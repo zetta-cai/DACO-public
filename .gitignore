@@ -1,3 +1,6 @@
+.DS_Store
+lib/boost_1_81_0
+
 # Prerequisites
 *.d
 
