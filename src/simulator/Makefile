@@ -4,15 +4,15 @@ DEPS :=
 CLEAN :=
 
 ##############################################################################
-# RocksDB module
+# boost module
 
-#ROCKSDB_INCDIR += -I../rocksdb-6.22.1/include
-#INCDIR += $(ROCKSDB_INCDIR)
+BOOST_LDDIR := -L../../lib/boost_1_81_0/install/lib
+LDDIR += $(BOOST_LDDIR)
+BOOST_LDLIBS := -l:libboost_program_options.a
+LDLIBS += $(BOOST_LDLIBS)
 
-#DEPS += rocksdb_wrapper.d rocksdb_wrapper.shared.d
-#CLEAN += rocksdb_wrapper.o rocksdb_wrapper.shared.o
-#ROCKSDB_OBJECTS += rocksdb_wrapper.o
-#ROCKSDB_SHARED_OBJECTS += rocksdb_wrapper.shared.o
+BOOST_INCRDIR := -I../../lib/boost_1_81_0/install/include
+INCDIR += $(BOOST_INCRDIR)
 
 ##############################################################################
 # Utils module
@@ -48,4 +48,6 @@ clean:
 .PHONY: all clean
 
 # Include dependencies
+ifneq ($(MAKECMDGOALS), clean)
 -include $(DEPS)
+endif

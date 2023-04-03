@@ -1,3 +1,5 @@
+#include <iostream>
+
 #include "boost/program_options.hpp"
 
 int main(int argc, char **argv) {
@@ -6,15 +8,11 @@ int main(int argc, char **argv) {
     boost::program_options::options_description argument_desc("Allowed arguments:");
 
     // TODO: use config.variables
-    int client_cnt = 0;
 
     argument_desc.add_options()
         ("help,h", "dump help information")
         ("version,v", "dump version of COVERED")
-        ("clientcnt", boost::program_options::value<int>(&client_cnt)->default_value(10), "the number of clients")
-        ("include-path,I", po::value< vector<string> >(), 
-    "include path")
-        ("input-file", po::value< vector<string> >(), "input file")
+        ("clientcnt", boost::program_options::value<int>()->default_value(10), "the number of clients")
     ;
 
     boost::program_options::variables_map argument_info;
@@ -30,6 +28,8 @@ int main(int argc, char **argv) {
         std::cout << "Current version of COVERED: 1.0" << std::endl;
         return 1;
     }
+
+    std::cout << "clientcnt: " << argument_info["clientcnt"].as<int>() << std::endl;
     
     return 1;
 }

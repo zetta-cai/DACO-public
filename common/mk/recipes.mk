@@ -3,28 +3,34 @@
 ##############################################################################
 # Generate dependency files
 
-DEPFLAGS ?= -MT $(@:.d=.o) -MMD -MP -MF $(@:.d=.Td)
-POSTCOMPILE_DEPS = mv -f $(@:.d=.Td) $@
+# Note: = (always replace), ?= (replace if undefined before), and += (append) are on-demand/delayed expanding; while := (always replace) is immediate expanding (usually used for constant right value)
+#DEPFLAGS ?= -MT $(@:.d=.o) -MMD -MP -MF $(@:.d=.Td)
+DEPENDENCY.c ?= $(CC) $(CFLAGS) $(CPPFLAGS) -MM
+# Note: \1 refers to the string matched by \($*\), i.e., the target name ($*) in Makefile
+# Note: $$ refers to the dollar sign itself in Makefile
 %.d: %.c
-	$(CC) $(DEPFLAGS) $(CFLAGS) $(CPPFLAGS) $^
-	@$(POSTCOMPILE_DEPS)
+	$(DEPENDENCY.c) $^ > $*.Td
+	@sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' $*.Td > $@
+#	@sed -e 's/.*://' -e 's/\\$$//' < $*.Td | fmt -1 | \
+#	  sed -e 's/^ *//' -e 's/$$/:/' >> $*.d
+	@rm -f $*.Td
 .PRECIOUS: %.d
 
 ##############################################################################
 # Preprocessing, compilation, and link macros
 
-INCDIR += -I/usr/include -I./lib/boost/include
+INCDIR += -I/usr/include
 CPPFLAGS += $(INCDIR)
 CPPFLAGS += $(EXTRA_CPPFLAGS)
 
 CC := g++
-#CFLAGS += -std=c++14 -O3 -g -Wall -Werror -march=native -fno-omit-frame-pointer
-CFLAGS += -std=c++14 -O3 -g -Wall -march=native -fno-omit-frame-pointer
+#CFLAGS += -std=c++17 -O3 -g -Wall -Werror -march=native -fno-omit-frame-pointer
+CFLAGS += -std=c++17 -O3 -g -Wall -march=native -fno-omit-frame-pointer
 CFLAGS += $(EXTRA_CFLAGS)
 CFLAGS_SHARED += $(CFLAGS) -fPIC
 
-LDDIR := -L./lib/boost/lib
-LDLIBS := -lboost
+LDDIR :=
+LDLIBS :=
 LDFLAGS += $(LDDIR)
 LINK = $(CC) $(LDFLAGS)
 LINK.so = $(CC) $(LDFLAGS) -shared
@@ -34,9 +40,9 @@ LINK.so = $(CC) $(LDFLAGS) -shared
 
 # Compile C to object file while generating dependency
 COMPILE.c = $(CC) $(CFLAGS) $(CPPFLAGS) -c
-OUTPUT_OPTION.c ?= -o $@
+COMPILE_OUTPUT_OPTION.c ?= -o $@
 %.o: %.c
-	$(COMPILE.c) $(OUTPUT_OPTION.c) $<
+	$(COMPILE.c) $(COMPILE_OUTPUT_OPTION.c) $<
 
 # Compile C to position independent object file while generating dependency
 COMPILE_SHARED.c = $(CC) $(CFLAGS_SHARED) $(CPPFLAGS) -c
