@@ -6,10 +6,11 @@
 # Note: = (always replace), ?= (replace if undefined before), and += (append) are on-demand/delayed expanding; while := (always replace) is immediate expanding (usually used for constant right value)
 #DEPFLAGS ?= -MT $(@:.d=.o) -MMD -MP -MF $(@:.d=.Td)
 DEPENDENCY.c ?= $(CC) $(CFLAGS) $(CPPFLAGS) -MM
+# Note: $< refers to the first input file (i.e., $*.c), while $^ refers to all input files (including many .h files combined from .d files)
 # Note: \1 refers to the string matched by \($*\), i.e., the target name ($*) in Makefile
 # Note: $$ refers to the dollar sign itself in Makefile
 %.d: %.c
-	$(DEPENDENCY.c) $^ > $*.Td
+	$(DEPENDENCY.c) $*.c > $*.Td
 	@sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' $*.Td > $@
 #	@sed -e 's/.*://' -e 's/\\$$//' < $*.Td | fmt -1 | \
 #	  sed -e 's/^ *//' -e 's/$$/:/' >> $*.d
