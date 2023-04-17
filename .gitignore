@@ -4,7 +4,6 @@
 *.pyc
 lib/boost_1_81_0
 src/simulator/simulator
-cachebench
 
 # Prerequisites
 *.d

@@ -19,7 +19,7 @@ namespace covered
         PhysicalClient(const uint16_t& local_client_workload_startport, const std::string& local_edge_node_ipstr, const uint32_t& client_thread_cnt);
         ~PhysicalClient();
 
-        void start(double duration);
+        void start(const uint32_t& duration);
     private:
         static const std::string kClassName;
 

@@ -11,7 +11,7 @@ covered::PhysicalClient::PhysicalClient(const uint16_t& local_client_workload_st
 
 covered::PhysicalClient::~PhysicalClient() {}
 
-void covered::PhysicalClient::PhysicalClient(double duration)
+void covered::PhysicalClient::PhysicalClient(const uint32_t& duration)
 {
     // TODO: launch client_thread_cnt sub-threads
 
