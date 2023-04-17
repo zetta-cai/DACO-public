@@ -12,7 +12,7 @@ def prompt(filename, promptmsg):
     print(Fore.GREEN + "{}: {}".format(filename, promptmsg) + Style.RESET_ALL)
 
 def warn(filename, warnmsg):
-    print(Fore.BLUE + "{}: {}".format(filename, warnmsg) + Style.RESET_ALL)
+    print(Fore.YELLOW + "{}: {}".format(filename, warnmsg) + Style.RESET_ALL)
 
 def die(filename, errmsg):
     print(Fore.RED + "{}: error {}".format(filename, errmsg) + Style.RESET_ALL, file=sys.stderr)

@@ -3,13 +3,14 @@
 #include <vector>
 #include <assert.h> // assert
 
-#include "util.h"
-#include "param.h"
-#include "config.h"
+#include "common/util.h"
+#include "common/param.h"
+#include "common/config.h"
 
 const std::string covered::Config::VERSION_KEYSTR = "version";
+const std::string covered::Config::GLOBAL_CLIENT_WORKLOAD_STARTPORT_KEYSTR = "global_client_workload_startport"
 
-const std::string covered::Config::class_name_ = "Config";
+const std::string covered::Config::kClassName = "Config";
 
 covered::Config::Config(const std::string& config_filepath)
 {
@@ -17,7 +18,8 @@ covered::Config::Config(const std::string& config_filepath)
     bool is_exist = covered::Util::isFileExist(config_filepath);
 
     // Initialize config variables by default
-    version_ = "0.0";
+    version_ = "1.0";
+    client_workload_startport_ = 4100; // [4096, 65536]
 
     if (is_exist)
     {
@@ -30,15 +32,26 @@ covered::Config::Config(const std::string& config_filepath)
         {
             version_ = kv_ptr->value().get_string();
         }
+        kv_ptr = find(GLOBAL_CLIENT_WORKLOAD_STARTPORT_KEYSTR);
+        if (kv_ptr != NULL)
+        {
+            uint64_t tmp_port = kv_ptr->value().get_uint64();
+            global_client_workload_startport_ = covered::Util::toUint16(tmp_port);
+        }
 
         //is_valid_ = true; // valid Config
     }
     else
     {
         std::ostringstream oss;
-        oss << config_filepath << " does not exist; use default config!";
-        covered::Util::dumpWarnMsg(class_name_, oss.str());
-        //is_valid_ = false; // invalid Config
+
+        //oss << config_filepath << " does not exist; use default config!";
+        //covered::Util::dumpWarnMsg(kClassName, oss.str());
+        ////is_valid_ = false; // invalid Config
+
+        oss << config_filepath << " does not exist!";
+        covered::Util::dumpErrorMsg(kClassName, oss.str());
+        exit(1);
     }
 }
 
@@ -48,6 +61,11 @@ std::string covered::Config::getVersion()
 {
     //checkIsValid();
     return version_;
+}
+
+uint16_t covered::Config::getGobalClientWorkloadStartport()
+{
+    return global_client_workload_startport_;
 }
 
 std::string covered::Config::toString()
@@ -80,7 +98,7 @@ void covered::Config::parseJsonFile(const std::string& config_filepath)
     {
         std::ostringstream oss;
         oss << "read " << config_filepath << " with " << filesize << " bytes";
-        covered::Util::dumpDebugMsg(class_name_, oss.str());
+        covered::Util::dumpDebugMsg(kClassName, oss.str());
     }
 
     // Parse the bytes
@@ -90,7 +108,7 @@ void covered::Config::parseJsonFile(const std::string& config_filepath)
     bool is_error = bool(boost_json_errcode);
     if (is_error)
     {
-        covered::Util::dumpErrorMsg(class_name_, boost_json_errcode.message());
+        covered::Util::dumpErrorMsg(kClassName, boost_json_errcode.message());
         exit(-1);
     }
 
@@ -99,7 +117,7 @@ void covered::Config::parseJsonFile(const std::string& config_filepath)
     is_error = bool(boost_json_errcode);
     if (is_error)
     {
-        covered::Util::dumpErrorMsg(class_name_, boost_json_errcode.message());
+        covered::Util::dumpErrorMsg(kClassName, boost_json_errcode.message());
         exit(-1);
     }
 
@@ -113,6 +131,12 @@ void covered::Config::parseJsonFile(const std::string& config_filepath)
 boost::json::key_value_pair* covered::Config::find(const std::string& key)
 {
     boost::json::key_value_pair* kv_ptr = json_object_.find(key);
+    if (kv_ptr == NULL)
+    {
+        std::ostringstrem oss;
+        oss << "no json entry for " << key << "; use default setting"
+        covered::Util::dumpWarnMsg(kClassName, oss.str());
+    }
     return kv_ptr;
 }
 
@@ -120,7 +144,7 @@ boost::json::key_value_pair* covered::Config::find(const std::string& key)
 {
     if (!is_valid_)
     {
-        covered::Util::dumpErrorMsg(class_name_, "invalid Config (config file has not been loaded)!");
+        covered::Util::dumpErrorMsg(kClassName, "invalid Config (config file has not been loaded)!");
         exit(-1);
     }
     return;

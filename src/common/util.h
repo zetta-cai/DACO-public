@@ -1,5 +1,5 @@
 /*
- * Util: provide utilities, e.g., I/O.
+ * Util: provide utilities, e.g., I/O and type conversion.
  * 
  * By Siyuan Sheng (2023.04.10).
  */
@@ -17,13 +17,19 @@ namespace covered
     class Util
     {
     public:
+        static const uint64_t MAX_UINT16;
+
         // I/O
+        static void dumpNormalMsg(const std::string& class_name, const std::string& normal_message);
         static void dumpDebugMsg(const std::string& class_name, const std::string& debug_message);
         static void dumpWarnMsg(const std::string& class_name, const std::string& warn_message);
         static void dumpErrorMsg(const std::string& class_name, const std::string& error_message);
         static bool isFileExist(const std::string& filepath);
+
+        // Type conversion
+        static uint16_t toUint16(const uint64_t& val);
     private:
-        static const std::string class_name_;
+        static const std::string kClassName;
     };
 }
 

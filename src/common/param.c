@@ -1,10 +1,10 @@
 #include <cstdlib> // exit
 #include <sstream> // ostringstream
 
-#include "util.h"
-#include "param.h"
+#include "common/util.h"
+#include "common/param.h"
 
-const std::string covered::Param::class_name_ = "Param";
+const std::string covered::Param::kClassName = "Param";
 
 bool covered::Param::is_valid_ = false;
 bool covered::Param::is_debug_ = false;
@@ -42,7 +42,7 @@ void covered::Param::checkIsValid()
 {
     if (!is_valid_)
     {
-        covered::Util::dumpErrorMsg(class_name_, "invalid Param (CLI parameters have not been set)!");
+        covered::Util::dumpErrorMsg(kClassName, "invalid Param (CLI parameters have not been set)!");
         exit(-1);
     }
     return;

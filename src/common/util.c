@@ -1,9 +1,17 @@
 #include <sstream> // ostringstream
 #include <iostream> // cerr
 
-#include "util.h"
+#include "common/util.h"
 
-const std::string covered::Util::class_name_ = "Util";
+const uint64_t covered::Util::MAX_UINT16 = 65536;
+
+const std::string covered::Util::kClassName = "Util";
+
+void covered::Util::dumpNormalMsg(const std::string& class_name, const std::string& normal_message)
+{
+    std::cout << class_name << ": " << normal_message << std::endl;
+    return;
+}
 
 void covered::Util::dumpDebugMsg(const std::string& class_name, const std::string& debug_message)
 {
@@ -37,7 +45,7 @@ bool covered::Util::isFileExist(const std::string& filepath)
     bool is_error = bool(boost_errcode); // boost_errcode.m_val != 0
     if (is_error)
     {
-        std::cerr << boost_errcode.message() << std::endl;
+        dumpWarnMsg(kClassName, boost_errcode.message());
         return false;
     }
 
@@ -46,7 +54,7 @@ bool covered::Util::isFileExist(const std::string& filepath)
     {
         std::ostringstream oss;
         oss << filepath << " does not exist!";
-        dumpErrorMsg(class_name_, oss.str());
+        dumpWarnMsg(kClassName, oss.str());
         return false;
     }
 
@@ -55,9 +63,25 @@ bool covered::Util::isFileExist(const std::string& filepath)
     {
         std::ostringstream oss;
         oss << filepath << " is a directory!";
-        dumpErrorMsg(class_name_, oss.str());
+        dumpWarnMsg(kClassName, oss.str());
         return false;
     }
 
     return true;
+}
+
+uint16_t covered::Util::toUint16(const uint64_t& val)
+{
+    if (val <= MAX_UINT16)
+    {
+        uint16_t result = static_cast<uint16_t>(val);
+        return result;
+    }
+    else
+    {
+        std::ostringstream oss;
+        oss << "cannot convert " << val << " (> " << MAX_UINT16 << ") to uint16_t!";
+        dumpErrorMsg(kClassName, oss.str());
+        exit(1);
+    }
 }

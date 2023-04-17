@@ -1,5 +1,5 @@
 /*
- * Param: store CLI parameters.
+ * Param: store CLI parameters for dynamic configurations.
  * 
  * By Siyuan Sheng (2023.04.10).
  */
@@ -21,7 +21,7 @@ namespace covered
 
         static std::string toString();
     private:
-        static const std::string class_name_;
+        static const std::string kClassName;
 
         static void checkIsValid();
 

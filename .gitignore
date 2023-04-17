@@ -1,8 +1,10 @@
+.vscode
 .DS_Store
 *.tar.gz
 *.pyc
 lib/boost_1_81_0
-src/simulator/main
+src/simulator/simulator
+cachebench
 
 # Prerequisites
 *.d

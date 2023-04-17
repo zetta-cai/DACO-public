@@ -1,4 +1,4 @@
-include ../../common/mk/recipes.mk
+include ../common/mk/recipes.mk
 
 DEPS :=
 CLEAN :=
@@ -17,25 +17,25 @@ INCDIR += $(BOOST_INCDIR)
 ##############################################################################
 # common module
 
-COMMON_INCDIR := -I../../common
+COMMON_INCDIR := -I../
 INCDIR += $(COMMON_INCDIR)
 
-DEPS += ../../common/config.d ../../common/util.d ../../common/param.d
-CLEAN += ../../common/config.o ../../common/util.o ../../common/param.o
-COMMON_OBJECTS += ../../common/config.o ../../common/util.o ../../common/param.o
-COMMON_SHARED_OBJECTS += ../../common/config.shared.o ../../common/util.shared.o ../../common/param.shared.o
+DEPS += ../common/config.d ../common/util.d ../common/param.d
+CLEAN += ../common/config.o ../common/util.o ../common/param.o
+COMMON_OBJECTS += ../common/config.o ../common/util.o ../common/param.o
+COMMON_SHARED_OBJECTS += ../common/config.shared.o ../common/util.shared.o ../common/param.shared.o
 
 ##############################################################################
 # Executable files
 
-main: main.o $(COMMON_OBJECTS)
+simulator: simulator.o $(COMMON_OBJECTS)
 	$(LINK) $^ $(LDLIBS) -o $@
-DEPS += main.d
-CLEAN += main.o
+DEPS += simulator.d
+CLEAN += simulator.o
 
 ##############################################################################
 
-TARGETS := main
+TARGETS := simulator
 
 all: $(TARGETS)
 #	rm -rf $(CLEAN) $(DEPS)
