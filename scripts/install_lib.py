@@ -77,7 +77,7 @@ if is_clear:
 
 # (3) Install cachelib (commit ID: 3d475f6)
 
-cachelib_clone_dirpath = "lib/cachelib"
+cachelib_clone_dirpath = "lib/CacheLib"
 if not os.path.exists(cachelib_clone_dirpath):
     prompt(filename, "clone cachelib into {}...".format(cachelib_clone_dirpath))
     cachelib_clone_cmd = "cd lib && git clone https://github.com/facebook/CacheLib.git"
