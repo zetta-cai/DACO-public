@@ -9,22 +9,17 @@ const std::string covered::Param::kClassName = "Param";
 bool covered::Param::is_valid_ = false;
 bool covered::Param::is_debug_ = false;
 
+void covered::Param::setParameters(const bool& is_debug)
+{
+    is_debug_ = is_debug;
+    is_valid_ = true;
+    return;
+}
+
 bool covered::Param::isDebug()
 {
     checkIsValid();
     return is_debug_;
-}
-
-void covered::Param::setValid(const bool& is_valid)
-{
-    is_valid_ = is_valid;
-    return;
-}
-
-void covered::Param::setDebug(const bool& is_debug)
-{
-    is_debug_ = is_debug;
-    return;
 }
 
 std::string covered::Param::toString()

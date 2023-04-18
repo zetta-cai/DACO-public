@@ -1,5 +1,8 @@
 # Generic recipes
 
+DEPS :=
+CLEAN :=
+
 ##############################################################################
 # Generate dependency files
 

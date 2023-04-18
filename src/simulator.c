@@ -11,6 +11,7 @@ int main(int argc, char **argv) {
     std::string main_class_name = "simulator";
 
     // (1) Create CLI parameter description
+
     boost::program_options::options_description argument_desc("Allowed arguments:");
     argument_desc.add_options()
         ("help,h", "dump help information")
@@ -21,11 +22,13 @@ int main(int argc, char **argv) {
     ;
 
     // (2) Parse CLI parameters (static/dynamic actions and dynamic configurations)
+
     boost::program_options::variables_map argument_info;
     boost::program_options::store(boost::program_options::parse_command_line(argc, argv, argument_desc), argument_info);
     boost::program_options::notify(argument_info);
 
     // (2.1) Process static actions
+
     if (argument_info.count("help")) // Dump help information
     {
         std::ostringstream oss;
@@ -33,21 +36,29 @@ int main(int argc, char **argv) {
         covered::Util::dumpNormalMsg(main_class_name, oss.str());
         return 1;
     }
-    // (2.2) Store CLI paremters for dynamic configurations
-    else if (argument_info.count("debug"))
+
+    // (2.2) Get CLI paremters for dynamic configurations
+
+    bool is_debug = false;
+    if (argument_info.count("debug"))
     {
-        covered::Param::setDebug(true);
+        is_debug = true;
     }
-    covered::Param::setValid(true); // After storing all CLI parameters
+
+    // Store CLI parameters for dynamic configurations and mark covered::Param as valid
+    covered::Param::setParameters(is_debug);
 
     // (2.3) Load config file for static configurations
-    covered::Config config(argument_info["config_file"].as<std::string>());
+
+    std::string config_filepath = argument_info["config_file"].as<std::string>();
+    covered::Config::loadConfig(config_filepath);
 
     // (2.4) Process dynamic actions
+
     if (argument_info.count("version"))
     {
         std::ostringstream oss;
-        oss << "Current version of COVERED: " << config.getVersion();
+        oss << "Current version of COVERED: " << covered::Config::getVersion();
         covered::Util::dumpNormalMsg(main_class_name, oss.str());
         return 1;
     }
@@ -56,7 +67,7 @@ int main(int argc, char **argv) {
     if (covered::Param::isDebug())
     {
         covered::Util::dumpDebugMsg(main_class_name, covered::Param::toString());
-        covered::Util::dumpDebugMsg(main_class_name, config.toString());
+        covered::Util::dumpDebugMsg(main_class_name, covered::Config::toString());
     }
     
     // (4) TODO: simulate multiple physical clients by multi-threading

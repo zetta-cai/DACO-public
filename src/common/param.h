@@ -14,10 +14,9 @@ namespace covered
     class Param
     {
     public:
-        static bool isDebug();
+        static void setParameters(const bool& is_debug);
 
-        static void setValid(const bool& is_valid);
-        static void setDebug(const bool& is_debug);
+        static bool isDebug();
 
         static std::string toString();
     private:

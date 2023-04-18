@@ -12,14 +12,16 @@ const std::string covered::Config::GLOBAL_CLIENT_WORKLOAD_STARTPORT_KEYSTR = "gl
 
 const std::string covered::Config::kClassName = "Config";
 
-covered::Config::Config(const std::string& config_filepath)
+// Initialize config variables by default
+bool covered::Config::is_valid_ = false;
+static std::string covered::Config::filepath_ = "";
+static std::string covered::Config::version_ = "1.0";
+static uint16_t covered::Config::client_workload_startport_ = 4100; // [4096, 65536]
+
+void covered::Config::setConfig(const std::string& config_filepath)
 {
     filepath_ = config_filepath;
     bool is_exist = covered::Util::isFileExist(config_filepath);
-
-    // Initialize config variables by default
-    version_ = "1.0";
-    client_workload_startport_ = 4100; // [4096, 65536]
 
     if (is_exist)
     {
@@ -39,7 +41,7 @@ covered::Config::Config(const std::string& config_filepath)
             global_client_workload_startport_ = covered::Util::toUint16(tmp_port);
         }
 
-        //is_valid_ = true; // valid Config
+        is_valid_ = true; // valid Config
     }
     else
     {
@@ -55,22 +57,21 @@ covered::Config::Config(const std::string& config_filepath)
     }
 }
 
-covered::Config::~Config() {}
-
 std::string covered::Config::getVersion()
 {
-    //checkIsValid();
+    checkIsValid();
     return version_;
 }
 
 uint16_t covered::Config::getGobalClientWorkloadStartport()
 {
+    checkIsValid();
     return global_client_workload_startport_;
 }
 
 std::string covered::Config::toString()
 {
-    //checkIsValid();
+    checkIsValid();
     std::ostringstream oss;
     oss << "[Parsed Config Information]" << std::endl;
     oss << "Config file path: " << filepath_ << std::endl;
@@ -104,7 +105,7 @@ void covered::Config::parseJsonFile(const std::string& config_filepath)
     // Parse the bytes
     boost::json::stream_parser boost_json_parser;
     boost::json::error_code boost_json_errcode;
-    boost_json_parser.write( bytes.data(), filesize, boost_json_errcode);
+    boost_json_parser.write(bytes.data(), filesize, boost_json_errcode);
     bool is_error = bool(boost_json_errcode);
     if (is_error)
     {
@@ -140,7 +141,7 @@ boost::json::key_value_pair* covered::Config::find(const std::string& key)
     return kv_ptr;
 }
 
-/*void covered::Config::checkIsValid()
+void covered::Config::checkIsValid()
 {
     if (!is_valid_)
     {
@@ -148,4 +149,4 @@ boost::json::key_value_pair* covered::Config::find(const std::string& key)
         exit(-1);
     }
     return;
-}*/
+}
