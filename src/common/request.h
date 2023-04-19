@@ -7,6 +7,8 @@
 #ifndef REQUEST_H
 #define REQUEST_H
 
+#include <string>
+
 #include "common/key.h"
 #include "common/value.h"
 
@@ -15,14 +17,14 @@ namespace covered
     class Request
     {
     public:
-        Request(const covered::Key& key, const covered::Value& value);
+        Request(const Key& key, const Value& value);
         ~Request();
     private:
         static const std::string kClassName;
 
-        covered::Key key_;
-        covered::Value value_;
-    }
+        Key key_;
+        Value value_;
+    };
 }
 
 #endif

@@ -1,10 +1,18 @@
 #include "common/value.h"
 
-const std::string covered::Value::kClassName = "Value";
-
-covered::Value::Value(const std::string& valuestr)
+namespace covered
 {
-    valuestr_ = valuestr;
-}
+    const std::string Value::kClassName = "Value";
 
-covered::Value::~Value() {}
+    Value::Value()
+    {
+        valuesize_ = 0;
+    }
+
+    Value::Value(const uint32_t& valuesize)
+    {
+        valuesize_ = valuesize;
+    }
+
+    Value::~Value() {}
+}

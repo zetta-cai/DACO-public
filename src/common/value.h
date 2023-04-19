@@ -7,18 +7,21 @@
 #ifndef VALUE_H
 #define VALUE_H
 
+#include <string>
+
 namespace covered
 {
     class Value
     {
     public:
-        Value(const std::string& valuestr);
+        Value();
+        Value(const uint32_t& valuesize);
         ~Value();
     private:
         static const std::string kClassName;
 
-        std::string valuestr_;
-    }
+        uint32_t valuesize_;
+    };
 }
 
 #endif

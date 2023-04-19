@@ -12,7 +12,6 @@
 
 #include <string>
 
-#include "common/util.h"
 #include "common/request.h"
 
 namespace covered
@@ -24,15 +23,15 @@ namespace covered
         virtual ~WorkloadBase();
 
         void validate();
-        covered::Request generateReq();
+        Request generateReq();
     private:
         static const std::string kClassName;
 
-        virtual void initWorkloadParameters() = 0; // initialize workload parameters (e.g., by loading config file)
+        virtual void initWorkloadParameters() = 0; // initialize workload parameters (e.g., by default or by loading config file)
         virtual void overwriteWorkloadParameters() = 0; // overwrite some workload patermers based on covered::Config and covered::Param
         virtual void createWorkloadGenerator() = 0; // create workload generator based on overwritten workload parameters
 
-        virtual covered::Request generateReqInternal() = 0;
+        virtual Request generateReqInternal() = 0;
 
         bool is_valid_;
         void checkIsValid();

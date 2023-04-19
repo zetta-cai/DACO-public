@@ -1,7 +1,7 @@
 # Generic recipes
 
 DEPS :=
-CLEAN :=
+CLEANS :=
 
 ##############################################################################
 # Generate dependency files
@@ -13,7 +13,7 @@ DEPENDENCY.c ?= $(CC) $(CFLAGS) $(CPPFLAGS) -MM
 # Note: \1 refers to the string matched by \($*\), i.e., the target name ($*) in Makefile
 # Note: $$ refers to the dollar sign itself in Makefile
 %.d: %.c
-	$(DEPENDENCY.c) $*.c > $*.Td
+	$(DEPENDENCY.c) $*.c > $*.Td || rm $*.Td
 	@sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' $*.Td > $@
 #	@sed -e 's/.*://' -e 's/\\$$//' < $*.Td | fmt -1 | \
 #	  sed -e 's/^ *//' -e 's/$$/:/' >> $*.d

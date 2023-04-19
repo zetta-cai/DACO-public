@@ -1,4 +1,5 @@
 {
     "version": "1.0",
-    "global_client_workload_startport": 4100
+    "global_client_workload_startport": 4100,
+    "facebook_config_filepath": "lib/CacheLib/cachelib/cachebench/test_configs/hit_ratio/cdn/config.json"
 }

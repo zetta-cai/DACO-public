@@ -13,12 +13,22 @@ int main(int argc, char **argv) {
     // (1) Create CLI parameter description
 
     boost::program_options::options_description argument_desc("Allowed arguments:");
+    // Static actions
     argument_desc.add_options()
         ("help,h", "dump help information")
+    ;
+    // Dynamic configurations
+    argument_desc.add_options()
+        ("config_file,c", boost::program_options::value<std::string>()->default_value("config.json"), "specify config file path of COVERED")
         ("debug", "enable debug information")
-        ("config_file,c", boost::program_options::value<std::string>()->default_value("../../config.json"), "specify config file path")
+        ("keycnt,k", boost::program_options::value<uint32_t>()->default_value(1000000), "the total number of keys")
+        ("opcnt,o", boost::program_options::value<uint32_t>()->default_value(1000000), "the total number of operations")
+        ("clientcnt,p", boost::program_options::value<uint32_t>()->default_value(2), "the total number of physical clients")
+        ("perclient_workercnt,p", boost::program_options::value<uint32_t>()->default_value(10), "the number of worker threads for each physical client")
+    ;
+    // Dynamic actions
+    argument_desc.add_options()
         ("version,v", "dump version of COVERED")
-        ("clientcnt", boost::program_options::value<int>()->default_value(10), "the number of clients")
     ;
 
     // (2) Parse CLI parameters (static/dynamic actions and dynamic configurations)
@@ -44,14 +54,18 @@ int main(int argc, char **argv) {
     {
         is_debug = true;
     }
+    std::string config_filepath = argument_info["config_file"].as<std::string>();
+    uint32_t keycnt = argument_info["keycnt"].as<uint32_t>();
+    uint32_t opcnt = argument_info["opcnt"].as<uint32_t>();
+    uint32_t clientcnt = argument_info["clientcnt"].as<uint32_t>();
+    uint32_t perclient_workercnt = argument_info["perclient_workercnt"].as<uint32_t>();
 
     // Store CLI parameters for dynamic configurations and mark covered::Param as valid
-    covered::Param::setParameters(is_debug);
+    covered::Param::setParameters(config_filepath, is_debug, keycnt, opcnt, clientcnt, perclient_workercnt);
 
     // (2.3) Load config file for static configurations
 
-    std::string config_filepath = argument_info["config_file"].as<std::string>();
-    covered::Config::loadConfig(config_filepath);
+    covered::Config::loadConfig();
 
     // (2.4) Process dynamic actions
 

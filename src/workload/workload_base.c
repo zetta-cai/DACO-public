@@ -1,42 +1,47 @@
+#include "common/util.h"
 #include "workload/workload_base.h"
 
-const std::string covered::WorkloadBase::kClassName = "WorkloadBase";
-
-covered::WorkloadBase::WorkloadBase()
+namespace covered
 {
-    is_valid_ = false;
-}
+    const std::string WorkloadBase::kClassName = "WorkloadBase";
 
-covered::WorkloadBase::~WorkloadBase() {}
-
-void covered::WorkloadBase::validate()
-{
-    if (!is_valid_)
+    WorkloadBase::WorkloadBase()
     {
-        initWorkloadParameters();
-        overwriteWorkloadParameters();
-        createWorkloadGenerator();
-
-        is_valid_ = true;
+        is_valid_ = false;
     }
-    else
+
+    WorkloadBase::~WorkloadBase() {}
+
+    void WorkloadBase::validate()
     {
-        dumpWarnMsg(kClassName, "duplicate invoke of validate()!");
+        if (!is_valid_)
+        {
+            initWorkloadParameters();
+            overwriteWorkloadParameters();
+            createWorkloadGenerator();
+
+            is_valid_ = true;
+        }
+        else
+        {
+            dumpWarnMsg(kClassName, "duplicate invoke of validate()!");
+        }
+        return;
     }
-}
 
-covered::Request covered::WorkloadBase::generateReq()
-{
-    checkIsValid();
-    return generateReqInternal();
-}
-
-void covered::WorkloadBase::checkIsValid()
-{
-    if (!is_valid_)
+    Request WorkloadBase::generateReq()
     {
-        covered::Util::dumpErrorMsg(kClassName, "not invoke validate()!");
-        exit(-1);
+        checkIsValid();
+        return generateReqInternal();
     }
-    return;
+
+    void WorkloadBase::checkIsValid()
+    {
+        if (!is_valid_)
+        {
+            Util::dumpErrorMsg(kClassName, "not invoke validate() yet!");
+            exit(-1);
+        }
+        return;
+    }
 }

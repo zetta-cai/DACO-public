@@ -1,87 +1,93 @@
 #include <sstream> // ostringstream
 #include <iostream> // cerr
 
+#include <boost/system.hpp>
+#include <boost/filesystem.hpp>
+
 #include "common/util.h"
 
-const uint64_t covered::Util::MAX_UINT16 = 65536;
-
-const std::string covered::Util::kClassName = "Util";
-
-void covered::Util::dumpNormalMsg(const std::string& class_name, const std::string& normal_message)
+namespace covered
 {
-    std::cout << class_name << ": " << normal_message << std::endl;
-    return;
-}
+    const int64_t Util::MAX_UINT16 = 65536;
 
-void covered::Util::dumpDebugMsg(const std::string& class_name, const std::string& debug_message)
-{
-    // \033 means ESC character, 1 means bold, 32 means green foreground, 0 means reset, and m is end character
-    std::cout << "\033[1;32m" << "[DEBUG] " << class_name << ": " << debug_message << std::endl << "\033[0m";
-    return;
-}
+    const std::string Util::kClassName = "Util";
 
-void covered::Util::dumpWarnMsg(const std::string& class_name, const std::string& warn_message)
-{
-    // \033 means ESC character, 1 means bold, 33 means yellow foreground, 0 means reset, and m is end character
-    std::cout << "\033[1;33m" << "[WARN] " << class_name << ": " << warn_message << std::endl << "\033[0m";
-    return;
-}
-
-void covered::Util::dumpErrorMsg(const std::string& class_name, const std::string& error_message)
-{
-    // \033 means ESC character, 1 means bold, 31 means red foreground, 0 means reset, and m is end character
-    std::cerr << "\033[1;31m" << "[ERROR] " << class_name << ": " << error_message << std::endl << "\033[0m";
-    return;
-}
-
-bool covered::Util::isFileExist(const std::string& filepath)
-{
-    // Get boost::file_status
-    boost::filesystem::path boost_filepath(filepath);
-    boost::system::error_code boost_errcode;
-    boost::filesystem::file_status boost_filestatus = boost::filesystem::status(boost_filepath, boost_errcode);
-
-    // An error occurs
-    bool is_error = bool(boost_errcode); // boost_errcode.m_val != 0
-    if (is_error)
+    void Util::dumpNormalMsg(const std::string& class_name, const std::string& normal_message)
     {
-        dumpWarnMsg(kClassName, boost_errcode.message());
-        return false;
+        std::cout << class_name << ": " << normal_message << std::endl;
+        return;
     }
 
-    // File not exist
-    if (!boost::filesystem::exists(boost_filestatus))
+    void Util::dumpDebugMsg(const std::string& class_name, const std::string& debug_message)
     {
-        std::ostringstream oss;
-        oss << filepath << " does not exist!";
-        dumpWarnMsg(kClassName, oss.str());
-        return false;
+        // \033 means ESC character, 1 means bold, 32 means green foreground, 0 means reset, and m is end character
+        std::cout << "\033[1;32m" << "[DEBUG] " << class_name << ": " << debug_message << std::endl << "\033[0m";
+        return;
     }
 
-    // Is a directory
-    if (boost::filesystem::is_directory(boost_filestatus))
+    void Util::dumpWarnMsg(const std::string& class_name, const std::string& warn_message)
     {
-        std::ostringstream oss;
-        oss << filepath << " is a directory!";
-        dumpWarnMsg(kClassName, oss.str());
-        return false;
+        // \033 means ESC character, 1 means bold, 33 means yellow foreground, 0 means reset, and m is end character
+        std::cout << "\033[1;33m" << "[WARN] " << class_name << ": " << warn_message << std::endl << "\033[0m";
+        return;
     }
 
-    return true;
-}
-
-uint16_t covered::Util::toUint16(const uint64_t& val)
-{
-    if (val <= MAX_UINT16)
+    void Util::dumpErrorMsg(const std::string& class_name, const std::string& error_message)
     {
-        uint16_t result = static_cast<uint16_t>(val);
-        return result;
+        // \033 means ESC character, 1 means bold, 31 means red foreground, 0 means reset, and m is end character
+        std::cerr << "\033[1;31m" << "[ERROR] " << class_name << ": " << error_message << std::endl << "\033[0m";
+        return;
     }
-    else
+
+    bool Util::isFileExist(const std::string& filepath)
     {
-        std::ostringstream oss;
-        oss << "cannot convert " << val << " (> " << MAX_UINT16 << ") to uint16_t!";
-        dumpErrorMsg(kClassName, oss.str());
-        exit(1);
+        // Get boost::file_status
+        boost::filesystem::path boost_filepath(filepath);
+        boost::system::error_code boost_errcode;
+        boost::filesystem::file_status boost_filestatus = boost::filesystem::status(boost_filepath, boost_errcode);
+
+        // An error occurs
+        bool is_error = bool(boost_errcode); // boost_errcode.m_val != 0
+        if (is_error)
+        {
+            dumpWarnMsg(kClassName, boost_errcode.message());
+            return false;
+        }
+
+        // File not exist
+        if (!boost::filesystem::exists(boost_filestatus))
+        {
+            std::ostringstream oss;
+            oss << filepath << " does not exist!";
+            dumpWarnMsg(kClassName, oss.str());
+            return false;
+        }
+
+        // Is a directory
+        if (boost::filesystem::is_directory(boost_filestatus))
+        {
+            std::ostringstream oss;
+            oss << filepath << " is a directory!";
+            dumpWarnMsg(kClassName, oss.str());
+            return false;
+        }
+
+        return true;
+    }
+
+    uint16_t Util::toUint16(const int64_t& val)
+    {
+        if (val >= 0 && val < MAX_UINT16)
+        {
+            uint16_t result = static_cast<uint16_t>(val);
+            return result;
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "cannot convert " << val << " (> " << MAX_UINT16 << ") to uint16_t!";
+            dumpErrorMsg(kClassName, oss.str());
+            exit(1);
+        }
     }
 }

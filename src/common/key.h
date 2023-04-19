@@ -7,18 +7,21 @@
 #ifndef KEY_H
 #define KEY_H
 
+#include <string>
+
 namespace covered
 {
     class Key
     {
     public:
+        Key();
         Key(const std::string& keystr);
         ~Key();
     private:
         static const std::string kClassName;
 
         std::string keystr_;
-    }
+    };
 }
 
 #endif

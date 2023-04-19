@@ -1,11 +1,14 @@
 #include "common/request.h"
 
-const std::string covered::Request::kClassName = "Request";
-
-covered::Request::Request(const covered::Key& key, const covered::Value& value)
+namespace covered
 {
-    key_ = key;
-    value_ = value;
-}
+    const std::string Request::kClassName = "Request";
 
-covered::Request::~Request() {}
+    Request::Request(const Key& key, const Value& value)
+    {
+        key_ = key;
+        value_ = value;
+    }
+
+    Request::~Request() {}
+}

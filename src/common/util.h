@@ -9,15 +9,12 @@
 
 #include <string>
 
-#include <boost/system.hpp>
-#include <boost/filesystem.hpp>
-
 namespace covered
 {
     class Util
     {
     public:
-        static const uint64_t MAX_UINT16;
+        static const int64_t MAX_UINT16;
 
         // I/O
         static void dumpNormalMsg(const std::string& class_name, const std::string& normal_message);
@@ -27,7 +24,7 @@ namespace covered
         static bool isFileExist(const std::string& filepath);
 
         // Type conversion
-        static uint16_t toUint16(const uint64_t& val);
+        static uint16_t toUint16(const int64_t& val);
     private:
         static const std::string kClassName;
     };
