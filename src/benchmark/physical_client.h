@@ -7,8 +7,8 @@
  * By Siyuan Sheng (2023.04.17).
  */
 
-#ifndef CLIENT_H
-#define CLIENT_H
+#ifndef PHYSICAL_CLIENT_H
+#define PHYSICAL_CLIENT_H
 
 #include <string>
 
@@ -18,7 +18,7 @@ namespace covered
     {
     public:
         // The UDP ports used by Client is [local_client_workload_startport, local_client_workload_startport + client_thread_cnt - 1]
-        PhysicalClient(const uint16_t& local_client_workload_startport, const std::string& local_edge_node_ipstr, const uint32_t& client_thread_cnt);
+        PhysicalClient(const uint16_t& local_client_workload_startport, const std::string& local_edge_node_ipstr);
         ~PhysicalClient();
 
         void start(const uint32_t& duration);
@@ -27,7 +27,6 @@ namespace covered
 
         uint16_t client_workload_port_;
         std::string local_edge_node_ipstr_;
-        uint32_t client_thread_cnt_;
     };
 }
 

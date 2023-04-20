@@ -14,8 +14,9 @@ namespace covered
     class Param
     {
     public:
-        static void setParameters(const std::string& config_filepath, const bool& is_debug, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& clientcnt, const uint32_t& perclient_workercnt);
+        static void setParameters(const bool& is_simulation, const std::string& config_filepath, const bool& is_debug, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& clientcnt, const uint32_t& perclient_workercnt);
 
+        static bool isSimulation();
         static std::string getConfigFilepath();
         static bool isDebug();
         static uint32_t getKeycnt();
@@ -30,6 +31,7 @@ namespace covered
         static void checkIsValid();
 
         static bool is_valid_;
+        static bool is_simulation_;
         static std::string config_filepath_;
         static bool is_debug_;
         static uint32_t keycnt_;

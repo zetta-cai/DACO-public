@@ -9,6 +9,7 @@
 namespace covered
 {
     const int64_t Util::MAX_UINT16 = 65536;
+    const std::string Util::LOCALHOST_IPSTR = "127.0.0.1";
 
     const std::string Util::kClassName = "Util";
 

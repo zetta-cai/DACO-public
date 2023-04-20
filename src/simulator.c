@@ -1,11 +1,15 @@
 #include <iostream>
 #include <sstream>
+#include <pthread>
 
 #include <boost/program_options.hpp>
 
 #include "common/util.h"
 #include "common/param.h"
 #include "common/config.h"
+#include "benchmark/physical_client.h"
+#include "benchmark/physical_client_param.h"
+#include "benchmark/physical_client_util.h"
 
 int main(int argc, char **argv) {
     std::string main_class_name = "simulator";
@@ -49,19 +53,20 @@ int main(int argc, char **argv) {
 
     // (2.2) Get CLI paremters for dynamic configurations
 
+    const bool is_simulation = true;
+    std::string config_filepath = argument_info["config_file"].as<std::string>();
     bool is_debug = false;
     if (argument_info.count("debug"))
     {
         is_debug = true;
     }
-    std::string config_filepath = argument_info["config_file"].as<std::string>();
     uint32_t keycnt = argument_info["keycnt"].as<uint32_t>();
     uint32_t opcnt = argument_info["opcnt"].as<uint32_t>();
     uint32_t clientcnt = argument_info["clientcnt"].as<uint32_t>();
     uint32_t perclient_workercnt = argument_info["perclient_workercnt"].as<uint32_t>();
 
     // Store CLI parameters for dynamic configurations and mark covered::Param as valid
-    covered::Param::setParameters(config_filepath, is_debug, keycnt, opcnt, clientcnt, perclient_workercnt);
+    covered::Param::setParameters(is_simulation, config_filepath, is_debug, keycnt, opcnt, clientcnt, perclient_workercnt);
 
     // (2.3) Load config file for static configurations
 
@@ -78,13 +83,52 @@ int main(int argc, char **argv) {
     }
 
     // (3) Dump stored CLI parameters and parsed config information if debug
+
     if (covered::Param::isDebug())
     {
         covered::Util::dumpDebugMsg(main_class_name, covered::Param::toString());
         covered::Util::dumpDebugMsg(main_class_name, covered::Config::toString());
     }
     
-    // (4) TODO: simulate multiple physical clients by multi-threading
+    // (4) Simulate multiple physical clients by multi-threading
+
+    pthread_t client_threads[clientcnt];
+    int pthread_returncode;
+
+    // Launch clientcnt physical clients
+    // NOTE: global_XXX is from the view of entire system, while local_XXX is from the view of each individual physical client
+    for (uint32_t global_client_idx = 0; global_client_idx < clientcnt; global_client_idx++)
+    {
+        std::ostringstream oss;
+        oss << "simulate physical client " << global_client_idx << " by pthread";
+        covered::Util::dumpNormalMsg(main_class_name, oss.str());
+
+        uint16_t local_client_workload_startport = covered::PhysicalClientUtil::getLocalClientWorkloadStartport(global_client_idx);
+        std::string local_edge_node_ipstr = covered::PhysicalClientUtil::getLocalEdgeNodeIpstr(global_client_idx);
+        covered::PhysicalClientParam local_physical_client_param(local_client_workload_startport, local_edge_node_ipstr);
+
+        pthread_returncode = pthread_create(&client_threads[global_client_idx], NULL, covered::PhysicalClientUtil::launchPhysicalClient, (void*)(&local_physical_client_param));
+        if (pthread_returncode != 0)
+        {
+            std::ostringstream oss;
+            oss << "failed to launch physical client " << global_client_idx << " (error code: " << pthread_returncode << ")" << std::endl;
+            covered::Util::dumpErrorMsg(main_class_name, oss.str());
+            exit(1);
+        }
+    }
+
+    // Wait for all physical clients
+    for (uint32_t global_client_idx = 0; global_client_idx < clientcnt; global_client_idx++)
+    {
+        pthread_returncode = pthread_join(client_threads[global_client_idx], NULL); // void* retval = NULL
+        if (pthread_returncode != 0)
+        {
+            std::ostringstream oss;
+            oss << "failed to join physical client " << global_client_idx << " (error code: " << pthread_returncode << ")" << std::endl;
+            covered::Util::dumpErrorMsg(main_class_name, oss.str());
+            exit(1);
+        }
+    }
 
     return 0;
 }

@@ -16,8 +16,9 @@ namespace covered
     uint32_t Param::clientcnt_ = 0;
     uint32_t Param::perclient_workercnt_ = 0;
 
-    void Param::setParameters(const std::string& config_filepath, const bool& is_debug, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& clientcnt, const uint32_t& perclient_workercnt)
+    void Param::setParameters(const bool& is_simulation, const std::string& config_filepath, const bool& is_debug, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& clientcnt, const uint32_t& perclient_workercnt)
     {
+        is_simulation_ = is_simulation;
         config_filepath_ = config_filepath;
         is_debug_ = is_debug;
         keycnt_ = keycnt;
@@ -27,6 +28,12 @@ namespace covered
 
         is_valid_ = true;
         return;
+    }
+
+    bool Param::isSimulation()
+    {
+        checkIsValid();
+        return is_simulation_;
     }
 
     std::string Param::getConfigFilepath()

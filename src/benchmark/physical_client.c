@@ -4,11 +4,10 @@ namespace covered
 {
     const std::string PhysicalClient::kClassName = "PhysicalClient";
 
-    PhysicalClient::PhysicalClient(const uint16_t& local_client_workload_startport, const std::string& local_edge_node_ipstr, const uint32_t& client_thread_cnt)
+    PhysicalClient::PhysicalClient(const uint16_t& local_client_workload_startport, const std::string& local_edge_node_ipstr)
     {
         client_workload_port_ = client_workload_port;
         local_edge_node_ipstr_ = local_edge_node_ipstr;
-        client_thread_cnt_ = client_thread_cnt;
     }
 
     PhysicalClient::~PhysicalClient() {}
