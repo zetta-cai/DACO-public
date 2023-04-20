@@ -2,7 +2,7 @@
 
 namespace covered
 {
-    const std::string Request::kClassName = "Request";
+    const std::string Request::kClassName("Request");
 
     Request::Request(const Key& key, const Value& value)
     {

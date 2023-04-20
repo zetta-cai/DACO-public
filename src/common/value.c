@@ -2,7 +2,7 @@
 
 namespace covered
 {
-    const std::string Value::kClassName = "Value";
+    const std::string Value::kClassName("Value");
 
     Value::Value()
     {

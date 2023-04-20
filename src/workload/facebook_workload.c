@@ -13,7 +13,7 @@ namespace covered
 {
     const std::string FacebookWorkload::kClassName = "FacebookWorkload";
 
-    // TODO: give random seeds for key-value pair generation (0) and request generation (physical_client_idx)
+    // TODO: give random seeds for key-value pair generation (0) and request generation (global_client_idx)
     FacebookWorkload::FacebookWorkload()
     {
         // Create random generators

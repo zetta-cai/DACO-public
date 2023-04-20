@@ -1,23 +1,21 @@
 /*
- * PhysicalClientUtil: utils for physical clients.
+ * BenchmarkUtil: utils for benchmarking.
  * 
  * By Siyuan Sheng (2023.04.20).
  */
 
-#ifndef PHYSICAL_CLIENT_UTIL_H
-#define PHYSICAL_CLIENT_UTIL_H
+#ifndef BENCHMARK_UTIL_H
+#define BENCHMARK_UTIL_H
 
-#include "benchmark/physical_client_param.h"
+#include <string>
 
 namespace covered
 {
-    class PhysicalClientUtil
+    class BenchmarkUtil
     {
     public:
         static uint16_t getLocalClientWorkloadStartport(uint32_t global_client_idx);
         static std::string getLocalEdgeNodeIpstr(uint32_t global_client_idx);
-
-        static void* launchPhysicalClient(void* physical_client_param);
     private:
         static std::string kClassName;
     };

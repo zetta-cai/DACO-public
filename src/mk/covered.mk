@@ -3,7 +3,7 @@ COVERED_INCDIR = -I$(COVERED_DIRPATH)
 INCDIR += $(COVERED_INCDIR)
 
 # benchmark module
-BENCHMARK_OBJECTS += $(COVERED_DIRPATH)/benchmark/physical_client.o
+BENCHMARK_OBJECTS += $(COVERED_DIRPATH)/benchmark/client_param.o $(COVERED_DIRPATH)/benchmark/client_util.o $(COVERED_DIRPATH)/benchmark/client_wrapper.o
 BENCHMARK_SHARED_OBJECTS += $(BENCHMARK_OBJECTS:.o=.shared.o)
 DEPS += $(BENCHMARK_OBJECTS:.o=.d)
 CLEANS += $(BENCHMARK_OBJECTS) $(BENCHMARK_SHARED_OBJECTS)

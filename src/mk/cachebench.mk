@@ -2,9 +2,9 @@
 
 CACHEBENCH_DIRPATH := lib/CacheLib
 
-CACHEBENCH_LDDIR := -L$(CACHEBENCH_DIRPATH)/opt/cachelib/lib $(CACHEBENCH_DIRPATH)/build-cachelib/cachebench
-LDDIR += $(CACHEENCH_LDDIR)
-CACHEBENCH_LDLIBS := -lcachelib_cachebench
+CACHEBENCH_LDDIR := -L$(CACHEBENCH_DIRPATH)/opt/cachelib/lib -L$(CACHEBENCH_DIRPATH)/build-cachelib/cachebench
+LDDIR += $(CACHEBENCH_LDDIR)
+CACHEBENCH_LDLIBS := -l:libcachelib_cachebench.a
 LDLIBS += $(CACHEBENCH_LDLIBS)
 
 CACHEBENCH_INCDIR := -I$(CACHEBENCH_DIRPATH)/opt/cachelib/include -I$(CACHEBENCH_DIRPATH)

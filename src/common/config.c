@@ -11,18 +11,18 @@
 
 namespace covered
 {
-    const std::string Config::VERSION_KEYSTR = "version";
-    const std::string Config::GLOBAL_CLIENT_WORKLOAD_STARTPORT_KEYSTR = "global_client_workload_startport";
-    const std::string Config::FACEBOOK_CONFIG_FILEPATH_KEYSTR = "facebook_config_filepath";
+    const std::string Config::VERSION_KEYSTR("version");
+    const std::string Config::GLOBAL_CLIENT_WORKLOAD_STARTPORT_KEYSTR("global_client_workload_startport");
+    const std::string Config::FACEBOOK_CONFIG_FILEPATH_KEYSTR("facebook_config_filepath");
 
-    const std::string Config::kClassName = "Config";
+    const std::string Config::kClassName("Config");
 
     // Initialize config variables by default
     bool Config::is_valid_ = false;
-    boost::json::object Config::json_object_ = boost::json::object();
-    std::string Config::version_ = "1.0";
+    boost::json::object Config::json_object_();
+    std::string Config::version_("1.0");
     uint16_t Config::global_client_workload_startport_ = 4100; // [4096, 65536]
-    std::string Config::facebook_config_filepath_ = "lib/CacheLib/cachelib/cachebench/test_configs/hit_ratio/cdn/config.json";
+    std::string Config::facebook_config_filepath_("lib/CacheLib/cachelib/cachebench/test_configs/hit_ratio/cdn/config.json");
 
     void Config::loadConfig()
     {

@@ -6,7 +6,7 @@
 
 namespace covered
 {
-    const std::string Param::kClassName = "Param";
+    const std::string Param::kClassName("Param");
 
     bool Param::is_valid_ = false;
     std::string Param::config_filepath_ = "";

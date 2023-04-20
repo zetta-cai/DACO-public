@@ -1,15 +1,15 @@
 #include <iostream>
 #include <sstream>
-#include <pthread>
+#include <pthread.h>
 
 #include <boost/program_options.hpp>
 
 #include "common/util.h"
 #include "common/param.h"
 #include "common/config.h"
-#include "benchmark/physical_client.h"
-#include "benchmark/physical_client_param.h"
-#include "benchmark/physical_client_util.h"
+#include "benchmark/benchmark_util.h"
+#include "benchmark/client_param.h"
+#include "benchmark/client_wrapper.h"
 
 int main(int argc, char **argv) {
     std::string main_class_name = "simulator";
@@ -27,8 +27,8 @@ int main(int argc, char **argv) {
         ("debug", "enable debug information")
         ("keycnt,k", boost::program_options::value<uint32_t>()->default_value(1000000), "the total number of keys")
         ("opcnt,o", boost::program_options::value<uint32_t>()->default_value(1000000), "the total number of operations")
-        ("clientcnt,p", boost::program_options::value<uint32_t>()->default_value(2), "the total number of physical clients")
-        ("perclient_workercnt,p", boost::program_options::value<uint32_t>()->default_value(10), "the number of worker threads for each physical client")
+        ("clientcnt,p", boost::program_options::value<uint32_t>()->default_value(2), "the total number of clients")
+        ("perclient_workercnt,p", boost::program_options::value<uint32_t>()->default_value(10), "the number of worker threads for each client")
     ;
     // Dynamic actions
     argument_desc.add_options()
@@ -90,45 +90,61 @@ int main(int argc, char **argv) {
         covered::Util::dumpDebugMsg(main_class_name, covered::Config::toString());
     }
     
-    // (4) Simulate multiple physical clients by multi-threading
+    // (4) Simulate multiple clients by multi-threading
 
     pthread_t client_threads[clientcnt];
+    covered::ClientParam client_params[clientcnt];
     int pthread_returncode;
 
-    // Launch clientcnt physical clients
-    // NOTE: global_XXX is from the view of entire system, while local_XXX is from the view of each individual physical client
+    // Prepare clientcnt client parameters
+    for (uint32_t global_client_idx = 0; global_client_idx < clientcnt; global_client_idx++)
+    {
+        uint16_t local_client_workload_startport = covered::BenchmarkUtil::getLocalClientWorkloadStartport(global_client_idx);
+        std::string local_edge_node_ipstr = covered::BenchmarkUtil::getLocalEdgeNodeIpstr(global_client_idx);
+        covered::ClientParam local_client_param(global_client_idx, local_client_workload_startport, local_edge_node_ipstr);
+        client_params[global_client_idx] = local_client_param;
+    }
+
+    // Launch clientcnt clients
+    // NOTE: global_XXX is from the view of entire system, while local_XXX is from the view of each individual client
     for (uint32_t global_client_idx = 0; global_client_idx < clientcnt; global_client_idx++)
     {
         std::ostringstream oss;
-        oss << "simulate physical client " << global_client_idx << " by pthread";
+        oss << "simulate client " << global_client_idx << " by pthread";
         covered::Util::dumpNormalMsg(main_class_name, oss.str());
 
-        uint16_t local_client_workload_startport = covered::PhysicalClientUtil::getLocalClientWorkloadStartport(global_client_idx);
-        std::string local_edge_node_ipstr = covered::PhysicalClientUtil::getLocalEdgeNodeIpstr(global_client_idx);
-        covered::PhysicalClientParam local_physical_client_param(local_client_workload_startport, local_edge_node_ipstr);
-
-        pthread_returncode = pthread_create(&client_threads[global_client_idx], NULL, covered::PhysicalClientUtil::launchPhysicalClient, (void*)(&local_physical_client_param));
+        pthread_returncode = pthread_create(&client_threads[global_client_idx], NULL, covered::ClientWrapper::launchClient, (void*)(&(client_params[global_client_idx])));
         if (pthread_returncode != 0)
         {
             std::ostringstream oss;
-            oss << "failed to launch physical client " << global_client_idx << " (error code: " << pthread_returncode << ")" << std::endl;
+            oss << "failed to launch client " << global_client_idx << " (error code: " << pthread_returncode << ")" << std::endl;
             covered::Util::dumpErrorMsg(main_class_name, oss.str());
             exit(1);
         }
     }
 
-    // Wait for all physical clients
+    // TODO: set local_client_running_ in all clientcnt client parameters to start benchmark
+
+    // TODO: need a class StatisticsTracker (in ClientParam) to collect and process statistics of all workers within each client
+        // TODO: StatisticsTracker provides a aggregate method, such that simulator can use an empty StatisticsTracker to aggregate those of all simulated clients
+        // TODO: StatisticsTracker also provides serialize/deserialize methods, such that prototype can collect serialized statistics files from all physical clients and deserialize them for aggregation
+
+    // TODO: with the aggregated StatisticsTracker, main thread can dump statistics every 10 seconds if necessary
+
+    // Wait for all clients
     for (uint32_t global_client_idx = 0; global_client_idx < clientcnt; global_client_idx++)
     {
         pthread_returncode = pthread_join(client_threads[global_client_idx], NULL); // void* retval = NULL
         if (pthread_returncode != 0)
         {
             std::ostringstream oss;
-            oss << "failed to join physical client " << global_client_idx << " (error code: " << pthread_returncode << ")" << std::endl;
+            oss << "failed to join client " << global_client_idx << " (error code: " << pthread_returncode << ")" << std::endl;
             covered::Util::dumpErrorMsg(main_class_name, oss.str());
             exit(1);
         }
     }
+
+    // TODO: with the aggregated StatisticsTracker, main thread can dump aggregated statistics after joining all sub-threads
 
     return 0;
 }

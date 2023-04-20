@@ -1,15 +1,15 @@
-#include <pthread>
+#include <pthread.h>
 
 #include "common/util.h"
 #include "common/param.h"
 #include "common/config.h"
-#include "benchmark/physical_client_util.h"
+#include "benchmark/benchmark_util.h"
 
 namespace covered
 {
-    const std::string PhysicalClientUtil::kClassName = "PhysicalClientUtil";
+    const std::string BenchmarkUtil::kClassName("BenchmarkUtil");
 
-    uint16_t PhysicalClientUtil::getLocalClientWorkloadStartport(uint32_t global_client_idx)
+    uint16_t BenchmarkUtil::getLocalClientWorkloadStartport(uint32_t global_client_idx)
     {
         int64_t local_client_workload_startport = 0;
         int64_t global_client_workload_startport = static_cast<int64_t>(covered::Config::getGlobalClientWorkloadStartport());
@@ -25,7 +25,7 @@ namespace covered
         return covered::Util::toUint16(local_client_workload_startport);
     }
 
-    std::string PhysicalClientUtil::getLocalEdgeNodeIpstr(uint32_t global_client_idx)
+    std::string BenchmarkUtil::getLocalEdgeNodeIpstr(uint32_t global_client_idx)
     {
         std::string local_edge_node_ipstr = "";
         if (covered::Param::isSimulation())
@@ -39,13 +39,5 @@ namespace covered
             exit(1);
         }
         return local_edge_node_ipstr;
-    }
-    
-    void* PhysicalClientUtil::launchPhysicalClient(void* physical_client_param)
-    {
-        // TODO: END HERE
-        
-        pthread_exit(NULL);
-        return NULL;
     }
 }

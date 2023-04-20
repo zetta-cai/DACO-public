@@ -2,7 +2,7 @@
 
 namespace covered
 {
-    const std::string Key::kClassName = "Key";
+    const std::string Key::kClassName("Key");
 
     Key::Key()
     {

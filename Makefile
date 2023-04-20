@@ -11,7 +11,7 @@ include src/mk/covered.mk
 ##############################################################################
 # Executable files
 
-simulator: src/simulator.o $(COMMON_OBJECTS)
+simulator: src/simulator.o $(COMMON_OBJECTS) $(BENCHMARK_OBJECTS)
 	$(LINK) $^ $(LDLIBS) -o $@
 DEPS += src/simulator.d
 CLEAN += src/simulator.o
