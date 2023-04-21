@@ -1,3 +1,9 @@
+#include <sstream>
+#include <assert.h> // assert
+
+#include "common/util.h"
+#include "common/request.h"
+#include "benchmark/client_param.h"
 #include "benchmark/worker.h"
 
 namespace covered
@@ -30,12 +36,28 @@ namespace covered
 
     void Worker::start()
     {
-        // TODO: Block with a while loop until local_client_running_ = true
+        ClientParam* local_client_param_ptr = local_worker_param_ptr_->getLocalClientParamPtr();
+        assert(local_client_param_ptr != NULL);
+        WorkloadBase* workload_generator_ptr = local_client_param_ptr->getWorkloadGeneratorPtr();
+        assert(workload_generator_ptr != NULL);
 
-        // TODO: for each sub-thread, within a while loop until local_client_running_ = false
+        // Block until local_client_running_ becomes true
+        while (!local_client_param_ptr->isClientRunning()) {}
 
-            // TODO: generate key-value request based on a specific workload
+        // Current worker thread start to issue requests and receive responses
+        while (local_client_param_ptr->isClientRunning())
+        {
+            // Generate key-value request based on a specific workload
+            Request current_request = workload_generator_ptr->generateReq();
 
-        // TODO: at the end of duration, notify main thread by pthread_exit
+            std::ostringstream oss;
+            oss << "keystr: " << current_request.getKey().getKeystr() << "; valuesize: " << current_request.getValue().getValuesize() << std::endl;
+            Util::dumpNormalMsg(kClassName, oss.str());
+
+            // TODO: convert the request into UDP packets
+            // TODO: communicate with local edge node listening on a specific port for the worker
+        }
+
+        return;
     }
 }

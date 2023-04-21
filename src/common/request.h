@@ -19,6 +19,9 @@ namespace covered
     public:
         Request(const Key& key, const Value& value);
         ~Request();
+
+        Key getKey();
+        Value getValue();
     private:
         static const std::string kClassName;
 

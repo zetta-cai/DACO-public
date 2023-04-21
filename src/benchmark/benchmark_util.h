@@ -17,7 +17,7 @@ namespace covered
         static uint16_t getLocalClientWorkloadStartport(uint32_t global_client_idx);
         static std::string getLocalEdgeNodeIpstr(uint32_t global_client_idx);
     private:
-        static std::string kClassName;
+        static const std::string kClassName;
     };
 }
 

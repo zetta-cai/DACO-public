@@ -14,7 +14,7 @@ namespace covered
     class Param
     {
     public:
-        static void setParameters(const bool& is_simulation, const std::string& config_filepath, const bool& is_debug, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& clientcnt, const uint32_t& perclient_workercnt);
+        static void setParameters(const bool& is_simulation, const std::string& config_filepath, const bool& is_debug, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& clientcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const double& duration);
 
         static bool isSimulation();
         static std::string getConfigFilepath();
@@ -23,6 +23,8 @@ namespace covered
         static uint32_t getOpcnt();
         static uint32_t getClientcnt();
         static uint32_t getPerclientWorkercnt();
+        static std::string getWorkloadName();
+        static double getDuration();
 
         static std::string toString();
     private:
@@ -38,6 +40,8 @@ namespace covered
         static uint32_t opcnt_;
         static uint32_t clientcnt_;
         static uint32_t perclient_workercnt_;
+        static std::string workload_name_;
+        static double duration_;
     };
 }
 

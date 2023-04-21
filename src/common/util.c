@@ -10,6 +10,7 @@ namespace covered
 {
     const int64_t Util::MAX_UINT16 = 65536;
     const std::string Util::LOCALHOST_IPSTR("127.0.0.1");
+    const unsigned int Util::SLEEP_INTERVAL_US = 1 * 1000 * 1000; // 1s
 
     const std::string Util::kClassName("Util");
 
@@ -74,6 +75,28 @@ namespace covered
         }
 
         return true;
+    }
+
+    struct timespec Util::getCurrentTimespec()
+    {
+        struct timespec current_timespec;
+        clock_gettime(CLOCK_REALTIME, &current_timespec);
+        return current_timespec;
+    }
+
+    double Util::getDeltaTime(const struct timespec& current_timespec, const struct timespec& previous_timespec)
+    {
+        struct timespec delta_timespec;
+        delta_timespec.tv_sec = current_timespec.tv_sec - previous_timespec.tv_sec;
+		delta_timespec.tv_nsec = current_timespec.tv_nsec - previous_timespec.tv_nsec;
+		if (delta_timespec.tv_nsec < 0)
+        {
+			delta_timespec.tv_sec--;
+			delta_timespec.tv_nsec += 1000000000L;
+		}
+
+        double delta_time = delta_timespec.tv_sec * 1000 * 1000 + double(delta_timespec.tv_nsec) / 1000.0;
+        return delta_time;
     }
 
     uint16_t Util::toUint16(const int64_t& val)

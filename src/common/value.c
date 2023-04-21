@@ -15,4 +15,9 @@ namespace covered
     }
 
     Value::~Value() {}
+
+    uint32_t Value::getValuesize()
+    {
+        return valuesize_;
+    }
 }

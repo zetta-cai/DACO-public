@@ -3,7 +3,7 @@ COVERED_INCDIR = -I$(COVERED_DIRPATH)
 INCDIR += $(COVERED_INCDIR)
 
 # benchmark module
-BENCHMARK_OBJECTS += $(COVERED_DIRPATH)/benchmark/client_param.o $(COVERED_DIRPATH)/benchmark/client_util.o $(COVERED_DIRPATH)/benchmark/client_wrapper.o
+BENCHMARK_OBJECTS += $(COVERED_DIRPATH)/benchmark/benchmark_util.o $(COVERED_DIRPATH)/benchmark/client_param.o $(COVERED_DIRPATH)/benchmark/client_wrapper.o $(COVERED_DIRPATH)/benchmark/worker_param.o $(COVERED_DIRPATH)/benchmark/worker.o
 BENCHMARK_SHARED_OBJECTS += $(BENCHMARK_OBJECTS:.o=.shared.o)
 DEPS += $(BENCHMARK_OBJECTS:.o=.d)
 CLEANS += $(BENCHMARK_OBJECTS) $(BENCHMARK_SHARED_OBJECTS)
@@ -15,7 +15,7 @@ DEPS += $(COMMON_OBJECTS:.o=.d)
 CLEANS += $(COMMON_OBJECTS) $(COMMON_SHARED_OBJECTS)
 
 # workload module
-WORKLOAD_OBJECTS += $(COVERED_DIRPATH)/workload/workload_base.o
+WORKLOAD_OBJECTS += $(COVERED_DIRPATH)/workload/workload_base.o $(COVERED_DIRPATH)/workload/facebook_workload.o
 WORKLOAD_SHARED_OBJECTS += $(WORKLOAD_OBJECTS:.o=.shared.o)
 DEPS += $(WORKLOAD_SHARED_OBJECTS:.o=.d)
 CLEANS += $(WORKLOAD_SHARED_OBJECTS) $(WORKLOAD_SHARED_OBJECTS)

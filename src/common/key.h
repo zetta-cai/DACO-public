@@ -17,6 +17,8 @@ namespace covered
         Key();
         Key(const std::string& keystr);
         ~Key();
+
+        std::string getKeystr();
     private:
         static const std::string kClassName;
 

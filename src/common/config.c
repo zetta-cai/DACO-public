@@ -19,7 +19,7 @@ namespace covered
 
     // Initialize config variables by default
     bool Config::is_valid_ = false;
-    boost::json::object Config::json_object_();
+    boost::json::object Config::json_object_ = boost::json::object();
     std::string Config::version_("1.0");
     uint16_t Config::global_client_workload_startport_ = 4100; // [4096, 65536]
     std::string Config::facebook_config_filepath_("lib/CacheLib/cachelib/cachebench/test_configs/hit_ratio/cdn/config.json");

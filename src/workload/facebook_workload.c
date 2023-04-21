@@ -7,6 +7,8 @@
 #include <cachelib/cachebench/workload/OnlineGenerator.h>
 
 #include "common/util.h"
+#include "common/param.h"
+#include "common/config.h"
 #include "workload/facebook_workload.h"
 
 namespace covered
@@ -20,7 +22,7 @@ namespace covered
         req_randgen_ptr_ = new std::mt19937_64(folly::Random::rand64());
         if (req_randgen_ptr_ == NULL)
         {
-            dumpErrorMsg(kClassName, "failed to create random generator for requests!");
+            Util::dumpErrorMsg(kClassName, "failed to create random generator for requests!");
             exit(1);
         }
 
@@ -37,6 +39,8 @@ namespace covered
         {
             delete op_pool_dist_ptr_;
         }
+        workload_generator_->markFinish();
+        workload_generator_->markShutdown();
     }
 
     void FacebookWorkload::initWorkloadParameters()
@@ -61,30 +65,9 @@ namespace covered
         op_pool_dist_ptr_ = new std::discrete_distribution<>(facebook_stressor_config_.opPoolDistribution.begin(), facebook_stressor_config_.opPoolDistribution.end());
         if (op_pool_dist_ptr_ == NULL)
         {
-            dumpErrorMsg(kClassName, "failed to create operation pool distribution!");
+            Util::dumpErrorMsg(kClassName, "failed to create operation pool distribution!");
             exit(1);
         }
-    }
-
-    void FacebookWorkload::createWorkloadGenerator()
-    {
-        // facebook::cachelib::cachebench::WorkloadGenerator will generate keycnt key-value pairs by generateReqs() and generate opcnt requests by generateKeyDistributions() in constructor
-        workload_generator_ = makeGenerator(facebook_stressor_config_);
-    }
-
-    Request FacebookWorkload::generateReqInternal()
-    {
-        // Must be 0 for Facebook CDN trace due to only a single operation pool (cachelib::PoolId = int8_t)
-        const int8_t tmp_poolid = static_cast<int8_t>(op_pool_dist_ptr_->(*req_randgen_ptr_));
-
-        const facebook::cachelib::cachebench::Request& tmp_facebook_req(workload_generator_.getReq(tmp_poolid, *req_randgen_ptr_, last_reqid_));
-
-        // Convert facebook::cachelib::cachebench::Request to covered::Request
-        const Key tmp_covered_key(tmp_facebook_req.key);
-        const Value tmp_covered_value(static_cast<uint32_t>(*(req.sizeBegin)));
-
-        last_reqid_ = tmp_facebook_req.requestId;
-        return Request(tmp_covered_key, tmp_covered_value);
     }
 
     // The same makeGenerator as in lib/CacheLib/cachelib/cachebench/runner/Stressor.cpp
@@ -106,4 +89,25 @@ namespace covered
             }
         }
     } // Anonymous namespace (cannot be accessed outside facebook_workload.c)
+
+    void FacebookWorkload::createWorkloadGenerator()
+    {
+        // facebook::cachelib::cachebench::WorkloadGenerator will generate keycnt key-value pairs by generateReqs() and generate opcnt requests by generateKeyDistributions() in constructor
+        workload_generator_ = makeGenerator(facebook_stressor_config_);
+    }
+
+    Request FacebookWorkload::generateReqInternal()
+    {
+        // Must be 0 for Facebook CDN trace due to only a single operation pool (cachelib::PoolId = int8_t)
+        const uint8_t tmp_poolid = static_cast<uint8_t>((*op_pool_dist_ptr_)(*req_randgen_ptr_));
+
+        const facebook::cachelib::cachebench::Request& tmp_facebook_req(workload_generator_->getReq(tmp_poolid, *req_randgen_ptr_, last_reqid_));
+
+        // Convert facebook::cachelib::cachebench::Request to covered::Request
+        const Key tmp_covered_key(tmp_facebook_req.key);
+        const Value tmp_covered_value(static_cast<uint32_t>(*(tmp_facebook_req.sizeBegin)));
+
+        last_reqid_ = tmp_facebook_req.requestId;
+        return Request(tmp_covered_key, tmp_covered_value);
+    }
 }

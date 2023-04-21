@@ -11,4 +11,14 @@ namespace covered
     }
 
     Request::~Request() {}
+
+    Key Request::getKey()
+    {
+        return key_;
+    }
+
+    Value Request::getValue()
+    {
+        return value_;
+    }
 }

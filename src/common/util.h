@@ -8,6 +8,7 @@
 #define UTIL_H
 
 #include <string>
+#include <time.h>
 
 namespace covered
 {
@@ -16,6 +17,7 @@ namespace covered
     public:
         static const int64_t MAX_UINT16;
         static const std::string LOCALHOST_IPSTR;
+        static const unsigned int SLEEP_INTERVAL_US;
 
         // I/O
         static void dumpNormalMsg(const std::string& class_name, const std::string& normal_message);
@@ -23,6 +25,10 @@ namespace covered
         static void dumpWarnMsg(const std::string& class_name, const std::string& warn_message);
         static void dumpErrorMsg(const std::string& class_name, const std::string& error_message);
         static bool isFileExist(const std::string& filepath);
+
+        // Time measurement (in units of microseconds)
+        static struct timespec getCurrentTimespec();
+        static double getDeltaTime(const struct timespec& current_timespec, const struct timespec& previous_timespec);
 
         // Type conversion
         static uint16_t toUint16(const int64_t& val);

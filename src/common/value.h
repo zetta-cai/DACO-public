@@ -17,6 +17,8 @@ namespace covered
         Value();
         Value(const uint32_t& valuesize);
         ~Value();
+
+        uint32_t getValuesize();
     private:
         static const std::string kClassName;
 

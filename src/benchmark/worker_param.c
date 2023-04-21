@@ -1,3 +1,4 @@
+#include "common/util.h"
 #include "worker_param.h"
 
 namespace covered
@@ -21,12 +22,21 @@ namespace covered
         local_worker_idx_ = local_worker_idx;
     }
 
-    WorkerParam::~WorkerParam() {}
+    WorkerParam::~WorkerParam()
+    {
+        // NOTE: no need to delete local_client_param_ptr_, as it is maintained outside WorkerParam
+    }
 
     const WorkerParam& WorkerParam::operator=(const WorkerParam& other)
     {
+        if (other.local_client_param_ptr_ == NULL)
+        {
+            Util::dumpErrorMsg(kClassName, "other.local_client_param_ptr_ is NULL!");
+            exit(1);
+        }
         local_client_param_ptr_ = other.local_client_param_ptr_;
         local_worker_idx_ = other.local_worker_idx_;
+        return *this;
     }
 
     ClientParam* WorkerParam::getLocalClientParamPtr()

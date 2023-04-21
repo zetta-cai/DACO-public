@@ -19,6 +19,10 @@ namespace covered
     class WorkloadBase
     {
     public:
+        static const std::string FACEBOOK_WORKLOAD_NAME;
+
+        static WorkloadBase* getWorkloadGenerator(std::string workload_name);
+
         WorkloadBase();
         virtual ~WorkloadBase();
 
