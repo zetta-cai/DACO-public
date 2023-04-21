@@ -1,5 +1,6 @@
-#include "common/util.h"
 #include "worker_param.h"
+
+#include "common/util.h"
 
 namespace covered
 {

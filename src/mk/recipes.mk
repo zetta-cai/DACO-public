@@ -14,7 +14,7 @@ DEPENDENCY.c ?= $(CC) $(CFLAGS) $(CPPFLAGS) -MM
 # Note: $$ refers to the dollar sign itself in Makefile
 %.d: %.c
 	$(DEPENDENCY.c) $*.c > $*.Td || rm $*.Td
-	@sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' $*.Td > $@
+	@sed 's,\($(notdir $*)\)\.o[ :]*,$*.o $@ : ,g' $*.Td > $@
 #	@sed -e 's/.*://' -e 's/\\$$//' < $*.Td | fmt -1 | \
 #	  sed -e 's/^ *//' -e 's/$$/:/' >> $*.d
 	@rm -f $*.Td

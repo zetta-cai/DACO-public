@@ -1,10 +1,10 @@
+#include "common/util.h"
+
 #include <sstream> // ostringstream
 #include <iostream> // cerr
 
 #include <boost/system.hpp>
 #include <boost/filesystem.hpp>
-
-#include "common/util.h"
 
 namespace covered
 {

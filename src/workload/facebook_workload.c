@@ -1,15 +1,16 @@
+#include "workload/facebook_workload.h"
+
 #include <memory> // std::make_unique
 #include <random> // std::mt19937_64, std::discrete_distribution
 
 #include <cachelib/cachebench/workload/PieceWiseReplayGenerator.h>
 #include <cachelib/cachebench/workload/KVReplayGenerator.h>
-#include <cachelib/cachebench/workload/WorkloadGenerator.h>
 #include <cachelib/cachebench/workload/OnlineGenerator.h>
 
 #include "common/util.h"
 #include "common/param.h"
 #include "common/config.h"
-#include "workload/facebook_workload.h"
+#include "workload/cachebench/workload_generator.h"
 
 namespace covered
 {
@@ -46,7 +47,7 @@ namespace covered
     void FacebookWorkload::initWorkloadParameters()
     {
         // Load workload config file for Facebook CDN trace
-        facebook::cachelib::cachebench::CacheBenchConfig facebook_config(Config::getFacebookConfigFilepath());
+        CacheBenchConfig facebook_config(Config::getFacebookConfigFilepath());
         //facebook_cache_config_ = facebook_config.getCacheConfig();
         facebook_stressor_config_ = facebook_config.getStressorConfig();
         return;
@@ -70,26 +71,6 @@ namespace covered
         }
     }
 
-    // The same makeGenerator as in lib/CacheLib/cachelib/cachebench/runner/Stressor.cpp
-    namespace {
-        std::unique_ptr<facebook::cachelib::cachebench::GeneratorBase> makeGenerator(const facebook::cachelib::cachebench::StressorConfig& config) {
-            if (config.generator == "piecewise-replay") {
-                return std::make_unique<facebook::cachelib::cachebench::PieceWiseReplayGenerator>(config);
-            } else if (config.generator == "replay") {
-                return std::make_unique<facebook::cachelib::cachebench::KVReplayGenerator>(config);
-            } else if (config.generator.empty() || config.generator == "workload") {
-                // TODO: Remove the empty() check once we label workload-based configs
-                // properly
-                return std::make_unique<facebook::cachelib::cachebench::WorkloadGenerator>(config);
-            } else if (config.generator == "online") {
-                return std::make_unique<facebook::cachelib::cachebench::OnlineGenerator>(config);
-
-            } else {
-                throw std::invalid_argument("Invalid config");
-            }
-        }
-    } // Anonymous namespace (cannot be accessed outside facebook_workload.c)
-
     void FacebookWorkload::createWorkloadGenerator()
     {
         // facebook::cachelib::cachebench::WorkloadGenerator will generate keycnt key-value pairs by generateReqs() and generate opcnt requests by generateKeyDistributions() in constructor
@@ -109,5 +90,32 @@ namespace covered
 
         last_reqid_ = tmp_facebook_req.requestId;
         return Request(tmp_covered_key, tmp_covered_value);
+    }
+
+    // The same makeGenerator as in lib/CacheLib/cachelib/cachebench/runner/Stressor.cpp
+    std::unique_ptr<facebook::cachelib::cachebench::GeneratorBase> FacebookWorkload::makeGenerator(const StressorConfig& config)
+    {
+        if (config.generator == "piecewise-replay") {
+            Util::dumpErrorMsg(kClassName, "piecewise-replay generator is not supported now!");
+            exit(1);
+            // TODO: copy PieceWiseReplayGenerator into namespace covered to support covered::StressorConfig
+            //return std::make_unique<facebook::cachelib::cachebench::PieceWiseReplayGenerator>(config);
+        } else if (config.generator == "replay") {
+            Util::dumpErrorMsg(kClassName, "replay generator is not supported now!");
+            exit(1);
+            // TODO: copy KVReplayGenerator into namespace covered to support covered::StressorConfig
+            //return std::make_unique<facebook::cachelib::cachebench::KVReplayGenerator>(config);
+        } else if (config.generator.empty() || config.generator == "workload") {
+            // TODO: Remove the empty() check once we label workload-based configs
+            // properly
+            return std::make_unique<covered::WorkloadGenerator>(config);
+        } else if (config.generator == "online") {
+            Util::dumpErrorMsg(kClassName, "online generator is not supported now!");
+            exit(1);
+            // TODO: copy OnlineGenerator into namespace covered to support covered::StressorConfig
+            //return std::make_unique<facebook::cachelib::cachebench::OnlineGenerator>(config);
+        } else {
+            throw std::invalid_argument("Invalid config");
+        }
     }
 }

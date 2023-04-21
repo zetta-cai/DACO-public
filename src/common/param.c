@@ -1,8 +1,9 @@
+#include "common/param.h"
+
 #include <cstdlib> // exit
 #include <sstream> // ostringstream
 
 #include "common/util.h"
-#include "common/param.h"
 
 namespace covered
 {

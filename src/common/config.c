@@ -1,3 +1,5 @@
+#include "common/config.h"
+
 #include <fstream> // ifstream
 #include <sstream> // ostringstream
 #include <vector>
@@ -5,9 +7,6 @@
 
 #include "common/util.h"
 #include "common/param.h"
-#include "common/config.h"
-
-#include <iostream>
 
 namespace covered
 {

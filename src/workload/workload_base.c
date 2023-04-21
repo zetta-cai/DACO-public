@@ -1,7 +1,8 @@
+#include "workload/workload_base.h"
+
 #include <sstream>
 
 #include "common/util.h"
-#include "workload/workload_base.h"
 #include "workload/facebook_workload.h"
 
 namespace covered

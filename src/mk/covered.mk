@@ -15,7 +15,7 @@ DEPS += $(COMMON_OBJECTS:.o=.d)
 CLEANS += $(COMMON_OBJECTS) $(COMMON_SHARED_OBJECTS)
 
 # workload module
-WORKLOAD_OBJECTS += $(COVERED_DIRPATH)/workload/workload_base.o $(COVERED_DIRPATH)/workload/facebook_workload.o
+WORKLOAD_OBJECTS += $(COVERED_DIRPATH)/workload/workload_base.o $(COVERED_DIRPATH)/workload/facebook_workload.o $(COVERED_DIRPATH)/workload/cachebench/workload_generator.o $(COVERED_DIRPATH)/workload/cachebench/cachebench_config.o
 WORKLOAD_SHARED_OBJECTS += $(WORKLOAD_OBJECTS:.o=.shared.o)
-DEPS += $(WORKLOAD_SHARED_OBJECTS:.o=.d)
-CLEANS += $(WORKLOAD_SHARED_OBJECTS) $(WORKLOAD_SHARED_OBJECTS)
+DEPS += $(WORKLOAD_OBJECTS:.o=.d)
+CLEANS += $(WORKLOAD_OBJECTS) $(WORKLOAD_SHARED_OBJECTS)

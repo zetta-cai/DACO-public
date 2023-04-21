@@ -1,9 +1,10 @@
+#include "benchmark/benchmark_util.h"
+
 #include <pthread.h>
 
 #include "common/util.h"
 #include "common/param.h"
 #include "common/config.h"
-#include "benchmark/benchmark_util.h"
 
 namespace covered
 {

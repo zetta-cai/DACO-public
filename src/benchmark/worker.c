@@ -1,10 +1,11 @@
+#include "benchmark/worker.h"
+
 #include <sstream>
 #include <assert.h> // assert
 
 #include "common/util.h"
 #include "common/request.h"
 #include "benchmark/client_param.h"
-#include "benchmark/worker.h"
 
 namespace covered
 {
@@ -53,6 +54,7 @@ namespace covered
             std::ostringstream oss;
             oss << "keystr: " << current_request.getKey().getKeystr() << "; valuesize: " << current_request.getValue().getValuesize() << std::endl;
             Util::dumpNormalMsg(kClassName, oss.str());
+            break;
 
             // TODO: convert the request into UDP packets
             // TODO: communicate with local edge node listening on a specific port for the worker

@@ -10,11 +10,11 @@
 #include <string>
 
 //#include <cachelib/cachebench/util/CacheConfig.h>
-#include <cachelib/cachebench/util/Config.h>
 #include <cachelib/cachebench/workload/GeneratorBase.h>
 
 #include "common/request.h"
 #include "workload/workload_base.h"
+#include "workload/cachebench/cachebench_config.h"
 
 namespace covered
 {
@@ -32,12 +32,14 @@ namespace covered
 
         virtual Request generateReqInternal() override;
 
+        std::unique_ptr<facebook::cachelib::cachebench::GeneratorBase> makeGenerator(const StressorConfig& config);
+
         std::mt19937_64* req_randgen_ptr_;
         std::discrete_distribution<>* op_pool_dist_ptr_;
         std::optional<uint64_t> last_reqid_;
 
         //facebook::cachelib::cachebench::CacheConfig facebook_cache_config_;
-        facebook::cachelib::cachebench::StressorConfig facebook_stressor_config_;
+        StressorConfig facebook_stressor_config_;
         std::unique_ptr<facebook::cachelib::cachebench::GeneratorBase> workload_generator_;
     };
 }
