@@ -11,6 +11,7 @@ namespace covered
     const int64_t Util::MAX_UINT16 = 65536;
     const std::string Util::LOCALHOST_IPSTR("127.0.0.1");
     const unsigned int Util::SLEEP_INTERVAL_US = 1 * 1000 * 1000; // 1s
+    const uint32_t Util::KVPAIR_GENERATION_SEED = 0;
 
     const std::string Util::kClassName("Util");
 

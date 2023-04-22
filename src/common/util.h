@@ -18,6 +18,7 @@ namespace covered
         static const int64_t MAX_UINT16;
         static const std::string LOCALHOST_IPSTR;
         static const unsigned int SLEEP_INTERVAL_US;
+        static const uint32_t KVPAIR_GENERATION_SEED;
 
         // I/O
         static void dumpNormalMsg(const std::string& class_name, const std::string& normal_message);

@@ -19,23 +19,11 @@ namespace covered
     // TODO: give random seeds for key-value pair generation (0) and request generation (global_client_idx)
     FacebookWorkload::FacebookWorkload()
     {
-        // Create random generators
-        req_randgen_ptr_ = new std::mt19937_64(folly::Random::rand64());
-        if (req_randgen_ptr_ == NULL)
-        {
-            Util::dumpErrorMsg(kClassName, "failed to create random generator for requests!");
-            exit(1);
-        }
-
         last_reqid_ = std::nullopt; // Not used by WorkloadGenerator for Facebook CDN trace
     }
 
     FacebookWorkload::~FacebookWorkload()
     {
-        if (req_randgen_ptr_ != NULL)
-        {
-            delete req_randgen_ptr_;
-        }
         if (op_pool_dist_ptr_ != NULL)
         {
             delete op_pool_dist_ptr_;
@@ -71,18 +59,18 @@ namespace covered
         }
     }
 
-    void FacebookWorkload::createWorkloadGenerator()
+    void FacebookWorkload::createWorkloadGenerator(const uint32_t& global_client_idx)
     {
         // facebook::cachelib::cachebench::WorkloadGenerator will generate keycnt key-value pairs by generateReqs() and generate opcnt requests by generateKeyDistributions() in constructor
-        workload_generator_ = makeGenerator(facebook_stressor_config_);
+        workload_generator_ = makeGenerator(facebook_stressor_config_, global_client_idx);
     }
 
-    Request FacebookWorkload::generateReqInternal()
+    Request FacebookWorkload::generateReqInternal(std::mt19937_64& request_randgen)
     {
         // Must be 0 for Facebook CDN trace due to only a single operation pool (cachelib::PoolId = int8_t)
-        const uint8_t tmp_poolid = static_cast<uint8_t>((*op_pool_dist_ptr_)(*req_randgen_ptr_));
+        const uint8_t tmp_poolid = static_cast<uint8_t>((*op_pool_dist_ptr_)(request_randgen));
 
-        const facebook::cachelib::cachebench::Request& tmp_facebook_req(workload_generator_->getReq(tmp_poolid, *req_randgen_ptr_, last_reqid_));
+        const facebook::cachelib::cachebench::Request& tmp_facebook_req(workload_generator_->getReq(tmp_poolid, request_randgen, last_reqid_));
 
         // Convert facebook::cachelib::cachebench::Request to covered::Request
         const Key tmp_covered_key(tmp_facebook_req.key);
@@ -93,7 +81,7 @@ namespace covered
     }
 
     // The same makeGenerator as in lib/CacheLib/cachelib/cachebench/runner/Stressor.cpp
-    std::unique_ptr<facebook::cachelib::cachebench::GeneratorBase> FacebookWorkload::makeGenerator(const StressorConfig& config)
+    std::unique_ptr<facebook::cachelib::cachebench::GeneratorBase> FacebookWorkload::makeGenerator(const StressorConfig& config, const uint32_t& global_client_idx)
     {
         if (config.generator == "piecewise-replay") {
             Util::dumpErrorMsg(kClassName, "piecewise-replay generator is not supported now!");
@@ -108,7 +96,7 @@ namespace covered
         } else if (config.generator.empty() || config.generator == "workload") {
             // TODO: Remove the empty() check once we label workload-based configs
             // properly
-            return std::make_unique<covered::WorkloadGenerator>(config);
+            return std::make_unique<covered::WorkloadGenerator>(config, global_client_idx);
         } else if (config.generator == "online") {
             Util::dumpErrorMsg(kClassName, "online generator is not supported now!");
             exit(1);

@@ -18,10 +18,10 @@
 #include <vector>
 
 #include <cachelib/cachebench/cache/Cache.h>
-#include <cachelib/cachebench/util/Parallel.h>
 #include <cachelib/cachebench/util/Request.h>
 #include <cachelib/cachebench/workload/GeneratorBase.h>
 
+#include "workload/cachebench/parallel.h"
 #include "workload/cachebench/cachebench_config.h"
 #include "workload/cachebench/workload_distribution.h"
 
@@ -29,7 +29,7 @@ namespace covered {
 
 class WorkloadGenerator : public facebook::cachelib::cachebench::GeneratorBase {
  public:
-  explicit WorkloadGenerator(const StressorConfig& config);
+  explicit WorkloadGenerator(const StressorConfig& config, const uint32_t& global_client_idx);
   virtual ~WorkloadGenerator() {}
 
   const facebook::cachelib::cachebench::Request& getReq(
@@ -48,6 +48,7 @@ class WorkloadGenerator : public facebook::cachelib::cachebench::GeneratorBase {
   size_t workloadIdx(size_t i) { return workloadDist_.size() > 1 ? i : 0; }
 
   const StressorConfig config_;
+  const uint32_t global_client_idx_;
   std::vector<std::string> keys_;
   std::vector<std::vector<size_t>> sizes_;
   std::vector<facebook::cachelib::cachebench::Request> reqs_; // key-value pairs

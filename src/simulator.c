@@ -109,7 +109,7 @@ int main(int argc, char **argv) {
     {
         uint16_t local_client_workload_startport = covered::BenchmarkUtil::getLocalClientWorkloadStartport(global_client_idx);
         std::string local_edge_node_ipstr = covered::BenchmarkUtil::getLocalEdgeNodeIpstr(global_client_idx);
-        workload_generator_ptrs[global_client_idx] = covered::WorkloadBase::getWorkloadGenerator(workload_name);
+        workload_generator_ptrs[global_client_idx] = covered::WorkloadBase::getWorkloadGenerator(workload_name, global_client_idx);
 
         covered::ClientParam local_client_param(global_client_idx, local_client_workload_startport, local_edge_node_ipstr, workload_generator_ptrs[global_client_idx]);
         client_params[global_client_idx] = local_client_param;

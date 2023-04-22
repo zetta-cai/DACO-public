@@ -14,8 +14,9 @@ namespace covered
     class BenchmarkUtil
     {
     public:
-        static uint16_t getLocalClientWorkloadStartport(uint32_t global_client_idx);
-        static std::string getLocalEdgeNodeIpstr(uint32_t global_client_idx);
+        static uint16_t getLocalClientWorkloadStartport(const uint32_t& global_client_idx);
+        static std::string getLocalEdgeNodeIpstr(const uint32_t& global_client_idx);
+        static uint32_t getGlobalWorkerIdx(const uint32_t& global_client_idx, const uint32_t local_worker_idx);
     private:
         static const std::string kClassName;
     };

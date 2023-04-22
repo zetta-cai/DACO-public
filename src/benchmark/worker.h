@@ -11,6 +11,7 @@
 #define WORKER_H
 
 #include <string>
+#include <random> // std::mt19937_64
 
 #include "benchmark/worker_param.h"
 
@@ -29,6 +30,7 @@ namespace covered
         static const std::string kClassName;
 
         WorkerParam* local_worker_param_ptr_;
+        std::mt19937_64* request_randgen_ptr_;
     };
 }
 

@@ -43,6 +43,7 @@ namespace covered
         pthread_t local_worker_threads[perclient_workercnt];
         WorkerParam local_worker_params[perclient_workercnt];
         int pthread_returncode;
+        assert(local_client_param_ptr_ != NULL);
 
         // Prepare perclient_workercnt worker parameters
         for (uint32_t local_worker_idx = 0; local_worker_idx < perclient_workercnt; local_worker_idx++)
@@ -58,7 +59,6 @@ namespace covered
             if (pthread_returncode != 0)
             {
                 std::ostringstream oss;
-                assert(local_client_param_ptr_ != NULL);
                 oss << "client " << local_client_param_ptr_->getGlobalClientIdx() << " failed to launch worker " << local_worker_idx << " (error code: " << pthread_returncode << ")" << std::endl;
                 covered::Util::dumpErrorMsg(kClassName, oss.str());
                 exit(1);
@@ -72,7 +72,6 @@ namespace covered
             if (pthread_returncode != 0)
             {
                 std::ostringstream oss;
-                assert(local_client_param_ptr_ != NULL);
                 oss << "client " << local_client_param_ptr_->getGlobalClientIdx() << " failed to join worker " << local_worker_idx << " (error code: " << pthread_returncode << ")" << std::endl;
                 covered::Util::dumpErrorMsg(kClassName, oss.str());
                 exit(1);

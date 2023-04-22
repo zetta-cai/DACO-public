@@ -10,7 +10,7 @@ namespace covered
 {
     const std::string BenchmarkUtil::kClassName("BenchmarkUtil");
 
-    uint16_t BenchmarkUtil::getLocalClientWorkloadStartport(uint32_t global_client_idx)
+    uint16_t BenchmarkUtil::getLocalClientWorkloadStartport(const uint32_t& global_client_idx)
     {
         int64_t local_client_workload_startport = 0;
         int64_t global_client_workload_startport = static_cast<int64_t>(covered::Config::getGlobalClientWorkloadStartport());
@@ -26,7 +26,7 @@ namespace covered
         return covered::Util::toUint16(local_client_workload_startport);
     }
 
-    std::string BenchmarkUtil::getLocalEdgeNodeIpstr(uint32_t global_client_idx)
+    std::string BenchmarkUtil::getLocalEdgeNodeIpstr(const uint32_t& global_client_idx)
     {
         std::string local_edge_node_ipstr = "";
         if (covered::Param::isSimulation())
@@ -40,5 +40,11 @@ namespace covered
             exit(1);
         }
         return local_edge_node_ipstr;
+    }
+
+    uint32_t BenchmarkUtil::getGlobalWorkerIdx(const uint32_t& global_client_idx, const uint32_t local_worker_idx)
+    {
+        uint32_t global_worker_idx = global_client_idx * Param::getPerclientWorkercnt() + local_worker_idx;
+        return global_worker_idx;
     }
 }

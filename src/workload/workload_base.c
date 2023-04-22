@@ -11,7 +11,7 @@ namespace covered
 
     const std::string WorkloadBase::kClassName = "WorkloadBase";
 
-    WorkloadBase* WorkloadBase::getWorkloadGenerator(std::string workload_name)
+    WorkloadBase* WorkloadBase::getWorkloadGenerator(std::string workload_name, const uint32_t& global_client_idx)
     {
         WorkloadBase* workload_ptr = NULL;
         if (workload_name == FACEBOOK_WORKLOAD_NAME)
@@ -28,7 +28,7 @@ namespace covered
 
         if (workload_ptr != NULL)
         {
-            workload_ptr->validate(); // validate workload before generating each request
+            workload_ptr->validate(global_client_idx); // validate workload before generating each request
         }
 
         return workload_ptr;
@@ -41,13 +41,13 @@ namespace covered
 
     WorkloadBase::~WorkloadBase() {}
 
-    void WorkloadBase::validate()
+    void WorkloadBase::validate(const uint32_t& global_client_idx)
     {
         if (!is_valid_)
         {
             initWorkloadParameters();
             overwriteWorkloadParameters();
-            createWorkloadGenerator();
+            createWorkloadGenerator(global_client_idx);
 
             is_valid_ = true;
         }
@@ -58,10 +58,10 @@ namespace covered
         return;
     }
 
-    Request WorkloadBase::generateReq()
+    Request WorkloadBase::generateReq(std::mt19937_64& request_randgen)
     {
         checkIsValid();
-        return generateReqInternal();
+        return generateReqInternal(request_randgen);
     }
 
     void WorkloadBase::checkIsValid()

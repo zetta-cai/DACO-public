@@ -4,10 +4,12 @@
 #include <chrono>
 #include <iostream>
 
+#include "common/util.h"
+
 namespace covered {
 
-WorkloadGenerator::WorkloadGenerator(const StressorConfig& config)
-    : config_{config} {
+WorkloadGenerator::WorkloadGenerator(const StressorConfig& config, const uint32_t& global_client_idx)
+    : config_{config}, global_client_idx_(global_client_idx) {
   for (const auto& c : config.poolDistributions) {
     if (c.keySizeRange.size() != c.keySizeRangeProbability.size() + 1) {
       throw std::invalid_argument(
@@ -27,6 +29,7 @@ WorkloadGenerator::WorkloadGenerator(const StressorConfig& config)
   generateKeyDistributions();
 }
 
+// gen is passed by each per-client worker to get different requests
 const facebook::cachelib::cachebench::Request& WorkloadGenerator::getReq(uint8_t poolId,
                                          std::mt19937_64& gen,
                                          std::optional<uint64_t>) {
@@ -42,10 +45,12 @@ const facebook::cachelib::cachebench::Request& WorkloadGenerator::getReq(uint8_t
 
 void WorkloadGenerator::generateKeys() {
   uint8_t pid = 0;
-  auto fn = [pid, this](size_t start, size_t end) {
+  auto fn = [pid, this](size_t start, size_t end, size_t local_thread_idx) -> void {
     // All keys are printable lower case english alphabet.
     std::uniform_int_distribution<char> charDis('a', 'z');
-    std::mt19937_64 gen(folly::Random::rand64());
+    //std::mt19937_64 gen(folly::Random::rand64());
+    // Siyuan: ensure that multiple clients generate the same set of key-value pairs
+    std::mt19937_64 gen(Util::KVPAIR_GENERATION_SEED + local_thread_idx);
     for (uint64_t i = start; i < end; i++) {
       size_t keySize =
           facebook::cachelib::util::narrow_cast<size_t>(workloadDist_[pid].sampleKeySizeDist(gen));
@@ -54,6 +59,7 @@ void WorkloadGenerator::generateKeys() {
         c = charDis(gen);
       }
     }
+    return;
   };
 
   size_t totalKeys(0);
@@ -64,7 +70,7 @@ void WorkloadGenerator::generateKeys() {
     size_t numKeysForPool =
         firstKeyIndexForPool_[i + 1] - firstKeyIndexForPool_[i];
     totalKeys += numKeysForPool;
-    keyGenDuration += facebook::cachelib::cachebench::detail::executeParallel(
+    keyGenDuration += covered::executeParallel(
         fn, config_.numThreads, numKeysForPool, firstKeyIndexForPool_[i]);
   }
 
@@ -96,7 +102,9 @@ void WorkloadGenerator::generateKeys() {
 void WorkloadGenerator::generateReqs() {
   generateFirstKeyIndexForPool();
   generateKeys();
-  std::mt19937_64 gen(folly::Random::rand64());
+  //std::mt19937_64 gen(folly::Random::rand64());
+  // Siyuan: ensure that multiple clients generate the same set of key-value pairs
+  std::mt19937_64 gen(Util::KVPAIR_GENERATION_SEED);
   for (size_t i = 0; i < config_.keyPoolDistribution.size(); i++) {
     size_t idx = workloadIdx(i);
     for (size_t j = firstKeyIndexForPool_[i]; j < firstKeyIndexForPool_[i + 1];
@@ -153,9 +161,13 @@ void WorkloadGenerator::generateKeyDistributions() {
         0, facebook::cachelib::util::narrow_cast<uint32_t>(numOpsForPool) - 1));
     keyIndicesForPool_.push_back(std::vector<uint32_t>(numOpsForPool));
 
-    duration += facebook::cachelib::cachebench::detail::executeParallel(
-        [&, this](size_t start, size_t end) {
-          std::mt19937_64 gen(folly::Random::rand64());
+    duration += covered::executeParallel(
+        [&, this](size_t start, size_t end, size_t local_thread_idx) {
+          //std::mt19937_64 gen(folly::Random::rand64());
+          // Siyuan: use global_thread_idx to ensure that multiple clients generate different sets of requests
+          // Siyuan: we need this->config_.numThreads + 1, as Parallel may create an extra thread to generate remaining requests
+          uint32_t global_thread_idx = this->global_client_idx_ * (this->config_.numThreads + 1) + local_thread_idx;
+          std::mt19937_64 gen(global_thread_idx);
           auto popDist = workloadDist_[idx].getPopDist(left, right); // FastDiscreteDistribution
           for (uint64_t j = start; j < end; j++) {
             keyIndicesForPool_[i][j] =
