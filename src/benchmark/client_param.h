@@ -17,9 +17,6 @@ namespace covered
     class ClientParam
     {
     public:
-        static std::memory_order LOAD_CONCURRENCY_ORDER;
-        static std::memory_order STORE_CONCURRENCY_ORDER;
-
         ClientParam();
         ClientParam(const uint32_t& global_client_idx, const uint16_t& local_client_workload_startport, const std::string& local_edge_node_ipstr, WorkloadBase* workload_generator_ptr);
         ~ClientParam();

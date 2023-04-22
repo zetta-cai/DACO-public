@@ -14,6 +14,12 @@ COMMON_SHARED_OBJECTS += $(COMMON_OBJECTS:.o=.shared.o)
 DEPS += $(COMMON_OBJECTS:.o=.d)
 CLEANS += $(COMMON_OBJECTS) $(COMMON_SHARED_OBJECTS)
 
+# edge module
+EDGE_OBJECTS += $(COVERED_DIRPATH)/edge/edge_param.o $(COVERED_DIRPATH)/edge/edge_wrapper.EDGE_OBJECTS
+EDGE_SHARED_OBJECTS += $(EDGE_OBJECTS:.o=.shared.o)
+DEPS += $(EDGE_OBJECTS:.o=.d)
+CLEANS += $(EDGE_OBJECTS) $(EDGE_SHARED_OBJECTS)
+
 # workload module
 WORKLOAD_OBJECTS += $(COVERED_DIRPATH)/workload/workload_base.o $(COVERED_DIRPATH)/workload/facebook_workload.o $(COVERED_DIRPATH)/workload/cachebench/workload_generator.o $(COVERED_DIRPATH)/workload/cachebench/cachebench_config.o
 WORKLOAD_SHARED_OBJECTS += $(WORKLOAD_OBJECTS:.o=.shared.o)

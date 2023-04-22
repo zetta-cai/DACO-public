@@ -11,8 +11,8 @@
 namespace covered
 {
     const std::string Config::VERSION_KEYSTR("version");
-    const std::string Config::GLOBAL_CLIENT_WORKLOAD_STARTPORT_KEYSTR("global_client_workload_startport");
     const std::string Config::FACEBOOK_CONFIG_FILEPATH_KEYSTR("facebook_config_filepath");
+    const std::string Config::GLOBAL_EDGE_RECVREQ_STARTPORT_KEYSTR("global_edge_recvreq_startport");
 
     const std::string Config::kClassName("Config");
 
@@ -20,8 +20,8 @@ namespace covered
     bool Config::is_valid_ = false;
     boost::json::object Config::json_object_ = boost::json::object();
     std::string Config::version_("1.0");
-    uint16_t Config::global_client_workload_startport_ = 4100; // [4096, 65536]
     std::string Config::facebook_config_filepath_("lib/CacheLib/cachelib/cachebench/test_configs/hit_ratio/cdn/config.json");
+    uint16_t Config::global_edge_recvreq_startport_ = 4100; // [4096, 65536]
 
     void Config::loadConfig()
     {
@@ -39,16 +39,16 @@ namespace covered
             {
                 version_ = kv_ptr->value().get_string();
             }
-            kv_ptr = find(GLOBAL_CLIENT_WORKLOAD_STARTPORT_KEYSTR);
-            if (kv_ptr != NULL)
-            {
-                int64_t tmp_port = kv_ptr->value().get_int64();
-                global_client_workload_startport_ = Util::toUint16(tmp_port);
-            }
             kv_ptr = find(FACEBOOK_CONFIG_FILEPATH_KEYSTR);
             if (kv_ptr != NULL)
             {
                 facebook_config_filepath_ = kv_ptr->value().get_string();
+            }
+            kv_ptr = find(GLOBAL_EDGE_RECVREQ_STARTPORT_KEYSTR);
+            if (kv_ptr != NULL)
+            {
+                int64_t tmp_port = kv_ptr->value().get_int64();
+                global_edge_recvreq_startport_ = Util::toUint16(tmp_port);
             }
 
             is_valid_ = true; // valid Config
@@ -74,16 +74,16 @@ namespace covered
         return version_;
     }
 
-    uint16_t Config::getGlobalClientWorkloadStartport()
-    {
-        checkIsValid();
-        return global_client_workload_startport_;
-    }
-
     std::string Config::getFacebookConfigFilepath()
     {
         checkIsValid();
         return facebook_config_filepath_;
+    }
+
+    uint16_t Config::getGlobalEdgeRecvreqStartport()
+    {
+        checkIsValid();
+        return global_edge_recvreq_startport_;
     }
 
     std::string Config::toString()

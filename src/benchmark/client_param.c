@@ -4,9 +4,6 @@
 
 namespace covered
 {
-    std::memory_order ClientParam::LOAD_CONCURRENCY_ORDER = std::memory_order_acquire;
-    std::memory_order ClientParam::STORE_CONCURRENCY_ORDER = std::memory_order_release;
-
     const std::string ClientParam::kClassName("ClientParam");
 
     ClientParam::ClientParam() : local_client_running_(false)
@@ -34,7 +31,7 @@ namespace covered
 
     const ClientParam& ClientParam::operator=(const ClientParam& other)
     {
-        local_client_running_.store(other.local_client_running_.load(LOAD_CONCURRENCY_ORDER), STORE_CONCURRENCY_ORDER);
+        local_client_running_.store(other.local_client_running_.load(Util::LOAD_CONCURRENCY_ORDER), Util::STORE_CONCURRENCY_ORDER);
         global_client_idx_ = other.global_client_idx_;
         local_client_workload_startport_ = other.local_client_workload_startport_;
         local_edge_node_ipstr_ = other.local_edge_node_ipstr_;
@@ -49,17 +46,17 @@ namespace covered
 
     bool ClientParam::isClientRunning()
     {
-        return local_client_running_.load(LOAD_CONCURRENCY_ORDER);
+        return local_client_running_.load(Util::LOAD_CONCURRENCY_ORDER);
     }
 
     void ClientParam::setClientRunning()
     {
-        return local_client_running_.store(true, STORE_CONCURRENCY_ORDER);
+        return local_client_running_.store(true, Util::STORE_CONCURRENCY_ORDER);
     }
 
     void ClientParam::resetClientRunning()
     {
-        return local_client_running_.store(false, STORE_CONCURRENCY_ORDER);
+        return local_client_running_.store(false, Util::STORE_CONCURRENCY_ORDER);
     }
 
     uint32_t ClientParam::getGlobalClientIdx()

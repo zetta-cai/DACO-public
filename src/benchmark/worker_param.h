@@ -29,7 +29,6 @@ namespace covered
         static const std::string kClassName;
 
         ClientParam* local_client_param_ptr_;
-        // Worker UDP port is local_client_workload_startport + local_worker_idx
         uint32_t local_worker_idx_;
     };
 }

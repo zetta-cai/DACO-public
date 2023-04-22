@@ -6,14 +6,21 @@
 #include <boost/system.hpp>
 #include <boost/filesystem.hpp>
 
+#include "common/param.h"
+#include "common/config.h"
+
 namespace covered
 {
     const int64_t Util::MAX_UINT16 = 65536;
     const std::string Util::LOCALHOST_IPSTR("127.0.0.1");
+    std::memory_order Util::LOAD_CONCURRENCY_ORDER = std::memory_order_acquire;
+    std::memory_order Util::STORE_CONCURRENCY_ORDER = std::memory_order_release;
     const unsigned int Util::SLEEP_INTERVAL_US = 1 * 1000 * 1000; // 1s
     const uint32_t Util::KVPAIR_GENERATION_SEED = 0;
 
     const std::string Util::kClassName("Util");
+
+    // I/O
 
     void Util::dumpNormalMsg(const std::string& class_name, const std::string& normal_message)
     {
@@ -78,6 +85,8 @@ namespace covered
         return true;
     }
 
+    // Time measurement
+
     struct timespec Util::getCurrentTimespec()
     {
         struct timespec current_timespec;
@@ -100,6 +109,8 @@ namespace covered
         return delta_time;
     }
 
+    // Type conversion
+
     uint16_t Util::toUint16(const int64_t& val)
     {
         if (val >= 0 && val < MAX_UINT16)
@@ -114,5 +125,60 @@ namespace covered
             dumpErrorMsg(kClassName, oss.str());
             exit(1);
         }
+    }
+
+    // Client-edge-cloud scenario
+
+    /*uint16_t Util::getLocalClientSendreqStartport(const uint32_t& global_client_idx)
+    {
+        int64_t local_client_sendreq_startport = 0;
+        int64_t global_client_sendreq_startport = static_cast<int64_t>(covered::Config::getGlobalClientSendreqStartport());
+        if (covered::Param::isSimulation())
+        {
+            int64_t perclient_workercnt = static_cast<int64_t>(covered::Param::getPerclientWorkercnt());
+            local_client_sendreq_startport = global_client_sendreq_startport + static_cast<int64_t>(global_client_idx) * perclient_workercnt;
+        }
+        else
+        {
+            local_client_sendreq_startport = global_client_sendreq_startport;
+        }
+        return covered::Util::toUint16(local_client_sendreq_startport);
+    }*/
+
+    std::string Util::getLocalEdgeNodeIpstr(const uint32_t& global_client_idx)
+    {
+        std::string local_edge_node_ipstr = "";
+        if (covered::Param::isSimulation())
+        {
+            local_edge_node_ipstr = covered::Util::LOCALHOST_IPSTR;
+        }
+        else
+        {
+            // TODO: set local_edge_node_ipstr based on covered::Config
+            covered::Util::dumpErrorMsg(kClassName, "NOT support getLocalEdgeNodeIpstr for prototype now!");
+            exit(1);
+        }
+        return local_edge_node_ipstr;
+    }
+
+    uint32_t Util::getGlobalWorkerIdx(const uint32_t& global_client_idx, const uint32_t local_worker_idx)
+    {
+        uint32_t global_worker_idx = global_client_idx * Param::getPerclientWorkercnt() + local_worker_idx;
+        return global_worker_idx;
+    }
+
+    uint16_t Util::getLocalEdgeRecvreqPort(const uint32_t& global_edge_idx)
+    {
+        int64_t local_edge_recvreq_port = 0;
+        int64_t global_edge_recvreq_startport = static_cast<int64_t>(covered::Config::getGlobalEdgeRecvreqStartport());
+        if (covered::Param::isSimulation())
+        {
+            local_edge_recvreq_port = global_edge_recvreq_startport + global_edge_idx;
+        }
+        else
+        {
+            local_edge_recvreq_port = global_edge_recvreq_startport;
+        }
+        return covered::Util::toUint16(local_edge_recvreq_port);
     }
 }

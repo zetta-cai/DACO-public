@@ -26,12 +26,13 @@ int main(int argc, char **argv) {
     ;
     // Dynamic configurations
     argument_desc.add_options()
-        ("config_file,f", boost::program_options::value<std::string>()->default_value("config.json"), "specify config file path of COVERED")
+        ("config_file,f", boost::program_options::value<std::string>()->default_value("config.json"), "config file path of COVERED")
         ("debug", "enable debug information")
+        ("edgecnt,e", boost:program_options::value<uint32_t>()->default_value(1), "the number of edge nodes")
         ("keycnt,k", boost::program_options::value<uint32_t>()->default_value(1000000), "the total number of keys")
         ("opcnt,o", boost::program_options::value<uint32_t>()->default_value(1000000), "the total number of operations")
-        ("clientcnt,c", boost::program_options::value<uint32_t>()->default_value(2), "the total number of clients")
-        ("perclient_workercnt,p", boost::program_options::value<uint32_t>()->default_value(10), "the number of worker threads for each client")
+        ("clientcnt,c", boost::program_options::value<uint32_t>()->default_value(1), "the total number of clients")
+        ("perclient_workercnt,p", boost::program_options::value<uint32_t>()->default_value(1), "the number of worker threads for each client")
         ("workload_name,n", boost::program_options::value<std::string>()->default_value(covered::WorkloadBase::FACEBOOK_WORKLOAD_NAME), "workload name")
         ("duration,d", boost::program_options::value<double>()->default_value(10), "benchmark duration")
     ;
@@ -65,6 +66,7 @@ int main(int argc, char **argv) {
     {
         is_debug = true;
     }
+    uint32_t edgecnt = argument_info["edgecnt"].as<uint32_t>();
     uint32_t keycnt = argument_info["keycnt"].as<uint32_t>();
     uint32_t opcnt = argument_info["opcnt"].as<uint32_t>();
     uint32_t clientcnt = argument_info["clientcnt"].as<uint32_t>();
@@ -73,7 +75,7 @@ int main(int argc, char **argv) {
     double duration = argument_info["duration"].as<double>();
 
     // Store CLI parameters for dynamic configurations and mark covered::Param as valid
-    covered::Param::setParameters(is_simulation, config_filepath, is_debug, keycnt, opcnt, clientcnt, perclient_workercnt, workload_name, duration);
+    covered::Param::setParameters(is_simulation, config_filepath, is_debug, edgecnt, keycnt, opcnt, clientcnt, perclient_workercnt, workload_name, duration);
 
     // (2.3) Load config file for static configurations
 
@@ -96,26 +98,61 @@ int main(int argc, char **argv) {
         covered::Util::dumpDebugMsg(main_class_name, covered::Param::toString());
         covered::Util::dumpDebugMsg(main_class_name, covered::Config::toString());
     }
+
+    // (4) TODO: Simulate cloud for backend storage
+
+    // (5) Simulate edge nodes for cooperative caching
+
+    pthread_t edge_threads[edgecnt];
+    covered::EdgeParam edge_params[edgecnt];
+    int pthread_returncode;
+
+    // (5.1) Prepare edgecnt edge parameters
+
+    for (uint32_t global_edge_idx = 0; global_edge_idx < edgecnt; global_edge_idx++)
+    {
+        covered::EdgeParam local_edge_param(global_edge_idx);
+        edge_params[global_edge_idx] = local_edge_param;
+    }
+
+    // (5.2) Launch edgecnt edge nodes
+
+    for (uint32_t global_edge_idx = 0; global_edge_idx < edgecnt; global_edge_idx++)
+    {
+        std::ostringstream oss;
+        oss << "simulate edge node " << global_edge_idx << " by pthread";
+        covered::Util::dumpNormalMsg(main_class_name, oss.str());
+
+        pthread_returncode = pthread_create(&edge_threads[global_edge_idx], NULL, covered::EdgeWrapper::launchEdge, (void*)(&(edge_params[global_edge_idx])));
+        if (pthread_returncode != 0)
+        {
+            std::ostringstream oss;
+            oss << "failed to launch edge node " << global_edge_idx << " (error code: " << pthread_returncode << ")" << std::endl;
+            covered::Util::dumpErrorMsg(main_class_name, oss.str());
+            exit(1);
+        }
+    }
     
-    // (4) Simulate multiple clients by multi-threading
+    // (6) Simulate multiple clients by multi-threading
 
     pthread_t client_threads[clientcnt];
     covered::WorkloadBase* workload_generator_ptrs[clientcnt]; // need delete
     covered::ClientParam client_params[clientcnt];
-    int pthread_returncode;
 
-    // Prepare clientcnt client parameters
+    // (6.1) Prepare clientcnt client parameters
+
     for (uint32_t global_client_idx = 0; global_client_idx < clientcnt; global_client_idx++)
     {
-        uint16_t local_client_workload_startport = covered::BenchmarkUtil::getLocalClientWorkloadStartport(global_client_idx);
-        std::string local_edge_node_ipstr = covered::BenchmarkUtil::getLocalEdgeNodeIpstr(global_client_idx);
+        uint16_t local_client_workload_startport = covered::Util::getLocalClientWorkloadStartport(global_client_idx);
+        std::string local_edge_node_ipstr = covered::Util::getLocalEdgeNodeIpstr(global_client_idx);
         workload_generator_ptrs[global_client_idx] = covered::WorkloadBase::getWorkloadGenerator(workload_name, global_client_idx);
 
         covered::ClientParam local_client_param(global_client_idx, local_client_workload_startport, local_edge_node_ipstr, workload_generator_ptrs[global_client_idx]);
         client_params[global_client_idx] = local_client_param;
     }
 
-    // Launch clientcnt clients
+    // (6.2) Launch clientcnt clients
+
     // NOTE: global_XXX is from the view of entire system, while local_XXX is from the view of each individual client
     for (uint32_t global_client_idx = 0; global_client_idx < clientcnt; global_client_idx++)
     {
@@ -133,16 +170,23 @@ int main(int argc, char **argv) {
         }
     }
 
+    // (6.3) Launch clientcnt statistics trackers
+
     // TODO: need a class StatisticsTracker (in ClientParam) to collect and process statistics of all workers within each client
         // TODO: StatisticsTracker provides a aggregate method, such that simulator can use an empty StatisticsTracker to aggregate those of all simulated clients
         // TODO: StatisticsTracker also provides serialize/deserialize methods, such that prototype can collect serialized statistics files from all physical clients and deserialize them for aggregation
 
-    // Set local_client_running_ = true in all clientcnt client parameters to start benchmark
+    // (7) Start benchmark and dump intermediate statistics
+
+    // (7.1) Set local_client_running_ = true in all clientcnt client parameters to start benchmark
+
     covered::Util::dumpNormalMsg(main_class_name, "Start benchmark...");
     for (uint32_t global_client_idx = 0; global_client_idx < clientcnt; global_client_idx++)
     {
         client_params[global_client_idx].setClientRunning();
     }
+
+    // (7.2) Dump intermediate statistics
 
     struct timespec start_timespec = covered::Util::getCurrentTimespec();
     while (true)
@@ -159,14 +203,20 @@ int main(int argc, char **argv) {
         // TODO: with the aggregated StatisticsTracker, main thread can dump statistics every 10 seconds if necessary
     }
 
-    // Reset local_client_running_ = false in all clientcnt client parameters to stop benchmark
+    // (8) Stop benchmark and dump aggregated statistics
+
+    // (8.1) Reset local_client_running_ = false in all clientcnt client parameters to stop benchmark
+
     for (uint32_t global_client_idx = 0; global_client_idx < clientcnt; global_client_idx++)
     {
         client_params[global_client_idx].resetClientRunning();
     }
     covered::Util::dumpNormalMsg(main_class_name, "Stop benchmark...");
 
-    // Wait for all clients
+    // (8.2) Wait for all sub-threads
+
+    // Wait for clientcnt clients
+    covered::Util::dumpNormalMsg(main_class_name, "wait for all clients...");
     for (uint32_t global_client_idx = 0; global_client_idx < clientcnt; global_client_idx++)
     {
         pthread_returncode = pthread_join(client_threads[global_client_idx], NULL); // void* retval = NULL
@@ -178,11 +228,29 @@ int main(int argc, char **argv) {
             exit(1);
         }
     }
-    covered::Util::dumpNormalMsg(main_class_name, "All clients are done");
+    covered::Util::dumpNormalMsg(main_class_name, "all clients are done");
+
+    // Wait for edgecnt edge nodes
+    covered::Util::dumpNormalMsg(main_class_name, "wait for all edge nodes...");
+    for (uint32_t global_edge_idx = 0; global_edge_idx < edgecnt; global_edge_idx++)
+    {
+        pthread_returncode = pthread_join(edge_threads[global_edge_idx], NULL); // void* retval = NULL
+        if (pthread_returncode != 0)
+        {
+            std::ostringstream oss;
+            oss << "failed to join edge node " << global_edge_idx << " (error code: " << pthread_returncode << ")" << std::endl;
+            covered::Util::dumpErrorMsg(main_class_name, oss.str());
+            exit(1);
+        }
+    }
+    covered::Util::dumpNormalMsg(main_class_name, "all edge nodes are done");
+
+    // (8.3) Dump aggregated statistics
 
     // TODO: with the aggregated StatisticsTracker, main thread can dump aggregated statistics after joining all sub-threads
 
-    // Delete variables in heap
+    // (8.4) Delete variables in heap
+
     for (uint32_t global_client_idx = 0; global_client_idx < clientcnt; global_client_idx++)
     {
         if (workload_generator_ptrs[global_client_idx] != NULL)

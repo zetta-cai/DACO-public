@@ -35,7 +35,7 @@ namespace covered
         assert(local_client_param_ptr != NULL);
         const uint32_t global_client_idx = local_client_param_ptr->getGlobalClientIdx();
         const uint32_t local_worker_idx = local_worker_param_ptr_->getLocalWorkerIdx();
-        uint32_t global_worker_idx = BenchmarkUtil::getGlobalWorkerIdx(global_client_idx, local_worker_idx);
+        uint32_t global_worker_idx = Util::getGlobalWorkerIdx(global_client_idx, local_worker_idx);
         request_randgen_ptr_ = new std::mt19937_64(global_worker_idx);
         if (request_randgen_ptr_ == NULL)
         {

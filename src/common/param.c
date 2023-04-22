@@ -13,6 +13,7 @@ namespace covered
     bool Param::is_simulation_ = true;
     std::string Param::config_filepath_ = "";
     bool Param::is_debug_ = false;
+    uint32_t Param::edgecnt_ = 0;
     uint32_t Param::keycnt_ = 0;
     uint32_t Param::opcnt_ = 0;
     uint32_t Param::clientcnt_ = 0;
@@ -20,11 +21,12 @@ namespace covered
     std::string Param::workload_name_ = "";
     double Param::duration_ = 0.0;
 
-    void Param::setParameters(const bool& is_simulation, const std::string& config_filepath, const bool& is_debug, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& clientcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const double& duration)
+    void Param::setParameters(const bool& is_simulation, const std::string& config_filepath, const bool& is_debug, const uint32_t& edgecnt, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& clientcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const double& duration)
     {
         is_simulation_ = is_simulation;
         config_filepath_ = config_filepath;
         is_debug_ = is_debug;
+        edgecnt_ = edgecnt;
         keycnt_ = keycnt;
         opcnt_ = opcnt;
         clientcnt_ = clientcnt;
@@ -52,6 +54,12 @@ namespace covered
     {
         checkIsValid();
         return is_debug_;
+    }
+
+    uint32_t Param::getEdgecnt()
+    {
+        checkIsValid();
+        return edgecnt_;
     }
 
     uint32_t Param::getKeycnt()
