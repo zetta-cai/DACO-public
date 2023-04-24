@@ -17,6 +17,7 @@ namespace covered
     public:
         static const int64_t MAX_UINT16; // toUint16 in Util
         static const std::string LOCALHOST_IPSTR; // getLocalEdgeNodeIpstr in Util
+        static const std::string ANY_IPSTR; // EdgeWrapper and CloudWrapper (TODO)
         static std::memory_order LOAD_CONCURRENCY_ORDER; // ClientParam
         static std::memory_order STORE_CONCURRENCY_ORDER; // ClientParam
         static const unsigned int SLEEP_INTERVAL_US; // simulator and client (TODO)

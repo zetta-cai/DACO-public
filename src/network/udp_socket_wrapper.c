@@ -6,28 +6,64 @@
 
 namespace covered
 {
-    const uint32_t SocketWrapper::SOCKET_TIMEOUT_SECONDS = 5; // 5s
-    const uint32_t SocketWrapper::SOCKET_TIMEOUT_USECONDS = 0; // 0us
-    const uint32_t SocketWrapper::UDP_PAYLOAD_MAXSIZE = 65507; // 65535(ipmax) - 20(iphdr) - 8(udphdr)
-    const uint32_t SocketWrapper::UDP_DEFAULT_RCVBUFSIZE = 212992; // 208KB used in linux by default
-    //const uint32_t SocketWrapper::UDP_LARGE_RCVBUFSIZE = 8388608; // 8MB used for large data
+    const uint32_t UdpSocketWrapper::SOCKET_TIMEOUT_SECONDS = 5; // 5s
+    const uint32_t UdpSocketWrapper::SOCKET_TIMEOUT_USECONDS = 0; // 0us
+    const uint32_t UdpSocketWrapper::UDP_PAYLOAD_MAXSIZE = 65507; // 65535(ipmax) - 20(iphdr) - 8(udphdr)
+    const uint32_t UdpSocketWrapper::UDP_DEFAULT_RCVBUFSIZE = 212992; // 208KB used in linux by default
+    //const uint32_t UdpSocketWrapper::UDP_LARGE_RCVBUFSIZE = 8388608; // 8MB used for large data
 
-    const std::string SocketWrapper::kClassName("SocketWrapper");
+    const std::string UdpSocketWrapper::kClassName("UdpSocketWrapper");
 
-    SocketWrapper(const SocketRole& role, const bool& need_timeout, const uint16_t& port) : role_(role), need_timeout_(need_timeout), port_(port)
+    UdpSocketWrapper(const SocketRole& role, const bool& need_timeout, const std::string& ipstr, const uint16_t& udp_port) : role_(role), need_timeout_(need_timeout), udp_host_ipstr_(role == SocketRole::kSocketServer ? ipstr : ""), udp_host_port_(role == SocketRole::kSocketServer ? port : 0)
     {
         if (role_ == SocketRole::kSocketClient)
         {
-            createUdpsock();
+			// Not support broadcast for UDP client 
+			if (udp_remote_ipstr_ == Util::ANY_IPSTR)
+			{
+				std::ostringstream oss;
+				oss << "invalid remote ipstr of " << udp_remote_ipstr_ << " for UDP client!";	
+				Util::dumpErrorMsg(kClassName, oss.str());
+				exit(1);
+			}
+
+			// Remote address is fixed to UDP client
+			udp_remote_ipstr_ = ipstr;
+			udp_remote_port_ = port;
+			is_receive_remote_address = true; // always true for UDP client
+
+			// Create UDP socket
+			createUdpsock();
         }
         else if (role_ == SocketRole::kSocketServer)
         {
-            createUdpsock();
-            if (port_ == 0)
-            {
-                Util::dumpErrorMsg(kClassName, "NOT set port for kSocketServer!");
-                exit(1);
-            }
+			// Not support to bind a specific host IP for UDP server
+			if (udp_host_ipstr_ != Util::ANY_IPSTR)
+			{
+				std::ostringstream oss;
+				oss << "NOT support to bind a specific host IP address " << udp_host_ipstr_ << " for UDP server now!";	
+				Util::dumpErrorMsg(kClassName, oss.str());
+				exit(1);
+			}
+
+			// UDP port must be > 4096
+			if (udp_host_port_ <= 4096)
+			{
+				std::ostringstream oss;
+				oss << "invalid host port of " << udp_host_port_ << " which should be > 4096!";	
+				Util::dumpErrorMsg(kClassName, oss.str());
+				exit(1);
+			}
+
+			// Remote address is dynamically changed by recvfrom for UDP server
+			udp_remote_ipstr_ = "";
+			udp_remote_port_ = 0;
+			is_receive_remote_address = false; // changed for UDP server
+
+			// Create UDP socket
+			createUdpsock();
+
+			// Prepare for listening on the host address
             enableReuseaddr();
             bindSockaddr();
         }
@@ -40,7 +76,44 @@ namespace covered
         }
     }
 
-    void SocketWrapper::createUdpsock() {
+	void UdpSocketWrapper::sendto(const std::vector<char>& buf)
+	{
+		// Must with valid remote address
+		if (is_receive_remote_address == false)
+		{
+			std::ostringstream oss;
+            oss << "NO remote address for SocketRole: " << static_cast<int>(role_);
+            Util::dumpErrorMsg(kClassName, oss.str());
+            exit(1);
+		}
+
+		// Prepare sockaddr based on remote address
+		struct sockaddr_in remote_sockaddr;
+        memset((void *)&remote_sockaddr, 0, sizeof(remote_sockaddr));
+        remote_sockaddr.sin_family = AF_INET;
+		inet_pton(AF_INET, udp_remote_ipstr_.c_str(), &(remote_sockaddr.sin_addr));
+        remote_sockaddr.sin_port = htons(udp_remote_port_);
+
+		// Send UDP packet
+		int flags = 0;
+		int return_code = sendto(sockfd_, payload.data(), payload.size(), flags, (struct sockaddr*)(&remote_sockaddr), sizeof(remote_sockaddr));
+		if (return_code < 0) {
+			std::ostringstream oss;
+            oss << "failed to send " << payload.size() << " bytes to remote address with ip " << udp_remote_ipstr_ << " and port " << udp_remote_port_ << " (error code: " << errno << ")";
+            Util::dumpErrorMsg(kClassName, oss.str());
+            exit(1);
+		}
+
+		// Reset is_receive_remote_address for UDP server
+		if (role_ == SocketRole::kSocketServer)
+		{
+			is_receive_remote_address = false; // to be set by the next recvfrom
+		}
+		return;
+	}
+
+    void UdpSocketWrapper::createUdpsock() {
+		// Create UDP socket
         sockfd_ = socket(AF_INET, SOCK_DGRAM, 0);
         if (sockfd_ < 0)
         {
@@ -50,7 +123,7 @@ namespace covered
             exit(1);
         }
 
-        // Disable UDP/TCP checksum
+        // Disable UDP checksum
         //int disable = 1;
         //if (setsockopt(sockfd, SOL_SOCKET, SO_NO_CHECK, (void*)&disable, sizeof(disable)) < 0)
         //{
@@ -60,7 +133,7 @@ namespace covered
         //    exit(1);
         //}
 
-        // Set timeout for recvfrom/accept of UDP/TCP
+        // Set timeout for recvfrom/accept of UDP client/server
         if (need_timeout_)
         {
             setTimeout();
@@ -78,7 +151,8 @@ namespace covered
         return;
     }
 
-    void SocketWrapper::setTimeout() {
+    void UdpSocketWrapper::setTimeout() {
+		// Set timeout for recvfrom/accept of UDP client/server
         struct timeval tv;
         tv.tv_sec = SOCKET_TIMEOUT_SECONDS;
         tv.tv_usec =  SOCKET_TIMEOUT_USECONDS;
@@ -92,7 +166,7 @@ namespace covered
         return;
     }
 
-    void SocketWrapper::enableReuseaddr()
+    void UdpSocketWrapper::enableReuseaddr()
     {
         // Reuse the occupied port for the last created socket instead of being crashed
         const int trueFlag = 1;
@@ -105,15 +179,19 @@ namespace covered
         return;
     }
 
-    void SocketWrapper::bindSockaddr() {
-        struct sockaddr_in sockaddr;
-        memset((void *)&sockaddr, 0, sizeof(sockaddr));
-        sockaddr.sin_family = AF_INET;
-        sockaddr.sin_addr.s_addr = INADDR_ANY; // set local IP as any IP address
-        sockaddr.sin_port = htons(port_);
-        if ((bind(sockfd_, (struct sockaddr*)&sockaddr, sizeof(sockaddr))) < 0) {
+    void UdpSocketWrapper::bindSockaddr() {
+		// Prepare sockaddr based on host address
+        struct sockaddr_in host_sockaddr;
+        memset((void *)&host_sockaddr, 0, sizeof(host_sockaddr));
+        host_sockaddr.sin_family = AF_INET;
+        //host_sockaddr.sin_addr.s_addr = INADDR_ANY; // set local IP as any IP address
+		inet_pton(AF_INET, udp_host_ipstr_.c_str(), &(host_sockaddr.sin_addr));
+        host_sockaddr.sin_port = htons(udp_host_port_);
+
+		// Bind host address to wait for packets from UDP clients
+        if ((bind(sockfd_, (struct sockaddr*)&host_sockaddr, sizeof(host_sockaddr))) < 0) {
             std::ostringstream oss;
-            oss << "failed to bind UDP socket on port " << port_ << " (errno: " << errno << ")!";
+            oss << "failed to bind UDP socket on port " << udp_port_ << " (errno: " << errno << ")!";
             Util::dumpErrorMsg(kClassName, oss.str());
             exit(1);
         }
@@ -130,14 +208,6 @@ namespace covered
 #include <netinet/tcp.h> // TCP_NODELAY
 
 // udp
-
-void udpsendto(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr_in *dest_addr, socklen_t addrlen, const char* role) {
-	int res = sendto(sockfd, buf, len, flags, (struct sockaddr *)dest_addr, addrlen);
-	if (res < 0) {
-		printf("[%s] sendto of udp socket fails, errno: %d!\n", role, errno);
-		exit(-1);
-	}
-}
 
 bool udprecvfrom(int sockfd, void *buf, size_t len, int flags, struct sockaddr_in *src_addr, socklen_t *addrlen, int &recvsize, const char* role) {
 	bool need_timeout = false;
@@ -536,402 +606,6 @@ bool udprecvlarge(method_t methodid, int sockfd, dynamic_array_t &buf, int flags
 			}
 		}
 		buf.clear();
-	}
-
-	return is_timeout;
-}
-
-// TODO: NOT supported yet
-//bool udprecvlarge_multisrc_udpfrag(method_t methodid, int sockfd, dynamic_array_t **bufs_ptr, size_t &bufnum, int flags, struct sockaddr_in *src_addrs, socklen_t *addrlens, const char* role, bool isfilter, optype_t optype, netreach_key_t targetkey) {
-//	return udprecvlarge_multisrc(methodid, sockfd, bufs_ptr, bufnum, flags, src_addrs, addrlens, role, UDP_FRAGMENT_MAXSIZE, UDP_FRAGTYPE, isfilter, optype, targetkey);
-//}
-
-bool udprecvlarge_multisrc_ipfrag(method_t methodid, int sockfd, dynamic_array_t **bufs_ptr, size_t &bufnum, int flags, struct sockaddr_in *src_addrs, socklen_t *addrlens, const char* role, bool isfilter, optype_t optype, netreach_key_t targetkey) {
-	return udprecvlarge_multisrc(methodid, sockfd, bufs_ptr, bufnum, flags, src_addrs, addrlens, role, IP_FRAGMENT_MAXSIZE, IP_FRAGTYPE, isfilter, optype, targetkey);
-}
-
-// NOTE: receive large packet from multiple sources; used for SCANRES_SPLIT (IMPORTANT: srcid > 0 && srcid <= srcnum <= bufnum)
-// *bufs_ptr: max_srcnum dynamic arrays; if is_timeout = true, *bufs_ptr = NULL;
-// bufnum: max_srcnum; if is_timeout = true, bufnum = 0;
-// src_addrs: NULL or bufnum; addrlens: NULL or bufnum
-// For example, srcnum for SCANRES_SPLIT is split_hdr.max_scannum; srcid for SCANRES_SPLIT is split_hdr.cur_scanidx
-bool udprecvlarge_multisrc(method_t methodid, int sockfd, dynamic_array_t **bufs_ptr, size_t &bufnum, int flags, struct sockaddr_in *src_addrs, socklen_t *addrlens, const char* role, size_t frag_maxsize, int fragtype, bool isfilter, optype_t optype, netreach_key_t targetkey) {
-	INVARIANT(fragtype == IP_FRAGTYPE);
-
-	bool isfirst = true;
-	size_t frag_hdrsize = 0;
-	size_t srcnum_off = 0;
-	size_t srcnum_len = 0;
-	bool srcnum_conversion = false;
-	size_t srcid_off = 0;
-	size_t srcid_len = 0;
-	bool srcid_conversion = false;
-
-	size_t final_frag_hdrsize = 0;
-	size_t frag_bodysize = 0;
-
-	INVARIANT(Packet<key_t>::is_singleswitch(methodid));
-
-	bool is_timeout = false;
-	struct sockaddr_in tmp_srcaddr;
-	socklen_t tmp_addrlen;
-
-	// receive current fragment
-	char fragbuf[frag_maxsize];
-	int frag_recvsize = 0;
-	// set by the global first fragment
-	bool global_isfirst = true;
-	size_t max_srcnum = 0;
-	size_t cur_srcnum = 0;
-	// set by the first fragment of each srcid
-	bool *local_isfirsts = NULL;
-	uint16_t *max_fragnums = NULL;
-	uint16_t *cur_fragnums = NULL;
-	netreach_key_t tmpkey;
-	while (true) {
-		is_timeout = udprecvfrom(sockfd, fragbuf, frag_maxsize, flags, &tmp_srcaddr, &tmp_addrlen, frag_recvsize, role);
-		if (is_timeout) {
-			break;
-		}
-
-		packet_type_t tmptype = get_packet_type(fragbuf, frag_recvsize);
-		if (isfilter) {
-			if (optype_t(tmptype) != optype) {
-				continue; // filter the unmatched packet
-			}
-			tmpkey = get_packet_key(methodid, fragbuf, frag_recvsize);
-			if (tmpkey != targetkey) {
-				continue;
-			}
-		}
-
-		if (isfirst) {
-			frag_hdrsize = get_frag_hdrsize(methodid, tmptype);
-			srcnum_off = get_srcnum_off(methodid, tmptype);
-			srcnum_len = get_srcnum_len(tmptype);
-			srcnum_conversion = get_srcnum_conversion(tmptype);
-			srcid_off = get_srcid_off(methodid, tmptype);
-			srcid_len = get_srcid_len(tmptype);
-			srcid_conversion = get_srcid_conversion(tmptype);
-
-			final_frag_hdrsize = frag_hdrsize + sizeof(uint16_t) + sizeof(uint16_t);
-			frag_bodysize = frag_maxsize - final_frag_hdrsize;
-			isfirst = false;
-
-			INVARIANT(srcnum_len == 1 || srcnum_len == 2 || srcnum_len == 4);
-			INVARIANT(srcid_len == 1 || srcid_len == 2 || srcid_len == 4);
-			INVARIANT(srcnum_off <= frag_hdrsize && srcid_off <= frag_hdrsize);
-		}
-
-		INVARIANT(size_t(frag_recvsize) >= final_frag_hdrsize);
-
-		// set max_srcnum for the global first packet
-		if (global_isfirst) {
-			//printf("frag_hdrsize: %d, final_frag_hdrsize: %d, frag_maxsize: %d, frag_bodysize: %d\n", frag_hdrsize, final_frag_hdrsize, frag_maxsize, frag_bodysize);
-			memcpy(&max_srcnum, fragbuf + srcnum_off, srcnum_len);
-			if (srcnum_conversion && srcnum_len == 2) max_srcnum = size_t(ntohs(uint16_t(max_srcnum)));
-			else if (srcnum_conversion && srcnum_len == 4) max_srcnum = size_t(ntohl(uint32_t(max_srcnum)));
-
-			// initialize
-			bufnum = max_srcnum;
-			*bufs_ptr = new dynamic_array_t[max_srcnum];
-			local_isfirsts = new bool[max_srcnum];
-			max_fragnums = new uint16_t[max_srcnum];
-			cur_fragnums = new uint16_t[max_srcnum];
-			for (size_t i = 0; i < max_srcnum; i++) {
-				(*bufs_ptr)[i].init(MAX_BUFSIZE, MAX_LARGE_BUFSIZE);
-				local_isfirsts[i] = true;
-				max_fragnums[i] = 0;
-				cur_fragnums[i] = 0;
-			}
-
-			global_isfirst = false;
-		}
-
-		uint16_t tmpsrcid = 0;
-		memcpy(&tmpsrcid, fragbuf + srcid_off, srcid_len);
-		if (srcid_conversion && srcid_len == 2) tmpsrcid = size_t(ntohs(uint16_t(tmpsrcid)));
-		else if (srcid_conversion && srcid_len == 4) tmpsrcid = size_t(ntohl(uint32_t(tmpsrcid)));
-		//printf("tmpsrcid: %d, max_srcnum: %d, bufnum: %d\n", tmpsrcid, max_srcnum, bufnum);
-		INVARIANT(tmpsrcid > 0 && tmpsrcid <= max_srcnum);
-
-		int tmp_bufidx = tmpsrcid - 1; // [1, max_srcnum] -> [0, max_srcnum-1]
-		dynamic_array_t &tmpbuf = (*bufs_ptr)[tmp_bufidx];
-
-		if (local_isfirsts[tmp_bufidx]) {
-			if (src_addrs != NULL) {
-				src_addrs[tmp_bufidx] = tmp_srcaddr;
-				addrlens[tmp_bufidx] = tmp_addrlen;
-			}
-
-			tmpbuf.dynamic_memcpy(0, fragbuf, frag_hdrsize);
-			memcpy(&max_fragnums[tmp_bufidx], fragbuf + frag_hdrsize + sizeof(uint16_t), sizeof(uint16_t));
-			max_fragnums[tmp_bufidx] = ntohs(max_fragnums[tmp_bufidx]); // bigendian -> littleendian for large value
-
-			local_isfirsts[tmp_bufidx] = false;
-		}
-
-		uint16_t cur_fragidx = 0;
-		memcpy(&cur_fragidx, fragbuf + frag_hdrsize, sizeof(uint16_t));
-		cur_fragidx = ntohs(cur_fragidx); // bigendian -> littleendian for large value
-		INVARIANT(cur_fragidx < max_fragnums[tmp_bufidx]);
-		//printf("cur_fragidx: %d, max_fragnum: %d, frag_recvsize: %d, buf_offset: %d, copy_size: %d\n", cur_fragidx, max_fragnums[tmp_bufidx], frag_recvsize, cur_fragidx * frag_bodysize, frag_recvsize - final_frag_hdrsize);
-
-		tmpbuf.dynamic_memcpy(frag_hdrsize + cur_fragidx * frag_bodysize, fragbuf + final_frag_hdrsize, frag_recvsize - final_frag_hdrsize);
-
-		cur_fragnums[tmp_bufidx] += 1;
-		INVARIANT(cur_fragnums[tmp_bufidx] <= max_fragnums[tmp_bufidx]);
-		if (cur_fragnums[tmp_bufidx] == max_fragnums[tmp_bufidx]) {
-#ifdef SERVER_ROTATION
-			break; // return as long as receiving all fragments of the ScanResponseSplit from one server for server rotation
-#else
-			cur_srcnum += 1;
-			if (cur_srcnum >= max_srcnum) {
-				break;
-			}
-#endif
-		}
-	}
-
-	INVARIANT(cur_srcnum == bufnum && bufnum == max_srcnum);
-	if (local_isfirsts != NULL) {
-		delete [] local_isfirsts;
-		local_isfirsts = NULL;
-	}
-	if (max_fragnums != NULL) {
-		delete [] max_fragnums;
-		max_fragnums = NULL;
-	}
-	if (cur_fragnums != NULL) {
-		delete [] cur_fragnums;
-		cur_fragnums = NULL;
-	}
-
-	if (is_timeout) {
-		if ((*bufs_ptr) != NULL) {
-			delete [] (*bufs_ptr);
-			*bufs_ptr = NULL;
-		}
-		bufnum = 0;
-	}
-
-	INVARIANT(bufnum == 0 || (bufnum > 0 && (*bufs_ptr) != NULL));
-
-	return is_timeout;
-}
-
-// TODO: NOT supported yet
-//bool udprecvlarge_multisrc_udpfrag_dist(method_t methodid, int sockfd, std::vector<std::vector<dynamic_array_t>> &perswitch_perserver_bufs, int flags, std::vector<std::vector<struct sockaddr_in>> &perswitch_perserver_addrs, std::vector<std::vector<socklen_t>> &perswitch_perserver_addrlens, const char* role, bool isfilter, optype_t optype, netreach_key_t targetkey) {
-//	return udprecvlarge_multisrc_dist(methodid, sockfd, perswitch_perserver_bufs, flags, perswitch_perserver_addrs, perswitch_perserver_addrlens, role, UDP_FRAGMENT_MAXSIZE, UDP_FRAGTYPE, isfilter, optype, targetkey);
-//}
-
-bool udprecvlarge_multisrc_ipfrag_dist(method_t methodid, int sockfd, std::vector<std::vector<dynamic_array_t>> &perswitch_perserver_bufs, int flags, std::vector<std::vector<struct sockaddr_in>> &perswitch_perserver_addrs, std::vector<std::vector<socklen_t>> &perswitch_perserver_addrlens, const char* role, bool isfilter, optype_t optype, netreach_key_t targetkey) {
-	return udprecvlarge_multisrc_dist(methodid, sockfd, perswitch_perserver_bufs, flags, perswitch_perserver_addrs, perswitch_perserver_addrlens, role, IP_FRAGMENT_MAXSIZE, IP_FRAGTYPE, isfilter, optype, targetkey);
-}
-
-// NOTE: receive large packet from multiple sources; used for SCANRES_SPLIT
-// IMPORTANT: srcswitchid > 0 && srcswitchid <= srcswitchnum; srcid > 0 && srcid <= srcnum; each srcswitchid can have different srcnums
-// perswitch_perserver_bufs: srcswitchnum * srcnum dynamic arrays; if is_timeout = true, size = 0
-// perswitch_perserver_addrs/addrlens have the same shape as perswitch_perserver_bufs
-// For example, for SCANRES_SPLIT, srcswitchnum is split_hdr.max_scanswitchnum; srcswitchid is split_hdr.cur_scanswitchidx; srcnum is split_hdr.max_scannum; srcid is split_hdr.cur_scanidx
-bool udprecvlarge_multisrc_dist(method_t methodid, int sockfd, std::vector<std::vector<dynamic_array_t>> &perswitch_perserver_bufs, int flags, std::vector<std::vector<struct sockaddr_in>> &perswitch_perserver_addrs, std::vector<std::vector<socklen_t>> &perswitch_perserver_addrlens, const char* role, size_t frag_maxsize, int fragtype, bool isfilter, optype_t optype, netreach_key_t targetkey) {
-	INVARIANT(fragtype == IP_FRAGTYPE);
-
-	bool isfirst = true;
-	size_t frag_hdrsize = 0;
-	size_t srcnum_off = 0;
-	size_t srcnum_len = 0;
-	bool srcnum_conversion = false;
-	size_t srcid_off = 0;
-	size_t srcid_len = 0;
-	bool srcid_conversion = false;
-	size_t srcswitchnum_off = 0;
-	size_t srcswitchnum_len = 0;
-	bool srcswitchnum_conversion = false;
-	size_t srcswitchid_off = 0;
-	size_t srcswitchid_len = 0;
-	bool srcswitchid_conversion = false;
-
-	size_t final_frag_hdrsize = 0;
-	size_t frag_bodysize = 0;
-
-	INVARIANT(!Packet<key_t>::is_singleswitch(methodid));
-
-	bool is_timeout = false;
-	struct sockaddr_in tmp_srcaddr;
-	socklen_t tmp_addrlen;
-
-	// receive current fragment
-	char fragbuf[frag_maxsize];
-	int frag_recvsize = 0;
-	// set by the global first fragment
-	bool global_isfirst = true;
-	size_t cur_srcswitchnum = 0; // already received switchnum
-	std::vector<size_t> perswitch_cur_srcnums; // per-switch already received servernum
-	// set by the first fragment of each srcswitchid and each srcid
-	std::vector<std::vector<uint16_t>> perswitch_perserver_max_fragnums;
-	std::vector<std::vector<uint16_t>> perswitch_perserver_cur_fragnums; // per-switch per-server already received fragnum
-	netreach_key_t tmpkey;
-	while (true) {
-		is_timeout = udprecvfrom(sockfd, fragbuf, frag_maxsize, flags, &tmp_srcaddr, &tmp_addrlen, frag_recvsize, role);
-		if (is_timeout) {
-			break;
-		}
-
-		packet_type_t tmptype = get_packet_type(fragbuf, frag_recvsize);
-		if (isfilter) {
-			//printf("received optype: %x, expected optype: %x\n", int(get_packet_type(fragbuf, frag_recvsize)), int(optype));
-			if (optype_t(tmptype) != optype) {
-				continue; // filter the unmatched packet
-			}
-			tmpkey = get_packet_key(methodid, fragbuf, frag_recvsize);
-			//printf("received key: %x, expected key: %x\n", tmpkey.keyhihi, targetkey.keyhihi);
-			if (tmpkey != targetkey) {
-				continue;
-			}
-		}
-
-		if (isfirst) {
-			frag_hdrsize = get_frag_hdrsize(methodid, tmptype);
-			srcnum_off = get_srcnum_off(methodid, tmptype);
-			srcnum_len = get_srcnum_len(tmptype);
-			srcnum_conversion = get_srcnum_conversion(tmptype);
-			srcid_off = get_srcid_off(methodid, tmptype);
-			srcid_len = get_srcid_len(tmptype);
-			srcid_conversion = get_srcid_conversion(tmptype);
-			srcswitchnum_off = get_srcswitchnum_off(methodid, tmptype);
-			srcswitchnum_len = get_srcswitchnum_len(tmptype);
-			srcswitchnum_conversion = get_srcswitchnum_conversion(tmptype);
-			srcswitchid_off = get_srcswitchid_off(methodid, tmptype);
-			srcswitchid_len = get_srcswitchid_len(tmptype);
-			srcswitchid_conversion = get_srcswitchid_conversion(tmptype);
-
-			final_frag_hdrsize = frag_hdrsize + sizeof(uint16_t) + sizeof(uint16_t);
-			frag_bodysize = frag_maxsize - final_frag_hdrsize;
-
-			INVARIANT(srcnum_len == 1 || srcnum_len == 2 || srcnum_len == 4);
-			INVARIANT(srcid_len == 1 || srcid_len == 2 || srcid_len == 4);
-			INVARIANT(srcnum_off <= frag_hdrsize && srcid_off <= frag_hdrsize);
-			INVARIANT(srcswitchnum_len == 1 || srcswitchnum_len == 2 || srcswitchnum_len == 4);
-			INVARIANT(srcswitchid_len == 1 || srcswitchid_len == 2 || srcswitchid_len == 4);
-			INVARIANT(srcswitchnum_off <= frag_hdrsize && srcswitchid_off <= frag_hdrsize);
-
-			isfirst = false;
-		}
-
-		INVARIANT(size_t(frag_recvsize) >= final_frag_hdrsize);
-
-
-		if (global_isfirst) { // first packet in global -> get switchnum
-			size_t max_srcswitchnum = 0;
-			memcpy(&max_srcswitchnum, fragbuf + srcswitchnum_off, srcswitchnum_len);
-			if (srcswitchnum_conversion && srcswitchnum_len == 2) max_srcswitchnum = size_t(ntohs(uint16_t(max_srcswitchnum)));
-			else if (srcswitchnum_conversion && srcswitchnum_len == 4) max_srcswitchnum = size_t(ntohl(uint32_t(max_srcswitchnum)));
-			INVARIANT(max_srcswitchnum > 0);
-
-			// initialize
-			perswitch_perserver_bufs.resize(max_srcswitchnum);
-			perswitch_perserver_addrs.resize(max_srcswitchnum);
-			perswitch_perserver_addrlens.resize(max_srcswitchnum);
-			perswitch_cur_srcnums.resize(max_srcswitchnum, 0);
-			perswitch_perserver_max_fragnums.resize(max_srcswitchnum);
-			perswitch_perserver_cur_fragnums.resize(max_srcswitchnum);
-
-			global_isfirst = false;
-
-			//printf("frag_hdrsize: %d, final_frag_hdrsize: %d, frag_maxsize: %d, frag_bodysize: %d, max_srcswitchnum: %d\n", frag_hdrsize, final_frag_hdrsize, frag_maxsize, frag_bodysize, max_srcswitchnum);
-		}
-
-		// get switchidx
-		uint16_t tmpsrcswitchid = 0;
-		memcpy(&tmpsrcswitchid, fragbuf + srcswitchid_off, srcswitchid_len);
-		if (srcswitchid_conversion && srcswitchid_len == 2) tmpsrcswitchid = size_t(ntohs(uint16_t(tmpsrcswitchid)));
-		else if (srcswitchid_conversion && srcswitchid_len == 4) tmpsrcswitchid = size_t(ntohl(uint32_t(tmpsrcswitchid)));
-		INVARIANT(tmpsrcswitchid > 0 && tmpsrcswitchid <= perswitch_perserver_bufs.size());
-		int tmp_switchidx = tmpsrcswitchid - 1; // [1, max_srcswitchnum] -> [0, max_srcswitchnum-1]
-
-		//printf("tmpsrcswitchid: %d, tmp_switchidx: %d\n", tmpsrcswitchid, tmp_switchidx);
-
-		if (perswitch_perserver_bufs[tmp_switchidx].size() == 0) { // first packet from the leaf switch -> get servernum for the switch
-			size_t max_srcnum = 0;
-			memcpy(&max_srcnum, fragbuf + srcnum_off, srcnum_len);
-			if (srcnum_conversion && srcnum_len == 2) max_srcnum = size_t(ntohs(uint16_t(max_srcnum)));
-			else if (srcnum_conversion && srcnum_len == 4) max_srcnum = size_t(ntohl(uint32_t(max_srcnum)));
-			INVARIANT(max_srcnum > 0);
-
-			// initialize
-			perswitch_perserver_bufs[tmp_switchidx].resize(max_srcnum);
-			for (size_t i = 0; i < max_srcnum; i++) {
-				perswitch_perserver_bufs[tmp_switchidx][i].init(MAX_BUFSIZE, MAX_LARGE_BUFSIZE);
-			}
-			perswitch_perserver_addrs[tmp_switchidx].resize(max_srcnum);
-			perswitch_perserver_addrlens[tmp_switchidx].resize(max_srcnum, sizeof(struct sockaddr_in));
-			perswitch_perserver_max_fragnums[tmp_switchidx].resize(max_srcnum, 0);
-			perswitch_perserver_cur_fragnums[tmp_switchidx].resize(max_srcnum, 0);
-
-			//printf("max_srcnum: %d\n", max_srcnum);
-		}
-
-		// get serveridx
-		uint16_t tmpsrcid = 0;
-		memcpy(&tmpsrcid, fragbuf + srcid_off, srcid_len);
-		if (srcid_conversion && srcid_len == 2) tmpsrcid = size_t(ntohs(uint16_t(tmpsrcid)));
-		else if (srcid_conversion && srcid_len == 4) tmpsrcid = size_t(ntohl(uint32_t(tmpsrcid)));
-		//printf("tmpsrcid: %d, max_srcnum: %d, bufnum: %d\n", tmpsrcid, max_srcnum, bufnum);
-		INVARIANT(tmpsrcid > 0 && tmpsrcid <= perswitch_perserver_bufs[tmp_switchidx].size());
-		int tmp_bufidx = tmpsrcid - 1; // [1, max_srcnum] -> [0, max_srcnum-1]
-
-		//printf("tmpsrcid: %d, tmp_bufidx: %d\n", tmpsrcid, tmp_bufidx);
-
-		// get dynamic array for the switch and the server
-		dynamic_array_t &tmpbuf = perswitch_perserver_bufs[tmp_switchidx][tmp_bufidx];
-
-		if (perswitch_perserver_max_fragnums[tmp_switchidx][tmp_bufidx] == 0) { // first packet from the leaf switch and the server
-			uint16_t max_fragnum = 0;
-			memcpy(&max_fragnum, fragbuf + frag_hdrsize + sizeof(uint16_t), sizeof(uint16_t));
-			max_fragnum = ntohs(max_fragnum); // bigendian -> littleendian for large value
-			INVARIANT(max_fragnum > 0);
-
-			perswitch_perserver_addrs[tmp_switchidx][tmp_bufidx] = tmp_srcaddr;
-			perswitch_perserver_addrlens[tmp_switchidx][tmp_bufidx] = tmp_addrlen;
-			perswitch_perserver_max_fragnums[tmp_switchidx][tmp_bufidx] = max_fragnum;
-
-			tmpbuf.dynamic_memcpy(0, fragbuf, frag_hdrsize);
-
-			//printf("max_fragnum: %d\n", max_fragnum);
-		}
-
-		uint16_t cur_fragidx = 0;
-		memcpy(&cur_fragidx, fragbuf + frag_hdrsize, sizeof(uint16_t));
-		cur_fragidx = ntohs(cur_fragidx); // bigendian -> littleendian for large value
-		INVARIANT(cur_fragidx < perswitch_perserver_max_fragnums[tmp_switchidx][tmp_bufidx]);
-		//printf("cur_fragidx: %d, max_fragnum: %d, frag_recvsize: %d, buf_offset: %d, copy_size: %d\n", cur_fragidx, max_fragnums[tmp_bufidx], frag_recvsize, cur_fragidx * frag_bodysize, frag_recvsize - final_frag_hdrsize);
-
-		tmpbuf.dynamic_memcpy(frag_hdrsize + cur_fragidx * frag_bodysize, fragbuf + final_frag_hdrsize, frag_recvsize - final_frag_hdrsize);
-
-		//printf("cur_fragidx: %d\n", cur_fragidx);
-
-		perswitch_perserver_cur_fragnums[tmp_switchidx][tmp_bufidx] += 1;
-		INVARIANT(perswitch_perserver_cur_fragnums[tmp_switchidx][tmp_bufidx] <= perswitch_perserver_max_fragnums[tmp_switchidx][tmp_bufidx]);
-		if (perswitch_perserver_cur_fragnums[tmp_switchidx][tmp_bufidx] == perswitch_perserver_max_fragnums[tmp_switchidx][tmp_bufidx]) {
-#ifdef SERVER_ROTATION
-			break; // return as long as receiving all fragments of the ScanResponseSplit from one server under one switch for server rotation
-#else
-			perswitch_cur_srcnums[tmp_switchidx] += 1;
-			if (perswitch_cur_srcnums[tmp_switchidx] >= perswitch_perserver_bufs[tmp_switchidx].size()) {
-				cur_srcswitchnum += 1;
-				if (cur_srcswitchnum >= perswitch_perserver_bufs.size()) {
-					break;
-				}
-			}
-#endif
-		}
-	}
-
-	if (is_timeout) {
-		perswitch_perserver_bufs.clear();
-		perswitch_perserver_addrs.clear();
-		perswitch_perserver_addrlens.clear();
 	}
 
 	return is_timeout;
