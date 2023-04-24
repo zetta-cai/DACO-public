@@ -1,20 +1,13 @@
-#include "network/socket_wrapper.h"
-
-#include <sstream>
-
-#include "common/util.h"
+#include "network/udp_socket_wrapper.h"
 
 namespace covered
 {
-    const uint32_t UdpSocketWrapper::SOCKET_TIMEOUT_SECONDS = 5; // 5s
-    const uint32_t UdpSocketWrapper::SOCKET_TIMEOUT_USECONDS = 0; // 0us
-    const uint32_t UdpSocketWrapper::UDP_PAYLOAD_MAXSIZE = 65507; // 65535(ipmax) - 20(iphdr) - 8(udphdr)
-    const uint32_t UdpSocketWrapper::UDP_DEFAULT_RCVBUFSIZE = 212992; // 208KB used in linux by default
-    //const uint32_t UdpSocketWrapper::UDP_LARGE_RCVBUFSIZE = 8388608; // 8MB used for large data
+    const bool UdpSocketWrapper::IS_SOCKET_CLIENT_TIMEOUT(true);
+    const bool UdpSocketWrapper::IS_SOCKET_SERVER_TIMEOUT(true);
 
     const std::string UdpSocketWrapper::kClassName("UdpSocketWrapper");
 
-    UdpSocketWrapper(const SocketRole& role, const bool& need_timeout, const std::string& ipstr, const uint16_t& udp_port) : role_(role), need_timeout_(need_timeout), udp_host_ipstr_(role == SocketRole::kSocketServer ? ipstr : ""), udp_host_port_(role == SocketRole::kSocketServer ? port : 0)
+    UdpSocketWrapper::UdpSocketWrapper(const SocketRole& role, const bool& need_timeout, const std::string& ipstr, const uint16_t& udp_port) : role_(role), need_timeout_(need_timeout), udp_host_ipstr_(role == SocketRole::kSocketServer ? ipstr : ""), udp_host_port_(role == SocketRole::kSocketServer ? port : 0)
     {
         if (role_ == SocketRole::kSocketClient)
         {
@@ -76,7 +69,7 @@ namespace covered
         }
     }
 
-	void UdpSocketWrapper::sendto(const std::vector<char>& buf)
+    void UdpSocketBasic::sendto(const std::vector<char>& buf)
 	{
 		// Must with valid remote address
 		if (is_receive_remote_address == false)
@@ -99,7 +92,7 @@ namespace covered
 		int return_code = sendto(sockfd_, payload.data(), payload.size(), flags, (struct sockaddr*)(&remote_sockaddr), sizeof(remote_sockaddr));
 		if (return_code < 0) {
 			std::ostringstream oss;
-            oss << "failed to send " << payload.size() << " bytes to remote address with ip " << udp_remote_ipstr_ << " and port " << udp_remote_port_ << " (error code: " << errno << ")";
+            oss << "failed to send " << payload.size() << " bytes to remote address with ip " << udp_remote_ipstr_ << " and port " << udp_remote_port_ << " (errno: " << errno << ")";
             Util::dumpErrorMsg(kClassName, oss.str());
             exit(1);
 		}
@@ -112,131 +105,52 @@ namespace covered
 		return;
 	}
 
-    void UdpSocketWrapper::createUdpsock() {
-		// Create UDP socket
-        sockfd_ = socket(AF_INET, SOCK_DGRAM, 0);
-        if (sockfd_ < 0)
-        {
-            std::ostringstream oss;
-            oss << "failed to create a UDP socket (errno: " << errno << ")!";
-            Util::dumpErrorMsg(kClassName, oss.str());
-            exit(1);
-        }
+	void UdpSocketBasic::recvfrom(SocketResult& socket_result)
+	{ 
+		// Prepare sockaddr for remote address
+		struct sockaddr_in remote_sockaddr;
+		memset((void *)&remote_sockaddr, 0, sizeof(remote_sockaddr));
 
-        // Disable UDP checksum
-        //int disable = 1;
-        //if (setsockopt(sockfd, SOL_SOCKET, SO_NO_CHECK, (void*)&disable, sizeof(disable)) < 0)
-        //{
-        //    std::ostringstream oss;
-        //    oss << "failed to disable UDP checksum (errno: " << errno << ")!";
-        //    Util::dumpErrorMsg(kClassName, oss.str());
-        //    exit(1);
-        //}
+		// Prepare for socket result
+		std::vector<char> paydload_ref = socket_result.getPayloadRef();
+		socket_result.resetTimeout();
 
-        // Set timeout for recvfrom/accept of UDP client/server
-        if (need_timeout_)
-        {
-            setTimeout();
-        }
+		// Try to receive the UDP packet
+		int flags = 0;
+		int recvsize = recvfrom(sockfd_, paydload_ref.data(), UdpSocketResult::UDP_PAYLOAD_MAXSIZE, flags, (struct sockaddr *)&remote_sockaddr, sizeof(remote_sockaddr));
+		if (recvsize < 0) { // Failed to receive a UDP packet
+			if (need_timeout_ && (errno == EWOULDBLOCK || errno == EINTR || errno == EAGAIN)) {
+				socket_result.setTimeout();
+			}
+			else {
+				std::ostringstream oss;
+				oss << "failed to receive a UDP packet (errno: " << errno << ")!";
+				Util::dumpErrorMsg(kClassName, oss.str());
+				exit(1);
+			}
+		}
+		else // Successfully receive a UDP packet
+		{
+			// Set remote address for successful packet receiving in UDP server, to send potential reply by sendto later
+			// Note: remote address is NOT changed for failed packet receiving or UDP client
+			if (role_ == SocketRole::kSocketServer)
+			{
+				char remote_ipcstr[INET_ADDRSTRLEN];
+				inet_ntop(AF_INET, &(remote_sockaddr.sin_addr), remote_ipcstr, INET_ADDRSTRLEN);
+				udp_remote_ipstr_ = std::string(remote_ipcstr);
+				udp_remote_port_ = ntohs(remote_sockaddr.sin_port);
+				is_receive_remote_address = true;
+			}
+		}
 
-        // Set UDP receive buffer size
-        if (setsockopt(sockfd, SOL_SOCKET, SO_RCVBUF, &UDP_DEFAULT_RCVBUFSIZE, sizeof(int)) < 0)
-        {
-            std::ostringstream oss;
-            oss << "failed to set UDP receive bufsize (errno: " << errno << ")!";
-            Util::dumpErrorMsg(kClassName, oss.str());
-            exit(1);
-        }
-
-        return;
-    }
-
-    void UdpSocketWrapper::setTimeout() {
-		// Set timeout for recvfrom/accept of UDP client/server
-        struct timeval tv;
-        tv.tv_sec = SOCKET_TIMEOUT_SECONDS;
-        tv.tv_usec =  SOCKET_TIMEOUT_USECONDS;
-        if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0)
-        {
-            std::ostringstream oss;
-            oss << "failed to set timeout (errno: " << errno << ")!";
-            Util::dumpErrorMsg(kClassName, oss.str());
-            exit(1);
-        }
-        return;
-    }
-
-    void UdpSocketWrapper::enableReuseaddr()
-    {
-        // Reuse the occupied port for the last created socket instead of being crashed
-        const int trueFlag = 1;
-        if (setsockopt(sockfd_, SOL_SOCKET, SO_REUSEADDR, &trueFlag, sizeof(int)) < 0) {
-            std::ostringstream oss;
-            oss << "failed to enable reuseaddr" << " (errno: " << errno << ")!";
-            Util::dumpErrorMsg(kClassName, oss.str());
-            exit(1);
-        }
-        return;
-    }
-
-    void UdpSocketWrapper::bindSockaddr() {
-		// Prepare sockaddr based on host address
-        struct sockaddr_in host_sockaddr;
-        memset((void *)&host_sockaddr, 0, sizeof(host_sockaddr));
-        host_sockaddr.sin_family = AF_INET;
-        //host_sockaddr.sin_addr.s_addr = INADDR_ANY; // set local IP as any IP address
-		inet_pton(AF_INET, udp_host_ipstr_.c_str(), &(host_sockaddr.sin_addr));
-        host_sockaddr.sin_port = htons(udp_host_port_);
-
-		// Bind host address to wait for packets from UDP clients
-        if ((bind(sockfd_, (struct sockaddr*)&host_sockaddr, sizeof(host_sockaddr))) < 0) {
-            std::ostringstream oss;
-            oss << "failed to bind UDP socket on port " << udp_port_ << " (errno: " << errno << ")!";
-            Util::dumpErrorMsg(kClassName, oss.str());
-            exit(1);
-        }
-        return;
-    }
+		return;
+	}
 }
 
 
 
 
-
-
-/*#include <arpa/inet.h> // inetaddr conversion; endianess conversion
-#include <netinet/tcp.h> // TCP_NODELAY
-
-// udp
-
-bool udprecvfrom(int sockfd, void *buf, size_t len, int flags, struct sockaddr_in *src_addr, socklen_t *addrlen, int &recvsize, const char* role) {
-	bool need_timeout = false;
-	struct timeval tv;
-	tv.tv_sec = 0;
-	tv.tv_usec =  0;
-	socklen_t tvsz = sizeof(tv);
-	int res = getsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, &tvsz);
-	UNUSED(res);
-	if (tv.tv_sec != 0 || tv.tv_usec != 0) {
-		need_timeout = true;
-	}
-
-	bool is_timeout = false;
-	recvsize = recvfrom(sockfd, buf, len, flags, (struct sockaddr *)src_addr, addrlen);
-	if (recvsize < 0) {
-		if (need_timeout && (errno == EWOULDBLOCK || errno == EINTR || errno == EAGAIN)) {
-			recvsize = 0;
-			is_timeout = true;
-		}
-		else {
-			printf("[%s] error of recvfrom, errno: %d!\n", role, errno);
-			exit(-1);
-		}
-	}
-	return is_timeout;
-}
-
-void udpsendlarge_udpfrag(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr_in *dest_addr, socklen_t addrlen, const char* role) {
+/*void udpsendlarge_udpfrag(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr_in *dest_addr, socklen_t addrlen, const char* role) {
 	udpsendlarge(sockfd, buf, len, flags, dest_addr, addrlen, role, 0, UDP_FRAGMENT_MAXSIZE);
 }
 
