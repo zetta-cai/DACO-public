@@ -1,5 +1,8 @@
 /*
- * UdpSocketWrapper: encapsulate advanced operations (timeout-and-retry and UDP fragmentation) on UDP socket programming.
+ * UdpSocketWrapper: encapsulate advanced operations (UDP fragmentation of message payload) on UDP socket programming.
+ *
+ * NOTE: message payload may be splited into multiple UDP fragments (i.e., multiple fragment payloads).
+ * NOTE: each fragment payload + fragment header form the corresponding packet payload.
  * 
  * By Siyuan Sheng (2023.04.24).
  */
@@ -9,7 +12,7 @@
 
 #include <string>
 
-#include "network/udp_socket_basic.h"
+#include "network/udp_pkt_socket.h"
 
 namespace covered
 {
@@ -22,27 +25,28 @@ namespace covered
     class UdpSocketWrapper
     {
     public:
+        // Whether to enable timeout for UDP client/server (only used in UdpSocketWrapper)
         static const bool IS_SOCKET_CLIENT_TIMEOUT;
         static const bool IS_SOCKET_SERVER_TIMEOUT;
 
-        // TODO: === END HERE ===
-
-        UdpSocketWrapper(const SocketRole& role, const std::string& ipstr, const uint16_t& udp_port);
+        UdpSocketWrapper(const SocketRole& role, const std::string& ipstr, const uint16_t& port);
         ~UdpSocketWrapper();
 
-        // Note: UDP client always sends packets to the remote address set in the constructor, while UDP server sends the current UDP packet to the remote address set in the most recent successful recvfrom
-        void send(const std::vector<char>& payload);
+        // Note: UDP client always sends message payload to the remote address set in the constructor
+        // Note: UDP server sends message payload to the remote address set in the most recent successful recv (i.e., receive all fragment payloads of a message payload)
+        void send(const std::vector<char>& msg_payload);
         void recv();
     private:
         static std::string kClassName;
 
         const SocketRole role_;
-        const std::string udp_host_ipstr_; // only for UDP server
-        const uint16_t udp_host_port_; // only for UDP server
+        const std::string host_ipstr_; // only for UDP server
+        const uint16_t host_port_; // only for UDP server
 
-        std::string udp_remote_ipstr_; // for UDP client (fixed) / server (changed)
-        uint16_t udp_remote_port_; // for UDP client (fixed) / server (changed)
+        std::string remote_ipstr_; // for UDP client (fixed) / server (changed)
+        uint16_t remote_port_; // for UDP client (fixed) / server (changed)
         bool is_receive_remote_address; // only for UDP server
+        UdpPktSocket* pkt_socket_ptr_;
     };
 }
 

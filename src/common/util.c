@@ -11,12 +11,20 @@
 
 namespace covered
 {
+    // Type conversion
     const int64_t Util::MAX_UINT16 = 65536;
+    // Network
     const std::string Util::LOCALHOST_IPSTR("127.0.0.1");
     const std::string Util::ANY_IPSTR("0.0.0.0");
+    const uint32_t Util::UDP_MAX_PKT_PAYLOAD = 65507; // 65535(ipmax) - 20(iphdr) - 8(udphdr)
+    const uint32_t Util::UDP_MAX_FRAG_PAYLOAD = Util::UDP_MAX_PKT_PAYLOAD - 2 * sizeof(uint32_t); // 65507(udpmax) - 4(fragment_idx) - 4(fragment_cnt)
+    const uint16_t Util::UDP_MAX_PORT = 4096; // UDP port has to be larger than 4096
+    // Atomicity
     std::memory_order Util::LOAD_CONCURRENCY_ORDER = std::memory_order_acquire;
     std::memory_order Util::STORE_CONCURRENCY_ORDER = std::memory_order_release;
+    // Workflow control
     const unsigned int Util::SLEEP_INTERVAL_US = 1 * 1000 * 1000; // 1s
+    // Workload generation
     const uint32_t Util::KVPAIR_GENERATION_SEED = 0;
 
     const std::string Util::kClassName("Util");
@@ -181,5 +189,23 @@ namespace covered
             local_edge_recvreq_port = global_edge_recvreq_startport;
         }
         return covered::Util::toUint16(local_edge_recvreq_port);
+    }
+
+    // Network
+
+    uint32_t Util::getFragmentCnt(const uint32_t& msg_payload_size)
+    {
+        // Split message payload into multiple fragment payloads
+        uint32_t max_fragment_payload = Util::UDP_MAX_FRAG_PAYLOAD;
+        uint32_t fragment_cnt = 0;
+        if (msg_payload_size == 0)
+        {
+            fragment_cnt = 1;
+        }
+        else
+        {
+            fragment_cnt = (msg_payload_size - 1) / max_fragment_payload + 1;
+        }
+        return fragment_cnt;
     }
 }

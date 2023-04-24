@@ -1,64 +1,75 @@
 #include "network/udp_socket_wrapper.h"
 
+#include <cstring> // memset memcpy
+
+#include "common/util.h"
+#include "network/udp_fragment_header.h"
+
 namespace covered
 {
-    const bool UdpSocketWrapper::IS_SOCKET_CLIENT_TIMEOUT(true);
-    const bool UdpSocketWrapper::IS_SOCKET_SERVER_TIMEOUT(true);
+    const bool UdpSocketWrapper::IS_SOCKET_CLIENT_TIMEOUT(true); // timeout-and-retry for UDP client
+    const bool UdpSocketWrapper::IS_SOCKET_SERVER_TIMEOUT(true); // timeout for UDP server to safely terminate
 
     const std::string UdpSocketWrapper::kClassName("UdpSocketWrapper");
 
-    UdpSocketWrapper::UdpSocketWrapper(const SocketRole& role, const bool& need_timeout, const std::string& ipstr, const uint16_t& udp_port) : role_(role), need_timeout_(need_timeout), udp_host_ipstr_(role == SocketRole::kSocketServer ? ipstr : ""), udp_host_port_(role == SocketRole::kSocketServer ? port : 0)
+    UdpSocketWrapper::UdpSocketWrapper(const SocketRole& role, const std::string& ipstr, const uint16_t& port) : role_(role), host_ipstr_(role == SocketRole::kSocketServer ? ipstr : ""), host_port_(role == SocketRole::kSocketServer ? port : 0)
     {
         if (role_ == SocketRole::kSocketClient)
         {
 			// Not support broadcast for UDP client 
-			if (udp_remote_ipstr_ == Util::ANY_IPSTR)
+			if (remote_ipstr_ == Util::ANY_IPSTR)
 			{
 				std::ostringstream oss;
-				oss << "invalid remote ipstr of " << udp_remote_ipstr_ << " for UDP client!";	
+				oss << "invalid remote ipstr of " << remote_ipstr_ << " for UDP client!";	
 				Util::dumpErrorMsg(kClassName, oss.str());
 				exit(1);
 			}
 
 			// Remote address is fixed to UDP client
-			udp_remote_ipstr_ = ipstr;
-			udp_remote_port_ = port;
+			remote_ipstr_ = ipstr;
+			remote_port_ = port;
 			is_receive_remote_address = true; // always true for UDP client
 
-			// Create UDP socket
-			createUdpsock();
+			// Create UdpPktSocket for UDP client
+			pkt_socket_ptr_ = new UdpPktSocket(IS_SOCKET_CLIENT_TIMEOUT);
+			if (pkt_socket_ptr_ == NULL)
+			{
+				Util::dumpErrorMsg(kClassName, "failed to create UdpPktSocket for UDP client!");
+				exit(1);
+			}
         }
         else if (role_ == SocketRole::kSocketServer)
         {
 			// Not support to bind a specific host IP for UDP server
-			if (udp_host_ipstr_ != Util::ANY_IPSTR)
+			if (host_ipstr_ != Util::ANY_IPSTR)
 			{
 				std::ostringstream oss;
-				oss << "NOT support to bind a specific host IP address " << udp_host_ipstr_ << " for UDP server now!";	
+				oss << "NOT support a specific host ipstr of " << host_ipstr_ << " for UDP server now!";	
 				Util::dumpErrorMsg(kClassName, oss.str());
 				exit(1);
 			}
 
-			// UDP port must be > 4096
-			if (udp_host_port_ <= 4096)
+			// UDP port must be > Util::UDP_MAX_PORT
+			if (host_port_ <= Util::UDP_MAX_PORT)
 			{
 				std::ostringstream oss;
-				oss << "invalid host port of " << udp_host_port_ << " which should be > 4096!";	
+				oss << "invalid host port of " << host_port_ << " which should be > " << Util::UDP_MAX_PORT << "!";	
 				Util::dumpErrorMsg(kClassName, oss.str());
 				exit(1);
 			}
 
-			// Remote address is dynamically changed by recvfrom for UDP server
-			udp_remote_ipstr_ = "";
-			udp_remote_port_ = 0;
+			// Remote address is dynamically changed by recv for UDP server
+			remote_ipstr_ = "";
+			remote_port_ = 0;
 			is_receive_remote_address = false; // changed for UDP server
 
-			// Create UDP socket
-			createUdpsock();
-
-			// Prepare for listening on the host address
-            enableReuseaddr();
-            bindSockaddr();
+			// Create UdpPktSocket for UDP server
+			pkt_socket_ptr_ = new UdpPktSocket(IS_SOCKET_SERVER_TIMEOUT, host_ipstr_, host_port_);
+			if (pkt_socket_ptr_ == NULL)
+			{
+				Util::dumpErrorMsg(kClassName, "failed to create UdpPktSocket for UDP server!");
+				exit(1);
+			}
         }
         else
         {
@@ -69,7 +80,7 @@ namespace covered
         }
     }
 
-    void UdpSocketBasic::sendto(const std::vector<char>& buf)
+    void UdpSocketWrapper::send(const std::vector<char>& msg_payload);
 	{
 		// Must with valid remote address
 		if (is_receive_remote_address == false)
@@ -80,33 +91,45 @@ namespace covered
             exit(1);
 		}
 
-		// Prepare sockaddr based on remote address
-		struct sockaddr_in remote_sockaddr;
-        memset((void *)&remote_sockaddr, 0, sizeof(remote_sockaddr));
-        remote_sockaddr.sin_family = AF_INET;
-		inet_pton(AF_INET, udp_remote_ipstr_.c_str(), &(remote_sockaddr.sin_addr));
-        remote_sockaddr.sin_port = htons(udp_remote_port_);
+		// Split message payload into multiple fragment payloads
+		uint32_t fragment_cnt = Util::getFragmentCnt(msg_payload.size());
+		for (uint32_t fragment_idx = 0; fragment_idx < fragment_cnt; fragment_idx++)
+		{
+			// Prepare packet payload for current UDP packet
+			std::vector<char> tmp_pkt_payload;
+			tmp_pkt_payload.resize(0);
+			tmp_pkt_payload.reserve(Util::UDP_MAX_PKT_PAYLOAD);
 
-		// Send UDP packet
-		int flags = 0;
-		int return_code = sendto(sockfd_, payload.data(), payload.size(), flags, (struct sockaddr*)(&remote_sockaddr), sizeof(remote_sockaddr));
-		if (return_code < 0) {
-			std::ostringstream oss;
-            oss << "failed to send " << payload.size() << " bytes to remote address with ip " << udp_remote_ipstr_ << " and port " << udp_remote_port_ << " (errno: " << errno << ")";
-            Util::dumpErrorMsg(kClassName, oss.str());
-            exit(1);
+			// Serialize fragment header
+			UdpFragHdr fraghdr(fragment_idx, fragment_cnt);
+			uint32_t fraghdr_size = fraghdr.serialize(tmp_pkt_payload);
+
+			// Copy UDP fragment payload
+			uint32_t fragment_offset = fragment_idx * Util::UDP_MAX_FRAG_PAYLOAD;
+			uint32_t fragment_payload_size = Util::UDP_MAX_FRAG_PAYLOAD;
+			if (fragment_idx == fragment_cnt - 1)
+			{
+				fragment_payload_size = msg_payload.size() - fragment_offset;
+				assert(fragment_payload_size <= Util::UDP_MAX_FRAG_PAYLOAD);
+			}
+			memcpy((void*)(tmp_pkt_payload.data() + fraghdr_size), (const void*)(msg_payload.data() + fragment_offset), fragment_payload_size);
+
+			// Send current UDP packet by UdpPktSocket
+			pkt_socket_ptr_->sendto(tmp_pkt_payload, remote_ipstr_, remote_port_);
 		}
 
-		// Reset is_receive_remote_address for UDP server
+		// Reset is_receive_remote_address for UDP server after sending all fragments
 		if (role_ == SocketRole::kSocketServer)
 		{
-			is_receive_remote_address = false; // to be set by the next recvfrom
+			// Mark remote address to be set by the next successful recv (i.e., receive all fragment payloads of a message payload)
+			is_receive_remote_address = false;
 		}
 		return;
 	}
 
-	void UdpSocketBasic::recvfrom(SocketResult& socket_result)
-	{ 
+	// TODO: === END HERE ===
+	/*void UdpPktSocket::recvfrom(SocketResult& socket_result)
+	{
 		// Prepare sockaddr for remote address
 		struct sockaddr_in remote_sockaddr;
 		memset((void *)&remote_sockaddr, 0, sizeof(remote_sockaddr));
@@ -117,7 +140,7 @@ namespace covered
 
 		// Try to receive the UDP packet
 		int flags = 0;
-		int recvsize = recvfrom(sockfd_, paydload_ref.data(), UdpSocketResult::UDP_PAYLOAD_MAXSIZE, flags, (struct sockaddr *)&remote_sockaddr, sizeof(remote_sockaddr));
+		int recvsize = recvfrom(sockfd_, paydload_ref.data(), UdpSocketResult::UDP_MAX_PKT_PAYLOAD, flags, (struct sockaddr *)&remote_sockaddr, sizeof(remote_sockaddr));
 		if (recvsize < 0) { // Failed to receive a UDP packet
 			if (need_timeout_ && (errno == EWOULDBLOCK || errno == EINTR || errno == EAGAIN)) {
 				socket_result.setTimeout();
@@ -144,7 +167,7 @@ namespace covered
 		}
 
 		return;
-	}
+	}*/
 }
 
 

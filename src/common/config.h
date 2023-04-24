@@ -16,7 +16,7 @@ namespace covered
     class Config
     {
     public:
-        // Key strings of JSON config file for static configurations
+        // Key strings of JSON config file for static configurations (only used by Config)
         static const std::string VERSION_KEYSTR;
         static const std::string FACEBOOK_CONFIG_FILEPATH_KEYSTR;
         static const std::string GLOBAL_EDGE_RECVREQ_STARTPORT_KEYSTR;

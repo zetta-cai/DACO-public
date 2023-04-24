@@ -15,13 +15,21 @@ namespace covered
     class Util
     {
     public:
-        static const int64_t MAX_UINT16; // toUint16 in Util
-        static const std::string LOCALHOST_IPSTR; // getLocalEdgeNodeIpstr in Util
-        static const std::string ANY_IPSTR; // EdgeWrapper and CloudWrapper (TODO)
-        static std::memory_order LOAD_CONCURRENCY_ORDER; // ClientParam
-        static std::memory_order STORE_CONCURRENCY_ORDER; // ClientParam
-        static const unsigned int SLEEP_INTERVAL_US; // simulator and client (TODO)
-        static const uint32_t KVPAIR_GENERATION_SEED; // FacebookWorkload and SyntheticWorkload (TODO)
+        // Type conversion
+        static const int64_t MAX_UINT16;
+        // Network (UDP message payload -> UDP fragment payloads; UDP fragment payload + UDP fragment header -> UDP packet payload)
+        static const std::string LOCALHOST_IPSTR;
+        static const std::string ANY_IPSTR;
+        static const uint32_t UDP_MAX_PKT_PAYLOAD;
+        static const uint32_t UDP_MAX_FRAG_PAYLOAD;
+        static const uint16_t UDP_MAX_PORT;
+        // Atomicity
+        static std::memory_order LOAD_CONCURRENCY_ORDER;
+        static std::memory_order STORE_CONCURRENCY_ORDER;
+        // Workflow control
+        static const unsigned int SLEEP_INTERVAL_US;
+        // Workload generation
+        static const uint32_t KVPAIR_GENERATION_SEED;
 
         // (1) I/O
 
@@ -52,6 +60,10 @@ namespace covered
 
         // (4.2) Edge
         static uint16_t getLocalEdgeRecvreqPort(const uint32_t& global_edge_idx);
+
+        // (5) Network
+
+        static uint32_t getFragmentCnt(const uint32_t& msg_payload_size);
     private:
         static const std::string kClassName;
     };
