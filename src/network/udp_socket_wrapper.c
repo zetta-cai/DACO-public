@@ -12,23 +12,22 @@ namespace covered
 
     const std::string UdpSocketWrapper::kClassName("UdpSocketWrapper");
 
-    UdpSocketWrapper::UdpSocketWrapper(const SocketRole& role, const std::string& ipstr, const uint16_t& port) : role_(role), host_ipstr_(role == SocketRole::kSocketServer ? ipstr : ""), host_port_(role == SocketRole::kSocketServer ? port : 0)
+    UdpSocketWrapper::UdpSocketWrapper(const SocketRole& role, const NetworkAddr& addr) : role_(role), host_addr_(role == SocketRole::kSocketServer ? addr : NetworkAddr())
     {
         if (role_ == SocketRole::kSocketClient)
         {
-			// Not support broadcast for UDP client 
-			if (remote_ipstr_ == Util::ANY_IPSTR)
+			// Not support broadcast for UDP client
+			std::string remote_str = addr.getIpstr();
+			if (remote_str == Util::ANY_IPSTR)
 			{
 				std::ostringstream oss;
-				oss << "invalid remote ipstr of " << remote_ipstr_ << " for UDP client!";	
+				oss << "invalid remote ipstr of " << remote_str << " for UDP client!";	
 				Util::dumpErrorMsg(kClassName, oss.str());
 				exit(1);
 			}
 
 			// Remote address is fixed to UDP client
-			remote_ipstr_ = ipstr;
-			remote_port_ = port;
-			is_receive_remote_address = true; // always true for UDP client
+			remote_addr_ = addr;
 
 			// Create UdpPktSocket for UDP client
 			pkt_socket_ptr_ = new UdpPktSocket(IS_SOCKET_CLIENT_TIMEOUT);
@@ -37,10 +36,14 @@ namespace covered
 				Util::dumpErrorMsg(kClassName, "failed to create UdpPktSocket for UDP client!");
 				exit(1);
 			}
+
+			assert(host_addr_.isValid() == false);
+			assert(remote_addr_.isValid() == true);
         }
         else if (role_ == SocketRole::kSocketServer)
         {
 			// Not support to bind a specific host IP for UDP server
+			std::string host_ipstr = addr.getIpstr();
 			if (host_ipstr_ != Util::ANY_IPSTR)
 			{
 				std::ostringstream oss;
@@ -49,27 +52,19 @@ namespace covered
 				exit(1);
 			}
 
-			// UDP port must be > Util::UDP_MAX_PORT
-			if (host_port_ <= Util::UDP_MAX_PORT)
-			{
-				std::ostringstream oss;
-				oss << "invalid host port of " << host_port_ << " which should be > " << Util::UDP_MAX_PORT << "!";	
-				Util::dumpErrorMsg(kClassName, oss.str());
-				exit(1);
-			}
-
 			// Remote address is dynamically changed by recv for UDP server
-			remote_ipstr_ = "";
-			remote_port_ = 0;
-			is_receive_remote_address = false; // changed for UDP server
+			remote_addr_ = NetWorkAddr();
 
 			// Create UdpPktSocket for UDP server
-			pkt_socket_ptr_ = new UdpPktSocket(IS_SOCKET_SERVER_TIMEOUT, host_ipstr_, host_port_);
+			pkt_socket_ptr_ = new UdpPktSocket(IS_SOCKET_SERVER_TIMEOUT, host_addr_);
 			if (pkt_socket_ptr_ == NULL)
 			{
 				Util::dumpErrorMsg(kClassName, "failed to create UdpPktSocket for UDP server!");
 				exit(1);
 			}
+
+			assert(host_addr_.isValid() == true);
+			assert(remote_addr_.isValid() == false);
         }
         else
         {
@@ -80,10 +75,18 @@ namespace covered
         }
     }
 
+	UdpSocketWrapper::~UdpSocketWrapper()
+	{
+		if (pkt_socket_ptr_ != NULL)
+		{
+			delete pkt_socket_ptr_;
+		}
+	}
+
     void UdpSocketWrapper::send(const std::vector<char>& msg_payload);
 	{
 		// Must with valid remote address
-		if (is_receive_remote_address == false)
+		if (remote_addr_.isValid() == false)
 		{
 			std::ostringstream oss;
             oss << "NO remote address for SocketRole: " << static_cast<int>(role_);
@@ -101,7 +104,7 @@ namespace covered
 			tmp_pkt_payload.reserve(Util::UDP_MAX_PKT_PAYLOAD);
 
 			// Serialize fragment header
-			UdpFragHdr fraghdr(fragment_idx, fragment_cnt);
+			UdpFragHdr fraghdr(fragment_idx, fragment_cnt, msg_payload.size());
 			uint32_t fraghdr_size = fraghdr.serialize(tmp_pkt_payload);
 
 			// Copy UDP fragment payload
@@ -115,119 +118,52 @@ namespace covered
 			memcpy((void*)(tmp_pkt_payload.data() + fraghdr_size), (const void*)(msg_payload.data() + fragment_offset), fragment_payload_size);
 
 			// Send current UDP packet by UdpPktSocket
-			pkt_socket_ptr_->sendto(tmp_pkt_payload, remote_ipstr_, remote_port_);
+			pkt_socket_ptr_->sendto(tmp_pkt_payload, remote_addr_);
 		}
 
 		// Reset is_receive_remote_address for UDP server after sending all fragments
 		if (role_ == SocketRole::kSocketServer)
 		{
 			// Mark remote address to be set by the next successful recv (i.e., receive all fragment payloads of a message payload)
-			is_receive_remote_address = false;
+			remote_addr_.resetValid();
 		}
 		return;
 	}
 
-	// TODO: === END HERE ===
-	/*void UdpPktSocket::recvfrom(SocketResult& socket_result)
+	bool UdpSocketWrapper::recv(std::vector<char>& msg_payload)
 	{
-		// Prepare sockaddr for remote address
-		struct sockaddr_in remote_sockaddr;
-		memset((void *)&remote_sockaddr, 0, sizeof(remote_sockaddr));
+		bool is_timeout = false;
 
-		// Prepare for socket result
-		std::vector<char> paydload_ref = socket_result.getPayloadRef();
-		socket_result.resetTimeout();
-
-		// Try to receive the UDP packet
-		int flags = 0;
-		int recvsize = recvfrom(sockfd_, paydload_ref.data(), UdpSocketResult::UDP_MAX_PKT_PAYLOAD, flags, (struct sockaddr *)&remote_sockaddr, sizeof(remote_sockaddr));
-		if (recvsize < 0) { // Failed to receive a UDP packet
-			if (need_timeout_ && (errno == EWOULDBLOCK || errno == EINTR || errno == EAGAIN)) {
-				socket_result.setTimeout();
-			}
-			else {
-				std::ostringstream oss;
-				oss << "failed to receive a UDP packet (errno: " << errno << ")!";
-				Util::dumpErrorMsg(kClassName, oss.str());
-				exit(1);
-			}
-		}
-		else // Successfully receive a UDP packet
+		while (true)
 		{
-			// Set remote address for successful packet receiving in UDP server, to send potential reply by sendto later
-			// Note: remote address is NOT changed for failed packet receiving or UDP client
-			if (role_ == SocketRole::kSocketServer)
+			// Prepare to receive a UDP packet
+			NetworkAddr tmp_addr;
+			std::vector<char> tmp_pkt_payload;
+
+			is_timeout = pkt_socket_ptr_->recvfrom(tmp_pkt_payload, tmp_addr);
+			if (is_timeout == true) // timeout (not receive any UDP packet)
 			{
-				char remote_ipcstr[INET_ADDRSTRLEN];
-				inet_ntop(AF_INET, &(remote_sockaddr.sin_addr), remote_ipcstr, INET_ADDRSTRLEN);
-				udp_remote_ipstr_ = std::string(remote_ipcstr);
-				udp_remote_port_ = ntohs(remote_sockaddr.sin_port);
-				is_receive_remote_address = true;
+				break;
+			}
+			else // not timeout (receive a UDP packet)
+			{
+				assert(tmp_addr.isValid() == true);
+
+				// TODO: use MsgFragStats to track fragment statistics of each message
+				// TODO: if is_last_frag == true, return the message
+					// TODO: if fragcnt == 1, directly return the fragment
+					// TODO: Otherwise, get previous fragments by getEntry, reconstruct the message, and remvoeEntry
 			}
 		}
 
-		return;
-	}*/
-}
-
-
-
-
-/*void udpsendlarge_udpfrag(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr_in *dest_addr, socklen_t addrlen, const char* role) {
-	udpsendlarge(sockfd, buf, len, flags, dest_addr, addrlen, role, 0, UDP_FRAGMENT_MAXSIZE);
-}
-
-void udpsendlarge_ipfrag(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr_in *dest_addr, socklen_t addrlen, const char* role, size_t frag_hdrsize) {
-	udpsendlarge(sockfd, buf, len, flags, dest_addr, addrlen, role, frag_hdrsize, IP_FRAGMENT_MAXSIZE);
-}
-
-void udpsendlarge(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr_in *dest_addr, socklen_t addrlen, const char* role, size_t frag_hdrsize, size_t frag_maxsize) {
-	// (1) buf[0:frag_hdrsize] + <cur_fragidx, max_fragnum> as final header of each fragment payload
-	// (2) frag_maxsize is the max size of fragment payload (final fragment header + fragment body), yet not including ethernet/ipv4/udp header
-	INVARIANT(len >= frag_hdrsize);
-	size_t final_frag_hdrsize = frag_hdrsize + sizeof(uint16_t) + sizeof(uint16_t);
-	size_t frag_bodysize = frag_maxsize - final_frag_hdrsize;
-	size_t total_bodysize = len - frag_hdrsize;
-	size_t fragnum = 1;
-	if (likely(total_bodysize > 0)) {
-		fragnum = (total_bodysize + frag_bodysize - 1) / frag_bodysize;
-	}
-	INVARIANT(fragnum > 0);
-	//printf("frag_hdrsize: %d, final_frag_hdrsize: %d, frag_maxsize: %d, frag_bodysize: %d, total_bodysize: %d, fragnum: %d\n", frag_hdrsize, final_frag_hdrsize, frag_maxsize, frag_bodysize, total_bodysize, fragnum);
-
-	// <frag_hdrsize, cur_fragidx, max_fragnum, frag_bodysize>
-	char fragbuf[frag_maxsize];
-	memset(fragbuf, 0, frag_maxsize);
-	memcpy(fragbuf, buf, frag_hdrsize); // fixed fragment header
-	uint16_t cur_fragidx = 0;
-	uint16_t max_fragnum = uint16_t(fragnum);
-	size_t buf_sentsize = frag_hdrsize;
-	for (; cur_fragidx < max_fragnum; cur_fragidx++) {
-		memset(fragbuf + frag_hdrsize, 0, frag_maxsize - frag_hdrsize);
-
-		// prepare for final fragment header
-		//// NOTE: UDP fragmentation is processed by end-hosts instead of switch -> no need for endianess conversion
-		//memcpy(fragbuf + frag_hdrsize, &cur_fragidx, sizeof(uint16_t));
-		//memcpy(fragbuf + frag_hdrsize + sizeof(uint16_t), &max_fragnum, sizeof(uint16_t));
-		// NOTE: to support large value, switch needs to parse fragidx and fragnum -> NEED endianess conversion now
-		uint16_t bigendian_cur_fragidx = htons(cur_fragidx); // littleendian -> bigendian for large value
-		memcpy(fragbuf + frag_hdrsize, &bigendian_cur_fragidx, sizeof(uint16_t));
-		uint16_t bigendian_max_fragnum = htons(max_fragnum); // littleendian -> bigendian for large value
-		memcpy(fragbuf + frag_hdrsize + sizeof(uint16_t), &bigendian_max_fragnum, sizeof(uint16_t));
-
-		// prepare for fragment body
-		int cur_frag_bodysize = frag_bodysize;
-		if (cur_fragidx == max_fragnum - 1) {
-			cur_frag_bodysize = total_bodysize - frag_bodysize * cur_fragidx;
-		}
-		memcpy(fragbuf + final_frag_hdrsize, buf + buf_sentsize, cur_frag_bodysize);
-		buf_sentsize += cur_frag_bodysize;
-
-		//printf("cur_fragidx: %d, max_fragnum: %d, cur_fragsize: %d\n", cur_fragidx, max_fragnum, final_frag_hdrsize + cur_frag_bodysize);
-		udpsendto(sockfd, fragbuf, final_frag_hdrsize + cur_frag_bodysize, flags, dest_addr, addrlen, role);
+		return is_timeout;
 	}
 }
 
+
+
+
+/*
 bool udprecvlarge_udpfrag(method_t methodid, int sockfd, dynamic_array_t &buf, int flags, struct sockaddr_in *src_addr, socklen_t *addrlen, const char* role) {
 	return udprecvlarge(methodid, sockfd, buf, flags, src_addr, addrlen, role, UDP_FRAGMENT_MAXSIZE, UDP_FRAGTYPE, NULL);
 }

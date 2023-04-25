@@ -17,7 +17,8 @@ namespace covered
     const std::string Util::LOCALHOST_IPSTR("127.0.0.1");
     const std::string Util::ANY_IPSTR("0.0.0.0");
     const uint32_t Util::UDP_MAX_PKT_PAYLOAD = 65507; // 65535(ipmax) - 20(iphdr) - 8(udphdr)
-    const uint32_t Util::UDP_MAX_FRAG_PAYLOAD = Util::UDP_MAX_PKT_PAYLOAD - 2 * sizeof(uint32_t); // 65507(udpmax) - 4(fragment_idx) - 4(fragment_cnt)
+    const uint32_t Util::UDP_FRAGHDR_SIZE = 4 * sizeof(uint32_t); // 4(fragment_idx) + 4(fragment_cnt) + 4(msg_payload_size) + 4(msg_seqnum)
+    const uint32_t Util::UDP_MAX_FRAG_PAYLOAD = Util::UDP_MAX_PKT_PAYLOAD - Util::UDP_FRAGHDR_SIZE;
     const uint16_t Util::UDP_MAX_PORT = 4096; // UDP port has to be larger than 4096
     // Atomicity
     std::memory_order Util::LOAD_CONCURRENCY_ORDER = std::memory_order_acquire;

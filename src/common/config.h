@@ -31,9 +31,9 @@ namespace covered
     private:
         static const std::string kClassName;
 
-        static void parseJsonFile(const std::string& config_filepath);
-        static boost::json::key_value_pair* find(const std::string& key);
-        static void checkIsValid();
+        static void parseJsonFile_(const std::string& config_filepath);
+        static boost::json::key_value_pair* find_(const std::string& key);
+        static void checkIsValid_();
 
         static bool is_valid_;
         static boost::json::object json_object_;

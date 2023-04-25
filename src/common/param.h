@@ -31,7 +31,7 @@ namespace covered
     private:
         static const std::string kClassName;
 
-        static void checkIsValid();
+        static void checkIsValid_();
 
         static bool is_valid_;
         static bool is_simulation_;

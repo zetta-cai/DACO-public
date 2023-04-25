@@ -21,6 +21,7 @@ namespace covered
         static const std::string LOCALHOST_IPSTR;
         static const std::string ANY_IPSTR;
         static const uint32_t UDP_MAX_PKT_PAYLOAD;
+        static const uint32_t UDP_FRAGHDR_SIZE;
         static const uint32_t UDP_MAX_FRAG_PAYLOAD;
         static const uint16_t UDP_MAX_PORT;
         // Atomicity

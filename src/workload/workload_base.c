@@ -45,9 +45,9 @@ namespace covered
     {
         if (!is_valid_)
         {
-            initWorkloadParameters();
-            overwriteWorkloadParameters();
-            createWorkloadGenerator(global_client_idx);
+            initWorkloadParameters_();
+            overwriteWorkloadParameters_();
+            createWorkloadGenerator_(global_client_idx);
 
             is_valid_ = true;
         }
@@ -61,7 +61,7 @@ namespace covered
     Request WorkloadBase::generateReq(std::mt19937_64& request_randgen)
     {
         checkIsValid();
-        return generateReqInternal(request_randgen);
+        return generateReqInternal_(request_randgen);
     }
 
     void WorkloadBase::checkIsValid()

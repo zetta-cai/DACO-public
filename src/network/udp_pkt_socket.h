@@ -16,7 +16,7 @@
 #include <netinet/in.h> // struct sockaddr_in
 #include <arpa/inet.h> // htons ntohs inet_ntop inet_pton
 
-#include "network/socket_result.h"
+#include "network/network_addr.h"
 
 namespace covered
 {
@@ -30,21 +30,22 @@ namespace covered
         //static const uint32_t UDP_LARGE_RCVBUFSIZE;
 
         UdpPktSocket(const bool& need_timeout); // for UDP client
-        UdpPktSocket(const bool& need_timeout, const std::string& host_ipstr, const uint16_t& host_port); // for UDP server
+        UdpPktSocket(const bool& need_timeout, const NetworkAddr& host_addr); // for UDP server
         ~UdpPktSocket();
 
-        void sendto(const std::vector<char>& pkt_payload, const std::string& remote_ipstr, const uint16_t& remote_port);
-        void recvfrom(SocketResult& socket_result); // Note: pass reference to avoid unnecessary memory copy
+        // Note: pass reference of pkt_payload to avoid unnecessary memory copy
+        void sendto(const std::vector<char>& pkt_payload, const NetworkAddr& remote_addr);
+        bool recvfrom(std::vector<char>& pkt_payload, NetworkAddr& remote_addr); // Return timeout flag
     private:
         static std::string kClassName;
 
         // UDP socket programming
-        void createUdpsock();
+        void createUdpsock_();
 
         // Shared by UDP/TCP
-        void setTimeout(); // for UDP client/server
-        void enableReuseaddr(); // only for UDP server
-        void bindSockaddr(const std::string& host_ipstr, const uint16_t& host_port); // only for UDP server
+        void setTimeout_(); // for UDP client/server
+        void enableReuseaddr_(); // only for UDP server
+        void bindSockaddr_(const NetworkAddr& host_addr); // only for UDP server
 
         const bool need_timeout_;
         int sockfd_;

@@ -32,7 +32,7 @@ namespace covered
         workload_generator_->markShutdown();
     }
 
-    void FacebookWorkload::initWorkloadParameters()
+    void FacebookWorkload::initWorkloadParameters_()
     {
         // Load workload config file for Facebook CDN trace
         CacheBenchConfig facebook_config(Config::getFacebookConfigFilepath());
@@ -41,7 +41,7 @@ namespace covered
         return;
     }
 
-    void FacebookWorkload::overwriteWorkloadParameters()
+    void FacebookWorkload::overwriteWorkloadParameters_()
     {
         uint32_t perworker_opcnt = Param::getOpcnt() / Param::getClientcnt() / Param::getPerclientWorkercnt();
         uint32_t perclient_workercnt = Param::getPerclientWorkercnt();
@@ -59,13 +59,13 @@ namespace covered
         }
     }
 
-    void FacebookWorkload::createWorkloadGenerator(const uint32_t& global_client_idx)
+    void FacebookWorkload::createWorkloadGenerator_(const uint32_t& global_client_idx)
     {
         // facebook::cachelib::cachebench::WorkloadGenerator will generate keycnt key-value pairs by generateReqs() and generate opcnt requests by generateKeyDistributions() in constructor
-        workload_generator_ = makeGenerator(facebook_stressor_config_, global_client_idx);
+        workload_generator_ = makeGenerator_(facebook_stressor_config_, global_client_idx);
     }
 
-    Request FacebookWorkload::generateReqInternal(std::mt19937_64& request_randgen)
+    Request FacebookWorkload::generateReqInternal_(std::mt19937_64& request_randgen)
     {
         // Must be 0 for Facebook CDN trace due to only a single operation pool (cachelib::PoolId = int8_t)
         const uint8_t tmp_poolid = static_cast<uint8_t>((*op_pool_dist_ptr_)(request_randgen));
@@ -81,7 +81,7 @@ namespace covered
     }
 
     // The same makeGenerator as in lib/CacheLib/cachelib/cachebench/runner/Stressor.cpp
-    std::unique_ptr<facebook::cachelib::cachebench::GeneratorBase> FacebookWorkload::makeGenerator(const StressorConfig& config, const uint32_t& global_client_idx)
+    std::unique_ptr<facebook::cachelib::cachebench::GeneratorBase> FacebookWorkload::makeGenerator_(const StressorConfig& config, const uint32_t& global_client_idx)
     {
         if (config.generator == "piecewise-replay") {
             Util::dumpErrorMsg(kClassName, "piecewise-replay generator is not supported now!");

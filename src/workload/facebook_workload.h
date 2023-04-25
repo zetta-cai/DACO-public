@@ -26,13 +26,13 @@ namespace covered
     private:
         static const std::string kClassName;
 
-        virtual void initWorkloadParameters() override;
-        virtual void overwriteWorkloadParameters() override;
-        virtual void createWorkloadGenerator(const uint32_t& global_client_idx) override;
+        virtual void initWorkloadParameters_() override;
+        virtual void overwriteWorkloadParameters_() override;
+        virtual void createWorkloadGenerator_(const uint32_t& global_client_idx) override;
 
-        virtual Request generateReqInternal(std::mt19937_64& request_randgen) override;
+        virtual Request generateReqInternal_(std::mt19937_64& request_randgen) override;
 
-        std::unique_ptr<facebook::cachelib::cachebench::GeneratorBase> makeGenerator(const StressorConfig& config, const uint32_t& global_client_idx);
+        std::unique_ptr<facebook::cachelib::cachebench::GeneratorBase> makeGenerator_(const StressorConfig& config, const uint32_t& global_client_idx);
 
         std::discrete_distribution<>* op_pool_dist_ptr_;
         std::optional<uint64_t> last_reqid_;

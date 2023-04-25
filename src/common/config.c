@@ -31,20 +31,20 @@ namespace covered
         if (is_exist)
         {
             // parse config file to set json_object_
-            parseJsonFile(config_filepath);
+            parseJsonFile_(config_filepath);
 
             // Overwrite default values of config variables if any
-            boost::json::key_value_pair* kv_ptr = find(VERSION_KEYSTR);
+            boost::json::key_value_pair* kv_ptr = find_(VERSION_KEYSTR);
             if (kv_ptr != NULL)
             {
                 version_ = kv_ptr->value().get_string();
             }
-            kv_ptr = find(FACEBOOK_CONFIG_FILEPATH_KEYSTR);
+            kv_ptr = find_(FACEBOOK_CONFIG_FILEPATH_KEYSTR);
             if (kv_ptr != NULL)
             {
                 facebook_config_filepath_ = kv_ptr->value().get_string();
             }
-            kv_ptr = find(GLOBAL_EDGE_RECVREQ_STARTPORT_KEYSTR);
+            kv_ptr = find_(GLOBAL_EDGE_RECVREQ_STARTPORT_KEYSTR);
             if (kv_ptr != NULL)
             {
                 int64_t tmp_port = kv_ptr->value().get_int64();
@@ -70,32 +70,32 @@ namespace covered
 
     std::string Config::getVersion()
     {
-        checkIsValid();
+        checkIsValid_();
         return version_;
     }
 
     std::string Config::getFacebookConfigFilepath()
     {
-        checkIsValid();
+        checkIsValid_();
         return facebook_config_filepath_;
     }
 
     uint16_t Config::getGlobalEdgeRecvreqStartport()
     {
-        checkIsValid();
+        checkIsValid_();
         return global_edge_recvreq_startport_;
     }
 
     std::string Config::toString()
     {
-        checkIsValid();
+        checkIsValid_();
         std::ostringstream oss;
         oss << "[Static configurations from " << Param::getConfigFilepath() << "]" << std::endl;
         oss << "Version: " << version_;
         return oss.str();
     }
 
-    void Config::parseJsonFile(const std::string& config_filepath)
+    void Config::parseJsonFile_(const std::string& config_filepath)
     {
         // Open a binary file and not eat whitespaces
         std::ifstream ifs(config_filepath, std::ios::binary);
@@ -145,7 +145,7 @@ namespace covered
         return;
     }
 
-    boost::json::key_value_pair* Config::find(const std::string& key)
+    boost::json::key_value_pair* Config::find_(const std::string& key)
     {
         boost::json::key_value_pair* kv_ptr = json_object_.find(key);
         if (kv_ptr == NULL)
@@ -157,7 +157,7 @@ namespace covered
         return kv_ptr;
     }
 
-    void Config::checkIsValid()
+    void Config::checkIsValid_()
     {
         if (!is_valid_)
         {

@@ -17,12 +17,15 @@ namespace covered
 	UdpPktSocket::UdpPktSocket(const bool& need_timeout) : need_timeout_(need_timeout)
 	{
 		// Create UDP socket
-		createUdpsock();
+		createUdpsock_();
 	}
 
-    UdpPktSocket::UdpPktSocket(const bool& need_timeout, const std::string& host_ipstr, const uint16_t& host_port) : need_timeout_(need_timeout)
+    UdpPktSocket::UdpPktSocket(const bool& need_timeout, const NetworkAddr& host_addr) : need_timeout_(need_timeout)
     {
+        assert(host_addr.isValid() == true);
+        
 		// Not support to bind a specific host IP for UDP server
+        std::string host_ipstr = host_addr.getIpstr();
 		if (host_ipstr != Util::ANY_IPSTR)
 		{
 			std::ostringstream oss;
@@ -31,28 +34,22 @@ namespace covered
 			exit(1);
 		}
 
-		// UDP port must be > Util::UDP_MAX_PORT
-		if (host_port <= Util::UDP_MAX_PORT)
-		{
-			std::ostringstream oss;
-			oss << "invalid host port of " << host_port << " which should be > " << Util::UDP_MAX_PORT << "!";	
-			Util::dumpErrorMsg(kClassName, oss.str());
-			exit(1);
-		}
-
 		// Create UDP socket
-		createUdpsock();
+		createUdpsock_();
 
 		// Prepare for listening on the host address
-		enableReuseaddr();
-		bindSockaddr(host_ipstr, host_port);
+		enableReuseaddr_();
+		bindSockaddr_(host_addr);
     }
 
 	UdpPktSocket::~UdpPktSocket() {}
 
-	void UdpPktSocket::sendto(const std::vector<char>& pkt_payload, const std::string& remote_ipstr, const uint16_t& remote_port)
+	void UdpPktSocket::sendto(const std::vector<char>& pkt_payload, const NetworkAddr& remote_addr)
 	{
-		// Not support broadcast for UDP client 
+        assert(remote_addr.isValid() == true);
+
+		// Not support broadcast for UDP client
+        std::string remote_ipstr = remote_addr.getIpstr();
 		if (remote_ipstr == Util::ANY_IPSTR)
 		{
 			std::ostringstream oss;
@@ -66,6 +63,7 @@ namespace covered
         memset((void *)&remote_sockaddr, 0, sizeof(remote_sockaddr));
         remote_sockaddr.sin_family = AF_INET;
 		inet_pton(AF_INET, remote_ipstr.c_str(), &(remote_sockaddr.sin_addr));
+        uint16_t remote_port = remote_addr.getPort();
         remote_sockaddr.sin_port = htons(remote_port);
 
 		// Send UDP packet
@@ -81,22 +79,24 @@ namespace covered
 		return;
 	}
 
-	void UdpPktSocket::recvfrom(SocketResult& socket_result)
-	{ 
+	bool UdpPktSocket::recvfrom(std::vector<char>& pkt_payload, NetworkAddr& remote_addr)
+	{
+        bool is_timeout = false;
+
 		// Prepare sockaddr for remote address
 		struct sockaddr_in remote_sockaddr;
 		memset((void *)&remote_sockaddr, 0, sizeof(remote_sockaddr));
 
-		// Prepare for socket result
-		std::vector<char> paydload_ref = socket_result.getPayloadRef();
-		socket_result.resetTimeout();
+        // Prepare for packet payload
+        pkt_payload.resize(0);
+        pkt_payload.reserve(Util::UDP_MAX_PKT_PAYLOAD);
 
 		// Try to receive the UDP packet
 		int flags = 0;
-		int recvsize = recvfrom(sockfd_, paydload_ref.data(), Util::UDP_MAX_PKT_PAYLOAD, flags, (struct sockaddr *)&remote_sockaddr, sizeof(remote_sockaddr));
+		int recvsize = recvfrom(sockfd_, pkt_payload.data(), Util::UDP_MAX_PKT_PAYLOAD, flags, (struct sockaddr *)&remote_sockaddr, sizeof(remote_sockaddr));
 		if (recvsize < 0) { // Failed to receive a UDP packet
 			if (need_timeout_ && (errno == EWOULDBLOCK || errno == EINTR || errno == EAGAIN)) {
-				socket_result.setTimeout();
+				is_timeout = true;
 			}
 			else {
 				std::ostringstream oss;
@@ -110,11 +110,12 @@ namespace covered
 			// Set remote address for successful packet receiving
 			char remote_ipcstr[INET_ADDRSTRLEN];
 			inet_ntop(AF_INET, &(remote_sockaddr.sin_addr), remote_ipcstr, INET_ADDRSTRLEN);
-			socket_result.setRemoteIpstr(std::string(remote_ipcstr));
-			socket_result.setRemotePort(ntohs(remote_sockaddr.sin_port));
+            remote_addr.setIpstr(std::string(remote_ipcstr));
+            remote_addr.setPort(ntohs(remote_sockaddr.sin_port));
+            remote_addr.setValid();
 		}
 
-		return;
+		return is_timeout;
 	}
 
     void UdpPktSocket::createUdpsock() {
@@ -184,7 +185,10 @@ namespace covered
         return;
     }
 
-    void UdpPktSocket::bindSockaddr(const std::string& host_ipstr, const uint16_t& host_port) {
+    void UdpPktSocket::bindSockaddr(const NetworkAddr& host_addr) {
+        std::string host_ipstr = host_addr.getIpstr();
+        uint16_t host_port = host_addr.getPort();
+
 		// Prepare sockaddr based on host address
         struct sockaddr_in host_sockaddr;
         memset((void *)&host_sockaddr, 0, sizeof(host_sockaddr));

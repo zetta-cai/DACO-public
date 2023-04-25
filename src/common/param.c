@@ -40,67 +40,67 @@ namespace covered
 
     bool Param::isSimulation()
     {
-        checkIsValid();
+        checkIsValid_();
         return is_simulation_;
     }
 
     std::string Param::getConfigFilepath()
     {
-        checkIsValid();
+        checkIsValid_();
         return config_filepath_;
     }
 
     bool Param::isDebug()
     {
-        checkIsValid();
+        checkIsValid_();
         return is_debug_;
     }
 
     uint32_t Param::getEdgecnt()
     {
-        checkIsValid();
+        checkIsValid_();
         return edgecnt_;
     }
 
     uint32_t Param::getKeycnt()
     {
-        checkIsValid();
+        checkIsValid_();
         return keycnt_;
     }
 
     uint32_t Param::getOpcnt()
     {
-        checkIsValid();
+        checkIsValid_();
         return opcnt_;
     }
 
     uint32_t Param::getClientcnt()
     {
-        checkIsValid();
+        checkIsValid_();
         return clientcnt_;
     }
 
     uint32_t Param::getPerclientWorkercnt()
     {
-        checkIsValid();
+        checkIsValid_();
         return perclient_workercnt_;
     }
 
     std::string Param::getWorkloadName()
     {
-        checkIsValid();
+        checkIsValid_();
         return workload_name_;
     }
 
     double Param::getDuration()
     {
-        checkIsValid();
+        checkIsValid_();
         return duration_;
     }
 
     std::string Param::toString()
     {
-        checkIsValid();
+        checkIsValid_();
 
         std::ostringstream oss;
         oss << "[Dynamic configurations from CLI parameters]" << std::endl;
@@ -114,7 +114,7 @@ namespace covered
         
     }
 
-    void Param::checkIsValid()
+    void Param::checkIsValid_()
     {
         if (!is_valid_)
         {
