@@ -1,5 +1,6 @@
 #include "common/dynamic_array.h"
 
+#include <assert.h>
 #include <cstring> // memcpy
 #include <sstream>
 
@@ -22,7 +23,7 @@ namespace covered
     
     DynamicArray::~DynamicArray() {};
 
-    const std::vector<char>& getBytes() const;
+    const std::vector<char>& DynamicArray::getBytes() const
     {
         return bytes_;
     }
@@ -49,7 +50,7 @@ namespace covered
         if (position + length > bytes_.capacity())
         {
             std::ostringstream oss;
-            oss << "position " << position " + length " << length << " = " << position + length << ", which exceeds the capacity " << bytes_.capacity() << "!";
+            oss << "position " << position << " + length " << length << " = " << position + length << ", which exceeds the capacity " << bytes_.capacity() << "!";
             Util::dumpErrorMsg(kClassName, oss.str());
             exit(1);
         }
@@ -70,7 +71,7 @@ namespace covered
         if (position + length > bytes_.size())
         {
             std::ostringstream oss;
-            oss << "position " << position " + length " << length << " = " << position + length << ", which exceeds the size " << bytes_.size() << "!";
+            oss << "position " << position << " + length " << length << " = " << position + length << ", which exceeds the size " << bytes_.size() << "!";
             Util::dumpErrorMsg(kClassName, oss.str());
             exit(1);
         }
@@ -86,7 +87,7 @@ namespace covered
         if (position + length > bytes_.size())
         {
             std::ostringstream oss;
-            oss << "position " << position " + length " << length << " = " << position + length << ", which exceeds the size " << bytes_.size() << "!";
+            oss << "position " << position << " + length " << length << " = " << position + length << ", which exceeds the size " << bytes_.size() << "!";
             Util::dumpErrorMsg(kClassName, oss.str());
             exit(1);
         }

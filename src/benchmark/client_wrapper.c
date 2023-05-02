@@ -1,13 +1,13 @@
 #include "benchmark/client_wrapper.h"
 
+#include <assert.h> // assert
 #include <pthread.h>
 #include <sstream>
-#include <assert.h> // assert
 
-#include "common/util.h"
-#include "common/param.h"
 #include "benchmark/worker_param.h"
 #include "benchmark/worker.h"
+#include "common/param.h"
+#include "common/util.h"
 
 namespace covered
 {

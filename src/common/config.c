@@ -1,12 +1,12 @@
 #include "common/config.h"
 
+#include <assert.h> // assert
 #include <fstream> // ifstream
 #include <sstream> // ostringstream
 #include <vector>
-#include <assert.h> // assert
 
-#include "common/util.h"
 #include "common/param.h"
+#include "common/util.h"
 
 namespace covered
 {

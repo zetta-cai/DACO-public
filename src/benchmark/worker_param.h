@@ -7,8 +7,8 @@
 #ifndef WORKER_PARAM_H
 #define WORKER_PARAM_H
 
-#include <string>
 #include <atomic>
+#include <string>
 
 #include "benchmark/client_param.h"
 

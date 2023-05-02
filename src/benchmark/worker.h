@@ -10,8 +10,8 @@
 #ifndef WORKER_H
 #define WORKER_H
 
-#include <string>
 #include <random> // std::mt19937_64
+#include <string>
 
 #include "benchmark/worker_param.h"
 

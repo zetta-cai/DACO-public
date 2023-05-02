@@ -9,15 +9,13 @@ namespace covered
     ClientParam::ClientParam() : local_client_running_(false)
     {
         global_client_idx_ = 0;
-        local_client_workload_startport_ = 0;
         local_edge_node_ipstr_ = "";
         workload_generator_ptr_ = NULL;
     }
 
-    ClientParam::ClientParam(const uint32_t& global_client_idx, const uint16_t& local_client_workload_startport, const std::string& local_edge_node_ipstr, WorkloadBase* workload_generator_ptr) : local_client_running_(false)
+    ClientParam::ClientParam(const uint32_t& global_client_idx, const std::string& local_edge_node_ipstr, WorkloadBase* workload_generator_ptr) : local_client_running_(false)
     {
         global_client_idx_ = global_client_idx;
-        local_client_workload_startport_ = local_client_workload_startport;
         local_edge_node_ipstr_ = local_edge_node_ipstr;
         if (workload_generator_ptr == NULL)
         {
@@ -33,7 +31,6 @@ namespace covered
     {
         local_client_running_.store(other.local_client_running_.load(Util::LOAD_CONCURRENCY_ORDER), Util::STORE_CONCURRENCY_ORDER);
         global_client_idx_ = other.global_client_idx_;
-        local_client_workload_startport_ = other.local_client_workload_startport_;
         local_edge_node_ipstr_ = other.local_edge_node_ipstr_;
         if (other.workload_generator_ptr_ == NULL)
         {
@@ -62,11 +59,6 @@ namespace covered
     uint32_t ClientParam::getGlobalClientIdx()
     {
         return global_client_idx_;
-    }
-
-    uint16_t ClientParam::getLocalClientWorkloadStartport()
-    {
-        return local_client_workload_startport_;
     }
 
     std::string ClientParam::getLocalEdgeNodeIpstr()

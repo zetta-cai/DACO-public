@@ -1,12 +1,11 @@
 #include "benchmark/worker.h"
 
-#include <sstream>
 #include <assert.h> // assert
+#include <sstream>
 
-#include "common/util.h"
-#include "common/request.h"
 #include "benchmark/client_param.h"
-#include "benchmark/benchmark_util.h"
+#include "common/request.h"
+#include "common/util.h"
 
 namespace covered
 {

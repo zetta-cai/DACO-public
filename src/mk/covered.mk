@@ -3,25 +3,36 @@ COVERED_INCDIR = -I$(COVERED_DIRPATH)
 INCDIR += $(COVERED_INCDIR)
 
 # benchmark module
-BENCHMARK_OBJECTS += $(COVERED_DIRPATH)/benchmark/benchmark_util.o $(COVERED_DIRPATH)/benchmark/client_param.o $(COVERED_DIRPATH)/benchmark/client_wrapper.o $(COVERED_DIRPATH)/benchmark/worker_param.o $(COVERED_DIRPATH)/benchmark/worker.o
-BENCHMARK_SHARED_OBJECTS += $(BENCHMARK_OBJECTS:.o=.shared.o)
-DEPS += $(BENCHMARK_OBJECTS:.o=.d)
+BENCHMARK_SRCFILES := $(wildcard $(COVERED_DIRPATH)/benchmark/*.c)
+BENCHMARK_OBJECTS += $(BENCHMARK_SRCFILES:.c=.o)
+BENCHMARK_SHARED_OBJECTS += $(BENCHMARK_SRCFILES:.c=.shared.o)
+DEPS += $(BENCHMARK_SRCFILES:.c=.d)
 CLEANS += $(BENCHMARK_OBJECTS) $(BENCHMARK_SHARED_OBJECTS)
 
 # common module
-COMMON_OBJECTS += $(COVERED_DIRPATH)/common/config.o $(COVERED_DIRPATH)/common/key.o $(COVERED_DIRPATH)/common/param.o $(COVERED_DIRPATH)/common/request.o $(COVERED_DIRPATH)/common/util.o $(COVERED_DIRPATH)/common/value.o
-COMMON_SHARED_OBJECTS += $(COMMON_OBJECTS:.o=.shared.o)
-DEPS += $(COMMON_OBJECTS:.o=.d)
+COMMON_SRCFILES := $(wildcard $(COVERED_DIRPATH)/common/*.c)
+COMMON_OBJECTS += $(COMMON_SRCFILES:.c=.o)
+COMMON_SHARED_OBJECTS += $(COMMON_SRCFILES:.c=.shared.o)
+DEPS += $(COMMON_SRCFILES:.c=.d)
 CLEANS += $(COMMON_OBJECTS) $(COMMON_SHARED_OBJECTS)
 
 # edge module
-EDGE_OBJECTS += $(COVERED_DIRPATH)/edge/edge_param.o $(COVERED_DIRPATH)/edge/edge_wrapper.EDGE_OBJECTS
-EDGE_SHARED_OBJECTS += $(EDGE_OBJECTS:.o=.shared.o)
-DEPS += $(EDGE_OBJECTS:.o=.d)
+EDGE_SRCFILES := $(wildcard $(COVERED_DIRPATH)/edge/*.c)
+EDGE_OBJECTS += $(EDGE_SRCFILES:.c=.o)
+EDGE_SHARED_OBJECTS += $(EDGE_SRCFILES:.c=.shared.o)
+DEPS += $(EDGE_SRCFILES:.c=.d)
 CLEANS += $(EDGE_OBJECTS) $(EDGE_SHARED_OBJECTS)
 
+# network module
+NETWORK_SRCFILES := $(wildcard $(COVERED_DIRPATH)/network/*.c)
+NETWORK_OBJECTS += $(NETWORK_SRCFILES:.c=.o)
+NETWORK_SHARED_OBJECTS += $(NETWORK_SRCFILES:.c=.shared.o)
+DEPS += $(NETWORK_SRCFILES:.c=.d)
+CLEANS += $(NETWORK_OBJECTS) $(NETWORK_SHARED_OBJECTS)
+
 # workload module
-WORKLOAD_OBJECTS += $(COVERED_DIRPATH)/workload/workload_base.o $(COVERED_DIRPATH)/workload/facebook_workload.o $(COVERED_DIRPATH)/workload/cachebench/workload_generator.o $(COVERED_DIRPATH)/workload/cachebench/cachebench_config.o
-WORKLOAD_SHARED_OBJECTS += $(WORKLOAD_OBJECTS:.o=.shared.o)
-DEPS += $(WORKLOAD_OBJECTS:.o=.d)
+WORKLOAD_SRCFILES := $(wildcard $(COVERED_DIRPATH)/workload/*.c) $(wildcard $(COVERED_DIRPATH)/workload/cachebench/*.c)
+WORKLOAD_OBJECTS += $(WORKLOAD_SRCFILES:.c=.o)
+WORKLOAD_SHARED_OBJECTS += $(WORKLOAD_SRCFILES:.c=.shared.o)
+DEPS += $(WORKLOAD_SRCFILES:.c=.d)
 CLEANS += $(WORKLOAD_OBJECTS) $(WORKLOAD_SHARED_OBJECTS)

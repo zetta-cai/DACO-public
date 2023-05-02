@@ -10,8 +10,8 @@
 #ifndef WORKLOAD_BASE_H
 #define WORKLOAD_BASE_H
 
-#include <string>
 #include <random> // std::mt19937_64
+#include <string>
 
 #include "common/request.h"
 

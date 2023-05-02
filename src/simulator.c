@@ -1,17 +1,18 @@
 #include <iostream>
-#include <sstream>
 #include <pthread.h>
+#include <sstream>
 #include <time.h> // struct timespec
 #include <unistd.h> // usleep
 
 #include <boost/program_options.hpp>
 
-#include "common/util.h"
-#include "common/param.h"
-#include "common/config.h"
-#include "benchmark/benchmark_util.h"
 #include "benchmark/client_param.h"
 #include "benchmark/client_wrapper.h"
+#include "common/config.h"
+#include "common/param.h"
+#include "common/util.h"
+#include "edge/edge_param.h"
+#include "edge/edge_wrapper.h"
 #include "workload/workload_base.h"
 
 int main(int argc, char **argv) {
@@ -28,7 +29,7 @@ int main(int argc, char **argv) {
     argument_desc.add_options()
         ("config_file,f", boost::program_options::value<std::string>()->default_value("config.json"), "config file path of COVERED")
         ("debug", "enable debug information")
-        ("edgecnt,e", boost:program_options::value<uint32_t>()->default_value(1), "the number of edge nodes")
+        ("edgecnt,e", boost::program_options::value<uint32_t>()->default_value(1), "the number of edge nodes")
         ("keycnt,k", boost::program_options::value<uint32_t>()->default_value(1000000), "the total number of keys")
         ("opcnt,o", boost::program_options::value<uint32_t>()->default_value(1000000), "the total number of operations")
         ("clientcnt,c", boost::program_options::value<uint32_t>()->default_value(1), "the total number of clients")
@@ -143,11 +144,10 @@ int main(int argc, char **argv) {
 
     for (uint32_t global_client_idx = 0; global_client_idx < clientcnt; global_client_idx++)
     {
-        uint16_t local_client_workload_startport = covered::Util::getLocalClientWorkloadStartport(global_client_idx);
         std::string local_edge_node_ipstr = covered::Util::getLocalEdgeNodeIpstr(global_client_idx);
         workload_generator_ptrs[global_client_idx] = covered::WorkloadBase::getWorkloadGenerator(workload_name, global_client_idx);
 
-        covered::ClientParam local_client_param(global_client_idx, local_client_workload_startport, local_edge_node_ipstr, workload_generator_ptrs[global_client_idx]);
+        covered::ClientParam local_client_param(global_client_idx, local_edge_node_ipstr, workload_generator_ptrs[global_client_idx]);
         client_params[global_client_idx] = local_client_param;
     }
 

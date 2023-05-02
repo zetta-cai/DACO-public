@@ -13,8 +13,8 @@
 #include <cachelib/cachebench/workload/GeneratorBase.h>
 
 #include "common/request.h"
-#include "workload/workload_base.h"
 #include "workload/cachebench/cachebench_config.h"
+#include "workload/workload_base.h"
 
 namespace covered
 {

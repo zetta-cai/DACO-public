@@ -3,13 +3,13 @@
 #include <memory> // std::make_unique
 #include <random> // std::mt19937_64, std::discrete_distribution
 
-#include <cachelib/cachebench/workload/PieceWiseReplayGenerator.h>
 #include <cachelib/cachebench/workload/KVReplayGenerator.h>
 #include <cachelib/cachebench/workload/OnlineGenerator.h>
+#include <cachelib/cachebench/workload/PieceWiseReplayGenerator.h>
 
-#include "common/util.h"
-#include "common/param.h"
 #include "common/config.h"
+#include "common/param.h"
+#include "common/util.h"
 #include "workload/cachebench/workload_generator.h"
 
 namespace covered

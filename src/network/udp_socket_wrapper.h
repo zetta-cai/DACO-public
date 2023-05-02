@@ -13,9 +13,9 @@
 #include <string>
 
 #include "common/dynamic_array.h"
+#include "network/msg_frag_stats.h"
 #include "network/network_addr.h"
 #include "network/udp_pkt_socket.h"
-#include "network/msg_frag_stats.h"
 
 namespace covered
 {

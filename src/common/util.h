@@ -7,6 +7,7 @@
 #ifndef UTIL_H
 #define UTIL_H
 
+#include <atomic> // std::memory_order
 #include <string>
 #include <time.h>
 
