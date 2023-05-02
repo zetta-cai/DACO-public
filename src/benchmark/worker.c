@@ -50,6 +50,7 @@ namespace covered
         if (request_randgen_ptr_ != NULL)
         {
             delete request_randgen_ptr_;
+            request_randgen_ptr_ = NULL;
         }
     }
 

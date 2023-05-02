@@ -31,7 +31,7 @@ namespace covered
         }
     }
 
-    void MsgFragStatsEntry::insertFrag(const UdpFragHdr& fraghdr, const std::vector<char>& pkt_payload)
+    void MsgFragStatsEntry::insertFrag(const UdpFragHdr& fraghdr, const DynamicArray& pkt_payload)
     {
         uint32_t fragidx = fraghdr.getFragmentIdx();
         uint32_t fragcnt = fraghdr.getFragmentCnt();
@@ -56,14 +56,18 @@ namespace covered
             assert(seqnum == seqnum_);
             if (fragidx_fragpayload_map_.find(fragidx) == fragidx_fragpayload_map_.end()) // Not tracked before
             {
-                fragidx_fragpayload_map_.insert(std::pair<uint32_t, std::vector<char>>(fragidx, std::vector<char>()));
-                std::vector<char>& frag_payload = fragidx_fragpayload_map_[fragidx];
-                frag_payload.reserve(Util::UDP_MAX_FRAG_PAYLOAD);
-                frag_payload.insert(pkt_payload.begin() + Util::UDP_FRAGHDR_SIZE, pkt_payload.end());
+                fragidx_fragpayload_map_.insert(std::pair<uint32_t, DynamicArray>(fragidx, DynamicArray(Util::UDP_MAX_FRAG_PAYLOAD)));
+                DynamicArray& frag_payload = fragidx_fragpayload_map_[fragidx];
+                pkt_payload.arraycpy(Util::UDP_FRAGHDR_SIZE, frag_payload, 0, pkt_payload.size() - Util::UDP_FRAGHDR_SIZE);
             }
         }
 
         return;
+    }
+
+    std::map<uint32_t, DynamicArray>& MsgFragStatsEntry::getFragidxFragpayloadMap()
+    {
+        return fragidx_fragpayload_map_;
     }
 
     // MsgFragStats
@@ -78,8 +82,10 @@ namespace covered
     MsgFragStats::~MsgFragStats() {}
 
     // NOTE: we do NOT copy the last fragment into the entry to avoid one time of unnecessary memory copy
-    bool MsgFragStats::insertEntry(const NetworkAddr& addr, const std::vector<char>& pkt_payload)
+    bool MsgFragStats::insertEntry(const NetworkAddr& addr, const DynamicArray& pkt_payload)
     {
+        assert(addr.isValid() == true);
+
         bool is_last_frag = false;
 
         UdpFragHdr fraghdr(pkt_payload);
@@ -112,6 +118,8 @@ namespace covered
 
     MsgFragStatsEntry* MsgFragStats::getEntry(const NetworkAddr& addr)
     {
+        assert(addr.isValid() == true);
+        
         if (addr_entry_map_.find(addr) == addr_entry_map_.end())
         {
             return NULL;

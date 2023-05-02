@@ -1,6 +1,5 @@
 #include "udp_fragment_header.h"
 
-#include <cstring> // memcpy
 #include <arpa/inet.h> // htonl ntohl
 
 #include "common/util.h"
@@ -17,7 +16,7 @@ namespace covered
         msg_seqnum_ = msg_seqnum;
     }
 
-    UdpFragHdr::UdpFragHdr(const std::vector<char>& pkt_payload)
+    UdpFragHdr::UdpFragHdr(const DynamicArray& pkt_payload)
     {
         deserialize(pkt_payload);
     }
@@ -44,41 +43,41 @@ namespace covered
         return msg_seqnum_;
     }
 
-    uint32_t serialize(std::vector<char>& pkt_payload)
+    uint32_t serialize(DynamicArray& pkt_payload)
     {
         uint32_t size = 0;
         uint32_t bigendian_fragment_idx = htonl(fragment_idx_);
-        memcpy((void*)(pkt_payload.data()), (const void*)(&bigendian_fragment_idx), sizeof(uint32_t));
+        pkt_payload.write(0, (const char*)(&bigendian_fragment_idx), sizeof(uint32_t));
         size += sizeof(uint32_t);
         uint32_t bigendian_fragment_cnt = htonl(fragment_cnt_);
-        memcpy((void*)(pkt_payload.data() + size), (const void *)(&bigendian_fragment_cnt), sizeof(uint32_t));
+        pkt_payload.write(size, (const char*)(&bigendian_fragment_cnt), sizeof(uint32_t));
         size += sizeof(uint32_t);
         uint32_t bigendian_msg_payload_size = htonl(msg_payload_size_);
-        memcpy((void*)(pkt_payload.data() + size), (const void *)(&bigendian_msg_payload_size), sizeof(uint32_t));
+        pkt_payload.write(size, (const char*)(&bigendian_msg_payload_size), sizeof(uint32_t));
         size += sizeof(uint32_t);
         uint32_t bigendian_msg_seqnum = htonl(msg_seqnum_);
-        memcpy((void*)(pkt_payload.data() + size), (const void *)(&bigendian_msg_seqnum), sizeof(uint32_t));
+        pkt_payload.write(size, (const char*)(&bigendian_msg_seqnum), sizeof(uint32_t));
         size += sizeof(uint32_t);
         return size;
     }
     
-    uint32_t deserialize(const std::vector<char>& pkt_payload)
+    uint32_t deserialize(const DynamicArray& pkt_payload)
     {
         uint32_t size = 0;
         uint32_t bigendian_fragment_idx = 0;
-        memcpy((void*)(&bigendian_fragment_idx), (const void*)(pkt_payload.data()), sizeof(uint32_t));
+        pkt_payload.read(0, (char*)(&bigendian_fragment_idx), sizeof(uint32_t));
         fragment_idx_ = ntohl(bigendian_fragment_idx);
         size += sizeof(uint32_t);
         uint32_t bigendian_fragment_cnt = 0;
-        memcpy((void*)(&bigendian_fragment_cnt), (const void*)(pkt_payload.data() + size), sizeof(uint32_t));
+        pkt_payload.read(size, (char*)(&bigendian_fragment_cnt), sizeof(uint32_t));
         fragment_cnt_ = ntohl(bigendian_fragment_cnt);
         size += sizeof(uint32_t);
         uint32_t bigendian_msg_payload_size = 0;
-        memcpy((void*)(&bigendian_msg_payload_size), (const void*)(pkt_payload.data() + size), sizeof(uint32_t));
+        pkt_payload.read(size, (char*)(&bigendian_msg_payload_size), sizeof(uint32_t));
         msg_payload_size_ = ntohl(bigendian_msg_payload_size);
         size += sizeof(uint32_t);
         uint32_t bigendian_msg_seqnum = 0;
-        memcpy((void*)(&bigendian_msg_seqnum), (const void*)(pkt_payload.data() + size), sizeof(uint32_t));
+        pkt_payload.read(size, (char*)(&bigendian_msg_seqnum), sizeof(uint32_t));
         msg_seqnum_ = ntohl(bigendian_msg_seqnum);
         size += sizeof(uint32_t);
         return size;

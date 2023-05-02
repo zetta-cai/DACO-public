@@ -2,7 +2,7 @@
  * UdpSocketWrapper: encapsulate advanced operations (UDP fragmentation of message payload) on UDP socket programming.
  *
  * NOTE: message payload may be splited into multiple UDP fragments (i.e., multiple fragment payloads).
- * NOTE: each fragment payload + fragment header form the corresponding packet payload.
+ * NOTE: each fragment payload + fragment header form the corresponding UDP packet payload.
  * 
  * By Siyuan Sheng (2023.04.24).
  */
@@ -12,8 +12,10 @@
 
 #include <string>
 
+#include "common/dynamic_array.h"
 #include "network/network_addr.h"
 #include "network/udp_pkt_socket.h"
+#include "network/msg_frag_stats.h"
 
 namespace covered
 {
@@ -34,8 +36,8 @@ namespace covered
         ~UdpSocketWrapper();
 
         // Note: pass reference of pkt_payload to avoid unnecessary memory copy
-        void send(const std::vector<char>& msg_payload);
-        bool recv(std::vector<char>& msg_payload);
+        void send(const DynamicArray& msg_payload);
+        bool recv(DynamicArray& msg_payload);
     private:
         static std::string kClassName;
 
@@ -45,20 +47,10 @@ namespace covered
         // Note: remote address of UDP client is always that set in the constructor
         // Note: remote address of UDP server is that set in the most recent successful recv (i.e., receive all fragment payloads of a message payload)
         NetworkAddr remote_addr_; // for UDP client (fixed) / server (changed)
-        UdpPktSocket* pkt_socket_ptr_;
+
+        UdpPktSocket* pkt_socket_ptr_; // send/recv payload of each single UDP packet
+        MsgFragStats msg_frag_stats_; // reconstruct each message based on received fragments
     };
 }
 
 #endif
-
-/*
-#include <netinet/ether.h> // ether_header
-#include <linux/ip.h> // iphdr
-#include <linux/udp.h> // udphdr
-#include <sys/ioctl.h> // ioctl
-#include <netpacket/packet.h> // sockaddr_ll
-
-
-bool udprecvlarge_udpfrag(method_t methodid, int sockfd, dynamic_array_t &buf, int flags, struct sockaddr_in *src_addr, socklen_t *addrlen, const char* role);
-bool udprecvlarge_ipfrag(method_t methodid, int sockfd, dynamic_array_t &buf, int flags, struct sockaddr_in *src_addr, socklen_t *addrlen, const char* role, pkt_ring_buffer_t *pkt_ring_buffer_ptr = NULL);
-bool udprecvlarge(method_t methodid, int sockfd, dynamic_array_t &buf, int flags, struct sockaddr_in *src_addr, socklen_t *addrlen, const char* role, size_t frag_maxsize, int fragtype, pkt_ring_buffer_t *pkt_ring_buffer_ptr);*/

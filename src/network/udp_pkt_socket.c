@@ -44,7 +44,7 @@ namespace covered
 
 	UdpPktSocket::~UdpPktSocket() {}
 
-	void UdpPktSocket::sendto(const std::vector<char>& pkt_payload, const NetworkAddr& remote_addr)
+	void UdpPktSocket::sendto(const DynamicArray& pkt_payload, const NetworkAddr& remote_addr)
 	{
         assert(remote_addr.isValid() == true);
 
@@ -68,10 +68,10 @@ namespace covered
 
 		// Send UDP packet
 		int flags = 0;
-		int return_code = sendto(sockfd_, pkt_payload.data(), pkt_payload.size(), flags, (struct sockaddr*)(&remote_sockaddr), sizeof(remote_sockaddr));
+		int return_code = sendto(sockfd_, pkt_payload.getBytes().data(), pkt_payload.getSize(), flags, (struct sockaddr*)(&remote_sockaddr), sizeof(remote_sockaddr));
 		if (return_code < 0) {
 			std::ostringstream oss;
-            oss << "failed to send " << pkt_payload.size() << " bytes to remote address with ip " << remote_ipstr << " and port " << remote_port << " (errno: " << errno << ")";
+            oss << "failed to send " << pkt_payload.getSize() << " bytes to remote address with ip " << remote_ipstr << " and port " << remote_port << " (errno: " << errno << ")";
             Util::dumpErrorMsg(kClassName, oss.str());
             exit(1);
 		}
@@ -79,7 +79,7 @@ namespace covered
 		return;
 	}
 
-	bool UdpPktSocket::recvfrom(std::vector<char>& pkt_payload, NetworkAddr& remote_addr)
+	bool UdpPktSocket::recvfrom(DynamicArray& pkt_payload, NetworkAddr& remote_addr)
 	{
         bool is_timeout = false;
 
@@ -88,12 +88,12 @@ namespace covered
 		memset((void *)&remote_sockaddr, 0, sizeof(remote_sockaddr));
 
         // Prepare for packet payload
-        pkt_payload.resize(0);
-        pkt_payload.reserve(Util::UDP_MAX_PKT_PAYLOAD);
+        char tmp_pkt_payload[Util::UDP_MAX_PKT_PAYLOAD];
+        memset(tmp_pkt_payload, 0, Util::UDP_MAX_PKT_PAYLOAD);
 
 		// Try to receive the UDP packet
 		int flags = 0;
-		int recvsize = recvfrom(sockfd_, pkt_payload.data(), Util::UDP_MAX_PKT_PAYLOAD, flags, (struct sockaddr *)&remote_sockaddr, sizeof(remote_sockaddr));
+		int recvsize = recvfrom(sockfd_, tmp_pkt_payload, Util::UDP_MAX_PKT_PAYLOAD, flags, (struct sockaddr *)&remote_sockaddr, sizeof(remote_sockaddr));
 		if (recvsize < 0) { // Failed to receive a UDP packet
 			if (need_timeout_ && (errno == EWOULDBLOCK || errno == EINTR || errno == EAGAIN)) {
 				is_timeout = true;
@@ -107,6 +107,9 @@ namespace covered
 		}
 		else // Successfully receive a UDP packet
 		{
+            // Copy into pkt_payload
+            pkt_payload.write(0, tmp_pkt_payload, recvsize);
+
 			// Set remote address for successful packet receiving
 			char remote_ipcstr[INET_ADDRSTRLEN];
 			inet_ntop(AF_INET, &(remote_sockaddr.sin_addr), remote_ipcstr, INET_ADDRSTRLEN);

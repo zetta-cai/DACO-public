@@ -1,7 +1,7 @@
 /*
- * UdpSocketBasic: encapsulate basic operations (send/receive payload of a single UDP packet) on UDP socket programming.
+ * UdpPktSocket: encapsulate basic operations (sendto/recvfrom payload of a single UDP packet) via timeout-based socket.
  *
- * Note: UdpSocketBasic is orthogonal with UDP fragmentation (see UdpSocketWrapper).
+ * Note: UdpPktSocket is orthogonal with UDP fragmentation (see UdpSocketWrapper).
  * 
  * By Siyuan Sheng (2023.04.22).
  */
@@ -34,8 +34,8 @@ namespace covered
         ~UdpPktSocket();
 
         // Note: pass reference of pkt_payload to avoid unnecessary memory copy
-        void sendto(const std::vector<char>& pkt_payload, const NetworkAddr& remote_addr);
-        bool recvfrom(std::vector<char>& pkt_payload, NetworkAddr& remote_addr); // Return timeout flag
+        void sendto(const DynamicArray& pkt_payload, const NetworkAddr& remote_addr);
+        bool recvfrom(DynamicArray& pkt_payload, NetworkAddr& remote_addr); // Return timeout flag
     private:
         static std::string kClassName;
 

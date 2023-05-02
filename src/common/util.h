@@ -65,6 +65,8 @@ namespace covered
         // (5) Network
 
         static uint32_t getFragmentCnt(const uint32_t& msg_payload_size);
+        static uint32_t getFragmentOffset(const uint32_t& fragment_idx);
+        static uint32_t getFragmentPayloadSize(const uint32_t& fragment_idx, const uint32_t& msg_payload_size);
     private:
         static const std::string kClassName;
     };

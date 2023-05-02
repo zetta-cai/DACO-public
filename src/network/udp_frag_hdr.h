@@ -10,13 +10,15 @@
 #include <string>
 #include <vector>
 
+#include "common/dynamic_array.h"
+
 namespace covered
 {
     class UdpFragHdr
     {
     public:
         UdpFragHdr(const uint32_t& fragment_idx, const uint32_t& fragment_cnt, const uint32_t& msg_payload_size, const uint32_t& msg_seqnum);
-        UdpFragHdr(const std::vector<char>& pkt_payload);
+        UdpFragHdr(const DynamicArray& pkt_payload);
         ~UdpFragHdr();
 
         uint32_t getFragmentIdx();
@@ -25,8 +27,8 @@ namespace covered
         uint32_t getMsgSeqnum();
 
         // Offset must be 0 for UDP fragment header
-        uint32_t serialize(std::vector<char>& pkt_payload);
-        uint32_t deserialize(const std::vector<char>& pkt_payload);
+        uint32_t serialize(DynamicArray& pkt_payload);
+        uint32_t deserialize(const DynamicArray& pkt_payload);
     private:
         static const std::string kClassName;
 

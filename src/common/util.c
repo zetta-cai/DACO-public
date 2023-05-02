@@ -209,4 +209,21 @@ namespace covered
         }
         return fragment_cnt;
     }
+
+    uint32_t Util::getFragmentOffset(const uint32_t& fragment_idx)
+    {
+        return fragment_idx * UDP_MAX_FRAG_PAYLOAD;
+    }
+
+    uint32_t Util::getFragmentPayloadSize(const uint32_t& fragment_idx, const uint32_t& msg_payload_size)
+    {
+        uint32_t fragment_payload_size = UDP_MAX_FRAG_PAYLOAD;
+        uint32_t fragment_cnt = getFragmentCnt(msg_payload_size);
+        if (fragment_idx == fragment_cnt - 1)
+        {
+            fragment_payload_size = msg_payload_size % UDP_MAX_FRAG_PAYLOAD;
+        }
+        assert(fragment_payload_size <= UDP_MAX_FRAG_PAYLOAD);
+        return fragment_payload_size;
+    }
 }

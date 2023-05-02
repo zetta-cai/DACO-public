@@ -8,9 +8,9 @@
 #define MSG_FRAG_STATS_H
 
 #include <map>
-#include <vector>
 #include <string>
 
+#include "common/dynamic_array.h"
 #include "network/network_addr.h"
 
 namespace covered
@@ -22,11 +22,12 @@ namespace covered
         ~MsgFragStatsEntry();
 
         bool isLastFrag(const UdpFragHdr& fraghdr);
-        void insertFrag(const UdpFragHdr& fraghdr, const std::vector<char>& pkt_payload);
+        void insertFrag(const UdpFragHdr& fraghdr, const DynamicArray& pkt_payload);
+        std::map<uint32_t, DynamicArray& getFragidxFragpayloadMap();
     private:
         static const std::string kClassName;
 
-        std::map<uint32_t, std::vector<char>> fragidx_fragpayload_map_;
+        std::map<uint32_t, DynamicArray> fragidx_fragpayload_map_;
         uint32_t fragcnt_;
         uint32_t seqnum_;
     };
@@ -37,7 +38,7 @@ namespace covered
         MsgFragStats();
         ~MsgFragStats();
 
-        bool insertEntry(const NetworkAddr& addr, const std::vector<char>& pkt_payload); // Return if the current fragment is the last one (must be true for fragcnt of 1)
+        bool insertEntry(const NetworkAddr& addr, const DynamicArray& pkt_payload); // Return if the current fragment is the last one (must be true for fragcnt of 1)
         MsgFragStatsEntry* getEntry(const NetworkAddr& addr);
         void removeEntry(const NetworkAddr& addr);
     private:

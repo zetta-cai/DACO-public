@@ -27,6 +27,7 @@ namespace covered
         if (op_pool_dist_ptr_ != NULL)
         {
             delete op_pool_dist_ptr_;
+            op_pool_dist_ptr_ = NULL;
         }
         workload_generator_->markFinish();
         workload_generator_->markShutdown();
