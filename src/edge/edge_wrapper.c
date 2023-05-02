@@ -1,12 +1,14 @@
 #include "edge_wrapper.h"
 
+#include "common/util.h"
+
 namespace covered
 {
     const std::string EdgeWrapper::kClassName("EdgeWrapper");
 
     void* EdgeWrapper::launchEdge(void* local_edge_param_ptr)
     {
-        EdgeWrapper local_edge(local_edge_param_ptr);
+        EdgeWrapper local_edge((EdgeParam*)local_edge_param_ptr);
         local_edge.start();
         
         pthread_exit(NULL);
@@ -27,7 +29,7 @@ namespace covered
         uint16_t local_edge_recvreq_port = Util::getLocalEdgeRecvreqPort(global_edge_idx);
     }
         
-    ~EdgeWrapper()
+    EdgeWrapper::~EdgeWrapper()
     {
         // NOTE: no need to delete local_edge_param_ptr, as it is maintained outside EdgeWrapper
     }

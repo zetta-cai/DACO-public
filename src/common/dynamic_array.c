@@ -34,12 +34,12 @@ namespace covered
         bytes_.reserve(capacity);
     }
 
-    uint32_t DynamicArray::getSize()
+    uint32_t DynamicArray::getSize() const
     {
         return bytes_.size();
     }
     
-    uint32_t DynamicArray::getCapacity()
+    uint32_t DynamicArray::getCapacity() const
     {
         return bytes_.capacity();
     }

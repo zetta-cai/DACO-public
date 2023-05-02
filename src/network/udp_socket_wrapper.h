@@ -39,7 +39,7 @@ namespace covered
         void send(const DynamicArray& msg_payload);
         bool recv(DynamicArray& msg_payload);
     private:
-        static std::string kClassName;
+        static const std::string kClassName;
 
         const SocketRole role_;
         const NetworkAddr host_addr_; // only for UDP server
@@ -50,6 +50,7 @@ namespace covered
 
         UdpPktSocket* pkt_socket_ptr_; // send/recv payload of each single UDP packet
         MsgFragStats msg_frag_stats_; // reconstruct each message based on received fragments
+        uint32_t msg_seqnum_;
     };
 }
 

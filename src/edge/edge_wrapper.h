@@ -9,7 +9,7 @@
 
 #include <string>
 
-#include "edge/edge_wrapper.h"
+#include "edge/edge_param.h"
 
 namespace covered
 {

@@ -1,5 +1,9 @@
 #include "msg_frag_stats.h"
 
+#include <assert.h>
+
+#include "common/util.h"
+
 namespace covered
 {
     // MsgFragStatsEntry
@@ -10,7 +14,7 @@ namespace covered
     {
         fragidx_fragpayload_map_.clear();
         fragcnt_ = 0;
-        seqnum_ = 0;
+        msg_seqnum_ = 0;
     }
 
     MsgFragStatsEntry::~MsgFragStatsEntry() {}
@@ -18,10 +22,10 @@ namespace covered
     bool MsgFragStatsEntry::isLastFrag(const UdpFragHdr& fraghdr)
     {
         uint32_t fragidx = fraghdr.getFragmentIdx();
-        uint32_t seqnum = fraghdr.getSeqnum();
+        uint32_t seqnum = fraghdr.getMsgSeqnum();
         if (fragidx_fragpayload_map_.size() == fragcnt_ - 1 \
             && fragidx_fragpayload_map_.find(fragidx) == fragidx_fragpayload_map_.end() \
-            && seqnum_ == seqnum) // fragidx is the last untracked fragment with matched seqnum
+            && msg_seqnum_ == seqnum) // fragidx is the last untracked fragment with matched seqnum
         {
             return true;
         }
@@ -35,30 +39,30 @@ namespace covered
     {
         uint32_t fragidx = fraghdr.getFragmentIdx();
         uint32_t fragcnt = fraghdr.getFragmentCnt();
-        uint32_t seqnum = fraghdr.getSeqnum();
+        uint32_t seqnum = fraghdr.getMsgSeqnum();
 
-        if (seqnum < seqnum_)
+        if (seqnum < msg_seqnum_)
         {
-            return; // Ignore the fragment with smaller seqnum than tracked seqnum_
+            return; // Ignore the fragment with smaller seqnum than tracked msg_seqnum_
         }
         else
-        {
-            // fragcnt must be the same even if with timeout-and-retry
-            assert(fragcnt == fragcnt_);
-
-            // Clear outdated fragments if the current fragment belongs to a retried message
-            if (seqnum > seqnum_)
+        {            
+            if (seqnum > msg_seqnum_) // Clear outdated fragments if the current fragment belongs to a retried message
             {
                 fragidx_fragpayload_map_.clear();
-                seqnum_ = seqnum;
+                msg_seqnum_ = seqnum;
+            }
+            else // Fragments of the same message
+            {
+                assert(fragcnt == fragcnt_);
             }
 
-            assert(seqnum == seqnum_);
+            assert(seqnum == msg_seqnum_);
             if (fragidx_fragpayload_map_.find(fragidx) == fragidx_fragpayload_map_.end()) // Not tracked before
             {
                 fragidx_fragpayload_map_.insert(std::pair<uint32_t, DynamicArray>(fragidx, DynamicArray(Util::UDP_MAX_FRAG_PAYLOAD)));
                 DynamicArray& frag_payload = fragidx_fragpayload_map_[fragidx];
-                pkt_payload.arraycpy(Util::UDP_FRAGHDR_SIZE, frag_payload, 0, pkt_payload.size() - Util::UDP_FRAGHDR_SIZE);
+                pkt_payload.arraycpy(Util::UDP_FRAGHDR_SIZE, frag_payload, 0, pkt_payload.getSize() - Util::UDP_FRAGHDR_SIZE);
             }
         }
 
@@ -98,18 +102,18 @@ namespace covered
             if (addr_entry_map_.find(addr) == addr_entry_map_.end()) // Not receive any fragment of the message before (must NOT be the last fragment)
             {
                 addr_entry_map_.insert(std::pair<NetworkAddr, MsgFragStatsEntry>(addr, MsgFragStatsEntry()));
-                addr_entry_map_[addr].insertFrag(pkt_payload);
+                addr_entry_map_[addr].insertFrag(fraghdr, pkt_payload);
             }
             else // Receive some fragments of the message before
             {
                 MsgFragStatsEntry& entry = addr_entry_map_[addr];
-                if (entry.isLastFrag(fraghdr.getFragmentIdx())) // The last fragment of the message
+                if (entry.isLastFrag(fraghdr)) // The last fragment of the message
                 {
                     is_last_frag = true;
                 }
                 else // NOT the last fragment, which has to be tracked into the entry
                 {
-                    entry.insertFrag(pkt_payload);
+                    entry.insertFrag(fraghdr, pkt_payload);
                 }
             }
         }

@@ -19,9 +19,10 @@ namespace covered
     const EdgeParam& EdgeParam::operator=(const EdgeParam& other)
     {
         global_edge_idx_ = other.global_edge_idx_;
+        return *this;
     }
 
-    uint32_t getGlobalEdgeIdx()
+    uint32_t EdgeParam::getGlobalEdgeIdx()
     {
         return global_edge_idx_;
     }

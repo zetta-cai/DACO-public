@@ -22,8 +22,8 @@ namespace covered
         const std::vector<char>& getBytes() const;
         void clear(const uint32_t& capacity);
 
-        uint32_t getSize();
-        uint32_t getCapacity();
+        uint32_t getSize() const;
+        uint32_t getCapacity() const;
 
         void write(uint32_t position, const char* data, uint32_t length);
         void read(uint32_t position, char* data, uint32_t length) const;

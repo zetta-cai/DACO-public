@@ -21,10 +21,10 @@ namespace covered
         UdpFragHdr(const DynamicArray& pkt_payload);
         ~UdpFragHdr();
 
-        uint32_t getFragmentIdx();
-        uint32_t getFragmentCnt();
-        uint32_t getMsgPayloadSize();
-        uint32_t getMsgSeqnum();
+        uint32_t getFragmentIdx() const;
+        uint32_t getFragmentCnt() const;
+        uint32_t getMsgPayloadSize() const;
+        uint32_t getMsgSeqnum() const;
 
         // Offset must be 0 for UDP fragment header
         uint32_t serialize(DynamicArray& pkt_payload);
@@ -37,7 +37,7 @@ namespace covered
         uint32_t fragment_cnt_;
         uint32_t msg_payload_size_;
         // TODO: use uint64_t seqnum to avoid sequence number overflow in MsgFragStatsEntry
-        uint32_T msg_seqnum_; // To cope with duplicate packets
+        uint32_t msg_seqnum_; // To cope with duplicate packets
     };
 }
 

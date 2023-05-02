@@ -12,6 +12,7 @@
 
 #include "common/dynamic_array.h"
 #include "network/network_addr.h"
+#include "network/udp_frag_hdr.h"
 
 namespace covered
 {
@@ -23,13 +24,13 @@ namespace covered
 
         bool isLastFrag(const UdpFragHdr& fraghdr);
         void insertFrag(const UdpFragHdr& fraghdr, const DynamicArray& pkt_payload);
-        std::map<uint32_t, DynamicArray& getFragidxFragpayloadMap();
+        std::map<uint32_t, DynamicArray>& getFragidxFragpayloadMap();
     private:
         static const std::string kClassName;
 
         std::map<uint32_t, DynamicArray> fragidx_fragpayload_map_;
         uint32_t fragcnt_;
-        uint32_t seqnum_;
+        uint32_t msg_seqnum_;
     };
 
     class MsgFragStats

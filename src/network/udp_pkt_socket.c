@@ -1,5 +1,6 @@
 #include "network/udp_pkt_socket.h"
 
+#include <assert.h>
 #include <cstring> // memset
 #include <sstream>
 
@@ -44,7 +45,7 @@ namespace covered
 
 	UdpPktSocket::~UdpPktSocket() {}
 
-	void UdpPktSocket::sendto(const DynamicArray& pkt_payload, const NetworkAddr& remote_addr)
+	void UdpPktSocket::udpSendto(const DynamicArray& pkt_payload, const NetworkAddr& remote_addr)
 	{
         assert(remote_addr.isValid() == true);
 
@@ -79,13 +80,14 @@ namespace covered
 		return;
 	}
 
-	bool UdpPktSocket::recvfrom(DynamicArray& pkt_payload, NetworkAddr& remote_addr)
+	bool UdpPktSocket::udpRecvfrom(DynamicArray& pkt_payload, NetworkAddr& remote_addr)
 	{
         bool is_timeout = false;
 
 		// Prepare sockaddr for remote address
 		struct sockaddr_in remote_sockaddr;
 		memset((void *)&remote_sockaddr, 0, sizeof(remote_sockaddr));
+        socklen_t sockaddr_len = sizeof(remote_sockaddr);
 
         // Prepare for packet payload
         char tmp_pkt_payload[Util::UDP_MAX_PKT_PAYLOAD];
@@ -93,7 +95,7 @@ namespace covered
 
 		// Try to receive the UDP packet
 		int flags = 0;
-		int recvsize = recvfrom(sockfd_, tmp_pkt_payload, Util::UDP_MAX_PKT_PAYLOAD, flags, (struct sockaddr *)&remote_sockaddr, sizeof(remote_sockaddr));
+		int recvsize = recvfrom(sockfd_, tmp_pkt_payload, Util::UDP_MAX_PKT_PAYLOAD, flags, (struct sockaddr *)&remote_sockaddr, &sockaddr_len);
 		if (recvsize < 0) { // Failed to receive a UDP packet
 			if (need_timeout_ && (errno == EWOULDBLOCK || errno == EINTR || errno == EAGAIN)) {
 				is_timeout = true;
@@ -121,7 +123,7 @@ namespace covered
 		return is_timeout;
 	}
 
-    void UdpPktSocket::createUdpsock() {
+    void UdpPktSocket::createUdpsock_() {
 		// Create UDP socket
         sockfd_ = socket(AF_INET, SOCK_DGRAM, 0);
         if (sockfd_ < 0)
@@ -145,11 +147,11 @@ namespace covered
         // Set timeout for recvfrom/accept of UDP client/server
         if (need_timeout_)
         {
-            setTimeout();
+            setTimeout_();
         }
 
         // Set UDP receive buffer size
-        if (setsockopt(sockfd, SOL_SOCKET, SO_RCVBUF, &UDP_DEFAULT_RCVBUFSIZE, sizeof(int)) < 0)
+        if (setsockopt(sockfd_, SOL_SOCKET, SO_RCVBUF, &UDP_DEFAULT_RCVBUFSIZE, sizeof(int)) < 0)
         {
             std::ostringstream oss;
             oss << "failed to set UDP receive bufsize (errno: " << errno << ")!";
@@ -160,12 +162,12 @@ namespace covered
         return;
     }
 
-    void UdpPktSocket::setTimeout() {
+    void UdpPktSocket::setTimeout_() {
 		// Set timeout for recvfrom/accept of UDP client/server
         struct timeval tv;
         tv.tv_sec = SOCKET_TIMEOUT_SECONDS;
         tv.tv_usec =  SOCKET_TIMEOUT_USECONDS;
-        if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0)
+        if (setsockopt(sockfd_, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0)
         {
             std::ostringstream oss;
             oss << "failed to set timeout (errno: " << errno << ")!";
@@ -175,7 +177,7 @@ namespace covered
         return;
     }
 
-    void UdpPktSocket::enableReuseaddr()
+    void UdpPktSocket::enableReuseaddr_()
     {
         // Reuse the occupied port for the last created socket instead of being crashed
         const int trueFlag = 1;
@@ -188,7 +190,7 @@ namespace covered
         return;
     }
 
-    void UdpPktSocket::bindSockaddr(const NetworkAddr& host_addr) {
+    void UdpPktSocket::bindSockaddr_(const NetworkAddr& host_addr) {
         std::string host_ipstr = host_addr.getIpstr();
         uint16_t host_port = host_addr.getPort();
 
@@ -203,7 +205,7 @@ namespace covered
 		// Bind host address to wait for packets from UDP clients
         if ((bind(sockfd_, (struct sockaddr*)&host_sockaddr, sizeof(host_sockaddr))) < 0) {
             std::ostringstream oss;
-            oss << "failed to bind UDP socket on ip " << host_ip << " and port " << host_port << " (errno: " << errno << ")!";
+            oss << "failed to bind UDP socket on ip " << host_ipstr << " and port " << host_port << " (errno: " << errno << ")!";
             Util::dumpErrorMsg(kClassName, oss.str());
             exit(1);
         }

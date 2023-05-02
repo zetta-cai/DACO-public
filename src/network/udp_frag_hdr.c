@@ -1,4 +1,4 @@
-#include "udp_fragment_header.h"
+#include "network/udp_frag_hdr.h"
 
 #include <arpa/inet.h> // htonl ntohl
 
@@ -21,29 +21,29 @@ namespace covered
         deserialize(pkt_payload);
     }
 
-    ~UdpFragHdr() {}
+    UdpFragHdr::~UdpFragHdr() {}
 
-    uint32_t UdpFragHdr::getFragmentIdx()
+    uint32_t UdpFragHdr::getFragmentIdx() const
     {
         return fragment_idx_;
     }
 
-    uint32_t UdpFragHdr::getFragmentCnt()
+    uint32_t UdpFragHdr::getFragmentCnt() const
     {
         return fragment_cnt_;
     }
     
-    uint32_t UdpFragHdr::getMsgPayloadSize()
+    uint32_t UdpFragHdr::getMsgPayloadSize() const
     {
         return msg_payload_size_;
     }
 
-    uint32_t UdpFragHdr::getMsgSeqnum()
+    uint32_t UdpFragHdr::getMsgSeqnum() const
     {
         return msg_seqnum_;
     }
 
-    uint32_t serialize(DynamicArray& pkt_payload)
+    uint32_t UdpFragHdr::serialize(DynamicArray& pkt_payload)
     {
         uint32_t size = 0;
         uint32_t bigendian_fragment_idx = htonl(fragment_idx_);
@@ -61,7 +61,7 @@ namespace covered
         return size;
     }
     
-    uint32_t deserialize(const DynamicArray& pkt_payload)
+    uint32_t UdpFragHdr::deserialize(const DynamicArray& pkt_payload)
     {
         uint32_t size = 0;
         uint32_t bigendian_fragment_idx = 0;

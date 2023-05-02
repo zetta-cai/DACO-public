@@ -16,6 +16,7 @@
 #include <netinet/in.h> // struct sockaddr_in
 #include <arpa/inet.h> // htons ntohs inet_ntop inet_pton
 
+#include "common/dynamic_array.h"
 #include "network/network_addr.h"
 
 namespace covered
@@ -34,10 +35,10 @@ namespace covered
         ~UdpPktSocket();
 
         // Note: pass reference of pkt_payload to avoid unnecessary memory copy
-        void sendto(const DynamicArray& pkt_payload, const NetworkAddr& remote_addr);
-        bool recvfrom(DynamicArray& pkt_payload, NetworkAddr& remote_addr); // Return timeout flag
+        void udpSendto(const DynamicArray& pkt_payload, const NetworkAddr& remote_addr);
+        bool udpRecvfrom(DynamicArray& pkt_payload, NetworkAddr& remote_addr); // Return timeout flag
     private:
-        static std::string kClassName;
+        static const std::string kClassName;
 
         // UDP socket programming
         void createUdpsock_();
