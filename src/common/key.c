@@ -18,7 +18,7 @@ namespace covered
 
     Key::~Key() {}
 
-    std::string Key::getKeystr()
+    std::string Key::getKeystr() const
     {
         return keystr_;
     }

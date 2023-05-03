@@ -20,7 +20,7 @@ namespace covered
         Value(const uint32_t& valuesize);
         ~Value();
 
-        uint32_t getValuesize();
+        uint32_t getValuesize() const;
 
         // Offset of value (position) is dynamically changed for different keys in message payload
         uint32_t serialize(DynamicArray& msg_payload, uint32_t position);

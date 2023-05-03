@@ -118,3 +118,34 @@ if not os.path.exists(cachelib_cachebench_filepath) or not os.path.exists(cachel
         die(filename, "failed to install cachelib")
 else:
     dump(filename, "cachelib has already been installed")
+
+# (4) Install LRU cache (commit ID: de1c4a0)
+
+lrucache_clone_dirpath = "{}/cpp-lru-cache".format(lib_dirpath)
+if not os.path.exists(lrucache_clone_dirpath):
+    prompt(filename, "clone LRU cache into {}...".format(lrucache_clone_dirpath))
+    lrucache_clone_cmd = "cd lib && git clone https://github.com/lamerman/cpp-lru-cache.git"
+
+    lrucache_clone_subprocess = subprocess.run(lrucache_clone_cmd, shell=True)
+    if lrucache_clone_subprocess.returncode != 0:
+        die(filename, "failed to clone LRU cache into {}".format(lrucache_clone_dirpath))
+else:
+    dump(filename, "{} exists (LRU cache has been cloned)".format(lrucache_clone_dirpath))
+
+lrucache_targetcommit = "de1c4a0"
+lrucache_checkversion_cmd = "cd {} && git log --format=\"%H\" -n 1".format(lrucache_clone_dirpath)
+lrucache_checkversion_subprocess = subprocess.run(lrucache_checkversion_cmd, shell=True, capture_output=True)
+if lrucache_checkversion_subprocess.returncode != 0:
+    die(filename, "failed to get the latest commit ID of LRU cache")
+else:
+    lrucache_checkversion_outputbytes = lrucache_checkversion_subprocess.stdout
+    lrucache_checkversion_outputstr = lrucache_checkversion_outputbytes.decode("utf-8")
+    if lrucache_targetcommit not in lrucache_checkversion_outputstr:
+        prompt(filename, "the latest commit ID of LRU cache is {} -> reset LRU cache to commit {}...".format(lrucache_checkversion_outputstr, lrucache_targetcommit))
+        lrucache_reset_cmd = "cd {} && git reset --hard {}".format(lrucache_clone_dirpath, lrucache_targetcommit)
+        
+        lrucache_checkversion_subprocess = subprocess.run(lrucache_checkversion_cmd, shell=True)
+        if lrucache_checkversion_subprocess.returncode != 0:
+            die(filename, "failed to reset LRU cache")
+    else:
+        dump(filename, "the latest commit ID of LRU cache is already {}".format(lrucache_targetcommit))

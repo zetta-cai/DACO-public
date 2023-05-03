@@ -20,7 +20,7 @@ namespace covered
         Key(const std::string& keystr);
         ~Key();
 
-        std::string getKeystr();
+        std::string getKeystr() const;
 
         // Offset of key must be 0 in message payload
         uint32_t serialize(DynamicArray& msg_payload);

@@ -4,6 +4,7 @@
 *.pyc
 lib/boost_1_81_0
 lib/CacheLib
+lib/cpp-lru-cache
 simulator
 
 # Prerequisites
