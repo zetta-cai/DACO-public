@@ -9,6 +9,8 @@
 
 #include <string>
 
+#include "common/dynamic_array.h"
+
 namespace covered
 {
     class Key
@@ -19,6 +21,10 @@ namespace covered
         ~Key();
 
         std::string getKeystr();
+
+        // Offset of key must be 0 in message payload
+        uint32_t serialize(DynamicArray& msg_payload);
+        uint32_t deserialize(const DynamicArray& msg_payload);
     private:
         static const std::string kClassName;
 

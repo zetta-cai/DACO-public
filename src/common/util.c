@@ -177,36 +177,40 @@ namespace covered
 
     // Client-edge-cloud scenario
 
-    /*uint16_t Util::getLocalClientSendreqStartport(const uint32_t& global_client_idx)
+    uint32_t Util::getClosestEdgeIdx(const uint32_t& global_client_idx)
     {
-        int64_t local_client_sendreq_startport = 0;
-        int64_t global_client_sendreq_startport = static_cast<int64_t>(covered::Config::getGlobalClientSendreqStartport());
-        if (covered::Param::isSimulation())
+        uint32_t peredge_clientcnt = Param::getClientcnt() / Param::getEdgecnt();
+        uint32_t closest_edge_idx = global_client_idx / peredge_clientcnt;
+        if (closest_edge_idx >= Param::getEdgecnt())
         {
-            int64_t perclient_workercnt = static_cast<int64_t>(covered::Param::getPerclientWorkercnt());
-            local_client_sendreq_startport = global_client_sendreq_startport + static_cast<int64_t>(global_client_idx) * perclient_workercnt;
+            closest_edge_idx = Param::getEdgecnt() - 1;
         }
-        else
-        {
-            local_client_sendreq_startport = global_client_sendreq_startport;
-        }
-        return covered::Util::toUint16(local_client_sendreq_startport);
-    }*/
+        return closest_edge_idx;
+    }
 
-    std::string Util::getLocalEdgeNodeIpstr(const uint32_t& global_client_idx)
+    std::string Util::getClosestEdgeIpstr(const uint32_t& global_client_idx)
     {
-        std::string local_edge_node_ipstr = "";
+        std::string closest_edge_ipstr = "";
         if (covered::Param::isSimulation())
         {
-            local_edge_node_ipstr = covered::Util::LOCALHOST_IPSTR;
+            closest_edge_ipstr = covered::Util::LOCALHOST_IPSTR;
         }
         else
         {
-            // TODO: set local_edge_node_ipstr based on covered::Config
+            // TODO: set closest_edge_ipstr
+            // uint32_t closest_edge_idx = getClosestEdgeIdx(global_client_idx);
+            // closest_edge_ipstr = getLocalEdgeIpstr(closest_edge_idx);
+            
             covered::Util::dumpErrorMsg(kClassName, "NOT support getLocalEdgeNodeIpstr for prototype now!");
             exit(1);
         }
-        return local_edge_node_ipstr;
+        return closest_edge_ipstr;
+    }
+
+    uint16_t Util::getClosestEdgeRecvreqPort(const uint32_t& global_client_idx)
+    {
+        uint32_t closest_edge_idx = getClosestEdgeIdx(global_client_idx);
+        return getLocalEdgeRecvreqPort(closest_edge_idx);
     }
 
     uint32_t Util::getGlobalWorkerIdx(const uint32_t& global_client_idx, const uint32_t local_worker_idx)

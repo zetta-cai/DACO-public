@@ -65,9 +65,29 @@ namespace covered
         return;
     }
 
+    void DynamicArray::arrayset(uint32_t position, int charval, uint32_t length)
+    {
+        // Should NOT exceed capacity; otherwise, you need to use clear to increase capacity before arrayset
+        if (position + length > bytes_.capacity())
+        {
+            std::ostringstream oss;
+            oss << "position " << position << " + length " << length << " = " << position + length << ", which exceeds the capacity " << bytes_.capacity() << "!";
+            Util::dumpErrorMsg(kClassName, oss.str());
+            exit(1);
+        }
+
+        if (position + length > bytes_.size())
+        {
+            bytes_.resize(position + length);
+        }
+
+        memset((void*)(bytes_.data() + position), charval, length);
+        return;
+    }
+
     void DynamicArray::read(uint32_t position, char* data, uint32_t length) const
     {
-        // Should NOT exceed size; otherwise, you need to use write to increase size before read
+        // Should NOT exceed size; otherwise, you need to use write/arrayset to increase size before read
         if (position + length > bytes_.size())
         {
             std::ostringstream oss;
@@ -83,7 +103,7 @@ namespace covered
 
     void DynamicArray::arraycpy(uint32_t position, DynamicArray& dstarray, uint32_t dstarray_position, uint32_t length) const
     {
-        // Should NOT exceed size; otherwise, you need to use write to increase size before read
+        // Should NOT exceed size; otherwise, you need to use write/arrayset to increase size before arraycpy
         if (position + length > bytes_.size())
         {
             std::ostringstream oss;

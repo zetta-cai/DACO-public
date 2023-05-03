@@ -9,6 +9,7 @@
 
 #include <string>
 
+#include "common/dynamic_array.h"
 #include "common/key.h"
 #include "common/value.h"
 
@@ -22,6 +23,12 @@ namespace covered
 
         Key getKey();
         Value getValue();
+
+        uint32_t getMsgPayloadSize();
+
+        // Offset of request must be 0 in message payload
+        uint32_t serialize(DynamicArray& msg_payload);
+        uint32_t deserialize(const DynamicArray& msg_payload);
     private:
         static const std::string kClassName;
 

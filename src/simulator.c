@@ -121,7 +121,7 @@ int main(int argc, char **argv) {
     for (uint32_t global_edge_idx = 0; global_edge_idx < edgecnt; global_edge_idx++)
     {
         std::ostringstream oss;
-        oss << "simulate edge node " << global_edge_idx << " by pthread";
+        oss << "launch edge node " << global_edge_idx;
         covered::Util::dumpNormalMsg(main_class_name, oss.str());
 
         pthread_returncode = pthread_create(&edge_threads[global_edge_idx], NULL, covered::EdgeWrapper::launchEdge, (void*)(&(edge_params[global_edge_idx])));
@@ -144,10 +144,9 @@ int main(int argc, char **argv) {
 
     for (uint32_t global_client_idx = 0; global_client_idx < clientcnt; global_client_idx++)
     {
-        std::string local_edge_node_ipstr = covered::Util::getLocalEdgeNodeIpstr(global_client_idx);
         workload_generator_ptrs[global_client_idx] = covered::WorkloadBase::getWorkloadGenerator(workload_name, global_client_idx);
 
-        covered::ClientParam local_client_param(global_client_idx, local_edge_node_ipstr, workload_generator_ptrs[global_client_idx]);
+        covered::ClientParam local_client_param(global_client_idx, workload_generator_ptrs[global_client_idx]);
         client_params[global_client_idx] = local_client_param;
     }
 
@@ -157,7 +156,7 @@ int main(int argc, char **argv) {
     for (uint32_t global_client_idx = 0; global_client_idx < clientcnt; global_client_idx++)
     {
         std::ostringstream oss;
-        oss << "simulate client " << global_client_idx << " by pthread";
+        oss << "launch client " << global_client_idx;
         covered::Util::dumpNormalMsg(main_class_name, oss.str());
 
         pthread_returncode = pthread_create(&client_threads[global_client_idx], NULL, covered::ClientWrapper::launchClient, (void*)(&(client_params[global_client_idx])));
@@ -205,7 +204,7 @@ int main(int argc, char **argv) {
 
     // (8) Stop benchmark and dump aggregated statistics
 
-    // (8.1) Reset local_client_running_ = false in all clientcnt client parameters to stop benchmark
+    // (8.1) Reset local_client_running_ = false in clientcnt client parameters to stop benchmark
 
     for (uint32_t global_client_idx = 0; global_client_idx < clientcnt; global_client_idx++)
     {
@@ -213,9 +212,8 @@ int main(int argc, char **argv) {
     }
     covered::Util::dumpNormalMsg(main_class_name, "Stop benchmark...");
 
-    // (8.2) Wait for all sub-threads
+    // (8.2) Wait for clientcnt clients
 
-    // Wait for clientcnt clients
     covered::Util::dumpNormalMsg(main_class_name, "wait for all clients...");
     for (uint32_t global_client_idx = 0; global_client_idx < clientcnt; global_client_idx++)
     {
@@ -230,7 +228,16 @@ int main(int argc, char **argv) {
     }
     covered::Util::dumpNormalMsg(main_class_name, "all clients are done");
 
-    // Wait for edgecnt edge nodes
+    // (8.3) Reset local_edge_running_ = false in edgecnt edge parameters to stop edge nodes
+
+    for (uint32_t global_edge_idx = 0; global_edge_idx < edgecnt; global_edge_idx++)
+    {
+        edge_params[global_edge_idx].resetEdgeRunning();
+    }
+    covered::Util::dumpNormalMsg(main_class_name, "Stop edge nodes...");
+
+    // (8.4) Wait for edgecnt edge nodes
+
     covered::Util::dumpNormalMsg(main_class_name, "wait for all edge nodes...");
     for (uint32_t global_edge_idx = 0; global_edge_idx < edgecnt; global_edge_idx++)
     {

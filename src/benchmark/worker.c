@@ -4,8 +4,11 @@
 #include <sstream>
 
 #include "benchmark/client_param.h"
+#include "common/dynamic_array.h"
 #include "common/request.h"
 #include "common/util.h"
+#include "network/network_addr.h"
+#include "network/udp_socket_wrapper.h"
 
 namespace covered
 {
@@ -60,6 +63,13 @@ namespace covered
         assert(local_client_param_ptr != NULL);
         WorkloadBase* workload_generator_ptr = local_client_param_ptr->getWorkloadGeneratorPtr();
         assert(workload_generator_ptr != NULL);
+        
+        // Create UdpSocketWrapper to send request messages and receive responses messages
+        uint32_t global_client_idx = local_client_param_ptr->getGlobalClientIdx();
+        std::string closest_edge_ipstr = Util::getClosestEdgeIpstr(global_client_idx);
+        uint16_t closest_edge_recvreq_port = Util::getClosestEdgeRecvreqPort(global_client_idx);
+        NetworkAddr remote_addr(closest_edge_ipstr, closest_edge_recvreq_port, true); // Communicate with the closest edge node
+        UdpSocketWrapper worker_sendreq_socket_client(SocketRole::kSocketClient, remote_addr);
 
         // Block until local_client_running_ becomes true
         while (!local_client_param_ptr->isClientRunning()) {}
@@ -68,15 +78,40 @@ namespace covered
         while (local_client_param_ptr->isClientRunning())
         {
             // Generate key-value request based on a specific workload
-            Request current_request = workload_generator_ptr->generateReq(*request_randgen_ptr_);
+            Request request = workload_generator_ptr->generateReq(*request_randgen_ptr_);
 
+            // Convert request into message payload
+            uint32_t request_msg_payload_size = request.getMsgPayloadSize();
+            DynamicArray request_msg_payload(request_msg_payload_size);
+            uint32_t request_serialize_size = request.serialize(request_msg_payload);
+            assert(request_serialize_size == request_msg_payload_size);
+
+            // Timeout-and-retry mechanism
+            DynamicArray response_msg_payload;
+            while (true)
+            {
+                // Send the message payload of request to the closest edge node
+                worker_sendreq_socket_client.send(request_msg_payload);
+
+                // Receive the message payload of response from the closest edge node
+                bool is_timeout = worker_sendreq_socket_client.recv(response_msg_payload);
+                if (is_timeout)
+                {
+                    continue; // Resend the request message
+                }
+                else
+                {
+                    break; // Receive the response message successfully
+                }
+            }
+
+            // TODO: Process the response message and update statistics
+
+            // TODO: remove later
             std::ostringstream oss;
-            oss << "keystr: " << current_request.getKey().getKeystr() << "; valuesize: " << current_request.getValue().getValuesize() << std::endl;
+            oss << "keystr: " << request.getKey().getKeystr() << "; valuesize: " << request.getValue().getValuesize() << std::endl;
             Util::dumpNormalMsg(kClassName, oss.str());
             break;
-
-            // TODO: convert the request into UDP packets
-            // TODO: communicate with local edge node listening on a specific port for the worker
         }
 
         return;

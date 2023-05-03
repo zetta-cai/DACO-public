@@ -18,7 +18,7 @@ namespace covered
     {
     public:
         ClientParam();
-        ClientParam(const uint32_t& global_client_idx, const std::string& local_edge_node_ipstr, WorkloadBase* workload_generator_ptr);
+        ClientParam(const uint32_t& global_client_idx, WorkloadBase* workload_generator_ptr);
         ~ClientParam();
 
         const ClientParam& operator=(const ClientParam& other);
@@ -28,7 +28,6 @@ namespace covered
         void resetClientRunning();
 
         uint32_t getGlobalClientIdx();
-        std::string getLocalEdgeNodeIpstr();
         WorkloadBase* getWorkloadGeneratorPtr();
     private:
         static const std::string kClassName;
@@ -40,8 +39,6 @@ namespace covered
         volatile std::atomic<bool> local_client_running_;
 
         uint32_t global_client_idx_;
-        // Per-client UDP port range is [local_client_workload_startport, local_client_workload_startport + perclient_workercnt - 1]
-        std::string local_edge_node_ipstr_;
         WorkloadBase* workload_generator_ptr_;
     };
 }

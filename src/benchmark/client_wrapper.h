@@ -21,7 +21,6 @@ namespace covered
     public:
         static void* launchClient(void* local_client_param_ptr);
 
-        // The UDP ports used by Client is [local_client_workload_startport, local_client_workload_startport + client_thread_cnt - 1]
         ClientWrapper(ClientParam* local_client_param_ptr);
         ~ClientWrapper();
 

@@ -26,7 +26,7 @@ namespace covered
         uint32_t getMsgPayloadSize() const;
         uint32_t getMsgSeqnum() const;
 
-        // Offset must be 0 for UDP fragment header
+        // Offset of UDP fragment header must be 0 in packet payload
         uint32_t serialize(DynamicArray& pkt_payload);
         uint32_t deserialize(const DynamicArray& pkt_payload);
     private:

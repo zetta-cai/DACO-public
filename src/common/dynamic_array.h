@@ -26,6 +26,7 @@ namespace covered
         uint32_t getCapacity() const;
 
         void write(uint32_t position, const char* data, uint32_t length);
+        void arrayset(uint32_t position, int charval, uint32_t length);
         void read(uint32_t position, char* data, uint32_t length) const;
         void arraycpy(uint32_t position, DynamicArray& dstarray, uint32_t dstarray_position, uint32_t length) const;
     private:
