@@ -21,7 +21,7 @@ namespace covered
         // Network (UDP message payload -> UDP fragment payloads; UDP fragment payload + UDP fragment header -> UDP packet payload)
         static const std::string LOCALHOST_IPSTR;
         static const std::string ANY_IPSTR;
-        static const uint32_t UDP_MAX_PKT_PAYLOAD;
+        static const uint32_t UDP_MAX_PKT_PAYLOAD; // Pkt payload = fraghdr + frag payload
         static const uint32_t UDP_FRAGHDR_SIZE;
         static const uint32_t UDP_MAX_FRAG_PAYLOAD;
         static const uint16_t UDP_MAX_PORT;
@@ -29,9 +29,13 @@ namespace covered
         static std::memory_order LOAD_CONCURRENCY_ORDER;
         static std::memory_order STORE_CONCURRENCY_ORDER;
         // Workflow control
-        static const unsigned int SLEEP_INTERVAL_US;
+        static const unsigned int SLEEP_INTERVAL_US; // Sleep interval for polling
         // Workload generation
-        static const uint32_t KVPAIR_GENERATION_SEED;
+        static const uint32_t KVPAIR_GENERATION_SEED; // Random seed to generate key-value objects (dataset instead of workload)
+        // Time measurement
+        static const int START_YEAR;
+        static const long NANOSECONDS_PERSECOND; // # of nanoseconds per second
+        static const uint32_t SECOND_PRECISION; // # of digits after decimal point of second shown in time string
 
         // (1) I/O
 
@@ -47,6 +51,7 @@ namespace covered
         // (2) Time measurement (in units of microseconds)
 
         static struct timespec getCurrentTimespec();
+        std::string getCurrentTimestr();
         static double getDeltaTime(const struct timespec& current_timespec, const struct timespec& previous_timespec);
 
         // (3) Type conversion

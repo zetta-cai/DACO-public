@@ -1,6 +1,8 @@
 #include "edge_wrapper.h"
 
 #include "common/util.h"
+#include "network/network_addr.h"
+#include "network/udp_socket_wrapper.h"
 
 namespace covered
 {
@@ -23,10 +25,6 @@ namespace covered
             exit(1);
         }
         local_edge_param_ptr_ = local_edge_param_ptr;
-
-        // TODO: Create timeout-based UDP socket on local_edge_recvreq_port to receive requests
-        uint32_t global_edge_idx = local_edge_param_ptr_->getGlobalEdgeIdx();
-        uint16_t local_edge_recvreq_port = Util::getLocalEdgeRecvreqPort(global_edge_idx);
     }
         
     EdgeWrapper::~EdgeWrapper()
@@ -36,6 +34,27 @@ namespace covered
 
     void EdgeWrapper::start()
     {
-        // TODO: Listen on local_edge_recvreq_port to receive requests with timeout
+        // Calculate local_edge_recvreq_port
+        uint32_t global_edge_idx = local_edge_param_ptr_->getGlobalEdgeIdx();
+        uint16_t local_edge_recvreq_port = Util::getLocalEdgeRecvreqPort(global_edge_idx);
+
+        // Listen on local_edge_recvreq_port to receive request messages and reply response messages
+        NetworkAddr host_addr(Util::ANY_IPSTR, local_edge_recvreq_port, true);
+        UdpSocketWrapper edge_recvreq_socket_server(SocketRole::kSocketServer, host_addr);
+        DynamicArray req_msg_payload;
+        bool is_timeout = false;
+        // TODO: Add local_edge_running_
+        while (true)
+        {
+            is_timeout = edge_recvreq_socket_server.recv(req_msg_payload);
+            if (is_timeout == true)
+            {
+                // TODO: Check local_edge_running_ to break
+            } // End of (is_timeout == true)
+            else
+            {
+                // TODO: Process received requests
+            } // End of (is_timeout == false)
+        } // End of while loop
     }
 }

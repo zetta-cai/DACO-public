@@ -102,7 +102,7 @@ int main(int argc, char **argv) {
 
     // (4) TODO: Simulate cloud for backend storage
 
-    // (5) Simulate edge nodes for cooperative caching
+    // (5) Simulate edge nodes with cooperative caching
 
     pthread_t edge_threads[edgecnt];
     covered::EdgeParam edge_params[edgecnt];

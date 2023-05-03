@@ -2,6 +2,7 @@
 
 #include <iostream> // cerr
 #include <sstream> // ostringstream
+#include <cmath> // pow
 
 #include <boost/filesystem.hpp>
 #include <boost/system.hpp>
@@ -27,6 +28,10 @@ namespace covered
     const unsigned int Util::SLEEP_INTERVAL_US = 1 * 1000 * 1000; // 1s
     // Workload generation
     const uint32_t Util::KVPAIR_GENERATION_SEED = 0;
+    // Time measurement
+    const int Util::START_YEAR = 1900;
+    const long Util::NANOSECONDS_PERSECOND = 1000000000L;
+    const uint32_t Util::SECOND_PRECISION = 2;
 
     const std::string Util::kClassName("Util");
 
@@ -34,28 +39,32 @@ namespace covered
 
     void Util::dumpNormalMsg(const std::string& class_name, const std::string& normal_message)
     {
-        std::cout << class_name << ": " << normal_message << std::endl;
+        std::string cur_timestr = getCurrentTimespec();
+        std::cout << cur_timestr << " " << class_name << ": " << normal_message << std::endl;
         return;
     }
 
     void Util::dumpDebugMsg(const std::string& class_name, const std::string& debug_message)
     {
+        std::string cur_timestr = getCurrentTimespec();
         // \033 means ESC character, 1 means bold, 32 means green foreground, 0 means reset, and m is end character
-        std::cout << "\033[1;32m" << "[DEBUG] " << class_name << ": " << debug_message << std::endl << "\033[0m";
+        std::cout << "\033[1;32m" << cur_timestr << " [DEBUG] " << class_name << ": " << debug_message << std::endl << "\033[0m";
         return;
     }
 
     void Util::dumpWarnMsg(const std::string& class_name, const std::string& warn_message)
     {
+        std::string cur_timestr = getCurrentTimespec();
         // \033 means ESC character, 1 means bold, 33 means yellow foreground, 0 means reset, and m is end character
-        std::cout << "\033[1;33m" << "[WARN] " << class_name << ": " << warn_message << std::endl << "\033[0m";
+        std::cout << "\033[1;33m" << cur_timestr << " [WARN] " << class_name << ": " << warn_message << std::endl << "\033[0m";
         return;
     }
 
     void Util::dumpErrorMsg(const std::string& class_name, const std::string& error_message)
     {
+        std::string cur_timestr = getCurrentTimespec();
         // \033 means ESC character, 1 means bold, 31 means red foreground, 0 means reset, and m is end character
-        std::cerr << "\033[1;31m" << "[ERROR] " << class_name << ": " << error_message << std::endl << "\033[0m";
+        std::cerr << "\033[1;31m" << cur_timestr << " [ERROR] " << class_name << ": " << error_message << std::endl << "\033[0m";
         return;
     }
 
@@ -104,6 +113,35 @@ namespace covered
         return current_timespec;
     }
 
+    std::string Util::getCurrentTimestr()
+    {
+        // Calculate reuiqred data
+        struct timespec current_timespec = getCurrentTimespec();
+        struct tm* current_datetime = localtime(current_timespec.tv_sec);
+        int year = current_datetime.tm_year + START_YEAR;
+        int month = current_datetime.tm_month + 1;
+        int day = current_datetime.tm_day;
+        int hour = current_datetime.tm_hour;
+        int minute = current_datetime.tm_min;
+        double second = static_cast<double>(current_datetime.tm_sec);
+        double nanosecond = static_cast<double>(current_datetime.tv_nsec) / static_cast<double>(NANOSECONDS_PERSECOND);
+        if (nanosecond >= (1.0d / pow(10, static_cast<double>(SECOND_PRECISION))))
+        {
+            second += nanosecond;
+        }
+
+        // Dump time string in a fixed format (keep the first two digits after decimal point for second)
+        std::ostringstream oss;
+        std::streamsize default_precision = oss.precision();
+        oss << year << "." << month << "." day << " " << hour << ":" << minute << ":";
+        oss.setf(std::fixed);
+        oss.precision(SECOND_PRECISION);
+        oss << second;
+        oss.unsetf(std::fixed);
+        oss.precision(default_precision);
+        return oss.str();
+    }
+
     double Util::getDeltaTime(const struct timespec& current_timespec, const struct timespec& previous_timespec)
     {
         struct timespec delta_timespec;
@@ -112,7 +150,7 @@ namespace covered
 		if (delta_timespec.tv_nsec < 0)
         {
 			delta_timespec.tv_sec--;
-			delta_timespec.tv_nsec += 1000000000L;
+			delta_timespec.tv_nsec += NANOSECONDS_PERSECOND;
 		}
 
         double delta_time = delta_timespec.tv_sec * 1000 * 1000 + double(delta_timespec.tv_nsec) / 1000.0;
