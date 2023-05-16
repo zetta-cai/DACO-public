@@ -12,7 +12,7 @@ namespace covered
         workload_generator_ptr_ = NULL;
     }
 
-    ClientParam::ClientParam(const uint32_t& global_client_idx, WorkloadBase* workload_generator_ptr) : local_client_running_(false)
+    ClientParam::ClientParam(const uint32_t& global_client_idx, WorkloadWrapperBase* workload_generator_ptr) : local_client_running_(false)
     {
         global_client_idx_ = global_client_idx;
         if (workload_generator_ptr == NULL)
@@ -58,7 +58,7 @@ namespace covered
         return global_client_idx_;
     }
 
-    WorkloadBase* ClientParam::getWorkloadGeneratorPtr()
+    WorkloadWrapperBase* ClientParam::getWorkloadGeneratorPtr()
     {
         return workload_generator_ptr_;
     }

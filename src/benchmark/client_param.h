@@ -10,7 +10,7 @@
 #include <atomic>
 #include <string>
 
-#include "workload/workload_base.h"
+#include "workload/workload_wrapper_base.h"
 
 namespace covered
 {
@@ -18,7 +18,7 @@ namespace covered
     {
     public:
         ClientParam();
-        ClientParam(const uint32_t& global_client_idx, WorkloadBase* workload_generator_ptr);
+        ClientParam(const uint32_t& global_client_idx, WorkloadWrapperBase* workload_generator_ptr);
         ~ClientParam();
 
         const ClientParam& operator=(const ClientParam& other);
@@ -28,7 +28,7 @@ namespace covered
         void resetClientRunning();
 
         uint32_t getGlobalClientIdx();
-        WorkloadBase* getWorkloadGeneratorPtr();
+        WorkloadWrapperBase* getWorkloadGeneratorPtr();
     private:
         static const std::string kClassName;
 
@@ -39,7 +39,7 @@ namespace covered
         volatile std::atomic<bool> local_client_running_;
 
         uint32_t global_client_idx_;
-        WorkloadBase* workload_generator_ptr_;
+        WorkloadWrapperBase* workload_generator_ptr_;
     };
 }
 

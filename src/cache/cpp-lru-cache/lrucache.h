@@ -1,7 +1,7 @@
 /*
  * LruCache: refer to lib/cpp-lru-cache/include/lrucache.hpp.
  *
- * Hack to limite cache capacity (in unit of bytes).
+ * Hack to support update, admit, evict, and size in units of bytes.
  * 
  * By Siyuan Sheng (2023.05.03).
  */
@@ -22,13 +22,16 @@ namespace covered {
 		typedef std::list<key_value_pair_t>::iterator list_iterator_t;
 		typedef std::unordered_map<Key, list_iterator_t>::iterator map_iterator_t;
 	public:
-		LruCache(const uint32_t& capacity);
-		
-		void put(const Key& key, const Value& value);
+		LruCache();
+		~LruCache();
 		
 		bool get(const Key& key, Value& value);
+		bool update(const Key& key, const Value& value);
+
+		void admit(const Key& key, const Value& value);
+        Key evict();
 		
-		bool exists(const Key& key) const;
+		//bool exists(const Key& key) const;
 		
 		uint32_t getSize() const;
 		
@@ -36,7 +39,6 @@ namespace covered {
 		static const std::string kClassName;
 
 		// In units of bytes
-		const uint32_t capacity_;
 		uint32_t size_;
 
 		// Store value for each key; Use list index to indicate the most recent access time

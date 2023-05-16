@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <iostream>
 #include <pthread.h>
 #include <sstream>
@@ -13,7 +14,7 @@
 #include "common/util.h"
 #include "edge/edge_param.h"
 #include "edge/edge_wrapper.h"
-#include "workload/workload_base.h"
+#include "workload/workload_wrapper_base.h"
 
 int main(int argc, char **argv) {
     std::string main_class_name = "simulator";
@@ -34,7 +35,7 @@ int main(int argc, char **argv) {
         ("opcnt,o", boost::program_options::value<uint32_t>()->default_value(1000000), "the total number of operations")
         ("clientcnt,c", boost::program_options::value<uint32_t>()->default_value(1), "the total number of clients")
         ("perclient_workercnt,p", boost::program_options::value<uint32_t>()->default_value(1), "the number of worker threads for each client")
-        ("workload_name,n", boost::program_options::value<std::string>()->default_value(covered::WorkloadBase::FACEBOOK_WORKLOAD_NAME), "workload name")
+        ("workload_name,n", boost::program_options::value<std::string>()->default_value(covered::WorkloadWrapperBase::FACEBOOK_WORKLOAD_NAME), "workload name")
         ("duration,d", boost::program_options::value<double>()->default_value(10), "benchmark duration")
     ;
     // Dynamic actions
@@ -137,14 +138,15 @@ int main(int argc, char **argv) {
     // (6) Simulate multiple clients by multi-threading
 
     pthread_t client_threads[clientcnt];
-    covered::WorkloadBase* workload_generator_ptrs[clientcnt]; // need delete
+    covered::WorkloadWrapperBase* workload_generator_ptrs[clientcnt]; // need delete
     covered::ClientParam client_params[clientcnt];
 
     // (6.1) Prepare clientcnt client parameters
 
     for (uint32_t global_client_idx = 0; global_client_idx < clientcnt; global_client_idx++)
     {
-        workload_generator_ptrs[global_client_idx] = covered::WorkloadBase::getWorkloadGenerator(workload_name, global_client_idx);
+        workload_generator_ptrs[global_client_idx] = covered::WorkloadWrapperBase::getWorkloadGenerator(workload_name, global_client_idx);
+        assert(workload_generator_ptrs[global_client_idx] != NULL);
 
         covered::ClientParam local_client_param(global_client_idx, workload_generator_ptrs[global_client_idx]);
         client_params[global_client_idx] = local_client_param;

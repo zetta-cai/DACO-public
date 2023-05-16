@@ -47,4 +47,14 @@ namespace covered
         size += keysize;
         return size;
     }
+
+    bool Key::operator<(const Key& other) const
+    {
+        bool is_smaller = false;
+        if (keystr_.compare(other.keystr_)) // Matched char is smaller, or all chars are matched yet with smaller string length
+        {
+            is_smaller = true;
+        }
+        return is_smaller;
+    }
 }

@@ -20,6 +20,9 @@ namespace covered
         Value(const uint32_t& valuesize);
         ~Value();
 
+        bool isDeleted() const;
+        //void remove();
+        
         uint32_t getValuesize() const;
 
         // Offset of value (position) is dynamically changed for different keys in message payload
@@ -28,6 +31,7 @@ namespace covered
     private:
         static const std::string kClassName;
 
+        bool is_deleted_;
         uint32_t valuesize_;
     };
 }

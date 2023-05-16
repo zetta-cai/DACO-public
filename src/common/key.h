@@ -25,6 +25,8 @@ namespace covered
         // Offset of key must be 0 in message payload
         uint32_t serialize(DynamicArray& msg_payload);
         uint32_t deserialize(const DynamicArray& msg_payload);
+
+        bool operator<(const Key& other) const; // To be used as key in std::map
     private:
         static const std::string kClassName;
 
