@@ -13,7 +13,7 @@
 #include <random> // std::mt19937_64
 #include <string>
 
-#include "common/request.h"
+#include "workload/workload_item.h"
 
 namespace covered
 {
@@ -29,7 +29,7 @@ namespace covered
         virtual ~WorkloadWrapperBase();
 
         void validate(const uint32_t& global_client_idx);
-        Request generateReq(std::mt19937_64& request_randgen);
+        WorkloadItem generateItem(std::mt19937_64& request_randgen);
     private:
         static const std::string kClassName;
 
@@ -37,7 +37,7 @@ namespace covered
         virtual void overwriteWorkloadParameters_() = 0; // overwrite some workload patermers based on covered::Config and covered::Param
         virtual void createWorkloadGenerator_(const uint32_t& global_client_idx) = 0; // create workload generator based on overwritten workload parameters
 
-        virtual Request generateReqInternal_(std::mt19937_64& request_randgen) = 0;
+        virtual WorkloadItem generateItemInternal_(std::mt19937_64& request_randgen) = 0;
 
         bool is_valid_;
         void checkIsValid();

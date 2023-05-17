@@ -5,10 +5,10 @@
 
 #include "benchmark/client_param.h"
 #include "common/dynamic_array.h"
-#include "common/request.h"
 #include "common/util.h"
 #include "network/network_addr.h"
 #include "network/udp_socket_wrapper.h"
+#include "workload/workload_item.h"
 
 namespace covered
 {
@@ -78,12 +78,17 @@ namespace covered
         while (local_client_param_ptr->isClientRunning())
         {
             // Generate key-value request based on a specific workload
-            Request request = workload_generator_ptr->generateReq(*request_randgen_ptr_);
+            WorkloadItem workload_item = workload_generator_ptr->generateItem(*request_randgen_ptr_);
+
+            // Convert workload item into local request message
+            MessageBase* request_ptr = MessageBase::getMessageFromWorkloadItem(workload_item);
+            assert(request_ptr != NULL);
+            assert(request_ptr->isLocalRequest());
 
             // Convert request into message payload
-            uint32_t request_msg_payload_size = request.getMsgPayloadSize();
+            uint32_t request_msg_payload_size = request_ptr->getMsgPayloadSize();
             DynamicArray request_msg_payload(request_msg_payload_size);
-            uint32_t request_serialize_size = request.serialize(request_msg_payload);
+            uint32_t request_serialize_size = request_ptr->serialize(request_msg_payload);
             assert(request_serialize_size == request_msg_payload_size);
 
             // Timeout-and-retry mechanism
@@ -105,11 +110,16 @@ namespace covered
                 }
             }
 
+            // Free request message
+            assert(request_ptr != NULL);
+            delete request_ptr;
+            request_ptr = NULL;
+
             // TODO: Process the response message and update statistics
 
             // TODO: remove later
             std::ostringstream oss;
-            oss << "keystr: " << request.getKey().getKeystr() << "; valuesize: " << request.getValue().getValuesize() << std::endl;
+            oss << "keystr: " << workload_item.getKey().getKeystr() << "; valuesize: " << workload_item.getValue().getValuesize() << std::endl;
             Util::dumpNormalMsg(kClassName, oss.str());
             break;
         }

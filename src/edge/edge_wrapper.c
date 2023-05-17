@@ -44,11 +44,11 @@ namespace covered
         // Listen on local_edge_recvreq_port to receive request messages and reply response messages
         NetworkAddr host_addr(Util::ANY_IPSTR, local_edge_recvreq_port, true);
         UdpSocketWrapper edge_recvreq_socket_server(SocketRole::kSocketServer, host_addr);
-        DynamicArray req_msg_payload;
+        DynamicArray request_msg_payload;
         bool is_timeout = false;
         while (local_edge_param_ptr_->isEdgeRunning()) // local_edge_running_ is set as true by default
         {
-            is_timeout = edge_recvreq_socket_server.recv(req_msg_payload);
+            is_timeout = edge_recvreq_socket_server.recv(request_msg_payload);
             if (is_timeout == true)
             {
                 if (!local_edge_param_ptr_->isEdgeRunning()) // Check local_edge_running_ to break
@@ -57,12 +57,13 @@ namespace covered
                 }
                 else
                 {
-                    // TODO: timeout-and-retry
+                    continue;
                 }
             } // End of (is_timeout == true)
             else
             {
-                // TODO: Process received requests
+                // TODO: Add get_request and del_request
+                // TODO: Process received requests by CacheWrapperBase
             } // End of (is_timeout == false)
         } // End of while loop
     }

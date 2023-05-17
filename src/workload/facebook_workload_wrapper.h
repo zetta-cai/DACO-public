@@ -12,7 +12,7 @@
 //#include <cachelib/cachebench/util/CacheConfig.h>
 #include <cachelib/cachebench/workload/GeneratorBase.h>
 
-#include "common/request.h"
+#include "workload/workload_item.h"
 #include "workload/cachebench/cachebench_config.h"
 #include "workload/workload_wrapper_base.h"
 
@@ -30,7 +30,7 @@ namespace covered
         virtual void overwriteWorkloadParameters_() override;
         virtual void createWorkloadGenerator_(const uint32_t& global_client_idx) override;
 
-        virtual Request generateReqInternal_(std::mt19937_64& request_randgen) override;
+        virtual WorkloadItem generateItemInternal_(std::mt19937_64& request_randgen) override;
 
         std::unique_ptr<facebook::cachelib::cachebench::GeneratorBase> makeGenerator_(const StressorConfig& config, const uint32_t& global_client_idx);
 

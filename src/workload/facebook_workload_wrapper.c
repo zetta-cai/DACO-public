@@ -66,7 +66,7 @@ namespace covered
         workload_generator_ = makeGenerator_(facebook_stressor_config_, global_client_idx);
     }
 
-    Request FacebookWorkloadWrapper::generateReqInternal_(std::mt19937_64& request_randgen)
+    WorkloadItem FacebookWorkloadWrapper::generateItemInternal_(std::mt19937_64& request_randgen)
     {
         // Must be 0 for Facebook CDN trace due to only a single operation pool (cachelib::PoolId = int8_t)
         const uint8_t tmp_poolid = static_cast<uint8_t>((*op_pool_dist_ptr_)(request_randgen));
@@ -76,9 +76,36 @@ namespace covered
         // Convert facebook::cachelib::cachebench::Request to covered::Request
         const Key tmp_covered_key(tmp_facebook_req.key);
         const Value tmp_covered_value(static_cast<uint32_t>(*(tmp_facebook_req.sizeBegin)));
+        WorkloadItemType tmp_item_type;
+        facebook::cachelib::cachebench::OpType tmp_op_type = tmp_facebook_req.getOp();
+        switch (tmp_op_type)
+        {
+            case facebook::cachelib::cachebench::OpType::kGet:
+            {
+                tmp_item_type = WorkloadItemType::kWorkloadItemGet;
+                break;
+            }
+            case facebook::cachelib::cachebench::OpType::kSet:
+            {
+                tmp_item_type = WorkloadItemType::kWorkloadItemPut;
+                break;
+            }
+            case facebook::cachelib::cachebench::OpType::kDel:
+            {
+                tmp_item_type = WorkloadItemType::kWorkloadItemDel;
+                break;
+            }
+            default:
+            {
+                std::ostringstream oss;
+                oss << "facebook::cachelib::cachebench::OpType " << static_cast<uint32_t>(tmp_op_type) << " is not supported now!";
+                Util::dumpErrorMsg(kClassName, oss.str());
+                exit(1);
+            }
+        }
 
         last_reqid_ = tmp_facebook_req.requestId;
-        return Request(tmp_covered_key, tmp_covered_value);
+        return WorkloadItem(tmp_covered_key, tmp_covered_value, tmp_item_type);
     }
 
     // The same makeGenerator as in lib/CacheLib/cachelib/cachebench/runner/Stressor.cpp
