@@ -47,7 +47,7 @@ namespace covered
     {
         uint32_t size = 0;
         uint32_t bigendian_fragment_idx = htonl(fragment_idx_);
-        pkt_payload.write(0, (const char*)(&bigendian_fragment_idx), sizeof(uint32_t));
+        pkt_payload.write(size, (const char*)(&bigendian_fragment_idx), sizeof(uint32_t));
         size += sizeof(uint32_t);
         uint32_t bigendian_fragment_cnt = htonl(fragment_cnt_);
         pkt_payload.write(size, (const char*)(&bigendian_fragment_cnt), sizeof(uint32_t));
@@ -65,7 +65,7 @@ namespace covered
     {
         uint32_t size = 0;
         uint32_t bigendian_fragment_idx = 0;
-        pkt_payload.read(0, (char*)(&bigendian_fragment_idx), sizeof(uint32_t));
+        pkt_payload.read(size, (char*)(&bigendian_fragment_idx), sizeof(uint32_t));
         fragment_idx_ = ntohl(bigendian_fragment_idx);
         size += sizeof(uint32_t);
         uint32_t bigendian_fragment_cnt = 0;

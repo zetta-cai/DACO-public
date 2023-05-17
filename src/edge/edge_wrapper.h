@@ -10,6 +10,7 @@
 #include <string>
 
 #include "edge/edge_param.h"
+#include "message/message_base.h"
 
 namespace covered
 {
@@ -25,7 +26,11 @@ namespace covered
     private:
         static const std::string kClassName;
 
+        MessageBase* processDataRequest_(MessageBase* request_ptr);
+        MessageBase* processControlRequest_(MessageBase* request_ptr);
+
         EdgeParam* local_edge_param_ptr_;
+        CacheWrapperBase* local_edge_cache_ptr_;
     };
 }
 

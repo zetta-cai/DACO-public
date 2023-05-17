@@ -28,15 +28,17 @@ int main(int argc, char **argv) {
     ;
     // Dynamic configurations
     argument_desc.add_options()
-        ("config_file,f", boost::program_options::value<std::string>()->default_value("config.json"), "config file path of COVERED")
+        ("cache_name", boost::program_options::value<std::string>()->default_value(covered::CacheWrapperBase::LRU_CACHE_NAME), "cache name")
+        ("capacitymb", boost::program_options::value<uint32_t>()->default_value(1000), "cache capacity in units of MB")
+        ("clientcnt", boost::program_options::value<uint32_t>()->default_value(1), "the total number of clients")
+        ("config_file", boost::program_options::value<std::string>()->default_value("config.json"), "config file path of COVERED")
         ("debug", "enable debug information")
-        ("edgecnt,e", boost::program_options::value<uint32_t>()->default_value(1), "the number of edge nodes")
-        ("keycnt,k", boost::program_options::value<uint32_t>()->default_value(1000000), "the total number of keys")
-        ("opcnt,o", boost::program_options::value<uint32_t>()->default_value(1000000), "the total number of operations")
-        ("clientcnt,c", boost::program_options::value<uint32_t>()->default_value(1), "the total number of clients")
-        ("perclient_workercnt,p", boost::program_options::value<uint32_t>()->default_value(1), "the number of worker threads for each client")
-        ("workload_name,n", boost::program_options::value<std::string>()->default_value(covered::WorkloadWrapperBase::FACEBOOK_WORKLOAD_NAME), "workload name")
-        ("duration,d", boost::program_options::value<double>()->default_value(10), "benchmark duration")
+        ("duration", boost::program_options::value<double>()->default_value(10), "benchmark duration")
+        ("edgecnt", boost::program_options::value<uint32_t>()->default_value(1), "the number of edge nodes")
+        ("keycnt", boost::program_options::value<uint32_t>()->default_value(1000000), "the total number of keys")
+        ("opcnt", boost::program_options::value<uint32_t>()->default_value(1000000), "the total number of operations")
+        ("perclient_workercnt", boost::program_options::value<uint32_t>()->default_value(1), "the number of worker threads for each client")
+        ("workload_name", boost::program_options::value<std::string>()->default_value(covered::WorkloadWrapperBase::FACEBOOK_WORKLOAD_NAME), "workload name")
     ;
     // Dynamic actions
     argument_desc.add_options()
@@ -62,22 +64,24 @@ int main(int argc, char **argv) {
     // (2.2) Get CLI paremters for dynamic configurations
 
     const bool is_simulation = true;
+    std::string cache_name = argument_info["cache_name"].as<std::string>();
+    uint32_t capacity = argument_info["capacitymb"].as<uint32_t> * 1000; // In units of bytes
+    uint32_t clientcnt = argument_info["clientcnt"].as<uint32_t>();
     std::string config_filepath = argument_info["config_file"].as<std::string>();
     bool is_debug = false;
     if (argument_info.count("debug"))
     {
         is_debug = true;
     }
+    double duration = argument_info["duration"].as<double>();
     uint32_t edgecnt = argument_info["edgecnt"].as<uint32_t>();
     uint32_t keycnt = argument_info["keycnt"].as<uint32_t>();
     uint32_t opcnt = argument_info["opcnt"].as<uint32_t>();
-    uint32_t clientcnt = argument_info["clientcnt"].as<uint32_t>();
     uint32_t perclient_workercnt = argument_info["perclient_workercnt"].as<uint32_t>();
     std::string workload_name = argument_info["workload_name"].as<std::string>();
-    double duration = argument_info["duration"].as<double>();
 
     // Store CLI parameters for dynamic configurations and mark covered::Param as valid
-    covered::Param::setParameters(is_simulation, config_filepath, is_debug, edgecnt, keycnt, opcnt, clientcnt, perclient_workercnt, workload_name, duration);
+    covered::Param::setParameters(is_simulation, cache_name, capacity, clientcnt, config_filepath, is_debug, duration, edgecnt, keycnt, opcnt, perclient_workercnt, workload_name);
 
     // (2.3) Load config file for static configurations
 

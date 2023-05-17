@@ -26,8 +26,8 @@ namespace covered
         uint32_t getValuesize() const;
 
         // Offset of value (position) is dynamically changed for different keys in message payload
-        uint32_t serialize(DynamicArray& msg_payload, uint32_t position);
-        uint32_t deserialize(const DynamicArray& msg_payload, uint32_t position);
+        uint32_t serialize(DynamicArray& msg_payload, const uint32_t& position);
+        uint32_t deserialize(const DynamicArray& msg_payload, const uint32_t& position);
     private:
         static const std::string kClassName;
 

@@ -81,14 +81,13 @@ namespace covered
             WorkloadItem workload_item = workload_generator_ptr->generateItem(*request_randgen_ptr_);
 
             // Convert workload item into local request message
-            MessageBase* request_ptr = MessageBase::getMessageFromWorkloadItem(workload_item);
-            assert(request_ptr != NULL);
-            assert(request_ptr->isLocalRequest());
+            MessageBase* local_request_ptr = MessageBase::getLocalRequestFromWorkloadItem(workload_item);
+            assert(local_request_ptr != NULL);
 
-            // Convert request into message payload
-            uint32_t request_msg_payload_size = request_ptr->getMsgPayloadSize();
+            // Convert local request into message payload
+            uint32_t request_msg_payload_size = local_request_ptr->getMsgPayloadSize();
             DynamicArray request_msg_payload(request_msg_payload_size);
-            uint32_t request_serialize_size = request_ptr->serialize(request_msg_payload);
+            uint32_t request_serialize_size = local_request_ptr->serialize(request_msg_payload);
             assert(request_serialize_size == request_msg_payload_size);
 
             // Timeout-and-retry mechanism
@@ -110,10 +109,10 @@ namespace covered
                 }
             }
 
-            // Free request message
-            assert(request_ptr != NULL);
-            delete request_ptr;
-            request_ptr = NULL;
+            // Free local request message
+            assert(local_request_ptr != NULL);
+            delete local_request_ptr;
+            local_request_ptr = NULL;
 
             // TODO: Process the response message and update statistics
 

@@ -11,28 +11,38 @@ namespace covered
 
     bool Param::is_valid_ = false;
     bool Param::is_simulation_ = true;
+    std::string Param::cache_name = "";
+    uint32_t Param::capacity_ = 0;
+    uint32_t Param::clientcnt_ = 0;
     std::string Param::config_filepath_ = "";
     bool Param::is_debug_ = false;
+    double Param::duration_ = 0.0;
     uint32_t Param::edgecnt_ = 0;
     uint32_t Param::keycnt_ = 0;
     uint32_t Param::opcnt_ = 0;
-    uint32_t Param::clientcnt_ = 0;
     uint32_t Param::perclient_workercnt_ = 0;
     std::string Param::workload_name_ = "";
-    double Param::duration_ = 0.0;
 
-    void Param::setParameters(const bool& is_simulation, const std::string& config_filepath, const bool& is_debug, const uint32_t& edgecnt, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& clientcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const double& duration)
+    void Param::setParameters(const bool& is_simulation, const std::string& cache_name, const uint32_t& capacity, const uint32_t& clientcnt, const std::string& config_filepath, const bool& is_debug, const double& duration, const uint32_t& edgecnt, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name)
     {
+        if (is_valid_)
+        {
+            Util::dumpErrorMsg("Param::setParameters cannot be invoked more than once!");
+            exit(1);
+        }
+
         is_simulation_ = is_simulation;
+        cache_name_ = cache_name;
+        capacity_ = capacity:
+        clientcnt_ = clientcnt;
         config_filepath_ = config_filepath;
         is_debug_ = is_debug;
+        duration_ = duration;
         edgecnt_ = edgecnt;
         keycnt_ = keycnt;
         opcnt_ = opcnt;
-        clientcnt_ = clientcnt;
         perclient_workercnt_ = perclient_workercnt;
         workload_name_ = workload_name;
-        duration_ = duration;
 
         is_valid_ = true;
         return;
@@ -42,6 +52,24 @@ namespace covered
     {
         checkIsValid_();
         return is_simulation_;
+    }
+
+    std::string Param::getCacheName()
+    {
+        checkIsValid_();
+        return cache_name_;
+    }
+
+    uint32_t Param::getCapacity()
+    {
+        checkIsValid_();
+        return capacity_;
+    }
+
+    uint32_t Param::getClientcnt()
+    {
+        checkIsValid_();
+        return clientcnt_;
     }
 
     std::string Param::getConfigFilepath()
@@ -54,6 +82,12 @@ namespace covered
     {
         checkIsValid_();
         return is_debug_;
+    }
+
+    double Param::getDuration()
+    {
+        checkIsValid_();
+        return duration_;
     }
 
     uint32_t Param::getEdgecnt()
@@ -74,12 +108,6 @@ namespace covered
         return opcnt_;
     }
 
-    uint32_t Param::getClientcnt()
-    {
-        checkIsValid_();
-        return clientcnt_;
-    }
-
     uint32_t Param::getPerclientWorkercnt()
     {
         checkIsValid_();
@@ -90,12 +118,6 @@ namespace covered
     {
         checkIsValid_();
         return workload_name_;
-    }
-
-    double Param::getDuration()
-    {
-        checkIsValid_();
-        return duration_;
     }
 
     std::string Param::toString()

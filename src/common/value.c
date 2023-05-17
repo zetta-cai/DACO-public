@@ -36,7 +36,7 @@ namespace covered
         return valuesize_;
     }
 
-    uint32_t Value::serialize(DynamicArray& msg_payload, uint32_t position)
+    uint32_t Value::serialize(DynamicArray& msg_payload, const uint32_t& position)
     {
         uint32_t size = position;
         msg_payload.write(size, (const char*)&is_deleted_, sizeof(bool));
@@ -50,7 +50,7 @@ namespace covered
         return size;
     }
 
-    uint32_t Value::deserialize(const DynamicArray& msg_payload, uint32_t position)
+    uint32_t Value::deserialize(const DynamicArray& msg_payload, const uint32_t& position)
     {
         uint32_t size = position;
         msg_payload.read(size, (char *)&is_deleted_, sizeof(bool));
