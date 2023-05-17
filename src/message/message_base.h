@@ -29,6 +29,7 @@ namespace covered
     public:
         static MessageBase* getLocalRequestFromWorkloadItem(WorkloadItem workload_item); // By workers in clients
         static MessageBase* getRequestFromMsgPayload(const DynamicArray& msg_payload); // Data/control requests
+        static Key getKeyFromMessage(MessageBase* message_ptr); // Get key from message (e.g., local requests)
 
         MessageBase(const MessageType& message_type);
         MessageBase(const DynamicArray& msg_payload);
@@ -37,6 +38,7 @@ namespace covered
         virtual uint32_t getMsgPayloadSize() = 0;
 
         // Offset of message must be 0 in message payload
+        // Message payload format: message_type + [key size & key] + [value size & value]
         uint32_t serialize(DynamicArray& msg_payload);
         uint32_t deserialize(const DynamicArray& msg_payload);
 
@@ -44,7 +46,12 @@ namespace covered
         bool isLocalRequest() const;
         bool isRedirectedRequest() const;
 
+        bool isDataResponse() const;
+        bool isLocalResponse() const;
+        bool isRedirectedResponse() const;
+
         bool isControlRequest() const;
+        bool isControlResponse() const;
     private:
         static const std::string kClassName;
 

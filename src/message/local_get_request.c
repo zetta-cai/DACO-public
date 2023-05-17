@@ -4,7 +4,7 @@ namespace covered
 {
     const std::string LocalGetRequest::kClassName("LocalGetRequest");
 
-    LocalGetRequest::LocalGetRequest(const Key& key) : MessageBase(MessageType::kLocalLocalGetRequest)
+    LocalGetRequest::LocalGetRequest(const Key& key) : MessageBase(MessageType::kLocalGetRequest)
     {
         key_ = key;
     }

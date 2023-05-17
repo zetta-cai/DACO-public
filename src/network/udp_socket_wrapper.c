@@ -187,6 +187,10 @@ namespace covered
 					uint32_t fragment_offset = Util::getFragmentOffset(fragidx);
 					uint32_t fragment_payload_size = Util::getFragmentPayloadSize(fragidx, msg_payload_size);
 					tmp_pkt_payload.arraycpy(Util::UDP_FRAGHDR_SIZE, msg_payload, fragment_offset, fragment_payload_size);
+
+					// Update remote address for send in the near future
+					remote_addr_ = tmp_addr;
+					assert(remote_addr.isValid() == true);
 				} // End of (is_last_frag == true)
 			}
 		}

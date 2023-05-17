@@ -34,7 +34,7 @@ namespace covered
         return is_cached;
     }
 
-    bool LruCacheWrapper::needIndependentAdmit()
+    bool LruCacheWrapper::needIndependentAdmit(const Key& key)
     {
         // LRU cache uses LRU-based independent admission policy (i.e., always admit) which always returns true
         return true;

@@ -7,6 +7,7 @@
 namespace covered
 {
     const std::string CacheWrapperBase::LRU_CACHE_NAME("lru");
+    const std::string CacheWrapperBase::COVERED_CACHE_NAME("covered");
 
     const std::string CacheWrapperBase::kClassName("CacheWrapperBase");
 

@@ -18,6 +18,7 @@ namespace covered
     {
     public:
         static const std::string LRU_CACHE_NAME;
+        static const std::string COVERED_CACHE_NAME;
 
         static CacheWrapperBase* getEdgeCache(const std::string& cache_name, const uint32_t& capacity);
 
@@ -41,7 +42,7 @@ namespace covered
         // If get() / update() / remove() returns false (i.e., key is still uncached), EdgeWrapper will invoke needIndependentAdmit() for admission policy
         // NOTE: cache methods w/ LRU-based independent admission policy (i.e., always admit) will always return true, while others will return true/false based on other independent admission policy
         // NOTE: only COVERED never needs independent admission (i.e., always returns false)
-        virtual bool needIndependentAdmit() = 0;
+        virtual bool needIndependentAdmit(const Key& key) = 0;
 
         // Invoke admitInternal_/evictInternal_ and update invalidity_map_
         void admit(const Key& key, const Value& value);

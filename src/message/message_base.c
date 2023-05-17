@@ -89,7 +89,38 @@ namespace covered
         return message_ptr;
     }
 
-    uint32_t deserializeMessageTypeFromMsgPayload(const DynamicArray& msg_payload, MessageType& message_type)
+    Key MessageBase::getKeyFromMessage(MessageBase* message_ptr)
+    {
+        assert(message_ptr != NULL);
+
+        Key tmp_key;
+        if (message_ptr->message_type_ == MessageType::kLocalGetRequest)
+        {
+            const LocalGetRequest* const local_get_request_ptr = static_cast<const LocalGetRequest*>(message_ptr);
+            tmp_key = local_get_request_ptr->getKey();
+        }
+        else if (message_ptr->message_type_ == MessageType::kLocalPutRequest)
+        {
+            const LocalPutRequest* const local_put_request_ptr = static_cast<const LocalPutRequest*>(message_ptr);
+            tmp_key = local_put_request_ptr->getKey();
+        }
+        else if (message_ptr->message_type_ == MessageType::kLocalDelRequest)
+        {
+            const LocalDelRequest* const local_del_request_ptr = static_cast<const LocalDelRequest*>(message_ptr);
+            tmp_key = local_del_request_ptr->getKey();
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "invalid message type " << static_cast<uint32_t>(message_ptr->message_type_) << " for getKeyFromMessage()!";
+            Util::dumpErrorMsg(kClassName, oss.str());
+            exit(1);
+        }
+
+        return tmp_key;
+    }
+
+    uint32_t MessageBase::deserializeMessageTypeFromMsgPayload(const DynamicArray& msg_payload, MessageType& message_type)
     {
         uint32_t message_type_value = 0;
         msg_payload.read(size, (const char *)&message_type_value, sizeof(uint32_t));
@@ -130,7 +161,7 @@ namespace covered
         return size;
     }
 
-    bool MessageBase::isDataMessage() const
+    bool MessageBase::isDataRequest() const
     {
         return isLocalRequest() || isRedirectedRequest();
     }
@@ -150,6 +181,41 @@ namespace covered
     bool MessageBase::isRedirectedRequest() const
     {
         // TODO: Update isRedirectedRequest() after introducing redirected requests
+        return false;
+    }
+
+    bool MessageBase::isDataResponse() const
+    {
+        return isLocalResponse() || isRedirectedResponse();
+    }
+
+    bool MessageBase::isLocalResponse() const
+    {
+        if (message_type_ == MessageType::kLocalGetResponse || message_type_ == MessageType::::kLocalPutResponse || message_type_ == MessageType::kLocalDelResponse)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    bool MessageBase::isRedirectedResponse() const
+    {
+        // TODO: Update isRedirectedResponse() after introducing redirected responses
+        return false;
+    }
+
+    bool MessageBase::isControlRequest() const
+    {
+        // TODO: Update isControlRequest() after introducing control requests
+        return false;
+    }
+
+    bool MessageBase::isControlResponse() const
+    {
+        // TODO: Update isControlResponse() after introducing control responses
         return false;
     }
 }

@@ -29,6 +29,9 @@ namespace covered
         MessageBase* processDataRequest_(MessageBase* request_ptr);
         MessageBase* processControlRequest_(MessageBase* request_ptr);
 
+        void blockForInvalidation_(const Key& key);
+        void triggerIndependentAdmission(const Key& key, const Value& value);
+
         EdgeParam* local_edge_param_ptr_;
         CacheWrapperBase* local_edge_cache_ptr_;
     };

@@ -56,10 +56,10 @@ namespace covered
         // Listen on local_edge_recvreq_port to receive request messages and reply response messages
         NetworkAddr host_addr(Util::ANY_IPSTR, local_edge_recvreq_port, true);
         UdpSocketWrapper edge_recvreq_socket_server(SocketRole::kSocketServer, host_addr);
-        DynamicArray request_msg_payload;
         bool is_timeout = false;
         while (local_edge_param_ptr_->isEdgeRunning()) // local_edge_running_ is set as true by default
         {
+            DynamicArray request_msg_payload;
             is_timeout = edge_recvreq_socket_server.recv(request_msg_payload);
             if (is_timeout == true)
             {
@@ -96,7 +96,10 @@ namespace covered
                     exit(1);
                 }
 
-                // TODO: Reply response message to sender
+                // Reply response message to sender (the remote address set by the most recent recv)
+                DynamicArray response_msg_payload(response_ptr->getMsgPayloadSize());
+                response_ptr->serialize(response_msg_payload);
+                edge_recvreq_socket_server.send(response_msg_payload);
 
                 // Free messages
                 assert(request_ptr != NULL);
@@ -120,21 +123,28 @@ namespace covered
         bool is_cached = false;
         if (request_ptr->isLocalRequest()) // Local request
         {
-            // TODO: Check invalidity flag
+            // Get key from local request
+            Key tmp_key = MessageBase::getKeyFromMessage(request_ptr);
+            Value tmp_value();
+
+            // Block until not invalidated
+            blockForInvalidation_(tmp_key);
 
             if (request_ptr->message_type_ == MessageType::kLocalGetRequest)
             {
-                const LocalGetRequest* const local_get_request_ptr = request_ptr;
-                Key tmp_key = local_get_request_ptr->getKey();
-                Value tmp_value();
                 is_cached = local_edge_cache_ptr_->get(tmp_key, tmp_value);
 
                 // TODO: Get data from neighbor / cloud for cache miss
-                // TODO: For COVERED, beacon node will tell the edge node if to admit, w/o independent decision
+                // TODO: For COVERED, beacon node will tell the edge node whether to admit, w/o independent decision
 
-                // TODO: Trigger independent cache admission/eviction for cache miss if necessary
+                // Trigger independent cache admission for cache miss if necessary
+                if (!is_cached && local_edge_cache_ptr_->needIndependentAdmit(tmp_key))
+                {
+                    triggerIndependentAdmission(tmp_key, tmp_value);
+                }
 
-                // TODO: Add and prepare LocalGetResponse for client
+                // Prepare LocalGetResponse for client
+                response_ptr = new LocalGetResponse(tmp_key, tmp_value);
             }
             else // Local put/del request
             {
@@ -147,27 +157,30 @@ namespace covered
                 // Update/remove local edge cache
                 if (request_ptr->message_type_ == MessageType::kLocalPutRequest)
                 {
-                    const LocalPutRequest* const local_put_request_ptr = request_ptr;
-                    Key tmp_key = local_put_request_ptr->getKey();
+                    const LocalPutRequest* const local_put_request_ptr = static_cast<const LocalPutRequest*>(request_ptr);
                     Value tmp_value = local_put_request_ptr->getValue();
                     is_cached = local_edge_cache_ptr_->update(tmp_key, tmp_value);
 
-                    // TODO: Add and prepare LocalPutResponse for client
+                    // Prepare LocalPutResponse for client
+                    response_ptr = new LocalPutResponse(tmp_key);
                 }
                 else if (request_ptr->message_type_ == MessageType::kLocalDelRequest)
                 {
-                    const LocalDelRequest* const local_del_request_ptr = request_ptr;
-                    Key tmp_key = local_del_request_ptr->getKey();
                     is_cached = local_edge_cache_ptr_->remove(tmp_key);
 
-                    // TODO: Add and prepare LocalDelResponse for client
+                    // Prepare LocalDelResponse for client
+                    response_ptr = new LocalDelResponse(tmp_key);
                 }
                 else
                 {
                     is_valid_message_type = false;
                 }
 
-                // TODO: Trigger independent cache admission/eviction if necessary
+                // Trigger independent cache admission for cache miss if necessary
+                if (!is_cached && local_edge_cache_ptr_->needIndependentAdmit(tmp_key))
+                {
+                    triggerIndependentAdmission(tmp_key, tmp_value);
+                }
 
                 // TODO: Notify beacon node to validate all other cache copies
                 // TODO: For COVERED, beacon node will tell the edge node if to admit, w/o independent decision
@@ -175,7 +188,7 @@ namespace covered
         }
         else if (request_ptr->isRedirectedRequest()) // Redirected request
         {
-            // TODO: redirected request for data message
+            // TODO: redirected request for data message (the same as local requests???)
         }
         else
         {
@@ -201,5 +214,53 @@ namespace covered
 
         // TODO: invalidation and cache admission/eviction requests for control message
         return NULL;
+    }
+
+    void EdgeWrapper::blockForInvalidation_(const Key& key)
+    {
+        bool is_invalidated = false;
+        while (true)
+        {
+            is_invalidated = local_edge_cache_ptr_->isInvalidated(key);
+            if (is_invalidated)
+            {
+                // TODO: sleep a short time to avoid frequent polling
+                continue;
+            }
+            else
+            {
+                break;
+            }
+        }
+        assert(!is_invalidated);
+        return;
+    }
+
+    void EdgeWrapper::triggerIndependentAdmission(const Key& key, const Value& value)
+    {
+        // NOTE: COVERED must NOT trigger any independent admission
+        assert(Param::getCacheName != CacheWrapperBase::COVERED_CACHE_NAME);
+
+        // Independently admit the new key-value pair into local edge cache
+        local_edge_cache_ptr->admit(key, value);
+
+        // Evict until cache size <= cache capacity
+        uint32_t cache_size = 0;
+        uint32_t cache_capacity = local_edge_cache_ptr->getCapacity();
+        while (true)
+        {
+            current_cache_size = local_edge_cache_ptr->getSize();
+            if (current_cache_size <= cache_capacity) // Not exceed capacity limitation
+            {
+                break;
+            }
+            else // Exceed capacity limitation
+            {
+                local_edge_cache_ptr->evict();
+                continue;
+            }
+        }
+
+        return;
     }
 }

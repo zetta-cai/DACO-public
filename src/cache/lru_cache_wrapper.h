@@ -20,7 +20,7 @@ namespace covered
         virtual bool get(const Key& key, Value& value) override;
         virtual bool update(const Key& key, const Value& value) override;
 
-        virtual bool needIndependentAdmit() override;
+        virtual bool needIndependentAdmit(const Key& key) override;
         
     private:
         static const std::string kClassName;
