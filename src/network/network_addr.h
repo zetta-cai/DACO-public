@@ -17,7 +17,7 @@ namespace covered
     {
     public:
         NetworkAddr();
-        NetworkAddr(const std::string& ipstr, const uint16_t& port, const bool& is_valid);
+        NetworkAddr(const std::string& ipstr, const uint16_t& port);
         NetworkAddr(const NetworkAddr& other);
         ~NetworkAddr();
 

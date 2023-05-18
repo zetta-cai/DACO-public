@@ -201,7 +201,7 @@ namespace covered
             // uint32_t closest_edge_idx = getClosestEdgeIdx(global_client_idx);
             // closest_edge_ipstr = getLocalEdgeIpstr(closest_edge_idx);
             
-            covered::Util::dumpErrorMsg(kClassName, "NOT support getLocalEdgeNodeIpstr for prototype now!");
+            covered::Util::dumpErrorMsg(kClassName, "NOT support getLocalEdgeNodeIpstr() for prototype now!");
             exit(1);
         }
         return closest_edge_ipstr;
@@ -232,6 +232,24 @@ namespace covered
             local_edge_recvreq_port = global_edge_recvreq_startport;
         }
         return covered::Util::toUint16(local_edge_recvreq_port);
+    }
+
+    std::string Util::getGlobalCloudIpstr()
+    {
+        std::string global_cloud_ipstr = "";
+        if (covered::Param::isSimulation())
+        {
+            global_cloud_ipstr = covered::Util::LOCALHOST_IPSTR;
+        }
+        else
+        {
+            // TODO: set global_cloud_ipstr
+            // global_cloud_ipstr = Config::getGlobalCloudIpstr();
+            
+            covered::Util::dumpErrorMsg(kClassName, "NOT support getGlobalCloudIpstr() for prototype now!");
+            exit(1);
+        }
+        return global_cloud_ipstr;
     }
 
     // Network

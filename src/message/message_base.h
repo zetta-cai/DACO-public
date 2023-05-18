@@ -18,15 +18,23 @@ namespace covered
     {
         kLocalGetRequest = 1,
         kLocalPutRequest,
-        kLocalDelResponse,
+        kLocalDelRequest,
         kLocalGetResponse,
         kLocalPutResponse,
-        kLocalDelRequest
+        kLocalDelResponse,
+        kGlobalGetRequest,
+        kGlobalPutRequest,
+        kGlobalDelRequest,
+        kGlobalGetResponse,
+        kGlobalPutResponse,
+        kGlobalDelResponse
     };
 
     class MessageBase
     {
     public:
+        static std::string messageTypeToString(const MessageType& message_type);
+
         static MessageBase* getLocalRequestFromWorkloadItem(WorkloadItem workload_item); // By workers in clients
         static MessageBase* getRequestFromMsgPayload(const DynamicArray& msg_payload); // Data/control requests
         static Key getKeyFromMessage(MessageBase* message_ptr); // Get key from message (e.g., local requests)

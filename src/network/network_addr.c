@@ -15,11 +15,11 @@ namespace covered
         is_valid_ = false;
     }
 
-    NetworkAddr::NetworkAddr(const std::string& ipstr, const uint16_t& port, const bool& is_valid)
+    NetworkAddr::NetworkAddr(const std::string& ipstr, const uint16_t& port)
     {
         ipstr_ = ipstr;
         port_ = port;
-        is_valid_ = is_valid;
+        is_valid_ = true;
         checkPortIfValid_();
     }
 

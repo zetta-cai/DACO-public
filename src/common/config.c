@@ -10,18 +10,20 @@
 
 namespace covered
 {
-    const std::string Config::VERSION_KEYSTR("version");
     const std::string Config::FACEBOOK_CONFIG_FILEPATH_KEYSTR("facebook_config_filepath");
+    const std::string Config::GLOBAL_CLOUD_RECVREQ_PORT_KEYSTR("global_cloud_recvreq_port");
     const std::string Config::GLOBAL_EDGE_RECVREQ_STARTPORT_KEYSTR("global_edge_recvreq_startport");
+    const std::string Config::VERSION_KEYSTR("version");
 
     const std::string Config::kClassName("Config");
 
     // Initialize config variables by default
     bool Config::is_valid_ = false;
     boost::json::object Config::json_object_ = boost::json::object();
-    std::string Config::version_("1.0");
     std::string Config::facebook_config_filepath_("lib/CacheLib/cachelib/cachebench/test_configs/hit_ratio/cdn/config.json");
-    uint16_t Config::global_edge_recvreq_startport_ = 4100; // [4096, 65536]
+    uint16_t Config::global_cloud_recvreq_port_ = 4100; // [4096, 65536]
+    uint16_t Config::global_edge_recvreq_startport_ = 4200; // [4096, 65536]
+    std::string Config::version_("1.0");
 
     void Config::loadConfig()
     {
@@ -34,21 +36,28 @@ namespace covered
             parseJsonFile_(config_filepath);
 
             // Overwrite default values of config variables if any
-            boost::json::key_value_pair* kv_ptr = find_(VERSION_KEYSTR);
-            if (kv_ptr != NULL)
-            {
-                version_ = kv_ptr->value().get_string();
-            }
+            boost::json::key_value_pair* kv_ptr = NULL;
             kv_ptr = find_(FACEBOOK_CONFIG_FILEPATH_KEYSTR);
             if (kv_ptr != NULL)
             {
                 facebook_config_filepath_ = kv_ptr->value().get_string();
+            }
+            kv_ptr = find_(GLOBAL_CLOUD_RECVREQ_PORT_KEYSTR);
+            if (kv_ptr != NULL)
+            {
+                int64_t tmp_port = kv_ptr->value().get_int64();
+                global_cloud_recvreq_port_ = Util::toUint16(tmp_port);
             }
             kv_ptr = find_(GLOBAL_EDGE_RECVREQ_STARTPORT_KEYSTR);
             if (kv_ptr != NULL)
             {
                 int64_t tmp_port = kv_ptr->value().get_int64();
                 global_edge_recvreq_startport_ = Util::toUint16(tmp_port);
+            }
+            kv_ptr = find_(VERSION_KEYSTR);
+            if (kv_ptr != NULL)
+            {
+                version_ = kv_ptr->value().get_string();
             }
 
             is_valid_ = true; // valid Config
@@ -68,16 +77,16 @@ namespace covered
         return;
     }
 
-    std::string Config::getVersion()
-    {
-        checkIsValid_();
-        return version_;
-    }
-
     std::string Config::getFacebookConfigFilepath()
     {
         checkIsValid_();
         return facebook_config_filepath_;
+    }
+
+    uint16_t Config::getGlobalCloudRecvreqPort()
+    {
+        checkIsValid_();
+        return global_cloud_recvreq_port_;
     }
 
     uint16_t Config::getGlobalEdgeRecvreqStartport()
@@ -86,11 +95,20 @@ namespace covered
         return global_edge_recvreq_startport_;
     }
 
+    std::string Config::getVersion()
+    {
+        checkIsValid_();
+        return version_;
+    }
+
     std::string Config::toString()
     {
         checkIsValid_();
         std::ostringstream oss;
         oss << "[Static configurations from " << Param::getConfigFilepath() << "]" << std::endl;
+        oss << "Facebook config filepath: " << facebook_config_filepath_ << std::endl;
+        oss << "Global cloud recvreq port: " << global_cloud_recvreq_port_ << std::endl;
+        oss << "Global edge recvreq startport: " << global_edge_recvreq_startport_ << std::endl;
         oss << "Version: " << version_;
         return oss.str();
     }

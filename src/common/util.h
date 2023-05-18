@@ -68,6 +68,8 @@ namespace covered
 
         // (4.2) Edge
         static uint16_t getLocalEdgeRecvreqPort(const uint32_t& global_edge_idx); // Calculate the recvreq port for the local edge node
+        static std::string getGlobalCloudIpstr();
+        // NOTE: global cloud recvreq port is the same for all edge nodes, which has been provided by Config
 
         // (5) Network
 

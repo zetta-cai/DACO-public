@@ -64,4 +64,11 @@ namespace covered
         size += valuesize_;
         return size;
     }
+
+    Value& Value::operator=(const Value& other)
+    {
+        is_deleted_ = other.is_deleted_;
+        valuesize_ = other.valuesize_;
+        return *this;
+    }
 }

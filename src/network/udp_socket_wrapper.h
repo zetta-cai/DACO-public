@@ -21,7 +21,7 @@ namespace covered
 {
     enum SocketRole
     {
-        kSocketClient = 0,
+        kSocketClient = 1,
         kSocketServer
     };
 

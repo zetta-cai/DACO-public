@@ -11,6 +11,7 @@
 
 #include "edge/edge_param.h"
 #include "message/message_base.h"
+#include "network/udp_socket_wrapper.h"
 
 namespace covered
 {
@@ -26,14 +27,20 @@ namespace covered
     private:
         static const std::string kClassName;
 
-        MessageBase* processDataRequest_(MessageBase* request_ptr);
-        MessageBase* processControlRequest_(MessageBase* request_ptr);
+        void processDataRequest_(MessageBase* request_ptr);
+        void processLocalGetRequest_(MessageBase* request_ptr);
+        void processLocalWriteRequest_(MessageBase* request_ptr); // For put/del
+        void processRedirectedRequest_(MessageBase* request_ptr);
+
+        void processControlRequest_(MessageBase* request_ptr);
 
         void blockForInvalidation_(const Key& key);
-        void triggerIndependentAdmission(const Key& key, const Value& value);
+        void triggerIndependentAdmission_(const Key& key, const Value& value);
 
         EdgeParam* local_edge_param_ptr_;
         CacheWrapperBase* local_edge_cache_ptr_;
+        UdpSocketWrapper* local_edge_recvreq_socket_server_ptr_;
+        UdpSocketWrapper* local_edge_sendreq_tocloud_socket_client_ptr_;
     };
 }
 

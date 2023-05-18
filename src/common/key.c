@@ -57,4 +57,10 @@ namespace covered
         }
         return is_smaller;
     }
+
+    Key& Key::operator=(const Key& other)
+    {
+        keystr_ = other.keystr_;
+        return *this;
+    }
 }

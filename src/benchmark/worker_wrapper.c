@@ -7,7 +7,6 @@
 #include "common/dynamic_array.h"
 #include "common/util.h"
 #include "network/network_addr.h"
-#include "network/udp_socket_wrapper.h"
 #include "workload/workload_item.h"
 
 namespace covered
@@ -31,45 +30,54 @@ namespace covered
             exit(1);
         }
         local_worker_param_ptr_ = local_worker_param_ptr;
+        assert(local_worker_param_ptr_ != NULL);
 
-        // Each per-client worker uses global_worker_idx to create a random generator and get different requests
         ClientParam* local_client_param_ptr = local_worker_param_ptr_->getLocalClientParamPtr();
         assert(local_client_param_ptr != NULL);
+
+        // Each per-client worker uses global_worker_idx to create a random generator and get different requests
         const uint32_t global_client_idx = local_client_param_ptr->getGlobalClientIdx();
         const uint32_t local_worker_idx = local_worker_param_ptr_->getLocalWorkerIdx();
         uint32_t global_worker_idx = Util::getGlobalWorkerIdx(global_client_idx, local_worker_idx);
-        request_randgen_ptr_ = new std::mt19937_64(global_worker_idx);
-        if (request_randgen_ptr_ == NULL)
+        local_worker_item_randgen_ptr_ = new std::mt19937_64(global_worker_idx);
+        if (local_worker_item_randgen_ptr_ == NULL)
         {
             Util::dumpErrorMsg(kClassName, "failed to create a random generator for requests!");
             exit(1);
         }
+
+        // Prepare a socket client to closest edge recvreq port
+        uint32_t global_client_idx = local_client_param_ptr->getGlobalClientIdx();
+        std::string closest_edge_ipstr = Util::getClosestEdgeIpstr(global_client_idx);
+        uint16_t closest_edge_recvreq_port = Util::getClosestEdgeRecvreqPort(global_client_idx);
+        NetworkAddr remote_addr(closest_edge_ipstr, closest_edge_recvreq_port); // Communicate with the closest edge node
+        local_worker_sendreq_toedge_socket_client_ptr_ = new UdpSocketWrapper(SocketRole::kSocketClient, remote_addr);
+        assert(local_worker_sendreq_toedge_socket_client_ptr_ != NULL);
     }
     
     WorkerWrapper::~WorkerWrapper()
     {
         // NOTE: no need to delete local_worker_param_ptr_, as it is maintained outside WorkerWrapper
-        if (request_randgen_ptr_ != NULL)
-        {
-            delete request_randgen_ptr_;
-            request_randgen_ptr_ = NULL;
-        }
+
+        assert(local_worker_item_randgen_ptr_ != NULL);
+        delete local_worker_item_randgen_ptr_;
+        local_worker_item_randgen_ptr_ = NULL;
+
+        assert(local_worker_sendreq_toedge_socket_client_ptr_ != NULL);
+        delete local_worker_sendreq_toedge_socket_client_ptr_;
+        local_worker_sendreq_toedge_socket_client_ptr_ = NULL;
     }
 
     void WorkerWrapper::start()
     {
+        assert(local_worker_item_randgen_ptr_ != NULL);
+        assert(local_worker_sendreq_toedge_socket_client_ptr_ != NULL);
+
         assert(local_worker_param_ptr_ != NULL);
         ClientParam* local_client_param_ptr = local_worker_param_ptr_->getLocalClientParamPtr();
         assert(local_client_param_ptr != NULL);
         WorkloadWrapperBase* workload_generator_ptr = local_client_param_ptr->getWorkloadGeneratorPtr();
         assert(workload_generator_ptr != NULL);
-        
-        // Create UdpSocketWrapper to send request messages and receive responses messages
-        uint32_t global_client_idx = local_client_param_ptr->getGlobalClientIdx();
-        std::string closest_edge_ipstr = Util::getClosestEdgeIpstr(global_client_idx);
-        uint16_t closest_edge_recvreq_port = Util::getClosestEdgeRecvreqPort(global_client_idx);
-        NetworkAddr remote_addr(closest_edge_ipstr, closest_edge_recvreq_port, true); // Communicate with the closest edge node
-        UdpSocketWrapper worker_sendreq_socket_client(SocketRole::kSocketClient, remote_addr);
 
         // Block until local_client_running_ becomes true
         while (!local_client_param_ptr->isClientRunning()) {}
@@ -78,7 +86,7 @@ namespace covered
         while (local_client_param_ptr->isClientRunning())
         {
             // Generate key-value request based on a specific workload
-            WorkloadItem workload_item = workload_generator_ptr->generateItem(*request_randgen_ptr_);
+            WorkloadItem workload_item = workload_generator_ptr->generateItem(*local_worker_item_randgen_ptr_);
 
             // Convert workload item into local request message
             MessageBase* local_request_ptr = MessageBase::getLocalRequestFromWorkloadItem(workload_item);
@@ -95,10 +103,10 @@ namespace covered
             while (true)
             {
                 // Send the message payload of request to the closest edge node
-                worker_sendreq_socket_client.send(request_msg_payload);
+                local_worker_sendreq_toedge_socket_client_ptr_->send(request_msg_payload);
 
                 // Receive the message payload of response from the closest edge node
-                bool is_timeout = worker_sendreq_socket_client.recv(response_msg_payload);
+                bool is_timeout = local_worker_sendreq_toedge_socket_client_ptr_->recv(response_msg_payload);
                 if (is_timeout)
                 {
                     continue; // Resend the request message

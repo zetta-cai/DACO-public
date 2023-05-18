@@ -27,6 +27,7 @@ namespace covered
         uint32_t deserialize(const DynamicArray& msg_payload, const uint32_t& position);
 
         bool operator<(const Key& other) const; // To be used as key in std::map
+        Key& operator=(const Key& other);
     private:
         static const std::string kClassName;
 

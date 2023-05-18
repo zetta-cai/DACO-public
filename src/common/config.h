@@ -17,15 +17,17 @@ namespace covered
     {
     public:
         // Key strings of JSON config file for static configurations (only used by Config)
-        static const std::string VERSION_KEYSTR;
         static const std::string FACEBOOK_CONFIG_FILEPATH_KEYSTR;
+        static const std::string GLOBAL_CLOUD_RECVREQ_PORT_KEYSTR;
         static const std::string GLOBAL_EDGE_RECVREQ_STARTPORT_KEYSTR;
+        static const std::string VERSION_KEYSTR;
 
         static void loadConfig();
 
-        static std::string getVersion();
-        static uint16_t getGlobalEdgeRecvreqStartport();
         static std::string getFacebookConfigFilepath();
+        static uint16_t getGlobalCloudRecvreqPort();
+        static uint16_t getGlobalEdgeRecvreqStartport();
+        static std::string getVersion();
 
         static std::string toString();
     private:
@@ -37,9 +39,10 @@ namespace covered
 
         static bool is_valid_;
         static boost::json::object json_object_;
-        static std::string version_;
         static std::string facebook_config_filepath_;
+        static uint16_t global_cloud_recvreq_port_;
         static uint16_t global_edge_recvreq_startport_;
+        static std::string version_;
     };
 }
 

@@ -1,11 +1,11 @@
 /*
- * LocalDelRequest: a request issued by a client to delete an existing value if any.
+ * KeyValueMessage: the base class of messages each with a key and a value.
  * 
- * By Siyuan Sheng (2023.05.17).
+ * By Siyuan Sheng (2023.05.18).
  */
 
-#ifndef LOCAL_DEL_REQUEST_H
-#define LOCAL_DEL_REQUEST_H
+#ifndef KEY_VALUE_MESSAGE_H
+#define KEY_VALUE_MESSAGE_H
 
 #include <string>
 
@@ -16,14 +16,15 @@
 
 namespace covered
 {
-    class LocalDelRequest : public MessageBase
+    class KeyValueMessage : public MessageBase
     {
     public:
-        LocalDelRequest(const Key& key);
-        LocalDelRequest(const DynamicArray& msg_payload);
-        ~LocalDelRequest();
+        KeyValueMessage(const Key& key, const Value& value, const MessageType& message_type);
+        KeyValueMessage(const DynamicArray& msg_payload);
+        ~KeyValueMessage();
 
         Key getKey() const;
+        Value getValue() const;
 
         virtual uint32_t getMsgPayloadSize() override;
     private:
@@ -33,6 +34,7 @@ namespace covered
         virtual uint32_t deserializeInternal_(const DynamicArray& msg_payload, const uint32_t& position) override;
 
         Key key_;
+        Value value_;
     };
 }
 

@@ -98,7 +98,7 @@ namespace covered
             default:
             {
                 std::ostringstream oss;
-                oss << "facebook::cachelib::cachebench::OpType " << static_cast<uint32_t>(tmp_op_type) << " is not supported now!";
+                oss << "facebook::cachelib::cachebench::OpType " << static_cast<uint32_t>(tmp_op_type) << " is not supported now (please refer to lib/CacheLib/cachelib/cachebench/util/Request.h for OpType)!";
                 Util::dumpErrorMsg(kClassName, oss.str());
                 exit(1);
             }

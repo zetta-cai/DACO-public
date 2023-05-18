@@ -1,5 +1,6 @@
 {
-    "version": "1.0",
     "facebook_config_filepath": "lib/CacheLib/cachelib/cachebench/test_configs/hit_ratio/cdn/config.json",
-    "global_edge_recvreq_startport": 4100
+    "global_cloud_recvreq_port": 4100,
+    "global_edge_recvreq_startport": 4200,
+    "version": "1.0"
 }

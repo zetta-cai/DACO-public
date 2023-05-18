@@ -126,12 +126,17 @@ namespace covered
 
         std::ostringstream oss;
         oss << "[Dynamic configurations from CLI parameters]" << std::endl;
-        oss << "Config file path: " << config_filepath_ << std::endl;
-        oss << "Debug flag: " << (is_debug_?"true":"false") << std::endl;
-        oss << "Key count: " << keycnt_ << std::endl;
-        oss << "Operation count: " << opcnt_ << std::endl;
+        oss << "Cache name: " << cache_name_ << std::endl;
+        oss << "Capacity (bytes): " << capacity_ << std::endl;
         oss << "Client count: " << clientcnt_ << std::endl;
-        oss << "Per-client worker count: " << perclient_workercnt_;
+        oss << "Config filepath: " << config_filepath_ << std::endl;
+        oss << "Debug flag: " << (is_debug_?"true":"false") << std::endl;
+        oss << "Duration: " << duration_ << std::endl;
+        oss << "Edge count: " << edgecnt_ << std::endl;
+        oss << "Key count (dataset size): " << keycnt_ << std::endl;
+        oss << "Operation count (workload size): " << opcnt_ << std::endl;
+        oss << "Per-client worker count: " << perclient_workercnt_ << std::endl;
+        oss << "Workload name: " << workload_name_;
         return oss.str();
         
     }

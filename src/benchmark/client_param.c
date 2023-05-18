@@ -23,7 +23,10 @@ namespace covered
         workload_generator_ptr_ = workload_generator_ptr;
     }
         
-    ClientParam::~ClientParam() {}
+    ClientParam::~ClientParam()
+    {
+        // NOTE: no need to delete workload_generator_ptr_, as it is maintained outside ClientParam
+    }
 
     const ClientParam& ClientParam::operator=(const ClientParam& other)
     {

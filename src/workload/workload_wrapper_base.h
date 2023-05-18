@@ -40,7 +40,7 @@ namespace covered
         virtual WorkloadItem generateItemInternal_(std::mt19937_64& request_randgen) = 0;
 
         bool is_valid_;
-        void checkIsValid();
+        void checkIsValid_();
     };
 }
 

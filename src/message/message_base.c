@@ -4,13 +4,54 @@
 #include <sstream>
 
 #include "common/util.h"
-#include "message/local_get_request.h"
-#include "message/local_put_request.h"
-#include "message/local_del_request.h"
-
+#include "message/local_message.h"
 namespace covered
 {
     const std::string MessageBase::kClassName("MessageBase");
+
+    std::string MessageBase::messageTypeToString(const MessageType& message_type)
+    {
+        std::string message_type_str = "";
+        switch (message_type)
+        {
+            case (MessageType::kLocalGetRequest):
+            {
+                message_type_str = "kLocalGetRequest";
+                break;
+            }
+            case (MessageType::kLocalPutRequest):
+            {
+                message_type_str = "kLocalPutRequest";
+                break;
+            }
+            case (MessageType::kLocalDelRequest):
+            {
+                message_type_str = "kLocalDelRequest";
+                break;
+            }
+            case (MessageType::kLocalGetResponse):
+            {
+                message_type_str = "kLocalGetResponse";
+                break;
+            }
+            case (MessageType::kLocalPutResponse):
+            {
+                message_type_str = "kLocalPutResponse";
+                break;
+            }
+            case (MessageType::kLocalDelResponse):
+            {
+                message_type_str = "kLocalDelResponse";
+                break;
+            }
+            default
+            {
+                message_type_str = std::string(static_cast<uint32_t>(message_type));
+                break;
+            }
+        }
+        return message_type_str;
+    }
 
     MessageBase* MessageBase::getLocalRequestFromWorkloadItem(WorkloadItem workload_item)
     {
@@ -38,7 +79,7 @@ namespace covered
             default
             {
                 std::ostringstream oss;
-                oss << "WorkloadItemType " << static_cast<uint32_t>(item_type) << " is invalid!";
+                oss << "invalid workload item type " << WorkloadItem::workloadItemTypeToString(item_type) << " for getLocalRequestFromWorkloadItem()!";
                 Util::dumpErrorMsg(kClassName, oss.str());
                 exit(1);
             }
@@ -78,7 +119,7 @@ namespace covered
             default
             {
                 std::ostringstream oss;
-                oss << "MessageType " << static_cast<uint32_t>(message_type) << " is invalid!";
+                oss << "invalid message type " << MessageBase::messageTypeToString(message_type) << " for getRequestFromMsgPayload()!";
                 Util::dumpErrorMsg(kClassName, oss.str());
                 exit(1);
             }
@@ -112,7 +153,7 @@ namespace covered
         else
         {
             std::ostringstream oss;
-            oss << "invalid message type " << static_cast<uint32_t>(message_ptr->message_type_) << " for getKeyFromMessage()!";
+            oss << "invalid message type " << getRequestFromMsgPayload(message_ptr->message_type_) << " for getKeyFromMessage()!";
             Util::dumpErrorMsg(kClassName, oss.str());
             exit(1);
         }

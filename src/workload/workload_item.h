@@ -25,6 +25,8 @@ namespace covered
     class WorkloadItem
     {
     public:
+        static std::string workloadItemTypeToString(const WorkloadItemType& item_type);
+
         WorkloadItem(const Key& key, const Value& value, const WorkloadItemType& item_type);
         ~WorkloadItem();
 

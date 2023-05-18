@@ -59,11 +59,11 @@ namespace covered
 
     WorkloadItem WorkloadWrapperBase::generateItem(std::mt19937_64& request_randgen)
     {
-        checkIsValid();
+        checkIsValid_();
         return generateItemInternal_(request_randgen);
     }
 
-    void WorkloadWrapperBase::checkIsValid()
+    void WorkloadWrapperBase::checkIsValid_()
     {
         if (!is_valid_)
         {
