@@ -93,27 +93,27 @@ namespace covered
             assert(local_request_ptr != NULL);
 
             // Convert local request into message payload
-            uint32_t request_msg_payload_size = local_request_ptr->getMsgPayloadSize();
-            DynamicArray request_msg_payload(request_msg_payload_size);
-            uint32_t request_serialize_size = local_request_ptr->serialize(request_msg_payload);
-            assert(request_serialize_size == request_msg_payload_size);
+            uint32_t local_request_msg_payload_size = local_request_ptr->getMsgPayloadSize();
+            DynamicArray local_request_msg_payload(local_request_msg_payload_size);
+            uint32_t local_request_serialize_size = local_request_ptr->serialize(local_request_msg_payload);
+            assert(local_request_serialize_size == local_request_msg_payload_size);
 
             // Timeout-and-retry mechanism
-            DynamicArray response_msg_payload;
+            DynamicArray local_response_msg_payload();
             while (true)
             {
-                // Send the message payload of request to the closest edge node
-                local_worker_sendreq_toedge_socket_client_ptr_->send(request_msg_payload);
+                // Send the message payload of local request to the closest edge node
+                local_worker_sendreq_toedge_socket_client_ptr_->send(local_request_msg_payload);
 
-                // Receive the message payload of response from the closest edge node
-                bool is_timeout = local_worker_sendreq_toedge_socket_client_ptr_->recv(response_msg_payload);
+                // Receive the message payload of local response from the closest edge node
+                bool is_timeout = local_worker_sendreq_toedge_socket_client_ptr_->recv(local_response_msg_payload);
                 if (is_timeout)
                 {
-                    continue; // Resend the request message
+                    continue; // Resend the local request message
                 }
                 else
                 {
-                    break; // Receive the response message successfully
+                    break; // Receive the local response message successfully
                 }
             }
 

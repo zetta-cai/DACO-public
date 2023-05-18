@@ -28,7 +28,7 @@ namespace covered
         // EdgeWrapper checks whether key is invalidated before accessing local edge cache (TODO)
         // True: cached yet invalidated (NO need to access cache)
         // False: uncached (still need to access cache to update metadata) or validated
-        bool isInvalidated(const uint32_t& key) const; // For data messages (e.g., local/redirected requests)
+        bool isInvalidated(const uint32_t& key) const; // For data messages (e.g., local/redirected/global requests)
         void invalidate(const uint32_t& key); // For control messages (e.g., invalidation and admission/eviction)
         void validate(const uint32_t& key); // For control messages (e.g., invalidation and admission/eviction)
 
@@ -62,7 +62,7 @@ namespace covered
 
         private const uint32_t capacity_;
 
-        // NOTE: ONLY write invalidity_map_ for control messages (e.g., requests for invalidation and admission/eviction), while just read it for data messages (local/redirected requests)
+        // NOTE: ONLY write invalidity_map_ for control messages (e.g., requests for invalidation and admission/eviction), while just read it for data messages (local/redirected/global requests)
         // NOTE: as the flag of invalidity can be integrated into cache metadata, we ONLY count the flag instead of key into the total size for capacity limitation (invalidity_map_ is just an implementation trick to avoid hacking each individual cache)
         private std::map<Key, bool> invalidity_map_;
     };

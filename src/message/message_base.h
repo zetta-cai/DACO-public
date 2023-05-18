@@ -37,6 +37,7 @@ namespace covered
 
         static MessageBase* getLocalRequestFromWorkloadItem(WorkloadItem workload_item); // By workers in clients
         static MessageBase* getRequestFromMsgPayload(const DynamicArray& msg_payload); // Data/control requests
+        static MessageBase* getResponseFromMsgPayload(const DynamicArray& msg_payload); // Data/control responses
         static Key getKeyFromMessage(MessageBase* message_ptr); // Get key from message (e.g., local requests)
 
         MessageBase(const MessageType& message_type);
@@ -44,6 +45,8 @@ namespace covered
         ~MessageBase();
 
         virtual uint32_t getMsgPayloadSize() = 0;
+
+        MessageType getMessageType() const;
 
         // Offset of message must be 0 in message payload
         // Message payload format: message_type + [key size & key] + [value size & value]
@@ -53,10 +56,12 @@ namespace covered
         bool isDataRequest() const;
         bool isLocalRequest() const;
         bool isRedirectedRequest() const;
+        bool isGlobalRequest() const;
 
         bool isDataResponse() const;
         bool isLocalResponse() const;
         bool isRedirectedResponse() const;
+        bool isGlobalResponse() const;
 
         bool isControlRequest() const;
         bool isControlResponse() const;

@@ -87,8 +87,8 @@ namespace covered
     bool CacheWrapperBase::remove(const Key& key);
     {
         Value deleted_value();
-        bool is_cached = update(key, deleted_value);
-        return is_cached;
+        bool is_local_cached = update(key, deleted_value);
+        return is_local_cached;
     }
 
     void CacheWrapperBase::admit(const Key& key, const Value& value)

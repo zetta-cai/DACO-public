@@ -29,6 +29,7 @@ namespace covered
 
         void processDataRequest_(MessageBase* request_ptr);
         void processLocalGetRequest_(MessageBase* request_ptr);
+        Value fetchDataFromCloud_(const Key& key);
         void processLocalWriteRequest_(MessageBase* request_ptr); // For put/del
         void processRedirectedRequest_(MessageBase* request_ptr);
 

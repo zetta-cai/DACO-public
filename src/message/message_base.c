@@ -103,17 +103,32 @@ namespace covered
         {
             case MessageType::kLocalGetRequest:
             {
-                message_ptr = new GetRequest(msg_payload);
+                message_ptr = new LocalGetRequest(msg_payload);
                 break;
             }
             case MessageType::kLocalPutRequest:
             {
-                message_ptr = new PutRequest(msg_payload);
+                message_ptr = new LocalPutRequest(msg_payload);
                 break;
             }
             case MessageType::kLocalDelRequest:
             {
-                message_ptr = new DelRequest(msg_payload);
+                message_ptr = new LocalDelRequest(msg_payload);
+                break;
+            }
+            case MessageType::kGlobalGetRequest:
+            {
+                message_ptr = new GlobalGetRequest(msg_payload);
+                break;
+            }
+            case MessageType::kGlobalPutRequest:
+            {
+                message_ptr = new GlobalPutRequest(msg_payload);
+                break;
+            }
+            case MessageType::kGlobalDelRequest:
+            {
+                message_ptr = new GlobalDelRequest(msg_payload);
                 break;
             }
             default
@@ -127,6 +142,61 @@ namespace covered
 
         assert(message_ptr != NULL);
         assert(message_ptr->isDataRequest() || message_ptr->isControlRequest());
+        return message_ptr;
+    }
+
+    MessageBase* MessageBase::getResponseFromMsgPayload(const DynamicArray& msg_payload)
+    {
+        // Get message type
+        MessageType message_type;
+        deserializeMessageTypeFromMsgPayload(msg_payload, message_type);
+
+        // Get message based on message type
+        // NOTE: message_ptr is freed outside MessageBase
+        MessageBase* message_ptr = NULL;
+        switch (message_type)
+        {
+            case MessageType::kLocalGetResponse:
+            {
+                message_ptr = new LocalGetResponse(msg_payload);
+                break;
+            }
+            case MessageType::kLocalPutResponse:
+            {
+                message_ptr = new LocalPutResponse(msg_payload);
+                break;
+            }
+            case MessageType::kLocalDelResponse:
+            {
+                message_ptr = new LocalDelResponse(msg_payload);
+                break;
+            }
+            case MessageType::kGlobalGetResponse:
+            {
+                message_ptr = new GlobalGetResponse(msg_payload);
+                break;
+            }
+            case MessageType::kGlobalPutResponse:
+            {
+                message_ptr = new GlobalPutResponse(msg_payload);
+                break;
+            }
+            case MessageType::kGlobalDelRequest:
+            {
+                message_ptr = new GlobalDelResponse(msg_payload);
+                break;
+            }
+            default
+            {
+                std::ostringstream oss;
+                oss << "invalid message type " << MessageBase::messageTypeToString(message_type) << " for getResponseFromMsgPayload()!";
+                Util::dumpErrorMsg(kClassName, oss.str());
+                exit(1);
+            }
+        }
+
+        assert(message_ptr != NULL);
+        assert(message_ptr->isDataResponse() || message_ptr->isControlResponse());
         return message_ptr;
     }
 
@@ -181,6 +251,11 @@ namespace covered
     
     MessageBase::~MessageBase() {}
 
+    MessageType MessageBase::getMessageType() const
+    {
+        return message_type_;
+    }
+
     uint32_t MessageBase::serialize(DynamicArray& msg_payload)
     {
         uint32_t size = 0;
@@ -204,7 +279,7 @@ namespace covered
 
     bool MessageBase::isDataRequest() const
     {
-        return isLocalRequest() || isRedirectedRequest();
+        return isLocalRequest() || isRedirectedRequest() || isGlobalRequest();
     }
 
     bool MessageBase::isLocalRequest() const
@@ -225,9 +300,21 @@ namespace covered
         return false;
     }
 
+    bool MessageBase::isGlobalRequest() const
+    {
+        if (message_type_ == MessageType::kGlobalGetRequest || message_type_ == MessageType::::kGlobalPutRequest || message_type_ == MessageType::kGlobalDelRequest)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
     bool MessageBase::isDataResponse() const
     {
-        return isLocalResponse() || isRedirectedResponse();
+        return isLocalResponse() || isRedirectedResponse() || isGlobalResponse();
     }
 
     bool MessageBase::isLocalResponse() const
@@ -246,6 +333,18 @@ namespace covered
     {
         // TODO: Update isRedirectedResponse() after introducing redirected responses
         return false;
+    }
+
+    bool MessageBase::isGlobalResponse() const
+    {
+        if (message_type_ == MessageType::kGlobalGetResponse || message_type_ == MessageType::::kGlobalPutResponse || message_type_ == MessageType::kGlobalDelResponse)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
     }
 
     bool MessageBase::isControlRequest() const

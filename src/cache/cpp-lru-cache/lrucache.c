@@ -15,29 +15,29 @@ namespace covered
 
 	bool LruCache::get(const Key& key, Value& value)
 	{
-		bool is_cached = false;
+		bool is_local_cached = false;
 
 		map_iterator_t map_iter = cache_items_map_.find(key);
 		if (map_iter == cache_items_map_.end()) {
-			is_cached = false;
+			is_local_cached = false;
 		} else {
 			// Note: insert/erase/splice will NOT invalidate previous iterators for non-continuous data stuctures (e.g., map/set/list) vs. continuous ones (e.g., vector/queue/array)
 			list_iterator_t list_iter = map_iter->second;
 			cache_items_list_.splice(cache_items_list_.begin(), cache_items_list_, list_iter); // Move the list entry pointed by list_iter to the head of the list (NOT change the memory address of the list entry)
 			value = list_iter->second;
-			is_cached = true;
+			is_local_cached = true;
 		}
 
-		return is_cached;
+		return is_local_cached;
 	}
 
 	bool LruCache::update(const Key& key, const Value& value) {
-		bool is_cached = false;
+		bool is_local_cached = false;
 
 		map_iterator_t map_iter = cache_items_map_.find(key);
 		if (map_iter != cache_items_map_.end()) // Previous list and map entry exist
 		{
-			is_cached = true;
+			is_local_cached = true;
 
 			// Update the object with new value
 			// Push key-value pair into the head of cache_items_list_, i.e., the key is the most recently used
@@ -56,7 +56,7 @@ namespace covered
 			map_iter->second = cache_items_list_.begin();
 		}
 
-		return is_cached;
+		return is_local_cached;
 	}
 
 	void LruCache::admit(const Key& key, const Value& value)

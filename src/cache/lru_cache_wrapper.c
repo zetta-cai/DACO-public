@@ -23,15 +23,15 @@ namespace covered
     bool LruCacheWrapper::get(const Key& key, Value& value)
     {
         assert(lru_cache_ptr_ != NULL);
-        bool is_cached = lru_cache_ptr_->get(key, value);
-        return is_cached;
+        bool is_local_cached = lru_cache_ptr_->get(key, value);
+        return is_local_cached;
     }
 
     bool LruCacheWrapper::update(const Key& key, const Value& value)
     {
         assert(lru_cache_ptr_ != NULL);
-        bool is_cached = lru_cache_ptr_->update(key, value);
-        return is_cached;
+        bool is_local_cached = lru_cache_ptr_->update(key, value);
+        return is_local_cached;
     }
 
     bool LruCacheWrapper::needIndependentAdmit(const Key& key)
