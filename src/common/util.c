@@ -70,35 +70,58 @@ namespace covered
 
     bool Util::isFileExist(const std::string& filepath)
     {
+        return isPathExist_(filepath, true);
+    }
+
+    bool Util::isDirectoryExist(const std::string& dirpath)
+    {
+        return isPathExist_(dirpath, false);
+    }
+
+    bool Util::isPathExist_(const std::string& path, const bool& is_file)
+    {
         // Get boost::file_status
-        boost::filesystem::path boost_filepath(filepath);
+        boost::filesystem::path boost_path(path);
         boost::system::error_code boost_errcode;
-        boost::filesystem::file_status boost_filestatus = boost::filesystem::status(boost_filepath, boost_errcode);
+        boost::filesystem::file_status boost_pathstatus = boost::filesystem::status(boost_path, boost_errcode);
 
         // An error occurs
         bool is_error = bool(boost_errcode); // boost_errcode.m_val != 0
         if (is_error)
         {
             dumpWarnMsg(kClassName, boost_errcode.message());
-            return false;
+            exit(1);
         }
 
         // File not exist
-        if (!boost::filesystem::exists(boost_filestatus))
+        if (!boost::filesystem::exists(boost_pathstatus))
         {
             std::ostringstream oss;
-            oss << filepath << " does not exist!";
+            oss << path << " does not exist!";
             dumpWarnMsg(kClassName, oss.str());
             return false;
         }
 
-        // Is a directory
-        if (boost::filesystem::is_directory(boost_filestatus))
+        // Judge file or directory
+        if (is_file) // Should be a regular file
         {
-            std::ostringstream oss;
-            oss << filepath << " is a directory!";
-            dumpWarnMsg(kClassName, oss.str());
-            return false;
+            if (boost::filesystem::is_directory(boost_pathstatus))
+            {
+                std::ostringstream oss;
+                oss << path << " is a directory!";
+                dumpWarnMsg(kClassName, oss.str());
+                return false;
+            }
+        }
+        else // Should be a directory
+        {
+            if (boost::filesystem::is_regular_file(boost_pathstatus))
+            {
+                std::ostringstream oss;
+                oss << path << " is a regular file!";
+                dumpWarnMsg(kClassName, oss.str());
+                return false;
+            }
         }
 
         return true;

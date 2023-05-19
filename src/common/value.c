@@ -36,6 +36,13 @@ namespace covered
         return valuesize_;
     }
 
+    std::string Value::generateValuestr() const
+    {
+        // Note: now we use '0' to fill up value content
+        // TODO: we could randomly generate characters to fill up value content
+        return std::string(valuesize_, '0');
+    }
+
     uint32_t Value::serialize(DynamicArray& msg_payload, const uint32_t& position)
     {
         uint32_t size = position;
@@ -44,8 +51,8 @@ namespace covered
         uint32_t bigendian_valuesize = htonl(valuesize_);
         msg_payload.write(size, (const char*)&bigendian_valuesize, sizeof(uint32_t));
         size += sizeof(uint32_t);
-        // Note: we use 0 to fill up value content
-        msg_payload.arrayset(size, 0, valuesize_);
+        std::string valuestr = generateValuestr();
+        msg_payload.write(size, (const char*)(valuestr.data()), valuesize_);
         size += valuesize_;
         return size;
     }

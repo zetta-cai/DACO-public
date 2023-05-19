@@ -73,7 +73,7 @@ if is_clear:
 
     boost_clear_subprocess = subprocess.run(boost_clear_cmd, shell=True)
     if boost_clear_subprocess.returncode != 0:
-        die(filename, "failed to clear".format(boost_download_filepath))
+        die(filename, "failed to clear {}".format(boost_download_filepath))
 
 # (3) Install cachelib (commit ID: 3d475f6)
 
@@ -149,3 +149,47 @@ else:
             die(filename, "failed to reset LRU cache")
     else:
         dump(filename, "the latest commit ID of LRU cache is already {}".format(lrucache_targetcommit))
+
+# (5) Install RocksDB 8.1.1
+
+rocksdb_download_filepath="{}/rocksdb-8.1.1.tar.gz".format(lib_dirpath)
+if not os.path.exists(rocksdb_download_filepath):
+    prompt(filename, "download {}...".format(rocksdb_download_filepath))
+    # NOTE: github url needs content-disposition to be converted into the the real url
+    rocksdb_download_cmd = "cd lib && wget --content-disposition https://github.com/facebook/rocksdb/archive/refs/tags/v8.1.1.tar.gz"
+
+    rocksdb_download_subprocess = subprocess.run(rocksdb_download_cmd, shell=True)
+    if rocksdb_download_subprocess.returncode != 0:
+        die(filename, "failed to download {}".format(rocksdb_download_filepath))
+else:
+    dump(filename, "{} exists (rocksdb has been downloaded)".format(rocksdb_download_filepath))
+
+rocksdb_decompress_dirpath = "{}/rocksdb-8.1.1".format(lib_dirpath)
+if not os.path.exists(rocksdb_decompress_dirpath):
+    prompt(filename, "decompress {}...".format(rocksdb_download_filepath))
+    rocksdb_decompress_cmd = "cd lib && tar -xzvf rocksdb-8.1.1.tar.gz"
+
+    rocksdb_decompress_subprocess = subprocess.run(rocksdb_decompress_cmd, shell=True)
+    if rocksdb_decompress_subprocess.returncode != 0:
+        die(filename, "failed to decompress {}".format(rocksdb_download_filepath))
+else:
+    dump(filename, "{} exists (rocksdb has been decompressed)".format(rocksdb_decompress_dirpath))
+
+rocksdb_install_dirpath = "{}/librocksdb.a".format(rocksdb_decompress_dirpath)
+if not os.path.exists(rocksdb_install_dirpath):
+    prompt(filename, "install librocksdb.a from source...")
+    rocksdb_install_cmd = "sudo apt-get install libgflags-dev libsnappy-dev zlib1g-dev libbz2-dev liblz4-dev libzstd-dev libjemalloc-dev libsnappy-dev && cd {} && PORTABLE=1 make static_lib".format(rocksdb_decompress_dirpath)
+
+    rocksdb_install_subprocess = subprocess.run(rocksdb_install_cmd, shell=True)
+    if rocksdb_install_subprocess.returncode != 0:
+        die(filename, "failed to install {}".format(rocksdb_install_dirpath))
+else:
+    dump(filename, "{} exists (rocksdb has been installed)".format(rocksdb_install_dirpath))
+
+if is_clear:
+    warn(filename, "clear {}".format(rocksdb_download_filepath))
+    rocksdb_clear_cmd = "cd lib && rm {}".format(rocksdb_download_filepath)
+
+    rocksdb_clear_subprocess = subprocess.run(rocksdb_clear_cmd, shell=True)
+    if rocksdb_clear_subprocess.returncode != 0:
+        die(filename, "failed to clear {}".format(rocksdb_download_filepath))

@@ -34,6 +34,7 @@ int main(int argc, char **argv) {
         ("capacitymb", boost::program_options::value<uint32_t>()->default_value(1000), "cache capacity in units of MB")
         ("clientcnt", boost::program_options::value<uint32_t>()->default_value(1), "the total number of clients")
         ("config_file", boost::program_options::value<std::string>()->default_value("config.json"), "config file path of COVERED")
+        ("cloud_storage", boost::program_options::value<std::string>()->default_value(covered::RocksdbWrapper::HDD_NAME), "type of cloud storage")
         ("debug", "enable debug information")
         ("duration", boost::program_options::value<double>()->default_value(10), "benchmark duration")
         ("edgecnt", boost::program_options::value<uint32_t>()->default_value(1), "the number of edge nodes")
@@ -69,6 +70,7 @@ int main(int argc, char **argv) {
     std::string cache_name = argument_info["cache_name"].as<std::string>();
     uint32_t capacity = argument_info["capacitymb"].as<uint32_t> * 1000; // In units of bytes
     uint32_t clientcnt = argument_info["clientcnt"].as<uint32_t>();
+    std::string cloud_storage = argument_info["cloud_storage"].as<std::string>();
     std::string config_filepath = argument_info["config_file"].as<std::string>();
     bool is_debug = false;
     if (argument_info.count("debug"))
@@ -83,7 +85,7 @@ int main(int argc, char **argv) {
     std::string workload_name = argument_info["workload_name"].as<std::string>();
 
     // Store CLI parameters for dynamic configurations and mark covered::Param as valid
-    covered::Param::setParameters(is_simulation, cache_name, capacity, clientcnt, config_filepath, is_debug, duration, edgecnt, keycnt, opcnt, perclient_workercnt, workload_name);
+    covered::Param::setParameters(is_simulation, cache_name, capacity, clientcnt, cloud_storage, config_filepath, is_debug, duration, edgecnt, keycnt, opcnt, perclient_workercnt, workload_name);
 
     // (2.3) Load config file for static configurations
 

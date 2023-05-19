@@ -47,6 +47,7 @@ namespace covered
 
         // (1.2) File I/O
         static bool isFileExist(const std::string& filepath);
+        static bool isDirectoryExist(const std::string& dirpath);
 
         // (2) Time measurement (in units of microseconds)
 
@@ -78,6 +79,9 @@ namespace covered
         static uint32_t getFragmentPayloadSize(const uint32_t& fragment_idx, const uint32_t& msg_payload_size);
     private:
         static const std::string kClassName;
+
+        // File I/O
+        static bool isPathExist_(const std::string& path, const bool& is_file); // File or directory 
     };
 }
 
