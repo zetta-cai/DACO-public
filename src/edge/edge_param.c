@@ -18,6 +18,7 @@ namespace covered
 
     const EdgeParam& EdgeParam::operator=(const EdgeParam& other)
     {
+        local_edge_running_.store(other.local_edge_running_.load(Util::LOAD_CONCURRENCY_ORDER), Util::STORE_CONCURRENCY_ORDER);
         global_edge_idx_ = other.global_edge_idx_;
         return *this;
     }

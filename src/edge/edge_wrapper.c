@@ -74,22 +74,15 @@ namespace covered
         assert(local_edge_param_ptr_ != NULL);
         assert(local_edge_recvreq_socket_server_ptr_ != NULL);
 
-        bool is_timeout = false;
+        bool is_finish = false; // Mark if local edge node is finished
         while (local_edge_param_ptr_->isEdgeRunning()) // local_edge_running_ is set as true by default
         {
             // Receive the message payload of data (local/redirected/global) or control requests
             DynamicArray request_msg_payload;
-            is_timeout = local_edge_recvreq_socket_server_ptr_->recv(request_msg_payload);
-            if (is_timeout == true)
+            bool is_timeout = local_edge_recvreq_socket_server_ptr_->recv(request_msg_payload);
+            if (is_timeout == true) // Timeout-and-retry
             {
-                if (!local_edge_param_ptr_->isEdgeRunning()) // Check local_edge_running_ to break
-                {
-                    break;
-                }
-                else
-                {
-                    continue;
-                }
+                continue; // Retry to receive a message if edge is still running
             } // End of (is_timeout == true)
             else
             {
@@ -98,11 +91,11 @@ namespace covered
 
                 if (request_ptr->isDataRequest()) // Data requests (e.g., local/redirected requests)
                 {
-                    processDataRequest_(request_ptr);
+                    is_finish = processDataRequest_(request_ptr);
                 }
                 else if (request_ptr->isControlRequest()) // Control requests (e.g., invalidation and cache admission/eviction requests)
                 {
-                    processControlRequest_(request_ptr);
+                    is_finish = processControlRequest_(request_ptr);
                 }
                 else
                 {
@@ -116,14 +109,21 @@ namespace covered
                 assert(request_ptr != NULL);
                 delete request_ptr;
                 request_ptr = NULL;
+
+                if (is_finish) // Check is_finish
+                {
+                    continue; // Go to check if edge is still running
+                }
             } // End of (is_timeout == false)
         } // End of while loop
     }
 
-    void EdgeWrapper::processDataRequest_(MessageBase* data_request_ptr)
+    bool EdgeWrapper::processDataRequest_(MessageBase* data_request_ptr)
     {
         assert(data_request_ptr != NULL && data_request_ptr->isDataRequest());
         assert(local_edge_cache_ptr_ != NULL);
+
+        bool is_finish = false; // Mark if local edge node is finished
 
         if (data_request_ptr->isLocalRequest()) // Local request
         {
@@ -132,20 +132,25 @@ namespace covered
             Value tmp_value();
 
             // Block until not invalidated
-            blockForInvalidation_(tmp_key);
+            is_finish = blockForInvalidation_(tmp_key);
+
+            if (is_finish) // Check is_finish
+            {
+                return is_finish;
+            }
 
             if (data_request_ptr->getMessageType() == MessageType::kLocalGetRequest)
             {
-                processLocalGetRequest_(data_request_ptr);
+                is_finish = processLocalGetRequest_(data_request_ptr);
             }
             else // Local put/del request
             {
-                processLocalWriteRequest_(data_request_ptr);
+                is_finish = processLocalWriteRequest_(data_request_ptr);
             }
         }
         else if (data_request_ptr->isRedirectedRequest()) // Redirected request
         {
-            processRedirectedRequest_(data_request_ptr);
+            is_finish = processRedirectedRequest_(data_request_ptr);
         }
         else
         {
@@ -155,13 +160,15 @@ namespace covered
             exit(1);
         }
         
-        return;
+        return is_finish;
     }
 
-    void EdgeWrapper::processLocalGetRequest_(MessageBase* local_request_ptr)
+    bool EdgeWrapper::processLocalGetRequest_(MessageBase* local_request_ptr)
     {
         assert(local_request_ptr != NULL && local_request_ptr->getMessageType() == MessageType::kLocalGetRequest);
         assert(local_edge_cache_ptr_ != NULL);
+
+        bool is_finish = false; // Mark if local edge node is finished
 
         const LocalGetRequest* const local_get_request_ptr = static_cast<const LocalGetRequest*>(local_request_ptr);
         Key tmp_key = local_get_request_ptr->getKey();
@@ -174,7 +181,12 @@ namespace covered
         // Get data from cloud for global cache miss
         if (!is_local_cached && !is_global_cached)
         {
-            tmp_value = fetchDataFromCloud_(tmp_key);
+            is_finish = fetchDataFromCloud_(tmp_key, tmp_value);
+        }
+
+        if (is_finish) // Check is_finish
+        {
+            return is_finish;
         }
 
         // TODO: For COVERED, beacon node will tell the edge node whether to admit, w/o independent decision
@@ -193,59 +205,40 @@ namespace covered
         local_get_response.serialize(local_response_msg_payload);
         local_edge_recvreq_socket_server_ptr_->send(local_response_msg_payload);
 
-        return;
+        return is_finish;
     }
 
-    Value EdgeWrapper::fetchDataFromCloud_(const Key& key)
-    {
-        assert(local_edge_sendreq_tocloud_socket_client_ptr_ != NULL);
-
-        GlobalGetRequest global_get_request(key);
-        DynamicArray global_request_msg_payload(global_get_request.getMsgPayloadSize());
-        global_get_request.serialize(global_request_msg_payload);
-        Value tmp_value();
-        while (true) // Timeout-and-retry
-        {
-            // Send the message payload of global request to cloud
-            local_edge_sendreq_tocloud_socket_client_ptr_->send(global_request_msg_payload);
-
-            // Receive the global response message from cloud
-            DynamicArray global_response_msg_payload();
-            bool is_timeout = local_edge_sendreq_tocloud_socket_client_ptr_->recv(global_response_msg_payload);
-            if (is_timeout)
-            {
-                continue; // Resend the global request message
-            }
-            else
-            {
-                // Receive the global response message successfully
-                MessageBase* global_response_ptr = MessageBase::getResponseFromMsgPayload(global_response_msg_payload);
-                assert(global_response_ptr != NULL && global_response_ptr->getMessageType() == MessageType::kGlobalGetResponse);
-                
-                // Get value from global response message
-                const GlobalGetResponse* const global_get_response_ptr = static_cast<const GlobalGetResponse*>(global_response_ptr);
-                tmp_value = global_get_response_ptr->getValue();
-
-                // Free global response message
-                delete global_response_ptr;
-                global_response_ptr = NULL;
-                break;
-            }
-        } // End of while loop
-        return tmp_value;
-    }
-
-    void EdgeWrapper::processLocalWriteRequest_(MessageBase* local_request_ptr)
+    bool EdgeWrapper::processLocalWriteRequest_(MessageBase* local_request_ptr)
     {
         assert(local_request_ptr != NULL);
         assert(local_request_ptr->getMessageType() == MessageType::kLocalPutRequest || local_request_ptr->getMessageType() == MessageType::kLocalDelRequest);
         assert(local_edge_cache_ptr_ != NULL);
 
+        bool is_finish = false; // Mark if local edge node is finished
+
         // TODO: Acquire write lock from beacon node
+        // TODO: Update is_finish
+
+        if (is_finish) // Check is_finish
+        {
+            return is_finish;
+        }
 
         // TODO: Wait for beacon node to invalidate all other cache copies
+        // TODO: Update is_finish
+
+        if (is_finish) // Check is_finish
+        {
+            return is_finish;
+        }
 
         // TODO: Send request to cloud for write-through policy
+        // TODO: Update is_finish
+
+        if (is_finish) // Check is_finish
+        {
+            return is_finish;
+        }
 
         // Update/remove local edge cache
         bool is_local_cached = false;
@@ -287,54 +280,74 @@ namespace covered
 
         // TODO: Notify beacon node to validate all other cache copies
         // TODO: For COVERED, beacon node will tell the edge node if to admit, w/o independent decision
+        // TODO: Update is_finish
 
-        // Reply local response message to a client (the remote address set by the most recent recv)
-        assert(local_response_ptr != NULL);
-        assert(local_response_ptr->getMessageType() == MessageType::kLocalPutResponse || local_response_ptr->getMessageType() == MessageType::kLocalDelResponse);
-        DynamicArray local_response_msg_payload(local_response_ptr->getMsgPayloadSize());
-        local_response_ptr->serialize(local_response_msg_payload);
-        local_edge_recvreq_socket_server_ptr_->send(local_response_msg_payload);
+        if (!is_finish) // Check is_finish
+        {
+            // Reply local response message to a client (the remote address set by the most recent recv)
+            assert(local_response_ptr != NULL);
+            assert(local_response_ptr->getMessageType() == MessageType::kLocalPutResponse || local_response_ptr->getMessageType() == MessageType::kLocalDelResponse);
+            DynamicArray local_response_msg_payload(local_response_ptr->getMsgPayloadSize());
+            local_response_ptr->serialize(local_response_msg_payload);
+            local_edge_recvreq_socket_server_ptr_->send(local_response_msg_payload);
+        }
 
         // Free response message
         assert(local_response_ptr != NULL);
         delete local_response_ptr;
         local_response_ptr = NULL;
 
-        return;
+        return is_finish;
     }
 
-    void EdgeWrapper::processRedirectedRequest_(MessageBase* redirected_request_ptr)
+    bool EdgeWrapper::processRedirectedRequest_(MessageBase* redirected_request_ptr)
     {
         assert(redirected_request_ptr != NULL && redirected_request_ptr->isRedirectedRequest());
         assert(local_edge_cache_ptr_ != NULL);
 
+        bool is_finish = false; // Mark if local edge node is finished
+
         // TODO: redirected request for data message (the same as local requests???)
         // TODO: reply redirected response message to an edge node
         // assert(redirected_response_ptr != NULL && redirected_response_ptr->isRedirectedResponse());
-        return;
+        return is_finish;
     }
 
-    void EdgeWrapper::processControlRequest_(MessageBase* control_request_ptr)
+    bool EdgeWrapper::processControlRequest_(MessageBase* control_request_ptr)
     {
         assert(control_request_ptr != NULL && control_request_ptr->isControlRequest());
         assert(local_edge_cache_ptr_ != NULL);
 
+        bool is_finish = false; // Mark if local edge node is finished
+
         // TODO: invalidation and cache admission/eviction requests for control message
         // TODO: reply control response message to a beacon node
         // assert(control_response_ptr != NULL && control_response_ptr->isControlResponse());
-        return;
+        return is_finish;
     }
 
-    void EdgeWrapper::blockForInvalidation_(const Key& key)
+    bool EdgeWrapper::blockForInvalidation_(const Key& key)
     {
+        assert(local_edge_param_ptr_ != NULL);
+
+        bool is_finish = false; // Mark if local edge node is finished
+
         bool is_invalidated = false;
         while (true)
         {
             is_invalidated = local_edge_cache_ptr_->isInvalidated(key);
             if (is_invalidated)
             {
-                // TODO: sleep a short time to avoid frequent polling
-                continue;
+                if (!local_edge_param_ptr_->isEdgeRunning())
+                {
+                    is_finish = true;
+                    break;
+                }
+                else
+                {
+                    // TODO: sleep a short time to avoid frequent polling
+                    continue;
+                }
             }
             else
             {
@@ -342,7 +355,59 @@ namespace covered
             }
         }
         assert(!is_invalidated);
-        return;
+
+        return is_finish;
+    }
+
+    bool EdgeWrapper::fetchDataFromCloud_(const Key& key, Value& value)
+    {
+        assert(local_edge_param_ptr_ != NULL);
+        assert(local_edge_sendreq_tocloud_socket_client_ptr_ != NULL);
+
+        bool is_finish = false; // Mark if local edge node is finished
+
+        GlobalGetRequest global_get_request(key);
+        DynamicArray global_request_msg_payload(global_get_request.getMsgPayloadSize());
+        global_get_request.serialize(global_request_msg_payload);
+        Value tmp_value();
+        while (true) // Timeout-and-retry
+        {
+            // Send the message payload of global request to cloud
+            local_edge_sendreq_tocloud_socket_client_ptr_->send(global_request_msg_payload);
+
+            // Receive the global response message from cloud
+            DynamicArray global_response_msg_payload();
+            bool is_timeout = local_edge_sendreq_tocloud_socket_client_ptr_->recv(global_response_msg_payload);
+            if (is_timeout)
+            {
+                if (!local_edge_param_ptr_->isEdgeRunning())
+                {
+                    is_finish = true;
+                    break; // Edge is NOT running
+                }
+                else
+                {
+                    continue; // Resend the global request message
+                }
+            }
+            else
+            {
+                // Receive the global response message successfully
+                MessageBase* global_response_ptr = MessageBase::getResponseFromMsgPayload(global_response_msg_payload);
+                assert(global_response_ptr != NULL && global_response_ptr->getMessageType() == MessageType::kGlobalGetResponse);
+                
+                // Get value from global response message
+                const GlobalGetResponse* const global_get_response_ptr = static_cast<const GlobalGetResponse*>(global_response_ptr);
+                value = global_get_response_ptr->getValue();
+
+                // Free global response message
+                delete global_response_ptr;
+                global_response_ptr = NULL;
+                break;
+            }
+        } // End of while loop
+        
+        return is_finish;
     }
 
     void EdgeWrapper::triggerIndependentAdmission_(const Key& key, const Value& value)

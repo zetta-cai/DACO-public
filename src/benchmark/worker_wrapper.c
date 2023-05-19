@@ -100,6 +100,7 @@ namespace covered
 
             // Timeout-and-retry mechanism
             DynamicArray local_response_msg_payload();
+            bool is_finish = false; // Mark if local client is finished
             while (true)
             {
                 // Send the message payload of local request to the closest edge node
@@ -109,7 +110,15 @@ namespace covered
                 bool is_timeout = local_worker_sendreq_toedge_socket_client_ptr_->recv(local_response_msg_payload);
                 if (is_timeout)
                 {
-                    continue; // Resend the local request message
+                    if (!local_client_param_ptr->isClientRunning())
+                    {
+                        is_finish = true;
+                        break; // Client is NOT running
+                    }
+                    else
+                    {
+                        continue; // Resend the local request message
+                    }
                 }
                 else
                 {
@@ -122,6 +131,11 @@ namespace covered
             delete local_request_ptr;
             local_request_ptr = NULL;
 
+            if (is_finish) // Check is_finish
+            {
+                continue; // Go to check if client is still running
+            }
+            
             // TODO: Process the response message and update statistics
 
             // TODO: remove later

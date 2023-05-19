@@ -12,6 +12,8 @@
 #include "common/config.h"
 #include "common/param.h"
 #include "common/util.h"
+#include "cloud/cloud_param.h"
+#include "cloud/cloud_wrapper.h"
 #include "edge/edge_param.h"
 #include "edge/edge_wrapper.h"
 #include "workload/workload_wrapper_base.h"
@@ -105,13 +107,34 @@ int main(int argc, char **argv) {
         covered::Util::dumpDebugMsg(main_class_name, covered::Config::toString());
     }
 
+    int pthread_returncode;
+
     // (4) TODO: Simulate cloud for backend storage
+
+    pthread_t cloud_thread;
+    covered::CloudParam cloud_param;
+
+    // (5.1) Prepare one cloud parameter
+
+    cloud_param = CloudParam();
+
+    // (5.2) Launch one cloud node
+
+    covered::Util::dumpNormalMsg(main_class_name, "launch cloud node");
+
+    pthread_returncode = pthread_create(&cloud_thread, NULL, covered::CloudWrapper::launchCloud, (void*)(&(cloud_param)));
+    if (pthread_returncode != 0)
+    {
+        std::ostringstream oss;
+        oss << "failed to launch cloud node (error code: " << pthread_returncode << ")";
+        covered::Util::dumpErrorMsg(main_class_name, oss.str());
+        exit(1);
+    }
 
     // (5) Simulate edge nodes with cooperative caching
 
     pthread_t edge_threads[edgecnt];
     covered::EdgeParam edge_params[edgecnt];
-    int pthread_returncode;
 
     // (5.1) Prepare edgecnt edge parameters
 
@@ -133,7 +156,7 @@ int main(int argc, char **argv) {
         if (pthread_returncode != 0)
         {
             std::ostringstream oss;
-            oss << "failed to launch edge node " << global_edge_idx << " (error code: " << pthread_returncode << ")" << std::endl;
+            oss << "failed to launch edge node " << global_edge_idx << " (error code: " << pthread_returncode << ")";
             covered::Util::dumpErrorMsg(main_class_name, oss.str());
             exit(1);
         }
@@ -169,7 +192,7 @@ int main(int argc, char **argv) {
         if (pthread_returncode != 0)
         {
             std::ostringstream oss;
-            oss << "failed to launch client " << global_client_idx << " (error code: " << pthread_returncode << ")" << std::endl;
+            oss << "failed to launch client " << global_client_idx << " (error code: " << pthread_returncode << ")";
             covered::Util::dumpErrorMsg(main_class_name, oss.str());
             exit(1);
         }
@@ -208,7 +231,7 @@ int main(int argc, char **argv) {
         // TODO: with the aggregated StatisticsTracker, main thread can dump statistics every 10 seconds if necessary
     }
 
-    // (8) Stop benchmark and dump aggregated statistics
+    // (8) Stop benchmark
 
     // (8.1) Reset local_client_running_ = false in clientcnt client parameters to stop benchmark
 
@@ -227,7 +250,7 @@ int main(int argc, char **argv) {
         if (pthread_returncode != 0)
         {
             std::ostringstream oss;
-            oss << "failed to join client " << global_client_idx << " (error code: " << pthread_returncode << ")" << std::endl;
+            oss << "failed to join client " << global_client_idx << " (error code: " << pthread_returncode << ")";
             covered::Util::dumpErrorMsg(main_class_name, oss.str());
             exit(1);
         }
@@ -251,18 +274,36 @@ int main(int argc, char **argv) {
         if (pthread_returncode != 0)
         {
             std::ostringstream oss;
-            oss << "failed to join edge node " << global_edge_idx << " (error code: " << pthread_returncode << ")" << std::endl;
+            oss << "failed to join edge node " << global_edge_idx << " (error code: " << pthread_returncode << ")";
             covered::Util::dumpErrorMsg(main_class_name, oss.str());
             exit(1);
         }
     }
     covered::Util::dumpNormalMsg(main_class_name, "all edge nodes are done");
 
-    // (8.3) Dump aggregated statistics
+    // (8.5) Reset local_cloud_running_ = false in a cloud parameter to stop the cloud node
+
+    cloudParam.resetCloudRunning();
+    covered::Util::dumpNormalMsg(main_class_name, "Stop the cloud node...");
+
+    // (8.6) Wait for the cloud node
+
+    covered::Util::dumpNormalMsg(main_class_name, "wait for the cloud node...");
+    pthread_returncode = pthread_join(cloud_thread, NULL); // void* retval = NULL
+    if (pthread_returncode != 0)
+    {
+        std::ostringstream oss;
+        oss << "failed to join cloud node (error code: " << pthread_returncode << ")";
+        covered::Util::dumpErrorMsg(main_class_name, oss.str());
+        exit(1);
+    }
+    covered::Util::dumpNormalMsg(main_class_name, "the cloud node is done");
+
+    // (9) Dump aggregated statistics
 
     // TODO: with the aggregated StatisticsTracker, main thread can dump aggregated statistics after joining all sub-threads
 
-    // (8.4) Delete variables in heap
+    // (10) Delete variables in heap
 
     for (uint32_t global_client_idx = 0; global_client_idx < clientcnt; global_client_idx++)
     {

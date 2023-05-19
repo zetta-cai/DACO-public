@@ -1,5 +1,5 @@
 /*
- * EdgeWrapper: the edge node to receive requests and send responses.
+ * EdgeWrapper: the edge node to receive data/control requests and send responses.
  * 
  * By Siyuan Sheng (2023.04.22).
  */
@@ -27,15 +27,19 @@ namespace covered
     private:
         static const std::string kClassName;
 
-        void processDataRequest_(MessageBase* request_ptr);
-        void processLocalGetRequest_(MessageBase* request_ptr);
-        Value fetchDataFromCloud_(const Key& key);
-        void processLocalWriteRequest_(MessageBase* request_ptr); // For put/del
-        void processRedirectedRequest_(MessageBase* request_ptr);
+        // Return is_finish
+        bool processDataRequest_(MessageBase* request_ptr);
+        bool processLocalGetRequest_(MessageBase* request_ptr);
+        bool processLocalWriteRequest_(MessageBase* request_ptr); // For put/del
+        bool processRedirectedRequest_(MessageBase* request_ptr);
 
-        void processControlRequest_(MessageBase* request_ptr);
+        // Return is_finish
+        bool processControlRequest_(MessageBase* request_ptr);
 
-        void blockForInvalidation_(const Key& key);
+        // Return is_finish
+        bool blockForInvalidation_(const Key& key);
+        bool fetchDataFromCloud_(const Key& key, Value& value);
+
         void triggerIndependentAdmission_(const Key& key, const Value& value);
 
         EdgeParam* local_edge_param_ptr_;
