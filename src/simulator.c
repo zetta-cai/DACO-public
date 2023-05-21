@@ -111,7 +111,7 @@ int main(int argc, char **argv) {
 
     int pthread_returncode;
 
-    // (4) TODO: Simulate cloud for backend storage
+    // (4) Simulate cloud for backend storage
 
     pthread_t cloud_thread;
     covered::CloudParam cloud_param;
@@ -202,9 +202,9 @@ int main(int argc, char **argv) {
 
     // (6.3) Launch clientcnt statistics trackers
 
-    // TODO: need a class StatisticsTracker (in ClientParam) to collect and process statistics of all workers within each client
-        // TODO: StatisticsTracker provides a aggregate method, such that simulator can use an empty StatisticsTracker to aggregate those of all simulated clients
-        // TODO: StatisticsTracker also provides serialize/deserialize methods, such that prototype can collect serialized statistics files from all physical clients and deserialize them for aggregation
+    // TODO: need a class ClientStatisticsTracker (in ClientParam) to collect and process statistics of all workers within each client
+        // TODO: ClientStatisticsTracker provides serialize/deserialize methods, such that prototype can collect serialized statistics files from all physical clients and deserialize them for aggregation
+    // TODO: TotalStatisticsTracker provides an aggregate method, such that simulator/prototype can use an empty StatisticsTracker to deserialize and aggregate all ClientStatisticsTracker
 
     // (7) Start benchmark and dump intermediate statistics
 

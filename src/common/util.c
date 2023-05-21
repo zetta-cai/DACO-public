@@ -14,6 +14,7 @@ namespace covered
 {
     // Type conversion
     const int64_t Util::MAX_UINT16 = 65536;
+    const int64_t Util::MAX_UINT32 = 4294967296;
     // Network
     const std::string Util::LOCALHOST_IPSTR("127.0.0.1");
     const std::string Util::ANY_IPSTR("0.0.0.0");
@@ -192,7 +193,23 @@ namespace covered
         else
         {
             std::ostringstream oss;
-            oss << "cannot convert " << val << " (> " << MAX_UINT16 << ") to uint16_t!";
+            oss << "cannot convert " << val << " (>= " << MAX_UINT16 << ") to uint16_t!";
+            dumpErrorMsg(kClassName, oss.str());
+            exit(1);
+        }
+    }
+
+    uint32_t Util::toUint32(const int64_t& val)
+    {
+        if (val >= 0 && val < MAX_UINT32)
+        {
+            uint32_t result = static_cast<uint32_t>(val);
+            return result;
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "cannot convert " << val << " (>= " << MAX_UINT32 << ") to uint32_t!";
             dumpErrorMsg(kClassName, oss.str());
             exit(1);
         }

@@ -21,6 +21,7 @@ namespace covered
         static const std::string GLOBAL_CLOUD_RECVREQ_PORT_KEYSTR;
         static const std::string GLOBAL_CLOUD_ROCKSDB_PATH_KEYSTR;
         static const std::string GLOBAL_EDGE_RECVREQ_STARTPORT_KEYSTR;
+        static const std::string LATENCY_HISTOGRAM_SIZE_KEYSTR;
         static const std::string VERSION_KEYSTR;
 
         static void loadConfig();
@@ -29,6 +30,7 @@ namespace covered
         static uint16_t getGlobalCloudRecvreqPort();
         static std::string getGlobalCloudRocksdbPath();
         static uint16_t getGlobalEdgeRecvreqStartport();
+        static uint32_t getLatencyHistogramSize();
         static std::string getVersion();
 
         static std::string toString();
@@ -45,6 +47,7 @@ namespace covered
         static uint16_t global_cloud_recvreq_port_;
         static std::string global_cloud_rocksdb_path_;
         static uint16_t global_edge_recvreq_startport_;
+        static uint32_t latency_histogram_size_;
         static std::string version_;
     };
 }

@@ -3,5 +3,6 @@
     "global_cloud_recvreq_port": 4100,
     "global_cloud_rocksdb_path": "/tmp/cloud",
     "global_edge_recvreq_startport": 4200,
+    "latency_histogram_size": 10000,
     "version": "1.0"
 }

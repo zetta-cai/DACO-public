@@ -58,6 +58,7 @@ namespace covered
         // (3) Type conversion
 
         static uint16_t toUint16(const int64_t& val);
+        static uint32_t toUint32(const int64_t& val);
 
         // (4) Client-edge-cloud scenario
 

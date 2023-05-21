@@ -1,7 +1,7 @@
 #include "common/dynamic_array.h"
 
 #include <assert.h>
-#include <cstring> // memcpy
+#include <cstring> // memcpy memset
 #include <sstream>
 
 #include "common/util.h"

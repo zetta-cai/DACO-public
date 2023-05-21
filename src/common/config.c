@@ -14,6 +14,7 @@ namespace covered
     const std::string Config::GLOBAL_CLOUD_RECVREQ_PORT_KEYSTR("global_cloud_recvreq_port");
     const std::string Config::GLOBAL_CLOUD_ROCKSDB_PATH_KEYSTR("global_cloud_rocksdb_path");
     const std::string Config::GLOBAL_EDGE_RECVREQ_STARTPORT_KEYSTR("global_edge_recvreq_startport");
+    const std::string Config::LATENCY_HISTOGRAM_SIZE_KEYSTR("latency_histogram_size");
     const std::string Config::VERSION_KEYSTR("version");
 
     const std::string Config::kClassName("Config");
@@ -25,6 +26,7 @@ namespace covered
     uint16_t Config::global_cloud_recvreq_port_ = 4100; // [4096, 65536]
     std::string global_cloud_rocksdb_path_("/tmp/cloud");
     uint16_t Config::global_edge_recvreq_startport_ = 4200; // [4096, 65536]
+    uint32_t Config::latency_histogram_size_ = 10000; // Track latency up to 10 ms
     std::string Config::version_("1.0");
 
     void Config::loadConfig()
@@ -60,6 +62,12 @@ namespace covered
             {
                 int64_t tmp_port = kv_ptr->value().get_int64();
                 global_edge_recvreq_startport_ = Util::toUint16(tmp_port);
+            }
+            kv_ptr = find_(LATENCY_HISTOGRAM_SIZE_KEYSTR);
+            if (kv_ptr != NULL)
+            {
+                int64_t tmp_size = kv_ptr->value().get_int64();
+                latency_histogram_size_ = util::toUint32(tmp_size);
             }
             kv_ptr = find_(VERSION_KEYSTR);
             if (kv_ptr != NULL)
@@ -106,6 +114,12 @@ namespace covered
     {
         checkIsValid_();
         return global_edge_recvreq_startport_;
+    }
+
+    uint32_t Config::getLatencyHistogramSize()
+    {
+        checkIsValid_();
+        return latency_histogram_size_;
     }
 
     std::string Config::getVersion()
