@@ -96,11 +96,11 @@ namespace covered
 
     void NetworkAddr::checkPortIfValid_()
     {
-        // UDP port must be > Util::UDP_MAX_PORT
-		if (is_valid_ && port_ <= Util::UDP_MAX_PORT)
+        // UDP port must be > Util::UDP_MIN_PORT
+		if (is_valid_ && port_ <= Util::UDP_MIN_PORT)
 		{
 			std::ostringstream oss;
-			oss << "invalid port of " << port_ << " which should be > " << Util::UDP_MAX_PORT << "!";	
+			oss << "invalid port of " << port_ << " which should be >= " << Util::UDP_MIN_PORT << "!";	
 			Util::dumpErrorMsg(kClassName, oss.str());
 			exit(1);
 		}

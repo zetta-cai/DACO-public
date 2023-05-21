@@ -24,7 +24,7 @@ namespace covered
         static const uint32_t UDP_MAX_PKT_PAYLOAD; // Pkt payload = fraghdr + frag payload
         static const uint32_t UDP_FRAGHDR_SIZE;
         static const uint32_t UDP_MAX_FRAG_PAYLOAD;
-        static const uint16_t UDP_MAX_PORT;
+        static const uint16_t UDP_MIN_PORT;
         // Atomicity
         static std::memory_order LOAD_CONCURRENCY_ORDER;
         static std::memory_order STORE_CONCURRENCY_ORDER;

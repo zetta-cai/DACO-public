@@ -58,11 +58,13 @@ namespace covered
             exit(1);
         }
 
+        // Open RocksDB KVS with suggested settings
         open_(dbpath);
     }
 
     RocksdbWrapper::~RocksdbWrapper()
     {
+        // Close RocksDB KVS
         assert(db_ptr_ != NULL);
         delete db_ptr_;
         db_ptr_ = NULL;
@@ -73,13 +75,29 @@ namespace covered
         std::string key_str = key.getKeystr();
         std::string value_str;
         rocksdb::Status rocksdb_status = db_ptr_->Get(rocksdb::ReadOptions(), key_str, &value_str);
-        assert(rocksdb_status.ok());
-        value = Value(value_str.length());
+        //assert(rocksdb_status.ok());
+        if (rocksdb_status.ok())
+        {
+            value = Value(value_str.length());
+        }
+        else if (rocksdb_status.IsNotFound())
+        {
+            value = Value();
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "fail to get key " << key.getKeystr() << " from RocksDB KVS (status: " << rocksdb_status.ToString() << ")";
+            Util::dumpErrorMsg(kClassName, oss.str());
+            exit(1);
+        }
         return;
     }
 
     void RocksdbWrapper::put(const Key& key, const Value& value)
     {
+        assert(value.isDeleted() == false);
+
         std::string key_str = key.getKeystr();
         std::string value_str = value.generateValuestr();
         rocksdb::Status rocksdb_status = db_ptr_->Put(rocksdb::WriteOptions(), key_str, value_str);
@@ -91,7 +109,7 @@ namespace covered
     {
         std::string key_str = key.getKeystr();
         rocksdb::Status rocksdb_status = db_ptr_->Delete(rocksdb::WriteOptions(), key_str);
-        assert(rocksdb_status.ok());
+        assert(rocksdb_status.ok()); // Return ok even if we remove a non-existing key
         return;
     }
 

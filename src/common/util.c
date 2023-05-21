@@ -20,7 +20,7 @@ namespace covered
     const uint32_t Util::UDP_MAX_PKT_PAYLOAD = 65507; // 65535(ipmax) - 20(iphdr) - 8(udphdr)
     const uint32_t Util::UDP_FRAGHDR_SIZE = 4 * sizeof(uint32_t); // 4(fragment_idx) + 4(fragment_cnt) + 4(msg_payload_size) + 4(msg_seqnum)
     const uint32_t Util::UDP_MAX_FRAG_PAYLOAD = Util::UDP_MAX_PKT_PAYLOAD - Util::UDP_FRAGHDR_SIZE;
-    const uint16_t Util::UDP_MAX_PORT = 4096; // UDP port has to be larger than 4096
+    const uint16_t Util::UDP_MIN_PORT = 1024; // UDP port has to be >= 1024 (0-1023 are reserved for well-known usage; 1024-49151 are registered ports; 49152-65535 are custom ports)
     // Atomicity
     std::memory_order Util::LOAD_CONCURRENCY_ORDER = std::memory_order_acquire;
     std::memory_order Util::STORE_CONCURRENCY_ORDER = std::memory_order_release;

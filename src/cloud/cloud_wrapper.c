@@ -29,7 +29,9 @@ namespace covered
         local_cloud_param_ptr_ = local_cloud_param_ptr;
         assert(local_cloud_param_ptr_ != NULL);
         
-        // TODO: Open local RocksDB KVS
+        // Open local RocksDB KVS
+        local_cloud_rocksdb_ptr_ = new RocksdbWrapper(Config::getGlobalCloudRocksdbPath());
+        assert(local_cloud_rocksdb_ptr_ != NULL);
 
         // Prepare a socket server on recvreq port
         uint16_t global_cloud_recvreq_port = Config::getGlobalCloudRecvreqPort();
@@ -42,7 +44,10 @@ namespace covered
     {
         // NOTE: no need to delete local_cloud_param_ptr, as it is maintained outside CloudWrapper
 
-        // TODO: Close local RocksDB KVS
+        // Close local RocksDB KVS
+        assert(local_cloud_rocksdb_ptr_ != NULL);
+        delete local_cloud_rocksdb_ptr_;
+        local_cloud_rocksdb_ptr_ = NULL;
 
         // Free the socket server on recvreq port
         assert(local_cloud_recvreq_socket_server_ptr_ != NULL);
@@ -54,6 +59,8 @@ namespace covered
     {
         assert(local_cloud_param_ptr != NULL);
         assert(local_cloud_recvreq_socket_server_ptr_ != NULL);
+
+        bool is_finish = false; // Mark if local cloud node is finished
 
         while (local_cloud_param_ptr->isCloudRunning()) // local_cloud_running_ is set as true by default
         {
@@ -71,7 +78,7 @@ namespace covered
 
                 if (request_ptr->isGlobalRequest()) // Global requests
                 {
-                    processGlobalRequest_(request_ptr);
+                    is_finish = processGlobalRequest_(request_ptr);
                 }
                 else
                 {
@@ -85,15 +92,89 @@ namespace covered
                 assert(request_ptr != NULL);
                 delete request_ptr;
                 request_ptr = NULL;
+
+                if (is_finish) // Check is_finish
+                {
+                    continue; // Go to check if cloud is still running
+                }
             } // End of (is_timeout == false)
         } // End of while loop
     }
 
-    void CloudWrapper::processGlobalRequest_(MessageBase* global_request_ptr)
+    bool CloudWrapper::processGlobalRequest_(MessageBase* global_request_ptr)
     {
-        assert(global_request_ptr != NULL);
+        assert(global_request_ptr != NULL && global_request_ptr->isGlobalRequest());
+        assert(local_cloud_param_ptr != NULL);
+        assert(local_cloud_rocksdb_ptr_ != NULL);
+        assert(local_cloud_recvreq_socket_server_ptr_ != NULL);
 
-        // TODO: Process global requests by RocksDB KVS
-        // TODO: Reply global responses to the edge node
+        bool is_finish = false;
+
+        // Process global requests by RocksDB KVS
+        MessageType global_request_message_type = global_request_ptr->getMessageType();
+        switch (global_request_message_type)
+        {
+            Key tmp_key();
+            Value tmp_value();
+            MessageType* global_response_ptr = NULL;
+            case (MessageType::kGlobalGetRequest)
+            {
+                const GlobalGetRequest* const global_get_request_ptr = static_cast<const GlobalGetRequest*>(global_request_ptr);
+                tmp_key = global_get_request_ptr->getKey();
+
+                // Get value from RocksDB KVS
+                local_cloud_rocksdb_ptr_->get(tmp_key, tmp_value);
+
+                // Prepare global get response message
+                global_response_ptr = new GlobalGetResponse(tmp_key, tmp_value);
+                assert(global_response_ptr != NULL);
+                break;
+            }
+            case (MessageType::kGlobalPutRequest)
+            {
+                const GlobalPutRequest* const global_put_request_ptr = static_cast<const GlobalPutRequest*>(global_request_ptr);
+                tmp_key = global_put_request_ptr->getKey();
+                tmp_value = global_put_request_ptr->getValue();
+                assert(tmp_value.isDeleted() == false);
+
+                // Put value into RocksDB KVS
+                local_cloud_rocksdb_ptr_->put(tmp_key, tmp_value);
+
+                // Prepare global put response message
+                global_response_ptr = new GlobalPutResponse(tmp_key);
+                assert(global_response_ptr != NULL);
+                break;
+            }
+            case (MessageType::kGlobalDelRequest)
+            {
+                const GlobalDelRequest* const global_del_request_ptr = static_cast<const GlobalDelRequest*>(global_request_ptr);
+                tmp_key = global_del_request_ptr->getKey();
+
+                // Put value into RocksDB KVS
+                local_cloud_rocksdb_ptr_->remove(tmp_key);
+
+                // Prepare global del response message
+                global_response_ptr = new GlobalDelResponse(tmp_key);
+                assert(global_response_ptr != NULL);
+                break;
+            }
+        }
+
+        if (!is_finish) // Check is_finish
+        {
+            // Reply global response message to the edge node (the remote address set by the most recent recv)
+            assert(global_response_ptr != NULL);
+            assert(global_response_ptr->isGlobalResponse());
+            DynamicArray global_response_msg_payload(global_response_ptr->getMsgPayloadSize());
+            global_response_ptr->serialize(global_response_msg_payload);
+            local_cloud_recvreq_socket_server_ptr_->send(global_response_msg_payload);
+        }
+
+        // Free global response message
+        assert(global_response_ptr != NULL);
+        delete global_response_ptr;
+        global_response_ptr = NULL;
+
+        return is_finish;
     }
 }

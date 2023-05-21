@@ -176,6 +176,7 @@ namespace covered
         bool is_local_cached = local_edge_cache_ptr_->get(tmp_key, tmp_value);
 
         // TODO: Get data from neighbor for local cache miss
+        // TODO: Update is_finish and is_global_cached
         bool is_global_cached = false;
 
         // Get data from cloud for global cache miss
@@ -250,6 +251,8 @@ namespace covered
             const LocalPutRequest* const local_put_request_ptr = static_cast<const LocalPutRequest*>(local_request_ptr);
             tmp_key = local_put_request_ptr->getKey();
             tmp_value = local_put_request_ptr->getValue();
+            assert(tmp_value.isDeleted() == false);
+
             is_local_cached = local_edge_cache_ptr_->update(tmp_key, tmp_value);
 
             // Prepare LocalPutResponse for client

@@ -10,6 +10,7 @@
 #include <string>
 
 #include "cloud/cloud_param.h"
+#include "cloud/rocksdb_wrapper.h"
 #include "message/message_base.h"
 #include "network/udp_socket_wrapper.h"
 
@@ -27,9 +28,10 @@ namespace covered
     private:
         static const std::string kClassName;
 
-        void processGlobalRequest_(MessageBase* request_ptr);
+        bool processGlobalRequest_(MessageBase* request_ptr);
 
         EdgeParam* local_cloud_param_ptr_;
+        RocksdbWrapper* local_cloud_rocksdb_ptr_;
         UdpSocketWrapper* local_cloud_recvreq_socket_server_ptr_;
     };
 }

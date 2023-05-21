@@ -12,6 +12,7 @@ namespace covered
 {
     const std::string Config::FACEBOOK_CONFIG_FILEPATH_KEYSTR("facebook_config_filepath");
     const std::string Config::GLOBAL_CLOUD_RECVREQ_PORT_KEYSTR("global_cloud_recvreq_port");
+    const std::string Config::GLOBAL_CLOUD_ROCKSDB_PATH_KEYSTR("global_cloud_rocksdb_path");
     const std::string Config::GLOBAL_EDGE_RECVREQ_STARTPORT_KEYSTR("global_edge_recvreq_startport");
     const std::string Config::VERSION_KEYSTR("version");
 
@@ -22,6 +23,7 @@ namespace covered
     boost::json::object Config::json_object_ = boost::json::object();
     std::string Config::facebook_config_filepath_("lib/CacheLib/cachelib/cachebench/test_configs/hit_ratio/cdn/config.json");
     uint16_t Config::global_cloud_recvreq_port_ = 4100; // [4096, 65536]
+    std::string global_cloud_rocksdb_path_("/tmp/cloud");
     uint16_t Config::global_edge_recvreq_startport_ = 4200; // [4096, 65536]
     std::string Config::version_("1.0");
 
@@ -47,6 +49,11 @@ namespace covered
             {
                 int64_t tmp_port = kv_ptr->value().get_int64();
                 global_cloud_recvreq_port_ = Util::toUint16(tmp_port);
+            }
+            kv_ptr = find_(GLOBAL_CLOUD_ROCKSDB_PATH_KEYSTR);
+            if (kv_ptr != NULL)
+            {
+                global_cloud_rocksdb_path_ = kv_ptr->value().get_string();
             }
             kv_ptr = find_(GLOBAL_EDGE_RECVREQ_STARTPORT_KEYSTR);
             if (kv_ptr != NULL)
@@ -87,6 +94,12 @@ namespace covered
     {
         checkIsValid_();
         return global_cloud_recvreq_port_;
+    }
+
+    std::string Config::getGlobalCloudRocksdbPath()
+    {
+        checkIsValid_();
+        return global_cloud_rocksdb_path_;
     }
 
     uint16_t Config::getGlobalEdgeRecvreqStartport()
