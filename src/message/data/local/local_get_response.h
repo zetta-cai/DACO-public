@@ -12,14 +12,14 @@
 #include "common/dynamic_array.h"
 #include "common/key.h"
 #include "common/value.h"
-#include "message/key_value_message.h"
+#include "message/key_value_hitflag_message.h"
 
 namespace covered
 {
-    class LocalGetResponse : public KeyValueMessage
+    class LocalGetResponse : public KeyValueHitflagMessage
     {
     public:
-        LocalGetResponse(const Key& key, const Value& value);
+        LocalGetResponse(const Key& key, const Value& value, const Hitflag& hitflag);
         LocalGetResponse(const DynamicArray& msg_payload);
         ~LocalGetResponse();
     private:

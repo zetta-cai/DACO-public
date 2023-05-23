@@ -9,17 +9,17 @@ namespace covered
         std::string item_type_str = "";
         switch (item_type)
         {
-            case (WorkloadItemType::kWorkloadItemGet):
+            case WorkloadItemType::kWorkloadItemGet:
             {
                 item_type_str = "kWorkloadItemGet";
                 break;
             }
-            case (WorkloadItemType::kWorkloadItemPut):
+            case WorkloadItemType::kWorkloadItemPut:
             {
                 item_type_str = "kWorkloadItemPut";
                 break;
             }
-            case (WorkloadItemType::kWorkloadItemDel):
+            case WorkloadItemType::kWorkloadItemDel:
             {
                 item_type_str = "kWorkloadItemDel";
                 break;

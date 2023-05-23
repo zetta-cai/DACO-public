@@ -26,7 +26,7 @@ namespace covered
     uint16_t Config::global_cloud_recvreq_port_ = 4100; // [4096, 65536]
     std::string global_cloud_rocksdb_path_("/tmp/cloud");
     uint16_t Config::global_edge_recvreq_startport_ = 4200; // [4096, 65536]
-    uint32_t Config::latency_histogram_size_ = 10000; // Track latency up to 10 ms
+    uint32_t Config::latency_histogram_size_ = 1000000; // Track latency up to 1000 ms
     std::string Config::version_("1.0");
 
     void Config::loadConfig()

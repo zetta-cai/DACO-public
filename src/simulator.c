@@ -16,6 +16,7 @@
 #include "cloud/cloud_wrapper.h"
 #include "edge/edge_param.h"
 #include "edge/edge_wrapper.h"
+#include "statistics/client_statistics_tracker.h"
 #include "workload/workload_wrapper_base.h"
 
 int main(int argc, char **argv) {
@@ -111,7 +112,7 @@ int main(int argc, char **argv) {
 
     int pthread_returncode;
 
-    // (4) Simulate cloud for backend storage
+    // (4) Simulate a single cloud node for backend storage
 
     pthread_t cloud_thread;
     covered::CloudParam cloud_param;
@@ -133,7 +134,7 @@ int main(int argc, char **argv) {
         exit(1);
     }
 
-    // (5) Simulate edge nodes with cooperative caching
+    // (5) Simulate edgecnt edge nodes with cooperative caching
 
     pthread_t edge_threads[edgecnt];
     covered::EdgeParam edge_params[edgecnt];
@@ -164,20 +165,26 @@ int main(int argc, char **argv) {
         }
     }
     
-    // (6) Simulate multiple clients by multi-threading
+    // (6) Simulate clientcnt clients by multi-threading
 
     pthread_t client_threads[clientcnt];
-    covered::WorkloadWrapperBase* workload_generator_ptrs[clientcnt]; // need delete
+    covered::WorkloadWrapperBase* workload_generator_ptrs[clientcnt]; // Free at the end
+    covered::ClientStatisticsTracker* client_statistics_tracker_ptrs[clientcnt]; // Free at the end
     covered::ClientParam client_params[clientcnt];
 
     // (6.1) Prepare clientcnt client parameters
 
     for (uint32_t global_client_idx = 0; global_client_idx < clientcnt; global_client_idx++)
     {
+        // Create workload generator for the client
         workload_generator_ptrs[global_client_idx] = covered::WorkloadWrapperBase::getWorkloadGenerator(workload_name, global_client_idx);
         assert(workload_generator_ptrs[global_client_idx] != NULL);
 
-        covered::ClientParam local_client_param(global_client_idx, workload_generator_ptrs[global_client_idx]);
+        // Create statistics tracker for the client
+        client_statistics_tracker_ptrs[global_client_idx_] = new covered::ClientStatisticsTracker(covered::Param::getPerclientWorkercnt());
+        assert(client_statistics_tracker_ptrs[global_client_idx_] != NULL);
+
+        covered::ClientParam local_client_param(global_client_idx, workload_generator_ptrs[global_client_idx], client_statistics_tracker_ptrs[global_client_idx_]);
         client_params[global_client_idx] = local_client_param;
     }
 
@@ -199,12 +206,6 @@ int main(int argc, char **argv) {
             exit(1);
         }
     }
-
-    // (6.3) Launch clientcnt statistics trackers
-
-    // TODO: need a class ClientStatisticsTracker (in ClientParam) to collect and process statistics of all workers within each client
-        // TODO: ClientStatisticsTracker provides serialize/deserialize methods, such that prototype can collect serialized statistics files from all physical clients and deserialize them for aggregation
-    // TODO: TotalStatisticsTracker provides an aggregate method, such that simulator/prototype can use an empty StatisticsTracker to deserialize and aggregate all ClientStatisticsTracker
 
     // (7) Start benchmark and dump intermediate statistics
 
@@ -305,7 +306,7 @@ int main(int argc, char **argv) {
 
     // TODO: with the aggregated StatisticsTracker, main thread can dump aggregated statistics after joining all sub-threads
 
-    // (10) Delete variables in heap
+    // (10) Free variables in heap
 
     for (uint32_t global_client_idx = 0; global_client_idx < clientcnt; global_client_idx++)
     {
@@ -313,6 +314,11 @@ int main(int argc, char **argv) {
         {
             delete workload_generator_ptrs[global_client_idx];
             workload_generator_ptrs[global_client_idx]= NULL;
+        }
+        if (client_statistics_tracker_ptrs[global_client_idx_] != NULL)
+        {
+            delete client_statistics_tracker_ptrs[global_client_idx_];
+            client_statistics_tracker_ptrs[global_client_idx_] = NULL;
         }
     }
 

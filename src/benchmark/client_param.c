@@ -12,7 +12,7 @@ namespace covered
         workload_generator_ptr_ = NULL;
     }
 
-    ClientParam::ClientParam(const uint32_t& global_client_idx, WorkloadWrapperBase* workload_generator_ptr) : local_client_running_(false)
+    ClientParam::ClientParam(const uint32_t& global_client_idx, WorkloadWrapperBase* workload_generator_ptr, ClientStatisticsTracker* client_statistics_tracker_ptr) : local_client_running_(false)
     {
         global_client_idx_ = global_client_idx;
         if (workload_generator_ptr == NULL)
@@ -21,11 +21,18 @@ namespace covered
             exit(1);
         }
         workload_generator_ptr_ = workload_generator_ptr;
+        if (client_statistics_tracker_ptr == NULL)
+        {
+            Util::dumpErrorMsg(kClassName, "client_statistics_tracker_ptr is NULL!");
+            exit(1);
+        }
+        client_statistics_tracker_ptr_ = client_statistics_tracker_ptr;
     }
         
     ClientParam::~ClientParam()
     {
         // NOTE: no need to delete workload_generator_ptr_, as it is maintained outside ClientParam
+        // NOTE: no need to delete client_statistics_tracker_ptr_, as it is maintained outside ClientParam
     }
 
     const ClientParam& ClientParam::operator=(const ClientParam& other)
@@ -64,5 +71,10 @@ namespace covered
     WorkloadWrapperBase* ClientParam::getWorkloadGeneratorPtr()
     {
         return workload_generator_ptr_;
+    }
+
+    ClientStatisticsTracker* ClientParam::getClientStatisticsTrackerPtr()
+    {
+        return client_statistics_tracker_ptr_;
     }
 }

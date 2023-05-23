@@ -1,11 +1,11 @@
 /*
- * KeyValueMessage: the base class of messages each with a key and a value.
+ * KeyValueHitflagMessage: the base class of messages each with a key, a value, and a hit flag.
  * 
- * By Siyuan Sheng (2023.05.18).
+ * By Siyuan Sheng (2023.05.23).
  */
 
-#ifndef KEY_VALUE_MESSAGE_H
-#define KEY_VALUE_MESSAGE_H
+#ifndef KEY_VALUE_HITFLAG_MESSAGE_H
+#define KEY_VALUE_HITFLAG_MESSAGE_H
 
 #include <string>
 
@@ -16,15 +16,16 @@
 
 namespace covered
 {
-    class KeyValueMessage : public MessageBase
+    class KeyValueHitflagMessage : public MessageBase
     {
     public:
-        KeyValueMessage(const Key& key, const Value& value, const MessageType& message_type);
-        KeyValueMessage(const DynamicArray& msg_payload);
-        ~KeyValueMessage();
+        KeyValueHitflagMessage(const Key& key, const Value& value, const Hitflag& hitflag, const MessageType& message_type);
+        KeyValueHitflagMessage(const DynamicArray& msg_payload);
+        ~KeyValueHitflagMessage();
 
         Key getKey() const;
         Value getValue() const;
+        Hitflag getHitflag() const;
 
         virtual uint32_t getMsgPayloadSize() override;
     private:
@@ -35,6 +36,7 @@ namespace covered
 
         const Key key_;
         const Value value_;
+        const Hitflag hitflag_;
     };
 }
 

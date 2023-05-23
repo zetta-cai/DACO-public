@@ -9,7 +9,7 @@
 
 #include <atomic> // std::memory_order
 #include <string>
-#include <time.h>
+#include <time.h> // struct timespec
 
 namespace covered
 {
@@ -49,11 +49,11 @@ namespace covered
         static bool isFileExist(const std::string& filepath);
         static bool isDirectoryExist(const std::string& dirpath);
 
-        // (2) Time measurement (in units of microseconds)
+        // (2) Time measurement
 
         static struct timespec getCurrentTimespec();
         std::string getCurrentTimestr();
-        static double getDeltaTime(const struct timespec& current_timespec, const struct timespec& previous_timespec);
+        static double getDeltaTime(const struct timespec& current_timespec, const struct timespec& previous_timespec); // In units of microseconds
 
         // (3) Type conversion
 

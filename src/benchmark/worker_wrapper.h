@@ -33,6 +33,8 @@ namespace covered
     private:
         static const std::string kClassName;
 
+        void processLocalResponse_(MessageBase* local_response_ptr, const uint32_t& rtt_us);
+
         WorkerParam* local_worker_param_ptr_;
         std::mt19937_64* local_worker_item_randgen_ptr_;
         UdpSocketWrapper* local_worker_sendreq_toedge_socket_client_ptr_;

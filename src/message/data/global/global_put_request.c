@@ -6,8 +6,6 @@ namespace covered
 
     GlobalPutRequest::GlobalPutRequest(const Key& key, const Value& value) : KeyValueMessage(key, value, MessageType::kGlobalPutRequest)
     {
-        key_ = key;
-        value_ = value;
     }
 
     GlobalPutRequest::GlobalPutRequest(const DynamicArray& msg_payload) : KeyValueMessage(msg_payload)

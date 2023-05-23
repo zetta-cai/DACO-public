@@ -117,7 +117,7 @@ namespace covered
             Key tmp_key();
             Value tmp_value();
             MessageType* global_response_ptr = NULL;
-            case (MessageType::kGlobalGetRequest)
+            case MessageType::kGlobalGetRequest:
             {
                 const GlobalGetRequest* const global_get_request_ptr = static_cast<const GlobalGetRequest*>(global_request_ptr);
                 tmp_key = global_get_request_ptr->getKey();
@@ -130,7 +130,7 @@ namespace covered
                 assert(global_response_ptr != NULL);
                 break;
             }
-            case (MessageType::kGlobalPutRequest)
+            case MessageType::kGlobalPutRequest:
             {
                 const GlobalPutRequest* const global_put_request_ptr = static_cast<const GlobalPutRequest*>(global_request_ptr);
                 tmp_key = global_put_request_ptr->getKey();
@@ -145,7 +145,7 @@ namespace covered
                 assert(global_response_ptr != NULL);
                 break;
             }
-            case (MessageType::kGlobalDelRequest)
+            case MessageType::kGlobalDelRequest:
             {
                 const GlobalDelRequest* const global_del_request_ptr = static_cast<const GlobalDelRequest*>(global_request_ptr);
                 tmp_key = global_del_request_ptr->getKey();
@@ -157,6 +157,13 @@ namespace covered
                 global_response_ptr = new GlobalDelResponse(tmp_key);
                 assert(global_response_ptr != NULL);
                 break;
+            }
+            default:
+            {
+                std::ostringstream oss;
+                oss << "invalid message type " << MessageBase::messageTypeToString(global_request_message_type) << " for processGlobalRequest_()!";
+                Util::dumpErrorMsg(kClassName, oss.str());
+                exit(1);
             }
         }
 

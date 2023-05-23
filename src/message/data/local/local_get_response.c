@@ -4,10 +4,8 @@ namespace covered
 {
     const std::string LocalGetResponse::kClassName("LocalGetResponse");
 
-    LocalGetResponse::LocalGetResponse(const Key& key, const Value& value) : KeyValueMessage(key, value, MessageType::kLocalGetResponse)
+    LocalGetResponse::LocalGetResponse(const Key& key, const Value& value, const Hitflag& hitflag) : KeyValueHitflagMessage(key, value, hitflag, MessageType::kLocalGetResponse)
     {
-        key_ = key;
-        value_ = value;
     }
 
     LocalGetResponse::LocalGetResponse(const DynamicArray& msg_payload) : KeyValueMessage(msg_payload)

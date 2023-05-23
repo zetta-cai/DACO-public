@@ -10,6 +10,7 @@
 #include <atomic>
 #include <string>
 
+#include "statistics/client_statistics_tracker.h"
 #include "workload/workload_wrapper_base.h"
 
 namespace covered
@@ -18,7 +19,7 @@ namespace covered
     {
     public:
         ClientParam();
-        ClientParam(const uint32_t& global_client_idx, WorkloadWrapperBase* workload_generator_ptr);
+        ClientParam(const uint32_t& global_client_idx, WorkloadWrapperBase* workload_generator_ptr, ClientStatisticsTracker* client_statistics_tracker_ptr);
         ~ClientParam();
 
         const ClientParam& operator=(const ClientParam& other);
@@ -29,6 +30,7 @@ namespace covered
 
         uint32_t getGlobalClientIdx();
         WorkloadWrapperBase* getWorkloadGeneratorPtr();
+        ClientStatisticsTracker* getClientStatisticsTrackerPtr();
     private:
         static const std::string kClassName;
 
@@ -40,6 +42,7 @@ namespace covered
 
         uint32_t global_client_idx_;
         WorkloadWrapperBase* workload_generator_ptr_;
+        ClientStatisticsTracker* client_statistics_tracker_ptr_;
     };
 }
 

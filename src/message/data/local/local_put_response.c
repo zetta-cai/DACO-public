@@ -4,7 +4,7 @@ namespace covered
 {
     const std::string LocalPutResponse::kClassName("LocalPutResponse");
 
-    LocalPutResponse::LocalPutResponse(const Key& key) : KeyMessage(key, MessageType::kLocalPutResponse)
+    LocalPutResponse::LocalPutResponse(const Key& key, const Hitflag& hitflag) : KeyHitflagMessage(key, hitflag, MessageType::kLocalPutResponse)
     {
     }
 

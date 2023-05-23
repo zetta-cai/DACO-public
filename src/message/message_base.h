@@ -30,10 +30,18 @@ namespace covered
         kGlobalDelResponse
     };
 
+    enum Hitflag
+    {
+        kLocalHit = 1, // Hit local edge cache of closest edge node
+        kCooperativeHit, // Hit cooperative edge cache of neighbor edge node
+        kGlobalMiss // Miss all edge nodes
+    }
+
     class MessageBase
     {
     public:
         static std::string messageTypeToString(const MessageType& message_type);
+        static std::string hitflagToString(const Hitflag& hitflag);
 
         static MessageBase* getLocalRequestFromWorkloadItem(WorkloadItem workload_item); // By workers in clients
         static MessageBase* getRequestFromMsgPayload(const DynamicArray& msg_payload); // Data/control requests
@@ -73,7 +81,7 @@ namespace covered
         virtual uint32_t serializeInternal_(DynamicArray& msg_payload, const uint32_t& size) = 0;
         virtual uint32_t deserializeInternal_(const DynamicArray& msg_payload, const uint32_t& size) = 0;
 
-        MessageType message_type_;
+        const MessageType message_type_;
     };
 }
 

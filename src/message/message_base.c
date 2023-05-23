@@ -14,32 +14,32 @@ namespace covered
         std::string message_type_str = "";
         switch (message_type)
         {
-            case (MessageType::kLocalGetRequest):
+            case MessageType::kLocalGetRequest:
             {
                 message_type_str = "kLocalGetRequest";
                 break;
             }
-            case (MessageType::kLocalPutRequest):
+            case MessageType::kLocalPutRequest:
             {
                 message_type_str = "kLocalPutRequest";
                 break;
             }
-            case (MessageType::kLocalDelRequest):
+            case MessageType::kLocalDelRequest:
             {
                 message_type_str = "kLocalDelRequest";
                 break;
             }
-            case (MessageType::kLocalGetResponse):
+            case MessageType::kLocalGetResponse:
             {
                 message_type_str = "kLocalGetResponse";
                 break;
             }
-            case (MessageType::kLocalPutResponse):
+            case MessageType::kLocalPutResponse:
             {
                 message_type_str = "kLocalPutResponse";
                 break;
             }
-            case (MessageType::kLocalDelResponse):
+            case MessageType::kLocalDelResponse:
             {
                 message_type_str = "kLocalDelResponse";
                 break;
@@ -51,6 +51,35 @@ namespace covered
             }
         }
         return message_type_str;
+    }
+
+    std::string MessageBase::hitflagToString(const Hitflag& hitflag)
+    {
+        std::string hitflag_str = "";
+        switch (hitflag)
+        {
+            case Hitflag::kLocalHit:
+            {
+                hitflag_str = "kLocalHit";
+                break;
+            }
+            case Hitflag::kCooperativeHit:
+            {
+                hitflag_str = "kCooperativeHit";
+                break;
+            }
+            case Hitflag::kGlobalMiss:
+            {
+                hitflag_str = "kGlobalMiss";
+                break;
+            }
+            default:
+            {
+                hitflag_str = std::string(static_cast<uint8_t>(hitflag));
+                break;
+            }
+        }
+        return hitflag_str;
     }
 
     MessageBase* MessageBase::getLocalRequestFromWorkloadItem(WorkloadItem workload_item)

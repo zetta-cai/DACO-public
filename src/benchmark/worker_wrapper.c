@@ -2,12 +2,16 @@
 
 #include <assert.h> // assert
 #include <sstream>
+#include <time.h> // struct timespec
 
 #include "benchmark/client_param.h"
 #include "common/dynamic_array.h"
 #include "common/util.h"
+#include "message/message_base.h"
 #include "network/network_addr.h"
+#include "statistics/client_statistics_tracker.h"
 #include "workload/workload_item.h"
+#include "workload/workload_wrapper_base.h"
 
 namespace covered
 {
@@ -99,6 +103,7 @@ namespace covered
             assert(local_request_serialize_size == local_request_msg_payload_size);
 
             // Timeout-and-retry mechanism
+            struct timespec sendreq_timestamp = Util::getCurrentTimespec();
             DynamicArray local_response_msg_payload();
             bool is_finish = false; // Mark if local client is finished
             while (true)
@@ -125,6 +130,7 @@ namespace covered
                     break; // Receive the local response message successfully
                 }
             }
+            struct timespec recvrsp_timestamp = Util::getCurrentTimespec();
 
             // Free local request message
             assert(local_request_ptr != NULL);
@@ -135,15 +141,105 @@ namespace covered
             {
                 continue; // Go to check if client is still running
             }
-            
-            // TODO: Process the response message and update statistics
 
-            // TODO: remove later
-            std::ostringstream oss;
-            oss << "keystr: " << workload_item.getKey().getKeystr() << "; valuesize: " << workload_item.getValue().getValuesize() << std::endl;
-            Util::dumpNormalMsg(kClassName, oss.str());
+            // Get local response message
+            MessageBase* local_response_ptr = MessageBase::getResponseFromMsgPayload(local_response_msg_payload);
+            assert(local_response_ptr != NULL && local_response_ptr->isLocalResponse());
+            
+            // Process local response message to update statistics
+            double rtt_us = Util::getDeltaTime(recvrsp_timestamp, sendreq_timestamp);
+            processLocalResponse_(local_response_ptr, static_cast<uint32_t>(rtt_us));
+
+            // Free local response message
+            assert(local_response_ptr != NULL);
+            delete local_response_ptr;
+            local_response_ptr = NULL;
             break;
         }
+
+        return;
+    }
+
+    void WorkerWrapper::processLocalResponse_(MessageBase* local_response_ptr, const uint32_t& rtt_us)
+    {
+        assert(local_response_ptr != NULL);
+
+        assert(local_worker_param_ptr_ != NULL);
+        ClientStatisticsTracker* client_statistics_tracker_ptr_ = local_worker_param_ptr_->getClientStatisticsTrackerPtr();
+        assert(client_statistics_tracker_ptr_ != NULL);
+
+        // Process local response message
+        Hitflag hitflag = Hitflag::kGlobalMiss;
+        MessageType local_response_message_type = local_response_ptr->getMessageType();
+        Key tmp_key();
+        Value tmp_value();
+        switch (local_response_message_type)
+        {
+            case MessageType::kLocalGetResponse:
+            {
+                LocalGetResponse* const local_get_response_ptr = static_cast<LocalGetResponse*>(local_response_ptr);
+                tmp_key = local_get_response_ptr->getKey();
+                tmp_value = local_get_response_ptr->getValue();
+                hitflag = local_get_response_ptr->getHitflag();
+                break;
+            }
+            case MessageType::kLocalPutResponse:
+            {
+                LocalPutResponse* const local_put_response_ptr = static_cast<LocalPutResponse*>(local_response_ptr);
+                tmp_key = local_put_response_ptr->getKey();
+                hitflag = local_put_response_ptr->getHitflag();
+                break;
+            }
+            case MessageType::kLocalDelResponse:
+            {
+                LocalDelResponse* const local_del_response_ptr = static_cast<LocalDelResponse*>(local_response_ptr);
+                tmp_key = local_del_response_ptr->getKey();
+                hitflag = local_del_response_ptr->getHitflag();
+                break;
+            }
+            default:
+            {
+                std::ostringstream oss;
+                oss << "invalid message type " << MessageBase::messageTypeToString(local_response_message_type) << " for processLocalResponse_()!";
+                Util::dumpErrorMsg(kClassName, oss.str());
+                exit(1);
+            }
+        }
+
+        // Update hit ratio statistics for the local client
+        switch (hitflag)
+        {
+            case Hitflag::kLocalHit:
+            {
+                client_statistics_tracker_ptr_->updateLocalHitcnt(local_worker_param_ptr_->local_worker_idx_);
+                break;
+            }
+            case Hitflag::kCooperativeHit:
+            {
+                client_statistics_tracker_ptr_->updateCooperativeHitcnt(local_worker_param_ptr_->local_worker_idx_);
+                break;
+            }
+            case Hitflag:kGlobalMiss:
+            {
+                client_statistics_tracker_ptr_->updateReqcnt(local_worker_param_ptr_->local_worker_idx_);
+                break;
+            }
+            default:
+            {
+                std::ostringstream oss;
+                oss << "invalid hitflag " << MessageBase::hitflagToString(hitflag) << " for processLocalResponse_()!";
+                Util::dumpErrorMsg(kClassName, oss.str());
+                exit(1);
+            }
+        }
+
+        // Update latency statistics for the local client
+        client_statistics_tracker_ptr_->updateLatency(local_worker_param_ptr_->local_worker_idx_, rtt_us);
+
+        // TODO: remove later
+        std::ostringstream oss;
+        oss << "type: " << MessageBase::messageTypeToString(local_response_message_type) << "; keystr: " << tmp_key.getKeystr() << "; valuesize: " << tmp_value.getValuesize() << std::endl;
+        Util::dumpNormalMsg(kClassName, oss.str());
 
         return;
     }

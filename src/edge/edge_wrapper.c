@@ -3,8 +3,9 @@
 #include <assert.h>
 
 #include "common/util.h"
-#include "message/local_message.h"
 #include "message/global_message.h"
+#include "message/local_message.h"
+#include "message/message_base.h"
 #include "network/network_addr.h"
 
 namespace covered
@@ -169,18 +170,30 @@ namespace covered
         assert(local_edge_cache_ptr_ != NULL);
 
         bool is_finish = false; // Mark if local edge node is finished
+        Hitflag hitflag = Hitflag::kGlobalMiss;
 
         const LocalGetRequest* const local_get_request_ptr = static_cast<const LocalGetRequest*>(local_request_ptr);
         Key tmp_key = local_get_request_ptr->getKey();
         Value tmp_value();
         bool is_local_cached = local_edge_cache_ptr_->get(tmp_key, tmp_value);
+        if (is_local_cached)
+        {
+            hitflag = Hitflag::kLocalHit;
+        }
 
-        // TODO: Get data from neighbor for local cache miss
-        // TODO: Update is_finish and is_global_cached
-        bool is_global_cached = false;
+        bool is_cooperative_cached = false;
+        if (!is_local_cached)
+        {
+            // TODO: Get data from neighbor for local cache miss
+            // TODO: Update is_finish and is_cooperative_cached
+            if (is_cooperative_cached)
+            {
+                hitflag = Hitflag::kCooperativeHit;
+            }
+        }
 
         // Get data from cloud for global cache miss
-        if (!is_local_cached && !is_global_cached)
+        if (!is_local_cached && !is_cooperative_cached)
         {
             is_finish = fetchDataFromCloud_(tmp_key, tmp_value);
         }
@@ -199,7 +212,7 @@ namespace covered
         }
 
         // Prepare LocalGetResponse for client
-        LocalGetResponse local_get_response(tmp_key, tmp_value);
+        LocalGetResponse local_get_response(tmp_key, tmp_value, hitflag);
 
         // Reply local response message to a client (the remote address set by the most recent recv)
         DynamicArray local_response_msg_payload(local_get_response.getMsgPayloadSize());
@@ -216,6 +229,7 @@ namespace covered
         assert(local_edge_cache_ptr_ != NULL);
 
         bool is_finish = false; // Mark if local edge node is finished
+        const Hitflag hitflag = Hitflag::kGlobalMiss; // Must be global miss due to write-through policy
 
         // TODO: Acquire write lock from beacon node
         // TODO: Update is_finish
@@ -256,7 +270,7 @@ namespace covered
             is_local_cached = local_edge_cache_ptr_->update(tmp_key, tmp_value);
 
             // Prepare LocalPutResponse for client
-            local_response_ptr = new LocalPutResponse(tmp_key);
+            local_response_ptr = new LocalPutResponse(tmp_key, hitflag);
         }
         else if (local_request_ptr->getMessageType() == MessageType::kLocalDelRequest)
         {
@@ -265,7 +279,7 @@ namespace covered
             is_local_cached = local_edge_cache_ptr_->remove(tmp_key);
 
             // Prepare LocalDelResponse for client
-            local_response_ptr = new LocalDelResponse(tmp_key);
+            local_response_ptr = new LocalDelResponse(tmp_key, hitflag);
         }
         else
         {
