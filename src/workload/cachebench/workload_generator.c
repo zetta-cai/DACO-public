@@ -49,7 +49,7 @@ void WorkloadGenerator::generateKeys() {
     // All keys are printable lower case english alphabet.
     std::uniform_int_distribution<char> charDis('a', 'z');
     //std::mt19937_64 gen(folly::Random::rand64());
-    // Siyuan: ensure that multiple clients generate the same set of key-value pairs
+    // Siyuan: use Util::KVPAIR_GENERATION_SEED as the deterministic seed to ensure that multiple clients generate the same set of key-value pairs
     std::mt19937_64 gen(Util::KVPAIR_GENERATION_SEED + local_thread_idx);
     for (uint64_t i = start; i < end; i++) {
       size_t keySize =
@@ -103,7 +103,7 @@ void WorkloadGenerator::generateReqs() {
   generateFirstKeyIndexForPool();
   generateKeys();
   //std::mt19937_64 gen(folly::Random::rand64());
-  // Siyuan: ensure that multiple clients generate the same set of key-value pairs
+  // Siyuan: Util::KVPAIR_GENERATION_SEED as the deterministic seed to ensure that multiple clients generate the same set of key-value pairs
   std::mt19937_64 gen(Util::KVPAIR_GENERATION_SEED);
   for (size_t i = 0; i < config_.keyPoolDistribution.size(); i++) {
     size_t idx = workloadIdx(i);
@@ -164,7 +164,7 @@ void WorkloadGenerator::generateKeyDistributions() {
     duration += covered::executeParallel(
         [&, this](size_t start, size_t end, size_t local_thread_idx) {
           //std::mt19937_64 gen(folly::Random::rand64());
-          // Siyuan: use global_thread_idx to ensure that multiple clients generate different sets of requests
+          // Siyuan: use global_thread_idx as the deterministic seed to ensure that multiple clients generate different sets of requests/workload-items
           // Siyuan: we need this->config_.numThreads + 1, as Parallel may create an extra thread to generate remaining requests
           uint32_t global_thread_idx = this->global_client_idx_ * (this->config_.numThreads + 1) + local_thread_idx;
           std::mt19937_64 gen(global_thread_idx);

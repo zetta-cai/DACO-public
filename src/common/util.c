@@ -1,5 +1,6 @@
 #include "common/util.h"
 
+#include <chrono> // system_clock
 #include <iostream> // cerr
 #include <sstream> // ostringstream
 #include <cmath> // pow
@@ -77,6 +78,20 @@ namespace covered
     bool Util::isDirectoryExist(const std::string& dirpath)
     {
         return isPathExist_(dirpath, false);
+    }
+
+    void Util::createDirectory(const std::string& dirpath)
+    {
+        assert(!isDirectoryExist(dirpath));
+        bool result = boost::filesystem::create_directory(dirpath);
+        if (!result)
+        {
+            std::ostringstream oss;
+            oss << "fail to create directory " << dirpath;
+            dumpErrorMsg(kClassName, oss.str());
+            exit(1);
+        }
+        return;
     }
 
     bool Util::isPathExist_(const std::string& path, const bool& is_file)
@@ -325,5 +340,13 @@ namespace covered
         }
         assert(fragment_payload_size <= UDP_MAX_FRAG_PAYLOAD);
         return fragment_payload_size;
+    }
+
+    // Others
+
+    uint32_t Util::getTimeBasedRandomSeed()
+    {
+        unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+        return static_cast<uint32_t>(seed);
     }
 }

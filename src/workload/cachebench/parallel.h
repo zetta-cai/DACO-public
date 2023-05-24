@@ -1,7 +1,7 @@
 /*
  * Parallel: refer to lib/CacheLib/cachelib/cachebench/util/Parallel.h.
  *
- * Hack to set random seeds for multi-client benchmark.
+ * Hack to set deterministic seeds for random generators under multi-client benchmark.
  * 
  * By Siyuan Sheng (2023.04.21).
  */

@@ -31,7 +31,7 @@ namespace covered
         // Workflow control
         static const unsigned int SLEEP_INTERVAL_US; // Sleep interval for polling
         // Workload generation
-        static const uint32_t KVPAIR_GENERATION_SEED; // Random seed to generate key-value objects (dataset instead of workload)
+        static const uint32_t KVPAIR_GENERATION_SEED; // Deterministic seed to generate key-value objects (dataset instead of workload)
         // Time measurement
         static const int START_YEAR;
         static const long NANOSECONDS_PERSECOND; // # of nanoseconds per second
@@ -48,6 +48,7 @@ namespace covered
         // (1.2) File I/O
         static bool isFileExist(const std::string& filepath);
         static bool isDirectoryExist(const std::string& dirpath);
+        static void createDirectory(const std::string& dirpath);
 
         // (2) Time measurement
 
@@ -78,6 +79,10 @@ namespace covered
         static uint32_t getFragmentCnt(const uint32_t& msg_payload_size);
         static uint32_t getFragmentOffset(const uint32_t& fragment_idx);
         static uint32_t getFragmentPayloadSize(const uint32_t& fragment_idx, const uint32_t& msg_payload_size);
+
+        // (6) Others
+
+        static uint32_t getTimeBasedRandomSeed(); // Get a random seed (instead of deterministic) based on current time
     private:
         static const std::string kClassName;
 

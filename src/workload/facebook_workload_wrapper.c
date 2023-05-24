@@ -16,7 +16,6 @@ namespace covered
 {
     const std::string FacebookWorkloadWrapper::kClassName("FacebookWorkloadWrapper");
 
-    // TODO: give random seeds for key-value pair generation (0) and request generation (global_client_idx)
     FacebookWorkloadWrapper::FacebookWorkloadWrapper() : WorkloadWrapperBase()
     {
         last_reqid_ = std::nullopt; // Not used by WorkloadGenerator for Facebook CDN trace

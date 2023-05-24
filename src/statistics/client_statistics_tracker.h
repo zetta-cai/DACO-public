@@ -25,6 +25,10 @@ namespace covered
 
         // Update per-client latency statistics
         void updateLatency(const uint32_t& local_worker_index), const uint32_t& latency_us);
+
+        // Dump and load for TotalStatisticsTracker
+        void dump(const std::string& filepath);
+        void load(const std::string& filepath);
     private:
         static const std::string kClassName;
 

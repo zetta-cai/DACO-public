@@ -52,10 +52,19 @@ namespace covered
         bool is_exist = Util::isDirectoryExist(dbpath);
         if (!is_exist)
         {
+            // Directory does not exist
             std::ostringstream oss;
             oss << "RocksDB path " << dbpath << " does not exist!";
-            Util::dumpErrorMsg(kClassName, oss.str());
-            exit(1);
+            //Util::dumpErrorMsg(kClassName, oss.str());
+            //exit(1);
+            Util::dumpWarnMsg(kClassNamem, oss.str());
+
+            // Create directory for RocksDB KVS
+            oss.clear(); // Clear error states
+            oss.str(""); // Set content as empty string and reset read/write position as zero
+            oss << "create directory " << dbpath << " for RocksDB!";
+            Util::dumpDebugMsg(kClassNamem, oss.str());
+            Util::createDirectory(dbpath);
         }
 
         // Open RocksDB KVS with suggested settings

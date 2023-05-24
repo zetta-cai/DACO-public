@@ -1,7 +1,7 @@
 /*
  * WorkloadGenerator: refer to lib/CacheLib/cachelib/cachebench/workload/WorkloadGenerator.*.
  *
- * Hack to set random seeds for multi-client benchmark.
+ * Hack to set deterministic seeds for random generators under multi-client benchmark.
  * Also hack to disable unnecessary outputs for multi-client benchmark.
  * 
  * By Siyuan Sheng (2023.04.21).

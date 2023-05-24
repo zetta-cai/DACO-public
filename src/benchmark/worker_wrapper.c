@@ -39,7 +39,7 @@ namespace covered
         ClientParam* local_client_param_ptr = local_worker_param_ptr_->getLocalClientParamPtr();
         assert(local_client_param_ptr != NULL);
 
-        // Each per-client worker uses global_worker_idx to create a random generator and get different requests
+        // Each per-client worker uses global_worker_idx as deterministic seed to create a random generator and get different requests
         const uint32_t global_client_idx = local_client_param_ptr->getGlobalClientIdx();
         const uint32_t local_worker_idx = local_worker_param_ptr_->getLocalWorkerIdx();
         uint32_t global_worker_idx = Util::getGlobalWorkerIdx(global_client_idx, local_worker_idx);

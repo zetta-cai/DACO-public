@@ -1,6 +1,7 @@
 #include "statistics/client_statistics_tracker.h"
 
 #include <cstring> // memcpy memset
+#include <random> // std::mt19937_64
 
 #include "common/config.h"
 #include "common/util.h"
@@ -107,4 +108,45 @@ namespace covered
         }
         return;
     }
+
+    void ClientStatisticsTracker::dump(const std::string& filepath)
+    {
+        std::string tmp_filepath = filepath;
+
+        bool is_exist = Util::isFileExist(tmp_filepath);
+        if (is_exist)
+        {
+            // File does not exist
+            std::ostringstream oss;
+            oss << "statistics file " << tmp_filepath << " already exists!";
+            //Util::dumpErrorMsg(kClassName, oss.str());
+            //exit(1);
+            Util::dumpWarnMsg(kClassNamem, oss.str());
+
+            // Generate a random number as a random seed
+            uint32_t random_seed = Util::getTimeBasedRandomSeed();
+            std::mt19937_64 randgen(random_seed);
+            std::uniform_int_distribution<uint32_t> uniform_dist; // Range from 0 to max uint32_t
+            uint32_t random_number = uniform_dist(random_seed);
+
+            // Replace with a random filepath
+            oss.clear(); // Clear error states
+            oss.str(""); // Set content as empty string and reset read/write position as zero
+            oss << tmp_filepath << "." << random_number;
+            tmp_filepath = oss.str();
+
+            // Dump hints
+            oss.clear(); // Clear error states
+            oss.str(""); // Set content as empty string and reset read/write position as zero
+            oss << "use a random file path " << tmp_filepath << " for statistics!";
+            Util::dumpDebugMsg(kClassName, oss.str());
+        }
+
+        // TODO: create file
+        // TOOD: open file
+        // TODO: write file
+        // TODO: close file
+    }
+    
+    void ClientStatisticsTracker::load(const std::string& filepath);
 }
