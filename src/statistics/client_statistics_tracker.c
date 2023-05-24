@@ -1,6 +1,7 @@
 #include "statistics/client_statistics_tracker.h"
 
 #include <cstring> // memcpy memset
+#include <fstream>
 #include <random> // std::mt19937_64
 
 #include "common/config.h"
@@ -10,8 +11,10 @@ namespace covered
 {
     const std::string kClassName("ClientStatisticsTracker");
     
-    ClientStatisticsTracker::ClientStatisticsTracker(uint32_t perclient_workercnt) : perclient_workercnt_(perclient_workercnt)
+    ClientStatisticsTracker::ClientStatisticsTracker(uint32_t perclient_workercnt)
     {
+        perclient_workercnt_ = perclient_workercnt;
+
         latency_histogram_ = new std::atomic<uint32_t>[Config::getLatencyHistogramSize()];
         assert(latency_histogram_ != NULL);
         for (uint32_t i = 0; i < Config::getLatencyHistogramSize(); i++)
@@ -43,22 +46,22 @@ namespace covered
 
     ClientStatisticsTracker::~ClientStatisticsTracker()
     {
-        // Free latency histogram
+        // Release latency histogram
         assert(latency_histogram_ != NULL);
         delete latency_histogram_;
         latency_histogram_ = NULL;
 
-        // Free local hit counts
+        // Release local hit counts
         assert(perworker_local_hitcnts_ != NULL);
         delete perworker_local_hitcnts_;
         perworker_local_hitcnts_ = NULL;
 
-        // Free global hit counts
+        // Release global hit counts
         assert(perworker_cooperative_hitcnts_ != NULL);
         delete perworker_cooperative_hitcnts_;
         perworker_cooperative_hitcnts_ = NULL;
 
-        // Free request counts
+        // Release request counts
         assert(perworker_reqcnts_ != NULL);
         delete perworker_reqcnts_;
         perworker_reqcnts_ = NULL;
@@ -109,7 +112,7 @@ namespace covered
         return;
     }
 
-    void ClientStatisticsTracker::dump(const std::string& filepath)
+    uint32_t ClientStatisticsTracker::dump(const std::string& filepath)
     {
         std::string tmp_filepath = filepath;
 
@@ -142,11 +145,27 @@ namespace covered
             Util::dumpDebugMsg(kClassName, oss.str());
         }
 
-        // TODO: create file
-        // TOOD: open file
-        // TODO: write file
-        // TODO: close file
+        // Create and open a binary file for per-client statistics
+        std::fstream* fs_ptr = Util::openFile(tmp_filepath, std::ios_base::out | std::ios_base::binary);
+        assert(fs_ptr != NULL);
+
+        // Write per-client statistics into file (format: perclient_workercnt_ + perworker_local_hitcnts_ + perworker_cooperative_hitcnts_ + perworker_reqcnts_ + latency histogram size + latency_histogram_)
+        uint32_t size = 0;
+        DynamicArray dynamic_array();
+        // (1) perclient_workercnt_
+        uint32_t perclient_workercnt_size = sizeof(uint32_t);
+        dynamic_array.clear(perclient_workercnt_size);
+        dynamic_array.deserialize(0, (const char*)&perclient_workercnt_, perclient_workercnt_size);
+        dynamic_array.writeBinaryFile(size, fs_ptr, perclient_workercnt_size);
+        size += perclient_workercnt_size;
+        // (2) perworker_local_hitcnts_
+        // TODO: === END HERE ===
+
+        // Close file and release ofstream
+        ofs_ptr->close();
+        delete ofs_ptr;
+        ofs_ptr = NULL;
     }
     
-    void ClientStatisticsTracker::load(const std::string& filepath);
+    uint32_t ClientStatisticsTracker::load(const std::string& filepath);
 }

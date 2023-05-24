@@ -27,9 +27,9 @@ namespace covered
     {
         uint32_t size = position;
         uint32_t bigendian_keysize = htonl(keystr_.length());
-        msg_payload.write(size, (const char*)&bigendian_keysize, sizeof(uint32_t));
+        msg_payload.deserialize(size, (const char*)&bigendian_keysize, sizeof(uint32_t));
         size += sizeof(uint32_t);
-        msg_payload.write(size, (const char*)(keystr_.data()), keystr_.length());
+        msg_payload.deserialize(size, (const char*)(keystr_.data()), keystr_.length());
         size += keystr_.length();
         return size;
     }
@@ -38,11 +38,11 @@ namespace covered
     {
         uint32_t size = position;
         uint32_t bigendian_keysize = 0;
-        msg_payload.read(size, (char *)&bigendian_keysize, sizeof(uint32_t));
+        msg_payload.serialize(size, (char *)&bigendian_keysize, sizeof(uint32_t));
         uint32_t keysize = ntohl(bigendian_keysize);
         size += sizeof(uint32_t);
         char keycstr[keysize];
-        msg_payload.read(size, (char *)keycstr, keysize);
+        msg_payload.serialize(size, (char *)keycstr, keysize);
         keystr_ = std::string(keycstr);
         size += keysize;
         return size;

@@ -47,16 +47,16 @@ namespace covered
     {
         uint32_t size = 0;
         uint32_t bigendian_fragment_idx = htonl(fragment_idx_);
-        pkt_payload.write(size, (const char*)(&bigendian_fragment_idx), sizeof(uint32_t));
+        pkt_payload.deserialize(size, (const char*)(&bigendian_fragment_idx), sizeof(uint32_t));
         size += sizeof(uint32_t);
         uint32_t bigendian_fragment_cnt = htonl(fragment_cnt_);
-        pkt_payload.write(size, (const char*)(&bigendian_fragment_cnt), sizeof(uint32_t));
+        pkt_payload.deserialize(size, (const char*)(&bigendian_fragment_cnt), sizeof(uint32_t));
         size += sizeof(uint32_t);
         uint32_t bigendian_msg_payload_size = htonl(msg_payload_size_);
-        pkt_payload.write(size, (const char*)(&bigendian_msg_payload_size), sizeof(uint32_t));
+        pkt_payload.deserialize(size, (const char*)(&bigendian_msg_payload_size), sizeof(uint32_t));
         size += sizeof(uint32_t);
         uint32_t bigendian_msg_seqnum = htonl(msg_seqnum_);
-        pkt_payload.write(size, (const char*)(&bigendian_msg_seqnum), sizeof(uint32_t));
+        pkt_payload.deserialize(size, (const char*)(&bigendian_msg_seqnum), sizeof(uint32_t));
         size += sizeof(uint32_t);
         return size;
     }
@@ -65,19 +65,19 @@ namespace covered
     {
         uint32_t size = 0;
         uint32_t bigendian_fragment_idx = 0;
-        pkt_payload.read(size, (char*)(&bigendian_fragment_idx), sizeof(uint32_t));
+        pkt_payload.serialize(size, (char*)(&bigendian_fragment_idx), sizeof(uint32_t));
         fragment_idx_ = ntohl(bigendian_fragment_idx);
         size += sizeof(uint32_t);
         uint32_t bigendian_fragment_cnt = 0;
-        pkt_payload.read(size, (char*)(&bigendian_fragment_cnt), sizeof(uint32_t));
+        pkt_payload.serialize(size, (char*)(&bigendian_fragment_cnt), sizeof(uint32_t));
         fragment_cnt_ = ntohl(bigendian_fragment_cnt);
         size += sizeof(uint32_t);
         uint32_t bigendian_msg_payload_size = 0;
-        pkt_payload.read(size, (char*)(&bigendian_msg_payload_size), sizeof(uint32_t));
+        pkt_payload.serialize(size, (char*)(&bigendian_msg_payload_size), sizeof(uint32_t));
         msg_payload_size_ = ntohl(bigendian_msg_payload_size);
         size += sizeof(uint32_t);
         uint32_t bigendian_msg_seqnum = 0;
-        pkt_payload.read(size, (char*)(&bigendian_msg_seqnum), sizeof(uint32_t));
+        pkt_payload.serialize(size, (char*)(&bigendian_msg_seqnum), sizeof(uint32_t));
         msg_seqnum_ = ntohl(bigendian_msg_seqnum);
         size += sizeof(uint32_t);
         return size;

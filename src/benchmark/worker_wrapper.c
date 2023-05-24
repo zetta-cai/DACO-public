@@ -132,7 +132,7 @@ namespace covered
             }
             struct timespec recvrsp_timestamp = Util::getCurrentTimespec();
 
-            // Free local request message
+            // Release local request message
             assert(local_request_ptr != NULL);
             delete local_request_ptr;
             local_request_ptr = NULL;
@@ -150,7 +150,7 @@ namespace covered
             double rtt_us = Util::getDeltaTime(recvrsp_timestamp, sendreq_timestamp);
             processLocalResponse_(local_response_ptr, static_cast<uint32_t>(rtt_us));
 
-            // Free local response message
+            // Release local response message
             assert(local_response_ptr != NULL);
             delete local_response_ptr;
             local_response_ptr = NULL;

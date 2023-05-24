@@ -143,6 +143,20 @@ namespace covered
         return true;
     }
 
+    std::fstream* Util::openFile(const std::string& filepath, ios_base::openmode mode)
+    {
+        std::fstream* fs_ptr = new std::ofstream(filepath.c_str(), mode);
+        assert(fs_ptr != NULL);
+        if (!(*fs_ptr))
+        {
+            std::ostringstream oss;
+            oss << "fail to open statistics file " << filepath;
+            Util::dumpErrorMsg(kClassName, oss.str());
+            exit(1);
+        }
+        return fs_ptr; // Release outside Util
+    }
+
     // Time measurement
 
     struct timespec Util::getCurrentTimespec()

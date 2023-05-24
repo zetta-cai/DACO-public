@@ -8,6 +8,7 @@
 #define UTIL_H
 
 #include <atomic> // std::memory_order
+#include <fstream>
 #include <string>
 #include <time.h> // struct timespec
 
@@ -49,6 +50,7 @@ namespace covered
         static bool isFileExist(const std::string& filepath);
         static bool isDirectoryExist(const std::string& dirpath);
         static void createDirectory(const std::string& dirpath);
+        static std::fstream* openFile(const std::string& filepath, ios_base::openmode mode); // Create if not exist
 
         // (2) Time measurement
 

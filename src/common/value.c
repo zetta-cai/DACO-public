@@ -46,13 +46,13 @@ namespace covered
     uint32_t Value::serialize(DynamicArray& msg_payload, const uint32_t& position)
     {
         uint32_t size = position;
-        msg_payload.write(size, (const char*)&is_deleted_, sizeof(bool));
+        msg_payload.deserialize(size, (const char*)&is_deleted_, sizeof(bool));
         size += sizeof(bool);
         uint32_t bigendian_valuesize = htonl(valuesize_);
-        msg_payload.write(size, (const char*)&bigendian_valuesize, sizeof(uint32_t));
+        msg_payload.deserialize(size, (const char*)&bigendian_valuesize, sizeof(uint32_t));
         size += sizeof(uint32_t);
         std::string valuestr = generateValuestr();
-        msg_payload.write(size, (const char*)(valuestr.data()), valuesize_);
+        msg_payload.deserialize(size, (const char*)(valuestr.data()), valuesize_);
         size += valuesize_;
         return size;
     }
@@ -60,10 +60,10 @@ namespace covered
     uint32_t Value::deserialize(const DynamicArray& msg_payload, const uint32_t& position)
     {
         uint32_t size = position;
-        msg_payload.read(size, (char *)&is_deleted_, sizeof(bool));
+        msg_payload.serialize(size, (char *)&is_deleted_, sizeof(bool));
         size += sizeof(bool);
         uint32_t bigendian_valuesize = 0;
-        msg_payload.read(size, (char *)&bigendian_valuesize, sizeof(uint32_t));
+        msg_payload.serialize(size, (char *)&bigendian_valuesize, sizeof(uint32_t));
         valuesize_ = ntohl(bigendian_valuesize);
         size += sizeof(uint32_t);
         // Note: we ignore the value content

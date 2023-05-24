@@ -27,8 +27,8 @@ namespace covered
         void updateLatency(const uint32_t& local_worker_index), const uint32_t& latency_us);
 
         // Dump and load for TotalStatisticsTracker
-        void dump(const std::string& filepath);
-        void load(const std::string& filepath);
+        uint32_t dump(const std::string& filepath);
+        uint32_t load(const std::string& filepath);
     private:
         static const std::string kClassName;
 
@@ -36,7 +36,7 @@ namespace covered
         std::atomic<uint32_t>* perworker_cooperative_hitcnts_; // Hit cooperative edge cache of neighbor edge node
         std::atomic<uint32_t>* perworker_reqcnts_;
         std::atomic<uint32_t>* latency_histogram_;
-        const uint32_t perclient_workercnt_;
+        uint32_t perclient_workercnt_;
 
     };
 }

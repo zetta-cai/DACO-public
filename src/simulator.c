@@ -168,8 +168,8 @@ int main(int argc, char **argv) {
     // (6) Simulate clientcnt clients by multi-threading
 
     pthread_t client_threads[clientcnt];
-    covered::WorkloadWrapperBase* workload_generator_ptrs[clientcnt]; // Free at the end
-    covered::ClientStatisticsTracker* client_statistics_tracker_ptrs[clientcnt]; // Free at the end
+    covered::WorkloadWrapperBase* workload_generator_ptrs[clientcnt]; // Release at the end
+    covered::ClientStatisticsTracker* client_statistics_tracker_ptrs[clientcnt]; // Release at the end
     covered::ClientParam client_params[clientcnt];
 
     // (6.1) Prepare clientcnt client parameters
@@ -306,7 +306,7 @@ int main(int argc, char **argv) {
 
     // TODO: with the aggregated StatisticsTracker, main thread can dump aggregated statistics after joining all sub-threads
 
-    // (10) Free variables in heap
+    // (10) Release variables in heap
 
     for (uint32_t global_client_idx = 0; global_client_idx < clientcnt; global_client_idx++)
     {

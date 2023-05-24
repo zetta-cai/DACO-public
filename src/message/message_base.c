@@ -263,7 +263,7 @@ namespace covered
     uint32_t MessageBase::deserializeMessageTypeFromMsgPayload(const DynamicArray& msg_payload, MessageType& message_type)
     {
         uint32_t message_type_value = 0;
-        msg_payload.read(size, (const char *)&message_type_value, sizeof(uint32_t));
+        msg_payload.serialize(size, (char *)&message_type_value, sizeof(uint32_t));
         message_type_value = ntohl(message_type_value);
         message_type = static_cast<MessageType>(message_type_value);
         return sizeof(uint32_t);
@@ -289,7 +289,7 @@ namespace covered
     {
         uint32_t size = 0;
         uint32_t bigendian_message_type_value = htonl(static_cast<uint32_t>(message_type_));
-        msg_payload.write(size, (const char *)&bigendian_message_type_value, sizeof(uint32_t));
+        msg_payload.deserialize(size, (const char *)&bigendian_message_type_value, sizeof(uint32_t));
         size += sizeof(uint32_t);
         uint32_t internal_size = serializeInternal_(msg_payload, size);
         size += internal_size;

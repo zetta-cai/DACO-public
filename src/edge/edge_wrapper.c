@@ -54,17 +54,17 @@ namespace covered
     {
         // NOTE: no need to delete local_edge_param_ptr, as it is maintained outside EdgeWrapper
 
-        // Free local edge cache
+        // Release local edge cache
         assert(local_edge_param_ptr_ != NULL);
         delete local_edge_param_ptr_;
         local_edge_param_ptr_ = NULL;
 
-        // Free the socket server on recvreq port
+        // Release the socket server on recvreq port
         assert(local_edge_recvreq_socket_server_ptr_ != NULL);
         delete local_edge_recvreq_socket_server_ptr_;
         local_edge_recvreq_socket_server_ptr_ = NULL;
 
-        // Free the socket client to cloud
+        // Release the socket client to cloud
         assert(local_edge_sendreq_tocloud_socket_client_ptr_ != NULL);
         delete local_edge_sendreq_tocloud_socket_client_ptr_;
         local_edge_sendreq_tocloud_socket_client_ptr_ = NULL;
@@ -106,7 +106,7 @@ namespace covered
                     exit(1);
                 }
 
-                // Free messages
+                // Release messages
                 assert(request_ptr != NULL);
                 delete request_ptr;
                 request_ptr = NULL;
@@ -309,7 +309,7 @@ namespace covered
             local_edge_recvreq_socket_server_ptr_->send(local_response_msg_payload);
         }
 
-        // Free response message
+        // Release response message
         assert(local_response_ptr != NULL);
         delete local_response_ptr;
         local_response_ptr = NULL;
@@ -417,7 +417,7 @@ namespace covered
                 const GlobalGetResponse* const global_get_response_ptr = static_cast<const GlobalGetResponse*>(global_response_ptr);
                 value = global_get_response_ptr->getValue();
 
-                // Free global response message
+                // Release global response message
                 delete global_response_ptr;
                 global_response_ptr = NULL;
                 break;

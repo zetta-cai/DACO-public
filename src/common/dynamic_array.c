@@ -44,13 +44,13 @@ namespace covered
         return bytes_.capacity();
     }
 
-    void DynamicArray::write(uint32_t position, const char* data, uint32_t length)
+    void DynamicArray::deserialize(uint32_t position, const char* data, uint32_t length)
     {
-        // Should NOT exceed capacity; otherwise, you need to use clear to increase capacity before write
+        // Should NOT exceed capacity; otherwise, you need to use clear() to increase capacity before deserialize()
         if (position + length > bytes_.capacity())
         {
             std::ostringstream oss;
-            oss << "position " << position << " + length " << length << " = " << position + length << ", which exceeds the capacity " << bytes_.capacity() << "!";
+            oss << "position " << position << " + length " << length << " = " << position + length << ", which exceeds the capacity " << bytes_.capacity() << " for deserialize()!";
             Util::dumpErrorMsg(kClassName, oss.str());
             exit(1);
         }
@@ -67,11 +67,11 @@ namespace covered
 
     void DynamicArray::arrayset(uint32_t position, int charval, uint32_t length)
     {
-        // Should NOT exceed capacity; otherwise, you need to use clear to increase capacity before arrayset
+        // Should NOT exceed capacity; otherwise, you need to use clear() to increase capacity before arrayset()
         if (position + length > bytes_.capacity())
         {
             std::ostringstream oss;
-            oss << "position " << position << " + length " << length << " = " << position + length << ", which exceeds the capacity " << bytes_.capacity() << "!";
+            oss << "position " << position << " + length " << length << " = " << position + length << ", which exceeds the capacity " << bytes_.capacity() << " for arrayset()!";
             Util::dumpErrorMsg(kClassName, oss.str());
             exit(1);
         }
@@ -85,13 +85,13 @@ namespace covered
         return;
     }
 
-    void DynamicArray::read(uint32_t position, char* data, uint32_t length) const
+    void DynamicArray::serialize(uint32_t position, char* data, uint32_t length) const
     {
-        // Should NOT exceed size; otherwise, you need to use write/arrayset to increase size before read
+        // Should NOT exceed size; otherwise, you need to use deserialize()/arrayset() to increase size before serialize()
         if (position + length > bytes_.size())
         {
             std::ostringstream oss;
-            oss << "position " << position << " + length " << length << " = " << position + length << ", which exceeds the size " << bytes_.size() << "!";
+            oss << "position " << position << " + length " << length << " = " << position + length << ", which exceeds the size " << bytes_.size() << " for serialize()!";
             Util::dumpErrorMsg(kClassName, oss.str());
             exit(1);
         }
@@ -103,16 +103,53 @@ namespace covered
 
     void DynamicArray::arraycpy(uint32_t position, DynamicArray& dstarray, uint32_t dstarray_position, uint32_t length) const
     {
-        // Should NOT exceed size; otherwise, you need to use write/arrayset to increase size before arraycpy
+        // Should NOT exceed size; otherwise, you need to use deserialize()/arrayset() to increase size before arraycpy()
         if (position + length > bytes_.size())
         {
             std::ostringstream oss;
-            oss << "position " << position << " + length " << length << " = " << position + length << ", which exceeds the size " << bytes_.size() << "!";
+            oss << "position " << position << " + length " << length << " = " << position + length << ", which exceeds the size " << bytes_.size() << " for arraycpy()!";
             Util::dumpErrorMsg(kClassName, oss.str());
             exit(1);
         }
 
-        dstarray.write(dstarray_position, bytes_.data() + position, length);
+        dstarray.deseriaize(dstarray_position, bytes_.data() + position, length);
+        return;
+    }
+
+    void DynamicArray::writeBinaryFile(uint32_t position, std::fstream* fs_ptr, uint32_t length) const
+    {
+        // Should NOT exceed size; otherwise, you need to use deserialize()/arrayset()/readBinaryFile() to increase size before writeBinaryFile()
+        if (position + length > bytes_.size())
+        {
+            std::ostringstream oss;
+            oss << "position " << position << " + length " << length << " = " << position + length << ", which exceeds the size " << bytes_.size() << " for writeBinaryFile()!";
+            Util::dumpErrorMsg(kClassName, oss.str());
+            exit(1);
+        }
+
+        assert(fs_ptr != NULL);
+        fs_ptr->write((const char*)(bytes_.data() + position), length);
+        return;
+    }
+    
+    void DynamicArray::readBinaryFile(uint32_t position, std::fstream* fs_ptr, uint32_t length)
+    {
+        // Should NOT exceed capacity; otherwise, you need to use clear() to increase capacity before readBinaryFile()
+        if (position + length > bytes_.capacity())
+        {
+            std::ostringstream oss;
+            oss << "position " << position << " + length " << length << " = " << position + length << ", which exceeds the capacity " << bytes_.capacity() << " for readBinaryFile()!";
+            Util::dumpErrorMsg(kClassName, oss.str());
+            exit(1);
+        }
+
+        if (position + length > bytes_.size())
+        {
+            bytes_.resize(position + length);
+        }
+
+        assert(fs_ptr != NULL);
+        fs_ptr->read((char *)(bytes_.data() + position), length);
         return;
     }
 }

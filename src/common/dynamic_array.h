@@ -25,10 +25,13 @@ namespace covered
         uint32_t getSize() const;
         uint32_t getCapacity() const;
 
-        void write(uint32_t position, const char* data, uint32_t length);
-        void arrayset(uint32_t position, int charval, uint32_t length);
-        void read(uint32_t position, char* data, uint32_t length) const;
-        void arraycpy(uint32_t position, DynamicArray& dstarray, uint32_t dstarray_position, uint32_t length) const;
+        void deserialize(uint32_t position, const char* data, uint32_t length); // Deserialize dynamic array from byte array
+        void arrayset(uint32_t position, int charval, uint32_t length); // Memset current dynamic array
+        void serialize(uint32_t position, char* data, uint32_t length) const; // Serialize dynamic array to byte array
+        void arraycpy(uint32_t position, DynamicArray& dstarray, uint32_t dstarray_position, uint32_t length) const; // Copy current dynamic array to another
+
+        void writeBinaryFile(uint32_t position, std::fstream* fs_ptr, uint32_t length) const; // Write dynamic array into a binary file
+        void readBinaryFile(uint32_t position, std::fstream* fs_ptr, uint32_t length); // Read dynamic array from a binary file
     private:
         static const std::string kClassName;
 

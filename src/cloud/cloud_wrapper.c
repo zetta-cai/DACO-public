@@ -49,7 +49,7 @@ namespace covered
         delete local_cloud_rocksdb_ptr_;
         local_cloud_rocksdb_ptr_ = NULL;
 
-        // Free the socket server on recvreq port
+        // Release the socket server on recvreq port
         assert(local_cloud_recvreq_socket_server_ptr_ != NULL);
         delete local_cloud_recvreq_socket_server_ptr_;
         local_cloud_recvreq_socket_server_ptr_ = NULL;
@@ -88,7 +88,7 @@ namespace covered
                     exit(1);
                 }
 
-                // Free messages
+                // Release messages
                 assert(request_ptr != NULL);
                 delete request_ptr;
                 request_ptr = NULL;
@@ -177,7 +177,7 @@ namespace covered
             local_cloud_recvreq_socket_server_ptr_->send(global_response_msg_payload);
         }
 
-        // Free global response message
+        // Release global response message
         assert(global_response_ptr != NULL);
         delete global_response_ptr;
         global_response_ptr = NULL;

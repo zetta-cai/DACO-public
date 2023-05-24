@@ -110,7 +110,7 @@ namespace covered
 		else // Successfully receive a UDP packet
 		{
             // Copy into pkt_payload
-            pkt_payload.write(0, tmp_pkt_payload, recvsize);
+            pkt_payload.deserialize(0, tmp_pkt_payload, recvsize);
 
 			// Set remote address for successful packet receiving
 			char remote_ipcstr[INET_ADDRSTRLEN];

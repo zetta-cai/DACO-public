@@ -37,7 +37,7 @@ namespace covered
         uint32_t key_serialize_size = key_.serialize(msg_payload, size);
         size += key_serialize_size;
         uint8_t hitflag_value = static_cast<uint8_t>(hitflag_);
-        msg_payload.write(size, (const char*)&hitflag_value, sizeof(uint8_t));
+        msg_payload.deserialize(size, (const char*)&hitflag_value, sizeof(uint8_t));
         size += sizeof(uint8_t);
         return size;
     }
@@ -47,7 +47,7 @@ namespace covered
         uint32_t size = position;
         uint32_t key_deserialize_size = key_.deserialize(msg_payload, size);
         size += key_deserialize_size;
-        msg_payload.read(size, (char *)&hitflag_value, sizeof(uint8_t));
+        msg_payload.serialize(size, (char *)&hitflag_value, sizeof(uint8_t));
         hitflag_ = static_cast<Hitflag>(hitflag_value);
         size += sizeof(uint8_t);
         return size;
