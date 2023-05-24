@@ -181,7 +181,7 @@ int main(int argc, char **argv) {
         assert(workload_generator_ptrs[global_client_idx] != NULL);
 
         // Create statistics tracker for the client
-        client_statistics_tracker_ptrs[global_client_idx_] = new covered::ClientStatisticsTracker(covered::Param::getPerclientWorkercnt());
+        client_statistics_tracker_ptrs[global_client_idx_] = new covered::ClientStatisticsTracker(covered::Param::getPerclientWorkercnt(), covered::Config::getLatencyHistogramSize());
         assert(client_statistics_tracker_ptrs[global_client_idx_] != NULL);
 
         covered::ClientParam local_client_param(global_client_idx, workload_generator_ptrs[global_client_idx], client_statistics_tracker_ptrs[global_client_idx_]);

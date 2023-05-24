@@ -165,7 +165,9 @@ namespace covered
         assert(local_response_ptr != NULL);
 
         assert(local_worker_param_ptr_ != NULL);
-        ClientStatisticsTracker* client_statistics_tracker_ptr_ = local_worker_param_ptr_->getClientStatisticsTrackerPtr();
+        ClientParam* local_client_param_ptr = local_worker_param_ptr_->getLocalClientParamPtr();
+        assert(local_client_param_ptr != NULL);
+        ClientStatisticsTracker* client_statistics_tracker_ptr_ = local_client_param_ptr->getClientStatisticsTrackerPtr();
         assert(client_statistics_tracker_ptr_ != NULL);
 
         // Process local response message

@@ -4,5 +4,6 @@
     "global_cloud_rocksdb_path": "/tmp/cloud",
     "global_edge_recvreq_startport": 4200,
     "latency_histogram_size": 1000000,
+    "output_basedir": "output",
     "version": "1.0"
 }

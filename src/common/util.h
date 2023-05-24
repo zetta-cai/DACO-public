@@ -70,6 +70,7 @@ namespace covered
         static std::string getClosestEdgeIpstr(const uint32_t& global_client_idx);
         static uint16_t getClosestEdgeRecvreqPort(const uint32_t& global_client_idx); // Calculate the recvreq port of the closest edge node for client
         static uint32_t getGlobalWorkerIdx(const uint32_t& global_client_idx, const uint32_t local_worker_idx);
+        static std::string getClientStatisticsFilepath(const uint32_t& global_client_idx);
 
         // (4.2) Edge
         static uint16_t getLocalEdgeRecvreqPort(const uint32_t& global_edge_idx); // Calculate the recvreq port for the local edge node

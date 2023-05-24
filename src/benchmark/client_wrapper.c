@@ -78,6 +78,16 @@ namespace covered
             }
         }
 
+        // Get per-client statistics file path
+        assert(local_client_param_ptr_ != NULL);
+        uint32_t global_client_idx = local_client_param_ptr_->getGlobalClientIdx();
+        std::string client_statistics_filepath = Util::getClientStatisticsFilepath(global_client_idx);
+
+        // Dump per-client statistics
+        ClientStatisticsTracker* client_statistics_tracker_ptr_ = local_client_param_ptr_->getClientStatisticsTrackerPtr();
+        assert(client_statistics_tracker_ptr_ != NULL);
+        client_statistics_tracker_ptr_->dump(client_statistics_filepath);
+
         return;
     }
 }

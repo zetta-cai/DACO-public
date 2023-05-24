@@ -37,7 +37,9 @@ namespace covered
 
     const std::string Util::kClassName("Util");
 
-    // I/O
+    // (1) I/O
+
+    // (1.1) stdout/stderr I/O
 
     void Util::dumpNormalMsg(const std::string& class_name, const std::string& normal_message)
     {
@@ -69,6 +71,8 @@ namespace covered
         std::cerr << "\033[1;31m" << cur_timestr << " [ERROR] " << class_name << ": " << error_message << std::endl << "\033[0m";
         return;
     }
+
+    // (1.2) File I/O
 
     bool Util::isFileExist(const std::string& filepath)
     {
@@ -157,7 +161,7 @@ namespace covered
         return fs_ptr; // Release outside Util
     }
 
-    // Time measurement
+    // (2) Time measurement
 
     struct timespec Util::getCurrentTimespec()
     {
@@ -210,7 +214,7 @@ namespace covered
         return delta_time;
     }
 
-    // Type conversion
+    // (3) Type conversion
 
     uint16_t Util::toUint16(const int64_t& val)
     {
@@ -244,7 +248,9 @@ namespace covered
         }
     }
 
-    // Client-edge-cloud scenario
+    // (4) Client-edge-cloud scenario
+
+    // (4.1) Client
 
     uint32_t Util::getClosestEdgeIdx(const uint32_t& global_client_idx)
     {
@@ -288,6 +294,16 @@ namespace covered
         return global_worker_idx;
     }
 
+    std::string Util::getClientStatisticsFilepath(const uint32_t& global_client_idx)
+    {
+        std::ostringstream oss;
+        oss << Config.getOutputBasedir() << "/client" << global_client_idx << "_statistics.out";
+        std::string client_statistics_filepath = oss.str();
+        return client_statistics_filepath;
+    }
+
+    // (4.2) Edge
+
     uint16_t Util::getLocalEdgeRecvreqPort(const uint32_t& global_edge_idx)
     {
         int64_t local_edge_recvreq_port = 0;
@@ -321,7 +337,7 @@ namespace covered
         return global_cloud_ipstr;
     }
 
-    // Network
+    // (5) Network
 
     uint32_t Util::getFragmentCnt(const uint32_t& msg_payload_size)
     {
@@ -356,7 +372,7 @@ namespace covered
         return fragment_payload_size;
     }
 
-    // Others
+    // (6) Others
 
     uint32_t Util::getTimeBasedRandomSeed()
     {
