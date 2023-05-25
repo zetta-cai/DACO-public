@@ -29,6 +29,14 @@ namespace covered
 
         // Dump per-client statistics for TotalStatisticsTracker
         uint32_t dump(const std::string& filepath) const;
+
+        // Get per-client statistics for aggregation
+        std::atomic<uint32_t>* getPerworkerLocalHitcnts() const;
+        std::atomic<uint32_t>* getPerworkerCooperativeHitcnts() const;
+        std::atomic<uint32_t>* getPerworkerReqcnts() const;
+        std::atomic<uint32_t>* getLatencyHistogram() const;
+        uint32_t getPerclientWorkercnt() const;
+        uint32_t getLatencyHistogramSize() const;
     private:
         static const std::string kClassName;
 

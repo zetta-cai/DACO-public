@@ -1,6 +1,5 @@
 #include "statistics/client_statistics_tracker.h"
 
-#include <cstring> // memcpy memset
 #include <fstream>
 #include <random> // std::mt19937_64
 
@@ -430,5 +429,37 @@ namespace covered
             latency_histogram_[i].store(tmp_latency_histogram_counter, Util::STORE_CONCURRENCY_ORDER);
         }
         return latency_histogram_bytes;
+    }
+
+    // Get per-client statistics for aggregation
+
+    std::atomic<uint32_t>* ClientStatisticsTracker::getPerworkerLocalHitcnts() const
+    {
+        return perworker_local_hitcnts_;
+    }
+    
+    std::atomic<uint32_t>* ClientStatisticsTracker::getPerworkerCooperativeHitcnts() const
+    {
+        return perworker_reqcnts_;
+    }
+
+    std::atomic<uint32_t>* ClientStatisticsTracker::getPerworkerReqcnts() const
+    {
+        return perworker_reqcnts_;
+    }
+    
+    std::atomic<uint32_t>* ClientStatisticsTracker::getLatencyHistogram() const
+    {
+        return latency_histogram_;
+    }
+
+    uint32_t ClientStatisticsTracker::getPerclientWorkercnt() const
+    {
+        return perclient_workercnt_;
+    }
+    
+    uint32_t ClientStatisticsTracker::getLatencyHistogramSize() const
+    {
+        return latency_histogram_size_;
     }
 }
