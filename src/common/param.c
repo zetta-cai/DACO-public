@@ -23,7 +23,7 @@ namespace covered
     uint32_t Param::perclient_workercnt_ = 0;
     std::string Param::workload_name_ = "";
 
-    void Param::setParameters(const bool& is_simulation, const std::string& cache_name, const uint32_t& capacity_bytes, const uint32_t& clientcnt, const std::string& cloud_storage, const std::string& config_filepath, const bool& is_debug, const double& duration, const uint32_t& edgecnt, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name)
+    void Param::setParameters(const bool& is_simulation, const std::string& cache_name, const uint32_t& capacity_bytes, const uint32_t& clientcnt, const std::string& cloud_storage, const std::string& config_filepath, const bool& is_debug, const double& duration, const uint32_t& edgecnt, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge, const uint32_t& propagation_latency_crossedge, const uint32_t& propagation_latency_edgecloud, const std::string& workload_name)
     {
         if (is_valid_)
         {
@@ -43,6 +43,9 @@ namespace covered
         keycnt_ = keycnt;
         opcnt_ = opcnt;
         perclient_workercnt_ = perclient_workercnt;
+        propagation_latency_clientedge_ = propagation_latency_clientedge;
+        propagation_latency_crossedge_ = propagation_latency_crossedge;
+        propagation_latency_edgecloud_ = propagation_latency_edgecloud;
         workload_name_ = workload_name;
 
         is_valid_ = true;
@@ -119,6 +122,24 @@ namespace covered
     {
         checkIsValid_();
         return perclient_workercnt_;
+    }
+
+    int32_t Param::getPropagationLatencyClientedge()
+    {
+        checkIsValid_();
+        return propagation_latency_clientedge_;
+    }
+
+    uint32_t Param::getPropagationLatencyCrossedge()
+    {
+        checkIsValid_();
+        return propagation_latency_crossedge_;
+    }
+
+    uint32_t Param::getPropagationLatencyEdgecloud()
+    {
+        checkIsValid_();
+        return propagation_latency_edgecloud_;
     }
 
     std::string Param::getWorkloadName()

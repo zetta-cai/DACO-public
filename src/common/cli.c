@@ -4,14 +4,19 @@
 
 namespace covered
 {
-    void CLI::parseAndProcessCliParameters(const bool& is_simulation, const std::string& main_class_name)
+    std::string CLI::SIMULATOR_NAME("simulator");
+    std::string CLI::STATISTICS_AGGREGATOR_NAME("statistics_aggregator");
+
+    std::string CLI::kClassName("CLI");
+
+    void CLI::parseAndProcessCliParameters(const std::string& main_class_name)
     {
-        parseCliParameters_(is_simulation);
+        parseCliParameters_(main_class_name);
         processCliParameters_(main_class_name);
         return;
     }
 
-    void CLI::parseCliParameters_(const bool& is_simulation)
+    void CLI::parseCliParameters_(const std::string& main_class_name)
     {
         // (1) Create CLI parameter description
 
@@ -33,6 +38,10 @@ namespace covered
             ("keycnt", boost::program_options::value<uint32_t>()->default_value(1000000), "the total number of keys")
             ("opcnt", boost::program_options::value<uint32_t>()->default_value(1000000), "the total number of operations")
             ("perclient_workercnt", boost::program_options::value<uint32_t>()->default_value(1), "the number of worker threads for each client")
+            ("propagation_latency_clientedge", boost::program_options::value<uint32_t>()->default_value(1000), "the propagation latency between client and edge (in units of us)")
+            ("propagation_latency_crossedge", boost::program_options::value<uint32_t>()->default_value(10000), "the propagation latency between edge and neighbor (in units of us)")
+            ("propagation_latency_edgecloud", boost::program_options::value<uint32_t>()->default_value(100000), "the propagation latency between edge and cloud (in units of us)")
+            ("prototype", "disable simulation mode")
             ("workload_name", boost::program_options::value<std::string>()->default_value(covered::WorkloadWrapperBase::FACEBOOK_WORKLOAD_NAME), "workload name")
         ;
         // Dynamic actions
@@ -48,6 +57,20 @@ namespace covered
 
         // (2.1) Get CLI paremters for dynamic configurations
 
+        bool is_simulation = true; // Enable simulation mode by default
+        if (argument_info.count("prototype"))
+        {
+            if (main_class_name == CLI::SIMULATOR_NAME)
+            {
+                std::ostringstream oss;
+                oss << "--prototype does not work for " << main_class_name << " -> still enable simulation mode!";
+                Util::dumpWarnMsg(kClassName, oss.str());
+            }
+            else
+            {
+                is_simulation = false;
+            }
+        }
         std::string cache_name = argument_info["cache_name"].as<std::string>();
         uint32_t capacity = argument_info["capacitymb"].as<uint32_t> * 1000; // In units of bytes
         uint32_t clientcnt = argument_info["clientcnt"].as<uint32_t>();
@@ -63,10 +86,13 @@ namespace covered
         uint32_t keycnt = argument_info["keycnt"].as<uint32_t>();
         uint32_t opcnt = argument_info["opcnt"].as<uint32_t>();
         uint32_t perclient_workercnt = argument_info["perclient_workercnt"].as<uint32_t>();
+        uint32_t propagation_latency_clientedge = argument_info["propagation_latency_clientedge"].as<uint32_t>();
+        uint32_t propagation_latency_crossedge = argument_info["propagation_latency_crossedge"].as<uint32_t>();
+        uint32_t propagation_latency_edgecloud = argument_info["propagation_latency_edgecloud"].as<uint32_t>();
         std::string workload_name = argument_info["workload_name"].as<std::string>();
 
         // Store CLI parameters for dynamic configurations and mark covered::Param as valid
-        covered::Param::setParameters(is_simulation, cache_name, capacity, clientcnt, cloud_storage, config_filepath, is_debug, duration, edgecnt, keycnt, opcnt, perclient_workercnt, workload_name);
+        covered::Param::setParameters(is_simulation, cache_name, capacity, clientcnt, cloud_storage, config_filepath, is_debug, duration, edgecnt, keycnt, opcnt, perclient_workercnt, propagation_latency_clientedge, propagation_latency_crossedge, propagation_latency_edgecloud, workload_name);
 
         // (2.2) Load config file for static configurations
 

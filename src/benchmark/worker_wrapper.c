@@ -9,6 +9,7 @@
 #include "common/util.h"
 #include "message/message_base.h"
 #include "network/network_addr.h"
+#include "network/propagation_simulator.h"
 #include "statistics/client_statistics_tracker.h"
 #include "workload/workload_item.h"
 #include "workload/workload_wrapper_base.h"
@@ -109,6 +110,7 @@ namespace covered
             while (true)
             {
                 // Send the message payload of local request to the closest edge node
+                PropagationSimulator::propagateFromClientToEdge(); // Simulate propagation latency
                 local_worker_sendreq_toedge_socket_client_ptr_->send(local_request_msg_payload);
 
                 // Receive the message payload of local response from the closest edge node

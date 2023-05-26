@@ -7,6 +7,7 @@
 #include "message/local_message.h"
 #include "message/message_base.h"
 #include "network/network_addr.h"
+#include "network/propagation_simulator.h"
 
 namespace covered
 {
@@ -217,6 +218,7 @@ namespace covered
         // Reply local response message to a client (the remote address set by the most recent recv)
         DynamicArray local_response_msg_payload(local_get_response.getMsgPayloadSize());
         local_get_response.serialize(local_response_msg_payload);
+        PropagationSimulator::propagateFromEdgeToClient();
         local_edge_recvreq_socket_server_ptr_->send(local_response_msg_payload);
 
         return is_finish;
@@ -306,6 +308,7 @@ namespace covered
             assert(local_response_ptr->getMessageType() == MessageType::kLocalPutResponse || local_response_ptr->getMessageType() == MessageType::kLocalDelResponse);
             DynamicArray local_response_msg_payload(local_response_ptr->getMsgPayloadSize());
             local_response_ptr->serialize(local_response_msg_payload);
+            PropagationSimulator::propagateFromEdgeToClient();
             local_edge_recvreq_socket_server_ptr_->send(local_response_msg_payload);
         }
 
@@ -390,6 +393,7 @@ namespace covered
         while (true) // Timeout-and-retry
         {
             // Send the message payload of global request to cloud
+            PropagationSimulator::propagateFromEdgeToCloud();
             local_edge_sendreq_tocloud_socket_client_ptr_->send(global_request_msg_payload);
 
             // Receive the global response message from cloud

@@ -14,7 +14,7 @@ namespace covered
     class Param
     {
     public:
-        static void setParameters(const bool& is_simulation, const std::string& cache_name, const uint32_t& capacity_bytes, const uint32_t& clientcnt, const std::string& cloud_storage, const std::string& config_filepath, const bool& is_debug, const double& duration, const uint32_t& edgecnt, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name);
+        static void setParameters(const bool& is_simulation, const std::string& cache_name, const uint32_t& capacity_bytes, const uint32_t& clientcnt, const std::string& cloud_storage, const std::string& config_filepath, const bool& is_debug, const double& duration, const uint32_t& edgecnt, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge, const uint32_t& propagation_latency_crossedge, const uint32_t& propagation_latency_edgecloud, const std::string& workload_name);
 
         static bool isSimulation();
         static std::string getCacheName();
@@ -28,6 +28,9 @@ namespace covered
         static uint32_t getKeycnt();
         static uint32_t getOpcnt();
         static uint32_t getPerclientWorkercnt();
+        static uint32_t getPropagationLatencyClientedge();
+        static uint32_t getPropagationLatencyCrossedge();
+        static uint32_t getPropagationLatencyEdgecloud();
         static std::string getWorkloadName();
 
         static std::string toString();
@@ -49,6 +52,9 @@ namespace covered
         static uint32_t keycnt_;
         static uint32_t opcnt_;
         static uint32_t perclient_workercnt_;
+        static uint32_t propagation_latency_clientedge_; // 1/2 RTT between client and edge (bidirectional link)
+        static uint32_t propagation_latency_crossedge_; // 1/2 RTT between edge and neighbor (bidirectional link)
+        static uint32_t propagation_latency_edgecloud_; // 1/2 RTT between edge and cloud (bidirectional link)
         static std::string workload_name_;
     };
 }

@@ -378,8 +378,8 @@ namespace covered
     std::string Util::getInfixForFilepath_()
     {
         std::ostringstream oss;
-        // Example: covered_capacitymb1000_clientcnt1_duration10_edgecnt1_keycnt1000000_opcnt1000000_perclientworkercnt1_facebook
-        oss << Param::getCacheName() << "_capacitymb" << Param::getCapacityBytes() / 1000 << "_clientcnt" << Param::getClientcnt() << "_duration" << Param::getDuration() << "_edgecnt" << Param::getEdgecnt() << "_keycnt" << Param::getKeycnt() << "_opcnt" << Param::getOpcnt() << "_perclientworkercnt" << Param::getPerclientWorkercnt() << "_" << Param::getWorkloadName();
+        // Example: simulation_covered_capacitymb1000_clientcnt1_duration10_edgecnt1_keycnt1000000_opcnt1000000_perclientworkercnt1_propagation100010000100000_facebook
+        oss << Param::isSimulation()?"simulation":"prototype" << "_" << Param::getCacheName() << "_capacitymb" << Param::getCapacityBytes() / 1000 << "_clientcnt" << Param::getClientcnt() << "_duration" << Param::getDuration() << "_edgecnt" << Param::getEdgecnt() << "_keycnt" << Param::getKeycnt() << "_opcnt" << Param::getOpcnt() << "_perclientworkercnt" << Param::getPerclientWorkercnt() << "_propagation" << Param::getPropagationLatencyClientedge() << Param::getPropagationLatencyCrossedge() << Param::getPropagationLatencyEdgecloud() << "_" << Param::getWorkloadName();
         std::string infixstr = oss.str();
         return infixstr;
     }

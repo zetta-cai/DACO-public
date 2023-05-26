@@ -33,15 +33,18 @@ void* launchLoader(void* local_loader_param_ptr)
 }
 
 int main(int argc, char **argv) {
-    const bool is_simulation = false;
     std::string main_class_name = "statistics_aggregator";
 
     // (1) Parse and process CLI parameters (set configurations in Config and Param)
-    CLI::parseAndProcessCliParameters(is_simulation, main_class_name);
+    CLI::parseAndProcessCliParameters(main_class_name);
 
     int pthread_returncode;
 
     // TODO: (2) Transfer per-client statistics files from all client machines into the current machine for prototype mode
+    if (!covered::Param::isSimulation())
+    {
+        // TODO
+    }
 
     // (3) Launch clientcnt loaders to load per-client statistics
 

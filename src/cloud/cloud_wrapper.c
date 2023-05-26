@@ -5,6 +5,7 @@
 #include "common/util.h"
 #include "message/global_message.h"
 #include "network/network_addr.h"
+#include "network/propagation_simulator.h"
 
 namespace covered
 {
@@ -174,6 +175,7 @@ namespace covered
             assert(global_response_ptr->isGlobalResponse());
             DynamicArray global_response_msg_payload(global_response_ptr->getMsgPayloadSize());
             global_response_ptr->serialize(global_response_msg_payload);
+            PropagationSimulator::propagateFromCloudToEdge();
             local_cloud_recvreq_socket_server_ptr_->send(global_response_msg_payload);
         }
 
