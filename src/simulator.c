@@ -5,10 +5,9 @@
 #include <time.h> // struct timespec
 #include <unistd.h> // usleep
 
-#include <boost/program_options.hpp>
-
 #include "benchmark/client_param.h"
 #include "benchmark/client_wrapper.h"
+#include "common/cli.h"
 #include "common/config.h"
 #include "common/param.h"
 #include "common/util.h"
@@ -22,106 +21,21 @@
 int main(int argc, char **argv) {
     std::string main_class_name = "simulator";
 
-    // (1) Create CLI parameter description
-
-    boost::program_options::options_description argument_desc("Allowed arguments:");
-    // Static actions
-    argument_desc.add_options()
-        ("help,h", "dump help information")
-    ;
-    // Dynamic configurations
-    argument_desc.add_options()
-        ("cache_name", boost::program_options::value<std::string>()->default_value(covered::CacheWrapperBase::LRU_CACHE_NAME), "cache name")
-        ("capacitymb", boost::program_options::value<uint32_t>()->default_value(1000), "cache capacity in units of MB")
-        ("clientcnt", boost::program_options::value<uint32_t>()->default_value(1), "the total number of clients")
-        ("config_file", boost::program_options::value<std::string>()->default_value("config.json"), "config file path of COVERED")
-        ("cloud_storage", boost::program_options::value<std::string>()->default_value(covered::RocksdbWrapper::HDD_NAME), "type of cloud storage")
-        ("debug", "enable debug information")
-        ("duration", boost::program_options::value<double>()->default_value(10), "benchmark duration")
-        ("edgecnt", boost::program_options::value<uint32_t>()->default_value(1), "the number of edge nodes")
-        ("keycnt", boost::program_options::value<uint32_t>()->default_value(1000000), "the total number of keys")
-        ("opcnt", boost::program_options::value<uint32_t>()->default_value(1000000), "the total number of operations")
-        ("perclient_workercnt", boost::program_options::value<uint32_t>()->default_value(1), "the number of worker threads for each client")
-        ("workload_name", boost::program_options::value<std::string>()->default_value(covered::WorkloadWrapperBase::FACEBOOK_WORKLOAD_NAME), "workload name")
-    ;
-    // Dynamic actions
-    argument_desc.add_options()
-        ("version,v", "dump version of COVERED")
-    ;
-
-    // (2) Parse CLI parameters (static/dynamic actions and dynamic configurations)
-
-    boost::program_options::variables_map argument_info;
-    boost::program_options::store(boost::program_options::parse_command_line(argc, argv, argument_desc), argument_info);
-    boost::program_options::notify(argument_info);
-
-    // (2.1) Process static actions
-
-    if (argument_info.count("help")) // Dump help information
-    {
-        std::ostringstream oss;
-        oss << argument_desc;
-        covered::Util::dumpNormalMsg(main_class_name, oss.str());
-        return 1;
-    }
-
-    // (2.2) Get CLI paremters for dynamic configurations
-
-    const bool is_simulation = true;
-    std::string cache_name = argument_info["cache_name"].as<std::string>();
-    uint32_t capacity = argument_info["capacitymb"].as<uint32_t> * 1000; // In units of bytes
-    uint32_t clientcnt = argument_info["clientcnt"].as<uint32_t>();
-    std::string cloud_storage = argument_info["cloud_storage"].as<std::string>();
-    std::string config_filepath = argument_info["config_file"].as<std::string>();
-    bool is_debug = false;
-    if (argument_info.count("debug"))
-    {
-        is_debug = true;
-    }
-    double duration = argument_info["duration"].as<double>();
-    uint32_t edgecnt = argument_info["edgecnt"].as<uint32_t>();
-    uint32_t keycnt = argument_info["keycnt"].as<uint32_t>();
-    uint32_t opcnt = argument_info["opcnt"].as<uint32_t>();
-    uint32_t perclient_workercnt = argument_info["perclient_workercnt"].as<uint32_t>();
-    std::string workload_name = argument_info["workload_name"].as<std::string>();
-
-    // Store CLI parameters for dynamic configurations and mark covered::Param as valid
-    covered::Param::setParameters(is_simulation, cache_name, capacity, clientcnt, cloud_storage, config_filepath, is_debug, duration, edgecnt, keycnt, opcnt, perclient_workercnt, workload_name);
-
-    // (2.3) Load config file for static configurations
-
-    covered::Config::loadConfig();
-
-    // (2.4) Process dynamic actions
-
-    if (argument_info.count("version"))
-    {
-        std::ostringstream oss;
-        oss << "Current version of COVERED: " << covered::Config::getVersion();
-        covered::Util::dumpNormalMsg(main_class_name, oss.str());
-        return 1;
-    }
-
-    // (3) Dump stored CLI parameters and parsed config information if debug
-
-    if (is_debug)
-    {
-        covered::Util::dumpDebugMsg(main_class_name, covered::Param::toString());
-        covered::Util::dumpDebugMsg(main_class_name, covered::Config::toString());
-    }
+    // (1) Parse and process CLI parameters (set configurations in Config and Param)
+    CLI::parseAndProcessCliParameters(main_class_name);
 
     int pthread_returncode;
 
-    // (4) Simulate a single cloud node for backend storage
+    // (2) Simulate a single cloud node for backend storage
 
     pthread_t cloud_thread;
     covered::CloudParam cloud_param;
 
-    // (5.1) Prepare one cloud parameter
+    // (2.1) Prepare one cloud parameter
 
     cloud_param = CloudParam();
 
-    // (5.2) Launch one cloud node
+    // (2.2) Launch one cloud node
 
     covered::Util::dumpNormalMsg(main_class_name, "launch cloud node");
 
@@ -134,12 +48,12 @@ int main(int argc, char **argv) {
         exit(1);
     }
 
-    // (5) Simulate edgecnt edge nodes with cooperative caching
+    // (3) Simulate edgecnt edge nodes with cooperative caching
 
     pthread_t edge_threads[edgecnt];
     covered::EdgeParam edge_params[edgecnt];
 
-    // (5.1) Prepare edgecnt edge parameters
+    // (3.1) Prepare edgecnt edge parameters
 
     for (uint32_t global_edge_idx = 0; global_edge_idx < edgecnt; global_edge_idx++)
     {
@@ -147,7 +61,7 @@ int main(int argc, char **argv) {
         edge_params[global_edge_idx] = local_edge_param;
     }
 
-    // (5.2) Launch edgecnt edge nodes
+    // (3.2) Launch edgecnt edge nodes
 
     for (uint32_t global_edge_idx = 0; global_edge_idx < edgecnt; global_edge_idx++)
     {
@@ -165,14 +79,14 @@ int main(int argc, char **argv) {
         }
     }
     
-    // (6) Simulate clientcnt clients by multi-threading
+    // (4) Simulate clientcnt clients by multi-threading
 
     pthread_t client_threads[clientcnt];
     covered::WorkloadWrapperBase* workload_generator_ptrs[clientcnt]; // Release at the end
     covered::ClientStatisticsTracker* client_statistics_tracker_ptrs[clientcnt]; // Release at the end
     covered::ClientParam client_params[clientcnt];
 
-    // (6.1) Prepare clientcnt client parameters
+    // (4.1) Prepare clientcnt client parameters
 
     for (uint32_t global_client_idx = 0; global_client_idx < clientcnt; global_client_idx++)
     {
@@ -188,7 +102,7 @@ int main(int argc, char **argv) {
         client_params[global_client_idx] = local_client_param;
     }
 
-    // (6.2) Launch clientcnt clients
+    // (4.2) Launch clientcnt clients
 
     // NOTE: global_XXX is from the view of entire system, while local_XXX is from the view of each individual client
     for (uint32_t global_client_idx = 0; global_client_idx < clientcnt; global_client_idx++)
@@ -207,9 +121,9 @@ int main(int argc, char **argv) {
         }
     }
 
-    // (7) Start benchmark and dump intermediate statistics
+    // (5) Start benchmark and dump intermediate statistics
 
-    // (7.1) Set local_client_running_ = true in all clientcnt client parameters to start benchmark
+    // (5.1) Set local_client_running_ = true in all clientcnt client parameters to start benchmark
 
     covered::Util::dumpNormalMsg(main_class_name, "Start benchmark...");
     for (uint32_t global_client_idx = 0; global_client_idx < clientcnt; global_client_idx++)
@@ -217,7 +131,7 @@ int main(int argc, char **argv) {
         client_params[global_client_idx].setClientRunning();
     }
 
-    // (7.2) Dump intermediate statistics
+    // (5.2) Dump intermediate statistics
 
     struct timespec start_timespec = covered::Util::getCurrentTimespec();
     while (true)
@@ -234,9 +148,9 @@ int main(int argc, char **argv) {
         // TODO: with the aggregated StatisticsTracker, main thread can dump statistics every 10 seconds if necessary
     }
 
-    // (8) Stop benchmark
+    // (6) Stop benchmark
 
-    // (8.1) Reset local_client_running_ = false in clientcnt client parameters to stop benchmark
+    // (6.1) Reset local_client_running_ = false in clientcnt client parameters to stop benchmark
 
     for (uint32_t global_client_idx = 0; global_client_idx < clientcnt; global_client_idx++)
     {
@@ -244,7 +158,7 @@ int main(int argc, char **argv) {
     }
     covered::Util::dumpNormalMsg(main_class_name, "Stop benchmark...");
 
-    // (8.2) Wait for clientcnt clients
+    // (6.2) Wait for clientcnt clients
 
     covered::Util::dumpNormalMsg(main_class_name, "wait for all clients...");
     for (uint32_t global_client_idx = 0; global_client_idx < clientcnt; global_client_idx++)
@@ -260,7 +174,7 @@ int main(int argc, char **argv) {
     }
     covered::Util::dumpNormalMsg(main_class_name, "all clients are done");
 
-    // (8.3) Reset local_edge_running_ = false in edgecnt edge parameters to stop edge nodes
+    // (6.3) Reset local_edge_running_ = false in edgecnt edge parameters to stop edge nodes
 
     for (uint32_t global_edge_idx = 0; global_edge_idx < edgecnt; global_edge_idx++)
     {
@@ -268,7 +182,7 @@ int main(int argc, char **argv) {
     }
     covered::Util::dumpNormalMsg(main_class_name, "Stop edge nodes...");
 
-    // (8.4) Wait for edgecnt edge nodes
+    // (6.4) Wait for edgecnt edge nodes
 
     covered::Util::dumpNormalMsg(main_class_name, "wait for all edge nodes...");
     for (uint32_t global_edge_idx = 0; global_edge_idx < edgecnt; global_edge_idx++)
@@ -284,12 +198,12 @@ int main(int argc, char **argv) {
     }
     covered::Util::dumpNormalMsg(main_class_name, "all edge nodes are done");
 
-    // (8.5) Reset local_cloud_running_ = false in a cloud parameter to stop the cloud node
+    // (6.5) Reset local_cloud_running_ = false in a cloud parameter to stop the cloud node
 
     cloudParam.resetCloudRunning();
     covered::Util::dumpNormalMsg(main_class_name, "Stop the cloud node...");
 
-    // (8.6) Wait for the cloud node
+    // (6.6) Wait for the cloud node
 
     covered::Util::dumpNormalMsg(main_class_name, "wait for the cloud node...");
     pthread_returncode = pthread_join(cloud_thread, NULL); // void* retval = NULL
@@ -302,11 +216,7 @@ int main(int argc, char **argv) {
     }
     covered::Util::dumpNormalMsg(main_class_name, "the cloud node is done");
 
-    // (9) Dump aggregated statistics
-
-    // TODO: with the aggregated StatisticsTracker, main thread can dump aggregated statistics after joining all sub-threads
-
-    // (10) Release variables in heap
+    // (7) Release variables in heap
 
     for (uint32_t global_client_idx = 0; global_client_idx < clientcnt; global_client_idx++)
     {

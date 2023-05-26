@@ -32,7 +32,7 @@ namespace covered
         assert(local_edge_param_ptr_ != NULL);
         
         // Allocate local edge cache
-        local_edge_cache_ptr_ = CacheWrapperBase::getEdgeCache(Param::getCacheName(), Param::getCapacity());
+        local_edge_cache_ptr_ = CacheWrapperBase::getEdgeCache(Param::getCacheName(), Param::getCapacityBytes());
         assert(local_edge_cache_ptr_ != NULL);
 
         // Prepare a socket server on recvreq port
@@ -437,7 +437,7 @@ namespace covered
 
         // Evict until cache size <= cache capacity
         uint32_t cache_size = 0;
-        uint32_t cache_capacity = local_edge_cache_ptr->getCapacity();
+        uint32_t cache_capacity = local_edge_cache_ptr->getCapacityBytes();
         while (true)
         {
             current_cache_size = local_edge_cache_ptr->getSize();

@@ -87,7 +87,8 @@ namespace covered
     void Util::createDirectory(const std::string& dirpath)
     {
         assert(!isDirectoryExist(dirpath));
-        bool result = boost::filesystem::create_directory(dirpath);
+        //bool result = boost::filesystem::create_directory(dirpath);
+        bool result = boost::filesystem::create_directories(dirpath); // Create directory path recursively
         if (!result)
         {
             std::ostringstream oss;
@@ -294,14 +295,6 @@ namespace covered
         return global_worker_idx;
     }
 
-    std::string Util::getClientStatisticsFilepath(const uint32_t& global_client_idx)
-    {
-        std::ostringstream oss;
-        oss << Config.getOutputBasedir() << "/client" << global_client_idx << "_statistics.out";
-        std::string client_statistics_filepath = oss.str();
-        return client_statistics_filepath;
-    }
-
     // (4.2) Edge
 
     uint16_t Util::getLocalEdgeRecvreqPort(const uint32_t& global_edge_idx)
@@ -372,7 +365,26 @@ namespace covered
         return fragment_payload_size;
     }
 
-    // (6) Others
+    // (6) Intermediate files
+
+    std::string Util::getClientStatisticsFilepath(const uint32_t& global_client_idx)
+    {
+        std::ostringstream oss;
+        oss << Config.getOutputBasedir() << "/" << getInfixForFilepath_() << "/client" << global_client_idx << "_statistics.out";
+        std::string client_statistics_filepath = oss.str();
+        return client_statistics_filepath;
+    }
+
+    std::string Util::getInfixForFilepath_()
+    {
+        std::ostringstream oss;
+        // Example: covered_capacitymb1000_clientcnt1_duration10_edgecnt1_keycnt1000000_opcnt1000000_perclientworkercnt1_facebook
+        oss << Param::getCacheName() << "_capacitymb" << Param::getCapacityBytes() / 1000 << "_clientcnt" << Param::getClientcnt() << "_duration" << Param::getDuration() << "_edgecnt" << Param::getEdgecnt() << "_keycnt" << Param::getKeycnt() << "_opcnt" << Param::getOpcnt() << "_perclientworkercnt" << Param::getPerclientWorkercnt() << "_" << Param::getWorkloadName();
+        std::string infixstr = oss.str();
+        return infixstr;
+    }
+
+    // (7) Others
 
     uint32_t Util::getTimeBasedRandomSeed()
     {

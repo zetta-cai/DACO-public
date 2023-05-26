@@ -23,7 +23,7 @@ namespace covered
     uint32_t Param::perclient_workercnt_ = 0;
     std::string Param::workload_name_ = "";
 
-    void Param::setParameters(const bool& is_simulation, const std::string& cache_name, const uint32_t& capacity, const uint32_t& clientcnt, const std::string& cloud_storage, const std::string& config_filepath, const bool& is_debug, const double& duration, const uint32_t& edgecnt, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name)
+    void Param::setParameters(const bool& is_simulation, const std::string& cache_name, const uint32_t& capacity_bytes, const uint32_t& clientcnt, const std::string& cloud_storage, const std::string& config_filepath, const bool& is_debug, const double& duration, const uint32_t& edgecnt, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name)
     {
         if (is_valid_)
         {
@@ -33,7 +33,7 @@ namespace covered
 
         is_simulation_ = is_simulation;
         cache_name_ = cache_name;
-        capacity_ = capacity:
+        capacity_bytes_ = capacity_bytes:
         clientcnt_ = clientcnt;
         cloud_storage_ = cloud_storage;
         config_filepath_ = config_filepath;
@@ -61,10 +61,10 @@ namespace covered
         return cache_name_;
     }
 
-    uint32_t Param::getCapacity()
+    uint32_t Param::getCapacityBytes()
     {
         checkIsValid_();
-        return capacity_;
+        return capacity_bytes_;
     }
 
     uint32_t Param::getClientcnt()

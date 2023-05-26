@@ -14,11 +14,11 @@ namespace covered
     class Param
     {
     public:
-        static void setParameters(const bool& is_simulation, const uint32_t& clientcnt, const std::string& cloud_storage, const std::string& config_filepath, const bool& is_debug, const double& duration, const uint32_t& edgecnt, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name);
+        static void setParameters(const bool& is_simulation, const std::string& cache_name, const uint32_t& capacity_bytes, const uint32_t& clientcnt, const std::string& cloud_storage, const std::string& config_filepath, const bool& is_debug, const double& duration, const uint32_t& edgecnt, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name);
 
         static bool isSimulation();
         static std::string getCacheName();
-        static uint32_t getCapacity();
+        static uint32_t getCapacityBytes();
         static uint32_t getClientcnt();
         static std::string getCloudStorage();
         static std::string getConfigFilepath();
@@ -39,7 +39,7 @@ namespace covered
         static bool is_valid_;
         static bool is_simulation_;
         static std::string cache_name_;
-        static uint32_t capacity_;
+        static uint32_t capacity_bytes_;
         static uint32_t clientcnt_;
         static std::string cloud_storage_;
         static std::string config_filepath_;

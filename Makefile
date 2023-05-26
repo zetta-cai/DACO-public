@@ -16,9 +16,14 @@ simulator: src/simulator.o $(COVERED_OBJECTS)
 DEPS += src/simulator.d
 CLEAN += src/simulator.o
 
+statistics_aggregator: src/statistics_aggregator.o $(COVERED_OBJECTS)
+	$(LINK) $^ $(LDLIBS) -o $@
+DEPS += src/statistics_aggregator.d
+CLEAN += src/statistics_aggregator.o
+
 ##############################################################################
 
-TARGETS := simulator
+TARGETS := simulator statistics_aggregator
 
 all: $(TARGETS)
 #	rm -rf $(CLEAN) $(DEPS)

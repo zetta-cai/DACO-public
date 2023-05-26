@@ -11,12 +11,12 @@ namespace covered
 
     const std::string CacheWrapperBase::kClassName("CacheWrapperBase");
 
-    CacheWrapperBase* CacheWrapperBase::getEdgeCache(const std::string& cache_name, const uint32_t& capacity)
+    CacheWrapperBase* CacheWrapperBase::getEdgeCache(const std::string& cache_name, const uint32_t& capacity_bytes)
     {
         CacheWrapperBase* cache_ptr = NULL;
         if (cache_name == LRU_CACHE_NAME)
         {
-            cache_ptr = new LruCacheWrapper(capacity);
+            cache_ptr = new LruCacheWrapper(capacity_bytes);
         }
         else
         {
@@ -30,7 +30,7 @@ namespace covered
         return cache_ptr;
     }
 
-    CacheWrapperBase::CacheWrapperBase(const uint32_t& capacity) : capacity_(capacity)
+    CacheWrapperBase::CacheWrapperBase(const uint32_t& capacity_bytes) : capacity_bytes_(capacity_bytes)
     {
         validity_map_.clear();
     }
@@ -135,8 +135,8 @@ namespace covered
         return total_size;
     }
 	
-    uint32_t CacheWrapperBase::getCapacity() const
+    uint32_t CacheWrapperBase::getCapacityBytes() const
     {
-        return capacity_;
+        return capacity_bytes;
     }
 }
