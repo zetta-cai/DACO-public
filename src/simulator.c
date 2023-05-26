@@ -19,10 +19,11 @@
 #include "workload/workload_wrapper_base.h"
 
 int main(int argc, char **argv) {
+    const bool is_simulation = true;
     std::string main_class_name = "simulator";
 
     // (1) Parse and process CLI parameters (set configurations in Config and Param)
-    CLI::parseAndProcessCliParameters(main_class_name);
+    CLI::parseAndProcessCliParameters(is_simulation, main_class_name);
 
     int pthread_returncode;
 

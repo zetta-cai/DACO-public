@@ -8,13 +8,13 @@ namespace covered
 {
     const std::string kClassName("TotalStatisticsTracker");
     
-    TotalStatisticsTracker::TotalStatisticsTracker(uint32_t clientcnt, ClientStatisticsTracker* client_statistics_trackers)
+    TotalStatisticsTracker::TotalStatisticsTracker(uint32_t clientcnt, ClientStatisticsTracker** client_statistics_tracker_ptrs)
     {
-        // Aggregate per-client hit ratio and latency statistics
-        aggregateClientStatistics_(clientcnt, client_statistics_trackers);
+        // Pre-process per-client hit ratio and latency statistics
+        preprocessClientStatistics_(clientcnt, client_statistics_tracker_ptrs);
 
-        // Process aggregate statistics
-        processAggregateStatistics_();
+        // Generate aggregate statistics
+        aggregateClientStatistics_();
     }
         
     TotalStatisticsTracker::~TotalStatisticsTracker()
@@ -83,14 +83,39 @@ namespace covered
     {
         return max_latency_;
     }
+
+    std::string TotalStatisticsTracker::toString() const
+    {
+        std::ostringstream oss;
+        oss << "[Hit Ratio Statistics]" << std::endl;
+        oss << "total local hit cnts: " << total_local_hitcnt_ << std::endl;
+        oss << "total cooperative hit cnts: " << total_cooperative_hitcnt_ << std::endl;
+        oss << "total request cnts: " << total_reqcnt_ << std::endl;
+        oss << "[Latency Statistics]" << std::endl;
+        oss << "average latency: " << avg_latency_ << std::endl;
+        oss << "min latency: " << min_latency_ << std::endl;
+        oss << "medium latency: " << medium_latency_ << std::endl;
+        oss << "90th-percentile latency: " << tail90_latency_ << std::endl;
+        oss << "95th-percentile latency: " << tail95_latency_ << std::endl;
+        oss << "99th-percentile latency: " << tail99_latency_ << std::endl;
+        oss << "max latency: " << max_latency_;
+        
+        std::string total_statistics_string = oss.str();
+        return total_statistics_string;
+    }
     
-    void TotalStatisticsTracker::aggregateClientStatistics_(uint32_t clientcnt, ClientStatisticsTracker* client_statistics_trackers)
+    void TotalStatisticsTracker::preprocessClientStatistics_(uint32_t clientcnt, ClientStatisticsTracker** client_statistics_tracker_ptrs)
     {
         clientcnt_ = clientcnt;
 
-        assert(client_statistics_trackers != NULL);
-        uint32_t perclient_workercnt = client_statistics_trackers[0].getPerclientWorkercnt();
-        latency_histogram_size_ = client_statistics_trackers[0].getLatencyHistogramSize();
+        assert(client_statistics_tracker_ptrs != NULL);
+        for (uint32_t global_client_idx = 0; global_client_idx < clientcnt; global_client_idx++)
+        {
+            assert(client_statistics_tracker_ptrs[global_client_idx] != NULL);
+        }
+
+        uint32_t perclient_workercnt = client_statistics_tracker_ptrs[0]->getPerclientWorkercnt();
+        latency_histogram_size_ = client_statistics_tracker_ptrs[0]->getLatencyHistogramSize();
 
         // Allocate space for aggregate statistics
         perclient_local_hitcnts_ = new uint32_t[clientcnt_];
@@ -109,7 +134,7 @@ namespace covered
         // Aggregate per-client statistics
         for (uint32_t global_client_idx = 0; global_client_idx < clientcnt_; i++)
         {
-            const ClientStatisticsTracker& tmp_client_statistics_tracker = client_statistics_trackers[global_client_idx];
+            const ClientStatisticsTracker& tmp_client_statistics_tracker = *(client_statistics_tracker_ptrs[global_client_idx]);
             assert(perclient_workercnt == tmp_client_statistics_tracker.getPerclientWorkercnt());
             assert(latency_histogram_size_ == tmp_client_statistics_tracker.getLatencyHistogram());
 
@@ -135,7 +160,7 @@ namespace covered
         return;
     }
 
-    void TotalStatisticsTracker::processAggregateStatistics_()
+    void TotalStatisticsTracker::aggregateClientStatistics_()
     {
         assert(perclient_local_hitcnts_ != NULL);
         total_local_hitcnt_ = 0;

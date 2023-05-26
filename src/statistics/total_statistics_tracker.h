@@ -16,7 +16,7 @@ namespace covered
     class TotalStatisticsTracker
     {
     public:
-        TotalStatisticsTracker(uint32_t clientcnt, ClientStatisticsTracker* client_statistics_trackers);
+        TotalStatisticsTracker(uint32_t clientcnt, ClientStatisticsTracker** client_statistics_tracker_ptrs);
         ~TotalStatisticsTracker();
 
         // Get aggregate statistics related with hit ratio
@@ -32,13 +32,16 @@ namespace covered
         uint32_t getTail95Latnecy() const;
         uint32_t getTail99Latnecy() const;
         uint32_t getMaxLatency() const;
+
+        // Get string for aggregate statistics
+        std::string toString() const;
     private:
         static const std::string kClassName;
 
-        void aggregateClientStatistics_(uint32_t clientcnt, ClientStatisticsTracker* client_statistics_trackers);
-        void processAggregateStatistics_();
+        void preprocessClientStatistics_(uint32_t clientcnt, ClientStatisticsTracker** client_statistics_tracker_ptrs);
+        void aggregateClientStatistics_();
 
-        // Aggregate statistics
+        // Pre-processed statistics
         uint32_t* perclient_local_hitcnts_; // Hit local edge cache of closest edge node
         uint32_t* perclient_cooperative_hitcnts_; // Hit cooperative edge cache of neighbor
         uint32_t* perclient_reqcnts_;
@@ -46,7 +49,7 @@ namespace covered
         uint32_t clientcnt_; // Come from Util::Param
         uint32_t latency_histogram_size_; // Come from Util::Config
 
-        // Processed statistics
+        // Aggregate statistics
         uint32_t total_local_hitcnt_;
         uint32_t total_cooperative_hitcnt_;
         uint32_t total_reqcnt_;

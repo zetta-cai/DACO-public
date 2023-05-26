@@ -4,14 +4,14 @@
 
 namespace covered
 {
-    void CLI::parseAndProcessCliParameters(const std::string& main_class_name)
+    void CLI::parseAndProcessCliParameters(const bool& is_simulation, const std::string& main_class_name)
     {
-        parseCliParameters_();
+        parseCliParameters_(is_simulation);
         processCliParameters_(main_class_name);
         return;
     }
 
-    void CLI::parseCliParameters_()
+    void CLI::parseCliParameters_(const bool& is_simulation)
     {
         // (1) Create CLI parameter description
 
@@ -48,7 +48,6 @@ namespace covered
 
         // (2.1) Get CLI paremters for dynamic configurations
 
-        const bool is_simulation = true;
         std::string cache_name = argument_info["cache_name"].as<std::string>();
         uint32_t capacity = argument_info["capacitymb"].as<uint32_t> * 1000; // In units of bytes
         uint32_t clientcnt = argument_info["clientcnt"].as<uint32_t>();
