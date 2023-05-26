@@ -39,6 +39,7 @@ namespace covered
         // Return is_finish
         bool blockForInvalidation_(const Key& key);
         bool fetchDataFromCloud_(const Key& key, Value& value);
+        bool writeDataToCloud_(const Key& key, const Value& value, const MessageType& message_type);
 
         void triggerIndependentAdmission_(const Key& key, const Value& value);
 

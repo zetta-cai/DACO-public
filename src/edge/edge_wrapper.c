@@ -233,55 +233,20 @@ namespace covered
         bool is_finish = false; // Mark if local edge node is finished
         const Hitflag hitflag = Hitflag::kGlobalMiss; // Must be global miss due to write-through policy
 
-        // TODO: Acquire write lock from beacon node
-        // TODO: Update is_finish
-
-        if (is_finish) // Check is_finish
-        {
-            return is_finish;
-        }
-
-        // TODO: Wait for beacon node to invalidate all other cache copies
-        // TODO: Update is_finish
-
-        if (is_finish) // Check is_finish
-        {
-            return is_finish;
-        }
-
-        // TODO: Send request to cloud for write-through policy
-        // TODO: Update is_finish
-
-        if (is_finish) // Check is_finish
-        {
-            return is_finish;
-        }
-
-        // Update/remove local edge cache
-        bool is_local_cached = false;
+        // Get key and value from local request message
         Key tmp_key();
         Value tmp_value();
-        MessageBase* local_response_ptr = NULL;
         if (local_request_ptr->getMessageType() == MessageType::kLocalPutRequest)
         {
             const LocalPutRequest* const local_put_request_ptr = static_cast<const LocalPutRequest*>(local_request_ptr);
             tmp_key = local_put_request_ptr->getKey();
             tmp_value = local_put_request_ptr->getValue();
             assert(tmp_value.isDeleted() == false);
-
-            is_local_cached = local_edge_cache_ptr_->update(tmp_key, tmp_value);
-
-            // Prepare LocalPutResponse for client
-            local_response_ptr = new LocalPutResponse(tmp_key, hitflag);
         }
         else if (local_request_ptr->getMessageType() == MessageType::kLocalDelRequest)
         {
             const LocalDelRequest* const local_del_request_ptr = static_cast<const LocalDelRequest*>(local_request_ptr);
             tmp_key = local_del_request_ptr->getKey();
-            is_local_cached = local_edge_cache_ptr_->remove(tmp_key);
-
-            // Prepare LocalDelResponse for client
-            local_response_ptr = new LocalDelResponse(tmp_key, hitflag);
         }
         else
         {
@@ -291,13 +256,58 @@ namespace covered
             exit(1);
         }
 
+        // TODO: Acquire write lock from beacon node for MSI protocol
+        // TODO: Update is_finish
+
+        if (is_finish) // Check is_finish
+        {
+            return is_finish;
+        }
+
+        // TODO: Wait for beacon node to invalidate all other cache copies for MSI protocol
+        // TODO: Update is_finish
+
+        if (is_finish) // Check is_finish
+        {
+            return is_finish;
+        }
+
+        // Send request to cloud for write-through policy
+        is_finish = writeDataToCloud_(tmp_key, tmp_value, local_request_ptr->getMessageType());
+
+        if (is_finish) // Check is_finish
+        {
+            return is_finish;
+        }
+
+        // Update/remove local edge cache
+        bool is_local_cached = false;
+        MessageBase* local_response_ptr = NULL;
+        // NOTE: message type has been checked, which must be one of the following two types
+        if (local_request_ptr->getMessageType() == MessageType::kLocalPutRequest)
+        {
+            const LocalPutRequest* const local_put_request_ptr = static_cast<const LocalPutRequest*>(local_request_ptr);
+            is_local_cached = local_edge_cache_ptr_->update(tmp_key, tmp_value);
+
+            // Prepare LocalPutResponse for client
+            local_response_ptr = new LocalPutResponse(tmp_key, hitflag);
+        }
+        else if (local_request_ptr->getMessageType() == MessageType::kLocalDelRequest)
+        {
+            const LocalDelRequest* const local_del_request_ptr = static_cast<const LocalDelRequest*>(local_request_ptr);
+            is_local_cached = local_edge_cache_ptr_->remove(tmp_key);
+
+            // Prepare LocalDelResponse for client
+            local_response_ptr = new LocalDelResponse(tmp_key, hitflag);
+        }
+
         // Trigger independent cache admission for local/global cache miss if necessary
         if (!is_local_cached && local_edge_cache_ptr_->needIndependentAdmit(tmp_key))
         {
             triggerIndependentAdmission_(tmp_key, tmp_value);
         }
 
-        // TODO: Notify beacon node to validate all other cache copies
+        // TODO: Notify beacon node to validate all other cache copies for MSI protocol
         // TODO: For COVERED, beacon node will tell the edge node if to admit, w/o independent decision
         // TODO: Update is_finish
 
@@ -389,7 +399,6 @@ namespace covered
         GlobalGetRequest global_get_request(key);
         DynamicArray global_request_msg_payload(global_get_request.getMsgPayloadSize());
         global_get_request.serialize(global_request_msg_payload);
-        Value tmp_value();
         while (true) // Timeout-and-retry
         {
             // Send the message payload of global request to cloud
@@ -427,6 +436,77 @@ namespace covered
                 break;
             }
         } // End of while loop
+        
+        return is_finish;
+    }
+
+    bool EdgeWrapper::writeDataToCloud_(const Key& key, const Value& value, const MessageType& message_type)
+    {
+        assert(local_edge_param_ptr_ != NULL);
+        assert(local_edge_sendreq_tocloud_socket_client_ptr_ != NULL);
+
+        bool is_finish = false; // Mark if local edge node is finished
+
+        // Prepare global write request message
+        MessageBase* global_request_ptr = NULL;
+        if (message_type == MessageType::kGlobalPutRequest)
+        {
+            global_request_ptr = new GlobalPutRequest(key, value);
+        }
+        else if (message_type == MessageType::kGlobalDelRequest)
+        {
+            global_request_ptr = new GlobalDelRequest(key);
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "invalid message type " << MessageBase::messageTypeToString(message_type) << " for writeDataToCloud_()!";
+            Util::dumpErrorMsg(kClassName, oss.str());
+            exit(1);
+        }
+        assert(global_request_ptr != NULL);
+
+        DynamicArray global_request_msg_payload(global_request_ptr->getMsgPayloadSize());
+        global_request_ptr->serialize(global_request_msg_payload);
+        while (true) // Timeout-and-retry
+        {
+            // Send the message payload of global request to cloud
+            PropagationSimulator::propagateFromEdgeToCloud();
+            local_edge_sendreq_tocloud_socket_client_ptr_->send(global_request_msg_payload);
+
+            // Receive the global response message from cloud
+            DynamicArray global_response_msg_payload();
+            bool is_timeout = local_edge_sendreq_tocloud_socket_client_ptr_->recv(global_response_msg_payload);
+            if (is_timeout)
+            {
+                if (!local_edge_param_ptr_->isEdgeRunning())
+                {
+                    is_finish = true;
+                    break; // Edge is NOT running
+                }
+                else
+                {
+                    continue; // Resend the global request message
+                }
+            }
+            else
+            {
+                // Receive the global response message successfully
+                MessageBase* global_response_ptr = MessageBase::getResponseFromMsgPayload(global_response_msg_payload);
+                assert(global_response_ptr != NULL)
+                assert(global_response_ptr->getMessageType() == MessageType::kGlobalPutResponse || global_response_ptr->getMessageType() == MessageType::kGlobalDelResponse);
+
+                // Release global response message
+                delete global_response_ptr;
+                global_response_ptr = NULL;
+                break;
+            }
+        } // End of while loop
+
+        // Release global request message
+        assert(global_request_ptr != NULL);
+        delete global_request_ptr;
+        global_request_ptr = NULL;
         
         return is_finish;
     }
