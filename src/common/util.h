@@ -50,7 +50,7 @@ namespace covered
         static bool isFileExist(const std::string& filepath);
         static bool isDirectoryExist(const std::string& dirpath);
         static void createDirectory(const std::string& dirpath);
-        static std::fstream* openFile(const std::string& filepath, ios_base::openmode mode); // Create if not exist
+        static std::fstream* openFile(const std::string& filepath, std::ios_base::openmode mode); // Create if not exist
 
         // (2) Time measurement
 

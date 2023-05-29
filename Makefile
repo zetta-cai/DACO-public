@@ -4,6 +4,7 @@ include src/mk/recipes.mk
 # Third-party recipes
 include src/mk/boost.mk
 include src/mk/cachebench.mk
+include src/mk/rocksdb.mk
 
 # COVERED's recipes
 include src/mk/covered.mk

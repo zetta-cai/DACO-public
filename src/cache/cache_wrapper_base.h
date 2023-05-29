@@ -60,10 +60,10 @@ namespace covered
         // In units of bytes
         virtual uint32_t getSizeInternal_() const = 0;
 
-        private const uint32_t capacity_bytes_; // Come from Util::Param
+        const uint32_t capacity_bytes_; // Come from Util::Param
 
         // NOTE: ONLY write invalidity_map_ for control messages (e.g., requests for invalidation and admission/eviction), while just read it for data messages (local/redirected/global requests)
         // NOTE: as the flag of invalidity can be integrated into cache metadata, we ONLY count the flag instead of key into the total size for capacity limitation (invalidity_map_ is just an implementation trick to avoid hacking each individual cache)
-        private std::map<Key, bool> invalidity_map_;
+        std::map<Key, bool> invalidity_map_;
     };
 }

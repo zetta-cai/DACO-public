@@ -25,7 +25,7 @@ namespace covered
         void updateReqcnt(const uint32_t& local_worker_index);
 
         // Update per-client latency statistics
-        void updateLatency(const uint32_t& local_worker_index), const uint32_t& latency_us);
+        void updateLatency(const uint32_t& local_worker_index, const uint32_t& latency_us);
 
         // Dump per-client statistics for TotalStatisticsTracker
         uint32_t dump(const std::string& filepath) const;

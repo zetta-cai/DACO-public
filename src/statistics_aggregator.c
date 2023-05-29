@@ -24,7 +24,7 @@ void* launchLoader(void* local_loader_param_ptr)
     LoaderParam& local_loader_param = *((LoaderParam*)local_loader_param_ptr);
     assert(local_loader_param.client_statistics_tracker_ptr == NULL);
 
-    std::string client_statistics_filepath = Util::getClientStatisticsFilepath(local_loader_param.global_client_idx);
+    std::string client_statistics_filepath = covered::Util::getClientStatisticsFilepath(local_loader_param.global_client_idx);
     local_loader_param.client_statistics_tracker_ptr = new covered::ClientStatisticsTracker(client_statistics_filepath); // Release outside launchLoader()
     assert(client_statistics_tracker_ptr != NULL);
     
@@ -36,7 +36,7 @@ int main(int argc, char **argv) {
     std::string main_class_name = "statistics_aggregator";
 
     // (1) Parse and process CLI parameters (set configurations in Config and Param)
-    CLI::parseAndProcessCliParameters(main_class_name);
+    covered::CLI::parseAndProcessCliParameters(main_class_name);
 
     int pthread_returncode;
 
@@ -48,7 +48,7 @@ int main(int argc, char **argv) {
 
     // (3) Launch clientcnt loaders to load per-client statistics
 
-    uint32_t clientcnt = Param::getClientcnt();
+    const uint32_t clientcnt = covered::Param::getClientcnt();
     pthread_t loader_threads[clientcnt];
     LoaderParam loader_params[clientcnt];
 
@@ -80,7 +80,7 @@ int main(int argc, char **argv) {
     // (4) Aggregate and dump per-client statistics
 
     // (4.1) Prepare parameters for TotalStatisticsTracker
-    ClientStatisticsTracker** client_statistics_tracker_ptrs[clientcnt];
+    covered::ClientStatisticsTracker** client_statistics_tracker_ptrs[clientcnt];
     for (uint32_t global_client_idx = 0; global_client_idx < clientcnt; global_client_idx++)
     {
         client_statistics_tracker_ptrs[global_client_idx] = loader_params[global_client_idx].client_statistics_tracker_ptr;

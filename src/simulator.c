@@ -22,7 +22,7 @@ int main(int argc, char **argv) {
     std::string main_class_name = "simulator";
 
     // (1) Parse and process CLI parameters (set configurations in Config and Param)
-    CLI::parseAndProcessCliParameters(main_class_name);
+    covered::CLI::parseAndProcessCliParameters(main_class_name);
 
     int pthread_returncode;
 
@@ -33,7 +33,7 @@ int main(int argc, char **argv) {
 
     // (2.1) Prepare one cloud parameter
 
-    cloud_param = CloudParam();
+    cloud_param = covered::CloudParam();
 
     // (2.2) Launch one cloud node
 
@@ -50,6 +50,7 @@ int main(int argc, char **argv) {
 
     // (3) Simulate edgecnt edge nodes with cooperative caching
 
+    const uint32_t edgecnt = covered::Param::getEdgecnt();
     pthread_t edge_threads[edgecnt];
     covered::EdgeParam edge_params[edgecnt];
 
@@ -81,6 +82,7 @@ int main(int argc, char **argv) {
     
     // (4) Simulate clientcnt clients by multi-threading
 
+    const uint32_t clientcnt = covered::Param::getClientcnt();
     pthread_t client_threads[clientcnt];
     covered::WorkloadWrapperBase* workload_generator_ptrs[clientcnt]; // Release at the end
     covered::ClientStatisticsTracker* client_statistics_tracker_ptrs[clientcnt]; // Release at the end
@@ -88,6 +90,7 @@ int main(int argc, char **argv) {
 
     // (4.1) Prepare clientcnt client parameters
 
+    const std::string workload_name = covered::Param::getWorkloadName();
     for (uint32_t global_client_idx = 0; global_client_idx < clientcnt; global_client_idx++)
     {
         // Create workload generator for the client
@@ -95,10 +98,10 @@ int main(int argc, char **argv) {
         assert(workload_generator_ptrs[global_client_idx] != NULL);
 
         // Create statistics tracker for the client
-        client_statistics_tracker_ptrs[global_client_idx_] = new covered::ClientStatisticsTracker(covered::Param::getPerclientWorkercnt(), covered::Config::getLatencyHistogramSize());
-        assert(client_statistics_tracker_ptrs[global_client_idx_] != NULL);
+        client_statistics_tracker_ptrs[global_client_idx] = new covered::ClientStatisticsTracker(covered::Param::getPerclientWorkercnt(), covered::Config::getLatencyHistogramSize());
+        assert(client_statistics_tracker_ptrs[global_client_idx] != NULL);
 
-        covered::ClientParam local_client_param(global_client_idx, workload_generator_ptrs[global_client_idx], client_statistics_tracker_ptrs[global_client_idx_]);
+        covered::ClientParam local_client_param(global_client_idx, workload_generator_ptrs[global_client_idx], client_statistics_tracker_ptrs[global_client_idx]);
         client_params[global_client_idx] = local_client_param;
     }
 
@@ -133,6 +136,7 @@ int main(int argc, char **argv) {
 
     // (5.2) Dump intermediate statistics
 
+    const double duration = covered::Param::getDuration();
     struct timespec start_timespec = covered::Util::getCurrentTimespec();
     while (true)
     {
@@ -200,7 +204,7 @@ int main(int argc, char **argv) {
 
     // (6.5) Reset local_cloud_running_ = false in a cloud parameter to stop the cloud node
 
-    cloudParam.resetCloudRunning();
+    cloud_param.resetCloudRunning();
     covered::Util::dumpNormalMsg(main_class_name, "Stop the cloud node...");
 
     // (6.6) Wait for the cloud node
@@ -225,10 +229,10 @@ int main(int argc, char **argv) {
             delete workload_generator_ptrs[global_client_idx];
             workload_generator_ptrs[global_client_idx]= NULL;
         }
-        if (client_statistics_tracker_ptrs[global_client_idx_] != NULL)
+        if (client_statistics_tracker_ptrs[global_client_idx] != NULL)
         {
-            delete client_statistics_tracker_ptrs[global_client_idx_];
-            client_statistics_tracker_ptrs[global_client_idx_] = NULL;
+            delete client_statistics_tracker_ptrs[global_client_idx];
+            client_statistics_tracker_ptrs[global_client_idx] = NULL;
         }
     }
 

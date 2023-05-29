@@ -35,7 +35,7 @@ namespace covered
         kLocalHit = 1, // Hit local edge cache of closest edge node
         kCooperativeHit, // Hit cooperative edge cache of neighbor edge node
         kGlobalMiss // Miss all edge nodes
-    }
+    };
 
     class MessageBase
     {

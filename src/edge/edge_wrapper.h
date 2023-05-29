@@ -9,6 +9,7 @@
 
 #include <string>
 
+#include "cache/cache_wrapper_base.h"
 #include "edge/edge_param.h"
 #include "message/message_base.h"
 #include "network/udp_socket_wrapper.h"
