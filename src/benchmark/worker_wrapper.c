@@ -7,6 +7,7 @@
 #include "benchmark/client_param.h"
 #include "common/dynamic_array.h"
 #include "common/util.h"
+#include "message/local_message.h"
 #include "network/network_addr.h"
 #include "network/propagation_simulator.h"
 #include "statistics/client_statistics_tracker.h"
@@ -51,7 +52,6 @@ namespace covered
         }
 
         // Prepare a socket client to closest edge recvreq port
-        uint32_t global_client_idx = local_client_param_ptr->getGlobalClientIdx();
         std::string closest_edge_ipstr = Util::getClosestEdgeIpstr(global_client_idx);
         uint16_t closest_edge_recvreq_port = Util::getClosestEdgeRecvreqPort(global_client_idx);
         NetworkAddr remote_addr(closest_edge_ipstr, closest_edge_recvreq_port); // Communicate with the closest edge node
@@ -104,7 +104,7 @@ namespace covered
 
             // Timeout-and-retry mechanism
             struct timespec sendreq_timestamp = Util::getCurrentTimespec();
-            DynamicArray local_response_msg_payload();
+            DynamicArray local_response_msg_payload;
             bool is_finish = false; // Mark if local client is finished
             while (true)
             {
@@ -174,8 +174,8 @@ namespace covered
         // Process local response message
         Hitflag hitflag = Hitflag::kGlobalMiss;
         MessageType local_response_message_type = local_response_ptr->getMessageType();
-        Key tmp_key();
-        Value tmp_value();
+        Key tmp_key;
+        Value tmp_value;
         switch (local_response_message_type)
         {
             case MessageType::kLocalGetResponse:
@@ -214,17 +214,17 @@ namespace covered
         {
             case Hitflag::kLocalHit:
             {
-                client_statistics_tracker_ptr_->updateLocalHitcnt(local_worker_param_ptr_->local_worker_idx_);
+                client_statistics_tracker_ptr_->updateLocalHitcnt(local_worker_param_ptr_->getLocalWorkerIdx());
                 break;
             }
             case Hitflag::kCooperativeHit:
             {
-                client_statistics_tracker_ptr_->updateCooperativeHitcnt(local_worker_param_ptr_->local_worker_idx_);
+                client_statistics_tracker_ptr_->updateCooperativeHitcnt(local_worker_param_ptr_->getLocalWorkerIdx());
                 break;
             }
-            case Hitflag:kGlobalMiss:
+            case Hitflag::kGlobalMiss:
             {
-                client_statistics_tracker_ptr_->updateReqcnt(local_worker_param_ptr_->local_worker_idx_);
+                client_statistics_tracker_ptr_->updateReqcnt(local_worker_param_ptr_->getLocalWorkerIdx());
                 break;
             }
             default:
@@ -237,7 +237,7 @@ namespace covered
         }
 
         // Update latency statistics for the local client
-        client_statistics_tracker_ptr_->updateLatency(local_worker_param_ptr_->local_worker_idx_, rtt_us);
+        client_statistics_tracker_ptr_->updateLatency(local_worker_param_ptr_->getLocalWorkerIdx(), rtt_us);
 
         // TODO: remove later
         std::ostringstream oss;

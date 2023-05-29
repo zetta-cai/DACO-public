@@ -20,7 +20,7 @@ namespace covered
     public:
         LocalPutResponse(const Key& key, const Hitflag& hitflag);
         LocalPutResponse(const DynamicArray& msg_payload);
-        ~LocalPutResponse();
+        virtual ~LocalPutResponse();
     private:
         static const std::string kClassName;
     };

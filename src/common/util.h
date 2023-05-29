@@ -19,6 +19,7 @@ namespace covered
     public:
         // Type conversion
         static const int64_t MAX_UINT16;
+        static const int64_t MAX_UINT32;
         // Network (UDP message payload -> UDP fragment payloads; UDP fragment payload + UDP fragment header -> UDP packet payload)
         static const std::string LOCALHOST_IPSTR;
         static const std::string ANY_IPSTR;
@@ -55,7 +56,7 @@ namespace covered
         // (2) Time measurement
 
         static struct timespec getCurrentTimespec();
-        std::string getCurrentTimestr();
+        static std::string getCurrentTimestr();
         static double getDeltaTime(const struct timespec& current_timespec, const struct timespec& previous_timespec); // In units of microseconds
 
         // (3) Type conversion

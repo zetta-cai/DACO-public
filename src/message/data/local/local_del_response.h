@@ -20,7 +20,7 @@ namespace covered
     public:
         LocalDelResponse(const Key& key, const Hitflag& hitflag);
         LocalDelResponse(const DynamicArray& msg_payload);
-        ~LocalDelResponse();
+        virtual ~LocalDelResponse();
     private:
         static const std::string kClassName;
     };

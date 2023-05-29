@@ -43,14 +43,14 @@ namespace covered
 
     void Util::dumpNormalMsg(const std::string& class_name, const std::string& normal_message)
     {
-        std::string cur_timestr = getCurrentTimespec();
+        std::string cur_timestr = getCurrentTimestr();
         std::cout << cur_timestr << " " << class_name << ": " << normal_message << std::endl;
         return;
     }
 
     void Util::dumpDebugMsg(const std::string& class_name, const std::string& debug_message)
     {
-        std::string cur_timestr = getCurrentTimespec();
+        std::string cur_timestr = getCurrentTimestr();
         // \033 means ESC character, 1 means bold, 32 means green foreground, 0 means reset, and m is end character
         std::cout << "\033[1;32m" << cur_timestr << " [DEBUG] " << class_name << ": " << debug_message << std::endl << "\033[0m";
         return;
@@ -58,7 +58,7 @@ namespace covered
 
     void Util::dumpWarnMsg(const std::string& class_name, const std::string& warn_message)
     {
-        std::string cur_timestr = getCurrentTimespec();
+        std::string cur_timestr = getCurrentTimestr();
         // \033 means ESC character, 1 means bold, 33 means yellow foreground, 0 means reset, and m is end character
         std::cout << "\033[1;33m" << cur_timestr << " [WARN] " << class_name << ": " << warn_message << std::endl << "\033[0m";
         return;
@@ -66,7 +66,7 @@ namespace covered
 
     void Util::dumpErrorMsg(const std::string& class_name, const std::string& error_message)
     {
-        std::string cur_timestr = getCurrentTimespec();
+        std::string cur_timestr = getCurrentTimestr();
         // \033 means ESC character, 1 means bold, 31 means red foreground, 0 means reset, and m is end character
         std::cerr << "\033[1;31m" << cur_timestr << " [ERROR] " << class_name << ": " << error_message << std::endl << "\033[0m";
         return;
@@ -148,9 +148,9 @@ namespace covered
         return true;
     }
 
-    std::fstream* Util::openFile(const std::string& filepath, ios_base::openmode mode)
+    std::fstream* Util::openFile(const std::string& filepath, std::ios_base::openmode mode)
     {
-        std::fstream* fs_ptr = new std::ofstream(filepath.c_str(), mode);
+        std::fstream* fs_ptr = new std::fstream(filepath.c_str(), mode);
         assert(fs_ptr != NULL);
         if (!(*fs_ptr))
         {
@@ -175,14 +175,14 @@ namespace covered
     {
         // Calculate reuiqred data
         struct timespec current_timespec = getCurrentTimespec();
-        struct tm* current_datetime = localtime(current_timespec.tv_sec);
-        int year = current_datetime.tm_year + START_YEAR;
-        int month = current_datetime.tm_month + 1;
-        int day = current_datetime.tm_day;
-        int hour = current_datetime.tm_hour;
-        int minute = current_datetime.tm_min;
-        double second = static_cast<double>(current_datetime.tm_sec);
-        double nanosecond = static_cast<double>(current_datetime.tv_nsec) / static_cast<double>(NANOSECONDS_PERSECOND);
+        struct tm* current_datetime = localtime(&(current_timespec.tv_sec));
+        int year = current_datetime->tm_year + START_YEAR;
+        int month = current_datetime->tm_mon + 1;
+        int day = current_datetime->tm_mday;
+        int hour = current_datetime->tm_hour;
+        int minute = current_datetime->tm_min;
+        double second = static_cast<double>(current_datetime->tm_sec);
+        double nanosecond = static_cast<double>(current_timespec.tv_nsec) / static_cast<double>(NANOSECONDS_PERSECOND);
         if (nanosecond >= (1.0d / pow(10, static_cast<double>(SECOND_PRECISION))))
         {
             second += nanosecond;
@@ -191,11 +191,11 @@ namespace covered
         // Dump time string in a fixed format (keep the first two digits after decimal point for second)
         std::ostringstream oss;
         std::streamsize default_precision = oss.precision();
-        oss << year << "." << month << "." day << " " << hour << ":" << minute << ":";
-        oss.setf(std::fixed);
+        oss << year << "." << month << "." << day << " " << hour << ":" << minute << ":";
+        oss.setf(std::ios_base::fixed);
         oss.precision(SECOND_PRECISION);
         oss << second;
-        oss.unsetf(std::fixed);
+        oss.unsetf(std::ios_base::fixed);
         oss.precision(default_precision);
         return oss.str();
     }
@@ -370,7 +370,7 @@ namespace covered
     std::string Util::getClientStatisticsFilepath(const uint32_t& global_client_idx)
     {
         std::ostringstream oss;
-        oss << Config.getOutputBasedir() << "/" << getInfixForFilepath_() << "/client" << global_client_idx << "_statistics.out";
+        oss << Config::getOutputBasedir() << "/" << getInfixForFilepath_() << "/client" << global_client_idx << "_statistics.out";
         std::string client_statistics_filepath = oss.str();
         return client_statistics_filepath;
     }
@@ -379,7 +379,7 @@ namespace covered
     {
         std::ostringstream oss;
         // Example: simulation_covered_capacitymb1000_clientcnt1_duration10_edgecnt1_keycnt1000000_opcnt1000000_perclientworkercnt1_propagation100010000100000_facebook
-        oss << Param::isSimulation()?"simulation":"prototype" << "_" << Param::getCacheName() << "_capacitymb" << Param::getCapacityBytes() / 1000 << "_clientcnt" << Param::getClientcnt() << "_duration" << Param::getDuration() << "_edgecnt" << Param::getEdgecnt() << "_keycnt" << Param::getKeycnt() << "_opcnt" << Param::getOpcnt() << "_perclientworkercnt" << Param::getPerclientWorkercnt() << "_propagation" << Param::getPropagationLatencyClientedge() << Param::getPropagationLatencyCrossedge() << Param::getPropagationLatencyEdgecloud() << "_" << Param::getWorkloadName();
+        oss << (Param::isSimulation()?"simulation":"prototype") << "_" << Param::getCacheName() << "_capacitymb" << Param::getCapacityBytes() / 1000 << "_clientcnt" << Param::getClientcnt() << "_duration" << Param::getDuration() << "_edgecnt" << Param::getEdgecnt() << "_keycnt" << Param::getKeycnt() << "_opcnt" << Param::getOpcnt() << "_perclientworkercnt" << Param::getPerclientWorkercnt() << "_propagation" << Param::getPropagationLatencyClientedge() << Param::getPropagationLatencyCrossedge() << Param::getPropagationLatencyEdgecloud() << "_" << Param::getWorkloadName();
         std::string infixstr = oss.str();
         return infixstr;
     }

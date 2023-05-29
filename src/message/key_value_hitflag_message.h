@@ -21,7 +21,7 @@ namespace covered
     public:
         KeyValueHitflagMessage(const Key& key, const Value& value, const Hitflag& hitflag, const MessageType& message_type);
         KeyValueHitflagMessage(const DynamicArray& msg_payload);
-        ~KeyValueHitflagMessage();
+        virtual ~KeyValueHitflagMessage();
 
         Key getKey() const;
         Value getValue() const;

@@ -20,7 +20,7 @@ namespace covered
     public:
         GlobalGetRequest(const Key& key);
         GlobalGetRequest(const DynamicArray& msg_payload);
-        ~GlobalGetRequest();
+        virtual ~GlobalGetRequest();
     private:
         static const std::string kClassName;
     };

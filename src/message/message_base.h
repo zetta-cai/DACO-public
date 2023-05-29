@@ -50,7 +50,7 @@ namespace covered
 
         MessageBase(const MessageType& message_type);
         MessageBase(const DynamicArray& msg_payload);
-        ~MessageBase();
+        virtual ~MessageBase();
 
         virtual uint32_t getMsgPayloadSize() = 0;
 

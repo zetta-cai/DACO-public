@@ -21,7 +21,7 @@ namespace covered
     public:
         GlobalPutRequest(const Key& key, const Value& value);
         GlobalPutRequest(const DynamicArray& msg_payload);
-        ~GlobalPutRequest();
+        virtual ~GlobalPutRequest();
     private:
         static const std::string kClassName;
     };

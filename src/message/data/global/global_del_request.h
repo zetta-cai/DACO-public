@@ -20,7 +20,7 @@ namespace covered
     public:
         GlobalDelRequest(const Key& key);
         GlobalDelRequest(const DynamicArray& msg_payload);
-        ~GlobalDelRequest();
+        virtual ~GlobalDelRequest();
     private:
         static const std::string kClassName;
     };

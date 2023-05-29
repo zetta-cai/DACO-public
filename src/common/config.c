@@ -69,7 +69,7 @@ namespace covered
             if (kv_ptr != NULL)
             {
                 int64_t tmp_size = kv_ptr->value().get_int64();
-                latency_histogram_size_ = util::toUint32(tmp_size);
+                latency_histogram_size_ = Util::toUint32(tmp_size);
             }
             kv_ptr = find_(OUTPUT_BASEDIR_KEYSTR);
             if (kv_ptr != NULL)

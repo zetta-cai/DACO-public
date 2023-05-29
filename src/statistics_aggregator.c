@@ -36,7 +36,7 @@ int main(int argc, char **argv) {
     std::string main_class_name = "statistics_aggregator";
 
     // (1) Parse and process CLI parameters (set configurations in Config and Param)
-    covered::CLI::parseAndProcessCliParameters(main_class_name);
+    covered::CLI::parseAndProcessCliParameters(main_class_name, argc, argv);
 
     int pthread_returncode;
 

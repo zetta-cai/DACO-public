@@ -20,7 +20,7 @@ namespace covered
     public:
         KeyMessage(const Key& key, const MessageType& message_type);
         KeyMessage(const DynamicArray& msg_payload);
-        ~KeyMessage();
+        virtual ~KeyMessage();
 
         Key getKey() const;
 

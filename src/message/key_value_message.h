@@ -21,7 +21,7 @@ namespace covered
     public:
         KeyValueMessage(const Key& key, const Value& value, const MessageType& message_type);
         KeyValueMessage(const DynamicArray& msg_payload);
-        ~KeyValueMessage();
+        virtual ~KeyValueMessage();
 
         Key getKey() const;
         Value getValue() const;

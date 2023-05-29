@@ -21,7 +21,7 @@ namespace covered
     public:
         GlobalGetResponse(const Key& key, const Value& value);
         GlobalGetResponse(const DynamicArray& msg_payload);
-        ~GlobalGetResponse();
+        virtual ~GlobalGetResponse();
     private:
         static const std::string kClassName;
     };

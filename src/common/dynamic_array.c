@@ -112,7 +112,7 @@ namespace covered
             exit(1);
         }
 
-        dstarray.deseriaize(dstarray_position, bytes_.data() + position, length);
+        dstarray.deserialize(dstarray_position, bytes_.data() + position, length);
         return;
     }
 

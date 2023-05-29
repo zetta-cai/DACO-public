@@ -11,8 +11,8 @@ namespace covered
 
     bool Param::is_valid_ = false;
     bool Param::is_simulation_ = true;
-    std::string Param::cache_name = "";
-    uint32_t Param::capacity_ = 0;
+    std::string Param::cache_name_ = "";
+    uint32_t Param::capacity_bytes_ = 0;
     uint32_t Param::clientcnt_ = 0;
     std::string Param::config_filepath_ = "";
     bool Param::is_debug_ = false;
@@ -27,13 +27,13 @@ namespace covered
     {
         if (is_valid_)
         {
-            Util::dumpErrorMsg("Param::setParameters cannot be invoked more than once!");
+            Util::dumpErrorMsg(kClassName, "Param::setParameters cannot be invoked more than once!");
             exit(1);
         }
 
         is_simulation_ = is_simulation;
         cache_name_ = cache_name;
-        capacity_bytes_ = capacity_bytes:
+        capacity_bytes_ = capacity_bytes;
         clientcnt_ = clientcnt;
         cloud_storage_ = cloud_storage;
         config_filepath_ = config_filepath;
@@ -124,7 +124,7 @@ namespace covered
         return perclient_workercnt_;
     }
 
-    int32_t Param::getPropagationLatencyClientedge()
+    uint32_t Param::getPropagationLatencyClientedge()
     {
         checkIsValid_();
         return propagation_latency_clientedge_;
@@ -155,7 +155,7 @@ namespace covered
         std::ostringstream oss;
         oss << "[Dynamic configurations from CLI parameters]" << std::endl;
         oss << "Cache name: " << cache_name_ << std::endl;
-        oss << "Capacity (bytes): " << capacity_ << std::endl;
+        oss << "Capacity (bytes): " << capacity_bytes_ << std::endl;
         oss << "Client count: " << clientcnt_ << std::endl;
         oss << "CLdou storage: " << cloud_storage_ << std::endl;
         oss << "Config filepath: " << config_filepath_ << std::endl;

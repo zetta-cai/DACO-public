@@ -20,7 +20,7 @@ namespace covered
     public:
         LocalDelRequest(const Key& key);
         LocalDelRequest(const DynamicArray& msg_payload);
-        ~LocalDelRequest();
+        virtual ~LocalDelRequest();
     private:
         static const std::string kClassName;
     };

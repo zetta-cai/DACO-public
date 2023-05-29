@@ -20,7 +20,7 @@ namespace covered
     public:
         KeyHitflagMessage(const Key& key, const Hitflag& hitflag, const MessageType& message_type);
         KeyHitflagMessage(const DynamicArray& msg_payload);
-        ~KeyHitflagMessage();
+        virtual ~KeyHitflagMessage();
 
         Key getKey() const;
         Hitflag getHitflag() const;

@@ -21,7 +21,7 @@ namespace covered
     public:
         LocalGetResponse(const Key& key, const Value& value, const Hitflag& hitflag);
         LocalGetResponse(const DynamicArray& msg_payload);
-        ~LocalGetResponse();
+        virtual ~LocalGetResponse();
     private:
         static const std::string kClassName;
     };

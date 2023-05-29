@@ -20,7 +20,7 @@ namespace covered
     public:
         GlobalPutResponse(const Key& key);
         GlobalPutResponse(const DynamicArray& msg_payload);
-        ~GlobalPutResponse();
+        virtual ~GlobalPutResponse();
     private:
         static const std::string kClassName;
     };
