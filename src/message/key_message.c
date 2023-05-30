@@ -4,8 +4,9 @@ namespace covered
 {
     const std::string KeyMessage::kClassName("KeyMessage");
 
-    KeyMessage::KeyMessage(const Key& key, const MessageType& message_type) : MessageBase(message_type), key_(key)
+    KeyMessage::KeyMessage(const Key& key, const MessageType& message_type) : MessageBase(message_type)
     {
+        key_ = key;
     }
 
     KeyMessage::KeyMessage(const DynamicArray& msg_payload) : MessageBase(msg_payload)

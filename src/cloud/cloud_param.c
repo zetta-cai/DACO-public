@@ -1,5 +1,7 @@
 #include "cloud/cloud_param.h"
 
+#include "common/util.h"
+
 namespace covered
 {
     const std::string CloudParam::kClassName("CloudParam");

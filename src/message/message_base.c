@@ -1,10 +1,13 @@
 #include "message/message_base.h"
 
 #include <arpa/inet.h> // htonl ntohl
+#include <assert.h>
 #include <sstream>
 
 #include "common/util.h"
 #include "message/local_message.h"
+#include "message/global_message.h"
+
 namespace covered
 {
     const std::string MessageBase::kClassName("MessageBase");
@@ -44,9 +47,9 @@ namespace covered
                 message_type_str = "kLocalDelResponse";
                 break;
             }
-            default
+            default:
             {
-                message_type_str = std::string(static_cast<uint32_t>(message_type));
+                message_type_str = std::to_string(static_cast<uint32_t>(message_type));
                 break;
             }
         }
@@ -75,7 +78,7 @@ namespace covered
             }
             default:
             {
-                hitflag_str = std::string(static_cast<uint8_t>(hitflag));
+                hitflag_str = std::to_string(static_cast<uint8_t>(hitflag));
                 break;
             }
         }
@@ -105,7 +108,7 @@ namespace covered
                 message_ptr = new LocalDelRequest(workload_item.getKey());
                 break;
             }
-            default
+            default:
             {
                 std::ostringstream oss;
                 oss << "invalid workload item type " << WorkloadItem::workloadItemTypeToString(item_type) << " for getLocalRequestFromWorkloadItem()!";
@@ -160,7 +163,7 @@ namespace covered
                 message_ptr = new GlobalDelRequest(msg_payload);
                 break;
             }
-            default
+            default:
             {
                 std::ostringstream oss;
                 oss << "invalid message type " << MessageBase::messageTypeToString(message_type) << " for getRequestFromMsgPayload()!";
@@ -215,7 +218,7 @@ namespace covered
                 message_ptr = new GlobalDelResponse(msg_payload);
                 break;
             }
-            default
+            default:
             {
                 std::ostringstream oss;
                 oss << "invalid message type " << MessageBase::messageTypeToString(message_type) << " for getResponseFromMsgPayload()!";
@@ -262,6 +265,7 @@ namespace covered
 
     uint32_t MessageBase::deserializeMessageTypeFromMsgPayload(const DynamicArray& msg_payload, MessageType& message_type)
     {
+        const uint32_t size = 0;
         uint32_t message_type_value = 0;
         msg_payload.serialize(size, (char *)&message_type_value, sizeof(uint32_t));
         message_type_value = ntohl(message_type_value);
@@ -269,8 +273,9 @@ namespace covered
         return sizeof(uint32_t);
     }
 
-    MessageBase::MessageBase(const MessageType& message_type) : message_type_(message_type)
+    MessageBase::MessageBase(const MessageType& message_type)
     {
+        message_type_ = message_type;
     }
 
     MessageBase::MessageBase(const DynamicArray& msg_payload)
@@ -313,7 +318,7 @@ namespace covered
 
     bool MessageBase::isLocalRequest() const
     {
-        if (message_type_ == MessageType::kLocalGetRequest || message_type_ == MessageType::::kLocalPutRequest || message_type_ == MessageType::kLocalDelRequest)
+        if (message_type_ == MessageType::kLocalGetRequest || message_type_ == MessageType::kLocalPutRequest || message_type_ == MessageType::kLocalDelRequest)
         {
             return true;
         }
@@ -331,7 +336,7 @@ namespace covered
 
     bool MessageBase::isGlobalRequest() const
     {
-        if (message_type_ == MessageType::kGlobalGetRequest || message_type_ == MessageType::::kGlobalPutRequest || message_type_ == MessageType::kGlobalDelRequest)
+        if (message_type_ == MessageType::kGlobalGetRequest || message_type_ == MessageType::kGlobalPutRequest || message_type_ == MessageType::kGlobalDelRequest)
         {
             return true;
         }
@@ -348,7 +353,7 @@ namespace covered
 
     bool MessageBase::isLocalResponse() const
     {
-        if (message_type_ == MessageType::kLocalGetResponse || message_type_ == MessageType::::kLocalPutResponse || message_type_ == MessageType::kLocalDelResponse)
+        if (message_type_ == MessageType::kLocalGetResponse || message_type_ == MessageType::kLocalPutResponse || message_type_ == MessageType::kLocalDelResponse)
         {
             return true;
         }
@@ -366,7 +371,7 @@ namespace covered
 
     bool MessageBase::isGlobalResponse() const
     {
-        if (message_type_ == MessageType::kGlobalGetResponse || message_type_ == MessageType::::kGlobalPutResponse || message_type_ == MessageType::kGlobalDelResponse)
+        if (message_type_ == MessageType::kGlobalGetResponse || message_type_ == MessageType::kGlobalPutResponse || message_type_ == MessageType::kGlobalDelResponse)
         {
             return true;
         }
@@ -388,5 +393,3 @@ namespace covered
         return false;
     }
 }
-
-#endif

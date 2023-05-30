@@ -1,8 +1,10 @@
 #include "cache/cache_wrapper_base.h"
 
+#include <assert.h>
 #include <sstream>
 
 #include "common/util.h"
+#include "cache/lru_cache_wrapper.h"
 
 namespace covered
 {
@@ -32,14 +34,14 @@ namespace covered
 
     CacheWrapperBase::CacheWrapperBase(const uint32_t& capacity_bytes) : capacity_bytes_(capacity_bytes)
     {
-        validity_map_.clear();
+        invalidity_map_.clear();
     }
     
     CacheWrapperBase::~CacheWrapperBase() {}
 
-    bool CacheWrapperBase::isInvalidated(const uint32_t& key) const
+    bool CacheWrapperBase::isInvalidated(const Key& key) const
     {
-        const std::map<Key, bool>::iterator iter = invalidity_map_.find(key);
+        std::map<Key, bool>::const_iterator iter = invalidity_map_.find(key);
         if (iter == invalidity_map_.end())
         {
             return false;
@@ -50,7 +52,7 @@ namespace covered
         }
     }
 
-    void CacheWrapperBase::invalidate(const uint32_t& key)
+    void CacheWrapperBase::invalidate(const Key& key)
     {
         if (invalidity_map_.find(key) != invalidity_map_.end()) // key to be invalidated should already be cached
         {
@@ -67,7 +69,7 @@ namespace covered
         return;
     }
 
-    void CacheWrapperBase::validate(const uint32_t& key)
+    void CacheWrapperBase::validate(const Key& key)
     {
         if (invalidity_map_.find(key) != invalidity_map_.end()) // key to be validated should already be cached
         {
@@ -84,9 +86,9 @@ namespace covered
         return;
     }
 
-    bool CacheWrapperBase::remove(const Key& key);
+    bool CacheWrapperBase::remove(const Key& key)
     {
-        Value deleted_value();
+        Value deleted_value;
         bool is_local_cached = update(key, deleted_value);
         return is_local_cached;
     }
@@ -101,7 +103,7 @@ namespace covered
         else
         {
             std::ostringstream oss;
-            oss << "key " << key.getKeystr() << " already exists in invalidity_map_ (invalidity: " << invalidity_map_[key]?"true":"false" << "; map size: " << invalidity_map_.size() << ") for admit()";
+            oss << "key " << key.getKeystr() << " already exists in invalidity_map_ (invalidity: " << (invalidity_map_[key]?"true":"false") << "; map size: " << invalidity_map_.size() << ") for admit()";
             Util::dumpWarnMsg(kClassName, oss.str());
 
             invalidity_map_[key] = false;
@@ -137,6 +139,6 @@ namespace covered
 	
     uint32_t CacheWrapperBase::getCapacityBytes() const
     {
-        return capacity_bytes;
+        return capacity_bytes_;
     }
 }

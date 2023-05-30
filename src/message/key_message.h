@@ -31,7 +31,7 @@ namespace covered
         virtual uint32_t serializeInternal_(DynamicArray& msg_payload, const uint32_t& position) override;
         virtual uint32_t deserializeInternal_(const DynamicArray& msg_payload, const uint32_t& position) override;
 
-        const Key key_;
+        Key key_;
     };
 }
 

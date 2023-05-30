@@ -1,5 +1,6 @@
 #include "statistics/total_statistics_tracker.h"
 
+#include <assert.h>
 #include <cstring> // memset
 
 #include "common/util.h"

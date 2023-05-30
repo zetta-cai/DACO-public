@@ -1,5 +1,7 @@
 #include "edge/edge_param.h"
 
+#include "common/util.h"
+
 namespace covered
 {
     const std::string EdgeParam::kClassName("EdgeParam");

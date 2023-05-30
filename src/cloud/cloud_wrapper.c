@@ -1,7 +1,9 @@
 #include "cloud/cloud_wrapper.h"
 
 #include <assert.h>
+#include <sstream>
 
+#include "common/config.h"
 #include "common/util.h"
 #include "message/global_message.h"
 #include "network/network_addr.h"
@@ -20,7 +22,7 @@ namespace covered
         return NULL;
     }
 
-    CloudWrapper::CloudWrapper(EdgeParam* local_cloud_param_ptr)
+    CloudWrapper::CloudWrapper(CloudParam* local_cloud_param_ptr)
     {
         if (local_cloud_param_ptr == NULL)
         {
@@ -58,12 +60,12 @@ namespace covered
 
     void CloudWrapper::start()
     {
-        assert(local_cloud_param_ptr != NULL);
+        assert(local_cloud_param_ptr_ != NULL);
         assert(local_cloud_recvreq_socket_server_ptr_ != NULL);
 
         bool is_finish = false; // Mark if local cloud node is finished
 
-        while (local_cloud_param_ptr->isCloudRunning()) // local_cloud_running_ is set as true by default
+        while (local_cloud_param_ptr_->isCloudRunning()) // local_cloud_running_ is set as true by default
         {
             // Receive the global request message
             DynamicArray global_request_msg_payload;
@@ -74,7 +76,7 @@ namespace covered
             } // End of (is_timeout == true)
             else
             {
-                MessageBase* request_ptr = MessageBase::getRequestFromMsgPayload(request_msg_payload);
+                MessageBase* request_ptr = MessageBase::getRequestFromMsgPayload(global_request_msg_payload);
                 assert(request_ptr != NULL);
 
                 if (request_ptr->isGlobalRequest()) // Global requests
@@ -105,7 +107,7 @@ namespace covered
     bool CloudWrapper::processGlobalRequest_(MessageBase* global_request_ptr)
     {
         assert(global_request_ptr != NULL && global_request_ptr->isGlobalRequest());
-        assert(local_cloud_param_ptr != NULL);
+        assert(local_cloud_param_ptr_ != NULL);
         assert(local_cloud_rocksdb_ptr_ != NULL);
         assert(local_cloud_recvreq_socket_server_ptr_ != NULL);
 
@@ -113,11 +115,11 @@ namespace covered
 
         // Process global requests by RocksDB KVS
         MessageType global_request_message_type = global_request_ptr->getMessageType();
+        Key tmp_key;
+        Value tmp_value;
+        MessageBase* global_response_ptr = NULL;
         switch (global_request_message_type)
         {
-            Key tmp_key();
-            Value tmp_value();
-            MessageType* global_response_ptr = NULL;
             case MessageType::kGlobalGetRequest:
             {
                 const GlobalGetRequest* const global_get_request_ptr = static_cast<const GlobalGetRequest*>(global_request_ptr);

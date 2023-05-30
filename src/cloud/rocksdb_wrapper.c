@@ -17,7 +17,7 @@ namespace covered
     const uint32_t RocksdbWrapper::kBloomfilterBitsPerKey = 10; // Default of 10
     const uint32_t RocksdbWrapper::kBlockCacheCapacity = 1 * 1024 * 1024 * 1024; // Default of 1 GiB
     const uint32_t RocksdbWrapper::kBlockCacheShardBits = 4; // Default of 4 (i.e., 16 shards)
-    const bool RocksdbWrapper::kAllowOsBuffer = true; // Default of true
+    //const bool RocksdbWrapper::kAllowOsBuffer = true; // Default of true
     const int RocksdbWrapper::kMaxOpenFiles = -1; // Keep all files open
     const uint32_t RocksdbWrapper::kTableCacheNumshardbits = 6; // Default of 6 (i.e., 64 shards)
     const uint32_t RocksdbWrapper::kBlockSize = 4 * 1024; // Default of 4 KiB
@@ -42,12 +42,12 @@ namespace covered
     const uint32_t RocksdbWrapper::kWalBytesPerSync = 2 * 1024 * 1024; // Use 2 MiB to avoid OS bottleneck
 
     // (6) Specific options
-    const uint32_t RocksdbWrapper::kDiskCntForHdd = 1; // Set a value larger than 1 if cloud has multiple disks
-    const uint32_t kCompactionReadaheadSizeForHdd = 2 * 1024 * 1024; // At least 2 MiB for HDD
+    const uint32_t RocksdbWrapper::kMaxFileOpeningThreadsForHdd = 16; // Set a value larger than 1 if cloud has multiple disks (default of 16)
+    //const uint32_t kCompactionReadaheadSizeForHdd = 2 * 1024 * 1024; // At least 2 MiB for HDD
 
     const std::string RocksdbWrapper::kClassName("RocksdbWrapper");
 
-    RocksdbWrapper::RocksdbWrapper(const std::string& dbpath) : db_ptr(NULL)
+    RocksdbWrapper::RocksdbWrapper(const std::string& dbpath) : db_ptr_(NULL)
     {
         bool is_exist = Util::isDirectoryExist(dbpath);
         if (!is_exist)
@@ -57,13 +57,13 @@ namespace covered
             oss << "RocksDB path " << dbpath << " does not exist!";
             //Util::dumpErrorMsg(kClassName, oss.str());
             //exit(1);
-            Util::dumpWarnMsg(kClassNamem, oss.str());
+            Util::dumpWarnMsg(kClassName, oss.str());
 
             // Create directory for RocksDB KVS
             oss.clear(); // Clear error states
             oss.str(""); // Set content as empty string and reset read/write position as zero
             oss << "create directory " << dbpath << " for RocksDB!";
-            Util::dumpDebugMsg(kClassNamem, oss.str());
+            Util::dumpDebugMsg(kClassName, oss.str());
             Util::createDirectory(dbpath);
         }
 
@@ -129,9 +129,9 @@ namespace covered
 
         // (1) Parallelism options
         rocksdb_options.max_background_flushes = kFlushThreadCnt;
-        rocksdb_options.env->SetBackgroundThreads(kFlushThreadCnt, Env::Priority::HIGH);
+        rocksdb_options.env->SetBackgroundThreads(kFlushThreadCnt, rocksdb::Env::Priority::HIGH);
         rocksdb_options.max_background_compactions = kCompactionThreadCnt;
-        rocksdb_options.env->SetBackgroundThreads(kCompactionThreadCnt, Env::Priority::LOW);
+        rocksdb_options.env->SetBackgroundThreads(kCompactionThreadCnt, rocksdb::Env::Priority::LOW);
 
         // (2) General options
         rocksdb::BlockBasedTableOptions table_options;
@@ -147,7 +147,7 @@ namespace covered
             table_options.block_size = kBlockSize;
         }
         rocksdb_options.table_factory.reset(rocksdb::NewBlockBasedTableFactory(table_options));
-        rocksdb_options.allow_os_buffer = kAllowOsBuffer;
+        //rocksdb_options.allow_os_buffer = kAllowOsBuffer; // Not supported by RocksDB 8.1.1
         rocksdb_options.max_open_files = kMaxOpenFiles;
         rocksdb_options.table_cache_numshardbits = kTableCacheNumshardbits;
 
@@ -190,9 +190,10 @@ namespace covered
             rocksdb_options.optimize_filters_for_hits = true;
             rocksdb_options.skip_stats_update_on_db_open = true;
             rocksdb_options.level_compaction_dynamic_level_bytes = true;
-            rocksdb_options.rocksdb_options = kDiskCntForHdd;
-            rocksdb_options.compaction_readahead_size = kCompactionReadaheadSizeForHdd;
-            rocksdb_options.new_table_reader_for_compaction_inputs = true;
+            rocksdb_options.max_file_opening_threads = kMaxFileOpeningThreadsForHdd;
+            // Not supported by RocksDB 8.1.1
+            //rocksdb_options.compaction_readahead_size = kCompactionReadaheadSizeForHdd;
+            //rocksdb_options.new_table_reader_for_compaction_inputs = true;
         }
 
         rocksdb::Status rocksdb_status = rocksdb::DB::Open(rocksdb_options, dbpath, &db_ptr_);

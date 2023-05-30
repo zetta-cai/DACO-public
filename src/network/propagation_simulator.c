@@ -6,51 +6,51 @@
 
 namespace covered
 {
-    std::string ProgatationSimulator::kClassName("ProgatationSimulator");
+    std::string PropagationSimulator::kClassName("PropagationSimulator");
 
-    void ProgatationSimulator::propagateFromClientToEdge()
+    void PropagationSimulator::propagateFromClientToEdge()
     {
         uint32_t latency_us = Param::getPropagationLatencyClientedge();
         propagate_(latency_us);
         return;
     }
     
-    void ProgatationSimulator::propagateFromEdgeToClient()
+    void PropagationSimulator::propagateFromEdgeToClient()
     {
         uint32_t latency_us = Param::getPropagationLatencyClientedge();
         propagate_(latency_us);
         return;
     }
     
-    void ProgatationSimulator::propagateFromEdgeToNeighbor()
+    void PropagationSimulator::propagateFromEdgeToNeighbor()
     {
         uint32_t latency_us = Param::getPropagationLatencyCrossedge();
         propagate_(latency_us);
         return;
     }
     
-    void ProgatationSimulator::propagateFromNeighborToEdge()
+    void PropagationSimulator::propagateFromNeighborToEdge()
     {
         uint32_t latency_us = Param::getPropagationLatencyCrossedge();
         propagate_(latency_us);
         return;
     }
     
-    void ProgatationSimulator::propagateFromEdgeToCloud()
+    void PropagationSimulator::propagateFromEdgeToCloud()
     {
         uint32_t latency_us = Param::getPropagationLatencyEdgecloud();
         propagate_(latency_us);
         return;
     }
     
-    void ProgatationSimulator::propagateFromCloudToEdge()
+    void PropagationSimulator::propagateFromCloudToEdge()
     {
         uint32_t latency_us = Param::getPropagationLatencyEdgecloud();
         propagate_(latency_us);
         return;
     }
         
-    void ProgatationSimulator::propagate_(const uint32_t& latency_us)
+    void PropagationSimulator::propagate_(const uint32_t& latency_us)
     {
         usleep(latency_us);
         return;

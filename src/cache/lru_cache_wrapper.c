@@ -6,8 +6,9 @@ namespace covered
 {
     const std::string LruCacheWrapper::kClassName("LruCacheWrapper");
 
-    LruCacheWrapper::LruCacheWrapper(const uint32_t& capacity) : CacheWrapperBase(capacity), lru_cache_ptr_(new LruCache())
+    LruCacheWrapper::LruCacheWrapper(const uint32_t& capacity) : CacheWrapperBase(capacity)
     {
+        lru_cache_ptr_ = new LruCache();
         assert(lru_cache_ptr_ != NULL);
     }
     

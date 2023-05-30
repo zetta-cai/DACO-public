@@ -1,8 +1,11 @@
 #include "statistics/client_statistics_tracker.h"
 
+#include <assert.h>
 #include <fstream>
 #include <random> // std::mt19937_64
+#include <sstream>
 
+#include "common/dynamic_array.h"
 #include "common/util.h"
 
 namespace covered
@@ -79,22 +82,22 @@ namespace covered
         perworker_reqcnts_ = NULL;
     }
 
-    void ClientStatisticsTracker::updateLocalHitcnt(const uint32_t& local_worker_index))
+    void ClientStatisticsTracker::updateLocalHitcnt(const uint32_t& local_worker_index)
     {
         assert(perworker_local_hitcnts_ != NULL);
         assert(local_worker_index < perclient_workercnt_);
 
-        perworker_local_hitcnts_[local_worker_idx_]++;
+        perworker_local_hitcnts_[local_worker_index]++;
         updateReqcnt(local_worker_index);
         return;
     }
 
-    void ClientStatisticsTracker::updateCooperativeHitcnt(const uint32_t& local_worker_index))
+    void ClientStatisticsTracker::updateCooperativeHitcnt(const uint32_t& local_worker_index)
     {
         assert(perworker_cooperative_hitcnts_ != NULL);
         assert(local_worker_index < perclient_workercnt_);
 
-        perworker_cooperative_hitcnts_[local_worker_idx_]++;
+        perworker_cooperative_hitcnts_[local_worker_index]++;
         updateReqcnt(local_worker_index);
         return;
     }
@@ -108,7 +111,7 @@ namespace covered
         return;
     }
 
-    void ClientStatisticsTracker::updateLatency(const uint32_t& local_worker_index), const uint32_t& latency_us)
+    void ClientStatisticsTracker::updateLatency(const uint32_t& local_worker_index, const uint32_t& latency_us)
     {
         assert(latency_histogram_ != NULL);
         assert(local_worker_index < perclient_workercnt_);
@@ -137,13 +140,13 @@ namespace covered
             oss << "statistics file " << tmp_filepath << " already exists!";
             //Util::dumpErrorMsg(kClassName, oss.str());
             //exit(1);
-            Util::dumpWarnMsg(kClassNamem, oss.str());
+            Util::dumpWarnMsg(kClassName, oss.str());
 
             // Generate a random number as a random seed
             uint32_t random_seed = Util::getTimeBasedRandomSeed();
             std::mt19937_64 randgen(random_seed);
             std::uniform_int_distribution<uint32_t> uniform_dist; // Range from 0 to max uint32_t
-            uint32_t random_number = uniform_dist(random_seed);
+            uint32_t random_number = uniform_dist(randgen);
 
             // Replace with a random filepath
             oss.clear(); // Clear error states

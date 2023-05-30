@@ -4,8 +4,10 @@ namespace covered
 {
     const std::string KeyHitflagMessage::kClassName("KeyHitflagMessage");
 
-    KeyHitflagMessage::KeyHitflagMessage(const Key& key, const bHitflagool& hitflag, const MessageType& message_type) : MessageBase(message_type), key_(key), hitflag_(hitflag)
+    KeyHitflagMessage::KeyHitflagMessage(const Key& key, const Hitflag& hitflag, const MessageType& message_type) : MessageBase(message_type)
     {
+        key_ = key;
+        hitflag_ = hitflag;
     }
 
     KeyHitflagMessage::KeyHitflagMessage(const DynamicArray& msg_payload) : MessageBase(msg_payload)
@@ -47,6 +49,7 @@ namespace covered
         uint32_t size = position;
         uint32_t key_deserialize_size = key_.deserialize(msg_payload, size);
         size += key_deserialize_size;
+        uint8_t hitflag_value = 0;
         msg_payload.serialize(size, (char *)&hitflag_value, sizeof(uint8_t));
         hitflag_ = static_cast<Hitflag>(hitflag_value);
         size += sizeof(uint8_t);

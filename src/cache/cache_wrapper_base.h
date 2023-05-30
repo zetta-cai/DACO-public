@@ -6,6 +6,10 @@
  * By Siyuan Sheng (2023.05.16).
  */
 
+#ifndef CACHE_WRAPPER_BASE_H
+#define CACHE_WRAPPER_BASE_H
+
+#include <map>
 #include <string>
 #include <set>
 
@@ -28,9 +32,9 @@ namespace covered
         // EdgeWrapper checks whether key is invalidated before accessing local edge cache (TODO)
         // True: cached yet invalidated (NO need to access cache)
         // False: uncached (still need to access cache to update metadata) or validated
-        bool isInvalidated(const uint32_t& key) const; // For data messages (e.g., local/redirected/global requests)
-        void invalidate(const uint32_t& key); // For control messages (e.g., invalidation and admission/eviction)
-        void validate(const uint32_t& key); // For control messages (e.g., invalidation and admission/eviction)
+        bool isInvalidated(const Key& key) const; // For data messages (e.g., local/redirected/global requests)
+        void invalidate(const Key& key); // For control messages (e.g., invalidation and admission/eviction)
+        void validate(const Key& key); // For control messages (e.g., invalidation and admission/eviction)
 
         // Return whether key is cached (i.e., cache hit) after get/update/remove
         // NOTE: get() cannot be const due to metadata changes for cached/uncached objects
@@ -67,3 +71,5 @@ namespace covered
         std::map<Key, bool> invalidity_map_;
     };
 }
+
+#endif

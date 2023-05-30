@@ -81,7 +81,7 @@ namespace covered
         virtual uint32_t serializeInternal_(DynamicArray& msg_payload, const uint32_t& size) = 0;
         virtual uint32_t deserializeInternal_(const DynamicArray& msg_payload, const uint32_t& size) = 0;
 
-        const MessageType message_type_;
+        MessageType message_type_;
     };
 }
 

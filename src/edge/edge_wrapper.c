@@ -1,7 +1,10 @@
 #include "edge/edge_wrapper.h"
 
 #include <assert.h>
+#include <sstream>
 
+#include "common/config.h"
+#include "common/param.h"
 #include "common/util.h"
 #include "message/global_message.h"
 #include "message/local_message.h"
@@ -175,7 +178,7 @@ namespace covered
 
         const LocalGetRequest* const local_get_request_ptr = static_cast<const LocalGetRequest*>(local_request_ptr);
         Key tmp_key = local_get_request_ptr->getKey();
-        Value tmp_value();
+        Value tmp_value;
         bool is_local_cached = local_edge_cache_ptr_->get(tmp_key, tmp_value);
         if (is_local_cached)
         {
@@ -234,8 +237,8 @@ namespace covered
         const Hitflag hitflag = Hitflag::kGlobalMiss; // Must be global miss due to write-through policy
 
         // Get key and value from local request message
-        Key tmp_key();
-        Value tmp_value();
+        Key tmp_key;
+        Value tmp_value;
         if (local_request_ptr->getMessageType() == MessageType::kLocalPutRequest)
         {
             const LocalPutRequest* const local_put_request_ptr = static_cast<const LocalPutRequest*>(local_request_ptr);
@@ -286,7 +289,6 @@ namespace covered
         // NOTE: message type has been checked, which must be one of the following two types
         if (local_request_ptr->getMessageType() == MessageType::kLocalPutRequest)
         {
-            const LocalPutRequest* const local_put_request_ptr = static_cast<const LocalPutRequest*>(local_request_ptr);
             is_local_cached = local_edge_cache_ptr_->update(tmp_key, tmp_value);
 
             // Prepare LocalPutResponse for client
@@ -294,7 +296,6 @@ namespace covered
         }
         else if (local_request_ptr->getMessageType() == MessageType::kLocalDelRequest)
         {
-            const LocalDelRequest* const local_del_request_ptr = static_cast<const LocalDelRequest*>(local_request_ptr);
             is_local_cached = local_edge_cache_ptr_->remove(tmp_key);
 
             // Prepare LocalDelResponse for client
@@ -406,7 +407,7 @@ namespace covered
             local_edge_sendreq_tocloud_socket_client_ptr_->send(global_request_msg_payload);
 
             // Receive the global response message from cloud
-            DynamicArray global_response_msg_payload();
+            DynamicArray global_response_msg_payload;
             bool is_timeout = local_edge_sendreq_tocloud_socket_client_ptr_->recv(global_response_msg_payload);
             if (is_timeout)
             {
@@ -475,7 +476,7 @@ namespace covered
             local_edge_sendreq_tocloud_socket_client_ptr_->send(global_request_msg_payload);
 
             // Receive the global response message from cloud
-            DynamicArray global_response_msg_payload();
+            DynamicArray global_response_msg_payload;
             bool is_timeout = local_edge_sendreq_tocloud_socket_client_ptr_->recv(global_response_msg_payload);
             if (is_timeout)
             {
@@ -493,7 +494,7 @@ namespace covered
             {
                 // Receive the global response message successfully
                 MessageBase* global_response_ptr = MessageBase::getResponseFromMsgPayload(global_response_msg_payload);
-                assert(global_response_ptr != NULL)
+                assert(global_response_ptr != NULL);
                 assert(global_response_ptr->getMessageType() == MessageType::kGlobalPutResponse || global_response_ptr->getMessageType() == MessageType::kGlobalDelResponse);
 
                 // Release global response message
@@ -514,24 +515,23 @@ namespace covered
     void EdgeWrapper::triggerIndependentAdmission_(const Key& key, const Value& value)
     {
         // NOTE: COVERED must NOT trigger any independent admission
-        assert(Param::getCacheName != CacheWrapperBase::COVERED_CACHE_NAME);
+        assert(Param::getCacheName() != CacheWrapperBase::COVERED_CACHE_NAME);
 
         // Independently admit the new key-value pair into local edge cache
-        local_edge_cache_ptr->admit(key, value);
+        local_edge_cache_ptr_->admit(key, value);
 
         // Evict until cache size <= cache capacity
-        uint32_t cache_size = 0;
-        uint32_t cache_capacity = local_edge_cache_ptr->getCapacityBytes();
+        uint32_t cache_capacity = local_edge_cache_ptr_->getCapacityBytes();
         while (true)
         {
-            current_cache_size = local_edge_cache_ptr->getSize();
+            uint32_t current_cache_size = local_edge_cache_ptr_->getSize();
             if (current_cache_size <= cache_capacity) // Not exceed capacity limitation
             {
                 break;
             }
             else // Exceed capacity limitation
             {
-                local_edge_cache_ptr->evict();
+                local_edge_cache_ptr_->evict();
                 continue;
             }
         }

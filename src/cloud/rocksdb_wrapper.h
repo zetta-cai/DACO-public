@@ -6,7 +6,13 @@
 
 #include <string>
 
-#include "rocksdb/db.h"
+#include <rocksdb/db.h>
+#include <rocksdb/cache.h>
+#include <rocksdb/table.h>
+#include <rocksdb/filter_policy.h>
+
+#include "common/key.h"
+#include "common/value.h"
 
 namespace covered
 {
@@ -28,7 +34,7 @@ namespace covered
         static const uint32_t kBloomfilterBitsPerKey;
         static const uint32_t kBlockCacheCapacity;
         static const uint32_t kBlockCacheShardBits;
-        static const bool kAllowOsBuffer;
+        //static const bool kAllowOsBuffer;
         static const int kMaxOpenFiles;
         static const uint32_t kTableCacheNumshardbits;
         static const uint32_t kBlockSize;
@@ -36,6 +42,7 @@ namespace covered
 
         // (3) Flushing options
         static const uint32_t kWriteBufferSize;
+        static const uint32_t kWriteBufferSizeForHdd;
         static const uint32_t kMaxWriteBufferNumber;
         static const uint32_t kMaxWriteBufferNumberToMerge;
 
@@ -44,6 +51,7 @@ namespace covered
         static const uint32_t kNumLevels;
         static const uint32_t kLevel1SstNum;
         static const uint32_t kLevel1SstSize;
+        static const uint32_t kLevel1SstSizeForHdd;
         static const uint32_t kSstSizeMultiplier;
         static const uint32_t kLevelSizeMultiplier;
 
@@ -51,8 +59,8 @@ namespace covered
         static const uint32_t kWalBytesPerSync;
 
         // (6) Specific options
-        static const uint32_t kDiskCntForHdd;
-        static const uint32_t kCompactionReadaheadSizeForHdd;
+        static const uint32_t kMaxFileOpeningThreadsForHdd;
+        //static const uint32_t kCompactionReadaheadSizeForHdd;
 
         RocksdbWrapper(const std::string& dbpath);
         ~RocksdbWrapper();

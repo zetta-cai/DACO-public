@@ -4,8 +4,11 @@ namespace covered
 {
     const std::string KeyValueHitflagMessage::kClassName("KeyValueHitflagMessage");
 
-    KeyValueHitflagMessage::KeyValueHitflagMessage(const Key& key, const Value& value, const Hitflag& hitflag, const MessageType& message_type) : MessageBase(message_type), key_(key), value_(value), hitflag_(hitflag)
+    KeyValueHitflagMessage::KeyValueHitflagMessage(const Key& key, const Value& value, const Hitflag& hitflag, const MessageType& message_type) : MessageBase(message_type)
     {
+        key_ = key;
+        value_ = value;
+        hitflag_ = hitflag;
     }
 
     KeyValueHitflagMessage::KeyValueHitflagMessage(const DynamicArray& msg_payload) : MessageBase(msg_payload)

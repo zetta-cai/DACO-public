@@ -31,6 +31,6 @@ namespace covered
         // In units of bytes
         virtual uint32_t getSizeInternal_() const override;
 
-        LruCache* const lru_cache_ptr_;
+        LruCache* lru_cache_ptr_;
     };
 }

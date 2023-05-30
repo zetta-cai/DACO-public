@@ -26,14 +26,14 @@ namespace covered
             }
             default:
             {
-                item_type_str = std::string(static_cast<uint32_t>(item_type));
+                item_type_str = std::to_string(static_cast<uint32_t>(item_type));
                 break;
             }
         }
         return item_type_str;
     }
 
-    WorkloadItem::WorkloadItem(const Key& key, const Value& value, const WorkloadItemType item_type)
+    WorkloadItem::WorkloadItem(const Key& key, const Value& value, const WorkloadItemType& item_type)
     {
         key_ = key;
         value_ = value;

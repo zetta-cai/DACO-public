@@ -135,7 +135,7 @@ namespace covered
 		while (true)
 		{
 			// Prepare to receive a UDP packet
-			NetworkAddr tmp_addr();
+			NetworkAddr tmp_addr;
 			DynamicArray tmp_pkt_payload(Util::UDP_MAX_PKT_PAYLOAD);
 
 			is_timeout = pkt_socket_ptr_->udpRecvfrom(tmp_pkt_payload, tmp_addr);
@@ -190,7 +190,7 @@ namespace covered
 
 					// Update remote address for send in the near future
 					remote_addr_ = tmp_addr;
-					assert(remote_addr.isValid() == true);
+					assert(remote_addr_.isValid() == true);
 				} // End of (is_last_frag == true)
 			}
 		}
