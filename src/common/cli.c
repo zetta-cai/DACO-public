@@ -14,7 +14,8 @@ namespace covered
 
     std::string CLI::kClassName("CLI");
 
-    boost::program_options::options_description argument_desc_("Allowed arguments:");
+    boost::program_options::options_description CLI::argument_desc_("Allowed arguments:");
+    boost::program_options::variables_map CLI::argument_info_; // Default constructor
 
     void CLI::parseAndProcessCliParameters(const std::string& main_class_name, int argc, char **argv)
     {

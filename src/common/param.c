@@ -14,6 +14,7 @@ namespace covered
     std::string Param::cache_name_ = "";
     uint32_t Param::capacity_bytes_ = 0;
     uint32_t Param::clientcnt_ = 0;
+    std::string Param::cloud_storage_ = "";
     std::string Param::config_filepath_ = "";
     bool Param::is_debug_ = false;
     double Param::duration_ = 0.0;
@@ -21,6 +22,9 @@ namespace covered
     uint32_t Param::keycnt_ = 0;
     uint32_t Param::opcnt_ = 0;
     uint32_t Param::perclient_workercnt_ = 0;
+    uint32_t Param::propagation_latency_clientedge_ = 0;
+    uint32_t Param::propagation_latency_crossedge_ = 0;
+    uint32_t Param::propagation_latency_edgecloud_ = 0;
     std::string Param::workload_name_ = "";
 
     void Param::setParameters(const bool& is_simulation, const std::string& cache_name, const uint32_t& capacity_bytes, const uint32_t& clientcnt, const std::string& cloud_storage, const std::string& config_filepath, const bool& is_debug, const double& duration, const uint32_t& edgecnt, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge, const uint32_t& propagation_latency_crossedge, const uint32_t& propagation_latency_edgecloud, const std::string& workload_name)

@@ -15,7 +15,7 @@ namespace covered
     const std::string Config::GLOBAL_CLOUD_ROCKSDB_PATH_KEYSTR("global_cloud_rocksdb_path");
     const std::string Config::GLOBAL_EDGE_RECVREQ_STARTPORT_KEYSTR("global_edge_recvreq_startport");
     const std::string Config::LATENCY_HISTOGRAM_SIZE_KEYSTR("latency_histogram_size");
-    const std::string OUTPUT_BASEDIR_KEYSTR("output_basedir");
+    const std::string Config::OUTPUT_BASEDIR_KEYSTR("output_basedir");
     const std::string Config::VERSION_KEYSTR("version");
 
     const std::string Config::kClassName("Config");
@@ -25,7 +25,7 @@ namespace covered
     boost::json::object Config::json_object_ = boost::json::object();
     std::string Config::facebook_config_filepath_("lib/CacheLib/cachelib/cachebench/test_configs/hit_ratio/cdn/config.json");
     uint16_t Config::global_cloud_recvreq_port_ = 4100; // [4096, 65536]
-    std::string global_cloud_rocksdb_path_("/tmp/cloud");
+    std::string Config::global_cloud_rocksdb_path_("/tmp/cloud");
     uint16_t Config::global_edge_recvreq_startport_ = 4200; // [4096, 65536]
     uint32_t Config::latency_histogram_size_ = 1000000; // Track latency up to 1000 ms
     std::string Config::output_basedir_("output");

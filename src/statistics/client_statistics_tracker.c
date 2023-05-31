@@ -10,7 +10,7 @@
 
 namespace covered
 {
-    const std::string kClassName("ClientStatisticsTracker");
+    const std::string ClientStatisticsTracker::kClassName("ClientStatisticsTracker");
     
     ClientStatisticsTracker::ClientStatisticsTracker(uint32_t perclient_workercnt, uint32_t latency_histogram_size)
     {

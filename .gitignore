@@ -7,6 +7,7 @@ lib/CacheLib
 lib/cpp-lru-cache
 lib/rocksdb-8.1.1
 simulator
+statistics_aggregator
 
 # Prerequisites
 *.d

@@ -26,7 +26,7 @@ void* launchLoader(void* local_loader_param_ptr)
 
     std::string client_statistics_filepath = covered::Util::getClientStatisticsFilepath(local_loader_param.global_client_idx);
     local_loader_param.client_statistics_tracker_ptr = new covered::ClientStatisticsTracker(client_statistics_filepath); // Release outside launchLoader()
-    assert(client_statistics_tracker_ptr != NULL);
+    assert(local_loader_param.client_statistics_tracker_ptr != NULL);
     
     pthread_exit(NULL);
     return NULL;
@@ -80,7 +80,7 @@ int main(int argc, char **argv) {
     // (4) Aggregate and dump per-client statistics
 
     // (4.1) Prepare parameters for TotalStatisticsTracker
-    covered::ClientStatisticsTracker** client_statistics_tracker_ptrs[clientcnt];
+    covered::ClientStatisticsTracker* client_statistics_tracker_ptrs[clientcnt];
     for (uint32_t global_client_idx = 0; global_client_idx < clientcnt; global_client_idx++)
     {
         client_statistics_tracker_ptrs[global_client_idx] = loader_params[global_client_idx].client_statistics_tracker_ptr;
