@@ -20,7 +20,7 @@ namespace covered {
 	private:
 		typedef std::pair<Key, Value> key_value_pair_t;
 		typedef std::list<key_value_pair_t>::iterator list_iterator_t;
-		typedef std::unordered_map<Key, list_iterator_t>::iterator map_iterator_t;
+		typedef std::unordered_map<Key, list_iterator_t, KeyHasher>::iterator map_iterator_t;
 	public:
 		LruCache();
 		~LruCache();
@@ -44,7 +44,7 @@ namespace covered {
 		// Store value for each key; Use list index to indicate the most recent access time
 		std::list<key_value_pair_t> cache_items_list_;
 		// Use list_iterator_t to locate the corresponding list entry in _cache_items_list
-		std::unordered_map<Key, list_iterator_t> cache_items_map_;
+		std::unordered_map<Key, list_iterator_t, KeyHasher> cache_items_map_;
 	};
 } // namespace covered
 

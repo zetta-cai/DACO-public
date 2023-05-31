@@ -1,7 +1,7 @@
 #include "cache/cpp-lru-cache/lrucache.h"
 
 #include <assert.h>
-#include <ostringstream>
+#include <sstream>
 
 #include "common/util.h"
 
@@ -64,7 +64,8 @@ namespace covered
 		map_iterator_t map_iter = cache_items_map_.find(key);
 		if (map_iter != cache_items_map_.end()) // Previous list and map entry exist
 		{
-			uint32_t list_index = static_cast<uint32_t>(map_iter->second - cache_items_list_.begin());
+			uint32_t list_index = static_cast<uint32_t>(std::distance(cache_items_list_.begin(), map_iter->second));
+			//uint32_t list_index = static_cast<uint32_t>(map_iter->second - cache_items_list_.begin());
 			std::ostringstream oss;
 			oss << "key " << key.getKeystr() << " already exists in cache_items_map_ (list index: " << list_index << "; list size: " << cache_items_list_.size() << ") for admit()";
 			Util::dumpWarnMsg(kClassName, oss.str());

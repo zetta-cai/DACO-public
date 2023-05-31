@@ -2,6 +2,7 @@
 
 #include <assert.h>
 #include <cstring> // memset
+#include <sstream>
 
 #include "common/util.h"
 
@@ -133,11 +134,11 @@ namespace covered
         memset(latency_histogram_, 0, latency_histogram_size_ * sizeof(uint32_t));
 
         // Aggregate per-client statistics
-        for (uint32_t global_client_idx = 0; global_client_idx < clientcnt_; i++)
+        for (uint32_t global_client_idx = 0; global_client_idx < clientcnt_; global_client_idx++)
         {
             const ClientStatisticsTracker& tmp_client_statistics_tracker = *(client_statistics_tracker_ptrs[global_client_idx]);
             assert(perclient_workercnt == tmp_client_statistics_tracker.getPerclientWorkercnt());
-            assert(latency_histogram_size_ == tmp_client_statistics_tracker.getLatencyHistogram());
+            assert(latency_histogram_size_ == tmp_client_statistics_tracker.getLatencyHistogramSize());
 
             // Aggregate per-client hit ratio statistics
             std::atomic<uint32_t>* tmp_perworker_local_hitcnts = tmp_client_statistics_tracker.getPerworkerLocalHitcnts();
@@ -186,7 +187,7 @@ namespace covered
 
         assert(latency_histogram_ != NULL);
         // Get latency overview to prepare for latency statistics
-        total_latency_cnt = 0; // i.e., total reqcnt
+        uint32_t total_latency_cnt = 0; // i.e., total reqcnt
         for (uint32_t latency_us = 0; latency_us < latency_histogram_size_; latency_us++)
         {
             uint32_t tmp_latency_cnt = latency_histogram_[latency_us];

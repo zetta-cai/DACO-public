@@ -1,38 +1,39 @@
 # Basic recipes
 include src/mk/recipes.mk
 
-# Third-party recipes
-include src/mk/boost.mk
-include src/mk/cachebench.mk
-include src/mk/rocksdb.mk
+# Recipes for third-party lib
+include src/mk/lib/boost.mk
+include src/mk/lib/cachebench.mk
+include src/mk/lib/rocksdb.mk
 
-# COVERED's recipes
-include src/mk/covered.mk
+# Recipes for cache methods (including baselines and COVERED)
+include src/mk/cache/covered.mk
+include src/mk/cache/lru.mk
 
 ##############################################################################
 # Executable files
 
-simulator: src/simulator.o $(COVERED_OBJECTS)
+simulator: src/simulator.o $(COVERED_OBJECTS) $(CACHEBENCH_OBJECTS) $(LRU_OBJECTS)
 	$(LINK) $^ $(LDLIBS) -o $@
 DEPS += src/simulator.d
-CLEAN += src/simulator.o
+CLEANS += src/simulator.o
 
-statistics_aggregator: src/statistics_aggregator.o $(COVERED_OBJECTS)
+statistics_aggregator: src/statistics_aggregator.o $(COVERED_OBJECTS) $(CACHEBENCH_OBJECTS) $(LRU_OBJECTS)
 	$(LINK) $^ $(LDLIBS) -o $@
 DEPS += src/statistics_aggregator.d
-CLEAN += src/statistics_aggregator.o
+CLEANS += src/statistics_aggregator.o
 
 ##############################################################################
 
 TARGETS := simulator statistics_aggregator
 
 all: $(TARGETS)
-#	rm -rf $(CLEAN) $(DEPS)
+#	rm -rf $(CLEANS) $(DEPS)
 
 ##############################################################################
 
 clean:
-	rm -rf $(CLEAN) $(DEPS) $(TARGETS) $(CLEANS)
+	rm -rf $(CLEANS) $(DEPS) $(TARGETS)
 
 .DEFAULT_GOAL := all
 .PHONY: all clean

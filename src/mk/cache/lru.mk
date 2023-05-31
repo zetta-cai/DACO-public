@@ -1,4 +1,4 @@
-# cachebench module
+# lru module
 
 CACHEBENCH_DIRPATH := lib/CacheLib
 
@@ -17,3 +17,10 @@ LDLIBS += $(CACHEBENCH_LDLIBS)
 
 CACHEBENCH_INCDIR := -I$(CACHEBENCH_DIRPATH) -I$(CACHEBENCH_DIRPATH)/opt/cachelib/include
 INCDIR += $(CACHEBENCH_INCDIR)
+
+# hacked part
+LRU_SRCFILES = $(wildcard $(COVERED_DIRPATH)/cache/cpp-lru-cache/*.c)
+LRU_OBJECTS += $(LRU_SRCFILES:.c=.o)
+LRU_SHARED_OBJECTS += $(LRU_SRCFILES:.c=.shared.o)
+DEPS += $(LRU_SRCFILES:.c=.d)
+CLEANS += $(LRU_OBJECTS) $(LRU_SHARED_OBJECTS)

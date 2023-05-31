@@ -28,9 +28,9 @@ namespace covered
         uint32_t getAvgLatency() const;
         uint32_t getMinLatency() const;
         uint32_t getMediumLatency() const;
-        uint32_t getTail90Latnecy() const;
-        uint32_t getTail95Latnecy() const;
-        uint32_t getTail99Latnecy() const;
+        uint32_t getTail90Latency() const;
+        uint32_t getTail95Latency() const;
+        uint32_t getTail99Latency() const;
         uint32_t getMaxLatency() const;
 
         // Get string for aggregate statistics

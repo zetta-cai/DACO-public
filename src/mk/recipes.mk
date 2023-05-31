@@ -1,7 +1,10 @@
 # Generic recipes
 
-DEPS :=
-CLEANS :=
+# NOTE: appending (+=) will inherit simple assignment (:=) or recursive assignment (=)
+# Example: for appending with simple assignment, A += B <-> A := A B
+# Example: for appending with recursive assignment, A += B <-> A = A B
+DEPS =
+CLEANS =
 
 ##############################################################################
 # Generate dependency files

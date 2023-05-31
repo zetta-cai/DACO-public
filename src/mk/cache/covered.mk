@@ -1,3 +1,5 @@
+# covered module
+
 COVERED_DIRPATH = src
 COVERED_INCDIR = -I$(COVERED_DIRPATH)
 INCDIR += $(COVERED_INCDIR)
@@ -38,7 +40,7 @@ DEPS += $(EDGE_SRCFILES:.c=.d)
 CLEANS += $(EDGE_OBJECTS) $(EDGE_SHARED_OBJECTS)
 
 # message module
-MESSAGE_SRCFILES := $(wildcard $(COVERED_DIRPATH)/message/*.c)
+MESSAGE_SRCFILES := $(wildcard $(COVERED_DIRPATH)/message/*.c) $(wildcard $(COVERED_DIRPATH)/message/data/global/*.c) $(wildcard $(COVERED_DIRPATH)/message/data/local/*.c)
 MESSAGE_OBJECTS += $(MESSAGE_SRCFILES:.c=.o)
 MESSAGE_SHARED_OBJECTS += $(MESSAGE_SRCFILES:.c=.shared.o)
 DEPS += $(MESSAGE_SRCFILES:.c=.d)
@@ -59,7 +61,7 @@ DEPS += $(STATISTICS_SRCFILES:.c=.d)
 CLEANS += $(STATISTICS_OBJECTS) $(STATISTICS_SHARED_OBJECTS)
 
 # workload module
-WORKLOAD_SRCFILES := $(wildcard $(COVERED_DIRPATH)/workload/*.c) $(wildcard $(COVERED_DIRPATH)/workload/cachebench/*.c)
+WORKLOAD_SRCFILES := $(wildcard $(COVERED_DIRPATH)/workload/*.c)
 WORKLOAD_OBJECTS += $(WORKLOAD_SRCFILES:.c=.o)
 WORKLOAD_SHARED_OBJECTS += $(WORKLOAD_SRCFILES:.c=.shared.o)
 DEPS += $(WORKLOAD_SRCFILES:.c=.d)

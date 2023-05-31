@@ -8,7 +8,7 @@ namespace covered
     {
     }
 
-    LocalGetResponse::LocalGetResponse(const DynamicArray& msg_payload) : KeyValueMessage(msg_payload)
+    LocalGetResponse::LocalGetResponse(const DynamicArray& msg_payload) : KeyValueHitflagMessage(msg_payload)
     {
     }
 

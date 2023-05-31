@@ -8,7 +8,7 @@ namespace covered
     {
     }
 
-    GlobalDelResponse::GlobalDelResponse(const DynamicArray& msg_payload) : MessageBase(msg_payload)
+    GlobalDelResponse::GlobalDelResponse(const DynamicArray& msg_payload) : KeyMessage(msg_payload)
     {
     }
 

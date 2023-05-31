@@ -27,11 +27,22 @@ namespace covered
         uint32_t deserialize(const DynamicArray& msg_payload, const uint32_t& position);
 
         bool operator<(const Key& other) const; // To be used as key in std::map
+        bool operator==(const Key& other) const; // To be used by key in std::unordered_map
         Key& operator=(const Key& other);
     private:
         static const std::string kClassName;
 
         std::string keystr_;
+    };
+
+    // To be used by key in std::unordered_map
+    class KeyHasher
+    {
+    public:
+        size_t operator()(const Key& key) const
+        {
+            return std::hash<std::string>{}(key.getKeystr());
+        }
     };
 }
 

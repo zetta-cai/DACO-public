@@ -8,7 +8,7 @@ namespace covered
     {
     }
 
-    LocalPutResponse::LocalPutResponse(const DynamicArray& msg_payload) : KeyMessage(msg_payload)
+    LocalPutResponse::LocalPutResponse(const DynamicArray& msg_payload) : KeyHitflagMessage(msg_payload)
     {
     }
 

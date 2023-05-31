@@ -8,7 +8,7 @@ namespace covered
     {
     }
 
-    LocalDelResponse::LocalDelResponse(const DynamicArray& msg_payload) : MessageBase(msg_payload)
+    LocalDelResponse::LocalDelResponse(const DynamicArray& msg_payload) : KeyHitflagMessage(msg_payload)
     {
     }
 

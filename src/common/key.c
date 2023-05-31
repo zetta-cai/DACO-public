@@ -58,6 +58,11 @@ namespace covered
         return is_smaller;
     }
 
+    bool Key::operator==(const Key& other) const
+    {
+        return keystr_ == other.keystr_;
+    }
+
     Key& Key::operator=(const Key& other)
     {
         keystr_ = other.keystr_;
