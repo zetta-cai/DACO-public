@@ -7,8 +7,11 @@
 #ifndef UTIL_H
 #define UTIL_H
 
+#define BOOST_STACKTRACE_USE_BACKTRACE
+
 #include <atomic> // std::memory_order
 #include <fstream>
+#include <mutex>
 #include <string>
 #include <time.h> // struct timespec
 
@@ -93,7 +96,8 @@ namespace covered
     private:
         static const std::string kClassName;
 
-        // File I/O
+        // I/O
+        static std::mutex msgdump_lock_;
         static bool isPathExist_(const std::string& path, const bool& is_file); // File or directory 
 
         // Intermediate filters

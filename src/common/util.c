@@ -1,11 +1,13 @@
 #include "common/util.h"
 
 #include <chrono> // system_clock
+#include <errno.h> // ENOENT
 #include <iostream> // cerr
 #include <sstream> // ostringstream
 #include <cmath> // pow
 
 #include <boost/filesystem.hpp>
+#include <boost/stacktrace.hpp>
 #include <boost/system.hpp>
 
 #include "common/config.h"
@@ -37,38 +39,51 @@ namespace covered
 
     const std::string Util::kClassName("Util");
 
+    std::mutex Util::msgdump_lock_;
+
     // (1) I/O
 
     // (1.1) stdout/stderr I/O
 
     void Util::dumpNormalMsg(const std::string& class_name, const std::string& normal_message)
     {
+        msgdump_lock_.lock();
         std::string cur_timestr = getCurrentTimestr();
         std::cout << cur_timestr << " " << class_name << ": " << normal_message << std::endl;
+        msgdump_lock_.unlock();
         return;
     }
 
     void Util::dumpDebugMsg(const std::string& class_name, const std::string& debug_message)
     {
-        std::string cur_timestr = getCurrentTimestr();
-        // \033 means ESC character, 1 means bold, 32 means green foreground, 0 means reset, and m is end character
-        std::cout << "\033[1;32m" << cur_timestr << " [DEBUG] " << class_name << ": " << debug_message << std::endl << "\033[0m";
+        if (Param::isDebug())
+        {
+            msgdump_lock_.lock();
+            std::string cur_timestr = getCurrentTimestr();
+            // \033 means ESC character, 1 means bold, 32 means green foreground, 0 means reset, and m is end character
+            std::cout << "\033[1;32m" << cur_timestr << " [DEBUG] " << class_name << ": " << debug_message << std::endl << "\033[0m";
+            msgdump_lock_.unlock();
+        }
         return;
     }
 
     void Util::dumpWarnMsg(const std::string& class_name, const std::string& warn_message)
     {
+        msgdump_lock_.lock();
         std::string cur_timestr = getCurrentTimestr();
         // \033 means ESC character, 1 means bold, 33 means yellow foreground, 0 means reset, and m is end character
         std::cout << "\033[1;33m" << cur_timestr << " [WARN] " << class_name << ": " << warn_message << std::endl << "\033[0m";
+        msgdump_lock_.unlock();
         return;
     }
 
     void Util::dumpErrorMsg(const std::string& class_name, const std::string& error_message)
     {
+        msgdump_lock_.lock();
         std::string cur_timestr = getCurrentTimestr();
         // \033 means ESC character, 1 means bold, 31 means red foreground, 0 means reset, and m is end character
-        std::cerr << "\033[1;31m" << cur_timestr << " [ERROR] " << class_name << ": " << error_message << std::endl << "\033[0m";
+        std::cerr << "\033[1;31m" << cur_timestr << " [ERROR] " << class_name << ": " << error_message << std::endl << "\033[0m" << boost::stacktrace::stacktrace();
+        msgdump_lock_.unlock();
         return;
     }
 
@@ -86,7 +101,7 @@ namespace covered
 
     void Util::createDirectory(const std::string& dirpath)
     {
-        assert(!isDirectoryExist(dirpath));
+        //assert(!isDirectoryExist(dirpath));
         //bool result = boost::filesystem::create_directory(dirpath);
         bool result = boost::filesystem::create_directories(dirpath); // Create directory path recursively
         if (!result)
@@ -108,9 +123,9 @@ namespace covered
 
         // An error occurs
         bool is_error = bool(boost_errcode); // boost_errcode.m_val != 0
-        if (is_error)
+        if (is_error && boost_errcode.value() != ENOENT)
         {
-            dumpWarnMsg(kClassName, boost_errcode.message());
+            dumpErrorMsg(kClassName, boost_errcode.message());
             exit(1);
         }
 

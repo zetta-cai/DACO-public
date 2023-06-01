@@ -90,7 +90,7 @@ int main(int argc, char **argv) {
     // (4.2) Aggregate and dump per-client statistics
     covered::TotalStatisticsTracker total_statistics_tracker(clientcnt, client_statistics_tracker_ptrs);
     std::string total_statistics_string = total_statistics_tracker.toString();
-    covered::Util::dumpDebugMsg(main_class_name, total_statistics_string);
+    covered::Util::dumpNormalMsg(main_class_name, total_statistics_string);
 
     // (5) Wait for clientcnt loaders
     covered::Util::dumpNormalMsg(main_class_name, "wait for all loaders...");

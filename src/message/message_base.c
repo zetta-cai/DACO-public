@@ -290,6 +290,12 @@ namespace covered
         return message_type_;
     }
 
+    uint32_t MessageBase::getMsgPayloadSize() const
+    {
+        // Message type size + internal payload size
+        return sizeof(uint32_t) + getMsgPayloadSizeInternal_();
+    }
+
     uint32_t MessageBase::serialize(DynamicArray& msg_payload)
     {
         uint32_t size = 0;
@@ -298,7 +304,7 @@ namespace covered
         size += sizeof(uint32_t);
         uint32_t internal_size = serializeInternal_(msg_payload, size);
         size += internal_size;
-        return size;
+        return size - 0;
     }
     
     uint32_t MessageBase::deserialize(const DynamicArray& msg_payload)
@@ -308,7 +314,7 @@ namespace covered
         size += message_type_size;
         uint32_t internal_size = deserializeInternal_(msg_payload, size);
         size += internal_size;
-        return size;
+        return size - 0;
     }
 
     bool MessageBase::isDataRequest() const

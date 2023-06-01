@@ -23,10 +23,10 @@ namespace covered
         virtual ~KeyMessage();
 
         Key getKey() const;
-
-        virtual uint32_t getMsgPayloadSize() override;
     private:
         static const std::string kClassName;
+
+        virtual uint32_t getMsgPayloadSizeInternal_() const override;
 
         virtual uint32_t serializeInternal_(DynamicArray& msg_payload, const uint32_t& position) override;
         virtual uint32_t deserializeInternal_(const DynamicArray& msg_payload, const uint32_t& position) override;

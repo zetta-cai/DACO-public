@@ -40,6 +40,8 @@ class WorkloadGenerator : public facebook::cachelib::cachebench::GeneratorBase {
   const std::vector<std::string>& getAllKeys() const override { return keys_; }
 
  private:
+  static const std::string kClassName;
+
   void generateFirstKeyIndexForPool();
   void generateKeys();
   void generateReqs();

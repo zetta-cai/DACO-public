@@ -20,7 +20,7 @@ namespace covered
         return key_;
     }
 
-    uint32_t KeyMessage::getMsgPayloadSize()
+    uint32_t KeyMessage::getMsgPayloadSizeInternal_() const
     {
         // keysize + key
         uint32_t msg_payload_size = sizeof(uint32_t) + key_.getKeystr().length();
@@ -32,7 +32,7 @@ namespace covered
         uint32_t size = position;
         uint32_t key_serialize_size = key_.serialize(msg_payload, size);
         size += key_serialize_size;
-        return size;
+        return size - position;
     }
 
     uint32_t KeyMessage::deserializeInternal_(const DynamicArray& msg_payload, const uint32_t& position)
@@ -40,6 +40,6 @@ namespace covered
         uint32_t size = position;
         uint32_t key_deserialize_size = key_.deserialize(msg_payload, size);
         size += key_deserialize_size;
-        return size;
+        return size - position;
     }
 }

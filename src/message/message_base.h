@@ -52,9 +52,9 @@ namespace covered
         MessageBase(const DynamicArray& msg_payload);
         virtual ~MessageBase();
 
-        virtual uint32_t getMsgPayloadSize() = 0;
-
         MessageType getMessageType() const;
+
+        uint32_t getMsgPayloadSize() const;
 
         // Offset of message must be 0 in message payload
         // Message payload format: message_type + [key size & key] + [value size & value]
@@ -77,6 +77,8 @@ namespace covered
         static const std::string kClassName;
 
         static uint32_t deserializeMessageTypeFromMsgPayload(const DynamicArray& msg_payload, MessageType& message_type);
+
+        virtual uint32_t getMsgPayloadSizeInternal_() const = 0;
 
         virtual uint32_t serializeInternal_(DynamicArray& msg_payload, const uint32_t& size) = 0;
         virtual uint32_t deserializeInternal_(const DynamicArray& msg_payload, const uint32_t& size) = 0;

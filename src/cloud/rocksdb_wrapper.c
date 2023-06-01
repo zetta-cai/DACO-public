@@ -49,6 +49,10 @@ namespace covered
 
     RocksdbWrapper::RocksdbWrapper(const std::string& dbpath) : db_ptr_(NULL)
     {
+        std::ostringstream oss;
+        oss << "open RocksDB from directory " << dbpath << "...";
+        Util::dumpNormalMsg(kClassName, oss.str());
+
         bool is_exist = Util::isDirectoryExist(dbpath);
         if (!is_exist)
         {
@@ -63,7 +67,7 @@ namespace covered
             oss.clear(); // Clear error states
             oss.str(""); // Set content as empty string and reset read/write position as zero
             oss << "create directory " << dbpath << " for RocksDB!";
-            Util::dumpDebugMsg(kClassName, oss.str());
+            Util::dumpNormalMsg(kClassName, oss.str());
             Util::createDirectory(dbpath);
         }
 

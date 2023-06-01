@@ -36,8 +36,8 @@ CFLAGS += -std=c++17 -O3 -g -Wall -march=native -fno-omit-frame-pointer
 CFLAGS += $(EXTRA_CFLAGS)
 CFLAGS_SHARED += $(CFLAGS) -fPIC
 
-LDDIR :=
-LDLIBS :=
+LDDIR =
+LDLIBS =
 LDFLAGS += $(LDDIR)
 LINK = $(CC) $(LDFLAGS)
 LINK.so = $(CC) $(LDFLAGS) -shared

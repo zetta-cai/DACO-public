@@ -32,7 +32,7 @@ namespace covered
         return hitflag_;
     }
 
-    uint32_t KeyValueHitflagMessage::getMsgPayloadSize()
+    uint32_t KeyValueHitflagMessage::getMsgPayloadSizeInternal_() const
     {
         // keysize + key + valuesize + value + hit flag
         uint32_t msg_payload_size = sizeof(uint32_t) + key_.getKeystr().length() + sizeof(uint32_t) + value_.getValuesize() + sizeof(uint8_t);
@@ -49,7 +49,7 @@ namespace covered
         uint8_t hitflag_value = static_cast<uint8_t>(hitflag_);
         msg_payload.deserialize(size, (const char*)&hitflag_value, sizeof(uint8_t));
         size += sizeof(uint8_t);
-        return size;
+        return size - position;
     }
 
     uint32_t KeyValueHitflagMessage::deserializeInternal_(const DynamicArray& msg_payload, const uint32_t& position)
@@ -63,6 +63,6 @@ namespace covered
         msg_payload.serialize(size, (char *)&hitflag_value, sizeof(uint8_t));
         hitflag_ = static_cast<Hitflag>(hitflag_value);
         size += sizeof(uint8_t);
-        return size;
+        return size - position;
     }
 }

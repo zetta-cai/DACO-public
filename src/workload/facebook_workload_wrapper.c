@@ -80,11 +80,14 @@ namespace covered
         switch (tmp_op_type)
         {
             case facebook::cachelib::cachebench::OpType::kGet:
+            case facebook::cachelib::cachebench::OpType::kLoneGet:
             {
                 tmp_item_type = WorkloadItemType::kWorkloadItemGet;
                 break;
             }
             case facebook::cachelib::cachebench::OpType::kSet:
+            case facebook::cachelib::cachebench::OpType::kLoneSet:
+            case facebook::cachelib::cachebench::OpType::kUpdate:
             {
                 tmp_item_type = WorkloadItemType::kWorkloadItemPut;
                 break;

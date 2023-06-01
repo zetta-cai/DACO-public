@@ -58,7 +58,7 @@ namespace covered
         uint32_t bigendian_msg_seqnum = htonl(msg_seqnum_);
         pkt_payload.deserialize(size, (const char*)(&bigendian_msg_seqnum), sizeof(uint32_t));
         size += sizeof(uint32_t);
-        return size;
+        return size - 0;
     }
     
     uint32_t UdpFragHdr::deserialize(const DynamicArray& pkt_payload)
@@ -80,6 +80,6 @@ namespace covered
         pkt_payload.serialize(size, (char*)(&bigendian_msg_seqnum), sizeof(uint32_t));
         msg_seqnum_ = ntohl(bigendian_msg_seqnum);
         size += sizeof(uint32_t);
-        return size;
+        return size - 0;
     }
 }

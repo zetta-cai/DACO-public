@@ -16,7 +16,7 @@
 
 namespace covered
 {
-    const std::string WorkerWrapper::kClassName("Worker");
+    const std::string WorkerWrapper::kClassName("WorkerWrapper");
 
     void* WorkerWrapper::launchWorker(void* local_worker_param_ptr)
     {
@@ -241,8 +241,8 @@ namespace covered
 
         // TODO: remove later
         std::ostringstream oss;
-        oss << "type: " << MessageBase::messageTypeToString(local_response_message_type) << "; keystr: " << tmp_key.getKeystr() << "; valuesize: " << tmp_value.getValuesize() << std::endl;
-        Util::dumpNormalMsg(kClassName, oss.str());
+        oss << "worker " << local_worker_param_ptr_->getLocalWorkerIdx() << "; type: " << MessageBase::messageTypeToString(local_response_message_type) << "; keystr: " << tmp_key.getKeystr() << "; valuesize: " << tmp_value.getValuesize() << "; hitflag: " << MessageBase::hitflagToString(hitflag);
+        Util::dumpDebugMsg(kClassName, oss.str());
 
         return;
     }

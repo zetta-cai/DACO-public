@@ -3,10 +3,13 @@
 #include <algorithm>
 #include <chrono>
 #include <iostream>
+#include <sstream>
 
 #include "common/util.h"
 
 namespace covered {
+
+const std::string WorkloadGenerator::kClassName("WorkloadGenerator");
 
 WorkloadGenerator::WorkloadGenerator(const StressorConfig& config, const uint32_t& global_client_idx)
     : config_{config}, global_client_idx_(global_client_idx) {
@@ -123,7 +126,11 @@ void WorkloadGenerator::generateReqs() {
       reqs_.emplace_back(keys_[j], reqSizes->begin(), reqSizes->end());
     }
   }
-  std::cout << "first key: " << reqs_[0].key << "; valuesize: " << (*reqs_[0].sizeBegin) << std::endl;
+
+  // TODO: remove later
+  std::ostringstream oss;
+  oss << "first key: " << reqs_[0].key << "; valuesize: " << (*reqs_[0].sizeBegin);
+  Util::dumpDebugMsg(kClassName, oss.str());
 }
 
 void WorkloadGenerator::generateFirstKeyIndexForPool() {

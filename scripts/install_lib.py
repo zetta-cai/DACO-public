@@ -57,7 +57,7 @@ else:
 boost_install_dirpath = "{}/install".format(boost_decompress_dirpath)
 if not os.path.exists(boost_install_dirpath):
     prompt(filename, "install lib/boost from source...")
-    boost_install_cmd = "cd {} && ./bootstrap.sh --with-libraries=log,thread,system,filesystem,program_options,test,json --prefix=./install && sudo ./b2 install".format(boost_decompress_dirpath)
+    boost_install_cmd = "cd {} && ./bootstrap.sh --with-libraries=log,thread,system,filesystem,program_options,test,json,stacktrace --prefix=./install && sudo ./b2 install".format(boost_decompress_dirpath)
     # Use the following command if your set prefix as /usr/local which needs to update Linux dynamic linker
     #boost_install_cmd = "cd {} && ./bootstrap.sh --with-libraries=log,thread,system,filesystem,program_options,test --prefix=./install && sudo ./b2 install && sudo ldconfig".format(boost_decompress_dirpath)
 

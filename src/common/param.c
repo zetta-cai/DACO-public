@@ -179,7 +179,7 @@ namespace covered
         if (!is_valid_)
         {
             Util::dumpErrorMsg(kClassName, "invalid Param (CLI parameters have not been set)!");
-            exit(-1);
+            exit(1);
         }
         return;
     }

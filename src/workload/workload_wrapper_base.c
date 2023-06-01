@@ -68,7 +68,7 @@ namespace covered
         if (!is_valid_)
         {
             Util::dumpErrorMsg(kClassName, "not invoke validate() yet!");
-            exit(-1);
+            exit(1);
         }
         return;
     }

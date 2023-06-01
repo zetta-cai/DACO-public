@@ -137,11 +137,8 @@ namespace covered
 
         // (6) Dump stored CLI parameters and parsed config information if debug
 
-        if (Param::isDebug())
-        {
-            Util::dumpDebugMsg(main_class_name, Param::toString());
-            Util::dumpDebugMsg(main_class_name, Config::toString());
-        }
+        Util::dumpDebugMsg(main_class_name, Param::toString());
+        Util::dumpDebugMsg(main_class_name, Config::toString());
 
         return;
     }

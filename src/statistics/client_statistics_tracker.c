@@ -158,7 +158,7 @@ namespace covered
             oss.clear(); // Clear error states
             oss.str(""); // Set content as empty string and reset read/write position as zero
             oss << "use a random file path " << tmp_filepath << " for statistics!";
-            Util::dumpDebugMsg(kClassName, oss.str());
+            Util::dumpNormalMsg(kClassName, oss.str());
         }
 
         // Create and open a binary file for per-client statistics
@@ -192,7 +192,7 @@ namespace covered
         delete fs_ptr;
         fs_ptr = NULL;
 
-        return size;
+        return size - 0;
     }
 
     // Used by dump() to dump per-client statistics
@@ -329,7 +329,7 @@ namespace covered
         delete fs_ptr;
         fs_ptr = NULL;
 
-        return size;
+        return size - 0;
     }
 
     // Used by load_() to load per-client statistics

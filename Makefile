@@ -11,14 +11,24 @@ include src/mk/cache/covered.mk
 include src/mk/cache/lru.mk
 
 ##############################################################################
+# Set link objects and directory paths
+
+LINK_OBJECTS = $(COVERED_OBJECTS) $(CACHEBENCH_OBJECTS) $(LRU_OBJECTS)
+
+LDDIR += $(BOOST_LDDIR)
+LDDIR += $(CACHEBENCH_LDDIR)
+LDDIR += $(ROCKSDB_LDDIR)
+LDDIR += -L/usr/lib/x86_64-linux-gnu
+
+##############################################################################
 # Executable files
 
-simulator: src/simulator.o $(COVERED_OBJECTS) $(CACHEBENCH_OBJECTS) $(LRU_OBJECTS)
+simulator: src/simulator.o $(LINK_OBJECTS)
 	$(LINK) $^ $(LDLIBS) -o $@
 DEPS += src/simulator.d
 CLEANS += src/simulator.o
 
-statistics_aggregator: src/statistics_aggregator.o $(COVERED_OBJECTS) $(CACHEBENCH_OBJECTS) $(LRU_OBJECTS)
+statistics_aggregator: src/statistics_aggregator.o $(LINK_OBJECTS)
 	$(LINK) $^ $(LDLIBS) -o $@
 DEPS += src/statistics_aggregator.d
 CLEANS += src/statistics_aggregator.o

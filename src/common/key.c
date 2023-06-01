@@ -31,7 +31,7 @@ namespace covered
         size += sizeof(uint32_t);
         msg_payload.deserialize(size, (const char*)(keystr_.data()), keystr_.length());
         size += keystr_.length();
-        return size;
+        return size - position;
     }
 
     uint32_t Key::deserialize(const DynamicArray& msg_payload, const uint32_t& position)
@@ -45,7 +45,7 @@ namespace covered
         msg_payload.serialize(size, (char *)keycstr, keysize);
         keystr_ = std::string(keycstr);
         size += keysize;
-        return size;
+        return size - position;
     }
 
     bool Key::operator<(const Key& other) const

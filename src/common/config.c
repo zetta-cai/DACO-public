@@ -169,12 +169,9 @@ namespace covered
         bytes.reserve(int(filesize));
         bytes.insert(bytes.begin(), std::istream_iterator<char>(ifs), std::istream_iterator<char>());
         //ifs.read(bytes, filesize); // read only supports char array instead of vector
-        if (Param::isDebug())
-        {
-            std::ostringstream oss;
-            oss << "read " << config_filepath << " with " << filesize << " bytes";
-            Util::dumpDebugMsg(kClassName, oss.str());
-        }
+        std::ostringstream oss;
+        oss << "read " << config_filepath << " with " << filesize << " bytes";
+        Util::dumpDebugMsg(kClassName, oss.str());
 
         // Parse the bytes
         boost::json::stream_parser boost_json_parser;
@@ -184,7 +181,7 @@ namespace covered
         if (is_error)
         {
             Util::dumpErrorMsg(kClassName, boost_json_errcode.message());
-            exit(-1);
+            exit(1);
         }
 
         // Finish byte parsing
@@ -193,7 +190,7 @@ namespace covered
         if (is_error)
         {
             Util::dumpErrorMsg(kClassName, boost_json_errcode.message());
-            exit(-1);
+            exit(1);
         }
 
         // Get the json object
@@ -220,7 +217,7 @@ namespace covered
         if (!is_valid_)
         {
             Util::dumpErrorMsg(kClassName, "invalid Config (config file has not been loaded)!");
-            exit(-1);
+            exit(1);
         }
         return;
     }

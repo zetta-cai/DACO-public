@@ -54,7 +54,7 @@ namespace covered
         std::string valuestr = generateValuestr();
         msg_payload.deserialize(size, (const char*)(valuestr.data()), valuesize_);
         size += valuesize_;
-        return size;
+        return size - position;
     }
 
     uint32_t Value::deserialize(const DynamicArray& msg_payload, const uint32_t& position)
@@ -69,7 +69,7 @@ namespace covered
         // Note: we ignore the value content
         // msg_payload.arraycpy(size, value_content, 0, valuesize_);
         size += valuesize_;
-        return size;
+        return size - position;
     }
 
     Value& Value::operator=(const Value& other)
