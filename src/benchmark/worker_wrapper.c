@@ -102,6 +102,12 @@ namespace covered
             uint32_t local_request_serialize_size = local_request_ptr->serialize(local_request_msg_payload);
             assert(local_request_serialize_size == local_request_msg_payload_size);
 
+            // TMPDEBUG
+            std::ostringstream oss;
+            oss << "worker " << local_worker_param_ptr_->getLocalWorkerIdx() << "; req type: " << MessageBase::messageTypeToString(local_request_ptr->getMessageType()) << "; keystr: " << workload_item.getKey().getKeystr() << "; valuesize: " << workload_item.getValue().getValuesize();
+            Util::dumpDebugMsg(kClassName, oss.str());
+
+
             // Timeout-and-retry mechanism
             struct timespec sendreq_timestamp = Util::getCurrentTimespec();
             DynamicArray local_response_msg_payload;
@@ -123,6 +129,7 @@ namespace covered
                     }
                     else
                     {
+                        Util::dumpWarnMsg(kClassName, "client timeout to wait for local response");
                         continue; // Resend the local request message
                     }
                 }
@@ -239,9 +246,9 @@ namespace covered
         // Update latency statistics for the local client
         client_statistics_tracker_ptr_->updateLatency(local_worker_param_ptr_->getLocalWorkerIdx(), rtt_us);
 
-        // TODO: remove later
+        // TMPDEBUG
         std::ostringstream oss;
-        oss << "worker " << local_worker_param_ptr_->getLocalWorkerIdx() << "; type: " << MessageBase::messageTypeToString(local_response_message_type) << "; keystr: " << tmp_key.getKeystr() << "; valuesize: " << tmp_value.getValuesize() << "; hitflag: " << MessageBase::hitflagToString(hitflag);
+        oss << "worker " << local_worker_param_ptr_->getLocalWorkerIdx() << "; rsp type: " << MessageBase::messageTypeToString(local_response_message_type) << "; keystr: " << tmp_key.getKeystr() << "; valuesize: " << tmp_value.getValuesize() << "; hitflag: " << MessageBase::hitflagToString(hitflag);
         Util::dumpDebugMsg(kClassName, oss.str());
 
         return;

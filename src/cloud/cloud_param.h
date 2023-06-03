@@ -20,13 +20,17 @@ namespace covered
 
         const CloudParam& operator=(const CloudParam& other);
 
+        uint32_t getGlobalCloudIdx() const;
+
         bool isCloudRunning();
         void setCloudRunning();
         void resetCloudRunning();
     private:
         static const std::string kClassName;
 
-         volatile std::atomic<bool> local_cloud_running_;
+        volatile std::atomic<bool> local_cloud_running_;
+
+        uint32_t global_cloud_idx_; // TODO: only support 1 cloud node now!
     };
 }
 

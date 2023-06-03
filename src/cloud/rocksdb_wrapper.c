@@ -47,32 +47,18 @@ namespace covered
 
     const std::string RocksdbWrapper::kClassName("RocksdbWrapper");
 
-    RocksdbWrapper::RocksdbWrapper(const std::string& dbpath) : db_ptr_(NULL)
+    RocksdbWrapper::RocksdbWrapper(const std::string& db_dirpath) : db_ptr_(NULL)
     {
         std::ostringstream oss;
-        oss << "open RocksDB from directory " << dbpath << "...";
+        oss << "open RocksDB from directory " << db_dirpath << "...";
         Util::dumpNormalMsg(kClassName, oss.str());
 
-        bool is_exist = Util::isDirectoryExist(dbpath);
-        if (!is_exist)
-        {
-            // Directory does not exist
-            std::ostringstream oss;
-            oss << "RocksDB path " << dbpath << " does not exist!";
-            //Util::dumpErrorMsg(kClassName, oss.str());
-            //exit(1);
-            Util::dumpWarnMsg(kClassName, oss.str());
-
-            // Create directory for RocksDB KVS
-            oss.clear(); // Clear error states
-            oss.str(""); // Set content as empty string and reset read/write position as zero
-            oss << "create directory " << dbpath << " for RocksDB!";
-            Util::dumpNormalMsg(kClassName, oss.str());
-            Util::createDirectory(dbpath);
-        }
+        // Parent directory must exit
+        std::string parentDirpath = Util::getParentDirpath(db_dirpath);
+        assert(Util::isDirectoryExist(parentDirpath));
 
         // Open RocksDB KVS with suggested settings
-        open_(dbpath);
+        open_(db_dirpath);
     }
 
     RocksdbWrapper::~RocksdbWrapper()
@@ -126,7 +112,7 @@ namespace covered
         return;
     }
 
-    void RocksdbWrapper::open_(const std::string& dbpath)
+    void RocksdbWrapper::open_(const std::string& db_dirpath)
     {
         rocksdb::Options rocksdb_options;
         rocksdb_options.create_if_missing = true;
@@ -200,7 +186,7 @@ namespace covered
             //rocksdb_options.new_table_reader_for_compaction_inputs = true;
         }
 
-        rocksdb::Status rocksdb_status = rocksdb::DB::Open(rocksdb_options, dbpath, &db_ptr_);
+        rocksdb::Status rocksdb_status = rocksdb::DB::Open(rocksdb_options, db_dirpath, &db_ptr_);
         assert(rocksdb_status.ok());
         assert(db_ptr_ != NULL);
         return;

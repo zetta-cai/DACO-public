@@ -12,7 +12,7 @@ namespace covered
 {
     const std::string Config::FACEBOOK_CONFIG_FILEPATH_KEYSTR("facebook_config_filepath");
     const std::string Config::GLOBAL_CLOUD_RECVREQ_PORT_KEYSTR("global_cloud_recvreq_port");
-    const std::string Config::GLOBAL_CLOUD_ROCKSDB_PATH_KEYSTR("global_cloud_rocksdb_path");
+    const std::string Config::GLOBAL_CLOUD_ROCKSDB_BASEDIR_KEYSTR("global_cloud_rocksdb_basedir");
     const std::string Config::GLOBAL_EDGE_RECVREQ_STARTPORT_KEYSTR("global_edge_recvreq_startport");
     const std::string Config::LATENCY_HISTOGRAM_SIZE_KEYSTR("latency_histogram_size");
     const std::string Config::OUTPUT_BASEDIR_KEYSTR("output_basedir");
@@ -25,7 +25,7 @@ namespace covered
     boost::json::object Config::json_object_ = boost::json::object();
     std::string Config::facebook_config_filepath_("lib/CacheLib/cachelib/cachebench/test_configs/hit_ratio/cdn/config.json");
     uint16_t Config::global_cloud_recvreq_port_ = 4100; // [4096, 65536]
-    std::string Config::global_cloud_rocksdb_path_("/tmp/cloud");
+    std::string Config::global_cloud_rocksdb_basedir_("/tmp/cloud");
     uint16_t Config::global_edge_recvreq_startport_ = 4200; // [4096, 65536]
     uint32_t Config::latency_histogram_size_ = 1000000; // Track latency up to 1000 ms
     std::string Config::output_basedir_("output");
@@ -54,10 +54,10 @@ namespace covered
                 int64_t tmp_port = kv_ptr->value().get_int64();
                 global_cloud_recvreq_port_ = Util::toUint16(tmp_port);
             }
-            kv_ptr = find_(GLOBAL_CLOUD_ROCKSDB_PATH_KEYSTR);
+            kv_ptr = find_(GLOBAL_CLOUD_ROCKSDB_BASEDIR_KEYSTR);
             if (kv_ptr != NULL)
             {
-                global_cloud_rocksdb_path_ = kv_ptr->value().get_string();
+                global_cloud_rocksdb_basedir_ = kv_ptr->value().get_string();
             }
             kv_ptr = find_(GLOBAL_EDGE_RECVREQ_STARTPORT_KEYSTR);
             if (kv_ptr != NULL)
@@ -111,10 +111,10 @@ namespace covered
         return global_cloud_recvreq_port_;
     }
 
-    std::string Config::getGlobalCloudRocksdbPath()
+    std::string Config::getGlobalCloudRocksdbBasedir()
     {
         checkIsValid_();
-        return global_cloud_rocksdb_path_;
+        return global_cloud_rocksdb_basedir_;
     }
 
     uint16_t Config::getGlobalEdgeRecvreqStartport()

@@ -58,11 +58,6 @@ namespace covered
     {
         // NOTE: no need to delete local_edge_param_ptr, as it is maintained outside EdgeWrapper
 
-        // Release local edge cache
-        assert(local_edge_param_ptr_ != NULL);
-        delete local_edge_param_ptr_;
-        local_edge_param_ptr_ = NULL;
-
         // Release the socket server on recvreq port
         assert(local_edge_recvreq_socket_server_ptr_ != NULL);
         delete local_edge_recvreq_socket_server_ptr_;
@@ -418,6 +413,7 @@ namespace covered
                 }
                 else
                 {
+                    Util::dumpWarnMsg(kClassName, "edge timeout to wait for global response");
                     continue; // Resend the global request message
                 }
             }

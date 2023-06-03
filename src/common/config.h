@@ -19,7 +19,7 @@ namespace covered
         // Key strings of JSON config file for static configurations (only used by Config)
         static const std::string FACEBOOK_CONFIG_FILEPATH_KEYSTR;
         static const std::string GLOBAL_CLOUD_RECVREQ_PORT_KEYSTR;
-        static const std::string GLOBAL_CLOUD_ROCKSDB_PATH_KEYSTR;
+        static const std::string GLOBAL_CLOUD_ROCKSDB_BASEDIR_KEYSTR;
         static const std::string GLOBAL_EDGE_RECVREQ_STARTPORT_KEYSTR;
         static const std::string LATENCY_HISTOGRAM_SIZE_KEYSTR;
         static const std::string OUTPUT_BASEDIR_KEYSTR;
@@ -29,7 +29,7 @@ namespace covered
 
         static std::string getFacebookConfigFilepath();
         static uint16_t getGlobalCloudRecvreqPort();
-        static std::string getGlobalCloudRocksdbPath();
+        static std::string getGlobalCloudRocksdbBasedir();
         static uint16_t getGlobalEdgeRecvreqStartport();
         static uint32_t getLatencyHistogramSize();
         static std::string getOutputBasedir();
@@ -47,7 +47,7 @@ namespace covered
         static boost::json::object json_object_;
         static std::string facebook_config_filepath_;
         static uint16_t global_cloud_recvreq_port_;
-        static std::string global_cloud_rocksdb_path_;
+        static std::string global_cloud_rocksdb_basedir_;
         static uint16_t global_edge_recvreq_startport_;
         static uint32_t latency_histogram_size_;
         static std::string output_basedir_;

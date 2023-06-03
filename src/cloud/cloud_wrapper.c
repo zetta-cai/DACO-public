@@ -33,7 +33,7 @@ namespace covered
         assert(local_cloud_param_ptr_ != NULL);
         
         // Open local RocksDB KVS
-        local_cloud_rocksdb_ptr_ = new RocksdbWrapper(Config::getGlobalCloudRocksdbPath());
+        local_cloud_rocksdb_ptr_ = new RocksdbWrapper(Util::getLocalCloudRocksdbDirpath(local_cloud_param_ptr_->getGlobalCloudIdx()));
         assert(local_cloud_rocksdb_ptr_ != NULL);
 
         // Prepare a socket server on recvreq port

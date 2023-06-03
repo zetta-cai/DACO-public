@@ -14,8 +14,8 @@
 
 struct LoaderParam
 {
-    uint32_t global_client_idx;
-    covered::ClientStatisticsTracker* client_statistics_tracker_ptr;
+    uint32_t global_client_idx = 0;
+    covered::ClientStatisticsTracker* client_statistics_tracker_ptr = NULL;
 };
 
 void* launchLoader(void* local_loader_param_ptr)
@@ -36,7 +36,7 @@ int main(int argc, char **argv) {
     std::string main_class_name = "statistics_aggregator";
 
     // (1) Parse and process CLI parameters (set configurations in Config and Param)
-    covered::CLI::parseAndProcessCliParameters(main_class_name, argc, argv);
+    covered::CLI::parseAndProcessCliParameters(covered::CliRole::kStatisticsAggregator, argc, argv);
 
     int pthread_returncode;
 
@@ -53,7 +53,7 @@ int main(int argc, char **argv) {
     LoaderParam loader_params[clientcnt];
 
     // (3.1) Prepare loader parameters
-    for (uint32_t global_client_idx = 0; global_client_idx < clientcnt; global_client_idx)
+    for (uint32_t global_client_idx = 0; global_client_idx < clientcnt; global_client_idx++)
     {
         loader_params[global_client_idx].global_client_idx = global_client_idx;
         loader_params[global_client_idx].client_statistics_tracker_ptr = NULL;
@@ -77,22 +77,7 @@ int main(int argc, char **argv) {
         }
     }
 
-    // (4) Aggregate and dump per-client statistics
-
-    // (4.1) Prepare parameters for TotalStatisticsTracker
-    covered::ClientStatisticsTracker* client_statistics_tracker_ptrs[clientcnt];
-    for (uint32_t global_client_idx = 0; global_client_idx < clientcnt; global_client_idx++)
-    {
-        client_statistics_tracker_ptrs[global_client_idx] = loader_params[global_client_idx].client_statistics_tracker_ptr;
-        assert(client_statistics_tracker_ptrs[global_client_idx] != NULL);
-    }
-
-    // (4.2) Aggregate and dump per-client statistics
-    covered::TotalStatisticsTracker total_statistics_tracker(clientcnt, client_statistics_tracker_ptrs);
-    std::string total_statistics_string = total_statistics_tracker.toString();
-    covered::Util::dumpNormalMsg(main_class_name, total_statistics_string);
-
-    // (5) Wait for clientcnt loaders
+    // (4) Wait for clientcnt loaders
     covered::Util::dumpNormalMsg(main_class_name, "wait for all loaders...");
     for (uint32_t global_client_idx = 0; global_client_idx < clientcnt; global_client_idx++)
     {
@@ -106,6 +91,21 @@ int main(int argc, char **argv) {
         }
     }
     covered::Util::dumpNormalMsg(main_class_name, "all loaders are done");
+
+    // (5) Aggregate and dump per-client statistics
+
+    // (5.1) Prepare parameters for TotalStatisticsTracker
+    covered::ClientStatisticsTracker* client_statistics_tracker_ptrs[clientcnt];
+    for (uint32_t global_client_idx = 0; global_client_idx < clientcnt; global_client_idx++)
+    {
+        client_statistics_tracker_ptrs[global_client_idx] = loader_params[global_client_idx].client_statistics_tracker_ptr;
+        assert(client_statistics_tracker_ptrs[global_client_idx] != NULL);
+    }
+
+    // (5.2) Aggregate and dump per-client statistics
+    covered::TotalStatisticsTracker total_statistics_tracker(clientcnt, client_statistics_tracker_ptrs);
+    std::string total_statistics_string = total_statistics_tracker.toString();
+    covered::Util::dumpNormalMsg(main_class_name, total_statistics_string);
 
     // (6) Release variables in heap
     for (uint32_t global_client_idx = 0; global_client_idx < clientcnt; global_client_idx++)

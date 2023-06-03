@@ -61,6 +61,7 @@ namespace covered
         }
 
         assert(data != NULL);
+
         memcpy((void*)(bytes_.data() + position), (const void*)data, length);
         return;
     }

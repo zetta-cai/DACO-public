@@ -130,38 +130,13 @@ namespace covered
     // Dump per-client statistics for TotalStatisticsTracker
     uint32_t ClientStatisticsTracker::dump(const std::string& filepath) const
     {
-        std::string tmp_filepath = filepath;
-
-        bool is_exist = Util::isFileExist(tmp_filepath);
-        if (is_exist)
-        {
-            // File already exists
-            std::ostringstream oss;
-            oss << "statistics file " << tmp_filepath << " already exists!";
-            //Util::dumpErrorMsg(kClassName, oss.str());
-            //exit(1);
-            Util::dumpWarnMsg(kClassName, oss.str());
-
-            // Generate a random number as a random seed
-            uint32_t random_seed = Util::getTimeBasedRandomSeed();
-            std::mt19937_64 randgen(random_seed);
-            std::uniform_int_distribution<uint32_t> uniform_dist; // Range from 0 to max uint32_t
-            uint32_t random_number = uniform_dist(randgen);
-
-            // Replace with a random filepath
-            oss.clear(); // Clear error states
-            oss.str(""); // Set content as empty string and reset read/write position as zero
-            oss << tmp_filepath << "." << random_number;
-            tmp_filepath = oss.str();
-
-            // Dump hints
-            oss.clear(); // Clear error states
-            oss.str(""); // Set content as empty string and reset read/write position as zero
-            oss << "use a random file path " << tmp_filepath << " for statistics!";
-            Util::dumpNormalMsg(kClassName, oss.str());
-        }
+        std::string tmp_filepath = checkFilepathForDump_(filepath);
 
         // Create and open a binary file for per-client statistics
+        // NOTE: each client opens a unique file (no confliction among different clients)
+        std::ostringstream oss;
+        oss << "open file " << tmp_filepath << " for client statistics";
+        Util::dumpDebugMsg(kClassName, oss.str());
         std::fstream* fs_ptr = Util::openFile(tmp_filepath, std::ios_base::out | std::ios_base::binary);
         assert(fs_ptr != NULL);
 
@@ -195,7 +170,48 @@ namespace covered
         return size - 0;
     }
 
-    // Used by dump() to dump per-client statistics
+    // Used by dump() to check filepath and dump per-client statistics
+
+    std::string ClientStatisticsTracker::checkFilepathForDump_(const std::string& filepath) const
+    {
+        std::string tmp_filepath = filepath;
+
+        // Parent directory must exit
+        std::string parentDirpath = Util::getParentDirpath(filepath);
+        assert(Util::isDirectoryExist(parentDirpath));
+
+        // Check statistics file existence
+        bool is_exist = Util::isFileExist(filepath);
+        if (is_exist)
+        {
+            // File already exists
+            std::ostringstream oss;
+            oss << "statistics file " << filepath << " already exists!";
+            //Util::dumpErrorMsg(kClassName, oss.str());
+            //exit(1);
+            Util::dumpWarnMsg(kClassName, oss.str());
+
+            // Generate a random number as a random seed
+            uint32_t random_seed = Util::getTimeBasedRandomSeed();
+            std::mt19937_64 randgen(random_seed);
+            std::uniform_int_distribution<uint32_t> uniform_dist; // Range from 0 to max uint32_t
+            uint32_t random_number = uniform_dist(randgen);
+
+            // Replace with a random filepath
+            oss.clear(); // Clear error states
+            oss.str(""); // Set content as empty string and reset read/write position as zero
+            oss << filepath << "." << random_number;
+            tmp_filepath = oss.str();
+
+            // Dump hints
+            oss.clear(); // Clear error states
+            oss.str(""); // Set content as empty string and reset read/write position as zero
+            oss << "use a random file path " << tmp_filepath << " for statistics!";
+            Util::dumpNormalMsg(kClassName, oss.str());
+        }
+
+        return tmp_filepath;
+    }
 
     uint32_t ClientStatisticsTracker::dumpPerclientWorkercnt_(std::fstream* fs_ptr) const
     {

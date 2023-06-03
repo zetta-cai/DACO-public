@@ -78,11 +78,9 @@ namespace covered
 
 	UdpSocketWrapper::~UdpSocketWrapper()
 	{
-		if (pkt_socket_ptr_ != NULL)
-		{
-			delete pkt_socket_ptr_;
-			pkt_socket_ptr_ = NULL;
-		}
+		assert(pkt_socket_ptr_ != NULL);
+		delete pkt_socket_ptr_;
+		pkt_socket_ptr_ = NULL;
 	}
 
     void UdpSocketWrapper::send(const DynamicArray& msg_payload)

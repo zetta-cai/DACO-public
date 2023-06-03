@@ -13,19 +13,28 @@
 
 namespace covered
 {
+    enum CliRole
+    {
+        kSimulator = 1,
+        kStatisticsAggregator,
+        kClientPrototype,
+        kEdgePrototype,
+        kCloudPrototype
+    };
+
     class CLI
     {
     public:
-        static std::string SIMULATOR_NAME;
-        static std::string STATISTICS_AGGREGATOR_NAME;
+        static std::string cliRoleToString(const CliRole& role);
 
-        static void parseAndProcessCliParameters(const std::string& main_class_name, int argc, char **argv);
+        static void parseAndProcessCliParameters(const CliRole& role, int argc, char **argv);
     private:
-        static std::string kClassName;
+        static const std::string kClassName;
 
-        static void parseCliParameters_(const std::string& main_class_name, int argc, char **argv);
-        static void setParamAndConfig_(const std::string& main_class_name);
-        static void processCliParameters_(const std::string& main_class_name);
+        static void parseCliParameters_(int argc, char **argv);
+        static void setParamAndConfig_(const CliRole& role);
+        static void processCliParameters_();
+        static void createRequiredDirectories_(const CliRole& role);
 
         static boost::program_options::options_description argument_desc_;
         static boost::program_options::variables_map argument_info_;

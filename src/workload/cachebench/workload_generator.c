@@ -127,7 +127,7 @@ void WorkloadGenerator::generateReqs() {
     }
   }
 
-  // TODO: remove later
+  // TMPDEBUG
   std::ostringstream oss;
   oss << "first key: " << reqs_[0].key << "; valuesize: " << (*reqs_[0].sizeBegin);
   Util::dumpDebugMsg(kClassName, oss.str());

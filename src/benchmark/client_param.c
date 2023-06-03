@@ -10,6 +10,7 @@ namespace covered
     {
         global_client_idx_ = 0;
         workload_generator_ptr_ = NULL;
+        client_statistics_tracker_ptr_ = NULL;
     }
 
     ClientParam::ClientParam(const uint32_t& global_client_idx, WorkloadWrapperBase* workload_generator_ptr, ClientStatisticsTracker* client_statistics_tracker_ptr) : local_client_running_(false)
@@ -45,6 +46,12 @@ namespace covered
             exit(1);
         }
         workload_generator_ptr_ = other.workload_generator_ptr_;
+        if (other.client_statistics_tracker_ptr_ == NULL)
+        {
+            Util::dumpErrorMsg(kClassName, "other.client_statistics_tracker_ptr_ is NULL!");
+            exit(1);
+        }
+        client_statistics_tracker_ptr_ = other.client_statistics_tracker_ptr_;
         return *this;
     }
 

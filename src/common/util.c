@@ -89,19 +89,19 @@ namespace covered
 
     // (1.2) File I/O
 
-    bool Util::isFileExist(const std::string& filepath)
+    bool Util::isFileExist(const std::string& filepath, const bool& is_silent)
     {
-        return isPathExist_(filepath, true);
+        return isPathExist_(filepath, true, is_silent);
     }
 
-    bool Util::isDirectoryExist(const std::string& dirpath)
+    bool Util::isDirectoryExist(const std::string& dirpath, const bool& is_silent)
     {
-        return isPathExist_(dirpath, false);
+        return isPathExist_(dirpath, false, is_silent);
     }
 
     void Util::createDirectory(const std::string& dirpath)
     {
-        //assert(!isDirectoryExist(dirpath));
+        assert(!isDirectoryExist(dirpath, true));
         //bool result = boost::filesystem::create_directory(dirpath);
         bool result = boost::filesystem::create_directories(dirpath); // Create directory path recursively
         if (!result)
@@ -114,7 +114,14 @@ namespace covered
         return;
     }
 
-    bool Util::isPathExist_(const std::string& path, const bool& is_file)
+    std::string Util::getParentDirpath(const std::string& filepath)
+    {
+        boost::filesystem::path boost_filepath(filepath);
+        boost::filesystem::path boost_dirpath = boost_filepath.parent_path();
+        return boost_dirpath.string();
+    }
+
+    bool Util::isPathExist_(const std::string& path, const bool& is_file, const bool& is_silent)
     {
         // Get boost::file_status
         boost::filesystem::path boost_path(path);
@@ -132,9 +139,12 @@ namespace covered
         // File not exist
         if (!boost::filesystem::exists(boost_pathstatus))
         {
-            std::ostringstream oss;
-            oss << path << " does not exist!";
-            dumpWarnMsg(kClassName, oss.str());
+            if (!is_silent)
+            {
+                std::ostringstream oss;
+                oss << path << " does not exist!";
+                dumpWarnMsg(kClassName, oss.str());
+            }
             return false;
         }
 
@@ -145,8 +155,8 @@ namespace covered
             {
                 std::ostringstream oss;
                 oss << path << " is a directory!";
-                dumpWarnMsg(kClassName, oss.str());
-                return false;
+                dumpErrorMsg(kClassName, oss.str());
+                exit(1);
             }
         }
         else // Should be a directory
@@ -155,8 +165,8 @@ namespace covered
             {
                 std::ostringstream oss;
                 oss << path << " is a regular file!";
-                dumpWarnMsg(kClassName, oss.str());
-                return false;
+                dumpErrorMsg(kClassName, oss.str());
+                exit(1);
             }
         }
 
@@ -382,12 +392,31 @@ namespace covered
 
     // (6) Intermediate files
 
+    std::string Util::getClientStatisticsDirpath()
+    {
+        std::ostringstream oss;
+        oss << Config::getOutputBasedir() << "/" << getInfixForFilepath_();
+        std::string client_statistics_dirpath = oss.str();
+        return client_statistics_dirpath;
+    }
+
     std::string Util::getClientStatisticsFilepath(const uint32_t& global_client_idx)
     {
         std::ostringstream oss;
-        oss << Config::getOutputBasedir() << "/" << getInfixForFilepath_() << "/client" << global_client_idx << "_statistics.out";
+        oss << getClientStatisticsDirpath() << "/client" << global_client_idx << "_statistics.out";
         std::string client_statistics_filepath = oss.str();
         return client_statistics_filepath;
+    }
+
+    std::string Util::getLocalCloudRocksdbDirpath(const uint32_t& global_cloud_idx)
+    {
+        // TODO: only support 1 cloud node now!
+        assert(global_cloud_idx == 0);
+
+        std::ostringstream oss;
+        oss << Config::getGlobalCloudRocksdbBasedir() << "/cloud" << global_cloud_idx << ".db";
+        std::string local_cloud_rocksdb_dirpath = oss.str();
+        return local_cloud_rocksdb_dirpath;
     }
 
     std::string Util::getInfixForFilepath_()

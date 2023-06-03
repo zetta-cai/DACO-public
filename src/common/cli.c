@@ -9,23 +9,60 @@
 
 namespace covered
 {
-    std::string CLI::SIMULATOR_NAME("simulator");
-    std::string CLI::STATISTICS_AGGREGATOR_NAME("statistics_aggregator");
+    const std::string CLI::kClassName("CLI");
 
-    std::string CLI::kClassName("CLI");
+    std::string CLI::cliRoleToString(const CliRole& role)
+    {
+        std::string cli_role_str = "";
+        switch (role)
+        {
+            case CliRole::kSimulator:
+            {
+                cli_role_str = "kSimulator";
+                break;
+            }
+            case CliRole::kStatisticsAggregator:
+            {
+                cli_role_str = "kStatisticsAggregator";
+                break;
+            }
+            case CliRole::kClientPrototype:
+            {
+                cli_role_str = "kClientPrototype";
+                break;
+            }
+            case CliRole::kEdgePrototype:
+            {
+                cli_role_str = "kEdgePrototype";
+                break;
+            }
+            case CliRole::kCloudPrototype:
+            {
+                cli_role_str = "kCloudPrototype";
+                break;
+            }
+            default:
+            {
+                cli_role_str = std::to_string(static_cast<uint32_t>(role));
+                break;
+            }
+        }
+        return cli_role_str;
+    }
 
     boost::program_options::options_description CLI::argument_desc_("Allowed arguments:");
     boost::program_options::variables_map CLI::argument_info_; // Default constructor
 
-    void CLI::parseAndProcessCliParameters(const std::string& main_class_name, int argc, char **argv)
+    void CLI::parseAndProcessCliParameters(const CliRole& role, int argc, char **argv)
     {
-        parseCliParameters_(main_class_name, argc, argv); // Parse CLI parameters based on argument_desc_ to set argument_info_
-        setParamAndConfig_(main_class_name); // Set parameters for dynamic configurations and load config file for static configurations
-        processCliParameters_(main_class_name); // Process static/dynamic actions
+        parseCliParameters_(argc, argv); // Parse CLI parameters based on argument_desc_ to set argument_info_
+        setParamAndConfig_(role); // Set parameters for dynamic configurations and load config file for static configurations
+        processCliParameters_(); // Process static/dynamic actions
+        createRequiredDirectories_(role); // Create required directories (e.g., client statistics directory and cloud RocksDB directory)
         return;
     }
 
-    void CLI::parseCliParameters_(const std::string& main_class_name, int argc, char **argv)
+    void CLI::parseCliParameters_(int argc, char **argv)
     {
         // (1) Create CLI parameter description
 
@@ -65,17 +102,17 @@ namespace covered
         return;
     }
 
-    void CLI::setParamAndConfig_(const std::string& main_class_name)
+    void CLI::setParamAndConfig_(const CliRole& role)
     {
         // (3) Get CLI parameters for dynamic configurations
 
         bool is_simulation = true; // Enable simulation mode by default
         if (argument_info_.count("prototype"))
         {
-            if (main_class_name == CLI::SIMULATOR_NAME)
+            if (role == CliRole::kSimulator)
             {
                 std::ostringstream oss;
-                oss << "--prototype does not work for " << main_class_name << " -> still enable simulation mode!";
+                oss << "--prototype does not work for " << cliRoleToString(role) << " -> still enable simulation mode!";
                 Util::dumpWarnMsg(kClassName, oss.str());
             }
             else
@@ -111,7 +148,7 @@ namespace covered
         Config::loadConfig();
     }
 
-    void CLI::processCliParameters_(const std::string& main_class_name)
+    void CLI::processCliParameters_()
     {
         // (5) Process CLI parameters
 
@@ -121,7 +158,7 @@ namespace covered
         {
             std::ostringstream oss;
             oss << argument_desc_;
-            Util::dumpNormalMsg(main_class_name, oss.str());
+            Util::dumpNormalMsg(kClassName, oss.str());
             exit(0);
         }
 
@@ -131,15 +168,61 @@ namespace covered
         {
             std::ostringstream oss;
             oss << "Current version of COVERED: " << Config::getVersion();
-            Util::dumpNormalMsg(main_class_name, oss.str());
+            Util::dumpNormalMsg(kClassName, oss.str());
             exit(0);
         }
 
         // (6) Dump stored CLI parameters and parsed config information if debug
 
-        Util::dumpDebugMsg(main_class_name, Param::toString());
-        Util::dumpDebugMsg(main_class_name, Config::toString());
+        Util::dumpDebugMsg(kClassName, Param::toString());
+        Util::dumpDebugMsg(kClassName, Config::toString());
 
+        return;
+    }
+
+    void CLI::createRequiredDirectories_(const CliRole& role)
+    {
+        bool is_createdir_for_client_statistics = false;
+        bool is_createdir_for_rocksdb = false;
+        if (role == CliRole::kSimulator)
+        {
+            is_createdir_for_client_statistics = true;
+            is_createdir_for_rocksdb = true;
+        }
+        else
+        {
+            // TODO: create directories for different prototype roles
+        }
+
+        if (is_createdir_for_client_statistics)
+        {
+            std::string dirpath = Util::getClientStatisticsDirpath();
+            bool is_dir_exist = Util::isDirectoryExist(dirpath);
+            if (!is_dir_exist)
+            {
+                // Create directory for client statistics
+                std::ostringstream oss;
+                oss << "create directory " << dirpath << " for client statistics";
+                Util::dumpNormalMsg(kClassName, oss.str());
+
+                Util::createDirectory(dirpath);
+            }
+        }
+
+        if (is_createdir_for_rocksdb)
+        {
+            std::string dirpath = Config::getGlobalCloudRocksdbBasedir();
+            bool is_dir_exist = Util::isDirectoryExist(dirpath);
+            if (!is_dir_exist)
+            {
+                // Create directory for RocksDB KVS
+                std::ostringstream oss;
+                oss << "create directory " << dirpath << " for RocksDB";
+                Util::dumpNormalMsg(kClassName, oss.str());
+
+                Util::createDirectory(dirpath);
+            }
+        }
         return;
     }
 }

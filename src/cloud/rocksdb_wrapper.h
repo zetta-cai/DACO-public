@@ -62,7 +62,7 @@ namespace covered
         static const uint32_t kMaxFileOpeningThreadsForHdd;
         //static const uint32_t kCompactionReadaheadSizeForHdd;
 
-        RocksdbWrapper(const std::string& dbpath);
+        RocksdbWrapper(const std::string& db_filepath);
         ~RocksdbWrapper();
 
         void get(const Key& key, Value& value);
@@ -71,7 +71,7 @@ namespace covered
     private:
         static const std::string kClassName;
 
-        void open_(const std::string& dbpath);
+        void open_(const std::string& db_filepath);
 
         rocksdb::DB* db_ptr_;
     };

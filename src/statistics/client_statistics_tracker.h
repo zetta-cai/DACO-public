@@ -40,7 +40,8 @@ namespace covered
     private:
         static const std::string kClassName;
 
-        // Used by dump() to dump per-client statistics
+        // Used by dump() to check filepath and dump per-client statistics
+        std::string checkFilepathForDump_(const std::string& filepath) const;
         uint32_t dumpPerclientWorkercnt_(std::fstream* fs_ptr) const;
         uint32_t dumpPerworkerLocalHitcnts_(std::fstream* fs_ptr) const;
         uint32_t dumpPerworkerCooperativeHitcnts_(std::fstream* fs_ptr) const;

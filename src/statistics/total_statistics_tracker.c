@@ -207,7 +207,11 @@ namespace covered
         {
             uint32_t tmp_latency_cnt = latency_histogram_[latency_us];
             cur_latency_cnt += tmp_latency_cnt;
-            double cur_ratio = static_cast<double>(cur_latency_cnt) / static_cast<double>(total_latency_cnt);
+            double cur_ratio = 0.0d;
+            if (total_latency_cnt != 0)
+            {
+                cur_ratio = static_cast<double>(cur_latency_cnt) / static_cast<double>(total_latency_cnt);
+            }
 
             tmp_avg_latency += static_cast<uint64_t>(latency_us * tmp_latency_cnt);
             if (min_latency_ == 0 && tmp_latency_cnt > 0)
@@ -235,7 +239,10 @@ namespace covered
                 max_latency_ = latency_us;
             }
         }
-        tmp_avg_latency /= total_latency_cnt;
+        if (total_latency_cnt != 0)
+        {
+            tmp_avg_latency /= total_latency_cnt;
+        }
         assert(tmp_avg_latency >= 0 && tmp_avg_latency < latency_histogram_size_);
         avg_latency_ = static_cast<uint32_t>(tmp_avg_latency);
 

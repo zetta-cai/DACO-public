@@ -51,10 +51,14 @@ namespace covered
         static void dumpErrorMsg(const std::string& class_name, const std::string& error_message);
 
         // (1.2) File I/O
-        static bool isFileExist(const std::string& filepath);
-        static bool isDirectoryExist(const std::string& dirpath);
+        static bool isFileExist(const std::string& filepath, const bool& is_silent=false);
+        static bool isDirectoryExist(const std::string& dirpath, const bool& is_silent=false);
+        // NOTE: avoid confliction in CLI::createRequiredDirectories_ (statistics / ROcksDB directory)
         static void createDirectory(const std::string& dirpath);
-        static std::fstream* openFile(const std::string& filepath, std::ios_base::openmode mode); // Create if not exist
+        // Open a file (create the file if not exist)
+        // NOTE: no confliction as each file (statistics / RocksDB) is accessed by a unique thread (client / cloud)
+        static std::fstream* openFile(const std::string& filepath, std::ios_base::openmode mode);
+        static std::string getParentDirpath(const std::string& filepath);
 
         // (2) Time measurement
 
@@ -79,6 +83,7 @@ namespace covered
         static uint16_t getLocalEdgeRecvreqPort(const uint32_t& global_edge_idx); // Calculate the recvreq port for the local edge node
         static std::string getGlobalCloudIpstr();
         // NOTE: global cloud recvreq port is the same for all edge nodes, which has been provided by Config
+        
 
         // (5) Network
 
@@ -88,7 +93,9 @@ namespace covered
 
         // (6) Intermediate files
 
+        static std::string getClientStatisticsDirpath();
         static std::string getClientStatisticsFilepath(const uint32_t& global_client_idx);
+        static std::string getLocalCloudRocksdbDirpath(const uint32_t& global_cloud_idx); // Calculate the RocksDB dirpath for the local cloud node
 
         // (7) Others
 
@@ -98,9 +105,9 @@ namespace covered
 
         // I/O
         static std::mutex msgdump_lock_;
-        static bool isPathExist_(const std::string& path, const bool& is_file); // File or directory 
+        static bool isPathExist_(const std::string& path, const bool& is_file, const bool& is_silent); // File or directory 
 
-        // Intermediate filters
+        // Intermediate files
         static std::string getInfixForFilepath_();
     };
 }
