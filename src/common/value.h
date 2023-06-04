@@ -24,10 +24,11 @@ namespace covered
         //void remove();
         
         uint32_t getValuesize() const;
-        std::string generateValuestr() const;
+        std::string generateValuestr() const; // Generate value string as value content for serialization
 
         // Offset of value (position) is dynamically changed for different keys in message payload
-        uint32_t serialize(DynamicArray& msg_payload, const uint32_t& position);
+        uint32_t getValuePayloadSize() const;
+        uint32_t serialize(DynamicArray& msg_payload, const uint32_t& position) const;
         uint32_t deserialize(const DynamicArray& msg_payload, const uint32_t& position);
 
         Value& operator=(const Value& other);

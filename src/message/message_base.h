@@ -49,7 +49,8 @@ namespace covered
         static Key getKeyFromMessage(MessageBase* message_ptr); // Get key from message (e.g., local requests)
 
         MessageBase(const MessageType& message_type);
-        MessageBase(const DynamicArray& msg_payload);
+        //MessageBase(const DynamicArray& msg_payload);
+        MessageBase();
         virtual ~MessageBase();
 
         MessageType getMessageType() const;
@@ -58,7 +59,7 @@ namespace covered
 
         // Offset of message must be 0 in message payload
         // Message payload format: message_type + [key size & key] + [value size & value]
-        uint32_t serialize(DynamicArray& msg_payload);
+        uint32_t serialize(DynamicArray& msg_payload) const;
         uint32_t deserialize(const DynamicArray& msg_payload);
 
         bool isDataRequest() const;
@@ -80,10 +81,14 @@ namespace covered
 
         virtual uint32_t getMsgPayloadSizeInternal_() const = 0;
 
-        virtual uint32_t serializeInternal_(DynamicArray& msg_payload, const uint32_t& size) = 0;
+        virtual uint32_t serializeInternal_(DynamicArray& msg_payload, const uint32_t& size) const = 0;
         virtual uint32_t deserializeInternal_(const DynamicArray& msg_payload, const uint32_t& size) = 0;
 
         MessageType message_type_;
+
+        bool is_valid_; // NOT serialized/deserialized in msg payload
+    protected:
+        void checkIsValid_() const;
     };
 }
 

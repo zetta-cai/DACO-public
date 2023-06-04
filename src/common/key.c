@@ -22,8 +22,14 @@ namespace covered
     {
         return keystr_;
     }
+    
+    uint32_t Key::getKeyPayloadSize() const
+    {
+        // key size + key
+        return sizeof(uint32_t) + keystr_.length();
+    }
 
-    uint32_t Key::serialize(DynamicArray& msg_payload, const uint32_t& position)
+    uint32_t Key::serialize(DynamicArray& msg_payload, const uint32_t& position) const
     {
         uint32_t size = position;
         uint32_t bigendian_keysize = htonl(keystr_.length());
@@ -41,9 +47,9 @@ namespace covered
         msg_payload.serialize(size, (char *)&bigendian_keysize, sizeof(uint32_t));
         uint32_t keysize = ntohl(bigendian_keysize);
         size += sizeof(uint32_t);
-        char keycstr[keysize];
-        msg_payload.serialize(size, (char *)keycstr, keysize);
-        keystr_ = std::string(keycstr);
+        DynamicArray keybytes(keysize);
+        msg_payload.arraycpy(size, keybytes, 0, keysize);
+        keystr_ = std::string(keybytes.getBytes().data(), keysize);
         size += keysize;
         return size - position;
     }

@@ -276,28 +276,40 @@ namespace covered
     MessageBase::MessageBase(const MessageType& message_type)
     {
         message_type_ = message_type;
+        is_valid_ = true;
     }
 
-    MessageBase::MessageBase(const DynamicArray& msg_payload)
+    // NOTE: CANNOT call pure method in constructor/destructor, as the derived object has not been contructed / has already been destructed
+    //MessageBase::MessageBase(const DynamicArray& msg_payload)
+    //{
+    //    deserialize(msg_payload);
+    //}
+
+    MessageBase::MessageBase()
     {
-        deserialize(msg_payload);
+        is_valid_ = false;
     }
     
     MessageBase::~MessageBase() {}
 
     MessageType MessageBase::getMessageType() const
     {
+        checkIsValid_();
         return message_type_;
     }
 
     uint32_t MessageBase::getMsgPayloadSize() const
     {
+        checkIsValid_();
+
         // Message type size + internal payload size
         return sizeof(uint32_t) + getMsgPayloadSizeInternal_();
     }
 
-    uint32_t MessageBase::serialize(DynamicArray& msg_payload)
+    uint32_t MessageBase::serialize(DynamicArray& msg_payload) const
     {
+        checkIsValid_();
+
         uint32_t size = 0;
         uint32_t bigendian_message_type_value = htonl(static_cast<uint32_t>(message_type_));
         msg_payload.deserialize(size, (const char *)&bigendian_message_type_value, sizeof(uint32_t));
@@ -309,21 +321,27 @@ namespace covered
     
     uint32_t MessageBase::deserialize(const DynamicArray& msg_payload)
     {
+        // deserialize() can only be invoked once after the default constructor
+        assert(!is_valid_);
+        is_valid_ = true;
+
         uint32_t size = 0;
         uint32_t message_type_size = deserializeMessageTypeFromMsgPayload(msg_payload, message_type_);
         size += message_type_size;
-        uint32_t internal_size = deserializeInternal_(msg_payload, size);
+        uint32_t internal_size = this->deserializeInternal_(msg_payload, size);
         size += internal_size;
         return size - 0;
     }
 
     bool MessageBase::isDataRequest() const
     {
+        checkIsValid_();
         return isLocalRequest() || isRedirectedRequest() || isGlobalRequest();
     }
 
     bool MessageBase::isLocalRequest() const
     {
+        checkIsValid_();
         if (message_type_ == MessageType::kLocalGetRequest || message_type_ == MessageType::kLocalPutRequest || message_type_ == MessageType::kLocalDelRequest)
         {
             return true;
@@ -336,12 +354,14 @@ namespace covered
 
     bool MessageBase::isRedirectedRequest() const
     {
+        checkIsValid_();
         // TODO: Update isRedirectedRequest() after introducing redirected requests
         return false;
     }
 
     bool MessageBase::isGlobalRequest() const
     {
+        checkIsValid_();
         if (message_type_ == MessageType::kGlobalGetRequest || message_type_ == MessageType::kGlobalPutRequest || message_type_ == MessageType::kGlobalDelRequest)
         {
             return true;
@@ -354,11 +374,13 @@ namespace covered
 
     bool MessageBase::isDataResponse() const
     {
+        checkIsValid_();
         return isLocalResponse() || isRedirectedResponse() || isGlobalResponse();
     }
 
     bool MessageBase::isLocalResponse() const
     {
+        checkIsValid_();
         if (message_type_ == MessageType::kLocalGetResponse || message_type_ == MessageType::kLocalPutResponse || message_type_ == MessageType::kLocalDelResponse)
         {
             return true;
@@ -371,12 +393,14 @@ namespace covered
 
     bool MessageBase::isRedirectedResponse() const
     {
+        checkIsValid_();
         // TODO: Update isRedirectedResponse() after introducing redirected responses
         return false;
     }
 
     bool MessageBase::isGlobalResponse() const
     {
+        checkIsValid_();
         if (message_type_ == MessageType::kGlobalGetResponse || message_type_ == MessageType::kGlobalPutResponse || message_type_ == MessageType::kGlobalDelResponse)
         {
             return true;
@@ -389,13 +413,25 @@ namespace covered
 
     bool MessageBase::isControlRequest() const
     {
+        checkIsValid_();
         // TODO: Update isControlRequest() after introducing control requests
         return false;
     }
 
     bool MessageBase::isControlResponse() const
     {
+        checkIsValid_();
         // TODO: Update isControlResponse() after introducing control responses
         return false;
+    }
+
+    void MessageBase::checkIsValid_() const
+    {
+        if (!is_valid_)
+        {
+            Util::dumpErrorMsg(kClassName, "invalid MessageBase (is_valid_ is still false)!");
+            exit(1);
+        }
+        return;
     }
 }

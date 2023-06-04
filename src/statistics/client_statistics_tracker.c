@@ -459,7 +459,7 @@ namespace covered
     
     std::atomic<uint32_t>* ClientStatisticsTracker::getPerworkerCooperativeHitcnts() const
     {
-        return perworker_reqcnts_;
+        return perworker_cooperative_hitcnts_;
     }
 
     std::atomic<uint32_t>* ClientStatisticsTracker::getPerworkerReqcnts() const

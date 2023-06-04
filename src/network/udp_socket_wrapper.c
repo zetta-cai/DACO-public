@@ -155,7 +155,6 @@ namespace covered
 					// Prepare message payload for current message
 					uint32_t msg_payload_size = fraghdr.getMsgPayloadSize();
 					msg_payload.clear(msg_payload_size);
-
 					uint32_t fragcnt = fraghdr.getFragmentCnt();
 					if (fragcnt > 1) // more than 1 fragments -> MsgFragStatsEntry exists
 					{
@@ -189,9 +188,11 @@ namespace covered
 					// Update remote address for send in the near future
 					remote_addr_ = tmp_addr;
 					assert(remote_addr_.isValid() == true);
+
+					break; // Break while(true)
 				} // End of (is_last_frag == true)
-			}
-		}
+			} // End of (is_timeout == false)
+		} // End of while(true)
 
 		return is_timeout;
 	}

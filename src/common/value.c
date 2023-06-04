@@ -43,7 +43,13 @@ namespace covered
         return std::string(valuesize_, '0');
     }
 
-    uint32_t Value::serialize(DynamicArray& msg_payload, const uint32_t& position)
+    uint32_t Value::getValuePayloadSize() const
+    {
+        // is deleted + value size + value
+        return sizeof(bool) + sizeof(uint32_t) + valuesize_;
+    }
+
+    uint32_t Value::serialize(DynamicArray& msg_payload, const uint32_t& position) const
     {
         uint32_t size = position;
         msg_payload.deserialize(size, (const char*)&is_deleted_, sizeof(bool));

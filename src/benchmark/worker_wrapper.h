@@ -34,7 +34,7 @@ namespace covered
     private:
         static const std::string kClassName;
 
-        void processLocalResponse_(MessageBase* local_response_ptr, const uint32_t& rtt_us);
+        void processLocalResponse_(const DynamicArray& local_response_msg_payload, const uint32_t& rtt_us);
 
         WorkerParam* local_worker_param_ptr_;
         std::mt19937_64* local_worker_item_randgen_ptr_;

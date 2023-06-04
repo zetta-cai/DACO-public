@@ -44,6 +44,26 @@ namespace covered
         return bytes_.capacity();
     }
 
+    std::string DynamicArray::getBytesStr() const
+    {
+        std::ostringstream oss;
+        char default_fill = oss.fill();
+        std::streamsize default_width = oss.width();
+        for (uint32_t idx = 0; idx < bytes_.size(); idx++)
+        {
+            oss.fill('0');
+            oss.width(2);
+            oss << std::hex << static_cast<int>(bytes_[idx]);
+            if (idx != bytes_.size() - 1)
+            {
+                oss << " ";
+            }
+        }
+        oss.fill(default_fill);
+        oss.width(default_width);
+        return oss.str();
+    }
+
     void DynamicArray::deserialize(uint32_t position, const char* data, uint32_t length)
     {
         // Should NOT exceed capacity; otherwise, you need to use clear() to increase capacity before deserialize()

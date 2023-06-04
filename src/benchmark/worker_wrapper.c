@@ -104,9 +104,8 @@ namespace covered
 
             // TMPDEBUG
             std::ostringstream oss;
-            oss << "worker " << local_worker_param_ptr_->getLocalWorkerIdx() << "; req type: " << MessageBase::messageTypeToString(local_request_ptr->getMessageType()) << "; keystr: " << workload_item.getKey().getKeystr() << "; valuesize: " << workload_item.getValue().getValuesize();
+            oss << "worker" << local_worker_param_ptr_->getLocalWorkerIdx() << " issues a local request; type: " << MessageBase::messageTypeToString(local_request_ptr->getMessageType()) << "; keystr: " << workload_item.getKey().getKeystr() << "; valuesize: " << workload_item.getValue().getValuesize() << std::endl << "Msg payload: " << local_request_msg_payload.getBytesStr();
             Util::dumpDebugMsg(kClassName, oss.str());
-
 
             // Timeout-and-retry mechanism
             struct timespec sendreq_timestamp = Util::getCurrentTimespec();
@@ -149,28 +148,22 @@ namespace covered
             {
                 continue; // Go to check if client is still running
             }
-
-            // Get local response message
-            MessageBase* local_response_ptr = MessageBase::getResponseFromMsgPayload(local_response_msg_payload);
-            assert(local_response_ptr != NULL && local_response_ptr->isLocalResponse());
             
             // Process local response message to update statistics
             double rtt_us = Util::getDeltaTime(recvrsp_timestamp, sendreq_timestamp);
-            processLocalResponse_(local_response_ptr, static_cast<uint32_t>(rtt_us));
+            processLocalResponse_(local_response_msg_payload, static_cast<uint32_t>(rtt_us));
 
-            // Release local response message
-            assert(local_response_ptr != NULL);
-            delete local_response_ptr;
-            local_response_ptr = NULL;
             break;
         }
 
         return;
     }
 
-    void WorkerWrapper::processLocalResponse_(MessageBase* local_response_ptr, const uint32_t& rtt_us)
+    void WorkerWrapper::processLocalResponse_(const DynamicArray& local_response_msg_payload, const uint32_t& rtt_us)
     {
-        assert(local_response_ptr != NULL);
+        // Get local response message
+        MessageBase* local_response_ptr = MessageBase::getResponseFromMsgPayload(local_response_msg_payload);
+        assert(local_response_ptr != NULL && local_response_ptr->isLocalResponse());
 
         assert(local_worker_param_ptr_ != NULL);
         ClientParam* local_client_param_ptr = local_worker_param_ptr_->getLocalClientParamPtr();
@@ -248,8 +241,13 @@ namespace covered
 
         // TMPDEBUG
         std::ostringstream oss;
-        oss << "worker " << local_worker_param_ptr_->getLocalWorkerIdx() << "; rsp type: " << MessageBase::messageTypeToString(local_response_message_type) << "; keystr: " << tmp_key.getKeystr() << "; valuesize: " << tmp_value.getValuesize() << "; hitflag: " << MessageBase::hitflagToString(hitflag);
+        oss << "worker" << local_worker_param_ptr_->getLocalWorkerIdx() << " receives a local response; type: " << MessageBase::messageTypeToString(local_response_message_type) << "; keystr: " << tmp_key.getKeystr() << "; valuesize: " << tmp_value.getValuesize() << "; hitflag: " << MessageBase::hitflagToString(hitflag) << std::endl << "Msg payload: " << local_response_msg_payload.getBytesStr();
         Util::dumpDebugMsg(kClassName, oss.str());
+
+        // Release local response message
+        assert(local_response_ptr != NULL);
+        delete local_response_ptr;
+        local_response_ptr = NULL;
 
         return;
     }

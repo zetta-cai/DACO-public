@@ -11,35 +11,39 @@ namespace covered
         hitflag_ = hitflag;
     }
 
-    KeyValueHitflagMessage::KeyValueHitflagMessage(const DynamicArray& msg_payload) : MessageBase(msg_payload)
+    KeyValueHitflagMessage::KeyValueHitflagMessage(const DynamicArray& msg_payload) : MessageBase()
     {
+        deserialize(msg_payload);
     }
 
     KeyValueHitflagMessage::~KeyValueHitflagMessage() {}
 
     Key KeyValueHitflagMessage::getKey() const
     {
+        checkIsValid_();
         return key_;
     }
 
     Value KeyValueHitflagMessage::getValue() const
     {
+        checkIsValid_();
         return value_;
     }
 
     Hitflag KeyValueHitflagMessage::getHitflag() const
     {
+        checkIsValid_();
         return hitflag_;
     }
 
     uint32_t KeyValueHitflagMessage::getMsgPayloadSizeInternal_() const
     {
-        // keysize + key + valuesize + value + hit flag
-        uint32_t msg_payload_size = sizeof(uint32_t) + key_.getKeystr().length() + sizeof(uint32_t) + value_.getValuesize() + sizeof(uint8_t);
+        // key payload + value payload + hitflag
+        uint32_t msg_payload_size = key_.getKeyPayloadSize() + value_.getValuePayloadSize() + sizeof(uint8_t);
         return msg_payload_size;
     }
 
-    uint32_t KeyValueHitflagMessage::serializeInternal_(DynamicArray& msg_payload, const uint32_t& position)
+    uint32_t KeyValueHitflagMessage::serializeInternal_(DynamicArray& msg_payload, const uint32_t& position) const
     {
         uint32_t size = position;
         uint32_t key_serialize_size = key_.serialize(msg_payload, size);

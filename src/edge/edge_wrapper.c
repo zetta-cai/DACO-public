@@ -131,6 +131,11 @@ namespace covered
             Key tmp_key = MessageBase::getKeyFromMessage(data_request_ptr);
             Value tmp_value();
 
+            // TMPDEBUG
+            std::ostringstream oss;
+            oss << "edge" << local_edge_param_ptr_->getGlobalEdgeIdx() << " receives a local request; type: " << MessageBase::messageTypeToString(data_request_ptr->getMessageType()) << "; keystr: " << tmp_key.getKeystr();
+            Util::dumpDebugMsg(kClassName, oss.str());
+
             // Block until not invalidated
             is_finish = blockForInvalidation_(tmp_key);
 
@@ -395,6 +400,12 @@ namespace covered
         GlobalGetRequest global_get_request(key);
         DynamicArray global_request_msg_payload(global_get_request.getMsgPayloadSize());
         global_get_request.serialize(global_request_msg_payload);
+
+        // TMPDEBUG
+        std::ostringstream oss;
+        oss << "edge" << local_edge_param_ptr_->getGlobalEdgeIdx() << " issues a global request; type: " << MessageBase::messageTypeToString(global_get_request.getMessageType()) << "; keystr:" << key.getKeystr() << std::endl << "Msg payload: " << global_request_msg_payload.getBytesStr();
+        Util::dumpDebugMsg(kClassName, oss.str());
+
         while (true) // Timeout-and-retry
         {
             // Send the message payload of global request to cloud

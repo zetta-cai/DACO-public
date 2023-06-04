@@ -161,7 +161,7 @@ namespace covered
         oss << "Cache name: " << cache_name_ << std::endl;
         oss << "Capacity (bytes): " << capacity_bytes_ << std::endl;
         oss << "Client count: " << clientcnt_ << std::endl;
-        oss << "CLdou storage: " << cloud_storage_ << std::endl;
+        oss << "Cloud storage: " << cloud_storage_ << std::endl;
         oss << "Config filepath: " << config_filepath_ << std::endl;
         oss << "Debug flag: " << (is_debug_?"true":"false") << std::endl;
         oss << "Duration: " << duration_ << std::endl;
@@ -169,6 +169,9 @@ namespace covered
         oss << "Key count (dataset size): " << keycnt_ << std::endl;
         oss << "Operation count (workload size): " << opcnt_ << std::endl;
         oss << "Per-client worker count: " << perclient_workercnt_ << std::endl;
+        oss << "One-way propagation latency between client and edge: " << propagation_latency_clientedge_ << "us" << std::endl;
+        oss << "One-way propagation latency between edge and edge: " << propagation_latency_crossedge_ << "us" << std::endl;
+        oss << "One-way propagation latency between edge and cloud: " << propagation_latency_edgecloud_ << "us" << std::endl;
         oss << "Workload name: " << workload_name_;
         return oss.str();
         

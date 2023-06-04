@@ -10,30 +10,33 @@ namespace covered
         value_ = value;
     }
 
-    KeyValueMessage::KeyValueMessage(const DynamicArray& msg_payload) : MessageBase(msg_payload)
+    KeyValueMessage::KeyValueMessage(const DynamicArray& msg_payload) : MessageBase()
     {
+        deserialize(msg_payload);
     }
 
     KeyValueMessage::~KeyValueMessage() {}
 
     Key KeyValueMessage::getKey() const
     {
+        checkIsValid_();
         return key_;
     }
 
     Value KeyValueMessage::getValue() const
     {
+        checkIsValid_();
         return value_;
     }
 
     uint32_t KeyValueMessage::getMsgPayloadSizeInternal_() const
     {
-        // keysize + key + valuesize + value
-        uint32_t msg_payload_size = sizeof(uint32_t) + key_.getKeystr().length() + sizeof(uint32_t) + value_.getValuesize();
+        // key payload + value payload
+        uint32_t msg_payload_size = key_.getKeyPayloadSize() + value_.getValuePayloadSize();
         return msg_payload_size;
     }
 
-    uint32_t KeyValueMessage::serializeInternal_(DynamicArray& msg_payload, const uint32_t& position)
+    uint32_t KeyValueMessage::serializeInternal_(DynamicArray& msg_payload, const uint32_t& position) const
     {
         uint32_t size = position;
         uint32_t key_serialize_size = key_.serialize(msg_payload, size);

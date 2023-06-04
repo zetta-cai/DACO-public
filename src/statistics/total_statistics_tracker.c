@@ -8,7 +8,7 @@
 
 namespace covered
 {
-    const std::string kClassName("TotalStatisticsTracker");
+    const std::string TotalStatisticsTracker::kClassName("TotalStatisticsTracker");
     
     TotalStatisticsTracker::TotalStatisticsTracker(uint32_t clientcnt, ClientStatisticsTracker** client_statistics_tracker_ptrs)
     {
@@ -143,6 +143,7 @@ namespace covered
             // Aggregate per-client hit ratio statistics
             std::atomic<uint32_t>* tmp_perworker_local_hitcnts = tmp_client_statistics_tracker.getPerworkerLocalHitcnts();
             std::atomic<uint32_t>* tmp_perworker_cooperative_hitcnts = tmp_client_statistics_tracker.getPerworkerCooperativeHitcnts();
+
             std::atomic<uint32_t>* tmp_perworker_reqcnts = tmp_client_statistics_tracker.getPerworkerReqcnts();
             for (uint32_t local_worker_idx = 0; local_worker_idx < perclient_workercnt; local_worker_idx++)
             {

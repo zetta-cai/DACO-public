@@ -10,30 +10,33 @@ namespace covered
         hitflag_ = hitflag;
     }
 
-    KeyHitflagMessage::KeyHitflagMessage(const DynamicArray& msg_payload) : MessageBase(msg_payload)
+    KeyHitflagMessage::KeyHitflagMessage(const DynamicArray& msg_payload) : MessageBase()
     {
+        deserialize(msg_payload);
     }
 
     KeyHitflagMessage::~KeyHitflagMessage() {}
 
     Key KeyHitflagMessage::getKey() const
     {
+        checkIsValid_();
         return key_;
     }
 
     Hitflag KeyHitflagMessage::getHitflag() const
     {
+        checkIsValid_();
         return hitflag_;
     }
 
     uint32_t KeyHitflagMessage::getMsgPayloadSizeInternal_() const
     {
-        // keysize + key + hit flag
-        uint32_t msg_payload_size = sizeof(uint32_t) + key_.getKeystr().length() + sizeof(uint8_t);
+        // key payload + hit flag
+        uint32_t msg_payload_size = key_.getKeyPayloadSize() + sizeof(uint8_t);
         return msg_payload_size;
     }
 
-    uint32_t KeyHitflagMessage::serializeInternal_(DynamicArray& msg_payload, const uint32_t& position)
+    uint32_t KeyHitflagMessage::serializeInternal_(DynamicArray& msg_payload, const uint32_t& position) const
     {
         uint32_t size = position;
         uint32_t key_serialize_size = key_.serialize(msg_payload, size);
