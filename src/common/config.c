@@ -10,10 +10,12 @@
 
 namespace covered
 {
+    const std::string Config::CLOUD_IPSTR_KEYSTR("cloud_ipstr");
+    const std::string Config::CLOUD_RECVREQ_STARTPORT_KEYSTR("cloud_recvreq_startport");
+    const std::string Config::CLOUD_ROCKSDB_BASEDIR_KEYSTR("cloud_rocksdb_basedir");
+    const std::string Config::EDGE_IPSTRS_KEYSTR("edge_ipstrs");
+    const std::string Config::EDGE_RECVREQ_STARTPORT_KEYSTR("edge_recvreq_startport");
     const std::string Config::FACEBOOK_CONFIG_FILEPATH_KEYSTR("facebook_config_filepath");
-    const std::string Config::GLOBAL_CLOUD_RECVREQ_PORT_KEYSTR("global_cloud_recvreq_port");
-    const std::string Config::GLOBAL_CLOUD_ROCKSDB_BASEDIR_KEYSTR("global_cloud_rocksdb_basedir");
-    const std::string Config::GLOBAL_EDGE_RECVREQ_STARTPORT_KEYSTR("global_edge_recvreq_startport");
     const std::string Config::LATENCY_HISTOGRAM_SIZE_KEYSTR("latency_histogram_size");
     const std::string Config::OUTPUT_BASEDIR_KEYSTR("output_basedir");
     const std::string Config::VERSION_KEYSTR("version");
@@ -23,10 +25,12 @@ namespace covered
     // Initialize config variables by default
     bool Config::is_valid_ = false;
     boost::json::object Config::json_object_ = boost::json::object();
+    std::string Config::cloud_ipstr_ = Util::LOCALHOST_IPSTR;
+    uint16_t Config::cloud_recvreq_startport_ = 4100; // [4096, 65536]
+    std::string Config::cloud_rocksdb_basedir_("/tmp/cloud");
+    std::vector<std::string> Config::edge_ipstrs_(0);
+    uint16_t Config::edge_recvreq_startport_ = 4200; // [4096, 65536]
     std::string Config::facebook_config_filepath_("lib/CacheLib/cachelib/cachebench/test_configs/hit_ratio/cdn/config.json");
-    uint16_t Config::global_cloud_recvreq_port_ = 4100; // [4096, 65536]
-    std::string Config::global_cloud_rocksdb_basedir_("/tmp/cloud");
-    uint16_t Config::global_edge_recvreq_startport_ = 4200; // [4096, 65536]
     uint32_t Config::latency_histogram_size_ = 1000000; // Track latency up to 1000 ms
     std::string Config::output_basedir_("output");
     std::string Config::version_("1.0");
@@ -43,27 +47,40 @@ namespace covered
 
             // Overwrite default values of config variables if any
             boost::json::key_value_pair* kv_ptr = NULL;
+            kv_ptr = find_(CLOUD_IPSTR_KEYSTR);
+            if (kv_ptr != NULL)
+            {
+                cloud_ipstr_ = kv_ptr->value().get_string();
+            }
+            kv_ptr = find_(CLOUD_RECVREQ_STARTPORT_KEYSTR);
+            if (kv_ptr != NULL)
+            {
+                int64_t tmp_port = kv_ptr->value().get_int64();
+                cloud_recvreq_startport_ = Util::toUint16(tmp_port);
+            }
+            kv_ptr = find_(CLOUD_ROCKSDB_BASEDIR_KEYSTR);
+            if (kv_ptr != NULL)
+            {
+                cloud_rocksdb_basedir_ = kv_ptr->value().get_string();
+            }
+            kv_ptr = find_(EDGE_IPSTRS_KEYSTR);
+            if (kv_ptr != NULL)
+            {
+                for (boost::json::array::iterator iter = kv_ptr->value().get_array().begin(); iter != kv_ptr->value().get_array().end(); iter++)
+                {
+                    edge_ipstrs_.push_back(static_cast<std::string>(iter->get_string()));
+                }
+            }
+            kv_ptr = find_(EDGE_RECVREQ_STARTPORT_KEYSTR);
+            if (kv_ptr != NULL)
+            {
+                int64_t tmp_port = kv_ptr->value().get_int64();
+                edge_recvreq_startport_ = Util::toUint16(tmp_port);
+            }
             kv_ptr = find_(FACEBOOK_CONFIG_FILEPATH_KEYSTR);
             if (kv_ptr != NULL)
             {
                 facebook_config_filepath_ = kv_ptr->value().get_string();
-            }
-            kv_ptr = find_(GLOBAL_CLOUD_RECVREQ_PORT_KEYSTR);
-            if (kv_ptr != NULL)
-            {
-                int64_t tmp_port = kv_ptr->value().get_int64();
-                global_cloud_recvreq_port_ = Util::toUint16(tmp_port);
-            }
-            kv_ptr = find_(GLOBAL_CLOUD_ROCKSDB_BASEDIR_KEYSTR);
-            if (kv_ptr != NULL)
-            {
-                global_cloud_rocksdb_basedir_ = kv_ptr->value().get_string();
-            }
-            kv_ptr = find_(GLOBAL_EDGE_RECVREQ_STARTPORT_KEYSTR);
-            if (kv_ptr != NULL)
-            {
-                int64_t tmp_port = kv_ptr->value().get_int64();
-                global_edge_recvreq_startport_ = Util::toUint16(tmp_port);
             }
             kv_ptr = find_(LATENCY_HISTOGRAM_SIZE_KEYSTR);
             if (kv_ptr != NULL)
@@ -99,28 +116,55 @@ namespace covered
         return;
     }
 
+    std::string Config::getCloudIpstr()
+    {
+        checkIsValid_();
+        if (Param::isSimulation())
+        {
+            return Util::LOCALHOST_IPSTR;
+        }
+        else
+        {
+            return cloud_ipstr_;
+        }
+    }
+
+    uint16_t Config::getCloudRecvreqStartport()
+    {
+        checkIsValid_();
+        return cloud_recvreq_startport_;
+    }
+
+    std::string Config::getCloudRocksdbBasedir()
+    {
+        checkIsValid_();
+        return cloud_rocksdb_basedir_;
+    }
+
+    std::string Config::getEdgeIpstr(const uint32_t& edge_idx)
+    {
+        checkIsValid_();
+        if (Param::isSimulation()) // NOT check edge_idx for simulation mode
+        {
+            return Util::LOCALHOST_IPSTR;
+        }
+        else
+        {
+            assert(edge_idx < edge_ipstrs_.size());
+            return edge_ipstrs_[edge_idx];
+        }
+    }
+
+    uint16_t Config::getEdgeRecvreqStartport()
+    {
+        checkIsValid_();
+        return edge_recvreq_startport_;
+    }
+
     std::string Config::getFacebookConfigFilepath()
     {
         checkIsValid_();
         return facebook_config_filepath_;
-    }
-
-    uint16_t Config::getGlobalCloudRecvreqPort()
-    {
-        checkIsValid_();
-        return global_cloud_recvreq_port_;
-    }
-
-    std::string Config::getGlobalCloudRocksdbBasedir()
-    {
-        checkIsValid_();
-        return global_cloud_rocksdb_basedir_;
-    }
-
-    uint16_t Config::getGlobalEdgeRecvreqStartport()
-    {
-        checkIsValid_();
-        return global_edge_recvreq_startport_;
     }
 
     uint32_t Config::getLatencyHistogramSize()
@@ -146,9 +190,11 @@ namespace covered
         checkIsValid_();
         std::ostringstream oss;
         oss << "[Static configurations from " << Param::getConfigFilepath() << "]" << std::endl;
+        oss << "Cloud ipstr: " << cloud_ipstr_ << std::endl;
+        oss << "Cloud recvreq port: " << cloud_recvreq_startport_ << std::endl;
+        oss << "Cloud RocksDB base directory: " << cloud_rocksdb_basedir_ << std::endl;
+        oss << "Edge recvreq startport: " << edge_recvreq_startport_ << std::endl;
         oss << "Facebook config filepath: " << facebook_config_filepath_ << std::endl;
-        oss << "Global cloud recvreq port: " << global_cloud_recvreq_port_ << std::endl;
-        oss << "Global edge recvreq startport: " << global_edge_recvreq_startport_ << std::endl;
         oss << "Version: " << version_;
         return oss.str();
     }

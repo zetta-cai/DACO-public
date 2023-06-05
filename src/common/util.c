@@ -278,10 +278,10 @@ namespace covered
 
     // (4.1) Client
 
-    uint32_t Util::getClosestEdgeIdx(const uint32_t& global_client_idx)
+    uint32_t Util::getClosestEdgeIdx(const uint32_t& client_idx)
     {
         uint32_t peredge_clientcnt = Param::getClientcnt() / Param::getEdgecnt();
-        uint32_t closest_edge_idx = global_client_idx / peredge_clientcnt;
+        uint32_t closest_edge_idx = client_idx / peredge_clientcnt;
         if (closest_edge_idx >= Param::getEdgecnt())
         {
             closest_edge_idx = Param::getEdgecnt() - 1;
@@ -289,70 +289,57 @@ namespace covered
         return closest_edge_idx;
     }
 
-    std::string Util::getClosestEdgeIpstr(const uint32_t& global_client_idx)
+    std::string Util::getClosestEdgeIpstr(const uint32_t& client_idx)
     {
-        std::string closest_edge_ipstr = "";
-        if (covered::Param::isSimulation())
-        {
-            closest_edge_ipstr = covered::Util::LOCALHOST_IPSTR;
-        }
-        else
-        {
-            // TODO: set closest_edge_ipstr
-            // uint32_t closest_edge_idx = getClosestEdgeIdx(global_client_idx);
-            // closest_edge_ipstr = getLocalEdgeIpstr(closest_edge_idx);
-            
-            covered::Util::dumpErrorMsg(kClassName, "NOT support getLocalEdgeNodeIpstr() for prototype now!");
-            exit(1);
-        }
-        return closest_edge_ipstr;
+        uint32_t closest_edge_idx = getClosestEdgeIdx(client_idx);
+        return Config::getEdgeIpstr(closest_edge_idx);
     }
 
-    uint16_t Util::getClosestEdgeRecvreqPort(const uint32_t& global_client_idx)
+    uint16_t Util::getClosestEdgeRecvreqPort(const uint32_t& client_idx)
     {
-        uint32_t closest_edge_idx = getClosestEdgeIdx(global_client_idx);
-        return getLocalEdgeRecvreqPort(closest_edge_idx);
+        uint32_t closest_edge_idx = getClosestEdgeIdx(client_idx);
+        return getEdgeRecvreqPort(closest_edge_idx);
     }
 
-    uint32_t Util::getGlobalWorkerIdx(const uint32_t& global_client_idx, const uint32_t local_worker_idx)
+    uint32_t Util::getGlobalWorkerIdx(const uint32_t& client_idx, const uint32_t local_worker_idx)
     {
-        uint32_t global_worker_idx = global_client_idx * Param::getPerclientWorkercnt() + local_worker_idx;
+        uint32_t global_worker_idx = client_idx * Param::getPerclientWorkercnt() + local_worker_idx;
         return global_worker_idx;
     }
 
-    // (4.2) Edge
+    // (4.2) Edge and cloud
 
-    uint16_t Util::getLocalEdgeRecvreqPort(const uint32_t& global_edge_idx)
+    uint16_t Util::getEdgeRecvreqPort(const uint32_t& edge_idx)
     {
-        int64_t local_edge_recvreq_port = 0;
-        int64_t global_edge_recvreq_startport = static_cast<int64_t>(covered::Config::getGlobalEdgeRecvreqStartport());
+        int64_t edge_recvreq_port = 0;
+        int64_t edge_recvreq_startport = static_cast<int64_t>(covered::Config::getEdgeRecvreqStartport());
         if (covered::Param::isSimulation())
         {
-            local_edge_recvreq_port = global_edge_recvreq_startport + global_edge_idx;
+            edge_recvreq_port = edge_recvreq_startport + edge_idx;
         }
         else
         {
-            local_edge_recvreq_port = global_edge_recvreq_startport;
+            edge_recvreq_port = edge_recvreq_startport;
         }
-        return covered::Util::toUint16(local_edge_recvreq_port);
+        return covered::Util::toUint16(edge_recvreq_port);
     }
 
-    std::string Util::getGlobalCloudIpstr()
+    uint16_t Util::getCloudRecvreqPort(const uint32_t& cloud_idx)
     {
-        std::string global_cloud_ipstr = "";
+        // TODO: only support 1 cloud node now
+        assert(cloud_idx == 0);
+
+        int64_t cloud_recvreq_port = 0;
+        int64_t cloud_recvreq_startport = static_cast<int64_t>(covered::Config::getCloudRecvreqStartport());
         if (covered::Param::isSimulation())
         {
-            global_cloud_ipstr = covered::Util::LOCALHOST_IPSTR;
+            cloud_recvreq_port = cloud_recvreq_startport + cloud_idx;
         }
         else
         {
-            // TODO: set global_cloud_ipstr
-            // global_cloud_ipstr = Config::getGlobalCloudIpstr();
-            
-            covered::Util::dumpErrorMsg(kClassName, "NOT support getGlobalCloudIpstr() for prototype now!");
-            exit(1);
+            cloud_recvreq_port = cloud_recvreq_startport;
         }
-        return global_cloud_ipstr;
+        return covered::Util::toUint16(cloud_recvreq_port);
     }
 
     // (5) Network
@@ -400,30 +387,30 @@ namespace covered
         return client_statistics_dirpath;
     }
 
-    std::string Util::getClientStatisticsFilepath(const uint32_t& global_client_idx)
+    std::string Util::getClientStatisticsFilepath(const uint32_t& client_idx)
     {
         std::ostringstream oss;
-        oss << getClientStatisticsDirpath() << "/client" << global_client_idx << "_statistics.out";
+        oss << getClientStatisticsDirpath() << "/client" << client_idx << "_statistics.out";
         std::string client_statistics_filepath = oss.str();
         return client_statistics_filepath;
     }
 
-    std::string Util::getLocalCloudRocksdbDirpath(const uint32_t& global_cloud_idx)
+    std::string Util::getCloudRocksdbDirpath(const uint32_t& cloud_idx)
     {
         // TODO: only support 1 cloud node now!
-        assert(global_cloud_idx == 0);
+        assert(cloud_idx == 0);
 
         std::ostringstream oss;
-        oss << Config::getGlobalCloudRocksdbBasedir() << "/cloud" << global_cloud_idx << ".db";
-        std::string local_cloud_rocksdb_dirpath = oss.str();
-        return local_cloud_rocksdb_dirpath;
+        oss << Config::getCloudRocksdbBasedir() << "/cloud" << cloud_idx << ".db";
+        std::string cloud_rocksdb_dirpath = oss.str();
+        return cloud_rocksdb_dirpath;
     }
 
     std::string Util::getInfixForFilepath_()
     {
         std::ostringstream oss;
-        // Example: simulation_covered_capacitymb1000_clientcnt1_duration10_edgecnt1_keycnt1000000_opcnt1000000_perclientworkercnt1_propagation100010000100000_facebook
-        oss << (Param::isSimulation()?"simulation":"prototype") << "_" << Param::getCacheName() << "_capacitymb" << Param::getCapacityBytes() / 1000 << "_clientcnt" << Param::getClientcnt() << "_duration" << Param::getDuration() << "_edgecnt" << Param::getEdgecnt() << "_keycnt" << Param::getKeycnt() << "_opcnt" << Param::getOpcnt() << "_perclientworkercnt" << Param::getPerclientWorkercnt() << "_propagation" << Param::getPropagationLatencyClientedge() << Param::getPropagationLatencyCrossedge() << Param::getPropagationLatencyEdgecloud() << "_" << Param::getWorkloadName();
+        // Example: simulation_covered_capacitymb1000_clientcnt1_duration10_edgecnt1_hashnamemmh3_keycnt1000000_opcnt1000000_perclientworkercnt1_propagation100010000100000_facebook
+        oss << (Param::isSimulation()?"simulation":"prototype") << "_" << Param::getCacheName() << "_capacitymb" << Param::getCapacityBytes() / 1000 << "_clientcnt" << Param::getClientcnt() << "_duration" << Param::getDuration() << "_edgecnt" << Param::getEdgecnt() << "_hashname" << Param::getHashName() << "_keycnt" << Param::getKeycnt() << "_opcnt" << Param::getOpcnt() << "_perclientworkercnt" << Param::getPerclientWorkercnt() << "_propagation" << Param::getPropagationLatencyClientedge() << Param::getPropagationLatencyCrossedge() << Param::getPropagationLatencyEdgecloud() << "_" << Param::getWorkloadName();
         std::string infixstr = oss.str();
         return infixstr;
     }

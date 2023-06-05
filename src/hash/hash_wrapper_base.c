@@ -8,45 +8,23 @@
 
 namespace covered
 {
+    const std::string HashWrapperBase::MMH3_HASH_NAME("mmh3");
+
     const std::string HashWrapperBase::kClassName("HashWrapperBase");
 
-    std::string HashWrapperBase::hashTypeToString(const HashType& hash_type)
-    {
-        std::string hash_type_str = "";
-        switch (hash_type)
-        {
-            case HashType::kMmh3Hash:
-            {
-                hash_type_str = "kMmh3Hash";
-                break;
-            }
-            default:
-            {
-                hash_type_str = std::to_string(static_cast<uint32_t>(hash_type));
-                break;
-            }
-        }
-        return hash_type_str;
-    }
-
-    HashWrapperBase* HashWrapperBase::getHashWrapper(const HashType& hash_type)
+    HashWrapperBase* HashWrapperBase::getHashWrapper(const std::string& hash_name)
     {
         HashWrapperBase* hash_wrapper_base_ptr = NULL;
-        switch (hash_type)
+        if (hash_name == MMH3_HASH_NAME)
         {
-            case HashType::kMmh3Hash:
-            {
-                hash_wrapper_base_ptr = new Mmh3HashWrapper();
-                break;
-            }
-            default:
-            {
-                std::ostringstream oss;
-                oss << "hash type " << HashWrapperBase::hashTypeToString(hash_type) << " is not supported!";
-                Util::dumpErrorMsg(kClassName, oss.str());
-                exit(1);
-                break;
-            }
+            hash_wrapper_base_ptr = new Mmh3HashWrapper();
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "hash name " << hash_name << " is not supported!";
+            Util::dumpErrorMsg(kClassName, oss.str());
+            exit(1);
         }
         assert(hash_wrapper_base_ptr != NULL);
         return hash_wrapper_base_ptr;

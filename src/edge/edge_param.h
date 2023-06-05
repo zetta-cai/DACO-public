@@ -16,7 +16,7 @@ namespace covered
     {
     public:
         EdgeParam();
-        EdgeParam(uint32_t global_edge_idx);
+        EdgeParam(uint32_t edge_idx);
         ~EdgeParam();
 
         const EdgeParam& operator=(const EdgeParam& other);
@@ -25,14 +25,14 @@ namespace covered
         void setEdgeRunning();
         void resetEdgeRunning();
 
-        uint32_t getGlobalEdgeIdx();
+        uint32_t getEdgeIdx();
     private:
         static const std::string kClassName;
 
-         volatile std::atomic<bool> local_edge_running_;
+         volatile std::atomic<bool> current_edge_running_;
 
-        // UDP port for receiving requests is global_edge_recvreq_startport + global_edge_idx
-        uint32_t global_edge_idx_;
+        // UDP port for receiving requests is edge_recvreq_startport + edge_idx
+        uint32_t edge_idx_;
     };
 }
 

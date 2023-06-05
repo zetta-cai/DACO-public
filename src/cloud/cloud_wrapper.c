@@ -13,63 +13,63 @@ namespace covered
 {
     const std::string CloudWrapper::kClassName("CloudWrapper");
 
-    void* CloudWrapper::launchCloud(void* local_cloud_param_ptr)
+    void* CloudWrapper::launchCloud(void* cloud_param_ptr)
     {
-        CloudWrapper local_cloud((CloudParam*)local_cloud_param_ptr);
+        CloudWrapper local_cloud((CloudParam*)cloud_param_ptr);
         local_cloud.start();
         
         pthread_exit(NULL);
         return NULL;
     }
 
-    CloudWrapper::CloudWrapper(CloudParam* local_cloud_param_ptr)
+    CloudWrapper::CloudWrapper(CloudParam* cloud_param_ptr)
     {
-        if (local_cloud_param_ptr == NULL)
+        if (cloud_param_ptr == NULL)
         {
-            Util::dumpErrorMsg(kClassName, "local_cloud_param_ptr is NULL!");
+            Util::dumpErrorMsg(kClassName, "cloud_param_ptr is NULL!");
             exit(1);
         }
-        local_cloud_param_ptr_ = local_cloud_param_ptr;
-        assert(local_cloud_param_ptr_ != NULL);
+        cloud_param_ptr_ = cloud_param_ptr;
+        assert(cloud_param_ptr_ != NULL);
         
         // Open local RocksDB KVS
-        local_cloud_rocksdb_ptr_ = new RocksdbWrapper(Util::getLocalCloudRocksdbDirpath(local_cloud_param_ptr_->getGlobalCloudIdx()));
-        assert(local_cloud_rocksdb_ptr_ != NULL);
+        cloud_rocksdb_ptr_ = new RocksdbWrapper(Util::getCloudRocksdbDirpath(cloud_param_ptr_->getCloudIdx()));
+        assert(cloud_rocksdb_ptr_ != NULL);
 
         // Prepare a socket server on recvreq port
-        uint16_t global_cloud_recvreq_port = Config::getGlobalCloudRecvreqPort();
-        NetworkAddr host_addr(Util::ANY_IPSTR, global_cloud_recvreq_port);
-        local_cloud_recvreq_socket_server_ptr_ = new UdpSocketWrapper(SocketRole::kSocketServer, host_addr);
-        assert(local_cloud_recvreq_socket_server_ptr_ != NULL);
+        uint16_t cloud_recvreq_port = Util::getCloudRecvreqPort(cloud_param_ptr_->getCloudIdx());
+        NetworkAddr host_addr(Util::ANY_IPSTR, cloud_recvreq_port);
+        cloud_recvreq_socket_server_ptr_ = new UdpSocketWrapper(SocketRole::kSocketServer, host_addr);
+        assert(cloud_recvreq_socket_server_ptr_ != NULL);
     }
         
     CloudWrapper::~CloudWrapper()
     {
-        // NOTE: no need to delete local_cloud_param_ptr, as it is maintained outside CloudWrapper
+        // NOTE: no need to delete cloud_param_ptr, as it is maintained outside CloudWrapper
 
         // Close local RocksDB KVS
-        assert(local_cloud_rocksdb_ptr_ != NULL);
-        delete local_cloud_rocksdb_ptr_;
-        local_cloud_rocksdb_ptr_ = NULL;
+        assert(cloud_rocksdb_ptr_ != NULL);
+        delete cloud_rocksdb_ptr_;
+        cloud_rocksdb_ptr_ = NULL;
 
         // Release the socket server on recvreq port
-        assert(local_cloud_recvreq_socket_server_ptr_ != NULL);
-        delete local_cloud_recvreq_socket_server_ptr_;
-        local_cloud_recvreq_socket_server_ptr_ = NULL;
+        assert(cloud_recvreq_socket_server_ptr_ != NULL);
+        delete cloud_recvreq_socket_server_ptr_;
+        cloud_recvreq_socket_server_ptr_ = NULL;
     }
 
     void CloudWrapper::start()
     {
-        assert(local_cloud_param_ptr_ != NULL);
-        assert(local_cloud_recvreq_socket_server_ptr_ != NULL);
+        assert(cloud_param_ptr_ != NULL);
+        assert(cloud_recvreq_socket_server_ptr_ != NULL);
 
         bool is_finish = false; // Mark if local cloud node is finished
 
-        while (local_cloud_param_ptr_->isCloudRunning()) // local_cloud_running_ is set as true by default
+        while (cloud_param_ptr_->isCloudRunning()) // cloud_running_ is set as true by default
         {
             // Receive the global request message
             DynamicArray global_request_msg_payload;
-            bool is_timeout = local_cloud_recvreq_socket_server_ptr_->recv(global_request_msg_payload);
+            bool is_timeout = cloud_recvreq_socket_server_ptr_->recv(global_request_msg_payload);
             if (is_timeout == true)
             {
                 continue; // Retry to receive global request if cloud is still running
@@ -107,9 +107,9 @@ namespace covered
     bool CloudWrapper::processGlobalRequest_(MessageBase* global_request_ptr)
     {
         assert(global_request_ptr != NULL && global_request_ptr->isGlobalRequest());
-        assert(local_cloud_param_ptr_ != NULL);
-        assert(local_cloud_rocksdb_ptr_ != NULL);
-        assert(local_cloud_recvreq_socket_server_ptr_ != NULL);
+        assert(cloud_param_ptr_ != NULL);
+        assert(cloud_rocksdb_ptr_ != NULL);
+        assert(cloud_recvreq_socket_server_ptr_ != NULL);
 
         bool is_finish = false;
 
@@ -126,7 +126,7 @@ namespace covered
                 tmp_key = global_get_request_ptr->getKey();
 
                 // Get value from RocksDB KVS
-                local_cloud_rocksdb_ptr_->get(tmp_key, tmp_value);
+                cloud_rocksdb_ptr_->get(tmp_key, tmp_value);
 
                 // Prepare global get response message
                 global_response_ptr = new GlobalGetResponse(tmp_key, tmp_value);
@@ -141,7 +141,7 @@ namespace covered
                 assert(tmp_value.isDeleted() == false);
 
                 // Put value into RocksDB KVS
-                local_cloud_rocksdb_ptr_->put(tmp_key, tmp_value);
+                cloud_rocksdb_ptr_->put(tmp_key, tmp_value);
 
                 // Prepare global put response message
                 global_response_ptr = new GlobalPutResponse(tmp_key);
@@ -154,7 +154,7 @@ namespace covered
                 tmp_key = global_del_request_ptr->getKey();
 
                 // Put value into RocksDB KVS
-                local_cloud_rocksdb_ptr_->remove(tmp_key);
+                cloud_rocksdb_ptr_->remove(tmp_key);
 
                 // Prepare global del response message
                 global_response_ptr = new GlobalDelResponse(tmp_key);
@@ -178,7 +178,7 @@ namespace covered
             DynamicArray global_response_msg_payload(global_response_ptr->getMsgPayloadSize());
             global_response_ptr->serialize(global_response_msg_payload);
             PropagationSimulator::propagateFromCloudToEdge();
-            local_cloud_recvreq_socket_server_ptr_->send(global_response_msg_payload);
+            cloud_recvreq_socket_server_ptr_->send(global_response_msg_payload);
         }
 
         // Release global response message

@@ -19,9 +19,9 @@ namespace covered
     class EdgeWrapper
     {
     public:
-        static void* launchEdge(void* local_edge_param_ptr);
+        static void* launchEdge(void* current_edge_param_ptr);
 
-        EdgeWrapper(EdgeParam* local_edge_param_ptr);
+        EdgeWrapper(EdgeParam* current_edge_param_ptr);
         ~EdgeWrapper();
 
         void start();
@@ -44,10 +44,10 @@ namespace covered
 
         void triggerIndependentAdmission_(const Key& key, const Value& value);
 
-        EdgeParam* local_edge_param_ptr_;
-        CacheWrapperBase* local_edge_cache_ptr_;
-        UdpSocketWrapper* local_edge_recvreq_socket_server_ptr_;
-        UdpSocketWrapper* local_edge_sendreq_tocloud_socket_client_ptr_;
+        EdgeParam* edge_param_ptr_;
+        CacheWrapperBase* edge_cache_ptr_;
+        UdpSocketWrapper* edge_recvreq_socket_server_ptr_;
+        UdpSocketWrapper* edge_sendreq_tocloud_socket_client_ptr_;
     };
 }
 

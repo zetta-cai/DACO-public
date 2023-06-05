@@ -18,8 +18,8 @@ namespace covered
     {
         assert(input != NULL);
 
-        uint32_t hash_result = 0;
-        MurmurHash3_x86_32((const void*)input, static_cast<int>(length), seed_, &hash_result);
-        return hash_result;
+        uint32_t hash_value = 0;
+        MurmurHash3_x86_32((const void*)input, static_cast<int>(length), seed_, &hash_value);
+        return hash_value;
     }
 }

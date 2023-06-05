@@ -19,16 +19,16 @@ namespace covered
     class ClientWrapper
     {
     public:
-        static void* launchClient(void* local_client_param_ptr);
+        static void* launchClient(void* client_param_ptr);
 
-        ClientWrapper(ClientParam* local_client_param_ptr);
+        ClientWrapper(ClientParam* client_param_ptr);
         ~ClientWrapper();
 
         void start();
     private:
         static const std::string kClassName;
 
-        ClientParam* local_client_param_ptr_;
+        ClientParam* client_param_ptr_;
     };
 }
 

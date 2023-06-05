@@ -17,20 +17,24 @@ namespace covered
     {
     public:
         // Key strings of JSON config file for static configurations (only used by Config)
+        static const std::string CLOUD_IPSTR_KEYSTR;
+        static const std::string CLOUD_RECVREQ_STARTPORT_KEYSTR;
+        static const std::string CLOUD_ROCKSDB_BASEDIR_KEYSTR;
+        static const std::string EDGE_IPSTRS_KEYSTR;
+        static const std::string EDGE_RECVREQ_STARTPORT_KEYSTR;
         static const std::string FACEBOOK_CONFIG_FILEPATH_KEYSTR;
-        static const std::string GLOBAL_CLOUD_RECVREQ_PORT_KEYSTR;
-        static const std::string GLOBAL_CLOUD_ROCKSDB_BASEDIR_KEYSTR;
-        static const std::string GLOBAL_EDGE_RECVREQ_STARTPORT_KEYSTR;
         static const std::string LATENCY_HISTOGRAM_SIZE_KEYSTR;
         static const std::string OUTPUT_BASEDIR_KEYSTR;
         static const std::string VERSION_KEYSTR;
 
         static void loadConfig();
 
+        static std::string getCloudIpstr();
+        static uint16_t getCloudRecvreqStartport();
+        static std::string getCloudRocksdbBasedir();
+        static std::string getEdgeIpstr(const uint32_t& edge_idx);
+        static uint16_t getEdgeRecvreqStartport();
         static std::string getFacebookConfigFilepath();
-        static uint16_t getGlobalCloudRecvreqPort();
-        static std::string getGlobalCloudRocksdbBasedir();
-        static uint16_t getGlobalEdgeRecvreqStartport();
         static uint32_t getLatencyHistogramSize();
         static std::string getOutputBasedir();
         static std::string getVersion();
@@ -45,10 +49,12 @@ namespace covered
 
         static bool is_valid_;
         static boost::json::object json_object_;
+        static std::string cloud_ipstr_;
+        static uint16_t cloud_recvreq_startport_;
+        static std::string cloud_rocksdb_basedir_;
+        static std::vector<std::string> edge_ipstrs_;
+        static uint16_t edge_recvreq_startport_;
         static std::string facebook_config_filepath_;
-        static uint16_t global_cloud_recvreq_port_;
-        static std::string global_cloud_rocksdb_basedir_;
-        static uint16_t global_edge_recvreq_startport_;
         static uint32_t latency_histogram_size_;
         static std::string output_basedir_;
         static std::string version_;

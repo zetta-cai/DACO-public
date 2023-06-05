@@ -18,17 +18,17 @@ namespace covered
     {
     public:
         WorkerParam();
-        WorkerParam(ClientParam* local_client_param_ptr, uint32_t local_worker_idx);
+        WorkerParam(ClientParam* client_param_ptr, uint32_t local_worker_idx);
         ~WorkerParam();
 
         const WorkerParam& operator=(const WorkerParam& other);
 
-        ClientParam* getLocalClientParamPtr();
+        ClientParam* getClientParamPtr();
         uint32_t getLocalWorkerIdx();
     private:
         static const std::string kClassName;
 
-        ClientParam* local_client_param_ptr_;
+        ClientParam* client_param_ptr_;
         uint32_t local_worker_idx_;
     };
 }

@@ -18,79 +18,79 @@ namespace covered
 {
     const std::string WorkerWrapper::kClassName("WorkerWrapper");
 
-    void* WorkerWrapper::launchWorker(void* local_worker_param_ptr)
+    void* WorkerWrapper::launchWorker(void* worker_param_ptr)
     {
-        WorkerWrapper local_worker((WorkerParam*)local_worker_param_ptr);
+        WorkerWrapper local_worker((WorkerParam*)worker_param_ptr);
         local_worker.start();
         
         pthread_exit(NULL);
         return NULL;
     }
 
-    WorkerWrapper::WorkerWrapper(WorkerParam* local_worker_param_ptr)
+    WorkerWrapper::WorkerWrapper(WorkerParam* worker_param_ptr)
     {
-        if (local_worker_param_ptr == NULL)
+        if (worker_param_ptr == NULL)
         {
-            Util::dumpErrorMsg(kClassName, "local_worker_param_ptr is NULL!");
+            Util::dumpErrorMsg(kClassName, "worker_param_ptr is NULL!");
             exit(1);
         }
-        local_worker_param_ptr_ = local_worker_param_ptr;
-        assert(local_worker_param_ptr_ != NULL);
+        worker_param_ptr_ = worker_param_ptr;
+        assert(worker_param_ptr_ != NULL);
 
-        ClientParam* local_client_param_ptr = local_worker_param_ptr_->getLocalClientParamPtr();
-        assert(local_client_param_ptr != NULL);
+        ClientParam* client_param_ptr = worker_param_ptr_->getClientParamPtr();
+        assert(client_param_ptr != NULL);
 
-        // Each per-client worker uses global_worker_idx as deterministic seed to create a random generator and get different requests
-        const uint32_t global_client_idx = local_client_param_ptr->getGlobalClientIdx();
-        const uint32_t local_worker_idx = local_worker_param_ptr_->getLocalWorkerIdx();
-        uint32_t global_worker_idx = Util::getGlobalWorkerIdx(global_client_idx, local_worker_idx);
-        local_worker_item_randgen_ptr_ = new std::mt19937_64(global_worker_idx);
-        if (local_worker_item_randgen_ptr_ == NULL)
+        // Each per-client worker uses worker_idx as deterministic seed to create a random generator and get different requests
+        const uint32_t client_idx = client_param_ptr->getClientIdx();
+        const uint32_t local_worker_idx = worker_param_ptr_->getLocalWorkerIdx();
+        uint32_t global_worker_idx = Util::getGlobalWorkerIdx(client_idx, local_worker_idx);
+        worker_item_randgen_ptr_ = new std::mt19937_64(global_worker_idx);
+        if (worker_item_randgen_ptr_ == NULL)
         {
             Util::dumpErrorMsg(kClassName, "failed to create a random generator for requests!");
             exit(1);
         }
 
         // Prepare a socket client to closest edge recvreq port
-        std::string closest_edge_ipstr = Util::getClosestEdgeIpstr(global_client_idx);
-        uint16_t closest_edge_recvreq_port = Util::getClosestEdgeRecvreqPort(global_client_idx);
+        std::string closest_edge_ipstr = Util::getClosestEdgeIpstr(client_idx);
+        uint16_t closest_edge_recvreq_port = Util::getClosestEdgeRecvreqPort(client_idx);
         NetworkAddr remote_addr(closest_edge_ipstr, closest_edge_recvreq_port); // Communicate with the closest edge node
-        local_worker_sendreq_toedge_socket_client_ptr_ = new UdpSocketWrapper(SocketRole::kSocketClient, remote_addr);
-        assert(local_worker_sendreq_toedge_socket_client_ptr_ != NULL);
+        worker_sendreq_toedge_socket_client_ptr_ = new UdpSocketWrapper(SocketRole::kSocketClient, remote_addr);
+        assert(worker_sendreq_toedge_socket_client_ptr_ != NULL);
     }
     
     WorkerWrapper::~WorkerWrapper()
     {
-        // NOTE: no need to delete local_worker_param_ptr_, as it is maintained outside WorkerWrapper
+        // NOTE: no need to delete worker_param_ptr_, as it is maintained outside WorkerWrapper
 
-        assert(local_worker_item_randgen_ptr_ != NULL);
-        delete local_worker_item_randgen_ptr_;
-        local_worker_item_randgen_ptr_ = NULL;
+        assert(worker_item_randgen_ptr_ != NULL);
+        delete worker_item_randgen_ptr_;
+        worker_item_randgen_ptr_ = NULL;
 
-        assert(local_worker_sendreq_toedge_socket_client_ptr_ != NULL);
-        delete local_worker_sendreq_toedge_socket_client_ptr_;
-        local_worker_sendreq_toedge_socket_client_ptr_ = NULL;
+        assert(worker_sendreq_toedge_socket_client_ptr_ != NULL);
+        delete worker_sendreq_toedge_socket_client_ptr_;
+        worker_sendreq_toedge_socket_client_ptr_ = NULL;
     }
 
     void WorkerWrapper::start()
     {
-        assert(local_worker_item_randgen_ptr_ != NULL);
-        assert(local_worker_sendreq_toedge_socket_client_ptr_ != NULL);
+        assert(worker_item_randgen_ptr_ != NULL);
+        assert(worker_sendreq_toedge_socket_client_ptr_ != NULL);
 
-        assert(local_worker_param_ptr_ != NULL);
-        ClientParam* local_client_param_ptr = local_worker_param_ptr_->getLocalClientParamPtr();
-        assert(local_client_param_ptr != NULL);
-        WorkloadWrapperBase* workload_generator_ptr = local_client_param_ptr->getWorkloadGeneratorPtr();
+        assert(worker_param_ptr_ != NULL);
+        ClientParam* client_param_ptr = worker_param_ptr_->getClientParamPtr();
+        assert(client_param_ptr != NULL);
+        WorkloadWrapperBase* workload_generator_ptr = client_param_ptr->getWorkloadGeneratorPtr();
         assert(workload_generator_ptr != NULL);
 
-        // Block until local_client_running_ becomes true
-        while (!local_client_param_ptr->isClientRunning()) {}
+        // Block until client_running_ becomes true
+        while (!client_param_ptr->isClientRunning()) {}
 
         // Current worker thread start to issue requests and receive responses
-        while (local_client_param_ptr->isClientRunning())
+        while (client_param_ptr->isClientRunning())
         {
             // Generate key-value request based on a specific workload
-            WorkloadItem workload_item = workload_generator_ptr->generateItem(*local_worker_item_randgen_ptr_);
+            WorkloadItem workload_item = workload_generator_ptr->generateItem(*worker_item_randgen_ptr_);
 
             // Convert workload item into local request message
             MessageBase* local_request_ptr = MessageBase::getLocalRequestFromWorkloadItem(workload_item);
@@ -104,7 +104,7 @@ namespace covered
 
             // TMPDEBUG
             std::ostringstream oss;
-            oss << "worker" << local_worker_param_ptr_->getLocalWorkerIdx() << " issues a local request; type: " << MessageBase::messageTypeToString(local_request_ptr->getMessageType()) << "; keystr: " << workload_item.getKey().getKeystr() << "; valuesize: " << workload_item.getValue().getValuesize() << std::endl << "Msg payload: " << local_request_msg_payload.getBytesHexstr();
+            oss << "worker" << worker_param_ptr_->getLocalWorkerIdx() << " issues a local request; type: " << MessageBase::messageTypeToString(local_request_ptr->getMessageType()) << "; keystr: " << workload_item.getKey().getKeystr() << "; valuesize: " << workload_item.getValue().getValuesize() << std::endl << "Msg payload: " << local_request_msg_payload.getBytesHexstr();
             Util::dumpDebugMsg(kClassName, oss.str());
 
             // Timeout-and-retry mechanism
@@ -115,13 +115,13 @@ namespace covered
             {
                 // Send the message payload of local request to the closest edge node
                 PropagationSimulator::propagateFromClientToEdge(); // Simulate propagation latency
-                local_worker_sendreq_toedge_socket_client_ptr_->send(local_request_msg_payload);
+                worker_sendreq_toedge_socket_client_ptr_->send(local_request_msg_payload);
 
                 // Receive the message payload of local response from the closest edge node
-                bool is_timeout = local_worker_sendreq_toedge_socket_client_ptr_->recv(local_response_msg_payload);
+                bool is_timeout = worker_sendreq_toedge_socket_client_ptr_->recv(local_response_msg_payload);
                 if (is_timeout)
                 {
-                    if (!local_client_param_ptr->isClientRunning())
+                    if (!client_param_ptr->isClientRunning())
                     {
                         is_finish = true;
                         break; // Client is NOT running
@@ -165,10 +165,10 @@ namespace covered
         MessageBase* local_response_ptr = MessageBase::getResponseFromMsgPayload(local_response_msg_payload);
         assert(local_response_ptr != NULL && local_response_ptr->isLocalResponse());
 
-        assert(local_worker_param_ptr_ != NULL);
-        ClientParam* local_client_param_ptr = local_worker_param_ptr_->getLocalClientParamPtr();
-        assert(local_client_param_ptr != NULL);
-        ClientStatisticsTracker* client_statistics_tracker_ptr_ = local_client_param_ptr->getClientStatisticsTrackerPtr();
+        assert(worker_param_ptr_ != NULL);
+        ClientParam* client_param_ptr = worker_param_ptr_->getClientParamPtr();
+        assert(client_param_ptr != NULL);
+        ClientStatisticsTracker* client_statistics_tracker_ptr_ = client_param_ptr->getClientStatisticsTrackerPtr();
         assert(client_statistics_tracker_ptr_ != NULL);
 
         // Process local response message
@@ -214,17 +214,17 @@ namespace covered
         {
             case Hitflag::kLocalHit:
             {
-                client_statistics_tracker_ptr_->updateLocalHitcnt(local_worker_param_ptr_->getLocalWorkerIdx());
+                client_statistics_tracker_ptr_->updateLocalHitcnt(worker_param_ptr_->getLocalWorkerIdx());
                 break;
             }
             case Hitflag::kCooperativeHit:
             {
-                client_statistics_tracker_ptr_->updateCooperativeHitcnt(local_worker_param_ptr_->getLocalWorkerIdx());
+                client_statistics_tracker_ptr_->updateCooperativeHitcnt(worker_param_ptr_->getLocalWorkerIdx());
                 break;
             }
             case Hitflag::kGlobalMiss:
             {
-                client_statistics_tracker_ptr_->updateReqcnt(local_worker_param_ptr_->getLocalWorkerIdx());
+                client_statistics_tracker_ptr_->updateReqcnt(worker_param_ptr_->getLocalWorkerIdx());
                 break;
             }
             default:
@@ -237,11 +237,11 @@ namespace covered
         }
 
         // Update latency statistics for the local client
-        client_statistics_tracker_ptr_->updateLatency(local_worker_param_ptr_->getLocalWorkerIdx(), rtt_us);
+        client_statistics_tracker_ptr_->updateLatency(worker_param_ptr_->getLocalWorkerIdx(), rtt_us);
 
         // TMPDEBUG
         std::ostringstream oss;
-        oss << "worker" << local_worker_param_ptr_->getLocalWorkerIdx() << " receives a local response; type: " << MessageBase::messageTypeToString(local_response_message_type) << "; keystr: " << tmp_key.getKeystr() << "; valuesize: " << tmp_value.getValuesize() << "; hitflag: " << MessageBase::hitflagToString(hitflag) << std::endl << "Msg payload: " << local_response_msg_payload.getBytesHexstr();
+        oss << "worker" << worker_param_ptr_->getLocalWorkerIdx() << " receives a local response; type: " << MessageBase::messageTypeToString(local_response_message_type) << "; keystr: " << tmp_key.getKeystr() << "; valuesize: " << tmp_value.getValuesize() << "; hitflag: " << MessageBase::hitflagToString(hitflag) << std::endl << "Msg payload: " << local_response_msg_payload.getBytesHexstr();
         Util::dumpDebugMsg(kClassName, oss.str());
 
         // Release local response message

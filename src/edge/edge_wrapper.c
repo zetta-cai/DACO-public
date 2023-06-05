@@ -16,70 +16,70 @@ namespace covered
 {
     const std::string EdgeWrapper::kClassName("EdgeWrapper");
 
-    void* EdgeWrapper::launchEdge(void* local_edge_param_ptr)
+    void* EdgeWrapper::launchEdge(void* edge_param_ptr)
     {
-        EdgeWrapper local_edge((EdgeParam*)local_edge_param_ptr);
+        EdgeWrapper local_edge((EdgeParam*)edge_param_ptr);
         local_edge.start();
         
         pthread_exit(NULL);
         return NULL;
     }
 
-    EdgeWrapper::EdgeWrapper(EdgeParam* local_edge_param_ptr)
+    EdgeWrapper::EdgeWrapper(EdgeParam* edge_param_ptr)
     {
-        if (local_edge_param_ptr == NULL)
+        if (edge_param_ptr == NULL)
         {
-            Util::dumpErrorMsg(kClassName, "local_edge_param_ptr is NULL!");
+            Util::dumpErrorMsg(kClassName, "edge_param_ptr is NULL!");
             exit(1);
         }
-        local_edge_param_ptr_ = local_edge_param_ptr;
-        assert(local_edge_param_ptr_ != NULL);
+        edge_param_ptr_ = edge_param_ptr;
+        assert(edge_param_ptr_ != NULL);
         
         // Allocate local edge cache
-        local_edge_cache_ptr_ = CacheWrapperBase::getEdgeCache(Param::getCacheName(), Param::getCapacityBytes());
-        assert(local_edge_cache_ptr_ != NULL);
+        edge_cache_ptr_ = CacheWrapperBase::getEdgeCache(Param::getCacheName(), Param::getCapacityBytes());
+        assert(edge_cache_ptr_ != NULL);
 
         // Prepare a socket server on recvreq port
-        uint32_t global_edge_idx = local_edge_param_ptr_->getGlobalEdgeIdx();
-        uint16_t local_edge_recvreq_port = Util::getLocalEdgeRecvreqPort(global_edge_idx);
-        NetworkAddr host_addr(Util::ANY_IPSTR, local_edge_recvreq_port);
-        local_edge_recvreq_socket_server_ptr_ = new UdpSocketWrapper(SocketRole::kSocketServer, host_addr);
-        assert(local_edge_recvreq_socket_server_ptr_ != NULL);
+        uint32_t edge_idx = edge_param_ptr_->getEdgeIdx();
+        uint16_t edge_recvreq_port = Util::getEdgeRecvreqPort(edge_idx);
+        NetworkAddr host_addr(Util::ANY_IPSTR, edge_recvreq_port);
+        edge_recvreq_socket_server_ptr_ = new UdpSocketWrapper(SocketRole::kSocketServer, host_addr);
+        assert(edge_recvreq_socket_server_ptr_ != NULL);
 
         // Prepare a socket client to cloud recvreq port
-        std::string global_cloud_ipstr = Util::getGlobalCloudIpstr();
-        uint16_t global_cloud_recvreq_port = Config::getGlobalCloudRecvreqPort();
-        NetworkAddr remote_addr(global_cloud_ipstr, global_cloud_recvreq_port);
-        local_edge_sendreq_tocloud_socket_client_ptr_ = new UdpSocketWrapper(SocketRole::kSocketClient, remote_addr);
-        assert(local_edge_sendreq_tocloud_socket_client_ptr_ != NULL);
+        std::string cloud_ipstr = Config::getCloudIpstr();
+        uint16_t cloud_recvreq_port = Util::getCloudRecvreqPort(0); // TODO: only support 1 cloud node now!
+        NetworkAddr remote_addr(cloud_ipstr, cloud_recvreq_port);
+        edge_sendreq_tocloud_socket_client_ptr_ = new UdpSocketWrapper(SocketRole::kSocketClient, remote_addr);
+        assert(edge_sendreq_tocloud_socket_client_ptr_ != NULL);
     }
         
     EdgeWrapper::~EdgeWrapper()
     {
-        // NOTE: no need to delete local_edge_param_ptr, as it is maintained outside EdgeWrapper
+        // NOTE: no need to delete edge_param_ptr, as it is maintained outside EdgeWrapper
 
         // Release the socket server on recvreq port
-        assert(local_edge_recvreq_socket_server_ptr_ != NULL);
-        delete local_edge_recvreq_socket_server_ptr_;
-        local_edge_recvreq_socket_server_ptr_ = NULL;
+        assert(edge_recvreq_socket_server_ptr_ != NULL);
+        delete edge_recvreq_socket_server_ptr_;
+        edge_recvreq_socket_server_ptr_ = NULL;
 
         // Release the socket client to cloud
-        assert(local_edge_sendreq_tocloud_socket_client_ptr_ != NULL);
-        delete local_edge_sendreq_tocloud_socket_client_ptr_;
-        local_edge_sendreq_tocloud_socket_client_ptr_ = NULL;
+        assert(edge_sendreq_tocloud_socket_client_ptr_ != NULL);
+        delete edge_sendreq_tocloud_socket_client_ptr_;
+        edge_sendreq_tocloud_socket_client_ptr_ = NULL;
     }
 
     void EdgeWrapper::start()
     {
-        assert(local_edge_param_ptr_ != NULL);
-        assert(local_edge_recvreq_socket_server_ptr_ != NULL);
+        assert(edge_param_ptr_ != NULL);
+        assert(edge_recvreq_socket_server_ptr_ != NULL);
 
         bool is_finish = false; // Mark if local edge node is finished
-        while (local_edge_param_ptr_->isEdgeRunning()) // local_edge_running_ is set as true by default
+        while (edge_param_ptr_->isEdgeRunning()) // edge_running_ is set as true by default
         {
             // Receive the message payload of data (local/redirected/global) or control requests
             DynamicArray request_msg_payload;
-            bool is_timeout = local_edge_recvreq_socket_server_ptr_->recv(request_msg_payload);
+            bool is_timeout = edge_recvreq_socket_server_ptr_->recv(request_msg_payload);
             if (is_timeout == true) // Timeout-and-retry
             {
                 continue; // Retry to receive a message if edge is still running
@@ -121,7 +121,7 @@ namespace covered
     bool EdgeWrapper::processDataRequest_(MessageBase* data_request_ptr)
     {
         assert(data_request_ptr != NULL && data_request_ptr->isDataRequest());
-        assert(local_edge_cache_ptr_ != NULL);
+        assert(edge_cache_ptr_ != NULL);
 
         bool is_finish = false; // Mark if local edge node is finished
 
@@ -133,7 +133,7 @@ namespace covered
 
             // TMPDEBUG
             std::ostringstream oss;
-            oss << "edge" << local_edge_param_ptr_->getGlobalEdgeIdx() << " receives a local request; type: " << MessageBase::messageTypeToString(data_request_ptr->getMessageType()) << "; keystr: " << tmp_key.getKeystr();
+            oss << "edge" << edge_param_ptr_->getEdgeIdx() << " receives a local request; type: " << MessageBase::messageTypeToString(data_request_ptr->getMessageType()) << "; keystr: " << tmp_key.getKeystr();
             Util::dumpDebugMsg(kClassName, oss.str());
 
             // Block until not invalidated
@@ -171,7 +171,7 @@ namespace covered
     bool EdgeWrapper::processLocalGetRequest_(MessageBase* local_request_ptr)
     {
         assert(local_request_ptr != NULL && local_request_ptr->getMessageType() == MessageType::kLocalGetRequest);
-        assert(local_edge_cache_ptr_ != NULL);
+        assert(edge_cache_ptr_ != NULL);
 
         bool is_finish = false; // Mark if local edge node is finished
         Hitflag hitflag = Hitflag::kGlobalMiss;
@@ -179,7 +179,7 @@ namespace covered
         const LocalGetRequest* const local_get_request_ptr = static_cast<const LocalGetRequest*>(local_request_ptr);
         Key tmp_key = local_get_request_ptr->getKey();
         Value tmp_value;
-        bool is_local_cached = local_edge_cache_ptr_->get(tmp_key, tmp_value);
+        bool is_local_cached = edge_cache_ptr_->get(tmp_key, tmp_value);
         if (is_local_cached)
         {
             hitflag = Hitflag::kLocalHit;
@@ -210,7 +210,7 @@ namespace covered
         // TODO: For COVERED, beacon node will tell the edge node whether to admit, w/o independent decision
 
         // Trigger independent cache admission for local/global cache miss if necessary
-        if (!is_local_cached && local_edge_cache_ptr_->needIndependentAdmit(tmp_key))
+        if (!is_local_cached && edge_cache_ptr_->needIndependentAdmit(tmp_key))
         {
             triggerIndependentAdmission_(tmp_key, tmp_value);
         }
@@ -222,7 +222,7 @@ namespace covered
         DynamicArray local_response_msg_payload(local_get_response.getMsgPayloadSize());
         local_get_response.serialize(local_response_msg_payload);
         PropagationSimulator::propagateFromEdgeToClient();
-        local_edge_recvreq_socket_server_ptr_->send(local_response_msg_payload);
+        edge_recvreq_socket_server_ptr_->send(local_response_msg_payload);
 
         return is_finish;
     }
@@ -231,7 +231,7 @@ namespace covered
     {
         assert(local_request_ptr != NULL);
         assert(local_request_ptr->getMessageType() == MessageType::kLocalPutRequest || local_request_ptr->getMessageType() == MessageType::kLocalDelRequest);
-        assert(local_edge_cache_ptr_ != NULL);
+        assert(edge_cache_ptr_ != NULL);
 
         bool is_finish = false; // Mark if local edge node is finished
         const Hitflag hitflag = Hitflag::kGlobalMiss; // Must be global miss due to write-through policy
@@ -289,21 +289,21 @@ namespace covered
         // NOTE: message type has been checked, which must be one of the following two types
         if (local_request_ptr->getMessageType() == MessageType::kLocalPutRequest)
         {
-            is_local_cached = local_edge_cache_ptr_->update(tmp_key, tmp_value);
+            is_local_cached = edge_cache_ptr_->update(tmp_key, tmp_value);
 
             // Prepare LocalPutResponse for client
             local_response_ptr = new LocalPutResponse(tmp_key, hitflag);
         }
         else if (local_request_ptr->getMessageType() == MessageType::kLocalDelRequest)
         {
-            is_local_cached = local_edge_cache_ptr_->remove(tmp_key);
+            is_local_cached = edge_cache_ptr_->remove(tmp_key);
 
             // Prepare LocalDelResponse for client
             local_response_ptr = new LocalDelResponse(tmp_key, hitflag);
         }
 
         // Trigger independent cache admission for local/global cache miss if necessary
-        if (!is_local_cached && local_edge_cache_ptr_->needIndependentAdmit(tmp_key))
+        if (!is_local_cached && edge_cache_ptr_->needIndependentAdmit(tmp_key))
         {
             triggerIndependentAdmission_(tmp_key, tmp_value);
         }
@@ -320,7 +320,7 @@ namespace covered
             DynamicArray local_response_msg_payload(local_response_ptr->getMsgPayloadSize());
             local_response_ptr->serialize(local_response_msg_payload);
             PropagationSimulator::propagateFromEdgeToClient();
-            local_edge_recvreq_socket_server_ptr_->send(local_response_msg_payload);
+            edge_recvreq_socket_server_ptr_->send(local_response_msg_payload);
         }
 
         // Release response message
@@ -334,7 +334,7 @@ namespace covered
     bool EdgeWrapper::processRedirectedRequest_(MessageBase* redirected_request_ptr)
     {
         assert(redirected_request_ptr != NULL && redirected_request_ptr->isRedirectedRequest());
-        assert(local_edge_cache_ptr_ != NULL);
+        assert(edge_cache_ptr_ != NULL);
 
         bool is_finish = false; // Mark if local edge node is finished
 
@@ -347,7 +347,7 @@ namespace covered
     bool EdgeWrapper::processControlRequest_(MessageBase* control_request_ptr)
     {
         assert(control_request_ptr != NULL && control_request_ptr->isControlRequest());
-        assert(local_edge_cache_ptr_ != NULL);
+        assert(edge_cache_ptr_ != NULL);
 
         bool is_finish = false; // Mark if local edge node is finished
 
@@ -359,17 +359,17 @@ namespace covered
 
     bool EdgeWrapper::blockForInvalidation_(const Key& key)
     {
-        assert(local_edge_param_ptr_ != NULL);
+        assert(edge_param_ptr_ != NULL);
 
         bool is_finish = false; // Mark if local edge node is finished
 
         bool is_invalidated = false;
         while (true)
         {
-            is_invalidated = local_edge_cache_ptr_->isInvalidated(key);
+            is_invalidated = edge_cache_ptr_->isInvalidated(key);
             if (is_invalidated)
             {
-                if (!local_edge_param_ptr_->isEdgeRunning())
+                if (!edge_param_ptr_->isEdgeRunning())
                 {
                     is_finish = true;
                     break;
@@ -392,8 +392,8 @@ namespace covered
 
     bool EdgeWrapper::fetchDataFromCloud_(const Key& key, Value& value)
     {
-        assert(local_edge_param_ptr_ != NULL);
-        assert(local_edge_sendreq_tocloud_socket_client_ptr_ != NULL);
+        assert(edge_param_ptr_ != NULL);
+        assert(edge_sendreq_tocloud_socket_client_ptr_ != NULL);
 
         bool is_finish = false; // Mark if local edge node is finished
 
@@ -403,21 +403,21 @@ namespace covered
 
         // TMPDEBUG
         std::ostringstream oss;
-        oss << "edge" << local_edge_param_ptr_->getGlobalEdgeIdx() << " issues a global request; type: " << MessageBase::messageTypeToString(global_get_request.getMessageType()) << "; keystr:" << key.getKeystr() << std::endl << "Msg payload: " << global_request_msg_payload.getBytesHexstr();
+        oss << "edge" << edge_param_ptr_->getEdgeIdx() << " issues a global request; type: " << MessageBase::messageTypeToString(global_get_request.getMessageType()) << "; keystr:" << key.getKeystr() << std::endl << "Msg payload: " << global_request_msg_payload.getBytesHexstr();
         Util::dumpDebugMsg(kClassName, oss.str());
 
         while (true) // Timeout-and-retry
         {
             // Send the message payload of global request to cloud
             PropagationSimulator::propagateFromEdgeToCloud();
-            local_edge_sendreq_tocloud_socket_client_ptr_->send(global_request_msg_payload);
+            edge_sendreq_tocloud_socket_client_ptr_->send(global_request_msg_payload);
 
             // Receive the global response message from cloud
             DynamicArray global_response_msg_payload;
-            bool is_timeout = local_edge_sendreq_tocloud_socket_client_ptr_->recv(global_response_msg_payload);
+            bool is_timeout = edge_sendreq_tocloud_socket_client_ptr_->recv(global_response_msg_payload);
             if (is_timeout)
             {
-                if (!local_edge_param_ptr_->isEdgeRunning())
+                if (!edge_param_ptr_->isEdgeRunning())
                 {
                     is_finish = true;
                     break; // Edge is NOT running
@@ -450,8 +450,8 @@ namespace covered
 
     bool EdgeWrapper::writeDataToCloud_(const Key& key, const Value& value, const MessageType& message_type)
     {
-        assert(local_edge_param_ptr_ != NULL);
-        assert(local_edge_sendreq_tocloud_socket_client_ptr_ != NULL);
+        assert(edge_param_ptr_ != NULL);
+        assert(edge_sendreq_tocloud_socket_client_ptr_ != NULL);
 
         bool is_finish = false; // Mark if local edge node is finished
 
@@ -480,14 +480,14 @@ namespace covered
         {
             // Send the message payload of global request to cloud
             PropagationSimulator::propagateFromEdgeToCloud();
-            local_edge_sendreq_tocloud_socket_client_ptr_->send(global_request_msg_payload);
+            edge_sendreq_tocloud_socket_client_ptr_->send(global_request_msg_payload);
 
             // Receive the global response message from cloud
             DynamicArray global_response_msg_payload;
-            bool is_timeout = local_edge_sendreq_tocloud_socket_client_ptr_->recv(global_response_msg_payload);
+            bool is_timeout = edge_sendreq_tocloud_socket_client_ptr_->recv(global_response_msg_payload);
             if (is_timeout)
             {
-                if (!local_edge_param_ptr_->isEdgeRunning())
+                if (!edge_param_ptr_->isEdgeRunning())
                 {
                     is_finish = true;
                     break; // Edge is NOT running
@@ -525,20 +525,20 @@ namespace covered
         assert(Param::getCacheName() != CacheWrapperBase::COVERED_CACHE_NAME);
 
         // Independently admit the new key-value pair into local edge cache
-        local_edge_cache_ptr_->admit(key, value);
+        edge_cache_ptr_->admit(key, value);
 
         // Evict until cache size <= cache capacity
-        uint32_t cache_capacity = local_edge_cache_ptr_->getCapacityBytes();
+        uint32_t cache_capacity = edge_cache_ptr_->getCapacityBytes();
         while (true)
         {
-            uint32_t current_cache_size = local_edge_cache_ptr_->getSize();
-            if (current_cache_size <= cache_capacity) // Not exceed capacity limitation
+            uint32_t cache_size = edge_cache_ptr_->getSize();
+            if (cache_size <= cache_capacity) // Not exceed capacity limitation
             {
                 break;
             }
             else // Exceed capacity limitation
             {
-                local_edge_cache_ptr_->evict();
+                edge_cache_ptr_->evict();
                 continue;
             }
         }

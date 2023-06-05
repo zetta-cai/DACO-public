@@ -5,6 +5,7 @@
 #include "common/config.h"
 #include "common/param.h"
 #include "common/util.h"
+#include "hash/hash_wrapper_base.h"
 #include "workload/workload_wrapper_base.h"
 
 namespace covered
@@ -80,13 +81,14 @@ namespace covered
             ("debug", "enable debug information")
             ("duration", boost::program_options::value<double>()->default_value(10), "benchmark duration")
             ("edgecnt", boost::program_options::value<uint32_t>()->default_value(1), "the number of edge nodes")
+            ("hash_name", boost::program_options::value<std::string>()->default_value(HashWrapperBase::MMH3_HASH_NAME, "the type of consistent hashing for DHT"))
             ("keycnt", boost::program_options::value<uint32_t>()->default_value(1000000), "the total number of keys")
             ("opcnt", boost::program_options::value<uint32_t>()->default_value(1000000), "the total number of operations")
             ("perclient_workercnt", boost::program_options::value<uint32_t>()->default_value(1), "the number of worker threads for each client")
             ("propagation_latency_clientedge", boost::program_options::value<uint32_t>()->default_value(1000), "the propagation latency between client and edge (in units of us)")
             ("propagation_latency_crossedge", boost::program_options::value<uint32_t>()->default_value(10000), "the propagation latency between edge and neighbor (in units of us)")
             ("propagation_latency_edgecloud", boost::program_options::value<uint32_t>()->default_value(100000), "the propagation latency between edge and cloud (in units of us)")
-            ("prototype", "disable simulation mode")
+            ("prototype", "disable simulation mode (NOT work for simulator)")
             ("workload_name", boost::program_options::value<std::string>()->default_value(WorkloadWrapperBase::FACEBOOK_WORKLOAD_NAME), "workload name")
         ;
         // Dynamic actions
@@ -132,6 +134,7 @@ namespace covered
         }
         double duration = argument_info_["duration"].as<double>();
         uint32_t edgecnt = argument_info_["edgecnt"].as<uint32_t>();
+        std::string hash_name = argument_info_["hash_name"].as<std::string>();
         uint32_t keycnt = argument_info_["keycnt"].as<uint32_t>();
         uint32_t opcnt = argument_info_["opcnt"].as<uint32_t>();
         uint32_t perclient_workercnt = argument_info_["perclient_workercnt"].as<uint32_t>();
@@ -141,7 +144,7 @@ namespace covered
         std::string workload_name = argument_info_["workload_name"].as<std::string>();
 
         // Store CLI parameters for dynamic configurations and mark Param as valid
-        Param::setParameters(is_simulation, cache_name, capacity, clientcnt, cloud_storage, config_filepath, is_debug, duration, edgecnt, keycnt, opcnt, perclient_workercnt, propagation_latency_clientedge, propagation_latency_crossedge, propagation_latency_edgecloud, workload_name);
+        Param::setParameters(is_simulation, cache_name, capacity, clientcnt, cloud_storage, config_filepath, is_debug, duration, edgecnt, hash_name, keycnt, opcnt, perclient_workercnt, propagation_latency_clientedge, propagation_latency_crossedge, propagation_latency_edgecloud, workload_name);
 
         // (4) Load config file for static configurations
 
@@ -211,7 +214,7 @@ namespace covered
 
         if (is_createdir_for_rocksdb)
         {
-            std::string dirpath = Config::getGlobalCloudRocksdbBasedir();
+            std::string dirpath = Config::getCloudRocksdbBasedir();
             bool is_dir_exist = Util::isDirectoryExist(dirpath);
             if (!is_dir_exist)
             {

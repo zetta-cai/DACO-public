@@ -74,16 +74,14 @@ namespace covered
         // (4) Client-edge-cloud scenario
 
         // (4.1) Client
-        static uint32_t getClosestEdgeIdx(const uint32_t& global_client_idx);
-        static std::string getClosestEdgeIpstr(const uint32_t& global_client_idx);
-        static uint16_t getClosestEdgeRecvreqPort(const uint32_t& global_client_idx); // Calculate the recvreq port of the closest edge node for client
-        static uint32_t getGlobalWorkerIdx(const uint32_t& global_client_idx, const uint32_t local_worker_idx);
+        static uint32_t getClosestEdgeIdx(const uint32_t& client_idx);
+        static std::string getClosestEdgeIpstr(const uint32_t& client_idx);
+        static uint16_t getClosestEdgeRecvreqPort(const uint32_t& client_idx); // Calculate the recvreq port of the closest edge node for client
+        static uint32_t getGlobalWorkerIdx(const uint32_t& client_idx, const uint32_t local_worker_idx);
 
-        // (4.2) Edge
-        static uint16_t getLocalEdgeRecvreqPort(const uint32_t& global_edge_idx); // Calculate the recvreq port for the local edge node
-        static std::string getGlobalCloudIpstr();
-        // NOTE: global cloud recvreq port is the same for all edge nodes, which has been provided by Config
-        
+        // (4.2) Edge and cloud
+        static uint16_t getEdgeRecvreqPort(const uint32_t& edge_idx); // Calculate the recvreq port for the local edge node
+        static uint16_t getCloudRecvreqPort(const uint32_t& cloud_idx);
 
         // (5) Network
 
@@ -94,8 +92,8 @@ namespace covered
         // (6) Intermediate files
 
         static std::string getClientStatisticsDirpath();
-        static std::string getClientStatisticsFilepath(const uint32_t& global_client_idx);
-        static std::string getLocalCloudRocksdbDirpath(const uint32_t& global_cloud_idx); // Calculate the RocksDB dirpath for the local cloud node
+        static std::string getClientStatisticsFilepath(const uint32_t& client_idx);
+        static std::string getCloudRocksdbDirpath(const uint32_t& cloud_idx); // Calculate the RocksDB dirpath for the cloud node
 
         // (7) Others
 

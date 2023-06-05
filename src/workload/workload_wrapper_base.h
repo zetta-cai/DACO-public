@@ -23,19 +23,19 @@ namespace covered
         // Workload generator type (only used in WorkloadWrapperBase)
         static const std::string FACEBOOK_WORKLOAD_NAME;
 
-        static WorkloadWrapperBase* getWorkloadGenerator(const std::string& workload_name, const uint32_t& global_client_idx);
+        static WorkloadWrapperBase* getWorkloadGenerator(const std::string& workload_name, const uint32_t& client_idx);
 
         WorkloadWrapperBase();
         virtual ~WorkloadWrapperBase();
 
-        void validate(const uint32_t& global_client_idx);
+        void validate(const uint32_t& client_idx);
         WorkloadItem generateItem(std::mt19937_64& request_randgen);
     private:
         static const std::string kClassName;
 
         virtual void initWorkloadParameters_() = 0; // initialize workload parameters (e.g., by default or by loading config file)
         virtual void overwriteWorkloadParameters_() = 0; // overwrite some workload patermers based on covered::Config and covered::Param
-        virtual void createWorkloadGenerator_(const uint32_t& global_client_idx) = 0; // create workload generator based on overwritten workload parameters
+        virtual void createWorkloadGenerator_(const uint32_t& client_idx) = 0; // create workload generator based on overwritten workload parameters
 
         virtual WorkloadItem generateItemInternal_(std::mt19937_64& request_randgen) = 0;
 

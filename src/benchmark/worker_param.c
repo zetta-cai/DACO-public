@@ -8,41 +8,41 @@ namespace covered
 
     WorkerParam::WorkerParam()
     {
-        local_client_param_ptr_ = NULL;
+        client_param_ptr_ = NULL;
         local_worker_idx_ = 0;
     }
 
-    WorkerParam::WorkerParam(ClientParam* local_client_param_ptr, uint32_t local_worker_idx)
+    WorkerParam::WorkerParam(ClientParam* current_client_param_ptr, uint32_t local_worker_idx)
     {
-        if (local_client_param_ptr == NULL)
+        if (current_client_param_ptr == NULL)
         {
-            Util::dumpErrorMsg(kClassName, "local_client_param_ptr is NULL!");
+            Util::dumpErrorMsg(kClassName, "current_client_param_ptr is NULL!");
             exit(1);
         }
-        local_client_param_ptr_ = local_client_param_ptr;
+        client_param_ptr_ = current_client_param_ptr;
         local_worker_idx_ = local_worker_idx;
     }
 
     WorkerParam::~WorkerParam()
     {
-        // NOTE: no need to delete local_client_param_ptr_, as it is maintained outside WorkerParam
+        // NOTE: no need to delete client_param_ptr_, as it is maintained outside WorkerParam
     }
 
     const WorkerParam& WorkerParam::operator=(const WorkerParam& other)
     {
-        if (other.local_client_param_ptr_ == NULL)
+        if (other.client_param_ptr_ == NULL)
         {
-            Util::dumpErrorMsg(kClassName, "other.local_client_param_ptr_ is NULL!");
+            Util::dumpErrorMsg(kClassName, "other.client_param_ptr_ is NULL!");
             exit(1);
         }
-        local_client_param_ptr_ = other.local_client_param_ptr_;
+        client_param_ptr_ = other.client_param_ptr_;
         local_worker_idx_ = other.local_worker_idx_;
         return *this;
     }
 
-    ClientParam* WorkerParam::getLocalClientParamPtr()
+    ClientParam* WorkerParam::getClientParamPtr()
     {
-        return local_client_param_ptr_;
+        return client_param_ptr_;
     }
 
     uint32_t WorkerParam::getLocalWorkerIdx()

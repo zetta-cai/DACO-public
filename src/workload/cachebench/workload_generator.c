@@ -11,8 +11,8 @@ namespace covered {
 
 const std::string WorkloadGenerator::kClassName("WorkloadGenerator");
 
-WorkloadGenerator::WorkloadGenerator(const StressorConfig& config, const uint32_t& global_client_idx)
-    : config_{config}, global_client_idx_(global_client_idx) {
+WorkloadGenerator::WorkloadGenerator(const StressorConfig& config, const uint32_t& client_idx)
+    : config_{config}, client_idx_(client_idx) {
   for (const auto& c : config.poolDistributions) {
     if (c.keySizeRange.size() != c.keySizeRangeProbability.size() + 1) {
       throw std::invalid_argument(
@@ -173,7 +173,7 @@ void WorkloadGenerator::generateKeyDistributions() {
           //std::mt19937_64 gen(folly::Random::rand64());
           // Siyuan: use global_thread_idx as the deterministic seed to ensure that multiple clients generate different sets of requests/workload-items
           // Siyuan: we need this->config_.numThreads + 1, as Parallel may create an extra thread to generate remaining requests
-          uint32_t global_thread_idx = this->global_client_idx_ * (this->config_.numThreads + 1) + local_thread_idx;
+          uint32_t global_thread_idx = this->client_idx_ * (this->config_.numThreads + 1) + local_thread_idx;
           std::mt19937_64 gen(global_thread_idx);
           auto popDist = workloadDist_[idx].getPopDist(left, right); // FastDiscreteDistribution
           for (uint64_t j = start; j < end; j++) {

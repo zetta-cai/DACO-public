@@ -19,7 +19,7 @@ namespace covered
     {
     public:
         ClientParam();
-        ClientParam(const uint32_t& global_client_idx, WorkloadWrapperBase* workload_generator_ptr, ClientStatisticsTracker* client_statistics_tracker_ptr);
+        ClientParam(const uint32_t& client_idx, WorkloadWrapperBase* workload_generator_ptr, ClientStatisticsTracker* client_statistics_tracker_ptr);
         ~ClientParam();
 
         const ClientParam& operator=(const ClientParam& other);
@@ -28,7 +28,7 @@ namespace covered
         void setClientRunning();
         void resetClientRunning();
 
-        uint32_t getGlobalClientIdx();
+        uint32_t getClientIdx();
         WorkloadWrapperBase* getWorkloadGeneratorPtr();
         ClientStatisticsTracker* getClientStatisticsTrackerPtr();
     private:
@@ -38,9 +38,9 @@ namespace covered
         // Concurrency control: acquire-release ordering/consistency.
         // Cache coherence: MSI protocol.
         // Cache consistency: volatile.
-        volatile std::atomic<bool> local_client_running_;
+        volatile std::atomic<bool> current_client_running_;
 
-        uint32_t global_client_idx_;
+        uint32_t client_idx_;
         WorkloadWrapperBase* workload_generator_ptr_;
         ClientStatisticsTracker* client_statistics_tracker_ptr_;
     };

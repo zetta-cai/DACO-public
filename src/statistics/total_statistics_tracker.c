@@ -111,9 +111,9 @@ namespace covered
         clientcnt_ = clientcnt;
 
         assert(client_statistics_tracker_ptrs != NULL);
-        for (uint32_t global_client_idx = 0; global_client_idx < clientcnt; global_client_idx++)
+        for (uint32_t client_idx = 0; client_idx < clientcnt; client_idx++)
         {
-            assert(client_statistics_tracker_ptrs[global_client_idx] != NULL);
+            assert(client_statistics_tracker_ptrs[client_idx] != NULL);
         }
 
         uint32_t perclient_workercnt = client_statistics_tracker_ptrs[0]->getPerclientWorkercnt();
@@ -134,9 +134,9 @@ namespace covered
         memset(latency_histogram_, 0, latency_histogram_size_ * sizeof(uint32_t));
 
         // Aggregate per-client statistics
-        for (uint32_t global_client_idx = 0; global_client_idx < clientcnt_; global_client_idx++)
+        for (uint32_t client_idx = 0; client_idx < clientcnt_; client_idx++)
         {
-            const ClientStatisticsTracker& tmp_client_statistics_tracker = *(client_statistics_tracker_ptrs[global_client_idx]);
+            const ClientStatisticsTracker& tmp_client_statistics_tracker = *(client_statistics_tracker_ptrs[client_idx]);
             assert(perclient_workercnt == tmp_client_statistics_tracker.getPerclientWorkercnt());
             assert(latency_histogram_size_ == tmp_client_statistics_tracker.getLatencyHistogramSize());
 
@@ -147,9 +147,9 @@ namespace covered
             std::atomic<uint32_t>* tmp_perworker_reqcnts = tmp_client_statistics_tracker.getPerworkerReqcnts();
             for (uint32_t local_worker_idx = 0; local_worker_idx < perclient_workercnt; local_worker_idx++)
             {
-                perclient_local_hitcnts_[global_client_idx] += tmp_perworker_local_hitcnts[local_worker_idx].load(Util::LOAD_CONCURRENCY_ORDER);
-                perclient_cooperative_hitcnts_[global_client_idx] += tmp_perworker_cooperative_hitcnts[local_worker_idx].load(Util::LOAD_CONCURRENCY_ORDER);
-                perclient_reqcnts_[global_client_idx] += tmp_perworker_reqcnts[local_worker_idx].load(Util::LOAD_CONCURRENCY_ORDER);
+                perclient_local_hitcnts_[client_idx] += tmp_perworker_local_hitcnts[local_worker_idx].load(Util::LOAD_CONCURRENCY_ORDER);
+                perclient_cooperative_hitcnts_[client_idx] += tmp_perworker_cooperative_hitcnts[local_worker_idx].load(Util::LOAD_CONCURRENCY_ORDER);
+                perclient_reqcnts_[client_idx] += tmp_perworker_reqcnts[local_worker_idx].load(Util::LOAD_CONCURRENCY_ORDER);
             }
 
             // Aggregate per-client latency statistics
@@ -167,23 +167,23 @@ namespace covered
     {
         assert(perclient_local_hitcnts_ != NULL);
         total_local_hitcnt_ = 0;
-        for (uint32_t global_client_idx = 0; global_client_idx < clientcnt_; global_client_idx++)
+        for (uint32_t client_idx = 0; client_idx < clientcnt_; client_idx++)
         {
-            total_local_hitcnt_ += perclient_local_hitcnts_[global_client_idx];
+            total_local_hitcnt_ += perclient_local_hitcnts_[client_idx];
         }
 
         assert(perclient_cooperative_hitcnts_ != NULL);
         total_cooperative_hitcnt_ = 0;
-        for (uint32_t global_client_idx = 0; global_client_idx < clientcnt_; global_client_idx++)
+        for (uint32_t client_idx = 0; client_idx < clientcnt_; client_idx++)
         {
-            total_cooperative_hitcnt_ += perclient_cooperative_hitcnts_[global_client_idx];
+            total_cooperative_hitcnt_ += perclient_cooperative_hitcnts_[client_idx];
         }
 
         assert(perclient_reqcnts_ != NULL);
         total_reqcnt_ = 0;
-        for (uint32_t global_client_idx = 0; global_client_idx < clientcnt_; global_client_idx++)
+        for (uint32_t client_idx = 0; client_idx < clientcnt_; client_idx++)
         {
-            total_reqcnt_ += perclient_reqcnts_[global_client_idx];
+            total_reqcnt_ += perclient_reqcnts_[client_idx];
         }
 
         assert(latency_histogram_ != NULL);

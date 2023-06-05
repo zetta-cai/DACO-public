@@ -13,28 +13,28 @@ namespace covered
 {
     const std::string ClientWrapper::kClassName("ClientWrapper");
 
-    void* ClientWrapper::launchClient(void* local_client_param_ptr)
+    void* ClientWrapper::launchClient(void* client_param_ptr)
     {
-        ClientWrapper local_client((ClientParam*)local_client_param_ptr);
+        ClientWrapper local_client((ClientParam*)client_param_ptr);
         local_client.start();
         
         pthread_exit(NULL);
         return NULL;
     }
 
-    ClientWrapper::ClientWrapper(ClientParam* local_client_param_ptr)
+    ClientWrapper::ClientWrapper(ClientParam* client_param_ptr)
     {
-        if (local_client_param_ptr == NULL)
+        if (client_param_ptr == NULL)
         {
-            Util::dumpErrorMsg(kClassName, "local_client_param_ptr is NULL!");
+            Util::dumpErrorMsg(kClassName, "client_param_ptr is NULL!");
             exit(1);
         }
-        local_client_param_ptr_ = local_client_param_ptr;
+        client_param_ptr_ = client_param_ptr;
     }
 
     ClientWrapper::~ClientWrapper()
     {
-        // NOTE: no need to delete local_client_param_ptr_, as it is maintained outside ClientWrapper
+        // NOTE: no need to delete client_param_ptr_, as it is maintained outside ClientWrapper
     }
 
     void ClientWrapper::start()
@@ -43,12 +43,12 @@ namespace covered
         pthread_t local_worker_threads[perclient_workercnt];
         WorkerParam local_worker_params[perclient_workercnt];
         int pthread_returncode;
-        assert(local_client_param_ptr_ != NULL);
+        assert(client_param_ptr_ != NULL);
 
         // Prepare perclient_workercnt worker parameters
         for (uint32_t local_worker_idx = 0; local_worker_idx < perclient_workercnt; local_worker_idx++)
         {
-            WorkerParam local_worker_param(local_client_param_ptr_, local_worker_idx);
+            WorkerParam local_worker_param(client_param_ptr_, local_worker_idx);
             local_worker_params[local_worker_idx] = local_worker_param;
         }
 
@@ -59,7 +59,7 @@ namespace covered
             if (pthread_returncode != 0)
             {
                 std::ostringstream oss;
-                oss << "client " << local_client_param_ptr_->getGlobalClientIdx() << " failed to launch worker " << local_worker_idx << " (error code: " << pthread_returncode << ")" << std::endl;
+                oss << "client " << client_param_ptr_->getClientIdx() << " failed to launch worker " << local_worker_idx << " (error code: " << pthread_returncode << ")" << std::endl;
                 covered::Util::dumpErrorMsg(kClassName, oss.str());
                 exit(1);
             }
@@ -72,19 +72,19 @@ namespace covered
             if (pthread_returncode != 0)
             {
                 std::ostringstream oss;
-                oss << "client " << local_client_param_ptr_->getGlobalClientIdx() << " failed to join worker " << local_worker_idx << " (error code: " << pthread_returncode << ")" << std::endl;
+                oss << "client " << client_param_ptr_->getClientIdx() << " failed to join worker " << local_worker_idx << " (error code: " << pthread_returncode << ")" << std::endl;
                 covered::Util::dumpErrorMsg(kClassName, oss.str());
                 exit(1);
             }
         }
 
         // Get per-client statistics file path
-        assert(local_client_param_ptr_ != NULL);
-        uint32_t global_client_idx = local_client_param_ptr_->getGlobalClientIdx();
-        std::string client_statistics_filepath = Util::getClientStatisticsFilepath(global_client_idx);
+        assert(client_param_ptr_ != NULL);
+        uint32_t client_idx = client_param_ptr_->getClientIdx();
+        std::string client_statistics_filepath = Util::getClientStatisticsFilepath(client_idx);
 
         // Dump per-client statistics
-        ClientStatisticsTracker* client_statistics_tracker_ptr_ = local_client_param_ptr_->getClientStatisticsTrackerPtr();
+        ClientStatisticsTracker* client_statistics_tracker_ptr_ = client_param_ptr_->getClientStatisticsTrackerPtr();
         assert(client_statistics_tracker_ptr_ != NULL);
         client_statistics_tracker_ptr_->dump(client_statistics_filepath);
 

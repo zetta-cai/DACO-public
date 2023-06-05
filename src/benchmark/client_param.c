@@ -6,16 +6,16 @@ namespace covered
 {
     const std::string ClientParam::kClassName("ClientParam");
 
-    ClientParam::ClientParam() : local_client_running_(false)
+    ClientParam::ClientParam() : current_client_running_(false)
     {
-        global_client_idx_ = 0;
+        client_idx_ = 0;
         workload_generator_ptr_ = NULL;
         client_statistics_tracker_ptr_ = NULL;
     }
 
-    ClientParam::ClientParam(const uint32_t& global_client_idx, WorkloadWrapperBase* workload_generator_ptr, ClientStatisticsTracker* client_statistics_tracker_ptr) : local_client_running_(false)
+    ClientParam::ClientParam(const uint32_t& client_idx, WorkloadWrapperBase* workload_generator_ptr, ClientStatisticsTracker* client_statistics_tracker_ptr) : current_client_running_(false)
     {
-        global_client_idx_ = global_client_idx;
+        client_idx_ = client_idx;
         if (workload_generator_ptr == NULL)
         {
             Util::dumpErrorMsg(kClassName, "workload_generator_ptr is NULL!");
@@ -38,8 +38,8 @@ namespace covered
 
     const ClientParam& ClientParam::operator=(const ClientParam& other)
     {
-        local_client_running_.store(other.local_client_running_.load(Util::LOAD_CONCURRENCY_ORDER), Util::STORE_CONCURRENCY_ORDER);
-        global_client_idx_ = other.global_client_idx_;
+        current_client_running_.store(other.current_client_running_.load(Util::LOAD_CONCURRENCY_ORDER), Util::STORE_CONCURRENCY_ORDER);
+        client_idx_ = other.client_idx_;
         if (other.workload_generator_ptr_ == NULL)
         {
             Util::dumpErrorMsg(kClassName, "other.workload_generator_ptr_ is NULL!");
@@ -57,22 +57,22 @@ namespace covered
 
     bool ClientParam::isClientRunning()
     {
-        return local_client_running_.load(Util::LOAD_CONCURRENCY_ORDER);
+        return current_client_running_.load(Util::LOAD_CONCURRENCY_ORDER);
     }
 
     void ClientParam::setClientRunning()
     {
-        return local_client_running_.store(true, Util::STORE_CONCURRENCY_ORDER);
+        return current_client_running_.store(true, Util::STORE_CONCURRENCY_ORDER);
     }
 
     void ClientParam::resetClientRunning()
     {
-        return local_client_running_.store(false, Util::STORE_CONCURRENCY_ORDER);
+        return current_client_running_.store(false, Util::STORE_CONCURRENCY_ORDER);
     }
 
-    uint32_t ClientParam::getGlobalClientIdx()
+    uint32_t ClientParam::getClientIdx()
     {
-        return global_client_idx_;
+        return client_idx_;
     }
 
     WorkloadWrapperBase* ClientParam::getWorkloadGeneratorPtr()

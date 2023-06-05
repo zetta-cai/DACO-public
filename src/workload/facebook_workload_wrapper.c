@@ -59,10 +59,10 @@ namespace covered
         }
     }
 
-    void FacebookWorkloadWrapper::createWorkloadGenerator_(const uint32_t& global_client_idx)
+    void FacebookWorkloadWrapper::createWorkloadGenerator_(const uint32_t& client_idx)
     {
         // facebook::cachelib::cachebench::WorkloadGenerator will generate keycnt key-value pairs by generateReqs() and generate opcnt requests by generateKeyDistributions() in constructor
-        workload_generator_ = makeGenerator_(facebook_stressor_config_, global_client_idx);
+        workload_generator_ = makeGenerator_(facebook_stressor_config_, client_idx);
     }
 
     WorkloadItem FacebookWorkloadWrapper::generateItemInternal_(std::mt19937_64& request_randgen)
@@ -111,7 +111,7 @@ namespace covered
     }
 
     // The same makeGenerator as in lib/CacheLib/cachelib/cachebench/runner/Stressor.cpp
-    std::unique_ptr<facebook::cachelib::cachebench::GeneratorBase> FacebookWorkloadWrapper::makeGenerator_(const StressorConfig& config, const uint32_t& global_client_idx)
+    std::unique_ptr<facebook::cachelib::cachebench::GeneratorBase> FacebookWorkloadWrapper::makeGenerator_(const StressorConfig& config, const uint32_t& client_idx)
     {
         if (config.generator == "piecewise-replay") {
             Util::dumpErrorMsg(kClassName, "piecewise-replay generator is not supported now!");
@@ -126,7 +126,7 @@ namespace covered
         } else if (config.generator.empty() || config.generator == "workload") {
             // TODO: Remove the empty() check once we label workload-based configs
             // properly
-            return std::make_unique<covered::WorkloadGenerator>(config, global_client_idx);
+            return std::make_unique<covered::WorkloadGenerator>(config, client_idx);
         } else if (config.generator == "online") {
             Util::dumpErrorMsg(kClassName, "online generator is not supported now!");
             exit(1);

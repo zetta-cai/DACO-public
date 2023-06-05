@@ -19,9 +19,9 @@ namespace covered
     class CloudWrapper
     {
     public:
-        static void* launchCloud(void* local_cloud_param_ptr);
+        static void* launchCloud(void* current_cloud_param_ptr);
 
-        CloudWrapper(CloudParam* local_cloud_param_ptr);
+        CloudWrapper(CloudParam* current_cloud_param_ptr);
         ~CloudWrapper();
 
         void start();
@@ -30,9 +30,9 @@ namespace covered
 
         bool processGlobalRequest_(MessageBase* request_ptr);
 
-        CloudParam* local_cloud_param_ptr_;
-        RocksdbWrapper* local_cloud_rocksdb_ptr_;
-        UdpSocketWrapper* local_cloud_recvreq_socket_server_ptr_;
+        CloudParam* cloud_param_ptr_;
+        RocksdbWrapper* cloud_rocksdb_ptr_;
+        UdpSocketWrapper* cloud_recvreq_socket_server_ptr_;
     };
 }
 

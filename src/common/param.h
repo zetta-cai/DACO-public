@@ -14,7 +14,7 @@ namespace covered
     class Param
     {
     public:
-        static void setParameters(const bool& is_simulation, const std::string& cache_name, const uint32_t& capacity_bytes, const uint32_t& clientcnt, const std::string& cloud_storage, const std::string& config_filepath, const bool& is_debug, const double& duration, const uint32_t& edgecnt, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge, const uint32_t& propagation_latency_crossedge, const uint32_t& propagation_latency_edgecloud, const std::string& workload_name);
+        static void setParameters(const bool& is_simulation, const std::string& cache_name, const uint32_t& capacity_bytes, const uint32_t& clientcnt, const std::string& cloud_storage, const std::string& config_filepath, const bool& is_debug, const double& duration, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge, const uint32_t& propagation_latency_crossedge, const uint32_t& propagation_latency_edgecloud, const std::string& workload_name);
 
         static bool isSimulation();
         static std::string getCacheName();
@@ -25,6 +25,7 @@ namespace covered
         static bool isDebug();
         static double getDuration();
         static uint32_t getEdgecnt();
+        static std::string getHashName();
         static uint32_t getKeycnt();
         static uint32_t getOpcnt();
         static uint32_t getPerclientWorkercnt();
@@ -49,6 +50,7 @@ namespace covered
         static bool is_debug_;
         static double duration_;
         static uint32_t edgecnt_;
+        static std::string hash_name_;
         static uint32_t keycnt_;
         static uint32_t opcnt_;
         static uint32_t perclient_workercnt_;

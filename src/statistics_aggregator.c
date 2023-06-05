@@ -14,7 +14,7 @@
 
 struct LoaderParam
 {
-    uint32_t global_client_idx = 0;
+    uint32_t client_idx = 0;
     covered::ClientStatisticsTracker* client_statistics_tracker_ptr = NULL;
 };
 
@@ -24,7 +24,7 @@ void* launchLoader(void* local_loader_param_ptr)
     LoaderParam& local_loader_param = *((LoaderParam*)local_loader_param_ptr);
     assert(local_loader_param.client_statistics_tracker_ptr == NULL);
 
-    std::string client_statistics_filepath = covered::Util::getClientStatisticsFilepath(local_loader_param.global_client_idx);
+    std::string client_statistics_filepath = covered::Util::getClientStatisticsFilepath(local_loader_param.client_idx);
     local_loader_param.client_statistics_tracker_ptr = new covered::ClientStatisticsTracker(client_statistics_filepath); // Release outside launchLoader()
     assert(local_loader_param.client_statistics_tracker_ptr != NULL);
     
@@ -53,25 +53,25 @@ int main(int argc, char **argv) {
     LoaderParam loader_params[clientcnt];
 
     // (3.1) Prepare loader parameters
-    for (uint32_t global_client_idx = 0; global_client_idx < clientcnt; global_client_idx++)
+    for (uint32_t client_idx = 0; client_idx < clientcnt; client_idx++)
     {
-        loader_params[global_client_idx].global_client_idx = global_client_idx;
-        loader_params[global_client_idx].client_statistics_tracker_ptr = NULL;
+        loader_params[client_idx].client_idx = client_idx;
+        loader_params[client_idx].client_statistics_tracker_ptr = NULL;
     }
 
     // (3.2) Launch clientcnt loaders
 
-    for (uint32_t global_client_idx = 0; global_client_idx < clientcnt; global_client_idx++)
+    for (uint32_t client_idx = 0; client_idx < clientcnt; client_idx++)
     {
         std::ostringstream oss;
-        oss << "launch loader " << global_client_idx;
+        oss << "launch loader " << client_idx;
         covered::Util::dumpNormalMsg(main_class_name, oss.str());
 
-        pthread_returncode = pthread_create(&loader_threads[global_client_idx], NULL, launchLoader, (void*)(&(loader_params[global_client_idx])));
+        pthread_returncode = pthread_create(&loader_threads[client_idx], NULL, launchLoader, (void*)(&(loader_params[client_idx])));
         if (pthread_returncode != 0)
         {
             std::ostringstream oss;
-            oss << "failed to launch loader " << global_client_idx << " (error code: " << pthread_returncode << ")";
+            oss << "failed to launch loader " << client_idx << " (error code: " << pthread_returncode << ")";
             covered::Util::dumpErrorMsg(main_class_name, oss.str());
             exit(1);
         }
@@ -79,13 +79,13 @@ int main(int argc, char **argv) {
 
     // (4) Wait for clientcnt loaders
     covered::Util::dumpNormalMsg(main_class_name, "wait for all loaders...");
-    for (uint32_t global_client_idx = 0; global_client_idx < clientcnt; global_client_idx++)
+    for (uint32_t client_idx = 0; client_idx < clientcnt; client_idx++)
     {
-        pthread_returncode = pthread_join(loader_threads[global_client_idx], NULL); // void* retval = NULL
+        pthread_returncode = pthread_join(loader_threads[client_idx], NULL); // void* retval = NULL
         if (pthread_returncode != 0)
         {
             std::ostringstream oss;
-            oss << "failed to join loader " << global_client_idx << " (error code: " << pthread_returncode << ")";
+            oss << "failed to join loader " << client_idx << " (error code: " << pthread_returncode << ")";
             covered::Util::dumpErrorMsg(main_class_name, oss.str());
             exit(1);
         }
@@ -96,10 +96,10 @@ int main(int argc, char **argv) {
 
     // (5.1) Prepare parameters for TotalStatisticsTracker
     covered::ClientStatisticsTracker* client_statistics_tracker_ptrs[clientcnt];
-    for (uint32_t global_client_idx = 0; global_client_idx < clientcnt; global_client_idx++)
+    for (uint32_t client_idx = 0; client_idx < clientcnt; client_idx++)
     {
-        client_statistics_tracker_ptrs[global_client_idx] = loader_params[global_client_idx].client_statistics_tracker_ptr;
-        assert(client_statistics_tracker_ptrs[global_client_idx] != NULL);
+        client_statistics_tracker_ptrs[client_idx] = loader_params[client_idx].client_statistics_tracker_ptr;
+        assert(client_statistics_tracker_ptrs[client_idx] != NULL);
     }
 
     // (5.2) Aggregate and dump per-client statistics
@@ -108,11 +108,11 @@ int main(int argc, char **argv) {
     covered::Util::dumpNormalMsg(main_class_name, total_statistics_string);
 
     // (6) Release variables in heap
-    for (uint32_t global_client_idx = 0; global_client_idx < clientcnt; global_client_idx++)
+    for (uint32_t client_idx = 0; client_idx < clientcnt; client_idx++)
     {
-        assert(loader_params[global_client_idx].client_statistics_tracker_ptr != NULL);
-        delete loader_params[global_client_idx].client_statistics_tracker_ptr;
-        loader_params[global_client_idx].client_statistics_tracker_ptr = NULL;
+        assert(loader_params[client_idx].client_statistics_tracker_ptr != NULL);
+        delete loader_params[client_idx].client_statistics_tracker_ptr;
+        loader_params[client_idx].client_statistics_tracker_ptr = NULL;
     }
 
     return 0;

@@ -19,6 +19,7 @@ namespace covered
     bool Param::is_debug_ = false;
     double Param::duration_ = 0.0;
     uint32_t Param::edgecnt_ = 0;
+    std::string Param::hash_name_ = "";
     uint32_t Param::keycnt_ = 0;
     uint32_t Param::opcnt_ = 0;
     uint32_t Param::perclient_workercnt_ = 0;
@@ -27,8 +28,9 @@ namespace covered
     uint32_t Param::propagation_latency_edgecloud_ = 0;
     std::string Param::workload_name_ = "";
 
-    void Param::setParameters(const bool& is_simulation, const std::string& cache_name, const uint32_t& capacity_bytes, const uint32_t& clientcnt, const std::string& cloud_storage, const std::string& config_filepath, const bool& is_debug, const double& duration, const uint32_t& edgecnt, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge, const uint32_t& propagation_latency_crossedge, const uint32_t& propagation_latency_edgecloud, const std::string& workload_name)
+    void Param::setParameters(const bool& is_simulation, const std::string& cache_name, const uint32_t& capacity_bytes, const uint32_t& clientcnt, const std::string& cloud_storage, const std::string& config_filepath, const bool& is_debug, const double& duration, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge, const uint32_t& propagation_latency_crossedge, const uint32_t& propagation_latency_edgecloud, const std::string& workload_name)
     {
+        // NOTE: Param::setParameters() does NOT rely on any other module
         if (is_valid_)
         {
             Util::dumpErrorMsg(kClassName, "Param::setParameters cannot be invoked more than once!");
@@ -44,6 +46,7 @@ namespace covered
         is_debug_ = is_debug;
         duration_ = duration;
         edgecnt_ = edgecnt;
+        hash_name_ = hash_name;
         keycnt_ = keycnt;
         opcnt_ = opcnt;
         perclient_workercnt_ = perclient_workercnt;
@@ -110,6 +113,12 @@ namespace covered
         return edgecnt_;
     }
 
+    std::string Param::getHashName()
+    {
+        checkIsValid_();
+        return hash_name_;
+    }
+
     uint32_t Param::getKeycnt()
     {
         checkIsValid_();
@@ -166,6 +175,7 @@ namespace covered
         oss << "Debug flag: " << (is_debug_?"true":"false") << std::endl;
         oss << "Duration: " << duration_ << std::endl;
         oss << "Edge count: " << edgecnt_ << std::endl;
+        oss << "Hash name: " << hash_name_ << std::endl;
         oss << "Key count (dataset size): " << keycnt_ << std::endl;
         oss << "Operation count (workload size): " << opcnt_ << std::endl;
         oss << "Per-client worker count: " << perclient_workercnt_ << std::endl;

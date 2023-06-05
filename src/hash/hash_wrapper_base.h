@@ -13,16 +13,12 @@
 
 namespace covered
 {
-    enum HashType
-    {
-        kMmh3Hash = 1
-    };
-
     class HashWrapperBase
     {
     public:
-        static std::string hashTypeToString(const HashType& hash_type);
-        static HashWrapperBase* getHashWrapper(const HashType& hash_type);
+        static const std::string MMH3_HASH_NAME;
+
+        static HashWrapperBase* getHashWrapper(const std::string& hash_name);
 
         HashWrapperBase();
         virtual ~HashWrapperBase();

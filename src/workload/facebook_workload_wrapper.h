@@ -28,11 +28,11 @@ namespace covered
 
         virtual void initWorkloadParameters_() override;
         virtual void overwriteWorkloadParameters_() override;
-        virtual void createWorkloadGenerator_(const uint32_t& global_client_idx) override;
+        virtual void createWorkloadGenerator_(const uint32_t& client_idx) override;
 
         virtual WorkloadItem generateItemInternal_(std::mt19937_64& request_randgen) override;
 
-        std::unique_ptr<facebook::cachelib::cachebench::GeneratorBase> makeGenerator_(const StressorConfig& config, const uint32_t& global_client_idx);
+        std::unique_ptr<facebook::cachelib::cachebench::GeneratorBase> makeGenerator_(const StressorConfig& config, const uint32_t& client_idx);
 
         std::discrete_distribution<>* op_pool_dist_ptr_;
         std::optional<uint64_t> last_reqid_;

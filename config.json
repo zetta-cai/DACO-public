@@ -1,8 +1,10 @@
 {
+    "cloud_ipstr": "172.0.0.1",
+    "cloud_recvreq_startport": 4100,
+    "cloud_rocksdb_basedir": "/tmp/cloud",
+    "edge_ipstrs": ["172.0.0.1"],
+    "edge_recvreq_startport": 4200,
     "facebook_config_filepath": "lib/CacheLib/cachelib/cachebench/test_configs/hit_ratio/cdn/config.json",
-    "global_cloud_recvreq_port": 4100,
-    "global_cloud_rocksdb_basedir": "/tmp/cloud",
-    "global_edge_recvreq_startport": 4200,
     "latency_histogram_size": 1000000,
     "output_basedir": "output",
     "version": "1.0"
