@@ -104,7 +104,7 @@ namespace covered
 
             // TMPDEBUG
             std::ostringstream oss;
-            oss << "worker" << local_worker_param_ptr_->getLocalWorkerIdx() << " issues a local request; type: " << MessageBase::messageTypeToString(local_request_ptr->getMessageType()) << "; keystr: " << workload_item.getKey().getKeystr() << "; valuesize: " << workload_item.getValue().getValuesize() << std::endl << "Msg payload: " << local_request_msg_payload.getBytesStr();
+            oss << "worker" << local_worker_param_ptr_->getLocalWorkerIdx() << " issues a local request; type: " << MessageBase::messageTypeToString(local_request_ptr->getMessageType()) << "; keystr: " << workload_item.getKey().getKeystr() << "; valuesize: " << workload_item.getValue().getValuesize() << std::endl << "Msg payload: " << local_request_msg_payload.getBytesHexstr();
             Util::dumpDebugMsg(kClassName, oss.str());
 
             // Timeout-and-retry mechanism
@@ -241,7 +241,7 @@ namespace covered
 
         // TMPDEBUG
         std::ostringstream oss;
-        oss << "worker" << local_worker_param_ptr_->getLocalWorkerIdx() << " receives a local response; type: " << MessageBase::messageTypeToString(local_response_message_type) << "; keystr: " << tmp_key.getKeystr() << "; valuesize: " << tmp_value.getValuesize() << "; hitflag: " << MessageBase::hitflagToString(hitflag) << std::endl << "Msg payload: " << local_response_msg_payload.getBytesStr();
+        oss << "worker" << local_worker_param_ptr_->getLocalWorkerIdx() << " receives a local response; type: " << MessageBase::messageTypeToString(local_response_message_type) << "; keystr: " << tmp_key.getKeystr() << "; valuesize: " << tmp_value.getValuesize() << "; hitflag: " << MessageBase::hitflagToString(hitflag) << std::endl << "Msg payload: " << local_response_msg_payload.getBytesHexstr();
         Util::dumpDebugMsg(kClassName, oss.str());
 
         // Release local response message

@@ -44,7 +44,7 @@ namespace covered
         return bytes_.capacity();
     }
 
-    std::string DynamicArray::getBytesStr() const
+    std::string DynamicArray::getBytesHexstr() const
     {
         std::ostringstream oss;
         char default_fill = oss.fill();

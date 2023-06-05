@@ -5,7 +5,7 @@ import sys
 import subprocess
 
 filename = sys.argv[0]
-is_clear = False # whether to clear intermediate files (e.g., tarball files)
+is_clear_tarball = False # whether to clear intermediate tarball files
 
 # (1) Install python libraries (some required by scripts/common.py)
 
@@ -67,7 +67,7 @@ if not os.path.exists(boost_install_dirpath):
 else:
     dump(filename, "{} exists (boost has been installed)".format(boost_install_dirpath))
 
-if is_clear:
+if is_clear_tarball:
     warn(filename, "clear {}".format(boost_download_filepath))
     boost_clear_cmd = "cd lib && rm {}".format(boost_download_filepath)
 
@@ -186,10 +186,41 @@ if not os.path.exists(rocksdb_install_dirpath):
 else:
     dump(filename, "{} exists (rocksdb has been installed)".format(rocksdb_install_dirpath))
 
-if is_clear:
+if is_clear_tarball:
     warn(filename, "clear {}".format(rocksdb_download_filepath))
     rocksdb_clear_cmd = "cd lib && rm {}".format(rocksdb_download_filepath)
 
     rocksdb_clear_subprocess = subprocess.run(rocksdb_clear_cmd, shell=True)
     if rocksdb_clear_subprocess.returncode != 0:
         die(filename, "failed to clear {}".format(rocksdb_download_filepath))
+
+# (6) Install SMHasher (commit ID: 61a0530)
+
+smhasher_clone_dirpath = "{}/smhasher".format(lib_dirpath)
+if not os.path.exists(smhasher_clone_dirpath):
+    prompt(filename, "clone SMHasher into {}...".format(smhasher_clone_dirpath))
+    smhasher_clone_cmd = "cd lib && git clone https://github.com/aappleby/smhasher.git"
+
+    smhasher_clone_subprocess = subprocess.run(smhasher_clone_cmd, shell=True)
+    if smhasher_clone_subprocess.returncode != 0:
+        die(filename, "failed to clone SMHasher into {}".format(smhasher_clone_dirpath))
+else:
+    dump(filename, "{} exists (SMHasher has been cloned)".format(smhasher_clone_dirpath))
+
+smhasher_targetcommit = "61a0530"
+smhahser_checkversion_cmd = "cd {} && git log --format=\"%H\" -n 1".format(smhasher_clone_dirpath)
+smhasher_checkversion_subprocess = subprocess.run(smhahser_checkversion_cmd, shell=True, capture_output=True)
+if smhasher_checkversion_subprocess.returncode != 0:
+    die(filename, "failed to get the latest commit ID of SMHasher")
+else:
+    smhasher_checkversion_outputbytes = smhasher_checkversion_subprocess.stdout
+    smhasher_checkversion_outputstr = smhasher_checkversion_outputbytes.decode("utf-8")
+    if smhasher_targetcommit not in smhasher_checkversion_outputstr:
+        prompt(filename, "the latest commit ID of SMHasher is {} -> reset SMHasher to commit {}...".format(smhasher_checkversion_outputstr, smhasher_targetcommit))
+        smhasher_reset_cmd = "cd {} && git reset --hard {}".format(smhasher_clone_dirpath, smhasher_targetcommit)
+        
+        smhasher_checkversion_subprocess = subprocess.run(smhasher_reset_cmd, shell=True)
+        if smhasher_checkversion_subprocess.returncode != 0:
+            die(filename, "failed to reset SMHasher")
+    else:
+        dump(filename, "the latest commit ID of SMHasher is already {}".format(smhasher_targetcommit))

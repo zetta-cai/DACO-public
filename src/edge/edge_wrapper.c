@@ -403,7 +403,7 @@ namespace covered
 
         // TMPDEBUG
         std::ostringstream oss;
-        oss << "edge" << local_edge_param_ptr_->getGlobalEdgeIdx() << " issues a global request; type: " << MessageBase::messageTypeToString(global_get_request.getMessageType()) << "; keystr:" << key.getKeystr() << std::endl << "Msg payload: " << global_request_msg_payload.getBytesStr();
+        oss << "edge" << local_edge_param_ptr_->getGlobalEdgeIdx() << " issues a global request; type: " << MessageBase::messageTypeToString(global_get_request.getMessageType()) << "; keystr:" << key.getKeystr() << std::endl << "Msg payload: " << global_request_msg_payload.getBytesHexstr();
         Util::dumpDebugMsg(kClassName, oss.str());
 
         while (true) // Timeout-and-retry

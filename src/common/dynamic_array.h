@@ -24,7 +24,7 @@ namespace covered
 
         uint32_t getSize() const;
         uint32_t getCapacity() const;
-        std::string getBytesStr() const;
+        std::string getBytesHexstr() const;
 
         void deserialize(uint32_t position, const char* data, uint32_t length); // Deserialize dynamic array from byte array
         void arrayset(uint32_t position, int charval, uint32_t length); // Memset current dynamic array

@@ -5,6 +5,7 @@ include src/mk/recipes.mk
 include src/mk/lib/boost.mk
 include src/mk/lib/cachebench.mk
 include src/mk/lib/rocksdb.mk
+include src/mk/lib/smhasher.mk
 
 # Recipes for cache methods (including baselines and COVERED)
 include src/mk/cache/covered.mk
@@ -13,7 +14,7 @@ include src/mk/cache/lru.mk
 ##############################################################################
 # Set link objects and directory paths
 
-LINK_OBJECTS = $(COVERED_OBJECTS) $(CACHEBENCH_OBJECTS) $(LRU_OBJECTS)
+LINK_OBJECTS = $(COVERED_OBJECTS) $(CACHEBENCH_OBJECTS) $(LRU_OBJECTS) $(SMHASHER_OBJECTS)
 
 LDDIR += $(BOOST_LDDIR)
 LDDIR += $(CACHEBENCH_LDDIR)
