@@ -27,7 +27,9 @@ namespace covered
         kGlobalDelRequest,
         kGlobalGetResponse,
         kGlobalPutResponse,
-        kGlobalDelResponse
+        kGlobalDelResponse,
+        kDirectoryLookupRequest,
+        kDirectoryLookupResponse
     };
 
     enum Hitflag

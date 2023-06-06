@@ -5,8 +5,7 @@
 #include <sstream>
 
 #include "common/util.h"
-#include "message/local_message.h"
-#include "message/global_message.h"
+#include "message/data_message.h"
 
 namespace covered
 {
@@ -45,6 +44,16 @@ namespace covered
             case MessageType::kLocalDelResponse:
             {
                 message_type_str = "kLocalDelResponse";
+                break;
+            }
+            case MessageType::kDirectoryLookupRequest:
+            {
+                message_type_str = "kDirectoryLookupRequest";
+                break;
+            }
+            case MessageType::kDirectoryLookupResponse:
+            {
+                message_type_str = "kDirectoryLookupResponse";
                 break;
             }
             default:
@@ -415,14 +424,28 @@ namespace covered
     {
         checkIsValid_();
         // TODO: Update isControlRequest() after introducing control requests
-        return false;
+        if (message_type_ == MessageType::kDirectoryLookupRequest)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
     }
 
     bool MessageBase::isControlResponse() const
     {
         checkIsValid_();
         // TODO: Update isControlResponse() after introducing control responses
-        return false;
+        if (message_type_ == MessageType::kDirectoryLookupResponse)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
     }
 
     void MessageBase::checkIsValid_() const

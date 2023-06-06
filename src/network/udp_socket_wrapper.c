@@ -83,6 +83,18 @@ namespace covered
 		pkt_socket_ptr_ = NULL;
 	}
 
+	void UdpSocketWrapper::setRemoteAddrForClient(const NetworkAddr& remote_addr)
+	{
+		assert(role_ == SocketRole::kSocketClient);
+		assert(remote_addr.isValid() == true);
+		assert(remote_addr_.isValid() == true);
+
+		remote_addr_ = remote_addr;
+		
+		assert(remote_addr_.isValid() == true);
+		return;
+	}
+
     void UdpSocketWrapper::send(const DynamicArray& msg_payload)
 	{
 		// Must with valid remote address

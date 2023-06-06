@@ -7,7 +7,7 @@
 #include "benchmark/client_param.h"
 #include "common/dynamic_array.h"
 #include "common/util.h"
-#include "message/local_message.h"
+#include "message/data_message.h"
 #include "network/network_addr.h"
 #include "network/propagation_simulator.h"
 #include "statistics/client_statistics_tracker.h"

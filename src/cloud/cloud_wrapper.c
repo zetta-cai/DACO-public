@@ -5,7 +5,7 @@
 
 #include "common/config.h"
 #include "common/util.h"
-#include "message/global_message.h"
+#include "message/data_message.h"
 #include "network/network_addr.h"
 #include "network/propagation_simulator.h"
 

@@ -1,0 +1,24 @@
+/*
+ * Help to include the header files of all data messages (e.g., local messages between clients and edge nodes, and global messages between edge nodes and cloud).
+ * 
+ * By Siyuan Sheng (2023.05.18).
+ */
+
+#ifndef DATA_MESSAGE_H
+#define DATA_MESSAGE_H
+
+#include "message/data/local/local_get_request.h"
+#include "message/data/local/local_put_request.h"
+#include "message/data/local/local_del_request.h"
+#include "message/data/local/local_get_response.h"
+#include "message/data/local/local_put_response.h"
+#include "message/data/local/local_del_response.h"
+
+#include "message/data/global/global_get_request.h"
+#include "message/data/global/global_put_request.h"
+#include "message/data/global/global_del_request.h"
+#include "message/data/global/global_get_response.h"
+#include "message/data/global/global_put_response.h"
+#include "message/data/global/global_del_response.h"
+
+#endif
