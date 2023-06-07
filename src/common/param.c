@@ -7,11 +7,11 @@
 
 namespace covered
 {
-    static const std::string SIMULATOR_MAIN_NAME("simulator");
-    static const std::string STATISTICS_AGGREGATOR_MAIN_NAME("statistics_aggregator");
-    static const std::string CLIENT_MAIN_NAME("client");
-    static const std::string EDGE_MAIN_NAME("edge");
-    static const std::string CLOUD_MAIN_NAME("cloud");
+    const std::string Param::SIMULATOR_MAIN_NAME("simulator");
+    const std::string Param::STATISTICS_AGGREGATOR_MAIN_NAME("statistics_aggregator");
+    const std::string Param::CLIENT_MAIN_NAME("client");
+    const std::string Param::EDGE_MAIN_NAME("edge");
+    const std::string Param::CLOUD_MAIN_NAME("cloud");
     const std::string Param::LRU_CACHE_NAME("lru");
     const std::string Param::COVERED_CACHE_NAME("covered");
     const std::string Param::HDD_NAME = "hdd";

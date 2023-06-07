@@ -42,12 +42,12 @@ namespace covered
 
     WorkloadItem::~WorkloadItem() {}
 
-    Key WorkloadItem::getKey()
+    Key WorkloadItem::getKey() const
     {
         return key_;
     }
 
-    Value WorkloadItem::getValue()
+    Value WorkloadItem::getValue() const
     {
         return value_;
     }

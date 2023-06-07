@@ -9,6 +9,7 @@
 
 #include <string>
 
+#include "edge/edge_param.h"
 #include "edge/edge_wrapper_base.h"
 
 namespace covered
@@ -16,13 +17,14 @@ namespace covered
     class BasicEdgeWrapper : public EdgeWrapperBase
     {
     public:
-        BasicEdgeWrapper(const std::string& cache_name, EdgeParam* edge_param_ptr);
-        ~BasicEdgeWrapper();
+        BasicEdgeWrapper(const std::string& cache_name, const std::string& hash_name, EdgeParam* edge_param_ptr);
+        virtual ~BasicEdgeWrapper();
     private:
         static const std::string kClassName;
 
-        // Return is_finish
-        virtual bool processControlRequest_(MessageBase* request_ptr) override;
+        // Return if edge node is finished
+        virtual bool processDirectoryLookupRequest_(MessageBase* control_request_ptr) override;
+        virtual bool processOtherControlRequest_(MessageBase* control_request_ptr) override;
     };
 }
 

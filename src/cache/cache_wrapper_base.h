@@ -1,5 +1,5 @@
 /*
- * CacheWrapperBase: base class for general edge cache interfaces.
+ * CacheWrapperBase: base class for general local edge cache interfaces.
  *
  * Each individual CacheWrapper needs to override get, update, needIndependentAdmit, admitInternal_, evictInternal_, and getSizeInternal_.
  * 

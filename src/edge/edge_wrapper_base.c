@@ -6,6 +6,7 @@
 #include "common/config.h"
 #include "common/param.h"
 #include "common/util.h"
+#include "edge/basic_edge_wrapper.h"
 #include "message/data_message.h"
 #include "message/message_base.h"
 #include "network/network_addr.h"
@@ -15,24 +16,24 @@ namespace covered
 {
     const std::string EdgeWrapperBase::kClassName("EdgeWrapperBase");
 
-    EdgeWrapperBase* EdgeWrapperBase::getEdgeWrapper(const std::string& cache_name, EdgeParam* edge_param_ptr)
+    EdgeWrapperBase* EdgeWrapperBase::getEdgeWrapper(const std::string& cache_name, const std::string& hash_name, EdgeParam* edge_param_ptr)
     {
         EdgeWrapperBase* edge_wrapper_ptr = NULL;
 
         if (cache_name == Param::COVERED_CACHE_NAME)
         {
-            //edge_wrapper_ptr = new CoveredEdgeWrapper(cache_name, edge_param_ptr);
+            //edge_wrapper_ptr = new CoveredEdgeWrapper(cache_name, hash_name, edge_param_ptr);
         }
         else
         {
-            edge_wrapper_ptr = new BasicEdgeWrapper(cache_name, edge_param_ptr);
+            edge_wrapper_ptr = new BasicEdgeWrapper(cache_name, hash_name, edge_param_ptr);
         }
 
         assert(edge_wrapper_ptr != NULL);
         return edge_wrapper_ptr;
     }
 
-    EdgeWrapperBase::EdgeWrapperBase(const std::string& cache_name, EdgeParam* edge_param_ptr) : cache_name_(cache_name)
+    EdgeWrapperBase::EdgeWrapperBase(const std::string& cache_name, const std::string& hash_name, EdgeParam* edge_param_ptr) : cache_name_(cache_name)
     {
         if (edge_param_ptr == NULL)
         {
@@ -42,9 +43,17 @@ namespace covered
         edge_param_ptr_ = edge_param_ptr;
         assert(edge_param_ptr_ != NULL);
         
-        // Allocate local edge cache
+        // Allocate local edge cache to store hot objects
         edge_cache_ptr_ = CacheWrapperBase::getEdgeCache(cache_name_, Param::getCapacityBytes());
         assert(edge_cache_ptr_ != NULL);
+
+        // Allocate cooperation wrapper for cooperative edge caching
+        cooperation_wrapper_ptr_ = CooperationWrapperBase::getCooperationWrapper(cache_name, hash_name, edge_param_ptr);
+        assert(cooperation_wrapper_ptr_ != NULL);
+
+        // Allocate randgen to choose neighbor edge node from directory information
+        directory_randgen_ptr_ = new std::mt19937_64(edge_param_ptr_->getEdgeIdx());
+        assert(directory_randgen_ptr_ != NULL);
 
         // Prepare a socket server on recvreq port
         uint32_t edge_idx = edge_param_ptr_->getEdgeIdx();
@@ -64,6 +73,21 @@ namespace covered
     EdgeWrapperBase::~EdgeWrapperBase()
     {
         // NOTE: no need to delete edge_param_ptr, as it is maintained outside EdgeWrapperBase
+
+        // Release local edge cache
+        assert(edge_cache_ptr_ != NULL);
+        delete edge_cache_ptr_;
+        edge_cache_ptr_ = NULL;
+
+        // Release cooperative cache wrapper
+        assert(cooperation_wrapper_ptr_ != NULL);
+        delete cooperation_wrapper_ptr_;
+        cooperation_wrapper_ptr_ = NULL;
+
+        // Release randgen
+        assert(directory_randgen_ptr_ != NULL);
+        delete directory_randgen_ptr_;
+        directory_randgen_ptr_ = NULL;
 
         // Release the socket server on recvreq port
         assert(edge_recvreq_socket_server_ptr_ != NULL);
@@ -124,6 +148,8 @@ namespace covered
             } // End of (is_timeout == false)
         } // End of while loop
     }
+
+    // (1) Data requests
 
     bool EdgeWrapperBase::processDataRequest_(MessageBase* data_request_ptr)
     {
@@ -516,7 +542,7 @@ namespace covered
     void EdgeWrapperBase::triggerIndependentAdmission_(const Key& key, const Value& value)
     {
         // NOTE: COVERED must NOT trigger any independent admission
-        assert(cache_name_ != CacheWrapperBase::COVERED_CACHE_NAME);
+        assert(cache_name_ != Param::COVERED_CACHE_NAME);
 
         // Independently admit the new key-value pair into local edge cache
         edge_cache_ptr_->admit(key, value);
@@ -537,6 +563,47 @@ namespace covered
             }
         }
 
+        return;
+    }
+
+    // (2) Control requests
+
+    bool EdgeWrapperBase::processControlRequest_(MessageBase* control_request_ptr)
+    {
+        assert(control_request_ptr != NULL && control_request_ptr->isControlRequest());
+        assert(edge_cache_ptr_ != NULL);
+
+        bool is_finish = false; // Mark if local edge node is finished
+
+        if (control_request_ptr->getMessageType() == MessageType::kDirectoryLookupRequest)
+        {
+            is_finish = processDirectoryLookupRequest_(control_request_ptr);
+        }
+        else
+        {
+            // NOTE: only COVERED has other control requests to process
+            is_finish = processOtherControlRequest_(control_request_ptr);
+        }
+        // TODO: invalidation and cache admission/eviction requests for control message
+        // TODO: reply control response message to a beacon node
+        return is_finish;
+    }
+
+    void EdgeWrapperBase::getNeighborEdgeIdxForDirectoryLookupRequest_(const Key& key, bool& is_directory_exist, uint32_t& neighbor_edge_idx)
+    {
+        // Check directory information cooperation_wrapper_ptr_
+        std::vector<uint32_t> edge_idxes;
+        cooperation_wrapper_ptr_->lookupLocalDirectory(key, is_directory_exist, edge_idxes);
+
+        // Get the neighbor edge index
+        if (is_directory_exist)
+        {
+            // Randomly select an edge node as the neighbor edge node
+            std::uniform_int_distribution<uint32_t> uniform_dist(0, edge_idxes.size() - 1); // Range from 0 to (# of edge indexes - 1)
+            uint32_t random_number = uniform_dist(*directory_randgen_ptr_);
+            assert(random_number < edge_idxes.size());
+            neighbor_edge_idx = edge_idxes[random_number];
+        }
         return;
     }
 }

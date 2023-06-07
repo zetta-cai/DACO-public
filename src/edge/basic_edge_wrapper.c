@@ -1,27 +1,62 @@
 #include "edge/basic_edge_wrapper.h"
 
 #include <assert.h>
+#include <sstream>
+
+#include "common/key.h"
+#include "common/param.h"
+#include "common/util.h"
+#include "message/control_message.h"
+#include "message/message_base.h"
 
 namespace covered
 {
-    BasicEdgeWrapper::BasicEdgeWrapper(const std::string& cache_name, EdgeParam* edge_param_ptr) : EdgeWrapperBase(cache_name, edge_param_ptr)
+    const std::string BasicEdgeWrapper::kClassName("BasicEdgeWrapper");
+
+    BasicEdgeWrapper::BasicEdgeWrapper(const std::string& cache_name, const std::string& hash_name, EdgeParam* edge_param_ptr) : EdgeWrapperBase(cache_name, hash_name, edge_param_ptr)
     {
+        assert(cache_name != Param::COVERED_CACHE_NAME);
     }
 
     BasicEdgeWrapper::~BasicEdgeWrapper() {}
 
-    bool BasicEdgeWrapper::processControlRequest_(MessageBase* control_request_ptr)
+    bool BasicEdgeWrapper::processDirectoryLookupRequest_(MessageBase* control_request_ptr)
     {
-        assert(control_request_ptr != NULL && control_request_ptr->isControlRequest());
-        assert(edge_cache_ptr_ != NULL);
+        assert(control_request_ptr != NULL);
+        assert(control_request_ptr->getMessageType() == MessageType::kDirectoryLookupRequest);
+        assert(edge_recvreq_socket_server_ptr_ != NULL);
 
-        bool is_finish = false; // Mark if local edge node is finished
+        bool is_finish = false;
 
-        // TODO: invalidation and cache admission/eviction requests for control message
-        // TODO: reply control response message to a beacon node
-        // assert(control_response_ptr != NULL && control_response_ptr->isControlResponse());
+        // Get key from directory lookup request
+        const DirectoryLookupRequest* const directory_lookup_request_ptr = static_cast<const DirectoryLookupRequest*>(control_request_ptr);
+        Key tmp_key = directory_lookup_request_ptr->getKey();
+
+        // Lookup directory information from beacon node and randomly select a neighbor edge index
+        bool is_directory_exist = false;
+        uint32_t neighbor_edge_idx = 0;
+        getNeighborEdgeIdxForDirectoryLookupRequest_(tmp_key, is_directory_exist, neighbor_edge_idx);
+
+        // Send back a directory lookup response
+        DirectoryLookupResponse directory_lookup_response(tmp_key, is_directory_exist, neighbor_edge_idx);
+        DynamicArray control_response_msg_payload(directory_lookup_response.getMsgPayloadSize());
+        directory_lookup_response.serialize(control_response_msg_payload);
+        edge_recvreq_socket_server_ptr_->send(control_response_msg_payload);
+
+        return is_finish;
+    }
+    
+    bool BasicEdgeWrapper::processOtherControlRequest_(MessageBase* control_request_ptr)
+    {
+        assert(control_request_ptr != NULL);
+
+        bool is_finish = false;
+
+        std::ostringstream oss;
+        oss << "control request " << MessageBase::messageTypeToString(control_request_ptr->getMessageType()) << " is not supported!";
+        Util::dumpErrorMsg(kClassName, oss.str());
+        exit(1);
+
         return is_finish;
     }
 }
-
-#endif

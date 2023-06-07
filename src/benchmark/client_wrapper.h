@@ -26,7 +26,7 @@ namespace covered
     private:
         static const std::string kClassName;
 
-        void* launchWorker(void* worker_param_ptr);
+        static void* launchWorker(void* worker_param_ptr);
 
         ClientParam* client_param_ptr_;
     };

@@ -32,6 +32,7 @@ namespace covered
     private:
         static const std::string kClassName;
 
+        bool issueItemToEdge_(const WorkloadItem& workload_item, DynamicArray& local_response_msg_payload, uint32_t& rtt_us); // Return is_finish
         void processLocalResponse_(const DynamicArray& local_response_msg_payload, const uint32_t& rtt_us);
 
         WorkerParam* worker_param_ptr_;

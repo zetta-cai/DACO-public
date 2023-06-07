@@ -1,4 +1,4 @@
-#include "cooperation/basic_cooperative_cache_wrapper.h"
+#include "cooperation/basic_cooperation_wrapper.h"
 
 #include <assert.h>
 
@@ -9,46 +9,15 @@
 
 namespace covered
 {
-    const std::string BasicCooperativeCacheWrapper::kClassName("BasicCooperativeCacheWrapper");
+    const std::string BasicCooperationWrapper::kClassName("BasicCooperationWrapper");
 
-    BasicCooperativeCacheWrapper::BasicCooperativeCacheWrapper(const std::string& hash_name, EdgeParam* edge_param_ptr) : CooperativeCacheWrapperBase(hash_name, edge_param_ptr)
+    BasicCooperationWrapper::BasicCooperationWrapper(const std::string& hash_name, EdgeParam* edge_param_ptr) : CooperationWrapperBase(hash_name, edge_param_ptr)
     {
     }
 
-    BasicCooperativeCacheWrapper::~BasicCooperativeCacheWrapper() {}
+    BasicCooperationWrapper::~BasicCooperationWrapper() {}
 
-    bool BasicCooperativeCacheWrapper::get(const Key& key, Value& value, bool& is_cooperative_cached)
-    {
-        assert(dht_wrapper_ptr_ != NULL);
-        assert(edge_sendreq_toneighbor_socket_client_ptr_ != NULL);
-
-        bool is_finish = false;
-
-        // Update remote address of edge_sendreq_toneighbor_socket_client_ptr_ as the beacon node for the key
-        locateBeaconNode_(key);
-
-        // Lookup directory information at the beacon node
-        bool tmp_is_cooperative_cached = false;
-        uint32_t neighbor_edge_idx = 0;
-        is_finish = directoryLookup_(key, tmp_is_cooperative_cached, neighbor_edge_idx);
-        if (is_finish) // Edge is NOT running
-        {
-            return is_finish;
-        }
-
-        if (tmp_is_cooperative_cached)
-        {
-            // TODO: Get data from the neighbor node based on the directory information and set is_cooperative_cached = true
-        }
-        else
-        {
-            // TODO: Or set is_cooperative_cached = false and return is_finish
-        }
-
-        return is_finish;
-    }
-
-    bool BasicCooperativeCacheWrapper::directoryLookup_(const Key& key, bool& is_cooperative_cached, uint32_t& neighbor_edge_idx)
+    bool BasicCooperationWrapper::lookupBeaconDirectory_(const Key& key, bool& is_directory_exist, uint32_t& neighbor_edge_idx)
     {
         assert(edge_sendreq_toneighbor_socket_client_ptr_ != NULL);
         assert(edge_param_ptr_ != NULL);
@@ -90,7 +59,7 @@ namespace covered
 
                 // Get directory information from the control response message
                 const DirectoryLookupResponse* const directory_lookup_response_ptr = static_cast<const DirectoryLookupResponse*>(control_response_ptr);
-                is_cooperative_cached = directory_lookup_response_ptr->isCooperativeCached();
+                is_directory_exist = directory_lookup_response_ptr->isDirectoryExist();
                 neighbor_edge_idx = directory_lookup_response_ptr->getNeighborEdgeIdx();
 
                 // Release the control response message

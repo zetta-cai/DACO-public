@@ -66,7 +66,6 @@ namespace covered
     void WorkerWrapper::start()
     {
         assert(worker_item_randgen_ptr_ != NULL);
-        assert(worker_sendreq_toedge_socket_client_ptr_ != NULL);
 
         assert(worker_param_ptr_ != NULL);
         ClientParam* client_param_ptr = worker_param_ptr_->getClientParamPtr();
@@ -83,71 +82,89 @@ namespace covered
             // Generate key-value request based on a specific workload
             WorkloadItem workload_item = workload_generator_ptr->generateItem(*worker_item_randgen_ptr_);
 
-            // Convert workload item into local request message
-            MessageBase* local_request_ptr = MessageBase::getLocalRequestFromWorkloadItem(workload_item);
-            assert(local_request_ptr != NULL);
-
-            // Convert local request into message payload
-            uint32_t local_request_msg_payload_size = local_request_ptr->getMsgPayloadSize();
-            DynamicArray local_request_msg_payload(local_request_msg_payload_size);
-            uint32_t local_request_serialize_size = local_request_ptr->serialize(local_request_msg_payload);
-            assert(local_request_serialize_size == local_request_msg_payload_size);
-
-            // TMPDEBUG
-            std::ostringstream oss;
-            oss << "worker" << worker_param_ptr_->getLocalWorkerIdx() << " issues a local request; type: " << MessageBase::messageTypeToString(local_request_ptr->getMessageType()) << "; keystr: " << workload_item.getKey().getKeystr() << "; valuesize: " << workload_item.getValue().getValuesize() << std::endl << "Msg payload: " << local_request_msg_payload.getBytesHexstr();
-            Util::dumpDebugMsg(kClassName, oss.str());
-
-            // Timeout-and-retry mechanism
-            struct timespec sendreq_timestamp = Util::getCurrentTimespec();
             DynamicArray local_response_msg_payload;
-            bool is_finish = false; // Mark if local client is finished
-            while (true)
-            {
-                // Send the message payload of local request to the closest edge node
-                PropagationSimulator::propagateFromClientToEdge(); // Simulate propagation latency
-                worker_sendreq_toedge_socket_client_ptr_->send(local_request_msg_payload);
+            uint32_t rtt_us = 0;
+            bool is_finish = false;
 
-                // Receive the message payload of local response from the closest edge node
-                bool is_timeout = worker_sendreq_toedge_socket_client_ptr_->recv(local_response_msg_payload);
-                if (is_timeout)
-                {
-                    if (!client_param_ptr->isClientRunning())
-                    {
-                        is_finish = true;
-                        break; // Client is NOT running
-                    }
-                    else
-                    {
-                        Util::dumpWarnMsg(kClassName, "client timeout to wait for local response");
-                        continue; // Resend the local request message
-                    }
-                }
-                else
-                {
-                    break; // Receive the local response message successfully
-                }
-            }
-            struct timespec recvrsp_timestamp = Util::getCurrentTimespec();
-
-            // Release local request message
-            assert(local_request_ptr != NULL);
-            delete local_request_ptr;
-            local_request_ptr = NULL;
-
+            // Issue the workload item to the closest edge node
+            is_finish = issueItemToEdge_(workload_item, local_response_msg_payload, rtt_us);
             if (is_finish) // Check is_finish
             {
                 continue; // Go to check if client is still running
             }
             
             // Process local response message to update statistics
-            double rtt_us = Util::getDeltaTime(recvrsp_timestamp, sendreq_timestamp);
-            processLocalResponse_(local_response_msg_payload, static_cast<uint32_t>(rtt_us));
+            processLocalResponse_(local_response_msg_payload, rtt_us);
 
             break;
         }
 
         return;
+    }
+
+    bool WorkerWrapper::issueItemToEdge_(const WorkloadItem& workload_item, DynamicArray& local_response_msg_payload, uint32_t& rtt_us)
+    {
+        assert(worker_param_ptr_ != NULL);
+        ClientParam* client_param_ptr = worker_param_ptr_->getClientParamPtr();
+        assert(client_param_ptr != NULL);
+        assert(worker_sendreq_toedge_socket_client_ptr_ != NULL);
+        
+        bool is_finish = false; // Mark if local client is finished
+
+        // Convert workload item into local request message
+        MessageBase* local_request_ptr = MessageBase::getLocalRequestFromWorkloadItem(workload_item);
+        assert(local_request_ptr != NULL);
+
+        // Convert local request into message payload
+        uint32_t local_request_msg_payload_size = local_request_ptr->getMsgPayloadSize();
+        DynamicArray local_request_msg_payload(local_request_msg_payload_size);
+        uint32_t local_request_serialize_size = local_request_ptr->serialize(local_request_msg_payload);
+        assert(local_request_serialize_size == local_request_msg_payload_size);
+
+        // TMPDEBUG
+        std::ostringstream oss;
+        oss << "worker" << worker_param_ptr_->getLocalWorkerIdx() << " issues a local request; type: " << MessageBase::messageTypeToString(local_request_ptr->getMessageType()) << "; keystr: " << workload_item.getKey().getKeystr() << "; valuesize: " << workload_item.getValue().getValuesize() << std::endl << "Msg payload: " << local_request_msg_payload.getBytesHexstr();
+        Util::dumpDebugMsg(kClassName, oss.str());
+
+        // Timeout-and-retry mechanism
+        struct timespec sendreq_timestamp = Util::getCurrentTimespec();
+        while (true)
+        {
+            // Send the message payload of local request to the closest edge node
+            PropagationSimulator::propagateFromClientToEdge(); // Simulate propagation latency
+            worker_sendreq_toedge_socket_client_ptr_->send(local_request_msg_payload);
+
+            // Receive the message payload of local response from the closest edge node
+            bool is_timeout = worker_sendreq_toedge_socket_client_ptr_->recv(local_response_msg_payload);
+            if (is_timeout)
+            {
+                if (!client_param_ptr->isClientRunning())
+                {
+                    is_finish = true;
+                    break; // Client is NOT running
+                }
+                else
+                {
+                    Util::dumpWarnMsg(kClassName, "client timeout to wait for local response");
+                    continue; // Resend the local request message
+                }
+            }
+            else
+            {
+                break; // Receive the local response message successfully
+            }
+        }
+        struct timespec recvrsp_timestamp = Util::getCurrentTimespec();
+
+        // Release local request message
+        assert(local_request_ptr != NULL);
+        delete local_request_ptr;
+        local_request_ptr = NULL;
+
+        double tmp_rtt_us = Util::getDeltaTime(recvrsp_timestamp, sendreq_timestamp);
+        rtt_us = static_cast<uint32_t>(tmp_rtt_us);
+
+        return is_finish;
     }
 
     void WorkerWrapper::processLocalResponse_(const DynamicArray& local_response_msg_payload, const uint32_t& rtt_us)

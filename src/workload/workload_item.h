@@ -30,8 +30,8 @@ namespace covered
         WorkloadItem(const Key& key, const Value& value, const WorkloadItemType& item_type);
         ~WorkloadItem();
 
-        Key getKey();
-        Value getValue();
+        Key getKey() const;
+        Value getValue() const;
         WorkloadItemType getItemType();
     private:
         static const std::string kClassName;

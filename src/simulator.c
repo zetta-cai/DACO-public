@@ -14,13 +14,13 @@
 #include "cloud/cloud_param.h"
 #include "cloud/cloud_wrapper.h"
 #include "edge/edge_param.h"
-#include "edge/edge_wrapper.h"
+#include "edge/edge_wrapper_base.h"
 #include "statistics/client_statistics_tracker.h"
 #include "workload/workload_wrapper_base.h"
 
 void* launchCloud(void* cloud_param_ptr)
 {
-    CloudWrapper local_cloud(Param::getCloudStorage(), (CloudParam*)cloud_param_ptr);
+    covered::CloudWrapper local_cloud(covered::Param::getCloudStorage(), (covered::CloudParam*)cloud_param_ptr);
     local_cloud.start();
     
     pthread_exit(NULL);
@@ -29,8 +29,13 @@ void* launchCloud(void* cloud_param_ptr)
 
 void* launchEdge(void* edge_param_ptr)
 {
-    EdgeWrapperBase local_edge(Param::getCacheName(), (EdgeParam*)edge_param_ptr);
-    local_edge.start();
+    covered::EdgeWrapperBase* local_edge_ptr = covered::EdgeWrapperBase::getEdgeWrapper(covered::Param::getCacheName(), covered::Param::getHashName(), (covered::EdgeParam*)edge_param_ptr);
+    assert(local_edge_ptr != NULL);
+    local_edge_ptr->start();
+
+    assert(local_edge_ptr != NULL);
+    delete local_edge_ptr;
+    local_edge_ptr = NULL;
     
     pthread_exit(NULL);
     return NULL;
@@ -38,7 +43,7 @@ void* launchEdge(void* edge_param_ptr)
 
 void* launchClient(void* client_param_ptr)
 {
-    ClientWrapper local_client((ClientParam*)client_param_ptr);
+    covered::ClientWrapper local_client((covered::ClientParam*)client_param_ptr);
     local_client.start();
     
     pthread_exit(NULL);

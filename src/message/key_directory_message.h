@@ -20,12 +20,12 @@ namespace covered
     class KeyDirectoryMessage : public MessageBase
     {
     public:
-        KeyDirectoryMessage(const Key& key, const bool& is_cooperative_cached, const uint32_t& neighbor_edge_idx, const MessageType& message_type);
+        KeyDirectoryMessage(const Key& key, const bool& is_directory_exist, const uint32_t& neighbor_edge_idx, const MessageType& message_type);
         KeyDirectoryMessage(const DynamicArray& msg_payload);
         virtual ~KeyDirectoryMessage();
 
         Key getKey() const;
-        bool isCooperativeCached() const;
+        bool isDirectoryExist() const;
         uint32_t getNeighborEdgeIdx() const;
     private:
         static const std::string kClassName;
@@ -38,7 +38,7 @@ namespace covered
         Key key_;
         
         // Directory information
-        bool is_cooperative_cached_;
+        bool is_directory_exist_;
         uint32_t neighbor_edge_idx_;
     };
 }
