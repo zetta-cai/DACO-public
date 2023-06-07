@@ -121,6 +121,13 @@ namespace covered
         return boost_dirpath.string();
     }
 
+    std::string Util::getFilenameFromFileath(const std::string& filepath)
+    {
+        boost::filesystem::path boost_filepath(filepath);
+        boost::filesystem::path boost_filename = boost_filepath.filename();
+        return boost_filename.string();
+    }
+
     bool Util::isPathExist_(const std::string& path, const bool& is_file, const bool& is_silent)
     {
         // Get boost::file_status

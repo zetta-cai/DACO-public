@@ -1,4 +1,4 @@
-#include "edge/edge_wrapper.h"
+#include "edge/edge_wrapper_base.h"
 
 #include <assert.h>
 #include <sstream>
@@ -13,18 +13,26 @@
 
 namespace covered
 {
-    const std::string EdgeWrapper::kClassName("EdgeWrapper");
+    const std::string EdgeWrapperBase::kClassName("EdgeWrapperBase");
 
-    void* EdgeWrapper::launchEdge(void* edge_param_ptr)
+    EdgeWrapperBase* EdgeWrapperBase::getEdgeWrapper(const std::string& cache_name, EdgeParam* edge_param_ptr)
     {
-        EdgeWrapper local_edge((EdgeParam*)edge_param_ptr);
-        local_edge.start();
-        
-        pthread_exit(NULL);
-        return NULL;
+        EdgeWrapperBase* edge_wrapper_ptr = NULL;
+
+        if (cache_name == Param::COVERED_CACHE_NAME)
+        {
+            //edge_wrapper_ptr = new CoveredEdgeWrapper(cache_name, edge_param_ptr);
+        }
+        else
+        {
+            edge_wrapper_ptr = new BasicEdgeWrapper(cache_name, edge_param_ptr);
+        }
+
+        assert(edge_wrapper_ptr != NULL);
+        return edge_wrapper_ptr;
     }
 
-    EdgeWrapper::EdgeWrapper(EdgeParam* edge_param_ptr)
+    EdgeWrapperBase::EdgeWrapperBase(const std::string& cache_name, EdgeParam* edge_param_ptr) : cache_name_(cache_name)
     {
         if (edge_param_ptr == NULL)
         {
@@ -35,7 +43,7 @@ namespace covered
         assert(edge_param_ptr_ != NULL);
         
         // Allocate local edge cache
-        edge_cache_ptr_ = CacheWrapperBase::getEdgeCache(Param::getCacheName(), Param::getCapacityBytes());
+        edge_cache_ptr_ = CacheWrapperBase::getEdgeCache(cache_name_, Param::getCapacityBytes());
         assert(edge_cache_ptr_ != NULL);
 
         // Prepare a socket server on recvreq port
@@ -53,9 +61,9 @@ namespace covered
         assert(edge_sendreq_tocloud_socket_client_ptr_ != NULL);
     }
         
-    EdgeWrapper::~EdgeWrapper()
+    EdgeWrapperBase::~EdgeWrapperBase()
     {
-        // NOTE: no need to delete edge_param_ptr, as it is maintained outside EdgeWrapper
+        // NOTE: no need to delete edge_param_ptr, as it is maintained outside EdgeWrapperBase
 
         // Release the socket server on recvreq port
         assert(edge_recvreq_socket_server_ptr_ != NULL);
@@ -68,7 +76,7 @@ namespace covered
         edge_sendreq_tocloud_socket_client_ptr_ = NULL;
     }
 
-    void EdgeWrapper::start()
+    void EdgeWrapperBase::start()
     {
         assert(edge_param_ptr_ != NULL);
         assert(edge_recvreq_socket_server_ptr_ != NULL);
@@ -117,7 +125,7 @@ namespace covered
         } // End of while loop
     }
 
-    bool EdgeWrapper::processDataRequest_(MessageBase* data_request_ptr)
+    bool EdgeWrapperBase::processDataRequest_(MessageBase* data_request_ptr)
     {
         assert(data_request_ptr != NULL && data_request_ptr->isDataRequest());
         assert(edge_cache_ptr_ != NULL);
@@ -167,7 +175,7 @@ namespace covered
         return is_finish;
     }
 
-    bool EdgeWrapper::processLocalGetRequest_(MessageBase* local_request_ptr)
+    bool EdgeWrapperBase::processLocalGetRequest_(MessageBase* local_request_ptr)
     {
         assert(local_request_ptr != NULL && local_request_ptr->getMessageType() == MessageType::kLocalGetRequest);
         assert(edge_cache_ptr_ != NULL);
@@ -226,7 +234,7 @@ namespace covered
         return is_finish;
     }
 
-    bool EdgeWrapper::processLocalWriteRequest_(MessageBase* local_request_ptr)
+    bool EdgeWrapperBase::processLocalWriteRequest_(MessageBase* local_request_ptr)
     {
         assert(local_request_ptr != NULL);
         assert(local_request_ptr->getMessageType() == MessageType::kLocalPutRequest || local_request_ptr->getMessageType() == MessageType::kLocalDelRequest);
@@ -330,7 +338,7 @@ namespace covered
         return is_finish;
     }
 
-    bool EdgeWrapper::processRedirectedRequest_(MessageBase* redirected_request_ptr)
+    bool EdgeWrapperBase::processRedirectedRequest_(MessageBase* redirected_request_ptr)
     {
         assert(redirected_request_ptr != NULL && redirected_request_ptr->isRedirectedRequest());
         assert(edge_cache_ptr_ != NULL);
@@ -343,20 +351,7 @@ namespace covered
         return is_finish;
     }
 
-    bool EdgeWrapper::processControlRequest_(MessageBase* control_request_ptr)
-    {
-        assert(control_request_ptr != NULL && control_request_ptr->isControlRequest());
-        assert(edge_cache_ptr_ != NULL);
-
-        bool is_finish = false; // Mark if local edge node is finished
-
-        // TODO: invalidation and cache admission/eviction requests for control message
-        // TODO: reply control response message to a beacon node
-        // assert(control_response_ptr != NULL && control_response_ptr->isControlResponse());
-        return is_finish;
-    }
-
-    bool EdgeWrapper::blockForInvalidation_(const Key& key)
+    bool EdgeWrapperBase::blockForInvalidation_(const Key& key)
     {
         assert(edge_param_ptr_ != NULL);
 
@@ -389,7 +384,7 @@ namespace covered
         return is_finish;
     }
 
-    bool EdgeWrapper::fetchDataFromCloud_(const Key& key, Value& value)
+    bool EdgeWrapperBase::fetchDataFromCloud_(const Key& key, Value& value)
     {
         assert(edge_param_ptr_ != NULL);
         assert(edge_sendreq_tocloud_socket_client_ptr_ != NULL);
@@ -447,7 +442,7 @@ namespace covered
         return is_finish;
     }
 
-    bool EdgeWrapper::writeDataToCloud_(const Key& key, const Value& value, const MessageType& message_type)
+    bool EdgeWrapperBase::writeDataToCloud_(const Key& key, const Value& value, const MessageType& message_type)
     {
         assert(edge_param_ptr_ != NULL);
         assert(edge_sendreq_tocloud_socket_client_ptr_ != NULL);
@@ -518,10 +513,10 @@ namespace covered
         return is_finish;
     }
 
-    void EdgeWrapper::triggerIndependentAdmission_(const Key& key, const Value& value)
+    void EdgeWrapperBase::triggerIndependentAdmission_(const Key& key, const Value& value)
     {
         // NOTE: COVERED must NOT trigger any independent admission
-        assert(Param::getCacheName() != CacheWrapperBase::COVERED_CACHE_NAME);
+        assert(cache_name_ != CacheWrapperBase::COVERED_CACHE_NAME);
 
         // Independently admit the new key-value pair into local edge cache
         edge_cache_ptr_->admit(key, value);

@@ -8,7 +8,7 @@ namespace covered
 {
     const std::string CloudParam::kClassName("CloudParam");
 
-    CloudParam::CloudParam() : current_cloud_running_(true)
+    CloudParam::CloudParam() : cloud_running_(true)
     {
         cloud_idx_ = 0;
     }
@@ -17,7 +17,7 @@ namespace covered
 
     const CloudParam& CloudParam::operator=(const CloudParam& other)
     {
-        current_cloud_running_.store(other.current_cloud_running_.load(Util::LOAD_CONCURRENCY_ORDER), Util::STORE_CONCURRENCY_ORDER);
+        cloud_running_.store(other.cloud_running_.load(Util::LOAD_CONCURRENCY_ORDER), Util::STORE_CONCURRENCY_ORDER);
         assert(other.cloud_idx_ == 0); // TODO: only support 1 cloud node now!
         cloud_idx_ = other.cloud_idx_;
         return *this;
@@ -30,16 +30,16 @@ namespace covered
 
     bool CloudParam::isCloudRunning()
     {
-        return current_cloud_running_.load(Util::LOAD_CONCURRENCY_ORDER);
+        return cloud_running_.load(Util::LOAD_CONCURRENCY_ORDER);
     }
 
     void CloudParam::setCloudRunning()
     {
-        return current_cloud_running_.store(true, Util::STORE_CONCURRENCY_ORDER);
+        return cloud_running_.store(true, Util::STORE_CONCURRENCY_ORDER);
     }
 
     void CloudParam::resetCloudRunning()
     {
-        return current_cloud_running_.store(false, Util::STORE_CONCURRENCY_ORDER);
+        return cloud_running_.store(false, Util::STORE_CONCURRENCY_ORDER);
     }
 }

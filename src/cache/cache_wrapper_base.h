@@ -21,9 +21,6 @@ namespace covered
     class CacheWrapperBase
     {
     public:
-        static const std::string LRU_CACHE_NAME;
-        static const std::string COVERED_CACHE_NAME;
-
         static CacheWrapperBase* getEdgeCache(const std::string& cache_name, const uint32_t& capacity_bytes);
 
         CacheWrapperBase(const uint32_t& capacity_bytes);

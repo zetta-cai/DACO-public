@@ -25,8 +25,6 @@ namespace covered
     class WorkerWrapper
     {
     public:
-        static void* launchWorker(void* worker_param_ptr);
-
         WorkerWrapper(WorkerParam* worker_param_ptr);
         ~WorkerWrapper();
 

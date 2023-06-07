@@ -7,8 +7,6 @@
 
 namespace covered
 {
-    const std::string RocksdbWrapper::HDD_NAME = "hdd";
-
     // (1) Parallelism options
     const uint32_t RocksdbWrapper::kFlushThreadCnt = 1; // Default of 1 is good enough
     const uint32_t RocksdbWrapper::kCompactionThreadCnt = 4; // Default of 1 yet can be increased based on your number of CPU cores
@@ -47,7 +45,7 @@ namespace covered
 
     const std::string RocksdbWrapper::kClassName("RocksdbWrapper");
 
-    RocksdbWrapper::RocksdbWrapper(const std::string& db_dirpath) : db_ptr_(NULL)
+    RocksdbWrapper::RocksdbWrapper(const std::string& cloud_storage, const std::string& db_dirpath) : db_ptr_(NULL)
     {
         std::ostringstream oss;
         oss << "open RocksDB from directory " << db_dirpath << "...";
@@ -58,7 +56,7 @@ namespace covered
         assert(Util::isDirectoryExist(parentDirpath));
 
         // Open RocksDB KVS with suggested settings
-        open_(db_dirpath);
+        open_(cloud_storage, db_dirpath);
     }
 
     RocksdbWrapper::~RocksdbWrapper()
@@ -112,7 +110,7 @@ namespace covered
         return;
     }
 
-    void RocksdbWrapper::open_(const std::string& db_dirpath)
+    void RocksdbWrapper::open_(const std::string& cloud_storage, const std::string& db_dirpath)
     {
         rocksdb::Options rocksdb_options;
         rocksdb_options.create_if_missing = true;
@@ -127,7 +125,7 @@ namespace covered
         rocksdb::BlockBasedTableOptions table_options;
         table_options.filter_policy = std::shared_ptr<const rocksdb::FilterPolicy>(rocksdb::NewBloomFilterPolicy(kBloomfilterBitsPerKey));
         table_options.block_cache = rocksdb::NewLRUCache(kBlockCacheCapacity, kBlockCacheShardBits);
-        if (Param::getCloudStorage() == HDD_NAME)
+        if (cloud_storage == Param::HDD_NAME)
         {
             table_options.block_size = kBlockSizeForHdd;
             table_options.cache_index_and_filter_blocks = true;
@@ -142,7 +140,7 @@ namespace covered
         rocksdb_options.table_cache_numshardbits = kTableCacheNumshardbits;
 
         // (3) Flushing options
-        if (Param::getCloudStorage() == HDD_NAME)
+        if (cloud_storage == Param::HDD_NAME)
         {
             rocksdb_options.write_buffer_size = kWriteBufferSizeForHdd;
         }
@@ -155,7 +153,7 @@ namespace covered
 
         // (4) Compaction options
         rocksdb_options.level0_file_num_compaction_trigger = kLevel0SstNum;
-        if (Param::getCloudStorage() == HDD_NAME)
+        if (cloud_storage == Param::HDD_NAME)
         {
             rocksdb_options.target_file_size_base = kLevel1SstSizeForHdd; // single sst size
             rocksdb_options.max_bytes_for_level_base = kLevel1SstNum * kLevel1SstSizeForHdd;
@@ -175,7 +173,7 @@ namespace covered
         rocksdb_options.wal_bytes_per_sync = kWalBytesPerSync;
 
         // (6) Specific options
-        if (Param::getCloudStorage() == HDD_NAME)
+        if (cloud_storage == Param::HDD_NAME)
         {
             rocksdb_options.optimize_filters_for_hits = true;
             rocksdb_options.skip_stats_update_on_db_open = true;

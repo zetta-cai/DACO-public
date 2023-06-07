@@ -19,9 +19,7 @@ namespace covered
     class CloudWrapper
     {
     public:
-        static void* launchCloud(void* current_cloud_param_ptr);
-
-        CloudWrapper(CloudParam* current_cloud_param_ptr);
+        CloudWrapper(const std::string& cloud_storage, CloudParam* cloud_param_ptr);
         ~CloudWrapper();
 
         void start();

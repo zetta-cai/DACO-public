@@ -19,9 +19,6 @@ namespace covered
     class RocksdbWrapper
     {
     public:
-        // NOTE: a single RocksDB size on HDD should NOT exceed 500 GiB
-        static const std::string HDD_NAME;
-
         // DeRocksDBfault settings suggested by official tuning guide
         // Refer to https://github.com/EighteenZi/rocksdb_wiki/blob/master/RocksDB-Tuning-Guide.md
         // Also refer to lib/rocksdb-8.1.1/include/rocksdb/options.h
@@ -62,7 +59,7 @@ namespace covered
         static const uint32_t kMaxFileOpeningThreadsForHdd;
         //static const uint32_t kCompactionReadaheadSizeForHdd;
 
-        RocksdbWrapper(const std::string& db_filepath);
+        RocksdbWrapper(const std::string& cloud_storage, const std::string& db_filepath);
         ~RocksdbWrapper();
 
         void get(const Key& key, Value& value);
@@ -71,7 +68,7 @@ namespace covered
     private:
         static const std::string kClassName;
 
-        void open_(const std::string& db_filepath);
+        void open_(const std::string& cloud_storage, const std::string& db_filepath);
 
         rocksdb::DB* db_ptr_;
     };

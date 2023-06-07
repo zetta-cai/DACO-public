@@ -19,19 +19,12 @@
 
 namespace covered
 {
-    enum CooperativeCacheType
-    {
-        kBasicCooperativeCache = 1, // for all baselines
-        kCoveredCooperativeCache // only for COVERED
-    };
-
     class CooperativeCacheWrapperBase
     {
     public:
-        static std::string cooperativeCacheTypeToString(const CooperativeCacheType& cooperative_cache_type);
-        static CooperativeCacheWrapperBase* getCooperativeCacheWrapper(const CooperativeCacheType& cooperative_cache_type);
+        static CooperativeCacheWrapperBase* getCooperativeCacheWrapper(const std::string& cache_name, const std::string& hash_name, EdgeParam* edge_param_ptr);
 
-        CooperativeCacheWrapperBase(EdgeParam* edge_param_ptr);
+        CooperativeCacheWrapperBase(const std::string& hash_name, EdgeParam* edge_param_ptr);
         ~CooperativeCacheWrapperBase();
 
         // Return if edge node is finished

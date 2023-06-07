@@ -3,19 +3,18 @@
 #include <assert.h>
 #include <sstream>
 
+#include "common/param.h"
 #include "common/util.h"
 #include "hash/mmh3_hash_wrapper.h"
 
 namespace covered
 {
-    const std::string HashWrapperBase::MMH3_HASH_NAME("mmh3");
-
     const std::string HashWrapperBase::kClassName("HashWrapperBase");
 
     HashWrapperBase* HashWrapperBase::getHashWrapper(const std::string& hash_name)
     {
         HashWrapperBase* hash_wrapper_base_ptr = NULL;
-        if (hash_name == MMH3_HASH_NAME)
+        if (hash_name == Param::MMH3_HASH_NAME)
         {
             hash_wrapper_base_ptr = new Mmh3HashWrapper();
         }

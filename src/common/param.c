@@ -7,8 +7,20 @@
 
 namespace covered
 {
+    static const std::string SIMULATOR_MAIN_NAME("simulator");
+    static const std::string STATISTICS_AGGREGATOR_MAIN_NAME("statistics_aggregator");
+    static const std::string CLIENT_MAIN_NAME("client");
+    static const std::string EDGE_MAIN_NAME("edge");
+    static const std::string CLOUD_MAIN_NAME("cloud");
+    const std::string Param::LRU_CACHE_NAME("lru");
+    const std::string Param::COVERED_CACHE_NAME("covered");
+    const std::string Param::HDD_NAME = "hdd";
+    const std::string Param::MMH3_HASH_NAME("mmh3");
+    const std::string Param::FACEBOOK_WORKLOAD_NAME("facebook");
+
     const std::string Param::kClassName("Param");
 
+    std::string Param::main_class_name_ = "";
     bool Param::is_valid_ = false;
     bool Param::is_simulation_ = true;
     std::string Param::cache_name_ = "";
@@ -28,7 +40,7 @@ namespace covered
     uint32_t Param::propagation_latency_edgecloud_ = 0;
     std::string Param::workload_name_ = "";
 
-    void Param::setParameters(const bool& is_simulation, const std::string& cache_name, const uint32_t& capacity_bytes, const uint32_t& clientcnt, const std::string& cloud_storage, const std::string& config_filepath, const bool& is_debug, const double& duration, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge, const uint32_t& propagation_latency_crossedge, const uint32_t& propagation_latency_edgecloud, const std::string& workload_name)
+    void Param::setParameters(const std::string& main_class_name, const bool& is_simulation, const std::string& cache_name, const uint32_t& capacity_bytes, const uint32_t& clientcnt, const std::string& cloud_storage, const std::string& config_filepath, const bool& is_debug, const double& duration, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge, const uint32_t& propagation_latency_crossedge, const uint32_t& propagation_latency_edgecloud, const std::string& workload_name)
     {
         // NOTE: Param::setParameters() does NOT rely on any other module
         if (is_valid_)
@@ -37,16 +49,21 @@ namespace covered
             exit(1);
         }
 
+        main_class_name_ = main_class_name;
+        checkMainClassName_();
         is_simulation_ = is_simulation;
         cache_name_ = cache_name;
+        checkCacheName_();
         capacity_bytes_ = capacity_bytes;
         clientcnt_ = clientcnt;
         cloud_storage_ = cloud_storage;
+        checkCloudStorage_();
         config_filepath_ = config_filepath;
         is_debug_ = is_debug;
         duration_ = duration;
         edgecnt_ = edgecnt;
         hash_name_ = hash_name;
+        checkHashName_();
         keycnt_ = keycnt;
         opcnt_ = opcnt;
         perclient_workercnt_ = perclient_workercnt;
@@ -54,9 +71,16 @@ namespace covered
         propagation_latency_crossedge_ = propagation_latency_crossedge;
         propagation_latency_edgecloud_ = propagation_latency_edgecloud;
         workload_name_ = workload_name;
+        checkWorkloadName_();
 
         is_valid_ = true;
         return;
+    }
+
+    std::string Param::getMainClassName()
+    {
+        checkIsValid_();
+        return main_class_name_;
     }
 
     bool Param::isSimulation()
@@ -185,6 +209,66 @@ namespace covered
         oss << "Workload name: " << workload_name_;
         return oss.str();
         
+    }
+
+    void Param::checkMainClassName_()
+    {
+        if (main_class_name_ != SIMULATOR_MAIN_NAME && main_class_name_ != STATISTICS_AGGREGATOR_MAIN_NAME && main_class_name_ != CLIENT_MAIN_NAME && main_class_name_ != EDGE_MAIN_NAME && main_class_name_ != CLOUD_MAIN_NAME)
+        {
+            std::ostringstream oss;
+            oss << "main class name " << main_class_name_ << " is not supported!";
+            Util::dumpErrorMsg(kClassName, main_class_name_);
+            exit(1);
+        }
+        return;
+    }
+
+    void Param::checkCacheName_()
+    {
+        if (cache_name_ != LRU_CACHE_NAME && cache_name_ != COVERED_CACHE_NAME)
+        {
+            std::ostringstream oss;
+            oss << "cache name " << cache_name_ << " is not supported!";
+            Util::dumpErrorMsg(kClassName, cache_name_);
+            exit(1);
+        }
+        return;
+    }
+
+    void Param::checkCloudStorage_()
+    {
+        if (cloud_storage_ != HDD_NAME)
+        {
+            std::ostringstream oss;
+            oss << "cloud storage " << cloud_storage_ << " is not supported!";
+            Util::dumpErrorMsg(kClassName, cloud_storage_);
+            exit(1);
+        }
+        return;
+    }
+
+    void Param::checkHashName_()
+    {
+        if (hash_name_ != MMH3_HASH_NAME)
+        {
+            std::ostringstream oss;
+            oss << "hash name " << hash_name_ << " is not supported!";
+            Util::dumpErrorMsg(kClassName, hash_name_);
+            exit(1);
+        }
+        return;
+    }
+
+    void Param::checkWorkloadName_()
+    {
+        if (workload_name_ != FACEBOOK_WORKLOAD_NAME)
+        {
+            std::ostringstream oss;
+            oss << "workload name " << workload_name_ << " is not supported!";
+            Util::dumpErrorMsg(kClassName, workload_name_);
+            exit(1);
+        }
+        return;
     }
 
     void Param::checkIsValid_()

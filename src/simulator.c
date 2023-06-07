@@ -18,11 +18,37 @@
 #include "statistics/client_statistics_tracker.h"
 #include "workload/workload_wrapper_base.h"
 
-int main(int argc, char **argv) {
-    const std::string main_class_name = "simulator";
+void* launchCloud(void* cloud_param_ptr)
+{
+    CloudWrapper local_cloud(Param::getCloudStorage(), (CloudParam*)cloud_param_ptr);
+    local_cloud.start();
+    
+    pthread_exit(NULL);
+    return NULL;
+}
 
+void* launchEdge(void* edge_param_ptr)
+{
+    EdgeWrapperBase local_edge(Param::getCacheName(), (EdgeParam*)edge_param_ptr);
+    local_edge.start();
+    
+    pthread_exit(NULL);
+    return NULL;
+}
+
+void* launchClient(void* client_param_ptr)
+{
+    ClientWrapper local_client((ClientParam*)client_param_ptr);
+    local_client.start();
+    
+    pthread_exit(NULL);
+    return NULL;
+}
+
+int main(int argc, char **argv) {
     // (1) Parse and process CLI parameters (set configurations in Config and Param)
-    covered::CLI::parseAndProcessCliParameters(covered::CliRole::kSimulator, argc, argv);
+    covered::CLI::parseAndProcessCliParameters(argc, argv);
+    const std::string main_class_name = covered::Param::getMainClassName();
 
     int pthread_returncode;
 
@@ -39,7 +65,7 @@ int main(int argc, char **argv) {
 
     covered::Util::dumpNormalMsg(main_class_name, "launch cloud node");
 
-    pthread_returncode = pthread_create(&cloud_thread, NULL, covered::CloudWrapper::launchCloud, (void*)(&(cloud_param)));
+    pthread_returncode = pthread_create(&cloud_thread, NULL, launchCloud, (void*)(&(cloud_param)));
     if (pthread_returncode != 0)
     {
         std::ostringstream oss;
@@ -58,8 +84,8 @@ int main(int argc, char **argv) {
 
     for (uint32_t edge_idx = 0; edge_idx < edgecnt; edge_idx++)
     {
-        covered::EdgeParam current_edge_param(edge_idx);
-        edge_params[edge_idx] = current_edge_param;
+        covered::EdgeParam edge_param(edge_idx);
+        edge_params[edge_idx] = edge_param;
     }
 
     // (3.2) Launch edgecnt edge nodes
@@ -70,7 +96,7 @@ int main(int argc, char **argv) {
         oss << "launch edge node " << edge_idx;
         covered::Util::dumpNormalMsg(main_class_name, oss.str());
 
-        pthread_returncode = pthread_create(&edge_threads[edge_idx], NULL, covered::EdgeWrapper::launchEdge, (void*)(&(edge_params[edge_idx])));
+        pthread_returncode = pthread_create(&edge_threads[edge_idx], NULL, launchEdge, (void*)(&(edge_params[edge_idx])));
         if (pthread_returncode != 0)
         {
             std::ostringstream oss;
@@ -101,8 +127,8 @@ int main(int argc, char **argv) {
         client_statistics_tracker_ptrs[client_idx] = new covered::ClientStatisticsTracker(covered::Param::getPerclientWorkercnt(), covered::Config::getLatencyHistogramSize());
         assert(client_statistics_tracker_ptrs[client_idx] != NULL);
 
-        covered::ClientParam current_client_param(client_idx, workload_generator_ptrs[client_idx], client_statistics_tracker_ptrs[client_idx]);
-        client_params[client_idx] = current_client_param;
+        covered::ClientParam client_param(client_idx, workload_generator_ptrs[client_idx], client_statistics_tracker_ptrs[client_idx]);
+        client_params[client_idx] = client_param;
     }
 
     // (4.2) Launch clientcnt clients
@@ -113,7 +139,7 @@ int main(int argc, char **argv) {
         oss << "launch client " << client_idx;
         covered::Util::dumpNormalMsg(main_class_name, oss.str());
 
-        pthread_returncode = pthread_create(&client_threads[client_idx], NULL, covered::ClientWrapper::launchClient, (void*)(&(client_params[client_idx])));
+        pthread_returncode = pthread_create(&client_threads[client_idx], NULL, launchClient, (void*)(&(client_params[client_idx])));
         if (pthread_returncode != 0)
         {
             std::ostringstream oss;
@@ -125,7 +151,7 @@ int main(int argc, char **argv) {
 
     // (5) Start benchmark and dump intermediate statistics
 
-    // (5.1) Set current_client_running_ = true in all clientcnt client parameters to start benchmark
+    // (5.1) Set client_running_ = true in all clientcnt client parameters to start benchmark
 
     covered::Util::dumpNormalMsg(main_class_name, "Start benchmark...");
     for (uint32_t client_idx = 0; client_idx < clientcnt; client_idx++)
@@ -153,7 +179,7 @@ int main(int argc, char **argv) {
 
     // (6) Stop benchmark
 
-    // (6.1) Reset current_client_running_ = false in clientcnt client parameters to stop benchmark
+    // (6.1) Reset client_running_ = false in clientcnt client parameters to stop benchmark
 
     for (uint32_t client_idx = 0; client_idx < clientcnt; client_idx++)
     {
@@ -177,7 +203,7 @@ int main(int argc, char **argv) {
     }
     covered::Util::dumpNormalMsg(main_class_name, "all clients are done");
 
-    // (6.3) Reset current_edge_running_ = false in edgecnt edge parameters to stop edge nodes
+    // (6.3) Reset edge_running_ = false in edgecnt edge parameters to stop edge nodes
 
     for (uint32_t edge_idx = 0; edge_idx < edgecnt; edge_idx++)
     {
@@ -201,7 +227,7 @@ int main(int argc, char **argv) {
     }
     covered::Util::dumpNormalMsg(main_class_name, "all edge nodes are done");
 
-    // (6.5) Reset current_cloud_running_ = false in a cloud parameter to stop the cloud node
+    // (6.5) Reset cloud_running_ = false in a cloud parameter to stop the cloud node
 
     cloud_param.resetCloudRunning();
     covered::Util::dumpNormalMsg(main_class_name, "Stop the cloud node...");

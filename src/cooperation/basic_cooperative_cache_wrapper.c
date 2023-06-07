@@ -11,7 +11,7 @@ namespace covered
 {
     const std::string BasicCooperativeCacheWrapper::kClassName("BasicCooperativeCacheWrapper");
 
-    BasicCooperativeCacheWrapper::BasicCooperativeCacheWrapper(EdgeParam* edge_param_ptr) : CooperativeCacheWrapperBase(edge_param_ptr)
+    BasicCooperativeCacheWrapper::BasicCooperativeCacheWrapper(const std::string& hash_name, EdgeParam* edge_param_ptr) : CooperativeCacheWrapperBase(hash_name, edge_param_ptr)
     {
     }
 
@@ -28,20 +28,27 @@ namespace covered
         locateBeaconNode_(key);
 
         // Lookup directory information at the beacon node
+        bool tmp_is_cooperative_cached = false;
         uint32_t neighbor_edge_idx = 0;
-        is_finish = directoryLookup_(key, neighbor_edge_idx);
+        is_finish = directoryLookup_(key, tmp_is_cooperative_cached, neighbor_edge_idx);
         if (is_finish) // Edge is NOT running
         {
             return is_finish;
         }
 
-        // TODO: Get data from the neighbor node based on the directory information and set is_cooperative_cached = true
-        // TODO: Or set is_cooperative_cached = false and return is_finish
+        if (tmp_is_cooperative_cached)
+        {
+            // TODO: Get data from the neighbor node based on the directory information and set is_cooperative_cached = true
+        }
+        else
+        {
+            // TODO: Or set is_cooperative_cached = false and return is_finish
+        }
 
         return is_finish;
     }
 
-    bool BasicCooperativeCacheWrapper::directoryLookup_(const Key& key, uint32_t& neighbor_edge_idx)
+    bool BasicCooperativeCacheWrapper::directoryLookup_(const Key& key, bool& is_cooperative_cached, uint32_t& neighbor_edge_idx)
     {
         assert(edge_sendreq_toneighbor_socket_client_ptr_ != NULL);
         assert(edge_param_ptr_ != NULL);
@@ -81,11 +88,12 @@ namespace covered
                 MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_request_msg_payload);
                 assert(control_response_ptr != NULL && control_response_ptr->getMessageType() == MessageType::kDirectoryLookupResponse);
 
-                // Get value from global response message
+                // Get directory information from the control response message
                 const DirectoryLookupResponse* const directory_lookup_response_ptr = static_cast<const DirectoryLookupResponse*>(control_response_ptr);
+                is_cooperative_cached = directory_lookup_response_ptr->isCooperativeCached();
                 neighbor_edge_idx = directory_lookup_response_ptr->getNeighborEdgeIdx();
 
-                // Release global response message
+                // Release the control response message
                 delete control_response_ptr;
                 control_response_ptr = NULL;
                 break;

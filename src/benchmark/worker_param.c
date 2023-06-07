@@ -12,14 +12,14 @@ namespace covered
         local_worker_idx_ = 0;
     }
 
-    WorkerParam::WorkerParam(ClientParam* current_client_param_ptr, uint32_t local_worker_idx)
+    WorkerParam::WorkerParam(ClientParam* client_param_ptr, uint32_t local_worker_idx)
     {
-        if (current_client_param_ptr == NULL)
+        if (client_param_ptr == NULL)
         {
-            Util::dumpErrorMsg(kClassName, "current_client_param_ptr is NULL!");
+            Util::dumpErrorMsg(kClassName, "client_param_ptr is NULL!");
             exit(1);
         }
-        client_param_ptr_ = current_client_param_ptr;
+        client_param_ptr_ = client_param_ptr;
         local_worker_idx_ = local_worker_idx;
     }
 

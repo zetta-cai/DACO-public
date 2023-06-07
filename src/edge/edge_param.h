@@ -29,7 +29,7 @@ namespace covered
     private:
         static const std::string kClassName;
 
-         volatile std::atomic<bool> current_edge_running_;
+         volatile std::atomic<bool> edge_running_;
 
         // UDP port for receiving requests is edge_recvreq_startport + edge_idx
         uint32_t edge_idx_;

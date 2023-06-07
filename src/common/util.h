@@ -59,6 +59,7 @@ namespace covered
         // NOTE: no confliction as each file (statistics / RocksDB) is accessed by a unique thread (client / cloud)
         static std::fstream* openFile(const std::string& filepath, std::ios_base::openmode mode);
         static std::string getParentDirpath(const std::string& filepath);
+        static std::string getFilenameFromFileath(const std::string& filepath);
 
         // (2) Time measurement
 

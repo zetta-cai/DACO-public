@@ -16,8 +16,6 @@ namespace covered
     class HashWrapperBase
     {
     public:
-        static const std::string MMH3_HASH_NAME;
-
         static HashWrapperBase* getHashWrapper(const std::string& hash_name);
 
         HashWrapperBase();

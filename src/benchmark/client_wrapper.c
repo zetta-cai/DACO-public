@@ -13,10 +13,10 @@ namespace covered
 {
     const std::string ClientWrapper::kClassName("ClientWrapper");
 
-    void* ClientWrapper::launchClient(void* client_param_ptr)
+    void* ClientWrapper::launchWorker(void* worker_param_ptr)
     {
-        ClientWrapper local_client((ClientParam*)client_param_ptr);
-        local_client.start();
+        WorkerWrapper local_worker((WorkerParam*)worker_param_ptr);
+        local_worker.start();
         
         pthread_exit(NULL);
         return NULL;
@@ -55,7 +55,7 @@ namespace covered
         // Launch perclient_workercnt worker threads in the local client
         for (uint32_t local_worker_idx = 0; local_worker_idx < perclient_workercnt; local_worker_idx++)
         {
-            pthread_returncode = pthread_create(&local_worker_threads[local_worker_idx], NULL, covered::WorkerWrapper::launchWorker, (void*)(&(local_worker_params[local_worker_idx])));
+            pthread_returncode = pthread_create(&local_worker_threads[local_worker_idx], NULL, launchWorker, (void*)(&(local_worker_params[local_worker_idx])));
             if (pthread_returncode != 0)
             {
                 std::ostringstream oss;

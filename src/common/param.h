@@ -14,8 +14,25 @@ namespace covered
     class Param
     {
     public:
-        static void setParameters(const bool& is_simulation, const std::string& cache_name, const uint32_t& capacity_bytes, const uint32_t& clientcnt, const std::string& cloud_storage, const std::string& config_filepath, const bool& is_debug, const double& duration, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge, const uint32_t& propagation_latency_crossedge, const uint32_t& propagation_latency_edgecloud, const std::string& workload_name);
+        // For main class name
+        static const std::string SIMULATOR_MAIN_NAME;
+        static const std::string STATISTICS_AGGREGATOR_MAIN_NAME;
+        static const std::string CLIENT_MAIN_NAME;
+        static const std::string EDGE_MAIN_NAME;
+        static const std::string CLOUD_MAIN_NAME;
+        // For cache name
+        static const std::string LRU_CACHE_NAME;
+        static const std::string COVERED_CACHE_NAME;
+        // For cloud storage
+        static const std::string HDD_NAME; // NOTE: a single RocksDB size on HDD should NOT exceed 500 GiB
+        // For hash name
+        static const std::string MMH3_HASH_NAME;
+        // For workload name
+        static const std::string FACEBOOK_WORKLOAD_NAME; // Workload generator type
 
+        static void setParameters(const std::string& main_class_name, const bool& is_simulation, const std::string& cache_name, const uint32_t& capacity_bytes, const uint32_t& clientcnt, const std::string& cloud_storage, const std::string& config_filepath, const bool& is_debug, const double& duration, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge, const uint32_t& propagation_latency_crossedge, const uint32_t& propagation_latency_edgecloud, const std::string& workload_name);
+
+        static std::string getMainClassName();
         static bool isSimulation();
         static std::string getCacheName();
         static uint32_t getCapacityBytes();
@@ -38,8 +55,15 @@ namespace covered
     private:
         static const std::string kClassName;
 
+        static void checkMainClassName_();
+        static void checkCacheName_();
+        static void checkCloudStorage_();
+        static void checkHashName_();
+        static void checkWorkloadName_();
+
         static void checkIsValid_();
 
+        static std::string main_class_name_;
         static bool is_valid_;
         static bool is_simulation_;
         static std::string cache_name_;

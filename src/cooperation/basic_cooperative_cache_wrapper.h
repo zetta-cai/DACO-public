@@ -18,7 +18,7 @@ namespace covered
     class BasicCooperativeCacheWrapper : public CooperativeCacheWrapperBase
     {
     public:
-        BasicCooperativeCacheWrapper(EdgeParam* edge_param_ptr);
+        BasicCooperativeCacheWrapper(const std::string& hash_name, EdgeParam* edge_param_ptr);
         ~BasicCooperativeCacheWrapper();
 
         // Return if edge node is finished
@@ -27,7 +27,7 @@ namespace covered
         static const std::string kClassName;
 
         // Return if edge node is finished
-        bool directoryLookup_(const Key& key, uint32_t& neighbor_edge_idx);
+        bool directoryLookup_(const Key& key, bool& is_cooperative_cached, uint32_t& neighbor_edge_idx);
     };
 }
 

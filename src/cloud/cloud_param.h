@@ -28,7 +28,7 @@ namespace covered
     private:
         static const std::string kClassName;
 
-        volatile std::atomic<bool> current_cloud_running_;
+        volatile std::atomic<bool> cloud_running_;
 
         uint32_t cloud_idx_; // TODO: only support 1 cloud node now!
     };

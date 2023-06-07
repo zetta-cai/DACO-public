@@ -6,72 +6,36 @@
 #include "common/config.h"
 #include "common/param.h"
 #include "common/util.h"
+#include "cooperation/basic_cooperative_cache_wrapper.h"
 #include "network/network_addr.h"
 
 namespace covered
 {
     const std::string CooperativeCacheWrapperBase::kClassName("CooperativeCacheWrapperBase");
 
-    std::string CooperativeCacheWrapperBase::cooperativeCacheTypeToString(const CooperativeCacheType& cooperative_cache_type)
-    {
-        std::string cooperative_cache_type_str = "";
-        switch (cooperative_cache_type)
-        {
-            case CooperativeCacheType::kBasicCooperativeCache:
-            {
-                cooperative_cache_type_str = "kBasicCooperativeCache";
-                break;
-            }
-            case CooperativeCacheType::kCoveredCooperativeCache:
-            {
-                cooperative_cache_type_str = "kCoveredCooperativeCache";
-                break;
-            }
-            default:
-            {
-                cooperative_cache_type_str = std::to_string(static_cast<uint32_t>(cooperative_cache_type));
-                break;
-            }
-        }
-        return cooperative_cache_type_str;
-    }
-
-    CooperativeCacheWrapperBase* CooperativeCacheWrapperBase::getCooperativeCacheWrapper(const CooperativeCacheType& cooperative_cache_type)
+    CooperativeCacheWrapperBase* CooperativeCacheWrapperBase::getCooperativeCacheWrapper(const std::string& cache_name, const std::string& hash_name, EdgeParam* edge_param_ptr)
     {
         CooperativeCacheWrapperBase* cooperative_cache_wrapper_ptr = NULL;
 
-        switch (cooperative_cache_type)
+        if (cache_name == Param::COVERED_CACHE_NAME)
         {
-            case CooperativeCacheType::kBasicCooperativeCache:
-            {
-                //cooperative_cache_wrapper_ptr = new BasicCooperativeCacheWrapper();
-                break;
-            }
-            case CooperativeCacheType::kCoveredCooperativeCache:
-            {
-                //cooperative_cache_wrapper_ptr = new CoveredCooperativeCacheWrapper();
-                break;
-            }
-            default:
-            {
-                std::ostringstream oss;
-                oss << "cooperative cache " << cooperativeCacheTypeToString(cooperative_cache_type) << " is not supported!";
-                Util::dumpErrorMsg(kClassName, oss.str());
-                exit(1);
-                break;
-            }
+            //cooperative_cache_wrapper_ptr = new CoveredCooperativeCacheWrapper(hash_name, edge_param_ptr);
+        }
+        else
+        {
+            cooperative_cache_wrapper_ptr = new BasicCooperativeCacheWrapper(hash_name, edge_param_ptr);
         }
 
         assert(cooperative_cache_wrapper_ptr != NULL);
         return cooperative_cache_wrapper_ptr;
     }
 
-    CooperativeCacheWrapperBase::CooperativeCacheWrapperBase(EdgeParam* edge_param_ptr)
+    CooperativeCacheWrapperBase::CooperativeCacheWrapperBase(const std::string& hash_name, EdgeParam* edge_param_ptr)
     {
         assert(edge_param_ptr != NULL);
         edge_param_ptr_ = edge_param_ptr;
 
-        dht_wrapper_ptr_ = new DhtWrapper(Param::getHashName());
+        dht_wrapper_ptr_ = new DhtWrapper(hash_name);
         assert(dht_wrapper_ptr_ != NULL);
 
         // NOTE: we use edge0 as default remote address, but we will reset remote address of the socket client as the beacon node based on the key later

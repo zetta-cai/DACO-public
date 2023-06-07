@@ -33,10 +33,9 @@ void* launchLoader(void* local_loader_param_ptr)
 }
 
 int main(int argc, char **argv) {
-    std::string main_class_name = "statistics_aggregator";
-
     // (1) Parse and process CLI parameters (set configurations in Config and Param)
-    covered::CLI::parseAndProcessCliParameters(covered::CliRole::kStatisticsAggregator, argc, argv);
+    covered::CLI::parseAndProcessCliParameters(argc, argv);
+    const std::string main_class_name = covered::Param::getMainClassName();
 
     int pthread_returncode;
 

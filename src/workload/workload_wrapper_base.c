@@ -3,19 +3,18 @@
 #include <assert.h>
 #include <sstream>
 
+#include "common/param.h"
 #include "common/util.h"
 #include "workload/facebook_workload_wrapper.h"
 
 namespace covered
 {
-    const std::string WorkloadWrapperBase::FACEBOOK_WORKLOAD_NAME("facebook");
-
     const std::string WorkloadWrapperBase::kClassName("WorkloadWrapperBase");
 
     WorkloadWrapperBase* WorkloadWrapperBase::getWorkloadGenerator(const std::string& workload_name, const uint32_t& client_idx)
     {
         WorkloadWrapperBase* workload_ptr = NULL;
-        if (workload_name == FACEBOOK_WORKLOAD_NAME)
+        if (workload_name == Param::FACEBOOK_WORKLOAD_NAME)
         {
             workload_ptr = new FacebookWorkloadWrapper();
         }

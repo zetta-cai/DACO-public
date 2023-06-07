@@ -20,9 +20,6 @@ namespace covered
     class WorkloadWrapperBase
     {
     public:
-        // Workload generator type (only used in WorkloadWrapperBase)
-        static const std::string FACEBOOK_WORKLOAD_NAME;
-
         static WorkloadWrapperBase* getWorkloadGenerator(const std::string& workload_name, const uint32_t& client_idx);
 
         WorkloadWrapperBase();

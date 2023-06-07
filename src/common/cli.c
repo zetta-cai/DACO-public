@@ -1,65 +1,24 @@
 #include "common/cli.h"
 
-#include "cache/cache_wrapper_base.h"
-#include "cloud/rocksdb_wrapper.h"
 #include "common/config.h"
 #include "common/param.h"
 #include "common/util.h"
-#include "hash/hash_wrapper_base.h"
-#include "workload/workload_wrapper_base.h"
 
 namespace covered
 {
     const std::string CLI::kClassName("CLI");
 
-    std::string CLI::cliRoleToString(const CliRole& role)
-    {
-        std::string cli_role_str = "";
-        switch (role)
-        {
-            case CliRole::kSimulator:
-            {
-                cli_role_str = "kSimulator";
-                break;
-            }
-            case CliRole::kStatisticsAggregator:
-            {
-                cli_role_str = "kStatisticsAggregator";
-                break;
-            }
-            case CliRole::kClientPrototype:
-            {
-                cli_role_str = "kClientPrototype";
-                break;
-            }
-            case CliRole::kEdgePrototype:
-            {
-                cli_role_str = "kEdgePrototype";
-                break;
-            }
-            case CliRole::kCloudPrototype:
-            {
-                cli_role_str = "kCloudPrototype";
-                break;
-            }
-            default:
-            {
-                cli_role_str = std::to_string(static_cast<uint32_t>(role));
-                break;
-            }
-        }
-        return cli_role_str;
-    }
-
     boost::program_options::options_description CLI::argument_desc_("Allowed arguments:");
     boost::program_options::variables_map CLI::argument_info_; // Default constructor
 
-    void CLI::parseAndProcessCliParameters(const CliRole& role, int argc, char **argv)
+    void CLI::parseAndProcessCliParameters(int argc, char **argv)
     {
+        std::string main_class_name = Util::getFilenameFromFileath(argv[0]);
+
         parseCliParameters_(argc, argv); // Parse CLI parameters based on argument_desc_ to set argument_info_
-        setParamAndConfig_(role); // Set parameters for dynamic configurations and load config file for static configurations
+        setParamAndConfig_(main_class_name); // Set parameters for dynamic configurations and load config file for static configurations
         processCliParameters_(); // Process static/dynamic actions
-        createRequiredDirectories_(role); // Create required directories (e.g., client statistics directory and cloud RocksDB directory)
+        createRequiredDirectories_(main_class_name); // Create required directories (e.g., client statistics directory and cloud RocksDB directory)
         return;
     }
 
@@ -73,15 +32,15 @@ namespace covered
         ;
         // Dynamic configurations
         argument_desc_.add_options()
-            ("cache_name", boost::program_options::value<std::string>()->default_value(CacheWrapperBase::LRU_CACHE_NAME), "cache name")
+            ("cache_name", boost::program_options::value<std::string>()->default_value(Param::LRU_CACHE_NAME), "cache name")
             ("capacitymb", boost::program_options::value<uint32_t>()->default_value(1000), "cache capacity in units of MB")
             ("clientcnt", boost::program_options::value<uint32_t>()->default_value(1), "the total number of clients")
             ("config_file", boost::program_options::value<std::string>()->default_value("config.json"), "config file path of COVERED")
-            ("cloud_storage", boost::program_options::value<std::string>()->default_value(RocksdbWrapper::HDD_NAME), "type of cloud storage")
+            ("cloud_storage", boost::program_options::value<std::string>()->default_value(Param::HDD_NAME), "type of cloud storage")
             ("debug", "enable debug information")
             ("duration", boost::program_options::value<double>()->default_value(10), "benchmark duration")
             ("edgecnt", boost::program_options::value<uint32_t>()->default_value(1), "the number of edge nodes")
-            ("hash_name", boost::program_options::value<std::string>()->default_value(HashWrapperBase::MMH3_HASH_NAME, "the type of consistent hashing for DHT"))
+            ("hash_name", boost::program_options::value<std::string>()->default_value(Param::MMH3_HASH_NAME, "the type of consistent hashing for DHT"))
             ("keycnt", boost::program_options::value<uint32_t>()->default_value(1000000), "the total number of keys")
             ("opcnt", boost::program_options::value<uint32_t>()->default_value(1000000), "the total number of operations")
             ("perclient_workercnt", boost::program_options::value<uint32_t>()->default_value(1), "the number of worker threads for each client")
@@ -89,7 +48,7 @@ namespace covered
             ("propagation_latency_crossedge", boost::program_options::value<uint32_t>()->default_value(10000), "the propagation latency between edge and neighbor (in units of us)")
             ("propagation_latency_edgecloud", boost::program_options::value<uint32_t>()->default_value(100000), "the propagation latency between edge and cloud (in units of us)")
             ("prototype", "disable simulation mode (NOT work for simulator)")
-            ("workload_name", boost::program_options::value<std::string>()->default_value(WorkloadWrapperBase::FACEBOOK_WORKLOAD_NAME), "workload name")
+            ("workload_name", boost::program_options::value<std::string>()->default_value(Param::FACEBOOK_WORKLOAD_NAME), "workload name")
         ;
         // Dynamic actions
         argument_desc_.add_options()
@@ -104,17 +63,17 @@ namespace covered
         return;
     }
 
-    void CLI::setParamAndConfig_(const CliRole& role)
+    void CLI::setParamAndConfig_(const std::string& main_class_name)
     {
         // (3) Get CLI parameters for dynamic configurations
 
         bool is_simulation = true; // Enable simulation mode by default
         if (argument_info_.count("prototype"))
         {
-            if (role == CliRole::kSimulator)
+            if (main_class_name == Param::SIMULATOR_MAIN_NAME)
             {
                 std::ostringstream oss;
-                oss << "--prototype does not work for " << cliRoleToString(role) << " -> still enable simulation mode!";
+                oss << "--prototype does not work for " << main_class_name << " -> still enable simulation mode!";
                 Util::dumpWarnMsg(kClassName, oss.str());
             }
             else
@@ -144,7 +103,7 @@ namespace covered
         std::string workload_name = argument_info_["workload_name"].as<std::string>();
 
         // Store CLI parameters for dynamic configurations and mark Param as valid
-        Param::setParameters(is_simulation, cache_name, capacity, clientcnt, cloud_storage, config_filepath, is_debug, duration, edgecnt, hash_name, keycnt, opcnt, perclient_workercnt, propagation_latency_clientedge, propagation_latency_crossedge, propagation_latency_edgecloud, workload_name);
+        Param::setParameters(main_class_name, is_simulation, cache_name, capacity, clientcnt, cloud_storage, config_filepath, is_debug, duration, edgecnt, hash_name, keycnt, opcnt, perclient_workercnt, propagation_latency_clientedge, propagation_latency_crossedge, propagation_latency_edgecloud, workload_name);
 
         // (4) Load config file for static configurations
 
@@ -183,11 +142,11 @@ namespace covered
         return;
     }
 
-    void CLI::createRequiredDirectories_(const CliRole& role)
+    void CLI::createRequiredDirectories_(const std::string& main_class_name)
     {
         bool is_createdir_for_client_statistics = false;
         bool is_createdir_for_rocksdb = false;
-        if (role == CliRole::kSimulator)
+        if (main_class_name == Param::SIMULATOR_MAIN_NAME)
         {
             is_createdir_for_client_statistics = true;
             is_createdir_for_rocksdb = true;

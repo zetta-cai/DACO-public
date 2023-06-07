@@ -38,7 +38,7 @@ namespace covered
         // Concurrency control: acquire-release ordering/consistency.
         // Cache coherence: MSI protocol.
         // Cache consistency: volatile.
-        volatile std::atomic<bool> current_client_running_;
+        volatile std::atomic<bool> client_running_;
 
         uint32_t client_idx_;
         WorkloadWrapperBase* workload_generator_ptr_;

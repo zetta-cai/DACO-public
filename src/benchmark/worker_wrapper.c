@@ -18,15 +18,6 @@ namespace covered
 {
     const std::string WorkerWrapper::kClassName("WorkerWrapper");
 
-    void* WorkerWrapper::launchWorker(void* worker_param_ptr)
-    {
-        WorkerWrapper local_worker((WorkerParam*)worker_param_ptr);
-        local_worker.start();
-        
-        pthread_exit(NULL);
-        return NULL;
-    }
-
     WorkerWrapper::WorkerWrapper(WorkerParam* worker_param_ptr)
     {
         if (worker_param_ptr == NULL)

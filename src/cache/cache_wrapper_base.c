@@ -3,27 +3,25 @@
 #include <assert.h>
 #include <sstream>
 
+#include "common/param.h"
 #include "common/util.h"
 #include "cache/lru_cache_wrapper.h"
 
 namespace covered
 {
-    const std::string CacheWrapperBase::LRU_CACHE_NAME("lru");
-    const std::string CacheWrapperBase::COVERED_CACHE_NAME("covered");
-
     const std::string CacheWrapperBase::kClassName("CacheWrapperBase");
 
     CacheWrapperBase* CacheWrapperBase::getEdgeCache(const std::string& cache_name, const uint32_t& capacity_bytes)
     {
         CacheWrapperBase* cache_ptr = NULL;
-        if (cache_name == LRU_CACHE_NAME)
+        if (cache_name == Param::LRU_CACHE_NAME)
         {
             cache_ptr = new LruCacheWrapper(capacity_bytes);
         }
         else
         {
             std::ostringstream oss;
-            oss << "cache " << cache_name << " is not supported!";
+            oss << "local edge cache " << cache_name << " is not supported!";
             Util::dumpErrorMsg(kClassName, oss.str());
             exit(1);
         }

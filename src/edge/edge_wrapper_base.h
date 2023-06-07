@@ -1,28 +1,29 @@
 /*
- * EdgeWrapper: the edge node to receive data/control requests and send responses.
+ * EdgeWrapperBase: the base class of edge node to process data/control requests.
  * 
  * By Siyuan Sheng (2023.04.22).
  */
 
-#ifndef EDGE_WRAPPER_H
-#define EDGE_WRAPPER_H
+#ifndef EDGE_WRAPPER_BASE_H
+#define EDGE_WRAPPER_BASE_H
 
 #include <string>
 
 #include "cache/cache_wrapper_base.h"
+#include "edge/basic_edge_wrapper.h"
 #include "edge/edge_param.h"
 #include "message/message_base.h"
 #include "network/udp_socket_wrapper.h"
 
 namespace covered
 {
-    class EdgeWrapper
+    class EdgeWrapperBase
     {
     public:
-        static void* launchEdge(void* current_edge_param_ptr);
+        static EdgeWrapperBase* getEdgeWrapper(const std::string& cache_name, EdgeParam* edge_param_ptr);
 
-        EdgeWrapper(EdgeParam* current_edge_param_ptr);
-        ~EdgeWrapper();
+        EdgeWrapperBase(const std::string& cache_name, EdgeParam* edge_param_ptr);
+        virtual ~EdgeWrapperBase();
 
         void start();
     private:
@@ -35,7 +36,7 @@ namespace covered
         bool processRedirectedRequest_(MessageBase* request_ptr);
 
         // Return is_finish
-        bool processControlRequest_(MessageBase* request_ptr);
+        virtual bool processControlRequest_(MessageBase* request_ptr) = 0;
 
         // Return is_finish
         bool blockForInvalidation_(const Key& key);
@@ -44,6 +45,7 @@ namespace covered
 
         void triggerIndependentAdmission_(const Key& key, const Value& value);
 
+        const std::string cache_name_;
         EdgeParam* edge_param_ptr_;
         CacheWrapperBase* edge_cache_ptr_;
         UdpSocketWrapper* edge_recvreq_socket_server_ptr_;
