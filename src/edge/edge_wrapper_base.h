@@ -7,7 +7,6 @@
 #ifndef EDGE_WRAPPER_BASE_H
 #define EDGE_WRAPPER_BASE_H
 
-#include <random> // std::mt19937_64
 #include <string>
 
 #include "cache/cache_wrapper_base.h"
@@ -52,14 +51,11 @@ namespace covered
         virtual bool processDirectoryLookupRequest_(MessageBase* control_request_ptr) = 0;
         virtual bool processOtherControlRequest_(MessageBase* control_request_ptr) = 0;
     protected:
-        void getNeighborEdgeIdxForDirectoryLookupRequest_(const Key& key, bool& is_directory_exist, uint32_t& neighbor_edge_idx);
-
         const std::string cache_name_;
         EdgeParam* edge_param_ptr_;
 
         CacheWrapperBase* edge_cache_ptr_;
         CooperationWrapperBase* cooperation_wrapper_ptr_;
-        std::mt19937_64* directory_randgen_ptr_;
 
         UdpSocketWrapper* edge_recvreq_socket_server_ptr_;
         UdpSocketWrapper* edge_sendreq_tocloud_socket_client_ptr_;

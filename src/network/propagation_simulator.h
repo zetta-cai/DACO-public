@@ -16,8 +16,8 @@ namespace covered
     public:
         static void propagateFromClientToEdge();
         static void propagateFromEdgeToClient();
-        static void propagateFromEdgeToNeighbor();
-        static void propagateFromNeighborToEdge();
+        static void propagateFromEdgeToNeighbor(); // Neighbor edge node: beacon or target
+        static void propagateFromNeighborToEdge(); // Neighbor edge node: beacon or target
         static void propagateFromEdgeToCloud();
         static void propagateFromCloudToEdge();
     private:

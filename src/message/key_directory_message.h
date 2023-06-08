@@ -1,7 +1,7 @@
 /*
  * KeyDirectoryMessage: the base class for messages each with a key and a directory information.
  *
- * NOTE: the directory information of the neighbor edge node includes a boolean (whether the key is cooperatively cached) and an integer (the index of the neighbor edge node).
+ * NOTE: the directory information of the target edge node includes a boolean (whether the key is cooperatively cached) and an integer (the index of the target edge node).
  * 
  * By Siyuan Sheng (2023.06.06).
  */
@@ -20,13 +20,13 @@ namespace covered
     class KeyDirectoryMessage : public MessageBase
     {
     public:
-        KeyDirectoryMessage(const Key& key, const bool& is_directory_exist, const uint32_t& neighbor_edge_idx, const MessageType& message_type);
+        KeyDirectoryMessage(const Key& key, const bool& is_directory_exist, const uint32_t& target_edge_idx, const MessageType& message_type);
         KeyDirectoryMessage(const DynamicArray& msg_payload);
         virtual ~KeyDirectoryMessage();
 
         Key getKey() const;
         bool isDirectoryExist() const;
-        uint32_t getNeighborEdgeIdx() const;
+        uint32_t getTargetEdgeIdx() const;
     private:
         static const std::string kClassName;
 
@@ -39,7 +39,7 @@ namespace covered
         
         // Directory information
         bool is_directory_exist_;
-        uint32_t neighbor_edge_idx_;
+        uint32_t target_edge_idx_;
     };
 }
 

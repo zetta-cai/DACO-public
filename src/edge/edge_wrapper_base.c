@@ -51,10 +51,6 @@ namespace covered
         cooperation_wrapper_ptr_ = CooperationWrapperBase::getCooperationWrapper(cache_name, hash_name, edge_param_ptr);
         assert(cooperation_wrapper_ptr_ != NULL);
 
-        // Allocate randgen to choose neighbor edge node from directory information
-        directory_randgen_ptr_ = new std::mt19937_64(edge_param_ptr_->getEdgeIdx());
-        assert(directory_randgen_ptr_ != NULL);
-
         // Prepare a socket server on recvreq port
         uint32_t edge_idx = edge_param_ptr_->getEdgeIdx();
         uint16_t edge_recvreq_port = Util::getEdgeRecvreqPort(edge_idx);
@@ -83,11 +79,6 @@ namespace covered
         assert(cooperation_wrapper_ptr_ != NULL);
         delete cooperation_wrapper_ptr_;
         cooperation_wrapper_ptr_ = NULL;
-
-        // Release randgen
-        assert(directory_randgen_ptr_ != NULL);
-        delete directory_randgen_ptr_;
-        directory_randgen_ptr_ = NULL;
 
         // Release the socket server on recvreq port
         assert(edge_recvreq_socket_server_ptr_ != NULL);
@@ -221,7 +212,7 @@ namespace covered
         bool is_cooperative_cached = false;
         if (!is_local_cached)
         {
-            // TODO: Get data from neighbor for local cache miss
+            // TODO: Get data from target edge node for local cache miss
             // TODO: Update is_finish and is_cooperative_cached
             if (is_cooperative_cached)
             {
@@ -587,23 +578,5 @@ namespace covered
         // TODO: invalidation and cache admission/eviction requests for control message
         // TODO: reply control response message to a beacon node
         return is_finish;
-    }
-
-    void EdgeWrapperBase::getNeighborEdgeIdxForDirectoryLookupRequest_(const Key& key, bool& is_directory_exist, uint32_t& neighbor_edge_idx)
-    {
-        // Check directory information cooperation_wrapper_ptr_
-        std::vector<uint32_t> edge_idxes;
-        cooperation_wrapper_ptr_->lookupLocalDirectory(key, is_directory_exist, edge_idxes);
-
-        // Get the neighbor edge index
-        if (is_directory_exist)
-        {
-            // Randomly select an edge node as the neighbor edge node
-            std::uniform_int_distribution<uint32_t> uniform_dist(0, edge_idxes.size() - 1); // Range from 0 to (# of edge indexes - 1)
-            uint32_t random_number = uniform_dist(*directory_randgen_ptr_);
-            assert(random_number < edge_idxes.size());
-            neighbor_edge_idx = edge_idxes[random_number];
-        }
-        return;
     }
 }

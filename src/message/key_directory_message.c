@@ -6,11 +6,11 @@ namespace covered
 {
     const std::string KeyDirectoryMessage::kClassName("KeyDirectoryMessage");
 
-    KeyDirectoryMessage::KeyDirectoryMessage(const Key& key, const bool& is_directory_exist, const uint32_t& neighbor_edge_idx, const MessageType& message_type) : MessageBase(message_type)
+    KeyDirectoryMessage::KeyDirectoryMessage(const Key& key, const bool& is_directory_exist, const uint32_t& target_edge_idx, const MessageType& message_type) : MessageBase(message_type)
     {
         key_ = key;
         is_directory_exist_ = is_directory_exist;
-        neighbor_edge_idx_ = neighbor_edge_idx;
+        target_edge_idx_ = target_edge_idx;
     }
 
     KeyDirectoryMessage::KeyDirectoryMessage(const DynamicArray& msg_payload) : MessageBase()
@@ -32,15 +32,15 @@ namespace covered
         return is_directory_exist_;
     }
 
-    uint32_t KeyDirectoryMessage::getNeighborEdgeIdx() const
+    uint32_t KeyDirectoryMessage::getTargetEdgeIdx() const
     {
         checkIsValid_();
-        return neighbor_edge_idx_;
+        return target_edge_idx_;
     }
 
     uint32_t KeyDirectoryMessage::getMsgPayloadSizeInternal_() const
     {
-        // key payload + is cooperatively cached + neighbor edge idx
+        // key payload + is cooperatively cached + target edge idx
         uint32_t msg_payload_size = key_.getKeyPayloadSize() + sizeof(bool) + sizeof(uint32_t);
         return msg_payload_size;
     }
@@ -52,8 +52,8 @@ namespace covered
         size += key_serialize_size;
         msg_payload.deserialize(size, (const char*)&is_directory_exist_, sizeof(bool));
         size += sizeof(bool);
-        uint32_t bigendian_neighbor_edge_idx = htonl(neighbor_edge_idx_);
-        msg_payload.deserialize(size, (const char*)&bigendian_neighbor_edge_idx, sizeof(uint32_t));
+        uint32_t bigendian_target_edge_idx = htonl(target_edge_idx_);
+        msg_payload.deserialize(size, (const char*)&bigendian_target_edge_idx, sizeof(uint32_t));
         size += sizeof(uint32_t);
         return size - position;
     }
@@ -65,9 +65,9 @@ namespace covered
         size += key_deserialize_size;
         msg_payload.serialize(size, (char *)&is_directory_exist_, sizeof(bool));
         size += sizeof(bool);
-        uint32_t bigendian_neighbor_edge_idx = 0;
-        msg_payload.serialize(size, (char *)&bigendian_neighbor_edge_idx, sizeof(uint32_t));
-        neighbor_edge_idx_ = ntohl(bigendian_neighbor_edge_idx);
+        uint32_t bigendian_target_edge_idx = 0;
+        msg_payload.serialize(size, (char *)&bigendian_target_edge_idx, sizeof(uint32_t));
+        target_edge_idx_ = ntohl(bigendian_target_edge_idx);
         size += sizeof(uint32_t);
         return size - position;
     }

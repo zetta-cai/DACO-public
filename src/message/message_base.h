@@ -28,6 +28,8 @@ namespace covered
         kGlobalGetResponse,
         kGlobalPutResponse,
         kGlobalDelResponse,
+        kRedirectedGetRequest,
+        kRedirectedGetResponse,
         kDirectoryLookupRequest,
         kDirectoryLookupResponse
     };
@@ -35,7 +37,7 @@ namespace covered
     enum Hitflag
     {
         kLocalHit = 1, // Hit local edge cache of closest edge node
-        kCooperativeHit, // Hit cooperative edge cache of neighbor edge node
+        kCooperativeHit, // Hit cooperative edge cache of some target edge node
         kGlobalMiss // Miss all edge nodes
     };
 

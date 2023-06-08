@@ -21,4 +21,7 @@
 #include "message/data/global/global_put_response.h"
 #include "message/data/global/global_del_response.h"
 
+#include "message/data/redirected/redirected_get_request.h"
+#include "message/data/redirected/redirected_get_response.h"
+
 #endif

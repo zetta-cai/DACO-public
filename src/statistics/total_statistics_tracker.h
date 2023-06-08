@@ -43,7 +43,7 @@ namespace covered
 
         // Pre-processed statistics
         uint32_t* perclient_local_hitcnts_; // Hit local edge cache of closest edge node
-        uint32_t* perclient_cooperative_hitcnts_; // Hit cooperative edge cache of neighbor
+        uint32_t* perclient_cooperative_hitcnts_; // Hit cooperative edge cache of some target edge node
         uint32_t* perclient_reqcnts_;
         uint32_t* latency_histogram_;
         uint32_t clientcnt_; // Come from Util::Param

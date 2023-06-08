@@ -1,11 +1,13 @@
 #include "cooperation/basic_cooperation_wrapper.h"
 
 #include <assert.h>
+#include <sstream>
 
 #include "common/dynamic_array.h"
 #include "common/util.h"
 #include "network/propagation_simulator.h"
 #include "message/control_message.h"
+#include "message/data_message.h"
 
 namespace covered
 {
@@ -17,9 +19,9 @@ namespace covered
 
     BasicCooperationWrapper::~BasicCooperationWrapper() {}
 
-    bool BasicCooperationWrapper::lookupBeaconDirectory_(const Key& key, bool& is_directory_exist, uint32_t& neighbor_edge_idx)
+    bool BasicCooperationWrapper::lookupBeaconDirectory_(const Key& key, bool& is_directory_exist, uint32_t& target_edge_idx)
     {
-        assert(edge_sendreq_toneighbor_socket_client_ptr_ != NULL);
+        assert(edge_sendreq_tobeacon_socket_client_ptr_ != NULL);
         assert(edge_param_ptr_ != NULL);
 
         bool is_finish = false;
@@ -33,11 +35,11 @@ namespace covered
         {
             // Send the control request to the beacon node
             PropagationSimulator::propagateFromEdgeToNeighbor();
-            edge_sendreq_toneighbor_socket_client_ptr_->send(control_request_msg_payload);
+            edge_sendreq_tobeacon_socket_client_ptr_->send(control_request_msg_payload);
 
             // Receive the control repsonse from the beacon node
             DynamicArray control_response_msg_payload;
-            bool is_timeout = edge_sendreq_toneighbor_socket_client_ptr_->recv(control_response_msg_payload);
+            bool is_timeout = edge_sendreq_tobeacon_socket_client_ptr_->recv(control_response_msg_payload);
             if (is_timeout)
             {
                 if (!edge_param_ptr_->isEdgeRunning())
@@ -48,7 +50,7 @@ namespace covered
                 else
                 {
                     Util::dumpWarnMsg(kClassName, "edge timeout to wait for control response");
-                    continue; // Resend the global request message
+                    continue; // Resend the control request message
                 }
             } // End of (is_timeout == true)
             else
@@ -60,11 +62,81 @@ namespace covered
                 // Get directory information from the control response message
                 const DirectoryLookupResponse* const directory_lookup_response_ptr = static_cast<const DirectoryLookupResponse*>(control_response_ptr);
                 is_directory_exist = directory_lookup_response_ptr->isDirectoryExist();
-                neighbor_edge_idx = directory_lookup_response_ptr->getNeighborEdgeIdx();
+                target_edge_idx = directory_lookup_response_ptr->getTargetEdgeIdx();
 
                 // Release the control response message
                 delete control_response_ptr;
                 control_response_ptr = NULL;
+                break;
+            } // End of (is_timeout == false)
+        } // End of while(true)
+
+        return is_finish;
+    }
+
+    bool BasicCooperationWrapper::redirectGetToTarget_(const Key& key, Value& value, bool& is_cooperative_cached)
+    {
+        assert(edge_sendreq_totarget_socket_client_ptr_ != NULL);
+        assert(edge_param_ptr_ != NULL);
+
+        bool is_finish = false;
+
+        // Prepare redirected get request to get data from target edge node if any
+        RedirectedGetRequest redirected_get_request(key);
+        DynamicArray redirected_request_msg_payload(redirected_get_request.getMsgPayloadSize());
+        redirected_get_request.serialize(redirected_request_msg_payload);
+
+        while (true) // Timeout-and-retry mechanism
+        {
+            // Send the redirected request to the target edge node
+            PropagationSimulator::propagateFromEdgeToNeighbor();
+            edge_sendreq_totarget_socket_client_ptr_->send(redirected_request_msg_payload);
+
+            // Receive the control repsonse from the target node
+            DynamicArray redirected_response_msg_payload;
+            bool is_timeout = edge_sendreq_totarget_socket_client_ptr_->recv(redirected_response_msg_payload);
+            if (is_timeout)
+            {
+                if (!edge_param_ptr_->isEdgeRunning())
+                {
+                    is_finish = true;
+                    break; // Edge is NOT running
+                }
+                else
+                {
+                    Util::dumpWarnMsg(kClassName, "edge timeout to wait for redirected response");
+                    continue; // Resend the redirected request message
+                }
+            } // End of (is_timeout == true)
+            else
+            {
+                // Receive the redirected response message successfully
+                MessageBase* redirected_response_ptr = MessageBase::getResponseFromMsgPayload(redirected_response_msg_payload);
+                assert(redirected_response_ptr != NULL && redirected_response_ptr->getMessageType() == MessageType::kRedirectedGetResponse);
+
+                // Get value from redirected response message
+                const RedirectedGetResponse* const redirected_get_response_ptr = static_cast<const RedirectedGetResponse*>(redirected_response_ptr);
+                value = redirected_get_response_ptr->getValue();
+                Hitflag hitflag = redirected_get_response_ptr->getHitflag();
+                if (hitflag == Hitflag::kCooperativeHit)
+                {
+                    is_cooperative_cached = true;
+                }
+                else if (hitflag == Hitflag::kGlobalMiss)
+                {
+                    is_cooperative_cached = false;
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << "invalid hitflag " << MessageBase::hitflagToString(hitflag) << " for redirectGetToTarget_()!";
+                    Util::dumpErrorMsg(kClassName, oss.str());
+                    exit(1);
+                }
+
+                // Release the redirected response message
+                delete redirected_response_ptr;
+                redirected_response_ptr = NULL;
                 break;
             } // End of (is_timeout == false)
         } // End of while(true)

@@ -24,7 +24,8 @@ namespace covered
         static const std::string kClassName;
 
         // Return if edge node is finished
-        virtual bool lookupBeaconDirectory_(const Key& key, bool& is_directory_exist, uint32_t& neighbor_edge_idx) override;
+        virtual bool lookupBeaconDirectory_(const Key& key, bool& is_directory_exist, uint32_t& target_edge_idx) override;
+        virtual bool redirectGetToTarget_(const Key& key, Value& value, bool& is_cooperative_cached) override;
     };
 }
 

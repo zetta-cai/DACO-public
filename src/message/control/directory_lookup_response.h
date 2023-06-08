@@ -18,7 +18,7 @@ namespace covered
     class DirectoryLookupResponse : public KeyDirectoryMessage
     {
     public:
-        DirectoryLookupResponse(const Key& key, const bool& is_directory_exist, const uint32_t& neighbor_edge_idx);
+        DirectoryLookupResponse(const Key& key, const bool& is_directory_exist, const uint32_t& target_edge_idx);
         DirectoryLookupResponse(const DynamicArray& msg_payload);
         virtual ~DirectoryLookupResponse();
     private:

@@ -61,7 +61,7 @@ namespace covered
         uint32_t loadLatencyHistogram_(std::fstream* fs_ptr);
 
         std::atomic<uint32_t>* perworker_local_hitcnts_; // Hit local edge cache of closest edge node
-        std::atomic<uint32_t>* perworker_cooperative_hitcnts_; // Hit cooperative edge cache of neighbor edge node
+        std::atomic<uint32_t>* perworker_cooperative_hitcnts_; // Hit cooperative edge cache of some target edge node
         std::atomic<uint32_t>* perworker_reqcnts_;
         std::atomic<uint32_t>* latency_histogram_;
         uint32_t perclient_workercnt_; // Come from Util::Param

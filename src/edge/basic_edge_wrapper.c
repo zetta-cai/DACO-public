@@ -8,6 +8,7 @@
 #include "common/util.h"
 #include "message/control_message.h"
 #include "message/message_base.h"
+#include "network/propagation_simulator.h"
 
 namespace covered
 {
@@ -24,6 +25,7 @@ namespace covered
     {
         assert(control_request_ptr != NULL);
         assert(control_request_ptr->getMessageType() == MessageType::kDirectoryLookupRequest);
+        assert(cooperation_wrapper_ptr_ != NULL);
         assert(edge_recvreq_socket_server_ptr_ != NULL);
 
         bool is_finish = false;
@@ -32,15 +34,16 @@ namespace covered
         const DirectoryLookupRequest* const directory_lookup_request_ptr = static_cast<const DirectoryLookupRequest*>(control_request_ptr);
         Key tmp_key = directory_lookup_request_ptr->getKey();
 
-        // Lookup directory information from beacon node and randomly select a neighbor edge index
+        // Lookup local directory information and randomly select a target edge index
         bool is_directory_exist = false;
-        uint32_t neighbor_edge_idx = 0;
-        getNeighborEdgeIdxForDirectoryLookupRequest_(tmp_key, is_directory_exist, neighbor_edge_idx);
+        uint32_t target_edge_idx = 0;
+        cooperation_wrapper_ptr_->getTargetEdgeIdxForDirectoryLookupRequest(tmp_key, is_directory_exist, target_edge_idx);
 
         // Send back a directory lookup response
-        DirectoryLookupResponse directory_lookup_response(tmp_key, is_directory_exist, neighbor_edge_idx);
+        DirectoryLookupResponse directory_lookup_response(tmp_key, is_directory_exist, target_edge_idx);
         DynamicArray control_response_msg_payload(directory_lookup_response.getMsgPayloadSize());
         directory_lookup_response.serialize(control_response_msg_payload);
+        PropagationSimulator::propagateFromNeighborToEdge();
         edge_recvreq_socket_server_ptr_->send(control_response_msg_payload);
 
         return is_finish;

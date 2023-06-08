@@ -364,8 +364,14 @@ namespace covered
     bool MessageBase::isRedirectedRequest() const
     {
         checkIsValid_();
-        // TODO: Update isRedirectedRequest() after introducing redirected requests
-        return false;
+        if (message_type_ == MessageType::kRedirectedGetRequest)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
     }
 
     bool MessageBase::isGlobalRequest() const
@@ -403,8 +409,14 @@ namespace covered
     bool MessageBase::isRedirectedResponse() const
     {
         checkIsValid_();
-        // TODO: Update isRedirectedResponse() after introducing redirected responses
-        return false;
+        if (message_type_ == MessageType::kRedirectedGetResponse)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
     }
 
     bool MessageBase::isGlobalResponse() const
