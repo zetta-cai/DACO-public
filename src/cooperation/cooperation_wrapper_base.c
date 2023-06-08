@@ -81,7 +81,7 @@ namespace covered
     {
         bool is_finish = false;
 
-        // Update remote address of edge_sendreq_tobeacon_socket_client_ptr_ as the beacon node for the key
+        // Update remote address of edge_sendreq_tobeacon_socket_client_ptr_ as the beacon node for the key if remote
         bool current_is_beacon = false;
         locateBeaconNode_(key, current_is_beacon);
 
@@ -90,16 +90,15 @@ namespace covered
         uint32_t target_edge_idx = 0;
         if (current_is_beacon) // Get target edge index from local directory information
         {
-            getTargetEdgeIdxForDirectoryLookupRequest(key, is_directory_exist, target_edge_idx);
+            getTargetEdgeIdxFromLocalDirectory(key, is_directory_exist, target_edge_idx);
         }
         else // Get target edge index from remote directory information at the beacon node
         {
             is_finish = lookupBeaconDirectory_(key, is_directory_exist, target_edge_idx);
-        }
-
-        if (is_finish) // Edge is NOT running
-        {
-            return is_finish;
+            if (is_finish) // Edge is NOT running
+            {
+                return is_finish;
+            }
         }
 
         if (is_directory_exist) // The object is cached by some target edge node
@@ -112,7 +111,7 @@ namespace covered
                 std::ostringstream oss;
                 oss << "current edge node " << current_edge_idx << " should not be the target edge node for cooperative edge caching under a local cache miss!";
                 Util::dumpWarnMsg(kClassName, oss.str());
-                return is_finish;
+                return is_finish; // NOTE: is_finish is still false, as edge is STILL running
             }
 
             // Update remote address of edge_sendreq_totarget_socket_client_ptr_ as the target edge node
@@ -120,10 +119,10 @@ namespace covered
 
             // Get data from the target edge node if any and update is_cooperative_cached
             is_finish = redirectGetToTarget_(key, value, is_cooperative_cached);
-            //if (is_finish) // Edge is NOT running
-            //{
-            //    return is_finish;
-            //}
+            if (is_finish) // Edge is NOT running
+            {
+                return is_finish;
+            }
         }
         else // The object is not cached by any target edge node
         {
@@ -133,17 +132,13 @@ namespace covered
         return is_finish;
     }
 
-    void CooperationWrapperBase::getTargetEdgeIdxForDirectoryLookupRequest(const Key& key, bool& is_directory_exist, uint32_t& target_edge_idx)
+    void CooperationWrapperBase::getTargetEdgeIdxFromLocalDirectory(const Key& key, bool& is_directory_exist, uint32_t& target_edge_idx)
     {
         // The current edge node must be the beacon node for the key
-        assert(dht_wrapper_ptr_ != NULL);
-        uint32_t beacon_edge_idx = dht_wrapper_ptr_->getBeaconEdgeIdx(key);
-        assert(edge_param_ptr_ != NULL);
-        uint32_t current_edge_idx = edge_param_ptr_->getEdgeIdx();
-        assert(beacon_edge_idx == current_edge_idx);
+        verifyCurrentIsBeacon_(key);
 
         // Check directory information cooperation_wrapper_ptr_
-        std::vector<uint32_t> edge_idxes;
+        std::unordered_set<uint32_t> edge_idxes;
         lookupLocalDirectory_(key, is_directory_exist, edge_idxes);
 
         // Get the target edge index
@@ -153,9 +148,41 @@ namespace covered
             std::uniform_int_distribution<uint32_t> uniform_dist(0, edge_idxes.size() - 1); // Range from 0 to (# of edge indexes - 1)
             uint32_t random_number = uniform_dist(*directory_randgen_ptr_);
             assert(random_number < edge_idxes.size());
-            target_edge_idx = edge_idxes[random_number];
+            uint32_t i = 0;
+            for (std::unordered_set<uint32_t>::const_iterator iter = edge_idxes.begin(); iter != edge_idxes.end(); iter++)
+            {
+                if (i == random_number)
+                {
+                    target_edge_idx = *iter;
+                    break;
+                }
+                i++;
+            }
         }
         return;
+    }
+
+    bool CooperationWrapperBase::updateDirectory(const Key& key, const bool& is_admit)
+    {
+        bool is_finish = false;
+
+        // Update remote address of edge_sendreq_tobeacon_socket_client_ptr_ as the beacon node for the key if remote
+        bool current_is_beacon = false;
+        locateBeaconNode_(key, current_is_beacon);
+
+        // Check if beacon node is the current edge node and update directory information
+        assert(edge_param_ptr_ != NULL);
+        uint32_t current_edge_idx = edge_param_ptr_->getEdgeIdx();
+        if (current_is_beacon) // Update target edge index of local directory information
+        {
+            updateLocalDirectory_(key, is_admit, current_edge_idx);
+        }
+        else // Update remote directory information at the beacon node
+        {
+            is_finish = updateBeaconDirectory_(key, is_admit, current_edge_idx);
+        }
+
+        return is_finish;
     }
 
     void CooperationWrapperBase::locateBeaconNode_(const Key& key, bool& current_is_beacon)
@@ -185,9 +212,12 @@ namespace covered
         return;
     }
 
-    void CooperationWrapperBase::lookupLocalDirectory_(const Key& key, bool& is_directory_exist, std::vector<uint32_t>& edge_idxes) const
+    void CooperationWrapperBase::lookupLocalDirectory_(const Key& key, bool& is_directory_exist, std::unordered_set<uint32_t>& edge_idxes) const
     {
-        std::unordered_map<Key, std::vector<uint32_t>, KeyHasher>::const_iterator iter = directory_hashtable_.find(key);
+        // The current edge node must be the beacon node for the key
+        verifyCurrentIsBeacon_(key);
+
+        std::unordered_map<Key, std::unordered_set<uint32_t>, KeyHasher>::const_iterator iter = directory_hashtable_.find(key);
         if (iter != directory_hashtable_.end())
         {
             is_directory_exist = true;
@@ -202,6 +232,7 @@ namespace covered
 
     void CooperationWrapperBase::locateTargetNode_(const uint32_t& target_edge_idx)
     {
+        // The current edge node must NOT be the target node
         assert(edge_param_ptr_ != NULL);
         uint32_t current_edge_idx = edge_param_ptr_->getEdgeIdx();
         assert(target_edge_idx != current_edge_idx);
@@ -214,6 +245,81 @@ namespace covered
         NetworkAddr target_edge_addr(target_edge_ipstr, target_edge_port);
         edge_sendreq_totarget_socket_client_ptr_->setRemoteAddrForClient(target_edge_addr);
         
+        return;
+    }
+
+    void CooperationWrapperBase::updateLocalDirectory_(const Key& key, const bool& is_admit, const uint32_t& target_edge_idx)
+    {
+        // The current edge node must be the beacon node for the key
+        verifyCurrentIsBeacon_(key);
+
+        std::unordered_map<Key, std::unordered_set<uint32_t>, KeyHasher>::iterator iter = directory_hashtable_.find(key);
+        if (is_admit) // Add a new directory info
+        {
+            if (iter == directory_hashtable_.end()) // key does not exist
+            {
+                std::unordered_set<uint32_t> tmp_edge_idxes;
+                tmp_edge_idxes.insert(target_edge_idx);
+                directory_hashtable_.insert(std::pair<Key, std::unordered_set<uint32_t>>(key, tmp_edge_idxes));
+            }
+            else // key already exists
+            {
+                std::unordered_set<uint32_t>& tmp_edge_idxes = iter->second;
+                if (tmp_edge_idxes.find(target_edge_idx) != tmp_edge_idxes.end()) // target_edge_idx exists for key
+                {
+                    std::ostringstream oss;
+                    oss << "target edge index " << target_edge_idx << " already exists for key " << key.getKeystr() << " in updateLocalDirectory_() with is_admit = true!";
+                    Util::dumpWarnMsg(kClassName, oss.str());
+                }
+                else // target_edge_idx does not exist for key
+                {
+                    tmp_edge_idxes.insert(target_edge_idx);
+                }
+            }
+        } // End of (is_admit == true)
+        else // Delete an existing directory info
+        {
+            std::ostringstream oss;
+            oss << "target edge index " << target_edge_idx << " does NOT exist for key " << key.getKeystr() << " in updateLocalDirectory_() with is_admit = false!";
+            if (iter != directory_hashtable_.end()) // key already exists
+            {
+                std::unordered_set<uint32_t>& tmp_edge_idxes = iter->second;
+                if (tmp_edge_idxes.find(target_edge_idx) != tmp_edge_idxes.end()) // target_edge_idx already exists
+                {
+                    tmp_edge_idxes.erase(target_edge_idx);
+                }
+                else // target_edge_idx does NOT exist
+                {
+                    Util::dumpWarnMsg(kClassName, oss.str());
+                }
+            }
+            else // key does NOT exist
+            {
+                Util::dumpWarnMsg(kClassName, oss.str());
+            }
+        } // ENd of (is_admit == false)
+        return;
+    }
+
+    void CooperationWrapperBase::verifyCurrentIsBeacon_(const Key& key) const
+    {
+        // The current edge node must be the beacon node for the key
+        assert(dht_wrapper_ptr_ != NULL);
+        uint32_t beacon_edge_idx = dht_wrapper_ptr_->getBeaconEdgeIdx(key);
+        assert(edge_param_ptr_ != NULL);
+        uint32_t current_edge_idx = edge_param_ptr_->getEdgeIdx();
+        assert(beacon_edge_idx == current_edge_idx);
+        return;
+    }
+
+    void CooperationWrapperBase::verifyCurrentIsNotBeacon_(const Key& key) const
+    {
+        // The current edge node must be the beacon node for the key
+        assert(dht_wrapper_ptr_ != NULL);
+        uint32_t beacon_edge_idx = dht_wrapper_ptr_->getBeaconEdgeIdx(key);
+        assert(edge_param_ptr_ != NULL);
+        uint32_t current_edge_idx = edge_param_ptr_->getEdgeIdx();
+        assert(beacon_edge_idx != current_edge_idx);
         return;
     }
 }

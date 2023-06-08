@@ -6,6 +6,7 @@
 #include "common/key.h"
 #include "common/param.h"
 #include "common/util.h"
+#include "message/data_message.h"
 #include "message/control_message.h"
 #include "message/message_base.h"
 #include "network/propagation_simulator.h"
@@ -20,6 +21,71 @@ namespace covered
     }
 
     BasicEdgeWrapper::~BasicEdgeWrapper() {}
+
+    // (1) Data requests
+
+    bool BasicEdgeWrapper::processRedirectedGetRequest_(MessageBase* redirected_request_ptr)
+    {
+        assert(redirected_request_ptr != NULL && redirected_request_ptr->getMessageType() == MessageType::kRedirectedGetRequest);
+        assert(edge_cache_ptr_ != NULL);
+
+        bool is_finish = false;
+        Hitflag hitflag = Hitflag::kGlobalMiss;
+
+        // Access local edge cache for cooperative edge caching (current edge node is the target edge node)
+        const RedirectedGetRequest* const redirected_get_request_ptr = static_cast<const RedirectedGetRequest*>(redirected_request_ptr);
+        Key tmp_key = redirected_get_request_ptr->getKey();
+        Value tmp_value;
+        bool is_cooperative_cached = edge_cache_ptr_->get(tmp_key, tmp_value);
+        if (is_cooperative_cached)
+        {
+            hitflag = Hitflag::kCooperativeHit;
+        }
+
+        // NOTE: no need to perform recursive cooperative edge caching (current edge node is already the target edge node for cooperative edge caching)
+        // NOTE: no need to access cloud to get data, which will be performed by the closest edge node
+
+        // TODO: reply redirected response message to an edge node
+
+        // Prepare RedirectedGetResponse for the closest edge node
+        RedirectedGetResponse redirected_get_response(tmp_key, tmp_value, hitflag);
+
+        // Reply redirected response message to the closest edge node (the remote address set by the most recent recv)
+        DynamicArray redirected_response_msg_payload(redirected_get_response.getMsgPayloadSize());
+        redirected_get_response.serialize(redirected_response_msg_payload);
+        PropagationSimulator::propagateFromNeighborToEdge();
+        edge_recvreq_socket_server_ptr_->send(redirected_response_msg_payload);
+
+        return is_finish;
+    }
+
+    void BasicEdgeWrapper::triggerIndependentAdmission_(const Key& key, const Value& value)
+    {
+        assert(edge_cache_ptr_ != NULL);
+
+        // Independently admit the new key-value pair into local edge cache
+        edge_cache_ptr_->admit(key, value);
+
+        // Evict until cache size <= cache capacity
+        uint32_t cache_capacity = edge_cache_ptr_->getCapacityBytes();
+        while (true)
+        {
+            uint32_t cache_size = edge_cache_ptr_->getSize();
+            if (cache_size <= cache_capacity) // Not exceed capacity limitation
+            {
+                break;
+            }
+            else // Exceed capacity limitation
+            {
+                edge_cache_ptr_->evict();
+                continue;
+            }
+        }
+
+        return;
+    }
+
+    // (2) Control requests
 
     bool BasicEdgeWrapper::processDirectoryLookupRequest_(MessageBase* control_request_ptr)
     {

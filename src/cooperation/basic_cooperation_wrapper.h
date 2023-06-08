@@ -26,6 +26,7 @@ namespace covered
         // Return if edge node is finished
         virtual bool lookupBeaconDirectory_(const Key& key, bool& is_directory_exist, uint32_t& target_edge_idx) override;
         virtual bool redirectGetToTarget_(const Key& key, Value& value, bool& is_cooperative_cached) override;
+        virtual bool updateBeaconDirectory_(const Key& key, const bool& is_admit, const uint32_t& target_edge_idx) override;
     };
 }
 

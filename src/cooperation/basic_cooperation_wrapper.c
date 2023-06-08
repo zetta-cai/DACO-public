@@ -21,6 +21,9 @@ namespace covered
 
     bool BasicCooperationWrapper::lookupBeaconDirectory_(const Key& key, bool& is_directory_exist, uint32_t& target_edge_idx)
     {
+        // The current edge node must NOT be the beacon node for the key
+        verifyCurrentIsNotBeacon_(key);
+
         assert(edge_sendreq_tobeacon_socket_client_ptr_ != NULL);
         assert(edge_param_ptr_ != NULL);
 
@@ -124,6 +127,10 @@ namespace covered
                 }
                 else if (hitflag == Hitflag::kGlobalMiss)
                 {
+                    std::ostringstream oss;
+                    oss << "target edge node does not cache the key " << key.getKeystr() << " in redirectGetToTarget_()!";
+                    Util::dumpWarnMsg(kClassName, oss.str());
+
                     is_cooperative_cached = false;
                 }
                 else
@@ -137,6 +144,66 @@ namespace covered
                 // Release the redirected response message
                 delete redirected_response_ptr;
                 redirected_response_ptr = NULL;
+                break;
+            } // End of (is_timeout == false)
+        } // End of while(true)
+
+        return is_finish;
+    }
+
+    bool BasicCooperationWrapper::updateBeaconDirectory_(const Key& key, const bool& is_admit, const uint32_t& target_edge_idx)
+    {
+        // The current edge node must NOT be the beacon node for the key
+        verifyCurrentIsNotBeacon_(key);
+
+        assert(edge_sendreq_tobeacon_socket_client_ptr_ != NULL);
+        assert(edge_param_ptr_ != NULL);
+
+        bool is_finish = false;
+
+        // TODO: END HERE
+
+        // Prepare directory lookup request to check directory information in beacon node
+        DirectoryLookupRequest directory_lookup_request(key);
+        DynamicArray control_request_msg_payload(directory_lookup_request.getMsgPayloadSize());
+        directory_lookup_request.serialize(control_request_msg_payload);
+
+        while (true) // Timeout-and-retry mechanism
+        {
+            // Send the control request to the beacon node
+            PropagationSimulator::propagateFromEdgeToNeighbor();
+            edge_sendreq_tobeacon_socket_client_ptr_->send(control_request_msg_payload);
+
+            // Receive the control repsonse from the beacon node
+            DynamicArray control_response_msg_payload;
+            bool is_timeout = edge_sendreq_tobeacon_socket_client_ptr_->recv(control_response_msg_payload);
+            if (is_timeout)
+            {
+                if (!edge_param_ptr_->isEdgeRunning())
+                {
+                    is_finish = true;
+                    break; // Edge is NOT running
+                }
+                else
+                {
+                    Util::dumpWarnMsg(kClassName, "edge timeout to wait for control response");
+                    continue; // Resend the control request message
+                }
+            } // End of (is_timeout == true)
+            else
+            {
+                // Receive the control response message successfully
+                MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_request_msg_payload);
+                assert(control_response_ptr != NULL && control_response_ptr->getMessageType() == MessageType::kDirectoryLookupResponse);
+
+                // Get directory information from the control response message
+                const DirectoryLookupResponse* const directory_lookup_response_ptr = static_cast<const DirectoryLookupResponse*>(control_response_ptr);
+                is_directory_exist = directory_lookup_response_ptr->isDirectoryExist();
+                target_edge_idx = directory_lookup_response_ptr->getTargetEdgeIdx();
+
+                // Release the control response message
+                delete control_response_ptr;
+                control_response_ptr = NULL;
                 break;
             } // End of (is_timeout == false)
         } // End of while(true)

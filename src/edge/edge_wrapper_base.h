@@ -36,13 +36,14 @@ namespace covered
         bool processLocalGetRequest_(MessageBase* local_request_ptr);
         bool processLocalWriteRequest_(MessageBase* local_request_ptr); // For put/del
         bool processRedirectedRequest_(MessageBase* redirected_request_ptr);
+        virtual bool processRedirectedGetRequest_(MessageBase* redirected_request_ptr) = 0;
 
         // Return if edge node is finished
         bool blockForInvalidation_(const Key& key);
         bool fetchDataFromCloud_(const Key& key, Value& value);
         bool writeDataToCloud_(const Key& key, const Value& value, const MessageType& message_type);
 
-        void triggerIndependentAdmission_(const Key& key, const Value& value);
+        virtual void triggerIndependentAdmission_(const Key& key, const Value& value) = 0;
 
         // (2) Control requests
 

@@ -7,6 +7,7 @@
 #include "common/param.h"
 #include "common/util.h"
 #include "edge/basic_edge_wrapper.h"
+#include "edge/covered_edge_wrapper.h"
 #include "message/data_message.h"
 #include "message/message_base.h"
 #include "network/network_addr.h"
@@ -22,7 +23,7 @@ namespace covered
 
         if (cache_name == Param::COVERED_CACHE_NAME)
         {
-            //edge_wrapper_ptr = new CoveredEdgeWrapper(cache_name, hash_name, edge_param_ptr);
+            edge_wrapper_ptr = new CoveredEdgeWrapper(cache_name, hash_name, edge_param_ptr);
         }
         else
         {
@@ -96,7 +97,7 @@ namespace covered
         assert(edge_param_ptr_ != NULL);
         assert(edge_recvreq_socket_server_ptr_ != NULL);
 
-        bool is_finish = false; // Mark if local edge node is finished
+        bool is_finish = false; // Mark if edge node is finished
         while (edge_param_ptr_->isEdgeRunning()) // edge_running_ is set as true by default
         {
             // Receive the message payload of data (local/redirected/global) or control requests
@@ -147,7 +148,7 @@ namespace covered
         assert(data_request_ptr != NULL && data_request_ptr->isDataRequest());
         assert(edge_cache_ptr_ != NULL);
 
-        bool is_finish = false; // Mark if local edge node is finished
+        bool is_finish = false; // Mark if edge node is finished
 
         if (data_request_ptr->isLocalRequest()) // Local request
         {
@@ -162,8 +163,7 @@ namespace covered
 
             // Block until not invalidated
             is_finish = blockForInvalidation_(tmp_key);
-
-            if (is_finish) // Check is_finish
+            if (is_finish) // Edge node is NOT running
             {
                 return is_finish;
             }
@@ -196,10 +196,12 @@ namespace covered
     {
         assert(local_request_ptr != NULL && local_request_ptr->getMessageType() == MessageType::kLocalGetRequest);
         assert(edge_cache_ptr_ != NULL);
+        assert(cooperation_wrapper_ptr_ != NULL);
 
-        bool is_finish = false; // Mark if local edge node is finished
+        bool is_finish = false; // Mark if edge node is finished
         Hitflag hitflag = Hitflag::kGlobalMiss;
 
+        // Access local edge cache (current edge node is the closest edge node)
         const LocalGetRequest* const local_get_request_ptr = static_cast<const LocalGetRequest*>(local_request_ptr);
         Key tmp_key = local_get_request_ptr->getKey();
         Value tmp_value;
@@ -209,11 +211,16 @@ namespace covered
             hitflag = Hitflag::kLocalHit;
         }
 
+        // Access cooperative edge cache
         bool is_cooperative_cached = false;
         if (!is_local_cached)
         {
-            // TODO: Get data from target edge node for local cache miss
-            // TODO: Update is_finish and is_cooperative_cached
+            // Get data from some target edge node for local cache miss
+            is_finish = cooperation_wrapper_ptr_->get(tmp_key, tmp_value, is_cooperative_cached);
+            if (is_finish) // Edge node is NOT running
+            {
+                return is_finish;
+            }
             if (is_cooperative_cached)
             {
                 hitflag = Hitflag::kCooperativeHit;
@@ -224,14 +231,11 @@ namespace covered
         if (!is_local_cached && !is_cooperative_cached)
         {
             is_finish = fetchDataFromCloud_(tmp_key, tmp_value);
+            if (is_finish) // Edge node is NOT running
+            {
+                return is_finish;
+            }
         }
-
-        if (is_finish) // Check is_finish
-        {
-            return is_finish;
-        }
-
-        // TODO: For COVERED, beacon node will tell the edge node whether to admit, w/o independent decision
 
         // Trigger independent cache admission for local/global cache miss if necessary
         if (!is_local_cached && edge_cache_ptr_->needIndependentAdmit(tmp_key))
@@ -257,7 +261,7 @@ namespace covered
         assert(local_request_ptr->getMessageType() == MessageType::kLocalPutRequest || local_request_ptr->getMessageType() == MessageType::kLocalDelRequest);
         assert(edge_cache_ptr_ != NULL);
 
-        bool is_finish = false; // Mark if local edge node is finished
+        bool is_finish = false; // Mark if edge node is finished
         const Hitflag hitflag = Hitflag::kGlobalMiss; // Must be global miss due to write-through policy
 
         // Get key and value from local request message
@@ -286,7 +290,7 @@ namespace covered
         // TODO: Acquire write lock from beacon node for MSI protocol
         // TODO: Update is_finish
 
-        if (is_finish) // Check is_finish
+        if (is_finish) // Edge node is NOT running
         {
             return is_finish;
         }
@@ -294,7 +298,7 @@ namespace covered
         // TODO: Wait for beacon node to invalidate all other cache copies for MSI protocol
         // TODO: Update is_finish
 
-        if (is_finish) // Check is_finish
+        if (is_finish) // Edge node is NOT running
         {
             return is_finish;
         }
@@ -302,7 +306,7 @@ namespace covered
         // Send request to cloud for write-through policy
         is_finish = writeDataToCloud_(tmp_key, tmp_value, local_request_ptr->getMessageType());
 
-        if (is_finish) // Check is_finish
+        if (is_finish) // Edge node is NOT running
         {
             return is_finish;
         }
@@ -336,7 +340,7 @@ namespace covered
         // TODO: For COVERED, beacon node will tell the edge node if to admit, w/o independent decision
         // TODO: Update is_finish
 
-        if (!is_finish) // Check is_finish
+        if (!is_finish) // // Edge node is STILL running
         {
             // Reply local response message to a client (the remote address set by the most recent recv)
             assert(local_response_ptr != NULL);
@@ -358,13 +362,22 @@ namespace covered
     bool EdgeWrapperBase::processRedirectedRequest_(MessageBase* redirected_request_ptr)
     {
         assert(redirected_request_ptr != NULL && redirected_request_ptr->isRedirectedRequest());
-        assert(edge_cache_ptr_ != NULL);
 
         bool is_finish = false; // Mark if local edge node is finished
 
-        // TODO: redirected request for data message (the same as local requests???)
-        // TODO: reply redirected response message to an edge node
-        // assert(redirected_response_ptr != NULL && redirected_response_ptr->isRedirectedResponse());
+        MessageType message_type = redirected_request_ptr->getMessageType();
+        if (message_type == MessageType::kRedirectedGetRequest)
+        {
+            is_finish = processRedirectedGetRequest_(redirected_request_ptr);
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "invalid message type " << MessageBase::messageTypeToString(message_type) << " for processRedirectedRequest_()!";
+            Util::dumpErrorMsg(kClassName, oss.str());
+            exit(1);
+        }
+        
         return is_finish;
     }
 
@@ -372,7 +385,7 @@ namespace covered
     {
         assert(edge_param_ptr_ != NULL);
 
-        bool is_finish = false; // Mark if local edge node is finished
+        bool is_finish = false; // Mark if edge node is finished
 
         bool is_invalidated = false;
         while (true)
@@ -406,7 +419,7 @@ namespace covered
         assert(edge_param_ptr_ != NULL);
         assert(edge_sendreq_tocloud_socket_client_ptr_ != NULL);
 
-        bool is_finish = false; // Mark if local edge node is finished
+        bool is_finish = false; // Mark if edge node is finished
 
         GlobalGetRequest global_get_request(key);
         DynamicArray global_request_msg_payload(global_get_request.getMsgPayloadSize());
@@ -464,7 +477,7 @@ namespace covered
         assert(edge_param_ptr_ != NULL);
         assert(edge_sendreq_tocloud_socket_client_ptr_ != NULL);
 
-        bool is_finish = false; // Mark if local edge node is finished
+        bool is_finish = false; // Mark if edge node is finished
 
         // Prepare global write request message
         MessageBase* global_request_ptr = NULL;
@@ -530,33 +543,6 @@ namespace covered
         return is_finish;
     }
 
-    void EdgeWrapperBase::triggerIndependentAdmission_(const Key& key, const Value& value)
-    {
-        // NOTE: COVERED must NOT trigger any independent admission
-        assert(cache_name_ != Param::COVERED_CACHE_NAME);
-
-        // Independently admit the new key-value pair into local edge cache
-        edge_cache_ptr_->admit(key, value);
-
-        // Evict until cache size <= cache capacity
-        uint32_t cache_capacity = edge_cache_ptr_->getCapacityBytes();
-        while (true)
-        {
-            uint32_t cache_size = edge_cache_ptr_->getSize();
-            if (cache_size <= cache_capacity) // Not exceed capacity limitation
-            {
-                break;
-            }
-            else // Exceed capacity limitation
-            {
-                edge_cache_ptr_->evict();
-                continue;
-            }
-        }
-
-        return;
-    }
-
     // (2) Control requests
 
     bool EdgeWrapperBase::processControlRequest_(MessageBase* control_request_ptr)
@@ -564,7 +550,7 @@ namespace covered
         assert(control_request_ptr != NULL && control_request_ptr->isControlRequest());
         assert(edge_cache_ptr_ != NULL);
 
-        bool is_finish = false; // Mark if local edge node is finished
+        bool is_finish = false; // Mark if edge node is finished
 
         if (control_request_ptr->getMessageType() == MessageType::kDirectoryLookupRequest)
         {
