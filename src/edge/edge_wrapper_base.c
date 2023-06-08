@@ -552,9 +552,14 @@ namespace covered
 
         bool is_finish = false; // Mark if edge node is finished
 
-        if (control_request_ptr->getMessageType() == MessageType::kDirectoryLookupRequest)
+        MessageType message_type = control_request_ptr->getMessageType();
+        if (message_type == MessageType::kDirectoryLookupRequest) // TODO: control_request_ptr->isDirectoryLookupRequest() for kCoveredDirectoryLookupRequest
         {
             is_finish = processDirectoryLookupRequest_(control_request_ptr);
+        }
+        else if (message_type == MessageType::kDirectoryUpdateRequest) // TODO: control_request_ptr->isDirectoryUpdateRequest() for kCoveredDirectoryUpdateRequest
+        {
+            is_finish = processDirectoryUpdateRequest_(control_request_ptr);
         }
         else
         {

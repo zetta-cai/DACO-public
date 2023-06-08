@@ -85,23 +85,24 @@ namespace covered
 		return;
 	}
     
-	Key LruCache::evict()
+	void LruCache::evict(Key& key, Value& value)
 	{
 		// Select victim by LRU
 		list_iterator_t last_list_iter = cache_items_list_.end();
 		last_list_iter--;
-		Key victim_key = last_list_iter->first;
+		key = last_list_iter->first;
+		value = last_list_iter->second;
 		uint32_t victim_valuesize = last_list_iter->second.getValuesize();
 
 		// Remove the corresponding map entry
-		cache_items_map_.erase(victim_key);
-		size_ -= (victim_key.getKeystr().length() + sizeof(list_iterator_t));
+		cache_items_map_.erase(key);
+		size_ -= (key.getKeystr().length() + sizeof(list_iterator_t));
 
 		// Remove the correpsonding list entry
 		cache_items_list_.pop_back();
-		size_ -= (victim_key.getKeystr().length() + victim_valuesize);
+		size_ -= (key.getKeystr().length() + victim_valuesize);
 
-		return victim_key;
+		return;
 	}
 
 	/*bool LruCache::exists(const Key& key) const

@@ -48,11 +48,11 @@ namespace covered
         return;
     }
 
-    Key LruCacheWrapper::evictInternal_()
+    void LruCacheWrapper::evictInternal_(Key& key, Value& value)
     {
         assert(lru_cache_ptr_ != NULL);
-        Key victim_key = lru_cache_ptr_->evict();
-        return victim_key;
+        lru_cache_ptr_->evict(key, value);
+        return;
     }
 
     uint32_t LruCacheWrapper::getSizeInternal_() const

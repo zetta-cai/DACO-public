@@ -22,6 +22,8 @@ namespace covered
     bool CoveredEdgeWrapper::processRedirectedGetRequest_(MessageBase* redirected_request_ptr)
     {
         // TODO
+
+        return false;
     }
 
     void CoveredEdgeWrapper::triggerIndependentAdmission_(const Key& key, const Value& value)
@@ -40,10 +42,23 @@ namespace covered
         // TODO
 
         // NOTE: For COVERED, beacon node will tell the closest edge node if to admit, w/o independent decision
+
+        return false;
+    }
+
+    bool CoveredEdgeWrapper::processDirectoryUpdateRequest_(MessageBase* control_request_ptr)
+    {
+        // TODO
+
+        // NOTE: For COVERED, beacon node will tell the closest edge node if to admit, w/o independent decision
+
+        return false;
     }
 
     bool CoveredEdgeWrapper::processOtherControlRequest_(MessageBase* control_request_ptr)
     {
         // TODO
+
+        return false;
     }
 }

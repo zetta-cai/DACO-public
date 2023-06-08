@@ -47,7 +47,7 @@ namespace covered
 
         // Invoke admitInternal_/evictInternal_ and update invalidity_map_
         void admit(const Key& key, const Value& value);
-        void evict();
+        void evict(Key& key, Value& value);
         
         // In units of bytes
         uint32_t getSize() const; // sum of internal size (each individual local cache) and external size (metadata for edge caching)
@@ -56,7 +56,7 @@ namespace covered
         static const std::string kClassName;
 
         virtual void admitInternal_(const Key& key, const Value& value) = 0;
-        virtual Key evictInternal_() = 0;
+        virtual void evictInternal_(Key& key, Value& value) = 0;
 
         // In units of bytes
         virtual uint32_t getSizeInternal_() const = 0;

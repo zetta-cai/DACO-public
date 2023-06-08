@@ -50,6 +50,7 @@ namespace covered
         // Return if edge node is finished
         bool processControlRequest_(MessageBase* control_request_ptr);
         virtual bool processDirectoryLookupRequest_(MessageBase* control_request_ptr) = 0;
+        virtual bool processDirectoryUpdateRequest_(MessageBase* control_request_ptr) = 0;
         virtual bool processOtherControlRequest_(MessageBase* control_request_ptr) = 0;
     protected:
         const std::string cache_name_;

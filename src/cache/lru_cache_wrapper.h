@@ -26,7 +26,7 @@ namespace covered
         static const std::string kClassName;
 
         virtual void admitInternal_(const Key& key, const Value& value) override;
-        virtual Key evictInternal_() override;
+        virtual void evictInternal_(Key& key, Value& value) override;
 
         // In units of bytes
         virtual uint32_t getSizeInternal_() const override;

@@ -62,9 +62,11 @@ namespace covered
     void BasicEdgeWrapper::triggerIndependentAdmission_(const Key& key, const Value& value)
     {
         assert(edge_cache_ptr_ != NULL);
+        assert(cooperation_wrapper_ptr_ != NULL);
 
         // Independently admit the new key-value pair into local edge cache
         edge_cache_ptr_->admit(key, value);
+        cooperation_wrapper_ptr_->updateDirectory(key, true);
 
         // Evict until cache size <= cache capacity
         uint32_t cache_capacity = edge_cache_ptr_->getCapacityBytes();
@@ -77,7 +79,10 @@ namespace covered
             }
             else // Exceed capacity limitation
             {
-                edge_cache_ptr_->evict();
+                Key victim_key;
+                Value victim_value;
+                edge_cache_ptr_->evict(victim_key, victim_value);
+                cooperation_wrapper_ptr_->updateDirectory(victim_key, false);
                 continue;
             }
         }
@@ -102,13 +107,41 @@ namespace covered
 
         // Lookup local directory information and randomly select a target edge index
         bool is_directory_exist = false;
-        uint32_t target_edge_idx = 0;
-        cooperation_wrapper_ptr_->getTargetEdgeIdxForDirectoryLookupRequest(tmp_key, is_directory_exist, target_edge_idx);
+        DirectoryInfo directory_info;
+        cooperation_wrapper_ptr_->lookupLocalDirectory(tmp_key, is_directory_exist, directory_info);
 
         // Send back a directory lookup response
-        DirectoryLookupResponse directory_lookup_response(tmp_key, is_directory_exist, target_edge_idx);
+        DirectoryLookupResponse directory_lookup_response(tmp_key, is_directory_exist, directory_info);
         DynamicArray control_response_msg_payload(directory_lookup_response.getMsgPayloadSize());
         directory_lookup_response.serialize(control_response_msg_payload);
+        PropagationSimulator::propagateFromNeighborToEdge();
+        edge_recvreq_socket_server_ptr_->send(control_response_msg_payload);
+
+        return is_finish;
+    }
+
+    bool BasicEdgeWrapper::processDirectoryUpdateRequest_(MessageBase* control_request_ptr)
+    {
+        assert(control_request_ptr != NULL);
+        assert(control_request_ptr->getMessageType() == MessageType::kDirectoryUpdateRequest);
+        assert(cooperation_wrapper_ptr_ != NULL);
+        assert(edge_recvreq_socket_server_ptr_ != NULL);
+
+        bool is_finish = false;
+
+        // Get key from directory update request
+        const DirectoryUpdateRequest* const directory_update_request_ptr = static_cast<const DirectoryUpdateRequest*>(control_request_ptr);
+        Key tmp_key = directory_update_request_ptr->getKey();
+        bool is_admit = directory_update_request_ptr->isDirectoryExist();
+        DirectoryInfo directory_info = directory_update_request_ptr->getDirectoryInfo();
+
+        // Update local directory information
+        cooperation_wrapper_ptr_->updateLocalDirectory(tmp_key, is_admit, directory_info);
+
+        // Send back a directory update response
+        DirectoryUpdateResponse directory_update_response(tmp_key);
+        DynamicArray control_response_msg_payload(directory_update_response.getMsgPayloadSize());
+        directory_update_response.serialize(control_response_msg_payload);
         PropagationSimulator::propagateFromNeighborToEdge();
         edge_recvreq_socket_server_ptr_->send(control_response_msg_payload);
 

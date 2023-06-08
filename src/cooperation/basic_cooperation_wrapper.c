@@ -19,7 +19,7 @@ namespace covered
 
     BasicCooperationWrapper::~BasicCooperationWrapper() {}
 
-    bool BasicCooperationWrapper::lookupBeaconDirectory_(const Key& key, bool& is_directory_exist, uint32_t& target_edge_idx)
+    bool BasicCooperationWrapper::lookupBeaconDirectory_(const Key& key, bool& is_directory_exist, DirectoryInfo& directory_info)
     {
         // The current edge node must NOT be the beacon node for the key
         verifyCurrentIsNotBeacon_(key);
@@ -65,7 +65,7 @@ namespace covered
                 // Get directory information from the control response message
                 const DirectoryLookupResponse* const directory_lookup_response_ptr = static_cast<const DirectoryLookupResponse*>(control_response_ptr);
                 is_directory_exist = directory_lookup_response_ptr->isDirectoryExist();
-                target_edge_idx = directory_lookup_response_ptr->getTargetEdgeIdx();
+                directory_info = directory_lookup_response_ptr->getDirectoryInfo();
 
                 // Release the control response message
                 delete control_response_ptr;
@@ -151,7 +151,7 @@ namespace covered
         return is_finish;
     }
 
-    bool BasicCooperationWrapper::updateBeaconDirectory_(const Key& key, const bool& is_admit, const uint32_t& target_edge_idx)
+    bool BasicCooperationWrapper::updateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info)
     {
         // The current edge node must NOT be the beacon node for the key
         verifyCurrentIsNotBeacon_(key);
@@ -161,12 +161,10 @@ namespace covered
 
         bool is_finish = false;
 
-        // TODO: END HERE
-
-        // Prepare directory lookup request to check directory information in beacon node
-        DirectoryLookupRequest directory_lookup_request(key);
-        DynamicArray control_request_msg_payload(directory_lookup_request.getMsgPayloadSize());
-        directory_lookup_request.serialize(control_request_msg_payload);
+        // Prepare directory update request to check directory information in beacon node
+        DirectoryUpdateRequest directory_update_request(key, is_admit, directory_info);
+        DynamicArray control_request_msg_payload(directory_update_request.getMsgPayloadSize());
+        directory_update_request.serialize(control_request_msg_payload);
 
         while (true) // Timeout-and-retry mechanism
         {
@@ -194,12 +192,7 @@ namespace covered
             {
                 // Receive the control response message successfully
                 MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_request_msg_payload);
-                assert(control_response_ptr != NULL && control_response_ptr->getMessageType() == MessageType::kDirectoryLookupResponse);
-
-                // Get directory information from the control response message
-                const DirectoryLookupResponse* const directory_lookup_response_ptr = static_cast<const DirectoryLookupResponse*>(control_response_ptr);
-                is_directory_exist = directory_lookup_response_ptr->isDirectoryExist();
-                target_edge_idx = directory_lookup_response_ptr->getTargetEdgeIdx();
+                assert(control_response_ptr != NULL && control_response_ptr->getMessageType() == MessageType::kDirectoryUpdateResponse);
 
                 // Release the control response message
                 delete control_response_ptr;

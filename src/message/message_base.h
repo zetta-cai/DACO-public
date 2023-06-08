@@ -31,7 +31,9 @@ namespace covered
         kRedirectedGetRequest,
         kRedirectedGetResponse,
         kDirectoryLookupRequest,
-        kDirectoryLookupResponse
+        kDirectoryUpdateRequest,
+        kDirectoryLookupResponse,
+        kDirectoryUpdateResponse
     };
 
     enum Hitflag

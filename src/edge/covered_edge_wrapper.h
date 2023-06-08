@@ -33,6 +33,7 @@ namespace covered
 
         // Return if edge node is finished
         virtual bool processDirectoryLookupRequest_(MessageBase* control_request_ptr) override;
+        virtual bool processDirectoryUpdateRequest_(MessageBase* control_request_ptr) override;
         virtual bool processOtherControlRequest_(MessageBase* control_request_ptr) override;
     };
 }

@@ -1,0 +1,49 @@
+/*
+ * DirectoryInfo: directory information for DHT-based content discovery.
+ * 
+ * By Siyuan Sheng (2023.06.08).
+ */
+
+#ifndef DIRECTORY_INFO_H
+#define DIRECTORY_INFO_H
+
+#include <string>
+
+#include "common/dynamic_array.h"
+
+namespace covered
+{
+    class DirectoryInfo
+    {
+    public:
+        DirectoryInfo();
+        DirectoryInfo(const uint32_t& target_edge_idx);
+        ~DirectoryInfo();        
+
+        uint32_t getTargetEdgeIdx() const;
+        void setTargetEdgeIdx(const uint32_t& target_edge_idx);
+
+        uint32_t getDirectoryInfoPayloadSize() const;
+        uint32_t serialize(DynamicArray& msg_payload, const uint32_t& position) const;
+        uint32_t deserialize(const DynamicArray& msg_payload, const uint32_t& position);
+
+        DirectoryInfo& operator=(const DirectoryInfo& other);
+        bool operator==(const DirectoryInfo& other) const; // To be used by DirectoryInfo in std::unordered_set
+    private:
+        static const std::string kClassName;
+
+        uint32_t target_edge_idx_;
+    };
+
+    // To be used by DirectoryInfo in std::unordered_set
+    class DirectoryInfoHasher
+    {
+    public:
+        size_t operator()(const DirectoryInfo& directory_info) const
+        {
+            return std::hash<uint32_t>{}(directory_info.getTargetEdgeIdx());
+        }
+    };
+}
+
+#endif

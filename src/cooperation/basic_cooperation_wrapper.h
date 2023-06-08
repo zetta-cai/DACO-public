@@ -12,6 +12,7 @@
 #include "common/key.h"
 #include "common/value.h"
 #include "cooperation/cooperation_wrapper_base.h"
+#include "cooperation/directory_info.h"
 
 namespace covered
 {
@@ -24,9 +25,9 @@ namespace covered
         static const std::string kClassName;
 
         // Return if edge node is finished
-        virtual bool lookupBeaconDirectory_(const Key& key, bool& is_directory_exist, uint32_t& target_edge_idx) override;
+        virtual bool lookupBeaconDirectory_(const Key& key, bool& is_directory_exist, DirectoryInfo& directory_info) override;
         virtual bool redirectGetToTarget_(const Key& key, Value& value, bool& is_cooperative_cached) override;
-        virtual bool updateBeaconDirectory_(const Key& key, const bool& is_admit, const uint32_t& target_edge_idx) override;
+        virtual bool updateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info) override;
     };
 }
 

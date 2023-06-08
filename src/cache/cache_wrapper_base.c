@@ -109,17 +109,17 @@ namespace covered
         return;
     }
     
-    void CacheWrapperBase::evict()
+    void CacheWrapperBase::evict(Key& key, Value& value)
     {
-        Key victim_key = evictInternal_();
-        if (invalidity_map_.find(victim_key) != invalidity_map_.end()) // key to be evicted should already be cached
+        evictInternal_(key, value);
+        if (invalidity_map_.find(key) != invalidity_map_.end()) // key to be evicted should already be cached
         {
-            invalidity_map_.erase(victim_key);
+            invalidity_map_.erase(key);
         }
         else
         {
             std::ostringstream oss;
-            oss << "victim key " << victim_key.getKeystr() << " does not exist in invalidity_map_ for evict()";
+            oss << "victim key " << key.getKeystr() << " does not exist in invalidity_map_ for evict()";
             Util::dumpWarnMsg(kClassName, oss.str());
             
             // NO need to update invalidity_map_

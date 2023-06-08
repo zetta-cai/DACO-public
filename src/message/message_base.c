@@ -6,6 +6,7 @@
 
 #include "common/util.h"
 #include "message/data_message.h"
+#include "message/control_message.h"
 
 namespace covered
 {
@@ -46,14 +47,34 @@ namespace covered
                 message_type_str = "kLocalDelResponse";
                 break;
             }
+            case MessageType::kRedirectedGetRequest:
+            {
+                message_type_str = "kRedirectedGetRequest";
+                break;
+            }
+            case MessageType::kRedirectedGetResponse:
+            {
+                message_type_str = "kRedirectedGetResponse";
+                break;
+            }
             case MessageType::kDirectoryLookupRequest:
             {
                 message_type_str = "kDirectoryLookupRequest";
                 break;
             }
+            case MessageType::kDirectoryUpdateRequest:
+            {
+                message_type_str = "kDirectoryUpdateRequest";
+                break;
+            }
             case MessageType::kDirectoryLookupResponse:
             {
                 message_type_str = "kDirectoryLookupResponse";
+                break;
+            }
+            case MessageType::kDirectoryUpdateResponse:
+            {
+                message_type_str = "kDirectoryUpdateResponse";
                 break;
             }
             default:
@@ -172,6 +193,21 @@ namespace covered
                 message_ptr = new GlobalDelRequest(msg_payload);
                 break;
             }
+            case MessageType::kRedirectedGetRequest:
+            {
+                message_ptr = new RedirectedGetRequest(msg_payload);
+                break;
+            }
+            case MessageType::kDirectoryLookupRequest:
+            {
+                message_ptr = new DirectoryLookupRequest(msg_payload);
+                break;
+            }
+            case MessageType::kDirectoryUpdateRequest:
+            {
+                message_ptr = new DirectoryUpdateRequest(msg_payload);
+                break;
+            }
             default:
             {
                 std::ostringstream oss;
@@ -225,6 +261,21 @@ namespace covered
             case MessageType::kGlobalDelRequest:
             {
                 message_ptr = new GlobalDelResponse(msg_payload);
+                break;
+            }
+            case MessageType::kRedirectedGetResponse:
+            {
+                message_ptr = new RedirectedGetResponse(msg_payload);
+                break;
+            }
+            case MessageType::kDirectoryLookupResponse:
+            {
+                message_ptr = new DirectoryLookupResponse(msg_payload);
+                break;
+            }
+            case MessageType::kDirectoryUpdateResponse:
+            {
+                message_ptr = new DirectoryUpdateResponse(msg_payload);
                 break;
             }
             default:
@@ -436,7 +487,7 @@ namespace covered
     {
         checkIsValid_();
         // TODO: Update isControlRequest() after introducing control requests
-        if (message_type_ == MessageType::kDirectoryLookupRequest)
+        if (message_type_ == MessageType::kDirectoryLookupRequest || message_type_ == MessageType::kDirectoryUpdateRequest)
         {
             return true;
         }
@@ -450,7 +501,7 @@ namespace covered
     {
         checkIsValid_();
         // TODO: Update isControlResponse() after introducing control responses
-        if (message_type_ == MessageType::kDirectoryLookupResponse)
+        if (message_type_ == MessageType::kDirectoryLookupResponse || message_type_ == MessageType::kDirectoryUpdateResponse)
         {
             return true;
         }

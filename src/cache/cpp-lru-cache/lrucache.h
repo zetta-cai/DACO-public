@@ -29,7 +29,7 @@ namespace covered {
 		bool update(const Key& key, const Value& value);
 
 		void admit(const Key& key, const Value& value);
-        Key evict();
+        void evict(Key& key, Value& value);
 		
 		//bool exists(const Key& key) const;
 		
