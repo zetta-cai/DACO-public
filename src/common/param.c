@@ -1,5 +1,6 @@
 #include "common/param.h"
 
+#include <assert.h>
 #include <cstdlib> // exit
 #include <sstream> // ostringstream
 
@@ -72,6 +73,8 @@ namespace covered
         propagation_latency_edgecloud_ = propagation_latency_edgecloud;
         workload_name_ = workload_name;
         checkWorkloadName_();
+
+        verifyIntegrity_();
 
         is_valid_ = true;
         return;
@@ -217,7 +220,7 @@ namespace covered
         {
             std::ostringstream oss;
             oss << "main class name " << main_class_name_ << " is not supported!";
-            Util::dumpErrorMsg(kClassName, main_class_name_);
+            Util::dumpErrorMsg(kClassName, oss.str());
             exit(1);
         }
         return;
@@ -229,7 +232,7 @@ namespace covered
         {
             std::ostringstream oss;
             oss << "cache name " << cache_name_ << " is not supported!";
-            Util::dumpErrorMsg(kClassName, cache_name_);
+            Util::dumpErrorMsg(kClassName, oss.str());
             exit(1);
         }
         return;
@@ -241,7 +244,7 @@ namespace covered
         {
             std::ostringstream oss;
             oss << "cloud storage " << cloud_storage_ << " is not supported!";
-            Util::dumpErrorMsg(kClassName, cloud_storage_);
+            Util::dumpErrorMsg(kClassName, oss.str());
             exit(1);
         }
         return;
@@ -253,7 +256,7 @@ namespace covered
         {
             std::ostringstream oss;
             oss << "hash name " << hash_name_ << " is not supported!";
-            Util::dumpErrorMsg(kClassName, hash_name_);
+            Util::dumpErrorMsg(kClassName, oss.str());
             exit(1);
         }
         return;
@@ -265,7 +268,26 @@ namespace covered
         {
             std::ostringstream oss;
             oss << "workload name " << workload_name_ << " is not supported!";
-            Util::dumpErrorMsg(kClassName, workload_name_);
+            Util::dumpErrorMsg(kClassName, oss.str());
+            exit(1);
+        }
+        return;
+    }
+
+    void Param::verifyIntegrity_()
+    {
+        assert(capacity_bytes_ > 0);
+        assert(clientcnt_ > 0);
+        assert(edgecnt_ > 0);
+        assert(keycnt_ > 0);
+        assert(opcnt_ > 0);
+        assert(perclient_workercnt_ > 0);
+
+        if (clientcnt_ < edgecnt_)
+        {
+            std::ostringstream oss;
+            oss << "clientcnt " << clientcnt_ << " should >= edgecnt " << edgecnt_ << " for edge-client mapping!";
+            Util::dumpErrorMsg(kClassName, oss.str());
             exit(1);
         }
         return;

@@ -60,6 +60,7 @@ namespace covered
         static void checkCloudStorage_();
         static void checkHashName_();
         static void checkWorkloadName_();
+        static void verifyIntegrity_();
 
         static void checkIsValid_();
 

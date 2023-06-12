@@ -203,6 +203,11 @@ namespace covered
             edge_sendreq_tobeacon_socket_client_ptr_->setRemoteAddrForClient(beacon_edge_addr);
         }
 
+        // TMPDEBUG
+        //std::ostringstream oss;
+        //oss << "beacon edge idx: " << beacon_edge_idx << "; current edge idx: " << current_edge_idx;
+        //Util::dumpDebugMsg(base_instance_name_, oss.str());
+
         return;
     }
 
@@ -221,6 +226,11 @@ namespace covered
         uint16_t target_edge_port = Util::getEdgeRecvreqPort(target_edge_idx);
         NetworkAddr target_edge_addr(target_edge_ipstr, target_edge_port);
         edge_sendreq_totarget_socket_client_ptr_->setRemoteAddrForClient(target_edge_addr);
+
+        // TMPDEBUG
+        //std::ostringstream oss;
+        //oss << "target edge idx: " << target_edge_idx << "; current edge idx: " << current_edge_idx;
+        //Util::dumpDebugMsg(base_instance_name_, oss.str());
         
         return;
     }

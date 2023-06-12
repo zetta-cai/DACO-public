@@ -40,9 +40,11 @@ namespace covered
 
         // Map edgecnt edge nodes into DHT hash ring
         uint32_t edgecnt = Param::getEdgecnt();
+        assert(edgecnt > 0);
         uint32_t peredge_hash_ring_length = DHT_HASH_RING_LENGTH / edgecnt;
 
         // Calculate beacon node edge idx
+        assert(peredge_hash_ring_length > 0);
         uint32_t beacon_edge_idx = hash_ring_value / peredge_hash_ring_length;
         if (beacon_edge_idx >= edgecnt)
         {

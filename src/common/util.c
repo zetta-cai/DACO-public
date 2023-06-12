@@ -287,7 +287,9 @@ namespace covered
 
     uint32_t Util::getClosestEdgeIdx(const uint32_t& client_idx)
     {
+        assert(Param::getEdgecnt() > 0);
         uint32_t peredge_clientcnt = Param::getClientcnt() / Param::getEdgecnt();
+        assert(peredge_clientcnt > 0);
         uint32_t closest_edge_idx = client_idx / peredge_clientcnt;
         if (closest_edge_idx >= Param::getEdgecnt())
         {
@@ -362,6 +364,7 @@ namespace covered
         }
         else
         {
+            assert(max_fragment_payload > 0);
             fragment_cnt = (msg_payload_size - 1) / max_fragment_payload + 1;
         }
         return fragment_cnt;

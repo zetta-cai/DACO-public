@@ -48,6 +48,8 @@ namespace covered
 
     void FacebookWorkloadWrapper::overwriteWorkloadParameters_()
     {
+        assert(Param::getClientcnt() > 0);
+        assert(Param::getPerclientWorkercnt() > 0);
         uint32_t perworker_opcnt = Param::getOpcnt() / Param::getClientcnt() / Param::getPerclientWorkercnt();
         uint32_t perclient_workercnt = Param::getPerclientWorkercnt();
         uint32_t keycnt = Param::getKeycnt();

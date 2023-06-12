@@ -4,6 +4,8 @@
 #include <sstream>
 #include <time.h> // struct timespec
 
+#include <unistd.h> // usleep // TMPDEBUG
+
 #include "benchmark/client_param.h"
 #include "common/dynamic_array.h"
 #include "common/util.h"
@@ -25,7 +27,7 @@ namespace covered
             Util::dumpErrorMsg(kClassName, "worker_param_ptr is NULL!");
             exit(1);
         }
-        ClientParam* client_param_ptr = worker_param_ptr_->getClientParamPtr();
+        ClientParam* client_param_ptr = worker_param_ptr->getClientParamPtr();
         assert(client_param_ptr != NULL);
 
         // Differentiate different workers
@@ -87,6 +89,13 @@ namespace covered
             // Generate key-value request based on a specific workload
             WorkloadItem workload_item = workload_generator_ptr->generateItem(*worker_item_randgen_ptr_);
 
+            // TMPDEBUG
+            //WorkloadItem workload_item(Key("123"), Value(200), WorkloadItemType::kWorkloadItemGet);
+            //if (client_param_ptr->getClientIdx() != 0)
+            //{
+            //    sleep(0.5);
+            //}
+
             DynamicArray local_response_msg_payload;
             uint32_t rtt_us = 0;
             bool is_finish = false;
@@ -97,9 +106,17 @@ namespace covered
             {
                 continue; // Go to check if client is still running
             }
-            
+
             // Process local response message to update statistics
             processLocalResponse_(local_response_msg_payload, rtt_us);
+
+            // TMPDEBUG
+            //is_finish = issueItemToEdge_(workload_item, local_response_msg_payload, rtt_us);
+            //if (is_finish) // Check is_finish
+            //{
+            //    continue; // Go to check if client is still running
+            //}
+            //processLocalResponse_(local_response_msg_payload, rtt_us);
 
             break;
         }
@@ -128,7 +145,7 @@ namespace covered
 
         // TMPDEBUG
         std::ostringstream oss;
-        oss << "worker" << worker_param_ptr_->getLocalWorkerIdx() << " issues a local request; type: " << MessageBase::messageTypeToString(local_request_ptr->getMessageType()) << "; keystr: " << workload_item.getKey().getKeystr() << "; valuesize: " << workload_item.getValue().getValuesize() << std::endl << "Msg payload: " << local_request_msg_payload.getBytesHexstr();
+        oss << "issue a local request; type: " << MessageBase::messageTypeToString(local_request_ptr->getMessageType()) << "; keystr: " << workload_item.getKey().getKeystr() << "; valuesize: " << workload_item.getValue().getValuesize();// << std::endl << "Msg payload: " << local_request_msg_payload.getBytesHexstr();
         Util::dumpDebugMsg(instance_name_, oss.str());
 
         // Timeout-and-retry mechanism
@@ -254,7 +271,7 @@ namespace covered
 
         // TMPDEBUG
         std::ostringstream oss;
-        oss << "worker" << worker_param_ptr_->getLocalWorkerIdx() << " receives a local response; type: " << MessageBase::messageTypeToString(local_response_message_type) << "; keystr: " << tmp_key.getKeystr() << "; valuesize: " << tmp_value.getValuesize() << "; hitflag: " << MessageBase::hitflagToString(hitflag) << std::endl << "Msg payload: " << local_response_msg_payload.getBytesHexstr();
+        oss << "receive a local response; type: " << MessageBase::messageTypeToString(local_response_message_type) << "; keystr: " << tmp_key.getKeystr() << "; valuesize: " << tmp_value.getValuesize() << "; hitflag: " << MessageBase::hitflagToString(hitflag);// << std::endl << "Msg payload: " << local_response_msg_payload.getBytesHexstr();
         Util::dumpDebugMsg(instance_name_, oss.str());
 
         // Release local response message

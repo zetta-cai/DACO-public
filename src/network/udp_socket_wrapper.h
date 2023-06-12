@@ -48,7 +48,7 @@ namespace covered
 
         // Note: remote address of UDP client is always that set in the constructor
         // Note: remote address of UDP server is that set in the most recent successful recv (i.e., receive all fragment payloads of a message payload)
-        NetworkAddr remote_addr_; // for UDP client (fixed) / server (changed)
+        NetworkAddr remote_addr_; // for UDP client (fixed) or server (changed)
 
         UdpPktSocket* pkt_socket_ptr_; // send/recv payload of each single UDP packet
         MsgFragStats msg_frag_stats_; // reconstruct each message based on received fragments

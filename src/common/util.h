@@ -53,10 +53,10 @@ namespace covered
         // (1.2) File I/O
         static bool isFileExist(const std::string& filepath, const bool& is_silent=false);
         static bool isDirectoryExist(const std::string& dirpath, const bool& is_silent=false);
-        // NOTE: avoid confliction in CLI::createRequiredDirectories_ (statistics / ROcksDB directory)
+        // NOTE: avoid confliction in CLI::createRequiredDirectories_ (statistics or RocksDB directory)
         static void createDirectory(const std::string& dirpath);
         // Open a file (create the file if not exist)
-        // NOTE: no confliction as each file (statistics / RocksDB) is accessed by a unique thread (client / cloud)
+        // NOTE: no confliction as each file (statistics or RocksDB) is accessed by a unique thread (client or cloud)
         static std::fstream* openFile(const std::string& filepath, std::ios_base::openmode mode);
         static std::string getParentDirpath(const std::string& filepath);
         static std::string getFilenameFromFileath(const std::string& filepath);

@@ -339,7 +339,7 @@ namespace covered
         is_valid_ = true;
     }
 
-    // NOTE: CANNOT call pure method in constructor/destructor, as the derived object has not been contructed / has already been destructed
+    // NOTE: CANNOT call pure method in constructor or destructor, as the derived object has not been contructed or has already been destructed
     //MessageBase::MessageBase(const DynamicArray& msg_payload)
     //{
     //    deserialize(msg_payload);

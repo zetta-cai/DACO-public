@@ -69,6 +69,11 @@ namespace covered
         assert(edge_cache_ptr_ != NULL);
         assert(cooperation_wrapper_ptr_ != NULL);
 
+        // TMPDEBUG
+        //std::ostringstream oss;
+        //oss << "admit key: " << key.getKeystr() << "; value: " << (value.isDeleted()?"true":"false") << "; //valuesize: " << value.getValuesize();
+        //Util::dumpDebugMsg(instance_name_, oss.str());
+
         // Independently admit the new key-value pair into local edge cache
         edge_cache_ptr_->admit(key, value);
         cooperation_wrapper_ptr_->updateDirectory(key, true);
@@ -88,6 +93,13 @@ namespace covered
                 Value victim_value;
                 edge_cache_ptr_->evict(victim_key, victim_value);
                 cooperation_wrapper_ptr_->updateDirectory(victim_key, false);
+
+                // TMPDEBUG
+                //oss.clear();
+                //oss.str("");
+                //oss << "evict key: " << victim_key.getKeystr() << "; value: " << (victim_value.isDeleted()?"true":"false") << "; valuesize: " << victim_value.getValuesize();
+                //Util::dumpDebugMsg(instance_name_, oss.str());
+
                 continue;
             }
         }

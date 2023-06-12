@@ -164,7 +164,7 @@ namespace covered
 
             // TMPDEBUG
             std::ostringstream oss;
-            oss << "edge" << edge_param_ptr_->getEdgeIdx() << " receives a local request; type: " << MessageBase::messageTypeToString(data_request_ptr->getMessageType()) << "; keystr: " << tmp_key.getKeystr();
+            oss << "receive a local request; type: " << MessageBase::messageTypeToString(data_request_ptr->getMessageType()) << "; keystr: " << tmp_key.getKeystr();
             Util::dumpDebugMsg(base_instance_name_, oss.str());
 
             // Block until not invalidated
@@ -257,6 +257,11 @@ namespace covered
         local_get_response.serialize(local_response_msg_payload);
         PropagationSimulator::propagateFromEdgeToClient();
         edge_recvreq_socket_server_ptr_->send(local_response_msg_payload);
+
+        // TMPDEBUG
+        std::ostringstream oss;
+        oss << "issue a local response; type: " << MessageBase::messageTypeToString(local_get_response.getMessageType()) << "; keystr:" << local_get_response.getKey().getKeystr();
+        Util::dumpDebugMsg(base_instance_name_, oss.str());
 
         return is_finish;
     }
@@ -415,7 +420,6 @@ namespace covered
                 break;
             }
         }
-        assert(!is_invalidated);
 
         return is_finish;
     }
@@ -433,7 +437,7 @@ namespace covered
 
         // TMPDEBUG
         std::ostringstream oss;
-        oss << "edge" << edge_param_ptr_->getEdgeIdx() << " issues a global request; type: " << MessageBase::messageTypeToString(global_get_request.getMessageType()) << "; keystr:" << key.getKeystr() << std::endl << "Msg payload: " << global_request_msg_payload.getBytesHexstr();
+        oss << "issue a global request; type: " << MessageBase::messageTypeToString(global_get_request.getMessageType()) << "; keystr:" << key.getKeystr();
         Util::dumpDebugMsg(base_instance_name_, oss.str());
 
         while (true) // Timeout-and-retry
@@ -467,6 +471,12 @@ namespace covered
                 // Get value from global response message
                 const GlobalGetResponse* const global_get_response_ptr = static_cast<const GlobalGetResponse*>(global_response_ptr);
                 value = global_get_response_ptr->getValue();
+
+                // TMPDEBUG
+                oss.clear();
+                oss.str("");
+                oss << "receive a global response; type: " << MessageBase::messageTypeToString(global_response_ptr->getMessageType()) << "; keystr:" << global_get_response_ptr->getKey().getKeystr();
+                Util::dumpDebugMsg(base_instance_name_, oss.str());
 
                 // Release global response message
                 delete global_response_ptr;

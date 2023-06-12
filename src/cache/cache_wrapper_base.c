@@ -52,7 +52,7 @@ namespace covered
         }
         else
         {
-            return true;
+            return iter->second;
         }
     }
 

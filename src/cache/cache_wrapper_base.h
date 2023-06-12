@@ -41,7 +41,7 @@ namespace covered
         virtual bool update(const Key& key, const Value& value) = 0;
         bool remove(const Key& key);
 
-        // If get() / update() / remove() returns false (i.e., key is still uncached), EdgeWrapper will invoke needIndependentAdmit() for admission policy
+        // If get() or update() or remove() returns false (i.e., key is still uncached), EdgeWrapper will invoke needIndependentAdmit() for admission policy
         // NOTE: cache methods w/ LRU-based independent admission policy (i.e., always admit) will always return true, while others will return true/false based on other independent admission policy
         // NOTE: only COVERED never needs independent admission (i.e., always returns false)
         virtual bool needIndependentAdmit(const Key& key) = 0;
