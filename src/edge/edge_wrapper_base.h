@@ -52,6 +52,8 @@ namespace covered
         virtual bool processDirectoryLookupRequest_(MessageBase* control_request_ptr) = 0;
         virtual bool processDirectoryUpdateRequest_(MessageBase* control_request_ptr) = 0;
         virtual bool processOtherControlRequest_(MessageBase* control_request_ptr) = 0;
+
+        std::string base_instance_name_;
     protected:
         const std::string cache_name_;
         EdgeParam* edge_param_ptr_;

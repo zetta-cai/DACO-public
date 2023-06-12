@@ -32,10 +32,16 @@ namespace covered
 
     CooperationWrapperBase::CooperationWrapperBase(const std::string& hash_name, EdgeParam* edge_param_ptr)
     {
+        // Differentiate CooperationWrapper in different edge nodes
         assert(edge_param_ptr != NULL);
-        edge_param_ptr_ = edge_param_ptr;
+        std::ostringstream oss;
+        oss << kClassName << " " << edge_param_ptr->getEdgeIdx();
+        base_instance_name_ = oss.str();
 
-        dht_wrapper_ptr_ = new DhtWrapper(hash_name);
+        edge_param_ptr_ = edge_param_ptr;
+        assert(edge_param_ptr_ != NULL);
+
+        dht_wrapper_ptr_ = new DhtWrapper(hash_name, edge_param_ptr);
         assert(dht_wrapper_ptr_ != NULL);
 
         // NOTE: we use edge0 as default remote address, but we will reset remote address of the socket clients based on the key later
@@ -108,7 +114,7 @@ namespace covered
             {
                 std::ostringstream oss;
                 oss << "current edge node " << current_edge_idx << " should not be the target edge node for cooperative edge caching under a local cache miss!";
-                Util::dumpWarnMsg(kClassName, oss.str());
+                Util::dumpWarnMsg(base_instance_name_, oss.str());
                 return is_finish; // NOTE: is_finish is still false, as edge is STILL running
             }
 

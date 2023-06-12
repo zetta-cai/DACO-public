@@ -35,6 +35,8 @@ namespace covered
         virtual bool processDirectoryLookupRequest_(MessageBase* control_request_ptr) override;
         virtual bool processDirectoryUpdateRequest_(MessageBase* control_request_ptr) override;
         virtual bool processOtherControlRequest_(MessageBase* control_request_ptr) override;
+
+        std::string instance_name_;
     };
 }
 

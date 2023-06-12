@@ -29,7 +29,14 @@ namespace covered
             Util::dumpErrorMsg(kClassName, "client_param_ptr is NULL!");
             exit(1);
         }
+
+        // Differentiate different clients
+        std::ostringstream oss;
+        oss << kClassName << " " << client_param_ptr->getClientIdx();
+        instance_name_ = oss.str();
+        
         client_param_ptr_ = client_param_ptr;
+        assert(client_param_ptr_ != NULL);
     }
 
     ClientWrapper::~ClientWrapper()
@@ -60,7 +67,7 @@ namespace covered
             {
                 std::ostringstream oss;
                 oss << "client " << client_param_ptr_->getClientIdx() << " failed to launch worker " << local_worker_idx << " (error code: " << pthread_returncode << ")" << std::endl;
-                covered::Util::dumpErrorMsg(kClassName, oss.str());
+                covered::Util::dumpErrorMsg(instance_name_, oss.str());
                 exit(1);
             }
         }
@@ -73,7 +80,7 @@ namespace covered
             {
                 std::ostringstream oss;
                 oss << "client " << client_param_ptr_->getClientIdx() << " failed to join worker " << local_worker_idx << " (error code: " << pthread_returncode << ")" << std::endl;
-                covered::Util::dumpErrorMsg(kClassName, oss.str());
+                covered::Util::dumpErrorMsg(instance_name_, oss.str());
                 exit(1);
             }
         }

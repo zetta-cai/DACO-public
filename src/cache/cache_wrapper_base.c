@@ -11,12 +11,12 @@ namespace covered
 {
     const std::string CacheWrapperBase::kClassName("CacheWrapperBase");
 
-    CacheWrapperBase* CacheWrapperBase::getEdgeCache(const std::string& cache_name, const uint32_t& capacity_bytes)
+    CacheWrapperBase* CacheWrapperBase::getEdgeCache(const std::string& cache_name, const uint32_t& capacity_bytes, EdgeParam* edge_param_ptr)
     {
         CacheWrapperBase* cache_ptr = NULL;
         if (cache_name == Param::LRU_CACHE_NAME)
         {
-            cache_ptr = new LruCacheWrapper(capacity_bytes);
+            cache_ptr = new LruCacheWrapper(capacity_bytes, edge_param_ptr);
         }
         else
         {
@@ -30,8 +30,14 @@ namespace covered
         return cache_ptr;
     }
 
-    CacheWrapperBase::CacheWrapperBase(const uint32_t& capacity_bytes) : capacity_bytes_(capacity_bytes)
+    CacheWrapperBase::CacheWrapperBase(const uint32_t& capacity_bytes, EdgeParam* edge_param_ptr) : capacity_bytes_(capacity_bytes)
     {
+        // Differentiate local edge cache in different edge nodes
+        assert(edge_param_ptr != NULL);
+        std::ostringstream oss;
+        oss << kClassName << " " << edge_param_ptr->getEdgeIdx();
+        base_instance_name_ = oss.str();
+
         invalidity_map_.clear();
     }
     
@@ -60,7 +66,7 @@ namespace covered
         {
             std::ostringstream oss;
             oss << "key " << key.getKeystr() << " does not exist in invalidity_map_ for invalidate()";
-            Util::dumpWarnMsg(kClassName, oss.str());
+            Util::dumpWarnMsg(base_instance_name_, oss.str());
 
             invalidity_map_.insert(std::pair<Key, bool>(key, true));
         }
@@ -77,7 +83,7 @@ namespace covered
         {
             std::ostringstream oss;
             oss << "key " << key.getKeystr() << " does not exist in invalidity_map_ for validate()";
-            Util::dumpWarnMsg(kClassName, oss.str());
+            Util::dumpWarnMsg(base_instance_name_, oss.str());
 
             invalidity_map_.insert(std::pair<Key, bool>(key, false));
         }
@@ -102,7 +108,7 @@ namespace covered
         {
             std::ostringstream oss;
             oss << "key " << key.getKeystr() << " already exists in invalidity_map_ (invalidity: " << (invalidity_map_[key]?"true":"false") << "; map size: " << invalidity_map_.size() << ") for admit()";
-            Util::dumpWarnMsg(kClassName, oss.str());
+            Util::dumpWarnMsg(base_instance_name_, oss.str());
 
             invalidity_map_[key] = false;
         }
@@ -120,7 +126,7 @@ namespace covered
         {
             std::ostringstream oss;
             oss << "victim key " << key.getKeystr() << " does not exist in invalidity_map_ for evict()";
-            Util::dumpWarnMsg(kClassName, oss.str());
+            Util::dumpWarnMsg(base_instance_name_, oss.str());
             
             // NO need to update invalidity_map_
         }

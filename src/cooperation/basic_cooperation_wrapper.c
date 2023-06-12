@@ -15,6 +15,11 @@ namespace covered
 
     BasicCooperationWrapper::BasicCooperationWrapper(const std::string& hash_name, EdgeParam* edge_param_ptr) : CooperationWrapperBase(hash_name, edge_param_ptr)
     {
+        // Differentiate CooperationWrapper in different edge nodes
+        assert(edge_param_ptr != NULL);
+        std::ostringstream oss;
+        oss << kClassName << " " << edge_param_ptr->getEdgeIdx();
+        instance_name_ = oss.str();
     }
 
     BasicCooperationWrapper::~BasicCooperationWrapper() {}
@@ -52,7 +57,7 @@ namespace covered
                 }
                 else
                 {
-                    Util::dumpWarnMsg(kClassName, "edge timeout to wait for control response");
+                    Util::dumpWarnMsg(instance_name_, "edge timeout to wait for control response");
                     continue; // Resend the control request message
                 }
             } // End of (is_timeout == true)
@@ -107,7 +112,7 @@ namespace covered
                 }
                 else
                 {
-                    Util::dumpWarnMsg(kClassName, "edge timeout to wait for redirected response");
+                    Util::dumpWarnMsg(instance_name_, "edge timeout to wait for redirected response");
                     continue; // Resend the redirected request message
                 }
             } // End of (is_timeout == true)
@@ -129,7 +134,7 @@ namespace covered
                 {
                     std::ostringstream oss;
                     oss << "target edge node does not cache the key " << key.getKeystr() << " in redirectGetToTarget_()!";
-                    Util::dumpWarnMsg(kClassName, oss.str());
+                    Util::dumpWarnMsg(instance_name_, oss.str());
 
                     is_cooperative_cached = false;
                 }
@@ -137,7 +142,7 @@ namespace covered
                 {
                     std::ostringstream oss;
                     oss << "invalid hitflag " << MessageBase::hitflagToString(hitflag) << " for redirectGetToTarget_()!";
-                    Util::dumpErrorMsg(kClassName, oss.str());
+                    Util::dumpErrorMsg(instance_name_, oss.str());
                     exit(1);
                 }
 
@@ -184,7 +189,7 @@ namespace covered
                 }
                 else
                 {
-                    Util::dumpWarnMsg(kClassName, "edge timeout to wait for control response");
+                    Util::dumpWarnMsg(instance_name_, "edge timeout to wait for control response");
                     continue; // Resend the control request message
                 }
             } // End of (is_timeout == true)

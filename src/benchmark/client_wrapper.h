@@ -28,6 +28,7 @@ namespace covered
 
         static void* launchWorker(void* worker_param_ptr);
 
+        std::string instance_name_;
         ClientParam* client_param_ptr_;
     };
 }

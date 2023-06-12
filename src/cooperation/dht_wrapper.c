@@ -1,6 +1,7 @@
 #include "cooperation/dht_wrapper.h"
 
 #include <assert.h>
+#include <sstream>
 
 #include "common/config.h"
 #include "common/param.h"
@@ -11,8 +12,14 @@ namespace covered
     const std::string DhtWrapper::kClassName("DhtWrapper");
     const uint32_t DhtWrapper::DHT_HASH_RING_LENGTH = 1024 * 1024;
 
-    DhtWrapper::DhtWrapper(const std::string& hash_name)
+    DhtWrapper::DhtWrapper(const std::string& hash_name, EdgeParam* edge_param_ptr)
     {
+        // Differentiate DhtWrapper in different edge nodes
+        assert(edge_param_ptr != NULL);
+        std::ostringstream oss;
+        oss << kClassName << " " << edge_param_ptr->getEdgeIdx();
+        instance_name_ = oss.str();
+
         hash_wrapper_ptr_ = HashWrapperBase::getHashWrapper(hash_name);
         assert(hash_wrapper_ptr_ != NULL);
     }

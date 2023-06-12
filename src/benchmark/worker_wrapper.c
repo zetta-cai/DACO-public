@@ -25,11 +25,16 @@ namespace covered
             Util::dumpErrorMsg(kClassName, "worker_param_ptr is NULL!");
             exit(1);
         }
-        worker_param_ptr_ = worker_param_ptr;
-        assert(worker_param_ptr_ != NULL);
-
         ClientParam* client_param_ptr = worker_param_ptr_->getClientParamPtr();
         assert(client_param_ptr != NULL);
+
+        // Differentiate different workers
+        std::ostringstream oss;
+        oss << kClassName << " " << client_param_ptr->getClientIdx() << "-" << worker_param_ptr->getLocalWorkerIdx();
+        instance_name_ = oss.str();
+
+        worker_param_ptr_ = worker_param_ptr;
+        assert(worker_param_ptr_ != NULL);
 
         // Each per-client worker uses worker_idx as deterministic seed to create a random generator and get different requests
         const uint32_t client_idx = client_param_ptr->getClientIdx();
@@ -38,7 +43,7 @@ namespace covered
         worker_item_randgen_ptr_ = new std::mt19937_64(global_worker_idx);
         if (worker_item_randgen_ptr_ == NULL)
         {
-            Util::dumpErrorMsg(kClassName, "failed to create a random generator for requests!");
+            Util::dumpErrorMsg(instance_name_, "failed to create a random generator for requests!");
             exit(1);
         }
 
@@ -124,7 +129,7 @@ namespace covered
         // TMPDEBUG
         std::ostringstream oss;
         oss << "worker" << worker_param_ptr_->getLocalWorkerIdx() << " issues a local request; type: " << MessageBase::messageTypeToString(local_request_ptr->getMessageType()) << "; keystr: " << workload_item.getKey().getKeystr() << "; valuesize: " << workload_item.getValue().getValuesize() << std::endl << "Msg payload: " << local_request_msg_payload.getBytesHexstr();
-        Util::dumpDebugMsg(kClassName, oss.str());
+        Util::dumpDebugMsg(instance_name_, oss.str());
 
         // Timeout-and-retry mechanism
         struct timespec sendreq_timestamp = Util::getCurrentTimespec();
@@ -145,7 +150,7 @@ namespace covered
                 }
                 else
                 {
-                    Util::dumpWarnMsg(kClassName, "client timeout to wait for local response");
+                    Util::dumpWarnMsg(instance_name_, "client timeout to wait for local response");
                     continue; // Resend the local request message
                 }
             }
@@ -212,7 +217,7 @@ namespace covered
             {
                 std::ostringstream oss;
                 oss << "invalid message type " << MessageBase::messageTypeToString(local_response_message_type) << " for processLocalResponse_()!";
-                Util::dumpErrorMsg(kClassName, oss.str());
+                Util::dumpErrorMsg(instance_name_, oss.str());
                 exit(1);
             }
         }
@@ -239,7 +244,7 @@ namespace covered
             {
                 std::ostringstream oss;
                 oss << "invalid hitflag " << MessageBase::hitflagToString(hitflag) << " for processLocalResponse_()!";
-                Util::dumpErrorMsg(kClassName, oss.str());
+                Util::dumpErrorMsg(instance_name_, oss.str());
                 exit(1);
             }
         }
@@ -250,7 +255,7 @@ namespace covered
         // TMPDEBUG
         std::ostringstream oss;
         oss << "worker" << worker_param_ptr_->getLocalWorkerIdx() << " receives a local response; type: " << MessageBase::messageTypeToString(local_response_message_type) << "; keystr: " << tmp_key.getKeystr() << "; valuesize: " << tmp_value.getValuesize() << "; hitflag: " << MessageBase::hitflagToString(hitflag) << std::endl << "Msg payload: " << local_response_msg_payload.getBytesHexstr();
-        Util::dumpDebugMsg(kClassName, oss.str());
+        Util::dumpDebugMsg(instance_name_, oss.str());
 
         // Release local response message
         assert(local_response_ptr != NULL);

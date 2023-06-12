@@ -41,11 +41,17 @@ namespace covered
             Util::dumpErrorMsg(kClassName, "edge_param_ptr is NULL!");
             exit(1);
         }
+
+        // Differentiate different edge nodes
+        std::ostringstream oss;
+        oss << kClassName << " " << edge_param_ptr->getEdgeIdx();
+        base_instance_name_ = oss.str();
+
         edge_param_ptr_ = edge_param_ptr;
         assert(edge_param_ptr_ != NULL);
         
         // Allocate local edge cache to store hot objects
-        edge_cache_ptr_ = CacheWrapperBase::getEdgeCache(cache_name_, Param::getCapacityBytes());
+        edge_cache_ptr_ = CacheWrapperBase::getEdgeCache(cache_name_, Param::getCapacityBytes(), edge_param_ptr);
         assert(edge_cache_ptr_ != NULL);
 
         // Allocate cooperation wrapper for cooperative edge caching
@@ -124,7 +130,7 @@ namespace covered
                 {
                     std::ostringstream oss;
                     oss << "invalid message type " << MessageBase::messageTypeToString(request_ptr->getMessageType()) << " for start()!";
-                    Util::dumpErrorMsg(kClassName, oss.str());
+                    Util::dumpErrorMsg(base_instance_name_, oss.str());
                     exit(1);
                 }
 
@@ -159,7 +165,7 @@ namespace covered
             // TMPDEBUG
             std::ostringstream oss;
             oss << "edge" << edge_param_ptr_->getEdgeIdx() << " receives a local request; type: " << MessageBase::messageTypeToString(data_request_ptr->getMessageType()) << "; keystr: " << tmp_key.getKeystr();
-            Util::dumpDebugMsg(kClassName, oss.str());
+            Util::dumpDebugMsg(base_instance_name_, oss.str());
 
             // Block until not invalidated
             is_finish = blockForInvalidation_(tmp_key);
@@ -185,7 +191,7 @@ namespace covered
         {
             std::ostringstream oss;
             oss << "invalid message type " << MessageBase::messageTypeToString(data_request_ptr->getMessageType()) << " for processDataRequest_()!";
-            Util::dumpErrorMsg(kClassName, oss.str());
+            Util::dumpErrorMsg(base_instance_name_, oss.str());
             exit(1);
         }
         
@@ -283,7 +289,7 @@ namespace covered
         {
             std::ostringstream oss;
             oss << "invalid message type " << MessageBase::messageTypeToString(local_request_ptr->getMessageType()) << " for processLocalWriteRequest_()!";
-            Util::dumpErrorMsg(kClassName, oss.str());
+            Util::dumpErrorMsg(base_instance_name_, oss.str());
             exit(1);
         }
 
@@ -374,7 +380,7 @@ namespace covered
         {
             std::ostringstream oss;
             oss << "invalid message type " << MessageBase::messageTypeToString(message_type) << " for processRedirectedRequest_()!";
-            Util::dumpErrorMsg(kClassName, oss.str());
+            Util::dumpErrorMsg(base_instance_name_, oss.str());
             exit(1);
         }
         
@@ -428,7 +434,7 @@ namespace covered
         // TMPDEBUG
         std::ostringstream oss;
         oss << "edge" << edge_param_ptr_->getEdgeIdx() << " issues a global request; type: " << MessageBase::messageTypeToString(global_get_request.getMessageType()) << "; keystr:" << key.getKeystr() << std::endl << "Msg payload: " << global_request_msg_payload.getBytesHexstr();
-        Util::dumpDebugMsg(kClassName, oss.str());
+        Util::dumpDebugMsg(base_instance_name_, oss.str());
 
         while (true) // Timeout-and-retry
         {
@@ -448,7 +454,7 @@ namespace covered
                 }
                 else
                 {
-                    Util::dumpWarnMsg(kClassName, "edge timeout to wait for global response");
+                    Util::dumpWarnMsg(base_instance_name_, "edge timeout to wait for global response");
                     continue; // Resend the global request message
                 }
             }
@@ -493,7 +499,7 @@ namespace covered
         {
             std::ostringstream oss;
             oss << "invalid message type " << MessageBase::messageTypeToString(message_type) << " for writeDataToCloud_()!";
-            Util::dumpErrorMsg(kClassName, oss.str());
+            Util::dumpErrorMsg(base_instance_name_, oss.str());
             exit(1);
         }
         assert(global_request_ptr != NULL);

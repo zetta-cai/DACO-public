@@ -38,6 +38,8 @@ namespace covered
         void updateLocalDirectory(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info);
     private:
         static const std::string kClassName;
+        
+        std::string base_instance_name_;
     protected:
         // For get()
         // Return if edge node is finished

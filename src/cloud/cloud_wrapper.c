@@ -21,11 +21,17 @@ namespace covered
             Util::dumpErrorMsg(kClassName, "cloud_param_ptr is NULL!");
             exit(1);
         }
+
+        // Different different clouds if any
+        std::ostringstream oss;
+        oss << kClassName << " " << cloud_param_ptr->getCloudIdx();
+        instance_name_ = oss.str();
+
         cloud_param_ptr_ = cloud_param_ptr;
         assert(cloud_param_ptr_ != NULL);
         
         // Open local RocksDB KVS
-        cloud_rocksdb_ptr_ = new RocksdbWrapper(cloud_storage, Util::getCloudRocksdbDirpath(cloud_param_ptr_->getCloudIdx()));
+        cloud_rocksdb_ptr_ = new RocksdbWrapper(cloud_storage, Util::getCloudRocksdbDirpath(cloud_param_ptr_->getCloudIdx()), cloud_param_ptr);
         assert(cloud_rocksdb_ptr_ != NULL);
 
         // Prepare a socket server on recvreq port
@@ -79,7 +85,7 @@ namespace covered
                 {
                     std::ostringstream oss;
                     oss << "invalid message type " << MessageBase::messageTypeToString(request_ptr->getMessageType()) << " for start()!";
-                    Util::dumpErrorMsg(kClassName, oss.str());
+                    Util::dumpErrorMsg(instance_name_, oss.str());
                     exit(1);
                 }
 
@@ -157,7 +163,7 @@ namespace covered
             {
                 std::ostringstream oss;
                 oss << "invalid message type " << MessageBase::messageTypeToString(global_request_message_type) << " for processGlobalRequest_()!";
-                Util::dumpErrorMsg(kClassName, oss.str());
+                Util::dumpErrorMsg(instance_name_, oss.str());
                 exit(1);
             }
         }

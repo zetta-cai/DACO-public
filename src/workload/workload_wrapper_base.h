@@ -22,10 +22,10 @@ namespace covered
     public:
         static WorkloadWrapperBase* getWorkloadGenerator(const std::string& workload_name, const uint32_t& client_idx);
 
-        WorkloadWrapperBase();
+        WorkloadWrapperBase(const uint32_t& client_idx);
         virtual ~WorkloadWrapperBase();
 
-        void validate(const uint32_t& client_idx);
+        void validate(); // Provide individual validate() as contructor cannot invoke virtual functions
         WorkloadItem generateItem(std::mt19937_64& request_randgen);
     private:
         static const std::string kClassName;
@@ -36,6 +36,8 @@ namespace covered
 
         virtual WorkloadItem generateItemInternal_(std::mt19937_64& request_randgen) = 0;
 
+        const uint32_t client_idx_;
+        std::string base_instance_name_;
         bool is_valid_;
         void checkIsValid_();
     };

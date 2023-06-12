@@ -16,7 +16,7 @@ namespace covered
         WorkloadWrapperBase* workload_ptr = NULL;
         if (workload_name == Param::FACEBOOK_WORKLOAD_NAME)
         {
-            workload_ptr = new FacebookWorkloadWrapper();
+            workload_ptr = new FacebookWorkloadWrapper(client_idx);
         }
         else
         {
@@ -27,31 +27,36 @@ namespace covered
         }
 
         assert(workload_ptr != NULL);
-        workload_ptr->validate(client_idx); // validate workload before generating each request
+        workload_ptr->validate(); // validate workload before generating each request
 
         return workload_ptr;
     }
 
-    WorkloadWrapperBase::WorkloadWrapperBase()
+    WorkloadWrapperBase::WorkloadWrapperBase(const uint32_t& client_idx) : client_idx_(client_idx)
     {
+        // Differentiate workload generator in different clients
+        std::ostringstream oss;
+        oss << kClassName << " " << client_idx;
+        base_instance_name_ = oss.str();
+
         is_valid_ = false;
     }
 
     WorkloadWrapperBase::~WorkloadWrapperBase() {}
 
-    void WorkloadWrapperBase::validate(const uint32_t& client_idx)
+    void WorkloadWrapperBase::validate()
     {
         if (!is_valid_)
         {
             initWorkloadParameters_();
             overwriteWorkloadParameters_();
-            createWorkloadGenerator_(client_idx);
+            createWorkloadGenerator_(client_idx_);
 
             is_valid_ = true;
         }
         else
         {
-            Util::dumpWarnMsg(kClassName, "duplicate invoke of validate()!");
+            Util::dumpWarnMsg(base_instance_name_, "duplicate invoke of validate()!");
         }
         return;
     }
@@ -66,7 +71,7 @@ namespace covered
     {
         if (!is_valid_)
         {
-            Util::dumpErrorMsg(kClassName, "not invoke validate() yet!");
+            Util::dumpErrorMsg(base_instance_name_, "not invoke validate() yet!");
             exit(1);
         }
         return;

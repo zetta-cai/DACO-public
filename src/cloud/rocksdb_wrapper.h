@@ -11,6 +11,7 @@
 #include <rocksdb/table.h>
 #include <rocksdb/filter_policy.h>
 
+#include "cloud/cloud_param.h"
 #include "common/key.h"
 #include "common/value.h"
 
@@ -59,7 +60,7 @@ namespace covered
         static const uint32_t kMaxFileOpeningThreadsForHdd;
         //static const uint32_t kCompactionReadaheadSizeForHdd;
 
-        RocksdbWrapper(const std::string& cloud_storage, const std::string& db_filepath);
+        RocksdbWrapper(const std::string& cloud_storage, const std::string& db_filepath, CloudParam* cloud_param_ptr);
         ~RocksdbWrapper();
 
         void get(const Key& key, Value& value);
@@ -69,6 +70,9 @@ namespace covered
         static const std::string kClassName;
 
         void open_(const std::string& cloud_storage, const std::string& db_filepath);
+
+        // CloudWrapper only uses cloud index to specify instance_name_, yet not need to check if cloud is running due to no network communication -> no need to maintain cloud_param_ptr_
+        std::string instance_name_;
 
         rocksdb::DB* db_ptr_;
     };

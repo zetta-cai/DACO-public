@@ -18,6 +18,11 @@ namespace covered
     BasicEdgeWrapper::BasicEdgeWrapper(const std::string& cache_name, const std::string& hash_name, EdgeParam* edge_param_ptr) : EdgeWrapperBase(cache_name, hash_name, edge_param_ptr)
     {
         assert(cache_name != Param::COVERED_CACHE_NAME);
+
+        // Differentiate BasicEdgeWrapper in different edge nodes
+        std::ostringstream oss;
+        oss << kClassName << " " << edge_param_ptr->getEdgeIdx();
+        instance_name_ = oss.str();
     }
 
     BasicEdgeWrapper::~BasicEdgeWrapper() {}
@@ -156,7 +161,7 @@ namespace covered
 
         std::ostringstream oss;
         oss << "control request " << MessageBase::messageTypeToString(control_request_ptr->getMessageType()) << " is not supported!";
-        Util::dumpErrorMsg(kClassName, oss.str());
+        Util::dumpErrorMsg(instance_name_, oss.str());
         exit(1);
 
         return is_finish;

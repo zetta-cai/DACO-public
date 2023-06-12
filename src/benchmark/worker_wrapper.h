@@ -35,6 +35,7 @@ namespace covered
         bool issueItemToEdge_(const WorkloadItem& workload_item, DynamicArray& local_response_msg_payload, uint32_t& rtt_us); // Return is_finish
         void processLocalResponse_(const DynamicArray& local_response_msg_payload, const uint32_t& rtt_us);
 
+        std::string instance_name_;
         WorkerParam* worker_param_ptr_;
         std::mt19937_64* worker_item_randgen_ptr_;
         UdpSocketWrapper* worker_sendreq_toedge_socket_client_ptr_;

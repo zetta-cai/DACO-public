@@ -15,15 +15,16 @@
 
 #include "common/key.h"
 #include "common/value.h"
+#include "edge/edge_param.h"
 
 namespace covered
 {
     class CacheWrapperBase
     {
     public:
-        static CacheWrapperBase* getEdgeCache(const std::string& cache_name, const uint32_t& capacity_bytes);
+        static CacheWrapperBase* getEdgeCache(const std::string& cache_name, const uint32_t& capacity_bytes, EdgeParam* edge_param_ptr);
 
-        CacheWrapperBase(const uint32_t& capacity_bytes);
+        CacheWrapperBase(const uint32_t& capacity_bytes, EdgeParam* edge_param_ptr);
         virtual ~CacheWrapperBase();
 
         // EdgeWrapper checks whether key is invalidated before accessing local edge cache (TODO)
@@ -62,6 +63,9 @@ namespace covered
         virtual uint32_t getSizeInternal_() const = 0;
 
         const uint32_t capacity_bytes_; // Come from Util::Param
+
+        // CacheWrapperBase only uses edge index to specify base_instance_name_, yet not need to check if edge is running due to no network communication -> no need to maintain edge_param_ptr_
+        std::string base_instance_name_;
 
         // NOTE: ONLY write invalidity_map_ for control messages (e.g., requests for invalidation and admission/eviction), while just read it for data messages (local/redirected/global requests)
         // NOTE: as the flag of invalidity can be integrated into cache metadata, we ONLY count the flag instead of key into the total size for capacity limitation (invalidity_map_ is just an implementation trick to avoid hacking each individual cache)

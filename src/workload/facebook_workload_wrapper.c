@@ -16,8 +16,13 @@ namespace covered
 {
     const std::string FacebookWorkloadWrapper::kClassName("FacebookWorkloadWrapper");
 
-    FacebookWorkloadWrapper::FacebookWorkloadWrapper() : WorkloadWrapperBase()
+    FacebookWorkloadWrapper::FacebookWorkloadWrapper(const uint32_t& client_idx) : WorkloadWrapperBase(client_idx)
     {
+        // Differentiate facebook workload generator in different clients
+        std::ostringstream oss;
+        oss << kClassName << " " << client_idx;
+        instance_name_ = oss.str();
+
         last_reqid_ = std::nullopt; // Not used by WorkloadGenerator for Facebook CDN trace
     }
 
@@ -54,7 +59,7 @@ namespace covered
         op_pool_dist_ptr_ = new std::discrete_distribution<>(facebook_stressor_config_.opPoolDistribution.begin(), facebook_stressor_config_.opPoolDistribution.end());
         if (op_pool_dist_ptr_ == NULL)
         {
-            Util::dumpErrorMsg(kClassName, "failed to create operation pool distribution!");
+            Util::dumpErrorMsg(instance_name_, "failed to create operation pool distribution!");
             exit(1);
         }
     }
@@ -101,7 +106,7 @@ namespace covered
             {
                 std::ostringstream oss;
                 oss << "facebook::cachelib::cachebench::OpType " << static_cast<uint32_t>(tmp_op_type) << " is not supported now (please refer to lib/CacheLib/cachelib/cachebench/util/Request.h for OpType)!";
-                Util::dumpErrorMsg(kClassName, oss.str());
+                Util::dumpErrorMsg(instance_name_, oss.str());
                 exit(1);
             }
         }
@@ -114,12 +119,12 @@ namespace covered
     std::unique_ptr<facebook::cachelib::cachebench::GeneratorBase> FacebookWorkloadWrapper::makeGenerator_(const StressorConfig& config, const uint32_t& client_idx)
     {
         if (config.generator == "piecewise-replay") {
-            Util::dumpErrorMsg(kClassName, "piecewise-replay generator is not supported now!");
+            Util::dumpErrorMsg(instance_name_, "piecewise-replay generator is not supported now!");
             exit(1);
             // TODO: copy PieceWiseReplayGenerator into namespace covered to support covered::StressorConfig
             //return std::make_unique<facebook::cachelib::cachebench::PieceWiseReplayGenerator>(config);
         } else if (config.generator == "replay") {
-            Util::dumpErrorMsg(kClassName, "replay generator is not supported now!");
+            Util::dumpErrorMsg(instance_name_, "replay generator is not supported now!");
             exit(1);
             // TODO: copy KVReplayGenerator into namespace covered to support covered::StressorConfig
             //return std::make_unique<facebook::cachelib::cachebench::KVReplayGenerator>(config);
@@ -128,7 +133,7 @@ namespace covered
             // properly
             return std::make_unique<covered::WorkloadGenerator>(config, client_idx);
         } else if (config.generator == "online") {
-            Util::dumpErrorMsg(kClassName, "online generator is not supported now!");
+            Util::dumpErrorMsg(instance_name_, "online generator is not supported now!");
             exit(1);
             // TODO: copy OnlineGenerator into namespace covered to support covered::StressorConfig
             //return std::make_unique<facebook::cachelib::cachebench::OnlineGenerator>(config);

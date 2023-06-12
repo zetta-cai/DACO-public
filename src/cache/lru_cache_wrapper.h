@@ -8,13 +8,14 @@
 
 #include "cache/cache_wrapper_base.h"
 #include "cache/cpp-lru-cache/lrucache.h"
+#include "edge/edge_param.h"
 
 namespace covered
 {
     class LruCacheWrapper : public CacheWrapperBase
     {
     public:
-        LruCacheWrapper(const uint32_t& capacity);
+        LruCacheWrapper(const uint32_t& capacity, EdgeParam* edge_param_ptr);
         ~LruCacheWrapper();
 
         virtual bool get(const Key& key, Value& value) override;
@@ -30,6 +31,9 @@ namespace covered
 
         // In units of bytes
         virtual uint32_t getSizeInternal_() const override;
+
+        // lruCacheWrapper only uses edge index to specify instance_name_, yet not need to check if edge is running due to no network communication -> no need to maintain edge_param_ptr_
+        std::string instance_name_;
 
         LruCache* lru_cache_ptr_;
     };

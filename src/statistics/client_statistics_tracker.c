@@ -12,8 +12,13 @@ namespace covered
 {
     const std::string ClientStatisticsTracker::kClassName("ClientStatisticsTracker");
     
-    ClientStatisticsTracker::ClientStatisticsTracker(uint32_t perclient_workercnt, uint32_t latency_histogram_size)
+    ClientStatisticsTracker::ClientStatisticsTracker(uint32_t perclient_workercnt, uint32_t latency_histogram_size, const uint32_t& client_idx)
     {
+        // Differentiate ClientStatisticsWrapper threads
+        std::ostringstream oss;
+        oss << kClassName << " " << client_idx;
+        instance_name_ = oss.str();
+
         perclient_workercnt_ = perclient_workercnt;
         latency_histogram_size_ = latency_histogram_size;
 
@@ -46,8 +51,13 @@ namespace covered
         }
     }
 
-    ClientStatisticsTracker::ClientStatisticsTracker(const std::string& filepath)
+    ClientStatisticsTracker::ClientStatisticsTracker(const std::string& filepath, const uint32_t& client_idx)
     {
+        // Differentiate ClientStatisticsWrapper threads
+        std::ostringstream oss;
+        oss << kClassName << " " << client_idx;
+        instance_name_ = oss.str();
+        
         perclient_workercnt_ = 0;
         perworker_local_hitcnts_ = NULL;
         perworker_cooperative_hitcnts_ = NULL;
@@ -136,7 +146,7 @@ namespace covered
         // NOTE: each client opens a unique file (no confliction among different clients)
         std::ostringstream oss;
         oss << "open file " << tmp_filepath << " for client statistics";
-        Util::dumpDebugMsg(kClassName, oss.str());
+        Util::dumpDebugMsg(instance_name_, oss.str());
         std::fstream* fs_ptr = Util::openFile(tmp_filepath, std::ios_base::out | std::ios_base::binary);
         assert(fs_ptr != NULL);
 
@@ -187,9 +197,9 @@ namespace covered
             // File already exists
             std::ostringstream oss;
             oss << "statistics file " << filepath << " already exists!";
-            //Util::dumpErrorMsg(kClassName, oss.str());
+            //Util::dumpErrorMsg(instance_name_, oss.str());
             //exit(1);
-            Util::dumpWarnMsg(kClassName, oss.str());
+            Util::dumpWarnMsg(instance_name_, oss.str());
 
             // Generate a random number as a random seed
             uint32_t random_seed = Util::getTimeBasedRandomSeed();
@@ -207,7 +217,7 @@ namespace covered
             oss.clear(); // Clear error states
             oss.str(""); // Set content as empty string and reset read/write position as zero
             oss << "use a random file path " << tmp_filepath << " for statistics!";
-            Util::dumpNormalMsg(kClassName, oss.str());
+            Util::dumpNormalMsg(instance_name_, oss.str());
         }
 
         return tmp_filepath;
@@ -310,7 +320,7 @@ namespace covered
             // File does not exist
             std::ostringstream oss;
             oss << "statistics file " << filepath << " does not exist!";
-            Util::dumpErrorMsg(kClassName, oss.str());
+            Util::dumpErrorMsg(instance_name_, oss.str());
             exit(1);
         }
 

@@ -1,5 +1,6 @@
 #include "cloud/rocksdb_wrapper.h"
 
+#include <assert.h>
 #include <sstream>
 
 #include "common/param.h"
@@ -45,11 +46,18 @@ namespace covered
 
     const std::string RocksdbWrapper::kClassName("RocksdbWrapper");
 
-    RocksdbWrapper::RocksdbWrapper(const std::string& cloud_storage, const std::string& db_dirpath) : db_ptr_(NULL)
+    RocksdbWrapper::RocksdbWrapper(const std::string& cloud_storage, const std::string& db_dirpath, CloudParam* cloud_param_ptr) : db_ptr_(NULL)
     {
+        // Different RocksDB KVS in different clouds if any
+        assert(cloud_param_ptr != NULL);
         std::ostringstream oss;
+        oss << kClassName << " " << cloud_param_ptr->getCloudIdx();
+        instance_name_ = oss.str();
+
+        oss.clear();
+        oss.str("");
         oss << "open RocksDB from directory " << db_dirpath << "...";
-        Util::dumpNormalMsg(kClassName, oss.str());
+        Util::dumpNormalMsg(instance_name_, oss.str());
 
         // Parent directory must exit
         std::string parentDirpath = Util::getParentDirpath(db_dirpath);
@@ -85,7 +93,7 @@ namespace covered
         {
             std::ostringstream oss;
             oss << "fail to get key " << key.getKeystr() << " from RocksDB KVS (status: " << rocksdb_status.ToString() << ")";
-            Util::dumpErrorMsg(kClassName, oss.str());
+            Util::dumpErrorMsg(instance_name_, oss.str());
             exit(1);
         }
         return;

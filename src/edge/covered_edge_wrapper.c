@@ -13,6 +13,11 @@ namespace covered
     CoveredEdgeWrapper::CoveredEdgeWrapper(const std::string& cache_name, const std::string& hash_name, EdgeParam* edge_param_ptr) : EdgeWrapperBase(cache_name, hash_name, edge_param_ptr)
     {
         assert(cache_name == Param::COVERED_CACHE_NAME);
+
+        // Differentiate BasicEdgeWrapper in different edge nodes
+        std::ostringstream oss;
+        oss << kClassName << " " << edge_param_ptr->getEdgeIdx();
+        instance_name_ = oss.str();
     }
 
     CoveredEdgeWrapper::~CoveredEdgeWrapper() {}
@@ -30,7 +35,7 @@ namespace covered
     {
         // NOTE: COVERED will NOT trigger any independent cache admission/eviction decision
         std::ostringstream oss;
-        Util::dumpErrorMsg(kClassName, "triggerIndependentAdmission_() should NOT be invoked in CoveredEdgeWrapper!");
+        Util::dumpErrorMsg(instance_name_, "triggerIndependentAdmission_() should NOT be invoked in CoveredEdgeWrapper!");
         exit(1);
         return;
     }

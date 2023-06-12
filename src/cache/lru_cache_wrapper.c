@@ -1,13 +1,20 @@
 #include "cache/lru_cache_wrapper.h"
 
 #include <assert.h>
+#include <sstream>
 
 namespace covered
 {
     const std::string LruCacheWrapper::kClassName("LruCacheWrapper");
 
-    LruCacheWrapper::LruCacheWrapper(const uint32_t& capacity) : CacheWrapperBase(capacity)
+    LruCacheWrapper::LruCacheWrapper(const uint32_t& capacity, EdgeParam* edge_param_ptr) : CacheWrapperBase(capacity, edge_param_ptr)
     {
+        // Differentiate local edge cache in different edge nodes
+        assert(edge_param_ptr != NULL);
+        std::ostringstream oss;
+        oss << kClassName << " " << edge_param_ptr->getEdgeIdx();
+        instance_name_ = oss.str();
+
         lru_cache_ptr_ = new LruCache();
         assert(lru_cache_ptr_ != NULL);
     }

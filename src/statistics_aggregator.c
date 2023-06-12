@@ -25,7 +25,7 @@ void* launchLoader(void* local_loader_param_ptr)
     assert(local_loader_param.client_statistics_tracker_ptr == NULL);
 
     std::string client_statistics_filepath = covered::Util::getClientStatisticsFilepath(local_loader_param.client_idx);
-    local_loader_param.client_statistics_tracker_ptr = new covered::ClientStatisticsTracker(client_statistics_filepath); // Release outside launchLoader()
+    local_loader_param.client_statistics_tracker_ptr = new covered::ClientStatisticsTracker(client_statistics_filepath, local_loader_param.client_idx); // Release outside launchLoader()
     assert(local_loader_param.client_statistics_tracker_ptr != NULL);
     
     pthread_exit(NULL);

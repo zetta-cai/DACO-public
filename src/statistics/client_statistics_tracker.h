@@ -15,8 +15,8 @@ namespace covered
     class ClientStatisticsTracker
     {
     public:
-        ClientStatisticsTracker(uint32_t perclient_workercnt, uint32_t latency_histogram_size);
-        ClientStatisticsTracker(const std::string& filepath);
+        ClientStatisticsTracker(uint32_t perclient_workercnt, uint32_t latency_histogram_size, const uint32_t& client_idx);
+        ClientStatisticsTracker(const std::string& filepath, const uint32_t& client_idx);
         ~ClientStatisticsTracker();
 
         // Update per-client hit ratio statistics
@@ -59,6 +59,9 @@ namespace covered
         uint32_t loadPerworkerReqcnts_(std::fstream* fs_ptr);
         uint32_t loadLatencyHistogramSize_(std::fstream* fs_ptr);
         uint32_t loadLatencyHistogram_(std::fstream* fs_ptr);
+
+        // ClientStatisticsWrapper only uses client index to specify instance_name_ -> no need to maintain client_idx_
+        std::string instance_name_;
 
         std::atomic<uint32_t>* perworker_local_hitcnts_; // Hit local edge cache of closest edge node
         std::atomic<uint32_t>* perworker_cooperative_hitcnts_; // Hit cooperative edge cache of some target edge node

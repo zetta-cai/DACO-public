@@ -28,6 +28,7 @@ namespace covered
 
         bool processGlobalRequest_(MessageBase* request_ptr);
 
+        std::string instance_name_;
         CloudParam* cloud_param_ptr_;
         RocksdbWrapper* cloud_rocksdb_ptr_;
         UdpSocketWrapper* cloud_recvreq_socket_server_ptr_;
