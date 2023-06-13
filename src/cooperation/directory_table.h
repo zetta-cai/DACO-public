@@ -26,8 +26,9 @@ namespace covered
         void lookup(const Key& key, bool& is_directory_exist, DirectoryInfo& directory_info) const;
         void update(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info);
     private:
-        typedef std::unordered_set<DirectoryInfo, DirectoryInfoHasher> dirinfo_set_t;
-        typedef std::unordered_map<Key, dirinfo_set_t, KeyHasher> dirinfo_table_t;
+        // TODO: use std::atomic<bool> if edge node has multiple sub-threads (now each edge node only has 1 thread to process data/control requests)
+        typedef std::unordered_map<DirectoryInfo, bool, DirectoryInfoHasher> perkey_dirinfos_t;
+        typedef std::unordered_map<Key, perkey_dirinfos_t, KeyHasher> dirinfo_table_t;
         
         static const std::string kClassName;
 

@@ -167,7 +167,7 @@ namespace covered
             oss << "receive a local request; type: " << MessageBase::messageTypeToString(data_request_ptr->getMessageType()) << "; keystr: " << tmp_key.getKeystr();
             Util::dumpDebugMsg(base_instance_name_, oss.str());
 
-            // Block until not invalidated
+            // Block until not invalid
             is_finish = blockForInvalidation_(tmp_key);
             if (is_finish) // Edge node is NOT running
             {
@@ -211,30 +211,34 @@ namespace covered
         const LocalGetRequest* const local_get_request_ptr = static_cast<const LocalGetRequest*>(local_request_ptr);
         Key tmp_key = local_get_request_ptr->getKey();
         Value tmp_value;
-        bool is_local_cached = edge_cache_ptr_->get(tmp_key, tmp_value);
-        if (is_local_cached)
+        bool is_local_valid = false;
+        bool is_local_cached = edge_cache_ptr_->get(tmp_key, tmp_value, is_local_valid);
+        bool is_local_cached_and_valid = false;
+        if (is_local_cached && is_local_valid) // local cached and valid
         {
+            is_local_cached_and_valid = true;
             hitflag = Hitflag::kLocalHit;
         }
 
         // Access cooperative edge cache
-        bool is_cooperative_cached = false;
-        if (!is_local_cached)
+        bool is_cooperative_cached_and_valid = false;
+        if (!is_local_cached_and_valid) // not local cached or invalid
         {
             // Get data from some target edge node for local cache miss
-            is_finish = cooperation_wrapper_ptr_->get(tmp_key, tmp_value, is_cooperative_cached);
+            // TODO: split is_cooperative_cached and is_cooperative_valid
+            is_finish = cooperation_wrapper_ptr_->get(tmp_key, tmp_value, is_cooperative_cached_and_valid);
             if (is_finish) // Edge node is NOT running
             {
                 return is_finish;
             }
-            if (is_cooperative_cached)
+            if (is_cooperative_cached_and_valid)
             {
                 hitflag = Hitflag::kCooperativeHit;
             }
         }
 
         // Get data from cloud for global cache miss
-        if (!is_local_cached && !is_cooperative_cached)
+        if (!is_local_cached_and_valid && !is_cooperative_cached_and_valid) // (not cached or invalid) in both local and cooperative cache
         {
             is_finish = fetchDataFromCloud_(tmp_key, tmp_value);
             if (is_finish) // Edge node is NOT running
@@ -398,11 +402,11 @@ namespace covered
 
         bool is_finish = false; // Mark if edge node is finished
 
-        bool is_invalidated = false;
+        bool is_invalid = false;
         while (true)
         {
-            is_invalidated = edge_cache_ptr_->isInvalidated(key);
-            if (is_invalidated)
+            is_invalid = edge_cache_ptr_->isCachedAndInvalid(key);
+            if (is_invalid)
             {
                 if (!edge_param_ptr_->isEdgeRunning())
                 {

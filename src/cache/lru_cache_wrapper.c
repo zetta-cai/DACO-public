@@ -28,13 +28,6 @@ namespace covered
         }
     }
 
-    bool LruCacheWrapper::get(const Key& key, Value& value)
-    {
-        assert(lru_cache_ptr_ != NULL);
-        bool is_local_cached = lru_cache_ptr_->get(key, value);
-        return is_local_cached;
-    }
-
     bool LruCacheWrapper::update(const Key& key, const Value& value)
     {
         assert(lru_cache_ptr_ != NULL);
@@ -46,6 +39,13 @@ namespace covered
     {
         // LRU cache uses LRU-based independent admission policy (i.e., always admit) which always returns true
         return true;
+    }
+
+    bool LruCacheWrapper::getInternal_(const Key& key, Value& value)
+    {
+        assert(lru_cache_ptr_ != NULL);
+        bool is_local_cached = lru_cache_ptr_->get(key, value);
+        return is_local_cached;
     }
 
     void LruCacheWrapper::admitInternal_(const Key& key, const Value& value)

@@ -16,7 +16,7 @@ namespace covered
         setTargetEdgeIdx(target_edge_idx);
     }
     
-    DirectoryInfo::~DirectoryInfo() {}    
+    DirectoryInfo::~DirectoryInfo() {}
 
     uint32_t DirectoryInfo::getTargetEdgeIdx() const
     {

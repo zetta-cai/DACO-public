@@ -18,7 +18,7 @@ namespace covered
     public:
         DirectoryInfo();
         DirectoryInfo(const uint32_t& target_edge_idx);
-        ~DirectoryInfo();        
+        ~DirectoryInfo();
 
         uint32_t getTargetEdgeIdx() const;
         void setTargetEdgeIdx(const uint32_t& target_edge_idx);
@@ -28,14 +28,14 @@ namespace covered
         uint32_t deserialize(const DynamicArray& msg_payload, const uint32_t& position);
 
         DirectoryInfo& operator=(const DirectoryInfo& other);
-        bool operator==(const DirectoryInfo& other) const; // To be used by DirectoryInfo in std::unordered_set
+        bool operator==(const DirectoryInfo& other) const; // To be used by DirectoryInfo in std::unordered_map
     private:
         static const std::string kClassName;
 
         uint32_t target_edge_idx_;
     };
 
-    // To be used by DirectoryInfo in std::unordered_set
+    // To be used by DirectoryInfo in std::unordered_map
     class DirectoryInfoHasher
     {
     public:

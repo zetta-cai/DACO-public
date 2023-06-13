@@ -27,17 +27,18 @@ namespace covered
         CacheWrapperBase(const uint32_t& capacity_bytes, EdgeParam* edge_param_ptr);
         virtual ~CacheWrapperBase();
 
-        // EdgeWrapper checks whether key is invalidated before accessing local edge cache (TODO)
-        // True: cached yet invalidated (NO need to access cache)
-        // False: uncached (still need to access cache to update metadata) or validated
-        bool isInvalidated(const Key& key) const; // For data messages (e.g., local/redirected/global requests)
+        // EdgeWrapper checks whether key is cached and invalid before accessing local edge cache (TODO)
+        // True: cached yet invalid (NO need to access cache)
+        // False: uncached (still need to access cache to update metadata) or valid
+        bool isCachedAndInvalid(const Key& key) const; // For data messages (e.g., local/redirected/global requests)
         void invalidate(const Key& key); // For control messages (e.g., invalidation and admission/eviction)
         void validate(const Key& key); // For control messages (e.g., invalidation and admission/eviction)
 
         // Return whether key is cached (i.e., cache hit) after get/update/remove
-        // NOTE: get() cannot be const due to metadata changes for cached/uncached objects
-        // NOTE: remove() just marks the object as deleted, yet not evict the cached object
-        virtual bool get(const Key& key, Value& value) = 0;
+        // NOTE: get() cannot be const due to metadata changes for cached/uncached objects; get() also checks validity flag for MSI protocol
+        // NOTE: update() only updates the object if cached, yet not admit a new one
+        // NOTE: remove() just marks the object as deleted if cached, yet not evict the cached object
+        bool get(const Key& key, Value& value, bool& validity);
         virtual bool update(const Key& key, const Value& value) = 0;
         bool remove(const Key& key);
 
@@ -46,7 +47,7 @@ namespace covered
         // NOTE: only COVERED never needs independent admission (i.e., always returns false)
         virtual bool needIndependentAdmit(const Key& key) = 0;
 
-        // Invoke admitInternal_/evictInternal_ and update invalidity_map_
+        // Invoke admitInternal_/evictInternal_ and update validity_map_
         void admit(const Key& key, const Value& value);
         void evict(Key& key, Value& value);
         
@@ -56,6 +57,7 @@ namespace covered
     private:
         static const std::string kClassName;
 
+        virtual bool getInternal_(const Key& key, Value& value) = 0; // Return whether key is cached (i.e., cache hit) after getInternal_()
         virtual void admitInternal_(const Key& key, const Value& value) = 0;
         virtual void evictInternal_(Key& key, Value& value) = 0;
 
@@ -67,9 +69,9 @@ namespace covered
         // CacheWrapperBase only uses edge index to specify base_instance_name_, yet not need to check if edge is running due to no network communication -> no need to maintain edge_param_ptr_
         std::string base_instance_name_;
 
-        // NOTE: ONLY write invalidity_map_ for control messages (e.g., requests for invalidation and admission/eviction), while just read it for data messages (local/redirected/global requests)
-        // NOTE: as the flag of invalidity can be integrated into cache metadata, we ONLY count the flag instead of key into the total size for capacity limitation (invalidity_map_ is just an implementation trick to avoid hacking each individual cache)
-        std::map<Key, bool> invalidity_map_;
+        // NOTE: write validity_map_ for control messages (e.g., requests for invalidation and admission/eviction), and data messages (local/redirected requests incurring ValidationGetRequest)
+        // NOTE: as the flag of validity can be integrated into cache metadata, we ONLY count the flag instead of key into the total size for capacity limitation (validity_map_ is just an implementation trick to avoid hacking each individual cache)
+        std::map<Key, bool> validity_map_;
     };
 }
 

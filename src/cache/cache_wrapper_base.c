@@ -38,56 +38,63 @@ namespace covered
         oss << kClassName << " " << edge_param_ptr->getEdgeIdx();
         base_instance_name_ = oss.str();
 
-        invalidity_map_.clear();
+        validity_map_.clear();
     }
     
     CacheWrapperBase::~CacheWrapperBase() {}
 
-    bool CacheWrapperBase::isInvalidated(const Key& key) const
+    bool CacheWrapperBase::isCachedAndInvalid(const Key& key) const
     {
-        std::map<Key, bool>::const_iterator iter = invalidity_map_.find(key);
-        if (iter == invalidity_map_.end())
+        std::map<Key, bool>::const_iterator iter = validity_map_.find(key);
+        if (iter == validity_map_.end())
         {
-            return false;
+            return false; // uncached
         }
         else
         {
-            return iter->second;
+            return !iter->second; // validity = true means not invalid
         }
     }
 
     void CacheWrapperBase::invalidate(const Key& key)
     {
-        if (invalidity_map_.find(key) != invalidity_map_.end()) // key to be invalidated should already be cached
+        if (validity_map_.find(key) != validity_map_.end()) // key to be invalidated should already be cached
         {
-            invalidity_map_[key] = true;
+            validity_map_[key] = false;
         }
         else
         {
             std::ostringstream oss;
-            oss << "key " << key.getKeystr() << " does not exist in invalidity_map_ for invalidate()";
+            oss << "key " << key.getKeystr() << " does not exist in validity_map_ for invalidate()";
             Util::dumpWarnMsg(base_instance_name_, oss.str());
 
-            invalidity_map_.insert(std::pair<Key, bool>(key, true));
+            validity_map_.insert(std::pair<Key, bool>(key, false));
         }
         return;
     }
 
     void CacheWrapperBase::validate(const Key& key)
     {
-        if (invalidity_map_.find(key) != invalidity_map_.end()) // key to be validated should already be cached
+        if (validity_map_.find(key) != validity_map_.end()) // key to be validated should already be cached
         {
-            invalidity_map_[key] = false;
+            validity_map_[key] = true;
         }
         else
         {
             std::ostringstream oss;
-            oss << "key " << key.getKeystr() << " does not exist in invalidity_map_ for validate()";
+            oss << "key " << key.getKeystr() << " does not exist in validity_map_ for validate()";
             Util::dumpWarnMsg(base_instance_name_, oss.str());
 
-            invalidity_map_.insert(std::pair<Key, bool>(key, false));
+            validity_map_.insert(std::pair<Key, bool>(key, true));
         }
         return;
+    }
+
+    bool CacheWrapperBase::get(const Key& key, Value& value, bool& validity)
+    {
+        bool is_local_cached = getInternal_(key, value);
+        validity = validity_map_[key];
+        return is_local_cached;
     }
 
     bool CacheWrapperBase::remove(const Key& key)
@@ -100,17 +107,17 @@ namespace covered
     void CacheWrapperBase::admit(const Key& key, const Value& value)
     {
         admitInternal_(key, value);
-        if (invalidity_map_.find(key) == invalidity_map_.end()) // key to be admitted should not be cached
+        if (validity_map_.find(key) == validity_map_.end()) // key to be admitted should not be cached
         {
-            invalidity_map_.insert(std::pair<Key, bool>(key, false));
+            validity_map_.insert(std::pair<Key, bool>(key, true));
         }
         else
         {
             std::ostringstream oss;
-            oss << "key " << key.getKeystr() << " already exists in invalidity_map_ (invalidity: " << (invalidity_map_[key]?"true":"false") << "; map size: " << invalidity_map_.size() << ") for admit()";
+            oss << "key " << key.getKeystr() << " already exists in validity_map_ (validity: " << (validity_map_[key]?"true":"false") << "; map size: " << validity_map_.size() << ") for admit()";
             Util::dumpWarnMsg(base_instance_name_, oss.str());
 
-            invalidity_map_[key] = false;
+            validity_map_[key] = true;
         }
         return;
     }
@@ -118,17 +125,17 @@ namespace covered
     void CacheWrapperBase::evict(Key& key, Value& value)
     {
         evictInternal_(key, value);
-        if (invalidity_map_.find(key) != invalidity_map_.end()) // key to be evicted should already be cached
+        if (validity_map_.find(key) != validity_map_.end()) // key to be evicted should already be cached
         {
-            invalidity_map_.erase(key);
+            validity_map_.erase(key);
         }
         else
         {
             std::ostringstream oss;
-            oss << "victim key " << key.getKeystr() << " does not exist in invalidity_map_ for evict()";
+            oss << "victim key " << key.getKeystr() << " does not exist in validity_map_ for evict()";
             Util::dumpWarnMsg(base_instance_name_, oss.str());
             
-            // NO need to update invalidity_map_
+            // NO need to update validity_map_
         }
         return;
     }
@@ -136,7 +143,7 @@ namespace covered
     uint32_t CacheWrapperBase::getSize() const
     {
         uint32_t internal_size = getSizeInternal_();
-        uint32_t external_size = invalidity_map_.size() * sizeof(bool);
+        uint32_t external_size = validity_map_.size() * sizeof(bool);
         uint32_t total_size = internal_size + external_size;
         return total_size;
     }

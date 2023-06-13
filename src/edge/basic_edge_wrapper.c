@@ -41,10 +41,18 @@ namespace covered
         const RedirectedGetRequest* const redirected_get_request_ptr = static_cast<const RedirectedGetRequest*>(redirected_request_ptr);
         Key tmp_key = redirected_get_request_ptr->getKey();
         Value tmp_value;
-        bool is_cooperative_cached = edge_cache_ptr_->get(tmp_key, tmp_value);
+        bool is_cooperative_valid = false;
+        bool is_cooperative_cached = edge_cache_ptr_->get(tmp_key, tmp_value, is_cooperative_valid);
         if (is_cooperative_cached)
         {
-            hitflag = Hitflag::kCooperativeHit;
+            if (is_cooperative_valid)
+            {
+                hitflag = Hitflag::kCooperativeHit;
+            }
+            else
+            {
+                //hitflag = Hitflag::kCooperativeInvalid;
+            }
         }
 
         // NOTE: no need to perform recursive cooperative edge caching (current edge node is already the target edge node for cooperative edge caching)

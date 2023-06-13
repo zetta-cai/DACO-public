@@ -18,7 +18,6 @@ namespace covered
         LruCacheWrapper(const uint32_t& capacity, EdgeParam* edge_param_ptr);
         ~LruCacheWrapper();
 
-        virtual bool get(const Key& key, Value& value) override;
         virtual bool update(const Key& key, const Value& value) override;
 
         virtual bool needIndependentAdmit(const Key& key) override;
@@ -26,6 +25,7 @@ namespace covered
     private:
         static const std::string kClassName;
 
+        virtual bool getInternal_(const Key& key, Value& value) override;
         virtual void admitInternal_(const Key& key, const Value& value) override;
         virtual void evictInternal_(Key& key, Value& value) override;
 
