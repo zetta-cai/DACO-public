@@ -90,10 +90,10 @@ namespace covered
         return;
     }
 
-    bool CacheWrapperBase::get(const Key& key, Value& value, bool& validity)
+    bool CacheWrapperBase::get(const Key& key, Value& value, bool& is_valid)
     {
         bool is_local_cached = getInternal_(key, value);
-        validity = validity_map_[key];
+        is_valid = validity_map_[key];
         return is_local_cached;
     }
 

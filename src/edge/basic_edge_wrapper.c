@@ -131,12 +131,12 @@ namespace covered
         Key tmp_key = directory_lookup_request_ptr->getKey();
 
         // Lookup local directory information and randomly select a target edge index
-        bool is_directory_exist = false;
+        bool is_valid_directory_exist = false;
         DirectoryInfo directory_info;
-        cooperation_wrapper_ptr_->lookupLocalDirectory(tmp_key, is_directory_exist, directory_info);
+        cooperation_wrapper_ptr_->lookupLocalDirectory(tmp_key, is_valid_directory_exist, directory_info);
 
         // Send back a directory lookup response
-        DirectoryLookupResponse directory_lookup_response(tmp_key, is_directory_exist, directory_info);
+        DirectoryLookupResponse directory_lookup_response(tmp_key, is_valid_directory_exist, directory_info);
         DynamicArray control_response_msg_payload(directory_lookup_response.getMsgPayloadSize());
         directory_lookup_response.serialize(control_response_msg_payload);
         PropagationSimulator::propagateFromNeighborToEdge();
@@ -157,7 +157,7 @@ namespace covered
         // Get key from directory update request
         const DirectoryUpdateRequest* const directory_update_request_ptr = static_cast<const DirectoryUpdateRequest*>(control_request_ptr);
         Key tmp_key = directory_update_request_ptr->getKey();
-        bool is_admit = directory_update_request_ptr->isDirectoryExist();
+        bool is_admit = directory_update_request_ptr->isValidDirectoryExist();
         DirectoryInfo directory_info = directory_update_request_ptr->getDirectoryInfo();
 
         // Update local directory information

@@ -38,7 +38,7 @@ namespace covered
         // NOTE: get() cannot be const due to metadata changes for cached/uncached objects; get() also checks validity flag for MSI protocol
         // NOTE: update() only updates the object if cached, yet not admit a new one
         // NOTE: remove() just marks the object as deleted if cached, yet not evict the cached object
-        bool get(const Key& key, Value& value, bool& validity);
+        bool get(const Key& key, Value& value, bool& is_valid);
         virtual bool update(const Key& key, const Value& value) = 0;
         bool remove(const Key& key);
 

@@ -4,10 +4,10 @@ namespace covered
 {
     const std::string KeyExistenceDirectoryMessage::kClassName("KeyExistenceDirectoryMessage");
 
-    KeyExistenceDirectoryMessage::KeyExistenceDirectoryMessage(const Key& key, const bool& is_directory_exist, const DirectoryInfo& directory_info, const MessageType& message_type) : MessageBase(message_type)
+    KeyExistenceDirectoryMessage::KeyExistenceDirectoryMessage(const Key& key, const bool& is_valid_directory_exist, const DirectoryInfo& directory_info, const MessageType& message_type) : MessageBase(message_type)
     {
         key_ = key;
-        is_directory_exist_ = is_directory_exist;
+        is_valid_directory_exist_ = is_valid_directory_exist;
         directory_info_ = directory_info;
     }
 
@@ -24,10 +24,10 @@ namespace covered
         return key_;
     }
 
-    bool KeyExistenceDirectoryMessage::isDirectoryExist() const
+    bool KeyExistenceDirectoryMessage::isValidDirectoryExist() const
     {
         checkIsValid_();
-        return is_directory_exist_;
+        return is_valid_directory_exist_;
     }
 
     DirectoryInfo KeyExistenceDirectoryMessage::getDirectoryInfo() const
@@ -48,7 +48,7 @@ namespace covered
         uint32_t size = position;
         uint32_t key_serialize_size = key_.serialize(msg_payload, size);
         size += key_serialize_size;
-        msg_payload.deserialize(size, (const char*)&is_directory_exist_, sizeof(bool));
+        msg_payload.deserialize(size, (const char*)&is_valid_directory_exist_, sizeof(bool));
         size += sizeof(bool);
         uint32_t directory_info_serialize_size = directory_info_.serialize(msg_payload, size);
         size += directory_info_serialize_size;
@@ -60,7 +60,7 @@ namespace covered
         uint32_t size = position;
         uint32_t key_deserialize_size = key_.deserialize(msg_payload, size);
         size += key_deserialize_size;
-        msg_payload.serialize(size, (char *)&is_directory_exist_, sizeof(bool));
+        msg_payload.serialize(size, (char *)&is_valid_directory_exist_, sizeof(bool));
         size += sizeof(bool);
         uint32_t directory_info_deserialize_size = directory_info_.deserialize(msg_payload, size);
         size += directory_info_deserialize_size;

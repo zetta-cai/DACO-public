@@ -1,7 +1,7 @@
 /*
  * DirectoryLookupResponse: a response issued by the beacon node to an edge node to reply directory information of a given key.
  *
- * NOTE: is_directory_exist indicates the validity of the directory information.
+ * NOTE: is_valid_directory_exist indicates the validity of the directory information.
  * 
  * By Siyuan Sheng (2023.06.06).
  */
@@ -21,7 +21,7 @@ namespace covered
     class DirectoryLookupResponse : public KeyExistenceDirectoryMessage
     {
     public:
-        DirectoryLookupResponse(const Key& key, const bool& is_directory_exist, const DirectoryInfo& directory_info);
+        DirectoryLookupResponse(const Key& key, const bool& is_valid_directory_exist, const DirectoryInfo& directory_info);
         DirectoryLookupResponse(const DynamicArray& msg_payload);
         virtual ~DirectoryLookupResponse();
     private:

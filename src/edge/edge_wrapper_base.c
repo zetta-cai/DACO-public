@@ -220,18 +220,17 @@ namespace covered
             hitflag = Hitflag::kLocalHit;
         }
 
-        // Access cooperative edge cache
+        // Access cooperative edge cache for local cache miss or invalid object
         bool is_cooperative_cached_and_valid = false;
         if (!is_local_cached_and_valid) // not local cached or invalid
         {
             // Get data from some target edge node for local cache miss
-            // TODO: split is_cooperative_cached and is_cooperative_valid
             is_finish = cooperation_wrapper_ptr_->get(tmp_key, tmp_value, is_cooperative_cached_and_valid);
             if (is_finish) // Edge node is NOT running
             {
                 return is_finish;
             }
-            if (is_cooperative_cached_and_valid)
+            if (is_cooperative_cached_and_valid) // cooperative cached and valid
             {
                 hitflag = Hitflag::kCooperativeHit;
             }

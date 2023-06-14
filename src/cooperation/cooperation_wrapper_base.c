@@ -81,7 +81,7 @@ namespace covered
         directory_table_ptr_ = NULL;
     }
 
-    bool CooperationWrapperBase::get(const Key& key, Value& value, bool& is_cooperative_cached)
+    bool CooperationWrapperBase::get(const Key& key, Value& value, bool& is_cooperative_cached_and_valid)
     {
         bool is_finish = false;
 
@@ -90,24 +90,24 @@ namespace covered
         locateBeaconNode_(key, current_is_beacon);
 
         // Check if beacon node is the current edge node and lookup directory information
-        bool is_directory_exist = false;
+        bool is_valid_directory_exist = false;
         DirectoryInfo directory_info;
         if (current_is_beacon) // Get target edge index from local directory information
         {
-            lookupLocalDirectory(key, is_directory_exist, directory_info);
+            lookupLocalDirectory(key, is_valid_directory_exist, directory_info);
         }
         else // Get target edge index from remote directory information at the beacon node
         {
-            is_finish = lookupBeaconDirectory_(key, is_directory_exist, directory_info);
+            is_finish = lookupBeaconDirectory_(key, is_valid_directory_exist, directory_info);
             if (is_finish) // Edge is NOT running
             {
                 return is_finish;
             }
         }
 
-        if (is_directory_exist) // The object is cached by some target edge node
+        if (is_valid_directory_exist) // The object is cached by some target edge node
         {
-            // NOTE: the target node should not be the current edge node, as CooperationWrapperBase::get() can only be invoked if is_local_cached = false (i.e., the current edge node does not cache the object and hence is_directory_exist should be false)
+            // NOTE: the target node should not be the current edge node, as CooperationWrapperBase::get() can only be invoked if is_local_cached = false (i.e., the current edge node does not cache the object and hence is_valid_directory_exist should be false)
             assert(edge_param_ptr_ != NULL);
             uint32_t current_edge_idx = edge_param_ptr_->getEdgeIdx();
             if (directory_info.getTargetEdgeIdx() == current_edge_idx)
@@ -121,8 +121,8 @@ namespace covered
             // Update remote address of edge_sendreq_totarget_socket_client_ptr_ as the target edge node
             locateTargetNode_(directory_info);
 
-            // Get data from the target edge node if any and update is_cooperative_cached
-            is_finish = redirectGetToTarget_(key, value, is_cooperative_cached);
+            // Get data from the target edge node if any and update is_cooperative_cached_and_valid
+            is_finish = redirectGetToTarget_(key, value, is_cooperative_cached_and_valid);
             if (is_finish) // Edge is NOT running
             {
                 return is_finish;
@@ -130,19 +130,19 @@ namespace covered
         }
         else // The object is not cached by any target edge node
         {
-            is_cooperative_cached = false;
+            is_cooperative_cached_and_valid = false;
         }
 
         return is_finish;
     }
 
-    void CooperationWrapperBase::lookupLocalDirectory(const Key& key, bool& is_directory_exist, DirectoryInfo& directory_info)
+    void CooperationWrapperBase::lookupLocalDirectory(const Key& key, bool& is_valid_directory_exist, DirectoryInfo& directory_info)
     {
         // The current edge node must be the beacon node for the key
         verifyCurrentIsBeacon_(key);
 
         assert(directory_table_ptr_ != NULL);
-        directory_table_ptr_->lookup(key, is_directory_exist, directory_info);
+        directory_table_ptr_->lookup(key, is_valid_directory_exist, directory_info);
         return;
     }
 

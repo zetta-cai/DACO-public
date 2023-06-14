@@ -24,7 +24,7 @@ namespace covered
 
     BasicCooperationWrapper::~BasicCooperationWrapper() {}
 
-    bool BasicCooperationWrapper::lookupBeaconDirectory_(const Key& key, bool& is_directory_exist, DirectoryInfo& directory_info)
+    bool BasicCooperationWrapper::lookupBeaconDirectory_(const Key& key, bool& is_valid_directory_exist, DirectoryInfo& directory_info)
     {
         // The current edge node must NOT be the beacon node for the key
         verifyCurrentIsNotBeacon_(key);
@@ -69,7 +69,7 @@ namespace covered
 
                 // Get directory information from the control response message
                 const DirectoryLookupResponse* const directory_lookup_response_ptr = static_cast<const DirectoryLookupResponse*>(control_response_ptr);
-                is_directory_exist = directory_lookup_response_ptr->isDirectoryExist();
+                is_valid_directory_exist = directory_lookup_response_ptr->isValidDirectoryExist();
                 directory_info = directory_lookup_response_ptr->getDirectoryInfo();
 
                 // Release the control response message
@@ -82,7 +82,7 @@ namespace covered
         return is_finish;
     }
 
-    bool BasicCooperationWrapper::redirectGetToTarget_(const Key& key, Value& value, bool& is_cooperative_cached)
+    bool BasicCooperationWrapper::redirectGetToTarget_(const Key& key, Value& value, bool& is_cooperative_cached_and_valid)
     {
         assert(edge_sendreq_totarget_socket_client_ptr_ != NULL);
         assert(edge_param_ptr_ != NULL);
@@ -128,7 +128,7 @@ namespace covered
                 Hitflag hitflag = redirected_get_response_ptr->getHitflag();
                 if (hitflag == Hitflag::kCooperativeHit)
                 {
-                    is_cooperative_cached = true;
+                    is_cooperative_cached_and_valid = true;
                 }
                 else if (hitflag == Hitflag::kGlobalMiss)
                 {
@@ -136,7 +136,7 @@ namespace covered
                     oss << "target edge node does not cache the key " << key.getKeystr() << " in redirectGetToTarget_()!";
                     Util::dumpWarnMsg(instance_name_, oss.str());
 
-                    is_cooperative_cached = false;
+                    is_cooperative_cached_and_valid = false;
                 }
                 else
                 {

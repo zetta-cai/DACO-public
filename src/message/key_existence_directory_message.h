@@ -21,12 +21,12 @@ namespace covered
     class KeyExistenceDirectoryMessage : public MessageBase
     {
     public:
-        KeyExistenceDirectoryMessage(const Key& key, const bool& is_directory_exist, const DirectoryInfo& directory_info, const MessageType& message_type);
+        KeyExistenceDirectoryMessage(const Key& key, const bool& is_valid_directory_exist, const DirectoryInfo& directory_info, const MessageType& message_type);
         KeyExistenceDirectoryMessage(const DynamicArray& msg_payload);
         virtual ~KeyExistenceDirectoryMessage();
 
         Key getKey() const;
-        bool isDirectoryExist() const;
+        bool isValidDirectoryExist() const;
         DirectoryInfo getDirectoryInfo() const;
     private:
         static const std::string kClassName;
@@ -39,7 +39,7 @@ namespace covered
         Key key_;
         
         // Directory information
-        bool is_directory_exist_;
+        bool is_valid_directory_exist_;
         DirectoryInfo directory_info_;
     };
 }

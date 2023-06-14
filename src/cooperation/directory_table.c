@@ -7,7 +7,86 @@
 
 namespace covered
 {
+    const std::string DirectoryMetadata::kClassName("DirectoryMetadata");
+    const std::string DirectoryEntry::kClassName("DirectoryEntry");
     const std::string DirectoryTable::kClassName("DirectoryTable");
+
+    // (1) DirectoryMetadata
+
+    DirectoryMetadata::DirectoryMetadata(const bool& is_valid)
+    {
+        is_valid_ = is_valid;
+    }
+
+    DirectoryMetadata::~DirectoryMetadata() {}
+
+    bool DirectoryMetadata::isValid() const
+    {
+        return is_valid_;
+    }
+
+    void DirectoryMetadata::validate()
+    {
+        is_valid_ = true;
+    }
+    
+    void DirectoryMetadata::invalidate()
+    {
+        is_valid_ = false;
+    }
+
+    // (2) DirectoryEntry
+
+    DirectoryEntry::DirectoryEntry()
+    {
+        directory_entry_.clear();
+    }
+
+    DirectoryEntry::~DirectoryEntry() {}
+
+    bool DirectoryEntry::isBeingWritten()
+    {
+        bool is_being_written = false;
+        if (rwlock_.try_lock_shared()) // Being able to get read lock means no writes
+        {
+            is_being_written = false;
+            rwlock_.unlock_shared();
+        }
+        else // Unable to get read lock means with writes
+        {
+            is_being_written = true;
+        }
+        return is_being_written;
+    }
+
+    bool DirectoryEntry::getValidDirinfoSet(dirinfo_set_t& dirinfo_set)
+    {
+        bool is_being_written = false;
+        if (rwlock_.try_lock_shared()) // Being able to get read lock means no writes
+        {
+            is_being_written = false;
+
+            // Add all valid directory information into valid_directory_info_set
+            for (dirinfo_entry_t::const_iterator iter = directory_entry_.begin(); iter != directory_entry_.end(); iter++)
+            {
+                const DirectoryInfo& directory_info = iter->first;
+                const DirectoryMetadata& directory_metadata = iter->second;
+                if (directory_metadata.isValid()) // validity = true
+                {
+                    dirinfo_set.insert(directory_info);
+                }
+            }
+
+            rwlock_.unlock_shared();
+        }
+        else // Unable to get read lock means with writes
+        {
+            is_being_written = true;
+        }
+        return is_being_written;
+    }
+
+    // (3) DirectoryTable
 
     DirectoryTable::DirectoryTable(const uint32_t& seed)
     {
@@ -26,50 +105,53 @@ namespace covered
         directory_randgen_ptr_ = NULL;
     }
 
-    void DirectoryTable::lookup(const Key& key, bool& is_directory_exist, DirectoryInfo& directory_info) const
+    void DirectoryTable::lookup(const Key& key, bool& is_valid_directory_exist, DirectoryInfo& directory_info)
     {
-        // Check directory information cooperation_wrapper_ptr_
-        perkey_dirinfos_t valid_dirinfos;
-        dirinfo_table_t::const_iterator directory_hashtable_iter = directory_hashtable_.find(key);
-        if (directory_hashtable_iter != directory_hashtable_.end())
-        {
-            // Add all valid directory information into valid_directory_info_set
-            const perkey_dirinfos_t& tmp_dirinfos = directory_hashtable_iter->second;
-            for (perkey_dirinfos_t::const_iterator tmp_dirinfos_iter = tmp_dirinfos.begin(); tmp_dirinfos_iter != tmp_dirinfos.end(); tmp_dirinfos_iter++)
-            {
-                if (tmp_dirinfos_iter->second) // validity = true
-                {
-                    valid_dirinfos.insert(*tmp_dirinfos_iter);
-                }
-            }
+        dirinfo_table_t::iterator directory_hashtable_iter = directory_hashtable_.find(key);
+        dirinfo_set_t valid_directory_info_set;
 
-            if (valid_dirinfos.size() > 0) // At least one valid directory
-            {
-                is_directory_exist = true;
-            }
-            else // No valid directory
-            {
-                is_directory_exist = false;
-            }
-        }
-        else
+        // Check if directory entry exists
+        if (directory_hashtable_iter == directory_hashtable_.end()) // Directory entry does not exist
         {
-            is_directory_exist = false;
+            is_valid_directory_exist = false;
         }
+        else // Directory entry exists
+        {
+            // Get all valid directory infos if without writes
+            DirectoryEntry& directory_entry = directory_hashtable_iter->second;
+            bool is_being_written = directory_entry.getValidDirinfoSet(valid_directory_info_set);
+
+            // Check if key is being written
+            if (is_being_written) // with writes
+            {
+                is_valid_directory_exist = false;
+            }
+            else // without writes
+            {
+                if (valid_directory_info_set.size() > 0) // At least one valid directory
+                {
+                    is_valid_directory_exist = true;
+                }
+                else // No valid directory
+                {
+                    is_valid_directory_exist = false;
+                }
+            } // End of if key is being written
+        } // End of if key exists
 
         // Get the target edge index from valid neighbors
-        if (is_directory_exist)
+        if (is_valid_directory_exist)
         {
             // Randomly select a valid edge node as the target edge node
-            std::uniform_int_distribution<uint32_t> uniform_dist(0, valid_dirinfos.size() - 1); // Range from 0 to (# of directory info - 1)
+            std::uniform_int_distribution<uint32_t> uniform_dist(0, valid_directory_info_set.size() - 1); // Range from 0 to (# of directory info - 1)
             uint32_t random_number = uniform_dist(*directory_randgen_ptr_);
-            assert(random_number < valid_dirinfos.size());
+            assert(random_number < valid_directory_info_set.size());
             uint32_t i = 0;
-            for (perkey_dirinfos_t::const_iterator iter = valid_dirinfos.begin(); iter != valid_dirinfos.end(); iter++)
+            for (dirinfo_set_t::const_iterator iter = valid_directory_info_set.begin(); iter != valid_directory_info_set.end(); iter++)
             {
                 if (i == random_number)
                 {
-                    directory_info = iter->first;
+                    directory_info = *iter;
                     break;
                 }
                 i++;
