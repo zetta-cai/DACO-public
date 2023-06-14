@@ -211,12 +211,9 @@ namespace covered
         const LocalGetRequest* const local_get_request_ptr = static_cast<const LocalGetRequest*>(local_request_ptr);
         Key tmp_key = local_get_request_ptr->getKey();
         Value tmp_value;
-        bool is_local_valid = false;
-        bool is_local_cached = edge_cache_ptr_->get(tmp_key, tmp_value, is_local_valid);
-        bool is_local_cached_and_valid = false;
-        if (is_local_cached && is_local_valid) // local cached and valid
+        bool is_local_cached_and_valid = edge_cache_ptr_->get(tmp_key, tmp_value);
+        if (is_local_cached_and_valid) // local cached and valid
         {
-            is_local_cached_and_valid = true;
             hitflag = Hitflag::kLocalHit;
         }
 
@@ -247,6 +244,7 @@ namespace covered
         }
 
         // Trigger independent cache admission for local/global cache miss if necessary
+        bool is_local_cached = edge_cache_ptr_->isLocalCached(tmp_key);
         if (!is_local_cached && edge_cache_ptr_->needIndependentAdmit(tmp_key))
         {
             triggerIndependentAdmission_(tmp_key, tmp_value);
@@ -401,11 +399,11 @@ namespace covered
 
         bool is_finish = false; // Mark if edge node is finished
 
-        bool is_invalid = false;
+        bool is_cached_and_invalid = false;
         while (true)
         {
-            is_invalid = edge_cache_ptr_->isCachedAndInvalid(key);
-            if (is_invalid)
+            is_cached_and_invalid = edge_cache_ptr_->isCachedAndInvalid(key);
+            if (is_cached_and_invalid)
             {
                 if (!edge_param_ptr_->isEdgeRunning())
                 {

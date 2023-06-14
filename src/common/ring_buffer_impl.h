@@ -1,0 +1,98 @@
+#include "common/ring_buffer.h"
+
+#include <assert.h>
+#include <sstream>
+
+#include "common/util.h"
+
+namespace covered
+{
+    template<class T>
+    const std::string RingBuffer<T>::kClassName = "RingBuffer<" + std::string(typeid(T).name()) + ">";
+
+    template<class T>
+    RingBuffer<T>::RingBuffer(uint32_t capacity, const T& default_element)
+    {
+        assert(capacity > 0);
+
+        head_ = 0;
+        tail_ = 0;
+        capacity_ = capacity;
+        default_element_ = default_element;
+        ring_buffer_.resize(capacity, default_element);
+    }
+
+    template<class T>
+    RingBuffer<T>::~RingBuffer()
+    {
+        /*
+        // NOTE: poped pointers are released outside RingBuffer, yet remaining pointers in ring_buffer_ are released by RingBuffer
+        while (true)
+        {
+            T* ptr = pop();
+            if (ptr != NULL)
+            {
+                delete ptr;
+                ptr = NULL;
+            }
+            else
+            {
+                break;
+            }
+        }
+        */
+    }
+
+    template<class T>
+    bool RingBuffer<T>::push(const T& element)
+    {
+        /*
+        if (ptr == NULL)
+        {
+            Util::dumpErrorMsg(kClassName, "ptr is NULL for push()!");
+            exit(1);
+        }
+        */
+
+        bool is_successful = false;
+
+        if ((head_ + 1) % capacity_ == tail_) // ring buffer is full
+        {
+            Util::dumpWarnMsg(kClassName, "ring buffer is fulll!");
+            is_successful = false;
+        }
+        else // still with free space
+        {
+            //assert(ring_buffer_[head_] == NULL);
+            ring_buffer_[head_] = element;
+            //assert(ring_buffer_[head_] != NULL);
+            
+            head_ = (head_ + 1) % capacity_;
+            is_successful = true;
+        }
+
+        return is_successful;
+    }
+
+    template<class T>
+    bool RingBuffer<T>::pop(T& element)
+    {
+        bool is_successful = false;
+
+        if (tail_ == head_) // ring buffer is empty
+        {
+            is_successful = false;
+        }
+        else // ring buffer is NOT empty
+        {
+            element = ring_buffer_[tail_];
+            //assert(result != NULL);
+            ring_buffer_[tail_] = default_element_;
+
+            tail_ = (tail_ + 1) % capacity_;
+            is_successful = true;
+        }
+
+        return is_successful;
+    }
+}

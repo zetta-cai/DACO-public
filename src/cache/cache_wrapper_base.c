@@ -90,10 +90,25 @@ namespace covered
         return;
     }
 
-    bool CacheWrapperBase::get(const Key& key, Value& value, bool& is_valid)
+    bool CacheWrapperBase::get(const Key& key, Value& value)
     {
-        bool is_local_cached = getInternal_(key, value);
-        is_valid = validity_map_[key];
+        bool is_local_cached = getInternal_(key, value); // Still need to update local statistics if key is cached yet invalid
+        bool is_valid = false;
+        if (is_local_cached)
+        {
+            assert(validity_map_.find(key) != validity_map_.end()); // key must be cached
+            is_valid = validity_map_[key];
+        }
+        return is_local_cached && is_valid;
+    }
+    
+    bool CacheWrapperBase::update(const Key& key, const Value& value)
+    {
+        bool is_local_cached = updateInternal_(key, value);
+        if (is_local_cached)
+        {
+            validity_map_[key] = true;
+        }
         return is_local_cached;
     }
 
@@ -102,6 +117,11 @@ namespace covered
         Value deleted_value;
         bool is_local_cached = update(key, deleted_value);
         return is_local_cached;
+    }
+
+    bool CacheWrapperBase::isLocalCached(const Key& key) const
+    {
+        return validity_map_.find(key) != validity_map_.end();
     }
 
     void CacheWrapperBase::admit(const Key& key, const Value& value)

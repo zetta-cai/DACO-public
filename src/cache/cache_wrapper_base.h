@@ -31,19 +31,23 @@ namespace covered
         // True: cached yet invalid (NO need to access cache)
         // False: uncached (still need to access cache to update metadata) or valid
         bool isCachedAndInvalid(const Key& key) const; // For data messages (e.g., local/redirected/global requests)
+        
         void invalidate(const Key& key); // For control messages (e.g., invalidation and admission/eviction)
         void validate(const Key& key); // For control messages (e.g., invalidation and admission/eviction)
 
-        // Return whether key is cached (i.e., cache hit) after get/update/remove
-        // NOTE: get() cannot be const due to metadata changes for cached/uncached objects; get() also checks validity flag for MSI protocol
-        // NOTE: update() only updates the object if cached, yet not admit a new one
-        // NOTE: remove() just marks the object as deleted if cached, yet not evict the cached object
-        bool get(const Key& key, Value& value, bool& is_valid);
-        virtual bool update(const Key& key, const Value& value) = 0;
-        bool remove(const Key& key);
+        // Return whether key is cached and valid (i.e., local cache hit) after get/update/remove
+        // NOTE: get() cannot be const due to metadata changes for cached/uncached objects
+        bool get(const Key& key, Value& value);
 
-        // If get() or update() or remove() returns false (i.e., key is still uncached), EdgeWrapper will invoke needIndependentAdmit() for admission policy
-        // NOTE: cache methods w/ LRU-based independent admission policy (i.e., always admit) will always return true, while others will return true/false based on other independent admission policy
+        // Return whether key is cached, while both update() and remove() will set validity as true
+        // NOTE: update() only updates the object if cached, yet not admit a new one
+        // NOTE: remove() only marks the object as deleted if cached, yet not evict it
+        bool update(const Key& key, const Value& value);
+        bool remove(const Key& key);
+        bool isLocalCached(const Key& key) const;
+
+        // If get() or update() or remove() returns false (i.e., key is not cached), EdgeWrapper will invoke needIndependentAdmit() for admission policy
+        // NOTE: cache methods w/o admission policy (i.e., always admit) will always return true if key is not cached, while others will return true/false based on other independent admission policy
         // NOTE: only COVERED never needs independent admission (i.e., always returns false)
         virtual bool needIndependentAdmit(const Key& key) = 0;
 
@@ -57,7 +61,8 @@ namespace covered
     private:
         static const std::string kClassName;
 
-        virtual bool getInternal_(const Key& key, Value& value) = 0; // Return whether key is cached (i.e., cache hit) after getInternal_()
+        virtual bool getInternal_(const Key& key, Value& value) = 0; // Return whether key is cached
+        virtual bool updateInternal_(const Key& key, const Value& value) = 0; // Return whether key is cached
         virtual void admitInternal_(const Key& key, const Value& value) = 0;
         virtual void evictInternal_(Key& key, Value& value) = 0;
 

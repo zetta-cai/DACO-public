@@ -41,15 +41,15 @@ namespace covered
         const RedirectedGetRequest* const redirected_get_request_ptr = static_cast<const RedirectedGetRequest*>(redirected_request_ptr);
         Key tmp_key = redirected_get_request_ptr->getKey();
         Value tmp_value;
-        bool is_cooperative_valid = false;
-        bool is_cooperative_cached = edge_cache_ptr_->get(tmp_key, tmp_value, is_cooperative_valid);
-        if (is_cooperative_cached)
+        bool is_cooperative_cached_and_valid = edge_cache_ptr_->get(tmp_key, tmp_value);
+        bool is_cooperaitve_cached = edge_cache_ptr_->isLocalCached(tmp_key);
+        if (is_cooperative_cached_and_valid) // cached and valid
         {
-            if (is_cooperative_valid)
-            {
-                hitflag = Hitflag::kCooperativeHit;
-            }
-            else
+            hitflag = Hitflag::kCooperativeHit;
+        }
+        else // not cached or invalid
+        {
+            if (is_cooperaitve_cached) // cached and invalid
             {
                 //hitflag = Hitflag::kCooperativeInvalid;
             }

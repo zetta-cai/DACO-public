@@ -9,6 +9,7 @@ namespace covered
 {
     const std::string DirectoryMetadata::kClassName("DirectoryMetadata");
     const std::string DirectoryEntry::kClassName("DirectoryEntry");
+    const uint32_t DirectoryEntry::DIRINFO_BUFFER_CAPACITY = 1000;
     const std::string DirectoryTable::kClassName("DirectoryTable");
 
     // (1) DirectoryMetadata
@@ -40,32 +41,22 @@ namespace covered
     DirectoryEntry::DirectoryEntry()
     {
         directory_entry_.clear();
+        is_being_written_ = false;
     }
 
     DirectoryEntry::~DirectoryEntry() {}
 
-    bool DirectoryEntry::isBeingWritten()
+    bool DirectoryEntry::isBeingWritten() const
     {
-        bool is_being_written = false;
-        if (rwlock_.try_lock_shared()) // Being able to get read lock means no writes
-        {
-            is_being_written = false;
-            rwlock_.unlock_shared();
-        }
-        else // Unable to get read lock means with writes
-        {
-            is_being_written = true;
-        }
-        return is_being_written;
+        return is_being_written_;
     }
 
-    bool DirectoryEntry::getValidDirinfoSet(dirinfo_set_t& dirinfo_set)
+    void DirectoryEntry::getValidDirinfoSet(dirinfo_set_t& dirinfo_set) const
     {
-        bool is_being_written = false;
-        if (rwlock_.try_lock_shared()) // Being able to get read lock means no writes
+        // NOTE: all directory infos must be invalid if being written
+        dirinfo_set.clear();
+        if (!is_being_written_) // key is not being written now
         {
-            is_being_written = false;
-
             // Add all valid directory information into valid_directory_info_set
             for (dirinfo_entry_t::const_iterator iter = directory_entry_.begin(); iter != directory_entry_.end(); iter++)
             {
@@ -76,14 +67,68 @@ namespace covered
                     dirinfo_set.insert(directory_info);
                 }
             }
+        }
+        return;
+    }
 
-            rwlock_.unlock_shared();
-        }
-        else // Unable to get read lock means with writes
+    bool DirectoryEntry::addDirinfo(const DirectoryInfo& directory_info)
+    {
+        // NOTE: admitted directory info is valid if without writes, or invalid otherwise
+        bool is_directory_already_exist = false;
+        if (!is_being_written_) // key is not being written
         {
-            is_being_written = true;
+            is_directory_already_exist = addDirinfoInternal_(directory_info, true);
         }
-        return is_being_written;
+        else // key is being written
+        {
+            is_directory_already_exist = addDirinfoInternal_(directory_info, false);
+        }
+        return is_directory_already_exist;
+    }
+
+    bool DirectoryEntry::removeDirinfo(const DirectoryInfo& directory_info)
+    {
+        bool is_directory_already_exist = false;
+        dirinfo_entry_t::const_iterator iter = directory_entry_.find(directory_info);
+        if (iter == directory_entry_.end()) // directory info does not exist
+        {
+            is_directory_already_exist = false;
+        }
+        else // directory info already exists
+        {
+            directory_entry_.erase(iter);
+
+            is_directory_already_exist = true;
+        }
+        return is_directory_already_exist;
+    }
+
+    bool DirectoryEntry::addDirinfoInternal_(const DirectoryInfo& directory_info, const bool& is_valid)
+    {
+        bool is_directory_already_exist = false;
+        dirinfo_entry_t::iterator iter = directory_entry_.find(directory_info);
+        if (iter == directory_entry_.end()) // directory info does not exist
+        {
+            DirectoryMetadata directory_metadata(is_valid);
+            directory_entry_.insert(std::pair<DirectoryInfo, DirectoryMetadata>(directory_info, directory_metadata));
+
+            is_directory_already_exist = false;
+        }
+        else // directory info already exists
+        {
+            DirectoryMetadata& directory_metadata = iter->second;
+            if (is_valid)
+            {
+                directory_metadata.validate();
+            }
+            else
+            {
+                directory_metadata.invalidate();
+            }
+
+            is_directory_already_exist = true;
+        }
+        return is_directory_already_exist;
     }
 
     // (3) DirectoryTable
@@ -107,36 +152,37 @@ namespace covered
 
     void DirectoryTable::lookup(const Key& key, bool& is_valid_directory_exist, DirectoryInfo& directory_info)
     {
-        dirinfo_table_t::iterator directory_hashtable_iter = directory_hashtable_.find(key);
+        // NOTE: as writer(s) can update DirectoryTable very quickly, it is okay to polling rwlock_ here
+        while (true)
+        {
+            if (rwlock_.try_lock_shared())
+            {
+                break;
+            }
+        }
+
+        dirinfo_table_t::const_iterator directory_hashtable_iter = directory_hashtable_.find(key);
         dirinfo_set_t valid_directory_info_set;
 
-        // Check if directory entry exists
-        if (directory_hashtable_iter == directory_hashtable_.end()) // Directory entry does not exist
+        // Check if key exists
+        if (directory_hashtable_iter == directory_hashtable_.end()) // key does not exist
         {
             is_valid_directory_exist = false;
         }
-        else // Directory entry exists
+        else // key exists
         {
-            // Get all valid directory infos if without writes
-            DirectoryEntry& directory_entry = directory_hashtable_iter->second;
-            bool is_being_written = directory_entry.getValidDirinfoSet(valid_directory_info_set);
+            // Get all valid directory infos if any
+            const DirectoryEntry& directory_entry = directory_hashtable_iter->second;
+            directory_entry.getValidDirinfoSet(valid_directory_info_set);
 
-            // Check if key is being written
-            if (is_being_written) // with writes
+            if (valid_directory_info_set.size() > 0) // At least one valid directory
+            {
+                is_valid_directory_exist = true;
+            }
+            else // No valid directory (e.g., key is being written)
             {
                 is_valid_directory_exist = false;
             }
-            else // without writes
-            {
-                if (valid_directory_info_set.size() > 0) // At least one valid directory
-                {
-                    is_valid_directory_exist = true;
-                }
-                else // No valid directory
-                {
-                    is_valid_directory_exist = false;
-                }
-            } // End of if key is being written
         } // End of if key exists
 
         // Get the target edge index from valid neighbors
@@ -158,51 +204,52 @@ namespace covered
             }
         }
 
+        rwlock_.unlock_shared();
         return;
     }
 
     void DirectoryTable::update(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info)
     {
+        // NOTE: as writer(s) can update DirectoryTable very quickly, it is okay to polling rwlock_ here
+        while (true)
+        {
+            if (rwlock_.try_lock())
+            {
+                break;
+            }
+        }
+
         dirinfo_table_t::iterator directory_hashtable_iter = directory_hashtable_.find(key);
         if (is_admit) // Add a new directory info
         {
-            // NOTE: validity flag must be true for each cache admission
-            const bool validity = true;
+            // Check if key exists
             if (directory_hashtable_iter == directory_hashtable_.end()) // key does not exist
             {
-                perkey_dirinfos_t tmp_dirinfos;
-                tmp_dirinfos.insert(std::pair<DirectoryInfo, bool>(directory_info, validity));
-                directory_hashtable_.insert(std::pair<Key, perkey_dirinfos_t>(key, tmp_dirinfos));
+                DirectoryEntry directory_entry;
+                bool is_directory_already_exists = directory_entry.addDirinfo(directory_info);
+                assert(is_directory_already_exists == false);
+                directory_hashtable_.insert(std::pair<Key, DirectoryEntry>(key, directory_entry));
             }
             else // key already exists
             {
-                perkey_dirinfos_t& tmp_dirinfos = directory_hashtable_iter->second;
-                perkey_dirinfos_t::iterator tmp_dirinfos_iter = tmp_dirinfos.find(directory_info);
-                if (tmp_dirinfos_iter != tmp_dirinfos.end()) // directory_info exists for key
+                DirectoryEntry& directory_entry = directory_hashtable_iter->second;
+                bool is_directory_already_exists = directory_entry.addDirinfo(directory_info);
+                if (is_directory_already_exists) // directory_info already exists for key
                 {
                     std::ostringstream oss;
                     oss << "target edge index " << directory_info.getTargetEdgeIdx() << " already exists for key " << key.getKeystr() << " in update() with is_admit = true!";
                     Util::dumpWarnMsg(kClassName, oss.str());
-
-                    tmp_dirinfos_iter->second = validity;
-                }
-                else // directory_info does not exist for key
-                {
-                    tmp_dirinfos.insert(std::pair<DirectoryInfo, bool>(directory_info, validity));
                 }
             }
         } // End of (is_admit == true)
         else // Delete an existing directory info
         {
-            // NOTE: validity flag could be either true or false for each cache eviction
+            // Check if key exists
             if (directory_hashtable_iter != directory_hashtable_.end()) // key already exists
             {
-                perkey_dirinfos_t& tmp_dirinfos = directory_hashtable_iter->second;
-                if (tmp_dirinfos.find(directory_info) != tmp_dirinfos.end()) // directory_info already exists
-                {
-                    tmp_dirinfos.erase(directory_info);
-                }
-                else // directory_info does NOT exist
+                DirectoryEntry& directory_entry = directory_hashtable_iter->second;
+                bool is_directory_already_exists = directory_entry.removeDirinfo(directory_info);
+                if (!is_directory_already_exists) // directory_info does NOT exist
                 {
                     std::ostringstream oss;
                     oss << "target edge index " << directory_info.getTargetEdgeIdx() << " does NOT exist for key " << key.getKeystr() << " in update() with is_admit = false!";
@@ -216,5 +263,8 @@ namespace covered
                 Util::dumpWarnMsg(kClassName, oss.str());
             }
         } // ENd of (is_admit == false)
+
+        rwlock_.unlock();
+        return;
     }
 }
