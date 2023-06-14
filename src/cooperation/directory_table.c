@@ -150,7 +150,7 @@ namespace covered
         directory_randgen_ptr_ = NULL;
     }
 
-    void DirectoryTable::lookup(const Key& key, bool& is_valid_directory_exist, DirectoryInfo& directory_info)
+    void DirectoryTable::lookup(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info)
     {
         // NOTE: as writer(s) can update DirectoryTable very quickly, it is okay to polling rwlock_ here
         while (true)
@@ -167,16 +167,19 @@ namespace covered
         // Check if key exists
         if (directory_hashtable_iter == directory_hashtable_.end()) // key does not exist
         {
+            is_being_written = false;
             is_valid_directory_exist = false;
         }
         else // key exists
         {
             // Get all valid directory infos if any
             const DirectoryEntry& directory_entry = directory_hashtable_iter->second;
+            is_being_written = directory_entry.isBeingWritten();
             directory_entry.getValidDirinfoSet(valid_directory_info_set);
 
             if (valid_directory_info_set.size() > 0) // At least one valid directory
             {
+                assert(is_being_written == false);
                 is_valid_directory_exist = true;
             }
             else // No valid directory (e.g., key is being written)

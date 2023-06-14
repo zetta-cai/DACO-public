@@ -69,7 +69,7 @@ namespace covered
         ~DirectoryTable();
 
         // NOTE: lookup() cannot be const due to rwlock_.try_lock_shared()
-        void lookup(const Key& key, bool& is_valid_directory_exist, DirectoryInfo& directory_info);
+        void lookup(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info);
         void update(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info);
     private:
         typedef std::unordered_map<Key, DirectoryEntry, KeyHasher> dirinfo_table_t;

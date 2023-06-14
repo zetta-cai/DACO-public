@@ -13,11 +13,11 @@
 
 #include "common/dynamic_array.h"
 #include "common/key.h"
-#include "message/key_existence_directory_message.h"
+#include "message/key_validity_directory_message.h"
 
 namespace covered
 {
-    class DirectoryUpdateRequest : public KeyExistenceDirectoryMessage
+    class DirectoryUpdateRequest : public KeyValidityDirectoryMessage
     {
     public:
         DirectoryUpdateRequest(const Key& key, const bool& is_valid_directory_exist, const DirectoryInfo& directory_info);

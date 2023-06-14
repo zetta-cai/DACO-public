@@ -33,7 +33,7 @@ namespace covered
         // Return if edge node is finished
         // NOTE: get() cannot be const due to changing remote address of edge_sendreq_totarget_socket_client_ptr_
         bool get(const Key& key, Value& value, bool& is_cooperative_cached_and_valid); // Get data from target edge ndoe
-        void lookupLocalDirectory(const Key& key, bool& is_valid_directory_exist, DirectoryInfo& directory_info); // Check local directory information
+        void lookupLocalDirectory(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info); // Check local directory information
         bool updateDirectory(const Key& key, const bool& is_admit); // Update remote directory info at beacon node
         void updateLocalDirectory(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info);
     private:
@@ -44,7 +44,7 @@ namespace covered
         // For get()
         // Return if edge node is finished
         void locateBeaconNode_(const Key& key, bool& current_is_beacon);
-        virtual bool lookupBeaconDirectory_(const Key& key, bool& is_valid_directory_exist, DirectoryInfo& directory_info) = 0; // Check remote directory information at the beacon node
+        virtual bool lookupBeaconDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) = 0; // Check remote directory information at the beacon node
         void locateTargetNode_(const DirectoryInfo& directory_info);
         virtual bool redirectGetToTarget_(const Key& key, Value& value, bool& is_cooperative_cached_and_valid) = 0;
 

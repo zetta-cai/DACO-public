@@ -131,12 +131,13 @@ namespace covered
         Key tmp_key = directory_lookup_request_ptr->getKey();
 
         // Lookup local directory information and randomly select a target edge index
+        bool is_being_written = false;
         bool is_valid_directory_exist = false;
         DirectoryInfo directory_info;
-        cooperation_wrapper_ptr_->lookupLocalDirectory(tmp_key, is_valid_directory_exist, directory_info);
+        cooperation_wrapper_ptr_->lookupLocalDirectory(tmp_key, is_being_written, is_valid_directory_exist, directory_info);
 
         // Send back a directory lookup response
-        DirectoryLookupResponse directory_lookup_response(tmp_key, is_valid_directory_exist, directory_info);
+        DirectoryLookupResponse directory_lookup_response(tmp_key, is_being_written, is_valid_directory_exist, directory_info);
         DynamicArray control_response_msg_payload(directory_lookup_response.getMsgPayloadSize());
         directory_lookup_response.serialize(control_response_msg_payload);
         PropagationSimulator::propagateFromNeighborToEdge();

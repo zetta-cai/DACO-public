@@ -1,13 +1,13 @@
 /*
- * KeyExistenceDirectoryMessage: the base class for messages each with a key, an existence boolean, and a directory information.
+ * KeyWriteflagValidityDirectoryMessage: the base class for messages each with a key, a write flag, a validity boolean, and a directory information.
  *
- * NOTE: the existence boolean indicates whether the key is cooperatively cached.
+ * NOTE: the write flag indicates whether key is being written.
  * 
- * By Siyuan Sheng (2023.06.06).
+ * By Siyuan Sheng (2023.06.14).
  */
 
-#ifndef KEY_EXISTENCE_DIRECTORY_MESSAGE_H
-#define KEY_EXISTENCE_DIRECTORY_MESSAGE_H
+#ifndef KEY_WRITEFLAG_VALIDITY_DIRECTORY_MESSAGE_H
+#define KEY_WRITEFLAG_VALIDITY_DIRECTORY_MESSAGE_H
 
 #include <string>
 
@@ -18,14 +18,15 @@
 
 namespace covered
 {
-    class KeyExistenceDirectoryMessage : public MessageBase
+    class KeyWriteflagValidityDirectoryMessage : public MessageBase
     {
     public:
-        KeyExistenceDirectoryMessage(const Key& key, const bool& is_valid_directory_exist, const DirectoryInfo& directory_info, const MessageType& message_type);
-        KeyExistenceDirectoryMessage(const DynamicArray& msg_payload);
-        virtual ~KeyExistenceDirectoryMessage();
+        KeyWriteflagValidityDirectoryMessage(const Key& key, const bool& is_being_written, const bool& is_valid_directory_exist, const DirectoryInfo& directory_info, const MessageType& message_type);
+        KeyWriteflagValidityDirectoryMessage(const DynamicArray& msg_payload);
+        virtual ~KeyWriteflagValidityDirectoryMessage();
 
         Key getKey() const;
+        bool isBeingWritten() const;
         bool isValidDirectoryExist() const;
         DirectoryInfo getDirectoryInfo() const;
     private:
@@ -39,6 +40,7 @@ namespace covered
         Key key_;
         
         // Directory information
+        bool is_being_written_;
         bool is_valid_directory_exist_;
         DirectoryInfo directory_info_;
     };

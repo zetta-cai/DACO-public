@@ -14,14 +14,14 @@
 #include "common/dynamic_array.h"
 #include "common/key.h"
 #include "cooperation/directory_info.h"
-#include "message/key_existence_directory_message.h"
+#include "message/key_writeflag_validity_directory_message.h"
 
 namespace covered
 {
-    class DirectoryLookupResponse : public KeyExistenceDirectoryMessage
+    class DirectoryLookupResponse : public KeyWriteflagValidityDirectoryMessage
     {
     public:
-        DirectoryLookupResponse(const Key& key, const bool& is_valid_directory_exist, const DirectoryInfo& directory_info);
+        DirectoryLookupResponse(const Key& key, const bool& is_being_written, const bool& is_valid_directory_exist, const DirectoryInfo& directory_info);
         DirectoryLookupResponse(const DynamicArray& msg_payload);
         virtual ~DirectoryLookupResponse();
     private:

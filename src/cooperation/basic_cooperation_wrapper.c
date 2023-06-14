@@ -24,7 +24,7 @@ namespace covered
 
     BasicCooperationWrapper::~BasicCooperationWrapper() {}
 
-    bool BasicCooperationWrapper::lookupBeaconDirectory_(const Key& key, bool& is_valid_directory_exist, DirectoryInfo& directory_info)
+    bool BasicCooperationWrapper::lookupBeaconDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info)
     {
         // The current edge node must NOT be the beacon node for the key
         verifyCurrentIsNotBeacon_(key);
@@ -69,6 +69,7 @@ namespace covered
 
                 // Get directory information from the control response message
                 const DirectoryLookupResponse* const directory_lookup_response_ptr = static_cast<const DirectoryLookupResponse*>(control_response_ptr);
+                is_being_written = directory_lookup_response_ptr->isBeingWritten();
                 is_valid_directory_exist = directory_lookup_response_ptr->isValidDirectoryExist();
                 directory_info = directory_lookup_response_ptr->getDirectoryInfo();
 

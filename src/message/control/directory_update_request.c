@@ -4,11 +4,11 @@ namespace covered
 {
     const std::string DirectoryUpdateRequest::kClassName("DirectoryUpdateRequest");
 
-    DirectoryUpdateRequest::DirectoryUpdateRequest(const Key& key, const bool& is_valid_directory_exist, const DirectoryInfo& directory_info) : KeyExistenceDirectoryMessage(key, is_valid_directory_exist, directory_info, MessageType::kDirectoryUpdateRequest)
+    DirectoryUpdateRequest::DirectoryUpdateRequest(const Key& key, const bool& is_valid_directory_exist, const DirectoryInfo& directory_info) : KeyValidityDirectoryMessage(key, is_valid_directory_exist, directory_info, MessageType::kDirectoryUpdateRequest)
     {
     }
 
-    DirectoryUpdateRequest::DirectoryUpdateRequest(const DynamicArray& msg_payload) : KeyExistenceDirectoryMessage(msg_payload)
+    DirectoryUpdateRequest::DirectoryUpdateRequest(const DynamicArray& msg_payload) : KeyValidityDirectoryMessage(msg_payload)
     {
     }
 

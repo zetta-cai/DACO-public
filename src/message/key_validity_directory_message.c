@@ -1,49 +1,49 @@
-#include "message/key_existence_directory_message.h"
+#include "message/key_validity_directory_message.h"
 
 namespace covered
 {
-    const std::string KeyExistenceDirectoryMessage::kClassName("KeyExistenceDirectoryMessage");
+    const std::string KeyValidityDirectoryMessage::kClassName("KeyValidityDirectoryMessage");
 
-    KeyExistenceDirectoryMessage::KeyExistenceDirectoryMessage(const Key& key, const bool& is_valid_directory_exist, const DirectoryInfo& directory_info, const MessageType& message_type) : MessageBase(message_type)
+    KeyValidityDirectoryMessage::KeyValidityDirectoryMessage(const Key& key, const bool& is_valid_directory_exist, const DirectoryInfo& directory_info, const MessageType& message_type) : MessageBase(message_type)
     {
         key_ = key;
         is_valid_directory_exist_ = is_valid_directory_exist;
         directory_info_ = directory_info;
     }
 
-    KeyExistenceDirectoryMessage::KeyExistenceDirectoryMessage(const DynamicArray& msg_payload) : MessageBase()
+    KeyValidityDirectoryMessage::KeyValidityDirectoryMessage(const DynamicArray& msg_payload) : MessageBase()
     {
         deserialize(msg_payload);
     }
 
-    KeyExistenceDirectoryMessage::~KeyExistenceDirectoryMessage() {}
+    KeyValidityDirectoryMessage::~KeyValidityDirectoryMessage() {}
 
-    Key KeyExistenceDirectoryMessage::getKey() const
+    Key KeyValidityDirectoryMessage::getKey() const
     {
         checkIsValid_();
         return key_;
     }
 
-    bool KeyExistenceDirectoryMessage::isValidDirectoryExist() const
+    bool KeyValidityDirectoryMessage::isValidDirectoryExist() const
     {
         checkIsValid_();
         return is_valid_directory_exist_;
     }
 
-    DirectoryInfo KeyExistenceDirectoryMessage::getDirectoryInfo() const
+    DirectoryInfo KeyValidityDirectoryMessage::getDirectoryInfo() const
     {
         checkIsValid_();
         return directory_info_;
     }
 
-    uint32_t KeyExistenceDirectoryMessage::getMsgPayloadSizeInternal_() const
+    uint32_t KeyValidityDirectoryMessage::getMsgPayloadSizeInternal_() const
     {
         // key payload + is cooperatively cached + target edge idx
         uint32_t msg_payload_size = key_.getKeyPayloadSize() + sizeof(bool) + sizeof(uint32_t);
         return msg_payload_size;
     }
 
-    uint32_t KeyExistenceDirectoryMessage::serializeInternal_(DynamicArray& msg_payload, const uint32_t& position) const
+    uint32_t KeyValidityDirectoryMessage::serializeInternal_(DynamicArray& msg_payload, const uint32_t& position) const
     {
         uint32_t size = position;
         uint32_t key_serialize_size = key_.serialize(msg_payload, size);
@@ -55,7 +55,7 @@ namespace covered
         return size - position;
     }
 
-    uint32_t KeyExistenceDirectoryMessage::deserializeInternal_(const DynamicArray& msg_payload, const uint32_t& position)
+    uint32_t KeyValidityDirectoryMessage::deserializeInternal_(const DynamicArray& msg_payload, const uint32_t& position)
     {
         uint32_t size = position;
         uint32_t key_deserialize_size = key_.deserialize(msg_payload, size);
