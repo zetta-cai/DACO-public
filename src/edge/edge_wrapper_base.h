@@ -1,5 +1,7 @@
 /*
- * EdgeWrapperBase: the base class of edge node to process data/control requests.
+ * EdgeWrapperBase: the base class of edge node to process data/control requests (thread safe).
+ *
+ * NOTE: all non-const shared variables in EdgeWrapperBase should be thread safe.
  * 
  * By Siyuan Sheng (2023.04.22).
  */
@@ -9,6 +11,7 @@
 
 #include <string>
 
+#include "common/perkey_rwlock.h"
 #include "cache/cache_wrapper_base.h"
 #include "cooperation/cooperation_wrapper_base.h"
 #include "edge/edge_param.h"
@@ -33,34 +36,40 @@ namespace covered
     
         // Return if edge node is finished
         bool processDataRequest_(MessageBase* data_request_ptr);
-        bool processLocalGetRequest_(MessageBase* local_request_ptr);
+        bool processLocalGetRequest_(MessageBase* local_request_ptr) const;
         bool processLocalWriteRequest_(MessageBase* local_request_ptr); // For put/del
         bool processRedirectedRequest_(MessageBase* redirected_request_ptr);
-        virtual bool processRedirectedGetRequest_(MessageBase* redirected_request_ptr) = 0;
+        virtual bool processRedirectedGetRequest_(MessageBase* redirected_request_ptr) const = 0;
 
         // Return if edge node is finished
-        bool blockForInvalidation_(const Key& key);
-        bool fetchDataFromCloud_(const Key& key, Value& value);
+        bool blockForInvalidation_(const Key& key) const;
+        bool fetchDataFromCloud_(const Key& key, Value& value) const;
         bool writeDataToCloud_(const Key& key, const Value& value, const MessageType& message_type);
 
-        virtual void triggerIndependentAdmission_(const Key& key, const Value& value) = 0;
+        virtual void triggerIndependentAdmission_(const Key& key, const Value& value) const = 0;
 
         // (2) Control requests
 
         // Return if edge node is finished
         bool processControlRequest_(MessageBase* control_request_ptr);
-        virtual bool processDirectoryLookupRequest_(MessageBase* control_request_ptr) = 0;
+        virtual bool processDirectoryLookupRequest_(MessageBase* control_request_ptr) const = 0;
         virtual bool processDirectoryUpdateRequest_(MessageBase* control_request_ptr) = 0;
         virtual bool processOtherControlRequest_(MessageBase* control_request_ptr) = 0;
 
         std::string base_instance_name_;
     protected:
+        // Const shared variables
         const std::string cache_name_;
-        EdgeParam* edge_param_ptr_;
+        const EdgeParam* edge_param_ptr_;
 
-        CacheWrapperBase* edge_cache_ptr_;
+        // Guarantee the global serializability for writes of the same key
+        mutable PerkeyRwlock perkey_rwlock_for_serializability_;
+
+        // Non-const shared variables (thread safe)
+        mutable CacheWrapperBase* edge_cache_ptr_;
         CooperationWrapperBase* cooperation_wrapper_ptr_;
 
+        // Non-const individual variables
         UdpSocketWrapper* edge_recvreq_socket_server_ptr_;
         UdpSocketWrapper* edge_sendreq_tocloud_socket_client_ptr_;
     };

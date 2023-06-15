@@ -1,10 +1,12 @@
 /*
- * LruCacheWrapper: the wrapper for LRU cache (https://github.com/lamerman/cpp-lru-cache).
+ * LruCacheWrapper: the wrapper for LRU cache (https://github.com/lamerman/cpp-lru-cache) (thread safe).
  * 
  * By Siyuan Sheng (2023.05.16).
  */
 
 #include <string>
+
+#include <boost/thread/shared_mutex.hpp>
 
 #include "cache/cache_wrapper_base.h"
 #include "cache/cpp-lru-cache/lrucache.h"
@@ -18,12 +20,12 @@ namespace covered
         LruCacheWrapper(const uint32_t& capacity, EdgeParam* edge_param_ptr);
         ~LruCacheWrapper();
 
-        virtual bool needIndependentAdmit(const Key& key) override;
+        virtual bool needIndependentAdmit(const Key& key) const override;
         
     private:
         static const std::string kClassName;
 
-        virtual bool getInternal_(const Key& key, Value& value) override;
+        virtual bool getInternal_(const Key& key, Value& value) const override;
         virtual bool updateInternal_(const Key& key, const Value& value) override;
         virtual void admitInternal_(const Key& key, const Value& value) override;
         virtual void evictInternal_(Key& key, Value& value) override;
@@ -34,6 +36,10 @@ namespace covered
         // lruCacheWrapper only uses edge index to specify instance_name_, yet not need to check if edge is running due to no network communication -> no need to maintain edge_param_ptr_
         std::string instance_name_;
 
+        // Guarantee the atomicity of local statistics (e.g., get values for different keys)
+        mutable boost::shared_mutex rwlock_for_local_statistics_;
+
+        // Non-const shared variables
         LruCache* lru_cache_ptr_;
     };
 }

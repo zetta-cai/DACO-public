@@ -25,7 +25,7 @@ namespace covered
         return *this;
     }
 
-    bool EdgeParam::isEdgeRunning()
+    bool EdgeParam::isEdgeRunning() const
     {
         return edge_running_.load(Util::LOAD_CONCURRENCY_ORDER);
     }
@@ -40,7 +40,7 @@ namespace covered
         return edge_running_.store(false, Util::STORE_CONCURRENCY_ORDER);
     }
 
-    uint32_t EdgeParam::getEdgeIdx()
+    uint32_t EdgeParam::getEdgeIdx() const
     {
         return edge_idx_;
     }

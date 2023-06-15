@@ -34,7 +34,7 @@ namespace covered
         return edge_wrapper_ptr;
     }
 
-    EdgeWrapperBase::EdgeWrapperBase(const std::string& cache_name, const std::string& hash_name, EdgeParam* edge_param_ptr) : cache_name_(cache_name)
+    EdgeWrapperBase::EdgeWrapperBase(const std::string& cache_name, const std::string& hash_name, EdgeParam* edge_param_ptr) : cache_name_(cache_name), edge_param_ptr_(edge_param_ptr)
     {
         if (edge_param_ptr == NULL)
         {
@@ -46,9 +46,6 @@ namespace covered
         std::ostringstream oss;
         oss << kClassName << " " << edge_param_ptr->getEdgeIdx();
         base_instance_name_ = oss.str();
-
-        edge_param_ptr_ = edge_param_ptr;
-        assert(edge_param_ptr_ != NULL);
         
         // Allocate local edge cache to store hot objects
         edge_cache_ptr_ = CacheWrapperBase::getEdgeCache(cache_name_, Param::getCapacityBytes(), edge_param_ptr);
@@ -151,8 +148,9 @@ namespace covered
 
     bool EdgeWrapperBase::processDataRequest_(MessageBase* data_request_ptr)
     {
+        // NOTE: no need to acquire rwlock which will be done in processLocalGetRequest_() or processLocalWriteRequest_()
+
         assert(data_request_ptr != NULL && data_request_ptr->isDataRequest());
-        assert(edge_cache_ptr_ != NULL);
 
         bool is_finish = false; // Mark if edge node is finished
 
@@ -198,9 +196,23 @@ namespace covered
         return is_finish;
     }
 
-    bool EdgeWrapperBase::processLocalGetRequest_(MessageBase* local_request_ptr)
+    bool EdgeWrapperBase::processLocalGetRequest_(MessageBase* local_request_ptr) const
     {
+        // Get key and value from local request if any
         assert(local_request_ptr != NULL && local_request_ptr->getMessageType() == MessageType::kLocalGetRequest);
+        const LocalGetRequest* const local_get_request_ptr = static_cast<const LocalGetRequest*>(local_request_ptr);
+        Key tmp_key = local_get_request_ptr->getKey();
+        Value tmp_value;
+
+        // Acquire a read lock before accessing any shared variable in the closest edge node
+        while (true)
+        {
+            if (perkey_rwlock_for_serializability_.try_lock_shared(tmp_key))
+            {
+                break;
+            }
+        }
+
         assert(edge_cache_ptr_ != NULL);
         assert(cooperation_wrapper_ptr_ != NULL);
 
@@ -208,9 +220,6 @@ namespace covered
         Hitflag hitflag = Hitflag::kGlobalMiss;
 
         // Access local edge cache (current edge node is the closest edge node)
-        const LocalGetRequest* const local_get_request_ptr = static_cast<const LocalGetRequest*>(local_request_ptr);
-        Key tmp_key = local_get_request_ptr->getKey();
-        Value tmp_value;
         bool is_local_cached_and_valid = edge_cache_ptr_->get(tmp_key, tmp_value);
         if (is_local_cached_and_valid) // local cached and valid
         {
@@ -225,6 +234,7 @@ namespace covered
             is_finish = cooperation_wrapper_ptr_->get(tmp_key, tmp_value, is_cooperative_cached_and_valid);
             if (is_finish) // Edge node is NOT running
             {
+                perkey_rwlock_for_serializability_.unlock_shared(tmp_key);
                 return is_finish;
             }
             if (is_cooperative_cached_and_valid) // cooperative cached and valid
@@ -239,6 +249,7 @@ namespace covered
             is_finish = fetchDataFromCloud_(tmp_key, tmp_value);
             if (is_finish) // Edge node is NOT running
             {
+                perkey_rwlock_for_serializability_.unlock_shared(tmp_key);
                 return is_finish;
             }
         }
@@ -264,19 +275,15 @@ namespace covered
         oss << "issue a local response; type: " << MessageBase::messageTypeToString(local_get_response.getMessageType()) << "; keystr:" << local_get_response.getKey().getKeystr();
         Util::dumpDebugMsg(base_instance_name_, oss.str());
 
+        perkey_rwlock_for_serializability_.unlock_shared(tmp_key);
         return is_finish;
     }
 
     bool EdgeWrapperBase::processLocalWriteRequest_(MessageBase* local_request_ptr)
     {
+        // Get key and value from local request if any
         assert(local_request_ptr != NULL);
         assert(local_request_ptr->getMessageType() == MessageType::kLocalPutRequest || local_request_ptr->getMessageType() == MessageType::kLocalDelRequest);
-        assert(edge_cache_ptr_ != NULL);
-
-        bool is_finish = false; // Mark if edge node is finished
-        const Hitflag hitflag = Hitflag::kGlobalMiss; // Must be global miss due to write-through policy
-
-        // Get key and value from local request message
         Key tmp_key;
         Value tmp_value;
         if (local_request_ptr->getMessageType() == MessageType::kLocalPutRequest)
@@ -299,11 +306,26 @@ namespace covered
             exit(1);
         }
 
+        // Acquire a write lock before accessing any shared variable in the closest edge node
+        while (true)
+        {
+            if (perkey_rwlock_for_serializability_.try_lock(tmp_key))
+            {
+                break;
+            }
+        }
+        
+        assert(edge_cache_ptr_ != NULL);
+
+        bool is_finish = false; // Mark if edge node is finished
+        const Hitflag hitflag = Hitflag::kGlobalMiss; // Must be global miss due to write-through policy
+
         // TODO: Acquire write lock from beacon node for MSI protocol
         // TODO: Update is_finish
 
         if (is_finish) // Edge node is NOT running
         {
+            perkey_rwlock_for_serializability_.unlock(tmp_key);
             return is_finish;
         }
 
@@ -312,6 +334,7 @@ namespace covered
 
         if (is_finish) // Edge node is NOT running
         {
+            perkey_rwlock_for_serializability_.unlock(tmp_key);
             return is_finish;
         }
 
@@ -320,6 +343,7 @@ namespace covered
 
         if (is_finish) // Edge node is NOT running
         {
+            perkey_rwlock_for_serializability_.unlock(tmp_key);
             return is_finish;
         }
 
@@ -368,11 +392,14 @@ namespace covered
         delete local_response_ptr;
         local_response_ptr = NULL;
 
+        perkey_rwlock_for_serializability_.unlock(tmp_key);
         return is_finish;
     }
 
     bool EdgeWrapperBase::processRedirectedRequest_(MessageBase* redirected_request_ptr)
     {
+        // NOTE: no need to acquire rwlock which will be done in processRedirectedGetRequest_()
+
         assert(redirected_request_ptr != NULL && redirected_request_ptr->isRedirectedRequest());
 
         bool is_finish = false; // Mark if local edge node is finished
@@ -393,8 +420,10 @@ namespace covered
         return is_finish;
     }
 
-    bool EdgeWrapperBase::blockForInvalidation_(const Key& key)
+    bool EdgeWrapperBase::blockForInvalidation_(const Key& key) const
     {
+        // TODO: to be removed
+
         assert(edge_param_ptr_ != NULL);
 
         bool is_finish = false; // Mark if edge node is finished
@@ -425,8 +454,10 @@ namespace covered
         return is_finish;
     }
 
-    bool EdgeWrapperBase::fetchDataFromCloud_(const Key& key, Value& value)
+    bool EdgeWrapperBase::fetchDataFromCloud_(const Key& key, Value& value) const
     {
+        // NOTE: no need to acquire rwlock which has been done in processLocalGetRequest_()
+
         assert(edge_param_ptr_ != NULL);
         assert(edge_sendreq_tocloud_socket_client_ptr_ != NULL);
 
@@ -491,6 +522,8 @@ namespace covered
 
     bool EdgeWrapperBase::writeDataToCloud_(const Key& key, const Value& value, const MessageType& message_type)
     {
+        // NOTE: no need to acquire rwlock which has been done in processLocalWriteRequest_()
+        
         assert(edge_param_ptr_ != NULL);
         assert(edge_sendreq_tocloud_socket_client_ptr_ != NULL);
 
@@ -564,6 +597,8 @@ namespace covered
 
     bool EdgeWrapperBase::processControlRequest_(MessageBase* control_request_ptr)
     {
+        // NOTE: no need to acquire rwlock which will be done in processDirectoryLookupRequest_() or processDirectoryUpdateRequest_() or processOtherControlRequest_()
+
         assert(control_request_ptr != NULL && control_request_ptr->isControlRequest());
         assert(edge_cache_ptr_ != NULL);
 

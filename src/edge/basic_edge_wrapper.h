@@ -1,5 +1,5 @@
 /*
- * BasicEdgeWrapper: basic edge node for baselines.
+ * BasicEdgeWrapper: basic edge node for baselines (thread safe).
  * 
  * By Siyuan Sheng (2023.06.07).
  */
@@ -25,14 +25,14 @@ namespace covered
         // (1) Data requests
 
         // Return if edge node is finished
-        virtual bool processRedirectedGetRequest_(MessageBase* redirected_request_ptr) override;
+        virtual bool processRedirectedGetRequest_(MessageBase* redirected_request_ptr) const override;
 
-        virtual void triggerIndependentAdmission_(const Key& key, const Value& value) override;
+        virtual void triggerIndependentAdmission_(const Key& key, const Value& value) const override;
 
         // (2) Control requests
 
         // Return if edge node is finished
-        virtual bool processDirectoryLookupRequest_(MessageBase* control_request_ptr) override;
+        virtual bool processDirectoryLookupRequest_(MessageBase* control_request_ptr) const override;
         virtual bool processDirectoryUpdateRequest_(MessageBase* control_request_ptr) override;
         virtual bool processOtherControlRequest_(MessageBase* control_request_ptr) override;
 

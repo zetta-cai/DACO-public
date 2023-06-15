@@ -45,19 +45,41 @@ namespace covered
 
     bool CacheWrapperBase::isCachedAndInvalid(const Key& key) const
     {
+        // Acquire a read lock before accessing any shared variable
+        while (true)
+        {
+            if (rwlock_for_validity_.try_lock_shared())
+            {
+                break;
+            }
+        }
+
         std::map<Key, bool>::const_iterator iter = validity_map_.find(key);
+        bool is_cached_and_invalid = false;
         if (iter == validity_map_.end())
         {
-            return false; // uncached
+            is_cached_and_invalid = false;
         }
         else
         {
-            return !iter->second; // validity = true means not invalid
+            is_cached_and_invalid = !iter->second; // validity = true means not invalid
         }
+
+        rwlock_for_validity_.unlock_shared();
+        return is_cached_and_invalid;
     }
 
     void CacheWrapperBase::invalidate(const Key& key)
     {
+        // Acquire a write lock before accessing any shared variable
+        while (true)
+        {
+            if (rwlock_for_validity_.try_lock())
+            {
+                break;
+            }
+        }
+
         if (validity_map_.find(key) != validity_map_.end()) // key to be invalidated should already be cached
         {
             validity_map_[key] = false;
@@ -70,11 +92,22 @@ namespace covered
 
             validity_map_.insert(std::pair<Key, bool>(key, false));
         }
+
+        rwlock_for_validity_.unlock();
         return;
     }
 
     void CacheWrapperBase::validate(const Key& key)
     {
+        // Acquire a write lock before accessing any shared variable
+        while (true)
+        {
+            if (rwlock_for_validity_.try_lock())
+            {
+                break;
+            }
+        }
+
         if (validity_map_.find(key) != validity_map_.end()) // key to be validated should already be cached
         {
             validity_map_[key] = true;
@@ -87,33 +120,60 @@ namespace covered
 
             validity_map_.insert(std::pair<Key, bool>(key, true));
         }
+
+        rwlock_for_validity_.unlock();
         return;
     }
 
-    bool CacheWrapperBase::get(const Key& key, Value& value)
+    bool CacheWrapperBase::get(const Key& key, Value& value) const
     {
+        // Acquire a read lock before accessing any shared variable
+        while (true)
+        {
+            if (rwlock_for_validity_.try_lock_shared())
+            {
+                break;
+            }
+        }
+
         bool is_local_cached = getInternal_(key, value); // Still need to update local statistics if key is cached yet invalid
         bool is_valid = false;
         if (is_local_cached)
         {
-            assert(validity_map_.find(key) != validity_map_.end()); // key must be cached
-            is_valid = validity_map_[key];
+            std::map<Key, bool>::const_iterator iter = validity_map_.find(key);
+            assert(iter != validity_map_.end()); // key must be cached
+            is_valid = iter->second;
         }
+
+        rwlock_for_validity_.unlock_shared();
         return is_local_cached && is_valid;
     }
     
     bool CacheWrapperBase::update(const Key& key, const Value& value)
     {
+        // Acquire a write lock before accessing any shared variable
+        while (true)
+        {
+            if (rwlock_for_validity_.try_lock())
+            {
+                break;
+            }
+        }
+
         bool is_local_cached = updateInternal_(key, value);
         if (is_local_cached)
         {
             validity_map_[key] = true;
         }
+
+        rwlock_for_validity_.unlock();
         return is_local_cached;
     }
 
     bool CacheWrapperBase::remove(const Key& key)
     {
+        // No need to acquire a write lock which will be done in update()
+
         Value deleted_value;
         bool is_local_cached = update(key, deleted_value);
         return is_local_cached;
@@ -121,11 +181,32 @@ namespace covered
 
     bool CacheWrapperBase::isLocalCached(const Key& key) const
     {
-        return validity_map_.find(key) != validity_map_.end();
+        // Acquire a read lock before accessing any shared variable
+        while (true)
+        {
+            if (rwlock_for_validity_.try_lock_shared())
+            {
+                break;
+            }
+        }
+
+        bool is_local_cached = validity_map_.find(key) != validity_map_.end();
+
+        rwlock_for_validity_.unlock_shared();
+        return is_local_cached;
     }
 
     void CacheWrapperBase::admit(const Key& key, const Value& value)
     {
+        // Acquire a write lock before accessing any shared variable
+        while (true)
+        {
+            if (rwlock_for_validity_.try_lock())
+            {
+                break;
+            }
+        }
+
         admitInternal_(key, value);
         if (validity_map_.find(key) == validity_map_.end()) // key to be admitted should not be cached
         {
@@ -139,11 +220,22 @@ namespace covered
 
             validity_map_[key] = true;
         }
+
+        rwlock_for_validity_.unlock();
         return;
     }
     
     void CacheWrapperBase::evict(Key& key, Value& value)
     {
+        // Acquire a write lock before accessing any shared variable
+        while (true)
+        {
+            if (rwlock_for_validity_.try_lock())
+            {
+                break;
+            }
+        }
+
         evictInternal_(key, value);
         if (validity_map_.find(key) != validity_map_.end()) // key to be evicted should already be cached
         {
@@ -157,19 +249,33 @@ namespace covered
             
             // NO need to update validity_map_
         }
+
+        rwlock_for_validity_.unlock();
         return;
     }
 
     uint32_t CacheWrapperBase::getSize() const
     {
+        // Acquire a read lock before accessing any shared variable
+        while (true)
+        {
+            if (rwlock_for_validity_.try_lock_shared())
+            {
+                break;
+            }
+        }
+
         uint32_t internal_size = getSizeInternal_();
         uint32_t external_size = validity_map_.size() * sizeof(bool);
         uint32_t total_size = internal_size + external_size;
+
+        rwlock_for_validity_.unlock_shared();
         return total_size;
     }
 	
     uint32_t CacheWrapperBase::getCapacityBytes() const
     {
+        // No need to acquire a write lock as capacity_bytes_ is a const variable
         return capacity_bytes_;
     }
 }

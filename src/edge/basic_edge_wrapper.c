@@ -29,18 +29,29 @@ namespace covered
 
     // (1) Data requests
 
-    bool BasicEdgeWrapper::processRedirectedGetRequest_(MessageBase* redirected_request_ptr)
+    bool BasicEdgeWrapper::processRedirectedGetRequest_(MessageBase* redirected_request_ptr) const
     {
+        // Get key and value from redirected request if any
         assert(redirected_request_ptr != NULL && redirected_request_ptr->getMessageType() == MessageType::kRedirectedGetRequest);
+        const RedirectedGetRequest* const redirected_get_request_ptr = static_cast<const RedirectedGetRequest*>(redirected_request_ptr);
+        Key tmp_key = redirected_get_request_ptr->getKey();
+        Value tmp_value;
+
+        // Acquire a read lock before accessing any shared variable in the target edge node
+        while (true)
+        {
+            if (perkey_rwlock_for_serializability_.try_lock_shared(tmp_key))
+            {
+                break;
+            }
+        }
+
         assert(edge_cache_ptr_ != NULL);
 
         bool is_finish = false;
         Hitflag hitflag = Hitflag::kGlobalMiss;
 
         // Access local edge cache for cooperative edge caching (current edge node is the target edge node)
-        const RedirectedGetRequest* const redirected_get_request_ptr = static_cast<const RedirectedGetRequest*>(redirected_request_ptr);
-        Key tmp_key = redirected_get_request_ptr->getKey();
-        Value tmp_value;
         bool is_cooperative_cached_and_valid = edge_cache_ptr_->get(tmp_key, tmp_value);
         bool is_cooperaitve_cached = edge_cache_ptr_->isLocalCached(tmp_key);
         if (is_cooperative_cached_and_valid) // cached and valid
@@ -69,11 +80,14 @@ namespace covered
         PropagationSimulator::propagateFromNeighborToEdge();
         edge_recvreq_socket_server_ptr_->send(redirected_response_msg_payload);
 
+        perkey_rwlock_for_serializability_.unlock_shared(tmp_key);
         return is_finish;
     }
 
-    void BasicEdgeWrapper::triggerIndependentAdmission_(const Key& key, const Value& value)
+    void BasicEdgeWrapper::triggerIndependentAdmission_(const Key& key, const Value& value) const
     {
+        // NOTE: no need to acquire rwlock which has been done in processRedirectedGetRequest_() and processRedirectedWriteRequest_()
+
         assert(edge_cache_ptr_ != NULL);
         assert(cooperation_wrapper_ptr_ != NULL);
 
@@ -117,18 +131,27 @@ namespace covered
 
     // (2) Control requests
 
-    bool BasicEdgeWrapper::processDirectoryLookupRequest_(MessageBase* control_request_ptr)
+    bool BasicEdgeWrapper::processDirectoryLookupRequest_(MessageBase* control_request_ptr) const
     {
+        // Get key and value from control request if any
         assert(control_request_ptr != NULL);
         assert(control_request_ptr->getMessageType() == MessageType::kDirectoryLookupRequest);
+        const DirectoryLookupRequest* const directory_lookup_request_ptr = static_cast<const DirectoryLookupRequest*>(control_request_ptr);
+        Key tmp_key = directory_lookup_request_ptr->getKey();
+
+        // Acquire a read lock before accessing any shared variable in the beacon edge node
+        while (true)
+        {
+            if (perkey_rwlock_for_serializability_.try_lock_shared(tmp_key))
+            {
+                break;
+            }
+        }
+
         assert(cooperation_wrapper_ptr_ != NULL);
         assert(edge_recvreq_socket_server_ptr_ != NULL);
 
         bool is_finish = false;
-
-        // Get key from directory lookup request
-        const DirectoryLookupRequest* const directory_lookup_request_ptr = static_cast<const DirectoryLookupRequest*>(control_request_ptr);
-        Key tmp_key = directory_lookup_request_ptr->getKey();
 
         // Lookup local directory information and randomly select a target edge index
         bool is_being_written = false;
@@ -143,23 +166,36 @@ namespace covered
         PropagationSimulator::propagateFromNeighborToEdge();
         edge_recvreq_socket_server_ptr_->send(control_response_msg_payload);
 
+        // Add the closest edge node into the DirectoryTable::block_list_for_writes_
+        // The closest edge node will be notified by data thread after writes or current control thread if writes have finished
+
+        perkey_rwlock_for_serializability_.unlock_shared(tmp_key);
         return is_finish;
     }
 
     bool BasicEdgeWrapper::processDirectoryUpdateRequest_(MessageBase* control_request_ptr)
     {
+        // Get key and value from control request if any
         assert(control_request_ptr != NULL);
         assert(control_request_ptr->getMessageType() == MessageType::kDirectoryUpdateRequest);
-        assert(cooperation_wrapper_ptr_ != NULL);
-        assert(edge_recvreq_socket_server_ptr_ != NULL);
-
-        bool is_finish = false;
-
-        // Get key from directory update request
         const DirectoryUpdateRequest* const directory_update_request_ptr = static_cast<const DirectoryUpdateRequest*>(control_request_ptr);
         Key tmp_key = directory_update_request_ptr->getKey();
         bool is_admit = directory_update_request_ptr->isValidDirectoryExist();
         DirectoryInfo directory_info = directory_update_request_ptr->getDirectoryInfo();
+
+        // Acquire a write lock before accessing any shared variable in the beacon edge node
+        while (true)
+        {
+            if (perkey_rwlock_for_serializability_.try_lock(tmp_key))
+            {
+                break;
+            }
+        }
+
+        assert(cooperation_wrapper_ptr_ != NULL);
+        assert(edge_recvreq_socket_server_ptr_ != NULL);
+
+        bool is_finish = false;        
 
         // Update local directory information
         cooperation_wrapper_ptr_->updateLocalDirectory(tmp_key, is_admit, directory_info);
@@ -171,12 +207,15 @@ namespace covered
         PropagationSimulator::propagateFromNeighborToEdge();
         edge_recvreq_socket_server_ptr_->send(control_response_msg_payload);
 
+        perkey_rwlock_for_serializability_.unlock(tmp_key);
         return is_finish;
     }
     
     bool BasicEdgeWrapper::processOtherControlRequest_(MessageBase* control_request_ptr)
     {
         assert(control_request_ptr != NULL);
+
+        // TODO: acquire a read/write lock before accessing any shared variable in the beacon edge node
 
         bool is_finish = false;
 

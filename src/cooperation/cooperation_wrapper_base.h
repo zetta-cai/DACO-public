@@ -1,5 +1,5 @@
 /*
- * CooperationWrapperBase: the base class for cooperative edge caching.
+ * CooperationWrapperBase: the base class for cooperative edge caching (thread safe).
  *
  * Basic or COVERED CooperativeCacheWrapper is responsible for checking directory information at beacon node located by DhtWrapper, getting data from a target edge node by request redirection, and synchronizing directory information at beacon node after cache admission/eviction of the closest edge cache.
  * 
@@ -11,6 +11,8 @@
 
 #include <string>
 #include <vector>
+
+#include <boost/thread/shared_mutex.hpp>
 
 #include "common/key.h"
 #include "common/value.h"
@@ -31,9 +33,8 @@ namespace covered
         virtual ~CooperationWrapperBase();
 
         // Return if edge node is finished
-        // NOTE: get() cannot be const due to changing remote address of edge_sendreq_totarget_socket_client_ptr_
-        bool get(const Key& key, Value& value, bool& is_cooperative_cached_and_valid); // Get data from target edge ndoe
-        void lookupLocalDirectory(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info); // Check local directory information
+        bool get(const Key& key, Value& value, bool& is_cooperative_cached_and_valid) const; // Get data from target edge ndoe
+        void lookupLocalDirectory(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const; // Check local directory information
         bool updateDirectory(const Key& key, const bool& is_admit); // Update remote directory info at beacon node
         void updateLocalDirectory(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info);
     private:
@@ -41,12 +42,15 @@ namespace covered
         
         std::string base_instance_name_;
     protected:
+        // Comment functions
+        bool isBeingWritten_(const Key& key) const; // Return if key is being written
+
         // For get()
         // Return if edge node is finished
-        void locateBeaconNode_(const Key& key, bool& current_is_beacon);
-        virtual bool lookupBeaconDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) = 0; // Check remote directory information at the beacon node
-        void locateTargetNode_(const DirectoryInfo& directory_info);
-        virtual bool redirectGetToTarget_(const Key& key, Value& value, bool& is_cooperative_cached_and_valid) = 0;
+        void locateBeaconNode_(const Key& key, bool& current_is_beacon) const;
+        virtual bool lookupBeaconDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const = 0; // Check remote directory information at the beacon node
+        void locateTargetNode_(const DirectoryInfo& directory_info) const;
+        virtual bool redirectGetToTarget_(const Key& key, Value& value, bool& is_cooperative_cached_and_valid) const = 0;
 
         // For updateDirectory()
         virtual bool updateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info) = 0; // TODO: implement in basic
@@ -55,12 +59,21 @@ namespace covered
         void verifyCurrentIsBeacon_(const Key& key) const;
         void verifyCurrentIsNotBeacon_(const Key& key) const;
 
+        // Const shared variables
         EdgeParam* edge_param_ptr_; // Maintained outside CooperativeCacheWrapperBase
-
         DhtWrapper* dht_wrapper_ptr_;
+
+        // NOTE: serializability for writes of the same key has been guaranteed in EdgeWrapperBase
+        // Guarantee the atomicity of per-key metadata (e.g., writes of different keys to update perkey_writeflags_)
+        mutable boost::shared_mutex rwlock_for_perkey_metadata_;
+
+        // Non-const shared variables
+        DirectoryTable* directory_table_ptr_;
+        std::unordered_map<Key, bool, KeyHasher> perkey_writeflags_; // whether key is being written
+
+        // Non-const individual variables
         UdpSocketWrapper* edge_sendreq_tobeacon_socket_client_ptr_;
         UdpSocketWrapper* edge_sendreq_totarget_socket_client_ptr_;
-        DirectoryTable* directory_table_ptr_;
     };
 }
 

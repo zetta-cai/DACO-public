@@ -9,7 +9,6 @@ namespace covered
 {
     const std::string DirectoryMetadata::kClassName("DirectoryMetadata");
     const std::string DirectoryEntry::kClassName("DirectoryEntry");
-    const uint32_t DirectoryEntry::DIRINFO_BUFFER_CAPACITY = 1000;
     const std::string DirectoryTable::kClassName("DirectoryTable");
 
     // (1) DirectoryMetadata
@@ -36,52 +35,53 @@ namespace covered
         is_valid_ = false;
     }
 
+    DirectoryMetadata& DirectoryMetadata::operator=(const DirectoryMetadata& other)
+    {
+        is_valid_ = other.is_valid_;
+        return *this;
+    }
+
     // (2) DirectoryEntry
 
     DirectoryEntry::DirectoryEntry()
     {
         directory_entry_.clear();
-        is_being_written_ = false;
     }
 
     DirectoryEntry::~DirectoryEntry() {}
 
-    bool DirectoryEntry::isBeingWritten() const
-    {
-        return is_being_written_;
-    }
-
     void DirectoryEntry::getValidDirinfoSet(dirinfo_set_t& dirinfo_set) const
     {
-        // NOTE: all directory infos must be invalid if being written
         dirinfo_set.clear();
-        if (!is_being_written_) // key is not being written now
+
+        // Add all valid directory information into valid_directory_info_set
+        for (dirinfo_entry_t::const_iterator iter = directory_entry_.begin(); iter != directory_entry_.end(); iter++)
         {
-            // Add all valid directory information into valid_directory_info_set
-            for (dirinfo_entry_t::const_iterator iter = directory_entry_.begin(); iter != directory_entry_.end(); iter++)
+            const DirectoryInfo& directory_info = iter->first;
+            const DirectoryMetadata& directory_metadata = iter->second;
+            if (directory_metadata.isValid()) // validity = true
             {
-                const DirectoryInfo& directory_info = iter->first;
-                const DirectoryMetadata& directory_metadata = iter->second;
-                if (directory_metadata.isValid()) // validity = true
-                {
-                    dirinfo_set.insert(directory_info);
-                }
+                dirinfo_set.insert(directory_info);
             }
         }
         return;
     }
 
-    bool DirectoryEntry::addDirinfo(const DirectoryInfo& directory_info)
+    bool DirectoryEntry::addDirinfo(const DirectoryInfo& directory_info, const DirectoryMetadata& directory_metadata)
     {
-        // NOTE: admitted directory info is valid if without writes, or invalid otherwise
         bool is_directory_already_exist = false;
-        if (!is_being_written_) // key is not being written
+        dirinfo_entry_t::iterator iter = directory_entry_.find(directory_info);
+        if (iter == directory_entry_.end()) // directory info does not exist
         {
-            is_directory_already_exist = addDirinfoInternal_(directory_info, true);
+            directory_entry_.insert(std::pair<DirectoryInfo, DirectoryMetadata>(directory_info, directory_metadata));
+
+            is_directory_already_exist = false;
         }
-        else // key is being written
+        else // directory info already exists
         {
-            is_directory_already_exist = addDirinfoInternal_(directory_info, false);
+            iter->second = directory_metadata;
+
+            is_directory_already_exist = true;
         }
         return is_directory_already_exist;
     }
@@ -97,34 +97,6 @@ namespace covered
         else // directory info already exists
         {
             directory_entry_.erase(iter);
-
-            is_directory_already_exist = true;
-        }
-        return is_directory_already_exist;
-    }
-
-    bool DirectoryEntry::addDirinfoInternal_(const DirectoryInfo& directory_info, const bool& is_valid)
-    {
-        bool is_directory_already_exist = false;
-        dirinfo_entry_t::iterator iter = directory_entry_.find(directory_info);
-        if (iter == directory_entry_.end()) // directory info does not exist
-        {
-            DirectoryMetadata directory_metadata(is_valid);
-            directory_entry_.insert(std::pair<DirectoryInfo, DirectoryMetadata>(directory_info, directory_metadata));
-
-            is_directory_already_exist = false;
-        }
-        else // directory info already exists
-        {
-            DirectoryMetadata& directory_metadata = iter->second;
-            if (is_valid)
-            {
-                directory_metadata.validate();
-            }
-            else
-            {
-                directory_metadata.invalidate();
-            }
 
             is_directory_already_exist = true;
         }
@@ -150,12 +122,12 @@ namespace covered
         directory_randgen_ptr_ = NULL;
     }
 
-    void DirectoryTable::lookup(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info)
+    void DirectoryTable::lookup(const Key& key, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
     {
         // NOTE: as writer(s) can update DirectoryTable very quickly, it is okay to polling rwlock_ here
         while (true)
         {
-            if (rwlock_.try_lock_shared())
+            if (rwlock_for_dirtable_.try_lock_shared())
             {
                 break;
             }
@@ -167,19 +139,16 @@ namespace covered
         // Check if key exists
         if (directory_hashtable_iter == directory_hashtable_.end()) // key does not exist
         {
-            is_being_written = false;
             is_valid_directory_exist = false;
         }
         else // key exists
         {
             // Get all valid directory infos if any
             const DirectoryEntry& directory_entry = directory_hashtable_iter->second;
-            is_being_written = directory_entry.isBeingWritten();
             directory_entry.getValidDirinfoSet(valid_directory_info_set);
 
             if (valid_directory_info_set.size() > 0) // At least one valid directory
             {
-                assert(is_being_written == false);
                 is_valid_directory_exist = true;
             }
             else // No valid directory (e.g., key is being written)
@@ -207,16 +176,16 @@ namespace covered
             }
         }
 
-        rwlock_.unlock_shared();
+        rwlock_for_dirtable_.unlock_shared();
         return;
     }
 
-    void DirectoryTable::update(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info)
+    void DirectoryTable::update(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, const DirectoryMetadata& directory_metadata)
     {
         // NOTE: as writer(s) can update DirectoryTable very quickly, it is okay to polling rwlock_ here
         while (true)
         {
-            if (rwlock_.try_lock())
+            if (rwlock_for_dirtable_.try_lock())
             {
                 break;
             }
@@ -228,15 +197,16 @@ namespace covered
             // Check if key exists
             if (directory_hashtable_iter == directory_hashtable_.end()) // key does not exist
             {
+                assert(directory_metadata.isValid()); // key must NOT being written
                 DirectoryEntry directory_entry;
-                bool is_directory_already_exists = directory_entry.addDirinfo(directory_info);
+                bool is_directory_already_exists = directory_entry.addDirinfo(directory_info, directory_metadata);
                 assert(is_directory_already_exists == false);
                 directory_hashtable_.insert(std::pair<Key, DirectoryEntry>(key, directory_entry));
             }
             else // key already exists
             {
                 DirectoryEntry& directory_entry = directory_hashtable_iter->second;
-                bool is_directory_already_exists = directory_entry.addDirinfo(directory_info);
+                bool is_directory_already_exists = directory_entry.addDirinfo(directory_info, directory_metadata);
                 if (is_directory_already_exists) // directory_info already exists for key
                 {
                     std::ostringstream oss;
@@ -267,7 +237,7 @@ namespace covered
             }
         } // ENd of (is_admit == false)
 
-        rwlock_.unlock();
+        rwlock_for_dirtable_.unlock();
         return;
     }
 }

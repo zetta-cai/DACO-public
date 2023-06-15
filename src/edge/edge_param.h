@@ -21,11 +21,11 @@ namespace covered
 
         const EdgeParam& operator=(const EdgeParam& other);
 
-        bool isEdgeRunning();
+        bool isEdgeRunning() const;
         void setEdgeRunning();
         void resetEdgeRunning();
 
-        uint32_t getEdgeIdx();
+        uint32_t getEdgeIdx() const;
     private:
         static const std::string kClassName;
 

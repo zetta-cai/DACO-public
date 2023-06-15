@@ -24,10 +24,14 @@ namespace covered
 
     BasicCooperationWrapper::~BasicCooperationWrapper() {}
 
-    bool BasicCooperationWrapper::lookupBeaconDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info)
+    bool BasicCooperationWrapper::lookupBeaconDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
     {
+        // NOTE: no need to acquire a read lockdue to accessing const shared variables and non-const individual variables
+
         // The current edge node must NOT be the beacon node for the key
         verifyCurrentIsNotBeacon_(key);
+
+        // No need to acquire a read lock due to accessing const shared variables
 
         assert(edge_sendreq_tobeacon_socket_client_ptr_ != NULL);
         assert(edge_param_ptr_ != NULL);
@@ -83,8 +87,10 @@ namespace covered
         return is_finish;
     }
 
-    bool BasicCooperationWrapper::redirectGetToTarget_(const Key& key, Value& value, bool& is_cooperative_cached_and_valid)
+    bool BasicCooperationWrapper::redirectGetToTarget_(const Key& key, Value& value, bool& is_cooperative_cached_and_valid) const
     {
+        // No need to acquire a read lock due to accessing const shared variables
+
         assert(edge_sendreq_totarget_socket_client_ptr_ != NULL);
         assert(edge_param_ptr_ != NULL);
 
@@ -159,6 +165,8 @@ namespace covered
 
     bool BasicCooperationWrapper::updateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info)
     {
+        // NOTE: no need to acquire a read lock due to accessing const shared variables and non-const individual variables
+
         // The current edge node must NOT be the beacon node for the key
         verifyCurrentIsNotBeacon_(key);
 
