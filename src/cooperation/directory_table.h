@@ -12,10 +12,9 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include <boost/thread/shared_mutex.hpp>
-
 #include "common/key.h"
 #include "cooperation/directory_info.h"
+#include "lock/rwlock.h"
 
 namespace covered
 {
@@ -62,7 +61,7 @@ namespace covered
     class DirectoryTable
     {
     public:
-        DirectoryTable(const uint32_t& seed);
+        DirectoryTable(const uint32_t& seed, const uint32_t& edge_idx);
         ~DirectoryTable();
 
         // NOTE: lookup() cannot be const due to rwlock_.try_lock_shared()
@@ -73,14 +72,15 @@ namespace covered
 
         static const std::string kClassName;
 
+        // Const shared variable
+        std::string instance_name_;
+        std::mt19937_64* directory_randgen_ptr_;
+
         // Guarantee the atomicity of directory_hashtable_ (e.g., update dirinfo of different keys)
-        mutable boost::shared_mutex rwlock_for_dirtable_;
+        mutable Rwlock* rwlock_for_dirtable_ptr_;
 
         // Non-const shared variable
         dirinfo_table_t directory_hashtable_; // Maintain directory information (not need ordered map)
-
-        // Const shared variable
-        std::mt19937_64* directory_randgen_ptr_;
     };
 }
 

@@ -36,7 +36,7 @@ namespace covered
     {
         // Differentiate workload generator in different clients
         std::ostringstream oss;
-        oss << kClassName << " " << client_idx;
+        oss << kClassName << " client" << client_idx;
         base_instance_name_ = oss.str();
 
         is_valid_ = false;

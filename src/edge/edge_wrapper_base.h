@@ -11,10 +11,10 @@
 
 #include <string>
 
-#include "common/perkey_rwlock.h"
 #include "cache/cache_wrapper_base.h"
 #include "cooperation/cooperation_wrapper_base.h"
 #include "edge/edge_param.h"
+#include "lock/perkey_rwlock.h"
 #include "message/message_base.h"
 #include "network/udp_socket_wrapper.h"
 
@@ -63,7 +63,7 @@ namespace covered
         const EdgeParam* edge_param_ptr_;
 
         // Guarantee the global serializability for writes of the same key
-        mutable PerkeyRwlock perkey_rwlock_for_serializability_;
+        mutable PerkeyRwlock* perkey_rwlock_for_serializability_ptr_;
 
         // Non-const shared variables (thread safe)
         mutable CacheWrapperBase* edge_cache_ptr_;

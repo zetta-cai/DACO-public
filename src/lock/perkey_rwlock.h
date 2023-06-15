@@ -1,5 +1,5 @@
 /*
- * PerkeyRwlock: provide fine-grained (i.e., key-level) read-write lock for concurrency control.
+ * PerkeyRwlock: provide key-level read-write lock for concurrency control.
  * 
  * By Siyuan Sheng (2023.06.15).
  */
@@ -20,7 +20,7 @@ namespace covered
     class PerkeyRwlock
     {
     public:
-        PerkeyRwlock();
+        PerkeyRwlock(const uint32_t& edge_idx);
         ~PerkeyRwlock();
 
         // The same interfaces as libboost
@@ -36,6 +36,8 @@ namespace covered
         static const uint32_t RWLOCK_HASHTABLE_CAPCITY;
 
         uint32_t getRwlockIndex_(const Key& key);
+
+        std::string instance_name_;
 
         rwlock_hashtable_t rwlock_hashtable_;
         HashWrapperBase* hash_wrapper_ptr_;

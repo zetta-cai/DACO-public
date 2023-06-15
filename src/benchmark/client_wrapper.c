@@ -32,7 +32,7 @@ namespace covered
 
         // Differentiate different clients
         std::ostringstream oss;
-        oss << kClassName << " " << client_param_ptr->getClientIdx();
+        oss << kClassName << " client" << client_param_ptr->getClientIdx();
         instance_name_ = oss.str();
         
         client_param_ptr_ = client_param_ptr;

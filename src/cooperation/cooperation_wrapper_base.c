@@ -35,7 +35,7 @@ namespace covered
         // Differentiate CooperationWrapper in different edge nodes
         assert(edge_param_ptr != NULL);
         std::ostringstream oss;
-        oss << kClassName << " " << edge_param_ptr->getEdgeIdx();
+        oss << kClassName << " edge" << edge_param_ptr->getEdgeIdx();
         base_instance_name_ = oss.str();
 
         edge_param_ptr_ = edge_param_ptr;
@@ -55,15 +55,19 @@ namespace covered
         assert(edge_sendreq_totarget_socket_client_ptr_ != NULL);
 
         // Allocate directory information
-        directory_table_ptr_ = new DirectoryTable(edge_param_ptr_->getEdgeIdx());
+        uint32_t seed_for_directory_selection = edge_param_ptr_->getEdgeIdx();
+        directory_table_ptr_ = new DirectoryTable(seed_for_directory_selection, edge_param_ptr_->getEdgeIdx());
         assert(directory_table_ptr_ != NULL);
+
+        rwlock_for_perkey_metadata_ptr_ = new Rwlock(base_instance_name_);
+        assert(rwlock_for_perkey_metadata_ptr_ != NULL);
 
         perkey_writeflags_.clear();
     }
 
     CooperationWrapperBase::~CooperationWrapperBase()
     {
-        // NOTE: no need to release edge_param_ptr_ which is maintained outside CooperationWrapperBase
+        // NOTE: no need to release edge_param_ptr_, which is maintained outside CooperationWrapperBase
 
         assert(dht_wrapper_ptr_ != NULL);
         delete dht_wrapper_ptr_;
@@ -81,11 +85,15 @@ namespace covered
         assert(directory_table_ptr_ != NULL);
         delete directory_table_ptr_;
         directory_table_ptr_ = NULL;
+
+        assert(rwlock_for_perkey_metadata_ptr_ != NULL);
+        delete rwlock_for_perkey_metadata_ptr_;
+        rwlock_for_perkey_metadata_ptr_ = NULL;
     }
 
     bool CooperationWrapperBase::get(const Key& key, Value& value, bool& is_cooperative_cached_and_valid) const
     {
-        // NOTE: no need to acquire a read lock which will be done in isBeingWritten_() in lookupLocalDirectory()
+        // No need to acquire a read lock for per-key metadata, which will be done in isBeingWritten_() in lookupLocalDirectory()
 
         bool is_finish = false;
 
@@ -178,7 +186,7 @@ namespace covered
 
     void CooperationWrapperBase::lookupLocalDirectory(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
     {
-        // NOTE: no need to acquire a read lock due to accessing const shared variables and non-const yet thread-safe shared variables, and will be done in isBeingWritten_()
+        // No need to acquire a read lock for per-key metadata due to accessing const shared variables and non-const yet thread-safe shared variables, yet will be done in isBeingWritten_()
 
         // The current edge node must be the beacon node for the key
         verifyCurrentIsBeacon_(key);
@@ -197,9 +205,9 @@ namespace covered
         return;
     }
 
-    bool CooperationWrapperBase::updateDirectory(const Key& key, const bool& is_admit)
+    bool CooperationWrapperBase::updateDirectory(const Key& key, const bool& is_admit, bool& is_being_written)
     {
-        // NOTE: no need to acquire a read lock which will be done in isBeingWritten_() in updateLocalDirectory()
+        // No need to acquire a read lock for per-key metadata, which will be done in isBeingWritten_() in updateLocalDirectory()
 
         bool is_finish = false;
 
@@ -212,24 +220,31 @@ namespace covered
         DirectoryInfo directory_info(edge_param_ptr_->getEdgeIdx());
         if (current_is_beacon) // Update target edge index of local directory information
         {
-            updateLocalDirectory(key, is_admit, directory_info);
+            updateLocalDirectory(key, is_admit, directory_info, is_being_written);
         }
         else // Update remote directory information at the beacon node
         {
-            is_finish = updateBeaconDirectory_(key, is_admit, directory_info);
+            is_finish = updateBeaconDirectory_(key, is_admit, directory_info, is_being_written);
         }
 
         return is_finish;
     }
 
-    void CooperationWrapperBase::updateLocalDirectory(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info)
+    void CooperationWrapperBase::updateLocalDirectory(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written)
     {
-        // NOTE: no need to acquire a read lock due to accessing const shared variables and non-const yet thread-safe shared variables, and will be done in isBeingWritten_()
+        // No need to acquire a read lock for per-key metadata due to accessing const shared variables and non-const yet thread-safe shared variables, yet will be done in isBeingWritten_()
 
         // The current edge node must be the beacon node for the key
         verifyCurrentIsBeacon_(key);
 
-        bool is_being_written = isBeingWritten_(key);
+        if (is_admit) // is_being_written affects validity of both directory info and cached object for cache admission
+        {
+            is_being_written = isBeingWritten_(key);
+        }
+        else // is_being_written does NOT affect cache eviction
+        {
+            is_being_written = false;
+        }
         DirectoryMetadata directory_metadata(!is_being_written); // valid if not being written
 
         assert(directory_table_ptr_ != NULL);
@@ -241,10 +256,11 @@ namespace covered
     {
         verifyCurrentIsBeacon_(key); // Access const shared variables
 
-        // Acquire a read lock before accessing per-key metadata
+        // Acquire a read lock for per-key metadata before accessing per-key metadata
+        assert(rwlock_for_perkey_metadata_ptr_ != NULL);
         while (true)
         {
-            if (rwlock_for_perkey_metadata_.try_lock_shared())
+            if (rwlock_for_perkey_metadata_ptr_->try_lock_shared())
             {
                 break;
             }
@@ -257,13 +273,13 @@ namespace covered
             is_being_written = iter->second;
         }
 
-        rwlock_for_perkey_metadata_.unlock_shared();
+        rwlock_for_perkey_metadata_ptr_->unlock_shared();
         return is_being_written;
     }
 
     void CooperationWrapperBase::locateBeaconNode_(const Key& key, bool& current_is_beacon) const
     {
-        // No need to acquire a write lock due to updating non-const individual variables
+        // No need to acquire a write lock for per-key metadata due to updating non-const individual variables
 
         assert(dht_wrapper_ptr_ != NULL);
         assert(edge_param_ptr_ != NULL);
@@ -297,7 +313,7 @@ namespace covered
 
     void CooperationWrapperBase::locateTargetNode_(const DirectoryInfo& directory_info) const
     {
-        // No need to acquire a write lock due to updating non-const individual variables
+        // No need to acquire a write lock for per-key metadata due to updating non-const individual variables
 
         // The current edge node must NOT be the target node
         assert(edge_param_ptr_ != NULL);
@@ -323,7 +339,7 @@ namespace covered
 
     void CooperationWrapperBase::verifyCurrentIsBeacon_(const Key& key) const
     {
-        // No need to acquire a write lock due to updating const shared variables
+        // No need to acquire a write lock for per-key metadata due to updating const shared variables
 
         // The current edge node must be the beacon node for the key
         assert(dht_wrapper_ptr_ != NULL);
@@ -336,7 +352,7 @@ namespace covered
 
     void CooperationWrapperBase::verifyCurrentIsNotBeacon_(const Key& key) const
     {
-        // No need to acquire a write lock due to updating const shared variables
+        // No need to acquire a write lock for per-key metadata due to updating const shared variables
         
         // The current edge node must be the beacon node for the key
         assert(dht_wrapper_ptr_ != NULL);

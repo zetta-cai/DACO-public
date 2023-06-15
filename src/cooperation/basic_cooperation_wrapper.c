@@ -18,7 +18,7 @@ namespace covered
         // Differentiate CooperationWrapper in different edge nodes
         assert(edge_param_ptr != NULL);
         std::ostringstream oss;
-        oss << kClassName << " " << edge_param_ptr->getEdgeIdx();
+        oss << kClassName << " edge" << edge_param_ptr->getEdgeIdx();
         instance_name_ = oss.str();
     }
 
@@ -26,12 +26,10 @@ namespace covered
 
     bool BasicCooperationWrapper::lookupBeaconDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
     {
-        // NOTE: no need to acquire a read lockdue to accessing const shared variables and non-const individual variables
+        // NOTE: no need to acquire a read lock for per-key metadata due to accessing const shared variables and non-const individual variables
 
         // The current edge node must NOT be the beacon node for the key
         verifyCurrentIsNotBeacon_(key);
-
-        // No need to acquire a read lock due to accessing const shared variables
 
         assert(edge_sendreq_tobeacon_socket_client_ptr_ != NULL);
         assert(edge_param_ptr_ != NULL);
@@ -89,7 +87,7 @@ namespace covered
 
     bool BasicCooperationWrapper::redirectGetToTarget_(const Key& key, Value& value, bool& is_cooperative_cached_and_valid) const
     {
-        // No need to acquire a read lock due to accessing const shared variables
+        // No need to acquire a read lock for per-key metadata due to accessing const shared variables and non-const individual variables
 
         assert(edge_sendreq_totarget_socket_client_ptr_ != NULL);
         assert(edge_param_ptr_ != NULL);
@@ -163,9 +161,9 @@ namespace covered
         return is_finish;
     }
 
-    bool BasicCooperationWrapper::updateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info)
+    bool BasicCooperationWrapper::updateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written)
     {
-        // NOTE: no need to acquire a read lock due to accessing const shared variables and non-const individual variables
+        // NOTE: no need to acquire a read lock for per-key metadata due to accessing const shared variables and non-const individual variables
 
         // The current edge node must NOT be the beacon node for the key
         verifyCurrentIsNotBeacon_(key);
@@ -207,6 +205,10 @@ namespace covered
                 // Receive the control response message successfully
                 MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
                 assert(control_response_ptr != NULL && control_response_ptr->getMessageType() == MessageType::kDirectoryUpdateResponse);
+
+                // Get is_being_written from control response message
+                const DirectoryUpdateResponse* const directory_update_response_ptr = static_cast<const DirectoryUpdateResponse*>(control_response_ptr);
+                is_being_written = directory_update_response_ptr->isBeingWritten();
 
                 // Release the control response message
                 delete control_response_ptr;

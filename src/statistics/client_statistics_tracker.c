@@ -16,7 +16,7 @@ namespace covered
     {
         // Differentiate ClientStatisticsWrapper threads
         std::ostringstream oss;
-        oss << kClassName << " " << client_idx;
+        oss << kClassName << " client" << client_idx;
         instance_name_ = oss.str();
 
         perclient_workercnt_ = perclient_workercnt;
@@ -55,7 +55,7 @@ namespace covered
     {
         // Differentiate ClientStatisticsWrapper threads
         std::ostringstream oss;
-        oss << kClassName << " " << client_idx;
+        oss << kClassName << " client" << client_idx;
         instance_name_ = oss.str();
         
         perclient_workercnt_ = 0;

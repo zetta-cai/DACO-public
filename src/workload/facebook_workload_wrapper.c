@@ -20,7 +20,7 @@ namespace covered
     {
         // Differentiate facebook workload generator in different clients
         std::ostringstream oss;
-        oss << kClassName << " " << client_idx;
+        oss << kClassName << " client" << client_idx;
         instance_name_ = oss.str();
 
         last_reqid_ = std::nullopt; // Not used by WorkloadGenerator for Facebook CDN trace

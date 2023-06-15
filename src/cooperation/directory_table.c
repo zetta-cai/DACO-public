@@ -105,13 +105,20 @@ namespace covered
 
     // (3) DirectoryTable
 
-    DirectoryTable::DirectoryTable(const uint32_t& seed)
+    DirectoryTable::DirectoryTable(const uint32_t& seed, const uint32_t& edge_idx)
     {
-        directory_hashtable_.clear();
-
         // Allocate randgen to choose target edge node from directory information
         directory_randgen_ptr_ = new std::mt19937_64(seed);
         assert(directory_randgen_ptr_ != NULL);
+
+        std::ostringstream oss;
+        oss << kClassName << " edge" << edge_idx;
+        instance_name_ = oss.str();
+
+        rwlock_for_dirtable_ptr_ = new Rwlock(instance_name_);
+        assert(rwlock_for_dirtable_ptr_ != NULL);
+
+        directory_hashtable_.clear();
     }
 
     DirectoryTable::~DirectoryTable()
@@ -120,14 +127,19 @@ namespace covered
         assert(directory_randgen_ptr_ != NULL);
         delete directory_randgen_ptr_;
         directory_randgen_ptr_ = NULL;
+
+        assert(rwlock_for_dirtable_ptr_ != NULL);
+        delete rwlock_for_dirtable_ptr_;
+        rwlock_for_dirtable_ptr_ = NULL;
     }
 
     void DirectoryTable::lookup(const Key& key, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
     {
         // NOTE: as writer(s) can update DirectoryTable very quickly, it is okay to polling rwlock_ here
+        assert(rwlock_for_dirtable_ptr_ != NULL);
         while (true)
         {
-            if (rwlock_for_dirtable_.try_lock_shared())
+            if (rwlock_for_dirtable_ptr_->try_lock_shared())
             {
                 break;
             }
@@ -176,16 +188,17 @@ namespace covered
             }
         }
 
-        rwlock_for_dirtable_.unlock_shared();
+        rwlock_for_dirtable_ptr_->unlock_shared();
         return;
     }
 
     void DirectoryTable::update(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, const DirectoryMetadata& directory_metadata)
     {
         // NOTE: as writer(s) can update DirectoryTable very quickly, it is okay to polling rwlock_ here
+        assert(rwlock_for_dirtable_ptr_ != NULL);
         while (true)
         {
-            if (rwlock_for_dirtable_.try_lock())
+            if (rwlock_for_dirtable_ptr_->try_lock())
             {
                 break;
             }
@@ -237,7 +250,7 @@ namespace covered
             }
         } // ENd of (is_admit == false)
 
-        rwlock_for_dirtable_.unlock();
+        rwlock_for_dirtable_ptr_->unlock();
         return;
     }
 }

@@ -24,7 +24,7 @@ namespace covered
 
         // Different different clouds if any
         std::ostringstream oss;
-        oss << kClassName << " " << cloud_param_ptr->getCloudIdx();
+        oss << kClassName << " cloud" << cloud_param_ptr->getCloudIdx();
         instance_name_ = oss.str();
 
         cloud_param_ptr_ = cloud_param_ptr;

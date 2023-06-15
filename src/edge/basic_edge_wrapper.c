@@ -21,7 +21,7 @@ namespace covered
 
         // Differentiate BasicEdgeWrapper in different edge nodes
         std::ostringstream oss;
-        oss << kClassName << " " << edge_param_ptr->getEdgeIdx();
+        oss << kClassName << " edge" << edge_param_ptr->getEdgeIdx();
         instance_name_ = oss.str();
     }
 
@@ -37,10 +37,11 @@ namespace covered
         Key tmp_key = redirected_get_request_ptr->getKey();
         Value tmp_value;
 
-        // Acquire a read lock before accessing any shared variable in the target edge node
+        // Acquire a read lock for serializability before accessing any shared variable in the target edge node
+        assert(perkey_rwlock_for_serializability_ptr_ != NULL);
         while (true)
         {
-            if (perkey_rwlock_for_serializability_.try_lock_shared(tmp_key))
+            if (perkey_rwlock_for_serializability_ptr_->try_lock_shared(tmp_key))
             {
                 break;
             }
@@ -80,13 +81,13 @@ namespace covered
         PropagationSimulator::propagateFromNeighborToEdge();
         edge_recvreq_socket_server_ptr_->send(redirected_response_msg_payload);
 
-        perkey_rwlock_for_serializability_.unlock_shared(tmp_key);
+        perkey_rwlock_for_serializability_ptr_->unlock_shared(tmp_key);
         return is_finish;
     }
 
     void BasicEdgeWrapper::triggerIndependentAdmission_(const Key& key, const Value& value) const
     {
-        // NOTE: no need to acquire rwlock which has been done in processRedirectedGetRequest_() and processRedirectedWriteRequest_()
+        // No need to acquire per-key rwlock for serializability, which has been done in processRedirectedGetRequest_() and processRedirectedWriteRequest_()
 
         assert(edge_cache_ptr_ != NULL);
         assert(cooperation_wrapper_ptr_ != NULL);
@@ -97,8 +98,9 @@ namespace covered
         //Util::dumpDebugMsg(instance_name_, oss.str());
 
         // Independently admit the new key-value pair into local edge cache
-        edge_cache_ptr_->admit(key, value);
-        cooperation_wrapper_ptr_->updateDirectory(key, true);
+        bool is_being_written = false;
+        cooperation_wrapper_ptr_->updateDirectory(key, true, is_being_written);
+        edge_cache_ptr_->admit(key, value, !is_being_written); // valid if not being written
 
         // Evict until cache size <= cache capacity
         uint32_t cache_capacity = edge_cache_ptr_->getCapacityBytes();
@@ -114,7 +116,8 @@ namespace covered
                 Key victim_key;
                 Value victim_value;
                 edge_cache_ptr_->evict(victim_key, victim_value);
-                cooperation_wrapper_ptr_->updateDirectory(victim_key, false);
+                bool _unused_is_being_written = false; // NOTE: is_being_written does NOT affect cache eviction
+                cooperation_wrapper_ptr_->updateDirectory(victim_key, false, _unused_is_being_written);
 
                 // TMPDEBUG
                 //oss.clear();
@@ -139,10 +142,10 @@ namespace covered
         const DirectoryLookupRequest* const directory_lookup_request_ptr = static_cast<const DirectoryLookupRequest*>(control_request_ptr);
         Key tmp_key = directory_lookup_request_ptr->getKey();
 
-        // Acquire a read lock before accessing any shared variable in the beacon edge node
+        // Acquire a read lock for serializability before accessing any shared variable in the beacon edge node
         while (true)
         {
-            if (perkey_rwlock_for_serializability_.try_lock_shared(tmp_key))
+            if (perkey_rwlock_for_serializability_ptr_->try_lock_shared(tmp_key))
             {
                 break;
             }
@@ -169,7 +172,7 @@ namespace covered
         // Add the closest edge node into the DirectoryTable::block_list_for_writes_
         // The closest edge node will be notified by data thread after writes or current control thread if writes have finished
 
-        perkey_rwlock_for_serializability_.unlock_shared(tmp_key);
+        perkey_rwlock_for_serializability_ptr_->unlock_shared(tmp_key);
         return is_finish;
     }
 
@@ -183,10 +186,11 @@ namespace covered
         bool is_admit = directory_update_request_ptr->isValidDirectoryExist();
         DirectoryInfo directory_info = directory_update_request_ptr->getDirectoryInfo();
 
-        // Acquire a write lock before accessing any shared variable in the beacon edge node
+        // Acquire a write lock for serializability before accessing any shared variable in the beacon edge node
+        assert(perkey_rwlock_for_serializability_ptr_ != NULL);
         while (true)
         {
-            if (perkey_rwlock_for_serializability_.try_lock(tmp_key))
+            if (perkey_rwlock_for_serializability_ptr_->try_lock(tmp_key))
             {
                 break;
             }
@@ -198,16 +202,17 @@ namespace covered
         bool is_finish = false;        
 
         // Update local directory information
-        cooperation_wrapper_ptr_->updateLocalDirectory(tmp_key, is_admit, directory_info);
+        bool is_being_written = false;
+        cooperation_wrapper_ptr_->updateLocalDirectory(tmp_key, is_admit, directory_info, is_being_written);
 
         // Send back a directory update response
-        DirectoryUpdateResponse directory_update_response(tmp_key);
+        DirectoryUpdateResponse directory_update_response(tmp_key, is_being_written);
         DynamicArray control_response_msg_payload(directory_update_response.getMsgPayloadSize());
         directory_update_response.serialize(control_response_msg_payload);
         PropagationSimulator::propagateFromNeighborToEdge();
         edge_recvreq_socket_server_ptr_->send(control_response_msg_payload);
 
-        perkey_rwlock_for_serializability_.unlock(tmp_key);
+        perkey_rwlock_for_serializability_ptr_->unlock(tmp_key);
         return is_finish;
     }
     

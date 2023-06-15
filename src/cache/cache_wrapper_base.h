@@ -13,11 +13,10 @@
 #include <string>
 #include <set>
 
-#include <boost/thread/shared_mutex.hpp>
-
 #include "common/key.h"
 #include "common/value.h"
 #include "edge/edge_param.h"
+#include "lock/rwlock.h"
 
 namespace covered
 {
@@ -53,7 +52,7 @@ namespace covered
         virtual bool needIndependentAdmit(const Key& key) const = 0;
 
         // Invoke admitInternal_/evictInternal_ and update validity_map_
-        void admit(const Key& key, const Value& value);
+        void admit(const Key& key, const Value& value, const bool& is_valid);
         void evict(Key& key, Value& value);
         
         // In units of bytes
@@ -77,7 +76,7 @@ namespace covered
         std::string base_instance_name_;
 
         // Guarantee the atomicity of validity_map_ (e.g., admit different keys)
-        mutable boost::shared_mutex rwlock_for_validity_;
+        mutable Rwlock* rwlock_for_validity_ptr_;
 
         // NOTE: write validity_map_ for control messages (e.g., requests for invalidation and admission/eviction), and data messages (local/redirected requests incurring ValidationGetRequest)
         // NOTE: as the flag of validity can be integrated into cache metadata, we ONLY count the flag instead of key into the total size for capacity limitation (validity_map_ is just an implementation trick to avoid hacking each individual cache)

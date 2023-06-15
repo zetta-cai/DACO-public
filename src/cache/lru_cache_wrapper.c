@@ -12,8 +12,11 @@ namespace covered
         // Differentiate local edge cache in different edge nodes
         assert(edge_param_ptr != NULL);
         std::ostringstream oss;
-        oss << kClassName << " " << edge_param_ptr->getEdgeIdx();
+        oss << kClassName << " edge" << edge_param_ptr->getEdgeIdx();
         instance_name_ = oss.str();
+
+        rwlock_for_local_statistics_ptr_ = new Rwlock(instance_name_);
+        assert(rwlock_for_local_statistics_ptr_ != NULL);
 
         lru_cache_ptr_ = new LruCache();
         assert(lru_cache_ptr_ != NULL);
@@ -21,6 +24,10 @@ namespace covered
     
     LruCacheWrapper::~LruCacheWrapper()
     {
+        assert(rwlock_for_local_statistics_ptr_ != NULL);
+        delete rwlock_for_local_statistics_ptr_;
+        rwlock_for_local_statistics_ptr_ = NULL;
+
         if (lru_cache_ptr_ != NULL)
         {
             delete lru_cache_ptr_;
@@ -38,10 +45,11 @@ namespace covered
 
     bool LruCacheWrapper::getInternal_(const Key& key, Value& value) const
     {
-        // Acquire a write lock to update local statistics atomically (yet no need to hack LRU cache)
+        // Acquire a write lock for local statistics to update local statistics atomically (so no need to hack LRU cache)
+        assert(rwlock_for_local_statistics_ptr_ != NULL);
         while (true)
         {
-            if (rwlock_for_local_statistics_.try_lock_shared())
+            if (rwlock_for_local_statistics_ptr_->try_lock())
             {
                 break;
             }
@@ -50,43 +58,83 @@ namespace covered
         assert(lru_cache_ptr_ != NULL);
         bool is_local_cached = lru_cache_ptr_->get(key, value);
 
-        rwlock_for_local_statistics_.unlock_shared();
+        rwlock_for_local_statistics_ptr_->unlock();
         return is_local_cached;
     }
 
     bool LruCacheWrapper::updateInternal_(const Key& key, const Value& value)
     {
-        // No need to acquire a write lock which has been done in update()
+        // Acquire a write lock for local statistics to update local statistics atomically (so no need to hack LRU cache)
+        assert(rwlock_for_local_statistics_ptr_ != NULL);
+        while (true)
+        {
+            if (rwlock_for_local_statistics_ptr_->try_lock())
+            {
+                break;
+            }
+        }
 
         assert(lru_cache_ptr_ != NULL);
         bool is_local_cached = lru_cache_ptr_->update(key, value);
+
+        rwlock_for_local_statistics_ptr_->unlock();
         return is_local_cached;
     }
 
     void LruCacheWrapper::admitInternal_(const Key& key, const Value& value)
     {
-        // No need to acquire a write lock which has been done in admit()
+        // Acquire a write lock for local statistics to update local statistics atomically (so no need to hack LRU cache)
+        assert(rwlock_for_local_statistics_ptr_ != NULL);
+        while (true)
+        {
+            if (rwlock_for_local_statistics_ptr_->try_lock())
+            {
+                break;
+            }
+        }
 
         assert(lru_cache_ptr_ != NULL);
         lru_cache_ptr_->admit(key, value);
+
+        rwlock_for_local_statistics_ptr_->unlock();
         return;
     }
 
     void LruCacheWrapper::evictInternal_(Key& key, Value& value)
     {
-        // No need to acquire a write lock which has been done in evict()
+        // Acquire a write lock for local statistics to update local statistics atomically (so no need to hack LRU cache)
+        assert(rwlock_for_local_statistics_ptr_ != NULL);
+        while (true)
+        {
+            if (rwlock_for_local_statistics_ptr_->try_lock())
+            {
+                break;
+            }
+        }
 
         assert(lru_cache_ptr_ != NULL);
         lru_cache_ptr_->evict(key, value);
+
+        rwlock_for_local_statistics_ptr_->unlock();
         return;
     }
 
     uint32_t LruCacheWrapper::getSizeInternal_() const
     {
-        // No need to acquire a read lock which has been done in getSize()
+        // Acquire a read lock for local statistics to update local statistics atomically (so no need to hack LRU cache)
+        assert(rwlock_for_local_statistics_ptr_ != NULL);
+        while (true)
+        {
+            if (rwlock_for_local_statistics_ptr_->try_lock_shared())
+            {
+                break;
+            }
+        }
 
         assert(lru_cache_ptr_ != NULL);
         uint32_t internal_size = lru_cache_ptr_->getSize();
+
+        rwlock_for_local_statistics_ptr_->unlock_shared();
         return internal_size;
     }
 

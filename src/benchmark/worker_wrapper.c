@@ -32,7 +32,7 @@ namespace covered
 
         // Differentiate different workers
         std::ostringstream oss;
-        oss << kClassName << " " << client_param_ptr->getClientIdx() << "-" << worker_param_ptr->getLocalWorkerIdx();
+        oss << kClassName << " client" << client_param_ptr->getClientIdx() << "-worker" << worker_param_ptr->getLocalWorkerIdx();
         instance_name_ = oss.str();
 
         worker_param_ptr_ = worker_param_ptr;

@@ -17,7 +17,7 @@ namespace covered
         // Differentiate DhtWrapper in different edge nodes
         assert(edge_param_ptr != NULL);
         std::ostringstream oss;
-        oss << kClassName << " " << edge_param_ptr->getEdgeIdx();
+        oss << kClassName << " edge" << edge_param_ptr->getEdgeIdx();
         instance_name_ = oss.str();
 
         hash_wrapper_ptr_ = HashWrapperBase::getHashWrapper(hash_name);

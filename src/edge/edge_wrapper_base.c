@@ -44,8 +44,12 @@ namespace covered
 
         // Differentiate different edge nodes
         std::ostringstream oss;
-        oss << kClassName << " " << edge_param_ptr->getEdgeIdx();
+        oss << kClassName << " edge" << edge_param_ptr->getEdgeIdx();
         base_instance_name_ = oss.str();
+
+        // Allocate per-key rwlock for serializability
+        perkey_rwlock_for_serializability_ptr_ = new PerkeyRwlock(edge_param_ptr->getEdgeIdx());
+        assert(perkey_rwlock_for_serializability_ptr_ != NULL);
         
         // Allocate local edge cache to store hot objects
         edge_cache_ptr_ = CacheWrapperBase::getEdgeCache(cache_name_, Param::getCapacityBytes(), edge_param_ptr);
@@ -73,6 +77,11 @@ namespace covered
     EdgeWrapperBase::~EdgeWrapperBase()
     {
         // NOTE: no need to delete edge_param_ptr, as it is maintained outside EdgeWrapperBase
+
+        // Release per-key rwlock
+        assert(perkey_rwlock_for_serializability_ptr_ != NULL);
+        delete perkey_rwlock_for_serializability_ptr_;
+        perkey_rwlock_for_serializability_ptr_ = NULL;
 
         // Release local edge cache
         assert(edge_cache_ptr_ != NULL);
@@ -148,7 +157,7 @@ namespace covered
 
     bool EdgeWrapperBase::processDataRequest_(MessageBase* data_request_ptr)
     {
-        // NOTE: no need to acquire rwlock which will be done in processLocalGetRequest_() or processLocalWriteRequest_()
+        // No need to acquire per-key rwlock for serializability, which will be done in processLocalGetRequest_() or processLocalWriteRequest_()
 
         assert(data_request_ptr != NULL && data_request_ptr->isDataRequest());
 
@@ -204,10 +213,11 @@ namespace covered
         Key tmp_key = local_get_request_ptr->getKey();
         Value tmp_value;
 
-        // Acquire a read lock before accessing any shared variable in the closest edge node
+        // Acquire a read lock for serializability before accessing any shared variable in the closest edge node
+        assert(perkey_rwlock_for_serializability_ptr_ != NULL);
         while (true)
         {
-            if (perkey_rwlock_for_serializability_.try_lock_shared(tmp_key))
+            if (perkey_rwlock_for_serializability_ptr_->try_lock_shared(tmp_key))
             {
                 break;
             }
@@ -234,7 +244,7 @@ namespace covered
             is_finish = cooperation_wrapper_ptr_->get(tmp_key, tmp_value, is_cooperative_cached_and_valid);
             if (is_finish) // Edge node is NOT running
             {
-                perkey_rwlock_for_serializability_.unlock_shared(tmp_key);
+                perkey_rwlock_for_serializability_ptr_->unlock_shared(tmp_key);
                 return is_finish;
             }
             if (is_cooperative_cached_and_valid) // cooperative cached and valid
@@ -249,7 +259,7 @@ namespace covered
             is_finish = fetchDataFromCloud_(tmp_key, tmp_value);
             if (is_finish) // Edge node is NOT running
             {
-                perkey_rwlock_for_serializability_.unlock_shared(tmp_key);
+                perkey_rwlock_for_serializability_ptr_->unlock_shared(tmp_key);
                 return is_finish;
             }
         }
@@ -275,7 +285,7 @@ namespace covered
         oss << "issue a local response; type: " << MessageBase::messageTypeToString(local_get_response.getMessageType()) << "; keystr:" << local_get_response.getKey().getKeystr();
         Util::dumpDebugMsg(base_instance_name_, oss.str());
 
-        perkey_rwlock_for_serializability_.unlock_shared(tmp_key);
+        perkey_rwlock_for_serializability_ptr_->unlock_shared(tmp_key);
         return is_finish;
     }
 
@@ -306,10 +316,11 @@ namespace covered
             exit(1);
         }
 
-        // Acquire a write lock before accessing any shared variable in the closest edge node
+        // Acquire a write lock for serializability before accessing any shared variable in the closest edge node
+        assert(perkey_rwlock_for_serializability_ptr_ != NULL);
         while (true)
         {
-            if (perkey_rwlock_for_serializability_.try_lock(tmp_key))
+            if (perkey_rwlock_for_serializability_ptr_->try_lock(tmp_key))
             {
                 break;
             }
@@ -325,7 +336,7 @@ namespace covered
 
         if (is_finish) // Edge node is NOT running
         {
-            perkey_rwlock_for_serializability_.unlock(tmp_key);
+            perkey_rwlock_for_serializability_ptr_->unlock(tmp_key);
             return is_finish;
         }
 
@@ -334,7 +345,7 @@ namespace covered
 
         if (is_finish) // Edge node is NOT running
         {
-            perkey_rwlock_for_serializability_.unlock(tmp_key);
+            perkey_rwlock_for_serializability_ptr_->unlock(tmp_key);
             return is_finish;
         }
 
@@ -343,7 +354,7 @@ namespace covered
 
         if (is_finish) // Edge node is NOT running
         {
-            perkey_rwlock_for_serializability_.unlock(tmp_key);
+            perkey_rwlock_for_serializability_ptr_->unlock(tmp_key);
             return is_finish;
         }
 
@@ -392,13 +403,13 @@ namespace covered
         delete local_response_ptr;
         local_response_ptr = NULL;
 
-        perkey_rwlock_for_serializability_.unlock(tmp_key);
+        perkey_rwlock_for_serializability_ptr_->unlock(tmp_key);
         return is_finish;
     }
 
     bool EdgeWrapperBase::processRedirectedRequest_(MessageBase* redirected_request_ptr)
     {
-        // NOTE: no need to acquire rwlock which will be done in processRedirectedGetRequest_()
+        // No need to acquire per-key rwlock for serializability, which will be done in processRedirectedGetRequest_()
 
         assert(redirected_request_ptr != NULL && redirected_request_ptr->isRedirectedRequest());
 
@@ -456,7 +467,7 @@ namespace covered
 
     bool EdgeWrapperBase::fetchDataFromCloud_(const Key& key, Value& value) const
     {
-        // NOTE: no need to acquire rwlock which has been done in processLocalGetRequest_()
+        // No need to acquire per-key rwlock for serializability, which has been done in processLocalGetRequest_()
 
         assert(edge_param_ptr_ != NULL);
         assert(edge_sendreq_tocloud_socket_client_ptr_ != NULL);
@@ -522,7 +533,7 @@ namespace covered
 
     bool EdgeWrapperBase::writeDataToCloud_(const Key& key, const Value& value, const MessageType& message_type)
     {
-        // NOTE: no need to acquire rwlock which has been done in processLocalWriteRequest_()
+        // No need to acquire per-key rwlock for serializability, which has been done in processLocalWriteRequest_()
         
         assert(edge_param_ptr_ != NULL);
         assert(edge_sendreq_tocloud_socket_client_ptr_ != NULL);
@@ -597,7 +608,7 @@ namespace covered
 
     bool EdgeWrapperBase::processControlRequest_(MessageBase* control_request_ptr)
     {
-        // NOTE: no need to acquire rwlock which will be done in processDirectoryLookupRequest_() or processDirectoryUpdateRequest_() or processOtherControlRequest_()
+        // No need to acquire per-key rwlock for serializability, which will be done in processDirectoryLookupRequest_() or processDirectoryUpdateRequest_() or processOtherControlRequest_()
 
         assert(control_request_ptr != NULL && control_request_ptr->isControlRequest());
         assert(edge_cache_ptr_ != NULL);

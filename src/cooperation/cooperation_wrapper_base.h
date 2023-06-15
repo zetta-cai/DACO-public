@@ -12,14 +12,13 @@
 #include <string>
 #include <vector>
 
-#include <boost/thread/shared_mutex.hpp>
-
 #include "common/key.h"
 #include "common/value.h"
 #include "cooperation/dht_wrapper.h"
 #include "cooperation/directory_info.h"
 #include "cooperation/directory_table.h"
 #include "edge/edge_param.h"
+#include "lock/rwlock.h"
 #include "network/udp_socket_wrapper.h"
 
 namespace covered
@@ -35,8 +34,8 @@ namespace covered
         // Return if edge node is finished
         bool get(const Key& key, Value& value, bool& is_cooperative_cached_and_valid) const; // Get data from target edge ndoe
         void lookupLocalDirectory(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const; // Check local directory information
-        bool updateDirectory(const Key& key, const bool& is_admit); // Update remote directory info at beacon node
-        void updateLocalDirectory(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info);
+        bool updateDirectory(const Key& key, const bool& is_admit, bool& is_being_written); // Update remote directory info at beacon node
+        void updateLocalDirectory(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written);
     private:
         static const std::string kClassName;
         
@@ -53,7 +52,7 @@ namespace covered
         virtual bool redirectGetToTarget_(const Key& key, Value& value, bool& is_cooperative_cached_and_valid) const = 0;
 
         // For updateDirectory()
-        virtual bool updateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info) = 0; // TODO: implement in basic
+        virtual bool updateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written) = 0; // TODO: implement in basic
 
         // Edge index verification
         void verifyCurrentIsBeacon_(const Key& key) const;
@@ -65,7 +64,7 @@ namespace covered
 
         // NOTE: serializability for writes of the same key has been guaranteed in EdgeWrapperBase
         // Guarantee the atomicity of per-key metadata (e.g., writes of different keys to update perkey_writeflags_)
-        mutable boost::shared_mutex rwlock_for_perkey_metadata_;
+        mutable Rwlock* rwlock_for_perkey_metadata_ptr_;
 
         // Non-const shared variables
         DirectoryTable* directory_table_ptr_;

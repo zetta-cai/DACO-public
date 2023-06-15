@@ -6,11 +6,10 @@
 
 #include <string>
 
-#include <boost/thread/shared_mutex.hpp>
-
 #include "cache/cache_wrapper_base.h"
 #include "cache/cpp-lru-cache/lrucache.h"
 #include "edge/edge_param.h"
+#include "lock/rwlock.h"
 
 namespace covered
 {
@@ -37,7 +36,7 @@ namespace covered
         std::string instance_name_;
 
         // Guarantee the atomicity of local statistics (e.g., get values for different keys)
-        mutable boost::shared_mutex rwlock_for_local_statistics_;
+        mutable Rwlock* rwlock_for_local_statistics_ptr_;
 
         // Non-const shared variables
         LruCache* lru_cache_ptr_;

@@ -11,14 +11,14 @@
 
 #include "common/dynamic_array.h"
 #include "common/key.h"
-#include "message/key_message.h"
+#include "message/key_writeflag_message.h"
 
 namespace covered
 {
-    class DirectoryUpdateResponse : public KeyMessage
+    class DirectoryUpdateResponse : public KeyWriteflagMessage
     {
     public:
-        DirectoryUpdateResponse(const Key& key);
+        DirectoryUpdateResponse(const Key& key, const bool& is_being_written);
         DirectoryUpdateResponse(const DynamicArray& msg_payload);
         virtual ~DirectoryUpdateResponse();
     private:
