@@ -77,6 +77,16 @@ namespace covered
                 message_type_str = "kDirectoryUpdateResponse";
                 break;
             }
+            case MessageType::kFinishBlockRequest:
+            {
+                message_type_str = "kFinishBlockRequest";
+                break;
+            }
+            case MessageType::kFinishBlockResponse:
+            {
+                message_type_str = "kFinishBlockResponse";
+                break;
+            }
             default:
             {
                 message_type_str = std::to_string(static_cast<uint32_t>(message_type));
@@ -208,6 +218,11 @@ namespace covered
                 message_ptr = new DirectoryUpdateRequest(msg_payload);
                 break;
             }
+            case MessageType::kFinishBlockRequest:
+            {
+                message_ptr = new FinishBlockRequest(msg_payload);
+                break;
+            }
             default:
             {
                 std::ostringstream oss;
@@ -276,6 +291,11 @@ namespace covered
             case MessageType::kDirectoryUpdateResponse:
             {
                 message_ptr = new DirectoryUpdateResponse(msg_payload);
+                break;
+            }
+            case MessageType::kFinishBlockResponse:
+            {
+                message_ptr = new FinishBlockResponse(msg_payload);
                 break;
             }
             default:
@@ -487,7 +507,7 @@ namespace covered
     {
         checkIsValid_();
         // TODO: Update isControlRequest() after introducing control requests
-        if (message_type_ == MessageType::kDirectoryLookupRequest || message_type_ == MessageType::kDirectoryUpdateRequest)
+        if (message_type_ == MessageType::kDirectoryLookupRequest || message_type_ == MessageType::kDirectoryUpdateRequest || message_type_ == MessageType::kFinishBlockRequest)
         {
             return true;
         }
@@ -501,7 +521,7 @@ namespace covered
     {
         checkIsValid_();
         // TODO: Update isControlResponse() after introducing control responses
-        if (message_type_ == MessageType::kDirectoryLookupResponse || message_type_ == MessageType::kDirectoryUpdateResponse)
+        if (message_type_ == MessageType::kDirectoryLookupResponse || message_type_ == MessageType::kDirectoryUpdateResponse || message_type_ == MessageType::kFinishBlockResponse)
         {
             return true;
         }

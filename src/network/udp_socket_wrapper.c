@@ -83,6 +83,11 @@ namespace covered
 		pkt_socket_ptr_ = NULL;
 	}
 
+	NetworkAddr UdpSocketWrapper::getRemoteAddrForServer() const
+	{
+		return remote_addr_;
+	}
+
 	void UdpSocketWrapper::setRemoteAddrForClient(const NetworkAddr& remote_addr)
 	{
 		assert(role_ == SocketRole::kSocketClient);

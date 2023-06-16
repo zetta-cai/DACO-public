@@ -156,6 +156,10 @@ namespace covered
 
         bool is_finish = false;
 
+        // Get remote address of the closest edge node before send(), which will reset remote address
+        NetworkAddr closest_edge_addr = edge_recvreq_socket_server_ptr_->getRemoteAddrForServer();
+        assert(closest_edge_addr.isValid());
+
         // Lookup local directory information and randomly select a target edge index
         bool is_being_written = false;
         bool is_valid_directory_exist = false;
@@ -169,8 +173,14 @@ namespace covered
         PropagationSimulator::propagateFromNeighborToEdge();
         edge_recvreq_socket_server_ptr_->send(control_response_msg_payload);
 
-        // Add the closest edge node into the DirectoryTable::block_list_for_writes_
-        // The closest edge node will be notified by data thread after writes or current control thread if writes have finished
+        if (is_being_written)
+        {
+            // Add the closest edge node into the CooperationWrapperBase::perkey_edge_blocklist_
+            cooperation_wrapper_ptr_->addEdgeIntoBlocklist(tmp_key, closest_edge_addr);
+
+            // Try to notify blocked edge nodes if without writes, in case that writes have finished before adding the closest edge node
+            cooperation_wrapper_ptr_->tryToNotifyEdgesFromBlocklist(tmp_key);
+        }
 
         perkey_rwlock_for_serializability_ptr_->unlock_shared(tmp_key);
         return is_finish;

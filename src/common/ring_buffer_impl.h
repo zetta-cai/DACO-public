@@ -8,10 +8,12 @@
 namespace covered
 {
     template<class T>
+    const uint32_t RingBuffer<T>::RINGBUFFER_CAPACITY = 1000;
+    template<class T>
     const std::string RingBuffer<T>::kClassName = "RingBuffer<" + std::string(typeid(T).name()) + ">";
 
     template<class T>
-    RingBuffer<T>::RingBuffer(uint32_t capacity, const T& default_element)
+    RingBuffer<T>::RingBuffer(const T& default_element, const uint32_t& capacity)
     {
         assert(capacity > 0);
 
@@ -94,5 +96,32 @@ namespace covered
         }
 
         return is_successful;
+    }
+
+    template<class T>
+    uint32_t RingBuffer<T>::size() const
+    {
+        uint32_t size = 0;
+        if (head_ >= tail_)
+        {
+            size = head_ - tail_;
+        }
+        else
+        {
+            size = head_ + capacity_ - tail_;
+        }
+        assert(size >= 0 && size < capacity_);
+        return size;
+    }
+
+    template<class T>
+    RingBuffer<T>& RingBuffer<T>::operator=(const RingBuffer<T>& other)
+    {
+        head_ = other.head_;
+        tail_ = other.tail_;
+        capacity_ = other.capacity_;
+        default_element_ = other.default_element_;
+        ring_buffer_ = other.ring_buffer_; // Deep copy
+        return *this;
     }
 }

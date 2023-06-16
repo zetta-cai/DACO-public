@@ -16,11 +16,16 @@ namespace covered
     class RingBuffer
     {
     public:
-        RingBuffer(uint32_t capacity, const T& default_element);
+        static const uint32_t RINGBUFFER_CAPACITY;
+
+        RingBuffer(const T& default_element, const uint32_t& capacity = RINGBUFFER_CAPACITY);
         ~RingBuffer();
 
         bool push(const T& element);
         bool pop(T& element);
+        uint32_t size() const;
+
+        RingBuffer<T>& operator=(const RingBuffer<T>& other);
     private:
         static const std::string kClassName;
 

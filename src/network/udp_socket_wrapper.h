@@ -35,6 +35,7 @@ namespace covered
         UdpSocketWrapper(const SocketRole& role, const NetworkAddr& addr);
         ~UdpSocketWrapper();
 
+        NetworkAddr getRemoteAddrForServer() const;
         void setRemoteAddrForClient(const NetworkAddr& remote_addr); // only for UDP client
 
         // Note: pass reference of pkt_payload to avoid unnecessary memory copy

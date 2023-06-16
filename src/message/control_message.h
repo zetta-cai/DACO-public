@@ -11,5 +11,7 @@
 #include "message/control/directory_update_request.h"
 #include "message/control/directory_lookup_response.h"
 #include "message/control/directory_update_response.h"
+#include "message/control/finish_block_request.h"
+#include "message/control/finish_block_response.h"
 
 #endif
