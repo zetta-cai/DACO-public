@@ -217,7 +217,7 @@ namespace covered
         assert(perkey_rwlock_for_serializability_ptr_ != NULL);
         while (true)
         {
-            if (perkey_rwlock_for_serializability_ptr_->try_lock_shared(tmp_key))
+            if (perkey_rwlock_for_serializability_ptr_->try_lock_shared(tmp_key, "processLocalGetRequest_()"))
             {
                 break;
             }
@@ -320,7 +320,7 @@ namespace covered
         assert(perkey_rwlock_for_serializability_ptr_ != NULL);
         while (true)
         {
-            if (perkey_rwlock_for_serializability_ptr_->try_lock(tmp_key))
+            if (perkey_rwlock_for_serializability_ptr_->try_lock(tmp_key, "processLocalWriteRequest_()"))
             {
                 break;
             }

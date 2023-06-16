@@ -22,9 +22,9 @@ namespace covered
         ~Rwlock();
 
         // The same interfaces as libboost
-        bool try_lock_shared();
+        bool try_lock_shared(const std::string& context_name);
         void unlock_shared();
-        bool try_lock();
+        bool try_lock(const std::string& context_name);
         void unlock();
     private:
         static const std::string kClassName;

@@ -15,7 +15,10 @@ namespace covered
         oss << kClassName << " edge" << edge_param_ptr->getEdgeIdx();
         instance_name_ = oss.str();
 
-        rwlock_for_local_statistics_ptr_ = new Rwlock(instance_name_);
+        oss.clear();
+        oss.str("");
+        oss << instance_name_ << " " << "rwlock_for_local_statistics_ptr_";
+        rwlock_for_local_statistics_ptr_ = new Rwlock(oss.str());
         assert(rwlock_for_local_statistics_ptr_ != NULL);
 
         lru_cache_ptr_ = new LruCache();
@@ -49,7 +52,7 @@ namespace covered
         assert(rwlock_for_local_statistics_ptr_ != NULL);
         while (true)
         {
-            if (rwlock_for_local_statistics_ptr_->try_lock())
+            if (rwlock_for_local_statistics_ptr_->try_lock("getInternal_()"))
             {
                 break;
             }
@@ -68,7 +71,7 @@ namespace covered
         assert(rwlock_for_local_statistics_ptr_ != NULL);
         while (true)
         {
-            if (rwlock_for_local_statistics_ptr_->try_lock())
+            if (rwlock_for_local_statistics_ptr_->try_lock("updateInternal_()"))
             {
                 break;
             }
@@ -87,7 +90,7 @@ namespace covered
         assert(rwlock_for_local_statistics_ptr_ != NULL);
         while (true)
         {
-            if (rwlock_for_local_statistics_ptr_->try_lock())
+            if (rwlock_for_local_statistics_ptr_->try_lock("admitInternal_()"))
             {
                 break;
             }
@@ -106,7 +109,7 @@ namespace covered
         assert(rwlock_for_local_statistics_ptr_ != NULL);
         while (true)
         {
-            if (rwlock_for_local_statistics_ptr_->try_lock())
+            if (rwlock_for_local_statistics_ptr_->try_lock("evictInternal_()"))
             {
                 break;
             }
@@ -125,7 +128,7 @@ namespace covered
         assert(rwlock_for_local_statistics_ptr_ != NULL);
         while (true)
         {
-            if (rwlock_for_local_statistics_ptr_->try_lock_shared())
+            if (rwlock_for_local_statistics_ptr_->try_lock_shared("getSizeInternal_()"))
             {
                 break;
             }

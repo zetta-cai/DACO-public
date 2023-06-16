@@ -115,7 +115,10 @@ namespace covered
         oss << kClassName << " edge" << edge_idx;
         instance_name_ = oss.str();
 
-        rwlock_for_dirtable_ptr_ = new Rwlock(instance_name_);
+        oss.clear();
+        oss.str("");
+        oss << instance_name_ << " " << "rwlock_for_dirtable_ptr_";
+        rwlock_for_dirtable_ptr_ = new Rwlock(oss.str());
         assert(rwlock_for_dirtable_ptr_ != NULL);
 
         directory_hashtable_.clear();
@@ -139,7 +142,7 @@ namespace covered
         assert(rwlock_for_dirtable_ptr_ != NULL);
         while (true)
         {
-            if (rwlock_for_dirtable_ptr_->try_lock_shared())
+            if (rwlock_for_dirtable_ptr_->try_lock_shared("lookup()"))
             {
                 break;
             }
@@ -198,7 +201,7 @@ namespace covered
         assert(rwlock_for_dirtable_ptr_ != NULL);
         while (true)
         {
-            if (rwlock_for_dirtable_ptr_->try_lock())
+            if (rwlock_for_dirtable_ptr_->try_lock("update()"))
             {
                 break;
             }

@@ -43,7 +43,7 @@ namespace covered
         hash_wrapper_ptr_ = NULL;
     }
 
-    bool PerkeyRwlock::try_lock_shared(const Key& key)
+    bool PerkeyRwlock::try_lock_shared(const Key& key, const std::string& context_name)
     {
         uint32_t rwlock_index = getRwlockIndex_(key);
         assert(rwlock_hashtable_[rwlock_index] != NULL);
@@ -53,7 +53,7 @@ namespace covered
         if (result)
         {
             std::ostringstream oss;
-            oss << "acquire a read lock for key " << key.getKeystr();
+            oss << "acquire a read lock for key " << key.getKeystr() << " in " << context_name;
             Util::dumpDebugMsg(instance_name_, oss.str());
         }
 
@@ -73,7 +73,7 @@ namespace covered
         return;
     }
 
-    bool PerkeyRwlock::try_lock(const Key& key)
+    bool PerkeyRwlock::try_lock(const Key& key, const std::string& context_name)
     {
         uint32_t rwlock_index = getRwlockIndex_(key);
         assert(rwlock_hashtable_[rwlock_index] != NULL);
@@ -83,7 +83,7 @@ namespace covered
         if (result)
         {
             std::ostringstream oss;
-            oss << "acquire a write lock for key " << key.getKeystr();
+            oss << "acquire a write lock for key " << key.getKeystr() << " in " << context_name;
             Util::dumpDebugMsg(instance_name_, oss.str());
         }
 

@@ -38,7 +38,10 @@ namespace covered
         oss << kClassName << " edge" << edge_param_ptr->getEdgeIdx();
         base_instance_name_ = oss.str();
 
-        rwlock_for_validity_ptr_ = new Rwlock(base_instance_name_);
+        oss.clear();
+        oss.str("");
+        oss << base_instance_name_ << " " << "rwlock_for_validity_ptr_";
+        rwlock_for_validity_ptr_ = new Rwlock(oss.str());
         assert(rwlock_for_validity_ptr_ != NULL);
 
         validity_map_.clear();
@@ -57,7 +60,7 @@ namespace covered
         assert(rwlock_for_validity_ptr_ != NULL);
         while (true)
         {
-            if (rwlock_for_validity_ptr_->try_lock_shared())
+            if (rwlock_for_validity_ptr_->try_lock_shared("isCachedAndInvalid()"))
             {
                 break;
             }
@@ -84,7 +87,7 @@ namespace covered
         assert(rwlock_for_validity_ptr_ != NULL);
         while (true)
         {
-            if (rwlock_for_validity_ptr_->try_lock())
+            if (rwlock_for_validity_ptr_->try_lock("invalidate()"))
             {
                 break;
             }
@@ -113,7 +116,7 @@ namespace covered
         assert(rwlock_for_validity_ptr_ != NULL);
         while (true)
         {
-            if (rwlock_for_validity_ptr_->try_lock())
+            if (rwlock_for_validity_ptr_->try_lock("validate()"))
             {
                 break;
             }
@@ -144,7 +147,7 @@ namespace covered
         assert(rwlock_for_validity_ptr_ != NULL);
         while (true)
         {
-            if (rwlock_for_validity_ptr_->try_lock_shared())
+            if (rwlock_for_validity_ptr_->try_lock_shared("get()"))
             {
                 break;
             }
@@ -172,7 +175,7 @@ namespace covered
             assert(rwlock_for_validity_ptr_ != NULL);
             while (true)
             {
-                if (rwlock_for_validity_ptr_->try_lock())
+                if (rwlock_for_validity_ptr_->try_lock("update()"))
                 {
                     break;
                 }
@@ -201,7 +204,7 @@ namespace covered
         assert(rwlock_for_validity_ptr_ != NULL);
         while (true)
         {
-            if (rwlock_for_validity_ptr_->try_lock_shared())
+            if (rwlock_for_validity_ptr_->try_lock_shared("isLocalCached()"))
             {
                 break;
             }
@@ -221,7 +224,7 @@ namespace covered
         assert(rwlock_for_validity_ptr_ != NULL);
         while (true)
         {
-            if (rwlock_for_validity_ptr_->try_lock())
+            if (rwlock_for_validity_ptr_->try_lock("admit()"))
             {
                 break;
             }
@@ -252,7 +255,7 @@ namespace covered
         assert(rwlock_for_validity_ptr_ != NULL);
         while (true)
         {
-            if (rwlock_for_validity_ptr_->try_lock())
+            if (rwlock_for_validity_ptr_->try_lock("evict()"))
             {
                 break;
             }
@@ -283,7 +286,7 @@ namespace covered
         assert(rwlock_for_validity_ptr_ != NULL);
         while (true)
         {
-            if (rwlock_for_validity_ptr_->try_lock_shared())
+            if (rwlock_for_validity_ptr_->try_lock_shared("getSize()"))
             {
                 break;
             }

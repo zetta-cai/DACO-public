@@ -11,13 +11,13 @@ namespace covered
     Rwlock::Rwlock(const std::string& lock_name)
     {
         std::ostringstream oss;
-        oss << kClassName << " in " << lock_name;
+        oss << kClassName << " of " << lock_name;
         instance_name_ = oss.str();
     }
 
     Rwlock::~Rwlock() {}
 
-    bool Rwlock::try_lock_shared()
+    bool Rwlock::try_lock_shared(const std::string& context_name)
     {
         bool result = rwlock_.try_lock_shared();
 
@@ -25,7 +25,7 @@ namespace covered
         if (result)
         {
             std::ostringstream oss;
-            oss << "acquire a read lock";
+            oss << "acquire a read lock in " << context_name;
             Util::dumpDebugMsg(instance_name_, oss.str());
         }
 
@@ -43,7 +43,7 @@ namespace covered
         return;
     }
 
-    bool Rwlock::try_lock()
+    bool Rwlock::try_lock(const std::string& context_name)
     {
         bool result = rwlock_.try_lock();
 
@@ -51,7 +51,7 @@ namespace covered
         if (result)
         {
             std::ostringstream oss;
-            oss << "acquire a write lock";
+            oss << "acquire a write lock in " << context_name;
             Util::dumpDebugMsg(instance_name_, oss.str());
         }
 

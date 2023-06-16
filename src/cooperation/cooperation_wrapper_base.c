@@ -59,7 +59,10 @@ namespace covered
         directory_table_ptr_ = new DirectoryTable(seed_for_directory_selection, edge_param_ptr_->getEdgeIdx());
         assert(directory_table_ptr_ != NULL);
 
-        rwlock_for_perkey_metadata_ptr_ = new Rwlock(base_instance_name_);
+        oss.clear();
+        oss.str("");
+        oss << base_instance_name_ << " " << "rwlock_for_perkey_metadata_ptr_";
+        rwlock_for_perkey_metadata_ptr_ = new Rwlock(oss.str());
         assert(rwlock_for_perkey_metadata_ptr_ != NULL);
 
         perkey_writeflags_.clear();
@@ -260,7 +263,7 @@ namespace covered
         assert(rwlock_for_perkey_metadata_ptr_ != NULL);
         while (true)
         {
-            if (rwlock_for_perkey_metadata_ptr_->try_lock_shared())
+            if (rwlock_for_perkey_metadata_ptr_->try_lock_shared("isBeingWritten_()"))
             {
                 break;
             }

@@ -24,9 +24,9 @@ namespace covered
         ~PerkeyRwlock();
 
         // The same interfaces as libboost
-        bool try_lock_shared(const Key& key);
+        bool try_lock_shared(const Key& key, const std::string& context_name);
         void unlock_shared(const Key& key);
-        bool try_lock(const Key& key);
+        bool try_lock(const Key& key, const std::string& context_name);
         void unlock(const Key& key);
     private:
         // NOTE: we cannot use std::vector<boost::shared_mutex> as boost::shared_mutex does not have copy constructor
