@@ -59,7 +59,7 @@ namespace covered
                 }
                 else
                 {
-                    Util::dumpWarnMsg(instance_name_, "edge timeout to wait for control response");
+                    Util::dumpWarnMsg(instance_name_, "edge timeout to wait for DirectoryLookupResponse");
                     continue; // Resend the control request message
                 }
             } // End of (is_timeout == true)
@@ -85,7 +85,7 @@ namespace covered
         return is_finish;
     }
 
-    bool BasicCooperationWrapper::redirectGetToTarget_(const Key& key, Value& value, bool& is_cooperative_cached_and_valid) const
+    bool BasicCooperationWrapper::redirectGetToTarget_(const Key& key, Value& value, bool& is_cooperative_cached, bool& is_valid) const
     {
         // No need to acquire a read lock for cooperation metadata due to accessing const shared variables and non-const individual variables
 
@@ -117,7 +117,7 @@ namespace covered
                 }
                 else
                 {
-                    Util::dumpWarnMsg(instance_name_, "edge timeout to wait for redirected response");
+                    Util::dumpWarnMsg(instance_name_, "edge timeout to wait for RedirectedGetResponse");
                     continue; // Resend the redirected request message
                 }
             } // End of (is_timeout == true)
@@ -133,7 +133,13 @@ namespace covered
                 Hitflag hitflag = redirected_get_response_ptr->getHitflag();
                 if (hitflag == Hitflag::kCooperativeHit)
                 {
-                    is_cooperative_cached_and_valid = true;
+                    is_cooperative_cached = true;
+                    is_valid = true;
+                }
+                else if (hitflag == Hitflag::kCooperativeInvalid)
+                {
+                    is_cooperative_cached = true;
+                    is_valid = false;
                 }
                 else if (hitflag == Hitflag::kGlobalMiss)
                 {
@@ -141,7 +147,8 @@ namespace covered
                     oss << "target edge node does not cache the key " << key.getKeystr() << " in redirectGetToTarget_()!";
                     Util::dumpWarnMsg(instance_name_, oss.str());
 
-                    is_cooperative_cached_and_valid = false;
+                    is_cooperative_cached = false;
+                    is_valid = false;
                 }
                 else
                 {
@@ -196,7 +203,7 @@ namespace covered
                 }
                 else
                 {
-                    Util::dumpWarnMsg(instance_name_, "edge timeout to wait for control response");
+                    Util::dumpWarnMsg(instance_name_, "edge timeout to wait for DirectoryUpdateResponse");
                     continue; // Resend the control request message
                 }
             } // End of (is_timeout == true)

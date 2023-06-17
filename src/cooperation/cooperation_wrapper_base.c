@@ -9,6 +9,10 @@
 #include "cooperation/basic_cooperation_wrapper.h"
 #include "network/network_addr.h"
 
+// TODO: remove if notifyEdgeToFinishBlock_ and blockForWritesByInterruption_ are pure virtual functions
+#include "message/control_message.h"
+#include "network/propagation_simulator.h"
+
 namespace covered
 {
     const std::string CooperationWrapperBase::kClassName("CooperationWrapperBase");
@@ -54,7 +58,7 @@ namespace covered
         edge_sendreq_totarget_socket_client_ptr_ = new UdpSocketWrapper(SocketRole::kSocketClient, edge0_addr);
         assert(edge_sendreq_totarget_socket_client_ptr_ != NULL);
         edge_sendreq_toclosest_socket_client_ptr_ = new UdpSocketWrapper(SocketRole::kSocketClient, edge0_addr);
-        asssert(edge_sendreq_toclosest_socket_client_ptr_ != NULL);
+        assert(edge_sendreq_toclosest_socket_client_ptr_ != NULL);
 
         // Allocate directory information
         uint32_t seed_for_directory_selection = edge_param_ptr_->getEdgeIdx();
@@ -132,11 +136,7 @@ namespace covered
                 {
                     // Wait for writes by polling
                     // TODO: sleep a short time to avoid frequent polling
-                    continue;
-                }
-                else // key is NOT being written
-                {
-                    break;
+                    continue; // Continue to lookup local directory info
                 }
             }
             else // Get target edge index from remote directory information at the beacon node
@@ -150,46 +150,69 @@ namespace covered
                 if (is_being_written) // If key is being written, we need to wait for writes
                 {
                     // Wait for writes by interruption instead of polling to avoid duplicate DirectoryLookupRequest
-                    //is_finish = blockForWritesByInterruption_();
-                    //if (is_finish) // Edge is NOT running
-                    //{
-                    //    return is_finish;
-                    //}
+                    is_finish = blockForWritesByInterruption_(key);
+                    if (is_finish) // Edge is NOT running
+                    {
+                        return is_finish;
+                    }
+                    else
+                    {
+                        continue; // Continue to lookup remote directory info
+                    }
                 }
-                else // key is NOT being written
+            } // End of current_is_beacon
+
+            // key must NOT being written here
+            assert(!is_being_written);
+
+            if (is_valid_directory_exist) // The object is cached by some target edge node
+            {
+                // NOTE: the target node should not be the current edge node, as CooperationWrapperBase::get() can only be invoked if is_local_cached = false (i.e., the current edge node does not cache the object and hence is_valid_directory_exist should be false)
+                assert(edge_param_ptr_ != NULL);
+                uint32_t current_edge_idx = edge_param_ptr_->getEdgeIdx();
+                if (directory_info.getTargetEdgeIdx() == current_edge_idx)
                 {
+                    std::ostringstream oss;
+                    oss << "current edge node " << current_edge_idx << " should not be the target edge node for cooperative edge caching under a local cache miss!";
+                    Util::dumpWarnMsg(base_instance_name_, oss.str());
+                    return is_finish; // NOTE: is_finish is still false, as edge is STILL running
+                }
+
+                // Update remote address of edge_sendreq_totarget_socket_client_ptr_ as the target edge node
+                locateTargetNode_(directory_info);
+
+                // Get data from the target edge node if any and update is_cooperative_cached_and_valid
+                bool is_cooperative_cached = false;
+                bool is_valid = false;
+                is_finish = redirectGetToTarget_(key, value, is_cooperative_cached, is_valid);
+                if (is_finish) // Edge is NOT running
+                {
+                    return is_finish;
+                }
+
+                // Check is_cooperative_cached and is_valid
+                if (!is_cooperative_cached) // Target edge node does not cache the object
+                {
+                    assert(!is_valid);
+                    is_cooperative_cached_and_valid = false; // Closest edge node will fetch data from cloud
                     break;
                 }
+                else if (is_valid) // Target edge node caches a valid object
+                {
+                    is_cooperative_cached_and_valid = true; // Closest edge node will directly reply clients
+                    break;
+                }
+                else // Target edge node caches an invalid object
+                {
+                    continue; // Go back to look up local/remote directory info again
+                }
+            }
+            else // The object is not cached by any target edge node
+            {
+                is_cooperative_cached_and_valid = false;
+                break;
             }
         } // End of while (true)
-
-        if (is_valid_directory_exist) // The object is cached by some target edge node
-        {
-            // NOTE: the target node should not be the current edge node, as CooperationWrapperBase::get() can only be invoked if is_local_cached = false (i.e., the current edge node does not cache the object and hence is_valid_directory_exist should be false)
-            assert(edge_param_ptr_ != NULL);
-            uint32_t current_edge_idx = edge_param_ptr_->getEdgeIdx();
-            if (directory_info.getTargetEdgeIdx() == current_edge_idx)
-            {
-                std::ostringstream oss;
-                oss << "current edge node " << current_edge_idx << " should not be the target edge node for cooperative edge caching under a local cache miss!";
-                Util::dumpWarnMsg(base_instance_name_, oss.str());
-                return is_finish; // NOTE: is_finish is still false, as edge is STILL running
-            }
-
-            // Update remote address of edge_sendreq_totarget_socket_client_ptr_ as the target edge node
-            locateTargetNode_(directory_info);
-
-            // Get data from the target edge node if any and update is_cooperative_cached_and_valid
-            is_finish = redirectGetToTarget_(key, value, is_cooperative_cached_and_valid);
-            if (is_finish) // Edge is NOT running
-            {
-                return is_finish;
-            }
-        }
-        else // The object is not cached by any target edge node
-        {
-            is_cooperative_cached_and_valid = false;
-        }
 
         return is_finish;
     }
@@ -281,15 +304,15 @@ namespace covered
         perkey_edge_blocklist_t::iterator iter = perkey_edge_blocklist_.find(key);
         if (iter != perkey_edge_blocklist_.end()) // key does not exist
         {
-            RingBuffer<NetworkAddr> tmp_edge_blocklist(NetworkAddr());
+            NetworkAddr default_network_addr;
+            RingBuffer<NetworkAddr> tmp_edge_blocklist(default_network_addr);
             perkey_edge_blocklist_.insert(std::pair<Key, RingBuffer<NetworkAddr>>(key, tmp_edge_blocklist));
-            is_successful = perkey_edge_blocklist_[key].push(network_addr);
         }
-        else // key already exists
-        {
-            RingBuffer<NetworkAddr>& tmp_edge_blocklist = iter->second;
-            is_successful = tmp_edge_blocklist.push(network_addr);
-        }
+
+        iter = perkey_edge_blocklist_.find(key);
+        assert(iter != perkey_edge_blocklist_.end()); // key must exist now
+        
+        is_successful = iter->second.push(network_addr);
         assert(is_successful);
 
         rwlock_for_cooperation_metadata_ptr_->unlock();
@@ -413,6 +436,82 @@ namespace covered
         return;
     }
 
+    bool CooperationWrapperBase::blockForWritesByInterruption_(const Key& key) const
+    {
+        // No need to acquire a read lock due to accessing const shared variables and non-const individual variables
+
+        verifyCurrentIsNotBeacon_(key); // Closest edge node must NOT be the beacon node if with interruption
+
+        assert(edge_param_ptr_ != NULL);
+        assert(edge_sendreq_tobeacon_socket_client_ptr_ != NULL);
+
+        bool is_finish = false;
+
+        // Wait for FinishBlockRequest from beacon node
+        while (true)
+        {
+            // Receive the control repsonse from the beacon node
+            DynamicArray control_response_msg_payload;
+            bool is_timeout = edge_sendreq_tobeacon_socket_client_ptr_->recv(control_response_msg_payload);
+            if (is_timeout)
+            {
+                if (!edge_param_ptr_->isEdgeRunning()) // Edge is not running
+                {
+                    is_finish = true;
+                    break;
+                }
+                else // Retry to receive a message if edge is still running
+                {
+                    Util::dumpWarnMsg(base_instance_name_, "edge timeout to wait for FinishBlockRequest");
+                    continue;
+                }
+            } // End of (is_timeout == true)
+            else
+            {
+                // Receive the control response message successfully
+                MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
+                assert(control_response_ptr != NULL && control_response_ptr->getMessageType() == MessageType::kFinishBlockRequest);
+
+                // Get key from FinishBlockRequest
+                const FinishBlockRequest* const finish_block_request_ptr = static_cast<const FinishBlockRequest*>(control_response_ptr);
+                Key tmp_key = finish_block_request_ptr->getKey();
+
+                // Release the control response message
+                delete control_response_ptr;
+                control_response_ptr = NULL;
+
+                // Double-check if key matches
+                if (key == tmp_key) // key matches
+                {
+                    break; // Break the while loop to send back FinishBlockResponse
+                    
+                }
+                else // key NOT match
+                {
+                    std::ostringstream oss;
+                    oss << "wait for key " << key.getKeystr() << " != received key " << tmp_key.getKeystr();
+                    Util::dumpWarnMsg(base_instance_name_, oss.str());
+
+                    continue; // Receive the next FinishBlockRequest
+                }
+            } // End of is_timeout
+        } // End of while(true)
+
+        if (!is_finish)
+        {
+            // Prepare FinishBlockResponse
+            FinishBlockResponse finish_block_response(key);
+            DynamicArray control_request_msg_payload(finish_block_response.getMsgPayloadSize());
+            finish_block_response.serialize(control_request_msg_payload);
+
+            // Send back FinishBlockResponse
+            PropagationSimulator::propagateFromEdgeToNeighbor();
+            edge_sendreq_tobeacon_socket_client_ptr_->send(control_request_msg_payload);
+        }
+
+        return is_finish;
+    }
+
     void CooperationWrapperBase::locateTargetNode_(const DirectoryInfo& directory_info) const
     {
         // No need to acquire a write lock for cooperation metadata due to updating non-const individual variables
@@ -453,12 +552,12 @@ namespace covered
         finish_block_request.serialize(control_request_msg_payload);
 
         // Set remote address to the closest edge node
-        edge_sendreq_toclosest_socket_client_ptr_->setRemoteAddressForClient(network_addr);
+        edge_sendreq_toclosest_socket_client_ptr_->setRemoteAddrForClient(network_addr);
 
         while (true) // Timeout-and-retry mechanism
         {
-            // Send the control request to the beacon node
-            PropagationSimulator::propagateFromEdgeToNeighbor();
+            // Send the control request to the closest node
+            PropagationSimulator::propagateFromNeighborToEdge();
             edge_sendreq_toclosest_socket_client_ptr_->send(control_request_msg_payload);
 
             // Receive the control repsonse from the beacon node
@@ -473,7 +572,7 @@ namespace covered
                 }
                 else
                 {
-                    Util::dumpWarnMsg(instance_name_, "edge timeout to wait for control response");
+                    Util::dumpWarnMsg(base_instance_name_, "edge timeout to wait for FinishBlockResponse");
                     continue; // Resend the control request message
                 }
             } // End of (is_timeout == true)

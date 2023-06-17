@@ -41,7 +41,8 @@ namespace covered
     enum Hitflag
     {
         kLocalHit = 1, // Hit local edge cache of closest edge node
-        kCooperativeHit, // Hit cooperative edge cache of some target edge node
+        kCooperativeHit, // Hit cooperative edge cache of some target edge node with valid object
+        kCooperativeInvalid, // Hit cooperative edge cache of some target edge node yet with invalid object (only used in edge nodes)
         kGlobalMiss // Miss all edge nodes
     };
 

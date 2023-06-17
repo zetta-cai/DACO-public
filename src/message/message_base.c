@@ -111,6 +111,11 @@ namespace covered
                 hitflag_str = "kCooperativeHit";
                 break;
             }
+            case Hitflag::kCooperativeInvalid:
+            {
+                hitflag_str = "kCooperativeInvalid";
+                break;
+            }
             case Hitflag::kGlobalMiss:
             {
                 hitflag_str = "kGlobalMiss";

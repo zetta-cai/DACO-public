@@ -174,13 +174,6 @@ namespace covered
             oss << "receive a local request; type: " << MessageBase::messageTypeToString(data_request_ptr->getMessageType()) << "; keystr: " << tmp_key.getKeystr();
             Util::dumpDebugMsg(base_instance_name_, oss.str());
 
-            // Block until not invalid
-            is_finish = blockForInvalidation_(tmp_key);
-            if (is_finish) // Edge node is NOT running
-            {
-                return is_finish;
-            }
-
             if (data_request_ptr->getMessageType() == MessageType::kLocalGetRequest)
             {
                 is_finish = processLocalGetRequest_(data_request_ptr);
@@ -264,12 +257,11 @@ namespace covered
             }
         }
 
+        // Update invalid object of local edge cache if necessary
+        tryToUpdateLocalEdgeCache_(tmp_key, tmp_value);
+
         // Trigger independent cache admission for local/global cache miss if necessary
-        bool is_local_cached = edge_cache_ptr_->isLocalCached(tmp_key);
-        if (!is_local_cached && edge_cache_ptr_->needIndependentAdmit(tmp_key))
-        {
-            triggerIndependentAdmission_(tmp_key, tmp_value);
-        }
+        tryToTriggerIndependentAdmission_(tmp_key, tmp_value);
 
         // Prepare LocalGetResponse for client
         LocalGetResponse local_get_response(tmp_key, tmp_value, hitflag);
@@ -431,40 +423,6 @@ namespace covered
         return is_finish;
     }
 
-    bool EdgeWrapperBase::blockForInvalidation_(const Key& key) const
-    {
-        // TODO: to be removed
-
-        assert(edge_param_ptr_ != NULL);
-
-        bool is_finish = false; // Mark if edge node is finished
-
-        bool is_cached_and_invalid = false;
-        while (true)
-        {
-            is_cached_and_invalid = edge_cache_ptr_->isCachedAndInvalid(key);
-            if (is_cached_and_invalid)
-            {
-                if (!edge_param_ptr_->isEdgeRunning())
-                {
-                    is_finish = true;
-                    break;
-                }
-                else
-                {
-                    // TODO: sleep a short time to avoid frequent polling
-                    continue;
-                }
-            }
-            else
-            {
-                break;
-            }
-        }
-
-        return is_finish;
-    }
-
     bool EdgeWrapperBase::fetchDataFromCloud_(const Key& key, Value& value) const
     {
         // No need to acquire per-key rwlock for serializability, which has been done in processLocalGetRequest_()
@@ -501,7 +459,7 @@ namespace covered
                 }
                 else
                 {
-                    Util::dumpWarnMsg(base_instance_name_, "edge timeout to wait for global response");
+                    Util::dumpWarnMsg(base_instance_name_, "edge timeout to wait for GlobalGetResponse");
                     continue; // Resend the global request message
                 }
             }
@@ -602,6 +560,46 @@ namespace covered
         global_request_ptr = NULL;
         
         return is_finish;
+    }
+
+    void EdgeWrapperBase::tryToUpdateLocalEdgeCache_(const Key& key, const Value& value) const
+    {
+        bool is_cached_and_invalid = edge_cache_ptr_->isCachedAndInvalid(key);
+        if (is_cached_and_invalid)
+        {
+            bool is_local_cached_after_udpate = edge_cache_ptr_->update(key, value);
+            assert(is_local_cached_after_udpate);
+
+            // Evict until cache size <= cache capacity (TODO: update after introducing entire capacity)
+            uint32_t cache_capacity = edge_cache_ptr_->getCapacityBytes();
+            while (true)
+            {
+                uint32_t cache_size = edge_cache_ptr_->getSize();
+                if (cache_size <= cache_capacity) // Not exceed capacity limitation
+                {
+                    break;
+                }
+                else // Exceed capacity limitation
+                {
+                    Key victim_key;
+                    Value victim_value;
+                    edge_cache_ptr_->evict(victim_key, victim_value);
+                    bool _unused_is_being_written = false; // NOTE: is_being_written does NOT affect cache eviction
+                    cooperation_wrapper_ptr_->updateDirectory(victim_key, false, _unused_is_being_written);
+
+                    continue;
+                }
+            }
+        }
+    }
+
+    void EdgeWrapperBase::tryToTriggerIndependentAdmission_(const Key& key, const Value& value) const
+    {
+        bool is_local_cached = edge_cache_ptr_->isLocalCached(key);
+        if (!is_local_cached && edge_cache_ptr_->needIndependentAdmit(key))
+        {
+            triggerIndependentAdmission_(key, value);
+        }
     }
 
     // (2) Control requests

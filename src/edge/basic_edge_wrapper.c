@@ -63,7 +63,7 @@ namespace covered
         {
             if (is_cooperaitve_cached) // cached and invalid
             {
-                //hitflag = Hitflag::kCooperativeInvalid;
+                hitflag = Hitflag::kCooperativeInvalid;
             }
         }
 
@@ -102,7 +102,7 @@ namespace covered
         cooperation_wrapper_ptr_->updateDirectory(key, true, is_being_written);
         edge_cache_ptr_->admit(key, value, !is_being_written); // valid if not being written
 
-        // Evict until cache size <= cache capacity
+        // Evict until cache size <= cache capacity (TODO: update after introducing entire capacity)
         uint32_t cache_capacity = edge_cache_ptr_->getCapacityBytes();
         while (true)
         {

@@ -57,9 +57,9 @@ namespace covered
         // Return if edge node is finished
         void locateBeaconNode_(const Key& key, bool& current_is_beacon) const;
         virtual bool lookupBeaconDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const = 0; // Check remote directory information at the beacon node
-        bool blockForWritesByInterruption_() const; // TODO: END HERE
+        bool blockForWritesByInterruption_(const Key& key) const; // TODO: END HERE
         void locateTargetNode_(const DirectoryInfo& directory_info) const;
-        virtual bool redirectGetToTarget_(const Key& key, Value& value, bool& is_cooperative_cached_and_valid) const = 0;
+        virtual bool redirectGetToTarget_(const Key& key, Value& value, bool& is_cooperative_cached, bool& is_valid) const = 0;
 
         // For updateDirectory()
         virtual bool updateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written) = 0; // TODO: implement in basic
