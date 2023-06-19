@@ -115,6 +115,21 @@ namespace covered
     }
 
     template<class T>
+    uint32_t RingBuffer<T>::getSizeForCapacity() const
+    {
+        uint32_t size = 0;
+        for (uint32_t ring_buffer_idx = tail_; ring_buffer_idx != head_; ring_buffer_idx++)
+        {
+            if (ring_buffer_idx >= capacity_)
+            {
+                ring_buffer_idx %= capacity_;
+            }
+            size += ring_buffer_[ring_buffer_idx].getSizeForCapacity();
+        }
+        return size;
+    }
+
+    template<class T>
     RingBuffer<T>& RingBuffer<T>::operator=(const RingBuffer<T>& other)
     {
         head_ = other.head_;

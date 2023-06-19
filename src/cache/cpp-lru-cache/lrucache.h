@@ -31,9 +31,9 @@ namespace covered {
 		void admit(const Key& key, const Value& value);
         void evict(Key& key, Value& value);
 		
-		//bool exists(const Key& key) const;
+		bool exists(const Key& key) const;
 		
-		uint32_t getSize() const;
+		uint32_t getSizeForCapacity() const;
 		
 	private:
 		static const std::string kClassName;

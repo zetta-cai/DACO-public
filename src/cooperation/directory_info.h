@@ -27,12 +27,14 @@ namespace covered
         uint32_t serialize(DynamicArray& msg_payload, const uint32_t& position) const;
         uint32_t deserialize(const DynamicArray& msg_payload, const uint32_t& position);
 
+        uint32_t getSizeForCapacity() const;
+
         DirectoryInfo& operator=(const DirectoryInfo& other);
         bool operator==(const DirectoryInfo& other) const; // To be used by DirectoryInfo in std::unordered_map
     private:
         static const std::string kClassName;
 
-        uint32_t target_edge_idx_;
+        uint32_t target_edge_idx_; // Metadata for cooperation
     };
 
     // To be used by DirectoryInfo in std::unordered_map

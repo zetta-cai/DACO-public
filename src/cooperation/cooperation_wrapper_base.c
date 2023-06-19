@@ -34,7 +34,7 @@ namespace covered
         return cooperation_wrapper_ptr;
     }
 
-    CooperationWrapperBase::CooperationWrapperBase(const std::string& hash_name, EdgeParam* edge_param_ptr)
+    CooperationWrapperBase::CooperationWrapperBase(const std::string& hash_name, EdgeParam* edge_param_ptr) : block_tracker_(edge_param_ptr)
     {
         // Differentiate CooperationWrapper in different edge nodes
         assert(edge_param_ptr != NULL);
@@ -57,22 +57,11 @@ namespace covered
         assert(edge_sendreq_tobeacon_socket_client_ptr_  != NULL);
         edge_sendreq_totarget_socket_client_ptr_ = new UdpSocketWrapper(SocketRole::kSocketClient, edge0_addr);
         assert(edge_sendreq_totarget_socket_client_ptr_ != NULL);
-        edge_sendreq_toclosest_socket_client_ptr_ = new UdpSocketWrapper(SocketRole::kSocketClient, edge0_addr);
-        assert(edge_sendreq_toclosest_socket_client_ptr_ != NULL);
 
         // Allocate directory information
         uint32_t seed_for_directory_selection = edge_param_ptr_->getEdgeIdx();
         directory_table_ptr_ = new DirectoryTable(seed_for_directory_selection, edge_param_ptr_->getEdgeIdx());
         assert(directory_table_ptr_ != NULL);
-
-        oss.clear();
-        oss.str("");
-        oss << base_instance_name_ << " " << "rwlock_for_cooperation_metadata_ptr_";
-        rwlock_for_cooperation_metadata_ptr_ = new Rwlock(oss.str());
-        assert(rwlock_for_cooperation_metadata_ptr_ != NULL);
-
-        perkey_writeflags_.clear();
-        perkey_edge_blocklist_.clear();
     }
 
     CooperationWrapperBase::~CooperationWrapperBase()
@@ -91,18 +80,10 @@ namespace covered
         delete edge_sendreq_totarget_socket_client_ptr_;
         edge_sendreq_totarget_socket_client_ptr_ = NULL;
 
-        assert(edge_sendreq_toclosest_socket_client_ptr_ != NULL);
-        delete edge_sendreq_toclosest_socket_client_ptr_;
-        edge_sendreq_toclosest_socket_client_ptr_ = NULL;
-
         // Release directory information
         assert(directory_table_ptr_ != NULL);
         delete directory_table_ptr_;
         directory_table_ptr_ = NULL;
-
-        assert(rwlock_for_cooperation_metadata_ptr_ != NULL);
-        delete rwlock_for_cooperation_metadata_ptr_;
-        rwlock_for_cooperation_metadata_ptr_ = NULL;
     }
 
     bool CooperationWrapperBase::get(const Key& key, Value& value, bool& is_cooperative_cached_and_valid) const
@@ -224,7 +205,7 @@ namespace covered
         // The current edge node must be the beacon node for the key
         verifyCurrentIsBeacon_(key);
 
-        is_being_written = isBeingWritten_(key);
+        is_being_written = block_tracker_.isBeingWritten(key);
         if (!is_being_written) // if key is NOT being written
         {
             assert(directory_table_ptr_ != NULL);
@@ -272,7 +253,7 @@ namespace covered
 
         if (is_admit) // is_being_written affects validity of both directory info and cached object for cache admission
         {
-            is_being_written = isBeingWritten_(key);
+            is_being_written = block_tracker_.isBeingWritten(key);
         }
         else // is_being_written does NOT affect cache eviction
         {
@@ -289,33 +270,7 @@ namespace covered
     {
         verifyCurrentIsBeacon_(key); // Beacon node blocks closest edge nodes
 
-        // Acquire a write lock for cooperation metadata before accessing cooperation metadata
-        assert(rwlock_for_cooperation_metadata_ptr_ != NULL);
-        while (true)
-        {
-            if (rwlock_for_cooperation_metadata_ptr_->try_lock("addEdgeIntoBlocklist()"))
-            {
-                break;
-            }
-        }
-
-        bool is_successful = false;
-
-        perkey_edge_blocklist_t::iterator iter = perkey_edge_blocklist_.find(key);
-        if (iter != perkey_edge_blocklist_.end()) // key does not exist
-        {
-            NetworkAddr default_network_addr;
-            RingBuffer<NetworkAddr> tmp_edge_blocklist(default_network_addr);
-            perkey_edge_blocklist_.insert(std::pair<Key, RingBuffer<NetworkAddr>>(key, tmp_edge_blocklist));
-        }
-
-        iter = perkey_edge_blocklist_.find(key);
-        assert(iter != perkey_edge_blocklist_.end()); // key must exist now
-        
-        is_successful = iter->second.push(network_addr);
-        assert(is_successful);
-
-        rwlock_for_cooperation_metadata_ptr_->unlock();
+        block_tracker_.block(key, network_addr);
         return;
     }
 
@@ -323,83 +278,22 @@ namespace covered
     {
         verifyCurrentIsBeacon_(key); // Beacon node blocks closest edge nodes
 
-        bool is_being_written = isBeingWritten_(key); // isBeingWritten_() acquires a read lock
+        bool is_being_written = block_tracker_.isBeingWritten(key); // isBeingWritten_() acquires a read lock
 
         if (!is_being_written) // key is NOT being written
         {
-            // Acquire a write lock for cooperation metadata before accessing cooperation metadata
-            assert(rwlock_for_cooperation_metadata_ptr_ != NULL);
-            while (true)
-            {
-                if (rwlock_for_cooperation_metadata_ptr_->try_lock("addEdgeIntoBlocklist()"))
-                {
-                    break;
-                }
-            }
-
-            // Double-check if key is being written again atomically
-            is_being_written = false;
-            std::unordered_map<Key, bool>::const_iterator iter = perkey_writeflags_.find(key);
-            if (iter != perkey_writeflags_.end())
-            {
-                is_being_written = iter->second;
-            }
-
-            if (!is_being_written) // key is still NOT being written
-            {
-                perkey_edge_blocklist_t::iterator iter = perkey_edge_blocklist_.find(key);
-                RingBuffer<NetworkAddr>& tmp_edge_blocklist = iter->second;
-
-                // Notify each blocked edge node to finish blocking for writes
-                bool is_successful = true;
-                while (true)
-                {
-                    NetworkAddr tmp_edge_addr;
-                    is_successful = tmp_edge_blocklist.pop(tmp_edge_addr);
-                    if (!is_successful) // No blocked edge node
-                    {
-                        break;
-                    }
-                    else
-                    {
-                        // Notify the edge node to finish blocking for writes
-                        notifyEdgeToFinishBlock_(key, tmp_edge_addr);
-                    }
-                }
-
-                // Remove the key and block list from perkey_edge_blocklist_
-                perkey_edge_blocklist_.erase(iter);
-            }
-
-            rwlock_for_cooperation_metadata_ptr_->unlock();
+            block_tracker_.unblock(key);
         }
 
         return;
     }
 
-    bool CooperationWrapperBase::isBeingWritten_(const Key& key) const
+    uint32_t CooperationWrapperBase::getSizeForCapacity() const
     {
-        verifyCurrentIsBeacon_(key); // Access const shared variables
-
-        // Acquire a read lock for cooperation metadata before accessing cooperation metadata
-        assert(rwlock_for_cooperation_metadata_ptr_ != NULL);
-        while (true)
-        {
-            if (rwlock_for_cooperation_metadata_ptr_->try_lock_shared("isBeingWritten_()"))
-            {
-                break;
-            }
-        }
-
-        bool is_being_written = false;
-        std::unordered_map<Key, bool>::const_iterator iter = perkey_writeflags_.find(key);
-        if (iter != perkey_writeflags_.end())
-        {
-            is_being_written = iter->second;
-        }
-
-        rwlock_for_cooperation_metadata_ptr_->unlock_shared();
-        return is_being_written;
+        assert(directory_table_ptr_ != NULL);
+        uint32_t directory_table_size = directory_table_ptr_->getSizeForCapacity();
+        uint32_t block_tracker_size = block_tracker_.getSizeForCapacity();
+        return directory_table_size + block_tracker_size;
     }
 
     void CooperationWrapperBase::locateBeaconNode_(const Key& key, bool& current_is_beacon) const
@@ -536,60 +430,6 @@ namespace covered
         //Util::dumpDebugMsg(base_instance_name_, oss.str());
         
         return;
-    }
-
-    bool CooperationWrapperBase::notifyEdgeToFinishBlock_(const Key& key, const NetworkAddr network_addr) const
-    {
-        // No need to acquire a read lock, as notifyEdgesFromBlocklist() has acquired a write lock
-
-        assert(edge_sendreq_toclosest_socket_client_ptr_ != NULL);
-
-        bool is_finish = false;
-
-        // Prepare finish block request to finish blocking for writes in the edge node
-        FinishBlockRequest finish_block_request(key);
-        DynamicArray control_request_msg_payload(finish_block_request.getMsgPayloadSize());
-        finish_block_request.serialize(control_request_msg_payload);
-
-        // Set remote address to the closest edge node
-        edge_sendreq_toclosest_socket_client_ptr_->setRemoteAddrForClient(network_addr);
-
-        while (true) // Timeout-and-retry mechanism
-        {
-            // Send the control request to the closest node
-            PropagationSimulator::propagateFromNeighborToEdge();
-            edge_sendreq_toclosest_socket_client_ptr_->send(control_request_msg_payload);
-
-            // Receive the control repsonse from the beacon node
-            DynamicArray control_response_msg_payload;
-            bool is_timeout = edge_sendreq_tobeacon_socket_client_ptr_->recv(control_response_msg_payload);
-            if (is_timeout)
-            {
-                if (!edge_param_ptr_->isEdgeRunning())
-                {
-                    is_finish = true;
-                    break; // Edge is NOT running
-                }
-                else
-                {
-                    Util::dumpWarnMsg(base_instance_name_, "edge timeout to wait for FinishBlockResponse");
-                    continue; // Resend the control request message
-                }
-            } // End of (is_timeout == true)
-            else
-            {
-                // Receive the control response message successfully
-                MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
-                assert(control_response_ptr != NULL && control_response_ptr->getMessageType() == MessageType::kFinishBlockResponse);
-
-                // Release the control response message
-                delete control_response_ptr;
-                control_response_ptr = NULL;
-                break;
-            } // End of (is_timeout == false)
-        } // End of while(true)
-
-        return is_finish;
     }
 
     void CooperationWrapperBase::verifyCurrentIsBeacon_(const Key& key) const

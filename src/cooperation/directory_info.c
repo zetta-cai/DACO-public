@@ -53,6 +53,11 @@ namespace covered
         return size - position;
     }
 
+    uint32_t DirectoryInfo::getSizeForCapacity() const
+    {
+        return sizeof(uint32_t);
+    }
+
     DirectoryInfo& DirectoryInfo::operator=(const DirectoryInfo& other)
     {
         target_edge_idx_ = other.target_edge_idx_;

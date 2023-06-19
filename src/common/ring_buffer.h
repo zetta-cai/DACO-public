@@ -25,6 +25,8 @@ namespace covered
         bool pop(T& element);
         uint32_t size() const;
 
+        uint32_t getSizeForCapacity() const;
+
         RingBuffer<T>& operator=(const RingBuffer<T>& other);
     private:
         static const std::string kClassName;

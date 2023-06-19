@@ -34,7 +34,7 @@ namespace covered
         return edge_wrapper_ptr;
     }
 
-    EdgeWrapperBase::EdgeWrapperBase(const std::string& cache_name, const std::string& hash_name, EdgeParam* edge_param_ptr) : cache_name_(cache_name), edge_param_ptr_(edge_param_ptr)
+    EdgeWrapperBase::EdgeWrapperBase(const std::string& cache_name, const std::string& hash_name, EdgeParam* edge_param_ptr, const uint32_t& capacity_bytes) : cache_name_(cache_name), edge_param_ptr_(edge_param_ptr), capacity_bytes_(capacity_bytes)
     {
         if (edge_param_ptr == NULL)
         {
@@ -114,13 +114,16 @@ namespace covered
         {
             // Receive the message payload of data (local/redirected/global) or control requests
             DynamicArray request_msg_payload;
-            bool is_timeout = edge_recvreq_socket_server_ptr_->recv(request_msg_payload);
+            NetworkAddr request_network_addr;
+            bool is_timeout = edge_recvreq_socket_server_ptr_->recv(request_msg_payload, request_network_addr);
             if (is_timeout == true) // Timeout-and-retry
             {
                 continue; // Retry to receive a message if edge is still running
             } // End of (is_timeout == true)
             else
             {
+                assert(request_network_addr.isValid());
+                
                 MessageBase* request_ptr = MessageBase::getRequestFromMsgPayload(request_msg_payload);
                 assert(request_ptr != NULL);
 
@@ -130,7 +133,7 @@ namespace covered
                 }
                 else if (request_ptr->isControlRequest()) // Control requests (e.g., invalidation and cache admission/eviction requests)
                 {
-                    is_finish = processControlRequest_(request_ptr);
+                    is_finish = processControlRequest_(request_ptr, request_network_addr);
                 }
                 else
                 {
@@ -564,7 +567,14 @@ namespace covered
 
     void EdgeWrapperBase::tryToUpdateLocalEdgeCache_(const Key& key, const Value& value) const
     {
-        bool is_cached_and_invalid = edge_cache_ptr_->isCachedAndInvalid(key);
+        bool is_local_cached = edge_cache_ptr_->isLocalCached(key);
+        bool is_cached_and_invalid = false;
+        if (is_local_cached)
+        {
+            bool is_valid = edge_cache_ptr_->isValidIfCached(key);
+            is_cached_and_invalid = is_local_cached && !is_valid;
+        }
+
         if (is_cached_and_invalid)
         {
             bool is_local_cached_after_udpate = edge_cache_ptr_->update(key, value);
@@ -574,7 +584,7 @@ namespace covered
             uint32_t cache_capacity = edge_cache_ptr_->getCapacityBytes();
             while (true)
             {
-                uint32_t cache_size = edge_cache_ptr_->getSize();
+                uint32_t cache_size = edge_cache_ptr_->getSizeForCapacity();
                 if (cache_size <= cache_capacity) // Not exceed capacity limitation
                 {
                     break;
@@ -604,7 +614,7 @@ namespace covered
 
     // (2) Control requests
 
-    bool EdgeWrapperBase::processControlRequest_(MessageBase* control_request_ptr)
+    bool EdgeWrapperBase::processControlRequest_(MessageBase* control_request_ptr, const NetworkAddr& closest_edge_addr)
     {
         // No need to acquire per-key rwlock for serializability, which will be done in processDirectoryLookupRequest_() or processDirectoryUpdateRequest_() or processOtherControlRequest_()
 
@@ -616,7 +626,7 @@ namespace covered
         MessageType message_type = control_request_ptr->getMessageType();
         if (message_type == MessageType::kDirectoryLookupRequest) // TODO: control_request_ptr->isDirectoryLookupRequest() for kCoveredDirectoryLookupRequest
         {
-            is_finish = processDirectoryLookupRequest_(control_request_ptr);
+            is_finish = processDirectoryLookupRequest_(control_request_ptr, closest_edge_addr);
         }
         else if (message_type == MessageType::kDirectoryUpdateRequest) // TODO: control_request_ptr->isDirectoryUpdateRequest() for kCoveredDirectoryUpdateRequest
         {

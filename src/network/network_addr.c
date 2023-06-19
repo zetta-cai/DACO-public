@@ -71,6 +71,12 @@ namespace covered
         return;
     }
 
+    uint32_t NetworkAddr::getSizeForCapacity() const
+    {
+        uint32_t size = ipstr_.length() + sizeof(uint16_t);
+        return size;
+    }
+
     bool NetworkAddr::operator<(const NetworkAddr& other) const
     {
         bool is_smaller = false;
@@ -92,6 +98,12 @@ namespace covered
         is_valid_ = other.is_valid_;
         checkPortIfValid_();
         return *this;
+    }
+
+    bool NetworkAddr::operator==(const NetworkAddr& other)
+    {
+        // No need to compare is_valid_
+        return ipstr_ == other.ipstr_ && port_ == other.port_;
     }
 
     void NetworkAddr::checkPortIfValid_()

@@ -35,6 +35,11 @@ namespace covered
         is_valid_ = false;
     }
 
+    uint32_t DirectoryMetadata::getSizeForCapacity() const
+    {
+        return sizeof(bool);
+    }
+
     DirectoryMetadata& DirectoryMetadata::operator=(const DirectoryMetadata& other)
     {
         is_valid_ = other.is_valid_;
@@ -101,6 +106,17 @@ namespace covered
             is_directory_already_exist = true;
         }
         return is_directory_already_exist;
+    }
+
+    uint32_t DirectoryEntry::getSizeForCapacity() const
+    {
+        uint32_t size = 0;
+        for (dirinfo_entry_t::const_iterator iter = directory_entry_.begin(); iter != directory_entry_.end(); iter++)
+        {
+            size += iter->first.getSizeForCapacity();
+            size += iter->second.getSizeForCapacity();
+        }
+        return size;
     }
 
     // (3) DirectoryTable
@@ -255,5 +271,29 @@ namespace covered
 
         rwlock_for_dirtable_ptr_->unlock();
         return;
+    }
+
+    uint32_t DirectoryTable::getSizeForCapacity() const
+    {
+        // Acquire a read block before accessing non-cast shared variables
+        assert(rwlock_for_dirtable_ptr_ != NULL);
+        while (true)
+        {
+            if (rwlock_for_dirtable_ptr_->try_lock_shared("getSizeForCapacity()"))
+            {
+                break;
+            }
+        }
+
+        // NOTE: note that CacheWrapperBase counts the size of keys cached for local edge cache as closest edge node, so we still need to count the size of keys managed for cooperation as beacon edge node
+        uint32_t size = 0;
+        for (dirinfo_table_t::const_iterator iter = directory_hashtable_.begin(); iter != directory_hashtable_.end(); iter++)
+        {
+            size += iter->first.getKeystr().length(); // size of a key managed by beacon edge node
+            size += iter->second.getSizeForCapacity(); // size of DirectoryEntry for the given key
+        }
+
+        rwlock_for_dirtable_ptr_->unlock_shared();
+        return size;
     }
 }

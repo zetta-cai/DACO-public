@@ -30,112 +30,41 @@ namespace covered
         return cache_ptr;
     }
 
-    CacheWrapperBase::CacheWrapperBase(const uint32_t& capacity_bytes, EdgeParam* edge_param_ptr) : capacity_bytes_(capacity_bytes)
+    CacheWrapperBase::CacheWrapperBase(EdgeParam* edge_param_ptr) : validity_map_(edge_param_ptr)
     {
         // Differentiate local edge cache in different edge nodes
         assert(edge_param_ptr != NULL);
         std::ostringstream oss;
         oss << kClassName << " edge" << edge_param_ptr->getEdgeIdx();
         base_instance_name_ = oss.str();
-
-        oss.clear();
-        oss.str("");
-        oss << base_instance_name_ << " " << "rwlock_for_validity_ptr_";
-        rwlock_for_validity_ptr_ = new Rwlock(oss.str());
-        assert(rwlock_for_validity_ptr_ != NULL);
-
-        validity_map_.clear();
     }
     
-    CacheWrapperBase::~CacheWrapperBase()
+    CacheWrapperBase::~CacheWrapperBase() {}
+
+    bool CacheWrapperBase::isValidIfCached(const Key& key) const
     {
-        assert(rwlock_for_validity_ptr_ != NULL);
-        delete rwlock_for_validity_ptr_;
-        rwlock_for_validity_ptr_ = NULL;
-    }
-
-    bool CacheWrapperBase::isCachedAndInvalid(const Key& key) const
-    {
-        // Acquire a read lock for validity_map_ before accessing any shared variable
-        assert(rwlock_for_validity_ptr_ != NULL);
-        while (true)
-        {
-            if (rwlock_for_validity_ptr_->try_lock_shared("isCachedAndInvalid()"))
-            {
-                break;
-            }
-        }
-
-        std::map<Key, bool>::const_iterator iter = validity_map_.find(key);
-        bool is_cached_and_invalid = false;
-        if (iter == validity_map_.end())
-        {
-            is_cached_and_invalid = false;
-        }
-        else
-        {
-            is_cached_and_invalid = !iter->second; // validity = true means not invalid
-        }
-
-        rwlock_for_validity_ptr_->unlock_shared();
-        return is_cached_and_invalid;
-    }
-
-    void CacheWrapperBase::invalidate(const Key& key)
-    {
-        // Acquire a write lock for validity_map_ before accessing any shared variable
-        assert(rwlock_for_validity_ptr_ != NULL);
-        while (true)
-        {
-            if (rwlock_for_validity_ptr_->try_lock("invalidate()"))
-            {
-                break;
-            }
-        }
-
-        if (validity_map_.find(key) != validity_map_.end()) // key to be invalidated should already be cached
-        {
-            validity_map_[key] = false;
-        }
-        else
+        bool is_found = false;
+        bool is_valid = validity_map_.isValid(key, is_found);
+        if (!is_found) // key is locally cached yet not found in validity_map_, which may due to processing order issue
         {
             std::ostringstream oss;
-            oss << "key " << key.getKeystr() << " does not exist in validity_map_ for invalidate()";
+            oss << "key " << key.getKeystr() << " is locally cached yet not found in validity_map_!";
             Util::dumpWarnMsg(base_instance_name_, oss.str());
-
-            validity_map_.insert(std::pair<Key, bool>(key, false));
+            assert(is_valid == false);
         }
-
-        rwlock_for_validity_ptr_->unlock();
-        return;
+        return is_valid;
     }
 
-    void CacheWrapperBase::validate(const Key& key)
+    void CacheWrapperBase::invalidateIfCached(const Key& key)
     {
-        // Acquire a write lock for validity_map_ before accessing any shared variable
-        assert(rwlock_for_validity_ptr_ != NULL);
-        while (true)
-        {
-            if (rwlock_for_validity_ptr_->try_lock("validate()"))
-            {
-                break;
-            }
-        }
-
-        if (validity_map_.find(key) != validity_map_.end()) // key to be validated should already be cached
-        {
-            validity_map_[key] = true;
-        }
-        else
+        bool is_found = false;
+        validity_map_.invalidate(key, is_found);
+        if (!is_found) // a key locally cached is not found in validity_map_
         {
             std::ostringstream oss;
-            oss << "key " << key.getKeystr() << " does not exist in validity_map_ for validate()";
+            oss << "key " << key.getKeystr() << " does not exist in validity_map_ for invalidateIfCached()";
             Util::dumpWarnMsg(base_instance_name_, oss.str());
-
-            validity_map_.insert(std::pair<Key, bool>(key, true));
         }
-
-        rwlock_for_validity_ptr_->unlock();
         return;
     }
 
@@ -143,25 +72,12 @@ namespace covered
     {
         bool is_local_cached = getInternal_(key, value); // Still need to update local statistics if key is cached yet invalid
 
-        // Acquire a read lock for validity_map_ before accessing any shared variable
-        assert(rwlock_for_validity_ptr_ != NULL);
-        while (true)
-        {
-            if (rwlock_for_validity_ptr_->try_lock_shared("get()"))
-            {
-                break;
-            }
-        }
-
         bool is_valid = false;
         if (is_local_cached)
         {
-            std::map<Key, bool>::const_iterator iter = validity_map_.find(key);
-            assert(iter != validity_map_.end()); // key must be cached
-            is_valid = iter->second;
+            is_valid = isValidIfCached(key);
         }
 
-        rwlock_for_validity_ptr_->unlock_shared();
         return is_local_cached && is_valid;
     }
     
@@ -171,19 +87,7 @@ namespace covered
 
         if (is_local_cached)
         {
-            // Acquire a write lock for validity_map_ before accessing any shared variable
-            assert(rwlock_for_validity_ptr_ != NULL);
-            while (true)
-            {
-                if (rwlock_for_validity_ptr_->try_lock("update()"))
-                {
-                    break;
-                }
-            }
-
-            validity_map_[key] = true;
-
-            rwlock_for_validity_ptr_->unlock();
+            validateIfCached_(key);
         }
 
         return is_local_cached;
@@ -198,52 +102,19 @@ namespace covered
         return is_local_cached;
     }
 
-    bool CacheWrapperBase::isLocalCached(const Key& key) const
-    {
-        // Acquire a read lock for validity_map_ before accessing any shared variable
-        assert(rwlock_for_validity_ptr_ != NULL);
-        while (true)
-        {
-            if (rwlock_for_validity_ptr_->try_lock_shared("isLocalCached()"))
-            {
-                break;
-            }
-        }
-
-        bool is_local_cached = validity_map_.find(key) != validity_map_.end();
-
-        rwlock_for_validity_ptr_->unlock_shared();
-        return is_local_cached;
-    }
-
     void CacheWrapperBase::admit(const Key& key, const Value& value, const bool& is_valid)
     {
         admitInternal_(key, value);
 
-        // Acquire a write lock for validity_map_ before accessing any shared variable
-        assert(rwlock_for_validity_ptr_ != NULL);
-        while (true)
+        if (is_valid)
         {
-            if (rwlock_for_validity_ptr_->try_lock("admit()"))
-            {
-                break;
-            }
-        }
-
-        if (validity_map_.find(key) == validity_map_.end()) // key to be admitted should not be cached
-        {
-            validity_map_.insert(std::pair<Key, bool>(key, is_valid));
+            validateIfUncached_(key);
         }
         else
         {
-            std::ostringstream oss;
-            oss << "key " << key.getKeystr() << " already exists in validity_map_ (validity: " << (validity_map_[key]?"true":"false") << "; map size: " << validity_map_.size() << ") for admit()";
-            Util::dumpWarnMsg(base_instance_name_, oss.str());
-
-            validity_map_[key] = true;
+            invalidateIfUncached_(key);
         }
 
-        rwlock_for_validity_ptr_->unlock();
         return;
     }
     
@@ -251,57 +122,63 @@ namespace covered
     {
         evictInternal_(key, value);
 
-        // Acquire a write lock for validity_map_ before accessing any shared variable
-        assert(rwlock_for_validity_ptr_ != NULL);
-        while (true)
-        {
-            if (rwlock_for_validity_ptr_->try_lock("evict()"))
-            {
-                break;
-            }
-        }
-
-        if (validity_map_.find(key) != validity_map_.end()) // key to be evicted should already be cached
-        {
-            validity_map_.erase(key);
-        }
-        else
+        bool is_found = false;
+        validity_map_.erase(key, is_found);
+        if (!is_found)
         {
             std::ostringstream oss;
             oss << "victim key " << key.getKeystr() << " does not exist in validity_map_ for evict()";
             Util::dumpWarnMsg(base_instance_name_, oss.str());
-            
-            // NO need to update validity_map_
+        
         }
 
-        rwlock_for_validity_ptr_->unlock();
         return;
     }
 
-    uint32_t CacheWrapperBase::getSize() const
+    uint32_t CacheWrapperBase::getSizeForCapacity() const
     {
-        uint32_t internal_size = getSizeInternal_();
-        
-        // Acquire a read lock for validity_map_ before accessing any shared variable
-        assert(rwlock_for_validity_ptr_ != NULL);
-        while (true)
-        {
-            if (rwlock_for_validity_ptr_->try_lock_shared("getSize()"))
-            {
-                break;
-            }
-        }
-
-        uint32_t external_size = validity_map_.size() * sizeof(bool);
-        uint32_t total_size = internal_size + external_size;
-
-        rwlock_for_validity_ptr_->unlock_shared();
+        uint32_t local_edge_cache_size = getSizeInternal_();
+        uint32_t validity_map_size = validity_map_.getSizeForCapacity();
+        uint32_t total_size = local_edge_cache_size + validity_map_size;
         return total_size;
     }
-	
-    uint32_t CacheWrapperBase::getCapacityBytes() const
+
+    void CacheWrapperBase::validateIfCached_(const Key& key)
     {
-        // No need to acquire a write lock for validity_map_, as capacity_bytes_ is a const variable
-        return capacity_bytes_;
+        bool is_found = false;
+        validity_map_.validate(key, is_found);
+        if (!is_found) // a key locally cached is not found in validity_map_
+        {
+            std::ostringstream oss;
+            oss << "key " << key.getKeystr() << " does not exist in validity_map_ for validateIfCached()";
+            Util::dumpWarnMsg(base_instance_name_, oss.str());
+        }
+        return;
+    }
+
+    void CacheWrapperBase::validateIfUncached_(const Key& key)
+    {
+        bool is_found = false;
+        validity_map_.validate(key, is_found);
+        if (is_found) // a key not locally cached is found in validity_map_
+        {
+            std::ostringstream oss;
+            oss << "key " << key.getKeystr() << " already exists in validity_map_ for validateIfUncached_()";
+            Util::dumpWarnMsg(base_instance_name_, oss.str());
+        }
+        return;
+    }
+
+    void CacheWrapperBase::invalidateIfUncached_(const Key& key)
+    {
+        bool is_found = false;
+        validity_map_.invalidate(key, is_found);
+        if (is_found) // a key not locally cached is found in validity_map_
+        {
+            std::ostringstream oss;
+            oss << "key " << key.getKeystr() << " already exists in validity_map_ for invalidateIfUncached_()";
+            Util::dumpWarnMsg(base_instance_name_, oss.str());
+        }
+        return;
     }
 }

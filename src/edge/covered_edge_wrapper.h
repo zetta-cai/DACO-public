@@ -32,7 +32,7 @@ namespace covered
         // (2) Control requests
 
         // Return if edge node is finished
-        virtual bool processDirectoryLookupRequest_(MessageBase* control_request_ptr) const override;
+        virtual bool processDirectoryLookupRequest_(MessageBase* control_request_ptr, const NetworkAddr& closest_edge_addr) const override;
         virtual bool processDirectoryUpdateRequest_(MessageBase* control_request_ptr) override;
         virtual bool processOtherControlRequest_(MessageBase* control_request_ptr) override;
 

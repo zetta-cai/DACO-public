@@ -43,7 +43,7 @@ namespace covered
     public:
         static EdgeWrapperBase* getEdgeWrapper(const std::string& cache_name, const std::string& hash_name, EdgeParam* edge_param_ptr);
 
-        EdgeWrapperBase(const std::string& cache_name, const std::string& hash_name, EdgeParam* edge_param_ptr);
+        EdgeWrapperBase(const std::string& cache_name, const std::string& hash_name, EdgeParam* edge_param_ptr, const uint32_t& capacity_bytes);
         virtual ~EdgeWrapperBase();
 
         void start();
@@ -70,8 +70,8 @@ namespace covered
         // (2) Control requests
 
         // Return if edge node is finished
-        bool processControlRequest_(MessageBase* control_request_ptr);
-        virtual bool processDirectoryLookupRequest_(MessageBase* control_request_ptr) const = 0;
+        bool processControlRequest_(MessageBase* control_request_ptr, const NetworkAddr& closest_edge_addr);
+        virtual bool processDirectoryLookupRequest_(MessageBase* control_request_ptr, const NetworkAddr& closest_edge_addr) const = 0;
         virtual bool processDirectoryUpdateRequest_(MessageBase* control_request_ptr) = 0;
         virtual bool processOtherControlRequest_(MessageBase* control_request_ptr) = 0;
 
@@ -80,13 +80,14 @@ namespace covered
         // Const shared variables
         const std::string cache_name_;
         const EdgeParam* edge_param_ptr_;
+        const uint32_t capacity_bytes_; // Come from Util::Param
 
         // Guarantee the global serializability for writes of the same key
         mutable PerkeyRwlock* perkey_rwlock_for_serializability_ptr_;
 
         // Non-const shared variables (thread safe)
-        mutable CacheWrapperBase* edge_cache_ptr_;
-        CooperationWrapperBase* cooperation_wrapper_ptr_;
+        mutable CacheWrapperBase* edge_cache_ptr_; // Data and metadata for local edge cache (thread safe)
+        CooperationWrapperBase* cooperation_wrapper_ptr_; // Cooperation metadata (thread safe)
 
         // Non-const individual variables
         UdpSocketWrapper* edge_recvreq_socket_server_ptr_;

@@ -33,7 +33,7 @@ namespace covered
         // Dynamic configurations
         argument_desc_.add_options()
             ("cache_name", boost::program_options::value<std::string>()->default_value(Param::LRU_CACHE_NAME), "cache name")
-            ("capacitymb", boost::program_options::value<uint32_t>()->default_value(1000), "cache capacity in units of MB")
+            ("capacitymb", boost::program_options::value<uint32_t>()->default_value(1000), "total cache capacity (including data and metadata) in units of MB")
             ("clientcnt", boost::program_options::value<uint32_t>()->default_value(1), "the total number of clients")
             ("config_file", boost::program_options::value<std::string>()->default_value("config.json"), "config file path of COVERED")
             ("cloud_storage", boost::program_options::value<std::string>()->default_value(Param::HDD_NAME), "type of cloud storage")

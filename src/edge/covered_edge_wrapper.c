@@ -44,7 +44,7 @@ namespace covered
 
     // (2) Control requests
 
-    bool CoveredEdgeWrapper::processDirectoryLookupRequest_(MessageBase* control_request_ptr) const
+    bool CoveredEdgeWrapper::processDirectoryLookupRequest_(MessageBase* control_request_ptr, const NetworkAddr& closest_edge_addr) const
     {
         // TODO: acquire a read lock for serializability before accessing any shared variable in the beacon edge node
 

@@ -35,12 +35,12 @@ namespace covered
         UdpSocketWrapper(const SocketRole& role, const NetworkAddr& addr);
         ~UdpSocketWrapper();
 
-        NetworkAddr getRemoteAddrForServer() const;
         void setRemoteAddrForClient(const NetworkAddr& remote_addr); // only for UDP client
 
         // Note: pass reference of pkt_payload to avoid unnecessary memory copy
         void send(const DynamicArray& msg_payload);
         bool recv(DynamicArray& msg_payload);
+        bool recv(DynamicArray& msg_payload, NetworkAddr& network_addr);
     private:
         static const std::string kClassName;
 

@@ -38,6 +38,25 @@ namespace covered
         }
     }
 
+    bool LruCacheWrapper::isLocalCached(const Key& key) const
+    {
+        // Acquire a read lock for local statistics to update local statistics atomically (so no need to hack LRU cache)
+        assert(rwlock_for_local_statistics_ptr_ != NULL);
+        while (true)
+        {
+            if (rwlock_for_local_statistics_ptr_->try_lock_shared("existsInternal_()"))
+            {
+                break;
+            }
+        }
+
+        assert(lru_cache_ptr_ != NULL);
+        bool is_cached = lru_cache_ptr_->exists(key);
+
+        rwlock_for_local_statistics_ptr_->unlock_shared();
+        return is_cached;
+    }
+
     bool LruCacheWrapper::needIndependentAdmit(const Key& key) const
     {
         // No need to acquire a read lock for local statistics due to returning a const boolean
@@ -135,7 +154,7 @@ namespace covered
         }
 
         assert(lru_cache_ptr_ != NULL);
-        uint32_t internal_size = lru_cache_ptr_->getSize();
+        uint32_t internal_size = lru_cache_ptr_->getSizeForCapacity();
 
         rwlock_for_local_statistics_ptr_->unlock_shared();
         return internal_size;

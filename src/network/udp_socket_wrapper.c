@@ -83,11 +83,6 @@ namespace covered
 		pkt_socket_ptr_ = NULL;
 	}
 
-	NetworkAddr UdpSocketWrapper::getRemoteAddrForServer() const
-	{
-		return remote_addr_;
-	}
-
 	void UdpSocketWrapper::setRemoteAddrForClient(const NetworkAddr& remote_addr)
 	{
 		assert(role_ == SocketRole::kSocketClient);
@@ -144,6 +139,13 @@ namespace covered
 	}
 
 	bool UdpSocketWrapper::recv(DynamicArray& msg_payload)
+	{
+		NetworkAddr tmp_network_addr; // unused
+		bool is_timeout = recv(msg_payload, tmp_network_addr);
+		return is_timeout;
+	}
+
+	bool UdpSocketWrapper::recv(DynamicArray& msg_payload, NetworkAddr& network_addr)
 	{
 		bool is_timeout = false;
 
@@ -202,9 +204,17 @@ namespace covered
 					uint32_t fragment_payload_size = Util::getFragmentPayloadSize(fragidx, msg_payload_size);
 					tmp_pkt_payload.arraycpy(Util::UDP_FRAGHDR_SIZE, msg_payload, fragment_offset, fragment_payload_size);
 
-					// Update remote address for send in the near future
-					remote_addr_ = tmp_addr;
-					assert(remote_addr_.isValid() == true);
+					// Update remote address of socket server for send in the near future
+					// NOTE: remote address if socket client will NOT be changed unless invoking setRemoteAddrForClient() explicitly!!!
+					if (role_ == SocketRole::kSocketServer)
+					{
+						remote_addr_ = tmp_addr;
+						assert(remote_addr_.isValid() == true);
+					}
+
+					// Update network address for processing outside UdpSocketWrapper
+					network_addr = tmp_addr;
+					assert(network_addr.isValid() == true);
 
 					break; // Break while(true)
 				} // End of (is_last_frag == true)

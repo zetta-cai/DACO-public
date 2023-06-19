@@ -10,16 +10,14 @@
 #define COOPERATION_WRAPPER_BASE_H
 
 #include <string>
-#include <vector>
 
 #include "common/key.h"
-#include "common/ring_buffer_impl.h"
 #include "common/value.h"
+#include "cooperation/block_tracker.h"
 #include "cooperation/dht_wrapper.h"
 #include "cooperation/directory_info.h"
 #include "cooperation/directory_table.h"
 #include "edge/edge_param.h"
-#include "lock/rwlock.h"
 #include "network/udp_socket_wrapper.h"
 
 namespace covered
@@ -42,16 +40,12 @@ namespace covered
         // NOTE: the blocked edge nodes will be notified after writes
         void addEdgeIntoBlocklist(const Key& key, const NetworkAddr& network_addr);
         void tryToNotifyEdgesFromBlocklist(const Key& key);
-    private:
-        typedef std::unordered_map<Key, bool, KeyHasher> perkey_writeflag_t;
-        typedef std::unordered_map<Key, RingBuffer<NetworkAddr>, KeyHasher> perkey_edge_blocklist_t;
 
+        uint32_t getSizeForCapacity() const;
+    private:
         static const std::string kClassName;
         
         std::string base_instance_name_;
-
-        // Comment functions
-        bool isBeingWritten_(const Key& key) const; // Return if key is being written
 
         // For get()
         // Return if edge node is finished
@@ -64,21 +58,13 @@ namespace covered
         // For updateDirectory()
         virtual bool updateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written) = 0; // TODO: implement in basic
 
-        // For tryToNotifyEdgesFromBlocklist()
-        bool notifyEdgeToFinishBlock_(const Key& key, const NetworkAddr network_addr) const;
-
         // Const shared variables
         DhtWrapper* dht_wrapper_ptr_;
 
-        // NOTE: serializability for writes of the same key has been guaranteed in EdgeWrapperBase
-        // Guarantee the atomicity of cooperation metadata (e.g., writes of different keys to update perkey_writeflags_)
-        mutable Rwlock* rwlock_for_cooperation_metadata_ptr_;
-
-        // Non-const shared variables
-        DirectoryTable* directory_table_ptr_; // DirectoryTable is thread-safe
-        // Cooperation metadata
-        perkey_writeflag_t perkey_writeflags_; // whether key is being written
-        perkey_edge_blocklist_t perkey_edge_blocklist_; // a list of blocked closest edge nodes waiting for writes of each given key
+        // Non-const shared variables (cooperation metadata)
+        DirectoryTable* directory_table_ptr_; // per-key content directory infos (thread safe)
+        BlockTracker block_tracker_; // per-key cooperation metadata (thread safe)
+        
     protected:
         // Edge index verification
         void verifyCurrentIsBeacon_(const Key& key) const;
@@ -90,7 +76,6 @@ namespace covered
         // Non-const individual variables
         UdpSocketWrapper* edge_sendreq_tobeacon_socket_client_ptr_;
         UdpSocketWrapper* edge_sendreq_totarget_socket_client_ptr_;
-        UdpSocketWrapper* edge_sendreq_toclosest_socket_client_ptr_;
     };
 }
 

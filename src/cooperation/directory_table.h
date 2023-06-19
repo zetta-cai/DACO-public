@@ -30,12 +30,14 @@ namespace covered
         void validate();
         void invalidate();
 
+        uint32_t getSizeForCapacity() const;
+
         DirectoryMetadata& operator=(const DirectoryMetadata& other);
     private:
         static const std::string kClassName;
 
         // NOTE: conflictions between reader(s) and write(s) have been fixed by DirectoryTable::rwlock_
-        bool is_valid_;
+        bool is_valid_; // Metadata for cooperation
     };
 
     // A directory entry stores multiple directory infos and metadatas for the given key
@@ -48,13 +50,15 @@ namespace covered
         void getValidDirinfoSet(dirinfo_set_t& dirinfo_set) const;
         bool addDirinfo(const DirectoryInfo& directory_info, const DirectoryMetadata& directory_metadata); // return is_directory_already_exist
         bool removeDirinfo(const DirectoryInfo& directory_info); // return is_directory_already_exist
+
+        uint32_t getSizeForCapacity() const;
     private:
         typedef std::unordered_map<DirectoryInfo, DirectoryMetadata, DirectoryInfoHasher> dirinfo_entry_t;
 
         static const std::string kClassName;
 
         // NOTE: conflictions between reader(s) and write(s) have been fixed by DirectoryTable::rwlock_
-        dirinfo_entry_t directory_entry_;
+        dirinfo_entry_t directory_entry_; // Metadata for cooperation
     };
 
     // A table maps key into corresponding directory entry
@@ -67,6 +71,8 @@ namespace covered
         // NOTE: lookup() cannot be const due to rwlock_.try_lock_shared()
         void lookup(const Key& key, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const;
         void update(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, const DirectoryMetadata& directory_metadata);
+
+        uint32_t getSizeForCapacity() const;
     private:
         typedef std::unordered_map<Key, DirectoryEntry, KeyHasher> dirinfo_table_t;
 
@@ -79,7 +85,7 @@ namespace covered
         // Guarantee the atomicity of directory_hashtable_ (e.g., update dirinfo of different keys)
         mutable Rwlock* rwlock_for_dirtable_ptr_;
 
-        // Non-const shared variable
+        // Non-const shared variable (metadata for cooperation)
         dirinfo_table_t directory_hashtable_; // Maintain directory information (not need ordered map)
     };
 }

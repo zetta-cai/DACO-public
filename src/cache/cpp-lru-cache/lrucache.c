@@ -105,12 +105,12 @@ namespace covered
 		return;
 	}
 
-	/*bool LruCache::exists(const Key& key) const
+	bool LruCache::exists(const Key& key) const
 	{
 		return cache_items_map_.find(key) != cache_items_map_.end();
-	}*/
+	}
 
-	uint32_t LruCache::getSize() const
+	uint32_t LruCache::getSizeForCapacity() const
 	{
 		return size_;
 	}

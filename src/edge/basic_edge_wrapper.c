@@ -106,7 +106,7 @@ namespace covered
         uint32_t cache_capacity = edge_cache_ptr_->getCapacityBytes();
         while (true)
         {
-            uint32_t cache_size = edge_cache_ptr_->getSize();
+            uint32_t cache_size = edge_cache_ptr_->getSizeForCapacity();
             if (cache_size <= cache_capacity) // Not exceed capacity limitation
             {
                 break;
@@ -134,13 +134,15 @@ namespace covered
 
     // (2) Control requests
 
-    bool BasicEdgeWrapper::processDirectoryLookupRequest_(MessageBase* control_request_ptr) const
+    bool BasicEdgeWrapper::processDirectoryLookupRequest_(MessageBase* control_request_ptr, const NetworkAddr& closest_edge_addr) const
     {
         // Get key and value from control request if any
         assert(control_request_ptr != NULL);
         assert(control_request_ptr->getMessageType() == MessageType::kDirectoryLookupRequest);
         const DirectoryLookupRequest* const directory_lookup_request_ptr = static_cast<const DirectoryLookupRequest*>(control_request_ptr);
         Key tmp_key = directory_lookup_request_ptr->getKey();
+
+        assert(closest_edge_addr.isValid());
 
         // Acquire a read lock for serializability before accessing any shared variable in the beacon edge node
         while (true)
@@ -155,10 +157,6 @@ namespace covered
         assert(edge_recvreq_socket_server_ptr_ != NULL);
 
         bool is_finish = false;
-
-        // Get remote address of the closest edge node before send(), which will reset remote address
-        NetworkAddr closest_edge_addr = edge_recvreq_socket_server_ptr_->getRemoteAddrForServer();
-        assert(closest_edge_addr.isValid());
 
         // Lookup local directory information and randomly select a target edge index
         bool is_being_written = false;

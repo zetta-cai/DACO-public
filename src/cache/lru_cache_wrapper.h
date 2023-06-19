@@ -19,8 +19,9 @@ namespace covered
         LruCacheWrapper(const uint32_t& capacity, EdgeParam* edge_param_ptr);
         ~LruCacheWrapper();
 
+        virtual bool isLocalCached(const Key& key) const override;
+
         virtual bool needIndependentAdmit(const Key& key) const override;
-        
     private:
         static const std::string kClassName;
 
@@ -39,6 +40,6 @@ namespace covered
         mutable Rwlock* rwlock_for_local_statistics_ptr_;
 
         // Non-const shared variables
-        LruCache* lru_cache_ptr_;
+        LruCache* lru_cache_ptr_; // Data and metadata for local edge cache
     };
 }
