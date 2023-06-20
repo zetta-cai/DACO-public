@@ -10,7 +10,7 @@ namespace covered
 {
     const std::string CoveredEdgeWrapper::kClassName("CoveredEdgeWrapper");
 
-    CoveredEdgeWrapper::CoveredEdgeWrapper(const std::string& cache_name, const std::string& hash_name, EdgeParam* edge_param_ptr) : EdgeWrapperBase(cache_name, hash_name, edge_param_ptr)
+    CoveredEdgeWrapper::CoveredEdgeWrapper(const std::string& cache_name, const std::string& hash_name, EdgeParam* edge_param_ptr, const uint32_t& capacity_bytes) : EdgeWrapperBase(cache_name, hash_name, edge_param_ptr, capacity_bytes)
     {
         assert(cache_name == Param::COVERED_CACHE_NAME);
 

@@ -23,7 +23,8 @@ namespace covered
         edge_param_ptr_ = edge_param_ptr;
         assert(edge_param_ptr_ != NULL);
 
-        std::ostringstream oss;
+        oss.clear();
+        oss.str("");
         oss << instance_name_ << " " << "rwlock_for_cooperation_metadata_ptr_";
         rwlock_for_cooperation_metadata_ptr_ = new Rwlock(oss.str());
         assert(rwlock_for_cooperation_metadata_ptr_ != NULL);

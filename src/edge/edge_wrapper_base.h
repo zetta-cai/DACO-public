@@ -41,7 +41,7 @@ namespace covered
     class EdgeWrapperBase
     {
     public:
-        static EdgeWrapperBase* getEdgeWrapper(const std::string& cache_name, const std::string& hash_name, EdgeParam* edge_param_ptr);
+        static EdgeWrapperBase* getEdgeWrapper(const std::string& cache_name, const std::string& hash_name, EdgeParam* edge_param_ptr, const uint32_t& capacity_bytes);
 
         EdgeWrapperBase(const std::string& cache_name, const std::string& hash_name, EdgeParam* edge_param_ptr, const uint32_t& capacity_bytes);
         virtual ~EdgeWrapperBase();

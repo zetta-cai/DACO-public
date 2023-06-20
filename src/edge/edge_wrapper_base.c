@@ -17,17 +17,17 @@ namespace covered
 {
     const std::string EdgeWrapperBase::kClassName("EdgeWrapperBase");
 
-    EdgeWrapperBase* EdgeWrapperBase::getEdgeWrapper(const std::string& cache_name, const std::string& hash_name, EdgeParam* edge_param_ptr)
+    EdgeWrapperBase* EdgeWrapperBase::getEdgeWrapper(const std::string& cache_name, const std::string& hash_name, EdgeParam* edge_param_ptr, const uint32_t& capacity_bytes)
     {
         EdgeWrapperBase* edge_wrapper_ptr = NULL;
 
         if (cache_name == Param::COVERED_CACHE_NAME)
         {
-            edge_wrapper_ptr = new CoveredEdgeWrapper(cache_name, hash_name, edge_param_ptr);
+            edge_wrapper_ptr = new CoveredEdgeWrapper(cache_name, hash_name, edge_param_ptr, capacity_bytes);
         }
         else
         {
-            edge_wrapper_ptr = new BasicEdgeWrapper(cache_name, hash_name, edge_param_ptr);
+            edge_wrapper_ptr = new BasicEdgeWrapper(cache_name, hash_name, edge_param_ptr, capacity_bytes);
         }
 
         assert(edge_wrapper_ptr != NULL);
@@ -52,7 +52,7 @@ namespace covered
         assert(perkey_rwlock_for_serializability_ptr_ != NULL);
         
         // Allocate local edge cache to store hot objects
-        edge_cache_ptr_ = CacheWrapperBase::getEdgeCache(cache_name_, Param::getCapacityBytes(), edge_param_ptr);
+        edge_cache_ptr_ = CacheWrapperBase::getEdgeCache(cache_name_, edge_param_ptr);
         assert(edge_cache_ptr_ != NULL);
 
         // Allocate cooperation wrapper for cooperative edge caching
@@ -371,14 +371,12 @@ namespace covered
             // Prepare LocalDelResponse for client
             local_response_ptr = new LocalDelResponse(tmp_key, hitflag);
         }
+        UNUSED(is_local_cached);
 
         // Trigger independent cache admission for local/global cache miss if necessary
-        if (!is_local_cached && edge_cache_ptr_->needIndependentAdmit(tmp_key))
-        {
-            triggerIndependentAdmission_(tmp_key, tmp_value);
-        }
+        tryToTriggerIndependentAdmission_(tmp_key, tmp_value);
 
-        // TODO: Notify beacon node to validate all other cache copies for MSI protocol
+        // TODO: Notify beacon node to finish write and clear blocked edge nodes
         // TODO: For COVERED, beacon node will tell the edge node if to admit, w/o independent decision
         // TODO: Update is_finish
 
@@ -567,6 +565,8 @@ namespace covered
 
     void EdgeWrapperBase::tryToUpdateLocalEdgeCache_(const Key& key, const Value& value) const
     {
+        // No need to acquire per-key rwlock for serializability, which has been done in processLocalGetRequest_()
+        
         bool is_local_cached = edge_cache_ptr_->isLocalCached(key);
         bool is_cached_and_invalid = false;
         if (is_local_cached)
@@ -580,12 +580,12 @@ namespace covered
             bool is_local_cached_after_udpate = edge_cache_ptr_->update(key, value);
             assert(is_local_cached_after_udpate);
 
-            // Evict until cache size <= cache capacity (TODO: update after introducing entire capacity)
-            uint32_t cache_capacity = edge_cache_ptr_->getCapacityBytes();
+            // Evict until used bytes <= capacity bytes
             while (true)
             {
-                uint32_t cache_size = edge_cache_ptr_->getSizeForCapacity();
-                if (cache_size <= cache_capacity) // Not exceed capacity limitation
+                // Data and metadata for local edge cache, and cooperation metadata
+                uint32_t used_bytes = edge_cache_ptr_->getSizeForCapacity() + cooperation_wrapper_ptr_->getSizeForCapacity();
+                if (used_bytes <= capacity_bytes_) // Not exceed capacity limitation
                 {
                     break;
                 }
@@ -601,10 +601,14 @@ namespace covered
                 }
             }
         }
+
+        return;
     }
 
     void EdgeWrapperBase::tryToTriggerIndependentAdmission_(const Key& key, const Value& value) const
     {
+        // No need to acquire per-key rwlock for serializability, which has been done in processLocalGetRequest_(), processLocalWriteRequest_(), and processRedirectedGetRequest_()
+
         bool is_local_cached = edge_cache_ptr_->isLocalCached(key);
         if (!is_local_cached && edge_cache_ptr_->needIndependentAdmit(key))
         {

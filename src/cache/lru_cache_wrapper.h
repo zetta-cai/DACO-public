@@ -16,7 +16,7 @@ namespace covered
     class LruCacheWrapper : public CacheWrapperBase
     {
     public:
-        LruCacheWrapper(const uint32_t& capacity, EdgeParam* edge_param_ptr);
+        LruCacheWrapper(EdgeParam* edge_param_ptr);
         ~LruCacheWrapper();
 
         virtual bool isLocalCached(const Key& key) const override;

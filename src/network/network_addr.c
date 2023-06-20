@@ -100,7 +100,7 @@ namespace covered
         return *this;
     }
 
-    bool NetworkAddr::operator==(const NetworkAddr& other)
+    bool NetworkAddr::operator==(const NetworkAddr& other) const
     {
         // No need to compare is_valid_
         return ipstr_ == other.ipstr_ && port_ == other.port_;

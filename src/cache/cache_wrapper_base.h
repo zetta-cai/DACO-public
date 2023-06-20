@@ -21,7 +21,7 @@ namespace covered
     class CacheWrapperBase
     {
     public:
-        static CacheWrapperBase* getEdgeCache(const std::string& cache_name, const uint32_t& capacity_bytes, EdgeParam* edge_param_ptr);
+        static CacheWrapperBase* getEdgeCache(const std::string& cache_name, EdgeParam* edge_param_ptr);
 
         CacheWrapperBase(EdgeParam* edge_param_ptr);
         virtual ~CacheWrapperBase();
@@ -61,7 +61,6 @@ namespace covered
         virtual bool updateInternal_(const Key& key, const Value& value) = 0; // Return whether key is cached
         virtual void admitInternal_(const Key& key, const Value& value) = 0;
         virtual void evictInternal_(Key& key, Value& value) = 0;
-        virtual bool existsInternal_(const Key& key) const = 0; // Return whether key is cached
 
         // In units of bytes
         virtual uint32_t getSizeInternal_() const = 0; // Get size of data and metadata for local edge cache

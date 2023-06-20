@@ -33,7 +33,7 @@ namespace covered
 
         bool operator<(const NetworkAddr& other) const; // To be used as key in std::map
         NetworkAddr& operator=(const NetworkAddr& other); // assignment operation
-        bool operator==(const NetworkAddr& other);
+        bool operator==(const NetworkAddr& other) const;
     private:
         static const std::string kClassName;
 

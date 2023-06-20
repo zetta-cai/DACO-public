@@ -29,7 +29,7 @@ void* launchCloud(void* cloud_param_ptr)
 
 void* launchEdge(void* edge_param_ptr)
 {
-    covered::EdgeWrapperBase* local_edge_ptr = covered::EdgeWrapperBase::getEdgeWrapper(covered::Param::getCacheName(), covered::Param::getHashName(), (covered::EdgeParam*)edge_param_ptr);
+    covered::EdgeWrapperBase* local_edge_ptr = covered::EdgeWrapperBase::getEdgeWrapper(covered::Param::getCacheName(), covered::Param::getHashName(), (covered::EdgeParam*)edge_param_ptr, covered::Param::getCapacityBytes());
     assert(local_edge_ptr != NULL);
     local_edge_ptr->start();
 

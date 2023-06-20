@@ -7,7 +7,7 @@ namespace covered
 {
     const std::string LruCacheWrapper::kClassName("LruCacheWrapper");
 
-    LruCacheWrapper::LruCacheWrapper(const uint32_t& capacity, EdgeParam* edge_param_ptr) : CacheWrapperBase(capacity, edge_param_ptr)
+    LruCacheWrapper::LruCacheWrapper(EdgeParam* edge_param_ptr) : CacheWrapperBase(edge_param_ptr)
     {
         // Differentiate local edge cache in different edge nodes
         assert(edge_param_ptr != NULL);
@@ -44,7 +44,7 @@ namespace covered
         assert(rwlock_for_local_statistics_ptr_ != NULL);
         while (true)
         {
-            if (rwlock_for_local_statistics_ptr_->try_lock_shared("existsInternal_()"))
+            if (rwlock_for_local_statistics_ptr_->try_lock_shared("isLocalCached()"))
             {
                 break;
             }

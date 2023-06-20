@@ -15,7 +15,7 @@ namespace covered
 {
     const std::string BasicEdgeWrapper::kClassName("BasicEdgeWrapper");
 
-    BasicEdgeWrapper::BasicEdgeWrapper(const std::string& cache_name, const std::string& hash_name, EdgeParam* edge_param_ptr) : EdgeWrapperBase(cache_name, hash_name, edge_param_ptr)
+    BasicEdgeWrapper::BasicEdgeWrapper(const std::string& cache_name, const std::string& hash_name, EdgeParam* edge_param_ptr, const uint32_t& capacity_bytes) : EdgeWrapperBase(cache_name, hash_name, edge_param_ptr, capacity_bytes)
     {
         assert(cache_name != Param::COVERED_CACHE_NAME);
 
@@ -87,7 +87,7 @@ namespace covered
 
     void BasicEdgeWrapper::triggerIndependentAdmission_(const Key& key, const Value& value) const
     {
-        // No need to acquire per-key rwlock for serializability, which has been done in processRedirectedGetRequest_() and processRedirectedWriteRequest_()
+        // No need to acquire per-key rwlock for serializability, which has been done in processLocalGetRequest_(), processLocalWriteRequest_(), and processRedirectedGetRequest_()
 
         assert(edge_cache_ptr_ != NULL);
         assert(cooperation_wrapper_ptr_ != NULL);
@@ -102,12 +102,12 @@ namespace covered
         cooperation_wrapper_ptr_->updateDirectory(key, true, is_being_written);
         edge_cache_ptr_->admit(key, value, !is_being_written); // valid if not being written
 
-        // Evict until cache size <= cache capacity (TODO: update after introducing entire capacity)
-        uint32_t cache_capacity = edge_cache_ptr_->getCapacityBytes();
+        // Evict until used bytes <= capacity bytes
         while (true)
         {
-            uint32_t cache_size = edge_cache_ptr_->getSizeForCapacity();
-            if (cache_size <= cache_capacity) // Not exceed capacity limitation
+            // Data and metadata for local edge cache, and cooperation metadata
+            uint32_t used_bytes = edge_cache_ptr_->getSizeForCapacity() + cooperation_wrapper_ptr_->getSizeForCapacity();
+            if (used_bytes <= capacity_bytes_) // Not exceed capacity limitation
             {
                 break;
             }

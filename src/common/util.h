@@ -15,6 +15,8 @@
 #include <string>
 #include <time.h> // struct timespec
 
+#define UNUSED(var) (void(var))
+
 namespace covered
 {
     class Util

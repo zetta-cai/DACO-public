@@ -11,12 +11,12 @@ namespace covered
 {
     const std::string CacheWrapperBase::kClassName("CacheWrapperBase");
 
-    CacheWrapperBase* CacheWrapperBase::getEdgeCache(const std::string& cache_name, const uint32_t& capacity_bytes, EdgeParam* edge_param_ptr)
+    CacheWrapperBase* CacheWrapperBase::getEdgeCache(const std::string& cache_name, EdgeParam* edge_param_ptr)
     {
         CacheWrapperBase* cache_ptr = NULL;
         if (cache_name == Param::LRU_CACHE_NAME)
         {
-            cache_ptr = new LruCacheWrapper(capacity_bytes, edge_param_ptr);
+            cache_ptr = new LruCacheWrapper(edge_param_ptr);
         }
         else
         {

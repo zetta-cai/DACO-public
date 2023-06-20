@@ -17,7 +17,7 @@ namespace covered
     class CoveredEdgeWrapper : public EdgeWrapperBase
     {
     public:
-        CoveredEdgeWrapper(const std::string& cache_name, const std::string& hash_name, EdgeParam* edge_param_ptr);
+        CoveredEdgeWrapper(const std::string& cache_name, const std::string& hash_name, EdgeParam* edge_param_ptr, const uint32_t& capacity_bytes);
         virtual ~CoveredEdgeWrapper();
     private:
         static const std::string kClassName;
