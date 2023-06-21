@@ -1,7 +1,7 @@
 /*
  * CacheServerBase: listen to receive local requests issued by clients; access local edge cache, cooperative cache, and cloud to reply clients.
  *
- * Workflow of local get request:
+ * A. Workflow of local get request:
  * (1) Cache server of closest edge node checks local edge cache.
  *   (1.1) If the object is cached and valid, cache server of closest edge node directly replies clients.
  *   (1.2) If the object is uncached or invalid, cache server of closest edge node tries to fetch data by cooperative caching.
@@ -17,13 +17,31 @@
  * (2) Cache server of the closest edge node tries to update local edge cache if cached yet invalid.
  * (3) Cache server of the closest edge node tries to independently admit object in local edge cache if necessary.
  * 
- * Workflow of local put/del request: TODO.
+ * B. Involved messages of local get requests:
+ * (1) Receive local requests
+ * (2) Issue/receive directory lookup requests/responses
+ * (3) Receive/issue finish block requests
+ * (4) Issue/receive redirected requests/responses
+ * (5) Issue/receive global requests/responses
+ * (6) Issue/receive directory update requests/responses
+ * (7) Issue local responses
+ * 
+ * C. Workflow of local put/del request: TODO.
+ * 
+ * D. Involved messages of local put/del requests:
+ * (1) Receive local requests
+ * (2) Issue/receive acquire writelock requests/response
+ * (3) Receive/issue finish block requests
+ * (4) Issue/receive global requests/responses
+ * (5) Issue/receive finish write requests/responses
+ * (6) Issue/receive directory update requests/responses
+ * (7) Issue local response
  * 
  * By Siyuan Sheng (2023.06.21).
  */
 
-#ifndef CACHE_SERVER_BASE
-#define CACHE_SERVER_BASE
+#ifndef CACHE_SERVER_BASE_H
+#define CACHE_SERVER_BASE_H
 
 #include <string>
 
@@ -59,20 +77,24 @@ namespace covered
         bool fetchDataFromCloud_(const Key& key, Value& value) const;
         bool writeDataToCloud_(const Key& key, const Value& value, const MessageType& message_type);
 
-        void tryToUpdateLocalEdgeCache_(const Key& key, const Value& value) const;
+        void tryToUpdateInvalidLocalEdgeCache_(const Key& key, const Value& value) const;
+        bool updateLocalEdgeCache_(const Key& key, const Value& value) const; // return is cached after update
+        bool removeLocalEdgeCache_(const Key& key) const; // return is cached after remove
         void tryToTriggerIndependentAdmission_(const Key& key, const Value& value) const;
         virtual void triggerIndependentAdmission_(const Key& key, const Value& value) const = 0;
 
         // (2) Member variables
 
-        const EdgeWrapper* edge_wrapper_ptr_;
         std::string base_instance_name_;
+
+        UdpSocketWrapper* edge_cache_server_sendreq_tocloud_socket_client_ptr_;
+    protected:
+        const EdgeWrapper* edge_wrapper_ptr_;
 
         // Guarantee the global serializability for writes of the same key
         mutable PerkeyRwlock* perkey_rwlock_for_serializability_ptr_;
 
         UdpSocketWrapper* edge_cache_server_recvreq_socket_server_ptr_;
-        UdpSocketWrapper* edge_cache_server_sendreq_tocloud_socket_client_ptr_;
     };
 }
 

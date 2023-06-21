@@ -26,6 +26,9 @@ namespace covered
         void start();
 
         friend class CacheServerBase;
+        friend class BasicCacheServer;
+        friend class CoveredCacheServer;
+        friend class BeaconServerBase;
     private:
         static const std::string kClassName;
 
@@ -45,7 +48,7 @@ namespace covered
 
         // Const shared variables
         const std::string cache_name_;
-        const EdgeParam* edge_param_ptr_;
+        const EdgeParam* edge_param_ptr_; // Thread safe
         const uint32_t capacity_bytes_; // Come from Util::Param
 
         // Non-const shared variables (thread safe)

@@ -1,11 +1,11 @@
 /*
- * CoveredEdgeWrapper: edge node for COVERED (thread safe).
+ * BasicEdgeWrapper: basic edge node for baselines.
  * 
- * By Siyuan Sheng (2023.06.08).
+ * By Siyuan Sheng (2023.06.07).
  */
 
-#ifndef COVERED_EDGE_WRAPPER_H
-#define COVERED_EDGE_WRAPPER_H
+#ifndef BASIC_EDGE_WRAPPER_H
+#define BASIC_EDGE_WRAPPER_H
 
 #include <string>
 
@@ -14,11 +14,11 @@
 
 namespace covered
 {
-    class CoveredEdgeWrapper : public EdgeWrapperBase
+    class BasicEdgeWrapper : public EdgeWrapperBase
     {
     public:
-        CoveredEdgeWrapper(const std::string& cache_name, const std::string& hash_name, EdgeParam* edge_param_ptr, const uint32_t& capacity_bytes);
-        virtual ~CoveredEdgeWrapper();
+        BasicEdgeWrapper(const std::string& cache_name, const std::string& hash_name, EdgeParam* edge_param_ptr, const uint32_t& capacity_bytes);
+        virtual ~BasicEdgeWrapper();
     private:
         static const std::string kClassName;
 

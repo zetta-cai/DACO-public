@@ -4,6 +4,8 @@
 
 #include "common/config.h"
 #include "common/param.h"
+#include "edge/cache_server/basic_cache_server.h"
+#include "edge/cache_server/covered_cache_server.h"
 #include "message/data_message.h"
 #include "network/network_addr.h"
 #include "network/propagation_simulator.h"
@@ -20,11 +22,11 @@ namespace covered
         std::string cache_name = edge_wrapper_ptr->cache_name_;
         if (cache_name == Param::COVERED_CACHE_NAME)
         {
-            //cache_server_ptr = new CoveredCacheServer(edge_wrapper_ptr);
+            cache_server_ptr = new CoveredCacheServer(edge_wrapper_ptr);
         }
         else
         {
-            //cache_server_ptr = new BasicCacheServer(edge_wrapper_ptr);
+            cache_server_ptr = new BasicCacheServer(edge_wrapper_ptr);
         }
 
         assert(cache_server_ptr != NULL);
@@ -236,7 +238,7 @@ namespace covered
         }
 
         // Update invalid object of local edge cache if necessary
-        tryToUpdateLocalEdgeCache_(tmp_key, tmp_value);
+        tryToUpdateInvalidLocalEdgeCache_(tmp_key, tmp_value);
 
         // Trigger independent cache admission for local/global cache miss if necessary
         tryToTriggerIndependentAdmission_(tmp_key, tmp_value);
@@ -335,14 +337,14 @@ namespace covered
         // NOTE: message type has been checked, which must be one of the following two types
         if (local_request_ptr->getMessageType() == MessageType::kLocalPutRequest)
         {
-            is_local_cached = edge_wrapper_ptr_->edge_cache_ptr_->update(tmp_key, tmp_value);
+            is_local_cached = updateLocalEdgeCache_(tmp_key, tmp_value);
 
             // Prepare LocalPutResponse for client
             local_response_ptr = new LocalPutResponse(tmp_key, hitflag);
         }
         else if (local_request_ptr->getMessageType() == MessageType::kLocalDelRequest)
         {
-            is_local_cached = edge_wrapper_ptr_->edge_cache_ptr_->remove(tmp_key);
+            is_local_cached = removeLocalEdgeCache_(tmp_key);
 
             // Prepare LocalDelResponse for client
             local_response_ptr = new LocalDelResponse(tmp_key, hitflag);
@@ -404,9 +406,9 @@ namespace covered
     {
         // No need to acquire per-key rwlock for serializability, which has been done in processLocalGetRequest_()
 
-        // TODO: END HERE
-        assert(edge_param_ptr_ != NULL);
-        assert(edge_sendreq_tocloud_socket_client_ptr_ != NULL);
+        assert(edge_wrapper_ptr_ != NULL);
+        assert(edge_wrapper_ptr_->edge_param_ptr_ != NULL);
+        assert(edge_cache_server_sendreq_tocloud_socket_client_ptr_ != NULL);
 
         bool is_finish = false; // Mark if edge node is finished
 
@@ -423,14 +425,14 @@ namespace covered
         {
             // Send the message payload of global request to cloud
             PropagationSimulator::propagateFromEdgeToCloud();
-            edge_sendreq_tocloud_socket_client_ptr_->send(global_request_msg_payload);
+            edge_cache_server_sendreq_tocloud_socket_client_ptr_->send(global_request_msg_payload);
 
             // Receive the global response message from cloud
             DynamicArray global_response_msg_payload;
-            bool is_timeout = edge_sendreq_tocloud_socket_client_ptr_->recv(global_response_msg_payload);
+            bool is_timeout = edge_cache_server_sendreq_tocloud_socket_client_ptr_->recv(global_response_msg_payload);
             if (is_timeout)
             {
-                if (!edge_param_ptr_->isEdgeRunning())
+                if (!edge_wrapper_ptr_->edge_param_ptr_->isEdgeRunning())
                 {
                     is_finish = true;
                     break; // Edge is NOT running
@@ -471,8 +473,9 @@ namespace covered
     {
         // No need to acquire per-key rwlock for serializability, which has been done in processLocalWriteRequest_()
         
-        assert(edge_param_ptr_ != NULL);
-        assert(edge_sendreq_tocloud_socket_client_ptr_ != NULL);
+        assert(edge_wrapper_ptr_ != NULL);
+        assert(edge_wrapper_ptr_->edge_param_ptr_ != NULL);
+        assert(edge_cache_server_sendreq_tocloud_socket_client_ptr_ != NULL);
 
         bool is_finish = false; // Mark if edge node is finished
 
@@ -501,14 +504,14 @@ namespace covered
         {
             // Send the message payload of global request to cloud
             PropagationSimulator::propagateFromEdgeToCloud();
-            edge_sendreq_tocloud_socket_client_ptr_->send(global_request_msg_payload);
+            edge_cache_server_sendreq_tocloud_socket_client_ptr_->send(global_request_msg_payload);
 
             // Receive the global response message from cloud
             DynamicArray global_response_msg_payload;
-            bool is_timeout = edge_sendreq_tocloud_socket_client_ptr_->recv(global_response_msg_payload);
+            bool is_timeout = edge_cache_server_sendreq_tocloud_socket_client_ptr_->recv(global_response_msg_payload);
             if (is_timeout)
             {
-                if (!edge_param_ptr_->isEdgeRunning())
+                if (!edge_wrapper_ptr_->edge_param_ptr_->isEdgeRunning())
                 {
                     is_finish = true;
                     break; // Edge is NOT running
@@ -540,54 +543,85 @@ namespace covered
         return is_finish;
     }
 
-    void CacheServerBase::tryToUpdateLocalEdgeCache_(const Key& key, const Value& value) const
+    void CacheServerBase::tryToUpdateInvalidLocalEdgeCache_(const Key& key, const Value& value) const
     {
         // No need to acquire per-key rwlock for serializability, which has been done in processLocalGetRequest_()
+
+        assert(edge_wrapper_ptr_ != NULL);
+        assert(edge_wrapper_ptr_->edge_param_ptr_ != NULL);
         
-        bool is_local_cached = edge_cache_ptr_->isLocalCached(key);
+        bool is_local_cached = edge_wrapper_ptr_->edge_cache_ptr_->isLocalCached(key);
         bool is_cached_and_invalid = false;
         if (is_local_cached)
         {
-            bool is_valid = edge_cache_ptr_->isValidIfCached(key);
+            bool is_valid = edge_wrapper_ptr_->edge_cache_ptr_->isValidIfCached(key);
             is_cached_and_invalid = is_local_cached && !is_valid;
         }
 
         if (is_cached_and_invalid)
         {
-            bool is_local_cached_after_udpate = edge_cache_ptr_->update(key, value);
-            assert(is_local_cached_after_udpate);
-
-            // Evict until used bytes <= capacity bytes
-            while (true)
+            bool is_local_cached_after_udpate = false;
+            if (value.isDeleted()) // value is deleted
             {
-                // Data and metadata for local edge cache, and cooperation metadata
-                uint32_t used_bytes = edge_cache_ptr_->getSizeForCapacity() + cooperation_wrapper_ptr_->getSizeForCapacity();
-                if (used_bytes <= capacity_bytes_) // Not exceed capacity limitation
-                {
-                    break;
-                }
-                else // Exceed capacity limitation
-                {
-                    Key victim_key;
-                    Value victim_value;
-                    edge_cache_ptr_->evict(victim_key, victim_value);
-                    bool _unused_is_being_written = false; // NOTE: is_being_written does NOT affect cache eviction
-                    cooperation_wrapper_ptr_->updateDirectory(victim_key, false, _unused_is_being_written);
-
-                    continue;
-                }
+                is_local_cached_after_udpate = removeLocalEdgeCache_(key);
             }
+            else // non-deleted value
+            {
+                is_local_cached_after_udpate = updateLocalEdgeCache_(key, value);
+            }
+            assert(is_local_cached_after_udpate);
         }
 
         return;
+    }
+
+    bool CacheServerBase::updateLocalEdgeCache_(const Key& key, const Value& value) const
+    {
+        // No need to acquire per-key rwlock for serializability, which has been done in processLocalGetRequest_() or processLocalWriteRequest_()
+
+        bool is_local_cached_after_udpate = edge_wrapper_ptr_->edge_cache_ptr_->update(key, value);
+
+        // Evict until used bytes <= capacity bytes
+        while (true)
+        {
+            // Data and metadata for local edge cache, and cooperation metadata
+            uint32_t used_bytes = edge_wrapper_ptr_->edge_cache_ptr_->getSizeForCapacity() + edge_wrapper_ptr_->cooperation_wrapper_ptr_->getSizeForCapacity();
+            if (used_bytes <= edge_wrapper_ptr_->capacity_bytes_) // Not exceed capacity limitation
+            {
+                break;
+            }
+            else // Exceed capacity limitation
+            {
+                Key victim_key;
+                Value victim_value;
+                edge_wrapper_ptr_->edge_cache_ptr_->evict(victim_key, victim_value);
+                bool _unused_is_being_written = false; // NOTE: is_being_written does NOT affect cache eviction
+                edge_wrapper_ptr_->cooperation_wrapper_ptr_->updateDirectory(victim_key, false, _unused_is_being_written);
+
+                continue;
+            }
+        }
+
+        return is_local_cached_after_udpate;
+    }
+
+    bool CacheServerBase::removeLocalEdgeCache_(const Key& key) const
+    {
+        // No need to acquire per-key rwlock for serializability, which has been done in processLocalGetRequest_() or processLocalWriteRequest_()
+
+        bool is_local_cached_after_udpate = edge_wrapper_ptr_->edge_cache_ptr_->remove(key);
+
+        // NOTE: no need to check capacity, as remove() only replaces the original value (value size + is_deleted) with a deleted value (zero value size + is_deleted of true), where deleted value uses minimum bytes and remove() cannot increase used bytes to trigger any eviction
+
+        return is_local_cached_after_udpate;
     }
 
     void CacheServerBase::tryToTriggerIndependentAdmission_(const Key& key, const Value& value) const
     {
         // No need to acquire per-key rwlock for serializability, which has been done in processLocalGetRequest_(), processLocalWriteRequest_(), and processRedirectedGetRequest_()
 
-        bool is_local_cached = edge_cache_ptr_->isLocalCached(key);
-        if (!is_local_cached && edge_cache_ptr_->needIndependentAdmit(key))
+        bool is_local_cached = edge_wrapper_ptr_->edge_cache_ptr_->isLocalCached(key);
+        if (!is_local_cached && edge_wrapper_ptr_->edge_cache_ptr_->needIndependentAdmit(key))
         {
             triggerIndependentAdmission_(key, value);
         }

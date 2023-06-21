@@ -57,7 +57,15 @@ namespace covered
         pthread_t cache_server_thread;
         pthread_t invalidation_server_thread;
 
-        // TODO: Launch beacon server
+        // Launch beacon server
+        pthread_returncode = pthread_create(&beacon_server_thread, NULL, launchBeaconServer_, (void*)(this));
+        if (pthread_returncode != 0)
+        {
+            std::ostringstream oss;
+            oss << "edge " << edge_idx << " failed to launch beacon server (error code: " << pthread_returncode << ")" << std::endl;
+            covered::Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
 
         // Launch cache server
         pthread_returncode = pthread_create(&cache_server_thread, NULL, launchCacheServer_, (void*)(this));
@@ -71,9 +79,17 @@ namespace covered
 
         // TODO: Launch invalidations server
 
-        // TODO: Wait for beacon server
+        // Wait for beacon server
+        pthread_returncode = pthread_join(beacon_server_thread, NULL); // void* retval = NULL
+        if (pthread_returncode != 0)
+        {
+            std::ostringstream oss;
+            oss << "edge " << edge_idx << " failed to join beacon server (error code: " << pthread_returncode << ")" << std::endl;
+            covered::Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
 
-        // TODO: Wait for cache server
+        // Wait for cache server
         pthread_returncode = pthread_join(cache_server_thread, NULL); // void* retval = NULL
         if (pthread_returncode != 0)
         {
@@ -86,7 +102,10 @@ namespace covered
         // TODO: Wait for invalidation server
     }
 
-    void* launchBeaconServer_(void* edge_wrapper_ptr);
+    void* launchBeaconServer_(void* edge_wrapper_ptr)
+    {
+        // TODO: END HERE
+    }
     
     void* EdgeWrapper::launchCacheServer_(void* edge_wrapper_ptr)
     {
@@ -102,54 +121,7 @@ namespace covered
     
     void* launchInvalidationServer_(void* edge_wrapper_ptr);
 
-    void EdgeWrapper::start()
-    {
-        bool is_finish = false; // Mark if edge node is finished
-        while (edge_param_ptr_->isEdgeRunning()) // edge_running_ is set as true by default
-        {
-            // Receive the message payload of data (local/redirected/global) or control requests
-            DynamicArray request_msg_payload;
-            NetworkAddr request_network_addr;
-            bool is_timeout = edge_recvreq_socket_server_ptr_->recv(request_msg_payload, request_network_addr);
-            if (is_timeout == true) // Timeout-and-retry
-            {
-                continue; // Retry to receive a message if edge is still running
-            } // End of (is_timeout == true)
-            else
-            {
-                assert(request_network_addr.isValid());
-                
-                MessageBase* request_ptr = MessageBase::getRequestFromMsgPayload(request_msg_payload);
-                assert(request_ptr != NULL);
-
-                if (request_ptr->isDataRequest()) // Data requests (e.g., local/redirected requests)
-                {
-                    is_finish = processDataRequest_(request_ptr);
-                }
-                else if (request_ptr->isControlRequest()) // Control requests (e.g., invalidation and cache admission/eviction requests)
-                {
-                    is_finish = processControlRequest_(request_ptr, request_network_addr);
-                }
-                else
-                {
-                    std::ostringstream oss;
-                    oss << "invalid message type " << MessageBase::messageTypeToString(request_ptr->getMessageType()) << " for start()!";
-                    Util::dumpErrorMsg(base_instance_name_, oss.str());
-                    exit(1);
-                }
-
-                // Release messages
-                assert(request_ptr != NULL);
-                delete request_ptr;
-                request_ptr = NULL;
-
-                if (is_finish) // Check is_finish
-                {
-                    continue; // Go to check if edge is still running
-                }
-            } // End of (is_timeout == false)
-        } // End of while loop
-    }
+    
 
     // (2) Control requests
 
