@@ -1,5 +1,5 @@
 /*
- * EdgeParam: parameters to launch an edge node.
+ * EdgeParam: parameters to launch an edge node (thread safe).
  * 
  * By Siyuan Sheng (2023.04.22).
  */

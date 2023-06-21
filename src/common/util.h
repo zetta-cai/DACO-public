@@ -79,11 +79,13 @@ namespace covered
         // (4.1) Client
         static uint32_t getClosestEdgeIdx(const uint32_t& client_idx);
         static std::string getClosestEdgeIpstr(const uint32_t& client_idx);
-        static uint16_t getClosestEdgeRecvreqPort(const uint32_t& client_idx); // Calculate the recvreq port of the closest edge node for client
+        static uint16_t getClosestEdgeCacheServerRecvreqPort(const uint32_t& client_idx); // Calculate the recvreq port of the closest edge node for client
         static uint32_t getGlobalWorkerIdx(const uint32_t& client_idx, const uint32_t local_worker_idx);
 
         // (4.2) Edge and cloud
-        static uint16_t getEdgeRecvreqPort(const uint32_t& edge_idx); // Calculate the recvreq port for the local edge node
+        static uint16_t getEdgeBeaconServerRecvreqPort(const uint32_t& edge_idx);
+        static uint16_t getEdgeCacheServerRecvreqPort(const uint32_t& edge_idx);
+        static uint16_t getEdgeInvalidationServerRecvreqPort(const uint32_t& edge_idx);
         static uint16_t getCloudRecvreqPort(const uint32_t& cloud_idx);
 
         // (5) Network
@@ -107,6 +109,9 @@ namespace covered
         // I/O
         static std::mutex msgdump_lock_;
         static bool isPathExist_(const std::string& path, const bool& is_file, const bool& is_silent); // File or directory 
+
+        // Client-edge-cloud scenario
+        static uint16_t getEdgePort_(const int64_t& start_port, const uint32_t edge_idx);
 
         // Intermediate files
         static std::string getInfixForFilepath_();

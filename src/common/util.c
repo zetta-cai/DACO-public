@@ -304,10 +304,10 @@ namespace covered
         return Config::getEdgeIpstr(closest_edge_idx);
     }
 
-    uint16_t Util::getClosestEdgeRecvreqPort(const uint32_t& client_idx)
+    uint16_t Util::getClosestEdgeCacheServerRecvreqPort(const uint32_t& client_idx)
     {
         uint32_t closest_edge_idx = getClosestEdgeIdx(client_idx);
-        return getEdgeRecvreqPort(closest_edge_idx);
+        return getEdgeCacheServerRecvreqPort(closest_edge_idx);
     }
 
     uint32_t Util::getGlobalWorkerIdx(const uint32_t& client_idx, const uint32_t local_worker_idx)
@@ -318,19 +318,22 @@ namespace covered
 
     // (4.2) Edge and cloud
 
-    uint16_t Util::getEdgeRecvreqPort(const uint32_t& edge_idx)
+    uint16_t Util::getEdgeBeaconServerRecvreqPort(const uint32_t& edge_idx)
     {
-        int64_t edge_recvreq_port = 0;
-        int64_t edge_recvreq_startport = static_cast<int64_t>(covered::Config::getEdgeRecvreqStartport());
-        if (covered::Param::isSimulation())
-        {
-            edge_recvreq_port = edge_recvreq_startport + edge_idx;
-        }
-        else
-        {
-            edge_recvreq_port = edge_recvreq_startport;
-        }
-        return covered::Util::toUint16(edge_recvreq_port);
+        int64_t edge_beacon_server_recvreq_startport = static_cast<int64_t>(covered::Config::getEdgeBeaconServerRecvreqStartport());
+        return getEdgePort_(edge_beacon_server_recvreq_startport, edge_idx);
+    }
+
+    uint16_t Util::getEdgeCacheServerRecvreqPort(const uint32_t& edge_idx)
+    {
+        int64_t edge_cache_server_recvreq_startport = static_cast<int64_t>(covered::Config::getEdgeCacheServerRecvreqStartport());
+        return getEdgePort_(edge_cache_server_recvreq_startport, edge_idx);
+    }
+
+    uint16_t Util::getEdgeInvalidationServerRecvreqPort(const uint32_t& edge_idx)
+    {
+        int64_t edge_invalidation_server_recvreq_startport = static_cast<int64_t>(covered::Config::getEdgeInvalidationServerRecvreqStartport());
+        return getEdgePort_(edge_invalidation_server_recvreq_startport, edge_idx);
     }
 
     uint16_t Util::getCloudRecvreqPort(const uint32_t& cloud_idx)
@@ -349,6 +352,20 @@ namespace covered
             cloud_recvreq_port = cloud_recvreq_startport;
         }
         return covered::Util::toUint16(cloud_recvreq_port);
+    }
+
+    uint16_t Util::getEdgePort_(const int64_t& start_port, const uint32_t edge_idx)
+    {
+        int64_t edge_port = 0;
+        if (covered::Param::isSimulation())
+        {
+            edge_port = start_port + edge_idx;
+        }
+        else
+        {
+            edge_port = start_port;
+        }
+        return covered::Util::toUint16(edge_port);
     }
 
     // (5) Network

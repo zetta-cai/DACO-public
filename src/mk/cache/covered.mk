@@ -40,7 +40,7 @@ DEPS += $(COOPERATION_SRCFILES:.c=.d)
 CLEANS += $(COOPERATION_OBJECTS) $(COOPERATION_SHARED_OBJECTS)
 
 # edge module
-EDGE_SRCFILES := $(wildcard $(COVERED_DIRPATH)/edge/*.c)
+EDGE_SRCFILES := $(wildcard $(COVERED_DIRPATH)/edge/*.c) $(wildcard $(COVERED_DIRPATH)/edge/beacon_server/*.c) $(wildcard $(COVERED_DIRPATH)/edge/cache_server/*.c) $(wildcard $(COVERED_DIRPATH)/edge/invalidation_server/*.c)
 EDGE_OBJECTS += $(EDGE_SRCFILES:.c=.o)
 EDGE_SHARED_OBJECTS += $(EDGE_SRCFILES:.c=.shared.o)
 DEPS += $(EDGE_SRCFILES:.c=.d)

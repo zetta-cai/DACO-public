@@ -14,7 +14,9 @@ namespace covered
     const std::string Config::CLOUD_RECVREQ_STARTPORT_KEYSTR("cloud_recvreq_startport");
     const std::string Config::CLOUD_ROCKSDB_BASEDIR_KEYSTR("cloud_rocksdb_basedir");
     const std::string Config::EDGE_IPSTRS_KEYSTR("edge_ipstrs");
-    const std::string Config::EDGE_RECVREQ_STARTPORT_KEYSTR("edge_recvreq_startport");
+    const std::string Config::EDGE_BEACON_SERVER_RECVREQ_STARTPORT_KEYSTR("edge_beacon_server_recvreq_startport");
+    const std::string Config::EDGE_CACHE_SERVER_RECVREQ_STARTPORT_KEYSTR("edge_cache_server_recvreq_startport");
+    const std::string Config::EDGE_INVALIDATION_SERVER_RECVREQ_STARTPORT_KEYSTR("edge_invalidation_server_recvreq_startport");
     const std::string Config::FACEBOOK_CONFIG_FILEPATH_KEYSTR("facebook_config_filepath");
     const std::string Config::LATENCY_HISTOGRAM_SIZE_KEYSTR("latency_histogram_size");
     const std::string Config::OUTPUT_BASEDIR_KEYSTR("output_basedir");
@@ -29,7 +31,9 @@ namespace covered
     uint16_t Config::cloud_recvreq_startport_ = 4100; // [4096, 65536]
     std::string Config::cloud_rocksdb_basedir_("/tmp/cloud");
     std::vector<std::string> Config::edge_ipstrs_(0);
-    uint16_t Config::edge_recvreq_startport_ = 4200; // [4096, 65536]
+    uint16_t Config::edge_beacon_server_recvreq_startport_ = 4200; // [4096, 65536]
+    uint16_t Config::edge_cache_server_recvreq_startport_ = 4300; // [4096, 65536]
+    uint16_t Config::edge_invalidation_server_recvreq_startport_ = 4400; // [4096, 65536]
     std::string Config::facebook_config_filepath_("lib/CacheLib/cachelib/cachebench/test_configs/hit_ratio/cdn/config.json");
     uint32_t Config::latency_histogram_size_ = 1000000; // Track latency up to 1000 ms
     std::string Config::output_basedir_("output");
@@ -71,11 +75,23 @@ namespace covered
                     edge_ipstrs_.push_back(static_cast<std::string>(iter->get_string()));
                 }
             }
-            kv_ptr = find_(EDGE_RECVREQ_STARTPORT_KEYSTR);
+            kv_ptr = find_(EDGE_BEACON_SERVER_RECVREQ_STARTPORT_KEYSTR);
             if (kv_ptr != NULL)
             {
                 int64_t tmp_port = kv_ptr->value().get_int64();
-                edge_recvreq_startport_ = Util::toUint16(tmp_port);
+                edge_beacon_server_recvreq_startport_ = Util::toUint16(tmp_port);
+            }
+            kv_ptr = find_(EDGE_CACHE_SERVER_RECVREQ_STARTPORT_KEYSTR);
+            if (kv_ptr != NULL)
+            {
+                int64_t tmp_port = kv_ptr->value().get_int64();
+                edge_cache_server_recvreq_startport_ = Util::toUint16(tmp_port);
+            }
+            kv_ptr = find_(EDGE_INVALIDATION_SERVER_RECVREQ_STARTPORT_KEYSTR);
+            if (kv_ptr != NULL)
+            {
+                int64_t tmp_port = kv_ptr->value().get_int64();
+                edge_invalidation_server_recvreq_startport_ = Util::toUint16(tmp_port);
             }
             kv_ptr = find_(FACEBOOK_CONFIG_FILEPATH_KEYSTR);
             if (kv_ptr != NULL)
@@ -155,10 +171,22 @@ namespace covered
         }
     }
 
-    uint16_t Config::getEdgeRecvreqStartport()
+    uint16_t Config::getEdgeBeaconServerRecvreqStartport()
     {
         checkIsValid_();
-        return edge_recvreq_startport_;
+        return edge_beacon_server_recvreq_startport_;
+    }
+
+    uint16_t Config::getEdgeCacheServerRecvreqStartport()
+    {
+        checkIsValid_();
+        return edge_cache_server_recvreq_startport_;
+    }
+
+    uint16_t Config::getEdgeInvalidationServerRecvreqStartport()
+    {
+        checkIsValid_();
+        return edge_invalidation_server_recvreq_startport_;
     }
 
     std::string Config::getFacebookConfigFilepath()
@@ -193,7 +221,9 @@ namespace covered
         oss << "Cloud ipstr: " << cloud_ipstr_ << std::endl;
         oss << "Cloud recvreq port: " << cloud_recvreq_startport_ << std::endl;
         oss << "Cloud RocksDB base directory: " << cloud_rocksdb_basedir_ << std::endl;
-        oss << "Edge recvreq startport: " << edge_recvreq_startport_ << std::endl;
+        oss << "Edge beacon server recvreq startport: " << edge_beacon_server_recvreq_startport_ << std::endl;
+        oss << "Edge cache server recvreq startport: " << edge_cache_server_recvreq_startport_ << std::endl;
+        oss << "Edge invalidation server recvreq startport: " << edge_invalidation_server_recvreq_startport_ << std::endl;
         oss << "Facebook config filepath: " << facebook_config_filepath_ << std::endl;
         oss << "Version: " << version_;
         return oss.str();

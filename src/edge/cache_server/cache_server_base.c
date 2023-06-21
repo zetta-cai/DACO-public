@@ -1,152 +1,124 @@
-#include "edge/edge_wrapper_base.h"
+#include "edge/cache_server/cache_server_base.h"
 
 #include <assert.h>
-#include <sstream>
 
 #include "common/config.h"
 #include "common/param.h"
-#include "common/util.h"
-#include "edge/basic_edge_wrapper.h"
-#include "edge/covered_edge_wrapper.h"
 #include "message/data_message.h"
-#include "message/message_base.h"
 #include "network/network_addr.h"
 #include "network/propagation_simulator.h"
 
 namespace covered
 {
-    const std::string EdgeWrapperBase::kClassName("EdgeWrapperBase");
+    const std::string CacheServerBase::kClassName("CacheServerBase");
 
-    EdgeWrapperBase* EdgeWrapperBase::getEdgeWrapper(const std::string& cache_name, const std::string& hash_name, EdgeParam* edge_param_ptr, const uint32_t& capacity_bytes)
+    CacheServerBase* CacheServerBase::getCacheServer(EdgeWrapper* edge_wrapper_ptr)
     {
-        EdgeWrapperBase* edge_wrapper_ptr = NULL;
+        CacheServerBase* cache_server_ptr = NULL;
 
+        assert(edge_wrapper_ptr != NULL);
+        std::string cache_name = edge_wrapper_ptr->cache_name_;
         if (cache_name == Param::COVERED_CACHE_NAME)
         {
-            edge_wrapper_ptr = new CoveredEdgeWrapper(cache_name, hash_name, edge_param_ptr, capacity_bytes);
+            //cache_server_ptr = new CoveredCacheServer(edge_wrapper_ptr);
         }
         else
         {
-            edge_wrapper_ptr = new BasicEdgeWrapper(cache_name, hash_name, edge_param_ptr, capacity_bytes);
+            //cache_server_ptr = new BasicCacheServer(edge_wrapper_ptr);
         }
 
-        assert(edge_wrapper_ptr != NULL);
-        return edge_wrapper_ptr;
+        assert(cache_server_ptr != NULL);
+        return cache_server_ptr;
     }
 
-    EdgeWrapperBase::EdgeWrapperBase(const std::string& cache_name, const std::string& hash_name, EdgeParam* edge_param_ptr, const uint32_t& capacity_bytes) : cache_name_(cache_name), edge_param_ptr_(edge_param_ptr), capacity_bytes_(capacity_bytes)
+    CacheServerBase::CacheServerBase(EdgeWrapper* edge_wrapper_ptr) : edge_wrapper_ptr_(edge_wrapper_ptr)
     {
-        if (edge_param_ptr == NULL)
-        {
-            Util::dumpErrorMsg(kClassName, "edge_param_ptr is NULL!");
-            exit(1);
-        }
+        assert(edge_wrapper_ptr_ != NULL);
+        uint32_t edge_idx = edge_wrapper_ptr_->edge_param_ptr_->getEdgeIdx();
 
-        // Differentiate different edge nodes
+        // Differentiate cache servers of different edge nodes
         std::ostringstream oss;
-        oss << kClassName << " edge" << edge_param_ptr->getEdgeIdx();
+        oss << kClassName << " edge" << edge_idx;
         base_instance_name_ = oss.str();
 
         // Allocate per-key rwlock for serializability
-        perkey_rwlock_for_serializability_ptr_ = new PerkeyRwlock(edge_param_ptr->getEdgeIdx());
+        perkey_rwlock_for_serializability_ptr_ = new PerkeyRwlock(edge_idx);
         assert(perkey_rwlock_for_serializability_ptr_ != NULL);
-        
-        // Allocate local edge cache to store hot objects
-        edge_cache_ptr_ = CacheWrapperBase::getEdgeCache(cache_name_, edge_param_ptr);
-        assert(edge_cache_ptr_ != NULL);
 
-        // Allocate cooperation wrapper for cooperative edge caching
-        cooperation_wrapper_ptr_ = CooperationWrapperBase::getCooperationWrapper(cache_name, hash_name, edge_param_ptr);
-        assert(cooperation_wrapper_ptr_ != NULL);
+        // Prepare a socket server on recvreq port for cache server
+        uint16_t edge_cache_server_recvreq_port = Util::getEdgeCacheServerRecvreqPort(edge_idx);
+        NetworkAddr host_addr(Util::ANY_IPSTR, edge_cache_server_recvreq_port);
+        edge_cache_server_recvreq_socket_server_ptr_ = new UdpSocketWrapper(SocketRole::kSocketServer, host_addr);
+        assert(edge_cache_server_recvreq_socket_server_ptr_ != NULL);
 
-        // Prepare a socket server on recvreq port
-        uint32_t edge_idx = edge_param_ptr_->getEdgeIdx();
-        uint16_t edge_recvreq_port = Util::getEdgeRecvreqPort(edge_idx);
-        NetworkAddr host_addr(Util::ANY_IPSTR, edge_recvreq_port);
-        edge_recvreq_socket_server_ptr_ = new UdpSocketWrapper(SocketRole::kSocketServer, host_addr);
-        assert(edge_recvreq_socket_server_ptr_ != NULL);
-
-        // Prepare a socket client to cloud recvreq port
+        // Prepare a socket client to cloud recvreq port for cache server
         std::string cloud_ipstr = Config::getCloudIpstr();
         uint16_t cloud_recvreq_port = Util::getCloudRecvreqPort(0); // TODO: only support 1 cloud node now!
         NetworkAddr remote_addr(cloud_ipstr, cloud_recvreq_port);
-        edge_sendreq_tocloud_socket_client_ptr_ = new UdpSocketWrapper(SocketRole::kSocketClient, remote_addr);
-        assert(edge_sendreq_tocloud_socket_client_ptr_ != NULL);
+        edge_cache_server_sendreq_tocloud_socket_client_ptr_ = new UdpSocketWrapper(SocketRole::kSocketClient, remote_addr);
+        assert(edge_cache_server_sendreq_tocloud_socket_client_ptr_ != NULL);
     }
-        
-    EdgeWrapperBase::~EdgeWrapperBase()
+
+    CacheServerBase::~CacheServerBase()
     {
-        // NOTE: no need to delete edge_param_ptr, as it is maintained outside EdgeWrapperBase
+        // NOTE: no need to release edge_wrapper_ptr_, which is maintained outside CacheServerBase
 
         // Release per-key rwlock
         assert(perkey_rwlock_for_serializability_ptr_ != NULL);
         delete perkey_rwlock_for_serializability_ptr_;
         perkey_rwlock_for_serializability_ptr_ = NULL;
 
-        // Release local edge cache
-        assert(edge_cache_ptr_ != NULL);
-        delete edge_cache_ptr_;
-        edge_cache_ptr_ = NULL;
-
-        // Release cooperative cache wrapper
-        assert(cooperation_wrapper_ptr_ != NULL);
-        delete cooperation_wrapper_ptr_;
-        cooperation_wrapper_ptr_ = NULL;
-
         // Release the socket server on recvreq port
-        assert(edge_recvreq_socket_server_ptr_ != NULL);
-        delete edge_recvreq_socket_server_ptr_;
-        edge_recvreq_socket_server_ptr_ = NULL;
+        assert(edge_cache_server_recvreq_socket_server_ptr_ != NULL);
+        delete edge_cache_server_recvreq_socket_server_ptr_;
+        edge_cache_server_recvreq_socket_server_ptr_ = NULL;
 
         // Release the socket client to cloud
-        assert(edge_sendreq_tocloud_socket_client_ptr_ != NULL);
-        delete edge_sendreq_tocloud_socket_client_ptr_;
-        edge_sendreq_tocloud_socket_client_ptr_ = NULL;
+        assert(edge_cache_server_sendreq_tocloud_socket_client_ptr_ != NULL);
+        delete edge_cache_server_sendreq_tocloud_socket_client_ptr_;
+        edge_cache_server_sendreq_tocloud_socket_client_ptr_ = NULL;
     }
 
-    void EdgeWrapperBase::start()
+    void CacheServerBase::start()
     {
-        assert(edge_param_ptr_ != NULL);
-        assert(edge_recvreq_socket_server_ptr_ != NULL);
+        assert(edge_wrapper_ptr_ != NULL);
+        assert(edge_wrapper_ptr_->edge_param_ptr_ != NULL);
+        assert(edge_cache_server_recvreq_socket_server_ptr_ != NULL);
 
         bool is_finish = false; // Mark if edge node is finished
-        while (edge_param_ptr_->isEdgeRunning()) // edge_running_ is set as true by default
+        while (edge_wrapper_ptr_->edge_param_ptr_->isEdgeRunning()) // edge_running_ is set as true by default
         {
-            // Receive the message payload of data (local/redirected/global) or control requests
-            DynamicArray request_msg_payload;
-            NetworkAddr request_network_addr;
-            bool is_timeout = edge_recvreq_socket_server_ptr_->recv(request_msg_payload, request_network_addr);
+            // Receive the message payload of data (local/redirected) requests
+            DynamicArray data_request_msg_payload;
+            NetworkAddr data_request_network_addr; // clients or neighbor edge nodes
+            bool is_timeout = edge_cache_server_recvreq_socket_server_ptr_->recv(data_request_msg_payload, data_request_network_addr);
             if (is_timeout == true) // Timeout-and-retry
             {
                 continue; // Retry to receive a message if edge is still running
             } // End of (is_timeout == true)
             else
             {
-                assert(request_network_addr.isValid());
+                assert(data_request_network_addr.isValid());
                 
-                MessageBase* request_ptr = MessageBase::getRequestFromMsgPayload(request_msg_payload);
-                assert(request_ptr != NULL);
+                MessageBase* data_request_ptr = MessageBase::getRequestFromMsgPayload(data_request_msg_payload);
+                assert(data_request_ptr != NULL);
 
-                if (request_ptr->isDataRequest()) // Data requests (e.g., local/redirected requests)
+                if (data_request_ptr->isDataRequest()) // Data requests (e.g., local/redirected requests)
                 {
-                    is_finish = processDataRequest_(request_ptr);
-                }
-                else if (request_ptr->isControlRequest()) // Control requests (e.g., invalidation and cache admission/eviction requests)
-                {
-                    is_finish = processControlRequest_(request_ptr, request_network_addr);
+                    is_finish = processDataRequest_(data_request_ptr);
                 }
                 else
                 {
                     std::ostringstream oss;
-                    oss << "invalid message type " << MessageBase::messageTypeToString(request_ptr->getMessageType()) << " for start()!";
+                    oss << "invalid message type " << MessageBase::messageTypeToString(data_request_ptr->getMessageType()) << " for start()!";
                     Util::dumpErrorMsg(base_instance_name_, oss.str());
                     exit(1);
                 }
 
                 // Release messages
-                assert(request_ptr != NULL);
-                delete request_ptr;
-                request_ptr = NULL;
+                assert(data_request_ptr != NULL);
+                delete data_request_ptr;
+                data_request_ptr = NULL;
 
                 if (is_finish) // Check is_finish
                 {
@@ -154,11 +126,13 @@ namespace covered
                 }
             } // End of (is_timeout == false)
         } // End of while loop
+
+        return;
     }
 
-    // (1) Data requests
+    // (1) Process data requests
 
-    bool EdgeWrapperBase::processDataRequest_(MessageBase* data_request_ptr)
+    bool CacheServerBase::processDataRequest_(MessageBase* data_request_ptr)
     {
         // No need to acquire per-key rwlock for serializability, which will be done in processLocalGetRequest_() or processLocalWriteRequest_()
 
@@ -201,7 +175,7 @@ namespace covered
         return is_finish;
     }
 
-    bool EdgeWrapperBase::processLocalGetRequest_(MessageBase* local_request_ptr) const
+    bool CacheServerBase::processLocalGetRequest_(MessageBase* local_request_ptr) const
     {
         // Get key and value from local request if any
         assert(local_request_ptr != NULL && local_request_ptr->getMessageType() == MessageType::kLocalGetRequest);
@@ -219,14 +193,15 @@ namespace covered
             }
         }
 
-        assert(edge_cache_ptr_ != NULL);
-        assert(cooperation_wrapper_ptr_ != NULL);
+        assert(edge_wrapper_ptr_ != NULL);
+        assert(edge_wrapper_ptr_->edge_cache_ptr_ != NULL);
+        assert(edge_wrapper_ptr_->cooperation_wrapper_ptr_ != NULL);
 
         bool is_finish = false; // Mark if edge node is finished
         Hitflag hitflag = Hitflag::kGlobalMiss;
 
         // Access local edge cache (current edge node is the closest edge node)
-        bool is_local_cached_and_valid = edge_cache_ptr_->get(tmp_key, tmp_value);
+        bool is_local_cached_and_valid = edge_wrapper_ptr_->edge_cache_ptr_->get(tmp_key, tmp_value);
         if (is_local_cached_and_valid) // local cached and valid
         {
             hitflag = Hitflag::kLocalHit;
@@ -237,7 +212,7 @@ namespace covered
         if (!is_local_cached_and_valid) // not local cached or invalid
         {
             // Get data from some target edge node for local cache miss
-            is_finish = cooperation_wrapper_ptr_->get(tmp_key, tmp_value, is_cooperative_cached_and_valid);
+            is_finish = edge_wrapper_ptr_->cooperation_wrapper_ptr_->get(tmp_key, tmp_value, is_cooperative_cached_and_valid);
             if (is_finish) // Edge node is NOT running
             {
                 perkey_rwlock_for_serializability_ptr_->unlock_shared(tmp_key);
@@ -273,7 +248,7 @@ namespace covered
         DynamicArray local_response_msg_payload(local_get_response.getMsgPayloadSize());
         local_get_response.serialize(local_response_msg_payload);
         PropagationSimulator::propagateFromEdgeToClient();
-        edge_recvreq_socket_server_ptr_->send(local_response_msg_payload);
+        edge_cache_server_recvreq_socket_server_ptr_->send(local_response_msg_payload);
 
         // TMPDEBUG
         std::ostringstream oss;
@@ -284,7 +259,7 @@ namespace covered
         return is_finish;
     }
 
-    bool EdgeWrapperBase::processLocalWriteRequest_(MessageBase* local_request_ptr)
+    bool CacheServerBase::processLocalWriteRequest_(MessageBase* local_request_ptr)
     {
         // Get key and value from local request if any
         assert(local_request_ptr != NULL);
@@ -321,7 +296,8 @@ namespace covered
             }
         }
         
-        assert(edge_cache_ptr_ != NULL);
+        assert(edge_wrapper_ptr_ != NULL);
+        assert(edge_wrapper_ptr_->edge_cache_ptr_ != NULL);
 
         bool is_finish = false; // Mark if edge node is finished
         const Hitflag hitflag = Hitflag::kGlobalMiss; // Must be global miss due to write-through policy
@@ -359,14 +335,14 @@ namespace covered
         // NOTE: message type has been checked, which must be one of the following two types
         if (local_request_ptr->getMessageType() == MessageType::kLocalPutRequest)
         {
-            is_local_cached = edge_cache_ptr_->update(tmp_key, tmp_value);
+            is_local_cached = edge_wrapper_ptr_->edge_cache_ptr_->update(tmp_key, tmp_value);
 
             // Prepare LocalPutResponse for client
             local_response_ptr = new LocalPutResponse(tmp_key, hitflag);
         }
         else if (local_request_ptr->getMessageType() == MessageType::kLocalDelRequest)
         {
-            is_local_cached = edge_cache_ptr_->remove(tmp_key);
+            is_local_cached = edge_wrapper_ptr_->edge_cache_ptr_->remove(tmp_key);
 
             // Prepare LocalDelResponse for client
             local_response_ptr = new LocalDelResponse(tmp_key, hitflag);
@@ -388,7 +364,7 @@ namespace covered
             DynamicArray local_response_msg_payload(local_response_ptr->getMsgPayloadSize());
             local_response_ptr->serialize(local_response_msg_payload);
             PropagationSimulator::propagateFromEdgeToClient();
-            edge_recvreq_socket_server_ptr_->send(local_response_msg_payload);
+            edge_cache_server_recvreq_socket_server_ptr_->send(local_response_msg_payload);
         }
 
         // Release response message
@@ -400,7 +376,7 @@ namespace covered
         return is_finish;
     }
 
-    bool EdgeWrapperBase::processRedirectedRequest_(MessageBase* redirected_request_ptr)
+    bool CacheServerBase::processRedirectedRequest_(MessageBase* redirected_request_ptr)
     {
         // No need to acquire per-key rwlock for serializability, which will be done in processRedirectedGetRequest_()
 
@@ -424,10 +400,11 @@ namespace covered
         return is_finish;
     }
 
-    bool EdgeWrapperBase::fetchDataFromCloud_(const Key& key, Value& value) const
+    bool CacheServerBase::fetchDataFromCloud_(const Key& key, Value& value) const
     {
         // No need to acquire per-key rwlock for serializability, which has been done in processLocalGetRequest_()
 
+        // TODO: END HERE
         assert(edge_param_ptr_ != NULL);
         assert(edge_sendreq_tocloud_socket_client_ptr_ != NULL);
 
@@ -490,7 +467,7 @@ namespace covered
         return is_finish;
     }
 
-    bool EdgeWrapperBase::writeDataToCloud_(const Key& key, const Value& value, const MessageType& message_type)
+    bool CacheServerBase::writeDataToCloud_(const Key& key, const Value& value, const MessageType& message_type)
     {
         // No need to acquire per-key rwlock for serializability, which has been done in processLocalWriteRequest_()
         
@@ -563,7 +540,7 @@ namespace covered
         return is_finish;
     }
 
-    void EdgeWrapperBase::tryToUpdateLocalEdgeCache_(const Key& key, const Value& value) const
+    void CacheServerBase::tryToUpdateLocalEdgeCache_(const Key& key, const Value& value) const
     {
         // No need to acquire per-key rwlock for serializability, which has been done in processLocalGetRequest_()
         
@@ -605,7 +582,7 @@ namespace covered
         return;
     }
 
-    void EdgeWrapperBase::tryToTriggerIndependentAdmission_(const Key& key, const Value& value) const
+    void CacheServerBase::tryToTriggerIndependentAdmission_(const Key& key, const Value& value) const
     {
         // No need to acquire per-key rwlock for serializability, which has been done in processLocalGetRequest_(), processLocalWriteRequest_(), and processRedirectedGetRequest_()
 
@@ -614,35 +591,5 @@ namespace covered
         {
             triggerIndependentAdmission_(key, value);
         }
-    }
-
-    // (2) Control requests
-
-    bool EdgeWrapperBase::processControlRequest_(MessageBase* control_request_ptr, const NetworkAddr& closest_edge_addr)
-    {
-        // No need to acquire per-key rwlock for serializability, which will be done in processDirectoryLookupRequest_() or processDirectoryUpdateRequest_() or processOtherControlRequest_()
-
-        assert(control_request_ptr != NULL && control_request_ptr->isControlRequest());
-        assert(edge_cache_ptr_ != NULL);
-
-        bool is_finish = false; // Mark if edge node is finished
-
-        MessageType message_type = control_request_ptr->getMessageType();
-        if (message_type == MessageType::kDirectoryLookupRequest) // TODO: control_request_ptr->isDirectoryLookupRequest() for kCoveredDirectoryLookupRequest
-        {
-            is_finish = processDirectoryLookupRequest_(control_request_ptr, closest_edge_addr);
-        }
-        else if (message_type == MessageType::kDirectoryUpdateRequest) // TODO: control_request_ptr->isDirectoryUpdateRequest() for kCoveredDirectoryUpdateRequest
-        {
-            is_finish = processDirectoryUpdateRequest_(control_request_ptr);
-        }
-        else
-        {
-            // NOTE: only COVERED has other control requests to process
-            is_finish = processOtherControlRequest_(control_request_ptr);
-        }
-        // TODO: invalidation and cache admission/eviction requests for control message
-        // TODO: reply control response message to a beacon node
-        return is_finish;
     }
 }
