@@ -34,10 +34,10 @@ namespace covered
 
         // NOTE: we use edge0 as default remote address, but we will reset remote address of the socket clients based on the key later
         std::string edge0_ipstr = Config::getEdgeIpstr(0);
-        uint16_t edge0_port = Util::getEdgeRecvreqPort(0);
-        NetworkAddr edge0_addr(edge0_ipstr, edge0_port);
-        edge_sendreq_toclosest_socket_client_ptr_ = new UdpSocketWrapper(SocketRole::kSocketClient, edge0_addr);
-        assert(edge_sendreq_toclosest_socket_client_ptr_ != NULL);
+        uint16_t edge0_cache_server_port = Util::getEdgeCacheServerRecvreqPort(0);
+        NetworkAddr edge0_cache_server_addr(edge0_ipstr, edge0_cache_server_port);
+        edge_sendreq_toclosest_cache_server_socket_client_ptr_ = new UdpSocketWrapper(SocketRole::kSocketClient, edge0_cache_server_addr);
+        assert(edge_sendreq_toclosest_cache_server_socket_client_ptr_ != NULL);
     }
 
     BlockTracker::~BlockTracker()
@@ -48,9 +48,9 @@ namespace covered
         delete rwlock_for_cooperation_metadata_ptr_;
         rwlock_for_cooperation_metadata_ptr_ = NULL;
 
-        assert(edge_sendreq_toclosest_socket_client_ptr_ != NULL);
-        delete edge_sendreq_toclosest_socket_client_ptr_;
-        edge_sendreq_toclosest_socket_client_ptr_ = NULL;
+        assert(edge_sendreq_toclosest_cache_server_socket_client_ptr_ != NULL);
+        delete edge_sendreq_toclosest_cache_server_socket_client_ptr_;
+        edge_sendreq_toclosest_cache_server_socket_client_ptr_ = NULL;
     }
 
     bool BlockTracker::isBeingWritten(const Key& key) const
@@ -191,7 +191,7 @@ namespace covered
     {
         // No need to acquire a lock, as unblock() has acquired a write lock
 
-        assert(edge_sendreq_toclosest_socket_client_ptr_ != NULL);
+        assert(edge_sendreq_toclosest_cache_server_socket_client_ptr_ != NULL);
 
         bool is_finish = false;
 
@@ -216,7 +216,7 @@ namespace covered
                     continue;
                 }
 
-                const NetworkAddr& tmp_network_addr = closest_edges[edgeidx_for_request];           
+                const NetworkAddr& tmp_network_addr = closest_edges[edgeidx_for_request]; // cache server address of a blocked closest edge node          
                 sendFinishBlockRequest_(key, tmp_network_addr);     
             } // End of edgeidx_for_request
 
@@ -225,7 +225,7 @@ namespace covered
             {
                 DynamicArray control_response_msg_payload;
                 NetworkAddr control_response_addr;
-                bool is_timeout = edge_sendreq_toclosest_socket_client_ptr_->recv(control_response_msg_payload, control_response_addr);
+                bool is_timeout = edge_sendreq_toclosest_cache_server_socket_client_ptr_->recv(control_response_msg_payload, control_response_addr);
                 if (is_timeout)
                 {
                     if (!edge_param_ptr_->isEdgeRunning())
@@ -295,11 +295,11 @@ namespace covered
         finish_block_request.serialize(control_request_msg_payload);
 
         // Set remote address to the closest edge node
-        edge_sendreq_toclosest_socket_client_ptr_->setRemoteAddrForClient(closest_edge_addr);
+        edge_sendreq_toclosest_cache_server_socket_client_ptr_->setRemoteAddrForClient(closest_edge_addr);
 
         // Send FinishBlockRequest to the closest edge node
         PropagationSimulator::propagateFromNeighborToEdge();
-        edge_sendreq_toclosest_socket_client_ptr_->send(control_request_msg_payload);
+        edge_sendreq_toclosest_cache_server_socket_client_ptr_->send(control_request_msg_payload);
 
         return;
     }

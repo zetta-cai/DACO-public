@@ -4,6 +4,7 @@
 #include <sstream>
 
 #include "common/util.h"
+#include "edge/beacon_server/beacon_server_base.h"
 #include "edge/cache_server/cache_server_base.h"
 
 namespace covered
@@ -77,7 +78,15 @@ namespace covered
             exit(1);
         }
 
-        // TODO: Launch invalidations server
+        // Launch invalidations server
+        pthread_returncode = pthread_create(&invalidation_server_thread, NULL, launchInvalidationServer_, (void*)(this));
+        if (pthread_returncode != 0)
+        {
+            std::ostringstream oss;
+            oss << "edge " << edge_idx << " failed to launch invalidation server (error code: " << pthread_returncode << ")" << std::endl;
+            covered::Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
 
         // Wait for beacon server
         pthread_returncode = pthread_join(beacon_server_thread, NULL); // void* retval = NULL
@@ -99,12 +108,29 @@ namespace covered
             exit(1);
         }
 
-        // TODO: Wait for invalidation server
+        // Wait for invalidation server
+        pthread_returncode = pthread_join(invalidation_server_thread, NULL); // void* retval = NULL
+        if (pthread_returncode != 0)
+        {
+            std::ostringstream oss;
+            oss << "edge " << edge_idx << " failed to join invalidation server (error code: " << pthread_returncode << ")" << std::endl;
+            covered::Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
+
+        return;
     }
 
-    void* launchBeaconServer_(void* edge_wrapper_ptr)
+    void* EdgeWrapper::launchBeaconServer_(void* edge_wrapper_ptr)
     {
-        // TODO: END HERE
+        assert(edge_wrapper_ptr != NULL);
+
+        BeaconServerBase* beacon_server_ptr = BeaconServerBase::getBeaconServer((EdgeWrapper*)edge_wrapper_ptr);
+        assert(beacon_server_ptr != NULL);
+        beacon_server_ptr->start();
+
+        pthread_exit(NULL);
+        return NULL;
     }
     
     void* EdgeWrapper::launchCacheServer_(void* edge_wrapper_ptr)
@@ -119,37 +145,16 @@ namespace covered
         return NULL;
     }
     
-    void* launchInvalidationServer_(void* edge_wrapper_ptr);
-
-    
-
-    // (2) Control requests
-
-    bool EdgeWrapper::processControlRequest_(MessageBase* control_request_ptr, const NetworkAddr& closest_edge_addr)
+    void* EdgeWrapper::launchInvalidationServer_(void* edge_wrapper_ptr)
     {
-        // No need to acquire per-key rwlock for serializability, which will be done in processDirectoryLookupRequest_() or processDirectoryUpdateRequest_() or processOtherControlRequest_()
+        assert(edge_wrapper_ptr != NULL);
 
-        assert(control_request_ptr != NULL && control_request_ptr->isControlRequest());
-        assert(edge_cache_ptr_ != NULL);
+        // TODO: uncomment after introducing invalidation server
+        //InvalidationServerBase* invalidation_server_ptr = InvalidationServerBase::getInvalidationServer((EdgeWrapper*)edge_wrapper_ptr);
+        //assert(invalidation_server_ptr != NULL);
+        //invalidation_server_ptr->start();
 
-        bool is_finish = false; // Mark if edge node is finished
-
-        MessageType message_type = control_request_ptr->getMessageType();
-        if (message_type == MessageType::kDirectoryLookupRequest) // TODO: control_request_ptr->isDirectoryLookupRequest() for kCoveredDirectoryLookupRequest
-        {
-            is_finish = processDirectoryLookupRequest_(control_request_ptr, closest_edge_addr);
-        }
-        else if (message_type == MessageType::kDirectoryUpdateRequest) // TODO: control_request_ptr->isDirectoryUpdateRequest() for kCoveredDirectoryUpdateRequest
-        {
-            is_finish = processDirectoryUpdateRequest_(control_request_ptr);
-        }
-        else
-        {
-            // NOTE: only COVERED has other control requests to process
-            is_finish = processOtherControlRequest_(control_request_ptr);
-        }
-        // TODO: invalidation and cache admission/eviction requests for control message
-        // TODO: reply control response message to a beacon node
-        return is_finish;
+        pthread_exit(NULL);
+        return NULL;
     }
 }

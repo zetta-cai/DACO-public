@@ -21,14 +21,13 @@ namespace covered
     private:
         static const std::string kClassName;
 
-        // (1) Data requests
+        // Data requests
 
         // Return if edge node is finished
         virtual bool processRedirectedGetRequest_(MessageBase* redirected_request_ptr) const override;
         virtual void triggerIndependentAdmission_(const Key& key, const Value& value) const override;
 
-        // (2) Member variables
-
+        // Const variable
         std::string instance_name_;
     };
 }

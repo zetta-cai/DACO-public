@@ -1,5 +1,17 @@
 /*
  * BeaconServerBase: listen to receive control requests issued by closest edge nodes; access content directory information for content discovery.
+ *
+ * A. Involved messages triggered by local get requests
+ * (1) Receive/issue directory lookup requests/reponses
+ * (2) Issue/receive finish block requests/responses
+ * (3) Receive/issue directory update requests/reponses
+ * 
+ * B. Involved messages triggered by local put/del requests
+ * (1) Receive/issue acquire writelock requests/responses
+ * (2) Issue/receive invalidation requests/responses
+ * (3) Receive/issue finish write requests/responses
+ * (4) Issue/receive finish block requests/responses
+ * (5) Receive/issue directory update requests/reponses
  * 
  * By Siyuan Sheng (2023.06.21).
  */
@@ -27,11 +39,21 @@ namespace covered
     private:
         static const std::string kClassName;
 
-        // (2) Member variables
+        // Control requests
 
+        // Return if edge node is finished
+        bool processControlRequest_(MessageBase* control_request_ptr, const NetworkAddr& closest_edge_addr);
+        virtual bool processDirectoryLookupRequest_(MessageBase* control_request_ptr, const NetworkAddr& closest_edge_addr) const = 0;
+        virtual bool processDirectoryUpdateRequest_(MessageBase* control_request_ptr) = 0;
+        virtual bool processOtherControlRequest_(MessageBase* control_request_ptr) = 0;
+
+        // Const variable
         std::string base_instance_name_;
+    protected:
+        // Const variable
         const EdgeWrapper* edge_wrapper_ptr_;
 
+        // Non-const individual variable
         UdpSocketWrapper* edge_beacon_server_recvreq_socket_server_ptr_;
     };
 }

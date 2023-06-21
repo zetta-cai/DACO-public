@@ -132,7 +132,7 @@ namespace covered
         return;
     }
 
-    // (1) Process data requests
+    // Data requests
 
     bool CacheServerBase::processDataRequest_(MessageBase* data_request_ptr)
     {
@@ -518,6 +518,7 @@ namespace covered
                 }
                 else
                 {
+                    Util::dumpWarnMsg(base_instance_name_, "edge timeout to wait for GlobalPutResponse/GlobalDelResponse");
                     continue; // Resend the global request message
                 }
             }

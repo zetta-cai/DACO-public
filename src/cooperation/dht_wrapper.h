@@ -26,7 +26,7 @@ namespace covered
 
         uint32_t getBeaconEdgeIdx(const Key& key) const;
         std::string getBeaconEdgeIpstr(const Key& key) const;
-        uint16_t getBeaconEdgeRecvreqPort(const Key& key) const;
+        uint16_t getBeaconEdgeBeaconServerRecvreqPort(const Key& key) const;
     private:
         static const std::string kClassName;
         static const uint32_t DHT_HASH_RING_LENGTH;

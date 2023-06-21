@@ -3,6 +3,8 @@
 #include <assert.h>
 
 #include "common/param.h"
+#include "edge/beacon_server/basic_beacon_server.h"
+#include "edge/beacon_server/covered_beacon_server.h"
 
 namespace covered
 {
@@ -56,46 +58,44 @@ namespace covered
 
     void BeaconServerBase::start()
     {
-        // TODO: END HERE
+        assert(edge_wrapper_ptr_ != NULL);
+        assert(edge_wrapper_ptr_->edge_param_ptr_ != NULL);
+        assert(edge_beacon_server_recvreq_socket_server_ptr_ != NULL);
         
         bool is_finish = false; // Mark if edge node is finished
-        while (edge_param_ptr_->isEdgeRunning()) // edge_running_ is set as true by default
+        while (edge_wrapper_ptr_->edge_param_ptr_->isEdgeRunning()) // edge_running_ is set as true by default
         {
-            // Receive the message payload of data (local/redirected/global) or control requests
-            DynamicArray request_msg_payload;
-            NetworkAddr request_network_addr;
-            bool is_timeout = edge_recvreq_socket_server_ptr_->recv(request_msg_payload, request_network_addr);
+            // Receive the message payload of control requests
+            DynamicArray control_request_msg_payload;
+            NetworkAddr control_request_network_addr;
+            bool is_timeout = edge_beacon_server_recvreq_socket_server_ptr_->recv(control_request_msg_payload, control_request_network_addr);
             if (is_timeout == true) // Timeout-and-retry
             {
                 continue; // Retry to receive a message if edge is still running
             } // End of (is_timeout == true)
             else
             {
-                assert(request_network_addr.isValid());
+                assert(control_request_network_addr.isValid());
                 
-                MessageBase* request_ptr = MessageBase::getRequestFromMsgPayload(request_msg_payload);
-                assert(request_ptr != NULL);
+                MessageBase* control_request_ptr = MessageBase::getRequestFromMsgPayload(control_request_msg_payload);
+                assert(control_request_ptr != NULL);
 
-                if (request_ptr->isDataRequest()) // Data requests (e.g., local/redirected requests)
+                if (control_request_ptr->isControlRequest()) // Control requests (e.g., invalidation and cache admission/eviction requests)
                 {
-                    is_finish = processDataRequest_(request_ptr);
-                }
-                else if (request_ptr->isControlRequest()) // Control requests (e.g., invalidation and cache admission/eviction requests)
-                {
-                    is_finish = processControlRequest_(request_ptr, request_network_addr);
+                    is_finish = processControlRequest_(control_request_ptr, control_request_network_addr);
                 }
                 else
                 {
                     std::ostringstream oss;
-                    oss << "invalid message type " << MessageBase::messageTypeToString(request_ptr->getMessageType()) << " for start()!";
+                    oss << "invalid message type " << MessageBase::messageTypeToString(control_request_ptr->getMessageType()) << " for start()!";
                     Util::dumpErrorMsg(base_instance_name_, oss.str());
                     exit(1);
                 }
 
                 // Release messages
-                assert(request_ptr != NULL);
-                delete request_ptr;
-                request_ptr = NULL;
+                assert(control_request_ptr != NULL);
+                delete control_request_ptr;
+                control_request_ptr = NULL;
 
                 if (is_finish) // Check is_finish
                 {
@@ -103,5 +103,34 @@ namespace covered
                 }
             } // End of (is_timeout == false)
         } // End of while loop
+
+        return;
+    }
+
+    // Control requests
+
+    bool BeaconServerBase::processControlRequest_(MessageBase* control_request_ptr, const NetworkAddr& closest_edge_addr)
+    {
+        assert(control_request_ptr != NULL && control_request_ptr->isControlRequest());
+
+        bool is_finish = false; // Mark if edge node is finished
+
+        MessageType message_type = control_request_ptr->getMessageType();
+        if (message_type == MessageType::kDirectoryLookupRequest) // TODO: control_request_ptr->isDirectoryLookupRequest() for kCoveredDirectoryLookupRequest
+        {
+            is_finish = processDirectoryLookupRequest_(control_request_ptr, closest_edge_addr);
+        }
+        else if (message_type == MessageType::kDirectoryUpdateRequest) // TODO: control_request_ptr->isDirectoryUpdateRequest() for kCoveredDirectoryUpdateRequest
+        {
+            is_finish = processDirectoryUpdateRequest_(control_request_ptr);
+        }
+        else
+        {
+            // NOTE: only COVERED has other control requests to process
+            is_finish = processOtherControlRequest_(control_request_ptr);
+        }
+        // TODO: invalidation and cache admission/eviction requests for control message
+        // TODO: reply control response message to a beacon node
+        return is_finish;
     }
 }

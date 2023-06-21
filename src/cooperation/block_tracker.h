@@ -58,7 +58,7 @@ namespace covered
         perkey_edge_blocklist_t perkey_edge_blocklist_; // a list of blocked closest edge nodes waiting for writes of each given key
 
         // Non-const individual variables
-        UdpSocketWrapper* edge_sendreq_toclosest_socket_client_ptr_;
+        UdpSocketWrapper* edge_sendreq_toclosest_cache_server_socket_client_ptr_;
     };
 }
 

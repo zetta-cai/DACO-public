@@ -59,9 +59,9 @@ namespace covered
         return Config::getEdgeIpstr(beacon_edge_idx);
     }
 
-    uint16_t DhtWrapper::getBeaconEdgeRecvreqPort(const Key& key) const
+    uint16_t DhtWrapper::getBeaconEdgeBeaconServerRecvreqPort(const Key& key) const
     {
         uint32_t beacon_edge_idx = getBeaconEdgeIdx(key);
-        return Util::getEdgeRecvreqPort(beacon_edge_idx);
+        return Util::getEdgeBeaconServerRecvreqPort(beacon_edge_idx);
     }
 }

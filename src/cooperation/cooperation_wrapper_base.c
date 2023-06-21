@@ -48,14 +48,17 @@ namespace covered
         dht_wrapper_ptr_ = new DhtWrapper(hash_name, edge_param_ptr);
         assert(dht_wrapper_ptr_ != NULL);
 
-        // NOTE: we use edge0 as default remote address, but we will reset remote address of the socket clients based on the key later
+        // NOTE: we use beacon server of edge0 as default remote address, but we will reset remote address of the socket clients based on the key later
         std::string edge0_ipstr = Config::getEdgeIpstr(0);
-        uint16_t edge0_port = Util::getEdgeRecvreqPort(0);
-        NetworkAddr edge0_addr(edge0_ipstr, edge0_port);
+        uint16_t edge0_beacon_server_port = Util::getEdgeBeaconServerRecvreqPort(0);
+        NetworkAddr edge0_beacon_server_addr(edge0_ipstr, edge0_beacon_server_port);
+        uint16_t edge0_cache_server_port = Util::getEdgeCacheServerRecvreqPort(0);
+        NetworkAddr edge0_cache_server_addr(edge0_ipstr, edge0_cache_server_port);
 
-        edge_sendreq_tobeacon_socket_client_ptr_  = new UdpSocketWrapper(SocketRole::kSocketClient, edge0_addr);
+        edge_sendreq_tobeacon_socket_client_ptr_  = new UdpSocketWrapper(SocketRole::kSocketClient, edge0_beacon_server_addr);
         assert(edge_sendreq_tobeacon_socket_client_ptr_  != NULL);
-        edge_sendreq_totarget_socket_client_ptr_ = new UdpSocketWrapper(SocketRole::kSocketClient, edge0_addr);
+
+        edge_sendreq_totarget_socket_client_ptr_ = new UdpSocketWrapper(SocketRole::kSocketClient, edge0_cache_server_addr);
         assert(edge_sendreq_totarget_socket_client_ptr_ != NULL);
 
         // Allocate directory information
@@ -317,9 +320,9 @@ namespace covered
 
             // Set remote address such that current edge node can communicate with the beacon node for the key
             std::string beacon_edge_ipstr = dht_wrapper_ptr_->getBeaconEdgeIpstr(key);
-            uint16_t beacon_edge_port = dht_wrapper_ptr_->getBeaconEdgeRecvreqPort(key);
-            NetworkAddr beacon_edge_addr(beacon_edge_ipstr, beacon_edge_port);
-            edge_sendreq_tobeacon_socket_client_ptr_->setRemoteAddrForClient(beacon_edge_addr);
+            uint16_t beacon_edge_beacon_server_port = dht_wrapper_ptr_->getBeaconEdgeBeaconServerRecvreqPort(key);
+            NetworkAddr beacon_edge_beacon_server_addr(beacon_edge_ipstr, beacon_edge_beacon_server_port);
+            edge_sendreq_tobeacon_socket_client_ptr_->setRemoteAddrForClient(beacon_edge_beacon_server_addr);
         }
 
         // TMPDEBUG
@@ -420,9 +423,9 @@ namespace covered
         // Set remote address such that the current edge node can communicate with the target edge node
         uint32_t target_edge_idx = directory_info.getTargetEdgeIdx();
         std::string target_edge_ipstr = Config::getEdgeIpstr(target_edge_idx);
-        uint16_t target_edge_port = Util::getEdgeRecvreqPort(target_edge_idx);
-        NetworkAddr target_edge_addr(target_edge_ipstr, target_edge_port);
-        edge_sendreq_totarget_socket_client_ptr_->setRemoteAddrForClient(target_edge_addr);
+        uint16_t target_edge_cache_server_port = Util::getEdgeCacheServerRecvreqPort(target_edge_idx);
+        NetworkAddr target_edge_cache_server_addr(target_edge_ipstr, target_edge_cache_server_port);
+        edge_sendreq_totarget_socket_client_ptr_->setRemoteAddrForClient(target_edge_cache_server_addr);
 
         // TMPDEBUG
         //std::ostringstream oss;

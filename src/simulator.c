@@ -14,7 +14,7 @@
 #include "cloud/cloud_param.h"
 #include "cloud/cloud_wrapper.h"
 #include "edge/edge_param.h"
-#include "edge/edge_wrapper_base.h"
+#include "edge/edge_wrapper.h"
 #include "statistics/client_statistics_tracker.h"
 #include "workload/workload_wrapper_base.h"
 
@@ -29,7 +29,7 @@ void* launchCloud(void* cloud_param_ptr)
 
 void* launchEdge(void* edge_param_ptr)
 {
-    covered::EdgeWrapperBase* local_edge_ptr = covered::EdgeWrapperBase::getEdgeWrapper(covered::Param::getCacheName(), covered::Param::getHashName(), (covered::EdgeParam*)edge_param_ptr, covered::Param::getCapacityBytes());
+    covered::EdgeWrapper* local_edge_ptr = new covered::EdgeWrapper(covered::Param::getCacheName(), covered::Param::getHashName(), (covered::EdgeParam*)edge_param_ptr, covered::Param::getCapacityBytes());
     assert(local_edge_ptr != NULL);
     local_edge_ptr->start();
 

@@ -15,7 +15,7 @@ namespace covered
     {
         assert(edge_wrapper_ptr_ != NULL);
         assert(edge_wrapper_ptr_->cache_name_ != Param::COVERED_CACHE_NAME);
-        uint32_t edge_idx = edge_wrapper_ptr_->edge_param_ptr->getEdgeIdx();
+        uint32_t edge_idx = edge_wrapper_ptr_->edge_param_ptr_->getEdgeIdx();
 
         // Differentiate BasicCacheServer in different edge nodes
         std::ostringstream oss;
@@ -25,7 +25,7 @@ namespace covered
 
     BasicCacheServer::~BasicCacheServer() {}
 
-    // (1) Data requests
+    // Data requests
 
     bool BasicCacheServer::processRedirectedGetRequest_(MessageBase* redirected_request_ptr) const
     {

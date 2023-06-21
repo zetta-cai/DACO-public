@@ -51,8 +51,8 @@ namespace covered
 
         // Prepare a socket client to closest edge recvreq port
         std::string closest_edge_ipstr = Util::getClosestEdgeIpstr(client_idx);
-        uint16_t closest_edge_recvreq_port = Util::getClosestEdgeRecvreqPort(client_idx);
-        NetworkAddr remote_addr(closest_edge_ipstr, closest_edge_recvreq_port); // Communicate with the closest edge node
+        uint16_t closest_edge_cache_server_recvreq_port = Util::getClosestEdgeCacheServerRecvreqPort(client_idx);
+        NetworkAddr remote_addr(closest_edge_ipstr, closest_edge_cache_server_recvreq_port); // Communicate with the closest edge node
         worker_sendreq_toedge_socket_client_ptr_ = new UdpSocketWrapper(SocketRole::kSocketClient, remote_addr);
         assert(worker_sendreq_toedge_socket_client_ptr_ != NULL);
     }

@@ -29,20 +29,14 @@ namespace covered
         friend class BasicCacheServer;
         friend class CoveredCacheServer;
         friend class BeaconServerBase;
+        friend class BasicBeaconServer;
+        friend class CoveredBeaconServer;
     private:
         static const std::string kClassName;
 
         static void* launchBeaconServer_(void* edge_wrapper_ptr);
         static void* launchCacheServer_(void* edge_wrapper_ptr);
         static void* launchInvalidationServer_(void* edge_wrapper_ptr);
-
-        // (2) Control requests
-
-        // Return if edge node is finished
-        bool processControlRequest_(MessageBase* control_request_ptr, const NetworkAddr& closest_edge_addr);
-        virtual bool processDirectoryLookupRequest_(MessageBase* control_request_ptr, const NetworkAddr& closest_edge_addr) const = 0;
-        virtual bool processDirectoryUpdateRequest_(MessageBase* control_request_ptr) = 0;
-        virtual bool processOtherControlRequest_(MessageBase* control_request_ptr) = 0;
 
         std::string instance_name_;
 

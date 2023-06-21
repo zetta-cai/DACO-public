@@ -24,7 +24,7 @@ namespace covered
 
     CoveredCacheServer::~CoveredCacheServer() {}
 
-    // (1) Data requests
+    // Data requests
 
     bool CoveredCacheServer::processRedirectedGetRequest_(MessageBase* redirected_request_ptr) const
     {

@@ -64,7 +64,7 @@ namespace covered
     private:
         static const std::string kClassName;
 
-        // (1) Process data requests
+        // Data requests
     
         // Return if edge node is finished
         bool processDataRequest_(MessageBase* data_request_ptr);
@@ -83,17 +83,19 @@ namespace covered
         void tryToTriggerIndependentAdmission_(const Key& key, const Value& value) const;
         virtual void triggerIndependentAdmission_(const Key& key, const Value& value) const = 0;
 
-        // (2) Member variables
-
+        // Const variable
         std::string base_instance_name_;
 
+        // Non-const individual variable
         UdpSocketWrapper* edge_cache_server_sendreq_tocloud_socket_client_ptr_;
     protected:
+        // Const variable
         const EdgeWrapper* edge_wrapper_ptr_;
 
         // Guarantee the global serializability for writes of the same key
         mutable PerkeyRwlock* perkey_rwlock_for_serializability_ptr_;
 
+        // Non-const individual variable
         UdpSocketWrapper* edge_cache_server_recvreq_socket_server_ptr_;
     };
 }
