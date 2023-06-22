@@ -59,6 +59,21 @@ namespace covered
         NetworkAddr remote_addr(cloud_ipstr, cloud_recvreq_port);
         edge_cache_server_sendreq_tocloud_socket_client_ptr_ = new UdpSocketWrapper(SocketRole::kSocketClient, remote_addr);
         assert(edge_cache_server_sendreq_tocloud_socket_client_ptr_ != NULL);
+
+        // NOTE: we use beacon server of edge0 as default remote address, but CooperationWrapper will reset remote address of the socket clients based on the key and directory information later
+        std::string edge0_ipstr = Config::getEdgeIpstr(0);
+        uint16_t edge0_beacon_server_port = Util::getEdgeBeaconServerRecvreqPort(0);
+        NetworkAddr edge0_beacon_server_addr(edge0_ipstr, edge0_beacon_server_port);
+        uint16_t edge0_cache_server_port = Util::getEdgeCacheServerRecvreqPort(0);
+        NetworkAddr edge0_cache_server_addr(edge0_ipstr, edge0_cache_server_port);
+
+        // Prepare a socket client to beacon edge node for cache server
+        edge_cache_server_sendreq_tobeacon_socket_client_ptr_  = new UdpSocketWrapper(SocketRole::kSocketClient, edge0_beacon_server_addr);
+        assert(edge_cache_server_sendreq_tobeacon_socket_client_ptr_  != NULL);
+
+        // Prepare a socket client to target edge node for cache server
+        edge_cache_server_sendreq_totarget_socket_client_ptr_ = new UdpSocketWrapper(SocketRole::kSocketClient, edge0_cache_server_addr);
+        assert(edge_cache_server_sendreq_totarget_socket_client_ptr_ != NULL);
     }
 
     CacheServerBase::~CacheServerBase()
@@ -79,6 +94,16 @@ namespace covered
         assert(edge_cache_server_sendreq_tocloud_socket_client_ptr_ != NULL);
         delete edge_cache_server_sendreq_tocloud_socket_client_ptr_;
         edge_cache_server_sendreq_tocloud_socket_client_ptr_ = NULL;
+
+        // Release the socket client to beacon node
+        assert(edge_cache_server_sendreq_tobeacon_socket_client_ptr_ != NULL);
+        delete edge_cache_server_sendreq_tobeacon_socket_client_ptr_ ;
+        edge_cache_server_sendreq_tobeacon_socket_client_ptr_ = NULL;
+
+        // Release the socket client to target ndoe
+        assert(edge_cache_server_sendreq_totarget_socket_client_ptr_ != NULL);
+        delete edge_cache_server_sendreq_totarget_socket_client_ptr_;
+        edge_cache_server_sendreq_totarget_socket_client_ptr_ = NULL;
     }
 
     void CacheServerBase::start()
@@ -214,7 +239,7 @@ namespace covered
         if (!is_local_cached_and_valid) // not local cached or invalid
         {
             // Get data from some target edge node for local cache miss
-            is_finish = edge_wrapper_ptr_->cooperation_wrapper_ptr_->get(tmp_key, tmp_value, is_cooperative_cached_and_valid);
+            is_finish = edge_wrapper_ptr_->cooperation_wrapper_ptr_->get(edge_cache_server_sendreq_tobeacon_socket_client_ptr_, edge_cache_server_sendreq_totarget_socket_client_ptr_, tmp_key, tmp_value, is_cooperative_cached_and_valid);
             if (is_finish) // Edge node is NOT running
             {
                 perkey_rwlock_for_serializability_ptr_->unlock_shared(tmp_key);
@@ -299,27 +324,22 @@ namespace covered
         }
         
         assert(edge_wrapper_ptr_ != NULL);
-        assert(edge_wrapper_ptr_->edge_cache_ptr_ != NULL);
+        assert(edge_wrapper_ptr_->cooperation_wrapper_ptr_ != NULL);
 
         bool is_finish = false; // Mark if edge node is finished
         const Hitflag hitflag = Hitflag::kGlobalMiss; // Must be global miss due to write-through policy
 
-        // TODO: Acquire write lock from beacon node no matter the locally cached object is valid or not
-        // TODO: Update is_finish
-
+        // Acquire write lock from beacon node no matter the locally cached object is valid or not, where the beacon will invalidate all other cache copies for cache coherence
+        bool is_successful = false;
+        is_finish = edge_wrapper_ptr_->cooperation_wrapper_ptr_->acquireWritelock(edge_cache_server_sendreq_tobeacon_socket_client_ptr_, is_successful);
         if (is_finish) // Edge node is NOT running
         {
             perkey_rwlock_for_serializability_ptr_->unlock(tmp_key);
             return is_finish;
         }
-
-        // TODO: Wait for beacon node to invalidate all other cache copies for MSI protocol
-        // TODO: Update is_finish
-
-        if (is_finish) // Edge node is NOT running
+        else
         {
-            perkey_rwlock_for_serializability_ptr_->unlock(tmp_key);
-            return is_finish;
+            assert(is_successful == true); // Must be true after acquiring a write lock from beacon node
         }
 
         // Send request to cloud for write-through policy
@@ -580,13 +600,16 @@ namespace covered
     {
         // No need to acquire per-key rwlock for serializability, which has been done in processLocalGetRequest_() or processLocalWriteRequest_()
 
+        assert(edge_wrapper_ptr_ != NULL);
+        assert(edge_wrapper_ptr_->edge_cache_ptr_ != NULL);
+
         bool is_local_cached_after_udpate = edge_wrapper_ptr_->edge_cache_ptr_->update(key, value);
 
         // Evict until used bytes <= capacity bytes
         while (true)
         {
             // Data and metadata for local edge cache, and cooperation metadata
-            uint32_t used_bytes = edge_wrapper_ptr_->edge_cache_ptr_->getSizeForCapacity() + edge_wrapper_ptr_->cooperation_wrapper_ptr_->getSizeForCapacity();
+            uint32_t used_bytes = edge_wrapper_ptr_->getSizeForCapacity_();
             if (used_bytes <= edge_wrapper_ptr_->capacity_bytes_) // Not exceed capacity limitation
             {
                 break;
@@ -597,7 +620,7 @@ namespace covered
                 Value victim_value;
                 edge_wrapper_ptr_->edge_cache_ptr_->evict(victim_key, victim_value);
                 bool _unused_is_being_written = false; // NOTE: is_being_written does NOT affect cache eviction
-                edge_wrapper_ptr_->cooperation_wrapper_ptr_->updateDirectory(victim_key, false, _unused_is_being_written);
+                edge_wrapper_ptr_->cooperation_wrapper_ptr_->updateDirectory(edge_cache_server_sendreq_tobeacon_socket_client_ptr_, victim_key, false, _unused_is_being_written);
 
                 continue;
             }
@@ -609,6 +632,9 @@ namespace covered
     bool CacheServerBase::removeLocalEdgeCache_(const Key& key) const
     {
         // No need to acquire per-key rwlock for serializability, which has been done in processLocalGetRequest_() or processLocalWriteRequest_()
+
+        assert(edge_wrapper_ptr_ != NULL);
+        assert(edge_wrapper_ptr_->edge_cache_ptr_ != NULL);
 
         bool is_local_cached_after_udpate = edge_wrapper_ptr_->edge_cache_ptr_->remove(key);
 

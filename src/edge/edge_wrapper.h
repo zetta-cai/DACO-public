@@ -38,6 +38,8 @@ namespace covered
         static void* launchCacheServer_(void* edge_wrapper_ptr);
         static void* launchInvalidationServer_(void* edge_wrapper_ptr);
 
+        uint32_t getSizeForCapacity_() const;
+
         std::string instance_name_;
 
         // Const shared variables

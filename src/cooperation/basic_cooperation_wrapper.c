@@ -26,14 +26,14 @@ namespace covered
 
     // (1) Get data from target edge node
 
-    bool BasicCooperationWrapper::lookupBeaconDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
+    bool BasicCooperationWrapper::lookupBeaconDirectory_(UdpSocketWrapper* sendreq_tobeacon_socket_client_ptr, const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
     {
         // NOTE: no need to acquire a read lock for cooperation metadata due to accessing const shared variables and non-const individual variables
 
         // The current edge node must NOT be the beacon node for the key
         verifyCurrentIsNotBeacon_(key);
 
-        assert(edge_sendreq_tobeacon_socket_client_ptr_ != NULL);
+        assert(sendreq_tobeacon_socket_client_ptr != NULL);
         assert(edge_param_ptr_ != NULL);
 
         bool is_finish = false;
@@ -47,11 +47,11 @@ namespace covered
         {
             // Send the control request to the beacon node
             PropagationSimulator::propagateFromEdgeToNeighbor();
-            edge_sendreq_tobeacon_socket_client_ptr_->send(control_request_msg_payload);
+            sendreq_tobeacon_socket_client_ptr->send(control_request_msg_payload);
 
             // Receive the control repsonse from the beacon node
             DynamicArray control_response_msg_payload;
-            bool is_timeout = edge_sendreq_tobeacon_socket_client_ptr_->recv(control_response_msg_payload);
+            bool is_timeout = sendreq_tobeacon_socket_client_ptr->recv(control_response_msg_payload);
             if (is_timeout)
             {
                 if (!edge_param_ptr_->isEdgeRunning())
@@ -87,11 +87,11 @@ namespace covered
         return is_finish;
     }
 
-    bool BasicCooperationWrapper::redirectGetToTarget_(const Key& key, Value& value, bool& is_cooperative_cached, bool& is_valid) const
+    bool BasicCooperationWrapper::redirectGetToTarget_(UdpSocketWrapper* sendreq_totarget_socket_client_ptr, const Key& key, Value& value, bool& is_cooperative_cached, bool& is_valid) const
     {
         // No need to acquire a read lock for cooperation metadata due to accessing const shared variables and non-const individual variables
 
-        assert(edge_sendreq_totarget_socket_client_ptr_ != NULL);
+        assert(sendreq_totarget_socket_client_ptr != NULL);
         assert(edge_param_ptr_ != NULL);
 
         bool is_finish = false;
@@ -105,11 +105,11 @@ namespace covered
         {
             // Send the redirected request to the target edge node
             PropagationSimulator::propagateFromEdgeToNeighbor();
-            edge_sendreq_totarget_socket_client_ptr_->send(redirected_request_msg_payload);
+            sendreq_totarget_socket_client_ptr->send(redirected_request_msg_payload);
 
             // Receive the control repsonse from the target node
             DynamicArray redirected_response_msg_payload;
-            bool is_timeout = edge_sendreq_totarget_socket_client_ptr_->recv(redirected_response_msg_payload);
+            bool is_timeout = sendreq_totarget_socket_client_ptr->recv(redirected_response_msg_payload);
             if (is_timeout)
             {
                 if (!edge_param_ptr_->isEdgeRunning())
@@ -172,14 +172,14 @@ namespace covered
 
     // (2) Update content directory information
 
-    bool BasicCooperationWrapper::updateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written)
+    bool BasicCooperationWrapper::updateBeaconDirectory_(UdpSocketWrapper* sendreq_tobeacon_socket_client_ptr, const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written)
     {
         // NOTE: no need to acquire a read lock for cooperation metadata due to accessing const shared variables and non-const individual variables
 
         // The current edge node must NOT be the beacon node for the key
         verifyCurrentIsNotBeacon_(key);
 
-        assert(edge_sendreq_tobeacon_socket_client_ptr_ != NULL);
+        assert(sendreq_tobeacon_socket_client_ptr != NULL);
         assert(edge_param_ptr_ != NULL);
 
         bool is_finish = false;
@@ -193,11 +193,11 @@ namespace covered
         {
             // Send the control request to the beacon node
             PropagationSimulator::propagateFromEdgeToNeighbor();
-            edge_sendreq_tobeacon_socket_client_ptr_->send(control_request_msg_payload);
+            sendreq_tobeacon_socket_client_ptr->send(control_request_msg_payload);
 
             // Receive the control repsonse from the beacon node
             DynamicArray control_response_msg_payload;
-            bool is_timeout = edge_sendreq_tobeacon_socket_client_ptr_->recv(control_response_msg_payload);
+            bool is_timeout = sendreq_tobeacon_socket_client_ptr->recv(control_response_msg_payload);
             if (is_timeout)
             {
                 if (!edge_param_ptr_->isEdgeRunning())
@@ -233,19 +233,21 @@ namespace covered
 
     // (3) Blocking for MSI protocols
 
-    void BasicCooperationWrapper::sendFinishBlockRequest_(const Key& key, const NetworkAddr& closest_edge_addr) const
+    void BasicCooperationWrapper::sendFinishBlockRequest_(UdpSocketWrapper* sendreq_toclosest_socket_client_ptr, const Key& key, const NetworkAddr& closest_edge_addr) const
     {
+        assert(sendreq_toclosest_socket_client_ptr != NULL);
+
         // Prepare finish block request to finish blocking for writes in all closest edge nodes
         FinishBlockRequest finish_block_request(key);
         DynamicArray control_request_msg_payload(finish_block_request.getMsgPayloadSize());
         finish_block_request.serialize(control_request_msg_payload);
 
         // Set remote address to the closest edge node
-        edge_sendreq_toclosest_cache_server_socket_client_ptr_->setRemoteAddrForClient(closest_edge_addr);
+        sendreq_toclosest_socket_client_ptr->setRemoteAddrForClient(closest_edge_addr);
 
         // Send FinishBlockRequest to the closest edge node
         PropagationSimulator::propagateFromNeighborToEdge();
-        edge_sendreq_toclosest_cache_server_socket_client_ptr_->send(control_request_msg_payload);
+        sendreq_toclosest_socket_client_ptr->send(control_request_msg_payload);
 
         return;
     }

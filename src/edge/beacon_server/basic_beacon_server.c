@@ -63,7 +63,7 @@ namespace covered
             edge_wrapper_ptr_->cooperation_wrapper_ptr_->addEdgeIntoBlocklist(tmp_key, closest_edge_addr);
 
             // Try to notify blocked edge nodes if without writes, in case that writes have finished before adding the closest edge node
-            edge_wrapper_ptr_->cooperation_wrapper_ptr_->tryToNotifyEdgesFromBlocklist(tmp_key);
+            edge_wrapper_ptr_->cooperation_wrapper_ptr_->tryToNotifyEdgesFromBlocklist(edge_beacon_server_sendreq_toblocked_socket_client_ptr_, tmp_key);
         }
 
         return is_finish;

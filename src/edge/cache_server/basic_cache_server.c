@@ -99,14 +99,14 @@ namespace covered
 
         // Independently admit the new key-value pair into local edge cache
         bool is_being_written = false;
-        edge_wrapper_ptr_->cooperation_wrapper_ptr_->updateDirectory(key, true, is_being_written);
+        edge_wrapper_ptr_->cooperation_wrapper_ptr_->updateDirectory(edge_cache_server_sendreq_tobeacon_socket_client_ptr_, key, true, is_being_written);
         edge_wrapper_ptr_->edge_cache_ptr_->admit(key, value, !is_being_written); // valid if not being written
 
         // Evict until used bytes <= capacity bytes
         while (true)
         {
             // Data and metadata for local edge cache, and cooperation metadata
-            uint32_t used_bytes = edge_wrapper_ptr_->edge_cache_ptr_->getSizeForCapacity() + edge_wrapper_ptr_->cooperation_wrapper_ptr_->getSizeForCapacity();
+            uint32_t used_bytes = edge_wrapper_ptr_->getSizeForCapacity_();
             if (used_bytes <= edge_wrapper_ptr_->capacity_bytes_) // Not exceed capacity limitation
             {
                 break;
@@ -117,7 +117,7 @@ namespace covered
                 Value victim_value;
                 edge_wrapper_ptr_->edge_cache_ptr_->evict(victim_key, victim_value);
                 bool _unused_is_being_written = false; // NOTE: is_being_written does NOT affect cache eviction
-                edge_wrapper_ptr_->cooperation_wrapper_ptr_->updateDirectory(victim_key, false, _unused_is_being_written);
+                edge_wrapper_ptr_->cooperation_wrapper_ptr_->updateDirectory(edge_cache_server_sendreq_tobeacon_socket_client_ptr_, victim_key, false, _unused_is_being_written);
 
                 // TMPDEBUG
                 //oss.clear();

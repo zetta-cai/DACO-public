@@ -44,6 +44,7 @@ namespace covered
         // Return if edge node is finished
         bool processControlRequest_(MessageBase* control_request_ptr, const NetworkAddr& closest_edge_addr);
         virtual bool processDirectoryLookupRequest_(MessageBase* control_request_ptr, const NetworkAddr& closest_edge_addr) const = 0;
+        // NOTE: as a directory update has limited impact on cache size, we do NOT check capacity and trigger eviction for performance (capacity is only checked for cache admission and value updates)
         virtual bool processDirectoryUpdateRequest_(MessageBase* control_request_ptr) = 0;
         virtual bool processOtherControlRequest_(MessageBase* control_request_ptr) = 0;
 
@@ -55,6 +56,7 @@ namespace covered
 
         // Non-const individual variable
         UdpSocketWrapper* edge_beacon_server_recvreq_socket_server_ptr_;
+        UdpSocketWrapper* edge_beacon_server_sendreq_toblocked_socket_client_ptr_;
     };
 }
 

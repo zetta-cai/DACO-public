@@ -2,6 +2,7 @@
 
 #include <assert.h>
 
+#include "common/config.h"
 #include "common/param.h"
 #include "edge/beacon_server/basic_beacon_server.h"
 #include "edge/beacon_server/covered_beacon_server.h"
@@ -39,11 +40,20 @@ namespace covered
         oss << kClassName << " edge" << edge_idx;
         base_instance_name_ = oss.str();
 
-        // Prepare a socket server on recvreq port for cache server
+        // Prepare a socket server on recvreq port for beacon server
         uint16_t edge_beacon_server_recvreq_port = Util::getEdgeBeaconServerRecvreqPort(edge_idx);
         NetworkAddr host_addr(Util::ANY_IPSTR, edge_beacon_server_recvreq_port);
         edge_beacon_server_recvreq_socket_server_ptr_ = new UdpSocketWrapper(SocketRole::kSocketServer, host_addr);
         assert(edge_beacon_server_recvreq_socket_server_ptr_ != NULL);
+
+        // NOTE: we use edge0 as default remote address, but CooperationWrapper will reset remote address of the socket clients based on BlockTracker later
+        std::string edge0_ipstr = Config::getEdgeIpstr(0);
+        uint16_t edge0_cache_server_port = Util::getEdgeCacheServerRecvreqPort(0);
+        NetworkAddr edge0_cache_server_addr(edge0_ipstr, edge0_cache_server_port);
+
+        // Prepare a socket client to blocked edge nodes for beacon server
+        edge_beacon_server_sendreq_toblocked_socket_client_ptr_ = new UdpSocketWrapper(SocketRole::kSocketClient, edge0_cache_server_addr);
+        assert(edge_beacon_server_sendreq_toblocked_socket_client_ptr_ != NULL);
     }
 
     BeaconServerBase::~BeaconServerBase()
@@ -54,6 +64,11 @@ namespace covered
         assert(edge_beacon_server_recvreq_socket_server_ptr_ != NULL);
         delete edge_beacon_server_recvreq_socket_server_ptr_;
         edge_beacon_server_recvreq_socket_server_ptr_ = NULL;
+
+        // Release the socket client to blocked edge nodes
+        assert(edge_beacon_server_sendreq_toblocked_socket_client_ptr_ != NULL);
+        delete edge_beacon_server_sendreq_toblocked_socket_client_ptr_;
+        edge_beacon_server_sendreq_toblocked_socket_client_ptr_ = NULL;
     }
 
     void BeaconServerBase::start()

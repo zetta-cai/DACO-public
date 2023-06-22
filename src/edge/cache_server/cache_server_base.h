@@ -30,12 +30,13 @@
  * 
  * D. Involved messages of local put/del requests:
  * (1) Receive local requests
- * (2) Issue/receive acquire writelock requests/response
- * (3) Receive/issue finish block requests
- * (4) Issue/receive global requests/responses
- * (5) Issue/receive finish write requests/responses
- * (6) Issue/receive directory update requests/responses
- * (7) Issue local response
+ * (2) Issue/receive acquire writelock requests/responses
+ * (3) Issue/receive invalidation requests/responses
+ * (4) Receive/issue finish block requests
+ * (5) Issue/receive global requests/responses
+ * (6) Issue/receive finish write requests/responses
+ * (7) Issue/receive directory update requests/responses
+ * (8) Issue local response
  * 
  * By Siyuan Sheng (2023.06.21).
  */
@@ -78,9 +79,11 @@ namespace covered
         bool writeDataToCloud_(const Key& key, const Value& value, const MessageType& message_type);
 
         void tryToUpdateInvalidLocalEdgeCache_(const Key& key, const Value& value) const;
+        // NOTE: we will check capacity and trigger eviction for value updates
         bool updateLocalEdgeCache_(const Key& key, const Value& value) const; // return is cached after update
         bool removeLocalEdgeCache_(const Key& key) const; // return is cached after remove
         void tryToTriggerIndependentAdmission_(const Key& key, const Value& value) const;
+        // NOTE: we will check capacity and trigger eviction for cache admission
         virtual void triggerIndependentAdmission_(const Key& key, const Value& value) const = 0;
 
         // Const variable
@@ -97,6 +100,8 @@ namespace covered
 
         // Non-const individual variable
         UdpSocketWrapper* edge_cache_server_recvreq_socket_server_ptr_;
+        UdpSocketWrapper* edge_cache_server_sendreq_tobeacon_socket_client_ptr_;
+        UdpSocketWrapper* edge_cache_server_sendreq_totarget_socket_client_ptr_;
     };
 }
 

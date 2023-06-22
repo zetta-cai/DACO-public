@@ -157,4 +157,10 @@ namespace covered
         pthread_exit(NULL);
         return NULL;
     }
+
+    uint32_t EdgeWrapper::getSizeForCapacity_() const
+    {
+        uint32_t size = edge_cache_ptr_->getSizeForCapacity() + cooperation_wrapper_ptr_->getSizeForCapacity();
+        return size;
+    }
 }
