@@ -30,6 +30,8 @@ namespace covered
         kGlobalDelResponse,
         kRedirectedGetRequest,
         kRedirectedGetResponse,
+        kAcquireWritelockRequest,
+        kAcquireWritelockResponse,
         kDirectoryLookupRequest,
         kDirectoryUpdateRequest,
         kDirectoryLookupResponse,

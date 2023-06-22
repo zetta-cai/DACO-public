@@ -2,6 +2,7 @@
 
 #include <assert.h>
 #include <sstream>
+#include <unordered_map>
 
 #include "common/config.h"
 #include "common/param.h"
@@ -61,6 +62,13 @@ namespace covered
         edge_sendreq_totarget_socket_client_ptr_ = new UdpSocketWrapper(SocketRole::kSocketClient, edge0_cache_server_addr);
         assert(edge_sendreq_totarget_socket_client_ptr_ != NULL);
 
+        // NOTE: we use edge0 as default remote address, but we will reset remote address of the socket clients based on the key later
+        std::string edge0_ipstr = Config::getEdgeIpstr(0);
+        uint16_t edge0_cache_server_port = Util::getEdgeCacheServerRecvreqPort(0);
+        NetworkAddr edge0_cache_server_addr(edge0_ipstr, edge0_cache_server_port);
+        edge_sendreq_toclosest_cache_server_socket_client_ptr_ = new UdpSocketWrapper(SocketRole::kSocketClient, edge0_cache_server_addr);
+        assert(edge_sendreq_toclosest_cache_server_socket_client_ptr_ != NULL);
+
         // Allocate directory information
         uint32_t seed_for_directory_selection = edge_param_ptr_->getEdgeIdx();
         directory_table_ptr_ = new DirectoryTable(seed_for_directory_selection, edge_param_ptr_->getEdgeIdx());
@@ -83,11 +91,17 @@ namespace covered
         delete edge_sendreq_totarget_socket_client_ptr_;
         edge_sendreq_totarget_socket_client_ptr_ = NULL;
 
+        assert(edge_sendreq_toclosest_cache_server_socket_client_ptr_ != NULL);
+        delete edge_sendreq_toclosest_cache_server_socket_client_ptr_;
+        edge_sendreq_toclosest_cache_server_socket_client_ptr_ = NULL;
+
         // Release directory information
         assert(directory_table_ptr_ != NULL);
         delete directory_table_ptr_;
         directory_table_ptr_ = NULL;
     }
+
+    // (1) Get data from target edge node
 
     bool CooperationWrapperBase::get(const Key& key, Value& value, bool& is_cooperative_cached_and_valid) const
     {
@@ -222,6 +236,8 @@ namespace covered
         return;
     }
 
+    // (2) Update content directory information
+
     bool CooperationWrapperBase::updateDirectory(const Key& key, const bool& is_admit, bool& is_being_written)
     {
         // No need to acquire a read lock for cooperation metadata, which will be done in isBeingWritten_() in updateLocalDirectory()
@@ -269,6 +285,8 @@ namespace covered
         return;
     }
 
+    // (3) Blocking for MSI protocol
+
     void CooperationWrapperBase::addEdgeIntoBlocklist(const Key& key, const NetworkAddr& network_addr)
     {
         verifyCurrentIsBeacon_(key); // Beacon node blocks closest edge nodes
@@ -285,11 +303,18 @@ namespace covered
 
         if (!is_being_written) // key is NOT being written
         {
-            block_tracker_.unblock(key);
+            // Pop all blocked edge nodes
+            std::unordered_set<NetworkAddr, NetworkAddrHasher> blocked_edges = block_tracker_.unblock(key);
+
+            // Notify all blocked edge nodes simultaneously to finish blocking for writes
+            bool is_finish = notifyEdgesToFinishBlock_(key, blocked_edges);
+            UNUSED(is_finish);
         }
 
         return;
     }
+
+    // (4) Get size for capacity check
 
     uint32_t CooperationWrapperBase::getSizeForCapacity() const
     {
@@ -298,6 +323,8 @@ namespace covered
         uint32_t block_tracker_size = block_tracker_.getSizeForCapacity();
         return directory_table_size + block_tracker_size;
     }
+
+    // (1) Get data from target edge node
 
     void CooperationWrapperBase::locateBeaconNode_(const Key& key, bool& current_is_beacon) const
     {
@@ -332,6 +359,34 @@ namespace covered
 
         return;
     }
+
+    void CooperationWrapperBase::locateTargetNode_(const DirectoryInfo& directory_info) const
+    {
+        // No need to acquire a write lock for cooperation metadata due to updating non-const individual variables
+
+        // The current edge node must NOT be the target node
+        assert(edge_param_ptr_ != NULL);
+        uint32_t current_edge_idx = edge_param_ptr_->getEdgeIdx();
+        assert(directory_info.getTargetEdgeIdx() != current_edge_idx);
+
+        assert(edge_sendreq_totarget_socket_client_ptr_ != NULL);
+
+        // Set remote address such that the current edge node can communicate with the target edge node
+        uint32_t target_edge_idx = directory_info.getTargetEdgeIdx();
+        std::string target_edge_ipstr = Config::getEdgeIpstr(target_edge_idx);
+        uint16_t target_edge_cache_server_port = Util::getEdgeCacheServerRecvreqPort(target_edge_idx);
+        NetworkAddr target_edge_cache_server_addr(target_edge_ipstr, target_edge_cache_server_port);
+        edge_sendreq_totarget_socket_client_ptr_->setRemoteAddrForClient(target_edge_cache_server_addr);
+
+        // TMPDEBUG
+        //std::ostringstream oss;
+        //oss << "target edge idx: " << target_edge_idx << "; current edge idx: " << current_edge_idx;
+        //Util::dumpDebugMsg(base_instance_name_, oss.str());
+        
+        return;
+    }
+
+    // (3) Blocking for MSI protocols
 
     bool CooperationWrapperBase::blockForWritesByInterruption_(const Key& key) const
     {
@@ -409,31 +464,109 @@ namespace covered
         return is_finish;
     }
 
-    void CooperationWrapperBase::locateTargetNode_(const DirectoryInfo& directory_info) const
+    bool CooperationWrapperBase::notifyEdgesToFinishBlock_(const Key& key, const std::unordered_set<NetworkAddr, NetworkAddrHasher>& closest_edges) const
     {
-        // No need to acquire a write lock for cooperation metadata due to updating non-const individual variables
+        // No need to acquire a lock, as unblock() has acquired a write lock
 
-        // The current edge node must NOT be the target node
-        assert(edge_param_ptr_ != NULL);
-        uint32_t current_edge_idx = edge_param_ptr_->getEdgeIdx();
-        assert(directory_info.getTargetEdgeIdx() != current_edge_idx);
+        assert(edge_sendreq_toclosest_cache_server_socket_client_ptr_ != NULL);
 
-        assert(edge_sendreq_totarget_socket_client_ptr_ != NULL);
+        bool is_finish = false;
 
-        // Set remote address such that the current edge node can communicate with the target edge node
-        uint32_t target_edge_idx = directory_info.getTargetEdgeIdx();
-        std::string target_edge_ipstr = Config::getEdgeIpstr(target_edge_idx);
-        uint16_t target_edge_cache_server_port = Util::getEdgeCacheServerRecvreqPort(target_edge_idx);
-        NetworkAddr target_edge_cache_server_addr(target_edge_ipstr, target_edge_cache_server_port);
-        edge_sendreq_totarget_socket_client_ptr_->setRemoteAddrForClient(target_edge_cache_server_addr);
+        uint32_t closest_edgecnt = closest_edges.size();
+        if (closest_edgecnt == 0)
+        {
+            return is_finish;
+        }
+        assert(closest_edgecnt > 0);
 
-        // TMPDEBUG
-        //std::ostringstream oss;
-        //oss << "target edge idx: " << target_edge_idx << "; current edge idx: " << current_edge_idx;
-        //Util::dumpDebugMsg(base_instance_name_, oss.str());
-        
-        return;
+        // Track whether notifictionas to all closest edge nodes have been acknowledged
+        uint32_t acked_edgecnt = 0;
+        std::unordered_map<NetworkAddr, bool, NetworkAddrHasher> acked_flags;
+        for (std::unordered_set<NetworkAddr, NetworkAddrHasher>::const_iterator iter_for_ackflag = closest_edges.begin(); iter_for_ackflag != closest_edges.end(); iter_for_ackflag++)
+        {
+            acked_flags.insert(std::pair<NetworkAddr, bool>(*iter_for_ackflag, false));
+        }
+
+        while (acked_edgecnt != closest_edgecnt) // Timeout-and-retry mechanism
+        {
+            // Send (closest_edgecnt - acked_edgecnt) control requests to the closest edge nodes that have not acknowledged notifications
+            for (std::unordered_set<NetworkAddr, NetworkAddrHasher>::const_iterator iter_for_request = closest_edges.begin(); iter_for_request != closest_edges.end(); iter_for_request++)
+            {
+                if (acked_flags[*iter_for_request]) // Skip the closest edge node that has acknowledged the notification
+                {
+                    continue;
+                }
+
+                const NetworkAddr& tmp_network_addr = *iter_for_request; // cache server address of a blocked closest edge node          
+                sendFinishBlockRequest_(key, tmp_network_addr);     
+            } // End of edgeidx_for_request
+
+            // Receive (closest_edgecnt - acked_edgecnt) control repsonses from the beacon node
+            for (uint32_t edgeidx_for_response = 0; edgeidx_for_response < closest_edgecnt - acked_edgecnt; edgeidx_for_response++)
+            {
+                DynamicArray control_response_msg_payload;
+                NetworkAddr control_response_addr;
+                bool is_timeout = edge_sendreq_toclosest_cache_server_socket_client_ptr_->recv(control_response_msg_payload, control_response_addr);
+                if (is_timeout)
+                {
+                    if (!edge_param_ptr_->isEdgeRunning())
+                    {
+                        is_finish = true;
+                        break; // Break as edge is NOT running
+                    }
+                    else
+                    {
+                        Util::dumpWarnMsg(base_instance_name_, "edge timeout to wait for FinishBlockResponse");
+                        break; // Break to resend the remaining control requests not acked yet
+                    }
+                } // End of (is_timeout == true)
+                else
+                {
+                    assert(control_response_addr.isValid());
+
+                    // Receive the control response message successfully
+                    MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
+                    assert(control_response_ptr != NULL && control_response_ptr->getMessageType() == MessageType::kFinishBlockResponse);
+
+                    // Mark the closest edge node has acknowledged the FinishBlockRequest
+                    bool is_match = false;
+                    for (std::unordered_set<NetworkAddr, NetworkAddrHasher>::const_iterator iter_for_response = closest_edges.begin(); iter_for_response != closest_edges.end(); iter_for_response++)
+                    {
+                        if (*iter_for_response == control_response_addr) // Match a closest edge node
+                        {
+                            assert(acked_flags[*iter_for_response] == false); // Original ack flag should be false
+
+                            // Update ack information
+                            acked_flags[*iter_for_response] = true;
+                            acked_edgecnt += 1;
+                            is_match = true;
+                            break;
+                        }
+                    } // End of edgeidx_for_ack
+
+                    if (!is_match) // Must match at least one closest edge node
+                    {
+                        std::ostringstream oss;
+                        oss << "receive FinishBlockResponse from an edge node " << control_response_addr.getIpstr() << ":" << control_response_addr.getPort() << ", which is NOT in the block list!";
+                        Util::dumpWarnMsg(base_instance_name_, oss.str());
+                    } // End of !is_match
+
+                    // Release the control response message
+                    delete control_response_ptr;
+                    control_response_ptr = NULL;
+                } // End of (is_timeout == false)
+            } // End of edgeidx_for_response
+
+            if (is_finish) // Edge node is NOT running now
+            {
+                break;
+            }
+        } // End of while(acked_edgecnt != closest_edgecnt)
+
+        return is_finish;
     }
+
+    // (5) Verification
 
     void CooperationWrapperBase::verifyCurrentIsBeacon_(const Key& key) const
     {

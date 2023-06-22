@@ -304,7 +304,7 @@ namespace covered
         bool is_finish = false; // Mark if edge node is finished
         const Hitflag hitflag = Hitflag::kGlobalMiss; // Must be global miss due to write-through policy
 
-        // TODO: Acquire write lock from beacon node for MSI protocol
+        // TODO: Acquire write lock from beacon node no matter the locally cached object is valid or not
         // TODO: Update is_finish
 
         if (is_finish) // Edge node is NOT running

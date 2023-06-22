@@ -12,6 +12,7 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <unordered_set>
 
 #include "common/key.h"
 #include "common/ring_buffer_impl.h"
@@ -30,7 +31,7 @@ namespace covered
 
         bool isBeingWritten(const Key& key) const; // Return if key is being written
         void block(const Key& key, const NetworkAddr& network_addr); // Add closest edge node into block list for the given key
-        bool unblock(const Key& key); // Notify all closest edge nodes in block list to finish blocking for writes, and clear them from block list; return if edge is finished
+        std::unordered_set<NetworkAddr, NetworkAddrHasher> unblock(const Key& key); // Notify all closest edge nodes in block list to finish blocking for writes, and clear them from block list; return if edge is finished
 
         uint32_t getSizeForCapacity() const;
     private:
@@ -38,10 +39,6 @@ namespace covered
         typedef std::unordered_map<Key, RingBuffer<NetworkAddr>, KeyHasher> perkey_edge_blocklist_t;
 
         static const std::string kClassName;
-
-        // For unlock()
-        bool notifyEdgesToFinishBlock_(const Key& key, const std::vector<NetworkAddr>& closest_edges) const; // Return if edge is finished
-        void sendFinishBlockRequest_(const Key& key, const NetworkAddr& closest_edge_addr) const;
 
         // Const shared variables
         EdgeParam* edge_param_ptr_; // Maintained outside CooperativeCacheWrapperBase
@@ -56,9 +53,6 @@ namespace covered
         // NOTE: BOTH perkey_writeflags_ and perkey_edge_blocklist_ do NOT count key size as the managed keys have been counted in DirectoryTable
         perkey_writeflag_t perkey_writeflags_; // whether key is being written
         perkey_edge_blocklist_t perkey_edge_blocklist_; // a list of blocked closest edge nodes waiting for writes of each given key
-
-        // Non-const individual variables
-        UdpSocketWrapper* edge_sendreq_toclosest_cache_server_socket_client_ptr_;
     };
 }
 

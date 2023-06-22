@@ -24,10 +24,18 @@ namespace covered
     private:
         static const std::string kClassName;
 
-        // Return if edge node is finished
+        // (1) Get data from target edge node
+        
         virtual bool lookupBeaconDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const override;
         virtual bool redirectGetToTarget_(const Key& key, Value& value, bool& is_cooperative_cached, bool& is_valid) const override;
+
+        // (2) Update content directory information
+
         virtual bool updateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written) override;
+
+        // (3) Blocking for MSI protocols
+
+        virtual void sendFinishBlockRequest_(const Key& key, const NetworkAddr& closest_edge_addr) const override;
 
         std::string instance_name_;
     };

@@ -24,6 +24,8 @@ namespace covered
 
     BasicCooperationWrapper::~BasicCooperationWrapper() {}
 
+    // (1) Get data from target edge node
+
     bool BasicCooperationWrapper::lookupBeaconDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
     {
         // NOTE: no need to acquire a read lock for cooperation metadata due to accessing const shared variables and non-const individual variables
@@ -168,6 +170,8 @@ namespace covered
         return is_finish;
     }
 
+    // (2) Update content directory information
+
     bool BasicCooperationWrapper::updateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written)
     {
         // NOTE: no need to acquire a read lock for cooperation metadata due to accessing const shared variables and non-const individual variables
@@ -225,5 +229,24 @@ namespace covered
         } // End of while(true)
 
         return is_finish;
+    }
+
+    // (3) Blocking for MSI protocols
+
+    void BasicCooperationWrapper::sendFinishBlockRequest_(const Key& key, const NetworkAddr& closest_edge_addr) const
+    {
+        // Prepare finish block request to finish blocking for writes in all closest edge nodes
+        FinishBlockRequest finish_block_request(key);
+        DynamicArray control_request_msg_payload(finish_block_request.getMsgPayloadSize());
+        finish_block_request.serialize(control_request_msg_payload);
+
+        // Set remote address to the closest edge node
+        edge_sendreq_toclosest_cache_server_socket_client_ptr_->setRemoteAddrForClient(closest_edge_addr);
+
+        // Send FinishBlockRequest to the closest edge node
+        PropagationSimulator::propagateFromNeighborToEdge();
+        edge_sendreq_toclosest_cache_server_socket_client_ptr_->send(control_request_msg_payload);
+
+        return;
     }
 }

@@ -57,6 +57,16 @@ namespace covered
                 message_type_str = "kRedirectedGetResponse";
                 break;
             }
+            case MessageType::kAcquireWritelockRequest:
+            {
+                message_type_str = "kAcquireWritelockRequest";
+                break;
+            }
+            case MessageType::kAcquireWritelockResponse:
+            {
+                message_type_str = "kAcquireWritelockResponse";
+                break;
+            }
             case MessageType::kDirectoryLookupRequest:
             {
                 message_type_str = "kDirectoryLookupRequest";
@@ -213,6 +223,11 @@ namespace covered
                 message_ptr = new RedirectedGetRequest(msg_payload);
                 break;
             }
+            case MessageType::kAcquireWritelockRequest:
+            {
+                message_ptr = new kAcquireWritelockRequest(msg_payload);
+                break;
+            }
             case MessageType::kDirectoryLookupRequest:
             {
                 message_ptr = new DirectoryLookupRequest(msg_payload);
@@ -286,6 +301,11 @@ namespace covered
             case MessageType::kRedirectedGetResponse:
             {
                 message_ptr = new RedirectedGetResponse(msg_payload);
+                break;
+            }
+            case MessageType::kAcquireWritelockResponse:
+            {
+                message_ptr = new kAcquireWritelockResponse(msg_payload);
                 break;
             }
             case MessageType::kDirectoryLookupResponse:
@@ -512,7 +532,7 @@ namespace covered
     {
         checkIsValid_();
         // TODO: Update isControlRequest() after introducing control requests
-        if (message_type_ == MessageType::kDirectoryLookupRequest || message_type_ == MessageType::kDirectoryUpdateRequest || message_type_ == MessageType::kFinishBlockRequest)
+        if (message_type_ == MessageType::kAcquireWritelockRequest || message_type_ == MessageType::kDirectoryLookupRequest || message_type_ == MessageType::kDirectoryUpdateRequest || message_type_ == MessageType::kFinishBlockRequest)
         {
             return true;
         }
@@ -526,7 +546,7 @@ namespace covered
     {
         checkIsValid_();
         // TODO: Update isControlResponse() after introducing control responses
-        if (message_type_ == MessageType::kDirectoryLookupResponse || message_type_ == MessageType::kDirectoryUpdateResponse || message_type_ == MessageType::kFinishBlockResponse)
+        if (message_type_ == MessageType::kAcquireWritelockResponse || message_type_ == MessageType::kDirectoryLookupResponse || message_type_ == MessageType::kDirectoryUpdateResponse || message_type_ == MessageType::kFinishBlockResponse)
         {
             return true;
         }

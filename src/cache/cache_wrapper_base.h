@@ -3,6 +3,8 @@
  *
  * Each individual CacheWrapper needs to override get, update, needIndependentAdmit, admitInternal_, evictInternal_, and getSizeInternal_.
  * 
+ * NOTE: all non-const shared variables in CacheWrapperBase and derived classes should be thread safe.
+ * 
  * By Siyuan Sheng (2023.05.16).
  */
 
@@ -66,8 +68,9 @@ namespace covered
         virtual uint32_t getSizeInternal_() const = 0; // Get size of data and metadata for local edge cache
 
         // CacheWrapperBase only uses edge index to specify base_instance_name_, yet not need to check if edge is running due to no network communication -> no need to maintain edge_param_ptr_
-        std::string base_instance_name_;
+        std::string base_instance_name_; // Const shared variable
 
+        // Non-const shared variable
         ValidityMap validity_map_; // Maintain per-key validity flag for local edge cache (thread safe)
     };
 }
