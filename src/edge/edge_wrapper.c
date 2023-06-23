@@ -163,4 +163,48 @@ namespace covered
         uint32_t size = edge_cache_ptr_->getSizeForCapacity() + cooperation_wrapper_ptr_->getSizeForCapacity();
         return size;
     }
+
+    // Utility functions
+
+    bool EdgeWrapper::currentIsBeacon_(const Key& key) const
+    {
+        assert(cooperation_wrapper_ptr_ != NULL);
+        assert(edge_param_ptr_ != NULL);
+
+        bool current_is_beacon = false;
+        uint32_t beacon_edge_idx = cooperation_wrapper_ptr_->getBeaconEdgeIdx(key);
+        uint32_t current_edge_idx = edge_param_ptr_->getEdgeIdx();
+        if (beacon_edge_idx == current_edge_idx)
+        {
+            current_is_beacon = true;
+        }
+
+        // TMPDEBUG
+        //std::ostringstream oss;
+        //oss << "beacon edge idx: " << beacon_edge_idx << "; current edge idx: " << current_edge_idx;
+        //Util::dumpDebugMsg(instance_name_, oss.str());
+
+        return current_is_beacon;
+    }
+
+    bool EdgeWrapper::currentIsTarget_(const DirectoryInfo& directory_info) const
+    {
+        assert(cooperation_wrapper_ptr_ != NULL);
+        assert(edge_param_ptr_ != NULL);
+
+        bool current_is_target = false;
+        uint32_t target_edge_idx = directory_info.getTargetEdgeIdx();
+        uint32_t current_edge_idx = edge_param_ptr_->getEdgeIdx();
+        if (target_edge_idx == current_edge_idx)
+        {
+            current_is_target = true;
+        }
+
+        // TMPDEBUG
+        //std::ostringstream oss;
+        //oss << "target edge idx: " << target_edge_idx << "; current edge idx: " << current_edge_idx;
+        //Util::dumpDebugMsg(instance_name_, oss.str());
+
+        return current_is_target;
+    }
 }

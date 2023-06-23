@@ -40,6 +40,10 @@ namespace covered
 
         uint32_t getSizeForCapacity_() const;
 
+        // Utility functions
+        bool currentIsBeacon_(const Key& key) const; // Check if current is beacon node
+        bool currentIsTarget_(const DirectoryInfo& directory_info) const; // Check if current is target node
+
         std::string instance_name_;
 
         // Const shared variables

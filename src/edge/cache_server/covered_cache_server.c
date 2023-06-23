@@ -24,23 +24,49 @@ namespace covered
 
     CoveredCacheServer::~CoveredCacheServer() {}
 
-    // Data requests
+    // (1) Process data requests
 
     bool CoveredCacheServer::processRedirectedGetRequest_(MessageBase* redirected_request_ptr) const
     {
-        // TODO: acquire a read lock for serializability before accessing any shared variable in the target edge node
-
         return false;
     }
 
-    void CoveredCacheServer::triggerIndependentAdmission_(const Key& key, const Value& value) const
-    {
-        // NOTE: no need to acquire per-key rwlock for serializability, which has been done in processRedirectedGetRequest_() and processRedirectedWriteRequest_()
+    // (2) Access cooperative edge cache
 
+    // (2.1) Fetch data from neighbor edge nodes
+
+    bool CoveredCacheServer::lookupBeaconDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
+    {
+        return false;
+    }
+
+    bool CoveredCacheServer::redirectGetToTarget_(const Key& key, Value& value, bool& is_cooperative_cached, bool& is_valid) const
+    {
+        return false;
+    }
+
+    // (2.2) Update content directory information
+
+    bool CoveredCacheServer::updateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written) const
+    {
+        return false;
+    }
+
+    // (2.3) Process writes and block for MSI protocol
+
+    bool CoveredCacheServer::acquireBeaconWritelock_(const Key& key, bool& is_successful)
+    {
+        return false;
+    }
+
+    // (5) Admit uncached objects in local edge cache
+
+    bool CoveredCacheServer::triggerIndependentAdmission_(const Key& key, const Value& value) const
+    {
         // NOTE: COVERED will NOT trigger any independent cache admission/eviction decision
         std::ostringstream oss;
         Util::dumpErrorMsg(instance_name_, "triggerIndependentAdmission_() should NOT be invoked in CoveredCacheServer!");
         exit(1);
-        return;
+        return false;
     }
 }

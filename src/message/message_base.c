@@ -225,7 +225,7 @@ namespace covered
             }
             case MessageType::kAcquireWritelockRequest:
             {
-                message_ptr = new kAcquireWritelockRequest(msg_payload);
+                message_ptr = new AcquireWritelockRequest(msg_payload);
                 break;
             }
             case MessageType::kDirectoryLookupRequest:
@@ -305,7 +305,7 @@ namespace covered
             }
             case MessageType::kAcquireWritelockResponse:
             {
-                message_ptr = new kAcquireWritelockResponse(msg_payload);
+                message_ptr = new AcquireWritelockResponse(msg_payload);
                 break;
             }
             case MessageType::kDirectoryLookupResponse:

@@ -26,7 +26,7 @@ namespace covered
 
     BasicBeaconServer::~BasicBeaconServer() {}
 
-    // Control requests
+    // (1) Access content directory information
 
     bool BasicBeaconServer::processDirectoryLookupRequest_(MessageBase* control_request_ptr, const NetworkAddr& closest_edge_addr) const
     {
@@ -63,7 +63,7 @@ namespace covered
             edge_wrapper_ptr_->cooperation_wrapper_ptr_->addEdgeIntoBlocklist(tmp_key, closest_edge_addr);
 
             // Try to notify blocked edge nodes if without writes, in case that writes have finished before adding the closest edge node
-            edge_wrapper_ptr_->cooperation_wrapper_ptr_->tryToNotifyEdgesFromBlocklist(edge_beacon_server_sendreq_toblocked_socket_client_ptr_, tmp_key);
+            is_finish = tryToNotifyEdgesFromBlocklist_(tmp_key);
         }
 
         return is_finish;
@@ -98,6 +98,30 @@ namespace covered
 
         return is_finish;
     }
+
+    // (2) Unblock for MSI protocol
+
+    void BasicBeaconServer::sendFinishBlockRequest_(const Key& key, const NetworkAddr& closest_edge_addr) const
+    {
+        assert(edge_wrapper_ptr_ != NULL);
+        assert(edge_beacon_server_sendreq_toblocked_socket_client_ptr_ != NULL);
+
+        // Prepare finish block request to finish blocking for writes in all closest edge nodes
+        FinishBlockRequest finish_block_request(key);
+        DynamicArray control_request_msg_payload(finish_block_request.getMsgPayloadSize());
+        finish_block_request.serialize(control_request_msg_payload);
+
+        // Set remote address to the closest edge node
+        edge_beacon_server_sendreq_toblocked_socket_client_ptr_->setRemoteAddrForClient(closest_edge_addr);
+
+        // Send FinishBlockRequest to the closest edge node
+        PropagationSimulator::propagateFromNeighborToEdge();
+        edge_beacon_server_sendreq_toblocked_socket_client_ptr_->send(control_request_msg_payload);
+
+        return;
+    }
+
+    // (3) Process other control requests
     
     bool BasicBeaconServer::processOtherControlRequest_(MessageBase* control_request_ptr)
     {

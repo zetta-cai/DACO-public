@@ -1,5 +1,5 @@
 /*
- * CooperationWrapperBase: the base class for cooperative edge caching (thread safe).
+ * CooperationWrapperBase: the base class to manage metadata for cooperative edge caching (thread safe).
  *
  * Basic or COVERED CooperativeCacheWrapper is responsible for checking directory information at beacon node located by DhtWrapper, getting data from a target edge node by request redirection, and synchronizing directory information at beacon node after cache admission/eviction of the closest edge cache.
  * 
@@ -21,7 +21,6 @@
 #include "cooperation/directory_info.h"
 #include "cooperation/directory_table.h"
 #include "edge/edge_param.h"
-#include "network/udp_socket_wrapper.h"
 
 namespace covered
 {
@@ -33,53 +32,32 @@ namespace covered
         CooperationWrapperBase(const std::string& hash_name, EdgeParam* edge_param_ptr);
         virtual ~CooperationWrapperBase();
 
-        // (1) Get data from target edge node
+        // (1) Locate beacon edge node
 
-        bool get(UdpSocketWrapper* sendreq_tobeacon_socket_client_ptr, UdpSocketWrapper* sendreq_totarget_socket_client_ptr, const Key& key, Value& value, bool& is_cooperative_cached_and_valid) const; // Return if edge node is finished
+        uint32_t getBeaconEdgeIdx(const Key& key) const;
+        NetworkAddr getBeaconEdgeBeaconServerAddr(const Key& key) const;
+
+        // (2) Access content directory information
+
         void lookupLocalDirectory(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const; // Check local directory information
-
-        // (2) Update content directory information
-
-        bool updateDirectory(UdpSocketWrapper* sendreq_tobeacon_socket_client_ptr, const Key& key, const bool& is_admit, bool& is_being_written); // Return if edge node is finished
         void updateLocalDirectory(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written); // Update local directory information
 
-        // (3) Blocking for MSI protocol
+        // (3) Access blocklist
 
         // Buffer closest edge nodes waiting for writes
         // NOTE: the blocked edge nodes will be notified after writes
         void addEdgeIntoBlocklist(const Key& key, const NetworkAddr& network_addr);
-        void tryToNotifyEdgesFromBlocklist(UdpSocketWrapper* sendreq_toblocked_socket_client_ptr, const Key& key);
+        std::unordered_set<NetworkAddr, NetworkAddrHasher> getBlocklistIfNoWrite(const Key& key);
 
         // (4) Process writes for MSI protocol
-        bool acquireWritelock(UdpSocketWrapper* sendreq_tobeacon_socket_client_ptr, const Key& key, bool& is_successful);
-        // TODO: END HERE
-        bool acquireLocalWritelock(const Key& key, bool& is_successful);
-        virtual bool acquireBeaconWritelock_(UdpSocketWrapper* sendreq_tobeacon_socket_client_ptr, const Key& key, bool& is_successful) = 0;
+
+        void acquireLocalWritelock(const Key& key, bool& is_successful);
 
         // (5) Get size for capacity check
 
         uint32_t getSizeForCapacity() const;
     private:
         static const std::string kClassName;
-
-        // (1) Get data from target edge node
-
-        void locateBeaconNode_(UdpSocketWrapper* sendreq_tobeacon_socket_client_ptr, const Key& key, bool& current_is_beacon) const;
-        virtual bool lookupBeaconDirectory_(UdpSocketWrapper* sendreq_tobeacon_socket_client_ptr, const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const = 0; // Check remote directory information at the beacon node
-        void locateTargetNode_(UdpSocketWrapper* sendreq_totarget_socket_client_ptr, const DirectoryInfo& directory_info) const;
-        virtual bool redirectGetToTarget_(UdpSocketWrapper* sendreq_totarget_socket_client_ptr, const Key& key, Value& value, bool& is_cooperative_cached, bool& is_valid) const = 0;
-
-        // (2) Update content directory information
-
-        virtual bool updateBeaconDirectory_(UdpSocketWrapper* sendreq_tobeacon_socket_client_ptr, const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written) = 0;
-
-        // (3) Blocking for MSI protocols
-
-        bool blockForWritesByInterruption_(UdpSocketWrapper* sendreq_tobeacon_socket_client_ptr, const Key& key) const;
-        bool notifyEdgesToFinishBlock_(UdpSocketWrapper* sendreq_toblocked_socket_client_ptr, const Key& key, const std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges) const; // Return if edge is finished
-        virtual void sendFinishBlockRequest_(UdpSocketWrapper* sendreq_toblocked_socket_client_ptr, const Key& key, const NetworkAddr& closest_edge_addr) const = 0;
-
-        // Member variables
 
         // Const shared variables
         std::string base_instance_name_;
@@ -88,16 +66,6 @@ namespace covered
         // Non-const shared variables (cooperation metadata)
         DirectoryTable* directory_table_ptr_; // per-key content directory infos (thread safe)
         BlockTracker block_tracker_; // per-key cooperation metadata (thread safe)
-        
-    protected:
-        // (6) Verification
-
-        // Edge index verification
-        void verifyCurrentIsBeacon_(const Key& key) const;
-        void verifyCurrentIsNotBeacon_(const Key& key) const;
-
-        // Const shared variables
-        EdgeParam* edge_param_ptr_; // Maintained outside CooperativeCacheWrapperBase (thread safe)
     };
 }
 

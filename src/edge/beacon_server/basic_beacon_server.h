@@ -21,12 +21,22 @@ namespace covered
     private:
         static const std::string kClassName;
 
-        // Control requests
+        // (1) Access content directory information
 
         // Return if edge node is finished
         virtual bool processDirectoryLookupRequest_(MessageBase* control_request_ptr, const NetworkAddr& closest_edge_addr) const override;
         virtual bool processDirectoryUpdateRequest_(MessageBase* control_request_ptr) override;
+
+        // (2) Unblock for MSI protocol
+
+        virtual void sendFinishBlockRequest_(const Key& key, const NetworkAddr& closest_edge_addr) const override;
+
+        // (3) Process other control requests
+
+        // Return if edge node is finished
         virtual bool processOtherControlRequest_(MessageBase* control_request_ptr) override;
+
+        // Member variables
 
         std::string instance_name_;
     };

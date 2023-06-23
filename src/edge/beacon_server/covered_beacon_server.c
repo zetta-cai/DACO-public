@@ -26,7 +26,7 @@ namespace covered
 
     CoveredBeaconServer::~CoveredBeaconServer() {}
 
-    // Control requests
+    // (1) Access content directory information
 
     bool CoveredBeaconServer::processDirectoryLookupRequest_(MessageBase* control_request_ptr, const NetworkAddr& closest_edge_addr) const
     {
@@ -41,6 +41,15 @@ namespace covered
 
         return false;
     }
+
+    // (2) Unblock for MSI protocol
+
+    void CoveredBeaconServer::sendFinishBlockRequest_(const Key& key, const NetworkAddr& closest_edge_addr) const
+    {
+        return;
+    }
+
+    // (3) Process other control requests
 
     bool CoveredBeaconServer::processOtherControlRequest_(MessageBase* control_request_ptr)
     {

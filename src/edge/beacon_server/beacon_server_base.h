@@ -39,18 +39,39 @@ namespace covered
     private:
         static const std::string kClassName;
 
-        // Control requests
-
         // Return if edge node is finished
         bool processControlRequest_(MessageBase* control_request_ptr, const NetworkAddr& closest_edge_addr);
+
+        // (1) Access content directory information
+
+        // Return if edge node is finished
         virtual bool processDirectoryLookupRequest_(MessageBase* control_request_ptr, const NetworkAddr& closest_edge_addr) const = 0;
         // NOTE: as a directory update has limited impact on cache size, we do NOT check capacity and trigger eviction for performance (capacity is only checked for cache admission and value updates)
         virtual bool processDirectoryUpdateRequest_(MessageBase* control_request_ptr) = 0;
+
+        // (2) Unblock for MSI protocol
+
+        // Return if edge node is finished
+        bool notifyEdgesToFinishBlock_(const Key& key, const std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges) const;
+        virtual void sendFinishBlockRequest_(const Key& key, const NetworkAddr& closest_edge_addr) const = 0;
+
+        // (3) Process other control requests
+
+        // Return if edge node is finished
         virtual bool processOtherControlRequest_(MessageBase* control_request_ptr) = 0;
+
+        // Member varaibles
 
         // Const variable
         std::string base_instance_name_;
     protected:
+        // (2) Unblock for MSI protocol
+
+        // Return if edge node is finished
+        bool tryToNotifyEdgesFromBlocklist_(const Key& key) const;
+
+        // Member variables
+
         // Const variable
         const EdgeWrapper* edge_wrapper_ptr_;
 

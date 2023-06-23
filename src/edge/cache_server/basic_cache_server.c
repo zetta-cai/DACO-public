@@ -4,6 +4,7 @@
 #include <sstream>
 
 #include "common/param.h"
+#include "message/control_message.h"
 #include "message/data_message.h"
 #include "network/propagation_simulator.h"
 
@@ -25,7 +26,7 @@ namespace covered
 
     BasicCacheServer::~BasicCacheServer() {}
 
-    // Data requests
+    // (1) Process data requests
 
     bool BasicCacheServer::processRedirectedGetRequest_(MessageBase* redirected_request_ptr) const
     {
@@ -84,13 +85,282 @@ namespace covered
         return is_finish;
     }
 
-    void BasicCacheServer::triggerIndependentAdmission_(const Key& key, const Value& value) const
+    // (2) Access cooperative edge cache
+
+    // (2.1) Fetch data from neighbor edge nodes
+
+    bool BasicCacheServer::lookupBeaconDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
+    {
+        assert(edge_wrapper_ptr_ != NULL);
+        assert(edge_wrapper_ptr_->edge_param_ptr_ != NULL);
+        assert(edge_cache_server_sendreq_tobeacon_socket_client_ptr_ != NULL);
+
+        // The current edge node must NOT be the beacon node for the key
+        bool current_is_beacon = edge_wrapper_ptr_->currentIsBeacon_(key);
+        assert(!current_is_beacon);
+
+        bool is_finish = false;
+
+        // Prepare directory lookup request to check directory information in beacon node
+        DirectoryLookupRequest directory_lookup_request(key);
+        DynamicArray control_request_msg_payload(directory_lookup_request.getMsgPayloadSize());
+        directory_lookup_request.serialize(control_request_msg_payload);
+
+        while (true) // Timeout-and-retry mechanism
+        {
+            // Send the control request to the beacon node
+            PropagationSimulator::propagateFromEdgeToNeighbor();
+            edge_cache_server_sendreq_tobeacon_socket_client_ptr_->send(control_request_msg_payload);
+
+            // Receive the control repsonse from the beacon node
+            DynamicArray control_response_msg_payload;
+            bool is_timeout = edge_cache_server_sendreq_tobeacon_socket_client_ptr_->recv(control_response_msg_payload);
+            if (is_timeout)
+            {
+                if (!edge_wrapper_ptr_->edge_param_ptr_->isEdgeRunning())
+                {
+                    is_finish = true;
+                    break; // Edge is NOT running
+                }
+                else
+                {
+                    Util::dumpWarnMsg(instance_name_, "edge timeout to wait for DirectoryLookupResponse");
+                    continue; // Resend the control request message
+                }
+            } // End of (is_timeout == true)
+            else
+            {
+                // Receive the control response message successfully
+                MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
+                assert(control_response_ptr != NULL && control_response_ptr->getMessageType() == MessageType::kDirectoryLookupResponse);
+
+                // Get directory information from the control response message
+                const DirectoryLookupResponse* const directory_lookup_response_ptr = static_cast<const DirectoryLookupResponse*>(control_response_ptr);
+                is_being_written = directory_lookup_response_ptr->isBeingWritten();
+                is_valid_directory_exist = directory_lookup_response_ptr->isValidDirectoryExist();
+                directory_info = directory_lookup_response_ptr->getDirectoryInfo();
+
+                // Release the control response message
+                delete control_response_ptr;
+                control_response_ptr = NULL;
+                break;
+            } // End of (is_timeout == false)
+        } // End of while(true)
+
+        return is_finish;
+    }
+
+    bool BasicCacheServer::redirectGetToTarget_(const Key& key, Value& value, bool& is_cooperative_cached, bool& is_valid) const
+    {
+        assert(edge_wrapper_ptr_ != NULL);
+        assert(edge_wrapper_ptr_->edge_param_ptr_ != NULL);
+        assert(edge_cache_server_sendreq_totarget_socket_client_ptr_ != NULL);
+
+        bool is_finish = false;
+
+        // Prepare redirected get request to get data from target edge node if any
+        RedirectedGetRequest redirected_get_request(key);
+        DynamicArray redirected_request_msg_payload(redirected_get_request.getMsgPayloadSize());
+        redirected_get_request.serialize(redirected_request_msg_payload);
+
+        while (true) // Timeout-and-retry mechanism
+        {
+            // Send the redirected request to the target edge node
+            PropagationSimulator::propagateFromEdgeToNeighbor();
+            edge_cache_server_sendreq_totarget_socket_client_ptr_->send(redirected_request_msg_payload);
+
+            // Receive the control repsonse from the target node
+            DynamicArray redirected_response_msg_payload;
+            bool is_timeout = edge_cache_server_sendreq_totarget_socket_client_ptr_->recv(redirected_response_msg_payload);
+            if (is_timeout)
+            {
+                if (!edge_wrapper_ptr_->edge_param_ptr_->isEdgeRunning())
+                {
+                    is_finish = true;
+                    break; // Edge is NOT running
+                }
+                else
+                {
+                    Util::dumpWarnMsg(instance_name_, "edge timeout to wait for RedirectedGetResponse");
+                    continue; // Resend the redirected request message
+                }
+            } // End of (is_timeout == true)
+            else
+            {
+                // Receive the redirected response message successfully
+                MessageBase* redirected_response_ptr = MessageBase::getResponseFromMsgPayload(redirected_response_msg_payload);
+                assert(redirected_response_ptr != NULL && redirected_response_ptr->getMessageType() == MessageType::kRedirectedGetResponse);
+
+                // Get value from redirected response message
+                const RedirectedGetResponse* const redirected_get_response_ptr = static_cast<const RedirectedGetResponse*>(redirected_response_ptr);
+                value = redirected_get_response_ptr->getValue();
+                Hitflag hitflag = redirected_get_response_ptr->getHitflag();
+                if (hitflag == Hitflag::kCooperativeHit)
+                {
+                    is_cooperative_cached = true;
+                    is_valid = true;
+                }
+                else if (hitflag == Hitflag::kCooperativeInvalid)
+                {
+                    is_cooperative_cached = true;
+                    is_valid = false;
+                }
+                else if (hitflag == Hitflag::kGlobalMiss)
+                {
+                    std::ostringstream oss;
+                    oss << "target edge node does not cache the key " << key.getKeystr() << " in redirectGetToTarget_()!";
+                    Util::dumpWarnMsg(instance_name_, oss.str());
+
+                    is_cooperative_cached = false;
+                    is_valid = false;
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << "invalid hitflag " << MessageBase::hitflagToString(hitflag) << " for redirectGetToTarget_()!";
+                    Util::dumpErrorMsg(instance_name_, oss.str());
+                    exit(1);
+                }
+
+                // Release the redirected response message
+                delete redirected_response_ptr;
+                redirected_response_ptr = NULL;
+                break;
+            } // End of (is_timeout == false)
+        } // End of while(true)
+
+        return is_finish;
+    }
+
+    // (2.2) Update content directory information
+
+    bool BasicCacheServer::updateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written) const
+    {
+        assert(edge_wrapper_ptr_ != NULL);
+        assert(edge_wrapper_ptr_->edge_param_ptr_ != NULL);
+        assert(edge_cache_server_sendreq_tobeacon_socket_client_ptr_ != NULL);
+
+        // The current edge node must NOT be the beacon node for the key
+        bool current_is_beacon = edge_wrapper_ptr_->currentIsBeacon_(key);
+        assert(!current_is_beacon);
+
+        bool is_finish = false;
+
+        // Prepare directory update request to check directory information in beacon node
+        DirectoryUpdateRequest directory_update_request(key, is_admit, directory_info);
+        DynamicArray control_request_msg_payload(directory_update_request.getMsgPayloadSize());
+        directory_update_request.serialize(control_request_msg_payload);
+
+        while (true) // Timeout-and-retry mechanism
+        {
+            // Send the control request to the beacon node
+            PropagationSimulator::propagateFromEdgeToNeighbor();
+            edge_cache_server_sendreq_tobeacon_socket_client_ptr_->send(control_request_msg_payload);
+
+            // Receive the control repsonse from the beacon node
+            DynamicArray control_response_msg_payload;
+            bool is_timeout = edge_cache_server_sendreq_tobeacon_socket_client_ptr_->recv(control_response_msg_payload);
+            if (is_timeout)
+            {
+                if (!edge_wrapper_ptr_->edge_param_ptr_->isEdgeRunning())
+                {
+                    is_finish = true;
+                    break; // Edge is NOT running
+                }
+                else
+                {
+                    Util::dumpWarnMsg(instance_name_, "edge timeout to wait for DirectoryUpdateResponse");
+                    continue; // Resend the control request message
+                }
+            } // End of (is_timeout == true)
+            else
+            {
+                // Receive the control response message successfully
+                MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
+                assert(control_response_ptr != NULL && control_response_ptr->getMessageType() == MessageType::kDirectoryUpdateResponse);
+
+                // Get is_being_written from control response message
+                const DirectoryUpdateResponse* const directory_update_response_ptr = static_cast<const DirectoryUpdateResponse*>(control_response_ptr);
+                is_being_written = directory_update_response_ptr->isBeingWritten();
+
+                // Release the control response message
+                delete control_response_ptr;
+                control_response_ptr = NULL;
+                break;
+            } // End of (is_timeout == false)
+        } // End of while(true)
+
+        return is_finish;
+    }
+
+    // (2.3) Process writes and block for MSI protocol
+
+    bool BasicCacheServer::acquireBeaconWritelock_(const Key& key, bool& is_successful)
+    {
+        assert(edge_wrapper_ptr_ != NULL);
+        assert(edge_wrapper_ptr_->edge_param_ptr_ != NULL);
+        assert(edge_cache_server_sendreq_tobeacon_socket_client_ptr_ != NULL);
+
+        // The current edge node must NOT be the beacon node for the key
+        bool current_is_beacon = edge_wrapper_ptr_->currentIsBeacon_(key);
+        assert(!current_is_beacon);
+
+        bool is_finish = false;
+
+        // Prepare acquire writelock request to acquire permission for a write
+        AcquireWritelockRequest acquire_writelock_request(key);
+        DynamicArray control_request_msg_payload(acquire_writelock_request.getMsgPayloadSize());
+        acquire_writelock_request.serialize(control_request_msg_payload);
+
+        while (true) // Timeout-and-retry mechanism
+        {
+            // Send the control request to the beacon node
+            PropagationSimulator::propagateFromEdgeToNeighbor();
+            edge_cache_server_sendreq_tobeacon_socket_client_ptr_->send(control_request_msg_payload);
+
+            // Receive the control repsonse from the beacon node
+            DynamicArray control_response_msg_payload;
+            bool is_timeout = edge_cache_server_sendreq_tobeacon_socket_client_ptr_->recv(control_response_msg_payload);
+            if (is_timeout)
+            {
+                if (!edge_wrapper_ptr_->edge_param_ptr_->isEdgeRunning())
+                {
+                    is_finish = true;
+                    break; // Edge is NOT running
+                }
+                else
+                {
+                    Util::dumpWarnMsg(instance_name_, "edge timeout to wait for AcquireWritelockResponse");
+                    continue; // Resend the control request message
+                }
+            } // End of (is_timeout == true)
+            else
+            {
+                // Receive the control response message successfully
+                MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
+                assert(control_response_ptr != NULL && control_response_ptr->getMessageType() == MessageType::kAcquireWritelockResponse);
+
+                // Release the control response message
+                delete control_response_ptr;
+                control_response_ptr = NULL;
+                break;
+            } // End of (is_timeout == false)
+        } // End of while(true)
+
+        return is_finish;
+    }
+
+    // (5) Admit uncached objects in local edge cache
+
+    bool BasicCacheServer::triggerIndependentAdmission_(const Key& key, const Value& value) const
     {
         // No need to acquire per-key rwlock for serializability, which has been done in processLocalGetRequest_() and processLocalWriteRequest_()
 
         assert(edge_wrapper_ptr_ != NULL);
         assert(edge_wrapper_ptr_->edge_cache_ptr_ != NULL);
         assert(edge_wrapper_ptr_->cooperation_wrapper_ptr_ != NULL);
+
+        bool is_finish = false;
 
         // TMPDEBUG
         //std::ostringstream oss;
@@ -99,7 +369,11 @@ namespace covered
 
         // Independently admit the new key-value pair into local edge cache
         bool is_being_written = false;
-        edge_wrapper_ptr_->cooperation_wrapper_ptr_->updateDirectory(edge_cache_server_sendreq_tobeacon_socket_client_ptr_, key, true, is_being_written);
+        is_finish = updateDirectory_(key, true, is_being_written);
+        if (is_finish)
+        {
+            return is_finish;
+        }
         edge_wrapper_ptr_->edge_cache_ptr_->admit(key, value, !is_being_written); // valid if not being written
 
         // Evict until used bytes <= capacity bytes
@@ -117,7 +391,11 @@ namespace covered
                 Value victim_value;
                 edge_wrapper_ptr_->edge_cache_ptr_->evict(victim_key, victim_value);
                 bool _unused_is_being_written = false; // NOTE: is_being_written does NOT affect cache eviction
-                edge_wrapper_ptr_->cooperation_wrapper_ptr_->updateDirectory(edge_cache_server_sendreq_tobeacon_socket_client_ptr_, victim_key, false, _unused_is_being_written);
+                is_finish = updateDirectory_(victim_key, false, _unused_is_being_written);
+                if (is_finish)
+                {
+                    return is_finish;
+                }
 
                 // TMPDEBUG
                 //oss.clear();
@@ -129,6 +407,6 @@ namespace covered
             }
         }
 
-        return;
+        return is_finish;
     }
 }
