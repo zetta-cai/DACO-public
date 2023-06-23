@@ -1,7 +1,7 @@
 /*
  * BlockTracker: track per-key cooperation metadata for MSI blocking (thread safe).
  *
- * NOTE: BlockTracers assists with DirectoryTable in CooperationWrapperBase.
+ * NOTE: all non-const shared variables in BlockTracker and derived classes should be thread safe.
  * 
  * By Siyuan Sheng (2023.06.19).
  */
@@ -29,9 +29,17 @@ namespace covered
         BlockTracker(EdgeParam* edge_param_ptr);
         ~BlockTracker();
 
+        // (1) Access per-key write flag
+
         bool isBeingWritten(const Key& key) const; // Return if key is being written
+        bool checkAndSetWriteflag(const Key& key); // Atomically mark key is being written if not
+
+        // (2) Access per-key blocklist
+
         void block(const Key& key, const NetworkAddr& network_addr); // Add closest edge node into block list for the given key
-        std::unordered_set<NetworkAddr, NetworkAddrHasher> unblock(const Key& key); // Notify all closest edge nodes in block list to finish blocking for writes, and clear them from block list; return if edge is finished
+        std::unordered_set<NetworkAddr, NetworkAddrHasher> unblock(const Key& key); // Pop all closest edge nodes from block list if key is not being written
+
+        // (3) Get size for capacity check
 
         uint32_t getSizeForCapacity() const;
     private:
@@ -41,12 +49,12 @@ namespace covered
         static const std::string kClassName;
 
         // Const shared variables
-        EdgeParam* edge_param_ptr_; // Maintained outside CooperativeCacheWrapperBase
+        EdgeParam* edge_param_ptr_; // Maintained outside CooperativeCacheWrapperBase (thread safe)
         std::string instance_name_;
 
         // NOTE: serializability for writes of the same key has been guaranteed in EdgeWrapperBase
         // Guarantee the atomicity of cooperation metadata (e.g., writes of different keys to update perkey_writeflags_)
-        mutable Rwlock* rwlock_for_cooperation_metadata_ptr_;
+        mutable Rwlock* rwlock_for_blockmeta_ptr_;
 
         // Non-const shared variables
         // NOTE: we do NOT merge write flags and blocklist as a single per-key metadata for easy development and debugging

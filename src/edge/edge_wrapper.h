@@ -40,9 +40,16 @@ namespace covered
 
         uint32_t getSizeForCapacity_() const;
 
-        // Utility functions
+        // (1) Utility functions
+
         bool currentIsBeacon_(const Key& key) const; // Check if current is beacon node
         bool currentIsTarget_(const DirectoryInfo& directory_info) const; // Check if current is target node
+
+        // (2) Invalidate for MSI protocol
+
+        // Return if edge node is finished
+        // Invalidate all cache copies for the key (note that invalidating the closest edge node is okay, as it is waiting for AcquireWritelockResponse instead of processing cache access requests)
+        bool invalidateCacheCopies_(const std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo) const;
 
         std::string instance_name_;
 

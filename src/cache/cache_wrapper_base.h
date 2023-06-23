@@ -3,7 +3,7 @@
  *
  * Each individual CacheWrapper needs to override get, update, needIndependentAdmit, admitInternal_, evictInternal_, and getSizeInternal_.
  * 
- * NOTE: all non-const shared variables in CacheWrapperBase and derived classes should be thread safe.
+ * NOTE: all non-const shared variables in CacheWrapperBase should be thread safe.
  * 
  * By Siyuan Sheng (2023.05.16).
  */

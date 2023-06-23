@@ -1,5 +1,7 @@
 /*
  * LruCacheWrapper: the wrapper for LRU cache (https://github.com/lamerman/cpp-lru-cache) (thread safe).
+ *
+ * NOTE: all non-const shared variables in LruCacheWrapper should be thread safe.
  * 
  * By Siyuan Sheng (2023.05.16).
  */

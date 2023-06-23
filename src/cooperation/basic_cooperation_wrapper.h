@@ -1,5 +1,7 @@
 /*
  * BasicCooperationWrapper: basic cooperative caching framework for baselines.
+ *
+ * NOTE: all non-const shared variables in BasicCooperationWrapper should be thread safe.
  * 
  * By Siyuan Sheng (2023.06.06).
  */

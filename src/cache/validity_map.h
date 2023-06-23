@@ -1,5 +1,7 @@
 /*
  * ValidityMap: maintain per-key validity flag for each object cached in local edge cache of closest edge node (thread safe).
+ *
+ * NOTE: all non-const shared variables in ValidityMap should be thread safe.
  * 
  * By Siyuan Sheng (2023.06.19).
  */

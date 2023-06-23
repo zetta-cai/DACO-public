@@ -133,13 +133,17 @@ namespace covered
         bool is_finish = false; // Mark if edge node is finished
 
         MessageType message_type = control_request_ptr->getMessageType();
-        if (message_type == MessageType::kDirectoryLookupRequest) // TODO: control_request_ptr->isDirectoryLookupRequest() for kCoveredDirectoryLookupRequest
+        if (message_type == MessageType::kDirectoryLookupRequest)
         {
             is_finish = processDirectoryLookupRequest_(control_request_ptr, closest_edge_addr);
         }
-        else if (message_type == MessageType::kDirectoryUpdateRequest) // TODO: control_request_ptr->isDirectoryUpdateRequest() for kCoveredDirectoryUpdateRequest
+        else if (message_type == MessageType::kDirectoryUpdateRequest)
         {
             is_finish = processDirectoryUpdateRequest_(control_request_ptr);
+        }
+        else if (message_type == MessageType::kAcquireWritelockRequest)
+        {
+            is_finish = processAcquireWritelockRequest_(control_request_ptr, closest_edge_addr);
         }
         else
         {
@@ -151,7 +155,7 @@ namespace covered
         return is_finish;
     }
 
-    // (2) Unblock for MSI protocol
+    // (2) Process writes and unblock for MSI protocol
 
     bool BeaconServerBase::tryToNotifyEdgesFromBlocklist_(const Key& key) const
     {

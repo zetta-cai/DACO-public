@@ -621,12 +621,17 @@ namespace covered
 
             if (current_is_beacon) // Get target edge index from local directory information
             {
-                edge_wrapper_ptr_->cooperation_wrapper_ptr_->acquireLocalWritelock(key, is_successful);
+                std::unordered_set<DirectoryInfo, DirectoryInfoHasher> all_dirinfo;
+                is_successful = edge_wrapper_ptr_->cooperation_wrapper_ptr_->acquireLocalWritelock(key, all_dirinfo);
                 if (!is_successful) // If key has been locked by any other edge node
                 {
                     // Wait for writes by polling
                     // TODO: sleep a short time to avoid frequent polling
                     continue; // Continue to try to acquire the write lock
+                }
+                else // Invalidate all cache copies if acquiring write permission successfully
+                {
+                    edge_wrapper_ptr_->invalidateCacheCopies_(all_dirinfo);
                 }
             }
             else // Get target edge index from remote directory information at the beacon node
@@ -650,6 +655,7 @@ namespace covered
                         continue; // Continue to try to acquire the write lock
                     }
                 }
+                // NOTE: cache server of closest edge node does NOT need to invalidate cache copies, which has been done by the remote beacon edge node
             } // End of current_is_beacon
 
             // key must NOT being written here

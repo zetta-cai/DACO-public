@@ -4,13 +4,20 @@ namespace covered
 {
     const std::string LocalPutResponse::kClassName("LocalPutResponse");
 
-    LocalPutResponse::LocalPutResponse(const Key& key, const Hitflag& hitflag) : KeyHitflagMessage(key, hitflag, MessageType::kLocalPutResponse)
+    LocalPutResponse::LocalPutResponse(const Key& key, const Hitflag& hitflag) : KeyByteMessage(key, static_cast<uint8_t>(hitflag), MessageType::kLocalPutResponse)
     {
     }
 
-    LocalPutResponse::LocalPutResponse(const DynamicArray& msg_payload) : KeyHitflagMessage(msg_payload)
+    LocalPutResponse::LocalPutResponse(const DynamicArray& msg_payload) : KeyByteMessage(msg_payload)
     {
     }
 
     LocalPutResponse::~LocalPutResponse() {}
+
+    Hitflag LocalPutResponse::getHitflag() const
+    {
+        uint8_t byte = getByte_();
+        Hitflag hitflag = static_cast<Hitflag>(byte);
+        return hitflag;
+    }
 }

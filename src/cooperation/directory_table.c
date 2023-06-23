@@ -108,6 +108,16 @@ namespace covered
         return is_directory_already_exist;
     }
 
+    void DirectoryEntry::invalidateAllDirinfo(std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo)
+    {
+        for (dirinfo_entry_t::iterator iter = directory_entry_.begin(); iter != directory_entry_.end(); iter++)
+        {
+            iter->second.invalidate();
+            all_dirinfo.insert(iter->first);
+        }
+        return;
+    }
+
     uint32_t DirectoryEntry::getSizeForCapacity() const
     {
         uint32_t size = 0;
@@ -268,6 +278,29 @@ namespace covered
                 Util::dumpWarnMsg(kClassName, oss.str());
             }
         } // ENd of (is_admit == false)
+
+        rwlock_for_dirtable_ptr_->unlock();
+        return;
+    }
+
+    void DirectoryTable::invalidateAllDirinfo(const Key& key, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo)
+    {
+        // Acquire a write block before accessing non-cast shared variables
+        assert(rwlock_for_dirtable_ptr_ != NULL);
+        while (true)
+        {
+            if (rwlock_for_dirtable_ptr_->try_lock("invalidateAllDirinfo()"))
+            {
+                break;
+            }
+        }
+
+        dirinfo_table_t::iterator directory_hashtable_iter = directory_hashtable_.find(key);
+        if (directory_hashtable_iter != directory_hashtable_.end())
+        {
+            DirectoryEntry& directory_entry = directory_hashtable_iter->second;
+            directory_entry.invalidateAllDirinfo(all_dirinfo);
+        }
 
         rwlock_for_dirtable_ptr_->unlock();
         return;

@@ -49,9 +49,10 @@ namespace covered
         // NOTE: as a directory update has limited impact on cache size, we do NOT check capacity and trigger eviction for performance (capacity is only checked for cache admission and value updates)
         virtual bool processDirectoryUpdateRequest_(MessageBase* control_request_ptr) = 0;
 
-        // (2) Unblock for MSI protocol
+        // (2) Process writes and unblock for MSI protocol
 
         // Return if edge node is finished
+        virtual bool processAcquireWritelockRequest_(MessageBase* control_request_ptr, const NetworkAddr& closest_edge_addr) = 0;
         bool notifyEdgesToFinishBlock_(const Key& key, const std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges) const;
         virtual void sendFinishBlockRequest_(const Key& key, const NetworkAddr& closest_edge_addr) const = 0;
 

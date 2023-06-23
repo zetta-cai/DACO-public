@@ -1,5 +1,7 @@
 /*
  * DirectoryTable: manage directory information of different keys (thread safe).
+ *
+ * NOTE: all non-const shared variables in DirectoryTable should be thread safe.
  * 
  * By Siyuan Sheng (2023.06.08).
  */
@@ -50,6 +52,7 @@ namespace covered
         void getValidDirinfoSet(dirinfo_set_t& dirinfo_set) const;
         bool addDirinfo(const DirectoryInfo& directory_info, const DirectoryMetadata& directory_metadata); // return is_directory_already_exist
         bool removeDirinfo(const DirectoryInfo& directory_info); // return is_directory_already_exist
+        void invalidateAllDirinfo(std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo);
 
         uint32_t getSizeForCapacity() const;
     private:
@@ -68,9 +71,9 @@ namespace covered
         DirectoryTable(const uint32_t& seed, const uint32_t& edge_idx);
         ~DirectoryTable();
 
-        // NOTE: lookup() cannot be const due to rwlock_.try_lock_shared()
         void lookup(const Key& key, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const;
         void update(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, const DirectoryMetadata& directory_metadata);
+        void invalidateAllDirinfo(const Key& key, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo);
 
         uint32_t getSizeForCapacity() const;
     private:

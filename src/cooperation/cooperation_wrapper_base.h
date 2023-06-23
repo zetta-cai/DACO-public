@@ -1,9 +1,9 @@
 /*
- * CooperationWrapperBase: the base class to manage metadata for cooperative edge caching (thread safe).
+ * CooperationWrapperBase: the base class to manage metadata for cooperative edge caching with MSI protocol (thread safe).
  *
  * Basic or COVERED CooperativeCacheWrapper is responsible for checking directory information at beacon node located by DhtWrapper, getting data from a target edge node by request redirection, and synchronizing directory information at beacon node after cache admission/eviction of the closest edge cache.
  * 
- * NOTE: all non-const shared variables in CooperationWrapperBase and derived classes should be thread safe.
+ * NOTE: all non-const shared variables in CooperationWrapperBase should be thread safe.
  * 
  * By Siyuan Sheng (2023.06.06).
  */
@@ -51,7 +51,7 @@ namespace covered
 
         // (4) Process writes for MSI protocol
 
-        void acquireLocalWritelock(const Key& key, bool& is_successful);
+        bool acquireLocalWritelock(const Key& key, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo);
 
         // (5) Get size for capacity check
 

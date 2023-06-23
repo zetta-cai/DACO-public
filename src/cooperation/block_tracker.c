@@ -25,9 +25,9 @@ namespace covered
 
         oss.clear();
         oss.str("");
-        oss << instance_name_ << " " << "rwlock_for_cooperation_metadata_ptr_";
-        rwlock_for_cooperation_metadata_ptr_ = new Rwlock(oss.str());
-        assert(rwlock_for_cooperation_metadata_ptr_ != NULL);
+        oss << instance_name_ << " " << "rwlock_for_blockmeta_ptr_";
+        rwlock_for_blockmeta_ptr_ = new Rwlock(oss.str());
+        assert(rwlock_for_blockmeta_ptr_ != NULL);
 
         perkey_writeflags_.clear();
         perkey_edge_blocklist_.clear();
@@ -37,18 +37,20 @@ namespace covered
     {
         // NOTE: no need to release edge_param_ptr_, which is maintained outside BlockTracker
 
-        assert(rwlock_for_cooperation_metadata_ptr_ != NULL);
-        delete rwlock_for_cooperation_metadata_ptr_;
-        rwlock_for_cooperation_metadata_ptr_ = NULL;
+        assert(rwlock_for_blockmeta_ptr_ != NULL);
+        delete rwlock_for_blockmeta_ptr_;
+        rwlock_for_blockmeta_ptr_ = NULL;
     }
+
+    // (1) Access per-key write flag
 
     bool BlockTracker::isBeingWritten(const Key& key) const
     {
         // Acquire a read lock for cooperation metadata before accessing cooperation metadata
-        assert(rwlock_for_cooperation_metadata_ptr_ != NULL);
+        assert(rwlock_for_blockmeta_ptr_ != NULL);
         while (true)
         {
-            if (rwlock_for_cooperation_metadata_ptr_->try_lock_shared("isBeingWritten()"))
+            if (rwlock_for_blockmeta_ptr_->try_lock_shared("isBeingWritten()"))
             {
                 break;
             }
@@ -61,17 +63,57 @@ namespace covered
             is_being_written = iter->second;
         }
 
-        rwlock_for_cooperation_metadata_ptr_->unlock_shared();
+        rwlock_for_blockmeta_ptr_->unlock_shared();
         return is_being_written;
     }
+
+    bool BlockTracker::checkAndSetWriteflag(const Key& key)
+    {
+        // Acquire a write lock for cooperation metadata before accessing cooperation metadata
+        assert(rwlock_for_blockmeta_ptr_ != NULL);
+        while (true)
+        {
+            if (rwlock_for_blockmeta_ptr_->try_lock("tryToLockForWrite()"))
+            {
+                break;
+            }
+        }
+
+        // Get original write flag
+        bool is_being_written = false;
+        std::unordered_map<Key, bool>::iterator iter = perkey_writeflags_.find(key);
+        if (iter != perkey_writeflags_.end())
+        {
+            is_being_written = iter->second;
+        }
+
+        bool is_successful = false;
+        if (!is_being_written) // Write permission has not been assigned
+        {
+            if (iter != perkey_writeflags_.end()) // key not exist
+            {
+                iter->second = true; // Assign write permission
+            }
+            else // key exists
+            {
+                perkey_writeflags_.insert(std::pair<Key, bool>(key, true));
+            }
+            is_successful = true;
+        }
+
+        rwlock_for_blockmeta_ptr_->unlock();
+        return is_successful;
+    }
+
+    // (2) Access per-key blocklist
 
     void BlockTracker::block(const Key& key, const NetworkAddr& network_addr)
     {
         // Acquire a write lock for cooperation metadata before accessing cooperation metadata
-        assert(rwlock_for_cooperation_metadata_ptr_ != NULL);
+        assert(rwlock_for_blockmeta_ptr_ != NULL);
         while (true)
         {
-            if (rwlock_for_cooperation_metadata_ptr_->try_lock("addEdgeIntoBlocklist()"))
+            if (rwlock_for_blockmeta_ptr_->try_lock("addEdgeIntoBlocklist()"))
             {
                 break;
             }
@@ -93,17 +135,17 @@ namespace covered
         is_successful = iter->second.push(network_addr);
         assert(is_successful);
 
-        rwlock_for_cooperation_metadata_ptr_->unlock();
+        rwlock_for_blockmeta_ptr_->unlock();
         return;
     }
 
     std::unordered_set<NetworkAddr, NetworkAddrHasher> BlockTracker::unblock(const Key& key)
     {
         // Acquire a write lock for cooperation metadata before accessing cooperation metadata
-        assert(rwlock_for_cooperation_metadata_ptr_ != NULL);
+        assert(rwlock_for_blockmeta_ptr_ != NULL);
         while (true)
         {
-            if (rwlock_for_cooperation_metadata_ptr_->try_lock("addEdgeIntoBlocklist()"))
+            if (rwlock_for_blockmeta_ptr_->try_lock("addEdgeIntoBlocklist()"))
             {
                 break;
             }
@@ -145,17 +187,19 @@ namespace covered
             perkey_edge_blocklist_.erase(iter);
         }
 
-        rwlock_for_cooperation_metadata_ptr_->unlock();
+        rwlock_for_blockmeta_ptr_->unlock();
         return blocked_edges;
     }
+
+    // (3) Get size for capacity check
 
     uint32_t BlockTracker::getSizeForCapacity() const
     {
         // Acquire a read lock for cooperation metadata before accessing cooperation metadata
-        assert(rwlock_for_cooperation_metadata_ptr_ != NULL);
+        assert(rwlock_for_blockmeta_ptr_ != NULL);
         while (true)
         {
-            if (rwlock_for_cooperation_metadata_ptr_->try_lock_shared("isBeingWritten()"))
+            if (rwlock_for_blockmeta_ptr_->try_lock_shared("isBeingWritten()"))
             {
                 break;
             }
@@ -169,7 +213,7 @@ namespace covered
             size += iter->second.getSizeForCapacity(); // Size of per-key block list
         }
 
-        rwlock_for_cooperation_metadata_ptr_->unlock_shared();
+        rwlock_for_blockmeta_ptr_->unlock_shared();
         return size;
     }
 }

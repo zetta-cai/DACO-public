@@ -27,8 +27,9 @@ namespace covered
         virtual bool processDirectoryLookupRequest_(MessageBase* control_request_ptr, const NetworkAddr& closest_edge_addr) const override;
         virtual bool processDirectoryUpdateRequest_(MessageBase* control_request_ptr) override;
 
-        // (2) Unblock for MSI protocol
+        // (2) Process writes and unblock for MSI protocol
 
+        virtual bool processAcquireWritelockRequest_(MessageBase* control_request_ptr, const NetworkAddr& closest_edge_addr) override;
         virtual void sendFinishBlockRequest_(const Key& key, const NetworkAddr& closest_edge_addr) const override;
 
         // (3) Process other control requests

@@ -164,7 +164,7 @@ namespace covered
         return size;
     }
 
-    // Utility functions
+    // (1) Utility functions
 
     bool EdgeWrapper::currentIsBeacon_(const Key& key) const
     {
@@ -206,5 +206,13 @@ namespace covered
         //Util::dumpDebugMsg(instance_name_, oss.str());
 
         return current_is_target;
+    }
+
+    // (2) Invalidate for MSI protocol
+
+    bool EdgeWrapper::invalidateCacheCopies_(const std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo) const
+    {
+        // TODO: END HERE
+        return false;
     }
 }

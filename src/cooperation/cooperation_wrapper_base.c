@@ -137,10 +137,19 @@ namespace covered
 
     // (4) Process writes for MSI protocol
 
-    void CooperationWrapperBase::acquireLocalWritelock(const Key& key, bool& is_successful)
+    bool CooperationWrapperBase::acquireLocalWritelock(const Key& key, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo)
     {
-        // TODO: END HERE
-        return;
+        assert(directory_table_ptr_ != NULL);
+
+        bool is_successful = block_tracker_.checkAndSetWriteflag(key);
+
+        if (is_successful)
+        {
+            // Invalidate all content directory informations
+            directory_table_ptr_->invalidateAllDirinfo(key, all_dirinfo);
+        }
+
+        return is_successful;
     }
 
     // (5) Get size for capacity check

@@ -42,7 +42,12 @@ namespace covered
         return false;
     }
 
-    // (2) Unblock for MSI protocol
+    // (2) Process writes and unblock for MSI protocol
+
+    bool CoveredBeaconServer::processAcquireWritelockRequest_(MessageBase* control_request_ptr, const NetworkAddr& closest_edge_addr)
+    {
+        return false;
+    }
 
     void CoveredBeaconServer::sendFinishBlockRequest_(const Key& key, const NetworkAddr& closest_edge_addr) const
     {

@@ -11,16 +11,18 @@
 
 #include "common/dynamic_array.h"
 #include "common/key.h"
-#include "message/key_hitflag_message.h"
+#include "message/key_byte_message.h"
 
 namespace covered
 {
-    class LocalDelResponse : public KeyHitflagMessage
+    class LocalDelResponse : public KeyByteMessage
     {
     public:
         LocalDelResponse(const Key& key, const Hitflag& hitflag);
         LocalDelResponse(const DynamicArray& msg_payload);
         virtual ~LocalDelResponse();
+
+        Hitflag getHitflag() const;
     private:
         static const std::string kClassName;
     };

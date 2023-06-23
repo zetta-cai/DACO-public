@@ -11,16 +11,18 @@
 
 #include "common/dynamic_array.h"
 #include "common/key.h"
-#include "message/key_message.h"
+#include "message/key_byte_message.h"
 
 namespace covered
 {
-    class AcquireWritelockResponse : public KeyMessage
+    class AcquireWritelockResponse : public KeyByteMessage
     {
     public:
-        AcquireWritelockResponse(const Key& key);
+        AcquireWritelockResponse(const Key& key, const bool& is_successful);
         AcquireWritelockResponse(const DynamicArray& msg_payload);
         virtual ~AcquireWritelockResponse();
+
+        bool isSuccessful() const;
     private:
         static const std::string kClassName;
     };
