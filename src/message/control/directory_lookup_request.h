@@ -18,7 +18,7 @@ namespace covered
     class DirectoryLookupRequest : public KeyMessage
     {
     public:
-        DirectoryLookupRequest(const Key& key);
+        DirectoryLookupRequest(const Key& key, const uint32_t& source_index);
         DirectoryLookupRequest(const DynamicArray& msg_payload);
         virtual ~DirectoryLookupRequest();
     private:

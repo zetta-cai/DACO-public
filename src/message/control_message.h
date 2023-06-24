@@ -15,5 +15,9 @@
 #include "message/control/directory_update_response.h"
 #include "message/control/finish_block_request.h"
 #include "message/control/finish_block_response.h"
+#include "message/control/release_writelock_request.h"
+#include "message/control/release_writelock_response.h"
+#include "message/control/invalidation_request.h"
+#include "message/control/invalidation_response.h"
 
 #endif

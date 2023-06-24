@@ -4,7 +4,7 @@ namespace covered
 {
     const std::string FinishBlockRequest::kClassName("FinishBlockRequest");
 
-    FinishBlockRequest::FinishBlockRequest(const Key& key) : KeyMessage(key, MessageType::kFinishBlockRequest)
+    FinishBlockRequest::FinishBlockRequest(const Key& key, const uint32_t& source_index) : KeyMessage(key, MessageType::kFinishBlockRequest, source_index)
     {
     }
 

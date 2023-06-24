@@ -38,8 +38,8 @@ namespace covered
 				exit(1);
 			}
 
-			assert(host_addr_.isValid() == false);
-			assert(remote_addr_.isValid() == true);
+			assert(host_addr_.isValidAddr() == false);
+			assert(remote_addr_.isValidAddr() == true);
         }
         else if (role_ == SocketRole::kSocketServer)
         {
@@ -64,8 +64,8 @@ namespace covered
 				exit(1);
 			}
 
-			assert(host_addr_.isValid() == true);
-			assert(remote_addr_.isValid() == false);
+			assert(host_addr_.isValidAddr() == true);
+			assert(remote_addr_.isValidAddr() == false);
         }
         else
         {
@@ -86,19 +86,19 @@ namespace covered
 	void UdpSocketWrapper::setRemoteAddrForClient(const NetworkAddr& remote_addr)
 	{
 		assert(role_ == SocketRole::kSocketClient);
-		assert(remote_addr.isValid() == true);
-		assert(remote_addr_.isValid() == true);
+		assert(remote_addr.isValidAddr() == true);
+		assert(remote_addr_.isValidAddr() == true);
 
 		remote_addr_ = remote_addr;
 		
-		assert(remote_addr_.isValid() == true);
+		assert(remote_addr_.isValidAddr() == true);
 		return;
 	}
 
     void UdpSocketWrapper::send(const DynamicArray& msg_payload)
 	{
 		// Must with valid remote address
-		if (remote_addr_.isValid() == false)
+		if (remote_addr_.isValidAddr() == false)
 		{
 			std::ostringstream oss;
             oss << "NO remote address for SocketRole: " << static_cast<int>(role_);
@@ -132,7 +132,7 @@ namespace covered
 		if (role_ == SocketRole::kSocketServer)
 		{
 			// Mark remote address to be set by the next successful recv (i.e., receive all fragment payloads of a message payload)
-			remote_addr_.resetValid();
+			remote_addr_.resetValidAddr();
 		}
 		msg_seqnum_ += 1;
 		return;
@@ -162,7 +162,7 @@ namespace covered
 			}
 			else // not timeout (receive a UDP packet)
 			{
-				assert(tmp_addr.isValid() == true);
+				assert(tmp_addr.isValidAddr() == true);
 
 				// Use MsgFragStats to track fragment statistics of each message
 				bool is_last_frag = msg_frag_stats_.insertEntry(tmp_addr, tmp_pkt_payload);
@@ -209,12 +209,12 @@ namespace covered
 					if (role_ == SocketRole::kSocketServer)
 					{
 						remote_addr_ = tmp_addr;
-						assert(remote_addr_.isValid() == true);
+						assert(remote_addr_.isValidAddr() == true);
 					}
 
 					// Update network address for processing outside UdpSocketWrapper
 					network_addr = tmp_addr;
-					assert(network_addr.isValid() == true);
+					assert(network_addr.isValidAddr() == true);
 
 					break; // Break while(true)
 				} // End of (is_last_frag == true)

@@ -33,13 +33,13 @@ namespace covered
         rwlock_for_validity_ptr_ = NULL;
     }
 
-    bool ValidityMap::isValid(const Key& key, bool& is_found) const
+    bool ValidityMap::isValidObject(const Key& key, bool& is_found) const
     {
         // Acquire a read lock for perkey_validity_ before accessing any shared variable
         assert(rwlock_for_validity_ptr_ != NULL);
         while (true)
         {
-            if (rwlock_for_validity_ptr_->try_lock_shared("isValid()"))
+            if (rwlock_for_validity_ptr_->try_lock_shared("isValidObject()"))
             {
                 break;
             }
@@ -62,13 +62,13 @@ namespace covered
         return is_valid;
     }
 
-    void ValidityMap::invalidate(const Key& key, bool& is_found)
+    void ValidityMap::invalidateObject(const Key& key, bool& is_found)
     {
         // Acquire a write lock for validity_map_ before accessing any shared variable
         assert(rwlock_for_validity_ptr_ != NULL);
         while (true)
         {
-            if (rwlock_for_validity_ptr_->try_lock("invalidate()"))
+            if (rwlock_for_validity_ptr_->try_lock("invalidateObject()"))
             {
                 break;
             }
@@ -89,13 +89,13 @@ namespace covered
         return;
     }
 
-    void ValidityMap::validate(const Key& key, bool& is_found)
+    void ValidityMap::validateObject(const Key& key, bool& is_found)
     {
         // Acquire a write lock for validity_map_ before accessing any shared variable
         assert(rwlock_for_validity_ptr_ != NULL);
         while (true)
         {
-            if (rwlock_for_validity_ptr_->try_lock("validate()"))
+            if (rwlock_for_validity_ptr_->try_lock("validateObject()"))
             {
                 break;
             }
@@ -122,7 +122,7 @@ namespace covered
         assert(rwlock_for_validity_ptr_ != NULL);
         while (true)
         {
-            if (rwlock_for_validity_ptr_->try_lock("invalidate()"))
+            if (rwlock_for_validity_ptr_->try_lock("erase()"))
             {
                 break;
             }

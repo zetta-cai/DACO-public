@@ -11,6 +11,8 @@
 
 #include <boost/json.hpp>
 
+#include "network/network_addr.h"
+
 namespace covered
 {
     class Config

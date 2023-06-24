@@ -4,7 +4,7 @@ namespace covered
 {
     const std::string DirectoryLookupRequest::kClassName("DirectoryLookupRequest");
 
-    DirectoryLookupRequest::DirectoryLookupRequest(const Key& key) : KeyMessage(key, MessageType::kDirectoryLookupRequest)
+    DirectoryLookupRequest::DirectoryLookupRequest(const Key& key, const uint32_t& source_index) : KeyMessage(key, MessageType::kDirectoryLookupRequest, source_index)
     {
     }
 

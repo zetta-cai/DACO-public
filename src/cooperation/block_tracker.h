@@ -33,6 +33,7 @@ namespace covered
 
         bool isBeingWritten(const Key& key) const; // Return if key is being written
         bool checkAndSetWriteflag(const Key& key); // Atomically mark key is being written if not
+        void resetWriteflag(const Key& key); // Atomically mark key is not being written
 
         // (2) Access per-key blocklist
 

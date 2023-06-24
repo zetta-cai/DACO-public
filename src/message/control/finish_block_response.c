@@ -4,7 +4,7 @@ namespace covered
 {
     const std::string FinishBlockResponse::kClassName("FinishBlockResponse");
 
-    FinishBlockResponse::FinishBlockResponse(const Key& key) : KeyMessage(key, MessageType::kFinishBlockResponse)
+    FinishBlockResponse::FinishBlockResponse(const Key& key, const uint32_t& source_index) : KeyMessage(key, MessageType::kFinishBlockResponse, source_index)
     {
     }
 

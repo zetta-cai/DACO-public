@@ -28,9 +28,9 @@ namespace covered
         DirectoryMetadata(const bool& is_valid);
         ~DirectoryMetadata();
 
-        bool isValid() const;
-        void validate();
-        void invalidate();
+        bool isValidDirinfo() const;
+        void validateDirinfo();
+        void invalidateDirinfo();
 
         uint32_t getSizeForCapacity() const;
 
@@ -52,7 +52,8 @@ namespace covered
         void getValidDirinfoSet(dirinfo_set_t& dirinfo_set) const;
         bool addDirinfo(const DirectoryInfo& directory_info, const DirectoryMetadata& directory_metadata); // return is_directory_already_exist
         bool removeDirinfo(const DirectoryInfo& directory_info); // return is_directory_already_exist
-        void invalidateAllDirinfo(std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo);
+        void invalidateDirentry(std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo);
+        DirectoryMetadata* getDirectoryMetadataPtr(const DirectoryInfo& directory_info);
 
         uint32_t getSizeForCapacity() const;
     private:
@@ -73,7 +74,9 @@ namespace covered
 
         void lookup(const Key& key, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const;
         void update(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, const DirectoryMetadata& directory_metadata);
+        bool isCooperativeCached(const Key& key) const;
         void invalidateAllDirinfo(const Key& key, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo);
+        void validateDirinfoIfExist(const Key& key, const DirectoryInfo& directory_info);
 
         uint32_t getSizeForCapacity() const;
     private:

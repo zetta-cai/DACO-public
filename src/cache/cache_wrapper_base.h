@@ -29,8 +29,8 @@ namespace covered
         virtual ~CacheWrapperBase();
 
         virtual bool isLocalCached(const Key& key) const = 0;
-        bool isValidIfCached(const Key& key) const;
-        void invalidateIfCached(const Key& key); // For invalidation control requests
+        bool isCachedObjectValid(const Key& key) const;
+        void invalidateCachedObject(const Key& key); // For invalidation control requests
 
         // Return whether key is cached and valid (i.e., local cache hit) after get/update/remove
         bool get(const Key& key, Value& value) const;
@@ -55,9 +55,9 @@ namespace covered
     private:
         static const std::string kClassName;
 
-        void validateIfCached_(const Key& key); // For local put/del requests invoked by update() and remove()
-        void validateIfUncached_(const Key& key); // For local get/put/del requests invoked by admit() w/ writes
-        void invalidateIfUncached_(const Key& key); // For local get/put/del requests invoked by admit() w/o writes
+        void validateCachedObject_(const Key& key); // For local put/del requests invoked by update() and remove()
+        void validateUncachedObject_(const Key& key); // For local get/put/del requests invoked by admit() w/o writes
+        void invalidateUncachedObject_(const Key& key); // For local get/put/del requests invoked by admit() w/ writes
 
         virtual bool getInternal_(const Key& key, Value& value) const = 0; // Return whether key is cached
         virtual bool updateInternal_(const Key& key, const Value& value) = 0; // Return whether key is cached
@@ -71,6 +71,7 @@ namespace covered
         std::string base_instance_name_; // Const shared variable
 
         // Non-const shared variable
+        // NOTE: Due to the write-through policy, we only need to maintain an invalidity flag for MSI protocol (i.e., both M and S refers to validity)
         ValidityMap validity_map_; // Maintain per-key validity flag for local edge cache (thread safe)
     };
 }

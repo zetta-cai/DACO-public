@@ -30,19 +30,20 @@ namespace covered
         ClientParam* client_param_ptr = worker_param_ptr->getClientParamPtr();
         assert(client_param_ptr != NULL);
 
+        const uint32_t client_idx = client_param_ptr->getClientIdx();
+        const uint32_t local_worker_idx = worker_param_ptr_->getLocalWorkerIdx();
+        global_worker_idx_ = Util::getGlobalWorkerIdx(client_idx, local_worker_idx);
+
         // Differentiate different workers
         std::ostringstream oss;
-        oss << kClassName << " client" << client_param_ptr->getClientIdx() << "-worker" << worker_param_ptr->getLocalWorkerIdx();
+        oss << kClassName << " client" << client_idx << "-worker" << local_worker_idx << "-global" << global_worker_idx_;
         instance_name_ = oss.str();
 
         worker_param_ptr_ = worker_param_ptr;
         assert(worker_param_ptr_ != NULL);
 
         // Each per-client worker uses worker_idx as deterministic seed to create a random generator and get different requests
-        const uint32_t client_idx = client_param_ptr->getClientIdx();
-        const uint32_t local_worker_idx = worker_param_ptr_->getLocalWorkerIdx();
-        uint32_t global_worker_idx = Util::getGlobalWorkerIdx(client_idx, local_worker_idx);
-        worker_item_randgen_ptr_ = new std::mt19937_64(global_worker_idx);
+        worker_item_randgen_ptr_ = new std::mt19937_64(global_worker_idx_);
         if (worker_item_randgen_ptr_ == NULL)
         {
             Util::dumpErrorMsg(instance_name_, "failed to create a random generator for requests!");
@@ -134,7 +135,7 @@ namespace covered
         bool is_finish = false; // Mark if local client is finished
 
         // Convert workload item into local request message
-        MessageBase* local_request_ptr = MessageBase::getLocalRequestFromWorkloadItem(workload_item);
+        MessageBase* local_request_ptr = MessageBase::getLocalRequestFromWorkloadItem(workload_item, global_worker_idx_);
         assert(local_request_ptr != NULL);
 
         // Convert local request into message payload

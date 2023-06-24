@@ -54,7 +54,12 @@ namespace covered
 
     // (2.3) Process writes and block for MSI protocol
 
-    bool CoveredCacheServer::acquireBeaconWritelock_(const Key& key, bool& is_successful)
+    bool CoveredCacheServer::acquireBeaconWritelock_(const Key& key, LockResult& lock_result)
+    {
+        return false;
+    }
+
+    bool CoveredCacheServer::releaseBeaconWritelock_(const Key& key)
     {
         return false;
     }

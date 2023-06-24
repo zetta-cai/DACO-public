@@ -4,7 +4,7 @@ namespace covered
 {
     const std::string AcquireWritelockResponse::kClassName("AcquireWritelockResponse");
 
-    AcquireWritelockResponse::AcquireWritelockResponse(const Key& key, const bool& is_successful) : KeyByteMessage(key, static_cast<uint8_t>(is_successful), MessageType::kAcquireWritelockResponse)
+    AcquireWritelockResponse::AcquireWritelockResponse(const Key& key, const LockResult& lock_result, const uint32_t& source_index) : KeyByteMessage(key, static_cast<uint8_t>(lock_result), MessageType::kAcquireWritelockResponse, source_index)
     {
     }
 
@@ -14,10 +14,10 @@ namespace covered
 
     AcquireWritelockResponse::~AcquireWritelockResponse() {}
 
-    bool AcquireWritelockResponse::isSuccessful() const
+    LockResult AcquireWritelockResponse::getLockResult() const
     {
         uint8_t byte = getByte_();
-        bool is_successful = static_cast<bool>(byte);
-        return is_successful;
+        LockResult lock_result = static_cast<LockResult>(byte);
+        return lock_result;
     }
 }

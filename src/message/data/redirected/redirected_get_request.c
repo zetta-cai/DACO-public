@@ -4,7 +4,7 @@ namespace covered
 {
     const std::string RedirectedGetRequest::kClassName("RedirectedGetRequest");
 
-    RedirectedGetRequest::RedirectedGetRequest(const Key& key) : KeyMessage(key, MessageType::kRedirectedGetRequest)
+    RedirectedGetRequest::RedirectedGetRequest(const Key& key, const uint32_t& source_index) : KeyMessage(key, MessageType::kRedirectedGetRequest, source_index)
     {
     }
 

@@ -18,7 +18,7 @@ namespace covered
     class AcquireWritelockRequest : public KeyMessage
     {
     public:
-        AcquireWritelockRequest(const Key& key);
+        AcquireWritelockRequest(const Key& key, const uint32_t& source_index);
         AcquireWritelockRequest(const DynamicArray& msg_payload);
         virtual ~AcquireWritelockRequest();
     private:

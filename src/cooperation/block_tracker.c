@@ -105,6 +105,37 @@ namespace covered
         return is_successful;
     }
 
+    void BlockTracker::resetWriteflag(const Key& key)
+    {
+        // Acquire a write lock for cooperation metadata before accessing cooperation metadata
+        assert(rwlock_for_blockmeta_ptr_ != NULL);
+        while (true)
+        {
+            if (rwlock_for_blockmeta_ptr_->try_lock("resetWriteflag()"))
+            {
+                break;
+            }
+        }
+
+        // Reset original write flag
+        std::unordered_map<Key, bool>::iterator iter = perkey_writeflags_.find(key);
+        if (iter == perkey_writeflags_.end()) // key does not exist
+        {
+            std::ostringstream oss;
+            oss << "writeflag for key " << key.getKeystr() << " does NOT exist in perkey_writeflags_!";
+            Util::dumpWarnMsg(instance_name_, oss.str());
+        }
+        else // key exists
+        {
+            assert(iter->second == true); // existing key must be written
+            iter->second = false;
+            perkey_writeflags_.erase(iter); // key NOT exist == key NOT being written
+        }
+
+        rwlock_for_blockmeta_ptr_->unlock();
+        return;
+    }
+
     // (2) Access per-key blocklist
 
     void BlockTracker::block(const Key& key, const NetworkAddr& network_addr)
@@ -177,7 +208,7 @@ namespace covered
                 }
                 else
                 {
-                    assert(tmp_edge_addr.isValid());
+                    assert(tmp_edge_addr.isValidAddr());
                     assert(blocked_edges.find(tmp_edge_addr) == blocked_edges.end());
                     blocked_edges.insert(tmp_edge_addr);
                 }

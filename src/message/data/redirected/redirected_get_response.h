@@ -19,7 +19,7 @@ namespace covered
     class RedirectedGetResponse : public KeyValueHitflagMessage
     {
     public:
-        RedirectedGetResponse(const Key& key, const Value& value, const Hitflag& hitflag);
+        RedirectedGetResponse(const Key& key, const Value& value, const Hitflag& hitflag, const uint32_t& source_index);
         RedirectedGetResponse(const DynamicArray& msg_payload);
         virtual ~RedirectedGetResponse();
     private:

@@ -4,7 +4,7 @@ namespace covered
 {
     const std::string AcquireWritelockRequest::kClassName("AcquireWritelockRequest");
 
-    AcquireWritelockRequest::AcquireWritelockRequest(const Key& key) : KeyMessage(key, MessageType::kAcquireWritelockRequest)
+    AcquireWritelockRequest::AcquireWritelockRequest(const Key& key, const uint32_t& source_index) : KeyMessage(key, MessageType::kAcquireWritelockRequest, source_index)
     {
     }
 

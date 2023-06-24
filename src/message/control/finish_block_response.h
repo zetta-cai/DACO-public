@@ -18,7 +18,7 @@ namespace covered
     class FinishBlockResponse : public KeyMessage
     {
     public:
-        FinishBlockResponse(const Key& key);
+        FinishBlockResponse(const Key& key, const uint32_t& source_index);
         FinishBlockResponse(const DynamicArray& msg_payload);
         virtual ~FinishBlockResponse();
     private:

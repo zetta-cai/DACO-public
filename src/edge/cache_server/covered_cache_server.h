@@ -42,7 +42,8 @@ namespace covered
         // (2.3) Process writes and block for MSI protocol
 
         // Return if edge node is finished
-        virtual bool acquireBeaconWritelock_(const Key& key, bool& is_successful) override;
+        virtual bool acquireBeaconWritelock_(const Key& key, LockResult& lock_result) override;
+        virtual bool releaseBeaconWritelock_(const Key& key) override;
 
         // (5) Admit uncached objects in local edge cache
 

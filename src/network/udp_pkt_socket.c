@@ -23,7 +23,7 @@ namespace covered
 
     UdpPktSocket::UdpPktSocket(const bool& need_timeout, const NetworkAddr& host_addr) : need_timeout_(need_timeout)
     {
-        assert(host_addr.isValid() == true);
+        assert(host_addr.isValidAddr() == true);
         
 		// Not support to bind a specific host IP for UDP server
         std::string host_ipstr = host_addr.getIpstr();
@@ -47,7 +47,7 @@ namespace covered
 
 	void UdpPktSocket::udpSendto(const DynamicArray& pkt_payload, const NetworkAddr& remote_addr)
 	{
-        assert(remote_addr.isValid() == true);
+        assert(remote_addr.isValidAddr() == true);
 
 		// Not support broadcast for UDP client
         std::string remote_ipstr = remote_addr.getIpstr();
@@ -117,7 +117,7 @@ namespace covered
 			inet_ntop(AF_INET, &(remote_sockaddr.sin_addr), remote_ipcstr, INET_ADDRSTRLEN);
             remote_addr.setIpstr(std::string(remote_ipcstr));
             remote_addr.setPort(ntohs(remote_sockaddr.sin_port));
-            remote_addr.setValid();
+            remote_addr.setValidAddr();
 		}
 
 		return is_timeout;

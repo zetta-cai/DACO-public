@@ -47,6 +47,7 @@ namespace covered
         }
 
         assert(edge_wrapper_ptr_ != NULL);
+        assert(edge_wrapper_ptr_->edge_param_ptr_ != NULL);
         assert(edge_wrapper_ptr_->edge_cache_ptr_ != NULL);
 
         bool is_finish = false;
@@ -70,10 +71,9 @@ namespace covered
         // NOTE: no need to perform recursive cooperative edge caching (current edge node is already the target edge node for cooperative edge caching)
         // NOTE: no need to access cloud to get data, which will be performed by the closest edge node
 
-        // TODO: reply redirected response message to an edge node
-
         // Prepare RedirectedGetResponse for the closest edge node
-        RedirectedGetResponse redirected_get_response(tmp_key, tmp_value, hitflag);
+        uint32_t edge_idx = edge_wrapper_ptr_->edge_param_ptr_->getEdgeIdx();
+        RedirectedGetResponse redirected_get_response(tmp_key, tmp_value, hitflag, edge_idx);
 
         // Reply redirected response message to the closest edge node (the remote address set by the most recent recv)
         DynamicArray redirected_response_msg_payload(redirected_get_response.getMsgPayloadSize());
@@ -102,7 +102,8 @@ namespace covered
         bool is_finish = false;
 
         // Prepare directory lookup request to check directory information in beacon node
-        DirectoryLookupRequest directory_lookup_request(key);
+        uint32_t edge_idx = edge_wrapper_ptr_->edge_param_ptr_->getEdgeIdx();
+        DirectoryLookupRequest directory_lookup_request(key, edge_idx);
         DynamicArray control_request_msg_payload(directory_lookup_request.getMsgPayloadSize());
         directory_lookup_request.serialize(control_request_msg_payload);
 
@@ -159,7 +160,8 @@ namespace covered
         bool is_finish = false;
 
         // Prepare redirected get request to get data from target edge node if any
-        RedirectedGetRequest redirected_get_request(key);
+        uint32_t edge_idx = edge_wrapper_ptr_->edge_param_ptr_->getEdgeIdx();
+        RedirectedGetRequest redirected_get_request(key, edge_idx);
         DynamicArray redirected_request_msg_payload(redirected_get_request.getMsgPayloadSize());
         redirected_get_request.serialize(redirected_request_msg_payload);
 
@@ -247,7 +249,8 @@ namespace covered
         bool is_finish = false;
 
         // Prepare directory update request to check directory information in beacon node
-        DirectoryUpdateRequest directory_update_request(key, is_admit, directory_info);
+        uint32_t edge_idx = edge_wrapper_ptr_->edge_param_ptr_->getEdgeIdx();
+        DirectoryUpdateRequest directory_update_request(key, is_admit, directory_info, edge_idx);
         DynamicArray control_request_msg_payload(directory_update_request.getMsgPayloadSize());
         directory_update_request.serialize(control_request_msg_payload);
 
@@ -295,7 +298,7 @@ namespace covered
 
     // (2.3) Process writes and block for MSI protocol
 
-    bool BasicCacheServer::acquireBeaconWritelock_(const Key& key, bool& is_successful)
+    bool BasicCacheServer::acquireBeaconWritelock_(const Key& key, LockResult& lock_result)
     {
         assert(edge_wrapper_ptr_ != NULL);
         assert(edge_wrapper_ptr_->edge_param_ptr_ != NULL);
@@ -308,7 +311,8 @@ namespace covered
         bool is_finish = false;
 
         // Prepare acquire writelock request to acquire permission for a write
-        AcquireWritelockRequest acquire_writelock_request(key);
+        uint32_t edge_idx = edge_wrapper_ptr_->edge_param_ptr_->getEdgeIdx();
+        AcquireWritelockRequest acquire_writelock_request(key, edge_idx);
         DynamicArray control_request_msg_payload(acquire_writelock_request.getMsgPayloadSize());
         acquire_writelock_request.serialize(control_request_msg_payload);
 
@@ -339,6 +343,66 @@ namespace covered
                 // Receive the control response message successfully
                 MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
                 assert(control_response_ptr != NULL && control_response_ptr->getMessageType() == MessageType::kAcquireWritelockResponse);
+
+                // Get lock result from control response
+                const AcquireWritelockResponse* const acquire_writelock_response_ptr = static_cast<const AcquireWritelockResponse*>(control_response_ptr);
+                lock_result = acquire_writelock_response_ptr->getLockResult();
+
+                // Release the control response message
+                delete control_response_ptr;
+                control_response_ptr = NULL;
+                break;
+            } // End of (is_timeout == false)
+        } // End of while(true)
+
+        return is_finish;
+    }
+
+    bool BasicCacheServer::releaseBeaconWritelock_(const Key& key)
+    {
+        assert(edge_wrapper_ptr_ != NULL);
+        assert(edge_wrapper_ptr_->edge_param_ptr_ != NULL);
+        assert(edge_cache_server_sendreq_tobeacon_socket_client_ptr_ != NULL);
+
+        // The current edge node must NOT be the beacon node for the key
+        bool current_is_beacon = edge_wrapper_ptr_->currentIsBeacon_(key);
+        assert(!current_is_beacon);
+
+        bool is_finish = false;
+
+        // Prepare release writelock request to finish write
+        uint32_t edge_idx = edge_wrapper_ptr_->edge_param_ptr_->getEdgeIdx();
+        ReleaseWritelockRequest release_writelock_request(key, edge_idx);
+        DynamicArray control_request_msg_payload(release_writelock_request.getMsgPayloadSize());
+        release_writelock_request.serialize(control_request_msg_payload);
+
+        while (true) // Timeout-and-retry mechanism
+        {
+            // Send the control request to the beacon node
+            PropagationSimulator::propagateFromEdgeToNeighbor();
+            edge_cache_server_sendreq_tobeacon_socket_client_ptr_->send(control_request_msg_payload);
+
+            // Receive the control repsonse from the beacon node
+            DynamicArray control_response_msg_payload;
+            bool is_timeout = edge_cache_server_sendreq_tobeacon_socket_client_ptr_->recv(control_response_msg_payload);
+            if (is_timeout)
+            {
+                if (!edge_wrapper_ptr_->edge_param_ptr_->isEdgeRunning())
+                {
+                    is_finish = true;
+                    break; // Edge is NOT running
+                }
+                else
+                {
+                    Util::dumpWarnMsg(instance_name_, "edge timeout to wait for ReleaseWritelockResponse");
+                    continue; // Resend the control request message
+                }
+            } // End of (is_timeout == true)
+            else
+            {
+                // Receive the control response message successfully
+                MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
+                assert(control_response_ptr != NULL && control_response_ptr->getMessageType() == MessageType::kReleaseWritelockResponse);
 
                 // Release the control response message
                 delete control_response_ptr;

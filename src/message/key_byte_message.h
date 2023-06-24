@@ -22,7 +22,7 @@ namespace covered
     class KeyByteMessage : public MessageBase
     {
     public:
-        KeyByteMessage(const Key& key, const uint8_t& byte, const MessageType& message_type);
+        KeyByteMessage(const Key& key, const uint8_t& byte, const MessageType& message_type, const uint32_t& source_index);
         KeyByteMessage(const DynamicArray& msg_payload);
         virtual ~KeyByteMessage();
 

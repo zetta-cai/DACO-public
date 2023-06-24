@@ -31,6 +31,9 @@ namespace covered
         friend class BeaconServerBase;
         friend class BasicBeaconServer;
         friend class CoveredBeaconServer;
+        friend class InvalidationServerBase;
+        friend class BasicInvalidationServer;
+        friend class CoveredInvalidationServer;
     private:
         static const std::string kClassName;
 
@@ -47,9 +50,10 @@ namespace covered
 
         // (2) Invalidate for MSI protocol
 
-        // Return if edge node is finished
-        // Invalidate all cache copies for the key (note that invalidating the closest edge node is okay, as it is waiting for AcquireWritelockResponse instead of processing cache access requests)
-        bool invalidateCacheCopies_(const std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo) const;
+        // Return if edge node is finished (invoked by cache server or beacon server)
+        // Invalidate all cache copies for the key simultaneously (note that invalidating closest edge node is okay, as it is waiting for AcquireWritelockResponse instead of processing cache access requests)
+        bool invalidateCacheCopies_(const Key& key, const std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo) const;
+        void sendInvalidationRequest_(UdpSocketWrapper* edge_sendreq_toinvalidate_socket_client_ptr, const Key& key, const NetworkAddr network_addr) const;
 
         std::string instance_name_;
 

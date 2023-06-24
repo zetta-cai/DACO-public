@@ -26,7 +26,14 @@
  * (6) Issue/receive directory update requests/responses
  * (7) Issue local responses
  * 
- * C. Workflow of local put/del request: TODO.
+ * C. Workflow of local put/del request:
+ * (1) Cache server of closest edge node tries to acquire a write lock from local MSI metadata or from beacon server of remote beacon node.
+ *   (1.1) If lock result is kFailure, cache server of closest edge node waits for the write lock by polling or interruption.
+ *   (1.2) If lock result is kNoneed or kSuccess, go to step 2.
+ *     (1.2.1) Note that if lock result is kSuccess, cache server of closest edge node or beacon server of remote beacon node will invalidate all cache copies.
+ * (2) Cache server of closest edge node writes cloud and update local edge cache if cached (i.e., write-through policy).
+ * (3) Cache server of the closest edge node tries to independently admit object in local edge cache if necessary.
+ * (4) If lock result is kSuccess, cache server of closest edge node notifies local MSI metadata or beacon server of remote beacon node to release write lock and finish writes.
  * 
  * D. Involved messages of local put/del requests:
  * (1) Receive local requests
@@ -91,9 +98,11 @@ namespace covered
         // (2.3) Process writes and block for MSI protocol
 
         // Return if edge node is finished
-        bool acquireWritelock_(const Key& key, bool& is_successful);
-        virtual bool acquireBeaconWritelock_(const Key& key, bool& is_successful) = 0;
+        bool acquireWritelock_(const Key& key, LockResult& lock_result);
+        virtual bool acquireBeaconWritelock_(const Key& key, LockResult& lock_result) = 0;
         bool blockForWritesByInterruption_(const Key& key) const; // Block for MSI protocol
+        bool releaseWritelock_(const Key& key);
+        virtual bool releaseBeaconWritelock_(const Key& key) = 0; // Notify beacon node to finish writes
 
         // (2.4) Utility functions for cooperative caching
 

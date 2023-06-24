@@ -4,7 +4,7 @@ namespace covered
 {
     const std::string GlobalGetRequest::kClassName("GlobalGetRequest");
 
-    GlobalGetRequest::GlobalGetRequest(const Key& key) : KeyMessage(key, MessageType::kGlobalGetRequest)
+    GlobalGetRequest::GlobalGetRequest(const Key& key, const uint32_t& source_index) : KeyMessage(key, MessageType::kGlobalGetRequest, source_index)
     {
     }
 

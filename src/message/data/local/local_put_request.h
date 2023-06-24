@@ -19,7 +19,7 @@ namespace covered
     class LocalPutRequest : public KeyValueMessage
     {
     public:
-        LocalPutRequest(const Key& key, const Value& value);
+        LocalPutRequest(const Key& key, const Value& value, const uint32_t& source_index);
         LocalPutRequest(const DynamicArray& msg_payload);
         virtual ~LocalPutRequest();
     private:

@@ -88,7 +88,7 @@ namespace covered
     // NOTE: we do NOT copy the last fragment into the entry to avoid one time of unnecessary memory copy
     bool MsgFragStats::insertEntry(const NetworkAddr& addr, const DynamicArray& pkt_payload)
     {
-        assert(addr.isValid() == true);
+        assert(addr.isValidAddr() == true);
 
         bool is_last_frag = false;
 
@@ -122,7 +122,7 @@ namespace covered
 
     MsgFragStatsEntry* MsgFragStats::getEntry(const NetworkAddr& addr)
     {
-        assert(addr.isValid() == true);
+        assert(addr.isValidAddr() == true);
         
         if (addr_entry_map_.find(addr) == addr_entry_map_.end())
         {

@@ -25,9 +25,9 @@ namespace covered
         void setIpstr(const std::string& ipstr);
         uint16_t getPort() const;
         void setPort(const uint16_t& port);
-        bool isValid() const;
-        void setValid();
-        void resetValid();
+        bool isValidAddr() const;
+        void setValidAddr();
+        void resetValidAddr();
 
         uint32_t getSizeForCapacity() const;
 

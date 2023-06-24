@@ -18,7 +18,7 @@ namespace covered
     class LocalGetRequest : public KeyMessage
     {
     public:
-        LocalGetRequest(const Key& key);
+        LocalGetRequest(const Key& key, const uint32_t& source_index);
         LocalGetRequest(const DynamicArray& msg_payload);
         virtual ~LocalGetRequest();
     private:

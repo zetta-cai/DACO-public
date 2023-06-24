@@ -19,7 +19,7 @@ namespace covered
     class LocalGetResponse : public KeyValueHitflagMessage
     {
     public:
-        LocalGetResponse(const Key& key, const Value& value, const Hitflag& hitflag);
+        LocalGetResponse(const Key& key, const Value& value, const Hitflag& hitflag, const uint32_t& source_index);
         LocalGetResponse(const DynamicArray& msg_payload);
         virtual ~LocalGetResponse();
     private:

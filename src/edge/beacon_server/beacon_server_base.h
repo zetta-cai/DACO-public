@@ -55,6 +55,7 @@ namespace covered
         virtual bool processAcquireWritelockRequest_(MessageBase* control_request_ptr, const NetworkAddr& closest_edge_addr) = 0;
         bool notifyEdgesToFinishBlock_(const Key& key, const std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges) const;
         virtual void sendFinishBlockRequest_(const Key& key, const NetworkAddr& closest_edge_addr) const = 0;
+        virtual bool processReleaseWritelockRequest_(MessageBase* control_request_ptr) = 0;
 
         // (3) Process other control requests
 

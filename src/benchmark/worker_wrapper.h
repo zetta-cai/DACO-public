@@ -36,6 +36,8 @@ namespace covered
         void processLocalResponse_(const DynamicArray& local_response_msg_payload, const uint32_t& rtt_us);
 
         std::string instance_name_;
+        uint32_t global_worker_idx_;
+
         WorkerParam* worker_param_ptr_;
         std::mt19937_64* worker_item_randgen_ptr_;
         UdpSocketWrapper* worker_sendreq_toedge_socket_client_ptr_;

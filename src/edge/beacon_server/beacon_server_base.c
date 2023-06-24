@@ -92,7 +92,7 @@ namespace covered
             } // End of (is_timeout == true)
             else
             {
-                assert(control_request_network_addr.isValid());
+                assert(control_request_network_addr.isValidAddr());
                 
                 MessageBase* control_request_ptr = MessageBase::getRequestFromMsgPayload(control_request_msg_payload);
                 assert(control_request_ptr != NULL);
@@ -144,6 +144,10 @@ namespace covered
         else if (message_type == MessageType::kAcquireWritelockRequest)
         {
             is_finish = processAcquireWritelockRequest_(control_request_ptr, closest_edge_addr);
+        }
+        else if (message_type == MessageType::kReleaseWritelockRequest)
+        {
+            is_finish = processReleaseWritelockRequest_(control_request_ptr);
         }
         else
         {
@@ -199,6 +203,7 @@ namespace covered
             acked_flags.insert(std::pair<NetworkAddr, bool>(*iter_for_ackflag, false));
         }
 
+        // Issue all finish block requests simultaneously
         while (acked_edgecnt != blocked_edgecnt) // Timeout-and-retry mechanism
         {
             // Send (blocked_edgecnt - acked_edgecnt) control requests to the closest edge nodes that have not acknowledged notifications
@@ -213,7 +218,7 @@ namespace covered
                 sendFinishBlockRequest_(key, tmp_network_addr);     
             } // End of edgeidx_for_request
 
-            // Receive (blocked_edgecnt - acked_edgecnt) control repsonses from the beacon node
+            // Receive (blocked_edgecnt - acked_edgecnt) control repsonses from the closest edge nodes
             for (uint32_t edgeidx_for_response = 0; edgeidx_for_response < blocked_edgecnt - acked_edgecnt; edgeidx_for_response++)
             {
                 DynamicArray control_response_msg_payload;
@@ -234,7 +239,7 @@ namespace covered
                 } // End of (is_timeout == true)
                 else
                 {
-                    assert(control_response_addr.isValid());
+                    assert(control_response_addr.isValidAddr());
 
                     // Receive the control response message successfully
                     MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);

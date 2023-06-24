@@ -4,7 +4,7 @@ namespace covered
 {
     const std::string KeyByteMessage::kClassName("KeyByteMessage");
 
-    KeyByteMessage::KeyByteMessage(const Key& key, const uint8_t& byte, const MessageType& message_type) : MessageBase(message_type)
+    KeyByteMessage::KeyByteMessage(const Key& key, const uint8_t& byte, const MessageType& message_type, const uint32_t& source_index) : MessageBase(message_type, source_index)
     {
         key_ = key;
         byte_ = byte;

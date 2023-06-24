@@ -18,7 +18,7 @@ namespace covered
     class RedirectedGetRequest : public KeyMessage
     {
     public:
-        RedirectedGetRequest(const Key& key);
+        RedirectedGetRequest(const Key& key, const uint32_t& source_index);
         RedirectedGetRequest(const DynamicArray& msg_payload);
         virtual ~RedirectedGetRequest();
     private:

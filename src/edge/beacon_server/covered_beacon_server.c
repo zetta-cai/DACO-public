@@ -54,6 +54,11 @@ namespace covered
         return;
     }
 
+    bool CoveredBeaconServer::processReleaseWritelockRequest_(MessageBase* control_request_ptr)
+    {
+        return false;
+    }
+
     // (3) Process other control requests
 
     bool CoveredBeaconServer::processOtherControlRequest_(MessageBase* control_request_ptr)

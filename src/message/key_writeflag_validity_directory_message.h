@@ -21,7 +21,7 @@ namespace covered
     class KeyWriteflagValidityDirectoryMessage : public MessageBase
     {
     public:
-        KeyWriteflagValidityDirectoryMessage(const Key& key, const bool& is_being_written, const bool& is_valid_directory_exist, const DirectoryInfo& directory_info, const MessageType& message_type);
+        KeyWriteflagValidityDirectoryMessage(const Key& key, const bool& is_being_written, const bool& is_valid_directory_exist, const DirectoryInfo& directory_info, const MessageType& message_type, const uint32_t& source_index);
         KeyWriteflagValidityDirectoryMessage(const DynamicArray& msg_payload);
         virtual ~KeyWriteflagValidityDirectoryMessage();
 

@@ -18,11 +18,11 @@ namespace covered
     class AcquireWritelockResponse : public KeyByteMessage
     {
     public:
-        AcquireWritelockResponse(const Key& key, const bool& is_successful);
+        AcquireWritelockResponse(const Key& key, const LockResult& lock_result, const uint32_t& source_index);
         AcquireWritelockResponse(const DynamicArray& msg_payload);
         virtual ~AcquireWritelockResponse();
 
-        bool isSuccessful() const;
+        LockResult getLockResult() const;
     private:
         static const std::string kClassName;
     };

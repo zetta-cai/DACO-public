@@ -18,7 +18,7 @@ namespace covered
     class DirectoryUpdateResponse : public KeyByteMessage
     {
     public:
-        DirectoryUpdateResponse(const Key& key, const bool& is_being_written);
+        DirectoryUpdateResponse(const Key& key, const bool& is_being_written, const uint32_t& source_index);
         DirectoryUpdateResponse(const DynamicArray& msg_payload);
         virtual ~DirectoryUpdateResponse();
 

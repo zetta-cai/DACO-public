@@ -37,7 +37,11 @@ namespace covered
         kDirectoryLookupResponse,
         kDirectoryUpdateResponse,
         kFinishBlockRequest,
-        kFinishBlockResponse
+        kFinishBlockResponse,
+        kInvalidationRequest,
+        kInvalidationResponse,
+        kReleaseWritelockRequest,
+        kReleaseWritelockResponse
     };
 
     enum Hitflag
@@ -48,28 +52,37 @@ namespace covered
         kGlobalMiss // Miss all edge nodes
     };
 
+    enum LockResult
+    {
+        kSuccess = 1, // Acquire write lock successfully for a cooperatively cached key
+        kFailure, // NOT acquire write lock for a cooperatively cached key
+        kNoneed // NO need to acquire write lock for a globally uncached key
+    };
+
     class MessageBase
     {
     public:
         static std::string messageTypeToString(const MessageType& message_type);
         static std::string hitflagToString(const Hitflag& hitflag);
+        static std::string lockResultToString(const LockResult& lock_result);
 
-        static MessageBase* getLocalRequestFromWorkloadItem(WorkloadItem workload_item); // By workers in clients
+        static MessageBase* getLocalRequestFromWorkloadItem(WorkloadItem workload_item, const uint32_t& source_index); // By workers in clients
         static MessageBase* getRequestFromMsgPayload(const DynamicArray& msg_payload); // Data/control requests
         static MessageBase* getResponseFromMsgPayload(const DynamicArray& msg_payload); // Data/control responses
         static Key getKeyFromMessage(MessageBase* message_ptr); // Get key from message (e.g., local requests)
 
-        MessageBase(const MessageType& message_type);
+        MessageBase(const MessageType& message_type, const uint32_t& source_index);
         //MessageBase(const DynamicArray& msg_payload);
         MessageBase();
         virtual ~MessageBase();
 
         MessageType getMessageType() const;
+        uint32_t getSourceIndex() const;
 
         uint32_t getMsgPayloadSize() const;
 
         // Offset of message must be 0 in message payload
-        // Message payload format: message_type + [key size & key] + [value size & value]
+        // Message payload format: message_type + source index + internal payload
         uint32_t serialize(DynamicArray& msg_payload) const;
         uint32_t deserialize(const DynamicArray& msg_payload);
 
@@ -96,6 +109,7 @@ namespace covered
         virtual uint32_t deserializeInternal_(const DynamicArray& msg_payload, const uint32_t& size) = 0;
 
         MessageType message_type_;
+        uint32_t source_index_; // client/edge/cloud index of source node
 
         bool is_valid_; // NOT serialized/deserialized in msg payload
     protected:

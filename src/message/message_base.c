@@ -97,6 +97,26 @@ namespace covered
                 message_type_str = "kFinishBlockResponse";
                 break;
             }
+            case MessageType::kInvalidationRequest:
+            {
+                message_type_str = "kInvalidationRequest";
+                break;
+            }
+            case MessageType::kInvalidationResponse:
+            {
+                message_type_str = "kInvalidationResponse";
+                break;
+            }
+            case MessageType::kReleaseWritelockRequest:
+            {
+                message_type_str = "kReleaseWritelockRequest";
+                break;
+            }
+            case MessageType::kReleaseWritelockResponse:
+            {
+                message_type_str = "kReleaseWritelockResponse";
+                break;
+            }
             default:
             {
                 message_type_str = std::to_string(static_cast<uint32_t>(message_type));
@@ -140,7 +160,36 @@ namespace covered
         return hitflag_str;
     }
 
-    MessageBase* MessageBase::getLocalRequestFromWorkloadItem(WorkloadItem workload_item)
+    std::string MessageBase::lockResultToString(const LockResult& lock_result)
+    {
+        std::string lockresult_str = "";
+        switch (lock_result)
+        {
+            case LockResult::kSuccess:
+            {
+                lockresult_str = "kSuccess";
+                break;
+            }
+            case LockResult::kFailure:
+            {
+                lockresult_str = "kFailure";
+                break;
+            }
+            case LockResult::kNoneed:
+            {
+                lockresult_str = "kNoneed";
+                break;
+            }
+            default:
+            {
+                lockresult_str = std::to_string(static_cast<uint8_t>(lock_result));
+                break;
+            }
+        }
+        return lockresult_str;
+    }
+
+    MessageBase* MessageBase::getLocalRequestFromWorkloadItem(WorkloadItem workload_item, const uint32_t& source_index)
     {
         WorkloadItemType item_type = workload_item.getItemType();
 
@@ -150,17 +199,17 @@ namespace covered
         {
             case WorkloadItemType::kWorkloadItemGet:
             {
-                message_ptr = new LocalGetRequest(workload_item.getKey());
+                message_ptr = new LocalGetRequest(workload_item.getKey(), source_index);
                 break;
             }
             case WorkloadItemType::kWorkloadItemPut:
             {
-                message_ptr = new LocalPutRequest(workload_item.getKey(), workload_item.getValue());
+                message_ptr = new LocalPutRequest(workload_item.getKey(), workload_item.getValue(), source_index);
                 break;
             }
             case WorkloadItemType::kWorkloadItemDel:
             {
-                message_ptr = new LocalDelRequest(workload_item.getKey());
+                message_ptr = new LocalDelRequest(workload_item.getKey(), source_index);
                 break;
             }
             default:
@@ -243,6 +292,16 @@ namespace covered
                 message_ptr = new FinishBlockRequest(msg_payload);
                 break;
             }
+            case MessageType::kInvalidationRequest:
+            {
+                message_ptr = new InvalidationRequest(msg_payload);
+                break;
+            }
+            case MessageType::kReleaseWritelockRequest:
+            {
+                message_ptr = new ReleaseWritelockRequest(msg_payload);
+                break;
+            }
             default:
             {
                 std::ostringstream oss;
@@ -323,6 +382,16 @@ namespace covered
                 message_ptr = new FinishBlockResponse(msg_payload);
                 break;
             }
+            case MessageType::kInvalidationResponse:
+            {
+                message_ptr = new InvalidationResponse(msg_payload);
+                break;
+            }
+            case MessageType::kReleaseWritelockResponse:
+            {
+                message_ptr = new ReleaseWritelockResponse(msg_payload);
+                break;
+            }
             default:
             {
                 std::ostringstream oss;
@@ -378,9 +447,10 @@ namespace covered
         return sizeof(uint32_t);
     }
 
-    MessageBase::MessageBase(const MessageType& message_type)
+    MessageBase::MessageBase(const MessageType& message_type, const uint32_t& source_index)
     {
         message_type_ = message_type;
+        source_index_ = source_index;
         is_valid_ = true;
     }
 
@@ -403,12 +473,18 @@ namespace covered
         return message_type_;
     }
 
+    uint32_t MessageBase::getSourceIndex() const
+    {
+        checkIsValid_();
+        return source_index_;
+    }
+
     uint32_t MessageBase::getMsgPayloadSize() const
     {
         checkIsValid_();
 
-        // Message type size + internal payload size
-        return sizeof(uint32_t) + getMsgPayloadSizeInternal_();
+        // Message type size + source index + internal payload size
+        return sizeof(uint32_t) + sizeof(uint32_t) + getMsgPayloadSizeInternal_();
     }
 
     uint32_t MessageBase::serialize(DynamicArray& msg_payload) const
@@ -418,6 +494,9 @@ namespace covered
         uint32_t size = 0;
         uint32_t bigendian_message_type_value = htonl(static_cast<uint32_t>(message_type_));
         msg_payload.deserialize(size, (const char *)&bigendian_message_type_value, sizeof(uint32_t));
+        size += sizeof(uint32_t);
+        uint32_t bigendian_source_index = htonl(static_cast<uint32_t>(source_index_));
+        msg_payload.deserialize(size, (const char *)&bigendian_source_index, sizeof(uint32_t));
         size += sizeof(uint32_t);
         uint32_t internal_size = serializeInternal_(msg_payload, size);
         size += internal_size;
@@ -433,6 +512,9 @@ namespace covered
         uint32_t size = 0;
         uint32_t message_type_size = deserializeMessageTypeFromMsgPayload(msg_payload, message_type_);
         size += message_type_size;
+        msg_payload.serialize(size, (char *)&source_index_, sizeof(uint32_t));
+        source_index_ = ntohl(source_index_);
+        size += sizeof(uint32_t);
         uint32_t internal_size = this->deserializeInternal_(msg_payload, size);
         size += internal_size;
         return size - 0;
@@ -532,7 +614,7 @@ namespace covered
     {
         checkIsValid_();
         // TODO: Update isControlRequest() after introducing control requests
-        if (message_type_ == MessageType::kAcquireWritelockRequest || message_type_ == MessageType::kDirectoryLookupRequest || message_type_ == MessageType::kDirectoryUpdateRequest || message_type_ == MessageType::kFinishBlockRequest)
+        if (message_type_ == MessageType::kAcquireWritelockRequest || message_type_ == MessageType::kDirectoryLookupRequest || message_type_ == MessageType::kDirectoryUpdateRequest || message_type_ == MessageType::kFinishBlockRequest || message_type_ == MessageType::kInvalidationRequest || message_type_ == MessageType::kReleaseWritelockRequest)
         {
             return true;
         }
@@ -546,7 +628,7 @@ namespace covered
     {
         checkIsValid_();
         // TODO: Update isControlResponse() after introducing control responses
-        if (message_type_ == MessageType::kAcquireWritelockResponse || message_type_ == MessageType::kDirectoryLookupResponse || message_type_ == MessageType::kDirectoryUpdateResponse || message_type_ == MessageType::kFinishBlockResponse)
+        if (message_type_ == MessageType::kAcquireWritelockResponse || message_type_ == MessageType::kDirectoryLookupResponse || message_type_ == MessageType::kDirectoryUpdateResponse || message_type_ == MessageType::kFinishBlockResponse || message_type_ == MessageType::kInvalidationResponse || message_type_ == MessageType::kReleaseWritelockResponse)
         {
             return true;
         }

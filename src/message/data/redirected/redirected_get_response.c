@@ -6,7 +6,7 @@ namespace covered
 {
     const std::string RedirectedGetResponse::kClassName("RedirectedGetResponse");
 
-    RedirectedGetResponse::RedirectedGetResponse(const Key& key, const Value& value, const Hitflag& hitflag) : KeyValueHitflagMessage(key, value, hitflag, MessageType::kRedirectedGetResponse)
+    RedirectedGetResponse::RedirectedGetResponse(const Key& key, const Value& value, const Hitflag& hitflag, const uint32_t& source_index) : KeyValueHitflagMessage(key, value, hitflag, MessageType::kRedirectedGetResponse, source_index)
     {
         assert(hitflag == Hitflag::kCooperativeHit || hitflag == Hitflag::kGlobalMiss);
     }

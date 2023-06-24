@@ -4,7 +4,7 @@ namespace covered
 {
     const std::string GlobalDelRequest::kClassName("GlobalDelRequest");
 
-    GlobalDelRequest::GlobalDelRequest(const Key& key) : KeyMessage(key, MessageType::kGlobalDelRequest)
+    GlobalDelRequest::GlobalDelRequest(const Key& key, const uint32_t& source_index) : KeyMessage(key, MessageType::kGlobalDelRequest, source_index)
     {
     }
 

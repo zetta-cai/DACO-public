@@ -24,9 +24,9 @@ namespace covered
         ValidityMap(EdgeParam* edge_param_ptr);
         ~ValidityMap();
 
-        bool isValid(const Key& key, bool& is_found) const;
-        void invalidate(const Key& key, bool& is_found);
-        void validate(const Key& key, bool& is_found);
+        bool isValidObject(const Key& key, bool& is_found) const;
+        void invalidateObject(const Key& key, bool& is_found);
+        void validateObject(const Key& key, bool& is_found);
         void erase(const Key& key, bool& is_found);
 
         uint32_t getSizeForCapacity() const;

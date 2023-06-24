@@ -137,19 +137,44 @@ namespace covered
 
     // (4) Process writes for MSI protocol
 
-    bool CooperationWrapperBase::acquireLocalWritelock(const Key& key, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo)
+    LockResult CooperationWrapperBase::acquireLocalWritelock(const Key& key, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo)
     {
         assert(directory_table_ptr_ != NULL);
 
-        bool is_successful = block_tracker_.checkAndSetWriteflag(key);
+        LockResult lock_result = LockResult::kNoneed;
 
-        if (is_successful)
+        // Check if key is cooperatively cached first
+        bool is_cooperative_cached = directory_table_ptr_->isCooperativeCached(key);
+
+        if (is_cooperative_cached) // Acquire write lock for cooperatively cached object for MSI protocol
         {
-            // Invalidate all content directory informations
-            directory_table_ptr_->invalidateAllDirinfo(key, all_dirinfo);
+            bool is_successful = block_tracker_.checkAndSetWriteflag(key);
+            if (is_successful) // Acquire write lock successfully
+            {
+                // Invalidate all content directory informations
+                directory_table_ptr_->invalidateAllDirinfo(key, all_dirinfo);
+
+                lock_result = LockResult::kSuccess;
+            }
+            else // NOT acquire write lock
+            {
+                lock_result = LockResult::kFailure;
+            }
         }
 
-        return is_successful;
+        return lock_result;
+    }
+
+    void CooperationWrapperBase::releaseLocalWritelock(const Key& key, const DirectoryInfo& sender_dirinfo)
+    {
+        assert(directory_table_ptr_ != NULL);
+
+        block_tracker_.resetWriteflag(key);
+
+        // TODO: Validate content directory if any for the closest edge node releasing the write lock
+        directory_table_ptr_->validateDirinfoIfExist(key, sender_dirinfo);
+
+        return;
     }
 
     // (5) Get size for capacity check

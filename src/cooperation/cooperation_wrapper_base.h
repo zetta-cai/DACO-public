@@ -21,6 +21,7 @@
 #include "cooperation/directory_info.h"
 #include "cooperation/directory_table.h"
 #include "edge/edge_param.h"
+#include "message/message_base.h"
 
 namespace covered
 {
@@ -51,7 +52,8 @@ namespace covered
 
         // (4) Process writes for MSI protocol
 
-        bool acquireLocalWritelock(const Key& key, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo);
+        LockResult acquireLocalWritelock(const Key& key, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo);
+        void releaseLocalWritelock(const Key& key, const DirectoryInfo& sender_dirinfo);
 
         // (5) Get size for capacity check
 

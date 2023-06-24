@@ -53,19 +53,19 @@ namespace covered
         return;
     }
 
-    bool NetworkAddr::isValid() const
+    bool NetworkAddr::isValidAddr() const
     {
         return is_valid_;
     }
 
-    void NetworkAddr::setValid()
+    void NetworkAddr::setValidAddr()
     {
         is_valid_ = true;
         checkPortIfValid_();
         return;
     }
 
-    void NetworkAddr::resetValid()
+    void NetworkAddr::resetValidAddr()
     {
         is_valid_ = false;
         return;

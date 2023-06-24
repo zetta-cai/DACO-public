@@ -18,7 +18,7 @@ namespace covered
     class GlobalDelRequest : public KeyMessage
     {
     public:
-        GlobalDelRequest(const Key& key);
+        GlobalDelRequest(const Key& key, const uint32_t& source_index);
         GlobalDelRequest(const DynamicArray& msg_payload);
         virtual ~GlobalDelRequest();
     private:

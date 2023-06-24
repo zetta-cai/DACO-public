@@ -21,7 +21,7 @@ namespace covered
     class DirectoryLookupResponse : public KeyWriteflagValidityDirectoryMessage
     {
     public:
-        DirectoryLookupResponse(const Key& key, const bool& is_being_written, const bool& is_valid_directory_exist, const DirectoryInfo& directory_info);
+        DirectoryLookupResponse(const Key& key, const bool& is_being_written, const bool& is_valid_directory_exist, const DirectoryInfo& directory_info, const uint32_t& source_index);
         DirectoryLookupResponse(const DynamicArray& msg_payload);
         virtual ~DirectoryLookupResponse();
     private:

@@ -20,17 +20,17 @@ namespace covered
 
     DirectoryMetadata::~DirectoryMetadata() {}
 
-    bool DirectoryMetadata::isValid() const
+    bool DirectoryMetadata::isValidDirinfo() const
     {
         return is_valid_;
     }
 
-    void DirectoryMetadata::validate()
+    void DirectoryMetadata::validateDirinfo()
     {
         is_valid_ = true;
     }
     
-    void DirectoryMetadata::invalidate()
+    void DirectoryMetadata::invalidateDirinfo()
     {
         is_valid_ = false;
     }
@@ -64,7 +64,7 @@ namespace covered
         {
             const DirectoryInfo& directory_info = iter->first;
             const DirectoryMetadata& directory_metadata = iter->second;
-            if (directory_metadata.isValid()) // validity = true
+            if (directory_metadata.isValidDirinfo()) // validity = true
             {
                 dirinfo_set.insert(directory_info);
             }
@@ -108,14 +108,25 @@ namespace covered
         return is_directory_already_exist;
     }
 
-    void DirectoryEntry::invalidateAllDirinfo(std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo)
+    void DirectoryEntry::invalidateDirentry(std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo)
     {
         for (dirinfo_entry_t::iterator iter = directory_entry_.begin(); iter != directory_entry_.end(); iter++)
         {
-            iter->second.invalidate();
+            iter->second.invalidateDirinfo();
             all_dirinfo.insert(iter->first);
         }
         return;
+    }
+
+    DirectoryMetadata* DirectoryEntry::getDirectoryMetadataPtr(const DirectoryInfo& directory_info)
+    {
+        DirectoryMetadata* directory_metadata_ptr = NULL;
+        dirinfo_entry_t::iterator iter = directory_entry_.find(directory_info);
+        if (iter != directory_entry_.end())
+        {
+            directory_metadata_ptr = &(iter->second);
+        }
+        return directory_metadata_ptr;
     }
 
     uint32_t DirectoryEntry::getSizeForCapacity() const
@@ -239,7 +250,7 @@ namespace covered
             // Check if key exists
             if (directory_hashtable_iter == directory_hashtable_.end()) // key does not exist
             {
-                assert(directory_metadata.isValid()); // key must NOT being written
+                //assert(directory_metadata.isValidDirinfo()); // invalid directory info if key is being written
                 DirectoryEntry directory_entry;
                 bool is_directory_already_exists = directory_entry.addDirinfo(directory_info, directory_metadata);
                 assert(is_directory_already_exists == false);
@@ -283,6 +294,28 @@ namespace covered
         return;
     }
 
+    bool DirectoryTable::isCooperativeCached(const Key& key) const
+    {
+        // Acquire a read block before accessing non-cast shared variables
+        assert(rwlock_for_dirtable_ptr_ != NULL);
+        while (true)
+        {
+            if (rwlock_for_dirtable_ptr_->try_lock_shared("isCooperativeCached()"))
+            {
+                break;
+            }
+        }
+
+        bool is_cooperative_cached = false;
+        if (directory_hashtable_.find(key) != directory_hashtable_.end())
+        {
+            is_cooperative_cached = true;
+        }
+
+        rwlock_for_dirtable_ptr_->unlock_shared();
+        return is_cooperative_cached;
+    }
+
     void DirectoryTable::invalidateAllDirinfo(const Key& key, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo)
     {
         // Acquire a write block before accessing non-cast shared variables
@@ -299,7 +332,34 @@ namespace covered
         if (directory_hashtable_iter != directory_hashtable_.end())
         {
             DirectoryEntry& directory_entry = directory_hashtable_iter->second;
-            directory_entry.invalidateAllDirinfo(all_dirinfo);
+            directory_entry.invalidateDirentry(all_dirinfo);
+        }
+
+        rwlock_for_dirtable_ptr_->unlock();
+        return;
+    }
+
+    void DirectoryTable::validateDirinfoIfExist(const Key& key, const DirectoryInfo& directory_info)
+    {
+        // Acquire a write block before accessing non-cast shared variables
+        assert(rwlock_for_dirtable_ptr_ != NULL);
+        while (true)
+        {
+            if (rwlock_for_dirtable_ptr_->try_lock("validateDirinfoIfExist()"))
+            {
+                break;
+            }
+        }
+
+        dirinfo_table_t::iterator directory_hashtable_iter = directory_hashtable_.find(key);
+        if (directory_hashtable_iter != directory_hashtable_.end()) // DirectoryEntry of the given key exists
+        {
+            DirectoryEntry& directory_entry = directory_hashtable_iter->second;
+            DirectoryMetadata* directory_metadata_ptr = directory_entry.getDirectoryMetadataPtr(directory_info);
+            if (directory_metadata_ptr != NULL) // The given directory info exists
+            {
+                directory_metadata_ptr->validateDirinfo(); // Validate the given directory info
+            }
         }
 
         rwlock_for_dirtable_ptr_->unlock();

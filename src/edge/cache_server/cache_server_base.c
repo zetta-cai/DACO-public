@@ -126,7 +126,7 @@ namespace covered
             } // End of (is_timeout == true)
             else
             {
-                assert(data_request_network_addr.isValid());
+                assert(data_request_network_addr.isValidAddr());
                 
                 MessageBase* data_request_ptr = MessageBase::getRequestFromMsgPayload(data_request_msg_payload);
                 assert(data_request_ptr != NULL);
@@ -222,6 +222,7 @@ namespace covered
         }
 
         assert(edge_wrapper_ptr_ != NULL);
+        assert(edge_wrapper_ptr_->edge_param_ptr_ != NULL);
         assert(edge_wrapper_ptr_->edge_cache_ptr_ != NULL);
         assert(edge_wrapper_ptr_->cooperation_wrapper_ptr_ != NULL);
 
@@ -252,6 +253,8 @@ namespace covered
             }
         }
 
+        // TODO: For COVERED, beacon node will tell the edge node if to admit, w/o independent decision
+
         // Get data from cloud for global cache miss
         if (!is_local_cached_and_valid && !is_cooperative_cached_and_valid) // (not cached or invalid) in both local and cooperative cache
         {
@@ -280,7 +283,8 @@ namespace covered
         }
 
         // Prepare LocalGetResponse for client
-        LocalGetResponse local_get_response(tmp_key, tmp_value, hitflag);
+        uint32_t edge_idx = edge_wrapper_ptr_->edge_param_ptr_->getEdgeIdx();
+        LocalGetResponse local_get_response(tmp_key, tmp_value, hitflag, edge_idx);
 
         // Reply local response message to a client (the remote address set by the most recent recv)
         DynamicArray local_response_msg_payload(local_get_response.getMsgPayloadSize());
@@ -335,14 +339,15 @@ namespace covered
         }
         
         assert(edge_wrapper_ptr_ != NULL);
+        assert(edge_wrapper_ptr_->edge_param_ptr_ != NULL);
         assert(edge_wrapper_ptr_->cooperation_wrapper_ptr_ != NULL);
 
         bool is_finish = false; // Mark if edge node is finished
         const Hitflag hitflag = Hitflag::kGlobalMiss; // Must be global miss due to write-through policy
 
         // Acquire write lock from beacon node no matter the locally cached object is valid or not, where the beacon will invalidate all other cache copies for cache coherence
-        bool is_successful = false;
-        is_finish = acquireWritelock_(tmp_key, is_successful);
+        LockResult lock_result = LockResult::kFailure;
+        is_finish = acquireWritelock_(tmp_key, lock_result);
         if (is_finish) // Edge node is NOT running
         {
             perkey_rwlock_for_serializability_ptr_->unlock(tmp_key);
@@ -350,35 +355,35 @@ namespace covered
         }
         else
         {
-            assert(is_successful == true); // Must be true after acquiring a write lock from beacon node
+            assert(lock_result == LockResult::kSuccess || lock_result == LockResult::kNoneed);
         }
 
         // Send request to cloud for write-through policy
         is_finish = writeDataToCloud_(tmp_key, tmp_value, local_request_ptr->getMessageType());
-
         if (is_finish) // Edge node is NOT running
         {
             perkey_rwlock_for_serializability_ptr_->unlock(tmp_key);
             return is_finish;
         }
 
-        // Update/remove local edge cache
+        // Try to update/remove local edge cache
         bool is_local_cached = false;
         MessageBase* local_response_ptr = NULL;
+        uint32_t edge_idx = edge_wrapper_ptr_->edge_param_ptr_->getEdgeIdx();
         // NOTE: message type has been checked, which must be one of the following two types
         if (local_request_ptr->getMessageType() == MessageType::kLocalPutRequest)
         {
             is_finish = updateLocalEdgeCache_(tmp_key, tmp_value, is_local_cached);
 
             // Prepare LocalPutResponse for client
-            local_response_ptr = new LocalPutResponse(tmp_key, hitflag);
+            local_response_ptr = new LocalPutResponse(tmp_key, hitflag, edge_idx);
         }
         else if (local_request_ptr->getMessageType() == MessageType::kLocalDelRequest)
         {
             removeLocalEdgeCache_(tmp_key, is_local_cached);
 
             // Prepare LocalDelResponse for client
-            local_response_ptr = new LocalDelResponse(tmp_key, hitflag);
+            local_response_ptr = new LocalDelResponse(tmp_key, hitflag, edge_idx);
         }
         UNUSED(is_local_cached);
 
@@ -388,12 +393,13 @@ namespace covered
             is_finish = tryToTriggerIndependentAdmission_(tmp_key, tmp_value);
         }
 
-        if (!is_finish)
+        if (!is_finish && lock_result == LockResult::kSuccess)
         {
-            // TODO: Notify beacon node to finish write and clear blocked edge nodes
-            // TODO: For COVERED, beacon node will tell the edge node if to admit, w/o independent decision
-            // TODO: Update is_finish
+            // Notify beacon node to finish writes if acquiring write lock successfully
+            is_finish = releaseWritelock_(tmp_key);
         }
+
+        // TODO: For COVERED, beacon node will tell the edge node if to admit, w/o independent decision
 
         if (!is_finish) // // Edge node is STILL running
         {
@@ -567,11 +573,10 @@ namespace covered
         assert(edge_wrapper_ptr_ != NULL);
         assert(edge_wrapper_ptr_->edge_param_ptr_ != NULL);
         assert(edge_wrapper_ptr_->cooperation_wrapper_ptr_ != NULL);
-        assert(edge_cache_server_sendreq_tocloud_socket_client_ptr_ != NULL);
 
         bool is_finish = false;
 
-        // Update remote address of edge_cache_server_sendreq_tocloud_socket_client_ptr_ as the beacon node for the key if remote
+        // Update remote address of edge_cache_server_sendreq_tobeacon_socket_client_ptr_ as the beacon node for the key if remote
         bool current_is_beacon = edge_wrapper_ptr_->currentIsBeacon_(key);
         if (!current_is_beacon)
         {
@@ -594,23 +599,22 @@ namespace covered
 
     // (2.3) Process writes and block for MSI protocol
 
-    bool CacheServerBase::acquireWritelock_(const Key& key, bool& is_successful)
+    bool CacheServerBase::acquireWritelock_(const Key& key, LockResult& lock_result)
     {
         assert(edge_wrapper_ptr_ != NULL);
         assert(edge_wrapper_ptr_->edge_param_ptr_ != NULL);
         assert(edge_wrapper_ptr_->cooperation_wrapper_ptr_ != NULL);
-        assert(edge_cache_server_sendreq_tocloud_socket_client_ptr_ != NULL);
 
         bool is_finish = false;
 
-        // Update remote address of edge_cache_server_sendreq_tocloud_socket_client_ptr_ as the beacon node for the key if remote
+        // Update remote address of edge_cache_server_sendreq_tobeacon_socket_client_ptr_ as the beacon node for the key if remote
         bool current_is_beacon = edge_wrapper_ptr_->currentIsBeacon_(key);
         if (!current_is_beacon)
         {
             locateBeaconNode_(key);
         }
 
-        // Check if beacon node is the current edge node and lookup directory information
+        // Check if beacon node is the current edge node and acquire write permission
         while (true)
         {
             if (!edge_wrapper_ptr_->edge_param_ptr_->isEdgeRunning()) // edge node is NOT running
@@ -622,27 +626,29 @@ namespace covered
             if (current_is_beacon) // Get target edge index from local directory information
             {
                 std::unordered_set<DirectoryInfo, DirectoryInfoHasher> all_dirinfo;
-                is_successful = edge_wrapper_ptr_->cooperation_wrapper_ptr_->acquireLocalWritelock(key, all_dirinfo);
-                if (!is_successful) // If key has been locked by any other edge node
+                lock_result = edge_wrapper_ptr_->cooperation_wrapper_ptr_->acquireLocalWritelock(key, all_dirinfo);
+                if (lock_result == LockResult::kFailure) // If key has been locked by any other edge node
                 {
                     // Wait for writes by polling
                     // TODO: sleep a short time to avoid frequent polling
                     continue; // Continue to try to acquire the write lock
                 }
-                else // Invalidate all cache copies if acquiring write permission successfully
+                else if (lock_result == LockResult::kSuccess) // If acquire write permission successfully
                 {
-                    edge_wrapper_ptr_->invalidateCacheCopies_(all_dirinfo);
+                    // Invalidate all cache copies
+                    edge_wrapper_ptr_->invalidateCacheCopies_(key, all_dirinfo);
                 }
+                // NOTE: will directly break if lock result is kNoneed
             }
             else // Get target edge index from remote directory information at the beacon node
             {
-                is_finish = acquireBeaconWritelock_(key, is_successful);
+                is_finish = acquireBeaconWritelock_(key, lock_result);
                 if (is_finish) // Edge is NOT running
                 {
                     return is_finish;
                 }
 
-                if (!is_successful) // If key has been locked by any other edge node
+                if (lock_result == LockResult::kFailure) // If key has been locked by any other edge node
                 {
                     // Wait for writes by interruption instead of polling to avoid duplicate AcquireWritelockRequest
                     is_finish = blockForWritesByInterruption_(key);
@@ -655,11 +661,12 @@ namespace covered
                         continue; // Continue to try to acquire the write lock
                     }
                 }
-                // NOTE: cache server of closest edge node does NOT need to invalidate cache copies, which has been done by the remote beacon edge node
+                // NOTE: cache server of closest edge node does NOT need to invalidate cache copies, which has been done by the remote beacon edge node, if lock result is kSuccess
+                // NOTE: will directly break if lock result is kNoneed
             } // End of current_is_beacon
 
             // key must NOT being written here
-            assert(is_successful == true);
+            assert(lock_result == LockResult::kSuccess || lock_result == LockResult::kNoneed);
             break;
         } // End of while (true)
 
@@ -731,7 +738,8 @@ namespace covered
         if (!is_finish)
         {
             // Prepare FinishBlockResponse
-            FinishBlockResponse finish_block_response(key);
+            uint32_t edge_idx = edge_wrapper_ptr_->edge_param_ptr_->getEdgeIdx();
+            FinishBlockResponse finish_block_response(key, edge_idx);
             DynamicArray control_request_msg_payload(finish_block_response.getMsgPayloadSize());
             finish_block_response.serialize(control_request_msg_payload);
 
@@ -739,6 +747,40 @@ namespace covered
             PropagationSimulator::propagateFromEdgeToNeighbor();
             edge_cache_server_sendreq_tobeacon_socket_client_ptr_->send(control_request_msg_payload);
         }
+
+        return is_finish;
+    }
+
+    bool CacheServerBase::releaseWritelock_(const Key& key)
+    {
+        assert(edge_wrapper_ptr_ != NULL);
+        assert(edge_wrapper_ptr_->edge_param_ptr_ != NULL);
+        assert(edge_wrapper_ptr_->cooperation_wrapper_ptr_ != NULL);
+
+        bool is_finish = false;
+
+        // Update remote address of edge_cache_server_sendreq_tobeacon_socket_client_ptr_ as the beacon node for the key if remote
+        bool current_is_beacon = edge_wrapper_ptr_->currentIsBeacon_(key);
+        if (!current_is_beacon)
+        {
+            locateBeaconNode_(key);
+        }
+
+        // Check if beacon node is the current edge node and lookup directory information
+    
+        if (current_is_beacon) // Get target edge index from local directory information
+        {
+            DirectoryInfo current_directory_info(edge_wrapper_ptr_->edge_param_ptr_->getEdgeIdx());
+            edge_wrapper_ptr_->cooperation_wrapper_ptr_->releaseLocalWritelock(key, current_directory_info);
+        }
+        else // Get target edge index from remote directory information at the beacon node
+        {
+            is_finish = releaseBeaconWritelock_(key);
+            if (is_finish) // Edge is NOT running
+            {
+                return is_finish;
+            }
+        } // End of current_is_beacon
 
         return is_finish;
     }
@@ -794,7 +836,8 @@ namespace covered
 
         bool is_finish = false; // Mark if edge node is finished
 
-        GlobalGetRequest global_get_request(key);
+        uint32_t edge_idx = edge_wrapper_ptr_->edge_param_ptr_->getEdgeIdx();
+        GlobalGetRequest global_get_request(key, edge_idx);
         DynamicArray global_request_msg_payload(global_get_request.getMsgPayloadSize());
         global_get_request.serialize(global_request_msg_payload);
 
@@ -863,13 +906,14 @@ namespace covered
 
         // Prepare global write request message
         MessageBase* global_request_ptr = NULL;
+        uint32_t edge_idx = edge_wrapper_ptr_->edge_param_ptr_->getEdgeIdx();
         if (message_type == MessageType::kGlobalPutRequest)
         {
-            global_request_ptr = new GlobalPutRequest(key, value);
+            global_request_ptr = new GlobalPutRequest(key, value, edge_idx);
         }
         else if (message_type == MessageType::kGlobalDelRequest)
         {
-            global_request_ptr = new GlobalDelRequest(key);
+            global_request_ptr = new GlobalDelRequest(key, edge_idx);
         }
         else
         {
@@ -941,7 +985,7 @@ namespace covered
         bool is_cached_and_invalid = false;
         if (is_local_cached)
         {
-            bool is_valid = edge_wrapper_ptr_->edge_cache_ptr_->isValidIfCached(key);
+            bool is_valid = edge_wrapper_ptr_->edge_cache_ptr_->isCachedObjectValid(key);
             is_cached_and_invalid = is_local_cached && !is_valid;
         }
 

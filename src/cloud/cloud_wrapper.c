@@ -109,6 +109,8 @@ namespace covered
         assert(cloud_rocksdb_ptr_ != NULL);
         assert(cloud_recvreq_socket_server_ptr_ != NULL);
 
+        uint32_t cloud_idx = cloud_param_ptr_->getCloudIdx();
+
         bool is_finish = false;
 
         // Process global requests by RocksDB KVS
@@ -127,7 +129,7 @@ namespace covered
                 cloud_rocksdb_ptr_->get(tmp_key, tmp_value);
 
                 // Prepare global get response message
-                global_response_ptr = new GlobalGetResponse(tmp_key, tmp_value);
+                global_response_ptr = new GlobalGetResponse(tmp_key, tmp_value, cloud_idx);
                 assert(global_response_ptr != NULL);
                 break;
             }
@@ -142,7 +144,7 @@ namespace covered
                 cloud_rocksdb_ptr_->put(tmp_key, tmp_value);
 
                 // Prepare global put response message
-                global_response_ptr = new GlobalPutResponse(tmp_key);
+                global_response_ptr = new GlobalPutResponse(tmp_key, cloud_idx);
                 assert(global_response_ptr != NULL);
                 break;
             }
@@ -155,7 +157,7 @@ namespace covered
                 cloud_rocksdb_ptr_->remove(tmp_key);
 
                 // Prepare global del response message
-                global_response_ptr = new GlobalDelResponse(tmp_key);
+                global_response_ptr = new GlobalDelResponse(tmp_key, cloud_idx);
                 assert(global_response_ptr != NULL);
                 break;
             }

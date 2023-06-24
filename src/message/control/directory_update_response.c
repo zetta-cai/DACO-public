@@ -4,7 +4,7 @@ namespace covered
 {
     const std::string DirectoryUpdateResponse::kClassName("DirectoryUpdateResponse");
 
-    DirectoryUpdateResponse::DirectoryUpdateResponse(const Key& key, const bool& is_being_written) : KeyByteMessage(key, static_cast<uint8_t>(is_being_written), MessageType::kDirectoryUpdateResponse)
+    DirectoryUpdateResponse::DirectoryUpdateResponse(const Key& key, const bool& is_being_written, const uint32_t& source_index) : KeyByteMessage(key, static_cast<uint8_t>(is_being_written), MessageType::kDirectoryUpdateResponse, source_index)
     {
     }
 

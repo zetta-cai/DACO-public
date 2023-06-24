@@ -19,7 +19,7 @@ namespace covered
     class GlobalGetResponse : public KeyValueMessage
     {
     public:
-        GlobalGetResponse(const Key& key, const Value& value);
+        GlobalGetResponse(const Key& key, const Value& value, const uint32_t& source_index);
         GlobalGetResponse(const DynamicArray& msg_payload);
         virtual ~GlobalGetResponse();
     private:
