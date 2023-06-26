@@ -39,7 +39,7 @@ namespace covered
         
     EdgeWrapper::~EdgeWrapper()
     {
-        // NOTE: no need to delete edge_param_ptr, as it is maintained outside EdgeWrapper
+        // NOTE: no need to delete edge_param_ptr_, as it is maintained outside EdgeWrapper
 
         // Release local edge cache
         assert(edge_cache_ptr_ != NULL);
@@ -133,6 +133,10 @@ namespace covered
         assert(beacon_server_ptr != NULL);
         beacon_server_ptr->start();
 
+        assert(beacon_server_ptr != NULL);
+        delete beacon_server_ptr;
+        beacon_server_ptr = NULL;
+
         pthread_exit(NULL);
         return NULL;
     }
@@ -145,6 +149,10 @@ namespace covered
         assert(cache_server_ptr != NULL);
         cache_server_ptr->start();
 
+        assert(cache_server_ptr != NULL);
+        delete cache_server_ptr;
+        cache_server_ptr = NULL;
+
         pthread_exit(NULL);
         return NULL;
     }
@@ -156,6 +164,10 @@ namespace covered
         InvalidationServerBase* invalidation_server_ptr = InvalidationServerBase::getInvalidationServer((EdgeWrapper*)edge_wrapper_ptr);
         assert(invalidation_server_ptr != NULL);
         invalidation_server_ptr->start();
+
+        assert(invalidation_server_ptr != NULL);
+        delete invalidation_server_ptr;
+        invalidation_server_ptr = NULL;
 
         pthread_exit(NULL);
         return NULL;

@@ -1,5 +1,5 @@
 /*
- * CacheServerBase: listen to receive local requests issued by clients; access local edge cache, cooperative cache, and cloud to reply clients.
+ * CacheServerWorkerBase: process requests partitioned by cache server; access local edge cache, cooperative cache, and cloud to reply clients.
  *
  * A. Workflow of local get request:
  * (1) Cache server of closest edge node checks local edge cache.
@@ -18,7 +18,7 @@
  * (3) Cache server of the closest edge node tries to independently admit object in local edge cache if necessary.
  * 
  * B. Involved messages of local get requests:
- * (1) Receive local requests
+ * (1) Receive local requests partitioned by cache server
  * (2) Issue/receive directory lookup requests/responses
  * (3) Receive/issue finish block requests
  * (4) Issue/receive redirected requests/responses
@@ -36,7 +36,7 @@
  * (4) If lock result is kSuccess, cache server of closest edge node notifies local MSI metadata or beacon server of remote beacon node to release write lock and finish writes.
  * 
  * D. Involved messages of local put/del requests:
- * (1) Receive local requests
+ * (1) Receive local requests partitioned by cache server
  * (2) Issue/receive acquire writelock requests/responses
  * (3) Issue/receive invalidation requests/responses
  * (4) Receive/issue finish block requests
@@ -48,25 +48,25 @@
  * By Siyuan Sheng (2023.06.21).
  */
 
-#ifndef CACHE_SERVER_BASE_H
-#define CACHE_SERVER_BASE_H
+#ifndef CACHE_SERVER_WORKER_BASE_H
+#define CACHE_SERVER_WORKER_BASE_H
 
 #include <string>
 
-#include "edge/edge_wrapper.h"
+#include "edge/cache_server/cache_server_worker_param.h"
 #include "lock/perkey_rwlock.h"
 #include "message/message_base.h"
 #include "network/udp_socket_wrapper.h"
 
 namespace covered
 {
-    class CacheServerBase
+    class CacheServerWorkerBase
     {
     public:
-        static CacheServerBase* getCacheServer(EdgeWrapper* edge_wrapper_ptr);
+        static CacheServerWorkerBase* getCacheServerWorker(CacheServerWorkerParam* cache_server_worker_param_ptr);
 
-        CacheServerBase(EdgeWrapper* edge_wrapper_ptr);
-        ~CacheServerBase();
+        CacheServerWorkerBase(CacheServerWorkerParam* cache_server_worker_param_ptr);
+        ~CacheServerWorkerBase();
 
         void start();
     private:
@@ -130,6 +130,10 @@ namespace covered
         // NOTE: we will check capacity and trigger eviction for cache admission
         virtual bool triggerIndependentAdmission_(const Key& key, const Value& value) const = 0;
 
+        // (6) Utility functions
+
+        void checkPointers_() const;
+
         // Member variables
 
         // Const variable
@@ -146,15 +150,15 @@ namespace covered
         // Member variables
 
         // Const variable
-        const EdgeWrapper* edge_wrapper_ptr_;
+        const CacheServerWorkerParam* cache_server_worker_param_ptr_;
 
         // Guarantee the global serializability for writes of the same key
         mutable PerkeyRwlock* perkey_rwlock_for_serializability_ptr_;
 
         // Non-const individual variable
-        UdpSocketWrapper* edge_cache_server_recvreq_socket_server_ptr_;
-        UdpSocketWrapper* edge_cache_server_sendreq_tobeacon_socket_client_ptr_;
-        UdpSocketWrapper* edge_cache_server_sendreq_totarget_socket_client_ptr_;
+        UdpSocketWrapper* edge_cache_server_worker_sendreq_tobeacon_socket_client_ptr_;
+        UdpSocketWrapper* edge_cache_server_worker_sendreq_totarget_socket_client_ptr_;
+        UdpSocketWrapper* edge_cache_server_worker_sendreq_toclient_socket_client_ptr_;
     };
 }
 

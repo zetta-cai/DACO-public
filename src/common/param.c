@@ -35,13 +35,14 @@ namespace covered
     std::string Param::hash_name_ = "";
     uint32_t Param::keycnt_ = 0;
     uint32_t Param::opcnt_ = 0;
+    uint32_t Param::percacheserver_workercnt_ = 0;
     uint32_t Param::perclient_workercnt_ = 0;
     uint32_t Param::propagation_latency_clientedge_ = 0;
     uint32_t Param::propagation_latency_crossedge_ = 0;
     uint32_t Param::propagation_latency_edgecloud_ = 0;
     std::string Param::workload_name_ = "";
 
-    void Param::setParameters(const std::string& main_class_name, const bool& is_simulation, const std::string& cache_name, const uint32_t& capacity_bytes, const uint32_t& clientcnt, const std::string& cloud_storage, const std::string& config_filepath, const bool& is_debug, const double& duration, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge, const uint32_t& propagation_latency_crossedge, const uint32_t& propagation_latency_edgecloud, const std::string& workload_name)
+    void Param::setParameters(const std::string& main_class_name, const bool& is_simulation, const std::string& cache_name, const uint32_t& capacity_bytes, const uint32_t& clientcnt, const std::string& cloud_storage, const std::string& config_filepath, const bool& is_debug, const double& duration, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& percacheserver_workercnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge, const uint32_t& propagation_latency_crossedge, const uint32_t& propagation_latency_edgecloud, const std::string& workload_name)
     {
         // NOTE: Param::setParameters() does NOT rely on any other module
         if (is_valid_)
@@ -67,6 +68,7 @@ namespace covered
         checkHashName_();
         keycnt_ = keycnt;
         opcnt_ = opcnt;
+        percacheserver_workercnt_ = percacheserver_workercnt;
         perclient_workercnt_ = perclient_workercnt;
         propagation_latency_clientedge_ = propagation_latency_clientedge;
         propagation_latency_crossedge_ = propagation_latency_crossedge;
@@ -158,6 +160,12 @@ namespace covered
         return opcnt_;
     }
 
+    uint32_t Param::getPercacheserverWorkercnt()
+    {
+        checkIsValid_();
+        return percacheserver_workercnt_;
+    }
+
     uint32_t Param::getPerclientWorkercnt()
     {
         checkIsValid_();
@@ -205,6 +213,7 @@ namespace covered
         oss << "Hash name: " << hash_name_ << std::endl;
         oss << "Key count (dataset size): " << keycnt_ << std::endl;
         oss << "Operation count (workload size): " << opcnt_ << std::endl;
+        oss << "Per-cache-server worker count:" << percacheserver_workercnt_ << std::endl;
         oss << "Per-client worker count: " << perclient_workercnt_ << std::endl;
         oss << "One-way propagation latency between client and edge: " << propagation_latency_clientedge_ << "us" << std::endl;
         oss << "One-way propagation latency between edge and edge: " << propagation_latency_crossedge_ << "us" << std::endl;
