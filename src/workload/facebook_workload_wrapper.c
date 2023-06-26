@@ -50,11 +50,11 @@ namespace covered
     {
         assert(Param::getClientcnt() > 0);
         assert(Param::getPerclientWorkercnt() > 0);
-        uint32_t perworker_opcnt = Param::getOpcnt() / Param::getClientcnt() / Param::getPerclientWorkercnt();
+        uint32_t perclientworker_opcnt = Param::getOpcnt() / Param::getClientcnt() / Param::getPerclientWorkercnt();
         uint32_t perclient_workercnt = Param::getPerclientWorkercnt();
         uint32_t keycnt = Param::getKeycnt();
 
-        facebook_stressor_config_.numOps = static_cast<uint64_t>(perworker_opcnt);
+        facebook_stressor_config_.numOps = static_cast<uint64_t>(perclientworker_opcnt);
         facebook_stressor_config_.numThreads = static_cast<uint64_t>(perclient_workercnt);
         facebook_stressor_config_.numKeys = static_cast<uint64_t>(keycnt);
 

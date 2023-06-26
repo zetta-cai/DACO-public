@@ -141,15 +141,15 @@ namespace covered
             assert(latency_histogram_size_ == tmp_client_statistics_tracker.getLatencyHistogramSize());
 
             // Aggregate per-client hit ratio statistics
-            std::atomic<uint32_t>* tmp_perworker_local_hitcnts = tmp_client_statistics_tracker.getPerworkerLocalHitcnts();
-            std::atomic<uint32_t>* tmp_perworker_cooperative_hitcnts = tmp_client_statistics_tracker.getPerworkerCooperativeHitcnts();
+            std::atomic<uint32_t>* tmp_perclientworker_local_hitcnts = tmp_client_statistics_tracker.getPerclientworkerLocalHitcnts();
+            std::atomic<uint32_t>* tmp_perclientworker_cooperative_hitcnts = tmp_client_statistics_tracker.getPerclientworkerCooperativeHitcnts();
 
-            std::atomic<uint32_t>* tmp_perworker_reqcnts = tmp_client_statistics_tracker.getPerworkerReqcnts();
+            std::atomic<uint32_t>* tmp_perclientworker_reqcnts = tmp_client_statistics_tracker.getPerclientworkerReqcnts();
             for (uint32_t local_worker_idx = 0; local_worker_idx < perclient_workercnt; local_worker_idx++)
             {
-                perclient_local_hitcnts_[client_idx] += tmp_perworker_local_hitcnts[local_worker_idx].load(Util::LOAD_CONCURRENCY_ORDER);
-                perclient_cooperative_hitcnts_[client_idx] += tmp_perworker_cooperative_hitcnts[local_worker_idx].load(Util::LOAD_CONCURRENCY_ORDER);
-                perclient_reqcnts_[client_idx] += tmp_perworker_reqcnts[local_worker_idx].load(Util::LOAD_CONCURRENCY_ORDER);
+                perclient_local_hitcnts_[client_idx] += tmp_perclientworker_local_hitcnts[local_worker_idx].load(Util::LOAD_CONCURRENCY_ORDER);
+                perclient_cooperative_hitcnts_[client_idx] += tmp_perclientworker_cooperative_hitcnts[local_worker_idx].load(Util::LOAD_CONCURRENCY_ORDER);
+                perclient_reqcnts_[client_idx] += tmp_perclientworker_reqcnts[local_worker_idx].load(Util::LOAD_CONCURRENCY_ORDER);
             }
 
             // Aggregate per-client latency statistics

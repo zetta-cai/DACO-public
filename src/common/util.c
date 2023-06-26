@@ -310,10 +310,10 @@ namespace covered
         return getEdgeCacheServerRecvreqPort(closest_edge_idx);
     }
 
-    uint32_t Util::getGlobalWorkerIdx(const uint32_t& client_idx, const uint32_t local_worker_idx)
+    uint32_t Util::getGlobalClientWorkerIdx(const uint32_t& client_idx, const uint32_t local_client_worker_idx)
     {
-        uint32_t global_worker_idx = client_idx * Param::getPerclientWorkercnt() + local_worker_idx;
-        return global_worker_idx;
+        uint32_t global_client_worker_idx = client_idx * Param::getPerclientWorkercnt() + local_client_worker_idx;
+        return global_client_worker_idx;
     }
 
     // (4.2) Edge and cloud

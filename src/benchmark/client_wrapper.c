@@ -4,8 +4,8 @@
 #include <pthread.h>
 #include <sstream>
 
-#include "benchmark/worker_param.h"
-#include "benchmark/worker_wrapper.h"
+#include "benchmark/client_worker_param.h"
+#include "benchmark/client_worker_wrapper.h"
 #include "common/param.h"
 #include "common/util.h"
 
@@ -13,10 +13,10 @@ namespace covered
 {
     const std::string ClientWrapper::kClassName("ClientWrapper");
 
-    void* ClientWrapper::launchWorker_(void* worker_param_ptr)
+    void* ClientWrapper::launchClientWorker_(void* client_worker_param_ptr)
     {
-        WorkerWrapper local_worker((WorkerParam*)worker_param_ptr);
-        local_worker.start();
+        ClientWorkerWrapper local_client_worker((ClientWorkerParam*)client_worker_param_ptr);
+        local_client_worker.start();
         
         pthread_exit(NULL);
         return NULL;
@@ -47,39 +47,39 @@ namespace covered
     void ClientWrapper::start()
     {
         uint32_t perclient_workercnt = Param::getPerclientWorkercnt();
-        pthread_t local_worker_threads[perclient_workercnt];
-        WorkerParam local_worker_params[perclient_workercnt];
+        pthread_t local_client_worker_threads[perclient_workercnt];
+        ClientWorkerParam local_client_worker_params[perclient_workercnt];
         int pthread_returncode;
         assert(client_param_ptr_ != NULL);
 
         // Prepare perclient_workercnt worker parameters
-        for (uint32_t local_worker_idx = 0; local_worker_idx < perclient_workercnt; local_worker_idx++)
+        for (uint32_t local_client_worker_idx = 0; local_client_worker_idx < perclient_workercnt; local_client_worker_idx++)
         {
-            WorkerParam local_worker_param(client_param_ptr_, local_worker_idx);
-            local_worker_params[local_worker_idx] = local_worker_param;
+            ClientWorkerParam local_client_worker_param(client_param_ptr_, local_client_worker_idx);
+            local_client_worker_params[local_client_worker_idx] = local_client_worker_param;
         }
 
         // Launch perclient_workercnt worker threads in the local client
-        for (uint32_t local_worker_idx = 0; local_worker_idx < perclient_workercnt; local_worker_idx++)
+        for (uint32_t local_client_worker_idx = 0; local_client_worker_idx < perclient_workercnt; local_client_worker_idx++)
         {
-            pthread_returncode = pthread_create(&local_worker_threads[local_worker_idx], NULL, launchWorker_, (void*)(&(local_worker_params[local_worker_idx])));
+            pthread_returncode = pthread_create(&local_client_worker_threads[local_client_worker_idx], NULL, launchClientWorker_, (void*)(&(local_client_worker_params[local_client_worker_idx])));
             if (pthread_returncode != 0)
             {
                 std::ostringstream oss;
-                oss << "client " << client_param_ptr_->getClientIdx() << " failed to launch worker " << local_worker_idx << " (error code: " << pthread_returncode << ")" << std::endl;
+                oss << "client " << client_param_ptr_->getClientIdx() << " failed to launch worker " << local_client_worker_idx << " (error code: " << pthread_returncode << ")" << std::endl;
                 covered::Util::dumpErrorMsg(instance_name_, oss.str());
                 exit(1);
             }
         }
 
         // Wait for all local workers
-        for (uint32_t local_worker_idx = 0; local_worker_idx < perclient_workercnt; local_worker_idx++)
+        for (uint32_t local_client_worker_idx = 0; local_client_worker_idx < perclient_workercnt; local_client_worker_idx++)
         {
-            pthread_returncode = pthread_join(local_worker_threads[local_worker_idx], NULL); // void* retval = NULL
+            pthread_returncode = pthread_join(local_client_worker_threads[local_client_worker_idx], NULL); // void* retval = NULL
             if (pthread_returncode != 0)
             {
                 std::ostringstream oss;
-                oss << "client " << client_param_ptr_->getClientIdx() << " failed to join worker " << local_worker_idx << " (error code: " << pthread_returncode << ")" << std::endl;
+                oss << "client " << client_param_ptr_->getClientIdx() << " failed to join client worker " << local_client_worker_idx << " (error code: " << pthread_returncode << ")" << std::endl;
                 covered::Util::dumpErrorMsg(instance_name_, oss.str());
                 exit(1);
             }

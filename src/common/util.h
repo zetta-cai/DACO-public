@@ -80,7 +80,7 @@ namespace covered
         static uint32_t getClosestEdgeIdx(const uint32_t& client_idx);
         static std::string getClosestEdgeIpstr(const uint32_t& client_idx);
         static uint16_t getClosestEdgeCacheServerRecvreqPort(const uint32_t& client_idx); // Calculate the recvreq port of the closest edge node for client
-        static uint32_t getGlobalWorkerIdx(const uint32_t& client_idx, const uint32_t local_worker_idx);
+        static uint32_t getGlobalClientWorkerIdx(const uint32_t& client_idx, const uint32_t local_client_worker_idx);
 
         // (4.2) Edge and cloud
         static uint16_t getEdgeBeaconServerRecvreqPort(const uint32_t& edge_idx);
