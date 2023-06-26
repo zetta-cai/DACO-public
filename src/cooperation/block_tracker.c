@@ -35,7 +35,7 @@ namespace covered
 
     BlockTracker::~BlockTracker()
     {
-        // NOTE: no need to release edge_param_ptr_, which is maintained outside BlockTracker
+        // NOTE: no need to release edge_param_ptr_, which will be released outside BlockTracker (e.g., simulator)
 
         assert(rwlock_for_blockmeta_ptr_ != NULL);
         delete rwlock_for_blockmeta_ptr_;
@@ -140,6 +140,8 @@ namespace covered
 
     void BlockTracker::block(const Key& key, const NetworkAddr& network_addr)
     {
+        assert(network_addr.isValidAddr());
+
         // Acquire a write lock for cooperation metadata before accessing cooperation metadata
         assert(rwlock_for_blockmeta_ptr_ != NULL);
         while (true)
@@ -150,21 +152,18 @@ namespace covered
             }
         }
 
-        bool is_successful = false;
-
         perkey_edge_blocklist_t::iterator iter = perkey_edge_blocklist_.find(key);
         if (iter != perkey_edge_blocklist_.end()) // key does not exist
         {
-            NetworkAddr default_network_addr;
-            RingBuffer<NetworkAddr> tmp_edge_blocklist(default_network_addr);
-            perkey_edge_blocklist_.insert(std::pair<Key, RingBuffer<NetworkAddr>>(key, tmp_edge_blocklist));
+            std::unordered_set<NetworkAddr, NetworkAddrHasher> tmp_edge_blocklist;
+            perkey_edge_blocklist_.insert(std::pair<Key, std::unordered_set<NetworkAddr, NetworkAddrHasher>>(key, tmp_edge_blocklist));
         }
 
         iter = perkey_edge_blocklist_.find(key);
         assert(iter != perkey_edge_blocklist_.end()); // key must exist now
         
-        is_successful = iter->second.push(network_addr);
-        assert(is_successful);
+        assert(iter->second.find(network_addr) == iter->second.end()); // An edge node can be blocked at most once (i.e., no duplicate edge nodes in a blocklist)
+        iter->second.insert(network_addr);
 
         rwlock_for_blockmeta_ptr_->unlock();
         return;
@@ -194,25 +193,8 @@ namespace covered
         if (!is_being_written) // key is still NOT being written
         {
             perkey_edge_blocklist_t::iterator iter = perkey_edge_blocklist_.find(key);
-            RingBuffer<NetworkAddr>& tmp_edge_blocklist = iter->second;
-
-            // Pop all blocked edge nodes to finish blocking for writes by CooperationWrapper
-            while (true)
-            {
-                // Get all closest edge nodes in block list
-                NetworkAddr tmp_edge_addr;
-                bool is_successful = tmp_edge_blocklist.pop(tmp_edge_addr);
-                if (!is_successful) // No blocked edge node
-                {
-                    break;
-                }
-                else
-                {
-                    assert(tmp_edge_addr.isValidAddr());
-                    assert(blocked_edges.find(tmp_edge_addr) == blocked_edges.end());
-                    blocked_edges.insert(tmp_edge_addr);
-                }
-            }
+            assert(iter != perkey_edge_blocklist_.end()); // key must exist
+            blocked_edges = iter->second;
 
             // Remove the key and block list from perkey_edge_blocklist_
             perkey_edge_blocklist_.erase(iter);
@@ -239,9 +221,13 @@ namespace covered
         // NOTE: we do NOT count key size in BlockTracker, as the size of keys managed by beacon edge node has been counted by DirectoryTable
         uint32_t size = 0;
         size += perkey_writeflags_.size() * sizeof(bool); // Size of write flags
-        for (perkey_edge_blocklist_t::const_iterator iter = perkey_edge_blocklist_.begin(); iter != perkey_edge_blocklist_.end(); iter++)
+        for (perkey_edge_blocklist_t::const_iterator iter_for_blocklist = perkey_edge_blocklist_.begin(); iter_for_blocklist != perkey_edge_blocklist_.end(); iter_for_blocklist++)
         {
-            size += iter->second.getSizeForCapacity(); // Size of per-key block list
+            const std::unordered_set<NetworkAddr, NetworkAddrHasher>& tmp_edge_blocklist = iter_for_blocklist->second;
+            for (std::unordered_set<NetworkAddr, NetworkAddrHasher>::const_iterator iter_for_networkaddr = tmp_edge_blocklist.begin(); iter_for_networkaddr != tmp_edge_blocklist.end(); iter_for_networkaddr++)
+            {
+                size += iter_for_networkaddr->getSizeForCapacity(); // Size of network address
+            }
         }
 
         rwlock_for_blockmeta_ptr_->unlock_shared();

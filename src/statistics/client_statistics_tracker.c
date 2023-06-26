@@ -22,29 +22,25 @@ namespace covered
         perclient_workercnt_ = perclient_workercnt;
         latency_histogram_size_ = latency_histogram_size;
 
-        latency_histogram_ = new std::atomic<uint32_t>[latency_histogram_size_];
-        assert(latency_histogram_ != NULL);
+        latency_histogram_.resize(latency_histogram_size_);
         for (uint32_t i = 0; i < latency_histogram_size_; i++)
         {
             latency_histogram_[i].store(0, Util::STORE_CONCURRENCY_ORDER);
         }
 
-        perclientworker_local_hitcnts_ = new std::atomic<uint32_t>[perclient_workercnt];
-        assert(perclientworker_local_hitcnts_ != NULL);
+        perclientworker_local_hitcnts_.resize(perclient_workercnt);
         for (uint32_t i = 0; i < perclient_workercnt; i++)
         {
             perclientworker_local_hitcnts_[i].store(0, Util::STORE_CONCURRENCY_ORDER);
         }
 
-        perclientworker_cooperative_hitcnts_ = new std::atomic<uint32_t>[perclient_workercnt];
-        assert(perclientworker_cooperative_hitcnts_ != NULL);
+        perclientworker_cooperative_hitcnts_.resize(perclient_workercnt);
         for (uint32_t i = 0; i < perclient_workercnt; i++)
         {
             perclientworker_cooperative_hitcnts_[i].store(0, Util::STORE_CONCURRENCY_ORDER);
         }
 
-        perclientworker_reqcnts_ = new std::atomic<uint32_t>[perclient_workercnt];;
-        assert(perclientworker_reqcnts_ != NULL);
+        perclientworker_reqcnts_.resize(perclient_workercnt);
         for (uint32_t i = 0; i < perclient_workercnt; i++)
         {
             perclientworker_reqcnts_[i].store(0, Util::STORE_CONCURRENCY_ORDER);
@@ -59,42 +55,21 @@ namespace covered
         instance_name_ = oss.str();
         
         perclient_workercnt_ = 0;
-        perclientworker_local_hitcnts_ = NULL;
-        perclientworker_cooperative_hitcnts_ = NULL;
-        perclientworker_reqcnts_ = NULL;
+        perclientworker_local_hitcnts_.resize(0);
+        perclientworker_cooperative_hitcnts_.resize(0);
+        perclientworker_reqcnts_.resize(0);
 
         latency_histogram_size_ = 0;
-        latency_histogram_ = NULL;
+        latency_histogram_.resize(0);
 
         load_(filepath); // Load per-client statistics from binary file
     }
 
-    ClientStatisticsTracker::~ClientStatisticsTracker()
-    {
-        // Release latency histogram
-        assert(latency_histogram_ != NULL);
-        delete latency_histogram_;
-        latency_histogram_ = NULL;
-
-        // Release local hit counts
-        assert(perclientworker_local_hitcnts_ != NULL);
-        delete perclientworker_local_hitcnts_;
-        perclientworker_local_hitcnts_ = NULL;
-
-        // Release global hit counts
-        assert(perclientworker_cooperative_hitcnts_ != NULL);
-        delete perclientworker_cooperative_hitcnts_;
-        perclientworker_cooperative_hitcnts_ = NULL;
-
-        // Release request counts
-        assert(perclientworker_reqcnts_ != NULL);
-        delete perclientworker_reqcnts_;
-        perclientworker_reqcnts_ = NULL;
-    }
+    ClientStatisticsTracker::~ClientStatisticsTracker() {}
 
     void ClientStatisticsTracker::updateLocalHitcnt(const uint32_t& local_client_worker_idx)
     {
-        assert(perclientworker_local_hitcnts_ != NULL);
+        assert(perclientworker_local_hitcnts_.size() == perclient_workercnt_);
         assert(local_client_worker_idx < perclient_workercnt_);
 
         perclientworker_local_hitcnts_[local_client_worker_idx]++;
@@ -104,7 +79,7 @@ namespace covered
 
     void ClientStatisticsTracker::updateCooperativeHitcnt(const uint32_t& local_client_worker_idx)
     {
-        assert(perclientworker_cooperative_hitcnts_ != NULL);
+        assert(perclientworker_cooperative_hitcnts_.size() == perclient_workercnt_);
         assert(local_client_worker_idx < perclient_workercnt_);
 
         perclientworker_cooperative_hitcnts_[local_client_worker_idx]++;
@@ -114,17 +89,16 @@ namespace covered
 
     void ClientStatisticsTracker::updateReqcnt(const uint32_t& local_client_worker_idx)
     {
-        assert(perclientworker_reqcnts_ != NULL);
+        assert(perclientworker_reqcnts_.size() == perclient_workercnt_);
         assert(local_client_worker_idx < perclient_workercnt_);
 
         perclientworker_reqcnts_[local_client_worker_idx]++;
         return;
     }
 
-    void ClientStatisticsTracker::updateLatency(const uint32_t& local_client_worker_idx, const uint32_t& latency_us)
+    void ClientStatisticsTracker::updateLatency(const uint32_t& latency_us)
     {
-        assert(latency_histogram_ != NULL);
-        assert(local_client_worker_idx < perclient_workercnt_);
+        assert(latency_histogram_.size() == latency_histogram_size_);
 
         if (latency_us < latency_histogram_size_)
         {
@@ -238,7 +212,7 @@ namespace covered
     uint32_t ClientStatisticsTracker::dumpPerclientworkerLocalHitcnts_(std::fstream* fs_ptr) const
     {
         assert(fs_ptr != NULL);
-        assert(perclientworker_local_hitcnts_ != NULL);
+        assert(perclientworker_local_hitcnts_.size() == perclient_workercnt_);
 
         uint32_t perclientworker_local_hitcnts_bytes = perclient_workercnt_ * sizeof(uint32_t);
         DynamicArray dynamic_array(perclientworker_local_hitcnts_bytes);
@@ -254,7 +228,7 @@ namespace covered
     uint32_t ClientStatisticsTracker::dumpPerclientworkerCooperativeHitcnts_(std::fstream* fs_ptr) const
     {
         assert(fs_ptr != NULL);
-        assert(perclientworker_cooperative_hitcnts_ != NULL);
+        assert(perclientworker_cooperative_hitcnts_.size() == perclient_workercnt_);
 
         uint32_t perclientworker_cooperative_hitcnts_bytes = perclient_workercnt_ * sizeof(uint32_t);
         DynamicArray dynamic_array(perclientworker_cooperative_hitcnts_bytes);
@@ -270,7 +244,7 @@ namespace covered
     uint32_t ClientStatisticsTracker::dumpPerclientworkerReqcnts_(std::fstream* fs_ptr) const
     {
         assert(fs_ptr != NULL);
-        assert(perclientworker_reqcnts_ != NULL);
+        assert(perclientworker_reqcnts_.size() == perclient_workercnt_);
 
         uint32_t perclientworker_reqcnts_bytes = perclient_workercnt_ * sizeof(uint32_t);
         DynamicArray dynamic_array(perclientworker_reqcnts_bytes);
@@ -298,7 +272,7 @@ namespace covered
     uint32_t ClientStatisticsTracker::dumpLatencyHistogram_(std::fstream* fs_ptr) const
     {
         assert(fs_ptr != NULL);
-        assert(latency_histogram_ != NULL);
+        assert(latency_histogram_.size() == latency_histogram_size_);
 
         uint32_t latency_histogram_bytes = latency_histogram_size_ * sizeof(uint32_t);
         DynamicArray dynamic_array(latency_histogram_bytes);
@@ -375,9 +349,9 @@ namespace covered
     uint32_t ClientStatisticsTracker::loadPerclientworkerLocalHitcnts_(std::fstream* fs_ptr)
     {
         assert(fs_ptr != NULL);
-        assert(perclientworker_local_hitcnts_ == NULL && perclient_workercnt_ > 0);
-        perclientworker_local_hitcnts_ = new std::atomic<uint32_t>[perclient_workercnt_];
-        assert(perclientworker_local_hitcnts_ != NULL);
+        assert(perclientworker_local_hitcnts_.size() == 0 && perclient_workercnt_ > 0);
+        perclientworker_local_hitcnts_.resize(perclient_workercnt_);
+        assert(perclientworker_local_hitcnts_.size() == perclient_workercnt_);
 
         uint32_t perclientworker_local_hitcnts_bytes = perclient_workercnt_ * sizeof(uint32_t);
         DynamicArray dynamic_array(perclientworker_local_hitcnts_bytes);
@@ -394,9 +368,9 @@ namespace covered
     uint32_t ClientStatisticsTracker::loadPerclientworkerCooperativeHitcnts_(std::fstream* fs_ptr)
     {
         assert(fs_ptr != NULL);
-        assert(perclientworker_cooperative_hitcnts_ == NULL && perclient_workercnt_ > 0);
-        perclientworker_cooperative_hitcnts_ = new std::atomic<uint32_t>[perclient_workercnt_];
-        assert(perclientworker_cooperative_hitcnts_ != NULL);
+        assert(perclientworker_cooperative_hitcnts_.size() == 0 && perclient_workercnt_ > 0);
+        perclientworker_cooperative_hitcnts_.resize(perclient_workercnt_);
+        assert(perclientworker_cooperative_hitcnts_.size() == perclient_workercnt_);
 
         uint32_t perclientworker_cooperative_hitcnts_bytes = perclient_workercnt_ * sizeof(uint32_t);
         DynamicArray dynamic_array(perclientworker_cooperative_hitcnts_bytes);
@@ -413,9 +387,9 @@ namespace covered
     uint32_t ClientStatisticsTracker::loadPerclientworkerReqcnts_(std::fstream* fs_ptr)
     {
         assert(fs_ptr != NULL);
-        assert(perclientworker_reqcnts_ == NULL && perclient_workercnt_ > 0);
-        perclientworker_reqcnts_ = new std::atomic<uint32_t>[perclient_workercnt_];
-        assert(perclientworker_reqcnts_ != NULL);
+        assert(perclientworker_reqcnts_.size() == 0 && perclient_workercnt_ > 0);
+        perclientworker_reqcnts_.resize(perclient_workercnt_);
+        assert(perclientworker_reqcnts_.size() == perclient_workercnt_);
 
         uint32_t perclientworker_reqcnts_bytes = perclient_workercnt_ * sizeof(uint32_t);
         DynamicArray dynamic_array(perclientworker_reqcnts_bytes);
@@ -444,9 +418,9 @@ namespace covered
     uint32_t ClientStatisticsTracker::loadLatencyHistogram_(std::fstream* fs_ptr)
     {
         assert(fs_ptr != NULL);
-        assert(latency_histogram_ == NULL && latency_histogram_size_ > 0);
-        latency_histogram_ = new std::atomic<uint32_t>[latency_histogram_size_];
-        assert(latency_histogram_ != NULL);
+        assert(latency_histogram_.size() == 0 && latency_histogram_size_ > 0);
+        latency_histogram_.resize(latency_histogram_size_);
+        assert(latency_histogram_.size() == latency_histogram_size_);
 
         uint32_t latency_histogram_bytes = latency_histogram_size_ * sizeof(uint32_t);
         DynamicArray dynamic_array(latency_histogram_bytes);
@@ -462,22 +436,22 @@ namespace covered
 
     // Get per-client statistics for aggregation
 
-    std::atomic<uint32_t>* ClientStatisticsTracker::getPerclientworkerLocalHitcnts() const
+    const std::vector<std::atomic<uint32_t>>& ClientStatisticsTracker::getPerclientworkerLocalHitcnts() const
     {
         return perclientworker_local_hitcnts_;
     }
     
-    std::atomic<uint32_t>* ClientStatisticsTracker::getPerclientworkerCooperativeHitcnts() const
+    const std::vector<std::atomic<uint32_t>>& ClientStatisticsTracker::getPerclientworkerCooperativeHitcnts() const
     {
         return perclientworker_cooperative_hitcnts_;
     }
 
-    std::atomic<uint32_t>* ClientStatisticsTracker::getPerclientworkerReqcnts() const
+    const std::vector<std::atomic<uint32_t>>& ClientStatisticsTracker::getPerclientworkerReqcnts() const
     {
         return perclientworker_reqcnts_;
     }
     
-    std::atomic<uint32_t>* ClientStatisticsTracker::getLatencyHistogram() const
+    const std::vector<std::atomic<uint32_t>>& ClientStatisticsTracker::getLatencyHistogram() const
     {
         return latency_histogram_;
     }

@@ -4,6 +4,7 @@
 
 #include "common/config.h"
 #include "common/param.h"
+#include "common/util.h"
 #include "edge/invalidation_server/basic_invalidation_server.h"
 #include "edge/invalidation_server/covered_invalidation_server.h"
 #include "message/control_message.h"
@@ -51,7 +52,7 @@ namespace covered
 
     InvalidationServerBase::~InvalidationServerBase()
     {
-        // NOTE: no need to release edge_wrapper_ptr_, which is maintained outside InvalidationServerBase
+        // NOTE: no need to release edge_wrapper_ptr_, which will be released outside InvalidationServerBase (e.g., simulator)
 
         // Release the socket server on recvreq port
         assert(edge_invalidation_server_recvreq_socket_server_ptr_ != NULL);

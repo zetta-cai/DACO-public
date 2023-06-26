@@ -268,7 +268,7 @@ namespace covered
         }
 
         // Update latency statistics for the local client
-        client_statistics_tracker_ptr_->updateLatency(client_worker_param_ptr_->getLocalClientWorkerIdx(), rtt_us);
+        client_statistics_tracker_ptr_->updateLatency(rtt_us);
 
         // TMPDEBUG
         std::ostringstream oss;

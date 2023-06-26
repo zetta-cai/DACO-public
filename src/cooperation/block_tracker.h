@@ -10,12 +10,10 @@
 #define BLOCK_TRACKER_H
 
 #include <string>
-#include <vector>
 #include <unordered_map>
 #include <unordered_set>
 
 #include "common/key.h"
-#include "common/ring_buffer_impl.h"
 #include "edge/edge_param.h"
 #include "lock/rwlock.h"
 #include "network/network_addr.h"
@@ -45,7 +43,7 @@ namespace covered
         uint32_t getSizeForCapacity() const;
     private:
         typedef std::unordered_map<Key, bool, KeyHasher> perkey_writeflag_t;
-        typedef std::unordered_map<Key, RingBuffer<NetworkAddr>, KeyHasher> perkey_edge_blocklist_t;
+        typedef std::unordered_map<Key, std::unordered_set<NetworkAddr, NetworkAddrHasher>, KeyHasher> perkey_edge_blocklist_t;
 
         static const std::string kClassName;
 

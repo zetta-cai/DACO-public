@@ -29,6 +29,15 @@ namespace covered
         NetworkAddr host_addr(Util::ANY_IPSTR, edge_cache_server_recvreq_port);
         edge_cache_server_recvreq_socket_server_ptr_ = new UdpSocketWrapper(SocketRole::kSocketServer, host_addr);
         assert(edge_cache_server_recvreq_socket_server_ptr_ != NULL);
+
+        // Prepare parameters for cache server threads
+        uint32_t percacheserver_workercnt = Param::getPercacheserverWorkercnt();
+        cache_server_worker_params_.resize(percacheserver_workercnt);
+        for (uint32_t local_cache_server_worker_idx = 0; local_cache_server_worker_idx < percacheserver_workercnt; local_cache_server_worker_idx++)
+        {
+            CacheServerWorkerParam tmp_cache_server_worker_param(edge_wrapper_ptr_, local_cache_server_worker_idx);
+            cache_server_worker_params_[local_cache_server_worker_idx] = tmp_cache_server_worker_param;
+        }
     }
 
     CacheServer::~CacheServer()
@@ -50,19 +59,11 @@ namespace covered
         int pthread_returncode;
         uint32_t percacheserver_workercnt = Param::getPercacheserverWorkercnt();
         pthread_t cache_server_worker_threads[percacheserver_workercnt];
-        CacheServerWorkerParam cache_server_worker_params[percacheserver_workercnt];
-
-        // Prepare parameters
-        for (uint32_t local_cache_server_worker_idx = 0; local_cache_server_worker_idx < percacheserver_workercnt; local_cache_server_worker_idx++)
-        {
-            CacheServerWorkerParam tmp_cache_server_worker_param(edge_wrapper_ptr_, local_cache_server_worker_idx);
-            cache_server_worker_params[local_cache_server_worker_idx] = tmp_cache_server_worker_param;
-        }
 
         // Launch cache server workers
         for (uint32_t local_cache_server_worker_idx = 0; local_cache_server_worker_idx < percacheserver_workercnt; local_cache_server_worker_idx++)
         {
-            pthread_returncode = pthread_create(&cache_server_worker_threads[local_cache_server_worker_idx], NULL, launchCacheServerWorker_, (void*)(&cache_server_worker_params[local_cache_server_worker_idx]));
+            pthread_returncode = pthread_create(&cache_server_worker_threads[local_cache_server_worker_idx], NULL, launchCacheServerWorker_, (void*)(&cache_server_worker_params_[local_cache_server_worker_idx]));
             if (pthread_returncode != 0)
             {
                 std::ostringstream oss;
@@ -71,6 +72,8 @@ namespace covered
                 exit(1);
             }
         }
+
+        // TODO: Use per-cache-server-worker ring buffer to partition client-issued local requests
 
         // Wait for cache server workers
         for (uint32_t local_cache_server_worker_idx = 0; local_cache_server_worker_idx < percacheserver_workercnt; local_cache_server_worker_idx++)
@@ -88,7 +91,7 @@ namespace covered
         return;
     }
 
-    void* EdgeWrapper::launchCacheServerWorker_(void* cache_server_worker_param_ptr)
+    void* CacheServer::launchCacheServerWorker_(void* cache_server_worker_param_ptr)
     {
         assert(cache_server_worker_param_ptr != NULL);
 

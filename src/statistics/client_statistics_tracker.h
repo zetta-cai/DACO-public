@@ -8,6 +8,7 @@
 #define CLIENT_STATISTICS_TRACKER_H
 
 #include <atomic>
+#include <vector>
 #include <string>
 
 namespace covered
@@ -25,16 +26,16 @@ namespace covered
         void updateReqcnt(const uint32_t& local_client_worker_idx);
 
         // Update per-client latency statistics
-        void updateLatency(const uint32_t& local_client_worker_idx, const uint32_t& latency_us);
+        void updateLatency(const uint32_t& latency_us);
 
         // Dump per-client statistics for TotalStatisticsTracker
         uint32_t dump(const std::string& filepath) const;
 
         // Get per-client statistics for aggregation
-        std::atomic<uint32_t>* getPerclientworkerLocalHitcnts() const;
-        std::atomic<uint32_t>* getPerclientworkerCooperativeHitcnts() const;
-        std::atomic<uint32_t>* getPerclientworkerReqcnts() const;
-        std::atomic<uint32_t>* getLatencyHistogram() const;
+        const std::vector<std::atomic<uint32_t>>& getPerclientworkerLocalHitcnts() const;
+        const std::vector<std::atomic<uint32_t>>& getPerclientworkerCooperativeHitcnts() const;
+        const std::vector<std::atomic<uint32_t>>& getPerclientworkerReqcnts() const;
+        const std::vector<std::atomic<uint32_t>>& getLatencyHistogram() const;
         uint32_t getPerclientWorkercnt() const;
         uint32_t getLatencyHistogramSize() const;
     private:
@@ -63,10 +64,10 @@ namespace covered
         // ClientStatisticsWrapper only uses client index to specify instance_name_ -> no need to maintain client_idx_
         std::string instance_name_;
 
-        std::atomic<uint32_t>* perclientworker_local_hitcnts_; // Hit local edge cache of closest edge node
-        std::atomic<uint32_t>* perclientworker_cooperative_hitcnts_; // Hit cooperative edge cache of some target edge node
-        std::atomic<uint32_t>* perclientworker_reqcnts_;
-        std::atomic<uint32_t>* latency_histogram_;
+        std::vector<std::atomic<uint32_t>> perclientworker_local_hitcnts_; // Hit local edge cache of closest edge node
+        std::vector<std::atomic<uint32_t>> perclientworker_cooperative_hitcnts_; // Hit cooperative edge cache of some target edge node
+        std::vector<std::atomic<uint32_t>> perclientworker_reqcnts_;
+        std::vector<std::atomic<uint32_t>> latency_histogram_;
         uint32_t perclient_workercnt_; // Come from Util::Param
         uint32_t latency_histogram_size_; // Come from Util::Config
     };

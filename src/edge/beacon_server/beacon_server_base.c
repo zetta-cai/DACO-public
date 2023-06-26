@@ -60,7 +60,7 @@ namespace covered
 
     BeaconServerBase::~BeaconServerBase()
     {
-        // NOTE: no need to release edge_wrapper_ptr_, which is maintained outside BeaconServerBase
+        // NOTE: no need to release edge_wrapper_ptr_, which will be released outside BeaconServerBase (e.g., simulator)
 
         // Release the socket server on recvreq port
         assert(edge_beacon_server_recvreq_socket_server_ptr_ != NULL);

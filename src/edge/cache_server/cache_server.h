@@ -8,6 +8,7 @@
 #define CACHE_SERVER_H
 
 #include <string>
+#include <vector>
 
 #include "edge/edge_wrapper.h"
 #include "network/udp_socket_wrapper.h"
@@ -31,7 +32,8 @@ namespace covered
         EdgeWrapper* edge_wrapper_ptr_;
 
         // Non-const individual variable
-        UdpSocketWrapper* edge_cache_server_recvreq_socket_server_ptr_;
+        UdpSocketWrapper* edge_cache_server_recvreq_socket_server_ptr_; // Only used by cache server
+        std::vector<CacheServerWorkerParam> cache_server_worker_params_; // Each cache server thread has a unique param
     };
 }
 

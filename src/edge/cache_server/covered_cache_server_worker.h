@@ -1,28 +1,28 @@
 /*
- * BasicCacheServer: basic cache server in edge for baselines.
+ * CoveredCacheServerWorker: cache server worker in edge for COVERED.
  * 
  * By Siyuan Sheng (2023.06.21).
  */
 
-#ifndef BASIC_CACHE_SERVER_H
-#define BASIC_CACHE_SERVER_H
+#ifndef COVERED_CACHE_SERVER_WORKER_H
+#define COVERED_CACHE_SERVER_WORKER_H
 
 #include <string>
 
-#include "edge/cache_server/cache_server_base.h"
+#include "edge/cache_server/cache_server_worker_base.h"
 
 namespace covered
 {
-    class BasicCacheServer : public CacheServerBase
+    class CoveredCacheServerWorker : public CacheServerWorkerBase
     {
     public:
-        BasicCacheServer(EdgeWrapper* edge_wrapper_ptr);
-        virtual ~BasicCacheServer();
+        CoveredCacheServerWorker(CacheServerWorkerParam* cache_server_worker_param_ptr);
+        virtual ~CoveredCacheServerWorker();
     private:
         static const std::string kClassName;
 
         // (1) Process data requests
-
+        
         // Return if edge node is finished
         virtual bool processRedirectedGetRequest_(MessageBase* redirected_request_ptr) const override;
 
@@ -46,7 +46,7 @@ namespace covered
         virtual bool releaseBeaconWritelock_(const Key& key) override;
 
         // (5) Admit uncached objects in local edge cache
-        
+
         // Return if edge node is finished
         virtual bool triggerIndependentAdmission_(const Key& key, const Value& value) const override;
 

@@ -10,25 +10,26 @@
 
 namespace covered
 {
-    const std::string BasicCacheServer::kClassName("BasicCacheServer");
+    const std::string BasicCacheServerWorker::kClassName("BasicCacheServerWorker");
 
-    BasicCacheServer::BasicCacheServer(EdgeWrapper* edge_wrapper_ptr) : CacheServerBase(edge_wrapper_ptr)
+    BasicCacheServerWorker::BasicCacheServerWorker(CacheServerWorkerParam* cache_server_worker_param_ptr) : CacheServerWorkerBase(cache_server_worker_param_ptr)
     {
-        assert(edge_wrapper_ptr_ != NULL);
-        assert(edge_wrapper_ptr_->cache_name_ != Param::COVERED_CACHE_NAME);
-        uint32_t edge_idx = edge_wrapper_ptr_->edge_param_ptr_->getEdgeIdx();
+        assert(cache_server_worker_param_ptr != NULL);
+        assert(cache_server_worker_param_ptr->getEdgeWrapperPtr()->cache_name_ != Param::COVERED_CACHE_NAME);
+        uint32_t edge_idx = cache_server_worker_param_ptr->getEdgeWrapperPtr()->edge_param_ptr_->getEdgeIdx();
+        uint32_t local_cache_server_worker_idx = cache_server_worker_param_ptr->getLocalCacheServerWorkerIdx();
 
-        // Differentiate BasicCacheServer in different edge nodes
+        // Differentiate BasicCacheServerWorker in different edge nodes
         std::ostringstream oss;
-        oss << kClassName << " edge" << edge_idx;
+        oss << kClassName << " edge" << edge_idx << "-worker" << local_cache_server_worker_idx;
         instance_name_ = oss.str();
     }
 
-    BasicCacheServer::~BasicCacheServer() {}
+    BasicCacheServerWorker::~BasicCacheServerWorker() {}
 
     // (1) Process data requests
 
-    bool BasicCacheServer::processRedirectedGetRequest_(MessageBase* redirected_request_ptr) const
+    bool BasicCacheServerWorker::processRedirectedGetRequest_(MessageBase* redirected_request_ptr) const
     {
         // Get key and value from redirected request if any
         assert(redirected_request_ptr != NULL && redirected_request_ptr->getMessageType() == MessageType::kRedirectedGetRequest);
@@ -46,16 +47,15 @@ namespace covered
             }
         }
 
-        assert(edge_wrapper_ptr_ != NULL);
-        assert(edge_wrapper_ptr_->edge_param_ptr_ != NULL);
-        assert(edge_wrapper_ptr_->edge_cache_ptr_ != NULL);
+        checkPointers_();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getEdgeWrapperPtr();
 
         bool is_finish = false;
         Hitflag hitflag = Hitflag::kGlobalMiss;
 
         // Access local edge cache for cooperative edge caching (current edge node is the target edge node)
-        bool is_cooperative_cached_and_valid = edge_wrapper_ptr_->edge_cache_ptr_->get(tmp_key, tmp_value);
-        bool is_cooperaitve_cached = edge_wrapper_ptr_->edge_cache_ptr_->isLocalCached(tmp_key);
+        bool is_cooperative_cached_and_valid = tmp_edge_wrapper_ptr->edge_cache_ptr_->get(tmp_key, tmp_value);
+        bool is_cooperaitve_cached = tmp_edge_wrapper_ptr->edge_cache_ptr_->isLocalCached(tmp_key);
         if (is_cooperative_cached_and_valid) // cached and valid
         {
             hitflag = Hitflag::kCooperativeHit;
@@ -72,7 +72,7 @@ namespace covered
         // NOTE: no need to access cloud to get data, which will be performed by the closest edge node
 
         // Prepare RedirectedGetResponse for the closest edge node
-        uint32_t edge_idx = edge_wrapper_ptr_->edge_param_ptr_->getEdgeIdx();
+        uint32_t edge_idx = tmp_edge_wrapper_ptr->edge_param_ptr_->getEdgeIdx();
         RedirectedGetResponse redirected_get_response(tmp_key, tmp_value, hitflag, edge_idx);
 
         // Reply redirected response message to the closest edge node (the remote address set by the most recent recv)
@@ -89,20 +89,19 @@ namespace covered
 
     // (2.1) Fetch data from neighbor edge nodes
 
-    bool BasicCacheServer::lookupBeaconDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
+    bool BasicCacheServerWorker::lookupBeaconDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
     {
-        assert(edge_wrapper_ptr_ != NULL);
-        assert(edge_wrapper_ptr_->edge_param_ptr_ != NULL);
-        assert(edge_cache_server_sendreq_tobeacon_socket_client_ptr_ != NULL);
+        checkPointers_();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getEdgeWrapperPtr();
 
         // The current edge node must NOT be the beacon node for the key
-        bool current_is_beacon = edge_wrapper_ptr_->currentIsBeacon_(key);
+        bool current_is_beacon = tmp_edge_wrapper_ptr->currentIsBeacon_(key);
         assert(!current_is_beacon);
 
         bool is_finish = false;
 
         // Prepare directory lookup request to check directory information in beacon node
-        uint32_t edge_idx = edge_wrapper_ptr_->edge_param_ptr_->getEdgeIdx();
+        uint32_t edge_idx = tmp_edge_wrapper_ptr->edge_param_ptr_->getEdgeIdx();
         DirectoryLookupRequest directory_lookup_request(key, edge_idx);
         DynamicArray control_request_msg_payload(directory_lookup_request.getMsgPayloadSize());
         directory_lookup_request.serialize(control_request_msg_payload);
@@ -118,7 +117,7 @@ namespace covered
             bool is_timeout = edge_cache_server_sendreq_tobeacon_socket_client_ptr_->recv(control_response_msg_payload);
             if (is_timeout)
             {
-                if (!edge_wrapper_ptr_->edge_param_ptr_->isEdgeRunning())
+                if (!tmp_edge_wrapper_ptr->edge_param_ptr_->isEdgeRunning())
                 {
                     is_finish = true;
                     break; // Edge is NOT running
@@ -151,16 +150,15 @@ namespace covered
         return is_finish;
     }
 
-    bool BasicCacheServer::redirectGetToTarget_(const Key& key, Value& value, bool& is_cooperative_cached, bool& is_valid) const
+    bool BasicCacheServerWorker::redirectGetToTarget_(const Key& key, Value& value, bool& is_cooperative_cached, bool& is_valid) const
     {
-        assert(edge_wrapper_ptr_ != NULL);
-        assert(edge_wrapper_ptr_->edge_param_ptr_ != NULL);
-        assert(edge_cache_server_sendreq_totarget_socket_client_ptr_ != NULL);
+        checkPointers_();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getEdgeWrapperPtr();
 
         bool is_finish = false;
 
         // Prepare redirected get request to get data from target edge node if any
-        uint32_t edge_idx = edge_wrapper_ptr_->edge_param_ptr_->getEdgeIdx();
+        uint32_t edge_idx = tmp_edge_wrapper_ptr->edge_param_ptr_->getEdgeIdx();
         RedirectedGetRequest redirected_get_request(key, edge_idx);
         DynamicArray redirected_request_msg_payload(redirected_get_request.getMsgPayloadSize());
         redirected_get_request.serialize(redirected_request_msg_payload);
@@ -176,7 +174,7 @@ namespace covered
             bool is_timeout = edge_cache_server_sendreq_totarget_socket_client_ptr_->recv(redirected_response_msg_payload);
             if (is_timeout)
             {
-                if (!edge_wrapper_ptr_->edge_param_ptr_->isEdgeRunning())
+                if (!tmp_edge_wrapper_ptr->edge_param_ptr_->isEdgeRunning())
                 {
                     is_finish = true;
                     break; // Edge is NOT running
@@ -236,20 +234,19 @@ namespace covered
 
     // (2.2) Update content directory information
 
-    bool BasicCacheServer::updateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written) const
+    bool BasicCacheServerWorker::updateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written) const
     {
-        assert(edge_wrapper_ptr_ != NULL);
-        assert(edge_wrapper_ptr_->edge_param_ptr_ != NULL);
-        assert(edge_cache_server_sendreq_tobeacon_socket_client_ptr_ != NULL);
+        checkPointers_();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getEdgeWrapperPtr();
 
         // The current edge node must NOT be the beacon node for the key
-        bool current_is_beacon = edge_wrapper_ptr_->currentIsBeacon_(key);
+        bool current_is_beacon = tmp_edge_wrapper_ptr->currentIsBeacon_(key);
         assert(!current_is_beacon);
 
         bool is_finish = false;
 
         // Prepare directory update request to check directory information in beacon node
-        uint32_t edge_idx = edge_wrapper_ptr_->edge_param_ptr_->getEdgeIdx();
+        uint32_t edge_idx = tmp_edge_wrapper_ptr->edge_param_ptr_->getEdgeIdx();
         DirectoryUpdateRequest directory_update_request(key, is_admit, directory_info, edge_idx);
         DynamicArray control_request_msg_payload(directory_update_request.getMsgPayloadSize());
         directory_update_request.serialize(control_request_msg_payload);
@@ -265,7 +262,7 @@ namespace covered
             bool is_timeout = edge_cache_server_sendreq_tobeacon_socket_client_ptr_->recv(control_response_msg_payload);
             if (is_timeout)
             {
-                if (!edge_wrapper_ptr_->edge_param_ptr_->isEdgeRunning())
+                if (!tmp_edge_wrapper_ptr->edge_param_ptr_->isEdgeRunning())
                 {
                     is_finish = true;
                     break; // Edge is NOT running
@@ -298,20 +295,19 @@ namespace covered
 
     // (2.3) Process writes and block for MSI protocol
 
-    bool BasicCacheServer::acquireBeaconWritelock_(const Key& key, LockResult& lock_result)
+    bool BasicCacheServerWorker::acquireBeaconWritelock_(const Key& key, LockResult& lock_result)
     {
-        assert(edge_wrapper_ptr_ != NULL);
-        assert(edge_wrapper_ptr_->edge_param_ptr_ != NULL);
-        assert(edge_cache_server_sendreq_tobeacon_socket_client_ptr_ != NULL);
+        checkPointers_();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getEdgeWrapperPtr();
 
         // The current edge node must NOT be the beacon node for the key
-        bool current_is_beacon = edge_wrapper_ptr_->currentIsBeacon_(key);
+        bool current_is_beacon = tmp_edge_wrapper_ptr->currentIsBeacon_(key);
         assert(!current_is_beacon);
 
         bool is_finish = false;
 
         // Prepare acquire writelock request to acquire permission for a write
-        uint32_t edge_idx = edge_wrapper_ptr_->edge_param_ptr_->getEdgeIdx();
+        uint32_t edge_idx = tmp_edge_wrapper_ptr->edge_param_ptr_->getEdgeIdx();
         AcquireWritelockRequest acquire_writelock_request(key, edge_idx);
         DynamicArray control_request_msg_payload(acquire_writelock_request.getMsgPayloadSize());
         acquire_writelock_request.serialize(control_request_msg_payload);
@@ -327,7 +323,7 @@ namespace covered
             bool is_timeout = edge_cache_server_sendreq_tobeacon_socket_client_ptr_->recv(control_response_msg_payload);
             if (is_timeout)
             {
-                if (!edge_wrapper_ptr_->edge_param_ptr_->isEdgeRunning())
+                if (!tmp_edge_wrapper_ptr->edge_param_ptr_->isEdgeRunning())
                 {
                     is_finish = true;
                     break; // Edge is NOT running
@@ -358,20 +354,19 @@ namespace covered
         return is_finish;
     }
 
-    bool BasicCacheServer::releaseBeaconWritelock_(const Key& key)
+    bool BasicCacheServerWorker::releaseBeaconWritelock_(const Key& key)
     {
-        assert(edge_wrapper_ptr_ != NULL);
-        assert(edge_wrapper_ptr_->edge_param_ptr_ != NULL);
-        assert(edge_cache_server_sendreq_tobeacon_socket_client_ptr_ != NULL);
+        checkPointers_();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getEdgeWrapperPtr();
 
         // The current edge node must NOT be the beacon node for the key
-        bool current_is_beacon = edge_wrapper_ptr_->currentIsBeacon_(key);
+        bool current_is_beacon = tmp_edge_wrapper_ptr->currentIsBeacon_(key);
         assert(!current_is_beacon);
 
         bool is_finish = false;
 
         // Prepare release writelock request to finish write
-        uint32_t edge_idx = edge_wrapper_ptr_->edge_param_ptr_->getEdgeIdx();
+        uint32_t edge_idx = tmp_edge_wrapper_ptr->edge_param_ptr_->getEdgeIdx();
         ReleaseWritelockRequest release_writelock_request(key, edge_idx);
         DynamicArray control_request_msg_payload(release_writelock_request.getMsgPayloadSize());
         release_writelock_request.serialize(control_request_msg_payload);
@@ -387,7 +382,7 @@ namespace covered
             bool is_timeout = edge_cache_server_sendreq_tobeacon_socket_client_ptr_->recv(control_response_msg_payload);
             if (is_timeout)
             {
-                if (!edge_wrapper_ptr_->edge_param_ptr_->isEdgeRunning())
+                if (!tmp_edge_wrapper_ptr->edge_param_ptr_->isEdgeRunning())
                 {
                     is_finish = true;
                     break; // Edge is NOT running
@@ -416,13 +411,12 @@ namespace covered
 
     // (5) Admit uncached objects in local edge cache
 
-    bool BasicCacheServer::triggerIndependentAdmission_(const Key& key, const Value& value) const
+    bool BasicCacheServerWorker::triggerIndependentAdmission_(const Key& key, const Value& value) const
     {
         // No need to acquire per-key rwlock for serializability, which has been done in processLocalGetRequest_() and processLocalWriteRequest_()
 
-        assert(edge_wrapper_ptr_ != NULL);
-        assert(edge_wrapper_ptr_->edge_cache_ptr_ != NULL);
-        assert(edge_wrapper_ptr_->cooperation_wrapper_ptr_ != NULL);
+        checkPointers_();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getEdgeWrapperPtr();
 
         bool is_finish = false;
 
@@ -438,14 +432,14 @@ namespace covered
         {
             return is_finish;
         }
-        edge_wrapper_ptr_->edge_cache_ptr_->admit(key, value, !is_being_written); // valid if not being written
+        tmp_edge_wrapper_ptr->edge_cache_ptr_->admit(key, value, !is_being_written); // valid if not being written
 
         // Evict until used bytes <= capacity bytes
         while (true)
         {
             // Data and metadata for local edge cache, and cooperation metadata
-            uint32_t used_bytes = edge_wrapper_ptr_->getSizeForCapacity_();
-            if (used_bytes <= edge_wrapper_ptr_->capacity_bytes_) // Not exceed capacity limitation
+            uint32_t used_bytes = tmp_edge_wrapper_ptr->getSizeForCapacity_();
+            if (used_bytes <= tmp_edge_wrapper_ptr->capacity_bytes_) // Not exceed capacity limitation
             {
                 break;
             }
@@ -453,7 +447,7 @@ namespace covered
             {
                 Key victim_key;
                 Value victim_value;
-                edge_wrapper_ptr_->edge_cache_ptr_->evict(victim_key, victim_value);
+                tmp_edge_wrapper_ptr->edge_cache_ptr_->evict(victim_key, victim_value);
                 bool _unused_is_being_written = false; // NOTE: is_being_written does NOT affect cache eviction
                 is_finish = updateDirectory_(victim_key, false, _unused_is_being_written);
                 if (is_finish)

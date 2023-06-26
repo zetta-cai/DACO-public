@@ -26,9 +26,9 @@ namespace covered
         void start();
 
         friend class CacheServer;
-        friend class CacheServerBase;
-        friend class BasicCacheServer;
-        friend class CoveredCacheServer;
+        friend class CacheServerWorkerBase;
+        friend class BasicCacheServerWorker;
+        friend class CoveredCacheServerWorker;
         friend class BeaconServerBase;
         friend class BasicBeaconServer;
         friend class CoveredBeaconServer;

@@ -99,7 +99,7 @@ namespace covered
     }
 
     template<class T>
-    uint32_t RingBuffer<T>::size() const
+    uint32_t RingBuffer<T>::getElementCnt() const
     {
         uint32_t size = 0;
         if (head_ >= tail_)
@@ -115,6 +115,18 @@ namespace covered
     }
 
     template<class T>
+    uint32_t RingBuffer<T>::getCapacity() const
+    {
+        return capacity_;
+    }
+
+    template<class T>
+    T RingBuffer<T>::getDefaultElement() const
+    {
+        return default_element_;
+    }
+
+    /*template<class T>
     uint32_t RingBuffer<T>::getSizeForCapacity() const
     {
         uint32_t size = 0;
@@ -127,7 +139,7 @@ namespace covered
             size += ring_buffer_[ring_buffer_idx].getSizeForCapacity();
         }
         return size;
-    }
+    }*/
 
     template<class T>
     RingBuffer<T>& RingBuffer<T>::operator=(const RingBuffer<T>& other)

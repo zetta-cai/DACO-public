@@ -20,7 +20,7 @@ namespace covered
         rwlock_hashtable_.resize(RWLOCK_HASHTABLE_CAPCITY, NULL);
         for (uint32_t i = 0; i < rwlock_hashtable_.size(); i++)
         {
-            rwlock_hashtable_[i] = new boost::shared_mutex;
+            rwlock_hashtable_[i] = new boost::shared_mutex();
             assert(rwlock_hashtable_[i] != NULL);
         }
 

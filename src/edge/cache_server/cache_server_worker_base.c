@@ -4,6 +4,7 @@
 
 #include "common/config.h"
 #include "common/param.h"
+#include "common/util.h"
 #include "edge/cache_server/basic_cache_server_worker.h"
 #include "edge/cache_server/covered_cache_server_worker.h"
 #include "message/control_message.h"
@@ -23,11 +24,11 @@ namespace covered
         std::string cache_name = cache_server_worker_param_ptr->getEdgeWrapperPtr()->cache_name_;
         if (cache_name == Param::COVERED_CACHE_NAME)
         {
-            cache_server_worker_ptr = new CoveredCacheServer(cache_server_worker_param_ptr);
+            cache_server_worker_ptr = new CoveredCacheServerWorker(cache_server_worker_param_ptr);
         }
         else
         {
-            cache_server_worker_ptr = new BasicCacheServer(cache_server_worker_param_ptr);
+            cache_server_worker_ptr = new BasicCacheServerWorker(cache_server_worker_param_ptr);
         }
 
         assert(cache_server_worker_ptr != NULL);
@@ -75,14 +76,14 @@ namespace covered
         std::string invalid_client_ipstr = Util::LOCALHOST_IPSTR;
         uint16_t invalid_client_port = Util::UDP_MIN_PORT + 1;
         NetworkAddr invalid_client_addr(invalid_client_ipstr, invalid_client_port);
-        edge_cache_server_worker_sendreq_toclient_socket_client_ptr_ = new UdpSocketWrapper(SockR
+        edge_cache_server_worker_sendreq_toclient_socket_client_ptr_ = new UdpSocketWrapper(SocketRole
         ::kSocketClient, invalid_client_addr);
         assert(edge_cache_server_worker_sendreq_toclient_socket_client_ptr_);
     }
 
     CacheServerWorkerBase::~CacheServerWorkerBase()
     {
-        // NOTE: no need to release cache_server_worker_param_ptr_, which is maintained outside CacheServerWorkerBase
+        // NOTE: no need to release cache_server_worker_param_ptr_, which will be released outside CacheServerWorkerBase (by CacheServer)
 
         // Release per-key rwlock
         assert(perkey_rwlock_for_serializability_ptr_ != NULL);
@@ -113,7 +114,7 @@ namespace covered
     void CacheServerWorkerBase::start()
     {
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_.getEdgeWrapperPtr();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getEdgeWrapperPtr();
 
         bool is_finish = false; // Mark if edge node is finished
         while (tmp_edge_wrapper_ptr->edge_param_ptr_->isEdgeRunning()) // edge_running_ is set as true by default
@@ -224,7 +225,7 @@ namespace covered
         }
 
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_.getEdgeWrapperPtr();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getEdgeWrapperPtr();
 
         bool is_finish = false; // Mark if edge node is finished
         Hitflag hitflag = Hitflag::kGlobalMiss;
@@ -339,7 +340,7 @@ namespace covered
         }
         
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_.getEdgeWrapperPtr();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getEdgeWrapperPtr();
 
         bool is_finish = false; // Mark if edge node is finished
         const Hitflag hitflag = Hitflag::kGlobalMiss; // Must be global miss due to write-through policy
@@ -451,7 +452,7 @@ namespace covered
     bool CacheServerWorkerBase::fetchDataFromNeighbor_(const Key& key, Value& value, bool& is_cooperative_cached_and_valid) const
     {
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_.getEdgeWrapperPtr();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getEdgeWrapperPtr();
 
         bool is_finish = false;
 
@@ -568,7 +569,7 @@ namespace covered
     bool CacheServerWorkerBase::updateDirectory_(const Key& key, const bool& is_admit, bool& is_being_written) const
     {
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_.getEdgeWrapperPtr();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getEdgeWrapperPtr();
 
         bool is_finish = false;
 
@@ -598,7 +599,7 @@ namespace covered
     bool CacheServerWorkerBase::acquireWritelock_(const Key& key, LockResult& lock_result)
     {
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_.getEdgeWrapperPtr();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getEdgeWrapperPtr();
 
         bool is_finish = false;
 
@@ -671,7 +672,7 @@ namespace covered
     bool CacheServerWorkerBase::blockForWritesByInterruption_(const Key& key) const
     {
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_.getEdgeWrapperPtr();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getEdgeWrapperPtr();
 
         // Closest edge node must NOT be the beacon node if with interruption
         bool current_is_beacon = tmp_edge_wrapper_ptr->currentIsBeacon_(key);
@@ -748,7 +749,7 @@ namespace covered
     bool CacheServerWorkerBase::releaseWritelock_(const Key& key)
     {
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_.getEdgeWrapperPtr();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getEdgeWrapperPtr();
 
         bool is_finish = false;
 
@@ -783,7 +784,7 @@ namespace covered
     void CacheServerWorkerBase::locateBeaconNode_(const Key& key) const
     {
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_.getEdgeWrapperPtr();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getEdgeWrapperPtr();
 
         // The current edge node must NOT be the beacon node for the key
         bool current_is_beacon = tmp_edge_wrapper_ptr->currentIsBeacon_(key);
@@ -823,7 +824,7 @@ namespace covered
         // No need to acquire per-key rwlock for serializability, which has been done in processLocalGetRequest_()
 
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_.getEdgeWrapperPtr();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getEdgeWrapperPtr();
 
         bool is_finish = false; // Mark if edge node is finished
 
@@ -890,7 +891,7 @@ namespace covered
         // No need to acquire per-key rwlock for serializability, which has been done in processLocalWriteRequest_()
         
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_.getEdgeWrapperPtr();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getEdgeWrapperPtr();
 
         bool is_finish = false; // Mark if edge node is finished
 
@@ -967,7 +968,7 @@ namespace covered
         // No need to acquire per-key rwlock for serializability, which has been done in processLocalGetRequest_()
 
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_.getEdgeWrapperPtr();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getEdgeWrapperPtr();
 
         bool is_finish = false;
         
@@ -1001,7 +1002,7 @@ namespace covered
         // No need to acquire per-key rwlock for serializability, which has been done in processLocalGetRequest_() or processLocalWriteRequest_()
 
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_.getEdgeWrapperPtr();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getEdgeWrapperPtr();
 
         bool is_finish = false;
 
@@ -1040,7 +1041,7 @@ namespace covered
         // No need to acquire per-key rwlock for serializability, which has been done in processLocalGetRequest_() or processLocalWriteRequest_()
 
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_.getEdgeWrapperPtr();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getEdgeWrapperPtr();
 
         is_local_cached_after_udpate = tmp_edge_wrapper_ptr->edge_cache_ptr_->remove(key);
 
@@ -1056,7 +1057,7 @@ namespace covered
         // No need to acquire per-key rwlock for serializability, which has been done in processLocalGetRequest_(), processLocalWriteRequest_(), and processRedirectedGetRequest_()
 
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_.getEdgeWrapperPtr();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getEdgeWrapperPtr();
 
         bool is_finish = false;
 

@@ -1,7 +1,7 @@
 #include "statistics/total_statistics_tracker.h"
 
 #include <assert.h>
-#include <cstring> // memset
+//#include <cstring> // memset
 #include <sstream>
 
 #include "common/util.h"
@@ -19,22 +19,7 @@ namespace covered
         aggregateClientStatistics_();
     }
         
-    TotalStatisticsTracker::~TotalStatisticsTracker()
-    {
-        // Release space for aggregate statistics
-        assert(perclient_local_hitcnts_ != NULL);
-        delete perclient_local_hitcnts_;
-        perclient_local_hitcnts_ = NULL;
-        assert(perclient_cooperative_hitcnts_ != NULL);
-        delete perclient_cooperative_hitcnts_;
-        perclient_cooperative_hitcnts_ = NULL;
-        assert(perclient_reqcnts_ != NULL);
-        delete perclient_reqcnts_;
-        perclient_reqcnts_ = NULL;
-        assert(latency_histogram_ != NULL);
-        delete latency_histogram_;
-        latency_histogram_ = NULL;
-    }
+    TotalStatisticsTracker::~TotalStatisticsTracker() {}
 
     uint32_t TotalStatisticsTracker::getTotalLocalHitcnt() const
     {
@@ -120,18 +105,10 @@ namespace covered
         latency_histogram_size_ = client_statistics_tracker_ptrs[0]->getLatencyHistogramSize();
 
         // Allocate space for aggregate statistics
-        perclient_local_hitcnts_ = new uint32_t[clientcnt_];
-        assert(perclient_local_hitcnts_ != NULL);
-        memset(perclient_local_hitcnts_, 0, clientcnt_ * sizeof(uint32_t));
-        perclient_cooperative_hitcnts_ = new uint32_t[clientcnt_];
-        assert(perclient_cooperative_hitcnts_ != NULL);
-        memset(perclient_cooperative_hitcnts_, 0, clientcnt_ * sizeof(uint32_t));
-        perclient_reqcnts_ = new uint32_t[clientcnt_];
-        assert(perclient_reqcnts_ != NULL);
-        memset(perclient_reqcnts_, 0, clientcnt_ * sizeof(uint32_t));
-        latency_histogram_ = new uint32_t[latency_histogram_size_];
-        assert(latency_histogram_ != NULL);
-        memset(latency_histogram_, 0, latency_histogram_size_ * sizeof(uint32_t));
+        perclient_local_hitcnts_.resize(clientcnt_, 0);
+        perclient_cooperative_hitcnts_.resize(clientcnt_, 0);
+        perclient_reqcnts_.resize(clientcnt_, 0);
+        latency_histogram_.resize(latency_histogram_size_, 0);
 
         // Aggregate per-client statistics
         for (uint32_t client_idx = 0; client_idx < clientcnt_; client_idx++)
@@ -141,10 +118,10 @@ namespace covered
             assert(latency_histogram_size_ == tmp_client_statistics_tracker.getLatencyHistogramSize());
 
             // Aggregate per-client hit ratio statistics
-            std::atomic<uint32_t>* tmp_perclientworker_local_hitcnts = tmp_client_statistics_tracker.getPerclientworkerLocalHitcnts();
-            std::atomic<uint32_t>* tmp_perclientworker_cooperative_hitcnts = tmp_client_statistics_tracker.getPerclientworkerCooperativeHitcnts();
+            const std::vector<std::atomic<uint32_t>>& tmp_perclientworker_local_hitcnts = tmp_client_statistics_tracker.getPerclientworkerLocalHitcnts();
+            const std::vector<std::atomic<uint32_t>>& tmp_perclientworker_cooperative_hitcnts = tmp_client_statistics_tracker.getPerclientworkerCooperativeHitcnts();
 
-            std::atomic<uint32_t>* tmp_perclientworker_reqcnts = tmp_client_statistics_tracker.getPerclientworkerReqcnts();
+            const std::vector<std::atomic<uint32_t>>& tmp_perclientworker_reqcnts = tmp_client_statistics_tracker.getPerclientworkerReqcnts();
             for (uint32_t local_worker_idx = 0; local_worker_idx < perclient_workercnt; local_worker_idx++)
             {
                 perclient_local_hitcnts_[client_idx] += tmp_perclientworker_local_hitcnts[local_worker_idx].load(Util::LOAD_CONCURRENCY_ORDER);
@@ -153,7 +130,7 @@ namespace covered
             }
 
             // Aggregate per-client latency statistics
-            std::atomic<uint32_t>* tmp_latency_histogram = tmp_client_statistics_tracker.getLatencyHistogram();
+            const std::vector<std::atomic<uint32_t>>& tmp_latency_histogram = tmp_client_statistics_tracker.getLatencyHistogram();
             for (uint32_t latency_us = 0; latency_us < latency_histogram_size_; latency_us++)
             {
                 latency_histogram_[latency_us] += tmp_latency_histogram[latency_us];
@@ -165,28 +142,28 @@ namespace covered
 
     void TotalStatisticsTracker::aggregateClientStatistics_()
     {
-        assert(perclient_local_hitcnts_ != NULL);
+        assert(perclient_local_hitcnts_.size() == clientcnt_);
         total_local_hitcnt_ = 0;
         for (uint32_t client_idx = 0; client_idx < clientcnt_; client_idx++)
         {
             total_local_hitcnt_ += perclient_local_hitcnts_[client_idx];
         }
 
-        assert(perclient_cooperative_hitcnts_ != NULL);
+        assert(perclient_cooperative_hitcnts_.size() == clientcnt_);
         total_cooperative_hitcnt_ = 0;
         for (uint32_t client_idx = 0; client_idx < clientcnt_; client_idx++)
         {
             total_cooperative_hitcnt_ += perclient_cooperative_hitcnts_[client_idx];
         }
 
-        assert(perclient_reqcnts_ != NULL);
+        assert(perclient_reqcnts_.size() == clientcnt_);
         total_reqcnt_ = 0;
         for (uint32_t client_idx = 0; client_idx < clientcnt_; client_idx++)
         {
             total_reqcnt_ += perclient_reqcnts_[client_idx];
         }
 
-        assert(latency_histogram_ != NULL);
+        assert(latency_histogram_.size() == latency_histogram_size_);
         // Get latency overview to prepare for latency statistics
         uint32_t total_latency_cnt = 0; // i.e., total reqcnt
         for (uint32_t latency_us = 0; latency_us < latency_histogram_size_; latency_us++)

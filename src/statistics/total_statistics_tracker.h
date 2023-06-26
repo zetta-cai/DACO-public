@@ -8,6 +8,7 @@
 #define TOTAL_STATISTICS_TRACKER_H
 
 #include <string>
+#include <vector>
 
 #include "statistics/client_statistics_tracker.h"
 
@@ -42,10 +43,10 @@ namespace covered
         void aggregateClientStatistics_();
 
         // Pre-processed statistics
-        uint32_t* perclient_local_hitcnts_; // Hit local edge cache of closest edge node
-        uint32_t* perclient_cooperative_hitcnts_; // Hit cooperative edge cache of some target edge node
-        uint32_t* perclient_reqcnts_;
-        uint32_t* latency_histogram_;
+        std::vector<uint32_t> perclient_local_hitcnts_; // Hit local edge cache of closest edge node
+        std::vector<uint32_t> perclient_cooperative_hitcnts_; // Hit cooperative edge cache of some target edge node
+        std::vector<uint32_t> perclient_reqcnts_;
+        std::vector<uint32_t> latency_histogram_;
         uint32_t clientcnt_; // Come from Util::Param
         uint32_t latency_histogram_size_; // Come from Util::Config
 

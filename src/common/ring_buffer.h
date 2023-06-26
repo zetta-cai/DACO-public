@@ -1,5 +1,5 @@
 /*
- * RingBuffer: provide ring buffer interfaces for concurrency between a provider and a customer.
+ * RingBuffer: provide ring buffer interfaces for concurrency between a provider and a customer (lock free).
  * 
  * By Siyuan Sheng (2023.06.14).
  */
@@ -23,9 +23,12 @@ namespace covered
 
         bool push(const T& element);
         bool pop(T& element);
-        uint32_t size() const;
 
-        uint32_t getSizeForCapacity() const;
+        uint32_t getElementCnt() const;
+        uint32_t getCapacity() const;
+        T getDefaultElement() const;
+
+        //uint32_t getSizeForCapacity() const;
 
         RingBuffer<T>& operator=(const RingBuffer<T>& other);
     private:
