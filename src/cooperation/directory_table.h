@@ -15,8 +15,8 @@
 #include <unordered_set>
 
 #include "common/key.h"
+#include "concurrency/rwlock.h"
 #include "cooperation/directory_info.h"
-#include "lock/rwlock.h"
 
 namespace covered
 {

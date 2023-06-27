@@ -14,8 +14,8 @@
 #include <unordered_set>
 
 #include "common/key.h"
+#include "concurrency/rwlock.h"
 #include "edge/edge_param.h"
-#include "lock/rwlock.h"
 #include "network/network_addr.h"
 #include "network/udp_socket_wrapper.h"
 

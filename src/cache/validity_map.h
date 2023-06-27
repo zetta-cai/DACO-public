@@ -13,8 +13,8 @@
 #include <unordered_map>
 
 #include "common/key.h"
+#include "concurrency/rwlock.h"
 #include "edge/edge_param.h"
-#include "lock/rwlock.h"
 
 namespace covered
 {

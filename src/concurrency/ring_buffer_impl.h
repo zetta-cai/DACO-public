@@ -1,4 +1,7 @@
-#include "common/ring_buffer.h"
+#ifndef RING_BUFFER_IMPL_H
+#define RING_BUFFER_IMPL_H
+
+#include "concurrency/ring_buffer.h"
 
 #include <assert.h>
 #include <sstream>
@@ -152,3 +155,5 @@ namespace covered
         return *this;
     }
 }
+
+#endif

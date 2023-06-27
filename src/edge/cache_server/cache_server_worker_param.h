@@ -9,7 +9,7 @@
 
 #include <string>
 
-#include "common/ring_buffer_impl.h"
+#include "concurrency/ring_buffer_impl.h"
 #include "edge/edge_wrapper.h"
 
 namespace covered

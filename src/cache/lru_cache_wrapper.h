@@ -10,8 +10,8 @@
 
 #include "cache/cache_wrapper_base.h"
 #include "cache/cpp-lru-cache/lrucache.h"
+#include "concurrency/rwlock.h"
 #include "edge/edge_param.h"
-#include "lock/rwlock.h"
 
 namespace covered
 {

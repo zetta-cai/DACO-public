@@ -53,8 +53,8 @@
 
 #include <string>
 
+#include "concurrency/perkey_rwlock.h"
 #include "edge/cache_server/cache_server_worker_param.h"
-#include "lock/perkey_rwlock.h"
 #include "message/message_base.h"
 #include "network/udp_socket_wrapper.h"
 
