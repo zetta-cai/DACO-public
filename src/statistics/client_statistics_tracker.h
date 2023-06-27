@@ -63,7 +63,7 @@ namespace covered
         // ClientStatisticsWrapper only uses client index to specify instance_name_ -> no need to maintain client_idx_
         std::string instance_name_;
 
-        // NOTE: we have to use dynamic array for std::atomic<uint32_t>, as it does NOT have default constructor and copy constructor
+        // NOTE: we have to use dynamic array for std::atomic<uint32_t>, as it does NOT have copy constructor and operator= for std::vector (e.g., resize() and push_back())
         std::atomic<uint32_t>* perclientworker_local_hitcnts_; // Hit local edge cache of closest edge node
         std::atomic<uint32_t>* perclientworker_cooperative_hitcnts_; // Hit cooperative edge cache of some target edge node
         std::atomic<uint32_t>* perclientworker_reqcnts_;

@@ -12,6 +12,7 @@
 
 namespace covered
 {
+    // NOTE: class T must support default constructor and operator=.
     template<class T>
     class RingBuffer
     {

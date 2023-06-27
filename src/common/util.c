@@ -28,6 +28,7 @@ namespace covered
     // Atomicity
     std::memory_order Util::LOAD_CONCURRENCY_ORDER = std::memory_order_acquire;
     std::memory_order Util::STORE_CONCURRENCY_ORDER = std::memory_order_release;
+    std::memory_order Util::RMW_CONCURRENCY_ORDER = std::memory_order_acq_rel;
     // Workflow control
     const unsigned int Util::SLEEP_INTERVAL_US = 1 * 1000 * 1000; // 1s
     // Workload generation

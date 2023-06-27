@@ -10,14 +10,31 @@
 #define VALIDITY_MAP_H
 
 #include <string>
-#include <unordered_map>
 
 #include "common/key.h"
-#include "concurrency/rwlock.h"
+#include "concurrency/concurrent_hashtable_impl.h"
 #include "edge/edge_param.h"
 
 namespace covered
 {
+    class ValidityFlag
+    {
+    public:
+        ValidityFlag();
+        ValidityFlag(const bool& is_valid);
+        ~ValidityFlag();
+
+        bool isValid() const;
+
+        uint32_t getSizeForCapacity() const;
+
+        ValidityFlag& operator=(const ValidityFlag& other);
+    private:
+        static const std::string kClassName;
+
+        bool is_valid_;
+    };
+
     class ValidityMap
     {
     public:
@@ -31,18 +48,14 @@ namespace covered
 
         uint32_t getSizeForCapacity() const;
     private:
-        typedef std::unordered_map<Key, bool, KeyHasher> perkey_validity_t;
-
         static const std::string kClassName;
 
         // Const shared variables
         std::string instance_name_;
 
-        // Guarantee the atomicity of validity_map_ (e.g., admit different keys)
-        mutable Rwlock* rwlock_for_validity_ptr_;
-
+        // Non-const shared variables
         // NOTE: as the flag of validity can be integrated into cache metadata, we ONLY count the flag instead of key into the total size for capacity limitation (validity_map_ is just an implementation trick to avoid hacking each individual cache)
-        perkey_validity_t perkey_validity_; // Metadata for local edge cache
+        ConcurrentHashtable<ValidityFlag, KeyHasher> perkey_validity_; // Validity metadata (thread safe)
     };
 }
 

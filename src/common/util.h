@@ -35,6 +35,7 @@ namespace covered
         // Atomicity
         static std::memory_order LOAD_CONCURRENCY_ORDER;
         static std::memory_order STORE_CONCURRENCY_ORDER;
+        static std::memory_order RMW_CONCURRENCY_ORDER; // read-modify-write
         // Workflow control
         static const unsigned int SLEEP_INTERVAL_US; // Sleep interval for polling
         // Workload generation

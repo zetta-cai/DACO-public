@@ -1,4 +1,4 @@
-#include "lock/perkey_rwlock.h"
+#include "concurrency/perkey_rwlock.h"
 
 #include <assert.h>
 #include <sstream>

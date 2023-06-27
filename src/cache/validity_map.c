@@ -7,157 +7,84 @@
 
 namespace covered
 {
+    // ValidityFlag
+
+    const std::string ValidityFlag::kClassName("ValidityFlag");
+
+    ValidityFlag::ValidityFlag()
+    {
+        is_valid_ = false;
+    }
+
+    ValidityFlag::ValidityFlag(const bool& is_valid)
+    {
+        is_valid_ = is_valid;
+    }
+
+    ValidityFlag::~ValidityFlag() {}
+
+    bool ValidityFlag::isValid() const
+    {
+        return is_valid_;
+    }
+
+    uint32_t ValidityFlag::getSizeForCapacity() const
+    {
+        return sizeof(bool);
+    }
+
+    ValidityFlag& ValidityFlag::operator=(const ValidityFlag& other)
+    {
+        is_valid_ = other.is_valid_;
+        return *this;
+    }
+
+    // ValidityMap
+
     const std::string ValidityMap::kClassName("ValidityMap");
 
-    ValidityMap::ValidityMap(EdgeParam* edge_param_ptr)
+    ValidityMap::ValidityMap(EdgeParam* edge_param_ptr) : perkey_validity_("perkey_validity_", ValidityFlag())
     {
         // Differentiate local edge cache in different edge nodes
         assert(edge_param_ptr != NULL);
         std::ostringstream oss;
         oss << kClassName << " edge" << edge_param_ptr->getEdgeIdx();
         instance_name_ = oss.str();
-
-        oss.clear();
-        oss.str("");
-        oss << instance_name_ << " " << "rwlock_for_validity_ptr_";
-        rwlock_for_validity_ptr_ = new Rwlock(oss.str());
-        assert(rwlock_for_validity_ptr_ != NULL);
-
-        perkey_validity_.clear();
     }
 
-    ValidityMap::~ValidityMap()
-    {
-        assert(rwlock_for_validity_ptr_ != NULL);
-        delete rwlock_for_validity_ptr_;
-        rwlock_for_validity_ptr_ = NULL;
-    }
+    ValidityMap::~ValidityMap() {}
 
     bool ValidityMap::isValidObject(const Key& key, bool& is_found) const
     {
-        // Acquire a read lock for perkey_validity_ before accessing any shared variable
-        assert(rwlock_for_validity_ptr_ != NULL);
-        while (true)
-        {
-            if (rwlock_for_validity_ptr_->try_lock_shared("isValidObject()"))
-            {
-                break;
-            }
-        }
-
-        perkey_validity_t::const_iterator iter = perkey_validity_.find(key);
-        bool is_valid = false;
-        if (iter != perkey_validity_.end())
-        {
-            is_valid = iter->second;
-            is_found = true;
-        }
-        else
-        {
-            is_valid = false;
-            is_found = false;
-        }
-
-        rwlock_for_validity_ptr_->unlock_shared();
+        ValidityFlag validity_flag = perkey_validity_.get(key, is_found);
+        bool is_valid = validity_flag.isValid();
         return is_valid;
     }
 
     void ValidityMap::invalidateObject(const Key& key, bool& is_found)
     {
-        // Acquire a write lock for validity_map_ before accessing any shared variable
-        assert(rwlock_for_validity_ptr_ != NULL);
-        while (true)
-        {
-            if (rwlock_for_validity_ptr_->try_lock("invalidateObject()"))
-            {
-                break;
-            }
-        }
-
-        if (perkey_validity_.find(key) != perkey_validity_.end())
-        {
-            perkey_validity_[key] = false;
-            is_found = true;
-        }
-        else
-        {
-            perkey_validity_.insert(std::pair<Key, bool>(key, false));
-            is_found = false;
-        }
-
-        rwlock_for_validity_ptr_->unlock();
+        ValidityFlag validity_flag(false);
+        perkey_validity_.update(key, validity_flag, is_found);
         return;
     }
 
     void ValidityMap::validateObject(const Key& key, bool& is_found)
     {
-        // Acquire a write lock for validity_map_ before accessing any shared variable
-        assert(rwlock_for_validity_ptr_ != NULL);
-        while (true)
-        {
-            if (rwlock_for_validity_ptr_->try_lock("validateObject()"))
-            {
-                break;
-            }
-        }
-
-        if (perkey_validity_.find(key) != perkey_validity_.end())
-        {
-            perkey_validity_[key] = true;
-            is_found = true;
-        }
-        else
-        {
-            perkey_validity_.insert(std::pair<Key, bool>(key, true));
-            is_found = false;
-        }
-
-        rwlock_for_validity_ptr_->unlock();
+        ValidityFlag validity_flag(true);
+        perkey_validity_.update(key, validity_flag, is_found);
         return;
     }
 
     void ValidityMap::erase(const Key& key, bool& is_found)
     {
-        // Acquire a write lock for validity_map_ before accessing any shared variable
-        assert(rwlock_for_validity_ptr_ != NULL);
-        while (true)
-        {
-            if (rwlock_for_validity_ptr_->try_lock("erase()"))
-            {
-                break;
-            }
-        }
-
-        if (perkey_validity_.find(key) != perkey_validity_.end())
-        {
-            perkey_validity_.erase(key);
-            is_found = true;
-        }
-        else
-        {
-            is_found = false;
-        }
-
-        rwlock_for_validity_ptr_->unlock();
+        perkey_validity_.erase(key, is_found);
         return;
     }
 
     uint32_t ValidityMap::getSizeForCapacity() const
     {
-        // Acquire a read lock for validity_map_ before accessing any shared variable
-        assert(rwlock_for_validity_ptr_ != NULL);
-        while (true)
-        {
-            if (rwlock_for_validity_ptr_->try_lock_shared("getSizeForCapacity()"))
-            {
-                break;
-            }
-        }
-
         // NOTE: we do NOT count key size of validity_map_, as the size of keys cached by closest edge node has been counted by the corresponding local edge cache (e.g., LruCacheWrapper::getInternal_())
-        uint32_t size = perkey_validity_.size() * sizeof(bool);
-
-        rwlock_for_validity_ptr_->unlock_shared();
+        uint32_t size = perkey_validity_.getTotalValueSizeForCapcity();
         return size;
     }
 }

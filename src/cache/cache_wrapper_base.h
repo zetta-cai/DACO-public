@@ -73,6 +73,8 @@ namespace covered
         // Non-const shared variable
         // NOTE: Due to the write-through policy, we only need to maintain an invalidity flag for MSI protocol (i.e., both M and S refers to validity)
         ValidityMap validity_map_; // Maintain per-key validity flag for local edge cache (thread safe)
+
+        // NOTE: we will use a single read-write lock (e.g., LruCacheWrapper::rwlock_for_local_statistics_ptr_) for concurrent accesses of cached objects and local statistics in each local edge cache for fair comparison; we do NOT hack each cache with fine-grained locking to avoid extensive complexity
     };
 }
 
