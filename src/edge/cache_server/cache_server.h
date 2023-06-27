@@ -1,5 +1,5 @@
 /*
- * CacheServer: listen to receive local requests issued by clients; launch multiple cache server worker threads to process received requests in parallel.
+ * CacheServer: listen to receive local/redirected requests issued by clients/neighbors; launch multiple cache server worker threads to process received requests in parallel.
  * 
  * By Siyuan Sheng (2023.06.26).
  */
@@ -10,7 +10,9 @@
 #include <string>
 #include <vector>
 
+#include "edge/cache_server/cache_server_worker_param.h"
 #include "edge/edge_wrapper.h"
+#include "hash/hash_wrapper_base.h"
 #include "network/udp_socket_wrapper.h"
 
 namespace covered
@@ -27,9 +29,13 @@ namespace covered
 
         static void* launchCacheServerWorker_(void* cache_server_worker_param_ptr);
 
+        void receiveRequestsAndPartition_();
+        void partitionRequest_(MessageBase* data_requeset_ptr, const NetworkAddr& network_addr);
+
         // Const variable
         std::string instance_name_;
         EdgeWrapper* edge_wrapper_ptr_;
+        HashWrapperBase* hash_wrapper_ptr_;
 
         // Non-const individual variable
         UdpSocketWrapper* edge_cache_server_recvreq_socket_server_ptr_; // Only used by cache server

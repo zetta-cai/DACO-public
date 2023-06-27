@@ -66,7 +66,7 @@ namespace covered
         static CacheServerWorkerBase* getCacheServerWorker(CacheServerWorkerParam* cache_server_worker_param_ptr);
 
         CacheServerWorkerBase(CacheServerWorkerParam* cache_server_worker_param_ptr);
-        ~CacheServerWorkerBase();
+        virtual ~CacheServerWorkerBase();
 
         void start();
     private:
@@ -75,11 +75,11 @@ namespace covered
         // (1) Process data requests
     
         // Return if edge node is finished
-        bool processDataRequest_(MessageBase* data_request_ptr);
-        bool processLocalGetRequest_(MessageBase* local_request_ptr) const;
-        bool processLocalWriteRequest_(MessageBase* local_request_ptr); // For put/del
-        bool processRedirectedRequest_(MessageBase* redirected_request_ptr);
-        virtual bool processRedirectedGetRequest_(MessageBase* redirected_request_ptr) const = 0;
+        bool processDataRequest_(MessageBase* data_request_ptr, const NetworkAddr& network_addr);
+        bool processLocalGetRequest_(MessageBase* local_request_ptr, const NetworkAddr& network_addr) const;
+        bool processLocalWriteRequest_(MessageBase* local_request_ptr, const NetworkAddr& network_addr); // For put/del
+        bool processRedirectedRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& network_addr);
+        virtual bool processRedirectedGetRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& network_addr) const = 0;
 
         // (2) Access cooperative edge cache
 
@@ -130,22 +130,22 @@ namespace covered
         // NOTE: we will check capacity and trigger eviction for cache admission
         virtual bool triggerIndependentAdmission_(const Key& key, const Value& value) const = 0;
 
-        // (6) Utility functions
-
-        void checkPointers_() const;
-
         // Member variables
 
         // Const variable
         std::string base_instance_name_;
 
         // Non-const individual variable
-        UdpSocketWrapper* edge_cache_server_sendreq_tocloud_socket_client_ptr_;
+        UdpSocketWrapper* edge_cache_server_worker_sendreq_tocloud_socket_client_ptr_;
     protected:
         // (2.2) Update content directory information
 
         // Return if edge node is finished
         bool updateDirectory_(const Key& key, const bool& is_admit, bool& is_being_written) const; // Update content directory information
+
+        // (6) Utility functions
+
+        void checkPointers_() const;
 
         // Member variables
 
@@ -158,7 +158,7 @@ namespace covered
         // Non-const individual variable
         UdpSocketWrapper* edge_cache_server_worker_sendreq_tobeacon_socket_client_ptr_;
         UdpSocketWrapper* edge_cache_server_worker_sendreq_totarget_socket_client_ptr_;
-        UdpSocketWrapper* edge_cache_server_worker_sendreq_toclient_socket_client_ptr_;
+        UdpSocketWrapper* edge_cache_server_worker_sendrsp_tosource_socket_client_ptr_; // source could be client or neighbor edge node
     };
 }
 

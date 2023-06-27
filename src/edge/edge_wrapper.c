@@ -6,7 +6,7 @@
 #include "common/config.h"
 #include "common/util.h"
 #include "edge/beacon_server/beacon_server_base.h"
-#include "edge/cache_server/cache_server_base.h"
+#include "edge/cache_server/cache_server.h"
 #include "edge/invalidation_server/invalidation_server_base.h"
 #include "message/control_message.h"
 #include "network/propagation_simulator.h"
@@ -145,13 +145,8 @@ namespace covered
     {
         assert(edge_wrapper_ptr != NULL);
 
-        CacheServerBase* cache_server_ptr = CacheServerBase::getCacheServer((EdgeWrapper*)edge_wrapper_ptr);
-        assert(cache_server_ptr != NULL);
-        cache_server_ptr->start();
-
-        assert(cache_server_ptr != NULL);
-        delete cache_server_ptr;
-        cache_server_ptr = NULL;
+        CacheServer cache_server = CacheServer((EdgeWrapper*)edge_wrapper_ptr);
+        cache_server.start();
 
         pthread_exit(NULL);
         return NULL;

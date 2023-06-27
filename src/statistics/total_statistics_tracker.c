@@ -118,10 +118,13 @@ namespace covered
             assert(latency_histogram_size_ == tmp_client_statistics_tracker.getLatencyHistogramSize());
 
             // Aggregate per-client hit ratio statistics
-            const std::vector<std::atomic<uint32_t>>& tmp_perclientworker_local_hitcnts = tmp_client_statistics_tracker.getPerclientworkerLocalHitcnts();
-            const std::vector<std::atomic<uint32_t>>& tmp_perclientworker_cooperative_hitcnts = tmp_client_statistics_tracker.getPerclientworkerCooperativeHitcnts();
+            std::atomic<uint32_t>* tmp_perclientworker_local_hitcnts = tmp_client_statistics_tracker.getPerclientworkerLocalHitcnts();
+            assert(tmp_perclientworker_local_hitcnts != NULL);
+            std::atomic<uint32_t>* tmp_perclientworker_cooperative_hitcnts = tmp_client_statistics_tracker.getPerclientworkerCooperativeHitcnts();
+            assert(tmp_perclientworker_cooperative_hitcnts != NULL);
 
-            const std::vector<std::atomic<uint32_t>>& tmp_perclientworker_reqcnts = tmp_client_statistics_tracker.getPerclientworkerReqcnts();
+            std::atomic<uint32_t>* tmp_perclientworker_reqcnts = tmp_client_statistics_tracker.getPerclientworkerReqcnts();
+            assert(tmp_perclientworker_reqcnts != NULL);
             for (uint32_t local_worker_idx = 0; local_worker_idx < perclient_workercnt; local_worker_idx++)
             {
                 perclient_local_hitcnts_[client_idx] += tmp_perclientworker_local_hitcnts[local_worker_idx].load(Util::LOAD_CONCURRENCY_ORDER);
@@ -130,7 +133,8 @@ namespace covered
             }
 
             // Aggregate per-client latency statistics
-            const std::vector<std::atomic<uint32_t>>& tmp_latency_histogram = tmp_client_statistics_tracker.getLatencyHistogram();
+            std::atomic<uint32_t>* tmp_latency_histogram = tmp_client_statistics_tracker.getLatencyHistogram();
+            assert(tmp_latency_histogram != NULL);
             for (uint32_t latency_us = 0; latency_us < latency_histogram_size_; latency_us++)
             {
                 latency_histogram_[latency_us] += tmp_latency_histogram[latency_us];

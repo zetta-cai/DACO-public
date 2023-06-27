@@ -1,4 +1,4 @@
-#include "edge/cache_server/basic_cache_server.h"
+#include "edge/cache_server/basic_cache_server_worker.h"
 
 #include <assert.h>
 #include <sstream>
@@ -29,7 +29,7 @@ namespace covered
 
     // (1) Process data requests
 
-    bool BasicCacheServerWorker::processRedirectedGetRequest_(MessageBase* redirected_request_ptr) const
+    bool BasicCacheServerWorker::processRedirectedGetRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& network_addr) const
     {
         // Get key and value from redirected request if any
         assert(redirected_request_ptr != NULL && redirected_request_ptr->getMessageType() == MessageType::kRedirectedGetRequest);
@@ -71,15 +71,16 @@ namespace covered
         // NOTE: no need to perform recursive cooperative edge caching (current edge node is already the target edge node for cooperative edge caching)
         // NOTE: no need to access cloud to get data, which will be performed by the closest edge node
 
-        // Prepare RedirectedGetResponse for the closest edge node
+        // Prepare RedirectedGetResponse and set remote address for the closest edge node
         uint32_t edge_idx = tmp_edge_wrapper_ptr->edge_param_ptr_->getEdgeIdx();
         RedirectedGetResponse redirected_get_response(tmp_key, tmp_value, hitflag, edge_idx);
+        edge_cache_server_worker_sendrsp_tosource_socket_client_ptr_->setRemoteAddrForClient(network_addr);
 
         // Reply redirected response message to the closest edge node (the remote address set by the most recent recv)
         DynamicArray redirected_response_msg_payload(redirected_get_response.getMsgPayloadSize());
         redirected_get_response.serialize(redirected_response_msg_payload);
         PropagationSimulator::propagateFromNeighborToEdge();
-        edge_cache_server_recvreq_socket_server_ptr_->send(redirected_response_msg_payload);
+        edge_cache_server_worker_sendrsp_tosource_socket_client_ptr_->send(redirected_response_msg_payload);
 
         perkey_rwlock_for_serializability_ptr_->unlock_shared(tmp_key);
         return is_finish;
@@ -110,11 +111,11 @@ namespace covered
         {
             // Send the control request to the beacon node
             PropagationSimulator::propagateFromEdgeToNeighbor();
-            edge_cache_server_sendreq_tobeacon_socket_client_ptr_->send(control_request_msg_payload);
+            edge_cache_server_worker_sendreq_tobeacon_socket_client_ptr_->send(control_request_msg_payload);
 
             // Receive the control repsonse from the beacon node
             DynamicArray control_response_msg_payload;
-            bool is_timeout = edge_cache_server_sendreq_tobeacon_socket_client_ptr_->recv(control_response_msg_payload);
+            bool is_timeout = edge_cache_server_worker_sendreq_tobeacon_socket_client_ptr_->recv(control_response_msg_payload);
             if (is_timeout)
             {
                 if (!tmp_edge_wrapper_ptr->edge_param_ptr_->isEdgeRunning())
@@ -167,11 +168,11 @@ namespace covered
         {
             // Send the redirected request to the target edge node
             PropagationSimulator::propagateFromEdgeToNeighbor();
-            edge_cache_server_sendreq_totarget_socket_client_ptr_->send(redirected_request_msg_payload);
+            edge_cache_server_worker_sendreq_totarget_socket_client_ptr_->send(redirected_request_msg_payload);
 
             // Receive the control repsonse from the target node
             DynamicArray redirected_response_msg_payload;
-            bool is_timeout = edge_cache_server_sendreq_totarget_socket_client_ptr_->recv(redirected_response_msg_payload);
+            bool is_timeout = edge_cache_server_worker_sendreq_totarget_socket_client_ptr_->recv(redirected_response_msg_payload);
             if (is_timeout)
             {
                 if (!tmp_edge_wrapper_ptr->edge_param_ptr_->isEdgeRunning())
@@ -255,11 +256,11 @@ namespace covered
         {
             // Send the control request to the beacon node
             PropagationSimulator::propagateFromEdgeToNeighbor();
-            edge_cache_server_sendreq_tobeacon_socket_client_ptr_->send(control_request_msg_payload);
+            edge_cache_server_worker_sendreq_tobeacon_socket_client_ptr_->send(control_request_msg_payload);
 
             // Receive the control repsonse from the beacon node
             DynamicArray control_response_msg_payload;
-            bool is_timeout = edge_cache_server_sendreq_tobeacon_socket_client_ptr_->recv(control_response_msg_payload);
+            bool is_timeout = edge_cache_server_worker_sendreq_tobeacon_socket_client_ptr_->recv(control_response_msg_payload);
             if (is_timeout)
             {
                 if (!tmp_edge_wrapper_ptr->edge_param_ptr_->isEdgeRunning())
@@ -316,11 +317,11 @@ namespace covered
         {
             // Send the control request to the beacon node
             PropagationSimulator::propagateFromEdgeToNeighbor();
-            edge_cache_server_sendreq_tobeacon_socket_client_ptr_->send(control_request_msg_payload);
+            edge_cache_server_worker_sendreq_tobeacon_socket_client_ptr_->send(control_request_msg_payload);
 
             // Receive the control repsonse from the beacon node
             DynamicArray control_response_msg_payload;
-            bool is_timeout = edge_cache_server_sendreq_tobeacon_socket_client_ptr_->recv(control_response_msg_payload);
+            bool is_timeout = edge_cache_server_worker_sendreq_tobeacon_socket_client_ptr_->recv(control_response_msg_payload);
             if (is_timeout)
             {
                 if (!tmp_edge_wrapper_ptr->edge_param_ptr_->isEdgeRunning())
@@ -375,11 +376,11 @@ namespace covered
         {
             // Send the control request to the beacon node
             PropagationSimulator::propagateFromEdgeToNeighbor();
-            edge_cache_server_sendreq_tobeacon_socket_client_ptr_->send(control_request_msg_payload);
+            edge_cache_server_worker_sendreq_tobeacon_socket_client_ptr_->send(control_request_msg_payload);
 
             // Receive the control repsonse from the beacon node
             DynamicArray control_response_msg_payload;
-            bool is_timeout = edge_cache_server_sendreq_tobeacon_socket_client_ptr_->recv(control_response_msg_payload);
+            bool is_timeout = edge_cache_server_worker_sendreq_tobeacon_socket_client_ptr_->recv(control_response_msg_payload);
             if (is_timeout)
             {
                 if (!tmp_edge_wrapper_ptr->edge_param_ptr_->isEdgeRunning())

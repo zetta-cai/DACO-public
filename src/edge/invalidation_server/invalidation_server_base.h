@@ -24,7 +24,7 @@ namespace covered
         static InvalidationServerBase* getInvalidationServer(EdgeWrapper* edge_wrapper_ptr);
 
         InvalidationServerBase(EdgeWrapper* edge_wrapper_ptr);
-        ~InvalidationServerBase();
+        virtual ~InvalidationServerBase();
 
         void start();
     private:

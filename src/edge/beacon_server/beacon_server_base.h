@@ -33,7 +33,7 @@ namespace covered
         static BeaconServerBase* getBeaconServer(EdgeWrapper* edge_wrapper_ptr);
 
         BeaconServerBase(EdgeWrapper* edge_wrapper_ptr);
-        ~BeaconServerBase();
+        virtual ~BeaconServerBase();
 
         void start();
     private:

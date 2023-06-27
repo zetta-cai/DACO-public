@@ -53,8 +53,8 @@ namespace covered
         std::string cloud_ipstr = Config::getCloudIpstr();
         uint16_t cloud_recvreq_port = Util::getCloudRecvreqPort(0); // TODO: only support 1 cloud node now!
         NetworkAddr remote_addr(cloud_ipstr, cloud_recvreq_port);
-        edge_cache_server_sendreq_tocloud_socket_client_ptr_ = new UdpSocketWrapper(SocketRole::kSocketClient, remote_addr);
-        assert(edge_cache_server_sendreq_tocloud_socket_client_ptr_ != NULL);
+        edge_cache_server_worker_sendreq_tocloud_socket_client_ptr_ = new UdpSocketWrapper(SocketRole::kSocketClient, remote_addr);
+        assert(edge_cache_server_worker_sendreq_tocloud_socket_client_ptr_ != NULL);
 
         // NOTE: we use beacon server of edge0 as default remote address, but will reset remote address of the socket clients based on the key and directory information later
         std::string edge0_ipstr = Config::getEdgeIpstr(0);
@@ -71,14 +71,14 @@ namespace covered
         edge_cache_server_worker_sendreq_totarget_socket_client_ptr_ = new UdpSocketWrapper(SocketRole::kSocketClient, edge0_cache_server_addr);
         assert(edge_cache_server_worker_sendreq_totarget_socket_client_ptr_ != NULL);
 
-        // Prepare a socket client to client for cache server worker
-        // NOTE: we use an invalid client address as default remote address, but will reset remote address of the socket client based on client address in ring buffer later
-        std::string invalid_client_ipstr = Util::LOCALHOST_IPSTR;
-        uint16_t invalid_client_port = Util::UDP_MIN_PORT + 1;
-        NetworkAddr invalid_client_addr(invalid_client_ipstr, invalid_client_port);
-        edge_cache_server_worker_sendreq_toclient_socket_client_ptr_ = new UdpSocketWrapper(SocketRole
-        ::kSocketClient, invalid_client_addr);
-        assert(edge_cache_server_worker_sendreq_toclient_socket_client_ptr_);
+        // Prepare a socket client to client/neighbor for cache server worker
+        // NOTE: we use an invalid source address as default remote address, but will reset remote address of the socket client based on network address popped from ring buffer later
+        std::string invalid_source_ipstr = Util::LOCALHOST_IPSTR;
+        uint16_t invalid_source_port = Util::UDP_MIN_PORT + 1;
+        NetworkAddr invalid_source_addr(invalid_source_ipstr, invalid_source_port);
+        edge_cache_server_worker_sendrsp_tosource_socket_client_ptr_ = new UdpSocketWrapper(SocketRole
+        ::kSocketClient, invalid_source_addr);
+        assert(edge_cache_server_worker_sendrsp_tosource_socket_client_ptr_);
     }
 
     CacheServerWorkerBase::~CacheServerWorkerBase()
@@ -91,9 +91,9 @@ namespace covered
         perkey_rwlock_for_serializability_ptr_ = NULL;
 
         // Release the socket client to cloud
-        assert(edge_cache_server_sendreq_tocloud_socket_client_ptr_ != NULL);
-        delete edge_cache_server_sendreq_tocloud_socket_client_ptr_;
-        edge_cache_server_sendreq_tocloud_socket_client_ptr_ = NULL;
+        assert(edge_cache_server_worker_sendreq_tocloud_socket_client_ptr_ != NULL);
+        delete edge_cache_server_worker_sendreq_tocloud_socket_client_ptr_;
+        edge_cache_server_worker_sendreq_tocloud_socket_client_ptr_ = NULL;
 
         // Release the socket client to beacon node
         assert(edge_cache_server_worker_sendreq_tobeacon_socket_client_ptr_ != NULL);
@@ -105,10 +105,10 @@ namespace covered
         delete edge_cache_server_worker_sendreq_totarget_socket_client_ptr_;
         edge_cache_server_worker_sendreq_totarget_socket_client_ptr_ = NULL;
 
-        // Release the socket client to client
-        assert(edge_cache_server_worker_sendreq_toclient_socket_client_ptr_ != NULL);
-        delete edge_cache_server_worker_sendreq_toclient_socket_client_ptr_;
-        edge_cache_server_worker_sendreq_toclient_socket_client_ptr_ = NULL;
+        // Release the socket client to client/neighbor
+        assert(edge_cache_server_worker_sendrsp_tosource_socket_client_ptr_ != NULL);
+        delete edge_cache_server_worker_sendrsp_tosource_socket_client_ptr_;
+        edge_cache_server_worker_sendrsp_tosource_socket_client_ptr_ = NULL;
     }
 
     void CacheServerWorkerBase::start()
@@ -119,24 +119,23 @@ namespace covered
         bool is_finish = false; // Mark if edge node is finished
         while (tmp_edge_wrapper_ptr->edge_param_ptr_->isEdgeRunning()) // edge_running_ is set as true by default
         {
-            // Receive the message payload of data (local/redirected) requests
-            DynamicArray data_request_msg_payload;
-            NetworkAddr data_request_network_addr; // clients or neighbor edge nodes
-            bool is_timeout = edge_cache_server_recvreq_socket_server_ptr_->recv(data_request_msg_payload, data_request_network_addr);
-            if (is_timeout == true) // Timeout-and-retry
+            // Try to get the data request from ring buffer partitioned by cache server
+            CacheServerWorkerItem tmp_cache_server_worker_item;
+            bool is_successful = cache_server_worker_param_ptr_->getLocalRequestBufferPtr()->pop(tmp_cache_server_worker_item);
+            if (is_successful)
             {
-                continue; // Retry to receive a message if edge is still running
-            } // End of (is_timeout == true)
+                continue; // Retry to receive an item if edge is still running
+            } // End of (is_successful == true)
             else
             {
-                assert(data_request_network_addr.isValidAddr());
-                
-                MessageBase* data_request_ptr = MessageBase::getRequestFromMsgPayload(data_request_msg_payload);
+                MessageBase* data_request_ptr = tmp_cache_server_worker_item.getDataRequestPtr();
                 assert(data_request_ptr != NULL);
+                NetworkAddr network_addr = tmp_cache_server_worker_item.getNetworkAddr();
+                assert(network_addr.isValidAddr());
 
                 if (data_request_ptr->isDataRequest()) // Data requests (e.g., local/redirected requests)
                 {
-                    is_finish = processDataRequest_(data_request_ptr);
+                    is_finish = processDataRequest_(data_request_ptr, network_addr);
                 }
                 else
                 {
@@ -146,7 +145,7 @@ namespace covered
                     exit(1);
                 }
 
-                // Release messages
+                // Release data request by the corresponding cache server worker thread
                 assert(data_request_ptr != NULL);
                 delete data_request_ptr;
                 data_request_ptr = NULL;
@@ -155,7 +154,7 @@ namespace covered
                 {
                     continue; // Go to check if edge is still running
                 }
-            } // End of (is_timeout == false)
+            } // End of (is_successful == false)
         } // End of while loop
 
         return;
@@ -163,11 +162,12 @@ namespace covered
 
     // (1) Process data requests
 
-    bool CacheServerWorkerBase::processDataRequest_(MessageBase* data_request_ptr)
+    bool CacheServerWorkerBase::processDataRequest_(MessageBase* data_request_ptr, const NetworkAddr& network_addr)
     {
         // No need to acquire per-key rwlock for serializability, which will be done in processLocalGetRequest_() or processLocalWriteRequest_()
 
         assert(data_request_ptr != NULL && data_request_ptr->isDataRequest());
+        assert(network_addr.isValidAddr());
 
         bool is_finish = false; // Mark if edge node is finished
 
@@ -184,16 +184,16 @@ namespace covered
 
             if (data_request_ptr->getMessageType() == MessageType::kLocalGetRequest)
             {
-                is_finish = processLocalGetRequest_(data_request_ptr);
+                is_finish = processLocalGetRequest_(data_request_ptr, network_addr);
             }
             else // Local put/del request
             {
-                is_finish = processLocalWriteRequest_(data_request_ptr);
+                is_finish = processLocalWriteRequest_(data_request_ptr, network_addr);
             }
         }
         else if (data_request_ptr->isRedirectedRequest()) // Redirected request
         {
-            is_finish = processRedirectedRequest_(data_request_ptr);
+            is_finish = processRedirectedRequest_(data_request_ptr, network_addr);
         }
         else
         {
@@ -206,10 +206,11 @@ namespace covered
         return is_finish;
     }
 
-    bool CacheServerWorkerBase::processLocalGetRequest_(MessageBase* local_request_ptr) const
+    bool CacheServerWorkerBase::processLocalGetRequest_(MessageBase* local_request_ptr, const NetworkAddr& network_addr) const
     {
         // Get key and value from local request if any
         assert(local_request_ptr != NULL && local_request_ptr->getMessageType() == MessageType::kLocalGetRequest);
+        assert(network_addr.isValidAddr());
         const LocalGetRequest* const local_get_request_ptr = static_cast<const LocalGetRequest*>(local_request_ptr);
         Key tmp_key = local_get_request_ptr->getKey();
         Value tmp_value;
@@ -283,15 +284,16 @@ namespace covered
             return is_finish;
         }
 
-        // Prepare LocalGetResponse for client
+        // Prepare LocalGetResponse and set remote address for client
         uint32_t edge_idx = tmp_edge_wrapper_ptr->edge_param_ptr_->getEdgeIdx();
         LocalGetResponse local_get_response(tmp_key, tmp_value, hitflag, edge_idx);
+        edge_cache_server_worker_sendrsp_tosource_socket_client_ptr_->setRemoteAddrForClient(network_addr);
 
         // Reply local response message to a client (the remote address set by the most recent recv)
         DynamicArray local_response_msg_payload(local_get_response.getMsgPayloadSize());
         local_get_response.serialize(local_response_msg_payload);
         PropagationSimulator::propagateFromEdgeToClient();
-        edge_cache_server_recvreq_socket_server_ptr_->send(local_response_msg_payload);
+        edge_cache_server_worker_sendrsp_tosource_socket_client_ptr_->send(local_response_msg_payload);
 
         // TMPDEBUG
         std::ostringstream oss;
@@ -302,11 +304,12 @@ namespace covered
         return is_finish;
     }
 
-    bool CacheServerWorkerBase::processLocalWriteRequest_(MessageBase* local_request_ptr)
+    bool CacheServerWorkerBase::processLocalWriteRequest_(MessageBase* local_request_ptr, const NetworkAddr& network_addr)
     {
         // Get key and value from local request if any
         assert(local_request_ptr != NULL);
         assert(local_request_ptr->getMessageType() == MessageType::kLocalPutRequest || local_request_ptr->getMessageType() == MessageType::kLocalDelRequest);
+        assert(network_addr.isValidAddr());
         Key tmp_key;
         Value tmp_value;
         if (local_request_ptr->getMessageType() == MessageType::kLocalPutRequest)
@@ -403,13 +406,16 @@ namespace covered
 
         if (!is_finish) // // Edge node is STILL running
         {
+            // Set remote address for client
+            edge_cache_server_worker_sendrsp_tosource_socket_client_ptr_->setRemoteAddrForClient(network_addr);
+
             // Reply local response message to a client (the remote address set by the most recent recv)
             assert(local_response_ptr != NULL);
             assert(local_response_ptr->getMessageType() == MessageType::kLocalPutResponse || local_response_ptr->getMessageType() == MessageType::kLocalDelResponse);
             DynamicArray local_response_msg_payload(local_response_ptr->getMsgPayloadSize());
             local_response_ptr->serialize(local_response_msg_payload);
             PropagationSimulator::propagateFromEdgeToClient();
-            edge_cache_server_recvreq_socket_server_ptr_->send(local_response_msg_payload);
+            edge_cache_server_worker_sendrsp_tosource_socket_client_ptr_->send(local_response_msg_payload);
         }
 
         // Release response message
@@ -421,7 +427,7 @@ namespace covered
         return is_finish;
     }
 
-    bool CacheServerWorkerBase::processRedirectedRequest_(MessageBase* redirected_request_ptr)
+    bool CacheServerWorkerBase::processRedirectedRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& network_addr)
     {
         // No need to acquire per-key rwlock for serializability, which will be done in processRedirectedGetRequest_()
 
@@ -432,7 +438,7 @@ namespace covered
         MessageType message_type = redirected_request_ptr->getMessageType();
         if (message_type == MessageType::kRedirectedGetRequest)
         {
-            is_finish = processRedirectedGetRequest_(redirected_request_ptr);
+            is_finish = processRedirectedGetRequest_(redirected_request_ptr, network_addr);
         }
         else
         {
@@ -456,7 +462,7 @@ namespace covered
 
         bool is_finish = false;
 
-        // Update remote address of edge_cache_server_sendreq_tocloud_socket_client_ptr_ as the beacon node for the key if remote
+        // Update remote address of edge_cache_server_worker_sendreq_tocloud_socket_client_ptr_ as the beacon node for the key if remote
         bool current_is_beacon = tmp_edge_wrapper_ptr->currentIsBeacon_(key);
         if (!current_is_beacon)
         {
@@ -799,9 +805,8 @@ namespace covered
 
     void CacheServerWorkerBase::locateTargetNode_(const DirectoryInfo& directory_info) const
     {
-        assert(tmp_edge_wrapper_ptr != NULL);
-        assert(tmp_edge_wrapper_ptr->edge_param_ptr_ != NULL);
-        assert(edge_cache_server_worker_sendreq_tobeacon_socket_client_ptr_ != NULL);
+        checkPointers_();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getEdgeWrapperPtr();
 
         // The current edge node must NOT be the target node
         bool current_is_target = tmp_edge_wrapper_ptr->currentIsTarget_(directory_info);
@@ -842,11 +847,11 @@ namespace covered
         {
             // Send the message payload of global request to cloud
             PropagationSimulator::propagateFromEdgeToCloud();
-            edge_cache_server_sendreq_tocloud_socket_client_ptr_->send(global_request_msg_payload);
+            edge_cache_server_worker_sendreq_tocloud_socket_client_ptr_->send(global_request_msg_payload);
 
             // Receive the global response message from cloud
             DynamicArray global_response_msg_payload;
-            bool is_timeout = edge_cache_server_sendreq_tocloud_socket_client_ptr_->recv(global_response_msg_payload);
+            bool is_timeout = edge_cache_server_worker_sendreq_tocloud_socket_client_ptr_->recv(global_response_msg_payload);
             if (is_timeout)
             {
                 if (!tmp_edge_wrapper_ptr->edge_param_ptr_->isEdgeRunning())
@@ -921,11 +926,11 @@ namespace covered
         {
             // Send the message payload of global request to cloud
             PropagationSimulator::propagateFromEdgeToCloud();
-            edge_cache_server_sendreq_tocloud_socket_client_ptr_->send(global_request_msg_payload);
+            edge_cache_server_worker_sendreq_tocloud_socket_client_ptr_->send(global_request_msg_payload);
 
             // Receive the global response message from cloud
             DynamicArray global_response_msg_payload;
-            bool is_timeout = edge_cache_server_sendreq_tocloud_socket_client_ptr_->recv(global_response_msg_payload);
+            bool is_timeout = edge_cache_server_worker_sendreq_tocloud_socket_client_ptr_->recv(global_response_msg_payload);
             if (is_timeout)
             {
                 if (!tmp_edge_wrapper_ptr->edge_param_ptr_->isEdgeRunning())
@@ -1075,12 +1080,13 @@ namespace covered
     void CacheServerWorkerBase::checkPointers_() const
     {
         assert(cache_server_worker_param_ptr_ != NULL);
-        assert(cache_server_worker_param_ptr_.getEdgeWrapperPtr() != NULL);
-        assert(cache_server_worker_param_ptr_.getEdgeWrapperPtr()->edge_param_ptr_ != NULL);
-        assert(cache_server_worker_param_ptr_.getEdgeWrapperPtr()->edge_cache_ptr_ != NULL);
-        assert(cache_server_worker_param_ptr_.getEdgeWrapperPtr()->cooperation_wrapper_ptr_ != NULL);
+        assert(cache_server_worker_param_ptr_->getEdgeWrapperPtr() != NULL);
+        assert(cache_server_worker_param_ptr_->getEdgeWrapperPtr()->edge_param_ptr_ != NULL);
+        assert(cache_server_worker_param_ptr_->getEdgeWrapperPtr()->edge_cache_ptr_ != NULL);
+        assert(cache_server_worker_param_ptr_->getEdgeWrapperPtr()->cooperation_wrapper_ptr_ != NULL);
+        assert(cache_server_worker_param_ptr_->getLocalRequestBufferPtr() != NULL);
         assert(edge_cache_server_worker_sendreq_tobeacon_socket_client_ptr_ != NULL);
         assert(edge_cache_server_worker_sendreq_totarget_socket_client_ptr_ != NULL);
-        assert(edge_cache_server_worker_sendreq_toclient_socket_client_ptr_ != NULL);
+        assert(edge_cache_server_worker_sendrsp_tosource_socket_client_ptr_ != NULL);
     }
 }

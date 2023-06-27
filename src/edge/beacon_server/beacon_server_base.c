@@ -4,6 +4,7 @@
 
 #include "common/config.h"
 #include "common/param.h"
+#include "common/util.h"
 #include "edge/beacon_server/basic_beacon_server.h"
 #include "edge/beacon_server/covered_beacon_server.h"
 #include "message/control_message.h"

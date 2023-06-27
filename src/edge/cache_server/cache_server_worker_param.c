@@ -8,36 +8,36 @@ namespace covered
 
     CacheServerWorkerItem::CacheServerWorkerItem()
     {
-        local_request_ptr_ = NULL;
-        client_addr_ = NetworkAddr();
+        data_request_ptr_ = NULL;
+        network_addr_ = NetworkAddr();
     }
 
-    CacheServerWorkerItem::CacheServerWorkerItem(MessageBase* local_request_ptr, const NetworkAddr& client_addr)
+    CacheServerWorkerItem::CacheServerWorkerItem(MessageBase* data_request_ptr, const NetworkAddr& network_addr)
     {
-        assert(local_request_ptr != NULL);
-        local_request_ptr_ = local_request_ptr;
-        client_addr_ = client_addr;
+        assert(data_request_ptr != NULL);
+        data_request_ptr_ = data_request_ptr;
+        network_addr_ = network_addr;
     }
 
     CacheServerWorkerItem::~CacheServerWorkerItem()
     {
-        // NOTE: no need to release local_request_ptr_, which will be released outside CacheServerWorkerItem (by the corresponding cache server worker thread)
+        // NOTE: no need to release data_request_ptr_, which will be released outside CacheServerWorkerItem (by the corresponding cache server worker thread)
     }
 
-    MessageBase* CacheServerWorkerItem::getLocalRequestPtr() const
+    MessageBase* CacheServerWorkerItem::getDataRequestPtr() const
     {
-        return local_request_ptr_;
+        return data_request_ptr_;
     }
     
-    NetworkAddr CacheServerWorkerItem::getClientAddr() const
+    NetworkAddr CacheServerWorkerItem::getNetworkAddr() const
     {
-        return client_addr_;
+        return network_addr_;
     }
 
     CacheServerWorkerItem& CacheServerWorkerItem::operator=(const CacheServerWorkerItem& other)
     {
-        local_request_ptr_ = other.local_request_ptr_;
-        client_addr_ = other.client_addr_;
+        data_request_ptr_ = other.data_request_ptr_; // Shallow copy
+        network_addr_ = other.network_addr_;
         return *this;
     }
 
