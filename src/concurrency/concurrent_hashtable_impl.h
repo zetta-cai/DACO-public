@@ -51,7 +51,7 @@ namespace covered
     }
 
     template<class V, class Hasher>
-    bool ConcurrentHashtable<V, Hasher>::exists(const Key& key) const
+    bool ConcurrentHashtable<V, Hasher>::isExist(const Key& key) const
     {
         assert(rwlocks_ != NULL);
 
@@ -83,7 +83,7 @@ namespace covered
     }
 
     template<class V, class Hasher>
-    V ConcurrentHashtable<V, Hasher>::get(const Key& key, bool& is_found) const
+    V ConcurrentHashtable<V, Hasher>::getIfExist(const Key& key, bool& is_exist) const
     {
         assert(rwlocks_ != NULL);
 
@@ -108,12 +108,12 @@ namespace covered
         if (iter != tmp_hashtable.end()) // key exists
         {
             value = iter->second;
-            is_found = true;
+            is_exist = true;
         }
         else
         {
             value = default_value_;
-            is_found = false;
+            is_exist = false;
         }
 
         // Release the read lock
@@ -123,7 +123,7 @@ namespace covered
     }
 
     template<class V, class Hasher>
-    void ConcurrentHashtable<V, Hasher>::update(const Key& key, const V& value, bool& is_found)
+    void ConcurrentHashtable<V, Hasher>::insertOrUpdate(const Key& key, const V& value, bool& is_exist)
     {
         assert(rwlocks_ != NULL);
 
@@ -135,7 +135,7 @@ namespace covered
             {
                 // TMPDEBUG
                 std::ostringstream oss;
-                oss << "acquire a write lock for key " << key.getKeystr() << " in update()";
+                oss << "acquire a write lock for key " << key.getKeystr() << " in insertOrUpdate()";
                 Util::dumpDebugMsg(instance_name_, oss.str());
 
                 break;
@@ -147,18 +147,20 @@ namespace covered
         if (iter == tmp_hashtable.end()) // key NOT exist
         {
             tmp_hashtable.insert(std::pair<Key, V>(key, value));
-            is_found = false;
+            is_exist = false;
 
             total_key_size_.fetch_add(key.getKeystr().length(), Util::RMW_CONCURRENCY_ORDER);
             total_value_size_.fetch_add(value.getSizeForCapacity(), Util::RMW_CONCURRENCY_ORDER);
         }
         else // key exists
         {
-            V original_value = iter->second;
-            iter->second = value;
-            is_found = true;
+            uint32_t original_value_size = iter->second.getSizeForCapacity();
 
-            total_value_size_ += (value.getSizeForCapacity() - original_value.getSizeForCapacity());
+            // Update value
+            iter->second = value;
+            is_exist = true;
+
+            updateTotalValueSize_(iter->second.getSizeForCapacity(), original_value_size);
         }
 
         // Release the write lock
@@ -168,7 +170,106 @@ namespace covered
     }
 
     template<class V, class Hasher>
-    void ConcurrentHashtable<V, Hasher>::erase(const Key& key, bool& is_found)
+    void ConcurrentHashtable<V, Hasher>::insertOrCall(const Key& key, const V& value, bool& is_exist, const std::string& function_name, void* param_ptr)
+    {
+        assert(rwlocks_ != NULL);
+
+        // Acquire a write lock
+        uint32_t hashidx = getHashIndex_(key);
+        while (true)
+        {
+            if (rwlocks_[hashidx].try_lock())
+            {
+                // TMPDEBUG
+                std::ostringstream oss;
+                oss << "acquire a write lock for key " << key.getKeystr() << " in insertOrCall()";
+                Util::dumpDebugMsg(instance_name_, oss.str());
+
+                break;
+            }
+        }
+
+        std::unordered_map<Key, V, Hasher>& tmp_hashtable = hashtables_[hashidx];
+        typename std::unordered_map<Key, V, Hasher>::iterator iter = tmp_hashtable.find(key);
+        if (iter == tmp_hashtable.end()) // key NOT exist
+        {
+            tmp_hashtable.insert(std::pair<Key, V>(key, value));
+            is_exist = false;
+
+            total_key_size_.fetch_add(key.getKeystr().length(), Util::RMW_CONCURRENCY_ORDER);
+            total_value_size_.fetch_add(value.getSizeForCapacity(), Util::RMW_CONCURRENCY_ORDER);
+        }
+        else // key exists
+        {
+            uint32_t original_value_size = iter->second.getSizeForCapacity();
+
+            // Call value's function
+            bool is_erase = iter->second.call(function_name, param_ptr);
+            is_exist = true;
+
+            updateTotalValueSize_(iter->second.getSizeForCapacity(), original_value_size);
+
+            assert(is_erase == false); // NOT erase key-value pair in insertOrCall()
+        }
+
+
+        // Release the write lock
+        rwlocks_[hashidx].unlock();
+
+        return;
+    }
+
+    template<class V, class Hasher>
+    void ConcurrentHashtable<V, Hasher>::callIfExist(const Key& key, bool& is_exist, const std::string& function_name, void* param_ptr)
+    {
+        assert(rwlocks_ != NULL);
+
+        // Acquire a write lock
+        uint32_t hashidx = getHashIndex_(key);
+        while (true)
+        {
+            if (rwlocks_[hashidx].try_lock())
+            {
+                // TMPDEBUG
+                std::ostringstream oss;
+                oss << "acquire a write lock for key " << key.getKeystr() << " in insertOrCall()";
+                Util::dumpDebugMsg(instance_name_, oss.str());
+
+                break;
+            }
+        }
+
+        std::unordered_map<Key, V, Hasher>& tmp_hashtable = hashtables_[hashidx];
+        typename std::unordered_map<Key, V, Hasher>::iterator iter = tmp_hashtable.find(key);
+
+        if (iter != tmp_hashtable.end()) // key exists
+        {
+            uint32_t original_value_size = iter->second.getSizeForCapacity();
+
+            // Call value's function
+            bool is_erase = iter->second.call(function_name, param_ptr);
+            is_exist = true;
+
+            updateTotalValueSize_(iter->second.getSizeForCapacity(), original_value_size);
+            original_value_size = iter->second.getSizeForCapacity();
+
+            if (is_erase) // Erase if necessary
+            {
+                tmp_hashtable.erase(iter);
+
+                total_key_size_.fetch_sub(key.getKeystr().length(), Util::RMW_CONCURRENCY_ORDER);
+                total_value_size_.fetch_sub(original_value_size, Util::RMW_CONCURRENCY_ORDER);
+            }
+        }
+
+        // Release the write lock
+        rwlocks_[hashidx].unlock();
+
+        return;
+    }
+
+    template<class V, class Hasher>
+    void ConcurrentHashtable<V, Hasher>::eraseIfExist(const Key& key, bool& is_exist)
     {
         assert(rwlocks_ != NULL);
 
@@ -191,16 +292,17 @@ namespace covered
         typename std::unordered_map<Key, V, Hasher>::iterator iter = tmp_hashtable.find(key);
         if (iter != tmp_hashtable.end()) // key exists
         {
-            V original_value = iter->second;
+            uint32_t original_value_size = iter->second.getSizeForCapacity();
+
             tmp_hashtable.erase(iter);
-            is_found = true;
+            is_exist = true;
 
             total_key_size_.fetch_sub(key.getKeystr().length(), Util::RMW_CONCURRENCY_ORDER);
-            total_value_size_.fetch_sub(original_value.getSizeForCapacity(), Util::RMW_CONCURRENCY_ORDER);
+            total_value_size_.fetch_sub(original_value_size, Util::RMW_CONCURRENCY_ORDER);
         }
         else // key NOT exist
         {
-            is_found = false;
+            is_exist = false;
         }
 
         // Release the write lock
@@ -230,6 +332,20 @@ namespace covered
         uint32_t hash_value = hash_wrapper_ptr_->hash(key);
         uint32_t hashidx = hash_value % hashtables_.size();
         return hashidx;
+    }
+
+    template<class V, class Hasher>
+    void ConcurrentHashtable<V, Hasher>::updateTotalValueSize_(uint32_t current_value_size, uint32_t original_value_size)
+    {
+        if (current_value_size >= original_value_size)
+        {
+            total_value_size_.fetch_add(current_value_size - original_value_size, Util::RMW_CONCURRENCY_ORDER);
+        }
+        else
+        {
+            total_value_size_.fetch_sub(original_value_size - current_value_size, Util::RMW_CONCURRENCY_ORDER);
+        }
+        return;
     }
 }
 

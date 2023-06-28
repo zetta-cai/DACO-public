@@ -26,6 +26,7 @@ namespace covered
 
         bool isValid() const;
 
+        bool call(const std::string& function_name, void* param_ptr);
         uint32_t getSizeForCapacity() const;
 
         ValidityFlag& operator=(const ValidityFlag& other);

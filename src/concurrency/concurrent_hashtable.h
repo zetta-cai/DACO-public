@@ -18,7 +18,8 @@
 
 namespace covered
 {
-    // NOTE: class V must support default constructor, operator=, and getSizeForCapacity()
+    // NOTE: class V must support default constructor, operator=, getSizeForCapacity(), and call(const std::string& function_name, void* param_ptr)
+    // NOTE: V::call() returns a boolean indicating whether to erase the key-value pair or not
     template<class V, class Hasher>
     class ConcurrentHashtable
     {
@@ -28,10 +29,13 @@ namespace covered
         ConcurrentHashtable(const std::string& table_name, const V& default_value, const uint32_t& bucket_count = CONCURRENT_HASHTABLE_BUCKET_COUNT);
         ~ConcurrentHashtable();
 
-        bool exists(const Key& key) const;
-        V get(const Key& key, bool& is_found) const; // Get if key exists
-        void update(const Key& key, const V& value, bool& is_found); // Insert if key does not exist
-        void erase(const Key& key, bool& is_found); // Erase if key exists
+        // NOTE: thread-safe structure cannot return a reference, which may violate atomicity
+        bool isExist(const Key& key) const;
+        V getIfExist(const Key& key, bool& is_exist) const; // Get if key exists
+        void insertOrUpdate(const Key& key, const V& value, bool& is_exist); // Insert a new value if key does not exist, or update the value if key exists
+        void insertOrCall(const Key& key, const V& value, bool& is_exist, const std::string& function_name, void* param_ptr); // Insert a new value if key does not exist, or call value.function_name if key exists
+        void callIfExist(const Key& key, bool& is_exist, const std::string& function_name, void* param_ptr); // Call value.function_name if key exists
+        void eraseIfExist(const Key& key, bool& is_exist); // Erase if key exists
 
         uint32_t getTotalKeySizeForCapcity() const;
         uint32_t getTotalValueSizeForCapcity() const;
@@ -39,6 +43,7 @@ namespace covered
         static const std::string kClassName;
 
         uint32_t getHashIndex_(const Key& key) const;
+        void updateTotalValueSize_(uint32_t current_value_size, uint32_t original_value_size);
 
         // Const shared varaibles
         std::string instance_name_;

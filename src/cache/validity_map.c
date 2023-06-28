@@ -33,6 +33,16 @@ namespace covered
         return sizeof(bool);
     }
 
+    bool ValidityFlag::call(const std::string& function_name, void* param_ptr)
+    {
+        bool is_erase = false;
+
+        Util::dumpErrorMsg(kClassName, "NOT need call() for ConcurrentHashtable::insertOrCall()!");
+        exit(1);
+
+        return is_erase;
+    }
+
     ValidityFlag& ValidityFlag::operator=(const ValidityFlag& other)
     {
         is_valid_ = other.is_valid_;
@@ -56,7 +66,7 @@ namespace covered
 
     bool ValidityMap::isValidObject(const Key& key, bool& is_found) const
     {
-        ValidityFlag validity_flag = perkey_validity_.get(key, is_found);
+        ValidityFlag validity_flag = perkey_validity_.getIfExist(key, is_found);
         bool is_valid = validity_flag.isValid();
         return is_valid;
     }
@@ -64,20 +74,20 @@ namespace covered
     void ValidityMap::invalidateObject(const Key& key, bool& is_found)
     {
         ValidityFlag validity_flag(false);
-        perkey_validity_.update(key, validity_flag, is_found);
+        perkey_validity_.insertOrUpdate(key, validity_flag, is_found);
         return;
     }
 
     void ValidityMap::validateObject(const Key& key, bool& is_found)
     {
         ValidityFlag validity_flag(true);
-        perkey_validity_.update(key, validity_flag, is_found);
+        perkey_validity_.insertOrUpdate(key, validity_flag, is_found);
         return;
     }
 
     void ValidityMap::erase(const Key& key, bool& is_found)
     {
-        perkey_validity_.erase(key, is_found);
+        perkey_validity_.eraseIfExist(key, is_found);
         return;
     }
 

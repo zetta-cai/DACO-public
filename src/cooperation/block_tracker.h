@@ -14,10 +14,8 @@
 #include <unordered_set>
 
 #include "common/key.h"
-#include "concurrency/rwlock.h"
 #include "edge/edge_param.h"
 #include "network/network_addr.h"
-#include "network/udp_socket_wrapper.h"
 
 namespace covered
 {
@@ -50,10 +48,6 @@ namespace covered
         // Const shared variables
         EdgeParam* edge_param_ptr_; // Maintained outside CooperativeCacheWrapperBase (thread safe)
         std::string instance_name_;
-
-        // NOTE: serializability for writes of the same key has been guaranteed in EdgeWrapperBase
-        // Guarantee the atomicity of cooperation metadata (e.g., writes of different keys to update perkey_writeflags_)
-        mutable Rwlock* rwlock_for_blockmeta_ptr_;
 
         // Non-const shared variables
         // NOTE: we do NOT merge write flags and blocklist as a single per-key metadata for easy development and debugging

@@ -18,7 +18,7 @@
 #include "common/value.h"
 #include "cooperation/block_tracker.h"
 #include "cooperation/dht_wrapper.h"
-#include "cooperation/directory_info.h"
+#include "cooperation/directory/directory_info.h"
 #include "cooperation/directory_table.h"
 #include "edge/edge_param.h"
 #include "message/message_base.h"

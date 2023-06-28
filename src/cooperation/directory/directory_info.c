@@ -1,4 +1,4 @@
-#include "cooperation/directory_info.h"
+#include "cooperation/directory/directory_info.h"
 
 #include <arpa/inet.h> // htonl ntohl
 

@@ -14,7 +14,6 @@
 #include "common/key.h"
 #include "common/value.h"
 #include "cooperation/cooperation_wrapper_base.h"
-#include "cooperation/directory_info.h"
 
 namespace covered
 {

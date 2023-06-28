@@ -22,6 +22,7 @@ namespace covered
         RingBuffer(const T& default_element, const uint32_t& capacity = RINGBUFFER_CAPACITY);
         ~RingBuffer();
 
+        // NOTE: thread-safe structure cannot return a reference, which may violate atomicity
         bool push(const T& element);
         bool pop(T& element);
 

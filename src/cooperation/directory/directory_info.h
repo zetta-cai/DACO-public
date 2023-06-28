@@ -1,5 +1,5 @@
 /*
- * DirectoryInfo: directory information for DHT-based content discovery.
+ * DirectoryInfo: directory information for DHT-based content discovery (building blocks for DirectoryTable).
  * 
  * By Siyuan Sheng (2023.06.08).
  */
@@ -13,6 +13,8 @@
 
 namespace covered
 {
+    typedef std::unordered_set<DirectoryInfo, DirectoryInfoHasher> dirinfo_set_t;
+    
     class DirectoryInfo
     {
     public:

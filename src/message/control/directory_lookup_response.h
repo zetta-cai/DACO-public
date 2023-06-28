@@ -13,7 +13,7 @@
 
 #include "common/dynamic_array.h"
 #include "common/key.h"
-#include "cooperation/directory_info.h"
+#include "cooperation/directory/directory_info.h"
 #include "message/key_writeflag_validity_directory_message.h"
 
 namespace covered
