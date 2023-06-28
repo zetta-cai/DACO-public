@@ -12,63 +12,40 @@ namespace covered
 {
     const std::string BlockTracker::kClassName("BlockTracker");
 
-    BlockTracker::BlockTracker(EdgeParam* edge_param_ptr)
+    BlockTracker::BlockTracker(EdgeParam* edge_param_ptr) : perkey_msimetadata_("perkey_msimetadata_", MsiMetadata())
     {
         // Differentiate CooperationWrapper in different edge nodes
         assert(edge_param_ptr != NULL);
         std::ostringstream oss;
         oss << kClassName << " edge" << edge_param_ptr->getEdgeIdx();
         instance_name_ = oss.str();
-
-        edge_param_ptr_ = edge_param_ptr;
-        assert(edge_param_ptr_ != NULL);
-
-        oss.clear();
-        oss.str("");
-        oss << instance_name_ << " " << "rwlock_for_blockmeta_ptr_";
-        rwlock_for_blockmeta_ptr_ = new Rwlock(oss.str());
-        assert(rwlock_for_blockmeta_ptr_ != NULL);
-
-        perkey_writeflags_.clear();
-        perkey_edge_blocklist_.clear();
     }
 
-    BlockTracker::~BlockTracker()
-    {
-        // NOTE: no need to release edge_param_ptr_, which will be released outside BlockTracker (e.g., simulator)
-
-        assert(rwlock_for_blockmeta_ptr_ != NULL);
-        delete rwlock_for_blockmeta_ptr_;
-        rwlock_for_blockmeta_ptr_ = NULL;
-    }
+    BlockTracker::~BlockTracker() {}
 
     // (1) Access per-key write flag
 
     bool BlockTracker::isBeingWritten(const Key& key) const
     {
-        // Acquire a read lock for cooperation metadata before accessing cooperation metadata
-        assert(rwlock_for_blockmeta_ptr_ != NULL);
-        while (true)
+        // Prepare IsBeingWrittenParam
+        MsiMetadata::IsBeingWrittenParam tmp_param = {false};
+
+        bool is_exist = false;
+        perkey_msimetadata_.constCallIfExist(key, is_exist, "isBeingWritten", &tmp_param);
+        
+        bool is_being_written = tmp_param.is_being_written;
+        if (!is_exist) // key NOT exist
         {
-            if (rwlock_for_blockmeta_ptr_->try_lock_shared("isBeingWritten()"))
-            {
-                break;
-            }
+            is_being_written = false;
         }
 
-        bool is_being_written = false;
-        std::unordered_map<Key, bool>::const_iterator iter = perkey_writeflags_.find(key);
-        if (iter != perkey_writeflags_.end())
-        {
-            is_being_written = iter->second;
-        }
-
-        rwlock_for_blockmeta_ptr_->unlock_shared();
         return is_being_written;
     }
 
     bool BlockTracker::checkAndSetWriteflag(const Key& key)
     {
+        // TODO: END HERE
+        
         // Acquire a write lock for cooperation metadata before accessing cooperation metadata
         assert(rwlock_for_blockmeta_ptr_ != NULL);
         while (true)

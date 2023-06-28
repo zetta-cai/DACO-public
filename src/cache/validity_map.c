@@ -37,10 +37,17 @@ namespace covered
     {
         bool is_erase = false;
 
-        Util::dumpErrorMsg(kClassName, "NOT need call() for ConcurrentHashtable::insertOrCall()!");
+        Util::dumpErrorMsg(kClassName, "NOT need call() for ConcurrentHashtable::insertOrCall()/callIfExist()!");
         exit(1);
 
         return is_erase;
+    }
+
+    void ValidityFlag::constCall(const std::string& function_name, void* param_ptr) const
+    {
+        Util::dumpErrorMsg(kClassName, "NOT need constCall() for ConcurrentHashtable::constCall()!");
+        exit(1);
+        return;
     }
 
     ValidityFlag& ValidityFlag::operator=(const ValidityFlag& other)

@@ -133,6 +133,13 @@ namespace covered
         return is_erase;
     }
 
+    void DirectoryEntry::constCall(const std::string& function_name, void* param_ptr) const
+    {
+        Util::dumpErrorMsg(kClassName, "NOT need constCall() for ConcurrentHashtable::constCall()!");
+        exit(1);
+        return;
+    }
+
     DirectoryEntry& DirectoryEntry::operator=(const DirectoryEntry& other)
     {
         directory_entry_ = other.directory_entry_;

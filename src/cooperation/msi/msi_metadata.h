@@ -19,16 +19,26 @@ namespace covered
     class MsiMetadata
     {
     public:
+        struct IsBeingWrittenParam
+        {
+            bool is_being_written;
+        };
+
         MsiMetadata();
         ~MsiMetadata();
 
+        bool isBeingWritten() const;
+
         uint32_t getSizeForCapacity() const;
-        void call(const std::string function_name, void* param_ptr);
+        bool call(const std::string function_name, void* param_ptr);
+        void constCall(const std::string function_name, void* param_ptr) const;
 
         MsiMetadata& operator=(const MsiMetadata& other);
     private:
-        bool writeflag_;
-        edge_blocklist_t edge_blocklist_;
+        static const std::string kClassName;
+
+        bool writeflag_; // whether key is being written
+        edge_blocklist_t edge_blocklist_; // a list of blocked closest edge nodes waiting for writes of each given key
     };
 }
 

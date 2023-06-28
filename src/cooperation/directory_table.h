@@ -35,7 +35,7 @@ namespace covered
 
         uint32_t getSizeForCapacity() const;
     private:
-        typedef ConcurrentHashtable<DirectoryEntry, KeyHasher> dirinfo_table_t;
+        typedef ConcurrentHashtable<DirectoryEntry> dirinfo_table_t;
 
         static const std::string kClassName;
 
@@ -44,7 +44,7 @@ namespace covered
         std::mt19937_64* directory_randgen_ptr_;
 
         // Non-const shared variable (metadata for cooperation)
-        dirinfo_table_t directory_hashtable_; // Maintain directory information (not need ordered map)
+        dirinfo_table_t directory_hashtable_; // Maintain directory information (thread safe)
     };
 }
 

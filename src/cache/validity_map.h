@@ -26,8 +26,9 @@ namespace covered
 
         bool isValid() const;
 
-        bool call(const std::string& function_name, void* param_ptr);
         uint32_t getSizeForCapacity() const;
+        bool call(const std::string& function_name, void* param_ptr);
+        void constCall(const std::string& function_name, void* param_ptr) const;
 
         ValidityFlag& operator=(const ValidityFlag& other);
     private:
@@ -56,7 +57,7 @@ namespace covered
 
         // Non-const shared variables
         // NOTE: as the flag of validity can be integrated into cache metadata, we ONLY count the flag instead of key into the total size for capacity limitation (validity_map_ is just an implementation trick to avoid hacking each individual cache)
-        ConcurrentHashtable<ValidityFlag, KeyHasher> perkey_validity_; // Validity metadata (thread safe)
+        ConcurrentHashtable<ValidityFlag> perkey_validity_; // Validity metadata (thread safe)
     };
 }
 

@@ -18,9 +18,9 @@
 
 namespace covered
 {
-    // NOTE: class V must support default constructor, operator=, getSizeForCapacity(), and call(const std::string& function_name, void* param_ptr)
+    // NOTE: class V must support default constructor, operator=, getSizeForCapacity(), and call/constCall(const std::string& function_name, void* param_ptr)
     // NOTE: V::call() returns a boolean indicating whether to erase the key-value pair or not
-    template<class V, class Hasher>
+    template<class V>
     class ConcurrentHashtable
     {
     public:
@@ -35,6 +35,7 @@ namespace covered
         void insertOrUpdate(const Key& key, const V& value, bool& is_exist); // Insert a new value if key does not exist, or update the value if key exists
         void insertOrCall(const Key& key, const V& value, bool& is_exist, const std::string& function_name, void* param_ptr); // Insert a new value if key does not exist, or call value.function_name if key exists
         void callIfExist(const Key& key, bool& is_exist, const std::string& function_name, void* param_ptr); // Call value.function_name if key exists
+        void constCallIfExist(const Key& key, bool& is_exist, const std::string& function_name, void* param_ptr) const; // Const call value.function_name if key exists
         void eraseIfExist(const Key& key, bool& is_exist); // Erase if key exists
 
         uint32_t getTotalKeySizeForCapcity() const;
@@ -55,7 +56,7 @@ namespace covered
         mutable boost::shared_mutex* rwlocks_;
 
         // Non-const shared variables
-        std::vector<std::unordered_map<Key, V, Hasher>> hashtables_;
+        std::vector<std::unordered_map<Key, V, KeyHasher>> hashtables_;
 
         // NOn-const shared variables (thread safe)
         std::atomic<uint32_t> total_key_size_;

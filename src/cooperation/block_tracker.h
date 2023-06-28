@@ -13,7 +13,9 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include "concurrency/concurrent_hashtable_impl.h"
 #include "common/key.h"
+#include "cooperation/msi/msi_metadata.h"
 #include "edge/edge_param.h"
 #include "network/network_addr.h"
 
@@ -46,14 +48,11 @@ namespace covered
         static const std::string kClassName;
 
         // Const shared variables
-        EdgeParam* edge_param_ptr_; // Maintained outside CooperativeCacheWrapperBase (thread safe)
         std::string instance_name_;
 
         // Non-const shared variables
-        // NOTE: we do NOT merge write flags and blocklist as a single per-key metadata for easy development and debugging
-        // NOTE: BOTH perkey_writeflags_ and perkey_edge_blocklist_ do NOT count key size as the managed keys have been counted in DirectoryTable
-        perkey_writeflag_t perkey_writeflags_; // whether key is being written
-        perkey_edge_blocklist_t perkey_edge_blocklist_; // a list of blocked closest edge nodes waiting for writes of each given key
+        // NOTE: perkey_msimetadata_ does NOT count key size, as the managed keys have been counted in DirectoryTable
+        ConcurrentHashtable<MsiMetadata> perkey_msimetadata_; // per-key metadata for MSI protocol (thread safe)
     };
 }
 
