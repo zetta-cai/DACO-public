@@ -35,7 +35,7 @@ namespace covered
         DirectoryEntry::GetAllValidDirinfoParam tmp_param = {valid_directory_info_set};
 
         bool is_exist = false;
-        directory_hashtable_.constCallIfExist(key, is_exist, "getAllValidDirinfo", &tmp_param); // Get directory entry if key exists
+        directory_hashtable_.constCallIfExist(key, is_exist, DirectoryEntry::GET_ALL_VALID_DIRINFO_FUNCNAME, &tmp_param); // Get directory entry if key exists
         if (!is_exist) // key does not exist
         {
             is_valid_directory_exist = false;
@@ -88,7 +88,7 @@ namespace covered
 
             // Insert a new directory entry, or add directory info into existing directory entry
             bool is_exist = false;
-            directory_hashtable_.insertOrCall(key, directory_entry, is_exist, "addDirinfo", (void*)&tmp_param);
+            directory_hashtable_.insertOrCall(key, directory_entry, is_exist, DirectoryEntry::ADD_DIRINFO_FUNCNAME, (void*)&tmp_param);
             if (!is_exist) // key does not exist
             {
                 //assert(directory_metadata.isValidDirinfo()); // invalid directory info if key is being written
@@ -109,7 +109,7 @@ namespace covered
             DirectoryEntry::RemoveDirinfoParam tmp_param = {directory_info, false};
 
             bool is_exist = false;
-            directory_hashtable_.callIfExist(key, is_exist, "removeDirinfo", &tmp_param);
+            directory_hashtable_.callIfExist(key, is_exist, DirectoryEntry::REMOVE_DIRINFO_FUNCNAME, &tmp_param);
             if (is_exist) // key already exists
             {
                 if (!tmp_param.is_directory_already_exist) // directory_info should exist for key
@@ -142,7 +142,7 @@ namespace covered
         DirectoryEntry::InvalidateMetadataForAllDirinfoIfExistParam tmp_param = {all_dirinfo};
 
         bool is_exist = false;
-        directory_hashtable_.callIfExist(key, is_exist, "invalidateMetadataForAllDirinfoIfExist", &tmp_param);
+        directory_hashtable_.callIfExist(key, is_exist, DirectoryEntry::INVALIDATE_METADATA_FOR_ALL_DIRINFO_IF_EXIST_FUNCNAME, &tmp_param);
         UNUSED(is_exist);
 
         return;
@@ -154,7 +154,7 @@ namespace covered
         DirectoryEntry::ValidateMetadataForDirinfoIfExistParam tmp_param = {directory_info};
 
         bool is_exist = false;
-        directory_hashtable_.callIfExist(key, is_exist, "validateMetadataForDirinfoIfExist", &tmp_param);
+        directory_hashtable_.callIfExist(key, is_exist, DirectoryEntry::VALIDATE_METADATA_FOR_DIRINFO_IF_EXIST_FUNCNAME, &tmp_param);
         UNUSED(is_exist);
 
         return;

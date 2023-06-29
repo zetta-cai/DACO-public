@@ -38,10 +38,7 @@ namespace covered
 
         assert(closest_edge_addr.isValidAddr());
 
-        assert(edge_wrapper_ptr_ != NULL);
-        assert(edge_wrapper_ptr_->edge_param_ptr_ != NULL);
-        assert(edge_wrapper_ptr_->cooperation_wrapper_ptr_ != NULL);
-        assert(edge_beacon_server_recvreq_socket_server_ptr_ != NULL);
+        checkPointers_();
 
         bool is_finish = false;
 
@@ -49,7 +46,7 @@ namespace covered
         bool is_being_written = false;
         bool is_valid_directory_exist = false;
         DirectoryInfo directory_info;
-        edge_wrapper_ptr_->cooperation_wrapper_ptr_->lookupLocalDirectory(tmp_key, is_being_written, is_valid_directory_exist, directory_info);
+        edge_wrapper_ptr_->cooperation_wrapper_ptr_->lookupLocalDirectoryByBeaconServer(tmp_key, closest_edge_addr, is_being_written, is_valid_directory_exist, directory_info);
 
         // Send back a directory lookup response
         uint32_t edge_idx = edge_wrapper_ptr_->edge_param_ptr_->getEdgeIdx();
@@ -58,15 +55,6 @@ namespace covered
         directory_lookup_response.serialize(control_response_msg_payload);
         PropagationSimulator::propagateFromNeighborToEdge();
         edge_beacon_server_recvreq_socket_server_ptr_->send(control_response_msg_payload);
-
-        if (is_being_written)
-        {
-            // Add the closest edge node into the CooperationWrapperBase::perkey_edge_blocklist_
-            edge_wrapper_ptr_->cooperation_wrapper_ptr_->addEdgeIntoBlocklist(tmp_key, closest_edge_addr);
-
-            // Try to notify blocked edge nodes if without writes, in case that writes have finished before adding the closest edge node
-            is_finish = tryToNotifyEdgesFromBlocklist_(tmp_key);
-        }
 
         return is_finish;
     }
@@ -81,10 +69,7 @@ namespace covered
         bool is_admit = directory_update_request_ptr->isValidDirectoryExist();
         DirectoryInfo directory_info = directory_update_request_ptr->getDirectoryInfo();
 
-        assert(edge_wrapper_ptr_ != NULL);
-        assert(edge_wrapper_ptr_->edge_param_ptr_ != NULL);
-        assert(edge_wrapper_ptr_->cooperation_wrapper_ptr_ != NULL);
-        assert(edge_beacon_server_recvreq_socket_server_ptr_ != NULL);
+        checkPointers_();
 
         bool is_finish = false;        
 
@@ -113,17 +98,16 @@ namespace covered
         const AcquireWritelockRequest* const acquire_writelock_request_ptr = static_cast<const AcquireWritelockRequest*>(control_request_ptr);
         Key tmp_key = acquire_writelock_request_ptr->getKey();
 
-        assert(edge_wrapper_ptr_ != NULL);
-        assert(edge_wrapper_ptr_->edge_param_ptr_ != NULL);
-        assert(edge_wrapper_ptr_->cooperation_wrapper_ptr_ != NULL);
-        assert(edge_beacon_server_recvreq_socket_server_ptr_ != NULL);
+        checkPointers_();
 
         bool is_finish = false;        
 
         // Try to acquire permission for the write
         LockResult lock_result = LockResult::kFailure;
         std::unordered_set<DirectoryInfo, DirectoryInfoHasher> all_dirinfo;
-        lock_result = edge_wrapper_ptr_->cooperation_wrapper_ptr_->acquireLocalWritelock(tmp_key, all_dirinfo);
+        lock_result = edge_wrapper_ptr_->cooperation_wrapper_ptr_->acquireLocalWritelockByBeaconServer(tmp_key, closest_edge_addr, all_dirinfo);
+
+        // NOTE: we invalidate cache copies by beacon code to avoid transmitting all_dirinfo to cache server of the closest edge node
         if (lock_result == LockResult::kSuccess) // If acquiring write permission successfully
         {
             // Invalidate all cache copies
@@ -138,38 +122,7 @@ namespace covered
         PropagationSimulator::propagateFromNeighborToEdge();
         edge_beacon_server_recvreq_socket_server_ptr_->send(control_response_msg_payload);
 
-        if (lock_result == LockResult::kFailure)
-        {
-            // Add the closest edge node into the CooperationWrapperBase::perkey_edge_blocklist_
-            edge_wrapper_ptr_->cooperation_wrapper_ptr_->addEdgeIntoBlocklist(tmp_key, closest_edge_addr);
-
-            // Try to notify blocked edge nodes if without writes, in case that writes have finished before adding the closest edge node
-            is_finish = tryToNotifyEdgesFromBlocklist_(tmp_key);
-        }
-
         return is_finish;
-    }
-
-    void BasicBeaconServer::sendFinishBlockRequest_(const Key& key, const NetworkAddr& closest_edge_addr) const
-    {
-        assert(edge_wrapper_ptr_ != NULL);
-        assert(edge_wrapper_ptr_->edge_param_ptr_ != NULL);
-        assert(edge_beacon_server_sendreq_toblocked_socket_client_ptr_ != NULL);
-
-        // Prepare finish block request to finish blocking for writes in all closest edge nodes
-        uint32_t edge_idx = edge_wrapper_ptr_->edge_param_ptr_->getEdgeIdx();
-        FinishBlockRequest finish_block_request(key, edge_idx);
-        DynamicArray control_request_msg_payload(finish_block_request.getMsgPayloadSize());
-        finish_block_request.serialize(control_request_msg_payload);
-
-        // Set remote address to the closest edge node
-        edge_beacon_server_sendreq_toblocked_socket_client_ptr_->setRemoteAddrForClient(closest_edge_addr);
-
-        // Send FinishBlockRequest to the closest edge node
-        PropagationSimulator::propagateFromNeighborToEdge();
-        edge_beacon_server_sendreq_toblocked_socket_client_ptr_->send(control_request_msg_payload);
-
-        return;
     }
 
     bool BasicBeaconServer::processReleaseWritelockRequest_(MessageBase* control_request_ptr)
@@ -180,17 +133,14 @@ namespace covered
         const ReleaseWritelockRequest* const release_writelock_request_ptr = static_cast<const ReleaseWritelockRequest*>(control_request_ptr);
         Key tmp_key = release_writelock_request_ptr->getKey();
 
-        assert(edge_wrapper_ptr_ != NULL);
-        assert(edge_wrapper_ptr_->edge_param_ptr_ != NULL);
-        assert(edge_wrapper_ptr_->cooperation_wrapper_ptr_ != NULL);
-        assert(edge_beacon_server_recvreq_socket_server_ptr_ != NULL);
+        checkPointers_();
 
         bool is_finish = false;        
 
         // Release permission for the write
         uint32_t sender_edge_idx = release_writelock_request_ptr->getSourceIndex();
         DirectoryInfo sender_directory_info(sender_edge_idx);
-        edge_wrapper_ptr_->cooperation_wrapper_ptr_->releaseLocalWritelock(tmp_key, sender_directory_info);
+        std::unordered_set<NetworkAddr, NetworkAddrHasher> blocked_edges = edge_wrapper_ptr_->cooperation_wrapper_ptr_->releaseLocalWritelock(tmp_key, sender_directory_info);
 
         // Send back a release writelock response
         uint32_t edge_idx = edge_wrapper_ptr_->edge_param_ptr_->getEdgeIdx();
@@ -200,8 +150,8 @@ namespace covered
         PropagationSimulator::propagateFromNeighborToEdge();
         edge_beacon_server_recvreq_socket_server_ptr_->send(control_response_msg_payload);
 
-        // Try to notify blocked edge nodes after finishing writes
-        is_finish = tryToNotifyEdgesFromBlocklist_(tmp_key);
+        // Notify blocked edge nodes if any after finishing writes
+        is_finish = edge_wrapper_ptr_->notifyEdgesToFinishBlock_(tmp_key, blocked_edges);
 
         return is_finish;
     }

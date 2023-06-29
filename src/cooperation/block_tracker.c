@@ -23,7 +23,7 @@ namespace covered
 
     BlockTracker::~BlockTracker() {}
 
-    // (1) Access per-key write flag
+    // (1) For DirectoryLookup
 
     bool BlockTracker::isBeingWrittenForKey(const Key& key) const
     {
@@ -31,7 +31,7 @@ namespace covered
         MsiMetadata::IsBeingWrittenParam tmp_param = {false};
 
         bool is_exist = false;
-        perkey_msimetadata_.constCallIfExist(key, is_exist, "isBeingWritten", &tmp_param);
+        perkey_msimetadata_.constCallIfExist(key, is_exist, MsiMetadata::IS_BEING_WRITTEN_FUNCNAME, &tmp_param);
         
         bool is_being_written = false;
         if (is_exist) // key exists
@@ -42,17 +42,43 @@ namespace covered
         return is_being_written;
     }
 
-    bool BlockTracker::checkAndSetWriteflagForKey(const Key& key)
+    void BlockTracker::blockEdgeForKeyIfExistAndBeingWritten(const Key& key, const NetworkAddr& network_addr, bool& is_being_written)
     {
-        // Prepare an MSI metadata with writeflag_ = true
-        MsiMetadata tmp_msimetadata;
-        tmp_msimetadata.setWriteflag();
+        assert(network_addr.isValidAddr());
 
-        // Prepare CheckAndSetWriteflagParam
-        MsiMetadata::CheckAndSetWriteflagParam tmp_param = {false};
+        // Prepare BlockEdgeIfBeingWrittenParam
+        MsiMetadata::BlockEdgeIfBeingWrittenParam tmp_param = {network_addr, false, false};
 
         bool is_exist = false;
-        perkey_msimetadata_.insertOrCall(key, tmp_msimetadata, is_exist, "checkAndSetWriteflag", &tmp_param);
+        perkey_msimetadata_.callIfExist(key, is_exist, MsiMetadata::BLOCK_EDGE_IF_BEING_WRITTEN_FUNCNAME, &tmp_param);
+
+        // An edge node can be blocked at most once (i.e., no duplicate edge nodes in a blocklist)
+        assert(!tmp_param.is_blocked_before);
+
+        if (!is_exist) // key does not exist
+        {
+            is_being_written = false;
+        }
+        else // key exists
+        {
+            is_being_written = tmp_param.is_being_written;
+        }
+
+        return;
+    }
+
+    // (2) For AcquireWritelock
+
+    bool BlockTracker::casWriteflagForKey(const Key& key)
+    {
+        // Prepare an MSI metadata with writeflag_ = true
+        MsiMetadata tmp_msimetadata(true);
+
+        // Prepare CasWriteflagParam
+        MsiMetadata::CasWriteflagParam tmp_param = {false};
+
+        bool is_exist = false;
+        perkey_msimetadata_.insertOrCall(key, tmp_msimetadata, is_exist, MsiMetadata::CAS_WRITEFLAG_FUNCNAME, &tmp_param);
 
         bool is_successful = false;
         if (!is_exist) // key NOT exist
@@ -67,14 +93,41 @@ namespace covered
         return is_successful;
     }
 
-    void BlockTracker::resetWriteflagForKeyIfExist(const Key& key)
+    bool BlockTracker::casWriteflagOrBlockEdgeForKey(const Key& key, const NetworkAddr& network_addr)
+    {
+        // Prepare an MSI metadata with writeflag_ = true
+        MsiMetadata tmp_msimetadata(true);
+
+        // Prepare CasWriteflagOrBlockEdgeParam
+        MsiMetadata::CasWriteflagOrBlockEdgeParam tmp_param = {network_addr, false, false};
+
+        bool is_exist = false;
+        perkey_msimetadata_.insertOrCall(key, tmp_msimetadata, is_exist, MsiMetadata::CAS_WRITEFLAG_OR_BLOCK_EDGE_FUNCNAME, &tmp_param);
+        assert(!tmp_param.is_blocked_before);
+
+        bool is_successful = false;
+        if (!is_exist) // key NOT exist
+        {
+            is_successful = true;
+        }
+        else // key exists
+        {
+            is_successful = tmp_param.is_successful;
+        }
+
+        return is_successful;
+    }
+
+    // (3) For FinishWrite
+
+    /*void BlockTracker::resetWriteflagForKeyIfExist(const Key& key)
     {
         // Prepare ResetWriteflagParam
         MsiMetadata::ResetWriteflagParam tmp_param = {false};
 
         // Reset original write flag if key exists
         bool is_exist = false;
-        perkey_msimetadata_.callIfExist(key, is_exist, "resetWriteflag", &tmp_param);
+        perkey_msimetadata_.callIfExist(key, is_exist, MsiMetadata::RESET_WRITEFLAG_FUNCNAME, &tmp_param);
 
         if (!is_exist) // key does not exist
         {
@@ -88,101 +141,30 @@ namespace covered
         }
 
         return;
-    }
+    }*/
 
-    // (2) Access per-key write flag and blocklist
-
-    void BlockTracker::blockEdgeForKeyIfExistAndBeingWritten(const Key& key, const NetworkAddr& network_addr, bool& is_being_written)
+    std::unordered_set<NetworkAddr, NetworkAddrHasher> BlockTracker::unblockAllEdgesAndFinishWriteForKeyIfExist(const Key& key)
     {
-        assert(network_addr.isValidAddr());
-
-        // Prepare AddEdgeIntoBlocklistIfBeingWrittenParam
-        bool is_blocked_before = false;
-        MsiMetadata::AddEdgeIntoBlocklistIfBeingWrittenParam tmp_param = {network_addr, is_being_written, is_blocked_before};
+        // Prepare UnblockAllEdgesAndFinishWriteParam
+        std::unordered_set<NetworkAddr, NetworkAddrHasher> blocked_edges;
+        MsiMetadata::UnblockAllEdgesAndFinishWriteParam tmp_param = {blocked_edges};
 
         bool is_exist = false;
-        perkey_msimetadata_.callIfExist(key, is_exist, "addEdgeIntoBlocklistIfBeingWritten", &tmp_param)
-
-        if (!is_exist) // key does not exist
-        {
-            // No block list for key
-            assert(!is_blocked_before);
-
-            is_being_written = false;
-        }
-        else // key exists
-        {
-            // An edge node can be blocked at most once (i.e., no duplicate edge nodes in a blocklist)
-            assert(!is_blocked_before);
-        }
-
-        return;
-    }
-
-    std::unordered_set<NetworkAddr, NetworkAddrHasher> BlockTracker::unblock(const Key& key)
-    {
-        // TODO: END HERE
+        perkey_msimetadata_.callIfExist(key, is_exist, MsiMetadata::UNBLOCK_ALL_EDGES_AND_FINISH_WRITE_FUNCNAME, &tmp_param);
         
-        // Acquire a write lock for cooperation metadata before accessing cooperation metadata
-        assert(rwlock_for_blockmeta_ptr_ != NULL);
-        while (true)
-        {
-            if (rwlock_for_blockmeta_ptr_->try_lock("addEdgeIntoBlocklist()"))
-            {
-                break;
-            }
-        }
+        // key MUST exist
+        assert(is_exist);
 
-        // Double-check if key is being written again atomically
-        bool is_being_written = false;
-        std::unordered_map<Key, bool>::const_iterator iter = perkey_writeflags_.find(key);
-        if (iter != perkey_writeflags_.end())
-        {
-            is_being_written = iter->second;
-        }
-
-        std::unordered_set<NetworkAddr, NetworkAddrHasher> blocked_edges;
-        if (!is_being_written) // key is still NOT being written
-        {
-            perkey_edge_blocklist_t::iterator iter = perkey_edge_blocklist_.find(key);
-            assert(iter != perkey_edge_blocklist_.end()); // key must exist
-            blocked_edges = iter->second;
-
-            // Remove the key and block list from perkey_edge_blocklist_
-            perkey_edge_blocklist_.erase(iter);
-        }
-
-        rwlock_for_blockmeta_ptr_->unlock();
-        return blocked_edges;
+        return tmp_param.blocked_edges;
     }
 
-    // (3) Get size for capacity check
+    // (4) Get size for capacity check
 
     uint32_t BlockTracker::getSizeForCapacity() const
     {
-        // Acquire a read lock for cooperation metadata before accessing cooperation metadata
-        assert(rwlock_for_blockmeta_ptr_ != NULL);
-        while (true)
-        {
-            if (rwlock_for_blockmeta_ptr_->try_lock_shared("isBeingWritten()"))
-            {
-                break;
-            }
-        }
-
         // NOTE: we do NOT count key size in BlockTracker, as the size of keys managed by beacon edge node has been counted by DirectoryTable
-        uint32_t size = 0;
-        size += perkey_writeflags_.size() * sizeof(bool); // Size of write flags
-        for (perkey_edge_blocklist_t::const_iterator iter_for_blocklist = perkey_edge_blocklist_.begin(); iter_for_blocklist != perkey_edge_blocklist_.end(); iter_for_blocklist++)
-        {
-            const std::unordered_set<NetworkAddr, NetworkAddrHasher>& tmp_edge_blocklist = iter_for_blocklist->second;
-            for (std::unordered_set<NetworkAddr, NetworkAddrHasher>::const_iterator iter_for_networkaddr = tmp_edge_blocklist.begin(); iter_for_networkaddr != tmp_edge_blocklist.end(); iter_for_networkaddr++)
-            {
-                size += iter_for_networkaddr->getSizeForCapacity(); // Size of network address
-            }
-        }
+        uint32_t size = perkey_msimetadata_.getTotalValueSizeForCapcity();
 
-        rwlock_for_blockmeta_ptr_->unlock_shared();
         return size;
     }
 }

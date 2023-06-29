@@ -9,6 +9,8 @@ namespace covered
 {
     // ValidityFlag
 
+    const std::string ValidityFlag::IS_VALID_FLAG_FUNCNAME("isValidFlag");
+
     const std::string ValidityFlag::kClassName("ValidityFlag");
 
     ValidityFlag::ValidityFlag()
@@ -51,7 +53,7 @@ namespace covered
     {
         assert(param_ptr != NULL);
 
-        if (function_name == "isValidFlag")
+        if (function_name == IS_VALID_FLAG_FUNCNAME)
         {
             IsValidFlagParam* tmp_param_ptr = static_cast<IsValidFlagParam*>(param_ptr);
             tmp_param_ptr->is_valid = isValidFlag();
@@ -61,7 +63,7 @@ namespace covered
             std::ostringstream oss;
             oss << "invalid function name " << function_name << " for constCall()!";
             Util::dumpErrorMsg(kClassName, oss.str());
-            exit(1);s
+            exit(1);
         }
 
         return;
@@ -90,10 +92,10 @@ namespace covered
 
     bool ValidityMap::isValidFlagForKey(const Key& key, bool& is_exist) const
     {
-        // Prepare IsValidFlagForParam
+        // Prepare IsValidFlagParam
         ValidityFlag::IsValidFlagParam tmp_param = {false};
 
-        perkey_validity_.constCallIfExist(key, is_exist, "isValidFlag", &tmp_param);
+        perkey_validity_.constCallIfExist(key, is_exist, ValidityFlag::IS_VALID_FLAG_FUNCNAME, &tmp_param);
         return tmp_param.is_valid;
     }
 

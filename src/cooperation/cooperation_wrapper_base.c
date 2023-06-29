@@ -79,9 +79,22 @@ namespace covered
 
     // (2) Access content directory information
 
-    void CooperationWrapperBase::lookupLocalDirectory(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
+    void CooperationWrapperBase::lookupLocalDirectoryByCacheServer(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
     {
-        is_being_written = block_tracker_.isBeingWritten(key);
+        is_being_written = block_tracker_.isBeingWrittenForKey(key);
+        lookupLocalDirectory_(key, is_being_written, is_valid_directory_exist, directory_info);
+        return;
+    }
+
+    void CooperationWrapperBase::lookupLocalDirectoryByBeaconServer(const Key& key, const NetworkAddr& network_addr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
+    {
+        block_tracker_.blockEdgeForKeyIfExistAndBeingWritten(key, network_addr, is_being_written);
+        lookupLocalDirectory_(key, is_being_written, is_valid_directory_exist, directory_info);
+        return;
+    }
+
+    void CooperationWrapperBase::lookupLocalDirectory_(const Key& key, const bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
+    {
         if (!is_being_written) // if key is NOT being written
         {
             assert(directory_table_ptr_ != NULL);
@@ -99,7 +112,7 @@ namespace covered
     {
         if (is_admit) // is_being_written affects validity of both directory info and cached object for cache admission
         {
-            is_being_written = block_tracker_.isBeingWritten(key);
+            is_being_written = block_tracker_.isBeingWrittenForKey(key);
         }
         else // is_being_written does NOT affect cache eviction
         {
@@ -112,32 +125,9 @@ namespace covered
         return;
     }
 
-    // (3) Access blocklist
-
-    void CooperationWrapperBase::addEdgeIntoBlocklist(const Key& key, const NetworkAddr& network_addr)
-    {
-        block_tracker_.block(key, network_addr);
-        return;
-    }
-
-    std::unordered_set<NetworkAddr, NetworkAddrHasher> CooperationWrapperBase::getBlocklistIfNoWrite(const Key& key)
-    {
-        std::unordered_set<NetworkAddr, NetworkAddrHasher> blocked_edges;
-        blocked_edges.clear();
-
-        bool is_being_written = block_tracker_.isBeingWritten(key); // isBeingWritten_() acquires a read lock
-        if (!is_being_written) // key is NOT being written
-        {
-            // Pop all blocked edge nodes
-            blocked_edges = block_tracker_.unblock(key);
-        }
-
-        return blocked_edges;
-    }
-
     // (4) Process writes for MSI protocol
 
-    LockResult CooperationWrapperBase::acquireLocalWritelock(const Key& key, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo)
+    LockResult CooperationWrapperBase::acquireLocalWritelockByCacheServer(const Key& key, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo)
     {
         assert(directory_table_ptr_ != NULL);
 
@@ -148,7 +138,7 @@ namespace covered
 
         if (is_cooperative_cached) // Acquire write lock for cooperatively cached object for MSI protocol
         {
-            bool is_successful = block_tracker_.checkAndSetWriteflag(key);
+            bool is_successful = block_tracker_.casWriteflagForKey(key);
             if (is_successful) // Acquire write lock successfully
             {
                 // Invalidate all content directory informations
@@ -165,16 +155,44 @@ namespace covered
         return lock_result;
     }
 
-    void CooperationWrapperBase::releaseLocalWritelock(const Key& key, const DirectoryInfo& sender_dirinfo)
+    LockResult CooperationWrapperBase::acquireLocalWritelockByBeaconServer(const Key& key, const NetworkAddr& network_addr, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo)
     {
         assert(directory_table_ptr_ != NULL);
 
-        block_tracker_.resetWriteflag(key);
+        LockResult lock_result = LockResult::kNoneed;
 
-        // TODO: Validate content directory if any for the closest edge node releasing the write lock
+        // Check if key is cooperatively cached first
+        bool is_cooperative_cached = directory_table_ptr_->isCooperativeCached(key);
+
+        if (is_cooperative_cached) // Acquire write lock for cooperatively cached object for MSI protocol
+        {
+            bool is_successful = block_tracker_.casWriteflagOrBlockEdgeForKey(key, network_addr);
+            if (is_successful) // Acquire write lock successfully
+            {
+                // Invalidate all content directory informations
+                directory_table_ptr_->invalidateAllDirinfoForKeyIfExist(key, all_dirinfo);
+
+                lock_result = LockResult::kSuccess;
+            }
+            else // NOT acquire write lock
+            {
+                lock_result = LockResult::kFailure;
+            }
+        }
+
+        return lock_result;
+    }
+
+    std::unordered_set<NetworkAddr, NetworkAddrHasher> CooperationWrapperBase::releaseLocalWritelock(const Key& key, const DirectoryInfo& sender_dirinfo)
+    {
+        assert(directory_table_ptr_ != NULL);
+
+        std::unordered_set<NetworkAddr, NetworkAddrHasher> blocked_edges = block_tracker_.unblockAllEdgesAndFinishWriteForKeyIfExist(key);
+
+        // Validate content directory if any for the closest edge node releasing the write lock
         directory_table_ptr_->validateDirinfoForKeyIfExist(key, sender_dirinfo);
 
-        return;
+        return blocked_edges;
     }
 
     // (5) Get size for capacity check

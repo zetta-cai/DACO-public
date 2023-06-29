@@ -14,6 +14,7 @@
 #include "cache/cache_wrapper_base.h"
 #include "cooperation/cooperation_wrapper_base.h"
 #include "edge/edge_param.h"
+#include "network/udp_socket_wrapper.h"
 
 namespace covered
 {
@@ -55,6 +56,12 @@ namespace covered
         // Invalidate all cache copies for the key simultaneously (note that invalidating closest edge node is okay, as it is waiting for AcquireWritelockResponse instead of processing cache access requests)
         bool invalidateCacheCopies_(const Key& key, const std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo) const;
         void sendInvalidationRequest_(UdpSocketWrapper* edge_sendreq_toinvalidate_socket_client_ptr, const Key& key, const NetworkAddr network_addr) const;
+
+        // (3) Unblock for MSI protocol
+        
+        // Return if edge node is finished (invoked by cache server or beacon server)
+        bool notifyEdgesToFinishBlock_(const Key& key, const std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges) const; // Notify all blocked edges for the key simultaneously
+        void sendFinishBlockRequest_(UdpSocketWrapper* edge_sendreq_tounblock_socket_client_ptr, const Key& key, const NetworkAddr& closest_edge_addr) const;
 
         std::string instance_name_;
 

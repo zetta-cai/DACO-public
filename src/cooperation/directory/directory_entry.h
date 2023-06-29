@@ -47,6 +47,12 @@ namespace covered
             const DirectoryInfo& directory_info;
         };
 
+        static const std::string GET_ALL_VALID_DIRINFO_FUNCNAME;
+        static const std::string ADD_DIRINFO_FUNCNAME;
+        static const std::string REMOVE_DIRINFO_FUNCNAME;
+        static const std::string INVALIDATE_METADATA_FOR_ALL_DIRINFO_IF_EXIST_FUNCNAME;
+        static const std::string VALIDATE_METADATA_FOR_DIRINFO_IF_EXIST_FUNCNAME;
+
         DirectoryEntry();
         ~DirectoryEntry();
 

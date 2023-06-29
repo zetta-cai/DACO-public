@@ -30,7 +30,6 @@ namespace covered
         // (2) Process writes and unblock for MSI protocol
 
         virtual bool processAcquireWritelockRequest_(MessageBase* control_request_ptr, const NetworkAddr& closest_edge_addr) override;
-        virtual void sendFinishBlockRequest_(const Key& key, const NetworkAddr& closest_edge_addr) const override;
         virtual bool processReleaseWritelockRequest_(MessageBase* control_request_ptr) override;
 
         // (3) Process other control requests

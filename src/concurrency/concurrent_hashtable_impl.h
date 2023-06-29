@@ -72,8 +72,8 @@ namespace covered
 
         bool is_exist = false;
 
-        const std::unordered_map<Key, V, Hasher>& tmp_hashtable = hashtables_[hashidx];
-        typename std::unordered_map<Key, V, Hasher>::const_iterator iter = tmp_hashtable.find(key);
+        const std::unordered_map<Key, V, KeyHasher>& tmp_hashtable = hashtables_[hashidx];
+        typename std::unordered_map<Key, V, KeyHasher>::const_iterator iter = tmp_hashtable.find(key);
         is_exist = (iter != tmp_hashtable.end());
 
         // Release the read lock
@@ -103,8 +103,8 @@ namespace covered
         }
 
         V value;
-        const std::unordered_map<Key, V, Hasher>& tmp_hashtable = hashtables_[hashidx];
-        typename std::unordered_map<Key, V, Hasher>::const_iterator iter = tmp_hashtable.find(key);
+        const std::unordered_map<Key, V, KeyHasher>& tmp_hashtable = hashtables_[hashidx];
+        typename std::unordered_map<Key, V, KeyHasher>::const_iterator iter = tmp_hashtable.find(key);
         if (iter != tmp_hashtable.end()) // key exists
         {
             value = iter->second;
@@ -142,8 +142,8 @@ namespace covered
             }
         }
 
-        std::unordered_map<Key, V, Hasher>& tmp_hashtable = hashtables_[hashidx];
-        typename std::unordered_map<Key, V, Hasher>::iterator iter = tmp_hashtable.find(key);
+        std::unordered_map<Key, V, KeyHasher>& tmp_hashtable = hashtables_[hashidx];
+        typename std::unordered_map<Key, V, KeyHasher>::iterator iter = tmp_hashtable.find(key);
         if (iter == tmp_hashtable.end()) // key NOT exist
         {
             tmp_hashtable.insert(std::pair<Key, V>(key, value));
@@ -189,8 +189,8 @@ namespace covered
             }
         }
 
-        std::unordered_map<Key, V, Hasher>& tmp_hashtable = hashtables_[hashidx];
-        typename std::unordered_map<Key, V, Hasher>::iterator iter = tmp_hashtable.find(key);
+        std::unordered_map<Key, V, KeyHasher>& tmp_hashtable = hashtables_[hashidx];
+        typename std::unordered_map<Key, V, KeyHasher>::iterator iter = tmp_hashtable.find(key);
         if (iter == tmp_hashtable.end()) // key NOT exist
         {
             tmp_hashtable.insert(std::pair<Key, V>(key, value));
@@ -239,8 +239,8 @@ namespace covered
             }
         }
 
-        std::unordered_map<Key, V, Hasher>& tmp_hashtable = hashtables_[hashidx];
-        typename std::unordered_map<Key, V, Hasher>::iterator iter = tmp_hashtable.find(key);
+        std::unordered_map<Key, V, KeyHasher>& tmp_hashtable = hashtables_[hashidx];
+        typename std::unordered_map<Key, V, KeyHasher>::iterator iter = tmp_hashtable.find(key);
 
         if (iter != tmp_hashtable.end()) // key exists
         {
@@ -281,7 +281,7 @@ namespace covered
         uint32_t hashidx = getHashIndex_(key);
         while (true)
         {
-            if (rwlocks_[hashidx].try_shared_lock())
+            if (rwlocks_[hashidx].try_lock_shared())
             {
                 // TMPDEBUG
                 std::ostringstream oss;
@@ -292,8 +292,8 @@ namespace covered
             }
         }
 
-        std::unordered_map<Key, V, Hasher>& tmp_hashtable = hashtables_[hashidx];
-        typename std::unordered_map<Key, V, Hasher>::const_iterator iter = tmp_hashtable.find(key);
+        const std::unordered_map<Key, V, KeyHasher>& tmp_hashtable = hashtables_[hashidx];
+        typename std::unordered_map<Key, V, KeyHasher>::const_iterator iter = tmp_hashtable.find(key);
 
         if (iter != tmp_hashtable.end()) // key exists
         {
@@ -332,8 +332,8 @@ namespace covered
             }
         }
 
-        std::unordered_map<Key, V, Hasher>& tmp_hashtable = hashtables_[hashidx];
-        typename std::unordered_map<Key, V, Hasher>::iterator iter = tmp_hashtable.find(key);
+        std::unordered_map<Key, V, KeyHasher>& tmp_hashtable = hashtables_[hashidx];
+        typename std::unordered_map<Key, V, KeyHasher>::iterator iter = tmp_hashtable.find(key);
         if (iter != tmp_hashtable.end()) // key exists
         {
             uint32_t original_value_size = iter->second.getSizeForCapacity();

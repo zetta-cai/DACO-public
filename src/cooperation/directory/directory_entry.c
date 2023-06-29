@@ -7,6 +7,12 @@
 
 namespace covered
 {
+    const std::string DirectoryEntry::GET_ALL_VALID_DIRINFO_FUNCNAME("getAllValidDirinfo");
+    const std::string DirectoryEntry::ADD_DIRINFO_FUNCNAME("addDirinfo");
+    const std::string DirectoryEntry::REMOVE_DIRINFO_FUNCNAME("removeDirinfo");
+    const std::string DirectoryEntry::INVALIDATE_METADATA_FOR_ALL_DIRINFO_IF_EXIST_FUNCNAME("invalidateMetadataForAllDirinfoIfExist");
+    const std::string DirectoryEntry::VALIDATE_METADATA_FOR_DIRINFO_IF_EXIST_FUNCNAME("validateMetadataForDirinfoIfExist");
+
     const std::string DirectoryEntry::kClassName("DirectoryEntry");
 
     DirectoryEntry::DirectoryEntry()
@@ -110,17 +116,17 @@ namespace covered
 
         bool is_erase = false;
 
-        if (function_name == "getAllValidDirinfo")
+        if (function_name == GET_ALL_VALID_DIRINFO_FUNCNAME)
         {
             GetAllValidDirinfoParam* tmp_param_ptr = static_cast<GetAllValidDirinfoParam*>(param_ptr);
             getAllValidDirinfo(tmp_param_ptr->dirinfo_set);
         }
-        else if (function_name == "addDirinfo")
+        else if (function_name == ADD_DIRINFO_FUNCNAME)
         {
             AddDirinfoParam* tmp_param_ptr = static_cast<AddDirinfoParam*>(param_ptr);
             tmp_param_ptr->is_directory_already_exist = addDirinfo(tmp_param_ptr->directory_info, tmp_param_ptr->directory_metadata);
         }
-        else if (function_name == "removeDirinfo")
+        else if (function_name == REMOVE_DIRINFO_FUNCNAME)
         {
             RemoveDirinfoParam* tmp_param_ptr = static_cast<RemoveDirinfoParam*>(param_ptr);
             tmp_param_ptr->is_directory_already_exist = removeDirinfo(tmp_param_ptr->directory_info);
@@ -130,12 +136,12 @@ namespace covered
                 is_erase = true; // the key-direntry pair can be erased due to empty direntry
             }
         }
-        else if (function_name == "invalidateMetadataForAllDirinfo")
+        else if (function_name == INVALIDATE_METADATA_FOR_ALL_DIRINFO_IF_EXIST_FUNCNAME)
         {
             InvalidateMetadataForAllDirinfoIfExistParam* tmp_param_ptr = static_cast<InvalidateMetadataForAllDirinfoIfExistParam*>(param_ptr);
             invalidateMetadataForAllDirinfoIfExist(tmp_param_ptr->all_dirinfo);
         }
-        else if (function_name == "validateMetadataForDirinfoIfExist")
+        else if (function_name == VALIDATE_METADATA_FOR_DIRINFO_IF_EXIST_FUNCNAME)
         {
             ValidateMetadataForDirinfoIfExistParam* tmp_param_ptr = static_cast<ValidateMetadataForDirinfoIfExistParam*>(param_ptr);
             validateMetadataForDirinfoIfExist(tmp_param_ptr->directory_info);

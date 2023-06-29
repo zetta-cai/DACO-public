@@ -27,20 +27,22 @@ namespace covered
         BlockTracker(EdgeParam* edge_param_ptr);
         ~BlockTracker();
 
-        // (1) Access per-key write flag
+        // (1) For DirectoryLookup
 
         bool isBeingWrittenForKey(const Key& key) const; // Return if key is being written
-        // Atomically mark key is being written if not
-        bool checkAndSetWriteflagForKey(const Key& key); // Add an MSI metadata with writeflag_ = true if key NOT exist
-        // Atomically mark key is not being written
-        void resetWriteflagForKeyIfExist(const Key& key); // Reset write flag only if key exists (NOT add an MSI metadata with writeflag_ = false is key NOT exist)
-
-        // (2) Access per-key write flag and blocklist
-
         void blockEdgeForKeyIfExistAndBeingWritten(const Key& key, const NetworkAddr& network_addr, bool& is_being_written); // Add edge into block list for key only if key exists and being written
-        std::unordered_set<NetworkAddr, NetworkAddrHasher> unblockAllEdgesForKeyIfNotWritten(const Key& key); // Pop all closest edge nodes from block list if key is not being written (TODO: trigger erase)
 
-        // (3) Get size for capacity check
+        // (2) For AcquireWritelock
+
+        bool casWriteflagForKey(const Key& key); // Add an MSI metadata with writeflag_ = true if key NOT exist, or set write flag as true if key is NOT being written
+        bool casWriteflagOrBlockEdgeForKey(const Key& key, const NetworkAddr& network_addr); // Add an MSI metadata with writeflag_ = true if key NOT exist, or set write flag as true if key is NOT being written, or block edge if being written otherwise
+
+        // (3) For FinishWrite
+
+        //void resetWriteflagForKeyIfExist(const Key& key); // Reset write flag only if key exists (NOT add an MSI metadata with writeflag_ = false is key NOT exist)
+        std::unordered_set<NetworkAddr, NetworkAddrHasher> unblockAllEdgesAndFinishWriteForKeyIfExist(const Key& key); // Pop all edges from block list and finish writes if key exists (MUST exist and being written) (TODO: trigger erase)
+
+        // (4) Get size for capacity check
 
         uint32_t getSizeForCapacity() const;
     private:

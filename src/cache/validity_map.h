@@ -25,6 +25,8 @@ namespace covered
             bool is_valid;
         };
 
+        static const std::string IS_VALID_FLAG_FUNCNAME;
+
         ValidityFlag();
         ValidityFlag(const bool& is_valid);
         ~ValidityFlag();

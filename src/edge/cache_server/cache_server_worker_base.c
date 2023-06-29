@@ -62,6 +62,8 @@ namespace covered
         NetworkAddr edge0_beacon_server_addr(edge0_ipstr, edge0_beacon_server_port);
         uint16_t edge0_cache_server_port = Util::getEdgeCacheServerRecvreqPort(0);
         NetworkAddr edge0_cache_server_addr(edge0_ipstr, edge0_cache_server_port);
+        uint16_t edge0_invalidation_server_port = Util::getEdgeInvalidationServerRecvreqPort(0);
+        NetworkAddr edge0_invalidation_server_addr(edge0_ipstr, edge0_invalidation_server_port);
 
         // Prepare a socket client to beacon edge node for cache server worker
         edge_cache_server_worker_sendreq_tobeacon_socket_client_ptr_  = new UdpSocketWrapper(SocketRole::kSocketClient, edge0_beacon_server_addr);
@@ -485,7 +487,7 @@ namespace covered
             is_valid_directory_exist = false;
             if (current_is_beacon) // Get target edge index from local directory information
             {
-                tmp_edge_wrapper_ptr->cooperation_wrapper_ptr_->lookupLocalDirectory(key, is_being_written, is_valid_directory_exist, directory_info);
+                tmp_edge_wrapper_ptr->cooperation_wrapper_ptr_->lookupLocalDirectoryByCacheServer(key, is_being_written, is_valid_directory_exist, directory_info);
                 if (is_being_written) // If key is being written, we need to wait for writes
                 {
                     // Wait for writes by polling
@@ -617,6 +619,7 @@ namespace covered
         }
 
         // Check if beacon node is the current edge node and acquire write permission
+        std::unordered_set<DirectoryInfo, DirectoryInfoHasher> all_dirinfo;
         while (true)
         {
             if (!tmp_edge_wrapper_ptr->edge_param_ptr_->isEdgeRunning()) // edge node is NOT running
@@ -627,8 +630,7 @@ namespace covered
 
             if (current_is_beacon) // Get target edge index from local directory information
             {
-                std::unordered_set<DirectoryInfo, DirectoryInfoHasher> all_dirinfo;
-                lock_result = tmp_edge_wrapper_ptr->cooperation_wrapper_ptr_->acquireLocalWritelock(key, all_dirinfo);
+                lock_result = tmp_edge_wrapper_ptr->cooperation_wrapper_ptr_->acquireLocalWritelockByCacheServer(key, all_dirinfo);
                 if (lock_result == LockResult::kFailure) // If key has been locked by any other edge node
                 {
                     // Wait for writes by polling
@@ -663,11 +665,10 @@ namespace covered
                         continue; // Continue to try to acquire the write lock
                     }
                 }
-                // NOTE: cache server of closest edge node does NOT need to invalidate cache copies, which has been done by the remote beacon edge node, if lock result is kSuccess
+                // NOTE: If lock_result == kSuccess, beacon server of beacon node has already invalidated all cache copies, so we do NOT need to invalidate them again in cache server
                 // NOTE: will directly break if lock result is kNoneed
             } // End of current_is_beacon
 
-            // key must NOT being written here
             assert(lock_result == LockResult::kSuccess || lock_result == LockResult::kNoneed);
             break;
         } // End of while (true)

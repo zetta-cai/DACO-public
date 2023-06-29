@@ -38,28 +38,25 @@ namespace covered
         uint32_t getBeaconEdgeIdx(const Key& key) const;
         NetworkAddr getBeaconEdgeBeaconServerAddr(const Key& key) const;
 
-        // (2) Access content directory information
+        // (2) Access content directory table and block tracker for MSI protocol
 
-        void lookupLocalDirectory(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const; // Check local directory information
+        void lookupLocalDirectoryByCacheServer(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const; // Check local directory information
+        void lookupLocalDirectoryByBeaconServer(const Key& key, const NetworkAddr& network_addr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const; // Check local directory information
         void updateLocalDirectory(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written); // Update local directory information
 
-        // (3) Access blocklist
+        LockResult acquireLocalWritelockByCacheServer(const Key& key, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo);
+        LockResult acquireLocalWritelockByBeaconServer(const Key& key, const NetworkAddr& network_addr, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo);
+        std::unordered_set<NetworkAddr, NetworkAddrHasher> releaseLocalWritelock(const Key& key, const DirectoryInfo& sender_dirinfo);
 
-        // Buffer closest edge nodes waiting for writes
-        // NOTE: the blocked edge nodes will be notified after writes
-        void addEdgeIntoBlocklist(const Key& key, const NetworkAddr& network_addr);
-        std::unordered_set<NetworkAddr, NetworkAddrHasher> getBlocklistIfNoWrite(const Key& key);
-
-        // (4) Process writes for MSI protocol
-
-        LockResult acquireLocalWritelock(const Key& key, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo);
-        void releaseLocalWritelock(const Key& key, const DirectoryInfo& sender_dirinfo);
-
-        // (5) Get size for capacity check
+        // (3) Get size for capacity check
 
         uint32_t getSizeForCapacity() const;
     private:
         static const std::string kClassName;
+
+        // (2) Access content directory information
+
+        void lookupLocalDirectory_(const Key& key, const bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const;
 
         // Const shared variables
         std::string base_instance_name_;
@@ -67,7 +64,7 @@ namespace covered
 
         // Non-const shared variables (cooperation metadata)
         DirectoryTable* directory_table_ptr_; // per-key content directory infos (thread safe)
-        BlockTracker block_tracker_; // per-key cooperation metadata (thread safe)
+        mutable BlockTracker block_tracker_; // per-key cooperation metadata (thread safe)
     };
 }
 

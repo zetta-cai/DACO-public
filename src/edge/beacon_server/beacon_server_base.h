@@ -53,8 +53,6 @@ namespace covered
 
         // Return if edge node is finished
         virtual bool processAcquireWritelockRequest_(MessageBase* control_request_ptr, const NetworkAddr& closest_edge_addr) = 0;
-        bool notifyEdgesToFinishBlock_(const Key& key, const std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges) const;
-        virtual void sendFinishBlockRequest_(const Key& key, const NetworkAddr& closest_edge_addr) const = 0;
         virtual bool processReleaseWritelockRequest_(MessageBase* control_request_ptr) = 0;
 
         // (3) Process other control requests
@@ -67,10 +65,8 @@ namespace covered
         // Const variable
         std::string base_instance_name_;
     protected:
-        // (2) Unblock for MSI protocol
-
-        // Return if edge node is finished
-        bool tryToNotifyEdgesFromBlocklist_(const Key& key) const;
+        // (4) Utility functions
+        void checkPointers_() const;
 
         // Member variables
 

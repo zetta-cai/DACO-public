@@ -7,6 +7,13 @@
 
 namespace covered
 {
+    const std::string MsiMetadata::IS_BEING_WRITTEN_FUNCNAME("isBeingWritten");
+    const std::string MsiMetadata::BLOCK_EDGE_IF_BEING_WRITTEN_FUNCNAME("blockEdgeIfBeingWritten");
+    const std::string MsiMetadata::CAS_WRITEFLAG_FUNCNAME("casWriteflag");
+    const std::string MsiMetadata::CAS_WRITEFLAG_OR_BLOCK_EDGE_FUNCNAME("casWriteflagOrBlockEdge");
+    //const std::string RESET_WRITEFLAG_FUNCNAME("resetWriteflag");
+    const std::string MsiMetadata::UNBLOCK_ALL_EDGES_AND_FINISH_WRITE_FUNCNAME("unblockAllEdgesAndFinishWrite");
+
     const std::string MsiMetadata::kClassName("MsiMetadata");
 
     MsiMetadata::MsiMetadata()
@@ -23,36 +30,14 @@ namespace covered
 
     MsiMetadata::~MsiMetadata() {}
 
-    // (1) Access write flag
+    // (1) For DirectoryLookup
 
     bool MsiMetadata::isBeingWritten() const
     {
         return writeflag_;
     }
 
-    bool MsiMetadata::checkAndSetWriteflag()
-    {
-        bool is_successful = false;
-        if (!writeflag_) // key is NOT being written
-        {
-            assert(edge_blocklist_.size() == 0);
-
-            writeflag_ = true;
-            is_successful = true;
-        }
-        return is_successful;
-    }
-
-    bool MsiMetadata::resetWriteflag()
-    {
-        bool original_writeflag = writeflag_;
-        writeflag_ = false;
-        return original_writeflag;
-    }
-
-    // (2) Access write flag and blocklist
-
-    bool MsiMetadata::addEdgeIntoBlocklistIfBeingWritten(const NetworkAddr& network_addr, bool& is_being_written)
+    bool MsiMetadata::blockEdgeIfBeingWritten(const NetworkAddr& network_addr, bool& is_being_written)
     {
         assert(network_addr.isValidAddr());
         
@@ -82,7 +67,62 @@ namespace covered
         return is_blocked_before;
     }
 
-    // (3) For ConcurrentHashtable
+    // (2) For AcquireWritelock
+
+    bool MsiMetadata::casWriteflag()
+    {
+        // Check and set write flag
+        bool is_successful = false;
+        if (!writeflag_) // key is NOT being written
+        {
+            assert(edge_blocklist_.size() == 0);
+
+            writeflag_ = true;
+            is_successful = true;
+        }
+
+        return is_successful;
+    }
+
+    bool MsiMetadata::casWriteflagOrBlockEdge(const NetworkAddr& network_addr, bool& is_blocked_before)
+    {
+        // Check and set write flag
+        bool is_successful = casWriteflag();
+
+        if (!is_successful) // key is already being written before CAS
+        {
+            // Add the edge into blocklist
+            bool is_being_written = false;
+            bool is_blocked_before = blockEdgeIfBeingWritten(network_addr, is_being_written);
+
+            assert(!is_blocked_before);
+            assert(is_being_written); // key MUST being written after CS
+        }
+
+        return is_successful;
+    }
+
+    // (3) For FinishWrite
+
+    /*bool MsiMetadata::resetWriteflag()
+    {
+        bool original_writeflag = writeflag_;
+        writeflag_ = false;
+        return original_writeflag;
+    }*/
+
+    void MsiMetadata::unblockAllEdgesAndFinishWrite(std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges)
+    {
+        // key MUST being written
+        assert(writeflag_);
+
+        blocked_edges = edge_blocklist_; // Unblock all edges
+        writeflag_ = false; // Finish write
+
+        return;
+    }
+
+    // (4) For ConcurrentHashtable
 
     uint32_t MsiMetadata::getSizeForCapacity() const
     {
@@ -101,20 +141,32 @@ namespace covered
 
         bool is_erase = false;
 
-        if (function_name == "checkAndSetWriteflag")
+        if (function_name == CAS_WRITEFLAG_FUNCNAME)
         {
-            CheckAndSetWriteflagParam* tmp_param_ptr = static_cast<CheckAndSetWriteflagParam*>(param_ptr);
-            tmp_param_ptr->is_successful = checkAndSetWriteflag();
+            CasWriteflagParam* tmp_param_ptr = static_cast<CasWriteflagParam*>(param_ptr);
+            tmp_param_ptr->is_successful = casWriteflag();
         }
-        else if (function_name == "resetWriteflag")
+        else if (function_name == CAS_WRITEFLAG_OR_BLOCK_EDGE_FUNCNAME)
+        {
+            CasWriteflagOrBlockEdgeParam* tmp_param_ptr = static_cast<CasWriteflagOrBlockEdgeParam*>(param_ptr);
+            tmp_param_ptr->is_successful = casWriteflagOrBlockEdge(tmp_param_ptr->network_addr, tmp_param_ptr->is_blocked_before);
+        }
+        /*else if (function_name == RESET_WRITEFLAG_FUNCNAME)
         {
             ResetWriteflagParam* tmp_param_ptr = static_cast<ResetWriteflagParam*>(param_ptr);
             tmp_param_ptr->original_writeflag = resetWriteflag();
-        }
-        else if (function_name == "addEdgeIntoBlocklistIfBeingWritten")
+        }*/
+        else if (function_name == BLOCK_EDGE_IF_BEING_WRITTEN_FUNCNAME)
         {
-            AddEdgeIntoBlocklistIfBeingWrittenParam* tmp_param_ptr = static_cast<AddEdgeIntoBlocklistIfBeingWrittenParam*>(param_ptr);
-            tmp_param_ptr->is_blocked_before = addEdgeIntoBlocklistIfBeingWritten(tmp_param_ptr->network_addr, tmp_param_ptr->is_being_written);
+            BlockEdgeIfBeingWrittenParam* tmp_param_ptr = static_cast<BlockEdgeIfBeingWrittenParam*>(param_ptr);
+            tmp_param_ptr->is_blocked_before = blockEdgeIfBeingWritten(tmp_param_ptr->network_addr, tmp_param_ptr->is_being_written);
+        }
+        else if (function_name == UNBLOCK_ALL_EDGES_AND_FINISH_WRITE_FUNCNAME)
+        {
+            UnblockAllEdgesAndFinishWriteParam* tmp_param_ptr = static_cast<UnblockAllEdgesAndFinishWriteParam*>(param_ptr);
+            unblockAllEdgesAndFinishWrite(tmp_param_ptr->blocked_edges);
+
+            is_erase = true;
         }
         else
         {
@@ -131,7 +183,7 @@ namespace covered
     {
         assert(param_ptr != NULL);
 
-        if (function_name == "isBeingWritten")
+        if (function_name == IS_BEING_WRITTEN_FUNCNAME)
         {
             IsBeingWrittenParam* tmp_param_ptr = static_cast<IsBeingWrittenParam*>(param_ptr);
             tmp_param_ptr->is_being_written = isBeingWritten();

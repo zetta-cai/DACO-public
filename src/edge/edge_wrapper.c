@@ -174,7 +174,7 @@ namespace covered
         return size;
     }
 
-    // (1) Utility functions
+    // Utility functions
 
     bool EdgeWrapper::currentIsBeacon_(const Key& key) const
     {
@@ -356,6 +356,137 @@ namespace covered
         // Send FinishBlockRequest to the closest edge node
         PropagationSimulator::propagateFromNeighborToEdge();
         edge_sendreq_toinvalidate_socket_client_ptr->send(control_request_msg_payload);
+
+        return;
+    }
+
+    // (3) Unblock for MSI protocol
+
+    bool EdgeWrapper::notifyEdgesToFinishBlock_(const Key& key, const std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges) const
+    {
+        assert(edge_param_ptr_ != NULL);
+
+        bool is_finish = false;
+
+        uint32_t blocked_edgecnt = blocked_edges.size();
+        if (blocked_edgecnt == 0)
+        {
+            return is_finish;
+        }
+        assert(blocked_edgecnt > 0);
+
+        // Prepare a temporary socket client to unblock cache servers of blocked edge nodes
+        // NOTE: use edge0 as default remote address, but will reset remote address based on dirinfo later
+        std::string edge0_ipstr = Config::getEdgeIpstr(0);
+        uint16_t edge0_cache_server_port = Util::getEdgeCacheServerRecvreqPort(0);
+        NetworkAddr edge0_cache_server_addr(edge0_ipstr, edge0_cache_server_port);
+        UdpSocketWrapper edge_sendreq_tounblock_socket_client(SocketRole::kSocketClient, edge0_cache_server_addr);
+
+        // Track whether notifictionas to all closest edge nodes have been acknowledged
+        uint32_t acked_edgecnt = 0;
+        std::unordered_map<NetworkAddr, bool, NetworkAddrHasher> acked_flags;
+        for (std::unordered_set<NetworkAddr, NetworkAddrHasher>::const_iterator iter_for_ackflag = blocked_edges.begin(); iter_for_ackflag != blocked_edges.end(); iter_for_ackflag++)
+        {
+            acked_flags.insert(std::pair<NetworkAddr, bool>(*iter_for_ackflag, false));
+        }
+
+        // Issue all finish block requests simultaneously
+        while (acked_edgecnt != blocked_edgecnt) // Timeout-and-retry mechanism
+        {
+            // Send (blocked_edgecnt - acked_edgecnt) control requests to the closest edge nodes that have not acknowledged notifications
+            for (std::unordered_set<NetworkAddr, NetworkAddrHasher>::const_iterator iter_for_request = blocked_edges.begin(); iter_for_request != blocked_edges.end(); iter_for_request++)
+            {
+                if (acked_flags[*iter_for_request]) // Skip the closest edge node that has acknowledged the notification
+                {
+                    continue;
+                }
+
+                const NetworkAddr& tmp_network_addr = *iter_for_request; // cache server address of a blocked closest edge node          
+                sendFinishBlockRequest_(&edge_sendreq_tounblock_socket_client, key, tmp_network_addr);     
+            } // End of edgeidx_for_request
+
+            // Receive (blocked_edgecnt - acked_edgecnt) control repsonses from the closest edge nodes
+            for (uint32_t edgeidx_for_response = 0; edgeidx_for_response < blocked_edgecnt - acked_edgecnt; edgeidx_for_response++)
+            {
+                DynamicArray control_response_msg_payload;
+                NetworkAddr control_response_addr;
+                bool is_timeout = edge_sendreq_tounblock_socket_client.recv(control_response_msg_payload, control_response_addr);
+                if (is_timeout)
+                {
+                    if (!edge_param_ptr_->isEdgeRunning())
+                    {
+                        is_finish = true;
+                        break; // Break as edge is NOT running
+                    }
+                    else
+                    {
+                        Util::dumpWarnMsg(instance_name_, "edge timeout to wait for FinishBlockResponse");
+                        break; // Break to resend the remaining control requests not acked yet
+                    }
+                } // End of (is_timeout == true)
+                else
+                {
+                    assert(control_response_addr.isValidAddr());
+
+                    // Receive the control response message successfully
+                    MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
+                    assert(control_response_ptr != NULL && control_response_ptr->getMessageType() == MessageType::kFinishBlockResponse);
+
+                    // Mark the closest edge node has acknowledged the FinishBlockRequest
+                    bool is_match = false;
+                    for (std::unordered_set<NetworkAddr, NetworkAddrHasher>::const_iterator iter_for_response = blocked_edges.begin(); iter_for_response != blocked_edges.end(); iter_for_response++)
+                    {
+                        if (*iter_for_response == control_response_addr) // Match a closest edge node
+                        {
+                            assert(acked_flags[*iter_for_response] == false); // Original ack flag should be false
+
+                            // Update ack information
+                            acked_flags[*iter_for_response] = true;
+                            acked_edgecnt += 1;
+                            is_match = true;
+                            break;
+                        }
+                    } // End of edgeidx_for_ack
+
+                    if (!is_match) // Must match at least one closest edge node
+                    {
+                        std::ostringstream oss;
+                        oss << "receive FinishBlockResponse from an edge node " << control_response_addr.getIpstr() << ":" << control_response_addr.getPort() << ", which is NOT in the block list!";
+                        Util::dumpWarnMsg(instance_name_, oss.str());
+                    } // End of !is_match
+
+                    // Release the control response message
+                    delete control_response_ptr;
+                    control_response_ptr = NULL;
+                } // End of (is_timeout == false)
+            } // End of edgeidx_for_response
+
+            if (is_finish) // Edge node is NOT running now
+            {
+                break;
+            }
+        } // End of while(acked_edgecnt != blocked_edgecnt)
+
+        return is_finish;
+    }
+
+    void EdgeWrapper::sendFinishBlockRequest_(UdpSocketWrapper* edge_sendreq_tounblock_socket_client_ptr, const Key& key, const NetworkAddr& closest_edge_addr) const
+    {
+        assert(edge_param_ptr_ != NULL);
+        assert(edge_sendreq_tounblock_socket_client_ptr != NULL);
+
+        // Prepare finish block request to finish blocking for writes in all closest edge nodes
+        uint32_t edge_idx = edge_param_ptr_->getEdgeIdx();
+        FinishBlockRequest finish_block_request(key, edge_idx);
+        DynamicArray control_request_msg_payload(finish_block_request.getMsgPayloadSize());
+        finish_block_request.serialize(control_request_msg_payload);
+
+        // Set remote address to the closest edge node
+        edge_sendreq_tounblock_socket_client_ptr->setRemoteAddrForClient(closest_edge_addr);
+
+        // Send FinishBlockRequest to the closest edge node
+        PropagationSimulator::propagateFromNeighborToEdge();
+        edge_sendreq_tounblock_socket_client_ptr->send(control_request_msg_payload);
 
         return;
     }

@@ -40,7 +40,7 @@ DEPS += $(CONCURRENCY_SRCFILES:.c=.d)
 CLEANS += $(CONCURRENCY_OBJECTS) $(CONCURRENCY_SHARED_OBJECTS)
 
 # cooperation module
-COOPERATION_SRCFILES := $(wildcard $(COVERED_DIRPATH)/cooperation/*.c)
+COOPERATION_SRCFILES := $(wildcard $(COVERED_DIRPATH)/cooperation/*.c) $(wildcard $(COVERED_DIRPATH)/cooperation/directory/*.c) $(wildcard $(COVERED_DIRPATH)/cooperation/msi/*.c)
 COOPERATION_OBJECTS += $(COOPERATION_SRCFILES:.c=.o)
 COOPERATION_SHARED_OBJECTS += $(COOPERATION_SRCFILES:.c=.shared.o)
 DEPS += $(COOPERATION_SRCFILES:.c=.d)

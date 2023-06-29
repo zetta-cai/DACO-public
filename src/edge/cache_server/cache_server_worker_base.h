@@ -158,7 +158,7 @@ namespace covered
         // Non-const individual variable
         UdpSocketWrapper* edge_cache_server_worker_sendreq_tobeacon_socket_client_ptr_;
         UdpSocketWrapper* edge_cache_server_worker_sendreq_totarget_socket_client_ptr_;
-        UdpSocketWrapper* edge_cache_server_worker_sendrsp_tosource_socket_client_ptr_; // source could be client or neighbor edge node
+        UdpSocketWrapper* edge_cache_server_worker_sendrsp_tosource_socket_client_ptr_; // source could be client or neighbor edge node to reply local/redirected requests
     };
 }
 

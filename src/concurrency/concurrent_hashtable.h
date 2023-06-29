@@ -1,5 +1,8 @@
 /*
  * ConcurrentHashtable: a hash table supports concurrent accesses by fine-grained locking (thread safe).
+ *
+ * NOTE: ConcurrentHashtable guarantees thread-safety for writes of different keys, and atomicity for writes of the same key.
+ * NOTE: However, we do NOT guarantee the serializability among multiple ConcurrentHashtables for writes of the same key -> need to use extra locking (e.g., PerkeyRwlock).
  * 
  * By Siyuan Sheng (2023.06.27).
  */

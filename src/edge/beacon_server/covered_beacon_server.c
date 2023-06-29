@@ -49,11 +49,6 @@ namespace covered
         return false;
     }
 
-    void CoveredBeaconServer::sendFinishBlockRequest_(const Key& key, const NetworkAddr& closest_edge_addr) const
-    {
-        return;
-    }
-
     bool CoveredBeaconServer::processReleaseWritelockRequest_(MessageBase* control_request_ptr)
     {
         return false;
