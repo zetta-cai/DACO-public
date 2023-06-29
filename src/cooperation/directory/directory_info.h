@@ -8,6 +8,7 @@
 #define DIRECTORY_INFO_H
 
 #include <string>
+#include <unordered_set>
 
 #include "common/dynamic_array.h"
 

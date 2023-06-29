@@ -23,10 +23,14 @@ namespace covered
 
     ValidityFlag::~ValidityFlag() {}
 
-    bool ValidityFlag::isValid() const
+    // (1) Access valid flag
+
+    bool ValidityFlag::isValidFlag() const
     {
         return is_valid_;
     }
+
+    // (2) For ConcurrentHashtable
 
     uint32_t ValidityFlag::getSizeForCapacity() const
     {
@@ -45,8 +49,21 @@ namespace covered
 
     void ValidityFlag::constCall(const std::string& function_name, void* param_ptr) const
     {
-        Util::dumpErrorMsg(kClassName, "NOT need constCall() for ConcurrentHashtable::constCall()!");
-        exit(1);
+        assert(param_ptr != NULL);
+
+        if (function_name == "isValidFlag")
+        {
+            IsValidFlagParam* tmp_param_ptr = static_cast<IsValidFlagParam*>(param_ptr);
+            tmp_param_ptr->is_valid = isValidFlag();
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "invalid function name " << function_name << " for constCall()!";
+            Util::dumpErrorMsg(kClassName, oss.str());
+            exit(1);s
+        }
+
         return;
     }
 
@@ -71,30 +88,32 @@ namespace covered
 
     ValidityMap::~ValidityMap() {}
 
-    bool ValidityMap::isValidObject(const Key& key, bool& is_found) const
+    bool ValidityMap::isValidFlagForKey(const Key& key, bool& is_exist) const
     {
-        ValidityFlag validity_flag = perkey_validity_.getIfExist(key, is_found);
-        bool is_valid = validity_flag.isValid();
-        return is_valid;
+        // Prepare IsValidFlagForParam
+        ValidityFlag::IsValidFlagParam tmp_param = {false};
+
+        perkey_validity_.constCallIfExist(key, is_exist, "isValidFlag", &tmp_param);
+        return tmp_param.is_valid;
     }
 
-    void ValidityMap::invalidateObject(const Key& key, bool& is_found)
+    void ValidityMap::invalidateFlagForKey(const Key& key, bool& is_exist)
     {
         ValidityFlag validity_flag(false);
-        perkey_validity_.insertOrUpdate(key, validity_flag, is_found);
+        perkey_validity_.insertOrUpdate(key, validity_flag, is_exist);
         return;
     }
 
-    void ValidityMap::validateObject(const Key& key, bool& is_found)
+    void ValidityMap::validateFlagForKey(const Key& key, bool& is_exist)
     {
         ValidityFlag validity_flag(true);
-        perkey_validity_.insertOrUpdate(key, validity_flag, is_found);
+        perkey_validity_.insertOrUpdate(key, validity_flag, is_exist);
         return;
     }
 
-    void ValidityMap::erase(const Key& key, bool& is_found)
+    void ValidityMap::eraseFlagForKey(const Key& key, bool& is_exist)
     {
-        perkey_validity_.eraseIfExist(key, is_found);
+        perkey_validity_.eraseIfExist(key, is_exist);
         return;
     }
 

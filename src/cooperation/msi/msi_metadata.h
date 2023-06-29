@@ -24,10 +24,39 @@ namespace covered
             bool is_being_written;
         };
 
+        struct CheckAndSetWriteflagParam
+        {
+            bool is_successful;
+        };
+
+        struct ResetWriteflagParam
+        {
+            bool original_writeflag;
+        };
+
+        struct AddEdgeIntoBlocklistIfBeingWrittenParam
+        {
+            const NetworkAddr& network_addr;
+            bool& is_being_written;
+            bool& is_blocked_before;
+        };
+
         MsiMetadata();
+        MsiMetadata(const bool& is_being_written);
         ~MsiMetadata();
 
+        // (1) Access write flag
+
         bool isBeingWritten() const;
+        bool checkAndSetWriteflag();
+        bool resetWriteflag(); // Return original writeflag_
+
+        // (2) Access write flag and blocklist
+
+        // Return is blocked before
+        bool addEdgeIntoBlocklistIfBeingWritten(const NetworkAddr& network_addr, bool& is_being_written); // Add edge into blocklist if NOT blocked before
+
+        // (3) For ConcurrentHashtable
 
         uint32_t getSizeForCapacity() const;
         bool call(const std::string function_name, void* param_ptr);

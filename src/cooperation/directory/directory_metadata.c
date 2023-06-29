@@ -11,17 +11,17 @@ namespace covered
 
     DirectoryMetadata::~DirectoryMetadata() {}
 
-    bool DirectoryMetadata::isValidDirinfo() const
+    bool DirectoryMetadata::isValidMetadata() const
     {
         return is_valid_;
     }
 
-    void DirectoryMetadata::validateDirinfo()
+    void DirectoryMetadata::validateMetadata()
     {
         is_valid_ = true;
     }
     
-    void DirectoryMetadata::invalidateDirinfo()
+    void DirectoryMetadata::invalidateMetadata()
     {
         is_valid_ = false;
     }

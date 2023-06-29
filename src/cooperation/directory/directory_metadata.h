@@ -17,9 +17,9 @@ namespace covered
         DirectoryMetadata(const bool& is_valid);
         ~DirectoryMetadata();
 
-        bool isValidDirinfo() const;
-        void validateDirinfo();
-        void invalidateDirinfo();
+        bool isValidMetadata() const;
+        void validateMetadata();
+        void invalidateMetadata();
 
         uint32_t getSizeForCapacity() const;
 

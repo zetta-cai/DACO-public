@@ -29,8 +29,9 @@ namespace covered
         virtual ~CacheWrapperBase();
 
         virtual bool isLocalCached(const Key& key) const = 0;
-        bool isCachedObjectValid(const Key& key) const;
-        void invalidateCachedObject(const Key& key); // For invalidation control requests
+        bool isValidKeyForLocalCachedObject(const Key& key) const;
+        // For invalidation control requests
+        void invalidateKeyForLocalCachedObject(const Key& key); // Add an invalid flag if key NOT exist
 
         // Return whether key is cached and valid (i.e., local cache hit) after get/update/remove
         bool get(const Key& key, Value& value) const;
@@ -55,9 +56,12 @@ namespace covered
     private:
         static const std::string kClassName;
 
-        void validateCachedObject_(const Key& key); // For local put/del requests invoked by update() and remove()
-        void validateUncachedObject_(const Key& key); // For local get/put/del requests invoked by admit() w/o writes
-        void invalidateUncachedObject_(const Key& key); // For local get/put/del requests invoked by admit() w/ writes
+        // For local put/del requests invoked by update() and remove()
+        void validateKeyForLocalCachedObject_(const Key& key); // Add a valid flag if key NOT exist
+        // For local get/put/del requests invoked by admit() w/o writes
+        void validateKeyForLocalUncachedObject_(const Key& key); // Add an invalid flag if key NOT exist
+        // For local get/put/del requests invoked by admit() w/ writes
+        void invalidateKeyForLocalUncachedObject_(const Key& key); // Add an invalid flag if key NOT exist
 
         virtual bool getInternal_(const Key& key, Value& value) const = 0; // Return whether key is cached
         virtual bool updateInternal_(const Key& key, const Value& value) = 0; // Return whether key is cached

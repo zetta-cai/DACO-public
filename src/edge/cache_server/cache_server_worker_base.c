@@ -981,7 +981,7 @@ namespace covered
         bool is_cached_and_invalid = false;
         if (is_local_cached)
         {
-            bool is_valid = tmp_edge_wrapper_ptr->edge_cache_ptr_->isCachedObjectValid(key);
+            bool is_valid = tmp_edge_wrapper_ptr->edge_cache_ptr_->isValidKeyForLocalCachedObject(key);
             is_cached_and_invalid = is_local_cached && !is_valid;
         }
 

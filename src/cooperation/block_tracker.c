@@ -25,7 +25,7 @@ namespace covered
 
     // (1) Access per-key write flag
 
-    bool BlockTracker::isBeingWritten(const Key& key) const
+    bool BlockTracker::isBeingWrittenForKey(const Key& key) const
     {
         // Prepare IsBeingWrittenParam
         MsiMetadata::IsBeingWrittenParam tmp_param = {false};
@@ -33,121 +33,96 @@ namespace covered
         bool is_exist = false;
         perkey_msimetadata_.constCallIfExist(key, is_exist, "isBeingWritten", &tmp_param);
         
-        bool is_being_written = tmp_param.is_being_written;
-        if (!is_exist) // key NOT exist
+        bool is_being_written = false;
+        if (is_exist) // key exists
         {
-            is_being_written = false;
+            is_being_written = tmp_param.is_being_written;
         }
 
         return is_being_written;
     }
 
-    bool BlockTracker::checkAndSetWriteflag(const Key& key)
+    bool BlockTracker::checkAndSetWriteflagForKey(const Key& key)
     {
-        // TODO: END HERE
-        
-        // Acquire a write lock for cooperation metadata before accessing cooperation metadata
-        assert(rwlock_for_blockmeta_ptr_ != NULL);
-        while (true)
-        {
-            if (rwlock_for_blockmeta_ptr_->try_lock("tryToLockForWrite()"))
-            {
-                break;
-            }
-        }
+        // Prepare an MSI metadata with writeflag_ = true
+        MsiMetadata tmp_msimetadata;
+        tmp_msimetadata.setWriteflag();
 
-        // Get original write flag
-        bool is_being_written = false;
-        std::unordered_map<Key, bool>::iterator iter = perkey_writeflags_.find(key);
-        if (iter != perkey_writeflags_.end())
-        {
-            is_being_written = iter->second;
-        }
+        // Prepare CheckAndSetWriteflagParam
+        MsiMetadata::CheckAndSetWriteflagParam tmp_param = {false};
+
+        bool is_exist = false;
+        perkey_msimetadata_.insertOrCall(key, tmp_msimetadata, is_exist, "checkAndSetWriteflag", &tmp_param);
 
         bool is_successful = false;
-        if (!is_being_written) // Write permission has not been assigned
+        if (!is_exist) // key NOT exist
         {
-            if (iter != perkey_writeflags_.end()) // key not exist
-            {
-                iter->second = true; // Assign write permission
-            }
-            else // key exists
-            {
-                perkey_writeflags_.insert(std::pair<Key, bool>(key, true));
-            }
             is_successful = true;
         }
+        else // key exists
+        {
+            is_successful = tmp_param.is_successful;
+        }
 
-        rwlock_for_blockmeta_ptr_->unlock();
         return is_successful;
     }
 
-    void BlockTracker::resetWriteflag(const Key& key)
+    void BlockTracker::resetWriteflagForKeyIfExist(const Key& key)
     {
-        // Acquire a write lock for cooperation metadata before accessing cooperation metadata
-        assert(rwlock_for_blockmeta_ptr_ != NULL);
-        while (true)
-        {
-            if (rwlock_for_blockmeta_ptr_->try_lock("resetWriteflag()"))
-            {
-                break;
-            }
-        }
+        // Prepare ResetWriteflagParam
+        MsiMetadata::ResetWriteflagParam tmp_param = {false};
 
-        // Reset original write flag
-        std::unordered_map<Key, bool>::iterator iter = perkey_writeflags_.find(key);
-        if (iter == perkey_writeflags_.end()) // key does not exist
+        // Reset original write flag if key exists
+        bool is_exist = false;
+        perkey_msimetadata_.callIfExist(key, is_exist, "resetWriteflag", &tmp_param);
+
+        if (!is_exist) // key does not exist
         {
             std::ostringstream oss;
-            oss << "writeflag for key " << key.getKeystr() << " does NOT exist in perkey_writeflags_!";
+            oss << "key " << key.getKeystr() << " does NOT exist in perkey_msimetadata_ for resetWriteflagForKeyIfExist()!";
             Util::dumpWarnMsg(instance_name_, oss.str());
         }
         else // key exists
         {
-            assert(iter->second == true); // existing key must be written
-            iter->second = false;
-            perkey_writeflags_.erase(iter); // key NOT exist == key NOT being written
+            assert(tmp_param.original_writeflag == true); // key must be written before resetting writeflag
         }
 
-        rwlock_for_blockmeta_ptr_->unlock();
         return;
     }
 
-    // (2) Access per-key blocklist
+    // (2) Access per-key write flag and blocklist
 
-    void BlockTracker::block(const Key& key, const NetworkAddr& network_addr)
+    void BlockTracker::blockEdgeForKeyIfExistAndBeingWritten(const Key& key, const NetworkAddr& network_addr, bool& is_being_written)
     {
         assert(network_addr.isValidAddr());
 
-        // Acquire a write lock for cooperation metadata before accessing cooperation metadata
-        assert(rwlock_for_blockmeta_ptr_ != NULL);
-        while (true)
+        // Prepare AddEdgeIntoBlocklistIfBeingWrittenParam
+        bool is_blocked_before = false;
+        MsiMetadata::AddEdgeIntoBlocklistIfBeingWrittenParam tmp_param = {network_addr, is_being_written, is_blocked_before};
+
+        bool is_exist = false;
+        perkey_msimetadata_.callIfExist(key, is_exist, "addEdgeIntoBlocklistIfBeingWritten", &tmp_param)
+
+        if (!is_exist) // key does not exist
         {
-            if (rwlock_for_blockmeta_ptr_->try_lock("addEdgeIntoBlocklist()"))
-            {
-                break;
-            }
+            // No block list for key
+            assert(!is_blocked_before);
+
+            is_being_written = false;
+        }
+        else // key exists
+        {
+            // An edge node can be blocked at most once (i.e., no duplicate edge nodes in a blocklist)
+            assert(!is_blocked_before);
         }
 
-        perkey_edge_blocklist_t::iterator iter = perkey_edge_blocklist_.find(key);
-        if (iter != perkey_edge_blocklist_.end()) // key does not exist
-        {
-            std::unordered_set<NetworkAddr, NetworkAddrHasher> tmp_edge_blocklist;
-            perkey_edge_blocklist_.insert(std::pair<Key, std::unordered_set<NetworkAddr, NetworkAddrHasher>>(key, tmp_edge_blocklist));
-        }
-
-        iter = perkey_edge_blocklist_.find(key);
-        assert(iter != perkey_edge_blocklist_.end()); // key must exist now
-        
-        assert(iter->second.find(network_addr) == iter->second.end()); // An edge node can be blocked at most once (i.e., no duplicate edge nodes in a blocklist)
-        iter->second.insert(network_addr);
-
-        rwlock_for_blockmeta_ptr_->unlock();
         return;
     }
 
     std::unordered_set<NetworkAddr, NetworkAddrHasher> BlockTracker::unblock(const Key& key)
     {
+        // TODO: END HERE
+        
         // Acquire a write lock for cooperation metadata before accessing cooperation metadata
         assert(rwlock_for_blockmeta_ptr_ != NULL);
         while (true)

@@ -82,7 +82,7 @@ namespace covered
         return is_exist;
     }
 
-    template<class V>
+    /*template<class V>
     V ConcurrentHashtable<V>::getIfExist(const Key& key, bool& is_exist) const
     {
         assert(rwlocks_ != NULL);
@@ -120,7 +120,7 @@ namespace covered
         rwlocks_[hashidx].unlock_shared();
 
         return value;
-    }
+    }*/
 
     template<class V>
     void ConcurrentHashtable<V>::insertOrUpdate(const Key& key, const V& value, bool& is_exist)

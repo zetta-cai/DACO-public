@@ -20,11 +20,20 @@ namespace covered
     class ValidityFlag
     {
     public:
+        struct IsValidFlagParam
+        {
+            bool is_valid;
+        };
+
         ValidityFlag();
         ValidityFlag(const bool& is_valid);
         ~ValidityFlag();
 
-        bool isValid() const;
+        // (1) Access valid flag
+
+        bool isValidFlag() const;
+
+        // (2) For ConcurrentHashtable
 
         uint32_t getSizeForCapacity() const;
         bool call(const std::string& function_name, void* param_ptr);
@@ -43,10 +52,10 @@ namespace covered
         ValidityMap(EdgeParam* edge_param_ptr);
         ~ValidityMap();
 
-        bool isValidObject(const Key& key, bool& is_found) const;
-        void invalidateObject(const Key& key, bool& is_found);
-        void validateObject(const Key& key, bool& is_found);
-        void erase(const Key& key, bool& is_found);
+        bool isValidFlagForKey(const Key& key, bool& is_exist) const;
+        void invalidateFlagForKey(const Key& key, bool& is_exist); // Add an invalid flag if key NOT exist
+        void validateFlagForKey(const Key& key, bool& is_exist); // Add a valid flag if key NOT exist
+        void eraseFlagForKey(const Key& key, bool& is_exist);
 
         uint32_t getSizeForCapacity() const;
     private:

@@ -30,8 +30,8 @@ namespace covered
         void lookup(const Key& key, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const;
         void update(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, const DirectoryMetadata& directory_metadata);
         bool isCooperativeCached(const Key& key) const;
-        void invalidateAllDirinfo(const Key& key, dirinfo_set_t& all_dirinfo);
-        void validateDirinfoIfExist(const Key& key, const DirectoryInfo& directory_info);
+        void invalidateAllDirinfoForKeyIfExist(const Key& key, dirinfo_set_t& all_dirinfo); // Invalidate all dirinfos only if key exists (NOT add an empty direntry)
+        void validateDirinfoForKeyIfExist(const Key& key, const DirectoryInfo& directory_info); // Validate only if key and dirinfo exist (NOT add a valid dirinfo)
 
         uint32_t getSizeForCapacity() const;
     private:

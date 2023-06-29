@@ -16,7 +16,9 @@ namespace covered
 
     DirectoryEntry::~DirectoryEntry() {}
 
-    void DirectoryEntry::getValidDirinfoSet(dirinfo_set_t& dirinfo_set) const
+    // (1) Access per-dirinfo metadata
+
+    void DirectoryEntry::getAllValidDirinfo(dirinfo_set_t& dirinfo_set) const
     {
         dirinfo_set.clear();
 
@@ -25,7 +27,7 @@ namespace covered
         {
             const DirectoryInfo& directory_info = iter->first;
             const DirectoryMetadata& directory_metadata = iter->second;
-            if (directory_metadata.isValidDirinfo()) // validity = true
+            if (directory_metadata.isValidMetadata()) // validity = true
             {
                 dirinfo_set.insert(directory_info);
             }
@@ -69,26 +71,27 @@ namespace covered
         return is_directory_already_exist;
     }
 
-    void DirectoryEntry::invalidateDirentry(dirinfo_set_t& all_dirinfo)
+    void DirectoryEntry::invalidateMetadataForAllDirinfoIfExist(dirinfo_set_t& all_dirinfo)
     {
         for (dirinfo_entry_t::iterator iter = directory_entry_.begin(); iter != directory_entry_.end(); iter++)
         {
-            iter->second.invalidateDirinfo();
+            iter->second.invalidateMetadata();
             all_dirinfo.insert(iter->first);
         }
         return;
     }
 
-    DirectoryMetadata* DirectoryEntry::getDirectoryMetadataPtr(const DirectoryInfo& directory_info)
+    void DirectoryEntry::validateMetadataForDirinfoIfExist(const DirectoryInfo& directory_info)
     {
-        DirectoryMetadata* directory_metadata_ptr = NULL;
         dirinfo_entry_t::iterator iter = directory_entry_.find(directory_info);
         if (iter != directory_entry_.end())
         {
-            directory_metadata_ptr = &(iter->second);
+            iter->second.validateMetadata();
         }
-        return directory_metadata_ptr;
+        return;
     }
+
+    // (2) For ConcurrentHashtable
 
     uint32_t DirectoryEntry::getSizeForCapacity() const
     {
@@ -107,7 +110,12 @@ namespace covered
 
         bool is_erase = false;
 
-        if (function_name == "addDirinfo")
+        if (function_name == "getAllValidDirinfo")
+        {
+            GetAllValidDirinfoParam* tmp_param_ptr = static_cast<GetAllValidDirinfoParam*>(param_ptr);
+            getAllValidDirinfo(tmp_param_ptr->dirinfo_set);
+        }
+        else if (function_name == "addDirinfo")
         {
             AddDirinfoParam* tmp_param_ptr = static_cast<AddDirinfoParam*>(param_ptr);
             tmp_param_ptr->is_directory_already_exist = addDirinfo(tmp_param_ptr->directory_info, tmp_param_ptr->directory_metadata);
@@ -121,6 +129,16 @@ namespace covered
             {
                 is_erase = true; // the key-direntry pair can be erased due to empty direntry
             }
+        }
+        else if (function_name == "invalidateMetadataForAllDirinfo")
+        {
+            InvalidateMetadataForAllDirinfoIfExistParam* tmp_param_ptr = static_cast<InvalidateMetadataForAllDirinfoIfExistParam*>(param_ptr);
+            invalidateMetadataForAllDirinfoIfExist(tmp_param_ptr->all_dirinfo);
+        }
+        else if (function_name == "validateMetadataForDirinfoIfExist")
+        {
+            ValidateMetadataForDirinfoIfExistParam* tmp_param_ptr = static_cast<ValidateMetadataForDirinfoIfExistParam*>(param_ptr);
+            validateMetadataForDirinfoIfExist(tmp_param_ptr->directory_info);
         }
         else
         {

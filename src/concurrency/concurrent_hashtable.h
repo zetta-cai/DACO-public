@@ -31,7 +31,7 @@ namespace covered
 
         // NOTE: thread-safe structure cannot return a reference, which may violate atomicity
         bool isExist(const Key& key) const;
-        V getIfExist(const Key& key, bool& is_exist) const; // Get if key exists
+        //V getIfExist(const Key& key, bool& is_exist) const; // Get if key exists
         void insertOrUpdate(const Key& key, const V& value, bool& is_exist); // Insert a new value if key does not exist, or update the value if key exists
         void insertOrCall(const Key& key, const V& value, bool& is_exist, const std::string& function_name, void* param_ptr); // Insert a new value if key does not exist, or call value.function_name if key exists
         void callIfExist(const Key& key, bool& is_exist, const std::string& function_name, void* param_ptr); // Call value.function_name if key exists

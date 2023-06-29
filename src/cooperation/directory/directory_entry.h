@@ -19,6 +19,11 @@ namespace covered
     class DirectoryEntry
     {
     public:
+        struct GetAllValidDirinfoParam
+        {
+            dirinfo_set_t& dirinfo_set;
+        };
+
         struct AddDirinfoParam
         {
             const DirectoryInfo& directory_info;
@@ -32,25 +37,28 @@ namespace covered
             bool is_directory_already_exist;
         };
 
-        struct InvalidateDirentryParam
+        struct InvalidateMetadataForAllDirinfoIfExistParam
         {
             dirinfo_set_t& all_dirinfo;
         };
-
-        struct GetDirectoryMetadataPtrParam
+        
+        struct ValidateMetadataForDirinfoIfExistParam
         {
             const DirectoryInfo& directory_info;
-            DirectoryMetadata* directory_metadata_ptr;
         };
 
         DirectoryEntry();
         ~DirectoryEntry();
 
-        void getValidDirinfoSet(dirinfo_set_t& dirinfo_set) const;
+        // (1) Access per-dirinfo metadata
+
+        void getAllValidDirinfo(dirinfo_set_t& dirinfo_set) const;
         bool addDirinfo(const DirectoryInfo& directory_info, const DirectoryMetadata& directory_metadata); // return is_directory_already_exist
         bool removeDirinfo(const DirectoryInfo& directory_info); // return is_directory_already_exist
-        void invalidateDirentry(dirinfo_set_t& all_dirinfo);
-        DirectoryMetadata* getDirectoryMetadataPtr(const DirectoryInfo& directory_info);
+        void invalidateMetadataForAllDirinfoIfExist(dirinfo_set_t& all_dirinfo); // Invalidate all metadatas only if dirinfos exist (NOT add invalid metadata)
+        void validateMetadataForDirinfoIfExist(const DirectoryInfo& directory_info); // Validate metadata only if dirinfo exists (NOT add invalid metadata)
+
+        // (2) For ConcurrentHashtable
 
         uint32_t getSizeForCapacity() const;
         bool call(const std::string& function_name, void* param_ptr);

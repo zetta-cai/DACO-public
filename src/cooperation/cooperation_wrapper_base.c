@@ -152,7 +152,7 @@ namespace covered
             if (is_successful) // Acquire write lock successfully
             {
                 // Invalidate all content directory informations
-                directory_table_ptr_->invalidateAllDirinfo(key, all_dirinfo);
+                directory_table_ptr_->invalidateAllDirinfoForKeyIfExist(key, all_dirinfo);
 
                 lock_result = LockResult::kSuccess;
             }
@@ -172,7 +172,7 @@ namespace covered
         block_tracker_.resetWriteflag(key);
 
         // TODO: Validate content directory if any for the closest edge node releasing the write lock
-        directory_table_ptr_->validateDirinfoIfExist(key, sender_dirinfo);
+        directory_table_ptr_->validateDirinfoForKeyIfExist(key, sender_dirinfo);
 
         return;
     }

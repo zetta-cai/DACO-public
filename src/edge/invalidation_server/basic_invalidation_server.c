@@ -45,7 +45,7 @@ namespace covered
         bool is_local_cached = edge_wrapper_ptr_->edge_cache_ptr_->isLocalCached(tmp_key);
         if (is_local_cached)
         {
-            edge_wrapper_ptr_->edge_cache_ptr_->invalidateCachedObject(tmp_key);
+            edge_wrapper_ptr_->edge_cache_ptr_->invalidateKeyForLocalCachedObject(tmp_key);
         }
 
         // Send back a invalidation response

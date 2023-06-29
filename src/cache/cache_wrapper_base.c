@@ -41,11 +41,11 @@ namespace covered
     
     CacheWrapperBase::~CacheWrapperBase() {}
 
-    bool CacheWrapperBase::isCachedObjectValid(const Key& key) const
+    bool CacheWrapperBase::isValidKeyForLocalCachedObject(const Key& key) const
     {
-        bool is_found = false;
-        bool is_valid = validity_map_.isValidObject(key, is_found);
-        if (!is_found) // key is locally cached yet not found in validity_map_, which may due to processing order issue
+        bool is_exist = false;
+        bool is_valid = validity_map_.isValidFlagForKey(key, is_exist);
+        if (!is_exist) // key is locally cached yet not found in validity_map_, which may due to processing order issue
         {
             std::ostringstream oss;
             oss << "key " << key.getKeystr() << " is locally cached yet not found in validity_map_!";
@@ -55,11 +55,11 @@ namespace covered
         return is_valid;
     }
 
-    void CacheWrapperBase::invalidateCachedObject(const Key& key)
+    void CacheWrapperBase::invalidateKeyForLocalCachedObject(const Key& key)
     {
-        bool is_found = false;
-        validity_map_.invalidateObject(key, is_found);
-        if (!is_found) // a key locally cached is not found in validity_map_
+        bool is_exist = false;
+        validity_map_.invalidateFlagForKey(key, is_exist);
+        if (!is_exist) // a key locally cached is not found in validity_map_
         {
             std::ostringstream oss;
             oss << "key " << key.getKeystr() << " does not exist in validity_map_ for invalidateIfCached()";
@@ -75,7 +75,7 @@ namespace covered
         bool is_valid = false;
         if (is_local_cached)
         {
-            is_valid = isCachedObjectValid(key);
+            is_valid = isValidKeyForLocalCachedObject(key);
         }
 
         return is_local_cached && is_valid;
@@ -87,7 +87,7 @@ namespace covered
 
         if (is_local_cached)
         {
-            validateCachedObject_(key);
+            validateKeyForLocalCachedObject_(key);
         }
 
         return is_local_cached;
@@ -108,11 +108,11 @@ namespace covered
 
         if (is_valid) // w/o writes
         {
-            validateUncachedObject_(key);
+            validateKeyForLocalUncachedObject_(key);
         }
         else // w/ writes
         {
-            invalidateUncachedObject_(key);
+            invalidateKeyForLocalUncachedObject_(key);
         }
 
         return;
@@ -122,9 +122,9 @@ namespace covered
     {
         evictInternal_(key, value);
 
-        bool is_found = false;
-        validity_map_.erase(key, is_found);
-        if (!is_found)
+        bool is_exist = false;
+        validity_map_.eraseFlagForKey(key, is_exist);
+        if (!is_exist)
         {
             std::ostringstream oss;
             oss << "victim key " << key.getKeystr() << " does not exist in validity_map_ for evict()";
@@ -143,11 +143,11 @@ namespace covered
         return total_size;
     }
 
-    void CacheWrapperBase::validateCachedObject_(const Key& key)
+    void CacheWrapperBase::validateKeyForLocalCachedObject_(const Key& key)
     {
-        bool is_found = false;
-        validity_map_.validateObject(key, is_found);
-        if (!is_found) // a key locally cached is not found in validity_map_
+        bool is_exist = false;
+        validity_map_.validateFlagForKey(key, is_exist);
+        if (!is_exist) // a key locally cached is not found in validity_map_
         {
             std::ostringstream oss;
             oss << "key " << key.getKeystr() << " does not exist in validity_map_ for validateIfCached()";
@@ -156,11 +156,11 @@ namespace covered
         return;
     }
 
-    void CacheWrapperBase::validateUncachedObject_(const Key& key)
+    void CacheWrapperBase::validateKeyForLocalUncachedObject_(const Key& key)
     {
-        bool is_found = false;
-        validity_map_.validateObject(key, is_found);
-        if (is_found) // a key not locally cached is found in validity_map_
+        bool is_exist = false;
+        validity_map_.validateFlagForKey(key, is_exist);
+        if (is_exist) // a key not locally cached is found in validity_map_
         {
             std::ostringstream oss;
             oss << "key " << key.getKeystr() << " already exists in validity_map_ for validateIfUncached_()";
@@ -169,11 +169,11 @@ namespace covered
         return;
     }
 
-    void CacheWrapperBase::invalidateUncachedObject_(const Key& key)
+    void CacheWrapperBase::invalidateKeyForLocalUncachedObject_(const Key& key)
     {
-        bool is_found = false;
-        validity_map_.invalidateObject(key, is_found);
-        if (is_found) // a key not locally cached is found in validity_map_
+        bool is_exist = false;
+        validity_map_.invalidateFlagForKey(key, is_exist);
+        if (is_exist) // a key not locally cached is found in validity_map_
         {
             std::ostringstream oss;
             oss << "key " << key.getKeystr() << " already exists in validity_map_ for invalidateIfUncached_()";

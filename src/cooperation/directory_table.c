@@ -30,19 +30,18 @@ namespace covered
 
     void DirectoryTable::lookup(const Key& key, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
     {
+        // Prepare GetAllValidDirinfoParam
         dirinfo_set_t valid_directory_info_set;
+        DirectoryEntry::GetAllValidDirinfoParam tmp_param = {valid_directory_info_set};
 
         bool is_exist = false;
-        DirectoryEntry directory_entry = directory_hashtable_.getIfExist(key, is_exist); // Get directory entry if key exists
+        directory_hashtable_.constCallIfExist(key, is_exist, "getAllValidDirinfo", &tmp_param); // Get directory entry if key exists
         if (!is_exist) // key does not exist
         {
             is_valid_directory_exist = false;
         }
         else // key exists
         {
-            // Get all valid directory infos if any
-            directory_entry.getValidDirinfoSet(valid_directory_info_set);
-
             if (valid_directory_info_set.size() > 0) // At least one valid directory
             {
                 is_valid_directory_exist = true;
@@ -137,32 +136,26 @@ namespace covered
         return is_cooperative_cached;
     }
 
-    void DirectoryTable::invalidateAllDirinfo(const Key& key, dirinfo_set_t& all_dirinfo)
+    void DirectoryTable::invalidateAllDirinfoForKeyIfExist(const Key& key, dirinfo_set_t& all_dirinfo)
     {
-        // Prepare InvalidateDirentryParam
-        DirectoryEntry::InvalidateDirentryParam tmp_param = {all_dirinfo};
+        // Prepare InvalidateMetadataForAllDirinfoParam
+        DirectoryEntry::InvalidateMetadataForAllDirinfoIfExistParam tmp_param = {all_dirinfo};
 
         bool is_exist = false;
-        directory_hashtable_.callIfExist(key, is_exist, "invalidateDirentry", &tmp_param);
+        directory_hashtable_.callIfExist(key, is_exist, "invalidateMetadataForAllDirinfoIfExist", &tmp_param);
         UNUSED(is_exist);
 
         return;
     }
 
-    void DirectoryTable::validateDirinfoIfExist(const Key& key, const DirectoryInfo& directory_info)
+    void DirectoryTable::validateDirinfoForKeyIfExist(const Key& key, const DirectoryInfo& directory_info)
     {
-        // Prepare GetDirectoryMetadataPtrParam
-        DirectoryEntry::GetDirectoryMetadataPtrParam tmp_param = {directory_info, NULL};
-        
+        // Prepare ValidateMetadataForDirinfoIfExistParam
+        DirectoryEntry::ValidateMetadataForDirinfoIfExistParam tmp_param = {directory_info};
+
         bool is_exist = false;
-        directory_hashtable_.callIfExist(key, is_exist, "getDirectoryMetadataPtr", &tmp_param);
-        if (is_exist) // DirectoryEntry of the given key exists
-        {
-            if (tmp_param.directory_metadata_ptr != NULL) // The given directory info exists
-            {
-                tmp_param.directory_metadata_ptr->validateDirinfo(); // Validate the given directory info
-            }
-        }
+        directory_hashtable_.callIfExist(key, is_exist, "validateMetadataForDirinfoIfExist", &tmp_param);
+        UNUSED(is_exist);
 
         return;
     }

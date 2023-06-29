@@ -15,12 +15,74 @@ namespace covered
         edge_blocklist_.clear();
     }
 
+    MsiMetadata::MsiMetadata(const bool& is_being_written)
+    {
+        writeflag_ = is_being_written;
+        edge_blocklist_.clear();
+    }
+
     MsiMetadata::~MsiMetadata() {}
+
+    // (1) Access write flag
 
     bool MsiMetadata::isBeingWritten() const
     {
         return writeflag_;
     }
+
+    bool MsiMetadata::checkAndSetWriteflag()
+    {
+        bool is_successful = false;
+        if (!writeflag_) // key is NOT being written
+        {
+            assert(edge_blocklist_.size() == 0);
+
+            writeflag_ = true;
+            is_successful = true;
+        }
+        return is_successful;
+    }
+
+    bool MsiMetadata::resetWriteflag()
+    {
+        bool original_writeflag = writeflag_;
+        writeflag_ = false;
+        return original_writeflag;
+    }
+
+    // (2) Access write flag and blocklist
+
+    bool MsiMetadata::addEdgeIntoBlocklistIfBeingWritten(const NetworkAddr& network_addr, bool& is_being_written)
+    {
+        assert(network_addr.isValidAddr());
+        
+        bool is_blocked_before = false;
+
+        if (writeflag_) // key is being written
+        {
+            edge_blocklist_t::iterator iter = edge_blocklist_.find(network_addr);
+            if (iter == edge_blocklist_.end()) // edge NOT blocked before
+            {
+                edge_blocklist_.insert(network_addr);
+            }
+            else // edge is blocked before
+            {
+                is_blocked_before = true;
+            }
+
+            is_being_written = true;
+        }
+        else // key is NOT being written
+        {
+            assert(edge_blocklist_.size() == 0);
+
+            is_being_written = false;
+        }
+
+        return is_blocked_before;
+    }
+
+    // (3) For ConcurrentHashtable
 
     uint32_t MsiMetadata::getSizeForCapacity() const
     {
@@ -39,9 +101,20 @@ namespace covered
 
         bool is_erase = false;
 
-        if (function_name == "isBeingWritten")
+        if (function_name == "checkAndSetWriteflag")
         {
-            // TODO
+            CheckAndSetWriteflagParam* tmp_param_ptr = static_cast<CheckAndSetWriteflagParam*>(param_ptr);
+            tmp_param_ptr->is_successful = checkAndSetWriteflag();
+        }
+        else if (function_name == "resetWriteflag")
+        {
+            ResetWriteflagParam* tmp_param_ptr = static_cast<ResetWriteflagParam*>(param_ptr);
+            tmp_param_ptr->original_writeflag = resetWriteflag();
+        }
+        else if (function_name == "addEdgeIntoBlocklistIfBeingWritten")
+        {
+            AddEdgeIntoBlocklistIfBeingWrittenParam* tmp_param_ptr = static_cast<AddEdgeIntoBlocklistIfBeingWrittenParam*>(param_ptr);
+            tmp_param_ptr->is_blocked_before = addEdgeIntoBlocklistIfBeingWritten(tmp_param_ptr->network_addr, tmp_param_ptr->is_being_written);
         }
         else
         {
