@@ -16,7 +16,7 @@ namespace covered
 {
     const std::string CacheServerWorkerBase::kClassName("CacheServerWorkerBase");
 
-    CacheServerWorkerBase* CacheServerWorkerBase::getCacheServerWorker(CacheServerWorkerParam* cache_server_worker_param_ptr)
+    CacheServerWorkerBase* CacheServerWorkerBase::getCacheServerWorkerByCacheName(CacheServerWorkerParam* cache_server_worker_param_ptr)
     {
         CacheServerWorkerBase* cache_server_worker_ptr = NULL;
 
@@ -44,10 +44,6 @@ namespace covered
         std::ostringstream oss;
         oss << kClassName << " edge" << edge_idx << "-worker" << cache_server_worker_param_ptr->getLocalCacheServerWorkerIdx();
         base_instance_name_ = oss.str();
-
-        // Allocate per-key rwlock for serializability
-        perkey_rwlock_for_serializability_ptr_ = new PerkeyRwlock(edge_idx);
-        assert(perkey_rwlock_for_serializability_ptr_ != NULL);
 
         // Prepare a socket client to cloud recvreq port for cache server worker
         std::string cloud_ipstr = Config::getCloudIpstr();
@@ -87,11 +83,6 @@ namespace covered
     {
         // NOTE: no need to release cache_server_worker_param_ptr_, which will be released outside CacheServerWorkerBase (by CacheServer)
 
-        // Release per-key rwlock
-        assert(perkey_rwlock_for_serializability_ptr_ != NULL);
-        delete perkey_rwlock_for_serializability_ptr_;
-        perkey_rwlock_for_serializability_ptr_ = NULL;
-
         // Release the socket client to cloud
         assert(edge_cache_server_worker_sendreq_tocloud_socket_client_ptr_ != NULL);
         delete edge_cache_server_worker_sendreq_tocloud_socket_client_ptr_;
@@ -123,7 +114,7 @@ namespace covered
         {
             // Try to get the data request from ring buffer partitioned by cache server
             CacheServerWorkerItem tmp_cache_server_worker_item;
-            bool is_successful = cache_server_worker_param_ptr_->getLocalRequestBufferPtr()->pop(tmp_cache_server_worker_item);
+            bool is_successful = cache_server_worker_param_ptr_->getDataRequestBufferPtr()->pop(tmp_cache_server_worker_item);
             if (is_successful)
             {
                 continue; // Retry to receive an item if edge is still running
@@ -166,8 +157,6 @@ namespace covered
 
     bool CacheServerWorkerBase::processDataRequest_(MessageBase* data_request_ptr, const NetworkAddr& network_addr)
     {
-        // No need to acquire per-key rwlock for serializability, which will be done in processLocalGetRequest_() or processLocalWriteRequest_()
-
         assert(data_request_ptr != NULL && data_request_ptr->isDataRequest());
         assert(network_addr.isValidAddr());
 
@@ -217,16 +206,6 @@ namespace covered
         Key tmp_key = local_get_request_ptr->getKey();
         Value tmp_value;
 
-        // Acquire a read lock for serializability before accessing any shared variable in the closest edge node
-        assert(perkey_rwlock_for_serializability_ptr_ != NULL);
-        while (true)
-        {
-            if (perkey_rwlock_for_serializability_ptr_->try_lock_shared(tmp_key, "processLocalGetRequest_()"))
-            {
-                break;
-            }
-        }
-
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getEdgeWrapperPtr();
 
@@ -248,7 +227,6 @@ namespace covered
             is_finish = fetchDataFromNeighbor_(tmp_key, tmp_value, is_cooperative_cached_and_valid);
             if (is_finish) // Edge node is NOT running
             {
-                perkey_rwlock_for_serializability_ptr_->unlock_shared(tmp_key);
                 return is_finish;
             }
             if (is_cooperative_cached_and_valid) // cooperative cached and valid
@@ -265,7 +243,6 @@ namespace covered
             is_finish = fetchDataFromCloud_(tmp_key, tmp_value);
             if (is_finish) // Edge node is NOT running
             {
-                perkey_rwlock_for_serializability_ptr_->unlock_shared(tmp_key);
                 return is_finish;
             }
         }
@@ -274,7 +251,6 @@ namespace covered
         is_finish = tryToUpdateInvalidLocalEdgeCache_(tmp_key, tmp_value);
         if (is_finish)
         {
-            perkey_rwlock_for_serializability_ptr_->unlock_shared(tmp_key);
             return is_finish;
         }
 
@@ -282,7 +258,6 @@ namespace covered
         is_finish = tryToTriggerIndependentAdmission_(tmp_key, tmp_value);
         if (is_finish)
         {
-            perkey_rwlock_for_serializability_ptr_->unlock_shared(tmp_key);
             return is_finish;
         }
 
@@ -302,7 +277,6 @@ namespace covered
         oss << "issue a local response; type: " << MessageBase::messageTypeToString(local_get_response.getMessageType()) << "; keystr:" << local_get_response.getKey().getKeystr();
         Util::dumpDebugMsg(base_instance_name_, oss.str());
 
-        perkey_rwlock_for_serializability_ptr_->unlock_shared(tmp_key);
         return is_finish;
     }
 
@@ -333,16 +307,6 @@ namespace covered
             Util::dumpErrorMsg(base_instance_name_, oss.str());
             exit(1);
         }
-
-        // Acquire a write lock for serializability before accessing any shared variable in the closest edge node
-        assert(perkey_rwlock_for_serializability_ptr_ != NULL);
-        while (true)
-        {
-            if (perkey_rwlock_for_serializability_ptr_->try_lock(tmp_key, "processLocalWriteRequest_()"))
-            {
-                break;
-            }
-        }
         
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getEdgeWrapperPtr();
@@ -355,7 +319,6 @@ namespace covered
         is_finish = acquireWritelock_(tmp_key, lock_result);
         if (is_finish) // Edge node is NOT running
         {
-            perkey_rwlock_for_serializability_ptr_->unlock(tmp_key);
             return is_finish;
         }
         else
@@ -367,7 +330,6 @@ namespace covered
         is_finish = writeDataToCloud_(tmp_key, tmp_value, local_request_ptr->getMessageType());
         if (is_finish) // Edge node is NOT running
         {
-            perkey_rwlock_for_serializability_ptr_->unlock(tmp_key);
             return is_finish;
         }
 
@@ -425,14 +387,11 @@ namespace covered
         delete local_response_ptr;
         local_response_ptr = NULL;
 
-        perkey_rwlock_for_serializability_ptr_->unlock(tmp_key);
         return is_finish;
     }
 
     bool CacheServerWorkerBase::processRedirectedRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& network_addr)
     {
-        // No need to acquire per-key rwlock for serializability, which will be done in processRedirectedGetRequest_()
-
         assert(redirected_request_ptr != NULL && redirected_request_ptr->isRedirectedRequest());
 
         bool is_finish = false; // Mark if local edge node is finished
@@ -665,7 +624,7 @@ namespace covered
                         continue; // Continue to try to acquire the write lock
                     }
                 }
-                // NOTE: If lock_result == kSuccess, beacon server of beacon node has already invalidated all cache copies, so we do NOT need to invalidate them again in cache server
+                // NOTE: If lock_result == kSuccess, beacon server of beacon node has already invalidated all cache copies -> NO need to invalidate them again in cache server
                 // NOTE: will directly break if lock result is kNoneed
             } // End of current_is_beacon
 
@@ -772,10 +731,17 @@ namespace covered
         if (current_is_beacon) // Get target edge index from local directory information
         {
             DirectoryInfo current_directory_info(tmp_edge_wrapper_ptr->edge_param_ptr_->getEdgeIdx());
-            tmp_edge_wrapper_ptr->cooperation_wrapper_ptr_->releaseLocalWritelock(key, current_directory_info);
+            std::unordered_set<NetworkAddr, NetworkAddrHasher> blocked_edges = tmp_edge_wrapper_ptr->cooperation_wrapper_ptr_->releaseLocalWritelock(key, current_directory_info);
+
+            is_finish = tmp_edge_wrapper_ptr->notifyEdgesToFinishBlock_(key, blocked_edges);
+            if (is_finish) // Edge is NOT running
+            {
+                return is_finish;
+            }
         }
         else // Get target edge index from remote directory information at the beacon node
         {
+            // NOTE: beacon server of beacon node has already notified all blocked edges -> NO need to notify them again in cache server
             is_finish = releaseBeaconWritelock_(key);
             if (is_finish) // Edge is NOT running
             {
@@ -827,8 +793,6 @@ namespace covered
 
     bool CacheServerWorkerBase::fetchDataFromCloud_(const Key& key, Value& value) const
     {
-        // No need to acquire per-key rwlock for serializability, which has been done in processLocalGetRequest_()
-
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getEdgeWrapperPtr();
 
@@ -893,9 +857,7 @@ namespace covered
     }
 
     bool CacheServerWorkerBase::writeDataToCloud_(const Key& key, const Value& value, const MessageType& message_type)
-    {
-        // No need to acquire per-key rwlock for serializability, which has been done in processLocalWriteRequest_()
-        
+    {        
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getEdgeWrapperPtr();
 
@@ -971,8 +933,6 @@ namespace covered
 
     bool CacheServerWorkerBase::tryToUpdateInvalidLocalEdgeCache_(const Key& key, const Value& value) const
     {
-        // No need to acquire per-key rwlock for serializability, which has been done in processLocalGetRequest_()
-
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getEdgeWrapperPtr();
 
@@ -1044,8 +1004,6 @@ namespace covered
 
     void CacheServerWorkerBase::removeLocalEdgeCache_(const Key& key, bool& is_local_cached_after_udpate) const
     {
-        // No need to acquire per-key rwlock for serializability, which has been done in processLocalGetRequest_() or processLocalWriteRequest_()
-
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getEdgeWrapperPtr();
 
@@ -1060,8 +1018,6 @@ namespace covered
 
     bool CacheServerWorkerBase::tryToTriggerIndependentAdmission_(const Key& key, const Value& value) const
     {
-        // No need to acquire per-key rwlock for serializability, which has been done in processLocalGetRequest_(), processLocalWriteRequest_(), and processRedirectedGetRequest_()
-
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getEdgeWrapperPtr();
 
@@ -1085,7 +1041,7 @@ namespace covered
         assert(cache_server_worker_param_ptr_->getEdgeWrapperPtr()->edge_param_ptr_ != NULL);
         assert(cache_server_worker_param_ptr_->getEdgeWrapperPtr()->edge_cache_ptr_ != NULL);
         assert(cache_server_worker_param_ptr_->getEdgeWrapperPtr()->cooperation_wrapper_ptr_ != NULL);
-        assert(cache_server_worker_param_ptr_->getLocalRequestBufferPtr() != NULL);
+        assert(cache_server_worker_param_ptr_->getDataRequestBufferPtr() != NULL);
         assert(edge_cache_server_worker_sendreq_tobeacon_socket_client_ptr_ != NULL);
         assert(edge_cache_server_worker_sendreq_totarget_socket_client_ptr_ != NULL);
         assert(edge_cache_server_worker_sendrsp_tosource_socket_client_ptr_ != NULL);

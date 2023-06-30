@@ -19,7 +19,7 @@ namespace covered
     public:
         static const uint32_t RINGBUFFER_CAPACITY;
 
-        RingBuffer(const T& default_element, const uint32_t& capacity = RINGBUFFER_CAPACITY);
+        RingBuffer(const T& default_element, const uint32_t& buffer_size);
         ~RingBuffer();
 
         // NOTE: thread-safe structure cannot return a reference, which may violate atomicity
@@ -27,7 +27,7 @@ namespace covered
         bool pop(T& element);
 
         uint32_t getElementCnt() const;
-        uint32_t getCapacity() const;
+        uint32_t getBufferSize() const;
         T getDefaultElement() const;
 
         //uint32_t getSizeForCapacity() const;
@@ -38,7 +38,7 @@ namespace covered
 
         uint32_t head_;
 		uint32_t tail_;
-		uint32_t capacity_;
+		uint32_t buffer_size_; // Come from Config::data_request_buffer_size_
         T default_element_;
         std::vector<T> ring_buffer_;
     };

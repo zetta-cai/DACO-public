@@ -2,11 +2,13 @@
     "cloud_ipstr": "172.0.0.1",
     "cloud_recvreq_startport": 4100,
     "cloud_rocksdb_basedir": "/tmp/cloud",
+    "data_request_buffer_size": 1000,
     "edge_ipstrs": ["172.0.0.1"],
     "edge_beacon_server_recvreq_startport": 4200,
     "edge_cache_server_recvreq_startport": 4300,
     "edge_invalidation_server_recvreq_startport": 4400,
     "facebook_config_filepath": "lib/CacheLib/cachelib/cachebench/test_configs/hit_ratio/cdn/config.json",
+    "fine_grained_locking_size": 1000,
     "latency_histogram_size": 1000000,
     "output_basedir": "output",
     "version": "1.0"

@@ -11,12 +11,11 @@ namespace covered
 {
     const std::string BasicCooperationWrapper::kClassName("BasicCooperationWrapper");
 
-    BasicCooperationWrapper::BasicCooperationWrapper(const std::string& hash_name, EdgeParam* edge_param_ptr) : CooperationWrapperBase(hash_name, edge_param_ptr)
+    BasicCooperationWrapper::BasicCooperationWrapper(const uint32_t& edgecnt, const uint32_t& edge_idx, const std::string& hash_name) : CooperationWrapperBase(edgecnt, edge_idx, hash_name)
     {
         // Differentiate CooperationWrapper in different edge nodes
-        assert(edge_param_ptr != NULL);
         std::ostringstream oss;
-        oss << kClassName << " edge" << edge_param_ptr->getEdgeIdx();
+        oss << kClassName << " edge" << edge_idx;
         instance_name_ = oss.str();
     }
 

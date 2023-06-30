@@ -9,7 +9,7 @@ namespace covered
 {
     const std::string DirectoryTable::kClassName("DirectoryTable");
 
-    DirectoryTable::DirectoryTable(const uint32_t& seed, const uint32_t& edge_idx) : directory_hashtable_("directory_hashtable_", DirectoryEntry())
+    DirectoryTable::DirectoryTable(const uint32_t& seed, const uint32_t& edge_idx, const PerkeyRwlock* perkey_rwlock_ptr) : directory_hashtable_("directory_hashtable_", DirectoryEntry(), perkey_rwlock_ptr)
     {
         // Allocate randgen to choose target edge node from directory information
         directory_randgen_ptr_ = new std::mt19937_64(seed);

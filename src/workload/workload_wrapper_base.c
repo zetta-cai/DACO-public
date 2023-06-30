@@ -11,12 +11,12 @@ namespace covered
 {
     const std::string WorkloadWrapperBase::kClassName("WorkloadWrapperBase");
 
-    WorkloadWrapperBase* WorkloadWrapperBase::getWorkloadGenerator(const std::string& workload_name, const uint32_t& client_idx)
+    WorkloadWrapperBase* WorkloadWrapperBase::getWorkloadGeneratorByWorkloadName(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name)
     {
         WorkloadWrapperBase* workload_ptr = NULL;
         if (workload_name == Param::FACEBOOK_WORKLOAD_NAME)
         {
-            workload_ptr = new FacebookWorkloadWrapper(client_idx);
+            workload_ptr = new FacebookWorkloadWrapper(clientcnt, client_idx, keycnt, opcnt, perclient_workercnt);
         }
         else
         {

@@ -12,7 +12,6 @@
 #include <string>
 
 #include "common/key.h"
-#include "edge/edge_param.h"
 #include "hash/hash_wrapper_base.h"
 #include "network/network_addr.h"
 
@@ -21,7 +20,7 @@ namespace covered
     class DhtWrapper
     {
     public:
-        DhtWrapper(const std::string& hash_name, EdgeParam* edge_param_ptr);
+        DhtWrapper(const std::string& hash_name, const uint32_t& edgecnt, const uint32_t& edge_idx);
         ~DhtWrapper();
 
         uint32_t getBeaconEdgeIdx(const Key& key) const;
@@ -30,6 +29,8 @@ namespace covered
     private:
         static const std::string kClassName;
         static const uint32_t DHT_HASH_RING_LENGTH;
+
+        const uint32_t edgecnt_; // Come from Param
 
         // DhtWrapper only uses edge index to specify instance_name_, yet not need to check if edge is running due to no network communication -> no need to maintain edge_param_ptr_
         std::string instance_name_;

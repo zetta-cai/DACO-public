@@ -16,7 +16,7 @@ namespace covered
 {
     const std::string FacebookWorkloadWrapper::kClassName("FacebookWorkloadWrapper");
 
-    FacebookWorkloadWrapper::FacebookWorkloadWrapper(const uint32_t& client_idx) : WorkloadWrapperBase(client_idx)
+    FacebookWorkloadWrapper::FacebookWorkloadWrapper(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& perclient_workercnt) : WorkloadWrapperBase(client_idx), clientcnt_(clientcnt), keycnt_(keycnt), opcnt_(opcnt), perclient_workercnt_(perclient_workercnt)
     {
         // Differentiate facebook workload generator in different clients
         std::ostringstream oss;
@@ -48,15 +48,13 @@ namespace covered
 
     void FacebookWorkloadWrapper::overwriteWorkloadParameters_()
     {
-        assert(Param::getClientcnt() > 0);
-        assert(Param::getPerclientWorkercnt() > 0);
-        uint32_t perclientworker_opcnt = Param::getOpcnt() / Param::getClientcnt() / Param::getPerclientWorkercnt();
-        uint32_t perclient_workercnt = Param::getPerclientWorkercnt();
-        uint32_t keycnt = Param::getKeycnt();
+        assert(clientcnt_ > 0);
+        assert(perclient_workercnt_ > 0);
+        uint32_t perclientworker_opcnt = opcnt_ / clientcnt_ / perclient_workercnt_;
 
         facebook_stressor_config_.numOps = static_cast<uint64_t>(perclientworker_opcnt);
-        facebook_stressor_config_.numThreads = static_cast<uint64_t>(perclient_workercnt);
-        facebook_stressor_config_.numKeys = static_cast<uint64_t>(keycnt);
+        facebook_stressor_config_.numThreads = static_cast<uint64_t>(perclient_workercnt_);
+        facebook_stressor_config_.numKeys = static_cast<uint64_t>(keycnt_);
 
         op_pool_dist_ptr_ = new std::discrete_distribution<>(facebook_stressor_config_.opPoolDistribution.begin(), facebook_stressor_config_.opPoolDistribution.end());
         if (op_pool_dist_ptr_ == NULL)

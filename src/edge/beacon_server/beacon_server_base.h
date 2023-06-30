@@ -30,7 +30,7 @@ namespace covered
     class BeaconServerBase
     {
     public:
-        static BeaconServerBase* getBeaconServer(EdgeWrapper* edge_wrapper_ptr);
+        static BeaconServerBase* getBeaconServerByCacheName(EdgeWrapper* edge_wrapper_ptr);
 
         BeaconServerBase(EdgeWrapper* edge_wrapper_ptr);
         virtual ~BeaconServerBase();

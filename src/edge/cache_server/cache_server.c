@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <sstream>
 
+#include "common/config.h"
 #include "common/param.h"
 #include "common/util.h"
 #include "edge/cache_server/cache_server_worker_base.h"
@@ -18,7 +19,7 @@ namespace covered
         assert(edge_wrapper_ptr->edge_param_ptr_ != NULL);
         uint32_t edge_idx = edge_wrapper_ptr->edge_param_ptr_->getEdgeIdx();
 
-        hash_wrapper_ptr_ = HashWrapperBase::getHashWrapper(Param::MMH3_HASH_NAME);
+        hash_wrapper_ptr_ = HashWrapperBase::getHashWrapperByHashName(Param::MMH3_HASH_NAME);
         assert(hash_wrapper_ptr_ != NULL);
         
         // Differentiate cache servers in different edge nodes
@@ -33,11 +34,10 @@ namespace covered
         assert(edge_cache_server_recvreq_socket_server_ptr_ != NULL);
 
         // Prepare parameters for cache server threads
-        uint32_t percacheserver_workercnt = Param::getPercacheserverWorkercnt();
-        cache_server_worker_params_.resize(percacheserver_workercnt);
-        for (uint32_t local_cache_server_worker_idx = 0; local_cache_server_worker_idx < percacheserver_workercnt; local_cache_server_worker_idx++)
+        cache_server_worker_params_.resize(edge_wrapper_ptr_->percacheserver_workercnt_);
+        for (uint32_t local_cache_server_worker_idx = 0; local_cache_server_worker_idx < edge_wrapper_ptr_->percacheserver_workercnt_; local_cache_server_worker_idx++)
         {
-            CacheServerWorkerParam tmp_cache_server_worker_param(edge_wrapper_ptr_, local_cache_server_worker_idx);
+            CacheServerWorkerParam tmp_cache_server_worker_param(edge_wrapper_ptr_, local_cache_server_worker_idx, Config::getDataRequestBufferSize());
             cache_server_worker_params_[local_cache_server_worker_idx] = tmp_cache_server_worker_param;
         }
     }
@@ -63,11 +63,10 @@ namespace covered
         uint32_t edge_idx = edge_wrapper_ptr_->edge_param_ptr_->getEdgeIdx();
 
         int pthread_returncode;
-        uint32_t percacheserver_workercnt = Param::getPercacheserverWorkercnt();
-        pthread_t cache_server_worker_threads[percacheserver_workercnt];
+        pthread_t cache_server_worker_threads[edge_wrapper_ptr_->percacheserver_workercnt_];
 
         // Launch cache server workers
-        for (uint32_t local_cache_server_worker_idx = 0; local_cache_server_worker_idx < percacheserver_workercnt; local_cache_server_worker_idx++)
+        for (uint32_t local_cache_server_worker_idx = 0; local_cache_server_worker_idx < edge_wrapper_ptr_->percacheserver_workercnt_; local_cache_server_worker_idx++)
         {
             pthread_returncode = pthread_create(&cache_server_worker_threads[local_cache_server_worker_idx], NULL, launchCacheServerWorker_, (void*)(&cache_server_worker_params_[local_cache_server_worker_idx]));
             if (pthread_returncode != 0)
@@ -83,7 +82,7 @@ namespace covered
         receiveRequestsAndPartition_();
 
         // Wait for cache server workers
-        for (uint32_t local_cache_server_worker_idx = 0; local_cache_server_worker_idx < percacheserver_workercnt; local_cache_server_worker_idx++)
+        for (uint32_t local_cache_server_worker_idx = 0; local_cache_server_worker_idx < edge_wrapper_ptr_->percacheserver_workercnt_; local_cache_server_worker_idx++)
         {
             pthread_returncode = pthread_join(cache_server_worker_threads[local_cache_server_worker_idx], NULL); // void* retval = NULL
             if (pthread_returncode != 0)
@@ -102,7 +101,7 @@ namespace covered
     {
         assert(cache_server_worker_param_ptr != NULL);
 
-        CacheServerWorkerBase* cache_server_worker_ptr = CacheServerWorkerBase::getCacheServerWorker((CacheServerWorkerParam*)cache_server_worker_param_ptr);
+        CacheServerWorkerBase* cache_server_worker_ptr = CacheServerWorkerBase::getCacheServerWorkerByCacheName((CacheServerWorkerParam*)cache_server_worker_param_ptr);
         assert(cache_server_worker_ptr != NULL);
         cache_server_worker_ptr->start();
 
@@ -159,15 +158,14 @@ namespace covered
         assert(hash_wrapper_ptr_ != NULL);
 
         // Calculate the corresponding cache server worker index by hashing
-        uint32_t percacheserver_workercnt = Param::getPercacheserverWorkercnt();
-        assert(cache_server_worker_params_.size() == percacheserver_workercnt);
+        assert(cache_server_worker_params_.size() == edge_wrapper_ptr_->percacheserver_workercnt_);
         Key tmp_key = MessageBase::getKeyFromMessage(data_requeset_ptr);
-        uint32_t local_cache_server_worker_idx = hash_wrapper_ptr_->hash(tmp_key) % percacheserver_workercnt;
-        assert(local_cache_server_worker_idx < percacheserver_workercnt);
+        uint32_t local_cache_server_worker_idx = hash_wrapper_ptr_->hash(tmp_key) % edge_wrapper_ptr_->percacheserver_workercnt_;
+        assert(local_cache_server_worker_idx < edge_wrapper_ptr_->percacheserver_workercnt_);
 
         // Pass cache server worker item into ring buffer
         CacheServerWorkerItem tmp_cache_server_worker_item(data_requeset_ptr, network_addr);
-        bool is_successful = cache_server_worker_params_[local_cache_server_worker_idx].getLocalRequestBufferPtr()->push(tmp_cache_server_worker_item);
+        bool is_successful = cache_server_worker_params_[local_cache_server_worker_idx].getDataRequestBufferPtr()->push(tmp_cache_server_worker_item);
         assert(is_successful == true); // Ring buffer must NOT be full
 
         return;

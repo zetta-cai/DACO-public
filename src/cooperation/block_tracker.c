@@ -12,12 +12,11 @@ namespace covered
 {
     const std::string BlockTracker::kClassName("BlockTracker");
 
-    BlockTracker::BlockTracker(EdgeParam* edge_param_ptr) : perkey_msimetadata_("perkey_msimetadata_", MsiMetadata())
+    BlockTracker::BlockTracker(const uint32_t& edge_idx, const PerkeyRwlock* perkey_rwlock_ptr) : perkey_msimetadata_("perkey_msimetadata_", MsiMetadata(), perkey_rwlock_ptr)
     {
         // Differentiate CooperationWrapper in different edge nodes
-        assert(edge_param_ptr != NULL);
         std::ostringstream oss;
-        oss << kClassName << " edge" << edge_param_ptr->getEdgeIdx();
+        oss << kClassName << " edge" << edge_idx;
         instance_name_ = oss.str();
     }
 

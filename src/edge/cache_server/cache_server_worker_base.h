@@ -53,7 +53,6 @@
 
 #include <string>
 
-#include "concurrency/perkey_rwlock.h"
 #include "edge/cache_server/cache_server_worker_param.h"
 #include "message/message_base.h"
 #include "network/udp_socket_wrapper.h"
@@ -63,7 +62,7 @@ namespace covered
     class CacheServerWorkerBase
     {
     public:
-        static CacheServerWorkerBase* getCacheServerWorker(CacheServerWorkerParam* cache_server_worker_param_ptr);
+        static CacheServerWorkerBase* getCacheServerWorkerByCacheName(CacheServerWorkerParam* cache_server_worker_param_ptr);
 
         CacheServerWorkerBase(CacheServerWorkerParam* cache_server_worker_param_ptr);
         virtual ~CacheServerWorkerBase();
@@ -152,8 +151,7 @@ namespace covered
         // Const variable
         const CacheServerWorkerParam* cache_server_worker_param_ptr_;
 
-        // Guarantee the global serializability for writes of the same key
-        mutable PerkeyRwlock* perkey_rwlock_for_serializability_ptr_;
+        // NOTE: we do NOT need per-key rwlock for serializability, which has been addressed by the ring buffer
 
         // Non-const individual variable
         UdpSocketWrapper* edge_cache_server_worker_sendreq_tobeacon_socket_client_ptr_;

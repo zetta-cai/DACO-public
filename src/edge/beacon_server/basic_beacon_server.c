@@ -150,7 +150,7 @@ namespace covered
         PropagationSimulator::propagateFromNeighborToEdge();
         edge_beacon_server_recvreq_socket_server_ptr_->send(control_response_msg_payload);
 
-        // Notify blocked edge nodes if any after finishing writes
+        // NOTE: notify blocked edge nodes if any after finishing writes, to avoid transmitting blocked_edges to cache server of the closest edge node
         is_finish = edge_wrapper_ptr_->notifyEdgesToFinishBlock_(tmp_key, blocked_edges);
 
         return is_finish;

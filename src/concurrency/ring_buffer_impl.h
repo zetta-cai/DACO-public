@@ -11,20 +11,18 @@
 namespace covered
 {
     template<class T>
-    const uint32_t RingBuffer<T>::RINGBUFFER_CAPACITY = 1000;
-    template<class T>
     const std::string RingBuffer<T>::kClassName = "RingBuffer<" + std::string(typeid(T).name()) + ">";
 
     template<class T>
-    RingBuffer<T>::RingBuffer(const T& default_element, const uint32_t& capacity)
+    RingBuffer<T>::RingBuffer(const T& default_element, const uint32_t& buffer_size)
     {
-        assert(capacity > 0);
+        assert(buffer_size > 0);
 
         head_ = 0;
         tail_ = 0;
-        capacity_ = capacity;
+        buffer_size_ = buffer_size;
         default_element_ = default_element;
-        ring_buffer_.resize(capacity, default_element);
+        ring_buffer_.resize(buffer_size, default_element);
     }
 
     template<class T>
@@ -61,7 +59,7 @@ namespace covered
 
         bool is_successful = false;
 
-        if ((head_ + 1) % capacity_ == tail_) // ring buffer is full
+        if ((head_ + 1) % buffer_size_ == tail_) // ring buffer is full
         {
             Util::dumpWarnMsg(kClassName, "ring buffer is fulll!");
             is_successful = false;
@@ -72,7 +70,7 @@ namespace covered
             ring_buffer_[head_] = element;
             //assert(ring_buffer_[head_] != NULL);
             
-            head_ = (head_ + 1) % capacity_;
+            head_ = (head_ + 1) % buffer_size_;
             is_successful = true;
         }
 
@@ -94,7 +92,7 @@ namespace covered
             //assert(result != NULL);
             ring_buffer_[tail_] = default_element_;
 
-            tail_ = (tail_ + 1) % capacity_;
+            tail_ = (tail_ + 1) % buffer_size_;
             is_successful = true;
         }
 
@@ -111,16 +109,16 @@ namespace covered
         }
         else
         {
-            size = head_ + capacity_ - tail_;
+            size = head_ + buffer_size_ - tail_;
         }
-        assert(size >= 0 && size < capacity_);
+        assert(size >= 0 && size < buffer_size_);
         return size;
     }
 
     template<class T>
-    uint32_t RingBuffer<T>::getCapacity() const
+    uint32_t RingBuffer<T>::getBufferSize() const
     {
-        return capacity_;
+        return buffer_size_;
     }
 
     template<class T>
@@ -135,9 +133,9 @@ namespace covered
         uint32_t size = 0;
         for (uint32_t ring_buffer_idx = tail_; ring_buffer_idx != head_; ring_buffer_idx++)
         {
-            if (ring_buffer_idx >= capacity_)
+            if (ring_buffer_idx >= buffer_size_)
             {
-                ring_buffer_idx %= capacity_;
+                ring_buffer_idx %= buffer_size_;
             }
             size += ring_buffer_[ring_buffer_idx].getSizeForCapacity();
         }
@@ -149,7 +147,7 @@ namespace covered
     {
         head_ = other.head_;
         tail_ = other.tail_;
-        capacity_ = other.capacity_;
+        buffer_size_ = other.buffer_size_;
         default_element_ = other.default_element_;
         ring_buffer_ = other.ring_buffer_; // Deep copy
         return *this;

@@ -5,6 +5,7 @@
 #include <random> // std::mt19937_64
 #include <sstream>
 
+#include "common/config.h"
 #include "common/dynamic_array.h"
 #include "common/util.h"
 
@@ -12,7 +13,7 @@ namespace covered
 {
     const std::string ClientStatisticsTracker::kClassName("ClientStatisticsTracker");
     
-    ClientStatisticsTracker::ClientStatisticsTracker(uint32_t perclient_workercnt, uint32_t latency_histogram_size, const uint32_t& client_idx)
+    ClientStatisticsTracker::ClientStatisticsTracker(uint32_t perclient_workercnt, const uint32_t& client_idx)
     {
         // Differentiate ClientStatisticsWrapper threads
         std::ostringstream oss;
@@ -20,7 +21,7 @@ namespace covered
         instance_name_ = oss.str();
 
         perclient_workercnt_ = perclient_workercnt;
-        latency_histogram_size_ = latency_histogram_size;
+        latency_histogram_size_ = Config::getLatencyHistogramSize();
 
         latency_histogram_ = new std::atomic<uint32_t>[latency_histogram_size_];
         assert(latency_histogram_ != NULL);

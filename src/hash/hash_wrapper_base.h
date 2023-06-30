@@ -16,7 +16,7 @@ namespace covered
     class HashWrapperBase
     {
     public:
-        static HashWrapperBase* getHashWrapper(const std::string& hash_name);
+        static HashWrapperBase* getHashWrapperByHashName(const std::string& hash_name);
 
         HashWrapperBase();
         virtual ~HashWrapperBase();

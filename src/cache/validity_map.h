@@ -13,7 +13,7 @@
 
 #include "common/key.h"
 #include "concurrency/concurrent_hashtable_impl.h"
-#include "edge/edge_param.h"
+#include "concurrency/perkey_rwlock.h"
 
 namespace covered
 {
@@ -51,7 +51,7 @@ namespace covered
     class ValidityMap
     {
     public:
-        ValidityMap(EdgeParam* edge_param_ptr);
+        ValidityMap(const uint32_t& edge_idx, const PerkeyRwlock* perkey_rwlock_ptr);
         ~ValidityMap();
 
         bool isValidFlagForKey(const Key& key, bool& is_exist) const;

@@ -29,7 +29,7 @@ void* launchCloud(void* cloud_param_ptr)
 
 void* launchEdge(void* edge_param_ptr)
 {
-    covered::EdgeWrapper* local_edge_ptr = new covered::EdgeWrapper(covered::Param::getCacheName(), covered::Param::getHashName(), (covered::EdgeParam*)edge_param_ptr, covered::Param::getCapacityBytes());
+    covered::EdgeWrapper* local_edge_ptr = new covered::EdgeWrapper(covered::Param::getCacheName(), covered::Param::getCapacityBytes(), covered::Param::getEdgecnt(), covered::Param::getHashName(), covered::Param::getPercacheserverWorkercnt(), (covered::EdgeParam*)edge_param_ptr);
     assert(local_edge_ptr != NULL);
     local_edge_ptr->start();
 
@@ -43,7 +43,7 @@ void* launchEdge(void* edge_param_ptr)
 
 void* launchClient(void* client_param_ptr)
 {
-    covered::ClientWrapper local_client((covered::ClientParam*)client_param_ptr);
+    covered::ClientWrapper local_client(covered::Param::getPerclientWorkercnt(), (covered::ClientParam*)client_param_ptr);
     local_client.start();
     
     pthread_exit(NULL);
@@ -125,11 +125,11 @@ int main(int argc, char **argv) {
     for (uint32_t client_idx = 0; client_idx < clientcnt; client_idx++)
     {
         // Create workload generator for the client
-        workload_generator_ptrs[client_idx] = covered::WorkloadWrapperBase::getWorkloadGenerator(workload_name, client_idx);
+        workload_generator_ptrs[client_idx] = covered::WorkloadWrapperBase::getWorkloadGeneratorByWorkloadName(covered::Param::getClientcnt(), client_idx, covered::Param::getKeycnt(), covered::Param::getOpcnt(), covered::Param::getPerclientWorkercnt(), workload_name);
         assert(workload_generator_ptrs[client_idx] != NULL);
 
         // Create statistics tracker for the client
-        client_statistics_tracker_ptrs[client_idx] = new covered::ClientStatisticsTracker(covered::Param::getPerclientWorkercnt(), covered::Config::getLatencyHistogramSize(), client_idx);
+        client_statistics_tracker_ptrs[client_idx] = new covered::ClientStatisticsTracker(covered::Param::getPerclientWorkercnt(), client_idx);
         assert(client_statistics_tracker_ptrs[client_idx] != NULL);
 
         covered::ClientParam client_param(client_idx, workload_generator_ptrs[client_idx], client_statistics_tracker_ptrs[client_idx]);

@@ -20,7 +20,7 @@ namespace covered
     class WorkloadWrapperBase
     {
     public:
-        static WorkloadWrapperBase* getWorkloadGenerator(const std::string& workload_name, const uint32_t& client_idx);
+        static WorkloadWrapperBase* getWorkloadGeneratorByWorkloadName(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name);
 
         WorkloadWrapperBase(const uint32_t& client_idx);
         virtual ~WorkloadWrapperBase();

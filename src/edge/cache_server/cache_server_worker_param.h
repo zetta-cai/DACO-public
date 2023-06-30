@@ -34,23 +34,21 @@ namespace covered
     class CacheServerWorkerParam
     {
     public:
-        static const uint32_t LOCAL_REQUEST_BUFFER_CAPACITY;
-
         CacheServerWorkerParam();
-        CacheServerWorkerParam(EdgeWrapper* edge_wrapper_ptr, uint32_t local_cache_server_worker_idx, const uint32_t& buffer_capacity = LOCAL_REQUEST_BUFFER_CAPACITY);
+        CacheServerWorkerParam(EdgeWrapper* edge_wrapper_ptr, uint32_t local_cache_server_worker_idx, const uint32_t& data_request_buffer_size);
         ~CacheServerWorkerParam();
 
         const CacheServerWorkerParam& operator=(const CacheServerWorkerParam& other);
 
         EdgeWrapper* getEdgeWrapperPtr() const;
         uint32_t getLocalCacheServerWorkerIdx() const;
-        RingBuffer<CacheServerWorkerItem>* getLocalRequestBufferPtr() const;
+        RingBuffer<CacheServerWorkerItem>* getDataRequestBufferPtr() const;
     private:
         static const std::string kClassName;
 
         EdgeWrapper* edge_wrapper_ptr_;
         uint32_t local_cache_server_worker_idx_;
-        RingBuffer<CacheServerWorkerItem>* local_request_buffer_ptr_;
+        RingBuffer<CacheServerWorkerItem>* data_request_buffer_ptr_;
     };
 }
 

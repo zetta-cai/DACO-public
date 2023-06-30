@@ -15,25 +15,26 @@ namespace covered
 {
     const std::string EdgeWrapper::kClassName("EdgeWrapper");
 
-    EdgeWrapper::EdgeWrapper(const std::string& cache_name, const std::string& hash_name, EdgeParam* edge_param_ptr, const uint32_t& capacity_bytes) : cache_name_(cache_name), edge_param_ptr_(edge_param_ptr), capacity_bytes_(capacity_bytes)
+    EdgeWrapper::EdgeWrapper(const std::string& cache_name, const uint32_t& capacity_bytes, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& percacheserver_workercnt, EdgeParam* edge_param_ptr) : cache_name_(cache_name), capacity_bytes_(capacity_bytes), percacheserver_workercnt_(percacheserver_workercnt), edge_param_ptr_(edge_param_ptr)
     {
         if (edge_param_ptr == NULL)
         {
             Util::dumpErrorMsg(kClassName, "edge_param_ptr is NULL!");
             exit(1);
         }
+        uint32_t edge_idx = edge_param_ptr->getEdgeIdx();
 
         // Differentiate different edge nodes
         std::ostringstream oss;
-        oss << kClassName << " edge" << edge_param_ptr->getEdgeIdx();
+        oss << kClassName << " edge" << edge_idx;
         instance_name_ = oss.str();
         
         // Allocate local edge cache to store hot objects
-        edge_cache_ptr_ = CacheWrapperBase::getEdgeCache(cache_name_, edge_param_ptr);
+        edge_cache_ptr_ = new CacheWrapper(cache_name_, edge_idx);
         assert(edge_cache_ptr_ != NULL);
 
         // Allocate cooperation wrapper for cooperative edge caching
-        cooperation_wrapper_ptr_ = CooperationWrapperBase::getCooperationWrapper(cache_name, hash_name, edge_param_ptr);
+        cooperation_wrapper_ptr_ = CooperationWrapperBase::getCooperationWrapperByCacheName(cache_name, edgecnt, edge_idx, hash_name);
         assert(cooperation_wrapper_ptr_ != NULL);
     }
         
@@ -129,7 +130,7 @@ namespace covered
     {
         assert(edge_wrapper_ptr != NULL);
 
-        BeaconServerBase* beacon_server_ptr = BeaconServerBase::getBeaconServer((EdgeWrapper*)edge_wrapper_ptr);
+        BeaconServerBase* beacon_server_ptr = BeaconServerBase::getBeaconServerByCacheName((EdgeWrapper*)edge_wrapper_ptr);
         assert(beacon_server_ptr != NULL);
         beacon_server_ptr->start();
 
@@ -156,7 +157,7 @@ namespace covered
     {
         assert(edge_wrapper_ptr != NULL);
 
-        InvalidationServerBase* invalidation_server_ptr = InvalidationServerBase::getInvalidationServer((EdgeWrapper*)edge_wrapper_ptr);
+        InvalidationServerBase* invalidation_server_ptr = InvalidationServerBase::getInvalidationServerByCacheName((EdgeWrapper*)edge_wrapper_ptr);
         assert(invalidation_server_ptr != NULL);
         invalidation_server_ptr->start();
 

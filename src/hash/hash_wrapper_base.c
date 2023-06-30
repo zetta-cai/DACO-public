@@ -11,7 +11,7 @@ namespace covered
 {
     const std::string HashWrapperBase::kClassName("HashWrapperBase");
 
-    HashWrapperBase* HashWrapperBase::getHashWrapper(const std::string& hash_name)
+    HashWrapperBase* HashWrapperBase::getHashWrapperByHashName(const std::string& hash_name)
     {
         HashWrapperBase* hash_wrapper_base_ptr = NULL;
         if (hash_name == Param::MMH3_HASH_NAME)

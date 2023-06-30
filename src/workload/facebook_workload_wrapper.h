@@ -21,7 +21,7 @@ namespace covered
     class FacebookWorkloadWrapper : public WorkloadWrapperBase
     {
     public:
-        FacebookWorkloadWrapper(const uint32_t& client_idx);
+        FacebookWorkloadWrapper(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& perclient_workercnt);
         virtual ~FacebookWorkloadWrapper();
     private:
         static const std::string kClassName;
@@ -33,6 +33,12 @@ namespace covered
         virtual WorkloadItem generateItemInternal_(std::mt19937_64& request_randgen) override;
 
         std::unique_ptr<facebook::cachelib::cachebench::GeneratorBase> makeGenerator_(const StressorConfig& config, const uint32_t& client_idx);
+
+        // Come from Param
+        const uint32_t clientcnt_;
+        const uint32_t keycnt_;
+        const uint32_t opcnt_;
+        const uint32_t perclient_workercnt_;
 
         std::string instance_name_;
 

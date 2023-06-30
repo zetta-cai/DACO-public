@@ -15,7 +15,7 @@ namespace covered
     class ClientStatisticsTracker
     {
     public:
-        ClientStatisticsTracker(uint32_t perclient_workercnt, uint32_t latency_histogram_size, const uint32_t& client_idx);
+        ClientStatisticsTracker(uint32_t perclient_workercnt, const uint32_t& client_idx);
         ClientStatisticsTracker(const std::string& filepath, const uint32_t& client_idx);
         ~ClientStatisticsTracker();
 
@@ -68,8 +68,8 @@ namespace covered
         std::atomic<uint32_t>* perclientworker_cooperative_hitcnts_; // Hit cooperative edge cache of some target edge node
         std::atomic<uint32_t>* perclientworker_reqcnts_;
         std::atomic<uint32_t>* latency_histogram_;
-        uint32_t perclient_workercnt_; // Come from Util::Param
-        uint32_t latency_histogram_size_; // Come from Util::Config
+        uint32_t perclient_workercnt_; // Come from Param
+        uint32_t latency_histogram_size_; // Come from Config::latency_histogram_size_
     };
 }
 

@@ -20,7 +20,7 @@ namespace covered
     class BasicCooperationWrapper : public CooperationWrapperBase
     {
     public:
-        BasicCooperationWrapper(const std::string& hash_name, EdgeParam* edge_param_ptr);
+        BasicCooperationWrapper(const uint32_t& edgecnt, const uint32_t& edge_idx, const std::string& hash_name);
         virtual ~BasicCooperationWrapper();
     private:
         static const std::string kClassName;

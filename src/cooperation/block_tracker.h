@@ -14,9 +14,9 @@
 #include <unordered_set>
 
 #include "concurrency/concurrent_hashtable_impl.h"
+#include "concurrency/perkey_rwlock.h"
 #include "common/key.h"
 #include "cooperation/msi/msi_metadata.h"
-#include "edge/edge_param.h"
 #include "network/network_addr.h"
 
 namespace covered
@@ -24,7 +24,7 @@ namespace covered
     class BlockTracker
     {
     public:
-        BlockTracker(EdgeParam* edge_param_ptr);
+        BlockTracker(const uint32_t& edge_idx, const PerkeyRwlock* perkey_rwlock_ptr);
         ~BlockTracker();
 
         // (1) For DirectoryLookup

@@ -14,7 +14,7 @@ namespace covered
 {
     const std::string InvalidationServerBase::kClassName("InvalidationServerBase");
 
-    InvalidationServerBase* InvalidationServerBase::getInvalidationServer(EdgeWrapper* edge_wrapper_ptr)
+    InvalidationServerBase* InvalidationServerBase::getInvalidationServerByCacheName(EdgeWrapper* edge_wrapper_ptr)
     {
         InvalidationServerBase* invalidation_server_ptr = NULL;
 

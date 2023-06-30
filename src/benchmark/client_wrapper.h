@@ -19,7 +19,7 @@ namespace covered
     class ClientWrapper
     {
     public:
-        ClientWrapper(ClientParam* client_param_ptr);
+        ClientWrapper(const uint32_t& perclient_workercnt, ClientParam* client_param_ptr);
         ~ClientWrapper();
 
         void start();
@@ -27,6 +27,8 @@ namespace covered
         static const std::string kClassName;
 
         static void* launchClientWorker_(void* client_worker_param_ptr);
+
+        const uint32_t perclient_workercnt_;
 
         std::string instance_name_;
         ClientParam* client_param_ptr_;

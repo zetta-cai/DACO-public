@@ -8,7 +8,7 @@ namespace covered
 {
     const std::string Mmh3HashWrapper::kClassName("Mmh3HashWrapper");
 
-    Mmh3HashWrapper::Mmh3HashWrapper(const uint32_t& seed) : seed_(seed)
+    Mmh3HashWrapper::Mmh3HashWrapper(const uint32_t& seed) : HashWrapperBase(), seed_(seed)
     {
     }
 

@@ -13,11 +13,13 @@ namespace covered
     const std::string Config::CLOUD_IPSTR_KEYSTR("cloud_ipstr");
     const std::string Config::CLOUD_RECVREQ_STARTPORT_KEYSTR("cloud_recvreq_startport");
     const std::string Config::CLOUD_ROCKSDB_BASEDIR_KEYSTR("cloud_rocksdb_basedir");
+    const std::string Config::DATA_REQUEST_BUFFER_SIZE_KEYSTR("data_request_buffer_size");
     const std::string Config::EDGE_IPSTRS_KEYSTR("edge_ipstrs");
     const std::string Config::EDGE_BEACON_SERVER_RECVREQ_STARTPORT_KEYSTR("edge_beacon_server_recvreq_startport");
     const std::string Config::EDGE_CACHE_SERVER_RECVREQ_STARTPORT_KEYSTR("edge_cache_server_recvreq_startport");
     const std::string Config::EDGE_INVALIDATION_SERVER_RECVREQ_STARTPORT_KEYSTR("edge_invalidation_server_recvreq_startport");
     const std::string Config::FACEBOOK_CONFIG_FILEPATH_KEYSTR("facebook_config_filepath");
+    const std::string Config::FINE_GRAINED_LOCKING_SIZE_KEYSTR("fine_grained_locking_size");
     const std::string Config::LATENCY_HISTOGRAM_SIZE_KEYSTR("latency_histogram_size");
     const std::string Config::OUTPUT_BASEDIR_KEYSTR("output_basedir");
     const std::string Config::VERSION_KEYSTR("version");
@@ -30,11 +32,13 @@ namespace covered
     std::string Config::cloud_ipstr_ = Util::LOCALHOST_IPSTR;
     uint16_t Config::cloud_recvreq_startport_ = 4100; // [4096, 65536]
     std::string Config::cloud_rocksdb_basedir_("/tmp/cloud");
+    uint32_t Config::data_request_buffer_size_ = 1000;
     std::vector<std::string> Config::edge_ipstrs_(0);
     uint16_t Config::edge_beacon_server_recvreq_startport_ = 4200; // [4096, 65536]
     uint16_t Config::edge_cache_server_recvreq_startport_ = 4300; // [4096, 65536]
     uint16_t Config::edge_invalidation_server_recvreq_startport_ = 4400; // [4096, 65536]
     std::string Config::facebook_config_filepath_("lib/CacheLib/cachelib/cachebench/test_configs/hit_ratio/cdn/config.json");
+    uint32_t Config::fine_grained_locking_size_ = 1000;
     uint32_t Config::latency_histogram_size_ = 1000000; // Track latency up to 1000 ms
     std::string Config::output_basedir_("output");
     std::string Config::version_("1.0");
@@ -67,6 +71,12 @@ namespace covered
             {
                 cloud_rocksdb_basedir_ = kv_ptr->value().get_string();
             }
+            kv_ptr = find_(DATA_REQUEST_BUFFER_SIZE_KEYSTR);
+            if (kv_ptr != NULL)
+            {
+                int64_t tmp_size = kv_ptr->value().get_int64();
+                data_request_buffer_size_ = Util::toUint32(tmp_size);
+            }
             kv_ptr = find_(EDGE_IPSTRS_KEYSTR);
             if (kv_ptr != NULL)
             {
@@ -97,6 +107,12 @@ namespace covered
             if (kv_ptr != NULL)
             {
                 facebook_config_filepath_ = kv_ptr->value().get_string();
+            }
+            kv_ptr = find_(FINE_GRAINED_LOCKING_SIZE_KEYSTR);
+            if (kv_ptr != NULL)
+            {
+                int64_t tmp_size = kv_ptr->value().get_int64();
+                fine_grained_locking_size_ = Util::toUint32(tmp_size);
             }
             kv_ptr = find_(LATENCY_HISTOGRAM_SIZE_KEYSTR);
             if (kv_ptr != NULL)
@@ -157,6 +173,12 @@ namespace covered
         return cloud_rocksdb_basedir_;
     }
 
+    uint32_t Config::getDataRequestBufferSize()
+    {
+        checkIsValid_();
+        return data_request_buffer_size_;
+    }
+
     std::string Config::getEdgeIpstr(const uint32_t& edge_idx)
     {
         checkIsValid_();
@@ -195,6 +217,12 @@ namespace covered
         return facebook_config_filepath_;
     }
 
+    uint32_t Config::getFineGrainedLockingSize()
+    {
+        checkIsValid_();
+        return fine_grained_locking_size_;
+    }
+
     uint32_t Config::getLatencyHistogramSize()
     {
         checkIsValid_();
@@ -221,10 +249,12 @@ namespace covered
         oss << "Cloud ipstr: " << cloud_ipstr_ << std::endl;
         oss << "Cloud recvreq port: " << cloud_recvreq_startport_ << std::endl;
         oss << "Cloud RocksDB base directory: " << cloud_rocksdb_basedir_ << std::endl;
+        oss << "Data request buffer size: " << data_request_buffer_size_ << std::endl;
         oss << "Edge beacon server recvreq startport: " << edge_beacon_server_recvreq_startport_ << std::endl;
         oss << "Edge cache server recvreq startport: " << edge_cache_server_recvreq_startport_ << std::endl;
         oss << "Edge invalidation server recvreq startport: " << edge_invalidation_server_recvreq_startport_ << std::endl;
         oss << "Facebook config filepath: " << facebook_config_filepath_ << std::endl;
+        oss << "Fine-grained locking size: " << fine_grained_locking_size_ << std::endl;
         oss << "Version: " << version_;
         return oss.str();
     }

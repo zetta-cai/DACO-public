@@ -79,12 +79,11 @@ namespace covered
 
     const std::string ValidityMap::kClassName("ValidityMap");
 
-    ValidityMap::ValidityMap(EdgeParam* edge_param_ptr) : perkey_validity_("perkey_validity_", ValidityFlag())
+    ValidityMap::ValidityMap(const uint32_t& edge_idx, const PerkeyRwlock* perkey_rwlock_ptr) : perkey_validity_("perkey_validity_", ValidityFlag(), perkey_rwlock_ptr)
     {
         // Differentiate local edge cache in different edge nodes
-        assert(edge_param_ptr != NULL);
         std::ostringstream oss;
-        oss << kClassName << " edge" << edge_param_ptr->getEdgeIdx();
+        oss << kClassName << " edge" << edge_idx;
         instance_name_ = oss.str();
     }
 

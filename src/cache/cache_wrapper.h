@@ -1,0 +1,87 @@
+/*
+ * CacheWrapper: provide general local edge cache interfaces with validity flags (thread safe).
+ * 
+ * NOTE: all non-const shared variables in CacheWrapperBase should be thread safe.
+ * 
+ * By Siyuan Sheng (2023.05.16).
+ */
+
+#ifndef CACHE_WRAPPER_H
+#define CACHE_WRAPPER_H
+
+#include <string>
+
+#include "cache/local_cache_base.h"
+#include "cache/validity_map.h"
+#include "common/key.h"
+#include "common/value.h"
+#include "concurrency/perkey_rwlock.h"
+
+namespace covered
+{
+    class CacheWrapper
+    {
+    public:
+        CacheWrapper(const std::string& cache_name, const uint32_t& edge_idx);
+        virtual ~CacheWrapper();
+
+        // (1) Check is cached and access validity
+
+        bool isLocalCached(const Key& key) const;
+        bool isValidKeyForLocalCachedObject(const Key& key) const;
+        // For invalidation control requests
+        void invalidateKeyForLocalCachedObject(const Key& key); // Add an invalid flag if key NOT exist
+
+        // (2) Access local edge cache
+
+        // Return whether key is cached and valid (i.e., local cache hit) after get/update/remove
+        bool get(const Key& key, Value& value) const;
+
+        // Return whether key is cached, while both update() and remove() will set validity as true
+        // NOTE: update() only updates the object if cached, yet not admit a new one
+        // NOTE: remove() only marks the object as deleted if cached, yet not evict it
+        bool update(const Key& key, const Value& value);
+        bool remove(const Key& key);
+
+        // (3) Local edge cache management
+
+        bool needIndependentAdmit(const Key& key) const;
+        void admit(const Key& key, const Value& value, const bool& is_valid);
+        void evict(Key& key, Value& value);
+
+        // (4) Other functions
+        
+        // In units of bytes
+        uint32_t getSizeForCapacity() const; // sum of internal size (each individual local cache) and external size (metadata for edge caching)
+    private:
+        static const std::string kClassName;
+
+        // (1) Check is cached and access validity
+
+        bool isValidKeyForLocalCachedObject_(const Key& key) const;
+        // For local put/del requests invoked by update() and remove()
+        void validateKeyForLocalCachedObject_(const Key& key); // Add a valid flag if key NOT exist
+        // For local get/put/del requests invoked by admit() w/o writes
+        void validateKeyForLocalUncachedObject_(const Key& key); // Add an invalid flag if key NOT exist
+        // For local get/put/del requests invoked by admit() w/ writes
+        void invalidateKeyForLocalUncachedObject_(const Key& key); // Add an invalid flag if key NOT exist
+
+        // (4) Other functions
+
+        void checkPointers_() const;
+
+        // Member variables
+
+        std::string instance_name_; // Const shared variable
+
+        // Fine-graind locking
+        mutable PerkeyRwlock* cache_wrapper_perkey_rwlock_ptr_;
+
+        // Non-const shared variable
+        // NOTE: Due to the write-through policy, we only need to maintain an invalidity flag for MSI protocol (i.e., both M and S refers to validity)
+        ValidityMap* validity_map_ptr_; // Maintain per-key validity flag for local edge cache (thread safe)
+        LocalCacheBase* local_cache_ptr_; // Maintain key-value objects for local edge cache (thread safe)
+    };
+}
+
+#endif

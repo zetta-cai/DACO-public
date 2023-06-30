@@ -21,7 +21,7 @@ namespace covered
     class InvalidationServerBase
     {
     public:
-        static InvalidationServerBase* getInvalidationServer(EdgeWrapper* edge_wrapper_ptr);
+        static InvalidationServerBase* getInvalidationServerByCacheName(EdgeWrapper* edge_wrapper_ptr);
 
         InvalidationServerBase(EdgeWrapper* edge_wrapper_ptr);
         virtual ~InvalidationServerBase();

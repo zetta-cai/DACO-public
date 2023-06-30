@@ -11,13 +11,10 @@
 namespace covered
 {
     template<class V>
-    const uint32_t ConcurrentHashtable<V>::CONCURRENT_HASHTABLE_BUCKET_COUNT = 1000;
-
-    template<class V>
     const std::string ConcurrentHashtable<V>::kClassName("ConcurrentHashtable");
 
     template<class V>
-    ConcurrentHashtable<V>::ConcurrentHashtable(const std::string& table_name, const V& default_value, const uint32_t& bucket_count)
+    ConcurrentHashtable<V>::ConcurrentHashtable(const std::string& table_name, const V& default_value, const PerkeyRwlock* perkey_rwlock_ptr) : perkey_rwlock_ptr_(perkey_rwlock_ptr)
     {
         std::ostringstream oss;
         oss << kClassName << " of " << table_name;
@@ -25,12 +22,9 @@ namespace covered
 
         default_value_ = default_value;
 
-        hash_wrapper_ptr_ = HashWrapperBase::getHashWrapper(Param::MMH3_HASH_NAME);
-        assert(hash_wrapper_ptr_ != NULL);
-        
-        rwlocks_ = new boost::shared_mutex[bucket_count];
-        assert(rwlocks_ != NULL);
+        assert(perkey_rwlock_ptr_ != NULL);
 
+        uint32_t bucket_count = perkey_rwlock_ptr_->getFineGrainedLockingSize();
         hashtables_.resize(bucket_count);
         for (uint32_t bucket_idx = 0; bucket_idx < bucket_count; bucket_idx++)
         {
@@ -41,34 +35,17 @@ namespace covered
     template<class V>
     ConcurrentHashtable<V>::~ConcurrentHashtable()
     {
-        assert(rwlocks_ != NULL);
-        delete[] rwlocks_;
-        rwlocks_ = NULL;
-
-        assert(hash_wrapper_ptr_ != NULL);
-        delete hash_wrapper_ptr_;
-        hash_wrapper_ptr_ = NULL;
+        // NOTE: no need to release perkey_rwlock_ptr_, which is maintained outside ConcurrentHashtable (e.g., in CacheWrapperBase and CooperationWrapperBase)
     }
 
     template<class V>
     bool ConcurrentHashtable<V>::isExist(const Key& key) const
     {
-        assert(rwlocks_ != NULL);
+        assert(perkey_rwlock_ptr_ != NULL);
 
-        // Acquire a read lock
-        uint32_t hashidx = getHashIndex_(key);
-        while (true)
-        {
-            if (rwlocks_[hashidx].try_lock_shared())
-            {
-                // TMPDEBUG
-                std::ostringstream oss;
-                oss << "acquire a read lock for key " << key.getKeystr() << " in isExist()";
-                Util::dumpDebugMsg(instance_name_, oss.str());
-
-                break;
-            }
-        }
+        // Must be protected by a read lock
+        assert(perkey_rwlock_ptr_->isReadLocked(key));
+        uint32_t hashidx = perkey_rwlock_ptr_->getRwlockIndex(key);
 
         bool is_exist = false;
 
@@ -76,8 +53,8 @@ namespace covered
         typename std::unordered_map<Key, V, KeyHasher>::const_iterator iter = tmp_hashtable.find(key);
         is_exist = (iter != tmp_hashtable.end());
 
-        // Release the read lock
-        rwlocks_[hashidx].unlock_shared();
+        // Must be protected by a read lock
+        assert(perkey_rwlock_ptr_->isReadLocked(key));
 
         return is_exist;
     }
@@ -85,22 +62,11 @@ namespace covered
     /*template<class V>
     V ConcurrentHashtable<V>::getIfExist(const Key& key, bool& is_exist) const
     {
-        assert(rwlocks_ != NULL);
+        assert(perkey_rwlock_ptr_ != NULL);
 
-        // Acquire a read lock
-        uint32_t hashidx = getHashIndex_(key);
-        while (true)
-        {
-            if (rwlocks_[hashidx].try_lock_shared())
-            {
-                // TMPDEBUG
-                std::ostringstream oss;
-                oss << "acquire a read lock for key " << key.getKeystr() << " in getIfExist()";
-                Util::dumpDebugMsg(instance_name_, oss.str());
-
-                break;
-            }
-        }
+        // Must be protected by a read lock
+        assert(perkey_rwlock_ptr_->isReadLocked(key));
+        uint32_t hashidx = perkey_rwlock_ptr_->getRwlockIndex(key);
 
         V value;
         const std::unordered_map<Key, V, KeyHasher>& tmp_hashtable = hashtables_[hashidx];
@@ -116,8 +82,8 @@ namespace covered
             is_exist = false;
         }
 
-        // Release the read lock
-        rwlocks_[hashidx].unlock_shared();
+        // Must be protected by a read lock
+        assert(perkey_rwlock_ptr_->isReadLocked(key));
 
         return value;
     }*/
@@ -125,22 +91,11 @@ namespace covered
     template<class V>
     void ConcurrentHashtable<V>::insertOrUpdate(const Key& key, const V& value, bool& is_exist)
     {
-        assert(rwlocks_ != NULL);
+        assert(perkey_rwlock_ptr_ != NULL);
 
-        // Acquire a write lock
-        uint32_t hashidx = getHashIndex_(key);
-        while (true)
-        {
-            if (rwlocks_[hashidx].try_lock())
-            {
-                // TMPDEBUG
-                std::ostringstream oss;
-                oss << "acquire a write lock for key " << key.getKeystr() << " in insertOrUpdate()";
-                Util::dumpDebugMsg(instance_name_, oss.str());
-
-                break;
-            }
-        }
+        // Must be protected by a write lock
+        assert(perkey_rwlock_ptr_->isWriteLocked(key));
+        uint32_t hashidx = perkey_rwlock_ptr_->getRwlockIndex(key);
 
         std::unordered_map<Key, V, KeyHasher>& tmp_hashtable = hashtables_[hashidx];
         typename std::unordered_map<Key, V, KeyHasher>::iterator iter = tmp_hashtable.find(key);
@@ -163,8 +118,8 @@ namespace covered
             updateTotalValueSize_(iter->second.getSizeForCapacity(), original_value_size);
         }
 
-        // Release the write lock
-        rwlocks_[hashidx].unlock();
+        // Must be protected by a write lock
+        assert(perkey_rwlock_ptr_->isWriteLocked(key));
 
         return;
     }
@@ -172,22 +127,11 @@ namespace covered
     template<class V>
     void ConcurrentHashtable<V>::insertOrCall(const Key& key, const V& value, bool& is_exist, const std::string& function_name, void* param_ptr)
     {
-        assert(rwlocks_ != NULL);
+        assert(perkey_rwlock_ptr_ != NULL);
 
-        // Acquire a write lock
-        uint32_t hashidx = getHashIndex_(key);
-        while (true)
-        {
-            if (rwlocks_[hashidx].try_lock())
-            {
-                // TMPDEBUG
-                std::ostringstream oss;
-                oss << "acquire a write lock for key " << key.getKeystr() << " in insertOrCall()";
-                Util::dumpDebugMsg(instance_name_, oss.str());
-
-                break;
-            }
-        }
+        // Must be protected by a write lock
+        assert(perkey_rwlock_ptr_->isWriteLocked(key));
+        uint32_t hashidx = perkey_rwlock_ptr_->getRwlockIndex(key);
 
         std::unordered_map<Key, V, KeyHasher>& tmp_hashtable = hashtables_[hashidx];
         typename std::unordered_map<Key, V, KeyHasher>::iterator iter = tmp_hashtable.find(key);
@@ -213,8 +157,8 @@ namespace covered
         }
 
 
-        // Release the write lock
-        rwlocks_[hashidx].unlock();
+        // Must be protected by a write lock
+        assert(perkey_rwlock_ptr_->isWriteLocked(key));
 
         return;
     }
@@ -222,22 +166,11 @@ namespace covered
     template<class V>
     void ConcurrentHashtable<V>::callIfExist(const Key& key, bool& is_exist, const std::string& function_name, void* param_ptr)
     {
-        assert(rwlocks_ != NULL);
+        assert(perkey_rwlock_ptr_ != NULL);
 
-        // Acquire a write lock
-        uint32_t hashidx = getHashIndex_(key);
-        while (true)
-        {
-            if (rwlocks_[hashidx].try_lock())
-            {
-                // TMPDEBUG
-                std::ostringstream oss;
-                oss << "acquire a write lock for key " << key.getKeystr() << " in callIfExist()";
-                Util::dumpDebugMsg(instance_name_, oss.str());
-
-                break;
-            }
-        }
+        // Must be protected by a write lock
+        assert(perkey_rwlock_ptr_->isWriteLocked(key));
+        uint32_t hashidx = perkey_rwlock_ptr_->getRwlockIndex(key);
 
         std::unordered_map<Key, V, KeyHasher>& tmp_hashtable = hashtables_[hashidx];
         typename std::unordered_map<Key, V, KeyHasher>::iterator iter = tmp_hashtable.find(key);
@@ -266,8 +199,8 @@ namespace covered
             is_exist = false;
         }
 
-        // Release the write lock
-        rwlocks_[hashidx].unlock();
+        // Must be protected by a write lock
+        assert(perkey_rwlock_ptr_->isWriteLocked(key));
 
         return;
     }
@@ -275,22 +208,11 @@ namespace covered
     template<class V>
     void ConcurrentHashtable<V>::constCallIfExist(const Key& key, bool& is_exist, const std::string& function_name, void* param_ptr) const
     {
-        assert(rwlocks_ != NULL);
+        assert(perkey_rwlock_ptr_ != NULL);
 
-        // Acquire a read lock
-        uint32_t hashidx = getHashIndex_(key);
-        while (true)
-        {
-            if (rwlocks_[hashidx].try_lock_shared())
-            {
-                // TMPDEBUG
-                std::ostringstream oss;
-                oss << "acquire a read lock for key " << key.getKeystr() << " in constCallIfExist()";
-                Util::dumpDebugMsg(instance_name_, oss.str());
-
-                break;
-            }
-        }
+        // Must be protected by a read lock
+        assert(perkey_rwlock_ptr_->isReadLocked(key));
+        uint32_t hashidx = perkey_rwlock_ptr_->getRwlockIndex(key);
 
         const std::unordered_map<Key, V, KeyHasher>& tmp_hashtable = hashtables_[hashidx];
         typename std::unordered_map<Key, V, KeyHasher>::const_iterator iter = tmp_hashtable.find(key);
@@ -306,8 +228,8 @@ namespace covered
             is_exist = false;
         }
 
-        // Release the read lock
-        rwlocks_[hashidx].unlock_shared();
+        // Must be protected by a read lock
+        assert(perkey_rwlock_ptr_->isReadLocked(key));
 
         return;
     }
@@ -315,22 +237,11 @@ namespace covered
     template<class V>
     void ConcurrentHashtable<V>::eraseIfExist(const Key& key, bool& is_exist)
     {
-        assert(rwlocks_ != NULL);
+        assert(perkey_rwlock_ptr_ != NULL);
 
-        // Acquire a write lock
-        uint32_t hashidx = getHashIndex_(key);
-        while (true)
-        {
-            if (rwlocks_[hashidx].try_lock())
-            {
-                // TMPDEBUG
-                std::ostringstream oss;
-                oss << "acquire a write lock for key " << key.getKeystr() << " in eraseIfExist()";
-                Util::dumpDebugMsg(instance_name_, oss.str());
-
-                break;
-            }
-        }
+        // Must be protected by a write lock
+        assert(perkey_rwlock_ptr_->isWriteLocked(key));
+        uint32_t hashidx = perkey_rwlock_ptr_->getRwlockIndex(key);
 
         std::unordered_map<Key, V, KeyHasher>& tmp_hashtable = hashtables_[hashidx];
         typename std::unordered_map<Key, V, KeyHasher>::iterator iter = tmp_hashtable.find(key);
@@ -349,8 +260,8 @@ namespace covered
             is_exist = false;
         }
 
-        // Release the write lock
-        rwlocks_[hashidx].unlock();
+        // Must be protected by a write lock
+        assert(perkey_rwlock_ptr_->isWriteLocked(key));
 
         return;
     }
@@ -365,17 +276,6 @@ namespace covered
     uint32_t ConcurrentHashtable<V>::getTotalValueSizeForCapcity() const
     {
         return total_value_size_;
-    }
-
-    template<class V>
-    uint32_t ConcurrentHashtable<V>::getHashIndex_(const Key& key) const
-    {
-        // No need to acquire any lock, which has been done in get(), insert(), and erase()
-
-        assert(hash_wrapper_ptr_ != NULL);
-        uint32_t hash_value = hash_wrapper_ptr_->hash(key);
-        uint32_t hashidx = hash_value % hashtables_.size();
-        return hashidx;
     }
 
     template<class V>

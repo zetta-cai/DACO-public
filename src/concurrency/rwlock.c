@@ -17,7 +17,19 @@ namespace covered
 
     Rwlock::~Rwlock() {}
 
-    bool Rwlock::try_lock_shared(const std::string& context_name)
+    void Rwlock::acquire_lock_shared(const std::string& context_name)
+    {
+        while (true)
+        {
+            if (try_lock_shared_(context_name))
+            {
+                break;
+            }
+        }
+        return;
+    }
+
+    bool Rwlock::try_lock_shared_(const std::string& context_name)
     {
         bool result = rwlock_.try_lock_shared();
 
@@ -32,18 +44,30 @@ namespace covered
         return result;
     }
 
-    void Rwlock::unlock_shared()
+    void Rwlock::unlock_shared(const std::string& context_name)
     {
         // TMPDEBUG
         std::ostringstream oss;
-        oss << "release a read lock";
+        oss << "release a read lock in " << context_name;
         Util::dumpDebugMsg(instance_name_, oss.str());
 
         rwlock_.unlock_shared();
         return;
     }
 
-    bool Rwlock::try_lock(const std::string& context_name)
+    void Rwlock::acquire_lock(const std::string& context_name)
+    {
+        while (true)
+        {
+            if (try_lock_(context_name))
+            {
+                break;
+            }
+        }
+        return;
+    }
+
+    bool Rwlock::try_lock_(const std::string& context_name)
     {
         bool result = rwlock_.try_lock();
 
@@ -58,11 +82,11 @@ namespace covered
         return result;
     }
 
-    void Rwlock::unlock()
+    void Rwlock::unlock(const std::string& context_name)
     {
         // TMPDEBUG
         std::ostringstream oss;
-        oss << "release a write lock";
+        oss << "release a write lock in " << context_name;
         Util::dumpDebugMsg(instance_name_, oss.str());
 
         rwlock_.unlock();

@@ -22,7 +22,7 @@ namespace covered
         return NULL;
     }
 
-    ClientWrapper::ClientWrapper(ClientParam* client_param_ptr)
+    ClientWrapper::ClientWrapper(const uint32_t& perclient_workercnt, ClientParam* client_param_ptr) : perclient_workercnt_(perclient_workercnt)
     {
         if (client_param_ptr == NULL)
         {
@@ -46,21 +46,20 @@ namespace covered
 
     void ClientWrapper::start()
     {
-        uint32_t perclient_workercnt = Param::getPerclientWorkercnt();
-        pthread_t client_worker_threads[perclient_workercnt];
-        ClientWorkerParam client_worker_params[perclient_workercnt];
+        pthread_t client_worker_threads[perclient_workercnt_];
+        ClientWorkerParam client_worker_params[perclient_workercnt_];
         int pthread_returncode;
         assert(client_param_ptr_ != NULL);
 
         // Prepare perclient_workercnt worker parameters
-        for (uint32_t local_client_worker_idx = 0; local_client_worker_idx < perclient_workercnt; local_client_worker_idx++)
+        for (uint32_t local_client_worker_idx = 0; local_client_worker_idx < perclient_workercnt_; local_client_worker_idx++)
         {
             ClientWorkerParam local_client_worker_param(client_param_ptr_, local_client_worker_idx);
             client_worker_params[local_client_worker_idx] = local_client_worker_param;
         }
 
         // Launch perclient_workercnt worker threads in the local client
-        for (uint32_t local_client_worker_idx = 0; local_client_worker_idx < perclient_workercnt; local_client_worker_idx++)
+        for (uint32_t local_client_worker_idx = 0; local_client_worker_idx < perclient_workercnt_; local_client_worker_idx++)
         {
             pthread_returncode = pthread_create(&client_worker_threads[local_client_worker_idx], NULL, launchClientWorker_, (void*)(&(client_worker_params[local_client_worker_idx])));
             if (pthread_returncode != 0)
@@ -73,7 +72,7 @@ namespace covered
         }
 
         // Wait for all local workers
-        for (uint32_t local_client_worker_idx = 0; local_client_worker_idx < perclient_workercnt; local_client_worker_idx++)
+        for (uint32_t local_client_worker_idx = 0; local_client_worker_idx < perclient_workercnt_; local_client_worker_idx++)
         {
             pthread_returncode = pthread_join(client_worker_threads[local_client_worker_idx], NULL); // void* retval = NULL
             if (pthread_returncode != 0)

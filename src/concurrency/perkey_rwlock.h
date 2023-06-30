@@ -7,8 +7,8 @@
 #ifndef PERKEY_RWLOCK_H
 #define PERKEY_RWLOCK_H
 
+#include <atomic>
 #include <string>
-#include <vector>
 
 #include <boost/thread/shared_mutex.hpp>
 
@@ -20,26 +20,32 @@ namespace covered
     class PerkeyRwlock
     {
     public:
-        PerkeyRwlock(const uint32_t& edge_idx);
+        PerkeyRwlock(const uint32_t& edge_idx, const uint32_t& fine_grained_locking_size);
         ~PerkeyRwlock();
 
         // The same interfaces as libboost
-        bool try_lock_shared(const Key& key, const std::string& context_name);
-        void unlock_shared(const Key& key);
-        bool try_lock(const Key& key, const std::string& context_name);
-        void unlock(const Key& key);
+        void acquire_lock_shared(const Key& key, const std::string& context_name);
+        void unlock_shared(const Key& key, const std::string& context_name);
+        void acquire_lock(const Key& key, const std::string& context_name);
+        void unlock(const Key& key, const std::string& context_name);
+
+        bool isReadLocked(const Key& key) const;
+        bool isWriteLocked(const Key& key) const;
+        uint32_t getRwlockIndex(const Key& key) const;
+        uint32_t getFineGrainedLockingSize() const;
     private:
-        // NOTE: we cannot use std::vector<boost::shared_mutex> as boost::shared_mutex does not have copy constructor
-        typedef std::vector<boost::shared_mutex*> rwlock_hashtable_t; 
-
         static const std::string kClassName;
-        static const uint32_t RWLOCK_HASHTABLE_CAPCITY;
 
-        uint32_t getRwlockIndex_(const Key& key);
+        bool try_lock_shared_(const Key& key, const std::string& context_name);
+        bool try_lock_(const Key& key, const std::string& context_name);
 
         std::string instance_name_;
+        uint32_t fine_grained_locking_size_; // Come from Config::fine_grained_locking_size_
 
-        rwlock_hashtable_t rwlock_hashtable_;
+        // NOTE: we have to use dynamic array for boost::shared_mutex and std::atomic, as they do NOT have copy constructor and operator= for std::vector (e.g., resize() and push_back())
+        boost::shared_mutex* rwlock_hashtable_;
+        std::atomic<uint32_t>* read_lock_cnts_;
+        std::atomic<bool>* write_lock_flags_;
         HashWrapperBase* hash_wrapper_ptr_;
     };
 }

@@ -1,0 +1,320 @@
+#include "cache/cache_wrapper.h"
+
+#include <assert.h>
+#include <sstream>
+
+#include "common/config.h"
+#include "common/param.h"
+#include "common/util.h"
+
+namespace covered
+{
+    const std::string CacheWrapper::kClassName("CacheWrapper");
+
+    CacheWrapper::CacheWrapper(const std::string& cache_name, const uint32_t& edge_idx)
+    {
+        // Differentiate local edge cache in different edge nodes
+        std::ostringstream oss;
+        oss << kClassName << " edge" << edge_idx;
+        instance_name_ = oss.str();
+
+        // Allocate per-key rwlock for cache wrapper
+        cache_wrapper_perkey_rwlock_ptr_ = new PerkeyRwlock(edge_idx, Config::getFineGrainedLockingSize());
+        assert(cache_wrapper_perkey_rwlock_ptr_ != NULL);
+
+        // Allocate validity map
+        validity_map_ptr_ = new ValidityMap(edge_idx, cache_wrapper_perkey_rwlock_ptr_);
+        assert(validity_map_ptr_ != NULL);
+
+        // Allocate local edge cache
+        local_cache_ptr_ = LocalCacheBase::getLocalCacheByCacheName(cache_name, edge_idx);
+        assert(local_cache_ptr_ != NULL);
+    }
+    
+    CacheWrapper::~CacheWrapper()
+    {
+        // Release per-key rwlock for cache wrapper
+        assert(cache_wrapper_perkey_rwlock_ptr_ != NULL);
+        delete cache_wrapper_perkey_rwlock_ptr_;
+        cache_wrapper_perkey_rwlock_ptr_ = NULL;
+
+        // Release validity map
+        assert(validity_map_ptr_ != NULL);
+        delete validity_map_ptr_;
+        validity_map_ptr_ = NULL;
+
+        // Release local edge cache
+        assert(local_cache_ptr_ != NULL);
+        delete local_cache_ptr_;
+        local_cache_ptr_ = NULL;
+    }
+
+    // (1) Check is cached and access validity
+
+    bool CacheWrapper::isLocalCached(const Key& key) const
+    {
+        checkPointers_();
+
+        // Acquire a read lock
+        std::string context_name = "CacheWrapper::isLocalCached()";
+        cache_wrapper_perkey_rwlock_ptr_->acquire_lock_shared(key, context_name);
+
+        bool is_local_cached = local_cache_ptr_->isLocalCached(key);
+
+        // Release a read lock
+        cache_wrapper_perkey_rwlock_ptr_->unlock_shared(key, context_name);
+
+        return is_local_cached;
+    }
+
+    bool CacheWrapper::isValidKeyForLocalCachedObject(const Key& key) const
+    {
+        checkPointers_();
+
+        // Acquire a read lock
+        std::string context_name = "CacheWrapper::isValidKeyForLocalCachedObject()";
+        cache_wrapper_perkey_rwlock_ptr_->acquire_lock_shared(key, context_name);
+
+        bool is_valid = isValidKeyForLocalCachedObject_(key);
+
+        // Release a read lock
+        cache_wrapper_perkey_rwlock_ptr_->unlock_shared(key, context_name);
+
+        return is_valid;
+    }
+
+    void CacheWrapper::invalidateKeyForLocalCachedObject(const Key& key)
+    {
+        checkPointers_();
+
+        // Acquire a write lock
+        std::string context_name = "CacheWrapper::invalidateKeyForLocalCachedObject()";
+        cache_wrapper_perkey_rwlock_ptr_->acquire_lock(key, context_name);
+
+        bool is_exist = false;
+        validity_map_ptr_->invalidateFlagForKey(key, is_exist);
+        if (!is_exist) // a key locally cached is not found in validity_map_
+        {
+            std::ostringstream oss;
+            oss << "key " << key.getKeystr() << " does not exist in validity_map_ for invalidateIfCached()";
+            Util::dumpWarnMsg(instance_name_, oss.str());
+        }
+
+        // Release a write lock
+        cache_wrapper_perkey_rwlock_ptr_->unlock(key, context_name);
+
+        return;
+    }
+
+    // (2) Access local edge cache
+
+    bool CacheWrapper::get(const Key& key, Value& value) const
+    {
+        checkPointers_();
+
+        // Acquire a read lock
+        std::string context_name = "CacheWrapper::get()";
+        cache_wrapper_perkey_rwlock_ptr_->acquire_lock_shared(key, context_name);
+
+        bool is_local_cached = local_cache_ptr_->getLocalCache(key, value); // Still need to update local statistics if key is cached yet invalid
+
+        bool is_valid = false;
+        if (is_local_cached)
+        {
+            is_valid = isValidKeyForLocalCachedObject_(key);
+        }
+
+        // Release a read lock
+        cache_wrapper_perkey_rwlock_ptr_->unlock_shared(key, context_name);
+
+        return is_local_cached && is_valid;
+    }
+    
+    bool CacheWrapper::update(const Key& key, const Value& value)
+    {
+        checkPointers_();
+
+        // Acquire a write lock
+        std::string context_name = "CacheWrapper::update()";
+        if (value.isDeleted())
+        {
+            context_name = "CacheWrapper::remove()";
+        }
+        cache_wrapper_perkey_rwlock_ptr_->acquire_lock(key, context_name);
+
+        bool is_local_cached = local_cache_ptr_->updateLocalCache(key, value);
+
+        if (is_local_cached)
+        {
+            validateKeyForLocalCachedObject_(key);
+        }
+
+        cache_wrapper_perkey_rwlock_ptr_->unlock(key, context_name);
+        return is_local_cached;
+    }
+
+    bool CacheWrapper::remove(const Key& key)
+    {
+        // No need to acquire a write lock, which will be done in update()
+
+        Value deleted_value;
+        bool is_local_cached = update(key, deleted_value);
+        return is_local_cached;
+    }
+
+    // (3) Local edge cache management
+
+    bool CacheWrapper::needIndependentAdmit(const Key& key) const
+    {
+        checkPointers_();
+
+        // Acquire a read lock
+        std::string context_name = "CacheWrapper::needIndependentAdmit()";
+        cache_wrapper_perkey_rwlock_ptr_->acquire_lock_shared(key, context_name);
+
+        bool need_independent_admit = local_cache_ptr_->needIndependentAdmit(key);
+
+        // Release a write lock
+        cache_wrapper_perkey_rwlock_ptr_->unlock(key, context_name);
+
+        return need_independent_admit;
+    }
+
+    void CacheWrapper::admit(const Key& key, const Value& value, const bool& is_valid)
+    {
+        checkPointers_();
+
+        // Acquire a write lock
+        std::string context_name = "CacheWrapper::admit()";
+        cache_wrapper_perkey_rwlock_ptr_->acquire_lock(key, context_name);
+
+        local_cache_ptr_->admitLocalCache(key, value);
+
+        if (is_valid) // w/o writes
+        {
+            validateKeyForLocalUncachedObject_(key);
+        }
+        else // w/ writes
+        {
+            invalidateKeyForLocalUncachedObject_(key);
+        }
+
+        // Release a write lock
+        cache_wrapper_perkey_rwlock_ptr_->unlock(key, context_name);
+
+        return;
+    }
+    
+    void CacheWrapper::evict(Key& key, Value& value)
+    {
+        checkPointers_();
+
+        // Acquire a write lock
+        std::string context_name = "CacheWrapper::evict()";
+        cache_wrapper_perkey_rwlock_ptr_->acquire_lock(key, context_name);
+
+        local_cache_ptr_->evictLocalCache(key, value);
+
+        bool is_exist = false;
+        validity_map_ptr_->eraseFlagForKey(key, is_exist);
+        if (!is_exist)
+        {
+            std::ostringstream oss;
+            oss << "victim key " << key.getKeystr() << " does not exist in validity_map_ for evict()";
+            Util::dumpWarnMsg(instance_name_, oss.str());
+        
+        }
+
+        // Release a write lock
+        cache_wrapper_perkey_rwlock_ptr_->unlock(key, context_name);
+
+        return;
+    }
+
+    // (4) Other functions
+
+    uint32_t CacheWrapper::getSizeForCapacity() const
+    {
+        checkPointers_();
+
+        // No need to acquire a read lock due to no key provided and not critical for size
+        
+        uint32_t local_edge_cache_size = local_cache_ptr_->getSizeForCapacity();
+        uint32_t validity_map_size = validity_map_ptr_->getSizeForCapacity();
+        uint32_t total_size = local_edge_cache_size + validity_map_size;
+        return total_size;
+    }
+
+    // (1) Check is cached and access validity
+
+    bool CacheWrapper::isValidKeyForLocalCachedObject_(const Key& key) const
+    {
+        // No need to acquire a read lock, which has been done in public functions
+
+        bool is_exist = false;
+        bool is_valid = validity_map_ptr_->isValidFlagForKey(key, is_exist);
+        if (!is_exist) // key is locally cached yet not found in validity_map_, which may due to processing order issue
+        {
+            std::ostringstream oss;
+            oss << "key " << key.getKeystr() << " is locally cached yet not found in validity_map_!";
+            Util::dumpWarnMsg(instance_name_, oss.str());
+            assert(is_valid == false);
+        }
+
+        return is_valid;
+    }
+
+    void CacheWrapper::validateKeyForLocalCachedObject_(const Key& key)
+    {
+        // No need to acquire a write lock, which has been done in public functions
+
+        bool is_exist = false;
+        validity_map_ptr_->validateFlagForKey(key, is_exist);
+        if (!is_exist) // a key locally cached is not found in validity_map_
+        {
+            std::ostringstream oss;
+            oss << "key " << key.getKeystr() << " does not exist in validity_map_ for validateIfCached()";
+            Util::dumpWarnMsg(instance_name_, oss.str());
+        }
+        return;
+    }
+
+    void CacheWrapper::validateKeyForLocalUncachedObject_(const Key& key)
+    {
+        // No need to acquire a write lock, which has been done in public functions
+
+        bool is_exist = false;
+        validity_map_ptr_->validateFlagForKey(key, is_exist);
+        if (is_exist) // a key not locally cached is found in validity_map_
+        {
+            std::ostringstream oss;
+            oss << "key " << key.getKeystr() << " already exists in validity_map_ for validateIfUncached_()";
+            Util::dumpWarnMsg(instance_name_, oss.str());
+        }
+        return;
+    }
+
+    void CacheWrapper::invalidateKeyForLocalUncachedObject_(const Key& key)
+    {
+        // No need to acquire a write lock, which has been done in public functions
+
+        bool is_exist = false;
+        validity_map_ptr_->invalidateFlagForKey(key, is_exist);
+        if (is_exist) // a key not locally cached is found in validity_map_
+        {
+            std::ostringstream oss;
+            oss << "key " << key.getKeystr() << " already exists in validity_map_ for invalidateIfUncached_()";
+            Util::dumpWarnMsg(instance_name_, oss.str());
+        }
+        return;
+    }
+
+    // (4) Other functions
+
+    void CacheWrapper::checkPointers_() const
+    {
+        assert(cache_wrapper_perkey_rwlock_ptr_ != NULL);
+        assert(validity_map_ptr_ != NULL);
+        assert(local_cache_ptr_ != NULL);
+    }
+}

@@ -1,7 +1,5 @@
 /*
  * CooperationWrapperBase: the base class to manage metadata for cooperative edge caching with MSI protocol (thread safe).
- *
- * Basic or COVERED CooperativeCacheWrapper is responsible for checking directory information at beacon node located by DhtWrapper, getting data from a target edge node by request redirection, and synchronizing directory information at beacon node after cache admission/eviction of the closest edge cache.
  * 
  * NOTE: all non-const shared variables in CooperationWrapperBase should be thread safe.
  * 
@@ -16,11 +14,11 @@
 
 #include "common/key.h"
 #include "common/value.h"
+#include "concurrency/perkey_rwlock.h"
 #include "cooperation/block_tracker.h"
 #include "cooperation/dht_wrapper.h"
 #include "cooperation/directory/directory_info.h"
 #include "cooperation/directory_table.h"
-#include "edge/edge_param.h"
 #include "message/message_base.h"
 
 namespace covered
@@ -28,9 +26,9 @@ namespace covered
     class CooperationWrapperBase
     {
     public:
-        static CooperationWrapperBase* getCooperationWrapper(const std::string& cache_name, const std::string& hash_name, EdgeParam* edge_param_ptr);
+        static CooperationWrapperBase* getCooperationWrapperByCacheName(const std::string& cache_name, const uint32_t& edgecnt, const uint32_t& edge_idx, const std::string& hash_name);
 
-        CooperationWrapperBase(const std::string& hash_name, EdgeParam* edge_param_ptr);
+        CooperationWrapperBase(const uint32_t& edgecnt, const uint32_t& edge_idx, const std::string& hash_name);
         virtual ~CooperationWrapperBase();
 
         // (1) Locate beacon edge node
@@ -48,7 +46,7 @@ namespace covered
         LockResult acquireLocalWritelockByBeaconServer(const Key& key, const NetworkAddr& network_addr, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo);
         std::unordered_set<NetworkAddr, NetworkAddrHasher> releaseLocalWritelock(const Key& key, const DirectoryInfo& sender_dirinfo);
 
-        // (3) Get size for capacity check
+        // (3) Other functions
 
         uint32_t getSizeForCapacity() const;
     private:
@@ -58,13 +56,22 @@ namespace covered
 
         void lookupLocalDirectory_(const Key& key, const bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const;
 
+        // (3) Other functions
+
+        void checkPointers_() const;
+
+        // Member varaibles
+
         // Const shared variables
         std::string base_instance_name_;
         DhtWrapper* dht_wrapper_ptr_;
 
+        // Fine-graind locking
+        mutable PerkeyRwlock* cooperation_wrapper_perkey_rwlock_ptr_;
+
         // Non-const shared variables (cooperation metadata)
         DirectoryTable* directory_table_ptr_; // per-key content directory infos (thread safe)
-        mutable BlockTracker block_tracker_; // per-key cooperation metadata (thread safe)
+        BlockTracker* block_tracker_ptr_; // per-key cooperation metadata (thread safe)
     };
 }
 

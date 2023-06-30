@@ -16,6 +16,7 @@
 
 #include "common/key.h"
 #include "concurrency/concurrent_hashtable_impl.h"
+#include "concurrency/perkey_rwlock.h"
 #include "cooperation/directory/directory_entry.h"
 
 namespace covered
@@ -24,7 +25,7 @@ namespace covered
     class DirectoryTable
     {
     public:
-        DirectoryTable(const uint32_t& seed, const uint32_t& edge_idx);
+        DirectoryTable(const uint32_t& seed, const uint32_t& edge_idx, const PerkeyRwlock* perkey_rwlock_ptr);
         ~DirectoryTable();
 
         void lookup(const Key& key, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const;

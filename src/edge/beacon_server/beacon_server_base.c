@@ -14,7 +14,7 @@ namespace covered
 {
     const std::string BeaconServerBase::kClassName("BeaconServerBase");
 
-    BeaconServerBase* BeaconServerBase::getBeaconServer(EdgeWrapper* edge_wrapper_ptr)
+    BeaconServerBase* BeaconServerBase::getBeaconServerByCacheName(EdgeWrapper* edge_wrapper_ptr)
     {
         BeaconServerBase* beacon_server_ptr = NULL;
 

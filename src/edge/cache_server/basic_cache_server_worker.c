@@ -37,16 +37,6 @@ namespace covered
         Key tmp_key = redirected_get_request_ptr->getKey();
         Value tmp_value;
 
-        // Acquire a read lock for serializability before accessing any shared variable in the target edge node
-        assert(perkey_rwlock_for_serializability_ptr_ != NULL);
-        while (true)
-        {
-            if (perkey_rwlock_for_serializability_ptr_->try_lock_shared(tmp_key, "processRedirectedGetRequest_()"))
-            {
-                break;
-            }
-        }
-
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getEdgeWrapperPtr();
 
@@ -82,7 +72,6 @@ namespace covered
         PropagationSimulator::propagateFromNeighborToEdge();
         edge_cache_server_worker_sendrsp_tosource_socket_client_ptr_->send(redirected_response_msg_payload);
 
-        perkey_rwlock_for_serializability_ptr_->unlock_shared(tmp_key);
         return is_finish;
     }
 
@@ -414,8 +403,6 @@ namespace covered
 
     bool BasicCacheServerWorker::triggerIndependentAdmission_(const Key& key, const Value& value) const
     {
-        // No need to acquire per-key rwlock for serializability, which has been done in processLocalGetRequest_() and processLocalWriteRequest_()
-
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getEdgeWrapperPtr();
 

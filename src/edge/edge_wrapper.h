@@ -11,7 +11,7 @@
 
 #include <string>
 
-#include "cache/cache_wrapper_base.h"
+#include "cache/cache_wrapper.h"
 #include "cooperation/cooperation_wrapper_base.h"
 #include "edge/edge_param.h"
 #include "network/udp_socket_wrapper.h"
@@ -21,7 +21,7 @@ namespace covered
     class EdgeWrapper
     {
     public:
-        EdgeWrapper(const std::string& cache_name, const std::string& hash_name, EdgeParam* edge_param_ptr, const uint32_t& capacity_bytes);
+        EdgeWrapper(const std::string& cache_name, const uint32_t& capacity_bytes, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& percacheserver_workercnt, EdgeParam* edge_param_ptr);
         virtual ~EdgeWrapper();
 
         void start();
@@ -66,12 +66,17 @@ namespace covered
         std::string instance_name_;
 
         // Const shared variables
-        const std::string cache_name_;
+        const std::string cache_name_; // Come from Param
+        const uint32_t capacity_bytes_; // Come from Param
+        const uint32_t percacheserver_workercnt_; // Come from Param
         const EdgeParam* edge_param_ptr_; // Thread safe
-        const uint32_t capacity_bytes_; // Come from Util::Param
+
+        // NOTE: we do NOT need per-key rwlock for atomicity among CacheWrapper and CooperationWrapperBase.
+        // (i) CacheWrapper is already thread-safe for cache server and invalidation server, and CooperationWrapperBase is already thread-safe for cache server and beacon server.
+        // (2) Only cache server needs to access both CacheWrapper and CooperationWrapperBase, while there NOT exist any serializability/atomicity issue for requests of the same key, as cache server workers have already partitioned requests by hashing keys into ring buffer.
 
         // Non-const shared variables (thread safe)
-        mutable CacheWrapperBase* edge_cache_ptr_; // Data and metadata for local edge cache (thread safe)
+        CacheWrapper* edge_cache_ptr_; // Data and metadata for local edge cache (thread safe)
         CooperationWrapperBase* cooperation_wrapper_ptr_; // Cooperation metadata (thread safe)
     };
 }
