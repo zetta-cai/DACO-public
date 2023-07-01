@@ -10,6 +10,7 @@
 #define BOOST_STACKTRACE_USE_BACKTRACE
 
 #include <atomic> // std::memory_order
+#include <cstdarg> // std::va_list, va_start, va_arg, and va_end
 #include <fstream>
 #include <mutex>
 #include <string>
@@ -52,6 +53,7 @@ namespace covered
         static void dumpDebugMsg(const std::string& class_name, const std::string& debug_message);
         static void dumpWarnMsg(const std::string& class_name, const std::string& warn_message);
         static void dumpErrorMsg(const std::string& class_name, const std::string& error_message);
+        static void dumpVariablesForDebug(const std::string& class_name, const uint32_t count, ...); // Only for temporary debugging
 
         // (1.2) File I/O
         static bool isFileExist(const std::string& filepath, const bool& is_silent=false);
@@ -74,6 +76,9 @@ namespace covered
 
         static uint16_t toUint16(const int64_t& val);
         static uint32_t toUint32(const int64_t& val);
+        static std::string toString(void* pointer);
+        static std::string toString(const bool& boolean);
+        static std::string toString(const uint32_t& val);
 
         // (4) Client-edge-cloud scenario
 

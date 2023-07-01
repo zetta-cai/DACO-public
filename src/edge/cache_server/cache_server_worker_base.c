@@ -115,7 +115,7 @@ namespace covered
             // Try to get the data request from ring buffer partitioned by cache server
             CacheServerWorkerItem tmp_cache_server_worker_item;
             bool is_successful = cache_server_worker_param_ptr_->getDataRequestBufferPtr()->pop(tmp_cache_server_worker_item);
-            if (is_successful)
+            if (!is_successful)
             {
                 continue; // Retry to receive an item if edge is still running
             } // End of (is_successful == true)
@@ -168,10 +168,9 @@ namespace covered
             Key tmp_key = MessageBase::getKeyFromMessage(data_request_ptr);
             Value tmp_value();
 
-            // TMPDEBUG
-            std::ostringstream oss;
-            oss << "receive a local request; type: " << MessageBase::messageTypeToString(data_request_ptr->getMessageType()) << "; keystr: " << tmp_key.getKeystr();
-            Util::dumpDebugMsg(base_instance_name_, oss.str());
+            #ifdef DEBUG_CACHE_SERVER
+            Util::dumpVariablesForDebug(base_instance_name_, 5, "receive a local request;", "type:", MessageBase::messageTypeToString(data_request_ptr->getMessageType()).c_str(), "keystr:", tmp_key.getKeystr().c_str());
+            #endif
 
             if (data_request_ptr->getMessageType() == MessageType::kLocalGetRequest)
             {
@@ -219,6 +218,10 @@ namespace covered
             hitflag = Hitflag::kLocalHit;
         }
 
+        #ifdef DEBUG_CACHE_SERVER
+        Util::dumpVariablesForDebug(base_instance_name_, 3, "acesss local edge cache;", "is_local_cached_and_valid:", Util::toString(is_local_cached_and_valid).c_str());
+        #endif
+
         // Access cooperative edge cache for local cache miss or invalid object
         bool is_cooperative_cached_and_valid = false;
         if (!is_local_cached_and_valid) // not local cached or invalid
@@ -234,6 +237,10 @@ namespace covered
                 hitflag = Hitflag::kCooperativeHit;
             }
         }
+
+        #ifdef DEBUG_CACHE_SERVER
+        Util::dumpVariablesForDebug(base_instance_name_, 3, "acesss cooperative edge cache;", "is_cooperative_cached_and_valid:", Util::toString(is_cooperative_cached_and_valid).c_str());
+        #endif
 
         // TODO: For COVERED, beacon node will tell the edge node if to admit, w/o independent decision
 
@@ -272,10 +279,9 @@ namespace covered
         PropagationSimulator::propagateFromEdgeToClient();
         edge_cache_server_worker_sendrsp_tosource_socket_client_ptr_->send(local_response_msg_payload);
 
-        // TMPDEBUG
-        std::ostringstream oss;
-        oss << "issue a local response; type: " << MessageBase::messageTypeToString(local_get_response.getMessageType()) << "; keystr:" << local_get_response.getKey().getKeystr();
-        Util::dumpDebugMsg(base_instance_name_, oss.str());
+        #ifdef DEBUG_CACHE_SERVER
+        Util::dumpVariablesForDebug(base_instance_name_, 5, "issue a local response;", "type:", MessageBase::messageTypeToString(local_get_response.getMessageType()).c_str(), "keystr:", local_get_response.getKey().getKeystr().c_str());
+        #endif
 
         return is_finish;
     }
@@ -430,6 +436,10 @@ namespace covered
             locateBeaconNode_(key);
         }
 
+        #ifdef DEBUG_CACHE_SERVER
+        Util::dumpVariablesForDebug(base_instance_name_, 2, "current_is_beacon:", Util::toString(current_is_beacon).c_str());
+        #endif
+
         // Check if beacon node is the current edge node and lookup directory information
         bool is_being_written = false;
         bool is_valid_directory_exist = false;
@@ -480,6 +490,10 @@ namespace covered
             // key must NOT being written here
             assert(!is_being_written);
 
+            #ifdef DEBUG_CACHE_SERVER
+            Util::dumpVariablesForDebug(base_instance_name_, 2, "is_valid_directory_exist:", Util::toString(is_valid_directory_exist).c_str());
+            #endif
+
             if (is_valid_directory_exist) // The object is cached by some target edge node
             {
                 // NOTE: the target node should not be the current edge node, as CooperationWrapperBase::get() can only be invoked if is_local_cached = false (i.e., the current edge node does not cache the object and hence is_valid_directory_exist should be false)
@@ -503,6 +517,10 @@ namespace covered
                 {
                     return is_finish;
                 }
+
+                #ifdef DEBUG_CACHE_SERVER
+                Util::dumpVariablesForDebug(base_instance_name_, 7, "issue redirected get request:", "target:", Util::toString(directory_info.getTargetEdgeIdx()).c_str(), "is_cooperative_cached:", Util::toString(is_cooperative_cached).c_str(), "is_valid", Util::toString(is_valid).c_str());
+                #endif
 
                 // Check is_cooperative_cached and is_valid
                 if (!is_cooperative_cached) // Target edge node does not cache the object
@@ -803,10 +821,9 @@ namespace covered
         DynamicArray global_request_msg_payload(global_get_request.getMsgPayloadSize());
         global_get_request.serialize(global_request_msg_payload);
 
-        // TMPDEBUG
-        std::ostringstream oss;
-        oss << "issue a global request; type: " << MessageBase::messageTypeToString(global_get_request.getMessageType()) << "; keystr:" << key.getKeystr();
-        Util::dumpDebugMsg(base_instance_name_, oss.str());
+        #ifdef DEBUG_CACHE_SERVER
+        Util::dumpVariablesForDebug(base_instance_name_, 5, "issue a global request;", "type:", MessageBase::messageTypeToString(global_get_request.getMessageType()).c_str(), "keystr:", key.getKeystr().c_str());
+        #endif
 
         while (true) // Timeout-and-retry
         {
@@ -840,11 +857,9 @@ namespace covered
                 const GlobalGetResponse* const global_get_response_ptr = static_cast<const GlobalGetResponse*>(global_response_ptr);
                 value = global_get_response_ptr->getValue();
 
-                // TMPDEBUG
-                oss.clear();
-                oss.str("");
-                oss << "receive a global response; type: " << MessageBase::messageTypeToString(global_response_ptr->getMessageType()) << "; keystr:" << global_get_response_ptr->getKey().getKeystr();
-                Util::dumpDebugMsg(base_instance_name_, oss.str());
+                #ifdef DEBUG_CACHE_SERVER
+                Util::dumpVariablesForDebug(base_instance_name_, 5, "receive a global response", "type:", MessageBase::messageTypeToString(global_response_ptr->getMessageType()).c_str(), "keystr:", global_get_response_ptr->getKey().getKeystr().c_str());
+                #endif
 
                 // Release global response message
                 delete global_response_ptr;

@@ -7,6 +7,8 @@
 #ifndef PROPAGATION_SIMULATOR_H
 #define PROPAGATION_SIMULATOR_H
 
+#define DEBUG_PROPAGATION_SIMULATOR
+
 #include <string>
 
 namespace covered

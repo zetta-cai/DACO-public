@@ -43,8 +43,8 @@ namespace covered
     {
         assert(perkey_rwlock_ptr_ != NULL);
 
-        // Must be protected by a read lock
-        assert(perkey_rwlock_ptr_->isReadLocked(key));
+        // Must be protected by a read/write/write lock
+        assert(perkey_rwlock_ptr_->isReadOrWriteLocked(key));
         uint32_t hashidx = perkey_rwlock_ptr_->getRwlockIndex(key);
 
         bool is_exist = false;
@@ -53,8 +53,8 @@ namespace covered
         typename std::unordered_map<Key, V, KeyHasher>::const_iterator iter = tmp_hashtable.find(key);
         is_exist = (iter != tmp_hashtable.end());
 
-        // Must be protected by a read lock
-        assert(perkey_rwlock_ptr_->isReadLocked(key));
+        // Must be protected by a read/write lock
+        assert(perkey_rwlock_ptr_->isReadOrWriteLocked(key));
 
         return is_exist;
     }
@@ -64,8 +64,8 @@ namespace covered
     {
         assert(perkey_rwlock_ptr_ != NULL);
 
-        // Must be protected by a read lock
-        assert(perkey_rwlock_ptr_->isReadLocked(key));
+        // Must be protected by a read/write lock
+        assert(perkey_rwlock_ptr_->isReadOrWriteLocked(key));
         uint32_t hashidx = perkey_rwlock_ptr_->getRwlockIndex(key);
 
         V value;
@@ -82,8 +82,8 @@ namespace covered
             is_exist = false;
         }
 
-        // Must be protected by a read lock
-        assert(perkey_rwlock_ptr_->isReadLocked(key));
+        // Must be protected by a read/write lock
+        assert(perkey_rwlock_ptr_->isReadOrWriteLocked(key));
 
         return value;
     }*/
@@ -210,8 +210,8 @@ namespace covered
     {
         assert(perkey_rwlock_ptr_ != NULL);
 
-        // Must be protected by a read lock
-        assert(perkey_rwlock_ptr_->isReadLocked(key));
+        // Must be protected by a read/write lock
+        assert(perkey_rwlock_ptr_->isReadOrWriteLocked(key));
         uint32_t hashidx = perkey_rwlock_ptr_->getRwlockIndex(key);
 
         const std::unordered_map<Key, V, KeyHasher>& tmp_hashtable = hashtables_[hashidx];
@@ -228,8 +228,8 @@ namespace covered
             is_exist = false;
         }
 
-        // Must be protected by a read lock
-        assert(perkey_rwlock_ptr_->isReadLocked(key));
+        // Must be protected by a read/write lock
+        assert(perkey_rwlock_ptr_->isReadOrWriteLocked(key));
 
         return;
     }

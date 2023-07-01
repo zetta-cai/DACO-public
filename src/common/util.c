@@ -50,7 +50,7 @@ namespace covered
     {
         msgdump_lock_.lock();
         std::string cur_timestr = getCurrentTimestr();
-        std::cout << cur_timestr << " " << class_name << ": " << normal_message << std::endl;
+        std::cout << cur_timestr << " <" << class_name << "> " << normal_message << std::endl;
         msgdump_lock_.unlock();
         return;
     }
@@ -62,7 +62,7 @@ namespace covered
             msgdump_lock_.lock();
             std::string cur_timestr = getCurrentTimestr();
             // \033 means ESC character, 1 means bold, 32 means green foreground, 0 means reset, and m is end character
-            std::cout << "\033[1;32m" << cur_timestr << " [DEBUG] " << class_name << ": " << debug_message << std::endl << "\033[0m";
+            std::cout << "\033[1;32m" << cur_timestr << " [DEBUG] <" << class_name << "> " << debug_message << std::endl << "\033[0m";
             msgdump_lock_.unlock();
         }
         return;
@@ -73,7 +73,7 @@ namespace covered
         msgdump_lock_.lock();
         std::string cur_timestr = getCurrentTimestr();
         // \033 means ESC character, 1 means bold, 33 means yellow foreground, 0 means reset, and m is end character
-        std::cout << "\033[1;33m" << cur_timestr << " [WARN] " << class_name << ": " << warn_message << std::endl << "\033[0m";
+        std::cout << "\033[1;33m" << cur_timestr << " [WARN] <" << class_name << "> " << warn_message << std::endl << "\033[0m";
         msgdump_lock_.unlock();
         return;
     }
@@ -83,8 +83,25 @@ namespace covered
         msgdump_lock_.lock();
         std::string cur_timestr = getCurrentTimestr();
         // \033 means ESC character, 1 means bold, 31 means red foreground, 0 means reset, and m is end character
-        std::cerr << "\033[1;31m" << cur_timestr << " [ERROR] " << class_name << ": " << error_message << std::endl << "\033[0m" << boost::stacktrace::stacktrace();
+        std::cerr << "\033[1;31m" << cur_timestr << " [ERROR] <" << class_name << "> " << error_message << std::endl << "\033[0m" << boost::stacktrace::stacktrace();
         msgdump_lock_.unlock();
+        return;
+    }
+
+    void Util::dumpVariablesForDebug(const std::string& class_name, const uint32_t count, ...)
+    {
+        std::va_list args;
+        va_start(args, count);
+
+        std::ostringstream oss;
+        for (uint32_t i = 0; i < count; i++)
+        {
+            const char* tmpstr = va_arg(args, const char*);
+            oss << std::string(tmpstr) << " ";
+        }
+        oss << std::endl;
+
+        dumpDebugMsg(class_name, oss.str());
         return;
     }
 
@@ -282,6 +299,21 @@ namespace covered
         }
     }
 
+    std::string Util::toString(void* pointer)
+    {
+        return std::to_string(reinterpret_cast<intptr_t>(pointer));
+    }
+
+    std::string Util::toString(const bool& boolean)
+    {
+        return boolean?"true":"false";
+    }
+
+    std::string Util::toString(const uint32_t& val)
+    {
+        return std::to_string(val);
+    }
+
     // (4) Client-edge-cloud scenario
 
     // (4.1) Client
@@ -437,8 +469,8 @@ namespace covered
     std::string Util::getInfixForFilepath_()
     {
         std::ostringstream oss;
-        // Example: simulation_covered_capacitymb1000_clientcnt1_duration10_edgecnt1_hashnamemmh3_keycnt1000000_opcnt1000000_perclientworkercnt1_propagation100010000100000_facebook
-        oss << (Param::isSimulation()?"simulation":"prototype") << "_" << Param::getCacheName() << "_capacitymb" << Param::getCapacityBytes() / 1000 << "_clientcnt" << Param::getClientcnt() << "_duration" << Param::getDuration() << "_edgecnt" << Param::getEdgecnt() << "_hashname" << Param::getHashName() << "_keycnt" << Param::getKeycnt() << "_opcnt" << Param::getOpcnt() << "_perclientworkercnt" << Param::getPerclientWorkercnt() << "_propagation" << Param::getPropagationLatencyClientedge() << Param::getPropagationLatencyCrossedge() << Param::getPropagationLatencyEdgecloud() << "_" << Param::getWorkloadName();
+        // Example: simulation_covered_capacitymb1000_clientcnt1_duration10_edgecnt1_hashnamemmh3_keycnt1000000_opcnt1000000_percacheserverworkercnt1_perclientworkercnt1_propagation100010000100000_facebook
+        oss << (Param::isSimulation()?"simulation":"prototype") << "_" << Param::getCacheName() << "_capacitymb" << Param::getCapacityBytes() / 1000 << "_clientcnt" << Param::getClientcnt() << "_duration" << Param::getDuration() << "_edgecnt" << Param::getEdgecnt() << "_hashname" << Param::getHashName() << "_keycnt" << Param::getKeycnt() << "_opcnt" << Param::getOpcnt() << "_percacheserverworkercnt" << Param::getPercacheserverWorkercnt() << "_perclientworkercnt" << Param::getPerclientWorkercnt() << "_propagation" << Param::getPropagationLatencyClientedge() << Param::getPropagationLatencyCrossedge() << Param::getPropagationLatencyEdgecloud() << "_" << Param::getWorkloadName();
         std::string infixstr = oss.str();
         return infixstr;
     }

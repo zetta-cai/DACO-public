@@ -31,7 +31,7 @@ namespace covered
         assert(client_param_ptr != NULL);
 
         const uint32_t client_idx = client_param_ptr->getClientIdx();
-        const uint32_t local_client_worker_idx = client_worker_param_ptr_->getLocalClientWorkerIdx();
+        const uint32_t local_client_worker_idx = client_worker_param_ptr->getLocalClientWorkerIdx();
         global_client_worker_idx_ = Util::getGlobalClientWorkerIdx(client_idx, local_client_worker_idx);
 
         // Differentiate different workers

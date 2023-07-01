@@ -408,10 +408,9 @@ namespace covered
 
         bool is_finish = false;
 
-        // TMPDEBUG
-        //std::ostringstream oss;
-        //oss << "admit key: " << key.getKeystr() << "; value: " << (value.isDeleted()?"true":"false") << "; //valuesize: " << value.getValuesize();
-        //Util::dumpDebugMsg(instance_name_, oss.str());
+        #ifdef DEBUG_CACHE_SERVER
+        Util::dumpVariablesForDebug(instance_name_, 7, "independent admission;", "keystr:", key.getKeystr().c_str(), "is value deleted:", Util::toString(value.isDeleted()).c_str(), "value size:", Util::toString(value.getValuesize()).c_str());
+        #endif
 
         // Independently admit the new key-value pair into local edge cache
         bool is_being_written = false;
@@ -443,11 +442,9 @@ namespace covered
                     return is_finish;
                 }
 
-                // TMPDEBUG
-                //oss.clear();
-                //oss.str("");
-                //oss << "evict key: " << victim_key.getKeystr() << "; value: " << (victim_value.isDeleted()?"true":"false") << "; valuesize: " << victim_value.getValuesize();
-                //Util::dumpDebugMsg(instance_name_, oss.str());
+                #ifdef DEBUG_CACHE_SERVER
+                Util::dumpVariablesForDebug(instance_name_, 7, "eviction;", "keystr:", victim_key.getKeystr().c_str(), "is value deleted:", Util::toString(victim_value.isDeleted()).c_str(), "value size:", Util::toString(victim_value.getValuesize()).c_str());
+                #endif
 
                 continue;
             }

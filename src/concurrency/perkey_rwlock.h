@@ -7,6 +7,8 @@
 #ifndef PERKEY_RWLOCK_H
 #define PERKEY_RWLOCK_H
 
+//#define DEBUG_PERKEY_RWLOCK
+
 #include <atomic>
 #include <string>
 
@@ -31,6 +33,7 @@ namespace covered
 
         bool isReadLocked(const Key& key) const;
         bool isWriteLocked(const Key& key) const;
+        bool isReadOrWriteLocked(const Key& key) const;
         uint32_t getRwlockIndex(const Key& key) const;
         uint32_t getFineGrainedLockingSize() const;
     private:

@@ -174,8 +174,8 @@ namespace covered
 
         bool need_independent_admit = local_cache_ptr_->needIndependentAdmit(key);
 
-        // Release a write lock
-        cache_wrapper_perkey_rwlock_ptr_->unlock(key, context_name);
+        // Release a read lock
+        cache_wrapper_perkey_rwlock_ptr_->unlock_shared(key, context_name);
 
         return need_independent_admit;
     }

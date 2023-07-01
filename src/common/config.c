@@ -46,7 +46,7 @@ namespace covered
     void Config::loadConfig()
     {
         std::string config_filepath = Param::getConfigFilepath();
-        bool is_exist = Util::isFileExist(config_filepath);
+        bool is_exist = Util::isFileExist(config_filepath, true);
 
         if (is_exist)
         {

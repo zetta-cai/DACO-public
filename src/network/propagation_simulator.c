@@ -3,6 +3,7 @@
 #include <unistd.h> // usleep
 
 #include "common/param.h"
+#include "common/util.h"
 
 namespace covered
 {
@@ -11,6 +12,9 @@ namespace covered
     void PropagationSimulator::propagateFromClientToEdge()
     {
         uint32_t latency_us = Param::getPropagationLatencyClientedge();
+        #ifdef DEBUG_PROPAGATION_SIMULATOR
+        Util::dumpVariablesForDebug(kClassName, 3, "propagateFromClientToEdge;", "latency us:", Util::toString(latency_us).c_str());
+        #endif
         propagate_(latency_us);
         return;
     }
@@ -18,6 +22,9 @@ namespace covered
     void PropagationSimulator::propagateFromEdgeToClient()
     {
         uint32_t latency_us = Param::getPropagationLatencyClientedge();
+        #ifdef DEBUG_PROPAGATION_SIMULATOR
+        Util::dumpVariablesForDebug(kClassName, 3, "propagateFromEdgeToClient;", "latency us:", Util::toString(latency_us).c_str());
+        #endif
         propagate_(latency_us);
         return;
     }
@@ -25,6 +32,9 @@ namespace covered
     void PropagationSimulator::propagateFromEdgeToNeighbor()
     {
         uint32_t latency_us = Param::getPropagationLatencyCrossedge();
+        #ifdef DEBUG_PROPAGATION_SIMULATOR
+        Util::dumpVariablesForDebug(kClassName, 3, "propagateFromEdgeToNeighbor;", "latency us:", Util::toString(latency_us).c_str());
+        #endif
         propagate_(latency_us);
         return;
     }
@@ -32,6 +42,9 @@ namespace covered
     void PropagationSimulator::propagateFromNeighborToEdge()
     {
         uint32_t latency_us = Param::getPropagationLatencyCrossedge();
+        #ifdef DEBUG_PROPAGATION_SIMULATOR
+        Util::dumpVariablesForDebug(kClassName, 3, "propagateFromNeighborToEdge;", "latency us:", Util::toString(latency_us).c_str());
+        #endif
         propagate_(latency_us);
         return;
     }
@@ -39,6 +52,9 @@ namespace covered
     void PropagationSimulator::propagateFromEdgeToCloud()
     {
         uint32_t latency_us = Param::getPropagationLatencyEdgecloud();
+        #ifdef DEBUG_PROPAGATION_SIMULATOR
+        Util::dumpVariablesForDebug(kClassName, 3, "propagateFromEdgeToCloud;", "latency us:", Util::toString(latency_us).c_str());
+        #endif
         propagate_(latency_us);
         return;
     }
@@ -46,6 +62,9 @@ namespace covered
     void PropagationSimulator::propagateFromCloudToEdge()
     {
         uint32_t latency_us = Param::getPropagationLatencyEdgecloud();
+        #ifdef DEBUG_PROPAGATION_SIMULATOR
+        Util::dumpVariablesForDebug(kClassName, 3, "propagateFromCloudToEdge;", "latency us:", Util::toString(latency_us).c_str());
+        #endif
         propagate_(latency_us);
         return;
     }

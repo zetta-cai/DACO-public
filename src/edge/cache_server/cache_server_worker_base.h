@@ -51,6 +51,8 @@
 #ifndef CACHE_SERVER_WORKER_BASE_H
 #define CACHE_SERVER_WORKER_BASE_H
 
+#define DEBUG_CACHE_SERVER
+
 #include <string>
 
 #include "edge/cache_server/cache_server_worker_param.h"

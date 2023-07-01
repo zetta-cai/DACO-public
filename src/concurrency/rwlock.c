@@ -33,23 +33,25 @@ namespace covered
     {
         bool result = rwlock_.try_lock_shared();
 
-        // TMPDEBUG
+        #ifdef DEBUG_RWLOCK
         if (result)
         {
             std::ostringstream oss;
             oss << "acquire a read lock in " << context_name;
             Util::dumpDebugMsg(instance_name_, oss.str());
         }
+        #endif
 
         return result;
     }
 
     void Rwlock::unlock_shared(const std::string& context_name)
     {
-        // TMPDEBUG
+        #ifdef DEBUG_RWLOCK
         std::ostringstream oss;
         oss << "release a read lock in " << context_name;
         Util::dumpDebugMsg(instance_name_, oss.str());
+        #endif
 
         rwlock_.unlock_shared();
         return;
@@ -71,23 +73,25 @@ namespace covered
     {
         bool result = rwlock_.try_lock();
 
-        // TMPDEBUG
+        #ifdef DEBUG_RWLOCK
         if (result)
         {
             std::ostringstream oss;
             oss << "acquire a write lock in " << context_name;
             Util::dumpDebugMsg(instance_name_, oss.str());
         }
+        #endif
 
         return result;
     }
 
     void Rwlock::unlock(const std::string& context_name)
     {
-        // TMPDEBUG
+        #ifdef DEBUG_RWLOCK
         std::ostringstream oss;
         oss << "release a write lock in " << context_name;
         Util::dumpDebugMsg(instance_name_, oss.str());
+        #endif
 
         rwlock_.unlock();
         return;

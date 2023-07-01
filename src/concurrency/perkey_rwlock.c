@@ -86,10 +86,11 @@ namespace covered
         {
             read_lock_cnts_[rwlock_index].fetch_add(1, Util::RMW_CONCURRENCY_ORDER);
 
-            // TMPDEBUG
+            #ifdef DEBUG_PERKEY_RWLOCK
             std::ostringstream oss;
             oss << "acquire a read lock for key " << key.getKeystr() << " in " << context_name;
             Util::dumpDebugMsg(instance_name_, oss.str());
+            #endif
         }
 
         return result;
@@ -100,10 +101,11 @@ namespace covered
         assert(rwlock_hashtable_ != NULL);
         assert(read_lock_cnts_ != NULL);
 
-        // TMPDEBUG
+        #ifdef DEBUG_PERKEY_RWLOCK
         std::ostringstream oss;
         oss << "release a read lock for key " << key.getKeystr() << " in " << context_name;
         Util::dumpDebugMsg(instance_name_, oss.str());
+        #endif
 
         uint32_t rwlock_index = getRwlockIndex(key);
         read_lock_cnts_[rwlock_index].fetch_sub(1, Util::RMW_CONCURRENCY_ORDER);
@@ -139,10 +141,11 @@ namespace covered
 
             write_lock_flags_[rwlock_index].store(true, Util::STORE_CONCURRENCY_ORDER);
 
-            // TMPDEBUG
+            #ifdef DEBUG_PERKEY_RWLOCK
             std::ostringstream oss;
             oss << "acquire a write lock for key " << key.getKeystr() << " in " << context_name;
             Util::dumpDebugMsg(instance_name_, oss.str());
+            #endif
         }
 
         return result;
@@ -153,10 +156,11 @@ namespace covered
         assert(rwlock_hashtable_ != NULL);
         assert(write_lock_flags_ != NULL);
 
-        // TMPDEBUG
+        #ifdef DEBUG_PERKEY_RWLOCK
         std::ostringstream oss;
         oss << "release a write lock for key " << key.getKeystr() << " in " << context_name;
         Util::dumpDebugMsg(instance_name_, oss.str());
+        #endif
 
         uint32_t rwlock_index = getRwlockIndex(key);
         write_lock_flags_[rwlock_index].store(false, Util::STORE_CONCURRENCY_ORDER);
@@ -182,6 +186,18 @@ namespace covered
         bool is_write_locked = (write_lock_flags_[rwlock_index].load(Util::LOAD_CONCURRENCY_ORDER) == true);
 
         return is_write_locked;
+    }
+
+    bool PerkeyRwlock::isReadOrWriteLocked(const Key& key) const
+    {
+        assert(read_lock_cnts_ != NULL);
+        assert(write_lock_flags_ != NULL);
+
+        uint32_t rwlock_index = getRwlockIndex(key);
+        bool is_read_locked = (read_lock_cnts_[rwlock_index].load(Util::LOAD_CONCURRENCY_ORDER) > 0);
+        bool is_write_locked = (write_lock_flags_[rwlock_index].load(Util::LOAD_CONCURRENCY_ORDER) == true);
+
+        return is_read_locked || is_write_locked;
     }
 
     uint32_t PerkeyRwlock::getRwlockIndex(const Key& key) const

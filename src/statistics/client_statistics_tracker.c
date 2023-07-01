@@ -187,7 +187,7 @@ namespace covered
         assert(Util::isDirectoryExist(parentDirpath));
 
         // Check statistics file existence
-        bool is_exist = Util::isFileExist(filepath);
+        bool is_exist = Util::isFileExist(filepath, true);
         if (is_exist)
         {
             // File already exists
@@ -310,7 +310,7 @@ namespace covered
     // Load per-client statistics for TotalStatisticsTracker
     uint32_t ClientStatisticsTracker::load_(const std::string& filepath)
     {
-        bool is_exist = Util::isFileExist(filepath);
+        bool is_exist = Util::isFileExist(filepath, true);
         if (!is_exist)
         {
             // File does not exist

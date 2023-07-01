@@ -190,11 +190,6 @@ namespace covered
             current_is_beacon = true;
         }
 
-        // TMPDEBUG
-        //std::ostringstream oss;
-        //oss << "beacon edge idx: " << beacon_edge_idx << "; current edge idx: " << current_edge_idx;
-        //Util::dumpDebugMsg(instance_name_, oss.str());
-
         return current_is_beacon;
     }
 
@@ -210,11 +205,6 @@ namespace covered
         {
             current_is_target = true;
         }
-
-        // TMPDEBUG
-        //std::ostringstream oss;
-        //oss << "target edge idx: " << target_edge_idx << "; current edge idx: " << current_edge_idx;
-        //Util::dumpDebugMsg(instance_name_, oss.str());
 
         return current_is_target;
     }
