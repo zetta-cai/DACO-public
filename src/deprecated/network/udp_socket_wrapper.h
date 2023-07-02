@@ -1,8 +1,9 @@
 /*
  * UdpSocketWrapper: encapsulate advanced operations (UDP fragmentation of message payload) on UDP socket programming.
  *
- * NOTE: message payload may be splited into multiple UDP fragments (i.e., multiple fragment payloads).
- * NOTE: each fragment payload + fragment header form the corresponding UDP packet payload.
+ * NOTE: message payload may be splited into multiple UDP fragments (i.e., multiple fragment payloads), where each fragment payload + fragment header form the corresponding UDP packet payload.
+ * 
+ * NOTE: it is impossible to make UdpSocketWrapper thread safe, as propagation simulator cannot get lock to send requests after sleep, if processing threads of each node are blocked by recv() after getting a lock
  * 
  * By Siyuan Sheng (2023.04.24).
  */

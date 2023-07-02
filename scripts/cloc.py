@@ -10,7 +10,7 @@ filename = sys.argv[0]
 proj_dirname = os.path.dirname(os.path.dirname(os.path.abspath(filename)))
 
 exclude_exts = "d,o,pyc"
-exclude_dirs = "\"(src/mk|src/workload/cachebench|src/cache/cpp-lru-cache)\""
+exclude_dirs = "\"(src/mk|src/workload/cachebench|src/cache/cpp-lru-cache|src/deprecated)\""
 exclude_files = "\"(src/Makefile|scripts/requirements\.txt)\""
 # --fullpath add the current working directory (pwd) ahead of --not-match-d and --not-match-f
 exclude_command = "--exclude-ext={} --fullpath --not-match-d={} --not-match-f={}".format(exclude_exts, exclude_dirs, exclude_files)
