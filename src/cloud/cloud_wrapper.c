@@ -14,6 +14,15 @@ namespace covered
 {
     const std::string CloudWrapper::kClassName("CloudWrapper");
 
+    void* CloudWrapper::launchCloud(void* cloud_param_ptr)
+    {
+        CloudWrapper local_cloud(Param::getCloudStorage(), (CloudParam*)cloud_param_ptr);
+        local_cloud.start();
+        
+        pthread_exit(NULL);
+        return NULL;
+    }
+
     CloudWrapper::CloudWrapper(const std::string& cloud_storage, CloudParam* cloud_param_ptr)
     {
         if (cloud_param_ptr == NULL)

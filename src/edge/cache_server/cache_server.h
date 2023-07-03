@@ -27,8 +27,6 @@ namespace covered
     private:
         static const std::string kClassName;
 
-        static void* launchCacheServerWorker_(void* cache_server_worker_param_ptr);
-
         void receiveRequestsAndPartition_();
         void partitionRequest_(MessageBase* data_requeset_ptr, const NetworkAddr& network_addr);
 

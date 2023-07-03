@@ -18,38 +18,6 @@
 #include "statistics/client_statistics_tracker.h"
 #include "workload/workload_wrapper_base.h"
 
-void* launchCloud(void* cloud_param_ptr)
-{
-    covered::CloudWrapper local_cloud(covered::Param::getCloudStorage(), (covered::CloudParam*)cloud_param_ptr);
-    local_cloud.start();
-    
-    pthread_exit(NULL);
-    return NULL;
-}
-
-void* launchEdge(void* edge_param_ptr)
-{
-    covered::EdgeWrapper* local_edge_ptr = new covered::EdgeWrapper(covered::Param::getCacheName(), covered::Param::getCapacityBytes(), covered::Param::getEdgecnt(), covered::Param::getHashName(), covered::Param::getPercacheserverWorkercnt(), (covered::EdgeParam*)edge_param_ptr);
-    assert(local_edge_ptr != NULL);
-    local_edge_ptr->start();
-
-    assert(local_edge_ptr != NULL);
-    delete local_edge_ptr;
-    local_edge_ptr = NULL;
-    
-    pthread_exit(NULL);
-    return NULL;
-}
-
-void* launchClient(void* client_param_ptr)
-{
-    covered::ClientWrapper local_client(covered::Param::getPerclientWorkercnt(), (covered::ClientParam*)client_param_ptr);
-    local_client.start();
-    
-    pthread_exit(NULL);
-    return NULL;
-}
-
 int main(int argc, char **argv) {
     // (1) Parse and process CLI parameters (set configurations in Config and Param)
     covered::CLI::parseAndProcessCliParameters(argc, argv);
@@ -70,7 +38,7 @@ int main(int argc, char **argv) {
 
     covered::Util::dumpNormalMsg(main_class_name, "launch cloud node");
 
-    pthread_returncode = pthread_create(&cloud_thread, NULL, launchCloud, (void*)(&(cloud_param)));
+    pthread_returncode = pthread_create(&cloud_thread, NULL, covered::CloudWrapper::launchCloud, (void*)(&(cloud_param)));
     if (pthread_returncode != 0)
     {
         std::ostringstream oss;
@@ -101,7 +69,7 @@ int main(int argc, char **argv) {
         oss << "launch edge node " << edge_idx;
         covered::Util::dumpNormalMsg(main_class_name, oss.str());
 
-        pthread_returncode = pthread_create(&edge_threads[edge_idx], NULL, launchEdge, (void*)(&(edge_params[edge_idx])));
+        pthread_returncode = pthread_create(&edge_threads[edge_idx], NULL, covered::EdgeWrapper::launchEdge, (void*)(&(edge_params[edge_idx])));
         if (pthread_returncode != 0)
         {
             std::ostringstream oss;
@@ -144,7 +112,7 @@ int main(int argc, char **argv) {
         oss << "launch client " << client_idx;
         covered::Util::dumpNormalMsg(main_class_name, oss.str());
 
-        pthread_returncode = pthread_create(&client_threads[client_idx], NULL, launchClient, (void*)(&(client_params[client_idx])));
+        pthread_returncode = pthread_create(&client_threads[client_idx], NULL, covered::ClientWrapper::launchClient, (void*)(&(client_params[client_idx])));
         if (pthread_returncode != 0)
         {
             std::ostringstream oss;
@@ -173,7 +141,7 @@ int main(int argc, char **argv) {
         usleep(covered::Util::SLEEP_INTERVAL_US);
 
         struct timespec end_timespec = covered::Util::getCurrentTimespec();
-        double delta_time = covered::Util::getDeltaTime(end_timespec, start_timespec);
+        double delta_time = covered::Util::getDeltaTimeUs(end_timespec, start_timespec);
         if (delta_time >= duration)
         {
             break;

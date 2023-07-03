@@ -15,6 +15,20 @@ namespace covered
 {
     const std::string EdgeWrapper::kClassName("EdgeWrapper");
 
+    void* EdgeWrapper::launchEdge(void* edge_param_ptr)
+    {
+        EdgeWrapper* local_edge_ptr = new EdgeWrapper(Param::getCacheName(), Param::getCapacityBytes(), Param::getEdgecnt(), Param::getHashName(), Param::getPercacheserverWorkercnt(), (EdgeParam*)edge_param_ptr);
+        assert(local_edge_ptr != NULL);
+        local_edge_ptr->start();
+
+        assert(local_edge_ptr != NULL);
+        delete local_edge_ptr;
+        local_edge_ptr = NULL;
+        
+        pthread_exit(NULL);
+        return NULL;
+    }
+
     EdgeWrapper::EdgeWrapper(const std::string& cache_name, const uint32_t& capacity_bytes, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& percacheserver_workercnt, EdgeParam* edge_param_ptr) : cache_name_(cache_name), capacity_bytes_(capacity_bytes), percacheserver_workercnt_(percacheserver_workercnt), edge_param_ptr_(edge_param_ptr)
     {
         if (edge_param_ptr == NULL)
@@ -69,7 +83,7 @@ namespace covered
         {
             std::ostringstream oss;
             oss << "edge " << edge_idx << " failed to launch beacon server (error code: " << pthread_returncode << ")" << std::endl;
-            covered::Util::dumpErrorMsg(instance_name_, oss.str());
+            Util::dumpErrorMsg(instance_name_, oss.str());
             exit(1);
         }
 
@@ -79,7 +93,7 @@ namespace covered
         {
             std::ostringstream oss;
             oss << "edge " << edge_idx << " failed to launch cache server (error code: " << pthread_returncode << ")" << std::endl;
-            covered::Util::dumpErrorMsg(instance_name_, oss.str());
+            Util::dumpErrorMsg(instance_name_, oss.str());
             exit(1);
         }
 
@@ -89,7 +103,7 @@ namespace covered
         {
             std::ostringstream oss;
             oss << "edge " << edge_idx << " failed to launch invalidation server (error code: " << pthread_returncode << ")" << std::endl;
-            covered::Util::dumpErrorMsg(instance_name_, oss.str());
+            Util::dumpErrorMsg(instance_name_, oss.str());
             exit(1);
         }
 
@@ -99,7 +113,7 @@ namespace covered
         {
             std::ostringstream oss;
             oss << "edge " << edge_idx << " failed to join beacon server (error code: " << pthread_returncode << ")" << std::endl;
-            covered::Util::dumpErrorMsg(instance_name_, oss.str());
+            Util::dumpErrorMsg(instance_name_, oss.str());
             exit(1);
         }
 
@@ -109,7 +123,7 @@ namespace covered
         {
             std::ostringstream oss;
             oss << "edge " << edge_idx << " failed to join cache server (error code: " << pthread_returncode << ")" << std::endl;
-            covered::Util::dumpErrorMsg(instance_name_, oss.str());
+            Util::dumpErrorMsg(instance_name_, oss.str());
             exit(1);
         }
 
@@ -119,7 +133,7 @@ namespace covered
         {
             std::ostringstream oss;
             oss << "edge " << edge_idx << " failed to join invalidation server (error code: " << pthread_returncode << ")" << std::endl;
-            covered::Util::dumpErrorMsg(instance_name_, oss.str());
+            Util::dumpErrorMsg(instance_name_, oss.str());
             exit(1);
         }
 

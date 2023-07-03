@@ -68,7 +68,7 @@ namespace covered
         // Launch cache server workers
         for (uint32_t local_cache_server_worker_idx = 0; local_cache_server_worker_idx < edge_wrapper_ptr_->percacheserver_workercnt_; local_cache_server_worker_idx++)
         {
-            pthread_returncode = pthread_create(&cache_server_worker_threads[local_cache_server_worker_idx], NULL, launchCacheServerWorker_, (void*)(&cache_server_worker_params_[local_cache_server_worker_idx]));
+            pthread_returncode = pthread_create(&cache_server_worker_threads[local_cache_server_worker_idx], NULL, CacheServerWorkerBase::launchCacheServerWorker, (void*)(&cache_server_worker_params_[local_cache_server_worker_idx]));
             if (pthread_returncode != 0)
             {
                 std::ostringstream oss;
@@ -95,22 +95,6 @@ namespace covered
         }
 
         return;
-    }
-
-    void* CacheServer::launchCacheServerWorker_(void* cache_server_worker_param_ptr)
-    {
-        assert(cache_server_worker_param_ptr != NULL);
-
-        CacheServerWorkerBase* cache_server_worker_ptr = CacheServerWorkerBase::getCacheServerWorkerByCacheName((CacheServerWorkerParam*)cache_server_worker_param_ptr);
-        assert(cache_server_worker_ptr != NULL);
-        cache_server_worker_ptr->start();
-
-        assert(cache_server_worker_ptr != NULL);
-        delete cache_server_worker_ptr;
-        cache_server_worker_ptr = NULL;
-
-        pthread_exit(NULL);
-        return NULL;
     }
 
     void CacheServer::receiveRequestsAndPartition_()

@@ -25,6 +25,8 @@ namespace covered
     class ClientWorkerWrapper
     {
     public:
+        static void* launchClientWorker(void* client_worker_param_ptr);
+
         ClientWorkerWrapper(ClientWorkerParam* client_worker_param_ptr);
         ~ClientWorkerWrapper();
 

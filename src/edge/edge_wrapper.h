@@ -21,6 +21,8 @@ namespace covered
     class EdgeWrapper
     {
     public:
+        static void* launchEdge(void* edge_param_ptr);
+
         EdgeWrapper(const std::string& cache_name, const uint32_t& capacity_bytes, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& percacheserver_workercnt, EdgeParam* edge_param_ptr);
         virtual ~EdgeWrapper();
 

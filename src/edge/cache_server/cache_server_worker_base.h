@@ -64,7 +64,7 @@ namespace covered
     class CacheServerWorkerBase
     {
     public:
-        static CacheServerWorkerBase* getCacheServerWorkerByCacheName(CacheServerWorkerParam* cache_server_worker_param_ptr);
+        static void* launchCacheServerWorker(void* cache_server_worker_param_ptr);
 
         CacheServerWorkerBase(CacheServerWorkerParam* cache_server_worker_param_ptr);
         virtual ~CacheServerWorkerBase();
@@ -72,6 +72,8 @@ namespace covered
         void start();
     private:
         static const std::string kClassName;
+
+        static CacheServerWorkerBase* getCacheServerWorkerByCacheName_(CacheServerWorkerParam* cache_server_worker_param_ptr);
 
         // (1) Process data requests
     

@@ -16,7 +16,23 @@ namespace covered
 {
     const std::string CacheServerWorkerBase::kClassName("CacheServerWorkerBase");
 
-    CacheServerWorkerBase* CacheServerWorkerBase::getCacheServerWorkerByCacheName(CacheServerWorkerParam* cache_server_worker_param_ptr)
+    void* CacheServerWorkerBase::launchCacheServerWorker(void* cache_server_worker_param_ptr)
+    {
+        assert(cache_server_worker_param_ptr != NULL);
+
+        CacheServerWorkerBase* cache_server_worker_ptr = getCacheServerWorkerByCacheName_((CacheServerWorkerParam*)cache_server_worker_param_ptr);
+        assert(cache_server_worker_ptr != NULL);
+        cache_server_worker_ptr->start();
+
+        assert(cache_server_worker_ptr != NULL);
+        delete cache_server_worker_ptr;
+        cache_server_worker_ptr = NULL;
+
+        pthread_exit(NULL);
+        return NULL;
+    }
+
+    CacheServerWorkerBase* CacheServerWorkerBase::getCacheServerWorkerByCacheName_(CacheServerWorkerParam* cache_server_worker_param_ptr)
     {
         CacheServerWorkerBase* cache_server_worker_ptr = NULL;
 

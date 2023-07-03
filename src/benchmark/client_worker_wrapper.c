@@ -20,6 +20,15 @@ namespace covered
 {
     const std::string ClientWorkerWrapper::kClassName("ClientWorkerWrapper");
 
+    void* ClientWorkerWrapper::launchClientWorker(void* client_worker_param_ptr)
+    {
+        ClientWorkerWrapper local_client_worker((ClientWorkerParam*)client_worker_param_ptr);
+        local_client_worker.start();
+        
+        pthread_exit(NULL);
+        return NULL;
+    }
+
     ClientWorkerWrapper::ClientWorkerWrapper(ClientWorkerParam* client_worker_param_ptr)
     {
         if (client_worker_param_ptr == NULL)
@@ -184,7 +193,7 @@ namespace covered
         delete local_request_ptr;
         local_request_ptr = NULL;
 
-        double tmp_rtt_us = Util::getDeltaTime(recvrsp_timestamp, sendreq_timestamp);
+        double tmp_rtt_us = Util::getDeltaTimeUs(recvrsp_timestamp, sendreq_timestamp);
         rtt_us = static_cast<uint32_t>(tmp_rtt_us);
 
         return is_finish;

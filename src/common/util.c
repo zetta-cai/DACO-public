@@ -250,7 +250,7 @@ namespace covered
         return oss.str();
     }
 
-    double Util::getDeltaTime(const struct timespec& current_timespec, const struct timespec& previous_timespec)
+    double Util::getDeltaTimeUs(const struct timespec& current_timespec, const struct timespec& previous_timespec)
     {
         struct timespec delta_timespec;
         delta_timespec.tv_sec = current_timespec.tv_sec - previous_timespec.tv_sec;

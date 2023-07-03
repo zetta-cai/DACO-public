@@ -13,10 +13,10 @@ namespace covered
 {
     const std::string ClientWrapper::kClassName("ClientWrapper");
 
-    void* ClientWrapper::launchClientWorker_(void* client_worker_param_ptr)
+    void* launchClient(void* client_param_ptr)
     {
-        ClientWorkerWrapper local_client_worker((ClientWorkerParam*)client_worker_param_ptr);
-        local_client_worker.start();
+        ClientWrapper local_client(Param::getPerclientWorkercnt(), (ClientParam*)client_param_ptr);
+        local_client.start();
         
         pthread_exit(NULL);
         return NULL;
@@ -61,12 +61,12 @@ namespace covered
         // Launch perclient_workercnt worker threads in the local client
         for (uint32_t local_client_worker_idx = 0; local_client_worker_idx < perclient_workercnt_; local_client_worker_idx++)
         {
-            pthread_returncode = pthread_create(&client_worker_threads[local_client_worker_idx], NULL, launchClientWorker_, (void*)(&(client_worker_params[local_client_worker_idx])));
+            pthread_returncode = pthread_create(&client_worker_threads[local_client_worker_idx], NULL, ClientWorkerWrapper::launchClientWorker, (void*)(&(client_worker_params[local_client_worker_idx])));
             if (pthread_returncode != 0)
             {
                 std::ostringstream oss;
                 oss << "client " << client_param_ptr_->getClientIdx() << " failed to launch worker " << local_client_worker_idx << " (error code: " << pthread_returncode << ")" << std::endl;
-                covered::Util::dumpErrorMsg(instance_name_, oss.str());
+                Util::dumpErrorMsg(instance_name_, oss.str());
                 exit(1);
             }
         }
@@ -79,7 +79,7 @@ namespace covered
             {
                 std::ostringstream oss;
                 oss << "client " << client_param_ptr_->getClientIdx() << " failed to join client worker " << local_client_worker_idx << " (error code: " << pthread_returncode << ")" << std::endl;
-                covered::Util::dumpErrorMsg(instance_name_, oss.str());
+                Util::dumpErrorMsg(instance_name_, oss.str());
                 exit(1);
             }
         }

@@ -70,7 +70,7 @@ namespace covered
 
         static struct timespec getCurrentTimespec();
         static std::string getCurrentTimestr();
-        static double getDeltaTime(const struct timespec& current_timespec, const struct timespec& previous_timespec); // In units of microseconds
+        static double getDeltaTimeUs(const struct timespec& current_timespec, const struct timespec& previous_timespec); // In units of microseconds
 
         // (3) Type conversion
 
