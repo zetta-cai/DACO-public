@@ -17,8 +17,6 @@ namespace covered
     class RingBuffer
     {
     public:
-        static const uint32_t RINGBUFFER_CAPACITY;
-
         RingBuffer(const T& default_element, const uint32_t& buffer_size);
         ~RingBuffer();
 

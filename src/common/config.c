@@ -13,11 +13,11 @@ namespace covered
     const std::string Config::CLOUD_IPSTR_KEYSTR("cloud_ipstr");
     const std::string Config::CLOUD_RECVREQ_STARTPORT_KEYSTR("cloud_recvreq_startport");
     const std::string Config::CLOUD_ROCKSDB_BASEDIR_KEYSTR("cloud_rocksdb_basedir");
-    const std::string Config::DATA_REQUEST_BUFFER_SIZE_KEYSTR("data_request_buffer_size");
-    const std::string Config::EDGE_IPSTRS_KEYSTR("edge_ipstrs");
     const std::string Config::EDGE_BEACON_SERVER_RECVREQ_STARTPORT_KEYSTR("edge_beacon_server_recvreq_startport");
+    const std::string Config::EDGE_CACHE_SERVER_DATA_REQUEST_BUFFER_SIZE_KEYSTR("edge_cache_server_data_request_buffer_size");
     const std::string Config::EDGE_CACHE_SERVER_RECVREQ_STARTPORT_KEYSTR("edge_cache_server_recvreq_startport");
     const std::string Config::EDGE_INVALIDATION_SERVER_RECVREQ_STARTPORT_KEYSTR("edge_invalidation_server_recvreq_startport");
+    const std::string Config::EDGE_IPSTRS_KEYSTR("edge_ipstrs");
     const std::string Config::FACEBOOK_CONFIG_FILEPATH_KEYSTR("facebook_config_filepath");
     const std::string Config::FINE_GRAINED_LOCKING_SIZE_KEYSTR("fine_grained_locking_size");
     const std::string Config::LATENCY_HISTOGRAM_SIZE_KEYSTR("latency_histogram_size");
@@ -32,11 +32,11 @@ namespace covered
     std::string Config::cloud_ipstr_ = Util::LOCALHOST_IPSTR;
     uint16_t Config::cloud_recvreq_startport_ = 4100; // [4096, 65536]
     std::string Config::cloud_rocksdb_basedir_("/tmp/cloud");
-    uint32_t Config::data_request_buffer_size_ = 1000;
-    std::vector<std::string> Config::edge_ipstrs_(0);
     uint16_t Config::edge_beacon_server_recvreq_startport_ = 4200; // [4096, 65536]
+    uint32_t Config::edge_cache_server_data_request_buffer_size_ = 1000;
     uint16_t Config::edge_cache_server_recvreq_startport_ = 4300; // [4096, 65536]
     uint16_t Config::edge_invalidation_server_recvreq_startport_ = 4400; // [4096, 65536]
+    std::vector<std::string> Config::edge_ipstrs_(0);
     std::string Config::facebook_config_filepath_("lib/CacheLib/cachelib/cachebench/test_configs/hit_ratio/cdn/config.json");
     uint32_t Config::fine_grained_locking_size_ = 1000;
     uint32_t Config::latency_histogram_size_ = 1000000; // Track latency up to 1000 ms
@@ -71,25 +71,17 @@ namespace covered
             {
                 cloud_rocksdb_basedir_ = kv_ptr->value().get_string();
             }
-            kv_ptr = find_(DATA_REQUEST_BUFFER_SIZE_KEYSTR);
-            if (kv_ptr != NULL)
-            {
-                int64_t tmp_size = kv_ptr->value().get_int64();
-                data_request_buffer_size_ = Util::toUint32(tmp_size);
-            }
-            kv_ptr = find_(EDGE_IPSTRS_KEYSTR);
-            if (kv_ptr != NULL)
-            {
-                for (boost::json::array::iterator iter = kv_ptr->value().get_array().begin(); iter != kv_ptr->value().get_array().end(); iter++)
-                {
-                    edge_ipstrs_.push_back(static_cast<std::string>(iter->get_string()));
-                }
-            }
             kv_ptr = find_(EDGE_BEACON_SERVER_RECVREQ_STARTPORT_KEYSTR);
             if (kv_ptr != NULL)
             {
                 int64_t tmp_port = kv_ptr->value().get_int64();
                 edge_beacon_server_recvreq_startport_ = Util::toUint16(tmp_port);
+            }
+            kv_ptr = find_(EDGE_CACHE_SERVER_DATA_REQUEST_BUFFER_SIZE_KEYSTR);
+            if (kv_ptr != NULL)
+            {
+                int64_t tmp_size = kv_ptr->value().get_int64();
+                edge_cache_server_data_request_buffer_size_ = Util::toUint32(tmp_size);
             }
             kv_ptr = find_(EDGE_CACHE_SERVER_RECVREQ_STARTPORT_KEYSTR);
             if (kv_ptr != NULL)
@@ -102,6 +94,14 @@ namespace covered
             {
                 int64_t tmp_port = kv_ptr->value().get_int64();
                 edge_invalidation_server_recvreq_startport_ = Util::toUint16(tmp_port);
+            }
+            kv_ptr = find_(EDGE_IPSTRS_KEYSTR);
+            if (kv_ptr != NULL)
+            {
+                for (boost::json::array::iterator iter = kv_ptr->value().get_array().begin(); iter != kv_ptr->value().get_array().end(); iter++)
+                {
+                    edge_ipstrs_.push_back(static_cast<std::string>(iter->get_string()));
+                }
             }
             kv_ptr = find_(FACEBOOK_CONFIG_FILEPATH_KEYSTR);
             if (kv_ptr != NULL)
@@ -173,10 +173,28 @@ namespace covered
         return cloud_rocksdb_basedir_;
     }
 
-    uint32_t Config::getDataRequestBufferSize()
+    uint16_t Config::getEdgeBeaconServerRecvreqStartport()
     {
         checkIsValid_();
-        return data_request_buffer_size_;
+        return edge_beacon_server_recvreq_startport_;
+    }
+
+    uint32_t Config::getEdgeCacheServerDataRequestBufferSize()
+    {
+        checkIsValid_();
+        return edge_cache_server_data_request_buffer_size_;
+    }
+
+    uint16_t Config::getEdgeCacheServerRecvreqStartport()
+    {
+        checkIsValid_();
+        return edge_cache_server_recvreq_startport_;
+    }
+
+    uint16_t Config::getEdgeInvalidationServerRecvreqStartport()
+    {
+        checkIsValid_();
+        return edge_invalidation_server_recvreq_startport_;
     }
 
     std::string Config::getEdgeIpstr(const uint32_t& edge_idx)
@@ -191,24 +209,6 @@ namespace covered
             assert(edge_idx < edge_ipstrs_.size());
             return edge_ipstrs_[edge_idx];
         }
-    }
-
-    uint16_t Config::getEdgeBeaconServerRecvreqStartport()
-    {
-        checkIsValid_();
-        return edge_beacon_server_recvreq_startport_;
-    }
-
-    uint16_t Config::getEdgeCacheServerRecvreqStartport()
-    {
-        checkIsValid_();
-        return edge_cache_server_recvreq_startport_;
-    }
-
-    uint16_t Config::getEdgeInvalidationServerRecvreqStartport()
-    {
-        checkIsValid_();
-        return edge_invalidation_server_recvreq_startport_;
     }
 
     std::string Config::getFacebookConfigFilepath()

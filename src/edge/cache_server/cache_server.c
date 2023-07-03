@@ -37,7 +37,7 @@ namespace covered
         cache_server_worker_params_.resize(edge_wrapper_ptr_->percacheserver_workercnt_);
         for (uint32_t local_cache_server_worker_idx = 0; local_cache_server_worker_idx < edge_wrapper_ptr_->percacheserver_workercnt_; local_cache_server_worker_idx++)
         {
-            CacheServerWorkerParam tmp_cache_server_worker_param(edge_wrapper_ptr_, local_cache_server_worker_idx, Config::getDataRequestBufferSize());
+            CacheServerWorkerParam tmp_cache_server_worker_param(edge_wrapper_ptr_, local_cache_server_worker_idx, Config::getEdgeCacheServerDataRequestBufferSize());
             cache_server_worker_params_[local_cache_server_worker_idx] = tmp_cache_server_worker_param;
         }
     }
