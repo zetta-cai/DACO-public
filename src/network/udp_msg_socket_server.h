@@ -3,7 +3,7 @@
  *
  * NOTE: message payload may be splited into multiple UDP fragments (i.e., multiple fragment payloads), where each fragment payload + fragment header form the corresponding UDP packet payload.
  * 
- * NOTE: UdpMsgSocketServer is only used by processing threads of each node (Client/Edge/CloudWrapper) to receive messages with a returned remote address.
+ * NOTE: UdpMsgSocketServer is only used by working threads of each node (Client/Edge/CloudWrapper) to receive messages with a returned remote address.
  * 
  * By Siyuan Sheng (2023.07.02).
  */
