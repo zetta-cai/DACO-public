@@ -32,7 +32,7 @@ namespace covered
 
         void propagate_(const uint32_t& sleep_us);
 
-        void checkPointers_();
+        void checkPointers_() const;
 
         // Const individual variable
         std::string instance_name_;

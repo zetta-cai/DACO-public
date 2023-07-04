@@ -9,6 +9,7 @@
 #include "common/config.h"
 #include "common/param.h"
 #include "common/util.h"
+#include "network/propagation_simulator.h"
 
 namespace covered
 {
@@ -58,13 +59,22 @@ namespace covered
         assert(client_param_ptr_ != NULL);
         int pthread_returncode;
 
-        // TODO: Launch client-to-edge propagation simulator
+        // Launch client-to-edge propagation simulator
+        pthread_t client_toedge_propagation_simulator_thread;
+        pthread_returncode = pthread_create(&client_toedge_propagation_simulator_thread, NULL, PropagationSimulator::launchPropagationSimulator, (void*)client_toedge_propagation_simulator_param_ptr_);
+        if (pthread_returncode != 0)
+        {
+            std::ostringstream oss;
+            oss << " failed to launch client-to-edge propagation simulator (error code: " << pthread_returncode << ")" << std::endl;
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
 
         // Prepare perclient_workercnt worker parameters
         ClientWorkerParam client_worker_params[perclient_workercnt_];
         for (uint32_t local_client_worker_idx = 0; local_client_worker_idx < perclient_workercnt_; local_client_worker_idx++)
         {
-            ClientWorkerParam local_client_worker_param(client_param_ptr_, local_client_worker_idx);
+            ClientWorkerParam local_client_worker_param(this, local_client_worker_idx);
             client_worker_params[local_client_worker_idx] = local_client_worker_param;
         }
 
@@ -76,7 +86,7 @@ namespace covered
             if (pthread_returncode != 0)
             {
                 std::ostringstream oss;
-                oss << "client " << client_param_ptr_->getClientIdx() << " failed to launch worker " << local_client_worker_idx << " (error code: " << pthread_returncode << ")" << std::endl;
+                oss << " failed to launch worker " << local_client_worker_idx << " (error code: " << pthread_returncode << ")" << std::endl;
                 Util::dumpErrorMsg(instance_name_, oss.str());
                 exit(1);
             }
@@ -89,7 +99,7 @@ namespace covered
             if (pthread_returncode != 0)
             {
                 std::ostringstream oss;
-                oss << "client " << client_param_ptr_->getClientIdx() << " failed to join client worker " << local_client_worker_idx << " (error code: " << pthread_returncode << ")" << std::endl;
+                oss << " failed to join client worker " << local_client_worker_idx << " (error code: " << pthread_returncode << ")" << std::endl;
                 Util::dumpErrorMsg(instance_name_, oss.str());
                 exit(1);
             }
@@ -97,7 +107,7 @@ namespace covered
 
         // Get per-client statistics file path
         assert(client_param_ptr_ != NULL);
-        uint32_t client_idx = client_param_ptr_->getClientIdx();
+        uint32_t client_idx = client_param_ptr_->getNodeIdx();
         std::string client_statistics_filepath = Util::getClientStatisticsFilepath(client_idx);
 
         // Dump per-client statistics

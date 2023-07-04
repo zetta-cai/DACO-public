@@ -9,7 +9,8 @@
 
 #include <string>
 
-#include "benchmark/client_param.h"
+#include "benchmark/client_wrapper.h"
+#include "network/propagation_simulator_param.h"
 
 namespace covered
 {
@@ -17,17 +18,17 @@ namespace covered
     {
     public:
         ClientWorkerParam();
-        ClientWorkerParam(ClientParam* client_param_ptr, uint32_t local_client_worker_idx);
+        ClientWorkerParam(ClientWrapper* client_wrapper_ptr, uint32_t local_client_worker_idx);
         ~ClientWorkerParam();
 
         const ClientWorkerParam& operator=(const ClientWorkerParam& other);
 
-        ClientParam* getClientParamPtr();
+        ClientWrapper* getClientWrapperPtr();
         uint32_t getLocalClientWorkerIdx();
     private:
         static const std::string kClassName;
 
-        ClientParam* client_param_ptr_;
+        ClientWrapper* client_wrapper_ptr_;
         uint32_t local_client_worker_idx_;
     };
 }

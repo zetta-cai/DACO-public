@@ -70,6 +70,7 @@ namespace covered
         // Const shared variables
         const std::string cache_name_; // Come from Param
         const uint32_t capacity_bytes_; // Come from Param
+        const uint32_t edgecnt_; // Come from Param
         const uint32_t percacheserver_workercnt_; // Come from Param
         const EdgeParam* edge_param_ptr_; // Thread safe
 

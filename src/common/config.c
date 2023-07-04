@@ -10,6 +10,7 @@
 
 namespace covered
 {
+    const std::string CLIENT_RECVRSP_STARTPORT_KEYSTR("client_recvrsp_startport");
     const std::string Config::CLOUD_IPSTR_KEYSTR("cloud_ipstr");
     const std::string Config::CLOUD_RECVREQ_STARTPORT_KEYSTR("cloud_recvreq_startport");
     const std::string Config::CLOUD_ROCKSDB_BASEDIR_KEYSTR("cloud_rocksdb_basedir");
@@ -30,13 +31,14 @@ namespace covered
     // Initialize config variables by default
     bool Config::is_valid_ = false;
     boost::json::object Config::json_object_ = boost::json::object();
+    uint16_t Config::client_recvrsp_startport_ = 4100; // [4096, 65536]
     std::string Config::cloud_ipstr_ = Util::LOCALHOST_IPSTR;
-    uint16_t Config::cloud_recvreq_startport_ = 4100; // [4096, 65536]
+    uint16_t Config::cloud_recvreq_startport_ = 4200; // [4096, 65536]
     std::string Config::cloud_rocksdb_basedir_("/tmp/cloud");
-    uint16_t Config::edge_beacon_server_recvreq_startport_ = 4200; // [4096, 65536]
+    uint16_t Config::edge_beacon_server_recvreq_startport_ = 4300; // [4096, 65536]
     uint32_t Config::edge_cache_server_data_request_buffer_size_ = 1000;
-    uint16_t Config::edge_cache_server_recvreq_startport_ = 4300; // [4096, 65536]
-    uint16_t Config::edge_invalidation_server_recvreq_startport_ = 4400; // [4096, 65536]
+    uint16_t Config::edge_cache_server_recvreq_startport_ = 4400; // [4096, 65536]
+    uint16_t Config::edge_invalidation_server_recvreq_startport_ = 4500; // [4096, 65536]
     std::vector<std::string> Config::edge_ipstrs_(0);
     std::string Config::facebook_config_filepath_("lib/CacheLib/cachelib/cachebench/test_configs/hit_ratio/cdn/config.json");
     uint32_t Config::fine_grained_locking_size_ = 1000;
@@ -57,6 +59,12 @@ namespace covered
 
             // Overwrite default values of config variables if any
             boost::json::key_value_pair* kv_ptr = NULL;
+            kv_ptr = find_(CLIENT_RECVRSP_STARTPORT_KEYSTR);
+            if (kv_ptr != NULL)
+            {
+                int64_t tmp_port = kv_ptr->value().get_int64();
+                client_recvrsp_startport_ = Util::toUint16(tmp_port);
+            }
             kv_ptr = find_(CLOUD_IPSTR_KEYSTR);
             if (kv_ptr != NULL)
             {
@@ -156,10 +164,16 @@ namespace covered
         return;
     }
 
+    uint16_t Config::getClientRecvrspStartport()
+    {
+        checkIsValid_();
+        return client_recvrsp_startport_;
+    }
+
     std::string Config::getCloudIpstr()
     {
         checkIsValid_();
-        if (Param::isSimulation())
+        if (Param::isSingleNode())
         {
             return Util::LOCALHOST_IPSTR;
         }
@@ -205,18 +219,39 @@ namespace covered
         return edge_invalidation_server_recvreq_startport_;
     }
 
-    std::string Config::getEdgeIpstr(const uint32_t& edge_idx)
+    std::string Config::getEdgeIpstr(const uint32_t& edge_idx, const uint32_t& edgecnt)
     {
         checkIsValid_();
-        if (Param::isSimulation()) // NOT check edge_idx for simulation mode
+        if (Param::isSingleNode()) // NOT check edge_idx for single-node mode
         {
             return Util::LOCALHOST_IPSTR;
         }
         else
         {
-            assert(edge_idx < edge_ipstrs_.size());
-            return edge_ipstrs_[edge_idx];
+            assert(edge_idx < edgecnt);
+            assert(edge_ipstrs_.size() > 0);
+            if (edgecnt <= edge_ipstrs_.size())
+            {
+                return edge_ipstrs_[edge_idx];
+            }
+            else
+            {
+                uint32_t permachine_edgecnt = edgecnt / edge_ipstrs_.size();
+                assert(permachine_edgecnt > 0);
+                uint32_t machine_idx = edge_idx / permachine_edgecnt;
+                if (machine_idx >= edge_ipstrs_.size())
+                {
+                    machine_idx = edge_ipstrs_.size() - 1; // Assign tail edges to the last machine
+                }
+                return edge_ipstrs_[machine_idx];
+            }
         }
+    }
+
+    uint32_t Config::getEdgeIpstrCnt()
+    {
+        checkIsValid_();
+        return edge_ipstrs_.size();
     }
 
     std::string Config::getFacebookConfigFilepath()

@@ -36,10 +36,14 @@ namespace covered
             Util::dumpErrorMsg(kClassName, "client_worker_param_ptr is NULL!");
             exit(1);
         }
-        ClientParam* client_param_ptr = client_worker_param_ptr->getClientParamPtr();
-        assert(client_param_ptr != NULL);
 
-        const uint32_t client_idx = client_param_ptr->getClientIdx();
+        // Get client index
+        ClientWrapper* client_wrapper_ptr = client_worker_param_ptr->getClientWrapperPtr();
+        assert(client_wrapper_ptr != NULL);
+        assert(client_wrapper_ptr->client_param_ptr_ != NULL);
+        const uint32_t client_idx = client_wrapper_ptr->client_param_ptr_->getNodeIdx();
+
+        // Get global client worker index
         const uint32_t local_client_worker_idx = client_worker_param_ptr->getLocalClientWorkerIdx();
         global_client_worker_idx_ = Util::getGlobalClientWorkerIdx(client_idx, local_client_worker_idx);
 
@@ -60,11 +64,9 @@ namespace covered
         }
 
         // Prepare a socket client to closest edge recvreq port
-        std::string closest_edge_ipstr = Util::getClosestEdgeIpstr(client_idx);
-        uint16_t closest_edge_cache_server_recvreq_port = Util::getClosestEdgeCacheServerRecvreqPort(client_idx);
-        NetworkAddr remote_addr(closest_edge_ipstr, closest_edge_cache_server_recvreq_port); // Communicate with the closest edge node
-        client_worker_sendreq_toedge_socket_client_ptr_ = new UdpSocketWrapper(SocketRole::kSocketClient, remote_addr);
-        assert(client_worker_sendreq_toedge_socket_client_ptr_ != NULL);
+        // TDOO: END HERE
+        client_worker_recvrsp_socket_server_ptr_ = new UdpMsgSocketServer(host_addr);
+        assert(client_worker_recvrsp_socket_server_ptr_ != NULL);
     }
     
     ClientWorkerWrapper::~ClientWorkerWrapper()
@@ -82,19 +84,16 @@ namespace covered
 
     void ClientWorkerWrapper::start()
     {
-        assert(client_worker_item_randgen_ptr_ != NULL);
-
-        assert(client_worker_param_ptr_ != NULL);
-        ClientParam* client_param_ptr = client_worker_param_ptr_->getClientParamPtr();
-        assert(client_param_ptr != NULL);
+        checkPointers_();
+        
+        ClientParam* client_param_ptr = client_worker_param_ptr_->getClientWrapperPtr()->client_param_ptr_;
         WorkloadWrapperBase* workload_generator_ptr = client_param_ptr->getWorkloadGeneratorPtr();
-        assert(workload_generator_ptr != NULL);
 
         // Block until client_running_ becomes true
-        while (!client_param_ptr->isClientRunning()) {}
+        while (!client_param_ptr->isNodeRunning()) {}
 
         // Current worker thread start to issue requests and receive responses
-        while (client_param_ptr->isClientRunning())
+        while (client_param_ptr->isNodeRunning())
         {
             // Generate key-value request based on a specific workload
             WorkloadItem workload_item = workload_generator_ptr->generateItem(*client_worker_item_randgen_ptr_);
@@ -136,10 +135,9 @@ namespace covered
 
     bool ClientWorkerWrapper::issueItemToEdge_(const WorkloadItem& workload_item, DynamicArray& local_response_msg_payload, uint32_t& rtt_us)
     {
-        assert(client_worker_param_ptr_ != NULL);
-        ClientParam* client_param_ptr = client_worker_param_ptr_->getClientParamPtr();
-        assert(client_param_ptr != NULL);
-        assert(client_worker_sendreq_toedge_socket_client_ptr_ != NULL);
+        checkPointers_();
+  
+        ClientParam* client_param_ptr = client_worker_param_ptr_->getClientWrapperPtr()->client_param_ptr_;
         
         bool is_finish = false; // Mark if local client is finished
 
@@ -169,7 +167,7 @@ namespace covered
             bool is_timeout = client_worker_sendreq_toedge_socket_client_ptr_->recv(local_response_msg_payload);
             if (is_timeout)
             {
-                if (!client_param_ptr->isClientRunning())
+                if (!client_param_ptr->isNodeRunning())
                 {
                     is_finish = true;
                     break; // Client is NOT running
@@ -287,6 +285,20 @@ namespace covered
         assert(local_response_ptr != NULL);
         delete local_response_ptr;
         local_response_ptr = NULL;
+
+        return;
+    }
+
+    void ClientWorkerWrapper::checkPointers_() const
+    {
+        assert(client_worker_param_ptr_ != NULL);
+        assert(client_worker_param_ptr_->getClientWrapperPtr() != NULL);
+        assert(client_worker_param_ptr_->getClientWrapperPtr()->client_param_ptr_ != NULL);
+        assert(client_worker_param_ptr_->getClientWrapperPtr()->client_param_ptr_->getWorkloadGeneratorPtr() != NULL);
+        assert(client_worker_param_ptr_->getClientWrapperPtr()->client_param_ptr_->getClientStatisticsTrackerPtr() != NULL);
+        assert(client_worker_param_ptr_->getClientWrapperPtr()->client_toedge_propagation_simulator_param_ptr_ != NULL);
+        assert(client_worker_item_randgen_ptr_ != NULL);
+        assert(client_worker_sendreq_toedge_socket_client_ptr_ != NULL);
 
         return;
     }

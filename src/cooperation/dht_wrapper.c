@@ -55,12 +55,12 @@ namespace covered
     std::string DhtWrapper::getBeaconEdgeIpstr(const Key& key) const
     {
         uint32_t beacon_edge_idx = getBeaconEdgeIdx(key);
-        return Config::getEdgeIpstr(beacon_edge_idx);
+        return Config::getEdgeIpstr(beacon_edge_idx, edgecnt_);
     }
 
     uint16_t DhtWrapper::getBeaconEdgeBeaconServerRecvreqPort(const Key& key) const
     {
         uint32_t beacon_edge_idx = getBeaconEdgeIdx(key);
-        return Util::getEdgeBeaconServerRecvreqPort(beacon_edge_idx);
+        return Util::getEdgeBeaconServerRecvreqPort(beacon_edge_idx, edgecnt_);
     }
 }

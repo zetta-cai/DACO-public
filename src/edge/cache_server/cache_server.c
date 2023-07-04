@@ -28,7 +28,7 @@ namespace covered
         instance_name_ = oss.str();
 
         // Prepare a socket server on recvreq port for cache server
-        uint16_t edge_cache_server_recvreq_port = Util::getEdgeCacheServerRecvreqPort(edge_idx);
+        uint16_t edge_cache_server_recvreq_port = Util::getEdgeCacheServerRecvreqPort(edge_idx, edge_wrapper_ptr->edgecnt_);
         NetworkAddr host_addr(Util::ANY_IPSTR, edge_cache_server_recvreq_port);
         edge_cache_server_recvreq_socket_server_ptr_ = new UdpSocketWrapper(SocketRole::kSocketServer, host_addr);
         assert(edge_cache_server_recvreq_socket_server_ptr_ != NULL);

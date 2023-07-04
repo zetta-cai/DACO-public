@@ -97,7 +97,7 @@ namespace covered
         return;
     }
 
-    void PropagationSimulator::checkPointers_()
+    void PropagationSimulator::checkPointers_() const
     {
         assert(propagation_simulator_param_ptr_ != NULL);
         assert(propagation_simulator_param_ptr_->getNodeParamPtr() != NULL);

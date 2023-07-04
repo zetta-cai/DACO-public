@@ -30,10 +30,10 @@ namespace covered
         // For workload name
         static const std::string FACEBOOK_WORKLOAD_NAME; // Workload generator type
 
-        static void setParameters(const std::string& main_class_name, const bool& is_simulation, const std::string& cache_name, const uint32_t& capacity_bytes, const uint32_t& clientcnt, const std::string& cloud_storage, const std::string& config_filepath, const bool& is_debug, const double& duration, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& percacheserver_workercnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge, const uint32_t& propagation_latency_crossedge, const uint32_t& propagation_latency_edgecloud, const std::string& workload_name);
+        static void setParameters(const std::string& main_class_name, const bool& is_single_node, const std::string& cache_name, const uint32_t& capacity_bytes, const uint32_t& clientcnt, const std::string& cloud_storage, const std::string& config_filepath, const bool& is_debug, const double& duration, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& percacheserver_workercnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge, const uint32_t& propagation_latency_crossedge, const uint32_t& propagation_latency_edgecloud, const std::string& workload_name);
 
         static std::string getMainClassName();
-        static bool isSimulation();
+        static bool isSingleNode();
         static std::string getCacheName();
         static uint32_t getCapacityBytes();
         static uint32_t getClientcnt();
@@ -67,7 +67,7 @@ namespace covered
 
         static std::string main_class_name_;
         static bool is_valid_;
-        static bool is_simulation_;
+        static bool is_single_node_;
         static std::string cache_name_;
         static uint32_t capacity_bytes_;
         static uint32_t clientcnt_;

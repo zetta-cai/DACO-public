@@ -29,14 +29,14 @@ namespace covered
         return NULL;
     }
 
-    EdgeWrapper::EdgeWrapper(const std::string& cache_name, const uint32_t& capacity_bytes, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& percacheserver_workercnt, EdgeParam* edge_param_ptr) : cache_name_(cache_name), capacity_bytes_(capacity_bytes), percacheserver_workercnt_(percacheserver_workercnt), edge_param_ptr_(edge_param_ptr)
+    EdgeWrapper::EdgeWrapper(const std::string& cache_name, const uint32_t& capacity_bytes, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& percacheserver_workercnt, EdgeParam* edge_param_ptr) : cache_name_(cache_name), capacity_bytes_(capacity_bytes), edgecnt_(edgecnt), percacheserver_workercnt_(percacheserver_workercnt), edge_param_ptr_(edge_param_ptr)
     {
         if (edge_param_ptr == NULL)
         {
             Util::dumpErrorMsg(kClassName, "edge_param_ptr is NULL!");
             exit(1);
         }
-        uint32_t edge_idx = edge_param_ptr->getEdgeIdx();
+        uint32_t edge_idx = edge_param_ptr->getNodeIdx();
 
         // Differentiate different edge nodes
         std::ostringstream oss;
@@ -239,19 +239,19 @@ namespace covered
         assert(invalidate_edgecnt > 0);
 
         // Prepare a temporary socket client to invalidate cached copies for the given key
-        // NOTE: use edge0 as default remote address, but will reset remote address based on dirinfo later
-        std::string edge0_ipstr = Config::getEdgeIpstr(0);
-        uint16_t edge0_invalidation_server_port = Util::getEdgeInvalidationServerRecvreqPort(0);
-        NetworkAddr edge0_invalidation_server_addr(edge0_ipstr, edge0_invalidation_server_port);
-        UdpSocketWrapper edge_sendreq_toinvalidate_socket_client(SocketRole::kSocketClient, edge0_invalidation_server_addr);
+        // NOTE: use invalid remote address as default, but will reset remote address based on dirinfo later
+        std::string invalid_ipstr = Util::LOCALHOST_IPSTR;
+        uint16_t invalid_port = Util::UDP_MIN_PORT + 1;
+        NetworkAddr invalid_addr(invalid_ipstr, invalid_port);
+        UdpSocketWrapper edge_sendreq_toinvalidate_socket_client(SocketRole::kSocketClient, invalid_addr);
 
         // Convert directory informations into network addresses
         std::unordered_set<NetworkAddr, NetworkAddrHasher> all_networkaddr;
         for (std::unordered_set<DirectoryInfo, DirectoryInfoHasher>::const_iterator iter = all_dirinfo.begin(); iter != all_dirinfo.end(); iter++)
         {
             uint32_t tmp_edgeidx = iter->getTargetEdgeIdx();
-            std::string tmp_edge_ipstr = Config::getEdgeIpstr(tmp_edgeidx);
-            uint16_t tmp_edge_invaliation_server_port = Util::getEdgeInvalidationServerRecvreqPort(tmp_edgeidx);
+            std::string tmp_edge_ipstr = Config::getEdgeIpstr(tmp_edgeidx, edgecnt_);
+            uint16_t tmp_edge_invaliation_server_port = Util::getEdgeInvalidationServerRecvreqPort(tmp_edgeidx, edgecnt_);
             NetworkAddr tmp_network_addr(tmp_edge_ipstr, tmp_edge_invaliation_server_port);
             all_networkaddr.insert(tmp_network_addr);
         }
@@ -381,11 +381,11 @@ namespace covered
         assert(blocked_edgecnt > 0);
 
         // Prepare a temporary socket client to unblock cache servers of blocked edge nodes
-        // NOTE: use edge0 as default remote address, but will reset remote address based on dirinfo later
-        std::string edge0_ipstr = Config::getEdgeIpstr(0);
-        uint16_t edge0_cache_server_port = Util::getEdgeCacheServerRecvreqPort(0);
-        NetworkAddr edge0_cache_server_addr(edge0_ipstr, edge0_cache_server_port);
-        UdpSocketWrapper edge_sendreq_tounblock_socket_client(SocketRole::kSocketClient, edge0_cache_server_addr);
+        // NOTE: use invalid remote address as default, but will reset remote address based on dirinfo later
+        std::string invalid_ipstr = Util::LOCALHOST_IPSTR;
+        uint16_t invalid_port = Util::UDP_MIN_PORT + 1;
+        NetworkAddr invalid_addr(invalid_ipstr, invalid_port);
+        UdpSocketWrapper edge_sendreq_tounblock_socket_client(SocketRole::kSocketClient, invalid_addr);
 
         // Track whether notifictionas to all closest edge nodes have been acknowledged
         uint32_t acked_edgecnt = 0;

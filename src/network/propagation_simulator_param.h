@@ -29,7 +29,7 @@ namespace covered
         uint32_t getPropagationLatencyUs() const;
         NodeParamBase* getNodeParamPtr() const;
 
-        bool pop(PropagationItem& element);
+        bool pop(PropagationItem& element); // Only invoked by PropagationSimulator
 
         PropagationSimulatorParam& operator=(const PropagationSimulatorParam& other);
     private:

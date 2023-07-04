@@ -40,7 +40,7 @@ int main(int argc, char **argv) {
     int pthread_returncode;
 
     // TODO: (2) Transfer per-client statistics files from all client machines into the current machine for prototype mode
-    if (!covered::Param::isSimulation())
+    if (!covered::Param::isSingleNode())
     {
         // TODO
     }

@@ -19,6 +19,7 @@ namespace covered
     {
     public:
         // Key strings of JSON config file for static configurations (only used by Config)
+        static const std::string CLIENT_RECVRSP_STARTPORT_KEYSTR;
         static const std::string CLOUD_IPSTR_KEYSTR;
         static const std::string CLOUD_RECVREQ_STARTPORT_KEYSTR;
         static const std::string CLOUD_ROCKSDB_BASEDIR_KEYSTR;
@@ -36,6 +37,7 @@ namespace covered
 
         static void loadConfig();
 
+        static uint16_t getClientRecvrspStartport();
         static std::string getCloudIpstr();
         static uint16_t getCloudRecvreqStartport();
         static std::string getCloudRocksdbBasedir();
@@ -43,7 +45,8 @@ namespace covered
         static uint32_t getEdgeCacheServerDataRequestBufferSize();
         static uint16_t getEdgeCacheServerRecvreqStartport();
         static uint16_t getEdgeInvalidationServerRecvreqStartport();
-        static std::string getEdgeIpstr(const uint32_t& edge_idx);
+        static std::string getEdgeIpstr(const uint32_t& edge_idx, const uint32_t& edgecnt);
+        static uint32_t getEdgeIpstrCnt();
         static std::string getFacebookConfigFilepath();
         static uint32_t getFineGrainedLockingSize();
         static uint32_t getLatencyHistogramSize();
@@ -61,6 +64,7 @@ namespace covered
 
         static bool is_valid_;
         static boost::json::object json_object_;
+        static uint16_t client_recvrsp_startport_;
         static std::string cloud_ipstr_;
         static uint16_t cloud_recvreq_startport_;
         static std::string cloud_rocksdb_basedir_;

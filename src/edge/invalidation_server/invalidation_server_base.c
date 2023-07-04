@@ -44,7 +44,7 @@ namespace covered
         base_instance_name_ = oss.str();
 
         // Prepare a socket server on recvreq port for invalidation server
-        uint16_t edge_invalidation_server_recvreq_port = Util::getEdgeInvalidationServerRecvreqPort(edge_idx);
+        uint16_t edge_invalidation_server_recvreq_port = Util::getEdgeInvalidationServerRecvreqPort(edge_idx, edge_wrapper_ptr_->edgecnt_);
         NetworkAddr host_addr(Util::ANY_IPSTR, edge_invalidation_server_recvreq_port);
         edge_invalidation_server_recvreq_socket_server_ptr_ = new UdpSocketWrapper(SocketRole::kSocketServer, host_addr);
         assert(edge_invalidation_server_recvreq_socket_server_ptr_ != NULL);

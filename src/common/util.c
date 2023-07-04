@@ -318,28 +318,28 @@ namespace covered
 
     // (4.1) Client
 
-    uint32_t Util::getClosestEdgeIdx(const uint32_t& client_idx)
+    uint32_t Util::getClosestEdgeIdx(const uint32_t& client_idx, const uint32_t& edgecnt)
     {
-        assert(Param::getEdgecnt() > 0);
-        uint32_t peredge_clientcnt = Param::getClientcnt() / Param::getEdgecnt();
+        assert(edgecnt > 0);
+        uint32_t peredge_clientcnt = Param::getClientcnt() / edgecnt;
         assert(peredge_clientcnt > 0);
         uint32_t closest_edge_idx = client_idx / peredge_clientcnt;
-        if (closest_edge_idx >= Param::getEdgecnt())
+        if (closest_edge_idx >= edgecnt)
         {
-            closest_edge_idx = Param::getEdgecnt() - 1;
+            closest_edge_idx = edgecnt - 1; // Assign tail clients to the last edge node
         }
         return closest_edge_idx;
     }
 
-    std::string Util::getClosestEdgeIpstr(const uint32_t& client_idx)
+    std::string Util::getClosestEdgeIpstr(const uint32_t& client_idx, const uint32_t& edgecnt)
     {
-        uint32_t closest_edge_idx = getClosestEdgeIdx(client_idx);
-        return Config::getEdgeIpstr(closest_edge_idx);
+        uint32_t closest_edge_idx = getClosestEdgeIdx(client_idx, edgecnt);
+        return Config::getEdgeIpstr(closest_edge_idx, edgecnt);
     }
 
-    uint16_t Util::getClosestEdgeCacheServerRecvreqPort(const uint32_t& client_idx)
+    uint16_t Util::getClosestEdgeCacheServerRecvreqPort(const uint32_t& client_idx, const uint32_t& edgecnt)
     {
-        uint32_t closest_edge_idx = getClosestEdgeIdx(client_idx);
+        uint32_t closest_edge_idx = getClosestEdgeIdx(client_idx, edgecnt);
         return getEdgeCacheServerRecvreqPort(closest_edge_idx);
     }
 
@@ -349,24 +349,31 @@ namespace covered
         return global_client_worker_idx;
     }
 
+    uint16_t Util::getClientWorkerRecvrspPort(const uint32_t& global_client_worker_idx)
+    {
+        // TODO: Add Util::getClientPort_()
+        // TODO: Add Config::client_ipstrs
+        // TODO: Assign clients into machines similar as edges
+    }
+
     // (4.2) Edge and cloud
 
-    uint16_t Util::getEdgeBeaconServerRecvreqPort(const uint32_t& edge_idx)
+    uint16_t Util::getEdgeBeaconServerRecvreqPort(const uint32_t& edge_idx, const uint32_t& edgecnt)
     {
         int64_t edge_beacon_server_recvreq_startport = static_cast<int64_t>(covered::Config::getEdgeBeaconServerRecvreqStartport());
-        return getEdgePort_(edge_beacon_server_recvreq_startport, edge_idx);
+        return getEdgePort_(edge_beacon_server_recvreq_startport, edge_idx, edgecnt);
     }
 
-    uint16_t Util::getEdgeCacheServerRecvreqPort(const uint32_t& edge_idx)
+    uint16_t Util::getEdgeCacheServerRecvreqPort(const uint32_t& edge_idx, const uint32_t& edgecnt)
     {
         int64_t edge_cache_server_recvreq_startport = static_cast<int64_t>(covered::Config::getEdgeCacheServerRecvreqStartport());
-        return getEdgePort_(edge_cache_server_recvreq_startport, edge_idx);
+        return getEdgePort_(edge_cache_server_recvreq_startport, edge_idx, edgecnt);
     }
 
-    uint16_t Util::getEdgeInvalidationServerRecvreqPort(const uint32_t& edge_idx)
+    uint16_t Util::getEdgeInvalidationServerRecvreqPort(const uint32_t& edge_idx, const uint32_t& edgecnt)
     {
         int64_t edge_invalidation_server_recvreq_startport = static_cast<int64_t>(covered::Config::getEdgeInvalidationServerRecvreqStartport());
-        return getEdgePort_(edge_invalidation_server_recvreq_startport, edge_idx);
+        return getEdgePort_(edge_invalidation_server_recvreq_startport, edge_idx, edgecnt);
     }
 
     uint16_t Util::getCloudRecvreqPort(const uint32_t& cloud_idx)
@@ -376,27 +383,46 @@ namespace covered
 
         int64_t cloud_recvreq_port = 0;
         int64_t cloud_recvreq_startport = static_cast<int64_t>(covered::Config::getCloudRecvreqStartport());
-        if (covered::Param::isSimulation())
+        if (covered::Param::isSingleNode())
         {
             cloud_recvreq_port = cloud_recvreq_startport + cloud_idx;
         }
         else
         {
-            cloud_recvreq_port = cloud_recvreq_startport;
+            // TODO: assign cloud nodes if with multiple machines similar as edge
+            assert(cloud_idx == 0);
         }
         return covered::Util::toUint16(cloud_recvreq_port);
     }
 
-    uint16_t Util::getEdgePort_(const int64_t& start_port, const uint32_t edge_idx)
+    uint16_t Util::getEdgePort_(const int64_t& start_port, const uint32_t& edge_idx, const uint32_t& edgecnt)
     {
         int64_t edge_port = 0;
-        if (covered::Param::isSimulation())
+        if (covered::Param::isSingleNode())
         {
             edge_port = start_port + edge_idx;
         }
         else
         {
-            edge_port = start_port;
+            uint32_t edge_machinecnt = Config::getEdgeIpstrCnt();
+            assert(edge_machinecnt > 0);
+            uint32_t permachine_edgecnt = edgecnt / edge_machinecnt;
+            assert(permachine_edgecnt > 0);
+            uint32_t machine_idx = edge_idx / permachine_edgecnt;
+
+            uint32_t local_edge_idx = 0;
+            if (machine_idx < edge_machinecnt)
+            {
+                local_edge_idx = edge_idx - machine_idx * permachine_edgecnt;
+                assert(local_edge_idx < permachine_edgecnt);
+            }
+            else
+            {
+                local_edge_idx = edge_idx - (edge_machinecnt - 1) * permachine_edgecnt;
+                assert(local_edge_idx >= permachine_edgecnt);
+            }
+
+            edge_port = start_port + local_edge_idx;
         }
         return covered::Util::toUint16(edge_port);
     }
@@ -469,8 +495,8 @@ namespace covered
     std::string Util::getInfixForFilepath_()
     {
         std::ostringstream oss;
-        // Example: simulation_covered_capacitymb1000_clientcnt1_duration10_edgecnt1_hashnamemmh3_keycnt1000000_opcnt1000000_percacheserverworkercnt1_perclientworkercnt1_propagation100010000100000_facebook
-        oss << (Param::isSimulation()?"simulation":"prototype") << "_" << Param::getCacheName() << "_capacitymb" << Param::getCapacityBytes() / 1000 << "_clientcnt" << Param::getClientcnt() << "_duration" << Param::getDuration() << "_edgecnt" << Param::getEdgecnt() << "_hashname" << Param::getHashName() << "_keycnt" << Param::getKeycnt() << "_opcnt" << Param::getOpcnt() << "_percacheserverworkercnt" << Param::getPercacheserverWorkercnt() << "_perclientworkercnt" << Param::getPerclientWorkercnt() << "_propagation" << Param::getPropagationLatencyClientedge() << Param::getPropagationLatencyCrossedge() << Param::getPropagationLatencyEdgecloud() << "_" << Param::getWorkloadName();
+        // Example: singlenode_covered_capacitymb1000_clientcnt1_duration10_edgecnt1_hashnamemmh3_keycnt1000000_opcnt1000000_percacheserverworkercnt1_perclientworkercnt1_propagation100010000100000_facebook
+        oss << (Param::isSingleNode()?"singlenode":"multinode") << "_" << Param::getCacheName() << "_capacitymb" << Param::getCapacityBytes() / 1000 << "_clientcnt" << Param::getClientcnt() << "_duration" << Param::getDuration() << "_edgecnt" << Param::getEdgecnt() << "_hashname" << Param::getHashName() << "_keycnt" << Param::getKeycnt() << "_opcnt" << Param::getOpcnt() << "_percacheserverworkercnt" << Param::getPercacheserverWorkercnt() << "_perclientworkercnt" << Param::getPerclientWorkercnt() << "_propagation" << Param::getPropagationLatencyClientedge() << Param::getPropagationLatencyCrossedge() << Param::getPropagationLatencyEdgecloud() << "_" << Param::getWorkloadName();
         std::string infixstr = oss.str();
         return infixstr;
     }

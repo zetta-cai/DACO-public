@@ -18,7 +18,7 @@
 
 #include "benchmark/client_worker_param.h"
 #include "message/message_base.h"
-#include "network/udp_socket_wrapper.h"
+#include "network/udp_msg_socket_server.h"
 
 namespace covered
 {
@@ -37,12 +37,14 @@ namespace covered
         bool issueItemToEdge_(const WorkloadItem& workload_item, DynamicArray& local_response_msg_payload, uint32_t& rtt_us); // Return is_finish
         void processLocalResponse_(const DynamicArray& local_response_msg_payload, const uint32_t& rtt_us);
 
+        void checkPointers_() const;
+
         std::string instance_name_;
         uint32_t global_client_worker_idx_;
 
         ClientWorkerParam* client_worker_param_ptr_;
         std::mt19937_64* client_worker_item_randgen_ptr_;
-        UdpSocketWrapper* client_worker_sendreq_toedge_socket_client_ptr_;
+        UdpMsgSocketServer* client_worker_recvrsp_socket_server_ptr_;
     };
 }
 

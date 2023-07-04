@@ -44,18 +44,18 @@ namespace covered
         base_instance_name_ = oss.str();
 
         // Prepare a socket server on recvreq port for beacon server
-        uint16_t edge_beacon_server_recvreq_port = Util::getEdgeBeaconServerRecvreqPort(edge_idx);
+        uint16_t edge_beacon_server_recvreq_port = Util::getEdgeBeaconServerRecvreqPort(edge_idx, edge_wrapper_ptr->edgecnt_);
         NetworkAddr host_addr(Util::ANY_IPSTR, edge_beacon_server_recvreq_port);
         edge_beacon_server_recvreq_socket_server_ptr_ = new UdpSocketWrapper(SocketRole::kSocketServer, host_addr);
         assert(edge_beacon_server_recvreq_socket_server_ptr_ != NULL);
 
-        // NOTE: we use edge0 as default remote address, but CooperationWrapper will reset remote address of the socket clients based on BlockTracker later
-        std::string edge0_ipstr = Config::getEdgeIpstr(0);
-        uint16_t edge0_cache_server_port = Util::getEdgeCacheServerRecvreqPort(0);
-        NetworkAddr edge0_cache_server_addr(edge0_ipstr, edge0_cache_server_port);
+        // NOTE: we use invalid remote address as default, but CooperationWrapper will reset remote address of the socket clients based on BlockTracker later
+        std::string invalid_ipstr = Util::LOCALHOST_IPSTR;
+        uint16_t invalid_port = Util::UDP_MIN_PORT + 1;
+        NetworkAddr invalid_addr(invalid_ipstr, invalid_port);
 
         // Prepare a socket client to blocked edge nodes for beacon server
-        edge_beacon_server_sendreq_toblocked_socket_client_ptr_ = new UdpSocketWrapper(SocketRole::kSocketClient, edge0_cache_server_addr);
+        edge_beacon_server_sendreq_toblocked_socket_client_ptr_ = new UdpSocketWrapper(SocketRole::kSocketClient, invalid_addr);
         assert(edge_beacon_server_sendreq_toblocked_socket_client_ptr_ != NULL);
     }
 

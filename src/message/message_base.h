@@ -109,7 +109,7 @@ namespace covered
         virtual uint32_t deserializeInternal_(const DynamicArray& msg_payload, const uint32_t& size) = 0;
 
         MessageType message_type_;
-        uint32_t source_index_; // client/edge/cloud index of source node
+        uint32_t source_index_; // global-client-worker/edge/cloud index of source node
 
         bool is_valid_; // NOT serialized/deserialized in msg payload
     protected:

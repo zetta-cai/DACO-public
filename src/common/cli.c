@@ -42,13 +42,13 @@ namespace covered
             ("edgecnt", boost::program_options::value<uint32_t>()->default_value(1), "the number of edge nodes")
             ("hash_name", boost::program_options::value<std::string>()->default_value(Param::MMH3_HASH_NAME, "the type of consistent hashing for DHT"))
             ("keycnt", boost::program_options::value<uint32_t>()->default_value(1000000), "the total number of keys")
+            ("multinode", "disable single-node mode (NOT work for simulator)")
             ("opcnt", boost::program_options::value<uint32_t>()->default_value(1000000), "the total number of operations")
             ("percacheserver_workercnt", boost::program_options::value<uint32_t>()->default_value(1), "the number of worker threads for each cache server")
             ("perclient_workercnt", boost::program_options::value<uint32_t>()->default_value(1), "the number of worker threads for each client")
             ("propagation_latency_clientedge", boost::program_options::value<uint32_t>()->default_value(1000), "the propagation latency between client and edge (in units of us)")
             ("propagation_latency_crossedge", boost::program_options::value<uint32_t>()->default_value(10000), "the propagation latency between edge and neighbor (in units of us)")
             ("propagation_latency_edgecloud", boost::program_options::value<uint32_t>()->default_value(100000), "the propagation latency between edge and cloud (in units of us)")
-            ("prototype", "disable simulation mode (NOT work for simulator)")
             ("workload_name", boost::program_options::value<std::string>()->default_value(Param::FACEBOOK_WORKLOAD_NAME), "workload name")
         ;
         // Dynamic actions
@@ -68,18 +68,18 @@ namespace covered
     {
         // (3) Get CLI parameters for dynamic configurations
 
-        bool is_simulation = true; // Enable simulation mode by default
-        if (argument_info_.count("prototype"))
+        bool is_single_node = true; // Enable single-node mode by default
+        if (argument_info_.count("multinode"))
         {
             if (main_class_name == Param::SIMULATOR_MAIN_NAME)
             {
                 std::ostringstream oss;
-                oss << "--prototype does not work for " << main_class_name << " -> still enable simulation mode!";
+                oss << "--multinode does not work for " << main_class_name << " -> still enable single-node mode!";
                 Util::dumpWarnMsg(kClassName, oss.str());
             }
             else
             {
-                is_simulation = false;
+                is_single_node = false;
             }
         }
         std::string cache_name = argument_info_["cache_name"].as<std::string>();
@@ -105,7 +105,7 @@ namespace covered
         std::string workload_name = argument_info_["workload_name"].as<std::string>();
 
         // Store CLI parameters for dynamic configurations and mark Param as valid
-        Param::setParameters(main_class_name, is_simulation, cache_name, capacity, clientcnt, cloud_storage, config_filepath, is_debug, duration, edgecnt, hash_name, keycnt, opcnt, percacheserver_workercnt, perclient_workercnt, propagation_latency_clientedge, propagation_latency_crossedge, propagation_latency_edgecloud, workload_name);
+        Param::setParameters(main_class_name, is_single_node, cache_name, capacity, clientcnt, cloud_storage, config_filepath, is_debug, duration, edgecnt, hash_name, keycnt, opcnt, percacheserver_workercnt, perclient_workercnt, propagation_latency_clientedge, propagation_latency_crossedge, propagation_latency_edgecloud, workload_name);
 
         // (4) Load config file for static configurations
 

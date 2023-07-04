@@ -83,16 +83,17 @@ namespace covered
         // (4) Client-edge-cloud scenario
 
         // (4.1) Client
-        static uint32_t getClosestEdgeIdx(const uint32_t& client_idx);
-        static std::string getClosestEdgeIpstr(const uint32_t& client_idx);
-        static uint16_t getClosestEdgeCacheServerRecvreqPort(const uint32_t& client_idx); // Calculate the recvreq port of the closest edge node for client
+        static uint32_t getClosestEdgeIdx(const uint32_t& client_idx, const uint32_t& edgecnt);
+        static std::string getClosestEdgeIpstr(const uint32_t& client_idx, const uint32_t& edgecnt);
+        static uint16_t getClosestEdgeCacheServerRecvreqPort(const uint32_t& client_idx, const uint32_t& edgecnt); // Calculate the recvreq port of the closest edge node for client
         static uint32_t getGlobalClientWorkerIdx(const uint32_t& client_idx, const uint32_t local_client_worker_idx);
+        static uint16_t getClientWorkerRecvrspPort(const uint32_t& global_client_worker_idx);
 
         // (4.2) Edge and cloud
-        // UDP port for receiving requests is edge_XXX_recvreq_startport + edge_idx
-        static uint16_t getEdgeBeaconServerRecvreqPort(const uint32_t& edge_idx);
-        static uint16_t getEdgeCacheServerRecvreqPort(const uint32_t& edge_idx);
-        static uint16_t getEdgeInvalidationServerRecvreqPort(const uint32_t& edge_idx);
+        // UDP port for receiving requests is edge_XXX_recvreq_startport + edge_idx / local_edge_idx
+        static uint16_t getEdgeBeaconServerRecvreqPort(const uint32_t& edge_idx, const uint32_t& edgecnt);
+        static uint16_t getEdgeCacheServerRecvreqPort(const uint32_t& edge_idx, const uint32_t& edgecnt);
+        static uint16_t getEdgeInvalidationServerRecvreqPort(const uint32_t& edge_idx, const uint32_t& edgecnt);
         static uint16_t getCloudRecvreqPort(const uint32_t& cloud_idx);
 
         // (5) Network
@@ -118,7 +119,7 @@ namespace covered
         static bool isPathExist_(const std::string& path, const bool& is_file, const bool& is_silent); // File or directory 
 
         // Client-edge-cloud scenario
-        static uint16_t getEdgePort_(const int64_t& start_port, const uint32_t edge_idx);
+        static uint16_t getEdgePort_(const int64_t& start_port, const uint32_t& edge_idx, const uint32_t& edgecnt);
 
         // Intermediate files
         static std::string getInfixForFilepath_();

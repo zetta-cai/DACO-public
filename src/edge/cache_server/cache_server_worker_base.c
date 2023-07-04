@@ -68,30 +68,23 @@ namespace covered
         edge_cache_server_worker_sendreq_tocloud_socket_client_ptr_ = new UdpSocketWrapper(SocketRole::kSocketClient, remote_addr);
         assert(edge_cache_server_worker_sendreq_tocloud_socket_client_ptr_ != NULL);
 
-        // NOTE: we use beacon server of edge0 as default remote address, but will reset remote address of the socket clients based on the key and directory information later
-        std::string edge0_ipstr = Config::getEdgeIpstr(0);
-        uint16_t edge0_beacon_server_port = Util::getEdgeBeaconServerRecvreqPort(0);
-        NetworkAddr edge0_beacon_server_addr(edge0_ipstr, edge0_beacon_server_port);
-        uint16_t edge0_cache_server_port = Util::getEdgeCacheServerRecvreqPort(0);
-        NetworkAddr edge0_cache_server_addr(edge0_ipstr, edge0_cache_server_port);
-        uint16_t edge0_invalidation_server_port = Util::getEdgeInvalidationServerRecvreqPort(0);
-        NetworkAddr edge0_invalidation_server_addr(edge0_ipstr, edge0_invalidation_server_port);
+        // NOTE: we use invalid remote address as default, but will reset remote address of the socket clients based on the key and directory information later
+        std::string invalid_ipstr = Util::LOCALHOST_IPSTR;
+        uint16_t invalid_port = Util::UDP_MIN_PORT + 1;
+        NetworkAddr invalid_addr(invalid_ipstr, invalid_port);
 
         // Prepare a socket client to beacon edge node for cache server worker
-        edge_cache_server_worker_sendreq_tobeacon_socket_client_ptr_  = new UdpSocketWrapper(SocketRole::kSocketClient, edge0_beacon_server_addr);
+        edge_cache_server_worker_sendreq_tobeacon_socket_client_ptr_  = new UdpSocketWrapper(SocketRole::kSocketClient, invalid_addr);
         assert(edge_cache_server_worker_sendreq_tobeacon_socket_client_ptr_  != NULL);
 
         // Prepare a socket client to target edge node for cache server worker
-        edge_cache_server_worker_sendreq_totarget_socket_client_ptr_ = new UdpSocketWrapper(SocketRole::kSocketClient, edge0_cache_server_addr);
+        edge_cache_server_worker_sendreq_totarget_socket_client_ptr_ = new UdpSocketWrapper(SocketRole::kSocketClient, invalid_addr);
         assert(edge_cache_server_worker_sendreq_totarget_socket_client_ptr_ != NULL);
 
         // Prepare a socket client to client/neighbor for cache server worker
-        // NOTE: we use an invalid source address as default remote address, but will reset remote address of the socket client based on network address popped from ring buffer later
-        std::string invalid_source_ipstr = Util::LOCALHOST_IPSTR;
-        uint16_t invalid_source_port = Util::UDP_MIN_PORT + 1;
-        NetworkAddr invalid_source_addr(invalid_source_ipstr, invalid_source_port);
+        // NOTE: we use invalid source address as default remote address, but will reset remote address of the socket client based on network address popped from ring buffer later
         edge_cache_server_worker_sendrsp_tosource_socket_client_ptr_ = new UdpSocketWrapper(SocketRole
-        ::kSocketClient, invalid_source_addr);
+        ::kSocketClient, invalid_addr);
         assert(edge_cache_server_worker_sendrsp_tosource_socket_client_ptr_);
     }
 
@@ -812,8 +805,8 @@ namespace covered
 
         // Set remote address such that the current edge node can communicate with the target edge node
         uint32_t target_edge_idx = directory_info.getTargetEdgeIdx();
-        std::string target_edge_ipstr = Config::getEdgeIpstr(target_edge_idx);
-        uint16_t target_edge_cache_server_port = Util::getEdgeCacheServerRecvreqPort(target_edge_idx);
+        std::string target_edge_ipstr = Config::getEdgeIpstr(target_edge_idx, tmp_edge_wrapper_ptr->edgecnt_);
+        uint16_t target_edge_cache_server_port = Util::getEdgeCacheServerRecvreqPort(target_edge_idx, tmp_edge_wrapper_ptr->edgecnt_);
         NetworkAddr target_edge_cache_server_addr(target_edge_ipstr, target_edge_cache_server_port);
         edge_cache_server_worker_sendreq_tobeacon_socket_client_ptr_->setRemoteAddrForClient(target_edge_cache_server_addr);
         
