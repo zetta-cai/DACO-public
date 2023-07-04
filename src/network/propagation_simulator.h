@@ -1,5 +1,7 @@
 /*
- * PropagationSimulator: simulate client-edge-cloud propagation latency.
+ * PropagationSimulator: simulate a given propagation latency before sending each message in client/edge/cloud node.
+ *
+ * NOTE: if a node has various propagation latencies to different destinations, it has launched multiple propagation simulators each for a specific propagation latency.
  * 
  * By Siyuan Sheng (2023.05.26).
  */
@@ -11,21 +13,21 @@
 
 #include <string>
 
+#include "network/propagation_simulator_param.h"
+
 namespace covered
 {
     class PropagationSimulator
     {
     public:
-        static void propagateFromClientToEdge();
-        static void propagateFromEdgeToClient();
-        static void propagateFromEdgeToNeighbor(); // Neighbor edge node: beacon or target
-        static void propagateFromNeighborToEdge(); // Neighbor edge node: beacon or target
-        static void propagateFromEdgeToCloud();
-        static void propagateFromCloudToEdge();
+        PropagationSimulator(PropagationSimulatorParam* propagation_simulator_param_ptr);
+        ~PropagationSimulator();
     private:
         static std::string kClassName;
 
-        static void propagate_(const uint32_t& latency_us);
+        void propagate_(const uint32_t& latency_us);
+
+        PropagationSimulatorParam* propagation_simulator_param_ptr_;
     };
 }
 

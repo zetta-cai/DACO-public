@@ -89,6 +89,7 @@ namespace covered
         static uint32_t getGlobalClientWorkerIdx(const uint32_t& client_idx, const uint32_t local_client_worker_idx);
 
         // (4.2) Edge and cloud
+        // UDP port for receiving requests is edge_XXX_recvreq_startport + edge_idx
         static uint16_t getEdgeBeaconServerRecvreqPort(const uint32_t& edge_idx);
         static uint16_t getEdgeCacheServerRecvreqPort(const uint32_t& edge_idx);
         static uint16_t getEdgeInvalidationServerRecvreqPort(const uint32_t& edge_idx);

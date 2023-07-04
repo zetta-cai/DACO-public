@@ -6,16 +6,14 @@ namespace covered
 {
     const std::string ClientParam::kClassName("ClientParam");
 
-    ClientParam::ClientParam() : client_running_(false)
+    ClientParam::ClientParam() : NodeParamBase(0, false)
     {
-        client_idx_ = 0;
         workload_generator_ptr_ = NULL;
         client_statistics_tracker_ptr_ = NULL;
     }
 
-    ClientParam::ClientParam(const uint32_t& client_idx, WorkloadWrapperBase* workload_generator_ptr, ClientStatisticsTracker* client_statistics_tracker_ptr) : client_running_(false)
+    ClientParam::ClientParam(const uint32_t& client_idx, WorkloadWrapperBase* workload_generator_ptr, ClientStatisticsTracker* client_statistics_tracker_ptr) : NodeParamBase(client_idx, false)
     {
-        client_idx_ = client_idx;
         if (workload_generator_ptr == NULL)
         {
             Util::dumpErrorMsg(kClassName, "workload_generator_ptr is NULL!");
@@ -38,8 +36,8 @@ namespace covered
 
     const ClientParam& ClientParam::operator=(const ClientParam& other)
     {
-        client_running_.store(other.client_running_.load(Util::LOAD_CONCURRENCY_ORDER), Util::STORE_CONCURRENCY_ORDER);
-        client_idx_ = other.client_idx_;
+        NodeParamBase::operator=(other);
+        
         if (other.workload_generator_ptr_ == NULL)
         {
             Util::dumpErrorMsg(kClassName, "other.workload_generator_ptr_ is NULL!");
@@ -52,27 +50,8 @@ namespace covered
             exit(1);
         }
         client_statistics_tracker_ptr_ = other.client_statistics_tracker_ptr_;
+
         return *this;
-    }
-
-    bool ClientParam::isClientRunning()
-    {
-        return client_running_.load(Util::LOAD_CONCURRENCY_ORDER);
-    }
-
-    void ClientParam::setClientRunning()
-    {
-        return client_running_.store(true, Util::STORE_CONCURRENCY_ORDER);
-    }
-
-    void ClientParam::resetClientRunning()
-    {
-        return client_running_.store(false, Util::STORE_CONCURRENCY_ORDER);
-    }
-
-    uint32_t ClientParam::getClientIdx()
-    {
-        return client_idx_;
     }
 
     WorkloadWrapperBase* ClientParam::getWorkloadGeneratorPtr()

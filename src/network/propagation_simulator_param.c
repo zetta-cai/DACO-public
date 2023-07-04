@@ -9,16 +9,21 @@ namespace covered
     PropagationSimulatorParam::PropagationSimulatorParam() : propagation_latency_us_(0), mutex_lock_(), prev_timespec_()
     {
         propagation_item_buffer_ptr_ = NULL;
+        node_param_ptr_ = NULL;
     }
 
-    PropagationSimulatorParam::PropagationSimulatorParam(const uint32_t& propagation_latency_us, const uint32_t& propagation_item_buffer_size) : propagation_latency_us_(propagation_latency_us), mutex_lock_(), prev_timespec_()
+    PropagationSimulatorParam::PropagationSimulatorParam(const uint32_t& propagation_latency_us, NodeParamBase* node_param_ptr, const uint32_t& propagation_item_buffer_size) : propagation_latency_us_(propagation_latency_us), node_param_ptr_(node_param_ptr), mutex_lock_(), prev_timespec_()
     {
         propagation_item_buffer_ptr_ = new RingBuffer<PropagationItem>(PropagationItem(), propagation_item_buffer_size);
         assert(propagation_item_buffer_ptr_ != NULL);
+
+        assert(node_param_ptr_ != NULL);
     }
 
     PropagationSimulatorParam::~PropagationSimulatorParam()
     {
+        // NOTE: no need to release node_param_ptr_, which will be released outside PropagationSimulatorParam (e.g., in simulator)
+
         assert(propagation_item_buffer_ptr_ != NULL);
         delete propagation_item_buffer_ptr_;
         propagation_item_buffer_ptr_ = NULL;
@@ -27,14 +32,25 @@ namespace covered
     PropagationSimulatorParam& PropagationSimulatorParam::operator=(const PropagationSimulatorParam& other)
     {
         propagation_latency_us_ = other.propagation_latency_us_;
+
+        node_param_ptr_ = other.node_param_ptr_;
+        assert(node_param_ptr_ != NULL);
         
         // Not copy mutex_lock_
 
         // Deep copy propagation_item_buffer_ptr_
-        assert(propagation_item_buffer_ptr_ == NULL); // Must copy a temporary PropagationSimulatorParam to a default PropagationSimulatorParam
-        propagation_item_buffer_ptr_ = new RingBuffer<PropagationItem>(PropagationItem(), other.propagation_item_buffer_ptr_->getBufferSize());
-        assert(propagation_item_buffer_ptr_ != NULL);
-        *propagation_item_buffer_ptr_ = *other.propagation_item_buffer_ptr_; // deep copy
+        if (propagation_item_buffer_ptr_ != NULL)
+        {
+            delete propagation_item_buffer_ptr_;
+            propagation_item_buffer_ptr_ = NULL;
+        }
+        if (other.propagation_item_buffer_ptr_ != NULL)
+        {
+            propagation_item_buffer_ptr_ = new RingBuffer<PropagationItem>(PropagationItem(), other.propagation_item_buffer_ptr_->getBufferSize());
+            assert(propagation_item_buffer_ptr_ != NULL);
+            
+            *propagation_item_buffer_ptr_ = *other.propagation_item_buffer_ptr_; // deep copy
+        }
 
         prev_timespec_ = other.prev_timespec_;
         

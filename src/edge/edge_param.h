@@ -10,9 +10,11 @@
 #include <atomic>
 #include <string>
 
+#include "common/node_param_base.h"
+
 namespace covered
 {
-    class EdgeParam
+    class EdgeParam : public NodeParamBase
     {
     public:
         EdgeParam();
@@ -20,19 +22,8 @@ namespace covered
         ~EdgeParam();
 
         const EdgeParam& operator=(const EdgeParam& other);
-
-        bool isEdgeRunning() const;
-        void setEdgeRunning();
-        void resetEdgeRunning();
-
-        uint32_t getEdgeIdx() const;
     private:
         static const std::string kClassName;
-
-         volatile std::atomic<bool> edge_running_;
-
-        // UDP port for receiving requests is edge_recvreq_startport + edge_idx
-        uint32_t edge_idx_;
     };
 }
 

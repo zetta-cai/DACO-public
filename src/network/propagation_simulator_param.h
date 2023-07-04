@@ -13,6 +13,7 @@
 #include <string>
 #include <time.h>
 
+#include "common/node_param_base.h"
 #include "concurrency/ring_buffer_impl.h"
 #include "network/propagation_item.h"
 
@@ -22,16 +23,19 @@ namespace covered
     {
     public:
         PropagationSimulatorParam();
-        PropagationSimulatorParam(const uint32_t& propagation_latency_us, const uint32_t& propagation_item_buffer_size);
+        PropagationSimulatorParam(const uint32_t& propagation_latency_us, NodeParamBase* node_param_ptr, const uint32_t& propagation_item_buffer_size);
         ~PropagationSimulatorParam();
 
         PropagationSimulatorParam& operator=(const PropagationSimulatorParam& other);
     private:
         static const std::string kClassName;
 
+        // Const shared variables
         uint32_t propagation_latency_us_;
+        NodeParamBase* node_param_ptr_;
         
-        std::mutex mutex_lock_;
+        // Non-const variables shared by working threads of each ndoe and propagation simulator
+        std::mutex mutex_lock_; // Ensure the atomicity of ring buffer due to multiple providers
         RingBuffer<PropagationItem>* propagation_item_buffer_ptr_;
         struct timespec prev_timespec_;
     };
