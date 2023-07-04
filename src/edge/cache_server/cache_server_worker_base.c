@@ -460,7 +460,7 @@ namespace covered
         bool is_being_written = false;
         bool is_valid_directory_exist = false;
         DirectoryInfo directory_info;
-        while (true)
+        while (true) // Wait for valid directory after writes by polling or interruption
         {
             if (!tmp_edge_wrapper_ptr->edge_param_ptr_->isEdgeRunning()) // edge node is NOT running
             {
@@ -472,11 +472,10 @@ namespace covered
             is_valid_directory_exist = false;
             if (current_is_beacon) // Get target edge index from local directory information
             {
+                // Frequent polling
                 tmp_edge_wrapper_ptr->cooperation_wrapper_ptr_->lookupLocalDirectoryByCacheServer(key, is_being_written, is_valid_directory_exist, directory_info);
                 if (is_being_written) // If key is being written, we need to wait for writes
                 {
-                    // Wait for writes by polling
-                    // TODO: sleep a short time to avoid frequent polling
                     continue; // Continue to lookup local directory info
                 }
             }
@@ -613,7 +612,7 @@ namespace covered
 
         // Check if beacon node is the current edge node and acquire write permission
         std::unordered_set<DirectoryInfo, DirectoryInfoHasher> all_dirinfo;
-        while (true)
+        while (true) // Wait for write permission by polling or interruption
         {
             if (!tmp_edge_wrapper_ptr->edge_param_ptr_->isEdgeRunning()) // edge node is NOT running
             {
@@ -623,11 +622,10 @@ namespace covered
 
             if (current_is_beacon) // Get target edge index from local directory information
             {
+                // Frequent polling
                 lock_result = tmp_edge_wrapper_ptr->cooperation_wrapper_ptr_->acquireLocalWritelockByCacheServer(key, all_dirinfo);
                 if (lock_result == LockResult::kFailure) // If key has been locked by any other edge node
                 {
-                    // Wait for writes by polling
-                    // TODO: sleep a short time to avoid frequent polling
                     continue; // Continue to try to acquire the write lock
                 }
                 else if (lock_result == LockResult::kSuccess) // If acquire write permission successfully
@@ -680,8 +678,7 @@ namespace covered
 
         bool is_finish = false;
 
-        // Wait for FinishBlockRequest from beacon node
-        while (true)
+        while (true) // Wait for FinishBlockRequest from beacon node by interruption
         {
             // Receive the control repsonse from the beacon node
             DynamicArray control_response_msg_payload;
@@ -1005,8 +1002,7 @@ namespace covered
 
         is_local_cached_after_udpate = tmp_edge_wrapper_ptr->edge_cache_ptr_->update(key, value);
 
-        // Evict until used bytes <= capacity bytes
-        while (true)
+        while (true) // Evict until used bytes <= capacity bytes
         {
             // Data and metadata for local edge cache, and cooperation metadata
             uint32_t used_bytes = tmp_edge_wrapper_ptr->getSizeForCapacity_();

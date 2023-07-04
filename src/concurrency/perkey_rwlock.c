@@ -64,7 +64,7 @@ namespace covered
 
     void PerkeyRwlock::acquire_lock_shared(const Key& key, const std::string& context_name)
     {
-        while (true)
+        while (true) // Frequent polling
         {
             if (try_lock_shared_(key, context_name))
             {
@@ -115,7 +115,7 @@ namespace covered
 
     void PerkeyRwlock::acquire_lock(const Key& key, const std::string& context_name)
     {
-        while (true)
+        while (true) // Frequent polling
         {
             if (try_lock_(key, context_name))
             {

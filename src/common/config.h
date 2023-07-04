@@ -31,6 +31,7 @@ namespace covered
         static const std::string FINE_GRAINED_LOCKING_SIZE_KEYSTR;
         static const std::string LATENCY_HISTOGRAM_SIZE_KEYSTR;
         static const std::string OUTPUT_BASEDIR_KEYSTR;
+        static const std::string PROPAGATION_ITEM_BUFFER_SIZE_CLIENT_TOEDGE_KEYSTR;
         static const std::string VERSION_KEYSTR;
 
         static void loadConfig();
@@ -47,6 +48,7 @@ namespace covered
         static uint32_t getFineGrainedLockingSize();
         static uint32_t getLatencyHistogramSize();
         static std::string getOutputBasedir();
+        static uint32_t getPropagationItemBufferSizeClientToedge();
         static std::string getVersion();
 
         static std::string toString();
@@ -71,6 +73,7 @@ namespace covered
         static uint32_t fine_grained_locking_size_;
         static uint32_t latency_histogram_size_;
         static std::string output_basedir_;
+        static uint32_t propagation_item_buffer_size_client_toedge_;
         static std::string version_;
     };
 }

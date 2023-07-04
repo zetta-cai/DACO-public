@@ -158,9 +158,8 @@ namespace covered
         oss << "issue a local request; type: " << MessageBase::messageTypeToString(local_request_ptr->getMessageType()) << "; keystr: " << workload_item.getKey().getKeystr() << "; valuesize: " << workload_item.getValue().getValuesize();// << std::endl << "Msg payload: " << local_request_msg_payload.getBytesHexstr();
         Util::dumpDebugMsg(instance_name_, oss.str());
 
-        // Timeout-and-retry mechanism
         struct timespec sendreq_timestamp = Util::getCurrentTimespec();
-        while (true)
+        while (true) // Timeout-and-retry mechanism
         {
             // Send the message payload of local request to the closest edge node
             PropagationSimulator::propagateFromClientToEdge(); // Simulate propagation latency

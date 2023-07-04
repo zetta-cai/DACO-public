@@ -1,5 +1,5 @@
 /*
- * CloudParam: parameters to launch the cloud node.
+ * CloudParam: parameters to launch the cloud node (thread safe).
  * 
  * By Siyuan Sheng (2023.05.19).
  */

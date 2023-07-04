@@ -1,5 +1,5 @@
 /*
- * CacheServerWorkerParam: parameters to launch a cache server worker in an edge node.
+ * CacheServerWorkerParam: parameters to launch a cache server worker in an edge node (thread safe).
  * 
  * By Siyuan Sheng (2023.06.26).
  */
@@ -46,9 +46,9 @@ namespace covered
     private:
         static const std::string kClassName;
 
-        EdgeWrapper* edge_wrapper_ptr_;
-        uint32_t local_cache_server_worker_idx_;
-        RingBuffer<CacheServerWorkerItem>* data_request_buffer_ptr_;
+        EdgeWrapper* edge_wrapper_ptr_; // thread safe
+        uint32_t local_cache_server_worker_idx_; // const shared variable
+        RingBuffer<CacheServerWorkerItem>* data_request_buffer_ptr_; // thread safe
     };
 }
 

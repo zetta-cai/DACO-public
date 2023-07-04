@@ -6,13 +6,13 @@ namespace covered
 {
     const std::string ClientParam::kClassName("ClientParam");
 
-    ClientParam::ClientParam() : NodeParamBase(0, false)
+    ClientParam::ClientParam() : NodeParamBase(NodeParamBase::CLIENT_NODE_ROLE, 0, false)
     {
         workload_generator_ptr_ = NULL;
         client_statistics_tracker_ptr_ = NULL;
     }
 
-    ClientParam::ClientParam(const uint32_t& client_idx, WorkloadWrapperBase* workload_generator_ptr, ClientStatisticsTracker* client_statistics_tracker_ptr) : NodeParamBase(client_idx, false)
+    ClientParam::ClientParam(const uint32_t& client_idx, WorkloadWrapperBase* workload_generator_ptr, ClientStatisticsTracker* client_statistics_tracker_ptr) : NodeParamBase(NodeParamBase::CLIENT_NODE_ROLE, client_idx, false)
     {
         if (workload_generator_ptr == NULL)
         {

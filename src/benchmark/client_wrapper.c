@@ -6,6 +6,7 @@
 
 #include "benchmark/client_worker_param.h"
 #include "benchmark/client_worker_wrapper.h"
+#include "common/config.h"
 #include "common/param.h"
 #include "common/util.h"
 
@@ -15,14 +16,14 @@ namespace covered
 
     void* launchClient(void* client_param_ptr)
     {
-        ClientWrapper local_client(Param::getPerclientWorkercnt(), (ClientParam*)client_param_ptr);
+        ClientWrapper local_client(Param::getPropagationLatencyClientedge(), Param::getPerclientWorkercnt(), (ClientParam*)client_param_ptr);
         local_client.start();
         
         pthread_exit(NULL);
         return NULL;
     }
 
-    ClientWrapper::ClientWrapper(const uint32_t& perclient_workercnt, ClientParam* client_param_ptr) : perclient_workercnt_(perclient_workercnt)
+    ClientWrapper::ClientWrapper(const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge, ClientParam* client_param_ptr) : perclient_workercnt_(perclient_workercnt)
     {
         if (client_param_ptr == NULL)
         {
@@ -32,26 +33,35 @@ namespace covered
 
         // Differentiate different clients
         std::ostringstream oss;
-        oss << kClassName << " client" << client_param_ptr->getClientIdx();
+        oss << kClassName << " client" << client_param_ptr->getNodeIdx();
         instance_name_ = oss.str();
         
         client_param_ptr_ = client_param_ptr;
         assert(client_param_ptr_ != NULL);
+
+        // Allocate client-to-edge propagation simulator param
+        client_toedge_propagation_simulator_param_ptr_ = new PropagationSimulatorParam(propagation_latency_clientedge, (NodeParamBase*)client_param_ptr, Config::getPropagationItemBufferSizeClientToedge());
+        assert(client_toedge_propagation_simulator_param_ptr_ != NULL);
     }
 
     ClientWrapper::~ClientWrapper()
     {
         // NOTE: no need to delete client_param_ptr_, as it is maintained outside ClientWrapper
+
+        assert(client_toedge_propagation_simulator_param_ptr_ != NULL);
+        delete client_toedge_propagation_simulator_param_ptr_;
+        client_toedge_propagation_simulator_param_ptr_ = NULL;
     }
 
     void ClientWrapper::start()
     {
-        pthread_t client_worker_threads[perclient_workercnt_];
-        ClientWorkerParam client_worker_params[perclient_workercnt_];
-        int pthread_returncode;
         assert(client_param_ptr_ != NULL);
+        int pthread_returncode;
+
+        // TODO: Launch client-to-edge propagation simulator
 
         // Prepare perclient_workercnt worker parameters
+        ClientWorkerParam client_worker_params[perclient_workercnt_];
         for (uint32_t local_client_worker_idx = 0; local_client_worker_idx < perclient_workercnt_; local_client_worker_idx++)
         {
             ClientWorkerParam local_client_worker_param(client_param_ptr_, local_client_worker_idx);
@@ -59,6 +69,7 @@ namespace covered
         }
 
         // Launch perclient_workercnt worker threads in the local client
+        pthread_t client_worker_threads[perclient_workercnt_];
         for (uint32_t local_client_worker_idx = 0; local_client_worker_idx < perclient_workercnt_; local_client_worker_idx++)
         {
             pthread_returncode = pthread_create(&client_worker_threads[local_client_worker_idx], NULL, ClientWorkerWrapper::launchClientWorker, (void*)(&(client_worker_params[local_client_worker_idx])));

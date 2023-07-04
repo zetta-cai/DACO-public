@@ -21,6 +21,10 @@ namespace covered
         PropagationItem(MessageBase* message_ptr, const NetworkAddr& network_addr, const uint32_t& sleep_us);
         ~PropagationItem();
 
+        MessageBase* getMessagePtr() const;
+        NetworkAddr getNetworkAddr() const;
+        uint32_t getSleepUs() const;
+
         PropagationItem& operator=(const PropagationItem& other);
     private:
         static const std::string kClassName;

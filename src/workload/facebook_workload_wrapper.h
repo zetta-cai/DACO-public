@@ -1,5 +1,5 @@
 /*
- * FacebookWorkloadWrapper: encapsulate the config parser and workload generator in cachebench for Facebook CDN trace (https://cachelib.org/docs/Cache_Library_User_Guides/Cachebench_Overview/).
+ * FacebookWorkloadWrapper: encapsulate the config parser and workload generator in cachebench for Facebook CDN trace (https://cachelib.org/docs/Cache_Library_User_Guides/Cachebench_Overview/) (thread safe).
  * 
  * By Siyuan Sheng (2023.04.19).
  */
@@ -30,21 +30,25 @@ namespace covered
         virtual void overwriteWorkloadParameters_() override;
         virtual void createWorkloadGenerator_(const uint32_t& client_idx) override;
 
+        // NOTE: randomly select an item without modifying any variable -> thread safe
         virtual WorkloadItem generateItemInternal_(std::mt19937_64& request_randgen) override;
 
         std::unique_ptr<facebook::cachelib::cachebench::GeneratorBase> makeGenerator_(const StressorConfig& config, const uint32_t& client_idx);
 
-        // Come from Param
+        // Const shared variables coming from Param
         const uint32_t clientcnt_;
         const uint32_t keycnt_;
         const uint32_t opcnt_;
         const uint32_t perclient_workercnt_;
 
+        // Const shared variables
         std::string instance_name_;
-
         std::discrete_distribution<>* op_pool_dist_ptr_;
-        std::optional<uint64_t> last_reqid_;
 
+        // Non-const shared variables
+        std::optional<uint64_t> last_reqid_; // NOT thread safe yet UNUSED in Facebook CDN workload
+
+        // Const shared variables
         //facebook::cachelib::cachebench::CacheConfig facebook_cache_config_;
         StressorConfig facebook_stressor_config_;
         std::unique_ptr<facebook::cachelib::cachebench::GeneratorBase> workload_generator_;

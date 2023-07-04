@@ -19,7 +19,7 @@ namespace covered
 
     void Rwlock::acquire_lock_shared(const std::string& context_name)
     {
-        while (true)
+        while (true) // Frequent polling
         {
             if (try_lock_shared_(context_name))
             {
@@ -59,7 +59,7 @@ namespace covered
 
     void Rwlock::acquire_lock(const std::string& context_name)
     {
-        while (true)
+        while (true) // Frequent polling
         {
             if (try_lock_(context_name))
             {

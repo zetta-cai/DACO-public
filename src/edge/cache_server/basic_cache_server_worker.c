@@ -421,8 +421,7 @@ namespace covered
         }
         tmp_edge_wrapper_ptr->edge_cache_ptr_->admit(key, value, !is_being_written); // valid if not being written
 
-        // Evict until used bytes <= capacity bytes
-        while (true)
+        while (true) // Evict until used bytes <= capacity bytes
         {
             // Data and metadata for local edge cache, and cooperation metadata
             uint32_t used_bytes = tmp_edge_wrapper_ptr->getSizeForCapacity_();

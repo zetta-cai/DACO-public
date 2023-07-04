@@ -1,5 +1,5 @@
 /*
- * ClientParam: parameters to launch a client for simulation.
+ * ClientParam: parameters to launch a client for simulation (thread safe).
  * 
  * By Siyuan Sheng (2023.04.20).
  */
@@ -30,8 +30,8 @@ namespace covered
     private:
         static const std::string kClassName;
 
-        WorkloadWrapperBase* workload_generator_ptr_;
-        ClientStatisticsTracker* client_statistics_tracker_ptr_;
+        WorkloadWrapperBase* workload_generator_ptr_; // thread safe
+        ClientStatisticsTracker* client_statistics_tracker_ptr_; // thread safe
     };
 }
 

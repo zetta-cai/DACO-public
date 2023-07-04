@@ -46,7 +46,7 @@ namespace covered
 	{
 		bool is_timeout = false;
 
-		while (true)
+		while (true) // Until receive a complete message
 		{
 			// Prepare to receive a UDP packet
 			NetworkAddr tmp_addr;

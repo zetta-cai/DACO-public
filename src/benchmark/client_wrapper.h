@@ -13,6 +13,7 @@
 #include <string>
 
 #include "benchmark/client_param.h"
+#include "network/propagation_simulator_param.h"
 
 namespace covered
 {
@@ -21,7 +22,7 @@ namespace covered
     public:
         static void* launchClient(void* client_param_ptr);
 
-        ClientWrapper(const uint32_t& perclient_workercnt, ClientParam* client_param_ptr);
+        ClientWrapper(const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge, ClientParam* client_param_ptr);
         ~ClientWrapper();
 
         void start();
@@ -30,8 +31,12 @@ namespace covered
 
         const uint32_t perclient_workercnt_;
 
+        // Const individual variable
         std::string instance_name_;
-        ClientParam* client_param_ptr_;
+
+        // Non-const shared variable
+        ClientParam* client_param_ptr_; // thread safe
+        PropagationSimulatorParam* client_toedge_propagation_simulator_param_ptr_; // thread safe
     };
 }
 

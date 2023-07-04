@@ -27,9 +27,24 @@ namespace covered
         // NOTE: no need to release message_ptr_, which will be released by PropagationSimultor after issuing the message
     }
 
+    MessageBase* PropagationItem::getMessagePtr() const
+    {
+        return message_ptr_;
+    }
+
+    NetworkAddr PropagationItem::getNetworkAddr() const
+    {
+        return network_addr_;
+    }
+
+    uint32_t PropagationItem::getSleepUs() const
+    {
+        return sleep_us_;
+    }
+
     PropagationItem& PropagationItem::operator=(const PropagationItem& other)
     {
-        message_ptr_ = other.message_ptr_;
+        message_ptr_ = other.message_ptr_; // shallow copy
         network_addr_ = other.network_addr_;
         sleep_us_ = other.sleep_us_;
     }

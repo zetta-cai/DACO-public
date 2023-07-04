@@ -1,5 +1,5 @@
 /*
- * WorkloadWrapperBase: the base class for workload generator to generate key-value pairs and requests.
+ * WorkloadWrapperBase: the base class for workload generator to generate key-value pairs and requests (thread safe).
  *
  * Access global covered::Config and covered::Param for static and dynamic configurations.
  * Overwrite some workload parameters (e.g., numOps and numKeys) based on static/dynamic configurations.
@@ -34,11 +34,14 @@ namespace covered
         virtual void overwriteWorkloadParameters_() = 0; // overwrite some workload patermers based on covered::Config and covered::Param
         virtual void createWorkloadGenerator_(const uint32_t& client_idx) = 0; // create workload generator based on overwritten workload parameters
 
+        // NOTE: randomly select an item without modifying any variable -> thread safe
         virtual WorkloadItem generateItemInternal_(std::mt19937_64& request_randgen) = 0;
 
+        // Const shared variables
         const uint32_t client_idx_;
         std::string base_instance_name_;
         bool is_valid_;
+
         void checkIsValid_();
     };
 }

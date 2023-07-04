@@ -136,7 +136,7 @@ int main(int argc, char **argv) {
 
     const double duration = covered::Param::getDuration();
     struct timespec start_timespec = covered::Util::getCurrentTimespec();
-    while (true)
+    while (true) // Dump intermediate statistics
     {
         usleep(covered::Util::SLEEP_INTERVAL_US);
 

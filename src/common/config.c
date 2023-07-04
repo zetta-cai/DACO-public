@@ -22,6 +22,7 @@ namespace covered
     const std::string Config::FINE_GRAINED_LOCKING_SIZE_KEYSTR("fine_grained_locking_size");
     const std::string Config::LATENCY_HISTOGRAM_SIZE_KEYSTR("latency_histogram_size");
     const std::string Config::OUTPUT_BASEDIR_KEYSTR("output_basedir");
+    const std::string Config::PROPAGATION_ITEM_BUFFER_SIZE_CLIENT_TOEDGE_KEYSTR("propagation_item_buffer_size_client_toedge");
     const std::string Config::VERSION_KEYSTR("version");
 
     const std::string Config::kClassName("Config");
@@ -41,6 +42,7 @@ namespace covered
     uint32_t Config::fine_grained_locking_size_ = 1000;
     uint32_t Config::latency_histogram_size_ = 1000000; // Track latency up to 1000 ms
     std::string Config::output_basedir_("output");
+    uint32_t Config::propagation_item_buffer_size_client_toedge_ = 1000;
     std::string Config::version_("1.0");
 
     void Config::loadConfig()
@@ -124,6 +126,12 @@ namespace covered
             if (kv_ptr != NULL)
             {
                 output_basedir_ = kv_ptr->value().get_string();
+            }
+            kv_ptr = find_(PROPAGATION_ITEM_BUFFER_SIZE_CLIENT_TOEDGE_KEYSTR);
+            if (kv_ptr != NULL)
+            {
+                int64_t tmp_size = kv_ptr->value().get_int64();
+                propagation_item_buffer_size_client_toedge_ = Util::toUint32(tmp_size);
             }
             kv_ptr = find_(VERSION_KEYSTR);
             if (kv_ptr != NULL)
@@ -233,6 +241,12 @@ namespace covered
     {
         checkIsValid_();
         return output_basedir_;
+    }
+
+    uint32_t Config::getPropagationItemBufferSizeClientToedge()
+    {
+        checkIsValid_();
+        return propagation_item_buffer_size_client_toedge_;
     }
 
     std::string Config::getVersion()
