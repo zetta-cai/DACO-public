@@ -18,7 +18,7 @@ namespace covered
     class LocalPutResponse : public KeyByteMessage
     {
     public:
-        LocalPutResponse(const Key& key, const Hitflag& hitflag, const uint32_t& source_index);
+        LocalPutResponse(const Key& key, const Hitflag& hitflag, const uint32_t& source_index, const NetworkAddr& source_addr);
         LocalPutResponse(const DynamicArray& msg_payload);
         virtual ~LocalPutResponse();
 

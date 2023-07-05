@@ -337,9 +337,9 @@ namespace covered
         return Config::getEdgeIpstr(closest_edge_idx, edgecnt);
     }
 
-    uint16_t Util::getClosestEdgeCacheServerRecvreqPort(const uint32_t& client_idx, const uint32_t& edgecnt)
+    uint16_t Util::getClosestEdgeCacheServerRecvreqPort(const uint32_t& client_idx, const uint32_t& clientcnt, const uint32_t& edgecnt)
     {
-        uint32_t closest_edge_idx = getClosestEdgeIdx(client_idx, edgecnt);
+        uint32_t closest_edge_idx = getClosestEdgeIdx(client_idx, clientcnt, edgecnt);
         return getEdgeCacheServerRecvreqPort(closest_edge_idx, edgecnt);
     }
 
@@ -349,13 +349,13 @@ namespace covered
         return global_client_worker_idx;
     }
 
-    void Util::parseGlobalClientWorkerIdx(const uint32_t& global_client_worker_idx, const uint32_t& perclient_workercnt, uint32_t& client_idx, uint32_t& local_client_worker_idx)
+    /*void Util::parseGlobalClientWorkerIdx(const uint32_t& global_client_worker_idx, const uint32_t& perclient_workercnt, uint32_t& client_idx, uint32_t& local_client_worker_idx)
     {
         client_idx = global_client_worker_idx / perclient_workercnt;
         local_client_worker_idx = global_client_worker_idx - client_idx * perclient_workercnt;
         assert(local_client_worker_idx < perclient_workercnt);
         return;
-    }
+    }*/
 
     uint16_t Util::getClientWorkerRecvrspPort(const uint32_t& client_idx, const uint32_t& clientcnt, const uint32_t& local_client_worker_idx, const uint32_t& perclient_workercnt)
     {

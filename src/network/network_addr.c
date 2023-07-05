@@ -1,5 +1,6 @@
 #include "network/network_addr.h"
 
+#include <arpa/inet.h> // htonl ntohl
 #include <sstream>
 
 #include "common/util.h"
@@ -75,6 +76,44 @@ namespace covered
     {
         uint32_t size = ipstr_.length() + sizeof(uint16_t);
         return size;
+    }
+
+    uint32_t NetworkAddr::getAddrPayloadSize() const
+    {
+        // ipstr length + ipstr + port
+        return sizeof(uint32_t) + ipstr_.length() + sizeof(uint16_t);
+    }
+
+    uint32_t NetworkAddr::serialize(DynamicArray& msg_payload, const uint32_t& position) const
+    {
+        uint32_t size = position;
+        uint32_t bigendian_ipstrsize = htonl(ipstr_.length());
+        msg_payload.deserialize(size, (const char*)&bigendian_ipstrsize, sizeof(uint32_t));
+        size += sizeof(uint32_t);
+        msg_payload.deserialize(size, (const char*)ipstr_.data(), ipstr_.length());
+        size += ipstr_.length();
+        uint16_t bigendian_port = htons(port_);
+        msg_payload.deserialize(size, (const char*)&bigendian_port, sizeof(uint16_t));
+        size += sizeof(uint16_t);
+        return size - position;
+    }
+
+    uint32_t NetworkAddr::deserialize(const DynamicArray& msg_payload, const uint32_t& position)
+    {
+        uint32_t size = position;
+        uint32_t bigendian_ipstrsize = 0;
+        msg_payload.serialize(size, (char *)&bigendian_ipstrsize, sizeof(uint32_t));
+        uint32_t ipstr_size = ntohl(bigendian_ipstrsize);
+        size += sizeof(uint32_t);
+        DynamicArray ipstr_bytes(ipstr_size);
+        msg_payload.arraycpy(size, ipstr_bytes, 0, ipstr_size);
+        ipstr_ = std::string(ipstr_bytes.getBytes().data(), ipstr_size);
+        size += ipstr_size;
+        uint16_t bigendian_port = 0;
+        msg_payload.serialize(size, (char *)&bigendian_port, sizeof(uint16_t));
+        port_ = ntohs(bigendian_port);
+        size += sizeof(uint16_t);
+        return size - position;
     }
 
     bool NetworkAddr::operator<(const NetworkAddr& other) const

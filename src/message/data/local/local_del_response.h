@@ -18,7 +18,7 @@ namespace covered
     class LocalDelResponse : public KeyByteMessage
     {
     public:
-        LocalDelResponse(const Key& key, const Hitflag& hitflag, const uint32_t& source_index);
+        LocalDelResponse(const Key& key, const Hitflag& hitflag, const uint32_t& source_index, const NetworkAddr& source_addr);
         LocalDelResponse(const DynamicArray& msg_payload);
         virtual ~LocalDelResponse();
 

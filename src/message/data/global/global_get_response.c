@@ -4,7 +4,7 @@ namespace covered
 {
     const std::string GlobalGetResponse::kClassName("GlobalGetResponse");
 
-    GlobalGetResponse::GlobalGetResponse(const Key& key, const Value& value, const uint32_t& source_index) : KeyValueMessage(key, value, MessageType::kGlobalGetResponse, source_index)
+    GlobalGetResponse::GlobalGetResponse(const Key& key, const Value& value, const uint32_t& source_index, const NetworkAddr& source_addr) : KeyValueMessage(key, value, MessageType::kGlobalGetResponse, source_index, source_addr)
     {
     }
 

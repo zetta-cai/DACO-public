@@ -3,8 +3,6 @@
  *
  * NOTE: all non-const shared variables in EdgeWrapper should be thread safe.
  * 
- * NOTE: EdgeWrapper relines on client settings in Param to calculate client network address and send responses.
- * 
  * By Siyuan Sheng (2023.04.22).
  */
 
@@ -16,6 +14,8 @@
 #include "cache/cache_wrapper.h"
 #include "cooperation/cooperation_wrapper_base.h"
 #include "edge/edge_param.h"
+#include "network/propagation_simulator.h"
+#include "network/udp_msg_socket_server.h"
 
 namespace covered
 {
@@ -24,7 +24,7 @@ namespace covered
     public:
         static void* launchEdge(void* edge_param_ptr);
 
-        EdgeWrapper(const std::string& cache_name, const uint32_t& capacity_bytes, const uint32_t& clientcnt, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& percacheserver_workercnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge, EdgeParam* edge_param_ptr);
+        EdgeWrapper(const std::string& cache_name, const uint32_t& capacity_bytes, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& percacheserver_workercnt, const uint32_t& propagation_latency_clientedge, const uint32_t& propagation_latency_crossedge, const uint32_t& propagation_latency_edgecloud, EdgeParam* edge_param_ptr);
         virtual ~EdgeWrapper();
 
         void start();
@@ -57,7 +57,7 @@ namespace covered
 
         // Return if edge node is finished (invoked by cache server or beacon server)
         // Invalidate all cache copies for the key simultaneously (note that invalidating closest edge node is okay, as it is waiting for AcquireWritelockResponse instead of processing cache access requests)
-        bool invalidateCacheCopies_(const Key& key, const std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo) const;
+        bool invalidateCacheCopies_(UdpMsgSocketServer* socket_server_ptr, const NetworkAddr& source_addr, const Key& key, const std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo) const;
         void sendInvalidationRequest_(UdpSocketWrapper* edge_sendreq_toinvalidate_socket_client_ptr, const Key& key, const NetworkAddr network_addr) const;
 
         // (3) Unblock for MSI protocol
@@ -66,15 +66,17 @@ namespace covered
         bool notifyEdgesToFinishBlock_(const Key& key, const std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges) const; // Notify all blocked edges for the key simultaneously
         void sendFinishBlockRequest_(UdpSocketWrapper* edge_sendreq_tounblock_socket_client_ptr, const Key& key, const NetworkAddr& closest_edge_addr) const;
 
+        // (4) Other utilities
+
+        void checkPointers_() const;
+
         std::string instance_name_;
 
         // Const shared variables
         const std::string cache_name_; // Come from Param
         const uint32_t capacity_bytes_; // Come from Param
-        const uint32_t clientcnt_; // Come from param
         const uint32_t edgecnt_; // Come from Param
         const uint32_t percacheserver_workercnt_; // Come from Param
-        const uint32_t perclient_workercnt_; // Come from Param
         const EdgeParam* edge_param_ptr_; // Thread safe
 
         // NOTE: we do NOT need per-key rwlock for atomicity among CacheWrapper and CooperationWrapperBase.

@@ -11,6 +11,7 @@
 
 #include "common/dynamic_array.h"
 #include "workload/workload_item.h"
+#include "network/network_addr.h"
 
 namespace covered
 {
@@ -66,18 +67,19 @@ namespace covered
         static std::string hitflagToString(const Hitflag& hitflag);
         static std::string lockResultToString(const LockResult& lock_result);
 
-        static MessageBase* getLocalRequestFromWorkloadItem(WorkloadItem workload_item, const uint32_t& source_index); // By workers in clients
+        static MessageBase* getLocalRequestFromWorkloadItem(WorkloadItem workload_item, const uint32_t& source_index, const NetworkAddr& source_addr); // By workers in clients
         static MessageBase* getRequestFromMsgPayload(const DynamicArray& msg_payload); // Data/control requests
         static MessageBase* getResponseFromMsgPayload(const DynamicArray& msg_payload); // Data/control responses
         static Key getKeyFromMessage(MessageBase* message_ptr); // Get key from message (e.g., local requests)
 
-        MessageBase(const MessageType& message_type, const uint32_t& source_index);
+        MessageBase(const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr);
         //MessageBase(const DynamicArray& msg_payload);
         MessageBase();
         virtual ~MessageBase();
 
         MessageType getMessageType() const;
         uint32_t getSourceIndex() const;
+        NetworkAddr getSourceAddr() const;
 
         uint32_t getMsgPayloadSize() const;
 
@@ -110,6 +112,7 @@ namespace covered
 
         MessageType message_type_;
         uint32_t source_index_; // global-client-worker/edge/cloud index of source node
+        NetworkAddr source_addr_; // Network address of source socket server to hide propagation simulator
 
         bool is_valid_; // NOT serialized/deserialized in msg payload
     protected:

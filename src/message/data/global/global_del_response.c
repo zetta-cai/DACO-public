@@ -4,7 +4,7 @@ namespace covered
 {
     const std::string GlobalDelResponse::kClassName("GlobalDelResponse");
 
-    GlobalDelResponse::GlobalDelResponse(const Key& key, const uint32_t& source_index) : KeyMessage(key, MessageType::kGlobalDelResponse, source_index)
+    GlobalDelResponse::GlobalDelResponse(const Key& key, const uint32_t& source_index, const NetworkAddr& source_addr) : KeyMessage(key, MessageType::kGlobalDelResponse, source_index, source_addr)
     {
     }
 

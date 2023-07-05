@@ -85,9 +85,9 @@ namespace covered
         // (4.1) Client
         static uint32_t getClosestEdgeIdx(const uint32_t& client_idx, const uint32_t& clientcnt, const uint32_t& edgecnt);
         static std::string getClosestEdgeIpstr(const uint32_t& client_idx, const uint32_t& clientcnt, const uint32_t& edgecnt);
-        static uint16_t getClosestEdgeCacheServerRecvreqPort(const uint32_t& client_idx, const uint32_t& edgecnt); // Calculate the recvreq port of the closest edge node for client
-        static uint32_t getGlobalClientWorkerIdx(const uint32_t& client_idx, const uint32_t& local_client_worker_idx);
-        static void parseGlobalClientWorkerIdx(const uint32_t& global_client_worker_idx, const uint32_t& perclient_workercnt, uint32_t& client_idx, uint32_t& local_client_worker_idx);
+        static uint16_t getClosestEdgeCacheServerRecvreqPort(const uint32_t& client_idx, const uint32_t& clientcnt, const uint32_t& edgecnt); // Calculate the recvreq port of the closest edge node for client
+        static uint32_t getGlobalClientWorkerIdx(const uint32_t& client_idx, const uint32_t& local_client_worker_idx, const uint32_t& perclient_workercnt);
+        //static void parseGlobalClientWorkerIdx(const uint32_t& global_client_worker_idx, const uint32_t& perclient_workercnt, uint32_t& client_idx, uint32_t& local_client_worker_idx);
         static uint16_t getClientWorkerRecvrspPort(const uint32_t& client_idx, const uint32_t& clientcnt, const uint32_t& local_client_worker_idx, const uint32_t& perclient_workercnt);
 
         // (4.2) Edge and cloud

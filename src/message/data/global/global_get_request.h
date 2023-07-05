@@ -18,7 +18,7 @@ namespace covered
     class GlobalGetRequest : public KeyMessage
     {
     public:
-        GlobalGetRequest(const Key& key, const uint32_t& source_index);
+        GlobalGetRequest(const Key& key, const uint32_t& source_index, const NetworkAddr& source_addr);
         GlobalGetRequest(const DynamicArray& msg_payload);
         virtual ~GlobalGetRequest();
     private:

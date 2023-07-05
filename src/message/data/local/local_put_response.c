@@ -4,7 +4,7 @@ namespace covered
 {
     const std::string LocalPutResponse::kClassName("LocalPutResponse");
 
-    LocalPutResponse::LocalPutResponse(const Key& key, const Hitflag& hitflag, const uint32_t& source_index) : KeyByteMessage(key, static_cast<uint8_t>(hitflag), MessageType::kLocalPutResponse, source_index)
+    LocalPutResponse::LocalPutResponse(const Key& key, const Hitflag& hitflag, const uint32_t& source_index, const NetworkAddr& source_addr) : KeyByteMessage(key, static_cast<uint8_t>(hitflag), MessageType::kLocalPutResponse, source_index, source_addr)
     {
     }
 

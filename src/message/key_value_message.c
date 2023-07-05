@@ -4,7 +4,7 @@ namespace covered
 {
     const std::string KeyValueMessage::kClassName("KeyValueMessage");
 
-    KeyValueMessage::KeyValueMessage(const Key& key, const Value& value, const MessageType& message_type, const uint32_t& source_index) : MessageBase(message_type, source_index)
+    KeyValueMessage::KeyValueMessage(const Key& key, const Value& value, const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr) : MessageBase(message_type, source_index, source_addr)
     {
         key_ = key;
         value_ = value;

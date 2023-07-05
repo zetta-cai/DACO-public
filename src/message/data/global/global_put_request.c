@@ -4,7 +4,7 @@ namespace covered
 {
     const std::string GlobalPutRequest::kClassName("GlobalPutRequest");
 
-    GlobalPutRequest::GlobalPutRequest(const Key& key, const Value& value, const uint32_t& source_index) : KeyValueMessage(key, value, MessageType::kGlobalPutRequest, source_index)
+    GlobalPutRequest::GlobalPutRequest(const Key& key, const Value& value, const uint32_t& source_index, const NetworkAddr& source_addr) : KeyValueMessage(key, value, MessageType::kGlobalPutRequest, source_index, source_addr)
     {
     }
 

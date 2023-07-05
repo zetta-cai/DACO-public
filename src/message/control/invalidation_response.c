@@ -4,7 +4,7 @@ namespace covered
 {
     const std::string InvalidationResponse::kClassName("InvalidationResponse");
 
-    InvalidationResponse::InvalidationResponse(const Key& key, const uint32_t& source_index) : KeyMessage(key, MessageType::kInvalidationResponse, source_index)
+    InvalidationResponse::InvalidationResponse(const Key& key, const uint32_t& source_index, const NetworkAddr& source_addr) : KeyMessage(key, MessageType::kInvalidationResponse, source_index, source_addr)
     {
     }
 

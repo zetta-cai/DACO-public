@@ -73,6 +73,8 @@ namespace covered
 
     void ClientWrapper::start()
     {
+        checkPointers_();
+        
         int pthread_returncode;
 
         // Launch client-to-edge propagation simulator
@@ -129,6 +131,16 @@ namespace covered
         // Dump per-client statistics
         assert(client_statistics_tracker_ptr_ != NULL);
         client_statistics_tracker_ptr_->dump(client_statistics_filepath);
+
+        return;
+    }
+
+    void ClientWrapper::checkPointers_() const
+    {
+        assert(client_param_ptr_ != NULL);
+        assert(workload_generator_ptr_ != NULL);
+        assert(client_statistics_tracker_ptr_ != NULL);
+        assert(client_toedge_propagation_simulator_param_ptr_ != NULL);
 
         return;
     }

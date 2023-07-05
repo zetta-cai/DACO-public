@@ -38,6 +38,8 @@ namespace covered
         std::string base_instance_name_;
     protected:
 
+        void checkPointers_() const;
+
         // Member variables
 
         // Const variable

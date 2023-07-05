@@ -30,7 +30,7 @@ namespace covered
         ~UdpMsgSocketServer();
 
         // Note: pass reference of pkt_payload to avoid unnecessary memory copy
-        bool recv(DynamicArray& msg_payload, NetworkAddr& network_addr);
+        bool recv(DynamicArray& msg_payload);
     private:
         static const std::string kClassName;
 

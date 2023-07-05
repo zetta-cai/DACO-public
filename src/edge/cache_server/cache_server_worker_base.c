@@ -135,7 +135,7 @@ namespace covered
 
                 if (data_request_ptr->isDataRequest()) // Data requests (e.g., local/redirected requests)
                 {
-                    // Get client index and local worker index
+                    /*// Get client index and local worker index
                     uint32_t global_client_worker_idx = data_request_ptr->getSourceIndex();
                     uint32_t client_idx = 0;
                     uint32_t local_client_worker_idx = 0;
@@ -144,9 +144,9 @@ namespace covered
                     // Get client worker recvrsp network address
                     std::string client_ipstr = Config::getClientIpstr(client_idx, tmp_edge_wrapper_ptr->clientcnt_);
                     uint16_t client_worker_recvrsp_port = Util::getClientWorkerRecvrspPort(client_idx, tmp_edge_wrapper_ptr->clientcnt_, local_client_worker_idx, tmp_edge_wrapper_ptr->perclient_workercnt_);
-                    Network client_worker_recvrsp_addr(client_ipstr, client_worker_recvrsp_port);
+                    Network client_worker_recvrsp_addr(client_ipstr, client_worker_recvrsp_port);*/
 
-                    is_finish = processDataRequest_(data_request_ptr, client_worker_recvrsp_addr);
+                    is_finish = processDataRequest_(data_request_ptr, data_request_ptr->getSourceAddr());
                 }
                 else
                 {
@@ -1067,9 +1067,9 @@ namespace covered
     {
         assert(cache_server_worker_param_ptr_ != NULL);
         assert(cache_server_worker_param_ptr_->getEdgeWrapperPtr() != NULL);
-        assert(cache_server_worker_param_ptr_->getEdgeWrapperPtr()->edge_param_ptr_ != NULL);
-        assert(cache_server_worker_param_ptr_->getEdgeWrapperPtr()->edge_cache_ptr_ != NULL);
-        assert(cache_server_worker_param_ptr_->getEdgeWrapperPtr()->cooperation_wrapper_ptr_ != NULL);
+        
+        cache_server_worker_param_ptr_->getEdgeWrapperPtr()->checkPointers_();
+
         assert(cache_server_worker_param_ptr_->getDataRequestBufferPtr() != NULL);
         assert(edge_cache_server_worker_sendreq_tobeacon_socket_client_ptr_ != NULL);
         assert(edge_cache_server_worker_sendreq_totarget_socket_client_ptr_ != NULL);

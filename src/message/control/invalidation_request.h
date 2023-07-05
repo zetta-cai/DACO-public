@@ -18,7 +18,7 @@ namespace covered
     class InvalidationRequest : public KeyMessage
     {
     public:
-        InvalidationRequest(const Key& key, const uint32_t& source_index);
+        InvalidationRequest(const Key& key, const uint32_t& source_index, const NetworkAddr& source_addr);
         InvalidationRequest(const DynamicArray& msg_payload);
         virtual ~InvalidationRequest();
     private:

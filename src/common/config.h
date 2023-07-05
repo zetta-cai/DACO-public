@@ -35,6 +35,9 @@ namespace covered
         static const std::string OUTPUT_BASEDIR_KEYSTR;
         static const std::string PROPAGATION_ITEM_BUFFER_SIZE_CLIENT_TOEDGE_KEYSTR;
         static const std::string PROPAGATION_ITEM_BUFFER_SIZE_EDGE_TOCLIENT_KEYSTR;
+        static const std::string PROPAGATION_ITEM_BUFFER_SIZE_EDGE_TOEDGE_KEYSTR;
+        static const std::string PROPAGATION_ITEM_BUFFER_SIZE_EDGE_TOCLOUD_KEYSTR;
+        static const std::string PROPAGATION_ITEM_BUFFER_SIZE_CLOUD_TOEDGE_KEYSTR;
         static const std::string VERSION_KEYSTR;
 
         static void loadConfig();
@@ -57,6 +60,9 @@ namespace covered
         static std::string getOutputBasedir();
         static uint32_t getPropagationItemBufferSizeClientToedge();
         static uint32_t getPropagationItemBufferSizeEdgeToclient();
+        static uint32_t getPropagationItemBufferSizeEdgeToedge();
+        static uint32_t getPropagationItemBufferSizeEdgeTocloud();
+        static uint32_t getPropagationItemBufferSizeCloudToedge();
         static std::string getVersion();
 
         static std::string toString();
@@ -86,6 +92,9 @@ namespace covered
         static std::string output_basedir_;
         static uint32_t propagation_item_buffer_size_client_toedge_;
         static uint32_t propagation_item_buffer_size_edge_toclient_;
+        static uint32_t propagation_item_buffer_size_edge_toedge_;
+        static uint32_t propagation_item_buffer_size_edge_tocloud_;
+        static uint32_t propagation_item_buffer_size_cloud_toedge_;
         static std::string version_;
     };
 }

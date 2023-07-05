@@ -42,7 +42,7 @@ namespace covered
 		pkt_socket_ptr_ = NULL;
 	}
 
-	bool UdpMsgSocketServer::recv(DynamicArray& msg_payload, NetworkAddr& network_addr)
+	bool UdpMsgSocketServer::recv(DynamicArray& msg_payload)
 	{
 		bool is_timeout = false;
 
@@ -102,8 +102,8 @@ namespace covered
 					tmp_pkt_payload.arraycpy(Util::UDP_FRAGHDR_SIZE, msg_payload, fragment_offset, fragment_payload_size);
 
 					// Update network address for processing outside UdpSocketWrapper
-					network_addr = tmp_addr;
-					assert(network_addr.isValidAddr() == true);
+					//network_addr = tmp_addr;
+					//assert(network_addr.isValidAddr() == true);
 
 					break; // Break while(true)
 				} // End of (is_last_frag == true)

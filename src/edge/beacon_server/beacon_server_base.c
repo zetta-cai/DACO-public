@@ -163,9 +163,9 @@ namespace covered
     void BeaconServerBase::checkPointers_() const
     {
         assert(edge_wrapper_ptr_ != NULL);
-        assert(edge_wrapper_ptr_->edge_param_ptr_ != NULL);
-        assert(edge_wrapper_ptr_->edge_cache_ptr_ != NULL);
-        assert(edge_wrapper_ptr_->cooperation_wrapper_ptr_ != NULL);
+
+        edge_wrapper_ptr_->checkPointers_();
+        
         assert(edge_beacon_server_recvreq_socket_server_ptr_ != NULL);
         assert(edge_beacon_server_sendreq_toblocked_socket_client_ptr_ != NULL);
     }

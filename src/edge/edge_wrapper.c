@@ -17,7 +17,7 @@ namespace covered
 
     void* EdgeWrapper::launchEdge(void* edge_param_ptr)
     {
-        EdgeWrapper* local_edge_ptr = new EdgeWrapper(Param::getCacheName(), Param::getCapacityBytes(), Param::getClientcnt(), Param::getEdgecnt(), Param::getHashName(), Param::getPercacheserverWorkercnt(), Param::getPerclientWorkercnt(), Param::getPropagationLatencyClientedge(), (EdgeParam*)edge_param_ptr);
+        EdgeWrapper* local_edge_ptr = new EdgeWrapper(Param::getCacheName(), Param::getCapacityBytes(), Param::getEdgecnt(), Param::getHashName(), Param::getPercacheserverWorkercnt(), Param::getPropagationLatencyClientedge(), Param::getPropagationLatencyCrossedge(), Param::getPropagationLatencyEdgecloud(), (EdgeParam*)edge_param_ptr);
         assert(local_edge_ptr != NULL);
         local_edge_ptr->start();
 
@@ -29,7 +29,7 @@ namespace covered
         return NULL;
     }
 
-    EdgeWrapper::EdgeWrapper(const std::string& cache_name, const uint32_t& capacity_bytes, const uint32_t& clientcnt, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& percacheserver_workercnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge, EdgeParam* edge_param_ptr) : cache_name_(cache_name), capacity_bytes_(capacity_bytes), clientcnt_(clientcnt), edgecnt_(edgecnt), percacheserver_workercnt_(percacheserver_workercnt), perclient_workercnt_(perclient_workercnt), edge_param_ptr_(edge_param_ptr)
+    EdgeWrapper::EdgeWrapper(const std::string& cache_name, const uint32_t& capacity_bytes, const const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& percacheserver_workercnt, const const uint32_t& propagation_latency_clientedge, const uint32_t& propagation_latency_crossedge, const uint32_t& propagation_latency_edgecloud, EdgeParam* edge_param_ptr) : cache_name_(cache_name), capacity_bytes_(capacity_bytes), edgecnt_(edgecnt), percacheserver_workercnt_(percacheserver_workercnt), edge_param_ptr_(edge_param_ptr)
     {
         if (edge_param_ptr == NULL)
         {
@@ -55,7 +55,13 @@ namespace covered
         edge_toclient_propagation_simulator_param_ptr_ = new PropagationSimulatorParam(propagation_latency_clientedge, (NodeParamBase*)edge_param_ptr, Config::getPropagationItemBufferSizeEdgeToclient());
         assert(edge_toclient_propagation_simulator_param_ptr_ != NULL);
 
-        // TODO: END HERE
+        // Allocate edge-to-edge propagation simulator param
+        edge_toedge_propagation_simulator_param_ptr_ = new PropagationSimulatorParam(propagation_latency_crossedge, (NodeParamBase*)edge_param_ptr, Config::getPropagationItemBufferSizeEdgeToedge());
+        assert(edge_toedge_propagation_simulator_param_ptr_ != NULL);
+
+        // Allocate edge-to-cloud propagation simulator param
+        edge_tocloud_propagation_simulator_param_ptr_ = new PropagationSimulatorParam(propagation_latency_edgecloud, (NodeParamBase*)edge_param_ptr, Config::getPropagationItemBufferSizeEdgeTocloud());
+        assert(edge_tocloud_propagation_simulator_param_ptr_ != NULL);
     }
         
     EdgeWrapper::~EdgeWrapper()
@@ -76,6 +82,16 @@ namespace covered
         assert(edge_toclient_propagation_simulator_param_ptr_ != NULL);
         delete edge_toclient_propagation_simulator_param_ptr_;
         edge_toclient_propagation_simulator_param_ptr_ = NULL;
+
+        // Release edge-to-edge propagation simulator param
+        assert(edge_toedge_propagation_simulator_param_ptr_ != NULL);
+        delete edge_toedge_propagation_simulator_param_ptr_;
+        edge_toedge_propagation_simulator_param_ptr_ = NULL;
+
+        // Release edge-to-cloud propagation simulator param
+        assert(edge_tocloud_propagation_simulator_param_ptr_ != NULL);
+        delete edge_tocloud_propagation_simulator_param_ptr_;
+        edge_tocloud_propagation_simulator_param_ptr_ = NULL;
     }
 
     void EdgeWrapper::start()
@@ -236,7 +252,7 @@ namespace covered
 
     // (2) Invalidate for MSI protocol
 
-    bool EdgeWrapper::invalidateCacheCopies_(const Key& key, const std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo) const
+    bool EdgeWrapper::invalidateCacheCopies_(UdpMsgSocketServer* socket_server_ptr, const NetworkAddr& source_addr, const Key& key, const std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo) const
     {
         assert(edge_param_ptr_ != NULL);
 
@@ -249,12 +265,7 @@ namespace covered
         }
         assert(invalidate_edgecnt > 0);
 
-        // Prepare a temporary socket client to invalidate cached copies for the given key
-        // NOTE: use invalid remote address as default, but will reset remote address based on dirinfo later
-        std::string invalid_ipstr = Util::LOCALHOST_IPSTR;
-        uint16_t invalid_port = Util::UDP_MIN_PORT + 1;
-        NetworkAddr invalid_addr(invalid_ipstr, invalid_port);
-        UdpSocketWrapper edge_sendreq_toinvalidate_socket_client(SocketRole::kSocketClient, invalid_addr);
+        // TODO: END HERE
 
         // Convert directory informations into network addresses
         std::unordered_set<NetworkAddr, NetworkAddrHasher> all_networkaddr;
@@ -503,6 +514,20 @@ namespace covered
         // Send FinishBlockRequest to the closest edge node
         PropagationSimulator::propagateFromNeighborToEdge();
         edge_sendreq_tounblock_socket_client_ptr->send(control_request_msg_payload);
+
+        return;
+    }
+
+    // (4) Other utilities
+
+    void EdgeWrapper::checkPointers_() const
+    {
+        assert(edge_param_ptr_ != NULL);
+        assert(edge_cache_ptr_ != NULL);
+        assert(cooperation_wrapper_ptr_ != NULL);
+        assert(edge_toclient_propagation_simulator_param_ptr_ != NULL);
+        assert(edge_toedge_propagation_simulator_param_ptr_ != NULL);
+        assert(edge_tocloud_propagation_simulator_param_ptr_ != NULL);
 
         return;
     }

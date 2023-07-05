@@ -22,7 +22,6 @@ namespace covered
 
         std::string getKeystr() const;
 
-        // Offset of key must be 0 in message payload
         uint32_t getKeyPayloadSize() const;
         uint32_t serialize(DynamicArray& msg_payload, const uint32_t& position) const;
         uint32_t deserialize(const DynamicArray& msg_payload, const uint32_t& position);

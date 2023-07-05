@@ -18,7 +18,7 @@ namespace covered
     class LocalDelRequest : public KeyMessage
     {
     public:
-        LocalDelRequest(const Key& key, const uint32_t& source_index);
+        LocalDelRequest(const Key& key, const uint32_t& source_index, const NetworkAddr& source_addr);
         LocalDelRequest(const DynamicArray& msg_payload);
         virtual ~LocalDelRequest();
     private:

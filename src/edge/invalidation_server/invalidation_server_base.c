@@ -110,4 +110,13 @@ namespace covered
 
         return;
     }
+
+    void InvalidationServerBase::checkPointers_() const
+    {
+        assert(edge_wrapper_ptr_ != NULL);
+
+        edge_wrapper_ptr_->checkPointers_();
+        
+        assert(edge_invalidation_server_recvreq_socket_server_ptr_ != NULL);
+    }
 }

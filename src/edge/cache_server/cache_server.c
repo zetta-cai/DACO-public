@@ -105,9 +105,7 @@ namespace covered
         {
             // Receive the message payload of data (local/redirected) requests
             DynamicArray data_request_msg_payload;
-            NetworkAddr tmp_addr; // clients or neighbor edge nodes
-            bool is_timeout = edge_cache_server_recvreq_socket_server_ptr_->recv(data_request_msg_payload, tmp_addr);
-            UNUSED(tmp_addr);
+            bool is_timeout = edge_cache_server_recvreq_socket_server_ptr_->recv(data_request_msg_payload);
             if (is_timeout == true) // Timeout-and-retry
             {
                 continue; // Retry to receive a message if edge is still running
@@ -157,7 +155,9 @@ namespace covered
     void CacheServer::checkPointers_() const
     {
         assert(edge_wrapper_ptr_ != NULL);
-        assert(edge_wrapper_ptr_->edge_param_ptr_ != NULL);
+
+        edge_wrapper_ptr_->checkPointers_();
+        
         assert(hash_wrapper_ptr_ != NULL);
         assert(edge_cache_server_recvreq_socket_server_ptr_ != NULL);
 

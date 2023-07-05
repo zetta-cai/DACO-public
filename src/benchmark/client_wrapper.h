@@ -34,6 +34,8 @@ namespace covered
     private:
         static const std::string kClassName;
 
+        void checkPointers_() const;
+
         // Const shared variable
         const uint32_t clientcnt_;
         const uint32_t edgecnt_;

@@ -15,5 +15,8 @@
     "output_basedir": "output",
     "propagation_item_buffer_size_client_toedge": 1000,
     "propagation_item_buffer_size_edge_toclient": 1000,
+    "propagation_item_buffer_size_edge_toedge": 1000,
+    "propagation_item_buffer_size_edge_tocloud": 1000,
+    "propagation_item_buffer_size_cloud_toedge": 1000,
     "version": "1.0"
 }

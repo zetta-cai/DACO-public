@@ -4,7 +4,7 @@ namespace covered
 {
     const std::string GlobalPutResponse::kClassName("GlobalPutResponse");
 
-    GlobalPutResponse::GlobalPutResponse(const Key& key, const uint32_t& source_index) : KeyMessage(key, MessageType::kGlobalPutResponse, source_index)
+    GlobalPutResponse::GlobalPutResponse(const Key& key, const uint32_t& source_index, const NetworkAddr& source_addr) : KeyMessage(key, MessageType::kGlobalPutResponse, source_index, source_addr)
     {
     }
 

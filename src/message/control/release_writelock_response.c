@@ -4,7 +4,7 @@ namespace covered
 {
     const std::string ReleaseWritelockResponse::kClassName("ReleaseWritelockResponse");
 
-    ReleaseWritelockResponse::ReleaseWritelockResponse(const Key& key, const uint32_t& source_index) : KeyMessage(key, MessageType::kReleaseWritelockResponse, source_index)
+    ReleaseWritelockResponse::ReleaseWritelockResponse(const Key& key, const uint32_t& source_index, const NetworkAddr& source_addr) : KeyMessage(key, MessageType::kReleaseWritelockResponse, source_index, source_addr)
     {
     }
 

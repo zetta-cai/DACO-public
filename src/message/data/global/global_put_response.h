@@ -18,7 +18,7 @@ namespace covered
     class GlobalPutResponse : public KeyMessage
     {
     public:
-        GlobalPutResponse(const Key& key, const uint32_t& source_index);
+        GlobalPutResponse(const Key& key, const uint32_t& source_index, const NetworkAddr& source_addr);
         GlobalPutResponse(const DynamicArray& msg_payload);
         virtual ~GlobalPutResponse();
     private:

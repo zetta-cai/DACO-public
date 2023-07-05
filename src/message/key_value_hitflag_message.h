@@ -19,7 +19,7 @@ namespace covered
     class KeyValueHitflagMessage : public MessageBase
     {
     public:
-        KeyValueHitflagMessage(const Key& key, const Value& value, const Hitflag& hitflag, const MessageType& message_type, const uint32_t& source_index);
+        KeyValueHitflagMessage(const Key& key, const Value& value, const Hitflag& hitflag, const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr);
         KeyValueHitflagMessage(const DynamicArray& msg_payload);
         virtual ~KeyValueHitflagMessage();
 

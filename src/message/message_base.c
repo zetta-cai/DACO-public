@@ -189,7 +189,7 @@ namespace covered
         return lockresult_str;
     }
 
-    MessageBase* MessageBase::getLocalRequestFromWorkloadItem(WorkloadItem workload_item, const uint32_t& source_index)
+    MessageBase* MessageBase::getLocalRequestFromWorkloadItem(WorkloadItem workload_item, const uint32_t& source_index, const NetworkAddr& source_addr)
     {
         WorkloadItemType item_type = workload_item.getItemType();
 
@@ -199,17 +199,17 @@ namespace covered
         {
             case WorkloadItemType::kWorkloadItemGet:
             {
-                message_ptr = new LocalGetRequest(workload_item.getKey(), source_index);
+                message_ptr = new LocalGetRequest(workload_item.getKey(), source_index, source_addr);
                 break;
             }
             case WorkloadItemType::kWorkloadItemPut:
             {
-                message_ptr = new LocalPutRequest(workload_item.getKey(), workload_item.getValue(), source_index);
+                message_ptr = new LocalPutRequest(workload_item.getKey(), workload_item.getValue(), source_index, source_addr);
                 break;
             }
             case WorkloadItemType::kWorkloadItemDel:
             {
-                message_ptr = new LocalDelRequest(workload_item.getKey(), source_index);
+                message_ptr = new LocalDelRequest(workload_item.getKey(), source_index, source_addr);
                 break;
             }
             default:
@@ -447,10 +447,11 @@ namespace covered
         return sizeof(uint32_t);
     }
 
-    MessageBase::MessageBase(const MessageType& message_type, const uint32_t& source_index)
+    MessageBase::MessageBase(const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr)
     {
         message_type_ = message_type;
         source_index_ = source_index;
+        source_addr_ = source_addr;
         is_valid_ = true;
     }
 
@@ -479,12 +480,18 @@ namespace covered
         return source_index_;
     }
 
+    NetworkAddr MessageBase::getSourceAddr() const
+    {
+        checkIsValid_();
+        return source_addr_;
+    }
+
     uint32_t MessageBase::getMsgPayloadSize() const
     {
         checkIsValid_();
 
-        // Message type size + source index + internal payload size
-        return sizeof(uint32_t) + sizeof(uint32_t) + getMsgPayloadSizeInternal_();
+        // Message type size + source index + source addr + internal payload size
+        return sizeof(uint32_t) + sizeof(uint32_t) + source_addr_.getAddrPayloadSize() + getMsgPayloadSizeInternal_();
     }
 
     uint32_t MessageBase::serialize(DynamicArray& msg_payload) const
@@ -498,6 +505,8 @@ namespace covered
         uint32_t bigendian_source_index = htonl(static_cast<uint32_t>(source_index_));
         msg_payload.deserialize(size, (const char *)&bigendian_source_index, sizeof(uint32_t));
         size += sizeof(uint32_t);
+        uint32_t addr_payload_size = source_addr_.serialize(msg_payload, size);
+        size += addr_payload_size;
         uint32_t internal_size = serializeInternal_(msg_payload, size);
         size += internal_size;
         return size - 0;
@@ -515,6 +524,8 @@ namespace covered
         msg_payload.serialize(size, (char *)&source_index_, sizeof(uint32_t));
         source_index_ = ntohl(source_index_);
         size += sizeof(uint32_t);
+        uint32_t addr_payload_size = source_addr_.deserialize(msg_payload, size);
+        size += addr_payload_size;
         uint32_t internal_size = this->deserializeInternal_(msg_payload, size);
         size += internal_size;
         return size - 0;

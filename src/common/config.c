@@ -26,6 +26,9 @@ namespace covered
     const std::string Config::OUTPUT_BASEDIR_KEYSTR("output_basedir");
     const std::string Config::PROPAGATION_ITEM_BUFFER_SIZE_CLIENT_TOEDGE_KEYSTR("propagation_item_buffer_size_client_toedge");
     const std::string Config::PROPAGATION_ITEM_BUFFER_SIZE_EDGE_TOCLIENT_KEYSTR("propagation_item_buffer_size_edge_toclient");
+    const std::string Config::PROPAGATION_ITEM_BUFFER_SIZE_EDGE_TOEDGE_KEYSTR("propagation_item_buffer_size_edge_toedge");
+    const std::string Config::PROPAGATION_ITEM_BUFFER_SIZE_EDGE_TOCLOUD_KEYSTR("propagation_item_buffer_size_edge_tocloud");
+    const std::string Config::PROPAGATION_ITEM_BUFFER_SIZE_CLOUD_TOEDGE_KEYSTR("propagation_item_buffer_size_cloud_toedge");
     const std::string Config::VERSION_KEYSTR("version");
 
     const std::string Config::kClassName("Config");
@@ -50,6 +53,9 @@ namespace covered
     std::string Config::output_basedir_("output");
     uint32_t Config::propagation_item_buffer_size_client_toedge_ = 1000;
     uint32_t Config::propagation_item_buffer_size_edge_toclient_ = 1000;
+    uint32_t Config::propagation_item_buffer_size_edge_toedge_ = 1000;
+    uint32_t Config::propagation_item_buffer_size_edge_tocloud_ = 1000;
+    uint32_t Config::propagation_item_buffer_size_cloud_toedge_ = 1000;
     std::string Config::version_("1.0");
 
     void Config::loadConfig()
@@ -159,6 +165,24 @@ namespace covered
             {
                 int64_t tmp_size = kv_ptr->value().get_int64();
                 propagation_item_buffer_size_edge_toclient_ = Util::toUint32(tmp_size);
+            }
+            kv_ptr = find_(PROPAGATION_ITEM_BUFFER_SIZE_EDGE_TOEDGE_KEYSTR);
+            if (kv_ptr != NULL)
+            {
+                int64_t tmp_size = kv_ptr->value().get_int64();
+                propagation_item_buffer_size_edge_toedge_ = Util::toUint32(tmp_size);
+            }
+            kv_ptr = find_(PROPAGATION_ITEM_BUFFER_SIZE_EDGE_TOCLOUD_KEYSTR);
+            if (kv_ptr != NULL)
+            {
+                int64_t tmp_size = kv_ptr->value().get_int64();
+                propagation_item_buffer_size_edge_tocloud_ = Util::toUint32(tmp_size);
+            }
+            kv_ptr = find_(PROPAGATION_ITEM_BUFFER_SIZE_CLOUD_TOEDGE_KEYSTR);
+            if (kv_ptr != NULL)
+            {
+                int64_t tmp_size = kv_ptr->value().get_int64();
+                propagation_item_buffer_size_cloud_toedge_ = Util::toUint32(tmp_size);
             }
             kv_ptr = find_(VERSION_KEYSTR);
             if (kv_ptr != NULL)
@@ -344,6 +368,24 @@ namespace covered
         return propagation_item_buffer_size_edge_toclient_;
     }
 
+    uint32_t Config::getPropagationItemBufferSizeEdgeToedge()
+    {
+        checkIsValid_();
+        return propagation_item_buffer_size_edge_toedge_;
+    }
+
+    uint32_t Config::getPropagationItemBufferSizeEdgeTocloud()
+    {
+        checkIsValid_();
+        return propagation_item_buffer_size_edge_tocloud_;
+    }
+
+    uint32_t Config::getPropagationItemBufferSizeCloudToedge()
+    {
+        checkIsValid_();
+        return propagation_item_buffer_size_cloud_toedge_;
+    }
+
     std::string Config::getVersion()
     {
         checkIsValid_();
@@ -381,6 +423,9 @@ namespace covered
         oss << "Output base directory: " << output_basedir_ << std::endl;
         oss << "Propagation item buffer size from client to edge: " << propagation_item_buffer_size_client_toedge_ << std::endl;
         oss << "Propagation item buffer size from edge to client: " << propagation_item_buffer_size_edge_toclient_ << std::endl;
+        oss << "Propagation item buffer size from edge to edge: " << propagation_item_buffer_size_edge_toedge_ << std::endl;
+        oss << "Propagation item buffer size from edge to cloud: " << propagation_item_buffer_size_edge_tocloud_ << std::endl;
+        oss << "Propagation item buffer size from cloud to edge: " << propagation_item_buffer_size_cloud_toedge_ << std::endl;
         oss << "Version: " << version_;
         return oss.str();
     }
