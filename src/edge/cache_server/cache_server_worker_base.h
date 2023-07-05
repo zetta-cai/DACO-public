@@ -77,11 +77,11 @@ namespace covered
         // (1) Process data requests
     
         // Return if edge node is finished
-        bool processDataRequest_(MessageBase* data_request_ptr, const NetworkAddr& network_addr);
-        bool processLocalGetRequest_(MessageBase* local_request_ptr, const NetworkAddr& network_addr) const;
-        bool processLocalWriteRequest_(MessageBase* local_request_ptr, const NetworkAddr& network_addr); // For put/del
-        bool processRedirectedRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& network_addr);
-        virtual bool processRedirectedGetRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& network_addr) const = 0;
+        bool processDataRequest_(MessageBase* data_request_ptr, const NetworkAddr& recvrsp_source_addr);
+        bool processLocalGetRequest_(MessageBase* local_request_ptr, const NetworkAddr& recvrsp_source_addr) const;
+        bool processLocalWriteRequest_(MessageBase* local_request_ptr, const NetworkAddr& recvrsp_source_addr); // For put/del
+        bool processRedirectedRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& recvrsp_source_addr);
+        virtual bool processRedirectedGetRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& recvrsp_source_addr) const = 0;
 
         // (2) Access cooperative edge cache
 

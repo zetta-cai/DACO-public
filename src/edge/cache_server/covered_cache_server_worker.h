@@ -24,7 +24,7 @@ namespace covered
         // (1) Process data requests
         
         // Return if edge node is finished
-        virtual bool processRedirectedGetRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& network_addr) const override;
+        virtual bool processRedirectedGetRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& recvrsp_source_addr) const override;
 
         // (2) Access cooperative edge cache
 

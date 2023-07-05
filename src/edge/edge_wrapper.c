@@ -96,7 +96,8 @@ namespace covered
 
     void EdgeWrapper::start()
     {
-        assert(edge_param_ptr_ != NULL);
+        checkPointers_();
+        
         uint32_t edge_idx = edge_param_ptr_->getNodeIdx();
 
         int pthread_returncode;
@@ -212,6 +213,8 @@ namespace covered
 
     uint32_t EdgeWrapper::getSizeForCapacity_() const
     {
+        checkPointers_();
+
         uint32_t size = edge_cache_ptr_->getSizeForCapacity() + cooperation_wrapper_ptr_->getSizeForCapacity();
         return size;
     }
@@ -220,8 +223,7 @@ namespace covered
 
     bool EdgeWrapper::currentIsBeacon_(const Key& key) const
     {
-        assert(cooperation_wrapper_ptr_ != NULL);
-        assert(edge_param_ptr_ != NULL);
+        checkPointers_();
 
         bool current_is_beacon = false;
         uint32_t beacon_edge_idx = cooperation_wrapper_ptr_->getBeaconEdgeIdx(key);
@@ -236,8 +238,7 @@ namespace covered
 
     bool EdgeWrapper::currentIsTarget_(const DirectoryInfo& directory_info) const
     {
-        assert(cooperation_wrapper_ptr_ != NULL);
-        assert(edge_param_ptr_ != NULL);
+        checkPointers_();
 
         bool current_is_target = false;
         uint32_t target_edge_idx = directory_info.getTargetEdgeIdx();
@@ -252,9 +253,11 @@ namespace covered
 
     // (2) Invalidate for MSI protocol
 
-    bool EdgeWrapper::invalidateCacheCopies_(UdpMsgSocketServer* socket_server_ptr, const NetworkAddr& source_addr, const Key& key, const std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo) const
+    bool EdgeWrapper::invalidateCacheCopies_(UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, const Key& key, const std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo) const
     {
-        assert(edge_param_ptr_ != NULL);
+        assert(recvrsp_socket_server_ptr != NULL);
+        assert(recvrsp_source_addr.isValidAddr());
+        checkPointers_();
 
         bool is_finish = false;
 
@@ -265,51 +268,48 @@ namespace covered
         }
         assert(invalidate_edgecnt > 0);
 
-        // TODO: END HERE
-
-        // Convert directory informations into network addresses
-        std::unordered_set<NetworkAddr, NetworkAddrHasher> all_networkaddr;
+        // Convert directory informations into destination network addresses
+        std::unordered_map<uint32_t, NetworkAddr> percachecopy_dstaddr;
         for (std::unordered_set<DirectoryInfo, DirectoryInfoHasher>::const_iterator iter = all_dirinfo.begin(); iter != all_dirinfo.end(); iter++)
         {
             uint32_t tmp_edgeidx = iter->getTargetEdgeIdx();
             std::string tmp_edge_ipstr = Config::getEdgeIpstr(tmp_edgeidx, edgecnt_);
             uint16_t tmp_edge_invaliation_server_port = Util::getEdgeInvalidationServerRecvreqPort(tmp_edgeidx, edgecnt_);
-            NetworkAddr tmp_network_addr(tmp_edge_ipstr, tmp_edge_invaliation_server_port);
-            all_networkaddr.insert(tmp_network_addr);
+            NetworkAddr tmp_edge_invalidation_server_recvreq_dst_addr(tmp_edge_ipstr, tmp_edge_invaliation_server_port);
+            percachecopy_dstaddr.insert(std::pair<uint32_t, NetworkAddr>(tmp_edgeidx, tmp_edge_invalidation_server_recvreq_dst_addr));
         }
 
         // Track whether invalidation requests to all involved edge nodes have been acknowledged
         uint32_t acked_edgecnt = 0;
-        std::unordered_map<NetworkAddr, bool, NetworkAddrHasher> acked_flags;
-        for (std::unordered_set<NetworkAddr, NetworkAddrHasher>::const_iterator iter_for_ackflag = all_networkaddr.begin(); iter_for_ackflag != all_networkaddr.end(); iter_for_ackflag++)
+        std::unordered_map<uint32_t, bool> acked_flags;
+        for (std::unordered_map<uint32_t, NetworkAddr>::const_iterator iter_for_ackflag = percachecopy_dstaddr.begin(); iter_for_ackflag != percachecopy_dstaddr.end(); iter_for_ackflag++)
         {
-            acked_flags.insert(std::pair<NetworkAddr, bool>(*iter_for_ackflag, false));
+            acked_flags.insert(std::pair<uint32_t, bool>(iter_for_ackflag->first, false));
         }
 
         // Issue all invalidation requests simultaneously
         while (acked_edgecnt != invalidate_edgecnt) // Timeout-and-retry mechanism
         {
             // Send (invalidate_edgecnt - acked_edgecnt) control requests to the involved edge nodes that have not acknowledged invalidation requests
-            for (std::unordered_set<NetworkAddr, NetworkAddrHasher>::const_iterator iter_for_request = all_networkaddr.begin(); iter_for_request != all_networkaddr.end(); iter_for_request++)
+            for (std::unordered_map<uint32_t, bool>::const_iterator iter_for_request = acked_flags.begin(); iter_for_request != acked_flags.end(); iter_for_request++)
             {
-                if (acked_flags[*iter_for_request]) // Skip the edge node that has acknowledged the invalidation request
+                if (iter_for_request->second) // Skip the edge node that has acknowledged the invalidation request
                 {
                     continue;
                 }
 
-                const NetworkAddr& tmp_network_addr = *iter_for_request; // cache server address of a blocked closest edge node          
-                sendInvalidationRequest_(&edge_sendreq_toinvalidate_socket_client, key, tmp_network_addr);     
+                const NetworkAddr& tmp_edge_invalidation_server_recvreq_dst_addr = percachecopy_dstaddr[iter_for_request->first]; // cache server address of a blocked closest edge node          
+                sendInvalidationRequest_(key, recvrsp_source_addr, tmp_edge_invalidation_server_recvreq_dst_addr);     
             } // End of edgeidx_for_request
 
             // Receive (invalidate_edgecnt - acked_edgecnt) control repsonses from involved edge nodes
             for (uint32_t edgeidx_for_response = 0; edgeidx_for_response < invalidate_edgecnt - acked_edgecnt; edgeidx_for_response++)
             {
                 DynamicArray control_response_msg_payload;
-                NetworkAddr control_response_addr;
-                bool is_timeout = edge_sendreq_toinvalidate_socket_client.recv(control_response_msg_payload, control_response_addr);
+                bool is_timeout = recvrsp_socket_server_ptr->recv(control_response_msg_payload);
                 if (is_timeout)
                 {
-                    if (!edge_param_ptr_->isEdgeRunning())
+                    if (!edge_param_ptr_->isNodeRunning())
                     {
                         is_finish = true;
                         break; // Break as edge is NOT running
@@ -322,22 +322,23 @@ namespace covered
                 } // End of (is_timeout == true)
                 else
                 {
-                    assert(control_response_addr.isValidAddr());
-
                     // Receive the control response message successfully
                     MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
                     assert(control_response_ptr != NULL && control_response_ptr->getMessageType() == MessageType::kInvalidationResponse);
+                    uint32_t tmp_edgeidx = control_response_ptr->getSourceIndex();
+                    NetworkAddr tmp_edge_invalidation_server_recvreq_source_addr = control_response_ptr->getSourceAddr();
 
                     // Mark the edge node has acknowledged the InvalidationRequest
                     bool is_match = false;
-                    for (std::unordered_set<NetworkAddr, NetworkAddrHasher>::const_iterator iter_for_response = all_networkaddr.begin(); iter_for_response != all_networkaddr.end(); iter_for_response++)
+                    for (std::unordered_map<uint32_t, bool>::iterator iter_for_response = acked_flags.begin(); iter_for_response != acked_flags.end(); iter_for_response++)
                     {
-                        if (*iter_for_response == control_response_addr) // Match a closest edge node
+                        if (iter_for_response->first == tmp_edgeidx) // Match a neighbor edge node
                         {
-                            assert(acked_flags[*iter_for_response] == false); // Original ack flag should be false
+                            assert(iter_for_response->second == false); // Original ack flag should be false
+                            assert(percachecopy_dstaddr[iter_for_response->first] == tmp_edge_invalidation_server_recvreq_source_addr);
 
                             // Update ack information
-                            acked_flags[*iter_for_response] = true;
+                            iter_for_response->second = true;
                             acked_edgecnt += 1;
                             is_match = true;
                             break;
@@ -347,7 +348,7 @@ namespace covered
                     if (!is_match) // Must match at least one closest edge node
                     {
                         std::ostringstream oss;
-                        oss << "receive InvalidationResponse from an edge node " << control_response_addr.getIpstr() << ":" << control_response_addr.getPort() << ", which is NOT in the content directory list!";
+                        oss << "receive InvalidationResponse from edge node " << tmp_edgeidx << ", which is NOT in the content directory list!";
                         Util::dumpWarnMsg(instance_name_, oss.str());
                     } // End of !is_match
 
@@ -366,32 +367,34 @@ namespace covered
         return is_finish;
     }
 
-    void EdgeWrapper::sendInvalidationRequest_(UdpSocketWrapper* edge_sendreq_toinvalidate_socket_client_ptr, const Key& key, const NetworkAddr network_addr) const
+    void EdgeWrapper::sendInvalidationRequest_(const Key& key, const NetworkAddr& recvrsp_source_addr, const NetworkAddr edge_invalidation_server_recvreq_dst_addr) const
     {
-        assert(edge_param_ptr_ != NULL);
-        assert(edge_sendreq_toinvalidate_socket_client_ptr != NULL);
+        checkPointers_();
 
         // Prepare invalidation request to invalidate the cache copy
-        uint32_t edge_idx = edge_param_ptr_->getEdgeIdx();
-        InvalidationRequest invalidation_request(key, edge_idx);
-        DynamicArray control_request_msg_payload(invalidation_request.getMsgPayloadSize());
-        invalidation_request.serialize(control_request_msg_payload);
+        uint32_t edge_idx = edge_param_ptr_->getNodeIdx();
+        MessageBase* invalidation_request_ptr = new InvalidationRequest(key, edge_idx, recvrsp_source_addr);
+        assert(invalidation_request_ptr != NULL);
 
-        // Set remote address to the closest edge node
-        edge_sendreq_toinvalidate_socket_client_ptr->setRemoteAddrForClient(network_addr);
+        // Prepare message payload
+        DynamicArray control_request_msg_payload(invalidation_request_ptr->getMsgPayloadSize());
+        invalidation_request_ptr->serialize(control_request_msg_payload);
 
-        // Send FinishBlockRequest to the closest edge node
-        PropagationSimulator::propagateFromNeighborToEdge();
-        edge_sendreq_toinvalidate_socket_client_ptr->send(control_request_msg_payload);
+        // Push InvalidationRequest into edge-to-edge propagation simulator to send to neighbor edge node
+        edge_toedge_propagation_simulator_param_ptr_->push(invalidation_request_ptr, edge_invalidation_server_recvreq_dst_addr);
+
+        // NOTE: invalidation_request_ptr will be released by edge-to-edge propagation simulator
 
         return;
     }
 
     // (3) Unblock for MSI protocol
 
-    bool EdgeWrapper::notifyEdgesToFinishBlock_(const Key& key, const std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges) const
+    bool EdgeWrapper::notifyEdgesToFinishBlock_(UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, const Key& key, const std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges) const
     {
-        assert(edge_param_ptr_ != NULL);
+        assert(recvrsp_socket_server_ptr != NULL);
+        assert(recvrsp_source_addr.isValidAddr());
+        checkPointers_();
 
         bool is_finish = false;
 
@@ -402,14 +405,7 @@ namespace covered
         }
         assert(blocked_edgecnt > 0);
 
-        // Prepare a temporary socket client to unblock cache servers of blocked edge nodes
-        // NOTE: use invalid remote address as default, but will reset remote address based on dirinfo later
-        std::string invalid_ipstr = Util::LOCALHOST_IPSTR;
-        uint16_t invalid_port = Util::UDP_MIN_PORT + 1;
-        NetworkAddr invalid_addr(invalid_ipstr, invalid_port);
-        UdpSocketWrapper edge_sendreq_tounblock_socket_client(SocketRole::kSocketClient, invalid_addr);
-
-        // Track whether notifictionas to all closest edge nodes have been acknowledged
+        // Track whether notifictions to all closest edge nodes have been acknowledged
         uint32_t acked_edgecnt = 0;
         std::unordered_map<NetworkAddr, bool, NetworkAddrHasher> acked_flags;
         for (std::unordered_set<NetworkAddr, NetworkAddrHasher>::const_iterator iter_for_ackflag = blocked_edges.begin(); iter_for_ackflag != blocked_edges.end(); iter_for_ackflag++)
@@ -421,26 +417,25 @@ namespace covered
         while (acked_edgecnt != blocked_edgecnt) // Timeout-and-retry mechanism
         {
             // Send (blocked_edgecnt - acked_edgecnt) control requests to the closest edge nodes that have not acknowledged notifications
-            for (std::unordered_set<NetworkAddr, NetworkAddrHasher>::const_iterator iter_for_request = blocked_edges.begin(); iter_for_request != blocked_edges.end(); iter_for_request++)
+            for (std::unordered_map<NetworkAddr, bool, NetworkAddrHasher>::const_iterator iter_for_request = acked_flags.begin(); iter_for_request != acked_flags.end(); iter_for_request++)
             {
-                if (acked_flags[*iter_for_request]) // Skip the closest edge node that has acknowledged the notification
+                if (iter_for_request->second) // Skip the closest edge node that has acknowledged the notification
                 {
                     continue;
                 }
 
-                const NetworkAddr& tmp_network_addr = *iter_for_request; // cache server address of a blocked closest edge node          
-                sendFinishBlockRequest_(&edge_sendreq_tounblock_socket_client, key, tmp_network_addr);     
+                const NetworkAddr& tmp_edge_cache_server_worker_recvreq_dst_addr = iter_for_request->first; // cache server address of a blocked closest edge node          
+                sendFinishBlockRequest_(key, recvrsp_source_addr, tmp_edge_cache_server_worker_recvreq_dst_addr);     
             } // End of edgeidx_for_request
 
             // Receive (blocked_edgecnt - acked_edgecnt) control repsonses from the closest edge nodes
             for (uint32_t edgeidx_for_response = 0; edgeidx_for_response < blocked_edgecnt - acked_edgecnt; edgeidx_for_response++)
             {
                 DynamicArray control_response_msg_payload;
-                NetworkAddr control_response_addr;
-                bool is_timeout = edge_sendreq_tounblock_socket_client.recv(control_response_msg_payload, control_response_addr);
+                bool is_timeout = recvrsp_socket_server_ptr->recv(control_response_msg_payload);
                 if (is_timeout)
                 {
-                    if (!edge_param_ptr_->isEdgeRunning())
+                    if (!edge_param_ptr_->isNodeRunning())
                     {
                         is_finish = true;
                         break; // Break as edge is NOT running
@@ -453,22 +448,22 @@ namespace covered
                 } // End of (is_timeout == true)
                 else
                 {
-                    assert(control_response_addr.isValidAddr());
-
                     // Receive the control response message successfully
                     MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
                     assert(control_response_ptr != NULL && control_response_ptr->getMessageType() == MessageType::kFinishBlockResponse);
+                    uint32_t tmp_edgeidx = control_response_ptr->getSourceIndex();
+                    NetworkAddr tmp_edge_cache_server_worker_recvreq_source_addr = control_response_ptr->getSourceAddr();
 
                     // Mark the closest edge node has acknowledged the FinishBlockRequest
                     bool is_match = false;
-                    for (std::unordered_set<NetworkAddr, NetworkAddrHasher>::const_iterator iter_for_response = blocked_edges.begin(); iter_for_response != blocked_edges.end(); iter_for_response++)
+                    for (std::unordered_map<NetworkAddr, bool, NetworkAddrHasher>::iterator iter_for_response = acked_flags.begin(); iter_for_response != acked_flags.end(); iter_for_response++)
                     {
-                        if (*iter_for_response == control_response_addr) // Match a closest edge node
+                        if (iter_for_response->first == tmp_edge_cache_server_worker_recvreq_source_addr) // Match a blocked edge node
                         {
-                            assert(acked_flags[*iter_for_response] == false); // Original ack flag should be false
+                            assert(iter_for_response->second == false); // Original ack flag should be false
 
                             // Update ack information
-                            acked_flags[*iter_for_response] = true;
+                            iter_for_response->second = true;
                             acked_edgecnt += 1;
                             is_match = true;
                             break;
@@ -478,7 +473,7 @@ namespace covered
                     if (!is_match) // Must match at least one closest edge node
                     {
                         std::ostringstream oss;
-                        oss << "receive FinishBlockResponse from an edge node " << control_response_addr.getIpstr() << ":" << control_response_addr.getPort() << ", which is NOT in the block list!";
+                        oss << "receive FinishBlockResponse from edge node " << tmp_edgeidx << ", which is NOT in the block list!";
                         Util::dumpWarnMsg(instance_name_, oss.str());
                     } // End of !is_match
 
@@ -497,23 +492,23 @@ namespace covered
         return is_finish;
     }
 
-    void EdgeWrapper::sendFinishBlockRequest_(UdpSocketWrapper* edge_sendreq_tounblock_socket_client_ptr, const Key& key, const NetworkAddr& closest_edge_addr) const
+    void EdgeWrapper::sendFinishBlockRequest_(const Key& key, const NetworkAddr& recvrsp_source_addr, const NetworkAddr& edge_cache_server_worker_recvreq_dst_addr) const
     {
-        assert(edge_param_ptr_ != NULL);
-        assert(edge_sendreq_tounblock_socket_client_ptr != NULL);
+        checkPointers_();
 
         // Prepare finish block request to finish blocking for writes in all closest edge nodes
-        uint32_t edge_idx = edge_param_ptr_->getEdgeIdx();
-        FinishBlockRequest finish_block_request(key, edge_idx);
-        DynamicArray control_request_msg_payload(finish_block_request.getMsgPayloadSize());
-        finish_block_request.serialize(control_request_msg_payload);
+        uint32_t edge_idx = edge_param_ptr_->getNodeIdx();
+        MessageBase* finish_block_request_ptr = new FinishBlockRequest(key, edge_idx, recvrsp_source_addr);
+        assert(finish_block_request_ptr != NULL);
 
-        // Set remote address to the closest edge node
-        edge_sendreq_tounblock_socket_client_ptr->setRemoteAddrForClient(closest_edge_addr);
+        // Prepare message payload
+        DynamicArray control_request_msg_payload(finish_block_request_ptr->getMsgPayloadSize());
+        finish_block_request_ptr->serialize(control_request_msg_payload);
 
-        // Send FinishBlockRequest to the closest edge node
-        PropagationSimulator::propagateFromNeighborToEdge();
-        edge_sendreq_tounblock_socket_client_ptr->send(control_request_msg_payload);
+        // Push FinishBlockRequest into edge-to-edge propagation simulator to send to blocked edge node
+        edge_toedge_propagation_simulator_param_ptr_->push(finish_block_request_ptr, edge_cache_server_worker_recvreq_dst_addr);
+
+        // NOTE: finish_block_request_ptr will be released by edge-to-edge propagation simulator
 
         return;
     }

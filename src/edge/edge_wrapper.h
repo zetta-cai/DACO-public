@@ -55,16 +55,16 @@ namespace covered
 
         // (2) Invalidate for MSI protocol
 
-        // Return if edge node is finished (invoked by cache server or beacon server)
+        // Return if edge node is finished (invoked by cache server worker or beacon server)
         // Invalidate all cache copies for the key simultaneously (note that invalidating closest edge node is okay, as it is waiting for AcquireWritelockResponse instead of processing cache access requests)
-        bool invalidateCacheCopies_(UdpMsgSocketServer* socket_server_ptr, const NetworkAddr& source_addr, const Key& key, const std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo) const;
-        void sendInvalidationRequest_(UdpSocketWrapper* edge_sendreq_toinvalidate_socket_client_ptr, const Key& key, const NetworkAddr network_addr) const;
+        bool invalidateCacheCopies_(UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, const Key& key, const std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo) const;
+        void sendInvalidationRequest_(const Key& key, const NetworkAddr& recvrsp_source_addr, const NetworkAddr edge_invalidation_server_recvreq_dst_addr) const;
 
         // (3) Unblock for MSI protocol
         
-        // Return if edge node is finished (invoked by cache server or beacon server)
-        bool notifyEdgesToFinishBlock_(const Key& key, const std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges) const; // Notify all blocked edges for the key simultaneously
-        void sendFinishBlockRequest_(UdpSocketWrapper* edge_sendreq_tounblock_socket_client_ptr, const Key& key, const NetworkAddr& closest_edge_addr) const;
+        // Return if edge node is finished (invoked by cache server worker or beacon server)
+        bool notifyEdgesToFinishBlock_(UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, const Key& key, const std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges) const; // Notify all blocked edges for the key simultaneously
+        void sendFinishBlockRequest_(const Key& key, const NetworkAddr& recvrsp_source_addr, const NetworkAddr& edge_cache_server_worker_recvreq_dst_addr) const;
 
         // (4) Other utilities
 

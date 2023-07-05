@@ -54,7 +54,7 @@ namespace covered
     CacheServerWorkerBase::CacheServerWorkerBase(CacheServerWorkerParam* cache_server_worker_param_ptr) : cache_server_worker_param_ptr_(cache_server_worker_param_ptr)
     {
         assert(cache_server_worker_param_ptr_ != NULL);
-        uint32_t edge_idx = cache_server_worker_param_ptr_->getEdgeWrapperPtr()->edge_param_ptr_->getEdgeIdx();
+        uint32_t edge_idx = cache_server_worker_param_ptr_->getEdgeWrapperPtr()->edge_param_ptr_->getNodeIdx();
 
         // Differentiate cache servers of different edge nodes
         std::ostringstream oss;
@@ -135,18 +135,8 @@ namespace covered
 
                 if (data_request_ptr->isDataRequest()) // Data requests (e.g., local/redirected requests)
                 {
-                    /*// Get client index and local worker index
-                    uint32_t global_client_worker_idx = data_request_ptr->getSourceIndex();
-                    uint32_t client_idx = 0;
-                    uint32_t local_client_worker_idx = 0;
-                    Util::parseGlobalClientWorkerIdx(global_client_worker_idx, tmp_edge_wrapper_ptr->perclient_workercnt_, client_idx, local_client_worker_idx);
-
-                    // Get client worker recvrsp network address
-                    std::string client_ipstr = Config::getClientIpstr(client_idx, tmp_edge_wrapper_ptr->clientcnt_);
-                    uint16_t client_worker_recvrsp_port = Util::getClientWorkerRecvrspPort(client_idx, tmp_edge_wrapper_ptr->clientcnt_, local_client_worker_idx, tmp_edge_wrapper_ptr->perclient_workercnt_);
-                    Network client_worker_recvrsp_addr(client_ipstr, client_worker_recvrsp_port);*/
-
-                    is_finish = processDataRequest_(data_request_ptr, data_request_ptr->getSourceAddr());
+                    NetworkAddr recvrsp_source_addr = data_request_ptr->getSourceAddr(); // client worker or cache server worker
+                    is_finish = processDataRequest_(data_request_ptr, recvrsp_source_addr);
                 }
                 else
                 {
@@ -173,10 +163,10 @@ namespace covered
 
     // (1) Process data requests
 
-    bool CacheServerWorkerBase::processDataRequest_(MessageBase* data_request_ptr, const NetworkAddr& network_addr)
+    bool CacheServerWorkerBase::processDataRequest_(MessageBase* data_request_ptr, const NetworkAddr& recvrsp_source_addr)
     {
         assert(data_request_ptr != NULL && data_request_ptr->isDataRequest());
-        assert(network_addr.isValidAddr());
+        assert(recvrsp_source_addr.isValidAddr());
 
         bool is_finish = false; // Mark if edge node is finished
 
@@ -192,16 +182,16 @@ namespace covered
 
             if (data_request_ptr->getMessageType() == MessageType::kLocalGetRequest)
             {
-                is_finish = processLocalGetRequest_(data_request_ptr, network_addr);
+                is_finish = processLocalGetRequest_(data_request_ptr, recvrsp_source_addr);
             }
             else // Local put/del request
             {
-                is_finish = processLocalWriteRequest_(data_request_ptr, network_addr);
+                is_finish = processLocalWriteRequest_(data_request_ptr, recvrsp_source_addr);
             }
         }
         else if (data_request_ptr->isRedirectedRequest()) // Redirected request
         {
-            is_finish = processRedirectedRequest_(data_request_ptr, network_addr);
+            is_finish = processRedirectedRequest_(data_request_ptr, recvrsp_source_addr);
         }
         else
         {
@@ -214,11 +204,11 @@ namespace covered
         return is_finish;
     }
 
-    bool CacheServerWorkerBase::processLocalGetRequest_(MessageBase* local_request_ptr, const NetworkAddr& network_addr) const
+    bool CacheServerWorkerBase::processLocalGetRequest_(MessageBase* local_request_ptr, const NetworkAddr& recvrsp_source_addr) const
     {
         // Get key and value from local request if any
         assert(local_request_ptr != NULL && local_request_ptr->getMessageType() == MessageType::kLocalGetRequest);
-        assert(network_addr.isValidAddr());
+        assert(recvrsp_source_addr.isValidAddr());
         const LocalGetRequest* const local_get_request_ptr = static_cast<const LocalGetRequest*>(local_request_ptr);
         Key tmp_key = local_get_request_ptr->getKey();
         Value tmp_value;
@@ -304,12 +294,12 @@ namespace covered
         return is_finish;
     }
 
-    bool CacheServerWorkerBase::processLocalWriteRequest_(MessageBase* local_request_ptr, const NetworkAddr& network_addr)
+    bool CacheServerWorkerBase::processLocalWriteRequest_(MessageBase* local_request_ptr, const NetworkAddr& recvrsp_source_addr)
     {
         // Get key and value from local request if any
         assert(local_request_ptr != NULL);
         assert(local_request_ptr->getMessageType() == MessageType::kLocalPutRequest || local_request_ptr->getMessageType() == MessageType::kLocalDelRequest);
-        assert(network_addr.isValidAddr());
+        assert(recvrsp_source_addr.isValidAddr());
         Key tmp_key;
         Value tmp_value;
         if (local_request_ptr->getMessageType() == MessageType::kLocalPutRequest)
@@ -414,7 +404,7 @@ namespace covered
         return is_finish;
     }
 
-    bool CacheServerWorkerBase::processRedirectedRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& network_addr)
+    bool CacheServerWorkerBase::processRedirectedRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& recvrsp_source_addr)
     {
         assert(redirected_request_ptr != NULL && redirected_request_ptr->isRedirectedRequest());
 
@@ -423,7 +413,7 @@ namespace covered
         MessageType message_type = redirected_request_ptr->getMessageType();
         if (message_type == MessageType::kRedirectedGetRequest)
         {
-            is_finish = processRedirectedGetRequest_(redirected_request_ptr, network_addr);
+            is_finish = processRedirectedGetRequest_(redirected_request_ptr, recvrsp_source_addr);
         }
         else
         {

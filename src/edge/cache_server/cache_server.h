@@ -13,6 +13,7 @@
 #include "edge/cache_server/cache_server_worker_param.h"
 #include "edge/edge_wrapper.h"
 #include "hash/hash_wrapper_base.h"
+#include "network/udp_msg_socket_server.h"
 
 namespace covered
 {
@@ -35,9 +36,10 @@ namespace covered
         std::string instance_name_;
         EdgeWrapper* edge_wrapper_ptr_;
         HashWrapperBase* hash_wrapper_ptr_;
+        NetworkAddr edge_cache_server_recvreq_source_addr_; // The same as that used by clients or neighbors to send local/redirected requests
 
         // Non-const individual variable
-        UdpSocketWrapper* edge_cache_server_recvreq_socket_server_ptr_; // Only used by cache server
+        UdpMsgSocketServer* edge_cache_server_recvreq_socket_server_ptr_; // Used by cache server to receive local requests from clients and redirected requests from neighbors
         std::vector<CacheServerWorkerParam> cache_server_worker_params_; // Each cache server thread has a unique param
     };
 }

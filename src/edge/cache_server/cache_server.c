@@ -18,7 +18,9 @@ namespace covered
         assert(edge_wrapper_ptr != NULL);
         assert(edge_wrapper_ptr->edge_param_ptr_ != NULL);
         uint32_t edge_idx = edge_wrapper_ptr->edge_param_ptr_->getNodeIdx();
+        uint32_t edgecnt = edge_wrapper_ptr->edgecnt_;
 
+        // Allocate hash wrapper for partition
         hash_wrapper_ptr_ = HashWrapperBase::getHashWrapperByHashName(Param::MMH3_HASH_NAME);
         assert(hash_wrapper_ptr_ != NULL);
         
@@ -27,10 +29,14 @@ namespace covered
         oss << kClassName << " edge" << edge_idx;
         instance_name_ = oss.str();
 
+        // Get cache server network address
+        std::string edge_ipstr = Config::getEdgeIpstr(edge_idx, edgecnt);
+        uint16_t edge_cache_server_recvreq_port = Util::getEdgeCacheServerRecvreqPort(edge_idx, edgecnt);
+        edge_cache_server_recvreq_source_addr_ = NetworkAddr(edge_ipstr, edge_cache_server_recvreq_port);
+
         // Prepare a socket server on recvreq port for cache server
-        uint16_t edge_cache_server_recvreq_port = Util::getEdgeCacheServerRecvreqPort(edge_idx, edge_wrapper_ptr->edgecnt_);
         NetworkAddr host_addr(Util::ANY_IPSTR, edge_cache_server_recvreq_port);
-        edge_cache_server_recvreq_socket_server_ptr_ = new UdpSocketWrapper(SocketRole::kSocketServer, host_addr);
+        edge_cache_server_recvreq_socket_server_ptr_ = new UdpMsgSocketServer(host_addr);
         assert(edge_cache_server_recvreq_socket_server_ptr_ != NULL);
 
         // Prepare parameters for cache server threads
@@ -46,6 +52,7 @@ namespace covered
     {
         // No need to release edge_wrapper_ptr_, which is performed outside CacheServer
 
+        // Release hash wrapper for partition
         assert(hash_wrapper_ptr_ != NULL);
         delete hash_wrapper_ptr_;
         hash_wrapper_ptr_ = NULL;

@@ -27,7 +27,7 @@ namespace covered
 
     // (1) Process data requests
 
-    bool CoveredCacheServerWorker::processRedirectedGetRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& network_addr) const
+    bool CoveredCacheServerWorker::processRedirectedGetRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& recvrsp_source_addr) const
     {
         return false;
     }

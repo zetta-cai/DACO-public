@@ -58,7 +58,7 @@ namespace covered
         // Get closest edge network address
         std::string closest_edge_ipstr = Util::getClosestEdgeIpstr(client_idx, clientcnt, edgecnt);
         uint16_t closest_edge_cache_server_recvreq_port = Util::getClosestEdgeCacheServerRecvreqPort(client_idx, clientcnt, edgecnt);
-        closest_edge_cache_server_recvreq_addr_ = NetworkAddr(closest_edge_ipstr, closest_edge_cache_server_recvreq_port);
+        closest_edge_cache_server_recvreq_dst_addr_ = NetworkAddr(closest_edge_ipstr, closest_edge_cache_server_recvreq_port);
 
         // Differentiate different workers
         std::ostringstream oss;
@@ -168,7 +168,7 @@ namespace covered
         while (true) // Timeout-and-retry mechanism
         {
             // Push local request into client-to-edge propagation simulator to send to closest edge node
-            bool is_successful = tmp_client_wrapper_ptr->client_toedge_propagation_simulator_ptr_->push(local_request_ptr, closest_edge_cache_server_recvreq_dst_addr_);
+            bool is_successful = tmp_client_wrapper_ptr->client_toedge_propagation_simulator_param_ptr_->push(local_request_ptr, closest_edge_cache_server_recvreq_dst_addr_);
             assert(is_successful);
 
             // Receive the message payload of local response from the closest edge node
@@ -193,7 +193,7 @@ namespace covered
         }
         struct timespec recvrsp_timestamp = Util::getCurrentTimespec();
 
-        // NOTE: local request message will be released by client-to-edge propagation simulator
+        // NOTE: local_request_ptr will be released by client-to-edge propagation simulator
 
         double tmp_rtt_us = Util::getDeltaTimeUs(recvrsp_timestamp, sendreq_timestamp);
         rtt_us = static_cast<uint32_t>(tmp_rtt_us);

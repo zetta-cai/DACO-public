@@ -29,10 +29,11 @@ namespace covered
 
     // (1) Process data requests
 
-    bool BasicCacheServerWorker::processRedirectedGetRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& network_addr) const
+    bool BasicCacheServerWorker::processRedirectedGetRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& recvrsp_source_addr) const
     {
         // Get key and value from redirected request if any
         assert(redirected_request_ptr != NULL && redirected_request_ptr->getMessageType() == MessageType::kRedirectedGetRequest);
+        assert(recvrsp_source_addr.isValidAddr());
         const RedirectedGetRequest* const redirected_get_request_ptr = static_cast<const RedirectedGetRequest*>(redirected_request_ptr);
         Key tmp_key = redirected_get_request_ptr->getKey();
         Value tmp_value;
@@ -81,6 +82,8 @@ namespace covered
 
     bool BasicCacheServerWorker::lookupBeaconDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
     {
+        // TODO: END HERE
+        
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getEdgeWrapperPtr();
 
