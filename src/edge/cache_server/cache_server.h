@@ -13,7 +13,6 @@
 #include "edge/cache_server/cache_server_worker_param.h"
 #include "edge/edge_wrapper.h"
 #include "hash/hash_wrapper_base.h"
-#include "network/udp_socket_wrapper.h"
 
 namespace covered
 {
@@ -28,7 +27,9 @@ namespace covered
         static const std::string kClassName;
 
         void receiveRequestsAndPartition_();
-        void partitionRequest_(MessageBase* data_requeset_ptr, const NetworkAddr& network_addr);
+        void partitionRequest_(MessageBase* data_requeset_ptr);
+
+        void checkPointers_() const;
 
         // Const variable
         std::string instance_name_;

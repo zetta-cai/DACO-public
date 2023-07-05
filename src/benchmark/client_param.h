@@ -11,8 +11,6 @@
 #include <string>
 
 #include "common/node_param_base.h"
-#include "statistics/client_statistics_tracker.h"
-#include "workload/workload_wrapper_base.h"
 
 namespace covered
 {
@@ -20,18 +18,12 @@ namespace covered
     {
     public:
         ClientParam();
-        ClientParam(const uint32_t& client_idx, WorkloadWrapperBase* workload_generator_ptr, ClientStatisticsTracker* client_statistics_tracker_ptr);
+        ClientParam(const uint32_t& client_idx);
         ~ClientParam();
 
         const ClientParam& operator=(const ClientParam& other);
-
-        WorkloadWrapperBase* getWorkloadGeneratorPtr();
-        ClientStatisticsTracker* getClientStatisticsTrackerPtr();
     private:
         static const std::string kClassName;
-
-        WorkloadWrapperBase* workload_generator_ptr_; // thread safe
-        ClientStatisticsTracker* client_statistics_tracker_ptr_; // thread safe
     };
 }
 

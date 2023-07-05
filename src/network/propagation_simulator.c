@@ -68,6 +68,14 @@ namespace covered
             }
             else
             {
+                // Prepare message payload
+                MessageBase* message_ptr = tmp_propagation_item.getMessagePtr();
+                assert(message_ptr != NULL);
+                uint32_t message_payload_size = message_ptr->getMsgPayloadSize();
+                DynamicArray message_payload(message_payload_size);
+                uint32_t serialize_size = message_ptr->serialize(message_payload);
+                assert(serialize_size == message_payload_size);
+
                 // Sleep to simulate propagation latency
                 uint32_t sleep_us = tmp_propagation_item.getSleepUs();
                 #ifdef DEBUG_PROPAGATION_SIMULATOR
@@ -77,18 +85,13 @@ namespace covered
                 #endif
                 propagate_(sleep_us);
 
-                // Prepare message payload
-                MessageBase* message_ptr = tmp_propagation_item.getMessagePtr();
-                assert(message_ptr != NULL);
-                DynamicArray message_payload(message_ptr->getMsgPayloadSize());
-                message_ptr->serialize(message_payload);
-
                 // Issue the message to the given address
                 NetworkAddr dst_addr = tmp_propagation_item.getNetworkAddr();
                 assert(dst_addr.isValidAddr());
                 propagation_simulator_socket_client_ptr_->send(message_payload, dst_addr);
 
                 // Release the message
+                assert(message_ptr != NULL);
                 delete message_ptr;
                 message_ptr = NULL;
             }

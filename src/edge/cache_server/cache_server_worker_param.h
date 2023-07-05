@@ -19,16 +19,14 @@ namespace covered
     {
     public:
         CacheServerWorkerItem();
-        CacheServerWorkerItem(MessageBase* data_request_ptr, const NetworkAddr& network_addr);
+        CacheServerWorkerItem(MessageBase* data_request_ptr);
         ~CacheServerWorkerItem();
 
         MessageBase* getDataRequestPtr() const;
-        NetworkAddr getNetworkAddr() const;
 
         CacheServerWorkerItem& operator=(const CacheServerWorkerItem& other);
     private:
         MessageBase* data_request_ptr_;
-        NetworkAddr network_addr_;
     };
 
     class CacheServerWorkerParam

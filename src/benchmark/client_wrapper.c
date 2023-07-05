@@ -17,28 +17,34 @@ namespace covered
 
     void* launchClient(void* client_param_ptr)
     {
-        ClientWrapper local_client(Param::getPropagationLatencyClientedge(), Param::getPerclientWorkercnt(), (ClientParam*)client_param_ptr);
+        ClientWrapper local_client(Param::getClientcnt(), Param::getEdgecnt(), Param::getKeycnt(), Param::getOpcnt(), Param::getPerclientWorkercnt(), Param::getPropagationLatencyClientedge(), Param::getWorkloadName(), (ClientParam*)client_param_ptr);
         local_client.start();
         
         pthread_exit(NULL);
         return NULL;
     }
 
-    ClientWrapper::ClientWrapper(const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge, ClientParam* client_param_ptr) : perclient_workercnt_(perclient_workercnt)
+    ClientWrapper::ClientWrapper(const uint32_t& clientcnt, const uint32_t& edgecnt, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge, const std::string& workload_name, ClientParam* client_param_ptr) : clientcnt_(clientcnt), edgecnt_(edgecnt), perclient_workercnt_(perclient_workercnt), client_param_ptr_(client_param_ptr)
     {
         if (client_param_ptr == NULL)
         {
             Util::dumpErrorMsg(kClassName, "client_param_ptr is NULL!");
             exit(1);
         }
+        uint32_t client_idx = client_param_ptr->getNodeIdx();
 
         // Differentiate different clients
         std::ostringstream oss;
-        oss << kClassName << " client" << client_param_ptr->getNodeIdx();
+        oss << kClassName << " client" << client_idx;
         instance_name_ = oss.str();
-        
-        client_param_ptr_ = client_param_ptr;
-        assert(client_param_ptr_ != NULL);
+
+        // Create workload generator for the client
+        workload_generator_ptr_ = WorkloadWrapperBase::getWorkloadGeneratorByWorkloadName(clientcnt, client_idx, keycnt, opcnt, perclient_workercnt, workload_name);
+        assert(workload_generator_ptr_ != NULL);
+
+        // Create statistics tracker for the client
+        client_statistics_tracker_ptr_ = new covered::ClientStatisticsTracker(perclient_workercnt, client_idx);
+        assert(client_statistics_tracker_ptr_ != NULL);
 
         // Allocate client-to-edge propagation simulator param
         client_toedge_propagation_simulator_param_ptr_ = new PropagationSimulatorParam(propagation_latency_clientedge, (NodeParamBase*)client_param_ptr, Config::getPropagationItemBufferSizeClientToedge());
@@ -49,6 +55,17 @@ namespace covered
     {
         // NOTE: no need to delete client_param_ptr_, as it is maintained outside ClientWrapper
 
+        // Release workload generator
+        assert(workload_generator_ptr_ != NULL);
+        delete workload_generator_ptr_;
+        workload_generator_ptr_ = NULL;
+
+        // Release client statistics
+        assert(client_statistics_tracker_ptr_ != NULL);
+        delete client_statistics_tracker_ptr_;
+        client_statistics_tracker_ptr_ = NULL;
+
+        // Release client-to-edge propagation simulator param
         assert(client_toedge_propagation_simulator_param_ptr_ != NULL);
         delete client_toedge_propagation_simulator_param_ptr_;
         client_toedge_propagation_simulator_param_ptr_ = NULL;
@@ -56,7 +73,6 @@ namespace covered
 
     void ClientWrapper::start()
     {
-        assert(client_param_ptr_ != NULL);
         int pthread_returncode;
 
         // Launch client-to-edge propagation simulator
@@ -111,7 +127,6 @@ namespace covered
         std::string client_statistics_filepath = Util::getClientStatisticsFilepath(client_idx);
 
         // Dump per-client statistics
-        ClientStatisticsTracker* client_statistics_tracker_ptr_ = client_param_ptr_->getClientStatisticsTrackerPtr();
         assert(client_statistics_tracker_ptr_ != NULL);
         client_statistics_tracker_ptr_->dump(client_statistics_filepath);
 

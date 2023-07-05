@@ -13,6 +13,8 @@
 #ifndef CLENT_WORKER_WRAPPER_H
 #define CLENT_WORKER_WRAPPER_H
 
+#define DEBUG_CLIENT_WORKER_WRAPPER
+
 #include <random> // std::mt19937_64
 #include <string>
 
@@ -41,6 +43,7 @@ namespace covered
 
         std::string instance_name_;
         uint32_t global_client_worker_idx_;
+        NetworkAddr closest_edge_cache_server_recvreq_addr_;
 
         ClientWorkerParam* client_worker_param_ptr_;
         std::mt19937_64* client_worker_item_randgen_ptr_;

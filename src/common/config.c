@@ -10,6 +10,7 @@
 
 namespace covered
 {
+    const std::string CLIENT_IPSTRS_KEYSTR("client_ipstrs");
     const std::string CLIENT_RECVRSP_STARTPORT_KEYSTR("client_recvrsp_startport");
     const std::string Config::CLOUD_IPSTR_KEYSTR("cloud_ipstr");
     const std::string Config::CLOUD_RECVREQ_STARTPORT_KEYSTR("cloud_recvreq_startport");
@@ -24,6 +25,7 @@ namespace covered
     const std::string Config::LATENCY_HISTOGRAM_SIZE_KEYSTR("latency_histogram_size");
     const std::string Config::OUTPUT_BASEDIR_KEYSTR("output_basedir");
     const std::string Config::PROPAGATION_ITEM_BUFFER_SIZE_CLIENT_TOEDGE_KEYSTR("propagation_item_buffer_size_client_toedge");
+    const std::string Config::PROPAGATION_ITEM_BUFFER_SIZE_EDGE_TOCLIENT_KEYSTR("propagation_item_buffer_size_edge_toclient");
     const std::string Config::VERSION_KEYSTR("version");
 
     const std::string Config::kClassName("Config");
@@ -31,6 +33,8 @@ namespace covered
     // Initialize config variables by default
     bool Config::is_valid_ = false;
     boost::json::object Config::json_object_ = boost::json::object();
+
+    std::vector<std::string> Config::client_ipstrs_(0);
     uint16_t Config::client_recvrsp_startport_ = 4100; // [4096, 65536]
     std::string Config::cloud_ipstr_ = Util::LOCALHOST_IPSTR;
     uint16_t Config::cloud_recvreq_startport_ = 4200; // [4096, 65536]
@@ -45,6 +49,7 @@ namespace covered
     uint32_t Config::latency_histogram_size_ = 1000000; // Track latency up to 1000 ms
     std::string Config::output_basedir_("output");
     uint32_t Config::propagation_item_buffer_size_client_toedge_ = 1000;
+    uint32_t Config::propagation_item_buffer_size_edge_toclient_ = 1000;
     std::string Config::version_("1.0");
 
     void Config::loadConfig()
@@ -59,6 +64,14 @@ namespace covered
 
             // Overwrite default values of config variables if any
             boost::json::key_value_pair* kv_ptr = NULL;
+            kv_ptr = find_(CLIENT_IPSTRS_KEYSTR);
+            if (kv_ptr != NULL)
+            {
+                for (boost::json::array::iterator iter = kv_ptr->value().get_array().begin(); iter != kv_ptr->value().get_array().end(); iter++)
+                {
+                    client_ipstrs_.push_back(static_cast<std::string>(iter->get_string()));
+                }
+            }
             kv_ptr = find_(CLIENT_RECVRSP_STARTPORT_KEYSTR);
             if (kv_ptr != NULL)
             {
@@ -141,6 +154,12 @@ namespace covered
                 int64_t tmp_size = kv_ptr->value().get_int64();
                 propagation_item_buffer_size_client_toedge_ = Util::toUint32(tmp_size);
             }
+            kv_ptr = find_(PROPAGATION_ITEM_BUFFER_SIZE_EDGE_TOCLIENT_KEYSTR);
+            if (kv_ptr != NULL)
+            {
+                int64_t tmp_size = kv_ptr->value().get_int64();
+                propagation_item_buffer_size_edge_toclient_ = Util::toUint32(tmp_size);
+            }
             kv_ptr = find_(VERSION_KEYSTR);
             if (kv_ptr != NULL)
             {
@@ -162,6 +181,41 @@ namespace covered
             exit(1);
         }
         return;
+    }
+
+    std::string Config::getClientIpstr(const uint32_t& client_idx, const uint32_t& clientcnt)
+    {
+        checkIsValid_();
+        if (Param::isSingleNode()) // NOT check client_idx for single-node mode
+        {
+            return Util::LOCALHOST_IPSTR;
+        }
+        else
+        {
+            assert(client_idx < clientcnt);
+            assert(client_ipstrs_.size() > 0);
+            if (clientcnt <= client_ipstrs_.size())
+            {
+                return client_ipstrs_[client_idx];
+            }
+            else
+            {
+                uint32_t permachine_clientcnt = clientcnt / client_ipstrs_.size();
+                assert(permachine_clientcnt > 0);
+                uint32_t machine_idx = client_idx / permachine_clientcnt;
+                if (machine_idx >= client_ipstrs_.size())
+                {
+                    machine_idx = client_ipstrs_.size() - 1; // Assign tail clients to the last machine
+                }
+                return client_ipstrs_[machine_idx];
+            }
+        }
+    }
+
+    uint32_t Config::getClientIpstrCnt()
+    {
+        checkIsValid_();
+        return client_ipstrs_.size();
     }
 
     uint16_t Config::getClientRecvrspStartport()
@@ -284,6 +338,12 @@ namespace covered
         return propagation_item_buffer_size_client_toedge_;
     }
 
+    uint32_t Config::getPropagationItemBufferSizeEdgeToclient()
+    {
+        checkIsValid_();
+        return propagation_item_buffer_size_edge_toclient_;
+    }
+
     std::string Config::getVersion()
     {
         checkIsValid_();
@@ -295,15 +355,32 @@ namespace covered
         checkIsValid_();
         std::ostringstream oss;
         oss << "[Static configurations from " << Param::getConfigFilepath() << "]" << std::endl;
+        oss << "Client ipstrs: ";
+        for (uint32_t i = 0; i < client_ipstrs_.size(); i++)
+        {
+            oss << client_ipstrs_[i] << " ";
+        }
+        oss << std::endl;
+        oss << "Client recvrsp startport: " << client_recvrsp_startport_ << std::endl;
         oss << "Cloud ipstr: " << cloud_ipstr_ << std::endl;
-        oss << "Cloud recvreq port: " << cloud_recvreq_startport_ << std::endl;
+        oss << "Cloud recvreq startport: " << cloud_recvreq_startport_ << std::endl;
         oss << "Cloud RocksDB base directory: " << cloud_rocksdb_basedir_ << std::endl;
-        oss << "Data request buffer size: " << data_request_buffer_size_ << std::endl;
         oss << "Edge beacon server recvreq startport: " << edge_beacon_server_recvreq_startport_ << std::endl;
+        oss << "Edge cache server data request buffer size: " << edge_cache_server_data_request_buffer_size_ << std::endl;
         oss << "Edge cache server recvreq startport: " << edge_cache_server_recvreq_startport_ << std::endl;
         oss << "Edge invalidation server recvreq startport: " << edge_invalidation_server_recvreq_startport_ << std::endl;
+        oss << "Edge ipstrs: ";
+        for (uint32_t i = 0; i < edge_ipstrs_.size(); i++)
+        {
+            oss << edge_ipstrs_[i] << " ";
+        }
+        oss << std::endl;
         oss << "Facebook config filepath: " << facebook_config_filepath_ << std::endl;
         oss << "Fine-grained locking size: " << fine_grained_locking_size_ << std::endl;
+        oss << "Latency histogram size: " << latency_histogram_size_ << std::endl;
+        oss << "Output base directory: " << output_basedir_ << std::endl;
+        oss << "Propagation item buffer size from client to edge: " << propagation_item_buffer_size_client_toedge_ << std::endl;
+        oss << "Propagation item buffer size from edge to client: " << propagation_item_buffer_size_edge_toclient_ << std::endl;
         oss << "Version: " << version_;
         return oss.str();
     }

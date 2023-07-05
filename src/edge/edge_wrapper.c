@@ -17,7 +17,7 @@ namespace covered
 
     void* EdgeWrapper::launchEdge(void* edge_param_ptr)
     {
-        EdgeWrapper* local_edge_ptr = new EdgeWrapper(Param::getCacheName(), Param::getCapacityBytes(), Param::getEdgecnt(), Param::getHashName(), Param::getPercacheserverWorkercnt(), (EdgeParam*)edge_param_ptr);
+        EdgeWrapper* local_edge_ptr = new EdgeWrapper(Param::getCacheName(), Param::getCapacityBytes(), Param::getClientcnt(), Param::getEdgecnt(), Param::getHashName(), Param::getPercacheserverWorkercnt(), Param::getPerclientWorkercnt(), Param::getPropagationLatencyClientedge(), (EdgeParam*)edge_param_ptr);
         assert(local_edge_ptr != NULL);
         local_edge_ptr->start();
 
@@ -29,7 +29,7 @@ namespace covered
         return NULL;
     }
 
-    EdgeWrapper::EdgeWrapper(const std::string& cache_name, const uint32_t& capacity_bytes, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& percacheserver_workercnt, EdgeParam* edge_param_ptr) : cache_name_(cache_name), capacity_bytes_(capacity_bytes), edgecnt_(edgecnt), percacheserver_workercnt_(percacheserver_workercnt), edge_param_ptr_(edge_param_ptr)
+    EdgeWrapper::EdgeWrapper(const std::string& cache_name, const uint32_t& capacity_bytes, const uint32_t& clientcnt, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& percacheserver_workercnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge, EdgeParam* edge_param_ptr) : cache_name_(cache_name), capacity_bytes_(capacity_bytes), clientcnt_(clientcnt), edgecnt_(edgecnt), percacheserver_workercnt_(percacheserver_workercnt), perclient_workercnt_(perclient_workercnt), edge_param_ptr_(edge_param_ptr)
     {
         if (edge_param_ptr == NULL)
         {
@@ -50,6 +50,12 @@ namespace covered
         // Allocate cooperation wrapper for cooperative edge caching
         cooperation_wrapper_ptr_ = CooperationWrapperBase::getCooperationWrapperByCacheName(cache_name, edgecnt, edge_idx, hash_name);
         assert(cooperation_wrapper_ptr_ != NULL);
+
+        // Allocate edge-to-client propagation simulator param
+        edge_toclient_propagation_simulator_param_ptr_ = new PropagationSimulatorParam(propagation_latency_clientedge, (NodeParamBase*)edge_param_ptr, Config::getPropagationItemBufferSizeEdgeToclient());
+        assert(edge_toclient_propagation_simulator_param_ptr_ != NULL);
+
+        // TODO: END HERE
     }
         
     EdgeWrapper::~EdgeWrapper()
@@ -65,12 +71,17 @@ namespace covered
         assert(cooperation_wrapper_ptr_ != NULL);
         delete cooperation_wrapper_ptr_;
         cooperation_wrapper_ptr_ = NULL;
+
+        // Release edge-to-client propagation simulator param
+        assert(edge_toclient_propagation_simulator_param_ptr_ != NULL);
+        delete edge_toclient_propagation_simulator_param_ptr_;
+        edge_toclient_propagation_simulator_param_ptr_ = NULL;
     }
 
     void EdgeWrapper::start()
     {
         assert(edge_param_ptr_ != NULL);
-        uint32_t edge_idx = edge_param_ptr_->getEdgeIdx();
+        uint32_t edge_idx = edge_param_ptr_->getNodeIdx();
 
         int pthread_returncode;
         pthread_t beacon_server_thread;
@@ -198,7 +209,7 @@ namespace covered
 
         bool current_is_beacon = false;
         uint32_t beacon_edge_idx = cooperation_wrapper_ptr_->getBeaconEdgeIdx(key);
-        uint32_t current_edge_idx = edge_param_ptr_->getEdgeIdx();
+        uint32_t current_edge_idx = edge_param_ptr_->getNodeIdx();
         if (beacon_edge_idx == current_edge_idx)
         {
             current_is_beacon = true;
@@ -214,7 +225,7 @@ namespace covered
 
         bool current_is_target = false;
         uint32_t target_edge_idx = directory_info.getTargetEdgeIdx();
-        uint32_t current_edge_idx = edge_param_ptr_->getEdgeIdx();
+        uint32_t current_edge_idx = edge_param_ptr_->getNodeIdx();
         if (target_edge_idx == current_edge_idx)
         {
             current_is_target = true;

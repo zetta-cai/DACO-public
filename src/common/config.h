@@ -19,6 +19,7 @@ namespace covered
     {
     public:
         // Key strings of JSON config file for static configurations (only used by Config)
+        static const std::string CLIENT_IPSTRS_KEYSTR;
         static const std::string CLIENT_RECVRSP_STARTPORT_KEYSTR;
         static const std::string CLOUD_IPSTR_KEYSTR;
         static const std::string CLOUD_RECVREQ_STARTPORT_KEYSTR;
@@ -33,10 +34,13 @@ namespace covered
         static const std::string LATENCY_HISTOGRAM_SIZE_KEYSTR;
         static const std::string OUTPUT_BASEDIR_KEYSTR;
         static const std::string PROPAGATION_ITEM_BUFFER_SIZE_CLIENT_TOEDGE_KEYSTR;
+        static const std::string PROPAGATION_ITEM_BUFFER_SIZE_EDGE_TOCLIENT_KEYSTR;
         static const std::string VERSION_KEYSTR;
 
         static void loadConfig();
 
+        static std::string getClientIpstr(const uint32_t& client_idx, const uint32_t& clientcnt);
+        static uint32_t getClientIpstrCnt();
         static uint16_t getClientRecvrspStartport();
         static std::string getCloudIpstr();
         static uint16_t getCloudRecvreqStartport();
@@ -52,6 +56,7 @@ namespace covered
         static uint32_t getLatencyHistogramSize();
         static std::string getOutputBasedir();
         static uint32_t getPropagationItemBufferSizeClientToedge();
+        static uint32_t getPropagationItemBufferSizeEdgeToclient();
         static std::string getVersion();
 
         static std::string toString();
@@ -64,6 +69,8 @@ namespace covered
 
         static bool is_valid_;
         static boost::json::object json_object_;
+
+        static std::vector<std::string> client_ipstrs_;
         static uint16_t client_recvrsp_startport_;
         static std::string cloud_ipstr_;
         static uint16_t cloud_recvreq_startport_;
@@ -78,6 +85,7 @@ namespace covered
         static uint32_t latency_histogram_size_;
         static std::string output_basedir_;
         static uint32_t propagation_item_buffer_size_client_toedge_;
+        static uint32_t propagation_item_buffer_size_edge_toclient_;
         static std::string version_;
     };
 }

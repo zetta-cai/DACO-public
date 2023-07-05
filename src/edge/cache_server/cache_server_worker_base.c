@@ -119,7 +119,7 @@ namespace covered
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getEdgeWrapperPtr();
 
         bool is_finish = false; // Mark if edge node is finished
-        while (tmp_edge_wrapper_ptr->edge_param_ptr_->isEdgeRunning()) // edge_running_ is set as true by default
+        while (tmp_edge_wrapper_ptr->edge_param_ptr_->isNodeRunning()) // edge_running_ is set as true by default
         {
             // Try to get the data request from ring buffer partitioned by cache server
             CacheServerWorkerItem tmp_cache_server_worker_item;
@@ -132,12 +132,21 @@ namespace covered
             {
                 MessageBase* data_request_ptr = tmp_cache_server_worker_item.getDataRequestPtr();
                 assert(data_request_ptr != NULL);
-                NetworkAddr network_addr = tmp_cache_server_worker_item.getNetworkAddr();
-                assert(network_addr.isValidAddr());
 
                 if (data_request_ptr->isDataRequest()) // Data requests (e.g., local/redirected requests)
                 {
-                    is_finish = processDataRequest_(data_request_ptr, network_addr);
+                    // Get client index and local worker index
+                    uint32_t global_client_worker_idx = data_request_ptr->getSourceIndex();
+                    uint32_t client_idx = 0;
+                    uint32_t local_client_worker_idx = 0;
+                    Util::parseGlobalClientWorkerIdx(global_client_worker_idx, tmp_edge_wrapper_ptr->perclient_workercnt_, client_idx, local_client_worker_idx);
+
+                    // Get client worker recvrsp network address
+                    std::string client_ipstr = Config::getClientIpstr(client_idx, tmp_edge_wrapper_ptr->clientcnt_);
+                    uint16_t client_worker_recvrsp_port = Util::getClientWorkerRecvrspPort(client_idx, tmp_edge_wrapper_ptr->clientcnt_, local_client_worker_idx, tmp_edge_wrapper_ptr->perclient_workercnt_);
+                    Network client_worker_recvrsp_addr(client_ipstr, client_worker_recvrsp_port);
+
+                    is_finish = processDataRequest_(data_request_ptr, client_worker_recvrsp_addr);
                 }
                 else
                 {

@@ -318,10 +318,10 @@ namespace covered
 
     // (4.1) Client
 
-    uint32_t Util::getClosestEdgeIdx(const uint32_t& client_idx, const uint32_t& edgecnt)
+    uint32_t Util::getClosestEdgeIdx(const uint32_t& client_idx, const uint32_t& clientcnt, const uint32_t& edgecnt)
     {
         assert(edgecnt > 0);
-        uint32_t peredge_clientcnt = Param::getClientcnt() / edgecnt;
+        uint32_t peredge_clientcnt = clientcnt / edgecnt;
         assert(peredge_clientcnt > 0);
         uint32_t closest_edge_idx = client_idx / peredge_clientcnt;
         if (closest_edge_idx >= edgecnt)
@@ -331,49 +331,65 @@ namespace covered
         return closest_edge_idx;
     }
 
-    std::string Util::getClosestEdgeIpstr(const uint32_t& client_idx, const uint32_t& edgecnt)
+    std::string Util::getClosestEdgeIpstr(const uint32_t& client_idx, const uint32_t& clientcnt, const uint32_t& edgecnt)
     {
-        uint32_t closest_edge_idx = getClosestEdgeIdx(client_idx, edgecnt);
+        uint32_t closest_edge_idx = getClosestEdgeIdx(client_idx, clientcnt, edgecnt);
         return Config::getEdgeIpstr(closest_edge_idx, edgecnt);
     }
 
     uint16_t Util::getClosestEdgeCacheServerRecvreqPort(const uint32_t& client_idx, const uint32_t& edgecnt)
     {
         uint32_t closest_edge_idx = getClosestEdgeIdx(client_idx, edgecnt);
-        return getEdgeCacheServerRecvreqPort(closest_edge_idx);
+        return getEdgeCacheServerRecvreqPort(closest_edge_idx, edgecnt);
     }
 
-    uint32_t Util::getGlobalClientWorkerIdx(const uint32_t& client_idx, const uint32_t local_client_worker_idx)
+    uint32_t Util::getGlobalClientWorkerIdx(const uint32_t& client_idx, const uint32_t& local_client_worker_idx, const uint32_t& perclient_workercnt)
     {
-        uint32_t global_client_worker_idx = client_idx * Param::getPerclientWorkercnt() + local_client_worker_idx;
+        uint32_t global_client_worker_idx = client_idx * perclient_workercnt + local_client_worker_idx;
         return global_client_worker_idx;
     }
 
-    uint16_t Util::getClientWorkerRecvrspPort(const uint32_t& global_client_worker_idx)
+    void Util::parseGlobalClientWorkerIdx(const uint32_t& global_client_worker_idx, const uint32_t& perclient_workercnt, uint32_t& client_idx, uint32_t& local_client_worker_idx)
     {
-        // TODO: Add Util::getClientPort_()
-        // TODO: Add Config::client_ipstrs
-        // TODO: Assign clients into machines similar as edges
+        client_idx = global_client_worker_idx / perclient_workercnt;
+        local_client_worker_idx = global_client_worker_idx - client_idx * perclient_workercnt;
+        assert(local_client_worker_idx < perclient_workercnt);
+        return;
+    }
+
+    uint16_t Util::getClientWorkerRecvrspPort(const uint32_t& client_idx, const uint32_t& clientcnt, const uint32_t& local_client_worker_idx, const uint32_t& perclient_workercnt)
+    {
+        assert(local_client_worker_idx < perclient_workercnt);
+
+        // Get client recvrsp port if 1 worker per client
+        int64_t client_recvrsp_startport = static_cast<int64_t>(Config::getClientRecvrspStartport());
+        int64_t client_recvrsp_port = static_cast<int64_t>(getNodePort_(client_recvrsp_startport, client_idx, clientcnt, Config::getClientIpstrCnt()));
+
+        // Get client worker recvrsp port
+        assert(client_recvrsp_port >= client_recvrsp_startport);
+        int64_t client_worker_recvrsp_port = (client_recvrsp_port - client_recvrsp_startport) * static_cast<int64_t>(perclient_workercnt) + static_cast<int64_t>(local_client_worker_idx);
+        
+        return Util::toUint16(client_worker_recvrsp_port);
     }
 
     // (4.2) Edge and cloud
 
     uint16_t Util::getEdgeBeaconServerRecvreqPort(const uint32_t& edge_idx, const uint32_t& edgecnt)
     {
-        int64_t edge_beacon_server_recvreq_startport = static_cast<int64_t>(covered::Config::getEdgeBeaconServerRecvreqStartport());
-        return getEdgePort_(edge_beacon_server_recvreq_startport, edge_idx, edgecnt);
+        int64_t edge_beacon_server_recvreq_startport = static_cast<int64_t>(Config::getEdgeBeaconServerRecvreqStartport());
+        return getNodePort_(edge_beacon_server_recvreq_startport, edge_idx, edgecnt, Config::getEdgeIpstrCnt());
     }
 
     uint16_t Util::getEdgeCacheServerRecvreqPort(const uint32_t& edge_idx, const uint32_t& edgecnt)
     {
-        int64_t edge_cache_server_recvreq_startport = static_cast<int64_t>(covered::Config::getEdgeCacheServerRecvreqStartport());
-        return getEdgePort_(edge_cache_server_recvreq_startport, edge_idx, edgecnt);
+        int64_t edge_cache_server_recvreq_startport = static_cast<int64_t>(Config::getEdgeCacheServerRecvreqStartport());
+        return getNodePort_(edge_cache_server_recvreq_startport, edge_idx, edgecnt, Config::getEdgeIpstrCnt());
     }
 
     uint16_t Util::getEdgeInvalidationServerRecvreqPort(const uint32_t& edge_idx, const uint32_t& edgecnt)
     {
-        int64_t edge_invalidation_server_recvreq_startport = static_cast<int64_t>(covered::Config::getEdgeInvalidationServerRecvreqStartport());
-        return getEdgePort_(edge_invalidation_server_recvreq_startport, edge_idx, edgecnt);
+        int64_t edge_invalidation_server_recvreq_startport = static_cast<int64_t>(Config::getEdgeInvalidationServerRecvreqStartport());
+        return getNodePort_(edge_invalidation_server_recvreq_startport, edge_idx, edgecnt, Config::getEdgeIpstrCnt());
     }
 
     uint16_t Util::getCloudRecvreqPort(const uint32_t& cloud_idx)
@@ -381,50 +397,39 @@ namespace covered
         // TODO: only support 1 cloud node now
         assert(cloud_idx == 0);
 
-        int64_t cloud_recvreq_port = 0;
-        int64_t cloud_recvreq_startport = static_cast<int64_t>(covered::Config::getCloudRecvreqStartport());
-        if (covered::Param::isSingleNode())
-        {
-            cloud_recvreq_port = cloud_recvreq_startport + cloud_idx;
-        }
-        else
-        {
-            // TODO: assign cloud nodes if with multiple machines similar as edge
-            assert(cloud_idx == 0);
-        }
-        return covered::Util::toUint16(cloud_recvreq_port);
+        int64_t cloud_recvreq_startport = static_cast<int64_t>(Config::getCloudRecvreqStartport());
+        return getNodePort_(cloud_recvreq_startport, cloud_idx, 1, 1);
     }
 
-    uint16_t Util::getEdgePort_(const int64_t& start_port, const uint32_t& edge_idx, const uint32_t& edgecnt)
+    uint16_t Util::getNodePort_(const int64_t& start_port, const uint32_t& node_idx, const uint32_t& nodecnt, const uint32_t& machine_cnt)
     {
-        int64_t edge_port = 0;
-        if (covered::Param::isSingleNode())
+        int64_t node_port = 0;
+        if (Param::isSingleNode())
         {
-            edge_port = start_port + edge_idx;
+            node_port = start_port + node_idx;
         }
         else
         {
-            uint32_t edge_machinecnt = Config::getEdgeIpstrCnt();
-            assert(edge_machinecnt > 0);
-            uint32_t permachine_edgecnt = edgecnt / edge_machinecnt;
-            assert(permachine_edgecnt > 0);
-            uint32_t machine_idx = edge_idx / permachine_edgecnt;
+            assert(machine_cnt > 0);
+            uint32_t permachine_nodecnt = nodecnt / machine_cnt;
+            assert(permachine_nodecnt > 0);
+            uint32_t machine_idx = node_idx / permachine_nodecnt;
 
-            uint32_t local_edge_idx = 0;
-            if (machine_idx < edge_machinecnt)
+            uint32_t local_node_idx = 0;
+            if (machine_idx < machine_cnt)
             {
-                local_edge_idx = edge_idx - machine_idx * permachine_edgecnt;
-                assert(local_edge_idx < permachine_edgecnt);
+                local_node_idx = node_idx - machine_idx * permachine_nodecnt;
+                assert(local_node_idx < permachine_nodecnt);
             }
             else
             {
-                local_edge_idx = edge_idx - (edge_machinecnt - 1) * permachine_edgecnt;
-                assert(local_edge_idx >= permachine_edgecnt);
+                local_node_idx = node_idx - (machine_cnt - 1) * permachine_nodecnt;
+                assert(local_node_idx >= permachine_nodecnt);
             }
 
-            edge_port = start_port + local_edge_idx;
+            node_port = start_port + local_node_idx;
         }
-        return covered::Util::toUint16(edge_port);
+        return Util::toUint16(node_port);
     }
 
     // (5) Network

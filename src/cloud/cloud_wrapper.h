@@ -12,7 +12,6 @@
 #include "cloud/cloud_param.h"
 #include "cloud/rocksdb_wrapper.h"
 #include "message/message_base.h"
-#include "network/udp_socket_wrapper.h"
 
 namespace covered
 {

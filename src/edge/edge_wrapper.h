@@ -3,6 +3,8 @@
  *
  * NOTE: all non-const shared variables in EdgeWrapper should be thread safe.
  * 
+ * NOTE: EdgeWrapper relines on client settings in Param to calculate client network address and send responses.
+ * 
  * By Siyuan Sheng (2023.04.22).
  */
 
@@ -14,7 +16,6 @@
 #include "cache/cache_wrapper.h"
 #include "cooperation/cooperation_wrapper_base.h"
 #include "edge/edge_param.h"
-#include "network/udp_socket_wrapper.h"
 
 namespace covered
 {
@@ -23,7 +24,7 @@ namespace covered
     public:
         static void* launchEdge(void* edge_param_ptr);
 
-        EdgeWrapper(const std::string& cache_name, const uint32_t& capacity_bytes, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& percacheserver_workercnt, EdgeParam* edge_param_ptr);
+        EdgeWrapper(const std::string& cache_name, const uint32_t& capacity_bytes, const uint32_t& clientcnt, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& percacheserver_workercnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge, EdgeParam* edge_param_ptr);
         virtual ~EdgeWrapper();
 
         void start();
@@ -70,8 +71,10 @@ namespace covered
         // Const shared variables
         const std::string cache_name_; // Come from Param
         const uint32_t capacity_bytes_; // Come from Param
+        const uint32_t clientcnt_; // Come from param
         const uint32_t edgecnt_; // Come from Param
         const uint32_t percacheserver_workercnt_; // Come from Param
+        const uint32_t perclient_workercnt_; // Come from Param
         const EdgeParam* edge_param_ptr_; // Thread safe
 
         // NOTE: we do NOT need per-key rwlock for atomicity among CacheWrapper and CooperationWrapperBase.
@@ -81,6 +84,9 @@ namespace covered
         // Non-const shared variables (thread safe)
         CacheWrapper* edge_cache_ptr_; // Data and metadata for local edge cache (thread safe)
         CooperationWrapperBase* cooperation_wrapper_ptr_; // Cooperation metadata (thread safe)
+        PropagationSimulatorParam* edge_toclient_propagation_simulator_param_ptr_; // thread safe
+        PropagationSimulatorParam* edge_toedge_propagation_simulator_param_ptr_; // thread safe
+        PropagationSimulatorParam* edge_tocloud_propagation_simulator_param_ptr_; // thread safe
     };
 }
 

@@ -83,11 +83,12 @@ namespace covered
         // (4) Client-edge-cloud scenario
 
         // (4.1) Client
-        static uint32_t getClosestEdgeIdx(const uint32_t& client_idx, const uint32_t& edgecnt);
-        static std::string getClosestEdgeIpstr(const uint32_t& client_idx, const uint32_t& edgecnt);
+        static uint32_t getClosestEdgeIdx(const uint32_t& client_idx, const uint32_t& clientcnt, const uint32_t& edgecnt);
+        static std::string getClosestEdgeIpstr(const uint32_t& client_idx, const uint32_t& clientcnt, const uint32_t& edgecnt);
         static uint16_t getClosestEdgeCacheServerRecvreqPort(const uint32_t& client_idx, const uint32_t& edgecnt); // Calculate the recvreq port of the closest edge node for client
-        static uint32_t getGlobalClientWorkerIdx(const uint32_t& client_idx, const uint32_t local_client_worker_idx);
-        static uint16_t getClientWorkerRecvrspPort(const uint32_t& global_client_worker_idx);
+        static uint32_t getGlobalClientWorkerIdx(const uint32_t& client_idx, const uint32_t& local_client_worker_idx);
+        static void parseGlobalClientWorkerIdx(const uint32_t& global_client_worker_idx, const uint32_t& perclient_workercnt, uint32_t& client_idx, uint32_t& local_client_worker_idx);
+        static uint16_t getClientWorkerRecvrspPort(const uint32_t& client_idx, const uint32_t& clientcnt, const uint32_t& local_client_worker_idx, const uint32_t& perclient_workercnt);
 
         // (4.2) Edge and cloud
         // UDP port for receiving requests is edge_XXX_recvreq_startport + edge_idx / local_edge_idx
@@ -119,7 +120,7 @@ namespace covered
         static bool isPathExist_(const std::string& path, const bool& is_file, const bool& is_silent); // File or directory 
 
         // Client-edge-cloud scenario
-        static uint16_t getEdgePort_(const int64_t& start_port, const uint32_t& edge_idx, const uint32_t& edgecnt);
+        static uint16_t getNodePort_(const int64_t& start_port, const uint32_t& node_idx, const uint32_t& nodecnt, const uint32_t& machine_cnt);
 
         // Intermediate files
         static std::string getInfixForFilepath_();

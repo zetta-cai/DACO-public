@@ -14,7 +14,6 @@
 
 #include "edge/edge_wrapper.h"
 #include "message/message_base.h"
-#include "network/udp_socket_wrapper.h"
 
 namespace covered
 {

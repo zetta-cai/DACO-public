@@ -9,14 +9,12 @@ namespace covered
     CacheServerWorkerItem::CacheServerWorkerItem()
     {
         data_request_ptr_ = NULL;
-        network_addr_ = NetworkAddr();
     }
 
-    CacheServerWorkerItem::CacheServerWorkerItem(MessageBase* data_request_ptr, const NetworkAddr& network_addr)
+    CacheServerWorkerItem::CacheServerWorkerItem(MessageBase* data_request_ptr)
     {
         assert(data_request_ptr != NULL);
         data_request_ptr_ = data_request_ptr;
-        network_addr_ = network_addr;
     }
 
     CacheServerWorkerItem::~CacheServerWorkerItem()
@@ -28,16 +26,10 @@ namespace covered
     {
         return data_request_ptr_;
     }
-    
-    NetworkAddr CacheServerWorkerItem::getNetworkAddr() const
-    {
-        return network_addr_;
-    }
 
     CacheServerWorkerItem& CacheServerWorkerItem::operator=(const CacheServerWorkerItem& other)
     {
         data_request_ptr_ = other.data_request_ptr_; // Shallow copy
-        network_addr_ = other.network_addr_;
         return *this;
     }
 

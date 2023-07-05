@@ -29,6 +29,7 @@ namespace covered
         uint32_t getPropagationLatencyUs() const;
         NodeParamBase* getNodeParamPtr() const;
 
+        bool push(MessageBase* message_ptr, const NetworkAddr& network_addr);
         bool pop(PropagationItem& element); // Only invoked by PropagationSimulator
 
         PropagationSimulatorParam& operator=(const PropagationSimulatorParam& other);
@@ -42,6 +43,7 @@ namespace covered
         // Non-const variables shared by working threads of each ndoe and propagation simulator
         Rwlock rwlock_for_propagation_item_buffer_; // Ensure the atomicity of ring buffer due to multiple providers
         RingBuffer<PropagationItem>* propagation_item_buffer_ptr_;
+        bool is_first_item_;
         struct timespec prev_timespec_;
     };
 }

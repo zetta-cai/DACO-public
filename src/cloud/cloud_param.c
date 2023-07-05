@@ -8,7 +8,7 @@ namespace covered
 {
     const std::string CloudParam::kClassName("CloudParam");
 
-    CloudParam::CloudParam() : NodeParamBase(0, true)
+    CloudParam::CloudParam() : NodeParamBase(NodeParamBase::CLOUD_NODE_ROLE, 0, true)
     {
     }
 

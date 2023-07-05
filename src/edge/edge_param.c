@@ -6,11 +6,11 @@ namespace covered
 {
     const std::string EdgeParam::kClassName("EdgeParam");
 
-    EdgeParam::EdgeParam() : NodeParamBase(0, true)
+    EdgeParam::EdgeParam() : NodeParamBase(NodeParamBase::EDGE_NODE_ROLE, 0, true)
     {
     }
 
-    EdgeParam::EdgeParam(uint32_t edge_idx) : NodeParamBase(edge_idx, true)
+    EdgeParam::EdgeParam(uint32_t edge_idx) : NodeParamBase(NodeParamBase::EDGE_NODE_ROLE, edge_idx, true)
     {
     }
 

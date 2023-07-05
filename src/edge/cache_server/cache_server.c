@@ -17,7 +17,7 @@ namespace covered
     {
         assert(edge_wrapper_ptr != NULL);
         assert(edge_wrapper_ptr->edge_param_ptr_ != NULL);
-        uint32_t edge_idx = edge_wrapper_ptr->edge_param_ptr_->getEdgeIdx();
+        uint32_t edge_idx = edge_wrapper_ptr->edge_param_ptr_->getNodeIdx();
 
         hash_wrapper_ptr_ = HashWrapperBase::getHashWrapperByHashName(Param::MMH3_HASH_NAME);
         assert(hash_wrapper_ptr_ != NULL);
@@ -58,9 +58,9 @@ namespace covered
 
     void CacheServer::start()
     {
-        assert(edge_wrapper_ptr_ != NULL);
-        assert(edge_wrapper_ptr_->edge_param_ptr_ != NULL);
-        uint32_t edge_idx = edge_wrapper_ptr_->edge_param_ptr_->getEdgeIdx();
+        checkPointers_();
+        
+        uint32_t edge_idx = edge_wrapper_ptr_->edge_param_ptr_->getNodeIdx();
 
         int pthread_returncode;
         pthread_t cache_server_worker_threads[edge_wrapper_ptr_->percacheserver_workercnt_];
@@ -99,20 +99,21 @@ namespace covered
 
     void CacheServer::receiveRequestsAndPartition_()
     {
-        while (edge_wrapper_ptr_->edge_param_ptr_->isEdgeRunning()) // edge_running_ is set as true by default
+        checkPointers_();
+
+        while (edge_wrapper_ptr_->edge_param_ptr_->isNodeRunning()) // edge_running_ is set as true by default
         {
             // Receive the message payload of data (local/redirected) requests
             DynamicArray data_request_msg_payload;
-            NetworkAddr data_request_network_addr; // clients or neighbor edge nodes
-            bool is_timeout = edge_cache_server_recvreq_socket_server_ptr_->recv(data_request_msg_payload, data_request_network_addr);
+            NetworkAddr tmp_addr; // clients or neighbor edge nodes
+            bool is_timeout = edge_cache_server_recvreq_socket_server_ptr_->recv(data_request_msg_payload, tmp_addr);
+            UNUSED(tmp_addr);
             if (is_timeout == true) // Timeout-and-retry
             {
                 continue; // Retry to receive a message if edge is still running
             } // End of (is_timeout == true)
             else
-            {
-                assert(data_request_network_addr.isValidAddr());
-                
+            {                
                 MessageBase* data_request_ptr = MessageBase::getRequestFromMsgPayload(data_request_msg_payload);
                 assert(data_request_ptr != NULL);
 
@@ -120,7 +121,7 @@ namespace covered
                 {
                     // Pass data request and network address to corresponding cache server worker by ring buffer
                     // NOTE: data request will be released by the corresponding cache server worker
-                    partitionRequest_(data_request_ptr, data_request_network_addr);
+                    partitionRequest_(data_request_ptr);
                 }
                 else
                 {
@@ -135,11 +136,9 @@ namespace covered
         return;
     }
 
-    void CacheServer::partitionRequest_(MessageBase* data_requeset_ptr, const NetworkAddr& network_addr)
+    void CacheServer::partitionRequest_(MessageBase* data_requeset_ptr)
     {
         assert(data_requeset_ptr != NULL && data_requeset_ptr->isDataRequest());
-        assert(network_addr.isValidAddr());
-        assert(hash_wrapper_ptr_ != NULL);
 
         // Calculate the corresponding cache server worker index by hashing
         assert(cache_server_worker_params_.size() == edge_wrapper_ptr_->percacheserver_workercnt_);
@@ -148,9 +147,19 @@ namespace covered
         assert(local_cache_server_worker_idx < edge_wrapper_ptr_->percacheserver_workercnt_);
 
         // Pass cache server worker item into ring buffer
-        CacheServerWorkerItem tmp_cache_server_worker_item(data_requeset_ptr, network_addr);
+        CacheServerWorkerItem tmp_cache_server_worker_item(data_requeset_ptr);
         bool is_successful = cache_server_worker_params_[local_cache_server_worker_idx].getDataRequestBufferPtr()->push(tmp_cache_server_worker_item);
         assert(is_successful == true); // Ring buffer must NOT be full
+
+        return;
+    }
+
+    void CacheServer::checkPointers_() const
+    {
+        assert(edge_wrapper_ptr_ != NULL);
+        assert(edge_wrapper_ptr_->edge_param_ptr_ != NULL);
+        assert(hash_wrapper_ptr_ != NULL);
+        assert(edge_cache_server_recvreq_socket_server_ptr_ != NULL);
 
         return;
     }

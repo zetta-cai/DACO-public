@@ -16,7 +16,6 @@
 #include "edge/edge_param.h"
 #include "edge/edge_wrapper.h"
 #include "statistics/client_statistics_tracker.h"
-#include "workload/workload_wrapper_base.h"
 
 int main(int argc, char **argv) {
     // (1) Parse and process CLI parameters (set configurations in Config and Param)
@@ -83,24 +82,13 @@ int main(int argc, char **argv) {
 
     const uint32_t clientcnt = covered::Param::getClientcnt();
     pthread_t client_threads[clientcnt];
-    covered::WorkloadWrapperBase* workload_generator_ptrs[clientcnt]; // Release at the end
-    covered::ClientStatisticsTracker* client_statistics_tracker_ptrs[clientcnt]; // Release at the end
     covered::ClientParam client_params[clientcnt];
 
     // (4.1) Prepare clientcnt client parameters
 
-    const std::string workload_name = covered::Param::getWorkloadName();
     for (uint32_t client_idx = 0; client_idx < clientcnt; client_idx++)
     {
-        // Create workload generator for the client
-        workload_generator_ptrs[client_idx] = covered::WorkloadWrapperBase::getWorkloadGeneratorByWorkloadName(covered::Param::getClientcnt(), client_idx, covered::Param::getKeycnt(), covered::Param::getOpcnt(), covered::Param::getPerclientWorkercnt(), workload_name);
-        assert(workload_generator_ptrs[client_idx] != NULL);
-
-        // Create statistics tracker for the client
-        client_statistics_tracker_ptrs[client_idx] = new covered::ClientStatisticsTracker(covered::Param::getPerclientWorkercnt(), client_idx);
-        assert(client_statistics_tracker_ptrs[client_idx] != NULL);
-
-        covered::ClientParam client_param(client_idx, workload_generator_ptrs[client_idx], client_statistics_tracker_ptrs[client_idx]);
+        covered::ClientParam client_param(client_idx);
         client_params[client_idx] = client_param;
     }
 
@@ -219,20 +207,6 @@ int main(int argc, char **argv) {
     covered::Util::dumpNormalMsg(main_class_name, "the cloud node is done");
 
     // (7) Release variables in heap
-
-    for (uint32_t client_idx = 0; client_idx < clientcnt; client_idx++)
-    {
-        if (workload_generator_ptrs[client_idx] != NULL)
-        {
-            delete workload_generator_ptrs[client_idx];
-            workload_generator_ptrs[client_idx]= NULL;
-        }
-        if (client_statistics_tracker_ptrs[client_idx] != NULL)
-        {
-            delete client_statistics_tracker_ptrs[client_idx];
-            client_statistics_tracker_ptrs[client_idx] = NULL;
-        }
-    }
 
     return 0;
 }

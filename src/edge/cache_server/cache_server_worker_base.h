@@ -57,7 +57,6 @@
 
 #include "edge/cache_server/cache_server_worker_param.h"
 #include "message/message_base.h"
-#include "network/udp_socket_wrapper.h"
 
 namespace covered
 {
