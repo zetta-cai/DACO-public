@@ -102,11 +102,11 @@ namespace covered
                 MessageBase* control_request_ptr = MessageBase::getRequestFromMsgPayload(control_request_msg_payload);
                 assert(control_request_ptr != NULL);
 
-                NetworkAddr cache_server_worker_recvrsp_dst_addr = control_request_ptr->getSourceAddr();
+                NetworkAddr edge_cache_server_worker_recvrsp_dst_addr = control_request_ptr->getSourceAddr();
 
                 if (control_request_ptr->isControlRequest()) // Control requests (e.g., invalidation and cache admission/eviction requests)
                 {
-                    is_finish = processControlRequest_(control_request_ptr, cache_server_worker_recvrsp_dst_addr);
+                    is_finish = processControlRequest_(control_request_ptr, edge_cache_server_worker_recvrsp_dst_addr);
                 }
                 else
                 {
@@ -133,7 +133,7 @@ namespace covered
 
     // (1) Access content directory information
 
-    bool BeaconServerBase::processControlRequest_(MessageBase* control_request_ptr, const NetworkAddr& cache_server_worker_recvrsp_dst_addr)
+    bool BeaconServerBase::processControlRequest_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr)
     {
         assert(control_request_ptr != NULL && control_request_ptr->isControlRequest());
 
@@ -142,24 +142,24 @@ namespace covered
         MessageType message_type = control_request_ptr->getMessageType();
         if (message_type == MessageType::kDirectoryLookupRequest)
         {
-            is_finish = processDirectoryLookupRequest_(control_request_ptr, cache_server_worker_recvrsp_dst_addr);
+            is_finish = processDirectoryLookupRequest_(control_request_ptr, edge_cache_server_worker_recvrsp_dst_addr);
         }
         else if (message_type == MessageType::kDirectoryUpdateRequest)
         {
-            is_finish = processDirectoryUpdateRequest_(control_request_ptr, cache_server_worker_recvrsp_dst_addr);
+            is_finish = processDirectoryUpdateRequest_(control_request_ptr, edge_cache_server_worker_recvrsp_dst_addr);
         }
         else if (message_type == MessageType::kAcquireWritelockRequest)
         {
-            is_finish = processAcquireWritelockRequest_(control_request_ptr, cache_server_worker_recvrsp_dst_addr);
+            is_finish = processAcquireWritelockRequest_(control_request_ptr, edge_cache_server_worker_recvrsp_dst_addr);
         }
         else if (message_type == MessageType::kReleaseWritelockRequest)
         {
-            is_finish = processReleaseWritelockRequest_(control_request_ptr, cache_server_worker_recvrsp_dst_addr);
+            is_finish = processReleaseWritelockRequest_(control_request_ptr, edge_cache_server_worker_recvrsp_dst_addr);
         }
         else
         {
             // NOTE: only COVERED has other control requests to process
-            is_finish = processOtherControlRequest_(control_request_ptr, cache_server_worker_recvrsp_dst_addr);
+            is_finish = processOtherControlRequest_(control_request_ptr, edge_cache_server_worker_recvrsp_dst_addr);
         }
         // TODO: invalidation and cache admission/eviction requests for control message
         // TODO: reply control response message to a beacon node

@@ -62,7 +62,7 @@ namespace covered
         oss << kClassName << " edge" << edge_idx << "-worker" << cache_server_worker_param_ptr->getLocalCacheServerWorkerIdx();
         base_instance_name_ = oss.str();
 
-        // Prepare destination address to cloud
+        // Prepare destination address to the corresponding cloud
         std::string cloud_ipstr = Config::getCloudIpstr();
         uint16_t cloud_recvreq_port = Util::getCloudRecvreqPort(0); // TODO: only support 1 cloud node now!
         corresponding_cloud_recvreq_dst_addr_ = NetworkAddr(cloud_ipstr, cloud_recvreq_port);
@@ -271,7 +271,8 @@ namespace covered
 
         // Prepare LocalGetResponse for client
         uint32_t edge_idx = tmp_edge_wrapper_ptr->edge_param_ptr_->getNodeIdx();
-        MessageBase* local_get_response_ptr = new LocalGetResponse(tmp_key, tmp_value, hitflag, edge_idx, edge_cache_server_worker_recvreq_source_addr_);
+        NetworkAddr edge_cache_server_recvreq_source_addr = cache_server_worker_param_ptr_->getCacheServerPtr()->edge_cache_server_recvreq_source_addr_;
+        MessageBase* local_get_response_ptr = new LocalGetResponse(tmp_key, tmp_value, hitflag, edge_idx, edge_cache_server_recvreq_source_addr);
         assert(local_get_response_ptr != NULL);
 
         // Push local response message into edge-to-client propagation simulator to a client

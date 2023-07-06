@@ -16,6 +16,8 @@
 #include <string>
 #include <time.h> // struct timespec
 
+#include "network/network_addr.h"
+
 #define UNUSED(var) (void(var))
 
 namespace covered
@@ -95,6 +97,7 @@ namespace covered
         static uint16_t getEdgeBeaconServerRecvreqPort(const uint32_t& edge_idx, const uint32_t& edgecnt);
         static uint16_t getEdgeBeaconServerRecvrspPort(const uint32_t& edge_idx, const uint32_t& edgecnt);
         static uint16_t getEdgeCacheServerRecvreqPort(const uint32_t& edge_idx, const uint32_t& edgecnt);
+        static NetworkAddr getEdgeCacheServerWorkerRecvreqAddrFromRecvrspAddr(const NetworkAddr& edge_cache_server_worker_recvrsp_addr);
         static uint16_t getEdgeCacheServerWorkerRecvreqPort(const uint32_t& edge_idx, const uint32_t& edgecnt);
         static uint16_t getEdgeCacheServerWorkerRecvrspPort(const uint32_t& edge_idx, const uint32_t& edgecnt);
         static uint16_t getEdgeInvalidationServerRecvreqPort(const uint32_t& edge_idx, const uint32_t& edgecnt);

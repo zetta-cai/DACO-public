@@ -40,25 +40,25 @@ namespace covered
         static const std::string kClassName;
 
         // Return if edge node is finished
-        bool processControlRequest_(MessageBase* control_request_ptr, const NetworkAddr& cache_server_worker_recvrsp_dst_addr);
+        bool processControlRequest_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr);
 
         // (1) Access content directory information
 
         // Return if edge node is finished
-        virtual bool processDirectoryLookupRequest_(MessageBase* control_request_ptr, const NetworkAddr& cache_server_worker_recvrsp_dst_addr) const = 0;
+        virtual bool processDirectoryLookupRequest_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr) const = 0;
         // NOTE: as a directory update has limited impact on cache size, we do NOT check capacity and trigger eviction for performance (capacity is only checked for cache admission and value updates)
-        virtual bool processDirectoryUpdateRequest_(MessageBase* control_request_ptr, const NetworkAddr& cache_server_worker_recvrsp_dst_addr) = 0;
+        virtual bool processDirectoryUpdateRequest_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr) = 0;
 
         // (2) Process writes and unblock for MSI protocol
 
         // Return if edge node is finished
-        virtual bool processAcquireWritelockRequest_(MessageBase* control_request_ptr, const NetworkAddr& cache_server_worker_recvrsp_dst_addr) = 0;
-        virtual bool processReleaseWritelockRequest_(MessageBase* control_request_ptr, const NetworkAddr& cache_server_worker_recvrsp_dst_addr) = 0;
+        virtual bool processAcquireWritelockRequest_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr) = 0;
+        virtual bool processReleaseWritelockRequest_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr) = 0;
 
         // (3) Process other control requests
 
         // Return if edge node is finished
-        virtual bool processOtherControlRequest_(MessageBase* control_request_ptr, const NetworkAddr& cache_server_worker_recvrsp_dst_addr) = 0;
+        virtual bool processOtherControlRequest_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr) = 0;
 
         // Member varaibles
 

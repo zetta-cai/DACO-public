@@ -117,7 +117,7 @@ int main(int argc, char **argv) {
     covered::Util::dumpNormalMsg(main_class_name, "Start benchmark...");
     for (uint32_t client_idx = 0; client_idx < clientcnt; client_idx++)
     {
-        client_params[client_idx].setClientRunning();
+        client_params[client_idx].setNodeRunning();
     }
 
     // (5.2) Dump intermediate statistics
@@ -144,7 +144,7 @@ int main(int argc, char **argv) {
 
     for (uint32_t client_idx = 0; client_idx < clientcnt; client_idx++)
     {
-        client_params[client_idx].resetClientRunning();
+        client_params[client_idx].resetNodeRunning();
     }
     covered::Util::dumpNormalMsg(main_class_name, "Stop benchmark...");
 
@@ -168,7 +168,7 @@ int main(int argc, char **argv) {
 
     for (uint32_t edge_idx = 0; edge_idx < edgecnt; edge_idx++)
     {
-        edge_params[edge_idx].resetEdgeRunning();
+        edge_params[edge_idx].resetNodeRunning();
     }
     covered::Util::dumpNormalMsg(main_class_name, "Stop edge nodes...");
 
@@ -190,7 +190,7 @@ int main(int argc, char **argv) {
 
     // (6.5) Reset cloud_running_ = false in a cloud parameter to stop the cloud node
 
-    cloud_param.resetCloudRunning();
+    cloud_param.resetNodeRunning();
     covered::Util::dumpNormalMsg(main_class_name, "Stop the cloud node...");
 
     // (6.6) Wait for the cloud node

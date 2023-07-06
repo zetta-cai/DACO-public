@@ -16,38 +16,49 @@ namespace covered
 
     void* CloudWrapper::launchCloud(void* cloud_param_ptr)
     {
-        CloudWrapper local_cloud(Param::getCloudStorage(), (CloudParam*)cloud_param_ptr);
+        CloudWrapper local_cloud(Param::getCloudStorage(), Param::getPropagationLatencyEdgecloud(), (CloudParam*)cloud_param_ptr);
         local_cloud.start();
         
         pthread_exit(NULL);
         return NULL;
     }
 
-    CloudWrapper::CloudWrapper(const std::string& cloud_storage, CloudParam* cloud_param_ptr)
+    CloudWrapper::CloudWrapper(const std::string& cloud_storage, const uint32_t& propagation_latency_edgecloud, CloudParam* cloud_param_ptr)
     {
         if (cloud_param_ptr == NULL)
         {
             Util::dumpErrorMsg(kClassName, "cloud_param_ptr is NULL!");
             exit(1);
         }
+        const uint32_t cloud_idx = cloud_param_ptr_->getNodeIdx();
 
         // Different different clouds if any
         std::ostringstream oss;
-        oss << kClassName << " cloud" << cloud_param_ptr->getCloudIdx();
+        oss << kClassName << " cloud" << cloud_idx;
         instance_name_ = oss.str();
 
         cloud_param_ptr_ = cloud_param_ptr;
         assert(cloud_param_ptr_ != NULL);
         
         // Open local RocksDB KVS
-        cloud_rocksdb_ptr_ = new RocksdbWrapper(cloud_storage, Util::getCloudRocksdbDirpath(cloud_param_ptr_->getCloudIdx()), cloud_param_ptr);
+        cloud_rocksdb_ptr_ = new RocksdbWrapper(cloud_storage, Util::getCloudRocksdbDirpath(cloud_idx), cloud_param_ptr);
         assert(cloud_rocksdb_ptr_ != NULL);
 
+        // For receiving global requests
+
+        // Get source address of cloud recvreq
+        std::string cloud_ipstr = Config::getCloudIpstr();
+        uint16_t cloud_recvreq_port = Util::getCloudRecvreqPort(cloud_idx);
+        cloud_recvreq_source_addr_ = NetworkAddr(cloud_ipstr, cloud_recvreq_port);
+
         // Prepare a socket server on recvreq port
-        uint16_t cloud_recvreq_port = Util::getCloudRecvreqPort(cloud_param_ptr_->getCloudIdx());
-        NetworkAddr host_addr(Util::ANY_IPSTR, cloud_recvreq_port);
-        cloud_recvreq_socket_server_ptr_ = new UdpSocketWrapper(SocketRole::kSocketServer, host_addr);
+        NetworkAddr recvreq_host_addr(Util::ANY_IPSTR, cloud_recvreq_port);
+        cloud_recvreq_socket_server_ptr_ = new UdpMsgSocketServer(recvreq_host_addr);
         assert(cloud_recvreq_socket_server_ptr_ != NULL);
+
+        // Allocate cloud-to-edge propagation simulator param
+        cloud_toedge_propagation_simulator_param_ptr_ = new PropagationSimulatorParam(propagation_latency_edgecloud, (NodeParamBase*)cloud_param_ptr, Config::getPropagationItemBufferSizeCloudToedge());
+        assert(cloud_toedge_propagation_simulator_param_ptr_ != NULL);
     }
         
     CloudWrapper::~CloudWrapper()
@@ -63,16 +74,20 @@ namespace covered
         assert(cloud_recvreq_socket_server_ptr_ != NULL);
         delete cloud_recvreq_socket_server_ptr_;
         cloud_recvreq_socket_server_ptr_ = NULL;
+
+        // Release cloud-to-edge propataion simulator param
+        assert(cloud_toedge_propagation_simulator_param_ptr_ != NULL);
+        delete cloud_toedge_propagation_simulator_param_ptr_;
+        cloud_toedge_propagation_simulator_param_ptr_ = NULL;
     }
 
     void CloudWrapper::start()
     {
-        assert(cloud_param_ptr_ != NULL);
-        assert(cloud_recvreq_socket_server_ptr_ != NULL);
+        checkPointers_();
 
         bool is_finish = false; // Mark if local cloud node is finished
 
-        while (cloud_param_ptr_->isCloudRunning()) // cloud_running_ is set as true by default
+        while (cloud_param_ptr_->isNodeRunning()) // cloud_running_ is set as true by default
         {
             // Receive the global request message
             DynamicArray global_request_msg_payload;
@@ -88,7 +103,8 @@ namespace covered
 
                 if (request_ptr->isGlobalRequest()) // Global requests
                 {
-                    is_finish = processGlobalRequest_(request_ptr);
+                    NetworkAddr edge_cache_server_worker_recvrsp_dst_addr = request_ptr->getSourceAddr();
+                    is_finish = processGlobalRequest_(request_ptr, edge_cache_server_worker_recvrsp_dst_addr);
                 }
                 else
                 {
@@ -111,14 +127,11 @@ namespace covered
         } // End of while loop
     }
 
-    bool CloudWrapper::processGlobalRequest_(MessageBase* global_request_ptr)
+    bool CloudWrapper::processGlobalRequest_(MessageBase* global_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr)
     {
-        assert(global_request_ptr != NULL && global_request_ptr->isGlobalRequest());
-        assert(cloud_param_ptr_ != NULL);
-        assert(cloud_rocksdb_ptr_ != NULL);
-        assert(cloud_recvreq_socket_server_ptr_ != NULL);
+        checkPointers_();
 
-        uint32_t cloud_idx = cloud_param_ptr_->getCloudIdx();
+        const uint32_t cloud_idx = cloud_param_ptr_->getNodeIdx();
 
         bool is_finish = false;
 
@@ -138,7 +151,7 @@ namespace covered
                 cloud_rocksdb_ptr_->get(tmp_key, tmp_value);
 
                 // Prepare global get response message
-                global_response_ptr = new GlobalGetResponse(tmp_key, tmp_value, cloud_idx);
+                global_response_ptr = new GlobalGetResponse(tmp_key, tmp_value, cloud_idx, cloud_recvreq_source_addr_);
                 assert(global_response_ptr != NULL);
                 break;
             }
@@ -153,7 +166,7 @@ namespace covered
                 cloud_rocksdb_ptr_->put(tmp_key, tmp_value);
 
                 // Prepare global put response message
-                global_response_ptr = new GlobalPutResponse(tmp_key, cloud_idx);
+                global_response_ptr = new GlobalPutResponse(tmp_key, cloud_idx, cloud_recvreq_source_addr_);
                 assert(global_response_ptr != NULL);
                 break;
             }
@@ -166,7 +179,7 @@ namespace covered
                 cloud_rocksdb_ptr_->remove(tmp_key);
 
                 // Prepare global del response message
-                global_response_ptr = new GlobalDelResponse(tmp_key, cloud_idx);
+                global_response_ptr = new GlobalDelResponse(tmp_key, cloud_idx, cloud_recvreq_source_addr_);
                 assert(global_response_ptr != NULL);
                 break;
             }
@@ -181,20 +194,25 @@ namespace covered
 
         if (!is_finish) // Check is_finish
         {
-            // Reply global response message to the edge node (the remote address set by the most recent recv)
+            // Push the global response message into cloud-to-edge propagation simulator to edge cache server worker
             assert(global_response_ptr != NULL);
             assert(global_response_ptr->isGlobalResponse());
-            DynamicArray global_response_msg_payload(global_response_ptr->getMsgPayloadSize());
-            global_response_ptr->serialize(global_response_msg_payload);
-            PropagationSimulator::propagateFromCloudToEdge();
-            cloud_recvreq_socket_server_ptr_->send(global_response_msg_payload);
+            bool is_successful = cloud_toedge_propagation_simulator_param_ptr_->push(global_response_ptr, edge_cache_server_worker_recvrsp_dst_addr);
+            assert(is_successful);
         }
 
-        // Release global response message
-        assert(global_response_ptr != NULL);
-        delete global_response_ptr;
-        global_response_ptr = NULL;
+        // NOTE: global_response_ptr will be released by cloud-to-edge propagation simulator
 
         return is_finish;
+    }
+
+    void CloudWrapper::checkPointers_() const
+    {
+        assert(cloud_param_ptr_ != NULL);
+        assert(cloud_rocksdb_ptr_ != NULL);
+        assert(cloud_recvreq_socket_server_ptr_ != NULL);
+        assert(cloud_toedge_propagation_simulator_param_ptr_ != NULL);
+
+        return;
     }
 }

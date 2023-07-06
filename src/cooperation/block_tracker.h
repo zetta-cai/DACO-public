@@ -1,6 +1,10 @@
 /*
  * BlockTracker: track per-key cooperation metadata for MSI blocking (thread safe).
  *
+ * NOTE: BlockTracker blocks network address of cache server worker recvreq, instead of cache server worker recvrsp carried by DirectoryLookupRequest and AcquireWritelockRequest (see Util::getEdgeCacheServerWorkerRecvreqAddrFromRecvrspAddr invoked by Basic/CoveredBeaconServer).
+ * 
+ * NOTE: each edge node only has up to one cache server worker in blocklist for a give key due to hash-based partition in cache server.
+ *
  * NOTE: all non-const shared variables in BlockTracker and derived classes should be thread safe.
  * 
  * By Siyuan Sheng (2023.06.19).

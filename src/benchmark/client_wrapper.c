@@ -15,7 +15,7 @@ namespace covered
 {
     const std::string ClientWrapper::kClassName("ClientWrapper");
 
-    void* launchClient(void* client_param_ptr)
+    void* ClientWrapper::launchClient(void* client_param_ptr)
     {
         ClientWrapper local_client(Param::getClientcnt(), Param::getEdgecnt(), Param::getKeycnt(), Param::getOpcnt(), Param::getPerclientWorkercnt(), Param::getPropagationLatencyClientedge(), Param::getWorkloadName(), (ClientParam*)client_param_ptr);
         local_client.start();

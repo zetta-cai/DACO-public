@@ -10,8 +10,8 @@
 
 namespace covered
 {
-    const std::string CLIENT_IPSTRS_KEYSTR("client_ipstrs");
-    const std::string CLIENT_RECVRSP_STARTPORT_KEYSTR("client_recvrsp_startport");
+    const std::string Config::CLIENT_IPSTRS_KEYSTR("client_ipstrs");
+    const std::string Config::CLIENT_RECVRSP_STARTPORT_KEYSTR("client_recvrsp_startport");
     const std::string Config::CLOUD_IPSTR_KEYSTR("cloud_ipstr");
     const std::string Config::CLOUD_RECVREQ_STARTPORT_KEYSTR("cloud_recvreq_startport");
     const std::string Config::CLOUD_ROCKSDB_BASEDIR_KEYSTR("cloud_rocksdb_basedir");

@@ -17,6 +17,8 @@
 
 namespace covered
 {
+    class CacheServerWorkerParam;
+
     class CacheServer
     {
     public:
@@ -26,8 +28,8 @@ namespace covered
         void start();
 
         friend class CacheServerWorkerBase;
-        friend class BasicCacheServer;
-        friend class CoveredCacheServer;
+        friend class BasicCacheServerWorker;
+        friend class CoveredCacheServerWorker;
     private:
         static const std::string kClassName;
 

@@ -15,8 +15,9 @@ namespace covered
     BasicCacheServerWorker::BasicCacheServerWorker(CacheServerWorkerParam* cache_server_worker_param_ptr) : CacheServerWorkerBase(cache_server_worker_param_ptr)
     {
         assert(cache_server_worker_param_ptr != NULL);
-        assert(cache_server_worker_param_ptr->getEdgeWrapperPtr()->cache_name_ != Param::COVERED_CACHE_NAME);
-        uint32_t edge_idx = cache_server_worker_param_ptr->getEdgeWrapperPtr()->edge_param_ptr_->getEdgeIdx();
+        EdgeWrapper* tmp_edgewrapper_ptr = cache_server_worker_param_ptr->getCacheServerPtr()->edge_wrapper_ptr_;
+        assert(tmp_edgewrapper_ptr->cache_name_ != Param::COVERED_CACHE_NAME);
+        uint32_t edge_idx = tmp_edgewrapper_ptr->edge_param_ptr_->getNodeIdx();
         uint32_t local_cache_server_worker_idx = cache_server_worker_param_ptr->getLocalCacheServerWorkerIdx();
 
         // Differentiate BasicCacheServerWorker in different edge nodes
@@ -62,16 +63,15 @@ namespace covered
         // NOTE: no need to perform recursive cooperative edge caching (current edge node is already the target edge node for cooperative edge caching)
         // NOTE: no need to access cloud to get data, which will be performed by the closest edge node
 
-        // Prepare RedirectedGetResponse and set remote address for the closest edge node
-        uint32_t edge_idx = tmp_edge_wrapper_ptr->edge_param_ptr_->getEdgeIdx();
-        RedirectedGetResponse redirected_get_response(tmp_key, tmp_value, hitflag, edge_idx);
-        edge_cache_server_worker_sendrsp_tosource_socket_client_ptr_->setRemoteAddrForClient(network_addr);
+        // Prepare RedirectedGetResponse for the closest edge node
+        uint32_t edge_idx = tmp_edge_wrapper_ptr->edge_param_ptr_->getNodeIdx();
+        NetworkAddr edge_cache_server_recvreq_source_addr = cache_server_worker_param_ptr_->getCacheServerPtr()->edge_cache_server_recvreq_source_addr_;
+        MessageBase* redirected_get_response_ptr = new RedirectedGetResponse(tmp_key, tmp_value, hitflag, edge_idx, edge_cache_server_recvreq_source_addr);
 
-        // Reply redirected response message to the closest edge node (the remote address set by the most recent recv)
-        DynamicArray redirected_response_msg_payload(redirected_get_response.getMsgPayloadSize());
-        redirected_get_response.serialize(redirected_response_msg_payload);
-        PropagationSimulator::propagateFromNeighborToEdge();
-        edge_cache_server_worker_sendrsp_tosource_socket_client_ptr_->send(redirected_response_msg_payload);
+        // Push the redirected response message into edge-to-client propagation simulator to cache server worker in the closest edge node
+        tmp_edge_wrapper_ptr->edge_toclient_propagation_simulator_param_ptr_->push(redirected_get_response_ptr, recvrsp_dst_addr);
+
+        // NOTE: redirected_get_response_ptr will be released by edge-to-client propagation simulator
 
         return is_finish;
     }
@@ -153,7 +153,7 @@ namespace covered
         bool is_finish = false;
 
         // Prepare redirected get request to get data from target edge node if any
-        uint32_t edge_idx = tmp_edge_wrapper_ptr->edge_param_ptr_->getEdgeIdx();
+        uint32_t edge_idx = tmp_edge_wrapper_ptr->edge_param_ptr_->getNodeIdx();
         MessageBase* redirected_get_request_ptr = new RedirectedGetRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_);
         assert(redirected_get_request_ptr != NULL);
 
@@ -310,7 +310,7 @@ namespace covered
         bool is_finish = false;
 
         // Prepare acquire writelock request to acquire permission for a write
-        uint32_t edge_idx = tmp_edge_wrapper_ptr->edge_param_ptr_->getEdgeIdx();
+        uint32_t edge_idx = tmp_edge_wrapper_ptr->edge_param_ptr_->getNodeIdx();
         MessageBase* acquire_writelock_request_ptr = new AcquireWritelockRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_);
         assert(acquire_writelock_request_ptr != NULL);
 
@@ -373,7 +373,7 @@ namespace covered
         bool is_finish = false;
 
         // Prepare release writelock request to finish write
-        uint32_t edge_idx = tmp_edge_wrapper_ptr->edge_param_ptr_->getEdgeIdx();
+        uint32_t edge_idx = tmp_edge_wrapper_ptr->edge_param_ptr_->getNodeIdx();
         MessageBase* release_writelock_request_ptr = new ReleaseWritelockRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_);
         assert(release_writelock_request_ptr != NULL);
 

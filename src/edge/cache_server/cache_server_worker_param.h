@@ -11,9 +11,12 @@
 
 #include "concurrency/ring_buffer_impl.h"
 #include "edge/cache_server/cache_server.h"
+#include "message/message_base.h"
 
 namespace covered
 {
+    class CacheServer;
+    
     // Item passed between cache server and cache server workers
     class CacheServerWorkerItem
     {
@@ -33,7 +36,7 @@ namespace covered
     {
     public:
         CacheServerWorkerParam();
-        CacheServerWorkerParam(CacheServer* cache_server_ptr, uint32_t local_cache_server_worker_idx, const uint32_t& data_request_buffer_size);
+        CacheServerWorkerParam(CacheServer* cache_server_ptr, const uint32_t& local_cache_server_worker_idx, const uint32_t& data_request_buffer_size);
         ~CacheServerWorkerParam();
 
         const CacheServerWorkerParam& operator=(const CacheServerWorkerParam& other);

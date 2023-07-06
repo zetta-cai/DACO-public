@@ -166,7 +166,7 @@ namespace covered
 
         // For receiving finish block requests
         NetworkAddr edge_cache_server_worker_recvreq_source_addr_; // The same as that used by cache server worker or beacon server to send finish block requests (const individual variable)
-        UdgMsgSocketServer* edge_cache_server_worker_recvreq_socket_server_ptr_; // Used by cache server worker to receive finish block requests from cache server worker or beacon server (non-const individual variable)
+        UdpMsgSocketServer* edge_cache_server_worker_recvreq_socket_server_ptr_; // Used by cache server worker to receive finish block requests from cache server worker or beacon server (non-const individual variable)
     };
 }
 

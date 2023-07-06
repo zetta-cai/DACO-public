@@ -51,7 +51,7 @@ namespace covered
         // Different RocksDB KVS in different clouds if any
         assert(cloud_param_ptr != NULL);
         std::ostringstream oss;
-        oss << kClassName << " cloud" << cloud_param_ptr->getCloudIdx();
+        oss << kClassName << " cloud" << cloud_param_ptr->getNodeIdx();
         instance_name_ = oss.str();
 
         oss.clear();

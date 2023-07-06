@@ -29,7 +29,7 @@ namespace covered
         return NULL;
     }
 
-    EdgeWrapper::EdgeWrapper(const std::string& cache_name, const uint32_t& capacity_bytes, const const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& percacheserver_workercnt, const const uint32_t& propagation_latency_clientedge, const uint32_t& propagation_latency_crossedge, const uint32_t& propagation_latency_edgecloud, EdgeParam* edge_param_ptr) : cache_name_(cache_name), capacity_bytes_(capacity_bytes), edgecnt_(edgecnt), percacheserver_workercnt_(percacheserver_workercnt), edge_param_ptr_(edge_param_ptr)
+    EdgeWrapper::EdgeWrapper(const std::string& cache_name, const uint32_t& capacity_bytes, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& percacheserver_workercnt, const uint32_t& propagation_latency_clientedge, const uint32_t& propagation_latency_crossedge, const uint32_t& propagation_latency_edgecloud, EdgeParam* edge_param_ptr) : cache_name_(cache_name), capacity_bytes_(capacity_bytes), edgecnt_(edgecnt), percacheserver_workercnt_(percacheserver_workercnt), edge_param_ptr_(edge_param_ptr)
     {
         if (edge_param_ptr == NULL)
         {

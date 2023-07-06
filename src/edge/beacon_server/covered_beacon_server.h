@@ -24,18 +24,18 @@ namespace covered
         // (1) Access content directory information
 
         // Return if edge node is finished
-        virtual bool processDirectoryLookupRequest_(MessageBase* control_request_ptr, const NetworkAddr& cache_server_worker_recvrsp_dst_addr) const override;
-        virtual bool processDirectoryUpdateRequest_(MessageBase* control_request_ptr, const NetworkAddr& cache_server_worker_recvrsp_dst_addr) override;
+        virtual bool processDirectoryLookupRequest_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr) const override;
+        virtual bool processDirectoryUpdateRequest_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr) override;
 
         // (2) Process writes and unblock for MSI protocol
 
-        virtual bool processAcquireWritelockRequest_(MessageBase* control_request_ptr, const NetworkAddr& cache_server_worker_recvrsp_dst_addr) override;
-        virtual bool processReleaseWritelockRequest_(MessageBase* control_request_ptr, const NetworkAddr& cache_server_worker_recvrsp_dst_addr) override;
+        virtual bool processAcquireWritelockRequest_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr) override;
+        virtual bool processReleaseWritelockRequest_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr) override;
 
         // (3) Process other control requests
 
         // Return if edge node is finished
-        virtual bool processOtherControlRequest_(MessageBase* control_request_ptr, const NetworkAddr& cache_server_worker_recvrsp_dst_addr) override;
+        virtual bool processOtherControlRequest_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr) override;
 
         // Member variables
 
