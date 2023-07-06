@@ -29,7 +29,7 @@ namespace covered
         uint32_t getPropagationLatencyUs() const;
         NodeParamBase* getNodeParamPtr() const;
 
-        bool push(MessageBase* message_ptr, const NetworkAddr& network_addr);
+        bool push(MessageBase* message_ptr, const NetworkAddr& dst_addr);
         bool pop(PropagationItem& element); // Only invoked by PropagationSimulator
 
         PropagationSimulatorParam& operator=(const PropagationSimulatorParam& other);

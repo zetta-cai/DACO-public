@@ -376,12 +376,9 @@ namespace covered
         MessageBase* invalidation_request_ptr = new InvalidationRequest(key, edge_idx, recvrsp_source_addr);
         assert(invalidation_request_ptr != NULL);
 
-        // Prepare message payload
-        DynamicArray control_request_msg_payload(invalidation_request_ptr->getMsgPayloadSize());
-        invalidation_request_ptr->serialize(control_request_msg_payload);
-
         // Push InvalidationRequest into edge-to-edge propagation simulator to send to neighbor edge node
-        edge_toedge_propagation_simulator_param_ptr_->push(invalidation_request_ptr, edge_invalidation_server_recvreq_dst_addr);
+        bool is_successful = edge_toedge_propagation_simulator_param_ptr_->push(invalidation_request_ptr, edge_invalidation_server_recvreq_dst_addr);
+        assert(is_successful);
 
         // NOTE: invalidation_request_ptr will be released by edge-to-edge propagation simulator
 
@@ -501,12 +498,9 @@ namespace covered
         MessageBase* finish_block_request_ptr = new FinishBlockRequest(key, edge_idx, recvrsp_source_addr);
         assert(finish_block_request_ptr != NULL);
 
-        // Prepare message payload
-        DynamicArray control_request_msg_payload(finish_block_request_ptr->getMsgPayloadSize());
-        finish_block_request_ptr->serialize(control_request_msg_payload);
-
         // Push FinishBlockRequest into edge-to-edge propagation simulator to send to blocked edge node
-        edge_toedge_propagation_simulator_param_ptr_->push(finish_block_request_ptr, edge_cache_server_worker_recvreq_dst_addr);
+        bool is_successful = edge_toedge_propagation_simulator_param_ptr_->push(finish_block_request_ptr, edge_cache_server_worker_recvreq_dst_addr);
+        assert(is_successful);
 
         // NOTE: finish_block_request_ptr will be released by edge-to-edge propagation simulator
 

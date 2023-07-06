@@ -42,13 +42,17 @@ namespace covered
         void checkPointers_() const;
 
         std::string instance_name_;
-        uint32_t global_client_worker_idx_;
-        NetworkAddr client_worker_recvrsp_source_addr_; // Used by cache server workers to send back local responses
-        NetworkAddr closest_edge_cache_server_recvreq_dst_addr_; // Used by client worker to send local requests
 
         ClientWorkerParam* client_worker_param_ptr_;
         std::mt19937_64* client_worker_item_randgen_ptr_;
-        UdpMsgSocketServer* client_worker_recvrsp_socket_server_ptr_; // Used to receive local responses from cache server workers
+
+        // For sending local requests
+        uint32_t global_client_worker_idx_;
+        NetworkAddr closest_edge_cache_server_recvreq_dst_addr_; // Used by client worker to send local requests
+
+        // For receiveing local responses
+        NetworkAddr client_worker_recvrsp_source_addr_; // Used by cache server workers to send back local responses (const individual variable)
+        UdpMsgSocketServer* client_worker_recvrsp_socket_server_ptr_; // Used by client worker to receive local responses from cache server workers (non-const individual variable)
     };
 }
 

@@ -27,7 +27,7 @@ namespace covered
 
     // (1) Process data requests
 
-    bool CoveredCacheServerWorker::processRedirectedGetRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& recvrsp_source_addr) const
+    bool CoveredCacheServerWorker::processRedirectedGetRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& recvrsp_dst_addr) const
     {
         return false;
     }
@@ -41,7 +41,7 @@ namespace covered
         return false;
     }
 
-    bool CoveredCacheServerWorker::redirectGetToTarget_(const Key& key, Value& value, bool& is_cooperative_cached, bool& is_valid) const
+    bool CoveredCacheServerWorker::redirectGetToTarget_(const DirectoryInfo& directory_info, const Key& key, Value& value, bool& is_cooperative_cached, bool& is_valid) const
     {
         return false;
     }

@@ -89,14 +89,14 @@ namespace covered
         return beacon_edge_idx;
     }
         
-    NetworkAddr CooperationWrapperBase::getBeaconEdgeBeaconServerAddr(const Key& key) const
+    NetworkAddr CooperationWrapperBase::getBeaconEdgeBeaconServerRecvreqAddr(const Key& key) const
     {
         // No need to acquire a read lock due to accessing a const shared variable
 
         std::string beacon_edge_ipstr = dht_wrapper_ptr_->getBeaconEdgeIpstr(key);
-        uint16_t beacon_edge_beacon_server_port = dht_wrapper_ptr_->getBeaconEdgeBeaconServerRecvreqPort(key);
-        NetworkAddr beacon_edge_beacon_server_addr(beacon_edge_ipstr, beacon_edge_beacon_server_port);
-        return beacon_edge_beacon_server_addr;
+        uint16_t beacon_edge_beacon_server_recvreq_port = dht_wrapper_ptr_->getBeaconEdgeBeaconServerRecvreqPort(key);
+        NetworkAddr beacon_edge_beacon_server_recvreq_addr(beacon_edge_ipstr, beacon_edge_beacon_server_recvreq_port);
+        return beacon_edge_beacon_server_recvreq_addr;
     }
 
     // (2) Access content directory information
@@ -118,7 +118,7 @@ namespace covered
         return;
     }
 
-    void CooperationWrapperBase::lookupLocalDirectoryByBeaconServer(const Key& key, const NetworkAddr& network_addr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
+    void CooperationWrapperBase::lookupLocalDirectoryByBeaconServer(const Key& key, const NetworkAddr& cache_server_worker_recvreq_dst_addr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
     {
         checkPointers_();
 
@@ -126,7 +126,7 @@ namespace covered
         std::string context_name = "CooperationWrapperBase::lookupLocalDirectoryByBeaconServer()";
         cooperation_wrapper_perkey_rwlock_ptr_->acquire_lock_shared(key, context_name);
 
-        block_tracker_ptr_->blockEdgeForKeyIfExistAndBeingWritten(key, network_addr, is_being_written);
+        block_tracker_ptr_->blockEdgeForKeyIfExistAndBeingWritten(key, cache_server_worker_recvreq_dst_addr, is_being_written);
         lookupLocalDirectory_(key, is_being_written, is_valid_directory_exist, directory_info);
 
         // Release a read lock
@@ -216,7 +216,7 @@ namespace covered
         return lock_result;
     }
 
-    LockResult CooperationWrapperBase::acquireLocalWritelockByBeaconServer(const Key& key, const NetworkAddr& network_addr, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo)
+    LockResult CooperationWrapperBase::acquireLocalWritelockByBeaconServer(const Key& key, const NetworkAddr& cache_server_worker_recvreq_dst_addr, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo)
     {
         checkPointers_();
 
@@ -231,7 +231,7 @@ namespace covered
 
         if (is_cooperative_cached) // Acquire write lock for cooperatively cached object for MSI protocol
         {
-            bool is_successful = block_tracker_ptr_->casWriteflagOrBlockEdgeForKey(key, network_addr);
+            bool is_successful = block_tracker_ptr_->casWriteflagOrBlockEdgeForKey(key, cache_server_worker_recvreq_dst_addr);
             if (is_successful) // Acquire write lock successfully
             {
                 // Invalidate all content directory informations

@@ -24,7 +24,7 @@ namespace covered
         // (1) Process data requests
         
         // Return if edge node is finished
-        virtual bool processRedirectedGetRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& recvrsp_source_addr) const override;
+        virtual bool processRedirectedGetRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& recvrsp_dst_addr) const override;
 
         // (2) Access cooperative edge cache
 
@@ -32,7 +32,7 @@ namespace covered
 
         // Return if edge node is finished
         virtual bool lookupBeaconDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const override; // Check remote directory info
-        virtual bool redirectGetToTarget_(const Key& key, Value& value, bool& is_cooperative_cached, bool& is_valid) const override; // Request redirection
+        virtual bool redirectGetToTarget_(const DirectoryInfo& directory_info, const Key& key, Value& value, bool& is_cooperative_cached, bool& is_valid) const override; // Request redirection
 
         // (2.2) Update content directory information
 

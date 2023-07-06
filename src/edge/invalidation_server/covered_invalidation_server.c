@@ -26,7 +26,7 @@ namespace covered
 
     CoveredInvalidationServer::~CoveredInvalidationServer() {}
 
-    bool CoveredInvalidationServer::processInvalidationRequest_(MessageBase* control_request_ptr)
+    bool CoveredInvalidationServer::processInvalidationRequest_(MessageBase* control_request_ptr, const NetworkAddr& recvrsp_dst_addr)
     {
         return false;
     }

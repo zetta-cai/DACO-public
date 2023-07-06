@@ -45,20 +45,7 @@ namespace covered
         const uint32_t client_idx = client_wrapper_ptr->client_param_ptr_->getNodeIdx();
         const uint32_t clientcnt = client_wrapper_ptr->clientcnt_;
         const uint32_t edgecnt = client_wrapper_ptr->edgecnt_;
-
-        // Get global client worker index
         const uint32_t local_client_worker_idx = client_worker_param_ptr->getLocalClientWorkerIdx();
-        global_client_worker_idx_ = Util::getGlobalClientWorkerIdx(client_idx, local_client_worker_idx, client_wrapper_ptr->perclient_workercnt_);
-
-        // Get source address of client worker to receive response
-        std::string client_ipstr = Config::getClientIpstr(client_idx, client_wrapper_ptr->clientcnt_);
-        uint16_t client_worker_recvrsp_port = Util::getClientWorkerRecvrspPort(client_idx, clientcnt, local_client_worker_idx, client_wrapper_ptr->perclient_workercnt_);
-        client_worker_recvrsp_source_addr_ = NetworkAddr(client_ipstr, client_worker_recvrsp_port);
-
-        // Get closest edge network address
-        std::string closest_edge_ipstr = Util::getClosestEdgeIpstr(client_idx, clientcnt, edgecnt);
-        uint16_t closest_edge_cache_server_recvreq_port = Util::getClosestEdgeCacheServerRecvreqPort(client_idx, clientcnt, edgecnt);
-        closest_edge_cache_server_recvreq_dst_addr_ = NetworkAddr(closest_edge_ipstr, closest_edge_cache_server_recvreq_port);
 
         // Differentiate different workers
         std::ostringstream oss;
@@ -76,7 +63,24 @@ namespace covered
             exit(1);
         }
 
-        // Prepare a socket server tor receive responses
+        // For sending local requests
+
+        // Get global client worker index to send local requests
+        global_client_worker_idx_ = Util::getGlobalClientWorkerIdx(client_idx, local_client_worker_idx, client_wrapper_ptr->perclient_workercnt_);
+
+        // Get closest edge network address to send local requests
+        std::string closest_edge_ipstr = Util::getClosestEdgeIpstr(client_idx, clientcnt, edgecnt);
+        uint16_t closest_edge_cache_server_recvreq_port = Util::getClosestEdgeCacheServerRecvreqPort(client_idx, clientcnt, edgecnt);
+        closest_edge_cache_server_recvreq_dst_addr_ = NetworkAddr(closest_edge_ipstr, closest_edge_cache_server_recvreq_port);
+
+        // For receiving local responses
+
+        // Get source address of client worker to receive local responses
+        std::string client_ipstr = Config::getClientIpstr(client_idx, client_wrapper_ptr->clientcnt_);
+        uint16_t client_worker_recvrsp_port = Util::getClientWorkerRecvrspPort(client_idx, clientcnt, local_client_worker_idx, client_wrapper_ptr->perclient_workercnt_);
+        client_worker_recvrsp_source_addr_ = NetworkAddr(client_ipstr, client_worker_recvrsp_port);
+
+        // Prepare a socket server to receive local responses
         NetworkAddr host_addr(Util::ANY_IPSTR, client_worker_recvrsp_port);
         client_worker_recvrsp_socket_server_ptr_ = new UdpMsgSocketServer(host_addr);
         assert(client_worker_recvrsp_socket_server_ptr_ != NULL);

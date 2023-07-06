@@ -20,16 +20,26 @@ namespace covered
         uint32_t edge_idx = edge_wrapper_ptr->edge_param_ptr_->getNodeIdx();
         uint32_t edgecnt = edge_wrapper_ptr->edgecnt_;
 
-        // Allocate hash wrapper for partition
-        hash_wrapper_ptr_ = HashWrapperBase::getHashWrapperByHashName(Param::MMH3_HASH_NAME);
-        assert(hash_wrapper_ptr_ != NULL);
-        
         // Differentiate cache servers in different edge nodes
         std::ostringstream oss;
         oss << kClassName << " edge" << edge_idx;
         instance_name_ = oss.str();
 
-        // Get cache server network address
+        // Allocate hash wrapper for partition
+        hash_wrapper_ptr_ = HashWrapperBase::getHashWrapperByHashName(Param::MMH3_HASH_NAME);
+        assert(hash_wrapper_ptr_ != NULL);
+
+        // Prepare parameters for cache server threads
+        cache_server_worker_params_.resize(edge_wrapper_ptr_->percacheserver_workercnt_);
+        for (uint32_t local_cache_server_worker_idx = 0; local_cache_server_worker_idx < edge_wrapper_ptr_->percacheserver_workercnt_; local_cache_server_worker_idx++)
+        {
+            CacheServerWorkerParam tmp_cache_server_worker_param(this, local_cache_server_worker_idx, Config::getEdgeCacheServerDataRequestBufferSize());
+            cache_server_worker_params_[local_cache_server_worker_idx] = tmp_cache_server_worker_param;
+        }
+
+        // For receiving local requests
+
+        // Get source address of cache server to receive local requests
         std::string edge_ipstr = Config::getEdgeIpstr(edge_idx, edgecnt);
         uint16_t edge_cache_server_recvreq_port = Util::getEdgeCacheServerRecvreqPort(edge_idx, edgecnt);
         edge_cache_server_recvreq_source_addr_ = NetworkAddr(edge_ipstr, edge_cache_server_recvreq_port);
@@ -38,14 +48,6 @@ namespace covered
         NetworkAddr host_addr(Util::ANY_IPSTR, edge_cache_server_recvreq_port);
         edge_cache_server_recvreq_socket_server_ptr_ = new UdpMsgSocketServer(host_addr);
         assert(edge_cache_server_recvreq_socket_server_ptr_ != NULL);
-
-        // Prepare parameters for cache server threads
-        cache_server_worker_params_.resize(edge_wrapper_ptr_->percacheserver_workercnt_);
-        for (uint32_t local_cache_server_worker_idx = 0; local_cache_server_worker_idx < edge_wrapper_ptr_->percacheserver_workercnt_; local_cache_server_worker_idx++)
-        {
-            CacheServerWorkerParam tmp_cache_server_worker_param(edge_wrapper_ptr_, local_cache_server_worker_idx, Config::getEdgeCacheServerDataRequestBufferSize());
-            cache_server_worker_params_[local_cache_server_worker_idx] = tmp_cache_server_worker_param;
-        }
     }
 
     CacheServer::~CacheServer()

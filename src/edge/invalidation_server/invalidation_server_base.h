@@ -30,14 +30,13 @@ namespace covered
         static const std::string kClassName;
 
         // Return if edge node is finished
-        virtual bool processInvalidationRequest_(MessageBase* control_request_ptr) = 0;
+        virtual bool processInvalidationRequest_(MessageBase* control_request_ptr, const NetworkAddr& recvrsp_dst_addr) = 0;
 
         // Member varaibles
 
         // Const variable
         std::string base_instance_name_;
     protected:
-
         void checkPointers_() const;
 
         // Member variables
@@ -45,8 +44,9 @@ namespace covered
         // Const variable
         const EdgeWrapper* edge_wrapper_ptr_;
 
-        // Non-const individual variable
-        UdpSocketWrapper* edge_invalidation_server_recvreq_socket_server_ptr_;
+        // For receiving invalidation requests
+        NetworkAddr edge_invalidation_server_recvreq_source_addr_; // The same as cache server worker or beacon server to send invalidation requests (const individual variable)
+        UdpMsgSocketServer* edge_invalidation_server_recvreq_socket_server_ptr_; // Used by invalidation server to receive invalidtion requests from cache server workers or beacon servers (non-const individual variable)
     };
 }
 

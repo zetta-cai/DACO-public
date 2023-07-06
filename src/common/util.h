@@ -93,7 +93,10 @@ namespace covered
         // (4.2) Edge and cloud
         // UDP port for receiving requests is edge_XXX_recvreq_startport + edge_idx / local_edge_idx
         static uint16_t getEdgeBeaconServerRecvreqPort(const uint32_t& edge_idx, const uint32_t& edgecnt);
+        static uint16_t getEdgeBeaconServerRecvrspPort(const uint32_t& edge_idx, const uint32_t& edgecnt);
         static uint16_t getEdgeCacheServerRecvreqPort(const uint32_t& edge_idx, const uint32_t& edgecnt);
+        static uint16_t getEdgeCacheServerWorkerRecvreqPort(const uint32_t& edge_idx, const uint32_t& edgecnt);
+        static uint16_t getEdgeCacheServerWorkerRecvrspPort(const uint32_t& edge_idx, const uint32_t& edgecnt);
         static uint16_t getEdgeInvalidationServerRecvreqPort(const uint32_t& edge_idx, const uint32_t& edgecnt);
         static uint16_t getCloudRecvreqPort(const uint32_t& cloud_idx);
 

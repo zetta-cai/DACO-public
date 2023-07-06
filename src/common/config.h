@@ -25,8 +25,11 @@ namespace covered
         static const std::string CLOUD_RECVREQ_STARTPORT_KEYSTR;
         static const std::string CLOUD_ROCKSDB_BASEDIR_KEYSTR;
         static const std::string EDGE_BEACON_SERVER_RECVREQ_STARTPORT_KEYSTR;
+        static const std::string EDGE_BEACON_SERVER_RECVRSP_STARTPORT_KEYSTR;
         static const std::string EDGE_CACHE_SERVER_DATA_REQUEST_BUFFER_SIZE_KEYSTR;
         static const std::string EDGE_CACHE_SERVER_RECVREQ_STARTPORT_KEYSTR;
+        static const std::string EDGE_CACHE_SERVER_WORKER_RECVREQ_STARTPORT_KEYSTR;
+        static const std::string EDGE_CACHE_SERVER_WORKER_RECVRSP_STARTPORT_KEYSTR;
         static const std::string EDGE_INVALIDATION_SERVER_RECVREQ_STARTPORT_KEYSTR;
         static const std::string EDGE_IPSTRS_KEYSTR;
         static const std::string FACEBOOK_CONFIG_FILEPATH_KEYSTR;
@@ -49,8 +52,11 @@ namespace covered
         static uint16_t getCloudRecvreqStartport();
         static std::string getCloudRocksdbBasedir();
         static uint16_t getEdgeBeaconServerRecvreqStartport();
+        static uint16_t getEdgeBeaconServerRecvrspStartport();
         static uint32_t getEdgeCacheServerDataRequestBufferSize();
         static uint16_t getEdgeCacheServerRecvreqStartport();
+        static uint16_t getEdgeCacheServerWorkerRecvreqStartport();
+        static uint16_t getEdgeCacheServerWorkerRecvrspStartport();
         static uint16_t getEdgeInvalidationServerRecvreqStartport();
         static std::string getEdgeIpstr(const uint32_t& edge_idx, const uint32_t& edgecnt);
         static uint32_t getEdgeIpstrCnt();
@@ -82,8 +88,11 @@ namespace covered
         static uint16_t cloud_recvreq_startport_;
         static std::string cloud_rocksdb_basedir_;
         static uint16_t edge_beacon_server_recvreq_startport_;
+        static uint16_t edge_beacon_server_recvrsp_startport_;
         static uint32_t edge_cache_server_data_request_buffer_size_;
         static uint16_t edge_cache_server_recvreq_startport_;
+        static uint16_t edge_cache_server_worker_recvreq_startport_;
+        static uint16_t edge_cache_server_worker_recvrsp_startport_;
         static uint16_t edge_invalidation_server_recvreq_startport_;
         static std::vector<std::string> edge_ipstrs_;
         static std::string facebook_config_filepath_;

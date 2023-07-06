@@ -16,7 +16,7 @@ namespace covered
     {
         assert(edge_wrapper_ptr_ != NULL);
         assert(edge_wrapper_ptr_->cache_name_ == Param::COVERED_CACHE_NAME);
-        uint32_t edge_idx = edge_wrapper_ptr_->edge_param_ptr_->getEdgeIdx();
+        uint32_t edge_idx = edge_wrapper_ptr_->edge_param_ptr_->getNodeIdx();
 
         // Differentiate CoveredBeaconServer in different edge nodes
         std::ostringstream oss;
@@ -28,14 +28,14 @@ namespace covered
 
     // (1) Access content directory information
 
-    bool CoveredBeaconServer::processDirectoryLookupRequest_(MessageBase* control_request_ptr, const NetworkAddr& closest_edge_addr) const
+    bool CoveredBeaconServer::processDirectoryLookupRequest_(MessageBase* control_request_ptr, const NetworkAddr& cache_server_worker_recvrsp_dst_addr) const
     {
         // NOTE: For COVERED, beacon node will tell the closest edge node if to admit, w/o independent decision
 
         return false;
     }
 
-    bool CoveredBeaconServer::processDirectoryUpdateRequest_(MessageBase* control_request_ptr)
+    bool CoveredBeaconServer::processDirectoryUpdateRequest_(MessageBase* control_request_ptr, const NetworkAddr& cache_server_worker_recvrsp_dst_addr)
     {
         // NOTE: For COVERED, beacon node will tell the closest edge node if to admit, w/o independent decision
 
@@ -44,19 +44,19 @@ namespace covered
 
     // (2) Process writes and unblock for MSI protocol
 
-    bool CoveredBeaconServer::processAcquireWritelockRequest_(MessageBase* control_request_ptr, const NetworkAddr& closest_edge_addr)
+    bool CoveredBeaconServer::processAcquireWritelockRequest_(MessageBase* control_request_ptr, const NetworkAddr& cache_server_worker_recvrsp_dst_addr)
     {
         return false;
     }
 
-    bool CoveredBeaconServer::processReleaseWritelockRequest_(MessageBase* control_request_ptr)
+    bool CoveredBeaconServer::processReleaseWritelockRequest_(MessageBase* control_request_ptr, const NetworkAddr& cache_server_worker_recvrsp_dst_addr)
     {
         return false;
     }
 
     // (3) Process other control requests
 
-    bool CoveredBeaconServer::processOtherControlRequest_(MessageBase* control_request_ptr)
+    bool CoveredBeaconServer::processOtherControlRequest_(MessageBase* control_request_ptr, const NetworkAddr& cache_server_worker_recvrsp_dst_addr)
     {
         return false;
     }

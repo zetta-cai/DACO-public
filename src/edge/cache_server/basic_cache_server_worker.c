@@ -29,17 +29,17 @@ namespace covered
 
     // (1) Process data requests
 
-    bool BasicCacheServerWorker::processRedirectedGetRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& recvrsp_source_addr) const
+    bool BasicCacheServerWorker::processRedirectedGetRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& recvrsp_dst_addr) const
     {
         // Get key and value from redirected request if any
         assert(redirected_request_ptr != NULL && redirected_request_ptr->getMessageType() == MessageType::kRedirectedGetRequest);
-        assert(recvrsp_source_addr.isValidAddr());
+        assert(recvrsp_dst_addr.isValidAddr());
         const RedirectedGetRequest* const redirected_get_request_ptr = static_cast<const RedirectedGetRequest*>(redirected_request_ptr);
         Key tmp_key = redirected_get_request_ptr->getKey();
         Value tmp_value;
 
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getEdgeWrapperPtr();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->edge_wrapper_ptr_;
 
         bool is_finish = false;
         Hitflag hitflag = Hitflag::kGlobalMiss;
@@ -82,10 +82,8 @@ namespace covered
 
     bool BasicCacheServerWorker::lookupBeaconDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
     {
-        // TODO: END HERE
-        
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getEdgeWrapperPtr();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->edge_wrapper_ptr_;
 
         // The current edge node must NOT be the beacon node for the key
         bool current_is_beacon = tmp_edge_wrapper_ptr->currentIsBeacon_(key);
@@ -94,23 +92,25 @@ namespace covered
         bool is_finish = false;
 
         // Prepare directory lookup request to check directory information in beacon node
-        uint32_t edge_idx = tmp_edge_wrapper_ptr->edge_param_ptr_->getEdgeIdx();
-        DirectoryLookupRequest directory_lookup_request(key, edge_idx);
-        DynamicArray control_request_msg_payload(directory_lookup_request.getMsgPayloadSize());
-        directory_lookup_request.serialize(control_request_msg_payload);
+        uint32_t edge_idx = tmp_edge_wrapper_ptr->edge_param_ptr_->getNodeIdx();
+        MessageBase* directory_lookup_request_ptr = new DirectoryLookupRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_);
+        assert(directory_lookup_request_ptr != NULL);
+
+        // Get destination address of beacon node
+        NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = getBeaconDstaddr_(key);
 
         while (true) // Timeout-and-retry mechanism
         {
-            // Send the control request to the beacon node
-            PropagationSimulator::propagateFromEdgeToNeighbor();
-            edge_cache_server_worker_sendreq_tobeacon_socket_client_ptr_->send(control_request_msg_payload);
+            // Push the control request into edge-to-edge propagation simulator to send to beacon node
+            bool is_successful = tmp_edge_wrapper_ptr->edge_toedge_propagation_simulator_param_ptr_->push(directory_lookup_request_ptr, beacon_edge_beacon_server_recvreq_dst_addr);
+            assert(is_successful);
 
             // Receive the control repsonse from the beacon node
             DynamicArray control_response_msg_payload;
-            bool is_timeout = edge_cache_server_worker_sendreq_tobeacon_socket_client_ptr_->recv(control_response_msg_payload);
+            bool is_timeout = edge_cache_server_worker_recvrsp_socket_server_ptr_->recv(control_response_msg_payload);
             if (is_timeout)
             {
-                if (!tmp_edge_wrapper_ptr->edge_param_ptr_->isEdgeRunning())
+                if (!tmp_edge_wrapper_ptr->edge_param_ptr_->isNodeRunning())
                 {
                     is_finish = true;
                     break; // Edge is NOT running
@@ -140,34 +140,38 @@ namespace covered
             } // End of (is_timeout == false)
         } // End of while(true)
 
+        // NOTE: directory_lookup_request_ptr will be released by edge-to-edge propagation simulator
+
         return is_finish;
     }
 
-    bool BasicCacheServerWorker::redirectGetToTarget_(const Key& key, Value& value, bool& is_cooperative_cached, bool& is_valid) const
+    bool BasicCacheServerWorker::redirectGetToTarget_(const DirectoryInfo& directory_info, const Key& key, Value& value, bool& is_cooperative_cached, bool& is_valid) const
     {
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getEdgeWrapperPtr();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->edge_wrapper_ptr_;
 
         bool is_finish = false;
 
         // Prepare redirected get request to get data from target edge node if any
         uint32_t edge_idx = tmp_edge_wrapper_ptr->edge_param_ptr_->getEdgeIdx();
-        RedirectedGetRequest redirected_get_request(key, edge_idx);
-        DynamicArray redirected_request_msg_payload(redirected_get_request.getMsgPayloadSize());
-        redirected_get_request.serialize(redirected_request_msg_payload);
+        MessageBase* redirected_get_request_ptr = new RedirectedGetRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_);
+        assert(redirected_get_request_ptr != NULL);
+
+        // Prepare destination address of target edge cache server
+        NetworkAddr target_edge_cache_server_recvreq_dst_addr = getTargetDstaddr_(directory_info);
 
         while (true) // Timeout-and-retry mechanism
         {
-            // Send the redirected request to the target edge node
-            PropagationSimulator::propagateFromEdgeToNeighbor();
-            edge_cache_server_worker_sendreq_totarget_socket_client_ptr_->send(redirected_request_msg_payload);
+            // Push the redirected data request into edge-to-edge propagation simulator to target node
+            bool is_successful = tmp_edge_wrapper_ptr->edge_toedge_propagation_simulator_param_ptr_->push(redirected_get_request_ptr, target_edge_cache_server_recvreq_dst_addr);
+            assert(is_successful);
 
-            // Receive the control repsonse from the target node
+            // Receive the redirected data repsonse from the target node
             DynamicArray redirected_response_msg_payload;
-            bool is_timeout = edge_cache_server_worker_sendreq_totarget_socket_client_ptr_->recv(redirected_response_msg_payload);
+            bool is_timeout = edge_cache_server_worker_recvrsp_socket_server_ptr_->recv(redirected_response_msg_payload);
             if (is_timeout)
             {
-                if (!tmp_edge_wrapper_ptr->edge_param_ptr_->isEdgeRunning())
+                if (!tmp_edge_wrapper_ptr->edge_param_ptr_->isNodeRunning())
                 {
                     is_finish = true;
                     break; // Edge is NOT running
@@ -222,6 +226,8 @@ namespace covered
             } // End of (is_timeout == false)
         } // End of while(true)
 
+        // NOTE: redirected_get_request_ptr will be released by edge-to-edge propagation simulator
+
         return is_finish;
     }
 
@@ -230,7 +236,7 @@ namespace covered
     bool BasicCacheServerWorker::updateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written) const
     {
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getEdgeWrapperPtr();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->edge_wrapper_ptr_;
 
         // The current edge node must NOT be the beacon node for the key
         bool current_is_beacon = tmp_edge_wrapper_ptr->currentIsBeacon_(key);
@@ -239,23 +245,25 @@ namespace covered
         bool is_finish = false;
 
         // Prepare directory update request to check directory information in beacon node
-        uint32_t edge_idx = tmp_edge_wrapper_ptr->edge_param_ptr_->getEdgeIdx();
-        DirectoryUpdateRequest directory_update_request(key, is_admit, directory_info, edge_idx);
-        DynamicArray control_request_msg_payload(directory_update_request.getMsgPayloadSize());
-        directory_update_request.serialize(control_request_msg_payload);
+        uint32_t edge_idx = tmp_edge_wrapper_ptr->edge_param_ptr_->getNodeIdx();
+        MessageBase* directory_update_request_ptr = new DirectoryUpdateRequest(key, is_admit, directory_info, edge_idx, edge_cache_server_worker_recvrsp_source_addr_);
+        assert(directory_update_request_ptr != NULL);
+
+        // Get destination address of beacon node
+        NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = getBeaconDstaddr_(key);
 
         while (true) // Timeout-and-retry mechanism
         {
-            // Send the control request to the beacon node
-            PropagationSimulator::propagateFromEdgeToNeighbor();
-            edge_cache_server_worker_sendreq_tobeacon_socket_client_ptr_->send(control_request_msg_payload);
+            // Push the control request into edge-to-edge propagation simulator to the beacon node
+            bool is_successful = tmp_edge_wrapper_ptr->edge_toedge_propagation_simulator_param_ptr_->push(directory_update_request_ptr, beacon_edge_beacon_server_recvreq_dst_addr);
+            assert(is_successful);
 
             // Receive the control repsonse from the beacon node
             DynamicArray control_response_msg_payload;
-            bool is_timeout = edge_cache_server_worker_sendreq_tobeacon_socket_client_ptr_->recv(control_response_msg_payload);
+            bool is_timeout = edge_cache_server_worker_recvrsp_socket_server_ptr_->recv(control_response_msg_payload);
             if (is_timeout)
             {
-                if (!tmp_edge_wrapper_ptr->edge_param_ptr_->isEdgeRunning())
+                if (!tmp_edge_wrapper_ptr->edge_param_ptr_->isNodeRunning())
                 {
                     is_finish = true;
                     break; // Edge is NOT running
@@ -283,6 +291,8 @@ namespace covered
             } // End of (is_timeout == false)
         } // End of while(true)
 
+        // NOTE: directory_update_request_ptr will be released by edge-to-edge propagation simulator
+
         return is_finish;
     }
 
@@ -291,7 +301,7 @@ namespace covered
     bool BasicCacheServerWorker::acquireBeaconWritelock_(const Key& key, LockResult& lock_result)
     {
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getEdgeWrapperPtr();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->edge_wrapper_ptr_;
 
         // The current edge node must NOT be the beacon node for the key
         bool current_is_beacon = tmp_edge_wrapper_ptr->currentIsBeacon_(key);
@@ -301,22 +311,24 @@ namespace covered
 
         // Prepare acquire writelock request to acquire permission for a write
         uint32_t edge_idx = tmp_edge_wrapper_ptr->edge_param_ptr_->getEdgeIdx();
-        AcquireWritelockRequest acquire_writelock_request(key, edge_idx);
-        DynamicArray control_request_msg_payload(acquire_writelock_request.getMsgPayloadSize());
-        acquire_writelock_request.serialize(control_request_msg_payload);
+        MessageBase* acquire_writelock_request_ptr = new AcquireWritelockRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_);
+        assert(acquire_writelock_request_ptr != NULL);
+
+        // Prepare destination address of beacon server
+        NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = getBeaconDstaddr_(key);
 
         while (true) // Timeout-and-retry mechanism
         {
-            // Send the control request to the beacon node
-            PropagationSimulator::propagateFromEdgeToNeighbor();
-            edge_cache_server_worker_sendreq_tobeacon_socket_client_ptr_->send(control_request_msg_payload);
+            // Push the control request into edge-to-edge propagation simulator to the beacon node
+            bool is_successful = tmp_edge_wrapper_ptr->edge_toedge_propagation_simulator_param_ptr_->push(acquire_writelock_request_ptr, beacon_edge_beacon_server_recvreq_dst_addr);
+            assert(is_successful);
 
             // Receive the control repsonse from the beacon node
             DynamicArray control_response_msg_payload;
-            bool is_timeout = edge_cache_server_worker_sendreq_tobeacon_socket_client_ptr_->recv(control_response_msg_payload);
+            bool is_timeout = edge_cache_server_worker_recvrsp_socket_server_ptr_->recv(control_response_msg_payload);
             if (is_timeout)
             {
-                if (!tmp_edge_wrapper_ptr->edge_param_ptr_->isEdgeRunning())
+                if (!tmp_edge_wrapper_ptr->edge_param_ptr_->isNodeRunning())
                 {
                     is_finish = true;
                     break; // Edge is NOT running
@@ -344,13 +356,15 @@ namespace covered
             } // End of (is_timeout == false)
         } // End of while(true)
 
+        // NOTE: acquire_writelock_request_ptr will be released by edge-to-edge propagation simulator
+
         return is_finish;
     }
 
     bool BasicCacheServerWorker::releaseBeaconWritelock_(const Key& key)
     {
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getEdgeWrapperPtr();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->edge_wrapper_ptr_;
 
         // The current edge node must NOT be the beacon node for the key
         bool current_is_beacon = tmp_edge_wrapper_ptr->currentIsBeacon_(key);
@@ -360,22 +374,24 @@ namespace covered
 
         // Prepare release writelock request to finish write
         uint32_t edge_idx = tmp_edge_wrapper_ptr->edge_param_ptr_->getEdgeIdx();
-        ReleaseWritelockRequest release_writelock_request(key, edge_idx);
-        DynamicArray control_request_msg_payload(release_writelock_request.getMsgPayloadSize());
-        release_writelock_request.serialize(control_request_msg_payload);
+        MessageBase* release_writelock_request_ptr = new ReleaseWritelockRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_);
+        assert(release_writelock_request_ptr != NULL);
+
+        // Prepare destination address of beacon server
+        NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = getBeaconDstaddr_(key);
 
         while (true) // Timeout-and-retry mechanism
         {
-            // Send the control request to the beacon node
-            PropagationSimulator::propagateFromEdgeToNeighbor();
-            edge_cache_server_worker_sendreq_tobeacon_socket_client_ptr_->send(control_request_msg_payload);
+            // Push the control request into edge-to-edge propagation simulator to the beacon node
+            bool is_successful = tmp_edge_wrapper_ptr->edge_toedge_propagation_simulator_param_ptr_->push(release_writelock_request_ptr, beacon_edge_beacon_server_recvreq_dst_addr);
+            assert(is_successful);
 
             // Receive the control repsonse from the beacon node
             DynamicArray control_response_msg_payload;
-            bool is_timeout = edge_cache_server_worker_sendreq_tobeacon_socket_client_ptr_->recv(control_response_msg_payload);
+            bool is_timeout = edge_cache_server_worker_recvrsp_socket_server_ptr_->recv(control_response_msg_payload);
             if (is_timeout)
             {
-                if (!tmp_edge_wrapper_ptr->edge_param_ptr_->isEdgeRunning())
+                if (!tmp_edge_wrapper_ptr->edge_param_ptr_->isNodeRunning())
                 {
                     is_finish = true;
                     break; // Edge is NOT running
@@ -399,6 +415,8 @@ namespace covered
             } // End of (is_timeout == false)
         } // End of while(true)
 
+        // NOTE: release_writelock_request_ptr will be released by edge-to-edge propagation simulator
+
         return is_finish;
     }
 
@@ -407,7 +425,7 @@ namespace covered
     bool BasicCacheServerWorker::triggerIndependentAdmission_(const Key& key, const Value& value) const
     {
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getEdgeWrapperPtr();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->edge_wrapper_ptr_;
 
         bool is_finish = false;
 

@@ -24,6 +24,10 @@ namespace covered
         ~CacheServer();
 
         void start();
+
+        friend class CacheServerWorkerBase;
+        friend class BasicCacheServer;
+        friend class CoveredCacheServer;
     private:
         static const std::string kClassName;
 
@@ -32,15 +36,17 @@ namespace covered
 
         void checkPointers_() const;
 
-        // Const variable
+        // Const shared variable
         std::string instance_name_;
         EdgeWrapper* edge_wrapper_ptr_;
         HashWrapperBase* hash_wrapper_ptr_;
-        NetworkAddr edge_cache_server_recvreq_source_addr_; // The same as that used by clients or neighbors to send local/redirected requests
 
         // Non-const individual variable
-        UdpMsgSocketServer* edge_cache_server_recvreq_socket_server_ptr_; // Used by cache server to receive local requests from clients and redirected requests from neighbors
         std::vector<CacheServerWorkerParam> cache_server_worker_params_; // Each cache server thread has a unique param
+
+        // For receiving local requests
+        NetworkAddr edge_cache_server_recvreq_source_addr_; // The same as that used by clients or neighbors to send local/redirected requests (const shared variable)
+        UdpMsgSocketServer* edge_cache_server_recvreq_socket_server_ptr_; // Used by cache server to receive local requests from clients and redirected requests from neighbors (non-const individual variable)
     };
 }
 

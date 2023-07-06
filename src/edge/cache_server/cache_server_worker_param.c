@@ -39,14 +39,14 @@ namespace covered
 
     CacheServerWorkerParam::CacheServerWorkerParam()
     {
-        edge_wrapper_ptr_ = NULL;
+        cache_server_ptr_ = NULL;
         local_cache_server_worker_idx_ = 0;
         data_request_buffer_ptr_ = NULL;
     }
 
-    CacheServerWorkerParam::CacheServerWorkerParam(EdgeWrapper* edge_wrapper_ptr, uint32_t local_cache_server_worker_idx, const uint32_t& data_request_buffer_size)
+    CacheServerWorkerParam::CacheServerWorkerParam(CacheServer* cache_server_ptr, uint32_t local_cache_server_worker_idx, const uint32_t& data_request_buffer_size)
     {
-        edge_wrapper_ptr_ = edge_wrapper_ptr;
+        cache_server_ptr_ = cache_server_ptr;
         local_cache_server_worker_idx_ = local_cache_server_worker_idx;
         
         // Allocate ring buffer for local requests
@@ -56,7 +56,7 @@ namespace covered
 
     CacheServerWorkerParam::~CacheServerWorkerParam()
     {
-        // NOTE: no need to release edge_wrapper_ptr_, which will be released outside CacheServerWorkerParam (e.g., by simulator)
+        // NOTE: no need to release cache_server_ptr_, which will be released outside CacheServerWorkerParam (e.g., by simulator)
 
         if (data_request_buffer_ptr_ != NULL)
         {
@@ -67,8 +67,8 @@ namespace covered
 
     const CacheServerWorkerParam& CacheServerWorkerParam::operator=(const CacheServerWorkerParam& other)
     {
-        // Shallow copy is okay, as edge_wrapper_ptr_ is maintained outside CacheServerWorkerParam (e.g., by simulator)
-        edge_wrapper_ptr_ = other.edge_wrapper_ptr_;
+        // Shallow copy is okay, as cache_server_ptr_ is maintained outside CacheServerWorkerParam (e.g., by simulator)
+        cache_server_ptr_ = other.cache_server_ptr_;
 
         local_cache_server_worker_idx_ = other.local_cache_server_worker_idx_;
 
@@ -89,9 +89,9 @@ namespace covered
         return *this;
     }
 
-    EdgeWrapper* CacheServerWorkerParam::getEdgeWrapperPtr() const
+    CacheServer* CacheServerWorkerParam::getCacheServerPtr() const
     {
-        return edge_wrapper_ptr_;
+        return cache_server_ptr_;
     }
 
     uint32_t CacheServerWorkerParam::getLocalCacheServerWorkerIdx() const

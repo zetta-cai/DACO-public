@@ -16,8 +16,11 @@ namespace covered
     const std::string Config::CLOUD_RECVREQ_STARTPORT_KEYSTR("cloud_recvreq_startport");
     const std::string Config::CLOUD_ROCKSDB_BASEDIR_KEYSTR("cloud_rocksdb_basedir");
     const std::string Config::EDGE_BEACON_SERVER_RECVREQ_STARTPORT_KEYSTR("edge_beacon_server_recvreq_startport");
+    const std::string Config::EDGE_BEACON_SERVER_RECVRSP_STARTPORT_KEYSTR("edge_beacon_server_recvrsp_startport");
     const std::string Config::EDGE_CACHE_SERVER_DATA_REQUEST_BUFFER_SIZE_KEYSTR("edge_cache_server_data_request_buffer_size");
     const std::string Config::EDGE_CACHE_SERVER_RECVREQ_STARTPORT_KEYSTR("edge_cache_server_recvreq_startport");
+    const std::string Config::EDGE_CACHE_SERVER_WORKER_RECVREQ_STARTPORT_KEYSTR("edge_cache_server_worker_recvreq_startport");
+    const std::string Config::EDGE_CACHE_SERVER_WORKER_RECVRSP_STARTPORT_KEYSTR("edge_cache_server_worker_recvrsp_startport");
     const std::string Config::EDGE_INVALIDATION_SERVER_RECVREQ_STARTPORT_KEYSTR("edge_invalidation_server_recvreq_startport");
     const std::string Config::EDGE_IPSTRS_KEYSTR("edge_ipstrs");
     const std::string Config::FACEBOOK_CONFIG_FILEPATH_KEYSTR("facebook_config_filepath");
@@ -43,9 +46,12 @@ namespace covered
     uint16_t Config::cloud_recvreq_startport_ = 4200; // [4096, 65536]
     std::string Config::cloud_rocksdb_basedir_("/tmp/cloud");
     uint16_t Config::edge_beacon_server_recvreq_startport_ = 4300; // [4096, 65536]
+    uint16_t Config::edge_beacon_server_recvrsp_startport_ = 4400; // [4096, 65536]
     uint32_t Config::edge_cache_server_data_request_buffer_size_ = 1000;
-    uint16_t Config::edge_cache_server_recvreq_startport_ = 4400; // [4096, 65536]
-    uint16_t Config::edge_invalidation_server_recvreq_startport_ = 4500; // [4096, 65536]
+    uint16_t Config::edge_cache_server_recvreq_startport_ = 4500; // [4096, 65536]
+    uint16_t Config::edge_cache_server_worker_recvreq_startport_ = 4600; // [4096, 65536]
+    uint16_t Config::edge_cache_server_worker_recvrsp_startport_ = 4700; // [4096, 65536]
+    uint16_t Config::edge_invalidation_server_recvreq_startport_ = 4800; // [4096, 65536]
     std::vector<std::string> Config::edge_ipstrs_(0);
     std::string Config::facebook_config_filepath_("lib/CacheLib/cachelib/cachebench/test_configs/hit_ratio/cdn/config.json");
     uint32_t Config::fine_grained_locking_size_ = 1000;
@@ -106,6 +112,12 @@ namespace covered
                 int64_t tmp_port = kv_ptr->value().get_int64();
                 edge_beacon_server_recvreq_startport_ = Util::toUint16(tmp_port);
             }
+            kv_ptr = find_(EDGE_BEACON_SERVER_RECVRSP_STARTPORT_KEYSTR);
+            if (kv_ptr != NULL)
+            {
+                int64_t tmp_port = kv_ptr->value().get_int64();
+                edge_beacon_server_recvrsp_startport_ = Util::toUint16(tmp_port);
+            }
             kv_ptr = find_(EDGE_CACHE_SERVER_DATA_REQUEST_BUFFER_SIZE_KEYSTR);
             if (kv_ptr != NULL)
             {
@@ -117,6 +129,18 @@ namespace covered
             {
                 int64_t tmp_port = kv_ptr->value().get_int64();
                 edge_cache_server_recvreq_startport_ = Util::toUint16(tmp_port);
+            }
+            kv_ptr = find_(EDGE_CACHE_SERVER_WORKER_RECVREQ_STARTPORT_KEYSTR);
+            if (kv_ptr != NULL)
+            {
+                int64_t tmp_port = kv_ptr->value().get_int64();
+                edge_cache_server_worker_recvreq_startport_ = Util::toUint16(tmp_port);
+            }
+            kv_ptr = find_(EDGE_CACHE_SERVER_WORKER_RECVRSP_STARTPORT_KEYSTR);
+            if (kv_ptr != NULL)
+            {
+                int64_t tmp_port = kv_ptr->value().get_int64();
+                edge_cache_server_worker_recvrsp_startport_ = Util::toUint16(tmp_port);
             }
             kv_ptr = find_(EDGE_INVALIDATION_SERVER_RECVREQ_STARTPORT_KEYSTR);
             if (kv_ptr != NULL)
@@ -279,6 +303,12 @@ namespace covered
         return edge_beacon_server_recvreq_startport_;
     }
 
+    uint16_t Config::getEdgeBeaconServerRecvrspStartport()
+    {
+        checkIsValid_();
+        return edge_beacon_server_recvrsp_startport_;
+    }
+
     uint32_t Config::getEdgeCacheServerDataRequestBufferSize()
     {
         checkIsValid_();
@@ -289,6 +319,18 @@ namespace covered
     {
         checkIsValid_();
         return edge_cache_server_recvreq_startport_;
+    }
+
+    uint16_t Config::getEdgeCacheServerWorkerRecvreqStartport()
+    {
+        checkIsValid_();
+        return edge_cache_server_worker_recvreq_startport_;
+    }
+
+    uint16_t Config::getEdgeCacheServerWorkerRecvrspStartport()
+    {
+        checkIsValid_();
+        return edge_cache_server_worker_recvrsp_startport_;
     }
 
     uint16_t Config::getEdgeInvalidationServerRecvreqStartport()
@@ -410,6 +452,8 @@ namespace covered
         oss << "Edge beacon server recvreq startport: " << edge_beacon_server_recvreq_startport_ << std::endl;
         oss << "Edge cache server data request buffer size: " << edge_cache_server_data_request_buffer_size_ << std::endl;
         oss << "Edge cache server recvreq startport: " << edge_cache_server_recvreq_startport_ << std::endl;
+        oss << "Edge cache server worker recvreq startport: " << edge_cache_server_worker_recvreq_startport_ << std::endl;
+        oss << "Edge cache server worker recvrsp startport: " << edge_cache_server_worker_recvrsp_startport_ << std::endl;
         oss << "Edge invalidation server recvreq startport: " << edge_invalidation_server_recvreq_startport_ << std::endl;
         oss << "Edge ipstrs: ";
         for (uint32_t i = 0; i < edge_ipstrs_.size(); i++)

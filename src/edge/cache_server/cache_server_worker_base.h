@@ -77,11 +77,11 @@ namespace covered
         // (1) Process data requests
     
         // Return if edge node is finished
-        bool processDataRequest_(MessageBase* data_request_ptr, const NetworkAddr& recvrsp_source_addr);
-        bool processLocalGetRequest_(MessageBase* local_request_ptr, const NetworkAddr& recvrsp_source_addr) const;
-        bool processLocalWriteRequest_(MessageBase* local_request_ptr, const NetworkAddr& recvrsp_source_addr); // For put/del
-        bool processRedirectedRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& recvrsp_source_addr);
-        virtual bool processRedirectedGetRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& recvrsp_source_addr) const = 0;
+        bool processDataRequest_(MessageBase* data_request_ptr, const NetworkAddr& recvrsp_dst_addr);
+        bool processLocalGetRequest_(MessageBase* local_request_ptr, const NetworkAddr& recvrsp_dst_addr) const;
+        bool processLocalWriteRequest_(MessageBase* local_request_ptr, const NetworkAddr& recvrsp_dst_addr); // For put/del
+        bool processRedirectedRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& recvrsp_dst_addr);
+        virtual bool processRedirectedGetRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& recvrsp_dst_addr) const = 0;
 
         // (2) Access cooperative edge cache
 
@@ -90,7 +90,7 @@ namespace covered
         // Return if edge node is finished
         bool fetchDataFromNeighbor_(const Key& key, Value& value, bool& is_cooperative_cached_and_valid) const;
         virtual bool lookupBeaconDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const = 0; // Check remote directory info
-        virtual bool redirectGetToTarget_(const Key& key, Value& value, bool& is_cooperative_cached, bool& is_valid) const = 0; // Request redirection
+        virtual bool redirectGetToTarget_(const DirectoryInfo& directory_info, const Key& key, Value& value, bool& is_cooperative_cached, bool& is_valid) const = 0; // Request redirection
 
         // (2.2) Update content directory information
 
@@ -105,11 +105,6 @@ namespace covered
         bool blockForWritesByInterruption_(const Key& key) const; // Block for MSI protocol
         bool releaseWritelock_(const Key& key);
         virtual bool releaseBeaconWritelock_(const Key& key) = 0; // Notify beacon node to finish writes
-
-        // (2.4) Utility functions for cooperative caching
-
-        void locateBeaconNode_(const Key& key) const; // Set remote address as beacon
-        void locateTargetNode_(const DirectoryInfo& directory_info) const; // Set remote address as target
 
         // (3) Access cloud
 
@@ -136,14 +131,16 @@ namespace covered
 
         // Const variable
         std::string base_instance_name_;
-
-        // Non-const individual variable
-        UdpSocketWrapper* edge_cache_server_worker_sendreq_tocloud_socket_client_ptr_;
     protected:
         // (2.2) Update content directory information
 
         // Return if edge node is finished
         bool updateDirectory_(const Key& key, const bool& is_admit, bool& is_being_written) const; // Update content directory information
+
+        // (2.4) Utility functions for cooperative caching
+
+        NetworkAddr getBeaconDstaddr_(const Key& key) const; // Get destination address of beacon server recvreq in beacon edge node
+        NetworkAddr getTargetDstaddr_(const DirectoryInfo& directory_info) const; // Get destination address of cache server recvreq in target edge node
 
         // (6) Utility functions
 
@@ -156,10 +153,20 @@ namespace covered
 
         // NOTE: we do NOT need per-key rwlock for serializability, which has been addressed by the ring buffer
 
-        // Non-const individual variable
-        UdpSocketWrapper* edge_cache_server_worker_sendreq_tobeacon_socket_client_ptr_;
-        UdpSocketWrapper* edge_cache_server_worker_sendreq_totarget_socket_client_ptr_;
-        UdpSocketWrapper* edge_cache_server_worker_sendrsp_tosource_socket_client_ptr_; // source could be client or neighbor edge node to reply local/redirected requests
+        // NOTE: destination addresses for sending control requests come from beacon edge index, directory entry of all cache copies, and blocklist of all blocked edges
+        // NOTE: destination address for sending redirected data requests come from directory info of target edge node
+        // NOTE: destination address for sending finish block responses come from received finish block requests
+
+        // For sending global data requests
+        NetworkAddr corresponding_cloud_recvreq_dst_addr_;
+
+        // For receiving control responses, redirected data responses, and global data responses
+        NetworkAddr edge_cache_server_worker_recvrsp_source_addr_; // Used by beacon server to send back control responses, cache server to send back redirected data responses, and cloud to send back global data responses (const individual variable)
+        UdpMsgSocketServer* edge_cache_server_worker_recvrsp_socket_server_ptr_; // Used by cache server worker to receive control responses from beacon server, redirected responses from cache server, and global responses from cloud (non-const individual variable)
+
+        // For receiving finish block requests
+        NetworkAddr edge_cache_server_worker_recvreq_source_addr_; // The same as that used by cache server worker or beacon server to send finish block requests (const individual variable)
+        UdgMsgSocketServer* edge_cache_server_worker_recvreq_socket_server_ptr_; // Used by cache server worker to receive finish block requests from cache server worker or beacon server (non-const individual variable)
     };
 }
 

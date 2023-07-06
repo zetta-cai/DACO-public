@@ -10,7 +10,7 @@
 #include <string>
 
 #include "concurrency/ring_buffer_impl.h"
-#include "edge/edge_wrapper.h"
+#include "edge/cache_server/cache_server.h"
 
 namespace covered
 {
@@ -33,18 +33,18 @@ namespace covered
     {
     public:
         CacheServerWorkerParam();
-        CacheServerWorkerParam(EdgeWrapper* edge_wrapper_ptr, uint32_t local_cache_server_worker_idx, const uint32_t& data_request_buffer_size);
+        CacheServerWorkerParam(CacheServer* cache_server_ptr, uint32_t local_cache_server_worker_idx, const uint32_t& data_request_buffer_size);
         ~CacheServerWorkerParam();
 
         const CacheServerWorkerParam& operator=(const CacheServerWorkerParam& other);
 
-        EdgeWrapper* getEdgeWrapperPtr() const;
+        CacheServer* getCacheServerPtr() const;
         uint32_t getLocalCacheServerWorkerIdx() const;
         RingBuffer<CacheServerWorkerItem>* getDataRequestBufferPtr() const;
     private:
         static const std::string kClassName;
 
-        EdgeWrapper* edge_wrapper_ptr_; // thread safe
+        CacheServer* cache_server_ptr_; // thread safe
         uint32_t local_cache_server_worker_idx_; // const shared variable
         RingBuffer<CacheServerWorkerItem>* data_request_buffer_ptr_; // thread safe
     };

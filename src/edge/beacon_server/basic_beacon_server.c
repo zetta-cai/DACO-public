@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <sstream>
 
+#include "common/config.h"
 #include "common/param.h"
 #include "common/util.h"
 #include "message/control_message.h"
@@ -16,7 +17,7 @@ namespace covered
     {
         assert(edge_wrapper_ptr_ != NULL);
         assert(edge_wrapper_ptr_->cache_name_ != Param::COVERED_CACHE_NAME);
-        uint32_t edge_idx = edge_wrapper_ptr_->edge_param_ptr_->getEdgeIdx();
+        uint32_t edge_idx = edge_wrapper_ptr_->edge_param_ptr_->getNodeIdx();
 
         // Differentiate BasicBeaconServer in different edge nodes
         std::ostringstream oss;
@@ -28,7 +29,7 @@ namespace covered
 
     // (1) Access content directory information
 
-    bool BasicBeaconServer::processDirectoryLookupRequest_(MessageBase* control_request_ptr, const NetworkAddr& closest_edge_addr) const
+    bool BasicBeaconServer::processDirectoryLookupRequest_(MessageBase* control_request_ptr, const NetworkAddr& cache_server_worker_recvrsp_dst_addr) const
     {
         // Get key from control request if any
         assert(control_request_ptr != NULL);
@@ -36,30 +37,36 @@ namespace covered
         const DirectoryLookupRequest* const directory_lookup_request_ptr = static_cast<const DirectoryLookupRequest*>(control_request_ptr);
         Key tmp_key = directory_lookup_request_ptr->getKey();
 
-        assert(closest_edge_addr.isValidAddr());
+        assert(cache_server_worker_recvrsp_dst_addr.isValidAddr());
 
         checkPointers_();
 
         bool is_finish = false;
 
+        // Calculate cache server worker recvreq destination address
+        NetworkAddr cache_server_worker_recvreq_dst_addr(cache_server_worker_recvrsp_dst_addr.getIpstr(), cache_server_worker_recvrsp_dst_addr.getPort() - Config::getEdgeCacheServerWorkerRecvrspStartport() + Config::getEdgeCacheServerWorkerRecvreqStartport());
+
         // Lookup local directory information and randomly select a target edge index
         bool is_being_written = false;
         bool is_valid_directory_exist = false;
         DirectoryInfo directory_info;
-        edge_wrapper_ptr_->cooperation_wrapper_ptr_->lookupLocalDirectoryByBeaconServer(tmp_key, closest_edge_addr, is_being_written, is_valid_directory_exist, directory_info);
+        edge_wrapper_ptr_->cooperation_wrapper_ptr_->lookupLocalDirectoryByBeaconServer(tmp_key, cache_server_worker_recvreq_dst_addr, is_being_written, is_valid_directory_exist, directory_info);
 
-        // Send back a directory lookup response
-        uint32_t edge_idx = edge_wrapper_ptr_->edge_param_ptr_->getEdgeIdx();
-        DirectoryLookupResponse directory_lookup_response(tmp_key, is_being_written, is_valid_directory_exist, directory_info, edge_idx);
-        DynamicArray control_response_msg_payload(directory_lookup_response.getMsgPayloadSize());
-        directory_lookup_response.serialize(control_response_msg_payload);
-        PropagationSimulator::propagateFromNeighborToEdge();
-        edge_beacon_server_recvreq_socket_server_ptr_->send(control_response_msg_payload);
+        // Prepare a directory lookup response
+        uint32_t edge_idx = edge_wrapper_ptr_->edge_param_ptr_->getNodeIdx();
+        MessageBase* directory_lookup_response_ptr = new DirectoryLookupResponse(tmp_key, is_being_written, is_valid_directory_exist, directory_info, edge_idx, edge_beacon_server_recvreq_source_addr_);
+        assert(directory_lookup_response_ptr != NULL);
+        
+        // Push the directory lookup response into edge-to-edge propagation simulator to cache server worker
+        bool is_successful = edge_wrapper_ptr_->edge_toedge_propagation_simulator_param_ptr_->push(directory_lookup_response_ptr, cache_server_worker_recvrsp_dst_addr);
+        assert(is_successful);
+
+        // NOTE: directory_lookup_response_ptr will be released by edge-to-edge propagation simulator
 
         return is_finish;
     }
 
-    bool BasicBeaconServer::processDirectoryUpdateRequest_(MessageBase* control_request_ptr)
+    bool BasicBeaconServer::processDirectoryUpdateRequest_(MessageBase* control_request_ptr, const NetworkAddr& cache_server_worker_recvrsp_dst_addr)
     {
         // Get key, admit/evict,and directory info from control request if any
         assert(control_request_ptr != NULL);
@@ -77,20 +84,23 @@ namespace covered
         bool is_being_written = false;
         edge_wrapper_ptr_->cooperation_wrapper_ptr_->updateLocalDirectory(tmp_key, is_admit, directory_info, is_being_written);
 
-        // Send back a directory update response
-        uint32_t edge_idx = edge_wrapper_ptr_->edge_param_ptr_->getEdgeIdx();
-        DirectoryUpdateResponse directory_update_response(tmp_key, is_being_written, edge_idx);
-        DynamicArray control_response_msg_payload(directory_update_response.getMsgPayloadSize());
-        directory_update_response.serialize(control_response_msg_payload);
-        PropagationSimulator::propagateFromNeighborToEdge();
-        edge_beacon_server_recvreq_socket_server_ptr_->send(control_response_msg_payload);
+        // Prepare a directory update response
+        uint32_t edge_idx = edge_wrapper_ptr_->edge_param_ptr_->getNodeIdx();
+        MessageBase* directory_update_response_ptr = new DirectoryUpdateResponse(tmp_key, is_being_written, edge_idx, edge_beacon_server_recvreq_source_addr_);
+        assert(directory_update_response_ptr != NULL);
+
+        // Push the directory update response into edge-to-edge propagation simulator to cache server worker
+        bool is_successful = edge_wrapper_ptr_->edge_toedge_propagation_simulator_param_ptr_->push(directory_update_response_ptr, cache_server_worker_recvrsp_dst_addr);
+        assert(is_successful);
+
+        // NOTE: directory_update_response_ptr will be released by edge-to-edge propagation simulator
 
         return is_finish;
     }
 
     // (2) Process writes and unblock for MSI protocol
 
-    bool BasicBeaconServer::processAcquireWritelockRequest_(MessageBase* control_request_ptr, const NetworkAddr& closest_edge_addr)
+    bool BasicBeaconServer::processAcquireWritelockRequest_(MessageBase* control_request_ptr, const NetworkAddr& cache_server_worker_recvrsp_dst_addr)
     {
         // Get key from control request if any
         assert(control_request_ptr != NULL);
@@ -100,32 +110,38 @@ namespace covered
 
         checkPointers_();
 
-        bool is_finish = false;        
+        bool is_finish = false;
+
+        // Calculate cache server worker recvreq destination address
+        NetworkAddr cache_server_worker_recvreq_dst_addr(cache_server_worker_recvrsp_dst_addr.getIpstr(), cache_server_worker_recvrsp_dst_addr.getPort() - Config::getEdgeCacheServerWorkerRecvrspStartport() + Config::getEdgeCacheServerWorkerRecvreqStartport());
 
         // Try to acquire permission for the write
         LockResult lock_result = LockResult::kFailure;
         std::unordered_set<DirectoryInfo, DirectoryInfoHasher> all_dirinfo;
-        lock_result = edge_wrapper_ptr_->cooperation_wrapper_ptr_->acquireLocalWritelockByBeaconServer(tmp_key, closest_edge_addr, all_dirinfo);
+        lock_result = edge_wrapper_ptr_->cooperation_wrapper_ptr_->acquireLocalWritelockByBeaconServer(tmp_key, cache_server_worker_recvreq_dst_addr, all_dirinfo);
 
         // NOTE: we invalidate cache copies by beacon code to avoid transmitting all_dirinfo to cache server of the closest edge node
         if (lock_result == LockResult::kSuccess) // If acquiring write permission successfully
         {
             // Invalidate all cache copies
-            edge_wrapper_ptr_->invalidateCacheCopies_(tmp_key, all_dirinfo);
+            edge_wrapper_ptr_->invalidateCacheCopies_(edge_beacon_server_recvrsp_socket_server_ptr_, edge_beacon_server_recvrsp_source_addr_, tmp_key, all_dirinfo);
         }
 
-        // Send back a acquire writelock response
-        uint32_t edge_idx = edge_wrapper_ptr_->edge_param_ptr_->getEdgeIdx();
-        AcquireWritelockResponse acquire_writelock_response(tmp_key, lock_result, edge_idx);
-        DynamicArray control_response_msg_payload(acquire_writelock_response.getMsgPayloadSize());
-        acquire_writelock_response.serialize(control_response_msg_payload);
-        PropagationSimulator::propagateFromNeighborToEdge();
-        edge_beacon_server_recvreq_socket_server_ptr_->send(control_response_msg_payload);
+        // Prepare a acquire writelock response
+        uint32_t edge_idx = edge_wrapper_ptr_->edge_param_ptr_->getNodeIdx();
+        MessageBase* acquire_writelock_response_ptr = new AcquireWritelockResponse(tmp_key, lock_result, edge_idx, edge_beacon_server_recvreq_source_addr_);
+        assert(acquire_writelock_response_ptr != NULL);
+
+        // Push acquire writelock response into edge-to-edge propagation simulator to cache server worker
+        bool is_successful = edge_wrapper_ptr_->edge_toedge_propagation_simulator_param_ptr_->push(acquire_writelock_response_ptr, cache_server_worker_recvrsp_dst_addr);
+        assert(is_successful);
+
+        // NOTE: acquire_writelock_response_ptr will be released by edge-to-edge propagation simulator
 
         return is_finish;
     }
 
-    bool BasicBeaconServer::processReleaseWritelockRequest_(MessageBase* control_request_ptr)
+    bool BasicBeaconServer::processReleaseWritelockRequest_(MessageBase* control_request_ptr, const NetworkAddr& cache_server_worker_recvrsp_dst_addr)
     {
         // Get key from control request if any
         assert(control_request_ptr != NULL);
@@ -142,23 +158,26 @@ namespace covered
         DirectoryInfo sender_directory_info(sender_edge_idx);
         std::unordered_set<NetworkAddr, NetworkAddrHasher> blocked_edges = edge_wrapper_ptr_->cooperation_wrapper_ptr_->releaseLocalWritelock(tmp_key, sender_directory_info);
 
-        // Send back a release writelock response
-        uint32_t edge_idx = edge_wrapper_ptr_->edge_param_ptr_->getEdgeIdx();
-        ReleaseWritelockResponse release_writelock_response(tmp_key, edge_idx);
-        DynamicArray control_response_msg_payload(release_writelock_response.getMsgPayloadSize());
-        release_writelock_response.serialize(control_response_msg_payload);
-        PropagationSimulator::propagateFromNeighborToEdge();
-        edge_beacon_server_recvreq_socket_server_ptr_->send(control_response_msg_payload);
+        // Prepare a release writelock response
+        uint32_t edge_idx = edge_wrapper_ptr_->edge_param_ptr_->getNodeIdx();
+        MessageBase* release_writelock_response_ptr = new ReleaseWritelockResponse(tmp_key, edge_idx, edge_beacon_server_recvreq_source_addr_);
+        assert(release_writelock_response_ptr != NULL);
+
+        // Push release writelock response into edge-to-edge propagation simulator to cache server worker
+        bool is_successful = edge_wrapper_ptr_->edge_toedge_propagation_simulator_param_ptr_->push(release_writelock_response_ptr, cache_server_worker_recvrsp_dst_addr);
+        assert(is_successful);
 
         // NOTE: notify blocked edge nodes if any after finishing writes, to avoid transmitting blocked_edges to cache server of the closest edge node
-        is_finish = edge_wrapper_ptr_->notifyEdgesToFinishBlock_(tmp_key, blocked_edges);
+        is_finish = edge_wrapper_ptr_->notifyEdgesToFinishBlock_(edge_beacon_server_recvrsp_socket_server_ptr_, edge_beacon_server_recvrsp_source_addr_, tmp_key, blocked_edges);
+
+        // NOTE: release_writelock_response_ptr will be released by edge-to-edge propagation simulator
 
         return is_finish;
     }
 
     // (3) Process other control requests
     
-    bool BasicBeaconServer::processOtherControlRequest_(MessageBase* control_request_ptr)
+    bool BasicBeaconServer::processOtherControlRequest_(MessageBase* control_request_ptr, const NetworkAddr& cache_server_worker_recvrsp_dst_addr)
     {
         assert(control_request_ptr != NULL);
 

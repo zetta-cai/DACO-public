@@ -16,7 +16,7 @@ namespace covered
     {
         assert(edge_wrapper_ptr_ != NULL);
         assert(edge_wrapper_ptr_->cache_name_ != Param::COVERED_CACHE_NAME);
-        uint32_t edge_idx = edge_wrapper_ptr_->edge_param_ptr_->getEdgeIdx();
+        uint32_t edge_idx = edge_wrapper_ptr_->edge_param_ptr_->getNodeIdx();
 
         // Differentiate BasicInvalidationServer in different edge nodes
         std::ostringstream oss;
@@ -26,7 +26,7 @@ namespace covered
 
     BasicInvalidationServer::~BasicInvalidationServer() {}
 
-    bool BasicInvalidationServer::processInvalidationRequest_(MessageBase* control_request_ptr)
+    bool BasicInvalidationServer::processInvalidationRequest_(MessageBase* control_request_ptr, const NetworkAddr& recvrsp_dst_addr)
     {
         // Get key from control request if any
         assert(control_request_ptr != NULL);
@@ -34,10 +34,7 @@ namespace covered
         const InvalidationRequest* const invalidation_request_ptr = static_cast<const InvalidationRequest*>(control_request_ptr);
         Key tmp_key = invalidation_request_ptr->getKey();
 
-        assert(edge_wrapper_ptr_ != NULL);
-        assert(edge_wrapper_ptr_->edge_param_ptr_ != NULL);
-        assert(edge_wrapper_ptr_->edge_cache_ptr_ != NULL);
-        assert(edge_invalidation_server_recvreq_socket_server_ptr_ != NULL);
+        checkPointers_();
 
         bool is_finish = false;
 
@@ -48,13 +45,16 @@ namespace covered
             edge_wrapper_ptr_->edge_cache_ptr_->invalidateKeyForLocalCachedObject(tmp_key);
         }
 
-        // Send back a invalidation response
-        uint32_t edge_idx = edge_wrapper_ptr_->edge_param_ptr_->getEdgeIdx();
-        InvalidationResponse invalidation_response(tmp_key, edge_idx);
-        DynamicArray control_response_msg_payload(invalidation_response.getMsgPayloadSize());
-        invalidation_response.serialize(control_response_msg_payload);
-        PropagationSimulator::propagateFromNeighborToEdge();
-        edge_invalidation_server_recvreq_socket_server_ptr_->send(control_response_msg_payload);
+        // Prepare a invalidation response
+        uint32_t edge_idx = edge_wrapper_ptr_->edge_param_ptr_->getNodeIdx();
+        MessageBase* invalidation_response_ptr = new InvalidationResponse(tmp_key, edge_idx, edge_invalidation_server_recvreq_source_addr_);
+        assert(invalidation_response_ptr != NULL);
+
+        // Push the invalidation response into edge-to-edge propagation simulator to cache server worker or beacon server
+        bool is_successful = edge_wrapper_ptr_->edge_toedge_propagation_simulator_param_ptr_->push(invalidation_response_ptr, recvrsp_dst_addr);
+        assert(is_successful);
+        
+        // NOTE: invalidation_response_ptr will be released by edge-to-edge propagation simulator
 
         return is_finish;
     }

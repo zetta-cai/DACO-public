@@ -43,10 +43,10 @@ namespace covered
         return node_param_ptr_;
     }
 
-    bool PropagationSimulatorParam::push(MessageBase* message_ptr, const NetworkAddr& network_addr)
+    bool PropagationSimulatorParam::push(MessageBase* message_ptr, const NetworkAddr& dst_addr)
     {
         assert(message_ptr != NULL);
-        assert(network_addr.isValidAddr());
+        assert(dst_addr.isValidAddr());
 
         // Acquire a write lock
         std::string context_name = "PropagationSimulatorParam::push()";
@@ -75,7 +75,7 @@ namespace covered
         assert(sleep_us <= propagation_latency_us_);
 
         // Push propagation item into ring buffer
-        PropagationItem propagation_item(message_ptr, network_addr, sleep_us);
+        PropagationItem propagation_item(message_ptr, dst_addr, sleep_us);
         bool is_successful = propagation_item_buffer_ptr_->push(propagation_item);
 
         // Release a write lock
