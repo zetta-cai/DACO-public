@@ -94,7 +94,13 @@ namespace covered
         assert(perkey_rwlock_ptr_ != NULL);
 
         // Must be protected by a write lock
-        assert(perkey_rwlock_ptr_->isWriteLocked(key));
+        if (!perkey_rwlock_ptr_->isWriteLocked(key))
+        {
+            std::ostringstream oss;
+            oss << "perkey_rwlock_ptr_ is NOT write locked for key " << key.getKeystr();
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
         uint32_t hashidx = perkey_rwlock_ptr_->getRwlockIndex(key);
 
         std::unordered_map<Key, V, KeyHasher>& tmp_hashtable = hashtables_[hashidx];
@@ -130,7 +136,13 @@ namespace covered
         assert(perkey_rwlock_ptr_ != NULL);
 
         // Must be protected by a write lock
-        assert(perkey_rwlock_ptr_->isWriteLocked(key));
+        if (!perkey_rwlock_ptr_->isWriteLocked(key))
+        {
+            std::ostringstream oss;
+            oss << "perkey_rwlock_ptr_ is NOT write locked for key " << key.getKeystr();
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
         uint32_t hashidx = perkey_rwlock_ptr_->getRwlockIndex(key);
 
         std::unordered_map<Key, V, KeyHasher>& tmp_hashtable = hashtables_[hashidx];
@@ -169,7 +181,13 @@ namespace covered
         assert(perkey_rwlock_ptr_ != NULL);
 
         // Must be protected by a write lock
-        assert(perkey_rwlock_ptr_->isWriteLocked(key));
+        if (!perkey_rwlock_ptr_->isWriteLocked(key))
+        {
+            std::ostringstream oss;
+            oss << "perkey_rwlock_ptr_ is NOT write locked for key " << key.getKeystr();
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
         uint32_t hashidx = perkey_rwlock_ptr_->getRwlockIndex(key);
 
         std::unordered_map<Key, V, KeyHasher>& tmp_hashtable = hashtables_[hashidx];
@@ -240,7 +258,13 @@ namespace covered
         assert(perkey_rwlock_ptr_ != NULL);
 
         // Must be protected by a write lock
-        assert(perkey_rwlock_ptr_->isWriteLocked(key));
+        if (!perkey_rwlock_ptr_->isWriteLocked(key))
+        {
+            std::ostringstream oss;
+            oss << "perkey_rwlock_ptr_ is NOT write locked for key " << key.getKeystr();
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
         uint32_t hashidx = perkey_rwlock_ptr_->getRwlockIndex(key);
 
         std::unordered_map<Key, V, KeyHasher>& tmp_hashtable = hashtables_[hashidx];

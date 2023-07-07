@@ -140,13 +140,13 @@ namespace covered
             //}
             //processLocalResponse_(local_response_msg_payload, rtt_us);
 
-            break;
+            //break; // TMPDEBUG
         }
 
         return;
     }
 
-    bool ClientWorkerWrapper::issueItemToEdge_(const WorkloadItem& tmp_workload_item, DynamicArray& local_response_msg_payload, uint32_t& rtt_us)
+    bool ClientWorkerWrapper::issueItemToEdge_(const WorkloadItem& workload_item, DynamicArray& local_response_msg_payload, uint32_t& rtt_us)
     {
         checkPointers_();
         ClientWrapper* tmp_client_wrapper_ptr = client_worker_param_ptr_->getClientWrapperPtr();
@@ -154,7 +154,7 @@ namespace covered
         bool is_finish = false; // Mark if local client is finished
 
         // TMPDEBUG
-        WorkloadItem workload_item(tmp_workload_item.getKey(), Value(6559), WorkloadItemType::kWorkloadItemGet);
+        //WorkloadItem workload_item(tmp_workload_item.getKey(), Value(200000), WorkloadItemType::kWorkloadItemPut);
 
         // Convert workload item into local request message
         MessageBase* local_request_ptr = MessageBase::getLocalRequestFromWorkloadItem(workload_item, global_client_worker_idx_, client_worker_recvrsp_source_addr_);

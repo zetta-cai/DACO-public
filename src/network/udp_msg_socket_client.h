@@ -13,7 +13,7 @@
 
 #include <string>
 
-#include "common/dynamic_array.h"
+#include "message/message_base.h"
 #include "network/network_addr.h"
 #include "network/udp_pkt_socket.h"
 
@@ -28,8 +28,7 @@ namespace covered
         UdpMsgSocketClient();
         ~UdpMsgSocketClient();
 
-        // Note: pass reference of pkt_payload to avoid unnecessary memory copy
-        void send(const DynamicArray& msg_payload, const NetworkAddr& remote_addr);
+        void send(MessageBase* message_ptr, const NetworkAddr& remote_addr);
     private:
         static const std::string kClassName;
 

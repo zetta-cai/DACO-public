@@ -39,7 +39,7 @@ namespace covered
         // (2) Access content directory table and block tracker for MSI protocol
 
         void lookupLocalDirectoryByCacheServer(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const; // Check local directory information
-        void lookupLocalDirectoryByBeaconServer(const Key& key, const NetworkAddr& cache_server_worker_recvreq_dst_addr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const; // Check local directory information
+        void lookupLocalDirectoryByBeaconServer(const Key& key, const NetworkAddr& cache_server_worker_recvreq_dst_addr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info); // Check local directory information
         void updateLocalDirectory(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written); // Update local directory information
 
         LockResult acquireLocalWritelockByCacheServer(const Key& key, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo);

@@ -11,13 +11,14 @@
 #include <vector>
 
 #include "common/dynamic_array.h"
+#include "network/network_addr.h"
 
 namespace covered
 {
     class UdpFragHdr
     {
     public:
-        UdpFragHdr(const uint32_t& fragment_idx, const uint32_t& fragment_cnt, const uint32_t& msg_payload_size, const uint32_t& msg_seqnum);
+        UdpFragHdr(const uint32_t& fragment_idx, const uint32_t& fragment_cnt, const uint32_t& msg_payload_size, const uint32_t& msg_seqnum, const NetworkAddr& source_addr);
         UdpFragHdr(const DynamicArray& pkt_payload);
         ~UdpFragHdr();
 
@@ -25,6 +26,7 @@ namespace covered
         uint32_t getFragmentCnt() const;
         uint32_t getMsgPayloadSize() const;
         uint32_t getMsgSeqnum() const;
+        NetworkAddr getSourceAddr() const;
 
         // Offset of UDP fragment header must be 0 in packet payload
         uint32_t serialize(DynamicArray& pkt_payload);
@@ -38,6 +40,7 @@ namespace covered
         uint32_t msg_payload_size_;
         // TODO: use uint64_t seqnum to avoid sequence number overflow in MsgFragStatsEntry
         uint32_t msg_seqnum_; // To cope with duplicate packets
+        NetworkAddr source_addr_;
     };
 }
 

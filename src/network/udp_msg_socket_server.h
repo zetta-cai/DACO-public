@@ -30,6 +30,7 @@ namespace covered
         ~UdpMsgSocketServer();
 
         // Note: pass reference of pkt_payload to avoid unnecessary memory copy
+        // NOTE: return DynamicArray instead of MessageBase, as we don't know whether to receive a request or a response
         bool recv(DynamicArray& msg_payload);
     private:
         static const std::string kClassName;

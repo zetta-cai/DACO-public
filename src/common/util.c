@@ -22,7 +22,7 @@ namespace covered
     const std::string Util::LOCALHOST_IPSTR("127.0.0.1");
     const std::string Util::ANY_IPSTR("0.0.0.0");
     const uint32_t Util::UDP_MAX_PKT_PAYLOAD = 65507; // 65535(ipmax) - 20(iphdr) - 8(udphdr)
-    const uint32_t Util::UDP_FRAGHDR_SIZE = 4 * sizeof(uint32_t); // 4(fragment_idx) + 4(fragment_cnt) + 4(msg_payload_size) + 4(msg_seqnum)
+    const uint32_t Util::UDP_FRAGHDR_SIZE = 5 * sizeof(uint32_t) + sizeof(uint16_t); // 4(fragment_idx) + 4(fragment_cnt) + 4(msg_payload_size) + 4(msg_seqnum) + 4(source_ip) + 2(source_port)
     const uint32_t Util::UDP_MAX_FRAG_PAYLOAD = Util::UDP_MAX_PKT_PAYLOAD - Util::UDP_FRAGHDR_SIZE;
     const uint16_t Util::UDP_MIN_PORT = 1024; // UDP port has to be >= 1024 (0-1023 are reserved for well-known usage; 1024-49151 are registered ports; 49152-65535 are custom ports)
     // Atomicity

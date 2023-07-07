@@ -165,14 +165,6 @@ namespace covered
 
         if (data_request_ptr->isLocalRequest()) // Local request
         {
-            // Get key from local request
-            Key tmp_key = MessageBase::getKeyFromMessage(data_request_ptr);
-            Value tmp_value();
-
-            #ifdef DEBUG_CACHE_SERVER
-            Util::dumpVariablesForDebug(base_instance_name_, 5, "receive a local request;", "type:", MessageBase::messageTypeToString(data_request_ptr->getMessageType()).c_str(), "keystr:", tmp_key.getKeystr().c_str());
-            #endif
-
             if (data_request_ptr->getMessageType() == MessageType::kLocalGetRequest)
             {
                 is_finish = processLocalGetRequest_(data_request_ptr, recvrsp_dst_addr);
@@ -205,6 +197,10 @@ namespace covered
         const LocalGetRequest* const local_get_request_ptr = static_cast<const LocalGetRequest*>(local_request_ptr);
         Key tmp_key = local_get_request_ptr->getKey();
         Value tmp_value;
+
+        #ifdef DEBUG_CACHE_SERVER
+        Util::dumpVariablesForDebug(base_instance_name_, 5, "receive a local get request;", "type:", MessageBase::messageTypeToString(local_request_ptr->getMessageType()).c_str(), "keystr:", tmp_key.getKeystr().c_str());
+        #endif
 
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->edge_wrapper_ptr_;
@@ -315,6 +311,10 @@ namespace covered
             Util::dumpErrorMsg(base_instance_name_, oss.str());
             exit(1);
         }
+
+        #ifdef DEBUG_CACHE_SERVER
+        Util::dumpVariablesForDebug(base_instance_name_, 9, "receive a local write request;", "type:", MessageBase::messageTypeToString(local_request_ptr->getMessageType()).c_str(), "keystr:", tmp_key.getKeystr().c_str(), "valuesize:", std::to_string(tmp_value.getValuesize()).c_str(), "is deleted:", Util::toString(tmp_value.isDeleted()).c_str());
+        #endif
         
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->edge_wrapper_ptr_;
@@ -374,7 +374,7 @@ namespace covered
             // Notify beacon node to finish writes if acquiring write lock successfully
             is_finish = releaseWritelock_(tmp_key);
         }
-
+        
         // TODO: For COVERED, beacon node will tell the edge node if to admit, w/o independent decision
 
         if (!is_finish) // // Edge node is STILL running
@@ -386,10 +386,7 @@ namespace covered
             assert(is_successful);
         }
 
-        // Release response message
-        assert(local_response_ptr != NULL);
-        delete local_response_ptr;
-        local_response_ptr = NULL;
+        // NOTE: local_response_ptr will be released by edge-to-client propagation simulator
 
         return is_finish;
     }
@@ -860,11 +857,11 @@ namespace covered
         // Prepare global write request message
         MessageBase* global_request_ptr = NULL;
         uint32_t edge_idx = tmp_edge_wrapper_ptr->edge_param_ptr_->getNodeIdx();
-        if (message_type == MessageType::kGlobalPutRequest)
+        if (message_type == MessageType::kLocalPutRequest)
         {
             global_request_ptr = new GlobalPutRequest(key, value, edge_idx, edge_cache_server_worker_recvrsp_source_addr_);
         }
-        else if (message_type == MessageType::kGlobalDelRequest)
+        else if (message_type == MessageType::kLocalDelRequest)
         {
             global_request_ptr = new GlobalDelRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_);
         }

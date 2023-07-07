@@ -158,6 +158,10 @@ namespace covered
 
         bool is_finish = false;
 
+        #ifdef DEBUG_CLOUD_WRAPPER
+        struct timespec t0 = Util::getCurrentTimespec();
+        #endif
+
         // Process global requests by RocksDB KVS
         MessageType global_request_message_type = global_request_ptr->getMessageType();
         Key tmp_key;
@@ -214,6 +218,12 @@ namespace covered
                 exit(1);
             }
         }
+
+        #ifdef DEBUG_CLOUD_WRAPPER
+        struct timespec t1 = Util::getCurrentTimespec();
+        double delta_t = Util::getDeltaTimeUs(t1, t0);
+        Util::dumpVariablesForDebug(instance_name_, 2, "delta time of rocksdb operation:", std::to_string(delta_t).c_str());
+        #endif
 
         if (!is_finish) // Check is_finish
         {

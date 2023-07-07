@@ -39,13 +39,14 @@ namespace covered
         MsgFragStats();
         ~MsgFragStats();
 
-        bool insertEntry(const NetworkAddr& addr, const DynamicArray& pkt_payload); // Return if the current fragment is the last one (must be true for fragcnt of 1)
-        MsgFragStatsEntry* getEntry(const NetworkAddr& addr);
-        void removeEntry(const NetworkAddr& addr);
+        bool insertEntry(const NetworkAddr& source_addr, const DynamicArray& pkt_payload); // Return if the current fragment is the last one (must be true for fragcnt of 1)
+        MsgFragStatsEntry* getEntry(const NetworkAddr& source_addr);
+        void removeEntry(const NetworkAddr& source_addr);
     private:
         static const std::string kClassName;
 
-        std::map<NetworkAddr, MsgFragStatsEntry> addr_entry_map_;
+        // NOTE: we should use source address in UDP payload instead of propagation simulator's address in UDP header (e.g., different client workers or cache server workers will share the same propagation simulator's address)
+        std::map<NetworkAddr, MsgFragStatsEntry> srcaddr_entry_map_;
     };
 }
 

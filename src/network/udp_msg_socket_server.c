@@ -49,33 +49,35 @@ namespace covered
 		while (true) // Until receive a complete message
 		{
 			// Prepare to receive a UDP packet
-			NetworkAddr tmp_addr;
+			NetworkAddr tmp_propagation_simulator_addr;
 			DynamicArray tmp_pkt_payload(Util::UDP_MAX_PKT_PAYLOAD);
 
-			is_timeout = pkt_socket_ptr_->udpRecvfrom(tmp_pkt_payload, tmp_addr);
+			is_timeout = pkt_socket_ptr_->udpRecvfrom(tmp_pkt_payload, tmp_propagation_simulator_addr);
+			UNUSED(tmp_propagation_simulator_addr);
 			if (is_timeout == true) // timeout (not receive any UDP packet)
 			{
 				break;
 			}
 			else // not timeout (receive a UDP packet)
 			{
-				assert(tmp_addr.isValidAddr() == true);
+				// Deserialize fragment header from currently received packet payload
+				UdpFragHdr fraghdr(tmp_pkt_payload);
+				NetworkAddr source_addr = fraghdr.getSourceAddr();
 
 				// Use MsgFragStats to track fragment statistics of each message
-				bool is_last_frag = msg_frag_stats_.insertEntry(tmp_addr, tmp_pkt_payload);
+				bool is_last_frag = msg_frag_stats_.insertEntry(source_addr, tmp_pkt_payload);
 				if (is_last_frag == true) // All fragment(s) of the message have been received
 				{
-					// Deserialize fragment header from currently received packet payload
-					UdpFragHdr fraghdr(tmp_pkt_payload);
-
 					// Prepare message payload for current message
 					uint32_t msg_payload_size = fraghdr.getMsgPayloadSize();
 					msg_payload.clear(msg_payload_size);
+
+					// Copy previously received fragment payloads if any
 					uint32_t fragcnt = fraghdr.getFragmentCnt();
 					if (fragcnt > 1) // more than 1 fragments -> MsgFragStatsEntry exists
 					{
 						// Get previously received fragment payloads
-						MsgFragStatsEntry* msg_frag_stats_entry = msg_frag_stats_.getEntry(tmp_addr);
+						MsgFragStatsEntry* msg_frag_stats_entry = msg_frag_stats_.getEntry(source_addr);
 						assert(msg_frag_stats_entry != NULL);
 						std::map<uint32_t, DynamicArray>& fragidx_fragpayload_map = msg_frag_stats_entry->getFragidxFragpayloadMap();
 
@@ -92,7 +94,7 @@ namespace covered
 						}
 
 						// Remove previously received fragment payloads
-						msg_frag_stats_.removeEntry(tmp_addr);
+						msg_frag_stats_.removeEntry(source_addr);
 					} // End of (fragcnt > 1)
 
 					// Copy currently received packet payload into current message payload
@@ -102,7 +104,7 @@ namespace covered
 					tmp_pkt_payload.arraycpy(Util::UDP_FRAGHDR_SIZE, msg_payload, fragment_offset, fragment_payload_size);
 
 					// Update network address for processing outside UdpSocketWrapper
-					//network_addr = tmp_addr;
+					//network_addr = source_addr;
 					//assert(network_addr.isValidAddr() == true);
 
 					break; // Break while(true)

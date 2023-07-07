@@ -41,29 +41,44 @@ namespace covered
         uint32_t fragcnt = fraghdr.getFragmentCnt();
         uint32_t seqnum = fraghdr.getMsgSeqnum();
 
-        if (seqnum < msg_seqnum_)
+        bool need_insert = false;
+        if (fragidx_fragpayload_map_.size() == 0) // First fragment
         {
-            return; // Ignore the fragment with smaller seqnum than tracked msg_seqnum_
+            fragcnt_ = fragcnt;
+            msg_seqnum_ = seqnum;
+
+            need_insert = true;
         }
-        else
-        {            
-            if (seqnum > msg_seqnum_) // Clear outdated fragments if the current fragment belongs to a retried message
+        else // Subsequent fragments
+        {
+            if (seqnum < msg_seqnum_)
+            {
+                return; // Ignore the fragment with smaller seqnum than tracked msg_seqnum_
+            }
+            else if (seqnum > msg_seqnum_) // Clear outdated fragments if the current fragment belongs to a retried message
             {
                 fragidx_fragpayload_map_.clear();
+                fragcnt_ = fragcnt;
                 msg_seqnum_ = seqnum;
+
+                need_insert = true;
             }
             else // Fragments of the same message
             {
                 assert(fragcnt == fragcnt_);
-            }
 
-            assert(seqnum == msg_seqnum_);
-            if (fragidx_fragpayload_map_.find(fragidx) == fragidx_fragpayload_map_.end()) // Not tracked before
-            {
-                fragidx_fragpayload_map_.insert(std::pair<uint32_t, DynamicArray>(fragidx, DynamicArray(Util::UDP_MAX_FRAG_PAYLOAD)));
-                DynamicArray& frag_payload = fragidx_fragpayload_map_[fragidx];
-                pkt_payload.arraycpy(Util::UDP_FRAGHDR_SIZE, frag_payload, 0, pkt_payload.getSize() - Util::UDP_FRAGHDR_SIZE);
+                // Not tracked before
+                need_insert = fragidx_fragpayload_map_.find(fragidx) == fragidx_fragpayload_map_.end();  
             }
+        }
+
+        assert(fragidx_fragpayload_map_.find(fragidx) == fragidx_fragpayload_map_.end());
+        if (need_insert)
+        {
+            fragidx_fragpayload_map_.insert(std::pair<uint32_t, DynamicArray>(fragidx, DynamicArray()));
+            DynamicArray& frag_payload = fragidx_fragpayload_map_[fragidx];
+            frag_payload.clear(Util::UDP_MAX_FRAG_PAYLOAD);
+            pkt_payload.arraycpy(Util::UDP_FRAGHDR_SIZE, frag_payload, 0, pkt_payload.getSize() - Util::UDP_FRAGHDR_SIZE);
         }
 
         return;
@@ -80,15 +95,15 @@ namespace covered
 
     MsgFragStats::MsgFragStats()
     {
-        addr_entry_map_.clear();
+        srcaddr_entry_map_.clear();
     }
 
     MsgFragStats::~MsgFragStats() {}
 
     // NOTE: we do NOT copy the last fragment into the entry to avoid one time of unnecessary memory copy
-    bool MsgFragStats::insertEntry(const NetworkAddr& addr, const DynamicArray& pkt_payload)
+    bool MsgFragStats::insertEntry(const NetworkAddr& source_addr, const DynamicArray& pkt_payload)
     {
-        assert(addr.isValidAddr() == true);
+        assert(source_addr.isValidAddr() == true);
 
         bool is_last_frag = false;
 
@@ -99,14 +114,14 @@ namespace covered
         }
         else
         {
-            if (addr_entry_map_.find(addr) == addr_entry_map_.end()) // Not receive any fragment of the message before (must NOT be the last fragment)
+            if (srcaddr_entry_map_.find(source_addr) == srcaddr_entry_map_.end()) // Not receive any fragment of the message before (must NOT be the last fragment)
             {
-                addr_entry_map_.insert(std::pair<NetworkAddr, MsgFragStatsEntry>(addr, MsgFragStatsEntry()));
-                addr_entry_map_[addr].insertFrag(fraghdr, pkt_payload);
+                srcaddr_entry_map_.insert(std::pair<NetworkAddr, MsgFragStatsEntry>(source_addr, MsgFragStatsEntry()));
+                srcaddr_entry_map_[source_addr].insertFrag(fraghdr, pkt_payload);
             }
             else // Receive some fragments of the message before
             {
-                MsgFragStatsEntry& entry = addr_entry_map_[addr];
+                MsgFragStatsEntry& entry = srcaddr_entry_map_[source_addr];
                 if (entry.isLastFrag(fraghdr)) // The last fragment of the message
                 {
                     is_last_frag = true;
@@ -120,25 +135,25 @@ namespace covered
         return is_last_frag;
     }
 
-    MsgFragStatsEntry* MsgFragStats::getEntry(const NetworkAddr& addr)
+    MsgFragStatsEntry* MsgFragStats::getEntry(const NetworkAddr& source_addr)
     {
-        assert(addr.isValidAddr() == true);
+        assert(source_addr.isValidAddr() == true);
         
-        if (addr_entry_map_.find(addr) == addr_entry_map_.end())
+        if (srcaddr_entry_map_.find(source_addr) == srcaddr_entry_map_.end())
         {
             return NULL;
         }
         else
         {
-            return &addr_entry_map_[addr];
+            return &srcaddr_entry_map_[source_addr];
         }
     }
 
-    void MsgFragStats::removeEntry(const NetworkAddr& addr)
+    void MsgFragStats::removeEntry(const NetworkAddr& source_addr)
     {
-        if (addr_entry_map_.find(addr) != addr_entry_map_.end())
+        if (srcaddr_entry_map_.find(source_addr) != srcaddr_entry_map_.end())
         {
-            addr_entry_map_.erase(addr);
+            srcaddr_entry_map_.erase(source_addr);
         }
         return;
     }

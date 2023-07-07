@@ -118,26 +118,26 @@ namespace covered
         return;
     }
 
-    void CooperationWrapperBase::lookupLocalDirectoryByBeaconServer(const Key& key, const NetworkAddr& cache_server_worker_recvreq_dst_addr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
+    void CooperationWrapperBase::lookupLocalDirectoryByBeaconServer(const Key& key, const NetworkAddr& cache_server_worker_recvreq_dst_addr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info)
     {
         checkPointers_();
 
-        // Acquire a read lock
+        // NOTE: we have to acquire a write lock as we may need to update the blocklist in BlockTracker
         std::string context_name = "CooperationWrapperBase::lookupLocalDirectoryByBeaconServer()";
-        cooperation_wrapper_perkey_rwlock_ptr_->acquire_lock_shared(key, context_name);
+        cooperation_wrapper_perkey_rwlock_ptr_->acquire_lock(key, context_name);
 
         block_tracker_ptr_->blockEdgeForKeyIfExistAndBeingWritten(key, cache_server_worker_recvreq_dst_addr, is_being_written);
         lookupLocalDirectory_(key, is_being_written, is_valid_directory_exist, directory_info);
 
         // Release a read lock
-        cooperation_wrapper_perkey_rwlock_ptr_->unlock_shared(key, context_name);
+        cooperation_wrapper_perkey_rwlock_ptr_->unlock(key, context_name);
 
         return;
     }
 
     void CooperationWrapperBase::lookupLocalDirectory_(const Key& key, const bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
     {
-        // No need to acquire a read lock, which has been done in public functions
+        // No need to acquire a read/write lock, which has been done in public functions
 
         if (!is_being_written) // if key is NOT being written
         {

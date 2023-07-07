@@ -7,6 +7,8 @@
 #ifndef CLOUD_WRAPPER_H
 #define CLOUD_WRAPPER_H
 
+#define DEBUG_CLOUD_WRAPPER
+
 #include <string>
 
 #include "cloud/cloud_param.h"
