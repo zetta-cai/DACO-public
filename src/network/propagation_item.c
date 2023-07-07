@@ -15,7 +15,7 @@ namespace covered
     PropagationItem::PropagationItem(MessageBase* message_ptr, const NetworkAddr& network_addr, const uint32_t& sleep_us)
     {
         assert(message_ptr != NULL);
-        assert(network_addr_.isValidAddr());
+        assert(network_addr.isValidAddr());
 
         message_ptr_ = message_ptr;
         network_addr_ = network_addr;
@@ -47,5 +47,6 @@ namespace covered
         message_ptr_ = other.message_ptr_; // shallow copy
         network_addr_ = other.network_addr_;
         sleep_us_ = other.sleep_us_;
+        return *this;
     }
 }

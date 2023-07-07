@@ -35,8 +35,8 @@ namespace covered
 
     InvalidationServerBase::InvalidationServerBase(EdgeWrapper* edge_wrapper_ptr) : edge_wrapper_ptr_(edge_wrapper_ptr)
     {
-        assert(edge_wrapper_ptr_ != NULL);
-        const uint32_t edge_idx = edge_wrapper_ptr_->edge_param_ptr_->getNodeIdx();
+        assert(edge_wrapper_ptr != NULL);
+        const uint32_t edge_idx = edge_wrapper_ptr->edge_param_ptr_->getNodeIdx();
         const uint32_t edgecnt = edge_wrapper_ptr->edgecnt_;
 
         // Differentiate cache servers of different edge nodes

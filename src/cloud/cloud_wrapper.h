@@ -22,6 +22,8 @@ namespace covered
     public:
         static void* launchCloud(void* cloud_param_ptr);
         
+        // NOTE: set NodeParamBase::node_initialized_ after all time-consuming initialization in constructor and start()
+        
         CloudWrapper(const std::string& cloud_storage, const uint32_t& propagation_latency_edgecloud, CloudParam* cloud_param_ptr);
         ~CloudWrapper();
 

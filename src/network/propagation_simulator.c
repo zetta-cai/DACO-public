@@ -21,7 +21,7 @@ namespace covered
         return NULL;
     }
 
-    PropagationSimulator::PropagationSimulator(PropagationSimulatorParam* propagation_simulator_param_ptr)
+    PropagationSimulator::PropagationSimulator(PropagationSimulatorParam* propagation_simulator_param_ptr) : propagation_simulator_param_ptr_(propagation_simulator_param_ptr)
     {
         assert(propagation_simulator_param_ptr != NULL);
 
@@ -38,8 +38,6 @@ namespace covered
         // Allocate socket client to issue message
         propagation_simulator_socket_client_ptr_ = new UdpMsgSocketClient();
         assert(propagation_simulator_socket_client_ptr_ != NULL);
-
-        propagation_simulator_param_ptr_ = propagation_simulator_param_ptr;
     }
 
     PropagationSimulator::~PropagationSimulator()
@@ -56,6 +54,9 @@ namespace covered
     {
         checkPointers_();
 
+        // NOTE: block for clients which is NOT running at first
+        while (!propagation_simulator_param_ptr_->getNodeParamPtr()->isNodeRunning()) {}
+
         // Loop until node finishes
         while (propagation_simulator_param_ptr_->getNodeParamPtr()->isNodeRunning())
         {
@@ -63,7 +64,7 @@ namespace covered
             bool is_successful = propagation_simulator_param_ptr_->pop(tmp_propagation_item);
 
             if (!is_successful)
-            {
+            {        
                 continue; // Continue to check if node is finished
             }
             else

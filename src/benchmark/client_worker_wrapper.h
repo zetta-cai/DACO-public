@@ -45,9 +45,9 @@ namespace covered
 
         ClientWorkerParam* client_worker_param_ptr_;
         std::mt19937_64* client_worker_item_randgen_ptr_;
+        uint32_t global_client_worker_idx_;
 
         // For sending local requests
-        uint32_t global_client_worker_idx_;
         NetworkAddr closest_edge_cache_server_recvreq_dst_addr_; // Used by client worker to send local requests
 
         // For receiveing local responses

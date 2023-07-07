@@ -17,7 +17,7 @@ namespace covered
         node_idx_ = 0;
     }
 
-    NodeParamBase::NodeParamBase(const std::string& node_role, const uint32_t& node_idx, const bool& is_running) : node_role_(node_role), node_running_(is_running)
+    NodeParamBase::NodeParamBase(const std::string& node_role, const uint32_t& node_idx, const bool& is_running) : node_role_(node_role), node_running_(is_running), node_initialized_(false)
     {
         node_idx_ = node_idx;
     }
@@ -36,12 +36,25 @@ namespace covered
 
     void NodeParamBase::setNodeRunning()
     {
-        return node_running_.store(true, Util::STORE_CONCURRENCY_ORDER);
+        node_running_.store(true, Util::STORE_CONCURRENCY_ORDER);
+        return;
     }
 
     void NodeParamBase::resetNodeRunning()
     {
-        return node_running_.store(false, Util::STORE_CONCURRENCY_ORDER);
+        node_running_.store(false, Util::STORE_CONCURRENCY_ORDER);
+        return;
+    }
+
+    bool NodeParamBase::isNodeInitialized() const
+    {
+        return node_initialized_.load(Util::LOAD_CONCURRENCY_ORDER);
+    }
+    
+    void NodeParamBase::setNodeInitialized()
+    {
+        node_initialized_.store(true, Util::STORE_CONCURRENCY_ORDER);
+        return;
     }
 
     uint32_t NodeParamBase::getNodeIdx() const

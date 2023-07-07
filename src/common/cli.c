@@ -38,7 +38,7 @@ namespace covered
             ("config_file", boost::program_options::value<std::string>()->default_value("config.json"), "config file path of COVERED")
             ("cloud_storage", boost::program_options::value<std::string>()->default_value(Param::HDD_NAME), "type of cloud storage")
             ("debug", "enable debug information")
-            ("duration", boost::program_options::value<double>()->default_value(10), "benchmark duration")
+            ("duration", boost::program_options::value<double>()->default_value(1), "benchmark duration (seconds)")
             ("edgecnt", boost::program_options::value<uint32_t>()->default_value(1), "the number of edge nodes")
             ("hash_name", boost::program_options::value<std::string>()->default_value(Param::MMH3_HASH_NAME, "the type of consistent hashing for DHT"))
             ("keycnt", boost::program_options::value<uint32_t>()->default_value(1000000), "the total number of keys")

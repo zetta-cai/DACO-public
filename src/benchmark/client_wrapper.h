@@ -25,6 +25,8 @@ namespace covered
     public:
         static void* launchClient(void* client_param_ptr);
 
+        // NOTE: set NodeParamBase::node_initialized_ after all time-consuming initialization in constructor and start()
+
         ClientWrapper(const uint32_t& clientcnt, const uint32_t& edgecnt, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge, const std::string& workload_name, ClientParam* client_param_ptr);
         ~ClientWrapper();
 

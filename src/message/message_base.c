@@ -191,6 +191,8 @@ namespace covered
 
     MessageBase* MessageBase::getLocalRequestFromWorkloadItem(WorkloadItem workload_item, const uint32_t& source_index, const NetworkAddr& source_addr)
     {
+        assert(source_addr.isValidAddr());
+        
         WorkloadItemType item_type = workload_item.getItemType();
 
         // NOTE: message_ptr is freed outside MessageBase

@@ -112,7 +112,24 @@ int main(int argc, char **argv) {
 
     // (5) Start benchmark and dump intermediate statistics
 
-    // (5.1) Set client_running_ = true in all clientcnt client parameters to start benchmark
+    // (5.1) Wait until client/edge/cloud finish initialization
+
+    covered::Util::dumpNormalMsg(main_class_name, "Wait for intialization of clients...");
+    for (uint32_t client_idx = 0; client_idx < clientcnt; client_idx++)
+    {
+        while (!client_params[client_idx].isNodeInitialized()) {}
+    }
+
+    covered::Util::dumpNormalMsg(main_class_name, "Wait for intialization of edge nodes...");
+    for (uint32_t edge_idx = 0; edge_idx < edgecnt; edge_idx++)
+    {
+        while (!edge_params[edge_idx].isNodeInitialized()) {}
+    }
+
+    covered::Util::dumpNormalMsg(main_class_name, "Wait for intialization of cloud...");
+    while (!cloud_param.isNodeInitialized()) {}
+
+    // (5.2) Set client_running_ = true in all clientcnt client parameters to start benchmark
 
     covered::Util::dumpNormalMsg(main_class_name, "Start benchmark...");
     for (uint32_t client_idx = 0; client_idx < clientcnt; client_idx++)
@@ -120,7 +137,7 @@ int main(int argc, char **argv) {
         client_params[client_idx].setNodeRunning();
     }
 
-    // (5.2) Dump intermediate statistics
+    // (5.3) Dump intermediate statistics
 
     const double duration = covered::Param::getDuration();
     struct timespec start_timespec = covered::Util::getCurrentTimespec();
@@ -130,7 +147,7 @@ int main(int argc, char **argv) {
 
         struct timespec end_timespec = covered::Util::getCurrentTimespec();
         double delta_time = covered::Util::getDeltaTimeUs(end_timespec, start_timespec);
-        if (delta_time >= duration)
+        if (delta_time >= duration * 1000 * 1000)
         {
             break;
         }

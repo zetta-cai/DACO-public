@@ -23,24 +23,22 @@ namespace covered
         return NULL;
     }
 
-    CloudWrapper::CloudWrapper(const std::string& cloud_storage, const uint32_t& propagation_latency_edgecloud, CloudParam* cloud_param_ptr)
+    CloudWrapper::CloudWrapper(const std::string& cloud_storage, const uint32_t& propagation_latency_edgecloud, CloudParam* cloud_param_ptr) : cloud_param_ptr_(cloud_param_ptr)
     {
         if (cloud_param_ptr == NULL)
         {
             Util::dumpErrorMsg(kClassName, "cloud_param_ptr is NULL!");
             exit(1);
         }
-        const uint32_t cloud_idx = cloud_param_ptr_->getNodeIdx();
+        const uint32_t cloud_idx = cloud_param_ptr->getNodeIdx();
+        assert(cloud_idx == 0); // TODO: only support 1 cloud node now!
 
         // Different different clouds if any
         std::ostringstream oss;
         oss << kClassName << " cloud" << cloud_idx;
         instance_name_ = oss.str();
-
-        cloud_param_ptr_ = cloud_param_ptr;
-        assert(cloud_param_ptr_ != NULL);
         
-        // Open local RocksDB KVS
+        // Open local RocksDB KVS (maybe time-consuming -> introduce NodeParamBase::node_initialized_)
         cloud_rocksdb_ptr_ = new RocksdbWrapper(cloud_storage, Util::getCloudRocksdbDirpath(cloud_idx), cloud_param_ptr);
         assert(cloud_rocksdb_ptr_ != NULL);
 
@@ -85,7 +83,22 @@ namespace covered
     {
         checkPointers_();
 
+        int pthread_returncode = 0;
         bool is_finish = false; // Mark if local cloud node is finished
+
+        // Launch cloud-to-client propagation simulator
+        pthread_t cloud_toedge_propagation_simulator_thread;
+        pthread_returncode = pthread_create(&cloud_toedge_propagation_simulator_thread, NULL, PropagationSimulator::launchPropagationSimulator, (void*)cloud_toedge_propagation_simulator_param_ptr_);
+        if (pthread_returncode != 0)
+        {
+            std::ostringstream oss;
+            oss << " failed to launch cloud-to-edge propagation simulator (error code: " << pthread_returncode << ")" << std::endl;
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
+
+        // After all time-consuming initialization
+        cloud_param_ptr_->setNodeInitialized();
 
         while (cloud_param_ptr_->isNodeRunning()) // cloud_running_ is set as true by default
         {
@@ -125,6 +138,16 @@ namespace covered
                 }
             } // End of (is_timeout == false)
         } // End of while loop
+
+        // Wait cloud-to-edge propagation simulator
+        pthread_returncode = pthread_join(cloud_toedge_propagation_simulator_thread, NULL);
+        if (pthread_returncode != 0)
+        {
+            std::ostringstream oss;
+            oss << " failed to join client-to-edge propagation simulator (error code: " << pthread_returncode << ")" << std::endl;
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
     }
 
     bool CloudWrapper::processGlobalRequest_(MessageBase* global_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr)

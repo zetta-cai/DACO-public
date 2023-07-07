@@ -17,20 +17,15 @@ namespace covered
 
     void* EdgeWrapper::launchEdge(void* edge_param_ptr)
     {
-        EdgeWrapper* local_edge_ptr = new EdgeWrapper(Param::getCacheName(), Param::getCapacityBytes(), Param::getEdgecnt(), Param::getHashName(), Param::getPercacheserverWorkercnt(), Param::getPropagationLatencyClientedge(), Param::getPropagationLatencyCrossedge(), Param::getPropagationLatencyEdgecloud(), (EdgeParam*)edge_param_ptr);
-        assert(local_edge_ptr != NULL);
-        local_edge_ptr->start();
-
-        assert(local_edge_ptr != NULL);
-        delete local_edge_ptr;
-        local_edge_ptr = NULL;
+        EdgeWrapper local_edge(Param::getCacheName(), Param::getCapacityBytes(), Param::getEdgecnt(), Param::getHashName(), Param::getPercacheserverWorkercnt(), Param::getPropagationLatencyClientedge(), Param::getPropagationLatencyCrossedge(), Param::getPropagationLatencyEdgecloud(), (EdgeParam*)edge_param_ptr);
+        local_edge.start();
         
         pthread_exit(NULL);
         return NULL;
     }
 
     EdgeWrapper::EdgeWrapper(const std::string& cache_name, const uint32_t& capacity_bytes, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& percacheserver_workercnt, const uint32_t& propagation_latency_clientedge, const uint32_t& propagation_latency_crossedge, const uint32_t& propagation_latency_edgecloud, EdgeParam* edge_param_ptr) : cache_name_(cache_name), capacity_bytes_(capacity_bytes), edgecnt_(edgecnt), percacheserver_workercnt_(percacheserver_workercnt), edge_param_ptr_(edge_param_ptr)
-    {
+    {        
         if (edge_param_ptr == NULL)
         {
             Util::dumpErrorMsg(kClassName, "edge_param_ptr is NULL!");
@@ -100,10 +95,43 @@ namespace covered
         
         uint32_t edge_idx = edge_param_ptr_->getNodeIdx();
 
-        int pthread_returncode;
+        int pthread_returncode = 0;
         pthread_t beacon_server_thread;
         pthread_t cache_server_thread;
         pthread_t invalidation_server_thread;
+
+        // Launch edge-to-client propagation simulator
+        pthread_t edge_toclient_propagation_simulator_thread;
+        pthread_returncode = pthread_create(&edge_toclient_propagation_simulator_thread, NULL, PropagationSimulator::launchPropagationSimulator, (void*)edge_toclient_propagation_simulator_param_ptr_);
+        if (pthread_returncode != 0)
+        {
+            std::ostringstream oss;
+            oss << " failed to launch edge-to-client propagation simulator (error code: " << pthread_returncode << ")" << std::endl;
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
+
+        // Launch edge-to-edge propagation simulator
+        pthread_t edge_toedge_propagation_simulator_thread;
+        pthread_returncode = pthread_create(&edge_toedge_propagation_simulator_thread, NULL, PropagationSimulator::launchPropagationSimulator, (void*)edge_toedge_propagation_simulator_param_ptr_);
+        if (pthread_returncode != 0)
+        {
+            std::ostringstream oss;
+            oss << " failed to launch edge-to-edge propagation simulator (error code: " << pthread_returncode << ")" << std::endl;
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
+
+        // Launch edge-to-cloud propagation simulator
+        pthread_t edge_tocloud_propagation_simulator_thread;
+        pthread_returncode = pthread_create(&edge_tocloud_propagation_simulator_thread, NULL, PropagationSimulator::launchPropagationSimulator, (void*)edge_tocloud_propagation_simulator_param_ptr_);
+        if (pthread_returncode != 0)
+        {
+            std::ostringstream oss;
+            oss << " failed to launch edge-to-cloud propagation simulator (error code: " << pthread_returncode << ")" << std::endl;
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
 
         // Launch beacon server
         pthread_returncode = pthread_create(&beacon_server_thread, NULL, launchBeaconServer_, (void*)(this));
@@ -131,6 +159,39 @@ namespace covered
         {
             std::ostringstream oss;
             oss << "edge " << edge_idx << " failed to launch invalidation server (error code: " << pthread_returncode << ")" << std::endl;
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
+
+        // After all time-consuming initialization
+        edge_param_ptr_->setNodeInitialized();
+
+        // Wait edge-to-client propagation simulator
+        pthread_returncode = pthread_join(edge_toclient_propagation_simulator_thread, NULL);
+        if (pthread_returncode != 0)
+        {
+            std::ostringstream oss;
+            oss << " failed to join edge-to-client propagation simulator (error code: " << pthread_returncode << ")" << std::endl;
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
+
+        // Wait edge-to-edge propagation simulator
+        pthread_returncode = pthread_join(edge_toedge_propagation_simulator_thread, NULL);
+        if (pthread_returncode != 0)
+        {
+            std::ostringstream oss;
+            oss << " failed to join edge-to-edge propagation simulator (error code: " << pthread_returncode << ")" << std::endl;
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
+
+        // Wait edge-to-cloud propagation simulator
+        pthread_returncode = pthread_join(edge_tocloud_propagation_simulator_thread, NULL);
+        if (pthread_returncode != 0)
+        {
+            std::ostringstream oss;
+            oss << " failed to join edge-to-cloud propagation simulator (error code: " << pthread_returncode << ")" << std::endl;
             Util::dumpErrorMsg(instance_name_, oss.str());
             exit(1);
         }

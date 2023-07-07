@@ -29,6 +29,9 @@ namespace covered
         void setNodeRunning();
         void resetNodeRunning();
 
+        bool isNodeInitialized() const;
+        void setNodeInitialized();
+
         uint32_t getNodeIdx() const;
 
         const NodeParamBase& operator=(const NodeParamBase& other);
@@ -42,6 +45,7 @@ namespace covered
         // CPU cache coherence: MSI protocol.
         // CPU cache consistency: volatile.
         volatile std::atomic<bool> node_running_; // thread safe
+        volatile std::atomic<bool> node_initialized_; // thread safe
     protected:
         uint32_t node_idx_; // const shared variable
     };

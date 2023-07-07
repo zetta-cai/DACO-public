@@ -24,6 +24,8 @@ namespace covered
     public:
         static void* launchEdge(void* edge_param_ptr);
 
+        // NOTE: set NodeParamBase::node_initialized_ after all time-consuming initialization in constructor and start()
+        
         EdgeWrapper(const std::string& cache_name, const uint32_t& capacity_bytes, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& percacheserver_workercnt, const uint32_t& propagation_latency_clientedge, const uint32_t& propagation_latency_crossedge, const uint32_t& propagation_latency_edgecloud, EdgeParam* edge_param_ptr);
         virtual ~EdgeWrapper();
 
@@ -77,7 +79,7 @@ namespace covered
         const uint32_t capacity_bytes_; // Come from Param
         const uint32_t edgecnt_; // Come from Param
         const uint32_t percacheserver_workercnt_; // Come from Param
-        const EdgeParam* edge_param_ptr_; // Thread safe
+        EdgeParam* edge_param_ptr_; // Thread safe
 
         // NOTE: we do NOT need per-key rwlock for atomicity among CacheWrapper and CooperationWrapperBase.
         // (i) CacheWrapper is already thread-safe for cache server and invalidation server, and CooperationWrapperBase is already thread-safe for cache server and beacon server.

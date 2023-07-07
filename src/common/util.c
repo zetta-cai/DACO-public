@@ -99,7 +99,6 @@ namespace covered
             const char* tmpstr = va_arg(args, const char*);
             oss << std::string(tmpstr) << " ";
         }
-        oss << std::endl;
 
         dumpDebugMsg(class_name, oss.str());
         return;
@@ -362,12 +361,12 @@ namespace covered
         assert(local_client_worker_idx < perclient_workercnt);
 
         // Get client recvrsp port if 1 worker per client
-        int64_t client_recvrsp_startport = static_cast<int64_t>(Config::getClientRecvrspStartport());
-        int64_t client_recvrsp_port = static_cast<int64_t>(getNodePort_(client_recvrsp_startport, client_idx, clientcnt, Config::getClientIpstrCnt()));
+        int64_t client_worker_recvrsp_startport = static_cast<int64_t>(Config::getClientWorkerRecvrspStartport());
+        int64_t client_recvrsp_port = static_cast<int64_t>(getNodePort_(client_worker_recvrsp_startport, client_idx, clientcnt, Config::getClientIpstrCnt()));
+        assert(client_recvrsp_port >= client_worker_recvrsp_startport);
 
         // Get client worker recvrsp port
-        assert(client_recvrsp_port >= client_recvrsp_startport);
-        int64_t client_worker_recvrsp_port = (client_recvrsp_port - client_recvrsp_startport) * static_cast<int64_t>(perclient_workercnt) + static_cast<int64_t>(local_client_worker_idx);
+        int64_t client_worker_recvrsp_port = client_worker_recvrsp_startport + (client_recvrsp_port - client_worker_recvrsp_startport) * static_cast<int64_t>(perclient_workercnt) + static_cast<int64_t>(local_client_worker_idx);
         
         return Util::toUint16(client_worker_recvrsp_port);
     }

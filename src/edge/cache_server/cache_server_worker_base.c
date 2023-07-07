@@ -53,9 +53,9 @@ namespace covered
 
     CacheServerWorkerBase::CacheServerWorkerBase(CacheServerWorkerParam* cache_server_worker_param_ptr) : cache_server_worker_param_ptr_(cache_server_worker_param_ptr)
     {
-        assert(cache_server_worker_param_ptr_ != NULL);
-        const uint32_t edge_idx = cache_server_worker_param_ptr_->getCacheServerPtr()->edge_wrapper_ptr_->edge_param_ptr_->getNodeIdx();
-        const uint32_t edgecnt = cache_server_worker_param_ptr_->getCacheServerPtr()->edge_wrapper_ptr_->edgecnt_;
+        assert(cache_server_worker_param_ptr != NULL);
+        const uint32_t edge_idx = cache_server_worker_param_ptr->getCacheServerPtr()->edge_wrapper_ptr_->edge_param_ptr_->getNodeIdx();
+        const uint32_t edgecnt = cache_server_worker_param_ptr->getCacheServerPtr()->edge_wrapper_ptr_->edgecnt_;
 
         // Differentiate cache servers of different edge nodes
         std::ostringstream oss;

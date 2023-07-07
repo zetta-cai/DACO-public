@@ -16,10 +16,10 @@ namespace covered
 
     PropagationSimulatorParam::PropagationSimulatorParam(const uint32_t& propagation_latency_us, NodeParamBase* node_param_ptr, const uint32_t& propagation_item_buffer_size) : propagation_latency_us_(propagation_latency_us), node_param_ptr_(node_param_ptr), rwlock_for_propagation_item_buffer_("rwlock_for_propagation_item_buffer_"), is_first_item_(true), prev_timespec_()
     {
+        assert(node_param_ptr != NULL);
+
         propagation_item_buffer_ptr_ = new RingBuffer<PropagationItem>(PropagationItem(), propagation_item_buffer_size);
         assert(propagation_item_buffer_ptr_ != NULL);
-
-        assert(node_param_ptr_ != NULL);
     }
 
     PropagationSimulatorParam::~PropagationSimulatorParam()

@@ -56,4 +56,13 @@ namespace covered
     {
         return item_type_;
     }
+
+    WorkloadItem& WorkloadItem::operator=(const WorkloadItem& other)
+    {
+        key_ = other.key_;
+        value_ = other.value_;
+        item_type_ = other.item_type_;
+        
+        return *this;
+    }
 }

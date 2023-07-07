@@ -30,8 +30,8 @@ namespace covered
         assert(hash_wrapper_ptr_ != NULL);
 
         // Prepare parameters for cache server threads
-        cache_server_worker_params_.resize(edge_wrapper_ptr_->percacheserver_workercnt_);
-        for (uint32_t local_cache_server_worker_idx = 0; local_cache_server_worker_idx < edge_wrapper_ptr_->percacheserver_workercnt_; local_cache_server_worker_idx++)
+        cache_server_worker_params_.resize(edge_wrapper_ptr->percacheserver_workercnt_);
+        for (uint32_t local_cache_server_worker_idx = 0; local_cache_server_worker_idx < edge_wrapper_ptr->percacheserver_workercnt_; local_cache_server_worker_idx++)
         {
             CacheServerWorkerParam tmp_cache_server_worker_param(this, local_cache_server_worker_idx, Config::getEdgeCacheServerDataRequestBufferSize());
             cache_server_worker_params_[local_cache_server_worker_idx] = tmp_cache_server_worker_param;

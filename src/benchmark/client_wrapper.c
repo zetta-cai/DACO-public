@@ -39,6 +39,7 @@ namespace covered
         instance_name_ = oss.str();
 
         // Create workload generator for the client
+        // NOTE: creating workload generator needs time, so we introduce NodeParamBase::node_initialized_
         workload_generator_ptr_ = WorkloadWrapperBase::getWorkloadGeneratorByWorkloadName(clientcnt, client_idx, keycnt, opcnt, perclient_workercnt, workload_name);
         assert(workload_generator_ptr_ != NULL);
 
@@ -75,7 +76,7 @@ namespace covered
     {
         checkPointers_();
         
-        int pthread_returncode;
+        int pthread_returncode = 0;
 
         // Launch client-to-edge propagation simulator
         pthread_t client_toedge_propagation_simulator_thread;
@@ -108,6 +109,19 @@ namespace covered
                 Util::dumpErrorMsg(instance_name_, oss.str());
                 exit(1);
             }
+        }
+
+        // After all time-consuming initialization
+        client_param_ptr_->setNodeInitialized();
+
+        // Wait client-to-edge propagation simulator
+        pthread_returncode = pthread_join(client_toedge_propagation_simulator_thread, NULL);
+        if (pthread_returncode != 0)
+        {
+            std::ostringstream oss;
+            oss << " failed to join client-to-edge propagation simulator (error code: " << pthread_returncode << ")" << std::endl;
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
         }
 
         // Wait for all local workers

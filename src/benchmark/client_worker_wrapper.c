@@ -4,8 +4,6 @@
 #include <sstream>
 #include <time.h> // struct timespec
 
-#include <unistd.h> // usleep // TMPDEBUG
-
 #include "benchmark/client_param.h"
 #include "common/config.h"
 #include "common/dynamic_array.h"
@@ -30,7 +28,7 @@ namespace covered
         return NULL;
     }
 
-    ClientWorkerWrapper::ClientWorkerWrapper(ClientWorkerParam* client_worker_param_ptr)
+    ClientWorkerWrapper::ClientWorkerWrapper(ClientWorkerParam* client_worker_param_ptr) : client_worker_param_ptr_(client_worker_param_ptr)
     {
         if (client_worker_param_ptr == NULL)
         {
@@ -46,14 +44,12 @@ namespace covered
         const uint32_t clientcnt = client_wrapper_ptr->clientcnt_;
         const uint32_t edgecnt = client_wrapper_ptr->edgecnt_;
         const uint32_t local_client_worker_idx = client_worker_param_ptr->getLocalClientWorkerIdx();
+        global_client_worker_idx_ = Util::getGlobalClientWorkerIdx(client_idx, local_client_worker_idx, client_wrapper_ptr->perclient_workercnt_);
 
         // Differentiate different workers
         std::ostringstream oss;
         oss << kClassName << " client" << client_idx << "-worker" << local_client_worker_idx << "-global" << global_client_worker_idx_;
         instance_name_ = oss.str();
-
-        client_worker_param_ptr_ = client_worker_param_ptr;
-        assert(client_worker_param_ptr_ != NULL);
 
         // Each per-client worker uses worker_idx as deterministic seed to create a random generator and get different requests
         client_worker_item_randgen_ptr_ = new std::mt19937_64(global_client_worker_idx_);
@@ -64,9 +60,6 @@ namespace covered
         }
 
         // For sending local requests
-
-        // Get global client worker index to send local requests
-        global_client_worker_idx_ = Util::getGlobalClientWorkerIdx(client_idx, local_client_worker_idx, client_wrapper_ptr->perclient_workercnt_);
 
         // Get closest edge network address to send local requests
         std::string closest_edge_ipstr = Util::getClosestEdgeIpstr(client_idx, clientcnt, edgecnt);
@@ -153,19 +146,22 @@ namespace covered
         return;
     }
 
-    bool ClientWorkerWrapper::issueItemToEdge_(const WorkloadItem& workload_item, DynamicArray& local_response_msg_payload, uint32_t& rtt_us)
+    bool ClientWorkerWrapper::issueItemToEdge_(const WorkloadItem& tmp_workload_item, DynamicArray& local_response_msg_payload, uint32_t& rtt_us)
     {
         checkPointers_();
         ClientWrapper* tmp_client_wrapper_ptr = client_worker_param_ptr_->getClientWrapperPtr();
         
         bool is_finish = false; // Mark if local client is finished
 
+        // TMPDEBUG
+        WorkloadItem workload_item(tmp_workload_item.getKey(), Value(6559), WorkloadItemType::kWorkloadItemGet);
+
         // Convert workload item into local request message
         MessageBase* local_request_ptr = MessageBase::getLocalRequestFromWorkloadItem(workload_item, global_client_worker_idx_, client_worker_recvrsp_source_addr_);
         assert(local_request_ptr != NULL);
 
         #ifdef DEBUG_CLIENT_WORKER_WRAPPER
-        Util::dumpVariablesForDebug(instance_name_, 7, "issue a local request;", "type:", MessageBase::messageTypeToString(local_request_ptr->getMessageType()).c_str(), "kestr", workload_item.getKey().getKeystr().c_str(), "valuesize:", std::to_string(workload_item.getValue().getValuesize()).c_str());
+        Util::dumpVariablesForDebug(instance_name_, 7, "issue a local request;", "type:", MessageBase::messageTypeToString(local_request_ptr->getMessageType()).c_str(), "keystr:", workload_item.getKey().getKeystr().c_str(), "valuesize:", std::to_string(workload_item.getValue().getValuesize()).c_str());
         #endif
 
         struct timespec sendreq_timestamp = Util::getCurrentTimespec();

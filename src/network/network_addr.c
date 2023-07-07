@@ -1,6 +1,7 @@
 #include "network/network_addr.h"
 
-#include <arpa/inet.h> // htonl ntohl
+#include <arpa/inet.h> // htonl ntohl inet_ntop inet_pton
+#include <assert.h>
 #include <sstream>
 
 #include "common/util.h"
@@ -80,18 +81,18 @@ namespace covered
 
     uint32_t NetworkAddr::getAddrPayloadSize() const
     {
-        // ipstr length + ipstr + port
-        return sizeof(uint32_t) + ipstr_.length() + sizeof(uint16_t);
+        // 4B ipint + 2B port
+        return sizeof(uint32_t) + sizeof(uint16_t);
     }
 
     uint32_t NetworkAddr::serialize(DynamicArray& msg_payload, const uint32_t& position) const
     {
         uint32_t size = position;
-        uint32_t bigendian_ipstrsize = htonl(ipstr_.length());
-        msg_payload.deserialize(size, (const char*)&bigendian_ipstrsize, sizeof(uint32_t));
+        struct in_addr ipint;
+        int return_val = inet_pton(AF_INET, ipstr_.c_str(), &ipint);
+        assert(return_val >= 0);
+        msg_payload.deserialize(size, (const char*)&(ipint.s_addr), sizeof(uint32_t));
         size += sizeof(uint32_t);
-        msg_payload.deserialize(size, (const char*)ipstr_.data(), ipstr_.length());
-        size += ipstr_.length();
         uint16_t bigendian_port = htons(port_);
         msg_payload.deserialize(size, (const char*)&bigendian_port, sizeof(uint16_t));
         size += sizeof(uint16_t);
@@ -101,18 +102,21 @@ namespace covered
     uint32_t NetworkAddr::deserialize(const DynamicArray& msg_payload, const uint32_t& position)
     {
         uint32_t size = position;
-        uint32_t bigendian_ipstrsize = 0;
-        msg_payload.serialize(size, (char *)&bigendian_ipstrsize, sizeof(uint32_t));
-        uint32_t ipstr_size = ntohl(bigendian_ipstrsize);
+        struct in_addr ipint;
+        msg_payload.serialize(size, (char *)&(ipint.s_addr), sizeof(uint32_t));
+        char ipstr_bytes[INET_ADDRSTRLEN]; // NOT use INET6_ADDRSTRLEN
+        const char* result_ptr = inet_ntop(AF_INET, &ipint, ipstr_bytes, INET_ADDRSTRLEN);
+        assert(result_ptr != NULL);
+        ipstr_ = std::string(ipstr_bytes);
         size += sizeof(uint32_t);
-        DynamicArray ipstr_bytes(ipstr_size);
-        msg_payload.arraycpy(size, ipstr_bytes, 0, ipstr_size);
-        ipstr_ = std::string(ipstr_bytes.getBytes().data(), ipstr_size);
-        size += ipstr_size;
         uint16_t bigendian_port = 0;
         msg_payload.serialize(size, (char *)&bigendian_port, sizeof(uint16_t));
         port_ = ntohs(bigendian_port);
         size += sizeof(uint16_t);
+
+        is_valid_ = true;
+        checkPortIfValid_();
+
         return size - position;
     }
 
