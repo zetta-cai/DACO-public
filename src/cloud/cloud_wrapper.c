@@ -222,7 +222,7 @@ namespace covered
         #ifdef DEBUG_CLOUD_WRAPPER
         struct timespec t1 = Util::getCurrentTimespec();
         double delta_t = Util::getDeltaTimeUs(t1, t0);
-        Util::dumpVariablesForDebug(instance_name_, 2, "delta time of rocksdb operation:", std::to_string(delta_t).c_str());
+        Util::dumpVariablesForDebug(instance_name_, 2, "delta time (us) of rocksdb operation:", std::to_string(delta_t).c_str());
         #endif
 
         if (!is_finish) // Check is_finish

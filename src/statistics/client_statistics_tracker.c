@@ -619,7 +619,7 @@ namespace covered
         return perclientworker_readcnts_;
     }
     
-    std::atomic<uint32_t>* ClientStatisticsTracker::getPerclientworkerWritedcnts() const
+    std::atomic<uint32_t>* ClientStatisticsTracker::getPerclientworkerWritecnts() const
     {
         return perclientworker_writecnts_;
     }

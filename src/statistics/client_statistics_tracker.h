@@ -42,7 +42,7 @@ namespace covered
         uint32_t getPerclientWorkercnt() const;
         uint32_t getLatencyHistogramSize() const;
         std::atomic<uint32_t>* getPerclientworkerReadcnts() const;
-        std::atomic<uint32_t>* getPerclientworkerWritedcnts() const;
+        std::atomic<uint32_t>* getPerclientworkerWritecnts() const;
     private:
         static const std::string kClassName;
 

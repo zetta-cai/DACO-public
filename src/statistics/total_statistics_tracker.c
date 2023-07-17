@@ -99,9 +99,9 @@ namespace covered
         oss << "90th-percentile latency: " << tail90_latency_ << std::endl;
         oss << "95th-percentile latency: " << tail95_latency_ << std::endl;
         oss << "99th-percentile latency: " << tail99_latency_ << std::endl;
-        oss << "max latency: " << max_latency_;
+        oss << "max latency: " << max_latency_ << std::endl;
         oss << "total read cnt: " << total_readcnt_ << std::endl;
-        oss << "total write cnt: " << total_writecnt_ << std::endl;
+        oss << "total write cnt: " << total_writecnt_;
         
         std::string total_statistics_string = oss.str();
         return total_statistics_string;
@@ -158,7 +158,7 @@ namespace covered
             // Aggregate per-client read-write statistics
             std::atomic<uint32_t>* tmp_perclientworker_readcnts = tmp_client_statistics_tracker.getPerclientworkerReadcnts();
             assert(tmp_perclientworker_readcnts != NULL);
-            std::atomic<uint32_t>* tmp_perclientworker_writecnts = tmp_client_statistics_tracker.getPerclientworkerReadcnts();
+            std::atomic<uint32_t>* tmp_perclientworker_writecnts = tmp_client_statistics_tracker.getPerclientworkerWritecnts();
             assert(tmp_perclientworker_writecnts != NULL);
             for (uint32_t local_worker_idx = 0; local_worker_idx < perclient_workercnt; local_worker_idx++)
             {
