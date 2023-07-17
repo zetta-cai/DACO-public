@@ -27,6 +27,10 @@ namespace covered
         // Update per-client latency statistics
         void updateLatency(const uint32_t& latency_us);
 
+        // Update read-write statistics
+        void updateReadcnt(const uint32_t& local_client_worker_idx);
+        void updateWritecnt(const uint32_t& local_client_worker_idx);
+
         // Dump per-client statistics for TotalStatisticsTracker
         uint32_t dump(const std::string& filepath) const;
 
@@ -37,6 +41,8 @@ namespace covered
         std::atomic<uint32_t>* getLatencyHistogram() const;
         uint32_t getPerclientWorkercnt() const;
         uint32_t getLatencyHistogramSize() const;
+        std::atomic<uint32_t>* getPerclientworkerReadcnts() const;
+        std::atomic<uint32_t>* getPerclientworkerWritedcnts() const;
     private:
         static const std::string kClassName;
 
@@ -48,6 +54,8 @@ namespace covered
         uint32_t dumpPerclientworkerReqcnts_(std::fstream* fs_ptr) const;
         uint32_t dumpLatencyHistogramSize_(std::fstream* fs_ptr) const;
         uint32_t dumpLatencyHistogram_(std::fstream* fs_ptr) const;
+        uint32_t dumpPerclientworkerReadcnts_(std::fstream* fs_ptr) const;
+        uint32_t dumpPerclientworkerWritecnts_(std::fstream* fs_ptr) const;
 
         // Load per-client statistics for TotalStatisticsTracker
         uint32_t load_(const std::string& filepath);
@@ -59,9 +67,15 @@ namespace covered
         uint32_t loadPerclientworkerReqcnts_(std::fstream* fs_ptr);
         uint32_t loadLatencyHistogramSize_(std::fstream* fs_ptr);
         uint32_t loadLatencyHistogram_(std::fstream* fs_ptr);
+        uint32_t loadPerclientworkerReadcnts_(std::fstream* fs_ptr);
+        uint32_t loadPerclientworkerWritecnts_(std::fstream* fs_ptr);
 
         // ClientStatisticsWrapper only uses client index to specify instance_name_ -> no need to maintain client_idx_
         std::string instance_name_;
+
+        // Const shared variables
+        uint32_t perclient_workercnt_; // Come from Param
+        uint32_t latency_histogram_size_; // Come from Config::latency_histogram_size_
 
         // Non-const individual variables
         // NOTE: we have to use dynamic array for std::atomic<uint32_t>, as it does NOT have copy constructor and operator= for std::vector (e.g., resize() and push_back())
@@ -72,9 +86,9 @@ namespace covered
         // Non-const shared variables
         std::atomic<uint32_t>* latency_histogram_; // thread safe
 
-        // Const shared variables
-        uint32_t perclient_workercnt_; // Come from Param
-        uint32_t latency_histogram_size_; // Come from Config::latency_histogram_size_
+        // Non-const individual variables
+        std::atomic<uint32_t>* perclientworker_readcnts_;
+        std::atomic<uint32_t>* perclientworker_writecnts_;
     };
 }
 

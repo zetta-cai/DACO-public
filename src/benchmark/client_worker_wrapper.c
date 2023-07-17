@@ -205,6 +205,7 @@ namespace covered
     {
         checkPointers_();
         ClientWrapper* tmp_client_wrapper_ptr = client_worker_param_ptr_->getClientWrapperPtr();
+        uint32_t local_client_worker_idx = client_worker_param_ptr_->getLocalClientWorkerIdx();
 
         // Get local response message
         MessageBase* local_response_ptr = MessageBase::getResponseFromMsgPayload(local_response_msg_payload);
@@ -217,6 +218,7 @@ namespace covered
         MessageType local_response_message_type = local_response_ptr->getMessageType();
         Key tmp_key;
         Value tmp_value;
+        bool is_write = false;
         switch (local_response_message_type)
         {
             case MessageType::kLocalGetResponse:
@@ -225,6 +227,7 @@ namespace covered
                 tmp_key = local_get_response_ptr->getKey();
                 tmp_value = local_get_response_ptr->getValue();
                 hitflag = local_get_response_ptr->getHitflag();
+                is_write = false;
                 break;
             }
             case MessageType::kLocalPutResponse:
@@ -232,6 +235,7 @@ namespace covered
                 LocalPutResponse* const local_put_response_ptr = static_cast<LocalPutResponse*>(local_response_ptr);
                 tmp_key = local_put_response_ptr->getKey();
                 hitflag = local_put_response_ptr->getHitflag();
+                is_write = true;
                 break;
             }
             case MessageType::kLocalDelResponse:
@@ -239,6 +243,7 @@ namespace covered
                 LocalDelResponse* const local_del_response_ptr = static_cast<LocalDelResponse*>(local_response_ptr);
                 tmp_key = local_del_response_ptr->getKey();
                 hitflag = local_del_response_ptr->getHitflag();
+                is_write = true;
                 break;
             }
             default:
@@ -255,17 +260,17 @@ namespace covered
         {
             case Hitflag::kLocalHit:
             {
-                client_statistics_tracker_ptr_->updateLocalHitcnt(client_worker_param_ptr_->getLocalClientWorkerIdx());
+                client_statistics_tracker_ptr_->updateLocalHitcnt(local_client_worker_idx);
                 break;
             }
             case Hitflag::kCooperativeHit:
             {
-                client_statistics_tracker_ptr_->updateCooperativeHitcnt(client_worker_param_ptr_->getLocalClientWorkerIdx());
+                client_statistics_tracker_ptr_->updateCooperativeHitcnt(local_client_worker_idx);
                 break;
             }
             case Hitflag::kGlobalMiss:
             {
-                client_statistics_tracker_ptr_->updateReqcnt(client_worker_param_ptr_->getLocalClientWorkerIdx());
+                client_statistics_tracker_ptr_->updateReqcnt(local_client_worker_idx);
                 break;
             }
             default:
@@ -279,6 +284,16 @@ namespace covered
 
         // Update latency statistics for the local client
         client_statistics_tracker_ptr_->updateLatency(rtt_us);
+
+        // Update read-write statistics for the local client
+        if (!is_write)
+        {
+            client_statistics_tracker_ptr_->updateReadcnt(local_client_worker_idx);
+        }
+        else
+        {
+            client_statistics_tracker_ptr_->updateWritecnt(local_client_worker_idx);
+        }
 
         #ifdef DEBUG_CLIENT_WORKER_WRAPPER
         Util::dumpVariablesForDebug(instance_name_, 11, "receive a local response;", "type:", MessageBase::messageTypeToString(local_response_message_type).c_str(), "kestr", tmp_key.getKeystr().c_str(), "valuesize:", std::to_string(tmp_value.getValuesize()).c_str(), "hitflag:", MessageBase::hitflagToString(hitflag).c_str(), "msg payload:", local_response_msg_payload.getBytesHexstr().c_str());

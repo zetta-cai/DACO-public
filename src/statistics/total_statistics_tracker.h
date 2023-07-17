@@ -34,6 +34,10 @@ namespace covered
         uint32_t getTail99Latency() const;
         uint32_t getMaxLatency() const;
 
+        // Get aggregate statistics related with read-write ratio
+        uint32_t getTotalReadcnt() const;
+        uint32_t getTotalWritecnt() const;
+
         // Get string for aggregate statistics
         std::string toString() const;
     private:
@@ -42,13 +46,17 @@ namespace covered
         void preprocessClientStatistics_(uint32_t clientcnt, ClientStatisticsTracker** client_statistics_tracker_ptrs);
         void aggregateClientStatistics_();
 
+        // Const variables
+        uint32_t clientcnt_; // Come from Util::Param
+        uint32_t latency_histogram_size_; // Come from Util::Config
+
         // Pre-processed statistics
         std::vector<uint32_t> perclient_local_hitcnts_; // Hit local edge cache of closest edge node
         std::vector<uint32_t> perclient_cooperative_hitcnts_; // Hit cooperative edge cache of some target edge node
         std::vector<uint32_t> perclient_reqcnts_;
         std::vector<uint32_t> latency_histogram_;
-        uint32_t clientcnt_; // Come from Util::Param
-        uint32_t latency_histogram_size_; // Come from Util::Config
+        std::vector<uint32_t> perclient_readcnts_;
+        std::vector<uint32_t> perclient_writecnts_;
 
         // Aggregate statistics
         uint32_t total_local_hitcnt_;
@@ -61,6 +69,8 @@ namespace covered
         uint32_t tail95_latency_;
         uint32_t tail99_latency_;
         uint32_t max_latency_;
+        uint32_t total_readcnt_;
+        uint32_t total_writecnt_;
     };
 }
 

@@ -4,6 +4,7 @@
 //#include <cstring> // memset
 #include <sstream>
 
+#include "common/config.h"
 #include "common/util.h"
 
 namespace covered
@@ -12,6 +13,9 @@ namespace covered
     
     TotalStatisticsTracker::TotalStatisticsTracker(uint32_t clientcnt, ClientStatisticsTracker** client_statistics_tracker_ptrs)
     {
+        clientcnt_ = clientcnt;
+        latency_histogram_size_ = Config::getLatencyHistogramSize();
+
         // Pre-process per-client hit ratio and latency statistics
         preprocessClientStatistics_(clientcnt, client_statistics_tracker_ptrs);
 
@@ -71,6 +75,16 @@ namespace covered
         return max_latency_;
     }
 
+    uint32_t TotalStatisticsTracker::getTotalReadcnt() const
+    {
+        return total_readcnt_;
+    }
+
+    uint32_t TotalStatisticsTracker::getTotalWritecnt() const
+    {
+        return total_writecnt_;
+    }
+
     std::string TotalStatisticsTracker::toString() const
     {
         std::ostringstream oss;
@@ -86,6 +100,8 @@ namespace covered
         oss << "95th-percentile latency: " << tail95_latency_ << std::endl;
         oss << "99th-percentile latency: " << tail99_latency_ << std::endl;
         oss << "max latency: " << max_latency_;
+        oss << "total read cnt: " << total_readcnt_ << std::endl;
+        oss << "total write cnt: " << total_writecnt_ << std::endl;
         
         std::string total_statistics_string = oss.str();
         return total_statistics_string;
@@ -93,8 +109,6 @@ namespace covered
     
     void TotalStatisticsTracker::preprocessClientStatistics_(uint32_t clientcnt, ClientStatisticsTracker** client_statistics_tracker_ptrs)
     {
-        clientcnt_ = clientcnt;
-
         assert(client_statistics_tracker_ptrs != NULL);
         for (uint32_t client_idx = 0; client_idx < clientcnt; client_idx++)
         {
@@ -102,13 +116,15 @@ namespace covered
         }
 
         uint32_t perclient_workercnt = client_statistics_tracker_ptrs[0]->getPerclientWorkercnt();
-        latency_histogram_size_ = client_statistics_tracker_ptrs[0]->getLatencyHistogramSize();
+        //latency_histogram_size_ = client_statistics_tracker_ptrs[0]->getLatencyHistogramSize();
 
         // Allocate space for aggregate statistics
         perclient_local_hitcnts_.resize(clientcnt_, 0);
         perclient_cooperative_hitcnts_.resize(clientcnt_, 0);
         perclient_reqcnts_.resize(clientcnt_, 0);
         latency_histogram_.resize(latency_histogram_size_, 0);
+        perclient_readcnts_.resize(clientcnt_, 0);
+        perclient_writecnts_.resize(clientcnt_, 0);
 
         // Aggregate per-client statistics
         for (uint32_t client_idx = 0; client_idx < clientcnt_; client_idx++)
@@ -122,7 +138,6 @@ namespace covered
             assert(tmp_perclientworker_local_hitcnts != NULL);
             std::atomic<uint32_t>* tmp_perclientworker_cooperative_hitcnts = tmp_client_statistics_tracker.getPerclientworkerCooperativeHitcnts();
             assert(tmp_perclientworker_cooperative_hitcnts != NULL);
-
             std::atomic<uint32_t>* tmp_perclientworker_reqcnts = tmp_client_statistics_tracker.getPerclientworkerReqcnts();
             assert(tmp_perclientworker_reqcnts != NULL);
             for (uint32_t local_worker_idx = 0; local_worker_idx < perclient_workercnt; local_worker_idx++)
@@ -138,6 +153,17 @@ namespace covered
             for (uint32_t latency_us = 0; latency_us < latency_histogram_size_; latency_us++)
             {
                 latency_histogram_[latency_us] += tmp_latency_histogram[latency_us];
+            }
+
+            // Aggregate per-client read-write statistics
+            std::atomic<uint32_t>* tmp_perclientworker_readcnts = tmp_client_statistics_tracker.getPerclientworkerReadcnts();
+            assert(tmp_perclientworker_readcnts != NULL);
+            std::atomic<uint32_t>* tmp_perclientworker_writecnts = tmp_client_statistics_tracker.getPerclientworkerReadcnts();
+            assert(tmp_perclientworker_writecnts != NULL);
+            for (uint32_t local_worker_idx = 0; local_worker_idx < perclient_workercnt; local_worker_idx++)
+            {
+                perclient_readcnts_[client_idx] += tmp_perclientworker_readcnts[local_worker_idx].load(Util::LOAD_CONCURRENCY_ORDER);
+                perclient_writecnts_[client_idx] += tmp_perclientworker_writecnts[local_worker_idx].load(Util::LOAD_CONCURRENCY_ORDER);
             }
         }
 
@@ -227,6 +253,20 @@ namespace covered
         }
         assert(tmp_avg_latency >= 0 && tmp_avg_latency < latency_histogram_size_);
         avg_latency_ = static_cast<uint32_t>(tmp_avg_latency);
+
+        assert(perclient_readcnts_.size() == clientcnt_);
+        total_readcnt_ = 0;
+        for (uint32_t client_idx = 0; client_idx < clientcnt_; client_idx++)
+        {
+            total_readcnt_ += perclient_readcnts_[client_idx];
+        }
+
+        assert(perclient_writecnts_.size() == clientcnt_);
+        total_writecnt_ = 0;
+        for (uint32_t client_idx = 0; client_idx < clientcnt_; client_idx++)
+        {
+            total_writecnt_ += perclient_writecnts_[client_idx];
+        }
 
         return;
     }

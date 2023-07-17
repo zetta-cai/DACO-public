@@ -67,6 +67,7 @@ namespace covered
 
         static std::string main_class_name_;
         static bool is_valid_;
+        
         static bool is_single_node_;
         static std::string cache_name_;
         static uint32_t capacity_bytes_;
