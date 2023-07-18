@@ -138,7 +138,7 @@ namespace covered
         assert(control_request_ptr != NULL && control_request_ptr->isControlRequest());
 
         #ifdef DEBUG_BEACON_SERVER
-        Util::dumpVariablesForDebug(base_instance_name_, 3, "receive a control request", "type:", MessageBase::messageTypeToString(control_request_ptr->getMessageType()).c_str());
+        Util::dumpVariablesForDebug(base_instance_name_, 5, "receive a control request", "type:", MessageBase::messageTypeToString(control_request_ptr->getMessageType()).c_str(), "keystr:", MessageBase::getKeyFromMessage(control_request_ptr).getKeystr().c_str());
         #endif
 
         bool is_finish = false; // Mark if edge node is finished

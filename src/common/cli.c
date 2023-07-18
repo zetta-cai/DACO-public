@@ -35,8 +35,8 @@ namespace covered
             ("cache_name", boost::program_options::value<std::string>()->default_value(Param::LRU_CACHE_NAME), "cache name")
             ("capacitymb", boost::program_options::value<uint32_t>()->default_value(1000), "total cache capacity (including data and metadata) in units of MB")
             ("clientcnt", boost::program_options::value<uint32_t>()->default_value(1), "the total number of clients")
-            ("config_file", boost::program_options::value<std::string>()->default_value("config.json"), "config file path of COVERED")
             ("cloud_storage", boost::program_options::value<std::string>()->default_value(Param::HDD_NAME), "type of cloud storage")
+            ("config_file", boost::program_options::value<std::string>()->default_value("config.json"), "config file path of COVERED")
             ("debug", "enable debug information")
             ("duration", boost::program_options::value<double>()->default_value(1), "benchmark duration (seconds)")
             ("edgecnt", boost::program_options::value<uint32_t>()->default_value(1), "the number of edge nodes")
@@ -49,6 +49,7 @@ namespace covered
             ("propagation_latency_clientedge", boost::program_options::value<uint32_t>()->default_value(1000), "the propagation latency between client and edge (in units of us)")
             ("propagation_latency_crossedge", boost::program_options::value<uint32_t>()->default_value(10000), "the propagation latency between edge and neighbor (in units of us)")
             ("propagation_latency_edgecloud", boost::program_options::value<uint32_t>()->default_value(100000), "the propagation latency between edge and cloud (in units of us)")
+            ("track_event", "track events to break down latencies")
             ("workload_name", boost::program_options::value<std::string>()->default_value(Param::FACEBOOK_WORKLOAD_NAME), "workload name")
         ;
         // Dynamic actions
@@ -102,10 +103,15 @@ namespace covered
         uint32_t propagation_latency_clientedge = argument_info_["propagation_latency_clientedge"].as<uint32_t>();
         uint32_t propagation_latency_crossedge = argument_info_["propagation_latency_crossedge"].as<uint32_t>();
         uint32_t propagation_latency_edgecloud = argument_info_["propagation_latency_edgecloud"].as<uint32_t>();
+        bool track_event = false;
+        if (argument_info_.count("track_event"))
+        {
+            track_event = true;
+        }
         std::string workload_name = argument_info_["workload_name"].as<std::string>();
 
         // Store CLI parameters for dynamic configurations and mark Param as valid
-        Param::setParameters(main_class_name, is_single_node, cache_name, capacity, clientcnt, cloud_storage, config_filepath, is_debug, duration, edgecnt, hash_name, keycnt, opcnt, percacheserver_workercnt, perclient_workercnt, propagation_latency_clientedge, propagation_latency_crossedge, propagation_latency_edgecloud, workload_name);
+        Param::setParameters(main_class_name, is_single_node, cache_name, capacity, clientcnt, cloud_storage, config_filepath, is_debug, duration, edgecnt, hash_name, keycnt, opcnt, percacheserver_workercnt, perclient_workercnt, propagation_latency_clientedge, propagation_latency_crossedge, propagation_latency_edgecloud, track_event, workload_name);
 
         // (4) Load config file for static configurations
 

@@ -216,7 +216,7 @@ namespace covered
         }
 
         #ifdef DEBUG_CACHE_SERVER
-        Util::dumpVariablesForDebug(base_instance_name_, 3, "acesss local edge cache;", "is_local_cached_and_valid:", Util::toString(is_local_cached_and_valid).c_str());
+        Util::dumpVariablesForDebug(base_instance_name_, 5, "acesss local edge cache;", "is_local_cached_and_valid:", Util::toString(is_local_cached_and_valid).c_str(), "keystr:", tmp_key.getKeystr().c_str());
         #endif
 
         // Access cooperative edge cache for local cache miss or invalid object
@@ -236,7 +236,7 @@ namespace covered
         }
 
         #ifdef DEBUG_CACHE_SERVER
-        Util::dumpVariablesForDebug(base_instance_name_, 3, "acesss cooperative edge cache;", "is_cooperative_cached_and_valid:", Util::toString(is_cooperative_cached_and_valid).c_str());
+        Util::dumpVariablesForDebug(base_instance_name_, 5, "acesss cooperative edge cache;", "is_cooperative_cached_and_valid:", Util::toString(is_cooperative_cached_and_valid).c_str(), "keystr:", tmp_key.getKeystr().c_str());
         #endif
 
         // TODO: For COVERED, beacon node will tell the edge node if to admit, w/o independent decision
@@ -428,7 +428,7 @@ namespace covered
         bool current_is_beacon = tmp_edge_wrapper_ptr->currentIsBeacon_(key);
 
         #ifdef DEBUG_CACHE_SERVER
-        Util::dumpVariablesForDebug(base_instance_name_, 2, "current_is_beacon:", Util::toString(current_is_beacon).c_str());
+        Util::dumpVariablesForDebug(base_instance_name_, 4, "current_is_beacon:", Util::toString(current_is_beacon).c_str(), "keystr:", key.getKeystr().c_str());
         #endif
 
         // Check if beacon node is the current edge node and lookup directory information
@@ -481,7 +481,7 @@ namespace covered
             assert(!is_being_written);
 
             #ifdef DEBUG_CACHE_SERVER
-            Util::dumpVariablesForDebug(base_instance_name_, 2, "is_valid_directory_exist:", Util::toString(is_valid_directory_exist).c_str());
+            Util::dumpVariablesForDebug(base_instance_name_, 4, "is_valid_directory_exist:", Util::toString(is_valid_directory_exist).c_str(), "keystr:", key.getKeystr().c_str());
             #endif
 
             if (is_valid_directory_exist) // The object is cached by some target edge node
@@ -506,7 +506,7 @@ namespace covered
                 }
 
                 #ifdef DEBUG_CACHE_SERVER
-                Util::dumpVariablesForDebug(base_instance_name_, 7, "issue redirected get request:", "target:", Util::toString(directory_info.getTargetEdgeIdx()).c_str(), "is_cooperative_cached:", Util::toString(is_cooperative_cached).c_str(), "is_valid", Util::toString(is_valid).c_str());
+                Util::dumpVariablesForDebug(base_instance_name_, 9, "issue redirected get request:", "target:", Util::toString(directory_info.getTargetEdgeIdx()).c_str(), "is_cooperative_cached:", Util::toString(is_cooperative_cached).c_str(), "is_valid", Util::toString(is_valid).c_str(), "keystr:", key.getKeystr().c_str());
                 #endif
 
                 // Check is_cooperative_cached and is_valid

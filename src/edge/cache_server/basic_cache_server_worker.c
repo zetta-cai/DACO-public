@@ -99,6 +99,10 @@ namespace covered
         // Get destination address of beacon node
         NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = getBeaconDstaddr_(key);
 
+        #ifdef DEBUG_CACHE_SERVER
+        Util::dumpVariablesForDebug(instance_name_, 4, "beacon edge index:", std::to_string(tmp_edge_wrapper_ptr->cooperation_wrapper_ptr_->getBeaconEdgeIdx(key)).c_str(), "keystr:", key.getKeystr().c_str());
+        #endif
+
         while (true) // Timeout-and-retry mechanism
         {
             // Push the control request into edge-to-edge propagation simulator to send to beacon node

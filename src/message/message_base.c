@@ -428,10 +428,125 @@ namespace covered
             const LocalDelRequest* const local_del_request_ptr = static_cast<const LocalDelRequest*>(message_ptr);
             tmp_key = local_del_request_ptr->getKey();
         }
+        else if (message_ptr->message_type_ == MessageType::kLocalGetResponse)
+        {
+            const LocalGetResponse* const local_get_response_ptr = static_cast<const LocalGetResponse*>(message_ptr);
+            tmp_key = local_get_response_ptr->getKey();
+        }
+        else if (message_ptr->message_type_ == MessageType::kLocalPutResponse)
+        {
+            const LocalPutResponse* const local_put_response_ptr = static_cast<const LocalPutResponse*>(message_ptr);
+            tmp_key = local_put_response_ptr->getKey();
+        }
+        else if (message_ptr->message_type_ == MessageType::kLocalDelResponse)
+        {
+            const LocalDelResponse* const local_del_response_ptr = static_cast<const LocalDelResponse*>(message_ptr);
+            tmp_key = local_del_response_ptr->getKey();
+        }
+        else if (message_ptr->message_type_ == MessageType::kGlobalGetRequest)
+        {
+            const GlobalGetRequest* const global_get_request_ptr = static_cast<const GlobalGetRequest*>(message_ptr);
+            tmp_key = global_get_request_ptr->getKey();
+        }
+        else if (message_ptr->message_type_ == MessageType::kGlobalPutRequest)
+        {
+            const GlobalPutRequest* const global_put_request_ptr = static_cast<const GlobalPutRequest*>(message_ptr);
+            tmp_key = global_put_request_ptr->getKey();
+        }
+        else if (message_ptr->message_type_ == MessageType::kGlobalDelRequest)
+        {
+            const GlobalDelRequest* const global_del_request_ptr = static_cast<const GlobalDelRequest*>(message_ptr);
+            tmp_key = global_del_request_ptr->getKey();
+        }
+        else if (message_ptr->message_type_ == MessageType::kGlobalGetResponse)
+        {
+            const GlobalGetResponse* const global_get_response_ptr = static_cast<const GlobalGetResponse*>(message_ptr);
+            tmp_key = global_get_response_ptr->getKey();
+        }
+        else if (message_ptr->message_type_ == MessageType::kGlobalPutResponse)
+        {
+            const GlobalPutResponse* const global_put_response_ptr = static_cast<const GlobalPutResponse*>(message_ptr);
+            tmp_key = global_put_response_ptr->getKey();
+        }
+        else if (message_ptr->message_type_ == MessageType::kGlobalDelResponse)
+        {
+            const GlobalDelResponse* const global_del_response_ptr = static_cast<const GlobalDelResponse*>(message_ptr);
+            tmp_key = global_del_response_ptr->getKey();
+        }
+        else if (message_ptr->message_type_ == MessageType::kRedirectedGetRequest)
+        {
+            const RedirectedGetRequest* const redirected_get_request_ptr = static_cast<const RedirectedGetRequest*>(message_ptr);
+            tmp_key = redirected_get_request_ptr->getKey();
+        }
+        else if (message_ptr->message_type_ == MessageType::kRedirectedGetResponse)
+        {
+            const RedirectedGetResponse* const redirected_get_response_ptr = static_cast<const RedirectedGetResponse*>(message_ptr);
+            tmp_key = redirected_get_response_ptr->getKey();
+        }
+        else if (message_ptr->message_type_ == MessageType::kAcquireWritelockRequest)
+        {
+            const AcquireWritelockRequest* const acquire_writelock_request_ptr = static_cast<const AcquireWritelockRequest*>(message_ptr);
+            tmp_key = acquire_writelock_request_ptr->getKey();
+        }
+        else if (message_ptr->message_type_ == MessageType::kAcquireWritelockResponse)
+        {
+            const AcquireWritelockResponse* const acquire_writelock_response_ptr = static_cast<const AcquireWritelockResponse*>(message_ptr);
+            tmp_key = acquire_writelock_response_ptr->getKey();
+        }
+        else if (message_ptr->message_type_ == MessageType::kDirectoryLookupRequest)
+        {
+            const DirectoryLookupRequest* const directory_lookup_request_ptr = static_cast<const DirectoryLookupRequest*>(message_ptr);
+            tmp_key = directory_lookup_request_ptr->getKey();
+        }
+        else if (message_ptr->message_type_ == MessageType::kDirectoryUpdateRequest)
+        {
+            const DirectoryUpdateRequest* const directory_update_request_ptr = static_cast<const DirectoryUpdateRequest*>(message_ptr);
+            tmp_key = directory_update_request_ptr->getKey();
+        }
+        else if (message_ptr->message_type_ == MessageType::kDirectoryLookupResponse)
+        {
+            const DirectoryLookupResponse* const directory_lookup_response_ptr = static_cast<const DirectoryLookupResponse*>(message_ptr);
+            tmp_key = directory_lookup_response_ptr->getKey();
+        }
+        else if (message_ptr->message_type_ == MessageType::kDirectoryUpdateResponse)
+        {
+            const DirectoryUpdateResponse* const directory_update_response_ptr = static_cast<const DirectoryUpdateResponse*>(message_ptr);
+            tmp_key = directory_update_response_ptr->getKey();
+        }
+        else if (message_ptr->message_type_ == MessageType::kFinishBlockRequest)
+        {
+            const FinishBlockRequest* const finish_block_request_ptr = static_cast<const FinishBlockRequest*>(message_ptr);
+            tmp_key = finish_block_request_ptr->getKey();
+        }
+        else if (message_ptr->message_type_ == MessageType::kFinishBlockResponse)
+        {
+            const FinishBlockResponse* const finish_block_response_ptr = static_cast<const FinishBlockResponse*>(message_ptr);
+            tmp_key = finish_block_response_ptr->getKey();
+        }
+        else if (message_ptr->message_type_ == MessageType::kInvalidationRequest)
+        {
+            const InvalidationRequest* const invalidation_request_ptr = static_cast<const InvalidationRequest*>(message_ptr);
+            tmp_key = invalidation_request_ptr->getKey();
+        }
+        else if (message_ptr->message_type_ == MessageType::kInvalidationResponse)
+        {
+            const InvalidationResponse* const invalidation_response_ptr = static_cast<const InvalidationResponse*>(message_ptr);
+            tmp_key = invalidation_response_ptr->getKey();
+        }
+        else if (message_ptr->message_type_ == MessageType::kReleaseWritelockRequest)
+        {
+            const ReleaseWritelockRequest* const release_writelock_request_ptr = static_cast<const ReleaseWritelockRequest*>(message_ptr);
+            tmp_key = release_writelock_request_ptr->getKey();
+        }
+        else if (message_ptr->message_type_ == MessageType::kReleaseWritelockResponse)
+        {
+            const ReleaseWritelockResponse* const release_writelock_response_ptr = static_cast<const ReleaseWritelockResponse*>(message_ptr);
+            tmp_key = release_writelock_response_ptr->getKey();
+        }
         else
         {
             std::ostringstream oss;
-            oss << "invalid message type " << getRequestFromMsgPayload(message_ptr->message_type_) << " for getKeyFromMessage()!";
+            oss << "invalid message type " << messageTypeToString(message_ptr->message_type_) << " for getKeyFromMessage()!";
             Util::dumpErrorMsg(kClassName, oss.str());
             exit(1);
         }

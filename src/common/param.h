@@ -1,5 +1,7 @@
 /*
  * Param: store CLI parameters for dynamic configurations.
+ *
+ * NOTE: all parameters regarding client/edge/cloud settings should be passed into each instance when launching threads, except those with no effect on results (see comments in Util::getInfixForFilepath_).
  * 
  * By Siyuan Sheng (2023.04.10).
  */
@@ -30,7 +32,7 @@ namespace covered
         // For workload name
         static const std::string FACEBOOK_WORKLOAD_NAME; // Workload generator type
 
-        static void setParameters(const std::string& main_class_name, const bool& is_single_node, const std::string& cache_name, const uint32_t& capacity_bytes, const uint32_t& clientcnt, const std::string& cloud_storage, const std::string& config_filepath, const bool& is_debug, const double& duration, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& percacheserver_workercnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge, const uint32_t& propagation_latency_crossedge, const uint32_t& propagation_latency_edgecloud, const std::string& workload_name);
+        static void setParameters(const std::string& main_class_name, const bool& is_single_node, const std::string& cache_name, const uint32_t& capacity_bytes, const uint32_t& clientcnt, const std::string& cloud_storage, const std::string& config_filepath, const bool& is_debug, const double& duration, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& percacheserver_workercnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge, const uint32_t& propagation_latency_crossedge, const uint32_t& propagation_latency_edgecloud, const bool& track_event, const std::string& workload_name);
 
         static std::string getMainClassName();
         static bool isSingleNode();
@@ -50,6 +52,7 @@ namespace covered
         static uint32_t getPropagationLatencyClientedge();
         static uint32_t getPropagationLatencyCrossedge();
         static uint32_t getPropagationLatencyEdgecloud();
+        static bool isTrackEvent();
         static std::string getWorkloadName();
 
         static std::string toString();
@@ -85,6 +88,7 @@ namespace covered
         static uint32_t propagation_latency_clientedge_; // 1/2 RTT between client and edge (bidirectional link)
         static uint32_t propagation_latency_crossedge_; // 1/2 RTT between edge and neighbor (bidirectional link)
         static uint32_t propagation_latency_edgecloud_; // 1/2 RTT between edge and cloud (bidirectional link)
+        static bool track_event_;
         static std::string workload_name_;
     };
 }

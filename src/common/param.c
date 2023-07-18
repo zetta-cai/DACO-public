@@ -42,7 +42,7 @@ namespace covered
     uint32_t Param::propagation_latency_edgecloud_ = 0;
     std::string Param::workload_name_ = "";
 
-    void Param::setParameters(const std::string& main_class_name, const bool& is_single_node, const std::string& cache_name, const uint32_t& capacity_bytes, const uint32_t& clientcnt, const std::string& cloud_storage, const std::string& config_filepath, const bool& is_debug, const double& duration, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& percacheserver_workercnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge, const uint32_t& propagation_latency_crossedge, const uint32_t& propagation_latency_edgecloud, const std::string& workload_name)
+    void Param::setParameters(const std::string& main_class_name, const bool& is_single_node, const std::string& cache_name, const uint32_t& capacity_bytes, const uint32_t& clientcnt, const std::string& cloud_storage, const std::string& config_filepath, const bool& is_debug, const double& duration, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& percacheserver_workercnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge, const uint32_t& propagation_latency_crossedge, const uint32_t& propagation_latency_edgecloud, const bool& track_event, const std::string& workload_name)
     {
         // NOTE: Param::setParameters() does NOT rely on any other module
         if (is_valid_)
@@ -73,6 +73,7 @@ namespace covered
         propagation_latency_clientedge_ = propagation_latency_clientedge;
         propagation_latency_crossedge_ = propagation_latency_crossedge;
         propagation_latency_edgecloud_ = propagation_latency_edgecloud;
+        track_event_ = track_event;
         workload_name_ = workload_name;
         checkWorkloadName_();
 
@@ -190,6 +191,12 @@ namespace covered
         return propagation_latency_edgecloud_;
     }
 
+    bool Param::isTrackEvent()
+    {
+        checkIsValid_();
+        return track_event_;
+    }
+
     std::string Param::getWorkloadName()
     {
         checkIsValid_();
@@ -218,6 +225,7 @@ namespace covered
         oss << "One-way propagation latency between client and edge: " << propagation_latency_clientedge_ << "us" << std::endl;
         oss << "One-way propagation latency between edge and edge: " << propagation_latency_crossedge_ << "us" << std::endl;
         oss << "One-way propagation latency between edge and cloud: " << propagation_latency_edgecloud_ << "us" << std::endl;
+        oss << "Track event flag: " << (track_event_?"true":"false") << std::endl;
         oss << "Workload name: " << workload_name_;
         return oss.str();
         
