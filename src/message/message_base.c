@@ -564,11 +564,13 @@ namespace covered
         return sizeof(uint32_t);
     }
 
-    MessageBase::MessageBase(const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr)
+    MessageBase::MessageBase(const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr, const EventList& event_list)
     {
         message_type_ = message_type;
         source_index_ = source_index;
         source_addr_ = source_addr;
+        event_list_ = event_list;
+
         is_valid_ = true;
     }
 
@@ -603,16 +605,24 @@ namespace covered
         return source_addr_;
     }
 
+    const EventList& MessageBase::getEventListRef() const
+    {
+        checkIsValid_();
+        return event_list_;
+    }
+
     uint32_t MessageBase::getMsgPayloadSize() const
     {
         checkIsValid_();
 
-        // Message type size + source index + source addr + internal payload size
-        return sizeof(uint32_t) + sizeof(uint32_t) + source_addr_.getAddrPayloadSize() + getMsgPayloadSizeInternal_();
+        // Message type size + source index + source addr + event list (0 if without event tracking) + internal payload size
+        return sizeof(uint32_t) + sizeof(uint32_t) + source_addr_.getAddrPayloadSize() + event_list_.getEventListPayloadSize() + getMsgPayloadSizeInternal_();
     }
 
     uint32_t MessageBase::serialize(DynamicArray& msg_payload) const
     {
+        // TODO: END HERE
+        
         checkIsValid_();
 
         uint32_t size = 0;

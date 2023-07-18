@@ -10,6 +10,7 @@
 #include <string>
 
 #include "common/dynamic_array.h"
+#include "event/event_list.h"
 #include "workload/workload_item.h"
 #include "network/network_addr.h"
 
@@ -72,7 +73,7 @@ namespace covered
         static MessageBase* getResponseFromMsgPayload(const DynamicArray& msg_payload); // Data/control responses
         static Key getKeyFromMessage(MessageBase* message_ptr); // Get key from message (e.g., local requests)
 
-        MessageBase(const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr);
+        MessageBase(const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr, const EventList& event_list);
         //MessageBase(const DynamicArray& msg_payload);
         MessageBase();
         virtual ~MessageBase();
@@ -80,6 +81,7 @@ namespace covered
         MessageType getMessageType() const;
         uint32_t getSourceIndex() const;
         NetworkAddr getSourceAddr() const;
+        const EventList& getEventListRef() const;
 
         uint32_t getMsgPayloadSize() const;
 
@@ -113,6 +115,7 @@ namespace covered
         MessageType message_type_;
         uint32_t source_index_; // global-client-worker/edge/cloud index of source node
         NetworkAddr source_addr_; // Network address of source socket server to hide propagation simulator
+        EventList event_list_; // Track events to break down latencies for debugging (NOTE: NOT consume bandwidth if without event tracking)
 
         bool is_valid_; // NOT serialized/deserialized in msg payload
     protected:

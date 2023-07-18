@@ -24,7 +24,7 @@ namespace covered
 
         bool isLastFrag(const UdpFragHdr& fraghdr);
         void insertFrag(const UdpFragHdr& fraghdr, const DynamicArray& pkt_payload);
-        std::map<uint32_t, DynamicArray>& getFragidxFragpayloadMap();
+        std::map<uint32_t, DynamicArray>& getFragidxFragpayloadMapRef();
     private:
         static const std::string kClassName;
 

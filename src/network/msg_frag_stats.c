@@ -84,7 +84,7 @@ namespace covered
         return;
     }
 
-    std::map<uint32_t, DynamicArray>& MsgFragStatsEntry::getFragidxFragpayloadMap()
+    std::map<uint32_t, DynamicArray>& MsgFragStatsEntry::getFragidxFragpayloadMapRef()
     {
         return fragidx_fragpayload_map_;
     }

@@ -19,7 +19,7 @@ namespace covered
         DynamicArray(const uint32_t& capacity);
         ~DynamicArray();
 
-        const std::vector<char>& getBytes() const;
+        const std::vector<char>& getBytesRef() const;
         void clear(const uint32_t& capacity);
 
         uint32_t getSize() const;
