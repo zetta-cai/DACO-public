@@ -18,7 +18,7 @@ namespace covered
     class KeyMessage : public MessageBase
     {
     public:
-        KeyMessage(const Key& key, const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr);
+        KeyMessage(const Key& key, const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr, const EventList& event_list);
         KeyMessage(const DynamicArray& msg_payload);
         virtual ~KeyMessage();
 

@@ -18,7 +18,7 @@ namespace covered
     class AcquireWritelockResponse : public KeyByteMessage
     {
     public:
-        AcquireWritelockResponse(const Key& key, const LockResult& lock_result, const uint32_t& source_index, const NetworkAddr& source_addr);
+        AcquireWritelockResponse(const Key& key, const LockResult& lock_result, const uint32_t& source_index, const NetworkAddr& source_addr, const EventList& event_list);
         AcquireWritelockResponse(const DynamicArray& msg_payload);
         virtual ~AcquireWritelockResponse();
 

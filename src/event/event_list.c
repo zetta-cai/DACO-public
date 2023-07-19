@@ -61,6 +61,18 @@ namespace covered
         return;
     }
 
+    void EventList::addEvents(const EventList& event_list)
+    {
+        if (Param::isTrackEvent() && event_list.events_.size() > 0)
+        {
+            for (uint32_t i = 0; i < event_list.events_.size(); i++)
+            {
+                events_.push_back(event_list.events_[i]);
+            }
+        }
+        return;
+    }
+
     uint32_t EventList::getEventListPayloadSize() const
     {
         uint32_t payload_size = 0;
@@ -134,6 +146,19 @@ namespace covered
         assert(!Param::isTrackEvent() && size == position);
 
         return size - position;
+    }
+
+    std::string EventList::toString() const
+    {
+        std::ostringstream oss;
+        if (Param::isTrackEvent() && events_.size() > 0)
+        {
+            for (uint32_t i = 0; i < events_.size(); i++)
+            {
+                oss << "<" << events_[i].getEventName() << ", " << events_[i].getEventLatencyUs() << " us> ";
+            }
+        }
+        return oss.str();
     }
 
     EventList& EventList::operator=(const EventList& other)

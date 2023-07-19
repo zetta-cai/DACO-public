@@ -4,7 +4,7 @@ namespace covered
 {
     const std::string DirectoryUpdateRequest::kClassName("DirectoryUpdateRequest");
 
-    DirectoryUpdateRequest::DirectoryUpdateRequest(const Key& key, const bool& is_valid_directory_exist, const DirectoryInfo& directory_info, const uint32_t& source_index, const NetworkAddr& source_addr) : KeyValidityDirectoryMessage(key, is_valid_directory_exist, directory_info, MessageType::kDirectoryUpdateRequest, source_index, source_addr)
+    DirectoryUpdateRequest::DirectoryUpdateRequest(const Key& key, const bool& is_valid_directory_exist, const DirectoryInfo& directory_info, const uint32_t& source_index, const NetworkAddr& source_addr) : KeyValidityDirectoryMessage(key, is_valid_directory_exist, directory_info, MessageType::kDirectoryUpdateRequest, source_index, source_addr, EventList())
     {
     }
 

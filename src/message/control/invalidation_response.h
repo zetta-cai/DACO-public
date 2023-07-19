@@ -18,7 +18,7 @@ namespace covered
     class InvalidationResponse : public KeyMessage
     {
     public:
-        InvalidationResponse(const Key& key, const uint32_t& source_index, const NetworkAddr& source_addr);
+        InvalidationResponse(const Key& key, const uint32_t& source_index, const NetworkAddr& source_addr, const EventList& event_list);
         InvalidationResponse(const DynamicArray& msg_payload);
         virtual ~InvalidationResponse();
     private:

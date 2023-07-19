@@ -189,7 +189,7 @@ namespace covered
         return lockresult_str;
     }
 
-    MessageBase* MessageBase::getLocalRequestFromWorkloadItem(WorkloadItem workload_item, const uint32_t& source_index, const NetworkAddr& source_addr)
+    MessageBase* MessageBase::getLocalRequestFromWorkloadItem(WorkloadItem workload_item, const uint32_t& source_index, const NetworkAddr& source_addr, const EventList& event_list)
     {
         assert(source_addr.isValidAddr());
         
@@ -201,17 +201,17 @@ namespace covered
         {
             case WorkloadItemType::kWorkloadItemGet:
             {
-                message_ptr = new LocalGetRequest(workload_item.getKey(), source_index, source_addr);
+                message_ptr = new LocalGetRequest(workload_item.getKey(), source_index, source_addr, event_list);
                 break;
             }
             case WorkloadItemType::kWorkloadItemPut:
             {
-                message_ptr = new LocalPutRequest(workload_item.getKey(), workload_item.getValue(), source_index, source_addr);
+                message_ptr = new LocalPutRequest(workload_item.getKey(), workload_item.getValue(), source_index, source_addr, event_list);
                 break;
             }
             case WorkloadItemType::kWorkloadItemDel:
             {
-                message_ptr = new LocalDelRequest(workload_item.getKey(), source_index, source_addr);
+                message_ptr = new LocalDelRequest(workload_item.getKey(), source_index, source_addr, event_list);
                 break;
             }
             default:
@@ -621,8 +621,6 @@ namespace covered
 
     uint32_t MessageBase::serialize(DynamicArray& msg_payload) const
     {
-        // TODO: END HERE
-        
         checkIsValid_();
 
         uint32_t size = 0;
@@ -634,6 +632,8 @@ namespace covered
         size += sizeof(uint32_t);
         uint32_t addr_payload_size = source_addr_.serialize(msg_payload, size);
         size += addr_payload_size;
+        uint32_t eventlist_payload_size = event_list_.serialize(msg_payload, size);
+        size += eventlist_payload_size;
         uint32_t internal_size = serializeInternal_(msg_payload, size);
         size += internal_size;
         return size - 0;
@@ -653,6 +653,8 @@ namespace covered
         size += sizeof(uint32_t);
         uint32_t addr_payload_size = source_addr_.deserialize(msg_payload, size);
         size += addr_payload_size;
+        uint32_t eventlist_payload_size = event_list_.deserialize(msg_payload, size);
+        size += eventlist_payload_size;
         uint32_t internal_size = this->deserializeInternal_(msg_payload, size);
         size += internal_size;
         return size - 0;

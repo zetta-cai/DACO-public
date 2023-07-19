@@ -26,10 +26,13 @@ namespace covered
         void addEvent(const Event& event);
         void addEvent(const std::string& event_name, const uint32_t& event_latency_us);
         void addEvents(const std::vector<Event>& events);
+        void addEvents(const EventList& event_list);
 
         uint32_t getEventListPayloadSize() const;
         uint32_t serialize(DynamicArray& msg_payload, const uint32_t& position) const;
         uint32_t deserialize(const DynamicArray& msg_payload, const uint32_t& position);
+
+        std::string toString() const;
 
         EventList& operator=(const EventList& other);
     private:

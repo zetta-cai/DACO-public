@@ -135,7 +135,7 @@ namespace covered
         return is_last_frag;
     }
 
-    MsgFragStatsEntry* MsgFragStats::getEntry(const NetworkAddr& source_addr)
+    MsgFragStatsEntry* MsgFragStats::getEntry(const NetworkAddr& source_addr, const EventList& event_list)
     {
         assert(source_addr.isValidAddr() == true);
         
@@ -149,7 +149,7 @@ namespace covered
         }
     }
 
-    void MsgFragStats::removeEntry(const NetworkAddr& source_addr)
+    void MsgFragStats::removeEntry(const NetworkAddr& source_addr, const EventList& event_list)
     {
         if (srcaddr_entry_map_.find(source_addr) != srcaddr_entry_map_.end())
         {

@@ -4,7 +4,7 @@ namespace covered
 {
     const std::string LocalDelRequest::kClassName("LocalDelRequest");
 
-    LocalDelRequest::LocalDelRequest(const Key& key, const uint32_t& source_index, const NetworkAddr& source_addr) : KeyMessage(key, MessageType::kLocalDelRequest, source_index, source_addr)
+    LocalDelRequest::LocalDelRequest(const Key& key, const uint32_t& source_index, const NetworkAddr& source_addr) : KeyMessage(key, MessageType::kLocalDelRequest, source_index, source_addr, EventList())
     {
     }
 

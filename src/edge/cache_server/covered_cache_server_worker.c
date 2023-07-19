@@ -37,38 +37,38 @@ namespace covered
 
     // (2.1) Fetch data from neighbor edge nodes
 
-    bool CoveredCacheServerWorker::lookupBeaconDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
+    bool CoveredCacheServerWorker::lookupBeaconDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, EventList& event_list) const
     {
         return false;
     }
 
-    bool CoveredCacheServerWorker::redirectGetToTarget_(const DirectoryInfo& directory_info, const Key& key, Value& value, bool& is_cooperative_cached, bool& is_valid) const
+    bool CoveredCacheServerWorker::redirectGetToTarget_(const DirectoryInfo& directory_info, const Key& key, Value& value, bool& is_cooperative_cached, bool& is_valid, EventList& event_list) const
     {
         return false;
     }
 
     // (2.2) Update content directory information
 
-    bool CoveredCacheServerWorker::updateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written) const
+    bool CoveredCacheServerWorker::updateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written, EventList& event_list) const
     {
         return false;
     }
 
     // (2.3) Process writes and block for MSI protocol
 
-    bool CoveredCacheServerWorker::acquireBeaconWritelock_(const Key& key, LockResult& lock_result)
+    bool CoveredCacheServerWorker::acquireBeaconWritelock_(const Key& key, LockResult& lock_result, EventList& event_list)
     {
         return false;
     }
 
-    bool CoveredCacheServerWorker::releaseBeaconWritelock_(const Key& key)
+    bool CoveredCacheServerWorker::releaseBeaconWritelock_(const Key& key, EventList& event_list)
     {
         return false;
     }
 
     // (5) Admit uncached objects in local edge cache
 
-    bool CoveredCacheServerWorker::triggerIndependentAdmission_(const Key& key, const Value& value) const
+    bool CoveredCacheServerWorker::triggerIndependentAdmission_(const Key& key, const Value& value, EventList& event_list) const
     {
         // NOTE: COVERED will NOT trigger any independent cache admission/eviction decision
         std::ostringstream oss;

@@ -21,7 +21,7 @@ namespace covered
     class KeyValidityDirectoryMessage : public MessageBase
     {
     public:
-        KeyValidityDirectoryMessage(const Key& key, const bool& is_valid_directory_exist, const DirectoryInfo& directory_info, const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr);
+        KeyValidityDirectoryMessage(const Key& key, const bool& is_valid_directory_exist, const DirectoryInfo& directory_info, const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr, const EventList& event_list);
         KeyValidityDirectoryMessage(const DynamicArray& msg_payload);
         virtual ~KeyValidityDirectoryMessage();
 

@@ -4,7 +4,7 @@ namespace covered
 {
     const std::string LocalDelResponse::kClassName("LocalDelResponse");
 
-    LocalDelResponse::LocalDelResponse(const Key& key, const Hitflag& hitflag, const uint32_t& source_index, const NetworkAddr& source_addr) : KeyByteMessage(key, static_cast<uint8_t>(hitflag), MessageType::kLocalDelResponse, source_index, source_addr)
+    LocalDelResponse::LocalDelResponse(const Key& key, const Hitflag& hitflag, const uint32_t& source_index, const NetworkAddr& source_addr, const EventList& event_list) : KeyByteMessage(key, static_cast<uint8_t>(hitflag), MessageType::kLocalDelResponse, source_index, source_addr, event_list)
     {
     }
 

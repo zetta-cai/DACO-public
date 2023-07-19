@@ -68,7 +68,7 @@ namespace covered
         static std::string hitflagToString(const Hitflag& hitflag);
         static std::string lockResultToString(const LockResult& lock_result);
 
-        static MessageBase* getLocalRequestFromWorkloadItem(WorkloadItem workload_item, const uint32_t& source_index, const NetworkAddr& source_addr); // By workers in clients
+        static MessageBase* getLocalRequestFromWorkloadItem(WorkloadItem workload_item, const uint32_t& source_index, const NetworkAddr& source_addr, const EventList& event_list); // By workers in clients
         static MessageBase* getRequestFromMsgPayload(const DynamicArray& msg_payload); // Data/control requests
         static MessageBase* getResponseFromMsgPayload(const DynamicArray& msg_payload); // Data/control responses
         static Key getKeyFromMessage(MessageBase* message_ptr); // Get key from message (e.g., local requests)

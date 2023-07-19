@@ -31,24 +31,24 @@ namespace covered
         // (2.1) Fetch data from neighbor edge nodes
 
         // Return if edge node is finished
-        virtual bool lookupBeaconDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const override; // Check remote directory info
-        virtual bool redirectGetToTarget_(const DirectoryInfo& directory_info, const Key& key, Value& value, bool& is_cooperative_cached, bool& is_valid) const override; // Request redirection
+        virtual bool lookupBeaconDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, EventList& event_list) const override; // Check remote directory info
+        virtual bool redirectGetToTarget_(const DirectoryInfo& directory_info, const Key& key, Value& value, bool& is_cooperative_cached, bool& is_valid, EventList& event_list) const override; // Request redirection
 
         // (2.2) Update content directory information
 
         // Return if edge node is finished
-        virtual bool updateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written) const override; // Update remote directory info
+        virtual bool updateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written, EventList& event_list) const override; // Update remote directory info
 
         // (2.3) Process writes and block for MSI protocol
 
         // Return if edge node is finished
-        virtual bool acquireBeaconWritelock_(const Key& key, LockResult& lock_result) override;
-        virtual bool releaseBeaconWritelock_(const Key& key) override;
+        virtual bool acquireBeaconWritelock_(const Key& key, LockResult& lock_result, EventList& event_list) override;
+        virtual bool releaseBeaconWritelock_(const Key& key, EventList& event_list) override;
 
         // (5) Admit uncached objects in local edge cache
 
         // Return if edge node is finished
-        virtual bool triggerIndependentAdmission_(const Key& key, const Value& value) const override;
+        virtual bool triggerIndependentAdmission_(const Key& key, const Value& value, EventList& event_list) const override;
 
         // Const variable
         std::string instance_name_;

@@ -18,7 +18,7 @@ namespace covered
     class UdpFragHdr
     {
     public:
-        UdpFragHdr(const uint32_t& fragment_idx, const uint32_t& fragment_cnt, const uint32_t& msg_payload_size, const uint32_t& msg_seqnum, const NetworkAddr& source_addr);
+        UdpFragHdr(const uint32_t& fragment_idx, const uint32_t& fragment_cnt, const uint32_t& msg_payload_size, const uint32_t& msg_seqnum, const NetworkAddr& source_addr, const EventList& event_list);
         UdpFragHdr(const DynamicArray& pkt_payload);
         ~UdpFragHdr();
 

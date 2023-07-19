@@ -88,44 +88,44 @@ namespace covered
         // (2.1) Fetch data from neighbor edge nodes
 
         // Return if edge node is finished
-        bool fetchDataFromNeighbor_(const Key& key, Value& value, bool& is_cooperative_cached_and_valid) const;
-        virtual bool lookupBeaconDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const = 0; // Check remote directory info
-        virtual bool redirectGetToTarget_(const DirectoryInfo& directory_info, const Key& key, Value& value, bool& is_cooperative_cached, bool& is_valid) const = 0; // Request redirection
+        bool fetchDataFromNeighbor_(const Key& key, Value& value, bool& is_cooperative_cached_and_valid, EventList& event_list) const;
+        virtual bool lookupBeaconDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, EventList& event_list) const = 0; // Check remote directory info
+        virtual bool redirectGetToTarget_(const DirectoryInfo& directory_info, const Key& key, Value& value, bool& is_cooperative_cached, bool& is_valid, EventList& event_list) const = 0; // Request redirection
 
         // (2.2) Update content directory information
 
         // Return if edge node is finished
-        virtual bool updateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written) const = 0; // Update remote directory info
+        virtual bool updateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written, EventList& event_list) const = 0; // Update remote directory info
 
         // (2.3) Process writes and block for MSI protocol
 
         // Return if edge node is finished
-        bool acquireWritelock_(const Key& key, LockResult& lock_result);
-        virtual bool acquireBeaconWritelock_(const Key& key, LockResult& lock_result) = 0;
-        bool blockForWritesByInterruption_(const Key& key) const; // Block for MSI protocol
-        bool releaseWritelock_(const Key& key);
-        virtual bool releaseBeaconWritelock_(const Key& key) = 0; // Notify beacon node to finish writes
+        bool acquireWritelock_(const Key& key, LockResult& lock_result, EventList& event_list);
+        virtual bool acquireBeaconWritelock_(const Key& key, LockResult& lock_result, EventList& event_list) = 0;
+        bool blockForWritesByInterruption_(const Key& key, EventList& event_list) const; // Block for MSI protocol
+        bool releaseWritelock_(const Key& key, EventList& event_list);
+        virtual bool releaseBeaconWritelock_(const Key& key, EventList& event_list) = 0; // Notify beacon node to finish writes
 
         // (3) Access cloud
 
         // Return if edge node is finished
-        bool fetchDataFromCloud_(const Key& key, Value& value) const;
-        bool writeDataToCloud_(const Key& key, const Value& value, const MessageType& message_type);
+        bool fetchDataFromCloud_(const Key& key, Value& value, EventList& event_list) const;
+        bool writeDataToCloud_(const Key& key, const Value& value, const MessageType& message_type, EventList& event_list);
 
         // (4) Update cached objects in local edge cache
 
         // Return if edge node is finished
-        bool tryToUpdateInvalidLocalEdgeCache_(const Key& key, const Value& value) const;
+        bool tryToUpdateInvalidLocalEdgeCache_(const Key& key, const Value& value, EventList& event_list) const;
         // NOTE: we will check capacity and trigger eviction for value updates
-        bool updateLocalEdgeCache_(const Key& key, const Value& value, bool& is_local_cached_after_udpate) const;
+        bool updateLocalEdgeCache_(const Key& key, const Value& value, bool& is_local_cached_after_udpate, EventList& event_list) const;
         void removeLocalEdgeCache_(const Key& key, bool& is_local_cached_after_udpate) const;
 
         // (5) Admit uncached objects in local edge cache
 
         // Return if edge node is finished
-        bool tryToTriggerIndependentAdmission_(const Key& key, const Value& value) const;
+        bool tryToTriggerIndependentAdmission_(const Key& key, const Value& value, EventList& event_list) const;
         // NOTE: we will check capacity and trigger eviction for cache admission
-        virtual bool triggerIndependentAdmission_(const Key& key, const Value& value) const = 0;
+        virtual bool triggerIndependentAdmission_(const Key& key, const Value& value, EventList& event_list) const = 0;
 
         // Member variables
 
@@ -135,7 +135,7 @@ namespace covered
         // (2.2) Update content directory information
 
         // Return if edge node is finished
-        bool updateDirectory_(const Key& key, const bool& is_admit, bool& is_being_written) const; // Update content directory information
+        bool updateDirectory_(const Key& key, const bool& is_admit, bool& is_being_written, EventList& event_list) const; // Update content directory information
 
         // (2.4) Utility functions for cooperative caching
 

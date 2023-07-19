@@ -9,7 +9,7 @@ namespace covered
 {
     const std::string UdpFragHdr::kClassName("UdpFragHdr");
 
-    UdpFragHdr::UdpFragHdr(const uint32_t& fragment_idx, const uint32_t& fragment_cnt, const uint32_t& msg_payload_size, const uint32_t& msg_seqnum, const NetworkAddr& source_addr)
+    UdpFragHdr::UdpFragHdr(const uint32_t& fragment_idx, const uint32_t& fragment_cnt, const uint32_t& msg_payload_size, const uint32_t& msg_seqnum, const NetworkAddr& source_addr, const EventList& event_list)
     {
         fragment_idx_ = fragment_idx;
         fragment_cnt_ = fragment_cnt;

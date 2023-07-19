@@ -4,7 +4,7 @@ namespace covered
 {
     const std::string KeyValidityDirectoryMessage::kClassName("KeyValidityDirectoryMessage");
 
-    KeyValidityDirectoryMessage::KeyValidityDirectoryMessage(const Key& key, const bool& is_valid_directory_exist, const DirectoryInfo& directory_info, const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr) : MessageBase(message_type, source_index, source_addr)
+    KeyValidityDirectoryMessage::KeyValidityDirectoryMessage(const Key& key, const bool& is_valid_directory_exist, const DirectoryInfo& directory_info, const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr, const EventList& event_list) : MessageBase(message_type, source_index, source_addr, event_list)
     {
         key_ = key;
         is_valid_directory_exist_ = is_valid_directory_exist;

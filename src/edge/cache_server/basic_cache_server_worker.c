@@ -80,7 +80,7 @@ namespace covered
 
     // (2.1) Fetch data from neighbor edge nodes
 
-    bool BasicCacheServerWorker::lookupBeaconDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
+    bool BasicCacheServerWorker::lookupBeaconDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, EventList& event_list) const
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->edge_wrapper_ptr_;
@@ -90,6 +90,7 @@ namespace covered
         assert(!current_is_beacon);
 
         bool is_finish = false;
+        struct timespec issue_directory_lookup_req_start_timespec = Util::getCurrentTimespec();
 
         // Prepare directory lookup request to check directory information in beacon node
         uint32_t edge_idx = tmp_edge_wrapper_ptr->edge_param_ptr_->getNodeIdx();
@@ -137,6 +138,9 @@ namespace covered
                 is_valid_directory_exist = directory_lookup_response_ptr->isValidDirectoryExist();
                 directory_info = directory_lookup_response_ptr->getDirectoryInfo();
 
+                // Add events of intermediate response if with event tracking
+                event_list.addEvents(directory_lookup_response_ptr->getEventListRef());
+
                 // Release the control response message
                 delete control_response_ptr;
                 control_response_ptr = NULL;
@@ -144,17 +148,23 @@ namespace covered
             } // End of (is_timeout == false)
         } // End of while(true)
 
+        // Add intermediate event if with event tracking
+        struct timespec issue_directory_lookup_req_end_timespec = Util::getCurrentTimespec();
+        uint32_t issue_directory_lookup_req_latency_us = Util::getDeltaTimeUs(issue_directory_lookup_req_end_timespec, issue_directory_lookup_req_start_timespec);
+        event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_ISSUE_DIRECTORY_LOOKUP_REQ_EVENT_NAME, issue_directory_lookup_req_latency_us);
+
         // NOTE: directory_lookup_request_ptr will be released by edge-to-edge propagation simulator
 
         return is_finish;
     }
 
-    bool BasicCacheServerWorker::redirectGetToTarget_(const DirectoryInfo& directory_info, const Key& key, Value& value, bool& is_cooperative_cached, bool& is_valid) const
+    bool BasicCacheServerWorker::redirectGetToTarget_(const DirectoryInfo& directory_info, const Key& key, Value& value, bool& is_cooperative_cached, bool& is_valid, EventList& event_list) const
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->edge_wrapper_ptr_;
 
         bool is_finish = false;
+        struct timespec issue_redirect_get_req_start_timespec = Util::getCurrentTimespec();
 
         // Prepare redirected get request to get data from target edge node if any
         uint32_t edge_idx = tmp_edge_wrapper_ptr->edge_param_ptr_->getNodeIdx();
@@ -223,12 +233,20 @@ namespace covered
                     exit(1);
                 }
 
+                // Add events of intermediate response if with event tracking
+                event_list.addEvents(redirected_response_ptr->getEventListRef());
+
                 // Release the redirected response message
                 delete redirected_response_ptr;
                 redirected_response_ptr = NULL;
                 break;
             } // End of (is_timeout == false)
         } // End of while(true)
+
+        // Add intermediate event if with event tracking
+        struct timespec issue_redirect_get_req_end_timespec = Util::getCurrentTimespec();
+        uint32_t issue_redirect_get_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(issue_redirect_get_req_end_timespec, issue_redirect_get_req_start_timespec));
+        event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_ISSUE_REDIRECT_GET_REQ_EVENT_NAME, issue_redirect_get_latency_us);
 
         // NOTE: redirected_get_request_ptr will be released by edge-to-edge propagation simulator
 
@@ -237,7 +255,7 @@ namespace covered
 
     // (2.2) Update content directory information
 
-    bool BasicCacheServerWorker::updateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written) const
+    bool BasicCacheServerWorker::updateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written, EventList& event_list) const
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->edge_wrapper_ptr_;
@@ -247,6 +265,7 @@ namespace covered
         assert(!current_is_beacon);
 
         bool is_finish = false;
+        struct timespec issue_directory_update_req_start_timespec = Util::getCurrentTimespec();
 
         // Prepare directory update request to check directory information in beacon node
         uint32_t edge_idx = tmp_edge_wrapper_ptr->edge_param_ptr_->getNodeIdx();
@@ -288,12 +307,20 @@ namespace covered
                 const DirectoryUpdateResponse* const directory_update_response_ptr = static_cast<const DirectoryUpdateResponse*>(control_response_ptr);
                 is_being_written = directory_update_response_ptr->isBeingWritten();
 
+                // Add events of intermediate response if with evet tracking
+                event_list.addEvents(directory_update_response_ptr->getEventListRef());
+
                 // Release the control response message
                 delete control_response_ptr;
                 control_response_ptr = NULL;
                 break;
             } // End of (is_timeout == false)
         } // End of while(true)
+
+        // Add intermediate event if with evet tracking
+        struct timespec issue_directory_update_req_end_timespec = Util::getCurrentTimespec();
+        uint32_t issue_directory_update_req_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(issue_directory_update_req_end_timespec, issue_directory_update_req_start_timespec));
+        event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_ISSUE_DIRECTORY_UPDATE_REQ_EVENT_NAME, issue_directory_update_req_latency_us);
 
         // NOTE: directory_update_request_ptr will be released by edge-to-edge propagation simulator
 
@@ -302,7 +329,7 @@ namespace covered
 
     // (2.3) Process writes and block for MSI protocol
 
-    bool BasicCacheServerWorker::acquireBeaconWritelock_(const Key& key, LockResult& lock_result)
+    bool BasicCacheServerWorker::acquireBeaconWritelock_(const Key& key, LockResult& lock_result, EventList& event_list)
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->edge_wrapper_ptr_;
@@ -312,6 +339,7 @@ namespace covered
         assert(!current_is_beacon);
 
         bool is_finish = false;
+        struct timespec issue_acquire_writelock_req_start_timespec = Util::getCurrentTimespec();
 
         // Prepare acquire writelock request to acquire permission for a write
         uint32_t edge_idx = tmp_edge_wrapper_ptr->edge_param_ptr_->getNodeIdx();
@@ -353,6 +381,9 @@ namespace covered
                 const AcquireWritelockResponse* const acquire_writelock_response_ptr = static_cast<const AcquireWritelockResponse*>(control_response_ptr);
                 lock_result = acquire_writelock_response_ptr->getLockResult();
 
+                // Add events of intermediate response if with event tracking
+                event_list.addEvents(acquire_writelock_response_ptr->getEventListRef());
+
                 // Release the control response message
                 delete control_response_ptr;
                 control_response_ptr = NULL;
@@ -360,12 +391,17 @@ namespace covered
             } // End of (is_timeout == false)
         } // End of while(true)
 
+        // Add intermediate event if with event tracking
+        struct timespec issue_acquire_writelock_req_end_timespec = Util::getCurrentTimespec();
+        uint32_t issue_acquire_writelock_req_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(issue_acquire_writelock_req_end_timespec, issue_acquire_writelock_req_start_timespec));
+        event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_ISSUE_ACQUIRE_WRITELOCK_REQ_EVENT_NAME, issue_acquire_writelock_req_latency_us);
+
         // NOTE: acquire_writelock_request_ptr will be released by edge-to-edge propagation simulator
 
         return is_finish;
     }
 
-    bool BasicCacheServerWorker::releaseBeaconWritelock_(const Key& key)
+    bool BasicCacheServerWorker::releaseBeaconWritelock_(const Key& key, EventList& event_list)
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->edge_wrapper_ptr_;
@@ -375,6 +411,7 @@ namespace covered
         assert(!current_is_beacon);
 
         bool is_finish = false;
+        struct timespec issue_release_writelock_req_start_timespec = Util::getCurrentTimespec();
 
         // Prepare release writelock request to finish write
         uint32_t edge_idx = tmp_edge_wrapper_ptr->edge_param_ptr_->getNodeIdx();
@@ -412,12 +449,20 @@ namespace covered
                 MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
                 assert(control_response_ptr != NULL && control_response_ptr->getMessageType() == MessageType::kReleaseWritelockResponse);
 
+                // Add events of intermediate response if with event tracking
+                event_list.addEvents(control_response_ptr->getEventListRef());
+
                 // Release the control response message
                 delete control_response_ptr;
                 control_response_ptr = NULL;
                 break;
             } // End of (is_timeout == false)
         } // End of while(true)
+
+        // Add intermediate event if with event tracking
+        struct timespec issue_release_writelock_req_end_timespec = Util::getCurrentTimespec();
+        uint32_t issue_release_writelock_req_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(issue_release_writelock_req_end_timespec, issue_release_writelock_req_start_timespec));
+        event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_ISSUE_RELEASE_WRITELOCK_REQ_EVENT_NAME, issue_release_writelock_req_latency_us);
 
         // NOTE: release_writelock_request_ptr will be released by edge-to-edge propagation simulator
 
@@ -426,7 +471,7 @@ namespace covered
 
     // (5) Admit uncached objects in local edge cache
 
-    bool BasicCacheServerWorker::triggerIndependentAdmission_(const Key& key, const Value& value) const
+    bool BasicCacheServerWorker::triggerIndependentAdmission_(const Key& key, const Value& value, EventList& event_list) const
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->edge_wrapper_ptr_;
@@ -438,13 +483,17 @@ namespace covered
         #endif
 
         // Independently admit the new key-value pair into local edge cache
+        struct timespec update_directory_to_admit_start_timespec = Util::getCurrentTimespec();
         bool is_being_written = false;
-        is_finish = updateDirectory_(key, true, is_being_written);
+        is_finish = updateDirectory_(key, true, is_being_written, event_list);
         if (is_finish)
         {
             return is_finish;
         }
         tmp_edge_wrapper_ptr->edge_cache_ptr_->admit(key, value, !is_being_written); // valid if not being written
+        struct timespec update_directory_to_admit_end_timespec = Util::getCurrentTimespec();
+        uint32_t update_directory_to_admit_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(update_directory_to_admit_end_timespec, update_directory_to_admit_start_timespec));
+        event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_UPDATE_DIRECTORY_TO_ADMIT_EVENT_NAME, update_directory_to_admit_latency_us); // Add intermediate event if with event tracking
 
         while (true) // Evict until used bytes <= capacity bytes
         {
@@ -456,15 +505,19 @@ namespace covered
             }
             else // Exceed capacity limitation
             {
+                struct timespec update_directory_to_evict_start_timespec = Util::getCurrentTimespec();
                 Key victim_key;
                 Value victim_value;
                 tmp_edge_wrapper_ptr->edge_cache_ptr_->evict(victim_key, victim_value);
                 bool _unused_is_being_written = false; // NOTE: is_being_written does NOT affect cache eviction
-                is_finish = updateDirectory_(victim_key, false, _unused_is_being_written);
+                is_finish = updateDirectory_(victim_key, false, _unused_is_being_written, event_list);
                 if (is_finish)
                 {
                     return is_finish;
                 }
+                struct timespec update_directory_to_evict_end_timespec = Util::getCurrentTimespec();
+                uint32_t update_directory_to_evict_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(update_directory_to_evict_end_timespec, update_directory_to_evict_start_timespec));
+                event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_UPDATE_DIRECTORY_TO_EVICT_EVENT_NAME, update_directory_to_evict_latency_us); // Add intermediate event if with event tracking
 
                 #ifdef DEBUG_CACHE_SERVER
                 Util::dumpVariablesForDebug(instance_name_, 7, "eviction;", "keystr:", victim_key.getKeystr().c_str(), "is value deleted:", Util::toString(victim_value.isDeleted()).c_str(), "value size:", Util::toString(victim_value.getValuesize()).c_str());

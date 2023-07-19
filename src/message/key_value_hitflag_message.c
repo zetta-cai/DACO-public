@@ -4,7 +4,7 @@ namespace covered
 {
     const std::string KeyValueHitflagMessage::kClassName("KeyValueHitflagMessage");
 
-    KeyValueHitflagMessage::KeyValueHitflagMessage(const Key& key, const Value& value, const Hitflag& hitflag, const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr) : MessageBase(message_type, source_index, source_addr)
+    KeyValueHitflagMessage::KeyValueHitflagMessage(const Key& key, const Value& value, const Hitflag& hitflag, const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr, const EventList& event_list) : MessageBase(message_type, source_index, source_addr, event_list)
     {
         key_ = key;
         value_ = value;

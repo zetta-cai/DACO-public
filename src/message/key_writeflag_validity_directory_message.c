@@ -4,7 +4,7 @@ namespace covered
 {
     const std::string KeyWriteflagValidityDirectoryMessage::kClassName("KeyWriteflagValidityDirectoryMessage");
 
-    KeyWriteflagValidityDirectoryMessage::KeyWriteflagValidityDirectoryMessage(const Key& key, const bool& is_being_written, const bool& is_valid_directory_exist, const DirectoryInfo& directory_info, const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr) : MessageBase(message_type, source_index, source_addr)
+    KeyWriteflagValidityDirectoryMessage::KeyWriteflagValidityDirectoryMessage(const Key& key, const bool& is_being_written, const bool& is_valid_directory_exist, const DirectoryInfo& directory_info, const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr, const EventList& event_list) : MessageBase(message_type, source_index, source_addr, event_list)
     {
         key_ = key;
         is_being_written_ = is_being_written;
