@@ -9,6 +9,8 @@
 #ifndef PROPAGATION_SIMULATOR_PARAM_H
 #define PROPAGATION_SIMULATOR_PARAM_H
 
+#define DEBUG_PROPAGATION_SIMULATOR_PARAM
+
 #include <string>
 #include <time.h>
 
@@ -39,6 +41,7 @@ namespace covered
         // Const shared variables
         uint32_t propagation_latency_us_;
         NodeParamBase* node_param_ptr_;
+        std::string instance_name_;
         
         // Non-const variables shared by working threads of each ndoe and propagation simulator
         Rwlock rwlock_for_propagation_item_buffer_; // Ensure the atomicity of ring buffer due to multiple providers

@@ -77,10 +77,16 @@ namespace covered
                 uint32_t sleep_us = tmp_propagation_item.getSleepUs();
                 #ifdef DEBUG_PROPAGATION_SIMULATOR
                 std::ostringstream oss;
-                oss << "sleep " << sleep_us << " us to simulate a propagation latency of " << propagation_simulator_param_ptr_->getPropagationLatencyUs() << " us";
+                oss << "before sleep " << sleep_us << " us to simulate a propagation latency of " << propagation_simulator_param_ptr_->getPropagationLatencyUs() << " us";
                 Util::dumpDebugMsg(instance_name_, oss.str());
                 #endif
                 propagate_(sleep_us);
+                #ifdef DEBUG_PROPAGATION_SIMULATOR
+                oss.clear();
+                oss.str("");
+                oss << "after sleep " << sleep_us << " us to simulate a propagation latency of " << propagation_simulator_param_ptr_->getPropagationLatencyUs() << " us";
+                Util::dumpDebugMsg(instance_name_, oss.str());
+                #endif
 
                 // Issue the message to the given address
                 NetworkAddr dst_addr = tmp_propagation_item.getNetworkAddr();

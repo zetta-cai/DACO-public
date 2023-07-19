@@ -12,11 +12,17 @@ namespace covered
     {
         propagation_item_buffer_ptr_ = NULL;
         node_param_ptr_ = NULL;
+        instance_name_ = "";
     }
 
     PropagationSimulatorParam::PropagationSimulatorParam(const uint32_t& propagation_latency_us, NodeParamBase* node_param_ptr, const uint32_t& propagation_item_buffer_size) : propagation_latency_us_(propagation_latency_us), node_param_ptr_(node_param_ptr), rwlock_for_propagation_item_buffer_("rwlock_for_propagation_item_buffer_"), is_first_item_(true), prev_timespec_()
     {
         assert(node_param_ptr != NULL);
+
+        // Differential propagation simulator parameter of different nodes
+        std::ostringstream oss;
+        oss << kClassName << " " << node_param_ptr->getNodeRole() << node_param_ptr->getNodeIdx();
+        instance_name_ = oss.str();
 
         propagation_item_buffer_ptr_ = new RingBuffer<PropagationItem>(PropagationItem(), propagation_item_buffer_size);
         assert(propagation_item_buffer_ptr_ != NULL);
@@ -78,6 +84,12 @@ namespace covered
         PropagationItem propagation_item(message_ptr, dst_addr, sleep_us);
         bool is_successful = propagation_item_buffer_ptr_->push(propagation_item);
 
+        #ifdef DEBUG_PROPAGATION_SIMULATOR_PARAM
+        std::ostringstream oss;
+        oss << "push to sleep " << sleep_us << " us to simulate a propagation latency of " << propagation_latency_us_ << " us";
+        Util::dumpDebugMsg(instance_name_, oss.str());
+        #endif
+
         // Release a write lock
         rwlock_for_propagation_item_buffer_.unlock(context_name);
 
@@ -104,6 +116,8 @@ namespace covered
 
         node_param_ptr_ = other.node_param_ptr_;
         assert(node_param_ptr_ != NULL);
+
+        instance_name_ = other.instance_name_;
         
         // Not copy mutex_lock_
 

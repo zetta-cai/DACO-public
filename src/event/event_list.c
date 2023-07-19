@@ -87,7 +87,10 @@ namespace covered
         }
 
         // NOTE: NOT embed event list if without event tracking
-        assert(!Param::isTrackEvent() && payload_size == 0);
+        if (!Param::isTrackEvent())
+        {
+            assert(payload_size == 0);
+        }
 
         return payload_size;
     }
@@ -112,7 +115,10 @@ namespace covered
         }
 
         // NOTE: NOT embed event list if without event tracking
-        assert(!Param::isTrackEvent() && size == position);
+        if (!Param::isTrackEvent())
+        {
+            assert(size == position);
+        }
 
         return size - position;
     }
@@ -143,7 +149,10 @@ namespace covered
         }
 
         // NOTE: NOT embed event list if without event tracking
-        assert(!Param::isTrackEvent() && size == position);
+        if (!Param::isTrackEvent())
+        {
+            assert(size == position);
+        }
 
         return size - position;
     }
