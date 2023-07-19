@@ -158,15 +158,14 @@ namespace covered
 
         bool is_finish = false;
 
-        #ifdef DEBUG_CLOUD_WRAPPER
-        struct timespec t0 = Util::getCurrentTimespec();
-        #endif
+        EventList event_list;
+        struct timespec access_rocksdb_start_timestamp = Util::getCurrentTimespec();
 
         // Process global requests by RocksDB KVS
         MessageType global_request_message_type = global_request_ptr->getMessageType();
         Key tmp_key;
         Value tmp_value;
-        MessageBase* global_response_ptr = NULL;
+        std::string event_name;
         switch (global_request_message_type)
         {
             case MessageType::kGlobalGetRequest:
@@ -177,9 +176,7 @@ namespace covered
                 // Get value from RocksDB KVS
                 cloud_rocksdb_ptr_->get(tmp_key, tmp_value);
 
-                // Prepare global get response message
-                global_response_ptr = new GlobalGetResponse(tmp_key, tmp_value, cloud_idx, cloud_recvreq_source_addr_);
-                assert(global_response_ptr != NULL);
+                event_name = Event::CLOUD_GET_ROCKSDB_EVENT_NAME;
                 break;
             }
             case MessageType::kGlobalPutRequest:
@@ -192,9 +189,7 @@ namespace covered
                 // Put value into RocksDB KVS
                 cloud_rocksdb_ptr_->put(tmp_key, tmp_value);
 
-                // Prepare global put response message
-                global_response_ptr = new GlobalPutResponse(tmp_key, cloud_idx, cloud_recvreq_source_addr_);
-                assert(global_response_ptr != NULL);
+                event_name = Event::CLOUD_PUT_ROCKSDB_EVENT_NAME;
                 break;
             }
             case MessageType::kGlobalDelRequest:
@@ -202,12 +197,10 @@ namespace covered
                 const GlobalDelRequest* const global_del_request_ptr = static_cast<const GlobalDelRequest*>(global_request_ptr);
                 tmp_key = global_del_request_ptr->getKey();
 
-                // Put value into RocksDB KVS
+                // Remove value from RocksDB KVS
                 cloud_rocksdb_ptr_->remove(tmp_key);
 
-                // Prepare global del response message
-                global_response_ptr = new GlobalDelResponse(tmp_key, cloud_idx, cloud_recvreq_source_addr_);
-                assert(global_response_ptr != NULL);
+                event_name = Event::CLOUD_DEL_ROCKSDB_EVENT_NAME;
                 break;
             }
             default:
@@ -219,11 +212,42 @@ namespace covered
             }
         }
 
-        #ifdef DEBUG_CLOUD_WRAPPER
-        struct timespec t1 = Util::getCurrentTimespec();
-        double delta_t = Util::getDeltaTimeUs(t1, t0);
-        Util::dumpVariablesForDebug(instance_name_, 4, "keystr:", tmp_key.getKeystr().c_str(), "delta time (us) of rocksdb operation:", std::to_string(delta_t).c_str());
-        #endif
+        // Add intermediate event if with event tracking
+        struct timespec access_rocksdb_end_timestamp = Util::getCurrentTimespec();
+        uint32_t access_rocksdb_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(access_rocksdb_end_timestamp, access_rocksdb_start_timestamp));
+        event_list.addEvent(event_name, access_rocksdb_latency_us);
+
+        // Prepare global response
+        MessageBase* global_response_ptr = NULL;
+        switch (global_request_message_type)
+        {
+            case MessageType::kGlobalGetRequest:
+            {
+                // Prepare global get response message
+                global_response_ptr = new GlobalGetResponse(tmp_key, tmp_value, cloud_idx, cloud_recvreq_source_addr_, event_list);
+                assert(global_response_ptr != NULL);
+                break;
+            }
+            case MessageType::kGlobalPutRequest:
+            {
+                // Prepare global put response message
+                global_response_ptr = new GlobalPutResponse(tmp_key, cloud_idx, cloud_recvreq_source_addr_, event_list);
+                assert(global_response_ptr != NULL);
+                break;
+            }
+            case MessageType::kGlobalDelRequest:
+            {
+                // Prepare global del response message
+                global_response_ptr = new GlobalDelResponse(tmp_key, cloud_idx, cloud_recvreq_source_addr_, event_list);
+                assert(global_response_ptr != NULL);
+                break;
+            }
+            default:
+            {
+                Util::dumpErrorMsg(instance_name_, "cannot arrive here!");
+                exit(1);
+            }
+        }
 
         if (!is_finish) // Check is_finish
         {

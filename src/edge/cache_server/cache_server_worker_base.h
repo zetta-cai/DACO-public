@@ -56,6 +56,7 @@
 #include <string>
 
 #include "edge/cache_server/cache_server_worker_param.h"
+#include "event/event_list.h"
 #include "message/message_base.h"
 
 namespace covered

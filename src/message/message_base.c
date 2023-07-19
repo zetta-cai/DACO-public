@@ -189,7 +189,7 @@ namespace covered
         return lockresult_str;
     }
 
-    MessageBase* MessageBase::getLocalRequestFromWorkloadItem(WorkloadItem workload_item, const uint32_t& source_index, const NetworkAddr& source_addr, const EventList& event_list)
+    MessageBase* MessageBase::getLocalRequestFromWorkloadItem(WorkloadItem workload_item, const uint32_t& source_index, const NetworkAddr& source_addr)
     {
         assert(source_addr.isValidAddr());
         
@@ -201,17 +201,17 @@ namespace covered
         {
             case WorkloadItemType::kWorkloadItemGet:
             {
-                message_ptr = new LocalGetRequest(workload_item.getKey(), source_index, source_addr, event_list);
+                message_ptr = new LocalGetRequest(workload_item.getKey(), source_index, source_addr);
                 break;
             }
             case WorkloadItemType::kWorkloadItemPut:
             {
-                message_ptr = new LocalPutRequest(workload_item.getKey(), workload_item.getValue(), source_index, source_addr, event_list);
+                message_ptr = new LocalPutRequest(workload_item.getKey(), workload_item.getValue(), source_index, source_addr);
                 break;
             }
             case WorkloadItemType::kWorkloadItemDel:
             {
-                message_ptr = new LocalDelRequest(workload_item.getKey(), source_index, source_addr, event_list);
+                message_ptr = new LocalDelRequest(workload_item.getKey(), source_index, source_addr);
                 break;
             }
             default:

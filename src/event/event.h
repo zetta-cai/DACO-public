@@ -9,6 +9,8 @@
 
 #include <string>
 
+#include "common/dynamic_array.h"
+
 namespace covered
 {
     class Event
@@ -25,6 +27,7 @@ namespace covered
         static const std::string EDGE_CACHE_SERVER_WORKER_BLOCK_FOR_WRITES_EVENT_NAME;
         static const std::string EDGE_CACHE_SERVER_WORKER_REDIRECT_GET_EVENT_NAME;
         static const std::string EDGE_CACHE_SERVER_WORKER_ISSUE_REDIRECT_GET_REQ_EVENT_NAME;
+        static const std::string EDGE_CACHE_SERVER_WORKER_TARGET_GET_LOCAL_CACHE_EVENT_NAME;
         static const std::string EDGE_CACHE_SERVER_WORKER_GET_CLOUD_EVENT_NAME;
         static const std::string EDGE_CACHE_SERVER_WORKER_ISSUE_GLOBAL_GET_REQ_EVENT_NAME;
         static const std::string EDGE_CACHE_SERVER_WORKER_UPDATE_INVALID_LOCAL_CACHE_EVENT_NAME;
@@ -52,6 +55,21 @@ namespace covered
 
         // For edge beacon server
         static const std::string EDGE_BEACON_SERVER_LOOKUP_LOCAL_DIRECTORY_EVENT_NAME;
+        static const std::string EDGE_BEACON_SERVER_UPDATE_LOCAL_DIRECTORY_EVENT_NAME;
+        static const std::string EDGE_BEACON_SERVER_ACQUIRE_LOCAL_WRITELOCK_EVENT_NAME;
+        static const std::string EDGE_BEACON_SERVER_RELEASE_LOCAL_WRITELOCK_EVENT_NAME;
+
+        // For edge beacon server or cache server worker
+        static const std::string EDGE_INVALIDATE_CACHE_COPIES_EVENT_NAME;
+        static const std::string EDGE_FINISH_BLOCK_EVENT_NAME;
+
+        // For edge invalidation server
+        static const std::string EDGE_INVALIDATION_SERVER_INVALIDATE_LOCAL_CACHE_EVENT_NAME;
+
+        // For cloud
+        static const std::string CLOUD_GET_ROCKSDB_EVENT_NAME;
+        static const std::string CLOUD_PUT_ROCKSDB_EVENT_NAME;
+        static const std::string CLOUD_DEL_ROCKSDB_EVENT_NAME;
 
         Event();
         Event(const std::string& event_name, const uint32_t& event_latency_us);

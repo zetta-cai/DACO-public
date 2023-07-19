@@ -68,7 +68,7 @@ namespace covered
         static std::string hitflagToString(const Hitflag& hitflag);
         static std::string lockResultToString(const LockResult& lock_result);
 
-        static MessageBase* getLocalRequestFromWorkloadItem(WorkloadItem workload_item, const uint32_t& source_index, const NetworkAddr& source_addr, const EventList& event_list); // By workers in clients
+        static MessageBase* getLocalRequestFromWorkloadItem(WorkloadItem workload_item, const uint32_t& source_index, const NetworkAddr& source_addr); // By workers in clients
         static MessageBase* getRequestFromMsgPayload(const DynamicArray& msg_payload); // Data/control requests
         static MessageBase* getResponseFromMsgPayload(const DynamicArray& msg_payload); // Data/control responses
         static Key getKeyFromMessage(MessageBase* message_ptr); // Get key from message (e.g., local requests)
@@ -115,7 +115,9 @@ namespace covered
         MessageType message_type_;
         uint32_t source_index_; // global-client-worker/edge/cloud index of source node
         NetworkAddr source_addr_; // Network address of source socket server to hide propagation simulator
-        EventList event_list_; // Track events to break down latencies for debugging (NOTE: NOT consume bandwidth if without event tracking)
+        // Track intermediate events and events of intermediate responses to break down latencies for debugging
+        // NOTE: requests MUST have empty event list; NOT consume bandwidth if without event tracking
+        EventList event_list_;
 
         bool is_valid_; // NOT serialized/deserialized in msg payload
     protected:

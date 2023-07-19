@@ -18,6 +18,7 @@ namespace covered
     const std::string Event::EDGE_CACHE_SERVER_WORKER_BLOCK_FOR_WRITES_EVENT_NAME("edge::cache_server_worker::block_for_writes");
     const std::string Event::EDGE_CACHE_SERVER_WORKER_REDIRECT_GET_EVENT_NAME("edge::cache_server_worker::redirect_get");
     const std::string Event::EDGE_CACHE_SERVER_WORKER_ISSUE_REDIRECT_GET_REQ_EVENT_NAME("edge::cache_server_worker::issue_redirect_get_req");
+    const std::string Event::EDGE_CACHE_SERVER_WORKER_TARGET_GET_LOCAL_CACHE_EVENT_NAME("edge::cache_server_worker::target_get_local_cache");
     const std::string Event::EDGE_CACHE_SERVER_WORKER_GET_CLOUD_EVENT_NAME("edge::cache_server_worker::get_cloud");
     const std::string Event::EDGE_CACHE_SERVER_WORKER_ISSUE_GLOBAL_GET_REQ_EVENT_NAME("edge::cache_server_worker::issue_global_get_req");
     const std::string Event::EDGE_CACHE_SERVER_WORKER_UPDATE_INVALID_LOCAL_CACHE_EVENT_NAME("edge::cache_server_worker::update_invalid_local_cache");
@@ -44,7 +45,22 @@ namespace covered
     const std::string Event::EDGE_CACHE_SERVER_WORKER_ISSUE_RELEASE_WRITELOCK_REQ_EVENT_NAME("edge::cache_server_worker::issue_release_writelock_req");
 
     // For edge beacon server
-    const std::string Event::EDGE_BEACON_SERVER_LOOKUP_LOCAL_DIRECTORY_EVENT_NAME("edge::beacon_server::lookup_local_directory");;
+    const std::string Event::EDGE_BEACON_SERVER_LOOKUP_LOCAL_DIRECTORY_EVENT_NAME("edge::beacon_server::lookup_local_directory");
+    const std::string Event::EDGE_BEACON_SERVER_UPDATE_LOCAL_DIRECTORY_EVENT_NAME("edge::beacon_server::update_local_directory");
+    const std::string Event::EDGE_BEACON_SERVER_ACQUIRE_LOCAL_WRITELOCK_EVENT_NAME("edge::beacon_server::acquire_local_writelock");
+    const std::string Event::EDGE_BEACON_SERVER_RELEASE_LOCAL_WRITELOCK_EVENT_NAME("edge::beacon_server::release_local_writelock");
+
+    // For edge beacon server or cache server worker
+    const std::string Event::EDGE_INVALIDATE_CACHE_COPIES_EVENT_NAME("edge::invalidate_cache_copies");
+    const std::string Event::EDGE_FINISH_BLOCK_EVENT_NAME("edge::finish_block");
+
+    // For edge invalidation server
+    const std::string Event::EDGE_INVALIDATION_SERVER_INVALIDATE_LOCAL_CACHE_EVENT_NAME("edge::invalidation_server::invalidate_local_cache");
+
+    // For cloud
+    const std::string Event::CLOUD_GET_ROCKSDB_EVENT_NAME("cloud::get_rocksdb");
+    const std::string Event::CLOUD_PUT_ROCKSDB_EVENT_NAME("cloud::put_rocksdb");
+    const std::string Event::CLOUD_DEL_ROCKSDB_EVENT_NAME("cloud::del_rocksdb");
 
     const std::string Event::kClassName("Event");
 
@@ -103,7 +119,7 @@ namespace covered
         size += sizeof(uint32_t);
         DynamicArray eventname_bytes(eventname_length);
         msg_payload.arraycpy(size, eventname_bytes, 0, eventname_length);
-        event_name_ = std::string(eventname_bytes.getBytes().data(), eventname_length);
+        event_name_ = std::string(eventname_bytes.getBytesRef().data(), eventname_length);
         size += eventname_length;
         uint32_t bigendian_event_latency_us = 0;
         msg_payload.serialize(size, (char *)&bigendian_event_latency_us, sizeof(uint32_t));

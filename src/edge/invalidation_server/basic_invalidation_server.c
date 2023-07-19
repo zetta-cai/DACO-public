@@ -5,6 +5,8 @@
 
 #include "common/param.h"
 #include "common/util.h"
+#include "event/event.h"
+#include "event/event_list.h"
 #include "message/control_message.h"
 #include "network/propagation_simulator.h"
 
@@ -38,6 +40,9 @@ namespace covered
 
         bool is_finish = false;
 
+        EventList event_list;
+        struct timespec invalidate_local_cache_start_timestamp = Util::getCurrentTimespec();
+
         // Invalidate cached object in local edge cache
         bool is_local_cached = edge_wrapper_ptr_->edge_cache_ptr_->isLocalCached(tmp_key);
         if (is_local_cached)
@@ -45,9 +50,14 @@ namespace covered
             edge_wrapper_ptr_->edge_cache_ptr_->invalidateKeyForLocalCachedObject(tmp_key);
         }
 
+        // Add intermediate event if with event tracking
+        struct timespec invalidate_local_cache_end_timestamp = Util::getCurrentTimespec();
+        uint32_t invalidate_local_cache_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(invalidate_local_cache_end_timestamp, invalidate_local_cache_start_timestamp));
+        event_list.addEvent(Event::EDGE_INVALIDATION_SERVER_INVALIDATE_LOCAL_CACHE_EVENT_NAME, invalidate_local_cache_latency_us);
+
         // Prepare a invalidation response
         uint32_t edge_idx = edge_wrapper_ptr_->edge_param_ptr_->getNodeIdx();
-        MessageBase* invalidation_response_ptr = new InvalidationResponse(tmp_key, edge_idx, edge_invalidation_server_recvreq_source_addr_);
+        MessageBase* invalidation_response_ptr = new InvalidationResponse(tmp_key, edge_idx, edge_invalidation_server_recvreq_source_addr_, event_list);
         assert(invalidation_response_ptr != NULL);
 
         // Push the invalidation response into edge-to-edge propagation simulator to cache server worker or beacon server

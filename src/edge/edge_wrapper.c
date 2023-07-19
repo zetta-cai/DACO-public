@@ -8,6 +8,7 @@
 #include "edge/beacon_server/beacon_server_base.h"
 #include "edge/cache_server/cache_server.h"
 #include "edge/invalidation_server/invalidation_server_base.h"
+#include "event/event.h"
 #include "message/control_message.h"
 #include "network/propagation_simulator.h"
 
@@ -314,13 +315,14 @@ namespace covered
 
     // (2) Invalidate for MSI protocol
 
-    bool EdgeWrapper::invalidateCacheCopies_(UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, const Key& key, const std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo) const
+    bool EdgeWrapper::invalidateCacheCopies_(UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, const Key& key, const std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo, EventList& event_list) const
     {
         assert(recvrsp_socket_server_ptr != NULL);
         assert(recvrsp_source_addr.isValidAddr());
         checkPointers_();
 
         bool is_finish = false;
+        struct timespec invalidate_cache_copies_start_timestamp = Util::getCurrentTimespec();
 
         uint32_t invalidate_edgecnt = all_dirinfo.size();
         if (invalidate_edgecnt == 0)
@@ -360,7 +362,7 @@ namespace covered
                 }
 
                 const NetworkAddr& tmp_edge_invalidation_server_recvreq_dst_addr = percachecopy_dstaddr[iter_for_request->first]; // cache server address of a blocked closest edge node          
-                sendInvalidationRequest_(key, recvrsp_source_addr, tmp_edge_invalidation_server_recvreq_dst_addr);     
+                sendInvalidationRequest_(key, recvrsp_source_addr, tmp_edge_invalidation_server_recvreq_dst_addr);
             } // End of edgeidx_for_request
 
             // Receive (invalidate_edgecnt - acked_edgecnt) control repsonses from involved edge nodes
@@ -398,6 +400,9 @@ namespace covered
                             assert(iter_for_response->second == false); // Original ack flag should be false
                             assert(percachecopy_dstaddr[iter_for_response->first] == tmp_edge_invalidation_server_recvreq_source_addr);
 
+                            // Add the event of intermediate response if with event tracking
+                            event_list.addEvents(control_response_ptr->getEventListRef());
+
                             // Update ack information
                             iter_for_response->second = true;
                             acked_edgecnt += 1;
@@ -425,6 +430,11 @@ namespace covered
             }
         } // End of while(acked_edgecnt != blocked_edgecnt)
 
+        // Add intermediate event if with event tracking
+        struct timespec invalidate_cache_copies_end_timestamp = Util::getCurrentTimespec();
+        uint32_t invalidate_cache_copies_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(invalidate_cache_copies_end_timestamp, invalidate_cache_copies_start_timestamp));
+        event_list.addEvent(Event::EDGE_INVALIDATE_CACHE_COPIES_EVENT_NAME, invalidate_cache_copies_latency_us);
+
         return is_finish;
     }
 
@@ -448,13 +458,14 @@ namespace covered
 
     // (3) Unblock for MSI protocol
 
-    bool EdgeWrapper::notifyEdgesToFinishBlock_(UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, const Key& key, const std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges) const
+    bool EdgeWrapper::notifyEdgesToFinishBlock_(UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, const Key& key, const std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges, EventList& event_list) const
     {
         assert(recvrsp_socket_server_ptr != NULL);
         assert(recvrsp_source_addr.isValidAddr());
         checkPointers_();
 
         bool is_finish = false;
+        struct timespec finish_block_start_timestamp = Util::getCurrentTimespec();
 
         uint32_t blocked_edgecnt = blocked_edges.size();
         if (blocked_edgecnt == 0)
@@ -520,6 +531,9 @@ namespace covered
                         {
                             assert(iter_for_response->second == false); // Original ack flag should be false
 
+                            // Add the event of intermediate response if with event tracking
+                            event_list.addEvents(control_response_ptr->getEventListRef());
+
                             // Update ack information
                             iter_for_response->second = true;
                             acked_edgecnt += 1;
@@ -546,6 +560,11 @@ namespace covered
                 break;
             }
         } // End of while(acked_edgecnt != blocked_edgecnt)
+
+        // Add intermediate event if with event tracking
+        struct timespec finish_block_end_timestamp = Util::getCurrentTimespec();
+        uint32_t finish_block_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(finish_block_end_timestamp, finish_block_start_timestamp));
+        event_list.addEvent(Event::EDGE_FINISH_BLOCK_EVENT_NAME, finish_block_latency_us);
 
         return is_finish;
     }

@@ -79,7 +79,7 @@ namespace covered
 						// Get previously received fragment payloads
 						MsgFragStatsEntry* msg_frag_stats_entry = msg_frag_stats_.getEntry(source_addr);
 						assert(msg_frag_stats_entry != NULL);
-						std::map<uint32_t, DynamicArray>& fragidx_fragpayload_map = msg_frag_stats_entry->getFragidxFragpayloadMap();
+						std::map<uint32_t, DynamicArray>& fragidx_fragpayload_map = msg_frag_stats_entry->getFragidxFragpayloadMapRef();
 
 						// Copy previously received fragment payloads into message payload
 						for (std::map<uint32_t, DynamicArray>::iterator iter = fragidx_fragpayload_map.begin(); iter != fragidx_fragpayload_map.end(); iter++)

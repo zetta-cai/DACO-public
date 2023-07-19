@@ -140,13 +140,13 @@ int main(int argc, char **argv) {
     // (5.3) Dump intermediate statistics
 
     const double duration = covered::Param::getDuration();
-    struct timespec start_timespec = covered::Util::getCurrentTimespec();
+    struct timespec start_timestamp = covered::Util::getCurrentTimespec();
     while (true) // Dump intermediate statistics
     {
         usleep(covered::Util::SLEEP_INTERVAL_US);
 
-        struct timespec end_timespec = covered::Util::getCurrentTimespec();
-        double delta_time = covered::Util::getDeltaTimeUs(end_timespec, start_timespec);
+        struct timespec end_timestamp = covered::Util::getCurrentTimespec();
+        double delta_time = covered::Util::getDeltaTimeUs(end_timestamp, start_timestamp);
         if (delta_time >= duration * 1000 * 1000)
         {
             break;

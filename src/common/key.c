@@ -49,7 +49,7 @@ namespace covered
         size += sizeof(uint32_t);
         DynamicArray keybytes(keysize);
         msg_payload.arraycpy(size, keybytes, 0, keysize);
-        keystr_ = std::string(keybytes.getBytes().data(), keysize);
+        keystr_ = std::string(keybytes.getBytesRef().data(), keysize);
         size += keysize;
         return size - position;
     }

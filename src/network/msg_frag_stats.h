@@ -40,8 +40,8 @@ namespace covered
         ~MsgFragStats();
 
         bool insertEntry(const NetworkAddr& source_addr, const DynamicArray& pkt_payload); // Return if the current fragment is the last one (must be true for fragcnt of 1)
-        MsgFragStatsEntry* getEntry(const NetworkAddr& source_addr, const EventList& event_list);
-        void removeEntry(const NetworkAddr& source_addr, const EventList& event_list);
+        MsgFragStatsEntry* getEntry(const NetworkAddr& source_addr);
+        void removeEntry(const NetworkAddr& source_addr);
     private:
         static const std::string kClassName;
 

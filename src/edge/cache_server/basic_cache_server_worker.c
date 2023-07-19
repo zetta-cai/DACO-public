@@ -44,8 +44,10 @@ namespace covered
 
         bool is_finish = false;
         Hitflag hitflag = Hitflag::kGlobalMiss;
+        EventList event_list;
 
         // Access local edge cache for cooperative edge caching (current edge node is the target edge node)
+        struct timespec target_get_local_cache_start_timestamp = Util::getCurrentTimespec();
         bool is_cooperative_cached_and_valid = tmp_edge_wrapper_ptr->edge_cache_ptr_->get(tmp_key, tmp_value);
         bool is_cooperaitve_cached = tmp_edge_wrapper_ptr->edge_cache_ptr_->isLocalCached(tmp_key);
         if (is_cooperative_cached_and_valid) // cached and valid
@@ -59,6 +61,9 @@ namespace covered
                 hitflag = Hitflag::kCooperativeInvalid;
             }
         }
+        struct timespec target_get_local_cache_end_timestamp = Util::getCurrentTimespec();
+        uint32_t target_get_local_cache_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(target_get_local_cache_end_timestamp, target_get_local_cache_start_timestamp));
+        event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_TARGET_GET_LOCAL_CACHE_EVENT_NAME, target_get_local_cache_latency_us);
 
         // NOTE: no need to perform recursive cooperative edge caching (current edge node is already the target edge node for cooperative edge caching)
         // NOTE: no need to access cloud to get data, which will be performed by the closest edge node
@@ -66,7 +71,7 @@ namespace covered
         // Prepare RedirectedGetResponse for the closest edge node
         uint32_t edge_idx = tmp_edge_wrapper_ptr->edge_param_ptr_->getNodeIdx();
         NetworkAddr edge_cache_server_recvreq_source_addr = cache_server_worker_param_ptr_->getCacheServerPtr()->edge_cache_server_recvreq_source_addr_;
-        MessageBase* redirected_get_response_ptr = new RedirectedGetResponse(tmp_key, tmp_value, hitflag, edge_idx, edge_cache_server_recvreq_source_addr);
+        MessageBase* redirected_get_response_ptr = new RedirectedGetResponse(tmp_key, tmp_value, hitflag, edge_idx, edge_cache_server_recvreq_source_addr, event_list);
 
         // Push the redirected response message into edge-to-client propagation simulator to cache server worker in the closest edge node
         tmp_edge_wrapper_ptr->edge_toclient_propagation_simulator_param_ptr_->push(redirected_get_response_ptr, recvrsp_dst_addr);
@@ -90,7 +95,7 @@ namespace covered
         assert(!current_is_beacon);
 
         bool is_finish = false;
-        struct timespec issue_directory_lookup_req_start_timespec = Util::getCurrentTimespec();
+        struct timespec issue_directory_lookup_req_start_timestamp = Util::getCurrentTimespec();
 
         // Prepare directory lookup request to check directory information in beacon node
         uint32_t edge_idx = tmp_edge_wrapper_ptr->edge_param_ptr_->getNodeIdx();
@@ -149,8 +154,8 @@ namespace covered
         } // End of while(true)
 
         // Add intermediate event if with event tracking
-        struct timespec issue_directory_lookup_req_end_timespec = Util::getCurrentTimespec();
-        uint32_t issue_directory_lookup_req_latency_us = Util::getDeltaTimeUs(issue_directory_lookup_req_end_timespec, issue_directory_lookup_req_start_timespec);
+        struct timespec issue_directory_lookup_req_end_timestamp = Util::getCurrentTimespec();
+        uint32_t issue_directory_lookup_req_latency_us = Util::getDeltaTimeUs(issue_directory_lookup_req_end_timestamp, issue_directory_lookup_req_start_timestamp);
         event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_ISSUE_DIRECTORY_LOOKUP_REQ_EVENT_NAME, issue_directory_lookup_req_latency_us);
 
         // NOTE: directory_lookup_request_ptr will be released by edge-to-edge propagation simulator
@@ -164,7 +169,7 @@ namespace covered
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->edge_wrapper_ptr_;
 
         bool is_finish = false;
-        struct timespec issue_redirect_get_req_start_timespec = Util::getCurrentTimespec();
+        struct timespec issue_redirect_get_req_start_timestamp = Util::getCurrentTimespec();
 
         // Prepare redirected get request to get data from target edge node if any
         uint32_t edge_idx = tmp_edge_wrapper_ptr->edge_param_ptr_->getNodeIdx();
@@ -244,8 +249,8 @@ namespace covered
         } // End of while(true)
 
         // Add intermediate event if with event tracking
-        struct timespec issue_redirect_get_req_end_timespec = Util::getCurrentTimespec();
-        uint32_t issue_redirect_get_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(issue_redirect_get_req_end_timespec, issue_redirect_get_req_start_timespec));
+        struct timespec issue_redirect_get_req_end_timestamp = Util::getCurrentTimespec();
+        uint32_t issue_redirect_get_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(issue_redirect_get_req_end_timestamp, issue_redirect_get_req_start_timestamp));
         event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_ISSUE_REDIRECT_GET_REQ_EVENT_NAME, issue_redirect_get_latency_us);
 
         // NOTE: redirected_get_request_ptr will be released by edge-to-edge propagation simulator
@@ -265,7 +270,7 @@ namespace covered
         assert(!current_is_beacon);
 
         bool is_finish = false;
-        struct timespec issue_directory_update_req_start_timespec = Util::getCurrentTimespec();
+        struct timespec issue_directory_update_req_start_timestamp = Util::getCurrentTimespec();
 
         // Prepare directory update request to check directory information in beacon node
         uint32_t edge_idx = tmp_edge_wrapper_ptr->edge_param_ptr_->getNodeIdx();
@@ -318,8 +323,8 @@ namespace covered
         } // End of while(true)
 
         // Add intermediate event if with evet tracking
-        struct timespec issue_directory_update_req_end_timespec = Util::getCurrentTimespec();
-        uint32_t issue_directory_update_req_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(issue_directory_update_req_end_timespec, issue_directory_update_req_start_timespec));
+        struct timespec issue_directory_update_req_end_timestamp = Util::getCurrentTimespec();
+        uint32_t issue_directory_update_req_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(issue_directory_update_req_end_timestamp, issue_directory_update_req_start_timestamp));
         event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_ISSUE_DIRECTORY_UPDATE_REQ_EVENT_NAME, issue_directory_update_req_latency_us);
 
         // NOTE: directory_update_request_ptr will be released by edge-to-edge propagation simulator
@@ -339,7 +344,7 @@ namespace covered
         assert(!current_is_beacon);
 
         bool is_finish = false;
-        struct timespec issue_acquire_writelock_req_start_timespec = Util::getCurrentTimespec();
+        struct timespec issue_acquire_writelock_req_start_timestamp = Util::getCurrentTimespec();
 
         // Prepare acquire writelock request to acquire permission for a write
         uint32_t edge_idx = tmp_edge_wrapper_ptr->edge_param_ptr_->getNodeIdx();
@@ -392,8 +397,8 @@ namespace covered
         } // End of while(true)
 
         // Add intermediate event if with event tracking
-        struct timespec issue_acquire_writelock_req_end_timespec = Util::getCurrentTimespec();
-        uint32_t issue_acquire_writelock_req_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(issue_acquire_writelock_req_end_timespec, issue_acquire_writelock_req_start_timespec));
+        struct timespec issue_acquire_writelock_req_end_timestamp = Util::getCurrentTimespec();
+        uint32_t issue_acquire_writelock_req_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(issue_acquire_writelock_req_end_timestamp, issue_acquire_writelock_req_start_timestamp));
         event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_ISSUE_ACQUIRE_WRITELOCK_REQ_EVENT_NAME, issue_acquire_writelock_req_latency_us);
 
         // NOTE: acquire_writelock_request_ptr will be released by edge-to-edge propagation simulator
@@ -411,7 +416,7 @@ namespace covered
         assert(!current_is_beacon);
 
         bool is_finish = false;
-        struct timespec issue_release_writelock_req_start_timespec = Util::getCurrentTimespec();
+        struct timespec issue_release_writelock_req_start_timestamp = Util::getCurrentTimespec();
 
         // Prepare release writelock request to finish write
         uint32_t edge_idx = tmp_edge_wrapper_ptr->edge_param_ptr_->getNodeIdx();
@@ -460,8 +465,8 @@ namespace covered
         } // End of while(true)
 
         // Add intermediate event if with event tracking
-        struct timespec issue_release_writelock_req_end_timespec = Util::getCurrentTimespec();
-        uint32_t issue_release_writelock_req_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(issue_release_writelock_req_end_timespec, issue_release_writelock_req_start_timespec));
+        struct timespec issue_release_writelock_req_end_timestamp = Util::getCurrentTimespec();
+        uint32_t issue_release_writelock_req_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(issue_release_writelock_req_end_timestamp, issue_release_writelock_req_start_timestamp));
         event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_ISSUE_RELEASE_WRITELOCK_REQ_EVENT_NAME, issue_release_writelock_req_latency_us);
 
         // NOTE: release_writelock_request_ptr will be released by edge-to-edge propagation simulator
@@ -483,7 +488,7 @@ namespace covered
         #endif
 
         // Independently admit the new key-value pair into local edge cache
-        struct timespec update_directory_to_admit_start_timespec = Util::getCurrentTimespec();
+        struct timespec update_directory_to_admit_start_timestamp = Util::getCurrentTimespec();
         bool is_being_written = false;
         is_finish = updateDirectory_(key, true, is_being_written, event_list);
         if (is_finish)
@@ -491,8 +496,8 @@ namespace covered
             return is_finish;
         }
         tmp_edge_wrapper_ptr->edge_cache_ptr_->admit(key, value, !is_being_written); // valid if not being written
-        struct timespec update_directory_to_admit_end_timespec = Util::getCurrentTimespec();
-        uint32_t update_directory_to_admit_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(update_directory_to_admit_end_timespec, update_directory_to_admit_start_timespec));
+        struct timespec update_directory_to_admit_end_timestamp = Util::getCurrentTimespec();
+        uint32_t update_directory_to_admit_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(update_directory_to_admit_end_timestamp, update_directory_to_admit_start_timestamp));
         event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_UPDATE_DIRECTORY_TO_ADMIT_EVENT_NAME, update_directory_to_admit_latency_us); // Add intermediate event if with event tracking
 
         while (true) // Evict until used bytes <= capacity bytes
@@ -505,7 +510,7 @@ namespace covered
             }
             else // Exceed capacity limitation
             {
-                struct timespec update_directory_to_evict_start_timespec = Util::getCurrentTimespec();
+                struct timespec update_directory_to_evict_start_timestamp = Util::getCurrentTimespec();
                 Key victim_key;
                 Value victim_value;
                 tmp_edge_wrapper_ptr->edge_cache_ptr_->evict(victim_key, victim_value);
@@ -515,8 +520,8 @@ namespace covered
                 {
                     return is_finish;
                 }
-                struct timespec update_directory_to_evict_end_timespec = Util::getCurrentTimespec();
-                uint32_t update_directory_to_evict_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(update_directory_to_evict_end_timespec, update_directory_to_evict_start_timespec));
+                struct timespec update_directory_to_evict_end_timestamp = Util::getCurrentTimespec();
+                uint32_t update_directory_to_evict_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(update_directory_to_evict_end_timestamp, update_directory_to_evict_start_timestamp));
                 event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_UPDATE_DIRECTORY_TO_EVICT_EVENT_NAME, update_directory_to_evict_latency_us); // Add intermediate event if with event tracking
 
                 #ifdef DEBUG_CACHE_SERVER

@@ -5,6 +5,8 @@
 
 #include "common/param.h"
 #include "common/util.h"
+#include "event/event.h"
+#include "event/event_list.h"
 #include "message/control_message.h"
 #include "network/propagation_simulator.h"
 

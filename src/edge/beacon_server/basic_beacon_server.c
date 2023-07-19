@@ -6,6 +6,7 @@
 #include "common/config.h"
 #include "common/param.h"
 #include "common/util.h"
+#include "event/event.h"
 #include "event/event_list.h"
 #include "message/control_message.h"
 #include "network/propagation_simulator.h"
@@ -43,9 +44,9 @@ namespace covered
         checkPointers_();
 
         bool is_finish = false;
-        EventList event_list;
 
-        struct timespec lookup_local_directory_start_timespec = Util::getCurrentTimespec();
+        EventList event_list;
+        struct timespec lookup_local_directory_start_timestamp = Util::getCurrentTimespec();
 
         // Calculate cache server worker recvreq destination address
         NetworkAddr edge_cache_server_worker_recvreq_source_addr = Util::getEdgeCacheServerWorkerRecvreqAddrFromRecvrspAddr(edge_cache_server_worker_recvrsp_dst_addr);
@@ -57,8 +58,8 @@ namespace covered
         edge_wrapper_ptr_->cooperation_wrapper_ptr_->lookupLocalDirectoryByBeaconServer(tmp_key, edge_cache_server_worker_recvreq_source_addr, is_being_written, is_valid_directory_exist, directory_info);
 
         // Add intermediate event if with event tracking
-        struct timespec lookup_local_directory_end_timespec = Util::getCurrentTimespec();
-        uint32_t lookup_local_directory_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(lookup_local_directory_end_timespec, lookup_local_directory_start_timespec));
+        struct timespec lookup_local_directory_end_timestamp = Util::getCurrentTimespec();
+        uint32_t lookup_local_directory_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(lookup_local_directory_end_timestamp, lookup_local_directory_start_timestamp));
         event_list.addEvent(Event::EDGE_BEACON_SERVER_LOOKUP_LOCAL_DIRECTORY_EVENT_NAME, lookup_local_directory_latency_us);
 
         // Prepare a directory lookup response
@@ -77,8 +78,6 @@ namespace covered
 
     bool BasicBeaconServer::processDirectoryUpdateRequest_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr)
     {
-        // TODO: END HERE
-        
         // Get key, admit/evict,and directory info from control request if any
         assert(control_request_ptr != NULL);
         assert(control_request_ptr->getMessageType() == MessageType::kDirectoryUpdateRequest);
@@ -89,15 +88,23 @@ namespace covered
 
         checkPointers_();
 
-        bool is_finish = false;        
+        bool is_finish = false;
+
+        EventList event_list;
+        struct timespec update_local_directory_start_timestamp = Util::getCurrentTimespec();
 
         // Update local directory information
         bool is_being_written = false;
         edge_wrapper_ptr_->cooperation_wrapper_ptr_->updateLocalDirectory(tmp_key, is_admit, directory_info, is_being_written);
 
+        // Add intermediate event if with event tracking
+        struct timespec update_local_directory_end_timestamp = Util::getCurrentTimespec();
+        uint32_t update_local_directory_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(update_local_directory_end_timestamp, update_local_directory_start_timestamp));
+        event_list.addEvent(Event::EDGE_BEACON_SERVER_UPDATE_LOCAL_DIRECTORY_EVENT_NAME, update_local_directory_latency_us);
+
         // Prepare a directory update response
         uint32_t edge_idx = edge_wrapper_ptr_->edge_param_ptr_->getNodeIdx();
-        MessageBase* directory_update_response_ptr = new DirectoryUpdateResponse(tmp_key, is_being_written, edge_idx, edge_beacon_server_recvreq_source_addr_);
+        MessageBase* directory_update_response_ptr = new DirectoryUpdateResponse(tmp_key, is_being_written, edge_idx, edge_beacon_server_recvreq_source_addr_, event_list);
         assert(directory_update_response_ptr != NULL);
 
         // Push the directory update response into edge-to-edge propagation simulator to cache server worker
@@ -123,6 +130,9 @@ namespace covered
 
         bool is_finish = false;
 
+        EventList event_list;
+        struct timespec acquire_local_writelock_start_timestamp = Util::getCurrentTimespec();
+
         // Calculate cache server worker recvreq destination address
         NetworkAddr edge_cache_server_worker_recvreq_dst_addr = Util::getEdgeCacheServerWorkerRecvreqAddrFromRecvrspAddr(edge_cache_server_worker_recvrsp_dst_addr);
         
@@ -131,16 +141,21 @@ namespace covered
         std::unordered_set<DirectoryInfo, DirectoryInfoHasher> all_dirinfo;
         lock_result = edge_wrapper_ptr_->cooperation_wrapper_ptr_->acquireLocalWritelockByBeaconServer(tmp_key, edge_cache_server_worker_recvreq_dst_addr, all_dirinfo);
 
+        // Add intermediate event if with event tracking
+        struct timespec acquire_local_writelock_end_timestamp = Util::getCurrentTimespec();
+        uint32_t acquire_local_writelock_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(acquire_local_writelock_end_timestamp, acquire_local_writelock_start_timestamp));
+        event_list.addEvent(Event::EDGE_BEACON_SERVER_ACQUIRE_LOCAL_WRITELOCK_EVENT_NAME, acquire_local_writelock_latency_us);
+
         // NOTE: we invalidate cache copies by beacon code to avoid transmitting all_dirinfo to cache server of the closest edge node
         if (lock_result == LockResult::kSuccess) // If acquiring write permission successfully
         {
             // Invalidate all cache copies
-            edge_wrapper_ptr_->invalidateCacheCopies_(edge_beacon_server_recvrsp_socket_server_ptr_, edge_beacon_server_recvrsp_source_addr_, tmp_key, all_dirinfo);
+            edge_wrapper_ptr_->invalidateCacheCopies_(edge_beacon_server_recvrsp_socket_server_ptr_, edge_beacon_server_recvrsp_source_addr_, tmp_key, all_dirinfo, event_list); // Add events of intermedate responses if with event tracking
         }
 
         // Prepare a acquire writelock response
         uint32_t edge_idx = edge_wrapper_ptr_->edge_param_ptr_->getNodeIdx();
-        MessageBase* acquire_writelock_response_ptr = new AcquireWritelockResponse(tmp_key, lock_result, edge_idx, edge_beacon_server_recvreq_source_addr_);
+        MessageBase* acquire_writelock_response_ptr = new AcquireWritelockResponse(tmp_key, lock_result, edge_idx, edge_beacon_server_recvreq_source_addr_, event_list);
         assert(acquire_writelock_response_ptr != NULL);
 
         // Push acquire writelock response into edge-to-edge propagation simulator to cache server worker
@@ -162,24 +177,32 @@ namespace covered
 
         checkPointers_();
 
-        bool is_finish = false;        
+        bool is_finish = false;
+
+        EventList event_list;
+        struct timespec release_local_writelock_start_timestamp = Util::getCurrentTimespec();
 
         // Release permission for the write
         uint32_t sender_edge_idx = release_writelock_request_ptr->getSourceIndex();
         DirectoryInfo sender_directory_info(sender_edge_idx);
         std::unordered_set<NetworkAddr, NetworkAddrHasher> blocked_edges = edge_wrapper_ptr_->cooperation_wrapper_ptr_->releaseLocalWritelock(tmp_key, sender_directory_info);
 
+        // Add intermediate event if with event tracking
+        struct timespec release_local_writelock_end_timestamp = Util::getCurrentTimespec();
+        uint32_t release_local_writelock_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(release_local_writelock_end_timestamp, release_local_writelock_start_timestamp));
+        event_list.addEvent(Event::EDGE_BEACON_SERVER_RELEASE_LOCAL_WRITELOCK_EVENT_NAME, release_local_writelock_latency_us);
+
+        // NOTE: notify blocked edge nodes if any after finishing writes, to avoid transmitting blocked_edges to cache server of the closest edge node
+        is_finish = edge_wrapper_ptr_->notifyEdgesToFinishBlock_(edge_beacon_server_recvrsp_socket_server_ptr_, edge_beacon_server_recvrsp_source_addr_, tmp_key, blocked_edges, event_list); // Add events of intermedate responses if with event tracking
+
         // Prepare a release writelock response
         uint32_t edge_idx = edge_wrapper_ptr_->edge_param_ptr_->getNodeIdx();
-        MessageBase* release_writelock_response_ptr = new ReleaseWritelockResponse(tmp_key, edge_idx, edge_beacon_server_recvreq_source_addr_);
+        MessageBase* release_writelock_response_ptr = new ReleaseWritelockResponse(tmp_key, edge_idx, edge_beacon_server_recvreq_source_addr_, event_list);
         assert(release_writelock_response_ptr != NULL);
 
         // Push release writelock response into edge-to-edge propagation simulator to cache server worker
         bool is_successful = edge_wrapper_ptr_->edge_toedge_propagation_simulator_param_ptr_->push(release_writelock_response_ptr, edge_cache_server_worker_recvrsp_dst_addr);
         assert(is_successful);
-
-        // NOTE: notify blocked edge nodes if any after finishing writes, to avoid transmitting blocked_edges to cache server of the closest edge node
-        is_finish = edge_wrapper_ptr_->notifyEdgesToFinishBlock_(edge_beacon_server_recvrsp_socket_server_ptr_, edge_beacon_server_recvrsp_source_addr_, tmp_key, blocked_edges);
 
         // NOTE: release_writelock_response_ptr will be released by edge-to-edge propagation simulator
 
