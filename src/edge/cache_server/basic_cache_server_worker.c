@@ -77,6 +77,7 @@ namespace covered
         tmp_edge_wrapper_ptr->edge_toclient_propagation_simulator_param_ptr_->push(redirected_get_response_ptr, recvrsp_dst_addr);
 
         // NOTE: redirected_get_response_ptr will be released by edge-to-client propagation simulator
+        redirected_get_response_ptr = NULL;
 
         return is_finish;
     }
@@ -97,23 +98,26 @@ namespace covered
         bool is_finish = false;
         struct timespec issue_directory_lookup_req_start_timestamp = Util::getCurrentTimespec();
 
-        // Prepare directory lookup request to check directory information in beacon node
-        uint32_t edge_idx = tmp_edge_wrapper_ptr->edge_param_ptr_->getNodeIdx();
-        MessageBase* directory_lookup_request_ptr = new DirectoryLookupRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_);
-        assert(directory_lookup_request_ptr != NULL);
-
         // Get destination address of beacon node
         NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = getBeaconDstaddr_(key);
 
-        #ifdef DEBUG_CACHE_SERVER
-        Util::dumpVariablesForDebug(instance_name_, 4, "beacon edge index:", std::to_string(tmp_edge_wrapper_ptr->cooperation_wrapper_ptr_->getBeaconEdgeIdx(key)).c_str(), "keystr:", key.getKeystr().c_str());
-        #endif
-
         while (true) // Timeout-and-retry mechanism
         {
+            // Prepare directory lookup request to check directory information in beacon node
+            uint32_t edge_idx = tmp_edge_wrapper_ptr->edge_param_ptr_->getNodeIdx();
+            MessageBase* directory_lookup_request_ptr = new DirectoryLookupRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_);
+            assert(directory_lookup_request_ptr != NULL);
+
+            #ifdef DEBUG_CACHE_SERVER
+            Util::dumpVariablesForDebug(instance_name_, 4, "beacon edge index:", std::to_string(tmp_edge_wrapper_ptr->cooperation_wrapper_ptr_->getBeaconEdgeIdx(key)).c_str(), "keystr:", key.getKeystr().c_str());
+            #endif
+
             // Push the control request into edge-to-edge propagation simulator to send to beacon node
             bool is_successful = tmp_edge_wrapper_ptr->edge_toedge_propagation_simulator_param_ptr_->push(directory_lookup_request_ptr, beacon_edge_beacon_server_recvreq_dst_addr);
             assert(is_successful);
+
+            // NOTE: directory_lookup_request_ptr will be released by edge-to-edge propagation simulator
+            directory_lookup_request_ptr = NULL;
 
             // Receive the control repsonse from the beacon node
             DynamicArray control_response_msg_payload;
@@ -158,8 +162,6 @@ namespace covered
         uint32_t issue_directory_lookup_req_latency_us = Util::getDeltaTimeUs(issue_directory_lookup_req_end_timestamp, issue_directory_lookup_req_start_timestamp);
         event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_ISSUE_DIRECTORY_LOOKUP_REQ_EVENT_NAME, issue_directory_lookup_req_latency_us);
 
-        // NOTE: directory_lookup_request_ptr will be released by edge-to-edge propagation simulator
-
         return is_finish;
     }
 
@@ -171,19 +173,22 @@ namespace covered
         bool is_finish = false;
         struct timespec issue_redirect_get_req_start_timestamp = Util::getCurrentTimespec();
 
-        // Prepare redirected get request to get data from target edge node if any
-        uint32_t edge_idx = tmp_edge_wrapper_ptr->edge_param_ptr_->getNodeIdx();
-        MessageBase* redirected_get_request_ptr = new RedirectedGetRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_);
-        assert(redirected_get_request_ptr != NULL);
-
         // Prepare destination address of target edge cache server
         NetworkAddr target_edge_cache_server_recvreq_dst_addr = getTargetDstaddr_(directory_info);
 
         while (true) // Timeout-and-retry mechanism
         {
+            // Prepare redirected get request to get data from target edge node if any
+            uint32_t edge_idx = tmp_edge_wrapper_ptr->edge_param_ptr_->getNodeIdx();
+            MessageBase* redirected_get_request_ptr = new RedirectedGetRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_);
+            assert(redirected_get_request_ptr != NULL);
+
             // Push the redirected data request into edge-to-edge propagation simulator to target node
             bool is_successful = tmp_edge_wrapper_ptr->edge_toedge_propagation_simulator_param_ptr_->push(redirected_get_request_ptr, target_edge_cache_server_recvreq_dst_addr);
             assert(is_successful);
+
+            // NOTE: redirected_get_request_ptr will be released by edge-to-edge propagation simulator
+            redirected_get_request_ptr = NULL;
 
             // Receive the redirected data repsonse from the target node
             DynamicArray redirected_response_msg_payload;
@@ -253,8 +258,6 @@ namespace covered
         uint32_t issue_redirect_get_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(issue_redirect_get_req_end_timestamp, issue_redirect_get_req_start_timestamp));
         event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_ISSUE_REDIRECT_GET_REQ_EVENT_NAME, issue_redirect_get_latency_us);
 
-        // NOTE: redirected_get_request_ptr will be released by edge-to-edge propagation simulator
-
         return is_finish;
     }
 
@@ -272,19 +275,22 @@ namespace covered
         bool is_finish = false;
         struct timespec issue_directory_update_req_start_timestamp = Util::getCurrentTimespec();
 
-        // Prepare directory update request to check directory information in beacon node
-        uint32_t edge_idx = tmp_edge_wrapper_ptr->edge_param_ptr_->getNodeIdx();
-        MessageBase* directory_update_request_ptr = new DirectoryUpdateRequest(key, is_admit, directory_info, edge_idx, edge_cache_server_worker_recvrsp_source_addr_);
-        assert(directory_update_request_ptr != NULL);
-
         // Get destination address of beacon node
         NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = getBeaconDstaddr_(key);
 
         while (true) // Timeout-and-retry mechanism
         {
+            // Prepare directory update request to check directory information in beacon node
+            uint32_t edge_idx = tmp_edge_wrapper_ptr->edge_param_ptr_->getNodeIdx();
+            MessageBase* directory_update_request_ptr = new DirectoryUpdateRequest(key, is_admit, directory_info, edge_idx, edge_cache_server_worker_recvrsp_source_addr_);
+            assert(directory_update_request_ptr != NULL);
+
             // Push the control request into edge-to-edge propagation simulator to the beacon node
             bool is_successful = tmp_edge_wrapper_ptr->edge_toedge_propagation_simulator_param_ptr_->push(directory_update_request_ptr, beacon_edge_beacon_server_recvreq_dst_addr);
             assert(is_successful);
+
+            // NOTE: directory_update_request_ptr will be released by edge-to-edge propagation simulator
+            directory_update_request_ptr = NULL;
 
             // Receive the control repsonse from the beacon node
             DynamicArray control_response_msg_payload;
@@ -327,8 +333,6 @@ namespace covered
         uint32_t issue_directory_update_req_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(issue_directory_update_req_end_timestamp, issue_directory_update_req_start_timestamp));
         event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_ISSUE_DIRECTORY_UPDATE_REQ_EVENT_NAME, issue_directory_update_req_latency_us);
 
-        // NOTE: directory_update_request_ptr will be released by edge-to-edge propagation simulator
-
         return is_finish;
     }
 
@@ -346,19 +350,22 @@ namespace covered
         bool is_finish = false;
         struct timespec issue_acquire_writelock_req_start_timestamp = Util::getCurrentTimespec();
 
-        // Prepare acquire writelock request to acquire permission for a write
-        uint32_t edge_idx = tmp_edge_wrapper_ptr->edge_param_ptr_->getNodeIdx();
-        MessageBase* acquire_writelock_request_ptr = new AcquireWritelockRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_);
-        assert(acquire_writelock_request_ptr != NULL);
-
         // Prepare destination address of beacon server
         NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = getBeaconDstaddr_(key);
 
         while (true) // Timeout-and-retry mechanism
         {
+            // Prepare acquire writelock request to acquire permission for a write
+            uint32_t edge_idx = tmp_edge_wrapper_ptr->edge_param_ptr_->getNodeIdx();
+            MessageBase* acquire_writelock_request_ptr = new AcquireWritelockRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_);
+            assert(acquire_writelock_request_ptr != NULL);
+
             // Push the control request into edge-to-edge propagation simulator to the beacon node
             bool is_successful = tmp_edge_wrapper_ptr->edge_toedge_propagation_simulator_param_ptr_->push(acquire_writelock_request_ptr, beacon_edge_beacon_server_recvreq_dst_addr);
             assert(is_successful);
+
+            // NOTE: acquire_writelock_request_ptr will be released by edge-to-edge propagation simulator
+            acquire_writelock_request_ptr = NULL;
 
             // Receive the control repsonse from the beacon node
             DynamicArray control_response_msg_payload;
@@ -401,8 +408,6 @@ namespace covered
         uint32_t issue_acquire_writelock_req_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(issue_acquire_writelock_req_end_timestamp, issue_acquire_writelock_req_start_timestamp));
         event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_ISSUE_ACQUIRE_WRITELOCK_REQ_EVENT_NAME, issue_acquire_writelock_req_latency_us);
 
-        // NOTE: acquire_writelock_request_ptr will be released by edge-to-edge propagation simulator
-
         return is_finish;
     }
 
@@ -418,19 +423,22 @@ namespace covered
         bool is_finish = false;
         struct timespec issue_release_writelock_req_start_timestamp = Util::getCurrentTimespec();
 
-        // Prepare release writelock request to finish write
-        uint32_t edge_idx = tmp_edge_wrapper_ptr->edge_param_ptr_->getNodeIdx();
-        MessageBase* release_writelock_request_ptr = new ReleaseWritelockRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_);
-        assert(release_writelock_request_ptr != NULL);
-
         // Prepare destination address of beacon server
         NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = getBeaconDstaddr_(key);
 
         while (true) // Timeout-and-retry mechanism
         {
+            // Prepare release writelock request to finish write
+            uint32_t edge_idx = tmp_edge_wrapper_ptr->edge_param_ptr_->getNodeIdx();
+            MessageBase* release_writelock_request_ptr = new ReleaseWritelockRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_);
+            assert(release_writelock_request_ptr != NULL);
+
             // Push the control request into edge-to-edge propagation simulator to the beacon node
             bool is_successful = tmp_edge_wrapper_ptr->edge_toedge_propagation_simulator_param_ptr_->push(release_writelock_request_ptr, beacon_edge_beacon_server_recvreq_dst_addr);
             assert(is_successful);
+
+            // NOTE: release_writelock_request_ptr will be released by edge-to-edge propagation simulator
+            release_writelock_request_ptr = NULL;
 
             // Receive the control repsonse from the beacon node
             DynamicArray control_response_msg_payload;
@@ -468,8 +476,6 @@ namespace covered
         struct timespec issue_release_writelock_req_end_timestamp = Util::getCurrentTimespec();
         uint32_t issue_release_writelock_req_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(issue_release_writelock_req_end_timestamp, issue_release_writelock_req_start_timestamp));
         event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_ISSUE_RELEASE_WRITELOCK_REQ_EVENT_NAME, issue_release_writelock_req_latency_us);
-
-        // NOTE: release_writelock_request_ptr will be released by edge-to-edge propagation simulator
 
         return is_finish;
     }

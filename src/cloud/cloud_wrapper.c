@@ -212,10 +212,21 @@ namespace covered
             }
         }
 
+        #ifdef DEBUG_CLOUD_WRAPPER
+        std::ostringstream oss;
+        oss << "receive a global request; message type: " << MessageBase::messageTypeToString(global_request_message_type) << "; keystr: " << tmp_key.getKeystr() << "; valuesize: " << tmp_value.getValuesize();
+        Util::dumpDebugMsg(instance_name_, oss.str());
+        #endif
+
         // Add intermediate event if with event tracking
         struct timespec access_rocksdb_end_timestamp = Util::getCurrentTimespec();
         uint32_t access_rocksdb_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(access_rocksdb_end_timestamp, access_rocksdb_start_timestamp));
         event_list.addEvent(event_name, access_rocksdb_latency_us);
+
+        if (is_finish) // Check is_finish
+        {
+            return is_finish;
+        }
 
         // Prepare global response
         MessageBase* global_response_ptr = NULL;
@@ -249,16 +260,14 @@ namespace covered
             }
         }
 
-        if (!is_finish) // Check is_finish
-        {
-            // Push the global response message into cloud-to-edge propagation simulator to edge cache server worker
-            assert(global_response_ptr != NULL);
-            assert(global_response_ptr->isGlobalResponse());
-            bool is_successful = cloud_toedge_propagation_simulator_param_ptr_->push(global_response_ptr, edge_cache_server_worker_recvrsp_dst_addr);
-            assert(is_successful);
-        }
+        // Push the global response message into cloud-to-edge propagation simulator to edge cache server worker
+        assert(global_response_ptr != NULL);
+        assert(global_response_ptr->isGlobalResponse());
+        bool is_successful = cloud_toedge_propagation_simulator_param_ptr_->push(global_response_ptr, edge_cache_server_worker_recvrsp_dst_addr);
+        assert(is_successful);
 
         // NOTE: global_response_ptr will be released by cloud-to-edge propagation simulator
+        global_response_ptr = NULL;
 
         return is_finish;
     }

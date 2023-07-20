@@ -156,20 +156,23 @@ namespace covered
         // TMPDEBUG
         //WorkloadItem workload_item(tmp_workload_item.getKey(), Value(200000), WorkloadItemType::kWorkloadItemPut);
 
-        // Convert workload item into local request message
-        MessageBase* local_request_ptr = MessageBase::getLocalRequestFromWorkloadItem(workload_item, global_client_worker_idx_, client_worker_recvrsp_source_addr_);
-        assert(local_request_ptr != NULL);
-
-        #ifdef DEBUG_CLIENT_WORKER_WRAPPER
-        Util::dumpVariablesForDebug(instance_name_, 7, "issue a local request;", "type:", MessageBase::messageTypeToString(local_request_ptr->getMessageType()).c_str(), "keystr:", workload_item.getKey().getKeystr().c_str(), "valuesize:", std::to_string(workload_item.getValue().getValuesize()).c_str());
-        #endif
-
         struct timespec sendreq_timestamp = Util::getCurrentTimespec();
         while (true) // Timeout-and-retry mechanism
         {
+            // Convert workload item into local request message
+            MessageBase* local_request_ptr = MessageBase::getLocalRequestFromWorkloadItem(workload_item, global_client_worker_idx_, client_worker_recvrsp_source_addr_);
+            assert(local_request_ptr != NULL);
+
+            #ifdef DEBUG_CLIENT_WORKER_WRAPPER
+            Util::dumpVariablesForDebug(instance_name_, 7, "issue a local request;", "type:", MessageBase::messageTypeToString(local_request_ptr->getMessageType()).c_str(), "keystr:", workload_item.getKey().getKeystr().c_str(), "valuesize:", std::to_string(workload_item.getValue().getValuesize()).c_str());
+            #endif
+
             // Push local request into client-to-edge propagation simulator to send to closest edge node
             bool is_successful = tmp_client_wrapper_ptr->client_toedge_propagation_simulator_param_ptr_->push(local_request_ptr, closest_edge_cache_server_recvreq_dst_addr_);
             assert(is_successful);
+            
+            // NOTE: local_request_ptr will be released by client-to-edge propagation simulator
+            local_request_ptr = NULL;
 
             // Receive the message payload of local response from the closest edge node
             bool is_timeout = client_worker_recvrsp_socket_server_ptr_->recv(local_response_msg_payload);
@@ -192,8 +195,6 @@ namespace covered
             }
         }
         struct timespec recvrsp_timestamp = Util::getCurrentTimespec();
-
-        // NOTE: local_request_ptr will be released by client-to-edge propagation simulator
 
         double tmp_rtt_us = Util::getDeltaTimeUs(recvrsp_timestamp, sendreq_timestamp);
         rtt_us = static_cast<uint32_t>(tmp_rtt_us);

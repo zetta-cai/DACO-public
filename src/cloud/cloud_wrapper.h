@@ -7,7 +7,7 @@
 #ifndef CLOUD_WRAPPER_H
 #define CLOUD_WRAPPER_H
 
-//#define DEBUG_CLOUD_WRAPPER
+#define DEBUG_CLOUD_WRAPPER
 
 #include <string>
 

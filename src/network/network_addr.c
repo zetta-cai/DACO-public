@@ -120,6 +120,13 @@ namespace covered
         return size - position;
     }
 
+    std::string NetworkAddr::toString() const
+    {
+        std::ostringstream oss;
+        oss << "<" << ipstr_ << ", " << port_ << ">";
+        return oss.str();
+    }
+
     bool NetworkAddr::operator<(const NetworkAddr& other) const
     {
         bool is_smaller = false;

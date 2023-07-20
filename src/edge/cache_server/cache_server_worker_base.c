@@ -302,6 +302,7 @@ namespace covered
         #endif
 
         // NOTE: local_get_response_ptr will be released by edge-to-client propagation simulator
+        local_get_response_ptr = NULL;
 
         return is_finish;
     }
@@ -450,6 +451,7 @@ namespace covered
         }
 
         // NOTE: local_response_ptr will be released by edge-to-client propagation simulator
+        local_response_ptr = NULL;
 
         return is_finish;
     }
@@ -799,6 +801,7 @@ namespace covered
             assert(is_successful);
 
             // NOTE: finish_block_response_ptr will be released by edge-to-edge propagation simulator
+            finish_block_response_ptr = NULL;
         }
 
         // Add intermediate event if with event tracking
@@ -896,20 +899,23 @@ namespace covered
         bool is_finish = false; // Mark if edge node is finished
         struct timespec issue_global_get_req_start_timestamp = Util::getCurrentTimespec();
 
-        // Prepare global get request to cloud
-        uint32_t edge_idx = tmp_edge_wrapper_ptr->edge_param_ptr_->getNodeIdx();
-        MessageBase* global_get_request_ptr = new GlobalGetRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_);
-        assert(global_get_request_ptr != NULL);
-
-        #ifdef DEBUG_CACHE_SERVER
-        Util::dumpVariablesForDebug(base_instance_name_, 5, "issue a global request;", "type:", MessageBase::messageTypeToString(global_get_request_ptr->getMessageType()).c_str(), "keystr:", key.getKeystr().c_str());
-        #endif
-
         while (true) // Timeout-and-retry
         {
+            // Prepare global get request to cloud
+            uint32_t edge_idx = tmp_edge_wrapper_ptr->edge_param_ptr_->getNodeIdx();
+            MessageBase* global_get_request_ptr = new GlobalGetRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_);
+            assert(global_get_request_ptr != NULL);
+
+            #ifdef DEBUG_CACHE_SERVER
+            Util::dumpVariablesForDebug(base_instance_name_, 5, "issue a global request;", "type:", MessageBase::messageTypeToString(global_get_request_ptr->getMessageType()).c_str(), "keystr:", key.getKeystr().c_str());
+            #endif
+
             // Push the global request into edge-to-cloud propagation simulator to cloud
             bool is_successful = tmp_edge_wrapper_ptr->edge_tocloud_propagation_simulator_param_ptr_->push(global_get_request_ptr, corresponding_cloud_recvreq_dst_addr_);
             assert(is_successful);
+
+            // NOTE: global_get_request_ptr will be released by edge-to-cloud propagation simulator
+            global_get_request_ptr = NULL;
 
             // Receive the global response message from cloud
             DynamicArray global_response_msg_payload;
@@ -955,8 +961,6 @@ namespace covered
         struct timespec issue_global_get_req_end_timestamp = Util::getCurrentTimespec();
         uint32_t issue_global_get_req_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(issue_global_get_req_end_timestamp, issue_global_get_req_start_timestamp));
         event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_ISSUE_GLOBAL_GET_REQ_EVENT_NAME, issue_global_get_req_latency_us);
-
-        // NOTE: global_get_request_ptr will be released by edge-to-cloud propagation simulator
         
         return is_finish;
     }
@@ -969,31 +973,34 @@ namespace covered
         bool is_finish = false; // Mark if edge node is finished
         struct timespec issue_global_write_req_start_timestamp = Util::getCurrentTimespec();
 
-        // Prepare global write request message
-        MessageBase* global_request_ptr = NULL;
-        uint32_t edge_idx = tmp_edge_wrapper_ptr->edge_param_ptr_->getNodeIdx();
-        if (message_type == MessageType::kLocalPutRequest)
-        {
-            global_request_ptr = new GlobalPutRequest(key, value, edge_idx, edge_cache_server_worker_recvrsp_source_addr_);
-        }
-        else if (message_type == MessageType::kLocalDelRequest)
-        {
-            global_request_ptr = new GlobalDelRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_);
-        }
-        else
-        {
-            std::ostringstream oss;
-            oss << "invalid message type " << MessageBase::messageTypeToString(message_type) << " for writeDataToCloud_()!";
-            Util::dumpErrorMsg(base_instance_name_, oss.str());
-            exit(1);
-        }
-        assert(global_request_ptr != NULL);
-
         while (true) // Timeout-and-retry
         {
+            // Prepare global write request message
+            MessageBase* global_request_ptr = NULL;
+            uint32_t edge_idx = tmp_edge_wrapper_ptr->edge_param_ptr_->getNodeIdx();
+            if (message_type == MessageType::kLocalPutRequest)
+            {
+                global_request_ptr = new GlobalPutRequest(key, value, edge_idx, edge_cache_server_worker_recvrsp_source_addr_);
+            }
+            else if (message_type == MessageType::kLocalDelRequest)
+            {
+                global_request_ptr = new GlobalDelRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_);
+            }
+            else
+            {
+                std::ostringstream oss;
+                oss << "invalid message type " << MessageBase::messageTypeToString(message_type) << " for writeDataToCloud_()!";
+                Util::dumpErrorMsg(base_instance_name_, oss.str());
+                exit(1);
+            }
+            assert(global_request_ptr != NULL);
+
             // Push the global request into edge-to-cloud propagation simulator to cloud
             bool is_successful = tmp_edge_wrapper_ptr->edge_tocloud_propagation_simulator_param_ptr_->push(global_request_ptr, corresponding_cloud_recvreq_dst_addr_);
             assert(is_successful);
+
+            // NOTE: global_request_ptr will be released by edge-to-cloud propagation simulator
+            global_request_ptr = NULL;
 
             // Receive the global response message from cloud
             DynamicArray global_response_msg_payload;
@@ -1032,8 +1039,6 @@ namespace covered
         struct timespec issue_global_write_req_end_timestamp = Util::getCurrentTimespec();
         uint32_t issue_global_write_req_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(issue_global_write_req_end_timestamp, issue_global_write_req_start_timestamp));
         event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_ISSUE_GLOBAL_WRITE_REQ_EVENT_NAME, issue_global_write_req_latency_us);
-
-        // NOTE: global_request_ptr will be released by edge-to-cloud propagation simulator
         
         return is_finish;
     }

@@ -452,6 +452,7 @@ namespace covered
         assert(is_successful);
 
         // NOTE: invalidation_request_ptr will be released by edge-to-edge propagation simulator
+        invalidation_request_ptr = NULL;
 
         return;
     }
@@ -583,6 +584,7 @@ namespace covered
         assert(is_successful);
 
         // NOTE: finish_block_request_ptr will be released by edge-to-edge propagation simulator
+        finish_block_request_ptr = NULL;
 
         return;
     }

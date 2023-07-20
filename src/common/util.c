@@ -19,7 +19,8 @@ namespace covered
     const int64_t Util::MAX_UINT16 = 65536;
     const int64_t Util::MAX_UINT32 = 4294967296;
     // Network
-    const std::string Util::LOCALHOST_IPSTR("127.0.0.1");
+    //const std::string Util::LOCALHOST_IPSTR("127.0.0.1"); // Pass network card
+    const std::string Util::LOCALHOST_IPSTR("localhost"); // NOT pass network card
     const std::string Util::ANY_IPSTR("0.0.0.0");
     const uint32_t Util::UDP_MAX_PKT_PAYLOAD = 65507; // 65535(ipmax) - 20(iphdr) - 8(udphdr)
     const uint32_t Util::UDP_FRAGHDR_SIZE = 5 * sizeof(uint32_t) + sizeof(uint16_t); // 4(fragment_idx) + 4(fragment_cnt) + 4(msg_payload_size) + 4(msg_seqnum) + 4(source_ip) + 2(source_port)
@@ -48,8 +49,8 @@ namespace covered
 
     void Util::dumpNormalMsg(const std::string& class_name, const std::string& normal_message)
     {
-        msgdump_lock_.lock();
         std::string cur_timestr = getCurrentTimestr();
+        msgdump_lock_.lock();
         std::cout << cur_timestr << " <" << class_name << "> " << normal_message << std::endl;
         msgdump_lock_.unlock();
         return;
@@ -59,8 +60,8 @@ namespace covered
     {
         if (Param::isDebug())
         {
-            msgdump_lock_.lock();
             std::string cur_timestr = getCurrentTimestr();
+            msgdump_lock_.lock();
             // \033 means ESC character, 1 means bold, 32 means green foreground, 0 means reset, and m is end character
             std::cout << "\033[1;32m" << cur_timestr << " [DEBUG] <" << class_name << "> " << debug_message << std::endl << "\033[0m";
             msgdump_lock_.unlock();
@@ -70,8 +71,8 @@ namespace covered
 
     void Util::dumpWarnMsg(const std::string& class_name, const std::string& warn_message)
     {
-        msgdump_lock_.lock();
         std::string cur_timestr = getCurrentTimestr();
+        msgdump_lock_.lock();
         // \033 means ESC character, 1 means bold, 33 means yellow foreground, 0 means reset, and m is end character
         std::cout << "\033[1;33m" << cur_timestr << " [WARN] <" << class_name << "> " << warn_message << std::endl << "\033[0m";
         msgdump_lock_.unlock();
@@ -80,8 +81,8 @@ namespace covered
 
     void Util::dumpErrorMsg(const std::string& class_name, const std::string& error_message)
     {
-        msgdump_lock_.lock();
         std::string cur_timestr = getCurrentTimestr();
+        msgdump_lock_.lock();
         // \033 means ESC character, 1 means bold, 31 means red foreground, 0 means reset, and m is end character
         std::cerr << "\033[1;31m" << cur_timestr << " [ERROR] <" << class_name << "> " << error_message << std::endl << "\033[0m" << boost::stacktrace::stacktrace();
         msgdump_lock_.unlock();

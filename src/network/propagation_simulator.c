@@ -77,14 +77,14 @@ namespace covered
                 uint32_t sleep_us = tmp_propagation_item.getSleepUs();
                 #ifdef DEBUG_PROPAGATION_SIMULATOR
                 std::ostringstream oss;
-                oss << "before sleep " << sleep_us << " us to simulate a propagation latency of " << propagation_simulator_param_ptr_->getPropagationLatencyUs() << " us";
+                oss << "before sleep " << sleep_us << " us to simulate a propagation latency of " << propagation_simulator_param_ptr_->getPropagationLatencyUs() << " us; keystr: " << MessageBase::getKeyFromMessage(message_ptr).getKeystr() << "; dstadrr: " << tmp_propagation_item.getNetworkAddr().toString() << "; srcaddr: " << message_ptr->getSourceAddr().toString();
                 Util::dumpDebugMsg(instance_name_, oss.str());
                 #endif
                 propagate_(sleep_us);
                 #ifdef DEBUG_PROPAGATION_SIMULATOR
                 oss.clear();
                 oss.str("");
-                oss << "after sleep " << sleep_us << " us to simulate a propagation latency of " << propagation_simulator_param_ptr_->getPropagationLatencyUs() << " us";
+                oss << "after sleep " << sleep_us << " us to simulate a propagation latency of " << propagation_simulator_param_ptr_->getPropagationLatencyUs() << " us; keystr: " << MessageBase::getKeyFromMessage(message_ptr).getKeystr() << "; dstadrr: " << tmp_propagation_item.getNetworkAddr().toString() << "; srcaddr: " << message_ptr->getSourceAddr().toString();
                 Util::dumpDebugMsg(instance_name_, oss.str());
                 #endif
 

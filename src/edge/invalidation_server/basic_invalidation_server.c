@@ -65,6 +65,7 @@ namespace covered
         assert(is_successful);
         
         // NOTE: invalidation_response_ptr will be released by edge-to-edge propagation simulator
+        invalidation_response_ptr = NULL;
 
         return is_finish;
     }

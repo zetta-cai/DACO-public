@@ -37,6 +37,8 @@ namespace covered
         uint32_t serialize(DynamicArray& msg_payload, const uint32_t& position) const;
         uint32_t deserialize(const DynamicArray& msg_payload, const uint32_t& position);
 
+        std::string toString() const;
+
         bool operator<(const NetworkAddr& other) const; // To be used as network addr in std::map
         NetworkAddr& operator=(const NetworkAddr& other); // assignment operation
         bool operator==(const NetworkAddr& other) const; // To be used by network addr in std::unordered_set

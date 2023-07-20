@@ -72,6 +72,7 @@ namespace covered
         assert(is_successful);
 
         // NOTE: directory_lookup_response_ptr will be released by edge-to-edge propagation simulator
+        directory_lookup_response_ptr = NULL;
 
         return is_finish;
     }
@@ -112,6 +113,7 @@ namespace covered
         assert(is_successful);
 
         // NOTE: directory_update_response_ptr will be released by edge-to-edge propagation simulator
+        directory_update_response_ptr = NULL;
 
         return is_finish;
     }
@@ -163,6 +165,7 @@ namespace covered
         assert(is_successful);
 
         // NOTE: acquire_writelock_response_ptr will be released by edge-to-edge propagation simulator
+        acquire_writelock_response_ptr = NULL;
 
         return is_finish;
     }
@@ -205,6 +208,7 @@ namespace covered
         assert(is_successful);
 
         // NOTE: release_writelock_response_ptr will be released by edge-to-edge propagation simulator
+        release_writelock_response_ptr = NULL;
 
         return is_finish;
     }
