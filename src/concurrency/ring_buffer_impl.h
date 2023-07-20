@@ -143,6 +143,26 @@ namespace covered
     }*/
 
     template<class T>
+    std::vector<T> RingBuffer<T>::getElementsForDebug() const
+    {
+        std::vector<T> tmp_elements;
+        uint32_t i = tail_;
+        while (true)
+        {
+            if (i == head_)
+            {
+                break;
+            }
+            else
+            {
+                tmp_elements.push_back(ring_buffer_[i]);
+                i = (i + 1) % buffer_size_;
+            }
+        }
+        return tmp_elements;
+    }
+
+    template<class T>
     RingBuffer<T>& RingBuffer<T>::operator=(const RingBuffer<T>& other)
     {
         head_ = other.head_;

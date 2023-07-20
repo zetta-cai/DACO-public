@@ -30,6 +30,9 @@ namespace covered
 
         //uint32_t getSizeForCapacity() const;
 
+        // NOTE: if you want to use getElementsForDebug() for debugging, reader(s) of ring buffer should also be protected by read-write locking
+        std::vector<T> getElementsForDebug() const;
+
         RingBuffer<T>& operator=(const RingBuffer<T>& other);
     private:
         static const std::string kClassName;
