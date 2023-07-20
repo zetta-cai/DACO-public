@@ -142,7 +142,7 @@ namespace covered
         return size;
     }*/
 
-    template<class T>
+    /*template<class T>
     std::vector<T> RingBuffer<T>::getElementsForDebug() const
     {
         std::vector<T> tmp_elements;
@@ -160,7 +160,7 @@ namespace covered
             }
         }
         return tmp_elements;
-    }
+    }*/
 
     template<class T>
     RingBuffer<T>& RingBuffer<T>::operator=(const RingBuffer<T>& other)

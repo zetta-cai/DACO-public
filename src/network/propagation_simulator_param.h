@@ -45,12 +45,11 @@ namespace covered
         
         // Non-const variables shared by working threads of each ndoe and propagation simulator
         Rwlock rwlock_for_propagation_item_buffer_; // Ensure the atomicity of ring buffer due to multiple providers
+        // NOTE: there will be multiple writers (processing threads of each componenet) yet a single reader (the corresponding propagation simulator) -> NOT need to acquire lock for pop()
         RingBuffer<PropagationItem>* propagation_item_buffer_ptr_;
         bool is_first_item_;
         struct timespec prev_timespec_;
     };
 }
-
-
 
 #endif

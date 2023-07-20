@@ -297,7 +297,7 @@ namespace covered
         }
 
         #ifdef DEBUG_CLIENT_WORKER_WRAPPER
-        Util::dumpVariablesForDebug(instance_name_, 13, "receive a local response;", "type:", MessageBase::messageTypeToString(local_response_message_type).c_str(), "kestr", tmp_key.getKeystr().c_str(), "valuesize:", std::to_string(tmp_value.getValuesize()).c_str(), "hitflag:", MessageBase::hitflagToString(hitflag).c_str(), "latency:", std::to_string(rtt_us).c_str(), "eventlist:", local_response_ptr->getEventListRef().toString().c_str());
+        Util::dumpVariablesForDebug(instance_name_, 13, "receive a local response;", "type:", MessageBase::messageTypeToString(local_response_message_type).c_str(), "keystr", tmp_key.getKeystr().c_str(), "valuesize:", std::to_string(tmp_value.getValuesize()).c_str(), "hitflag:", MessageBase::hitflagToString(hitflag).c_str(), "latency:", std::to_string(rtt_us).c_str(), "eventlist:", local_response_ptr->getEventListRef().toString().c_str());
         // "msg payload:", local_response_msg_payload.getBytesHexstr().c_str()
         #endif
 

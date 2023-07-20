@@ -85,13 +85,13 @@ namespace covered
         bool is_successful = propagation_item_buffer_ptr_->push(propagation_item);
 
         #ifdef DEBUG_PROPAGATION_SIMULATOR_PARAM
-        std::vector<PropagationItem> tmp_propagation_items = propagation_item_buffer_ptr_->getElementsForDebug();
+        //std::vector<PropagationItem> tmp_propagation_items = propagation_item_buffer_ptr_->getElementsForDebug();
         std::ostringstream oss;
-        oss << "push to sleep " << sleep_us << " us to simulate a propagation latency of " << propagation_latency_us_ << " us; keystr: " << MessageBase::getKeyFromMessage(message_ptr).getKeystr() << "; dstadrr: " << dst_addr.toString() << "; srcaddr: " << message_ptr->getSourceAddr().toString();
-        for (uint32_t i = 0; i < tmp_propagation_items.size(); i++)
-        {
-            oss << "tmp_propagation_items[" << i << "] sleep_us: " << tmp_propagation_items[i].getSleepUs() << "; ";
-        }
+        oss << "push to sleep " << sleep_us << " us to simulate a propagation latency of " << propagation_latency_us_ << " us; keystr: " << MessageBase::getKeyFromMessage(message_ptr).getKeystr() << "; dstadrr: " << dst_addr.toString() << "; srcaddr: " << message_ptr->getSourceAddr().toString() << "; ";
+        //for (uint32_t i = 0; i < tmp_propagation_items.size(); i++)
+        //{
+        //    oss << "tmp_propagation_items[" << i << "] sleep_us: " << tmp_propagation_items[i].getSleepUs() << "; ";
+        //}
         Util::dumpDebugMsg(instance_name_, oss.str());
         #endif
 
@@ -103,14 +103,16 @@ namespace covered
 
     bool PropagationSimulatorParam::pop(PropagationItem& element)
     {
+        // NOTE: NO need to acquire a write lock, as there will be ONLY one reader (i.e., the propagation simulator)
+
         // Acquire a write lock
-        std::string context_name = "PropagationSimulatorParam::pop()";
-        rwlock_for_propagation_item_buffer_.acquire_lock(context_name);
+        //std::string context_name = "PropagationSimulatorParam::pop()";
+        //rwlock_for_propagation_item_buffer_.acquire_lock(context_name);
 
         bool is_successful = propagation_item_buffer_ptr_->pop(element);
 
         // Release a write lock
-        rwlock_for_propagation_item_buffer_.unlock(context_name);
+        //rwlock_for_propagation_item_buffer_.unlock(context_name);
 
         return is_successful;
     }

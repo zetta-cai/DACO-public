@@ -30,16 +30,16 @@ namespace covered
 
         //uint32_t getSizeForCapacity() const;
 
-        // NOTE: if you want to use getElementsForDebug() for debugging, reader(s) of ring buffer should also be protected by read-write locking
-        std::vector<T> getElementsForDebug() const;
+        // NOTE: if you want to use getElementsForDebug() for debugging under multiple providers/readers, providers/readers of ring buffer should be protected by read-write locking
+        //std::vector<T> getElementsForDebug() const;
 
         RingBuffer<T>& operator=(const RingBuffer<T>& other);
     private:
         static const std::string kClassName;
 
-        uint32_t head_;
-		uint32_t tail_;
-		uint32_t buffer_size_; // Come from Config::data_request_buffer_size_
+        volatile uint32_t head_;
+		volatile uint32_t tail_;
+		volatile uint32_t buffer_size_; // Come from Config::data_request_buffer_size_
         T default_element_;
         std::vector<T> ring_buffer_;
     };

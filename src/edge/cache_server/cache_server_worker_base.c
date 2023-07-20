@@ -522,6 +522,7 @@ namespace covered
             }
             else // Get target edge index from remote directory information at the beacon node
             {
+                Util::dumpVariablesForDebug(base_instance_name_, 1, "before lookupBeaconDirectory_()"); // TMPDEBUG
                 is_finish = lookupBeaconDirectory_(key, is_being_written, is_valid_directory_exist, directory_info, event_list); // Add events of intermediate responses if with event tracking
                 if (is_finish) // Edge is NOT running
                 {
@@ -638,6 +639,7 @@ namespace covered
         else // Update remote directory information at the beacon node
         {
             // Add events of intermediate responses if with event tracking
+            Util::dumpVariablesForDebug(base_instance_name_, 1, "before updateBeaconDirectory_()"); // TMPDEBUG
             is_finish = updateBeaconDirectory_(key, is_admit, directory_info, is_being_written, event_list);
         }
 

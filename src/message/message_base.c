@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <sstream>
 
+#include "common/param.h"
 #include "common/util.h"
 #include "message/data_message.h"
 #include "message/control_message.h"
@@ -602,7 +603,15 @@ namespace covered
     NetworkAddr MessageBase::getSourceAddr() const
     {
         checkIsValid_();
-        return source_addr_;
+        if (Param::isSingleNode())
+        {
+            // Fix invalid ipstr of localhost under single-node mode
+            return NetworkAddr(Util::LOCALHOST_IPSTR, source_addr_.getPort());
+        }
+        else
+        {
+            return source_addr_;
+        }
     }
 
     const EventList& MessageBase::getEventListRef() const
