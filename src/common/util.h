@@ -13,6 +13,7 @@
 #include <cstdarg> // std::va_list, va_start, va_arg, and va_end
 #include <fstream>
 #include <mutex>
+#include <pthread.h>
 #include <string>
 #include <time.h> // struct timespec
 
@@ -47,6 +48,8 @@ namespace covered
         static const int START_YEAR;
         static const long NANOSECONDS_PERSECOND; // # of nanoseconds per second
         static const uint32_t SECOND_PRECISION; // # of digits after decimal point of second shown in time string
+        // Task scheduling
+        static const int SCHEDULING_POLICY;
 
         // (1) I/O
 
@@ -115,7 +118,12 @@ namespace covered
         static std::string getClientStatisticsFilepath(const uint32_t& client_idx);
         static std::string getCloudRocksdbDirpath(const uint32_t& cloud_idx); // Calculate the RocksDB dirpath for the cloud node
 
-        // (7) Others
+        // (7) Task scheduling
+
+        static int pthreadCreateLowPriority(pthread_t* tid_ptr, void *(*start_routine)(void *), void* arg_ptr);
+        static int pthreadCreateHighPriority(pthread_t* tid_ptr, void *(*start_routine)(void *), void* arg_ptr);
+
+        // (8) Others
 
         static uint32_t getTimeBasedRandomSeed(); // Get a random seed (instead of deterministic) based on current time
     private:
@@ -130,6 +138,9 @@ namespace covered
 
         // Intermediate files
         static std::string getInfixForFilepath_();
+
+        // Task scheduling
+        static void preparePthreadAttr_(pthread_attr_t* attr_ptr);
     };
 }
 

@@ -88,7 +88,8 @@ namespace covered
 
         // Launch cloud-to-client propagation simulator
         pthread_t cloud_toedge_propagation_simulator_thread;
-        pthread_returncode = pthread_create(&cloud_toedge_propagation_simulator_thread, NULL, PropagationSimulator::launchPropagationSimulator, (void*)cloud_toedge_propagation_simulator_param_ptr_);
+        //pthread_returncode = pthread_create(&cloud_toedge_propagation_simulator_thread, NULL, PropagationSimulator::launchPropagationSimulator, (void*)cloud_toedge_propagation_simulator_param_ptr_);
+        pthread_returncode = Util::pthreadCreateHighPriority(&cloud_toedge_propagation_simulator_thread, PropagationSimulator::launchPropagationSimulator, (void*)cloud_toedge_propagation_simulator_param_ptr_);
         if (pthread_returncode != 0)
         {
             std::ostringstream oss;

@@ -37,7 +37,8 @@ int main(int argc, char **argv) {
 
     covered::Util::dumpNormalMsg(main_class_name, "launch cloud node");
 
-    pthread_returncode = pthread_create(&cloud_thread, NULL, covered::CloudWrapper::launchCloud, (void*)(&(cloud_param)));
+    //pthread_returncode = pthread_create(&cloud_thread, NULL, covered::CloudWrapper::launchCloud, (void*)(&(cloud_param)));
+    pthread_returncode = covered::Util::pthreadCreateHighPriority(&cloud_thread, covered::CloudWrapper::launchCloud, (void*)(&(cloud_param)));
     if (pthread_returncode != 0)
     {
         std::ostringstream oss;
@@ -68,7 +69,8 @@ int main(int argc, char **argv) {
         oss << "launch edge node " << edge_idx;
         covered::Util::dumpNormalMsg(main_class_name, oss.str());
 
-        pthread_returncode = pthread_create(&edge_threads[edge_idx], NULL, covered::EdgeWrapper::launchEdge, (void*)(&(edge_params[edge_idx])));
+        //pthread_returncode = pthread_create(&edge_threads[edge_idx], NULL, covered::EdgeWrapper::launchEdge, (void*)(&(edge_params[edge_idx])));
+        pthread_returncode = covered::Util::pthreadCreateLowPriority(&edge_threads[edge_idx], covered::EdgeWrapper::launchEdge, (void*)(&(edge_params[edge_idx])));
         if (pthread_returncode != 0)
         {
             std::ostringstream oss;
@@ -100,7 +102,8 @@ int main(int argc, char **argv) {
         oss << "launch client " << client_idx;
         covered::Util::dumpNormalMsg(main_class_name, oss.str());
 
-        pthread_returncode = pthread_create(&client_threads[client_idx], NULL, covered::ClientWrapper::launchClient, (void*)(&(client_params[client_idx])));
+        //pthread_returncode = pthread_create(&client_threads[client_idx], NULL, covered::ClientWrapper::launchClient, (void*)(&(client_params[client_idx])));
+        pthread_returncode = covered::Util::pthreadCreateLowPriority(&client_threads[client_idx], covered::ClientWrapper::launchClient, (void*)(&(client_params[client_idx])));
         if (pthread_returncode != 0)
         {
             std::ostringstream oss;

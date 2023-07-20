@@ -77,7 +77,8 @@ namespace covered
         // Launch cache server workers
         for (uint32_t local_cache_server_worker_idx = 0; local_cache_server_worker_idx < edge_wrapper_ptr_->percacheserver_workercnt_; local_cache_server_worker_idx++)
         {
-            pthread_returncode = pthread_create(&cache_server_worker_threads[local_cache_server_worker_idx], NULL, CacheServerWorkerBase::launchCacheServerWorker, (void*)(&cache_server_worker_params_[local_cache_server_worker_idx]));
+            //pthread_returncode = pthread_create(&cache_server_worker_threads[local_cache_server_worker_idx], NULL, CacheServerWorkerBase::launchCacheServerWorker, (void*)(&cache_server_worker_params_[local_cache_server_worker_idx]));
+            pthread_returncode = Util::pthreadCreateHighPriority(&cache_server_worker_threads[local_cache_server_worker_idx], CacheServerWorkerBase::launchCacheServerWorker, (void*)(&cache_server_worker_params_[local_cache_server_worker_idx]));
             if (pthread_returncode != 0)
             {
                 std::ostringstream oss;

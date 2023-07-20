@@ -80,7 +80,8 @@ namespace covered
 
         // Launch client-to-edge propagation simulator
         pthread_t client_toedge_propagation_simulator_thread;
-        pthread_returncode = pthread_create(&client_toedge_propagation_simulator_thread, NULL, PropagationSimulator::launchPropagationSimulator, (void*)client_toedge_propagation_simulator_param_ptr_);
+        //pthread_returncode = pthread_create(&client_toedge_propagation_simulator_thread, NULL, PropagationSimulator::launchPropagationSimulator, (void*)client_toedge_propagation_simulator_param_ptr_);
+        pthread_returncode = Util::pthreadCreateHighPriority(&client_toedge_propagation_simulator_thread, PropagationSimulator::launchPropagationSimulator, (void*)client_toedge_propagation_simulator_param_ptr_);
         if (pthread_returncode != 0)
         {
             std::ostringstream oss;
@@ -101,7 +102,8 @@ namespace covered
         pthread_t client_worker_threads[perclient_workercnt_];
         for (uint32_t local_client_worker_idx = 0; local_client_worker_idx < perclient_workercnt_; local_client_worker_idx++)
         {
-            pthread_returncode = pthread_create(&client_worker_threads[local_client_worker_idx], NULL, ClientWorkerWrapper::launchClientWorker, (void*)(&(client_worker_params[local_client_worker_idx])));
+            //pthread_returncode = pthread_create(&client_worker_threads[local_client_worker_idx], NULL, ClientWorkerWrapper::launchClientWorker, (void*)(&(client_worker_params[local_client_worker_idx])));
+            pthread_returncode = Util::pthreadCreateHighPriority(&client_worker_threads[local_client_worker_idx], ClientWorkerWrapper::launchClientWorker, (void*)(&(client_worker_params[local_client_worker_idx])));
             if (pthread_returncode != 0)
             {
                 std::ostringstream oss;

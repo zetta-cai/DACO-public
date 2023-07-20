@@ -103,7 +103,8 @@ namespace covered
 
         // Launch edge-to-client propagation simulator
         pthread_t edge_toclient_propagation_simulator_thread;
-        pthread_returncode = pthread_create(&edge_toclient_propagation_simulator_thread, NULL, PropagationSimulator::launchPropagationSimulator, (void*)edge_toclient_propagation_simulator_param_ptr_);
+        //pthread_returncode = pthread_create(&edge_toclient_propagation_simulator_thread, NULL, PropagationSimulator::launchPropagationSimulator, (void*)edge_toclient_propagation_simulator_param_ptr_);
+        pthread_returncode = Util::pthreadCreateHighPriority(&edge_toclient_propagation_simulator_thread, PropagationSimulator::launchPropagationSimulator, (void*)edge_toclient_propagation_simulator_param_ptr_);
         if (pthread_returncode != 0)
         {
             std::ostringstream oss;
@@ -114,7 +115,8 @@ namespace covered
 
         // Launch edge-to-edge propagation simulator
         pthread_t edge_toedge_propagation_simulator_thread;
-        pthread_returncode = pthread_create(&edge_toedge_propagation_simulator_thread, NULL, PropagationSimulator::launchPropagationSimulator, (void*)edge_toedge_propagation_simulator_param_ptr_);
+        //pthread_returncode = pthread_create(&edge_toedge_propagation_simulator_thread, NULL, PropagationSimulator::launchPropagationSimulator, (void*)edge_toedge_propagation_simulator_param_ptr_);
+        pthread_returncode = Util::pthreadCreateHighPriority(&edge_toedge_propagation_simulator_thread, PropagationSimulator::launchPropagationSimulator, (void*)edge_toedge_propagation_simulator_param_ptr_);
         if (pthread_returncode != 0)
         {
             std::ostringstream oss;
@@ -125,7 +127,8 @@ namespace covered
 
         // Launch edge-to-cloud propagation simulator
         pthread_t edge_tocloud_propagation_simulator_thread;
-        pthread_returncode = pthread_create(&edge_tocloud_propagation_simulator_thread, NULL, PropagationSimulator::launchPropagationSimulator, (void*)edge_tocloud_propagation_simulator_param_ptr_);
+        //pthread_returncode = pthread_create(&edge_tocloud_propagation_simulator_thread, NULL, PropagationSimulator::launchPropagationSimulator, (void*)edge_tocloud_propagation_simulator_param_ptr_);
+        pthread_returncode = Util::pthreadCreateHighPriority(&edge_tocloud_propagation_simulator_thread, PropagationSimulator::launchPropagationSimulator, (void*)edge_tocloud_propagation_simulator_param_ptr_);
         if (pthread_returncode != 0)
         {
             std::ostringstream oss;
@@ -135,7 +138,8 @@ namespace covered
         }
 
         // Launch beacon server
-        pthread_returncode = pthread_create(&beacon_server_thread, NULL, launchBeaconServer_, (void*)(this));
+        //pthread_returncode = pthread_create(&beacon_server_thread, NULL, launchBeaconServer_, (void*)(this));
+        pthread_returncode = Util::pthreadCreateHighPriority(&beacon_server_thread, launchBeaconServer_, (void*)(this));
         if (pthread_returncode != 0)
         {
             std::ostringstream oss;
@@ -145,7 +149,8 @@ namespace covered
         }
 
         // Launch cache server
-        pthread_returncode = pthread_create(&cache_server_thread, NULL, launchCacheServer_, (void*)(this));
+        //pthread_returncode = pthread_create(&cache_server_thread, NULL, launchCacheServer_, (void*)(this));
+        pthread_returncode = Util::pthreadCreateLowPriority(&cache_server_thread, launchCacheServer_, (void*)(this));
         if (pthread_returncode != 0)
         {
             std::ostringstream oss;
@@ -155,7 +160,8 @@ namespace covered
         }
 
         // Launch invalidations server
-        pthread_returncode = pthread_create(&invalidation_server_thread, NULL, launchInvalidationServer_, (void*)(this));
+        //pthread_returncode = pthread_create(&invalidation_server_thread, NULL, launchInvalidationServer_, (void*)(this));
+        pthread_returncode = Util::pthreadCreateHighPriority(&invalidation_server_thread, launchInvalidationServer_, (void*)(this));
         if (pthread_returncode != 0)
         {
             std::ostringstream oss;
