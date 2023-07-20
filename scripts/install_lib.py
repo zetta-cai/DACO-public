@@ -12,7 +12,7 @@ is_clear_tarball = False # whether to clear intermediate tarball files
 pylib_requirement_filepath = "scripts/requirements.txt"
 #prompt(filename, "install python libraries based on {}...".format(pylib_requirement_filepath))
 print("{}: {}".format(filename, "install python libraries based on {}...".format(pylib_requirement_filepath)))
-pylib_install_cmd = "pip3 install -r {}".format(pylib_requirement_filepath)
+pylib_install_cmd = "python3 -m pip install -r {}".format(pylib_requirement_filepath)
 
 pylib_install_subprocess = subprocess.run(pylib_install_cmd, shell=True)
 if pylib_install_subprocess.returncode != 0:
