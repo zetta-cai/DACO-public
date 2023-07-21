@@ -91,9 +91,7 @@ namespace covered
                 // Issue the message to the given address
                 NetworkAddr dst_addr = tmp_propagation_item.getNetworkAddr();
                 assert(dst_addr.isValidAddr());
-                Util::dumpVariablesForDebug(instance_name_, 1, "before send()"); // TMPDEBUG
                 propagation_simulator_socket_client_ptr_->send(message_ptr, dst_addr);
-                Util::dumpVariablesForDebug(instance_name_, 1, "after send()"); // TMPDEBUG
 
                 // Release the message
                 assert(message_ptr != NULL);

@@ -92,7 +92,6 @@ namespace covered
         {
             // Receive the message payload of control requests
             DynamicArray control_request_msg_payload;
-            Util::dumpVariablesForDebug(base_instance_name_, 1, "before recv()"); // TMPDEBUG
             bool is_timeout = edge_beacon_server_recvreq_socket_server_ptr_->recv(control_request_msg_payload);
             if (is_timeout == true) // Timeout-and-retry
             {

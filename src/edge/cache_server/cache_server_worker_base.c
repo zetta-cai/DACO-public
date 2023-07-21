@@ -57,6 +57,8 @@ namespace covered
         assert(cache_server_worker_param_ptr != NULL);
         const uint32_t edge_idx = cache_server_worker_param_ptr->getCacheServerPtr()->edge_wrapper_ptr_->edge_param_ptr_->getNodeIdx();
         const uint32_t edgecnt = cache_server_worker_param_ptr->getCacheServerPtr()->edge_wrapper_ptr_->edgecnt_;
+        const uint32_t local_cache_server_worker_idx = cache_server_worker_param_ptr->getLocalCacheServerWorkerIdx();
+        const uint32_t percacheserver_workercnt = cache_server_worker_param_ptr->getCacheServerPtr()->edge_wrapper_ptr_->percacheserver_workercnt_;
 
         // Differentiate cache servers of different edge nodes
         std::ostringstream oss;
@@ -72,18 +74,19 @@ namespace covered
 
         // Get source address of cache server worker to receive control responses and redirected data responses
         std::string edge_ipstr = Config::getEdgeIpstr(edge_idx, edgecnt);
-        uint16_t edge_cache_server_worker_recvrsp_port = Util::getEdgeCacheServerWorkerRecvrspPort(edge_idx, edgecnt);
+        uint16_t edge_cache_server_worker_recvrsp_port = Util::getEdgeCacheServerWorkerRecvrspPort(edge_idx, edgecnt, local_cache_server_worker_idx, percacheserver_workercnt);
         edge_cache_server_worker_recvrsp_source_addr_ = NetworkAddr(edge_ipstr, edge_cache_server_worker_recvrsp_port);
 
         // Prepare a socket server to receive control responses and redirected data responses
         NetworkAddr recvrsp_host_addr(Util::ANY_IPSTR, edge_cache_server_worker_recvrsp_port);
+        Util::dumpVariablesForDebug(base_instance_name_, 2, "recvrsp_host_addr", recvrsp_host_addr.toString().c_str()); // TMPDEBUG
         edge_cache_server_worker_recvrsp_socket_server_ptr_ = new UdpMsgSocketServer(recvrsp_host_addr);
         assert(edge_cache_server_worker_recvrsp_socket_server_ptr_ != NULL);
 
         // For receiving finish block requests
 
         // Get source address of cache server worker to receive finish block requests
-        uint16_t edge_cache_server_worker_recvreq_port = Util::getEdgeCacheServerWorkerRecvreqPort(edge_idx, edgecnt);
+        uint16_t edge_cache_server_worker_recvreq_port = Util::getEdgeCacheServerWorkerRecvreqPort(edge_idx, edgecnt, local_cache_server_worker_idx, percacheserver_workercnt);
         edge_cache_server_worker_recvreq_source_addr_ = NetworkAddr(edge_ipstr, edge_cache_server_worker_recvreq_port);
 
         // Prepare a socket server to receive finish block requests
@@ -522,7 +525,6 @@ namespace covered
             }
             else // Get target edge index from remote directory information at the beacon node
             {
-                Util::dumpVariablesForDebug(base_instance_name_, 1, "before lookupBeaconDirectory_()"); // TMPDEBUG
                 is_finish = lookupBeaconDirectory_(key, is_being_written, is_valid_directory_exist, directory_info, event_list); // Add events of intermediate responses if with event tracking
                 if (is_finish) // Edge is NOT running
                 {
@@ -639,7 +641,6 @@ namespace covered
         else // Update remote directory information at the beacon node
         {
             // Add events of intermediate responses if with event tracking
-            Util::dumpVariablesForDebug(base_instance_name_, 1, "before updateBeaconDirectory_()"); // TMPDEBUG
             is_finish = updateBeaconDirectory_(key, is_admit, directory_info, is_being_written, event_list);
         }
 
@@ -939,6 +940,7 @@ namespace covered
             {
                 // Receive the global response message successfully
                 MessageBase* global_response_ptr = MessageBase::getResponseFromMsgPayload(global_response_msg_payload);
+                Util::dumpVariablesForDebug(base_instance_name_, 4, "message type:", MessageBase::messageTypeToString(global_response_ptr->getMessageType()).c_str(), "keystr:", MessageBase::getKeyFromMessage(global_response_ptr).getKeystr().c_str()); // TMPDEBUG
                 assert(global_response_ptr != NULL && global_response_ptr->getMessageType() == MessageType::kGlobalGetResponse);
                 
                 // Get value from global response message

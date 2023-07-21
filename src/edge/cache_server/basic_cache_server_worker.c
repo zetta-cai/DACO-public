@@ -113,7 +113,6 @@ namespace covered
             #endif
 
             // Push the control request into edge-to-edge propagation simulator to send to beacon node
-            Util::dumpVariablesForDebug(instance_name_, 1, "before push()"); // TMPDEBUG
             bool is_successful = tmp_edge_wrapper_ptr->edge_toedge_propagation_simulator_param_ptr_->push(directory_lookup_request_ptr, beacon_edge_beacon_server_recvreq_dst_addr);
             assert(is_successful);
 
@@ -287,7 +286,6 @@ namespace covered
             assert(directory_update_request_ptr != NULL);
 
             // Push the control request into edge-to-edge propagation simulator to the beacon node
-            Util::dumpVariablesForDebug(instance_name_, 1, "before push()"); // TMPDEBUG
             bool is_successful = tmp_edge_wrapper_ptr->edge_toedge_propagation_simulator_param_ptr_->push(directory_update_request_ptr, beacon_edge_beacon_server_recvreq_dst_addr);
             assert(is_successful);
 
@@ -498,7 +496,6 @@ namespace covered
         // Independently admit the new key-value pair into local edge cache
         struct timespec update_directory_to_admit_start_timestamp = Util::getCurrentTimespec();
         bool is_being_written = false;
-        Util::dumpVariablesForDebug(instance_name_, 1, "before updateDirectory_()"); // TMPDEBUG
         is_finish = updateDirectory_(key, true, is_being_written, event_list);
         if (is_finish)
         {

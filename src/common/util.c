@@ -406,16 +406,26 @@ namespace covered
         return edge_cache_server_worker_recvreq_addr;
     }
 
-    uint16_t Util::getEdgeCacheServerWorkerRecvreqPort(const uint32_t& edge_idx, const uint32_t& edgecnt)
+    uint16_t Util::getEdgeCacheServerWorkerRecvreqPort(const uint32_t& edge_idx, const uint32_t& edgecnt, const uint32_t& local_cache_server_worker_idx, const uint32_t& percacheserver_workercnt)
     {
         int64_t edge_cache_server_worker_recvreq_startport = static_cast<int64_t>(Config::getEdgeCacheServerWorkerRecvreqStartport());
-        return getNodePort_(edge_cache_server_worker_recvreq_startport, edge_idx, edgecnt, Config::getEdgeIpstrCnt());
+        int64_t edge_cache_server_recvreq_port = static_cast<int64_t>(getNodePort_(edge_cache_server_worker_recvreq_startport, edge_idx, edgecnt, Config::getEdgeIpstrCnt()));
+
+        // Get cache server worker recvreq port
+        int64_t cache_server_worker_recvreq_port = edge_cache_server_worker_recvreq_startport + (edge_cache_server_recvreq_port - edge_cache_server_worker_recvreq_startport) * static_cast<int64_t>(percacheserver_workercnt) + static_cast<int64_t>(local_cache_server_worker_idx);
+
+        return Util::toUint16(cache_server_worker_recvreq_port);
     }
 
-    uint16_t Util::getEdgeCacheServerWorkerRecvrspPort(const uint32_t& edge_idx, const uint32_t& edgecnt)
+    uint16_t Util::getEdgeCacheServerWorkerRecvrspPort(const uint32_t& edge_idx, const uint32_t& edgecnt, const uint32_t& local_cache_server_worker_idx, const uint32_t& percacheserver_workercnt)
     {
         int64_t edge_cache_server_worker_recvrsp_startport = static_cast<int64_t>(Config::getEdgeCacheServerWorkerRecvrspStartport());
-        return getNodePort_(edge_cache_server_worker_recvrsp_startport, edge_idx, edgecnt, Config::getEdgeIpstrCnt());
+        int64_t edge_cache_server_recvrsp_port = static_cast<int64_t>(getNodePort_(edge_cache_server_worker_recvrsp_startport, edge_idx, edgecnt, Config::getEdgeIpstrCnt()));
+
+        // Get cache server worker recvreq port
+        int64_t cache_server_worker_recvrsp_port = edge_cache_server_worker_recvrsp_startport + (edge_cache_server_recvrsp_port - edge_cache_server_worker_recvrsp_startport) * static_cast<int64_t>(percacheserver_workercnt) + static_cast<int64_t>(local_cache_server_worker_idx);
+
+        return Util::toUint16(cache_server_worker_recvrsp_port);
     }
 
     uint16_t Util::getEdgeInvalidationServerRecvreqPort(const uint32_t& edge_idx, const uint32_t& edgecnt)
