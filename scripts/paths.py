@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import sys
 
 filename = sys.argv[0]
 
@@ -17,7 +18,7 @@ def getPreferredDirpath():
 
     if env_pathstr == None:
         print("ERROR: $PATH is None!")
-        exit()
+        sys.exit(1)
     else:
         print("$PATH: {}".format(env_pathstr))
 
@@ -34,11 +35,21 @@ def getPreferredDirpath():
     
     if preferred_dirpath == "":
         print("ERROR: both /usr/local/bin and /usr/bin are NOT found in $PATH!")
-        exit()
+        sys.exit(1)
     
     return preferred_dirpath
 
 
 preferred_dirpath = getPreferredDirpath()
+
+custom_installpath = preferred_dirpath
+custom_binpath = "{}/bin".format(custom_installpath)
+
 preferred_binpath = "{}/bin".format(preferred_dirpath)
 preferred_libpath = "{}/lib".format(preferred_dirpath)
+
+compiler_installpath = "/usr" # Installed by apt
+compiler_binpath = "{}/bin".format(compiler_installpath)
+
+cmake_installpath = "/usr" # Installed by apt
+cmake_binpath = "{}/bin".format(cmake_installpath)
