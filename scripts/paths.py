@@ -24,7 +24,7 @@ def getPreferredDirpath():
 
     preferred_dirpath = ""
     env_paths = env_pathstr.split(":")
-    for i in len(env_paths):
+    for i in range(len(env_paths)):
         tmp_env_path = env_paths[i]
         if "/usr/local/bin" in tmp_env_path:
             preferred_dirpath = "/usr/local"

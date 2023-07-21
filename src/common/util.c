@@ -591,10 +591,9 @@ namespace covered
         ret = pthread_attr_init(attr_ptr);
         assert(ret >= 0);
 
-        int policy = 0;
-
         // Get and print default policy
-        /*ret = pthread_attr_getschedpolicy(attr_ptr, &policy);
+        /*int policy = 0;
+        ret = pthread_attr_getschedpolicy(attr_ptr, &policy);
         assert(ret >= 0);
         if (policy == SCHED_OTHER) // This is the default policy in Ubuntu
         {

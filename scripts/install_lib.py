@@ -205,3 +205,11 @@ else:
             die(filename, "failed to reset SMHasher")
     else:
         dump(filename, "the latest commit ID of SMHasher is already {}".format(smhasher_targetcommit))
+
+# (6) Chown of libraries
+
+prompt(filename, "chown of libraries...")
+chown_cmd = "sudo chown -R ${USER}:${USER} {}".format(lib_dirpath)
+chown_subprocess = subprocess.run(chown_cmd, shell=True)
+if chown_subprocess.returncode != 0:
+    die(filename, "failed to chown of libraries")
