@@ -34,7 +34,7 @@ namespace covered
 
         std::string toString() const;
 
-        EventList& operator=(const EventList& other);
+        const EventList& operator=(const EventList& other);
     private:
         static const std::string kClassName;
 

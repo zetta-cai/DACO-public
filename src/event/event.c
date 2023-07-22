@@ -128,7 +128,7 @@ namespace covered
         return size - position;
     }
     
-    Event& Event::operator=(const Event& other)
+    const Event& Event::operator=(const Event& other)
     {
         event_name_ = other.event_name_;
         event_latency_us_ = other.event_latency_us_;

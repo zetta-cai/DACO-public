@@ -58,7 +58,7 @@ namespace covered
         return sizeof(uint32_t);
     }
 
-    DirectoryInfo& DirectoryInfo::operator=(const DirectoryInfo& other)
+    const DirectoryInfo& DirectoryInfo::operator=(const DirectoryInfo& other)
     {
         target_edge_idx_ = other.target_edge_idx_;
         return *this;

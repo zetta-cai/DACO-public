@@ -33,7 +33,7 @@ namespace covered
         // NOTE: if you want to use getElementsForDebug() for debugging under multiple providers/readers, providers/readers of ring buffer should be protected by read-write locking
         //std::vector<T> getElementsForDebug() const;
 
-        RingBuffer<T>& operator=(const RingBuffer<T>& other);
+        const RingBuffer<T>& operator=(const RingBuffer<T>& other);
     private:
         static const std::string kClassName;
 

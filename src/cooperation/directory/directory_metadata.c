@@ -31,7 +31,7 @@ namespace covered
         return sizeof(bool);
     }
 
-    DirectoryMetadata& DirectoryMetadata::operator=(const DirectoryMetadata& other)
+    const DirectoryMetadata& DirectoryMetadata::operator=(const DirectoryMetadata& other)
     {
         is_valid_ = other.is_valid_;
         return *this;

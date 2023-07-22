@@ -40,7 +40,7 @@ namespace covered
         std::string toString() const;
 
         bool operator<(const NetworkAddr& other) const; // To be used as network addr in std::map
-        NetworkAddr& operator=(const NetworkAddr& other); // assignment operation
+        const NetworkAddr& operator=(const NetworkAddr& other); // assignment operation
         bool operator==(const NetworkAddr& other) const; // To be used by network addr in std::unordered_set
     private:
         static const std::string kClassName;

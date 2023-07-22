@@ -113,7 +113,7 @@ int main(int argc, char **argv) {
         }
     }
 
-    // (5) Start benchmark and dump intermediate statistics
+    // (5) Start benchmark
 
     // (5.1) Wait until client/edge/cloud finish initialization
 
@@ -140,11 +140,11 @@ int main(int argc, char **argv) {
         client_params[client_idx].setNodeRunning();
     }
 
-    // (5.3) Dump intermediate statistics
+    // (5.3) Count down duration
 
     const double duration = covered::Param::getDuration();
     struct timespec start_timestamp = covered::Util::getCurrentTimespec();
-    while (true) // Dump intermediate statistics
+    while (true)
     {
         usleep(covered::Util::SLEEP_INTERVAL_US);
 

@@ -69,7 +69,7 @@ namespace covered
         return keystr_ == other.keystr_;
     }
 
-    Key& Key::operator=(const Key& other)
+    const Key& Key::operator=(const Key& other)
     {
         keystr_ = other.keystr_;
         return *this;

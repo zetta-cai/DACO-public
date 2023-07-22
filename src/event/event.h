@@ -82,7 +82,7 @@ namespace covered
         uint32_t serialize(DynamicArray& msg_payload, const uint32_t& position) const;
         uint32_t deserialize(const DynamicArray& msg_payload, const uint32_t& position);
 
-        Event& operator=(const Event& other);
+        const Event& operator=(const Event& other);
     private:
         static const std::string kClassName;
 

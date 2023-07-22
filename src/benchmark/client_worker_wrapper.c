@@ -286,7 +286,7 @@ namespace covered
         // Update latency statistics for the local client
         client_statistics_tracker_ptr_->updateLatency(rtt_us);
 
-        // Update read-write statistics for the local client
+        // Update read-write ratio statistics for the local client
         if (!is_write)
         {
             client_statistics_tracker_ptr_->updateReadcnt(local_client_worker_idx);

@@ -1,19 +1,14 @@
-#include "statistics/client_updated_statistics.h"
+#include "statistics/client_raw_statistics.h"
 
 #include "common/config.h"
 #include "common/util.h"
 
 namespace covered
 {
-    const std::string ClientUpdatedStatistics::kClassName("ClientUpdatedStatistics");
+    const std::string ClientRawStatistics::kClassName("ClientRawStatistics");
 
-    ClientUpdatedStatistics::ClientUpdatedStatistics(uint32_t perclient_workercnt, const uint32_t& client_idx)
+    ClientRawStatistics::ClientRawStatistics(uint32_t perclient_workercnt)
     {
-        // Differentiate ClientStatisticsWrapper threads
-        std::ostringstream oss;
-        oss << kClassName << " client" << client_idx;
-        instance_name_ = oss.str();
-
         perclient_workercnt_ = perclient_workercnt;
         latency_histogram_size_ = Config::getLatencyHistogramSize();
 
@@ -42,7 +37,7 @@ namespace covered
         Util::initializeAtomicArray(perclientworker_writecnts_, perclient_workercnt, 0);
     }
 
-    ClientUpdatedStatistics::~ClientUpdatedStatistics()
+    ClientRawStatistics::~ClientRawStatistics()
     {
         assert(perclientworker_local_hitcnts_ != NULL);
         delete[] perclientworker_local_hitcnts_;
@@ -69,7 +64,7 @@ namespace covered
         perclientworker_writecnts_ = NULL;
     }
 
-    void ClientUpdatedStatistics::updateLocalHitcnt(const uint32_t& local_client_worker_idx)
+    void ClientRawStatistics::updateLocalHitcnt(const uint32_t& local_client_worker_idx)
     {
         assert(perclientworker_local_hitcnts_ != NULL);
         assert(local_client_worker_idx < perclient_workercnt_);
@@ -79,7 +74,7 @@ namespace covered
         return;
     }
 
-    void ClientUpdatedStatistics::updateCooperativeHitcnt(const uint32_t& local_client_worker_idx)
+    void ClientRawStatistics::updateCooperativeHitcnt(const uint32_t& local_client_worker_idx)
     {
         assert(perclientworker_cooperative_hitcnts_ != NULL);
         assert(local_client_worker_idx < perclient_workercnt_);
@@ -89,7 +84,7 @@ namespace covered
         return;
     }
 
-    void ClientUpdatedStatistics::updateReqcnt(const uint32_t& local_client_worker_idx)
+    void ClientRawStatistics::updateReqcnt(const uint32_t& local_client_worker_idx)
     {
         assert(perclientworker_reqcnts_ != NULL);
         assert(local_client_worker_idx < perclient_workercnt_);
@@ -98,7 +93,7 @@ namespace covered
         return;
     }
 
-    void ClientUpdatedStatistics::updateLatency(const uint32_t& latency_us)
+    void ClientRawStatistics::updateLatency(const uint32_t& latency_us)
     {
         assert(latency_histogram_ != NULL);
 
@@ -113,7 +108,7 @@ namespace covered
         return;
     }
 
-    void ClientUpdatedStatistics::updateReadcnt(const uint32_t& local_client_worker_idx)
+    void ClientRawStatistics::updateReadcnt(const uint32_t& local_client_worker_idx)
     {
         assert(perclientworker_readcnts_ != NULL);
         assert(local_client_worker_idx < perclient_workercnt_);
@@ -122,12 +117,27 @@ namespace covered
         return;
     }
 
-    void ClientUpdatedStatistics::updateWritecnt(const uint32_t& local_client_worker_idx)
+    void ClientRawStatistics::updateWritecnt(const uint32_t& local_client_worker_idx)
     {
         assert(perclientworker_writecnts_ != NULL);
         assert(local_client_worker_idx < perclient_workercnt_);
 
         perclientworker_writecnts_[local_client_worker_idx]++;
         return;
+    }
+
+    void ClientRawStatistics::checkPointers_()
+    {
+        // Per-client-worker hit ratio statistics
+        assert(perclientworker_local_hitcnts_ != NULL);
+        assert(perclientworker_cooperative_hitcnts_ != NULL);
+        assert(perclientworker_reqcnts_ != NULL);
+
+        // Per-client-worker latency statistics
+        assert(latency_histogram_ != NULL);
+
+        // Per-client-worker read-write ratio statistics
+        assert(perclientworker_readcnts_ != NULL);
+        assert(perclientworker_writecnts_ != NULL);
     }
 }

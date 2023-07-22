@@ -155,7 +155,7 @@ namespace covered
                 latency_histogram_[latency_us] += tmp_latency_histogram[latency_us];
             }
 
-            // Aggregate per-client read-write statistics
+            // Aggregate per-client read-write ratio statistics
             std::atomic<uint32_t>* tmp_perclientworker_readcnts = tmp_client_statistics_tracker.getPerclientworkerReadcnts();
             assert(tmp_perclientworker_readcnts != NULL);
             std::atomic<uint32_t>* tmp_perclientworker_writecnts = tmp_client_statistics_tracker.getPerclientworkerWritecnts();

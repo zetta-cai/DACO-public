@@ -117,7 +117,7 @@ namespace covered
         return is_successful;
     }
 
-    PropagationSimulatorParam& PropagationSimulatorParam::operator=(const PropagationSimulatorParam& other)
+    const PropagationSimulatorParam& PropagationSimulatorParam::operator=(const PropagationSimulatorParam& other)
     {
         propagation_latency_us_ = other.propagation_latency_us_;
 

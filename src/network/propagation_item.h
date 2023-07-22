@@ -25,7 +25,7 @@ namespace covered
         NetworkAddr getNetworkAddr() const;
         uint32_t getSleepUs() const;
 
-        PropagationItem& operator=(const PropagationItem& other);
+        const PropagationItem& operator=(const PropagationItem& other);
     private:
         static const std::string kClassName;
 

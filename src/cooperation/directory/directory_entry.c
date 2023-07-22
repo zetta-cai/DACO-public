@@ -164,7 +164,7 @@ namespace covered
         return;
     }
 
-    DirectoryEntry& DirectoryEntry::operator=(const DirectoryEntry& other)
+    const DirectoryEntry& DirectoryEntry::operator=(const DirectoryEntry& other)
     {
         directory_entry_ = other.directory_entry_;
         return *this;

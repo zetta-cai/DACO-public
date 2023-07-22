@@ -163,7 +163,7 @@ namespace covered
     }*/
 
     template<class T>
-    RingBuffer<T>& RingBuffer<T>::operator=(const RingBuffer<T>& other)
+    const RingBuffer<T>& RingBuffer<T>::operator=(const RingBuffer<T>& other)
     {
         head_ = other.head_;
         tail_ = other.tail_;

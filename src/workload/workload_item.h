@@ -34,7 +34,7 @@ namespace covered
         Value getValue() const;
         WorkloadItemType getItemType();
 
-        WorkloadItem& operator=(const WorkloadItem& other);
+        const WorkloadItem& operator=(const WorkloadItem& other);
     private:
         static const std::string kClassName;
 

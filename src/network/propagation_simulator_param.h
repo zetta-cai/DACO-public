@@ -34,7 +34,7 @@ namespace covered
         bool push(MessageBase* message_ptr, const NetworkAddr& dst_addr);
         bool pop(PropagationItem& element); // Only invoked by PropagationSimulator
 
-        PropagationSimulatorParam& operator=(const PropagationSimulatorParam& other);
+        const PropagationSimulatorParam& operator=(const PropagationSimulatorParam& other);
     private:
         static const std::string kClassName;
 

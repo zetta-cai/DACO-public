@@ -119,7 +119,7 @@ namespace covered
         // Block until client_running_ becomes true
         while (!client_param_ptr->isNodeRunning()) {}
 
-        // Monitor and switch intermediate statistics
+        // Switch and update intermediate raw statistics to track per-slot aggregated statistics
         while (client_param_ptr->isNodeRunning())
         {
             // TODO: with the aggregated StatisticsTracker, each client main thread can dump statistics every 10 seconds if necessary

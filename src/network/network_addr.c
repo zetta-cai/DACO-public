@@ -141,7 +141,7 @@ namespace covered
         return is_smaller;
     }
 
-    NetworkAddr& NetworkAddr::operator=(const NetworkAddr& other)
+    const NetworkAddr& NetworkAddr::operator=(const NetworkAddr& other)
     {
         ipstr_ = other.ipstr_;
         port_ = other.port_;

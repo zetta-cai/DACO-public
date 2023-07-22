@@ -86,7 +86,7 @@ namespace covered
         bool call(const std::string function_name, void* param_ptr);
         void constCall(const std::string function_name, void* param_ptr) const;
 
-        MsiMetadata& operator=(const MsiMetadata& other);
+        const MsiMetadata& operator=(const MsiMetadata& other);
     private:
         static const std::string kClassName;
 

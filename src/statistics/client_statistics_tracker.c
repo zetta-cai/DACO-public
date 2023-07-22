@@ -22,14 +22,13 @@ namespace covered
         oss << kClassName << " client" << client_idx;
         instance_name_ = oss.str();
 
-        perclient_workercnt_ = perclient_workercnt;
-        latency_histogram_size_ = Config::getLatencyHistogramSize();
-
         // (B) Non-const individual variables (latency_histogram_ is shared)
 
-        // (B.1) For updated intermediate statistics
+        // (B.1) For intermediate raw statistics
 
         cur_slot_idx_.store(0, Util::STORE_CONCURRENCY_ORDER);
+
+        // TODO: END HERE
 
         cur_perclientworker_local_hitcnts_ = new std::atomic<uint32_t>[perclient_workercnt];
         Util::initializeAtomicArray(cur_perclientworker_local_hitcnts_, perclient_workercnt, 0);
@@ -76,7 +75,7 @@ namespace covered
 
         // (B) Non-const individual variables (latency_histogram_ is shared)
 
-        // (B.1) For updated intermediate statistics
+        // (B.1) For intermediate raw statistics
 
         cur_slot_idx_.store(0, Util::STORE_CONCURRENCY_ORDER);
 

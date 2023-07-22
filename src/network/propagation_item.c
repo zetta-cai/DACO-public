@@ -42,7 +42,7 @@ namespace covered
         return sleep_us_;
     }
 
-    PropagationItem& PropagationItem::operator=(const PropagationItem& other)
+    const PropagationItem& PropagationItem::operator=(const PropagationItem& other)
     {
         message_ptr_ = other.message_ptr_; // shallow copy
         network_addr_ = other.network_addr_;

@@ -1,5 +1,5 @@
 /*
- * TotalStatisticsTracker: track aggregate statistics from all clients.
+ * TotalStatisticsTracker: load per-slot/stable ClientAggregatedStatistics from all clients, aggregate ClientAggregatedStatistics into per-slot/stable TotalAggregatedStatistics, and print TotalAggregatedStatistics.
  * 
  * By Siyuan Sheng (2023.05.25).
  */

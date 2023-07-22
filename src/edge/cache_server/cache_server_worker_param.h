@@ -27,7 +27,7 @@ namespace covered
 
         MessageBase* getDataRequestPtr() const;
 
-        CacheServerWorkerItem& operator=(const CacheServerWorkerItem& other);
+        const CacheServerWorkerItem& operator=(const CacheServerWorkerItem& other);
     private:
         MessageBase* data_request_ptr_;
     };

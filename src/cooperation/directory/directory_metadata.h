@@ -23,7 +23,7 @@ namespace covered
 
         uint32_t getSizeForCapacity() const;
 
-        DirectoryMetadata& operator=(const DirectoryMetadata& other);
+        const DirectoryMetadata& operator=(const DirectoryMetadata& other);
     private:
         static const std::string kClassName;
 

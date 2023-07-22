@@ -70,7 +70,7 @@ namespace covered
         bool call(const std::string& function_name, void* param_ptr);
         void constCall(const std::string& function_name, void* param_ptr) const;
 
-        DirectoryEntry& operator=(const DirectoryEntry& other);
+        const DirectoryEntry& operator=(const DirectoryEntry& other);
     private:
         typedef std::unordered_map<DirectoryInfo, DirectoryMetadata, DirectoryInfoHasher> dirinfo_entry_t;
 

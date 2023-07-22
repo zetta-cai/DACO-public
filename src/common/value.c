@@ -78,7 +78,7 @@ namespace covered
         return size - position;
     }
 
-    Value& Value::operator=(const Value& other)
+    const Value& Value::operator=(const Value& other)
     {
         is_deleted_ = other.is_deleted_;
         valuesize_ = other.valuesize_;

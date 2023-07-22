@@ -28,7 +28,7 @@ namespace covered
 
         bool operator<(const Key& other) const; // To be used as key in std::map
         bool operator==(const Key& other) const; // To be used by key in std::unordered_map
-        Key& operator=(const Key& other);
+        const Key& operator=(const Key& other);
     private:
         static const std::string kClassName;
 

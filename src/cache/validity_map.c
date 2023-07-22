@@ -69,7 +69,7 @@ namespace covered
         return;
     }
 
-    ValidityFlag& ValidityFlag::operator=(const ValidityFlag& other)
+    const ValidityFlag& ValidityFlag::operator=(const ValidityFlag& other)
     {
         is_valid_ = other.is_valid_;
         return *this;

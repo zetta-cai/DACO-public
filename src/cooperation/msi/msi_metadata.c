@@ -199,7 +199,7 @@ namespace covered
         return;
     }
 
-    MsiMetadata& MsiMetadata::operator=(const MsiMetadata& other)
+    const MsiMetadata& MsiMetadata::operator=(const MsiMetadata& other)
     {
         writeflag_ = other.writeflag_;
         edge_blocklist_ = other.edge_blocklist_;

@@ -30,7 +30,7 @@ namespace covered
 
         uint32_t getSizeForCapacity() const;
 
-        DirectoryInfo& operator=(const DirectoryInfo& other);
+        const DirectoryInfo& operator=(const DirectoryInfo& other);
         bool operator==(const DirectoryInfo& other) const; // To be used by DirectoryInfo in std::unordered_map
     private:
         static const std::string kClassName;

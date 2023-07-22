@@ -27,7 +27,7 @@ namespace covered
         return data_request_ptr_;
     }
 
-    CacheServerWorkerItem& CacheServerWorkerItem::operator=(const CacheServerWorkerItem& other)
+    const CacheServerWorkerItem& CacheServerWorkerItem::operator=(const CacheServerWorkerItem& other)
     {
         data_request_ptr_ = other.data_request_ptr_; // Shallow copy
         return *this;

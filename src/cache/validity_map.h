@@ -41,7 +41,7 @@ namespace covered
         bool call(const std::string& function_name, void* param_ptr);
         void constCall(const std::string& function_name, void* param_ptr) const;
 
-        ValidityFlag& operator=(const ValidityFlag& other);
+        const ValidityFlag& operator=(const ValidityFlag& other);
     private:
         static const std::string kClassName;
 

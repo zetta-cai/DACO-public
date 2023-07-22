@@ -170,7 +170,7 @@ namespace covered
         return oss.str();
     }
 
-    EventList& EventList::operator=(const EventList& other)
+    const EventList& EventList::operator=(const EventList& other)
     {
         events_ = other.events_; // deep copy
         return *this;
