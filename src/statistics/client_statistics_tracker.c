@@ -13,8 +13,10 @@ namespace covered
 {
     const std::string ClientStatisticsTracker::kClassName("ClientStatisticsTracker");
     
-    ClientStatisticsTracker::ClientStatisticsTracker(uint32_t perclient_workercnt, const uint32_t& client_idx)
+    ClientStatisticsTracker::ClientStatisticsTracker(uint32_t perclient_workercnt, const uint32_t& client_idx) : allow_update_(true)
     {
+        // (A) Const shared variables
+
         // Differentiate ClientStatisticsWrapper threads
         std::ostringstream oss;
         oss << kClassName << " client" << client_idx;
@@ -23,26 +25,20 @@ namespace covered
         perclient_workercnt_ = perclient_workercnt;
         latency_histogram_size_ = Config::getLatencyHistogramSize();
 
-        perclientworker_local_hitcnts_ = new std::atomic<uint32_t>[perclient_workercnt];
-        assert(perclientworker_local_hitcnts_ != NULL);
-        for (uint32_t i = 0; i < perclient_workercnt; i++)
-        {
-            perclientworker_local_hitcnts_[i].store(0, Util::STORE_CONCURRENCY_ORDER);
-        }
+        // (B) Non-const individual variables (latency_histogram_ is shared)
+
+        // (B.1) For updated intermediate statistics
+
+        cur_slot_idx_.store(0, Util::STORE_CONCURRENCY_ORDER);
+
+        cur_perclientworker_local_hitcnts_ = new std::atomic<uint32_t>[perclient_workercnt];
+        Util::initializeAtomicArray(cur_perclientworker_local_hitcnts_, perclient_workercnt, 0);
 
         perclientworker_cooperative_hitcnts_ = new std::atomic<uint32_t>[perclient_workercnt];
-        assert(perclientworker_cooperative_hitcnts_ != NULL);
-        for (uint32_t i = 0; i < perclient_workercnt; i++)
-        {
-            perclientworker_cooperative_hitcnts_[i].store(0, Util::STORE_CONCURRENCY_ORDER);
-        }
+        Util::initializeAtomicArray(perclientworker_cooperative_hitcnts_, perclient_workercnt, 0);
 
         perclientworker_reqcnts_ = new std::atomic<uint32_t>[perclient_workercnt];
-        assert(perclientworker_reqcnts_ != NULL);
-        for (uint32_t i = 0; i < perclient_workercnt; i++)
-        {
-            perclientworker_reqcnts_[i].store(0, Util::STORE_CONCURRENCY_ORDER);
-        }
+        Util::initializeAtomicArray(perclientworker_reqcnts_, perclient_workercnt, 0);
 
         latency_histogram_ = new std::atomic<uint32_t>[latency_histogram_size_];
         assert(latency_histogram_ != NULL);
@@ -66,8 +62,10 @@ namespace covered
         }
     }
 
-    ClientStatisticsTracker::ClientStatisticsTracker(const std::string& filepath, const uint32_t& client_idx)
+    ClientStatisticsTracker::ClientStatisticsTracker(const std::string& filepath, const uint32_t& client_idx) : allow_update_(false)
     {
+        // (A) Const shared variables
+
         // Differentiate ClientStatisticsWrapper threads
         std::ostringstream oss;
         oss << kClassName << " client" << client_idx;
@@ -75,6 +73,12 @@ namespace covered
         
         perclient_workercnt_ = 0;
         latency_histogram_size_ = 0;
+
+        // (B) Non-const individual variables (latency_histogram_ is shared)
+
+        // (B.1) For updated intermediate statistics
+
+        cur_slot_idx_.store(0, Util::STORE_CONCURRENCY_ORDER);
 
         perclientworker_local_hitcnts_ = NULL;
         perclientworker_cooperative_hitcnts_ = NULL;
@@ -113,6 +117,16 @@ namespace covered
         assert(perclientworker_writecnts_ != NULL);
         delete[] perclientworker_writecnts_;
         perclientworker_writecnts_ = NULL;
+    }
+
+    std::atomic<uint32_t>* ClientStatisticsTracker::getPerclientworkerReqcnts() const
+    {
+        return perclientworker_reqcnts_;
+    }
+    
+    std::atomic<uint32_t>* ClientStatisticsTracker::getLatencyHistogram() const
+    {
+        return latency_histogram_;
     }
 
     void ClientStatisticsTracker::updateLocalHitcnt(const uint32_t& local_client_worker_idx)
@@ -592,16 +606,6 @@ namespace covered
     std::atomic<uint32_t>* ClientStatisticsTracker::getPerclientworkerCooperativeHitcnts() const
     {
         return perclientworker_cooperative_hitcnts_;
-    }
-
-    std::atomic<uint32_t>* ClientStatisticsTracker::getPerclientworkerReqcnts() const
-    {
-        return perclientworker_reqcnts_;
-    }
-    
-    std::atomic<uint32_t>* ClientStatisticsTracker::getLatencyHistogram() const
-    {
-        return latency_histogram_;
     }
 
     uint32_t ClientStatisticsTracker::getPerclientWorkercnt() const

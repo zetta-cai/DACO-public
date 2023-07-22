@@ -21,9 +21,17 @@ namespace covered
         ClientParam(const uint32_t& client_idx);
         ~ClientParam();
 
+        bool isWarmupPhase() const;
+        void finishWarmupPhase();
+        bool isStresstestPhase() const;
+        void startStresstestPhase();
+
         const ClientParam& operator=(const ClientParam& other);
     private:
         static const std::string kClassName;
+
+        std::atomic<bool> is_warmup_phase_;
+        std::atomic<bool> is_stresstest_phase_;
     };
 }
 

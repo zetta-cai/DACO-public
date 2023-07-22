@@ -126,6 +126,9 @@ namespace covered
         // (8) Others
 
         static uint32_t getTimeBasedRandomSeed(); // Get a random seed (instead of deterministic) based on current time
+
+        static void initializeAtomicArray(std::atomic<uint32_t>* atomic_array_ptr, const uint32_t& array_size, const uint32_t& default_value);
+        static void initializeAtomicArray(std::atomic<bool>* atomic_array_ptr, const uint32_t& array_size, const bool& default_value);
     private:
         static const std::string kClassName;
 

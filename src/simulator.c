@@ -154,8 +154,6 @@ int main(int argc, char **argv) {
         {
             break;
         }
-        
-        // TODO: with the aggregated StatisticsTracker, main thread can dump statistics every 10 seconds if necessary
     }
 
     // (6) Stop benchmark

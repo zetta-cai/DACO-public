@@ -116,6 +116,15 @@ namespace covered
         // After all time-consuming initialization
         client_param_ptr_->setNodeInitialized();
 
+        // Block until client_running_ becomes true
+        while (!client_param_ptr->isNodeRunning()) {}
+
+        // Monitor and switch intermediate statistics
+        while (client_param_ptr->isNodeRunning())
+        {
+            // TODO: with the aggregated StatisticsTracker, each client main thread can dump statistics every 10 seconds if necessary
+        }
+
         // Wait client-to-edge propagation simulator
         pthread_returncode = pthread_join(client_toedge_propagation_simulator_thread, NULL);
         if (pthread_returncode != 0)

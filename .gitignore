@@ -2,6 +2,7 @@
 .DS_Store
 *.tar.gz
 *.pyc
+*.bak
 lib/boost_1_81_0
 lib/CacheLib
 lib/cpp-lru-cache
