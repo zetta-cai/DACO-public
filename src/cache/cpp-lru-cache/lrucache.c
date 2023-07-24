@@ -42,7 +42,7 @@ namespace covered
 			// Update the object with new value
 			// Push key-value pair into the head of cache_items_list_, i.e., the key is the most recently used
 			cache_items_list_.push_front(key_value_pair_t(key, value));
-			size_ += (key.getKeystr().length() + value.getValuesize());
+			size_ += static_cast<uint64_t>(key.getKeystr().length() + value.getValuesize());
 
 			// Remove previous list entry from cache_items_list_
 			list_iterator_t prev_list_iter = map_iter->second;
@@ -50,7 +50,7 @@ namespace covered
 			uint32_t prev_keysize = prev_list_iter->first.getKeystr().length();
 			uint32_t prev_valuesize = prev_list_iter->second.getValuesize();
 			cache_items_list_.erase(prev_list_iter);
-			size_ -= (prev_keysize + prev_valuesize);
+			size_ -= static_cast<uint64_t>(prev_keysize + prev_valuesize);
 
 			// Update map entry with the latest list iterator
 			map_iter->second = cache_items_list_.begin();
@@ -76,10 +76,10 @@ namespace covered
 			// Insert the object with new value
 			// Push key-value pair into the head of cache_items_list_, i.e., the key is the most recently used
 			cache_items_list_.push_front(key_value_pair_t(key, value));
-			size_ += (key.getKeystr().length() + value.getValuesize());
+			size_ += static_cast<uint64_t>(key.getKeystr().length() + value.getValuesize());
 
 			cache_items_map_.insert(std::pair<Key, list_iterator_t>(key, cache_items_list_.begin()));
-			size_ += (key.getKeystr().length() + sizeof(list_iterator_t));
+			size_ += static_cast<uint64_t>(key.getKeystr().length() + sizeof(list_iterator_t));
 		}
 
 		return;
@@ -96,11 +96,11 @@ namespace covered
 
 		// Remove the corresponding map entry
 		cache_items_map_.erase(key);
-		size_ -= (key.getKeystr().length() + sizeof(list_iterator_t));
+		size_ -= static_cast<uint64_t>(key.getKeystr().length() + sizeof(list_iterator_t));
 
 		// Remove the correpsonding list entry
 		cache_items_list_.pop_back();
-		size_ -= (key.getKeystr().length() + victim_valuesize);
+		size_ -= static_cast<uint64_t>(key.getKeystr().length() + victim_valuesize);
 
 		return;
 	}
@@ -110,7 +110,7 @@ namespace covered
 		return cache_items_map_.find(key) != cache_items_map_.end();
 	}
 
-	uint32_t LruCache::getSizeForCapacity() const
+	uint64_t LruCache::getSizeForCapacity() const
 	{
 		return size_;
 	}

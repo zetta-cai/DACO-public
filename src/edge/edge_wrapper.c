@@ -18,14 +18,14 @@ namespace covered
 
     void* EdgeWrapper::launchEdge(void* edge_param_ptr)
     {
-        EdgeWrapper local_edge(Param::getCacheName(), Param::getCapacityBytes(), Param::getEdgecnt(), Param::getHashName(), Param::getPercacheserverWorkercnt(), Param::getPropagationLatencyClientedge(), Param::getPropagationLatencyCrossedge(), Param::getPropagationLatencyEdgecloud(), (EdgeParam*)edge_param_ptr);
+        EdgeWrapper local_edge(Param::getCacheName(), Param::getCapacityBytes(), Param::getEdgecnt(), Param::getHashName(), Param::getPercacheserverWorkercnt(), Param::getPropagationLatencyClientedgeUs(), Param::getPropagationLatencyCrossedgeUs(), Param::getPropagationLatencyEdgecloudUs(), (EdgeParam*)edge_param_ptr);
         local_edge.start();
         
         pthread_exit(NULL);
         return NULL;
     }
 
-    EdgeWrapper::EdgeWrapper(const std::string& cache_name, const uint32_t& capacity_bytes, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& percacheserver_workercnt, const uint32_t& propagation_latency_clientedge, const uint32_t& propagation_latency_crossedge, const uint32_t& propagation_latency_edgecloud, EdgeParam* edge_param_ptr) : cache_name_(cache_name), capacity_bytes_(capacity_bytes), edgecnt_(edgecnt), percacheserver_workercnt_(percacheserver_workercnt), edge_param_ptr_(edge_param_ptr)
+    EdgeWrapper::EdgeWrapper(const std::string& cache_name, const uint64_t& capacity_bytes, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& percacheserver_workercnt, const uint32_t& propagation_latency_clientedge_us, const uint32_t& propagation_latency_crossedge_us, const uint32_t& propagation_latency_edgecloud_us, EdgeParam* edge_param_ptr) : cache_name_(cache_name), capacity_bytes_(capacity_bytes), edgecnt_(edgecnt), percacheserver_workercnt_(percacheserver_workercnt), edge_param_ptr_(edge_param_ptr)
     {        
         if (edge_param_ptr == NULL)
         {
@@ -48,15 +48,15 @@ namespace covered
         assert(cooperation_wrapper_ptr_ != NULL);
 
         // Allocate edge-to-client propagation simulator param
-        edge_toclient_propagation_simulator_param_ptr_ = new PropagationSimulatorParam(propagation_latency_clientedge, (NodeParamBase*)edge_param_ptr, Config::getPropagationItemBufferSizeEdgeToclient());
+        edge_toclient_propagation_simulator_param_ptr_ = new PropagationSimulatorParam(propagation_latency_clientedge_us, (NodeParamBase*)edge_param_ptr, Config::getPropagationItemBufferSizeEdgeToclient());
         assert(edge_toclient_propagation_simulator_param_ptr_ != NULL);
 
         // Allocate edge-to-edge propagation simulator param
-        edge_toedge_propagation_simulator_param_ptr_ = new PropagationSimulatorParam(propagation_latency_crossedge, (NodeParamBase*)edge_param_ptr, Config::getPropagationItemBufferSizeEdgeToedge());
+        edge_toedge_propagation_simulator_param_ptr_ = new PropagationSimulatorParam(propagation_latency_crossedge_us, (NodeParamBase*)edge_param_ptr, Config::getPropagationItemBufferSizeEdgeToedge());
         assert(edge_toedge_propagation_simulator_param_ptr_ != NULL);
 
         // Allocate edge-to-cloud propagation simulator param
-        edge_tocloud_propagation_simulator_param_ptr_ = new PropagationSimulatorParam(propagation_latency_edgecloud, (NodeParamBase*)edge_param_ptr, Config::getPropagationItemBufferSizeEdgeTocloud());
+        edge_tocloud_propagation_simulator_param_ptr_ = new PropagationSimulatorParam(propagation_latency_edgecloud_us, (NodeParamBase*)edge_param_ptr, Config::getPropagationItemBufferSizeEdgeTocloud());
         assert(edge_tocloud_propagation_simulator_param_ptr_ != NULL);
     }
         
@@ -279,11 +279,11 @@ namespace covered
         return NULL;
     }
 
-    uint32_t EdgeWrapper::getSizeForCapacity_() const
+    uint64_t EdgeWrapper::getSizeForCapacity_() const
     {
         checkPointers_();
 
-        uint32_t size = edge_cache_ptr_->getSizeForCapacity() + cooperation_wrapper_ptr_->getSizeForCapacity();
+        uint64_t size = edge_cache_ptr_->getSizeForCapacity() + cooperation_wrapper_ptr_->getSizeForCapacity();
         return size;
     }
 

@@ -121,7 +121,7 @@ namespace covered
 
     // (4) Other functions
 
-    uint32_t LruLocalCache::getSizeForCapacity() const
+    uint64_t LruLocalCache::getSizeForCapacity() const
     {
         checkPointers_();
 
@@ -129,7 +129,7 @@ namespace covered
         std::string context_name = "LruLocalCache::getSizeForCapacity()";
         rwlock_for_lru_local_cache_ptr_->acquire_lock_shared(context_name);
 
-        uint32_t internal_size = lru_cache_ptr_->getSizeForCapacity();
+        uint64_t internal_size = lru_cache_ptr_->getSizeForCapacity();
 
         rwlock_for_lru_local_cache_ptr_->unlock_shared(context_name);
         return internal_size;

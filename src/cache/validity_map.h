@@ -37,7 +37,7 @@ namespace covered
 
         // (2) For ConcurrentHashtable
 
-        uint32_t getSizeForCapacity() const;
+        uint64_t getSizeForCapacity() const;
         bool call(const std::string& function_name, void* param_ptr);
         void constCall(const std::string& function_name, void* param_ptr) const;
 
@@ -59,7 +59,7 @@ namespace covered
         void validateFlagForKey(const Key& key, bool& is_exist); // Add a valid flag if key NOT exist
         void eraseFlagForKey(const Key& key, bool& is_exist);
 
-        uint32_t getSizeForCapacity() const;
+        uint64_t getSizeForCapacity() const;
     private:
         static const std::string kClassName;
 

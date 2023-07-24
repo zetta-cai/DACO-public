@@ -31,7 +31,7 @@ namespace covered
         void setValidAddr();
         void resetValidAddr();
 
-        uint32_t getSizeForCapacity() const;
+        uint64_t getSizeForCapacity() const;
 
         uint32_t getAddrPayloadSize() const;
         uint32_t serialize(DynamicArray& msg_payload, const uint32_t& position) const;

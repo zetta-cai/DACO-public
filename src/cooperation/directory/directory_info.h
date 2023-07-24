@@ -28,7 +28,7 @@ namespace covered
         uint32_t serialize(DynamicArray& msg_payload, const uint32_t& position) const;
         uint32_t deserialize(const DynamicArray& msg_payload, const uint32_t& position);
 
-        uint32_t getSizeForCapacity() const;
+        uint64_t getSizeForCapacity() const;
 
         const DirectoryInfo& operator=(const DirectoryInfo& other);
         bool operator==(const DirectoryInfo& other) const; // To be used by DirectoryInfo in std::unordered_map

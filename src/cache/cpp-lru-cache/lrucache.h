@@ -33,13 +33,13 @@ namespace covered {
 		
 		bool exists(const Key& key) const;
 		
-		uint32_t getSizeForCapacity() const;
+		uint64_t getSizeForCapacity() const;
 		
 	private:
 		static const std::string kClassName;
 
 		// In units of bytes
-		uint32_t size_;
+		uint64_t size_;
 
 		// Store value for each key; Use list index to indicate the most recent access time
 		std::list<key_value_pair_t> cache_items_list_;

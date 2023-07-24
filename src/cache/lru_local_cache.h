@@ -38,7 +38,7 @@ namespace covered
         // (4) Other functions
 
         // In units of bytes
-        virtual uint32_t getSizeForCapacity() const override;
+        virtual uint64_t getSizeForCapacity() const override;
     private:
         static const std::string kClassName;
 

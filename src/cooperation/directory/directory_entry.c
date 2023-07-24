@@ -99,9 +99,9 @@ namespace covered
 
     // (2) For ConcurrentHashtable
 
-    uint32_t DirectoryEntry::getSizeForCapacity() const
+    uint64_t DirectoryEntry::getSizeForCapacity() const
     {
-        uint32_t size = 0;
+        uint64_t size = 0;
         for (dirinfo_entry_t::const_iterator iter = directory_entry_.begin(); iter != directory_entry_.end(); iter++)
         {
             size += iter->first.getSizeForCapacity();

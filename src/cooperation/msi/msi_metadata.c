@@ -124,9 +124,9 @@ namespace covered
 
     // (4) For ConcurrentHashtable
 
-    uint32_t MsiMetadata::getSizeForCapacity() const
+    uint64_t MsiMetadata::getSizeForCapacity() const
     {
-        uint32_t size = 0;
+        uint64_t size = 0;
         size += sizeof(bool);
         for (edge_blocklist_t::const_iterator iter = edge_blocklist_.begin(); iter != edge_blocklist_.end(); iter++)
         {

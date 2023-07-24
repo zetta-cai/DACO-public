@@ -21,7 +21,7 @@ namespace covered
         void validateMetadata();
         void invalidateMetadata();
 
-        uint32_t getSizeForCapacity() const;
+        uint64_t getSizeForCapacity() const;
 
         const DirectoryMetadata& operator=(const DirectoryMetadata& other);
     private:

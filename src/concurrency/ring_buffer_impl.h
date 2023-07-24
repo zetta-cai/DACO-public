@@ -128,9 +128,9 @@ namespace covered
     }
 
     /*template<class T>
-    uint32_t RingBuffer<T>::getSizeForCapacity() const
+    uint64_t RingBuffer<T>::getSizeForCapacity() const
     {
-        uint32_t size = 0;
+        uint64_t size = 0;
         for (uint32_t ring_buffer_idx = tail_; ring_buffer_idx != head_; ring_buffer_idx++)
         {
             if (ring_buffer_idx >= buffer_size_)

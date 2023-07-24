@@ -1096,7 +1096,7 @@ namespace covered
         while (true) // Evict until used bytes <= capacity bytes
         {
             // Data and metadata for local edge cache, and cooperation metadata
-            uint32_t used_bytes = tmp_edge_wrapper_ptr->getSizeForCapacity_();
+            uint64_t used_bytes = tmp_edge_wrapper_ptr->getSizeForCapacity_();
             if (used_bytes <= tmp_edge_wrapper_ptr->capacity_bytes_) // Not exceed capacity limitation
             {
                 break;

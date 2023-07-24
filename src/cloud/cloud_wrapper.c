@@ -16,14 +16,14 @@ namespace covered
 
     void* CloudWrapper::launchCloud(void* cloud_param_ptr)
     {
-        CloudWrapper local_cloud(Param::getCloudStorage(), Param::getPropagationLatencyEdgecloud(), (CloudParam*)cloud_param_ptr);
+        CloudWrapper local_cloud(Param::getCloudStorage(), Param::getPropagationLatencyEdgecloudUs(), (CloudParam*)cloud_param_ptr);
         local_cloud.start();
         
         pthread_exit(NULL);
         return NULL;
     }
 
-    CloudWrapper::CloudWrapper(const std::string& cloud_storage, const uint32_t& propagation_latency_edgecloud, CloudParam* cloud_param_ptr) : cloud_param_ptr_(cloud_param_ptr)
+    CloudWrapper::CloudWrapper(const std::string& cloud_storage, const uint32_t& propagation_latency_edgecloud_us, CloudParam* cloud_param_ptr) : cloud_param_ptr_(cloud_param_ptr)
     {
         if (cloud_param_ptr == NULL)
         {
@@ -55,7 +55,7 @@ namespace covered
         assert(cloud_recvreq_socket_server_ptr_ != NULL);
 
         // Allocate cloud-to-edge propagation simulator param
-        cloud_toedge_propagation_simulator_param_ptr_ = new PropagationSimulatorParam(propagation_latency_edgecloud, (NodeParamBase*)cloud_param_ptr, Config::getPropagationItemBufferSizeCloudToedge());
+        cloud_toedge_propagation_simulator_param_ptr_ = new PropagationSimulatorParam(propagation_latency_edgecloud_us, (NodeParamBase*)cloud_param_ptr, Config::getPropagationItemBufferSizeCloudToedge());
         assert(cloud_toedge_propagation_simulator_param_ptr_ != NULL);
     }
         
