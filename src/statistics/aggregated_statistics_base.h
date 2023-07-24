@@ -23,6 +23,10 @@ namespace covered
         uint32_t getTotalLocalHitcnt() const;
         uint32_t getTotalCooperativeHitcnt() const;
         uint32_t getTotalReqcnt() const;
+        // Calculate hit ratio based on aggregated statistics
+        double getLocalHitRatio() const;
+        double getCooperativeHitRatio() const;
+        double getTotalHitRatio() const;
 
         // Get aggregate statistics related with latency
         uint32_t getAvgLatency() const;

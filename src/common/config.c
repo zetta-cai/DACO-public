@@ -11,7 +11,7 @@
 namespace covered
 {
     const std::string Config::CLIENT_IPSTRS_KEYSTR("client_ipstrs");
-    const std::string Config::CLIENT_INTERMEDIATE_RAW_STATISTICS_SLOT_INTERVAL_SEC_KEYSTR("client_intermediate_raw_statistics_slot_interval");
+    const std::string Config::CLIENT_RAW_STATISTICS_SLOT_INTERVAL_SEC_KEYSTR("client_raw_statistics_slot_interval_sec");
     const std::string Config::CLIENT_WORKER_RECVRSP_STARTPORT_KEYSTR("client_worker_recvrsp_startport");
     const std::string Config::CLOUD_IPSTR_KEYSTR("cloud_ipstr");
     const std::string Config::CLOUD_RECVREQ_STARTPORT_KEYSTR("cloud_recvreq_startport");
@@ -42,7 +42,7 @@ namespace covered
     boost::json::object Config::json_object_ = boost::json::object();
 
     std::vector<std::string> Config::client_ipstrs_(0);
-    uint32_t Config::client_intermediate_raw_statistics_slot_interval_sec_(1);
+    uint32_t Config::client_raw_statistics_slot_interval_sec_(1);
     uint16_t Config::client_worker_recvrsp_startport_ = 4100; // [4096, 65536]
     std::string Config::cloud_ipstr_ = Util::LOCALHOST_IPSTR;
     uint16_t Config::cloud_recvreq_startport_ = 4200; // [4096, 65536]
@@ -86,11 +86,11 @@ namespace covered
                     client_ipstrs_.push_back(static_cast<std::string>(iter->get_string()));
                 }
             }
-            kv_ptr = find_(CLIENT_INTERMEDIATE_RAW_STATISTICS_SLOT_INTERVAL_SEC_KEYSTR);
+            kv_ptr = find_(CLIENT_RAW_STATISTICS_SLOT_INTERVAL_SEC_KEYSTR);
             if (kv_ptr != NULL)
             {
                 int64_t tmp_interval = kv_ptr->value().get_int64();
-                client_intermediate_raw_statistics_slot_interval_sec_ = Util::toUint32(tmp_interval);
+                client_raw_statistics_slot_interval_sec_ = Util::toUint32(tmp_interval);
             }
             kv_ptr = find_(CLIENT_WORKER_RECVRSP_STARTPORT_KEYSTR);
             if (kv_ptr != NULL)
@@ -268,10 +268,10 @@ namespace covered
         }
     }
 
-    uint32_t Config::getClientIntermediateRawStatisticsSlotIntervalSec()
+    uint32_t Config::getClientRawStatisticsSlotIntervalSec()
     {
         checkIsValid_();
-        return client_intermediate_raw_statistics_slot_interval_sec_;
+        return client_raw_statistics_slot_interval_sec_;
     }
 
     uint32_t Config::getClientIpstrCnt()
@@ -459,7 +459,7 @@ namespace covered
             oss << client_ipstrs_[i] << " ";
         }
         oss << std::endl;
-        oss << "Client intermediate raw statistics slot interval second: " << client_intermediate_raw_statistics_slot_interval_sec_ << std::endl;
+        oss << "Client raw statistics slot interval second: " << client_raw_statistics_slot_interval_sec_ << std::endl;
         oss << "Client worker recvrsp startport: " << client_worker_recvrsp_startport_ << std::endl;
         oss << "Cloud ipstr: " << cloud_ipstr_ << std::endl;
         oss << "Cloud recvreq startport: " << cloud_recvreq_startport_ << std::endl;

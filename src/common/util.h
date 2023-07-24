@@ -41,7 +41,7 @@ namespace covered
         static std::memory_order STORE_CONCURRENCY_ORDER;
         static std::memory_order RMW_CONCURRENCY_ORDER; // read-modify-write
         // Workflow control
-        static const unsigned int SLEEP_INTERVAL_US; // Sleep interval for polling
+        //static const unsigned int SLEEP_INTERVAL_US; // Sleep interval for polling
         // Workload generation
         static const uint32_t KVPAIR_GENERATION_SEED; // Deterministic seed to generate key-value objects (dataset instead of workload)
         // Time measurement

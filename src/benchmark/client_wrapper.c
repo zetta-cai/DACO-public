@@ -117,13 +117,51 @@ namespace covered
         client_param_ptr_->setNodeInitialized();
 
         // Block until client_running_ becomes true
-        while (!client_param_ptr->isNodeRunning()) {}
+        while (!client_param_ptr_->isNodeRunning()) {}
 
-        // Switch and update intermediate client raw statistics to track per-slot client aggregated statistics
-        const uint32_t client_intermediate_raw_statistics_slot_interval_sec = Config::getClientIntermediateRawStatisticsSlotIntervalSec();
-        while (client_param_ptr->isNodeRunning())
+        // Switch cur-slot client raw statistics to track per-slot aggregated statistics
+        const uint32_t client_raw_statistics_slot_interval_sec = Config::getClientRawStatisticsSlotIntervalSec();
+        bool is_stable = false;
+        double stable_hit_ratio = 0.0d;
+        while (client_param_ptr_->isNodeRunning())
         {
-            // TODO: with the aggregated StatisticsTracker, each client main thread can dump statistics every 10 seconds if necessary
+            // Get current phase (warmph or stresstest)
+            bool is_warmup_phase = false;
+            bool is_stresstest_phase = false;
+            is_warmup_phase = client_param_ptr_->isWarmupPhase();
+            if (!is_warmup_phase)
+            {
+                is_stresstest_phase = client_param_ptr_->isStresstestPhase();
+            }
+
+            if (is_warmup_phase || is_stresstest_phase)
+            {
+                usleep(client_raw_statistics_slot_interval_sec * 1000 * 1000);
+
+                // NOTE: NO need to reload is_warmup_phase and is_stresstest_phase after usleep:
+                // (i) if is_warmup_phase is true, ONLY client wrapper itself can finish warmup phase here;
+                // (ii) if is_stresstest_phase is true, none will finish stresstest phase (simulator/evaluator will ONLY start stresstest phase if is_stresstest_phase is false)
+
+                // Switch cur-slot client raw statistics and aggregate
+                client_statistics_tracker_ptr_->switchCurslotForClientRawStatistics();
+
+                // Monitor if cache hit ratio is stable to finish the warmup phase if any
+                if (is_warmup_phase)
+                {
+                    is_stable = client_statistics_tracker_ptr_->isPerSlotAggregatedStatisticsStable(stable_hit_ratio);
+
+                    // Cache hit ratio becomes stable
+                    if (is_stable)
+                    {
+                        std::ostringstream oss;
+                        oss << "cache hit ratio becomes stable at " << stable_hit_ratio << " -> finish warmup phase";
+                        Util::dumpNormalMsg(instance_name_, oss.str());
+
+                        // Client workers will NOT issue any request until stresstest phase is started
+                        client_param_ptr_->finishWarmupPhase(); // Finish the warmup phase of all client workers
+                    }
+                }
+            }
         }
 
         // Wait client-to-edge propagation simulator
@@ -154,9 +192,9 @@ namespace covered
         uint32_t client_idx = client_param_ptr_->getNodeIdx();
         std::string client_statistics_filepath = Util::getClientStatisticsFilepath(client_idx);
 
-        // Dump per-client statistics
+        // TODO: Aggregate cur-slot/stable client raw statistics, and dump per-slot/stable client aggregated statistics
         assert(client_statistics_tracker_ptr_ != NULL);
-        client_statistics_tracker_ptr_->dump(client_statistics_filepath);
+        client_statistics_tracker_ptr_->aggregateAndDump(client_statistics_filepath);
 
         return;
     }

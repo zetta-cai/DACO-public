@@ -140,10 +140,13 @@ int main(int argc, char **argv) {
         client_params[client_idx].setNodeRunning();
     }
 
-    // (5.3) Count down duration
+    // (5.3) TODO: Start stresstest phase
+
+    // (5.4) Count down duration for stresstest phase
 
     const uint32_t duration_sec = covered::Param::getDurationSec();
-    struct timespec start_timestamp = covered::Util::getCurrentTimespec();
+    usleep(duration_sec * 1000 * 1000);
+    /*struct timespec start_timestamp = covered::Util::getCurrentTimespec();
     while (true)
     {
         usleep(covered::Util::SLEEP_INTERVAL_US);
@@ -154,7 +157,7 @@ int main(int argc, char **argv) {
         {
             break;
         }
-    }
+    }*/
 
     // (6) Stop benchmark
 

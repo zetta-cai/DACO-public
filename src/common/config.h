@@ -20,7 +20,7 @@ namespace covered
     public:
         // Key strings of JSON config file for static configurations (only used by Config)
         static const std::string CLIENT_IPSTRS_KEYSTR;
-        static const std::string CLIENT_INTERMEDIATE_RAW_STATISTICS_SLOT_INTERVAL_SEC_KEYSTR;
+        static const std::string CLIENT_RAW_STATISTICS_SLOT_INTERVAL_SEC_KEYSTR;
         static const std::string CLIENT_WORKER_RECVRSP_STARTPORT_KEYSTR;
         static const std::string CLOUD_IPSTR_KEYSTR;
         static const std::string CLOUD_RECVREQ_STARTPORT_KEYSTR;
@@ -47,7 +47,7 @@ namespace covered
         static void loadConfig();
 
         static std::string getClientIpstr(const uint32_t& client_idx, const uint32_t& clientcnt);
-        static uint32_t getClientIntermediateRawStatisticsSlotIntervalSec();
+        static uint32_t getClientRawStatisticsSlotIntervalSec();
         static uint32_t getClientIpstrCnt();
         static uint16_t getClientWorkerRecvrspStartport();
         static std::string getCloudIpstr();
@@ -85,7 +85,7 @@ namespace covered
         static boost::json::object json_object_;
 
         static std::vector<std::string> client_ipstrs_;
-        static uint32_t client_intermediate_raw_statistics_slot_interval_sec_;
+        static uint32_t client_raw_statistics_slot_interval_sec_;
         static uint16_t client_worker_recvrsp_startport_;
         static std::string cloud_ipstr_;
         static uint16_t cloud_recvreq_startport_;

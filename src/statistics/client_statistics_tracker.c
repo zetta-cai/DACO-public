@@ -11,11 +11,11 @@
 
 namespace covered
 {
-    const uint32_t ClientStatisticsTracker::INTERMEDIATE_SLOT_CNT = 2;
+    const uint32_t ClientStatisticsTracker::CURSLOT_CLIENT_RAW_STATISTICS_CNT = 2;
 
     const std::string ClientStatisticsTracker::kClassName("ClientStatisticsTracker");
     
-    ClientStatisticsTracker::ClientStatisticsTracker(uint32_t perclient_workercnt, const uint32_t& client_idx, const uint32_t& intermediate_slot_cnt) : allow_update_(true), perclient_workercnt_(perclient_workercnt)
+    ClientStatisticsTracker::ClientStatisticsTracker(uint32_t perclient_workercnt, const uint32_t& client_idx, const uint32_t& curslot_client_raw_statistics_cnt) : allow_update_(true), perclient_workercnt_(perclient_workercnt)
     {
         // (A) Const shared variables
 
@@ -26,23 +26,23 @@ namespace covered
 
         // (B) Non-const individual variables
 
-        // (B.1) For intermediate client raw statistics
+        // (B.1) For cur-slot client raw statistics
 
         cur_slot_idx_.store(0, Util::STORE_CONCURRENCY_ORDER);
 
-        perclientworker_intermediate_update_flags_ = new std::atomic<bool>[perclient_workercnt_];
-        assert(perclientworker_intermediate_update_flags_ != NULL);
-        Util::initializeAtomicArray(perclientworker_intermediate_update_flags_, perclient_workercnt_, false);
+        perclientworker_curslot_update_flags_ = new std::atomic<bool>[perclient_workercnt_];
+        assert(perclientworker_curslot_update_flags_ != NULL);
+        Util::initializeAtomicArray(perclientworker_curslot_update_flags_, perclient_workercnt_, false);
 
-        perclientworker_intermediate_update_statuses_ = new std::atomic<uint64_t>[perclient_workercnt];
-        assert(perclientworker_intermediate_update_statuses_ != NULL);
-        Util::initializeAtomicArray(perclientworker_intermediate_update_statuses_, perclient_workercnt, 0);
+        perclientworker_curslot_update_statuses_ = new std::atomic<uint64_t>[perclient_workercnt];
+        assert(perclientworker_curslot_update_statuses_ != NULL);
+        Util::initializeAtomicArray(perclientworker_curslot_update_statuses_, perclient_workercnt, 0);
 
-        intermediate_client_raw_statistics_ptr_list_.resize(intermediate_slot_cnt);
-        for (uint32_t i = 0; i < intermediate_client_raw_statistics_ptr_list_.size(); i++)
+        curslot_client_raw_statistics_ptr_list_.resize(curslot_client_raw_statistics_cnt);
+        for (uint32_t i = 0; i < curslot_client_raw_statistics_ptr_list_.size(); i++)
         {
-            intermediate_client_raw_statistics_ptr_list_[i] = new ClientRawStatistics(perclient_workercnt);
-            assert(intermediate_client_raw_statistics_ptr_list_[i] != NULL);
+            curslot_client_raw_statistics_ptr_list_[i] = new ClientRawStatistics(perclient_workercnt);
+            assert(curslot_client_raw_statistics_ptr_list_[i] != NULL);
         }
 
         // (B.2) For stable client raw statistics
@@ -66,13 +66,13 @@ namespace covered
 
         // (B) Non-const individual variables (latency_histogram_ is shared)
 
-        // (B.1) For intermediate client raw statistics
+        // (B.1) For cur-slot client raw statistics
 
         cur_slot_idx_.store(0, Util::STORE_CONCURRENCY_ORDER);
 
-        perclientworker_intermediate_update_flags_ = NULL;
-        perclientworker_intermediate_update_statuses_ = NULL;
-        intermediate_client_raw_statistics_ptr_list_.resize(0);
+        perclientworker_curslot_update_flags_ = NULL;
+        perclientworker_curslot_update_statuses_ = NULL;
+        curslot_client_raw_statistics_ptr_list_.resize(0);
 
         // (B.2) For stable client raw statistics
 
@@ -89,20 +89,20 @@ namespace covered
     {
         if (allow_update_)
         {
-            assert(perclientworker_intermediate_update_flags_ != NULL);
-            delete[] perclientworker_intermediate_update_flags_;
-            perclientworker_intermediate_update_flags_ = NULL;
+            assert(perclientworker_curslot_update_flags_ != NULL);
+            delete[] perclientworker_curslot_update_flags_;
+            perclientworker_curslot_update_flags_ = NULL;
 
-            assert(perclientworker_intermediate_update_statuses_ != NULL);
-            delete[] perclientworker_intermediate_update_statuses_;
-            perclientworker_intermediate_update_statuses_ = NULL;
+            assert(perclientworker_curslot_update_statuses_ != NULL);
+            delete[] perclientworker_curslot_update_statuses_;
+            perclientworker_curslot_update_statuses_ = NULL;
 
-            assert(intermediate_client_raw_statistics_ptr_list_.size() > 0);
-            for (uint32_t i = 0; i < intermediate_client_raw_statistics_ptr_list_.size(); i++)
+            assert(curslot_client_raw_statistics_ptr_list_.size() > 0);
+            for (uint32_t i = 0; i < curslot_client_raw_statistics_ptr_list_.size(); i++)
             {
-                assert(intermediate_client_raw_statistics_ptr_list_[i] != NULL);
-                delete intermediate_client_raw_statistics_ptr_list_[i];
-                intermediate_client_raw_statistics_ptr_list_[i] = NULL;
+                assert(curslot_client_raw_statistics_ptr_list_[i] != NULL);
+                delete curslot_client_raw_statistics_ptr_list_[i];
+                curslot_client_raw_statistics_ptr_list_[i] = NULL;
             }
 
             assert(stable_client_raw_statistics_ptr_ != NULL);
@@ -111,22 +111,22 @@ namespace covered
         }
     }
 
-    // (1) Update intermediate/stable client raw statistics (invoked by client workers)
+    // (1) Update cur-slot/stable client raw statistics (invoked by client workers)
 
     void ClientStatisticsTracker::updateLocalHitcnt(const uint32_t& local_client_worker_idx, const bool& is_stresstest)
     {
         checkPointers_();
         assert(allow_update == true);
 
-        perclientworker_intermediate_update_flags_[local_client_worker_idx].store(true, Util::STORE_CONCURRENCY_ORDER);
+        perclientworker_curslot_update_flags_[local_client_worker_idx].store(true, Util::STORE_CONCURRENCY_ORDER);
 
-        // Update intermediate client raw statistics
-        ClientRawStatistics* cur_intermediate_client_raw_statistics_ptr = getIntermediateClientRawStatisticsPtr_(cur_slot_idx_.load(Util::LOAD_CONCURRENCY_ORDER));
-        assert(cur_intermediate_client_raw_statistics_ptr != NULL);
-        cur_intermediate_client_raw_statistics_ptr->updateLocalHitcnt_();
+        // Update cur-slot client raw statistics
+        ClientRawStatistics* tmp_curslot_client_raw_statistics_ptr = getCurslotClientRawStatisticsPtr_(cur_slot_idx_.load(Util::LOAD_CONCURRENCY_ORDER));
+        assert(tmp_curslot_client_raw_statistics_ptr != NULL);
+        tmp_curslot_client_raw_statistics_ptr->updateLocalHitcnt_();
 
-        perclientworker_intermediate_update_flags_[local_client_worker_idx].store(false, Util::STORE_CONCURRENCY_ORDER);
-        perclientworker_intermediate_update_statuses_[local_client_worker_idx]++;
+        perclientworker_curslot_update_flags_[local_client_worker_idx].store(false, Util::STORE_CONCURRENCY_ORDER);
+        perclientworker_curslot_update_statuses_[local_client_worker_idx]++;
 
         // Update stable client raw statistics for stresstest phase
         if (is_stresstest)
@@ -142,15 +142,15 @@ namespace covered
         checkPointers_();
         assert(allow_update == true);
 
-        perclientworker_intermediate_update_flags_[local_client_worker_idx].store(true, Util::STORE_CONCURRENCY_ORDER);
+        perclientworker_curslot_update_flags_[local_client_worker_idx].store(true, Util::STORE_CONCURRENCY_ORDER);
 
-        // Update intermediate client raw statistics
-        ClientRawStatistics* cur_intermediate_client_raw_statistics_ptr = getIntermediateClientRawStatisticsPtr_(cur_slot_idx_.load(Util::LOAD_CONCURRENCY_ORDER));
-        assert(cur_intermediate_client_raw_statistics_ptr != NULL);
-        cur_intermediate_client_raw_statistics_ptr->updateCooperativeHitcnt_();
+        // Update cur-slot client raw statistics
+        ClientRawStatistics* tmp_curslot_client_raw_statistics_ptr = getCurslotClientRawStatisticsPtr_(cur_slot_idx_.load(Util::LOAD_CONCURRENCY_ORDER));
+        assert(tmp_curslot_client_raw_statistics_ptr != NULL);
+        tmp_curslot_client_raw_statistics_ptr->updateCooperativeHitcnt_();
 
-        perclientworker_intermediate_update_flags_[local_client_worker_idx].store(false, Util::STORE_CONCURRENCY_ORDER);
-        perclientworker_intermediate_update_statuses_[local_client_worker_idx]++;
+        perclientworker_curslot_update_flags_[local_client_worker_idx].store(false, Util::STORE_CONCURRENCY_ORDER);
+        perclientworker_curslot_update_statuses_[local_client_worker_idx]++;
 
         // Update stable client raw statistics for stresstest phase
         if (is_stresstest)
@@ -166,15 +166,15 @@ namespace covered
         checkPointers_();
         assert(allow_update == true);
 
-        perclientworker_intermediate_update_flags_[local_client_worker_idx].store(true, Util::STORE_CONCURRENCY_ORDER);
+        perclientworker_curslot_update_flags_[local_client_worker_idx].store(true, Util::STORE_CONCURRENCY_ORDER);
 
-        // Update intermediate client raw statistics
-        ClientRawStatistics* cur_intermediate_client_raw_statistics_ptr = getIntermediateClientRawStatisticsPtr_(cur_slot_idx_.load(Util::LOAD_CONCURRENCY_ORDER));
-        assert(cur_intermediate_client_raw_statistics_ptr != NULL);
-        cur_intermediate_client_raw_statistics_ptr->updateReqcnt_();
+        // Update cur-slot client raw statistics
+        ClientRawStatistics* tmp_curslot_client_raw_statistics_ptr = getCurslotClientRawStatisticsPtr_(cur_slot_idx_.load(Util::LOAD_CONCURRENCY_ORDER));
+        assert(tmp_curslot_client_raw_statistics_ptr != NULL);
+        tmp_curslot_client_raw_statistics_ptr->updateReqcnt_();
 
-        perclientworker_intermediate_update_flags_[local_client_worker_idx].store(false, Util::STORE_CONCURRENCY_ORDER);
-        perclientworker_intermediate_update_statuses_[local_client_worker_idx]++;
+        perclientworker_curslot_update_flags_[local_client_worker_idx].store(false, Util::STORE_CONCURRENCY_ORDER);
+        perclientworker_curslot_update_statuses_[local_client_worker_idx]++;
 
         // Update stable client raw statistics for stresstest phase
         if (is_stresstest)
@@ -190,16 +190,16 @@ namespace covered
         checkPointers_();
         assert(allow_update == true);
 
-        perclientworker_intermediate_update_flags_[local_client_worker_idx].store(true, Util::STORE_CONCURRENCY_ORDER);
+        perclientworker_curslot_update_flags_[local_client_worker_idx].store(true, Util::STORE_CONCURRENCY_ORDER);
 
-        // Update intermediate client raw statistics
-        ClientRawStatistics* cur_intermediate_client_raw_statistics_ptr = getIntermediateClientRawStatisticsPtr_(cur_slot_idx_.load(Util::LOAD_CONCURRENCY_ORDER));
-        assert(cur_intermediate_client_raw_statistics_ptr != NULL);
-        cur_intermediate_client_raw_statistics_ptr->updateLatency_();
+        // Update cur-slot client raw statistics
+        ClientRawStatistics* tmp_curslot_client_raw_statistics_ptr = getCurslotClientRawStatisticsPtr_(cur_slot_idx_.load(Util::LOAD_CONCURRENCY_ORDER));
+        assert(tmp_curslot_client_raw_statistics_ptr != NULL);
+        tmp_curslot_client_raw_statistics_ptr->updateLatency_();
 
 
-        perclientworker_intermediate_update_flags_[local_client_worker_idx].store(false, Util::STORE_CONCURRENCY_ORDER);
-        perclientworker_intermediate_update_statuses_[local_client_worker_idx]++;
+        perclientworker_curslot_update_flags_[local_client_worker_idx].store(false, Util::STORE_CONCURRENCY_ORDER);
+        perclientworker_curslot_update_statuses_[local_client_worker_idx]++;
 
         // Update stable client raw statistics for stresstest phase
         if (is_stresstest)
@@ -215,15 +215,15 @@ namespace covered
         checkPointers_();
         assert(allow_update == true);
 
-        perclientworker_intermediate_update_flags_[local_client_worker_idx].store(true, Util::STORE_CONCURRENCY_ORDER);
+        perclientworker_curslot_update_flags_[local_client_worker_idx].store(true, Util::STORE_CONCURRENCY_ORDER);
 
-        // Update intermediate client raw statistics
-        ClientRawStatistics* cur_intermediate_client_raw_statistics_ptr = getIntermediateClientRawStatisticsPtr_(cur_slot_idx_.load(Util::LOAD_CONCURRENCY_ORDER));
-        assert(cur_intermediate_client_raw_statistics_ptr != NULL);
-        cur_intermediate_client_raw_statistics_ptr->updateReadcnt_();
+        // Update cur-slot client raw statistics
+        ClientRawStatistics* tmp_curslot_client_raw_statistics_ptr = getCurslotClientRawStatisticsPtr_(cur_slot_idx_.load(Util::LOAD_CONCURRENCY_ORDER));
+        assert(tmp_curslot_client_raw_statistics_ptr != NULL);
+        tmp_curslot_client_raw_statistics_ptr->updateReadcnt_();
 
-        perclientworker_intermediate_update_flags_[local_client_worker_idx].store(false, Util::STORE_CONCURRENCY_ORDER);
-        perclientworker_intermediate_update_statuses_[local_client_worker_idx]++;
+        perclientworker_curslot_update_flags_[local_client_worker_idx].store(false, Util::STORE_CONCURRENCY_ORDER);
+        perclientworker_curslot_update_statuses_[local_client_worker_idx]++;
 
         // Update stable client raw statistics for stresstest phase
         if (is_stresstest)
@@ -239,15 +239,15 @@ namespace covered
         checkPointers_();
         assert(allow_update == true);
 
-        perclientworker_intermediate_update_flags_[local_client_worker_idx].store(true, Util::STORE_CONCURRENCY_ORDER);
+        perclientworker_curslot_update_flags_[local_client_worker_idx].store(true, Util::STORE_CONCURRENCY_ORDER);
 
-        // Update intermediate client raw statistics
-        ClientRawStatistics* cur_intermediate_client_raw_statistics_ptr = getIntermediateClientRawStatisticsPtr_(cur_slot_idx_.load(Util::LOAD_CONCURRENCY_ORDER));
-        assert(cur_intermediate_client_raw_statistics_ptr != NULL);
-        cur_intermediate_client_raw_statistics_ptr->updateWritecnt_();
+        // Update cur-slot client raw statistics
+        ClientRawStatistics* tmp_curslot_client_raw_statistics_ptr = getCurslotClientRawStatisticsPtr_(cur_slot_idx_.load(Util::LOAD_CONCURRENCY_ORDER));
+        assert(tmp_curslot_client_raw_statistics_ptr != NULL);
+        tmp_curslot_client_raw_statistics_ptr->updateWritecnt_();
 
-        perclientworker_intermediate_update_flags_[local_client_worker_idx].store(false, Util::STORE_CONCURRENCY_ORDER);
-        perclientworker_intermediate_update_statuses_[local_client_worker_idx]++;
+        perclientworker_curslot_update_flags_[local_client_worker_idx].store(false, Util::STORE_CONCURRENCY_ORDER);
+        perclientworker_curslot_update_statuses_[local_client_worker_idx]++;
 
         // Update stable client raw statistics for stresstest phase
         if (is_stresstest)
@@ -258,39 +258,62 @@ namespace covered
         return;
     }
 
-    // (2) Switch time slot for intermediate client raw statistics (invoked by client thread ClientWrapper)
+    // (2) Switch cur-slot client raw statistics (invoked by client thread ClientWrapper)
 
-    void ClientStatisticsTracker::switchIntermediateSlot()
+    void ClientStatisticsTracker::switchCurslotForClientRawStatistics()
     {
         checkPointers_();
         assert(allow_update == true);
 
-        // Switch to update intermediate client raw statistics for the next time slot
+        // Switch cur-slot client raw statistics to update for the next time slot
         const uint32_t current_slot_idx = cur_slot_idx_.load(Util::LOAD_CONCURRENCY_ORDER);
         cur_slot_idx_++;
 
         // Slot switch barrier to ensure that all client workers will realize the next time slot
-        intermediateSlotSwitchBarrier_();
+        curslotSwitchBarrier_();
 
         // Aggregate client raw statistics of the current time slot
-        ClientRawStatistics* current_intermediate_client_raw_statistics_ptr = getIntermediateClientRawStatisticsPtr_(current_slot_idx);
-        assert(current_intermediate_client_raw_statistics_ptr != NULL);
-        ClientAggregatedStatistics tmp_client_aggregated_statistics(current_intermediate_client_raw_statistics_ptr);
+        ClientRawStatistics* tmp_curslot_client_raw_statistics_ptr = getCurslotClientRawStatisticsPtr_(current_slot_idx);
+        assert(tmp_curslot_client_raw_statistics_ptr != NULL);
+        ClientAggregatedStatistics tmp_client_aggregated_statistics(tmp_curslot_client_raw_statistics_ptr);
 
         // Update per-slot client aggregated statistics
         perslot_client_aggregated_statistics_list_.push_back(tmp_client_aggregated_statistics);
 
         // Clean for the current time slot to avoid the interferences of obselete statistics
-        current_intermediate_client_raw_statistics_ptr->clean();
+        tmp_curslot_client_raw_statistics_ptr->clean();
 
         return;
     }
 
-    // (3) Dump client per-slot/stable aggregated statistics (invoked by main client thread ClientWrapper)
-
-    // Dump per-client statistics for TotalStatisticsTracker
-    uint32_t ClientStatisticsTracker::dump(const std::string& filepath) const
+    bool ClientStatisticsTracker::isPerSlotAggregatedStatisticsStable(double& cache_hit_ratio)
     {
+        bool is_stable = false;
+
+        const uint32_t slotcnt = perslot_client_aggregated_statistics_list_.size();
+
+        if (slotcnt > 1)
+        {
+            double cur_total_hit_ratio = perslot_client_aggregated_statistics_list_[slotcnt - 1].getTotalHitRatio();
+            double prev_total_hit_ratio = perslot_client_aggregated_statistics_list_[slotcnt - 2].getTotalHitRatio();
+
+            // TODO: we may introduce min total hit ratio in Config to avoid false positive decision
+            if (cur_total_hit_ratio > 0.0d && prev_total_hit_ratio > 0.0d && cur_total_hit_ratio <= prev_total_hit_ratio)
+            {
+                is_stable = true;
+                cache_hit_ratio = cur_total_hit_ratio;
+            }
+        }
+
+        return is_stable;
+    }
+
+    // (3) Aggregate cur-slot/stable client raw statistics, and dump per-slot/stable client aggregated statistics for TotalStatisticsTracker (invoked by main client thread ClientWrapper)
+
+    uint32_t ClientStatisticsTracker::aggregateAndDump(const std::string& filepath) const
+    {
+        // TODO: END HERE
+
         std::string tmp_filepath = checkFilepathForDump_(filepath);
 
         // Create and open a binary file for per-client statistics
@@ -693,17 +716,17 @@ namespace covered
         return perclientworker_writecnts_bytes;
     }
 
-    // For intermediate client raw statistics
+    // For cur-slot client raw statistics
 
-    ClientRawStatistics* ClientStatisticsTracker::getIntermediateClientRawStatisticsPtr_(const uint32_t& slot_idx)
+    ClientRawStatistics* ClientStatisticsTracker::getCurslotClientRawStatisticsPtr_(const uint32_t& slot_idx)
     {
         if (allow_update_)
         {
-            assert(intermediate_client_raw_statistics_ptr_list_.size() > 0);
-            uint32_t intermediate_client_raw_statistics_idx = slot_idx % intermediate_client_raw_statistics_ptr_list_.size();
-            assert(intermediate_client_raw_statistics_idx >= 0 && intermediate_client_raw_statistics_idx < intermediate_client_raw_statistics_ptr_list_.size());
+            assert(curslot_client_raw_statistics_ptr_list_.size() > 0);
+            uint32_t curslot_client_raw_statistics_idx = slot_idx % curslot_client_raw_statistics_ptr_list_.size();
+            assert(curslot_client_raw_statistics_idx >= 0 && curslot_client_raw_statistics_idx < curslot_client_raw_statistics_ptr_list_.size());
 
-            return intermediate_client_raw_statistics_ptr_list_[intermediate_client_raw_statistics_idx];
+            return curslot_client_raw_statistics_ptr_list_[curslot_client_raw_statistics_idx];
         }
         else
         {
@@ -711,17 +734,17 @@ namespace covered
         }
     }
 
-    void ClientStatisticsTracker::intermediateSlotSwitchBarrier_() const
+    void ClientStatisticsTracker::curslotSwitchBarrier_() const
     {
-        assert(perclientworker_intermediate_update_statuses_ != NULL);
+        assert(perclientworker_curslot_update_statuses_ != NULL);
 
-        uint64_t prev_perclientworker_intermediate_update_statuses[perclient_workercnt_];
-        memset(prev_perclientworker_intermediate_update_statuses, 0, perclient_workercnt_ * sizeof(uint64_t));
+        uint64_t prev_perclientworker_curslot_update_statuses[perclient_workercnt_];
+        memset(prev_perclientworker_curslot_update_statuses, 0, perclient_workercnt_ * sizeof(uint64_t));
 
-        // Get previous intermediate update statuses
+        // Get previous cur-slot update statuses
         for (uint32_t i = 0; i < perclient_workercnt_; i++)
         {
-            prev_perclientworker_intermediate_update_statuses[i] = perclientworker_intermediate_update_statuses_[i].load(Util::LOAD_CONCURRENCY_ORDER);
+            prev_perclientworker_curslot_update_statuses[i] = perclientworker_curslot_update_statuses_[i].load(Util::LOAD_CONCURRENCY_ORDER);
         }
 
         // Wait all client workers to realize the next time slot
@@ -729,11 +752,11 @@ namespace covered
         {
             while (true)
             {
-                if (prev_perclientworker_intermediate_update_statuses[i] < perclientworker_intermediate_update_statuses_[i].load(Util::LOAD_CONCURRENCY_ORDER)) // Client worker has updated intermediate raw statistics for at least one response after switching time slot
+                if (prev_perclientworker_curslot_update_statuses[i] < perclientworker_curslot_update_statuses_[i].load(Util::LOAD_CONCURRENCY_ORDER)) // Client worker has updated cur-slot raw statistics for at least one response after switching time slot
                 {
                     break;
                 }
-                else if (perclientworker_intermediate_update_flags_[i].load(Util::LOAD_CONCURRENCY_ORDER) == false) // Client worker is NOT updating intermediate raw statistics
+                else if (perclientworker_curslot_update_flags_[i].load(Util::LOAD_CONCURRENCY_ORDER) == false) // Client worker is NOT updating cur-slot raw statistics
                 {
                     break;
                 }
@@ -749,12 +772,12 @@ namespace covered
     {
         if (allow_update_)
         {
-            assert(perclientworker_intermediate_update_statuses_ != NULL);
+            assert(perclientworker_curslot_update_statuses_ != NULL);
 
-            assert(intermediate_client_raw_statistics_ptr_list_.size() > 0);
-            for (uint32_t i = 0; i < intermediate_client_raw_statistics_ptr_list_.size(); i++)
+            assert(curslot_client_raw_statistics_ptr_list_.size() > 0);
+            for (uint32_t i = 0; i < curslot_client_raw_statistics_ptr_list_.size(); i++)
             {
-                assert(intermediate_client_raw_statistics_ptr_list_[i] != NULL);
+                assert(curslot_client_raw_statistics_ptr_list_[i] != NULL);
             }
 
             assert(stable_client_raw_statistics_ptr_ != NULL);

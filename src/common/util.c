@@ -32,7 +32,7 @@ namespace covered
     std::memory_order Util::STORE_CONCURRENCY_ORDER = std::memory_order_release;
     std::memory_order Util::RMW_CONCURRENCY_ORDER = std::memory_order_acq_rel;
     // Workflow control
-    const unsigned int Util::SLEEP_INTERVAL_US = 1 * 1000 * 1000; // 1s
+    //const unsigned int Util::SLEEP_INTERVAL_US = 1 * 1000 * 1000; // 1s
     // Workload generation
     const uint32_t Util::KVPAIR_GENERATION_SEED = 0;
     // Time measurement

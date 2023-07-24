@@ -1,6 +1,6 @@
 {
     "client_ipstrs": ["127.0.0.1"],
-    "client_intermediate_raw_statistics_slot_interval_sec": 1,
+    "client_raw_statistics_slot_interval_sec": 1,
     "client_worker_recvrsp_startport": 4100,
     "cloud_ipstr": "127.0.0.1",
     "cloud_recvreq_startport": 4200,

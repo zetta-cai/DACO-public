@@ -41,6 +41,23 @@ namespace covered
         return total_reqcnt_;
     }
 
+    double AggregatedStatisticsBase::getLocalHitRatio() const
+    {
+        double local_hit_ratio = static_cast<double>(total_local_hitcnt_) / static_cast<double>(total_reqcnt_);
+        return local_hit_ratio;
+    }
+
+    double AggregatedStatisticsBase::getCooperativeHitRatio() const
+    {
+        double cooperative_hit_ratio = static_cast<double>(total_cooperative_hitcnt_) / static_cast<double>(total_reqcnt_);
+        return cooperative_hit_ratio;
+    }
+    
+    double AggregatedStatisticsBase::getTotalHitRatio() const
+    {
+        return getLocalHitRatio() + getCooperativeHitRatio();
+    }
+
     // Get aggregate statistics related with latency
 
     uint32_t AggregatedStatisticsBase::getAvgLatency() const

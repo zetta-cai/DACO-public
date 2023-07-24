@@ -18,8 +18,8 @@ namespace covered
         ClientRawStatistics(uint32_t perclient_workercnt);
         ~ClientRawStatistics();
 
-        friend class ClientStatisticsTracker; // To update intermediate/stable client raw statistics of client workers
-        friend class ClientAggregatedStatistics; // To aggregate intermediate/stable client raw statistics of client workers
+        friend class ClientStatisticsTracker; // To update cur-slot/stable client raw statistics of client workers
+        friend class ClientAggregatedStatistics; // To aggregate cur-slot/stable client raw statistics of client workers
     private:
         static const std::string kClassName;
 
