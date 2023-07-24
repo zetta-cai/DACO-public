@@ -66,7 +66,7 @@ namespace covered
 
         // (2) For ConcurrentHashtable
 
-        uint32_t getSizeForCapacity() const;
+        uint64_t getSizeForCapacity() const;
         bool call(const std::string& function_name, void* param_ptr);
         void constCall(const std::string& function_name, void* param_ptr) const;
 

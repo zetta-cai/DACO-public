@@ -1,5 +1,5 @@
 /*
- * ClientAggregatedStatistics: store aggregated statistics of a client (aggregate ClientRawStatistics of client workers in a client).
+ * ClientAggregatedStatistics: store client aggregated statistics (aggregate ClientRawStatistics of client workers in a client).
  *
  * NOTE: ClientAggregatedStatistics aggregate latency statistics accurately based on the latency histogram of the client.
  *

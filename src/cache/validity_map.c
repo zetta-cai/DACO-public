@@ -34,7 +34,7 @@ namespace covered
 
     // (2) For ConcurrentHashtable
 
-    uint32_t ValidityFlag::getSizeForCapacity() const
+    uint64_t ValidityFlag::getSizeForCapacity() const
     {
         return sizeof(bool);
     }
@@ -118,10 +118,10 @@ namespace covered
         return;
     }
 
-    uint32_t ValidityMap::getSizeForCapacity() const
+    uint64_t ValidityMap::getSizeForCapacity() const
     {
         // NOTE: we do NOT count key size of validity_map_, as the size of keys cached by closest edge node has been counted by the corresponding local edge cache (e.g., LruCacheWrapper::getInternal_())
-        uint32_t size = perkey_validity_.getTotalValueSizeForCapcity();
+        uint64_t size = perkey_validity_.getTotalValueSizeForCapcity();
         return size;
     }
 }

@@ -233,15 +233,15 @@ namespace covered
 
     // (4) Other functions
 
-    uint32_t CacheWrapper::getSizeForCapacity() const
+    uint64_t CacheWrapper::getSizeForCapacity() const
     {
         checkPointers_();
 
         // No need to acquire a read lock due to no key provided and not critical for size
         
-        uint32_t local_edge_cache_size = local_cache_ptr_->getSizeForCapacity();
-        uint32_t validity_map_size = validity_map_ptr_->getSizeForCapacity();
-        uint32_t total_size = local_edge_cache_size + validity_map_size;
+        uint64_t local_edge_cache_size = local_cache_ptr_->getSizeForCapacity();
+        uint64_t validity_map_size = validity_map_ptr_->getSizeForCapacity();
+        uint64_t total_size = local_edge_cache_size + validity_map_size;
         return total_size;
     }
 

@@ -26,7 +26,7 @@ namespace covered
         
         // NOTE: set NodeParamBase::node_initialized_ after all time-consuming initialization in constructor and start()
         
-        CloudWrapper(const std::string& cloud_storage, const uint32_t& propagation_latency_edgecloud, CloudParam* cloud_param_ptr);
+        CloudWrapper(const std::string& cloud_storage, const uint32_t& propagation_latency_edgecloud_us, CloudParam* cloud_param_ptr);
         ~CloudWrapper();
 
         void start();

@@ -32,26 +32,26 @@ namespace covered
         // For workload name
         static const std::string FACEBOOK_WORKLOAD_NAME; // Workload generator type
 
-        static void setParameters(const std::string& main_class_name, const bool& is_single_node, const std::string& cache_name, const uint32_t& capacity_bytes, const uint32_t& clientcnt, const std::string& cloud_storage, const std::string& config_filepath, const bool& is_debug, const double& duration, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& percacheserver_workercnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge, const uint32_t& propagation_latency_crossedge, const uint32_t& propagation_latency_edgecloud, const bool& track_event, const std::string& workload_name);
+        static void setParameters(const std::string& main_class_name, const bool& is_single_node, const std::string& cache_name, const uint64_t& capacity_bytes, const uint32_t& clientcnt, const std::string& cloud_storage, const std::string& config_filepath, const bool& is_debug, const double& duration_sec, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& percacheserver_workercnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge_us, const uint32_t& propagation_latency_crossedge_us, const uint32_t& propagation_latency_edgecloud_us, const bool& track_event, const std::string& workload_name);
 
         static std::string getMainClassName();
         static bool isSingleNode();
         static std::string getCacheName();
-        static uint32_t getCapacityBytes();
+        static uint64_t getCapacityBytes();
         static uint32_t getClientcnt();
         static std::string getCloudStorage();
         static std::string getConfigFilepath();
         static bool isDebug();
-        static double getDuration();
+        static uint32_t getDurationSec();
         static uint32_t getEdgecnt();
         static std::string getHashName();
         static uint32_t getKeycnt();
         static uint32_t getOpcnt();
         static uint32_t getPercacheserverWorkercnt();
         static uint32_t getPerclientWorkercnt();
-        static uint32_t getPropagationLatencyClientedge();
-        static uint32_t getPropagationLatencyCrossedge();
-        static uint32_t getPropagationLatencyEdgecloud();
+        static uint32_t getPropagationLatencyClientedgeUs();
+        static uint32_t getPropagationLatencyCrossedgeUs();
+        static uint32_t getPropagationLatencyEdgecloudUs();
         static bool isTrackEvent();
         static std::string getWorkloadName();
 
@@ -73,21 +73,21 @@ namespace covered
         
         static bool is_single_node_;
         static std::string cache_name_;
-        static uint32_t capacity_bytes_;
+        static uint64_t capacity_bytes_;
         static uint32_t clientcnt_;
         static std::string cloud_storage_;
         static std::string config_filepath_;
         static bool is_debug_;
-        static double duration_;
+        static uint32_t duration_sec_;
         static uint32_t edgecnt_;
         static std::string hash_name_;
         static uint32_t keycnt_;
         static uint32_t opcnt_;
         static uint32_t percacheserver_workercnt_;
         static uint32_t perclient_workercnt_;
-        static uint32_t propagation_latency_clientedge_; // 1/2 RTT between client and edge (bidirectional link)
-        static uint32_t propagation_latency_crossedge_; // 1/2 RTT between edge and neighbor (bidirectional link)
-        static uint32_t propagation_latency_edgecloud_; // 1/2 RTT between edge and cloud (bidirectional link)
+        static uint32_t propagation_latency_clientedge_us_; // 1/2 RTT between client and edge (bidirectional link)
+        static uint32_t propagation_latency_crossedge_us_; // 1/2 RTT between edge and neighbor (bidirectional link)
+        static uint32_t propagation_latency_edgecloud_us_; // 1/2 RTT between edge and cloud (bidirectional link)
         static bool track_event_;
         static std::string workload_name_;
     };

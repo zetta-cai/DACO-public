@@ -27,7 +27,7 @@ namespace covered
 
         // NOTE: set NodeParamBase::node_initialized_ after all time-consuming initialization in constructor and start()
         
-        EdgeWrapper(const std::string& cache_name, const uint32_t& capacity_bytes, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& percacheserver_workercnt, const uint32_t& propagation_latency_clientedge, const uint32_t& propagation_latency_crossedge, const uint32_t& propagation_latency_edgecloud, EdgeParam* edge_param_ptr);
+        EdgeWrapper(const std::string& cache_name, const uint32_t& capacity_bytes, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& percacheserver_workercnt, const uint32_t& propagation_latency_clientedge_us, const uint32_t& propagation_latency_crossedge_us, const uint32_t& propagation_latency_edgecloud_us, EdgeParam* edge_param_ptr);
         virtual ~EdgeWrapper();
 
         void start();
@@ -49,7 +49,7 @@ namespace covered
         static void* launchCacheServer_(void* edge_wrapper_ptr);
         static void* launchInvalidationServer_(void* edge_wrapper_ptr);
 
-        uint32_t getSizeForCapacity_() const;
+        uint64_t getSizeForCapacity_() const;
 
         // (1) Utility functions
 
@@ -79,7 +79,7 @@ namespace covered
 
         // Const shared variables
         const std::string cache_name_; // Come from Param
-        const uint32_t capacity_bytes_; // Come from Param
+        const uint64_t capacity_bytes_; // Come from Param
         const uint32_t edgecnt_; // Come from Param
         const uint32_t percacheserver_workercnt_; // Come from Param
         EdgeParam* edge_param_ptr_; // Thread safe

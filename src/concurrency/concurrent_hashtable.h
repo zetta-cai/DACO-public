@@ -38,12 +38,12 @@ namespace covered
         void constCallIfExist(const Key& key, bool& is_exist, const std::string& function_name, void* param_ptr) const; // Const call value.function_name if key exists
         void eraseIfExist(const Key& key, bool& is_exist); // Erase if key exists
 
-        uint32_t getTotalKeySizeForCapcity() const;
-        uint32_t getTotalValueSizeForCapcity() const;
+        uint64_t getTotalKeySizeForCapcity() const;
+        uint64_t getTotalValueSizeForCapcity() const;
     private:
         static const std::string kClassName;
 
-        void updateTotalValueSize_(uint32_t current_value_size, uint32_t original_value_size);
+        void updateTotalValueSize_(uint64_t current_value_size, uint64_t original_value_size);
 
         // Const shared varaibles
         std::string instance_name_;
@@ -54,8 +54,8 @@ namespace covered
         std::vector<std::unordered_map<Key, V, KeyHasher>> hashtables_;
 
         // NOn-const shared variables (thread safe)
-        std::atomic<uint32_t> total_key_size_;
-        std::atomic<uint32_t> total_value_size_;
+        std::atomic<uint64_t> total_key_size_;
+        std::atomic<uint64_t> total_value_size_;
     };
 }
 

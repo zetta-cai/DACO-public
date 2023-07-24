@@ -48,7 +48,7 @@ namespace covered
 
         // (3) Other functions
 
-        uint32_t getSizeForCapacity() const;
+        uint64_t getSizeForCapacity() const;
     private:
         static const std::string kClassName;
 

@@ -142,7 +142,7 @@ int main(int argc, char **argv) {
 
     // (5.3) Count down duration
 
-    const double duration = covered::Param::getDuration();
+    const uint32_t duration_sec = covered::Param::getDurationSec();
     struct timespec start_timestamp = covered::Util::getCurrentTimespec();
     while (true)
     {
@@ -150,7 +150,7 @@ int main(int argc, char **argv) {
 
         struct timespec end_timestamp = covered::Util::getCurrentTimespec();
         double delta_time = covered::Util::getDeltaTimeUs(end_timestamp, start_timestamp);
-        if (delta_time >= duration * 1000 * 1000)
+        if (delta_time >= static_cast<double>(duration_sec * 1000 * 1000))
         {
             break;
         }

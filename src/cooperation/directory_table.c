@@ -160,11 +160,11 @@ namespace covered
         return;
     }
 
-    uint32_t DirectoryTable::getSizeForCapacity() const
+    uint64_t DirectoryTable::getSizeForCapacity() const
     {
         // NOTE: note that CacheWrapperBase counts the size of keys cached for local edge cache as closest edge node, so we still need to count the size of keys managed for cooperation as beacon edge node
         // NOTE: as we have counted the size of keys for cooperation, other structures (e.g., BlockTracker) does NOT need to count key sizes again
-        uint32_t size = directory_hashtable_.getTotalKeySizeForCapcity() + directory_hashtable_.getTotalValueSizeForCapcity();
+        uint64_t size = directory_hashtable_.getTotalKeySizeForCapcity() + directory_hashtable_.getTotalValueSizeForCapcity();
 
         return size;
     }

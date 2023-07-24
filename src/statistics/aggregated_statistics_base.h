@@ -1,5 +1,5 @@
 /*
- * AggregatedStatisticsBase: store aggregated statistics.
+ * AggregatedStatisticsBase: store client/total aggregated statistics.
  *
  * NOTE: AggregatedStatisticsBase does NOT support online updates.
  * 

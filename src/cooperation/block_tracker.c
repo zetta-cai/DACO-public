@@ -159,10 +159,10 @@ namespace covered
 
     // (4) Get size for capacity check
 
-    uint32_t BlockTracker::getSizeForCapacity() const
+    uint64_t BlockTracker::getSizeForCapacity() const
     {
         // NOTE: we do NOT count key size in BlockTracker, as the size of keys managed by beacon edge node has been counted by DirectoryTable
-        uint32_t size = perkey_msimetadata_.getTotalValueSizeForCapcity();
+        uint64_t size = perkey_msimetadata_.getTotalValueSizeForCapcity();
 
         return size;
     }

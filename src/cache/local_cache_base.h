@@ -46,7 +46,7 @@ namespace covered
         // (4) Other functions
         
         // In units of bytes
-        virtual uint32_t getSizeForCapacity() const = 0; // Get size of data and metadata for local edge cache
+        virtual uint64_t getSizeForCapacity() const = 0; // Get size of data and metadata for local edge cache
 
         
     private:

@@ -543,8 +543,8 @@ namespace covered
     {
         std::ostringstream oss;
         // NOTE: NOT consider --cloud_storage, --config_file, --debug, and --track_even
-        // Example: singlenode_covered_capacitymb1000_clientcnt1_duration10_edgecnt1_hashnamemmh3_keycnt1000000_opcnt1000000_percacheserverworkercnt1_perclientworkercnt1_propagation100010000100000_facebook
-        oss << (Param::isSingleNode()?"singlenode":"multinode") << "_" << Param::getCacheName() << "_capacitymb" << Param::getCapacityBytes() / 1000 << "_clientcnt" << Param::getClientcnt() << "_duration" << Param::getDuration() << "_edgecnt" << Param::getEdgecnt() << "_hashname" << Param::getHashName() << "_keycnt" << Param::getKeycnt() << "_opcnt" << Param::getOpcnt() << "_percacheserverworkercnt" << Param::getPercacheserverWorkercnt() << "_perclientworkercnt" << Param::getPerclientWorkercnt() << "_propagation" << Param::getPropagationLatencyClientedge() << Param::getPropagationLatencyCrossedge() << Param::getPropagationLatencyEdgecloud() << "_" << Param::getWorkloadName();
+        // Example: singlenode_covered_capacitymb1000_clientcnt1_durationsec10_edgecnt1_hashnamemmh3_keycnt1000000_opcnt1000000_percacheserverworkercnt1_perclientworkercnt1_propagationus100010000100000_facebook
+        oss << (Param::isSingleNode()?"singlenode":"multinode") << "_" << Param::getCacheName() << "_capacitymb" << Param::getCapacityBytes() / 1000 / 1000 << "_clientcnt" << Param::getClientcnt() << "_durationsec" << Param::getDurationSec() << "_edgecnt" << Param::getEdgecnt() << "_hashname" << Param::getHashName() << "_keycnt" << Param::getKeycnt() << "_opcnt" << Param::getOpcnt() << "_percacheserverworkercnt" << Param::getPercacheserverWorkercnt() << "_perclientworkercnt" << Param::getPerclientWorkercnt() << "_propagationus" << Param::getPropagationLatencyClientedgeUs() << Param::getPropagationLatencyCrossedgeUs() << Param::getPropagationLatencyEdgecloudUs() << "_" << Param::getWorkloadName();
         std::string infixstr = oss.str();
         return infixstr;
     }
@@ -640,6 +640,16 @@ namespace covered
     }
 
     void Util::initializeAtomicArray(std::atomic<uint32_t>* atomic_array, const uint32_t& array_size, const uint32_t& default_value)
+    {
+        assert(atomic_array != NULL);
+        for (uint32_t i = 0; i < array_size; i++)
+        {
+            atomic_array[i].store(default_value, Util::STORE_CONCURRENCY_ORDER);
+        }
+        return;
+    }
+
+    void Util::initializeAtomicArray(std::atomic<uint64_t>* atomic_array, const uint32_t& array_size, const uint64_t& default_value)
     {
         assert(atomic_array != NULL);
         for (uint32_t i = 0; i < array_size; i++)

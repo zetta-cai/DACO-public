@@ -108,39 +108,51 @@ namespace covered
         // Current worker thread start to issue requests and receive responses
         while (client_param_ptr->isNodeRunning())
         {
-            // Generate key-value request based on a specific workload
-            WorkloadItem workload_item = workload_generator_ptr->generateItem(*client_worker_item_randgen_ptr_);
-
-            // TMPDEBUG
-            //WorkloadItem workload_item(Key("123"), Value(200), WorkloadItemType::kWorkloadItemGet);
-            //if (client_param_ptr->getClientIdx() != 0)
-            //{
-            //    sleep(0.5);
-            //}
-
-            DynamicArray local_response_msg_payload;
-            uint32_t rtt_us = 0;
-            bool is_finish = false;
-
-            // Issue the workload item to the closest edge node
-            is_finish = issueItemToEdge_(workload_item, local_response_msg_payload, rtt_us);
-            if (is_finish) // Check is_finish
+            // Get current phase (warmph or stresstest)
+            bool is_warmup_phase = false;
+            bool is_stresstest_phase = false;
+            is_warmup_phase = client_param_ptr->isWarmupPhase();
+            if (!is_warmup_phase)
             {
-                continue; // Go to check if client is still running
+                is_stresstest_phase = client_param_ptr->isStresstestPhase();
             }
 
-            // Process local response message to update statistics
-            processLocalResponse_(local_response_msg_payload, rtt_us);
+            if (is_warmup_phase || is_stresstest_phase)
+            {
+                // Generate key-value request based on a specific workload
+                WorkloadItem workload_item = workload_generator_ptr->generateItem(*client_worker_item_randgen_ptr_);
 
-            // TMPDEBUG
-            //is_finish = issueItemToEdge_(workload_item, local_response_msg_payload, rtt_us);
-            //if (is_finish) // Check is_finish
-            //{
-            //    continue; // Go to check if client is still running
-            //}
-            //processLocalResponse_(local_response_msg_payload, rtt_us);
+                // TMPDEBUG
+                //WorkloadItem workload_item(Key("123"), Value(200), WorkloadItemType::kWorkloadItemGet);
+                //if (client_param_ptr->getClientIdx() != 0)
+                //{
+                //    sleep(0.5);
+                //}
 
-            //break; // TMPDEBUG
+                DynamicArray local_response_msg_payload;
+                uint32_t rtt_us = 0;
+                bool is_finish = false;
+
+                // Issue the workload item to the closest edge node
+                is_finish = issueItemToEdge_(workload_item, local_response_msg_payload, rtt_us);
+                if (is_finish) // Check is_finish
+                {
+                    continue; // Go to check if client is still running
+                }
+
+                // Process local response message to update statistics
+                processLocalResponse_(local_response_msg_payload, rtt_us, is_stresstest_phase);
+
+                // TMPDEBUG
+                //is_finish = issueItemToEdge_(workload_item, local_response_msg_payload, rtt_us);
+                //if (is_finish) // Check is_finish
+                //{
+                //    continue; // Go to check if client is still running
+                //}
+                //processLocalResponse_(local_response_msg_payload, rtt_us);
+
+                //break; // TMPDEBUG
+            }
         }
 
         return;
@@ -202,7 +214,7 @@ namespace covered
         return is_finish;
     }
 
-    void ClientWorkerWrapper::processLocalResponse_(const DynamicArray& local_response_msg_payload, const uint32_t& rtt_us)
+    void ClientWorkerWrapper::processLocalResponse_(const DynamicArray& local_response_msg_payload, const uint32_t& rtt_us, const bool& is_stresstest)
     {
         checkPointers_();
         ClientWrapper* tmp_client_wrapper_ptr = client_worker_param_ptr_->getClientWrapperPtr();
@@ -261,17 +273,17 @@ namespace covered
         {
             case Hitflag::kLocalHit:
             {
-                client_statistics_tracker_ptr_->updateLocalHitcnt(local_client_worker_idx);
+                client_statistics_tracker_ptr_->updateLocalHitcnt(local_client_worker_idx, is_stresstest);
                 break;
             }
             case Hitflag::kCooperativeHit:
             {
-                client_statistics_tracker_ptr_->updateCooperativeHitcnt(local_client_worker_idx);
+                client_statistics_tracker_ptr_->updateCooperativeHitcnt(local_client_worker_idx, is_stresstest);
                 break;
             }
             case Hitflag::kGlobalMiss:
             {
-                client_statistics_tracker_ptr_->updateReqcnt(local_client_worker_idx);
+                client_statistics_tracker_ptr_->updateReqcnt(local_client_worker_idx, is_stresstest);
                 break;
             }
             default:
@@ -284,16 +296,16 @@ namespace covered
         }
 
         // Update latency statistics for the local client
-        client_statistics_tracker_ptr_->updateLatency(rtt_us);
+        client_statistics_tracker_ptr_->updateLatency(rtt_us, is_stresstest);
 
         // Update read-write ratio statistics for the local client
         if (!is_write)
         {
-            client_statistics_tracker_ptr_->updateReadcnt(local_client_worker_idx);
+            client_statistics_tracker_ptr_->updateReadcnt(local_client_worker_idx, is_stresstest);
         }
         else
         {
-            client_statistics_tracker_ptr_->updateWritecnt(local_client_worker_idx);
+            client_statistics_tracker_ptr_->updateWritecnt(local_client_worker_idx, is_stresstest);
         }
 
         #ifdef DEBUG_CLIENT_WORKER_WRAPPER

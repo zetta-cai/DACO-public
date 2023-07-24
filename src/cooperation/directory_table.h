@@ -34,7 +34,7 @@ namespace covered
         void invalidateAllDirinfoForKeyIfExist(const Key& key, dirinfo_set_t& all_dirinfo); // Invalidate all dirinfos only if key exists (NOT add an empty direntry)
         void validateDirinfoForKeyIfExist(const Key& key, const DirectoryInfo& directory_info); // Validate only if key and dirinfo exist (NOT add a valid dirinfo)
 
-        uint32_t getSizeForCapacity() const;
+        uint64_t getSizeForCapacity() const;
     private:
         typedef ConcurrentHashtable<DirectoryEntry> dirinfo_table_t;
 

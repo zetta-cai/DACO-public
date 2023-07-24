@@ -28,7 +28,7 @@ namespace covered
         uint32_t getBufferSize() const;
         T getDefaultElement() const;
 
-        //uint32_t getSizeForCapacity() const;
+        //uint64_t getSizeForCapacity() const;
 
         // NOTE: if you want to use getElementsForDebug() for debugging under multiple providers/readers, providers/readers of ring buffer should be protected by read-write locking
         //std::vector<T> getElementsForDebug() const;

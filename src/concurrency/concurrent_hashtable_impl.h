@@ -110,12 +110,12 @@ namespace covered
             tmp_hashtable.insert(std::pair<Key, V>(key, value));
             is_exist = false;
 
-            total_key_size_.fetch_add(key.getKeystr().length(), Util::RMW_CONCURRENCY_ORDER);
-            total_value_size_.fetch_add(value.getSizeForCapacity(), Util::RMW_CONCURRENCY_ORDER);
+            total_key_size_.fetch_add(static_cast<uint64_t>(key.getKeystr()).length(), Util::RMW_CONCURRENCY_ORDER);
+            total_value_size_.fetch_add(static_cast<uint64_t>(value.getSizeForCapacity()), Util::RMW_CONCURRENCY_ORDER);
         }
         else // key exists
         {
-            uint32_t original_value_size = iter->second.getSizeForCapacity();
+            uint64_t original_value_size = iter->second.getSizeForCapacity();
 
             // Update value
             iter->second = value;
@@ -152,12 +152,12 @@ namespace covered
             tmp_hashtable.insert(std::pair<Key, V>(key, value));
             is_exist = false;
 
-            total_key_size_.fetch_add(key.getKeystr().length(), Util::RMW_CONCURRENCY_ORDER);
-            total_value_size_.fetch_add(value.getSizeForCapacity(), Util::RMW_CONCURRENCY_ORDER);
+            total_key_size_.fetch_add(static_cast<uint64_t>(key.getKeystr().length()), Util::RMW_CONCURRENCY_ORDER);
+            total_value_size_.fetch_add(static_cast<uint64_t>(value.getSizeForCapacity()), Util::RMW_CONCURRENCY_ORDER);
         }
         else // key exists
         {
-            uint32_t original_value_size = iter->second.getSizeForCapacity();
+            uint64_t original_value_size = iter->second.getSizeForCapacity();
 
             // Call value's function
             bool is_erase = iter->second.call(function_name, param_ptr);
@@ -195,7 +195,7 @@ namespace covered
 
         if (iter != tmp_hashtable.end()) // key exists
         {
-            uint32_t original_value_size = iter->second.getSizeForCapacity();
+            uint64_t original_value_size = iter->second.getSizeForCapacity();
 
             // Call value's function
             bool is_erase = iter->second.call(function_name, param_ptr);
@@ -208,7 +208,7 @@ namespace covered
             {
                 tmp_hashtable.erase(iter);
 
-                total_key_size_.fetch_sub(key.getKeystr().length(), Util::RMW_CONCURRENCY_ORDER);
+                total_key_size_.fetch_sub(static_cast<uint64_t>(key.getKeystr().length()), Util::RMW_CONCURRENCY_ORDER);
                 total_value_size_.fetch_sub(original_value_size, Util::RMW_CONCURRENCY_ORDER);
             }
         }
@@ -271,12 +271,12 @@ namespace covered
         typename std::unordered_map<Key, V, KeyHasher>::iterator iter = tmp_hashtable.find(key);
         if (iter != tmp_hashtable.end()) // key exists
         {
-            uint32_t original_value_size = iter->second.getSizeForCapacity();
+            uint64_t original_value_size = iter->second.getSizeForCapacity();
 
             tmp_hashtable.erase(iter);
             is_exist = true;
 
-            total_key_size_.fetch_sub(key.getKeystr().length(), Util::RMW_CONCURRENCY_ORDER);
+            total_key_size_.fetch_sub(static_cast<uint64_t>(key.getKeystr().length()), Util::RMW_CONCURRENCY_ORDER);
             total_value_size_.fetch_sub(original_value_size, Util::RMW_CONCURRENCY_ORDER);
         }
         else // key NOT exist
@@ -291,19 +291,19 @@ namespace covered
     }
 
     template<class V>
-    uint32_t ConcurrentHashtable<V>::getTotalKeySizeForCapcity() const
+    uint64_t ConcurrentHashtable<V>::getTotalKeySizeForCapcity() const
     {
         return total_key_size_.load(Util::LOAD_CONCURRENCY_ORDER);
     }
     
     template<class V>
-    uint32_t ConcurrentHashtable<V>::getTotalValueSizeForCapcity() const
+    uint64_t ConcurrentHashtable<V>::getTotalValueSizeForCapcity() const
     {
         return total_value_size_;
     }
 
     template<class V>
-    void ConcurrentHashtable<V>::updateTotalValueSize_(uint32_t current_value_size, uint32_t original_value_size)
+    void ConcurrentHashtable<V>::updateTotalValueSize_(uint64_t current_value_size, uint64_t original_value_size)
     {
         if (current_value_size >= original_value_size)
         {

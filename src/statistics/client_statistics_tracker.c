@@ -11,9 +11,11 @@
 
 namespace covered
 {
+    const uint32_t ClientStatisticsTracker::INTERMEDIATE_SLOT_CNT = 2;
+
     const std::string ClientStatisticsTracker::kClassName("ClientStatisticsTracker");
     
-    ClientStatisticsTracker::ClientStatisticsTracker(uint32_t perclient_workercnt, const uint32_t& client_idx) : allow_update_(true)
+    ClientStatisticsTracker::ClientStatisticsTracker(uint32_t perclient_workercnt, const uint32_t& client_idx, const uint32_t& intermediate_slot_cnt) : allow_update_(true), perclient_workercnt_(perclient_workercnt)
     {
         // (A) Const shared variables
 
@@ -22,46 +24,38 @@ namespace covered
         oss << kClassName << " client" << client_idx;
         instance_name_ = oss.str();
 
-        // (B) Non-const individual variables (latency_histogram_ is shared)
+        // (B) Non-const individual variables
 
-        // (B.1) For intermediate raw statistics
+        // (B.1) For intermediate client raw statistics
 
         cur_slot_idx_.store(0, Util::STORE_CONCURRENCY_ORDER);
 
-        // TODO: END HERE
+        perclientworker_intermediate_update_flags_ = new std::atomic<bool>[perclient_workercnt_];
+        assert(perclientworker_intermediate_update_flags_ != NULL);
+        Util::initializeAtomicArray(perclientworker_intermediate_update_flags_, perclient_workercnt_, false);
 
-        cur_perclientworker_local_hitcnts_ = new std::atomic<uint32_t>[perclient_workercnt];
-        Util::initializeAtomicArray(cur_perclientworker_local_hitcnts_, perclient_workercnt, 0);
+        perclientworker_intermediate_update_statuses_ = new std::atomic<uint64_t>[perclient_workercnt];
+        assert(perclientworker_intermediate_update_statuses_ != NULL);
+        Util::initializeAtomicArray(perclientworker_intermediate_update_statuses_, perclient_workercnt, 0);
 
-        perclientworker_cooperative_hitcnts_ = new std::atomic<uint32_t>[perclient_workercnt];
-        Util::initializeAtomicArray(perclientworker_cooperative_hitcnts_, perclient_workercnt, 0);
-
-        perclientworker_reqcnts_ = new std::atomic<uint32_t>[perclient_workercnt];
-        Util::initializeAtomicArray(perclientworker_reqcnts_, perclient_workercnt, 0);
-
-        latency_histogram_ = new std::atomic<uint32_t>[latency_histogram_size_];
-        assert(latency_histogram_ != NULL);
-        for (uint32_t i = 0; i < latency_histogram_size_; i++)
+        intermediate_client_raw_statistics_ptr_list_.resize(intermediate_slot_cnt);
+        for (uint32_t i = 0; i < intermediate_client_raw_statistics_ptr_list_.size(); i++)
         {
-            latency_histogram_[i].store(0, Util::STORE_CONCURRENCY_ORDER);
+            intermediate_client_raw_statistics_ptr_list_[i] = new ClientRawStatistics(perclient_workercnt);
+            assert(intermediate_client_raw_statistics_ptr_list_[i] != NULL);
         }
 
-        perclientworker_readcnts_ = new std::atomic<uint32_t>[perclient_workercnt];
-        assert(perclientworker_readcnts_ != NULL);
-        for (uint32_t i = 0; i < perclient_workercnt; i++)
-        {
-            perclientworker_readcnts_[i].store(0, Util::STORE_CONCURRENCY_ORDER);
-        }
+        // (B.2) For stable client raw statistics
 
-        perclientworker_writecnts_ = new std::atomic<uint32_t>[perclient_workercnt];
-        assert(perclientworker_writecnts_ != NULL);
-        for (uint32_t i = 0; i < perclient_workercnt; i++)
-        {
-            perclientworker_writecnts_[i].store(0, Util::STORE_CONCURRENCY_ORDER);
-        }
+        stable_client_raw_statistics_ptr_ = new ClientRawStatistics(perclient_workercnt);
+        assert(stable_client_raw_statistics_ptr_ != NULL);
+
+        // (C) For per-slot client aggregated statistics
+
+        perslot_client_aggregated_statistics_list_.resize(0);
     }
 
-    ClientStatisticsTracker::ClientStatisticsTracker(const std::string& filepath, const uint32_t& client_idx) : allow_update_(false)
+    ClientStatisticsTracker::ClientStatisticsTracker(const std::string& filepath, const uint32_t& client_idx) : allow_update_(false), perclient_workercnt_(perclient_workercnt)
     {
         // (A) Const shared variables
 
@@ -69,126 +63,230 @@ namespace covered
         std::ostringstream oss;
         oss << kClassName << " client" << client_idx;
         instance_name_ = oss.str();
-        
-        perclient_workercnt_ = 0;
-        latency_histogram_size_ = 0;
 
         // (B) Non-const individual variables (latency_histogram_ is shared)
 
-        // (B.1) For intermediate raw statistics
+        // (B.1) For intermediate client raw statistics
 
         cur_slot_idx_.store(0, Util::STORE_CONCURRENCY_ORDER);
 
-        perclientworker_local_hitcnts_ = NULL;
-        perclientworker_cooperative_hitcnts_ = NULL;
-        perclientworker_reqcnts_ = NULL;
+        perclientworker_intermediate_update_flags_ = NULL;
+        perclientworker_intermediate_update_statuses_ = NULL;
+        intermediate_client_raw_statistics_ptr_list_.resize(0);
 
-        latency_histogram_ = NULL;
+        // (B.2) For stable client raw statistics
 
-        perclientworker_readcnts_ = NULL;
-        perclientworker_writecnts_ = NULL;
+        stable_client_raw_statistics_ptr_ = NULL;
 
-        load_(filepath); // Load per-client statistics from binary file
+        // (C) For per-slot client aggregated statistics
+
+        perslot_client_aggregated_statistics_list_.resize(0);
+
+        load_(filepath); // Load client aggregated statistics from binary file
     }
 
     ClientStatisticsTracker::~ClientStatisticsTracker()
     {
-        assert(perclientworker_local_hitcnts_ != NULL);
-        delete[] perclientworker_local_hitcnts_;
-        perclientworker_local_hitcnts_ = NULL;
+        if (allow_update_)
+        {
+            assert(perclientworker_intermediate_update_flags_ != NULL);
+            delete[] perclientworker_intermediate_update_flags_;
+            perclientworker_intermediate_update_flags_ = NULL;
 
-        assert(perclientworker_cooperative_hitcnts_ != NULL);
-        delete[] perclientworker_cooperative_hitcnts_;
-        perclientworker_cooperative_hitcnts_ = NULL;
-        
-        assert(perclientworker_reqcnts_ != NULL);
-        delete[] perclientworker_reqcnts_;
-        perclientworker_reqcnts_ = NULL;
+            assert(perclientworker_intermediate_update_statuses_ != NULL);
+            delete[] perclientworker_intermediate_update_statuses_;
+            perclientworker_intermediate_update_statuses_ = NULL;
 
-        assert(latency_histogram_ != NULL);
-        delete[] latency_histogram_;
-        latency_histogram_ = NULL;
+            assert(intermediate_client_raw_statistics_ptr_list_.size() > 0);
+            for (uint32_t i = 0; i < intermediate_client_raw_statistics_ptr_list_.size(); i++)
+            {
+                assert(intermediate_client_raw_statistics_ptr_list_[i] != NULL);
+                delete intermediate_client_raw_statistics_ptr_list_[i];
+                intermediate_client_raw_statistics_ptr_list_[i] = NULL;
+            }
 
-        assert(perclientworker_readcnts_ != NULL);
-        delete[] perclientworker_readcnts_;
-        perclientworker_readcnts_ = NULL;
-
-        assert(perclientworker_writecnts_ != NULL);
-        delete[] perclientworker_writecnts_;
-        perclientworker_writecnts_ = NULL;
+            assert(stable_client_raw_statistics_ptr_ != NULL);
+            delete stable_client_raw_statistics_ptr_;
+            stable_client_raw_statistics_ptr_ = NULL;
+        }
     }
 
-    std::atomic<uint32_t>* ClientStatisticsTracker::getPerclientworkerReqcnts() const
-    {
-        return perclientworker_reqcnts_;
-    }
-    
-    std::atomic<uint32_t>* ClientStatisticsTracker::getLatencyHistogram() const
-    {
-        return latency_histogram_;
-    }
+    // (1) Update intermediate/stable client raw statistics (invoked by client workers)
 
-    void ClientStatisticsTracker::updateLocalHitcnt(const uint32_t& local_client_worker_idx)
+    void ClientStatisticsTracker::updateLocalHitcnt(const uint32_t& local_client_worker_idx, const bool& is_stresstest)
     {
-        assert(perclientworker_local_hitcnts_ != NULL);
-        assert(local_client_worker_idx < perclient_workercnt_);
+        checkPointers_();
+        assert(allow_update == true);
 
-        perclientworker_local_hitcnts_[local_client_worker_idx]++;
-        updateReqcnt(local_client_worker_idx);
+        perclientworker_intermediate_update_flags_[local_client_worker_idx].store(true, Util::STORE_CONCURRENCY_ORDER);
+
+        // Update intermediate client raw statistics
+        ClientRawStatistics* cur_intermediate_client_raw_statistics_ptr = getIntermediateClientRawStatisticsPtr_(cur_slot_idx_.load(Util::LOAD_CONCURRENCY_ORDER));
+        assert(cur_intermediate_client_raw_statistics_ptr != NULL);
+        cur_intermediate_client_raw_statistics_ptr->updateLocalHitcnt_();
+
+        perclientworker_intermediate_update_flags_[local_client_worker_idx].store(false, Util::STORE_CONCURRENCY_ORDER);
+        perclientworker_intermediate_update_statuses_[local_client_worker_idx]++;
+
+        // Update stable client raw statistics for stresstest phase
+        if (is_stresstest)
+        {
+            stable_client_raw_statistics_ptr_->updateLocalHitcnt_();
+        }
+
         return;
     }
 
     void ClientStatisticsTracker::updateCooperativeHitcnt(const uint32_t& local_client_worker_idx)
     {
-        assert(perclientworker_cooperative_hitcnts_ != NULL);
-        assert(local_client_worker_idx < perclient_workercnt_);
+        checkPointers_();
+        assert(allow_update == true);
 
-        perclientworker_cooperative_hitcnts_[local_client_worker_idx]++;
-        updateReqcnt(local_client_worker_idx);
+        perclientworker_intermediate_update_flags_[local_client_worker_idx].store(true, Util::STORE_CONCURRENCY_ORDER);
+
+        // Update intermediate client raw statistics
+        ClientRawStatistics* cur_intermediate_client_raw_statistics_ptr = getIntermediateClientRawStatisticsPtr_(cur_slot_idx_.load(Util::LOAD_CONCURRENCY_ORDER));
+        assert(cur_intermediate_client_raw_statistics_ptr != NULL);
+        cur_intermediate_client_raw_statistics_ptr->updateCooperativeHitcnt_();
+
+        perclientworker_intermediate_update_flags_[local_client_worker_idx].store(false, Util::STORE_CONCURRENCY_ORDER);
+        perclientworker_intermediate_update_statuses_[local_client_worker_idx]++;
+
+        // Update stable client raw statistics for stresstest phase
+        if (is_stresstest)
+        {
+            stable_client_raw_statistics_ptr_->updateCooperativeHitcnt_();
+        }
+
         return;
     }
 
     void ClientStatisticsTracker::updateReqcnt(const uint32_t& local_client_worker_idx)
     {
-        assert(perclientworker_reqcnts_ != NULL);
-        assert(local_client_worker_idx < perclient_workercnt_);
+        checkPointers_();
+        assert(allow_update == true);
 
-        perclientworker_reqcnts_[local_client_worker_idx]++;
+        perclientworker_intermediate_update_flags_[local_client_worker_idx].store(true, Util::STORE_CONCURRENCY_ORDER);
+
+        // Update intermediate client raw statistics
+        ClientRawStatistics* cur_intermediate_client_raw_statistics_ptr = getIntermediateClientRawStatisticsPtr_(cur_slot_idx_.load(Util::LOAD_CONCURRENCY_ORDER));
+        assert(cur_intermediate_client_raw_statistics_ptr != NULL);
+        cur_intermediate_client_raw_statistics_ptr->updateReqcnt_();
+
+        perclientworker_intermediate_update_flags_[local_client_worker_idx].store(false, Util::STORE_CONCURRENCY_ORDER);
+        perclientworker_intermediate_update_statuses_[local_client_worker_idx]++;
+
+        // Update stable client raw statistics for stresstest phase
+        if (is_stresstest)
+        {
+            stable_client_raw_statistics_ptr_->updateReqcnt_();
+        }
+        
         return;
     }
 
     void ClientStatisticsTracker::updateLatency(const uint32_t& latency_us)
     {
-        assert(latency_histogram_ != NULL);
+        checkPointers_();
+        assert(allow_update == true);
 
-        if (latency_us < latency_histogram_size_)
+        perclientworker_intermediate_update_flags_[local_client_worker_idx].store(true, Util::STORE_CONCURRENCY_ORDER);
+
+        // Update intermediate client raw statistics
+        ClientRawStatistics* cur_intermediate_client_raw_statistics_ptr = getIntermediateClientRawStatisticsPtr_(cur_slot_idx_.load(Util::LOAD_CONCURRENCY_ORDER));
+        assert(cur_intermediate_client_raw_statistics_ptr != NULL);
+        cur_intermediate_client_raw_statistics_ptr->updateLatency_();
+
+
+        perclientworker_intermediate_update_flags_[local_client_worker_idx].store(false, Util::STORE_CONCURRENCY_ORDER);
+        perclientworker_intermediate_update_statuses_[local_client_worker_idx]++;
+
+        // Update stable client raw statistics for stresstest phase
+        if (is_stresstest)
         {
-            latency_histogram_[latency_us]++;
+            stable_client_raw_statistics_ptr_->updateLatency_();
         }
-        else
-        {
-            latency_histogram_[latency_histogram_size_ - 1]++;
-        }
+        
         return;
     }
 
     void ClientStatisticsTracker::updateReadcnt(const uint32_t& local_client_worker_idx)
     {
-        assert(perclientworker_readcnts_ != NULL);
-        assert(local_client_worker_idx < perclient_workercnt_);
+        checkPointers_();
+        assert(allow_update == true);
 
-        perclientworker_readcnts_[local_client_worker_idx]++;
+        perclientworker_intermediate_update_flags_[local_client_worker_idx].store(true, Util::STORE_CONCURRENCY_ORDER);
+
+        // Update intermediate client raw statistics
+        ClientRawStatistics* cur_intermediate_client_raw_statistics_ptr = getIntermediateClientRawStatisticsPtr_(cur_slot_idx_.load(Util::LOAD_CONCURRENCY_ORDER));
+        assert(cur_intermediate_client_raw_statistics_ptr != NULL);
+        cur_intermediate_client_raw_statistics_ptr->updateReadcnt_();
+
+        perclientworker_intermediate_update_flags_[local_client_worker_idx].store(false, Util::STORE_CONCURRENCY_ORDER);
+        perclientworker_intermediate_update_statuses_[local_client_worker_idx]++;
+
+        // Update stable client raw statistics for stresstest phase
+        if (is_stresstest)
+        {
+            stable_client_raw_statistics_ptr_->updateReadcnt_();
+        }
+
         return;
     }
 
     void ClientStatisticsTracker::updateWritecnt(const uint32_t& local_client_worker_idx)
     {
-        assert(perclientworker_writecnts_ != NULL);
-        assert(local_client_worker_idx < perclient_workercnt_);
+        checkPointers_();
+        assert(allow_update == true);
 
-        perclientworker_writecnts_[local_client_worker_idx]++;
+        perclientworker_intermediate_update_flags_[local_client_worker_idx].store(true, Util::STORE_CONCURRENCY_ORDER);
+
+        // Update intermediate client raw statistics
+        ClientRawStatistics* cur_intermediate_client_raw_statistics_ptr = getIntermediateClientRawStatisticsPtr_(cur_slot_idx_.load(Util::LOAD_CONCURRENCY_ORDER));
+        assert(cur_intermediate_client_raw_statistics_ptr != NULL);
+        cur_intermediate_client_raw_statistics_ptr->updateWritecnt_();
+
+        perclientworker_intermediate_update_flags_[local_client_worker_idx].store(false, Util::STORE_CONCURRENCY_ORDER);
+        perclientworker_intermediate_update_statuses_[local_client_worker_idx]++;
+
+        // Update stable client raw statistics for stresstest phase
+        if (is_stresstest)
+        {
+            stable_client_raw_statistics_ptr_->updateWritecnt_();
+        }
+
         return;
     }
+
+    // (2) Switch time slot for intermediate client raw statistics (invoked by client thread ClientWrapper)
+
+    void ClientStatisticsTracker::switchIntermediateSlot()
+    {
+        checkPointers_();
+        assert(allow_update == true);
+
+        // Switch to update intermediate client raw statistics for the next time slot
+        const uint32_t current_slot_idx = cur_slot_idx_.load(Util::LOAD_CONCURRENCY_ORDER);
+        cur_slot_idx_++;
+
+        // Slot switch barrier to ensure that all client workers will realize the next time slot
+        intermediateSlotSwitchBarrier_();
+
+        // Aggregate client raw statistics of the current time slot
+        ClientRawStatistics* current_intermediate_client_raw_statistics_ptr = getIntermediateClientRawStatisticsPtr_(current_slot_idx);
+        assert(current_intermediate_client_raw_statistics_ptr != NULL);
+        ClientAggregatedStatistics tmp_client_aggregated_statistics(current_intermediate_client_raw_statistics_ptr);
+
+        // Update per-slot client aggregated statistics
+        perslot_client_aggregated_statistics_list_.push_back(tmp_client_aggregated_statistics);
+
+        // Clean for the current time slot to avoid the interferences of obselete statistics
+        current_intermediate_client_raw_statistics_ptr->clean();
+
+        return;
+    }
+
+    // (3) Dump client per-slot/stable aggregated statistics (invoked by main client thread ClientWrapper)
 
     // Dump per-client statistics for TotalStatisticsTracker
     uint32_t ClientStatisticsTracker::dump(const std::string& filepath) const
@@ -595,35 +693,72 @@ namespace covered
         return perclientworker_writecnts_bytes;
     }
 
-    // Get per-client statistics for aggregation
+    // For intermediate client raw statistics
 
-    std::atomic<uint32_t>* ClientStatisticsTracker::getPerclientworkerLocalHitcnts() const
+    ClientRawStatistics* ClientStatisticsTracker::getIntermediateClientRawStatisticsPtr_(const uint32_t& slot_idx)
     {
-        return perclientworker_local_hitcnts_;
-    }
-    
-    std::atomic<uint32_t>* ClientStatisticsTracker::getPerclientworkerCooperativeHitcnts() const
-    {
-        return perclientworker_cooperative_hitcnts_;
-    }
+        if (allow_update_)
+        {
+            assert(intermediate_client_raw_statistics_ptr_list_.size() > 0);
+            uint32_t intermediate_client_raw_statistics_idx = slot_idx % intermediate_client_raw_statistics_ptr_list_.size();
+            assert(intermediate_client_raw_statistics_idx >= 0 && intermediate_client_raw_statistics_idx < intermediate_client_raw_statistics_ptr_list_.size());
 
-    uint32_t ClientStatisticsTracker::getPerclientWorkercnt() const
-    {
-        return perclient_workercnt_;
-    }
-    
-    uint32_t ClientStatisticsTracker::getLatencyHistogramSize() const
-    {
-        return latency_histogram_size_;
+            return intermediate_client_raw_statistics_ptr_list_[intermediate_client_raw_statistics_idx];
+        }
+        else
+        {
+            return NULL;
+        }
     }
 
-    std::atomic<uint32_t>* ClientStatisticsTracker::getPerclientworkerReadcnts() const
+    void ClientStatisticsTracker::intermediateSlotSwitchBarrier_() const
     {
-        return perclientworker_readcnts_;
+        assert(perclientworker_intermediate_update_statuses_ != NULL);
+
+        uint64_t prev_perclientworker_intermediate_update_statuses[perclient_workercnt_];
+        memset(prev_perclientworker_intermediate_update_statuses, 0, perclient_workercnt_ * sizeof(uint64_t));
+
+        // Get previous intermediate update statuses
+        for (uint32_t i = 0; i < perclient_workercnt_; i++)
+        {
+            prev_perclientworker_intermediate_update_statuses[i] = perclientworker_intermediate_update_statuses_[i].load(Util::LOAD_CONCURRENCY_ORDER);
+        }
+
+        // Wait all client workers to realize the next time slot
+        for (uint32_t i = 0; i < perclient_workercnt_; i++)
+        {
+            while (true)
+            {
+                if (prev_perclientworker_intermediate_update_statuses[i] < perclientworker_intermediate_update_statuses_[i].load(Util::LOAD_CONCURRENCY_ORDER)) // Client worker has updated intermediate raw statistics for at least one response after switching time slot
+                {
+                    break;
+                }
+                else if (perclientworker_intermediate_update_flags_[i].load(Util::LOAD_CONCURRENCY_ORDER) == false) // Client worker is NOT updating intermediate raw statistics
+                {
+                    break;
+                }
+            }
+        }
+        
+        return;
     }
-    
-    std::atomic<uint32_t>* ClientStatisticsTracker::getPerclientworkerWritecnts() const
+
+    // Other utility functions
+
+    void ClientStatisticsTracker::checkPointers_() const
     {
-        return perclientworker_writecnts_;
+        if (allow_update_)
+        {
+            assert(perclientworker_intermediate_update_statuses_ != NULL);
+
+            assert(intermediate_client_raw_statistics_ptr_list_.size() > 0);
+            for (uint32_t i = 0; i < intermediate_client_raw_statistics_ptr_list_.size(); i++)
+            {
+                assert(intermediate_client_raw_statistics_ptr_list_[i] != NULL);
+            }
+
+            assert(stable_client_raw_statistics_ptr_ != NULL);
+        }
+        return;
     }
 }

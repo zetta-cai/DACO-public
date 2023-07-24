@@ -18,8 +18,8 @@ namespace covered
         ClientRawStatistics(uint32_t perclient_workercnt);
         ~ClientRawStatistics();
 
-        friend class ClientStatisticsTracker; // To update intermediate/stable raw statistics of client workers
-        friend class ClientAggregatedStatistics; // To aggregate per-client-worker raw statistics for a client
+        friend class ClientStatisticsTracker; // To update intermediate/stable client raw statistics of client workers
+        friend class ClientAggregatedStatistics; // To aggregate intermediate/stable client raw statistics of client workers
     private:
         static const std::string kClassName;
 
@@ -35,7 +35,10 @@ namespace covered
         void updateReadcnt_(const uint32_t& local_client_worker_idx);
         void updateWritecnt_(const uint32_t& local_client_worker_idx);
 
-        void checkPointers_();
+        // Clean client raw statistics
+        void clean();
+
+        void checkPointers_() const;
 
         // Const variables
         uint32_t perclient_workercnt_; // Come from Param

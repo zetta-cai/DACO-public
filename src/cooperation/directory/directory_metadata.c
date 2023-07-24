@@ -26,7 +26,7 @@ namespace covered
         is_valid_ = false;
     }
 
-    uint32_t DirectoryMetadata::getSizeForCapacity() const
+    uint64_t DirectoryMetadata::getSizeForCapacity() const
     {
         return sizeof(bool);
     }

@@ -126,7 +126,21 @@ namespace covered
         return;
     }
 
-    void ClientRawStatistics::checkPointers_()
+    void ClientRawStatistics::clean()
+    {
+        Util::initializeAtomicArray(perclientworker_local_hitcnts_, perclient_workercnt_, 0);
+        Util::initializeAtomicArray(perclientworker_cooperative_hitcnts_, perclient_workercnt_, 0);
+        Util::initializeAtomicArray(perclientworker_reqcnts_, perclient_workercnt_, 0);
+
+        Util::initializeAtomicArray(latency_histogram_, latency_histogram_size_, 0);
+
+        Util::initializeAtomicArray(perclientworker_reqcnts_, perclientworker_readcnts_, 0);
+        Util::initializeAtomicArray(perclientworker_reqcnts_, perclientworker_writecnts_, 0);
+
+        return;
+    }
+
+    void ClientRawStatistics::checkPointers_() const
     {
         // Per-client-worker hit ratio statistics
         assert(perclientworker_local_hitcnts_ != NULL);

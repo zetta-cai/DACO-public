@@ -17,14 +17,14 @@ namespace covered
 
     void* ClientWrapper::launchClient(void* client_param_ptr)
     {
-        ClientWrapper local_client(Param::getClientcnt(), Param::getEdgecnt(), Param::getKeycnt(), Param::getOpcnt(), Param::getPerclientWorkercnt(), Param::getPropagationLatencyClientedge(), Param::getWorkloadName(), (ClientParam*)client_param_ptr);
+        ClientWrapper local_client(Param::getClientcnt(), Param::getEdgecnt(), Param::getKeycnt(), Param::getOpcnt(), Param::getPerclientWorkercnt(), Param::getPropagationLatencyClientedgeUs(), Param::getWorkloadName(), (ClientParam*)client_param_ptr);
         local_client.start();
         
         pthread_exit(NULL);
         return NULL;
     }
 
-    ClientWrapper::ClientWrapper(const uint32_t& clientcnt, const uint32_t& edgecnt, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge, const std::string& workload_name, ClientParam* client_param_ptr) : clientcnt_(clientcnt), edgecnt_(edgecnt), perclient_workercnt_(perclient_workercnt), client_param_ptr_(client_param_ptr)
+    ClientWrapper::ClientWrapper(const uint32_t& clientcnt, const uint32_t& edgecnt, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge_us, const std::string& workload_name, ClientParam* client_param_ptr) : clientcnt_(clientcnt), edgecnt_(edgecnt), perclient_workercnt_(perclient_workercnt), client_param_ptr_(client_param_ptr)
     {
         if (client_param_ptr == NULL)
         {
@@ -48,7 +48,7 @@ namespace covered
         assert(client_statistics_tracker_ptr_ != NULL);
 
         // Allocate client-to-edge propagation simulator param
-        client_toedge_propagation_simulator_param_ptr_ = new PropagationSimulatorParam(propagation_latency_clientedge, (NodeParamBase*)client_param_ptr, Config::getPropagationItemBufferSizeClientToedge());
+        client_toedge_propagation_simulator_param_ptr_ = new PropagationSimulatorParam(propagation_latency_clientedge_us, (NodeParamBase*)client_param_ptr, Config::getPropagationItemBufferSizeClientToedge());
         assert(client_toedge_propagation_simulator_param_ptr_ != NULL);
     }
 
@@ -119,7 +119,8 @@ namespace covered
         // Block until client_running_ becomes true
         while (!client_param_ptr->isNodeRunning()) {}
 
-        // Switch and update intermediate raw statistics to track per-slot aggregated statistics
+        // Switch and update intermediate client raw statistics to track per-slot client aggregated statistics
+        const uint32_t client_intermediate_raw_statistics_slot_interval_sec = Config::getClientIntermediateRawStatisticsSlotIntervalSec();
         while (client_param_ptr->isNodeRunning())
         {
             // TODO: with the aggregated StatisticsTracker, each client main thread can dump statistics every 10 seconds if necessary

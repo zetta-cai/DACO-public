@@ -52,7 +52,7 @@ namespace covered
         // (4) Other functions
         
         // In units of bytes
-        uint32_t getSizeForCapacity() const; // sum of internal size (each individual local cache) and external size (metadata for edge caching)
+        uint64_t getSizeForCapacity() const; // sum of internal size (each individual local cache) and external size (metadata for edge caching)
     private:
         static const std::string kClassName;
 

@@ -272,14 +272,14 @@ namespace covered
 
     // (5) Get size for capacity check
 
-    uint32_t CooperationWrapperBase::getSizeForCapacity() const
+    uint64_t CooperationWrapperBase::getSizeForCapacity() const
     {
         checkPointers_();
 
         // No need to acquire a read lock due to no key provided and not critical for size
 
-        uint32_t directory_table_size = directory_table_ptr_->getSizeForCapacity();
-        uint32_t block_tracker_size = block_tracker_ptr_->getSizeForCapacity();
+        uint64_t directory_table_size = directory_table_ptr_->getSizeForCapacity();
+        uint64_t block_tracker_size = block_tracker_ptr_->getSizeForCapacity();
         return directory_table_size + block_tracker_size;
     }
 

@@ -73,9 +73,9 @@ namespace covered
         return;
     }
 
-    uint32_t NetworkAddr::getSizeForCapacity() const
+    uint64_t NetworkAddr::getSizeForCapacity() const
     {
-        uint32_t size = ipstr_.length() + sizeof(uint16_t);
+        uint64_t size = static_cast<uint64_t>(ipstr_.length()) + sizeof(uint16_t);
         return size;
     }
 

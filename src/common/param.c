@@ -25,25 +25,25 @@ namespace covered
     bool Param::is_valid_ = false;
     bool Param::is_single_node_ = true;
     std::string Param::cache_name_ = "";
-    uint32_t Param::capacity_bytes_ = 0;
+    uint64_t Param::capacity_bytes_ = 0;
     uint32_t Param::clientcnt_ = 0;
     std::string Param::cloud_storage_ = "";
     std::string Param::config_filepath_ = "";
     bool Param::is_debug_ = false;
-    double Param::duration_ = 0.0;
+    double Param::duration_sec_ = 0.0;
     uint32_t Param::edgecnt_ = 0;
     std::string Param::hash_name_ = "";
     uint32_t Param::keycnt_ = 0;
     uint32_t Param::opcnt_ = 0;
     uint32_t Param::percacheserver_workercnt_ = 0;
     uint32_t Param::perclient_workercnt_ = 0;
-    uint32_t Param::propagation_latency_clientedge_ = 0;
-    uint32_t Param::propagation_latency_crossedge_ = 0;
-    uint32_t Param::propagation_latency_edgecloud_ = 0;
+    uint32_t Param::propagation_latency_clientedge_us_ = 0;
+    uint32_t Param::propagation_latency_crossedge_us_ = 0;
+    uint32_t Param::propagation_latency_edgecloud_us_ = 0;
     bool Param::track_event_ = false;
     std::string Param::workload_name_ = "";
 
-    void Param::setParameters(const std::string& main_class_name, const bool& is_single_node, const std::string& cache_name, const uint32_t& capacity_bytes, const uint32_t& clientcnt, const std::string& cloud_storage, const std::string& config_filepath, const bool& is_debug, const double& duration, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& percacheserver_workercnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge, const uint32_t& propagation_latency_crossedge, const uint32_t& propagation_latency_edgecloud, const bool& track_event, const std::string& workload_name)
+    void Param::setParameters(const std::string& main_class_name, const bool& is_single_node, const std::string& cache_name, const uint64_t& capacity_bytes, const uint32_t& clientcnt, const std::string& cloud_storage, const std::string& config_filepath, const bool& is_debug, const uint32_t& duration_sec, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& percacheserver_workercnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge_us, const uint32_t& propagation_latency_crossedge_us, const uint32_t& propagation_latency_edgecloud_us, const bool& track_event, const std::string& workload_name)
     {
         // NOTE: Param::setParameters() does NOT rely on any other module
         if (is_valid_)
@@ -63,7 +63,7 @@ namespace covered
         checkCloudStorage_();
         config_filepath_ = config_filepath;
         is_debug_ = is_debug;
-        duration_ = duration;
+        duration_sec_ = duration_sec;
         edgecnt_ = edgecnt;
         hash_name_ = hash_name;
         checkHashName_();
@@ -71,9 +71,9 @@ namespace covered
         opcnt_ = opcnt;
         percacheserver_workercnt_ = percacheserver_workercnt;
         perclient_workercnt_ = perclient_workercnt;
-        propagation_latency_clientedge_ = propagation_latency_clientedge;
-        propagation_latency_crossedge_ = propagation_latency_crossedge;
-        propagation_latency_edgecloud_ = propagation_latency_edgecloud;
+        propagation_latency_clientedge_us_ = propagation_latency_clientedge_us;
+        propagation_latency_crossedge_us_ = propagation_latency_crossedge_us;
+        propagation_latency_edgecloud_us_ = propagation_latency_edgecloud_us;
         track_event_ = track_event;
         workload_name_ = workload_name;
         checkWorkloadName_();
@@ -102,7 +102,7 @@ namespace covered
         return cache_name_;
     }
 
-    uint32_t Param::getCapacityBytes()
+    uint64_t Param::getCapacityBytes()
     {
         checkIsValid_();
         return capacity_bytes_;
@@ -132,10 +132,10 @@ namespace covered
         return is_debug_;
     }
 
-    double Param::getDuration()
+    uint32_t Param::getDurationSec()
     {
         checkIsValid_();
-        return duration_;
+        return duration_sec_;
     }
 
     uint32_t Param::getEdgecnt()
@@ -174,22 +174,22 @@ namespace covered
         return perclient_workercnt_;
     }
 
-    uint32_t Param::getPropagationLatencyClientedge()
+    uint32_t Param::getPropagationLatencyClientedgeUs()
     {
         checkIsValid_();
-        return propagation_latency_clientedge_;
+        return propagation_latency_clientedge_us_;
     }
 
-    uint32_t Param::getPropagationLatencyCrossedge()
+    uint32_t Param::getPropagationLatencyCrossedgeUs()
     {
         checkIsValid_();
-        return propagation_latency_crossedge_;
+        return propagation_latency_crossedge_us_;
     }
 
-    uint32_t Param::getPropagationLatencyEdgecloud()
+    uint32_t Param::getPropagationLatencyEdgecloudUs()
     {
         checkIsValid_();
-        return propagation_latency_edgecloud_;
+        return propagation_latency_edgecloud_us_;
     }
 
     bool Param::isTrackEvent()
@@ -216,16 +216,16 @@ namespace covered
         oss << "Cloud storage: " << cloud_storage_ << std::endl;
         oss << "Config filepath: " << config_filepath_ << std::endl;
         oss << "Debug flag: " << (is_debug_?"true":"false") << std::endl;
-        oss << "Duration: " << duration_ << std::endl;
+        oss << "Duration seconds: " << duration_sec_ << std::endl;
         oss << "Edge count: " << edgecnt_ << std::endl;
         oss << "Hash name: " << hash_name_ << std::endl;
         oss << "Key count (dataset size): " << keycnt_ << std::endl;
         oss << "Operation count (workload size): " << opcnt_ << std::endl;
         oss << "Per-cache-server worker count:" << percacheserver_workercnt_ << std::endl;
         oss << "Per-client worker count: " << perclient_workercnt_ << std::endl;
-        oss << "One-way propagation latency between client and edge: " << propagation_latency_clientedge_ << "us" << std::endl;
-        oss << "One-way propagation latency between edge and edge: " << propagation_latency_crossedge_ << "us" << std::endl;
-        oss << "One-way propagation latency between edge and cloud: " << propagation_latency_edgecloud_ << "us" << std::endl;
+        oss << "One-way propagation latency between client and edge: " << propagation_latency_clientedge_us_ << "us" << std::endl;
+        oss << "One-way propagation latency between edge and edge: " << propagation_latency_crossedge_us_ << "us" << std::endl;
+        oss << "One-way propagation latency between edge and cloud: " << propagation_latency_edgecloud_us_ << "us" << std::endl;
         oss << "Track event flag: " << (track_event_?"true":"false") << std::endl;
         oss << "Workload name: " << workload_name_;
         return oss.str();
