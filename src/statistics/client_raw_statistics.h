@@ -18,6 +18,9 @@ namespace covered
         ClientRawStatistics(uint32_t perclient_workercnt);
         ~ClientRawStatistics();
 
+        // Clean client raw statistics
+        void clean();
+
         friend class ClientStatisticsTracker; // To update cur-slot/stable client raw statistics of client workers
         friend class ClientAggregatedStatistics; // To aggregate cur-slot/stable client raw statistics of client workers
     private:
@@ -34,9 +37,6 @@ namespace covered
         // Update read-write ratio statistics of a client worker
         void updateReadcnt_(const uint32_t& local_client_worker_idx);
         void updateWritecnt_(const uint32_t& local_client_worker_idx);
-
-        // Clean client raw statistics
-        void clean();
 
         void checkPointers_() const;
 

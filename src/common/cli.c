@@ -33,7 +33,7 @@ namespace covered
         // Dynamic configurations
         argument_desc_.add_options()
             ("cache_name", boost::program_options::value<std::string>()->default_value(Param::LRU_CACHE_NAME), "cache name")
-            ("capacity_mb", boost::program_options::value<uint32_t>()->default_value(1000), "total cache capacity (including data and metadata) in units of MB")
+            ("capacity_mb", boost::program_options::value<uint64_t>()->default_value(1000), "total cache capacity (including data and metadata) in units of MB")
             ("clientcnt", boost::program_options::value<uint32_t>()->default_value(1), "the total number of clients")
             ("cloud_storage", boost::program_options::value<std::string>()->default_value(Param::HDD_NAME), "type of cloud storage")
             ("config_file", boost::program_options::value<std::string>()->default_value("config.json"), "config file path of COVERED")
@@ -84,7 +84,7 @@ namespace covered
             }
         }
         std::string cache_name = argument_info_["cache_name"].as<std::string>();
-        uint64_t capacity_bytes = argument_info_["capacity_mb"].as<uint32_t>() * 1000 * 1000; // In units of bytes
+        uint64_t capacity_bytes = argument_info_["capacity_mb"].as<uint64_t>() * 1000 * 1000; // In units of bytes
         uint32_t clientcnt = argument_info_["clientcnt"].as<uint32_t>();
         std::string cloud_storage = argument_info_["cloud_storage"].as<std::string>();
         std::string config_filepath = argument_info_["config_file"].as<std::string>();
@@ -93,7 +93,7 @@ namespace covered
         {
             is_debug = true;
         }
-        uint32_t duration_sec = argument_info_["duration_sec"].as<double>();
+        uint32_t duration_sec = argument_info_["duration_sec"].as<uint32_t>();
         uint32_t edgecnt = argument_info_["edgecnt"].as<uint32_t>();
         std::string hash_name = argument_info_["hash_name"].as<std::string>();
         uint32_t keycnt = argument_info_["keycnt"].as<uint32_t>();

@@ -7,7 +7,7 @@
 #ifndef RWLOCK_H
 #define RWLOCK_H
 
-//#define DEBUG_RWLOCK
+////#define DEBUG_RWLOCK
 
 #include <string>
 

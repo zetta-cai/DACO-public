@@ -2,6 +2,8 @@
 
 #include <assert.h>
 
+#include "common/util.h"
+
 namespace covered
 {
     const std::string ClientAggregatedStatistics::kClassName("ClientAggregatedStatistics");
@@ -14,7 +16,7 @@ namespace covered
     {
         assert(client_raw_statistics_ptr != NULL);
 
-        aggregateClientRawStatistics_();
+        aggregateClientRawStatistics_(client_raw_statistics_ptr);
     }
 
     ClientAggregatedStatistics::~ClientAggregatedStatistics() {}
@@ -25,7 +27,7 @@ namespace covered
         client_raw_statistics_ptr->checkPointers_();
 
         const uint32_t perclient_workercnt = client_raw_statistics_ptr->perclient_workercnt_;
-        cosnt uint32_t latency_histogram_size = client_raw_statistics_ptr->latency_histogram_size_;
+        const uint32_t latency_histogram_size = client_raw_statistics_ptr->latency_histogram_size_;
 
         // Aggregate ClientRawStatistics of client workers in a client
 
@@ -41,7 +43,7 @@ namespace covered
         uint32_t total_latency_cnt = 0; // i.e., total reqcnt
         for (uint32_t latency_us = 0; latency_us < latency_histogram_size; latency_us++)
         {
-            uint32_t tmp_latency_cnt = latency_histogram_[latency_us];
+            uint32_t tmp_latency_cnt = client_raw_statistics_ptr->latency_histogram_[latency_us];
             total_latency_cnt += tmp_latency_cnt;
         }
         // Get latency statistics
@@ -49,7 +51,7 @@ namespace covered
         uint64_t tmp_avg_latency = 0; // To avoid integer overflow
         for (uint32_t latency_us = 0; latency_us < latency_histogram_size; latency_us++)
         {
-            uint32_t tmp_latency_cnt = latency_histogram_[latency_us];
+            uint32_t tmp_latency_cnt = client_raw_statistics_ptr->latency_histogram_[latency_us];
             cur_latency_cnt += tmp_latency_cnt;
             double cur_ratio = 0.0d;
             if (total_latency_cnt != 0)

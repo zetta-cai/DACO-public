@@ -64,27 +64,41 @@ namespace covered
         perclientworker_writecnts_ = NULL;
     }
 
-    void ClientRawStatistics::updateLocalHitcnt(const uint32_t& local_client_worker_idx)
+    void ClientRawStatistics::clean()
+    {
+        Util::initializeAtomicArray(perclientworker_local_hitcnts_, perclient_workercnt_, 0);
+        Util::initializeAtomicArray(perclientworker_cooperative_hitcnts_, perclient_workercnt_, 0);
+        Util::initializeAtomicArray(perclientworker_reqcnts_, perclient_workercnt_, 0);
+
+        Util::initializeAtomicArray(latency_histogram_, latency_histogram_size_, 0);
+
+        Util::initializeAtomicArray(perclientworker_readcnts_, perclient_workercnt_, 0);
+        Util::initializeAtomicArray(perclientworker_writecnts_, perclient_workercnt_, 0);
+
+        return;
+    }
+
+    void ClientRawStatistics::updateLocalHitcnt_(const uint32_t& local_client_worker_idx)
     {
         assert(perclientworker_local_hitcnts_ != NULL);
         assert(local_client_worker_idx < perclient_workercnt_);
 
         perclientworker_local_hitcnts_[local_client_worker_idx]++;
-        updateReqcnt(local_client_worker_idx);
+        updateReqcnt_(local_client_worker_idx);
         return;
     }
 
-    void ClientRawStatistics::updateCooperativeHitcnt(const uint32_t& local_client_worker_idx)
+    void ClientRawStatistics::updateCooperativeHitcnt_(const uint32_t& local_client_worker_idx)
     {
         assert(perclientworker_cooperative_hitcnts_ != NULL);
         assert(local_client_worker_idx < perclient_workercnt_);
 
         perclientworker_cooperative_hitcnts_[local_client_worker_idx]++;
-        updateReqcnt(local_client_worker_idx);
+        updateReqcnt_(local_client_worker_idx);
         return;
     }
 
-    void ClientRawStatistics::updateReqcnt(const uint32_t& local_client_worker_idx)
+    void ClientRawStatistics::updateReqcnt_(const uint32_t& local_client_worker_idx)
     {
         assert(perclientworker_reqcnts_ != NULL);
         assert(local_client_worker_idx < perclient_workercnt_);
@@ -93,7 +107,7 @@ namespace covered
         return;
     }
 
-    void ClientRawStatistics::updateLatency(const uint32_t& latency_us)
+    void ClientRawStatistics::updateLatency_(const uint32_t& latency_us)
     {
         assert(latency_histogram_ != NULL);
 
@@ -108,7 +122,7 @@ namespace covered
         return;
     }
 
-    void ClientRawStatistics::updateReadcnt(const uint32_t& local_client_worker_idx)
+    void ClientRawStatistics::updateReadcnt_(const uint32_t& local_client_worker_idx)
     {
         assert(perclientworker_readcnts_ != NULL);
         assert(local_client_worker_idx < perclient_workercnt_);
@@ -117,26 +131,12 @@ namespace covered
         return;
     }
 
-    void ClientRawStatistics::updateWritecnt(const uint32_t& local_client_worker_idx)
+    void ClientRawStatistics::updateWritecnt_(const uint32_t& local_client_worker_idx)
     {
         assert(perclientworker_writecnts_ != NULL);
         assert(local_client_worker_idx < perclient_workercnt_);
 
         perclientworker_writecnts_[local_client_worker_idx]++;
-        return;
-    }
-
-    void ClientRawStatistics::clean()
-    {
-        Util::initializeAtomicArray(perclientworker_local_hitcnts_, perclient_workercnt_, 0);
-        Util::initializeAtomicArray(perclientworker_cooperative_hitcnts_, perclient_workercnt_, 0);
-        Util::initializeAtomicArray(perclientworker_reqcnts_, perclient_workercnt_, 0);
-
-        Util::initializeAtomicArray(latency_histogram_, latency_histogram_size_, 0);
-
-        Util::initializeAtomicArray(perclientworker_reqcnts_, perclientworker_readcnts_, 0);
-        Util::initializeAtomicArray(perclientworker_reqcnts_, perclientworker_writecnts_, 0);
-
         return;
     }
 

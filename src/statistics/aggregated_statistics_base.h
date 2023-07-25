@@ -46,14 +46,14 @@ namespace covered
         // Get string for aggregate statistics
         std::string toString() const;
 
-        static uint32_t getAggregatedStatisticsIOSize() const;
+        static uint32_t getAggregatedStatisticsIOSize();
         uint32_t serialize(DynamicArray& dynamic_array, const uint32_t& position) const;
         uint32_t deserialize(const DynamicArray& dynamic_array, const uint32_t& position);
 
         const AggregatedStatisticsBase& operator=(const AggregatedStatisticsBase& other);
     private:
         static const std::string kClassName;
-
+    protected:
         // Aggregated statistics related with hit ratio
         uint32_t total_local_hitcnt_;
         uint32_t total_cooperative_hitcnt_;

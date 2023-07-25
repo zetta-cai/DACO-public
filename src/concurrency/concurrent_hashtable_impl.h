@@ -110,7 +110,7 @@ namespace covered
             tmp_hashtable.insert(std::pair<Key, V>(key, value));
             is_exist = false;
 
-            total_key_size_.fetch_add(static_cast<uint64_t>(key.getKeystr()).length(), Util::RMW_CONCURRENCY_ORDER);
+            total_key_size_.fetch_add(static_cast<uint64_t>(key.getKeystr().length()), Util::RMW_CONCURRENCY_ORDER);
             total_value_size_.fetch_add(static_cast<uint64_t>(value.getSizeForCapacity()), Util::RMW_CONCURRENCY_ORDER);
         }
         else // key exists

@@ -38,7 +38,7 @@ namespace covered
         void updateReqcnt(const uint32_t& local_client_worker_idx, const bool& is_stresstest);
 
         // Update cur-slot/stable client raw statistics for latency
-        void updateLatency(const uint32_t& latency_us, const bool& is_stresstest);
+        void updateLatency(const uint32_t& local_client_worker_idx, const uint32_t& latency_us, const bool& is_stresstest);
 
         // Update cur-slot/stable client raw statistics for read-write ratio
         void updateReadcnt(const uint32_t& local_client_worker_idx, const bool& is_stresstest);
@@ -51,17 +51,17 @@ namespace covered
 
         // (3) Aggregate cur-slot/stable client raw statistics, and dump per-slot/stable client aggregated statistics for TotalStatisticsTracker (invoked by main client thread ClientWrapper)
 
-        uint32_t aggregateAndDump(const std::string& filepath) const;
+        uint32_t aggregateAndDump(const std::string& filepath);
 
         // (4) Get client aggregated statistics
 
-        const std::vector<ClientAggregatedStatistics>& getPerslotClientAggregatedStatistics() const;
-        const ClientAggregatedStatistics& getStableClientAggregatedStatistics() const;
+        std::vector<ClientAggregatedStatistics> getPerslotClientAggregatedStatistics() const;
+        ClientAggregatedStatistics getStableClientAggregatedStatistics() const;
     private:
         static const std::string kClassName;
 
         // For cur-slot client raw statistics
-        ClientRawStatistics* getCurslotClientRawStatisticsPtr_(const uint32_t& slot_idx);
+        ClientRawStatistics* getCurslotClientRawStatisticsPtr_(const uint32_t& slot_idx) const;
         void curslotSwitchBarrier_() const; // Wait for all client workers for cur-slot time slot switching
 
         // Other utility functions
@@ -79,7 +79,7 @@ namespace covered
         std::string instance_name_;
 
         const bool allow_update_; // NOT allow statistics update when aggregation (by statistics_aggregator)
-        cosnt uint32_t perclient_workercnt_; // To track per-client-worker update status
+        const uint32_t perclient_workercnt_; // To track per-client-worker update status
 
         // (B) Non-const individual variables
         // NOTE: we have to use dynamic array for std::atomic<uint32_t>, as it does NOT have copy constructor and operator= for std::vector (e.g., resize() and push_back())

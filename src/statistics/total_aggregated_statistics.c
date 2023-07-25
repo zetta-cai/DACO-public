@@ -1,8 +1,15 @@
 #include "statistics/total_aggregated_statistics.h"
 
+#include <algorithm> // sort
+#include <assert.h>
+
 namespace covered
 {
     const std::string TotalAggregatedStatistics::kClassName("TotalAggregatedStatistics");
+
+    TotalAggregatedStatistics::TotalAggregatedStatistics() : AggregatedStatisticsBase()
+    {
+    }
 
     TotalAggregatedStatistics::TotalAggregatedStatistics(std::vector<ClientAggregatedStatistics*> client_aggregated_statistics_ptrs) : AggregatedStatisticsBase()
     {
@@ -20,13 +27,13 @@ namespace covered
 
         // Aggregate ClientAggregatedStatistics of all clients
         uint64_t total_avg_latency = 0; // Avoid integer overflow
-        std::vector<uint32_t medium_latencies;
-        std::vector<uint32_t tail90_latencies;
-        std::vector<uint32_t tail95_latencies;
-        std::vector<uint32_t tail99_latencies;
+        std::vector<uint32_t> medium_latencies;
+        std::vector<uint32_t> tail90_latencies;
+        std::vector<uint32_t> tail95_latencies;
+        std::vector<uint32_t> tail99_latencies;
         for (uint32_t clientidx = 0; clientidx < clientcnt; clientidx++)
         {
-            ClientAggregatedStatistics tmp_client_aggregated_statistics_ptr = client_aggregated_statistics_ptrs[clientidx];
+            ClientAggregatedStatistics* tmp_client_aggregated_statistics_ptr = client_aggregated_statistics_ptrs[clientidx];
             assert(tmp_client_aggregated_statistics_ptr != NULL);
 
             // Aggregate hit ratio statistics
@@ -41,10 +48,10 @@ namespace covered
                 min_latency_ = tmp_client_aggregated_statistics_ptr->min_latency_;
             }
             medium_latencies.push_back(tmp_client_aggregated_statistics_ptr->medium_latency_);
-            tail90_latencies.push_back(tmp_client_aggregated_statistics_ptr->tail90_latencies);
-            tail95_latencies.push_back(tmp_client_aggregated_statistics_ptr->tail95_latencies);
-            tail99_latencies.push_back(tmp_client_aggregated_statistics_ptr->tail99_latencies);
-            if (max_latency == 0 || max_latency < tmp_client_aggregated_statistics_ptr->max_latency_)
+            tail90_latencies.push_back(tmp_client_aggregated_statistics_ptr->tail90_latency_);
+            tail95_latencies.push_back(tmp_client_aggregated_statistics_ptr->tail95_latency_);
+            tail99_latencies.push_back(tmp_client_aggregated_statistics_ptr->tail99_latency_);
+            if (max_latency_ == 0 || max_latency_ < tmp_client_aggregated_statistics_ptr->max_latency_)
             {
                 max_latency_ = tmp_client_aggregated_statistics_ptr->max_latency_;
             }
@@ -56,13 +63,13 @@ namespace covered
 
         // Aggregate latency statistics approximately
         avg_latency_ = static_cast<uint32_t>(total_avg_latency / clientcnt);
-        std::sort(medium_latencies.begin(), medium_latencies.end(), std::less<uint32_t>); // ascending order
+        std::sort(medium_latencies.begin(), medium_latencies.end(), std::less<uint32_t>()); // ascending order
         medium_latency_ = medium_latencies[clientcnt * 0.5];
-        std::sort(tail90_latencies.begin(), tail90_latencies.end(), std::less<uint32_t>); // ascending order
+        std::sort(tail90_latencies.begin(), tail90_latencies.end(), std::less<uint32_t>()); // ascending order
         tail90_latency_ = tail90_latencies[clientcnt * 0.9];
-        std::sort(tail95_latencies.begin(), tail95_latencies.end(), std::less<uint32_t>); // ascending order
+        std::sort(tail95_latencies.begin(), tail95_latencies.end(), std::less<uint32_t>()); // ascending order
         tail95_latency_ = tail95_latencies[clientcnt * 0.95];
-        std::sort(tail99_latencies.begin(), tail99_latencies.end(), std::less<uint32_t>); // ascending order
+        std::sort(tail99_latencies.begin(), tail99_latencies.end(), std::less<uint32_t>()); // ascending order
         tail99_latency_ = tail99_latencies[clientcnt * 0.99];
 
         return;

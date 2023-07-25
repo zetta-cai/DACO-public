@@ -31,7 +31,7 @@ namespace covered
 
         // Per-slot/stable total aggregated statistics
         std::vector<TotalAggregatedStatistics> perslot_total_aggregated_statistics_;
-        ToalAggregatedStatistics stable_total_aggregated_statistics_;
+        TotalAggregatedStatistics stable_total_aggregated_statistics_;
     };
 }
 

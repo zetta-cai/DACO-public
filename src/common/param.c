@@ -30,7 +30,7 @@ namespace covered
     std::string Param::cloud_storage_ = "";
     std::string Param::config_filepath_ = "";
     bool Param::is_debug_ = false;
-    double Param::duration_sec_ = 0.0;
+    uint32_t Param::duration_sec_ = 0;
     uint32_t Param::edgecnt_ = 0;
     std::string Param::hash_name_ = "";
     uint32_t Param::keycnt_ = 0;

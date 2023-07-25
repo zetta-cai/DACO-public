@@ -22,6 +22,7 @@ namespace covered
     class TotalAggregatedStatistics : public AggregatedStatisticsBase
     {
     public:
+        TotalAggregatedStatistics();
         TotalAggregatedStatistics(std::vector<ClientAggregatedStatistics*> client_aggregated_statistics_ptrs);
         ~TotalAggregatedStatistics();
     private:

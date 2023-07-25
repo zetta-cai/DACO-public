@@ -659,7 +659,7 @@ namespace covered
         return;
     }
     
-    static void initializeAtomicArray(std::atomic<bool>* atomic_array, const uint32_t& array_size, const bool& default_value)
+    void Util::initializeAtomicArray(std::atomic<bool>* atomic_array, const uint32_t& array_size, const bool& default_value)
     {
         assert(atomic_array != NULL);
         for (uint32_t i = 0; i < array_size; i++)

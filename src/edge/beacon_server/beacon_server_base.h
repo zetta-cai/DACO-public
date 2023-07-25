@@ -19,7 +19,7 @@
 #ifndef BEACON_SERVER_BASE_H
 #define BEACON_SERVER_BASE_H
 
-#define DEBUG_BEACON_SERVER
+//#define DEBUG_BEACON_SERVER
 
 #include <string>
 

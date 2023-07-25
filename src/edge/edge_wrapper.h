@@ -27,7 +27,7 @@ namespace covered
 
         // NOTE: set NodeParamBase::node_initialized_ after all time-consuming initialization in constructor and start()
         
-        EdgeWrapper(const std::string& cache_name, const uint32_t& capacity_bytes, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& percacheserver_workercnt, const uint32_t& propagation_latency_clientedge_us, const uint32_t& propagation_latency_crossedge_us, const uint32_t& propagation_latency_edgecloud_us, EdgeParam* edge_param_ptr);
+        EdgeWrapper(const std::string& cache_name, const uint64_t& capacity_bytes, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& percacheserver_workercnt, const uint32_t& propagation_latency_clientedge_us, const uint32_t& propagation_latency_crossedge_us, const uint32_t& propagation_latency_edgecloud_us, EdgeParam* edge_param_ptr);
         virtual ~EdgeWrapper();
 
         void start();

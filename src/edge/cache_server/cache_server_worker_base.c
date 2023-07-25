@@ -79,7 +79,6 @@ namespace covered
 
         // Prepare a socket server to receive control responses and redirected data responses
         NetworkAddr recvrsp_host_addr(Util::ANY_IPSTR, edge_cache_server_worker_recvrsp_port);
-        Util::dumpVariablesForDebug(base_instance_name_, 2, "recvrsp_host_addr", recvrsp_host_addr.toString().c_str()); // TMPDEBUG
         edge_cache_server_worker_recvrsp_socket_server_ptr_ = new UdpMsgSocketServer(recvrsp_host_addr);
         assert(edge_cache_server_worker_recvrsp_socket_server_ptr_ != NULL);
 
@@ -940,7 +939,6 @@ namespace covered
             {
                 // Receive the global response message successfully
                 MessageBase* global_response_ptr = MessageBase::getResponseFromMsgPayload(global_response_msg_payload);
-                Util::dumpVariablesForDebug(base_instance_name_, 4, "message type:", MessageBase::messageTypeToString(global_response_ptr->getMessageType()).c_str(), "keystr:", MessageBase::getKeyFromMessage(global_response_ptr).getKeystr().c_str()); // TMPDEBUG
                 assert(global_response_ptr != NULL && global_response_ptr->getMessageType() == MessageType::kGlobalGetResponse);
                 
                 // Get value from global response message

@@ -140,7 +140,18 @@ int main(int argc, char **argv) {
         client_params[client_idx].setNodeRunning();
     }
 
-    // (5.3) TODO: Start stresstest phase
+    // (5.3) Start stresstest phase if all clients finish warmup phase
+
+    for (uint32_t client_idx = 0; client_idx < clientcnt; client_idx++)
+    {
+        while (client_params[client_idx].isWarmupPhase()) {}
+    }
+
+    covered::Util::dumpNormalMsg(main_class_name, "Start stresstest phase...");
+    for (uint32_t client_idx = 0; client_idx < clientcnt; client_idx++)
+    {
+        client_params[client_idx].startStresstestPhase();
+    }
 
     // (5.4) Count down duration for stresstest phase
 

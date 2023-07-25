@@ -1,5 +1,7 @@
 #include "statistics/aggregated_statistics_base.h"
 
+#include <sstream>
+
 namespace covered
 {
     const std::string AggregatedStatisticsBase::kClassName("AggregatedStatisticsBase");
@@ -134,7 +136,7 @@ namespace covered
         return total_statistics_string;
     }
 
-    uint32_t AggregatedStatisticsBase::getAggregatedStatisticsIOSize() const
+    uint32_t AggregatedStatisticsBase::getAggregatedStatisticsIOSize()
     {
         // Aggregated statistics for hit ratio + latency + read-write ratio
         return sizeof(uint32_t) * 3 + sizeof(uint32_t) * 7 + sizeof(uint32_t) * 2;
@@ -182,33 +184,33 @@ namespace covered
         uint32_t size = position;
 
         // Deserialize aggregated statistics for hit ratio
-        msg_payload.serialize(size, (char *)&total_local_hitcnt_, sizeof(uint32_t));
+        dynamic_array.serialize(size, (char *)&total_local_hitcnt_, sizeof(uint32_t));
         size += sizeof(uint32_t);
-        msg_payload.serialize(size, (char *)&total_cooperative_hitcnt_, sizeof(uint32_t));
+        dynamic_array.serialize(size, (char *)&total_cooperative_hitcnt_, sizeof(uint32_t));
         size += sizeof(uint32_t);
-        msg_payload.serialize(size, (char *)&total_reqcnt_, sizeof(uint32_t));
+        dynamic_array.serialize(size, (char *)&total_reqcnt_, sizeof(uint32_t));
         size += sizeof(uint32_t);
 
         // Deserialize aggregated statistics for latency
-        msg_payload.serialize(size, (char *)&avg_latency_, sizeof(uint32_t));
+        dynamic_array.serialize(size, (char *)&avg_latency_, sizeof(uint32_t));
         size += sizeof(uint32_t);
-        msg_payload.serialize(size, (char *)&min_latency_, sizeof(uint32_t));
+        dynamic_array.serialize(size, (char *)&min_latency_, sizeof(uint32_t));
         size += sizeof(uint32_t);
-        msg_payload.serialize(size, (char *)&medium_latency_, sizeof(uint32_t));
+        dynamic_array.serialize(size, (char *)&medium_latency_, sizeof(uint32_t));
         size += sizeof(uint32_t);
-        msg_payload.serialize(size, (char *)&tail90_latency_, sizeof(uint32_t));
+        dynamic_array.serialize(size, (char *)&tail90_latency_, sizeof(uint32_t));
         size += sizeof(uint32_t);
-        msg_payload.serialize(size, (char *)&tail95_latency_, sizeof(uint32_t));
+        dynamic_array.serialize(size, (char *)&tail95_latency_, sizeof(uint32_t));
         size += sizeof(uint32_t);
-        msg_payload.serialize(size, (char *)&tail99_latency_, sizeof(uint32_t));
+        dynamic_array.serialize(size, (char *)&tail99_latency_, sizeof(uint32_t));
         size += sizeof(uint32_t);
-        msg_payload.serialize(size, (char *)&max_latency_, sizeof(uint32_t));
+        dynamic_array.serialize(size, (char *)&max_latency_, sizeof(uint32_t));
         size += sizeof(uint32_t);
 
         // Deserialize aggregated statistics for read-write ratio
-        msg_payload.serialize(size, (char *)&total_readcnt_, sizeof(uint32_t));
+        dynamic_array.serialize(size, (char *)&total_readcnt_, sizeof(uint32_t));
         size += sizeof(uint32_t);
-        msg_payload.serialize(size, (char *)&total_writecnt_, sizeof(uint32_t));
+        dynamic_array.serialize(size, (char *)&total_writecnt_, sizeof(uint32_t));
         size += sizeof(uint32_t);
 
         return size - position;
