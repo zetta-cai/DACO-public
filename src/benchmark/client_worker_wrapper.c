@@ -141,6 +141,11 @@ namespace covered
                 }
 
                 // Process local response message to update statistics
+                /*if (is_warmup_phase && !client_param_ptr->isWarmupPhase()) // Detect responses of warmup requests received after warmup phase (e.g., after curslot switch or during stresstest phase)
+                {
+                    // TODO: as there could still exist limited warmup requests are counted in stresstest beginning slots, we can print the start slot idx of stresstest phase to drop the invalid statistics of the beginning slots
+                    continue; // NOT update to avoid affecting cur-slot raw/aggregated statistics especially for warmup speedup
+                }*/
                 processLocalResponse_(local_response_msg_payload, rtt_us, is_stresstest_phase);
 
                 // TMPDEBUG

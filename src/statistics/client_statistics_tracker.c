@@ -302,7 +302,7 @@ namespace covered
             double cur_total_hit_ratio = perslot_client_aggregated_statistics_list_[slotcnt - 1].getTotalHitRatio();
             double prev_total_hit_ratio = perslot_client_aggregated_statistics_list_[slotcnt - 2].getTotalHitRatio();
 
-            // TODO: we may treat cache as stable after cache is full
+            // TODO: cache is stable ONLY if cache is filled up and hit ratio is stabilized
             if (cur_total_hit_ratio > 0.0d && prev_total_hit_ratio > 0.0d && cur_total_hit_ratio <= prev_total_hit_ratio)
             {
                 is_stable = true;
