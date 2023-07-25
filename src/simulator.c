@@ -7,6 +7,7 @@
 
 #include "benchmark/client_param.h"
 #include "benchmark/client_wrapper.h"
+#include "benchmark/evaluator.h"
 #include "common/cli.h"
 #include "common/config.h"
 #include "common/param.h"
@@ -23,6 +24,25 @@ int main(int argc, char **argv) {
     const std::string main_class_name = covered::Param::getMainClassName();
 
     int pthread_returncode;
+
+    // (2) Launch evaluator to control benchmark workflow
+
+    pthread_t evaluator_thread;
+    volatile bool is_evaluator_initialized = false;
+
+    covered::Util::dumpNormalMsg(main_class_name, "launch evaluator");
+
+    pthread_returncode = covered::Util::pthreadCreateHighPriority(&evaluator_thread, covered::Evaluator::launchEvaluator, (void*)(&is_evaluator_initialized));
+    if (pthread_returncode != 0)
+    {
+        std::ostringstream oss;
+        oss << "failed to launch evaluator (error code: " << pthread_returncode << ")";
+        covered::Util::dumpErrorMsg(main_class_name, oss.str());
+        exit(1);
+    }
+
+    // Block until evaluator is initialized
+    while (!is_evaluator_initialized) {}
 
     // (2) Simulate a single cloud node for backend storage
 
