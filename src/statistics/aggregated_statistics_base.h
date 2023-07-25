@@ -11,6 +11,8 @@
 
 #include <string>
 
+#include "common/dynamic_array.h"
+
 namespace covered
 {
     class AggregatedStatisticsBase
@@ -43,6 +45,10 @@ namespace covered
 
         // Get string for aggregate statistics
         std::string toString() const;
+
+        static uint32_t getAggregatedStatisticsIOSize() const;
+        uint32_t serialize(DynamicArray& dynamic_array, const uint32_t& position) const;
+        uint32_t deserialize(const DynamicArray& dynamic_array, const uint32_t& position);
 
         const AggregatedStatisticsBase& operator=(const AggregatedStatisticsBase& other);
     private:

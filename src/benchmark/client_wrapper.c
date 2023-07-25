@@ -192,7 +192,7 @@ namespace covered
         uint32_t client_idx = client_param_ptr_->getNodeIdx();
         std::string client_statistics_filepath = Util::getClientStatisticsFilepath(client_idx);
 
-        // TODO: Aggregate cur-slot/stable client raw statistics, and dump per-slot/stable client aggregated statistics
+        // Aggregate cur-slot/stable client raw statistics, and dump per-slot/stable client aggregated statistics
         assert(client_statistics_tracker_ptr_ != NULL);
         client_statistics_tracker_ptr_->aggregateAndDump(client_statistics_filepath);
 

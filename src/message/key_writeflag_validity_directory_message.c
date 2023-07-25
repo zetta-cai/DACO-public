@@ -45,8 +45,8 @@ namespace covered
 
     uint32_t KeyWriteflagValidityDirectoryMessage::getMsgPayloadSizeInternal_() const
     {
-        // key payload + is being written + is cooperatively cached + target edge idx
-        uint32_t msg_payload_size = key_.getKeyPayloadSize() + sizeof(bool) + sizeof(bool) + sizeof(uint32_t);
+        // key payload + is being written + is cooperatively cached + directory info (target edge idx)
+        uint32_t msg_payload_size = key_.getKeyPayloadSize() + sizeof(bool) + sizeof(bool) + directory_info_.getDirectoryInfoPayloadSize();
         return msg_payload_size;
     }
 

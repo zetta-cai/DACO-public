@@ -52,6 +52,11 @@ namespace covered
         // (3) Aggregate cur-slot/stable client raw statistics, and dump per-slot/stable client aggregated statistics for TotalStatisticsTracker (invoked by main client thread ClientWrapper)
 
         uint32_t aggregateAndDump(const std::string& filepath) const;
+
+        // (4) Get client aggregated statistics
+
+        const std::vector<ClientAggregatedStatistics>& getPerslotClientAggregatedStatistics() const;
+        const ClientAggregatedStatistics& getStableClientAggregatedStatistics() const;
     private:
         static const std::string kClassName;
 
@@ -62,29 +67,11 @@ namespace covered
         // Other utility functions
         void checkPointers_() const;
 
-        // Used by dump() to check filepath and dump per-client statistics
+        // Used by aggregateAndDump() to check filepath and dump per-client statistics
         std::string checkFilepathForDump_(const std::string& filepath) const;
-        uint32_t dumpPerclientWorkercnt_(std::fstream* fs_ptr) const;
-        uint32_t dumpPerclientworkerLocalHitcnts_(std::fstream* fs_ptr) const;
-        uint32_t dumpPerclientworkerCooperativeHitcnts_(std::fstream* fs_ptr) const;
-        uint32_t dumpPerclientworkerReqcnts_(std::fstream* fs_ptr) const;
-        uint32_t dumpLatencyHistogramSize_(std::fstream* fs_ptr) const;
-        uint32_t dumpLatencyHistogram_(std::fstream* fs_ptr) const;
-        uint32_t dumpPerclientworkerReadcnts_(std::fstream* fs_ptr) const;
-        uint32_t dumpPerclientworkerWritecnts_(std::fstream* fs_ptr) const;
 
         // Load per-client statistics for TotalStatisticsTracker
         uint32_t load_(const std::string& filepath);
-
-        // Used by load_() to load per-client statistics
-        uint32_t loadPerclientWorkercnt_(std::fstream* fs_ptr);
-        uint32_t loadPerclientworkerLocalHitcnts_(std::fstream* fs_ptr);
-        uint32_t loadPerclientworkerCooperativeHitcnts_(std::fstream* fs_ptr);
-        uint32_t loadPerclientworkerReqcnts_(std::fstream* fs_ptr);
-        uint32_t loadLatencyHistogramSize_(std::fstream* fs_ptr);
-        uint32_t loadLatencyHistogram_(std::fstream* fs_ptr);
-        uint32_t loadPerclientworkerReadcnts_(std::fstream* fs_ptr);
-        uint32_t loadPerclientworkerWritecnts_(std::fstream* fs_ptr);
 
         // (A) Const shared variables
 

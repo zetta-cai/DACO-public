@@ -38,8 +38,8 @@ namespace covered
 
     uint32_t KeyValidityDirectoryMessage::getMsgPayloadSizeInternal_() const
     {
-        // key payload + is cooperatively cached + target edge idx
-        uint32_t msg_payload_size = key_.getKeyPayloadSize() + sizeof(bool) + sizeof(uint32_t);
+        // key payload + is cooperatively cached + directory info (target edge idx)
+        uint32_t msg_payload_size = key_.getKeyPayloadSize() + sizeof(bool) + directory_info_.getDirectoryInfoPayloadSize();
         return msg_payload_size;
     }
 

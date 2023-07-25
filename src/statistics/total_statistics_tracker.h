@@ -11,66 +11,27 @@
 #include <vector>
 
 #include "statistics/client_statistics_tracker.h"
+#include "statistics/total_aggregated_statistics.h"
 
 namespace covered
 {
     class TotalStatisticsTracker
     {
     public:
-        TotalStatisticsTracker(uint32_t clientcnt, ClientStatisticsTracker** client_statistics_tracker_ptrs);
+        TotalStatisticsTracker(const uint32_t& clientcnt, ClientStatisticsTracker** client_statistics_tracker_ptrs);
         ~TotalStatisticsTracker();
 
-        // Get aggregate statistics related with hit ratio
-        uint32_t getTotalLocalHitcnt() const;
-        uint32_t getTotalCooperativeHitcnt() const;
-        uint32_t getTotalReqcnt() const;
-
-        // Get aggregate statistics related with latency
-        uint32_t getAvgLatency() const;
-        uint32_t getMinLatency() const;
-        uint32_t getMediumLatency() const;
-        uint32_t getTail90Latency() const;
-        uint32_t getTail95Latency() const;
-        uint32_t getTail99Latency() const;
-        uint32_t getMaxLatency() const;
-
-        // Get aggregate statistics related with read-write ratio
-        uint32_t getTotalReadcnt() const;
-        uint32_t getTotalWritecnt() const;
-
-        // Get string for aggregate statistics
+        // Get string for per-slot/stable total aggregate statistics
         std::string toString() const;
     private:
         static const std::string kClassName;
 
-        void preprocessClientStatistics_(uint32_t clientcnt, ClientStatisticsTracker** client_statistics_tracker_ptrs);
-        void aggregateClientStatistics_();
+        // Aggregate per-slot/stable client aggregated statistics into per-slot/stable total aggregated statistics
+        void aggregateClientStatistics_(const uint32_t& clientcnt, ClientStatisticsTracker** client_statistics_tracker_ptrs);
 
-        // Const variables
-        uint32_t clientcnt_; // Come from Util::Param
-        uint32_t latency_histogram_size_; // Come from Util::Config
-
-        // Pre-processed statistics
-        std::vector<uint32_t> perclient_local_hitcnts_; // Hit local edge cache of closest edge node
-        std::vector<uint32_t> perclient_cooperative_hitcnts_; // Hit cooperative edge cache of some target edge node
-        std::vector<uint32_t> perclient_reqcnts_;
-        std::vector<uint32_t> latency_histogram_;
-        std::vector<uint32_t> perclient_readcnts_;
-        std::vector<uint32_t> perclient_writecnts_;
-
-        // Aggregate statistics
-        uint32_t total_local_hitcnt_;
-        uint32_t total_cooperative_hitcnt_;
-        uint32_t total_reqcnt_;
-        uint32_t avg_latency_;
-        uint32_t min_latency_;
-        uint32_t medium_latency_;
-        uint32_t tail90_latency_;
-        uint32_t tail95_latency_;
-        uint32_t tail99_latency_;
-        uint32_t max_latency_;
-        uint32_t total_readcnt_;
-        uint32_t total_writecnt_;
+        // Per-slot/stable total aggregated statistics
+        std::vector<TotalAggregatedStatistics> perslot_total_aggregated_statistics_;
+        ToalAggregatedStatistics stable_total_aggregated_statistics_;
     };
 }
 
