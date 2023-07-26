@@ -11,36 +11,32 @@
 
 #include <string>
 
-#include "cloud/cloud_param.h"
 #include "cloud/rocksdb_wrapper.h"
+#include "common/node_wrapper_base.h"
 #include "message/message_base.h"
-#include "network/udp_msg_socket_server.h"
+#include "network/network_addr.h"
 #include "network/propagation_simulator_param.h"
 
 namespace covered
 {
-    class CloudWrapper
+    class CloudWrapper : public NodeWrapperBase
     {
     public:
-        static void* launchCloud(void* cloud_param_ptr);
-        
-        // NOTE: set NodeParamBase::node_initialized_ after all time-consuming initialization in constructor and start()
-        
-        CloudWrapper(const std::string& cloud_storage, const uint32_t& propagation_latency_edgecloud_us, CloudParam* cloud_param_ptr);
-        ~CloudWrapper();
+        static void* launchCloud(void* cloud_idx_ptr);
 
-        void start();
+        CloudWrapper(const uint32_t& cloud_idx, const std::string& cloud_storage, const uint32_t& propagation_latency_edgecloud_us);
+        ~CloudWrapper();
     private:
         static const std::string kClassName;
 
-        bool processGlobalRequest_(MessageBase* request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr);
+        virtual void initialize_() override;
+        virtual void startInternal_() override;
 
-        void finishInitialization_() const;
+        bool processGlobalRequest_(MessageBase* request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr);
 
         void checkPointers_() const;
 
         std::string instance_name_;
-        CloudParam* cloud_param_ptr_;
         RocksdbWrapper* cloud_rocksdb_ptr_;
 
         // For receiving global requests
@@ -49,11 +45,8 @@ namespace covered
 
         PropagationSimulatorParam* cloud_toedge_propagation_simulator_param_ptr_;
 
-        // Non-const individual variables for benchmark control messages
-        NetworkAddr cloud_recvmsg_source_addr_;
-        NetworkAddr evaluator_recvmsg_dst_addr_;
-        UdpMsgSocketServer* cloud_recvmsg_socket_server_ptr_;
-        UdpMsgSocketClient* cloud_sendmsg_socket_client_ptr_;
+        // Sub-threads
+        pthread_t cloud_toedge_propagation_simulator_thread_;
     };
 }
 

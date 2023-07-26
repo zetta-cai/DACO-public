@@ -18,7 +18,7 @@ namespace covered
     {
         assert(edge_wrapper_ptr_ != NULL);
         assert(edge_wrapper_ptr_->cache_name_ != Param::COVERED_CACHE_NAME);
-        uint32_t edge_idx = edge_wrapper_ptr_->edge_param_ptr_->getNodeIdx();
+        uint32_t edge_idx = edge_wrapper_ptr_->node_idx_;
 
         // Differentiate BasicInvalidationServer in different edge nodes
         std::ostringstream oss;
@@ -56,7 +56,7 @@ namespace covered
         event_list.addEvent(Event::EDGE_INVALIDATION_SERVER_INVALIDATE_LOCAL_CACHE_EVENT_NAME, invalidate_local_cache_latency_us);
 
         // Prepare a invalidation response
-        uint32_t edge_idx = edge_wrapper_ptr_->edge_param_ptr_->getNodeIdx();
+        uint32_t edge_idx = edge_wrapper_ptr_->node_idx_;
         MessageBase* invalidation_response_ptr = new InvalidationResponse(tmp_key, edge_idx, edge_invalidation_server_recvreq_source_addr_, event_list);
         assert(invalidation_response_ptr != NULL);
 

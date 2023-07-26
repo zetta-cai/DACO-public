@@ -5,17 +5,15 @@
 #include <time.h> // struct timespec
 #include <unistd.h> // usleep
 
-#include "benchmark/client_param.h"
 #include "benchmark/client_wrapper.h"
-#include "benchmark/evaluator.h"
+#include "benchmark/evaluator_wrapper.h"
 #include "common/cli.h"
 #include "common/config.h"
 #include "common/param.h"
 #include "common/util.h"
-#include "cloud/cloud_param.h"
 #include "cloud/cloud_wrapper.h"
-#include "edge/edge_param.h"
 #include "edge/edge_wrapper.h"
+#include "benchmark/evaluator_wrapper.h"
 #include "statistics/client_statistics_tracker.h"
 
 int main(int argc, char **argv) {
@@ -32,7 +30,7 @@ int main(int argc, char **argv) {
 
     covered::Util::dumpNormalMsg(main_class_name, "launch evaluator");
 
-    pthread_returncode = covered::Util::pthreadCreateHighPriority(&evaluator_thread, covered::Evaluator::launchEvaluator, (void*)(&is_evaluator_initialized));
+    pthread_returncode = covered::Util::pthreadCreateHighPriority(&evaluator_thread, covered::EvaluatorWrapper::launchEvaluator, (void*)(&is_evaluator_initialized));
     if (pthread_returncode != 0)
     {
         std::ostringstream oss;
@@ -47,18 +45,18 @@ int main(int argc, char **argv) {
     // (2) Simulate a single cloud node for backend storage
 
     pthread_t cloud_thread;
-    covered::CloudParam cloud_param;
+    uint32_t cloud_idx;
 
     // (2.1) Prepare one cloud parameter
 
-    cloud_param = covered::CloudParam();
+    cloud_idx = 0; // TODO: support 1 cloud node now
 
     // (2.2) Launch one cloud node
 
     covered::Util::dumpNormalMsg(main_class_name, "launch cloud node");
 
-    //pthread_returncode = pthread_create(&cloud_thread, NULL, covered::CloudWrapper::launchCloud, (void*)(&(cloud_param)));
-    pthread_returncode = covered::Util::pthreadCreateHighPriority(&cloud_thread, covered::CloudWrapper::launchCloud, (void*)(&(cloud_param)));
+    //pthread_returncode = pthread_create(&cloud_thread, NULL, covered::CloudWrapper::launchCloud, (void*)(&(cloud_idx)));
+    pthread_returncode = covered::Util::pthreadCreateHighPriority(&cloud_thread, covered::CloudWrapper::launchCloud, (void*)(&(cloud_idx)));
     if (pthread_returncode != 0)
     {
         std::ostringstream oss;
@@ -71,14 +69,13 @@ int main(int argc, char **argv) {
 
     const uint32_t edgecnt = covered::Param::getEdgecnt();
     pthread_t edge_threads[edgecnt];
-    covered::EdgeParam edge_params[edgecnt];
+    uint32_t edge_idxes[edgecnt];
 
     // (3.1) Prepare edgecnt edge parameters
 
     for (uint32_t edge_idx = 0; edge_idx < edgecnt; edge_idx++)
     {
-        covered::EdgeParam edge_param(edge_idx);
-        edge_params[edge_idx] = edge_param;
+        edge_idxes[edge_idx] = edge_idx;
     }
 
     // (3.2) Launch edgecnt edge nodes
@@ -89,8 +86,8 @@ int main(int argc, char **argv) {
         oss << "launch edge node " << edge_idx;
         covered::Util::dumpNormalMsg(main_class_name, oss.str());
 
-        //pthread_returncode = pthread_create(&edge_threads[edge_idx], NULL, covered::EdgeWrapper::launchEdge, (void*)(&(edge_params[edge_idx])));
-        pthread_returncode = covered::Util::pthreadCreateLowPriority(&edge_threads[edge_idx], covered::EdgeWrapper::launchEdge, (void*)(&(edge_params[edge_idx])));
+        //pthread_returncode = pthread_create(&edge_threads[edge_idx], NULL, covered::EdgeWrapper::launchEdge, (void*)(&(edge_idxes[edge_idx])));
+        pthread_returncode = covered::Util::pthreadCreateLowPriority(&edge_threads[edge_idx], covered::EdgeWrapper::launchEdge, (void*)(&(edge_idxes[edge_idx])));
         if (pthread_returncode != 0)
         {
             std::ostringstream oss;
@@ -104,14 +101,13 @@ int main(int argc, char **argv) {
 
     const uint32_t clientcnt = covered::Param::getClientcnt();
     pthread_t client_threads[clientcnt];
-    covered::ClientParam client_params[clientcnt];
+    uint32_t client_idxes[clientcnt];
 
     // (4.1) Prepare clientcnt client parameters
 
     for (uint32_t client_idx = 0; client_idx < clientcnt; client_idx++)
     {
-        covered::ClientParam client_param(client_idx);
-        client_params[client_idx] = client_param;
+        client_idxes[client_idx] = client_idx;
     }
 
     // (4.2) Launch clientcnt clients
@@ -122,8 +118,8 @@ int main(int argc, char **argv) {
         oss << "launch client " << client_idx;
         covered::Util::dumpNormalMsg(main_class_name, oss.str());
 
-        //pthread_returncode = pthread_create(&client_threads[client_idx], NULL, covered::ClientWrapper::launchClient, (void*)(&(client_params[client_idx])));
-        pthread_returncode = covered::Util::pthreadCreateLowPriority(&client_threads[client_idx], covered::ClientWrapper::launchClient, (void*)(&(client_params[client_idx])));
+        //pthread_returncode = pthread_create(&client_threads[client_idx], NULL, covered::ClientWrapper::launchClient, (void*)(&(client_idxes[client_idx])));
+        pthread_returncode = covered::Util::pthreadCreateLowPriority(&client_threads[client_idx], covered::ClientWrapper::launchClient, (void*)(&(client_idxes[client_idx])));
         if (pthread_returncode != 0)
         {
             std::ostringstream oss;
@@ -138,23 +134,23 @@ int main(int argc, char **argv) {
     // (5.2) Set client_running_ = true in all clientcnt client parameters to start benchmark
 
     covered::Util::dumpNormalMsg(main_class_name, "Start benchmark...");
-    for (uint32_t client_idx = 0; client_idx < clientcnt; client_idx++)
-    {
-        client_params[client_idx].setNodeRunning();
-    }
+    //for (uint32_t client_idx = 0; client_idx < clientcnt; client_idx++)
+    //{
+    //    client_params[client_idx].setNodeRunning();
+    //}
 
     // (5.3) Start stresstest phase if all clients finish warmup phase
 
-    for (uint32_t client_idx = 0; client_idx < clientcnt; client_idx++)
-    {
-        while (client_params[client_idx].isWarmupPhase()) {}
-    }
+    //for (uint32_t client_idx = 0; client_idx < clientcnt; client_idx++)
+    //{
+    //    while (client_params[client_idx].isWarmupPhase()) {}
+    //}
 
-    covered::Util::dumpNormalMsg(main_class_name, "Start stresstest phase...");
-    for (uint32_t client_idx = 0; client_idx < clientcnt; client_idx++)
-    {
-        client_params[client_idx].startStresstestPhase();
-    }
+    //covered::Util::dumpNormalMsg(main_class_name, "Start stresstest phase...");
+    //for (uint32_t client_idx = 0; client_idx < clientcnt; client_idx++)
+    //{
+    //    client_params[client_idx].startStresstestPhase();
+    //}
 
     // (5.4) Count down duration for stresstest phase
 
@@ -177,11 +173,11 @@ int main(int argc, char **argv) {
 
     // (6.1) Reset client_running_ = false in clientcnt client parameters to stop benchmark
 
-    for (uint32_t client_idx = 0; client_idx < clientcnt; client_idx++)
-    {
-        client_params[client_idx].resetNodeRunning();
-    }
-    covered::Util::dumpNormalMsg(main_class_name, "Stop benchmark...");
+    //for (uint32_t client_idx = 0; client_idx < clientcnt; client_idx++)
+    //{
+    //    client_params[client_idx].resetNodeRunning();
+    //}
+    //covered::Util::dumpNormalMsg(main_class_name, "Stop benchmark...");
 
     // (6.2) Wait for clientcnt clients
 
@@ -201,11 +197,11 @@ int main(int argc, char **argv) {
 
     // (6.3) Reset edge_running_ = false in edgecnt edge parameters to stop edge nodes
 
-    for (uint32_t edge_idx = 0; edge_idx < edgecnt; edge_idx++)
-    {
-        edge_params[edge_idx].resetNodeRunning();
-    }
-    covered::Util::dumpNormalMsg(main_class_name, "Stop edge nodes...");
+    //for (uint32_t edge_idx = 0; edge_idx < edgecnt; edge_idx++)
+    //{
+    //    edge_params[edge_idx].resetNodeRunning();
+    //}
+    //covered::Util::dumpNormalMsg(main_class_name, "Stop edge nodes...");
 
     // (6.4) Wait for edgecnt edge nodes
 
@@ -225,8 +221,8 @@ int main(int argc, char **argv) {
 
     // (6.5) Reset cloud_running_ = false in a cloud parameter to stop the cloud node
 
-    cloud_param.resetNodeRunning();
-    covered::Util::dumpNormalMsg(main_class_name, "Stop the cloud node...");
+    //cloud_param.resetNodeRunning();
+    //covered::Util::dumpNormalMsg(main_class_name, "Stop the cloud node...");
 
     // (6.6) Wait for the cloud node
 

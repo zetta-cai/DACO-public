@@ -39,8 +39,7 @@ namespace covered
         // Get client index
         ClientWrapper* client_wrapper_ptr = client_worker_param_ptr->getClientWrapperPtr();
         assert(client_wrapper_ptr != NULL);
-        assert(client_wrapper_ptr->client_param_ptr_ != NULL);
-        const uint32_t client_idx = client_wrapper_ptr->client_param_ptr_->getNodeIdx();
+        const uint32_t client_idx = client_wrapper_ptr->node_idx_;
         const uint32_t clientcnt = client_wrapper_ptr->clientcnt_;
         const uint32_t edgecnt = client_wrapper_ptr->edgecnt_;
         const uint32_t local_client_worker_idx = client_worker_param_ptr->getLocalClientWorkerIdx();
@@ -99,22 +98,21 @@ namespace covered
         checkPointers_();
         ClientWrapper* tmp_client_wrapper_ptr = client_worker_param_ptr_->getClientWrapperPtr();
         
-        ClientParam* client_param_ptr = tmp_client_wrapper_ptr->client_param_ptr_;
         WorkloadWrapperBase* workload_generator_ptr = tmp_client_wrapper_ptr->workload_generator_ptr_;
 
         // Block until client_running_ becomes true
-        while (!client_param_ptr->isNodeRunning()) {}
+        while (!tmp_client_wrapper_ptr->isNodeRunning_()) {}
 
         // Current worker thread start to issue requests and receive responses
-        while (client_param_ptr->isNodeRunning())
+        while (tmp_client_wrapper_ptr->isNodeRunning_())
         {
             // Get current phase (warmph or stresstest)
             bool is_warmup_phase = false;
             bool is_stresstest_phase = false;
-            is_warmup_phase = client_param_ptr->isWarmupPhase();
+            is_warmup_phase = tmp_client_wrapper_ptr->isWarmupPhase_();
             if (!is_warmup_phase)
             {
-                is_stresstest_phase = client_param_ptr->isStresstestPhase();
+                is_stresstest_phase = tmp_client_wrapper_ptr->isStresstestPhase_();
             }
 
             if (is_warmup_phase || is_stresstest_phase)
@@ -124,7 +122,7 @@ namespace covered
 
                 // TMPDEBUG
                 //WorkloadItem workload_item(Key("123"), Value(200), WorkloadItemType::kWorkloadItemGet);
-                //if (client_param_ptr->getClientIdx() != 0)
+                //if (tmp_client_wrapper_ptr->node_idx_ != 0)
                 //{
                 //    sleep(0.5);
                 //}
@@ -141,7 +139,7 @@ namespace covered
                 }
 
                 // Process local response message to update statistics
-                /*if (is_warmup_phase && !client_param_ptr->isWarmupPhase()) // Detect responses of warmup requests received after warmup phase (e.g., after curslot switch or during stresstest phase)
+                /*if (is_warmup_phase && !tmp_client_wrapper_ptr->isWarmupPhase_()) // Detect responses of warmup requests received after warmup phase (e.g., after curslot switch or during stresstest phase)
                 {
                     // TODO: as there could still exist limited warmup requests are counted in stresstest beginning slots, we can print the start slot idx of stresstest phase to drop the invalid statistics of the beginning slots
                     continue; // NOT update to avoid affecting cur-slot raw/aggregated statistics especially for warmup speedup
@@ -177,7 +175,7 @@ namespace covered
         while (true) // Timeout-and-retry mechanism
         {
             // Convert workload item into local request message
-            MessageBase* local_request_ptr = MessageBase::getLocalRequestFromWorkloadItem(workload_item, tmp_client_wrapper_ptr->client_param_ptr_->getNodeIdx(), client_worker_recvrsp_source_addr_);
+            MessageBase* local_request_ptr = MessageBase::getLocalRequestFromWorkloadItem(workload_item, tmp_client_wrapper_ptr->node_idx_, client_worker_recvrsp_source_addr_);
             assert(local_request_ptr != NULL);
 
             #ifdef DEBUG_CLIENT_WORKER_WRAPPER
@@ -195,7 +193,7 @@ namespace covered
             bool is_timeout = client_worker_recvrsp_socket_server_ptr_->recv(local_response_msg_payload);
             if (is_timeout)
             {
-                if (!tmp_client_wrapper_ptr->client_param_ptr_->isNodeRunning())
+                if (!tmp_client_wrapper_ptr->isNodeRunning_())
                 {
                     is_finish = true;
                     break; // Client is NOT running

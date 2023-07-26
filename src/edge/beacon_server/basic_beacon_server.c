@@ -19,7 +19,7 @@ namespace covered
     {
         assert(edge_wrapper_ptr_ != NULL);
         assert(edge_wrapper_ptr_->cache_name_ != Param::COVERED_CACHE_NAME);
-        uint32_t edge_idx = edge_wrapper_ptr_->edge_param_ptr_->getNodeIdx();
+        uint32_t edge_idx = edge_wrapper_ptr_->node_idx_;
 
         // Differentiate BasicBeaconServer in different edge nodes
         std::ostringstream oss;
@@ -63,7 +63,7 @@ namespace covered
         event_list.addEvent(Event::EDGE_BEACON_SERVER_LOOKUP_LOCAL_DIRECTORY_EVENT_NAME, lookup_local_directory_latency_us);
 
         // Prepare a directory lookup response
-        uint32_t edge_idx = edge_wrapper_ptr_->edge_param_ptr_->getNodeIdx();
+        uint32_t edge_idx = edge_wrapper_ptr_->node_idx_;
         MessageBase* directory_lookup_response_ptr = new DirectoryLookupResponse(tmp_key, is_being_written, is_valid_directory_exist, directory_info, edge_idx, edge_beacon_server_recvreq_source_addr_, event_list);
         assert(directory_lookup_response_ptr != NULL);
         
@@ -104,7 +104,7 @@ namespace covered
         event_list.addEvent(Event::EDGE_BEACON_SERVER_UPDATE_LOCAL_DIRECTORY_EVENT_NAME, update_local_directory_latency_us);
 
         // Prepare a directory update response
-        uint32_t edge_idx = edge_wrapper_ptr_->edge_param_ptr_->getNodeIdx();
+        uint32_t edge_idx = edge_wrapper_ptr_->node_idx_;
         MessageBase* directory_update_response_ptr = new DirectoryUpdateResponse(tmp_key, is_being_written, edge_idx, edge_beacon_server_recvreq_source_addr_, event_list);
         assert(directory_update_response_ptr != NULL);
 
@@ -156,7 +156,7 @@ namespace covered
         }
 
         // Prepare a acquire writelock response
-        uint32_t edge_idx = edge_wrapper_ptr_->edge_param_ptr_->getNodeIdx();
+        uint32_t edge_idx = edge_wrapper_ptr_->node_idx_;
         MessageBase* acquire_writelock_response_ptr = new AcquireWritelockResponse(tmp_key, lock_result, edge_idx, edge_beacon_server_recvreq_source_addr_, event_list);
         assert(acquire_writelock_response_ptr != NULL);
 
@@ -199,7 +199,7 @@ namespace covered
         is_finish = edge_wrapper_ptr_->notifyEdgesToFinishBlock_(edge_beacon_server_recvrsp_socket_server_ptr_, edge_beacon_server_recvrsp_source_addr_, tmp_key, blocked_edges, event_list); // Add events of intermedate responses if with event tracking
 
         // Prepare a release writelock response
-        uint32_t edge_idx = edge_wrapper_ptr_->edge_param_ptr_->getNodeIdx();
+        uint32_t edge_idx = edge_wrapper_ptr_->node_idx_;
         MessageBase* release_writelock_response_ptr = new ReleaseWritelockResponse(tmp_key, edge_idx, edge_beacon_server_recvreq_source_addr_, event_list);
         assert(release_writelock_response_ptr != NULL);
 

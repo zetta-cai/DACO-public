@@ -18,7 +18,7 @@ namespace covered
     {
         assert(edge_wrapper_ptr_ != NULL);
         assert(edge_wrapper_ptr_->cache_name_ == Param::COVERED_CACHE_NAME);
-        uint32_t edge_idx = edge_wrapper_ptr_->edge_param_ptr_->getNodeIdx();
+        uint32_t edge_idx = edge_wrapper_ptr_->node_idx_;
 
         // Differentiate CoveredBeaconServer in different edge nodes
         std::ostringstream oss;

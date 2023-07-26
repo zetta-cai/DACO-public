@@ -15,7 +15,7 @@ namespace covered
 {
     const std::string EvaluatorWrapper::kClassName("EvaluatorWrapper");
 
-    void* EvaluatorWrapper::launchEvaluatorWrapper(void* is_evaluator_initialized_ptr)
+    void* EvaluatorWrapper::launchEvaluator(void* is_evaluator_initialized_ptr)
     {
         bool& is_evaluator_initialized = *(static_cast<bool*>(is_evaluator_initialized_ptr));
 

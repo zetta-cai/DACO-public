@@ -13,53 +13,54 @@
 
 #include <string>
 
-#include "benchmark/client_param.h"
-#include "network/network_addr.h"
+#include "common/node_wrapper_base.h"
 #include "network/propagation_simulator_param.h"
 #include "statistics/client_statistics_tracker.h"
 #include "workload/workload_wrapper_base.h"
 
 namespace covered
 {
-    class ClientWrapper
+    class ClientWrapper : public NodeWrapperBase
     {
     public:
-        static void* launchClient(void* client_param_ptr);
+        static void* launchClient(void* client_idx_ptr);
 
-        // NOTE: set NodeParamBase::node_initialized_ after all time-consuming initialization in constructor and start()
-
-        ClientWrapper(const uint32_t& clientcnt, const uint32_t& edgecnt, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge_us, const std::string& workload_name, ClientParam* client_param_ptr);
-        ~ClientWrapper();
-
-        void start();
+        ClientWrapper(const uint32_t& client_idx, const uint32_t& clientcnt, const uint32_t& edgecnt, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge_us, const std::string& workload_name);
+        virtual ~ClientWrapper();
 
         friend class ClientWorkerWrapper;
     private:
         static const std::string kClassName;
 
-        void finishInitialization_() const;
+        virtual void initialize_() override;
+        virtual void startInternal_() override;
+
+        bool isWarmupPhase_() const;
+        void finishWarmupPhase_();
+        bool isStresstestPhase_() const;
+        void startStresstestPhase_();
 
         void checkPointers_() const;
 
         // Const shared variable
-        const uint32_t clientcnt_;
         const uint32_t edgecnt_;
         const uint32_t perclient_workercnt_;
-        ClientParam* client_param_ptr_; // thread safe
 
         // Const individual variable
         std::string instance_name_;
+
+        // Non-const shared variables for evaluation phases
+        std::atomic<bool> is_warmup_phase_;
+        std::atomic<bool> is_stresstest_phase_;
 
         // Non-const shared variables
         WorkloadWrapperBase* workload_generator_ptr_; // thread safe
         ClientStatisticsTracker* client_statistics_tracker_ptr_; // thread safe
         PropagationSimulatorParam* client_toedge_propagation_simulator_param_ptr_; // thread safe
 
-        // Non-const individual variables for benchmark control messages
-        NetworkAddr client_recvmsg_source_addr_;
-        NetworkAddr evaluator_recvmsg_dst_addr_;
-        UdpMsgSocketServer* client_recvmsg_socket_server_ptr_;
-        UdpMsgSocketClient* client_sendmsg_socket_client_ptr_;
+        // Sub-threads
+        pthread_t client_toedge_propagation_simulator_thread_;
+        pthread_t* client_worker_threads_;
     };
 }
 

@@ -9,31 +9,26 @@
 #include "common/config.h"
 #include "common/param.h"
 #include "common/util.h"
-#include "message/control_message.h"
 #include "network/propagation_simulator.h"
 
 namespace covered
 {
     const std::string ClientWrapper::kClassName("ClientWrapper");
 
-    void* ClientWrapper::launchClient(void* client_param_ptr)
+    void* ClientWrapper::launchClient(void* client_idx_ptr)
     {
-        ClientWrapper local_client(Param::getClientcnt(), Param::getEdgecnt(), Param::getKeycnt(), Param::getOpcnt(), Param::getPerclientWorkercnt(), Param::getPropagationLatencyClientedgeUs(), Param::getWorkloadName(), (ClientParam*)client_param_ptr);
+        assert(client_idx_ptr != NULL);
+        uint32_t client_idx = *((uint32_t*)client_idx_ptr);
+        
+        ClientWrapper local_client(client_idx, Param::getClientcnt(), Param::getEdgecnt(), Param::getKeycnt(), Param::getOpcnt(), Param::getPerclientWorkercnt(), Param::getPropagationLatencyClientedgeUs(), Param::getWorkloadName());
         local_client.start();
         
         pthread_exit(NULL);
         return NULL;
     }
 
-    ClientWrapper::ClientWrapper(const uint32_t& clientcnt, const uint32_t& edgecnt, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge_us, const std::string& workload_name, ClientParam* client_param_ptr) : clientcnt_(clientcnt), edgecnt_(edgecnt), perclient_workercnt_(perclient_workercnt), client_param_ptr_(client_param_ptr)
+    ClientWrapper::ClientWrapper(const uint32_t& client_idx, const uint32_t& clientcnt, const uint32_t& edgecnt, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge_us, const std::string& workload_name) : NodeWrapperBase(NodeWrapperBase::CLIENT_NODE_ROLE, client_idx, clientcnt, false), edgecnt_(edgecnt), perclient_workercnt_(perclient_workercnt), is_warmup_phase_(true)
     {
-        if (client_param_ptr == NULL)
-        {
-            Util::dumpErrorMsg(kClassName, "client_param_ptr is NULL!");
-            exit(1);
-        }
-        uint32_t client_idx = client_param_ptr->getNodeIdx();
-
         // Differentiate different clients
         std::ostringstream oss;
         oss << kClassName << " client" << client_idx;
@@ -49,31 +44,18 @@ namespace covered
         assert(client_statistics_tracker_ptr_ != NULL);
 
         // Allocate client-to-edge propagation simulator param
-        client_toedge_propagation_simulator_param_ptr_ = new PropagationSimulatorParam(propagation_latency_clientedge_us, (NodeParamBase*)client_param_ptr, Config::getPropagationItemBufferSizeClientToedge());
+        client_toedge_propagation_simulator_param_ptr_ = new PropagationSimulatorParam(node_role_idx_str_, propagation_latency_clientedge_us, Config::getPropagationItemBufferSizeClientToedge());
         assert(client_toedge_propagation_simulator_param_ptr_ != NULL);
 
-        // For benchmark control messages
-
-        std::string client_ipstr = Config::getClientIpstr(client_idx, clientcnt);
-        uint16_t client_recvmsg_port = Util::getClientRecvmsgPort(client_idx, clientcnt);
-        client_recvmsg_source_addr_ = NetworkAddr(client_ipstr, client_recvmsg_port);
-
-        std::string evaluator_ipstr = Config::getEvaluatorIpstr();
-        uint16_t evaluator_recvmsg_port = Config::getEvaluatorRecvmsgPort();
-        evaluator_recvmsg_dst_addr_ = NetworkAddr(evaluator_ipstr, evaluator_recvmsg_port);
-        
-        NetworkAddr host_addr(Util::ANY_IPSTR, client_recvmsg_port);
-        client_recvmsg_socket_server_ptr_ = new UdpMsgSocketServer(host_addr);
-        assert(client_recvmsg_socket_server_ptr_ != NULL);
-
-        client_sendmsg_socket_client_ptr_ = new UdpMsgSocketClient();
-        assert(client_sendmsg_socket_client_ptr_ != NULL);
+        // Sub-threads
+        client_toedge_propagation_simulator_thread = 0;
+        client_worker_threads_ = new pthread_t[perclient_workercnt];
+        assert(client_worker_threads_ != NULL);
+        memset(client_worker_threads_, 0, perclient_workercnt * sizeof(pthread_t));
     }
 
     ClientWrapper::~ClientWrapper()
     {
-        // NOTE: no need to delete client_param_ptr_, as it is maintained outside ClientWrapper
-
         // Release workload generator
         assert(workload_generator_ptr_ != NULL);
         delete workload_generator_ptr_;
@@ -89,25 +71,21 @@ namespace covered
         delete client_toedge_propagation_simulator_param_ptr_;
         client_toedge_propagation_simulator_param_ptr_ = NULL;
 
-        // For benchmark control messages
-        assert(client_recvmsg_socket_server_ptr_ != NULL);
-        delete client_recvmsg_socket_server_ptr_;
-        client_recvmsg_socket_server_ptr_ = NULL;
-        assert(client_sendmsg_socket_client_ptr_ != NULL);
-        delete client_sendmsg_socket_client_ptr_;
-        client_sendmsg_socket_client_ptr_ = NULL;
+        // Release sub-threads
+        assert(client_worker_threads_ != NULL);
+        delete[] client_worker_threads_;
+        client_worker_threads_ = NULL;
     }
 
-    void ClientWrapper::start()
+    void ClientWrapper::initialize_()
     {
         checkPointers_();
         
         int pthread_returncode = 0;
 
         // Launch client-to-edge propagation simulator
-        pthread_t client_toedge_propagation_simulator_thread;
         //pthread_returncode = pthread_create(&client_toedge_propagation_simulator_thread, NULL, PropagationSimulator::launchPropagationSimulator, (void*)client_toedge_propagation_simulator_param_ptr_);
-        pthread_returncode = Util::pthreadCreateHighPriority(&client_toedge_propagation_simulator_thread, PropagationSimulator::launchPropagationSimulator, (void*)client_toedge_propagation_simulator_param_ptr_);
+        pthread_returncode = Util::pthreadCreateHighPriority(&client_toedge_propagation_simulator_thread_, PropagationSimulator::launchPropagationSimulator, (void*)client_toedge_propagation_simulator_param_ptr_);
         if (pthread_returncode != 0)
         {
             std::ostringstream oss;
@@ -125,11 +103,10 @@ namespace covered
         }
 
         // Launch perclient_workercnt worker threads in the local client
-        pthread_t client_worker_threads[perclient_workercnt_];
         for (uint32_t local_client_worker_idx = 0; local_client_worker_idx < perclient_workercnt_; local_client_worker_idx++)
         {
-            //pthread_returncode = pthread_create(&client_worker_threads[local_client_worker_idx], NULL, ClientWorkerWrapper::launchClientWorker, (void*)(&(client_worker_params[local_client_worker_idx])));
-            pthread_returncode = Util::pthreadCreateHighPriority(&client_worker_threads[local_client_worker_idx], ClientWorkerWrapper::launchClientWorker, (void*)(&(client_worker_params[local_client_worker_idx])));
+            //pthread_returncode = pthread_create(&client_worker_threads[local_client_worker_idx], NULL, launchClientWorker, (void*)(&(client_worker_params[local_client_worker_idx])));
+            pthread_returncode = Util::pthreadCreateHighPriority(&client_worker_threads_[local_client_worker_idx], launchClientWorker, (void*)(&(client_worker_params[local_client_worker_idx])));
             if (pthread_returncode != 0)
             {
                 std::ostringstream oss;
@@ -139,25 +116,26 @@ namespace covered
             }
         }
 
-        // After all time-consuming initialization
-        finishInitialization_();
+        return;
+    }
 
-        // Block until client_running_ becomes true
-        while (!client_param_ptr_->isNodeRunning()) {}
-
+    void ClientWrapper::startInternal_()
+    {
+        checkPointers_();
+        
         // Switch cur-slot client raw statistics to track per-slot aggregated statistics
         const uint32_t client_raw_statistics_slot_interval_sec = Config::getClientRawStatisticsSlotIntervalSec();
         bool is_stable = false;
         double stable_hit_ratio = 0.0d;
-        while (client_param_ptr_->isNodeRunning())
+        while (isNodeRunning_())
         {
             // Get current phase (warmph or stresstest)
             bool is_warmup_phase = false;
             bool is_stresstest_phase = false;
-            is_warmup_phase = client_param_ptr_->isWarmupPhase();
+            is_warmup_phase = isWarmupPhase_();
             if (!is_warmup_phase)
             {
-                is_stresstest_phase = client_param_ptr_->isStresstestPhase();
+                is_stresstest_phase = isStresstestPhase_();
             }
 
             if (is_warmup_phase || is_stresstest_phase)
@@ -184,14 +162,16 @@ namespace covered
                         Util::dumpNormalMsg(instance_name_, oss.str());
 
                         // Client workers will NOT issue any request until stresstest phase is started
-                        client_param_ptr_->finishWarmupPhase(); // Finish the warmup phase of all client workers
+                        finishWarmupPhase_(); // Finish the warmup phase of all client workers
                     }
                 }
             }
         }
 
+        int pthread_returncode = 0;
+
         // Wait client-to-edge propagation simulator
-        pthread_returncode = pthread_join(client_toedge_propagation_simulator_thread, NULL);
+        pthread_returncode = pthread_join(client_toedge_propagation_simulator_thread_, NULL);
         if (pthread_returncode != 0)
         {
             std::ostringstream oss;
@@ -203,7 +183,7 @@ namespace covered
         // Wait for all local workers
         for (uint32_t local_client_worker_idx = 0; local_client_worker_idx < perclient_workercnt_; local_client_worker_idx++)
         {
-            pthread_returncode = pthread_join(client_worker_threads[local_client_worker_idx], NULL); // void* retval = NULL
+            pthread_returncode = pthread_join(client_worker_threads_[local_client_worker_idx], NULL); // void* retval = NULL
             if (pthread_returncode != 0)
             {
                 std::ostringstream oss;
@@ -214,9 +194,7 @@ namespace covered
         }
 
         // Get per-client statistics file path
-        assert(client_param_ptr_ != NULL);
-        uint32_t client_idx = client_param_ptr_->getNodeIdx();
-        std::string client_statistics_filepath = Util::getClientStatisticsFilepath(client_idx);
+        std::string client_statistics_filepath = Util::getClientStatisticsFilepath(node_idx_);
 
         // Aggregate cur-slot/stable client raw statistics, and dump per-slot/stable client aggregated statistics
         assert(client_statistics_tracker_ptr_ != NULL);
@@ -225,45 +203,35 @@ namespace covered
         return;
     }
 
-    void ClientWrapper::finishInitialization_() const
+    bool ClientWrapper::isWarmupPhase() const
     {
-        // Issue a InitializationRequest to evaluator
-        uint32_t client_idx = client_param_ptr_->getNodeIdx();
-        InitializationRequest initialization_request(client_idx, client_recvmsg_source_addr_);
-        client_sendmsg_socket_client_ptr_->send((MessageBase*)&initialization_request, evaluator_recvmsg_dst_addr_);
+        return is_warmup_phase_.load(Util::LOAD_CONCURRENCY_ORDER);
+    }
 
-        // Wait for InitializationResponse
-        while (true)
-        {
-            DynamicArray control_response_msg_payload;
-            bool is_timeout = client_recvmsg_socket_server_ptr_->recv(control_response_msg_payload);
-            if (is_timeout)
-            {
-                continue; // Wait until receiving InitializationResponse
-            }
-            else
-            {
-                MessageBase* control_response_ptr = MessageBase::getRequestFromMsgPayload(control_response_msg_payload);
-                assert(control_response_ptr != NULL);
-                assert(control_response_ptr->getMessageType() == MessageType::kInitializationResponse);
+    void ClientWrapper::finishWarmupPhase()
+    {
+        is_warmup_phase_.store(false, Util::STORE_CONCURRENCY_ORDER);
+        return;
+    }
 
-                delete control_response_ptr;
-                control_response_ptr = NULL;
-                
-                break;
-            }
-        }
+    bool ClientWrapper::isStresstestPhase() const
+    {
+        return is_stresstest_phase_.load(Util::LOAD_CONCURRENCY_ORDER);
+    }
+    
+    void ClientWrapper::startStresstestPhase()
+    {
+        is_stresstest_phase_.store(true, Util::STORE_CONCURRENCY_ORDER);
         return;
     }
 
     void ClientWrapper::checkPointers_() const
     {
-        assert(client_param_ptr_ != NULL);
+        NodeWrapperBase::checkPointers_();
+
         assert(workload_generator_ptr_ != NULL);
         assert(client_statistics_tracker_ptr_ != NULL);
         assert(client_toedge_propagation_simulator_param_ptr_ != NULL);
-        assert(client_recvmsg_socket_server_ptr_ != NULL);
-        assert(client_sendmsg_socket_client_ptr_ != NULL);
 
         return;
     }

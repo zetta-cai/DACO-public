@@ -64,8 +64,8 @@ namespace covered
     class CacheServerWorkerBase
     {
     public:
-        static void* launchCacheServerWorker(void* cache_server_worker_param_ptr);
-
+        void* launchCacheServerWorker(void* cache_server_worker_param_ptr);
+    
         CacheServerWorkerBase(CacheServerWorkerParam* cache_server_worker_param_ptr);
         virtual ~CacheServerWorkerBase();
 

@@ -12,25 +12,20 @@
 #include <string>
 
 #include "cache/cache_wrapper.h"
+#include "common/node_wrapper_base.h"
 #include "cooperation/cooperation_wrapper_base.h"
-#include "edge/edge_param.h"
 #include "event/event_list.h"
 #include "network/propagation_simulator.h"
-#include "network/udp_msg_socket_server.h"
 
 namespace covered
 {
-    class EdgeWrapper
+    class EdgeWrapper : public NodeWrapperBase
     {
     public:
-        static void* launchEdge(void* edge_param_ptr);
+        static void* launchEdge(void* edge_idx_ptr);
 
-        // NOTE: set NodeParamBase::node_initialized_ after all time-consuming initialization in constructor and start()
-        
-        EdgeWrapper(const std::string& cache_name, const uint64_t& capacity_bytes, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& percacheserver_workercnt, const uint32_t& propagation_latency_clientedge_us, const uint32_t& propagation_latency_crossedge_us, const uint32_t& propagation_latency_edgecloud_us, EdgeParam* edge_param_ptr);
+        EdgeWrapper(const std::string& cache_name, const uint64_t& capacity_bytes, const uint32_t& edge_idx, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& percacheserver_workercnt, const uint32_t& propagation_latency_clientedge_us, const uint32_t& propagation_latency_crossedge_us, const uint32_t& propagation_latency_edgecloud_us);
         virtual ~EdgeWrapper();
-
-        void start();
 
         friend class CacheServer;
         friend class CacheServerWorkerBase;
@@ -44,6 +39,9 @@ namespace covered
         friend class CoveredInvalidationServer;
     private:
         static const std::string kClassName;
+
+        virtual void initialize_() override;
+        virtual void startInternal_() override;
 
         static void* launchBeaconServer_(void* edge_wrapper_ptr);
         static void* launchCacheServer_(void* edge_wrapper_ptr);
@@ -73,8 +71,6 @@ namespace covered
 
         // (4) Other utilities
 
-        void finishInitialization_() const;
-
         void checkPointers_() const;
 
         std::string instance_name_;
@@ -82,9 +78,7 @@ namespace covered
         // Const shared variables
         const std::string cache_name_; // Come from Param
         const uint64_t capacity_bytes_; // Come from Param
-        const uint32_t edgecnt_; // Come from Param
         const uint32_t percacheserver_workercnt_; // Come from Param
-        EdgeParam* edge_param_ptr_; // Thread safe
 
         // NOTE: we do NOT need per-key rwlock for atomicity among CacheWrapper and CooperationWrapperBase.
         // (i) CacheWrapper is already thread-safe for cache server and invalidation server, and CooperationWrapperBase is already thread-safe for cache server and beacon server.
@@ -97,11 +91,13 @@ namespace covered
         PropagationSimulatorParam* edge_toedge_propagation_simulator_param_ptr_; // thread safe
         PropagationSimulatorParam* edge_tocloud_propagation_simulator_param_ptr_; // thread safe
 
-        // Non-const individual variables for benchmark control messages
-        NetworkAddr edge_recvmsg_source_addr_;
-        NetworkAddr evaluator_recvmsg_dst_addr_;
-        UdpMsgSocketServer* edge_recvmsg_socket_server_ptr_;
-        UdpMsgSocketClient* edge_sendmsg_socket_client_ptr_;
+        // Sub-threads
+        pthread_t edge_toclient_propagation_simulator_thread_;
+        pthread_t edge_toedge_propagation_simulator_thread_;
+        pthread_t edge_tocloud_propagation_simulator_thread_;
+        pthread_t beacon_server_thread_;
+        pthread_t cache_server_thread_;
+        pthread_t invalidation_server_thread_;
     };
 }
 

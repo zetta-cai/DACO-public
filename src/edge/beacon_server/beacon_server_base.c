@@ -36,7 +36,7 @@ namespace covered
     BeaconServerBase::BeaconServerBase(EdgeWrapper* edge_wrapper_ptr) : edge_wrapper_ptr_(edge_wrapper_ptr)
     {
         assert(edge_wrapper_ptr != NULL);
-        const uint32_t edge_idx = edge_wrapper_ptr->edge_param_ptr_->getNodeIdx();
+        const uint32_t edge_idx = edge_wrapper_ptr->node_idx_;
         const uint32_t edgecnt = edge_wrapper_ptr->edgecnt_;
 
         // Differentiate cache servers of different edge nodes
@@ -88,7 +88,7 @@ namespace covered
         checkPointers_();
 
         bool is_finish = false; // Mark if edge node is finished
-        while (edge_wrapper_ptr_->edge_param_ptr_->isNodeRunning()) // edge_running_ is set as true by default
+        while (edge_wrapper_ptr_->isNodeRunning_()) // edge_running_ is set as true by default
         {
             // Receive the message payload of control requests
             DynamicArray control_request_msg_payload;

@@ -11,17 +11,14 @@ namespace covered
     PropagationSimulatorParam::PropagationSimulatorParam() : propagation_latency_us_(0), rwlock_for_propagation_item_buffer_("rwlock_for_propagation_item_buffer_"), is_first_item_(true), prev_timespec_()
     {
         propagation_item_buffer_ptr_ = NULL;
-        node_param_ptr_ = NULL;
         instance_name_ = "";
     }
 
-    PropagationSimulatorParam::PropagationSimulatorParam(const uint32_t& propagation_latency_us, NodeParamBase* node_param_ptr, const uint32_t& propagation_item_buffer_size) : propagation_latency_us_(propagation_latency_us), node_param_ptr_(node_param_ptr), rwlock_for_propagation_item_buffer_("rwlock_for_propagation_item_buffer_"), is_first_item_(true), prev_timespec_()
+    PropagationSimulatorParam::PropagationSimulatorParam(const std::string& node_role_idx_str, const uint32_t& propagation_latency_us, const uint32_t& propagation_item_buffer_size) : propagation_latency_us_(propagation_latency_us), rwlock_for_propagation_item_buffer_("rwlock_for_propagation_item_buffer_"), is_first_item_(true), prev_timespec_()
     {
-        assert(node_param_ptr != NULL);
-
         // Differential propagation simulator parameter of different nodes
         std::ostringstream oss;
-        oss << kClassName << " " << node_param_ptr->getNodeRole() << node_param_ptr->getNodeIdx();
+        oss << kClassName << " " << node_role_idx_str;
         instance_name_ = oss.str();
 
         propagation_item_buffer_ptr_ = new RingBuffer<PropagationItem>(PropagationItem(), propagation_item_buffer_size);
@@ -30,8 +27,6 @@ namespace covered
 
     PropagationSimulatorParam::~PropagationSimulatorParam()
     {
-        // NOTE: no need to release node_param_ptr_, which will be released outside PropagationSimulatorParam (e.g., in simulator)
-
         assert(propagation_item_buffer_ptr_ != NULL);
         delete propagation_item_buffer_ptr_;
         propagation_item_buffer_ptr_ = NULL;
@@ -41,12 +36,6 @@ namespace covered
     {
         // No need to acquire a lock due to const shared variable
         return propagation_latency_us_;
-    }
-    
-    NodeParamBase* PropagationSimulatorParam::getNodeParamPtr() const
-    {
-        // No need to acquire a lock due to const shared variable
-        return node_param_ptr_;
     }
 
     bool PropagationSimulatorParam::push(MessageBase* message_ptr, const NetworkAddr& dst_addr)
@@ -120,9 +109,6 @@ namespace covered
     const PropagationSimulatorParam& PropagationSimulatorParam::operator=(const PropagationSimulatorParam& other)
     {
         propagation_latency_us_ = other.propagation_latency_us_;
-
-        node_param_ptr_ = other.node_param_ptr_;
-        assert(node_param_ptr_ != NULL);
 
         instance_name_ = other.instance_name_;
         

@@ -32,7 +32,7 @@ namespace covered
 
         const uint32_t edgecnt_; // Come from Param
 
-        // DhtWrapper only uses edge index to specify instance_name_, yet not need to check if edge is running due to no network communication -> no need to maintain edge_param_ptr_
+        // Const variable
         std::string instance_name_;
 
         HashWrapperBase* hash_wrapper_ptr_;

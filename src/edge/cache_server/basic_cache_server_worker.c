@@ -17,7 +17,7 @@ namespace covered
         assert(cache_server_worker_param_ptr != NULL);
         EdgeWrapper* tmp_edgewrapper_ptr = cache_server_worker_param_ptr->getCacheServerPtr()->edge_wrapper_ptr_;
         assert(tmp_edgewrapper_ptr->cache_name_ != Param::COVERED_CACHE_NAME);
-        uint32_t edge_idx = tmp_edgewrapper_ptr->edge_param_ptr_->getNodeIdx();
+        uint32_t edge_idx = tmp_edgewrapper_ptr->node_idx_;
         uint32_t local_cache_server_worker_idx = cache_server_worker_param_ptr->getLocalCacheServerWorkerIdx();
 
         // Differentiate BasicCacheServerWorker in different edge nodes
@@ -69,7 +69,7 @@ namespace covered
         // NOTE: no need to access cloud to get data, which will be performed by the closest edge node
 
         // Prepare RedirectedGetResponse for the closest edge node
-        uint32_t edge_idx = tmp_edge_wrapper_ptr->edge_param_ptr_->getNodeIdx();
+        uint32_t edge_idx = tmp_edge_wrapper_ptr->node_idx_;
         NetworkAddr edge_cache_server_recvreq_source_addr = cache_server_worker_param_ptr_->getCacheServerPtr()->edge_cache_server_recvreq_source_addr_;
         MessageBase* redirected_get_response_ptr = new RedirectedGetResponse(tmp_key, tmp_value, hitflag, edge_idx, edge_cache_server_recvreq_source_addr, event_list);
 
@@ -104,7 +104,7 @@ namespace covered
         while (true) // Timeout-and-retry mechanism
         {
             // Prepare directory lookup request to check directory information in beacon node
-            uint32_t edge_idx = tmp_edge_wrapper_ptr->edge_param_ptr_->getNodeIdx();
+            uint32_t edge_idx = tmp_edge_wrapper_ptr->node_idx_;
             MessageBase* directory_lookup_request_ptr = new DirectoryLookupRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_);
             assert(directory_lookup_request_ptr != NULL);
 
@@ -124,7 +124,7 @@ namespace covered
             bool is_timeout = edge_cache_server_worker_recvrsp_socket_server_ptr_->recv(control_response_msg_payload);
             if (is_timeout)
             {
-                if (!tmp_edge_wrapper_ptr->edge_param_ptr_->isNodeRunning())
+                if (!tmp_edge_wrapper_ptr->isNodeRunning_())
                 {
                     is_finish = true;
                     break; // Edge is NOT running
@@ -179,7 +179,7 @@ namespace covered
         while (true) // Timeout-and-retry mechanism
         {
             // Prepare redirected get request to get data from target edge node if any
-            uint32_t edge_idx = tmp_edge_wrapper_ptr->edge_param_ptr_->getNodeIdx();
+            uint32_t edge_idx = tmp_edge_wrapper_ptr->node_idx_;
             MessageBase* redirected_get_request_ptr = new RedirectedGetRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_);
             assert(redirected_get_request_ptr != NULL);
 
@@ -195,7 +195,7 @@ namespace covered
             bool is_timeout = edge_cache_server_worker_recvrsp_socket_server_ptr_->recv(redirected_response_msg_payload);
             if (is_timeout)
             {
-                if (!tmp_edge_wrapper_ptr->edge_param_ptr_->isNodeRunning())
+                if (!tmp_edge_wrapper_ptr->isNodeRunning_())
                 {
                     is_finish = true;
                     break; // Edge is NOT running
@@ -281,7 +281,7 @@ namespace covered
         while (true) // Timeout-and-retry mechanism
         {
             // Prepare directory update request to check directory information in beacon node
-            uint32_t edge_idx = tmp_edge_wrapper_ptr->edge_param_ptr_->getNodeIdx();
+            uint32_t edge_idx = tmp_edge_wrapper_ptr->node_idx_;
             MessageBase* directory_update_request_ptr = new DirectoryUpdateRequest(key, is_admit, directory_info, edge_idx, edge_cache_server_worker_recvrsp_source_addr_);
             assert(directory_update_request_ptr != NULL);
 
@@ -297,7 +297,7 @@ namespace covered
             bool is_timeout = edge_cache_server_worker_recvrsp_socket_server_ptr_->recv(control_response_msg_payload);
             if (is_timeout)
             {
-                if (!tmp_edge_wrapper_ptr->edge_param_ptr_->isNodeRunning())
+                if (!tmp_edge_wrapper_ptr->isNodeRunning_())
                 {
                     is_finish = true;
                     break; // Edge is NOT running
@@ -356,7 +356,7 @@ namespace covered
         while (true) // Timeout-and-retry mechanism
         {
             // Prepare acquire writelock request to acquire permission for a write
-            uint32_t edge_idx = tmp_edge_wrapper_ptr->edge_param_ptr_->getNodeIdx();
+            uint32_t edge_idx = tmp_edge_wrapper_ptr->node_idx_;
             MessageBase* acquire_writelock_request_ptr = new AcquireWritelockRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_);
             assert(acquire_writelock_request_ptr != NULL);
 
@@ -372,7 +372,7 @@ namespace covered
             bool is_timeout = edge_cache_server_worker_recvrsp_socket_server_ptr_->recv(control_response_msg_payload);
             if (is_timeout)
             {
-                if (!tmp_edge_wrapper_ptr->edge_param_ptr_->isNodeRunning())
+                if (!tmp_edge_wrapper_ptr->isNodeRunning_())
                 {
                     is_finish = true;
                     break; // Edge is NOT running
@@ -429,7 +429,7 @@ namespace covered
         while (true) // Timeout-and-retry mechanism
         {
             // Prepare release writelock request to finish write
-            uint32_t edge_idx = tmp_edge_wrapper_ptr->edge_param_ptr_->getNodeIdx();
+            uint32_t edge_idx = tmp_edge_wrapper_ptr->node_idx_;
             MessageBase* release_writelock_request_ptr = new ReleaseWritelockRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_);
             assert(release_writelock_request_ptr != NULL);
 
@@ -445,7 +445,7 @@ namespace covered
             bool is_timeout = edge_cache_server_worker_recvrsp_socket_server_ptr_->recv(control_response_msg_payload);
             if (is_timeout)
             {
-                if (!tmp_edge_wrapper_ptr->edge_param_ptr_->isNodeRunning())
+                if (!tmp_edge_wrapper_ptr->isNodeRunning_())
                 {
                     is_finish = true;
                     break; // Edge is NOT running

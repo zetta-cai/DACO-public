@@ -48,7 +48,7 @@ namespace covered
 
         // Member variables
 
-        // lruCacheWrapper only uses edge index to specify instance_name_, yet not need to check if edge is running due to no network communication -> no need to maintain edge_param_ptr_
+        // Const variable
         std::string instance_name_;
 
         // Guarantee the atomicity of local LRU cache and local statistics

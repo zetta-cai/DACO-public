@@ -46,12 +46,11 @@ namespace covered
 
     const std::string RocksdbWrapper::kClassName("RocksdbWrapper");
 
-    RocksdbWrapper::RocksdbWrapper(const std::string& cloud_storage, const std::string& db_dirpath, CloudParam* cloud_param_ptr) : db_ptr_(NULL)
+    RocksdbWrapper::RocksdbWrapper(const uint32_t& cloud_idx, const std::string& cloud_storage, const std::string& db_dirpath) : db_ptr_(NULL)
     {
         // Different RocksDB KVS in different clouds if any
-        assert(cloud_param_ptr != NULL);
         std::ostringstream oss;
-        oss << kClassName << " cloud" << cloud_param_ptr->getNodeIdx();
+        oss << kClassName << " cloud" << cloud_idx;
         instance_name_ = oss.str();
 
         oss.clear();

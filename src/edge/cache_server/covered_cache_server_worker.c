@@ -15,7 +15,7 @@ namespace covered
         assert(cache_server_worker_param_ptr != NULL);
         EdgeWrapper* tmp_edgewrapper_ptr = cache_server_worker_param_ptr->getCacheServerPtr()->edge_wrapper_ptr_;
         assert(tmp_edgewrapper_ptr->cache_name_ == Param::COVERED_CACHE_NAME);
-        uint32_t edge_idx = tmp_edgewrapper_ptr->edge_param_ptr_->getNodeIdx();
+        uint32_t edge_idx = tmp_edgewrapper_ptr->node_idx_;
         uint32_t local_cache_server_worker_idx = cache_server_worker_param_ptr->getLocalCacheServerWorkerIdx();
 
         // Differentiate CoveredCacheServerWorker in different edge nodes

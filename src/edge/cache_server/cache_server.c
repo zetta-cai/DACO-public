@@ -16,9 +16,8 @@ namespace covered
     CacheServer::CacheServer(EdgeWrapper* edge_wrapper_ptr) : edge_wrapper_ptr_(edge_wrapper_ptr)
     {
         assert(edge_wrapper_ptr != NULL);
-        assert(edge_wrapper_ptr->edge_param_ptr_ != NULL);
-        uint32_t edge_idx = edge_wrapper_ptr->edge_param_ptr_->getNodeIdx();
-        uint32_t edgecnt = edge_wrapper_ptr->edgecnt_;
+        uint32_t edge_idx = edge_wrapper_ptr->node_idx_;
+        uint32_t edgecnt = edge_wrapper_ptr->node_cnt_;
 
         // Differentiate cache servers in different edge nodes
         std::ostringstream oss;
@@ -69,7 +68,7 @@ namespace covered
     {
         checkPointers_();
         
-        uint32_t edge_idx = edge_wrapper_ptr_->edge_param_ptr_->getNodeIdx();
+        uint32_t edge_idx = edge_wrapper_ptr_->node_idx_;
 
         int pthread_returncode;
         pthread_t cache_server_worker_threads[edge_wrapper_ptr_->percacheserver_workercnt_];
@@ -111,7 +110,7 @@ namespace covered
     {
         checkPointers_();
 
-        while (edge_wrapper_ptr_->edge_param_ptr_->isNodeRunning()) // edge_running_ is set as true by default
+        while (edge_wrapper_ptr_->isNodeRunning_()) // edge_running_ is set as true by default
         {
             // Receive the message payload of data (local/redirected) requests
             DynamicArray data_request_msg_payload;

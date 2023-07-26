@@ -19,7 +19,7 @@ namespace covered
     class EvaluatorWrapper
     {
     public:
-        static void* launchEvaluatorWrapper(void* is_evaluator_initialized_ptr);
+        static void* launchEvaluator(void* is_evaluator_initialized_ptr);
 
         EvaluatorWrapper(const uint32_t& clientcnt, const uint32_t& edgecnt);
         ~EvaluatorWrapper();

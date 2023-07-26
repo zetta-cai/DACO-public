@@ -1,0 +1,68 @@
+/*
+ * NodeWrapperBase: the base class for client/edge/cloud wrapper (thread safe).
+ * 
+ * By Siyuan Sheng (2023.07.26).
+ */
+
+#ifndef NODE_WRAPPER_BASE_H
+#define NODE_WRAPPER_BASE_H
+
+#include <atomic>
+#include <string>
+
+#include "network/network_addr.h"
+#include "network/udp_msg_socket_client.h"
+#include "network/udp_msg_socket_server.h"
+
+namespace covered
+{
+    class NodeWrapperBase
+    {
+    public:
+        static const std::string CLIENT_NODE_ROLE;
+        static const std::string EDGE_NODE_ROLE;
+        static const std::string CLOUD_NODE_ROLE;
+
+        NodeWrapperBase(const std::string& node_role, const uint32_t& node_idx, const uint32_t& node_cnt, const bool& is_running);
+        virtual ~NodeWrapperBase();
+
+        void start();
+    private:
+        static const std::string kClassName;
+
+        virtual void initialize_() = 0;
+        virtual void startInternal_() = 0;
+
+        void finishInitialization_() const;
+        void blockForStartrun_();
+
+        // Const individual variable
+        std::string base_instance_name_;
+
+        // Non-const individual variables for benchmark control messages
+        NetworkAddr node_recvmsg_source_addr_;
+        NetworkAddr evaluator_recvmsg_dst_addr_;
+        UdpMsgSocketServer* node_recvmsg_socket_server_ptr_;
+        UdpMsgSocketClient* node_sendmsg_socket_client_ptr_;
+    protected:
+        bool isNodeRunning_() const;
+        void setNodeRunning_();
+        void resetNodeRunning_();
+
+        void checkPointers_() const;
+
+        // Const shared variable
+        std::string node_role_;
+        uint32_t node_idx_;
+        uint32_t node_cnt_;
+        std::string node_role_idx_str_;
+
+        // Atomicity: atomic load/store.
+        // Concurrency control: acquire-release ordering/consistency.
+        // CPU cache coherence: MSI protocol.
+        // CPU cache consistency: volatile.
+        volatile std::atomic<bool> node_running_; // thread safe
+    };
+}
+
+#endif

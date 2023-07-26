@@ -4,36 +4,32 @@
 #include <sstream>
 
 #include "common/config.h"
+#include "common/param.h"
 #include "common/util.h"
 #include "edge/beacon_server/beacon_server_base.h"
 #include "edge/cache_server/cache_server.h"
 #include "edge/invalidation_server/invalidation_server_base.h"
 #include "event/event.h"
-#include "message/control_message.h"
 #include "network/propagation_simulator.h"
 
 namespace covered
 {
     const std::string EdgeWrapper::kClassName("EdgeWrapper");
 
-    void* EdgeWrapper::launchEdge(void* edge_param_ptr)
+    void* EdgeWrapper::launchEdge(void* edge_idx_ptr)
     {
-        EdgeWrapper local_edge(Param::getCacheName(), Param::getCapacityBytes(), Param::getEdgecnt(), Param::getHashName(), Param::getPercacheserverWorkercnt(), Param::getPropagationLatencyClientedgeUs(), Param::getPropagationLatencyCrossedgeUs(), Param::getPropagationLatencyEdgecloudUs(), (EdgeParam*)edge_param_ptr);
+        assert(edge_idx_ptr != NULL);
+        uint32_t edge_idx = *((uint32_t*)edge_idx_ptr);
+
+        EdgeWrapper local_edge(Param::getCacheName(), Param::getCapacityBytes(), edge_idx, Param::getEdgecnt(), Param::getHashName(), Param::getPercacheserverWorkercnt(), Param::getPropagationLatencyClientedgeUs(), Param::getPropagationLatencyCrossedgeUs(), Param::getPropagationLatencyEdgecloudUs());
         local_edge.start();
         
         pthread_exit(NULL);
         return NULL;
     }
 
-    EdgeWrapper::EdgeWrapper(const std::string& cache_name, const uint64_t& capacity_bytes, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& percacheserver_workercnt, const uint32_t& propagation_latency_clientedge_us, const uint32_t& propagation_latency_crossedge_us, const uint32_t& propagation_latency_edgecloud_us, EdgeParam* edge_param_ptr) : cache_name_(cache_name), capacity_bytes_(capacity_bytes), edgecnt_(edgecnt), percacheserver_workercnt_(percacheserver_workercnt), edge_param_ptr_(edge_param_ptr)
+    EdgeWrapper::EdgeWrapper(const std::string& cache_name, const uint64_t& capacity_bytes, const uint32_t& edge_idx, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& percacheserver_workercnt, const uint32_t& propagation_latency_clientedge_us, const uint32_t& propagation_latency_crossedge_us, const uint32_t& propagation_latency_edgecloud_us) : NodeWrapperBase(NodeWrapperBase::EDGE_NODE_ROLE, edge_idx,edgecnt, true), cache_name_(cache_name), capacity_bytes_(capacity_bytes), percacheserver_workercnt_(percacheserver_workercnt)
     {        
-        if (edge_param_ptr == NULL)
-        {
-            Util::dumpErrorMsg(kClassName, "edge_param_ptr is NULL!");
-            exit(1);
-        }
-        uint32_t edge_idx = edge_param_ptr->getNodeIdx();
-
         // Differentiate different edge nodes
         std::ostringstream oss;
         oss << kClassName << " edge" << edge_idx;
@@ -48,39 +44,28 @@ namespace covered
         assert(cooperation_wrapper_ptr_ != NULL);
 
         // Allocate edge-to-client propagation simulator param
-        edge_toclient_propagation_simulator_param_ptr_ = new PropagationSimulatorParam(propagation_latency_clientedge_us, (NodeParamBase*)edge_param_ptr, Config::getPropagationItemBufferSizeEdgeToclient());
+        edge_toclient_propagation_simulator_param_ptr_ = new PropagationSimulatorParam(node_role_idx_str_, propagation_latency_clientedge_us, Config::getPropagationItemBufferSizeEdgeToclient());
         assert(edge_toclient_propagation_simulator_param_ptr_ != NULL);
 
         // Allocate edge-to-edge propagation simulator param
-        edge_toedge_propagation_simulator_param_ptr_ = new PropagationSimulatorParam(propagation_latency_crossedge_us, (NodeParamBase*)edge_param_ptr, Config::getPropagationItemBufferSizeEdgeToedge());
+        edge_toedge_propagation_simulator_param_ptr_ = new PropagationSimulatorParam(node_role_idx_str_, propagation_latency_crossedge_us, Config::getPropagationItemBufferSizeEdgeToedge());
         assert(edge_toedge_propagation_simulator_param_ptr_ != NULL);
 
         // Allocate edge-to-cloud propagation simulator param
-        edge_tocloud_propagation_simulator_param_ptr_ = new PropagationSimulatorParam(propagation_latency_edgecloud_us, (NodeParamBase*)edge_param_ptr, Config::getPropagationItemBufferSizeEdgeTocloud());
+        edge_tocloud_propagation_simulator_param_ptr_ = new PropagationSimulatorParam(node_role_idx_str_, propagation_latency_edgecloud_us, Config::getPropagationItemBufferSizeEdgeTocloud());
         assert(edge_tocloud_propagation_simulator_param_ptr_ != NULL);
 
-        // For benchmark control messages
-
-        std::string edge_ipstr = Config::getEdgeIpstr(edge_idx, edgecnt);
-        uint16_t edge_recvmsg_port = Util::getEdgeRecvmsgPort(edge_idx, edgecnt);
-        edge_recvmsg_source_addr_ = NetworkAddr(edge_ipstr, edge_recvmsg_port);
-
-        std::string evaluator_ipstr = Config::getEvaluatorIpstr();
-        uint16_t evaluator_recvmsg_port = Config::getEvaluatorRecvmsgPort();
-        evaluator_recvmsg_dst_addr_ = NetworkAddr(evaluator_ipstr, evaluator_recvmsg_port);
-        
-        NetworkAddr host_addr(Util::ANY_IPSTR, edge_recvmsg_port);
-        edge_recvmsg_socket_server_ptr_ = new UdpMsgSocketServer(host_addr);
-        assert(edge_recvmsg_socket_server_ptr_ != NULL);
-
-        edge_sendmsg_socket_client_ptr_ = new UdpMsgSocketClient();
-        assert(edge_sendmsg_socket_client_ptr_ != NULL);
+        // Sub-threads
+        edge_toclient_propagation_simulator_thread_ = 0;
+        edge_toedge_propagation_simulator_thread_ = 0;
+        edge_tocloud_propagation_simulator_thread_ = 0;
+        beacon_server_thread_ = 0;
+        cache_server_thread_ = 0;
+        invalidation_server_thread_ = 0;
     }
         
     EdgeWrapper::~EdgeWrapper()
     {
-        // NOTE: no need to delete edge_param_ptr_, as it is maintained outside EdgeWrapper
-
         // Release local edge cache
         assert(edge_cache_ptr_ != NULL);
         delete edge_cache_ptr_;
@@ -105,31 +90,17 @@ namespace covered
         assert(edge_tocloud_propagation_simulator_param_ptr_ != NULL);
         delete edge_tocloud_propagation_simulator_param_ptr_;
         edge_tocloud_propagation_simulator_param_ptr_ = NULL;
-
-        // For benchmark control messages
-        assert(edge_recvmsg_socket_server_ptr_ != NULL);
-        delete edge_recvmsg_socket_server_ptr_;
-        edge_recvmsg_socket_server_ptr_ = NULL;
-        assert(edge_sendmsg_socket_client_ptr_ != NULL);
-        delete edge_sendmsg_socket_client_ptr_;
-        edge_sendmsg_socket_client_ptr_ = NULL;
     }
 
-    void EdgeWrapper::start()
+    void EdgeWrapper::initialize_()
     {
         checkPointers_();
-        
-        uint32_t edge_idx = edge_param_ptr_->getNodeIdx();
 
         int pthread_returncode = 0;
-        pthread_t beacon_server_thread;
-        pthread_t cache_server_thread;
-        pthread_t invalidation_server_thread;
 
         // Launch edge-to-client propagation simulator
-        pthread_t edge_toclient_propagation_simulator_thread;
-        //pthread_returncode = pthread_create(&edge_toclient_propagation_simulator_thread, NULL, PropagationSimulator::launchPropagationSimulator, (void*)edge_toclient_propagation_simulator_param_ptr_);
-        pthread_returncode = Util::pthreadCreateHighPriority(&edge_toclient_propagation_simulator_thread, PropagationSimulator::launchPropagationSimulator, (void*)edge_toclient_propagation_simulator_param_ptr_);
+        //pthread_returncode = pthread_create(&edge_toclient_propagation_simulator_thread_, NULL, PropagationSimulator::launchPropagationSimulator, (void*)edge_toclient_propagation_simulator_param_ptr_);
+        pthread_returncode = Util::pthreadCreateHighPriority(&edge_toclient_propagation_simulator_thread_, PropagationSimulator::launchPropagationSimulator, (void*)edge_toclient_propagation_simulator_param_ptr_);
         if (pthread_returncode != 0)
         {
             std::ostringstream oss;
@@ -139,9 +110,8 @@ namespace covered
         }
 
         // Launch edge-to-edge propagation simulator
-        pthread_t edge_toedge_propagation_simulator_thread;
-        //pthread_returncode = pthread_create(&edge_toedge_propagation_simulator_thread, NULL, PropagationSimulator::launchPropagationSimulator, (void*)edge_toedge_propagation_simulator_param_ptr_);
-        pthread_returncode = Util::pthreadCreateHighPriority(&edge_toedge_propagation_simulator_thread, PropagationSimulator::launchPropagationSimulator, (void*)edge_toedge_propagation_simulator_param_ptr_);
+        //pthread_returncode = pthread_create(&edge_toedge_propagation_simulator_thread_, NULL, PropagationSimulator::launchPropagationSimulator, (void*)edge_toedge_propagation_simulator_param_ptr_);
+        pthread_returncode = Util::pthreadCreateHighPriority(&edge_toedge_propagation_simulator_thread_, PropagationSimulator::launchPropagationSimulator, (void*)edge_toedge_propagation_simulator_param_ptr_);
         if (pthread_returncode != 0)
         {
             std::ostringstream oss;
@@ -151,9 +121,8 @@ namespace covered
         }
 
         // Launch edge-to-cloud propagation simulator
-        pthread_t edge_tocloud_propagation_simulator_thread;
-        //pthread_returncode = pthread_create(&edge_tocloud_propagation_simulator_thread, NULL, PropagationSimulator::launchPropagationSimulator, (void*)edge_tocloud_propagation_simulator_param_ptr_);
-        pthread_returncode = Util::pthreadCreateHighPriority(&edge_tocloud_propagation_simulator_thread, PropagationSimulator::launchPropagationSimulator, (void*)edge_tocloud_propagation_simulator_param_ptr_);
+        //pthread_returncode = pthread_create(&edge_tocloud_propagation_simulator_thread_, NULL, PropagationSimulator::launchPropagationSimulator, (void*)edge_tocloud_propagation_simulator_param_ptr_);
+        pthread_returncode = Util::pthreadCreateHighPriority(&edge_tocloud_propagation_simulator_thread_, PropagationSimulator::launchPropagationSimulator, (void*)edge_tocloud_propagation_simulator_param_ptr_);
         if (pthread_returncode != 0)
         {
             std::ostringstream oss;
@@ -163,43 +132,49 @@ namespace covered
         }
 
         // Launch beacon server
-        //pthread_returncode = pthread_create(&beacon_server_thread, NULL, launchBeaconServer_, (void*)(this));
-        pthread_returncode = Util::pthreadCreateHighPriority(&beacon_server_thread, launchBeaconServer_, (void*)(this));
+        //pthread_returncode = pthread_create(&beacon_server_thread_, NULL, launchBeaconServer_, (void*)(this));
+        pthread_returncode = Util::pthreadCreateHighPriority(&beacon_server_thread_, launchBeaconServer_, (void*)(this));
         if (pthread_returncode != 0)
         {
             std::ostringstream oss;
-            oss << "edge " << edge_idx << " failed to launch beacon server (error code: " << pthread_returncode << ")" << std::endl;
+            oss << "edge " << node_idx_ << " failed to launch beacon server (error code: " << pthread_returncode << ")" << std::endl;
             Util::dumpErrorMsg(instance_name_, oss.str());
             exit(1);
         }
 
         // Launch cache server
-        //pthread_returncode = pthread_create(&cache_server_thread, NULL, launchCacheServer_, (void*)(this));
-        pthread_returncode = Util::pthreadCreateLowPriority(&cache_server_thread, launchCacheServer_, (void*)(this));
+        //pthread_returncode = pthread_create(&cache_server_thread_, NULL, launchCacheServer_, (void*)(this));
+        pthread_returncode = Util::pthreadCreateLowPriority(&cache_server_thread_, launchCacheServer_, (void*)(this));
         if (pthread_returncode != 0)
         {
             std::ostringstream oss;
-            oss << "edge " << edge_idx << " failed to launch cache server (error code: " << pthread_returncode << ")" << std::endl;
+            oss << "edge " << node_idx_ << " failed to launch cache server (error code: " << pthread_returncode << ")" << std::endl;
             Util::dumpErrorMsg(instance_name_, oss.str());
             exit(1);
         }
 
         // Launch invalidations server
-        //pthread_returncode = pthread_create(&invalidation_server_thread, NULL, launchInvalidationServer_, (void*)(this));
-        pthread_returncode = Util::pthreadCreateHighPriority(&invalidation_server_thread, launchInvalidationServer_, (void*)(this));
+        //pthread_returncode = pthread_create(&invalidation_server_thread_, NULL, launchInvalidationServer_, (void*)(this));
+        pthread_returncode = Util::pthreadCreateHighPriority(&invalidation_server_thread_, launchInvalidationServer_, (void*)(this));
         if (pthread_returncode != 0)
         {
             std::ostringstream oss;
-            oss << "edge " << edge_idx << " failed to launch invalidation server (error code: " << pthread_returncode << ")" << std::endl;
+            oss << "edge " << node_idx_ << " failed to launch invalidation server (error code: " << pthread_returncode << ")" << std::endl;
             Util::dumpErrorMsg(instance_name_, oss.str());
             exit(1);
         }
 
-        // After all time-consuming initialization
-        finishInitialization_();
+        return;
+    }
+
+    void EdgeWrapper::startInternal_()
+    {
+        checkPointers_();
+
+        int pthread_returncode = 0;
 
         // Wait edge-to-client propagation simulator
-        pthread_returncode = pthread_join(edge_toclient_propagation_simulator_thread, NULL);
+        pthread_returncode = pthread_join(edge_toclient_propagation_simulator_thread_, NULL);
         if (pthread_returncode != 0)
         {
             std::ostringstream oss;
@@ -209,7 +184,7 @@ namespace covered
         }
 
         // Wait edge-to-edge propagation simulator
-        pthread_returncode = pthread_join(edge_toedge_propagation_simulator_thread, NULL);
+        pthread_returncode = pthread_join(edge_toedge_propagation_simulator_thread_, NULL);
         if (pthread_returncode != 0)
         {
             std::ostringstream oss;
@@ -219,7 +194,7 @@ namespace covered
         }
 
         // Wait edge-to-cloud propagation simulator
-        pthread_returncode = pthread_join(edge_tocloud_propagation_simulator_thread, NULL);
+        pthread_returncode = pthread_join(edge_tocloud_propagation_simulator_thread_, NULL);
         if (pthread_returncode != 0)
         {
             std::ostringstream oss;
@@ -229,31 +204,31 @@ namespace covered
         }
 
         // Wait for beacon server
-        pthread_returncode = pthread_join(beacon_server_thread, NULL); // void* retval = NULL
+        pthread_returncode = pthread_join(beacon_server_thread_, NULL); // void* retval = NULL
         if (pthread_returncode != 0)
         {
             std::ostringstream oss;
-            oss << "edge " << edge_idx << " failed to join beacon server (error code: " << pthread_returncode << ")" << std::endl;
+            oss << "edge " << node_idx_ << " failed to join beacon server (error code: " << pthread_returncode << ")" << std::endl;
             Util::dumpErrorMsg(instance_name_, oss.str());
             exit(1);
         }
 
         // Wait for cache server
-        pthread_returncode = pthread_join(cache_server_thread, NULL); // void* retval = NULL
+        pthread_returncode = pthread_join(cache_server_thread_, NULL); // void* retval = NULL
         if (pthread_returncode != 0)
         {
             std::ostringstream oss;
-            oss << "edge " << edge_idx << " failed to join cache server (error code: " << pthread_returncode << ")" << std::endl;
+            oss << "edge " << node_idx_ << " failed to join cache server (error code: " << pthread_returncode << ")" << std::endl;
             Util::dumpErrorMsg(instance_name_, oss.str());
             exit(1);
         }
 
         // Wait for invalidation server
-        pthread_returncode = pthread_join(invalidation_server_thread, NULL); // void* retval = NULL
+        pthread_returncode = pthread_join(invalidation_server_thread_, NULL); // void* retval = NULL
         if (pthread_returncode != 0)
         {
             std::ostringstream oss;
-            oss << "edge " << edge_idx << " failed to join invalidation server (error code: " << pthread_returncode << ")" << std::endl;
+            oss << "edge " << node_idx_ << " failed to join invalidation server (error code: " << pthread_returncode << ")" << std::endl;
             Util::dumpErrorMsg(instance_name_, oss.str());
             exit(1);
         }
@@ -320,7 +295,7 @@ namespace covered
 
         bool current_is_beacon = false;
         uint32_t beacon_edge_idx = cooperation_wrapper_ptr_->getBeaconEdgeIdx(key);
-        uint32_t current_edge_idx = edge_param_ptr_->getNodeIdx();
+        uint32_t current_edge_idx = node_idx_;
         if (beacon_edge_idx == current_edge_idx)
         {
             current_is_beacon = true;
@@ -335,7 +310,7 @@ namespace covered
 
         bool current_is_target = false;
         uint32_t target_edge_idx = directory_info.getTargetEdgeIdx();
-        uint32_t current_edge_idx = edge_param_ptr_->getNodeIdx();
+        uint32_t current_edge_idx = node_idx_;
         if (target_edge_idx == current_edge_idx)
         {
             current_is_target = true;
@@ -367,8 +342,8 @@ namespace covered
         for (std::unordered_set<DirectoryInfo, DirectoryInfoHasher>::const_iterator iter = all_dirinfo.begin(); iter != all_dirinfo.end(); iter++)
         {
             uint32_t tmp_edgeidx = iter->getTargetEdgeIdx();
-            std::string tmp_edge_ipstr = Config::getEdgeIpstr(tmp_edgeidx, edgecnt_);
-            uint16_t tmp_edge_invaliation_server_port = Util::getEdgeInvalidationServerRecvreqPort(tmp_edgeidx, edgecnt_);
+            std::string tmp_edge_ipstr = Config::getEdgeIpstr(tmp_edgeidx, node_cnt_);
+            uint16_t tmp_edge_invaliation_server_port = Util::getEdgeInvalidationServerRecvreqPort(tmp_edgeidx, node_cnt_);
             NetworkAddr tmp_edge_invalidation_server_recvreq_dst_addr(tmp_edge_ipstr, tmp_edge_invaliation_server_port);
             percachecopy_dstaddr.insert(std::pair<uint32_t, NetworkAddr>(tmp_edgeidx, tmp_edge_invalidation_server_recvreq_dst_addr));
         }
@@ -403,7 +378,7 @@ namespace covered
                 bool is_timeout = recvrsp_socket_server_ptr->recv(control_response_msg_payload);
                 if (is_timeout)
                 {
-                    if (!edge_param_ptr_->isNodeRunning())
+                    if (!isNodeRunning_())
                     {
                         is_finish = true;
                         break; // Break as edge is NOT running
@@ -474,7 +449,7 @@ namespace covered
         checkPointers_();
 
         // Prepare invalidation request to invalidate the cache copy
-        uint32_t edge_idx = edge_param_ptr_->getNodeIdx();
+        uint32_t edge_idx = node_idx_;
         MessageBase* invalidation_request_ptr = new InvalidationRequest(key, edge_idx, recvrsp_source_addr);
         assert(invalidation_request_ptr != NULL);
 
@@ -536,7 +511,7 @@ namespace covered
                 bool is_timeout = recvrsp_socket_server_ptr->recv(control_response_msg_payload);
                 if (is_timeout)
                 {
-                    if (!edge_param_ptr_->isNodeRunning())
+                    if (!isNodeRunning_())
                     {
                         is_finish = true;
                         break; // Break as edge is NOT running
@@ -606,7 +581,7 @@ namespace covered
         checkPointers_();
 
         // Prepare finish block request to finish blocking for writes in all closest edge nodes
-        uint32_t edge_idx = edge_param_ptr_->getNodeIdx();
+        uint32_t edge_idx = node_idx_;
         MessageBase* finish_block_request_ptr = new FinishBlockRequest(key, edge_idx, recvrsp_source_addr);
         assert(finish_block_request_ptr != NULL);
 
@@ -622,47 +597,15 @@ namespace covered
 
     // (4) Other utilities
 
-    void EdgeWrapper::finishInitialization_() const
-    {
-        // Issue a InitializationRequest to evaluator
-        uint32_t edge_idx = edge_param_ptr_->getNodeIdx();
-        InitializationRequest initialization_request(edge_idx, edge_recvmsg_source_addr_);
-        edge_sendmsg_socket_client_ptr_->send((MessageBase*)&initialization_request, evaluator_recvmsg_dst_addr_);
-
-        // Wait for InitializationResponse
-        while (true)
-        {
-            DynamicArray control_response_msg_payload;
-            bool is_timeout = edge_recvmsg_socket_server_ptr_->recv(control_response_msg_payload);
-            if (is_timeout)
-            {
-                continue; // Wait until receiving InitializationResponse
-            }
-            else
-            {
-                MessageBase* control_response_ptr = MessageBase::getRequestFromMsgPayload(control_response_msg_payload);
-                assert(control_response_ptr != NULL);
-                assert(control_response_ptr->getMessageType() == MessageType::kInitializationResponse);
-
-                delete control_response_ptr;
-                control_response_ptr = NULL;
-                
-                break;
-            }
-        }
-        return;
-    }
-
     void EdgeWrapper::checkPointers_() const
     {
-        assert(edge_param_ptr_ != NULL);
+        NodeWrapperBase::checkPointers_();
+
         assert(edge_cache_ptr_ != NULL);
         assert(cooperation_wrapper_ptr_ != NULL);
         assert(edge_toclient_propagation_simulator_param_ptr_ != NULL);
         assert(edge_toedge_propagation_simulator_param_ptr_ != NULL);
         assert(edge_tocloud_propagation_simulator_param_ptr_ != NULL);
-        assert(edge_recvmsg_socket_server_ptr_ != NULL);
-        assert(edge_sendmsg_socket_client_ptr_ != NULL);
 
         return;
     }

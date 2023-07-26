@@ -20,7 +20,7 @@ namespace covered
 
         if (cache_name == Param::COVERED_CACHE_NAME)
         {
-            //cooperation_wrapper_ptr = new CoveredCooperationWrapper(hash_name, edge_param_ptr);
+            //cooperation_wrapper_ptr = new CoveredCooperationWrapper(edgecnt, edge_idx, hash_name);
         }
         else
         {
