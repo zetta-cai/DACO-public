@@ -11,6 +11,8 @@
 #include "message/control/benchmark/initialization_response.h"
 #include "message/control/benchmark/startrun_request.h"
 #include "message/control/benchmark/startrun_response.h"
+#include "message/control/benchmark/switch_slot_request.h"
+#include "message/control/benchmark/switch_slot_response.h"
 
 #include "message/control/cooperation/acquire_writelock_request.h"
 #include "message/control/cooperation/acquire_writelock_response.h"

@@ -108,7 +108,8 @@ namespace covered
         // Wait all componenets finish initiailization
         blockForInitialization_();
 
-        // TODO
+        // Notify all clients to start running
+        notifyClientsToStartrun_();
     }
 
     void EvaluatorWrapper::blockForInitialization_()
@@ -129,6 +130,7 @@ namespace covered
 
         Util::dumpNormalMsg(kClassName, "Wait for intialization of all clients, edges, and clouds...");
 
+        // Wait for InitializeRequests from client/edge/cloud
         uint32_t acked_cnt = 0;
         while (acked_cnt < initialization_acked_flags.size())
         {
@@ -156,7 +158,7 @@ namespace covered
                 {
                     if (iter->second == false)
                     {
-                        // Send back InitializationResponse
+                        // Send back InitializationResponse to client/edge/cloud
                         InitializationResponse initialization_response(0, evaluator_recvmsg_source_addr_, EventList());
                         evaluator_sendmsg_socket_client_ptr_->send((MessageBase*)&initialization_response, tmp_dst_addr);
 
@@ -171,6 +173,76 @@ namespace covered
         }
 
         Util::dumpNormalMsg(kClassName, "All clients, edges, and clouds finish initialization!");
+
+        return;
+    }
+
+    void EvaluatorWrapper::notifyClientsToStartrun_()
+    {
+        checkPointers_();
+
+        // Client ack flags
+        std::unordered_map<NetworkAddr, bool, NetworkAddrHasher> startrun_acked_flags;
+        for (uint32_t client_idx = 0; client_idx < clientcnt_; client_idx++)
+        {
+            startrun_acked_flags.insert(std::pair<NetworkAddr, bool>(perclient_recvmsg_dst_addrs_[client_idx], false));
+        }
+
+        Util::dumpNormalMsg(kClassName, "Notify all clients to start running...");
+
+        // Timeout-and-retry mechanism
+        uint32_t acked_cnt = 0;
+        while (acked_cnt < startrun_acked_flags.size())
+        {
+            // Issue StartrunRequests to unacked clients simultaneously
+            for (std::unordered_map<NetworkAddr, bool, NetworkAddrHasher>::const_iterator iter_for_req = startrun_acked_flags.begin(); iter_for_req != startrun_acked_flags.end(); iter_for_req++)
+            {
+                if (iter_for_req->second == false)
+                {
+                    StartrunRequest tmp_startrun_request(0, evaluator_recvmsg_source_addr_);
+                    evaluator_sendmsg_socket_client_ptr_->send((MessageBase*)&tmp_startrun_request, iter_for_req->first);
+                }
+            }
+
+            // Receive StartrunResponses for unacked clients
+            for (uint32_t i = 0; i < (startrun_acked_flags.size() - acked_cnt); i++)
+            {
+                DynamicArray control_response_msg_payload;
+                bool is_timeout = evaluator_recvmsg_socket_server_ptr_->recv(control_response_msg_payload);
+                if (is_timeout)
+                {
+                    break; // Wait until all clients are running
+                }
+                else
+                {
+                    MessageBase* control_response_ptr = MessageBase::getRequestFromMsgPayload(control_response_msg_payload);
+                    assert(control_response_ptr != NULL);
+                    assert(control_response_ptr->getMessageType() == MessageType::kStartrunResponse);
+
+                    NetworkAddr tmp_dst_addr = control_response_ptr->getSourceAddr();
+                    std::unordered_map<NetworkAddr, bool, NetworkAddrHasher>::iterator iter = startrun_acked_flags.find(tmp_dst_addr);
+                    if (iter == startrun_acked_flags.end())
+                    {
+                        std::ostringstream oss;
+                        oss << "receive StartrunResponse from network addr " << tmp_dst_addr.toString() << ", which is NOT in the to-be-acked list!";
+                        Util::dumpWarnMsg(kClassName, oss.str());
+                    }
+                    else
+                    {
+                        if (iter->second == false)
+                        {
+                            iter->second = true;
+                            acked_cnt++;
+                        }
+                    }
+
+                    delete control_response_ptr;
+                    control_response_ptr = NULL;
+                }
+            }
+        }
+
+        Util::dumpNormalMsg(kClassName, "All clients are running!");
 
         return;
     }

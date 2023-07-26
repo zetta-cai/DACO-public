@@ -123,6 +123,9 @@ namespace covered
     {
         checkPointers_();
         
+        // Wait for SwitchSlotRequest from evaluator
+        // TODO: END HERE
+
         // Switch cur-slot client raw statistics to track per-slot aggregated statistics
         const uint32_t client_raw_statistics_slot_interval_sec = Config::getClientRawStatisticsSlotIntervalSec();
         bool is_stable = false;

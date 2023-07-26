@@ -78,6 +78,16 @@ namespace covered
                 message_type_str = "kStartrunResponse";
                 break;
             }
+            case MessageType::kSwitchSlotRequest:
+            {
+                message_type_str = "kSwitchSlotRequest";
+                break;
+            }
+            case MessageType::kSwitchSlotResponse:
+            {
+                message_type_str = "kSwitchSlotResponse";
+                break;
+            }
             case MessageType::kAcquireWritelockRequest:
             {
                 message_type_str = "kAcquireWritelockRequest";
@@ -305,6 +315,11 @@ namespace covered
                 message_ptr = new StartrunRequest(msg_payload);
                 break;
             }
+            case MessageType::kSwitchSlotRequest:
+            {
+                message_ptr = new SwitchSlotRequest(msg_payload);
+                break;
+            }
             case MessageType::kAcquireWritelockRequest:
             {
                 message_ptr = new AcquireWritelockRequest(msg_payload);
@@ -403,6 +418,11 @@ namespace covered
             case MessageType::kStartrunResponse:
             {
                 message_ptr = new StartrunResponse(msg_payload);
+                break;
+            }
+            case MessageType::kSwitchSlotResponse:
+            {
+                message_ptr = new SwitchSlotResponse(msg_payload);
                 break;
             }
             case MessageType::kAcquireWritelockResponse:
@@ -821,7 +841,7 @@ namespace covered
     bool MessageBase::isBenchmarkControlRequest() const
     {
         checkIsValid_();
-        if (message_type_ == MessageType::kInitializationRequest || message_type_ == MessageType::kStartrunRequest)
+        if (message_type_ == MessageType::kInitializationRequest || message_type_ == MessageType::kStartrunRequest || message_type_ == MessageType::kSwitchSlotRequest)
         {
             return true;
         }
@@ -853,7 +873,7 @@ namespace covered
     bool MessageBase::isBenchmarkControlResponse() const
     {
         checkIsValid_();
-        if (message_type_ == MessageType::kInitializationResponse || message_type_ == MessageType::kStartrunResponse)
+        if (message_type_ == MessageType::kInitializationResponse || message_type_ == MessageType::kStartrunResponse || message_type_ == MessageType::kSwitchSlotResponse)
         {
             return true;
         }

@@ -90,7 +90,7 @@ namespace covered
         if (node_running_ == false)
         {
             assert(node_role_ == CLIENT_NODE_ROLE);
-            
+
             // Block until receiving startrun request
             blockForStartrun_();
         }
@@ -100,18 +100,21 @@ namespace covered
 
     void NodeWrapperBase::finishInitialization_() const
     {
-        // Issue a InitializationRequest to evaluator
+        // Prepare InitializationRequest
         InitializationRequest initialization_request(node_idx_, node_recvmsg_source_addr_);
-        node_sendmsg_socket_client_ptr_->send((MessageBase*)&initialization_request, evaluator_recvmsg_dst_addr_);
 
-        // Wait for InitializationResponse
+        // Timeout-and-retry mechanism
         while (true)
         {
+            // Issue InitializationRequest to evaluator
+            node_sendmsg_socket_client_ptr_->send((MessageBase*)&initialization_request, evaluator_recvmsg_dst_addr_);
+        
             DynamicArray control_response_msg_payload;
             bool is_timeout = node_recvmsg_socket_server_ptr_->recv(control_response_msg_payload);
             if (is_timeout)
             {
-                continue; // Wait until receiving InitializationResponse
+                Util::dumpWarnMsg(base_instance_name_, "timeout to wait for InitializationResponse");
+                continue; // Wait until receiving InitializationResponse from evaluator
             }
             else
             {
@@ -125,6 +128,7 @@ namespace covered
                 break;
             }
         }
+
         return;
     }
 
@@ -132,9 +136,36 @@ namespace covered
     {
         assert(node_role_ == CLIENT_NODE_ROLE);
 
-        // TODO
+        // Wait for StartrunRequest from evaluator
+        while (true)
+        {
+            DynamicArray control_request_msg_payload;
+            bool is_timeout = node_recvmsg_socket_server_ptr_->recv(control_request_msg_payload);
+            if (is_timeout)
+            {
+                continue; // Wait until receiving StartrunRequest from evaluator
+            }
+            else
+            {
+                MessageBase* control_request_ptr = MessageBase::getRequestFromMsgPayload(control_request_msg_payload);
+                assert(control_request_ptr != NULL);
+                assert(control_request_ptr->getMessageType() == MessageType::kStartrunRequest);
 
-        // setNodeRunning()
+                // Send back StartrunResponse to evaluator
+                StartrunResponse startrun_response(node_idx_, node_recvmsg_source_addr_, EventList());
+                node_sendmsg_socket_client_ptr_->send((MessageBase*)&startrun_response, evaluator_recvmsg_dst_addr_);
+
+                delete control_request_ptr;
+                control_request_ptr = NULL;
+                
+                break;
+            }
+        }
+
+        // Mark the current node as running
+        setNodeRunning_();
+
+        return;
     }
 
     bool NodeWrapperBase::isNodeRunning_() const

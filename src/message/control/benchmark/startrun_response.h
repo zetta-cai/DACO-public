@@ -1,5 +1,5 @@
 /*
- * StartrunResponse: a request issued by client/edge/cloud to notify the end of initialization to evaluator.
+ * StartrunResponse: a response issued by client to acknowledge StartrunRequest from evaluator.
  * 
  * By Siyuan Sheng (2023.07.26).
  */

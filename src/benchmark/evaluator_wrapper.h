@@ -29,6 +29,7 @@ namespace covered
         static const std::string kClassName;
 
         void blockForInitialization_();
+        void notifyClientsToStartrun_();
 
         void checkPointers_() const;
 

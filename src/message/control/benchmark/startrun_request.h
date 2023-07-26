@@ -1,5 +1,5 @@
 /*
- * StartrunRequest: a request issued by evaluator to notify the start of benchmark (i.e., warmup phase) to client/edge/cloud.
+ * StartrunRequest: a request issued by evaluator to notify the start of benchmark (i.e., warmup phase) to client.
  * 
  * By Siyuan Sheng (2023.07.26).
  */

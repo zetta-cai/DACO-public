@@ -40,6 +40,8 @@ namespace covered
         kInitializationResponse,
         kStartrunRequest,
         kStartrunResponse,
+        kSwitchSlotRequest,
+        kSwitchSlotResponse,
         // Cooperation control messages
         kAcquireWritelockRequest,
         kAcquireWritelockResponse,

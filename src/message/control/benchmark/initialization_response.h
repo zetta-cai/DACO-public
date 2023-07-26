@@ -1,5 +1,5 @@
 /*
- * InitializationResponse: a response issued by evaluator to acknowledge the initialization requests from client/edge/cloud.
+ * InitializationResponse: a response issued by evaluator to acknowledge InitializeRequest from client/edge/cloud.
  * 
  * By Siyuan Sheng (2023.07.26).
  */
