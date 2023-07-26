@@ -1,4 +1,4 @@
-#include "message/control/directory_update_request.h"
+#include "message/control/cooperation/directory_update_request.h"
 
 namespace covered
 {

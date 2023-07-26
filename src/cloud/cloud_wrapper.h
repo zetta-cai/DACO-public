@@ -35,6 +35,8 @@ namespace covered
 
         bool processGlobalRequest_(MessageBase* request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr);
 
+        void finishInitialization_() const;
+
         void checkPointers_() const;
 
         std::string instance_name_;
@@ -46,6 +48,12 @@ namespace covered
         UdpMsgSocketServer* cloud_recvreq_socket_server_ptr_; // Used by cloud to receive global requests from edge cache server worker (non-const individual variable)
 
         PropagationSimulatorParam* cloud_toedge_propagation_simulator_param_ptr_;
+
+        // Non-const individual variables for benchmark control messages
+        NetworkAddr cloud_recvmsg_source_addr_;
+        NetworkAddr evaluator_recvmsg_dst_addr_;
+        UdpMsgSocketServer* cloud_recvmsg_socket_server_ptr_;
+        UdpMsgSocketClient* cloud_sendmsg_socket_client_ptr_;
     };
 }
 

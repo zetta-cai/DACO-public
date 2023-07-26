@@ -1,4 +1,4 @@
-#include "message/control/directory_lookup_response.h"
+#include "message/control/cooperation/directory_lookup_response.h"
 
 namespace covered
 {

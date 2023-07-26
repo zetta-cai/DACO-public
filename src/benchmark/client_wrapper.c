@@ -9,6 +9,7 @@
 #include "common/config.h"
 #include "common/param.h"
 #include "common/util.h"
+#include "message/control_message.h"
 #include "network/propagation_simulator.h"
 
 namespace covered
@@ -50,6 +51,23 @@ namespace covered
         // Allocate client-to-edge propagation simulator param
         client_toedge_propagation_simulator_param_ptr_ = new PropagationSimulatorParam(propagation_latency_clientedge_us, (NodeParamBase*)client_param_ptr, Config::getPropagationItemBufferSizeClientToedge());
         assert(client_toedge_propagation_simulator_param_ptr_ != NULL);
+
+        // For benchmark control messages
+
+        std::string client_ipstr = Config::getClientIpstr(client_idx, clientcnt);
+        uint16_t client_recvmsg_port = Util::getClientRecvmsgPort(client_idx, clientcnt);
+        client_recvmsg_source_addr_ = NetworkAddr(client_ipstr, client_recvmsg_port);
+
+        std::string evaluator_ipstr = Config::getEvaluatorIpstr();
+        uint16_t evaluator_recvmsg_port = Config::getEvaluatorRecvmsgPort();
+        evaluator_recvmsg_dst_addr_ = NetworkAddr(evaluator_ipstr, evaluator_recvmsg_port);
+        
+        NetworkAddr host_addr(Util::ANY_IPSTR, client_recvmsg_port);
+        client_recvmsg_socket_server_ptr_ = new UdpMsgSocketServer(host_addr);
+        assert(client_recvmsg_socket_server_ptr_ != NULL);
+
+        client_sendmsg_socket_client_ptr_ = new UdpMsgSocketClient();
+        assert(client_sendmsg_socket_client_ptr_ != NULL);
     }
 
     ClientWrapper::~ClientWrapper()
@@ -70,6 +88,14 @@ namespace covered
         assert(client_toedge_propagation_simulator_param_ptr_ != NULL);
         delete client_toedge_propagation_simulator_param_ptr_;
         client_toedge_propagation_simulator_param_ptr_ = NULL;
+
+        // For benchmark control messages
+        assert(client_recvmsg_socket_server_ptr_ != NULL);
+        delete client_recvmsg_socket_server_ptr_;
+        client_recvmsg_socket_server_ptr_ = NULL;
+        assert(client_sendmsg_socket_client_ptr_ != NULL);
+        delete client_sendmsg_socket_client_ptr_;
+        client_sendmsg_socket_client_ptr_ = NULL;
     }
 
     void ClientWrapper::start()
@@ -114,7 +140,7 @@ namespace covered
         }
 
         // After all time-consuming initialization
-        client_param_ptr_->setNodeInitialized();
+        finishInitialization_();
 
         // Block until client_running_ becomes true
         while (!client_param_ptr_->isNodeRunning()) {}
@@ -199,12 +225,45 @@ namespace covered
         return;
     }
 
+    void ClientWrapper::finishInitialization_() const
+    {
+        // Issue a InitializationRequest to evaluator
+        uint32_t client_idx = client_param_ptr_->getNodeIdx();
+        InitializationRequest initialization_request(client_idx, client_recvmsg_source_addr_);
+        client_sendmsg_socket_client_ptr_->send((MessageBase*)&initialization_request, evaluator_recvmsg_dst_addr_);
+
+        // Wait for InitializationResponse
+        while (true)
+        {
+            DynamicArray control_response_msg_payload;
+            bool is_timeout = client_recvmsg_socket_server_ptr_->recv(control_response_msg_payload);
+            if (is_timeout)
+            {
+                continue; // Wait until receiving InitializationResponse
+            }
+            else
+            {
+                MessageBase* control_response_ptr = MessageBase::getRequestFromMsgPayload(control_response_msg_payload);
+                assert(control_response_ptr != NULL);
+                assert(control_response_ptr->getMessageType() == MessageType::kInitializationResponse);
+
+                delete control_response_ptr;
+                control_response_ptr = NULL;
+                
+                break;
+            }
+        }
+        return;
+    }
+
     void ClientWrapper::checkPointers_() const
     {
         assert(client_param_ptr_ != NULL);
         assert(workload_generator_ptr_ != NULL);
         assert(client_statistics_tracker_ptr_ != NULL);
         assert(client_toedge_propagation_simulator_param_ptr_ != NULL);
+        assert(client_recvmsg_socket_server_ptr_ != NULL);
+        assert(client_sendmsg_socket_client_ptr_ != NULL);
 
         return;
     }

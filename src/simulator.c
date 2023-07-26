@@ -135,23 +135,6 @@ int main(int argc, char **argv) {
 
     // (5) Start benchmark
 
-    // (5.1) Wait until client/edge/cloud finish initialization
-
-    covered::Util::dumpNormalMsg(main_class_name, "Wait for intialization of clients...");
-    for (uint32_t client_idx = 0; client_idx < clientcnt; client_idx++)
-    {
-        while (!client_params[client_idx].isNodeInitialized()) {}
-    }
-
-    covered::Util::dumpNormalMsg(main_class_name, "Wait for intialization of edge nodes...");
-    for (uint32_t edge_idx = 0; edge_idx < edgecnt; edge_idx++)
-    {
-        while (!edge_params[edge_idx].isNodeInitialized()) {}
-    }
-
-    covered::Util::dumpNormalMsg(main_class_name, "Wait for intialization of cloud...");
-    while (!cloud_param.isNodeInitialized()) {}
-
     // (5.2) Set client_running_ = true in all clientcnt client parameters to start benchmark
 
     covered::Util::dumpNormalMsg(main_class_name, "Start benchmark...");

@@ -73,6 +73,8 @@ namespace covered
 
         // (4) Other utilities
 
+        void finishInitialization_() const;
+
         void checkPointers_() const;
 
         std::string instance_name_;
@@ -94,6 +96,12 @@ namespace covered
         PropagationSimulatorParam* edge_toclient_propagation_simulator_param_ptr_; // thread safe
         PropagationSimulatorParam* edge_toedge_propagation_simulator_param_ptr_; // thread safe
         PropagationSimulatorParam* edge_tocloud_propagation_simulator_param_ptr_; // thread safe
+
+        // Non-const individual variables for benchmark control messages
+        NetworkAddr edge_recvmsg_source_addr_;
+        NetworkAddr evaluator_recvmsg_dst_addr_;
+        UdpMsgSocketServer* edge_recvmsg_socket_server_ptr_;
+        UdpMsgSocketClient* edge_sendmsg_socket_client_ptr_;
     };
 }
 

@@ -18,20 +18,29 @@ namespace covered
 {
     enum MessageType
     {
+        // Local data messages
         kLocalGetRequest = 1,
         kLocalPutRequest,
         kLocalDelRequest,
         kLocalGetResponse,
         kLocalPutResponse,
         kLocalDelResponse,
+        // Global data messages
         kGlobalGetRequest,
         kGlobalPutRequest,
         kGlobalDelRequest,
         kGlobalGetResponse,
         kGlobalPutResponse,
         kGlobalDelResponse,
+        // Redirected data messages
         kRedirectedGetRequest,
         kRedirectedGetResponse,
+        // Benchmark control message
+        kInitializationRequest,
+        kInitializationResponse,
+        kStartrunRequest,
+        kStartrunResponse,
+        // Cooperation control messages
         kAcquireWritelockRequest,
         kAcquireWritelockResponse,
         kDirectoryLookupRequest,
@@ -91,17 +100,22 @@ namespace covered
         uint32_t deserialize(const DynamicArray& msg_payload);
 
         bool isDataRequest() const;
-        bool isLocalRequest() const;
-        bool isRedirectedRequest() const;
-        bool isGlobalRequest() const;
+        bool isLocalDataRequest() const;
+        bool isRedirectedDataRequest() const;
+        bool isGlobalDataRequest() const;
 
         bool isDataResponse() const;
-        bool isLocalResponse() const;
-        bool isRedirectedResponse() const;
-        bool isGlobalResponse() const;
+        bool isLocalDataResponse() const;
+        bool isRedirectedDataResponse() const;
+        bool isGlobalDataResponse() const;
 
         bool isControlRequest() const;
+        bool isCooperationControlRequest() const;
+        bool isBenchmarkControlRequest() const;
+
         bool isControlResponse() const;
+        bool isCooperationControlResponse() const;
+        bool isBenchmarkControlResponse() const;
     private:
         static const std::string kClassName;
 
@@ -113,7 +127,7 @@ namespace covered
         virtual uint32_t deserializeInternal_(const DynamicArray& msg_payload, const uint32_t& size) = 0;
 
         MessageType message_type_;
-        uint32_t source_index_; // global-client-worker/edge/cloud index of source node
+        uint32_t source_index_; // client/edge/cloud index of source node
         NetworkAddr source_addr_; // Network address of source socket server to hide propagation simulator
         // Track intermediate events and events of intermediate responses to break down latencies for debugging
         // NOTE: requests MUST have empty event list; NOT consume bandwidth if without event tracking

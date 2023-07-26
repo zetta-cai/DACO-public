@@ -1,4 +1,4 @@
-#include "message/control/invalidation_request.h"
+#include "message/control/cooperation/invalidation_request.h"
 
 namespace covered
 {

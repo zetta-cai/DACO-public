@@ -68,7 +68,7 @@ DEPS += $(HASH_SRCFILES:.c=.d)
 CLEANS += $(HASH_OBJECTS) $(HASH_SHARED_OBJECTS)
 
 # message module
-MESSAGE_SRCFILES := $(wildcard $(COVERED_DIRPATH)/message/*.c) $(wildcard $(COVERED_DIRPATH)/message/data/global/*.c) $(wildcard $(COVERED_DIRPATH)/message/data/local/*.c) $(wildcard $(COVERED_DIRPATH)/message/data/redirected/*.c) $(wildcard $(COVERED_DIRPATH)/message/control/*.c)
+MESSAGE_SRCFILES := $(wildcard $(COVERED_DIRPATH)/message/*.c) $(wildcard $(COVERED_DIRPATH)/message/data/global/*.c) $(wildcard $(COVERED_DIRPATH)/message/data/local/*.c) $(wildcard $(COVERED_DIRPATH)/message/data/redirected/*.c) $(wildcard $(COVERED_DIRPATH)/message/control/cooperation/*.c)
 MESSAGE_OBJECTS += $(MESSAGE_SRCFILES:.c=.o)
 MESSAGE_SHARED_OBJECTS += $(MESSAGE_SRCFILES:.c=.shared.o)
 DEPS += $(MESSAGE_SRCFILES:.c=.d)

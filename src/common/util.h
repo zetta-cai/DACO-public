@@ -88,6 +88,7 @@ namespace covered
         // (4) Client-edge-cloud scenario
 
         // (4.1) Client
+        static uint16_t getClientRecvmsgPort(const uint32_t& client_idx, const uint32_t& clientcnt);
         static uint32_t getClosestEdgeIdx(const uint32_t& client_idx, const uint32_t& clientcnt, const uint32_t& edgecnt);
         static std::string getClosestEdgeIpstr(const uint32_t& client_idx, const uint32_t& clientcnt, const uint32_t& edgecnt);
         static uint16_t getClosestEdgeCacheServerRecvreqPort(const uint32_t& client_idx, const uint32_t& clientcnt, const uint32_t& edgecnt); // Calculate the recvreq port of the closest edge node for client
@@ -95,8 +96,9 @@ namespace covered
         //static void parseGlobalClientWorkerIdx(const uint32_t& global_client_worker_idx, const uint32_t& perclient_workercnt, uint32_t& client_idx, uint32_t& local_client_worker_idx);
         static uint16_t getClientWorkerRecvrspPort(const uint32_t& client_idx, const uint32_t& clientcnt, const uint32_t& local_client_worker_idx, const uint32_t& perclient_workercnt);
 
-        // (4.2) Edge and cloud
-        // UDP port for receiving requests is edge_XXX_recvreq_startport + edge_idx / local_edge_idx
+        // (4.2) Edge
+        // UDP port for receiving requests is edge_XXX_recvreq_startport + edge_idx
+        static uint16_t getEdgeRecvmsgPort(const uint32_t& edge_idx, const uint32_t& edgecnt);
         static uint16_t getEdgeBeaconServerRecvreqPort(const uint32_t& edge_idx, const uint32_t& edgecnt);
         static uint16_t getEdgeBeaconServerRecvrspPort(const uint32_t& edge_idx, const uint32_t& edgecnt);
         static uint16_t getEdgeCacheServerRecvreqPort(const uint32_t& edge_idx, const uint32_t& edgecnt);
@@ -104,6 +106,9 @@ namespace covered
         static uint16_t getEdgeCacheServerWorkerRecvreqPort(const uint32_t& edge_idx, const uint32_t& edgecnt, const uint32_t& local_cache_server_worker_idx, const uint32_t& percacheserver_workercnt);
         static uint16_t getEdgeCacheServerWorkerRecvrspPort(const uint32_t& edge_idx, const uint32_t& edgecnt, const uint32_t& local_cache_server_worker_idx, const uint32_t& percacheserver_workercnt);
         static uint16_t getEdgeInvalidationServerRecvreqPort(const uint32_t& edge_idx, const uint32_t& edgecnt);
+
+        // (4.3) Cloud
+        static uint16_t getCloudRecvmsgPort(const uint32_t& cloud_idx);
         static uint16_t getCloudRecvreqPort(const uint32_t& cloud_idx);
 
         // (5) Network

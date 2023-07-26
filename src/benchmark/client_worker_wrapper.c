@@ -44,15 +44,15 @@ namespace covered
         const uint32_t clientcnt = client_wrapper_ptr->clientcnt_;
         const uint32_t edgecnt = client_wrapper_ptr->edgecnt_;
         const uint32_t local_client_worker_idx = client_worker_param_ptr->getLocalClientWorkerIdx();
-        global_client_worker_idx_ = Util::getGlobalClientWorkerIdx(client_idx, local_client_worker_idx, client_wrapper_ptr->perclient_workercnt_);
+        uint32_t global_client_worker_idx = Util::getGlobalClientWorkerIdx(client_idx, local_client_worker_idx, client_wrapper_ptr->perclient_workercnt_);
 
         // Differentiate different workers
         std::ostringstream oss;
-        oss << kClassName << " client" << client_idx << "-worker" << local_client_worker_idx << "-global" << global_client_worker_idx_;
+        oss << kClassName << " client" << client_idx << "-worker" << local_client_worker_idx << "-global" << global_client_worker_idx;
         instance_name_ = oss.str();
 
         // Each per-client worker uses worker_idx as deterministic seed to create a random generator and get different requests
-        client_worker_item_randgen_ptr_ = new std::mt19937_64(global_client_worker_idx_);
+        client_worker_item_randgen_ptr_ = new std::mt19937_64(global_client_worker_idx);
         if (client_worker_item_randgen_ptr_ == NULL)
         {
             Util::dumpErrorMsg(instance_name_, "failed to create a random generator for requests!");
@@ -177,7 +177,7 @@ namespace covered
         while (true) // Timeout-and-retry mechanism
         {
             // Convert workload item into local request message
-            MessageBase* local_request_ptr = MessageBase::getLocalRequestFromWorkloadItem(workload_item, global_client_worker_idx_, client_worker_recvrsp_source_addr_);
+            MessageBase* local_request_ptr = MessageBase::getLocalRequestFromWorkloadItem(workload_item, tmp_client_wrapper_ptr->client_param_ptr_->getNodeIdx(), client_worker_recvrsp_source_addr_);
             assert(local_request_ptr != NULL);
 
             #ifdef DEBUG_CLIENT_WORKER_WRAPPER
@@ -227,7 +227,7 @@ namespace covered
 
         // Get local response message
         MessageBase* local_response_ptr = MessageBase::getResponseFromMsgPayload(local_response_msg_payload);
-        assert(local_response_ptr != NULL && local_response_ptr->isLocalResponse());
+        assert(local_response_ptr != NULL && local_response_ptr->isLocalDataResponse());
 
         ClientStatisticsTracker* client_statistics_tracker_ptr_ = tmp_client_wrapper_ptr->client_statistics_tracker_ptr_;
 

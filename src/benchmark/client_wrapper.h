@@ -14,6 +14,7 @@
 #include <string>
 
 #include "benchmark/client_param.h"
+#include "network/network_addr.h"
 #include "network/propagation_simulator_param.h"
 #include "statistics/client_statistics_tracker.h"
 #include "workload/workload_wrapper_base.h"
@@ -36,6 +37,8 @@ namespace covered
     private:
         static const std::string kClassName;
 
+        void finishInitialization_() const;
+
         void checkPointers_() const;
 
         // Const shared variable
@@ -51,6 +54,12 @@ namespace covered
         WorkloadWrapperBase* workload_generator_ptr_; // thread safe
         ClientStatisticsTracker* client_statistics_tracker_ptr_; // thread safe
         PropagationSimulatorParam* client_toedge_propagation_simulator_param_ptr_; // thread safe
+
+        // Non-const individual variables for benchmark control messages
+        NetworkAddr client_recvmsg_source_addr_;
+        NetworkAddr evaluator_recvmsg_dst_addr_;
+        UdpMsgSocketServer* client_recvmsg_socket_server_ptr_;
+        UdpMsgSocketClient* client_sendmsg_socket_client_ptr_;
     };
 }
 

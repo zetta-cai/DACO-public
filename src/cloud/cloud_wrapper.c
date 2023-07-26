@@ -7,6 +7,7 @@
 #include "common/param.h"
 #include "common/util.h"
 #include "message/data_message.h"
+#include "message/control_message.h"
 #include "network/network_addr.h"
 #include "network/propagation_simulator.h"
 
@@ -57,6 +58,23 @@ namespace covered
         // Allocate cloud-to-edge propagation simulator param
         cloud_toedge_propagation_simulator_param_ptr_ = new PropagationSimulatorParam(propagation_latency_edgecloud_us, (NodeParamBase*)cloud_param_ptr, Config::getPropagationItemBufferSizeCloudToedge());
         assert(cloud_toedge_propagation_simulator_param_ptr_ != NULL);
+
+        // For benchmark control messages
+
+        std::string cloud_ipstr = Config::getCloudIpstr();
+        uint16_t cloud_recvmsg_port = Util::getCloudRecvmsgPort(0);
+        cloud_recvmsg_source_addr_ = NetworkAddr(cloud_ipstr, cloud_recvmsg_port);
+
+        std::string evaluator_ipstr = Config::getEvaluatorIpstr();
+        uint16_t evaluator_recvmsg_port = Config::getEvaluatorRecvmsgPort();
+        evaluator_recvmsg_dst_addr_ = NetworkAddr(evaluator_ipstr, evaluator_recvmsg_port);
+        
+        NetworkAddr host_addr(Util::ANY_IPSTR, cloud_recvmsg_port);
+        cloud_recvmsg_socket_server_ptr_ = new UdpMsgSocketServer(host_addr);
+        assert(cloud_recvmsg_socket_server_ptr_ != NULL);
+
+        cloud_sendmsg_socket_client_ptr_ = new UdpMsgSocketClient();
+        assert(cloud_sendmsg_socket_client_ptr_ != NULL);
     }
         
     CloudWrapper::~CloudWrapper()
@@ -77,6 +95,14 @@ namespace covered
         assert(cloud_toedge_propagation_simulator_param_ptr_ != NULL);
         delete cloud_toedge_propagation_simulator_param_ptr_;
         cloud_toedge_propagation_simulator_param_ptr_ = NULL;
+
+        // For benchmark control messages
+        assert(cloud_recvmsg_socket_server_ptr_ != NULL);
+        delete cloud_recvmsg_socket_server_ptr_;
+        cloud_recvmsg_socket_server_ptr_ = NULL;
+        assert(cloud_sendmsg_socket_client_ptr_ != NULL);
+        delete cloud_sendmsg_socket_client_ptr_;
+        cloud_sendmsg_socket_client_ptr_ = NULL;
     }
 
     void CloudWrapper::start()
@@ -99,7 +125,7 @@ namespace covered
         }
 
         // After all time-consuming initialization
-        cloud_param_ptr_->setNodeInitialized();
+        finishInitialization_();
 
         while (cloud_param_ptr_->isNodeRunning()) // cloud_running_ is set as true by default
         {
@@ -115,7 +141,7 @@ namespace covered
                 MessageBase* request_ptr = MessageBase::getRequestFromMsgPayload(global_request_msg_payload);
                 assert(request_ptr != NULL);
 
-                if (request_ptr->isGlobalRequest()) // Global requests
+                if (request_ptr->isGlobalDataRequest()) // Global requests
                 {
                     NetworkAddr edge_cache_server_worker_recvrsp_dst_addr = request_ptr->getSourceAddr();
                     is_finish = processGlobalRequest_(request_ptr, edge_cache_server_worker_recvrsp_dst_addr);
@@ -263,7 +289,7 @@ namespace covered
 
         // Push the global response message into cloud-to-edge propagation simulator to edge cache server worker
         assert(global_response_ptr != NULL);
-        assert(global_response_ptr->isGlobalResponse());
+        assert(global_response_ptr->isGlobalDataResponse());
         bool is_successful = cloud_toedge_propagation_simulator_param_ptr_->push(global_response_ptr, edge_cache_server_worker_recvrsp_dst_addr);
         assert(is_successful);
 
@@ -273,12 +299,44 @@ namespace covered
         return is_finish;
     }
 
+    void CloudWrapper::finishInitialization_() const
+    {
+        // Issue a InitializationRequest to evaluator
+        InitializationRequest initialization_request(0, cloud_recvmsg_source_addr_);
+        cloud_sendmsg_socket_client_ptr_->send((MessageBase*)&initialization_request, evaluator_recvmsg_dst_addr_);
+
+        // Wait for InitializationResponse
+        while (true)
+        {
+            DynamicArray control_response_msg_payload;
+            bool is_timeout = cloud_recvmsg_socket_server_ptr_->recv(control_response_msg_payload);
+            if (is_timeout)
+            {
+                continue; // Wait until receiving InitializationResponse
+            }
+            else
+            {
+                MessageBase* control_response_ptr = MessageBase::getRequestFromMsgPayload(control_response_msg_payload);
+                assert(control_response_ptr != NULL);
+                assert(control_response_ptr->getMessageType() == MessageType::kInitializationResponse);
+
+                delete control_response_ptr;
+                control_response_ptr = NULL;
+                
+                break;
+            }
+        }
+        return;
+    }
+
     void CloudWrapper::checkPointers_() const
     {
         assert(cloud_param_ptr_ != NULL);
         assert(cloud_rocksdb_ptr_ != NULL);
         assert(cloud_recvreq_socket_server_ptr_ != NULL);
         assert(cloud_toedge_propagation_simulator_param_ptr_ != NULL);
+        assert(cloud_recvmsg_socket_server_ptr_ != NULL);
+        assert(cloud_sendmsg_socket_client_ptr_ != NULL);
 
         return;
     }

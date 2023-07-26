@@ -20,8 +20,8 @@ namespace covered
     const int64_t Util::MAX_UINT16 = 65536;
     const int64_t Util::MAX_UINT32 = 4294967296;
     // Network
-    //const std::string Util::LOCALHOST_IPSTR("127.0.0.1"); // Pass network card
-    const std::string Util::LOCALHOST_IPSTR("localhost"); // NOT pass network card
+    const std::string Util::LOCALHOST_IPSTR("127.0.0.1"); // Pass network card
+    //const std::string Util::LOCALHOST_IPSTR("localhost"); // NOT pass network card
     const std::string Util::ANY_IPSTR("0.0.0.0");
     const uint32_t Util::UDP_MAX_PKT_PAYLOAD = 65507; // 65535(ipmax) - 20(iphdr) - 8(udphdr)
     const uint32_t Util::UDP_FRAGHDR_SIZE = 5 * sizeof(uint32_t) + sizeof(uint16_t); // 4(fragment_idx) + 4(fragment_cnt) + 4(msg_payload_size) + 4(msg_seqnum) + 4(source_ip) + 2(source_port)
@@ -323,6 +323,12 @@ namespace covered
 
     // (4.1) Client
 
+    uint16_t Util::getClientRecvmsgPort(const uint32_t& client_idx, const uint32_t& clientcnt)
+    {
+        int64_t client_recvmsg_startport = static_cast<int64_t>(Config::getClientRecvmsgStartport());
+        return getNodePort_(client_recvmsg_startport, client_idx, clientcnt, Config::getClientIpstrCnt());
+    }
+
     uint32_t Util::getClosestEdgeIdx(const uint32_t& client_idx, const uint32_t& clientcnt, const uint32_t& edgecnt)
     {
         assert(edgecnt > 0);
@@ -377,7 +383,13 @@ namespace covered
         return Util::toUint16(client_worker_recvrsp_port);
     }
 
-    // (4.2) Edge and cloud
+    // (4.2) Edge
+
+    uint16_t Util::getEdgeRecvmsgPort(const uint32_t& edge_idx, const uint32_t& edgecnt)
+    {
+        int64_t edge_recvmsg_startport = static_cast<int64_t>(Config::getEdgeRecvmsgStartport());
+        return getNodePort_(edge_recvmsg_startport, edge_idx, edgecnt, Config::getEdgeIpstrCnt());
+    }
 
     uint16_t Util::getEdgeBeaconServerRecvreqPort(const uint32_t& edge_idx, const uint32_t& edgecnt)
     {
@@ -432,6 +444,17 @@ namespace covered
     {
         int64_t edge_invalidation_server_recvreq_startport = static_cast<int64_t>(Config::getEdgeInvalidationServerRecvreqStartport());
         return getNodePort_(edge_invalidation_server_recvreq_startport, edge_idx, edgecnt, Config::getEdgeIpstrCnt());
+    }
+
+    // (4.3) Cloud
+
+    uint16_t Util::getCloudRecvmsgPort(const uint32_t& cloud_idx)
+    {
+        // TODO: only support 1 cloud node now
+        assert(cloud_idx == 0);
+
+        int64_t cloud_recvmsg_startport = static_cast<int64_t>(Config::getCloudRecvmsgStartport());
+        return getNodePort_(cloud_recvmsg_startport, cloud_idx, 1, 1);
     }
 
     uint16_t Util::getCloudRecvreqPort(const uint32_t& cloud_idx)

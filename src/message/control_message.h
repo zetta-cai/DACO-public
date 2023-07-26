@@ -7,17 +7,22 @@
 #ifndef CONTROL_MESSAGE_H
 #define CONTROL_MESSAGE_H
 
-#include "message/control/acquire_writelock_request.h"
-#include "message/control/acquire_writelock_response.h"
-#include "message/control/directory_lookup_request.h"
-#include "message/control/directory_update_request.h"
-#include "message/control/directory_lookup_response.h"
-#include "message/control/directory_update_response.h"
-#include "message/control/finish_block_request.h"
-#include "message/control/finish_block_response.h"
-#include "message/control/release_writelock_request.h"
-#include "message/control/release_writelock_response.h"
-#include "message/control/invalidation_request.h"
-#include "message/control/invalidation_response.h"
+#include "message/control/benchmark/initialization_request.h"
+#include "message/control/benchmark/initialization_response.h"
+#include "message/control/benchmark/startrun_request.h"
+#include "message/control/benchmark/startrun_response.h"
+
+#include "message/control/cooperation/acquire_writelock_request.h"
+#include "message/control/cooperation/acquire_writelock_response.h"
+#include "message/control/cooperation/directory_lookup_request.h"
+#include "message/control/cooperation/directory_update_request.h"
+#include "message/control/cooperation/directory_lookup_response.h"
+#include "message/control/cooperation/directory_update_response.h"
+#include "message/control/cooperation/finish_block_request.h"
+#include "message/control/cooperation/finish_block_response.h"
+#include "message/control/cooperation/release_writelock_request.h"
+#include "message/control/cooperation/release_writelock_response.h"
+#include "message/control/cooperation/invalidation_request.h"
+#include "message/control/cooperation/invalidation_response.h"
 
 #endif

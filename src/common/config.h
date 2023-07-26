@@ -21,8 +21,10 @@ namespace covered
         // Key strings of JSON config file for static configurations (only used by Config)
         static const std::string CLIENT_IPSTRS_KEYSTR;
         static const std::string CLIENT_RAW_STATISTICS_SLOT_INTERVAL_SEC_KEYSTR;
+        static const std::string CLIENT_RECVMSG_STARTPORT_KEYSTR;
         static const std::string CLIENT_WORKER_RECVRSP_STARTPORT_KEYSTR;
         static const std::string CLOUD_IPSTR_KEYSTR;
+        static const std::string CLOUD_RECVMSG_STARTPORT_KEYSTR;
         static const std::string CLOUD_RECVREQ_STARTPORT_KEYSTR;
         static const std::string CLOUD_ROCKSDB_BASEDIR_KEYSTR;
         static const std::string EDGE_BEACON_SERVER_RECVREQ_STARTPORT_KEYSTR;
@@ -33,6 +35,9 @@ namespace covered
         static const std::string EDGE_CACHE_SERVER_WORKER_RECVRSP_STARTPORT_KEYSTR;
         static const std::string EDGE_INVALIDATION_SERVER_RECVREQ_STARTPORT_KEYSTR;
         static const std::string EDGE_IPSTRS_KEYSTR;
+        static const std::string EDGE_RECVMSG_STARTPORT_KEYSTR;
+        static const std::string EVALUATOR_IPSTR_KEYSTR;
+        static const std::string EVALUATOR_RECVMSG_PORT_KEYSTR;
         static const std::string FACEBOOK_CONFIG_FILEPATH_KEYSTR;
         static const std::string FINE_GRAINED_LOCKING_SIZE_KEYSTR;
         static const std::string LATENCY_HISTOGRAM_SIZE_KEYSTR;
@@ -48,9 +53,11 @@ namespace covered
 
         static std::string getClientIpstr(const uint32_t& client_idx, const uint32_t& clientcnt);
         static uint32_t getClientRawStatisticsSlotIntervalSec();
+        static uint16_t getClientRecvmsgStartport();
         static uint32_t getClientIpstrCnt();
         static uint16_t getClientWorkerRecvrspStartport();
         static std::string getCloudIpstr();
+        static uint16_t getCloudRecvmsgStartport();
         static uint16_t getCloudRecvreqStartport();
         static std::string getCloudRocksdbBasedir();
         static uint16_t getEdgeBeaconServerRecvreqStartport();
@@ -62,6 +69,9 @@ namespace covered
         static uint16_t getEdgeInvalidationServerRecvreqStartport();
         static std::string getEdgeIpstr(const uint32_t& edge_idx, const uint32_t& edgecnt);
         static uint32_t getEdgeIpstrCnt();
+        static uint16_t getEdgeRecvmsgStartport();
+        static std::string getEvaluatorIpstr();
+        static std::uint16_t getEvaluatorRecvmsgPort();
         static std::string getFacebookConfigFilepath();
         static uint32_t getFineGrainedLockingSize();
         static uint32_t getLatencyHistogramSize();
@@ -86,8 +96,10 @@ namespace covered
 
         static std::vector<std::string> client_ipstrs_;
         static uint32_t client_raw_statistics_slot_interval_sec_;
+        static uint16_t client_recvmsg_startport_;
         static uint16_t client_worker_recvrsp_startport_;
         static std::string cloud_ipstr_;
+        static uint16_t cloud_recvmsg_startport_;
         static uint16_t cloud_recvreq_startport_;
         static std::string cloud_rocksdb_basedir_;
         static uint16_t edge_beacon_server_recvreq_startport_;
@@ -98,6 +110,9 @@ namespace covered
         static uint16_t edge_cache_server_worker_recvrsp_startport_;
         static uint16_t edge_invalidation_server_recvreq_startport_;
         static std::vector<std::string> edge_ipstrs_;
+        static uint16_t edge_recvmsg_startport_;
+        static std::string evaluator_ipstr_;
+        static uint16_t evaluator_recvmsg_port_;
         static std::string facebook_config_filepath_;
         static uint32_t fine_grained_locking_size_;
         static uint32_t latency_histogram_size_;

@@ -166,7 +166,7 @@ namespace covered
 
         bool is_finish = false; // Mark if edge node is finished
 
-        if (data_request_ptr->isLocalRequest()) // Local request
+        if (data_request_ptr->isLocalDataRequest()) // Local request
         {
             if (data_request_ptr->getMessageType() == MessageType::kLocalGetRequest)
             {
@@ -177,7 +177,7 @@ namespace covered
                 is_finish = processLocalWriteRequest_(data_request_ptr, recvrsp_dst_addr);
             }
         }
-        else if (data_request_ptr->isRedirectedRequest()) // Redirected request
+        else if (data_request_ptr->isRedirectedDataRequest()) // Redirected request
         {
             is_finish = processRedirectedRequest_(data_request_ptr, recvrsp_dst_addr);
         }
@@ -460,7 +460,7 @@ namespace covered
 
     bool CacheServerWorkerBase::processRedirectedRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& recvrsp_dst_addr)
     {
-        assert(redirected_request_ptr != NULL && redirected_request_ptr->isRedirectedRequest());
+        assert(redirected_request_ptr != NULL && redirected_request_ptr->isRedirectedDataRequest());
 
         bool is_finish = false; // Mark if local edge node is finished
 

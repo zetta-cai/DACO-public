@@ -1,4 +1,4 @@
-#include "message/control/release_writelock_request.h"
+#include "message/control/cooperation/release_writelock_request.h"
 
 namespace covered
 {

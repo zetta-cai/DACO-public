@@ -58,6 +58,26 @@ namespace covered
                 message_type_str = "kRedirectedGetResponse";
                 break;
             }
+            case MessageType::kInitializationRequest:
+            {
+                message_type_str = "kInitializationRequest";
+                break;
+            }
+            case MessageType::kInitializationResponse:
+            {
+                message_type_str = "kInitializationResponse";
+                break;
+            }
+            case MessageType::kStartrunRequest:
+            {
+                message_type_str = "kStartrunRequest";
+                break;
+            }
+            case MessageType::kStartrunResponse:
+            {
+                message_type_str = "kStartrunResponse";
+                break;
+            }
             case MessageType::kAcquireWritelockRequest:
             {
                 message_type_str = "kAcquireWritelockRequest";
@@ -225,7 +245,7 @@ namespace covered
         }
 
         assert(message_ptr != NULL);
-        assert(message_ptr->isLocalRequest()); // Must be local request for clients
+        assert(message_ptr->isLocalDataRequest()); // Must be local request for clients
         return message_ptr;
     }
 
@@ -273,6 +293,16 @@ namespace covered
             case MessageType::kRedirectedGetRequest:
             {
                 message_ptr = new RedirectedGetRequest(msg_payload);
+                break;
+            }
+            case MessageType::kInitializationRequest:
+            {
+                message_ptr = new InitializationRequest(msg_payload);
+                break;
+            }
+            case MessageType::kStartrunRequest:
+            {
+                message_ptr = new StartrunRequest(msg_payload);
                 break;
             }
             case MessageType::kAcquireWritelockRequest:
@@ -363,6 +393,16 @@ namespace covered
             case MessageType::kRedirectedGetResponse:
             {
                 message_ptr = new RedirectedGetResponse(msg_payload);
+                break;
+            }
+            case MessageType::kInitializationResponse:
+            {
+                message_ptr = new InitializationResponse(msg_payload);
+                break;
+            }
+            case MessageType::kStartrunResponse:
+            {
+                message_ptr = new StartrunResponse(msg_payload);
                 break;
             }
             case MessageType::kAcquireWritelockResponse:
@@ -672,10 +712,10 @@ namespace covered
     bool MessageBase::isDataRequest() const
     {
         checkIsValid_();
-        return isLocalRequest() || isRedirectedRequest() || isGlobalRequest();
+        return isLocalDataRequest() || isRedirectedDataRequest() || isGlobalDataRequest();
     }
 
-    bool MessageBase::isLocalRequest() const
+    bool MessageBase::isLocalDataRequest() const
     {
         checkIsValid_();
         if (message_type_ == MessageType::kLocalGetRequest || message_type_ == MessageType::kLocalPutRequest || message_type_ == MessageType::kLocalDelRequest)
@@ -688,7 +728,7 @@ namespace covered
         }
     }
 
-    bool MessageBase::isRedirectedRequest() const
+    bool MessageBase::isRedirectedDataRequest() const
     {
         checkIsValid_();
         if (message_type_ == MessageType::kRedirectedGetRequest)
@@ -701,7 +741,7 @@ namespace covered
         }
     }
 
-    bool MessageBase::isGlobalRequest() const
+    bool MessageBase::isGlobalDataRequest() const
     {
         checkIsValid_();
         if (message_type_ == MessageType::kGlobalGetRequest || message_type_ == MessageType::kGlobalPutRequest || message_type_ == MessageType::kGlobalDelRequest)
@@ -717,10 +757,10 @@ namespace covered
     bool MessageBase::isDataResponse() const
     {
         checkIsValid_();
-        return isLocalResponse() || isRedirectedResponse() || isGlobalResponse();
+        return isLocalDataResponse() || isRedirectedDataResponse() || isGlobalDataResponse();
     }
 
-    bool MessageBase::isLocalResponse() const
+    bool MessageBase::isLocalDataResponse() const
     {
         checkIsValid_();
         if (message_type_ == MessageType::kLocalGetResponse || message_type_ == MessageType::kLocalPutResponse || message_type_ == MessageType::kLocalDelResponse)
@@ -733,7 +773,7 @@ namespace covered
         }
     }
 
-    bool MessageBase::isRedirectedResponse() const
+    bool MessageBase::isRedirectedDataResponse() const
     {
         checkIsValid_();
         if (message_type_ == MessageType::kRedirectedGetResponse)
@@ -746,7 +786,7 @@ namespace covered
         }
     }
 
-    bool MessageBase::isGlobalResponse() const
+    bool MessageBase::isGlobalDataResponse() const
     {
         checkIsValid_();
         if (message_type_ == MessageType::kGlobalGetResponse || message_type_ == MessageType::kGlobalPutResponse || message_type_ == MessageType::kGlobalDelResponse)
@@ -762,8 +802,26 @@ namespace covered
     bool MessageBase::isControlRequest() const
     {
         checkIsValid_();
-        // TODO: Update isControlRequest() after introducing control requests
+        return isCooperationControlRequest() || isBenchmarkControlRequest();
+    }
+
+    bool MessageBase::isCooperationControlRequest() const
+    {
+        checkIsValid_();
         if (message_type_ == MessageType::kAcquireWritelockRequest || message_type_ == MessageType::kDirectoryLookupRequest || message_type_ == MessageType::kDirectoryUpdateRequest || message_type_ == MessageType::kFinishBlockRequest || message_type_ == MessageType::kInvalidationRequest || message_type_ == MessageType::kReleaseWritelockRequest)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    bool MessageBase::isBenchmarkControlRequest() const
+    {
+        checkIsValid_();
+        if (message_type_ == MessageType::kInitializationRequest || message_type_ == MessageType::kStartrunRequest)
         {
             return true;
         }
@@ -776,8 +834,26 @@ namespace covered
     bool MessageBase::isControlResponse() const
     {
         checkIsValid_();
-        // TODO: Update isControlResponse() after introducing control responses
+        return isCooperationControlResponse() || isBenchmarkControlResponse();
+    }
+
+    bool MessageBase::isCooperationControlResponse() const
+    {
+        checkIsValid_();
         if (message_type_ == MessageType::kAcquireWritelockResponse || message_type_ == MessageType::kDirectoryLookupResponse || message_type_ == MessageType::kDirectoryUpdateResponse || message_type_ == MessageType::kFinishBlockResponse || message_type_ == MessageType::kInvalidationResponse || message_type_ == MessageType::kReleaseWritelockResponse)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    bool MessageBase::isBenchmarkControlResponse() const
+    {
+        checkIsValid_();
+        if (message_type_ == MessageType::kInitializationResponse || message_type_ == MessageType::kStartrunResponse)
         {
             return true;
         }

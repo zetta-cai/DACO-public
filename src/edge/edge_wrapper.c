@@ -58,6 +58,23 @@ namespace covered
         // Allocate edge-to-cloud propagation simulator param
         edge_tocloud_propagation_simulator_param_ptr_ = new PropagationSimulatorParam(propagation_latency_edgecloud_us, (NodeParamBase*)edge_param_ptr, Config::getPropagationItemBufferSizeEdgeTocloud());
         assert(edge_tocloud_propagation_simulator_param_ptr_ != NULL);
+
+        // For benchmark control messages
+
+        std::string edge_ipstr = Config::getEdgeIpstr(edge_idx, edgecnt);
+        uint16_t edge_recvmsg_port = Util::getEdgeRecvmsgPort(edge_idx, edgecnt);
+        edge_recvmsg_source_addr_ = NetworkAddr(edge_ipstr, edge_recvmsg_port);
+
+        std::string evaluator_ipstr = Config::getEvaluatorIpstr();
+        uint16_t evaluator_recvmsg_port = Config::getEvaluatorRecvmsgPort();
+        evaluator_recvmsg_dst_addr_ = NetworkAddr(evaluator_ipstr, evaluator_recvmsg_port);
+        
+        NetworkAddr host_addr(Util::ANY_IPSTR, edge_recvmsg_port);
+        edge_recvmsg_socket_server_ptr_ = new UdpMsgSocketServer(host_addr);
+        assert(edge_recvmsg_socket_server_ptr_ != NULL);
+
+        edge_sendmsg_socket_client_ptr_ = new UdpMsgSocketClient();
+        assert(edge_sendmsg_socket_client_ptr_ != NULL);
     }
         
     EdgeWrapper::~EdgeWrapper()
@@ -88,6 +105,14 @@ namespace covered
         assert(edge_tocloud_propagation_simulator_param_ptr_ != NULL);
         delete edge_tocloud_propagation_simulator_param_ptr_;
         edge_tocloud_propagation_simulator_param_ptr_ = NULL;
+
+        // For benchmark control messages
+        assert(edge_recvmsg_socket_server_ptr_ != NULL);
+        delete edge_recvmsg_socket_server_ptr_;
+        edge_recvmsg_socket_server_ptr_ = NULL;
+        assert(edge_sendmsg_socket_client_ptr_ != NULL);
+        delete edge_sendmsg_socket_client_ptr_;
+        edge_sendmsg_socket_client_ptr_ = NULL;
     }
 
     void EdgeWrapper::start()
@@ -171,7 +196,7 @@ namespace covered
         }
 
         // After all time-consuming initialization
-        edge_param_ptr_->setNodeInitialized();
+        finishInitialization_();
 
         // Wait edge-to-client propagation simulator
         pthread_returncode = pthread_join(edge_toclient_propagation_simulator_thread, NULL);
@@ -597,6 +622,37 @@ namespace covered
 
     // (4) Other utilities
 
+    void EdgeWrapper::finishInitialization_() const
+    {
+        // Issue a InitializationRequest to evaluator
+        uint32_t edge_idx = edge_param_ptr_->getNodeIdx();
+        InitializationRequest initialization_request(edge_idx, edge_recvmsg_source_addr_);
+        edge_sendmsg_socket_client_ptr_->send((MessageBase*)&initialization_request, evaluator_recvmsg_dst_addr_);
+
+        // Wait for InitializationResponse
+        while (true)
+        {
+            DynamicArray control_response_msg_payload;
+            bool is_timeout = edge_recvmsg_socket_server_ptr_->recv(control_response_msg_payload);
+            if (is_timeout)
+            {
+                continue; // Wait until receiving InitializationResponse
+            }
+            else
+            {
+                MessageBase* control_response_ptr = MessageBase::getRequestFromMsgPayload(control_response_msg_payload);
+                assert(control_response_ptr != NULL);
+                assert(control_response_ptr->getMessageType() == MessageType::kInitializationResponse);
+
+                delete control_response_ptr;
+                control_response_ptr = NULL;
+                
+                break;
+            }
+        }
+        return;
+    }
+
     void EdgeWrapper::checkPointers_() const
     {
         assert(edge_param_ptr_ != NULL);
@@ -605,6 +661,8 @@ namespace covered
         assert(edge_toclient_propagation_simulator_param_ptr_ != NULL);
         assert(edge_toedge_propagation_simulator_param_ptr_ != NULL);
         assert(edge_tocloud_propagation_simulator_param_ptr_ != NULL);
+        assert(edge_recvmsg_socket_server_ptr_ != NULL);
+        assert(edge_sendmsg_socket_client_ptr_ != NULL);
 
         return;
     }

@@ -1,4 +1,4 @@
-#include "message/control/finish_block_request.h"
+#include "message/control/cooperation/finish_block_request.h"
 
 namespace covered
 {
