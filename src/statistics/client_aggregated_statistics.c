@@ -99,6 +99,10 @@ namespace covered
             total_writecnt_ += client_raw_statistics_ptr->perclientworker_writecnts_[local_worker_idx].load(Util::LOAD_CONCURRENCY_ORDER);
         }
 
+        // Copy closest edge cache utilization
+        total_cache_size_bytes_ = client_raw_statistics_ptr->closest_edge_cache_size_bytes_;
+        total_cache_capacity_bytes_ = client_raw_statistics_ptr->closest_edge_cache_capacity_bytes_;
+
         return;
     }
 

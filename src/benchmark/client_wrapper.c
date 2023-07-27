@@ -146,11 +146,11 @@ namespace covered
                 }
                 else if (control_request_msg_type == MessageType::kFinishWarmupRequest)
                 {
-                    finishWarmup_(); // Will mark is_warmup_phase_ as false
+                    finishWarmup_(); // TODO: Mark is_warmup_phase_ as false
                 }
                 else if (control_request_msg_type == MessageType::kFinishrunRequest)
                 {
-                    finishRun_(); // Will mark node_running_ as false
+                    finishRun_(); // TODO: Mark node_running_ as false
                     // Place into finishRun_()
                     // Aggregate cur-slot/stable client raw statistics, and dump per-slot/stable client aggregated statistics
                     //assert(client_statistics_tracker_ptr_ != NULL);

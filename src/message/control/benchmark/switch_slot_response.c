@@ -16,6 +16,7 @@ namespace covered
 
     uint32_t SwitchSlotResponse::getTargetSlotIdx() const
     {
-        return getUnsignedInteger();
+        checkIsValid_();
+        return getUnsignedInteger_();
     }
 }

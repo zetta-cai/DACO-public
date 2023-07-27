@@ -1,7 +1,7 @@
 /*
  * KeyByteMessage: the base class for messages each with a key and a single byte.
  *
- * (1) For LocalDelResponse and LocalPutResponse, the byte is a cache hit flag.
+ * ~~(1) For LocalDelResponse and LocalPutResponse, the byte is a cache hit flag.~~ (use KeyHitflagUtilizationMessage now).
  * (2) For DirectoryUpdateResponse, the byte is a write flag.
  * (3) For AcquireWritelockResponse, the byte is a success flag.
  * 

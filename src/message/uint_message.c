@@ -18,8 +18,9 @@ namespace covered
 
     UintMessage::~UintMessage() {}
 
-    uint32_t UintMessage::getUnsignedInteger() const
+    uint32_t UintMessage::getUnsignedInteger_() const
     {
+        checkIsValid_();
         return unsigned_integer_;
     }
 

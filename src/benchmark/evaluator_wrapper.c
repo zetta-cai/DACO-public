@@ -137,7 +137,7 @@ namespace covered
                     Util::dumpNormalMsg(kClassName, "Stop benchmark...");
 
                     // Notify client/edge/cloud to finish run
-                    notifyAllToFinishrun_();
+                    notifyAllToFinishrun_(); // TOOD: Update total_statistics_tracker_ptr_; finish edge/cloud after clients are finished
 
                     break;
                 }
@@ -149,8 +149,6 @@ namespace covered
             {
                 // Notify clients to switch cur-slot client raw statistics
                 notifyClientsToSwitchSlot_(); // Increase cur_slot_idx_ by one
-
-                // TOOD: Update total_statistics_tracker_ptr_
 
                 // Update prev_timestamp for the next slot
                 prev_timestamp = cur_timestamp;
@@ -169,7 +167,7 @@ namespace covered
                     Util::dumpNormalMsg(kClassName, oss.str());
 
                     // Notify all clients to finish warmup phase (i.e., enter stresstest phase)
-                    notifyClientsToFinishWarmup_(); // Mark is_warmup_phase_ as false
+                    notifyClientsToFinishWarmup_(); // TODO: Mark is_warmup_phase_ as false
 
                     // Duration starts from the end of warmup phase
                     is_warmup_phase_ = false;

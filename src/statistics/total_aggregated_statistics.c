@@ -58,6 +58,10 @@ namespace covered
             // Aggregate read-write ratio statistics
             total_readcnt_ += tmp_client_aggregated_statistics.total_readcnt_;
             total_writecnt_ += tmp_client_aggregated_statistics.total_writecnt_;
+
+            // Aggregate cache utilization statistics
+            total_cache_size_bytes_ += tmp_client_aggregated_statistics.total_cache_size_bytes_;
+            total_cache_capacity_bytes_ += tmp_client_aggregated_statistics.total_cache_capacity_bytes_;
         }
 
         // Aggregate latency statistics approximately

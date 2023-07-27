@@ -19,13 +19,15 @@ namespace covered
 
     UintAggstatMessage::~UintAggstatMessage() {}
 
-    uint32_t UintAggstatMessage::getUnsignedInteger() const
+    uint32_t UintAggstatMessage::getUnsignedInteger_() const
     {
+        checkIsValid_();
         return unsigned_integer_;
     }
 
     AggregatedStatisticsBase UintAggstatMessage::getAggregatedStatistics() const
     {
+        checkIsValid_();
         return aggregated_statistics_;
     }
 

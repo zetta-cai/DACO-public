@@ -38,6 +38,9 @@ namespace covered
         void updateReadcnt_(const uint32_t& local_client_worker_idx);
         void updateWritecnt_(const uint32_t& local_client_worker_idx);
 
+        // Update cache utilization statistics
+        void updateCacheUtilization(const uint64_t& closest_edge_cache_size_bytes, const uint64_t& closest_edge_cache_capacity_bytes);
+
         void checkPointers_() const;
 
         // Const variables
@@ -55,6 +58,10 @@ namespace covered
         // Per-client-worker read-write ratio statistics
         std::atomic<uint32_t>* perclientworker_readcnts_;
         std::atomic<uint32_t>* perclientworker_writecnts_;
+
+        // Cache utilization statistics
+        uint64_t closest_edge_cache_size_bytes_;
+        uint64_t closest_edge_cache_capacity_bytes_;
     };
 }
 

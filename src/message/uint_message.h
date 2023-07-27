@@ -20,8 +20,6 @@ namespace covered
         UintMessage(const uint32_t& unsigned_integer, const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr, const EventList& event_list);
         UintMessage(const DynamicArray& msg_payload);
         virtual ~UintMessage();
-
-        uint32_t getUnsignedInteger() const;
     private:
         static const std::string kClassName;
 
@@ -31,6 +29,8 @@ namespace covered
         virtual uint32_t deserializeInternal_(const DynamicArray& msg_payload, const uint32_t& position) override;
 
         uint32_t unsigned_integer_;
+    protected:
+        uint32_t getUnsignedInteger_() const;
     };
 }
 

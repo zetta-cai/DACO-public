@@ -221,10 +221,12 @@ namespace covered
         ClientStatisticsTracker* client_statistics_tracker_ptr_ = tmp_client_wrapper_ptr->client_statistics_tracker_ptr_;
 
         // Process local response message
-        Hitflag hitflag = Hitflag::kGlobalMiss;
         MessageType local_response_message_type = local_response_ptr->getMessageType();
         Key tmp_key;
         Value tmp_value;
+        Hitflag hitflag = Hitflag::kGlobalMiss;
+        uint64_t closest_edge_cache_size_bytes = 0;
+        uint64_t closest_edge_cache_capacity_bytes = 0;
         bool is_write = false;
         switch (local_response_message_type)
         {
@@ -234,6 +236,8 @@ namespace covered
                 tmp_key = local_get_response_ptr->getKey();
                 tmp_value = local_get_response_ptr->getValue();
                 hitflag = local_get_response_ptr->getHitflag();
+                closest_edge_cache_size_bytes = local_get_response_ptr->getCacheSizeBytes();
+                closest_edge_cache_capacity_bytes = local_get_response_ptr->getCacheCapacityBytes();
                 is_write = false;
                 break;
             }
@@ -242,6 +246,8 @@ namespace covered
                 LocalPutResponse* const local_put_response_ptr = static_cast<LocalPutResponse*>(local_response_ptr);
                 tmp_key = local_put_response_ptr->getKey();
                 hitflag = local_put_response_ptr->getHitflag();
+                closest_edge_cache_size_bytes = local_put_response_ptr->getCacheSizeBytes();
+                closest_edge_cache_capacity_bytes = local_put_response_ptr->getCacheCapacityBytes();
                 is_write = true;
                 break;
             }
@@ -250,6 +256,8 @@ namespace covered
                 LocalDelResponse* const local_del_response_ptr = static_cast<LocalDelResponse*>(local_response_ptr);
                 tmp_key = local_del_response_ptr->getKey();
                 hitflag = local_del_response_ptr->getHitflag();
+                closest_edge_cache_size_bytes = local_del_response_ptr->getCacheSizeBytes();
+                closest_edge_cache_capacity_bytes = local_del_response_ptr->getCacheCapacityBytes();
                 is_write = true;
                 break;
             }
@@ -301,6 +309,9 @@ namespace covered
         {
             client_statistics_tracker_ptr_->updateWritecnt(local_client_worker_idx, is_stresstest);
         }
+
+        // Update cache utilization statistics for the local client
+        client_statistics_tracker_ptr_->updateCacheUtilization(closest_edge_cache_size_bytes, closest_edge_cache_capacity_bytes);
 
         #ifdef DEBUG_CLIENT_WORKER_WRAPPER
         Util::dumpVariablesForDebug(instance_name_, 13, "receive a local response;", "type:", MessageBase::messageTypeToString(local_response_message_type).c_str(), "keystr", tmp_key.getKeystr().c_str(), "valuesize:", std::to_string(tmp_value.getValuesize()).c_str(), "hitflag:", MessageBase::hitflagToString(hitflag).c_str(), "latency:", std::to_string(rtt_us).c_str(), "eventlist:", local_response_ptr->getEventListRef().toString().c_str());

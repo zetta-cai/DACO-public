@@ -18,6 +18,8 @@ namespace covered
     class TotalStatisticsTracker
     {
     public:
+        static const double CACHE_FILLUP_THRESHOLD;
+
         TotalStatisticsTracker();
         TotalStatisticsTracker(const std::string& filepath);
         ~TotalStatisticsTracker();

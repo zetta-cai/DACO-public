@@ -43,6 +43,11 @@ namespace covered
         uint32_t getTotalReadcnt() const;
         uint32_t getTotalWritecnt() const;
 
+        // Get aggregated statistics related with cache utilization
+        uint64_t getTotalCacheSizeBytes() const;
+        uint64_t getTotalCacheCapacityBytes() const;
+        double getTotalCacheUtilization() const;
+
         // Get string for aggregate statistics
         std::string toString() const;
 
@@ -71,6 +76,10 @@ namespace covered
         // Aggregated statistics related with read-write ratio
         uint32_t total_readcnt_;
         uint32_t total_writecnt_;
+
+        // Aggregated statistics related with cache utilization
+        uint64_t total_cache_size_bytes_;
+        uint64_t total_cache_capacity_bytes_;
     };
 }
 

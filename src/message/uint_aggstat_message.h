@@ -22,7 +22,6 @@ namespace covered
         UintAggstatMessage(const DynamicArray& msg_payload);
         virtual ~UintAggstatMessage();
 
-        uint32_t getUnsignedInteger() const;
         AggregatedStatisticsBase getAggregatedStatistics() const;
     private:
         static const std::string kClassName;
@@ -34,6 +33,8 @@ namespace covered
 
         uint32_t unsigned_integer_;
         AggregatedStatisticsBase aggregated_statistics_;
+    protected:
+        uint32_t getUnsignedInteger_() const;
     };
 }
 

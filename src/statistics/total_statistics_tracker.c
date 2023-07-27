@@ -11,6 +11,8 @@
 
 namespace covered
 {
+    const double TotalStatisticsTracker::CACHE_FILLUP_THRESHOLD = 0.9d;
+
     const std::string TotalStatisticsTracker::kClassName("TotalStatisticsTracker");
     
     TotalStatisticsTracker::TotalStatisticsTracker() : allow_update_(true)
@@ -53,14 +55,18 @@ namespace covered
         {
             //return true; // TMPDEBUG
 
+            double cur_total_cache_utilization = perslot_total_aggregated_statistics_[slotcnt - 1].getTotalCacheUtilization();
             double cur_total_hit_ratio = perslot_total_aggregated_statistics_[slotcnt - 1].getTotalHitRatio();
             double prev_total_hit_ratio = perslot_total_aggregated_statistics_[slotcnt - 2].getTotalHitRatio();
 
-            // TODO: cache is stable ONLY if cache is filled up and hit ratio is stabilized
-            if (cur_total_hit_ratio > 0.0d && prev_total_hit_ratio > 0.0d && cur_total_hit_ratio <= prev_total_hit_ratio)
+            // Cache becomes stable
+            if (cur_total_cache_utilization >= CACHE_FILLUP_THRESHOLD) // Cache is filled up
             {
-                is_stable = true;
-                cache_hit_ratio = cur_total_hit_ratio;
+                if (cur_total_hit_ratio > 0.0d && prev_total_hit_ratio > 0.0d && cur_total_hit_ratio <= prev_total_hit_ratio) // Cache hit ratio is stabilized
+                {
+                    is_stable = true;
+                    cache_hit_ratio = cur_total_hit_ratio;
+                }
             }
         }
 

@@ -56,7 +56,7 @@ namespace covered
     {
         assert(cache_server_worker_param_ptr != NULL);
         const uint32_t edge_idx = cache_server_worker_param_ptr->getCacheServerPtr()->edge_wrapper_ptr_->node_idx_;
-        const uint32_t edgecnt = cache_server_worker_param_ptr->getCacheServerPtr()->edge_wrapper_ptr_->edgecnt_;
+        const uint32_t edgecnt = cache_server_worker_param_ptr->getCacheServerPtr()->edge_wrapper_ptr_->node_cnt_;
         const uint32_t local_cache_server_worker_idx = cache_server_worker_param_ptr->getLocalCacheServerWorkerIdx();
         const uint32_t percacheserver_workercnt = cache_server_worker_param_ptr->getCacheServerPtr()->edge_wrapper_ptr_->percacheserver_workercnt_;
 
@@ -290,9 +290,11 @@ namespace covered
         event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_INDEPENDENT_ADMISSION_EVENT_NAME, independent_admission_latency_us); // Add intermediate event if with event tracking
 
         // Prepare LocalGetResponse for client
+        uint64_t used_bytes = tmp_edge_wrapper_ptr->getSizeForCapacity_();
+        uint64_t capacity_bytes = tmp_edge_wrapper_ptr->capacity_bytes_;
         uint32_t edge_idx = tmp_edge_wrapper_ptr->node_idx_;
         NetworkAddr edge_cache_server_recvreq_source_addr = cache_server_worker_param_ptr_->getCacheServerPtr()->edge_cache_server_recvreq_source_addr_;
-        MessageBase* local_get_response_ptr = new LocalGetResponse(tmp_key, tmp_value, hitflag, edge_idx, edge_cache_server_recvreq_source_addr, event_list);
+        MessageBase* local_get_response_ptr = new LocalGetResponse(tmp_key, tmp_value, hitflag, used_bytes, capacity_bytes, edge_idx, edge_cache_server_recvreq_source_addr, event_list);
         assert(local_get_response_ptr != NULL);
 
         // Push local response message into edge-to-client propagation simulator to a client
@@ -378,7 +380,6 @@ namespace covered
         // Try to update/remove local edge cache
         struct timespec write_local_cache_start_timestamp = Util::getCurrentTimespec();
         bool is_local_cached = false;
-        uint32_t edge_idx = tmp_edge_wrapper_ptr->node_idx_;
         NetworkAddr edge_cache_server_recvreq_source_addr = cache_server_worker_param_ptr_->getCacheServerPtr()->edge_cache_server_recvreq_source_addr_;
         // NOTE: message type has been checked, which must be one of the following two types
         if (local_request_ptr->getMessageType() == MessageType::kLocalPutRequest)
@@ -432,15 +433,18 @@ namespace covered
 
         // Prepare local response
         MessageBase* local_response_ptr = NULL;
+        uint64_t used_bytes = tmp_edge_wrapper_ptr->getSizeForCapacity_();
+        uint64_t capacity_bytes = tmp_edge_wrapper_ptr->capacity_bytes_;
+        uint32_t edge_idx = tmp_edge_wrapper_ptr->node_idx_;
         if (local_request_ptr->getMessageType() == MessageType::kLocalPutRequest)
         {
             // Prepare LocalPutResponse for client
-            local_response_ptr = new LocalPutResponse(tmp_key, hitflag, edge_idx, edge_cache_server_recvreq_source_addr, event_list);
+            local_response_ptr = new LocalPutResponse(tmp_key, hitflag, used_bytes, capacity_bytes, edge_idx, edge_cache_server_recvreq_source_addr, event_list);
         }
         else if (local_request_ptr->getMessageType() == MessageType::kLocalDelRequest)
         {
             // Prepare LocalDelResponse for client
-            local_response_ptr = new LocalDelResponse(tmp_key, hitflag, edge_idx, edge_cache_server_recvreq_source_addr, event_list);
+            local_response_ptr = new LocalDelResponse(tmp_key, hitflag, used_bytes, capacity_bytes, edge_idx, edge_cache_server_recvreq_source_addr, event_list);
         }
 
         if (!is_finish) // // Edge node is STILL running
@@ -884,8 +888,8 @@ namespace covered
 
         // Set remote address such that the current edge node can communicate with the target edge node
         uint32_t target_edge_idx = directory_info.getTargetEdgeIdx();
-        std::string target_edge_ipstr = Config::getEdgeIpstr(target_edge_idx, tmp_edge_wrapper_ptr->edgecnt_);
-        uint16_t target_edge_cache_server_recvreq_port = Util::getEdgeCacheServerRecvreqPort(target_edge_idx, tmp_edge_wrapper_ptr->edgecnt_);
+        std::string target_edge_ipstr = Config::getEdgeIpstr(target_edge_idx, tmp_edge_wrapper_ptr->node_cnt_);
+        uint16_t target_edge_cache_server_recvreq_port = Util::getEdgeCacheServerRecvreqPort(target_edge_idx, tmp_edge_wrapper_ptr->node_cnt_);
         NetworkAddr target_edge_cache_server_recvreq_dst_addr(target_edge_ipstr, target_edge_cache_server_recvreq_port);
 
         return target_edge_cache_server_recvreq_dst_addr;

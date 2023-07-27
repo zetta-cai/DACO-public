@@ -109,6 +109,24 @@ namespace covered
         return total_writecnt_;
     }
 
+    // Get aggregated statistics related with cache utilization
+
+    uint64_t AggregatedStatisticsBase::getTotalCacheSizeBytes() const
+    {
+        return total_cache_size_bytes_;
+    }
+
+    uint64_t AggregatedStatisticsBase::getTotalCacheCapacityBytes() const
+    {
+        return total_cache_capacity_bytes_;
+    }
+
+    double AggregatedStatisticsBase::getTotalCacheUtilization() const
+    {
+        double total_cache_utilization = static_cast<double>(total_cache_size_bytes_) / static_cast<double>(total_cache_capacity_bytes_);
+        return total_cache_utilization;
+    }
+
     // Get string for aggregate statistics
     std::string AggregatedStatisticsBase::toString() const
     {
@@ -131,6 +149,10 @@ namespace covered
         oss << "[Read-write Ratio Statistics]" << std::endl;
         oss << "total read cnt: " << total_readcnt_ << std::endl;
         oss << "total write cnt: " << total_writecnt_;
+
+        oss << "[Cache Utilization Statistics]" << std::endl;
+        oss << "total cache size usage bytes: " << total_cache_size_bytes_ << std::endl;
+        oss << "total cache capacity bytes: " << total_cache_capacity_bytes_ << std::endl;
         
         std::string total_statistics_string = oss.str();
         return total_statistics_string;
@@ -138,8 +160,8 @@ namespace covered
 
     uint32_t AggregatedStatisticsBase::getAggregatedStatisticsIOSize()
     {
-        // Aggregated statistics for hit ratio + latency + read-write ratio
-        return sizeof(uint32_t) * 3 + sizeof(uint32_t) * 7 + sizeof(uint32_t) * 2;
+        // Aggregated statistics for hit ratio + latency + read-write ratio + cache utilization
+        return sizeof(uint32_t) * 3 + sizeof(uint32_t) * 7 + sizeof(uint32_t) * 2 + sizeof(uint64_t) * 2;
     }
 
     uint32_t AggregatedStatisticsBase::serialize(DynamicArray& dynamic_array, const uint32_t& position) const
@@ -175,6 +197,12 @@ namespace covered
         size += sizeof(uint32_t);
         dynamic_array.deserialize(size, (const char*)&total_writecnt_, sizeof(uint32_t));
         size += sizeof(uint32_t);
+
+        // Serialize aggregated statistics for cache utilization
+        dynamic_array.deserialize(size, (const char*)&total_cache_size_bytes_, sizeof(uint64_t));
+        size += sizeof(uint64_t);
+        dynamic_array.deserialize(size, (const char*)&total_cache_capacity_bytes_, sizeof(uint64_t));
+        size += sizeof(uint64_t);
 
         return size - position;
     }
@@ -213,6 +241,12 @@ namespace covered
         dynamic_array.serialize(size, (char *)&total_writecnt_, sizeof(uint32_t));
         size += sizeof(uint32_t);
 
+        // Deserialize aggregated statistics for cache utilization
+        dynamic_array.serialize(size, (char*)&total_cache_size_bytes_, sizeof(uint64_t));
+        size += sizeof(uint64_t);
+        dynamic_array.serialize(size, (char*)&total_cache_capacity_bytes_, sizeof(uint64_t));
+        size += sizeof(uint64_t);
+
         return size - position;
     }
 
@@ -235,6 +269,10 @@ namespace covered
         // Aggregated statistics related with read-write ratio
         total_readcnt_ = other.total_readcnt_;
         total_writecnt_ = other.total_writecnt_;
+
+        // Aggregated statistics related with cache utilization
+        total_cache_size_bytes_ = other.total_cache_size_bytes_;
+        total_cache_capacity_bytes_ = other.total_cache_capacity_bytes_;
 
         return *this;
     }

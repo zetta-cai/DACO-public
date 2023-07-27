@@ -35,6 +35,9 @@ namespace covered
         perclientworker_writecnts_ = new std::atomic<uint32_t>[perclient_workercnt];
         assert(perclientworker_writecnts_ != NULL);
         Util::initializeAtomicArray(perclientworker_writecnts_, perclient_workercnt, 0);
+
+        closest_edge_cache_size_bytes_ = 0;
+        closest_edge_cache_capacity_bytes_ = 0;
     }
 
     ClientRawStatistics::~ClientRawStatistics()
@@ -137,6 +140,13 @@ namespace covered
         assert(local_client_worker_idx < perclient_workercnt_);
 
         perclientworker_writecnts_[local_client_worker_idx]++;
+        return;
+    }
+
+    void ClientRawStatistics::updateCacheUtilization(const uint64_t& closest_edge_cache_size_bytes, const uint64_t& closest_edge_cache_capacity_bytes)
+    {
+        closest_edge_cache_size_bytes_ = closest_edge_cache_size_bytes;
+        closest_edge_cache_capacity_bytes_ = closest_edge_cache_capacity_bytes;
         return;
     }
 
