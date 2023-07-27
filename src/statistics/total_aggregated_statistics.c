@@ -11,18 +11,18 @@ namespace covered
     {
     }
 
-    TotalAggregatedStatistics::TotalAggregatedStatistics(std::vector<ClientAggregatedStatistics*> client_aggregated_statistics_ptrs) : AggregatedStatisticsBase()
+    TotalAggregatedStatistics::TotalAggregatedStatistics(const std::vector<ClientAggregatedStatistics>& curslot_perclient_aggregated_statistics) : AggregatedStatisticsBase()
     {
-        assert(client_aggregated_statistics_ptrs.size() > 0);
+        assert(curslot_perclient_aggregated_statistics.size() > 0);
 
-        aggregateClientAggregatedStatistics_(client_aggregated_statistics_ptrs);
+        aggregateClientAggregatedStatistics_(curslot_perclient_aggregated_statistics);
     }
     
     TotalAggregatedStatistics::~TotalAggregatedStatistics() {}
 
-    void TotalAggregatedStatistics::aggregateClientAggregatedStatistics_(std::vector<ClientAggregatedStatistics*> client_aggregated_statistics_ptrs)
+    void TotalAggregatedStatistics::aggregateClientAggregatedStatistics_(const std::vector<ClientAggregatedStatistics>& curslot_perclient_aggregated_statistics)
     {
-        const uint32_t clientcnt = client_aggregated_statistics_ptrs.size();
+        const uint32_t clientcnt = curslot_perclient_aggregated_statistics.size();
         assert(clientcnt > 0);
 
         // Aggregate ClientAggregatedStatistics of all clients
@@ -33,35 +33,35 @@ namespace covered
         std::vector<uint32_t> tail99_latencies;
         for (uint32_t clientidx = 0; clientidx < clientcnt; clientidx++)
         {
-            ClientAggregatedStatistics* tmp_client_aggregated_statistics_ptr = client_aggregated_statistics_ptrs[clientidx];
-            assert(tmp_client_aggregated_statistics_ptr != NULL);
+            const ClientAggregatedStatistics& tmp_client_aggregated_statistics = curslot_perclient_aggregated_statistics[clientidx];
 
             // Aggregate hit ratio statistics
-            total_local_hitcnt_ += tmp_client_aggregated_statistics_ptr->total_local_hitcnt_;
-            total_cooperative_hitcnt_ += tmp_client_aggregated_statistics_ptr->total_cooperative_hitcnt_;
-            total_reqcnt_ += tmp_client_aggregated_statistics_ptr->total_reqcnt_;
+            total_local_hitcnt_ += tmp_client_aggregated_statistics.total_local_hitcnt_;
+            total_cooperative_hitcnt_ += tmp_client_aggregated_statistics.total_cooperative_hitcnt_;
+            total_reqcnt_ += tmp_client_aggregated_statistics.total_reqcnt_;
 
             // Pre-process latency statistics
-            total_avg_latency += tmp_client_aggregated_statistics_ptr->avg_latency_;
-            if (min_latency_ == 0 || min_latency_ > tmp_client_aggregated_statistics_ptr->min_latency_)
+            total_avg_latency += tmp_client_aggregated_statistics.avg_latency_;
+            if (min_latency_ == 0 || min_latency_ > tmp_client_aggregated_statistics.min_latency_)
             {
-                min_latency_ = tmp_client_aggregated_statistics_ptr->min_latency_;
+                min_latency_ = tmp_client_aggregated_statistics.min_latency_;
             }
-            medium_latencies.push_back(tmp_client_aggregated_statistics_ptr->medium_latency_);
-            tail90_latencies.push_back(tmp_client_aggregated_statistics_ptr->tail90_latency_);
-            tail95_latencies.push_back(tmp_client_aggregated_statistics_ptr->tail95_latency_);
-            tail99_latencies.push_back(tmp_client_aggregated_statistics_ptr->tail99_latency_);
-            if (max_latency_ == 0 || max_latency_ < tmp_client_aggregated_statistics_ptr->max_latency_)
+            medium_latencies.push_back(tmp_client_aggregated_statistics.medium_latency_);
+            tail90_latencies.push_back(tmp_client_aggregated_statistics.tail90_latency_);
+            tail95_latencies.push_back(tmp_client_aggregated_statistics.tail95_latency_);
+            tail99_latencies.push_back(tmp_client_aggregated_statistics.tail99_latency_);
+            if (max_latency_ == 0 || max_latency_ < tmp_client_aggregated_statistics.max_latency_)
             {
-                max_latency_ = tmp_client_aggregated_statistics_ptr->max_latency_;
+                max_latency_ = tmp_client_aggregated_statistics.max_latency_;
             }
 
             // Aggregate read-write ratio statistics
-            total_readcnt_ += tmp_client_aggregated_statistics_ptr->total_readcnt_;
-            total_writecnt_ += tmp_client_aggregated_statistics_ptr->total_writecnt_;
+            total_readcnt_ += tmp_client_aggregated_statistics.total_readcnt_;
+            total_writecnt_ += tmp_client_aggregated_statistics.total_writecnt_;
         }
 
         // Aggregate latency statistics approximately
+        // TODO: Update ClientWrapper to return cur-slot client raw statistics to evaluator for accurate statistics aggregation
         avg_latency_ = static_cast<uint32_t>(total_avg_latency / clientcnt);
         std::sort(medium_latencies.begin(), medium_latencies.end(), std::less<uint32_t>()); // ascending order
         medium_latency_ = medium_latencies[clientcnt * 0.5];

@@ -106,56 +106,47 @@ namespace covered
         // Current worker thread start to issue requests and receive responses
         while (tmp_client_wrapper_ptr->isNodeRunning_())
         {
-            // Get current phase (warmph or stresstest)
-            bool is_warmup_phase = false;
-            bool is_stresstest_phase = false;
-            is_warmup_phase = tmp_client_wrapper_ptr->isWarmupPhase_();
-            if (!is_warmup_phase)
+            // Get current phase (warmup or stresstest)
+            bool is_stresstest_phase = !tmp_client_wrapper_ptr->isWarmupPhase_();
+
+            // Generate key-value request based on a specific workload
+            WorkloadItem workload_item = workload_generator_ptr->generateItem(*client_worker_item_randgen_ptr_);
+
+            // TMPDEBUG
+            //WorkloadItem workload_item(Key("123"), Value(200), WorkloadItemType::kWorkloadItemGet);
+            //if (tmp_client_wrapper_ptr->node_idx_ != 0)
+            //{
+            //    sleep(0.5);
+            //}
+
+            DynamicArray local_response_msg_payload;
+            uint32_t rtt_us = 0;
+            bool is_finish = false;
+
+            // Issue the workload item to the closest edge node
+            is_finish = issueItemToEdge_(workload_item, local_response_msg_payload, rtt_us);
+            if (is_finish) // Check is_finish
             {
-                is_stresstest_phase = tmp_client_wrapper_ptr->isStresstestPhase_();
+                continue; // Go to check if client is still running
             }
 
-            if (is_warmup_phase || is_stresstest_phase)
+            // Process local response message to update statistics
+            /*if (!is_stresstest_phase && !tmp_client_wrapper_ptr->isWarmupPhase_()) // Detect responses of warmup requests received after warmup phase (e.g., after curslot switch or during stresstest phase)
             {
-                // Generate key-value request based on a specific workload
-                WorkloadItem workload_item = workload_generator_ptr->generateItem(*client_worker_item_randgen_ptr_);
+                // TODO: as there could still exist limited warmup requests are counted in stresstest beginning slots, we can print the start slot idx of stresstest phase to drop the invalid statistics of the beginning slots
+                continue; // NOT update to avoid affecting cur-slot raw/aggregated statistics especially for warmup speedup
+            }*/
+            processLocalResponse_(local_response_msg_payload, rtt_us, is_stresstest_phase);
 
-                // TMPDEBUG
-                //WorkloadItem workload_item(Key("123"), Value(200), WorkloadItemType::kWorkloadItemGet);
-                //if (tmp_client_wrapper_ptr->node_idx_ != 0)
-                //{
-                //    sleep(0.5);
-                //}
+            // TMPDEBUG
+            //is_finish = issueItemToEdge_(workload_item, local_response_msg_payload, rtt_us);
+            //if (is_finish) // Check is_finish
+            //{
+            //    continue; // Go to check if client is still running
+            //}
+            //processLocalResponse_(local_response_msg_payload, rtt_us);
 
-                DynamicArray local_response_msg_payload;
-                uint32_t rtt_us = 0;
-                bool is_finish = false;
-
-                // Issue the workload item to the closest edge node
-                is_finish = issueItemToEdge_(workload_item, local_response_msg_payload, rtt_us);
-                if (is_finish) // Check is_finish
-                {
-                    continue; // Go to check if client is still running
-                }
-
-                // Process local response message to update statistics
-                /*if (is_warmup_phase && !tmp_client_wrapper_ptr->isWarmupPhase_()) // Detect responses of warmup requests received after warmup phase (e.g., after curslot switch or during stresstest phase)
-                {
-                    // TODO: as there could still exist limited warmup requests are counted in stresstest beginning slots, we can print the start slot idx of stresstest phase to drop the invalid statistics of the beginning slots
-                    continue; // NOT update to avoid affecting cur-slot raw/aggregated statistics especially for warmup speedup
-                }*/
-                processLocalResponse_(local_response_msg_payload, rtt_us, is_stresstest_phase);
-
-                // TMPDEBUG
-                //is_finish = issueItemToEdge_(workload_item, local_response_msg_payload, rtt_us);
-                //if (is_finish) // Check is_finish
-                //{
-                //    continue; // Go to check if client is still running
-                //}
-                //processLocalResponse_(local_response_msg_payload, rtt_us);
-
-                //break; // TMPDEBUG
-            }
+            //break; // TMPDEBUG
         }
 
         return;

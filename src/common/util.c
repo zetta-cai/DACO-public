@@ -32,7 +32,7 @@ namespace covered
     std::memory_order Util::STORE_CONCURRENCY_ORDER = std::memory_order_release;
     std::memory_order Util::RMW_CONCURRENCY_ORDER = std::memory_order_acq_rel;
     // Workflow control
-    //const unsigned int Util::SLEEP_INTERVAL_US = 1 * 1000 * 1000; // 1s
+    const unsigned int Util::SLEEP_INTERVAL_US = 100 * 1000; // 100ms
     // Workload generation
     const uint32_t Util::KVPAIR_GENERATION_SEED = 0;
     // Time measurement
@@ -535,7 +535,7 @@ namespace covered
 
     // (6) Intermediate files
 
-    std::string Util::getClientStatisticsDirpath()
+    std::string Util::getStatisticsDirpath()
     {
         std::ostringstream oss;
         oss << Config::getOutputBasedir() << "/" << getInfixForFilepath_();
@@ -546,9 +546,17 @@ namespace covered
     std::string Util::getClientStatisticsFilepath(const uint32_t& client_idx)
     {
         std::ostringstream oss;
-        oss << getClientStatisticsDirpath() << "/client" << client_idx << "_statistics.out";
+        oss << getStatisticsDirpath() << "/client" << client_idx << "_statistics.out";
         std::string client_statistics_filepath = oss.str();
         return client_statistics_filepath;
+    }
+
+    std::string Util::getEvaluatorStatisticsFilepath()
+    {
+        std::ostringstream oss;
+        oss << getStatisticsDirpath() << "/evaluator_statistics.out";
+        std::string evaluator_statistics_filepath = oss.str();
+        return evaluator_statistics_filepath;
     }
 
     std::string Util::getCloudRocksdbDirpath(const uint32_t& cloud_idx)

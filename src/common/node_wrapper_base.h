@@ -38,12 +38,6 @@ namespace covered
 
         // Const individual variable
         std::string base_instance_name_;
-
-        // Non-const individual variables for benchmark control messages
-        NetworkAddr node_recvmsg_source_addr_;
-        NetworkAddr evaluator_recvmsg_dst_addr_;
-        UdpMsgSocketServer* node_recvmsg_socket_server_ptr_;
-        UdpMsgSocketClient* node_sendmsg_socket_client_ptr_;
     protected:
         bool isNodeRunning_() const;
         void setNodeRunning_();
@@ -62,6 +56,12 @@ namespace covered
         // CPU cache coherence: MSI protocol.
         // CPU cache consistency: volatile.
         volatile std::atomic<bool> node_running_; // thread safe
+
+        // Non-const individual variables for benchmark control messages
+        NetworkAddr node_recvmsg_source_addr_;
+        NetworkAddr evaluator_recvmsg_dst_addr_;
+        UdpMsgSocketServer* node_recvmsg_socket_server_ptr_;
+        UdpMsgSocketClient* node_sendmsg_socket_client_ptr_;
     };
 }
 

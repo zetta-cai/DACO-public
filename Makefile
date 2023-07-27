@@ -36,7 +36,8 @@ CLEANS += src/statistics_aggregator.o
 
 ##############################################################################
 
-TARGETS := simulator statistics_aggregator
+# statistics_aggregator
+TARGETS := simulator total_statistics_loader
 
 all: $(TARGETS)
 #	rm -rf $(CLEANS) $(DEPS)

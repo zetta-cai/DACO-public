@@ -18,16 +18,30 @@ namespace covered
     class TotalStatisticsTracker
     {
     public:
-        TotalStatisticsTracker(const uint32_t& clientcnt, ClientStatisticsTracker** client_statistics_tracker_ptrs);
+        TotalStatisticsTracker();
+        TotalStatisticsTracker(const std::string& filepath);
         ~TotalStatisticsTracker();
+
+        // Aggregate cur-slot client aggregated statistics into per-slot total aggregated statistics
+        void updatePerslotTotalAggregatedStatistics(const std::vector<ClientAggregatedStatistics>& curslot_perclient_aggregated_statistics);
+
+        // Cache is stable if cache is filled up and total hit ratio converges
+        bool isPerSlotTotalAggregatedStatisticsStable(double& cache_hit_ratio);
+
+        uint32_t dump(const std::string filepath) const;
 
         // Get string for per-slot/stable total aggregate statistics
         std::string toString() const;
     private:
         static const std::string kClassName;
 
-        // Aggregate per-slot/stable client aggregated statistics into per-slot/stable total aggregated statistics
-        void aggregateClientStatistics_(const uint32_t& clientcnt, ClientStatisticsTracker** client_statistics_tracker_ptrs);
+        // Used by dump() to check filepath and dump total aggregated statistics
+        std::string checkFilepathForDump_(const std::string& filepath) const;
+
+        // Load per-slot/total aggregated statistics
+        void load_(const std::string& filepath);
+
+        const bool allow_update_; // NOT allow statistics update for loaded total statistics
 
         // Per-slot/stable total aggregated statistics
         std::vector<TotalAggregatedStatistics> perslot_total_aggregated_statistics_;

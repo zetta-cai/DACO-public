@@ -41,7 +41,8 @@ namespace covered
         static std::memory_order STORE_CONCURRENCY_ORDER;
         static std::memory_order RMW_CONCURRENCY_ORDER; // read-modify-write
         // Workflow control
-        //static const unsigned int SLEEP_INTERVAL_US; // Sleep interval for polling
+        // NOTE: SLEEP_INTERVAL_US MUST be able to support Param::duration_sec and Config::client_raw_statistics_slot_interval_sec
+        static const unsigned int SLEEP_INTERVAL_US; // Sleep interval for polling
         // Workload generation
         static const uint32_t KVPAIR_GENERATION_SEED; // Deterministic seed to generate key-value objects (dataset instead of workload)
         // Time measurement
@@ -119,8 +120,9 @@ namespace covered
 
         // (6) Intermediate files
 
-        static std::string getClientStatisticsDirpath();
+        static std::string getStatisticsDirpath();
         static std::string getClientStatisticsFilepath(const uint32_t& client_idx);
+        static std::string getEvaluatorStatisticsFilepath();
         static std::string getCloudRocksdbDirpath(const uint32_t& cloud_idx); // Calculate the RocksDB dirpath for the cloud node
 
         // (7) Task scheduling

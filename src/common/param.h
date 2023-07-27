@@ -18,7 +18,8 @@ namespace covered
     public:
         // For main class name
         static const std::string SIMULATOR_MAIN_NAME;
-        static const std::string STATISTICS_AGGREGATOR_MAIN_NAME;
+        //static const std::string STATISTICS_AGGREGATOR_MAIN_NAME;
+        static const std::string TOTAL_STATISTICS_LOADER_MAIN_NAME;
         static const std::string CLIENT_MAIN_NAME;
         static const std::string EDGE_MAIN_NAME;
         static const std::string CLOUD_MAIN_NAME;

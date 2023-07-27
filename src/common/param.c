@@ -9,7 +9,8 @@
 namespace covered
 {
     const std::string Param::SIMULATOR_MAIN_NAME("simulator");
-    const std::string Param::STATISTICS_AGGREGATOR_MAIN_NAME("statistics_aggregator");
+    //const std::string Param::STATISTICS_AGGREGATOR_MAIN_NAME("statistics_aggregator");
+    const std::string Param::TOTAL_STATISTICS_LOADER_MAIN_NAME("total_statistics_loader");
     const std::string Param::CLIENT_MAIN_NAME("client");
     const std::string Param::EDGE_MAIN_NAME("edge");
     const std::string Param::CLOUD_MAIN_NAME("cloud");

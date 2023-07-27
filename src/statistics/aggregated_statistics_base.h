@@ -46,7 +46,7 @@ namespace covered
         // Get string for aggregate statistics
         std::string toString() const;
 
-        static uint32_t getAggregatedStatisticsIOSize();
+        static uint32_t getAggregatedStatisticsIOSize(); // For file I/O (dump/load) and network I/O (message payload)
         uint32_t serialize(DynamicArray& dynamic_array, const uint32_t& position) const;
         uint32_t deserialize(const DynamicArray& dynamic_array, const uint32_t& position);
 

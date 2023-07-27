@@ -1,5 +1,7 @@
 /*
  * EvaluatorWrapper: an evaluation controller to control the evaluation phases during benchmark.
+ *
+ * NOTE: evaluator notifies each client wrapper to switch and update cur-slot client raw statistics, monitors per-slot total aggregated statistics to finish warmup phase for stresstest.
  * 
  * By Siyuan Sheng (2023.07.25).
  */
@@ -21,7 +23,7 @@ namespace covered
     public:
         static void* launchEvaluator(void* is_evaluator_initialized_ptr);
 
-        EvaluatorWrapper(const uint32_t& clientcnt, const uint32_t& edgecnt);
+        EvaluatorWrapper(const uint32_t& clientcnt, const uint32_t& duration_sec, const uint32_t& edgecnt);
         ~EvaluatorWrapper();
 
         void start();
@@ -30,16 +32,21 @@ namespace covered
 
         void blockForInitialization_();
         void notifyClientsToStartrun_();
+        void notifyClientsToSwitchSlot_();
+        void notifyClientsToFinishWarmup_();
+        void notifyAllToFinishrun_(); // Finish clients first, and then edge and cloud
 
         void checkPointers_() const;
 
         // Const variables
-        const uint32_t clientcnt_;
-        const uint32_t edgecnt_;
+        const uint32_t clientcnt_; // Come from Param
+        const uint32_t duration_sec_; // Come from Param
+        const uint32_t edgecnt_; // Come from Param
 
         // (1) Manage evaluation phases
 
         bool is_warmup_phase_;
+        uint32_t cur_slot_idx_;
 
         NetworkAddr evaluator_recvmsg_source_addr_;
         NetworkAddr* perclient_recvmsg_dst_addrs_;

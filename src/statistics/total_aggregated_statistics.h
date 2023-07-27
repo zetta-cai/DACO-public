@@ -23,12 +23,12 @@ namespace covered
     {
     public:
         TotalAggregatedStatistics();
-        TotalAggregatedStatistics(std::vector<ClientAggregatedStatistics*> client_aggregated_statistics_ptrs);
+        TotalAggregatedStatistics(const std::vector<ClientAggregatedStatistics>& curslot_perclient_aggregated_statistics);
         ~TotalAggregatedStatistics();
     private:
         static const std::string kClassName;
 
-        void aggregateClientAggregatedStatistics_(std::vector<ClientAggregatedStatistics*> client_aggregated_statistics_ptrs);
+        void aggregateClientAggregatedStatistics_(const std::vector<ClientAggregatedStatistics>& curslot_perclient_aggregated_statistics);
     };
 }
 

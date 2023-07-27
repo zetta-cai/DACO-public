@@ -1,3 +1,9 @@
+/*
+ * Simulate all componenets including client/edge/cloud nodes and evaluator in a single node.
+ * 
+ * By Siyuan Sheng (2023.07.27).
+ */
+
 #include <assert.h>
 #include <iostream>
 #include <pthread.h>
@@ -131,43 +137,7 @@ int main(int argc, char **argv) {
 
     // (5) Start benchmark
 
-    // (5.2) Set client_running_ = true in all clientcnt client parameters to start benchmark
-
-    covered::Util::dumpNormalMsg(main_class_name, "Start benchmark...");
-    //for (uint32_t client_idx = 0; client_idx < clientcnt; client_idx++)
-    //{
-    //    client_params[client_idx].setNodeRunning();
-    //}
-
     // (5.3) Start stresstest phase if all clients finish warmup phase
-
-    //for (uint32_t client_idx = 0; client_idx < clientcnt; client_idx++)
-    //{
-    //    while (client_params[client_idx].isWarmupPhase()) {}
-    //}
-
-    //covered::Util::dumpNormalMsg(main_class_name, "Start stresstest phase...");
-    //for (uint32_t client_idx = 0; client_idx < clientcnt; client_idx++)
-    //{
-    //    client_params[client_idx].startStresstestPhase();
-    //}
-
-    // (5.4) Count down duration for stresstest phase
-
-    const uint32_t duration_sec = covered::Param::getDurationSec();
-    usleep(duration_sec * 1000 * 1000);
-    /*struct timespec start_timestamp = covered::Util::getCurrentTimespec();
-    while (true)
-    {
-        usleep(covered::Util::SLEEP_INTERVAL_US);
-
-        struct timespec end_timestamp = covered::Util::getCurrentTimespec();
-        double delta_time = covered::Util::getDeltaTimeUs(end_timestamp, start_timestamp);
-        if (delta_time >= static_cast<double>(duration_sec * 1000 * 1000))
-        {
-            break;
-        }
-    }*/
 
     // (6) Stop benchmark
 
@@ -236,8 +206,6 @@ int main(int argc, char **argv) {
         exit(1);
     }
     covered::Util::dumpNormalMsg(main_class_name, "the cloud node is done");
-
-    // (7) Release variables in heap
 
     return 0;
 }

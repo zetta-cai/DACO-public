@@ -10,6 +10,7 @@
 #include "common/util.h"
 #include "message/message_base.h"
 #include "message/control_message.h"
+#include "statistics/client_aggregated_statistics.h"
 
 namespace covered
 {
@@ -19,7 +20,7 @@ namespace covered
     {
         bool& is_evaluator_initialized = *(static_cast<bool*>(is_evaluator_initialized_ptr));
 
-        EvaluatorWrapper evaluator(Param::getClientcnt(), Param::getEdgecnt());
+        EvaluatorWrapper evaluator(Param::getClientcnt(), Param::getDurationSec(), Param::getEdgecnt());
         is_evaluator_initialized = true; // Such that simulator or prototype will continue to launch cloud, edge, and client nodes
 
         evaluator.start();
@@ -28,9 +29,10 @@ namespace covered
         return NULL;
     }
 
-    EvaluatorWrapper::EvaluatorWrapper(const uint32_t& clientcnt, const uint32_t& edgecnt) : clientcnt_(clientcnt), edgecnt_(edgecnt)
+    EvaluatorWrapper::EvaluatorWrapper(const uint32_t& clientcnt, const uint32_t& duration_sec, const uint32_t& edgecnt) : clientcnt_(clientcnt), duration_sec_(duration_sec), edgecnt_(edgecnt)
     {
         is_warmup_phase_ = true;
+        cur_slot_idx_ = 0;
 
         // (1) Manage evaluation phases
 
@@ -75,9 +77,8 @@ namespace covered
 
         // (2) Track total aggregated statistics
 
-        // TODO
-        //total_statistics_tracker_ptr_ = new TotalStatisticsTracker();
-        //assert(total_statistics_tracker_ptr_ != NULL);
+        total_statistics_tracker_ptr_ = new TotalStatisticsTracker();
+        assert(total_statistics_tracker_ptr_ != NULL);
     }
 
     EvaluatorWrapper::~EvaluatorWrapper()
@@ -105,11 +106,96 @@ namespace covered
 
     void EvaluatorWrapper::start()
     {
-        // Wait all componenets finish initiailization
+        checkPointers_();
+        
+        // Wait all componenets to finish initiailization
         blockForInitialization_();
+
+        Util::dumpNormalMsg(kClassName, "Start benchmark...");
 
         // Notify all clients to start running
         notifyClientsToStartrun_();
+
+        // Monitor cache hit ratio for warmup and stresstest phases
+        const uint32_t client_raw_statistics_slot_interval_sec = Config::getClientRawStatisticsSlotIntervalSec();
+        bool is_stable = false;
+        double stable_hit_ratio = 0.0d;
+        struct timespec start_timestamp; // For duration of stresstest phase
+        struct timespec prev_timestamp = Util::getCurrentTimespec(); // For switch slot
+        while (true)
+        {
+            usleep(Util::SLEEP_INTERVAL_US);
+
+            struct timespec cur_timestamp = Util::getCurrentTimespec();
+
+            // Count down duration for stresstest phase to judge if benchmark is finished
+            if (!is_warmup_phase_) // Stresstest phase
+            {
+                double delta_us_for_finishrun = Util::getDeltaTimeUs(cur_timestamp, start_timestamp);
+                if (delta_us_for_finishrun >= duration_sec_ * 1000 * 1000)
+                {
+                    Util::dumpNormalMsg(kClassName, "Stop benchmark...");
+
+                    // Notify client/edge/cloud to finish run
+                    notifyAllToFinishrun_();
+
+                    break;
+                }
+            }
+
+            // Switch cur-slot client raw statistics to track per-slot aggregated statistics
+            double delta_us_for_switch_slot = Util::getDeltaTimeUs(cur_timestamp, prev_timestamp);
+            if (delta_us_for_switch_slot >= static_cast<double>(client_raw_statistics_slot_interval_sec * 1000 * 1000))
+            {
+                // Notify clients to switch cur-slot client raw statistics
+                notifyClientsToSwitchSlot_(); // Increase cur_slot_idx_ by one
+
+                // TOOD: Update total_statistics_tracker_ptr_
+
+                // Update prev_timestamp for the next slot
+                prev_timestamp = cur_timestamp;
+            }
+
+            // Monitor if cache hit ratio is stable to finish the warmup phase if any
+            if (is_warmup_phase_) // Warmup phase
+            {
+                is_stable = total_statistics_tracker_ptr_->isPerSlotTotalAggregatedStatisticsStable(stable_hit_ratio);
+
+                // Cache hit ratio becomes stable
+                if (is_stable)
+                {
+                    std::ostringstream oss;
+                    oss << "cache hit ratio becomes stable at " << stable_hit_ratio << " -> finish warmup phase";
+                    Util::dumpNormalMsg(kClassName, oss.str());
+
+                    // Notify all clients to finish warmup phase (i.e., enter stresstest phase)
+                    notifyClientsToFinishWarmup_(); // Mark is_warmup_phase_ as false
+
+                    // Duration starts from the end of warmup phase
+                    is_warmup_phase_ = false;
+                    start_timestamp = Util::getCurrentTimespec();
+                }
+            }
+        }
+
+        // Print per-slot/stable total aggregated statistics
+        std::ostringstream oss;
+        oss << total_statistics_tracker_ptr_->toString();
+        Util::dumpNormalMsg(kClassName, oss.str());
+
+        // Dump per-slot/stable total aggregated statistics
+        std::string evaluator_statistics_filepath = Util::getEvaluatorStatisticsFilepath();
+        oss.clear();
+        oss.str("");
+        oss << "dump per-slot/stable total aggregated statistics into " << evaluator_statistics_filepath;
+        Util::dumpNormalMsg(kClassName, oss.str());
+        uint32_t dump_size = total_statistics_tracker_ptr_->dump(evaluator_statistics_filepath);
+        oss.clear();
+        oss.str("");
+        oss << "finish dump for " << dump_size << " bytes";
+        Util::dumpNormalMsg(kClassName, oss.str());
+
+        return;
     }
 
     void EvaluatorWrapper::blockForInitialization_()
@@ -211,6 +297,7 @@ namespace covered
                 bool is_timeout = evaluator_recvmsg_socket_server_ptr_->recv(control_response_msg_payload);
                 if (is_timeout)
                 {
+                    Util::dumpWarnMsg(kClassName, "timeout to wait for StartrunResponse!");
                     break; // Wait until all clients are running
                 }
                 else
@@ -243,6 +330,100 @@ namespace covered
         }
 
         Util::dumpNormalMsg(kClassName, "All clients are running!");
+
+        return;
+    }
+
+    void EvaluatorWrapper::notifyClientsToSwitchSlot_()
+    {
+        checkPointers_();
+
+        // Client ack flags
+        std::unordered_map<NetworkAddr, bool, NetworkAddrHasher> switchslot_acked_flags;
+        for (uint32_t client_idx = 0; client_idx < clientcnt_; client_idx++)
+        {
+            switchslot_acked_flags.insert(std::pair<NetworkAddr, bool>(perclient_recvmsg_dst_addrs_[client_idx], false));
+        }
+
+        // Prepare for cur-slot per-client aggregated statistics
+        std::vector<ClientAggregatedStatistics> curslot_perclient_aggregated_statistics;
+        curslot_perclient_aggregated_statistics.resize(clientcnt_);
+
+        cur_slot_idx_++;
+        std::ostringstream oss;
+        oss << "Notify all clients to switch slot into target slot " << cur_slot_idx_;
+        Util::dumpNormalMsg(kClassName, oss.str());
+
+        // Timeout-and-retry mechanism
+        uint32_t acked_cnt = 0;
+        while (acked_cnt < switchslot_acked_flags.size())
+        {
+            // Issue SwitchSlotRequests to unacked clients simultaneously
+            for (std::unordered_map<NetworkAddr, bool, NetworkAddrHasher>::const_iterator iter_for_req = switchslot_acked_flags.begin(); iter_for_req != switchslot_acked_flags.end(); iter_for_req++)
+            {
+                if (iter_for_req->second == false)
+                {
+                    SwitchSlotRequest tmp_switch_slot_request(cur_slot_idx_, 0, evaluator_recvmsg_source_addr_);
+                    evaluator_sendmsg_socket_client_ptr_->send((MessageBase*)&tmp_switch_slot_request, iter_for_req->first);
+                }
+            }
+
+            // Receive SwitchSlotResponses for unacked clients
+            for (uint32_t i = 0; i < (switchslot_acked_flags.size() - acked_cnt); i++)
+            {
+                DynamicArray control_response_msg_payload;
+                bool is_timeout = evaluator_recvmsg_socket_server_ptr_->recv(control_response_msg_payload);
+                if (is_timeout)
+                {
+                    Util::dumpWarnMsg(kClassName, "timeout to wait for SwitchSlotResponse!");
+                    break; // Wait until all clients are running
+                }
+                else
+                {
+                    MessageBase* control_response_ptr = MessageBase::getRequestFromMsgPayload(control_response_msg_payload);
+                    assert(control_response_ptr != NULL);
+                    assert(control_response_ptr->getMessageType() == MessageType::kSwitchSlotResponse);
+
+                    NetworkAddr tmp_dst_addr = control_response_ptr->getSourceAddr();
+                    std::unordered_map<NetworkAddr, bool, NetworkAddrHasher>::iterator iter = switchslot_acked_flags.find(tmp_dst_addr);
+                    if (iter == switchslot_acked_flags.end())
+                    {
+                        oss.clear();
+                        oss.str("");
+                        oss << "receive SwitchSlotResponse from network addr " << tmp_dst_addr.toString() << ", which is NOT in the to-be-acked list!";
+                        Util::dumpWarnMsg(kClassName, oss.str());
+                    }
+                    else
+                    {
+                        if (iter->second == false)
+                        {
+                            uint32_t client_idx = iter - switchslot_acked_flags.begin();
+                            assert(client_idx == control_response_ptr->getSourceIndex());
+                            assert(client_idx < clientcnt_);
+
+                            // Add into cur-slot per-client aggregated statistics
+                            const SwitchSlotResponse* const switch_slot_response_ptr = static_cast<const SwitchSlotResponse*>(control_response_ptr);
+                            assert(cur_slot_idx_ == switch_slot_response_ptr->getTargetSlotIdx());
+                            curslot_perclient_aggregated_statistics[client_idx] = switch_slot_response_ptr->getAggregatedStatistics();
+
+                            iter->second = true;
+                            acked_cnt++;
+                        }
+                    }
+
+                    delete control_response_ptr;
+                    control_response_ptr = NULL;
+                }
+            }
+        }
+
+        oss.clear();
+        oss.str("");
+        oss << "All clients are switched to target slot " << cur_slot_idx_;
+        Util::dumpNormalMsg(kClassName, oss.str());
+
+        // Update per-slot total aggregated statistics
+        total_statistics_tracker_ptr_->updatePerslotTotalAggregatedStatistics(curslot_perclient_aggregated_statistics);
 
         return;
     }

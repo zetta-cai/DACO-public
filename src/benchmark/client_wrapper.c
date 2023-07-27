@@ -9,7 +9,9 @@
 #include "common/config.h"
 #include "common/param.h"
 #include "common/util.h"
+#include "message/control_message.h"
 #include "network/propagation_simulator.h"
+#include "statistics/client_aggregated_statistics.h"
 
 namespace covered
 {
@@ -48,7 +50,7 @@ namespace covered
         assert(client_toedge_propagation_simulator_param_ptr_ != NULL);
 
         // Sub-threads
-        client_toedge_propagation_simulator_thread = 0;
+        client_toedge_propagation_simulator_thread_ = 0;
         client_worker_threads_ = new pthread_t[perclient_workercnt];
         assert(client_worker_threads_ != NULL);
         memset(client_worker_threads_, 0, perclient_workercnt * sizeof(pthread_t));
@@ -106,7 +108,7 @@ namespace covered
         for (uint32_t local_client_worker_idx = 0; local_client_worker_idx < perclient_workercnt_; local_client_worker_idx++)
         {
             //pthread_returncode = pthread_create(&client_worker_threads[local_client_worker_idx], NULL, launchClientWorker, (void*)(&(client_worker_params[local_client_worker_idx])));
-            pthread_returncode = Util::pthreadCreateHighPriority(&client_worker_threads_[local_client_worker_idx], launchClientWorker, (void*)(&(client_worker_params[local_client_worker_idx])));
+            pthread_returncode = Util::pthreadCreateHighPriority(&client_worker_threads_[local_client_worker_idx], ClientWorkerWrapper::launchClientWorker, (void*)(&(client_worker_params[local_client_worker_idx])));
             if (pthread_returncode != 0)
             {
                 std::ostringstream oss;
@@ -123,51 +125,47 @@ namespace covered
     {
         checkPointers_();
         
-        // Wait for SwitchSlotRequest from evaluator
-        // TODO: END HERE
-
-        // Switch cur-slot client raw statistics to track per-slot aggregated statistics
-        const uint32_t client_raw_statistics_slot_interval_sec = Config::getClientRawStatisticsSlotIntervalSec();
-        bool is_stable = false;
-        double stable_hit_ratio = 0.0d;
+        // Wait for SwitchSlotRequest or FinishRunRequest from evaluator
         while (isNodeRunning_())
         {
-            // Get current phase (warmph or stresstest)
-            bool is_warmup_phase = false;
-            bool is_stresstest_phase = false;
-            is_warmup_phase = isWarmupPhase_();
-            if (!is_warmup_phase)
+            DynamicArray control_request_msg_payload;
+            bool is_timeout = node_recvmsg_socket_server_ptr_->recv(control_request_msg_payload);
+            if (is_timeout)
             {
-                is_stresstest_phase = isStresstestPhase_();
+                continue; // Continue to wait for SwitchSlotRequest or FinishRunRequest if client is still running
             }
-
-            if (is_warmup_phase || is_stresstest_phase)
+            else
             {
-                usleep(client_raw_statistics_slot_interval_sec * 1000 * 1000);
-
-                // NOTE: NO need to reload is_warmup_phase and is_stresstest_phase after usleep:
-                // (i) if is_warmup_phase is true, ONLY client wrapper itself can finish warmup phase here;
-                // (ii) if is_stresstest_phase is true, none will finish stresstest phase (simulator/evaluator will ONLY start stresstest phase if is_stresstest_phase is false)
-
-                // Switch cur-slot client raw statistics and aggregate
-                client_statistics_tracker_ptr_->switchCurslotForClientRawStatistics();
-
-                // Monitor if cache hit ratio is stable to finish the warmup phase if any
-                if (is_warmup_phase)
+                MessageBase* control_request_ptr = MessageBase::getRequestFromMsgPayload(control_request_msg_payload);
+                assert(control_request_ptr != NULL);
+                
+                MessageType control_request_msg_type = control_request_ptr->getMessageType();
+                if (control_request_msg_type == MessageType::kSwitchSlotRequest)
                 {
-                    is_stable = client_statistics_tracker_ptr_->isPerSlotAggregatedStatisticsStable(stable_hit_ratio);
-
-                    // Cache hit ratio becomes stable
-                    if (is_stable)
-                    {
-                        std::ostringstream oss;
-                        oss << "cache hit ratio becomes stable at " << stable_hit_ratio << " -> finish warmup phase";
-                        Util::dumpNormalMsg(instance_name_, oss.str());
-
-                        // Client workers will NOT issue any request until stresstest phase is started
-                        finishWarmupPhase_(); // Finish the warmup phase of all client workers
-                    }
+                    switchSlot_(control_request_ptr);
                 }
+                else if (control_request_msg_type == MessageType::kFinishWarmupRequest)
+                {
+                    finishWarmup_(); // Will mark is_warmup_phase_ as false
+                }
+                else if (control_request_msg_type == MessageType::kFinishrunRequest)
+                {
+                    finishRun_(); // Will mark node_running_ as false
+                    // Place into finishRun_()
+                    // Aggregate cur-slot/stable client raw statistics, and dump per-slot/stable client aggregated statistics
+                    //assert(client_statistics_tracker_ptr_ != NULL);
+                    //client_statistics_tracker_ptr_->aggregateForFinishrun(client_statistics_filepath);
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << "invalid message type " << MessageBase::messageTypeToString(control_request_msg_type) << " for startInternal_()";
+                    Util::dumpErrorMsg(instance_name_, oss.str());
+                    exit(1);
+                }
+
+                delete control_request_ptr;
+                control_request_ptr = NULL;
             }
         }
 
@@ -196,35 +194,34 @@ namespace covered
             }
         }
 
-        // Get per-client statistics file path
-        std::string client_statistics_filepath = Util::getClientStatisticsFilepath(node_idx_);
+        return;
+    }
 
-        // Aggregate cur-slot/stable client raw statistics, and dump per-slot/stable client aggregated statistics
-        assert(client_statistics_tracker_ptr_ != NULL);
-        client_statistics_tracker_ptr_->aggregateAndDump(client_statistics_filepath);
+    void ClientWrapper::switchSlot_(MessageBase* control_request_ptr)
+    {
+        assert(control_request_ptr != NULL);
+
+        const SwitchSlotRequest* const switch_slot_request_ptr = static_cast<const SwitchSlotRequest*>(control_request_ptr);
+        uint32_t target_slot_idx = switch_slot_request_ptr->getTargetSlotIdx();
+
+        // Switch cur-slot client raw statistics and aggregate
+        ClientAggregatedStatistics curslot_client_aggregated_statistics = client_statistics_tracker_ptr_->switchCurslotForClientRawStatistics(target_slot_idx);
+
+        // Send back SwitchSlotResponse to evaluator
+        SwitchSlotResponse switch_slot_response(target_slot_idx, curslot_client_aggregated_statistics, node_idx_, node_recvmsg_source_addr_, EventList());
+        node_sendmsg_socket_client_ptr_->send((MessageBase*)&switch_slot_response, evaluator_recvmsg_dst_addr_);
 
         return;
     }
 
-    bool ClientWrapper::isWarmupPhase() const
+    bool ClientWrapper::isWarmupPhase_() const
     {
         return is_warmup_phase_.load(Util::LOAD_CONCURRENCY_ORDER);
     }
 
-    void ClientWrapper::finishWarmupPhase()
+    void ClientWrapper::finishWarmupPhase_()
     {
         is_warmup_phase_.store(false, Util::STORE_CONCURRENCY_ORDER);
-        return;
-    }
-
-    bool ClientWrapper::isStresstestPhase() const
-    {
-        return is_stresstest_phase_.load(Util::LOAD_CONCURRENCY_ORDER);
-    }
-    
-    void ClientWrapper::startStresstestPhase()
-    {
-        is_stresstest_phase_.store(true, Util::STORE_CONCURRENCY_ORDER);
         return;
     }
 

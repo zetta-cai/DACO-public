@@ -35,10 +35,12 @@ namespace covered
         virtual void initialize_() override;
         virtual void startInternal_() override;
 
+        void switchSlot_(MessageBase* control_request_ptr);
+        void finishWarmup_();
+        void finishRun_();
+
         bool isWarmupPhase_() const;
         void finishWarmupPhase_();
-        bool isStresstestPhase_() const;
-        void startStresstestPhase_();
 
         void checkPointers_() const;
 
@@ -49,9 +51,8 @@ namespace covered
         // Const individual variable
         std::string instance_name_;
 
-        // Non-const shared variables for evaluation phases
+        // Non-const shared variables for warmup and stresstest phases
         std::atomic<bool> is_warmup_phase_;
-        std::atomic<bool> is_stresstest_phase_;
 
         // Non-const shared variables
         WorkloadWrapperBase* workload_generator_ptr_; // thread safe

@@ -10,16 +10,18 @@
 #include <string>
 
 #include "common/dynamic_array.h"
-#include "message/simple_message.h"
+#include "message/uint_message.h"
 
 namespace covered
 {
-    class SwitchSlotRequest : public SimpleMessage
+    class SwitchSlotRequest : public UintMessage
     {
     public:
-        SwitchSlotRequest(const uint32_t& source_index, const NetworkAddr& source_addr);
+        SwitchSlotRequest(const uint32_t& target_slot_idx, const uint32_t& source_index, const NetworkAddr& source_addr);
         SwitchSlotRequest(const DynamicArray& msg_payload);
         virtual ~SwitchSlotRequest();
+
+        uint32_t getTargetSlotIdx() const;
     private:
         static const std::string kClassName;
     };
