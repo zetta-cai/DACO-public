@@ -43,6 +43,19 @@ namespace covered
         return;
     }
 
+    void TotalStatisticsTracker::updateStableTotalAggregatedStatistics(const std::vector<ClientAggregatedStatistics>& stable_perclient_aggregated_statistics)
+    {
+        assert(allow_update_ == true);
+
+        const uint32_t clientcnt = stable_perclient_aggregated_statistics.size();
+        assert(clientcnt > 0);
+
+        TotalAggregatedStatistics total_aggregated_statistics(stable_perclient_aggregated_statistics);
+        stable_total_aggregated_statistics_ = total_aggregated_statistics;
+
+        return;
+    }
+
     bool TotalStatisticsTracker::isPerSlotTotalAggregatedStatisticsStable(double& cache_hit_ratio)
     {
         assert(allow_update_ == true);

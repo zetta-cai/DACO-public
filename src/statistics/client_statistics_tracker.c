@@ -247,17 +247,19 @@ namespace covered
 
     // (3) Aggregate cur-slot/stable client raw statistics when benchmark is finished (invoked by main client thread ClientWrapper)
 
-    void ClientStatisticsTracker::aggregateForFinishrun(const std::string& filepath)
+    uint32_t ClientStatisticsTracker::aggregateForFinishrun(ClientAggregatedStatistics& lastslot_client_aggregated_statistics, ClientAggregatedStatistics& stable_client_aggregated_statistics)
     {
         checkPointers_();
 
         // Aggregate cur-slot client raw statistics as per-slot client aggregated statistics for the last slot
         ClientRawStatistics* tmp_curslot_client_raw_statistics_ptr = getCurslotClientRawStatisticsPtr_(cur_slot_idx_.load(Util::LOAD_CONCURRENCY_ORDER));
         assert(tmp_curslot_client_raw_statistics_ptr != NULL);
-        ClientAggregatedStatistics tmp_client_aggregated_statistics(tmp_curslot_client_raw_statistics_ptr);
+        lastslot_client_aggregated_statistics = ClientAggregatedStatistics(tmp_curslot_client_raw_statistics_ptr);
 
         // Aggregate stable client raw statistics into stable client aggregated statistics
-        ClientAggregatedStatistics stable_client_aggregated_statistics(stable_client_raw_statistics_ptr_);
+        stable_client_aggregated_statistics = ClientAggregatedStatistics(stable_client_raw_statistics_ptr_);
+
+        return cur_slot_idx_;
     }
 
     // For cur-slot client raw statistics

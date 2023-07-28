@@ -3,10 +3,11 @@
 #include <assert.h>
 #include <sstream>
 
+#include "cloud/data_server/data_server.h"
 #include "common/config.h"
 #include "common/param.h"
 #include "common/util.h"
-#include "message/data_message.h"
+#include "message/control_message.h"
 #include "network/propagation_simulator.h"
 
 namespace covered
@@ -38,21 +39,13 @@ namespace covered
         cloud_rocksdb_ptr_ = new RocksdbWrapper(cloud_idx, cloud_storage, Util::getCloudRocksdbDirpath(cloud_idx));
         assert(cloud_rocksdb_ptr_ != NULL);
 
-        // For receiving global requests
-
-        // Get source address of cloud recvreq
-        std::string cloud_ipstr = Config::getCloudIpstr();
-        uint16_t cloud_recvreq_port = Util::getCloudRecvreqPort(cloud_idx);
-        cloud_recvreq_source_addr_ = NetworkAddr(cloud_ipstr, cloud_recvreq_port);
-
-        // Prepare a socket server on recvreq port
-        NetworkAddr recvreq_host_addr(Util::ANY_IPSTR, cloud_recvreq_port);
-        cloud_recvreq_socket_server_ptr_ = new UdpMsgSocketServer(recvreq_host_addr);
-        assert(cloud_recvreq_socket_server_ptr_ != NULL);
-
         // Allocate cloud-to-edge propagation simulator param
         cloud_toedge_propagation_simulator_param_ptr_ = new PropagationSimulatorParam(node_role_idx_str_, propagation_latency_edgecloud_us, Config::getPropagationItemBufferSizeCloudToedge());
         assert(cloud_toedge_propagation_simulator_param_ptr_ != NULL);
+
+        // Sub-threads
+        cloud_toedge_propagation_simulator_thread_ = 0;
+        data_server_thread_ = 0;
     }
         
     CloudWrapper::~CloudWrapper()
@@ -61,11 +54,6 @@ namespace covered
         assert(cloud_rocksdb_ptr_ != NULL);
         delete cloud_rocksdb_ptr_;
         cloud_rocksdb_ptr_ = NULL;
-
-        // Release the socket server on recvreq port
-        assert(cloud_recvreq_socket_server_ptr_ != NULL);
-        delete cloud_recvreq_socket_server_ptr_;
-        cloud_recvreq_socket_server_ptr_ = NULL;
 
         // Release cloud-to-edge propataion simulator param
         assert(cloud_toedge_propagation_simulator_param_ptr_ != NULL);
@@ -90,52 +78,49 @@ namespace covered
             exit(1);
         }
 
+        // Launch a data server thread in the local cloud
+        //pthread_returncode = pthread_create(&data_server_thread_, NULL, DataServer::launchDataServer, (void*)(&cloud_worker_param));
+        pthread_returncode = Util::pthreadCreateHighPriority(&data_server_thread_, DataServer::launchDataServer, (void*)(this));
+        if (pthread_returncode != 0)
+        {
+            std::ostringstream oss;
+            oss << " failed to launch cloud data server (error code: " << pthread_returncode << ")" << std::endl;
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
+
         return;
     }
 
-    void CloudWrapper::startInternal_()
+    void CloudWrapper::processFinishrunRequest_()
     {
         checkPointers_();
 
-        bool is_finish = false; // Mark if local cloud node is finished
-        while (isNodeRunning_()) // cloud_running_ is set as true by default
-        {
-            // Receive the global request message
-            DynamicArray global_request_msg_payload;
-            bool is_timeout = cloud_recvreq_socket_server_ptr_->recv(global_request_msg_payload);
-            if (is_timeout == true)
-            {
-                continue; // Retry to receive global request if cloud is still running
-            } // End of (is_timeout == true)
-            else
-            {
-                MessageBase* request_ptr = MessageBase::getRequestFromMsgPayload(global_request_msg_payload);
-                assert(request_ptr != NULL);
+        // Mark the current node as NOT running to finish benchmark
+        resetNodeRunning_();
 
-                if (request_ptr->isGlobalDataRequest()) // Global requests
-                {
-                    NetworkAddr edge_cache_server_worker_recvrsp_dst_addr = request_ptr->getSourceAddr();
-                    is_finish = processGlobalRequest_(request_ptr, edge_cache_server_worker_recvrsp_dst_addr);
-                }
-                else
-                {
-                    std::ostringstream oss;
-                    oss << "invalid message type " << MessageBase::messageTypeToString(request_ptr->getMessageType()) << " for start()!";
-                    Util::dumpErrorMsg(instance_name_, oss.str());
-                    exit(1);
-                }
+        // Send back SimpleFinishrunResponse to evaluator
+        SimpleFinishrunResponse simple_finishrun_response(node_idx_, node_recvmsg_source_addr_, EventList());
+        node_sendmsg_socket_client_ptr_->send((MessageBase*)&simple_finishrun_response, evaluator_recvmsg_dst_addr_);
 
-                // Release messages
-                assert(request_ptr != NULL);
-                delete request_ptr;
-                request_ptr = NULL;
+        return;
+    }
 
-                if (is_finish) // Check is_finish
-                {
-                    continue; // Go to check if cloud is still running
-                }
-            } // End of (is_timeout == false)
-        } // End of while loop
+    void CloudWrapper::processOtherBenchmarkControlRequest_(MessageBase* control_request_ptr)
+    {
+        checkPointers_();
+        assert(control_request_ptr != NULL);
+        
+        std::ostringstream oss;
+        oss << "invalid message type " << MessageBase::messageTypeToString(control_request_ptr->getMessageType()) << " for startInternal_()";
+        Util::dumpErrorMsg(instance_name_, oss.str());
+        exit(1);
+        return;
+    }
+
+    void CloudWrapper::cleanup_()
+    {
+        checkPointers_();
 
         // Wait cloud-to-edge propagation simulator
         int pthread_returncode = pthread_join(cloud_toedge_propagation_simulator_thread_, NULL);
@@ -146,128 +131,16 @@ namespace covered
             Util::dumpErrorMsg(instance_name_, oss.str());
             exit(1);
         }
-    }
 
-    bool CloudWrapper::processGlobalRequest_(MessageBase* global_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr)
-    {
-        checkPointers_();
-
-        const uint32_t cloud_idx = node_idx_;
-
-        bool is_finish = false;
-
-        EventList event_list;
-        struct timespec access_rocksdb_start_timestamp = Util::getCurrentTimespec();
-
-        // Process global requests by RocksDB KVS
-        MessageType global_request_message_type = global_request_ptr->getMessageType();
-        Key tmp_key;
-        Value tmp_value;
-        std::string event_name;
-        switch (global_request_message_type)
+        // Wait cloud data server
+        pthread_returncode = pthread_join(data_server_thread_, NULL);
+        if (pthread_returncode != 0)
         {
-            case MessageType::kGlobalGetRequest:
-            {
-                const GlobalGetRequest* const global_get_request_ptr = static_cast<const GlobalGetRequest*>(global_request_ptr);
-                tmp_key = global_get_request_ptr->getKey();
-
-                // Get value from RocksDB KVS
-                cloud_rocksdb_ptr_->get(tmp_key, tmp_value);
-
-                event_name = Event::CLOUD_GET_ROCKSDB_EVENT_NAME;
-                break;
-            }
-            case MessageType::kGlobalPutRequest:
-            {
-                const GlobalPutRequest* const global_put_request_ptr = static_cast<const GlobalPutRequest*>(global_request_ptr);
-                tmp_key = global_put_request_ptr->getKey();
-                tmp_value = global_put_request_ptr->getValue();
-                assert(tmp_value.isDeleted() == false);
-
-                // Put value into RocksDB KVS
-                cloud_rocksdb_ptr_->put(tmp_key, tmp_value);
-
-                event_name = Event::CLOUD_PUT_ROCKSDB_EVENT_NAME;
-                break;
-            }
-            case MessageType::kGlobalDelRequest:
-            {
-                const GlobalDelRequest* const global_del_request_ptr = static_cast<const GlobalDelRequest*>(global_request_ptr);
-                tmp_key = global_del_request_ptr->getKey();
-
-                // Remove value from RocksDB KVS
-                cloud_rocksdb_ptr_->remove(tmp_key);
-
-                event_name = Event::CLOUD_DEL_ROCKSDB_EVENT_NAME;
-                break;
-            }
-            default:
-            {
-                std::ostringstream oss;
-                oss << "invalid message type " << MessageBase::messageTypeToString(global_request_message_type) << " for processGlobalRequest_()!";
-                Util::dumpErrorMsg(instance_name_, oss.str());
-                exit(1);
-            }
+            std::ostringstream oss;
+            oss << " failed to join cloud data server (error code: " << pthread_returncode << ")" << std::endl;
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
         }
-
-        #ifdef DEBUG_CLOUD_WRAPPER
-        std::ostringstream oss;
-        oss << "receive a global request; message type: " << MessageBase::messageTypeToString(global_request_message_type) << "; keystr: " << tmp_key.getKeystr() << "; valuesize: " << tmp_value.getValuesize();
-        Util::dumpDebugMsg(instance_name_, oss.str());
-        #endif
-
-        // Add intermediate event if with event tracking
-        struct timespec access_rocksdb_end_timestamp = Util::getCurrentTimespec();
-        uint32_t access_rocksdb_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(access_rocksdb_end_timestamp, access_rocksdb_start_timestamp));
-        event_list.addEvent(event_name, access_rocksdb_latency_us);
-
-        if (is_finish) // Check is_finish
-        {
-            return is_finish;
-        }
-
-        // Prepare global response
-        MessageBase* global_response_ptr = NULL;
-        switch (global_request_message_type)
-        {
-            case MessageType::kGlobalGetRequest:
-            {
-                // Prepare global get response message
-                global_response_ptr = new GlobalGetResponse(tmp_key, tmp_value, cloud_idx, cloud_recvreq_source_addr_, event_list);
-                assert(global_response_ptr != NULL);
-                break;
-            }
-            case MessageType::kGlobalPutRequest:
-            {
-                // Prepare global put response message
-                global_response_ptr = new GlobalPutResponse(tmp_key, cloud_idx, cloud_recvreq_source_addr_, event_list);
-                assert(global_response_ptr != NULL);
-                break;
-            }
-            case MessageType::kGlobalDelRequest:
-            {
-                // Prepare global del response message
-                global_response_ptr = new GlobalDelResponse(tmp_key, cloud_idx, cloud_recvreq_source_addr_, event_list);
-                assert(global_response_ptr != NULL);
-                break;
-            }
-            default:
-            {
-                Util::dumpErrorMsg(instance_name_, "cannot arrive here!");
-                exit(1);
-            }
-        }
-
-        // Push the global response message into cloud-to-edge propagation simulator to edge cache server worker
-        assert(global_response_ptr != NULL);
-        assert(global_response_ptr->isGlobalDataResponse());
-        bool is_successful = cloud_toedge_propagation_simulator_param_ptr_->push(global_response_ptr, edge_cache_server_worker_recvrsp_dst_addr);
-        assert(is_successful);
-
-        // NOTE: global_response_ptr will be released by cloud-to-edge propagation simulator
-        global_response_ptr = NULL;
-
-        return is_finish;
     }
 
     void CloudWrapper::checkPointers_() const
@@ -275,7 +148,6 @@ namespace covered
         NodeWrapperBase::checkPointers_();
 
         assert(cloud_rocksdb_ptr_ != NULL);
-        assert(cloud_recvreq_socket_server_ptr_ != NULL);
         assert(cloud_toedge_propagation_simulator_param_ptr_ != NULL);
 
         return;

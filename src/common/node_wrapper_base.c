@@ -87,15 +87,15 @@ namespace covered
         // After all time-consuming initialization
         finishInitialization_();
 
-        if (node_running_ == false)
+        if (node_role_ == CLIENT_NODE_ROLE)
         {
-            assert(node_role_ == CLIENT_NODE_ROLE);
-
             // Block until receiving startrun request
-            blockForStartrun_();
+            blockForStartrun_(); // Set node_running_ as true
         }
 
-        startInternal_();
+        blockForFinishrun_();
+
+        cleanup_();
     }
 
     void NodeWrapperBase::finishInitialization_() const
@@ -166,6 +166,38 @@ namespace covered
         setNodeRunning_();
 
         return;
+    }
+
+    void NodeWrapperBase::blockForFinishrun_()
+    {
+        // Wait for FinishRunRequest from evaluator
+        while (isNodeRunning_())
+        {
+            DynamicArray control_request_msg_payload;
+            bool is_timeout = node_recvmsg_socket_server_ptr_->recv(control_request_msg_payload);
+            if (is_timeout)
+            {
+                continue; // Continue to wait for FinishRunRequest if client is still running
+            }
+            else
+            {
+                MessageBase* control_request_ptr = MessageBase::getRequestFromMsgPayload(control_request_msg_payload);
+                assert(control_request_ptr != NULL);
+                
+                MessageType control_request_msg_type = control_request_ptr->getMessageType();
+                if (control_request_msg_type == MessageType::kFinishrunRequest)
+                {
+                    processFinishrunRequest_(); // Mark node_running_ as false
+                }
+                else
+                {
+                    processOtherBenchmarkControlRequest_(control_request_ptr);
+                }
+
+                delete control_request_ptr;
+                control_request_ptr = NULL;
+            }
+        }
     }
 
     bool NodeWrapperBase::isNodeRunning_() const

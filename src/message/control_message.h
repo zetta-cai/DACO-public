@@ -13,6 +13,11 @@
 #include "message/control/benchmark/startrun_response.h"
 #include "message/control/benchmark/switch_slot_request.h"
 #include "message/control/benchmark/switch_slot_response.h"
+#include "message/control/benchmark/finish_warmup_request.h"
+#include "message/control/benchmark/finish_warmup_response.h"
+#include "message/control/benchmark/finishrun_request.h"
+#include "message/control/benchmark/finishrun_response.h"
+#include "message/control/benchmark/simple_finishrun_response.h"
 
 #include "message/control/cooperation/acquire_writelock_request.h"
 #include "message/control/cooperation/acquire_writelock_response.h"

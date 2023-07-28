@@ -88,6 +88,31 @@ namespace covered
                 message_type_str = "kSwitchSlotResponse";
                 break;
             }
+            case MessageType::kFinishWarmupRequest:
+            {
+                message_type_str = "kFinishWarmupRequest";
+                break;
+            }
+            case MessageType::kFinishWarmupResponse:
+            {
+                message_type_str = "kFinishWarmupResponse";
+                break;
+            }
+            case MessageType::kFinishrunRequest:
+            {
+                message_type_str = "kFinishrunRequest";
+                break;
+            }
+            case MessageType::kFinishrunResponse:
+            {
+                message_type_str = "kFinishrunResponse";
+                break;
+            }
+            case MessageType::kSimpleFinishrunResponse:
+            {
+                message_type_str = "kSimpleFinishrunResponse";
+                break;
+            }
             case MessageType::kAcquireWritelockRequest:
             {
                 message_type_str = "kAcquireWritelockRequest";
@@ -320,6 +345,16 @@ namespace covered
                 message_ptr = new SwitchSlotRequest(msg_payload);
                 break;
             }
+            case MessageType::kFinishWarmupRequest:
+            {
+                message_ptr = new FinishWarmupRequest(msg_payload);
+                break;
+            }
+            case MessageType::kFinishrunRequest:
+            {
+                message_ptr = new FinishrunRequest(msg_payload);
+                break;
+            }
             case MessageType::kAcquireWritelockRequest:
             {
                 message_ptr = new AcquireWritelockRequest(msg_payload);
@@ -423,6 +458,21 @@ namespace covered
             case MessageType::kSwitchSlotResponse:
             {
                 message_ptr = new SwitchSlotResponse(msg_payload);
+                break;
+            }
+            case MessageType::kFinishWarmupResponse:
+            {
+                message_ptr = new FinishWarmupResponse(msg_payload);
+                break;
+            }
+            case MessageType::kFinishrunResponse:
+            {
+                message_ptr = new FinishrunResponse(msg_payload);
+                break;
+            }
+            case MessageType::kSimpleFinishrunResponse:
+            {
+                message_ptr = new SimpleFinishrunResponse(msg_payload);
                 break;
             }
             case MessageType::kAcquireWritelockResponse:
@@ -841,7 +891,7 @@ namespace covered
     bool MessageBase::isBenchmarkControlRequest() const
     {
         checkIsValid_();
-        if (message_type_ == MessageType::kInitializationRequest || message_type_ == MessageType::kStartrunRequest || message_type_ == MessageType::kSwitchSlotRequest)
+        if (message_type_ == MessageType::kInitializationRequest || message_type_ == MessageType::kStartrunRequest || message_type_ == MessageType::kSwitchSlotRequest || message_type_ == MessageType::kFinishWarmupRequest || message_type_ == MessageType::kFinishrunRequest)
         {
             return true;
         }
@@ -873,7 +923,7 @@ namespace covered
     bool MessageBase::isBenchmarkControlResponse() const
     {
         checkIsValid_();
-        if (message_type_ == MessageType::kInitializationResponse || message_type_ == MessageType::kStartrunResponse || message_type_ == MessageType::kSwitchSlotResponse)
+        if (message_type_ == MessageType::kInitializationResponse || message_type_ == MessageType::kStartrunResponse || message_type_ == MessageType::kSwitchSlotResponse || message_type_ == MessageType::kFinishWarmupResponse || message_type_ == MessageType::kFinishrunResponse || message_type_ == MessageType::kSimpleFinishrunResponse)
         {
             return true;
         }

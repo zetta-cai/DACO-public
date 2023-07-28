@@ -2,7 +2,6 @@
 
 #include <assert.h>
 #include <sstream>
-#include <unordered_map>
 
 #include "common/config.h"
 #include "common/dynamic_array.h"
@@ -137,7 +136,7 @@ namespace covered
                     Util::dumpNormalMsg(kClassName, "Stop benchmark...");
 
                     // Notify client/edge/cloud to finish run
-                    notifyAllToFinishrun_(); // TOOD: Update total_statistics_tracker_ptr_; finish edge/cloud after clients are finished
+                    notifyAllToFinishrun_(); // Update per-slot/stable total aggregated statistics
 
                     break;
                 }
@@ -148,7 +147,7 @@ namespace covered
             if (delta_us_for_switch_slot >= static_cast<double>(client_raw_statistics_slot_interval_sec * 1000 * 1000))
             {
                 // Notify clients to switch cur-slot client raw statistics
-                notifyClientsToSwitchSlot_(); // Increase cur_slot_idx_ by one
+                notifyClientsToSwitchSlot_(); // Increase cur_slot_idx_ by one and update per-slot total aggregated statistics
 
                 // Update prev_timestamp for the next slot
                 prev_timestamp = cur_timestamp;
@@ -167,7 +166,7 @@ namespace covered
                     Util::dumpNormalMsg(kClassName, oss.str());
 
                     // Notify all clients to finish warmup phase (i.e., enter stresstest phase)
-                    notifyClientsToFinishWarmup_(); // TODO: Mark is_warmup_phase_ as false
+                    notifyClientsToFinishWarmup_(); // Mark is_warmup_phase_ as false
 
                     // Duration starts from the end of warmup phase
                     is_warmup_phase_ = false;
@@ -201,16 +200,7 @@ namespace covered
         checkPointers_();
 
         // Client/edge/cloud ack flags
-        std::unordered_map<NetworkAddr, bool, NetworkAddrHasher> initialization_acked_flags;
-        for (uint32_t client_idx = 0; client_idx < clientcnt_; client_idx++)
-        {
-            initialization_acked_flags.insert(std::pair<NetworkAddr, bool>(perclient_recvmsg_dst_addrs_[client_idx], false));
-        }
-        for (uint32_t edge_idx = 0; edge_idx < edgecnt_; edge_idx++)
-        {
-            initialization_acked_flags.insert(std::pair<NetworkAddr, bool>(peredge_recvmsg_dst_addrs_[edge_idx], false));
-        }
-        initialization_acked_flags.insert(std::pair<NetworkAddr, bool>(cloud_recvmsg_dst_addr_, false));
+        std::unordered_map<NetworkAddr, bool, NetworkAddrHasher> initialization_acked_flags = getAckedFlagsForAll_();
 
         Util::dumpNormalMsg(kClassName, "Wait for intialization of all clients, edges, and clouds...");
 
@@ -230,25 +220,14 @@ namespace covered
                 assert(control_request_ptr != NULL);
                 assert(control_request_ptr->getMessageType() == MessageType::kInitializationRequest);
 
-                NetworkAddr tmp_dst_addr = control_request_ptr->getSourceAddr();
-                std::unordered_map<NetworkAddr, bool, NetworkAddrHasher>::iterator iter = initialization_acked_flags.find(tmp_dst_addr);
-                if (iter == initialization_acked_flags.end())
+                bool is_first_req_to_be_acked = processMsgForAck_(control_request_ptr, initialization_acked_flags);
+                if (is_first_req_to_be_acked)
                 {
-                    std::ostringstream oss;
-                    oss << "receive InitializationRequest from network addr " << tmp_dst_addr.toString() << ", which is NOT in the to-be-acked list!";
-                    Util::dumpWarnMsg(kClassName, oss.str());
-                }
-                else
-                {
-                    if (iter->second == false)
-                    {
-                        // Send back InitializationResponse to client/edge/cloud
-                        InitializationResponse initialization_response(0, evaluator_recvmsg_source_addr_, EventList());
-                        evaluator_sendmsg_socket_client_ptr_->send((MessageBase*)&initialization_response, tmp_dst_addr);
+                    // Send back InitializationResponse to client/edge/cloud
+                    InitializationResponse initialization_response(0, evaluator_recvmsg_source_addr_, EventList());
+                    evaluator_sendmsg_socket_client_ptr_->send((MessageBase*)&initialization_response, tmp_dst_addr);
 
-                        iter->second = true;
-                        acked_cnt++;
-                    }
+                    acked_cnt++;
                 }
 
                 delete control_request_ptr;
@@ -266,11 +245,7 @@ namespace covered
         checkPointers_();
 
         // Client ack flags
-        std::unordered_map<NetworkAddr, bool, NetworkAddrHasher> startrun_acked_flags;
-        for (uint32_t client_idx = 0; client_idx < clientcnt_; client_idx++)
-        {
-            startrun_acked_flags.insert(std::pair<NetworkAddr, bool>(perclient_recvmsg_dst_addrs_[client_idx], false));
-        }
+        std::unordered_map<NetworkAddr, bool, NetworkAddrHasher> startrun_acked_flags = getAckedFlagsForClients_();
 
         Util::dumpNormalMsg(kClassName, "Notify all clients to start running...");
 
@@ -279,14 +254,8 @@ namespace covered
         while (acked_cnt < startrun_acked_flags.size())
         {
             // Issue StartrunRequests to unacked clients simultaneously
-            for (std::unordered_map<NetworkAddr, bool, NetworkAddrHasher>::const_iterator iter_for_req = startrun_acked_flags.begin(); iter_for_req != startrun_acked_flags.end(); iter_for_req++)
-            {
-                if (iter_for_req->second == false)
-                {
-                    StartrunRequest tmp_startrun_request(0, evaluator_recvmsg_source_addr_);
-                    evaluator_sendmsg_socket_client_ptr_->send((MessageBase*)&tmp_startrun_request, iter_for_req->first);
-                }
-            }
+            StartrunRequest tmp_startrun_request(0, evaluator_recvmsg_source_addr_);
+            issueMsgToUnackedNodes_((MessageBase*)&tmp_startrun_request, startrun_acked_flags);
 
             // Receive StartrunResponses for unacked clients
             for (uint32_t i = 0; i < (startrun_acked_flags.size() - acked_cnt); i++)
@@ -304,21 +273,10 @@ namespace covered
                     assert(control_response_ptr != NULL);
                     assert(control_response_ptr->getMessageType() == MessageType::kStartrunResponse);
 
-                    NetworkAddr tmp_dst_addr = control_response_ptr->getSourceAddr();
-                    std::unordered_map<NetworkAddr, bool, NetworkAddrHasher>::iterator iter = startrun_acked_flags.find(tmp_dst_addr);
-                    if (iter == startrun_acked_flags.end())
+                    bool is_first_rsp_for_ack = processMsgForAck_(control_response_ptr, startrun_acked_flags);
+                    if (is_first_rsp_for_ack)
                     {
-                        std::ostringstream oss;
-                        oss << "receive StartrunResponse from network addr " << tmp_dst_addr.toString() << ", which is NOT in the to-be-acked list!";
-                        Util::dumpWarnMsg(kClassName, oss.str());
-                    }
-                    else
-                    {
-                        if (iter->second == false)
-                        {
-                            iter->second = true;
-                            acked_cnt++;
-                        }
+                        acked_cnt++;
                     }
 
                     delete control_response_ptr;
@@ -337,11 +295,7 @@ namespace covered
         checkPointers_();
 
         // Client ack flags
-        std::unordered_map<NetworkAddr, bool, NetworkAddrHasher> switchslot_acked_flags;
-        for (uint32_t client_idx = 0; client_idx < clientcnt_; client_idx++)
-        {
-            switchslot_acked_flags.insert(std::pair<NetworkAddr, bool>(perclient_recvmsg_dst_addrs_[client_idx], false));
-        }
+        std::unordered_map<NetworkAddr, bool, NetworkAddrHasher> switchslot_acked_flags = getAckedFlagsForClients_();
 
         // Prepare for cur-slot per-client aggregated statistics
         std::vector<ClientAggregatedStatistics> curslot_perclient_aggregated_statistics;
@@ -349,7 +303,7 @@ namespace covered
 
         cur_slot_idx_++;
         std::ostringstream oss;
-        oss << "Notify all clients to switch slot into target slot " << cur_slot_idx_;
+        oss << "Notify all clients to switch slot into target slot " << cur_slot_idx_ << "...";
         Util::dumpNormalMsg(kClassName, oss.str());
 
         // Timeout-and-retry mechanism
@@ -357,14 +311,8 @@ namespace covered
         while (acked_cnt < switchslot_acked_flags.size())
         {
             // Issue SwitchSlotRequests to unacked clients simultaneously
-            for (std::unordered_map<NetworkAddr, bool, NetworkAddrHasher>::const_iterator iter_for_req = switchslot_acked_flags.begin(); iter_for_req != switchslot_acked_flags.end(); iter_for_req++)
-            {
-                if (iter_for_req->second == false)
-                {
-                    SwitchSlotRequest tmp_switch_slot_request(cur_slot_idx_, 0, evaluator_recvmsg_source_addr_);
-                    evaluator_sendmsg_socket_client_ptr_->send((MessageBase*)&tmp_switch_slot_request, iter_for_req->first);
-                }
-            }
+            SwitchSlotRequest tmp_switch_slot_request(cur_slot_idx_, 0, evaluator_recvmsg_source_addr_);
+            issueMsgToUnackedNodes_((MessageBase*)&tmp_switch_slot_request, switchslot_acked_flags);
 
             // Receive SwitchSlotResponses for unacked clients
             for (uint32_t i = 0; i < (switchslot_acked_flags.size() - acked_cnt); i++)
@@ -374,7 +322,7 @@ namespace covered
                 if (is_timeout)
                 {
                     Util::dumpWarnMsg(kClassName, "timeout to wait for SwitchSlotResponse!");
-                    break; // Wait until all clients are running
+                    break; // Wait until all clients have switched slot
                 }
                 else
                 {
@@ -382,31 +330,23 @@ namespace covered
                     assert(control_response_ptr != NULL);
                     assert(control_response_ptr->getMessageType() == MessageType::kSwitchSlotResponse);
 
-                    NetworkAddr tmp_dst_addr = control_response_ptr->getSourceAddr();
-                    std::unordered_map<NetworkAddr, bool, NetworkAddrHasher>::iterator iter = switchslot_acked_flags.find(tmp_dst_addr);
-                    if (iter == switchslot_acked_flags.end())
+                    bool is_first_rsp_for_ack = processMsgForAck_(control_response_ptr, switchslot_acked_flags);
+                    if (is_first_rsp_for_ack)
                     {
-                        oss.clear();
-                        oss.str("");
-                        oss << "receive SwitchSlotResponse from network addr " << tmp_dst_addr.toString() << ", which is NOT in the to-be-acked list!";
-                        Util::dumpWarnMsg(kClassName, oss.str());
-                    }
-                    else
-                    {
-                        if (iter->second == false)
-                        {
-                            uint32_t client_idx = iter - switchslot_acked_flags.begin();
-                            assert(client_idx == control_response_ptr->getSourceIndex());
-                            assert(client_idx < clientcnt_);
+                        std::unordered_map<NetworkAddr, bool, NetworkAddrHasher>::iterator iter = switchslot_acked_flags.find(control_response_ptr->getSourceAddr());
+                        assert(iter != switchslot_acked_flags.end());
 
-                            // Add into cur-slot per-client aggregated statistics
-                            const SwitchSlotResponse* const switch_slot_response_ptr = static_cast<const SwitchSlotResponse*>(control_response_ptr);
-                            assert(cur_slot_idx_ == switch_slot_response_ptr->getTargetSlotIdx());
-                            curslot_perclient_aggregated_statistics[client_idx] = switch_slot_response_ptr->getAggregatedStatistics();
+                        // Calculate and check client idx
+                        uint32_t client_idx = iter - switchslot_acked_flags.begin();
+                        assert(client_idx == control_response_ptr->getSourceIndex());
+                        assert(client_idx < clientcnt_);
 
-                            iter->second = true;
-                            acked_cnt++;
-                        }
+                        // Add into cur-slot per-client aggregated statistics
+                        const SwitchSlotResponse* const switch_slot_response_ptr = static_cast<const SwitchSlotResponse*>(control_response_ptr);
+                        assert(cur_slot_idx_ == switch_slot_response_ptr->getTargetSlotIdx());
+                        curslot_perclient_aggregated_statistics[client_idx] = switch_slot_response_ptr->getAggregatedStatistics();
+
+                        acked_cnt++;
                     }
 
                     delete control_response_ptr;
@@ -424,6 +364,266 @@ namespace covered
         total_statistics_tracker_ptr_->updatePerslotTotalAggregatedStatistics(curslot_perclient_aggregated_statistics);
 
         return;
+    }
+
+    void EvaluatorWrapper::notifyClientsToFinishWarmup_()
+    {
+        checkPointers_();
+
+        // Client ack flags
+        std::unordered_map<NetworkAddr, bool, NetworkAddrHasher> finish_warmup_acked_flags = getAckedFlagsForClients_();
+
+        Util::dumpNormalMsg(kClassName, "Notify all clients to finish warmup and start stresstest...");
+
+        // Timeout-and-retry mechanism
+        uint32_t acked_cnt = 0;
+        while (acked_cnt < finish_warmup_acked_flags.size())
+        {
+            // Issue FinishWarmupRequests to unacked clients simultaneously
+            FinishWarmupRequest tmp_finish_warmup_request(0, evaluator_recvmsg_source_addr_);
+            issueMsgToUnackedNodes_((MessageBase*)&tmp_finish_warmup_request, finish_warmup_acked_flags);
+
+            // Receive FinishWarmupResponses for unacked clients
+            for (uint32_t i = 0; i < (finish_warmup_acked_flags.size() - acked_cnt); i++)
+            {
+                DynamicArray control_response_msg_payload;
+                bool is_timeout = evaluator_recvmsg_socket_server_ptr_->recv(control_response_msg_payload);
+                if (is_timeout)
+                {
+                    Util::dumpWarnMsg(kClassName, "timeout to wait for FinishWarmupResponse!");
+                    break; // Wait until all clients have finished warmup phase
+                }
+                else
+                {
+                    MessageBase* control_response_ptr = MessageBase::getRequestFromMsgPayload(control_response_msg_payload);
+                    assert(control_response_ptr != NULL);
+                    assert(control_response_ptr->getMessageType() == MessageType::kFinishWarmupResponse);
+
+                    bool is_first_rsp_for_ack = processMsgForAck_(control_response_ptr, finish_warmup_acked_flags);
+                    if (is_first_rsp_for_ack)
+                    {
+                        acked_cnt++;
+                    }
+
+                    delete control_response_ptr;
+                    control_response_ptr = NULL;
+                }
+            }
+        }
+
+        Util::dumpNormalMsg(kClassName, "All clients have finished warmup phase!");
+
+        is_warmup_phase_ = false;
+
+        return;
+    }
+
+    void EvaluatorWrapper::notifyAllToFinishrun_()
+    {
+        // Notify all clients to finish running, and update per-slot/stable total aggregated statistics
+        notifyClientsToFinishrun_();
+
+        // After clients finish running, notify edge/cloud nodes to finish running
+        notifyEdgeCloudToFinishrun_();
+    }
+
+    void EvaluatorWrapper::notifyClientsToFinishrun_()
+    {
+        checkPointers_();
+
+        // Client ack flags
+        std::unordered_map<NetworkAddr, bool, NetworkAddrHasher> finishrun_acked_flags = getAckedFlagsForClients_();
+
+        // Prepare for last-slot/stable per-client aggregated statistics
+        std::vector<ClientAggregatedStatistics> lastslot_perclient_aggregated_statistics;
+        curslot_perclient_aggregated_statistics.resize(clientcnt_);
+        std::vector<ClientAggregatedStatistics> stable_perclient_aggregated_statistics;
+        stable_perclient_aggregated_statistics.resize(clientcnt_);
+
+        Util::dumpNormalMsg(kClassName, "Notify all clients to finish run...");
+
+        // Timeout-and-retry mechanism
+        uint32_t acked_cnt = 0;
+        while (acked_cnt < finishrun_acked_flags.size())
+        {
+            // Issue FinishrunRequests to unacked clients simultaneously
+            FinishrunRequest tmp_finishrun_request(0, evaluator_recvmsg_source_addr_);
+            issueMsgToUnackedNodes_((MessageBase*)&tmp_finishrun_request, finishrun_acked_flags);
+
+            // Receive FinishrunResponses for unacked clients
+            for (uint32_t i = 0; i < (finishrun_acked_flags.size() - acked_cnt); i++)
+            {
+                DynamicArray control_response_msg_payload;
+                bool is_timeout = evaluator_recvmsg_socket_server_ptr_->recv(control_response_msg_payload);
+                if (is_timeout)
+                {
+                    Util::dumpWarnMsg(kClassName, "timeout to wait for FinishrunResponse!");
+                    break; // Wait until all clients have finished running
+                }
+                else
+                {
+                    MessageBase* control_response_ptr = MessageBase::getRequestFromMsgPayload(control_response_msg_payload);
+                    assert(control_response_ptr != NULL);
+                    assert(control_response_ptr->getMessageType() == MessageType::kFinishrunResponse);
+
+                    bool is_first_rsp_for_ack = processMsgForAck_(control_response_ptr, finishrun_acked_flags);
+                    if (is_first_rsp_for_ack)
+                    {
+                        std::unordered_map<NetworkAddr, bool, NetworkAddrHasher>::iterator iter = finishrun_acked_flags.find(control_response_ptr->getSourceAddr());
+                        assert(iter != finishrun_acked_flags.end());
+
+                        // Calculate and check client idx
+                        uint32_t client_idx = iter - finishrun_acked_flags.begin();
+                        assert(client_idx == control_response_ptr->getSourceIndex());
+                        assert(client_idx < clientcnt_);
+
+                        // Add into last-slot/stable per-client aggregated statistics
+                        const FinishrunResponse* const finishrun_response_ptr = static_cast<const FinishrunResponse*>(control_response_ptr);
+                        assert(cur_slot_idx_ == finishrun_response_ptr->getLastSlotIdx());
+                        lastslot_perclient_aggregated_statistics[client_idx] = finishrun_response_ptr->getLastSlotAggregatedStatistics();
+                        stable_perclient_aggregated_statistics[client_idx] = finishrun_response_ptr->getStableAggregatedStatistics();
+
+                        acked_cnt++;
+                    }
+
+                    delete control_response_ptr;
+                    control_response_ptr = NULL;
+                }
+            }
+        }
+
+        Util::dumpNormalMsg(kClassName, "All clients have finished running!");
+
+        // Update per-slot total aggregated statistics
+        total_statistics_tracker_ptr_->updatePerslotTotalAggregatedStatistics(lastslot_perclient_aggregated_statistics);
+
+        // Update stable total aggregated statistics
+        total_statistics_tracker_ptr_->updateStableTotalAggregatedStatistics(stable_perclient_aggregated_statistics);
+
+        return;
+    }
+
+    void EvaluatorWrapper::notifyEdgeCloudToFinishrun_()
+    {
+        checkPointers_();
+
+        // Edge/cloud ack flags
+        std::unordered_map<NetworkAddr, bool, NetworkAddrHasher> finishrun_acked_flags = getAckedFlagsForEdgeCloud_();
+
+        Util::dumpNormalMsg(kClassName, "Notify all edge/cloud nodes to finish run...");
+
+        // Timeout-and-retry mechanism
+        uint32_t acked_cnt = 0;
+        while (acked_cnt < finishrun_acked_flags.size())
+        {
+            // Issue FinishrunRequests to unacked edge/cloud nodes simultaneously
+            FinishrunRequest tmp_finishrun_request(0, evaluator_recvmsg_source_addr_);
+            issueMsgToUnackedNodes_((MessageBase*)&tmp_finishrun_request, finishrun_acked_flags);
+
+            // Receive SimpleFinishrunResponses for unacked edge/cloud nodes
+            for (uint32_t i = 0; i < (finishrun_acked_flags.size() - acked_cnt); i++)
+            {
+                DynamicArray control_response_msg_payload;
+                bool is_timeout = evaluator_recvmsg_socket_server_ptr_->recv(control_response_msg_payload);
+                if (is_timeout)
+                {
+                    Util::dumpWarnMsg(kClassName, "timeout to wait for SimpleFinishrunResponse!");
+                    break; // Wait until all edge/cloud nodes have finished running
+                }
+                else
+                {
+                    MessageBase* control_response_ptr = MessageBase::getRequestFromMsgPayload(control_response_msg_payload);
+                    assert(control_response_ptr != NULL);
+                    assert(control_response_ptr->getMessageType() == MessageType::kSimpleFinishrunResponse);
+
+                    bool is_first_rsp_for_ack = processMsgForAck_(control_response_ptr, finishrun_acked_flags);
+                    if (is_first_rsp_for_ack)
+                    {
+                        acked_cnt++;
+                    }
+
+                    delete control_response_ptr;
+                    control_response_ptr = NULL;
+                }
+            }
+        }
+
+        Util::dumpNormalMsg(kClassName, "All edge/cloud nodes have finished running!");
+
+        return;
+    }
+
+    std::unordered_map<NetworkAddr, bool, NetworkAddrHasher> EvaluatorWrapper::getAckedFlagsForAll_() const
+    {
+        std::unordered_map<NetworkAddr, bool, NetworkAddrHasher> acked_flags_for_clients = getAckedFlagsForClients_();
+        std::unordered_map<NetworkAddr, bool, NetworkAddrHasher> acked_flags_for_edgeclout = getAckedFlagsForEdgeCloud_();
+
+        std::unordered_map<NetworkAddr, bool, NetworkAddrHasher> acked_flags_for_all;
+        acked_flags_for_all.insert(acked_flags_for_clients.begin(), acked_flags_for_clients.end());
+        acked_flags_for_all.insert(acked_flags_for_edgeclout.begin(), acked_flags_for_edgeclout.end());
+
+        return acked_flags_for_all;
+    }
+
+    std::unordered_map<NetworkAddr, bool, NetworkAddrHasher> EvaluatorWrapper::getAckedFlagsForClients_() const
+    {
+        std::unordered_map<NetworkAddr, bool, NetworkAddrHasher> acked_flags_for_clients;
+        for (uint32_t client_idx = 0; client_idx < clientcnt_; client_idx++)
+        {
+            acked_flags_for_clients.insert(std::pair<NetworkAddr, bool>(perclient_recvmsg_dst_addrs_[client_idx], false));
+        }
+        return acked_flags_for_clients;
+    }
+
+    std::unordered_map<NetworkAddr, bool, NetworkAddrHasher> EvaluatorWrapper::getAckedFlagsForEdgeCloud_() const
+    {
+        std::unordered_map<NetworkAddr, bool, NetworkAddrHasher> acked_flags_for_edgeclout;
+        for (uint32_t edge_idx = 0; edge_idx < edgecnt_; edge_idx++)
+        {
+            acked_flags_for_edgeclout.insert(std::pair<NetworkAddr, bool>(peredge_recvmsg_dst_addrs_[edge_idx], false));
+        }
+        acked_flags_for_edgeclout.insert(std::pair<NetworkAddr, bool>(cloud_recvmsg_dst_addr_, false));
+        return acked_flags_for_edgeclout;
+    }
+
+    void EvaluatorWrapper::issueMsgToUnackedNodes_(MessageBase* message_ptr, const std::unordered_map<NetworkAddr, bool, NetworkAddrHasher>& acked_flags) const
+    {
+        assert(message_ptr != NULL);
+
+        for (std::unordered_map<NetworkAddr, bool, NetworkAddrHasher>::const_iterator iter_for_req = acked_flags.begin(); iter_for_req != acked_flags.end(); iter_for_req++)
+        {
+            if (iter_for_req->second == false)
+            {
+                evaluator_sendmsg_socket_client_ptr_->send(message_ptr, iter_for_req->first);
+            }
+        }
+
+        return;
+    }
+
+    bool EvaluatorWrapper::processMsgForAck_(MessageBase* message_ptr, std::unordered_map<NetworkAddr, bool, NetworkAddrHasher>* acked_flags)
+    {
+        assert(message_ptr != NULL);
+
+        bool is_first_msg = false;
+        NetworkAddr tmp_dst_addr = message_ptr->getSourceAddr();
+        std::unordered_map<NetworkAddr, bool, NetworkAddrHasher>::iterator iter = acked_flags.find(tmp_dst_addr);
+        if (iter == acked_flags.end())
+        {
+            std::ostringstream oss;
+            oss << "receive " << MessageBase::messageTypeToString(message_ptr->getMessageType()) << " from network addr " << tmp_dst_addr.toString() << ", which is NOT in the to-be-acked list!";
+            Util::dumpWarnMsg(kClassName, oss.str());
+        }
+        else
+        {
+            if (iter->second == false)
+            {
+                iter->second = true;
+                is_first_msg = true;
+            }
+        }
+
+        return is_first_msg;
     }
 
     void EvaluatorWrapper::checkPointers_() const

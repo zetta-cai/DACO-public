@@ -33,11 +33,12 @@ namespace covered
         static const std::string kClassName;
 
         virtual void initialize_() override;
-        virtual void startInternal_() override;
+        virtual void processFinishrunRequest_() override;
+        virtual void processOtherBenchmarkControlRequest_(MessageBase* control_request_ptr) override;
+        virtual void cleanup_() override;
 
-        void switchSlot_(MessageBase* control_request_ptr);
-        void finishWarmup_();
-        void finishRun_();
+        void processSwitchSlotRequest_(MessageBase* control_request_ptr);
+        void processWarmupRequest_();
 
         bool isWarmupPhase_() const;
         void finishWarmupPhase_();

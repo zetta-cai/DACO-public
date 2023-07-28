@@ -121,53 +121,51 @@ namespace covered
         return;
     }
 
-    void ClientWrapper::startInternal_()
+    void ClientWrapper::processFinishrunRequest_()
     {
         checkPointers_();
-        
-        // Wait for SwitchSlotRequest or FinishRunRequest from evaluator
-        while (isNodeRunning_())
-        {
-            DynamicArray control_request_msg_payload;
-            bool is_timeout = node_recvmsg_socket_server_ptr_->recv(control_request_msg_payload);
-            if (is_timeout)
-            {
-                continue; // Continue to wait for SwitchSlotRequest or FinishRunRequest if client is still running
-            }
-            else
-            {
-                MessageBase* control_request_ptr = MessageBase::getRequestFromMsgPayload(control_request_msg_payload);
-                assert(control_request_ptr != NULL);
-                
-                MessageType control_request_msg_type = control_request_ptr->getMessageType();
-                if (control_request_msg_type == MessageType::kSwitchSlotRequest)
-                {
-                    switchSlot_(control_request_ptr);
-                }
-                else if (control_request_msg_type == MessageType::kFinishWarmupRequest)
-                {
-                    finishWarmup_(); // TODO: Mark is_warmup_phase_ as false
-                }
-                else if (control_request_msg_type == MessageType::kFinishrunRequest)
-                {
-                    finishRun_(); // TODO: Mark node_running_ as false
-                    // Place into finishRun_()
-                    // Aggregate cur-slot/stable client raw statistics, and dump per-slot/stable client aggregated statistics
-                    //assert(client_statistics_tracker_ptr_ != NULL);
-                    //client_statistics_tracker_ptr_->aggregateForFinishrun(client_statistics_filepath);
-                }
-                else
-                {
-                    std::ostringstream oss;
-                    oss << "invalid message type " << MessageBase::messageTypeToString(control_request_msg_type) << " for startInternal_()";
-                    Util::dumpErrorMsg(instance_name_, oss.str());
-                    exit(1);
-                }
 
-                delete control_request_ptr;
-                control_request_ptr = NULL;
-            }
+        // Mark the current node as NOT running to finish benchmark
+        resetNodeRunning_();
+
+        // Aggregate cur-slot/stable client raw statistics into last-slot/stable client aggregated statistics
+        ClientAggregatedStatistics lastslot_client_aggregated_statistics;
+        ClientAggregatedStatistics stable_client_aggregated_statistics;
+        uint32_t last_slot_idx = client_statistics_tracker_ptr_->aggregateForFinishrun(lastslot_client_aggregated_statistics, stable_client_aggregated_statistics);
+
+        // Send back FinishrunResponse to evaluator
+        FinishrunResponse finishrun_response(last_slot_idx, lastslot_client_aggregated_statistics, stable_client_aggregated_statistics, node_idx_, node_recvmsg_source_addr_, EventList());
+        node_sendmsg_socket_client_ptr_->send((MessageBase*)&finishrun_response, evaluator_recvmsg_dst_addr_);
+
+        return;
+    }
+
+    void ClientWrapper::processOtherBenchmarkControlRequest_(MessageBase* control_request_ptr)
+    {
+        checkPointers_();
+        assert(control_request_ptr != NULL);
+        
+        MessageType control_request_msg_type = control_request_ptr->getMessageType();
+        if (control_request_msg_type == MessageType::kSwitchSlotRequest)
+        {
+            processSwitchSlotRequest_(control_request_ptr); // Increase cur_slot_idx_ in ClientStatisticsTracker and return cur-slot client aggregated statistics
         }
+        else if (control_request_msg_type == MessageType::kFinishWarmupRequest)
+        {
+            processWarmupRequest_(); // Mark is_warmup_phase_ as false
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "invalid message type " << MessageBase::messageTypeToString(control_request_msg_type) << " for startInternal_()";
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
+    }
+
+    void ClientWrapper::cleanup_()
+    {
+        checkPointers_();
 
         int pthread_returncode = 0;
 
@@ -197,7 +195,7 @@ namespace covered
         return;
     }
 
-    void ClientWrapper::switchSlot_(MessageBase* control_request_ptr)
+    void ClientWrapper::processSwitchSlotRequest_(MessageBase* control_request_ptr)
     {
         assert(control_request_ptr != NULL);
 
@@ -210,6 +208,18 @@ namespace covered
         // Send back SwitchSlotResponse to evaluator
         SwitchSlotResponse switch_slot_response(target_slot_idx, curslot_client_aggregated_statistics, node_idx_, node_recvmsg_source_addr_, EventList());
         node_sendmsg_socket_client_ptr_->send((MessageBase*)&switch_slot_response, evaluator_recvmsg_dst_addr_);
+
+        return;
+    }
+
+    void ClientWrapper::processWarmupRequest_()
+    {
+        // Finish warmup phase to start stresstest phase
+        finishWarmupPhase_();
+
+        // Send back FinishWarmupResponse to evaluator
+        FinishWarmupResponse finish_warmup_response(node_idx_, node_recvmsg_source_addr_, EventList());
+        node_sendmsg_socket_client_ptr_->send((MessageBase*)&finish_warmup_response, evaluator_recvmsg_dst_addr_);
 
         return;
     }

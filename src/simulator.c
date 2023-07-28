@@ -135,21 +135,9 @@ int main(int argc, char **argv) {
         }
     }
 
-    // (5) Start benchmark
+    // (5) Wait for all threads
 
-    // (5.3) Start stresstest phase if all clients finish warmup phase
-
-    // (6) Stop benchmark
-
-    // (6.1) Reset client_running_ = false in clientcnt client parameters to stop benchmark
-
-    //for (uint32_t client_idx = 0; client_idx < clientcnt; client_idx++)
-    //{
-    //    client_params[client_idx].resetNodeRunning();
-    //}
-    //covered::Util::dumpNormalMsg(main_class_name, "Stop benchmark...");
-
-    // (6.2) Wait for clientcnt clients
+    // (5.1) Wait for clientcnt clients
 
     covered::Util::dumpNormalMsg(main_class_name, "wait for all clients...");
     for (uint32_t client_idx = 0; client_idx < clientcnt; client_idx++)
@@ -165,15 +153,7 @@ int main(int argc, char **argv) {
     }
     covered::Util::dumpNormalMsg(main_class_name, "all clients are done");
 
-    // (6.3) Reset edge_running_ = false in edgecnt edge parameters to stop edge nodes
-
-    //for (uint32_t edge_idx = 0; edge_idx < edgecnt; edge_idx++)
-    //{
-    //    edge_params[edge_idx].resetNodeRunning();
-    //}
-    //covered::Util::dumpNormalMsg(main_class_name, "Stop edge nodes...");
-
-    // (6.4) Wait for edgecnt edge nodes
+    // (5.2) Wait for edgecnt edge nodes
 
     covered::Util::dumpNormalMsg(main_class_name, "wait for all edge nodes...");
     for (uint32_t edge_idx = 0; edge_idx < edgecnt; edge_idx++)
@@ -189,12 +169,7 @@ int main(int argc, char **argv) {
     }
     covered::Util::dumpNormalMsg(main_class_name, "all edge nodes are done");
 
-    // (6.5) Reset cloud_running_ = false in a cloud parameter to stop the cloud node
-
-    //cloud_param.resetNodeRunning();
-    //covered::Util::dumpNormalMsg(main_class_name, "Stop the cloud node...");
-
-    // (6.6) Wait for the cloud node
+    // (5.3) Wait for the cloud node
 
     covered::Util::dumpNormalMsg(main_class_name, "wait for the cloud node...");
     pthread_returncode = pthread_join(cloud_thread, NULL); // void* retval = NULL

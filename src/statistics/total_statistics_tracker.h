@@ -24,8 +24,9 @@ namespace covered
         TotalStatisticsTracker(const std::string& filepath);
         ~TotalStatisticsTracker();
 
-        // Aggregate cur-slot client aggregated statistics into per-slot total aggregated statistics
+        // Aggregate cur-slot/stable client aggregated statistics into per-slot/stable total aggregated statistics
         void updatePerslotTotalAggregatedStatistics(const std::vector<ClientAggregatedStatistics>& curslot_perclient_aggregated_statistics);
+        void updateStableTotalAggregatedStatistics(const std::vector<ClientAggregatedStatistics>& stable_perclient_aggregated_statistics);
 
         // Cache is stable if cache is filled up and total hit ratio converges
         bool isPerSlotTotalAggregatedStatisticsStable(double& cache_hit_ratio);

@@ -10,6 +10,7 @@
 #include "edge/cache_server/cache_server.h"
 #include "edge/invalidation_server/invalidation_server_base.h"
 #include "event/event.h"
+#include "message/control_message.h"
 #include "network/propagation_simulator.h"
 
 namespace covered
@@ -153,7 +154,7 @@ namespace covered
             exit(1);
         }
 
-        // Launch invalidations server
+        // Launch invalidation server
         //pthread_returncode = pthread_create(&invalidation_server_thread_, NULL, launchInvalidationServer_, (void*)(this));
         pthread_returncode = Util::pthreadCreateHighPriority(&invalidation_server_thread_, launchInvalidationServer_, (void*)(this));
         if (pthread_returncode != 0)
@@ -167,7 +168,33 @@ namespace covered
         return;
     }
 
-    void EdgeWrapper::startInternal_()
+    void EdgeWrapper::processFinishrunRequest_()
+    {
+        checkPointers_();
+
+        // Mark the current node as NOT running to finish benchmark
+        resetNodeRunning_();
+
+        // Send back SimpleFinishrunResponse to evaluator
+        SimpleFinishrunResponse simple_finishrun_response(node_idx_, node_recvmsg_source_addr_, EventList());
+        node_sendmsg_socket_client_ptr_->send((MessageBase*)&simple_finishrun_response, evaluator_recvmsg_dst_addr_);
+
+        return;
+    }
+
+    void EdgeWrapper::processOtherBenchmarkControlRequest_(MessageBase* control_request_ptr)
+    {
+        checkPointers_();
+        assert(control_request_ptr != NULL);
+        
+        std::ostringstream oss;
+        oss << "invalid message type " << MessageBase::messageTypeToString(control_request_ptr->getMessageType()) << " for startInternal_()";
+        Util::dumpErrorMsg(instance_name_, oss.str());
+        exit(1);
+        return;
+    }
+
+    void EdgeWrapper::cleanup_()
     {
         checkPointers_();
 
@@ -232,6 +259,18 @@ namespace covered
             Util::dumpErrorMsg(instance_name_, oss.str());
             exit(1);
         }
+
+        return;
+    }
+
+    void EdgeWrapper::finishRun_()
+    {
+        // Mark the current node as NOT running to finish benchmark
+        resetNodeRunning_();
+
+        // Send back SimpleFinishrunResponse to evaluator
+        SimpleFinishrunResponse simple_finishrun_response(node_idx_, node_recvmsg_source_addr_, EventList());
+        node_sendmsg_socket_client_ptr_->send((MessageBase*)&simple_finishrun_response, evaluator_recvmsg_dst_addr_);
 
         return;
     }

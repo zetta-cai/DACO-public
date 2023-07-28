@@ -10,7 +10,6 @@
 #include <string>
 
 #include "benchmark/client_wrapper.h"
-#include "network/propagation_simulator_param.h"
 
 namespace covered
 {

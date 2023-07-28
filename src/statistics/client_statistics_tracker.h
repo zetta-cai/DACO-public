@@ -46,8 +46,8 @@ namespace covered
 
         // (3) Aggregate cur-slot/stable client raw statistics when benchmark is finished (invoked by main client thread ClientWrapper)
 
-        // TODO: Return two ClientAggregatedStatistics for last-slot and stable
-        void aggregateForFinishrun(const std::string& filepath);
+        // Return last slot idx with two ClientAggregatedStatistics for last-slot and stable
+        uint32_t aggregateForFinishrun(ClientAggregatedStatistics& lastslot_client_aggregated_statistics, ClientAggregatedStatistics& stable_client_aggregated_statistics);
     private:
         static const std::string kClassName;
 

@@ -31,10 +31,12 @@ namespace covered
         static const std::string kClassName;
 
         virtual void initialize_() = 0;
-        virtual void startInternal_() = 0;
-
         void finishInitialization_() const;
         void blockForStartrun_();
+        void blockForFinishrun_();
+        virtual void processFinishrunRequest_() = 0;
+        virtual void processOtherBenchmarkControlRequest_(MessageBase* control_request_ptr) = 0;
+        virtual void cleanup_() = 0;
 
         // Const individual variable
         std::string base_instance_name_;
