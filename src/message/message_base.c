@@ -58,6 +58,21 @@ namespace covered
                 message_type_str = "kRedirectedGetResponse";
                 break;
             }
+            case MessageType::kWarmupGetRequest:
+            {
+                message_type_str = "kWarmupGetRequest";
+                break;
+            }
+            case MessageType::kWarmupPutRequest:
+            {
+                message_type_str = "kWarmupPutRequest";
+                break;
+            }
+            case MessageType::kWarmupDelRequest:
+            {
+                message_type_str = "kWarmupDelRequest";
+                break;
+            }
             case MessageType::kInitializationRequest:
             {
                 message_type_str = "kInitializationRequest";
@@ -245,7 +260,7 @@ namespace covered
         return lockresult_str;
     }
 
-    MessageBase* MessageBase::getLocalRequestFromWorkloadItem(WorkloadItem workload_item, const uint32_t& source_index, const NetworkAddr& source_addr)
+    MessageBase* MessageBase::getRequestFromWorkloadItem(WorkloadItem workload_item, const uint32_t& source_index, const NetworkAddr& source_addr, const bool& is_warmup_phase, const bool& is_warmup_speedup)
     {
         assert(source_addr.isValidAddr());
         
@@ -257,23 +272,44 @@ namespace covered
         {
             case WorkloadItemType::kWorkloadItemGet:
             {
-                message_ptr = new LocalGetRequest(workload_item.getKey(), source_index, source_addr);
+                if (is_warmup_phase && is_warmup_speedup)
+                {
+                    message_ptr = new WarmupGetRequest(workload_item.getKey(), source_index, source_addr);
+                }
+                else
+                {
+                    message_ptr = new LocalGetRequest(workload_item.getKey(), source_index, source_addr);
+                }
                 break;
             }
             case WorkloadItemType::kWorkloadItemPut:
             {
-                message_ptr = new LocalPutRequest(workload_item.getKey(), workload_item.getValue(), source_index, source_addr);
+                if (is_warmup_phase && is_warmup_speedup)
+                {
+                    message_ptr = new WarmupPutRequest(workload_item.getKey(), workload_item.getValue(), source_index, source_addr);
+                }
+                else
+                {
+                    message_ptr = new LocalPutRequest(workload_item.getKey(), workload_item.getValue(), source_index, source_addr);
+                }
                 break;
             }
             case WorkloadItemType::kWorkloadItemDel:
             {
-                message_ptr = new LocalDelRequest(workload_item.getKey(), source_index, source_addr);
+                if (is_warmup_phase && is_warmup_speedup)
+                {
+                    message_ptr = new WarmupDelRequest(workload_item.getKey(), source_index, source_addr);
+                }
+                else
+                {
+                    message_ptr = new LocalDelRequest(workload_item.getKey(), source_index, source_addr);
+                }
                 break;
             }
             default:
             {
                 std::ostringstream oss;
-                oss << "invalid workload item type " << WorkloadItem::workloadItemTypeToString(item_type) << " for getLocalRequestFromWorkloadItem()!";
+                oss << "invalid workload item type " << WorkloadItem::workloadItemTypeToString(item_type) << " for getRequestFromWorkloadItem()!";
                 Util::dumpErrorMsg(kClassName, oss.str());
                 exit(1);
             }
@@ -328,6 +364,21 @@ namespace covered
             case MessageType::kRedirectedGetRequest:
             {
                 message_ptr = new RedirectedGetRequest(msg_payload);
+                break;
+            }
+            case MessageType::kWarmupGetRequest:
+            {
+                message_ptr = new WarmupGetRequest(msg_payload);
+                break;
+            }
+            case MessageType::kWarmupPutRequest:
+            {
+                message_ptr = new WarmupPutRequest(msg_payload);
+                break;
+            }
+            case MessageType::kWarmupDelRequest:
+            {
+                message_ptr = new WarmupDelRequest(msg_payload);
                 break;
             }
             case MessageType::kInitializationRequest:
@@ -594,6 +645,21 @@ namespace covered
             const RedirectedGetResponse* const redirected_get_response_ptr = static_cast<const RedirectedGetResponse*>(message_ptr);
             tmp_key = redirected_get_response_ptr->getKey();
         }
+        else if (message_ptr->message_type_ == MessageType::kWarmupGetRequest)
+        {
+            const WarmupGetRequest* const warmup_get_request_ptr = static_cast<const WarmupGetRequest*>(message_ptr);
+            tmp_key = warmup_get_request_ptr->getKey();
+        }
+        else if (message_ptr->message_type_ == MessageType::kWarmupPutRequest)
+        {
+            const WarmupPutRequest* const warmup_put_request_ptr = static_cast<const WarmupPutRequest*>(message_ptr);
+            tmp_key = warmup_put_request_ptr->getKey();
+        }
+        else if (message_ptr->message_type_ == MessageType::kWarmupDelRequest)
+        {
+            const WarmupDelRequest* const warmup_del_request_ptr = static_cast<const WarmupDelRequest*>(message_ptr);
+            tmp_key = warmup_del_request_ptr->getKey();
+        }
         else if (message_ptr->message_type_ == MessageType::kAcquireWritelockRequest)
         {
             const AcquireWritelockRequest* const acquire_writelock_request_ptr = static_cast<const AcquireWritelockRequest*>(message_ptr);
@@ -782,7 +848,7 @@ namespace covered
     bool MessageBase::isDataRequest() const
     {
         checkIsValid_();
-        return isLocalDataRequest() || isRedirectedDataRequest() || isGlobalDataRequest();
+        return isLocalDataRequest() || isRedirectedDataRequest() || isGlobalDataRequest() || isWarmupDataRequest();
     }
 
     bool MessageBase::isLocalDataRequest() const
@@ -815,6 +881,19 @@ namespace covered
     {
         checkIsValid_();
         if (message_type_ == MessageType::kGlobalGetRequest || message_type_ == MessageType::kGlobalPutRequest || message_type_ == MessageType::kGlobalDelRequest)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    bool MessageBase::isWarmupDataRequest() const
+    {
+        checkIsValid_();
+        if (message_type_ == MessageType::kWarmupGetRequest || message_type_ == MessageType::kWarmupPutRequest || message_type_ == MessageType::kWarmupDelRequest)
         {
             return true;
         }

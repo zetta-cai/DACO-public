@@ -22,14 +22,14 @@ namespace covered
         assert(client_idx_ptr != NULL);
         uint32_t client_idx = *((uint32_t*)client_idx_ptr);
         
-        ClientWrapper local_client(client_idx, Param::getClientcnt(), Param::getEdgecnt(), Param::getKeycnt(), Param::getOpcnt(), Param::getPerclientWorkercnt(), Param::getPropagationLatencyClientedgeUs(), Param::getWorkloadName());
+        ClientWrapper local_client(client_idx, Param::getClientcnt(), Param::isWarmupSpeedup(), Param::getEdgecnt(), Param::getKeycnt(), Param::getOpcnt(), Param::getPerclientWorkercnt(), Param::getPropagationLatencyClientedgeUs(), Param::getWorkloadName());
         local_client.start();
         
         pthread_exit(NULL);
         return NULL;
     }
 
-    ClientWrapper::ClientWrapper(const uint32_t& client_idx, const uint32_t& clientcnt, const uint32_t& edgecnt, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge_us, const std::string& workload_name) : NodeWrapperBase(NodeWrapperBase::CLIENT_NODE_ROLE, client_idx, clientcnt, false), edgecnt_(edgecnt), perclient_workercnt_(perclient_workercnt), is_warmup_phase_(true)
+    ClientWrapper::ClientWrapper(const uint32_t& client_idx, const uint32_t& clientcnt, const bool& is_warmup_speedup, const uint32_t& edgecnt, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge_us, const std::string& workload_name) : NodeWrapperBase(NodeWrapperBase::CLIENT_NODE_ROLE, client_idx, clientcnt, false), is_warmup_speedup_(is_warmup_speedup), edgecnt_(edgecnt), perclient_workercnt_(perclient_workercnt), is_warmup_phase_(true)
     {
         // Differentiate different clients
         std::ostringstream oss;

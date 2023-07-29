@@ -33,7 +33,7 @@ namespace covered
         // For workload name
         static const std::string FACEBOOK_WORKLOAD_NAME; // Workload generator type
 
-        static void setParameters(const std::string& main_class_name, const bool& is_single_node, const std::string& cache_name, const uint64_t& capacity_bytes, const uint32_t& clientcnt, const std::string& cloud_storage, const std::string& config_filepath, const bool& is_debug, const uint32_t& duration_sec, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& percacheserver_workercnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge_us, const uint32_t& propagation_latency_crossedge_us, const uint32_t& propagation_latency_edgecloud_us, const bool& track_event, const std::string& workload_name);
+        static void setParameters(const std::string& main_class_name, const bool& is_single_node, const std::string& cache_name, const uint64_t& capacity_bytes, const uint32_t& clientcnt, const std::string& cloud_storage, const std::string& config_filepath, const bool& is_debug, const bool& is_warmup_speedup, const uint32_t& duration_sec, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& percacheserver_workercnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge_us, const uint32_t& propagation_latency_crossedge_us, const uint32_t& propagation_latency_edgecloud_us, const bool& track_event, const std::string& workload_name);
 
         static std::string getMainClassName();
         static bool isSingleNode();
@@ -43,6 +43,7 @@ namespace covered
         static std::string getCloudStorage();
         static std::string getConfigFilepath();
         static bool isDebug();
+        static bool isWarmupSpeedup();
         static uint32_t getDurationSec();
         static uint32_t getEdgecnt();
         static std::string getHashName();
@@ -79,6 +80,7 @@ namespace covered
         static std::string cloud_storage_;
         static std::string config_filepath_;
         static bool is_debug_;
+        static bool is_warmup_speedup_;
         static uint32_t duration_sec_;
         static uint32_t edgecnt_;
         static std::string hash_name_;

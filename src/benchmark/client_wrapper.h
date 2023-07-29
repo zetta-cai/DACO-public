@@ -25,7 +25,7 @@ namespace covered
     public:
         static void* launchClient(void* client_idx_ptr);
 
-        ClientWrapper(const uint32_t& client_idx, const uint32_t& clientcnt, const uint32_t& edgecnt, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge_us, const std::string& workload_name);
+        ClientWrapper(const uint32_t& client_idx, const uint32_t& clientcnt, const bool& is_warmup_speedup, const uint32_t& edgecnt, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge_us, const std::string& workload_name);
         virtual ~ClientWrapper();
 
         friend class ClientWorkerWrapper;
@@ -47,6 +47,7 @@ namespace covered
 
         // Const shared variable
         const uint32_t edgecnt_;
+        const bool is_warmup_speedup_; // Come from Param
         const uint32_t perclient_workercnt_;
 
         // Const individual variable

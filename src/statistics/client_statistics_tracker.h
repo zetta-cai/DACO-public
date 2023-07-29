@@ -28,16 +28,16 @@ namespace covered
         // (1) Update cur-slot/stable client raw statistics (invoked by client workers)
 
         // Update cur-slot/stable client raw statistics for cache hit ratio
-        void updateLocalHitcnt(const uint32_t& local_client_worker_idx, const bool& is_stresstest);
-        void updateCooperativeHitcnt(const uint32_t& local_client_worker_idx, const bool& is_stresstest);
-        void updateReqcnt(const uint32_t& local_client_worker_idx, const bool& is_stresstest);
+        void updateLocalHitcnt(const uint32_t& local_client_worker_idx, const bool& is_stresstest_phase);
+        void updateCooperativeHitcnt(const uint32_t& local_client_worker_idx, const bool& is_stresstest_phase);
+        void updateReqcnt(const uint32_t& local_client_worker_idx, const bool& is_stresstest_phase);
 
         // Update cur-slot/stable client raw statistics for latency
-        void updateLatency(const uint32_t& local_client_worker_idx, const uint32_t& latency_us, const bool& is_stresstest);
+        void updateLatency(const uint32_t& local_client_worker_idx, const uint32_t& latency_us, const bool& is_stresstest_phase);
 
         // Update cur-slot/stable client raw statistics for read-write ratio
-        void updateReadcnt(const uint32_t& local_client_worker_idx, const bool& is_stresstest);
-        void updateWritecnt(const uint32_t& local_client_worker_idx, const bool& is_stresstest);
+        void updateReadcnt(const uint32_t& local_client_worker_idx, const bool& is_stresstest_phase);
+        void updateWritecnt(const uint32_t& local_client_worker_idx, const bool& is_stresstest_phase);
 
         // (2) Switch cur-slot client raw statistics (invoked by client thread ClientWrapper)
 

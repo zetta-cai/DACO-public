@@ -38,6 +38,7 @@ namespace covered
             ("cloud_storage", boost::program_options::value<std::string>()->default_value(Param::HDD_NAME), "type of cloud storage")
             ("config_file", boost::program_options::value<std::string>()->default_value("config.json"), "config file path of COVERED")
             ("debug", "enable debug information")
+            ("disable_warmup_speedup", "disable speedup mode for warmup phase")
             ("duration_sec", boost::program_options::value<uint32_t>()->default_value(1), "benchmark duration (seconds)")
             ("edgecnt", boost::program_options::value<uint32_t>()->default_value(1), "the number of edge nodes")
             ("hash_name", boost::program_options::value<std::string>()->default_value(Param::MMH3_HASH_NAME, "the type of consistent hashing for DHT"))
@@ -93,6 +94,11 @@ namespace covered
         {
             is_debug = true;
         }
+        bool is_warmup_speedup = true;
+        if (argument_info_.count("disable_warmup_speedup"))
+        {
+            is_warmup_speedup = false;
+        }
         uint32_t duration_sec = argument_info_["duration_sec"].as<uint32_t>();
         uint32_t edgecnt = argument_info_["edgecnt"].as<uint32_t>();
         std::string hash_name = argument_info_["hash_name"].as<std::string>();
@@ -111,7 +117,7 @@ namespace covered
         std::string workload_name = argument_info_["workload_name"].as<std::string>();
 
         // Store CLI parameters for dynamic configurations and mark Param as valid
-        Param::setParameters(main_class_name, is_single_node, cache_name, capacity_bytes, clientcnt, cloud_storage, config_filepath, is_debug, duration_sec, edgecnt, hash_name, keycnt, opcnt, percacheserver_workercnt, perclient_workercnt, propagation_latency_clientedge_us, propagation_latency_crossedge_us, propagation_latency_edgecloud_us, track_event, workload_name);
+        Param::setParameters(main_class_name, is_single_node, cache_name, capacity_bytes, clientcnt, cloud_storage, config_filepath, is_debug, is_warmup_speedup, duration_sec, edgecnt, hash_name, keycnt, opcnt, percacheserver_workercnt, perclient_workercnt, propagation_latency_clientedge_us, propagation_latency_crossedge_us, propagation_latency_edgecloud_us, track_event, workload_name);
 
         // (4) Load config file for static configurations
 

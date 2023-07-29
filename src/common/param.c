@@ -31,6 +31,7 @@ namespace covered
     std::string Param::cloud_storage_ = "";
     std::string Param::config_filepath_ = "";
     bool Param::is_debug_ = false;
+    bool Param::is_warmup_speedup_ = true;
     uint32_t Param::duration_sec_ = 0;
     uint32_t Param::edgecnt_ = 0;
     std::string Param::hash_name_ = "";
@@ -44,7 +45,7 @@ namespace covered
     bool Param::track_event_ = false;
     std::string Param::workload_name_ = "";
 
-    void Param::setParameters(const std::string& main_class_name, const bool& is_single_node, const std::string& cache_name, const uint64_t& capacity_bytes, const uint32_t& clientcnt, const std::string& cloud_storage, const std::string& config_filepath, const bool& is_debug, const uint32_t& duration_sec, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& percacheserver_workercnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge_us, const uint32_t& propagation_latency_crossedge_us, const uint32_t& propagation_latency_edgecloud_us, const bool& track_event, const std::string& workload_name)
+    void Param::setParameters(const std::string& main_class_name, const bool& is_single_node, const std::string& cache_name, const uint64_t& capacity_bytes, const uint32_t& clientcnt, const std::string& cloud_storage, const std::string& config_filepath, const bool& is_debug, const bool& is_warmup_speedup, const uint32_t& duration_sec, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& percacheserver_workercnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge_us, const uint32_t& propagation_latency_crossedge_us, const uint32_t& propagation_latency_edgecloud_us, const bool& track_event, const std::string& workload_name)
     {
         // NOTE: Param::setParameters() does NOT rely on any other module
         if (is_valid_)
@@ -64,6 +65,7 @@ namespace covered
         checkCloudStorage_();
         config_filepath_ = config_filepath;
         is_debug_ = is_debug;
+        is_warmup_speedup_ = is_warmup_speedup;
         duration_sec_ = duration_sec;
         edgecnt_ = edgecnt;
         hash_name_ = hash_name;
@@ -131,6 +133,12 @@ namespace covered
     {
         checkIsValid_();
         return is_debug_;
+    }
+
+    bool Param::isWarmupSpeedup()
+    {
+        checkIsValid_();
+        return is_warmup_speedup_;
     }
 
     uint32_t Param::getDurationSec()
@@ -217,6 +225,7 @@ namespace covered
         oss << "Cloud storage: " << cloud_storage_ << std::endl;
         oss << "Config filepath: " << config_filepath_ << std::endl;
         oss << "Debug flag: " << (is_debug_?"true":"false") << std::endl;
+        oss << "Warmup speedup flag: " << (is_warmup_speedup_?"true":"false") << std::endl;
         oss << "Duration seconds: " << duration_sec_ << std::endl;
         oss << "Edge count: " << edgecnt_ << std::endl;
         oss << "Hash name: " << hash_name_ << std::endl;

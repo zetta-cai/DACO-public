@@ -4,7 +4,6 @@
 #include <sstream>
 #include <time.h> // struct timespec
 
-#include "benchmark/client_param.h"
 #include "common/config.h"
 #include "common/dynamic_array.h"
 #include "common/util.h"
@@ -40,7 +39,7 @@ namespace covered
         ClientWrapper* client_wrapper_ptr = client_worker_param_ptr->getClientWrapperPtr();
         assert(client_wrapper_ptr != NULL);
         const uint32_t client_idx = client_wrapper_ptr->node_idx_;
-        const uint32_t clientcnt = client_wrapper_ptr->clientcnt_;
+        const uint32_t clientcnt = client_wrapper_ptr->node_cnt_;
         const uint32_t edgecnt = client_wrapper_ptr->edgecnt_;
         const uint32_t local_client_worker_idx = client_worker_param_ptr->getLocalClientWorkerIdx();
         uint32_t global_client_worker_idx = Util::getGlobalClientWorkerIdx(client_idx, local_client_worker_idx, client_wrapper_ptr->perclient_workercnt_);
@@ -68,7 +67,7 @@ namespace covered
         // For receiving local responses
 
         // Get source address of client worker to receive local responses
-        std::string client_ipstr = Config::getClientIpstr(client_idx, client_wrapper_ptr->clientcnt_);
+        std::string client_ipstr = Config::getClientIpstr(client_idx, clientcnt);
         uint16_t client_worker_recvrsp_port = Util::getClientWorkerRecvrspPort(client_idx, clientcnt, local_client_worker_idx, client_wrapper_ptr->perclient_workercnt_);
         client_worker_recvrsp_source_addr_ = NetworkAddr(client_ipstr, client_worker_recvrsp_port);
 
@@ -104,10 +103,12 @@ namespace covered
         while (!tmp_client_wrapper_ptr->isNodeRunning_()) {}
 
         // Current worker thread start to issue requests and receive responses
+        const bool is_warmup_speedup = tmp_client_wrapper_ptr->is_warmup_speedup_;
         while (tmp_client_wrapper_ptr->isNodeRunning_())
         {
             // Get current phase (warmup or stresstest)
-            bool is_stresstest_phase = !tmp_client_wrapper_ptr->isWarmupPhase_();
+            bool is_warmup_phase = tmp_client_wrapper_ptr->isWarmupPhase_();
+            bool is_stresstest_phase = !is_warmup_phase;
 
             // Generate key-value request based on a specific workload
             WorkloadItem workload_item = workload_generator_ptr->generateItem(*client_worker_item_randgen_ptr_);
@@ -124,7 +125,7 @@ namespace covered
             bool is_finish = false;
 
             // Issue the workload item to the closest edge node
-            is_finish = issueItemToEdge_(workload_item, local_response_msg_payload, rtt_us);
+            is_finish = issueItemToEdge_(workload_item, local_response_msg_payload, rtt_us, is_warmup_phase, is_warmup_speedup);
             if (is_finish) // Check is_finish
             {
                 continue; // Go to check if client is still running
@@ -152,7 +153,7 @@ namespace covered
         return;
     }
 
-    bool ClientWorkerWrapper::issueItemToEdge_(const WorkloadItem& workload_item, DynamicArray& local_response_msg_payload, uint32_t& rtt_us)
+    bool ClientWorkerWrapper::issueItemToEdge_(const WorkloadItem& workload_item, DynamicArray& local_response_msg_payload, uint32_t& rtt_us, const bool& is_warmup_phase, const bool& is_warmup_speedup)
     {
         checkPointers_();
         ClientWrapper* tmp_client_wrapper_ptr = client_worker_param_ptr_->getClientWrapperPtr();
@@ -166,7 +167,7 @@ namespace covered
         while (true) // Timeout-and-retry mechanism
         {
             // Convert workload item into local request message
-            MessageBase* local_request_ptr = MessageBase::getLocalRequestFromWorkloadItem(workload_item, tmp_client_wrapper_ptr->node_idx_, client_worker_recvrsp_source_addr_);
+            MessageBase* local_request_ptr = MessageBase::getRequestFromWorkloadItem(workload_item, tmp_client_wrapper_ptr->node_idx_, client_worker_recvrsp_source_addr_, is_warmup_phase, is_warmup_speedup);
             assert(local_request_ptr != NULL);
 
             #ifdef DEBUG_CLIENT_WORKER_WRAPPER
@@ -208,7 +209,7 @@ namespace covered
         return is_finish;
     }
 
-    void ClientWorkerWrapper::processLocalResponse_(const DynamicArray& local_response_msg_payload, const uint32_t& rtt_us, const bool& is_stresstest)
+    void ClientWorkerWrapper::processLocalResponse_(const DynamicArray& local_response_msg_payload, const uint32_t& rtt_us, const bool& is_stresstest_phase)
     {
         checkPointers_();
         ClientWrapper* tmp_client_wrapper_ptr = client_worker_param_ptr_->getClientWrapperPtr();
@@ -275,17 +276,17 @@ namespace covered
         {
             case Hitflag::kLocalHit:
             {
-                client_statistics_tracker_ptr_->updateLocalHitcnt(local_client_worker_idx, is_stresstest);
+                client_statistics_tracker_ptr_->updateLocalHitcnt(local_client_worker_idx, is_stresstest_phase);
                 break;
             }
             case Hitflag::kCooperativeHit:
             {
-                client_statistics_tracker_ptr_->updateCooperativeHitcnt(local_client_worker_idx, is_stresstest);
+                client_statistics_tracker_ptr_->updateCooperativeHitcnt(local_client_worker_idx, is_stresstest_phase);
                 break;
             }
             case Hitflag::kGlobalMiss:
             {
-                client_statistics_tracker_ptr_->updateReqcnt(local_client_worker_idx, is_stresstest);
+                client_statistics_tracker_ptr_->updateReqcnt(local_client_worker_idx, is_stresstest_phase);
                 break;
             }
             default:
@@ -298,16 +299,16 @@ namespace covered
         }
 
         // Update latency statistics for the local client
-        client_statistics_tracker_ptr_->updateLatency(local_client_worker_idx, rtt_us, is_stresstest);
+        client_statistics_tracker_ptr_->updateLatency(local_client_worker_idx, rtt_us, is_stresstest_phase);
 
         // Update read-write ratio statistics for the local client
         if (!is_write)
         {
-            client_statistics_tracker_ptr_->updateReadcnt(local_client_worker_idx, is_stresstest);
+            client_statistics_tracker_ptr_->updateReadcnt(local_client_worker_idx, is_stresstest_phase);
         }
         else
         {
-            client_statistics_tracker_ptr_->updateWritecnt(local_client_worker_idx, is_stresstest);
+            client_statistics_tracker_ptr_->updateWritecnt(local_client_worker_idx, is_stresstest_phase);
         }
 
         // Update cache utilization statistics for the local client

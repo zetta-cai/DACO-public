@@ -35,6 +35,10 @@ namespace covered
         // Redirected data messages
         kRedirectedGetRequest,
         kRedirectedGetResponse,
+        // Warmup data messages
+        kWarmupGetRequest,
+        kWarmupPutRequest,
+        kWarmupDelRequest,
         // Benchmark control message
         kInitializationRequest,
         kInitializationResponse,
@@ -84,7 +88,7 @@ namespace covered
         static std::string hitflagToString(const Hitflag& hitflag);
         static std::string lockResultToString(const LockResult& lock_result);
 
-        static MessageBase* getLocalRequestFromWorkloadItem(WorkloadItem workload_item, const uint32_t& source_index, const NetworkAddr& source_addr); // By workers in clients
+        static MessageBase* getRequestFromWorkloadItem(WorkloadItem workload_item, const uint32_t& source_index, const NetworkAddr& source_addr, const bool& is_warmup_phase, const bool& is_warmup_speedup); // By workers in clients
         static MessageBase* getRequestFromMsgPayload(const DynamicArray& msg_payload); // Data/control requests
         static MessageBase* getResponseFromMsgPayload(const DynamicArray& msg_payload); // Data/control responses
         static Key getKeyFromMessage(MessageBase* message_ptr); // Get key from message (e.g., local requests)
@@ -110,6 +114,7 @@ namespace covered
         bool isLocalDataRequest() const;
         bool isRedirectedDataRequest() const;
         bool isGlobalDataRequest() const;
+        bool isWarmupDataRequest() const;
 
         bool isDataResponse() const;
         bool isLocalDataResponse() const;

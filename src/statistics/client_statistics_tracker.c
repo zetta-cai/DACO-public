@@ -74,7 +74,7 @@ namespace covered
 
     // (1) Update cur-slot/stable client raw statistics (invoked by client workers)
 
-    void ClientStatisticsTracker::updateLocalHitcnt(const uint32_t& local_client_worker_idx, const bool& is_stresstest)
+    void ClientStatisticsTracker::updateLocalHitcnt(const uint32_t& local_client_worker_idx, const bool& is_stresstest_phase)
     {
         checkPointers_();
 
@@ -89,7 +89,7 @@ namespace covered
         perclientworker_curslot_update_statuses_[local_client_worker_idx]++;
 
         // Update stable client raw statistics for stresstest phase
-        if (is_stresstest)
+        if (is_stresstest_phase)
         {
             stable_client_raw_statistics_ptr_->updateLocalHitcnt_(local_client_worker_idx);
         }
@@ -97,7 +97,7 @@ namespace covered
         return;
     }
 
-    void ClientStatisticsTracker::updateCooperativeHitcnt(const uint32_t& local_client_worker_idx, const bool& is_stresstest)
+    void ClientStatisticsTracker::updateCooperativeHitcnt(const uint32_t& local_client_worker_idx, const bool& is_stresstest_phase)
     {
         checkPointers_();
 
@@ -112,7 +112,7 @@ namespace covered
         perclientworker_curslot_update_statuses_[local_client_worker_idx]++;
 
         // Update stable client raw statistics for stresstest phase
-        if (is_stresstest)
+        if (is_stresstest_phase)
         {
             stable_client_raw_statistics_ptr_->updateCooperativeHitcnt_(local_client_worker_idx);
         }
@@ -120,7 +120,7 @@ namespace covered
         return;
     }
 
-    void ClientStatisticsTracker::updateReqcnt(const uint32_t& local_client_worker_idx, const bool& is_stresstest)
+    void ClientStatisticsTracker::updateReqcnt(const uint32_t& local_client_worker_idx, const bool& is_stresstest_phase)
     {
         checkPointers_();
 
@@ -135,7 +135,7 @@ namespace covered
         perclientworker_curslot_update_statuses_[local_client_worker_idx]++;
 
         // Update stable client raw statistics for stresstest phase
-        if (is_stresstest)
+        if (is_stresstest_phase)
         {
             stable_client_raw_statistics_ptr_->updateReqcnt_(local_client_worker_idx);
         }
@@ -143,7 +143,7 @@ namespace covered
         return;
     }
 
-    void ClientStatisticsTracker::updateLatency(const uint32_t& local_client_worker_idx, const uint32_t& latency_us, const bool& is_stresstest)
+    void ClientStatisticsTracker::updateLatency(const uint32_t& local_client_worker_idx, const uint32_t& latency_us, const bool& is_stresstest_phase)
     {
         checkPointers_();
 
@@ -159,7 +159,7 @@ namespace covered
         perclientworker_curslot_update_statuses_[local_client_worker_idx]++;
 
         // Update stable client raw statistics for stresstest phase
-        if (is_stresstest)
+        if (is_stresstest_phase)
         {
             stable_client_raw_statistics_ptr_->updateLatency_(latency_us);
         }
@@ -167,7 +167,7 @@ namespace covered
         return;
     }
 
-    void ClientStatisticsTracker::updateReadcnt(const uint32_t& local_client_worker_idx, const bool& is_stresstest)
+    void ClientStatisticsTracker::updateReadcnt(const uint32_t& local_client_worker_idx, const bool& is_stresstest_phase)
     {
         checkPointers_();
 
@@ -182,7 +182,7 @@ namespace covered
         perclientworker_curslot_update_statuses_[local_client_worker_idx]++;
 
         // Update stable client raw statistics for stresstest phase
-        if (is_stresstest)
+        if (is_stresstest_phase)
         {
             stable_client_raw_statistics_ptr_->updateReadcnt_(local_client_worker_idx);
         }
@@ -190,7 +190,7 @@ namespace covered
         return;
     }
 
-    void ClientStatisticsTracker::updateWritecnt(const uint32_t& local_client_worker_idx, const bool& is_stresstest)
+    void ClientStatisticsTracker::updateWritecnt(const uint32_t& local_client_worker_idx, const bool& is_stresstest_phase)
     {
         checkPointers_();
 
@@ -205,7 +205,7 @@ namespace covered
         perclientworker_curslot_update_statuses_[local_client_worker_idx]++;
 
         // Update stable client raw statistics for stresstest phase
-        if (is_stresstest)
+        if (is_stresstest_phase)
         {
             stable_client_raw_statistics_ptr_->updateWritecnt_(local_client_worker_idx);
         }
