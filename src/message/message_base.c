@@ -58,21 +58,6 @@ namespace covered
                 message_type_str = "kRedirectedGetResponse";
                 break;
             }
-            case MessageType::kWarmupGetRequest:
-            {
-                message_type_str = "kWarmupGetRequest";
-                break;
-            }
-            case MessageType::kWarmupPutRequest:
-            {
-                message_type_str = "kWarmupPutRequest";
-                break;
-            }
-            case MessageType::kWarmupDelRequest:
-            {
-                message_type_str = "kWarmupDelRequest";
-                break;
-            }
             case MessageType::kInitializationRequest:
             {
                 message_type_str = "kInitializationRequest";
@@ -101,16 +86,6 @@ namespace covered
             case MessageType::kSwitchSlotResponse:
             {
                 message_type_str = "kSwitchSlotResponse";
-                break;
-            }
-            case MessageType::kFinishWarmupRequest:
-            {
-                message_type_str = "kFinishWarmupRequest";
-                break;
-            }
-            case MessageType::kFinishWarmupResponse:
-            {
-                message_type_str = "kFinishWarmupResponse";
                 break;
             }
             case MessageType::kFinishrunRequest:
@@ -266,44 +241,29 @@ namespace covered
         
         WorkloadItemType item_type = workload_item.getItemType();
 
+        bool skip_propagation_latency = false;
+        if (is_warmup_phase && is_warmup_speedup)
+        {
+            skip_propagation_latency = true;
+        }
+
         // NOTE: message_ptr is freed outside MessageBase
         MessageBase* message_ptr = NULL;
         switch (item_type)
         {
             case WorkloadItemType::kWorkloadItemGet:
             {
-                if (is_warmup_phase && is_warmup_speedup)
-                {
-                    message_ptr = new WarmupGetRequest(workload_item.getKey(), source_index, source_addr);
-                }
-                else
-                {
-                    message_ptr = new LocalGetRequest(workload_item.getKey(), source_index, source_addr);
-                }
+                message_ptr = new LocalGetRequest(workload_item.getKey(), source_index, source_addr, skip_propagation_latency);
                 break;
             }
             case WorkloadItemType::kWorkloadItemPut:
             {
-                if (is_warmup_phase && is_warmup_speedup)
-                {
-                    message_ptr = new WarmupPutRequest(workload_item.getKey(), workload_item.getValue(), source_index, source_addr);
-                }
-                else
-                {
-                    message_ptr = new LocalPutRequest(workload_item.getKey(), workload_item.getValue(), source_index, source_addr);
-                }
+                message_ptr = new LocalPutRequest(workload_item.getKey(), workload_item.getValue(), source_index, source_addr, skip_propagation_latency);
                 break;
             }
             case WorkloadItemType::kWorkloadItemDel:
             {
-                if (is_warmup_phase && is_warmup_speedup)
-                {
-                    message_ptr = new WarmupDelRequest(workload_item.getKey(), source_index, source_addr);
-                }
-                else
-                {
-                    message_ptr = new LocalDelRequest(workload_item.getKey(), source_index, source_addr);
-                }
+                message_ptr = new LocalDelRequest(workload_item.getKey(), source_index, source_addr, skip_propagation_latency);
                 break;
             }
             default:
@@ -364,21 +324,6 @@ namespace covered
             case MessageType::kRedirectedGetRequest:
             {
                 message_ptr = new RedirectedGetRequest(msg_payload);
-                break;
-            }
-            case MessageType::kWarmupGetRequest:
-            {
-                message_ptr = new WarmupGetRequest(msg_payload);
-                break;
-            }
-            case MessageType::kWarmupPutRequest:
-            {
-                message_ptr = new WarmupPutRequest(msg_payload);
-                break;
-            }
-            case MessageType::kWarmupDelRequest:
-            {
-                message_ptr = new WarmupDelRequest(msg_payload);
                 break;
             }
             case MessageType::kInitializationRequest:
@@ -645,21 +590,6 @@ namespace covered
             const RedirectedGetResponse* const redirected_get_response_ptr = static_cast<const RedirectedGetResponse*>(message_ptr);
             tmp_key = redirected_get_response_ptr->getKey();
         }
-        else if (message_ptr->message_type_ == MessageType::kWarmupGetRequest)
-        {
-            const WarmupGetRequest* const warmup_get_request_ptr = static_cast<const WarmupGetRequest*>(message_ptr);
-            tmp_key = warmup_get_request_ptr->getKey();
-        }
-        else if (message_ptr->message_type_ == MessageType::kWarmupPutRequest)
-        {
-            const WarmupPutRequest* const warmup_put_request_ptr = static_cast<const WarmupPutRequest*>(message_ptr);
-            tmp_key = warmup_put_request_ptr->getKey();
-        }
-        else if (message_ptr->message_type_ == MessageType::kWarmupDelRequest)
-        {
-            const WarmupDelRequest* const warmup_del_request_ptr = static_cast<const WarmupDelRequest*>(message_ptr);
-            tmp_key = warmup_del_request_ptr->getKey();
-        }
         else if (message_ptr->message_type_ == MessageType::kAcquireWritelockRequest)
         {
             const AcquireWritelockRequest* const acquire_writelock_request_ptr = static_cast<const AcquireWritelockRequest*>(message_ptr);
@@ -741,12 +671,13 @@ namespace covered
         return sizeof(uint32_t);
     }
 
-    MessageBase::MessageBase(const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr, const EventList& event_list)
+    MessageBase::MessageBase(const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr, const EventList& event_list, const bool& skip_propagation_latency)
     {
         message_type_ = message_type;
         source_index_ = source_index;
         source_addr_ = source_addr;
         event_list_ = event_list;
+        skip_propagation_latency_ = skip_propagation_latency;
 
         is_valid_ = true;
     }
@@ -796,12 +727,18 @@ namespace covered
         return event_list_;
     }
 
+    bool MessageBase::isSkipPropagationLatency() const
+    {
+        checkIsValid_();
+        return skip_propagation_latency_;
+    }
+
     uint32_t MessageBase::getMsgPayloadSize() const
     {
         checkIsValid_();
 
-        // Message type size + source index + source addr + event list (0 if without event tracking) + internal payload size
-        return sizeof(uint32_t) + sizeof(uint32_t) + source_addr_.getAddrPayloadSize() + event_list_.getEventListPayloadSize() + getMsgPayloadSizeInternal_();
+        // Message type size + source index + source addr + event list (0 if without event tracking) + skip_propagation_latency flag + internal payload size
+        return sizeof(uint32_t) + sizeof(uint32_t) + source_addr_.getAddrPayloadSize() + event_list_.getEventListPayloadSize() + sizeof(bool) + getMsgPayloadSizeInternal_();
     }
 
     uint32_t MessageBase::serialize(DynamicArray& msg_payload) const
@@ -819,6 +756,8 @@ namespace covered
         size += addr_payload_size;
         uint32_t eventlist_payload_size = event_list_.serialize(msg_payload, size);
         size += eventlist_payload_size;
+        msg_payload.deserialize(size, (const char *)&skip_propagation_latency_, sizeof(bool));
+        size += sizeof(bool);
         uint32_t internal_size = serializeInternal_(msg_payload, size);
         size += internal_size;
         return size - 0;
@@ -840,6 +779,8 @@ namespace covered
         size += addr_payload_size;
         uint32_t eventlist_payload_size = event_list_.deserialize(msg_payload, size);
         size += eventlist_payload_size;
+        msg_payload.serialize(size, (char *)&skip_propagation_latency_, sizeof(bool));
+        size += sizeof(bool);
         uint32_t internal_size = this->deserializeInternal_(msg_payload, size);
         size += internal_size;
         return size - 0;
@@ -848,7 +789,7 @@ namespace covered
     bool MessageBase::isDataRequest() const
     {
         checkIsValid_();
-        return isLocalDataRequest() || isRedirectedDataRequest() || isGlobalDataRequest() || isWarmupDataRequest();
+        return isLocalDataRequest() || isRedirectedDataRequest() || isGlobalDataRequest();
     }
 
     bool MessageBase::isLocalDataRequest() const
@@ -881,19 +822,6 @@ namespace covered
     {
         checkIsValid_();
         if (message_type_ == MessageType::kGlobalGetRequest || message_type_ == MessageType::kGlobalPutRequest || message_type_ == MessageType::kGlobalDelRequest)
-        {
-            return true;
-        }
-        else
-        {
-            return false;
-        }
-    }
-
-    bool MessageBase::isWarmupDataRequest() const
-    {
-        checkIsValid_();
-        if (message_type_ == MessageType::kWarmupGetRequest || message_type_ == MessageType::kWarmupPutRequest || message_type_ == MessageType::kWarmupDelRequest)
         {
             return true;
         }

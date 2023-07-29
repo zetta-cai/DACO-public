@@ -38,6 +38,7 @@ namespace covered
         assert(control_request_ptr->getMessageType() == MessageType::kDirectoryLookupRequest);
         const DirectoryLookupRequest* const directory_lookup_request_ptr = static_cast<const DirectoryLookupRequest*>(control_request_ptr);
         Key tmp_key = directory_lookup_request_ptr->getKey();
+        const bool skip_propagation_latency = directory_lookup_request_ptr->isSkipPropagationLatency();
 
         assert(edge_cache_server_worker_recvrsp_dst_addr.isValidAddr());
 
@@ -64,7 +65,7 @@ namespace covered
 
         // Prepare a directory lookup response
         uint32_t edge_idx = edge_wrapper_ptr_->node_idx_;
-        MessageBase* directory_lookup_response_ptr = new DirectoryLookupResponse(tmp_key, is_being_written, is_valid_directory_exist, directory_info, edge_idx, edge_beacon_server_recvreq_source_addr_, event_list);
+        MessageBase* directory_lookup_response_ptr = new DirectoryLookupResponse(tmp_key, is_being_written, is_valid_directory_exist, directory_info, edge_idx, edge_beacon_server_recvreq_source_addr_, event_list, skip_propagation_latency);
         assert(directory_lookup_response_ptr != NULL);
         
         // Push the directory lookup response into edge-to-edge propagation simulator to cache server worker
@@ -84,6 +85,7 @@ namespace covered
         assert(control_request_ptr->getMessageType() == MessageType::kDirectoryUpdateRequest);
         const DirectoryUpdateRequest* const directory_update_request_ptr = static_cast<const DirectoryUpdateRequest*>(control_request_ptr);
         Key tmp_key = directory_update_request_ptr->getKey();
+        const bool skip_propagation_latency = directory_update_request_ptr->isSkipPropagationLatency();
         bool is_admit = directory_update_request_ptr->isValidDirectoryExist();
         DirectoryInfo directory_info = directory_update_request_ptr->getDirectoryInfo();
 
@@ -105,7 +107,7 @@ namespace covered
 
         // Prepare a directory update response
         uint32_t edge_idx = edge_wrapper_ptr_->node_idx_;
-        MessageBase* directory_update_response_ptr = new DirectoryUpdateResponse(tmp_key, is_being_written, edge_idx, edge_beacon_server_recvreq_source_addr_, event_list);
+        MessageBase* directory_update_response_ptr = new DirectoryUpdateResponse(tmp_key, is_being_written, edge_idx, edge_beacon_server_recvreq_source_addr_, event_list, skip_propagation_latency);
         assert(directory_update_response_ptr != NULL);
 
         // Push the directory update response into edge-to-edge propagation simulator to cache server worker
@@ -127,6 +129,7 @@ namespace covered
         assert(control_request_ptr->getMessageType() == MessageType::kAcquireWritelockRequest);
         const AcquireWritelockRequest* const acquire_writelock_request_ptr = static_cast<const AcquireWritelockRequest*>(control_request_ptr);
         Key tmp_key = acquire_writelock_request_ptr->getKey();
+        const bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();
 
         checkPointers_();
 
@@ -152,12 +155,12 @@ namespace covered
         if (lock_result == LockResult::kSuccess) // If acquiring write permission successfully
         {
             // Invalidate all cache copies
-            edge_wrapper_ptr_->invalidateCacheCopies_(edge_beacon_server_recvrsp_socket_server_ptr_, edge_beacon_server_recvrsp_source_addr_, tmp_key, all_dirinfo, event_list); // Add events of intermedate responses if with event tracking
+            edge_wrapper_ptr_->invalidateCacheCopies_(edge_beacon_server_recvrsp_socket_server_ptr_, edge_beacon_server_recvrsp_source_addr_, tmp_key, all_dirinfo, event_list, skip_propagation_latency); // Add events of intermedate responses if with event tracking
         }
 
         // Prepare a acquire writelock response
         uint32_t edge_idx = edge_wrapper_ptr_->node_idx_;
-        MessageBase* acquire_writelock_response_ptr = new AcquireWritelockResponse(tmp_key, lock_result, edge_idx, edge_beacon_server_recvreq_source_addr_, event_list);
+        MessageBase* acquire_writelock_response_ptr = new AcquireWritelockResponse(tmp_key, lock_result, edge_idx, edge_beacon_server_recvreq_source_addr_, event_list, skip_propagation_latency);
         assert(acquire_writelock_response_ptr != NULL);
 
         // Push acquire writelock response into edge-to-edge propagation simulator to cache server worker
@@ -177,6 +180,7 @@ namespace covered
         assert(control_request_ptr->getMessageType() == MessageType::kReleaseWritelockRequest);
         const ReleaseWritelockRequest* const release_writelock_request_ptr = static_cast<const ReleaseWritelockRequest*>(control_request_ptr);
         Key tmp_key = release_writelock_request_ptr->getKey();
+        const skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();
 
         checkPointers_();
 
@@ -196,11 +200,11 @@ namespace covered
         event_list.addEvent(Event::EDGE_BEACON_SERVER_RELEASE_LOCAL_WRITELOCK_EVENT_NAME, release_local_writelock_latency_us);
 
         // NOTE: notify blocked edge nodes if any after finishing writes, to avoid transmitting blocked_edges to cache server of the closest edge node
-        is_finish = edge_wrapper_ptr_->notifyEdgesToFinishBlock_(edge_beacon_server_recvrsp_socket_server_ptr_, edge_beacon_server_recvrsp_source_addr_, tmp_key, blocked_edges, event_list); // Add events of intermedate responses if with event tracking
+        is_finish = edge_wrapper_ptr_->notifyEdgesToFinishBlock_(edge_beacon_server_recvrsp_socket_server_ptr_, edge_beacon_server_recvrsp_source_addr_, tmp_key, blocked_edges, event_list, skip_propagation_latency); // Add events of intermedate responses if with event tracking
 
         // Prepare a release writelock response
         uint32_t edge_idx = edge_wrapper_ptr_->node_idx_;
-        MessageBase* release_writelock_response_ptr = new ReleaseWritelockResponse(tmp_key, edge_idx, edge_beacon_server_recvreq_source_addr_, event_list);
+        MessageBase* release_writelock_response_ptr = new ReleaseWritelockResponse(tmp_key, edge_idx, edge_beacon_server_recvreq_source_addr_, event_list, skip_propagation_latency);
         assert(release_writelock_response_ptr != NULL);
 
         // Push release writelock response into edge-to-edge propagation simulator to cache server worker

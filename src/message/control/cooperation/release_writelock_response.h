@@ -18,7 +18,7 @@ namespace covered
     class ReleaseWritelockResponse : public KeyMessage
     {
     public:
-        ReleaseWritelockResponse(const Key& key, const uint32_t& source_index, const NetworkAddr& source_addr, const EventList& event_list);
+        ReleaseWritelockResponse(const Key& key, const uint32_t& source_index, const NetworkAddr& source_addr, const EventList& event_list, const bool& skip_propagation_latency);
         ReleaseWritelockResponse(const DynamicArray& msg_payload);
         virtual ~ReleaseWritelockResponse();
     private:

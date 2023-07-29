@@ -35,10 +35,6 @@ namespace covered
         // Redirected data messages
         kRedirectedGetRequest,
         kRedirectedGetResponse,
-        // Warmup data messages
-        kWarmupGetRequest,
-        kWarmupPutRequest,
-        kWarmupDelRequest,
         // Benchmark control message
         kInitializationRequest,
         kInitializationResponse,
@@ -93,7 +89,7 @@ namespace covered
         static MessageBase* getResponseFromMsgPayload(const DynamicArray& msg_payload); // Data/control responses
         static Key getKeyFromMessage(MessageBase* message_ptr); // Get key from message (e.g., local requests)
 
-        MessageBase(const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr, const EventList& event_list);
+        MessageBase(const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr, const EventList& event_list, const bool& skip_propagation_latency);
         //MessageBase(const DynamicArray& msg_payload);
         MessageBase();
         virtual ~MessageBase();
@@ -102,6 +98,7 @@ namespace covered
         uint32_t getSourceIndex() const;
         NetworkAddr getSourceAddr() const;
         const EventList& getEventListRef() const;
+        bool isSkipPropagationLatency() const;
 
         uint32_t getMsgPayloadSize() const;
 
@@ -114,7 +111,6 @@ namespace covered
         bool isLocalDataRequest() const;
         bool isRedirectedDataRequest() const;
         bool isGlobalDataRequest() const;
-        bool isWarmupDataRequest() const;
 
         bool isDataResponse() const;
         bool isLocalDataResponse() const;
@@ -144,6 +140,7 @@ namespace covered
         // Track intermediate events and events of intermediate responses to break down latencies for debugging
         // NOTE: requests MUST have empty event list; NOT consume bandwidth if without event tracking
         EventList event_list_;
+        bool skip_propagation_latency_; // NOT simulate propagation latency for warmup speedup
 
         bool is_valid_; // NOT serialized/deserialized in msg payload
     protected:

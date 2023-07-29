@@ -4,7 +4,7 @@ namespace covered
 {
     const std::string KeyHitflagUtilizationMessage::kClassName("KeyHitflagUtilizationMessage");
 
-    KeyHitflagUtilizationMessage::KeyHitflagUtilizationMessage(const Key& key, const Hitflag& hitflag, const uint64_t& cache_size_bytes, const uint64_t& cache_capacity_bytes, const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr, const EventList& event_list) : MessageBase(message_type, source_index, source_addr, event_list)
+    KeyHitflagUtilizationMessage::KeyHitflagUtilizationMessage(const Key& key, const Hitflag& hitflag, const uint64_t& cache_size_bytes, const uint64_t& cache_capacity_bytes, const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr, const EventList& event_list, const bool& skip_propagation_latency) : MessageBase(message_type, source_index, source_addr, event_list, skip_propagation_latency)
     {
         key_ = key;
         hitflag_ = hitflag;

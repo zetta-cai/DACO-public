@@ -35,6 +35,7 @@ namespace covered
         assert(control_request_ptr->getMessageType() == MessageType::kInvalidationRequest);
         const InvalidationRequest* const invalidation_request_ptr = static_cast<const InvalidationRequest*>(control_request_ptr);
         Key tmp_key = invalidation_request_ptr->getKey();
+        const skip_propagation_latency = invalidation_request_ptr->isSkipPropagationLatency();
 
         checkPointers_();
 
@@ -57,7 +58,7 @@ namespace covered
 
         // Prepare a invalidation response
         uint32_t edge_idx = edge_wrapper_ptr_->node_idx_;
-        MessageBase* invalidation_response_ptr = new InvalidationResponse(tmp_key, edge_idx, edge_invalidation_server_recvreq_source_addr_, event_list);
+        MessageBase* invalidation_response_ptr = new InvalidationResponse(tmp_key, edge_idx, edge_invalidation_server_recvreq_source_addr_, event_list, skip_propagation_latency);
         assert(invalidation_response_ptr != NULL);
 
         // Push the invalidation response into edge-to-edge propagation simulator to cache server worker or beacon server

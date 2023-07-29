@@ -18,7 +18,7 @@ namespace covered
     class LocalGetRequest : public KeyMessage
     {
     public:
-        LocalGetRequest(const Key& key, const uint32_t& source_index, const NetworkAddr& source_addr);
+        LocalGetRequest(const Key& key, const uint32_t& source_index, const NetworkAddr& source_addr, const bool& skip_propagation_latency);
         LocalGetRequest(const DynamicArray& msg_payload);
         virtual ~LocalGetRequest();
     private:

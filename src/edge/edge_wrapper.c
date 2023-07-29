@@ -360,7 +360,7 @@ namespace covered
 
     // (2) Invalidate for MSI protocol
 
-    bool EdgeWrapper::invalidateCacheCopies_(UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, const Key& key, const std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo, EventList& event_list) const
+    bool EdgeWrapper::invalidateCacheCopies_(UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, const Key& key, const std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo, EventList& event_list, const bool& skip_propagation_latency) const
     {
         assert(recvrsp_socket_server_ptr != NULL);
         assert(recvrsp_source_addr.isValidAddr());
@@ -407,7 +407,7 @@ namespace covered
                 }
 
                 const NetworkAddr& tmp_edge_invalidation_server_recvreq_dst_addr = percachecopy_dstaddr[iter_for_request->first]; // cache server address of a blocked closest edge node          
-                sendInvalidationRequest_(key, recvrsp_source_addr, tmp_edge_invalidation_server_recvreq_dst_addr);
+                sendInvalidationRequest_(key, recvrsp_source_addr, tmp_edge_invalidation_server_recvreq_dst_addr, skip_propagation_latency);
             } // End of edgeidx_for_request
 
             // Receive (invalidate_edgecnt - acked_edgecnt) control repsonses from involved edge nodes
@@ -483,13 +483,13 @@ namespace covered
         return is_finish;
     }
 
-    void EdgeWrapper::sendInvalidationRequest_(const Key& key, const NetworkAddr& recvrsp_source_addr, const NetworkAddr edge_invalidation_server_recvreq_dst_addr) const
+    void EdgeWrapper::sendInvalidationRequest_(const Key& key, const NetworkAddr& recvrsp_source_addr, const NetworkAddr edge_invalidation_server_recvreq_dst_addr, const bool& skip_propagation_latency) const
     {
         checkPointers_();
 
         // Prepare invalidation request to invalidate the cache copy
         uint32_t edge_idx = node_idx_;
-        MessageBase* invalidation_request_ptr = new InvalidationRequest(key, edge_idx, recvrsp_source_addr);
+        MessageBase* invalidation_request_ptr = new InvalidationRequest(key, edge_idx, recvrsp_source_addr, skip_propagation_latency);
         assert(invalidation_request_ptr != NULL);
 
         // Push InvalidationRequest into edge-to-edge propagation simulator to send to neighbor edge node
@@ -504,7 +504,7 @@ namespace covered
 
     // (3) Unblock for MSI protocol
 
-    bool EdgeWrapper::notifyEdgesToFinishBlock_(UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, const Key& key, const std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges, EventList& event_list) const
+    bool EdgeWrapper::notifyEdgesToFinishBlock_(UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, const Key& key, const std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges, EventList& event_list, const bool& skip_propagation_latency) const
     {
         assert(recvrsp_socket_server_ptr != NULL);
         assert(recvrsp_source_addr.isValidAddr());
@@ -540,7 +540,7 @@ namespace covered
                 }
 
                 const NetworkAddr& tmp_edge_cache_server_worker_recvreq_dst_addr = iter_for_request->first; // cache server address of a blocked closest edge node          
-                sendFinishBlockRequest_(key, recvrsp_source_addr, tmp_edge_cache_server_worker_recvreq_dst_addr);     
+                sendFinishBlockRequest_(key, recvrsp_source_addr, tmp_edge_cache_server_worker_recvreq_dst_addr, skip_propagation_latency);     
             } // End of edgeidx_for_request
 
             // Receive (blocked_edgecnt - acked_edgecnt) control repsonses from the closest edge nodes
@@ -615,13 +615,13 @@ namespace covered
         return is_finish;
     }
 
-    void EdgeWrapper::sendFinishBlockRequest_(const Key& key, const NetworkAddr& recvrsp_source_addr, const NetworkAddr& edge_cache_server_worker_recvreq_dst_addr) const
+    void EdgeWrapper::sendFinishBlockRequest_(const Key& key, const NetworkAddr& recvrsp_source_addr, const NetworkAddr& edge_cache_server_worker_recvreq_dst_addr, const bool& skip_propagation_latency) const
     {
         checkPointers_();
 
         // Prepare finish block request to finish blocking for writes in all closest edge nodes
         uint32_t edge_idx = node_idx_;
-        MessageBase* finish_block_request_ptr = new FinishBlockRequest(key, edge_idx, recvrsp_source_addr);
+        MessageBase* finish_block_request_ptr = new FinishBlockRequest(key, edge_idx, recvrsp_source_addr, skip_propagation_latency);
         assert(finish_block_request_ptr != NULL);
 
         // Push FinishBlockRequest into edge-to-edge propagation simulator to send to blocked edge node

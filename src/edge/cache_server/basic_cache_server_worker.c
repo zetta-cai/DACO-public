@@ -38,6 +38,7 @@ namespace covered
         const RedirectedGetRequest* const redirected_get_request_ptr = static_cast<const RedirectedGetRequest*>(redirected_request_ptr);
         Key tmp_key = redirected_get_request_ptr->getKey();
         Value tmp_value;
+        const bool skip_propagation_latency = redirected_get_request_ptr->isSkipPropagationLatency();
 
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->edge_wrapper_ptr_;
@@ -71,7 +72,7 @@ namespace covered
         // Prepare RedirectedGetResponse for the closest edge node
         uint32_t edge_idx = tmp_edge_wrapper_ptr->node_idx_;
         NetworkAddr edge_cache_server_recvreq_source_addr = cache_server_worker_param_ptr_->getCacheServerPtr()->edge_cache_server_recvreq_source_addr_;
-        MessageBase* redirected_get_response_ptr = new RedirectedGetResponse(tmp_key, tmp_value, hitflag, edge_idx, edge_cache_server_recvreq_source_addr, event_list);
+        MessageBase* redirected_get_response_ptr = new RedirectedGetResponse(tmp_key, tmp_value, hitflag, edge_idx, edge_cache_server_recvreq_source_addr, event_list, skip_propagation_latency);
 
         // Push the redirected response message into edge-to-client propagation simulator to cache server worker in the closest edge node
         tmp_edge_wrapper_ptr->edge_toclient_propagation_simulator_param_ptr_->push(redirected_get_response_ptr, recvrsp_dst_addr);
@@ -86,7 +87,7 @@ namespace covered
 
     // (2.1) Fetch data from neighbor edge nodes
 
-    bool BasicCacheServerWorker::lookupBeaconDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, EventList& event_list) const
+    bool BasicCacheServerWorker::lookupBeaconDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, EventList& event_list, const bool& skip_propagation_latency) const
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->edge_wrapper_ptr_;
@@ -105,7 +106,7 @@ namespace covered
         {
             // Prepare directory lookup request to check directory information in beacon node
             uint32_t edge_idx = tmp_edge_wrapper_ptr->node_idx_;
-            MessageBase* directory_lookup_request_ptr = new DirectoryLookupRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_);
+            MessageBase* directory_lookup_request_ptr = new DirectoryLookupRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
             assert(directory_lookup_request_ptr != NULL);
 
             #ifdef DEBUG_CACHE_SERVER
@@ -165,7 +166,7 @@ namespace covered
         return is_finish;
     }
 
-    bool BasicCacheServerWorker::redirectGetToTarget_(const DirectoryInfo& directory_info, const Key& key, Value& value, bool& is_cooperative_cached, bool& is_valid, EventList& event_list) const
+    bool BasicCacheServerWorker::redirectGetToTarget_(const DirectoryInfo& directory_info, const Key& key, Value& value, bool& is_cooperative_cached, bool& is_valid, EventList& event_list, const bool& skip_propagation_latency) const
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->edge_wrapper_ptr_;
@@ -180,7 +181,7 @@ namespace covered
         {
             // Prepare redirected get request to get data from target edge node if any
             uint32_t edge_idx = tmp_edge_wrapper_ptr->node_idx_;
-            MessageBase* redirected_get_request_ptr = new RedirectedGetRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_);
+            MessageBase* redirected_get_request_ptr = new RedirectedGetRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
             assert(redirected_get_request_ptr != NULL);
 
             // Push the redirected data request into edge-to-edge propagation simulator to target node
@@ -263,7 +264,7 @@ namespace covered
 
     // (2.2) Update content directory information
 
-    bool BasicCacheServerWorker::updateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written, EventList& event_list) const
+    bool BasicCacheServerWorker::updateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written, EventList& event_list, const bool& skip_propagation_latency) const
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->edge_wrapper_ptr_;
@@ -282,7 +283,7 @@ namespace covered
         {
             // Prepare directory update request to check directory information in beacon node
             uint32_t edge_idx = tmp_edge_wrapper_ptr->node_idx_;
-            MessageBase* directory_update_request_ptr = new DirectoryUpdateRequest(key, is_admit, directory_info, edge_idx, edge_cache_server_worker_recvrsp_source_addr_);
+            MessageBase* directory_update_request_ptr = new DirectoryUpdateRequest(key, is_admit, directory_info, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
             assert(directory_update_request_ptr != NULL);
 
             // Push the control request into edge-to-edge propagation simulator to the beacon node
@@ -338,7 +339,7 @@ namespace covered
 
     // (2.3) Process writes and block for MSI protocol
 
-    bool BasicCacheServerWorker::acquireBeaconWritelock_(const Key& key, LockResult& lock_result, EventList& event_list)
+    bool BasicCacheServerWorker::acquireBeaconWritelock_(const Key& key, LockResult& lock_result, EventList& event_list, const bool& skip_propagation_latency)
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->edge_wrapper_ptr_;
@@ -357,7 +358,7 @@ namespace covered
         {
             // Prepare acquire writelock request to acquire permission for a write
             uint32_t edge_idx = tmp_edge_wrapper_ptr->node_idx_;
-            MessageBase* acquire_writelock_request_ptr = new AcquireWritelockRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_);
+            MessageBase* acquire_writelock_request_ptr = new AcquireWritelockRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
             assert(acquire_writelock_request_ptr != NULL);
 
             // Push the control request into edge-to-edge propagation simulator to the beacon node
@@ -411,7 +412,7 @@ namespace covered
         return is_finish;
     }
 
-    bool BasicCacheServerWorker::releaseBeaconWritelock_(const Key& key, EventList& event_list)
+    bool BasicCacheServerWorker::releaseBeaconWritelock_(const Key& key, EventList& event_list, const bool& skip_propagation_latency)
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->edge_wrapper_ptr_;
@@ -430,7 +431,7 @@ namespace covered
         {
             // Prepare release writelock request to finish write
             uint32_t edge_idx = tmp_edge_wrapper_ptr->node_idx_;
-            MessageBase* release_writelock_request_ptr = new ReleaseWritelockRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_);
+            MessageBase* release_writelock_request_ptr = new ReleaseWritelockRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
             assert(release_writelock_request_ptr != NULL);
 
             // Push the control request into edge-to-edge propagation simulator to the beacon node
@@ -482,7 +483,7 @@ namespace covered
 
     // (5) Admit uncached objects in local edge cache
 
-    bool BasicCacheServerWorker::triggerIndependentAdmission_(const Key& key, const Value& value, EventList& event_list) const
+    bool BasicCacheServerWorker::triggerIndependentAdmission_(const Key& key, const Value& value, EventList& event_list, const bool& skip_propagation_latency) const
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->edge_wrapper_ptr_;
@@ -496,7 +497,7 @@ namespace covered
         // Independently admit the new key-value pair into local edge cache
         struct timespec update_directory_to_admit_start_timestamp = Util::getCurrentTimespec();
         bool is_being_written = false;
-        is_finish = updateDirectory_(key, true, is_being_written, event_list);
+        is_finish = updateDirectory_(key, true, is_being_written, event_list, skip_propagation_latency);
         if (is_finish)
         {
             return is_finish;
@@ -521,7 +522,7 @@ namespace covered
                 Value victim_value;
                 tmp_edge_wrapper_ptr->edge_cache_ptr_->evict(victim_key, victim_value);
                 bool _unused_is_being_written = false; // NOTE: is_being_written does NOT affect cache eviction
-                is_finish = updateDirectory_(victim_key, false, _unused_is_being_written, event_list);
+                is_finish = updateDirectory_(victim_key, false, _unused_is_being_written, event_list, skip_propagation_latency);
                 if (is_finish)
                 {
                     return is_finish;

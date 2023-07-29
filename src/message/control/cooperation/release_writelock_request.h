@@ -18,7 +18,7 @@ namespace covered
     class ReleaseWritelockRequest : public KeyMessage
     {
     public:
-        ReleaseWritelockRequest(const Key& key, const uint32_t& source_index, const NetworkAddr& source_addr);
+        ReleaseWritelockRequest(const Key& key, const uint32_t& source_index, const NetworkAddr& source_addr, const bool& skip_propagation_latency);
         ReleaseWritelockRequest(const DynamicArray& msg_payload);
         virtual ~ReleaseWritelockRequest();
     private:

@@ -18,7 +18,7 @@ namespace covered
     class LocalDelResponse : public KeyHitflagUtilizationMessage
     {
     public:
-        LocalDelResponse(const Key& key, const Hitflag& hitflag, const uint64_t& cache_size_bytes, const uint64_t& cache_capacity_bytes, const uint32_t& source_index, const NetworkAddr& source_addr, const EventList& event_list);
+        LocalDelResponse(const Key& key, const Hitflag& hitflag, const uint64_t& cache_size_bytes, const uint64_t& cache_capacity_bytes, const uint32_t& source_index, const NetworkAddr& source_addr, const EventList& event_list, const bool& skip_propagation_latency);
         LocalDelResponse(const DynamicArray& msg_payload);
         virtual ~LocalDelResponse();
 

@@ -24,8 +24,4 @@
 #include "message/data/redirected/redirected_get_request.h"
 #include "message/data/redirected/redirected_get_response.h"
 
-#include "message/data/warmup/warmup_get_request.h"
-#include "message/data/warmup/warmup_put_request.h"
-#include "message/data/warmup/warmup_del_request.h"
-
 #endif

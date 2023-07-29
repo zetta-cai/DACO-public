@@ -4,7 +4,7 @@ namespace covered
 {
     const std::string StartrunRequest::kClassName("StartrunRequest");
 
-    StartrunRequest::StartrunRequest(const uint32_t& source_index, const NetworkAddr& source_addr) : SimpleMessage(MessageType::kStartrunRequest, source_index, source_addr, EventList())
+    StartrunRequest::StartrunRequest(const uint32_t& source_index, const NetworkAddr& source_addr) : SimpleMessage(MessageType::kStartrunRequest, source_index, source_addr, EventList(), true)
     {
     }
 

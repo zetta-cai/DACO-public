@@ -114,6 +114,7 @@ namespace covered
         MessageType global_request_message_type = global_request_ptr->getMessageType();
         Key tmp_key;
         Value tmp_value;
+        const bool skip_propagation_latency = global_request_ptr->isSkipPropagationLatency();
         std::string event_name;
         switch (global_request_message_type)
         {
@@ -184,21 +185,21 @@ namespace covered
             case MessageType::kGlobalGetRequest:
             {
                 // Prepare global get response message
-                global_response_ptr = new GlobalGetResponse(tmp_key, tmp_value, cloud_idx, cloud_recvreq_source_addr_, event_list);
+                global_response_ptr = new GlobalGetResponse(tmp_key, tmp_value, cloud_idx, cloud_recvreq_source_addr_, event_list, skip_propagation_latency);
                 assert(global_response_ptr != NULL);
                 break;
             }
             case MessageType::kGlobalPutRequest:
             {
                 // Prepare global put response message
-                global_response_ptr = new GlobalPutResponse(tmp_key, cloud_idx, cloud_recvreq_source_addr_, event_list);
+                global_response_ptr = new GlobalPutResponse(tmp_key, cloud_idx, cloud_recvreq_source_addr_, event_list, skip_propagation_latency);
                 assert(global_response_ptr != NULL);
                 break;
             }
             case MessageType::kGlobalDelRequest:
             {
                 // Prepare global del response message
-                global_response_ptr = new GlobalDelResponse(tmp_key, cloud_idx, cloud_recvreq_source_addr_, event_list);
+                global_response_ptr = new GlobalDelResponse(tmp_key, cloud_idx, cloud_recvreq_source_addr_, event_list, skip_propagation_latency);
                 assert(global_response_ptr != NULL);
                 break;
             }
