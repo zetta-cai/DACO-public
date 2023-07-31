@@ -19,7 +19,7 @@ namespace covered
     {
         bool& is_evaluator_initialized = *(static_cast<bool*>(is_evaluator_initialized_ptr));
 
-        EvaluatorWrapper evaluator(Param::getClientcnt(), Param::getDurationSec(), Param::getEdgecnt());
+        EvaluatorWrapper evaluator(Param::getClientcnt(), Param::getEdgecnt(), Param::getMaxWarmupDurationSec(), Param::getStresstestDurationSec());
         is_evaluator_initialized = true; // Such that simulator or prototype will continue to launch cloud, edge, and client nodes
 
         evaluator.start();
@@ -28,7 +28,7 @@ namespace covered
         return NULL;
     }
 
-    EvaluatorWrapper::EvaluatorWrapper(const uint32_t& clientcnt, const uint32_t& duration_sec, const uint32_t& edgecnt) : clientcnt_(clientcnt), duration_sec_(duration_sec), edgecnt_(edgecnt)
+    EvaluatorWrapper::EvaluatorWrapper(const uint32_t& clientcnt, const uint32_t& edgecnt, const uint32_t& max_warmup_duration_sec, const uint32_t& stresstest_duration_sec) : clientcnt_(clientcnt), edgecnt_(edgecnt), max_warmup_duration_sec_(max_warmup_duration_sec), stresstest_duration_sec_(stresstest_duration_sec)
     {
         is_warmup_phase_ = true;
         cur_slot_idx_ = 0;
@@ -118,9 +118,9 @@ namespace covered
         // Monitor cache hit ratio for warmup and stresstest phases
         const uint32_t client_raw_statistics_slot_interval_sec = Config::getClientRawStatisticsSlotIntervalSec();
         bool is_stable = false;
-        double stable_hit_ratio = 0.0d;
-        struct timespec start_timestamp; // For duration of stresstest phase
-        struct timespec prev_timestamp = Util::getCurrentTimespec(); // For switch slot
+        double stable_hit_ratio = 0.0;
+        struct timespec start_timestamp = Util::getCurrentTimespec(); // For max duration of warmup phase and duration of stresstest phase
+        struct timespec prev_timestamp = start_timestamp; // For switch slot
         while (true)
         {
             usleep(Util::SLEEP_INTERVAL_US);
@@ -131,7 +131,7 @@ namespace covered
             if (!is_warmup_phase_) // Stresstest phase
             {
                 double delta_us_for_finishrun = Util::getDeltaTimeUs(cur_timestamp, start_timestamp);
-                if (delta_us_for_finishrun >= duration_sec_ * 1000 * 1000)
+                if (delta_us_for_finishrun >= stresstest_duration_sec_ * 1000 * 1000)
                 {
                     Util::dumpNormalMsg(kClassName, "Stop benchmark...");
 
@@ -156,24 +156,45 @@ namespace covered
             // Monitor if cache hit ratio is stable to finish the warmup phase if any
             if (is_warmup_phase_) // Warmup phase
             {
-                is_stable = total_statistics_tracker_ptr_->isPerSlotTotalAggregatedStatisticsStable(stable_hit_ratio);
+                bool finish_warmup_phase = false;
 
-                // Cache hit ratio becomes stable
-                if (is_stable)
+                double delta_us_for_finishwarmup = Util::getDeltaTimeUs(cur_timestamp, start_timestamp);
+                if (delta_us_for_finishwarmup >= max_warmup_duration_sec_ * 1000 * 1000)
                 {
                     std::ostringstream oss;
-                    oss << "cache hit ratio becomes stable at " << stable_hit_ratio << " -> finish warmup phase";
+                    oss << "achieve max warmup duration of " << max_warmup_duration_sec_ << " seconds with cache hit ratio of " << total_statistics_tracker_ptr_->getCurslotTotalHitRatio() << " -> finish warmup phase";
                     Util::dumpNormalMsg(kClassName, oss.str());
 
+                    finish_warmup_phase = true;
+                } // End of achieving max_warmup_duration_sec_
+                else
+                {
+                    is_stable = total_statistics_tracker_ptr_->isPerSlotTotalAggregatedStatisticsStable(stable_hit_ratio);
+
+                    // Cache hit ratio becomes stable
+                    if (is_stable)
+                    {
+                        std::ostringstream oss;
+                        oss << "cache hit ratio becomes stable at " << stable_hit_ratio << " -> finish warmup phase";
+                        Util::dumpNormalMsg(kClassName, oss.str());
+
+                        finish_warmup_phase = true;
+                    }
+                } // End of within max_warmup_duration_sec_
+
+                if (finish_warmup_phase)
+                {
                     // Notify all clients to finish warmup phase (i.e., enter stresstest phase)
                     notifyClientsToFinishWarmup_(); // Mark is_warmup_phase_ as false
 
                     // Duration starts from the end of warmup phase
                     is_warmup_phase_ = false;
+
+                    // Reset start_timestamp for duration of stresstest phase
                     start_timestamp = Util::getCurrentTimespec();
-                }
-            }
-        }
+                } // End of (finish_warmup_phase == true)
+            } // End if (is_warmup_phase == true)
+        } // End of while loop
 
         // Print per-slot/stable total aggregated statistics
         std::ostringstream oss;
@@ -225,7 +246,7 @@ namespace covered
                 {
                     // Send back InitializationResponse to client/edge/cloud
                     InitializationResponse initialization_response(0, evaluator_recvmsg_source_addr_, EventList());
-                    evaluator_sendmsg_socket_client_ptr_->send((MessageBase*)&initialization_response, tmp_dst_addr);
+                    evaluator_sendmsg_socket_client_ptr_->send((MessageBase*)&initialization_response, control_request_ptr->getSourceAddr());
 
                     acked_cnt++;
                 }
@@ -363,6 +384,10 @@ namespace covered
         // Update per-slot total aggregated statistics
         total_statistics_tracker_ptr_->updatePerslotTotalAggregatedStatistics(curslot_perclient_aggregated_statistics);
 
+        #ifdef DEBUG_EVALUATOR_WRAPPER
+        Util::dumpVariablesForDebug(kClassName, 4, "slot idx:", std::to_string(cur_slot_idx_ - 1).c_str(), "total hit ratio:", std::to_string(total_statistics_tracker_ptr_->getCurslotTotalHitRatio()).c_str());
+        #endif
+
         return;
     }
 
@@ -436,7 +461,7 @@ namespace covered
 
         // Prepare for last-slot/stable per-client aggregated statistics
         std::vector<ClientAggregatedStatistics> lastslot_perclient_aggregated_statistics;
-        curslot_perclient_aggregated_statistics.resize(clientcnt_);
+        lastslot_perclient_aggregated_statistics.resize(clientcnt_);
         std::vector<ClientAggregatedStatistics> stable_perclient_aggregated_statistics;
         stable_perclient_aggregated_statistics.resize(clientcnt_);
 
@@ -480,7 +505,7 @@ namespace covered
                         // Add into last-slot/stable per-client aggregated statistics
                         const FinishrunResponse* const finishrun_response_ptr = static_cast<const FinishrunResponse*>(control_response_ptr);
                         assert(cur_slot_idx_ == finishrun_response_ptr->getLastSlotIdx());
-                        lastslot_perclient_aggregated_statistics[client_idx] = finishrun_response_ptr->getLastSlotAggregatedStatistics();
+                        lastslot_perclient_aggregated_statistics[client_idx] = static_cast<ClientAggregatedStatistics>(finishrun_response_ptr->getLastSlotAggregatedStatistics());
                         stable_perclient_aggregated_statistics[client_idx] = finishrun_response_ptr->getStableAggregatedStatistics();
 
                         acked_cnt++;
@@ -601,7 +626,7 @@ namespace covered
         return;
     }
 
-    bool EvaluatorWrapper::processMsgForAck_(MessageBase* message_ptr, std::unordered_map<NetworkAddr, bool, NetworkAddrHasher>* acked_flags)
+    bool EvaluatorWrapper::processMsgForAck_(MessageBase* message_ptr, std::unordered_map<NetworkAddr, bool, NetworkAddrHasher>& acked_flags)
     {
         assert(message_ptr != NULL);
 

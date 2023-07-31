@@ -27,51 +27,55 @@ namespace covered
         EdgeWrapper(const std::string& cache_name, const uint64_t& capacity_bytes, const uint32_t& edge_idx, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& percacheserver_workercnt, const uint32_t& propagation_latency_clientedge_us, const uint32_t& propagation_latency_crossedge_us, const uint32_t& propagation_latency_edgecloud_us);
         virtual ~EdgeWrapper();
 
-        friend class CacheServer;
-        friend class CacheServerWorkerBase;
-        friend class BasicCacheServerWorker;
-        friend class CoveredCacheServerWorker;
-        friend class BeaconServerBase;
-        friend class BasicBeaconServer;
-        friend class CoveredBeaconServer;
-        friend class InvalidationServerBase;
-        friend class BasicInvalidationServer;
-        friend class CoveredInvalidationServer;
+        // (1) Const getters
+
+        std::string getCacheName() const;
+        uint64_t getCapacityBytes() const;
+        uint32_t getPercacheserverWorkercnt() const;
+        CacheWrapper* getEdgeCachePtr() const;
+        CooperationWrapperBase* getCooperationWrapperPtr() const;
+        PropagationSimulatorParam* getEdgeToclientPropagationSimulatorParamPtr() const;
+        PropagationSimulatorParam* getEdgeToedgePropagationSimulatorParamPtr() const;
+        PropagationSimulatorParam* getEdgeTocloudPropagationSimulatorParamPtr() const;
+
+        // (2) Utility functions
+
+        uint64_t getSizeForCapacity() const;
+
+        bool currentIsBeacon(const Key& key) const; // Check if current is beacon node
+        bool currentIsTarget(const DirectoryInfo& directory_info) const; // Check if current is target node
+
+        // (3) Invalidate and unblock for MSI protocol
+
+        // Return if edge node is finished (invoked by cache server worker or beacon server)
+        // Invalidate all cache copies for the key simultaneously (note that invalidating closest edge node is okay, as it is waiting for AcquireWritelockResponse instead of processing cache access requests)
+        bool invalidateCacheCopies(UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, const Key& key, const std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo, EventList& event_list, const bool& skip_propagation_latency) const;
+        
+        // Return if edge node is finished (invoked by cache server worker or beacon server)
+        bool notifyEdgesToFinishBlock_(UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, const Key& key, const std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges, EventList& event_list, const bool& skip_propagation_latency) const; // Notify all blocked edges for the key simultaneously
     private:
         static const std::string kClassName;
+
+        // (3) Invalidate and unblock for MSI protocol
+
+        // NOTE: NO need to add events of issue_invalidation_req, as they happen in parallel and have been counted in the event of invalidate_cache_copies
+        void sendInvalidationRequest_(const Key& key, const NetworkAddr& recvrsp_source_addr, const NetworkAddr edge_invalidation_server_recvreq_dst_addr, const bool& skip_propagation_latency) const;
+
+        // NOTE: NO need to add events of issue_finish_block_req, as they happen in parallel and have been counted in the event of finish_block
+        void sendFinishBlockRequest_(const Key& key, const NetworkAddr& recvrsp_source_addr, const NetworkAddr& edge_cache_server_worker_recvreq_dst_addr, const bool& skip_propagation_latency) const;
+
+        // (4) Benchmark process
 
         virtual void initialize_() override;
         virtual void processFinishrunRequest_() override;
         virtual void processOtherBenchmarkControlRequest_(MessageBase* control_request_ptr) override;
         virtual void cleanup_() override;
 
+        // (5) Other utilities
+
         static void* launchBeaconServer_(void* edge_wrapper_ptr);
         static void* launchCacheServer_(void* edge_wrapper_ptr);
         static void* launchInvalidationServer_(void* edge_wrapper_ptr);
-
-        uint64_t getSizeForCapacity_() const;
-
-        // (1) Utility functions
-
-        bool currentIsBeacon_(const Key& key) const; // Check if current is beacon node
-        bool currentIsTarget_(const DirectoryInfo& directory_info) const; // Check if current is target node
-
-        // (2) Invalidate for MSI protocol
-
-        // Return if edge node is finished (invoked by cache server worker or beacon server)
-        // Invalidate all cache copies for the key simultaneously (note that invalidating closest edge node is okay, as it is waiting for AcquireWritelockResponse instead of processing cache access requests)
-        bool invalidateCacheCopies_(UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, const Key& key, const std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo, EventList& event_list, const bool& skip_propagation_latency) const;
-        // NOTE: NO need to add events of issue_invalidation_req, as they happen in parallel and have been counted in the event of invalidate_cache_copies
-        void sendInvalidationRequest_(const Key& key, const NetworkAddr& recvrsp_source_addr, const NetworkAddr edge_invalidation_server_recvreq_dst_addr, const bool& skip_propagation_latency) const;
-
-        // (3) Unblock for MSI protocol
-        
-        // Return if edge node is finished (invoked by cache server worker or beacon server)
-        bool notifyEdgesToFinishBlock_(UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, const Key& key, const std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges, EventList& event_list, const bool& skip_propagation_latency) const; // Notify all blocked edges for the key simultaneously
-        // NOTE: NO need to add events of issue_finish_block_req, as they happen in parallel and have been counted in the event of finish_block
-        void sendFinishBlockRequest_(const Key& key, const NetworkAddr& recvrsp_source_addr, const NetworkAddr& edge_cache_server_worker_recvreq_dst_addr, const bool& skip_propagation_latency) const;
-
-        // (4) Other utilities
 
         void checkPointers_() const;
 

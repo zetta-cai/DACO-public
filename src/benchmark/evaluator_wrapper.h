@@ -9,6 +9,8 @@
 #ifndef EVALUATOR_WRAPPER_H
 #define EVALUATOR_WRAPPER_H
 
+#define DEBUG_EVALUATOR_WRAPPER
+
 #include <string>
 #include <unordered_map>
 
@@ -24,7 +26,7 @@ namespace covered
     public:
         static void* launchEvaluator(void* is_evaluator_initialized_ptr);
 
-        EvaluatorWrapper(const uint32_t& clientcnt, const uint32_t& duration_sec, const uint32_t& edgecnt);
+        EvaluatorWrapper(const uint32_t& clientcnt, const uint32_t& edgecnt, const uint32_t& max_warmup_duration_sec, const uint32_t& stresstest_duration_sec);
         ~EvaluatorWrapper();
 
         void start();
@@ -43,14 +45,15 @@ namespace covered
         std::unordered_map<NetworkAddr, bool, NetworkAddrHasher> getAckedFlagsForClients_() const;
         std::unordered_map<NetworkAddr, bool, NetworkAddrHasher> getAckedFlagsForEdgeCloud_() const;
         void issueMsgToUnackedNodes_(MessageBase* message_ptr, const std::unordered_map<NetworkAddr, bool, NetworkAddrHasher>& acked_flags) const;
-        bool processMsgForAck_(MessageBase* message_ptr, std::unordered_map<NetworkAddr, bool, NetworkAddrHasher>* acked_flags);
+        bool processMsgForAck_(MessageBase* message_ptr, std::unordered_map<NetworkAddr, bool, NetworkAddrHasher>& acked_flags);
 
         void checkPointers_() const;
 
         // Const variables
         const uint32_t clientcnt_; // Come from Param
-        const uint32_t duration_sec_; // Come from Param
         const uint32_t edgecnt_; // Come from Param
+        const uint32_t max_warmup_duration_sec_; // Come from Param
+        const uint32_t stresstest_duration_sec_; // Come from Param
 
         // (1) Manage evaluation phases
 

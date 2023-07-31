@@ -28,6 +28,9 @@ namespace covered
         void updatePerslotTotalAggregatedStatistics(const std::vector<ClientAggregatedStatistics>& curslot_perclient_aggregated_statistics);
         void updateStableTotalAggregatedStatistics(const std::vector<ClientAggregatedStatistics>& stable_perclient_aggregated_statistics);
 
+        // Get cur-slot total cache hit ratio
+        double getCurslotTotalHitRatio() const;
+
         // Cache is stable if cache is filled up and total hit ratio converges
         bool isPerSlotTotalAggregatedStatisticsStable(double& cache_hit_ratio);
 
@@ -42,7 +45,7 @@ namespace covered
         std::string checkFilepathForDump_(const std::string& filepath) const;
 
         // Load per-slot/total aggregated statistics
-        void load_(const std::string& filepath);
+        uint32_t load_(const std::string& filepath);
 
         const bool allow_update_; // NOT allow statistics update for loaded total statistics
 

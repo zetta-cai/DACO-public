@@ -19,6 +19,11 @@ namespace covered
         aggregateClientRawStatistics_(client_raw_statistics_ptr);
     }
 
+    ClientAggregatedStatistics::ClientAggregatedStatistics(const AggregatedStatisticsBase& base_instance)
+    {
+        AggregatedStatisticsBase::operator=(base_instance);
+    }
+
     ClientAggregatedStatistics::~ClientAggregatedStatistics() {}
 
     void ClientAggregatedStatistics::aggregateClientRawStatistics_(ClientRawStatistics* client_raw_statistics_ptr)
@@ -53,7 +58,7 @@ namespace covered
         {
             uint32_t tmp_latency_cnt = client_raw_statistics_ptr->latency_histogram_[latency_us];
             cur_latency_cnt += tmp_latency_cnt;
-            double cur_ratio = 0.0d;
+            double cur_ratio = 0.0;
             if (total_latency_cnt != 0)
             {
                 cur_ratio = static_cast<double>(cur_latency_cnt) / static_cast<double>(total_latency_cnt);

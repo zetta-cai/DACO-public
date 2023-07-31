@@ -19,7 +19,7 @@ namespace covered
         BeaconServerBase* beacon_server_ptr = NULL;
 
         assert(edge_wrapper_ptr != NULL);
-        std::string cache_name = edge_wrapper_ptr->cache_name_;
+        std::string cache_name = edge_wrapper_ptr->getCacheName();
         if (cache_name == Param::COVERED_CACHE_NAME)
         {
             beacon_server_ptr = new CoveredBeaconServer(edge_wrapper_ptr);
@@ -36,8 +36,8 @@ namespace covered
     BeaconServerBase::BeaconServerBase(EdgeWrapper* edge_wrapper_ptr) : edge_wrapper_ptr_(edge_wrapper_ptr)
     {
         assert(edge_wrapper_ptr != NULL);
-        const uint32_t edge_idx = edge_wrapper_ptr->node_idx_;
-        const uint32_t edgecnt = edge_wrapper_ptr->edgecnt_;
+        const uint32_t edge_idx = edge_wrapper_ptr->getNodeIdx();
+        const uint32_t edgecnt = edge_wrapper_ptr->getNodeCnt();
 
         // Differentiate cache servers of different edge nodes
         std::ostringstream oss;
@@ -88,7 +88,7 @@ namespace covered
         checkPointers_();
 
         bool is_finish = false; // Mark if edge node is finished
-        while (edge_wrapper_ptr_->isNodeRunning_()) // edge_running_ is set as true by default
+        while (edge_wrapper_ptr_->isNodeRunning()) // edge_running_ is set as true by default
         {
             // Receive the message payload of control requests
             DynamicArray control_request_msg_payload;
@@ -175,9 +175,6 @@ namespace covered
     void BeaconServerBase::checkPointers_() const
     {
         assert(edge_wrapper_ptr_ != NULL);
-
-        edge_wrapper_ptr_->checkPointers_();
-        
         assert(edge_beacon_server_recvreq_socket_server_ptr_ != NULL);
         assert(edge_beacon_server_recvrsp_socket_server_ptr_ != NULL);
     }

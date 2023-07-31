@@ -143,7 +143,7 @@ namespace covered
         return;
     }
 
-    void ClientRawStatistics::updateCacheUtilization(const uint64_t& closest_edge_cache_size_bytes, const uint64_t& closest_edge_cache_capacity_bytes)
+    void ClientRawStatistics::updateCacheUtilization_(const uint64_t& closest_edge_cache_size_bytes, const uint64_t& closest_edge_cache_capacity_bytes)
     {
         closest_edge_cache_size_bytes_ = closest_edge_cache_size_bytes;
         closest_edge_cache_capacity_bytes_ = closest_edge_cache_capacity_bytes;

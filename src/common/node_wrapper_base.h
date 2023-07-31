@@ -27,6 +27,12 @@ namespace covered
         virtual ~NodeWrapperBase();
 
         void start();
+
+        uint32_t getNodeIdx() const;
+        uint32_t getNodeCnt() const;
+        std::string getNodeRoleIdxStr() const;
+
+        bool isNodeRunning() const;
     private:
         static const std::string kClassName;
 
@@ -41,7 +47,6 @@ namespace covered
         // Const individual variable
         std::string base_instance_name_;
     protected:
-        bool isNodeRunning_() const;
         void setNodeRunning_();
         void resetNodeRunning_();
 

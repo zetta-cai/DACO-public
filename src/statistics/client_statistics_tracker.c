@@ -213,6 +213,29 @@ namespace covered
         return;
     }
 
+    void ClientStatisticsTracker::updateCacheUtilization(const uint32_t& local_client_worker_idx, const uint64_t& closest_edge_cache_size_bytes, const uint64_t& closest_edge_cache_capacity_bytes, const bool& is_stresstest_phase)
+    {
+        checkPointers_();
+
+        perclientworker_curslot_update_flags_[local_client_worker_idx].store(true, Util::STORE_CONCURRENCY_ORDER);
+
+        // Update cur-slot client raw statistics
+        ClientRawStatistics* tmp_curslot_client_raw_statistics_ptr = getCurslotClientRawStatisticsPtr_(cur_slot_idx_.load(Util::LOAD_CONCURRENCY_ORDER));
+        assert(tmp_curslot_client_raw_statistics_ptr != NULL);
+        tmp_curslot_client_raw_statistics_ptr->updateCacheUtilization_(closest_edge_cache_size_bytes, closest_edge_cache_capacity_bytes);
+
+        perclientworker_curslot_update_flags_[local_client_worker_idx].store(false, Util::STORE_CONCURRENCY_ORDER);
+        perclientworker_curslot_update_statuses_[local_client_worker_idx]++;
+
+        // Update stable client raw statistics for stresstest phase
+        if (is_stresstest_phase)
+        {
+            stable_client_raw_statistics_ptr_->updateCacheUtilization_(closest_edge_cache_size_bytes, closest_edge_cache_capacity_bytes);
+        }
+
+        return;
+    }
+
     // (2) Switch cur-slot client raw statistics (invoked by client thread ClientWrapper)
 
     ClientAggregatedStatistics ClientStatisticsTracker::switchCurslotForClientRawStatistics(const uint32_t& target_slot_idx)
@@ -270,7 +293,9 @@ namespace covered
         uint32_t curslot_client_raw_statistics_idx = slot_idx % curslot_client_raw_statistics_ptr_list_.size();
         assert(curslot_client_raw_statistics_idx >= 0 && curslot_client_raw_statistics_idx < curslot_client_raw_statistics_ptr_list_.size());
 
-        return curslot_client_raw_statistics_ptr_list_[curslot_client_raw_statistics_idx];
+        ClientRawStatistics* tmp_client_raw_statistics_ptr = curslot_client_raw_statistics_ptr_list_[curslot_client_raw_statistics_idx];
+        assert(tmp_client_raw_statistics_ptr != NULL);
+        return tmp_client_raw_statistics_ptr;
     }
 
     void ClientStatisticsTracker::curslotSwitchBarrier_() const

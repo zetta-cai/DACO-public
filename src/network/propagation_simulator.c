@@ -25,14 +25,9 @@ namespace covered
     {
         assert(propagation_simulator_param_ptr != NULL);
 
-        NodeParamBase* node_param_ptr = propagation_simulator_param_ptr->getNodeParamPtr();
-        assert(node_param_ptr != NULL);
-        uint32_t node_idx = node_param_ptr->getNodeIdx();
-        std::string node_role = node_param_ptr->getNodeRole();
-
         // Differential propagation simulator of different nodes
         std::ostringstream oss;
-        oss << kClassName << " " << node_role << node_idx;
+        oss << kClassName << " " << propagation_simulator_param_ptr->getNodeWrapperPtr()->getNodeRoleIdxStr();
         instance_name_ = oss.str();
 
         // Allocate socket client to issue message
@@ -55,10 +50,10 @@ namespace covered
         checkPointers_();
 
         // NOTE: block for clients which is NOT running at first
-        while (!propagation_simulator_param_ptr_->getNodeParamPtr()->isNodeRunning()) {}
+        while (!propagation_simulator_param_ptr_->getNodeWrapperPtr()->isNodeRunning()) {}
 
         // Loop until node finishes
-        while (propagation_simulator_param_ptr_->getNodeParamPtr()->isNodeRunning())
+        while (propagation_simulator_param_ptr_->getNodeWrapperPtr()->isNodeRunning())
         {
             PropagationItem tmp_propagation_item;
             bool is_successful = propagation_simulator_param_ptr_->pop(tmp_propagation_item);
@@ -106,14 +101,16 @@ namespace covered
     void PropagationSimulator::checkPointers_() const
     {
         assert(propagation_simulator_param_ptr_ != NULL);
-        assert(propagation_simulator_param_ptr_->getNodeParamPtr() != NULL);
-
         return;
     }
         
     void PropagationSimulator::propagate_(const uint32_t& sleep_us)
     {
-        usleep(sleep_us);
+        // NOTE: NOT simulator propagation latency for sleep_us of 0 (e.g., skip propagation latency under warmup phase if enable warmup speedup)
+        if (sleep_us > 0)
+        {
+            usleep(sleep_us);
+        }
         return;
     }
 }

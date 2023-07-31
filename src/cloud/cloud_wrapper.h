@@ -23,7 +23,8 @@ namespace covered
         CloudWrapper(const uint32_t& cloud_idx, const std::string& cloud_storage, const uint32_t& propagation_latency_edgecloud_us);
         ~CloudWrapper();
 
-        friend class DataServer;
+        RocksdbWrapper* getCloudRocksdbPtr() const;
+        PropagationSimulatorParam* getCloudToedgePropagationSimulatorParamPtr() const;
     private:
         static const std::string kClassName;
 

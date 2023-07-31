@@ -39,6 +39,9 @@ namespace covered
         void updateReadcnt(const uint32_t& local_client_worker_idx, const bool& is_stresstest_phase);
         void updateWritecnt(const uint32_t& local_client_worker_idx, const bool& is_stresstest_phase);
 
+        // Update cur-slot/stable client raw statistics for cache utilization
+        void updateCacheUtilization(const uint32_t& local_client_worker_idx, const uint64_t& closest_edge_cache_size_bytes, const uint64_t& closest_edge_cache_capacity_bytes, const bool& is_stresstest_phase);
+
         // (2) Switch cur-slot client raw statistics (invoked by client thread ClientWrapper)
 
         // TODO: if cur-slot client aggregated statistics is not precise enough, we can return cur-slot client raw statistics to evaluator for fine-grained statistics tracking

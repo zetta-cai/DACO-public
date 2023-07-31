@@ -98,6 +98,21 @@ namespace covered
         cleanup_();
     }
 
+    uint32_t NodeWrapperBase::getNodeIdx() const
+    {
+        return node_idx_;
+    }
+
+    uint32_t NodeWrapperBase::getNodeCnt() const
+    {
+        return node_cnt_;
+    }
+
+    std::string NodeWrapperBase::getNodeRoleIdxStr() const
+    {
+        return node_role_idx_str_;
+    }
+
     void NodeWrapperBase::finishInitialization_() const
     {
         // Prepare InitializationRequest
@@ -171,7 +186,7 @@ namespace covered
     void NodeWrapperBase::blockForFinishrun_()
     {
         // Wait for FinishRunRequest from evaluator
-        while (isNodeRunning_())
+        while (isNodeRunning())
         {
             DynamicArray control_request_msg_payload;
             bool is_timeout = node_recvmsg_socket_server_ptr_->recv(control_request_msg_payload);
@@ -200,7 +215,7 @@ namespace covered
         }
     }
 
-    bool NodeWrapperBase::isNodeRunning_() const
+    bool NodeWrapperBase::isNodeRunning() const
     {
         return node_running_.load(Util::LOAD_CONCURRENCY_ORDER);
     }

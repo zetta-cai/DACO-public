@@ -20,8 +20,8 @@ namespace covered
     DataServer::DataServer(CloudWrapper* cloud_wrapper_ptr) : cloud_wrapper_ptr_(cloud_wrapper_ptr)
     {
         assert(cloud_wrapper_ptr != NULL);
-        uint32_t cloud_idx = cloud_wrapper_ptr->node_idx_;
-        uint32_t cloudcnt = cloud_wrapper_ptr->node_cnt_;
+        uint32_t cloud_idx = cloud_wrapper_ptr->getNodeIdx();
+        uint32_t cloudcnt = cloud_wrapper_ptr->getNodeCnt();
         assert(cloud_idx == 0 && cloudcnt == 1); // TODO: only 1 cloud node now
 
         // Differentiate cache servers in different edge nodes
@@ -57,7 +57,7 @@ namespace covered
         checkPointers_();
 
         bool is_finish = false; // Mark if local cloud node is finished
-        while (cloud_wrapper_ptr_->isNodeRunning_()) // cloud_running_ is set as true by default
+        while (cloud_wrapper_ptr_->isNodeRunning()) // cloud_running_ is set as true by default
         {
             // Receive the global request message
             DynamicArray global_request_msg_payload;
@@ -103,7 +103,7 @@ namespace covered
     {
         checkPointers_();
 
-        const uint32_t cloud_idx = cloud_wrapper_ptr_->node_idx_;
+        const uint32_t cloud_idx = cloud_wrapper_ptr_->getNodeIdx();
 
         bool is_finish = false;
 
@@ -124,7 +124,7 @@ namespace covered
                 tmp_key = global_get_request_ptr->getKey();
 
                 // Get value from RocksDB KVS
-                cloud_wrapper_ptr_->cloud_rocksdb_ptr_->get(tmp_key, tmp_value);
+                cloud_wrapper_ptr_->getCloudRocksdbPtr()->get(tmp_key, tmp_value);
 
                 event_name = Event::CLOUD_GET_ROCKSDB_EVENT_NAME;
                 break;
@@ -137,7 +137,7 @@ namespace covered
                 assert(tmp_value.isDeleted() == false);
 
                 // Put value into RocksDB KVS
-                cloud_wrapper_ptr_->cloud_rocksdb_ptr_->put(tmp_key, tmp_value);
+                cloud_wrapper_ptr_->getCloudRocksdbPtr()->put(tmp_key, tmp_value);
 
                 event_name = Event::CLOUD_PUT_ROCKSDB_EVENT_NAME;
                 break;
@@ -148,7 +148,7 @@ namespace covered
                 tmp_key = global_del_request_ptr->getKey();
 
                 // Remove value from RocksDB KVS
-                cloud_wrapper_ptr_->cloud_rocksdb_ptr_->remove(tmp_key);
+                cloud_wrapper_ptr_->getCloudRocksdbPtr()->remove(tmp_key);
 
                 event_name = Event::CLOUD_DEL_ROCKSDB_EVENT_NAME;
                 break;
@@ -213,7 +213,7 @@ namespace covered
         // Push the global response message into cloud-to-edge propagation simulator to edge cache server worker
         assert(global_response_ptr != NULL);
         assert(global_response_ptr->isGlobalDataResponse());
-        bool is_successful = cloud_wrapper_ptr_->cloud_toedge_propagation_simulator_param_ptr_->push(global_response_ptr, edge_cache_server_worker_recvrsp_dst_addr);
+        bool is_successful = cloud_wrapper_ptr_->getCloudToedgePropagationSimulatorParamPtr()->push(global_response_ptr, edge_cache_server_worker_recvrsp_dst_addr);
         assert(is_successful);
 
         // NOTE: global_response_ptr will be released by cloud-to-edge propagation simulator
@@ -225,7 +225,6 @@ namespace covered
     void DataServer::checkPointers_() const
     {
         assert(cloud_wrapper_ptr_ != NULL);
-        cloud_wrapper_ptr_->checkPointers_();
         assert(cloud_recvreq_socket_server_ptr_ != NULL);
         return;
     }

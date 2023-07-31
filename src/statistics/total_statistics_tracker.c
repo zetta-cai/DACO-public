@@ -11,7 +11,7 @@
 
 namespace covered
 {
-    const double TotalStatisticsTracker::CACHE_FILLUP_THRESHOLD = 0.9d;
+    const double TotalStatisticsTracker::CACHE_FILLUP_THRESHOLD = 0.9;
 
     const std::string TotalStatisticsTracker::kClassName("TotalStatisticsTracker");
     
@@ -24,7 +24,11 @@ namespace covered
     {
         perslot_total_aggregated_statistics_.resize(0);
 
-        load_(filepath); // Load per-slot/stable total aggregated statistics from binary file
+        uint32_t load_size = load_(filepath); // Load per-slot/stable total aggregated statistics from binary file
+
+        std::ostringstream oss;
+        oss << "load total aggregated statistics of " << load_size << " bytes";
+        Util::dumpNormalMsg(kClassName, oss.str());
     }
 
         
@@ -56,6 +60,16 @@ namespace covered
         return;
     }
 
+    double TotalStatisticsTracker::getCurslotTotalHitRatio() const
+    {
+        assert(allow_update_ == true);
+
+        const uint32_t slotcnt = perslot_total_aggregated_statistics_.size();
+        double cur_total_hit_ratio = perslot_total_aggregated_statistics_[slotcnt - 1].getTotalHitRatio();
+
+        return cur_total_hit_ratio;
+    }
+
     bool TotalStatisticsTracker::isPerSlotTotalAggregatedStatisticsStable(double& cache_hit_ratio)
     {
         assert(allow_update_ == true);
@@ -75,7 +89,7 @@ namespace covered
             // Cache becomes stable
             if (cur_total_cache_utilization >= CACHE_FILLUP_THRESHOLD) // Cache is filled up
             {
-                if (cur_total_hit_ratio > 0.0d && prev_total_hit_ratio > 0.0d && cur_total_hit_ratio <= prev_total_hit_ratio) // Cache hit ratio is stabilized
+                if (cur_total_hit_ratio > 0.0 && prev_total_hit_ratio > 0.0 && cur_total_hit_ratio <= prev_total_hit_ratio) // Cache hit ratio is stabilized
                 {
                     is_stable = true;
                     cache_hit_ratio = cur_total_hit_ratio;
@@ -190,7 +204,7 @@ namespace covered
     }
 
     // Load per-slot/stable total aggregated statistics
-    void TotalStatisticsTracker::load_(const std::string& filepath)
+    uint32_t TotalStatisticsTracker::load_(const std::string& filepath)
     {
         assert(allow_update_ == false);
 

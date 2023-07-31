@@ -29,6 +29,7 @@ namespace covered
 
     MessageBase* PropagationItem::getMessagePtr() const
     {
+        assert(message_ptr_ != NULL);
         return message_ptr_;
     }
 

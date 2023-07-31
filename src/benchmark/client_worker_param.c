@@ -42,6 +42,7 @@ namespace covered
 
     ClientWrapper* ClientWorkerParam::getClientWrapperPtr()
     {
+        assert(client_wrapper_ptr_ != NULL);
         return client_wrapper_ptr_;
     }
 

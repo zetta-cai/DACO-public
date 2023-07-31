@@ -38,11 +38,12 @@ namespace covered
         // Get client index
         ClientWrapper* client_wrapper_ptr = client_worker_param_ptr->getClientWrapperPtr();
         assert(client_wrapper_ptr != NULL);
-        const uint32_t client_idx = client_wrapper_ptr->node_idx_;
-        const uint32_t clientcnt = client_wrapper_ptr->node_cnt_;
-        const uint32_t edgecnt = client_wrapper_ptr->edgecnt_;
+        const uint32_t client_idx = client_wrapper_ptr->getNodeIdx();
+        const uint32_t clientcnt = client_wrapper_ptr->getNodeCnt();
+        const uint32_t edgecnt = client_wrapper_ptr->getEdgeCnt();
+        const uint32_t perclient_workercnt = client_wrapper_ptr->getPerclientWorkercnt();
         const uint32_t local_client_worker_idx = client_worker_param_ptr->getLocalClientWorkerIdx();
-        uint32_t global_client_worker_idx = Util::getGlobalClientWorkerIdx(client_idx, local_client_worker_idx, client_wrapper_ptr->perclient_workercnt_);
+        uint32_t global_client_worker_idx = Util::getGlobalClientWorkerIdx(client_idx, local_client_worker_idx, perclient_workercnt);
 
         // Differentiate different workers
         std::ostringstream oss;
@@ -68,7 +69,7 @@ namespace covered
 
         // Get source address of client worker to receive local responses
         std::string client_ipstr = Config::getClientIpstr(client_idx, clientcnt);
-        uint16_t client_worker_recvrsp_port = Util::getClientWorkerRecvrspPort(client_idx, clientcnt, local_client_worker_idx, client_wrapper_ptr->perclient_workercnt_);
+        uint16_t client_worker_recvrsp_port = Util::getClientWorkerRecvrspPort(client_idx, clientcnt, local_client_worker_idx, perclient_workercnt);
         client_worker_recvrsp_source_addr_ = NetworkAddr(client_ipstr, client_worker_recvrsp_port);
 
         // Prepare a socket server to receive local responses
@@ -97,17 +98,17 @@ namespace covered
         checkPointers_();
         ClientWrapper* tmp_client_wrapper_ptr = client_worker_param_ptr_->getClientWrapperPtr();
         
-        WorkloadWrapperBase* workload_generator_ptr = tmp_client_wrapper_ptr->workload_generator_ptr_;
+        WorkloadWrapperBase* workload_generator_ptr = tmp_client_wrapper_ptr->getWorkloadWrapperPtr();
 
         // Block until client_running_ becomes true
-        while (!tmp_client_wrapper_ptr->isNodeRunning_()) {}
+        while (!tmp_client_wrapper_ptr->isNodeRunning()) {}
 
         // Current worker thread start to issue requests and receive responses
-        const bool is_warmup_speedup = tmp_client_wrapper_ptr->is_warmup_speedup_;
-        while (tmp_client_wrapper_ptr->isNodeRunning_())
+        const bool is_warmup_speedup = tmp_client_wrapper_ptr->isWarmupSpeedup();
+        while (tmp_client_wrapper_ptr->isNodeRunning())
         {
             // Get current phase (warmup or stresstest)
-            bool is_warmup_phase = tmp_client_wrapper_ptr->isWarmupPhase_();
+            bool is_warmup_phase = tmp_client_wrapper_ptr->isWarmupPhase();
             bool is_stresstest_phase = !is_warmup_phase;
 
             // Generate key-value request based on a specific workload
@@ -167,7 +168,7 @@ namespace covered
         while (true) // Timeout-and-retry mechanism
         {
             // Convert workload item into local request message
-            MessageBase* local_request_ptr = MessageBase::getRequestFromWorkloadItem(workload_item, tmp_client_wrapper_ptr->node_idx_, client_worker_recvrsp_source_addr_, is_warmup_phase, is_warmup_speedup);
+            MessageBase* local_request_ptr = MessageBase::getRequestFromWorkloadItem(workload_item, tmp_client_wrapper_ptr->getNodeIdx(), client_worker_recvrsp_source_addr_, is_warmup_phase, is_warmup_speedup);
             assert(local_request_ptr != NULL);
 
             #ifdef DEBUG_CLIENT_WORKER_WRAPPER
@@ -175,7 +176,7 @@ namespace covered
             #endif
 
             // Push local request into client-to-edge propagation simulator to send to closest edge node
-            bool is_successful = tmp_client_wrapper_ptr->client_toedge_propagation_simulator_param_ptr_->push(local_request_ptr, closest_edge_cache_server_recvreq_dst_addr_);
+            bool is_successful = tmp_client_wrapper_ptr->getClientToedgePropagationSimulatorParamPtr()->push(local_request_ptr, closest_edge_cache_server_recvreq_dst_addr_);
             assert(is_successful);
             
             // NOTE: local_request_ptr will be released by client-to-edge propagation simulator
@@ -185,7 +186,7 @@ namespace covered
             bool is_timeout = client_worker_recvrsp_socket_server_ptr_->recv(local_response_msg_payload);
             if (is_timeout)
             {
-                if (!tmp_client_wrapper_ptr->isNodeRunning_())
+                if (!tmp_client_wrapper_ptr->isNodeRunning())
                 {
                     is_finish = true;
                     break; // Client is NOT running
@@ -219,7 +220,7 @@ namespace covered
         MessageBase* local_response_ptr = MessageBase::getResponseFromMsgPayload(local_response_msg_payload);
         assert(local_response_ptr != NULL && local_response_ptr->isLocalDataResponse());
 
-        ClientStatisticsTracker* client_statistics_tracker_ptr_ = tmp_client_wrapper_ptr->client_statistics_tracker_ptr_;
+        ClientStatisticsTracker* client_statistics_tracker_ptr_ = tmp_client_wrapper_ptr->getClientStatisticsTrackerPtr();
 
         // Process local response message
         MessageType local_response_message_type = local_response_ptr->getMessageType();
@@ -312,7 +313,7 @@ namespace covered
         }
 
         // Update cache utilization statistics for the local client
-        client_statistics_tracker_ptr_->updateCacheUtilization(closest_edge_cache_size_bytes, closest_edge_cache_capacity_bytes);
+        client_statistics_tracker_ptr_->updateCacheUtilization(local_client_worker_idx, closest_edge_cache_size_bytes, closest_edge_cache_capacity_bytes, is_stresstest_phase);
 
         #ifdef DEBUG_CLIENT_WORKER_WRAPPER
         Util::dumpVariablesForDebug(instance_name_, 13, "receive a local response;", "type:", MessageBase::messageTypeToString(local_response_message_type).c_str(), "keystr", tmp_key.getKeystr().c_str(), "valuesize:", std::to_string(tmp_value.getValuesize()).c_str(), "hitflag:", MessageBase::hitflagToString(hitflag).c_str(), "latency:", std::to_string(rtt_us).c_str(), "eventlist:", local_response_ptr->getEventListRef().toString().c_str());
@@ -330,10 +331,6 @@ namespace covered
     void ClientWorkerWrapper::checkPointers_() const
     {
         assert(client_worker_param_ptr_ != NULL);
-        assert(client_worker_param_ptr_->getClientWrapperPtr() != NULL);
-        
-        client_worker_param_ptr_->getClientWrapperPtr()->checkPointers_();
-
         assert(client_worker_item_randgen_ptr_ != NULL);
         assert(client_worker_recvrsp_socket_server_ptr_ != NULL);
 

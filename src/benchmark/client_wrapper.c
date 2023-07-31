@@ -46,7 +46,7 @@ namespace covered
         assert(client_statistics_tracker_ptr_ != NULL);
 
         // Allocate client-to-edge propagation simulator param
-        client_toedge_propagation_simulator_param_ptr_ = new PropagationSimulatorParam(node_role_idx_str_, propagation_latency_clientedge_us, Config::getPropagationItemBufferSizeClientToedge());
+        client_toedge_propagation_simulator_param_ptr_ = new PropagationSimulatorParam((NodeWrapperBase*)this, propagation_latency_clientedge_us, Config::getPropagationItemBufferSizeClientToedge());
         assert(client_toedge_propagation_simulator_param_ptr_ != NULL);
 
         // Sub-threads
@@ -78,6 +78,48 @@ namespace covered
         delete[] client_worker_threads_;
         client_worker_threads_ = NULL;
     }
+
+    // (1) Const getters
+
+    uint32_t ClientWrapper::getEdgeCnt() const
+    {
+        return edge_cnt_;
+    }
+
+    bool ClientWrapper::isWarmupSpeedup() const
+    {
+        return is_warmup_speedup_;
+    }
+    
+    uint32_t ClientWrapper::getPerclientWorkercnt() const
+    {
+        return perclient_workercnt_;
+    }
+
+    bool ClientWrapper::isWarmupPhase() const
+    {
+        return is_warmup_phase_.load(Util::LOAD_CONCURRENCY_ORDER);
+    }
+
+    WorkloadWrapperBase* ClientWrapper::getWorkloadWrapperPtr() const
+    {
+        assert(workload_generator_ptr_ != NULL);
+        return workload_generator_ptr_;
+    }
+
+    ClientStatisticsTracker* ClientWrapper::getClientStatisticsTrackerPtr() const
+    {
+        assert(client_statistics_tracker_ptr_ != NULL);
+        return client_statistics_tracker_ptr_;
+    }
+
+    PropagationSimulatorParam* ClientWrapper::getClientToedgePropagationSimulatorParamPtr() const
+    {
+        assert(client_toedge_propagation_simulator_param_ptr_ != NULL);
+        return client_toedge_propagation_simulator_param_ptr_;
+    }
+
+    // (2) Process benchmark control messages
 
     void ClientWrapper::initialize_()
     {
@@ -224,10 +266,7 @@ namespace covered
         return;
     }
 
-    bool ClientWrapper::isWarmupPhase_() const
-    {
-        return is_warmup_phase_.load(Util::LOAD_CONCURRENCY_ORDER);
-    }
+    // (3) Other utility functions
 
     void ClientWrapper::finishWarmupPhase_()
     {

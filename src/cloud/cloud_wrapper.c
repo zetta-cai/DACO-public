@@ -40,7 +40,7 @@ namespace covered
         assert(cloud_rocksdb_ptr_ != NULL);
 
         // Allocate cloud-to-edge propagation simulator param
-        cloud_toedge_propagation_simulator_param_ptr_ = new PropagationSimulatorParam(node_role_idx_str_, propagation_latency_edgecloud_us, Config::getPropagationItemBufferSizeCloudToedge());
+        cloud_toedge_propagation_simulator_param_ptr_ = new PropagationSimulatorParam((NodeWrapperBase*)this, propagation_latency_edgecloud_us, Config::getPropagationItemBufferSizeCloudToedge());
         assert(cloud_toedge_propagation_simulator_param_ptr_ != NULL);
 
         // Sub-threads
@@ -59,6 +59,18 @@ namespace covered
         assert(cloud_toedge_propagation_simulator_param_ptr_ != NULL);
         delete cloud_toedge_propagation_simulator_param_ptr_;
         cloud_toedge_propagation_simulator_param_ptr_ = NULL;
+    }
+
+    RocksdbWrapper* CloudWrapper::getCloudRocksdbPtr() const
+    {
+        assert(cloud_rocksdb_ptr_ != NULL);
+        return cloud_rocksdb_ptr_;
+    }
+    
+    PropagationSimulatorParam* CloudWrapper::getCloudToedgePropagationSimulatorParamPtr() const
+    {
+        assert(cloud_toedge_propagation_simulator_param_ptr_ != NULL);
+        return cloud_toedge_propagation_simulator_param_ptr_;
     }
 
     void CloudWrapper::initialize_()

@@ -33,7 +33,7 @@ namespace covered
         // For workload name
         static const std::string FACEBOOK_WORKLOAD_NAME; // Workload generator type
 
-        static void setParameters(const std::string& main_class_name, const bool& is_single_node, const std::string& cache_name, const uint64_t& capacity_bytes, const uint32_t& clientcnt, const std::string& cloud_storage, const std::string& config_filepath, const bool& is_debug, const bool& is_warmup_speedup, const uint32_t& duration_sec, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& percacheserver_workercnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge_us, const uint32_t& propagation_latency_crossedge_us, const uint32_t& propagation_latency_edgecloud_us, const bool& track_event, const std::string& workload_name);
+        static void setParameters(const std::string& main_class_name, const bool& is_single_node, const std::string& cache_name, const uint64_t& capacity_bytes, const uint32_t& clientcnt, const std::string& cloud_storage, const std::string& config_filepath, const bool& is_debug, const bool& is_warmup_speedup, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& keycnt, const uint32_t& max_warmup_duration_sec, const uint32_t& opcnt, const uint32_t& percacheserver_workercnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge_us, const uint32_t& propagation_latency_crossedge_us, const uint32_t& propagation_latency_edgecloud_us, const uint32_t& stresstest_duration_sec, const bool& track_event, const std::string& workload_name);
 
         static std::string getMainClassName();
         static bool isSingleNode();
@@ -44,16 +44,17 @@ namespace covered
         static std::string getConfigFilepath();
         static bool isDebug();
         static bool isWarmupSpeedup();
-        static uint32_t getDurationSec();
         static uint32_t getEdgecnt();
         static std::string getHashName();
         static uint32_t getKeycnt();
+        static uint32_t getMaxWarmupDurationSec();
         static uint32_t getOpcnt();
         static uint32_t getPercacheserverWorkercnt();
         static uint32_t getPerclientWorkercnt();
         static uint32_t getPropagationLatencyClientedgeUs();
         static uint32_t getPropagationLatencyCrossedgeUs();
         static uint32_t getPropagationLatencyEdgecloudUs();
+        static uint32_t getStresstestDurationSec();
         static bool isTrackEvent();
         static std::string getWorkloadName();
 
@@ -81,16 +82,17 @@ namespace covered
         static std::string config_filepath_;
         static bool is_debug_;
         static bool is_warmup_speedup_;
-        static uint32_t duration_sec_;
         static uint32_t edgecnt_;
         static std::string hash_name_;
         static uint32_t keycnt_;
+        static uint32_t max_warmup_duration_sec_;
         static uint32_t opcnt_;
         static uint32_t percacheserver_workercnt_;
         static uint32_t perclient_workercnt_;
         static uint32_t propagation_latency_clientedge_us_; // 1/2 RTT between client and edge (bidirectional link)
         static uint32_t propagation_latency_crossedge_us_; // 1/2 RTT between edge and neighbor (bidirectional link)
         static uint32_t propagation_latency_edgecloud_us_; // 1/2 RTT between edge and cloud (bidirectional link)
+        static uint32_t stresstest_duration_sec_;
         static bool track_event_;
         static std::string workload_name_;
     };

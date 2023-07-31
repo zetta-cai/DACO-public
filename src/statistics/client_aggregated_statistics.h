@@ -23,6 +23,7 @@ namespace covered
     public:
         ClientAggregatedStatistics();
         ClientAggregatedStatistics(ClientRawStatistics* client_raw_statistics_ptr);
+        ClientAggregatedStatistics(const AggregatedStatisticsBase& base_instance);
         ~ClientAggregatedStatistics();
 
         const ClientAggregatedStatistics& operator=(const ClientAggregatedStatistics& other);

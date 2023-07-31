@@ -16,6 +16,7 @@
 
 #include "concurrency/ring_buffer_impl.h"
 #include "concurrency/rwlock.h"
+#include "common/node_wrapper_base.h"
 #include "network/propagation_item.h"
 
 namespace covered
@@ -24,9 +25,10 @@ namespace covered
     {
     public:
         PropagationSimulatorParam();
-        PropagationSimulatorParam(const std::string& node_role_idx_str, const uint32_t& propagation_latency_us, const uint32_t& propagation_item_buffer_size);
+        PropagationSimulatorParam(NodeWrapperBase* node_wrapper_ptr, const uint32_t& propagation_latency_us, const uint32_t& propagation_item_buffer_size);
         ~PropagationSimulatorParam();
 
+        const NodeWrapperBase* getNodeWrapperPtr() const;
         uint32_t getPropagationLatencyUs() const;
 
         bool push(MessageBase* message_ptr, const NetworkAddr& dst_addr);
@@ -37,6 +39,7 @@ namespace covered
         static const std::string kClassName;
 
         // Const shared variables
+        NodeWrapperBase* node_wrapper_ptr_;
         uint32_t propagation_latency_us_;
         std::string instance_name_;
         

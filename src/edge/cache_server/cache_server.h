@@ -27,9 +27,8 @@ namespace covered
 
         void start();
 
-        friend class CacheServerWorkerBase;
-        friend class BasicCacheServerWorker;
-        friend class CoveredCacheServerWorker;
+        EdgeWrapper* getEdgeWrapperPtr() const;
+        NetworkAddr getEdgeCacheServerRecvreqSourceAddr() const;
     private:
         static const std::string kClassName;
 

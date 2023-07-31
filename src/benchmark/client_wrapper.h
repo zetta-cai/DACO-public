@@ -28,9 +28,19 @@ namespace covered
         ClientWrapper(const uint32_t& client_idx, const uint32_t& clientcnt, const bool& is_warmup_speedup, const uint32_t& edgecnt, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge_us, const std::string& workload_name);
         virtual ~ClientWrapper();
 
-        friend class ClientWorkerWrapper;
+        // (1) Const getters
+
+        uint32_t getEdgeCnt() const;
+        bool isWarmupSpeedup() const;
+        uint32_t getPerclientWorkercnt() const;
+        bool isWarmupPhase() const;
+        WorkloadWrapperBase* getWorkloadWrapperPtr() const;
+        ClientStatisticsTracker* getClientStatisticsTrackerPtr() const;
+        PropagationSimulatorParam* getClientToedgePropagationSimulatorParamPtr() const;
     private:
         static const std::string kClassName;
+
+        // (2) Process benchmark control messages
 
         virtual void initialize_() override;
         virtual void processFinishrunRequest_() override;
@@ -40,15 +50,16 @@ namespace covered
         void processSwitchSlotRequest_(MessageBase* control_request_ptr);
         void processWarmupRequest_();
 
-        bool isWarmupPhase_() const;
+        // (3) Other utility functions
+
         void finishWarmupPhase_();
 
         void checkPointers_() const;
 
         // Const shared variable
-        const uint32_t edgecnt_;
+        const uint32_t edgecnt_; // Come from Param
         const bool is_warmup_speedup_; // Come from Param
-        const uint32_t perclient_workercnt_;
+        const uint32_t perclient_workercnt_; // Come from Param
 
         // Const individual variable
         std::string instance_name_;

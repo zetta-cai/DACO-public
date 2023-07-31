@@ -14,11 +14,13 @@ namespace covered
         instance_name_ = "";
     }
 
-    PropagationSimulatorParam::PropagationSimulatorParam(const std::string& node_role_idx_str, const uint32_t& propagation_latency_us, const uint32_t& propagation_item_buffer_size) : propagation_latency_us_(propagation_latency_us), rwlock_for_propagation_item_buffer_("rwlock_for_propagation_item_buffer_"), is_first_item_(true), prev_timespec_()
+    PropagationSimulatorParam::PropagationSimulatorParam(NodeWrapperBase* node_wrapper_ptr, const uint32_t& propagation_latency_us, const uint32_t& propagation_item_buffer_size) : node_wrapper_ptr_(node_wrapper_ptr), propagation_latency_us_(propagation_latency_us), rwlock_for_propagation_item_buffer_("rwlock_for_propagation_item_buffer_"), is_first_item_(true), prev_timespec_()
     {
+        assert(node_wrapper_ptr != NULL);
+
         // Differential propagation simulator parameter of different nodes
         std::ostringstream oss;
-        oss << kClassName << " " << node_role_idx_str;
+        oss << kClassName << " " << node_wrapper_ptr->getNodeRoleIdxStr();
         instance_name_ = oss.str();
 
         propagation_item_buffer_ptr_ = new RingBuffer<PropagationItem>(PropagationItem(), propagation_item_buffer_size);
@@ -30,6 +32,13 @@ namespace covered
         assert(propagation_item_buffer_ptr_ != NULL);
         delete propagation_item_buffer_ptr_;
         propagation_item_buffer_ptr_ = NULL;
+    }
+
+    const NodeWrapperBase* PropagationSimulatorParam::getNodeWrapperPtr() const
+    {
+        // No need to acquire a lock due to const shared variable
+        assert(node_wrapper_ptr_ != NULL);
+        return node_wrapper_ptr_;
     }
 
     uint32_t PropagationSimulatorParam::getPropagationLatencyUs() const
@@ -47,25 +56,34 @@ namespace covered
         std::string context_name = "PropagationSimulatorParam::push()";
         rwlock_for_propagation_item_buffer_.acquire_lock(context_name);
 
-        // Calculate sleep interval
+        const bool skip_propagation_latency = message_ptr->isSkipPropagationLatency();
         uint32_t sleep_us = 0;
-        struct timespec cur_timespec = Util::getCurrentTimespec();
-        if (is_first_item_)
+        if (skip_propagation_latency)
         {
-            sleep_us = propagation_latency_us_;
-
-            prev_timespec_ = cur_timespec;
-            is_first_item_ = false;
+            // skip_propagation_latency = true means the message is enabled with warmup speedup under warmup phase
+            sleep_us = 0;
         }
         else
         {
-            sleep_us = Util::getDeltaTimeUs(cur_timespec, prev_timespec_);
-            if (sleep_us > propagation_latency_us_)
+            // Calculate sleep interval
+            struct timespec cur_timespec = Util::getCurrentTimespec();
+            if (is_first_item_)
             {
                 sleep_us = propagation_latency_us_;
-            }
 
-            prev_timespec_ = cur_timespec;
+                prev_timespec_ = cur_timespec;
+                is_first_item_ = false;
+            }
+            else
+            {
+                sleep_us = Util::getDeltaTimeUs(cur_timespec, prev_timespec_);
+                if (sleep_us > propagation_latency_us_)
+                {
+                    sleep_us = propagation_latency_us_;
+                }
+
+                prev_timespec_ = cur_timespec;
+            }
         }
         assert(sleep_us <= propagation_latency_us_);
 
@@ -108,6 +126,7 @@ namespace covered
 
     const PropagationSimulatorParam& PropagationSimulatorParam::operator=(const PropagationSimulatorParam& other)
     {
+        node_wrapper_ptr_ = other.node_wrapper_ptr_;
         propagation_latency_us_ = other.propagation_latency_us_;
 
         instance_name_ = other.instance_name_;

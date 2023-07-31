@@ -24,6 +24,7 @@ namespace covered
 
     MessageBase* CacheServerWorkerItem::getDataRequestPtr() const
     {
+        assert(data_request_ptr_ != NULL);
         return data_request_ptr_;
     }
 
@@ -91,6 +92,7 @@ namespace covered
 
     CacheServer* CacheServerWorkerParam::getCacheServerPtr() const
     {
+        assert(cache_server_ptr_ != NULL);
         return cache_server_ptr_;
     }
 
@@ -101,6 +103,7 @@ namespace covered
 
     RingBuffer<CacheServerWorkerItem>* CacheServerWorkerParam::getDataRequestBufferPtr() const
     {
+        assert(data_request_buffer_ptr_ != NULL);
         return data_request_buffer_ptr_;
     }
 }
