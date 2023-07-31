@@ -46,6 +46,7 @@ namespace covered
         // Get aggregated statistics related with cache utilization
         uint64_t getTotalCacheSizeBytes() const;
         uint64_t getTotalCacheCapacityBytes() const;
+        uint64_t getTotalCacheMarginBytes() const; // cache size bytes + cache margin bytes = cache capacity bytes
         double getTotalCacheUtilization() const;
 
         // Get string for aggregate statistics

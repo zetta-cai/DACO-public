@@ -11,7 +11,9 @@
 
 namespace covered
 {
-    const double TotalStatisticsTracker::CACHE_FILLUP_THRESHOLD = 0.9;
+    const double TotalStatisticsTracker::CACHE_UTILIZATION_THRESHOLD_FOR_FILLUP = 0.999; // >= 99.9% cache utilization
+    const uint64_t TotalStatisticsTracker::CACHE_MARGIN_BYTES_IOTA_FOR_FILLUP = 1 * 1024 * 1024; // <= 1MiB
+    const double TotalStatisticsTracker::CACHE_HIT_RATIO_CHANGE_THRESHOLD_FOR_STABLE = 0.001; // <= 0.1% cache hit ratio change
 
     const std::string TotalStatisticsTracker::kClassName("TotalStatisticsTracker");
     
@@ -82,18 +84,33 @@ namespace covered
         {
             //return true; // TMPDEBUG
 
+            uint64_t cur_total_cache_margin_bytes = perslot_total_aggregated_statistics_[slotcnt - 1].getTotalCacheMarginBytes();
             double cur_total_cache_utilization = perslot_total_aggregated_statistics_[slotcnt - 1].getTotalCacheUtilization();
             double cur_total_hit_ratio = perslot_total_aggregated_statistics_[slotcnt - 1].getTotalHitRatio();
             double prev_total_hit_ratio = perslot_total_aggregated_statistics_[slotcnt - 2].getTotalHitRatio();
 
-            // Cache becomes stable
-            if (cur_total_cache_utilization >= CACHE_FILLUP_THRESHOLD) // Cache is filled up
+            // If cache is filled up
+            bool is_cache_fillup = false;
+            if (cur_total_cache_margin_bytes <= CACHE_MARGIN_BYTES_IOTA_FOR_FILLUP || cur_total_cache_utilization >= CACHE_UTILIZATION_THRESHOLD_FOR_FILLUP)
             {
-                if (cur_total_hit_ratio > 0.0 && prev_total_hit_ratio > 0.0 && cur_total_hit_ratio <= prev_total_hit_ratio) // Cache hit ratio is stabilized
+                is_cache_fillup = true;
+            }
+
+            // If cache becomes stable
+            bool is_cache_stable = false;
+            if (is_cache_fillup)
+            {
+                double abs_cache_hit_ratio_change = (cur_total_hit_ratio >= prev_total_hit_ratio)?(cur_total_hit_ratio - prev_total_hit_ratio):(prev_total_hit_ratio - cur_total_hit_ratio);
+                if (cur_total_hit_ratio > 0.0 && prev_total_hit_ratio > 0.0 && abs_cache_hit_ratio_change <= CACHE_HIT_RATIO_CHANGE_THRESHOLD_FOR_STABLE)
                 {
-                    is_stable = true;
-                    cache_hit_ratio = cur_total_hit_ratio;
+                    is_cache_stable = true;
                 }
+            }
+
+            if (is_cache_stable)
+            {
+                is_stable = true;
+                cache_hit_ratio = cur_total_hit_ratio;
             }
         }
 

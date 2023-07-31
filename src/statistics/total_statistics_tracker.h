@@ -18,7 +18,9 @@ namespace covered
     class TotalStatisticsTracker
     {
     public:
-        static const double CACHE_FILLUP_THRESHOLD;
+        static const double CACHE_UTILIZATION_THRESHOLD_FOR_FILLUP;
+        static const uint64_t CACHE_MARGIN_BYTES_IOTA_FOR_FILLUP;
+        static const double CACHE_HIT_RATIO_CHANGE_THRESHOLD_FOR_STABLE;
 
         TotalStatisticsTracker();
         TotalStatisticsTracker(const std::string& filepath);

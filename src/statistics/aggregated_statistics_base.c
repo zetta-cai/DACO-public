@@ -121,6 +121,18 @@ namespace covered
         return total_cache_capacity_bytes_;
     }
 
+    uint64_t AggregatedStatisticsBase::getTotalCacheMarginBytes() const
+    {
+        if (total_cache_capacity_bytes_ >= total_cache_size_bytes_)
+        {
+            return total_cache_capacity_bytes_ - total_cache_size_bytes_;
+        }
+        else
+        {
+            return 0;
+        }
+    }
+
     double AggregatedStatisticsBase::getTotalCacheUtilization() const
     {
         double total_cache_utilization = static_cast<double>(total_cache_size_bytes_) / static_cast<double>(total_cache_capacity_bytes_);
