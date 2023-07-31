@@ -13,6 +13,7 @@
 
 #include <string>
 
+#include "benchmark/client_worker_param.h"
 #include "common/node_wrapper_base.h"
 #include "network/propagation_simulator_param.h"
 #include "statistics/client_statistics_tracker.h"
@@ -20,6 +21,8 @@
 
 namespace covered
 {
+    class ClientWorkerParam;
+    
     class ClientWrapper : public NodeWrapperBase
     {
     public:
@@ -57,8 +60,8 @@ namespace covered
         void checkPointers_() const;
 
         // Const shared variable
-        const uint32_t edgecnt_; // Come from Param
         const bool is_warmup_speedup_; // Come from Param
+        const uint32_t edgecnt_; // Come from Param
         const uint32_t perclient_workercnt_; // Come from Param
 
         // Const individual variable
@@ -71,6 +74,9 @@ namespace covered
         WorkloadWrapperBase* workload_generator_ptr_; // thread safe
         ClientStatisticsTracker* client_statistics_tracker_ptr_; // thread safe
         PropagationSimulatorParam* client_toedge_propagation_simulator_param_ptr_; // thread safe
+
+        // Non-const individual
+        ClientWorkerParam* client_worker_params_;
 
         // Sub-threads
         pthread_t client_toedge_propagation_simulator_thread_;

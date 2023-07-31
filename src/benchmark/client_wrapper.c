@@ -4,7 +4,6 @@
 #include <pthread.h>
 #include <sstream>
 
-#include "benchmark/client_worker_param.h"
 #include "benchmark/client_worker_wrapper.h"
 #include "common/config.h"
 #include "common/param.h"
@@ -49,6 +48,15 @@ namespace covered
         client_toedge_propagation_simulator_param_ptr_ = new PropagationSimulatorParam((NodeWrapperBase*)this, propagation_latency_clientedge_us, Config::getPropagationItemBufferSizeClientToedge());
         assert(client_toedge_propagation_simulator_param_ptr_ != NULL);
 
+        // Prepare perclient_workercnt worker parameters
+        client_worker_params_ = new ClientWorkerParam[perclient_workercnt];
+        assert(client_worker_params_ != NULL);
+        for (uint32_t local_client_worker_idx = 0; local_client_worker_idx < perclient_workercnt; local_client_worker_idx++)
+        {
+            ClientWorkerParam local_client_worker_param(this, local_client_worker_idx);
+            client_worker_params_[local_client_worker_idx] = local_client_worker_param;
+        }
+
         // Sub-threads
         client_toedge_propagation_simulator_thread_ = 0;
         client_worker_threads_ = new pthread_t[perclient_workercnt];
@@ -73,6 +81,11 @@ namespace covered
         delete client_toedge_propagation_simulator_param_ptr_;
         client_toedge_propagation_simulator_param_ptr_ = NULL;
 
+        // Release client worker parameters
+        assert(client_worker_params_ != NULL);
+        delete[] client_worker_params_;
+        client_worker_params_ = NULL;
+
         // Release sub-threads
         assert(client_worker_threads_ != NULL);
         delete[] client_worker_threads_;
@@ -83,7 +96,7 @@ namespace covered
 
     uint32_t ClientWrapper::getEdgeCnt() const
     {
-        return edge_cnt_;
+        return edgecnt_;
     }
 
     bool ClientWrapper::isWarmupSpeedup() const
@@ -138,19 +151,11 @@ namespace covered
             exit(1);
         }
 
-        // Prepare perclient_workercnt worker parameters
-        ClientWorkerParam client_worker_params[perclient_workercnt_];
-        for (uint32_t local_client_worker_idx = 0; local_client_worker_idx < perclient_workercnt_; local_client_worker_idx++)
-        {
-            ClientWorkerParam local_client_worker_param(this, local_client_worker_idx);
-            client_worker_params[local_client_worker_idx] = local_client_worker_param;
-        }
-
         // Launch perclient_workercnt worker threads in the local client
         for (uint32_t local_client_worker_idx = 0; local_client_worker_idx < perclient_workercnt_; local_client_worker_idx++)
         {
             //pthread_returncode = pthread_create(&client_worker_threads[local_client_worker_idx], NULL, launchClientWorker, (void*)(&(client_worker_params[local_client_worker_idx])));
-            pthread_returncode = Util::pthreadCreateHighPriority(&client_worker_threads_[local_client_worker_idx], ClientWorkerWrapper::launchClientWorker, (void*)(&(client_worker_params[local_client_worker_idx])));
+            pthread_returncode = Util::pthreadCreateHighPriority(&client_worker_threads_[local_client_worker_idx], ClientWorkerWrapper::launchClientWorker, (void*)(&(client_worker_params_[local_client_worker_idx])));
             if (pthread_returncode != 0)
             {
                 std::ostringstream oss;

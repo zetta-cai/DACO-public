@@ -31,7 +31,10 @@ namespace covered
         void updateStableTotalAggregatedStatistics(const std::vector<ClientAggregatedStatistics>& stable_perclient_aggregated_statistics);
 
         // Get cur-slot total cache hit ratio
+        uint64_t getCurslotTotalCacheMarginBytes() const;
+        double getCurslotTotalCacheUtilization() const;
         double getCurslotTotalHitRatio() const;
+        double getPrevslotTotalHitRatio() const;
 
         // Cache is stable if cache is filled up and total hit ratio converges
         bool isPerSlotTotalAggregatedStatisticsStable(double& cache_hit_ratio);

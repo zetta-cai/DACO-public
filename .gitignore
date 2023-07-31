@@ -9,7 +9,8 @@ lib/cpp-lru-cache
 lib/rocksdb-8.1.1
 lib/smhasher
 simulator
-statistics_aggregator
+total_statistics_loader
+#statistics_aggregator
 
 # Prerequisites
 *.d

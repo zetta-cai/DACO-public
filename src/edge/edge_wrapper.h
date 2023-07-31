@@ -52,7 +52,7 @@ namespace covered
         bool invalidateCacheCopies(UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, const Key& key, const std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo, EventList& event_list, const bool& skip_propagation_latency) const;
         
         // Return if edge node is finished (invoked by cache server worker or beacon server)
-        bool notifyEdgesToFinishBlock_(UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, const Key& key, const std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges, EventList& event_list, const bool& skip_propagation_latency) const; // Notify all blocked edges for the key simultaneously
+        bool notifyEdgesToFinishBlock(UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, const Key& key, const std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges, EventList& event_list, const bool& skip_propagation_latency) const; // Notify all blocked edges for the key simultaneously
     private:
         static const std::string kClassName;
 

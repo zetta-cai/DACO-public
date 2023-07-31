@@ -200,7 +200,7 @@ namespace covered
         event_list.addEvent(Event::EDGE_BEACON_SERVER_RELEASE_LOCAL_WRITELOCK_EVENT_NAME, release_local_writelock_latency_us);
 
         // NOTE: notify blocked edge nodes if any after finishing writes, to avoid transmitting blocked_edges to cache server of the closest edge node
-        is_finish = edge_wrapper_ptr_->notifyEdgesToFinishBlock_(edge_beacon_server_recvrsp_socket_server_ptr_, edge_beacon_server_recvrsp_source_addr_, tmp_key, blocked_edges, event_list, skip_propagation_latency); // Add events of intermedate responses if with event tracking
+        is_finish = edge_wrapper_ptr_->notifyEdgesToFinishBlock(edge_beacon_server_recvrsp_socket_server_ptr_, edge_beacon_server_recvrsp_source_addr_, tmp_key, blocked_edges, event_list, skip_propagation_latency); // Add events of intermedate responses if with event tracking
 
         // Prepare a release writelock response
         uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();

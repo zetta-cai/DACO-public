@@ -150,7 +150,7 @@ namespace covered
         return size;
     }
 
-    bool EdgeWrapper::currentIsBeacon_(const Key& key) const
+    bool EdgeWrapper::currentIsBeacon(const Key& key) const
     {
         checkPointers_();
 
@@ -165,7 +165,7 @@ namespace covered
         return current_is_beacon;
     }
 
-    bool EdgeWrapper::currentIsTarget_(const DirectoryInfo& directory_info) const
+    bool EdgeWrapper::currentIsTarget(const DirectoryInfo& directory_info) const
     {
         checkPointers_();
 

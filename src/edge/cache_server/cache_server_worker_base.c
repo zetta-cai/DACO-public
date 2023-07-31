@@ -847,7 +847,7 @@ namespace covered
             DirectoryInfo current_directory_info(tmp_edge_wrapper_ptr->getNodeIdx());
             std::unordered_set<NetworkAddr, NetworkAddrHasher> blocked_edges = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->releaseLocalWritelock(key, current_directory_info);
 
-            is_finish = tmp_edge_wrapper_ptr->notifyEdgesToFinishBlock_(edge_cache_server_worker_recvrsp_socket_server_ptr_, edge_cache_server_worker_recvrsp_source_addr_, key, blocked_edges, event_list, skip_propagation_latency); // Add events of intermediate response if with event tracking
+            is_finish = tmp_edge_wrapper_ptr->notifyEdgesToFinishBlock(edge_cache_server_worker_recvrsp_socket_server_ptr_, edge_cache_server_worker_recvrsp_source_addr_, key, blocked_edges, event_list, skip_propagation_latency); // Add events of intermediate response if with event tracking
             if (is_finish) // Edge is NOT running
             {
                 return is_finish;

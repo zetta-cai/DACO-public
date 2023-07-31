@@ -13,6 +13,8 @@
 
 namespace covered
 {
+    class ClientWrapper;
+    
     class ClientWorkerParam
     {
     public:

@@ -31,7 +31,7 @@ namespace covered
     EvaluatorWrapper::EvaluatorWrapper(const uint32_t& clientcnt, const uint32_t& edgecnt, const uint32_t& max_warmup_duration_sec, const uint32_t& stresstest_duration_sec) : clientcnt_(clientcnt), edgecnt_(edgecnt), max_warmup_duration_sec_(max_warmup_duration_sec), stresstest_duration_sec_(stresstest_duration_sec)
     {
         is_warmup_phase_ = true;
-        cur_slot_idx_ = 0;
+        target_slot_idx_ = 0;
 
         // (1) Manage evaluation phases
 
@@ -147,7 +147,7 @@ namespace covered
             if (delta_us_for_switch_slot >= static_cast<double>(client_raw_statistics_slot_interval_sec * 1000 * 1000))
             {
                 // Notify clients to switch cur-slot client raw statistics
-                notifyClientsToSwitchSlot_(); // Increase cur_slot_idx_ by one and update per-slot total aggregated statistics
+                notifyClientsToSwitchSlot_(); // Increase target_slot_idx_ by one and update per-slot total aggregated statistics
 
                 // Update prev_timestamp for the next slot
                 prev_timestamp = cur_timestamp;
@@ -322,9 +322,9 @@ namespace covered
         std::vector<ClientAggregatedStatistics> curslot_perclient_aggregated_statistics;
         curslot_perclient_aggregated_statistics.resize(clientcnt_);
 
-        cur_slot_idx_++;
+        target_slot_idx_++;
         std::ostringstream oss;
-        oss << "Notify all clients to switch slot into target slot " << cur_slot_idx_ << "...";
+        oss << "Notify all clients to switch slot into target slot " << target_slot_idx_ << "...";
         Util::dumpNormalMsg(kClassName, oss.str());
 
         // Timeout-and-retry mechanism
@@ -332,7 +332,7 @@ namespace covered
         while (acked_cnt < switchslot_acked_flags.size())
         {
             // Issue SwitchSlotRequests to unacked clients simultaneously
-            SwitchSlotRequest tmp_switch_slot_request(cur_slot_idx_, 0, evaluator_recvmsg_source_addr_);
+            SwitchSlotRequest tmp_switch_slot_request(target_slot_idx_, 0, evaluator_recvmsg_source_addr_);
             issueMsgToUnackedNodes_((MessageBase*)&tmp_switch_slot_request, switchslot_acked_flags);
 
             // Receive SwitchSlotResponses for unacked clients
@@ -358,13 +358,13 @@ namespace covered
                         assert(iter != switchslot_acked_flags.end());
 
                         // Calculate and check client idx
-                        uint32_t client_idx = iter - switchslot_acked_flags.begin();
+                        uint32_t client_idx = static_cast<uint32_t>(std::distance(switchslot_acked_flags.begin(), iter));
                         assert(client_idx == control_response_ptr->getSourceIndex());
                         assert(client_idx < clientcnt_);
 
                         // Add into cur-slot per-client aggregated statistics
                         const SwitchSlotResponse* const switch_slot_response_ptr = static_cast<const SwitchSlotResponse*>(control_response_ptr);
-                        assert(cur_slot_idx_ == switch_slot_response_ptr->getTargetSlotIdx());
+                        assert(target_slot_idx_ == switch_slot_response_ptr->getTargetSlotIdx());
                         curslot_perclient_aggregated_statistics[client_idx] = switch_slot_response_ptr->getAggregatedStatistics();
 
                         acked_cnt++;
@@ -378,14 +378,14 @@ namespace covered
 
         oss.clear();
         oss.str("");
-        oss << "All clients are switched to target slot " << cur_slot_idx_;
+        oss << "All clients are switched to target slot " << target_slot_idx_;
         Util::dumpNormalMsg(kClassName, oss.str());
 
         // Update per-slot total aggregated statistics
         total_statistics_tracker_ptr_->updatePerslotTotalAggregatedStatistics(curslot_perclient_aggregated_statistics);
 
         #ifdef DEBUG_EVALUATOR_WRAPPER
-        Util::dumpVariablesForDebug(kClassName, 4, "slot idx:", std::to_string(cur_slot_idx_ - 1).c_str(), "total hit ratio:", std::to_string(total_statistics_tracker_ptr_->getCurslotTotalHitRatio()).c_str());
+        Util::dumpVariablesForDebug(kClassName, 8, "slot idx:", std::to_string(target_slot_idx_ - 1).c_str(), "total hit ratio:", std::to_string(total_statistics_tracker_ptr_->getCurslotTotalHitRatio()).c_str(), "cache utilization:", std::to_string(total_statistics_tracker_ptr_->getCurslotTotalCacheUtilization()).c_str(), "cache margin bytes:", std::to_string(total_statistics_tracker_ptr_->getCurslotTotalCacheMarginBytes()).c_str());
         #endif
 
         return;
@@ -498,13 +498,13 @@ namespace covered
                         assert(iter != finishrun_acked_flags.end());
 
                         // Calculate and check client idx
-                        uint32_t client_idx = iter - finishrun_acked_flags.begin();
+                        uint32_t client_idx = static_cast<uint32_t>(std::distance(finishrun_acked_flags.begin(), iter));
                         assert(client_idx == control_response_ptr->getSourceIndex());
                         assert(client_idx < clientcnt_);
 
                         // Add into last-slot/stable per-client aggregated statistics
                         const FinishrunResponse* const finishrun_response_ptr = static_cast<const FinishrunResponse*>(control_response_ptr);
-                        assert(cur_slot_idx_ == finishrun_response_ptr->getLastSlotIdx());
+                        assert(target_slot_idx_ == finishrun_response_ptr->getLastSlotIdx());
                         lastslot_perclient_aggregated_statistics[client_idx] = static_cast<ClientAggregatedStatistics>(finishrun_response_ptr->getLastSlotAggregatedStatistics());
                         stable_perclient_aggregated_statistics[client_idx] = finishrun_response_ptr->getStableAggregatedStatistics();
 

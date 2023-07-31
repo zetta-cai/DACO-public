@@ -74,14 +74,14 @@ namespace covered
         static std::string main_class_name_;
         static bool is_valid_;
         
-        static bool is_single_node_;
+        static bool is_single_node_; // Come from CLI::multinode
         static std::string cache_name_;
         static uint64_t capacity_bytes_;
         static uint32_t clientcnt_;
         static std::string cloud_storage_;
         static std::string config_filepath_;
-        static bool is_debug_;
-        static bool is_warmup_speedup_;
+        static bool is_debug_; // Come from CLI::debug
+        static bool is_warmup_speedup_; // Come from CLI::disable_warmup_speedup
         static uint32_t edgecnt_;
         static std::string hash_name_;
         static uint32_t keycnt_;

@@ -19,7 +19,7 @@ DEPS += $(CACHE_SRCFILES:.c=.d)
 CLEANS += $(CACHE_OBJECTS) $(CACHE_SHARED_OBJECTS)
 
 # cloud module
-CLOUD_SRCFILES := $(wildcard $(COVERED_DIRPATH)/cloud/*.c)
+CLOUD_SRCFILES := $(wildcard $(COVERED_DIRPATH)/cloud/*.c) $(wildcard $(COVERED_DIRPATH)/cloud/data_server/*.c)
 CLOUD_OBJECTS += $(CLOUD_SRCFILES:.c=.o)
 CLOUD_SHARED_OBJECTS += $(CLOUD_SRCFILES:.c=.shared.o)
 DEPS += $(CLOUD_SRCFILES:.c=.d)

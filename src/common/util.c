@@ -238,7 +238,7 @@ namespace covered
         int minute = current_datetime->tm_min;
         double second = static_cast<double>(current_datetime->tm_sec);
         double nanosecond = static_cast<double>(current_timespec.tv_nsec) / static_cast<double>(NANOSECONDS_PERSECOND);
-        if (nanosecond >= (1.0d / pow(10, static_cast<double>(SECOND_PRECISION))))
+        if (nanosecond >= (1.0 / pow(10, static_cast<double>(SECOND_PRECISION))))
         {
             second += nanosecond;
         }

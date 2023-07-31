@@ -58,7 +58,7 @@ namespace covered
         // (1) Manage evaluation phases
 
         bool is_warmup_phase_;
-        uint32_t cur_slot_idx_;
+        uint32_t target_slot_idx_;
 
         NetworkAddr evaluator_recvmsg_source_addr_;
         NetworkAddr* perclient_recvmsg_dst_addrs_;

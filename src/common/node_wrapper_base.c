@@ -133,7 +133,7 @@ namespace covered
             }
             else
             {
-                MessageBase* control_response_ptr = MessageBase::getRequestFromMsgPayload(control_response_msg_payload);
+                MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
                 assert(control_response_ptr != NULL);
                 assert(control_response_ptr->getMessageType() == MessageType::kInitializationResponse);
 

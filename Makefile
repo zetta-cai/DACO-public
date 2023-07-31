@@ -29,10 +29,15 @@ simulator: src/simulator.o $(LINK_OBJECTS)
 DEPS += src/simulator.d
 CLEANS += src/simulator.o
 
-statistics_aggregator: src/statistics_aggregator.o $(LINK_OBJECTS)
+total_statistics_loader: src/total_statistics_loader.o $(LINK_OBJECTS)
 	$(LINK) $^ $(LDLIBS) -o $@
-DEPS += src/statistics_aggregator.d
-CLEANS += src/statistics_aggregator.o
+DEPS += src/total_statistics_loader.d
+CLEANS += src/total_statistics_loader.o
+
+#statistics_aggregator: src/statistics_aggregator.o $(LINK_OBJECTS)
+#	$(LINK) $^ $(LDLIBS) -o $@
+#DEPS += src/statistics_aggregator.d
+#CLEANS += src/statistics_aggregator.o
 
 ##############################################################################
 

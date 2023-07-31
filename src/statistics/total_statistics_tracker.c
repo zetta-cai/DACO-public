@@ -62,14 +62,52 @@ namespace covered
         return;
     }
 
+    uint64_t TotalStatisticsTracker::getCurslotTotalCacheMarginBytes() const
+    {
+        assert(allow_update_ == true);
+
+        const uint32_t slotcnt = perslot_total_aggregated_statistics_.size();
+        assert(slotcnt > 0);
+
+        uint64_t cur_total_cache_margin_bytes = perslot_total_aggregated_statistics_[slotcnt - 1].getTotalCacheMarginBytes();
+
+        return cur_total_cache_margin_bytes;
+    }
+    
+    double TotalStatisticsTracker::getCurslotTotalCacheUtilization() const
+    {
+        assert(allow_update_ == true);
+
+        const uint32_t slotcnt = perslot_total_aggregated_statistics_.size();
+        assert(slotcnt > 0);
+
+        double cur_total_cache_utilization = perslot_total_aggregated_statistics_[slotcnt - 1].getTotalCacheUtilization();
+
+        return cur_total_cache_utilization;
+    }
+
     double TotalStatisticsTracker::getCurslotTotalHitRatio() const
     {
         assert(allow_update_ == true);
 
         const uint32_t slotcnt = perslot_total_aggregated_statistics_.size();
+        assert(slotcnt > 0);
+
         double cur_total_hit_ratio = perslot_total_aggregated_statistics_[slotcnt - 1].getTotalHitRatio();
 
         return cur_total_hit_ratio;
+    }
+
+    double TotalStatisticsTracker::getPrevslotTotalHitRatio() const
+    {
+        assert(allow_update_ == true);
+
+        const uint32_t slotcnt = perslot_total_aggregated_statistics_.size();
+        assert(slotcnt > 1);
+
+        double prev_total_hit_ratio = perslot_total_aggregated_statistics_[slotcnt - 2].getTotalHitRatio();
+
+        return prev_total_hit_ratio;
     }
 
     bool TotalStatisticsTracker::isPerSlotTotalAggregatedStatisticsStable(double& cache_hit_ratio)
@@ -79,15 +117,14 @@ namespace covered
         bool is_stable = false;
 
         const uint32_t slotcnt = perslot_total_aggregated_statistics_.size();
-
         if (slotcnt > 1)
         {
             //return true; // TMPDEBUG
 
-            uint64_t cur_total_cache_margin_bytes = perslot_total_aggregated_statistics_[slotcnt - 1].getTotalCacheMarginBytes();
-            double cur_total_cache_utilization = perslot_total_aggregated_statistics_[slotcnt - 1].getTotalCacheUtilization();
-            double cur_total_hit_ratio = perslot_total_aggregated_statistics_[slotcnt - 1].getTotalHitRatio();
-            double prev_total_hit_ratio = perslot_total_aggregated_statistics_[slotcnt - 2].getTotalHitRatio();
+            uint64_t cur_total_cache_margin_bytes = getCurslotTotalCacheMarginBytes();
+            double cur_total_cache_utilization = getCurslotTotalCacheUtilization();
+            double cur_total_hit_ratio = getCurslotTotalHitRatio();
+            double prev_total_hit_ratio = getPrevslotTotalHitRatio();
 
             // If cache is filled up
             bool is_cache_fillup = false;
