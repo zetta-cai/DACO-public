@@ -7,7 +7,7 @@
 #ifndef PERKEY_RWLOCK_H
 #define PERKEY_RWLOCK_H
 
-////#define DEBUG_PERKEY_RWLOCK
+//#define DEBUG_PERKEY_RWLOCK
 
 #include <atomic>
 #include <string>

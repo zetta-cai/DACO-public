@@ -20,6 +20,7 @@ namespace covered {
 	private:
 		typedef std::pair<Key, Value> key_value_pair_t;
 		typedef std::list<key_value_pair_t>::iterator list_iterator_t;
+		typedef std::list<key_value_pair_t>::const_iterator list_const_iterator_t;
 		typedef std::unordered_map<Key, list_iterator_t, KeyHasher>::iterator map_iterator_t;
 	public:
 		LruCache();
@@ -29,7 +30,8 @@ namespace covered {
 		bool update(const Key& key, const Value& value);
 
 		void admit(const Key& key, const Value& value);
-        void evict(Key& key, Value& value);
+		Key getVictimKey() const;
+        bool evictIfKeyMatch(const Key& key, Value& value);
 		
 		bool exists(const Key& key) const;
 		

@@ -69,7 +69,6 @@ namespace covered
 
         // Get source address of client worker to receive local responses
         std::string client_ipstr = Config::getClientIpstr(client_idx, clientcnt);
-        Util::dumpVariablesForDebug(instance_name_, 8, "client_idx:", std::to_string(client_idx).c_str(), "clientcnt:", std::to_string(clientcnt).c_str(), "local_client_worker_idx:", std::to_string(local_client_worker_idx).c_str(), "perclient_workercnt:", std::to_string(perclient_workercnt).c_str()); // TMPDEBUG
         uint16_t client_worker_recvrsp_port = Util::getClientWorkerRecvrspPort(client_idx, clientcnt, local_client_worker_idx, perclient_workercnt);
         client_worker_recvrsp_source_addr_ = NetworkAddr(client_ipstr, client_worker_recvrsp_port);
 

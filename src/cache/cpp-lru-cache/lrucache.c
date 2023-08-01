@@ -84,25 +84,40 @@ namespace covered
 
 		return;
 	}
-    
-	void LruCache::evict(Key& key, Value& value)
+
+	Key LruCache::getVictimKey() const
 	{
 		// Select victim by LRU
-		list_iterator_t last_list_iter = cache_items_list_.end();
+		list_const_iterator_t last_list_iter = cache_items_list_.end();
 		last_list_iter--;
-		key = last_list_iter->first;
-		value = last_list_iter->second;
-		uint32_t victim_valuesize = last_list_iter->second.getValuesize();
+		Key victim_key = last_list_iter->first;
+		return victim_key;
+	}
+    
+	bool LruCache::evictIfKeyMatch(const Key& key, Value& value)
+	{
+		bool is_evict = false;
+		
+		// Select victim by LRU for version check
+		Key cur_victim_key = getVictimKey();
+		if (cur_victim_key == key) // Key matches
+		{
+			list_iterator_t last_list_iter = cache_items_list_.end();
+			value = last_list_iter->second;
+			uint32_t victim_valuesize = last_list_iter->second.getValuesize();
 
-		// Remove the corresponding map entry
-		cache_items_map_.erase(key);
-		size_ -= static_cast<uint64_t>(key.getKeystr().length() + sizeof(list_iterator_t));
+			// Remove the corresponding map entry
+			cache_items_map_.erase(key);
+			size_ -= static_cast<uint64_t>(key.getKeystr().length() + sizeof(list_iterator_t));
 
-		// Remove the correpsonding list entry
-		cache_items_list_.pop_back();
-		size_ -= static_cast<uint64_t>(key.getKeystr().length() + victim_valuesize);
+			// Remove the corresponding list entry
+			cache_items_list_.pop_back();
+			size_ -= static_cast<uint64_t>(key.getKeystr().length() + victim_valuesize);
 
-		return;
+			is_evict = true;
+		}
+
+		return is_evict;
 	}
 
 	bool LruCache::exists(const Key& key) const

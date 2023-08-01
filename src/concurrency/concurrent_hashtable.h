@@ -2,7 +2,7 @@
  * ConcurrentHashtable: a hash table supports concurrent accesses by PerkeyRwlock (thread safe).
  *
  * NOTE: ConcurrentHashtable guarantees thread-safety for writes of different keys, and atomicity for writes of the same key.
- * NOTE: To guarantee the atomicity among multiple ConcurrentHashtables for writes of the same key, you should pass the same PerkeyRwlock.
+ * NOTE: To guarantee the atomicity/order among multiple ConcurrentHashtables for writes of the same key, you should pass the same PerkeyRwlock.
  * 
  * By Siyuan Sheng (2023.06.27).
  */

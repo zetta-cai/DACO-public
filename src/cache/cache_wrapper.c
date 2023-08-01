@@ -209,24 +209,48 @@ namespace covered
     {
         checkPointers_();
 
-        // Acquire a write lock
-        std::string context_name = "CacheWrapper::evict()";
-        cache_wrapper_perkey_rwlock_ptr_->acquire_lock(key, context_name);
+        // NOTE: key and value are uninitialized now!!!
 
-        local_cache_ptr_->evictLocalCache(key, value);
+        // NOTE: we should NOT modify local_cache_ptr_ outside the write lock, otherwise we cannot guarantee atomicity/order between local_cache_ptr_ and validity_map_ptr_, which may incur an inconsistent state
 
-        bool is_exist = false;
-        validity_map_ptr_->eraseFlagForKey(key, is_exist);
-        if (!is_exist)
+        while (true)
         {
-            std::ostringstream oss;
-            oss << "victim key " << key.getKeystr() << " does not exist in validity_map_ for evict()";
-            Util::dumpWarnMsg(instance_name_, oss.str());
-        
-        }
+            // Get victim_key for key-level fine-grained locking
+            Key victim_key = local_cache_ptr_->getLocalCacheVictimKey();
+            Value victim_value;
 
-        // Release a write lock
-        cache_wrapper_perkey_rwlock_ptr_->unlock(key, context_name);
+            // Acquire a write lock (pessimistic locking to avoid atomicity/order issues)
+            std::string context_name = "CacheWrapper::evict()";
+            cache_wrapper_perkey_rwlock_ptr_->acquire_lock(victim_key, context_name);
+
+            // Evict if key matches (similar as version check for optimistic locking to revert effects of atomicity/order issues)
+            bool is_evict = local_cache_ptr_->evictLocalCacheIfKeyMatch(victim_key, victim_value);
+            if (is_evict) // If with successful eviction
+            {
+                bool is_exist = false;
+                validity_map_ptr_->eraseFlagForKey(victim_key, is_exist);
+                if (!is_exist)
+                {
+                    std::ostringstream oss;
+                    oss << "victim key " << victim_key.getKeystr() << " does not exist in validity_map_ for evict()";
+                    Util::dumpWarnMsg(instance_name_, oss.str());
+                }
+            }
+            else
+            {
+                std::ostringstream oss;
+                oss << "victim key " << victim_key.getKeystr() << " is not matched during eviction in local_cache_ptr_ for evict()!";
+                Util::dumpWarnMsg(instance_name_, oss.str());
+            }
+
+            // Release a write lock
+            cache_wrapper_perkey_rwlock_ptr_->unlock(victim_key, context_name);
+
+            if (is_evict) // If with successful eviction
+            {
+                break;
+            }
+        }
 
         return;
     }
@@ -242,6 +266,7 @@ namespace covered
         uint64_t local_edge_cache_size = local_cache_ptr_->getSizeForCapacity();
         uint64_t validity_map_size = validity_map_ptr_->getSizeForCapacity();
         uint64_t total_size = local_edge_cache_size + validity_map_size;
+
         return total_size;
     }
 

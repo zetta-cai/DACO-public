@@ -491,7 +491,8 @@ namespace covered
         bool is_finish = false;
 
         #ifdef DEBUG_CACHE_SERVER
-        Util::dumpVariablesForDebug(instance_name_, 7, "independent admission;", "keystr:", key.getKeystr().c_str(), "is value deleted:", Util::toString(value.isDeleted()).c_str(), "value size:", Util::toString(value.getValuesize()).c_str());
+        uint64_t used_bytes_before_admit = tmp_edge_wrapper_ptr->getSizeForCapacity();
+        Util::dumpVariablesForDebug(instance_name_, 9, "independent admission;", "keystr:", key.getKeystr().c_str(), "is value deleted:", Util::toString(value.isDeleted()).c_str(), "value size:", Util::toString(value.getValuesize()).c_str(), "used_bytes_before_admit:", std::to_string(used_bytes_before_admit).c_str());
         #endif
 
         // Independently admit the new key-value pair into local edge cache

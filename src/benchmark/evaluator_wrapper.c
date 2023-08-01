@@ -162,7 +162,7 @@ namespace covered
                 if (delta_us_for_finishwarmup >= max_warmup_duration_sec_ * 1000 * 1000)
                 {
                     std::ostringstream oss;
-                    oss << "achieve max warmup duration of " << max_warmup_duration_sec_ << " seconds with cache hit ratio of " << total_statistics_tracker_ptr_->getCurslotTotalHitRatio() << " -> finish warmup phase";
+                    oss << "achieve max warmup duration of " << max_warmup_duration_sec_ << " seconds with cache hit ratio of " << total_statistics_tracker_ptr_->getCurslotTotalAggregatedStatistics().getTotalHitRatio() << " -> finish warmup phase";
                     Util::dumpNormalMsg(kClassName, oss.str());
 
                     finish_warmup_phase = true;
@@ -290,7 +290,7 @@ namespace covered
                 }
                 else
                 {
-                    MessageBase* control_response_ptr = MessageBase::getRequestFromMsgPayload(control_response_msg_payload);
+                    MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
                     assert(control_response_ptr != NULL);
                     assert(control_response_ptr->getMessageType() == MessageType::kStartrunResponse);
 
@@ -347,7 +347,7 @@ namespace covered
                 }
                 else
                 {
-                    MessageBase* control_response_ptr = MessageBase::getRequestFromMsgPayload(control_response_msg_payload);
+                    MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
                     assert(control_response_ptr != NULL);
                     assert(control_response_ptr->getMessageType() == MessageType::kSwitchSlotResponse);
 
@@ -385,7 +385,8 @@ namespace covered
         total_statistics_tracker_ptr_->updatePerslotTotalAggregatedStatistics(curslot_perclient_aggregated_statistics);
 
         #ifdef DEBUG_EVALUATOR_WRAPPER
-        Util::dumpVariablesForDebug(kClassName, 8, "slot idx:", std::to_string(target_slot_idx_ - 1).c_str(), "total hit ratio:", std::to_string(total_statistics_tracker_ptr_->getCurslotTotalHitRatio()).c_str(), "cache utilization:", std::to_string(total_statistics_tracker_ptr_->getCurslotTotalCacheUtilization()).c_str(), "cache margin bytes:", std::to_string(total_statistics_tracker_ptr_->getCurslotTotalCacheMarginBytes()).c_str());
+        TotalAggregatedStatistics tmp_curslot_total_aggregated_statistics = total_statistics_tracker_ptr_->getCurslotTotalAggregatedStatistics();
+        Util::dumpVariablesForDebug(kClassName, 10, "slot idx:", std::to_string(target_slot_idx_ - 1).c_str(), "total hit ratio:", std::to_string(tmp_curslot_total_aggregated_statistics.getTotalHitRatio()).c_str(), "cache utilization:", std::to_string(tmp_curslot_total_aggregated_statistics.getTotalCacheUtilization()).c_str(), "cache margin bytes:", std::to_string(tmp_curslot_total_aggregated_statistics.getTotalCacheMarginBytes()).c_str(), "cache size usage bytes:", std::to_string(tmp_curslot_total_aggregated_statistics.getTotalCacheSizeBytes()).c_str());
         #endif
 
         return;
@@ -420,7 +421,7 @@ namespace covered
                 }
                 else
                 {
-                    MessageBase* control_response_ptr = MessageBase::getRequestFromMsgPayload(control_response_msg_payload);
+                    MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
                     assert(control_response_ptr != NULL);
                     assert(control_response_ptr->getMessageType() == MessageType::kFinishWarmupResponse);
 
@@ -487,7 +488,7 @@ namespace covered
                 }
                 else
                 {
-                    MessageBase* control_response_ptr = MessageBase::getRequestFromMsgPayload(control_response_msg_payload);
+                    MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
                     assert(control_response_ptr != NULL);
                     assert(control_response_ptr->getMessageType() == MessageType::kFinishrunResponse);
 
@@ -557,7 +558,7 @@ namespace covered
                 }
                 else
                 {
-                    MessageBase* control_response_ptr = MessageBase::getRequestFromMsgPayload(control_response_msg_payload);
+                    MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
                     assert(control_response_ptr != NULL);
                     assert(control_response_ptr->getMessageType() == MessageType::kSimpleFinishrunResponse);
 

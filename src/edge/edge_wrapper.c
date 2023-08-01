@@ -30,7 +30,7 @@ namespace covered
     }
 
     EdgeWrapper::EdgeWrapper(const std::string& cache_name, const uint64_t& capacity_bytes, const uint32_t& edge_idx, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& percacheserver_workercnt, const uint32_t& propagation_latency_clientedge_us, const uint32_t& propagation_latency_crossedge_us, const uint32_t& propagation_latency_edgecloud_us) : NodeWrapperBase(NodeWrapperBase::EDGE_NODE_ROLE, edge_idx,edgecnt, true), cache_name_(cache_name), capacity_bytes_(capacity_bytes), percacheserver_workercnt_(percacheserver_workercnt)
-    {        
+    {
         // Differentiate different edge nodes
         std::ostringstream oss;
         oss << kClassName << " edge" << edge_idx;
@@ -146,7 +146,10 @@ namespace covered
     {
         checkPointers_();
 
-        uint64_t size = edge_cache_ptr_->getSizeForCapacity() + cooperation_wrapper_ptr_->getSizeForCapacity();
+        uint64_t edge_cache_size = edge_cache_ptr_->getSizeForCapacity();
+        uint64_t cooperation_size = cooperation_wrapper_ptr_->getSizeForCapacity();
+        uint64_t size = edge_cache_size + cooperation_size;
+
         return size;
     }
 

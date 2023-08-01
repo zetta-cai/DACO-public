@@ -105,7 +105,21 @@ namespace covered
         return;
     }
 
-    void LruLocalCache::evictLocalCache(Key& key, Value& value)
+    Key LruLocalCache::getLocalCacheVictimKey() const
+    {
+        checkPointers_();
+
+        // Acquire a read lock for local statistics to update local statistics atomically (so no need to hack LRU cache)
+        std::string context_name = "LruLocalCache::getLocalCacheVictimKey()";
+        rwlock_for_lru_local_cache_ptr_->acquire_lock_shared(context_name);
+
+        Key victim_key = lru_cache_ptr_->getVictimKey();
+
+        rwlock_for_lru_local_cache_ptr_->unlock_shared(context_name);
+        return victim_key;
+    }
+
+    bool LruLocalCache::evictLocalCacheIfKeyMatch(const Key& key, Value& value)
     {
         checkPointers_();
 
@@ -113,10 +127,10 @@ namespace covered
         std::string context_name = "LruLocalCache::evictLocalCache()";
         rwlock_for_lru_local_cache_ptr_->acquire_lock(context_name);
 
-        lru_cache_ptr_->evict(key, value);
+        bool is_evict = lru_cache_ptr_->evictIfKeyMatch(key, value);
 
         rwlock_for_lru_local_cache_ptr_->unlock(context_name);
-        return;
+        return is_evict;
     }
 
     // (4) Other functions

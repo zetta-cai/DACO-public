@@ -22,6 +22,9 @@ namespace covered
 
         total_readcnt_ = 0;
         total_writecnt_ = 0;
+
+        total_cache_size_bytes_ = 0;
+        total_cache_capacity_bytes_ = 0;
     }
         
     AggregatedStatisticsBase::~AggregatedStatisticsBase() {}

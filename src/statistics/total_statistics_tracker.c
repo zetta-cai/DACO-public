@@ -62,52 +62,24 @@ namespace covered
         return;
     }
 
-    uint64_t TotalStatisticsTracker::getCurslotTotalCacheMarginBytes() const
+    TotalAggregatedStatistics TotalStatisticsTracker::getCurslotTotalAggregatedStatistics() const
     {
         assert(allow_update_ == true);
 
         const uint32_t slotcnt = perslot_total_aggregated_statistics_.size();
         assert(slotcnt > 0);
 
-        uint64_t cur_total_cache_margin_bytes = perslot_total_aggregated_statistics_[slotcnt - 1].getTotalCacheMarginBytes();
-
-        return cur_total_cache_margin_bytes;
+        return perslot_total_aggregated_statistics_[slotcnt - 1];
     }
     
-    double TotalStatisticsTracker::getCurslotTotalCacheUtilization() const
-    {
-        assert(allow_update_ == true);
-
-        const uint32_t slotcnt = perslot_total_aggregated_statistics_.size();
-        assert(slotcnt > 0);
-
-        double cur_total_cache_utilization = perslot_total_aggregated_statistics_[slotcnt - 1].getTotalCacheUtilization();
-
-        return cur_total_cache_utilization;
-    }
-
-    double TotalStatisticsTracker::getCurslotTotalHitRatio() const
-    {
-        assert(allow_update_ == true);
-
-        const uint32_t slotcnt = perslot_total_aggregated_statistics_.size();
-        assert(slotcnt > 0);
-
-        double cur_total_hit_ratio = perslot_total_aggregated_statistics_[slotcnt - 1].getTotalHitRatio();
-
-        return cur_total_hit_ratio;
-    }
-
-    double TotalStatisticsTracker::getPrevslotTotalHitRatio() const
+    TotalAggregatedStatistics TotalStatisticsTracker::getPrevslotTotalAggregatedStatistics() const
     {
         assert(allow_update_ == true);
 
         const uint32_t slotcnt = perslot_total_aggregated_statistics_.size();
         assert(slotcnt > 1);
 
-        double prev_total_hit_ratio = perslot_total_aggregated_statistics_[slotcnt - 2].getTotalHitRatio();
-
-        return prev_total_hit_ratio;
+        return perslot_total_aggregated_statistics_[slotcnt - 2];
     }
 
     bool TotalStatisticsTracker::isPerSlotTotalAggregatedStatisticsStable(double& cache_hit_ratio)
@@ -121,10 +93,13 @@ namespace covered
         {
             //return true; // TMPDEBUG
 
-            uint64_t cur_total_cache_margin_bytes = getCurslotTotalCacheMarginBytes();
-            double cur_total_cache_utilization = getCurslotTotalCacheUtilization();
-            double cur_total_hit_ratio = getCurslotTotalHitRatio();
-            double prev_total_hit_ratio = getPrevslotTotalHitRatio();
+            TotalAggregatedStatistics cur_total_aggregated_statistics = getCurslotTotalAggregatedStatistics();
+            uint64_t cur_total_cache_margin_bytes = cur_total_aggregated_statistics.getTotalCacheMarginBytes();
+            double cur_total_cache_utilization = cur_total_aggregated_statistics.getTotalCacheUtilization();
+            double cur_total_hit_ratio = cur_total_aggregated_statistics.getTotalHitRatio();
+
+            TotalAggregatedStatistics prev_total_aggregated_statistics = getPrevslotTotalAggregatedStatistics();
+            double prev_total_hit_ratio = prev_total_aggregated_statistics.getTotalHitRatio();
 
             // If cache is filled up
             bool is_cache_fillup = false;

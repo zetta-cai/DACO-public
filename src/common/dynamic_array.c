@@ -53,7 +53,7 @@ namespace covered
         {
             oss.fill('0');
             oss.width(2);
-            oss << std::hex << static_cast<int>(bytes_[idx]);
+            oss << std::hex << static_cast<int>(static_cast<uint8_t>(bytes_[idx]));
             if (idx != bytes_.size() - 1)
             {
                 oss << " ";
