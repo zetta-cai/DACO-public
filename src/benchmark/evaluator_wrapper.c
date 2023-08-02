@@ -118,7 +118,7 @@ namespace covered
         // Monitor cache hit ratio for warmup and stresstest phases
         const uint32_t client_raw_statistics_slot_interval_sec = Config::getClientRawStatisticsSlotIntervalSec();
         bool is_stable = false;
-        double stable_hit_ratio = 0.0;
+        double stable_hit_ratio = double(0.0);
         struct timespec start_timestamp = Util::getCurrentTimespec(); // For max duration of warmup phase and duration of stresstest phase
         struct timespec prev_timestamp = start_timestamp; // For switch slot
         while (true)
@@ -131,7 +131,7 @@ namespace covered
             if (!is_warmup_phase_) // Stresstest phase
             {
                 double delta_us_for_finishrun = Util::getDeltaTimeUs(cur_timestamp, start_timestamp);
-                if (delta_us_for_finishrun >= stresstest_duration_sec_ * 1000 * 1000)
+                if (delta_us_for_finishrun >= SEC2US(stresstest_duration_sec_))
                 {
                     Util::dumpNormalMsg(kClassName, "Stop benchmark...");
 
@@ -144,7 +144,7 @@ namespace covered
 
             // Switch cur-slot client raw statistics to track per-slot aggregated statistics
             double delta_us_for_switch_slot = Util::getDeltaTimeUs(cur_timestamp, prev_timestamp);
-            if (delta_us_for_switch_slot >= static_cast<double>(client_raw_statistics_slot_interval_sec * 1000 * 1000))
+            if (delta_us_for_switch_slot >= static_cast<double>(SEC2US(client_raw_statistics_slot_interval_sec)))
             {
                 // Notify clients to switch cur-slot client raw statistics
                 notifyClientsToSwitchSlot_(); // Increase target_slot_idx_ by one and update per-slot total aggregated statistics
@@ -159,7 +159,7 @@ namespace covered
                 bool finish_warmup_phase = false;
 
                 double delta_us_for_finishwarmup = Util::getDeltaTimeUs(cur_timestamp, start_timestamp);
-                if (delta_us_for_finishwarmup >= max_warmup_duration_sec_ * 1000 * 1000)
+                if (delta_us_for_finishwarmup >= SEC2US(max_warmup_duration_sec_))
                 {
                     std::ostringstream oss;
                     oss << "achieve max warmup duration of " << max_warmup_duration_sec_ << " seconds with cache hit ratio of " << total_statistics_tracker_ptr_->getCurslotTotalAggregatedStatistics().getTotalHitRatio() << " -> finish warmup phase";

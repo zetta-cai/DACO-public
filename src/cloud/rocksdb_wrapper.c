@@ -14,17 +14,17 @@ namespace covered
 
     // (2) General options
     const uint32_t RocksdbWrapper::kBloomfilterBitsPerKey = 10; // Default of 10
-    const uint32_t RocksdbWrapper::kBlockCacheCapacity = 1 * 1024 * 1024 * 1024; // Default of 1 GiB
+    const uint32_t RocksdbWrapper::kBlockCacheCapacity = GB2B(1); // Default of 1 GiB
     const uint32_t RocksdbWrapper::kBlockCacheShardBits = 4; // Default of 4 (i.e., 16 shards)
     //const bool RocksdbWrapper::kAllowOsBuffer = true; // Default of true
     const int RocksdbWrapper::kMaxOpenFiles = -1; // Keep all files open
     const uint32_t RocksdbWrapper::kTableCacheNumshardbits = 6; // Default of 6 (i.e., 64 shards)
-    const uint32_t RocksdbWrapper::kBlockSize = 4 * 1024; // Default of 4 KiB
-    const uint32_t RocksdbWrapper::kBlockSizeForHdd = 64 * 1024; // At least 64 KiB for HDD
+    const uint32_t RocksdbWrapper::kBlockSize = KB2B(4); // Default of 4 KiB
+    const uint32_t RocksdbWrapper::kBlockSizeForHdd = KB2B(64); // At least 64 KiB for HDD
 
     // (3) Flushing options
-    const uint32_t RocksdbWrapper::kWriteBufferSize = 64 * 1024 * 1024; // Default of 64 MiB
-    const uint32_t RocksdbWrapper::kWriteBufferSizeForHdd = 256 * 1024 * 1024; // At least 256 MiB for HDD
+    const uint32_t RocksdbWrapper::kWriteBufferSize = MB2B(64); // Default of 64 MiB
+    const uint32_t RocksdbWrapper::kWriteBufferSizeForHdd = MB2B(256); // At least 256 MiB for HDD
     const uint32_t RocksdbWrapper::kMaxWriteBufferNumber = 5; // Example of 5
     const uint32_t RocksdbWrapper::kMaxWriteBufferNumberToMerge = 2; // Example of 2
 
@@ -32,17 +32,17 @@ namespace covered
     const uint32_t RocksdbWrapper::kLevel0SstNum = 4; // Default of 4
     const uint32_t RocksdbWrapper::kNumLevels = 7; // Default of 7
     const uint32_t RocksdbWrapper::kLevel1SstNum = 10; // Suggestion of 10
-    const uint32_t RocksdbWrapper::kLevel1SstSize = 64 * 1024 * 1024; // Default of 64 MiB
-    const uint32_t RocksdbWrapper::kLevel1SstSizeForHdd = 64 * 1024 * 1024; //At least 256 MiB for HDD
+    const uint32_t RocksdbWrapper::kLevel1SstSize = MB2B(64); // Default of 64 MiB
+    const uint32_t RocksdbWrapper::kLevel1SstSizeForHdd = MB2B(64); //At least 256 MiB for HDD
     const uint32_t RocksdbWrapper::kSstSizeMultiplier = 1; // Default of 1
     const uint32_t RocksdbWrapper::kLevelSizeMultiplier = 10; // Default of 10
 
     // (5) Other options
-    const uint32_t RocksdbWrapper::kWalBytesPerSync = 2 * 1024 * 1024; // Use 2 MiB to avoid OS bottleneck
+    const uint32_t RocksdbWrapper::kWalBytesPerSync = MB2B(2); // Use 2 MiB to avoid OS bottleneck
 
     // (6) Specific options
     const uint32_t RocksdbWrapper::kMaxFileOpeningThreadsForHdd = 16; // Set a value larger than 1 if cloud has multiple disks (default of 16)
-    //const uint32_t kCompactionReadaheadSizeForHdd = 2 * 1024 * 1024; // At least 2 MiB for HDD
+    //const uint32_t kCompactionReadaheadSizeForHdd = MB2B(2); // At least 2 MiB for HDD
 
     const std::string RocksdbWrapper::kClassName("RocksdbWrapper");
 

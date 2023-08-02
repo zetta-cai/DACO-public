@@ -86,7 +86,7 @@ namespace covered
             }
         }
         std::string cache_name = argument_info_["cache_name"].as<std::string>();
-        uint64_t capacity_bytes = argument_info_["capacity_mb"].as<uint64_t>() * 1024 * 1024; // In units of bytes
+        uint64_t capacity_bytes = MB2B(argument_info_["capacity_mb"].as<uint64_t>()); // In units of bytes
         uint32_t clientcnt = argument_info_["clientcnt"].as<uint32_t>();
         std::string cloud_storage = argument_info_["cloud_storage"].as<std::string>();
         std::string config_filepath = argument_info_["config_file"].as<std::string>();

@@ -32,7 +32,7 @@ namespace covered
     std::memory_order Util::STORE_CONCURRENCY_ORDER = std::memory_order_release;
     std::memory_order Util::RMW_CONCURRENCY_ORDER = std::memory_order_acq_rel;
     // Workflow control
-    const unsigned int Util::SLEEP_INTERVAL_US = 100 * 1000; // 100ms
+    const unsigned int Util::SLEEP_INTERVAL_US = MS2US(100); // 100ms
     // Workload generation
     const uint32_t Util::KVPAIR_GENERATION_SEED = 0;
     // Time measurement
@@ -238,7 +238,7 @@ namespace covered
         int minute = current_datetime->tm_min;
         double second = static_cast<double>(current_datetime->tm_sec);
         double nanosecond = static_cast<double>(current_timespec.tv_nsec) / static_cast<double>(NANOSECONDS_PERSECOND);
-        if (nanosecond >= (1.0 / pow(10, static_cast<double>(SECOND_PRECISION))))
+        if (nanosecond >= (double(1.0) / pow(10, static_cast<double>(SECOND_PRECISION))))
         {
             second += nanosecond;
         }
@@ -266,7 +266,7 @@ namespace covered
 			delta_timespec.tv_nsec += NANOSECONDS_PERSECOND;
 		}
 
-        double delta_time = delta_timespec.tv_sec * 1000 * 1000 + double(delta_timespec.tv_nsec) / 1000.0;
+        double delta_time = SEC2US(delta_timespec.tv_sec) + double(delta_timespec.tv_nsec) / double(1000.0);
         return delta_time;
     }
 

@@ -11,9 +11,9 @@
 
 namespace covered
 {
-    const double TotalStatisticsTracker::CACHE_UTILIZATION_THRESHOLD_FOR_FILLUP = 0.999; // >= 99.9% cache utilization
-    const uint64_t TotalStatisticsTracker::CACHE_MARGIN_BYTES_IOTA_FOR_FILLUP = 1 * 1024 * 1024; // <= 1MiB
-    const double TotalStatisticsTracker::CACHE_HIT_RATIO_CHANGE_THRESHOLD_FOR_STABLE = 0.001; // <= 0.1% cache hit ratio change
+    const double TotalStatisticsTracker::CACHE_UTILIZATION_THRESHOLD_FOR_FILLUP = double(0.999); // >= 99.9% cache utilization
+    const uint64_t TotalStatisticsTracker::CACHE_MARGIN_BYTES_IOTA_FOR_FILLUP = MB2B(1); // <= 1MiB
+    const double TotalStatisticsTracker::CACHE_HIT_RATIO_CHANGE_THRESHOLD_FOR_STABLE = double(0.001); // <= 0.1% cache hit ratio change
 
     const std::string TotalStatisticsTracker::kClassName("TotalStatisticsTracker");
     
