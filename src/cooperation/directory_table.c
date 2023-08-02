@@ -164,7 +164,9 @@ namespace covered
     {
         // NOTE: note that CacheWrapperBase counts the size of keys cached for local edge cache as closest edge node, so we still need to count the size of keys managed for cooperation as beacon edge node
         // NOTE: as we have counted the size of keys for cooperation, other structures (e.g., BlockTracker) does NOT need to count key sizes again
-        uint64_t size = directory_hashtable_.getTotalKeySizeForCapcity() + directory_hashtable_.getTotalValueSizeForCapcity();
+        uint64_t total_key_size = directory_hashtable_.getTotalKeySizeForCapcity();
+        uint64_t total_value_size = directory_hashtable_.getTotalValueSizeForCapcity();
+        uint64_t size = Util::uint64Add(total_key_size, total_value_size);
 
         return size;
     }

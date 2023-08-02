@@ -275,7 +275,7 @@ namespace covered
         
         uint64_t local_edge_cache_size = local_cache_ptr_->getSizeForCapacity();
         uint64_t validity_map_size = validity_map_ptr_->getSizeForCapacity();
-        uint64_t total_size = local_edge_cache_size + validity_map_size;
+        uint64_t total_size = Util::uint64Add(local_edge_cache_size, validity_map_size);
 
         return total_size;
     }

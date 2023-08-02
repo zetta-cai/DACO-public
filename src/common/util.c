@@ -16,7 +16,7 @@
 
 namespace covered
 {
-    // Type conversion
+    // Type conversion/checking
     const int64_t Util::MAX_UINT16 = 65536;
     const int64_t Util::MAX_UINT32 = 4294967296;
     // Network
@@ -270,7 +270,7 @@ namespace covered
         return delta_time;
     }
 
-    // (3) Type conversion
+    // (3) Type conversion/checking
 
     uint16_t Util::toUint16(const int64_t& val)
     {
@@ -302,6 +302,60 @@ namespace covered
             dumpErrorMsg(kClassName, oss.str());
             exit(1);
         }
+    }
+
+    uint64_t Util::uint64Add(const uint64_t& a, const uint64_t& b)
+    {
+        uint64_t results = a + b;
+        if (results < a || results < b)
+        {
+            std::ostringstream oss;
+            oss << "uint64_t overflow of " << a << " + " << b;
+            dumpErrorMsg(kClassName, oss.str());
+            exit(1);
+        }
+        return results;
+    }
+    
+    uint64_t Util::uint64Minus(const uint64_t& a, const uint64_t& b)
+    {
+        uint64_t results = a - b;
+        if (results > a)
+        {
+            std::ostringstream oss;
+            oss << "uint64_t overflow of " << a << " - " << b;
+            dumpErrorMsg(kClassName, oss.str());
+            exit(1);
+        }
+        return results;
+    }
+
+    void Util::uint64AddForAtomic(std::atomic<uint64_t>& a, const uint64_t& b)
+    {
+        uint64_t original_a = a.fetch_add(b, RMW_CONCURRENCY_ORDER);
+        uint64_t results = a.load(LOAD_CONCURRENCY_ORDER);
+        if (results < original_a || results < b)
+        {
+            std::ostringstream oss;
+            oss << "uint64_t overflow of " << original_a << " + " << b;
+            dumpErrorMsg(kClassName, oss.str());
+            exit(1);
+        }
+        return;
+    }
+    
+    void Util::uint64MinusForAtomic(std::atomic<uint64_t>& a, const uint64_t& b)
+    {
+        uint64_t original_a = a.fetch_sub(b, RMW_CONCURRENCY_ORDER);
+        uint64_t results = a.load(LOAD_CONCURRENCY_ORDER);
+        if (results > original_a)
+        {
+            std::ostringstream oss;
+            oss << "uint64_t overflow of " << original_a << " - " << b;
+            dumpErrorMsg(kClassName, oss.str());
+            exit(1);
+        }
+        return;
     }
 
     std::string Util::toString(void* pointer)

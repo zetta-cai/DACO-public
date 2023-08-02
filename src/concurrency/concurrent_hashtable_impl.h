@@ -110,8 +110,8 @@ namespace covered
             tmp_hashtable.insert(std::pair<Key, V>(key, value));
             is_exist = false;
 
-            total_key_size_.fetch_add(static_cast<uint64_t>(key.getKeystr().length()), Util::RMW_CONCURRENCY_ORDER);
-            total_value_size_.fetch_add(static_cast<uint64_t>(value.getSizeForCapacity()), Util::RMW_CONCURRENCY_ORDER);
+            Util::uint64AddForAtomic(total_key_size_, static_cast<uint64_t>(key.getKeystr().length()));
+            Util::uint64AddForAtomic(total_value_size_, static_cast<uint64_t>(value.getSizeForCapacity()));
         }
         else // key exists
         {
@@ -152,8 +152,8 @@ namespace covered
             tmp_hashtable.insert(std::pair<Key, V>(key, value));
             is_exist = false;
 
-            total_key_size_.fetch_add(static_cast<uint64_t>(key.getKeystr().length()), Util::RMW_CONCURRENCY_ORDER);
-            total_value_size_.fetch_add(static_cast<uint64_t>(value.getSizeForCapacity()), Util::RMW_CONCURRENCY_ORDER);
+            Util::uint64AddForAtomic(total_key_size_, static_cast<uint64_t>(key.getKeystr().length()));
+            Util::uint64AddForAtomic(total_value_size_, static_cast<uint64_t>(value.getSizeForCapacity()));
         }
         else // key exists
         {
@@ -208,8 +208,8 @@ namespace covered
             {
                 tmp_hashtable.erase(iter);
 
-                total_key_size_.fetch_sub(static_cast<uint64_t>(key.getKeystr().length()), Util::RMW_CONCURRENCY_ORDER);
-                total_value_size_.fetch_sub(original_value_size, Util::RMW_CONCURRENCY_ORDER);
+                Util::uint64MinusForAtomic(total_key_size_, static_cast<uint64_t>(key.getKeystr().length()));
+                Util::uint64MinusForAtomic(total_value_size_, original_value_size);
             }
         }
         else // key NOT exist
@@ -276,8 +276,8 @@ namespace covered
             tmp_hashtable.erase(iter);
             is_exist = true;
 
-            total_key_size_.fetch_sub(static_cast<uint64_t>(key.getKeystr().length()), Util::RMW_CONCURRENCY_ORDER);
-            total_value_size_.fetch_sub(original_value_size, Util::RMW_CONCURRENCY_ORDER);
+            Util::uint64MinusForAtomic(total_key_size_, static_cast<uint64_t>(key.getKeystr().length()));
+            Util::uint64MinusForAtomic(total_value_size_, original_value_size);
         }
         else // key NOT exist
         {
@@ -307,11 +307,11 @@ namespace covered
     {
         if (current_value_size >= original_value_size)
         {
-            total_value_size_.fetch_add(current_value_size - original_value_size, Util::RMW_CONCURRENCY_ORDER);
+            Util::uint64AddForAtomic(total_value_size_, current_value_size - original_value_size);
         }
         else
         {
-            total_value_size_.fetch_sub(original_value_size - current_value_size, Util::RMW_CONCURRENCY_ORDER);
+            Util::uint64MinusForAtomic(total_value_size_, original_value_size - current_value_size);
         }
         return;
     }

@@ -280,7 +280,7 @@ namespace covered
 
         uint64_t directory_table_size = directory_table_ptr_->getSizeForCapacity();
         uint64_t block_tracker_size = block_tracker_ptr_->getSizeForCapacity();
-        uint64_t size = directory_table_size + block_tracker_size;
+        uint64_t size = Util::uint64Add(directory_table_size, block_tracker_size);
 
         return size;
     }

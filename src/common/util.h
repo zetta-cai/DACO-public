@@ -78,10 +78,14 @@ namespace covered
         static std::string getCurrentTimestr();
         static double getDeltaTimeUs(const struct timespec& current_timespec, const struct timespec& previous_timespec); // In units of microseconds
 
-        // (3) Type conversion
+        // (3) Type conversion/checking
 
         static uint16_t toUint16(const int64_t& val);
         static uint32_t toUint32(const int64_t& val);
+        static uint64_t uint64Add(const uint64_t& a, const uint64_t& b); // a + b
+        static uint64_t uint64Minus(const uint64_t& a, const uint64_t& b); // a - b
+        static void uint64AddForAtomic(std::atomic<uint64_t>& a, const uint64_t& b); // a + b
+        static void uint64MinusForAtomic(std::atomic<uint64_t>& a, const uint64_t& b); // a - b
         static std::string toString(void* pointer);
         static std::string toString(const bool& boolean);
         static std::string toString(const uint32_t& val);
