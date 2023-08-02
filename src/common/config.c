@@ -5,7 +5,7 @@
 #include <sstream> // ostringstream
 #include <vector>
 
-#include "common/param.h"
+#include "common/param/common_param.h"
 #include "common/util.h"
 
 namespace covered
@@ -78,11 +78,15 @@ namespace covered
 
     void Config::loadConfig()
     {
-        std::string config_filepath = Param::getConfigFilepath();
+        std::string config_filepath = CommonParam::getConfigFilepath();
         bool is_exist = Util::isFileExist(config_filepath, true);
 
         if (is_exist)
         {
+            std::ostringstream oss;
+            oss << "load config file from " << config_filepath << "!";
+            Util::dumpNormalMsg(kClassName, oss.str());
+
             // parse config file to set json_object_
             parseJsonFile_(config_filepath);
 
@@ -281,7 +285,7 @@ namespace covered
     std::string Config::getClientIpstr(const uint32_t& client_idx, const uint32_t& clientcnt)
     {
         checkIsValid_();
-        if (Param::isSingleNode()) // NOT check client_idx for single-node mode
+        if (CommonParam::isSingleNode()) // NOT check client_idx for single-node mode
         {
             return Util::LOCALHOST_IPSTR;
         }
@@ -334,7 +338,7 @@ namespace covered
     std::string Config::getCloudIpstr()
     {
         checkIsValid_();
-        if (Param::isSingleNode())
+        if (CommonParam::isSingleNode())
         {
             return Util::LOCALHOST_IPSTR;
         }
@@ -407,7 +411,7 @@ namespace covered
     std::string Config::getEdgeIpstr(const uint32_t& edge_idx, const uint32_t& edgecnt)
     {
         checkIsValid_();
-        if (Param::isSingleNode()) // NOT check edge_idx for single-node mode
+        if (CommonParam::isSingleNode()) // NOT check edge_idx for single-node mode
         {
             return Util::LOCALHOST_IPSTR;
         }
@@ -521,7 +525,7 @@ namespace covered
     {
         checkIsValid_();
         std::ostringstream oss;
-        oss << "[Static configurations from " << Param::getConfigFilepath() << "]" << std::endl;
+        oss << "[Static configurations from " << CommonParam::getConfigFilepath() << "]" << std::endl;
         oss << "Client ipstrs: ";
         for (uint32_t i = 0; i < client_ipstrs_.size(); i++)
         {

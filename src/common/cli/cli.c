@@ -6,23 +6,8 @@
 
 namespace covered
 {
-    const std::string CLI::kClassName("CLI");
 
-    boost::program_options::options_description CLI::argument_desc_("Allowed arguments:");
-    boost::program_options::variables_map CLI::argument_info_; // Default constructor
-
-    void CLI::parseAndProcessCliParameters(int argc, char **argv)
-    {
-        std::string main_class_name = Util::getFilenameFromFileath(argv[0]);
-
-        parseCliParameters_(argc, argv); // Parse CLI parameters based on argument_desc_ to set argument_info_
-        setParamAndConfig_(main_class_name); // Set parameters for dynamic configurations and load config file for static configurations
-        processCliParameters_(); // Process static/dynamic actions
-        createRequiredDirectories_(main_class_name); // Create required directories (e.g., client statistics directory and cloud RocksDB directory)
-        return;
-    }
-
-    void CLI::parseCliParameters_(int argc, char **argv)
+    void CLI::addCliParameters_(int argc, char **argv)
     {
         // (1) Create CLI parameter description
 
@@ -34,35 +19,21 @@ namespace covered
         argument_desc_.add_options()
             ("cache_name", boost::program_options::value<std::string>()->default_value(Param::LRU_CACHE_NAME), "cache name")
             ("capacity_mb", boost::program_options::value<uint64_t>()->default_value(1024), "total cache capacity (including data and metadata) in units of MiB")
-            ("clientcnt", boost::program_options::value<uint32_t>()->default_value(1), "the total number of clients")
             ("cloud_storage", boost::program_options::value<std::string>()->default_value(Param::HDD_NAME), "type of cloud storage")
-            ("config_file", boost::program_options::value<std::string>()->default_value("config.json"), "config file path of COVERED")
-            ("debug", "enable debug information")
-            ("disable_warmup_speedup", "disable speedup mode for warmup phase")
             ("edgecnt", boost::program_options::value<uint32_t>()->default_value(1), "the number of edge nodes")
             ("hash_name", boost::program_options::value<std::string>()->default_value(Param::MMH3_HASH_NAME, "the type of consistent hashing for DHT"))
-            ("keycnt", boost::program_options::value<uint32_t>()->default_value(1000000), "the total number of keys")
             ("max_warmup_duration_sec", boost::program_options::value<uint32_t>()->default_value(10), "duration of warmup phase (seconds)")
-            ("multinode", "disable single-node mode (NOT work for simulator)")
-            ("opcnt", boost::program_options::value<uint32_t>()->default_value(1000000), "the total number of operations")
             ("percacheserver_workercnt", boost::program_options::value<uint32_t>()->default_value(1), "the number of worker threads for each cache server")
-            ("perclient_workercnt", boost::program_options::value<uint32_t>()->default_value(1), "the number of worker threads for each client")
             ("propagation_latency_clientedge_us", boost::program_options::value<uint32_t>()->default_value(1000), "the propagation latency between client and edge (in units of us)")
             ("propagation_latency_crossedge_us", boost::program_options::value<uint32_t>()->default_value(10000), "the propagation latency between edge and neighbor (in units of us)")
             ("propagation_latency_edgecloud_us", boost::program_options::value<uint32_t>()->default_value(100000), "the propagation latency between edge and cloud (in units of us)")
             ("stresstest_duration_sec", boost::program_options::value<uint32_t>()->default_value(1), "duration of stresstest phase (seconds)")
-            ("track_event", "track events to break down latencies")
             ("workload_name", boost::program_options::value<std::string>()->default_value(Param::FACEBOOK_WORKLOAD_NAME), "workload name")
         ;
         // Dynamic actions
         argument_desc_.add_options()
             ("version,v", "dump version of COVERED")
         ;
-
-        // (2) Parse CLI parameters (static/dynamic actions and dynamic configurations)
-
-        boost::program_options::store(boost::program_options::parse_command_line(argc, argv, argument_desc_), argument_info_);
-        boost::program_options::notify(argument_info_);
 
         return;
     }
@@ -71,30 +42,9 @@ namespace covered
     {
         // (3) Get CLI parameters for dynamic configurations
 
-        bool is_single_node = true; // Enable single-node mode by default
-        if (argument_info_.count("multinode"))
-        {
-            if (main_class_name == Param::SIMULATOR_MAIN_NAME)
-            {
-                std::ostringstream oss;
-                oss << "--multinode does not work for " << main_class_name << " -> still enable single-node mode!";
-                Util::dumpWarnMsg(kClassName, oss.str());
-            }
-            else
-            {
-                is_single_node = false;
-            }
-        }
         std::string cache_name = argument_info_["cache_name"].as<std::string>();
         uint64_t capacity_bytes = MB2B(argument_info_["capacity_mb"].as<uint64_t>()); // In units of bytes
-        uint32_t clientcnt = argument_info_["clientcnt"].as<uint32_t>();
         std::string cloud_storage = argument_info_["cloud_storage"].as<std::string>();
-        std::string config_filepath = argument_info_["config_file"].as<std::string>();
-        bool is_debug = false;
-        if (argument_info_.count("debug"))
-        {
-            is_debug = true;
-        }
         bool is_warmup_speedup = true;
         if (argument_info_.count("disable_warmup_speedup"))
         {
@@ -111,51 +61,14 @@ namespace covered
         uint32_t propagation_latency_crossedge_us = argument_info_["propagation_latency_crossedge_us"].as<uint32_t>();
         uint32_t propagation_latency_edgecloud_us = argument_info_["propagation_latency_edgecloud_us"].as<uint32_t>();
         uint32_t stresstest_duration_sec = argument_info_["stresstest_duration_sec"].as<uint32_t>();
-        bool track_event = false;
-        if (argument_info_.count("track_event"))
-        {
-            track_event = true;
-        }
         std::string workload_name = argument_info_["workload_name"].as<std::string>();
 
         // Store CLI parameters for dynamic configurations and mark Param as valid
-        Param::setParameters(main_class_name, is_single_node, cache_name, capacity_bytes, clientcnt, cloud_storage, config_filepath, is_debug, is_warmup_speedup, edgecnt, hash_name, keycnt, max_warmup_duration_sec, opcnt, percacheserver_workercnt, perclient_workercnt, propagation_latency_clientedge_us, propagation_latency_crossedge_us, propagation_latency_edgecloud_us, stresstest_duration_sec, track_event, workload_name);
+        Param::setParameters(main_class_name, is_single_node, cache_name, capacity_bytes, clientcnt, cloud_storage, config_filepath, is_debug, is_warmup_speedup, edgecnt, hash_name, keycnt, max_warmup_duration_sec, opcnt, percacheserver_workercnt, perclient_workercnt, propagation_latency_clientedge_us, propagation_latency_crossedge_us, propagation_latency_edgecloud_us, stresstest_duration_sec, workload_name);
 
         // (4) Load config file for static configurations
 
         Config::loadConfig();
-    }
-
-    void CLI::processCliParameters_()
-    {
-        // (5) Process CLI parameters
-
-        // (5.1) Process static actions
-
-        if (argument_info_.count("help")) // Dump help information
-        {
-            std::ostringstream oss;
-            oss << argument_desc_;
-            Util::dumpNormalMsg(kClassName, oss.str());
-            exit(0);
-        }
-
-        // (5.2) Process dynamic actions
-
-        if (argument_info_.count("version"))
-        {
-            std::ostringstream oss;
-            oss << "Current version of COVERED: " << Config::getVersion();
-            Util::dumpNormalMsg(kClassName, oss.str());
-            exit(0);
-        }
-
-        // (6) Dump stored CLI parameters and parsed config information if debug
-
-        Util::dumpDebugMsg(kClassName, Param::toString());
-        Util::dumpDebugMsg(kClassName, Config::toString());
-
-        return;
     }
 
     void CLI::createRequiredDirectories_(const std::string& main_class_name)
