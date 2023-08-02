@@ -216,8 +216,16 @@ namespace covered
         while (true)
         {
             // Get victim_key for key-level fine-grained locking
-            Key victim_key = local_cache_ptr_->getLocalCacheVictimKey();
+            Key victim_key;
+            bool has_victim_key = local_cache_ptr_->getLocalCacheVictimKey(victim_key);
             Value victim_value;
+
+            // At least one victim key should exist for eviction
+            if (!has_victim_key)
+            {
+                Util::dumpErrorMsg(instance_name_, "NOT find any victim key for evict()!");
+                exit(1);
+            }
 
             // Acquire a write lock (pessimistic locking to avoid atomicity/order issues)
             std::string context_name = "CacheWrapper::evict()";
@@ -248,6 +256,8 @@ namespace covered
 
             if (is_evict) // If with successful eviction
             {
+                key = victim_key;
+                value = victim_value;
                 break;
             }
         }

@@ -105,7 +105,7 @@ namespace covered
         return;
     }
 
-    Key LruLocalCache::getLocalCacheVictimKey() const
+    bool LruLocalCache::getLocalCacheVictimKey(Key& key) const
     {
         checkPointers_();
 
@@ -113,10 +113,10 @@ namespace covered
         std::string context_name = "LruLocalCache::getLocalCacheVictimKey()";
         rwlock_for_lru_local_cache_ptr_->acquire_lock_shared(context_name);
 
-        Key victim_key = lru_cache_ptr_->getVictimKey();
+        bool has_victim_key = lru_cache_ptr_->getVictimKey(key);
 
         rwlock_for_lru_local_cache_ptr_->unlock_shared(context_name);
-        return victim_key;
+        return has_victim_key;
     }
 
     bool LruLocalCache::evictLocalCacheIfKeyMatch(const Key& key, Value& value)

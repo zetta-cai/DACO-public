@@ -42,7 +42,7 @@ namespace covered
 
         virtual void admitLocalCache(const Key& key, const Value& value) = 0;
         // Split evict() into two steps for key-level fine-grained locking in cache wrapper: (i) get victim key; (ii) evict if victim key matches (similar as version check)
-        virtual Key getLocalCacheVictimKey() const = 0;
+        virtual bool getLocalCacheVictimKey(Key& key) const = 0;
         virtual bool evictLocalCacheIfKeyMatch(const Key& key, Value& value) = 0;
 
         // (4) Other functions

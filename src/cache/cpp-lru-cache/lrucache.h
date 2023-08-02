@@ -30,7 +30,7 @@ namespace covered {
 		bool update(const Key& key, const Value& value);
 
 		void admit(const Key& key, const Value& value);
-		Key getVictimKey() const;
+		bool getVictimKey(Key& key) const;
         bool evictIfKeyMatch(const Key& key, Value& value);
 		
 		bool exists(const Key& key) const;

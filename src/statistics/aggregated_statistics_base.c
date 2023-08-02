@@ -163,7 +163,7 @@ namespace covered
 
         oss << "[Read-write Ratio Statistics]" << std::endl;
         oss << "total read cnt: " << total_readcnt_ << std::endl;
-        oss << "total write cnt: " << total_writecnt_;
+        oss << "total write cnt: " << total_writecnt_ << std::endl;
 
         oss << "[Cache Utilization Statistics]" << std::endl;
         oss << "total cache size usage bytes: " << total_cache_size_bytes_ << std::endl;

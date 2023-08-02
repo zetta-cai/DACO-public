@@ -116,12 +116,7 @@ namespace covered
 
         bool is_erase = false;
 
-        if (function_name == GET_ALL_VALID_DIRINFO_FUNCNAME)
-        {
-            GetAllValidDirinfoParam* tmp_param_ptr = static_cast<GetAllValidDirinfoParam*>(param_ptr);
-            getAllValidDirinfo(tmp_param_ptr->dirinfo_set);
-        }
-        else if (function_name == ADD_DIRINFO_FUNCNAME)
+        if (function_name == ADD_DIRINFO_FUNCNAME)
         {
             AddDirinfoParam* tmp_param_ptr = static_cast<AddDirinfoParam*>(param_ptr);
             tmp_param_ptr->is_directory_already_exist = addDirinfo(tmp_param_ptr->directory_info, tmp_param_ptr->directory_metadata);
@@ -159,8 +154,19 @@ namespace covered
 
     void DirectoryEntry::constCall(const std::string& function_name, void* param_ptr) const
     {
-        Util::dumpErrorMsg(kClassName, "NOT need constCall() for ConcurrentHashtable::constCall()!");
-        exit(1);
+        if (function_name == GET_ALL_VALID_DIRINFO_FUNCNAME)
+        {
+            GetAllValidDirinfoParam* tmp_param_ptr = static_cast<GetAllValidDirinfoParam*>(param_ptr);
+            getAllValidDirinfo(tmp_param_ptr->dirinfo_set);
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "invalid function name " << function_name << " for constCall()!";
+            Util::dumpErrorMsg(kClassName, oss.str());
+            exit(1);
+        }
+        
         return;
     }
 

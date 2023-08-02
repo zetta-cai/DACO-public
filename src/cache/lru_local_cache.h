@@ -33,7 +33,7 @@ namespace covered
 
         virtual bool needIndependentAdmit(const Key& key) const override;
         virtual void admitLocalCache(const Key& key, const Value& value) override;
-        virtual Key getLocalCacheVictimKey() const override;
+        virtual bool getLocalCacheVictimKey(Key& key) const override;
         virtual bool evictLocalCacheIfKeyMatch(const Key& key, Value& value) override;
 
         // (4) Other functions

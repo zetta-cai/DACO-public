@@ -85,13 +85,19 @@ namespace covered
 		return;
 	}
 
-	Key LruCache::getVictimKey() const
+	bool LruCache::getVictimKey(Key& key) const
 	{
-		// Select victim by LRU
-		list_const_iterator_t last_list_iter = cache_items_list_.end();
-		last_list_iter--;
-		Key victim_key = last_list_iter->first;
-		return victim_key;
+		bool has_victim_key = false;
+		if (cache_items_list_.size() > 0)
+		{
+			// Select victim by LRU
+			list_const_iterator_t last_list_iter = cache_items_list_.end();
+			last_list_iter--;
+			key = last_list_iter->first;
+
+			has_victim_key = true;
+		}
+		return has_victim_key;
 	}
     
 	bool LruCache::evictIfKeyMatch(const Key& key, Value& value)
@@ -99,8 +105,9 @@ namespace covered
 		bool is_evict = false;
 		
 		// Select victim by LRU for version check
-		Key cur_victim_key = getVictimKey();
-		if (cur_victim_key == key) // Key matches
+		Key cur_victim_key;
+		bool has_victim_key = getVictimKey(cur_victim_key);
+		if (has_victim_key && cur_victim_key == key) // Key matches
 		{
 			list_iterator_t last_list_iter = cache_items_list_.end();
 			value = last_list_iter->second;
