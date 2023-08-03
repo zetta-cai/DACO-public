@@ -1,29 +1,27 @@
 /*
- * ClientCLI: parse and process client CLI parameters dynamic configurations (stored into ClientParam).
+ * EvaluatorCLI: parse and process evaluator CLI parameters dynamic configurations (stored into EvaluatorParam).
  * 
- * By Siyuan Sheng (2023.08.02).
+ * By Siyuan Sheng (2023.08.03).
  */
 
-#ifndef CLIENT_CLI_H
-#define CLIENT_CLI_H
+#ifndef EVALUATOR_CLI_H
+#define EVALUATOR_CLI_H
 
 #include <string>
 
 #include <boost/program_options.hpp>
 
 #include "common/cli/cli_base.h"
-#include "common/cli/edgescale_cli.h"
-#include "common/cli/propagation_cli.h"
-#include "common/cli/workload_cli.h"
+#include "common/cli/client_cli.h"
+#include "common/cli/edge_cli.h"
 
 namespace covered
 {
-    class ClientCLI : virtual public EdgescaleCLI, virtual public PropagationCLI, virtual public WorkloadCLI
+    class EvaluatorCLI : public ClientCLI, public EdgeCLI
     {
     public:
-        ClientCLI();
-        ClientCLI(int argc, char **argv);
-        ~ClientCLI();
+        EvaluatorCLI(int argc, char **argv);
+        ~EvaluatorCLI();
     private:
         static const std::string kClassName;
 

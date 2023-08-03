@@ -3,7 +3,7 @@
 #include <assert.h>
 #include <sstream>
 
-#include "common/param.h"
+#include "common/param/cloud_param.h"
 #include "common/util.h"
 
 namespace covered
@@ -132,7 +132,7 @@ namespace covered
         rocksdb::BlockBasedTableOptions table_options;
         table_options.filter_policy = std::shared_ptr<const rocksdb::FilterPolicy>(rocksdb::NewBloomFilterPolicy(kBloomfilterBitsPerKey));
         table_options.block_cache = rocksdb::NewLRUCache(kBlockCacheCapacity, kBlockCacheShardBits);
-        if (cloud_storage == Param::HDD_NAME)
+        if (cloud_storage == CloudParam::HDD_NAME)
         {
             table_options.block_size = kBlockSizeForHdd;
             table_options.cache_index_and_filter_blocks = true;
@@ -147,7 +147,7 @@ namespace covered
         rocksdb_options.table_cache_numshardbits = kTableCacheNumshardbits;
 
         // (3) Flushing options
-        if (cloud_storage == Param::HDD_NAME)
+        if (cloud_storage == CloudParam::HDD_NAME)
         {
             rocksdb_options.write_buffer_size = kWriteBufferSizeForHdd;
         }
@@ -160,7 +160,7 @@ namespace covered
 
         // (4) Compaction options
         rocksdb_options.level0_file_num_compaction_trigger = kLevel0SstNum;
-        if (cloud_storage == Param::HDD_NAME)
+        if (cloud_storage == CloudParam::HDD_NAME)
         {
             rocksdb_options.target_file_size_base = kLevel1SstSizeForHdd; // single sst size
             rocksdb_options.max_bytes_for_level_base = kLevel1SstNum * kLevel1SstSizeForHdd;
@@ -180,7 +180,7 @@ namespace covered
         rocksdb_options.wal_bytes_per_sync = kWalBytesPerSync;
 
         // (6) Specific options
-        if (cloud_storage == Param::HDD_NAME)
+        if (cloud_storage == CloudParam::HDD_NAME)
         {
             rocksdb_options.optimize_filters_for_hits = true;
             rocksdb_options.skip_stats_update_on_db_open = true;

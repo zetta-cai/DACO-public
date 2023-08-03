@@ -1,5 +1,5 @@
 /*
- * ClientCLI: parse and process client CLI parameters dynamic configurations (stored into ClientParam).
+ * DatasetLoaderCLI: parse and process dataset loader CLI parameters dynamic configurations (stored into DatasetLoaderParam).
  * 
  * By Siyuan Sheng (2023.08.02).
  */
@@ -12,18 +12,16 @@
 #include <boost/program_options.hpp>
 
 #include "common/cli/cli_base.h"
-#include "common/cli/edgescale_cli.h"
-#include "common/cli/propagation_cli.h"
 #include "common/cli/workload_cli.h"
 
 namespace covered
 {
-    class ClientCLI : virtual public EdgescaleCLI, virtual public PropagationCLI, virtual public WorkloadCLI
+    class DatasetLoaderCLI : virtual public WorkloadCLI
     {
     public:
-        ClientCLI();
-        ClientCLI(int argc, char **argv);
-        ~ClientCLI();
+        DatasetLoaderCLI();
+        DatasetLoaderCLI(int argc, char **argv);
+        ~DatasetLoaderCLI();
     private:
         static const std::string kClassName;
 

@@ -5,7 +5,8 @@
 
 #include "cloud/data_server/data_server.h"
 #include "common/config.h"
-#include "common/param.h"
+#include "common/param/cloud_param.h"
+#include "common/param/propagation_param.h"
 #include "common/util.h"
 #include "message/control_message.h"
 #include "network/propagation_simulator.h"
@@ -19,7 +20,7 @@ namespace covered
         assert(cloud_idx_ptr != NULL);
         uint32_t cloud_idx = *((uint32_t*)cloud_idx_ptr);
 
-        CloudWrapper local_cloud(cloud_idx, Param::getCloudStorage(), Param::getPropagationLatencyEdgecloudUs());
+        CloudWrapper local_cloud(cloud_idx, CloudParam::getCloudStorage(), PropagationParam::getPropagationLatencyEdgecloudUs());
         local_cloud.start();
         
         pthread_exit(NULL);

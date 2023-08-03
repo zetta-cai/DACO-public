@@ -3,7 +3,7 @@
 #include <assert.h>
 
 #include "common/config.h"
-#include "common/param.h"
+#include "common/param/edge_param.h"
 #include "common/util.h"
 #include "edge/cache_server/basic_cache_server_worker.h"
 #include "edge/cache_server/covered_cache_server_worker.h"
@@ -39,7 +39,7 @@ namespace covered
 
         assert(cache_server_worker_param_ptr != NULL);
         std::string cache_name = cache_server_worker_param_ptr->getCacheServerPtr()->getEdgeWrapperPtr()->getCacheName();
-        if (cache_name == Param::COVERED_CACHE_NAME)
+        if (cache_name == EdgeParam::COVERED_CACHE_NAME)
         {
             cache_server_worker_ptr = new CoveredCacheServerWorker(cache_server_worker_param_ptr);
         }

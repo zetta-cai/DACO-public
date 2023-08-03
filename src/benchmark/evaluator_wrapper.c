@@ -5,7 +5,9 @@
 
 #include "common/config.h"
 #include "common/dynamic_array.h"
-#include "common/param.h"
+#include "common/param/client_param.h"
+#include "common/param/edgescale_param.h"
+#include "common/param/evaluator_param.h"
 #include "common/util.h"
 #include "message/message_base.h"
 #include "message/control_message.h"
@@ -19,7 +21,7 @@ namespace covered
     {
         bool& is_evaluator_initialized = *(static_cast<bool*>(is_evaluator_initialized_ptr));
 
-        EvaluatorWrapper evaluator(Param::getClientcnt(), Param::getEdgecnt(), Param::getMaxWarmupDurationSec(), Param::getStresstestDurationSec());
+        EvaluatorWrapper evaluator(ClientParam::getClientcnt(), EdgescaleParam::getEdgecnt(), EvaluatorParam::getMaxWarmupDurationSec(), EvaluatorParam::getStresstestDurationSec());
         is_evaluator_initialized = true; // Such that simulator or prototype will continue to launch cloud, edge, and client nodes
 
         evaluator.start();

@@ -19,19 +19,17 @@ namespace covered
 
     std::string CommonParam::main_class_name_ = "";
     bool CommonParam::is_valid_ = false;
+    
     bool CommonParam::is_single_node_ = true;
     bool CommonParam::is_debug_ = false;
     bool CommonParam::track_event_ = false;
 
     void CommonParam::setParameters(const std::string& main_class_name, const bool& is_single_node, const std::string& config_filepath, const bool& is_debug, const bool& track_event)
     {
-        // NOTE: CommonParam::setParameters() does NOT rely on any other module
+        // NOTE: NOT rely on any other module
         if (is_valid_)
         {
             return; // NO need to set parameters once again
-
-            //Util::dumpErrorMsg(kClassName, "CommonParam::setParameters cannot be invoked more than once!");
-            //exit(1);
         }
         else
         {
@@ -88,7 +86,7 @@ namespace covered
         oss << "Is single node: " << (is_single_node_?"true":"false") << std::endl;
         oss << "Config filepath: " << config_filepath_ << std::endl;
         oss << "Debug flag: " << (is_debug_?"true":"false") << std::endl;
-        oss << "Track event flag: " << (track_event_?"true":"false") << std::endl;
+        oss << "Track event flag: " << (track_event_?"true":"false");
 
         return oss.str();
     }

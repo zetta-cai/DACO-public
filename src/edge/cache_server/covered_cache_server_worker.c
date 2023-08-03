@@ -3,7 +3,7 @@
 #include <assert.h>
 #include <sstream>
 
-#include "common/param.h"
+#include "common/param/edge_param.h"
 #include "common/util.h"
 
 namespace covered
@@ -14,7 +14,7 @@ namespace covered
     {
         assert(cache_server_worker_param_ptr != NULL);
         EdgeWrapper* tmp_edgewrapper_ptr = cache_server_worker_param_ptr->getCacheServerPtr()->getEdgeWrapperPtr();
-        assert(tmp_edgewrapper_ptr->getCacheName() == Param::COVERED_CACHE_NAME);
+        assert(tmp_edgewrapper_ptr->getCacheName() == EdgeParam::COVERED_CACHE_NAME);
         uint32_t edge_idx = tmp_edgewrapper_ptr->getNodeIdx();
         uint32_t local_cache_server_worker_idx = cache_server_worker_param_ptr->getLocalCacheServerWorkerIdx();
 

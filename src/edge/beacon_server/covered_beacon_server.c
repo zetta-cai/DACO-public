@@ -3,7 +3,7 @@
 #include <assert.h>
 #include <sstream>
 
-#include "common/param.h"
+#include "common/param/edge_param.h"
 #include "common/util.h"
 #include "event/event.h"
 #include "event/event_list.h"
@@ -17,7 +17,7 @@ namespace covered
     CoveredBeaconServer::CoveredBeaconServer(EdgeWrapper* edge_wrapper_ptr) : BeaconServerBase(edge_wrapper_ptr)
     {
         assert(edge_wrapper_ptr_ != NULL);
-        assert(edge_wrapper_ptr_->getCacheName() == Param::COVERED_CACHE_NAME);
+        assert(edge_wrapper_ptr_->getCacheName() == EdgeParam::COVERED_CACHE_NAME);
         uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
 
         // Differentiate CoveredBeaconServer in different edge nodes

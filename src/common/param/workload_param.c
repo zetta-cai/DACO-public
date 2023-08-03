@@ -12,28 +12,35 @@ namespace covered
 
     const std::string WorkloadParam::kClassName("WorkloadParam");
 
+    bool WorkloadParam::is_valid_ = false;
+
+    uint32_t WorkloadParam::keycnt_ = 0;
     std::string WorkloadParam::workload_name_ = "";
 
-    void WorkloadParam::setParameters(const std::string& workload_name)
+    void WorkloadParam::setParameters(const uint32_t& keycnt, const std::string& workload_name)
     {
-        // NOTE: WorkloadParam::setParameters() does NOT rely on any other module
+        // NOTE: NOT rely on any other module
         if (is_valid_)
         {
             return; // NO need to set parameters once again
-
-            //Util::dumpErrorMsg(kClassName, "WorkloadParam::setParameters cannot be invoked more than once!");
-            //exit(1);
         }
         else
         {
             Util::dumpNormalMsg(kClassName, "invoke setParameters()!");
         }
 
+        keycnt_ = keycnt;
         workload_name_ = workload_name;
         checkWorkloadName_();
 
         is_valid_ = true;
         return;
+    }
+
+    uint32_t WorkloadParam::getKeycnt()
+    {
+        checkIsValid_();
+        return keycnt_;
     }
 
     std::string WorkloadParam::getWorkloadName()
@@ -48,6 +55,7 @@ namespace covered
 
         std::ostringstream oss;
         oss << "[Dynamic configurations from CLI parameters in " << kClassName << "]" << std::endl;
+        oss << "Key count (dataset size): " << keycnt_ << std::endl;
         oss << "Workload name: " << workload_name_;
 
         return oss.str();  
@@ -62,6 +70,13 @@ namespace covered
             Util::dumpErrorMsg(kClassName, oss.str());
             exit(1);
         }
+        return;
+    }
+
+    void WorkloadParam::verifyIntegrity_()
+    {
+        assert(keycnt_ > 0);
+
         return;
     }
 

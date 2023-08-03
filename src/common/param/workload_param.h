@@ -1,11 +1,9 @@
 /*
  * WorkloadParam: store CLI parameters for workload dynamic configurations.
  *
- * NOTE: different Params should NOT have overlapped fields, and each Param will be set at most once.
- *
- * NOTE: all parameters should be passed into each instance when launching threads, except those with no effect on results (see comments of "// NO effect on results").
+ * See NOTEs in CommonParam.
  * 
- * By Siyuan Sheng (2023.08.02).
+ * By Siyuan Sheng (2023.08.03).
  */
 
 #ifndef WORKLOAD_PARAM_H
@@ -21,8 +19,9 @@ namespace covered
         // For workload name
         static const std::string FACEBOOK_WORKLOAD_NAME; // Workload generator type
 
-        static void setParameters(const std::string& workload_name);
+        static void setParameters(const uint32_t& keycnt, const std::string& workload_name);
 
+        static uint32_t getKeycnt();
         static std::string getWorkloadName();
 
         static std::string toString();
@@ -30,11 +29,13 @@ namespace covered
         static const std::string kClassName;
 
         static void checkWorkloadName_();
+        static void verifyIntegrity_();
 
         static void checkIsValid_();
 
         static bool is_valid_;
 
+        static uint32_t keycnt_;
         static std::string workload_name_;
     };
 }

@@ -4,7 +4,7 @@
 #include <assert.h>
 #include <sstream>
 
-#include "common/param.h"
+#include "common/param/common_param.h"
 #include "common/util.h"
 
 namespace covered
@@ -20,7 +20,7 @@ namespace covered
 
     const std::vector<Event>& EventList::getEventsRef() const
     {
-        if (!Param::isTrackEvent() && events_.size() > 0)
+        if (!CommonParam::isTrackEvent() && events_.size() > 0)
         {
             std::ostringstream oss;
             oss << "size of events_ (" << events_.size() << ") should be 0 when disabling event tracking!";
@@ -33,7 +33,7 @@ namespace covered
 
     void EventList::addEvent(const Event& event)
     {
-        if (Param::isTrackEvent())
+        if (CommonParam::isTrackEvent())
         {
             events_.push_back(event);
         }
@@ -42,7 +42,7 @@ namespace covered
     
     void EventList::addEvent(const std::string& event_name, const uint32_t& event_latency_us)
     {
-        if (Param::isTrackEvent())
+        if (CommonParam::isTrackEvent())
         {
             events_.push_back(Event(event_name, event_latency_us));
         }
@@ -51,7 +51,7 @@ namespace covered
 
     void EventList::addEvents(const std::vector<Event>& events)
     {
-        if (Param::isTrackEvent() && events.size() > 0)
+        if (CommonParam::isTrackEvent() && events.size() > 0)
         {
             for (uint32_t i = 0; i < events.size(); i++)
             {
@@ -63,7 +63,7 @@ namespace covered
 
     void EventList::addEvents(const EventList& event_list)
     {
-        if (Param::isTrackEvent() && event_list.events_.size() > 0)
+        if (CommonParam::isTrackEvent() && event_list.events_.size() > 0)
         {
             for (uint32_t i = 0; i < event_list.events_.size(); i++)
             {
@@ -76,7 +76,7 @@ namespace covered
     uint32_t EventList::getEventListPayloadSize() const
     {
         uint32_t payload_size = 0;
-        if (Param::isTrackEvent())
+        if (CommonParam::isTrackEvent())
         {
             // event list size + event list
             payload_size = sizeof(uint32_t);
@@ -87,7 +87,7 @@ namespace covered
         }
 
         // NOTE: NOT embed event list if without event tracking
-        if (!Param::isTrackEvent())
+        if (!CommonParam::isTrackEvent())
         {
             assert(payload_size == 0);
         }
@@ -99,7 +99,7 @@ namespace covered
     {
         uint32_t size = position;
 
-        if (Param::isTrackEvent())
+        if (CommonParam::isTrackEvent())
         {
             // Event list size
             uint32_t bigendian_eventlist_size = htonl(events_.size());
@@ -115,7 +115,7 @@ namespace covered
         }
 
         // NOTE: NOT embed event list if without event tracking
-        if (!Param::isTrackEvent())
+        if (!CommonParam::isTrackEvent())
         {
             assert(size == position);
         }
@@ -127,7 +127,7 @@ namespace covered
     {
         uint32_t size = position;
 
-        if (Param::isTrackEvent())
+        if (CommonParam::isTrackEvent())
         {
             // Event list
             uint32_t bigendian_eventlist_size = 0;
@@ -149,7 +149,7 @@ namespace covered
         }
 
         // NOTE: NOT embed event list if without event tracking
-        if (!Param::isTrackEvent())
+        if (!CommonParam::isTrackEvent())
         {
             assert(size == position);
         }
@@ -160,7 +160,7 @@ namespace covered
     std::string EventList::toString() const
     {
         std::ostringstream oss;
-        if (Param::isTrackEvent() && events_.size() > 0)
+        if (CommonParam::isTrackEvent() && events_.size() > 0)
         {
             for (uint32_t i = 0; i < events_.size(); i++)
             {

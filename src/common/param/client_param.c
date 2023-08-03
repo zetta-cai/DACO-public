@@ -4,28 +4,26 @@
 #include <cstdlib> // exit
 #include <sstream> // ostringstream
 
-#include "common/param/edge_param.h"
+#include "common/param/edgescale_param.h"
 #include "common/util.h"
 
 namespace covered
 {
     const std::string ClientParam::kClassName("ClientParam");
 
+    bool ClientParam::is_valid_ = false;
+
     uint32_t ClientParam::clientcnt_ = 0;
     bool ClientParam::is_warmup_speedup_ = true;
-    uint32_t ClientParam::keycnt_ = 0;
     uint32_t ClientParam::opcnt_ = 0;
     uint32_t ClientParam::perclient_workercnt_ = 0;
 
-    void ClientParam::setParameters(const uint32_t& clientcnt, const bool& is_warmup_speedup, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& perclient_workercnt)
+    void ClientParam::setParameters(const uint32_t& clientcnt, const bool& is_warmup_speedup, const uint32_t& opcnt, const uint32_t& perclient_workercnt)
     {
-        // NOTE: ClientParam::setParameters() does NOT rely on any other module
+        // NOTE: NOT rely on any other module
         if (is_valid_)
         {
             return; // NO need to set parameters once again
-
-            //Util::dumpErrorMsg(kClassName, "ClientParam::setParameters cannot be invoked more than once!");
-            //exit(1);
         }
         else
         {
@@ -34,7 +32,6 @@ namespace covered
 
         clientcnt_ = clientcnt;
         is_warmup_speedup_ = is_warmup_speedup;
-        keycnt_ = keycnt;
         opcnt_ = opcnt;
         perclient_workercnt_ = perclient_workercnt;
 
@@ -56,12 +53,6 @@ namespace covered
         return is_warmup_speedup_;
     }
 
-    uint32_t ClientParam::getKeycnt()
-    {
-        checkIsValid_();
-        return keycnt_;
-    }
-
     uint32_t ClientParam::getOpcnt()
     {
         checkIsValid_();
@@ -74,6 +65,11 @@ namespace covered
         return perclient_workercnt_;
     }
 
+    bool ClientParam::isValid()
+    {
+        return is_valid_;
+    }
+
     std::string ClientParam::toString()
     {
         checkIsValid_();
@@ -82,9 +78,8 @@ namespace covered
         oss << "[Dynamic configurations from CLI parameters in " << kClassName << "]" << std::endl;
         oss << "Client count: " << clientcnt_ << std::endl;
         oss << "Warmup speedup flag: " << (is_warmup_speedup_?"true":"false") << std::endl;
-        oss << "Key count (dataset size): " << keycnt_ << std::endl;
         oss << "Operation count (workload size): " << opcnt_ << std::endl;
-        oss << "Per-client worker count: " << perclient_workercnt_ << std::endl;
+        oss << "Per-client worker count: " << perclient_workercnt_;
 
         return oss.str();  
     }
@@ -92,13 +87,12 @@ namespace covered
     void ClientParam::verifyIntegrity_()
     {
         assert(clientcnt_ > 0);
-        assert(keycnt_ > 0);
         assert(opcnt_ > 0);
         assert(perclient_workercnt_ > 0);
 
-        if (EdgeParam::isEdgecntValid())
+        if (EdgescaleParam::isValid())
         {
-            uint32_t edgecnt = EdgeParam::getEdgecnt();
+            uint32_t edgecnt = EdgescaleParam::getEdgecnt();
             if (clientcnt_ < edgecnt)
             {
                 std::ostringstream oss;

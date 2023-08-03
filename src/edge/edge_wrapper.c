@@ -4,7 +4,9 @@
 #include <sstream>
 
 #include "common/config.h"
-#include "common/param.h"
+#include "common/param/edge_param.h"
+#include "common/param/edgescale_param.h"
+#include "common/param/propagation_param.h"
 #include "common/util.h"
 #include "edge/beacon_server/beacon_server_base.h"
 #include "edge/cache_server/cache_server.h"
@@ -22,7 +24,7 @@ namespace covered
         assert(edge_idx_ptr != NULL);
         uint32_t edge_idx = *((uint32_t*)edge_idx_ptr);
 
-        EdgeWrapper local_edge(Param::getCacheName(), Param::getCapacityBytes(), edge_idx, Param::getEdgecnt(), Param::getHashName(), Param::getPercacheserverWorkercnt(), Param::getPropagationLatencyClientedgeUs(), Param::getPropagationLatencyCrossedgeUs(), Param::getPropagationLatencyEdgecloudUs());
+        EdgeWrapper local_edge(EdgeParam::getCacheName(), EdgeParam::getCapacityBytes(), edge_idx, EdgescaleParam::getEdgecnt(), EdgeParam::getHashName(), EdgeParam::getPercacheserverWorkercnt(), PropagationParam::getPropagationLatencyClientedgeUs(), PropagationParam::getPropagationLatencyCrossedgeUs(), PropagationParam::getPropagationLatencyEdgecloudUs());
         local_edge.start();
         
         pthread_exit(NULL);

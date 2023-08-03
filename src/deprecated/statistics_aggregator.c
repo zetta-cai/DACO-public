@@ -7,7 +7,7 @@
 
 #include "common/cli.h"
 #include "common/config.h"
-#include "common/param.h"
+#include "common/param/common_param.h"
 #include "common/util.h"
 #include "statistics/client_statistics_tracker.h"
 #include "statistics/total_statistics_tracker.h"
@@ -35,19 +35,19 @@ void* launchLoader(void* local_loader_param_ptr)
 int main(int argc, char **argv) {
     // (1) Parse and process CLI parameters (set configurations in Config and Param)
     covered::CLI::parseAndProcessCliParameters(argc, argv);
-    const std::string main_class_name = covered::Param::getMainClassName();
+    const std::string main_class_name = covered::CommonParam::getMainClassName();
 
     int pthread_returncode;
 
     // TODO: (2) Transfer per-client statistics files from all client machines into the current machine for prototype mode
-    if (!covered::Param::isSingleNode())
+    if (!covered::CommonParam::isSingleNode())
     {
         // TODO
     }
 
     // (3) Launch clientcnt loaders to load per-client statistics
 
-    const uint32_t clientcnt = covered::Param::getClientcnt();
+    const uint32_t clientcnt = covered::ClientParam::getClientcnt();
     pthread_t loader_threads[clientcnt];
     LoaderParam loader_params[clientcnt];
 

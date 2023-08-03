@@ -13,9 +13,14 @@
 
 #include "benchmark/client_wrapper.h"
 #include "benchmark/evaluator_wrapper.h"
-#include "common/cli.h"
+#include "common/cli/client_cli.h"
+#include "common/cli/cloud_cli.h"
+#include "common/cli/edge_cli.h"
+#include "common/cli/evaluator_cli.h"
 #include "common/config.h"
-#include "common/param.h"
+#include "common/param/client_param.h"
+#include "common/param/common_param.h"
+#include "common/param/edgescale_param.h"
 #include "common/util.h"
 #include "cloud/cloud_wrapper.h"
 #include "edge/edge_wrapper.h"
@@ -23,9 +28,15 @@
 #include "statistics/client_statistics_tracker.h"
 
 int main(int argc, char **argv) {
-    // (1) Parse and process CLI parameters (set configurations in Config and Param)
-    covered::CLI::parseAndProcessCliParameters(argc, argv);
-    const std::string main_class_name = covered::Param::getMainClassName();
+
+    // (1) Parse and process different CLI parameters for client/edge/cloud/evaluator, and store them into Params
+
+    covered::ClientCLI client_cli(argc, argv);
+    covered::EdgeCLI edge_cli(argc, argv);
+    covered::CloudCLI cloud_cli(argc, argv);
+    covered::EvaluatorCLI evaluator_cli(argc, argv);
+
+    const std::string main_class_name = covered::CommonParam::getMainClassName();
 
     int pthread_returncode;
 
@@ -73,7 +84,7 @@ int main(int argc, char **argv) {
 
     // (3) Simulate edgecnt edge nodes with cooperative caching
 
-    const uint32_t edgecnt = covered::Param::getEdgecnt();
+    const uint32_t edgecnt = covered::EdgescaleParam::getEdgecnt();
     pthread_t edge_threads[edgecnt];
     uint32_t edge_idxes[edgecnt];
 
@@ -105,7 +116,7 @@ int main(int argc, char **argv) {
     
     // (4) Simulate clientcnt clients by multi-threading
 
-    const uint32_t clientcnt = covered::Param::getClientcnt();
+    const uint32_t clientcnt = covered::ClientParam::getClientcnt();
     pthread_t client_threads[clientcnt];
     uint32_t client_idxes[clientcnt];
 

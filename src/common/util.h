@@ -48,7 +48,7 @@ namespace covered
         static std::memory_order STORE_CONCURRENCY_ORDER;
         static std::memory_order RMW_CONCURRENCY_ORDER; // read-modify-write
         // Workflow control
-        // NOTE: SLEEP_INTERVAL_US MUST be able to support Param::duration_sec and Config::client_raw_statistics_slot_interval_sec
+        // NOTE: SLEEP_INTERVAL_US MUST be able to support EvaluatorParam::max_warmup_duration_sec/stresstest_duration_sec and Config::client_raw_statistics_slot_interval_sec
         static const unsigned int SLEEP_INTERVAL_US; // Sleep interval for polling
         // Workload generation
         static const uint32_t KVPAIR_GENERATION_SEED; // Deterministic seed to generate key-value objects (dataset instead of workload)
@@ -132,8 +132,9 @@ namespace covered
         // (6) Intermediate files
 
         static std::string getStatisticsDirpath();
-        static std::string getClientStatisticsFilepath(const uint32_t& client_idx);
+        //static std::string getClientStatisticsFilepath(const uint32_t& client_idx);
         static std::string getEvaluatorStatisticsFilepath();
+        static std::string getCloudRocksdbBasedirForWorkload();
         static std::string getCloudRocksdbDirpath(const uint32_t& cloud_idx); // Calculate the RocksDB dirpath for the cloud node
 
         // (7) Task scheduling
@@ -159,7 +160,7 @@ namespace covered
         static uint16_t getNodePort_(const int64_t& start_port, const uint32_t& node_idx, const uint32_t& nodecnt, const uint32_t& machine_cnt);
 
         // Intermediate files
-        static std::string getInfixForFilepath_();
+        static std::string getInfixForStatisticsFilepath_();
 
         // Task scheduling
         static void preparePthreadAttr_(pthread_attr_t* attr_ptr);

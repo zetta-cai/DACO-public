@@ -8,9 +8,11 @@ namespace covered
 {
     const std::string CLIBase::kClassName("CLIBase");
 
-    CLIBase::CLIBase() : is_add_cli_parameters_(false), is_set_param_and_config_(false), is_process_cli_parameters_(false), is_create_required_directories_(false), argument_desc_("Allowed arguments:"), argument_info_()
+    CLIBase::CLIBase() : is_add_cli_parameters_(false), is_set_param_and_config_(false), argument_desc_("Allowed arguments:"), argument_info_()
     {
     }
+
+    CLIBase::~CLIBase() {}
 
     void CLIBase::parseAndProcessCliParameters(int argc, char **argv)
     {
@@ -99,7 +101,7 @@ namespace covered
                 track_event = true;
             }
 
-            // Store CLI parameters for comon dynamic configurations and mark CommonParam as valid
+            // Store CLI parameters for common dynamic configurations and mark CommonParam as valid
             CommonParam::setParameters(main_class_name, is_single_node, config_filepath, is_debug, track_event);
 
             // (4) Load config file for static configurations
@@ -114,47 +116,33 @@ namespace covered
 
     void CLIBase::processCliParameters_()
     {
-        if (is_process_cli_parameters_)
+        // (5) Process CLI parameters
+
+        // (5.1) Process static actions
+
+        if (argument_info_.count("help")) // Dump help information
         {
-            // (5) Process CLI parameters
-
-            // (5.1) Process static actions
-
-            if (argument_info_.count("help")) // Dump help information
-            {
-                std::ostringstream oss;
-                oss << argument_desc_;
-                Util::dumpNormalMsg(kClassName, oss.str());
-                exit(0);
-            }
-
-            // (5.2) Process dynamic actions
-
-            if (argument_info_.count("version"))
-            {
-                std::ostringstream oss;
-                oss << "Current version of COVERED: " << Config::getVersion();
-                Util::dumpNormalMsg(kClassName, oss.str());
-                exit(0);
-            }
-
-            // (6) Dump stored CLI parameters and parsed config information if debug
-
-            Util::dumpDebugMsg(kClassName, Config::toString());
-            Util::dumpDebugMsg(kClassName, CommonParam::toString());
-
-            is_process_cli_parameters_ = true;
+            std::ostringstream oss;
+            oss << argument_desc_;
+            Util::dumpNormalMsg(kClassName, oss.str());
+            exit(0);
         }
 
-        return;
-    }
+        // (5.2) Process dynamic actions
 
-    void CLIBase::createRequiredDirectories_(const std::string& main_class_name)
-    {
-        if (!is_create_required_directories_)
+        if (argument_info_.count("version"))
         {
-            is_create_required_directories_ = true;
+            std::ostringstream oss;
+            oss << "Current version of COVERED: " << Config::getVersion();
+            Util::dumpNormalMsg(kClassName, oss.str());
+            exit(0);
         }
+
+        // (6) Dump stored CLI parameters and parsed config information if debug
+
+        Util::dumpDebugMsg(kClassName, Config::toString());
+        Util::dumpDebugMsg(kClassName, CommonParam::toString());
+
         return;
     }
 }

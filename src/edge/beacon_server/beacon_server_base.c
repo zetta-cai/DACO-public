@@ -3,7 +3,7 @@
 #include <assert.h>
 
 #include "common/config.h"
-#include "common/param.h"
+#include "common/param/edge_param.h"
 #include "common/util.h"
 #include "edge/beacon_server/basic_beacon_server.h"
 #include "edge/beacon_server/covered_beacon_server.h"
@@ -20,7 +20,7 @@ namespace covered
 
         assert(edge_wrapper_ptr != NULL);
         std::string cache_name = edge_wrapper_ptr->getCacheName();
-        if (cache_name == Param::COVERED_CACHE_NAME)
+        if (cache_name == EdgeParam::COVERED_CACHE_NAME)
         {
             beacon_server_ptr = new CoveredBeaconServer(edge_wrapper_ptr);
         }

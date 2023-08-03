@@ -12,7 +12,13 @@
 #include <boost/system.hpp>
 
 #include "common/config.h"
-#include "common/param.h"
+#include "common/param/common_param.h"
+#include "common/param/client_param.h"
+#include "common/param/edge_param.h"
+#include "common/param/edgescale_param.h"
+#include "common/param/evaluator_param.h"
+#include "common/param/workload_param.h"
+#include "common/param/propagation_param.h"
 
 namespace covered
 {
@@ -63,7 +69,7 @@ namespace covered
 
     void Util::dumpDebugMsg(const std::string& class_name, const std::string& debug_message)
     {
-        if (Param::isDebug())
+        if (CommonParam::isDebug())
         {
             std::string cur_timestr = getCurrentTimestr();
             msgdump_lock_.lock();
@@ -523,7 +529,7 @@ namespace covered
     uint16_t Util::getNodePort_(const int64_t& start_port, const uint32_t& node_idx, const uint32_t& nodecnt, const uint32_t& machine_cnt)
     {
         int64_t node_port = 0;
-        if (Param::isSingleNode())
+        if (CommonParam::isSingleNode())
         {
             node_port = start_port + node_idx;
         }
@@ -592,18 +598,18 @@ namespace covered
     std::string Util::getStatisticsDirpath()
     {
         std::ostringstream oss;
-        oss << Config::getOutputBasedir() << "/" << getInfixForFilepath_();
+        oss << Config::getOutputBasedir() << "/" << getInfixForStatisticsFilepath_();
         std::string client_statistics_dirpath = oss.str();
         return client_statistics_dirpath;
     }
 
-    std::string Util::getClientStatisticsFilepath(const uint32_t& client_idx)
+    /*std::string Util::getClientStatisticsFilepath(const uint32_t& client_idx)
     {
         std::ostringstream oss;
         oss << getStatisticsDirpath() << "/client" << client_idx << "_statistics.out";
         std::string client_statistics_filepath = oss.str();
         return client_statistics_filepath;
-    }
+    }*/
 
     std::string Util::getEvaluatorStatisticsFilepath()
     {
@@ -613,23 +619,31 @@ namespace covered
         return evaluator_statistics_filepath;
     }
 
+    std::string Util::getCloudRocksdbBasedirForWorkload()
+    {
+        std::ostringstream oss;
+        // Example: /tmp/key1000000_facebook
+        oss << Config::getCloudRocksdbBasedir() << "/key" << WorkloadParam::getKeycnt() << "_" << WorkloadParam::getWorkloadName();
+        return oss.str();
+    }
+
     std::string Util::getCloudRocksdbDirpath(const uint32_t& cloud_idx)
     {
         // TODO: only support 1 cloud node now!
         assert(cloud_idx == 0);
 
         std::ostringstream oss;
-        oss << Config::getCloudRocksdbBasedir() << "/cloud" << cloud_idx << ".db";
+        oss << getCloudRocksdbBasedirForWorkload() << "/cloud" << cloud_idx << ".db";
         std::string cloud_rocksdb_dirpath = oss.str();
         return cloud_rocksdb_dirpath;
     }
 
-    std::string Util::getInfixForFilepath_()
+    std::string Util::getInfixForStatisticsFilepath_()
     {
         std::ostringstream oss;
         // NOTE: NOT consider --cloud_storage, --config_file, --debug, and --track_event
-        // Example: singlenode_covered_capacitymb1000_clientcnt1_warmupspeedup1_edgecnt1_hashnamemmh3_keycnt1000000_opcnt1000000_percacheserverworkercnt1_perclientworkercnt1_propagationus100010000100000_stresstestdurationsec10_facebook
-        oss << (Param::isSingleNode()?"singlenode":"multinode") << "_" << Param::getCacheName() << "_capacitymb" << Param::getCapacityBytes() / 1000 / 1000 << "_clientcnt" << Param::getClientcnt() << "_warmupspeedup" << (Param::isWarmupSpeedup()?"1":"0") << "_edgecnt" << Param::getEdgecnt() << "_hashname" << Param::getHashName() << "_keycnt" << Param::getKeycnt() << "_opcnt" << Param::getOpcnt() << "_percacheserverworkercnt" << Param::getPercacheserverWorkercnt() << "_perclientworkercnt" << Param::getPerclientWorkercnt() << "_propagationus" << Param::getPropagationLatencyClientedgeUs() << Param::getPropagationLatencyCrossedgeUs() << Param::getPropagationLatencyEdgecloudUs() << "_stresstestdurationsec" << Param::getStresstestDurationSec() << "_" << Param::getWorkloadName();
+        // Example: singlenode_covered_capacitymb1000_clientcnt1_warmupspeedup1_edgecnt1_hashnamemmh3_keycnt1000000_opcnt1000000_percacheserverworkercnt1_perclientworkercnt1_propagationus100010000100000_maxwarmupdurationsec10_stresstestdurationsec10_facebook
+        oss << (CommonParam::isSingleNode()?"singlenode":"multinode") << "_" << EdgeParam::getCacheName() << "_capacitymb" << EdgeParam::getCapacityBytes() / 1000 / 1000 << "_clientcnt" << ClientParam::getClientcnt() << "_warmupspeedup" << (ClientParam::isWarmupSpeedup()?"1":"0") << "_edgecnt" << EdgescaleParam::getEdgecnt() << "_hashname" << EdgeParam::getHashName() << "_keycnt" << WorkloadParam::getKeycnt() << "_opcnt" << ClientParam::getOpcnt() << "_percacheserverworkercnt" << EdgeParam::getPercacheserverWorkercnt() << "_perclientworkercnt" << ClientParam::getPerclientWorkercnt() << "_propagationus" << PropagationParam::getPropagationLatencyClientedgeUs() << PropagationParam::getPropagationLatencyCrossedgeUs() << PropagationParam::getPropagationLatencyEdgecloudUs() << "_maxwarmupdurationsec" << EvaluatorParam::getMaxWarmupDurationSec() << "_stresstestdurationsec" << EvaluatorParam::getStresstestDurationSec() << "_" << WorkloadParam::getWorkloadName();
         std::string infixstr = oss.str();
         return infixstr;
     }

@@ -1,9 +1,7 @@
 /*
  * ClientParam: store CLI parameters for client dynamic configurations.
  *
- * NOTE: different Params should NOT have overlapped fields, and each Param will be set at most once.
- *
- * NOTE: all parameters should be passed into each instance when launching threads, except those with no effect on results (see comments of "// NO effect on results").
+ * See NOTEs in CommonParam.
  * 
  * By Siyuan Sheng (2023.08.02).
  */
@@ -18,13 +16,14 @@ namespace covered
     class ClientParam
     {
     public:
-        static void setParameters(const uint32_t& clientcnt, const bool& is_warmup_speedup, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& perclient_workercnt);
+        static void setParameters(const uint32_t& clientcnt, const bool& is_warmup_speedup, const uint32_t& opcnt, const uint32_t& perclient_workercnt);
 
         static uint32_t getClientcnt();
         static bool isWarmupSpeedup();
-        static uint32_t getKeycnt();
         static uint32_t getOpcnt();
         static uint32_t getPerclientWorkercnt();
+
+        static bool isValid();
 
         static std::string toString();
     private:
@@ -38,7 +37,6 @@ namespace covered
 
         static uint32_t clientcnt_;
         static bool is_warmup_speedup_; // Come from CLI::disable_warmup_speedup
-        static uint32_t keycnt_;
         static uint32_t opcnt_;
         static uint32_t perclient_workercnt_;
     };

@@ -6,7 +6,10 @@
 
 #include "benchmark/client_worker_wrapper.h"
 #include "common/config.h"
-#include "common/param.h"
+#include "common/param/client_param.h"
+#include "common/param/edgescale_param.h"
+#include "common/param/propagation_param.h"
+#include "common/param/workload_param.h"
 #include "common/util.h"
 #include "message/control_message.h"
 #include "network/propagation_simulator.h"
@@ -21,7 +24,7 @@ namespace covered
         assert(client_idx_ptr != NULL);
         uint32_t client_idx = *((uint32_t*)client_idx_ptr);
         
-        ClientWrapper local_client(client_idx, Param::getClientcnt(), Param::isWarmupSpeedup(), Param::getEdgecnt(), Param::getKeycnt(), Param::getOpcnt(), Param::getPerclientWorkercnt(), Param::getPropagationLatencyClientedgeUs(), Param::getWorkloadName());
+        ClientWrapper local_client(client_idx, ClientParam::getClientcnt(), ClientParam::isWarmupSpeedup(), EdgescaleParam::getEdgecnt(), WorkloadParam::getKeycnt(), ClientParam::getOpcnt(), ClientParam::getPerclientWorkercnt(), PropagationParam::getPropagationLatencyClientedgeUs(), WorkloadParam::getWorkloadName());
         local_client.start();
         
         pthread_exit(NULL);
