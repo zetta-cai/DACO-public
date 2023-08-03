@@ -12,11 +12,12 @@
 #include <boost/program_options.hpp>
 
 #include "common/cli/cli_base.h"
+#include "common/cli/cloud_cli.h"
 #include "common/cli/workload_cli.h"
 
 namespace covered
 {
-    class DatasetLoaderCLI : virtual public WorkloadCLI
+    class DatasetLoaderCLI : virtual public CloudCLI, virtual public WorkloadCLI
     {
     public:
         DatasetLoaderCLI();
@@ -31,7 +32,7 @@ namespace covered
     protected:
         virtual void addCliParameters_();
         virtual void setParamAndConfig_(const std::string& main_class_name);
-        virtual void createRequiredDirectories_(const std::string& main_class_name);
+        virtual void createRequiredDirectories_(const std::string& main_class_name) override;
     };
 }
 

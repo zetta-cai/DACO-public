@@ -46,6 +46,20 @@ const facebook::cachelib::cachebench::Request& WorkloadGenerator::getReq(uint8_t
   return reqs_[idx];
 }
 
+const facebook::cachelib::cachebench::Request& getReq(uint8_t poolId, uint32_t itemidx)
+{
+  uint32_t keycnt = reqs_.size();
+  if (itemidx >= keycnt)
+  {
+    std::ostringstream oss;
+    oss << "itemidx " << itemidx << " should NOT >= keycnt " << keycnt;
+    Util::dumpErrorMsg("cachebench::workload_generator", oss.str());
+    exit(1);
+  }
+
+  return reqs_[itemidx];
+}
+
 void WorkloadGenerator::generateKeys() {
   uint8_t pid = 0;
   auto fn = [pid, this](size_t start, size_t end, size_t local_thread_idx) -> void {

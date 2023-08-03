@@ -32,7 +32,7 @@ namespace covered
         return workload_ptr;
     }
 
-    WorkloadWrapperBase::WorkloadWrapperBase(const uint32_t& client_idx) : client_idx_(client_idx)
+    WorkloadWrapperBase::WorkloadWrapperBase(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& perclient_workercnt) : clientcnt_(clientcnt), client_idx_(client_idx), keycnt_(keycnt), opcnt_(opcnt), perclient_workercnt_(perclient_workercnt)
     {
         // Differentiate workload generator in different clients
         std::ostringstream oss;
@@ -50,7 +50,7 @@ namespace covered
         {
             initWorkloadParameters_();
             overwriteWorkloadParameters_();
-            createWorkloadGenerator_(client_idx_);
+            createWorkloadGenerator_();
 
             is_valid_ = true;
         }
@@ -61,10 +61,23 @@ namespace covered
         return;
     }
 
-    WorkloadItem WorkloadWrapperBase::generateItem(std::mt19937_64& request_randgen)
+    WorkloadItem WorkloadWrapperBase::generateWorkloadItem(std::mt19937_64& request_randgen)
     {
         checkIsValid_();
-        return generateItemInternal_(request_randgen);
+        return generateWorkloadItemInternal_(request_randgen);
+    }
+
+    uint32_t WorkloadWrapperBase::getKeycnt() const
+    {
+        return keycnt_;
+    }
+
+    WorkloadItem WorkloadWrapperBase::getDatasetItem(const uint32_t itemidx)
+    {
+        checkIsValid_();
+
+        assert(itemidx < keycnt_);
+        getDatasetItemInternal_(itemidx);
     }
 
     void WorkloadWrapperBase::checkIsValid_()

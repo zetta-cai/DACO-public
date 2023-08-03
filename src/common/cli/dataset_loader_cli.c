@@ -9,11 +9,11 @@ namespace covered
 {
     const std::string DatasetLoaderCLI::kClassName("DatasetLoaderCLI");
 
-    DatasetLoaderCLI::DatasetLoaderCLI() : WorkloadCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_create_required_directories_(false)
+    DatasetLoaderCLI::DatasetLoaderCLI() : CloudCLI(), WorkloadCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_create_required_directories_(false)
     {
     }
 
-    DatasetLoaderCLI::DatasetLoaderCLI(int argc, char **argv) : WorkloadCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_create_required_directories_(false)
+    DatasetLoaderCLI::DatasetLoaderCLI(int argc, char **argv) : CloudCLI(), WorkloadCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_create_required_directories_(false)
     {
         parseAndProcessCliParameters(argc, argv);
     }
@@ -24,6 +24,7 @@ namespace covered
     {
         if (!is_add_cli_parameters_)
         {
+            CloudCLI::addCliParameters_();
             WorkloadCLI::addCliParameters_();
 
             // (1) Create CLI parameter description
@@ -44,6 +45,7 @@ namespace covered
     {
         if (!is_set_param_and_config_)
         {
+            CloudCLI::setParamAndConfig_(main_class_name);
             WorkloadCLI::setParamAndConfig_(main_class_name);
 
             // (3) Get CLI parameters for client dynamic configurations
@@ -64,7 +66,7 @@ namespace covered
     {
         if (!is_create_required_directories_)
         {
-            CLIBase::createRequiredDirectories_(main_class_name);
+            CloudCLI::createRequiredDirectories_(main_class_name);
 
             bool is_createdir_for_rocksdb = false;
             if (main_class_name == CommonParam::SIMULATOR_MAIN_NAME)

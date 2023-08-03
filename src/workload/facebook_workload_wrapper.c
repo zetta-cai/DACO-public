@@ -16,7 +16,7 @@ namespace covered
 {
     const std::string FacebookWorkloadWrapper::kClassName("FacebookWorkloadWrapper");
 
-    FacebookWorkloadWrapper::FacebookWorkloadWrapper(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& perclient_workercnt) : WorkloadWrapperBase(client_idx), clientcnt_(clientcnt), keycnt_(keycnt), opcnt_(opcnt), perclient_workercnt_(perclient_workercnt)
+    FacebookWorkloadWrapper::FacebookWorkloadWrapper(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& perclient_workercnt) : WorkloadWrapperBase(clientcnt, client_idx, keycnt, opcnt, perclient_workercnt)
     {
         // Differentiate facebook workload generator in different clients
         std::ostringstream oss;
@@ -56,6 +56,7 @@ namespace covered
         facebook_stressor_config_.numThreads = static_cast<uint64_t>(perclient_workercnt_);
         facebook_stressor_config_.numKeys = static_cast<uint64_t>(keycnt_);
 
+        // NOTE: opPoolDistribution is {1.0}, which generates 0 with a probability of 1.0
         op_pool_dist_ptr_ = new std::discrete_distribution<>(facebook_stressor_config_.opPoolDistribution.begin(), facebook_stressor_config_.opPoolDistribution.end());
         if (op_pool_dist_ptr_ == NULL)
         {
@@ -64,13 +65,13 @@ namespace covered
         }
     }
 
-    void FacebookWorkloadWrapper::createWorkloadGenerator_(const uint32_t& client_idx)
+    void FacebookWorkloadWrapper::createWorkloadGenerator_()
     {
         // facebook::cachelib::cachebench::WorkloadGenerator will generate keycnt key-value pairs by generateReqs() and generate opcnt requests by generateKeyDistributions() in constructor
-        workload_generator_ = makeGenerator_(facebook_stressor_config_, client_idx);
+        workload_generator_ = makeGenerator_(facebook_stressor_config_, client_idx_);
     }
 
-    WorkloadItem FacebookWorkloadWrapper::generateItemInternal_(std::mt19937_64& request_randgen)
+    WorkloadItem FacebookWorkloadWrapper::generateWorkloadItemInternal_(std::mt19937_64& request_randgen)
     {
         // Must be 0 for Facebook CDN trace due to only a single operation pool (cachelib::PoolId = int8_t)
         const uint8_t tmp_poolid = static_cast<uint8_t>((*op_pool_dist_ptr_)(request_randgen));
@@ -113,6 +114,19 @@ namespace covered
 
         last_reqid_ = tmp_facebook_req.requestId;
         return WorkloadItem(tmp_covered_key, tmp_covered_value, tmp_item_type);
+    }
+
+    WorkloadItem FacebookWorkloadWrapper::getDatasetItemInternal_(const uint32_t itemidx)
+    {
+        // Must be 0 for Facebook CDN trace due to only a single operation pool (cachelib::PoolId = int8_t)
+        assert(facebook_stressor_config_.opPoolDistribution.size() == 1 && facebook_stressor_config_.opPoolDistribution[0] == double(1.0));
+        const uint8_t tmp_poolid = 0;
+
+        const facebook::cachelib::cachebench::Request& tmp_facebook_req(workload_generator_->getReq(tmp_poolid, itemidx));
+
+        const Key tmp_covered_key(tmp_facebook_req.key);
+        const Value tmp_covered_value(static_cast<uint32_t>(*(tmp_facebook_req.sizeBegin)));
+        return WorkloadItem(tmp_covered_key, tmp_covered_value, WorkloadItemType::kWorkloadItemPut);
     }
 
     // The same makeGenerator as in lib/CacheLib/cachelib/cachebench/runner/Stressor.cpp

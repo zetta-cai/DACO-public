@@ -112,7 +112,7 @@ namespace covered
             bool is_stresstest_phase = !is_warmup_phase;
 
             // Generate key-value request based on a specific workload
-            WorkloadItem workload_item = workload_generator_ptr->generateItem(*client_worker_item_randgen_ptr_);
+            WorkloadItem workload_item = workload_generator_ptr->generateWorkloadItem(*client_worker_item_randgen_ptr_);
 
             // TMPDEBUG
             //WorkloadItem workload_item(Key("123"), Value(200), WorkloadItemType::kWorkloadItemGet);

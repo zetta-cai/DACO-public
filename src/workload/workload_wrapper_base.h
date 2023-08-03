@@ -1,5 +1,5 @@
 /*
- * WorkloadWrapperBase: the base class for workload generator to generate key-value pairs and requests (thread safe).
+ * WorkloadWrapperBase: the base class for workload generator to generate keycnt dataset key-value pairs with Util::KVPAIR_GENERATION_SEED as the seed and opcnt/clientcnt workload requests/items with client_idx as the seed (thread safe).
  *
  * Access global covered::Config and covered::Param for static and dynamic configurations.
  * Overwrite some workload parameters (e.g., numOps and numKeys) based on static/dynamic configurations.
@@ -22,27 +22,40 @@ namespace covered
     public:
         static WorkloadWrapperBase* getWorkloadGeneratorByWorkloadName(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name);
 
-        WorkloadWrapperBase(const uint32_t& client_idx);
+        WorkloadWrapperBase(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& perclient_workercnt);
         virtual ~WorkloadWrapperBase();
 
         void validate(); // Provide individual validate() as contructor cannot invoke virtual functions
-        WorkloadItem generateItem(std::mt19937_64& request_randgen);
+
+        WorkloadItem generateWorkloadItem(std::mt19937_64& request_randgen);
+
+        uint32_t getKeycnt() const;
+        WorkloadItem getDatasetItem(const uint32_t itemidx);
     private:
         static const std::string kClassName;
 
         virtual void initWorkloadParameters_() = 0; // initialize workload parameters (e.g., by default or by loading config file)
         virtual void overwriteWorkloadParameters_() = 0; // overwrite some workload patermers based on covered::Config and covered::Param
-        virtual void createWorkloadGenerator_(const uint32_t& client_idx) = 0; // create workload generator based on overwritten workload parameters
+        virtual void createWorkloadGenerator_() = 0; // create workload generator based on overwritten workload parameters
 
         // NOTE: randomly select an item without modifying any variable -> thread safe
-        virtual WorkloadItem generateItemInternal_(std::mt19937_64& request_randgen) = 0;
+        virtual WorkloadItem generateWorkloadItemInternal_(std::mt19937_64& request_randgen) = 0;
+
+        // Get a dataset key-value pair item with the index of itemidx
+        virtual WorkloadItem getDatasetItemInternal_(const uint32_t itemidx) = 0;
 
         // Const shared variables
-        const uint32_t client_idx_;
         std::string base_instance_name_;
         bool is_valid_;
 
         void checkIsValid_();
+    protected:
+        // Const shared variables coming from Param
+        const uint32_t clientcnt_;
+        const uint32_t client_idx_;
+        const uint32_t keycnt_;
+        const uint32_t opcnt_;
+        const uint32_t perclient_workercnt_;
     };
 }
 

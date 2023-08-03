@@ -36,6 +36,8 @@ class WorkloadGenerator : public facebook::cachelib::cachebench::GeneratorBase {
       uint8_t poolId,
       std::mt19937_64& gen,
       std::optional<uint64_t> lastRequestId = std::nullopt) override;
+  
+  const facebook::cachelib::cachebench::Request& getReq(uint8_t poolId, uint32_t itemidx);
 
   const std::vector<std::string>& getAllKeys() const override { return keys_; }
 

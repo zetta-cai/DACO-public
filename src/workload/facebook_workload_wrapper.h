@@ -28,18 +28,15 @@ namespace covered
 
         virtual void initWorkloadParameters_() override;
         virtual void overwriteWorkloadParameters_() override;
-        virtual void createWorkloadGenerator_(const uint32_t& client_idx) override;
+        virtual void createWorkloadGenerator_() override;
 
         // NOTE: randomly select an item without modifying any variable -> thread safe
-        virtual WorkloadItem generateItemInternal_(std::mt19937_64& request_randgen) override;
+        virtual WorkloadItem generateWorkloadItemInternal_(std::mt19937_64& request_randgen) override;
+
+        // Get a dataset key-value pair item with the index of itemidx
+        virtual WorkloadItem getDatasetItemInternal_(const uint32_t itemidx) override;
 
         std::unique_ptr<facebook::cachelib::cachebench::GeneratorBase> makeGenerator_(const StressorConfig& config, const uint32_t& client_idx);
-
-        // Const shared variables coming from Param
-        const uint32_t clientcnt_;
-        const uint32_t keycnt_;
-        const uint32_t opcnt_;
-        const uint32_t perclient_workercnt_;
 
         // Const shared variables
         std::string instance_name_;

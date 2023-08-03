@@ -1,6 +1,7 @@
 #include "common/cli/evaluator_cli.h"
 
 #include "common/config.h"
+#include "common/param/common_param.h"
 #include "common/param/evaluator_param.h"
 #include "common/util.h"
 
@@ -59,29 +60,37 @@ namespace covered
 
     void EvaluatorCLI::createRequiredDirectories_(const std::string& main_class_name)
     {
-        bool is_createdir_for_evaluator_statistics = false;
-        if (main_class_name == CommonParam::SIMULATOR_MAIN_NAME)
+        if (!is_create_required_directories_)
         {
-            is_createdir_for_evaluator_statistics = true;
-        }
-        else
-        {
-            // TODO: create directories for different prototype roles
-        }
+            ClientCLI::createRequiredDirectories_(main_class_name);
+            EdgeCLI::createRequiredDirectories_(main_class_name);
 
-        if (is_createdir_for_evaluator_statistics)
-        {
-            std::string dirpath = Util::getStatisticsDirpath();
-            bool is_dir_exist = Util::isDirectoryExist(dirpath);
-            if (!is_dir_exist)
+            bool is_createdir_for_evaluator_statistics = false;
+            if (main_class_name == CommonParam::SIMULATOR_MAIN_NAME)
             {
-                // Create directory for client statistics
-                std::ostringstream oss;
-                oss << "create directory " << dirpath << " for statistics";
-                Util::dumpNormalMsg(kClassName, oss.str());
-
-                Util::createDirectory(dirpath);
+                is_createdir_for_evaluator_statistics = true;
             }
+            else
+            {
+                // TODO: create directories for different prototype roles
+            }
+
+            if (is_createdir_for_evaluator_statistics)
+            {
+                std::string dirpath = Util::getStatisticsDirpath();
+                bool is_dir_exist = Util::isDirectoryExist(dirpath);
+                if (!is_dir_exist)
+                {
+                    // Create directory for client statistics
+                    std::ostringstream oss;
+                    oss << "create directory " << dirpath << " for statistics";
+                    Util::dumpNormalMsg(kClassName, oss.str());
+
+                    Util::createDirectory(dirpath);
+                }
+            }
+
+            is_create_required_directories_ = true;
         }
 
         return;

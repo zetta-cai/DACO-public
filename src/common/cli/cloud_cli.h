@@ -19,6 +19,7 @@ namespace covered
     class CloudCLI : virtual public PropagationCLI
     {
     public:
+        CloudCLI();
         CloudCLI(int argc, char **argv);
         ~CloudCLI();
     private:
@@ -30,7 +31,7 @@ namespace covered
     protected:
         virtual void addCliParameters_();
         virtual void setParamAndConfig_(const std::string& main_class_name);
-        virtual void createRequiredDirectories_(const std::string& main_class_name);
+        virtual void createRequiredDirectories_(const std::string& main_class_name) override;
     };
 }
 

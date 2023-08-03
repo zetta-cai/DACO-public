@@ -8,6 +8,10 @@ namespace covered
 {
     const std::string CloudCLI::kClassName("CloudCLI");
 
+    CloudCLI::CloudCLI() : PropagationCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_create_required_directories_(false)
+    {
+    }
+
     CloudCLI::CloudCLI(int argc, char **argv) : PropagationCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_create_required_directories_(false)
     {
         parseAndProcessCliParameters(argc, argv);
