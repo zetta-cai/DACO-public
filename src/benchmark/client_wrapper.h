@@ -77,9 +77,9 @@ namespace covered
         void checkPointers_() const;
 
         // Const shared variable
-        const bool is_warmup_speedup_; // Come from Param
-        const uint32_t edgecnt_; // Come from Param
-        const uint32_t perclient_workercnt_; // Come from Param
+        const bool is_warmup_speedup_; // Come from CLI
+        const uint32_t edgecnt_; // Come from CLI
+        const uint32_t perclient_workercnt_; // Come from CLI
 
         // Const individual variable
         std::string instance_name_;

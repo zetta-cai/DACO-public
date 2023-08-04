@@ -42,6 +42,8 @@ namespace covered
         static const std::string EVALUATOR_RECVMSG_PORT_KEYSTR;
         static const std::string FACEBOOK_CONFIG_FILEPATH_KEYSTR;
         static const std::string FINE_GRAINED_LOCKING_SIZE_KEYSTR;
+        static const std::string IS_DEBUG_KEYSTR;
+        static const std::string IS_TRACK_EVENT_KEYSTR;
         static const std::string LATENCY_HISTOGRAM_SIZE_KEYSTR;
         static const std::string OUTPUT_BASEDIR_KEYSTR;
         static const std::string PROPAGATION_ITEM_BUFFER_SIZE_CLIENT_TOEDGE_KEYSTR;
@@ -51,7 +53,10 @@ namespace covered
         static const std::string PROPAGATION_ITEM_BUFFER_SIZE_CLOUD_TOEDGE_KEYSTR;
         static const std::string VERSION_KEYSTR;
 
-        static void loadConfig(const std::string& config_filepath);
+        static void loadConfig(const std::string& config_filepath, const std::string& main_class_name, const bool& is_single_node);
+
+        static std::string getMainClassName();
+        static bool isSingleNode();
 
         static std::string getClientIpstr(const uint32_t& client_idx, const uint32_t& clientcnt);
         static uint32_t getClientRawStatisticsSlotIntervalSec();
@@ -76,6 +81,8 @@ namespace covered
         static std::uint16_t getEvaluatorRecvmsgPort();
         static std::string getFacebookConfigFilepath();
         static uint32_t getFineGrainedLockingSize();
+        static bool isDebug();
+        static bool isTrackEvent();
         static uint32_t getLatencyHistogramSize();
         static std::string getOutputBasedir();
         static uint32_t getPropagationItemBufferSizeClientToedge();
@@ -92,9 +99,15 @@ namespace covered
         static void parseJsonFile_(const std::string& config_filepath);
         static boost::json::key_value_pair* find_(const std::string& key);
         static void checkIsValid_();
+        static void checkMainClassName_();
 
         static bool is_valid_;
         static boost::json::object json_object_;
+
+        // Come CLI parameters yet NOT affect evaluation results (with sufficient CPU and memory power -> irrelevant with is_single_node) and NOT changed during evaluation (with fixed evaluation testbed -> irrelevant with main_class_name)
+        static std::string config_filepath_;
+        static std::string main_class_name_; // Come from argv[0]
+        static bool is_single_node_; // Decided by CLIBase::main_class_name_
 
         static std::vector<std::string> client_ipstrs_;
         static uint32_t client_raw_statistics_slot_interval_sec_;
@@ -117,6 +130,8 @@ namespace covered
         static uint16_t evaluator_recvmsg_port_;
         static std::string facebook_config_filepath_;
         static uint32_t fine_grained_locking_size_;
+        static bool is_debug_; // NOT affect evaluation results and NOT changed during evaluation
+        static bool is_track_event_; // NOT affect evaluation results and NOT changed during evaluation
         static uint32_t latency_histogram_size_;
         static std::string output_basedir_;
         static uint32_t propagation_item_buffer_size_client_toedge_;

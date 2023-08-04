@@ -9,39 +9,9 @@ namespace covered
 
     CLIBase::CLIBase() : is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), argument_desc_("Allowed arguments:"), argument_info_()
     {
-        main_class_name_ = "";
-        is_single_node_ = true;
-        config_filepath_ = "";
-        is_debug_ = false;
-        track_event_ = false;
     }
 
     CLIBase::~CLIBase() {}
-
-    std::string CLIBase::getMainClassName() const
-    {
-        return main_class_name_;
-    }
-
-    bool CLIBase::isSingleNode() const
-    {
-        return is_single_node_;
-    }
-
-    std::string CLIBase::getConfigFilepath() const
-    {
-        return config_filepath_;
-    }
-
-    bool CLIBase::isDebug() const
-    {
-        return is_debug_;
-    }
-
-    bool CLIBase::isTrackEvent() const
-    {
-        return track_event_;
-    }
 
     void CLIBase::parseAndProcessCliParameters(int argc, char **argv)
     {
@@ -71,11 +41,9 @@ namespace covered
             ;
 
             // Common dynamic configurations
+            // Obsolete: ("debug", "enable debug information"); ("track_event", "track events to break down latencies"), ("multinode", "disable single-node mode (NOT work for simulator)")
             argument_desc_.add_options()
                 ("config_file", boost::program_options::value<std::string>()->default_value("config.json"), "config file path of COVERED")
-                ("debug", "enable debug information")
-                ("multinode", "disable single-node mode (NOT work for simulator)")
-                ("track_event", "track events to break down latencies")
             ;
 
             // Common dynamic actions
@@ -105,7 +73,27 @@ namespace covered
         {
             // (3) Get CLI parameters for common dynamic configurations
 
+            std::string config_filepath = argument_info_["config_file"].as<std::string>();
+
             bool is_single_node = true; // Enable single-node mode by default
+            if (main_class_name == Util::SIMULATOR_MAIN_NAME)
+            {
+                is_single_node = true;
+            }
+            else if (main_class_name == Util::CLIENT_MAIN_NAME || main_class_name == Util::EDGE_MAIN_NAME || main_class_name == Util::CLOUD_MAIN_NAME || main_class_name == Util::EVALUATOR_MAIN_NAME)
+            {
+                is_single_node = false;
+            }
+            else
+            {
+                std::ostringstream oss;
+                oss << main_class_name << " does NOT use is_single_node";
+                Util::dumpWarnMsg(kClassName, oss.str());
+                exit(1);
+            }
+            
+            // Obsolete
+            /*
             if (argument_info_.count("multinode"))
             {
                 if (main_class_name == Util::SIMULATOR_MAIN_NAME)
@@ -119,7 +107,6 @@ namespace covered
                     is_single_node = false;
                 }
             }
-            std::string config_filepath = argument_info_["config_file"].as<std::string>();
             bool is_debug = false;
             if (argument_info_.count("debug"))
             {
@@ -130,18 +117,11 @@ namespace covered
             {
                 track_event = true;
             }
-
-            // Store CLI parameters for common dynamic configurations
-            main_class_name_ = main_class_name;
-            checkMainClassName_();
-            is_single_node_ = is_single_node;
-            config_filepath_ = config_filepath;
-            is_debug_ = is_debug;
-            track_event_ = track_event;
+            */
 
             // (4) Load config file for static configurations
 
-            Config::loadConfig(config_filepath);
+            Config::loadConfig(config_filepath, main_class_name, is_single_node);
 
             is_set_param_and_config_ = true;
         }
@@ -184,31 +164,13 @@ namespace covered
 
             Util::dumpDebugMsg(kClassName, Config::toString());
 
-            std::ostringstream oss;
+            /*std::ostringstream oss;
             oss << "[Dynamic configurations from CLI parameters in " << kClassName << "]" << std::endl;
-            oss << "Main class name: " << main_class_name_ << std::endl;
-            oss << "Is single node: " << (is_single_node_?"true":"false") << std::endl;
-            oss << "Config filepath: " << config_filepath_ << std::endl;
-            oss << "Debug flag: " << (is_debug_?"true":"false") << std::endl;
-            oss << "Track event flag: " << (track_event_?"true":"false");
-            Util::dumpDebugMsg(kClassName, oss.str());
+            Util::dumpDebugMsg(kClassName, oss.str());*/
 
             is_dump_cli_parameters_ = true;
         }
 
-        return;
-    }
-
-    void CLIBase::checkMainClassName_() const
-    {
-        // Obselete: STATISTICS_AGGREGATOR_MAIN_NAME
-        if (main_class_name_ != Util::SIMULATOR_MAIN_NAME && main_class_name_ != Util::TOTAL_STATISTICS_LOADER_MAIN_NAME && main_class_name_ != Util::DATASET_LOADER_MAIN_NAME && main_class_name_ != Util::CLIENT_MAIN_NAME && main_class_name_ != Util::EDGE_MAIN_NAME && main_class_name_ != Util::CLOUD_MAIN_NAME)
-        {
-            std::ostringstream oss;
-            oss << "main class name " << main_class_name_ << " is not supported!";
-            Util::dumpErrorMsg(kClassName, oss.str());
-            exit(1);
-        }
         return;
     }
 }

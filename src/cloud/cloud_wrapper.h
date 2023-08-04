@@ -37,7 +37,7 @@ namespace covered
     public:
         static void* launchCloud(void* cloud_wrapper_param_ptr);
 
-        CloudWrapper(const uint32_t& cloud_idx, const std::string& cloud_storage, const uint32_t& propagation_latency_edgecloud_us);
+        CloudWrapper(const uint32_t& cloud_idx, const std::string& cloud_storage, const uint32_t& keycnt, const uint32_t& propagation_latency_edgecloud_us, const std::string& workload_name);
         ~CloudWrapper();
 
         RocksdbWrapper* getCloudRocksdbPtr() const;

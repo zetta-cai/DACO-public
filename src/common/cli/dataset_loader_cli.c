@@ -116,7 +116,7 @@ namespace covered
 
             if (is_createdir_for_rocksdb)
             {
-                std::string dirpath = Util::getCloudRocksdbBasedirForWorkload();
+                std::string dirpath = Util::getCloudRocksdbBasedirForWorkload(getKeycnt(), getWorkloadName());
                 bool is_dir_exist = Util::isDirectoryExist(dirpath);
                 if (!is_dir_exist)
                 {

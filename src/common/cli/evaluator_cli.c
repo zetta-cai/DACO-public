@@ -114,7 +114,7 @@ namespace covered
 
             if (is_createdir_for_evaluator_statistics)
             {
-                std::string dirpath = Util::getStatisticsDirpath();
+                std::string dirpath = Util::getEvaluatorStatisticsDirpath(this);
                 bool is_dir_exist = Util::isDirectoryExist(dirpath);
                 if (!is_dir_exist)
                 {

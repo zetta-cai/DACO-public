@@ -7,12 +7,12 @@ namespace covered
 {
     const std::string CloudCLI::kClassName("CloudCLI");
 
-    CloudCLI::CloudCLI() : PropagationCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_create_required_directories_(false)
+    CloudCLI::CloudCLI() : PropagationCLI(), WorkloadCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_create_required_directories_(false)
     {
         cloud_storage_ = "";
     }
 
-    CloudCLI::CloudCLI(int argc, char **argv) : PropagationCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_create_required_directories_(false)
+    CloudCLI::CloudCLI(int argc, char **argv) : PropagationCLI(), WorkloadCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_create_required_directories_(false)
     {
         parseAndProcessCliParameters(argc, argv);
     }
@@ -29,6 +29,7 @@ namespace covered
         if (!is_add_cli_parameters_)
         {
             PropagationCLI::addCliParameters_();
+            WorkloadCLI::addCliParameters_();
 
             // (1) Create CLI parameter description
 
@@ -48,6 +49,7 @@ namespace covered
         if (!is_set_param_and_config_)
         {
             PropagationCLI::setParamAndConfig_(main_class_name);
+            WorkloadCLI::setParamAndConfig_(main_class_name);
 
             // (3) Get CLI parameters for client dynamic configurations
 
@@ -68,6 +70,7 @@ namespace covered
         if (!is_dump_cli_parameters_)
         {
             PropagationCLI::dumpCliParameters_();
+            WorkloadCLI::dumpCliParameters_();
 
             // (6) Dump stored CLI parameters and parsed config information if debug
 

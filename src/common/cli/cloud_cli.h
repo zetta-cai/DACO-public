@@ -13,10 +13,11 @@
 
 #include "common/cli/cli_base.h"
 #include "common/cli/propagation_cli.h"
+#include "common/cli/workload_cli.h"
 
 namespace covered
 {
-    class CloudCLI : virtual public PropagationCLI
+    class CloudCLI : virtual public PropagationCLI, virtual public WorkloadCLI
     {
     public:
         CloudCLI();

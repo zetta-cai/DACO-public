@@ -11,14 +11,8 @@
 #include <boost/stacktrace.hpp>
 #include <boost/system.hpp>
 
+#include "common/cli/evaluator_cli.h"
 #include "common/config.h"
-#include "common/param/common_param.h"
-#include "common/param/client_param.h"
-#include "common/param/edge_param.h"
-#include "common/param/edgescale_param.h"
-#include "common/param/evaluator_param.h"
-#include "common/param/workload_param.h"
-#include "common/param/propagation_param.h"
 
 namespace covered
 {
@@ -96,7 +90,7 @@ namespace covered
 
     void Util::dumpDebugMsg(const std::string& class_name, const std::string& debug_message)
     {
-        if (CommonParam::isDebug())
+        if (Config::isDebug())
         {
             std::string cur_timestr = getCurrentTimestr();
             msgdump_lock_.lock();
@@ -556,7 +550,7 @@ namespace covered
     uint16_t Util::getNodePort_(const int64_t& start_port, const uint32_t& node_idx, const uint32_t& nodecnt, const uint32_t& machine_cnt)
     {
         int64_t node_port = 0;
-        if (CommonParam::isSingleNode())
+        if (Config::isSingleNode())
         {
             node_port = start_port + node_idx;
         }
@@ -622,10 +616,12 @@ namespace covered
 
     // (6) Intermediate files
 
-    std::string Util::getStatisticsDirpath()
+    std::string Util::getEvaluatorStatisticsDirpath(EvaluatorCLI* evaluator_cli_ptr)
     {
+        assert(evaluator_cli_ptr != NULL);
+
         std::ostringstream oss;
-        oss << Config::getOutputBasedir() << "/" << getInfixForStatisticsFilepath_();
+        oss << Config::getOutputBasedir() << "/" << getInfixForEvaluatorStatisticsFilepath_(evaluator_cli_ptr);
         std::string client_statistics_dirpath = oss.str();
         return client_statistics_dirpath;
     }
@@ -638,39 +634,65 @@ namespace covered
         return client_statistics_filepath;
     }*/
 
-    std::string Util::getEvaluatorStatisticsFilepath()
+    std::string Util::getEvaluatorStatisticsFilepath(EvaluatorCLI* evaluator_cli_ptr)
     {
+        assert(evaluator_cli_ptr != NULL);
+
         std::ostringstream oss;
-        oss << getStatisticsDirpath() << "/evaluator_statistics.out";
+        oss << getEvaluatorStatisticsDirpath(evaluator_cli_ptr) << "/evaluator_statistics.out";
         std::string evaluator_statistics_filepath = oss.str();
         return evaluator_statistics_filepath;
     }
 
-    std::string Util::getCloudRocksdbBasedirForWorkload()
+    std::string Util::getCloudRocksdbBasedirForWorkload(const uint32_t& keycnt, const std::string& workload_name)
     {
+        assert(keycnt > 0);
+
         std::ostringstream oss;
         // Example: /tmp/key1000000_facebook
-        oss << Config::getCloudRocksdbBasedir() << "/key" << WorkloadParam::getKeycnt() << "_" << WorkloadParam::getWorkloadName();
+        oss << Config::getCloudRocksdbBasedir() << "/key" << keycnt << "_" << workload_name;
         return oss.str();
     }
 
-    std::string Util::getCloudRocksdbDirpath(const uint32_t& cloud_idx)
+    std::string Util::getCloudRocksdbDirpath(const uint32_t& keycnt, const std::string& workload_name, const uint32_t& cloud_idx)
     {
         // TODO: only support 1 cloud node now!
         assert(cloud_idx == 0);
 
         std::ostringstream oss;
-        oss << getCloudRocksdbBasedirForWorkload() << "/cloud" << cloud_idx << ".db";
+        oss << getCloudRocksdbBasedirForWorkload(keycnt, workload_name) << "/cloud" << cloud_idx << ".db";
         std::string cloud_rocksdb_dirpath = oss.str();
         return cloud_rocksdb_dirpath;
     }
 
-    std::string Util::getInfixForStatisticsFilepath_()
+    std::string Util::getInfixForEvaluatorStatisticsFilepath_(EvaluatorCLI* evaluator_cli_ptr)
     {
+        assert(evaluator_cli_ptr != NULL);
+
+        const std::string cache_name = evaluator_cli_ptr->getCacheName();
+        const uint64_t capacity_bytes = evaluator_cli_ptr->getCapacityBytes();
+        const uint32_t clientcnt = evaluator_cli_ptr->getClientcnt();
+        const bool is_warmup_speedup = evaluator_cli_ptr->isWarmupSpeedup();
+        const uint32_t edgecnt = evaluator_cli_ptr->getEdgecnt();
+        const std::string hash_name = evaluator_cli_ptr->getHashName();
+        const uint32_t keycnt = evaluator_cli_ptr->getKeycnt();
+        const uint32_t opcnt = evaluator_cli_ptr->getOpcnt();
+        const uint32_t percacheserver_workercnt = evaluator_cli_ptr->getPercacheserverWorkercnt();
+        const uint32_t perclient_workercnt = evaluator_cli_ptr->getPerclientWorkercnt();
+        const uint32_t propagation_latency_clientedge_us = evaluator_cli_ptr->getPropagationLatencyClientedgeUs();
+        const uint32_t propagation_latency_crossedge_us = evaluator_cli_ptr->getPropagationLatencyCrossedgeUs();
+        const uint32_t propagation_latency_edgecloud_us = evaluator_cli_ptr->getPropagationLatencyEdgecloudUs();
+        const uint32_t max_warmup_duration_sec = evaluator_cli_ptr->getMaxWarmupDurationSec();
+        const uint32_t stresstest_duration_sec = evaluator_cli_ptr->getStresstestDurationSec();
+        const std::string workload_name = evaluator_cli_ptr->getWorkloadName();
+
         std::ostringstream oss;
-        // NOTE: NOT consider --cloud_storage, --config_file, --debug, and --track_event
-        // Example: singlenode_covered_capacitymb1000_clientcnt1_warmupspeedup1_edgecnt1_hashnamemmh3_keycnt1000000_opcnt1000000_percacheserverworkercnt1_perclientworkercnt1_propagationus100010000100000_maxwarmupdurationsec10_stresstestdurationsec10_facebook
-        oss << (CommonParam::isSingleNode()?"singlenode":"multinode") << "_" << EdgeParam::getCacheName() << "_capacitymb" << EdgeParam::getCapacityBytes() / 1000 / 1000 << "_clientcnt" << ClientParam::getClientcnt() << "_warmupspeedup" << (ClientParam::isWarmupSpeedup()?"1":"0") << "_edgecnt" << EdgescaleParam::getEdgecnt() << "_hashname" << EdgeParam::getHashName() << "_keycnt" << WorkloadParam::getKeycnt() << "_opcnt" << ClientParam::getOpcnt() << "_percacheserverworkercnt" << EdgeParam::getPercacheserverWorkercnt() << "_perclientworkercnt" << ClientParam::getPerclientWorkercnt() << "_propagationus" << PropagationParam::getPropagationLatencyClientedgeUs() << PropagationParam::getPropagationLatencyCrossedgeUs() << PropagationParam::getPropagationLatencyEdgecloudUs() << "_maxwarmupdurationsec" << EvaluatorParam::getMaxWarmupDurationSec() << "_stresstestdurationsec" << EvaluatorParam::getStresstestDurationSec() << "_" << WorkloadParam::getWorkloadName();
+        // NOTE: NOT consider variables which do NOT affect evaluation results
+        // (i) Config variables from JSON, e.g., is_debug and is_track_event
+        // (ii) Config variables from CLI, e.g., main_class_name, --config_filepath, and is_single_node
+        // (iii) Unchanged CLI parameters, e.g., --cloud_storage.
+        // Example: covered_capacitymb1000_clientcnt1_warmupspeedup1_edgecnt1_hashnamemmh3_keycnt1000000_opcnt1000000_percacheserverworkercnt1_perclientworkercnt1_propagationus100010000100000_maxwarmupdurationsec10_stresstestdurationsec10_facebook
+        oss << cache_name << "_capacitymb" << B2MB(capacity_bytes) << "_clientcnt" << clientcnt << "_warmupspeedup" << (is_warmup_speedup?"1":"0") << "_edgecnt" << edgecnt << "_hashname" << hash_name << "_keycnt" << keycnt << "_opcnt" << opcnt << "_percacheserverworkercnt" << percacheserver_workercnt << "_perclientworkercnt" << perclient_workercnt << "_propagationus" << propagation_latency_clientedge_us << propagation_latency_crossedge_us << propagation_latency_edgecloud_us << "_maxwarmupdurationsec" << max_warmup_duration_sec << "_stresstestdurationsec" << stresstest_duration_sec << "_" << workload_name;
         std::string infixstr = oss.str();
         return infixstr;
     }

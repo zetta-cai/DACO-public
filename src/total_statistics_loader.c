@@ -7,6 +7,7 @@
 #include <sstream>
 
 #include "common/cli/evaluator_cli.h"
+#include "common/config.h"
 #include "common/util.h"
 #include "statistics/total_statistics_tracker.h"
 
@@ -14,10 +15,10 @@ int main(int argc, char **argv) {
     // (1) Parse and process CLI parameters and store them into EvaluatorParam
     covered::EvaluatorCLI evaluator_cli(argc, argv);
 
-    const std::string main_class_name = evaluator_cli.getMainClassName();
+    const std::string main_class_name = covered::Config::getMainClassName();
 
     // (2) Load total aggregated statistics
-    std::string total_statistics_filepath = covered::Util::getEvaluatorStatisticsFilepath();
+    std::string total_statistics_filepath = covered::Util::getEvaluatorStatisticsFilepath(&evaluator_cli);
     std::ostringstream oss;
     oss << "load per-slot/stable total aggregated statistics from " << total_statistics_filepath;
     covered::Util::dumpNormalMsg(main_class_name, oss.str());

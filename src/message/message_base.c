@@ -4,7 +4,7 @@
 #include <assert.h>
 #include <sstream>
 
-#include "common/param/common_param.h"
+#include "common/config.h"
 #include "common/util.h"
 #include "message/data_message.h"
 #include "message/control_message.h"
@@ -710,7 +710,7 @@ namespace covered
     NetworkAddr MessageBase::getSourceAddr() const
     {
         checkIsValid_();
-        if (CommonParam::isSingleNode())
+        if (Config::isSingleNode())
         {
             // Fix invalid ipstr of localhost under single-node mode
             return NetworkAddr(Util::LOCALHOST_IPSTR, source_addr_.getPort());

@@ -8,7 +8,6 @@
 #include <cachelib/cachebench/workload/PieceWiseReplayGenerator.h>
 
 #include "common/config.h"
-#include "common/param.h"
 #include "common/util.h"
 #include "workload/cachebench/workload_generator.h"
 

@@ -30,7 +30,7 @@ namespace covered
         static const std::string kClassName;
         static const uint32_t DHT_HASH_RING_LENGTH;
 
-        const uint32_t edgecnt_; // Come from Param
+        const uint32_t edgecnt_; // Come from CLI
 
         // Const variable
         std::string instance_name_;

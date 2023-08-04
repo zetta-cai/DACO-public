@@ -8,6 +8,7 @@
 
 #include "cloud/rocksdb_wrapper.h"
 #include "common/cli/dataset_loader_cli.h"
+#include "common/config.h"
 #include "common/util.h"
 #include "workload/workload_item.h"
 #include "workload/workload_wrapper_base.h"
@@ -18,12 +19,12 @@ struct DatasetLoaderParam
     uint32_t dataset_loadercnt;
     covered::RocksdbWrapper* rocksdb_wrapper_ptr;
     covered::WorkloadWrapperBase* workload_generator_ptr;
-}
+};
 
 void* launchDatasetLoader(void* dataset_loader_param_ptr)
 {
     assert(dataset_loader_param_ptr != NULL);
-    covered::DatasetLoaderParam& dataset_loader_param = *((covered::DatasetLoaderParam*)dataset_loader_param_ptr);
+    DatasetLoaderParam& dataset_loader_param = *((DatasetLoaderParam*)dataset_loader_param_ptr);
 
     // Calculate the key index range [start, end) assigned to the current dataset loader
     const uint32_t keycnt = dataset_loader_param.workload_generator_ptr->getKeycnt();
@@ -67,7 +68,7 @@ int main(int argc, char **argv) {
 
     covered::DatasetLoaderCLI dataset_loader_cli(argc, argv);
 
-    const std::string main_class_name = dataset_loader_cli.getMainClassName();
+    const std::string main_class_name = covered::Config::getMainClassName();
 
     const uint32_t cloud_idx = dataset_loader_cli.getCloudIdx();
     const uint32_t dataset_loadercnt = dataset_loader_cli.getDatasetLoadercnt();
@@ -81,7 +82,7 @@ int main(int argc, char **argv) {
     covered::Util::dumpNormalMsg(main_class_name, oss.str());
 
     // Create the corresponding RocksDB KVS
-    covered::RocksdbWrapper rocksdb_wrapper(cloud_idx, dataset_loader_cli.getCloudStorage(), covered::Util::getCloudRocksdbDirpath(cloud_idx));
+    covered::RocksdbWrapper rocksdb_wrapper(cloud_idx, dataset_loader_cli.getCloudStorage(), covered::Util::getCloudRocksdbDirpath(keycnt, workload_name, cloud_idx));
 
     // Create a workload generator
     // NOTE: NOT need client CLI parameters as we only use dataset key-value pairs instead of workload items
@@ -89,7 +90,7 @@ int main(int argc, char **argv) {
     const uint32_t client_idx = 0;
     const uint32_t perclient_workercnt = dataset_loadercnt;
     const uint32_t opcnt = clientcnt * perclient_workercnt; // dataset_loadercnt
-    covered::WorkloadWrapperBase* workload_generator_ptr = covered::WorkloadWrapperBase::getWorkloadGeneratorByWorkloadName(clientcnt, client_idx, keycnt, opcnt, perclient_workercnt, workload_name)
+    covered::WorkloadWrapperBase* workload_generator_ptr = covered::WorkloadWrapperBase::getWorkloadGeneratorByWorkloadName(clientcnt, client_idx, keycnt, opcnt, perclient_workercnt, workload_name);
     assert(workload_generator_ptr != NULL);
 
     // Create dataset loader parameters

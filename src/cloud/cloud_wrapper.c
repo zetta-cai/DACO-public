@@ -58,14 +58,14 @@ namespace covered
         uint32_t cloud_idx = cloud_wrapper_param.getCloudIdx();
         CloudCLI* cloud_cli_ptr = cloud_wrapper_param.getCloudCLIPtr();
 
-        CloudWrapper local_cloud(cloud_idx, cloud_cli_ptr->getCloudStorage(), cloud_cli_ptr->getPropagationLatencyEdgecloudUs());
+        CloudWrapper local_cloud(cloud_idx, cloud_cli_ptr->getCloudStorage(), cloud_cli_ptr->getKeycnt(), cloud_cli_ptr->getPropagationLatencyEdgecloudUs(), cloud_cli_ptr->getWorkloadName());
         local_cloud.start();
         
         pthread_exit(NULL);
         return NULL;
     }
 
-    CloudWrapper::CloudWrapper(const uint32_t& cloud_idx, const std::string& cloud_storage, const uint32_t& propagation_latency_edgecloud_us) : NodeWrapperBase(NodeWrapperBase::CLOUD_NODE_ROLE, cloud_idx, 1, true)
+    CloudWrapper::CloudWrapper(const uint32_t& cloud_idx, const std::string& cloud_storage, const uint32_t& keycnt, const uint32_t& propagation_latency_edgecloud_us, const std::string& workload_name) : NodeWrapperBase(NodeWrapperBase::CLOUD_NODE_ROLE, cloud_idx, 1, true)
     {
         assert(cloud_idx == 0); // TODO: only support 1 cloud node now!
 
@@ -75,7 +75,7 @@ namespace covered
         instance_name_ = oss.str();
         
         // Open local RocksDB KVS (maybe time-consuming -> introduce NodeParamBase::node_initialized_)
-        cloud_rocksdb_ptr_ = new RocksdbWrapper(cloud_idx, cloud_storage, Util::getCloudRocksdbDirpath(cloud_idx));
+        cloud_rocksdb_ptr_ = new RocksdbWrapper(cloud_idx, cloud_storage, Util::getCloudRocksdbDirpath(keycnt, workload_name, cloud_idx));
         assert(cloud_rocksdb_ptr_ != NULL);
 
         // Allocate cloud-to-edge propagation simulator param

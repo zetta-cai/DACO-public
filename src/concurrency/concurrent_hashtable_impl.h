@@ -5,7 +5,6 @@
 
 #include <sstream>
 
-#include "common/param.h"
 #include "common/util.h"
 
 namespace covered

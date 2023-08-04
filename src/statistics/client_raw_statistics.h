@@ -44,7 +44,7 @@ namespace covered
         void checkPointers_() const;
 
         // Const variables
-        uint32_t perclient_workercnt_; // Come from Param
+        uint32_t perclient_workercnt_; // Come from CLI
         uint32_t latency_histogram_size_; // Come from Config::latency_histogram_size_
 
         // Per-client-worker hit ratio statistics

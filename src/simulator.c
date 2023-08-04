@@ -33,7 +33,7 @@ int main(int argc, char **argv) {
     covered::CloudCLI cloud_cli(argc, argv);
     covered::EvaluatorCLI evaluator_cli(argc, argv);
 
-    const std::string main_class_name = client_cli.getMainClassName();
+    const std::string main_class_name = covered::Config::getMainClassName();
 
     int pthread_returncode;
 

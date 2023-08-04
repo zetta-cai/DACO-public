@@ -64,8 +64,9 @@ namespace covered
         EvaluatorWrapperParam& evaluator_wrapper_param = *((EvaluatorWrapperParam*)evaluator_wrapper_param_ptr);
 
         EvaluatorCLI* evaluator_cli_ptr = evaluator_wrapper_param.getEvaluatorCLIPtr();
+        std::string evaluator_statistics_filepath = Util::getEvaluatorStatisticsFilepath(evaluator_cli_ptr);
 
-        EvaluatorWrapper evaluator(evaluator_cli_ptr->getClientcnt(), evaluator_cli_ptr->getEdgecnt(), evaluator_cli_ptr->getMaxWarmupDurationSec(), evaluator_cli_ptr->getStresstestDurationSec());
+        EvaluatorWrapper evaluator(evaluator_cli_ptr->getClientcnt(), evaluator_cli_ptr->getEdgecnt(), evaluator_cli_ptr->getMaxWarmupDurationSec(), evaluator_cli_ptr->getStresstestDurationSec(), evaluator_statistics_filepath);
         evaluator_wrapper_param.setEvaluatorInitialized(); // Such that simulator or prototype will continue to launch cloud, edge, and client nodes
 
         evaluator.start();
@@ -74,7 +75,7 @@ namespace covered
         return NULL;
     }
 
-    EvaluatorWrapper::EvaluatorWrapper(const uint32_t& clientcnt, const uint32_t& edgecnt, const uint32_t& max_warmup_duration_sec, const uint32_t& stresstest_duration_sec) : clientcnt_(clientcnt), edgecnt_(edgecnt), max_warmup_duration_sec_(max_warmup_duration_sec), stresstest_duration_sec_(stresstest_duration_sec)
+    EvaluatorWrapper::EvaluatorWrapper(const uint32_t& clientcnt, const uint32_t& edgecnt, const uint32_t& max_warmup_duration_sec, const uint32_t& stresstest_duration_sec, const std::string& evaluator_statistics_filepath) : clientcnt_(clientcnt), edgecnt_(edgecnt), max_warmup_duration_sec_(max_warmup_duration_sec), stresstest_duration_sec_(stresstest_duration_sec), evaluator_statistics_filepath_(evaluator_statistics_filepath)
     {
         is_warmup_phase_ = true;
         target_slot_idx_ = 0;
@@ -248,12 +249,11 @@ namespace covered
         Util::dumpNormalMsg(kClassName, oss.str());
 
         // Dump per-slot/stable total aggregated statistics
-        std::string evaluator_statistics_filepath = Util::getEvaluatorStatisticsFilepath();
         oss.clear();
         oss.str("");
-        oss << "dump per-slot/stable total aggregated statistics into " << evaluator_statistics_filepath;
+        oss << "dump per-slot/stable total aggregated statistics into " << evaluator_statistics_filepath_;
         Util::dumpNormalMsg(kClassName, oss.str());
-        uint32_t dump_size = total_statistics_tracker_ptr_->dump(evaluator_statistics_filepath);
+        uint32_t dump_size = total_statistics_tracker_ptr_->dump(evaluator_statistics_filepath_);
         oss.clear();
         oss.str("");
         oss << "finish dump for " << dump_size << " bytes";
