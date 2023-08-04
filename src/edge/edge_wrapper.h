@@ -12,6 +12,7 @@
 #include <string>
 
 #include "cache/cache_wrapper.h"
+#include "common/cli/edge_cli.h"
 #include "common/node_wrapper_base.h"
 #include "cooperation/cooperation_wrapper_base.h"
 #include "event/event_list.h"
@@ -19,10 +20,26 @@
 
 namespace covered
 {
+    class EdgeWrapperParam
+    {
+    public:
+        EdgeWrapperParam();
+        EdgeWrapperParam(const uint32_t& edge_idx, EdgeCLI* edge_cli_ptr);
+        ~EdgeWrapperParam();
+
+        uint32_t getEdgeIdx() const;
+        EdgeCLI* getEdgeCLIPtr() const;
+
+        EdgeWrapperParam& operator=(const EdgeWrapperParam& other);
+    private:
+        uint32_t edge_idx_;
+        EdgeCLI* edge_cli_ptr_;
+    };
+    
     class EdgeWrapper : public NodeWrapperBase
     {
     public:
-        static void* launchEdge(void* edge_idx_ptr);
+        static void* launchEdge(void* edge_wrapper_param_ptr);
 
         EdgeWrapper(const std::string& cache_name, const uint64_t& capacity_bytes, const uint32_t& edge_idx, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& percacheserver_workercnt, const uint32_t& propagation_latency_clientedge_us, const uint32_t& propagation_latency_crossedge_us, const uint32_t& propagation_latency_edgecloud_us);
         virtual ~EdgeWrapper();

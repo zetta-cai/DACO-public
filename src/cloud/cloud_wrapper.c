@@ -5,8 +5,6 @@
 
 #include "cloud/data_server/data_server.h"
 #include "common/config.h"
-#include "common/param/cloud_param.h"
-#include "common/param/propagation_param.h"
 #include "common/util.h"
 #include "message/control_message.h"
 #include "network/propagation_simulator.h"
@@ -15,12 +13,52 @@ namespace covered
 {
     const std::string CloudWrapper::kClassName("CloudWrapper");
 
-    void* CloudWrapper::launchCloud(void* cloud_idx_ptr)
+    CloudWrapperParam::CloudWrapperParam()
     {
-        assert(cloud_idx_ptr != NULL);
-        uint32_t cloud_idx = *((uint32_t*)cloud_idx_ptr);
+        cloud_idx_ = 0;
+        cloud_cli_ptr_ = NULL;
+    }
 
-        CloudWrapper local_cloud(cloud_idx, CloudParam::getCloudStorage(), PropagationParam::getPropagationLatencyEdgecloudUs());
+    CloudWrapperParam::CloudWrapperParam(const uint32_t& cloud_idx, CloudCLI* cloud_cli_ptr)
+    {
+        assert(cloud_cli_ptr != NULL);
+
+        cloud_idx_ = cloud_idx;
+        cloud_cli_ptr_ = cloud_cli_ptr;
+    }
+
+    CloudWrapperParam::~CloudWrapperParam()
+    {
+        // NOTE: NO need to release cloud_cli_ptr_, which is maintained outside CloudWrapperParam
+    }
+
+    uint32_t CloudWrapperParam::getCloudIdx() const
+    {
+        return cloud_idx_;
+    }
+    
+    CloudCLI* CloudWrapperParam::getCloudCLIPtr() const
+    {
+        assert(cloud_cli_ptr_ != NULL);
+        return cloud_cli_ptr_;
+    }
+
+    CloudWrapperParam& CloudWrapperParam::operator=(const CloudWrapperParam& other)
+    {
+        cloud_idx_ = other.cloud_idx_;
+        cloud_cli_ptr_ = other.cloud_cli_ptr_;
+        return *this;
+    }
+
+    void* CloudWrapper::launchCloud(void* cloud_wrapper_param_ptr)
+    {
+        assert(cloud_wrapper_param_ptr != NULL);
+        CloudWrapperParam& cloud_wrapper_param = *((CloudWrapperParam*)cloud_wrapper_param_ptr);
+
+        uint32_t cloud_idx = cloud_wrapper_param.getCloudIdx();
+        CloudCLI* cloud_cli_ptr = cloud_wrapper_param.getCloudCLIPtr();
+
+        CloudWrapper local_cloud(cloud_idx, cloud_cli_ptr->getCloudStorage(), cloud_cli_ptr->getPropagationLatencyEdgecloudUs());
         local_cloud.start();
         
         pthread_exit(NULL);

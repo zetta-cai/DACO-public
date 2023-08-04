@@ -33,6 +33,33 @@ namespace covered
     class Util
     {
     public:
+        // (1) For CLI parameters
+
+        // Main class name
+        static const std::string SIMULATOR_MAIN_NAME;
+        //static const std::string STATISTICS_AGGREGATOR_MAIN_NAME;
+        static const std::string TOTAL_STATISTICS_LOADER_MAIN_NAME;
+        static const std::string DATASET_LOADER_MAIN_NAME;
+        static const std::string CLIENT_MAIN_NAME;
+        static const std::string EDGE_MAIN_NAME;
+        static const std::string CLOUD_MAIN_NAME;
+        static const std::string EVALUATOR_MAIN_NAME;
+
+        // Workload name
+        static const std::string FACEBOOK_WORKLOAD_NAME; // Workload generator type
+
+        // Cloud storage
+        static const std::string HDD_NAME; // NOTE: a single RocksDB size on HDD should NOT exceed 500 GiB
+
+        // Cache name
+        static const std::string LRU_CACHE_NAME;
+        static const std::string COVERED_CACHE_NAME;
+
+        // Hash name
+        static const std::string MMH3_HASH_NAME;
+
+        // (2) For utility functions
+
         // Type conversion
         static const int64_t MAX_UINT16;
         static const int64_t MAX_UINT32;
@@ -77,7 +104,7 @@ namespace covered
         // NOTE: no confliction as each file (statistics or RocksDB) is accessed by a unique thread (client or cloud)
         static std::fstream* openFile(const std::string& filepath, std::ios_base::openmode mode);
         static std::string getParentDirpath(const std::string& filepath);
-        static std::string getFilenameFromFileath(const std::string& filepath);
+        static std::string getFilenameFromFilepath(const std::string& filepath);
 
         // (2) Time measurement
 

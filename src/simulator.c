@@ -18,9 +18,6 @@
 #include "common/cli/edge_cli.h"
 #include "common/cli/evaluator_cli.h"
 #include "common/config.h"
-#include "common/param/client_param.h"
-#include "common/param/common_param.h"
-#include "common/param/edgescale_param.h"
 #include "common/util.h"
 #include "cloud/cloud_wrapper.h"
 #include "edge/edge_wrapper.h"
@@ -36,18 +33,18 @@ int main(int argc, char **argv) {
     covered::CloudCLI cloud_cli(argc, argv);
     covered::EvaluatorCLI evaluator_cli(argc, argv);
 
-    const std::string main_class_name = covered::CommonParam::getMainClassName();
+    const std::string main_class_name = client_cli.getMainClassName();
 
     int pthread_returncode;
 
     // (2) Launch evaluator to control benchmark workflow
 
     pthread_t evaluator_thread;
-    volatile bool is_evaluator_initialized = false;
+    covered::EvaluatorWrapperParam evaluator_param(false, &evaluator_cli);
 
     covered::Util::dumpNormalMsg(main_class_name, "launch evaluator");
 
-    pthread_returncode = covered::Util::pthreadCreateHighPriority(&evaluator_thread, covered::EvaluatorWrapper::launchEvaluator, (void*)(&is_evaluator_initialized));
+    pthread_returncode = covered::Util::pthreadCreateHighPriority(&evaluator_thread, covered::EvaluatorWrapper::launchEvaluator, (void*)(&evaluator_param));
     if (pthread_returncode != 0)
     {
         std::ostringstream oss;
@@ -57,23 +54,24 @@ int main(int argc, char **argv) {
     }
 
     // Block until evaluator is initialized
-    while (!is_evaluator_initialized) {}
+    while (!evaluator_param.isEvaluatorInitialized()) {}
 
     // (2) Simulate a single cloud node for backend storage
 
     pthread_t cloud_thread;
-    uint32_t cloud_idx;
+    covered::CloudWrapperParam cloud_param;
 
     // (2.1) Prepare one cloud parameter
 
     cloud_idx = 0; // TODO: support 1 cloud node now
+    cloud_param = CloudWrapperParam(0, &cloud_cli);
 
     // (2.2) Launch one cloud node
 
     covered::Util::dumpNormalMsg(main_class_name, "launch cloud node");
 
     //pthread_returncode = pthread_create(&cloud_thread, NULL, covered::CloudWrapper::launchCloud, (void*)(&(cloud_idx)));
-    pthread_returncode = covered::Util::pthreadCreateHighPriority(&cloud_thread, covered::CloudWrapper::launchCloud, (void*)(&(cloud_idx)));
+    pthread_returncode = covered::Util::pthreadCreateHighPriority(&cloud_thread, covered::CloudWrapper::launchCloud, (void*)(&(cloud_param)));
     if (pthread_returncode != 0)
     {
         std::ostringstream oss;
@@ -84,15 +82,16 @@ int main(int argc, char **argv) {
 
     // (3) Simulate edgecnt edge nodes with cooperative caching
 
-    const uint32_t edgecnt = covered::EdgescaleParam::getEdgecnt();
+    const uint32_t edgecnt = edge_cli.getEdgecnt();
     pthread_t edge_threads[edgecnt];
-    uint32_t edge_idxes[edgecnt];
+    covered::EdgeWrapperParam edge_params[edgecnt];
 
     // (3.1) Prepare edgecnt edge parameters
 
     for (uint32_t edge_idx = 0; edge_idx < edgecnt; edge_idx++)
     {
-        edge_idxes[edge_idx] = edge_idx;
+        covered::EdgeWrapperParam tmp_edge_param(edge_idx, &edge_cli);
+        edge_params[edge_idx] = tmp_edge_param;
     }
 
     // (3.2) Launch edgecnt edge nodes
@@ -104,7 +103,7 @@ int main(int argc, char **argv) {
         covered::Util::dumpNormalMsg(main_class_name, oss.str());
 
         //pthread_returncode = pthread_create(&edge_threads[edge_idx], NULL, covered::EdgeWrapper::launchEdge, (void*)(&(edge_idxes[edge_idx])));
-        pthread_returncode = covered::Util::pthreadCreateLowPriority(&edge_threads[edge_idx], covered::EdgeWrapper::launchEdge, (void*)(&(edge_idxes[edge_idx])));
+        pthread_returncode = covered::Util::pthreadCreateLowPriority(&edge_threads[edge_idx], covered::EdgeWrapper::launchEdge, (void*)(&(edge_params[edge_idx])));
         if (pthread_returncode != 0)
         {
             std::ostringstream oss;
@@ -116,15 +115,16 @@ int main(int argc, char **argv) {
     
     // (4) Simulate clientcnt clients by multi-threading
 
-    const uint32_t clientcnt = covered::ClientParam::getClientcnt();
+    const uint32_t clientcnt = client_cli.getClientcnt();
     pthread_t client_threads[clientcnt];
-    uint32_t client_idxes[clientcnt];
+    covered::ClientWrapperParam client_params[clientcnt];
 
     // (4.1) Prepare clientcnt client parameters
 
     for (uint32_t client_idx = 0; client_idx < clientcnt; client_idx++)
     {
-        client_idxes[client_idx] = client_idx;
+        covered::ClientWrapperParam tmp_client_param(client_idx, &client_cli);
+        client_params[client_idx] = tmp_client_param;
     }
 
     // (4.2) Launch clientcnt clients
@@ -136,7 +136,7 @@ int main(int argc, char **argv) {
         covered::Util::dumpNormalMsg(main_class_name, oss.str());
 
         //pthread_returncode = pthread_create(&client_threads[client_idx], NULL, covered::ClientWrapper::launchClient, (void*)(&(client_idxes[client_idx])));
-        pthread_returncode = covered::Util::pthreadCreateLowPriority(&client_threads[client_idx], covered::ClientWrapper::launchClient, (void*)(&(client_idxes[client_idx])));
+        pthread_returncode = covered::Util::pthreadCreateLowPriority(&client_threads[client_idx], covered::ClientWrapper::launchClient, (void*)(&(client_params[client_idx])));
         if (pthread_returncode != 0)
         {
             std::ostringstream oss;

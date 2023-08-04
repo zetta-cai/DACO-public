@@ -3,7 +3,6 @@
 #include <assert.h>
 #include <sstream>
 
-#include "common/param/edge_param.h"
 #include "common/util.h"
 #include "event/event.h"
 #include "event/event_list.h"
@@ -17,7 +16,7 @@ namespace covered
     BasicInvalidationServer::BasicInvalidationServer(EdgeWrapper* edge_wrapper_ptr) : InvalidationServerBase(edge_wrapper_ptr)
     {
         assert(edge_wrapper_ptr_ != NULL);
-        assert(edge_wrapper_ptr_->getCacheName() != EdgeParam::COVERED_CACHE_NAME);
+        assert(edge_wrapper_ptr_->getCacheName() != Util::COVERED_CACHE_NAME);
         uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
 
         // Differentiate BasicInvalidationServer in different edge nodes

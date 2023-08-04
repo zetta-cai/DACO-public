@@ -4,9 +4,6 @@
 #include <sstream>
 
 #include "common/config.h"
-#include "common/param/edge_param.h"
-#include "common/param/edgescale_param.h"
-#include "common/param/propagation_param.h"
 #include "common/util.h"
 #include "edge/beacon_server/beacon_server_base.h"
 #include "edge/cache_server/cache_server.h"
@@ -19,12 +16,52 @@ namespace covered
 {
     const std::string EdgeWrapper::kClassName("EdgeWrapper");
 
-    void* EdgeWrapper::launchEdge(void* edge_idx_ptr)
+    EdgeWrapperParam::EdgeWrapperParam()
     {
-        assert(edge_idx_ptr != NULL);
-        uint32_t edge_idx = *((uint32_t*)edge_idx_ptr);
+        edge_idx_ = 0;
+        edge_cli_ptr_ = NULL;
+    }
 
-        EdgeWrapper local_edge(EdgeParam::getCacheName(), EdgeParam::getCapacityBytes(), edge_idx, EdgescaleParam::getEdgecnt(), EdgeParam::getHashName(), EdgeParam::getPercacheserverWorkercnt(), PropagationParam::getPropagationLatencyClientedgeUs(), PropagationParam::getPropagationLatencyCrossedgeUs(), PropagationParam::getPropagationLatencyEdgecloudUs());
+    EdgeWrapperParam::EdgeWrapperParam(const uint32_t& edge_idx, EdgeCLI* edge_cli_ptr)
+    {
+        assert(edge_cli_ptr != NULL);
+
+        edge_idx_ = edge_idx;
+        edge_cli_ptr_ = edge_cli_ptr;
+    }
+
+    EdgeWrapperParam::~EdgeWrapperParam()
+    {
+        // NOTE: NO need to release edge_cli_ptr_, which is maintained outside EdgeWrapperParam
+    }
+
+    uint32_t EdgeWrapperParam::getEdgeIdx() const
+    {
+        return edge_idx_;
+    }
+    
+    EdgeCLI* EdgeWrapperParam::getEdgeCLIPtr() const
+    {
+        assert(edge_cli_ptr_ != NULL);
+        return edge_cli_ptr_;
+    }
+
+    EdgeWrapperParam& EdgeWrapperParam::operator=(const EdgeWrapperParam& other)
+    {
+        edge_idx_ = other.edge_idx_;
+        edge_cli_ptr_ = other.edge_cli_ptr_;
+        return *this;
+    }
+
+    void* EdgeWrapper::launchEdge(void* edge_wrapper_param_ptr)
+    {
+        assert(edge_wrapper_param_ptr != NULL);
+        EdgeWrapperParam& edge_wrapper_param = *((EdgeWrapperParam*)edge_wrapper_param_ptr);
+
+        uint32_t edge_idx = edge_wrapper_param.getEdgeIdx();
+        EdgeCLI* edge_cli_ptr = edge_wrapper_param.getEdgeCLIPtr();
+
+        EdgeWrapper local_edge(edge_cli_ptr->getCacheName(), edge_cli_ptr->getCapacityBytes(), edge_idx, edge_cli_ptr->getEdgecnt(), edge_cli_ptr->getHashName(), edge_cli_ptr->getPercacheserverWorkercnt(), edge_cli_ptr->getPropagationLatencyClientedgeUs(), edge_cli_ptr->getPropagationLatencyCrossedgeUs(), edge_cli_ptr->getPropagationLatencyEdgecloudUs());
         local_edge.start();
         
         pthread_exit(NULL);

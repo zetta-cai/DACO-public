@@ -1,24 +1,34 @@
 #include "common/cli/dataset_loader_cli.h"
 
 #include "common/config.h"
-#include "common/param/common_param.h"
-#include "common/param/dataset_loader_param.h"
 #include "common/util.h"
 
 namespace covered
 {
     const std::string DatasetLoaderCLI::kClassName("DatasetLoaderCLI");
 
-    DatasetLoaderCLI::DatasetLoaderCLI() : CloudCLI(), WorkloadCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_create_required_directories_(false)
+    DatasetLoaderCLI::DatasetLoaderCLI() : CloudCLI(), WorkloadCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_create_required_directories_(false)
     {
+        dataset_loadercnt_ = 0;
+        cloud_idx_ = 0;
     }
 
-    DatasetLoaderCLI::DatasetLoaderCLI(int argc, char **argv) : CloudCLI(), WorkloadCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_create_required_directories_(false)
+    DatasetLoaderCLI::DatasetLoaderCLI(int argc, char **argv) : CloudCLI(), WorkloadCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_create_required_directories_(false)
     {
         parseAndProcessCliParameters(argc, argv);
     }
 
     DatasetLoaderCLI::~DatasetLoaderCLI() {}
+
+    uint32_t DatasetLoaderCLI::getDatasetLoadercnt() const
+    {
+        return dataset_loadercnt_;
+    }
+
+    uint32_t DatasetLoaderCLI::getCloudIdx() const
+    {
+        return cloud_idx_;
+    }
 
     void DatasetLoaderCLI::addCliParameters_()
     {
@@ -53,10 +63,33 @@ namespace covered
             uint32_t dataset_loadercnt = argument_info_["dataset_loadercnt"].as<uint32_t>();
             uint32_t cloud_idx = argument_info_["cloud_idx"].as<uint32_t>();
 
-            // Store client CLI parameters for dynamic configurations and mark ClientParam as valid
-            DatasetLoaderParam::setParameters(dataset_loadercnt, cloud_idx);
+            // Store client CLI parameters for dynamic configurations
+            dataset_loadercnt_ = dataset_loadercnt;
+            cloud_idx_ = cloud_idx;
+            verifyIntegrity_();
 
             is_set_param_and_config_ = true;
+        }
+
+        return;
+    }
+
+    void DatasetLoaderCLI::dumpCliParameters_()
+    {
+        if (!is_dump_cli_parameters_)
+        {
+            CloudCLI::dumpCliParameters_();
+            WorkloadCLI::dumpCliParameters_();
+
+            // (6) Dump stored CLI parameters and parsed config information if debug
+
+            std::ostringstream oss;
+            oss << "[Dynamic configurations from CLI parameters in " << kClassName << "]" << std::endl;
+            oss << "Dataset loader count: " << dataset_loadercnt_ << std::endl;
+            oss << "Cloud index: " << cloud_idx_;
+            Util::dumpDebugMsg(kClassName, oss.str());
+
+            is_dump_cli_parameters_ = true;
         }
 
         return;
@@ -69,13 +102,16 @@ namespace covered
             CloudCLI::createRequiredDirectories_(main_class_name);
 
             bool is_createdir_for_rocksdb = false;
-            if (main_class_name == CommonParam::SIMULATOR_MAIN_NAME)
+            if (main_class_name == Util::DATASET_LOADER_MAIN_NAME)
             {
                 is_createdir_for_rocksdb = true;
             }
             else
             {
-                // TODO: create directories for different prototype roles
+                std::ostringstream oss;
+                oss << main_class_name << " should NOT use DatasetLoaderCLI!";
+                Util::dumpErrorMsg(kClassName, oss.str());
+                exit(1);
             }
 
             if (is_createdir_for_rocksdb)
@@ -95,6 +131,13 @@ namespace covered
 
             is_create_required_directories_ = true;
         }
+        return;
+    }
+
+    void DatasetLoaderCLI::verifyIntegrity_() const
+    {
+        assert(dataset_loadercnt_ > 0);
+
         return;
     }
 }

@@ -3,7 +3,6 @@
 #include <assert.h>
 #include <sstream>
 
-#include "common/param/edge_param.h"
 #include "common/util.h"
 #include "hash/mmh3_hash_wrapper.h"
 
@@ -14,7 +13,7 @@ namespace covered
     HashWrapperBase* HashWrapperBase::getHashWrapperByHashName(const std::string& hash_name)
     {
         HashWrapperBase* hash_wrapper_base_ptr = NULL;
-        if (hash_name == EdgeParam::MMH3_HASH_NAME)
+        if (hash_name == Util::MMH3_HASH_NAME)
         {
             hash_wrapper_base_ptr = new Mmh3HashWrapper();
         }

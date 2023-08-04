@@ -8,10 +8,6 @@
 
 #include "cloud/rocksdb_wrapper.h"
 #include "common/cli/dataset_loader_cli.h"
-#include "common/param/cloud_param.h"
-#include "common/param/common_param.h"
-#include "common/param/dataset_loader_param.h"
-#include "common/param/workload_param.h"
 #include "common/util.h"
 #include "workload/workload_item.h"
 #include "workload/workload_wrapper_base.h"
@@ -71,12 +67,12 @@ int main(int argc, char **argv) {
 
     covered::DatasetLoaderCLI dataset_loader_cli(argc, argv);
 
-    const std::string main_class_name = covered::CommonParam::getMainClassName();
+    const std::string main_class_name = dataset_loader_cli.getMainClassName();
 
-    const uint32_t cloud_idx = covered::DatasetLoaderParam::getCloudIdx();
-    const uint32_t dataset_loadercnt = covered::DatasetLoaderParam::getDatasetLoadercnt();
-    const uint32_t keycnt = covered::WorkloadParam::getKeycnt();
-    const std::string workload_name = covered::WorkloadParam::getWorkloadName();
+    const uint32_t cloud_idx = dataset_loader_cli.getCloudIdx();
+    const uint32_t dataset_loadercnt = dataset_loader_cli.getDatasetLoadercnt();
+    const uint32_t keycnt = dataset_loader_cli.getKeycnt();
+    const std::string workload_name = dataset_loader_cli.getWorkloadName();
 
     // (2) Prepare dataset loader parameters
 
@@ -85,7 +81,7 @@ int main(int argc, char **argv) {
     covered::Util::dumpNormalMsg(main_class_name, oss.str());
 
     // Create the corresponding RocksDB KVS
-    covered::RocksdbWrapper rocksdb_wrapper(cloud_idx, covered::CloudParam::getCloudStorage(), covered::Util::getCloudRocksdbDirpath(cloud_idx));
+    covered::RocksdbWrapper rocksdb_wrapper(cloud_idx, dataset_loader_cli.getCloudStorage(), covered::Util::getCloudRocksdbDirpath(cloud_idx));
 
     // Create a workload generator
     // NOTE: NOT need client CLI parameters as we only use dataset key-value pairs instead of workload items

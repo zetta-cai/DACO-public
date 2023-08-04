@@ -1,18 +1,29 @@
 #include "common/cli/workload_cli.h"
 
 #include "common/config.h"
-#include "common/param/workload_param.h"
 #include "common/util.h"
 
 namespace covered
 {
     const std::string WorkloadCLI::kClassName("WorkloadCLI");
 
-    WorkloadCLI::WorkloadCLI() : CLIBase(), is_add_cli_parameters_(false), is_set_param_and_config_(false)
+    WorkloadCLI::WorkloadCLI() : CLIBase(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false)
     {
+        keycnt_ = 0;
+        workload_name_ = "";
     }
 
     WorkloadCLI::~WorkloadCLI() {}
+
+    uint32_t WorkloadCLI::getKeycnt() const
+    {
+        return keycnt_;
+    }
+
+    std::string WorkloadCLI::getWorkloadName() const
+    {
+        return workload_name_;
+    }
 
     void WorkloadCLI::addCliParameters_()
     {
@@ -24,8 +35,8 @@ namespace covered
 
             // Dynamic configurations for client
             argument_desc_.add_options()
-                ("keycnt", boost::program_options::value<uint32_t>()->default_value(1000000), "the total number of keys")
-                ("workload_name", boost::program_options::value<std::string>()->default_value(WorkloadParam::FACEBOOK_WORKLOAD_NAME), "workload name")
+                ("keycnt", boost::program_options::value<uint32_t>()->default_value(1000), "the total number of keys")
+                ("workload_name", boost::program_options::value<std::string>()->default_value(Util::FACEBOOK_WORKLOAD_NAME), "workload name")
             ;
 
             is_add_cli_parameters_ = true;
@@ -45,11 +56,52 @@ namespace covered
             uint32_t keycnt = argument_info_["keycnt"].as<uint32_t>();
             std::string workload_name = argument_info_["workload_name"].as<std::string>();
 
-            // Store workload CLI parameters for dynamic configurations and mark WorkloadParam as valid
-            WorkloadParam::setParameters(keycnt, workload_name);
+            // Store workload CLI parameters for dynamic configurations
+            keycnt_ = keycnt;
+            workload_name_ = workload_name;
+            checkWorkloadName_();
 
             is_set_param_and_config_ = true;
         }
+
+        return;
+    }
+
+    void WorkloadCLI::dumpCliParameters_()
+    {
+        if (!is_dump_cli_parameters_)
+        {
+            CLIBase::dumpCliParameters_();
+
+            // (6) Dump stored CLI parameters and parsed config information if debug
+
+            std::ostringstream oss;
+            oss << "[Dynamic configurations from CLI parameters in " << kClassName << "]" << std::endl;
+            oss << "Key count (dataset size): " << keycnt_ << std::endl;
+            oss << "Workload name: " << workload_name_;
+            Util::dumpDebugMsg(kClassName, oss.str());
+
+            is_dump_cli_parameters_ = true;
+        }
+
+        return;
+    }
+
+    void WorkloadCLI::checkWorkloadName_() const
+    {
+        if (workload_name_ != Util::FACEBOOK_WORKLOAD_NAME)
+        {
+            std::ostringstream oss;
+            oss << "workload name " << workload_name_ << " is not supported!";
+            Util::dumpErrorMsg(kClassName, oss.str());
+            exit(1);
+        }
+        return;
+    }
+
+    void WorkloadCLI::verifyIntegrity_() const
+    {
+        assert(keycnt_ > 0);
 
         return;
     }

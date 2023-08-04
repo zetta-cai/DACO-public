@@ -3,7 +3,6 @@
 #include <assert.h>
 #include <sstream>
 
-#include "common/param/workload_param.h"
 #include "common/util.h"
 #include "workload/facebook_workload_wrapper.h"
 
@@ -14,7 +13,7 @@ namespace covered
     WorkloadWrapperBase* WorkloadWrapperBase::getWorkloadGeneratorByWorkloadName(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name)
     {
         WorkloadWrapperBase* workload_ptr = NULL;
-        if (workload_name == WorkloadParam::FACEBOOK_WORKLOAD_NAME)
+        if (workload_name == Util::FACEBOOK_WORKLOAD_NAME)
         {
             workload_ptr = new FacebookWorkloadWrapper(clientcnt, client_idx, keycnt, opcnt, perclient_workercnt);
         }

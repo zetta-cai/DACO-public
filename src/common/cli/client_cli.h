@@ -1,5 +1,5 @@
 /*
- * ClientCLI: parse and process client CLI parameters dynamic configurations (stored into ClientParam).
+ * ClientCLI: parse and process client CLI parameters dynamic configurations.
  * 
  * By Siyuan Sheng (2023.08.02).
  */
@@ -23,16 +23,30 @@ namespace covered
     public:
         ClientCLI();
         ClientCLI(int argc, char **argv);
-        ~ClientCLI();
+        virtual ~ClientCLI();
+
+        uint32_t getClientcnt() const;
+        bool isWarmupSpeedup() const;
+        uint32_t getOpcnt() const;
+        uint32_t getPerclientWorkercnt() const;
     private:
         static const std::string kClassName;
 
+        void verifyIntegrity_() const;
+
         bool is_add_cli_parameters_;
         bool is_set_param_and_config_;
+        bool is_dump_cli_parameters_;
         bool is_create_required_directories_;
+
+        uint32_t clientcnt_;
+        bool is_warmup_speedup_; // Come from --disable_warmup_speedup
+        uint32_t opcnt_;
+        uint32_t perclient_workercnt_;
     protected:
         virtual void addCliParameters_();
         virtual void setParamAndConfig_(const std::string& main_class_name);
+        virtual void dumpCliParameters_();
         virtual void createRequiredDirectories_(const std::string& main_class_name) override;
     };
 }

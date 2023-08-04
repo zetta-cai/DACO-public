@@ -3,7 +3,6 @@
 #include <assert.h>
 #include <sstream>
 
-#include "common/param/edge_param.h"
 #include "common/util.h"
 #include "cache/lru_local_cache.h"
 
@@ -14,7 +13,7 @@ namespace covered
     LocalCacheBase* LocalCacheBase::getLocalCacheByCacheName(const std::string& cache_name, const uint32_t& edge_idx)
     {
         LocalCacheBase* local_cache_ptr = NULL;
-        if (cache_name == EdgeParam::LRU_CACHE_NAME)
+        if (cache_name == Util::LRU_CACHE_NAME)
         {
             local_cache_ptr = new LruLocalCache(edge_idx);
         }

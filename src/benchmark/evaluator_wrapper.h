@@ -14,6 +14,7 @@
 #include <string>
 #include <unordered_map>
 
+#include "common/cli/evaluator_cli.h"
 #include "network/network_addr.h"
 #include "network/udp_msg_socket_client.h"
 #include "network/udp_msg_socket_server.h"
@@ -21,10 +22,28 @@
 
 namespace covered
 {
+    class EvaluatorWrapperParam
+    {
+    public:
+        EvaluatorWrapperParam();
+        EvaluatorWrapperParam(const bool& is_evaluator_initialized, EvaluatorCLI* evaluator_cli_ptr);
+        ~EvaluatorWrapperParam();
+
+        bool isEvaluatorInitialized() const;
+        EvaluatorCLI* getEvaluatorCLIPtr() const;
+
+        void setEvaluatorInitialized();
+
+        EvaluatorWrapperParam& operator=(const EvaluatorWrapperParam& other);
+    private:
+        volatile bool is_evaluator_initialized_;
+        EvaluatorCLI* evaluator_cli_ptr_;
+    };
+
     class EvaluatorWrapper
     {
     public:
-        static void* launchEvaluator(void* is_evaluator_initialized_ptr);
+        static void* launchEvaluator(void* evaluator_wrapper_param_ptr);
 
         EvaluatorWrapper(const uint32_t& clientcnt, const uint32_t& edgecnt, const uint32_t& max_warmup_duration_sec, const uint32_t& stresstest_duration_sec);
         ~EvaluatorWrapper();

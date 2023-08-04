@@ -22,6 +22,33 @@
 
 namespace covered
 {
+    // (1) For CLI parameters
+
+    // Main class name
+    const std::string Util::SIMULATOR_MAIN_NAME("simulator");
+    //const std::string Util::STATISTICS_AGGREGATOR_MAIN_NAME("statistics_aggregator");
+    const std::string Util::TOTAL_STATISTICS_LOADER_MAIN_NAME("total_statistics_loader");
+    const std::string Util::DATASET_LOADER_MAIN_NAME("dataset_loader");
+    const std::string Util::CLIENT_MAIN_NAME("client");
+    const std::string Util::EDGE_MAIN_NAME("edge");
+    const std::string Util::CLOUD_MAIN_NAME("cloud");
+    const std::string Util::EVALUATOR_MAIN_NAME("evaluator");
+
+    // Workload name
+    const std::string Util::FACEBOOK_WORKLOAD_NAME("facebook");
+
+    // Cloud storage
+    const std::string Util::HDD_NAME = "hdd";
+
+    // Cache name
+    const std::string Util::LRU_CACHE_NAME("lru");
+    const std::string Util::COVERED_CACHE_NAME("covered");
+
+    // Hash name
+    const std::string Util::MMH3_HASH_NAME("mmh3");
+
+    // (2) For utility functions
+
     // Type conversion/checking
     const int64_t Util::MAX_UINT16 = 65536;
     const int64_t Util::MAX_UINT32 = 4294967296;
@@ -150,7 +177,7 @@ namespace covered
         return boost_dirpath.string();
     }
 
-    std::string Util::getFilenameFromFileath(const std::string& filepath)
+    std::string Util::getFilenameFromFilepath(const std::string& filepath)
     {
         boost::filesystem::path boost_filepath(filepath);
         boost::filesystem::path boost_filename = boost_filepath.filename();

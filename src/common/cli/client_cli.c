@@ -1,23 +1,46 @@
 #include "common/cli/client_cli.h"
 
 #include "common/config.h"
-#include "common/param/client_param.h"
 #include "common/util.h"
 
 namespace covered
 {
     const std::string ClientCLI::kClassName("ClientCLI");
 
-    ClientCLI::ClientCLI() : EdgescaleCLI(), PropagationCLI(), WorkloadCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_create_required_directories_(false)
+    ClientCLI::ClientCLI() : EdgescaleCLI(), PropagationCLI(), WorkloadCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_create_required_directories_(false)
     {
+        clientcnt_ = 0;
+        is_warmup_speedup_ = true;
+        opcnt_ = 0;
+        perclient_workercnt_ = 0;
     }
 
-    ClientCLI::ClientCLI(int argc, char **argv) : EdgescaleCLI(), PropagationCLI(), WorkloadCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_create_required_directories_(false)
+    ClientCLI::ClientCLI(int argc, char **argv) : EdgescaleCLI(), PropagationCLI(), WorkloadCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_create_required_directories_(false)
     {
         parseAndProcessCliParameters(argc, argv);
     }
 
     ClientCLI::~ClientCLI() {}
+
+    uint32_t ClientCLI::getClientcnt() const
+    {
+        return clientcnt_;
+    }
+
+    bool ClientCLI::isWarmupSpeedup() const
+    {
+        return is_warmup_speedup_;
+    }
+
+    uint32_t ClientCLI::getOpcnt() const
+    {
+        return opcnt_;
+    }
+
+    uint32_t ClientCLI::getPerclientWorkercnt() const
+    {
+        return perclient_workercnt_;
+    }
 
     void ClientCLI::addCliParameters_()
     {
@@ -62,10 +85,38 @@ namespace covered
             uint32_t opcnt = argument_info_["opcnt"].as<uint32_t>();
             uint32_t perclient_workercnt = argument_info_["perclient_workercnt"].as<uint32_t>();
 
-            // Store client CLI parameters for dynamic configurations and mark ClientParam as valid
-            ClientParam::setParameters(clientcnt, is_warmup_speedup, opcnt, perclient_workercnt);
+            // Store client CLI parameters for dynamic configurations
+            clientcnt_ = clientcnt;
+            is_warmup_speedup_ = is_warmup_speedup;
+            opcnt_ = opcnt;
+            perclient_workercnt_ = perclient_workercnt;
+            verifyIntegrity_();
 
             is_set_param_and_config_ = true;
+        }
+
+        return;
+    }
+
+    void ClientCLI::dumpCliParameters_()
+    {
+        if (!is_dump_cli_parameters_)
+        {
+            EdgescaleCLI::dumpCliParameters_();
+            PropagationCLI::dumpCliParameters_();
+            WorkloadCLI::dumpCliParameters_();
+
+            // (6) Dump stored CLI parameters and parsed config information if debug
+
+            std::ostringstream oss;
+            oss << "[Dynamic configurations from CLI parameters in " << kClassName << "]" << std::endl;
+            oss << "Client count: " << clientcnt_ << std::endl;
+            oss << "Warmup speedup flag: " << (is_warmup_speedup_?"true":"false") << std::endl;
+            oss << "Operation count (workload size): " << opcnt_ << std::endl;
+            oss << "Per-client worker count: " << perclient_workercnt_;
+            Util::dumpDebugMsg(kClassName, oss.str());
+
+            is_dump_cli_parameters_ = true;
         }
 
         return;
@@ -75,10 +126,26 @@ namespace covered
     {
         if (!is_create_required_directories_)
         {
-            CLIBase::createRequiredDirectories_(main_class_name);
-
             is_create_required_directories_ = true;
         }
+        return;
+    }
+
+    void ClientCLI::verifyIntegrity_() const
+    {
+        assert(clientcnt_ > 0);
+        assert(opcnt_ > 0);
+        assert(perclient_workercnt_ > 0);
+
+        uint32_t edgecnt = getEdgecnt();
+        if (clientcnt_ < edgecnt)
+        {
+            std::ostringstream oss;
+            oss << "clientcnt " << clientcnt_ << " should >= edgecnt " << edgecnt << " for edge-client mapping!";
+            Util::dumpErrorMsg(kClassName, oss.str());
+            exit(1);
+        }
+
         return;
     }
 }

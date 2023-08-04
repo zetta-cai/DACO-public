@@ -3,7 +3,6 @@
 #include <assert.h>
 #include <sstream>
 
-#include "common/param/edge_param.h"
 #include "common/util.h"
 
 namespace covered
@@ -39,7 +38,7 @@ namespace covered
         }
 
         // NOTE: hashing for rwlock index is orthogonal with hash partition for DHT-based content discovery
-        hash_wrapper_ptr_ = HashWrapperBase::getHashWrapperByHashName(EdgeParam::MMH3_HASH_NAME);
+        hash_wrapper_ptr_ = HashWrapperBase::getHashWrapperByHashName(Util::MMH3_HASH_NAME);
         assert(hash_wrapper_ptr_ != NULL);
     }
 

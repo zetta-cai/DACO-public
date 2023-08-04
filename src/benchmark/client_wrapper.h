@@ -14,6 +14,7 @@
 #include <string>
 
 #include "benchmark/client_worker_param.h"
+#include "common/cli/client_cli.h"
 #include "common/node_wrapper_base.h"
 #include "network/propagation_simulator_param.h"
 #include "statistics/client_statistics_tracker.h"
@@ -22,11 +23,27 @@
 namespace covered
 {
     class ClientWorkerParam;
+
+    class ClientWrapperParam
+    {
+    public:
+        ClientWrapperParam();
+        ClientWrapperParam(const uint32_t& client_idx, ClientCLI* client_cli_ptr);
+        ~ClientWrapperParam();
+
+        uint32_t getClientIdx() const;
+        ClientCLI* getClientCLIPtr() const;
+
+        ClientWrapperParam& operator=(const ClientWrapperParam& other);
+    private:
+        uint32_t client_idx_;
+        ClientCLI* client_cli_ptr_;
+    };
     
     class ClientWrapper : public NodeWrapperBase
     {
     public:
-        static void* launchClient(void* client_idx_ptr);
+        static void* launchClient(void* client_wrapper_param_ptr);
 
         ClientWrapper(const uint32_t& client_idx, const uint32_t& clientcnt, const bool& is_warmup_speedup, const uint32_t& edgecnt, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge_us, const std::string& workload_name);
         virtual ~ClientWrapper();

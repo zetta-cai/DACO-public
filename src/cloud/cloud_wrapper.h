@@ -10,15 +10,32 @@
 #include <string>
 
 #include "cloud/rocksdb_wrapper.h"
+#include "common/cli/cloud_cli.h"
 #include "common/node_wrapper_base.h"
 #include "network/propagation_simulator_param.h"
 
 namespace covered
 {
+    class CloudWrapperParam
+    {
+    public:
+        CloudWrapperParam();
+        CloudWrapperParam(const uint32_t& cloud_idx, CloudCLI* cloud_cli_ptr);
+        ~CloudWrapperParam();
+
+        uint32_t getCloudIdx() const;
+        CloudCLI* getCloudCLIPtr() const;
+
+        CloudWrapperParam& operator=(const CloudWrapperParam& other);
+    private:
+        uint32_t cloud_idx_;
+        CloudCLI* cloud_cli_ptr_;
+    };
+
     class CloudWrapper : public NodeWrapperBase
     {
     public:
-        static void* launchCloud(void* cloud_idx_ptr);
+        static void* launchCloud(void* cloud_wrapper_param_ptr);
 
         CloudWrapper(const uint32_t& cloud_idx, const std::string& cloud_storage, const uint32_t& propagation_latency_edgecloud_us);
         ~CloudWrapper();

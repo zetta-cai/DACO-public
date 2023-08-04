@@ -5,7 +5,6 @@
 #include <sstream> // ostringstream
 #include <vector>
 
-#include "common/param/common_param.h"
 #include "common/util.h"
 
 namespace covered
@@ -76,9 +75,8 @@ namespace covered
     uint32_t Config::propagation_item_buffer_size_cloud_toedge_ = 1000;
     std::string Config::version_("1.0");
 
-    void Config::loadConfig()
+    void Config::loadConfig(const std::string& config_filepath)
     {
-        std::string config_filepath = CommonParam::getConfigFilepath();
         bool is_exist = Util::isFileExist(config_filepath, true);
 
         if (is_exist)

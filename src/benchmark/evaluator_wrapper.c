@@ -5,9 +5,6 @@
 
 #include "common/config.h"
 #include "common/dynamic_array.h"
-#include "common/param/client_param.h"
-#include "common/param/edgescale_param.h"
-#include "common/param/evaluator_param.h"
 #include "common/util.h"
 #include "message/message_base.h"
 #include "message/control_message.h"
@@ -17,12 +14,59 @@ namespace covered
 {
     const std::string EvaluatorWrapper::kClassName("EvaluatorWrapper");
 
-    void* EvaluatorWrapper::launchEvaluator(void* is_evaluator_initialized_ptr)
+    EvaluatorWrapperParam::EvaluatorWrapperParam()
     {
-        bool& is_evaluator_initialized = *(static_cast<bool*>(is_evaluator_initialized_ptr));
+        is_evaluator_initialized_ = false;
+        evaluator_cli_ptr_ = NULL;
+    }
 
-        EvaluatorWrapper evaluator(ClientParam::getClientcnt(), EdgescaleParam::getEdgecnt(), EvaluatorParam::getMaxWarmupDurationSec(), EvaluatorParam::getStresstestDurationSec());
-        is_evaluator_initialized = true; // Such that simulator or prototype will continue to launch cloud, edge, and client nodes
+    EvaluatorWrapperParam::EvaluatorWrapperParam(const bool& is_evaluator_initialized, EvaluatorCLI* evaluator_cli_ptr)
+    {
+        assert(evaluator_cli_ptr != NULL);
+
+        is_evaluator_initialized_ = is_evaluator_initialized;
+        evaluator_cli_ptr_ = evaluator_cli_ptr;
+    }
+
+    EvaluatorWrapperParam::~EvaluatorWrapperParam()
+    {
+        // NOTE: NO need to release evaluator_cli_ptr_, which is maintained outside EvaluatorWrapperParam
+    }
+
+    bool EvaluatorWrapperParam::isEvaluatorInitialized() const
+    {
+        return is_evaluator_initialized_;
+    }
+    
+    EvaluatorCLI* EvaluatorWrapperParam::getEvaluatorCLIPtr() const
+    {
+        assert(evaluator_cli_ptr_ != NULL);
+        return evaluator_cli_ptr_;
+    }
+
+    void EvaluatorWrapperParam::setEvaluatorInitialized()
+    {
+        assert(!is_evaluator_initialized_);
+        is_evaluator_initialized_ = true;
+        return;
+    }
+
+    EvaluatorWrapperParam& EvaluatorWrapperParam::operator=(const EvaluatorWrapperParam& other)
+    {
+        is_evaluator_initialized_ = other.is_evaluator_initialized_;
+        evaluator_cli_ptr_ = other.evaluator_cli_ptr_;
+        return *this;
+    }
+
+    void* EvaluatorWrapper::launchEvaluator(void* evaluator_wrapper_param_ptr)
+    {
+        assert(evaluator_wrapper_param_ptr != NULL);
+        EvaluatorWrapperParam& evaluator_wrapper_param = *((EvaluatorWrapperParam*)evaluator_wrapper_param_ptr);
+
+        EvaluatorCLI* evaluator_cli_ptr = evaluator_wrapper_param.getEvaluatorCLIPtr();
+
+        EvaluatorWrapper evaluator(evaluator_cli_ptr->getClientcnt(), evaluator_cli_ptr->getEdgecnt(), evaluator_cli_ptr->getMaxWarmupDurationSec(), evaluator_cli_ptr->getStresstestDurationSec());
+        evaluator_wrapper_param.setEvaluatorInitialized(); // Such that simulator or prototype will continue to launch cloud, edge, and client nodes
 
         evaluator.start();
         

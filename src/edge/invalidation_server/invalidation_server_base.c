@@ -3,7 +3,6 @@
 #include <assert.h>
 
 #include "common/config.h"
-#include "common/param/edge_param.h"
 #include "common/util.h"
 #include "edge/invalidation_server/basic_invalidation_server.h"
 #include "edge/invalidation_server/covered_invalidation_server.h"
@@ -20,7 +19,7 @@ namespace covered
 
         assert(edge_wrapper_ptr != NULL);
         std::string cache_name = edge_wrapper_ptr->getCacheName();
-        if (cache_name == EdgeParam::COVERED_CACHE_NAME)
+        if (cache_name == Util::COVERED_CACHE_NAME)
         {
             invalidation_server_ptr = new CoveredInvalidationServer(edge_wrapper_ptr);
         }

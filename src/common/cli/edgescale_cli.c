@@ -1,18 +1,30 @@
 #include "common/cli/edgescale_cli.h"
 
 #include "common/config.h"
-#include "common/param/edgescale_param.h"
 #include "common/util.h"
 
 namespace covered
 {
     const std::string EdgescaleCLI::kClassName("EdgescaleCLI");
 
-    EdgescaleCLI::EdgescaleCLI() : CLIBase(), is_add_cli_parameters_(false), is_set_param_and_config_(false)
+    EdgescaleCLI::EdgescaleCLI() : CLIBase(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false)
     {
+        edgecnt_ = 0;
     }
 
     EdgescaleCLI::~EdgescaleCLI() {}
+
+    uint32_t EdgescaleCLI::getEdgecnt() const
+    {
+        return edgecnt_;
+    }
+
+    void EdgescaleCLI::verifyIntegrity_() const
+    {
+        assert(edgecnt_ > 0);
+        
+        return;
+    }
 
     void EdgescaleCLI::addCliParameters_()
     {
@@ -43,10 +55,30 @@ namespace covered
 
             uint32_t edgecnt = argument_info_["edgecnt"].as<uint32_t>();
 
-            // Store edgescale CLI parameters for dynamic configurations and mark EdgescaleParam as valid
-            EdgescaleParam::setParameters(edgecnt);
+            // Store edgescale CLI parameters for dynamic configurations
+            edgecnt_ = edgecnt;
+            verifyIntegrity_();
 
             is_set_param_and_config_ = true;
+        }
+
+        return;
+    }
+
+    void EdgescaleCLI::dumpCliParameters_()
+    {
+        if (!is_dump_cli_parameters_)
+        {
+            CLIBase::dumpCliParameters_();
+
+            // (6) Dump stored CLI parameters and parsed config information if debug
+
+            std::ostringstream oss;
+            oss << "[Dynamic configurations from CLI parameters in " << kClassName << "]" << std::endl;
+            oss << "Edge count: " << edgecnt_;
+            Util::dumpDebugMsg(kClassName, oss.str());
+
+            is_dump_cli_parameters_ = true;
         }
 
         return;

@@ -5,7 +5,6 @@
 #include <unordered_map>
 
 #include "common/config.h"
-#include "common/param/edge_param.h"
 #include "common/util.h"
 #include "cooperation/basic_cooperation_wrapper.h"
 #include "network/network_addr.h"
@@ -18,7 +17,7 @@ namespace covered
     {
         CooperationWrapperBase* cooperation_wrapper_ptr = NULL;
 
-        if (cache_name == EdgeParam::COVERED_CACHE_NAME)
+        if (cache_name == Util::COVERED_CACHE_NAME)
         {
             //cooperation_wrapper_ptr = new CoveredCooperationWrapper(edgecnt, edge_idx, hash_name);
         }

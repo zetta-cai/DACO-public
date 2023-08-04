@@ -122,6 +122,7 @@ void WorkloadGenerator::generateReqs() {
   //std::mt19937_64 gen(folly::Random::rand64());
   // Siyuan: Util::KVPAIR_GENERATION_SEED as the deterministic seed to ensure that multiple clients generate the same set of key-value pairs
   std::mt19937_64 gen(Util::KVPAIR_GENERATION_SEED);
+  double avg_valuesize = double(0.0);
   for (size_t i = 0; i < config_.keyPoolDistribution.size(); i++) {
     size_t idx = workloadIdx(i);
     for (size_t j = firstKeyIndexForPool_[i]; j < firstKeyIndexForPool_[i + 1];
@@ -138,12 +139,15 @@ void WorkloadGenerator::generateReqs() {
       sizes_.emplace_back(chainSizes);
       auto reqSizes = sizes_.end() - 1;
       reqs_.emplace_back(keys_[j], reqSizes->begin(), reqSizes->end());
+
+      avg_valuesize += static_cast<double>(*(reqSizes->begin()));
     }
   }
+  avg_valuesize /= static_cast<double>(reqs_.size());
 
   // TMPDEBUG
   std::ostringstream oss;
-  oss << "first key: " << reqs_[0].key << "; valuesize: " << (*reqs_[0].sizeBegin);
+  oss << "first key: " << reqs_[0].key << "; valuesize: " << (*reqs_[0].sizeBegin) << "; avg valuesize: " << avg_valuesize;
   Util::dumpDebugMsg(kClassName, oss.str());
 }
 

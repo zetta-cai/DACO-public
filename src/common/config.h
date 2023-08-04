@@ -1,5 +1,7 @@
 /*
  * Config: load JSON config file for static configurations.
+ *
+ * NOTE: Config tracks all static parameters as well as debugging parameters (NOT changed during evaluation).
  * 
  * By Siyuan Sheng (2023.04.10).
  */
@@ -49,7 +51,7 @@ namespace covered
         static const std::string PROPAGATION_ITEM_BUFFER_SIZE_CLOUD_TOEDGE_KEYSTR;
         static const std::string VERSION_KEYSTR;
 
-        static void loadConfig();
+        static void loadConfig(const std::string& config_filepath);
 
         static std::string getClientIpstr(const uint32_t& client_idx, const uint32_t& clientcnt);
         static uint32_t getClientRawStatisticsSlotIntervalSec();

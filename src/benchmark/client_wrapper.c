@@ -6,10 +6,6 @@
 
 #include "benchmark/client_worker_wrapper.h"
 #include "common/config.h"
-#include "common/param/client_param.h"
-#include "common/param/edgescale_param.h"
-#include "common/param/propagation_param.h"
-#include "common/param/workload_param.h"
 #include "common/util.h"
 #include "message/control_message.h"
 #include "network/propagation_simulator.h"
@@ -19,12 +15,52 @@ namespace covered
 {
     const std::string ClientWrapper::kClassName("ClientWrapper");
 
-    void* ClientWrapper::launchClient(void* client_idx_ptr)
+    ClientWrapperParam::ClientWrapperParam()
     {
-        assert(client_idx_ptr != NULL);
-        uint32_t client_idx = *((uint32_t*)client_idx_ptr);
+        client_idx_ = 0;
+        client_cli_ptr_ = NULL;
+    }
+
+    ClientWrapperParam::ClientWrapperParam(const uint32_t& client_idx, ClientCLI* client_cli_ptr)
+    {
+        assert(client_cli_ptr != NULL);
+
+        client_idx_ = client_idx;
+        client_cli_ptr_ = client_cli_ptr;
+    }
+
+    ClientWrapperParam::~ClientWrapperParam()
+    {
+        // NOTE: NO need to release client_cli_ptr_, which is maintained outside ClientWrapperParam
+    }
+
+    uint32_t ClientWrapperParam::getClientIdx() const
+    {
+        return client_idx_;
+    }
+    
+    ClientCLI* ClientWrapperParam::getClientCLIPtr() const
+    {
+        assert(client_cli_ptr_ != NULL);
+        return client_cli_ptr_;
+    }
+
+    ClientWrapperParam& ClientWrapperParam::operator=(const ClientWrapperParam& other)
+    {
+        client_idx_ = other.client_idx_;
+        client_cli_ptr_ = other.client_cli_ptr_;
+        return *this;
+    }
+
+    void* ClientWrapper::launchClient(void* client_wrapper_param_ptr)
+    {
+        assert(client_wrapper_param_ptr != NULL);
+        ClientWrapperParam& client_wrapper_param = *((ClientWrapperParam*)client_wrapper_param_ptr);
+
+        uint32_t client_idx = client_wrapper_param.getClientIdx();
+        ClientCLI* client_cli_ptr = client_wrapper_param.getClientCLIPtr();
         
-        ClientWrapper local_client(client_idx, ClientParam::getClientcnt(), ClientParam::isWarmupSpeedup(), EdgescaleParam::getEdgecnt(), WorkloadParam::getKeycnt(), ClientParam::getOpcnt(), ClientParam::getPerclientWorkercnt(), PropagationParam::getPropagationLatencyClientedgeUs(), WorkloadParam::getWorkloadName());
+        ClientWrapper local_client(client_idx, client_cli_ptr->getClientcnt(), client_cli_ptr->isWarmupSpeedup(), client_cli_ptr->getEdgecnt(), client_cli_ptr->getKeycnt(), client_cli_ptr->getOpcnt(), client_cli_ptr->getPerclientWorkercnt(), client_cli_ptr->getPropagationLatencyClientedgeUs(), client_cli_ptr->getWorkloadName());
         local_client.start();
         
         pthread_exit(NULL);

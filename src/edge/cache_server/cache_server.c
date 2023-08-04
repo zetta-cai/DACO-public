@@ -4,7 +4,6 @@
 #include <sstream>
 
 #include "common/config.h"
-#include "common/param/edge_param.h"
 #include "common/util.h"
 #include "edge/cache_server/cache_server_worker_base.h"
 #include "network/network_addr.h"
@@ -25,7 +24,7 @@ namespace covered
         instance_name_ = oss.str();
 
         // Allocate hash wrapper for partition
-        hash_wrapper_ptr_ = HashWrapperBase::getHashWrapperByHashName(EdgeParam::MMH3_HASH_NAME);
+        hash_wrapper_ptr_ = HashWrapperBase::getHashWrapperByHashName(Util::MMH3_HASH_NAME);
         assert(hash_wrapper_ptr_ != NULL);
 
         // Prepare parameters for cache server threads

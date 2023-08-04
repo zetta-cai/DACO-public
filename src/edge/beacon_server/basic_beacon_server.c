@@ -4,7 +4,6 @@
 #include <sstream>
 
 #include "common/config.h"
-#include "common/param/edge_param.h"
 #include "common/util.h"
 #include "event/event.h"
 #include "event/event_list.h"
@@ -18,7 +17,7 @@ namespace covered
     BasicBeaconServer::BasicBeaconServer(EdgeWrapper* edge_wrapper_ptr) : BeaconServerBase(edge_wrapper_ptr)
     {
         assert(edge_wrapper_ptr_ != NULL);
-        assert(edge_wrapper_ptr_->getCacheName() != EdgeParam::COVERED_CACHE_NAME);
+        assert(edge_wrapper_ptr_->getCacheName() != Util::COVERED_CACHE_NAME);
         uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
 
         // Differentiate BasicBeaconServer in different edge nodes
