@@ -87,9 +87,8 @@ namespace covered
             else
             {
                 std::ostringstream oss;
-                oss << main_class_name << " does NOT use is_single_node";
-                Util::dumpWarnMsg(kClassName, oss.str());
-                exit(1);
+                oss << main_class_name << " will NOT use is_single_node";
+                Util::dumpNormalMsg(kClassName, oss.str());
             }
             
             // Obsolete

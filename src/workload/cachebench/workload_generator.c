@@ -148,7 +148,7 @@ void WorkloadGenerator::generateReqs() {
   // TMPDEBUG
   std::ostringstream oss;
   oss << "first key: " << reqs_[0].key << "; valuesize: " << (*reqs_[0].sizeBegin) << "; avg valuesize: " << avg_valuesize;
-  Util::dumpDebugMsg(kClassName, oss.str());
+  Util::dumpNormalMsg(kClassName, oss.str());
 }
 
 void WorkloadGenerator::generateFirstKeyIndexForPool() {

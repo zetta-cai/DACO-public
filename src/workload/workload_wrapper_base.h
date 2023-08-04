@@ -29,7 +29,7 @@ namespace covered
 
         WorkloadItem generateWorkloadItem(std::mt19937_64& request_randgen);
 
-        uint32_t getKeycnt() const;
+        virtual uint32_t getPracticalKeycnt() const = 0;
         WorkloadItem getDatasetItem(const uint32_t itemidx);
     private:
         static const std::string kClassName;

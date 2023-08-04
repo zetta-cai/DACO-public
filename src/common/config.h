@@ -29,6 +29,7 @@ namespace covered
         static const std::string CLOUD_RECVMSG_STARTPORT_KEYSTR;
         static const std::string CLOUD_RECVREQ_STARTPORT_KEYSTR;
         static const std::string CLOUD_ROCKSDB_BASEDIR_KEYSTR;
+        static const std::string DATASET_LOADER_SLEEP_FOR_COMPACTION_SEC_KEYSTR;
         static const std::string EDGE_BEACON_SERVER_RECVREQ_STARTPORT_KEYSTR;
         static const std::string EDGE_BEACON_SERVER_RECVRSP_STARTPORT_KEYSTR;
         static const std::string EDGE_CACHE_SERVER_DATA_REQUEST_BUFFER_SIZE_KEYSTR;
@@ -67,6 +68,7 @@ namespace covered
         static uint16_t getCloudRecvmsgStartport();
         static uint16_t getCloudRecvreqStartport();
         static std::string getCloudRocksdbBasedir();
+        static uint32_t getDatasetLoaderSleepForCompactionSec();
         static uint16_t getEdgeBeaconServerRecvreqStartport();
         static uint16_t getEdgeBeaconServerRecvrspStartport();
         static uint32_t getEdgeCacheServerDataRequestBufferSize();
@@ -117,6 +119,7 @@ namespace covered
         static uint16_t cloud_recvmsg_startport_;
         static uint16_t cloud_recvreq_startport_;
         static std::string cloud_rocksdb_basedir_;
+        static uint32_t dataset_loader_sleep_for_compaction_sec_;
         static uint16_t edge_beacon_server_recvreq_startport_;
         static uint16_t edge_beacon_server_recvrsp_startport_;
         static uint32_t edge_cache_server_data_request_buffer_size_;

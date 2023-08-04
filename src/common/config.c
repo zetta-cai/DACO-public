@@ -17,6 +17,7 @@ namespace covered
     const std::string Config::CLOUD_RECVMSG_STARTPORT_KEYSTR("cloud_recvmsg_startport");
     const std::string Config::CLOUD_RECVREQ_STARTPORT_KEYSTR("cloud_recvreq_startport");
     const std::string Config::CLOUD_ROCKSDB_BASEDIR_KEYSTR("cloud_rocksdb_basedir");
+    const std::string Config::DATASET_LOADER_SLEEP_FOR_COMPACTION_SEC_KEYSTR("dataset_loader_sleep_for_compaction_sec");
     const std::string Config::EDGE_BEACON_SERVER_RECVREQ_STARTPORT_KEYSTR("edge_beacon_server_recvreq_startport");
     const std::string Config::EDGE_BEACON_SERVER_RECVRSP_STARTPORT_KEYSTR("edge_beacon_server_recvrsp_startport");
     const std::string Config::EDGE_CACHE_SERVER_DATA_REQUEST_BUFFER_SIZE_KEYSTR("edge_cache_server_data_request_buffer_size");
@@ -31,7 +32,7 @@ namespace covered
     const std::string Config::FACEBOOK_CONFIG_FILEPATH_KEYSTR("facebook_config_filepath");
     const std::string Config::FINE_GRAINED_LOCKING_SIZE_KEYSTR("fine_grained_locking_size");
     const std::string Config::IS_DEBUG_KEYSTR("is_debug");
-    const std::string Config::IS_TRACK_EVENT_KEYSTR("is_track_even");
+    const std::string Config::IS_TRACK_EVENT_KEYSTR("is_track_event");
     const std::string Config::LATENCY_HISTOGRAM_SIZE_KEYSTR("latency_histogram_size");
     const std::string Config::OUTPUT_BASEDIR_KEYSTR("output_basedir");
     const std::string Config::PROPAGATION_ITEM_BUFFER_SIZE_CLIENT_TOEDGE_KEYSTR("propagation_item_buffer_size_client_toedge");
@@ -59,6 +60,7 @@ namespace covered
     uint16_t Config::cloud_recvmsg_startport_ = 4300; // [4096, 65536]
     uint16_t Config::cloud_recvreq_startport_ = 4400; // [4096, 65536]
     std::string Config::cloud_rocksdb_basedir_("/tmp/cloud");
+    uint32_t Config::dataset_loader_sleep_for_compaction_sec_ = 30;
     uint16_t Config::edge_beacon_server_recvreq_startport_ = 4500; // [4096, 65536]
     uint16_t Config::edge_beacon_server_recvrsp_startport_ = 4600; // [4096, 65536]
     uint32_t Config::edge_cache_server_data_request_buffer_size_ = 1000;
@@ -153,6 +155,12 @@ namespace covered
                 if (kv_ptr != NULL)
                 {
                     cloud_rocksdb_basedir_ = std::string(kv_ptr->value().get_string().c_str());
+                }
+                kv_ptr = find_(DATASET_LOADER_SLEEP_FOR_COMPACTION_SEC_KEYSTR);
+                if (kv_ptr != NULL)
+                {
+                    int64_t tmp_sec = kv_ptr->value().get_int64();
+                    dataset_loader_sleep_for_compaction_sec_ = Util::toUint32(tmp_sec);
                 }
                 kv_ptr = find_(EDGE_BEACON_SERVER_RECVREQ_STARTPORT_KEYSTR);
                 if (kv_ptr != NULL)
@@ -346,6 +354,15 @@ namespace covered
     bool Config::isSingleNode()
     {
         checkIsValid_();
+
+        if (!(main_class_name_ == Util::SIMULATOR_MAIN_NAME || main_class_name_ == Util::CLIENT_MAIN_NAME || main_class_name_ == Util::EDGE_MAIN_NAME || main_class_name_ == Util::CLOUD_MAIN_NAME || main_class_name_ == Util::EVALUATOR_MAIN_NAME))
+        {
+            std::ostringstream oss;
+            oss << main_class_name_ << " should NOT use is_single_node!";
+            Util::dumpErrorMsg(kClassName, oss.str());
+            exit(1);
+        }
+
         return is_single_node_;
     }
 
@@ -402,6 +419,12 @@ namespace covered
     {
         checkIsValid_();
         return cloud_rocksdb_basedir_;
+    }
+
+    uint32_t Config::getDatasetLoaderSleepForCompactionSec()
+    {
+        checkIsValid_();
+        return dataset_loader_sleep_for_compaction_sec_;
     }
 
     uint16_t Config::getEdgeBeaconServerRecvreqStartport()
@@ -591,6 +614,7 @@ namespace covered
         oss << "Cloud recvmsg startport: " << cloud_recvmsg_startport_ << std::endl;
         oss << "Cloud recvreq startport: " << cloud_recvreq_startport_ << std::endl;
         oss << "Cloud RocksDB base directory: " << cloud_rocksdb_basedir_ << std::endl;
+        oss << "Dataset loader sleep for compaction seconds: " << dataset_loader_sleep_for_compaction_sec_ << std::endl;
         oss << "Edge beacon server recvreq startport: " << edge_beacon_server_recvreq_startport_ << std::endl;
         oss << "Edge cache server data request buffer size: " << edge_cache_server_data_request_buffer_size_ << std::endl;
         oss << "Edge cache server recvreq startport: " << edge_cache_server_recvreq_startport_ << std::endl;
@@ -639,7 +663,7 @@ namespace covered
         //ifs.read(bytes, filesize); // read only supports char array instead of vector
         std::ostringstream oss;
         oss << "read " << config_filepath << " with " << filesize << " bytes";
-        Util::dumpDebugMsg(kClassName, oss.str());
+        Util::dumpNormalMsg(kClassName, oss.str());
 
         // Parse the bytes
         boost::json::stream_parser boost_json_parser;

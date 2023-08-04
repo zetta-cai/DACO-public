@@ -25,6 +25,8 @@ namespace covered
     public:
         FacebookWorkloadWrapper(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& perclient_workercnt);
         virtual ~FacebookWorkloadWrapper();
+
+        virtual uint32_t getPracticalKeycnt() const;
     private:
         static const std::string kClassName;
 

@@ -5,6 +5,7 @@
  */
 
 #include <sstream>
+#include <unistd.h>
 
 #include "cloud/rocksdb_wrapper.h"
 #include "common/cli/dataset_loader_cli.h"
@@ -27,26 +28,26 @@ void* launchDatasetLoader(void* dataset_loader_param_ptr)
     DatasetLoaderParam& dataset_loader_param = *((DatasetLoaderParam*)dataset_loader_param_ptr);
 
     // Calculate the key index range [start, end) assigned to the current dataset loader
-    const uint32_t keycnt = dataset_loader_param.workload_generator_ptr->getKeycnt();
+    const uint32_t practical_keycnt = dataset_loader_param.workload_generator_ptr->getPracticalKeycnt();
     assert(dataset_loader_param.dataset_loadercnt != 0);
-    const uint32_t perloader_keycnt = keycnt / dataset_loader_param.dataset_loadercnt;
+    const uint32_t perloader_keycnt = practical_keycnt / dataset_loader_param.dataset_loadercnt;
     assert(perloader_keycnt > 0);
     const uint32_t start_keyidx = perloader_keycnt * dataset_loader_param.dataset_loader_idx;
-    assert(start_keyidx < keycnt);
+    assert(start_keyidx < practical_keycnt);
     uint32_t end_keyidx = 0;
     if (dataset_loader_param.dataset_loader_idx == dataset_loader_param.dataset_loadercnt - 1) // tail
     {
-        end_keyidx = keycnt;
+        end_keyidx = practical_keycnt;
     }
     else
     {
         end_keyidx = start_keyidx + perloader_keycnt;
     }
-    assert(end_keyidx <= keycnt);
+    assert(end_keyidx <= practical_keycnt);
     assert(end_keyidx > start_keyidx);
 
     std::ostringstream oss;
-    oss << "loader " << dataset_loader_param.dataset_loader_idx << " loads dataset item indexes [" << start_keyidx << ", " << end_keyidx << " ) into RocksDB KVS...";
+    oss << "loader " << dataset_loader_param.dataset_loader_idx << " loads dataset item indexes [" << start_keyidx << ", " << end_keyidx << ") into RocksDB KVS...";
     covered::Util::dumpNormalMsg("dataset loader", oss.str());
     
     // Store partial dataset into RocksDB
@@ -82,7 +83,8 @@ int main(int argc, char **argv) {
     covered::Util::dumpNormalMsg(main_class_name, oss.str());
 
     // Create the corresponding RocksDB KVS
-    covered::RocksdbWrapper rocksdb_wrapper(cloud_idx, dataset_loader_cli.getCloudStorage(), covered::Util::getCloudRocksdbDirpath(keycnt, workload_name, cloud_idx));
+    covered::RocksdbWrapper* rocksdb_wrapper_ptr = new covered::RocksdbWrapper(cloud_idx, dataset_loader_cli.getCloudStorage(), covered::Util::getCloudRocksdbDirpath(keycnt, workload_name, cloud_idx));
+    assert(rocksdb_wrapper_ptr != NULL);
 
     // Create a workload generator
     // NOTE: NOT need client CLI parameters as we only use dataset key-value pairs instead of workload items
@@ -100,11 +102,11 @@ int main(int argc, char **argv) {
         struct DatasetLoaderParam& tmp_dataset_loader_param = dataset_loader_params[dataset_loader_idx];
         tmp_dataset_loader_param.dataset_loader_idx = dataset_loader_idx;
         tmp_dataset_loader_param.dataset_loadercnt = dataset_loadercnt;
-        tmp_dataset_loader_param.rocksdb_wrapper_ptr = &rocksdb_wrapper;
+        tmp_dataset_loader_param.rocksdb_wrapper_ptr = rocksdb_wrapper_ptr;
         tmp_dataset_loader_param.workload_generator_ptr = workload_generator_ptr;
     }
 
-    // (4) Launch dataset loaders for loading phase
+    // (3) Launch dataset loaders for loading phase
     covered::Util::dumpNormalMsg(main_class_name, "launch dataset loaders...");
     int pthread_returncode = 0;
     pthread_t dataset_loader_threads[dataset_loadercnt];
@@ -121,7 +123,7 @@ int main(int argc, char **argv) {
         }
     }
 
-    // (5) Wait for dataset loaders
+    // (4) Wait for dataset loaders
     covered::Util::dumpNormalMsg(main_class_name, "wait for all dataset loaders...");
     for (uint32_t dataset_loader_idx = 0; dataset_loader_idx < dataset_loadercnt; dataset_loader_idx++)
     {
@@ -136,10 +138,28 @@ int main(int argc, char **argv) {
     }
     covered::Util::dumpNormalMsg(main_class_name, "all dataset loaders are done");
 
+    // (5) Sleep for compaction
+
+    oss.clear();
+    oss.str("");
+    uint32_t sleep_for_compaction_sec = covered::Config::getDatasetLoaderSleepForCompactionSec();
+    oss << "sleep " << sleep_for_compaction_sec << " seconds to wait for compaction...";
+    covered::Util::dumpNormalMsg(main_class_name, oss.str());
+
+    sleep(sleep_for_compaction_sec);
+
+    covered::Util::dumpNormalMsg(main_class_name, "finish sleep for compaction!");
+
     // (6) Release variables
+
     assert(workload_generator_ptr != NULL);
     delete workload_generator_ptr;
     workload_generator_ptr = NULL;
+
+    // Close Rocksdb KVS
+    assert(rocksdb_wrapper_ptr != NULL);
+    delete rocksdb_wrapper_ptr;
+    rocksdb_wrapper_ptr = NULL;
 
     return 0;
 }

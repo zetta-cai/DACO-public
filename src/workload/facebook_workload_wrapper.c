@@ -36,6 +36,12 @@ namespace covered
         workload_generator_->markShutdown();
     }
 
+    uint32_t FacebookWorkloadWrapper::getPracticalKeycnt() const
+    {
+        // NOTE: CacheLib CDN generator will remove redundant keys, so the number of generated key-value pairs will be slightly smaller than keycnt -> we do NOT fix CacheLib as the keycnt gap is very limited and we aim to avoid changing its workload distribution.
+        return static_cast<uint32_t>(workload_generator_->getAllKeys().size());
+    }
+
     void FacebookWorkloadWrapper::initWorkloadParameters_()
     {
         // Load workload config file for Facebook CDN trace

@@ -67,6 +67,8 @@ namespace covered
 
     RocksdbWrapper::~RocksdbWrapper()
     {
+        Util::dumpDebugMsg(instance_name_, "close RocksDB KVS!");
+
         // Close RocksDB KVS
         assert(db_ptr_ != NULL);
         delete db_ptr_;

@@ -66,16 +66,11 @@ namespace covered
         return generateWorkloadItemInternal_(request_randgen);
     }
 
-    uint32_t WorkloadWrapperBase::getKeycnt() const
-    {
-        return keycnt_;
-    }
-
     WorkloadItem WorkloadWrapperBase::getDatasetItem(const uint32_t itemidx)
     {
         checkIsValid_();
 
-        assert(itemidx < keycnt_);
+        assert(itemidx < getPracticalKeycnt());
         return getDatasetItemInternal_(itemidx);
     }
 
