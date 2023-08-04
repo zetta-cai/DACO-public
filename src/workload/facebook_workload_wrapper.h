@@ -10,7 +10,9 @@
 #include <string>
 
 //#include <cachelib/cachebench/util/CacheConfig.h>
-#include <cachelib/cachebench/workload/GeneratorBase.h>
+
+//#include <cachelib/cachebench/workload/GeneratorBase.h>
+#include "workload/cachebench/generator_base.h"
 
 #include "workload/workload_item.h"
 #include "workload/cachebench/cachebench_config.h"
@@ -36,7 +38,7 @@ namespace covered
         // Get a dataset key-value pair item with the index of itemidx
         virtual WorkloadItem getDatasetItemInternal_(const uint32_t itemidx) override;
 
-        std::unique_ptr<facebook::cachelib::cachebench::GeneratorBase> makeGenerator_(const StressorConfig& config, const uint32_t& client_idx);
+        std::unique_ptr<covered::GeneratorBase> makeGenerator_(const StressorConfig& config, const uint32_t& client_idx);
 
         // Const shared variables
         std::string instance_name_;
@@ -48,7 +50,7 @@ namespace covered
         // Const shared variables
         //facebook::cachelib::cachebench::CacheConfig facebook_cache_config_;
         StressorConfig facebook_stressor_config_;
-        std::unique_ptr<facebook::cachelib::cachebench::GeneratorBase> workload_generator_;
+        std::unique_ptr<covered::GeneratorBase> workload_generator_;
     };
 }
 

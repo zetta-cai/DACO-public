@@ -7,13 +7,13 @@ namespace covered
 {
     const std::string DatasetLoaderCLI::kClassName("DatasetLoaderCLI");
 
-    DatasetLoaderCLI::DatasetLoaderCLI() : CloudCLI(), WorkloadCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_create_required_directories_(false)
+    DatasetLoaderCLI::DatasetLoaderCLI() : CloudCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_create_required_directories_(false)
     {
         dataset_loadercnt_ = 0;
         cloud_idx_ = 0;
     }
 
-    DatasetLoaderCLI::DatasetLoaderCLI(int argc, char **argv) : CloudCLI(), WorkloadCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_create_required_directories_(false)
+    DatasetLoaderCLI::DatasetLoaderCLI(int argc, char **argv) : CloudCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_create_required_directories_(false)
     {
         parseAndProcessCliParameters(argc, argv);
     }
@@ -35,7 +35,6 @@ namespace covered
         if (!is_add_cli_parameters_)
         {
             CloudCLI::addCliParameters_();
-            WorkloadCLI::addCliParameters_();
 
             // (1) Create CLI parameter description
 
@@ -56,7 +55,6 @@ namespace covered
         if (!is_set_param_and_config_)
         {
             CloudCLI::setParamAndConfig_(main_class_name);
-            WorkloadCLI::setParamAndConfig_(main_class_name);
 
             // (3) Get CLI parameters for client dynamic configurations
 
@@ -79,7 +77,6 @@ namespace covered
         if (!is_dump_cli_parameters_)
         {
             CloudCLI::dumpCliParameters_();
-            WorkloadCLI::dumpCliParameters_();
 
             // (6) Dump stored CLI parameters and parsed config information if debug
 

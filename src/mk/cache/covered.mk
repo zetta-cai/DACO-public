@@ -26,7 +26,7 @@ DEPS += $(CLOUD_SRCFILES:.c=.d)
 CLEANS += $(CLOUD_OBJECTS) $(CLOUD_SHARED_OBJECTS)
 
 # common module
-COMMON_SRCFILES := $(wildcard $(COVERED_DIRPATH)/common/*.c) $(wildcard $(COVERED_DIRPATH)/common/cli/*.c) $(wildcard $(COVERED_DIRPATH)/common/param/*.c)
+COMMON_SRCFILES := $(wildcard $(COVERED_DIRPATH)/common/*.c) $(wildcard $(COVERED_DIRPATH)/common/cli/*.c)
 COMMON_OBJECTS += $(COMMON_SRCFILES:.c=.o)
 COMMON_SHARED_OBJECTS += $(COMMON_SRCFILES:.c=.shared.o)
 DEPS += $(COMMON_SRCFILES:.c=.d)

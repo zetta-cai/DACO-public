@@ -11,7 +11,6 @@
 
 #include <boost/program_options.hpp>
 
-#include "common/cli/cli_base.h"
 #include "common/cli/client_cli.h"
 #include "common/cli/edge_cli.h"
 

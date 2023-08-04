@@ -48,6 +48,8 @@ namespace covered
     boost::json::object Config::json_object_ = boost::json::object();
 
     std::string Config::config_filepath_("");
+    std::string Config::main_class_name_(""); // Come from argv[0]
+    bool Config::is_single_node_ = true;
 
     std::vector<std::string> Config::client_ipstrs_(0);
     uint32_t Config::client_raw_statistics_slot_interval_sec_(1);
@@ -70,6 +72,8 @@ namespace covered
     uint16_t Config::evaluator_recvmsg_port_ = 5200; // [4096, 65536]
     std::string Config::facebook_config_filepath_("lib/CacheLib/cachelib/cachebench/test_configs/hit_ratio/cdn/config.json");
     uint32_t Config::fine_grained_locking_size_ = 1000;
+    bool Config::is_debug_ = false;
+    bool Config::is_track_event_ = false;
     uint32_t Config::latency_histogram_size_ = 1000000; // Track latency up to 1000 ms
     std::string Config::output_basedir_("output");
     uint32_t Config::propagation_item_buffer_size_client_toedge_ = 1000;

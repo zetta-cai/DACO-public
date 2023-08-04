@@ -19,7 +19,8 @@
 
 #include <cachelib/cachebench/cache/Cache.h>
 #include <cachelib/cachebench/util/Request.h>
-#include <cachelib/cachebench/workload/GeneratorBase.h>
+//#include <cachelib/cachebench/workload/GeneratorBase.h>
+#include "workload/cachebench/generator_base.h"
 
 #include "workload/cachebench/parallel.h"
 #include "workload/cachebench/cachebench_config.h"
@@ -27,7 +28,7 @@
 
 namespace covered {
 
-class WorkloadGenerator : public facebook::cachelib::cachebench::GeneratorBase {
+class WorkloadGenerator : public covered::GeneratorBase {
  public:
   explicit WorkloadGenerator(const StressorConfig& config, const uint32_t& client_idx);
   virtual ~WorkloadGenerator() {}

@@ -11,7 +11,6 @@
 #include <boost/stacktrace.hpp>
 #include <boost/system.hpp>
 
-#include "common/cli/evaluator_cli.h"
 #include "common/config.h"
 
 namespace covered

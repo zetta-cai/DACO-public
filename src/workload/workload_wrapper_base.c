@@ -76,7 +76,7 @@ namespace covered
         checkIsValid_();
 
         assert(itemidx < keycnt_);
-        getDatasetItemInternal_(itemidx);
+        return getDatasetItemInternal_(itemidx);
     }
 
     void WorkloadWrapperBase::checkIsValid_()

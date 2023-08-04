@@ -46,7 +46,7 @@ const facebook::cachelib::cachebench::Request& WorkloadGenerator::getReq(uint8_t
   return reqs_[idx];
 }
 
-const facebook::cachelib::cachebench::Request& getReq(uint8_t poolId, uint32_t itemidx)
+const facebook::cachelib::cachebench::Request& WorkloadGenerator::getReq(uint8_t poolId, uint32_t itemidx)
 {
   uint32_t keycnt = reqs_.size();
   if (itemidx >= keycnt)

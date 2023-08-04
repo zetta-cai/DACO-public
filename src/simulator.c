@@ -63,8 +63,8 @@ int main(int argc, char **argv) {
 
     // (2.1) Prepare one cloud parameter
 
-    cloud_idx = 0; // TODO: support 1 cloud node now
-    cloud_param = CloudWrapperParam(0, &cloud_cli);
+    const uint32_t cloud_idx = 0; // TODO: support 1 cloud node now
+    cloud_param = covered::CloudWrapperParam(cloud_idx, &cloud_cli);
 
     // (2.2) Launch one cloud node
 

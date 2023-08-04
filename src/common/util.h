@@ -17,6 +17,7 @@
 #include <string>
 #include <time.h> // struct timespec
 
+#include "common/cli/evaluator_cli.h"
 #include "network/network_addr.h"
 
 #define UNUSED(var) (void(var))

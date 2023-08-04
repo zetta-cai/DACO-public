@@ -129,7 +129,7 @@ namespace covered
     }
 
     // The same makeGenerator as in lib/CacheLib/cachelib/cachebench/runner/Stressor.cpp
-    std::unique_ptr<facebook::cachelib::cachebench::GeneratorBase> FacebookWorkloadWrapper::makeGenerator_(const StressorConfig& config, const uint32_t& client_idx)
+    std::unique_ptr<covered::GeneratorBase> FacebookWorkloadWrapper::makeGenerator_(const StressorConfig& config, const uint32_t& client_idx)
     {
         if (config.generator == "piecewise-replay") {
             Util::dumpErrorMsg(instance_name_, "piecewise-replay generator is not supported now!");

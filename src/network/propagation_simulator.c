@@ -3,7 +3,6 @@
 #include <sstream>
 #include <unistd.h> // usleep
 
-#include "common/param.h"
 #include "common/util.h"
 
 namespace covered

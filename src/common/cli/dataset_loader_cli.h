@@ -4,20 +4,18 @@
  * By Siyuan Sheng (2023.08.02).
  */
 
-#ifndef CLIENT_CLI_H
-#define CLIENT_CLI_H
+#ifndef DATASET_LOADER_CLI_H
+#define DATASET_LOADER_CLI_H
 
 #include <string>
 
 #include <boost/program_options.hpp>
 
-#include "common/cli/cli_base.h"
 #include "common/cli/cloud_cli.h"
-#include "common/cli/workload_cli.h"
 
 namespace covered
 {
-    class DatasetLoaderCLI : virtual public CloudCLI, virtual public WorkloadCLI
+    class DatasetLoaderCLI : virtual public CloudCLI
     {
     public:
         DatasetLoaderCLI();
