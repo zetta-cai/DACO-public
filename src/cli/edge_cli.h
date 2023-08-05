@@ -11,8 +11,8 @@
 
 #include <boost/program_options.hpp>
 
-#include "common/cli/edgescale_cli.h"
-#include "common/cli/propagation_cli.h"
+#include "cli/edgescale_cli.h"
+#include "cli/propagation_cli.h"
 
 namespace covered
 {

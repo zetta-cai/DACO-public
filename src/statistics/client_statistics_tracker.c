@@ -30,11 +30,11 @@ namespace covered
 
         perclientworker_curslot_update_flags_ = new std::atomic<bool>[perclient_workercnt_];
         assert(perclientworker_curslot_update_flags_ != NULL);
-        Util::initializeAtomicArray(perclientworker_curslot_update_flags_, perclient_workercnt_, false);
+        Util::initializeAtomicArray<bool>(perclientworker_curslot_update_flags_, perclient_workercnt_, false);
 
         perclientworker_curslot_update_statuses_ = new std::atomic<uint64_t>[perclient_workercnt];
         assert(perclientworker_curslot_update_statuses_ != NULL);
-        Util::initializeAtomicArray(perclientworker_curslot_update_statuses_, perclient_workercnt, 0);
+        Util::initializeAtomicArray<uint64_t>(perclientworker_curslot_update_statuses_, perclient_workercnt, 0);
 
         curslot_client_raw_statistics_ptr_list_.resize(curslot_client_raw_statistics_cnt);
         for (uint32_t i = 0; i < curslot_client_raw_statistics_ptr_list_.size(); i++)
@@ -231,6 +231,31 @@ namespace covered
         if (is_stresstest_phase)
         {
             stable_client_raw_statistics_ptr_->updateCacheUtilization_(closest_edge_cache_size_bytes, closest_edge_cache_capacity_bytes);
+        }
+
+        return;
+    }
+
+    // Update cur-slot/stable client raw statistics for value size
+    
+    void ClientStatisticsTracker::updateValueSize(const uint32_t& local_client_worker_idx, const uint32_t& value_size, const bool& is_stresstest_phase)
+    {
+        checkPointers_();
+
+        perclientworker_curslot_update_flags_[local_client_worker_idx].store(true, Util::STORE_CONCURRENCY_ORDER);
+
+        // Update cur-slot client raw statistics
+        ClientRawStatistics* tmp_curslot_client_raw_statistics_ptr = getCurslotClientRawStatisticsPtr_(cur_slot_idx_.load(Util::LOAD_CONCURRENCY_ORDER));
+        assert(tmp_curslot_client_raw_statistics_ptr != NULL);
+        tmp_curslot_client_raw_statistics_ptr->updateTotalValueSize_(local_client_worker_idx, value_size);
+
+        perclientworker_curslot_update_flags_[local_client_worker_idx].store(false, Util::STORE_CONCURRENCY_ORDER);
+        perclientworker_curslot_update_statuses_[local_client_worker_idx]++;
+
+        // Update stable client raw statistics for stresstest phase
+        if (is_stresstest_phase)
+        {
+            stable_client_raw_statistics_ptr_->updateTotalValueSize_(local_client_worker_idx, value_size);
         }
 
         return;

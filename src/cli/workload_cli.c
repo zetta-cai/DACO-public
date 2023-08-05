@@ -1,4 +1,4 @@
-#include "common/cli/workload_cli.h"
+#include "cli/workload_cli.h"
 
 #include "common/config.h"
 #include "common/util.h"

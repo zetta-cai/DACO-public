@@ -11,14 +11,15 @@
 
 #include <boost/program_options.hpp>
 
-#include "common/cli/client_cli.h"
-#include "common/cli/edge_cli.h"
+#include "cli/client_cli.h"
+#include "cli/edge_cli.h"
 
 namespace covered
 {
     class EvaluatorCLI : virtual public ClientCLI, virtual public EdgeCLI
     {
     public:
+        EvaluatorCLI();
         EvaluatorCLI(int argc, char **argv);
         virtual ~EvaluatorCLI();
 

@@ -6,7 +6,7 @@
 
 #include <sstream>
 
-#include "common/cli/evaluator_cli.h"
+#include "cli/evaluator_cli.h"
 #include "common/config.h"
 #include "common/util.h"
 #include "statistics/total_statistics_tracker.h"

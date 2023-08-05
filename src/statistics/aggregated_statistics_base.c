@@ -25,6 +25,8 @@ namespace covered
 
         total_cache_size_bytes_ = 0;
         total_cache_capacity_bytes_ = 0;
+
+        total_value_size_ = double(0.0);
     }
         
     AggregatedStatisticsBase::~AggregatedStatisticsBase() {}
@@ -142,6 +144,23 @@ namespace covered
         return total_cache_utilization;
     }
 
+    // Get aggregated statistics related with value size
+    
+    double AggregatedStatisticsBase::getTotalValueSize() const
+    {
+        return total_value_size_;
+    }
+
+    double AggregatedStatisticsBase::getAvgValueSize() const
+    {
+        double avg_value_size_ = double(0.0);
+        if (total_value_size_ > double(0.0))
+        {
+            avg_value_size_ = total_value_size_ / static_cast<double>(total_reqcnt_);
+        }
+        return avg_value_size_;
+    }
+
     // Get string for aggregate statistics
     std::string AggregatedStatisticsBase::toString() const
     {
@@ -151,6 +170,9 @@ namespace covered
         oss << "total local hit cnts: " << total_local_hitcnt_ << std::endl;
         oss << "total cooperative hit cnts: " << total_cooperative_hitcnt_ << std::endl;
         oss << "total request cnts: " << total_reqcnt_ << std::endl;
+        oss << "local hit ratio: " << getLocalHitRatio() << std::endl;
+        oss << "cooperative hit ratio: " << getCooperativeHitRatio() << std::endl;
+        oss << "total hit ratio: " << getTotalHitRatio() << std::endl;
 
         oss << "[Latency Statistics]" << std::endl;
         oss << "average latency: " << avg_latency_ << std::endl;
@@ -168,6 +190,12 @@ namespace covered
         oss << "[Cache Utilization Statistics]" << std::endl;
         oss << "total cache size usage bytes: " << total_cache_size_bytes_ << std::endl;
         oss << "total cache capacity bytes: " << total_cache_capacity_bytes_ << std::endl;
+        oss << "total cache margin bytes: " << getTotalCacheMarginBytes() << std::endl;
+        oss << "total cache utilization: " << getTotalCacheUtilization() << std::endl;
+
+        oss << "[Value Size Statistics]" << std::endl;
+        oss << "total value size: " << total_value_size_ << std::endl;
+        oss << "average value size: " << getAvgValueSize() << std::endl;
         
         std::string total_statistics_string = oss.str();
         return total_statistics_string;
@@ -175,8 +203,8 @@ namespace covered
 
     uint32_t AggregatedStatisticsBase::getAggregatedStatisticsIOSize()
     {
-        // Aggregated statistics for hit ratio + latency + read-write ratio + cache utilization
-        return sizeof(uint32_t) * 3 + sizeof(uint32_t) * 7 + sizeof(uint32_t) * 2 + sizeof(uint64_t) * 2;
+        // Aggregated statistics for hit ratio + latency + read-write ratio + cache utilization + value size
+        return sizeof(uint32_t) * 3 + sizeof(uint32_t) * 7 + sizeof(uint32_t) * 2 + sizeof(uint64_t) * 2 + sizeof(double);
     }
 
     uint32_t AggregatedStatisticsBase::serialize(DynamicArray& dynamic_array, const uint32_t& position) const
@@ -218,6 +246,10 @@ namespace covered
         size += sizeof(uint64_t);
         dynamic_array.deserialize(size, (const char*)&total_cache_capacity_bytes_, sizeof(uint64_t));
         size += sizeof(uint64_t);
+
+        // Serialize aggregated statistics for value size
+        dynamic_array.deserialize(size, (const char*)&total_value_size_, sizeof(double));
+        size += sizeof(double);
 
         return size - position;
     }
@@ -262,6 +294,10 @@ namespace covered
         dynamic_array.serialize(size, (char*)&total_cache_capacity_bytes_, sizeof(uint64_t));
         size += sizeof(uint64_t);
 
+        // Deserialize aggregated statistics for value size
+        dynamic_array.serialize(size, (char*)&total_value_size_, sizeof(double));
+        size += sizeof(double);
+
         return size - position;
     }
 
@@ -288,6 +324,9 @@ namespace covered
         // Aggregated statistics related with cache utilization
         total_cache_size_bytes_ = other.total_cache_size_bytes_;
         total_cache_capacity_bytes_ = other.total_cache_capacity_bytes_;
+
+        // Aggregated statistics related with value size
+        total_value_size_ = other.total_value_size_;
 
         return *this;
     }

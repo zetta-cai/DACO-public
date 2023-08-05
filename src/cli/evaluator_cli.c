@@ -1,4 +1,4 @@
-#include "common/cli/evaluator_cli.h"
+#include "cli/evaluator_cli.h"
 
 #include "common/config.h"
 #include "common/util.h"
@@ -6,6 +6,10 @@
 namespace covered
 {
     const std::string EvaluatorCLI::kClassName("EvaluatorCLI");
+
+    EvaluatorCLI::EvaluatorCLI() : ClientCLI(), EdgeCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_create_required_directories_(false)
+    {
+    }
 
     EvaluatorCLI::EvaluatorCLI(int argc, char **argv) : ClientCLI(), EdgeCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_create_required_directories_(false)
     {

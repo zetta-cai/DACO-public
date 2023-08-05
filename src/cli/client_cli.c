@@ -1,4 +1,4 @@
-#include "common/cli/client_cli.h"
+#include "cli/client_cli.h"
 
 #include "common/config.h"
 #include "common/util.h"

@@ -14,7 +14,7 @@
 #include <string>
 #include <unordered_map>
 
-#include "common/cli/evaluator_cli.h"
+#include "cli/evaluator_cli.h"
 #include "network/network_addr.h"
 #include "network/udp_msg_socket_client.h"
 #include "network/udp_msg_socket_server.h"

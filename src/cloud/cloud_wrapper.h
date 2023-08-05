@@ -10,7 +10,7 @@
 #include <string>
 
 #include "cloud/rocksdb_wrapper.h"
-#include "common/cli/cloud_cli.h"
+#include "cli/cloud_cli.h"
 #include "common/node_wrapper_base.h"
 #include "network/propagation_simulator_param.h"
 

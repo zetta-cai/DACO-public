@@ -9,6 +9,7 @@
 
 #include <atomic>
 #include <string>
+#include <vector>
 
 namespace covered
 {
@@ -41,7 +42,12 @@ namespace covered
         // Update cache utilization statistics
         void updateCacheUtilization_(const uint64_t& closest_edge_cache_size_bytes, const uint64_t& closest_edge_cache_capacity_bytes);
 
+        // Update value size statistics
+        void updateTotalValueSize_(const uint32_t& local_client_worker_idx, const uint32_t& value_size);
+
         void checkPointers_() const;
+
+        // TODO: Actually std::atomic is unnecessary here, as different client worker threads access individual variables; while client wrapper accesses cur-slot client raw statistics only after all client workers will access the next slot, and accesses stable client raw statistics only after all client workers are finished.
 
         // Const variables
         uint32_t perclient_workercnt_; // Come from CLI
@@ -62,6 +68,9 @@ namespace covered
         // Cache utilization statistics
         uint64_t closest_edge_cache_size_bytes_;
         uint64_t closest_edge_cache_capacity_bytes_;
+
+        // Value size statistics
+        std::vector<double> perclientworker_total_value_sizes_;
     };
 }
 

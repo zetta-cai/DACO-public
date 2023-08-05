@@ -432,7 +432,7 @@ namespace covered
 
         #ifdef DEBUG_EVALUATOR_WRAPPER
         TotalAggregatedStatistics tmp_curslot_total_aggregated_statistics = total_statistics_tracker_ptr_->getCurslotTotalAggregatedStatistics();
-        Util::dumpVariablesForDebug(kClassName, 10, "slot idx:", std::to_string(target_slot_idx_ - 1).c_str(), "total hit ratio:", std::to_string(tmp_curslot_total_aggregated_statistics.getTotalHitRatio()).c_str(), "cache utilization:", std::to_string(tmp_curslot_total_aggregated_statistics.getTotalCacheUtilization()).c_str(), "cache margin bytes:", std::to_string(tmp_curslot_total_aggregated_statistics.getTotalCacheMarginBytes()).c_str(), "cache size usage bytes:", std::to_string(tmp_curslot_total_aggregated_statistics.getTotalCacheSizeBytes()).c_str());
+        Util::dumpVariablesForDebug(kClassName, 4, "slot idx:", std::to_string(target_slot_idx_ - 1).c_str(), "\n", tmp_curslot_total_aggregated_statistics.toString().c_str());
         #endif
 
         return;

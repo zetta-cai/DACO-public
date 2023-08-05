@@ -1,4 +1,4 @@
-#include "common/cli/cloud_cli.h"
+#include "cli/cloud_cli.h"
 
 #include "common/config.h"
 #include "common/util.h"

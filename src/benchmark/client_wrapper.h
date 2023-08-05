@@ -14,7 +14,7 @@
 #include <string>
 
 #include "benchmark/client_worker_param.h"
-#include "common/cli/client_cli.h"
+#include "cli/client_cli.h"
 #include "common/node_wrapper_base.h"
 #include "network/propagation_simulator_param.h"
 #include "statistics/client_statistics_tracker.h"

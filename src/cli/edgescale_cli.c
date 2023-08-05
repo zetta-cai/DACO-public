@@ -1,4 +1,4 @@
-#include "common/cli/edgescale_cli.h"
+#include "cli/edgescale_cli.h"
 
 #include "common/config.h"
 #include "common/util.h"

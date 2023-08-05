@@ -1,40 +1,41 @@
 /*
- * CloudCLI: parse and process cloud CLI parameters for dynamic configurations.
+ * DatasetLoaderCLI: parse and process dataset loader CLI parameters dynamic configurations.
  * 
- * By Siyuan Sheng (2023.08.03).
+ * By Siyuan Sheng (2023.08.02).
  */
 
-#ifndef CLOUD_CLI_H
-#define CLOUD_CLI_H
+#ifndef DATASET_LOADER_CLI_H
+#define DATASET_LOADER_CLI_H
 
 #include <string>
 
 #include <boost/program_options.hpp>
 
-#include "common/cli/propagation_cli.h"
-#include "common/cli/workload_cli.h"
+#include "cli/cloud_cli.h"
 
 namespace covered
 {
-    class CloudCLI : virtual public PropagationCLI, virtual public WorkloadCLI
+    class DatasetLoaderCLI : virtual public CloudCLI
     {
     public:
-        CloudCLI();
-        CloudCLI(int argc, char **argv);
-        virtual ~CloudCLI();
+        DatasetLoaderCLI();
+        DatasetLoaderCLI(int argc, char **argv);
+        virtual ~DatasetLoaderCLI();
 
-        std::string getCloudStorage() const;
+        uint32_t getDatasetLoadercnt() const;
+        uint32_t getCloudIdx() const;
     private:
         static const std::string kClassName;
 
-        void checkCloudStorage_() const;
+        void verifyIntegrity_() const;
 
         bool is_add_cli_parameters_;
         bool is_set_param_and_config_;
         bool is_dump_cli_parameters_;
         bool is_create_required_directories_;
 
-        std::string cloud_storage_;
+        uint32_t dataset_loadercnt_;
+        uint32_t cloud_idx_;
     protected:
         virtual void addCliParameters_();
         virtual void setParamAndConfig_(const std::string& main_class_name);

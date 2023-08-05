@@ -11,7 +11,7 @@
 
 #include <boost/program_options.hpp>
 
-#include "common/cli/cli_base.h"
+#include "cli/cli_base.h"
 
 namespace covered
 {

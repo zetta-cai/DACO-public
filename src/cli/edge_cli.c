@@ -1,4 +1,4 @@
-#include "common/cli/edge_cli.h"
+#include "cli/edge_cli.h"
 
 #include "common/config.h"
 #include "common/util.h"

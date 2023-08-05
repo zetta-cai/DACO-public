@@ -13,10 +13,7 @@
 
 #include "benchmark/client_wrapper.h"
 #include "benchmark/evaluator_wrapper.h"
-#include "common/cli/client_cli.h"
-#include "common/cli/cloud_cli.h"
-#include "common/cli/edge_cli.h"
-#include "common/cli/evaluator_cli.h"
+#include "cli/simulator_cli.h"
 #include "common/config.h"
 #include "common/util.h"
 #include "cloud/cloud_wrapper.h"
@@ -28,10 +25,7 @@ int main(int argc, char **argv) {
 
     // (1) Parse and process different CLI parameters for client/edge/cloud/evaluator, and store them into Params
 
-    covered::ClientCLI client_cli(argc, argv);
-    covered::EdgeCLI edge_cli(argc, argv);
-    covered::CloudCLI cloud_cli(argc, argv);
-    covered::EvaluatorCLI evaluator_cli(argc, argv);
+    covered::SimulatorCLI simulator_cli(argc, argv);
 
     const std::string main_class_name = covered::Config::getMainClassName();
 
@@ -40,7 +34,7 @@ int main(int argc, char **argv) {
     // (2) Launch evaluator to control benchmark workflow
 
     pthread_t evaluator_thread;
-    covered::EvaluatorWrapperParam evaluator_param(false, &evaluator_cli);
+    covered::EvaluatorWrapperParam evaluator_param(false, (covered::EvaluatorCLI*)&simulator_cli);
 
     covered::Util::dumpNormalMsg(main_class_name, "launch evaluator");
 
@@ -64,7 +58,7 @@ int main(int argc, char **argv) {
     // (2.1) Prepare one cloud parameter
 
     const uint32_t cloud_idx = 0; // TODO: support 1 cloud node now
-    cloud_param = covered::CloudWrapperParam(cloud_idx, &cloud_cli);
+    cloud_param = covered::CloudWrapperParam(cloud_idx, (covered::CloudCLI*)&simulator_cli);
 
     // (2.2) Launch one cloud node
 
@@ -82,7 +76,7 @@ int main(int argc, char **argv) {
 
     // (3) Simulate edgecnt edge nodes with cooperative caching
 
-    const uint32_t edgecnt = edge_cli.getEdgecnt();
+    const uint32_t edgecnt = simulator_cli.getEdgecnt();
     pthread_t edge_threads[edgecnt];
     covered::EdgeWrapperParam edge_params[edgecnt];
 
@@ -90,7 +84,7 @@ int main(int argc, char **argv) {
 
     for (uint32_t edge_idx = 0; edge_idx < edgecnt; edge_idx++)
     {
-        covered::EdgeWrapperParam tmp_edge_param(edge_idx, &edge_cli);
+        covered::EdgeWrapperParam tmp_edge_param(edge_idx, (covered::EdgeCLI*)&simulator_cli);
         edge_params[edge_idx] = tmp_edge_param;
     }
 
@@ -115,7 +109,7 @@ int main(int argc, char **argv) {
     
     // (4) Simulate clientcnt clients by multi-threading
 
-    const uint32_t clientcnt = client_cli.getClientcnt();
+    const uint32_t clientcnt = simulator_cli.getClientcnt();
     pthread_t client_threads[clientcnt];
     covered::ClientWrapperParam client_params[clientcnt];
 
@@ -123,7 +117,7 @@ int main(int argc, char **argv) {
 
     for (uint32_t client_idx = 0; client_idx < clientcnt; client_idx++)
     {
-        covered::ClientWrapperParam tmp_client_param(client_idx, &client_cli);
+        covered::ClientWrapperParam tmp_client_param(client_idx, (covered::ClientCLI*)&simulator_cli);
         client_params[client_idx] = tmp_client_param;
     }
 

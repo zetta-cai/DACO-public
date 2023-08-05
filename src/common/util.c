@@ -785,34 +785,4 @@ namespace covered
         unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
         return static_cast<uint32_t>(seed);
     }
-
-    void Util::initializeAtomicArray(std::atomic<uint32_t>* atomic_array, const uint32_t& array_size, const uint32_t& default_value)
-    {
-        assert(atomic_array != NULL);
-        for (uint32_t i = 0; i < array_size; i++)
-        {
-            atomic_array[i].store(default_value, Util::STORE_CONCURRENCY_ORDER);
-        }
-        return;
-    }
-
-    void Util::initializeAtomicArray(std::atomic<uint64_t>* atomic_array, const uint32_t& array_size, const uint64_t& default_value)
-    {
-        assert(atomic_array != NULL);
-        for (uint32_t i = 0; i < array_size; i++)
-        {
-            atomic_array[i].store(default_value, Util::STORE_CONCURRENCY_ORDER);
-        }
-        return;
-    }
-    
-    void Util::initializeAtomicArray(std::atomic<bool>* atomic_array, const uint32_t& array_size, const bool& default_value)
-    {
-        assert(atomic_array != NULL);
-        for (uint32_t i = 0; i < array_size; i++)
-        {
-            atomic_array[i].store(default_value, Util::STORE_CONCURRENCY_ORDER);
-        }
-        return;
-    }
 }

@@ -12,7 +12,7 @@
 #include <string>
 
 #include "cache/cache_wrapper.h"
-#include "common/cli/edge_cli.h"
+#include "cli/edge_cli.h"
 #include "common/node_wrapper_base.h"
 #include "cooperation/cooperation_wrapper_base.h"
 #include "event/event_list.h"

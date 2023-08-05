@@ -138,7 +138,7 @@ namespace covered
                 // TODO: as there could still exist limited warmup requests are counted in stresstest beginning slots, we can print the start slot idx of stresstest phase to drop the invalid statistics of the beginning slots
                 continue; // NOT update to avoid affecting cur-slot raw/aggregated statistics especially for warmup speedup
             }*/
-            processLocalResponse_(local_response_msg_payload, rtt_us, is_stresstest_phase);
+            processLocalResponse_(workload_item, local_response_msg_payload, rtt_us, is_stresstest_phase);
 
             // TMPDEBUG
             //is_finish = issueItemToEdge_(workload_item, local_response_msg_payload, rtt_us);
@@ -210,7 +210,7 @@ namespace covered
         return is_finish;
     }
 
-    void ClientWorkerWrapper::processLocalResponse_(const DynamicArray& local_response_msg_payload, const uint32_t& rtt_us, const bool& is_stresstest_phase)
+    void ClientWorkerWrapper::processLocalResponse_(const WorkloadItem& workload_item, const DynamicArray& local_response_msg_payload, const uint32_t& rtt_us, const bool& is_stresstest_phase)
     {
         checkPointers_();
         ClientWrapper* tmp_client_wrapper_ptr = client_worker_param_ptr_->getClientWrapperPtr();
@@ -314,6 +314,14 @@ namespace covered
 
         // Update cache utilization statistics for the local client
         client_statistics_tracker_ptr_->updateCacheUtilization(local_client_worker_idx, closest_edge_cache_size_bytes, closest_edge_cache_capacity_bytes, is_stresstest_phase);
+
+        // Update value size statistics for the local client
+        uint32_t value_size = tmp_value.getValuesize();
+        if (local_response_message_type == MessageType::kLocalPutResponse)
+        {
+            value_size = workload_item.getValue().getValuesize();
+        }
+        client_statistics_tracker_ptr_->updateValueSize(local_client_worker_idx, value_size, is_stresstest_phase);
 
         #ifdef DEBUG_CLIENT_WORKER_WRAPPER
         Util::dumpVariablesForDebug(instance_name_, 13, "receive a local response;", "type:", MessageBase::messageTypeToString(local_response_message_type).c_str(), "keystr", tmp_key.getKeystr().c_str(), "valuesize:", std::to_string(tmp_value.getValuesize()).c_str(), "hitflag:", MessageBase::hitflagToString(hitflag).c_str(), "latency:", std::to_string(rtt_us).c_str(), "eventlist:", local_response_ptr->getEventListRef().toString().c_str());

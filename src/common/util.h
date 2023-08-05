@@ -17,7 +17,7 @@
 #include <string>
 #include <time.h> // struct timespec
 
-#include "common/cli/evaluator_cli.h"
+#include "cli/evaluator_cli.h"
 #include "network/network_addr.h"
 
 #define UNUSED(var) (void(var))
@@ -174,9 +174,16 @@ namespace covered
 
         static uint32_t getTimeBasedRandomSeed(); // Get a random seed (instead of deterministic) based on current time
 
-        static void initializeAtomicArray(std::atomic<uint64_t>* atomic_array, const uint32_t& array_size, const uint64_t& default_value);
-        static void initializeAtomicArray(std::atomic<uint32_t>* atomic_array, const uint32_t& array_size, const uint32_t& default_value);
-        static void initializeAtomicArray(std::atomic<bool>* atomic_array, const uint32_t& array_size, const bool& default_value);
+        template<class T>
+        static void initializeAtomicArray(std::atomic<T>* atomic_array, const uint32_t& array_size, const T& default_value)
+        {
+            assert(atomic_array != NULL);
+            for (uint32_t i = 0; i < array_size; i++)
+            {
+                atomic_array[i].store(default_value, Util::STORE_CONCURRENCY_ORDER);
+            }
+            return;
+        }
     private:
         static const std::string kClassName;
 

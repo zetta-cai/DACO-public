@@ -62,6 +62,9 @@ namespace covered
             // Aggregate cache utilization statistics
             total_cache_size_bytes_ += tmp_client_aggregated_statistics.total_cache_size_bytes_;
             total_cache_capacity_bytes_ += tmp_client_aggregated_statistics.total_cache_capacity_bytes_;
+
+            // Aggregate value size statistics
+            total_value_size_ += tmp_client_aggregated_statistics.total_value_size_;
         }
 
         // Aggregate latency statistics approximately

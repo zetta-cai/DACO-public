@@ -14,30 +14,32 @@ namespace covered
 
         perclientworker_local_hitcnts_ = new std::atomic<uint32_t>[perclient_workercnt];
         assert(perclientworker_local_hitcnts_ != NULL);
-        Util::initializeAtomicArray(perclientworker_local_hitcnts_, perclient_workercnt, 0);
+        Util::initializeAtomicArray<uint32_t>(perclientworker_local_hitcnts_, perclient_workercnt, 0);
 
         perclientworker_cooperative_hitcnts_ = new std::atomic<uint32_t>[perclient_workercnt];
         assert(perclientworker_cooperative_hitcnts_ != NULL);
-        Util::initializeAtomicArray(perclientworker_cooperative_hitcnts_, perclient_workercnt, 0);
+        Util::initializeAtomicArray<uint32_t>(perclientworker_cooperative_hitcnts_, perclient_workercnt, 0);
 
         perclientworker_reqcnts_ = new std::atomic<uint32_t>[perclient_workercnt];
         assert(perclientworker_reqcnts_ != NULL);
-        Util::initializeAtomicArray(perclientworker_reqcnts_, perclient_workercnt, 0);
+        Util::initializeAtomicArray<uint32_t>(perclientworker_reqcnts_, perclient_workercnt, 0);
 
         latency_histogram_ = new std::atomic<uint32_t>[latency_histogram_size_];
         assert(latency_histogram_ != NULL);
-        Util::initializeAtomicArray(latency_histogram_, latency_histogram_size_, 0);
+        Util::initializeAtomicArray<uint32_t>(latency_histogram_, latency_histogram_size_, 0);
 
         perclientworker_readcnts_ = new std::atomic<uint32_t>[perclient_workercnt];
         assert(perclientworker_readcnts_ != NULL);
-        Util::initializeAtomicArray(perclientworker_readcnts_, perclient_workercnt, 0);
+        Util::initializeAtomicArray<uint32_t>(perclientworker_readcnts_, perclient_workercnt, 0);
 
         perclientworker_writecnts_ = new std::atomic<uint32_t>[perclient_workercnt];
         assert(perclientworker_writecnts_ != NULL);
-        Util::initializeAtomicArray(perclientworker_writecnts_, perclient_workercnt, 0);
+        Util::initializeAtomicArray<uint32_t>(perclientworker_writecnts_, perclient_workercnt, 0);
 
         closest_edge_cache_size_bytes_ = 0;
         closest_edge_cache_capacity_bytes_ = 0;
+
+        perclientworker_total_value_sizes_.resize(perclient_workercnt, double(0.0));
     }
 
     ClientRawStatistics::~ClientRawStatistics()
@@ -69,14 +71,20 @@ namespace covered
 
     void ClientRawStatistics::clean()
     {
-        Util::initializeAtomicArray(perclientworker_local_hitcnts_, perclient_workercnt_, 0);
-        Util::initializeAtomicArray(perclientworker_cooperative_hitcnts_, perclient_workercnt_, 0);
-        Util::initializeAtomicArray(perclientworker_reqcnts_, perclient_workercnt_, 0);
+        Util::initializeAtomicArray<uint32_t>(perclientworker_local_hitcnts_, perclient_workercnt_, 0);
+        Util::initializeAtomicArray<uint32_t>(perclientworker_cooperative_hitcnts_, perclient_workercnt_, 0);
+        Util::initializeAtomicArray<uint32_t>(perclientworker_reqcnts_, perclient_workercnt_, 0);
 
-        Util::initializeAtomicArray(latency_histogram_, latency_histogram_size_, 0);
+        Util::initializeAtomicArray<uint32_t>(latency_histogram_, latency_histogram_size_, 0);
 
-        Util::initializeAtomicArray(perclientworker_readcnts_, perclient_workercnt_, 0);
-        Util::initializeAtomicArray(perclientworker_writecnts_, perclient_workercnt_, 0);
+        Util::initializeAtomicArray<uint32_t>(perclientworker_readcnts_, perclient_workercnt_, 0);
+        Util::initializeAtomicArray<uint32_t>(perclientworker_writecnts_, perclient_workercnt_, 0);
+
+        closest_edge_cache_size_bytes_ = 0;
+        closest_edge_cache_capacity_bytes_ = 0;
+
+        perclientworker_total_value_sizes_.clear();
+        perclientworker_total_value_sizes_.resize(perclient_workercnt_, double(0.0));
 
         return;
     }
@@ -147,6 +155,14 @@ namespace covered
     {
         closest_edge_cache_size_bytes_ = closest_edge_cache_size_bytes;
         closest_edge_cache_capacity_bytes_ = closest_edge_cache_capacity_bytes;
+        return;
+    }
+
+    void ClientRawStatistics::updateTotalValueSize_(const uint32_t& local_client_worker_idx, const uint32_t& value_size)
+    {
+        assert(local_client_worker_idx < perclient_workercnt_);
+
+        perclientworker_total_value_sizes_[local_client_worker_idx] += static_cast<double>(value_size);
         return;
     }
 

@@ -1,4 +1,4 @@
-#include "common/cli/propagation_cli.h"
+#include "cli/propagation_cli.h"
 
 #include "common/config.h"
 #include "common/util.h"

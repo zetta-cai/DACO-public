@@ -44,7 +44,7 @@ namespace covered
             total_reqcnt_ += client_raw_statistics_ptr->perclientworker_reqcnts_[local_worker_idx].load(Util::LOAD_CONCURRENCY_ORDER);
         }
 
-        // Aggregate per-client latency statistics accurately
+        // Aggregate per-client-worker latency statistics accurately
         uint32_t total_latency_cnt = 0; // i.e., total reqcnt
         for (uint32_t latency_us = 0; latency_us < latency_histogram_size; latency_us++)
         {
@@ -97,7 +97,7 @@ namespace covered
         assert(tmp_avg_latency >= 0 && tmp_avg_latency < latency_histogram_size);
         avg_latency_ = static_cast<uint32_t>(tmp_avg_latency);
 
-        // Aggregate per-client read-write ratio statistics
+        // Aggregate per-client-worker read-write ratio statistics
         for (uint32_t local_worker_idx = 0; local_worker_idx < perclient_workercnt; local_worker_idx++)
         {
             total_readcnt_ += client_raw_statistics_ptr->perclientworker_readcnts_[local_worker_idx].load(Util::LOAD_CONCURRENCY_ORDER);
@@ -107,6 +107,12 @@ namespace covered
         // Copy closest edge cache utilization
         total_cache_size_bytes_ = client_raw_statistics_ptr->closest_edge_cache_size_bytes_;
         total_cache_capacity_bytes_ = client_raw_statistics_ptr->closest_edge_cache_capacity_bytes_;
+
+        // Aggregate per-client-worker value size statistics
+        for (uint32_t local_worker_idx = 0; local_worker_idx < perclient_workercnt; local_worker_idx++)
+        {
+            total_value_size_ += client_raw_statistics_ptr->perclientworker_total_value_sizes_[local_worker_idx];
+        }
 
         return;
     }

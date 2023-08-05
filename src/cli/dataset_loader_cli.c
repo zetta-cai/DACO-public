@@ -1,4 +1,4 @@
-#include "common/cli/dataset_loader_cli.h"
+#include "cli/dataset_loader_cli.h"
 
 #include "common/config.h"
 #include "common/util.h"
