@@ -1,7 +1,7 @@
 /*
  * LruCache: refer to lib/cpp-lru-cache/include/lrucache.hpp.
  *
- * Hack to support update, admit, evict, and size in units of bytes.
+ * Hack to support required interfaces and cache size in units of bytes for capacity constraint.
  * 
  * By Siyuan Sheng (2023.05.03).
  */

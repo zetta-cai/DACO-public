@@ -36,7 +36,7 @@ namespace covered
             // Dynamic configurations for client
             argument_desc_.add_options()
                 ("keycnt", boost::program_options::value<uint32_t>()->default_value(1000), "the total number of keys")
-                ("workload_name", boost::program_options::value<std::string>()->default_value(Util::FACEBOOK_WORKLOAD_NAME), "workload name")
+                ("workload_name", boost::program_options::value<std::string>()->default_value(Util::FACEBOOK_WORKLOAD_NAME), "workload name (e.g., facebook)")
             ;
 
             is_add_cli_parameters_ = true;

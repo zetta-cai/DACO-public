@@ -35,7 +35,7 @@ namespace covered
 
             // Dynamic configurations for client
             argument_desc_.add_options()
-                ("cloud_storage", boost::program_options::value<std::string>()->default_value(Util::HDD_NAME), "type of cloud storage")
+                ("cloud_storage", boost::program_options::value<std::string>()->default_value(Util::HDD_NAME), "type of cloud storage (e.g., hdd)")
             ;
 
             is_add_cli_parameters_ = true;
