@@ -4,7 +4,7 @@ import os
 import sys
 import subprocess
 
-from paths import *
+from common import *
 
 is_clear_tarball = False # whether to clear intermediate tarball files
 
@@ -16,8 +16,8 @@ is_install_lfucache = True
 is_install_rocksdb = True
 is_install_smhasher = True
 
-# Include common module for the following installation
-from common import *
+# Include util module for the following installation
+from util import *
 
 # (1) Install boost 1.81.0
 
@@ -254,7 +254,7 @@ if is_install_smhasher:
 # (7) Chown of libraries
 
 prompt(filename, "chown of libraries...")
-chown_cmd = "sudo chown -R ${USER}:${USER} {}".format(lib_dirpath)
+chown_cmd = "sudo chown -R {0}:{0} {1}".format(username, lib_dirpath)
 chown_subprocess = subprocess.run(chown_cmd, shell=True)
 if chown_subprocess.returncode != 0:
     die(filename, "failed to chown of libraries")

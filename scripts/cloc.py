@@ -5,9 +5,7 @@ import sys
 import subprocess
 
 from common import *
-
-filename = sys.argv[0]
-proj_dirname = os.path.dirname(os.path.dirname(os.path.abspath(filename)))
+from util import *
 
 exclude_exts = "d,o,pyc"
 exclude_dirs = "\"(src/mk|src/workload/cachebench|src/cache/cpp-lru-cache|src/deprecated)\""

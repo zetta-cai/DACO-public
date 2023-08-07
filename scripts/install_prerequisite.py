@@ -4,7 +4,7 @@ import os
 import sys
 import subprocess
 
-from paths import *
+from common import *
 
 is_clear_tarball = False # whether to clear intermediate tarball files
 
@@ -127,8 +127,8 @@ if is_install_pylib:
         print("{}: failed to install python libraries based on {}".format(filename, pylib_requirement_filepath))
         sys.exit(1)
 
-# Include common module for the following installation
-from common import *
+# Include util module for the following installation
+from util import *
 
 # (3) Upgrade gcc/g++ if necessary
 
