@@ -1,4 +1,4 @@
-#include "cache/cpp-lru-cache/lrucache.h"
+#include "cache/lru/lrucache.h"
 
 #include <assert.h>
 #include <sstream>

@@ -3,8 +3,6 @@
 #include <assert.h>
 #include <sstream>
 
-#include "cache/caches/lfu_cache_policy.hpp"
-
 namespace covered
 {
     const std::string LfuLocalCache::kClassName("LfuLocalCache");
@@ -145,7 +143,7 @@ namespace covered
         std::string context_name = "LfuLocalCache::getSizeForCapacity()";
         rwlock_for_lfu_local_cache_ptr_->acquire_lock_shared(context_name);
 
-        uint64_t internal_size = lru_cache_ptr_->getSizeForCapacity();
+        uint64_t internal_size = lfu_cache_ptr_->getSizeForCapacity();
 
         rwlock_for_lfu_local_cache_ptr_->unlock_shared(context_name);
         return internal_size;

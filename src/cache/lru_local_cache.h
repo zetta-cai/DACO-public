@@ -9,7 +9,7 @@
 #include <string>
 
 #include "cache/local_cache_base.h"
-#include "cache/cpp-lru-cache/lrucache.h"
+#include "cache/lru/lrucache.h"
 #include "concurrency/rwlock.h"
 
 namespace covered
