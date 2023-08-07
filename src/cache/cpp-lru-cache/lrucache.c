@@ -21,8 +21,9 @@ namespace covered
 		if (map_iter == cache_items_map_.end()) {
 			is_local_cached = false;
 		} else {
-			// Note: insert/erase/splice will NOT invalidate previous iterators for non-continuous data stuctures (e.g., map/set/list) vs. continuous ones (e.g., vector/queue/array)
 			list_iterator_t list_iter = map_iter->second;
+			assert(list_iter != cache_items_list_.end());
+			assert(list_iter->first == key);
 			cache_items_list_.splice(cache_items_list_.begin(), cache_items_list_, list_iter); // Move the list entry pointed by list_iter to the head of the list (NOT change the memory address of the list entry)
 			value = list_iter->second;
 			is_local_cached = true;
@@ -47,6 +48,7 @@ namespace covered
 			// Remove previous list entry from cache_items_list_
 			list_iterator_t prev_list_iter = map_iter->second;
 			assert(prev_list_iter != cache_items_list_.end());
+			assert(prev_list_iter->first == key);
 			uint32_t prev_keysize = prev_list_iter->first.getKeystr().length();
 			uint32_t prev_valuesize = prev_list_iter->second.getValuesize();
 			cache_items_list_.erase(prev_list_iter);

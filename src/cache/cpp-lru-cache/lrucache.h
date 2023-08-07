@@ -3,6 +3,8 @@
  *
  * Hack to support required interfaces and cache size in units of bytes for capacity constraint.
  * 
+ * Note: insert/erase/splice will NOT invalidate previous iterators for non-continuous data stuctures (e.g., map/set/list) vs. continuous ones (e.g., vector/queue/array).
+ * 
  * By Siyuan Sheng (2023.05.03).
  */
 

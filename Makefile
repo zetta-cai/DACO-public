@@ -9,6 +9,7 @@ include src/mk/lib/smhasher.mk
 
 # Recipes for cache methods (including baselines and COVERED)
 include src/mk/cache/covered.mk
+include src/mk/cache/lfu.mk
 include src/mk/cache/lru.mk
 
 ##############################################################################
