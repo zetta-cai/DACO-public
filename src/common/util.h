@@ -54,6 +54,7 @@ namespace covered
         static const std::string HDD_NAME; // NOTE: a single RocksDB size on HDD should NOT exceed 500 GiB
 
         // Cache name
+        static const std::string CACHELIB_CACHE_NAME;
         static const std::string LFU_CACHE_NAME;
         static const std::string LRU_CACHE_NAME;
         static const std::string COVERED_CACHE_NAME;

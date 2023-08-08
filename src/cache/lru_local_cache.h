@@ -6,6 +6,9 @@
  * By Siyuan Sheng (2023.05.16).
  */
 
+#ifndef LRU_LOCAL_CACHE_H
+#define LRU_LOCAL_CACHE_H
+
 #include <string>
 
 #include "cache/local_cache_base.h"
@@ -18,7 +21,7 @@ namespace covered
     {
     public:
         LruLocalCache(const uint32_t& edge_idx);
-        ~LruLocalCache();
+        virtual ~LruLocalCache();
 
         // (1) Check is cached and access validity
 
@@ -33,8 +36,8 @@ namespace covered
 
         virtual bool needIndependentAdmit(const Key& key) const override;
         virtual void admitLocalCache(const Key& key, const Value& value) override;
-        virtual bool getLocalCacheVictimKey(Key& key) const override;
-        virtual bool evictLocalCacheIfKeyMatch(const Key& key, Value& value) override;
+        virtual bool getLocalCacheVictimKey(Key& key, const Key& admit_key, const Value& admit_value) const override;
+        virtual bool evictLocalCacheIfKeyMatch(const Key& key, Value& value, const Key& admit_key, const Value& admit_value) override;
 
         // (4) Other functions
 
@@ -59,3 +62,5 @@ namespace covered
         LruCache* lru_cache_ptr_; // Data and metadata for local edge cache
     };
 }
+
+#endif

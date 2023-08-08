@@ -3,6 +3,8 @@
 #include <assert.h>
 #include <sstream>
 
+#include "common/util.h"
+
 namespace covered
 {
     const std::string LruLocalCache::kClassName("LruLocalCache");
@@ -105,9 +107,12 @@ namespace covered
         return;
     }
 
-    bool LruLocalCache::getLocalCacheVictimKey(Key& key) const
+    bool LruLocalCache::getLocalCacheVictimKey(Key& key, const Key& admit_key, const Value& admit_value) const
     {
         checkPointers_();
+
+        UNUSED(admit_key);
+        UNUSED(admit_value);
 
         // Acquire a read lock for local statistics to update local statistics atomically (so no need to hack LRU cache)
         std::string context_name = "LruLocalCache::getLocalCacheVictimKey()";
@@ -119,12 +124,15 @@ namespace covered
         return has_victim_key;
     }
 
-    bool LruLocalCache::evictLocalCacheIfKeyMatch(const Key& key, Value& value)
+    bool LruLocalCache::evictLocalCacheIfKeyMatch(const Key& key, Value& value, const Key& admit_key, const Value& admit_value)
     {
         checkPointers_();
 
+        UNUSED(admit_key);
+        UNUSED(admit_value);
+
         // Acquire a write lock for local statistics to update local statistics atomically (so no need to hack LRU cache)
-        std::string context_name = "LruLocalCache::evictLocalCache()";
+        std::string context_name = "LruLocalCache::evictLocalCacheIfKeyMatch()";
         rwlock_for_lru_local_cache_ptr_->acquire_lock(context_name);
 
         bool is_evict = lru_cache_ptr_->evictIfKeyMatch(key, value);

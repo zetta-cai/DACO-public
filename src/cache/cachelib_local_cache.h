@@ -1,27 +1,34 @@
 /*
- * LfuLocalCache: local edge cache with LFU policy (https://github.com/vpetrigo/caches.git) (thread safe).
+ * CachelibLocalCache: local edge cache with LRU2Q policy based on Cachelibhttps://github.com/facebook/CacheLib.git) (thread safe).
  *
- * NOTE: all non-const shared variables in LfuLocalCache should be thread safe.
+ * NOTE: all non-const shared variables in CachelibLocalCache should be thread safe.
+ * 
+ * NOTE: all configuration and function calls refer to Cachelib files, including lib/cachelib/examples/simple_cache/main.cpp and lib/cachelib/cachebench/runner/CacheStressor.h.
  * 
  * By Siyuan Sheng (2023.08.07).
  */
 
-#ifndef LFU_LOCAL_CACHE_H
-#define LFU_LOCAL_CACHE_H
+#ifndef CACHELIB_LOCAL_CACHE_H
+#define CACHELIB_LOCAL_CACHE_H
 
 #include <string>
 
-#include "cache/lfu/lfu_cache_policy.hpp"
+#include "cache/cachelib/CacheAllocator.h"
 #include "cache/local_cache_base.h"
 #include "concurrency/rwlock.h"
 
 namespace covered
 {
-    class LfuLocalCache : public LocalCacheBase
+    class CachelibLocalCache : public LocalCacheBase
     {
     public:
-        LfuLocalCache(const uint32_t& edge_idx);
-        virtual ~LfuLocalCache();
+        typedef Lru2QAllocator Lru2QCache; // LRU2Q cache policy
+        typedef Lru2QCache::Config Lru2QCacheConfig;
+        typedef Lru2QCache::ReadHandle Lru2QCacheReadHandle;
+        typedef Lru2QCache::Item Lru2QCacheItem;
+
+        CachelibLocalCache(const uint32_t& edge_idx, const uint64_t& capacity_bytes);
+        virtual ~CachelibLocalCache();
 
         // (1) Check is cached and access validity
 
@@ -55,11 +62,12 @@ namespace covered
         // Const variable
         std::string instance_name_;
 
-        // Guarantee the atomicity of local LFU cache and local statistics
-        mutable Rwlock* rwlock_for_lfu_local_cache_ptr_;
+        // Guarantee the atomicity of local Cachelib cache and local statistics
+        mutable Rwlock* rwlock_for_cachelib_local_cache_ptr_;
 
         // Non-const shared variables
-        LFUCachePolicy<Key, Value, KeyHasher>* lfu_cache_ptr_; // Data and metadata for local edge cache
+        std::unique_ptr<Lru2QCache> cachelib_cache_ptr_; // Data and metadata for local edge cache
+        facebook::cachelib::PoolId cachelib_poolid_; // Pool ID for cachelib local edge cache
     };
 }
 

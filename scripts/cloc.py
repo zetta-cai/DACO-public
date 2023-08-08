@@ -8,7 +8,7 @@ from common import *
 from util import *
 
 exclude_exts = "d,o,pyc"
-exclude_dirs = "\"(src/mk|src/workload/cachebench|src/cache/lfu|src/cache/lru|src/deprecated)\""
+exclude_dirs = "\"(src/mk|src/workload/cachebench|src/cache/cachelib|src/cache/lfu|src/cache/lru|src/deprecated)\""
 exclude_files = "\"(src/Makefile|scripts/requirements\.txt)\""
 # --fullpath add the current working directory (pwd) ahead of --not-match-d and --not-match-f
 exclude_command = "--exclude-ext={} --fullpath --not-match-d={} --not-match-f={}".format(exclude_exts, exclude_dirs, exclude_files)

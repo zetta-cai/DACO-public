@@ -4,6 +4,7 @@
 #include <sstream>
 
 #include "common/util.h"
+#include "cache/cachelib_local_cache.h"
 #include "cache/lfu_local_cache.h"
 #include "cache/lru_local_cache.h"
 
@@ -14,7 +15,11 @@ namespace covered
     LocalCacheBase* LocalCacheBase::getLocalCacheByCacheName(const std::string& cache_name, const uint32_t& edge_idx)
     {
         LocalCacheBase* local_cache_ptr = NULL;
-        if (cache_name == Util::LFU_CACHE_NAME)
+        if (cache_name == Util::CACHELIB_CACHE_NAME)
+        {
+            local_cache_ptr = new CachelibLocalCache(edge_idx);
+        }
+        else if (cache_name == Util::LFU_CACHE_NAME)
         {
             local_cache_ptr = new LfuLocalCache(edge_idx);
         }

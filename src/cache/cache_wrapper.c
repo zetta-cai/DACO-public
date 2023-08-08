@@ -204,7 +204,7 @@ namespace covered
         return;
     }
     
-    void CacheWrapper::evict(Key& key, Value& value)
+    void CacheWrapper::evict(Key& key, Value& value, const Key& admit_key, const Value& admit_value)
     {
         checkPointers_();
 
@@ -216,7 +216,7 @@ namespace covered
         {
             // Get victim_key for key-level fine-grained locking
             Key victim_key;
-            bool has_victim_key = local_cache_ptr_->getLocalCacheVictimKey(victim_key);
+            bool has_victim_key = local_cache_ptr_->getLocalCacheVictimKey(victim_key, admit_key, admit_value);
             Value victim_value;
 
             // At least one victim key should exist for eviction
@@ -231,7 +231,7 @@ namespace covered
             cache_wrapper_perkey_rwlock_ptr_->acquire_lock(victim_key, context_name);
 
             // Evict if key matches (similar as version check for optimistic locking to revert effects of atomicity/order issues)
-            bool is_evict = local_cache_ptr_->evictLocalCacheIfKeyMatch(victim_key, victim_value);
+            bool is_evict = local_cache_ptr_->evictLocalCacheIfKeyMatch(victim_key, victim_value, admit_key, admit_value);
             if (is_evict) // If with successful eviction
             {
                 bool is_exist = false;

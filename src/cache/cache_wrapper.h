@@ -47,7 +47,7 @@ namespace covered
 
         bool needIndependentAdmit(const Key& key) const;
         void admit(const Key& key, const Value& value, const bool& is_valid);
-        void evict(Key& key, Value& value);
+        void evict(Key& key, Value& value, const Key& admit_key = Key(), const Value& admit_value = Value()); // Some cache policy requires to know admit key-value pair for victim selection
 
         // (4) Other functions
         
