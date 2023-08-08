@@ -1,4 +1,4 @@
-#include "cache/lfu_local_cache.h"
+#include "cache/cachelib_local_cache.h"
 
 #include <assert.h>
 #include <sstream>
@@ -28,7 +28,7 @@ namespace covered
         cacheConfig.setCacheSize(capacity_bytes); // NOTE: we limit cache capacity outside CachelibLocalCache (in EdgeWrapper); here we set cachelib local cache size as overall cache capacity to avoid cache capacity constraint inside CachelibLocalCache
         cacheConfig.validate(); // will throw if bad config
 
-        cachelib_cache_ptr_ = std::make_unique<Cache>(config);
+        cachelib_cache_ptr_ = std::make_unique<Lru2QCache>(cacheConfig);
         assert(cachelib_cache_ptr_.get() != NULL);
 
         cachelib_poolid_ = cachelib_cache_ptr_->addPool("default", cachelib_cache_ptr_->getCacheMemoryStats().ramCacheSize);
@@ -105,7 +105,7 @@ namespace covered
         bool is_local_cached = (handle != nullptr);
         if (is_local_cached) // Key already exists
         {
-            auto allocate_handle = cachelib_cache_ptr_->allocate(cachelib_poolid_, keystr, value.size());
+            auto allocate_handle = cachelib_cache_ptr_->allocate(cachelib_poolid_, keystr, value.getValuesize());
             if (allocate_handle == nullptr)
             {
                 is_local_cached = false; // cache may fail to evict due to too many pending writes -> equivalent to NOT caching the latest value
@@ -113,8 +113,8 @@ namespace covered
             else
             {
                 std::string valuestr = value.generateValuestr();
-                assert(valuestr.size() == value.size());
-                std::memcpy(allocate_handle->getMemory(), valuestr.data(), value.size());
+                assert(valuestr.size() == value.getValuesize());
+                std::memcpy(allocate_handle->getMemory(), valuestr.data(), value.getValuesize());
                 cachelib_cache_ptr_->insertOrReplace(allocate_handle); // Must replace
             }
         }
@@ -147,7 +147,7 @@ namespace covered
         bool is_local_cached = (handle != nullptr);
         if (!is_local_cached) // Key does NOT exist
         {
-            auto allocate_handle = cachelib_cache_ptr_->allocate(cachelib_poolid_, keystr, value.size());
+            auto allocate_handle = cachelib_cache_ptr_->allocate(cachelib_poolid_, keystr, value.getValuesize());
             if (allocate_handle == nullptr)
             {
                 is_local_cached = false; // cache may fail to evict due to too many pending writes -> equivalent to NOT admitting the new key-value pair
@@ -155,8 +155,8 @@ namespace covered
             else
             {
                 std::string valuestr = value.generateValuestr();
-                assert(valuestr.size() == value.size());
-                std::memcpy(allocate_handle->getMemory(), valuestr.data(), value.size());
+                assert(valuestr.size() == value.getValuesize());
+                std::memcpy(allocate_handle->getMemory(), valuestr.data(), value.getValuesize());
                 cachelib_cache_ptr_->insertOrReplace(allocate_handle); // Must insert
             }
         }
@@ -176,17 +176,17 @@ namespace covered
         const std::string admit_keystr = admit_key.getKeystr();
 
         // number of bytes required for this item
-        const auto requiredSize = Lru2QCacheItem::getRequiredSize(admit_keystr, admit_value.size());
+        const auto requiredSize = Lru2QCacheItem::getRequiredSize(admit_keystr, admit_value.getValuesize());
         // TODO: maybe we can set requiredSize as 1 byte to ensure that we can always find a victim key
 
         // the allocation class in our memory allocator.
         const auto cid = cachelib_cache_ptr_->allocator_->getAllocationClassId(cachelib_poolid_, requiredSize);
 
-        Lru2QCacheItem* item_ptr = findEviction(cachelib_poolid_, cid);
+        Lru2QCacheItem* item_ptr = cachelib_cache_ptr_->findEviction(cachelib_poolid_, cid);
         bool has_victim_key = (item_ptr != nullptr);
         if (has_victim_key)
         {
-            std::string victim_keystr((const char*)item_ptr->getKey().getMemory(), item_ptr->getKey().getSize());
+            std::string victim_keystr((const char*)item_ptr->getKey().data(), item_ptr->getKey().size()); // data() returns b_, while size() return e_ - b_
             key = Key(victim_keystr);
         }
 
@@ -216,8 +216,8 @@ namespace covered
             value = Value(handle->getSize());
 
             // Remove the corresponding cache item
-            RemoveRes = cachelib_cache_ptr_->remove(cur_victim_key.getKeystr());
-            assert(removeRes == RemoveRes::kSuccess);
+            Lru2QCache::RemoveRes removeRes = cachelib_cache_ptr_->remove(cur_victim_key.getKeystr());
+            assert(removeRes == Lru2QCache::RemoveRes::kSuccess);
 
             is_evict = true;
         }
@@ -245,7 +245,7 @@ namespace covered
     void CachelibLocalCache::checkPointers_() const
     {
         assert(rwlock_for_cachelib_local_cache_ptr_ != NULL);
-        assert(lfu_cache_ptr_ != NULL);
+        assert(cachelib_cache_ptr_ != NULL);
     }
 
 }

@@ -34,7 +34,7 @@
 #include "cachelib/allocator/Cache.h"
 #include "cachelib/allocator/CacheAllocatorConfig.h"
 #include "cachelib/allocator/CacheChainedItemIterator.h"
-#include "cachelib/allocator/CacheItem.h"
+#include "cache/cachelib/CacheItem.h" // Hacked version
 #include "cachelib/allocator/CacheStats.h"
 #include "cachelib/allocator/CacheStatsInternal.h"
 #include "cachelib/allocator/CacheTraits.h"
@@ -72,7 +72,8 @@
 #include "cachelib/common/Utils.h"
 #include "cachelib/shm/ShmManager.h"
 
-namespace covered {
+namespace facebook {
+namespace cachelib {
 
 template <typename AllocatorT>
 class FbInternalRuntimeUpdateWrapper;
@@ -137,6 +138,78 @@ class GET_CLASS_NAME(ObjectCache, ObjectHandleInvalid);
 } // namespace test
 } // namespace objcache
 
+} // namespace cachelib
+} // namespace facebook
+
+namespace covered {
+
+class Key;
+
+using facebook::cachelib::TypedHandleImpl;
+using facebook::cachelib::CacheChainedItemIterator;
+using facebook::cachelib::CacheChainedAllocs;
+using facebook::cachelib::PoolId;
+using facebook::cachelib::EventInterface;
+using facebook::cachelib::AllocInfo;
+using facebook::cachelib::ClassId;
+using facebook::cachelib::RemoveContext;
+using facebook::cachelib::DestructorContext;
+using facebook::cachelib::NvmCache;
+using facebook::cachelib::AccessMode;
+using facebook::cachelib::RebalanceStrategy;
+using facebook::cachelib::PoolOptimizeStrategy;
+using facebook::cachelib::ICompactCache;
+using facebook::cachelib::MemoryMonitor;
+using facebook::cachelib::MemoryPool;
+using facebook::cachelib::PoolAdviseReclaimData;
+using facebook::cachelib::SlabReleaseStats;
+using facebook::cachelib::ReaperStats;
+using facebook::cachelib::RebalancerStats;
+using facebook::cachelib::PoolStats;
+using facebook::cachelib::PoolEvictionAgeStats;
+using facebook::cachelib::CacheMetadata;
+using facebook::cachelib::GlobalCacheStats;
+using facebook::cachelib::CacheMemoryStats;
+using facebook::cachelib::AllSlabReleaseEvents;
+using facebook::cachelib::RefcountWithFlags;
+using facebook::cachelib::KAllocation;
+using covered::Key;
+using facebook::cachelib::WaitContext;
+using facebook::cachelib::MemoryAllocator;
+using facebook::cachelib::MemoryPoolManager;
+using facebook::cachelib::AllocatorApiEvent;
+using facebook::cachelib::HashedKey;
+using facebook::cachelib::Deserializer;
+using facebook::cachelib::SlabReleaseMode;
+using facebook::cachelib::ShmSegmentOpts;
+using facebook::cachelib::CCacheManager;
+using facebook::cachelib::TempShmMapping;
+using facebook::cachelib::PoolRebalancer;
+using facebook::cachelib::Reaper;
+using facebook::cachelib::TlsActiveItemRing;
+using facebook::cachelib::NvmCacheState;
+using facebook::cachelib::NvmAdmissionPolicy;
+using facebook::cachelib::ReaperAPIWrapper;
+using facebook::cachelib::CacheAPIWrapperForNvm;
+using facebook::cachelib::FbInternalRuntimeUpdateWrapper;
+using facebook::cachelib::PoolResizer;
+using facebook::cachelib::PoolOptimizer;
+using facebook::cachelib::MurmurHash2;
+using facebook::cachelib::Slab;
+using facebook::cachelib::RejectFirstAP;
+using facebook::cachelib::AllocatorApiResult;
+using facebook::cachelib::CacheStat;
+using facebook::cachelib::kCachelibVersion;
+using facebook::cachelib::kCacheRamFormatVersion;
+using facebook::cachelib::kCacheNvmFormatVersion;
+using facebook::cachelib::exception::SlabReleaseAborted;
+using facebook::cachelib::SlabReleaseContext;
+using facebook::cachelib::Serializer;
+using facebook::cachelib::LruCacheTrait;
+using facebook::cachelib::LruCacheWithSpinBucketsTrait;
+using facebook::cachelib::Lru2QCacheTrait;
+using facebook::cachelib::TinyLFUCacheTrait;
+
 // CacheAllocator can provide an interface to make Keyed Allocations(Item) and
 // takes two templated types that control how the allocation is
 // maintained(MMType aka MemoryManagementType) and accessed(AccessType). The
@@ -164,7 +237,7 @@ class GET_CLASS_NAME(ObjectCache, ObjectHandleInvalid);
 // find/insert/remove interface similar to a hash table.
 //
 template <typename CacheTrait>
-class CacheAllocator : public CacheBase {
+class CacheAllocator : public facebook::cachelib::CacheBase {
  public:
   friend class CachelibLocalCache;
 
@@ -177,8 +250,8 @@ class CacheAllocator : public CacheBase {
   using MMConfig = typename MMType::Config;
   using AccessConfig = typename AccessType::Config;
 
-  using Item = CacheItem<CacheTrait>;
-  using ChainedItem = typename Item::ChainedItem;
+  using Item = CacheItem<CacheTrait>; // covered::CacheItem
+  using ChainedItem = typename Item::ChainedItem; // covered::ChainedItem
 
   // the holder for the item when we hand it to the caller. This ensures
   // that the reference count is maintained when the caller is done with the
@@ -194,7 +267,7 @@ class CacheAllocator : public CacheBase {
   // using ItemHandle = WriteHandle;
   template <typename UserType,
             typename Converter =
-                detail::DefaultUserTypeConverter<Item, UserType>>
+                facebook::cachelib::detail::DefaultUserTypeConverter<Item, UserType>>
   using TypedHandle = TypedHandleImpl<Item, UserType, Converter>;
 
   // TODO (sathya) some types take CacheT and some take CacheTrait. need to
@@ -209,8 +282,6 @@ class CacheAllocator : public CacheBase {
   using PoolIds = std::set<PoolId>;
 
   using EventTracker = EventInterface<Key>;
-
-  using facebook::cachelib::MemoryAllocator;
 
   // SampleItem is a wrapper for the CacheItem which is provided as the sample
   // for uploading to Scuba (see ItemStatsExporter). It is guaranteed that the
@@ -516,7 +587,7 @@ class CacheAllocator : public CacheBase {
   // @param  handle  the handle for the allocation.
   //
   // @throw std::invalid_argument if the handle is already accessible.
-  // @throw cachelib::exception::RefcountOverflow if the item we are replacing
+  // @throw facebook::cachelib::exception::RefcountOverflow if the item we are replacing
   //        is already out of refcounts.
   // @return handle to the old item that had been replaced
   WriteHandle insertOrReplace(const WriteHandle& handle);
@@ -620,7 +691,7 @@ class CacheAllocator : public CacheBase {
   AccessIterator begin() { return accessContainer_->begin(); }
 
   // return an iterator with a throttler for throttled iteration
-  AccessIterator begin(util::Throttler::Config config) {
+  AccessIterator begin(facebook::cachelib::util::Throttler::Config config) {
     return accessContainer_->begin(config);
   }
 
@@ -1047,7 +1118,7 @@ class CacheAllocator : public CacheBase {
   // @param interval                the period this worker fires
   // @param reaperThrottleConfig    throttling config
   bool startNewReaper(std::chrono::milliseconds interval,
-                      util::Throttler::Config reaperThrottleConfig);
+                      facebook::cachelib::util::Throttler::Config reaperThrottleConfig);
 
   // Stop existing workers with a timeout
   bool stopPoolRebalancer(std::chrono::seconds timeout = std::chrono::seconds{
@@ -1178,7 +1249,7 @@ class CacheAllocator : public CacheBase {
   CacheMemoryStats getCacheMemoryStats() const override final;
 
   // return the nvm cache stats map
-  util::StatsMap getNvmCacheStatsMap() const override final;
+  facebook::cachelib::util::StatsMap getNvmCacheStatsMap() const override final;
 
   // return the event tracker stats map
   std::unordered_map<std::string, uint64_t> getEventTrackerStatsMap()
@@ -1687,7 +1758,7 @@ class CacheAllocator : public CacheBase {
   //
   // @param  deserializer   Deserializer object
   // @throws                runtime_error
-  serialization::CacheAllocatorMetadata deserializeCacheAllocatorMetadata(
+  facebook::cachelib::serialization::CacheAllocatorMetadata deserializeCacheAllocatorMetadata(
       Deserializer& deserializer);
 
   MMContainers deserializeMMContainers(
@@ -1760,7 +1831,7 @@ class CacheAllocator : public CacheBase {
   //          fasle when this item has already been freed
   bool markMovingForSlabRelease(const SlabReleaseContext& ctx,
                                 void* alloc,
-                                util::Throttler& throttler);
+                                facebook::cachelib::util::Throttler& throttler);
 
   // "Move" (by copying) the content in this item to another memory
   // location by invoking the move callback.
@@ -1774,7 +1845,7 @@ class CacheAllocator : public CacheBase {
   //            false if we have exhausted moving attempts
   bool moveForSlabRelease(const SlabReleaseContext& ctx,
                           Item& item,
-                          util::Throttler& throttler);
+                          facebook::cachelib::util::Throttler& throttler);
 
   // "Move" (by copying) the content in this item to another memory
   // location by invoking the move callback.
@@ -1794,7 +1865,7 @@ class CacheAllocator : public CacheBase {
   // @param throttler   slow this function down as not to take too much cpu
   void evictForSlabRelease(const SlabReleaseContext& ctx,
                            Item& item,
-                           util::Throttler& throttler);
+                           facebook::cachelib::util::Throttler& throttler);
 
   // Helper function to evict a normal item for slab release
   //
@@ -1847,7 +1918,7 @@ class CacheAllocator : public CacheBase {
       const Config& config) {
     return MemoryAllocator::Config{
         config.defaultAllocSizes.empty()
-            ? util::generateAllocSizes(
+            ? facebook::cachelib::util::generateAllocSizes(
                   config.allocationClassSizeFactor,
                   config.maxAllocationClassSize,
                   config.minAllocationClassSize,
@@ -1897,7 +1968,7 @@ class CacheAllocator : public CacheBase {
   }
 
   // helper utility to throttle and optionally log.
-  static void throttleWith(util::Throttler& t, std::function<void()> fn);
+  static void throttleWith(facebook::cachelib::util::Throttler& t, std::function<void()> fn);
 
   // Write the item to nvm cache if enabled. This is called on eviction.
   void pushToNvmCache(const Item& item);
@@ -1961,7 +2032,7 @@ class CacheAllocator : public CacheBase {
   WriteHandle findChainedItem(const Item& parent) const;
 
   // Get the thread local version of the Stats
-  detail::Stats& stats() const noexcept { return stats_; }
+  facebook::cachelib::detail::Stats& stats() const noexcept { return stats_; }
 
   void initStats();
 
@@ -1999,7 +2070,7 @@ class CacheAllocator : public CacheBase {
   std::unique_ptr<Deserializer> deserializer_;
 
   // used only while attaching to existing shared memory.
-  serialization::CacheAllocatorMetadata metadata_{};
+  facebook::cachelib::serialization::CacheAllocatorMetadata metadata_{};
 
   // configs for the access container and the mm container.
   const MMConfig mmConfig_{};
@@ -2079,9 +2150,9 @@ class CacheAllocator : public CacheBase {
   const uint32_t cacheInstanceCreationTime_{0};
 
   // thread local accumulation of handle counts
-  mutable util::FastStats<int64_t> handleCount_{};
+  mutable facebook::cachelib::util::FastStats<int64_t> handleCount_{};
 
-  mutable detail::Stats stats_{};
+  mutable facebook::cachelib::detail::Stats stats_{};
   // allocator's items reaper to evict expired items in bg checking
   std::unique_ptr<Reaper<CacheT>> reaper_;
 
@@ -2104,8 +2175,8 @@ class CacheAllocator : public CacheBase {
   friend ReaperAPIWrapper<CacheT>;
   friend class CacheAPIWrapperForNvm<CacheT>;
   friend class FbInternalRuntimeUpdateWrapper<CacheT>;
-  friend class objcache2::ObjectCache<CacheT>;
-  friend class objcache2::ObjectCacheBase<CacheT>;
+  friend class facebook::cachelib::objcache2::ObjectCache<CacheT>;
+  friend class facebook::cachelib::objcache2::ObjectCacheBase<CacheT>;
   template <typename K, typename V, typename C>
   friend class ReadOnlyMap;
 
@@ -2140,7 +2211,7 @@ class CacheAllocator : public CacheBase {
   // objectCache
   template <typename CacheDescriptor, typename AllocatorRes>
   friend class facebook::cachelib::objcache::ObjectCache;
-  friend class GET_DECORATED_CLASS_NAME(objcache::test,
+  friend class GET_DECORATED_CLASS_NAME(facebook::cachelib::objcache::test,
                                         ObjectCache,
                                         ObjectHandleInvalid);
 };

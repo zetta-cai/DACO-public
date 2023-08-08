@@ -28,7 +28,7 @@ template <typename CacheTrait>
 CacheAllocator<CacheTrait>::CacheAllocator(SharedMemNewT, Config config)
     : CacheAllocator(InitMemType::kMemNew, config) {
   initCommon(false);
-  shmManager_->removeShm(detail::kShmInfoName);
+  shmManager_->removeShm(facebook::cachelib::detail::kShmInfoName);
 }
 
 template <typename CacheTrait>
@@ -43,7 +43,7 @@ CacheAllocator<CacheTrait>::CacheAllocator(SharedMemAttachT, Config config)
   // We will create a new info shm segment on shutDown(). If we don't remove
   // this info shm segment here and the new info shm segment's size is larger
   // than this one, creating new one will fail.
-  shmManager_->removeShm(detail::kShmInfoName);
+  shmManager_->removeShm(facebook::cachelib::detail::kShmInfoName);
 }
 
 template <typename CacheTrait>
@@ -63,7 +63,7 @@ CacheAllocator<CacheTrait>::CacheAllocator(
                                                     : nullptr),
       metadata_{type == InitMemType::kMemAttach
                     ? deserializeCacheAllocatorMetadata(*deserializer_)
-                    : serialization::CacheAllocatorMetadata{}},
+                    : facebook::cachelib::serialization::CacheAllocatorMetadata{}},
       allocator_(initAllocator(type)),
       compactCacheManager_(type != InitMemType::kMemAttach
                                ? std::make_unique<CCacheManager>(*allocator_)
@@ -73,20 +73,20 @@ CacheAllocator<CacheTrait>::CacheAllocator(
                         ? deserializeMMContainers(*deserializer_, compressor_)
                         : MMContainers{}),
       accessContainer_(initAccessContainer(
-          type, detail::kShmHashTableName, config.accessConfig)),
+          type, facebook::cachelib::detail::kShmHashTableName, config.accessConfig)),
       chainedItemAccessContainer_(
           initAccessContainer(type,
-                              detail::kShmChainedItemHashTableName,
+                              facebook::cachelib::detail::kShmChainedItemHashTableName,
                               config.chainedItemAccessConfig)),
       chainedItemLocks_(config_.chainedItemsLockPower,
                         std::make_shared<MurmurHash2>()),
       cacheCreationTime_{
           type != InitMemType::kMemAttach
-              ? util::getCurrentTimeSec()
+              ? facebook::cachelib::util::getCurrentTimeSec()
               : static_cast<uint32_t>(*metadata_.cacheCreationTime())},
       cacheInstanceCreationTime_{type != InitMemType::kMemAttach
                                      ? cacheCreationTime_
-                                     : util::getCurrentTimeSec()},
+                                     : facebook::cachelib::util::getCurrentTimeSec()},
       // Pass in cacheInstnaceCreationTime_ as the current time to keep
       // nvmCacheState's current time in sync
       nvmCacheState_{cacheInstanceCreationTime_, config_.cacheDir,
@@ -121,7 +121,7 @@ CacheAllocator<CacheTrait>::createNewMemoryAllocator() {
   return std::make_unique<MemoryAllocator>(
       getAllocatorConfig(config_),
       shmManager_
-          ->createShm(detail::kShmCacheName, config_.size,
+          ->createShm(facebook::cachelib::detail::kShmCacheName, config_.size,
                       config_.slabMemoryBaseAddr, createShmCacheOpts())
           .addr,
       config_.size);
@@ -133,7 +133,7 @@ CacheAllocator<CacheTrait>::restoreMemoryAllocator() {
   return std::make_unique<MemoryAllocator>(
       deserializer_->deserialize<MemoryAllocator::SerializationType>(),
       shmManager_
-          ->attachShm(detail::kShmCacheName, config_.slabMemoryBaseAddr,
+          ->attachShm(facebook::cachelib::detail::kShmCacheName, config_.slabMemoryBaseAddr,
                       createShmCacheOpts())
           .addr,
       config_.size,
@@ -297,7 +297,7 @@ CacheAllocator<CacheTrait>::initAccessContainer(InitMemType type,
 
 template <typename CacheTrait>
 std::unique_ptr<Deserializer> CacheAllocator<CacheTrait>::createDeserializer() {
-  auto infoAddr = shmManager_->attachShm(detail::kShmInfoName);
+  auto infoAddr = shmManager_->attachShm(facebook::cachelib::detail::kShmInfoName);
   return std::make_unique<Deserializer>(
       reinterpret_cast<uint8_t*>(infoAddr.addr),
       reinterpret_cast<uint8_t*>(infoAddr.addr) + infoAddr.size);
@@ -311,7 +311,7 @@ CacheAllocator<CacheTrait>::allocate(PoolId poolId,
                                      uint32_t ttlSecs,
                                      uint32_t creationTime) {
   if (creationTime == 0) {
-    creationTime = util::getCurrentTimeSec();
+    creationTime = facebook::cachelib::util::getCurrentTimeSec();
   }
   return allocateInternal(poolId, key, size, creationTime,
                           ttlSecs == 0 ? 0 : creationTime + ttlSecs);
@@ -324,7 +324,7 @@ CacheAllocator<CacheTrait>::allocateInternal(PoolId pid,
                                              uint32_t size,
                                              uint32_t creationTime,
                                              uint32_t expiryTime) {
-  util::LatencyTracker tracker{stats().allocateLatency_};
+  facebook::cachelib::util::LatencyTracker tracker{stats().allocateLatency_};
 
   SCOPE_FAIL { stats_.invalidAllocs.inc(); };
 
@@ -356,7 +356,7 @@ CacheAllocator<CacheTrait>::allocateInternal(PoolId pid,
     if (handle) {
       handle.markNascent();
       (*stats_.fragmentationSize)[pid][cid].add(
-          util::getFragmentation(*this, *handle));
+          facebook::cachelib::util::getFragmentation(*this, *handle));
     }
 
   } else { // failed to allocate memory.
@@ -400,7 +400,7 @@ template <typename CacheTrait>
 typename CacheAllocator<CacheTrait>::WriteHandle
 CacheAllocator<CacheTrait>::allocateChainedItemInternal(
     const ReadHandle& parent, uint32_t size) {
-  util::LatencyTracker tracker{stats().allocateLatency_};
+  facebook::cachelib::util::LatencyTracker tracker{stats().allocateLatency_};
 
   SCOPE_FAIL { stats_.invalidAllocs.inc(); };
 
@@ -425,12 +425,12 @@ CacheAllocator<CacheTrait>::allocateChainedItemInternal(
 
   auto child = acquire(
       new (memory) ChainedItem(compressor_.compress(parent.getInternal()), size,
-                               util::getCurrentTimeSec()));
+                               facebook::cachelib::util::getCurrentTimeSec()));
 
   if (child) {
     child.markNascent();
     (*stats_.fragmentationSize)[pid][cid].add(
-        util::getFragmentation(*this, *child));
+        facebook::cachelib::util::getFragmentation(*this, *child));
   }
 
   return child;
@@ -734,7 +734,7 @@ CacheAllocator<CacheTrait>::releaseBackToAllocator(Item& it,
   const auto allocInfo = allocator_->getAllocInfo(it.getMemory());
 
   if (ctx == RemoveContext::kEviction) {
-    const auto timeNow = util::getCurrentTimeSec();
+    const auto timeNow = facebook::cachelib::util::getCurrentTimeSec();
     const auto refreshTime = timeNow - it.getLastAccessTime();
     const auto lifeTime = timeNow - it.getCreationTime();
     stats_.ramEvictionAgeSecs_.trackValue(refreshTime);
@@ -743,7 +743,7 @@ CacheAllocator<CacheTrait>::releaseBackToAllocator(Item& it,
   }
 
   (*stats_.fragmentationSize)[allocInfo.poolId][allocInfo.classId].sub(
-      util::getFragmentation(*this, it));
+      facebook::cachelib::util::getFragmentation(*this, it));
 
   // Chained items can only end up in this place if the user has allocated
   // memory for a chained item but has decided not to insert the chained item
@@ -827,7 +827,7 @@ CacheAllocator<CacheTrait>::releaseBackToAllocator(Item& it,
       const auto childInfo =
           allocator_->getAllocInfo(static_cast<const void*>(head));
       (*stats_.fragmentationSize)[childInfo.poolId][childInfo.classId].sub(
-          util::getFragmentation(*this, *head));
+          facebook::cachelib::util::getFragmentation(*this, *head));
 
       removeFromMMContainer(*head);
 
@@ -1102,7 +1102,7 @@ template <typename CacheTrait>
 bool CacheAllocator<CacheTrait>::moveRegularItem(Item& oldItem,
                                                  WriteHandle& newItemHdl) {
   XDCHECK(config_.moveCb);
-  util::LatencyTracker tracker{stats_.moveRegularLatency_};
+  facebook::cachelib::util::LatencyTracker tracker{stats_.moveRegularLatency_};
 
   if (!oldItem.isAccessible() || oldItem.isExpired()) {
     return false;
@@ -1182,7 +1182,7 @@ template <typename CacheTrait>
 bool CacheAllocator<CacheTrait>::moveChainedItem(ChainedItem& oldItem,
                                                  WriteHandle& newItemHdl) {
   XDCHECK(config_.moveCb);
-  util::LatencyTracker tracker{stats_.moveChainedLatency_};
+  facebook::cachelib::util::LatencyTracker tracker{stats_.moveChainedLatency_};
 
   // This item has been unlinked from its parent and we're the only
   // owner of it, so we're done here
@@ -2308,9 +2308,9 @@ void CacheAllocator<CacheTrait>::releaseSlab(PoolId pid,
     }
 
     allocator_->completeSlabRelease(releaseContext);
-  } catch (const exception::SlabReleaseAborted& e) {
+  } catch (const facebook::cachelib::exception::SlabReleaseAborted& e) {
     stats_.numAbortedSlabReleases.inc();
-    throw exception::SlabReleaseAborted(folly::sformat(
+    throw facebook::cachelib::exception::SlabReleaseAborted(folly::sformat(
         "Slab release aborted while releasing "
         "a slab in pool {} victim {} receiver {}. Original ex msg: ",
         pid, static_cast<int>(victim), static_cast<int>(receiver), e.what()));
@@ -2339,7 +2339,7 @@ SlabReleaseStats CacheAllocator<CacheTrait>::getSlabReleaseStats()
 template <typename CacheTrait>
 void CacheAllocator<CacheTrait>::releaseSlabImpl(
     const SlabReleaseContext& releaseContext) {
-  auto startTime = std::chrono::milliseconds(util::getCurrentTimeMs());
+  auto startTime = std::chrono::milliseconds(facebook::cachelib::util::getCurrentTimeMs());
   bool releaseStuck = false;
 
   SCOPE_EXIT {
@@ -2348,7 +2348,7 @@ void CacheAllocator<CacheTrait>::releaseSlabImpl(
     }
   };
 
-  util::Throttler throttler(
+  facebook::cachelib::util::Throttler throttler(
       config_.throttleConfig,
       [this, &startTime, &releaseStuck](std::chrono::milliseconds curTime) {
         if (!releaseStuck &&
@@ -2387,7 +2387,7 @@ void CacheAllocator<CacheTrait>::releaseSlabImpl(
 }
 
 template <typename CacheTrait>
-void CacheAllocator<CacheTrait>::throttleWith(util::Throttler& t,
+void CacheAllocator<CacheTrait>::throttleWith(facebook::cachelib::util::Throttler& t,
                                               std::function<void()> fn) {
   const unsigned int rateLimit = 1024;
   // execute every 1024 times we have actually throttled
@@ -2398,13 +2398,13 @@ void CacheAllocator<CacheTrait>::throttleWith(util::Throttler& t,
 
 template <typename CacheTrait>
 bool CacheAllocator<CacheTrait>::moveForSlabRelease(
-    const SlabReleaseContext& ctx, Item& oldItem, util::Throttler& throttler) {
+    const SlabReleaseContext& ctx, Item& oldItem, facebook::cachelib::util::Throttler& throttler) {
   if (!config_.moveCb) {
     return false;
   }
 
   bool isMoved = false;
-  auto startTime = util::getCurrentTimeSec();
+  auto startTime = facebook::cachelib::util::getCurrentTimeSec();
   WriteHandle newItemHdl = allocateNewItemForOldItem(oldItem);
 
   for (unsigned int itemMovingAttempts = 0;
@@ -2438,7 +2438,7 @@ bool CacheAllocator<CacheTrait>::moveForSlabRelease(
       XLOGF(WARN,
             "Spent {} seconds, slab release still trying to move Item: {}. "
             "Pool: {}, Class: {}.",
-            util::getCurrentTimeSec() - startTime, oldItem.toString(),
+            facebook::cachelib::util::getCurrentTimeSec() - startTime, oldItem.toString(),
             ctx.getPoolId(), ctx.getClassId());
     });
   }
@@ -2452,13 +2452,13 @@ bool CacheAllocator<CacheTrait>::moveForSlabRelease(
   // worry about any stats related changes, because there is another item
   // that's identical to this one to replace it. Here we just need to wait
   // until all users have dropped the item handles before we can proceed.
-  startTime = util::getCurrentTimeSec();
+  startTime = facebook::cachelib::util::getCurrentTimeSec();
   while (!oldItem.isOnlyMoving()) {
     throttleWith(throttler, [&] {
       XLOGF(WARN,
             "Spent {} seconds, slab release still waiting for refcount to "
             "drain Item: {}. Pool: {}, Class: {}.",
-            util::getCurrentTimeSec() - startTime, oldItem.toString(),
+            facebook::cachelib::util::getCurrentTimeSec() - startTime, oldItem.toString(),
             ctx.getPoolId(), ctx.getClassId());
     });
   }
@@ -2466,7 +2466,7 @@ bool CacheAllocator<CacheTrait>::moveForSlabRelease(
   allocator_->free(&oldItem);
 
   (*stats_.fragmentationSize)[allocInfo.poolId][allocInfo.classId].sub(
-      util::getFragmentation(*this, oldItem));
+      facebook::cachelib::util::getFragmentation(*this, oldItem));
   stats_.numMoveSuccesses.inc();
   return true;
 }
@@ -2484,7 +2484,7 @@ CacheAllocator<CacheTrait>::validateAndGetParentHandleForChainedMoveLocked(
         parentHandle.get() != &item.getParentItem(compressor_)) {
       return {};
     }
-  } catch (const exception::RefcountOverflow&) {
+  } catch (const facebook::cachelib::exception::RefcountOverflow&) {
     return {};
   }
 
@@ -2584,8 +2584,8 @@ bool CacheAllocator<CacheTrait>::tryMovingForSlabRelease(
 
 template <typename CacheTrait>
 void CacheAllocator<CacheTrait>::evictForSlabRelease(
-    const SlabReleaseContext& ctx, Item& item, util::Throttler& throttler) {
-  auto startTime = util::getCurrentTimeSec();
+    const SlabReleaseContext& ctx, Item& item, facebook::cachelib::util::Throttler& throttler) {
+  auto startTime = facebook::cachelib::util::getCurrentTimeSec();
   while (true) {
     stats_.numEvictionAttempts.inc();
 
@@ -2638,7 +2638,7 @@ void CacheAllocator<CacheTrait>::evictForSlabRelease(
     if (shutDownInProgress_) {
       item.unmarkMoving();
       allocator_->abortSlabRelease(ctx);
-      throw exception::SlabReleaseAborted(
+      throw facebook::cachelib::exception::SlabReleaseAborted(
           folly::sformat("Slab Release aborted while trying to evict"
                          " Item: {} Pool: {}, Class: {}.",
                          item.toString(), ctx.getPoolId(), ctx.getClassId()));
@@ -2647,7 +2647,7 @@ void CacheAllocator<CacheTrait>::evictForSlabRelease(
       XLOGF(WARN,
             "Spent {} seconds, slab release still trying to evict Item: {}. "
             "Pool: {}, Class: {}.",
-            util::getCurrentTimeSec() - startTime, item.toString(),
+            facebook::cachelib::util::getCurrentTimeSec() - startTime, item.toString(),
             ctx.getPoolId(), ctx.getClassId())
           << (item.isChainedItem()
                   ? folly::sformat(" Parent: {}",
@@ -2938,7 +2938,7 @@ bool CacheAllocator<CacheTrait>::removeIfExpired(const ReadHandle& handle) {
 
 template <typename CacheTrait>
 bool CacheAllocator<CacheTrait>::markMovingForSlabRelease(
-    const SlabReleaseContext& ctx, void* alloc, util::Throttler& throttler) {
+    const SlabReleaseContext& ctx, void* alloc, facebook::cachelib::util::Throttler& throttler) {
   // MemoryAllocator::processAllocForRelease will execute the callback
   // if the item is not already free. So there are three outcomes here:
   //  1. Item not freed yet and marked as moving
@@ -2961,7 +2961,7 @@ bool CacheAllocator<CacheTrait>::markMovingForSlabRelease(
     }
   };
 
-  auto startTime = util::getCurrentTimeSec();
+  auto startTime = facebook::cachelib::util::getCurrentTimeSec();
   while (true) {
     allocator_->processAllocForRelease(ctx, alloc, fn);
 
@@ -2979,7 +2979,7 @@ bool CacheAllocator<CacheTrait>::markMovingForSlabRelease(
 
     if (shutDownInProgress_) {
       allocator_->abortSlabRelease(ctx);
-      throw exception::SlabReleaseAborted(
+      throw facebook::cachelib::exception::SlabReleaseAborted(
           folly::sformat("Slab Release aborted while still trying to mark"
                          " as moving for Item: {}. Pool: {}, Class: {}.",
                          static_cast<Item*>(alloc)->toString(), ctx.getPoolId(),
@@ -2989,7 +2989,7 @@ bool CacheAllocator<CacheTrait>::markMovingForSlabRelease(
       XLOGF(WARN,
             "Spent {} seconds, slab release still trying to mark as moving for "
             "Item: {}. Pool: {}, Class: {}.",
-            util::getCurrentTimeSec() - startTime,
+            facebook::cachelib::util::getCurrentTimeSec() - startTime,
             static_cast<Item*>(alloc)->toString(), ctx.getPoolId(),
             ctx.getClassId());
     });
@@ -3241,7 +3241,7 @@ void CacheAllocator<CacheTrait>::saveRamCache() {
   ioBuf->coalesce();
 
   void* infoAddr =
-      shmManager_->createShm(detail::kShmInfoName, ioBuf->length()).addr;
+      shmManager_->createShm(facebook::cachelib::detail::kShmInfoName, ioBuf->length()).addr;
   Serializer serializer(reinterpret_cast<uint8_t*>(infoAddr),
                         reinterpret_cast<uint8_t*>(infoAddr) + ioBuf->length());
   serializer.writeToBuffer(std::move(ioBuf));
@@ -3282,10 +3282,10 @@ CacheAllocator<CacheTrait>::deserializeMMContainers(
 }
 
 template <typename CacheTrait>
-serialization::CacheAllocatorMetadata
+facebook::cachelib::serialization::CacheAllocatorMetadata
 CacheAllocator<CacheTrait>::deserializeCacheAllocatorMetadata(
     Deserializer& deserializer) {
-  auto meta = deserializer.deserialize<serialization::CacheAllocatorMetadata>();
+  auto meta = deserializer.deserialize<facebook::cachelib::serialization::CacheAllocatorMetadata>();
   // TODO:
   // Once everyone is on v8 or later, remove the outter if.
   if (kCachelibVersion > 8) {
@@ -3404,7 +3404,7 @@ GlobalCacheStats CacheAllocator<CacheTrait>::getGlobalCacheStats() const {
 
   ret.numItems = accessContainer_->getStats().numKeys;
 
-  const uint64_t currTime = util::getCurrentTimeSec();
+  const uint64_t currTime = facebook::cachelib::util::getCurrentTimeSec();
   ret.cacheInstanceUpTime = currTime - cacheInstanceCreationTime_;
   ret.ramUpTime = currTime - cacheCreationTime_;
   ret.nvmUpTime = currTime - nvmCacheState_.getCreationTime();
@@ -3443,8 +3443,8 @@ CacheMemoryStats CacheAllocator<CacheTrait>::getCacheMemoryStats() const {
                           memMonitor_ ? memMonitor_->getMaxAdvisePct() : 0,
                           allocator_->getUnreservedMemorySize(),
                           nvmCache_ ? nvmCache_->getSize() : 0,
-                          util::getMemAvailable(),
-                          util::getRSSBytes()};
+                          facebook::cachelib::util::getMemAvailable(),
+                          facebook::cachelib::util::getRSSBytes()};
 }
 
 template <typename CacheTrait>
@@ -3584,7 +3584,7 @@ bool CacheAllocator<CacheTrait>::startNewMemMonitor(
 template <typename CacheTrait>
 bool CacheAllocator<CacheTrait>::startNewReaper(
     std::chrono::milliseconds interval,
-    util::Throttler::Config reaperThrottleConfig) {
+    facebook::cachelib::util::Throttler::Config reaperThrottleConfig) {
   if (!startNewWorker("Reaper", reaper_, interval, reaperThrottleConfig)) {
     return false;
   }
@@ -3624,7 +3624,7 @@ bool CacheAllocator<CacheTrait>::stopReaper(std::chrono::seconds timeout) {
 template <typename CacheTrait>
 bool CacheAllocator<CacheTrait>::cleanupStrayShmSegments(
     const std::string& cacheDir, bool posix) {
-  if (util::getStatIfExists(cacheDir, nullptr) && util::isDir(cacheDir)) {
+  if (facebook::cachelib::util::getStatIfExists(cacheDir, nullptr) && facebook::cachelib::util::isDir(cacheDir)) {
     try {
       // cache dir exists. clean up only if there are no other processes
       // attached. if another process was attached, the following would fail.
@@ -3637,10 +3637,10 @@ bool CacheAllocator<CacheTrait>::cleanupStrayShmSegments(
     // cache dir did not exist. Try to nuke the segments we know by name.
     // Any other concurrent process can not be attached to the segments or
     // even if it does, we want to mark it for destruction.
-    ShmManager::removeByName(cacheDir, detail::kShmInfoName, posix);
-    ShmManager::removeByName(cacheDir, detail::kShmCacheName, posix);
-    ShmManager::removeByName(cacheDir, detail::kShmHashTableName, posix);
-    ShmManager::removeByName(cacheDir, detail::kShmChainedItemHashTableName,
+    ShmManager::removeByName(cacheDir, facebook::cachelib::detail::kShmInfoName, posix);
+    ShmManager::removeByName(cacheDir, facebook::cachelib::detail::kShmCacheName, posix);
+    ShmManager::removeByName(cacheDir, facebook::cachelib::detail::kShmHashTableName, posix);
+    ShmManager::removeByName(cacheDir, facebook::cachelib::detail::kShmChainedItemHashTableName,
                              posix);
   }
   return true;
@@ -3659,15 +3659,15 @@ uint64_t CacheAllocator<CacheTrait>::getItemPtrAsOffset(const void* ptr) {
     throw std::invalid_argument("Shared memory not used");
   }
 
-  const auto& shm = shmManager_->getShmByName(detail::kShmCacheName);
+  const auto& shm = shmManager_->getShmByName(facebook::cachelib::detail::kShmCacheName);
 
   return reinterpret_cast<uint64_t>(ptr) -
          reinterpret_cast<uint64_t>(shm.getCurrentMapping().addr);
 }
 
 template <typename CacheTrait>
-util::StatsMap CacheAllocator<CacheTrait>::getNvmCacheStatsMap() const {
-  auto ret = nvmCache_ ? nvmCache_->getStatsMap() : util::StatsMap{};
+facebook::cachelib::util::StatsMap CacheAllocator<CacheTrait>::getNvmCacheStatsMap() const {
+  auto ret = nvmCache_ ? nvmCache_->getStatsMap() : facebook::cachelib::util::StatsMap{};
   if (nvmAdmissionPolicy_) {
     nvmAdmissionPolicy_->getCounters(ret.createCountVisitor());
   }

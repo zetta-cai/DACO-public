@@ -76,7 +76,7 @@ namespace covered
         instance_name_ = oss.str();
         
         // Allocate local edge cache to store hot objects
-        edge_cache_ptr_ = new CacheWrapper(cache_name_, edge_idx);
+        edge_cache_ptr_ = new CacheWrapper(cache_name_, edge_idx, capacity_bytes);
         assert(edge_cache_ptr_ != NULL);
 
         // Allocate cooperation wrapper for cooperative edge caching

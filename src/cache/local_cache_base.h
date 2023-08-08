@@ -19,7 +19,7 @@ namespace covered
     class LocalCacheBase
     {
     public:
-        static LocalCacheBase* getLocalCacheByCacheName(const std::string& cache_name, const uint32_t& edge_idx);
+        static LocalCacheBase* getLocalCacheByCacheName(const std::string& cache_name, const uint32_t& edge_idx, const uint64_t& capacity_bytes);
 
         LocalCacheBase(const uint32_t& edge_idx);
         virtual ~LocalCacheBase();

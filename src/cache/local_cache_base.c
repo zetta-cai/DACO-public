@@ -12,12 +12,12 @@ namespace covered
 {
     const std::string LocalCacheBase::kClassName("LocalCacheBase");
 
-    LocalCacheBase* LocalCacheBase::getLocalCacheByCacheName(const std::string& cache_name, const uint32_t& edge_idx)
+    LocalCacheBase* LocalCacheBase::getLocalCacheByCacheName(const std::string& cache_name, const uint32_t& edge_idx, const uint64_t& capacity_bytes)
     {
         LocalCacheBase* local_cache_ptr = NULL;
         if (cache_name == Util::CACHELIB_CACHE_NAME)
         {
-            local_cache_ptr = new CachelibLocalCache(edge_idx);
+            local_cache_ptr = new CachelibLocalCache(edge_idx, capacity_bytes);
         }
         else if (cache_name == Util::LFU_CACHE_NAME)
         {

@@ -5,6 +5,8 @@
  * 
  * NOTE: all configuration and function calls refer to Cachelib files, including lib/cachelib/examples/simple_cache/main.cpp and lib/cachelib/cachebench/runner/CacheStressor.h.
  * 
+ * NOTE: handle points to CacheItem, whose kAllocation alloc_ stores key and value (it encodes key size and value size into one uint32_t variable, and concatenates key bytes and value bytes into one unsigned char array) -> getMemory() and getSize() return value bytes and size, while getKey() return Key (inheriting from folly::StringPiece) with key bytes and size.
+ * 
  * By Siyuan Sheng (2023.08.07).
  */
 

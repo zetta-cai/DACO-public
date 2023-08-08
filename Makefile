@@ -8,6 +8,7 @@ include src/mk/lib/rocksdb.mk
 include src/mk/lib/smhasher.mk
 
 # Recipes for cache methods (including baselines and COVERED)
+include src/mk/cache/cachelib.mk
 include src/mk/cache/covered.mk
 include src/mk/cache/lfu.mk
 include src/mk/cache/lru.mk

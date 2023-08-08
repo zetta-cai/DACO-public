@@ -22,7 +22,7 @@ namespace covered
     class CacheWrapper
     {
     public:
-        CacheWrapper(const std::string& cache_name, const uint32_t& edge_idx);
+        CacheWrapper(const std::string& cache_name, const uint32_t& edge_idx, const uint64_t& capacity_bytes);
         virtual ~CacheWrapper();
 
         // (1) Check is cached and access validity

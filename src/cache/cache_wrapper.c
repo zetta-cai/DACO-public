@@ -10,7 +10,7 @@ namespace covered
 {
     const std::string CacheWrapper::kClassName("CacheWrapper");
 
-    CacheWrapper::CacheWrapper(const std::string& cache_name, const uint32_t& edge_idx)
+    CacheWrapper::CacheWrapper(const std::string& cache_name, const uint32_t& edge_idx, const uint64_t& capacity_bytes)
     {
         // Differentiate local edge cache in different edge nodes
         std::ostringstream oss;
@@ -26,7 +26,7 @@ namespace covered
         assert(validity_map_ptr_ != NULL);
 
         // Allocate local edge cache
-        local_cache_ptr_ = LocalCacheBase::getLocalCacheByCacheName(cache_name, edge_idx);
+        local_cache_ptr_ = LocalCacheBase::getLocalCacheByCacheName(cache_name, edge_idx, capacity_bytes);
         assert(local_cache_ptr_ != NULL);
     }
     
