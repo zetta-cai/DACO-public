@@ -31,9 +31,13 @@ CPPFLAGS += $(INCDIR)
 CPPFLAGS += $(EXTRA_CPPFLAGS)
 
 CC := g++
+# For debugging
 #CC := g++ -v
+
 #CFLAGS += -std=c++17 -O3 -g -Wall -Werror -march=native -fno-omit-frame-pointer
-CFLAGS += -std=c++17 -O3 -g -Wall -march=native -fno-omit-frame-pointer
+#CFLAGS += -std=c++17 -O3 -g -Wall -march=native -fno-omit-frame-pointer
+# Use -mtune=generic -march=x86-64 for level SSE2 of SIMD, such that folly will use F14IntrinsicsMode::Simd, which is the same as the definition compiled by cachelib.
+CFLAGS += -std=c++17 -O3 -g -Wall -mtune=generic -march=x86-64 -fno-omit-frame-pointer
 CFLAGS += $(EXTRA_CFLAGS)
 CFLAGS_SHARED += $(CFLAGS) -fPIC
 
