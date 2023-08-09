@@ -88,10 +88,10 @@ if is_upgrade_python3:
         else:
             print("{}: {} exists (python3.7.5 has been decompressed)".format(filename, python3_decompress_dirpath))
 
-        python3_install_filepath = "{}/python3.7".format(custom_binpath)
+        python3_install_filepath = "{}/python3.7".format(python3_binpath)
         if not os.path.exists(python3_install_filepath):
             print("{}: install python3.7.5 from source...".format(filename))
-            python3_install_cmd = "cd {0} && ./configure --enable-optimizations --prefix={1} --exec_prefix={1} && sudo make altinstall".format(python3_decompress_dirpath, custom_installpath)
+            python3_install_cmd = "cd {0} && ./configure --enable-optimizations --prefix={1} --exec_prefix={1} && sudo make altinstall".format(python3_decompress_dirpath, python3_installpath)
             python3_install_subprocess = subprocess.run(python3_install_cmd, shell=True)
             if python3_install_subprocess.returncode != 0:
                 print("{}: failed to install python3.7.5".format(filename))
@@ -100,7 +100,7 @@ if is_upgrade_python3:
             print("{}: {} exists (python3.7.5 has been installed)".format(filename, python3_install_filepath))
 
         print("{}: switch to python3.7.5...".format(filename))
-        python3_switch_new_cmd = "sudo update-alternatives --install {}/python3 python3 {}/python3.7 50".format(preferred_binpath, custom_binpath)
+        python3_switch_new_cmd = "sudo update-alternatives --install {}/python3 python3 {}/python3.7 50".format(preferred_binpath, python3_binpath)
         python3_switch_new_subprocess = subprocess.run(python3_switch_new_cmd, shell=True)
         if python3_switch_new_subprocess.returncode != 0:
             print("{}: failed to switch python3.7.5".format(filename))

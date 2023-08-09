@@ -31,6 +31,7 @@ CPPFLAGS += $(INCDIR)
 CPPFLAGS += $(EXTRA_CPPFLAGS)
 
 CC := g++
+#CC := g++ -v
 #CFLAGS += -std=c++17 -O3 -g -Wall -Werror -march=native -fno-omit-frame-pointer
 CFLAGS += -std=c++17 -O3 -g -Wall -march=native -fno-omit-frame-pointer
 CFLAGS += $(EXTRA_CFLAGS)

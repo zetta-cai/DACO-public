@@ -56,6 +56,8 @@ if is_install_boost:
             die(filename, "failed to install {}".format(boost_install_dirpath))
     else:
         dump(filename, "{} exists (boost has been installed)".format(boost_install_dirpath))
+    
+    boost_system_dirpath = "{}"
 
     if is_clear_tarball:
         warn(filename, "clear {}".format(boost_download_filepath))

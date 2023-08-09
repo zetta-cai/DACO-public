@@ -88,6 +88,10 @@ using facebook::cachelib::KAllocation; // NOTE: here we use facebook::cachelib::
 using facebook::cachelib::MemoryAllocator;
 using facebook::cachelib::SListHook;
 
+template <typename CacheTrait>
+class CacheItem;
+using covered::CacheItem;
+
 // This is the actual representation of the cache item. It has two member
 // hooks of type MMType::Hook and AccessType::Hook to ensure that the CacheItem
 // can be put in the MMType::Container and AccessType::Container.

@@ -5,7 +5,7 @@ CACHEBENCH_DIRPATH := lib/CacheLib
 CACHEBENCH_LDDIR := -L$(CACHEBENCH_DIRPATH)/build-cachelib/cachebench -L$(CACHEBENCH_DIRPATH)/opt/cachelib/lib
 
 # Cachelib libs from $(CACHEBENCH_DIRPATH)/build-cachelib/cachebench and $(CACHEBENCH_DIRPATH)/opt/cachelib/lib
-CACHEBENCH_LDLIBS := -l:libcachelib_cachebench.a -l:libcachelib_allocator.a -l:libcachelib_common.a -l:libcachelib_datatype.a -l:libcachelib_navy.a -l:libcachelib_shm.a
+CACHEBENCH_LDLIBS := -l:libcachelib_cachebench.a -l:libcachelib_allocator.a -l:libcachelib_datatype.a -l:libcachelib_navy.a -l:libcachelib_shm.a -l:libcachelib_common.a
 # Third-party libs from $(CACHEBENCH_DIRPATH)/opt/cachelib/lib
 CACHEBENCH_LDLIBS += -l:libfolly.so -l:libfmt.so -l:libzstd.so -l:libglog.so -l:libnuma.so
 # Third-party libs from /usr/lib/x86_64-linux-gnu

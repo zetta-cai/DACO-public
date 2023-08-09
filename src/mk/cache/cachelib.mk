@@ -1,7 +1,7 @@
 # cachelib module
 
 # NOTE: include path, lib path, and most libs of Cachelib have been added by src/mk/lib/cachebench.mk, here we only add the rest libs for Cachelib
-CACHELIB_LDLIBS := -l:libthriftcpp2.so -l:libthriftmetadata.so
+CACHELIB_LDLIBS := -l:libthriftcpp2.so -l:libthriftmetadata.so -l:libthriftprotocol.so
 
 LDLIBS += $(CACHELIB_LDLIBS)
 

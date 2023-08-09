@@ -3683,7 +3683,7 @@ namespace covered {
 // Declare templates ahead of use to reduce compilation time
 extern template class CacheAllocator<LruCacheTrait>;
 extern template class CacheAllocator<LruCacheWithSpinBucketsTrait>;
-extern template class CacheAllocator<Lru2QCacheTrait>;
+//extern template class CacheAllocator<Lru2QCacheTrait>;
 extern template class CacheAllocator<TinyLFUCacheTrait>;
 
 // CacheAllocator with an LRU eviction policy
