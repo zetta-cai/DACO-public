@@ -2,7 +2,6 @@
 
 import os
 import sys
-import subprocess
 
 from common import *
 
