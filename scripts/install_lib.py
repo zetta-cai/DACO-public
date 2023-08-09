@@ -46,18 +46,21 @@ if is_install_boost:
     boost_install_dirpath = "{}/install".format(boost_decompress_dirpath)
     if not os.path.exists(boost_install_dirpath):
         prompt(filename, "install libboost from source...")
-        boost_install_cmd = "cd {} && ./bootstrap.sh --with-libraries=log,thread,system,filesystem,program_options,test,json,stacktrace --prefix=./install && sudo ./b2 install".format(boost_decompress_dirpath)
+        boost_install_cmd = "cd {} && ./bootstrap.sh --with-libraries=log,thread,system,filesystem,program_options,test,json,stacktrace,context --prefix=./install && sudo ./b2 install".format(boost_decompress_dirpath)
         # Use the following command if your set prefix as /usr/local which needs to update Linux dynamic linker
-        #boost_install_cmd = "cd {} && ./bootstrap.sh --with-libraries=log,thread,system,filesystem,program_options,test --prefix=./install && sudo ./b2 install && sudo ldconfig".format(boost_decompress_dirpath)
+        #boost_install_cmd = "cd {} && ./bootstrap.sh --with-libraries=log,thread,system,filesystem,program_options,test,json,stacktrace,context --prefix=./install && sudo ./b2 install && sudo ldconfig".format(boost_decompress_dirpath)
 
         boost_install_subprocess = subprocess.run(boost_install_cmd, shell=True)
         if boost_install_subprocess.returncode != 0:
             die(filename, "failed to install {}".format(boost_install_dirpath))
     else:
         dump(filename, "{} exists (boost has been installed)".format(boost_install_dirpath))
+
+    # TODO: link libboost 1.81.0 to all possible system paths
+    # TODO: Remove all parts related with TMPDEBUG0809
     
     # Link installed libboost 1.81.0 to system path such that cachelib will use the same libboost version to compile libfolly
-    boost_system_include_dirpath = "{}/boost".format(preferred_includepath)
+    boost_system_include_dirpath = "{}/boost".format(boost_preferred_include_dirpath)
     boost_system_version_filepath = "{}/version.hpp".format(boost_system_include_dirpath)
     need_link_boost_system = False
     target_boost_system_versionstr = "1_81"
@@ -76,21 +79,22 @@ if is_install_boost:
                 need_link_boost_system = True
     
     if need_link_boost_system:
-        prompt(filename, "backup original {}...".format(boost_system_include_dirpath))
+        backup_boost_system_include_dirpath = "{}_backup".format(boost_system_include_dirpath)
         if os.path.exists(boost_system_include_dirpath):
-            backup_original_boost_system_include_cmd = "sudo mv {} {}".format(boost_system_include_dirpath, "{}_backup".format(boost_system_include_dirpath))
+            prompt(filename, "backup original {} into {}...".format(boost_system_include_dirpath, backup_boost_system_include_dirpath))
+            backup_original_boost_system_include_cmd = "sudo mv {} {}".format(boost_system_include_dirpath, backup_boost_system_include_dirpath)
             backup_original_boost_system_include_subprocess = subprocess.run(backup_original_boost_system_include_cmd, shell=True)
             if backup_original_boost_system_include_subprocess.returncode != 0:
                 die(filename, "failed to backup original {}".format(boost_system_include_dirpath))
         
         boost_install_include_dirpath = "{}/include/boost".format(boost_install_dirpath)
-        prompt(filename, "copy {} to {}...".format(boost_install_include_dirpath, boost_system_include_dirpath)
-        copy_boost_system_include_cmd = "sudo cp -r {}/boost {}".format(boost_install_include_dirpath, boost_system_include_dirpath)
+        prompt(filename, "copy {} to {}...".format(boost_install_include_dirpath, boost_system_include_dirpath))
+        copy_boost_system_include_cmd = "sudo cp -r {} {}".format(boost_install_include_dirpath, boost_system_include_dirpath)
         copy_boost_system_include_subprocess = subprocess.run(copy_boost_system_include_cmd, shell=True)
         if copy_boost_system_include_subprocess.returncode != 0:
             die(filename, "failed to copy {} to {}".format(boost_install_include_dirpath, boost_system_include_dirpath))
         
-        backup_boost_system_lib_dirpath = "{}/boost_backup".format(preferred_libpath)
+        backup_boost_system_lib_dirpath = "{}/boost_backup".format(boost_preferred_lib_dirpath)
         if not os.path.exists(backup_boost_system_lib_dirpath):
             prompt(filename, "create directory {}...".format(backup_boost_system_lib_dirpath))
             create_backup_boost_system_lib_dirpath_cmd = "sudo mkdir {}".format(backup_boost_system_lib_dirpath)
@@ -98,22 +102,28 @@ if is_install_boost:
             if create_backup_boost_system_lib_dirpath_subprocess.returncode != 0:
                 die(filename, "failed to create {}".format(backup_boost_system_lib_dirpath))
 
-        original_boost_system_libs = "{}/libboost_*".format(preferred_libpath)
-        prompt(filename, "backup original {} into {}...".format(original_boost_system_libs, backup_boost_system_lib_dirpath)
+        original_boost_system_libs = "{}/libboost_*".format(boost_preferred_lib_dirpath)
+        prompt(filename, "backup original {} into {}...".format(original_boost_system_libs, backup_boost_system_lib_dirpath))
         backup_boost_system_lib_cmd = "sudo mv {} {}".format(original_boost_system_libs, backup_boost_system_lib_dirpath)
         backup_boost_system_lib_subprocess = subprocess.run(backup_boost_system_lib_cmd, shell=True)
-        if backup_boost_system_lib_subprocess.returncode != 0:
-            die(filename, "failed to backup original {} into {}".format(original_boost_system_libs, backup_boost_system_lib_dirpath))
+        #if backup_boost_system_lib_subprocess.returncode != 0:
+        #    die(filename, "failed to backup original {} into {}".format(original_boost_system_libs, backup_boost_system_lib_dirpath))
         
         boost_install_lib_dirpath = "{}/lib".format(boost_install_dirpath)
         boost_install_libs_filepath = "{}/libboost_*".format(boost_install_lib_dirpath)
-        prompt(filename, "copy {} to {}...".format(boost_install_libs_filepath, preferred_libpath)
-        copy_boost_system_lib_cmd = "sudo cp {} {}".format(boost_install_libs_filepath, preferred_libpath)
+        prompt(filename, "copy {} to {}...".format(boost_install_libs_filepath, boost_preferred_lib_dirpath))
+        copy_boost_system_lib_cmd = "sudo cp {} {}".format(boost_install_libs_filepath, boost_preferred_lib_dirpath)
         copy_boost_system_include_subprocess = subprocess.run(copy_boost_system_lib_cmd, shell=True)
         if copy_boost_system_include_subprocess.returncode != 0:
-            die(filename, "failed to copy {} to {}".format(boost_install_libs_filepath, preferred_libpath))
+            die(filename, "failed to copy {} to {}".format(boost_install_libs_filepath, boost_preferred_lib_dirpath))
+
+        prompt(filename, "update OS by ldconfig")
+        update_ldconfig_cmd = "sudo ldconfig"
+        update_ldconfig_subprocess = subprocess.run(update_ldconfig_cmd, shell=True)
+        if update_ldconfig_subprocess.returncode != 0:
+            die(filename, "failed to update OS by ldconfig")
     else:
-        dump(filename, "libboost preferred by system is already {}".format(target_boost_system_versionstr)
+        dump(filename, "libboost preferred by system is already {}".format(target_boost_system_versionstr))
 
     if is_clear_tarball:
         warn(filename, "clear {}".format(boost_download_filepath))
@@ -126,7 +136,7 @@ if is_install_boost:
 # (2) Install cachelib (commit ID: 3d475f6)
 
 if is_install_cachelib:
-    cachelib_clone_dirpath = "{}/CacheLib".format(lib_dirpath)
+    cachelib_clone_dirpath = "{}/CacheLib".format("/data/ssy/lib") # TMPDEBUG0809
     if not os.path.exists(cachelib_clone_dirpath):
         prompt(filename, "clone cachelib into {}...".format(cachelib_clone_dirpath))
         cachelib_clone_cmd = "cd {} && git clone https://github.com/facebook/CacheLib.git".format(lib_dirpath)
@@ -159,6 +169,14 @@ if is_install_cachelib:
     cachelib_cachebench_filepath = "{}/build-cachelib/cachebench/libcachelib_cachebench.a".format(cachelib_clone_dirpath)
     cachelib_allocator_filepath = "{}/opt/cachelib/lib/libcachelib_allocator.a".format(cachelib_clone_dirpath)
     if not os.path.exists(cachelib_cachebench_filepath) or not os.path.exists(cachelib_allocator_filepath):
+        # Update folly to use libboost 1.81.0
+        prompt(filename, "replace contrib/build-package.sh to use libboost 1.81.0...")
+        replace_build_package_cmd = "sudo cp scripts/cachelib/build-package.sh {}/contrib/build-package.sh".format(cachelib_clone_dirpath)
+        replace_build_package_subprocess = subprocess.run(replace_build_package_cmd, shell=True)
+        if replace_build_package_subprocess.returncode != 0:
+            die(filename, "failed to replace contrib/build-package.sh")
+
+        # Build cachelib and its dependencies
         prompt(filename, "execute contrib/build.sh in {} to install cachelib...".format(cachelib_clone_dirpath))
         cachelib_install_cmd = "cd {} && ./contrib/build.sh -j -T".format(cachelib_clone_dirpath)
 

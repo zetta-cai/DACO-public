@@ -55,7 +55,7 @@ if is_upgrade_python3:
 
         if need_preserve_old_python3:
             print("{}: preserve old python3...".format(filename))
-            python3_preserve_old_cmd = "sudo update-alternatives --install {}/python3 python3 $(readlink -f $(which python3) 40".format(preferred_binpath)
+            python3_preserve_old_cmd = "sudo update-alternatives --install {}/python3 python3 $(readlink -f $(which python3) 40".format(python3_preferred_binpath)
             python3_preserve_old_subprocess = subprocess.run(python3_preserve_old_cmd, shell=True)
             if python3_preserve_old_subprocess.returncode != 0:
                 print("{}: failed to preserve old python3".format(filename))
@@ -87,7 +87,7 @@ if is_upgrade_python3:
         else:
             print("{}: {} exists (python3.7.5 has been decompressed)".format(filename, python3_decompress_dirpath))
 
-        python3_install_filepath = "{}/python3.7".format(python3_binpath)
+        python3_install_filepath = "{}/python3.7".format(python3_install_binpath)
         if not os.path.exists(python3_install_filepath):
             print("{}: install python3.7.5 from source...".format(filename))
             python3_install_cmd = "cd {0} && ./configure --enable-optimizations --prefix={1} --exec_prefix={1} && sudo make altinstall".format(python3_decompress_dirpath, python3_installpath)
@@ -99,7 +99,7 @@ if is_upgrade_python3:
             print("{}: {} exists (python3.7.5 has been installed)".format(filename, python3_install_filepath))
 
         print("{}: switch to python3.7.5...".format(filename))
-        python3_switch_new_cmd = "sudo update-alternatives --install {}/python3 python3 {}/python3.7 50".format(preferred_binpath, python3_binpath)
+        python3_switch_new_cmd = "sudo update-alternatives --install {0}/python3 python3 {1}/python3.7 50".format(python3_preferred_binpath, python3_install_binpath)
         python3_switch_new_subprocess = subprocess.run(python3_switch_new_cmd, shell=True)
         if python3_switch_new_subprocess.returncode != 0:
             print("{}: failed to switch python3.7.5".format(filename))
@@ -168,7 +168,7 @@ if is_upgrade_gcc:
 
             if need_preserve_old_compiler:
                 prompt(filename, "preserve old {}...".format(compiler_name))
-                compiler_preserve_old_cmd = "sudo update-alternatives --install {0}/{1} {1} $(readlink -f $(which {1})) 40".format(preferred_binpath, compiler_name)
+                compiler_preserve_old_cmd = "sudo update-alternatives --install {0}/{1} {1} $(readlink -f $(which {1})) 40".format(compiler_preferred_binpaths[compiler_name], compiler_name)
                 compiler_preserve_old_subprocess = subprocess.run(compiler_preserve_old_cmd, shell=True)
                 if compiler_preserve_old_subprocess.returncode != 0:
                     die(filename, "failed to preserve old {}".format(compiler_name))
@@ -191,7 +191,7 @@ if is_upgrade_gcc:
                 die(filename, "failed to install {}-9".format(compiler_name))
 
             prompt(filename, "switch to {}-9...".format(compiler_name))
-            compiler_switch_cmd = "sudo update-alternatives --install {0}/{1} {1} {2}/{1}-9 50".format(preferred_binpath, compiler_name, compiler_binpath)
+            compiler_switch_cmd = "sudo update-alternatives --install {0}/{1} {1} {2}/{1}-9 50".format(compiler_preferred_binpaths[compiler_name], compiler_name, compiler_install_binpath)
             compiler_switch_subprocess = subprocess.run(compiler_switch_cmd, shell=True)
             if compiler_switch_subprocess.returncode != 0:
                 die(filename, "failed to switch {}-9".format(compiler_name))
@@ -220,7 +220,7 @@ if is_link_cpp:
 
     if need_link_cpp:
         prompt(filename, "link g++-9 to c++ binary...")
-        link_cpp_cmd = "sudo mv $(which c++) $(which c++).bak; sudo ln -s {0}/g++ {0}/c++".foramt(preferred_binpath)
+        link_cpp_cmd = "sudo mv $(which c++) $(which c++).bak; sudo ln -s {0}/g++ {0}/c++".foramt(compiler_preferred_binpaths["g++"])
         link_cpp_subprocess = subprocess.run(link_cpp_cmd, shell=True)
         if link_cpp_subprocess.returncode != 0:
             die(filename, "failed to link g++-9 to c++ binary")
