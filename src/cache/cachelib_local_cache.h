@@ -15,7 +15,7 @@
 
 #include <string>
 
-#include "cache/cachelib/CacheAllocator.h"
+#include "cache/cachelib/CacheAllocator-inl.h"
 #include "cache/local_cache_base.h"
 #include "concurrency/rwlock.h"
 

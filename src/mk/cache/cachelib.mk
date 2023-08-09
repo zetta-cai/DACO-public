@@ -1,6 +1,9 @@
 # cachelib module
 
-# NOTE: include path and lib path of Cachelib have been added by src/mk/lib/cachebench.mk
+# NOTE: include path, lib path, and most libs of Cachelib have been added by src/mk/lib/cachebench.mk, here we only add the rest libs for Cachelib
+CACHELIB_LDLIBS := -l:libthriftcpp2.so -l:libthriftmetadata.so
+
+LDLIBS += $(CACHELIB_LDLIBS)
 
 # hacked part (CACHELIB uses template class -> NO need to compile into binary objects and static/dynamic libraries)
 #CACHELIB_SRCFILES = $(wildcard $(COVERED_DIRPATH)/cache/cachelib/*.c)

@@ -14,6 +14,10 @@
  * limitations under the License.
  */
 
+#pragma once
+
+#include "cache/cachelib/CacheItem.h"
+
 // CacheItem implementations.
 namespace covered {
 template <typename CacheTrait>

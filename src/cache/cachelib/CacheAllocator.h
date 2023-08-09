@@ -34,7 +34,7 @@
 #include "cachelib/allocator/Cache.h"
 #include "cachelib/allocator/CacheAllocatorConfig.h"
 #include "cachelib/allocator/CacheChainedItemIterator.h"
-#include "cache/cachelib/CacheItem.h" // Hacked version
+#include "cache/cachelib/CacheItem-inl.h" // Hacked version
 #include "cachelib/allocator/CacheStats.h"
 #include "cachelib/allocator/CacheStatsInternal.h"
 #include "cachelib/allocator/CacheTraits.h"
@@ -143,8 +143,6 @@ class GET_CLASS_NAME(ObjectCache, ObjectHandleInvalid);
 
 namespace covered {
 
-class Key;
-
 using facebook::cachelib::TypedHandleImpl;
 using facebook::cachelib::CacheChainedItemIterator;
 using facebook::cachelib::CacheChainedAllocs;
@@ -172,8 +170,7 @@ using facebook::cachelib::GlobalCacheStats;
 using facebook::cachelib::CacheMemoryStats;
 using facebook::cachelib::AllSlabReleaseEvents;
 using facebook::cachelib::RefcountWithFlags;
-using facebook::cachelib::KAllocation;
-using covered::Key;
+using facebook::cachelib::KAllocation; // NOTE: here we use facebook::cachelib::KAllocation instead of facebook::cachelib::KAllocation::Key, so we do NOT need using covered::Key
 using facebook::cachelib::WaitContext;
 using facebook::cachelib::MemoryAllocator;
 using facebook::cachelib::MemoryPoolManager;
@@ -2215,36 +2212,4 @@ class CacheAllocator : public facebook::cachelib::CacheBase {
                                         ObjectCache,
                                         ObjectHandleInvalid);
 };
-} // namespace covered
-#include "cache/cachelib/CacheAllocator-inl.h"
-
-namespace covered {
-
-// Declare templates ahead of use to reduce compilation time
-extern template class CacheAllocator<LruCacheTrait>;
-extern template class CacheAllocator<LruCacheWithSpinBucketsTrait>;
-extern template class CacheAllocator<Lru2QCacheTrait>;
-extern template class CacheAllocator<TinyLFUCacheTrait>;
-
-// CacheAllocator with an LRU eviction policy
-// LRU policy can be configured to act as a segmented LRU as well
-using LruAllocator = CacheAllocator<LruCacheTrait>;
-using LruAllocatorSpinBuckets = CacheAllocator<LruCacheWithSpinBucketsTrait>;
-
-// CacheAllocator with 2Q eviction policy
-// Hot, Warm, Cold queues are maintained
-// Item Life Time:
-//  0. On access, each item is promoted to the head of its current
-//  queue
-//  1. first enter Hot queue
-//  2. if accessed while in Hot, item will qualify entry to Warm queue
-//     otherwise, item will enter cold queue
-//  3. items in cold queue are evicted to make room for new items
-using Lru2QAllocator = CacheAllocator<Lru2QCacheTrait>;
-
-// CacheAllocator with Tiny LFU eviction policy
-// It has a window initially to gauage the frequency of accesses of newly
-// inserted items. And eventually it will onl admit items that are accessed
-// beyond a threshold into the warm cache.
-using TinyLFUAllocator = CacheAllocator<TinyLFUCacheTrait>;
 } // namespace covered

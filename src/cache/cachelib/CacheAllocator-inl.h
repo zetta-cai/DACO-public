@@ -16,6 +16,8 @@
 
 #pragma once
 
+#include "cache/cachelib/CacheAllocator.h"
+
 namespace covered {
 
 template <typename CacheTrait>
@@ -3674,4 +3676,35 @@ facebook::cachelib::util::StatsMap CacheAllocator<CacheTrait>::getNvmCacheStatsM
   return ret;
 }
 
+} // namespace covered
+
+namespace covered {
+
+// Declare templates ahead of use to reduce compilation time
+extern template class CacheAllocator<LruCacheTrait>;
+extern template class CacheAllocator<LruCacheWithSpinBucketsTrait>;
+extern template class CacheAllocator<Lru2QCacheTrait>;
+extern template class CacheAllocator<TinyLFUCacheTrait>;
+
+// CacheAllocator with an LRU eviction policy
+// LRU policy can be configured to act as a segmented LRU as well
+using LruAllocator = CacheAllocator<LruCacheTrait>;
+using LruAllocatorSpinBuckets = CacheAllocator<LruCacheWithSpinBucketsTrait>;
+
+// CacheAllocator with 2Q eviction policy
+// Hot, Warm, Cold queues are maintained
+// Item Life Time:
+//  0. On access, each item is promoted to the head of its current
+//  queue
+//  1. first enter Hot queue
+//  2. if accessed while in Hot, item will qualify entry to Warm queue
+//     otherwise, item will enter cold queue
+//  3. items in cold queue are evicted to make room for new items
+using Lru2QAllocator = CacheAllocator<Lru2QCacheTrait>;
+
+// CacheAllocator with Tiny LFU eviction policy
+// It has a window initially to gauage the frequency of accesses of newly
+// inserted items. And eventually it will onl admit items that are accessed
+// beyond a threshold into the warm cache.
+using TinyLFUAllocator = CacheAllocator<TinyLFUCacheTrait>;
 } // namespace covered

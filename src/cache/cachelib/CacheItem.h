@@ -68,8 +68,6 @@ class Map;
 
 namespace covered
 {
-class Key;
-
 // forward declaration
 template <typename CacheTrait>
 class CacheAllocator;
@@ -86,8 +84,7 @@ namespace covered
 {
 using facebook::cachelib::NvmCache;
 using facebook::cachelib::RefcountWithFlags;
-using facebook::cachelib::KAllocation;
-using covered::Key;
+using facebook::cachelib::KAllocation; // NOTE: here we use facebook::cachelib::KAllocation instead of facebook::cachelib::KAllocation::Key, so we do NOT need using covered::Key
 using facebook::cachelib::MemoryAllocator;
 using facebook::cachelib::SListHook;
 
@@ -606,5 +603,3 @@ class CACHELIB_PACKED_ATTR CacheChainedItem : public CacheItem<CacheTrait> {
   FRIEND_TEST(ItemTest, ChangeKey);
 };
 } // namespace covered
-
-#include "cache/cachelib/CacheItem-inl.h"
