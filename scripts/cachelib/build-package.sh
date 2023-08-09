@@ -283,7 +283,8 @@ test -d cachelib || die "expected 'cachelib' directory not found in $PWD"
 
 # After ensuring we are in the correct directory, set the installation prefix"
 CMAKE_PARAMS="$CMAKE_PARAMS -DCMAKE_INSTALL_PREFIX=$PREFIX"
-CMAKE_PREFIX_PATH="$PREFIX/lib/cmake:$PREFIX/lib64/cmake:$PREFIX/lib:$PREFIX/lib64:$PREFIX:${CMAKE_PREFIX_PATH:-}"
+# Siyuan: change CMAKE_PREFIX_PATH to search the custom path first before the default path in FindBoost.cmake for libboost 1.81.0
+CMAKE_PREFIX_PATH="/home/ssy/projects/covered-private/lib/boost_1_81_0/install:$PREFIX/lib/cmake:$PREFIX/lib64/cmake:$PREFIX/lib:$PREFIX/lib64:$PREFIX:${CMAKE_PREFIX_PATH:-}"
 export CMAKE_PREFIX_PATH
 PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig:$PREFIX/lib64/pkgconfig:${PKG_CONFIG_PATH:-}"
 export PKG_CONFIG_PATH
@@ -300,17 +301,16 @@ if test "$source" ; then
 
   if test "$external_git_clone" ; then
 
-    # TMPDEBUG0809
-    # # This is an external (non-facebook) project, clone/pull it.
-    # if test -d "$SRCDIR" ; then
-    #   # cloned repository already exists, update it, unless we're on a specific tag
-    #   ( cd "$SRCDIR" && git fetch --all ) \
-    #     || die "failed to fetch git repository for '$NAME' in '$SRCDIR'"
-    # else
-    #   # Clone new repository directory
-    #   git clone "$REPO" "$REPODIR" \
-    #     || die "failed to clone git repository $REPO to '$REPODIR'"
-    # fi
+    # This is an external (non-facebook) project, clone/pull it.
+    if test -d "$SRCDIR" ; then
+      # cloned repository already exists, update it, unless we're on a specific tag
+      ( cd "$SRCDIR" && git fetch --all ) \
+        || die "failed to fetch git repository for '$NAME' in '$SRCDIR'"
+    else
+      # Clone new repository directory
+      git clone "$REPO" "$REPODIR" \
+        || die "failed to clone git repository $REPO to '$REPODIR'"
+    fi
 
 
     # switch to specific branch/tag if needed
@@ -326,10 +326,9 @@ if test "$source" ; then
 
   fi
 
-  # TMPDEBUG0809
-  # if test "$update_submodules" ; then
-  #   ./contrib/update-submodules.sh || die "failed to update git-submodules"
-  # fi
+  if test "$update_submodules" ; then
+    ./contrib/update-submodules.sh || die "failed to update git-submodules"
+  fi
 fi
 
 
@@ -345,7 +344,7 @@ fi
 mkdir -p "build-$NAME" || die "failed to create build-$NAME directory"
 cd "build-$NAME" || die "'cd' failed"
 
-# Enforce to use libboost 1.81.0 for libfolly
+# Siyuan: enforce to use libboost 1.81.0 for libfolly
 follydeps_filepath="$(pwd)/../cachelib/external/folly/CMake/folly-deps.cmake"
 echo "Enforce to use libboost 1.81.0 for libfolly by modifying $follydeps_filepath..."
 sudo sed -i 's/find_package(Boost 1.51.0 MODULE/find_package(Boost 1.81.0 MODULE/g' $follydeps_filepath
