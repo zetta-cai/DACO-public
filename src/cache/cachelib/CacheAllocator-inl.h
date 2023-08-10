@@ -106,6 +106,14 @@ CacheAllocator<CacheTrait>::~CacheAllocator() {
 }
 
 template <typename CacheTrait>
+uint64_t CacheAllocator<CacheTrait>::getUsedSize(PoolId pid) const
+{
+  auto& pool = allocator_->getPool(pid);
+  uint64_t used_size = static_cast<uint64_t>(pool.getCurrentAllocSize());
+  return used_size;
+}
+
+template <typename CacheTrait>
 ShmSegmentOpts CacheAllocator<CacheTrait>::createShmCacheOpts() {
   ShmSegmentOpts opts;
   opts.alignment = sizeof(Slab);
@@ -3424,7 +3432,7 @@ GlobalCacheStats CacheAllocator<CacheTrait>::getGlobalCacheStats() const {
 
 template <typename CacheTrait>
 CacheMemoryStats CacheAllocator<CacheTrait>::getCacheMemoryStats() const {
-  const auto totalCacheSize = allocator_->getMemorySize();
+  const auto totalCacheSize = allocator_->getMemorySize(); // NOTE: getMemorySize() returns usable size (i.e., capacity) instead of used size
   const auto configuredTotalCacheSize = allocator_->getMemorySizeInclAdvised();
 
   auto addSize = [this](size_t a, PoolId pid) {

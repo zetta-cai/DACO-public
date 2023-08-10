@@ -17,12 +17,22 @@ namespace covered
     {
         std::string main_class_name = Util::getFilenameFromFilepath(argv[0]);
 
-        addCliParameters_(); // Add CLI parameters into argument_desc_
-        parseCliParameters_(argc, argv); // Parse CLI parameters based on argument_desc_ to set argument_info_
-        setParamAndConfig_(main_class_name); // Set parameters for dynamic configurations and load config file for static configurations
-        processCliParameters_(); // Process static/dynamic actions
-        dumpCliParameters_(); // Dump CLI parameters
-        createRequiredDirectories_(main_class_name); // Create required directories (e.g., client statistics directory and cloud RocksDB directory)
+        try
+        {
+            addCliParameters_(); // Add CLI parameters into argument_desc_
+            parseCliParameters_(argc, argv); // Parse CLI parameters based on argument_desc_ to set argument_info_
+            setParamAndConfig_(main_class_name); // Set parameters for dynamic configurations and load config file for static configurations
+            processCliParameters_(); // Process static/dynamic actions
+            dumpCliParameters_(); // Dump CLI parameters
+            createRequiredDirectories_(main_class_name); // Create required directories (e.g., client statistics directory and cloud RocksDB directory)
+        }
+        catch (boost::program_options::error& e)
+        {
+            std::ostringstream oss;
+            oss << "Failed to parse CLI parameters: " << e.what();
+            Util::dumpErrorMsg(kClassName, oss.str());
+            exit(1);
+        }
 
         return;
     }

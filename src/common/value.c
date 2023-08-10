@@ -2,6 +2,9 @@
 
 #include <arpa/inet.h> // htonl ntohl
 
+#include "common/config.h"
+#include "common/util.h"
+
 namespace covered
 {
     const std::string Value::kClassName("Value");
@@ -38,9 +41,18 @@ namespace covered
 
     std::string Value::generateValuestr() const
     {
-        // Note: now we use '0' to fill up value content
-        // TODO: we could randomly generate characters to fill up value content
-        return std::string(valuesize_, '0');
+        std::string valuestr = "";
+        if (Config::isGenerateRandomValuestr())
+        {
+            // Randomly generate characters to fill up value content
+            valuestr = Util::getRandomString(valuesize_);
+        }
+        else
+        {
+            // Note: now we use '0' to fill up value content
+            valuestr = std::string(valuesize_, '0');
+        }
+        return valuestr;
     }
 
     uint32_t Value::getValuePayloadSize() const

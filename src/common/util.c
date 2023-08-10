@@ -1,5 +1,6 @@
 #include "common/util.h"
 
+#include <assert.h>
 #include <chrono> // system_clock
 #include <errno.h> // ENOENT
 #include <iostream> // cerr
@@ -71,6 +72,11 @@ namespace covered
     // TODO: pass nice value into each pthread for SCHED_OTHER
     const int Util::SCHEDULING_POLICY = SCHED_OTHER; // Default policy used by Linux (nice value: min 19 to max -20), which relies on kernel.sched_latency_ns and kernel.sched_min_granularity_ns
     //const int Util::SCHEDULING_POLICY = SCHED_RR; // Round-robin (priority: min 1 to max 99), which relies on /proc/sys/kernel/sched_rr_timeslice_ms
+
+    // For charset
+    const std::string Util::CHARSET("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz");
+    std::mt19937_64 Util::string_randgen_(0);
+    std::uniform_int_distribution<uint32_t> Util::string_randdist_(0, CHARSET.size() - 1); // Range of [0, CHARSET.size() - 1]
 
     const std::string Util::kClassName("Util");
 
@@ -786,5 +792,17 @@ namespace covered
     {
         unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
         return static_cast<uint32_t>(seed);
+    }
+
+    std::string Util::getRandomString(const uint32_t& length)
+    {
+        std::string random_string(length, '0');
+        for (uint32_t i = 0; i < length; i++)
+        {
+            uint32_t random_index = string_randdist_(string_randgen_);
+            assert(random_index < CHARSET.length());
+            random_string[i] = CHARSET[random_index];
+        }
+        return random_string;
     }
 }

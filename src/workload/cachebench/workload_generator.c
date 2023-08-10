@@ -20,6 +20,9 @@ WorkloadGenerator::WorkloadGenerator(const StressorConfig& config, const uint32_
           "test config.");
     }
     workloadDist_.push_back(WorkloadDistribution(c));
+
+    avg_dataset_keysize_ = 0;
+    avg_dataset_valuesize_ = 0;
   }
 
   if (config_.numKeys > std::numeric_limits<uint32_t>::max()) {
@@ -58,6 +61,16 @@ const facebook::cachelib::cachebench::Request& WorkloadGenerator::getReq(uint8_t
   }
 
   return reqs_[itemidx];
+}
+
+double WorkloadGenerator::getAvgDatasetKeysize() const
+{
+  return avg_dataset_keysize_;
+}
+
+double WorkloadGenerator::getAvgDatasetValuesize() const
+{
+  return avg_dataset_valuesize_;
 }
 
 void WorkloadGenerator::generateKeys() {
@@ -109,6 +122,13 @@ void WorkloadGenerator::generateKeys() {
   auto sortDuration = std::chrono::duration_cast<std::chrono::seconds>(
       std::chrono::steady_clock::now() - startTime);
 
+  // Siyuan: update avg_dataset_keysize_
+  for (size_t i = 0; i < keys_.size(); i++)
+  {
+    avg_dataset_keysize_ += static_cast<double>(keys_[i].size());
+  }
+  avg_dataset_keysize_ /= static_cast<double>(keys_.size());
+
   // Siyuan: disable unnecessary outputs
   //std::cout << folly::sformat("Created {:,} keys in {:.2f} mins",
   //                            totalKeys,
@@ -122,7 +142,6 @@ void WorkloadGenerator::generateReqs() {
   //std::mt19937_64 gen(folly::Random::rand64());
   // Siyuan: Util::KVPAIR_GENERATION_SEED as the deterministic seed to ensure that multiple clients generate the same set of key-value pairs
   std::mt19937_64 gen(Util::KVPAIR_GENERATION_SEED);
-  double avg_valuesize = double(0.0);
   for (size_t i = 0; i < config_.keyPoolDistribution.size(); i++) {
     size_t idx = workloadIdx(i);
     for (size_t j = firstKeyIndexForPool_[i]; j < firstKeyIndexForPool_[i + 1];
@@ -140,14 +159,15 @@ void WorkloadGenerator::generateReqs() {
       auto reqSizes = sizes_.end() - 1;
       reqs_.emplace_back(keys_[j], reqSizes->begin(), reqSizes->end());
 
-      avg_valuesize += static_cast<double>(*(reqSizes->begin()));
+      // Siyuan: update avg_dataset_valuesize_
+      avg_dataset_valuesize_ += static_cast<double>(*(reqSizes->begin()));
     }
   }
-  avg_valuesize /= static_cast<double>(reqs_.size());
+  avg_dataset_valuesize_ /= static_cast<double>(reqs_.size());
 
   // TMPDEBUG
   std::ostringstream oss;
-  oss << "first key: " << reqs_[0].key << "; valuesize: " << (*reqs_[0].sizeBegin) << "; avg valuesize: " << avg_valuesize;
+  oss << "first key: " << reqs_[0].key << "; valuesize: " << (*reqs_[0].sizeBegin);
   Util::dumpNormalMsg(kClassName, oss.str());
 }
 

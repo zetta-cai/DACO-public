@@ -56,7 +56,7 @@ namespace covered
         if (is_valid_directory_exist)
         {
             // Randomly select a valid edge node as the target edge node
-            std::uniform_int_distribution<uint32_t> uniform_dist(0, valid_directory_info_set.size() - 1); // Range from 0 to (# of directory info - 1)
+            std::uniform_int_distribution<uint32_t> uniform_dist(0, valid_directory_info_set.size() - 1); // Range of [0, # of directory info - 1]
             uint32_t random_number = uniform_dist(*directory_randgen_ptr_);
             assert(random_number < valid_directory_info_set.size());
             uint32_t i = 0;

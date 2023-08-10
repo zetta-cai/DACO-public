@@ -27,6 +27,10 @@ namespace covered
         virtual ~FacebookWorkloadWrapper();
 
         virtual uint32_t getPracticalKeycnt() const;
+
+        // Get average dataset key/value size
+        virtual double getAvgDatasetKeysize() const override;
+        virtual double getAvgDatasetValuesize() const override;
     private:
         static const std::string kClassName;
 

@@ -6,8 +6,12 @@
 #include <cachelib/cachebench/util/CacheConfig.h>
 #include <folly/init/Init.h>
 
+#include "common/util.h"
+
 namespace covered
 {
+    const uint64_t CachelibLocalCache::CACHELIB_MIN_CAPACITY_BYTES = GB2B(1); // 1 GiB
+
     const std::string CachelibLocalCache::kClassName("CachelibLocalCache");
 
     CachelibLocalCache::CachelibLocalCache(const uint32_t& edge_idx, const uint64_t& capacity_bytes) : LocalCacheBase(edge_idx)
@@ -25,7 +29,15 @@ namespace covered
 
         // Prepare cacheConfig for Cachelib local cache (most parameters are default values)
         Lru2QCacheConfig cacheConfig;
-        cacheConfig.setCacheSize(capacity_bytes); // NOTE: we limit cache capacity outside CachelibLocalCache (in EdgeWrapper); here we set cachelib local cache size as overall cache capacity to avoid cache capacity constraint inside CachelibLocalCache
+        // NOTE: we limit cache capacity outside CachelibLocalCache (in EdgeWrapper); here we set cachelib local cache size as overall cache capacity to avoid cache capacity constraint inside CachelibLocalCache
+        if (capacity_bytes >= CACHELIB_MIN_CAPACITY_BYTES)
+        {
+            cacheConfig.setCacheSize(capacity_bytes);
+        }
+        else
+        {
+            cacheConfig.setCacheSize(CACHELIB_MIN_CAPACITY_BYTES);
+        }
         cacheConfig.validate(); // will throw if bad config
 
         cachelib_cache_ptr_ = std::make_unique<Lru2QCache>(cacheConfig);
@@ -236,7 +248,8 @@ namespace covered
         std::string context_name = "CachelibLocalCache::getSizeForCapacity()";
         rwlock_for_cachelib_local_cache_ptr_->acquire_lock_shared(context_name);
 
-        uint64_t internal_size = cachelib_cache_ptr_->getCacheMemoryStats().ramCacheSize;
+        // NOTE: should NOT use cachelib_cache_ptr_->getCacheMemoryStats().ramCacheSize, which is usable cache size (i.e. capacity) instead of used size
+        uint64_t internal_size = cachelib_cache_ptr_->getUsedSize(cachelib_poolid_);
 
         rwlock_for_cachelib_local_cache_ptr_->unlock_shared(context_name);
         return internal_size;

@@ -77,6 +77,7 @@ namespace covered
         // Create workload generator for the client
         // NOTE: creating workload generator needs time, so we introduce NodeParamBase::node_initialized_
         workload_generator_ptr_ = WorkloadWrapperBase::getWorkloadGeneratorByWorkloadName(clientcnt, client_idx, keycnt, opcnt, perclient_workercnt, workload_name);
+        Util::dumpVariablesForDebug(instance_name_, 4, "average dataset key size:", std::to_string(workload_generator_ptr_->getAvgDatasetKeysize()).c_str(), "average dataset value size:", std::to_string(workload_generator_ptr_->getAvgDatasetValuesize()).c_str());
         assert(workload_generator_ptr_ != NULL);
 
         // Create statistics tracker for the client

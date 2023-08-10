@@ -213,7 +213,7 @@ namespace covered
             // Generate a random number as a random seed
             uint32_t random_seed = Util::getTimeBasedRandomSeed();
             std::mt19937_64 randgen(random_seed);
-            std::uniform_int_distribution<uint32_t> uniform_dist; // Range from 0 to max uint32_t
+            std::uniform_int_distribution<uint32_t> uniform_dist; // Range of [0, max uint32_t]
             uint32_t random_number = uniform_dist(randgen);
 
             // Replace with a random filepath

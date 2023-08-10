@@ -30,6 +30,7 @@ class GeneratorBase {
                                 std::mt19937_64& /*gen*/,
                                 std::optional<uint64_t> /*lastRequestId*/) = 0;
   
+  // Siyuan: get dataset item of a specific index
   virtual const facebook::cachelib::cachebench::Request& getReq(uint8_t poolId, uint32_t itemidx) = 0;
 
   // Notify the workload generator about the result of the request.
@@ -37,6 +38,10 @@ class GeneratorBase {
   virtual void notifyResult(uint64_t /*requestId*/, facebook::cachelib::cachebench::OpResultType /*result*/) {}
 
   virtual const std::vector<std::string>& getAllKeys() const = 0;
+
+  // Siyuan: average dataset key/value size
+  virtual double getAvgDatasetKeysize() const = 0;
+  virtual double getAvgDatasetValuesize() const = 0;
 
   // Notify the workload generator that the nvm cache has already warmed up.
   virtual void setNvmCacheWarmedUp(uint64_t /*timestamp*/) {

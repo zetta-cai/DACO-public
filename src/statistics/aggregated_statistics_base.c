@@ -26,7 +26,8 @@ namespace covered
         total_cache_size_bytes_ = 0;
         total_cache_capacity_bytes_ = 0;
 
-        total_value_size_ = double(0.0);
+        total_workload_key_size_ = double(0.0);
+        total_workload_value_size_ = double(0.0);
     }
         
     AggregatedStatisticsBase::~AggregatedStatisticsBase() {}
@@ -144,21 +145,36 @@ namespace covered
         return total_cache_utilization;
     }
 
-    // Get aggregated statistics related with value size
-    
-    double AggregatedStatisticsBase::getTotalValueSize() const
+    // Get aggregated statistics related with workload key-value size
+
+    double AggregatedStatisticsBase::getTotalWorkloadKeySize() const
     {
-        return total_value_size_;
+        return total_workload_key_size_;
+    }
+    
+    double AggregatedStatisticsBase::getTotalWorkloadValueSize() const
+    {
+        return total_workload_value_size_;
     }
 
-    double AggregatedStatisticsBase::getAvgValueSize() const
+    double AggregatedStatisticsBase::getAvgWorkloadKeySize() const
     {
-        double avg_value_size_ = double(0.0);
-        if (total_value_size_ > double(0.0))
+        double avg_workload_key_size = double(0.0);
+        if (total_workload_key_size_ > double(0.0))
         {
-            avg_value_size_ = total_value_size_ / static_cast<double>(total_reqcnt_);
+            avg_workload_key_size = total_workload_key_size_ / static_cast<double>(total_reqcnt_);
         }
-        return avg_value_size_;
+        return avg_workload_key_size;
+    }
+
+    double AggregatedStatisticsBase::getAvgWorkloadValueSize() const
+    {
+        double avg_workload_value_size = double(0.0);
+        if (total_workload_value_size_ > double(0.0))
+        {
+            avg_workload_value_size = total_workload_value_size_ / static_cast<double>(total_reqcnt_);
+        }
+        return avg_workload_value_size;
     }
 
     // Get string for aggregate statistics
@@ -193,9 +209,11 @@ namespace covered
         oss << "total cache margin bytes: " << getTotalCacheMarginBytes() << std::endl;
         oss << "total cache utilization: " << getTotalCacheUtilization() << std::endl;
 
-        oss << "[Value Size Statistics]" << std::endl;
-        oss << "total value size: " << total_value_size_ << std::endl;
-        oss << "average value size: " << getAvgValueSize() << std::endl;
+        oss << "[Workload key-value Size Statistics]" << std::endl;
+        oss << "total workload key size: " << total_workload_key_size_ << std::endl;
+        oss << "total workload value size: " << total_workload_value_size_ << std::endl;
+        oss << "average workload key size: " << getAvgWorkloadKeySize() << std::endl;
+        oss << "average workload value size: " << getAvgWorkloadValueSize() << std::endl;
         
         std::string total_statistics_string = oss.str();
         return total_statistics_string;
@@ -203,8 +221,8 @@ namespace covered
 
     uint32_t AggregatedStatisticsBase::getAggregatedStatisticsIOSize()
     {
-        // Aggregated statistics for hit ratio + latency + read-write ratio + cache utilization + value size
-        return sizeof(uint32_t) * 3 + sizeof(uint32_t) * 7 + sizeof(uint32_t) * 2 + sizeof(uint64_t) * 2 + sizeof(double);
+        // Aggregated statistics for hit ratio + latency + read-write ratio + cache utilization + workload key-value size
+        return sizeof(uint32_t) * 3 + sizeof(uint32_t) * 7 + sizeof(uint32_t) * 2 + sizeof(uint64_t) * 2 + 2 * sizeof(double);
     }
 
     uint32_t AggregatedStatisticsBase::serialize(DynamicArray& dynamic_array, const uint32_t& position) const
@@ -247,8 +265,10 @@ namespace covered
         dynamic_array.deserialize(size, (const char*)&total_cache_capacity_bytes_, sizeof(uint64_t));
         size += sizeof(uint64_t);
 
-        // Serialize aggregated statistics for value size
-        dynamic_array.deserialize(size, (const char*)&total_value_size_, sizeof(double));
+        // Serialize aggregated statistics for workload key-value size
+        dynamic_array.deserialize(size, (const char*)&total_workload_key_size_, sizeof(double));
+        size += sizeof(double);
+        dynamic_array.deserialize(size, (const char*)&total_workload_value_size_, sizeof(double));
         size += sizeof(double);
 
         return size - position;
@@ -294,8 +314,10 @@ namespace covered
         dynamic_array.serialize(size, (char*)&total_cache_capacity_bytes_, sizeof(uint64_t));
         size += sizeof(uint64_t);
 
-        // Deserialize aggregated statistics for value size
-        dynamic_array.serialize(size, (char*)&total_value_size_, sizeof(double));
+        // Deserialize aggregated statistics for workload key-value size
+        dynamic_array.serialize(size, (char*)&total_workload_key_size_, sizeof(double));
+        size += sizeof(double);
+        dynamic_array.serialize(size, (char*)&total_workload_value_size_, sizeof(double));
         size += sizeof(double);
 
         return size - position;
@@ -325,8 +347,9 @@ namespace covered
         total_cache_size_bytes_ = other.total_cache_size_bytes_;
         total_cache_capacity_bytes_ = other.total_cache_capacity_bytes_;
 
-        // Aggregated statistics related with value size
-        total_value_size_ = other.total_value_size_;
+        // Aggregated statistics related with workload key-value size
+        total_workload_key_size_ = other.total_workload_key_size_;
+        total_workload_value_size_ = other.total_workload_value_size_;
 
         return *this;
     }

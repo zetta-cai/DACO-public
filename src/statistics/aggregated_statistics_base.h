@@ -49,9 +49,11 @@ namespace covered
         uint64_t getTotalCacheMarginBytes() const; // cache size bytes + cache margin bytes = cache capacity bytes
         double getTotalCacheUtilization() const;
 
-        // Get aggregated statistics related with value size
-        double getTotalValueSize() const;
-        double getAvgValueSize() const;
+        // Get aggregated statistics related with workload key-value size
+        double getTotalWorkloadKeySize() const;
+        double getTotalWorkloadValueSize() const;
+        double getAvgWorkloadKeySize() const;
+        double getAvgWorkloadValueSize() const;
 
         // Get string for aggregate statistics
         std::string toString() const;
@@ -86,8 +88,9 @@ namespace covered
         uint64_t total_cache_size_bytes_;
         uint64_t total_cache_capacity_bytes_;
 
-        // Aggregated statistics related with value size
-        double total_value_size_;
+        // Aggregated statistics related with workload key-value size
+        double total_workload_key_size_;
+        double total_workload_value_size_;
     };
 }
 

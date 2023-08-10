@@ -14,6 +14,7 @@
 #include <fstream>
 #include <mutex>
 #include <pthread.h>
+#include <random> // std::mt19937_64
 #include <string>
 #include <time.h> // struct timespec
 
@@ -89,6 +90,8 @@ namespace covered
         static const uint32_t SECOND_PRECISION; // # of digits after decimal point of second shown in time string
         // Task scheduling
         static const int SCHEDULING_POLICY;
+        // Charset
+        static const std::string CHARSET;
 
         // (1) I/O
 
@@ -175,6 +178,7 @@ namespace covered
         // (8) Others
 
         static uint32_t getTimeBasedRandomSeed(); // Get a random seed (instead of deterministic) based on current time
+        static std::string getRandomString(const uint32_t& length);
 
         template<class T>
         static void initializeAtomicArray(std::atomic<T>* atomic_array, const uint32_t& array_size, const T& default_value)
@@ -200,6 +204,8 @@ namespace covered
         static std::string getInfixForEvaluatorStatisticsFilepath_(EvaluatorCLI* evaluator_cli_ptr);
 
         // Task scheduling
+        static std::mt19937_64 string_randgen_;
+        static std::uniform_int_distribution<uint32_t> string_randdist_;
         static void preparePthreadAttr_(pthread_attr_t* attr_ptr);
     };
 }

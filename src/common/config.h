@@ -44,6 +44,7 @@ namespace covered
         static const std::string FACEBOOK_CONFIG_FILEPATH_KEYSTR;
         static const std::string FINE_GRAINED_LOCKING_SIZE_KEYSTR;
         static const std::string IS_DEBUG_KEYSTR;
+        static const std::string IS_GENERATE_RANDOM_VALUESTR_KEYSTR;
         static const std::string IS_TRACK_EVENT_KEYSTR;
         static const std::string LATENCY_HISTOGRAM_SIZE_KEYSTR;
         static const std::string OUTPUT_BASEDIR_KEYSTR;
@@ -84,6 +85,7 @@ namespace covered
         static std::string getFacebookConfigFilepath();
         static uint32_t getFineGrainedLockingSize();
         static bool isDebug();
+        static bool isGenerateRandomValuestr();
         static bool isTrackEvent();
         static uint32_t getLatencyHistogramSize();
         static std::string getOutputBasedir();
@@ -107,42 +109,43 @@ namespace covered
         static boost::json::object json_object_;
 
         // Come CLI parameters yet NOT affect evaluation results (with sufficient CPU and memory power -> irrelevant with is_single_node) and NOT changed during evaluation (with fixed evaluation testbed -> irrelevant with main_class_name)
-        static std::string config_filepath_;
+        static std::string config_filepath_; // Configuration file path for COVERED to load static configurations
         static std::string main_class_name_; // Come from argv[0]
         static bool is_single_node_; // Decided by CLIBase::main_class_name_
 
-        static std::vector<std::string> client_ipstrs_;
-        static uint32_t client_raw_statistics_slot_interval_sec_;
-        static uint16_t client_recvmsg_startport_;
-        static uint16_t client_worker_recvrsp_startport_;
-        static std::string cloud_ipstr_;
-        static uint16_t cloud_recvmsg_startport_;
-        static uint16_t cloud_recvreq_startport_;
-        static std::string cloud_rocksdb_basedir_;
-        static uint32_t dataset_loader_sleep_for_compaction_sec_;
-        static uint16_t edge_beacon_server_recvreq_startport_;
-        static uint16_t edge_beacon_server_recvrsp_startport_;
-        static uint32_t edge_cache_server_data_request_buffer_size_;
-        static uint16_t edge_cache_server_recvreq_startport_;
-        static uint16_t edge_cache_server_worker_recvreq_startport_;
-        static uint16_t edge_cache_server_worker_recvrsp_startport_;
-        static uint16_t edge_invalidation_server_recvreq_startport_;
-        static std::vector<std::string> edge_ipstrs_;
-        static uint16_t edge_recvmsg_startport_;
-        static std::string evaluator_ipstr_;
-        static uint16_t evaluator_recvmsg_port_;
-        static std::string facebook_config_filepath_;
-        static uint32_t fine_grained_locking_size_;
-        static bool is_debug_; // NOT affect evaluation results and NOT changed during evaluation
-        static bool is_track_event_; // NOT affect evaluation results and NOT changed during evaluation
-        static uint32_t latency_histogram_size_;
-        static std::string output_basedir_;
-        static uint32_t propagation_item_buffer_size_client_toedge_;
-        static uint32_t propagation_item_buffer_size_edge_toclient_;
-        static uint32_t propagation_item_buffer_size_edge_toedge_;
-        static uint32_t propagation_item_buffer_size_edge_tocloud_;
-        static uint32_t propagation_item_buffer_size_cloud_toedge_;
-        static std::string version_;
+        static std::vector<std::string> client_ipstrs_; // IP strings of physical client nodes
+        static uint32_t client_raw_statistics_slot_interval_sec_; // Slot interval for client raw statistics in units of seconds
+        static uint16_t client_recvmsg_startport_; // Start UDP port for client to receive benchmark control messages
+        static uint16_t client_worker_recvrsp_startport_; // Start UDP port for client worker to receive local responses
+        static std::string cloud_ipstr_; // IP string of physical cloud node
+        static uint16_t cloud_recvmsg_startport_; // Start UDP port for cloud to receive benchmark control messages
+        static uint16_t cloud_recvreq_startport_; // Start UDP port for cloud to receive global requests
+        static std::string cloud_rocksdb_basedir_; // Base directory of RocksDB in cloud
+        static uint32_t dataset_loader_sleep_for_compaction_sec_; // Sleep time for dataset loader to wait for compaction in units of seconds
+        static uint16_t edge_beacon_server_recvreq_startport_; // Start UDP port for edge beacon server to receive cooperation control requests
+        static uint16_t edge_beacon_server_recvrsp_startport_; // Start UDP port for edge beacon server to receive cooperation control responses
+        static uint32_t edge_cache_server_data_request_buffer_size_; // Buffer size for edge cache server to store local/redirected data requests
+        static uint16_t edge_cache_server_recvreq_startport_; // Start UDP port for edge cache server to receive local/redirected requests
+        static uint16_t edge_cache_server_worker_recvreq_startport_; // Start UDP port for edge cache server worker to receive cooperation control requests
+        static uint16_t edge_cache_server_worker_recvrsp_startport_; // Start UDP port for edge cache server worker to receive global responses
+        static uint16_t edge_invalidation_server_recvreq_startport_; // Start UDP port for edge invalidation server to receive cooperation control requests
+        static std::vector<std::string> edge_ipstrs_; // IP strings of physical edge nodes
+        static uint16_t edge_recvmsg_startport_; // Start UDP port for edge to receive benchmark control messages
+        static std::string evaluator_ipstr_; // IP string of physical evaluator node
+        static uint16_t evaluator_recvmsg_port_; // UDP port for evaluator to receive benchmark control messages
+        static std::string facebook_config_filepath_; // Configuration file path for Facebook CDN workload
+        static uint32_t fine_grained_locking_size_; // Bucket size of fine-grained locking
+        static bool is_debug_; // Whether to dump debug information -> NOT affect evaluation results and NOT changed during evaluation
+        static bool is_generate_random_valuestr_; // Whether to generate random string to fill up value content
+        static bool is_track_event_; // Whether to track per-message events for debugging -> NOT affect evaluation results and NOT changed during evaluation
+        static uint32_t latency_histogram_size_; // Size of latency histogram
+        static std::string output_basedir_; // Base directory for output files
+        static uint32_t propagation_item_buffer_size_client_toedge_; // Buffer size for client-to-edge propagated messages
+        static uint32_t propagation_item_buffer_size_edge_toclient_; // Buffer size for edge-to-client propagated messages
+        static uint32_t propagation_item_buffer_size_edge_toedge_; // Buffer size for edge-to-edge propagated messages
+        static uint32_t propagation_item_buffer_size_edge_tocloud_; // Buffer size for edge-to-cloud propagated messages
+        static uint32_t propagation_item_buffer_size_cloud_toedge_; // Buffer size for cloud-to-edge propagated messages
+        static std::string version_; // Version of COVERED
     };
 }
 

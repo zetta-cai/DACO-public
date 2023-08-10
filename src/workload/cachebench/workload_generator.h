@@ -38,9 +38,14 @@ class WorkloadGenerator : public covered::GeneratorBase {
       std::mt19937_64& gen,
       std::optional<uint64_t> lastRequestId = std::nullopt) override;
   
+  // Siyuan: get dataset item of a specific index
   const facebook::cachelib::cachebench::Request& getReq(uint8_t poolId, uint32_t itemidx);
 
   const std::vector<std::string>& getAllKeys() const override { return keys_; }
+
+  // Siyuan: average dataset key/value size
+  double getAvgDatasetKeysize() const;
+  double getAvgDatasetValuesize() const;
 
  private:
   static const std::string kClassName;
@@ -67,5 +72,9 @@ class WorkloadGenerator : public covered::GeneratorBase {
   std::vector<std::uniform_int_distribution<uint32_t>> keyGenForPool_;
 
   std::vector<WorkloadDistribution> workloadDist_;
+  
+  // Siyuan: average dataset key/value size
+  double avg_dataset_keysize_;
+  double avg_dataset_valuesize_;
 };
 } // namespace covered

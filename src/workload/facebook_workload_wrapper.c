@@ -134,6 +134,17 @@ namespace covered
         return WorkloadItem(tmp_covered_key, tmp_covered_value, WorkloadItemType::kWorkloadItemPut);
     }
 
+    // Get average dataset key/value size
+    double FacebookWorkloadWrapper::getAvgDatasetKeysize() const
+    {
+        return workload_generator_->getAvgDatasetKeysize();
+    }
+    
+    double FacebookWorkloadWrapper::getAvgDatasetValuesize() const
+    {
+        return workload_generator_->getAvgDatasetValuesize();
+    }
+
     // The same makeGenerator as in lib/CacheLib/cachelib/cachebench/runner/Stressor.cpp
     std::unique_ptr<covered::GeneratorBase> FacebookWorkloadWrapper::makeGenerator_(const StressorConfig& config, const uint32_t& client_idx)
     {

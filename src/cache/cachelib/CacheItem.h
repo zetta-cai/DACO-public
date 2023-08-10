@@ -1,7 +1,7 @@
 /*
  * CacheItem: refer to lib/cachelib/allocator/CacheItem.h.
  *
- * Hack to expose internal variables to support required interfaces (NOTE: Cachelib already track cache size usage for cache capacity constraint).
+ * Hack to expose internal variables to support required interfaces (NOTE: Cachelib already track cache size usage for cache capacity constraint, but we need to expose it for CachelibLocalCache).
  * 
  * By Siyuan Sheng (2023.08.08).
  */

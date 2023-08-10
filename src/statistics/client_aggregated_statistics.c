@@ -108,10 +108,11 @@ namespace covered
         total_cache_size_bytes_ = client_raw_statistics_ptr->closest_edge_cache_size_bytes_;
         total_cache_capacity_bytes_ = client_raw_statistics_ptr->closest_edge_cache_capacity_bytes_;
 
-        // Aggregate per-client-worker value size statistics
+        // Aggregate per-client-worker workload key-value size statistics
         for (uint32_t local_worker_idx = 0; local_worker_idx < perclient_workercnt; local_worker_idx++)
         {
-            total_value_size_ += client_raw_statistics_ptr->perclientworker_total_value_sizes_[local_worker_idx];
+            total_workload_key_size_ += client_raw_statistics_ptr->perclientworker_total_workload_key_sizes_[local_worker_idx];
+            total_workload_value_size_ += client_raw_statistics_ptr->perclientworker_total_workload_value_sizes_[local_worker_idx];
         }
 
         return;

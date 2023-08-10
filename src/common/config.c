@@ -32,6 +32,7 @@ namespace covered
     const std::string Config::FACEBOOK_CONFIG_FILEPATH_KEYSTR("facebook_config_filepath");
     const std::string Config::FINE_GRAINED_LOCKING_SIZE_KEYSTR("fine_grained_locking_size");
     const std::string Config::IS_DEBUG_KEYSTR("is_debug");
+    const std::string Config::IS_GENERATE_RANDOM_VALUESTR_KEYSTR("is_generate_random_valuestr");
     const std::string Config::IS_TRACK_EVENT_KEYSTR("is_track_event");
     const std::string Config::LATENCY_HISTOGRAM_SIZE_KEYSTR("latency_histogram_size");
     const std::string Config::OUTPUT_BASEDIR_KEYSTR("output_basedir");
@@ -75,6 +76,7 @@ namespace covered
     std::string Config::facebook_config_filepath_("lib/CacheLib/cachelib/cachebench/test_configs/hit_ratio/cdn/config.json");
     uint32_t Config::fine_grained_locking_size_ = 1000;
     bool Config::is_debug_ = false;
+    bool Config::is_generate_random_valuestr_ = false;
     bool Config::is_track_event_ = false;
     uint32_t Config::latency_histogram_size_ = 1000000; // Track latency up to 1000 ms
     std::string Config::output_basedir_("output");
@@ -244,6 +246,11 @@ namespace covered
                 {
                     int64_t tmp_value = kv_ptr->value().get_int64();
                     is_debug_ = tmp_value==1?true:false;
+                }
+                kv_ptr = find_(IS_GENERATE_RANDOM_VALUESTR_KEYSTR);
+                {
+                    int64_t tmp_value = kv_ptr->value().get_int64();
+                    is_generate_random_valuestr_ = tmp_value==1?true:false;
                 }
                 kv_ptr = find_(IS_TRACK_EVENT_KEYSTR);
                 {
@@ -539,6 +546,12 @@ namespace covered
         checkIsValid_();
         return is_debug_;
     }
+
+    bool Config::isGenerateRandomValuestr()
+    {
+        checkIsValid_();
+        return is_generate_random_valuestr_;
+    }
     
     bool Config::isTrackEvent()
     {
@@ -633,6 +646,7 @@ namespace covered
         oss << "Facebook config filepath: " << facebook_config_filepath_ << std::endl;
         oss << "Fine-grained locking size: " << fine_grained_locking_size_ << std::endl;
         oss << "Is debug: " << (is_debug_?"true":"false") << std::endl;
+        oss << "Is generate random valuestr: " << (is_generate_random_valuestr_?"true":"false") << std::endl;
         oss << "Is track event: " << (is_track_event_?"true":"false") << std::endl;
         oss << "Latency histogram size: " << latency_histogram_size_ << std::endl;
         oss << "Output base directory: " << output_basedir_ << std::endl;

@@ -31,6 +31,10 @@ namespace covered
 
         virtual uint32_t getPracticalKeycnt() const = 0;
         WorkloadItem getDatasetItem(const uint32_t itemidx);
+
+        // Get average dataset key/value size
+        virtual double getAvgDatasetKeysize() const = 0;
+        virtual double getAvgDatasetValuesize() const = 0;
     private:
         static const std::string kClassName;
 

@@ -43,7 +43,7 @@ namespace covered
         void updateCacheUtilization(const uint32_t& local_client_worker_idx, const uint64_t& closest_edge_cache_size_bytes, const uint64_t& closest_edge_cache_capacity_bytes, const bool& is_stresstest_phase);
 
         // Update cur-slot/stable client raw statistics for value size
-        void updateValueSize(const uint32_t& local_client_worker_idx, const uint32_t& value_size, const bool& is_stresstest_phase);
+        void updateWorkloadKeyValueSize(const uint32_t& local_client_worker_idx, const uint32_t& key_size, const uint32_t& value_size, const bool& is_stresstest_phase);
 
         // (2) Switch cur-slot client raw statistics (invoked by client thread ClientWrapper)
 
