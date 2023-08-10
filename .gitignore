@@ -9,6 +9,7 @@ lib/cpp-lru-cache
 lib/caches
 lib/rocksdb-8.1.1
 lib/smhasher
+lib/segcache
 simulator
 total_statistics_loader
 dataset_loader

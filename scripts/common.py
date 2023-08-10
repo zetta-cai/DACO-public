@@ -10,7 +10,8 @@ only_cachelib = True
 filename = sys.argv[0]
 proj_dirname = os.path.dirname(os.path.dirname(os.path.abspath(filename)))
 
-username = os.getenv("USER")
+#username = os.getenv("USER") # NOTE: USER will be root if sudo is used
+username = os.getenv("SUDO_USER")
 
 # TODO: update lib_dirpath for new library installation path if necessary
 lib_dirpath = "{}/lib".format(proj_dirname)

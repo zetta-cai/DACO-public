@@ -53,7 +53,7 @@ namespace covered
 
             // Dynamic configurations for client
             argument_desc_.add_options()
-                ("cache_name", boost::program_options::value<std::string>()->default_value(Util::LRU_CACHE_NAME), "cache name (e.g., cachelib, lfu, lru, and covered)")
+                ("cache_name", boost::program_options::value<std::string>()->default_value(Util::LRU_CACHE_NAME), "cache name (e.g., cachelib, lfu, lru, segcache, and covered)")
                 ("capacity_mb", boost::program_options::value<uint64_t>()->default_value(1024), "total cache capacity (including data and metadata) in units of MiB")
                 ("hash_name", boost::program_options::value<std::string>()->default_value(Util::MMH3_HASH_NAME, "the type of consistent hashing for DHT (e.g., mmh3)"))
                 ("percacheserver_workercnt", boost::program_options::value<uint32_t>()->default_value(1), "the number of worker threads for each cache server")
@@ -128,7 +128,7 @@ namespace covered
 
     void EdgeCLI::checkCacheName_() const
     {
-        if (cache_name_ != Util::CACHELIB_CACHE_NAME && cache_name_ != Util::LFU_CACHE_NAME && cache_name_ != Util::LRU_CACHE_NAME && cache_name_ != Util::DATASET_LOADER_MAIN_NAME)
+        if (cache_name_ != Util::CACHELIB_CACHE_NAME && cache_name_ != Util::LFU_CACHE_NAME && cache_name_ != Util::LRU_CACHE_NAME && cache_name_ != Util::SEGCACHE_CACHE_NAME && cache_name_ != Util::DATASET_LOADER_MAIN_NAME)
         {
             std::ostringstream oss;
             oss << "cache name " << cache_name_ << " is not supported!";

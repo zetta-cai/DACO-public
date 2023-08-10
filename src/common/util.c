@@ -38,6 +38,7 @@ namespace covered
     const std::string Util::CACHELIB_CACHE_NAME("cachelib");
     const std::string Util::LFU_CACHE_NAME("lfu");
     const std::string Util::LRU_CACHE_NAME("lru");
+    const std::string Util::SEGCACHE_CACHE_NAME("segcache");
     const std::string Util::COVERED_CACHE_NAME("covered");
 
     // Hash name

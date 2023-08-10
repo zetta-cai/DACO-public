@@ -14,6 +14,7 @@ is_install_lrucache = True
 is_install_lfucache = True
 is_install_rocksdb = True
 is_install_smhasher = True
+is_install_segcache = True
 
 # Include util module for the following installation
 from util import *
@@ -251,7 +252,50 @@ if is_install_smhasher:
         else:
             dump(filename, "the latest commit ID of SMHasher is already {}".format(smhasher_targetcommit))
 
-# (7) Chown of libraries
+# (7) Install SegCache (commit ID: 0abdfee)
+
+if is_install_segcache:
+    segcache_clone_dirpath = "{}/segcache".format(lib_dirpath)
+    if not os.path.exists(segcache_clone_dirpath):
+        prompt(filename, "clone SegCache into {}...".format(segcache_clone_dirpath))
+        segcache_clone_cmd = "cd {} && git clone https://github.com/thesys-lab/segcache".format(lib_dirpath)
+
+        segcache_clone_subprocess = subprocess.run(segcache_clone_cmd, shell=True)
+        if segcache_clone_subprocess.returncode != 0:
+            die(filename, "failed to clone SegCache into {}".format(segcache_clone_dirpath))
+    else:
+        dump(filename, "{} exists (SegCache has been cloned)".format(segcache_clone_dirpath))
+
+    segcache_targetcommit = "0abdfee"
+    segcache_checkversion_cmd = "cd {} && git log --format=\"%H\" -n 1".format(segcache_clone_dirpath)
+    segcache_checkversion_subprocess = subprocess.run(segcache_checkversion_cmd, shell=True, capture_output=True)
+    if segcache_checkversion_subprocess.returncode != 0:
+        die(filename, "failed to get the latest commit ID of SegCache")
+    else:
+        segcache_checkversion_outputbytes = segcache_checkversion_subprocess.stdout
+        segcache_checkversion_outputstr = segcache_checkversion_outputbytes.decode("utf-8")
+        if segcache_targetcommit not in segcache_checkversion_outputstr:
+            prompt(filename, "the latest commit ID of SegCache is {} -> reset SegCache to commit {}...".format(segcache_checkversion_outputstr, segcache_targetcommit))
+            segcache_reset_cmd = "cd {} && git reset --hard {}".format(segcache_clone_dirpath, segcache_targetcommit)
+            
+            segcache_reset_subprocess = subprocess.run(segcache_reset_cmd, shell=True)
+            if segcache_reset_subprocess.returncode != 0:
+                die(filename, "failed to reset SegCache")
+        else:
+            dump(filename, "the latest commit ID of SegCache is already {}".format(segcache_targetcommit))
+    
+    segcache_install_dirpath = "{}/build".format(segcache_clone_dirpath)
+    if not os.path.exists(segcache_install_dirpath):
+        prompt(filename, "install SegCache from source...")
+        segcache_install_cmd = "cd {} && mkdir build && cd build && cmake .. && make -j".format(segcache_clone_dirpath)
+
+        segcache_install_subprocess = subprocess.run(segcache_install_cmd, shell=True)
+        if segcache_install_subprocess.returncode != 0:
+            die(filename, "failed to install {}".format(segcache_install_dirpath))
+    else:
+        dump(filename, "{} exists (SegCache has been installed)".format(segcache_install_dirpath))
+
+# (8) Chown of libraries
 
 prompt(filename, "chown of libraries...")
 chown_cmd = "sudo chown -R {0}:{0} {1}".format(username, lib_dirpath)
