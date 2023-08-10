@@ -1,0 +1,59 @@
+# Compiled Object files
+*.lo
+*.o
+/_bin
+/_site
+
+# Compiled Dynamic libraries
+*.so
+
+# Compiled Static libraries
+*.la
+*.a
+
+# Compiled misc
+*.dep
+*.gcda
+*.gcno
+*.gcov
+
+# Packages
+*.tar.gz
+*.tar.bz2
+
+# Logs
+*.log
+
+# Temporary
+/_build
+*.swp
+*.~
+*.project
+*.cproject
+
+# cscope
+cscope.out
+
+# CLion
+/.idea
+lcov
+
+# python compiled files
+*.pyc
+
+cdb.rs
+*.cdb
+compile_commands.json
+
+*.cmd
+/core
+CMAKE_BINARY_DIR
+
+# CMake generates a .cargo/config which is specific to the local
+# setup. We don't want to include it within the repo
+.cargo
+
+# Cargo build directory
+/target
+benchmarks/config
+*.svg

@@ -1,0 +1,7 @@
+add_subdirectory(cuckoo)
+add_subdirectory(slab)
+add_subdirectory(seg)
+if(USE_PMEM)
+    add_subdirectory(cuckoo_pmem)
+    add_subdirectory(slab_pmem)
+endif(USE_PMEM)
