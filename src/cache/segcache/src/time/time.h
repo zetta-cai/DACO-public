@@ -6,6 +6,8 @@
 #include <cc_debug.h>
 #include <cc_option.h>
 
+struct SegCache;
+
 /*********
  * Types *
  *********
@@ -85,17 +87,19 @@ extern uint8_t time_type;
 /*
  * Time when the process was started expressed as absolute unix timestamp
  */
-extern time_t time_start;
+// Siyuan: remove global variables
+//extern time_t time_start;
 
 /*
  * Current time relative to process start. These are updated with each call
  * to time_update(). Do NOT use these directly; instead use the API provided
  * below.
  */
-extern proc_time_i proc_sec;
-extern proc_time_fine_i proc_ms;
-extern proc_time_fine_i proc_us;
-extern proc_time_fine_i proc_ns;
+// Siyuan: remove global variables
+// extern proc_time_i proc_sec;
+// extern proc_time_fine_i proc_ms;
+// extern proc_time_fine_i proc_us;
+// extern proc_time_fine_i proc_ns;
 
 /*******
  * API *
@@ -118,54 +122,54 @@ time_started(void)
  * Current time since the process started
  */
 static inline proc_time_i
-time_proc_sec(void)
+time_proc_sec(struct SegCache& segcache)
 {
-    return __atomic_load_n(&proc_sec, __ATOMIC_RELAXED);
+    return __atomic_load_n(&segcache.proc_sec, __ATOMIC_RELAXED);
 }
 
 static inline proc_time_fine_i
-time_proc_ms(void)
+time_proc_ms(struct SegCache& segcache)
 {
-    return __atomic_load_n(&proc_ms, __ATOMIC_RELAXED);
+    return __atomic_load_n(&segcache.proc_ms, __ATOMIC_RELAXED);
 }
 
 static inline proc_time_fine_i
-time_proc_us(void)
+time_proc_us(struct SegCache& segcache)
 {
-    return __atomic_load_n(&proc_us, __ATOMIC_RELAXED);
+    return __atomic_load_n(&segcache.proc_us, __ATOMIC_RELAXED);
 }
 
 static inline proc_time_fine_i
-time_proc_ns(void)
+time_proc_ns(struct SegCache& segcache)
 {
-    return __atomic_load_n(&proc_ns, __ATOMIC_RELAXED);
+    return __atomic_load_n(&segcache.proc_ns, __ATOMIC_RELAXED);
 }
 
 /*
  * Current unix timestamp
  */
 static inline time_t  /* time_t is used for compatibility with time_started() */
-time_unix_sec(void)
+time_unix_sec(struct SegCache& segcache)
 {
-    return time_started() + time_proc_sec();
+    return time_started() + time_proc_sec(segcache);
 }
 
 static inline unix_time_fine_u
-time_unix_ms(void)
+time_unix_ms(struct SegCache& segcache)
 {
-    return time_started() * MSEC_PER_SEC + time_proc_ms();
+    return time_started() * MSEC_PER_SEC + time_proc_ms(segcache);
 }
 
 static inline unix_time_fine_u
-time_unix_us(void)
+time_unix_us(struct SegCache& segcache)
 {
-    return time_started() * USEC_PER_SEC + time_proc_us();
+    return time_started() * USEC_PER_SEC + time_proc_us(segcache);
 }
 
 static inline unix_time_fine_u
-time_unix_ns(void)
+time_unix_ns(struct SegCache& segcache)
 {
-    return time_started() * NSEC_PER_SEC + time_proc_ns();
+    return time_started() * NSEC_PER_SEC + time_proc_ns(segcache);
 }
 
 /*

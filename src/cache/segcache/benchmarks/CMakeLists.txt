@@ -1,7 +1,8 @@
-add_subdirectory(storage_cuckoo)
-add_subdirectory(storage_slab)
+# Siyuan: NOT use cuckoo, slab, and LHD temporarily
+#add_subdirectory(storage_cuckoo)
+#add_subdirectory(storage_slab)
 add_subdirectory(storage_seg)
-add_subdirectory(storage_LHD)
+#add_subdirectory(storage_LHD)
 
 
 set(SOURCE bench_storage.c shared.c)

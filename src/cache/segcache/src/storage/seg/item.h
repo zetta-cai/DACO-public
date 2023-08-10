@@ -5,7 +5,11 @@
 #include <cc_bstring.h>
 #include <cc_metric.h>
 #include <cc_queue.h>
-#include <time/time.h>
+
+// Siyuan
+//#include <time/time.h>
+#include "segcache.h"
+
 
 #include <stdbool.h>
 #include <stddef.h>
