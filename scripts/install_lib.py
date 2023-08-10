@@ -284,7 +284,18 @@ if is_install_segcache:
         else:
             dump(filename, "the latest commit ID of SegCache is already {}".format(segcache_targetcommit))
     
-    segcache_install_dirpath = "{}/build".format(segcache_clone_dirpath)
+    # segcache_install_dirpath = "{}/build".format(segcache_clone_dirpath)
+    # if not os.path.exists(segcache_install_dirpath):
+    #     prompt(filename, "install SegCache from source...")
+    #     segcache_install_cmd = "cd {} && mkdir build && cd build && cmake .. && make -j".format(segcache_clone_dirpath)
+
+    #     segcache_install_subprocess = subprocess.run(segcache_install_cmd, shell=True)
+    #     if segcache_install_subprocess.returncode != 0:
+    #         die(filename, "failed to install {}".format(segcache_install_dirpath))
+    # else:
+    #     dump(filename, "{} exists (SegCache has been installed)".format(segcache_install_dirpath))
+
+    segcache_install_dirpath = "{}/src/cache/segcache/build".format(proj_dirpath)
     if not os.path.exists(segcache_install_dirpath):
         prompt(filename, "install SegCache from source...")
         segcache_install_cmd = "cd {} && mkdir build && cd build && cmake .. && make -j".format(segcache_clone_dirpath)

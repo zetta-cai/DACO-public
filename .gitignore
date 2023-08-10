@@ -10,6 +10,7 @@ lib/caches
 lib/rocksdb-8.1.1
 lib/smhasher
 lib/segcache
+src/cache/segcache/build
 simulator
 total_statistics_loader
 dataset_loader
