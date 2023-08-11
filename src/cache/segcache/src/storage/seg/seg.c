@@ -556,8 +556,8 @@ seg_get_new(struct SegCache* segcache_ptr)
 
     while (seg_id_ret == -1 && n_retries_left >= 0) {
         /* evict seg */
-        if (segcache_ptr->evict_info.policy == EVICT_MERGE_FIFO) {
-            status = seg_merge_evict(&seg_id_ret);
+        if (segcache_ptr->evict_info_ptr->policy == EVICT_MERGE_FIFO) {
+            status = seg_merge_evict(&seg_id_ret, segcache_ptr);
         } else {
             status = seg_evict(&seg_id_ret, segcache_ptr);
         }
@@ -728,13 +728,13 @@ seg_setup(seg_options_st *options, seg_metrics_st *metrics, struct SegCache* seg
 
     ttl_bucket_setup(segcache_ptr);
 
-    segcache_ptr->evict_info.merge_opt.seg_n_merge     =
+    segcache_ptr->evict_info_ptr->merge_opt.seg_n_merge     =
         option_uint(&segcache_ptr->seg_options->seg_n_merge);
-    segcache_ptr->evict_info.merge_opt.seg_n_max_merge =
+    segcache_ptr->evict_info_ptr->merge_opt.seg_n_max_merge =
         option_uint(&segcache_ptr->seg_options->seg_n_max_merge);
     segevict_setup(option_uint(&options->seg_evict_opt),
         option_uint(&segcache_ptr->seg_options->seg_mature_time), segcache_ptr);
-    if (segcache_ptr->evict_info.policy == EVICT_MERGE_FIFO) {
+    if (segcache_ptr->evict_info_ptr->policy == EVICT_MERGE_FIFO) {
         segcache_ptr->heap_ptr->n_reserved_seg = segcache_ptr->n_thread;
     }
 
@@ -743,7 +743,7 @@ seg_setup(seg_options_st *options, seg_metrics_st *metrics, struct SegCache* seg
     segcache_ptr->seg_initialized = true;
 
     log_info("Seg header size: %d, item header size: %d, eviction algorithm %s",
-        SEG_HDR_SIZE, ITEM_HDR_SIZE, eviction_policy_names[segcache_ptr->evict_info.policy]);
+        SEG_HDR_SIZE, ITEM_HDR_SIZE, eviction_policy_names[segcache_ptr->evict_info_ptr->policy]);
 
     return;
 
@@ -753,7 +753,8 @@ seg_setup(seg_options_st *options, seg_metrics_st *metrics, struct SegCache* seg
 }
 
 // Siyuan: allow forward declaration to break circular dependency
-uint8_t *
+
+static inline uint8_t *
 get_seg_data_start(int32_t seg_id, struct SegCache* segcache_ptr)
 {
     return segcache_ptr->heap_ptr->base + segcache_ptr->heap_ptr->seg_size * seg_id;

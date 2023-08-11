@@ -9,48 +9,50 @@
 
 #include <sys/types.h>
 
-extern struct seg_evict_info evict_info;
-extern struct ttl_bucket     ttl_buckets[MAX_N_TTL_BUCKET];
-extern seg_metrics_st        *seg_metrics; 
-extern seg_perttl_metrics_st perttl[MAX_N_TTL_BUCKET];
+// Siyuan: encapsulate global variables
+// extern struct seg_evict_info evict_info;
+// extern struct ttl_bucket     ttl_buckets[MAX_N_TTL_BUCKET];
+// extern seg_metrics_st        *seg_metrics; 
+// extern seg_perttl_metrics_st perttl[MAX_N_TTL_BUCKET];
 
-static uint64_t seg_evict_seg_cnt = 0; 
-static uint64_t seg_evict_seg_sum = 0; 
+// Siyuan: encapsulate global variables
+// static uint64_t seg_evict_seg_cnt = 0; 
+// static uint64_t seg_evict_seg_sum = 0; 
 
 
 static inline void
 seg_copy(int32_t seg_id_dest, int32_t seg_id_src,
-         double *cutoff_freq, double target_ratio);
+         double *cutoff_freq, double target_ratio, struct SegCache* segcache_ptr);
 
 int32_t
 merge_segs(struct seg *segs_to_merge[],
            int n_evictable,
-           double *merge_keep_ratio);
+           double *merge_keep_ratio, struct SegCache* segcache_ptr);
 
 static inline uint64_t
-n_evicted_seg(void)
+n_evicted_seg(struct SegCache* segcache_ptr)
 {
-    return __atomic_load_n(&seg_evict_seg_cnt, __ATOMIC_RELAXED); 
+    return __atomic_load_n(&segcache_ptr->seg_evict_seg_cnt, __ATOMIC_RELAXED); 
     // return __atomic_load_n(
-    //     &seg_metrics->seg_evict_seg_cnt.counter, __ATOMIC_RELAXED);
+    //     &segcache_ptr->seg_metrics->seg_evict_seg_cnt.counter, __ATOMIC_RELAXED);
 }
 
 static inline uint64_t
-cal_mean_eviction_age(void)
+cal_mean_eviction_age(struct SegCache* segcache_ptr)
 {
     // uint64_t evict_age_sum = __atomic_load_n(
-    //     &((seg_metrics->seg_evict_age_sum).counter), __ATOMIC_RELAXED);
+    //     &((segcache_ptr->seg_metrics->seg_evict_age_sum).counter), __ATOMIC_RELAXED);
     // uint64_t evict_seg_cnt = __atomic_load_n(
-    //     &(seg_metrics->seg_evict_seg_cnt.counter), __ATOMIC_RELAXED);
+    //     &(segcache_ptr->seg_metrics->seg_evict_seg_cnt.counter), __ATOMIC_RELAXED);
 
-    uint64_t evict_age_sum = __atomic_load_n(&seg_evict_seg_sum, __ATOMIC_RELAXED);
-    uint64_t evict_seg_cnt = __atomic_load_n(&seg_evict_seg_cnt, __ATOMIC_RELAXED);
+    uint64_t evict_age_sum = __atomic_load_n(&segcache_ptr->seg_evict_seg_sum, __ATOMIC_RELAXED);
+    uint64_t evict_seg_cnt = __atomic_load_n(&segcache_ptr->seg_evict_seg_cnt, __ATOMIC_RELAXED);
 
     if (evict_seg_cnt == 0) {
         return 86400;
     }
 
-    return evict_age_sum / evict_seg_cnt + evict_info.seg_mature_time;
+    return evict_age_sum / evict_seg_cnt + segcache_ptr->evict_info_ptr->seg_mature_time;
 }
 
 /**
@@ -61,38 +63,38 @@ cal_mean_eviction_age(void)
  * @return
  */
 static struct seg *
-find_n_consecutive_evictable_seg(struct seg *seg)
+find_n_consecutive_evictable_seg(struct seg *seg, struct SegCache* segcache_ptr)
 {
     struct seg *next_seg1, *next_seg2;
     int32_t    seg_id, next_seg_id1, next_seg_id2;
 
     seg_id       = seg->seg_id;
-    next_seg_id1 = heap.segs[seg_id].next_seg_id;
+    next_seg_id1 = segcache_ptr->heap_ptr->segs[seg_id].next_seg_id;
     next_seg_id2 =
-        next_seg_id1 == -1 ? -1 : heap.segs[next_seg_id1].next_seg_id;
+        next_seg_id1 == -1 ? -1 : segcache_ptr->heap_ptr->segs[next_seg_id1].next_seg_id;
 
     while (seg_id != -1 && next_seg_id1 != -1 && next_seg_id2 != -1) {
-        seg       = &heap.segs[seg_id];
-        next_seg1 = &heap.segs[next_seg_id1];
-        next_seg2 = &heap.segs[next_seg_id2];
+        seg       = &segcache_ptr->heap_ptr->segs[seg_id];
+        next_seg1 = &segcache_ptr->heap_ptr->segs[next_seg_id1];
+        next_seg2 = &segcache_ptr->heap_ptr->segs[next_seg_id2];
 
-        if (!seg_evictable(next_seg2)) {
+        if (!seg_evictable(next_seg2, segcache_ptr)) {
             seg_id       = next_seg2->next_seg_id;
-            next_seg_id1 = seg_id == -1 ? -1 : heap.segs[seg_id].next_seg_id;
+            next_seg_id1 = seg_id == -1 ? -1 : segcache_ptr->heap_ptr->segs[seg_id].next_seg_id;
             next_seg_id2 =
-                next_seg_id1 == -1 ? -1 : heap.segs[next_seg_id1].next_seg_id;
+                next_seg_id1 == -1 ? -1 : segcache_ptr->heap_ptr->segs[next_seg_id1].next_seg_id;
             continue;
         }
 
-        if (!seg_evictable(next_seg1)) {
+        if (!seg_evictable(next_seg1, segcache_ptr)) {
             seg_id       = next_seg_id2;
             next_seg_id1 = next_seg2->next_seg_id;
             next_seg_id2 =
-                next_seg_id1 == -1 ? -1 : heap.segs[next_seg_id1].next_seg_id;
+                next_seg_id1 == -1 ? -1 : segcache_ptr->heap_ptr->segs[next_seg_id1].next_seg_id;
             continue;
         }
 
-        if (!seg_evictable(seg)) {
+        if (!seg_evictable(seg, segcache_ptr)) {
             seg_id       = next_seg_id1;
             next_seg_id1 = next_seg_id2;
             next_seg_id2 = next_seg2->next_seg_id;
@@ -113,7 +115,7 @@ prep_seg_to_merge(int32_t start_seg_id,
                   struct seg *segs_to_merge[],
                   int *n_evictable_seg,
                   double *merge_keep_ratio, 
-                  int32_t *next_seg_to_merge)
+                  int32_t *next_seg_to_merge, struct SegCache* segcache_ptr)
 {
 
     *n_evictable_seg = 0;
@@ -122,22 +124,22 @@ prep_seg_to_merge(int32_t start_seg_id,
     uint64_t n_live_bytes = 0; 
 
     /* TODO(juncheng): do we need lock */
-    pthread_mutex_lock(&heap.mtx);
-    for (int i = 0; i < evict_info.merge_opt.seg_n_max_merge; i++) {
+    pthread_mutex_lock(&segcache_ptr->heap_ptr->mtx);
+    for (int i = 0; i < segcache_ptr->evict_info_ptr->merge_opt.seg_n_max_merge; i++) {
         if (curr_seg_id == -1) {
             *next_seg_to_merge = -1; 
             break;
         }
 
 #ifdef USE_THREAD_LOCAL_SEG
-        if (n_live_bytes > heap.seg_size + heap.seg_size >> 1) {
+        if (n_live_bytes > segcache_ptr->heap_ptr->seg_size + segcache_ptr->heap_ptr->seg_size >> 1) {
             *next_seg_to_merge = curr_seg_id;
             break; 
         }
 #endif 
 
-        curr_seg = &heap.segs[curr_seg_id];
-        if (!seg_evictable(curr_seg)) {
+        curr_seg = &segcache_ptr->heap_ptr->segs[curr_seg_id];
+        if (!seg_evictable(curr_seg, segcache_ptr)) {
             break;
 //            curr_seg_id = curr_seg->next_seg_id;
 //            continue;
@@ -151,15 +153,15 @@ prep_seg_to_merge(int32_t start_seg_id,
         segs_to_merge[(*n_evictable_seg)++] = curr_seg;
         curr_seg_id = curr_seg->next_seg_id;
     }
-    pthread_mutex_unlock(&heap.mtx);
+    pthread_mutex_unlock(&segcache_ptr->heap_ptr->mtx);
 
     /* calculate how many bytes should be retained from each seg */
-    int target_n_seg_to_merge = evict_info.merge_opt.seg_n_merge;
+    int target_n_seg_to_merge = segcache_ptr->evict_info_ptr->merge_opt.seg_n_merge;
     if (*n_evictable_seg < target_n_seg_to_merge) {
         target_n_seg_to_merge = *n_evictable_seg;
     }
 
-    for (int i = 0; i < evict_info.merge_opt.seg_n_max_merge; i++) {
+    for (int i = 0; i < segcache_ptr->evict_info_ptr->merge_opt.seg_n_max_merge; i++) {
         merge_keep_ratio[i] = 1.0 / target_n_seg_to_merge;
     }
 
@@ -167,15 +169,15 @@ prep_seg_to_merge(int32_t start_seg_id,
 }
 
 static inline void
-replace_seg_in_chain(int32_t new_seg_id, int32_t old_seg_id)
+replace_seg_in_chain(int32_t new_seg_id, int32_t old_seg_id, struct SegCache* segcache_ptr)
 {
-    struct seg *new_seg = &heap.segs[new_seg_id];
-    struct seg *old_seg = &heap.segs[old_seg_id];
+    struct seg *new_seg = &segcache_ptr->heap_ptr->segs[new_seg_id];
+    struct seg *old_seg = &segcache_ptr->heap_ptr->segs[old_seg_id];
 
-    struct ttl_bucket *tb = &ttl_buckets[find_ttl_bucket_idx(old_seg->ttl)];
+    struct ttl_bucket *tb = &segcache_ptr->ttl_buckets[find_ttl_bucket_idx(old_seg->ttl)];
 
     /* all modification to seg chain needs to be protected by lock */
-    ASSERT(pthread_mutex_trylock(&heap.mtx) != 0);
+    ASSERT(pthread_mutex_trylock(&segcache_ptr->heap_ptr->mtx) != 0);
 
     int32_t prev_seg_id = old_seg->prev_seg_id;
     int32_t next_seg_id = old_seg->next_seg_id;
@@ -186,11 +188,11 @@ replace_seg_in_chain(int32_t new_seg_id, int32_t old_seg_id)
         tb->first_seg_id = new_seg_id;
     }
     else {
-        heap.segs[prev_seg_id].next_seg_id = new_seg_id;
+        segcache_ptr->heap_ptr->segs[prev_seg_id].next_seg_id = new_seg_id;
     }
 
     ASSERT(next_seg_id != -1);
-    heap.segs[next_seg_id].prev_seg_id = new_seg_id;
+    segcache_ptr->heap_ptr->segs[next_seg_id].prev_seg_id = new_seg_id;
 
     new_seg->prev_seg_id = prev_seg_id;
     new_seg->next_seg_id = next_seg_id;
@@ -198,9 +200,9 @@ replace_seg_in_chain(int32_t new_seg_id, int32_t old_seg_id)
 
 
 evict_rstatus_e
-seg_merge_evict(int32_t *seg_id_ret)
+seg_merge_evict(int32_t *seg_id_ret, struct SegCache* segcache_ptr)
 {
-    struct merge_opts *mopt = &evict_info.merge_opt;
+    struct merge_opts *mopt = &segcache_ptr->evict_info_ptr->merge_opt;
     struct seg        *seg  = NULL;
 
     int32_t           bkt_idx;
@@ -236,8 +238,8 @@ seg_merge_evict(int32_t *seg_id_ret)
      * ttl bucket again after reaching the end */
     for (i = 0; i < MAX_N_TTL_BUCKET + 1; i++) {
         bkt_idx = (last_bkt_idx + i) % MAX_N_TTL_BUCKET;
-        ttl_bkt = &ttl_buckets[bkt_idx];
-        if (ttl_buckets[bkt_idx].first_seg_id == -1) {
+        ttl_bkt = &segcache_ptr->ttl_buckets[bkt_idx];
+        if (segcache_ptr->ttl_buckets[bkt_idx].first_seg_id == -1) {
             /* empty TTL bucket */
             continue;
         }
@@ -263,26 +265,26 @@ seg_merge_evict(int32_t *seg_id_ret)
 //        }
 
         seg = ttl_bkt->next_seg_to_merge != -1 ?
-              &heap.segs[ttl_bkt->next_seg_to_merge] :
-              &heap.segs[ttl_bkt->first_seg_id];
+              &segcache_ptr->heap_ptr->segs[ttl_bkt->next_seg_to_merge] :
+              &segcache_ptr->heap_ptr->segs[ttl_bkt->first_seg_id];
 
-        seg = find_n_consecutive_evictable_seg(seg);
+        seg = find_n_consecutive_evictable_seg(seg, segcache_ptr);
         if (seg == NULL) {
             /* cannot find enough evictable seg in this TTL bucket */
-            ttl_buckets[bkt_idx].next_seg_to_merge = -1;
-            seg_id        = ttl_buckets[bkt_idx].first_seg_id;
+            segcache_ptr->ttl_buckets[bkt_idx].next_seg_to_merge = -1;
+            seg_id        = segcache_ptr->ttl_buckets[bkt_idx].first_seg_id;
             if (seg_id != -1) {
-                first_seg_age = time_proc_sec() - heap.segs[seg_id].create_at;
-                if (heap.segs[seg_id].merge_at > 0) {
-                    first_seg_age = time_proc_sec() - heap.segs[seg_id].merge_at;
+                first_seg_age = time_proc_sec(segcache_ptr) - segcache_ptr->heap_ptr->segs[seg_id].create_at;
+                if (segcache_ptr->heap_ptr->segs[seg_id].merge_at > 0) {
+                    first_seg_age = time_proc_sec(segcache_ptr) - segcache_ptr->heap_ptr->segs[seg_id].merge_at;
                 }
                 /* the first segment in this bucket has not been evicted for a long time,
                  * this can happen if there is a corner case we have not considered,
                  * so evict it, one magic parameter here */
-                bool seg_too_old = first_seg_age > (cal_mean_eviction_age() * 10);
+                bool seg_too_old = first_seg_age > (cal_mean_eviction_age(segcache_ptr) * 10);
 
-                if (n_evicted_seg() > 100 && seg_too_old) {
-                    bool success = rm_all_item_on_seg(seg_id, SEG_FORCE_EVICTION);
+                if (n_evicted_seg(segcache_ptr) > 100 && seg_too_old) {
+                    bool success = rm_all_item_on_seg(seg_id, SEG_FORCE_EVICTION, segcache_ptr);
                     if (success) {
                         last_bkt_idx = bkt_idx + 1;
                         pthread_mutex_unlock(&ttl_bkt->mtx);
@@ -302,21 +304,21 @@ seg_merge_evict(int32_t *seg_id_ret)
         /* we have found enough consecutive evictable segments,
          * block the eviction of next seg_n_max_merge segments */
         prep_seg_to_merge(seg->seg_id, segs_to_merge,
-            &n_evictable_seg, merge_keep_ratio, &next_seg_to_merge);
+            &n_evictable_seg, merge_keep_ratio, &next_seg_to_merge, segcache_ptr);
 
 #ifdef USE_THREAD_LOCAL_SEG
-        ttl_buckets[bkt_idx].next_seg_to_merge = next_seg_to_merge;
+        segcache_ptr->ttl_buckets[bkt_idx].next_seg_to_merge = next_seg_to_merge;
 
         // move this from after merge to before merge, could cause a bug, 
         // but this change signifcantly reduces contention 
         // but we trade off some efficiency for scalability, need a better design
         pthread_mutex_unlock(&ttl_bkt->mtx);
 
-        merge_segs(segs_to_merge, n_evictable_seg, merge_keep_ratio);
+        merge_segs(segs_to_merge, n_evictable_seg, merge_keep_ratio, segcache_ptr);
 
 #else 
-        ttl_buckets[bkt_idx].next_seg_to_merge =
-            merge_segs(segs_to_merge, n_evictable_seg, merge_keep_ratio);
+        segcache_ptr->ttl_buckets[bkt_idx].next_seg_to_merge =
+            merge_segs(segs_to_merge, n_evictable_seg, merge_keep_ratio, segcache_ptr);
 
         pthread_mutex_unlock(&ttl_bkt->mtx);
 #endif 
@@ -337,19 +339,19 @@ seg_merge_evict(int32_t *seg_id_ret)
      * it might be 1. the mature time is too large
      * 2. there is limited number of active TTL buckets and the thread won't be
      * able to lock that bucket */
-//    pthread_mutex_lock(&heap.mtx);
-//    if (heap.n_free_seg > heap.n_reserved_seg) {
+//    pthread_mutex_lock(&segcache_ptr->heap_ptr->mtx);
+//    if (segcache_ptr->heap_ptr->n_free_seg > segcache_ptr->heap_ptr->n_reserved_seg) {
 //        *seg_id_ret = seg_get_from_freepool(false);
 //
-//        pthread_mutex_unlock(&heap.mtx);
+//        pthread_mutex_unlock(&segcache_ptr->heap_ptr->mtx);
 //        return EVICT_OK;
 //    }
-//    pthread_mutex_unlock(&heap.mtx);
+//    pthread_mutex_unlock(&segcache_ptr->heap_ptr->mtx);
 
-    evict_info.seg_mature_time = evict_info.seg_mature_time / 2;
+    segcache_ptr->evict_info_ptr->seg_mature_time = segcache_ptr->evict_info_ptr->seg_mature_time / 2;
 
     log_warn("cannot find enough evictable segs");
-    INCR(seg_metrics, seg_evict_ex);
+    INCR(segcache_ptr->seg_metrics, seg_evict_ex);
 
 #if defined CC_ASSERT_PANIC || defined CC_ASSERT_LOG
     dump_seg_info();
@@ -360,28 +362,28 @@ seg_merge_evict(int32_t *seg_id_ret)
 
 static void
 seg_copy(int32_t seg_id_dest, int32_t seg_id_src,
-         double *cutoff_freq, double target_ratio)
+         double *cutoff_freq, double target_ratio, struct SegCache* segcache_ptr)
 {
-    struct merge_opts *mopt          = &evict_info.merge_opt;
+    struct merge_opts *mopt          = &segcache_ptr->evict_info_ptr->merge_opt;
 
     struct item *it = NULL, *last_it = NULL;
 
-    struct seg *seg_dest = &heap.segs[seg_id_dest];
-    struct seg *seg_src  = &heap.segs[seg_id_src];
+    struct seg *seg_dest = &segcache_ptr->heap_ptr->segs[seg_id_dest];
+    struct seg *seg_src  = &segcache_ptr->heap_ptr->segs[seg_id_src];
 
     int32_t seg_id_src_ht = seg_id_src;
     int32_t seg_id_dest_ht = seg_id_dest;
 #ifdef DEBUG_MODE
     /* hash table uses non_decr seg id when debug */
-    seg_id_src_ht = heap.segs[seg_id_src].seg_id_non_decr;
-    seg_id_dest_ht = heap.segs[seg_id_dest].seg_id_non_decr;
+    seg_id_src_ht = segcache_ptr->heap_ptr->segs[seg_id_src].seg_id_non_decr;
+    seg_id_dest_ht = segcache_ptr->heap_ptr->segs[seg_id_dest].seg_id_non_decr;
 #endif
 
-    uint8_t *seg_data_src  = get_seg_data_start(seg_id_src);
-    uint8_t *seg_data_dest = get_seg_data_start(seg_id_dest);
+    uint8_t *seg_data_src  = get_seg_data_start(seg_id_src, segcache_ptr);
+    uint8_t *seg_data_dest = get_seg_data_start(seg_id_dest, segcache_ptr);
     uint8_t *curr_src      = seg_data_src;
 
-    uint32_t offset = MIN(seg_src->write_offset, heap.seg_size) - ITEM_HDR_SIZE;
+    uint32_t offset = MIN(seg_src->write_offset, segcache_ptr->heap_ptr->seg_size) - ITEM_HDR_SIZE;
 
     int32_t it_sz, it_offset;
     double  it_freq;
@@ -407,7 +409,7 @@ seg_copy(int32_t seg_id_dest, int32_t seg_id_src,
     int    n_scanned    = 0, n_copied = 0;
     double mean_size    = (double) seg_src->live_bytes / seg_src->n_live_item;
     double cutoff       = (1 + *cutoff_freq) / 2;
-    int    update_intvl = (int) heap.seg_size / 10;
+    int    update_intvl = (int) segcache_ptr->heap_ptr->seg_size / 10;
     int    n_th_update  = 1;
 
     while (curr_src - seg_data_src < offset) {
@@ -461,7 +463,7 @@ seg_copy(int32_t seg_id_dest, int32_t seg_id_src,
         if (it->deleted) {
             /* this is necessary for current hash table design */
             hashtable_evict(item_key(it), item_nkey(it),
-                            seg_id_src_ht, curr_src - seg_data_src);
+                            seg_id_src_ht, curr_src - seg_data_src, segcache_ptr);
             curr_src += it_sz;
             continue;
         }
@@ -470,7 +472,7 @@ seg_copy(int32_t seg_id_dest, int32_t seg_id_src,
 
 #ifdef STORE_FREQ_IN_HASHTABLE
         it_freq = (double) hashtable_get_it_freq(item_key(it), it->klen,
-            seg_id_src_ht, it_offset);
+            seg_id_src_ht, it_offset, segcache_ptr);
 #else
         it_freq = (double) it->freq;
 #endif
@@ -478,12 +480,12 @@ seg_copy(int32_t seg_id_dest, int32_t seg_id_src,
         it_freq = it_freq / ((double) it_sz / mean_size);
 
         if (it_freq <= cutoff && (!copy_all_items)) {
-            hashtable_evict(item_key(it), it->klen, seg_id_src_ht, it_offset);
+            hashtable_evict(item_key(it), it->klen, seg_id_src_ht, it_offset, segcache_ptr);
             curr_src += it_sz;
             continue;
         }
 
-        if (seg_dest->write_offset + it_sz > heap.seg_size) {
+        if (seg_dest->write_offset + it_sz > segcache_ptr->heap_ptr->seg_size) {
             if (!dest_seg_full) {
                 dest_seg_full = true;
                 log_debug("copy from seg %" PRId32 " to seg %" PRId32
@@ -492,7 +494,7 @@ seg_copy(int32_t seg_id_dest, int32_t seg_id_src,
                     it_offset);
             }
 
-            hashtable_evict(item_key(it), it->klen, seg_id_src_ht, it_offset);
+            hashtable_evict(item_key(it), it->klen, seg_id_src_ht, it_offset, segcache_ptr);
             curr_src += it_sz;
             continue;
         }
@@ -506,7 +508,7 @@ seg_copy(int32_t seg_id_dest, int32_t seg_id_src,
 #endif
 
         it_up_to_date = hashtable_relink_it(item_key(it), it->klen,
-            seg_id_src_ht, it_offset, seg_id_dest_ht, seg_dest->write_offset);
+            seg_id_src_ht, it_offset, seg_id_dest_ht, seg_dest->write_offset, segcache_ptr);
 
         if (it_up_to_date) {
             /* we need atomics because we already copied data on seg_dest
@@ -551,11 +553,11 @@ seg_copy(int32_t seg_id_dest, int32_t seg_id_src,
 int32_t
 merge_segs(struct seg *segs_to_merge[],
            int n_evictable,
-           double *merge_keep_ratio)
+           double *merge_keep_ratio, struct SegCache* segcache_ptr)
 {
-    INCR(seg_metrics, seg_merge);
+    INCR(segcache_ptr->seg_metrics, seg_merge);
 
-    struct merge_opts *mopt = &evict_info.merge_opt;
+    struct merge_opts *mopt = &segcache_ptr->evict_info_ptr->merge_opt;
 
     static int empty_merge      = 0;
     static int successful_merge = 0;
@@ -571,14 +573,14 @@ merge_segs(struct seg *segs_to_merge[],
     int32_t last_seg_next_seg_id = segs_to_merge[n_evictable - 1]->next_seg_id;
 
     /* get a reserved seg as the new seg for storing the copied objects */
-    int32_t new_seg_id = seg_get_from_freepool(true);
-    seg_init(new_seg_id);
+    int32_t new_seg_id = seg_get_from_freepool(true, segcache_ptr);
+    seg_init(new_seg_id, segcache_ptr);
 
-    struct seg *new_seg = &heap.segs[new_seg_id];
+    struct seg *new_seg = &segcache_ptr->heap_ptr->segs[new_seg_id];
     ASSERT(new_seg->evictable == 0);
 
     new_seg->create_at   = segs_to_merge[0]->create_at;
-    new_seg->merge_at    = time_proc_sec();
+    new_seg->merge_at    = time_proc_sec(segcache_ptr);
     new_seg->ttl         = segs_to_merge[0]->ttl;
     new_seg->accessible  = 1;
     new_seg->prev_seg_id = segs_to_merge[0]->prev_seg_id;
@@ -601,33 +603,33 @@ merge_segs(struct seg *segs_to_merge[],
         curr_seg_id = curr_seg->seg_id;
 
         seg_copy(new_seg_id, curr_seg_id, &cutoff_freq,
-            merge_keep_ratio[n_merged]);
+            merge_keep_ratio[n_merged], segcache_ptr);
 
         /* remove the evicted seg and return to freepool */
         accessible =
             __atomic_exchange_n(&(curr_seg->accessible), 0, __ATOMIC_RELAXED);
         ASSERT(accessible == 1);
 
-        seg_wait_refcnt(curr_seg_id);
+        seg_wait_refcnt(curr_seg_id, segcache_ptr);
 
-        pthread_mutex_lock(&heap.mtx);
+        pthread_mutex_lock(&segcache_ptr->heap_ptr->mtx);
         if (n_merged == 0) {
             /* place the new seg at the position of the first evicted seg and
              * not return this seg to freepool, keep it for the immediate use */
-            replace_seg_in_chain(new_seg_id, curr_seg_id);
+            replace_seg_in_chain(new_seg_id, curr_seg_id, segcache_ptr);
         }
         else {
-            rm_seg_from_ttl_bucket(curr_seg_id);
-            seg_add_to_freepool(curr_seg_id, SEG_EVICTION);
+            rm_seg_from_ttl_bucket(curr_seg_id, segcache_ptr);
+            seg_add_to_freepool(curr_seg_id, SEG_EVICTION, segcache_ptr);
         }
 
-        pthread_mutex_unlock(&heap.mtx);
+        pthread_mutex_unlock(&segcache_ptr->heap_ptr->mtx);
 
         n_merged++;
 
-        INCR_N(seg_metrics, seg_evict_age_sum,
-            time_proc_sec() - curr_seg->create_at);
-        INCR(seg_metrics, seg_evict_seg_cnt);
+        INCR_N(segcache_ptr->seg_metrics, seg_evict_age_sum,
+            time_proc_sec(segcache_ptr) - curr_seg->create_at);
+        INCR(segcache_ptr->seg_metrics, segcache_ptr->seg_evict_seg_cnt);
     }
 
     ASSERT(n_merged > 0);
@@ -636,15 +638,15 @@ merge_segs(struct seg *segs_to_merge[],
         /* if the evicted segs all have no live object */
         new_seg->accessible = 0;
 
-        pthread_mutex_lock(&heap.mtx);
-        rm_seg_from_ttl_bucket(new_seg_id);
-        seg_add_to_freepool(new_seg_id, SEG_EVICTION);
-        pthread_mutex_unlock(&heap.mtx);
+        pthread_mutex_lock(&segcache_ptr->heap_ptr->mtx);
+        rm_seg_from_ttl_bucket(new_seg_id, segcache_ptr);
+        seg_add_to_freepool(new_seg_id, SEG_EVICTION, segcache_ptr);
+        pthread_mutex_unlock(&segcache_ptr->heap_ptr->mtx);
 
         log_warn("merged %d segments with no active objects, "
                  "return reserved seg %d", n_merged, new_seg_id);
         for (int i = 0; i < n_merged; i++) {
-            SEG_PRINT(segs_to_merge[i]->seg_id, "seg info", log_debug);
+            SEG_PRINT(segs_to_merge[i]->seg_id, "seg info", log_debug, segcache_ptr);
         }
 
         empty_merge += 1;
@@ -663,8 +665,8 @@ merge_segs(struct seg *segs_to_merge[],
 
         /* because of internal memory fragmentation, the seg is not always full
          * set the part that written to 0 */
-        memset(get_seg_data_start(new_seg_id) + new_seg->write_offset,
-            0, heap.seg_size - new_seg->write_offset);
+        memset(get_seg_data_start(new_seg_id, segcache_ptr) + new_seg->write_offset,
+            0, segcache_ptr->heap_ptr->seg_size - new_seg->write_offset);
         __atomic_store_n(&new_seg->evictable, 1, __ATOMIC_RELAXED);
         successful_merge += 1;
 
@@ -679,16 +681,13 @@ merge_segs(struct seg *segs_to_merge[],
         //           "curr #free segs %d, new seg offset %d, occupied size %d, "
         //           "%d items",
         //     new_seg->ttl, n_merged, n_evictable, merged_segs, new_seg_id,
-        //     heap.n_free_seg, new_seg->write_offset,
+        //     segcache_ptr->heap_ptr->n_free_seg, new_seg->write_offset,
         //     new_seg->live_bytes, new_seg->n_live_item);
 
         // log_verb("***************************************************");
 
-        return heap.segs[new_seg_id].next_seg_id;
+        return segcache_ptr->heap_ptr->segs[new_seg_id].next_seg_id;
     }
 
     ASSERT(0);
 }
-
-
-

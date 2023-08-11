@@ -20,9 +20,16 @@
 // Siyuan: add to pass struct SegCache
 struct background_param_t
 {
-    void* arg = NULL;
-    struct SegCache* segcache_ptr = NULL;
+    void* arg;
+    struct SegCache* segcache_ptr;
 };
+
+static inline void initialize_background_param(struct background_param_t* background_param_ptr)
+{
+    background_param_ptr->arg = NULL;
+    background_param_ptr->segcache_ptr = NULL;
+    return;
+}
 
 static void
 check_seg_expire(struct SegCache* segcache_ptr)
@@ -37,17 +44,17 @@ check_seg_expire(struct SegCache* segcache_ptr)
             continue;
         }
 
-        seg = &heap.segs[seg_id];
+        seg = &segcache_ptr->heap_ptr->segs[seg_id];
         /* curr_sec - 2 to avoid a slow client is still writing to
          * the expiring segment  */
-        while (seg->create_at + seg->ttl < time_proc_sec(segcache) - 2 ||
+        while (seg->create_at + seg->ttl < time_proc_sec(segcache_ptr) - 2 ||
             seg->create_at < segcache_ptr->flush_at) {
             log_debug("expire seg %"PRId32 ", create at %"PRId32 ", ttl %"PRId32
             ", flushed at %"PRId32, seg_id, seg->create_at, seg->ttl, segcache_ptr->flush_at);
 
             next_seg_id = seg->next_seg_id;
 
-            status = expire_seg(seg_id);
+            status = expire_seg(seg_id, segcache_ptr);
             if (status != CC_OK) {
                 log_error("error removing expired seg %d", seg_id);
             }
@@ -57,7 +64,7 @@ check_seg_expire(struct SegCache* segcache_ptr)
             }
 
             seg_id = next_seg_id;
-            seg    = &heap.segs[seg_id];
+            seg    = &segcache_ptr->heap_ptr->segs[seg_id];
         }
     }
 }
@@ -73,10 +80,10 @@ background_main(void *background_param_ptr)
 
     log_info("Segcache background thread started");
 
-    struct background_param_t& background_param = *(struct background_param_t*) background_param_ptr;
+    struct background_param_t* tmp_background_param_ptr = (struct background_param_t*) background_param_ptr;
 
-    while (!background_param.segcache_ptr->stop) {
-        check_seg_expire(*background_param.segcache_ptr);
+    while (!tmp_background_param_ptr->segcache_ptr->stop) {
+        check_seg_expire(tmp_background_param_ptr->segcache_ptr);
 
         // do we want to enable background eviction?
         // merge_based_eviction();
@@ -92,6 +99,7 @@ void
 start_background_thread(void *arg, struct SegCache* segcache_ptr)
 {
     struct background_param_t background_param;
+    initialize_background_param(&background_param);
     background_param.arg = arg;
     background_param.segcache_ptr = segcache_ptr;
 

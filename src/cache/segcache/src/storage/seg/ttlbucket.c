@@ -52,7 +52,7 @@ ttl_bucket_reserve_item(int32_t ttl_bucket_idx, size_t sz, int32_t *seg_id, stru
 
     if (curr_seg_id != -1) {
         /* increment offset by sz */
-        curr_seg   = &heap.segs[curr_seg_id];
+        curr_seg   = &segcache_ptr->heap_ptr->segs[curr_seg_id];
         accessible = seg_is_accessible(curr_seg_id, segcache_ptr);
         if (accessible) {
             offset = __atomic_fetch_add(
@@ -60,15 +60,15 @@ ttl_bucket_reserve_item(int32_t ttl_bucket_idx, size_t sz, int32_t *seg_id, stru
         }
     }
 
-    while (curr_seg_id == -1 || offset + sz > heap.seg_size || (!accessible)) {
+    while (curr_seg_id == -1 || offset + sz > segcache_ptr->heap_ptr->seg_size || (!accessible)) {
         /* we need to get a new segment */
-        if (offset + sz > heap.seg_size && offset < heap.seg_size) {
+        if (offset + sz > segcache_ptr->heap_ptr->seg_size && offset < segcache_ptr->heap_ptr->seg_size) {
             /* we cannot roll back offset due to data race,
              * but we need to explicitly clear rest of the segment
              * so that we know it is the end of segment, this is because
              * we do not zero the segment during initialization */
-            seg_data = get_seg_data_start(curr_seg_id);
-            memset(seg_data + offset, 0, heap.seg_size - offset);
+            seg_data = get_seg_data_start(curr_seg_id, segcache_ptr);
+            memset(seg_data + offset, 0, segcache_ptr->heap_ptr->seg_size - offset);
         }
 
         new_seg_id = seg_get_new(segcache_ptr);
@@ -81,11 +81,11 @@ ttl_bucket_reserve_item(int32_t ttl_bucket_idx, size_t sz, int32_t *seg_id, stru
             log_warn("cannot get new segment");
             return NULL;
         }
-        new_seg = &heap.segs[new_seg_id];
+        new_seg = &segcache_ptr->heap_ptr->segs[new_seg_id];
         new_seg->ttl = ttl_bucket->ttl;
 
         /* TODO(juncheng): update to TTL lock */
-        if (pthread_mutex_lock(&heap.mtx) != 0) {
+        if (pthread_mutex_lock(&segcache_ptr->heap_ptr->mtx) != 0) {
             log_error("unable to lock mutex");
             return NULL;
         }
@@ -115,7 +115,7 @@ ttl_bucket_reserve_item(int32_t ttl_bucket_idx, size_t sz, int32_t *seg_id, stru
                 ASSERT(curr_seg != NULL);
                 ASSERT(ttl_bucket->last_seg_id != -1);
 
-                heap.segs[curr_seg_id].next_seg_id = new_seg_id;
+                segcache_ptr->heap_ptr->segs[curr_seg_id].next_seg_id = new_seg_id;
             }
 
             /* it prev seg has a short TTL and has expired,
@@ -143,20 +143,20 @@ ttl_bucket_reserve_item(int32_t ttl_bucket_idx, size_t sz, int32_t *seg_id, stru
                 ttl_bucket_idx,ttl_bucket->ttl,
                 ttl_bucket->n_seg, new_seg->prev_seg_id,
                 curr_seg_id == -1 ? -1 : __atomic_load_n(
-                    &heap.segs[curr_seg_id].write_offset, __ATOMIC_SEQ_CST),
+                    &segcache_ptr->heap_ptr->segs[curr_seg_id].write_offset, __ATOMIC_SEQ_CST),
                 ttl_bucket->first_seg_id, ttl_bucket->last_seg_id);
         }
 
-        pthread_mutex_unlock(&heap.mtx);
+        pthread_mutex_unlock(&segcache_ptr->heap_ptr->mtx);
 
         curr_seg_id = new_seg_id;
-        curr_seg    = &heap.segs[curr_seg_id];
+        curr_seg    = &segcache_ptr->heap_ptr->segs[curr_seg_id];
         offset      = __atomic_fetch_add(
             &(curr_seg->write_offset), sz, __ATOMIC_SEQ_CST);
         accessible  = seg_is_accessible(curr_seg_id, segcache_ptr);
     }
 
-    seg_data = get_seg_data_start(curr_seg_id);
+    seg_data = get_seg_data_start(curr_seg_id, segcache_ptr);
     ASSERT(seg_data != NULL);
 
     it = (struct item *) (seg_data + offset);
@@ -183,24 +183,24 @@ ttl_bucket_reserve_item(int32_t ttl_bucket_idx, size_t sz, int32_t *seg_id, stru
     curr_seg_id = local_last_seg[ttl_bucket_idx] - 1;
 
     if (curr_seg_id != -1) {
-        curr_seg   = &heap.segs[curr_seg_id];
+        curr_seg   = &segcache_ptr->heap_ptr->segs[curr_seg_id];
         accessible = seg_is_accessible(curr_seg_id);
         if (accessible) {
             offset = curr_seg->write_offset;
         }
     }
 
-    if (curr_seg_id == -1 || offset + sz > heap.seg_size || (!accessible)) {
-        if (offset + sz > heap.seg_size) {
-            ASSERT(offset <= heap.seg_size);
+    if (curr_seg_id == -1 || offset + sz > segcache_ptr->heap_ptr->seg_size || (!accessible)) {
+        if (offset + sz > segcache_ptr->heap_ptr->seg_size) {
+            ASSERT(offset <= segcache_ptr->heap_ptr->seg_size);
             seg_data = get_seg_data_start(curr_seg_id);
-            memset(seg_data + offset, 0, heap.seg_size - offset);
+            memset(seg_data + offset, 0, segcache_ptr->heap_ptr->seg_size - offset);
         }
 
         if (curr_seg_id != -1) {
             /* curr seg is not linked to segment chain at this time,
              * link it now */
-            if (pthread_mutex_lock(&heap.mtx) != 0) {
+            if (pthread_mutex_lock(&segcache_ptr->heap_ptr->mtx) != 0) {
                 log_error("unable to lock mutex");
                 return NULL;
             }
@@ -212,7 +212,7 @@ ttl_bucket_reserve_item(int32_t ttl_bucket_idx, size_t sz, int32_t *seg_id, stru
                 ttl_bucket->first_seg_id = curr_seg_id;
             }
             else {
-                heap.segs[ttl_bucket->last_seg_id].next_seg_id = curr_seg_id;
+                segcache_ptr->heap_ptr->segs[ttl_bucket->last_seg_id].next_seg_id = curr_seg_id;
             }
 
             curr_seg->prev_seg_id   = ttl_bucket->last_seg_id;
@@ -234,7 +234,7 @@ ttl_bucket_reserve_item(int32_t ttl_bucket_idx, size_t sz, int32_t *seg_id, stru
                 ttl_bucket_idx, ttl_bucket->n_seg, curr_seg->prev_seg_id,
                 ttl_bucket->first_seg_id, ttl_bucket->last_seg_id);
 
-            pthread_mutex_unlock(&heap.mtx);
+            pthread_mutex_unlock(&segcache_ptr->heap_ptr->mtx);
         }
 
         curr_seg_id = seg_get_new();
@@ -247,7 +247,7 @@ ttl_bucket_reserve_item(int32_t ttl_bucket_idx, size_t sz, int32_t *seg_id, stru
         }
 
         local_last_seg[ttl_bucket_idx] = curr_seg_id + 1;
-        curr_seg = &heap.segs[curr_seg_id];
+        curr_seg = &segcache_ptr->heap_ptr->segs[curr_seg_id];
         curr_seg->ttl         = ttl_bucket->ttl;
         curr_seg->next_seg_id = -1;
         offset = curr_seg->write_offset;

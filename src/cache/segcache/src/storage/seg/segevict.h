@@ -2,10 +2,6 @@
 
 #include "constant.h"
 
-#include <time/time.h>
-#include <cc_mm.h>
-#include <pthread.h>
-
 typedef enum {
     EVICT_NONE = 0,
     EVICT_RANDOM,
@@ -25,6 +21,13 @@ typedef enum evict_rstatus {
     EVICT_OTHER,
 } evict_rstatus_e;
 
+struct merge_opts;
+struct seg_evict_info;
+struct seg;
+
+#include <time/time.h>
+#include <cc_mm.h>
+#include <pthread.h>
 
 struct merge_opts {
 
@@ -75,7 +78,7 @@ evict_rstatus_e
 seg_evict(int32_t *evicted_seg_id, struct SegCache* segcache_ptr);
 
 evict_rstatus_e
-seg_merge_evict(int32_t *seg_id_ret);
+seg_merge_evict(int32_t *seg_id_ret, struct SegCache* segcache_ptr);
 
 void
 segevict_setup(evict_policy_e ev_policy, uintmax_t seg_mature_time, struct SegCache* segcache_ptr);

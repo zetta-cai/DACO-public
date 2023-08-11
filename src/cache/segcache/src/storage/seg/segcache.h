@@ -44,7 +44,11 @@ struct SegCache
 
     // From src/storage/seg/segevict.c
     bool segevict_initialized;
-    struct seg_evict_info evict_info;
+    struct seg_evict_info* evict_info_ptr;
+
+    // From src/storage/seg/segmerge.c
+    uint64_t seg_evict_seg_cnt; 
+    uint64_t seg_evict_seg_sum;
 
     // From src/storage/seg/seg.c
     struct seg_heapinfo* heap_ptr; /* info of all allocated segs */
@@ -60,5 +64,5 @@ struct SegCache
     volatile bool stop;
 };
 
-void initializeSegcache(struct SegCache* segcache_ptr);
-void releaseSegCache(struct SegCache* segcache_ptr);
+void initialize_segcache(struct SegCache* segcache_ptr);
+void release_segcache(struct SegCache* segcache_ptr);
