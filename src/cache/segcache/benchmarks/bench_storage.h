@@ -26,6 +26,7 @@ typedef enum {
     op_invalid
 } op_e;
 
+// Siyuan: NO need to encapsulate const global variables
 static const char *op_names[op_invalid + 1] = {"get", "gets", "set", "add",
         "cas", "replace", "append", "prepend", "delete", "incr", "decr",
         "cache_miss", "invalid"};

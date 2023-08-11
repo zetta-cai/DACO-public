@@ -214,10 +214,10 @@ typedef struct {
 } seg_perttl_metrics_st;
 
 
-#define PERTTL_INCR(idx, metric) INCR(&perttl[idx], metric)
-#define PERTTL_DECR(idx, metric) DECR(&perttl[idx], metric)
-#define PERTTL_INCR_N(idx, metric, delta) INCR_N(&perttl[idx], metric, delta)
-#define PERTTL_DECR_N(idx, metric, delta) DECR_N(&perttl[idx], metric, delta)
+#define PERTTL_INCR(idx, metric, segcache) INCR(&segcache.perttl[idx], metric)
+#define PERTTL_DECR(idx, metric, segcache) DECR(&segcache.perttl[idx], metric)
+#define PERTTL_INCR_N(idx, metric, delta, segcache) INCR_N(&segcache.perttl[idx], metric, delta)
+#define PERTTL_DECR_N(idx, metric, delta, segcache) DECR_N(&segcache.perttl[idx], metric, delta)
 
 extern struct seg_heapinfo heap; /* info of all allocated segs */
 

@@ -260,14 +260,16 @@ include_directories(${include_directories}
 # server & (cli) client
 add_subdirectory(src)
 
-if(HAVE_TEST)
-    include_directories(${include_directories} ${CHECK_INCLUDES})
-    add_subdirectory(test)
-endif(HAVE_TEST)
+# Siyuan: NO need temporarily
+#if(HAVE_TEST)
+#    include_directories(${include_directories} ${CHECK_INCLUDES})
+#    add_subdirectory(test)
+#endif(HAVE_TEST)
 
-#if(${OS_PLATFORM} MATCHES "OS_LINUX")
-    add_subdirectory(benchmarks)
-#endif()
+# Siyuan: NO need temporarily
+##if(${OS_PLATFORM} MATCHES "OS_LINUX")
+#    add_subdirectory(benchmarks)
+##endif()
 
 
 ###################

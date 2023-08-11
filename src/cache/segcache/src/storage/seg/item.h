@@ -249,4 +249,4 @@ item_delete(const struct bstring *key);
 
 /* flush the cache */
 void
-item_flush(void);
+item_flush(struct SegCache& segcache);

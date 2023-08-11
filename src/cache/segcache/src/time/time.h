@@ -87,7 +87,7 @@ extern uint8_t time_type;
 /*
  * Time when the process was started expressed as absolute unix timestamp
  */
-// Siyuan: remove global variables
+// Siyuan: encapsulate global variables
 //extern time_t time_start;
 
 /*
@@ -95,7 +95,7 @@ extern uint8_t time_type;
  * to time_update(). Do NOT use these directly; instead use the API provided
  * below.
  */
-// Siyuan: remove global variables
+// Siyuan: encapsulate global variables
 // extern proc_time_i proc_sec;
 // extern proc_time_fine_i proc_ms;
 // extern proc_time_fine_i proc_us;
@@ -113,34 +113,34 @@ extern uint8_t time_type;
  * Unix timestamp at which the process was started
  */
 static inline time_t
-time_started(void)
+time_started(const struct SegCache& segcache)
 {
-    return __atomic_load_n(&time_start, __ATOMIC_RELAXED);
+    return __atomic_load_n(&segcache.time_start, __ATOMIC_RELAXED);
 }
 
 /*
  * Current time since the process started
  */
 static inline proc_time_i
-time_proc_sec(struct SegCache& segcache)
+time_proc_sec(const struct SegCache& segcache)
 {
     return __atomic_load_n(&segcache.proc_sec, __ATOMIC_RELAXED);
 }
 
 static inline proc_time_fine_i
-time_proc_ms(struct SegCache& segcache)
+time_proc_ms(const struct SegCache& segcache)
 {
     return __atomic_load_n(&segcache.proc_ms, __ATOMIC_RELAXED);
 }
 
 static inline proc_time_fine_i
-time_proc_us(struct SegCache& segcache)
+time_proc_us(const struct SegCache& segcache)
 {
     return __atomic_load_n(&segcache.proc_us, __ATOMIC_RELAXED);
 }
 
 static inline proc_time_fine_i
-time_proc_ns(struct SegCache& segcache)
+time_proc_ns(const struct SegCache& segcache)
 {
     return __atomic_load_n(&segcache.proc_ns, __ATOMIC_RELAXED);
 }
@@ -149,27 +149,27 @@ time_proc_ns(struct SegCache& segcache)
  * Current unix timestamp
  */
 static inline time_t  /* time_t is used for compatibility with time_started() */
-time_unix_sec(struct SegCache& segcache)
+time_unix_sec(const struct SegCache& segcache)
 {
-    return time_started() + time_proc_sec(segcache);
+    return time_started(segcache) + time_proc_sec(segcache);
 }
 
 static inline unix_time_fine_u
-time_unix_ms(struct SegCache& segcache)
+time_unix_ms(const struct SegCache& segcache)
 {
-    return time_started() * MSEC_PER_SEC + time_proc_ms(segcache);
+    return time_started(segcache) * MSEC_PER_SEC + time_proc_ms(segcache);
 }
 
 static inline unix_time_fine_u
-time_unix_us(struct SegCache& segcache)
+time_unix_us(const struct SegCache& segcache)
 {
-    return time_started() * USEC_PER_SEC + time_proc_us(segcache);
+    return time_started(segcache) * USEC_PER_SEC + time_proc_us(segcache);
 }
 
 static inline unix_time_fine_u
-time_unix_ns(struct SegCache& segcache)
+time_unix_ns(const struct SegCache& segcache)
 {
-    return time_started() * NSEC_PER_SEC + time_proc_ns(segcache);
+    return time_started(segcache) * NSEC_PER_SEC + time_proc_ns(segcache);
 }
 
 /*
@@ -180,54 +180,54 @@ time_unix_ns(struct SegCache& segcache)
  *       Instead, an input of 0 for time_memcache is converted to max int.
  */
 static inline proc_time_i
-time_unix2proc_sec(unix_time_u t)
+time_unix2proc_sec(unix_time_u t, const struct SegCache& segcache)
 {
-    return (proc_time_i)(t - time_started());
+    return (proc_time_i)(t - time_started(segcache));
 }
 
 static inline proc_time_fine_i
-time_unix2proc_ms(unix_time_fine_u t)
+time_unix2proc_ms(unix_time_fine_u t, const struct SegCache& segcache)
 {
-    return (proc_time_i)(t - (time_started() * MSEC_PER_SEC));
+    return (proc_time_i)(t - (time_started(segcache) * MSEC_PER_SEC));
 }
 
 static inline proc_time_fine_i
-time_unix2proc_us(unix_time_fine_u t)
+time_unix2proc_us(unix_time_fine_u t, const struct SegCache& segcache)
 {
-    return (proc_time_i)(t - (time_started() * USEC_PER_SEC));
+    return (proc_time_i)(t - (time_started(segcache) * USEC_PER_SEC));
 }
 
 static inline proc_time_fine_i
-time_unix2proc_ns(unix_time_fine_u t)
+time_unix2proc_ns(unix_time_fine_u t, const struct SegCache& segcache)
 {
-    return (proc_time_i)(t - (time_started() * NSEC_PER_SEC));
+    return (proc_time_i)(t - (time_started(segcache) * NSEC_PER_SEC));
 }
 
 /*
  * Time from now conversion to time since proc started
  */
 static inline proc_time_i
-time_delta2proc_sec(delta_time_i t)
+time_delta2proc_sec(delta_time_i t, const struct SegCache& segcache)
 {
-    return (proc_time_i)t + time_proc_sec();
+    return (proc_time_i)t + time_proc_sec(segcache);
 }
 
 static inline proc_time_fine_i
-time_delta2proc_ms(delta_time_fine_i t)
+time_delta2proc_ms(delta_time_fine_i t, const struct SegCache& segcache)
 {
-    return (proc_time_fine_i)t + time_proc_ms();
+    return (proc_time_fine_i)t + time_proc_ms(segcache);
 }
 
 static inline proc_time_fine_i
-time_delta2proc_us(delta_time_fine_i t)
+time_delta2proc_us(delta_time_fine_i t, const struct SegCache& segcache)
 {
-    return (proc_time_fine_i)t + time_proc_us();
+    return (proc_time_fine_i)t + time_proc_us(segcache);
 }
 
 static inline proc_time_fine_i
-time_delta2proc_ns(delta_time_fine_i t)
+time_delta2proc_ns(delta_time_fine_i t, const struct SegCache& segcache)
 {
-    return (proc_time_fine_i)t + time_proc_ns();
+    return (proc_time_fine_i)t + time_proc_ns(segcache);
 }
 
 /*
@@ -240,58 +240,58 @@ time_delta2proc_ns(delta_time_fine_i t)
 #define TIME_MEMCACHE_MAXDELTA_NS   (time_t)(60 * 60 * 30 * 24 * NSEC_PER_SEC)
 
 static inline proc_time_i
-time_memcache2proc_sec(memcache_time_u t)
+time_memcache2proc_sec(memcache_time_u t, const struct SegCache& segcache)
 {
     if (t == 0) {
         return INT32_MAX;
     }
 
     if (t > TIME_MEMCACHE_MAXDELTA_SEC) {
-        return time_unix2proc_sec((unix_time_u)t);
+        return time_unix2proc_sec((unix_time_u)t, segcache);
     } else {
-        return time_delta2proc_sec((delta_time_i)t);
+        return time_delta2proc_sec((delta_time_i)t, segcache);
     }
 }
 
 static inline proc_time_fine_i
-time_memcache2proc_ms(memcache_time_fine_u t)
+time_memcache2proc_ms(memcache_time_fine_u t, const struct SegCache& segcache)
 {
     if (t == 0) {
         return INT64_MAX;
     }
 
     if (t > TIME_MEMCACHE_MAXDELTA_MS) {
-        return time_unix2proc_ms((unix_time_fine_u)t);
+        return time_unix2proc_ms((unix_time_fine_u)t, segcache);
     } else {
-        return time_delta2proc_ms((delta_time_fine_i)t);
+        return time_delta2proc_ms((delta_time_fine_i)t, segcache);
     }
 }
 
 static inline proc_time_fine_i
-time_memcache2proc_us(memcache_time_fine_u t)
+time_memcache2proc_us(memcache_time_fine_u t, const struct SegCache& segcache)
 {
     if (t == 0) {
         return INT64_MAX;
     }
 
     if (t > TIME_MEMCACHE_MAXDELTA_US) {
-        return time_unix2proc_us((unix_time_fine_u)t);
+        return time_unix2proc_us((unix_time_fine_u)t, segcache);
     } else {
-        return time_delta2proc_us((delta_time_fine_i)t);
+        return time_delta2proc_us((delta_time_fine_i)t, segcache);
     }
 }
 
 static inline proc_time_fine_i
-time_memcache2proc_ns(memcache_time_fine_u t)
+time_memcache2proc_ns(memcache_time_fine_u t, const struct SegCache& segcache)
 {
     if (t == 0) {
         return INT64_MAX;
     }
 
     if (t > TIME_MEMCACHE_MAXDELTA_NS) {
-        return time_unix2proc_ns((unix_time_fine_u)t);
+        return time_unix2proc_ns((unix_time_fine_u)t, segcache);
     } else {
-        return time_delta2proc_ns((delta_time_fine_i)t);
+        return time_delta2proc_ns((delta_time_fine_i)t, segcache);
     }
 }
 
@@ -300,15 +300,15 @@ time_memcache2proc_ns(memcache_time_fine_u t)
  * mode.
  */
 static inline proc_time_i
-time_convert_proc_sec(time_i t)
+time_convert_proc_sec(time_i t, const struct SegCache& segcache)
 {
     switch (time_type) {
     case TIME_UNIX:
-        return time_unix2proc_sec((unix_time_u)t);
+        return time_unix2proc_sec((unix_time_u)t, segcache);
     case TIME_DELTA:
-        return time_delta2proc_sec((delta_time_i)t);
+        return time_delta2proc_sec((delta_time_i)t, segcache);
     case TIME_MEMCACHE:
-        return time_memcache2proc_sec((memcache_time_u)t);
+        return time_memcache2proc_sec((memcache_time_u)t, segcache);
     default:
         NOT_REACHED();
         return -1;
@@ -316,15 +316,15 @@ time_convert_proc_sec(time_i t)
 }
 
 static inline proc_time_i
-time_convert_proc_ms(time_i t)
+time_convert_proc_ms(time_i t, const struct SegCache& segcache)
 {
     switch (time_type) {
     case TIME_UNIX:
-        return time_unix2proc_ms((unix_time_u)t);
+        return time_unix2proc_ms((unix_time_u)t, segcache);
     case TIME_DELTA:
-        return time_delta2proc_ms((delta_time_i)t);
+        return time_delta2proc_ms((delta_time_i)t, segcache);
     case TIME_MEMCACHE:
-        return time_memcache2proc_ms((memcache_time_u)t);
+        return time_memcache2proc_ms((memcache_time_u)t, segcache);
     default:
         NOT_REACHED();
         return -1;
@@ -332,15 +332,15 @@ time_convert_proc_ms(time_i t)
 }
 
 static inline proc_time_i
-time_convert_proc_us(time_i t)
+time_convert_proc_us(time_i t, const struct SegCache& segcache)
 {
     switch (time_type) {
     case TIME_UNIX:
-        return time_unix2proc_us((unix_time_u)t);
+        return time_unix2proc_us((unix_time_u)t, segcache);
     case TIME_DELTA:
-        return time_delta2proc_us((delta_time_i)t);
+        return time_delta2proc_us((delta_time_i)t, segcache);
     case TIME_MEMCACHE:
-        return time_memcache2proc_us((memcache_time_u)t);
+        return time_memcache2proc_us((memcache_time_u)t, segcache);
     default:
         NOT_REACHED();
         return -1;
@@ -348,15 +348,15 @@ time_convert_proc_us(time_i t)
 }
 
 static inline proc_time_i
-time_convert_proc_ns(time_i t)
+time_convert_proc_ns(time_i t, const struct SegCache& segcache)
 {
     switch (time_type) {
     case TIME_UNIX:
-        return time_unix2proc_ns((unix_time_u)t);
+        return time_unix2proc_ns((unix_time_u)t, segcache);
     case TIME_DELTA:
-        return time_delta2proc_ns((delta_time_i)t);
+        return time_delta2proc_ns((delta_time_i)t, segcache);
     case TIME_MEMCACHE:
-        return time_memcache2proc_ns((memcache_time_u)t);
+        return time_memcache2proc_ns((memcache_time_u)t, segcache);
     default:
         NOT_REACHED();
         return -1;
@@ -367,10 +367,10 @@ time_convert_proc_ns(time_i t)
  * Get current time and update current time state variables. Because time
  * objects are shared, only one thread should call time_update
  */
-void time_update(void);
+void time_update(struct SegCache& segcache);
 
 /*
  * Setup/teardown proc time module.
  */
-void time_setup(time_options_st *options);
-void time_teardown(void);
+void time_setup(time_options_st *options, struct SegCache& segcache);
+void time_teardown(struct SegCache& segcache);

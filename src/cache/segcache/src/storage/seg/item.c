@@ -12,13 +12,13 @@
 #include "libpmem.h"
 #endif
 
+// Siyuan: encapsulate global variables
+// extern proc_time_i flush_at;
+//extern struct hash_table *hash_table; // Siyuan: typo which should be "extern struct hash_table hash_table"???
+// extern seg_metrics_st *seg_metrics;
+// extern seg_perttl_metrics_st perttl[MAX_N_TTL_BUCKET];
 
-extern proc_time_i flush_at;
-extern struct hash_table *hash_table;
-extern seg_metrics_st *seg_metrics;
-extern seg_perttl_metrics_st perttl[MAX_N_TTL_BUCKET];
-
-static __thread __uint128_t g_lehmer64_state       = 1;
+static __thread __uint128_t g_lehmer64_state       = 1; // Siyuan: NO need to encapsulate thread-local variables
 
 static inline uint64_t
 prand(void)
@@ -28,12 +28,12 @@ prand(void)
 }
 
 static struct item *
-_item_alloc(uint32_t sz, int32_t ttl_bucket_idx, int32_t *seg_id)
+_item_alloc(uint32_t sz, int32_t ttl_bucket_idx, int32_t *seg_id, struct SegCache& segcache)
 {
-    struct item *it = ttl_bucket_reserve_item(ttl_bucket_idx, sz, seg_id);
+    struct item *it = ttl_bucket_reserve_item(ttl_bucket_idx, sz, seg_id, segcache);
 
     if (it == NULL) {
-        INCR(seg_metrics, item_alloc_ex);
+        INCR(segcache.seg_metrics, item_alloc_ex);
         log_error("error alloc it %p of size %" PRIu32
                   " (bucket %" PRIu16 ") in seg %" PRIu32,
                 it, sz, ttl_bucket_idx, seg_id);
@@ -51,7 +51,7 @@ _item_alloc(uint32_t sz, int32_t ttl_bucket_idx, int32_t *seg_id)
          * roll back the seg stat for avoid inconsistency at eviction
          **/
 
-        INCR(seg_metrics, item_alloc_ex);
+        INCR(segcache.seg_metrics, item_alloc_ex);
 
         log_warn("allocated item is not accessible (seg is expiring or "
                  "being evicted), ttl %d", curr_seg->ttl);
@@ -61,7 +61,7 @@ _item_alloc(uint32_t sz, int32_t ttl_bucket_idx, int32_t *seg_id)
     }
 
 
-    INCR(seg_metrics, item_alloc);
+    INCR(segcache.seg_metrics, item_alloc);
 
     log_vverb("alloc it %p of size %" PRIu32 " in TTL bucket %" PRIu16
               " and seg %" PRIu32,
@@ -73,7 +73,7 @@ _item_alloc(uint32_t sz, int32_t ttl_bucket_idx, int32_t *seg_id)
 static void
 _item_define(struct item *it, const struct bstring *key,
              const struct bstring *val, uint8_t olen,
-             int32_t seg_id, int32_t ttl_bucket_idx, size_t sz)
+             int32_t seg_id, int32_t ttl_bucket_idx, size_t sz, struct SegCache& segcache)
 {
 #if defined CC_ASSERT_PANIC || defined CC_ASSERT_LOG
     it->magic = ITEM_MAGIC;
@@ -111,15 +111,15 @@ _item_define(struct item *it, const struct bstring *key,
 
     ASSERT(curr_seg->w_refcount > 0);
 
-    INCR(seg_metrics, item_curr);
-    INCR_N(seg_metrics, item_curr_bytes, sz);
-    PERTTL_INCR(ttl_bucket_idx, item_curr);
-    PERTTL_INCR_N(ttl_bucket_idx, item_curr_bytes, sz);
+    INCR(segcache.seg_metrics, item_curr);
+    INCR_N(segcache.seg_metrics, item_curr_bytes, sz);
+    PERTTL_INCR(ttl_bucket_idx, item_curr, segcache);
+    PERTTL_INCR_N(ttl_bucket_idx, item_curr_bytes, sz, segcache);
 }
 
 /* insert or update */
 void
-item_insert(struct item *it)
+item_insert(struct item *it, struct SegCache& segcache)
 {
 
     /* calculate seg_id from it address */
@@ -134,7 +134,7 @@ item_insert(struct item *it)
 #if defined DEBUG_MODE
     hashtable_put(it, (uint64_t)heap.segs[seg_id].seg_id_non_decr, (uint64_t)offset);
 #else
-    hashtable_put(it, (uint64_t)seg_id, (uint64_t)offset);
+    hashtable_put(it, (uint64_t)seg_id, (uint64_t)offset, segcache);
 #endif
 
     seg_w_deref(seg_id);
@@ -170,7 +170,7 @@ _item_freq_incr(struct item *it) {
  *
  */
 struct item *
-item_get(const struct bstring *key, uint64_t *cas)
+item_get(const struct bstring *key, uint64_t *cas, struct SegCache& segcache)
 {
     struct item *it;
     int32_t seg_id;
@@ -183,7 +183,7 @@ item_get(const struct bstring *key, uint64_t *cas)
         ASSERT(seg_id_non_decr == heap.segs[seg_id].seg_id_non_decr);
     }
 #else
-    it = hashtable_get(key->data, key->len, &seg_id, cas);
+    it = hashtable_get(key->data, key->len, &seg_id, cas, segcache);
 #endif
 
     if (it == NULL) {
@@ -221,7 +221,7 @@ item_release(struct item *it)
 item_rstatus_e
 item_reserve_with_ttl(struct item **it_p, const struct bstring *key,
              const struct bstring *val, uint32_t vlen, uint8_t olen,
-             delta_time_i ttl)
+             delta_time_i ttl, struct SegCache& segcache)
 {
     struct item *it;
     int32_t seg_id;
@@ -238,13 +238,13 @@ item_reserve_with_ttl(struct item **it_p, const struct bstring *key,
         return ITEM_EOVERSIZED;
     }
 
-    if ((it = _item_alloc(sz, ttl_bucket_idx, &seg_id)) == NULL) {
+    if ((it = _item_alloc(sz, ttl_bucket_idx, &seg_id, segcache)) == NULL) {
         log_warn("item reservation failed");
         *it_p = NULL;
         return ITEM_ENOMEM;
     }
 
-    _item_define(it, key, val, olen, seg_id, ttl_bucket_idx, sz);
+    _item_define(it, key, val, olen, seg_id, ttl_bucket_idx, sz, segcache);
 
     *it_p = it;
 
@@ -261,11 +261,11 @@ item_reserve_with_ttl(struct item **it_p, const struct bstring *key,
 item_rstatus_e
 item_reserve(struct item **it_p, const struct bstring *key,
         const struct bstring *val, uint32_t vlen, uint8_t olen,
-        proc_time_i expire_at)
+        proc_time_i expire_at, struct SegCache& segcache)
 {
     struct item *it;
     int32_t seg_id;
-    delta_time_i ttl = expire_at - time_proc_sec();
+    delta_time_i ttl = expire_at - time_proc_sec(segcache);
 
     if (ttl <= 0) {
         log_warn("reserve_item (%.*s) ttl %" PRId32, key->len, key->data, ttl);
@@ -279,13 +279,13 @@ item_reserve(struct item **it_p, const struct bstring *key,
         return ITEM_EOVERSIZED;
     }
 
-    if ((it = _item_alloc(sz, ttl_bucket_idx, &seg_id)) == NULL) {
+    if ((it = _item_alloc(sz, ttl_bucket_idx, &seg_id, segcache)) == NULL) {
         log_warn("item reservation failed");
         *it_p = NULL;
         return ITEM_ENOMEM;
     }
 
-    _item_define(it, key, val, olen, seg_id, ttl_bucket_idx, sz);
+    _item_define(it, key, val, olen, seg_id, ttl_bucket_idx, sz, segcache);
 
     *it_p = it;
 
@@ -357,16 +357,16 @@ item_decr(uint64_t *vint, struct item *it, uint64_t delta)
 
 
 bool
-item_delete(const struct bstring *key)
+item_delete(const struct bstring *key, struct SegCache& segcache)
 {
     log_verb("delete it (%.*s)", key->len, key->data);
-    return hashtable_delete(key);
+    return hashtable_delete(key, segcache);
 }
 
 void
-item_flush(void)
+item_flush(struct SegCache& segcache)
 {
-    time_update();
-    flush_at = time_proc_sec();
-    log_info("all keys flushed at %" PRIu32, flush_at);
+    time_update(segcache);
+    segcache.flush_at = time_proc_sec(segcache);
+    log_info("all keys flushed at %" PRIu32, segcache.flush_at);
 }

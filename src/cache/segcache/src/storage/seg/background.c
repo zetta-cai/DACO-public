@@ -11,20 +11,27 @@
 #include <sysexits.h>
 #include <time.h>
 
-extern volatile bool        stop;
-extern volatile proc_time_i flush_at;
-extern pthread_t            bg_tid;
-extern struct ttl_bucket    ttl_buckets[MAX_N_TTL_BUCKET];
+// Siyuan: encapsulate global variables
+// extern volatile bool        stop;
+// extern volatile proc_time_i flush_at;
+// extern pthread_t            bg_tid;
+// extern struct ttl_bucket    ttl_buckets[MAX_N_TTL_BUCKET];
 
+// Siyuan: add to pass struct SegCache
+struct background_param_t
+{
+    void* arg = NULL;
+    struct SegCache* segcache_ptr = NULL;
+};
 
 static void
-check_seg_expire(void)
+check_seg_expire(struct SegCache& segcache)
 {
     rstatus_i   status;
     struct seg  *seg;
     int32_t     seg_id, next_seg_id;
     for (int i = 0; i < MAX_N_TTL_BUCKET; i++) {
-        seg_id = ttl_buckets[i].first_seg_id;
+        seg_id = segcache.ttl_buckets[i].first_seg_id;
         if (seg_id == -1) {
             /* no object of this TTL */
             continue;
@@ -33,10 +40,10 @@ check_seg_expire(void)
         seg = &heap.segs[seg_id];
         /* curr_sec - 2 to avoid a slow client is still writing to
          * the expiring segment  */
-        while (seg->create_at + seg->ttl < time_proc_sec() - 2 ||
-            seg->create_at < flush_at) {
+        while (seg->create_at + seg->ttl < time_proc_sec(segcache) - 2 ||
+            seg->create_at < segcache.flush_at) {
             log_debug("expire seg %"PRId32 ", create at %"PRId32 ", ttl %"PRId32
-            ", flushed at %"PRId32, seg_id, seg->create_at, seg->ttl, flush_at);
+            ", flushed at %"PRId32, seg_id, seg->create_at, seg->ttl, segcache.flush_at);
 
             next_seg_id = seg->next_seg_id;
 
@@ -56,7 +63,7 @@ check_seg_expire(void)
 }
 
 static void *
-background_main(void *data)
+background_main(void *background_param_ptr)
 {
 #ifdef __APPLE__
     pthread_setname_np("segBg");
@@ -66,8 +73,10 @@ background_main(void *data)
 
     log_info("Segcache background thread started");
 
-    while (!stop) {
-        check_seg_expire();
+    struct background_param_t& background_param = *(struct background_param_t*) background_param_ptr;
+
+    while (!background_param.segcache_ptr->stop) {
+        check_seg_expire(*background_param.segcache_ptr);
 
         // do we want to enable background eviction?
         // merge_based_eviction();
@@ -80,9 +89,13 @@ background_main(void *data)
 }
 
 void
-start_background_thread(void *arg)
+start_background_thread(void *arg, struct SegCache& segcache)
 {
-    int ret = pthread_create(&bg_tid, NULL, background_main, arg);
+    struct background_param_t background_param;
+    background_param.arg = arg;
+    background_param.segcache_ptr = &segcache;
+
+    int ret = pthread_create(&segcache.bg_tid, NULL, background_main, &background_param);
     if (ret != 0) {
         log_crit("pthread create failed for background thread: %s",
             strerror(ret));
