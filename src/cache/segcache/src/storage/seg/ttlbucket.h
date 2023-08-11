@@ -150,7 +150,7 @@ find_ttl_bucket_idx(delta_time_i ttl)
 
 
 void
-ttl_bucket_setup(struct SegCache& segcache);
+ttl_bucket_setup(struct SegCache* segcache_ptr);
 
 void
 ttl_bucket_teardown(void);
@@ -163,4 +163,4 @@ ttl_bucket_teardown(void);
  *
  */
 struct item *
-ttl_bucket_reserve_item(int32_t ttl_bucket_idx, size_t sz, int32_t *seg_id, struct SegCache& segcache);
+ttl_bucket_reserve_item(int32_t ttl_bucket_idx, size_t sz, int32_t *seg_id, struct SegCache* segcache_ptr);

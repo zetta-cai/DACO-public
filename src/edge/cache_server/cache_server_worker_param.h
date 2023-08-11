@@ -9,14 +9,17 @@
 
 #include <string>
 
+namespace covered
+{
+    class CacheServerWorkerParam;
+}
+
 #include "concurrency/ring_buffer_impl.h"
 #include "edge/cache_server/cache_server.h"
 #include "message/message_base.h"
 
 namespace covered
-{
-    class CacheServer;
-    
+{   
     // Item passed between cache server and cache server workers
     class CacheServerWorkerItem
     {

@@ -8,10 +8,18 @@
 
 #pragma once
 
+#include <stdint.h> // uint8_t
+
 #include <time/cc_timer.h>
 
-#include <time/time.h>
-#include <storage/seg/hashtable.h>
+struct SegCache;
+
+#include "time/time.h"
+#include "storage/seg/hashtable.h"
+#include "storage/seg/segevict.h"
+#include "storage/seg/seg.h"
+#include "storage/seg/ttlbucket.h"
+#include "storage/seg/hashtable.h"
 
 struct SegCache
 {
@@ -24,11 +32,11 @@ struct SegCache
     // OS_LINUX will be set by src/cache/segcache/CMakeLists.txt for struct duration
     struct duration start;
     struct duration proc_snapshot;
-    uint8_t time_type = TIME_UNIX;
+    uint8_t time_type;
 
     // From src/storage/seg/hash_table.c
     struct hash_table hash_table;
-    bool hash_table_initialized = false;
+    bool hash_table_initialized;
     //static __thread __uint128_t g_lehmer64_state = 1; // NO need to encapsulate thread-local variables
 
     // From src/storage/seg/ttlbucket.c
@@ -39,15 +47,18 @@ struct SegCache
     struct seg_evict_info evict_info;
 
     // From src/storage/seg/seg.c
-    struct seg_heapinfo heap; /* info of all allocated segs */
-    struct ttl_bucket ttl_buckets[MAX_N_TTL_BUCKET];
-    bool seg_initialized = false;
-    seg_metrics_st *seg_metrics = NULL;
-    seg_options_st *seg_options = NULL;
-    seg_perttl_metrics_st perttl[MAX_N_TTL_BUCKET];
-    proc_time_i flush_at = -1;
-    bool use_cas = false;
+    struct seg_heapinfo* heap_ptr; /* info of all allocated segs */
+    struct ttl_bucket* ttl_buckets;;
+    bool seg_initialized;
+    seg_metrics_st *seg_metrics;
+    seg_options_st *seg_options;
+    seg_perttl_metrics_st* perttl;
+    proc_time_i flush_at;
+    bool use_cas;
     pthread_t bg_tid;
-    int n_thread = 1;
-    volatile bool stop = false;
+    int n_thread;
+    volatile bool stop;
 };
+
+void initializeSegcache(struct SegCache* segcache_ptr);
+void releaseSegCache(struct SegCache* segcache_ptr);

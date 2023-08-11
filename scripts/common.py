@@ -36,8 +36,8 @@ def getPreferredDirpathForTarget(target_name, env_pathstr):
     if env_pathstr == None:
         print("ERROR: env_pathstr for {} is None!",format(target_name))
         sys.exit(1)
-    else:
-        print("env_pathstr for {}: {}".format(target_name, env_pathstr))
+    #else:
+    #    print("env_pathstr for {}: {}".format(target_name, env_pathstr))
 
     preferred_dirpath = ""
     env_paths = env_pathstr.split(":")

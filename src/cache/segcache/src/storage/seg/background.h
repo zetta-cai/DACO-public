@@ -2,5 +2,5 @@
 
 
 
-void start_background_thread(void *arg, struct SegCache& segcache);
+void start_background_thread(void *arg, struct SegCache* segcache_ptr);
 

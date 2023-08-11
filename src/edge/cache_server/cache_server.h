@@ -10,6 +10,11 @@
 #include <string>
 #include <vector>
 
+namespace covered
+{
+    class CacheServer;
+}
+
 #include "edge/cache_server/cache_server_worker_param.h"
 #include "edge/edge_wrapper.h"
 #include "hash/hash_wrapper_base.h"
@@ -17,8 +22,6 @@
 
 namespace covered
 {
-    class CacheServerWorkerParam;
-
     class CacheServer
     {
     public:

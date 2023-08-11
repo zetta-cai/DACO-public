@@ -9,12 +9,15 @@
 
 #include <string>
 
+namespace covered
+{
+    class ClientWorkerParam;
+}
+
 #include "benchmark/client_wrapper.h"
 
 namespace covered
 {
-    class ClientWrapper;
-    
     class ClientWorkerParam
     {
     public:

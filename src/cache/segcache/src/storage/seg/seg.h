@@ -1,5 +1,27 @@
 #pragma once
 
+struct seg;
+struct seg_heapinfo;
+struct seg_metrics_st_t;
+typedef struct seg_metrics_st_t seg_metrics_st;
+struct seg_options_st_t;
+typedef struct seg_options_st_t seg_options_st;
+struct seg_perttl_metrics_st_t;
+typedef struct seg_perttl_metrics_st_t seg_perttl_metrics_st;
+
+enum seg_state_change {
+    SEG_ALLOCATION = 0,
+    SEG_CONCURRENT_GET,   /* multiple threads can concurrently get segs when
+                             * the last seg is full, but only one thread will
+                             * success, the other threads will return the
+                             * seg to free pool */
+    SEG_EVICTION,
+    SEG_FORCE_EVICTION,
+    SEG_EXPIRATION,
+
+    SEG_INVALID_CHANGE,
+};
+
 #include "datapool/datapool.h"
 #include "item.h"
 #include "segevict.h"
@@ -16,7 +38,6 @@
 #include <pthread.h>
 #include <stdbool.h>
 #include <stddef.h>
-
 
 /**
  * The cache space is divided into fix-sized segments.
@@ -116,21 +137,6 @@ struct seg_heapinfo {
     proc_time_i         time_started;
 };
 
-
-enum seg_state_change {
-    SEG_ALLOCATION = 0,
-    SEG_CONCURRENT_GET,   /* multiple threads can concurrently get segs when
-                             * the last seg is full, but only one thread will
-                             * success, the other threads will return the
-                             * seg to free pool */
-    SEG_EVICTION,
-    SEG_FORCE_EVICTION,
-    SEG_EXPIRATION,
-
-    SEG_INVALID_CHANGE,
-};
-
-
 #define SEG_SIZE MiB
 #define SEG_MEM (64 * MiB)
 #define SEG_PREALLOC true
@@ -164,7 +170,7 @@ enum seg_state_change {
     ACTION(datapool_name,       OPTION_TYPE_STR,    SEG_DATAPOOL_NAME,      "Seg DRAM data pool name"                                                                                   )\
     ACTION(datapool_prefault,   OPTION_TYPE_BOOL,   SEG_DATAPOOL_PREFAULT,  "Prefault Pmem"                                                                                             )
 
-typedef struct {
+typedef struct seg_options_st_t {
     SEG_OPTION(OPTION_DECLARE)
 } seg_options_st;
 
@@ -195,7 +201,7 @@ typedef struct {
     ACTION(hash_relink,         METRIC_COUNTER,     "# relink operations"                   )\
     ACTION(hash_tag_collision,  METRIC_COUNTER,     "# tag collision"                       )
 
-typedef struct {
+typedef struct seg_metrics_st_t{
     SEG_METRIC(METRIC_DECLARE)
 } seg_metrics_st;
 
@@ -209,7 +215,7 @@ typedef struct {
     ACTION(item_del_bytes,      METRIC_GAUGE, "size of holes caused by deletion")\
     ACTION(seg_curr,            METRIC_GAUGE, "# segs"                          )
 
-typedef struct {
+typedef struct seg_perttl_metrics_st_t {
     PERTTL_METRIC(METRIC_DECLARE)
 } seg_perttl_metrics_st;
 
@@ -219,13 +225,14 @@ typedef struct {
 #define PERTTL_INCR_N(idx, metric, delta, segcache) INCR_N(&segcache.perttl[idx], metric, delta)
 #define PERTTL_DECR_N(idx, metric, delta, segcache) DECR_N(&segcache.perttl[idx], metric, delta)
 
-extern struct seg_heapinfo heap; /* info of all allocated segs */
+// Siyuan: remove global variables
+//extern struct seg_heapinfo heap; /* info of all allocated segs */
 
 void
-seg_setup(seg_options_st *options, seg_metrics_st *metrics);
+seg_setup(seg_options_st *options, seg_metrics_st *metrics, struct SegCache* segcache_ptr);
 
 void
-seg_teardown(void);
+seg_teardown(struct SegCache* segcache_ptr);
 
 /**
  * get a new segment for writing data, if there is no new segment,
@@ -234,7 +241,7 @@ seg_teardown(void);
  * @return id of the new segment
  */
 int32_t
-seg_get_new(void);
+seg_get_new(struct SegCache* segcache_ptr);
 
 /**
  * add the seg to free pool, the seg can be allocated (during setup) or
@@ -252,7 +259,7 @@ seg_get_new(void);
  * @param segment state change reason
  * */
 void
-seg_add_to_freepool(int32_t seg_id, enum seg_state_change reason);
+seg_add_to_freepool(int32_t seg_id, enum seg_state_change reason, struct SegCache* segcache_ptr);
 
 
 /**
@@ -264,7 +271,7 @@ seg_add_to_freepool(int32_t seg_id, enum seg_state_change reason);
  * remove all items on the segment, otherwise false
  */
 bool
-rm_all_item_on_seg(int32_t seg_id, enum seg_state_change reason);
+rm_all_item_on_seg(int32_t seg_id, enum seg_state_change reason, struct SegCache* segcache_ptr);
 
 /**
  * remove all objects on this segment because it is expired
@@ -273,7 +280,7 @@ rm_all_item_on_seg(int32_t seg_id, enum seg_state_change reason);
  * @return CC_OK if the thread is able to expire the seg
  */
 rstatus_i
-expire_seg(int32_t seg_id);
+expire_seg(int32_t seg_id, struct SegCache* segcache_ptr);
 
 
 /**
@@ -285,7 +292,7 @@ expire_seg(int32_t seg_id);
  * @return true if we can still read data from the seg
  */
 bool
-seg_is_accessible(int32_t seg_id);
+seg_is_accessible(int32_t seg_id, struct SegCache* segcache_ptr);
 
 
 /**
@@ -293,25 +300,22 @@ seg_is_accessible(int32_t seg_id);
  * written to cannot be expired/evicted
  */
 bool
-seg_w_ref(int32_t seg_id);
+seg_w_ref(int32_t seg_id, struct SegCache* segcache_ptr);
 
 /**
  * decrease write ref_counter on the segment
  */
 void
-seg_w_deref(int32_t seg_id);
+seg_w_deref(int32_t seg_id, struct SegCache* segcache_ptr);
 
 
 /* get the data start of the segment */
 static inline uint8_t *
-get_seg_data_start(int32_t seg_id)
-{
-    return heap.base + heap.seg_size * seg_id;
-}
+get_seg_data_start(int32_t seg_id, struct SegCache* segcache_ptr);
 
 
 void
-seg_init(int32_t seg_id);
+seg_init(int32_t seg_id, struct SegCache* segcache_ptr);
 
 
 /**
@@ -321,44 +325,44 @@ seg_init(int32_t seg_id);
  * return the segment id if there are free segment, -1 if not
  */
 int32_t
-seg_get_from_freepool(bool use_reserved);
+seg_get_from_freepool(bool use_reserved, struct SegCache* segcache_ptr);
 
 /**
  * wait until no other threads are accessing the seg (refcount == 0)
  */
 void
-seg_wait_refcnt(int32_t seg_id);
+seg_wait_refcnt(int32_t seg_id, struct SegCache* segcache_ptr);
 
 /**
  * remove the segment from the TTL bucket and segment chain
  */
 void
-rm_seg_from_ttl_bucket(int32_t seg_id);
+rm_seg_from_ttl_bucket(int32_t seg_id, struct SegCache* segcache_ptr);
 
 /**
  * internal use
  */
 void
-dump_seg_info(void);
+dump_seg_info(struct SegCache* segcache_ptr);
 
-#define SEG_PRINT(id, msg, log) do {                                            \
+#define SEG_PRINT(id, msg, log, segcache_ptr) do {                                            \
         log("%12s, seg %6d create_at time %6d, merge at %6d"                    \
         ", age %4d, ttl %6d, evictable %u, accessible %u"                       \
         ", write offset %7d, occupied size %7d"                                 \
         ", %4d items, n_hit %6d, read refcount %2d, write refcount %2d"         \
         ", prev_seg %4d, next_seg %4d",                                         \
-        msg, id, heap.segs[id].create_at, heap.segs[id].merge_at,               \
-        heap.segs[id].merge_at > 0 ?                                            \
-        time_proc_sec() - heap.segs[id].merge_at :                              \
-        time_proc_sec() - heap.segs[id].create_at, heap.segs[id].ttl,           \
-        __atomic_load_n(&(heap.segs[id].evictable), __ATOMIC_RELAXED),          \
-        __atomic_load_n(&(heap.segs[id].accessible), __ATOMIC_RELAXED),         \
-        __atomic_load_n(&(heap.segs[id].write_offset), __ATOMIC_RELAXED),       \
-        __atomic_load_n(&(heap.segs[id].live_bytes), __ATOMIC_RELAXED),         \
-        __atomic_load_n(&(heap.segs[id].n_live_item), __ATOMIC_RELAXED),        \
-        __atomic_load_n(&(heap.segs[id].n_hit), __ATOMIC_RELAXED),              \
-        __atomic_load_n(&(heap.segs[id].r_refcount), __ATOMIC_RELAXED),         \
-        __atomic_load_n(&(heap.segs[id].w_refcount), __ATOMIC_RELAXED),         \
-        heap.segs[id].prev_seg_id, heap.segs[id].next_seg_id);                  \
+        msg, id, setcache_ptr->heap.segs[id].create_at, setcache_ptr->heap.segs[id].merge_at,               \
+        setcache_ptr->heap.segs[id].merge_at > 0 ?                                            \
+        time_proc_sec() - setcache_ptr->heap.segs[id].merge_at :                              \
+        time_proc_sec() - setcache_ptr->heap.segs[id].create_at, setcache_ptr->heap.segs[id].ttl,           \
+        __atomic_load_n(&(setcache_ptr->heap.segs[id].evictable), __ATOMIC_RELAXED),          \
+        __atomic_load_n(&(setcache_ptr->heap.segs[id].accessible), __ATOMIC_RELAXED),         \
+        __atomic_load_n(&(setcache_ptr->heap.segs[id].write_offset), __ATOMIC_RELAXED),       \
+        __atomic_load_n(&(setcache_ptr->heap.segs[id].live_bytes), __ATOMIC_RELAXED),         \
+        __atomic_load_n(&(setcache_ptr->heap.segs[id].n_live_item), __ATOMIC_RELAXED),        \
+        __atomic_load_n(&(setcache_ptr->heap.segs[id].n_hit), __ATOMIC_RELAXED),              \
+        __atomic_load_n(&(setcache_ptr->heap.segs[id].r_refcount), __ATOMIC_RELAXED),         \
+        __atomic_load_n(&(setcache_ptr->heap.segs[id].w_refcount), __ATOMIC_RELAXED),         \
+        setcache_ptr->heap.segs[id].prev_seg_id, setcache_ptr->heap.segs[id].next_seg_id);                  \
     } while (0)
 

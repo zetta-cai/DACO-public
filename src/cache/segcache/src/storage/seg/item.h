@@ -6,16 +6,6 @@
 #include <cc_metric.h>
 #include <cc_queue.h>
 
-// Siyuan
-//#include <time/time.h>
-#include "segcache.h"
-
-
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
-
-
 typedef enum item_rstatus {
     ITEM_OK,
     ITEM_EOVERSIZED,
@@ -23,6 +13,13 @@ typedef enum item_rstatus {
     ITEM_ENAN, /* not a number */
     ITEM_EOTHER,
 } item_rstatus_e;
+
+#include <time/time.h>
+#include "segcache.h" // Siyuan
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 
 /*
@@ -209,16 +206,16 @@ item_decr(uint64_t *vint, struct item *it, uint64_t delta);
  * decrement the ref counter
  */
 void
-item_release(struct item *it);
+item_release(struct item *it, struct SegCache* segcache_ptr);
 
 
 /* acquire an item */
 struct item *
-item_get(const struct bstring *key, uint64_t *cas);
+item_get(const struct bstring *key, uint64_t *cas, struct SegCache* segcache_ptr);
 
 /* this function does insert or update */
 void
-item_insert(struct item *it);
+item_insert(struct item *it, struct SegCache* segcache_ptr);
 
 
 /* reserve an item, this does not link it or remove existing item with the same
@@ -229,12 +226,12 @@ item_insert(struct item *it);
 item_rstatus_e
 item_reserve(struct item **it_p, const struct bstring *key,
         const struct bstring *val, uint32_t vlen, uint8_t olen,
-        proc_time_i expire_at);
+        proc_time_i expire_at, struct SegCache* segcache_ptr);
 
 item_rstatus_e
 item_reserve_with_ttl(struct item **it_p, const struct bstring *key,
                       const struct bstring *val, uint32_t vlen, uint8_t olen,
-                      delta_time_i ttl);
+                      delta_time_i ttl, struct SegCache* segcache_ptr);
 
 void
 item_backfill(struct item *it, const struct bstring *val);
@@ -245,8 +242,8 @@ item_update(struct item *it);
 
 /* Remove item from cache */
 bool
-item_delete(const struct bstring *key);
+item_delete(const struct bstring *key, struct SegCache* segcache_ptr);
 
 /* flush the cache */
 void
-item_flush(struct SegCache& segcache);
+item_flush(struct SegCache* segcache_ptr);

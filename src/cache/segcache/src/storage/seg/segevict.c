@@ -35,7 +35,7 @@ evict_rstatus_e
 least_valuable_seg(int32_t *seg_id);
 
 bool
-seg_evictable(struct seg *seg, const struct SegCache& segcache)
+seg_evictable(struct seg *seg, const struct SegCache* segcache_ptr)
 {
     if (seg == NULL) {
         return false;
@@ -50,24 +50,24 @@ seg_evictable(struct seg *seg, const struct SegCache& segcache)
     /* a magic number - we don't want to merge just created seg */
     /* TODO(jason): the time needs to be adaptive */
     is_evictable = is_evictable
-        && (time_proc_sec(segcache) - seg->create_at >= segcache.evict_info.seg_mature_time);
+        && (time_proc_sec(segcache_ptr) - seg->create_at >= segcache_ptr->evict_info.seg_mature_time);
 
     /* don't merge segments that will expire soon */
     is_evictable = is_evictable &&
-        seg->create_at + seg->ttl - time_proc_sec(segcache) > 20;
+        seg->create_at + seg->ttl - time_proc_sec(segcache_ptr) > 20;
 
     return is_evictable;
 }
 
 evict_rstatus_e
-seg_evict(int32_t *evicted_seg_id, struct SegCache& segcache)
+seg_evict(int32_t *evicted_seg_id, struct SegCache* segcache_ptr)
 {
     evict_rstatus_e status;
 
     status = least_valuable_seg(evicted_seg_id);
     if (status == EVICT_NO_AVAILABLE_SEG) {
         log_warn("unable to find seg to evict");
-        INCR(segcache.seg_metrics, seg_evict_ex);
+        INCR(segcache_ptr->seg_metrics, seg_evict_ex);
 
         return EVICT_NO_AVAILABLE_SEG;
     }
@@ -75,7 +75,7 @@ seg_evict(int32_t *evicted_seg_id, struct SegCache& segcache)
     log_verb("evict segment %"PRId32, *evicted_seg_id);
 
     if (rm_all_item_on_seg(*evicted_seg_id, SEG_EVICTION)) {
-        INCR(segcache.seg_metrics, seg_evict);
+        INCR(segcache_ptr->seg_metrics, seg_evict);
 
         return EVICT_OK;
     }
@@ -86,31 +86,31 @@ seg_evict(int32_t *evicted_seg_id, struct SegCache& segcache)
 
 /* maybe we should use # of req instead of real time to make decision */
 static inline bool
-should_rerank(const struct SegCache& segcache)
+should_rerank(const struct SegCache* segcache_ptr)
 {
     static bool need_rerank;
     proc_time_i prev_sec;
-    prev_sec = segcache.evict_info.last_update_time;
+    prev_sec = segcache_ptr->evict_info.last_update_time;
 
     need_rerank =
-        prev_sec == -1 || time_proc_sec(segcache) - prev_sec > UPDATE_INTERVAL;
+        prev_sec == -1 || time_proc_sec(segcache_ptr) - prev_sec > UPDATE_INTERVAL;
 
-    need_rerank = need_rerank || heap.max_nseg - segcache.evict_info.idx_rseg < 8;
+    need_rerank = need_rerank || heap.max_nseg - segcache_ptr->evict_info.idx_rseg < 8;
 
     return need_rerank;
 }
 
 static inline int
-cmp_seg_FIFO(const void *d1, const void *d2, const struct SegCache& segcache)
+cmp_seg_FIFO(const void *d1, const void *d2, const struct SegCache* segcache_ptr)
 {
     struct seg *seg1 = &heap.segs[*(uint32_t *) d1];
     struct seg *seg2 = &heap.segs[*(uint32_t *) d2];
 
     /* avoid segments that are currently being written to */
-    if (!seg_evictable(seg1, segcache)) {
+    if (!seg_evictable(seg1, segcache_ptr)) {
         return 1;
     }
-    if (!seg_evictable(seg2, segcache)) {
+    if (!seg_evictable(seg2, segcache_ptr)) {
         return -1;
     }
 
@@ -119,15 +119,15 @@ cmp_seg_FIFO(const void *d1, const void *d2, const struct SegCache& segcache)
 }
 
 static inline int
-cmp_seg_CTE(const void *d1, const void *d2, const struct SegCache& segcache)
+cmp_seg_CTE(const void *d1, const void *d2, const struct SegCache* segcache_ptr)
 {
     struct seg *seg1 = &heap.segs[*(uint32_t *) d1];
     struct seg *seg2 = &heap.segs[*(uint32_t *) d2];
 
-    if (!seg_evictable(seg1, segcache)) {
+    if (!seg_evictable(seg1, segcache_ptr)) {
         return 1;
     }
-    if (!seg_evictable(seg2, segcache)) {
+    if (!seg_evictable(seg2, segcache_ptr)) {
         return -1;
     }
 
@@ -135,15 +135,15 @@ cmp_seg_CTE(const void *d1, const void *d2, const struct SegCache& segcache)
 }
 
 static inline int
-cmp_seg_util(const void *d1, const void *d2, const struct SegCache& segcache)
+cmp_seg_util(const void *d1, const void *d2, const struct SegCache* segcache_ptr)
 {
     struct seg *seg1 = &heap.segs[*(uint32_t *) d1];
     struct seg *seg2 = &heap.segs[*(uint32_t *) d2];
 
-    if (!seg_evictable(seg1, segcache)) {
+    if (!seg_evictable(seg1, segcache_ptr)) {
         return 1;
     }
-    if (!seg_evictable(seg2, segcache)) {
+    if (!seg_evictable(seg2, segcache_ptr)) {
         return -1;
     }
 
@@ -151,14 +151,14 @@ cmp_seg_util(const void *d1, const void *d2, const struct SegCache& segcache)
 }
 
 static inline void
-rank_seg(struct SegCache& segcache)
+rank_seg(struct SegCache* segcache_ptr)
 {
-    segcache.evict_info.idx_rseg = 0;
+    segcache_ptr->evict_info.idx_rseg = 0;
 
     int
     (*cmp)(const void *, const void *) = NULL;
 
-    switch (segcache.evict_info.policy) {
+    switch (segcache_ptr->evict_info.policy) {
         case EVICT_FIFO:cmp = cmp_seg_FIFO;
             break;
         case EVICT_CTE:cmp = cmp_seg_CTE;
@@ -169,32 +169,32 @@ rank_seg(struct SegCache& segcache)
     }
 
     ASSERT(cmp != NULL);
-    qsort(segcache.evict_info.ranked_seg_id, heap.max_nseg, sizeof(uint32_t), cmp);
+    qsort(segcache_ptr->evict_info.ranked_seg_id, heap.max_nseg, sizeof(uint32_t), cmp);
 
 //    log_debug("ranked seg id %u %u %u %u %u %u %u %u %u %u ...",
-//        segcache.evict_info.ranked_seg_id[0], segcache.evict_info.ranked_seg_id[1],
-//        segcache.evict_info.ranked_seg_id[2], segcache.evict_info.ranked_seg_id[3],
-//        segcache.evict_info.ranked_seg_id[4], segcache.evict_info.ranked_seg_id[5],
-//        segcache.evict_info.ranked_seg_id[6], segcache.evict_info.ranked_seg_id[7],
-//        segcache.evict_info.ranked_seg_id[8], segcache.evict_info.ranked_seg_id[9]);
-//    SEG_PRINT(segcache.evict_info.ranked_seg_id[0], "", log_debug);
-//    SEG_PRINT(segcache.evict_info.ranked_seg_id[1], "", log_debug);
-//    SEG_PRINT(segcache.evict_info.ranked_seg_id[2], "", log_debug);
-//    SEG_PRINT(segcache.evict_info.ranked_seg_id[3], "", log_debug);
+//        segcache_ptr->evict_info.ranked_seg_id[0], segcache_ptr->evict_info.ranked_seg_id[1],
+//        segcache_ptr->evict_info.ranked_seg_id[2], segcache_ptr->evict_info.ranked_seg_id[3],
+//        segcache_ptr->evict_info.ranked_seg_id[4], segcache_ptr->evict_info.ranked_seg_id[5],
+//        segcache_ptr->evict_info.ranked_seg_id[6], segcache_ptr->evict_info.ranked_seg_id[7],
+//        segcache_ptr->evict_info.ranked_seg_id[8], segcache_ptr->evict_info.ranked_seg_id[9]);
+//    SEG_PRINT(segcache_ptr->evict_info.ranked_seg_id[0], "", log_debug);
+//    SEG_PRINT(segcache_ptr->evict_info.ranked_seg_id[1], "", log_debug);
+//    SEG_PRINT(segcache_ptr->evict_info.ranked_seg_id[2], "", log_debug);
+//    SEG_PRINT(segcache_ptr->evict_info.ranked_seg_id[3], "", log_debug);
 
-    segcache.evict_info.last_update_time = time_proc_sec(segcache);
+    segcache_ptr->evict_info.last_update_time = time_proc_sec(segcache_ptr);
 }
 
 evict_rstatus_e
-least_valuable_seg(int32_t *seg_id, struct SegCache& segcache)
+least_valuable_seg(int32_t *seg_id, struct SegCache* segcache_ptr)
 {
     struct seg *seg;
     uint32_t   i = 0;
 
-    if (segcache.evict_info.policy == EVICT_RANDOM) {
+    if (segcache_ptr->evict_info.policy == EVICT_RANDOM) {
         *seg_id = rand() % heap.max_nseg;
         seg = &heap.segs[*seg_id];
-        while ((!seg_evictable(seg, segcache)) && i <= heap.max_nseg) {
+        while ((!seg_evictable(seg, segcache_ptr)) && i <= heap.max_nseg) {
             /* transition to linear search */
             *seg_id = (*seg_id + 1) % heap.max_nseg;
             seg = &heap.segs[*seg_id];
@@ -208,39 +208,39 @@ least_valuable_seg(int32_t *seg_id, struct SegCache& segcache)
         }
     }
     else {
-        pthread_mutex_lock(&segcache.evict_info.mtx);
+        pthread_mutex_lock(&segcache_ptr->evict_info.mtx);
 
-        if (should_rerank(segcache)) {
-            rank_seg(segcache);
+        if (should_rerank(segcache_ptr)) {
+            rank_seg(segcache_ptr);
         }
 
-        *seg_id = segcache.evict_info.ranked_seg_id[segcache.evict_info.idx_rseg];
+        *seg_id = segcache_ptr->evict_info.ranked_seg_id[segcache_ptr->evict_info.idx_rseg];
         seg = &heap.segs[*seg_id];
         bool reranked = false;
 
-        while (!seg_evictable(seg, segcache) && i < heap.max_nseg) {
+        while (!seg_evictable(seg, segcache_ptr) && i < heap.max_nseg) {
             i++;
-            if (!reranked && segcache.evict_info.idx_rseg + i >= heap.max_nseg) {
-                rank_seg(segcache);
+            if (!reranked && segcache_ptr->evict_info.idx_rseg + i >= heap.max_nseg) {
+                rank_seg(segcache_ptr);
                 i = 0;
                 reranked = true;
             }
-            *seg_id = segcache.evict_info.ranked_seg_id[segcache.evict_info.idx_rseg + i];
+            *seg_id = segcache_ptr->evict_info.ranked_seg_id[segcache_ptr->evict_info.idx_rseg + i];
             seg = &heap.segs[*seg_id];
         }
 
         if (i >= heap.max_nseg) {
-            rank_seg(segcache);
+            rank_seg(segcache_ptr);
 
-            pthread_mutex_unlock(&segcache.evict_info.mtx);
+            pthread_mutex_unlock(&segcache_ptr->evict_info.mtx);
 
             *seg_id = -1;
             return EVICT_NO_AVAILABLE_SEG;
         }
         else {
-            segcache.evict_info.idx_rseg = (segcache.evict_info.idx_rseg + i + 1) % heap.max_nseg;
+            segcache_ptr->evict_info.idx_rseg = (segcache_ptr->evict_info.idx_rseg + i + 1) % heap.max_nseg;
 
-            pthread_mutex_unlock(&segcache.evict_info.mtx);
+            pthread_mutex_unlock(&segcache_ptr->evict_info.mtx);
 
             return EVICT_OK;
         }
@@ -249,37 +249,37 @@ least_valuable_seg(int32_t *seg_id, struct SegCache& segcache)
 }
 
 void
-segevict_teardown(struct SegCache& segcache)
+segevict_teardown(struct SegCache* segcache_ptr)
 {
-    cc_free(segcache.evict_info.ranked_seg_id);
+    cc_free(segcache_ptr->evict_info.ranked_seg_id);
 
-    segcache.segevict_initialized = false;
+    segcache_ptr->segevict_initialized = false;
 }
 
 void
-segevict_setup(evict_policy_e ev_policy, uintmax_t seg_mature_time, struct SegCache& segcache)
+segevict_setup(evict_policy_e ev_policy, uintmax_t seg_mature_time, struct SegCache* segcache_ptr)
 {
     uint32_t i = 0;
 
-    if (segcache.segevict_initialized) {
+    if (segcache_ptr->segevict_initialized) {
         log_warn("segevict has already initialized");
 
-        segevict_teardown(segcache);
+        segevict_teardown(segcache_ptr);
     }
 
-    segcache.evict_info.last_update_time = -1;
-    segcache.evict_info.policy           = ev_policy;
-    segcache.evict_info.ranked_seg_id    = cc_zalloc(sizeof(int32_t) * heap.max_nseg);
-    segcache.evict_info.idx_rseg         = 0;
-    segcache.evict_info.seg_mature_time  = seg_mature_time;
-    pthread_mutex_init(&segcache.evict_info.mtx, NULL);
+    segcache_ptr->evict_info.last_update_time = -1;
+    segcache_ptr->evict_info.policy           = ev_policy;
+    segcache_ptr->evict_info.ranked_seg_id    = cc_zalloc(sizeof(int32_t) * heap.max_nseg);
+    segcache_ptr->evict_info.idx_rseg         = 0;
+    segcache_ptr->evict_info.seg_mature_time  = seg_mature_time;
+    pthread_mutex_init(&segcache_ptr->evict_info.mtx, NULL);
 
     for (i = 0; i < heap.max_nseg; i++) {
-        segcache.evict_info.ranked_seg_id[i] = i;
+        segcache_ptr->evict_info.ranked_seg_id[i] = i;
     }
 
     /* initialize merged-based eviction policy */
-    struct merge_opts *mopt = &segcache.evict_info.merge_opt;
+    struct merge_opts *mopt = &segcache_ptr->evict_info.merge_opt;
     mopt->target_ratio = 1.0 / mopt->seg_n_merge;
     /* stop if the bytes on the merged seg is more than the threshold */
     // mopt->stop_ratio   = mopt->target_ratio * (mopt->seg_n_merge - 1) + 0.05;
@@ -287,5 +287,5 @@ segevict_setup(evict_policy_e ev_policy, uintmax_t seg_mature_time, struct SegCa
     mopt->stop_bytes   = (int32_t) (heap.seg_size * mopt->stop_ratio);
 
     srand(time(NULL));
-    segcache.segevict_initialized = true;
+    segcache_ptr->segevict_initialized = true;
 }

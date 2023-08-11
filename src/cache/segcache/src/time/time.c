@@ -20,43 +20,43 @@
 //uint8_t time_type = TIME_UNIX;
 
 void
-time_update(struct SegCache& segcache)
+time_update(struct SegCache* segcache_ptr)
 {
-    duration_snapshot(&segcache.proc_snapshot, &segcache.start);
+    duration_snapshot(&segcache_ptr->proc_snapshot, &segcache_ptr->start);
 
-    __atomic_store_n(&segcache.proc_sec, (proc_time_i)duration_sec(&segcache.proc_snapshot),
+    __atomic_store_n(&segcache_ptr->proc_sec, (proc_time_i)duration_sec(&segcache_ptr->proc_snapshot),
             __ATOMIC_RELAXED);
-    __atomic_store_n(&segcache.proc_ms, (proc_time_fine_i)duration_ms(&segcache.proc_snapshot),
+    __atomic_store_n(&segcache_ptr->proc_ms, (proc_time_fine_i)duration_ms(&segcache_ptr->proc_snapshot),
             __ATOMIC_RELAXED);
-    __atomic_store_n(&segcache.proc_us, (proc_time_fine_i)duration_us(&segcache.proc_snapshot),
+    __atomic_store_n(&segcache_ptr->proc_us, (proc_time_fine_i)duration_us(&segcache_ptr->proc_snapshot),
             __ATOMIC_RELAXED);
-    __atomic_store_n(&segcache.proc_ns, (proc_time_fine_i)duration_ns(&segcache.proc_snapshot),
+    __atomic_store_n(&segcache_ptr->proc_ns, (proc_time_fine_i)duration_ns(&segcache_ptr->proc_snapshot),
             __ATOMIC_RELAXED);
 }
 
 void
-time_setup(time_options_st *options, struct SegCache& segcache)
+time_setup(time_options_st *options, struct SegCache* segcache_ptr)
 {
     if (options != NULL) {
-        segcache.time_type = option_uint(&options->time_type);
+        segcache_ptr->time_type = option_uint(&options->time_type);
     }
 
-    segcache.time_start = time(NULL);
-    duration_start(&segcache.start);
-    time_update(segcache);
+    segcache_ptr->time_start = time(NULL);
+    duration_start(&segcache_ptr->start);
+    time_update(segcache_ptr);
 
-    log_info("timer started at %"PRIu64, (uint64_t)segcache.time_start);
+    log_info("timer started at %"PRIu64, (uint64_t)segcache_ptr->time_start);
 
-    if (segcache.time_type >= TIME_SENTINEL) {
+    if (segcache_ptr->time_type >= TIME_SENTINEL) {
         exit(EX_CONFIG);
     }
 }
 
 void
-time_teardown(struct SegCache& segcache)
+time_teardown(struct SegCache* segcache_ptr)
 {
-    duration_reset(&segcache.start);
-    duration_reset(&segcache.proc_snapshot);
+    duration_reset(&segcache_ptr->start);
+    duration_reset(&segcache_ptr->proc_snapshot);
 
     log_info("timer ended at %"PRIu64, (uint64_t)time(NULL));
 }

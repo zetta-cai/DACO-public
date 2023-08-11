@@ -24,10 +24,10 @@ __thread int32_t             local_last_seg[MAX_N_TTL_BUCKET] = {0}; // Siyuan: 
  * bucket, which is expensive when there is no need for high scalability,
  * Segcache can scale to 8 cores without turning this on */
 struct item *
-ttl_bucket_reserve_item(int32_t ttl_bucket_idx, size_t sz, int32_t *seg_id, struct SegCache& segcache)
+ttl_bucket_reserve_item(int32_t ttl_bucket_idx, size_t sz, int32_t *seg_id, struct SegCache* segcache_ptr)
 {
     struct item       *it;
-    struct ttl_bucket *ttl_bucket = &segcache.ttl_buckets[ttl_bucket_idx];
+    struct ttl_bucket *ttl_bucket = &segcache_ptr->ttl_buckets[ttl_bucket_idx];
     int32_t           curr_seg_id, new_seg_id;
     struct seg        *curr_seg   = NULL, *new_seg = NULL;
 
@@ -53,7 +53,7 @@ ttl_bucket_reserve_item(int32_t ttl_bucket_idx, size_t sz, int32_t *seg_id, stru
     if (curr_seg_id != -1) {
         /* increment offset by sz */
         curr_seg   = &heap.segs[curr_seg_id];
-        accessible = seg_is_accessible(curr_seg_id);
+        accessible = seg_is_accessible(curr_seg_id, segcache_ptr);
         if (accessible) {
             offset = __atomic_fetch_add(
                 &(curr_seg->write_offset), sz, __ATOMIC_SEQ_CST);
@@ -71,10 +71,10 @@ ttl_bucket_reserve_item(int32_t ttl_bucket_idx, size_t sz, int32_t *seg_id, stru
             memset(seg_data + offset, 0, heap.seg_size - offset);
         }
 
-        new_seg_id = seg_get_new();
+        new_seg_id = seg_get_new(segcache_ptr);
 
         if (new_seg_id == -1) {
-            dump_seg_info();
+            dump_seg_info(segcache_ptr);
 #if defined CC_ASSERT_PANIC || defined(CC_ASSERT_LOG)
             ASSERT(0);
 #endif
@@ -97,9 +97,9 @@ ttl_bucket_reserve_item(int32_t ttl_bucket_idx, size_t sz, int32_t *seg_id, stru
         if (curr_seg_id != ttl_bucket->last_seg_id &&
             ttl_bucket->last_seg_id != -1) {
             /* roll back */
-            INCR(segcache.seg_metrics, seg_return);
+            INCR(segcache_ptr->seg_metrics, seg_return);
 
-            seg_add_to_freepool(new_seg_id, SEG_CONCURRENT_GET);
+            seg_add_to_freepool(new_seg_id, SEG_CONCURRENT_GET, segcache_ptr);
             new_seg_id = ttl_bucket->last_seg_id;
 
         }
@@ -132,7 +132,7 @@ ttl_bucket_reserve_item(int32_t ttl_bucket_idx, size_t sz, int32_t *seg_id, stru
                 &new_seg->evictable, 1, __ATOMIC_RELAXED);
             ASSERT(evictable == 0);
 
-            PERTTL_INCR(ttl_bucket_idx, seg_curr, segcache);
+            PERTTL_INCR(ttl_bucket_idx, seg_curr, segcache_ptr);
 
             ASSERT(new_seg->prev_seg_id == curr_seg_id ||
                             new_seg->prev_seg_id == -1);
@@ -153,7 +153,7 @@ ttl_bucket_reserve_item(int32_t ttl_bucket_idx, size_t sz, int32_t *seg_id, stru
         curr_seg    = &heap.segs[curr_seg_id];
         offset      = __atomic_fetch_add(
             &(curr_seg->write_offset), sz, __ATOMIC_SEQ_CST);
-        accessible  = seg_is_accessible(curr_seg_id);
+        accessible  = seg_is_accessible(curr_seg_id, segcache_ptr);
     }
 
     seg_data = get_seg_data_start(curr_seg_id);
@@ -162,17 +162,17 @@ ttl_bucket_reserve_item(int32_t ttl_bucket_idx, size_t sz, int32_t *seg_id, stru
     it = (struct item *) (seg_data + offset);
     *seg_id = curr_seg->seg_id;
 
-    PERTTL_INCR(ttl_bucket_idx, item_curr, segcache);
-    PERTTL_INCR_N(ttl_bucket_idx, item_curr_bytes, sz, segcache);
+    PERTTL_INCR(ttl_bucket_idx, item_curr, segcache_ptr);
+    PERTTL_INCR_N(ttl_bucket_idx, item_curr_bytes, sz, segcache_ptr);
 
     return it;
 }
 #else
 struct item *
-ttl_bucket_reserve_item(int32_t ttl_bucket_idx, size_t sz, int32_t *seg_id, struct SegCache& segcache)
+ttl_bucket_reserve_item(int32_t ttl_bucket_idx, size_t sz, int32_t *seg_id, struct SegCache* segcache_ptr)
 {
     struct item       *it;
-    struct ttl_bucket *ttl_bucket = &segcache.ttl_buckets[ttl_bucket_idx];
+    struct ttl_bucket *ttl_bucket = &segcache_ptr->ttl_buckets[ttl_bucket_idx];
     int32_t           curr_seg_id;
     struct seg        *curr_seg   = NULL;
 
@@ -225,7 +225,7 @@ ttl_bucket_reserve_item(int32_t ttl_bucket_idx, size_t sz, int32_t *seg_id, stru
                 &curr_seg->evictable, 1, __ATOMIC_RELAXED);
             ASSERT(evictable == 0);
 
-            PERTTL_INCR(ttl_bucket_idx, seg_curr, segcache);
+            PERTTL_INCR(ttl_bucket_idx, seg_curr, segcache_ptr);
 
             log_debug("link seg %d (offset %d occupied_size %d) to "
                       "ttl bucket %d, total %d segments, "
@@ -258,15 +258,15 @@ ttl_bucket_reserve_item(int32_t ttl_bucket_idx, size_t sz, int32_t *seg_id, stru
     it       = (struct item *) (seg_data + offset);
     *seg_id = curr_seg->seg_id;
 
-    PERTTL_INCR(ttl_bucket_idx, item_curr, segcache);
-    PERTTL_INCR_N(ttl_bucket_idx, item_curr_bytes, sz, segcache);
+    PERTTL_INCR(ttl_bucket_idx, item_curr, segcache_ptr);
+    PERTTL_INCR_N(ttl_bucket_idx, item_curr_bytes, sz, segcache_ptr);
 
     return it;
 }
 #endif
 
 void
-ttl_bucket_setup(struct SegCache& segcache)
+ttl_bucket_setup(struct SegCache* segcache_ptr)
 {
     struct ttl_bucket *ttl_bucket;
 
@@ -275,7 +275,7 @@ ttl_bucket_setup(struct SegCache& segcache)
 
     for (uint32_t i = 0; i < 4; i++) {
         for (uint32_t j = 0; j < N_BUCKET_PER_STEP; j++) {
-            ttl_bucket = &(segcache.ttl_buckets[i * N_BUCKET_PER_STEP + j]);
+            ttl_bucket = &(segcache_ptr->ttl_buckets[i * N_BUCKET_PER_STEP + j]);
             memset(ttl_bucket, 0, sizeof(*ttl_bucket));
             ttl_bucket->ttl               = ttl_bucket_intvls[i] * j + 1;
             ttl_bucket->last_seg_id       = -1;

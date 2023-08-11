@@ -1,6 +1,6 @@
 #pragma once
 
-#include "item.h"
+#include <stdint.h>
 
 /**
  * bulk-chaining hashtable
@@ -133,20 +133,22 @@ struct hash_table {
     uint64_t *table;
 };
 
-
-void
-hashtable_setup(uint32_t hash_power, struct SegCache& segcache);
-
-void
-hashtable_teardown(struct SegCache& segcache);
+#include "item.h"
 
 
 void
-hashtable_put(struct item *it, uint64_t seg_id, uint64_t offset, struct SegCache& segcache);
+hashtable_setup(uint32_t hash_power, struct SegCache* segcache_ptr);
+
+void
+hashtable_teardown(struct SegCache* segcache_ptr);
+
+
+void
+hashtable_put(struct item *it, uint64_t seg_id, uint64_t offset, struct SegCache* segcache_ptr);
 
 /* delete the item from hashtable */
 bool
-hashtable_delete(const struct bstring *key, struct SegCache& segcache);
+hashtable_delete(const struct bstring *key, struct SegCache* segcache_ptr);
 
 /*
  * delete the hashtable entry of to this item and all entries
@@ -154,17 +156,17 @@ hashtable_delete(const struct bstring *key, struct SegCache& segcache);
  */
 bool
 hashtable_evict(const char *oit_key, uint32_t oit_klen, uint64_t seg_id,
-        uint64_t offset, struct SegCache& segcache);
+        uint64_t offset, struct SegCache* segcache_ptr);
 
 struct item *
 hashtable_get(const char *key, uint32_t klen, int32_t *seg_id,
-        uint64_t *cas, struct SegCache& segcache);
+        uint64_t *cas, struct SegCache* segcache_ptr);
 
 
 bool
 hashtable_relink_it(const char *oit_key, uint32_t oit_klen,
         uint64_t old_seg_id, uint64_t old_offset,
-        uint64_t new_seg_id, uint64_t new_offset, struct SegCache& segcache);
+        uint64_t new_seg_id, uint64_t new_offset, struct SegCache* segcache_ptr);
 
 /**
  * debugging functions
@@ -182,17 +184,17 @@ hashtable_check_it(const char *oit_key, uint32_t oit_klen,
  *
  */
 void
-hashtable_stat(int *item_cnt_ptr, int *bucket_cnt_ptr, const struct SegCache& segcache);
+hashtable_stat(int *item_cnt_ptr, int *bucket_cnt_ptr, const struct SegCache* segcache_ptr);
 
 
 int hashtable_get_it_freq(const char *oit_key, uint32_t oit_klen,
-                          uint64_t old_seg_id, uint64_t old_offset, struct SegCache& segcache);
+                          uint64_t old_seg_id, uint64_t old_offset, struct SegCache* segcache_ptr);
 
 /* each hashtable get will incr item frequency,
  * this function does not incr item frequency */
 struct item *
 hashtable_get_no_freq_incr(const char *key, uint32_t klen, int32_t *seg_id,
-                           uint64_t *cas, struct SegCache& segcache);
+                           uint64_t *cas, struct SegCache* segcache_ptr);
 
 
 /**
@@ -201,7 +203,7 @@ hashtable_get_no_freq_incr(const char *key, uint32_t klen, int32_t *seg_id,
  * is in the hash table
  */
 void
-scan_hashtable_find_seg(int32_t target_seg_id, const struct SegCache& segcache);
+scan_hashtable_find_seg(int32_t target_seg_id, const struct SegCache* segcache_ptr);
 
 void
-verify_hashtable(const struct SegCache& segcache);
+verify_hashtable(const struct SegCache* segcache_ptr);

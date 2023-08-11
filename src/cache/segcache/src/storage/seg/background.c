@@ -25,13 +25,13 @@ struct background_param_t
 };
 
 static void
-check_seg_expire(struct SegCache& segcache)
+check_seg_expire(struct SegCache* segcache_ptr)
 {
     rstatus_i   status;
     struct seg  *seg;
     int32_t     seg_id, next_seg_id;
     for (int i = 0; i < MAX_N_TTL_BUCKET; i++) {
-        seg_id = segcache.ttl_buckets[i].first_seg_id;
+        seg_id = segcache_ptr->ttl_buckets[i].first_seg_id;
         if (seg_id == -1) {
             /* no object of this TTL */
             continue;
@@ -41,9 +41,9 @@ check_seg_expire(struct SegCache& segcache)
         /* curr_sec - 2 to avoid a slow client is still writing to
          * the expiring segment  */
         while (seg->create_at + seg->ttl < time_proc_sec(segcache) - 2 ||
-            seg->create_at < segcache.flush_at) {
+            seg->create_at < segcache_ptr->flush_at) {
             log_debug("expire seg %"PRId32 ", create at %"PRId32 ", ttl %"PRId32
-            ", flushed at %"PRId32, seg_id, seg->create_at, seg->ttl, segcache.flush_at);
+            ", flushed at %"PRId32, seg_id, seg->create_at, seg->ttl, segcache_ptr->flush_at);
 
             next_seg_id = seg->next_seg_id;
 
@@ -89,13 +89,13 @@ background_main(void *background_param_ptr)
 }
 
 void
-start_background_thread(void *arg, struct SegCache& segcache)
+start_background_thread(void *arg, struct SegCache* segcache_ptr)
 {
     struct background_param_t background_param;
     background_param.arg = arg;
-    background_param.segcache_ptr = &segcache;
+    background_param.segcache_ptr = segcache_ptr;
 
-    int ret = pthread_create(&segcache.bg_tid, NULL, background_main, &background_param);
+    int ret = pthread_create(&segcache_ptr->bg_tid, NULL, background_main, &background_param);
     if (ret != 0) {
         log_crit("pthread create failed for background thread: %s",
             strerror(ret));

@@ -92,14 +92,14 @@ static __thread __uint128_t g_lehmer64_state       = 1; // Siyuan: NO need to en
 #undef GET_SEG_ID
 #undef GET_SEG_ID_NON_DECR
 #define GET_SEG_ID_NON_DECR(item_info)   (((item_info) & SEG_ID_MASK) >> SEG_ID_BIT_SHIFT)
-#define GET_SEG_ID(item_info)   ((((item_info) & SEG_ID_MASK) >> SEG_ID_BIT_SHIFT) % heap.max_nseg)
+#define GET_SEG_ID(item_info, segcache_ptr)   ((((item_info) & SEG_ID_MASK) >> SEG_ID_BIT_SHIFT) % segcache_ptr->segcache_ptr->heap_ptr->max_nseg)
 #endif
 
 #define GET_OFFSET(item_info)   (((item_info) & OFFSET_MASK) << OFFSET_UNIT_IN_BIT)
 #define CLEAR_FREQ(item_info)   ((item_info) & (~FREQ_MASK))
 
 #define CAL_TAG_FROM_HV(hv) (((hv) & TAG_MASK) | 0x0010000000000000ul)
-#define GET_BUCKET(hv, segcache)      (&segcache.hash_table.table[((hv) & (segcache.hash_table.hash_mask))])
+#define GET_BUCKET(hv, segcache_ptr)      (&segcache_ptr->hash_table.table[((hv) & (segcache_ptr->hash_table.hash_mask))])
 
 #define GET_TS(bucket_ptr)          (((*(bucket_ptr)) & TS_MASK) >> TS_BIT_SHIFT)
 #define GET_CAS(bucket_ptr)         ((*(bucket_ptr)) & CAS_MASK)
@@ -180,38 +180,38 @@ static __thread __uint128_t g_lehmer64_state       = 1; // Siyuan: NO need to en
  */
 
 static inline struct item *
-_info_to_item(uint64_t item_info)
+_info_to_item(uint64_t item_info, struct SegCache* segcache_ptr)
 {
     uint64_t seg_id = GET_SEG_ID(item_info);
     uint64_t offset = GET_OFFSET(item_info);
 #if defined DEBUG_MODE
-    seg_id = seg_id % heap.max_nseg;
+    seg_id = seg_id % segcache_ptr->heap_ptr->max_nseg;
 #endif
-    ASSERT(seg_id < heap.max_nseg);
-    ASSERT(offset < heap.seg_size);
+    ASSERT(seg_id < segcache_ptr->heap_ptr->max_nseg);
+    ASSERT(offset < segcache_ptr->heap_ptr->seg_size);
 
-    return (struct item *) (heap.base + heap.seg_size * seg_id + offset);
+    return (struct item *) (segcache_ptr->heap_ptr->base + segcache_ptr->heap_ptr->seg_size * seg_id + offset);
 }
 
 static inline void
-_item_free(uint64_t item_info, bool mark_tombstone)
+_item_free(uint64_t item_info, bool mark_tombstone, struct SegCache* segcache_ptr)
 {
     struct item *it;
     uint64_t    seg_id = GET_SEG_ID(item_info);
     uint64_t    offset = GET_OFFSET(item_info);
-    it = (struct item *) (heap.base + heap.seg_size * seg_id + offset);
+    it = (struct item *) (segcache_ptr->heap_ptr->base + segcache_ptr->heap_ptr->seg_size * seg_id + offset);
     uint32_t sz = item_ntotal(it);
 
-    __atomic_fetch_sub(&heap.segs[seg_id].live_bytes, sz, __ATOMIC_RELAXED);
-    __atomic_fetch_sub(&heap.segs[seg_id].n_live_item, 1, __ATOMIC_RELAXED);
+    __atomic_fetch_sub(&segcache_ptr->heap_ptr->segs[seg_id].live_bytes, sz, __ATOMIC_RELAXED);
+    __atomic_fetch_sub(&segcache_ptr->heap_ptr->segs[seg_id].n_live_item, 1, __ATOMIC_RELAXED);
 
 #ifdef DEBUG_MODE
-    __atomic_fetch_add(&heap.segs[seg_id].n_rm_item, 1, __ATOMIC_RELAXED);
-    __atomic_fetch_add(&heap.segs[seg_id].n_rm_bytes, sz, __ATOMIC_RELAXED);
+    __atomic_fetch_add(&segcache_ptr->heap_ptr->segs[seg_id].n_rm_item, 1, __ATOMIC_RELAXED);
+    __atomic_fetch_add(&segcache_ptr->heap_ptr->segs[seg_id].n_rm_bytes, sz, __ATOMIC_RELAXED);
 #endif
 
-    ASSERT(__atomic_load_n(&heap.segs[seg_id].n_live_item, __ATOMIC_RELAXED) >= 0);
-    ASSERT(__atomic_load_n(&heap.segs[seg_id].live_bytes, __ATOMIC_RELAXED) >= 0);
+    ASSERT(__atomic_load_n(&segcache_ptr->heap_ptr->segs[seg_id].n_live_item, __ATOMIC_RELAXED) >= 0);
+    ASSERT(__atomic_load_n(&segcache_ptr->heap_ptr->segs[seg_id].live_bytes, __ATOMIC_RELAXED) >= 0);
 
 //    if (mark_tombstone) {
 //        it->deleted = true;
@@ -221,9 +221,9 @@ _item_free(uint64_t item_info, bool mark_tombstone)
 }
 
 static inline bool
-_same_item(const char *key, uint32_t klen, uint64_t item_info)
+_same_item(const char *key, uint32_t klen, uint64_t item_info, struct SegCache* segcache_ptr)
 {
-    struct item *oit = _info_to_item(item_info);
+    struct item *oit = _info_to_item(item_info, segcache_ptr);
     return ((oit->klen == klen) && cc_memcmp(item_key(oit), key, klen) == 0);
 }
 
@@ -277,45 +277,45 @@ _hashtable_alloc(uint64_t n_slot)
 }
 
 void
-hashtable_setup(uint32_t hash_power, struct SegCache& segcache)
+hashtable_setup(uint32_t hash_power, struct SegCache* segcache_ptr)
 {
 
     ASSERT(hash_power > 0);
 
-    if (segcache.hash_table_initialized) {
+    if (segcache_ptr->hash_table_initialized) {
         log_warn("hash table has been initialized");
-        hashtable_teardown(segcache);
+        hashtable_teardown(segcache_ptr);
     }
 
     /* init members */
-    segcache.hash_table.hash_power = hash_power;
+    segcache_ptr->hash_table.hash_power = hash_power;
     uint64_t n_slot = HASHSIZE(hash_power);
     /* N_SLOT_PER_BUCKET slots are in one bucket, so hash_mask last
      * N_SLOT_PER_BUCKET_LOG2 bits should be zero */
-    segcache.hash_table.hash_mask =
+    segcache_ptr->hash_table.hash_mask =
         (n_slot - 1) & (0xfffffffffffffffful << N_SLOT_PER_BUCKET_LOG2);
 
     /* alloc table */
-    segcache.hash_table.table = _hashtable_alloc(n_slot);
+    segcache_ptr->hash_table.table = _hashtable_alloc(n_slot);
 
-    segcache.hash_table_initialized = true;
+    segcache_ptr->hash_table_initialized = true;
 
     log_info("create hash table of %" PRIu64 " entries %" PRIu64 " buckets",
         n_slot, n_slot >> N_SLOT_PER_BUCKET_LOG2);
 }
 
 void
-hashtable_teardown(struct SegCache& segcache)
+hashtable_teardown(struct SegCache* segcache_ptr)
 {
-    if (!segcache.hash_table_initialized) {
+    if (!segcache_ptr->hash_table_initialized) {
         log_warn("hash table is not initialized");
         return;
     }
 
-    cc_free(segcache.hash_table.table);
-    segcache.hash_table.table = NULL;
+    cc_free(segcache_ptr->hash_table.table);
+    segcache_ptr->hash_table.table = NULL;
 
-    segcache.hash_table_initialized = false;
+    segcache_ptr->hash_table_initialized = false;
 }
 
 /**
@@ -336,17 +336,17 @@ hashtable_teardown(struct SegCache& segcache)
  */
 
 void
-hashtable_put(struct item *it, const uint64_t seg_id, const uint64_t offset, struct SegCache& segcache)
+hashtable_put(struct item *it, const uint64_t seg_id, const uint64_t offset, struct SegCache* segcache_ptr)
 {
     const char     *key = item_key(it);
     const uint32_t klen = item_nkey(it);
 
     uint64_t hv        = CAL_HV(key, klen);
     uint64_t tag       = CAL_TAG_FROM_HV(hv);
-    uint64_t *head_bkt = GET_BUCKET(hv, segcache);
+    uint64_t *head_bkt = GET_BUCKET(hv, segcache_ptr);
     uint64_t *bkt      = head_bkt;
 
-    INCR(segcache.seg_metrics, hash_insert);
+    INCR(segcache_ptr->seg_metrics, hash_insert);
 
     /* 12-bit tag, 8-bit counter,
      * 24-bit seg id, 20-bit offset (in the unit of 8-byte) */
@@ -380,8 +380,8 @@ hashtable_put(struct item *it, const uint64_t seg_id, const uint64_t offset, str
                 continue;
             }
             /* a potential hit */
-            if (!_same_item(key, klen, item_info)) {
-                INCR(segcache.seg_metrics, hash_tag_collision);
+            if (!_same_item(key, klen, item_info, segcache_ptr)) {
+                INCR(segcache_ptr->seg_metrics, hash_tag_collision);
                 continue;
             }
 
@@ -391,7 +391,7 @@ hashtable_put(struct item *it, const uint64_t seg_id, const uint64_t offset, str
             insert_item_info = 0;
 
             /* now mark the old item as deleted, update stat */
-            _item_free(item_info, false);
+            _item_free(item_info, false, segcache_ptr);
 
             /* there could be pointers to stale objects later in the bucket,
              * we leave the clean up to future eviction time */
@@ -414,7 +414,7 @@ hashtable_put(struct item *it, const uint64_t seg_id, const uint64_t offset, str
     /* we have searched every bucket, but have not found the old item
      * nor inserted new item - so we need to allocate a new array,
      * this is very rare */
-    INCR(segcache.seg_metrics, hash_bucket_alloc);
+    INCR(segcache_ptr->seg_metrics, hash_bucket_alloc);
 
     uint64_t *new_bkt = cc_zalloc(sizeof(uint64_t) * N_SLOT_PER_BUCKET);
     /* move the last item from last bucket to new bucket */
@@ -435,16 +435,16 @@ hashtable_put(struct item *it, const uint64_t seg_id, const uint64_t offset, str
 }
 
 bool
-hashtable_delete(const struct bstring *key, struct SegCache& segcache)
+hashtable_delete(const struct bstring *key, struct SegCache* segcache_ptr)
 {
-    INCR(segcache.seg_metrics, hash_remove);
+    INCR(segcache_ptr->seg_metrics, hash_remove);
 
     bool     deleted = false;
     uint64_t item_info;
 
     uint64_t hv        = CAL_HV(key->data, key->len);
     uint64_t tag       = CAL_TAG_FROM_HV(hv);
-    uint64_t *head_bkt = GET_BUCKET(hv, segcache);
+    uint64_t *head_bkt = GET_BUCKET(hv, segcache_ptr);
     uint64_t *bkt      = head_bkt;
 
     lock(head_bkt);
@@ -467,14 +467,14 @@ hashtable_delete(const struct bstring *key, struct SegCache& segcache)
                 continue;
             }
             /* a potential hit */
-            if (!_same_item(key->data, key->len, item_info)) {
-                INCR(segcache.seg_metrics, hash_tag_collision);
+            if (!_same_item(key->data, key->len, item_info, segcache_ptr)) {
+                INCR(segcache_ptr->seg_metrics, hash_tag_collision);
                 continue;
             }
             /* found the item, now delete */
             /* if this is the first and most up-to-date hash table entry
              * we need to mark tombstone, this is for recovery */
-            _item_free(item_info, !deleted);
+            _item_free(item_info, !deleted, segcache_ptr);
             __atomic_store_n(&bkt[i], 0, __ATOMIC_RELAXED);
 
             deleted = true;
@@ -504,13 +504,13 @@ hashtable_delete(const struct bstring *key, struct SegCache& segcache)
  */
 bool
 hashtable_evict(const char *oit_key, const uint32_t oit_klen,
-                const uint64_t seg_id, const uint64_t offset, struct SegCache& segcache)
+                const uint64_t seg_id, const uint64_t offset, struct SegCache* segcache_ptr)
 {
-    INCR(segcache.seg_metrics, hash_evict);
+    INCR(segcache_ptr->seg_metrics, hash_evict);
 
     uint64_t hv        = CAL_HV(oit_key, oit_klen);
     uint64_t tag       = CAL_TAG_FROM_HV(hv);
-    uint64_t *head_bkt = GET_BUCKET(hv, segcache);
+    uint64_t *head_bkt = GET_BUCKET(hv, segcache_ptr);
     uint64_t *bkt      = head_bkt;
 
     uint64_t item_info;
@@ -542,8 +542,8 @@ hashtable_evict(const char *oit_key, const uint32_t oit_klen,
                 continue;
             }
             /* a potential hit */
-            if (!_same_item(oit_key, oit_klen, item_info)) {
-                INCR(segcache.seg_metrics, hash_tag_collision);
+            if (!_same_item(oit_key, oit_klen, item_info, segcache_ptr)) {
+                INCR(segcache_ptr->seg_metrics, hash_tag_collision);
                 continue;
             }
 
@@ -551,7 +551,7 @@ hashtable_evict(const char *oit_key, const uint32_t oit_klen,
                 first_match = false;
                 if (oit_info == item_info) {
                     /* item to evict is up-to-date */
-                    _item_free(item_info, false);
+                    _item_free(item_info, false, segcache_ptr);
                     __atomic_store_n(&bkt[i], 0, __ATOMIC_RELAXED);
                     item_outdated = false;
                     found_oit     = true;
@@ -564,7 +564,7 @@ hashtable_evict(const char *oit_key, const uint32_t oit_klen,
                     found_oit = true;
                 }
 
-                _item_free(bkt[i], !item_outdated);
+                _item_free(bkt[i], !item_outdated, segcache_ptr);
                 __atomic_store_n(&bkt[i], 0, __ATOMIC_RELAXED);
             }
         }
@@ -582,13 +582,13 @@ hashtable_evict(const char *oit_key, const uint32_t oit_klen,
 struct item *
 hashtable_get(const char *key, const uint32_t klen,
               int32_t *seg_id,
-              uint64_t *cas, struct SegCache& segcache)
+              uint64_t *cas, struct SegCache* segcache_ptr)
 {
-    INCR(segcache.seg_metrics, hash_lookup);
+    INCR(segcache_ptr->seg_metrics, hash_lookup);
 
     uint64_t    hv         = CAL_HV(key, klen);
     uint64_t    tag        = CAL_TAG_FROM_HV(hv);
-    uint64_t    *first_bkt = GET_BUCKET(hv, segcache);
+    uint64_t    *first_bkt = GET_BUCKET(hv, segcache_ptr);
     uint64_t    *bkt       = first_bkt;
     uint64_t    offset;
     struct item *it;
@@ -598,7 +598,7 @@ hashtable_get(const char *key, const uint32_t klen,
     int bkt_chain_len = GET_BUCKET_CHAIN_LEN(first_bkt) - 1;
     int n_item_slot;
 
-    uint64_t curr_ts = ((uint64_t) time_proc_sec(segcache)) & PROC_TS_MASK;
+    uint64_t curr_ts = ((uint64_t) time_proc_sec(segcache_ptr)) & PROC_TS_MASK;
     if (curr_ts != GET_TS(first_bkt)) {
         /* clear the indicator of all items in the bucket that
          * the frequency has increased in curr sec */
@@ -647,8 +647,8 @@ hashtable_get(const char *key, const uint32_t klen,
                 continue;
             }
             /* a potential hit */
-            if (!_same_item(key, klen, item_info)) {
-                INCR(segcache.seg_metrics, hash_tag_collision);
+            if (!_same_item(key, klen, item_info, segcache_ptr)) {
+                INCR(segcache_ptr->seg_metrics, hash_tag_collision);
                 continue;
             }
             if (cas) {
@@ -657,16 +657,16 @@ hashtable_get(const char *key, const uint32_t klen,
 
 #if defined DEBUG_MODE
             *seg_id = GET_SEG_ID_NON_DECR(item_info);
-            ASSERT(heap.segs[GET_SEG_ID(item_info)].seg_id_non_decr == *seg_id);
+            ASSERT(segcache_ptr->heap_ptr->segs[GET_SEG_ID(item_info)].seg_id_non_decr == *seg_id);
 #else
             *seg_id = GET_SEG_ID(item_info);
 #endif
 
-            struct seg *seg = &heap.segs[GET_SEG_ID(item_info)];
+            struct seg *seg = &segcache_ptr->heap_ptr->segs[GET_SEG_ID(item_info)];
             int ref_cnt = __atomic_add_fetch(&seg->r_refcount, 1, __ATOMIC_RELAXED);
-            ASSERT(ref_cnt <= segcache.n_thread);
+            ASSERT(ref_cnt <= segcache_ptr->n_thread);
 
-            if (!seg_is_accessible(GET_SEG_ID(item_info)) ||
+            if (!seg_is_accessible(GET_SEG_ID(item_info), segcache_ptr) ||
                     __atomic_load_n(&bkt[i], __ATOMIC_RELAXED) != item_info) {
                 /* not accessible: it will be removed by other threads,
                  * item_info change: updated/deleted/accessed by other thread */
@@ -678,7 +678,7 @@ hashtable_get(const char *key, const uint32_t klen,
             }
 
             offset = GET_OFFSET(item_info);
-            it = (struct item *) (heap.base + heap.seg_size * GET_SEG_ID(item_info) + offset);
+            it = (struct item *) (segcache_ptr->heap_ptr->base + segcache_ptr->heap_ptr->seg_size * GET_SEG_ID(item_info) + offset);
 
             /* item found, try to update the frequency */
             uint64_t freq = GET_FREQ(item_info);
@@ -720,13 +720,13 @@ hashtable_get(const char *key, const uint32_t klen,
 struct item *
 hashtable_get(const char *key, const uint32_t klen,
               int32_t *seg_id,
-              uint64_t *cas, struct SegCache& segcache)
+              uint64_t *cas, struct SegCache* segcache_ptr)
 {
-    INCR(segcache.seg_metrics, hash_lookup);
+    INCR(segcache_ptr->seg_metrics, hash_lookup);
 
     uint64_t    hv         = CAL_HV(key, klen);
     uint64_t    tag        = CAL_TAG_FROM_HV(hv);
-    uint64_t    *first_bkt = GET_BUCKET(hv, segcache);
+    uint64_t    *first_bkt = GET_BUCKET(hv, segcache_ptr);
     uint64_t    *bkt       = first_bkt;
     struct item *it;
     int i;
@@ -762,7 +762,7 @@ hashtable_get(const char *key, const uint32_t klen,
             }
             /* a potential hit */
             if (!_same_item(key, klen, item_info)) {
-                INCR(segcache.seg_metrics, hash_tag_collision);
+                INCR(segcache_ptr->seg_metrics, hash_tag_collision);
                 continue;
             }
             if (cas) {
@@ -771,14 +771,14 @@ hashtable_get(const char *key, const uint32_t klen,
 
 #if defined DEBUG_MODE
             *seg_id = GET_SEG_ID_NON_DECR(item_info);
-            ASSERT(heap.segs[GET_SEG_ID(item_info)].seg_id_non_decr == *seg_id);
+            ASSERT(segcache_ptr->heap_ptr->segs[GET_SEG_ID(item_info)].seg_id_non_decr == *seg_id);
 #else
             *seg_id = GET_SEG_ID(item_info);
 #endif
 
-            struct seg *seg = &heap.segs[GET_SEG_ID(item_info)];
+            struct seg *seg = &segcache_ptr->heap_ptr->segs[GET_SEG_ID(item_info)];
             int ref_cnt = __atomic_add_fetch(&seg->r_refcount, 1, __ATOMIC_RELAXED);
-            ASSERT(ref_cnt <= segcache.n_thread);
+            ASSERT(ref_cnt <= segcache_ptr->n_thread);
 
             if (!seg_is_accessible(GET_SEG_ID(item_info)) ||
                 __atomic_load_n(&bkt[i], __ATOMIC_RELAXED) != item_info) {
@@ -792,7 +792,7 @@ hashtable_get(const char *key, const uint32_t klen,
                 return NULL;
             }
 
-            it = (struct item *) (heap.base + heap.seg_size *
+            it = (struct item *) (segcache_ptr->heap_ptr->base + segcache_ptr->heap_ptr->seg_size *
                         GET_SEG_ID(item_info) + GET_OFFSET(item_info));
 
             scan_len_sum += i;
@@ -818,11 +818,11 @@ hashtable_get(const char *key, const uint32_t klen,
 struct item *
 hashtable_get_no_freq_incr(const char *key, const uint32_t klen,
                            int32_t *seg_id,
-                           uint64_t *cas, struct SegCache& segcache)
+                           uint64_t *cas, struct SegCache* segcache_ptr)
 {
     uint64_t    hv         = CAL_HV(key, klen);
     uint64_t    tag        = CAL_TAG_FROM_HV(hv);
-    uint64_t    *first_bkt = GET_BUCKET(hv, segcache);
+    uint64_t    *first_bkt = GET_BUCKET(hv, segcache_ptr);
     uint64_t    *bkt       = first_bkt;
     uint64_t    offset;
     struct item *it;
@@ -847,8 +847,8 @@ hashtable_get_no_freq_incr(const char *key, const uint32_t klen,
                 continue;
             }
             /* a potential hit */
-            if (!_same_item(key, klen, item_info)) {
-                INCR(segcache.seg_metrics, hash_tag_collision);
+            if (!_same_item(key, klen, item_info, segcache_ptr)) {
+                INCR(segcache_ptr->seg_metrics, hash_tag_collision);
                 continue;
             }
             if (cas) {
@@ -857,7 +857,7 @@ hashtable_get_no_freq_incr(const char *key, const uint32_t klen,
 
             *seg_id = GET_SEG_ID(item_info);
             offset = GET_OFFSET(item_info);
-            it     = (struct item *) (heap.base + heap.seg_size * (*seg_id)
+            it     = (struct item *) (segcache_ptr->heap_ptr->base + segcache_ptr->heap_ptr->seg_size * (*seg_id)
                 + offset);
 
             return it;
@@ -875,12 +875,12 @@ hashtable_get_no_freq_incr(const char *key, const uint32_t klen,
  **/
 int
 hashtable_get_it_freq(const char *it_key, const uint32_t it_klen,
-                      const uint64_t seg_id, const uint64_t offset, struct SegCache& segcache)
+                      const uint64_t seg_id, const uint64_t offset, struct SegCache* segcache_ptr)
 {
     uint64_t hv  = CAL_HV(it_key, it_klen);
     uint64_t tag = CAL_TAG_FROM_HV(hv);
 
-    uint64_t *first_bkt        = GET_BUCKET(hv, segcache);
+    uint64_t *first_bkt        = GET_BUCKET(hv, segcache_ptr);
     uint64_t *curr_bkt         = first_bkt;
     uint64_t curr_item_info;
     uint64_t item_info_to_find = _build_item_info(tag, seg_id, offset);
@@ -912,8 +912,8 @@ hashtable_get_it_freq(const char *it_key, const uint32_t it_klen,
             }
 
             /* a potential hit */
-            if (!_same_item(it_key, it_klen, curr_item_info)) {
-                INCR(segcache.seg_metrics, hash_tag_collision);
+            if (!_same_item(it_key, it_klen, curr_item_info, segcache_ptr)) {
+                INCR(segcache_ptr->seg_metrics, hash_tag_collision);
                 continue;
             }
 
@@ -940,13 +940,13 @@ hashtable_get_it_freq(const char *it_key, const uint32_t it_klen,
 bool
 hashtable_relink_it(const char *oit_key, const uint32_t oit_klen,
                     const uint64_t old_seg_id, const uint64_t old_offset,
-                    const uint64_t new_seg_id, const uint64_t new_offset, struct SegCache& segcache)
+                    const uint64_t new_seg_id, const uint64_t new_offset, struct SegCache* segcache_ptr)
 {
-    INCR(segcache.seg_metrics, hash_relink);
+    INCR(segcache_ptr->seg_metrics, hash_relink);
 
     uint64_t hv         = CAL_HV(oit_key, oit_klen);
     uint64_t tag        = CAL_TAG_FROM_HV(hv);
-    uint64_t *first_bkt = GET_BUCKET(hv, segcache);
+    uint64_t *first_bkt = GET_BUCKET(hv, segcache_ptr);
     uint64_t *curr_bkt  = first_bkt;
     uint64_t item_info, item_info_with_freq;
     bool item_outdated = true, first_match = true;
@@ -975,8 +975,8 @@ hashtable_relink_it(const char *oit_key, const uint32_t oit_klen,
             }
 
             /* a potential hit */
-            if (!_same_item(oit_key, oit_klen, item_info)) {
-                INCR(segcache.seg_metrics, hash_tag_collision);
+            if (!_same_item(oit_key, oit_klen, item_info, segcache_ptr)) {
+                INCR(segcache_ptr->seg_metrics, hash_tag_collision);
                 continue;
             }
 
@@ -990,14 +990,14 @@ hashtable_relink_it(const char *oit_key, const uint32_t oit_klen,
                         &curr_bkt[i], __ATOMIC_RELAXED)) == oit_info) {
                         __atomic_store_n(&curr_bkt[i], nit_info, __ATOMIC_RELAXED);
                         item_outdated = false;
-                        _item_free(oit_info, false);
+                        _item_free(oit_info, false, segcache_ptr);
                     }
 //                    unlock(first_bkt);
                 }
                 first_match = false;
             } else {
                 /* not first match, delete */
-                _item_free(curr_bkt[i], false);
+                _item_free(curr_bkt[i], false, segcache_ptr);
                 __atomic_store_n(&curr_bkt[i], 0, __ATOMIC_RELAXED);
             }
         }
@@ -1010,9 +1010,9 @@ hashtable_relink_it(const char *oit_key, const uint32_t oit_klen,
 }
 
 void
-hashtable_stat(int *item_cnt_ptr, int *bucket_cnt_ptr, const struct SegCache& segcache)
+hashtable_stat(int *item_cnt_ptr, int *bucket_cnt_ptr, const struct SegCache* segcache_ptr)
 {
-#define BUCKET_HEAD(idx, segcache) (&segcache.hash_table.table[(idx) * N_SLOT_PER_BUCKET])
+#define BUCKET_HEAD(idx, segcache_ptr) (&segcache_ptr->hash_table.table[(idx) * N_SLOT_PER_BUCKET])
 
     *item_cnt_ptr   = 0;
     *bucket_cnt_ptr = 0;
@@ -1023,10 +1023,10 @@ hashtable_stat(int *item_cnt_ptr, int *bucket_cnt_ptr, const struct SegCache& se
     uint64_t item_info, *head_bkt, *curr_bkt;
 
     for (uint64_t bucket_idx = 0;
-         bucket_idx < HASHSIZE(segcache.hash_table.hash_power - N_SLOT_PER_BUCKET_LOG2);
+         bucket_idx < HASHSIZE(segcache_ptr->hash_table.hash_power - N_SLOT_PER_BUCKET_LOG2);
          bucket_idx++) {
 
-        head_bkt      = curr_bkt = BUCKET_HEAD(bucket_idx, segcache);
+        head_bkt      = curr_bkt = BUCKET_HEAD(bucket_idx, segcache_ptr);
         bkt_chain_len = GET_BUCKET_CHAIN_LEN(head_bkt);
         *bucket_cnt_ptr += bkt_chain_len;
         do {
@@ -1058,10 +1058,10 @@ hashtable_stat(int *item_cnt_ptr, int *bucket_cnt_ptr, const struct SegCache& se
 }
 
 void
-scan_hashtable_find_seg(int32_t target_seg_id, const struct SegCache& segcache)
+scan_hashtable_find_seg(int32_t target_seg_id, const struct SegCache* segcache_ptr)
 {
 #ifdef CC_ASSERT_PANIC
-#define BUCKET_HEAD(idx, segcache) (&segcache.hash_table.table[(idx) * N_SLOT_PER_BUCKET])
+#define BUCKET_HEAD(idx, segcache_ptr) (&segcache_ptr->hash_table.table[(idx) * N_SLOT_PER_BUCKET])
     /* expensive debug */
     log_warn("scan_hashtable_find_seg is expensive func");
 
@@ -1074,10 +1074,10 @@ scan_hashtable_find_seg(int32_t target_seg_id, const struct SegCache& segcache)
     struct item *it;
 
     int n_bkt_in_table =
-            HASHSIZE(segcache.hash_table.hash_power - N_SLOT_PER_BUCKET_LOG2);
+            HASHSIZE(segcache_ptr->hash_table.hash_power - N_SLOT_PER_BUCKET_LOG2);
 
     for (uint64_t bucket_idx = 0; bucket_idx < n_bkt_in_table; bucket_idx++) {
-        curr_bkt      = head_bkt = BUCKET_HEAD(bucket_idx, segcache);
+        curr_bkt      = head_bkt = BUCKET_HEAD(bucket_idx, segcache_ptr);
         bkt_chain_len = GET_BUCKET_CHAIN_LEN(head_bkt);
         do {
             n_item_slot = bkt_chain_len >= 1 ?
@@ -1100,7 +1100,7 @@ scan_hashtable_find_seg(int32_t target_seg_id, const struct SegCache& segcache)
                     ASSERT(item_info == __atomic_load_n(&curr_bkt[i], __ATOMIC_RELAXED));
                     offset = (item_info & OFFSET_MASK) << OFFSET_UNIT_IN_BIT;
                     it =
-                        (struct item *) (heap.base + heap.seg_size * seg_id +
+                        (struct item *) (segcache_ptr->heap_ptr->base + segcache_ptr->heap_ptr->seg_size * seg_id +
                             offset);
                     log_warn("find item on seg %d offset %d, "
                              "item_info %x, slot %d, bkt_len %d, bkt_len left %d",
@@ -1118,10 +1118,10 @@ scan_hashtable_find_seg(int32_t target_seg_id, const struct SegCache& segcache)
 }
 
 void
-verify_hashtable(const struct SegCache& segcache)
+verify_hashtable(const struct SegCache* segcache_ptr)
 {
 #if defined CC_ASSERT_PANIC
-#define BUCKET_HEAD(idx) (&segcache.hash_table.table[(idx) * N_SLOT_PER_BUCKET])
+#define BUCKET_HEAD(idx) (&segcache_ptr->hash_table.table[(idx) * N_SLOT_PER_BUCKET])
 
     int         bkt_chain_len;
     uint64_t    item_info;
@@ -1134,10 +1134,10 @@ verify_hashtable(const struct SegCache& segcache)
     uint64_t n_item = 0;
 
     int n_bkt_in_table =
-            HASHSIZE(segcache.hash_table.hash_power - N_SLOT_PER_BUCKET_LOG2);
+            HASHSIZE(segcache_ptr->hash_table.hash_power - N_SLOT_PER_BUCKET_LOG2);
 
     for (uint64_t bucket_idx = 0; bucket_idx < n_bkt_in_table; bucket_idx++) {
-        curr_bkt      = head_bkt = BUCKET_HEAD(bucket_idx, segcache);
+        curr_bkt      = head_bkt = BUCKET_HEAD(bucket_idx, segcache_ptr);
         bkt_chain_len = GET_BUCKET_CHAIN_LEN(head_bkt);
         do {
             n_item_slot = bkt_chain_len >= 1 ?
@@ -1158,7 +1158,7 @@ verify_hashtable(const struct SegCache& segcache)
 
                 seg_id = ((item_info & SEG_ID_MASK) >> SEG_ID_BIT_SHIFT);
                 offset = (item_info & OFFSET_MASK) << OFFSET_UNIT_IN_BIT;
-                it     = (struct item *) (heap.base + heap.seg_size * seg_id
+                it     = (struct item *) (segcache_ptr->heap_ptr->base + segcache_ptr->heap_ptr->seg_size * seg_id
                     + offset);
 
                 ASSERT(it->magic == ITEM_MAGIC);

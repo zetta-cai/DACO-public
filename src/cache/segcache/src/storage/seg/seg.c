@@ -23,7 +23,7 @@
 
 #define SEG_MODULE_NAME "storage::seg"
 
-extern struct setting        setting; // Siyuan: setting is NOT used here (ONLY used by main.c in segcache client/server)
+extern struct setting        setting; // Siyuan: setting is NOT used here (ONLY used by main.c in segcache_ptr client/server)
 //extern struct seg_evict_info evict_info;
 extern const char            *eviction_policy_names[]; // Siyuan: NO need to encapsulate const global variables
 
@@ -55,13 +55,13 @@ static const char *seg_state_change_str[] = {
 };
 
 void
-dump_seg_info(struct SegCache& segcache)
+dump_seg_info(struct SegCache* segcache_ptr)
 {
     struct seg *seg;
     int32_t    seg_id;
 
     for (int32_t i = 0; i < MAX_N_TTL_BUCKET; i++) {
-        seg_id = segcache.ttl_buckets[i].first_seg_id;
+        seg_id = segcache_ptr->ttl_buckets[i].first_seg_id;
         if (seg_id != -1) {
             printf("ttl bucket %4d: ", i);
         }
@@ -69,18 +69,18 @@ dump_seg_info(struct SegCache& segcache)
             continue;
         }
         while (seg_id != -1) {
-            seg = &segcache.heap.segs[seg_id];
-            printf("seg %d (%d), ", seg_id, seg_evictable(seg, segcache));
+            seg = &segcache_ptr->heap_ptr->segs[seg_id];
+            printf("seg %d (%d), ", seg_id, seg_evictable(seg, segcache_ptr));
             seg_id = seg->next_seg_id;
         }
         printf("\n");
     }
 
     char         s[64];
-    for (int32_t j = 0; j < segcache.heap.max_nseg; j++) {
+    for (int32_t j = 0; j < segcache_ptr->heap_ptr->max_nseg; j++) {
         snprintf(s, 64, "seg %4d evictable %d", j,
-            seg_evictable(&segcache.heap.segs[j], segcache));
-        SEG_PRINT(j, s, log_warn);
+            seg_evictable(&segcache_ptr->heap_ptr->segs[j], segcache_ptr));
+        SEG_PRINT(j, s, log_warn, segcache_ptr);
     }
 }
 
@@ -88,9 +88,9 @@ dump_seg_info(struct SegCache& segcache)
  * wait until no other threads are accessing the seg (refcount == 0)
  */
 void
-seg_wait_refcnt(int32_t seg_id, struct SegCache& segcache)
+seg_wait_refcnt(int32_t seg_id, struct SegCache* segcache_ptr)
 {
-    struct seg *seg          = &segcache.heap.segs[seg_id];
+    struct seg *seg          = &segcache_ptr->heap_ptr->segs[seg_id];
     ASSERT(seg->accessible != 1);
     bool       r_log_printed = false, w_log_printed = false;
     int        r_ref, w_ref;
@@ -130,23 +130,23 @@ seg_wait_refcnt(int32_t seg_id, struct SegCache& segcache)
  * check whether seg is accessible
  */
 bool
-seg_is_accessible(int32_t seg_id, struct SegCache& segcache)
+seg_is_accessible(int32_t seg_id, struct SegCache* segcache_ptr)
 {
-    struct seg *seg = &segcache.heap.segs[seg_id];
+    struct seg *seg = &segcache_ptr->heap_ptr->segs[seg_id];
     if (__atomic_load_n(&seg->accessible, __ATOMIC_RELAXED) == 0) {
         return false;
     }
 
-    return seg->ttl + seg->create_at > time_proc_sec(segcache)
-        && seg->create_at > segcache.flush_at;
+    return seg->ttl + seg->create_at > time_proc_sec(segcache_ptr)
+        && seg->create_at > segcache_ptr->flush_at;
 }
 
 bool
-seg_w_ref(int32_t seg_id, struct SegCache& segcache)
+seg_w_ref(int32_t seg_id, struct SegCache* segcache_ptr)
 {
-    struct seg *seg = &segcache.heap.segs[seg_id];
+    struct seg *seg = &segcache_ptr->heap_ptr->segs[seg_id];
 
-    if (seg_is_accessible(seg_id)) {
+    if (seg_is_accessible(seg_id, segcache_ptr)) {
         __atomic_fetch_add(&seg->w_refcount, 1, __ATOMIC_RELAXED);
         return true;
     }
@@ -155,9 +155,9 @@ seg_w_ref(int32_t seg_id, struct SegCache& segcache)
 }
 
 void
-seg_w_deref(int32_t seg_id, struct SegCache& segcache)
+seg_w_deref(int32_t seg_id, struct SegCache* segcache_ptr)
 {
-    struct seg *seg = &segcache.heap.segs[seg_id];
+    struct seg *seg = &segcache_ptr->heap_ptr->segs[seg_id];
 
     int16_t ref = __atomic_sub_fetch(&seg->w_refcount, 1, __ATOMIC_RELAXED);
 
@@ -176,26 +176,26 @@ seg_w_deref(int32_t seg_id, struct SegCache& segcache)
  * we do not clear seg->locked until it is linked into ttl_bucket
  */
 void
-seg_init(int32_t seg_id, struct SegCache& segcache)
+seg_init(int32_t seg_id, struct SegCache* segcache_ptr)
 {
     ASSERT(seg_id != -1);
-    struct seg *seg = &segcache.heap.segs[seg_id];
+    struct seg *seg = &segcache_ptr->heap_ptr->segs[seg_id];
 
 #if defined DEBUG_MODE
-    seg->seg_id_non_decr += segcache.heap.max_nseg;
+    seg->seg_id_non_decr += segcache_ptr->heap_ptr->max_nseg;
     if (seg->seg_id_non_decr > 1ul << 23ul) {
-        seg->seg_id_non_decr = seg->seg_id % segcache.heap.max_nseg;
+        seg->seg_id_non_decr = seg->seg_id % segcache_ptr->heap_ptr->max_nseg;
     }
     seg->n_rm_item = 0;
     seg->n_rm_bytes = 0;
 #endif
 
-    uint8_t *data_start = get_seg_data_start(seg_id);
+    uint8_t *data_start = get_seg_data_start(seg_id, segcache_ptr);
 
     ASSERT(seg->accessible == 0);
     ASSERT(seg->evictable == 0);
 
-//    cc_memset(data_start, 0, segcache.heap.seg_size);
+//    cc_memset(data_start, 0, segcache_ptr->heap_ptr->seg_size);
 
 #if defined CC_ASSERT_PANIC || defined CC_ASSERT_LOG
     *(uint64_t *) (data_start) = SEG_MAGIC;
@@ -213,7 +213,7 @@ seg_init(int32_t seg_id, struct SegCache& segcache)
     seg->n_live_item = 0;
     seg->n_total_item = 0;
 
-    seg->create_at = time_proc_sec(segcache);
+    seg->create_at = time_proc_sec(segcache_ptr);
     seg->merge_at  = 0;
 
     seg->accessible = 1;
@@ -224,15 +224,15 @@ seg_init(int32_t seg_id, struct SegCache& segcache)
 }
 
 void
-rm_seg_from_ttl_bucket(int32_t seg_id, struct SegCache& segcache)
+rm_seg_from_ttl_bucket(int32_t seg_id, struct SegCache* segcache_ptr)
 {
-    struct seg        *seg        = &segcache.heap.segs[seg_id];
-    struct ttl_bucket *ttl_bucket = &segcache.ttl_buckets[find_ttl_bucket_idx(seg->ttl)];
+    struct seg        *seg        = &segcache_ptr->heap_ptr->segs[seg_id];
+    struct ttl_bucket *ttl_bucket = &segcache_ptr->ttl_buckets[find_ttl_bucket_idx(seg->ttl)];
     ASSERT(seg->ttl == ttl_bucket->ttl);
 
     /* all modification to seg chain needs to be protected by lock
      * TODO(juncheng): can change to the TTL lock? */
-    ASSERT(pthread_mutex_trylock(&segcache.heap.mtx) != 0);
+    ASSERT(pthread_mutex_trylock(&segcache_ptr->heap_ptr->mtx) != 0);
 
     int32_t prev_seg_id = seg->prev_seg_id;
     int32_t next_seg_id = seg->next_seg_id;
@@ -243,7 +243,7 @@ rm_seg_from_ttl_bucket(int32_t seg_id, struct SegCache& segcache)
         ttl_bucket->first_seg_id = next_seg_id;
     }
     else {
-        segcache.heap.segs[prev_seg_id].next_seg_id = next_seg_id;
+        segcache_ptr->heap_ptr->segs[prev_seg_id].next_seg_id = next_seg_id;
     }
 
     if (next_seg_id == -1) {
@@ -252,7 +252,7 @@ rm_seg_from_ttl_bucket(int32_t seg_id, struct SegCache& segcache)
         ttl_bucket->last_seg_id = prev_seg_id;
     }
     else {
-        segcache.heap.segs[next_seg_id].prev_seg_id = prev_seg_id;
+        segcache_ptr->heap_ptr->segs[next_seg_id].prev_seg_id = prev_seg_id;
     }
 
     ttl_bucket->n_seg -= 1;
@@ -282,11 +282,11 @@ rm_seg_from_ttl_bucket(int32_t seg_id, struct SegCache& segcache)
  */
 /* TODO(jason): separate into two func: one lock for remove, one remove */
 bool
-rm_all_item_on_seg(int32_t seg_id, enum seg_state_change reason, struct SegCache& segcache)
+rm_all_item_on_seg(int32_t seg_id, enum seg_state_change reason, struct SegCache* segcache_ptr)
 {
     ASSERT(seg_id >= 0);
 
-    struct seg  *seg = &segcache.heap.segs[seg_id];
+    struct seg  *seg = &segcache_ptr->heap_ptr->segs[seg_id];
     struct item *it;
 
     /* prevent being picked by eviction algorithm concurrently */
@@ -294,9 +294,9 @@ rm_all_item_on_seg(int32_t seg_id, enum seg_state_change reason, struct SegCache
         /* this seg is either expiring or being evicted by other threads */
 
         if (reason == SEG_EXPIRATION) {
-            SEG_PRINT(seg_id, "expiring unevictable seg", log_warn);
+            SEG_PRINT(seg_id, "expiring unevictable seg", log_warn, segcache_ptr);
 
-            INCR(segcache.seg_metrics, seg_evict_ex);
+            INCR(segcache_ptr->seg_metrics, seg_evict_ex);
         }
         return false;
     }
@@ -322,16 +322,16 @@ rm_all_item_on_seg(int32_t seg_id, enum seg_state_change reason, struct SegCache
         /* "this should not happen" */
         ASSERT(0);
 //        __atomic_store_n(&seg->evictable, 0, __ATOMIC_SEQ_CST);
-//        INCR(segcache.seg_metrics, seg_evict_ex);
+//        INCR(segcache_ptr->seg_metrics, seg_evict_ex);
 
         return false;
     }
 
-    uint8_t  *seg_data = get_seg_data_start(seg_id);
+    uint8_t  *seg_data = get_seg_data_start(seg_id, segcache_ptr);
     uint8_t  *curr     = seg_data;
-    uint32_t offset    = MIN(seg->write_offset, segcache.heap.seg_size) - ITEM_HDR_SIZE;
+    uint32_t offset    = MIN(seg->write_offset, segcache_ptr->heap_ptr->seg_size) - ITEM_HDR_SIZE;
 
-    SEG_PRINT(seg_id, seg_state_change_str[reason], log_debug);
+    SEG_PRINT(seg_id, seg_state_change_str[reason], log_debug, segcache_ptr);
 
 #if defined CC_ASSERT_PANIC || defined CC_ASSERT_LOG
     ASSERT(*(uint64_t *) (curr) == SEG_MAGIC);
@@ -339,9 +339,9 @@ rm_all_item_on_seg(int32_t seg_id, enum seg_state_change reason, struct SegCache
 #endif
 
     /* remove segment from TTL bucket */
-    pthread_mutex_lock(&segcache.heap.mtx);
-    rm_seg_from_ttl_bucket(seg_id);
-    pthread_mutex_unlock(&segcache.heap.mtx);
+    pthread_mutex_lock(&segcache_ptr->heap_ptr->mtx);
+    rm_seg_from_ttl_bucket(seg_id, segcache_ptr);
+    pthread_mutex_unlock(&segcache_ptr->heap_ptr->mtx);
 
     while (curr - seg_data < offset) {
         /* check both offset and n_live_item is because when a segment is expiring
@@ -372,7 +372,7 @@ rm_all_item_on_seg(int32_t seg_id, enum seg_state_change reason, struct SegCache
         hashtable_evict(item_key(it), it->klen, seg->seg_id_non_decr,
             curr - seg_data);
 #else
-        hashtable_evict(item_key(it), it->klen, seg->seg_id, curr - seg_data, segcache);
+        hashtable_evict(item_key(it), it->klen, seg->seg_id, curr - seg_data, segcache_ptr);
 #endif
 
         ASSERT(seg->n_live_item >= 0);
@@ -392,7 +392,7 @@ rm_all_item_on_seg(int32_t seg_id, enum seg_state_change reason, struct SegCache
      * Because we have already locked the segment before removing entries
      * from hashtable, ideally by the time we have removed all hashtable
      * entries, all previous requests on this segment have all finished */
-    seg_wait_refcnt(seg_id);
+    seg_wait_refcnt(seg_id, segcache_ptr);
 
     /* optimistic concurrency control:
      * because we didn't wait for refcount before remove hashtable entries
@@ -401,7 +401,7 @@ rm_all_item_on_seg(int32_t seg_id, enum seg_state_change reason, struct SegCache
      * so we need to double check, in most cases, this should not happen */
 
     if (__atomic_load_n(&seg->n_live_item, __ATOMIC_SEQ_CST) > 0) {
-        INCR(segcache.seg_metrics, seg_evict_retry);
+        INCR(segcache_ptr->seg_metrics, seg_evict_retry);
         /* because we don't know which item is newly written, so we
          * have to remove all items again */
         curr = seg_data;
@@ -414,7 +414,7 @@ rm_all_item_on_seg(int32_t seg_id, enum seg_state_change reason, struct SegCache
             hashtable_evict(item_key(it), it->klen, seg->seg_id_non_decr,
                 curr - seg_data);
 #else
-            hashtable_evict(item_key(it), it->klen, seg->seg_id, curr - seg_data, segcache);
+            hashtable_evict(item_key(it), it->klen, seg->seg_id, curr - seg_data, segcache_ptr);
 #endif
             curr += item_ntotal(it);
         }
@@ -425,7 +425,7 @@ rm_all_item_on_seg(int32_t seg_id, enum seg_state_change reason, struct SegCache
         log_warn("removed all items from segment, but %d items left",
             seg->n_live_item);
 #if defined(CC_ASSERT_PANIC) && defined(DEBUG_MODE)
-        scan_hashtable_find_seg(segcache.heap.segs[seg_id].seg_id_non_decr);
+        scan_hashtable_find_seg(segcache_ptr->heap_ptr->segs[seg_id].seg_id_non_decr);
 #endif
     }
 
@@ -436,21 +436,21 @@ rm_all_item_on_seg(int32_t seg_id, enum seg_state_change reason, struct SegCache
 }
 
 rstatus_i
-expire_seg(int32_t seg_id, struct SegCache& segcache)
+expire_seg(int32_t seg_id, struct SegCache* segcache_ptr)
 {
-    bool success = rm_all_item_on_seg(seg_id, SEG_EXPIRATION);
+    bool success = rm_all_item_on_seg(seg_id, SEG_EXPIRATION, segcache_ptr);
     if (!success) {
         return CC_ERROR;
     }
 
-    int status = pthread_mutex_lock(&segcache.heap.mtx);
+    int status = pthread_mutex_lock(&segcache_ptr->heap_ptr->mtx);
     ASSERT(status == 0);
 
-    seg_add_to_freepool(seg_id, SEG_EXPIRATION);
+    seg_add_to_freepool(seg_id, SEG_EXPIRATION, segcache_ptr);
 
-    pthread_mutex_unlock(&segcache.heap.mtx);
+    pthread_mutex_unlock(&segcache_ptr->heap_ptr->mtx);
 
-    INCR(segcache.seg_metrics, seg_expire);
+    INCR(segcache_ptr->seg_metrics, seg_expire);
 
     return CC_OK;
 }
@@ -462,41 +462,41 @@ expire_seg(int32_t seg_id, struct SegCache& segcache)
  * return the segment id if there are free segment, -1 if not
  */
 int32_t
-seg_get_from_freepool(bool use_reserved, struct SegCache& segcache)
+seg_get_from_freepool(bool use_reserved, struct SegCache* segcache_ptr)
 {
     int32_t seg_id_ret, next_seg_id;
 
-    int status = pthread_mutex_lock(&segcache.heap.mtx);
+    int status = pthread_mutex_lock(&segcache_ptr->heap_ptr->mtx);
 
     if (status != 0) {
         log_warn("fail to lock seg free pool");
-        pthread_mutex_unlock(&segcache.heap.mtx);
+        pthread_mutex_unlock(&segcache_ptr->heap_ptr->mtx);
 
         return -1;
     }
 
-    if (segcache.heap.n_free_seg == 0 ||
-        (!use_reserved && segcache.heap.n_free_seg <= segcache.heap.n_reserved_seg)) {
-        pthread_mutex_unlock(&segcache.heap.mtx);
+    if (segcache_ptr->heap_ptr->n_free_seg == 0 ||
+        (!use_reserved && segcache_ptr->heap_ptr->n_free_seg <= segcache_ptr->heap_ptr->n_reserved_seg)) {
+        pthread_mutex_unlock(&segcache_ptr->heap_ptr->mtx);
 
         return -1;
     }
 
-    segcache.heap.n_free_seg -= 1;
-    ASSERT(segcache.heap.n_free_seg >= 0);
+    segcache_ptr->heap_ptr->n_free_seg -= 1;
+    ASSERT(segcache_ptr->heap_ptr->n_free_seg >= 0);
 
-    seg_id_ret = segcache.heap.free_seg_id;
+    seg_id_ret = segcache_ptr->heap_ptr->free_seg_id;
     ASSERT(seg_id_ret >= 0);
 
-    next_seg_id = segcache.heap.segs[seg_id_ret].next_seg_id;
-    segcache.heap.free_seg_id = next_seg_id;
+    next_seg_id = segcache_ptr->heap_ptr->segs[seg_id_ret].next_seg_id;
+    segcache_ptr->heap_ptr->free_seg_id = next_seg_id;
     if (next_seg_id != -1) {
-        segcache.heap.segs[next_seg_id].prev_seg_id = -1;
+        segcache_ptr->heap_ptr->segs[next_seg_id].prev_seg_id = -1;
     }
 
-    ASSERT(segcache.heap.segs[seg_id_ret].write_offset == 0);
+    ASSERT(segcache_ptr->heap_ptr->segs[seg_id_ret].write_offset == 0);
 
-    pthread_mutex_unlock(&segcache.heap.mtx);
+    pthread_mutex_unlock(&segcache_ptr->heap_ptr->mtx);
 
     return seg_id_ret;
 }
@@ -506,18 +506,18 @@ seg_get_from_freepool(bool use_reserved, struct SegCache& segcache)
  * caller should grab the heap lock before calling this function
  **/
 void
-seg_add_to_freepool(int32_t seg_id, enum seg_state_change reason, struct SegCache& segcache)
+seg_add_to_freepool(int32_t seg_id, enum seg_state_change reason, struct SegCache* segcache_ptr)
 {
-    ASSERT(pthread_mutex_trylock(&segcache.heap.mtx) != 0);
+    ASSERT(pthread_mutex_trylock(&segcache_ptr->heap_ptr->mtx) != 0);
 
-    struct seg *seg = &segcache.heap.segs[seg_id];
-    seg->next_seg_id = segcache.heap.free_seg_id;
+    struct seg *seg = &segcache_ptr->heap_ptr->segs[seg_id];
+    seg->next_seg_id = segcache_ptr->heap_ptr->free_seg_id;
     seg->prev_seg_id = -1;
-    if (segcache.heap.free_seg_id != -1) {
-        ASSERT(segcache.heap.segs[segcache.heap.free_seg_id].prev_seg_id == -1);
-        segcache.heap.segs[segcache.heap.free_seg_id].prev_seg_id = seg_id;
+    if (segcache_ptr->heap_ptr->free_seg_id != -1) {
+        ASSERT(segcache_ptr->heap_ptr->segs[segcache_ptr->heap_ptr->free_seg_id].prev_seg_id == -1);
+        segcache_ptr->heap_ptr->segs[segcache_ptr->heap_ptr->free_seg_id].prev_seg_id = seg_id;
     }
-    segcache.heap.free_seg_id = seg_id;
+    segcache_ptr->heap_ptr->free_seg_id = seg_id;
 
     /* we set all free segs as locked to prevent it being evicted
      * before finishing setup */
@@ -529,10 +529,10 @@ seg_add_to_freepool(int32_t seg_id, enum seg_state_change reason, struct SegCach
     seg->write_offset = 0;
     seg->live_bytes   = 0;
 
-    segcache.heap.n_free_seg += 1;
+    segcache_ptr->heap_ptr->n_free_seg += 1;
 
     log_vverb("add %s seg %d to free pool, %d free segs",
-        seg_state_change_str[reason], seg_id, segcache.heap.n_free_seg);
+        seg_state_change_str[reason], seg_id, segcache_ptr->heap_ptr->n_free_seg);
 }
 
 /**
@@ -542,7 +542,7 @@ seg_add_to_freepool(int32_t seg_id, enum seg_state_change reason, struct SegCach
  * 3. eviction
  **/
 int32_t
-seg_get_new(struct SegCache& segcache)
+seg_get_new(struct SegCache* segcache_ptr)
 {
 #define MAX_RETRIES 8
     evict_rstatus_e status;
@@ -550,16 +550,16 @@ seg_get_new(struct SegCache& segcache)
     /* eviction may fail if other threads pick the same seg */
     int             n_retries_left = MAX_RETRIES;
 
-    INCR(segcache.seg_metrics, seg_get);
+    INCR(segcache_ptr->seg_metrics, seg_get);
 
-    seg_id_ret = seg_get_from_freepool(false);
+    seg_id_ret = seg_get_from_freepool(false, segcache_ptr);
 
     while (seg_id_ret == -1 && n_retries_left >= 0) {
         /* evict seg */
-        if (segcache.evict_info.policy == EVICT_MERGE_FIFO) {
+        if (segcache_ptr->evict_info.policy == EVICT_MERGE_FIFO) {
             status = seg_merge_evict(&seg_id_ret);
         } else {
-            status = seg_evict(&seg_id_ret, segcache);
+            status = seg_evict(&seg_id_ret, segcache_ptr);
         }
 
         if (status == EVICT_OK) {
@@ -569,185 +569,192 @@ seg_get_new(struct SegCache& segcache)
         if (--n_retries_left < MAX_RETRIES) {
             log_warn("retry %d", n_retries_left);
 
-            INCR(segcache.seg_metrics, seg_evict_retry);
+            INCR(segcache_ptr->seg_metrics, seg_evict_retry);
         }
     }
 
     if (seg_id_ret == -1) {
-        INCR(segcache.seg_metrics, seg_get_ex);
+        INCR(segcache_ptr->seg_metrics, seg_get_ex);
         log_error("unable to get new seg from eviction");
 
         return -1;
     }
 
-    seg_init(seg_id_ret);
+    seg_init(seg_id_ret, segcache_ptr);
 
     return seg_id_ret;
 }
 
 static void
-heap_init(struct SegCache& segcache)
+heap_init(struct SegCache* segcache_ptr)
 {
-    segcache.heap.max_nseg  = segcache.heap.heap_size / segcache.heap.seg_size;
-    segcache.heap.heap_size = segcache.heap.max_nseg * segcache.heap.seg_size;
-    segcache.heap.base      = NULL;
+    segcache_ptr->heap_ptr->max_nseg  = segcache_ptr->heap_ptr->heap_size / segcache_ptr->heap_ptr->seg_size;
+    segcache_ptr->heap_ptr->heap_size = segcache_ptr->heap_ptr->max_nseg * segcache_ptr->heap_ptr->seg_size;
+    segcache_ptr->heap_ptr->base      = NULL;
 
-    if (!segcache.heap.prealloc) {
+    if (!segcache_ptr->heap_ptr->prealloc) {
         log_crit("%s only support prealloc", SEG_MODULE_NAME);
         exit(EX_CONFIG);
     }
 }
 
 static int
-setup_heap_mem(struct SegCache& segcache)
+setup_heap_mem(struct SegCache* segcache_ptr)
 {
     int datapool_fresh = 1;
 
-    segcache.heap.pool = datapool_open(segcache.heap.poolpath, segcache.heap.poolname, segcache.heap.heap_size,
-        &datapool_fresh, segcache.heap.prefault);
+    segcache_ptr->heap_ptr->pool = datapool_open(segcache_ptr->heap_ptr->poolpath, segcache_ptr->heap_ptr->poolname, segcache_ptr->heap_ptr->heap_size,
+        &datapool_fresh, segcache_ptr->heap_ptr->prefault);
 
-    if (segcache.heap.pool == NULL || datapool_addr(segcache.heap.pool) == NULL) {
+    if (segcache_ptr->heap_ptr->pool == NULL || datapool_addr(segcache_ptr->heap_ptr->pool) == NULL) {
         log_crit("create datapool failed: %s - %zu bytes for %" PRIu32 " segs",
-            strerror(errno), segcache.heap.heap_size, segcache.heap.max_nseg);
+            strerror(errno), segcache_ptr->heap_ptr->heap_size, segcache_ptr->heap_ptr->max_nseg);
         exit(EX_CONFIG);
     }
 
-    log_info("pre-allocated %zu bytes for %" PRIu32 " segs", segcache.heap.heap_size,
-        segcache.heap.max_nseg);
+    log_info("pre-allocated %zu bytes for %" PRIu32 " segs", segcache_ptr->heap_ptr->heap_size,
+        segcache_ptr->heap_ptr->max_nseg);
 
-    segcache.heap.base = datapool_addr(segcache.heap.pool);
+    segcache_ptr->heap_ptr->base = datapool_addr(segcache_ptr->heap_ptr->pool);
 
     return datapool_fresh;
 }
 
 static rstatus_i
-seg_heap_setup(struct SegCache& segcache)
+seg_heap_setup(struct SegCache* segcache_ptr)
 {
-    heap_init(segcache);
+    heap_init(segcache_ptr);
 
     int    dram_fresh = 1;
-    size_t seg_hdr_sz = SEG_HDR_SIZE * segcache.heap.max_nseg;
+    size_t seg_hdr_sz = SEG_HDR_SIZE * segcache_ptr->heap_ptr->max_nseg;
 
-    dram_fresh = setup_heap_mem(segcache);
-    pthread_mutex_init(&segcache.heap.mtx, NULL);
+    dram_fresh = setup_heap_mem(segcache_ptr);
+    pthread_mutex_init(&segcache_ptr->heap_ptr->mtx, NULL);
 
-    segcache.heap.segs = cc_zalloc(seg_hdr_sz);
+    segcache_ptr->heap_ptr->segs = cc_zalloc(seg_hdr_sz);
 
     if (!dram_fresh) {
         /* TODO(jason): recover */
         ;
     }
     else {
-        pthread_mutex_lock(&segcache.heap.mtx);
-        segcache.heap.n_free_seg = 0;
-        for (int32_t i = segcache.heap.max_nseg - 1; i >= 0; i--) {
-            segcache.heap.segs[i].seg_id          = i;
+        pthread_mutex_lock(&segcache_ptr->heap_ptr->mtx);
+        segcache_ptr->heap_ptr->n_free_seg = 0;
+        for (int32_t i = segcache_ptr->heap_ptr->max_nseg - 1; i >= 0; i--) {
+            segcache_ptr->heap_ptr->segs[i].seg_id          = i;
 #ifdef DEBUG_MODE
-            segcache.heap.segs[i].seg_id_non_decr = i;
+            segcache_ptr->heap_ptr->segs[i].seg_id_non_decr = i;
 #endif
-            segcache.heap.segs[i].evictable       = 0;
-            segcache.heap.segs[i].accessible      = 0;
+            segcache_ptr->heap_ptr->segs[i].evictable       = 0;
+            segcache_ptr->heap_ptr->segs[i].accessible      = 0;
 
-            seg_add_to_freepool(i, SEG_ALLOCATION);
+            seg_add_to_freepool(i, SEG_ALLOCATION, segcache_ptr);
         }
-        pthread_mutex_unlock(&segcache.heap.mtx);
+        pthread_mutex_unlock(&segcache_ptr->heap_ptr->mtx);
     }
 
     return CC_OK;
 }
 
 void
-seg_teardown(struct SegCache& segcache)
+seg_teardown(struct SegCache* segcache_ptr)
 {
     log_info("tear down the %s module", SEG_MODULE_NAME);
 
-    segcache.stop = true;
+    segcache_ptr->stop = true;
 
-    pthread_join(segcache.bg_tid, NULL);
+    pthread_join(segcache_ptr->bg_tid, NULL);
 
-    if (!segcache.seg_initialized) {
+    if (!segcache_ptr->seg_initialized) {
         log_warn("%s has never been set up", SEG_MODULE_NAME);
         return;
     }
 
-    hashtable_teardown(segcache);
+    hashtable_teardown(segcache_ptr);
 
-    segevict_teardown(segcache);
+    segevict_teardown(segcache_ptr);
     ttl_bucket_teardown();
 
-    segcache.seg_metrics = NULL;
+    segcache_ptr->seg_metrics = NULL;
 
-    segcache.flush_at        = -1;
-    segcache.seg_initialized = false;
+    segcache_ptr->flush_at        = -1;
+    segcache_ptr->seg_initialized = false;
 }
 
 void
-seg_setup(seg_options_st *options, seg_metrics_st *metrics, struct SegCache& segcache)
+seg_setup(seg_options_st *options, seg_metrics_st *metrics, struct SegCache* segcache_ptr)
 {
     log_info("set up the %s module", SEG_MODULE_NAME);
 
-    if (segcache.seg_initialized) {
+    if (segcache_ptr->seg_initialized) {
         log_warn("%s has already been set up, re-creating", SEG_MODULE_NAME);
-        seg_teardown();
+        seg_teardown(segcache_ptr);
     }
 
-    segcache.seg_metrics = metrics;
+    segcache_ptr->seg_metrics = metrics;
 
     if (options == NULL) {
         log_crit("no option is provided for seg initialization");
         exit(EX_CONFIG);
     }
 
-    segcache.flush_at = -1;
-    segcache.stop     = false;
+    segcache_ptr->flush_at = -1;
+    segcache_ptr->stop     = false;
 
-    segcache.seg_options = options;
-    segcache.n_thread    = option_uint(&segcache.seg_options->seg_n_thread);
+    segcache_ptr->seg_options = options;
+    segcache_ptr->n_thread    = option_uint(&segcache_ptr->seg_options->seg_n_thread);
 
-    segcache.heap.seg_size  = option_uint(&segcache.seg_options->seg_size);
-    segcache.heap.heap_size = option_uint(&segcache.seg_options->heap_mem);
-    log_verb("cache size %" PRIu64, segcache.heap.heap_size);
+    segcache_ptr->heap_ptr->seg_size  = option_uint(&segcache_ptr->seg_options->seg_size);
+    segcache_ptr->heap_ptr->heap_size = option_uint(&segcache_ptr->seg_options->heap_mem);
+    log_verb("cache size %" PRIu64, segcache_ptr->heap_ptr->heap_size);
 
-    segcache.heap.free_seg_id = -1;
-    segcache.heap.prealloc    = option_bool(&segcache.seg_options->seg_prealloc);
-    segcache.heap.prefault    = option_bool(&segcache.seg_options->datapool_prefault);
+    segcache_ptr->heap_ptr->free_seg_id = -1;
+    segcache_ptr->heap_ptr->prealloc    = option_bool(&segcache_ptr->seg_options->seg_prealloc);
+    segcache_ptr->heap_ptr->prefault    = option_bool(&segcache_ptr->seg_options->datapool_prefault);
 
-    segcache.heap.poolpath = option_str(&segcache.seg_options->datapool_path);
-    segcache.heap.poolname = option_str(&segcache.seg_options->datapool_name);
+    segcache_ptr->heap_ptr->poolpath = option_str(&segcache_ptr->seg_options->datapool_path);
+    segcache_ptr->heap_ptr->poolname = option_str(&segcache_ptr->seg_options->datapool_name);
 
-    segcache.heap.n_reserved_seg = 0;
+    segcache_ptr->heap_ptr->n_reserved_seg = 0;
 
-    segcache.use_cas = option_bool(&segcache.seg_options->seg_use_cas);
+    segcache_ptr->use_cas = option_bool(&segcache_ptr->seg_options->seg_use_cas);
 
-    hashtable_setup(option_uint(&segcache.seg_options->hash_power), segcache);
+    hashtable_setup(option_uint(&segcache_ptr->seg_options->hash_power), segcache_ptr);
 
-    if (seg_heap_setup(segcache) != CC_OK) {
+    if (seg_heap_setup(segcache_ptr) != CC_OK) {
         log_crit("Could not setup seg heap info");
         goto error;
     }
 
-    ttl_bucket_setup(segcache);
+    ttl_bucket_setup(segcache_ptr);
 
-    segcache.evict_info.merge_opt.seg_n_merge     =
-        option_uint(&segcache.seg_options->seg_n_merge);
-    segcache.evict_info.merge_opt.seg_n_max_merge =
-        option_uint(&segcache.seg_options->seg_n_max_merge);
+    segcache_ptr->evict_info.merge_opt.seg_n_merge     =
+        option_uint(&segcache_ptr->seg_options->seg_n_merge);
+    segcache_ptr->evict_info.merge_opt.seg_n_max_merge =
+        option_uint(&segcache_ptr->seg_options->seg_n_max_merge);
     segevict_setup(option_uint(&options->seg_evict_opt),
-        option_uint(&segcache.seg_options->seg_mature_time), segcache);
-    if (segcache.evict_info.policy == EVICT_MERGE_FIFO) {
-        segcache.heap.n_reserved_seg = segcache.n_thread;
+        option_uint(&segcache_ptr->seg_options->seg_mature_time), segcache_ptr);
+    if (segcache_ptr->evict_info.policy == EVICT_MERGE_FIFO) {
+        segcache_ptr->heap_ptr->n_reserved_seg = segcache_ptr->n_thread;
     }
 
-    start_background_thread(NULL);
+    start_background_thread(NULL, segcache_ptr);
 
-    segcache.seg_initialized = true;
+    segcache_ptr->seg_initialized = true;
 
     log_info("Seg header size: %d, item header size: %d, eviction algorithm %s",
-        SEG_HDR_SIZE, ITEM_HDR_SIZE, eviction_policy_names[segcache.evict_info.policy]);
+        SEG_HDR_SIZE, ITEM_HDR_SIZE, eviction_policy_names[segcache_ptr->evict_info.policy]);
 
     return;
 
     error:
-    seg_teardown();
+    seg_teardown(segcache_ptr);
     exit(EX_CONFIG);
+}
+
+// Siyuan: allow forward declaration to break circular dependency
+uint8_t *
+get_seg_data_start(int32_t seg_id, struct SegCache* segcache_ptr)
+{
+    return segcache_ptr->heap_ptr->base + segcache_ptr->heap_ptr->seg_size * seg_id;
 }

@@ -13,6 +13,11 @@
 
 #include <string>
 
+namespace covered
+{
+    class ClientWrapperParam;
+}
+
 #include "benchmark/client_worker_param.h"
 #include "cli/client_cli.h"
 #include "common/node_wrapper_base.h"
@@ -22,8 +27,6 @@
 
 namespace covered
 {
-    class ClientWorkerParam;
-
     class ClientWrapperParam
     {
     public:

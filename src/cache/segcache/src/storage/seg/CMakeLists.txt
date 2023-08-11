@@ -3,6 +3,7 @@ set(SOURCE
         item.c
         seg.c
         background.c
+        segcache.c
         segevict.c
         segmerge.c
         ttlbucket.c)
