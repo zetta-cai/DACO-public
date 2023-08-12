@@ -1,5 +1,7 @@
 /*
- * PerkeyRwlock: provide key-level read-write lock for concurrency control.
+ * PerkeyRwlock: provide key-level read-write lock for fine-grained concurrency control.
+ *
+ * NOTE: if disable fine-grained locking, PerkeyRwlock will go back to a single read-write lock.
  * 
  * By Siyuan Sheng (2023.06.15).
  */
@@ -22,7 +24,7 @@ namespace covered
     class PerkeyRwlock
     {
     public:
-        PerkeyRwlock(const uint32_t& edge_idx, const uint32_t& fine_grained_locking_size);
+        PerkeyRwlock(const uint32_t& edge_idx, const uint32_t& fine_grained_locking_size, const bool& enable_fine_grained_locking = true);
         ~PerkeyRwlock();
 
         // The same interfaces as libboost
@@ -43,7 +45,8 @@ namespace covered
         bool try_lock_(const Key& key, const std::string& context_name);
 
         std::string instance_name_;
-        uint32_t fine_grained_locking_size_; // Come from Config::fine_grained_locking_size_
+        const uint32_t fine_grained_locking_size_; // Come from Config::fine_grained_locking_size_
+        const bool enable_fine_grained_locking_; // Determined by the specific local edge cache
 
         // NOTE: we have to use dynamic array for boost::shared_mutex and std::atomic, as they do NOT have copy constructor and operator= for std::vector (e.g., resize() and push_back())
         boost::shared_mutex* rwlock_hashtable_;

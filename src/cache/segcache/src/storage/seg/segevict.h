@@ -75,10 +75,10 @@ seg_evictable(struct seg *seg, const struct SegCache* segcache_ptr);
 /* evict one segment, return the id of the evicted segment in evicted_seg_id,
  * this function can fail if it cannot find an evictable segment */
 evict_rstatus_e
-seg_evict(int32_t *evicted_seg_id, struct SegCache* segcache_ptr);
+seg_evict(int32_t *evicted_seg_id, struct SegCache* segcache_ptr, bool need_victims, struct bstring** key_bstrs_ptr, struct bstring** value_bstrs_ptr, uint32_t* vicimt_cnt_ptr);
 
 evict_rstatus_e
-seg_merge_evict(int32_t *seg_id_ret, struct SegCache* segcache_ptr);
+seg_merge_evict(int32_t *seg_id_ret, struct SegCache* segcache_ptr, bool need_victims, struct bstring** key_bstrs_ptr, struct bstring** value_bstrs_ptr, uint32_t* vicimt_cnt_ptr);
 
 void
 segevict_setup(evict_policy_e ev_policy, uintmax_t seg_mature_time, struct SegCache* segcache_ptr);

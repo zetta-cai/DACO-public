@@ -17,21 +17,26 @@ namespace covered
         oss << kClassName << " edge" << edge_idx;
         instance_name_ = oss.str();
 
+        // Allocate local edge cache
+        local_cache_ptr_ = LocalCacheBase::getLocalCacheByCacheName(cache_name, edge_idx, capacity_bytes);
+        assert(local_cache_ptr_ != NULL);
+
         // Allocate per-key rwlock for cache wrapper
-        cache_wrapper_perkey_rwlock_ptr_ = new PerkeyRwlock(edge_idx, Config::getFineGrainedLockingSize());
+        cache_wrapper_perkey_rwlock_ptr_ = new PerkeyRwlock(edge_idx, Config::getFineGrainedLockingSize(), local_cache_ptr_->hasFineGrainedManagement());
         assert(cache_wrapper_perkey_rwlock_ptr_ != NULL);
 
         // Allocate validity map
         validity_map_ptr_ = new ValidityMap(edge_idx, cache_wrapper_perkey_rwlock_ptr_);
         assert(validity_map_ptr_ != NULL);
-
-        // Allocate local edge cache
-        local_cache_ptr_ = LocalCacheBase::getLocalCacheByCacheName(cache_name, edge_idx, capacity_bytes);
-        assert(local_cache_ptr_ != NULL);
     }
     
     CacheWrapper::~CacheWrapper()
     {
+        // Release local edge cache
+        assert(local_cache_ptr_ != NULL);
+        delete local_cache_ptr_;
+        local_cache_ptr_ = NULL;
+
         // Release per-key rwlock for cache wrapper
         assert(cache_wrapper_perkey_rwlock_ptr_ != NULL);
         delete cache_wrapper_perkey_rwlock_ptr_;
@@ -41,11 +46,6 @@ namespace covered
         assert(validity_map_ptr_ != NULL);
         delete validity_map_ptr_;
         validity_map_ptr_ = NULL;
-
-        // Release local edge cache
-        assert(local_cache_ptr_ != NULL);
-        delete local_cache_ptr_;
-        local_cache_ptr_ = NULL;
     }
 
     // (1) Check is cached and access validity

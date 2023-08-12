@@ -1,7 +1,7 @@
 /*
- * SegcacheLocalCache: local edge cache with SegCache group-level policy (https://github.com/thesys-lab/segcache) (thread safe).
+ * SegcacheLocalCache: local edge cache with SegCache group-level policy (https://github.com/thesys-lab/segcache).
  *
- * NOTE: all non-const shared variables in SegcacheLocalCache should be thread safe.
+ * NOTE: all configuration and function calls refer to SegCache files, including lib/segcache/benchmarks/thrpt_bench.c, lib/segcache/benchmarks/storage_seg/storage_seg.c, and src/cache/segcache/src/storage/seg/seg.c::seg_get_new() (see hacked versions in src/cache/segcache to convert global variables into thread-local variables for multi-threading).
  * 
  * By Siyuan Sheng (2023.08.10).
  */
@@ -27,40 +27,41 @@ namespace covered
         SegcacheLocalCache(const uint32_t& edge_idx, const uint64_t& capacity_bytes);
         virtual ~SegcacheLocalCache();
 
+        virtual const bool hasFineGrainedManagement() const;
+    private:
+        static const std::string kClassName;
+
         // (1) Check is cached and access validity
 
-        virtual bool isLocalCached(const Key& key) const override;
+        virtual bool isLocalCachedInternal_(const Key& key) const override;
 
         // (2) Access local edge cache
 
-        virtual bool getLocalCache(const Key& key, Value& value) const override;
-        virtual bool updateLocalCache(const Key& key, const Value& value) override;
+        virtual bool getLocalCacheInternal_(const Key& key, Value& value) const override;
+        virtual bool updateLocalCacheInternal_(const Key& key, const Value& value) override;
 
         // (3) Local edge cache management
 
-        virtual bool needIndependentAdmit(const Key& key) const override;
-        virtual void admitLocalCache(const Key& key, const Value& value) override;
-        virtual bool getLocalCacheVictimKey(Key& key, const Key& admit_key, const Value& admit_value) const override;
-        virtual bool evictLocalCacheIfKeyMatch(const Key& key, Value& value, const Key& admit_key, const Value& admit_value) override;
+        virtual bool needIndependentAdmitInternal_(const Key& key) const override;
+        virtual void admitLocalCacheInternal_(const Key& key, const Value& value) override;
+        virtual bool getLocalCacheVictimKeyInternal_(Key& key, const Key& admit_key, const Value& admit_value) const override;
+        virtual bool evictLocalCacheIfKeyMatchInternal_(const Key& key, Value& value, const Key& admit_key, const Value& admit_value) override;
 
         // (4) Other functions
 
         // In units of bytes
-        virtual uint64_t getSizeForCapacity() const override;
-    private:
-        static const std::string kClassName;
+        virtual uint64_t getSizeForCapacityInternal_() const override;
 
-        // (4) Other functions
+        virtual void checkPointersInternal_() const override;
 
-        virtual void checkPointers_() const override;
+        // (5) SegCache-specific functions
+
+        bool appendLocalCache_(const Key& key, const Value& value);
 
         // Member variables
 
         // Const variable
         std::string instance_name_;
-
-        // Guarantee the atomicity of local SegCache cache and local statistics
-        mutable Rwlock* rwlock_for_segcache_local_cache_ptr_;
 
         // Non-const shared variables
         unsigned segcache_options_cnt_; // # of options in segcache_options_

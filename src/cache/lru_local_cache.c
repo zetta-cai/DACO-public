@@ -16,151 +16,95 @@ namespace covered
         oss << kClassName << " edge" << edge_idx;
         instance_name_ = oss.str();
 
-        oss.clear();
-        oss.str("");
-        oss << instance_name_ << " " << "rwlock_for_lru_local_cache_ptr_";
-        rwlock_for_lru_local_cache_ptr_ = new Rwlock(oss.str());
-        assert(rwlock_for_lru_local_cache_ptr_ != NULL);
-
         lru_cache_ptr_ = new LruCache();
         assert(lru_cache_ptr_ != NULL);
     }
     
     LruLocalCache::~LruLocalCache()
     {
-        assert(rwlock_for_lru_local_cache_ptr_ != NULL);
-        delete rwlock_for_lru_local_cache_ptr_;
-        rwlock_for_lru_local_cache_ptr_ = NULL;
-
         assert(lru_cache_ptr_ != NULL);
         delete lru_cache_ptr_;
         lru_cache_ptr_ = NULL;
     }
 
+    const bool LruLocalCache::hasFineGrainedManagement() const
+    {
+        return true; // Key-level (i.e., object-level) cache management
+    }
+
     // (1) Check is cached and access validity
 
-    bool LruLocalCache::isLocalCached(const Key& key) const
+    bool LruLocalCache::isLocalCachedInternal_(const Key& key) const
     {
-        checkPointers_();
-
-        // Acquire a read lock for local statistics to update local statistics atomically (so no need to hack LRU cache)
-        std::string context_name = "LruLocalCache::isLocalCached()";
-        rwlock_for_lru_local_cache_ptr_->acquire_lock_shared(context_name);
-
         bool is_cached = lru_cache_ptr_->exists(key);
 
-        rwlock_for_lru_local_cache_ptr_->unlock_shared(context_name);
         return is_cached;
     }
 
     // (2) Access local edge cache
 
-    bool LruLocalCache::getLocalCache(const Key& key, Value& value) const
+    bool LruLocalCache::getLocalCacheInternal_(const Key& key, Value& value) const
     {
-        checkPointers_();
-
-        // Acquire a write lock for local statistics to update local statistics atomically (so no need to hack LRU cache)
-        std::string context_name = "LruLocalCache::getLocalCache()";
-        rwlock_for_lru_local_cache_ptr_->acquire_lock(context_name);
-
         bool is_local_cached = lru_cache_ptr_->get(key, value);
 
-        rwlock_for_lru_local_cache_ptr_->unlock(context_name);
         return is_local_cached;
     }
 
-    bool LruLocalCache::updateLocalCache(const Key& key, const Value& value)
+    bool LruLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value)
     {
-        checkPointers_();
-
-        // Acquire a write lock for local statistics to update local statistics atomically (so no need to hack LRU cache)
-        std::string context_name = "LruLocalCache::updateLocalCache()";
-        rwlock_for_lru_local_cache_ptr_->acquire_lock(context_name);
-
         bool is_local_cached = lru_cache_ptr_->update(key, value);
 
-        rwlock_for_lru_local_cache_ptr_->unlock(context_name);
         return is_local_cached;
     }
 
     // (3) Local edge cache management
 
-    bool LruLocalCache::needIndependentAdmit(const Key& key) const
+    bool LruLocalCache::needIndependentAdmitInternal_(const Key& key) const
     {
-        // No need to acquire a read lock for local statistics due to returning a const boolean
-
-        // LRU cache uses LRU-based independent admission policy (i.e., always admit), which always returns true as long as key is not cached
+        // LRU cache uses default admission policy (i.e., always admit), which always returns true as long as key is not cached
         return true;
     }
 
-    void LruLocalCache::admitLocalCache(const Key& key, const Value& value)
+    void LruLocalCache::admitLocalCacheInternal_(const Key& key, const Value& value)
     {
-        checkPointers_();
-
-        // Acquire a write lock for local statistics to update local statistics atomically (so no need to hack LRU cache)
-        std::string context_name = "LruLocalCache::admitLocalCache()";
-        rwlock_for_lru_local_cache_ptr_->acquire_lock(context_name);
-
         lru_cache_ptr_->admit(key, value);
 
-        rwlock_for_lru_local_cache_ptr_->unlock(context_name);
         return;
     }
 
-    bool LruLocalCache::getLocalCacheVictimKey(Key& key, const Key& admit_key, const Value& admit_value) const
+    bool LruLocalCache::getLocalCacheVictimKeyInternal_(Key& key, const Key& admit_key, const Value& admit_value) const
     {
-        checkPointers_();
-
         UNUSED(admit_key);
         UNUSED(admit_value);
-
-        // Acquire a read lock for local statistics to update local statistics atomically (so no need to hack LRU cache)
-        std::string context_name = "LruLocalCache::getLocalCacheVictimKey()";
-        rwlock_for_lru_local_cache_ptr_->acquire_lock_shared(context_name);
 
         bool has_victim_key = lru_cache_ptr_->getVictimKey(key);
 
-        rwlock_for_lru_local_cache_ptr_->unlock_shared(context_name);
         return has_victim_key;
     }
 
-    bool LruLocalCache::evictLocalCacheIfKeyMatch(const Key& key, Value& value, const Key& admit_key, const Value& admit_value)
+    bool LruLocalCache::evictLocalCacheIfKeyMatchInternal_(const Key& key, Value& value, const Key& admit_key, const Value& admit_value)
     {
-        checkPointers_();
-
         UNUSED(admit_key);
         UNUSED(admit_value);
 
-        // Acquire a write lock for local statistics to update local statistics atomically (so no need to hack LRU cache)
-        std::string context_name = "LruLocalCache::evictLocalCacheIfKeyMatch()";
-        rwlock_for_lru_local_cache_ptr_->acquire_lock(context_name);
-
         bool is_evict = lru_cache_ptr_->evictIfKeyMatch(key, value);
 
-        rwlock_for_lru_local_cache_ptr_->unlock(context_name);
         return is_evict;
     }
 
     // (4) Other functions
 
-    uint64_t LruLocalCache::getSizeForCapacity() const
+    uint64_t LruLocalCache::getSizeForCapacityInternal_() const
     {
-        checkPointers_();
-
-        // Acquire a read lock for local statistics to update local statistics atomically (so no need to hack LRU cache)
-        std::string context_name = "LruLocalCache::getSizeForCapacity()";
-        rwlock_for_lru_local_cache_ptr_->acquire_lock_shared(context_name);
-
         uint64_t internal_size = lru_cache_ptr_->getSizeForCapacity();
 
-        rwlock_for_lru_local_cache_ptr_->unlock_shared(context_name);
         return internal_size;
     }
 
-    void LruLocalCache::checkPointers_() const
+    void LruLocalCache::checkPointersInternal_() const
     {
-        assert(rwlock_for_lru_local_cache_ptr_ != NULL);
         assert(lru_cache_ptr_ != NULL);
+        return;
     }
 
 }

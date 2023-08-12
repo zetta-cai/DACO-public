@@ -22,7 +22,7 @@
 
 static inline void
 seg_copy(int32_t seg_id_dest, int32_t seg_id_src,
-         double *cutoff_freq, double target_ratio, struct SegCache* segcache_ptr);
+         double *cutoff_freq, double target_ratio, struct SegCache* segcache_ptr, bool need_victims, struct bstring** key_bstrs_ptr, struct bstring** value_bstrs_ptr, uint32_t* victim_cnt_ptr);
 
 int32_t
 merge_segs(struct seg *segs_to_merge[],
@@ -200,7 +200,7 @@ replace_seg_in_chain(int32_t new_seg_id, int32_t old_seg_id, struct SegCache* se
 
 
 evict_rstatus_e
-seg_merge_evict(int32_t *seg_id_ret, struct SegCache* segcache_ptr)
+seg_merge_evict(int32_t *seg_id_ret, struct SegCache* segcache_ptr, bool need_victims, struct bstring** key_bstrs_ptr, struct bstring** value_bstrs_ptr, uint32_t* victim_cnt_ptr)
 {
     struct merge_opts *mopt = &segcache_ptr->evict_info_ptr->merge_opt;
     struct seg        *seg  = NULL;
@@ -284,7 +284,7 @@ seg_merge_evict(int32_t *seg_id_ret, struct SegCache* segcache_ptr)
                 bool seg_too_old = first_seg_age > (cal_mean_eviction_age(segcache_ptr) * 10);
 
                 if (n_evicted_seg(segcache_ptr) > 100 && seg_too_old) {
-                    bool success = rm_all_item_on_seg(seg_id, SEG_FORCE_EVICTION, segcache_ptr);
+                    bool success = rm_all_item_on_seg(seg_id, SEG_FORCE_EVICTION, segcache_ptr, need_victims, key_bstrs_ptr, value_bstrs_ptr, victim_cnt_ptr); // Siyuan: equivalent to seg_evict() if segment is too cold
                     if (success) {
                         last_bkt_idx = bkt_idx + 1;
                         pthread_mutex_unlock(&ttl_bkt->mtx);
@@ -362,7 +362,7 @@ seg_merge_evict(int32_t *seg_id_ret, struct SegCache* segcache_ptr)
 
 static void
 seg_copy(int32_t seg_id_dest, int32_t seg_id_src,
-         double *cutoff_freq, double target_ratio, struct SegCache* segcache_ptr)
+         double *cutoff_freq, double target_ratio, struct SegCache* segcache_ptr, bool need_victims, struct bstring** key_bstrs_ptr, struct bstring** value_bstrs_ptr, uint32_t* victim_cnt_ptr)
 {
     struct merge_opts *mopt          = &segcache_ptr->evict_info_ptr->merge_opt;
 
@@ -411,6 +411,21 @@ seg_copy(int32_t seg_id_dest, int32_t seg_id_src,
     double cutoff       = (1 + *cutoff_freq) / 2;
     int    update_intvl = (int) segcache_ptr->heap_ptr->seg_size / 10;
     int    n_th_update  = 1;
+
+    // Siyuan: allocate space for evicted key-value pairs
+    uint32_t victim_idx = 0;
+    uint32_t victim_cnt = seg_src->n_live_item;
+    if (need_victims && victim_cnt > 0)
+    {
+        ASSERT(key_bstrs_ptr != NULL);
+        ASSERT(value_bstrs_ptr != NULL);
+        ASSERT(victim_cnt_ptr != NULL);
+
+        *key_bstrs_ptr = (struct bstring*)malloc(sizeof(struct bstring) * victim_cnt);
+        memset(*key_bstrs_ptr, 0, sizeof(struct bstring) * victim_cnt);
+        *value_bstrs_ptr = (struct bstring*)malloc(sizeof(struct bstring) * victim_cnt);
+        memset(*value_bstrs_ptr, 0, sizeof(struct bstring) * victim_cnt);
+    }
 
     while (curr_src - seg_data_src < offset) {
         last_it = it;
@@ -461,6 +476,19 @@ seg_copy(int32_t seg_id_dest, int32_t seg_id_src,
         }
 
         if (it->deleted) {
+            // Siyuan: deep copy the current evicted key-value pair
+            if (need_victims)
+            {
+                ASSERT(victim_idx < victim_cnt);
+                (*key_bstrs_ptr)[victim_idx].len = it->klen;
+                (*key_bstrs_ptr)[victim_idx].data = (char*)malloc(it->klen);
+                memcpy((*key_bstrs_ptr)[victim_idx].data, item_key(it), it->klen);
+                (*value_bstrs_ptr)[victim_idx].len = it->vlen;
+                (*value_bstrs_ptr)[victim_idx].data = (char*)malloc(it->vlen);
+                memcpy((*value_bstrs_ptr)[victim_idx].data, item_val(it), it->vlen);
+                victim_idx++;
+            }
+
             /* this is necessary for current hash table design */
             hashtable_evict(item_key(it), item_nkey(it),
                             seg_id_src_ht, curr_src - seg_data_src, segcache_ptr);
@@ -480,6 +508,19 @@ seg_copy(int32_t seg_id_dest, int32_t seg_id_src,
         it_freq = it_freq / ((double) it_sz / mean_size);
 
         if (it_freq <= cutoff && (!copy_all_items)) {
+            // Siyuan: deep copy the current evicted key-value pair
+            if (need_victims)
+            {
+                ASSERT(victim_idx < victim_cnt);
+                (*key_bstrs_ptr)[victim_idx].len = it->klen;
+                (*key_bstrs_ptr)[victim_idx].data = (char*)malloc(it->klen);
+                memcpy((*key_bstrs_ptr)[victim_idx].data, item_key(it), it->klen);
+                (*value_bstrs_ptr)[victim_idx].len = it->vlen;
+                (*value_bstrs_ptr)[victim_idx].data = (char*)malloc(it->vlen);
+                memcpy((*value_bstrs_ptr)[victim_idx].data, item_val(it), it->vlen);
+                victim_idx++;
+            }
+
             hashtable_evict(item_key(it), it->klen, seg_id_src_ht, it_offset, segcache_ptr);
             curr_src += it_sz;
             continue;
@@ -492,6 +533,19 @@ seg_copy(int32_t seg_id_dest, int32_t seg_id_src,
                     ", destination seg full %d + %d src offset %d",
                     seg_id_src, seg_id_dest, seg_dest->write_offset, it_sz,
                     it_offset);
+            }
+
+            // Siyuan: deep copy the current evicted key-value pair
+            if (need_victims)
+            {
+                ASSERT(victim_idx < victim_cnt);
+                (*key_bstrs_ptr)[victim_idx].len = it->klen;
+                (*key_bstrs_ptr)[victim_idx].data = (char*)malloc(it->klen);
+                memcpy((*key_bstrs_ptr)[victim_idx].data, item_key(it), it->klen);
+                (*value_bstrs_ptr)[victim_idx].len = it->vlen;
+                (*value_bstrs_ptr)[victim_idx].data = (char*)malloc(it->vlen);
+                memcpy((*value_bstrs_ptr)[victim_idx].data, item_val(it), it->vlen);
+                victim_idx++;
             }
 
             hashtable_evict(item_key(it), it->klen, seg_id_src_ht, it_offset, segcache_ptr);
@@ -524,6 +578,12 @@ seg_copy(int32_t seg_id_dest, int32_t seg_id_src,
         curr_src += it_sz;
     }
 
+    // Siyuan: update victim_cnt_ptr
+    if (need_victims)
+    {
+        *victim_cnt_ptr = victim_cnt;
+    }
+
     /* using this one will crash, there must be some data race which incr
      * n_live_item somewhere
      */
@@ -553,7 +613,7 @@ seg_copy(int32_t seg_id_dest, int32_t seg_id_src,
 int32_t
 merge_segs(struct seg *segs_to_merge[],
            int n_evictable,
-           double *merge_keep_ratio, struct SegCache* segcache_ptr)
+           double *merge_keep_ratio, struct SegCache* segcache_ptr, bool need_victims, struct bstring** key_bstrs_ptr, struct bstring** value_bstrs_ptr, uint32_t* victim_cnt_ptr)
 {
     INCR(segcache_ptr->seg_metrics, seg_merge);
 
@@ -597,13 +657,38 @@ merge_segs(struct seg *segs_to_merge[],
         cutoff_freq = 0;
     }
 
+    // Siyuan: prepare n_evictable pointers (at most n_evictable merges)
+    uint32_t merge_idx = 0;
+    uint32_t merge_cnt = n_evictable;
+    struct bstring** key_bstrs_array = NULL;
+    struct bstring** value_bstrs_array = NULL;
+    uint32_t* victim_cnt_array = NULL;
+    if (need_victims)
+    {
+        key_bstrs_array = (struct bstring**)malloc(sizeof(struct bstring*) * merge_cnt);
+        memset(key_bstrs_array, 0, sizeof(struct bstring*) * merge_cnt);
+        value_bstrs_array = (struct bstring**)malloc(sizeof(struct bstring*) * merge_cnt);
+        memset(value_bstrs_array, 0, sizeof(struct bstring*) * merge_cnt);
+        victim_cnt_array = (uint32_t*)malloc(sizeof(uint32_t) * merge_cnt);
+        memset(victim_cnt_array, 0, sizeof(uint32_t) * merge_cnt);
+    }
+
     /* start from start_seg until new_seg is full or no seg can be merged */
     while (new_seg->write_offset < mopt->stop_bytes && n_merged < n_evictable) {
         curr_seg    = segs_to_merge[n_merged];
         curr_seg_id = curr_seg->seg_id;
 
-        seg_copy(new_seg_id, curr_seg_id, &cutoff_freq,
-            merge_keep_ratio[n_merged], segcache_ptr);
+        // Siyuan: get evicted key-value pairs for each time of merge
+        if (need_victims)
+        {
+            ASSERT(merge_idx < merge_cnt);
+            seg_copy(new_seg_id, curr_seg_id, &cutoff_freq, merge_keep_ratio[n_merged], segcache_ptr, need_victims, &key_bstrs_array[merge_idx], &value_bstrs_array[merge_idx], &victim_cnt_array[merge_idx]);
+            merge_idx++;
+        }
+        else
+        {
+            seg_copy(new_seg_id, curr_seg_id, &cutoff_freq, merge_keep_ratio[n_merged], segcache_ptr, false, NULL, NULL, NULL);
+        }
 
         /* remove the evicted seg and return to freepool */
         accessible =
@@ -633,6 +718,63 @@ merge_segs(struct seg *segs_to_merge[],
     }
 
     ASSERT(n_merged > 0);
+
+    // Siyuan: aggregate per-merge evicted key-value pairs
+    if (need_victims)
+    {
+        ASSERT(merge_idx <= merge_cnt);
+
+        // Get total victim cnt
+        uint32_t victim_idx = 0;
+        uint32_t victim_cnt = 0;
+        for (uint32_t i = 0; i < merge_idx; i++)
+        {
+            victim_cnt += victim_cnt_array[i];
+        }
+
+        if (victim_cnt > 0)
+        {
+            ASSERT(key_bstrs_ptr != NULL);
+            ASSERT(value_bstrs_ptr != NULL);
+            ASSERT(victim_cnt_ptr != NULL);
+
+            // Allocate space for evicted key-value pairs
+            *key_bstrs_ptr = (struct bstring*)malloc(sizeof(struct bstring) * victim_cnt);
+            memset(*key_bstrs_ptr, 0, sizeof(struct bstring) * victim_cnt);
+            *value_bstrs_ptr = (struct bstring*)malloc(sizeof(struct bstring) * victim_cnt);
+            memset(*value_bstrs_ptr, 0, sizeof(struct bstring) * victim_cnt);
+
+            // Deep copy per-merge evicted key-value pairs
+            for (uint32_t i = 0; i < merge_idx; i++)
+            {
+                uint32_t tmp_victim_cnt = victim_cnt_array[i];
+                struct bstring* tmp_key_bstrs = key_bstrs_array[i];
+                struct bstring* tmp_value_bstrs = value_bstrs_array[i];
+                for (uint32_t j = 0; j < tmp_victim_cnt; j++)
+                {
+                    ASSERT(victim_idx < victim_cnt);
+                    (*key_bstrs_ptr)[victim_idx].len = tmp_key_bstrs[j].len;
+                    (*key_bstrs_ptr)[victim_idx].data = (char*)malloc(tmp_key_bstrs[j].len);
+                    memcpy((*key_bstrs_ptr)[victim_idx].data, tmp_key_bstrs[j].data, tmp_key_bstrs[j].len);
+                    (*value_bstrs_ptr)[victim_idx].len = tmp_value_bstrs[j].len;
+                    (*value_bstrs_ptr)[victim_idx].data = (char*)malloc(tmp_value_bstrs[j].len);
+                    memcpy((*value_bstrs_ptr)[victim_idx].data, tmp_value_bstrs[j].data, tmp_value_bstrs[j].len);
+                    victim_idx++;
+
+                    // Release tmp evicted key-value pair
+                    free(tmp_key_bstrs[j].data);
+                    tmp_key_bstrs[j].len = 0;
+                    tmp_key_bstrs[j].data = NULL;
+                    free(tmp_value_bstrs[j].data);
+                    tmp_value_bstrs[j].len = 0;
+                    tmp_value_bstrs[j].data = NULL;
+                }
+            }
+        }
+
+        // Update victim_cnt_ptr
+        *victim_cnt_ptr = victim_cnt;
+    }
 
     if (new_seg->live_bytes <= 8) {
         /* if the evicted segs all have no live object */

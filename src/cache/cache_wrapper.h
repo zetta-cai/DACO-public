@@ -74,13 +74,12 @@ namespace covered
 
         std::string instance_name_; // Const shared variable
 
+        // Non-const shared variable
+        LocalCacheBase* local_cache_ptr_; // Maintain key-value objects for local edge cache (thread safe)
         // Fine-graind locking
         mutable PerkeyRwlock* cache_wrapper_perkey_rwlock_ptr_;
-
-        // Non-const shared variable
         // NOTE: Due to the write-through policy, we only need to maintain an invalidity flag for MSI protocol (i.e., both M and S refers to validity)
         ValidityMap* validity_map_ptr_; // Maintain per-key validity flag for local edge cache (thread safe)
-        LocalCacheBase* local_cache_ptr_; // Maintain key-value objects for local edge cache (thread safe)
     };
 }
 

@@ -241,7 +241,7 @@ seg_teardown(struct SegCache* segcache_ptr);
  * @return id of the new segment
  */
 int32_t
-seg_get_new(struct SegCache* segcache_ptr);
+seg_get_new(struct SegCache* segcache_ptr, bool need_victims = false, struct bstring** key_bstrs_ptr = NULL, struct bstring** value_bstrs_ptr = NULL, uint32_t* vicimt_cnt_ptr = NULL);
 
 /**
  * add the seg to free pool, the seg can be allocated (during setup) or
@@ -271,7 +271,7 @@ seg_add_to_freepool(int32_t seg_id, enum seg_state_change reason, struct SegCach
  * remove all items on the segment, otherwise false
  */
 bool
-rm_all_item_on_seg(int32_t seg_id, enum seg_state_change reason, struct SegCache* segcache_ptr);
+rm_all_item_on_seg(int32_t seg_id, enum seg_state_change reason, struct SegCache* segcache_ptr, bool need_victims, struct bstring** key_bstrs_ptr, struct bstring** value_bstrs_ptr, uint32_t* vicimt_cnt_ptr);
 
 /**
  * remove all objects on this segment because it is expired

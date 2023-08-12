@@ -1,7 +1,5 @@
 /*
- * CachelibLocalCache: local edge cache with LRU2Q policy based on Cachelibhttps://github.com/facebook/CacheLib.git) (thread safe).
- *
- * NOTE: all non-const shared variables in CachelibLocalCache should be thread safe.
+ * CachelibLocalCache: local edge cache with LRU2Q policy based on Cachelibhttps://github.com/facebook/CacheLib.git).
  * 
  * NOTE: all configuration and function calls refer to Cachelib files, including lib/cachelib/examples/simple_cache/main.cpp and lib/cachelib/cachebench/runner/CacheStressor.h.
  * 
@@ -35,40 +33,37 @@ namespace covered
         CachelibLocalCache(const uint32_t& edge_idx, const uint64_t& capacity_bytes);
         virtual ~CachelibLocalCache();
 
+        virtual const bool hasFineGrainedManagement() const;
+    private:
+        static const std::string kClassName;
+
         // (1) Check is cached and access validity
 
-        virtual bool isLocalCached(const Key& key) const override;
+        virtual bool isLocalCachedInternal_(const Key& key) const override;
 
         // (2) Access local edge cache
 
-        virtual bool getLocalCache(const Key& key, Value& value) const override;
-        virtual bool updateLocalCache(const Key& key, const Value& value) override;
+        virtual bool getLocalCacheInternal_(const Key& key, Value& value) const override;
+        virtual bool updateLocalCacheInternal_(const Key& key, const Value& value) override;
 
         // (3) Local edge cache management
 
-        virtual bool needIndependentAdmit(const Key& key) const override;
-        virtual void admitLocalCache(const Key& key, const Value& value) override;
-        virtual bool getLocalCacheVictimKey(Key& key, const Key& admit_key, const Value& admit_value) const override;
-        virtual bool evictLocalCacheIfKeyMatch(const Key& key, Value& value, const Key& admit_key, const Value& admit_value) override;
+        virtual bool needIndependentAdmitInternal_(const Key& key) const override;
+        virtual void admitLocalCacheInternal_(const Key& key, const Value& value) override;
+        virtual bool getLocalCacheVictimKeyInternal_(Key& key, const Key& admit_key, const Value& admit_value) const override;
+        virtual bool evictLocalCacheIfKeyMatchInternal_(const Key& key, Value& value, const Key& admit_key, const Value& admit_value) override;
 
         // (4) Other functions
 
         // In units of bytes
-        virtual uint64_t getSizeForCapacity() const override;
-    private:
-        static const std::string kClassName;
+        virtual uint64_t getSizeForCapacityInternal_() const override;
 
-        // (4) Other functions
-
-        virtual void checkPointers_() const override;
+        virtual void checkPointersInternal_() const override;
 
         // Member variables
 
         // Const variable
         std::string instance_name_;
-
-        // Guarantee the atomicity of local Cachelib cache and local statistics
-        mutable Rwlock* rwlock_for_cachelib_local_cache_ptr_;
 
         // Non-const shared variables
         std::unique_ptr<Lru2QCache> cachelib_cache_ptr_; // Data and metadata for local edge cache

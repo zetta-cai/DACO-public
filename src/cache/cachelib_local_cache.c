@@ -21,12 +21,6 @@ namespace covered
         oss << kClassName << " edge" << edge_idx;
         instance_name_ = oss.str();
 
-        oss.clear();
-        oss.str("");
-        oss << instance_name_ << " " << "rwlock_for_cachelib_local_cache_ptr_";
-        rwlock_for_cachelib_local_cache_ptr_ = new Rwlock(oss.str());
-        assert(rwlock_for_cachelib_local_cache_ptr_ != NULL);
-
         // Prepare cacheConfig for Cachelib local cache (most parameters are default values)
         Lru2QCacheConfig cacheConfig;
         // NOTE: we limit cache capacity outside CachelibLocalCache (in EdgeWrapper); here we set cachelib local cache size as overall cache capacity to avoid cache capacity constraint inside CachelibLocalCache
@@ -48,23 +42,18 @@ namespace covered
     
     CachelibLocalCache::~CachelibLocalCache()
     {
-        assert(rwlock_for_cachelib_local_cache_ptr_ != NULL);
-        delete rwlock_for_cachelib_local_cache_ptr_;
-        rwlock_for_cachelib_local_cache_ptr_ = NULL;
-
         // NOTE: deconstructor of cachelib_cache_ptr_ will delete cachelib_cache_ptr_.get() automatically
+    }
+
+    const bool CachelibLocalCache::hasFineGrainedManagement() const
+    {
+        return true; // Key-level (i.e., object-level) cache management
     }
 
     // (1) Check is cached and access validity
 
-    bool CachelibLocalCache::isLocalCached(const Key& key) const
+    bool CachelibLocalCache::isLocalCachedInternal_(const Key& key) const
     {
-        checkPointers_();
-
-        // Acquire a read lock for local statistics to update local statistics atomically (so no need to hack LRU cache)
-        std::string context_name = "CachelibLocalCache::isLocalCached()";
-        rwlock_for_cachelib_local_cache_ptr_->acquire_lock_shared(context_name);
-
         const std::string keystr = key.getKeystr();
 
         // NOTE: NO need to invoke recordAccess() as isLocalCached() does NOT update local statistics
@@ -72,20 +61,13 @@ namespace covered
         Lru2QCacheReadHandle handle = cachelib_cache_ptr_->find(keystr);
         bool is_cached = (handle != nullptr);
 
-        rwlock_for_cachelib_local_cache_ptr_->unlock_shared(context_name);
         return is_cached;
     }
 
     // (2) Access local edge cache
 
-    bool CachelibLocalCache::getLocalCache(const Key& key, Value& value) const
+    bool CachelibLocalCache::getLocalCacheInternal_(const Key& key, Value& value) const
     {
-        checkPointers_();
-
-        // Acquire a write lock for local statistics to update local statistics atomically (so no need to hack LRU cache)
-        std::string context_name = "CachelibLocalCache::getLocalCache()";
-        rwlock_for_cachelib_local_cache_ptr_->acquire_lock(context_name);
-
         const std::string keystr = key.getKeystr();
 
         // NOTE: NOT take effect as cacheConfig.nvmAdmissionPolicyFactory is empty by default
@@ -99,18 +81,11 @@ namespace covered
             value = Value(handle->getSize());
         }
 
-        rwlock_for_cachelib_local_cache_ptr_->unlock(context_name);
         return is_local_cached;
     }
 
-    bool CachelibLocalCache::updateLocalCache(const Key& key, const Value& value)
+    bool CachelibLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value)
     {
-        checkPointers_();
-
-        // Acquire a write lock for local statistics to update local statistics atomically (so no need to hack LFU cache)
-        std::string context_name = "CachelibLocalCache::updateLocalCache()";
-        rwlock_for_cachelib_local_cache_ptr_->acquire_lock(context_name);
-
         const std::string keystr = key.getKeystr();
 
         Lru2QCacheReadHandle handle = cachelib_cache_ptr_->find(keystr);
@@ -131,28 +106,19 @@ namespace covered
             }
         }
 
-        rwlock_for_cachelib_local_cache_ptr_->unlock(context_name);
         return is_local_cached;
     }
 
     // (3) Local edge cache management
 
-    bool CachelibLocalCache::needIndependentAdmit(const Key& key) const
+    bool CachelibLocalCache::needIndependentAdmitInternal_(const Key& key) const
     {
-        // No need to acquire a read lock for local statistics due to returning a const boolean
-
-        // LRU cache uses LRU-based independent admission policy (i.e., always admit), which always returns true as long as key is not cached
+        // CacheLib (LRU2Q) cache uses default admission policy (i.e., always admit), which always returns true as long as key is not cached
         return true;
     }
 
-    void CachelibLocalCache::admitLocalCache(const Key& key, const Value& value)
+    void CachelibLocalCache::admitLocalCacheInternal_(const Key& key, const Value& value)
     {
-        checkPointers_();
-
-        // Acquire a write lock for local statistics to update local statistics atomically (so no need to hack LRU cache)
-        std::string context_name = "CachelibLocalCache::admitLocalCache()";
-        rwlock_for_cachelib_local_cache_ptr_->acquire_lock(context_name);
-
         const std::string keystr = key.getKeystr();
 
         Lru2QCacheReadHandle handle = cachelib_cache_ptr_->find(keystr);
@@ -173,18 +139,11 @@ namespace covered
             }
         }
 
-        rwlock_for_cachelib_local_cache_ptr_->unlock(context_name);
         return;
     }
 
-    bool CachelibLocalCache::getLocalCacheVictimKey(Key& key, const Key& admit_key, const Value& admit_value) const
+    bool CachelibLocalCache::getLocalCacheVictimKeyInternal_(Key& key, const Key& admit_key, const Value& admit_value) const
     {
-        checkPointers_();
-
-        // Acquire a read lock for local statistics to update local statistics atomically (so no need to hack LRU cache)
-        std::string context_name = "CachelibLocalCache::getLocalCacheVictimKey()";
-        rwlock_for_cachelib_local_cache_ptr_->acquire_lock_shared(context_name);
-
         const std::string admit_keystr = admit_key.getKeystr();
 
         // number of bytes required for this item
@@ -202,18 +161,11 @@ namespace covered
             key = Key(victim_keystr);
         }
 
-        rwlock_for_cachelib_local_cache_ptr_->unlock_shared(context_name);
         return has_victim_key;
     }
 
-    bool CachelibLocalCache::evictLocalCacheIfKeyMatch(const Key& key, Value& value, const Key& admit_key, const Value& admit_value)
+    bool CachelibLocalCache::evictLocalCacheIfKeyMatchInternal_(const Key& key, Value& value, const Key& admit_key, const Value& admit_value)
     {
-        checkPointers_();
-
-        // Acquire a write lock for local statistics to update local statistics atomically (so no need to hack LRU cache)
-        std::string context_name = "CachelibLocalCache::evictLocalCacheIfKeyMatch()";
-        rwlock_for_cachelib_local_cache_ptr_->acquire_lock(context_name);
-
         bool is_evict = false;
 
         // Select victim by LFU for version check
@@ -234,31 +186,23 @@ namespace covered
             is_evict = true;
         }
 
-        rwlock_for_cachelib_local_cache_ptr_->unlock(context_name);
         return is_evict;
     }
 
     // (4) Other functions
 
-    uint64_t CachelibLocalCache::getSizeForCapacity() const
+    uint64_t CachelibLocalCache::getSizeForCapacityInternal_() const
     {
-        checkPointers_();
-
-        // Acquire a read lock for local statistics to update local statistics atomically (so no need to hack LRU cache)
-        std::string context_name = "CachelibLocalCache::getSizeForCapacity()";
-        rwlock_for_cachelib_local_cache_ptr_->acquire_lock_shared(context_name);
-
         // NOTE: should NOT use cachelib_cache_ptr_->getCacheMemoryStats().ramCacheSize, which is usable cache size (i.e. capacity) instead of used size
         uint64_t internal_size = cachelib_cache_ptr_->getUsedSize(cachelib_poolid_);
 
-        rwlock_for_cachelib_local_cache_ptr_->unlock_shared(context_name);
         return internal_size;
     }
 
-    void CachelibLocalCache::checkPointers_() const
+    void CachelibLocalCache::checkPointersInternal_() const
     {
-        assert(rwlock_for_cachelib_local_cache_ptr_ != NULL);
         assert(cachelib_cache_ptr_ != NULL);
+        return;
     }
 
 }

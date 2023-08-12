@@ -60,7 +60,7 @@ seg_evictable(struct seg *seg, const struct SegCache* segcache_ptr)
 }
 
 evict_rstatus_e
-seg_evict(int32_t *evicted_seg_id, struct SegCache* segcache_ptr)
+seg_evict(int32_t *evicted_seg_id, struct SegCache* segcache_ptr, bool need_victims, struct bstring** key_bstrs_ptr, struct bstring** value_bstrs_ptr, uint32_t* victim_cnt_ptr)
 {
     evict_rstatus_e status;
 
@@ -74,7 +74,7 @@ seg_evict(int32_t *evicted_seg_id, struct SegCache* segcache_ptr)
 
     log_verb("evict segment %"PRId32, *evicted_seg_id);
 
-    if (rm_all_item_on_seg(*evicted_seg_id, SEG_EVICTION, segcache_ptr)) {
+    if (rm_all_item_on_seg(*evicted_seg_id, SEG_EVICTION, segcache_ptr, need_victims, key_bstrs_ptr, value_bstrs_ptr, victim_cnt_ptr)) {
         INCR(segcache_ptr->seg_metrics, seg_evict);
 
         return EVICT_OK;

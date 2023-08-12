@@ -9,30 +9,34 @@ namespace covered
 {
     const std::string PerkeyRwlock::kClassName("PerkeyRwlock");
     
-    PerkeyRwlock::PerkeyRwlock(const uint32_t& edge_idx, const uint32_t& fine_grained_locking_size)
+    PerkeyRwlock::PerkeyRwlock(const uint32_t& edge_idx, const uint32_t& fine_grained_locking_size, const bool& enable_fine_grained_locking) : fine_grained_locking_size_(fine_grained_locking_size), enable_fine_grained_locking_(enable_fine_grained_locking)
     {
         std::ostringstream oss;
         oss << kClassName << " edge" << edge_idx;
         instance_name_ = oss.str();
 
-        fine_grained_locking_size_ = fine_grained_locking_size;
+        uint32_t rwlock_cnt = fine_grained_locking_size;
+        if (!enable_fine_grained_locking)
+        {
+            rwlock_cnt = 1;
+        }
 
         // Allocate space for rwlocks
-        rwlock_hashtable_ = new boost::shared_mutex[fine_grained_locking_size_];
+        rwlock_hashtable_ = new boost::shared_mutex[rwlock_cnt];
         assert(rwlock_hashtable_ != NULL);
 
         // Allocate space for read lock counts
-        read_lock_cnts_ = new std::atomic<uint32_t>[fine_grained_locking_size_];
+        read_lock_cnts_ = new std::atomic<uint32_t>[rwlock_cnt];
         assert(read_lock_cnts_ != NULL);
-        for (uint32_t i = 0; i < fine_grained_locking_size_; i++)
+        for (uint32_t i = 0; i < rwlock_cnt; i++)
         {
             read_lock_cnts_[i].store(0, Util::STORE_CONCURRENCY_ORDER);
         }
 
         // Allocate space for write lock flags
-        write_lock_flags_ = new std::atomic<bool>[fine_grained_locking_size_];
+        write_lock_flags_ = new std::atomic<bool>[rwlock_cnt];
         assert(write_lock_flags_ != NULL);
-        for (uint32_t i = 0; i < fine_grained_locking_size_; i++)
+        for (uint32_t i = 0; i < rwlock_cnt; i++)
         {
             write_lock_flags_[i].store(false, Util::STORE_CONCURRENCY_ORDER);
         }
@@ -205,9 +209,17 @@ namespace covered
     {
         assert(hash_wrapper_ptr_ != NULL);
 
-        // Hash the key
-        uint32_t hash_value = hash_wrapper_ptr_->hash(key);
-        uint32_t rwlock_index = hash_value % fine_grained_locking_size_;
+        uint32_t rwlock_index = 0;
+        if (enable_fine_grained_locking_)
+        {
+            // Hash the key
+            uint32_t hash_value = hash_wrapper_ptr_->hash(key);
+            rwlock_index = hash_value % fine_grained_locking_size_;
+        }
+        else
+        {
+            rwlock_index = 0;
+        }
         
         return rwlock_index;
     }
