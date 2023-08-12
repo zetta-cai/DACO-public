@@ -74,6 +74,8 @@ namespace covered
 
     bool LruLocalCache::getLocalCacheVictimKeyInternal_(Key& key, const Key& admit_key, const Value& admit_value) const
     {
+        assert(hasFineGrainedManagement());
+
         UNUSED(admit_key);
         UNUSED(admit_value);
 
@@ -84,12 +86,24 @@ namespace covered
 
     bool LruLocalCache::evictLocalCacheIfKeyMatchInternal_(const Key& key, Value& value, const Key& admit_key, const Value& admit_value)
     {
+        assert(hasFineGrainedManagement());
+
         UNUSED(admit_key);
         UNUSED(admit_value);
 
         bool is_evict = lru_cache_ptr_->evictIfKeyMatch(key, value);
 
         return is_evict;
+    }
+
+    void LruLocalCache::evictLocalCacheInternal_(std::vector<Key>& keys, std::vector<Value>& values, const Key& admit_key, const Value& admit_value)
+    {
+        assert(!hasFineGrainedManagement());
+
+        Util::dumpErrorMsg(instance_name_, "evictLocalCacheInternal_() is not supported due to fine-grained management");
+        exit(1);
+
+        return;
     }
 
     // (4) Other functions

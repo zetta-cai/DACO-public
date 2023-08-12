@@ -71,7 +71,8 @@ ttl_bucket_reserve_item(int32_t ttl_bucket_idx, size_t sz, int32_t *seg_id, stru
             memset(seg_data + offset, 0, segcache_ptr->heap_ptr->seg_size - offset);
         }
 
-        new_seg_id = seg_get_new(segcache_ptr);
+        // Siyuan: as we track capacity constraint to trigger eviction outside SegcacheLocalCache, ttl_bucket_reserve_item will NOT trigger eviction (eviction will be triggered by edge node before segcache local cache arrives its own capacity limit)
+        new_seg_id = seg_get_new(segcache_ptr, false, NULL, NULL, NULL);
 
         if (new_seg_id == -1) {
             dump_seg_info(segcache_ptr);

@@ -144,6 +144,8 @@ namespace covered
 
     bool CachelibLocalCache::getLocalCacheVictimKeyInternal_(Key& key, const Key& admit_key, const Value& admit_value) const
     {
+        assert(hasFineGrainedManagement());
+
         const std::string admit_keystr = admit_key.getKeystr();
 
         // number of bytes required for this item
@@ -166,6 +168,8 @@ namespace covered
 
     bool CachelibLocalCache::evictLocalCacheIfKeyMatchInternal_(const Key& key, Value& value, const Key& admit_key, const Value& admit_value)
     {
+        assert(hasFineGrainedManagement());
+
         bool is_evict = false;
 
         // Select victim by LFU for version check
@@ -187,6 +191,16 @@ namespace covered
         }
 
         return is_evict;
+    }
+
+    void CachelibLocalCache::evictLocalCacheInternal_(std::vector<Key>& keys, std::vector<Value>& values, const Key& admit_key, const Value& admit_value)
+    {
+        assert(!hasFineGrainedManagement());
+
+        Util::dumpErrorMsg(instance_name_, "evictLocalCacheInternal_() is not supported due to fine-grained management");
+        exit(1);
+
+        return;
     }
 
     // (4) Other functions

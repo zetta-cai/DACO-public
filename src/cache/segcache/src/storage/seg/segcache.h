@@ -52,7 +52,7 @@ struct SegCache
 
     // From src/storage/seg/seg.c
     struct seg_heapinfo* heap_ptr; /* info of all allocated segs */
-    struct ttl_bucket* ttl_buckets;;
+    struct ttl_bucket* ttl_buckets;
     bool seg_initialized;
     seg_metrics_st *seg_metrics;
     seg_options_st *seg_options;
@@ -69,3 +69,5 @@ struct SegCache
 
 void initialize_segcache(struct SegCache* segcache_ptr);
 void release_segcache(struct SegCache* segcache_ptr);
+
+uint64_t get_segcache_size_bytes(struct SegCache* segcache_ptr);

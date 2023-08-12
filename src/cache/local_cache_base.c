@@ -145,6 +145,8 @@ namespace covered
     {
         checkPointers_();
 
+        assert(hasFineGrainedManagement());
+
         // Acquire a read lock for local statistics to update local statistics atomically
         std::string context_name = "LocalCacheBase::getLocalCacheVictimKey()";
         rwlock_for_local_cache_ptr_->acquire_lock_shared(context_name);
@@ -159,6 +161,8 @@ namespace covered
     {
         checkPointers_();
 
+        assert(hasFineGrainedManagement());
+
         // Acquire a write lock for local statistics to update local statistics atomically
         std::string context_name = "LocalCacheBase::evictLocalCacheIfKeyMatch()";
         rwlock_for_local_cache_ptr_->acquire_lock(context_name);
@@ -167,6 +171,22 @@ namespace covered
 
         rwlock_for_local_cache_ptr_->unlock(context_name);
         return is_evict;
+    }
+
+    void LocalCacheBase::evictLocalCache(std::vector<Key>& keys, std::vector<Value>& values, const Key& admit_key, const Value& admit_value)
+    {
+        checkPointers_();
+
+        assert(!hasFineGrainedManagement());
+
+        // Acquire a write lock for local statistics to update local statistics atomically
+        std::string context_name = "LocalCacheBase::evictLocalCache()";
+        rwlock_for_local_cache_ptr_->acquire_lock(context_name);
+
+        evictLocalCacheInternal_(keys, values, admit_key, admit_value);
+
+        rwlock_for_local_cache_ptr_->unlock(context_name);
+        return;
     }
 
     // (4) Other functions

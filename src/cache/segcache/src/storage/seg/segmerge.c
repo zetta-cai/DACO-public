@@ -27,7 +27,7 @@ seg_copy(int32_t seg_id_dest, int32_t seg_id_src,
 int32_t
 merge_segs(struct seg *segs_to_merge[],
            int n_evictable,
-           double *merge_keep_ratio, struct SegCache* segcache_ptr);
+           double *merge_keep_ratio, struct SegCache* segcache_ptr, bool need_victims, struct bstring** key_bstrs_ptr, struct bstring** value_bstrs_ptr, uint32_t* victim_cnt_ptr);
 
 static inline uint64_t
 n_evicted_seg(struct SegCache* segcache_ptr)
@@ -314,11 +314,11 @@ seg_merge_evict(int32_t *seg_id_ret, struct SegCache* segcache_ptr, bool need_vi
         // but we trade off some efficiency for scalability, need a better design
         pthread_mutex_unlock(&ttl_bkt->mtx);
 
-        merge_segs(segs_to_merge, n_evictable_seg, merge_keep_ratio, segcache_ptr);
+        merge_segs(segs_to_merge, n_evictable_seg, merge_keep_ratio, segcache_ptr, need_victims, key_bstrs_ptr, value_bstrs_ptr, victim_cnt_ptr);
 
 #else 
         segcache_ptr->ttl_buckets[bkt_idx].next_seg_to_merge =
-            merge_segs(segs_to_merge, n_evictable_seg, merge_keep_ratio, segcache_ptr);
+            merge_segs(segs_to_merge, n_evictable_seg, merge_keep_ratio, segcache_ptr, need_victims, key_bstrs_ptr, value_bstrs_ptr, victim_cnt_ptr);
 
         pthread_mutex_unlock(&ttl_bkt->mtx);
 #endif 

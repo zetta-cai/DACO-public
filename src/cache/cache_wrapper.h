@@ -10,6 +10,7 @@
 #define CACHE_WRAPPER_H
 
 #include <string>
+#include <vector>
 
 #include "cache/local_cache_base.h"
 #include "cache/validity_map.h"
@@ -47,7 +48,7 @@ namespace covered
 
         bool needIndependentAdmit(const Key& key) const;
         void admit(const Key& key, const Value& value, const bool& is_valid);
-        void evict(Key& key, Value& value, const Key& admit_key = Key(), const Value& admit_value = Value()); // Some cache policy requires to know admit key-value pair for victim selection
+        void evict(std::vector<Key>& keys, std::vector<Value>& values, const Key& admit_key = Key(), const Value& admit_value = Value()); // Some cache policy requires to know admit key-value pair for victim selection
 
         // (4) Other functions
         
@@ -66,6 +67,11 @@ namespace covered
         // For local get/put/del requests invoked by admit() w/ writes
         void invalidateKeyForLocalUncachedObject_(const Key& key); // Add an invalid flag if key NOT exist
 
+        // (3) Local edge cache management
+
+        void evictForFineGrainedManagement_(std::vector<Key>& keys, std::vector<Value>& values, const Key& admit_key = Key(), const Value& admit_value = Value());
+        void evictForCoarseGrainedManagement_(std::vector<Key>& keys, std::vector<Value>& values, const Key& admit_key = Key(), const Value& admit_value = Value());
+
         // (4) Other functions
 
         void checkPointers_() const;
@@ -76,7 +82,7 @@ namespace covered
 
         // Non-const shared variable
         LocalCacheBase* local_cache_ptr_; // Maintain key-value objects for local edge cache (thread safe)
-        // Fine-graind locking
+        // Fine-graind locking for local edge cache with fine-grained management, or single read-write lock for that with coarse-grained cache management
         mutable PerkeyRwlock* cache_wrapper_perkey_rwlock_ptr_;
         // NOTE: Due to the write-through policy, we only need to maintain an invalidity flag for MSI protocol (i.e., both M and S refers to validity)
         ValidityMap* validity_map_ptr_; // Maintain per-key validity flag for local edge cache (thread safe)

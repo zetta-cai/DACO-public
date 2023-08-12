@@ -1014,8 +1014,8 @@ hashtable_stat(int *item_cnt_ptr, int *bucket_cnt_ptr, const struct SegCache* se
 {
 #define BUCKET_HEAD(idx, segcache_ptr) (&segcache_ptr->hash_table.table[(idx) * N_SLOT_PER_BUCKET])
 
-    *item_cnt_ptr   = 0;
-    *bucket_cnt_ptr = 0;
+    *item_cnt_ptr   = 0; // Siyuan: total # of valid items
+    *bucket_cnt_ptr = 0; // Siyuan: total # of chains (i.e.g, total # of non-item head buckets)
 
     int n_item_slots; /* the number of used slot in current bucket */
     int bkt_chain_len; /* the number of buckets in current bucket chain */

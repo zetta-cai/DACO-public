@@ -71,7 +71,7 @@ namespace covered
 
     const Key& Key::operator=(const Key& other)
     {
-        keystr_ = other.keystr_;
+        keystr_ = other.keystr_; // Deep copy
         return *this;
     }
 }

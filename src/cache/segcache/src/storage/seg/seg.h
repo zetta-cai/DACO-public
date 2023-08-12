@@ -241,7 +241,7 @@ seg_teardown(struct SegCache* segcache_ptr);
  * @return id of the new segment
  */
 int32_t
-seg_get_new(struct SegCache* segcache_ptr, bool need_victims = false, struct bstring** key_bstrs_ptr = NULL, struct bstring** value_bstrs_ptr = NULL, uint32_t* vicimt_cnt_ptr = NULL);
+seg_get_new(struct SegCache* segcache_ptr, bool need_victims, struct bstring** key_bstrs_ptr, struct bstring** value_bstrs_ptr, uint32_t* vicimt_cnt_ptr);
 
 /**
  * add the seg to free pool, the seg can be allocated (during setup) or

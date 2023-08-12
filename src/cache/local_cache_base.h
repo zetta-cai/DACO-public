@@ -10,6 +10,7 @@
 #define LOCAL_CACHE_BASE_H
 
 #include <string>
+#include <vector>
 
 #include "common/key.h"
 #include "common/value.h"
@@ -41,9 +42,13 @@ namespace covered
         bool needIndependentAdmit(const Key& key) const;
 
         void admitLocalCache(const Key& key, const Value& value);
-        // Split evict() into two steps for key-level fine-grained locking in cache wrapper: (i) get victim key; (ii) evict if victim key matches similar as version check
+
+        // If local cache supports fine-grained cache management, split evict() into two steps for key-level fine-grained locking in cache wrapper: (i) get victim key; (ii) evict if victim key matches similar as version check
         bool getLocalCacheVictimKey(Key& key, const Key& admit_key, const Value& admit_value) const; // NOTE: return true with empty Key if without fine-grained management
         bool evictLocalCacheIfKeyMatch(const Key& key, Value& value, const Key& admit_key, const Value& admit_value); // NOTE: NOT check whether key is matched if without fine-grained management
+
+        // If local cache only supports coarse-grained cache management, evict local cache directly
+        void evictLocalCache(std::vector<Key>& keys, std::vector<Value>& values, const Key& admit_key, const Value& admit_value);
 
         // (4) Other functions
         
@@ -74,6 +79,8 @@ namespace covered
         virtual void admitLocalCacheInternal_(const Key& key, const Value& value) = 0;
         virtual bool getLocalCacheVictimKeyInternal_(Key& key, const Key& admit_key, const Value& admit_value) const = 0;
         virtual bool evictLocalCacheIfKeyMatchInternal_(const Key& key, Value& value, const Key& admit_key, const Value& admit_value) = 0;
+
+        virtual void evictLocalCacheInternal_(std::vector<Key>& keys, std::vector<Value>& values, const Key& admit_key, const Value& admit_value) = 0;
 
         // (4) Other functions
 

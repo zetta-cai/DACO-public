@@ -143,24 +143,28 @@ namespace covered
 
     bool SegcacheLocalCache::getLocalCacheVictimKeyInternal_(Key& key, const Key& admit_key, const Value& admit_value) const
     {
-        assert(!hasFineGrainedManagement());
+        assert(hasFineGrainedManagement());
 
-        UNUSED(admit_key);
-        UNUSED(admit_value);
+        Util::dumpErrorMsg(instance_name_, "getLocalCacheVictimKeyInternal_() is not supported due to coarse-grained management");
+        exit(1);
 
-        // Return true with empty key due to coarse-grained (i.e., segment-level) cache management
-        bool has_victim_key = true;
-        key = Key();
-
-        return has_victim_key;
+        return false;
     }
 
     bool SegcacheLocalCache::evictLocalCacheIfKeyMatchInternal_(const Key& key, Value& value, const Key& admit_key, const Value& admit_value)
     {
+        assert(hasFineGrainedManagement());
+
+        Util::dumpErrorMsg(instance_name_, "evictLocalCacheIfKeyMatchInternal_() is not supported due to coarse-grained management");
+        exit(1);
+
+        return false;
+    }
+
+    void SegcacheLocalCache::evictLocalCacheInternal_(std::vector<Key>& keys, std::vector<Value>& values, const Key& admit_key, const Value& admit_value)
+    {
 #define MAX_RETRIES 8
         assert(!hasFineGrainedManagement());
-
-        UNUSED(key); // NOTE: NO need to check if key matches due to coarse-grained (i.e., segment-level) cache management
 
         UNUSED(admit_key);
         UNUSED(admit_value);
@@ -172,20 +176,20 @@ namespace covered
         int32_t seg_id_ret = -1;
         int n_retries_left = MAX_RETRIES;
 
+        struct bstring* key_bstrs = NULL;
+        struct bstring* value_bstrs = NULL;
+        uint32_t victim_cnt = 0;
+
         while (seg_id_ret == -1 && n_retries_left >= 0)
         {
-            struct bstring* key_bstrs = NULL;
-            struct bstring* value_bstrs = NULL;
-            uint32_t vicimt_cnt = 0;
-
             /* evict seg */
             if (segcache_cache_ptr_->evict_info_ptr->policy == EVICT_MERGE_FIFO)
             {
-                status = seg_merge_evict(&seg_id_ret, segcache_cache_ptr_, true, &key_bstrs, &value_bstrs, &vicimt_cnt);
+                status = seg_merge_evict(&seg_id_ret, segcache_cache_ptr_, true, &key_bstrs, &value_bstrs, &victim_cnt);
             }
             else
             {
-                status = seg_evict(&seg_id_ret, segcache_cache_ptr_, true, &key_bstrs, &value_bstrs, &vicimt_cnt);
+                status = seg_evict(&seg_id_ret, segcache_cache_ptr_, true, &key_bstrs, &value_bstrs, &victim_cnt);
             }
 
             if (status == EVICT_OK)
@@ -196,7 +200,7 @@ namespace covered
             // If NOT return EVICT_OK, MUST NO key-value pair has been evicted
             assert(key_bstrs == NULL);
             assert(value_bstrs == NULL);
-            assert(vicimt_cnt == 0);
+            assert(victim_cnt == 0);
 
             if (--n_retries_left < MAX_RETRIES)
             {
@@ -208,26 +212,52 @@ namespace covered
             }
         }
 
-        // TODO: END HERE (return evicted key-value pairs outside SegcacheLocalCache)
-
         if (seg_id_ret == -1)
         {
             INCR(segcache_ptr->seg_metrics, seg_get_ex);
-            log_error("unable to get new seg from eviction");
-
+            Util::dumpErrorMsg(instance_name_, "unable to get new seg from eviction");
             exit(-1);
         }
 
         seg_init(seg_id_ret, segcache_ptr);
 
-        return is_evict;
+        // TODO: END HERE (return evicted key-value pairs outside SegcacheLocalCache)
+        if (victim_cnt > 0)
+        {
+            for (uint32_t i = 0; i < victim_cnt; i++)
+            {
+                Key tmp_key(std::string(key_bstrs[i].data, key_bstrs[i].len));
+                keys.push_back(tmp_key);
+                Value tmp_value(value_bstrs[i].len);
+                values.push_back(tmp_value);
+
+                // Release data of key bstring
+                free(key_bstrs[i].data);
+                key_bstrs[i].len = 0;
+                key_bstrs[i].data = NULL;
+
+                // Release data of value bstring
+                free(value_bstrs[i].data);
+                value_bstrs[i].len = 0;
+                value_bstrs[i].data = NULL;
+            }
+
+            // Release bstring structs
+            free(key_bstrs);
+            key_bstrs = NULL;
+            free(value_bstrs);
+            value_bstrs = NULL;
+            victim_cnt = 0;
+        }
+
+        return;
     }
 
     // (4) Other functions
 
     uint64_t SegcacheLocalCache::getSizeForCapacityInternal_() const
     {
-        uint64_t internal_size = lru_cache_ptr_->getSizeForCapacity();
+        uint64_t internal_size = get_segcache_size_bytes(segcache_cache_ptr_);
 
         return internal_size;
     }

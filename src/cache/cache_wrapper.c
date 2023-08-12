@@ -204,61 +204,17 @@ namespace covered
         return;
     }
     
-    void CacheWrapper::evict(Key& key, Value& value, const Key& admit_key, const Value& admit_value)
+    void CacheWrapper::evict(std::vector<Key>& keys, std::vector<Value>& values, const Key& admit_key, const Value& admit_value)
     {
         checkPointers_();
 
-        // NOTE: key and value are uninitialized now!!!
-
-        // NOTE: we should NOT modify local_cache_ptr_ outside the write lock, otherwise we cannot guarantee atomicity/order between local_cache_ptr_ and validity_map_ptr_, which may incur an inconsistent state
-
-        while (true)
+        if (local_cache_ptr_->hasFineGrainedManagement()) // Local cache with fine-grained management
         {
-            // Get victim_key for key-level fine-grained locking
-            Key victim_key;
-            bool has_victim_key = local_cache_ptr_->getLocalCacheVictimKey(victim_key, admit_key, admit_value);
-            Value victim_value;
-
-            // At least one victim key should exist for eviction
-            if (!has_victim_key)
-            {
-                Util::dumpErrorMsg(instance_name_, "NOT find any victim key for evict()!");
-                exit(1);
-            }
-
-            // Acquire a write lock (pessimistic locking to avoid atomicity/order issues)
-            std::string context_name = "CacheWrapper::evict()";
-            cache_wrapper_perkey_rwlock_ptr_->acquire_lock(victim_key, context_name);
-
-            // Evict if key matches (similar as version check for optimistic locking to revert effects of atomicity/order issues)
-            bool is_evict = local_cache_ptr_->evictLocalCacheIfKeyMatch(victim_key, victim_value, admit_key, admit_value);
-            if (is_evict) // If with successful eviction
-            {
-                bool is_exist = false;
-                validity_map_ptr_->eraseFlagForKey(victim_key, is_exist);
-                if (!is_exist)
-                {
-                    std::ostringstream oss;
-                    oss << "victim key " << victim_key.getKeystr() << " does not exist in validity_map_ for evict()";
-                    Util::dumpWarnMsg(instance_name_, oss.str());
-                }
-            }
-            else
-            {
-                std::ostringstream oss;
-                oss << "victim key " << victim_key.getKeystr() << " is not matched during eviction in local_cache_ptr_ for evict()!";
-                Util::dumpWarnMsg(instance_name_, oss.str());
-            }
-
-            // Release a write lock
-            cache_wrapper_perkey_rwlock_ptr_->unlock(victim_key, context_name);
-
-            if (is_evict) // If with successful eviction
-            {
-                key = victim_key;
-                value = victim_value;
-                break;
-            }
+            evictForFineGrainedManagement_(keys, values, admit_key, admit_value);
+        }
+        else // Local cache with coarse-grained management
+        {
+            evictForCoarseGrainedManagement_(keys, values, admit_key, admit_value);
         }
 
         return;
@@ -340,6 +296,102 @@ namespace covered
             oss << "key " << key.getKeystr() << " already exists in validity_map_ for invalidateIfUncached_()";
             Util::dumpWarnMsg(instance_name_, oss.str());
         }
+        return;
+    }
+
+    // (3) Local edge cache management
+
+    void CacheWrapper::evictForFineGrainedManagement_(std::vector<Key>& keys, std::vector<Value>& values, const Key& admit_key = Key(), const Value& admit_value = Value())
+    {
+        assert(local_cache_ptr_->hasFineGrainedManagement());
+
+        // NOTE: keys and values are uninitialized now!!!
+        keys.clear();
+        values.clear();
+
+        // NOTE: we should NOT modify local_cache_ptr_ outside the write lock, otherwise we cannot guarantee atomicity/order between local_cache_ptr_ and validity_map_ptr_, which may incur an inconsistent state
+
+        while (true)
+        {
+            // Get victim_key for key-level fine-grained locking
+            Key victim_key;
+            bool has_victim_key = local_cache_ptr_->getLocalCacheVictimKey(victim_key, admit_key, admit_value);
+            Value victim_value;
+
+            // At least one victim key should exist for eviction
+            if (!has_victim_key)
+            {
+                Util::dumpErrorMsg(instance_name_, "NOT find any victim key for evict()!");
+                exit(1);
+            }
+
+            // Acquire a write lock (pessimistic locking to avoid atomicity/order issues)
+            std::string context_name = "CacheWrapper::evictForFineGrainedManagement_()";
+            cache_wrapper_perkey_rwlock_ptr_->acquire_lock(victim_key, context_name);
+
+            // Evict if key matches (similar as version check for optimistic locking to revert effects of atomicity/order issues)
+            bool is_evict = local_cache_ptr_->evictLocalCacheIfKeyMatch(victim_key, victim_value, admit_key, admit_value);
+            if (is_evict) // If with successful eviction
+            {
+                bool is_exist = false;
+                validity_map_ptr_->eraseFlagForKey(victim_key, is_exist);
+                if (!is_exist)
+                {
+                    std::ostringstream oss;
+                    oss << "victim key " << victim_key.getKeystr() << " does not exist in validity_map_ for evict()";
+                    Util::dumpWarnMsg(instance_name_, oss.str());
+                }
+            }
+            else
+            {
+                std::ostringstream oss;
+                oss << "victim key " << victim_key.getKeystr() << " is not matched during eviction in local_cache_ptr_ for evict()!";
+                Util::dumpWarnMsg(instance_name_, oss.str());
+            }
+
+            // Release a write lock
+            cache_wrapper_perkey_rwlock_ptr_->unlock(victim_key, context_name);
+
+            if (is_evict) // If with successful eviction
+            {
+                keys.push_back(victim_key);
+                values.push_back(victim_value);
+                break;
+            }
+        }
+
+        return;
+    }
+
+    void CacheWrapper::evictForCoarseGrainedManagement_(std::vector<Key>& keys, std::vector<Value>& values, const Key& admit_key = Key(), const Value& admit_value = Value())
+    {
+        assert(!local_cache_ptr_->hasFineGrainedManagement());
+
+        // NOTE: keys and values are uninitialized now!!!
+        keys.clear();
+        values.clear();
+
+        // Acquire a write lock (pessimistic locking to avoid atomicity/order issues)
+        std::string context_name = "CacheWrapper::evictForCoarseGrainedManagement_()";
+        cache_wrapper_perkey_rwlock_ptr_->acquire_lock(Key(), context_name); // NOTE: parameter key will NOT be used due to NOT using fine-grained locking for coarse-grained management
+
+        // Directly evict local cache for coarse-grained management
+        local_cache_ptr_->evictLocalCache(keys, values, admit_key, admit_value);
+        for (uint32_t i = 0; i < keys.size(); i++)
+        {
+            bool is_exist = false;
+            validity_map_ptr_->eraseFlagForKey(keys[i], is_exist);
+            if (!is_exist)
+            {
+                std::ostringstream oss;
+                oss << "victim keys[" << i << "] " << keys[i].getKeystr() << " does not exist in validity_map_ for evict()";
+                Util::dumpWarnMsg(instance_name_, oss.str());
+            }
+        }
+
+        // Release a write lock
+        cache_wrapper_perkey_rwlock_ptr_->unlock(Key(), context_name);
+
         return;
     }
 
