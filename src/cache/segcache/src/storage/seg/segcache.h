@@ -62,6 +62,9 @@ struct SegCache
     pthread_t bg_tid;
     int n_thread;
     volatile bool stop;
+
+    // Siyuan: whether to disable timeout-based expiration
+    bool disable_expiration;
 };
 
 void initialize_segcache(struct SegCache* segcache_ptr);

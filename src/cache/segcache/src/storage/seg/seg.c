@@ -738,7 +738,10 @@ seg_setup(seg_options_st *options, seg_metrics_st *metrics, struct SegCache* seg
         segcache_ptr->heap_ptr->n_reserved_seg = segcache_ptr->n_thread;
     }
 
-    start_background_thread(NULL, segcache_ptr);
+    if (!segcache_ptr->disable_expiration) // Siyuan: start background thread for expiration if enabled (always disabled for cooperative edge caching framework, as we do NOT target timeout-based cache)
+    {
+        start_background_thread(NULL, segcache_ptr);
+    }
 
     segcache_ptr->seg_initialized = true;
 

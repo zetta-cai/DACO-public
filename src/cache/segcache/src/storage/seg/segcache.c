@@ -31,6 +31,9 @@ void initialize_segcache(struct SegCache* segcache_ptr)
     segcache_ptr->n_thread = 1;
     segcache_ptr->stop = false;
 
+    // Siyuan: whether to disable timeout-based expiration
+    segcache_ptr->disable_expiration = true;
+
     return;
 }
 

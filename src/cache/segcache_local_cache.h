@@ -12,6 +12,8 @@
 #include <string>
 
 #include "cache/local_cache_base.h"
+#include "cache/segcache/src/storage/seg/seg.h" // seg_metrics_st, seg_options_st, SET_OPTION, SEG_METRIC, seg_setup
+#include "cache/segcache/src/storage/seg/segcache.h" // struct SegCache
 #include "concurrency/rwlock.h"
 
 namespace covered
@@ -19,7 +21,10 @@ namespace covered
     class SegcacheLocalCache : public LocalCacheBase
     {
     public:
-        SegcacheLocalCache(const uint32_t& edge_idx);
+        // NOTE: too small cache capacity cannot support segment-based memory allocation in SegCache (see src/cache/segcache/benchmarks/storage_seg/storage_seg.c)
+        static const uint64_t SEGCACHE_MIN_CAPACITY_BYTES;
+
+        SegcacheLocalCache(const uint32_t& edge_idx, const uint64_t& capacity_bytes);
         virtual ~SegcacheLocalCache();
 
         // (1) Check is cached and access validity
@@ -58,7 +63,11 @@ namespace covered
         mutable Rwlock* rwlock_for_segcache_local_cache_ptr_;
 
         // Non-const shared variables
-        LruCache* lru_cache_ptr_; // Data and metadata for local edge cache
+        unsigned segcache_options_cnt_; // # of options in segcache_options_
+        seg_options_st* segcache_options_ptr_; // Options for SegCache
+        unsigned segcache_metrics_cnt_; // # of metrics in segcache_metrics_
+        seg_metrics_st* segcache_metrics_ptr_; // Metrics for SegCache
+        struct SegCache* segcache_cache_ptr_; // Data and metadata for local edge cache
     };
 }
 
