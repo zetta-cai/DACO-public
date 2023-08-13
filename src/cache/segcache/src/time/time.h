@@ -112,23 +112,23 @@ extern uint8_t time_type;
 /*
  * Unix timestamp at which the process was started
  */
-static inline time_t
-time_started(const struct SegCache* segcache_ptr);
+time_t
+time_started(const struct SegCache* segcache_ptr); // Siyuan: remove static inline to avoid unused function warning
 
 /*
  * Current time since the process started
  */
-static inline proc_time_i
-time_proc_sec(const struct SegCache* segcache_ptr);
+proc_time_i
+time_proc_sec(const struct SegCache* segcache_ptr); // Siyuan: remove static inline to avoid unused function warning
 
-static inline proc_time_fine_i
-time_proc_ms(const struct SegCache* segcache_ptr);
+proc_time_fine_i
+time_proc_ms(const struct SegCache* segcache_ptr); // Siyuan: remove static inline to avoid unused function warning
 
-static inline proc_time_fine_i
-time_proc_us(const struct SegCache* segcache_ptr);
+proc_time_fine_i
+time_proc_us(const struct SegCache* segcache_ptr); // Siyuan: remove static inline to avoid unused function warning
 
-static inline proc_time_fine_i
-time_proc_ns(const struct SegCache* segcache_ptr);
+proc_time_fine_i
+time_proc_ns(const struct SegCache* segcache_ptr); // Siyuan: remove static inline to avoid unused function warning
 
 /*
  * Current unix timestamp

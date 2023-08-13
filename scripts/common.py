@@ -18,8 +18,8 @@ lib_dirpath = "{}/lib".format(proj_dirname)
 if not os.path.exists(lib_dirpath):
     print("{}: Create directory {}...".format(filename, lib_dirpath))
     os.mkdir(lib_dirpath)
-else:
-    print("{}: {} exists (directory has been created)".format(filename, lib_dirpath))
+#else:
+#    print("{}: {} exists (directory has been created)".format(filename, lib_dirpath))
 
 def list_immediate_files_and_directories(directory):
     # Get a list of files and directories in the given directory

@@ -69,8 +69,8 @@ namespace covered
 
         // (3) Local edge cache management
 
-        void evictForFineGrainedManagement_(std::vector<Key>& keys, std::vector<Value>& values, const Key& admit_key = Key(), const Value& admit_value = Value());
-        void evictForCoarseGrainedManagement_(std::vector<Key>& keys, std::vector<Value>& values, const Key& admit_key = Key(), const Value& admit_value = Value());
+        void evictForFineGrainedManagement_(std::vector<Key>& keys, std::vector<Value>& values, const Key& admit_key, const Value& admit_value);
+        void evictForCoarseGrainedManagement_(std::vector<Key>& keys, std::vector<Value>& values, const Key& admit_key, const Value& admit_value);
 
         // (4) Other functions
 

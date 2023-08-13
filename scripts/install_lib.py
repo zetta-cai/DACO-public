@@ -254,6 +254,7 @@ if is_install_smhasher:
 
 # (7) Install SegCache (commit ID: 0abdfee)
 
+# NOTE: we just use SegCache downloaded from github in lib/segcache as a reference, while always use our hacked version in src/cache/segcache to fix SegCache's implementation issues
 if is_install_segcache:
     segcache_clone_dirpath = "{}/segcache".format(lib_dirpath)
     if not os.path.exists(segcache_clone_dirpath):

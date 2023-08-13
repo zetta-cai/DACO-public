@@ -39,7 +39,7 @@ static struct response rsp;
 static inline void
 _admin_close(struct buf_sock *s)
 {
-    event_del(ctx->evb, hdl->rid(s->ch));
+    cc_event_del(ctx->evb, hdl->rid(s->ch)); // Siyuan: rename to avoid confliction with system lib
     hdl->term(s->ch);
     buf_sock_destroy(&s);
 }

@@ -1115,14 +1115,20 @@ namespace covered
             }
             else // Exceed capacity limitation
             {
-                Key victim_key;
-                Value victim_value;
-                tmp_edge_wrapper_ptr->getEdgeCachePtr()->evict(victim_key, victim_value, key, value);
-                bool _unused_is_being_written = false; // NOTE: is_being_written does NOT affect cache eviction
-                is_finish = updateDirectory_(victim_key, false, _unused_is_being_written, event_list, skip_propagation_latency);
-                if (is_finish)
+                std::vector<Key> victim_keys;
+                victim_keys.clear();
+                std::vector<Value> victim_values;
+                victim_values.clear();
+                tmp_edge_wrapper_ptr->getEdgeCachePtr()->evict(victim_keys, victim_values, key, value);
+                
+                for (uint32_t i = 0; i < victim_keys.size(); i++)
                 {
-                    return is_finish;
+                    bool _unused_is_being_written = false; // NOTE: is_being_written does NOT affect cache eviction
+                    is_finish = updateDirectory_(victim_keys[i], false, _unused_is_being_written, event_list, skip_propagation_latency);
+                    if (is_finish)
+                    {
+                        return is_finish;
+                    }
                 }
 
                 continue;

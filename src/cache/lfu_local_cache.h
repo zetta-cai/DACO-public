@@ -11,7 +11,6 @@
 
 #include "cache/lfu/lfu_cache_policy.hpp"
 #include "cache/local_cache_base.h"
-#include "concurrency/rwlock.h"
 
 namespace covered
 {

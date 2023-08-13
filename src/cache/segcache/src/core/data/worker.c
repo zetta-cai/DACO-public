@@ -59,7 +59,7 @@ _worker_event_write(struct buf_sock *s)
          * pressure to the sending side.
          */
 
-        event_del(ctx->evb, hdl->wid(c));
+        cc_event_del(ctx->evb, hdl->wid(c)); // Siyuan: rename to avoid confliction with system lib
         event_add_write(ctx->evb, hdl->wid(c), s);
     } else if (status == CC_ERROR) {
         c->state = CHANNEL_TERM;
@@ -190,7 +190,7 @@ worker_ret_stream(struct buf_sock *s)
      * and stop receiving event updates. then it's safe to return to server
      */
     processor->error(&s->rbuf, &s->wbuf, &s->data);
-    event_del(ctx->evb, hdl->rid(s->ch));
+    cc_event_del(ctx->evb, hdl->rid(s->ch));
 
     /* push buf_sock to queue */
     INCR(worker_metrics, worker_ret_stream);
@@ -240,7 +240,7 @@ _worker_event(void *arg, uint32_t events)
             INCR(worker_metrics, worker_event_write);
             if (_worker_event_write(s) == CC_OK) {
                 /* write backlog cleared up, re-add read event (only) */
-                event_del(ctx->evb, hdl->wid(s->ch));
+                cc_event_del(ctx->evb, hdl->wid(s->ch));
                 event_add_read(ctx->evb, hdl->rid(s->ch), s);
             }
         }

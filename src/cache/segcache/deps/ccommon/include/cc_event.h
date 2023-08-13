@@ -65,7 +65,7 @@ void event_base_destroy(struct event_base **evb);
  */
 int event_add_read(struct event_base *evb, int fd, void *data);
 int event_add_write(struct event_base *evb, int fd, void *data);
-int event_del(struct event_base *evb, int fd);
+int cc_cc_event_del(struct event_base *evb, int fd); // Siyuan: rename to avoid confliction with system lib
 
 /* event wait */
 int event_wait(struct event_base *evb, int timeout);

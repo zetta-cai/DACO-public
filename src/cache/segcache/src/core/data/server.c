@@ -56,7 +56,7 @@ _server_close(struct buf_sock *s)
 {
     log_info("core close on buf_sock %p", s);
 
-    event_del(ctx->evb, hdl->rid(s->ch));
+    cc_event_del(ctx->evb, hdl->rid(s->ch)); // Siyuan: rename to avoid confliction with system lib
 
     hdl->term(s->ch);
     buf_sock_return(&s);

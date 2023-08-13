@@ -12,9 +12,10 @@
 #include <string>
 
 #include "cache/local_cache_base.h"
-#include "cache/segcache/src/storage/seg/seg.h" // seg_metrics_st, seg_options_st, SET_OPTION, SEG_METRIC, seg_setup
-#include "cache/segcache/src/storage/seg/segcache.h" // struct SegCache
-#include "concurrency/rwlock.h"
+extern "C" { // Such that compiler will use C naming convention for functions instead of C++
+    #include "cache/segcache/src/storage/seg/seg.h" // seg_metrics_st, seg_options_st, SET_OPTION, SEG_METRIC, seg_setup
+    #include "cache/segcache/src/storage/seg/segcache.h" // struct SegCache
+}
 
 namespace covered
 {

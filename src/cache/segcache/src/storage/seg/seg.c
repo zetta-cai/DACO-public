@@ -843,7 +843,7 @@ seg_setup(seg_options_st *options, seg_metrics_st *metrics, struct SegCache* seg
 
 // Siyuan: allow forward declaration to break circular dependency
 
-static inline uint8_t *
+uint8_t *
 get_seg_data_start(int32_t seg_id, struct SegCache* segcache_ptr)
 {
     return segcache_ptr->heap_ptr->base + segcache_ptr->heap_ptr->seg_size * seg_id;

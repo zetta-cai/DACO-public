@@ -14,6 +14,7 @@
 
 #include "common/key.h"
 #include "common/value.h"
+#include "concurrency/rwlock.h"
 
 namespace covered
 {

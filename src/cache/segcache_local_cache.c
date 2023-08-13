@@ -3,12 +3,17 @@
 #include <assert.h>
 #include <sstream>
 
-#include "src/cache/segcache/deps/ccommon/include/cc_bstring.h" // struct bstring
-#include "src/cache/segcache/deps/ccommon/include/cc_option.h" // struct option, OPTION_CARDINALITY, OPTION_INIT, option_load_default
-#include "src/cache/segcache/deps/ccommon/include/cc_metric.h" // struct metric, METRIC_CARDINALITY, METRIC_INIT
-#include "src/cache/segcache/src/storage/seg/item.h" // item_rstatus_e
-#include "src/cache/segcache/src/storage/seg/segevict.h" // evict_rstatus_e
-#include "src/cache/segcache/src/time/time.h" // delta_time_i
+extern "C" { // Such that compiler will use C naming convention for functions instead of C++
+// NOTE: as we have set include path for cache/segcache/src/deps/ccommon, the following header files are also our hacked version
+#include <cc_bstring.h> // struct bstring
+#include <cc_option.h> // struct option, OPTION_CARDINALITY, OPTION_INIT, option_load_default
+#include <cc_metric.h> // struct metric, METRIC_CARDINALITY, METRIC_INIT
+
+#include "cache/segcache/src/storage/seg/item.h" // item_rstatus_e
+#include "cache/segcache/src/storage/seg/segevict.h" // evict_rstatus_e
+#include "cache/segcache/src/time/time.h" // delta_time_i
+}
+
 #include "common/util.h"
 
 namespace covered
@@ -29,7 +34,7 @@ namespace covered
         assert(segcache_options_cnt_ > 0);
         segcache_options_ptr_ = (seg_options_st*)malloc(sizeof(struct option) * segcache_options_cnt_); // Allocate space for options
         assert(segcache_options_ptr_ != NULL);
-        *segcache_options_ptr_ = (seg_options_st){SEG_OPTION(OPTION_INIT)}; // Initialize default values in options
+        CPP_SEG_OPTION(CPP_OPTION_INIT, segcache_options_ptr_); // Initialize default values in options
         option_load_default((struct option*)segcache_options_ptr_, segcache_options_cnt_); // Copy default values to values in options
         // NOTE: we limit cache capacity outside SegcacheLocalCache (in EdgeWrapper); here we set segcache local cache size as overall cache capacity to avoid cache capacity constraint inside SegcacheLocalCache
         if (capacity_bytes >= SEGCACHE_MIN_CAPACITY_BYTES)
@@ -86,7 +91,9 @@ namespace covered
 
     bool SegcacheLocalCache::isLocalCachedInternal_(const Key& key) const
     {
-        struct bstring key_bstr = {.len=key.getKeystr().length(), .data=key.getKeystr().data()};
+        struct bstring key_bstr;
+        key_bstr.len = static_cast<uint32_t>(key.getKeystr().length());
+        key_bstr.data = key.getKeystr().data();
 
         struct item* item_ptr = item_get(&key_bstr, NULL, segcache_cache_ptr_); // Will increase read refcnt of segment
         bool is_cached = (item_ptr != NULL);
@@ -102,7 +109,9 @@ namespace covered
 
     bool SegcacheLocalCache::getLocalCacheInternal_(const Key& key, Value& value) const
     {
-        struct bstring key_bstr = {.len=key.getKeystr().length(), .data=key.getKeystr().data()};
+        struct bstring key_bstr;
+        key_bstr.len = static_cast<uint32_t>(key.getKeystr().length());
+        key_bstr.data = key.getKeystr().data();
 
         struct item* item_ptr = item_get(&key_bstr, NULL, segcache_cache_ptr_); // Lookup hashtable to get item in segment; will increase read refcnt of segment
         bool is_local_cached = (item_ptr != NULL);
@@ -171,7 +180,6 @@ namespace covered
 
         // Refer to src/cache/segcache/src/storage/seg/seg.c::seg_evict()
 
-        bool is_evict = false;
         evict_rstatus_e status;
         int32_t seg_id_ret = -1;
         int n_retries_left = MAX_RETRIES;
@@ -208,20 +216,20 @@ namespace covered
                 oss << "retry " << n_retries_left << "in evictLocalCacheIfKeyMatchInternal_()";
                 Util::dumpWarnMsg(instance_name_, oss.str());
 
-                INCR(segcache_ptr->seg_metrics, seg_evict_retry);
+                INCR(segcache_cache_ptr_->seg_metrics, seg_evict_retry);
             }
         }
 
         if (seg_id_ret == -1)
         {
-            INCR(segcache_ptr->seg_metrics, seg_get_ex);
+            INCR(segcache_cache_ptr_->seg_metrics, seg_get_ex);
             Util::dumpErrorMsg(instance_name_, "unable to get new seg from eviction");
             exit(-1);
         }
 
-        seg_init(seg_id_ret, segcache_ptr);
+        seg_init(seg_id_ret, segcache_cache_ptr_);
 
-        // TODO: END HERE (return evicted key-value pairs outside SegcacheLocalCache)
+        // Return evicted key-value pairs outside SegcacheLocalCache
         if (victim_cnt > 0)
         {
             for (uint32_t i = 0; i < victim_cnt; i++)
@@ -277,9 +285,14 @@ namespace covered
 
     bool SegcacheLocalCache::appendLocalCache_(const Key& key, const Value& value)
     {
-        struct bstring key_bstr = {.len = key.getKeystr().length(), .data = key.getKeystr().data()};
+        struct bstring key_bstr;
+        key_bstr.len = static_cast<uint32_t>(key.getKeystr().length());
+        key_bstr.data = key.getKeystr().data();
+
         std::string valuestr = value.generateValuestr();
-        struct bstring value_bstr = {.len = valuestr.length(), .data = valuestr.data()};
+        struct bstring value_bstr;
+        value_bstr.len = static_cast<uint32_t>(valuestr.length());
+        value_bstr.data = valuestr.data();
 
         // Check whether key has already been cached
         struct item* prev_item_ptr = item_get(&key_bstr, NULL, segcache_cache_ptr_); // Lookup hashtable to get item in segment; will increase read refcnt of segment

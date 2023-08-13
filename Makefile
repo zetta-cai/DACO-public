@@ -12,15 +12,11 @@ include src/mk/cache/cachelib.mk
 include src/mk/cache/covered.mk
 include src/mk/cache/lfu.mk
 include src/mk/cache/lru.mk
+include src/mk/cache/segcache.mk
 
 ##############################################################################
-# Set link objects and directory paths
+# Set link directory paths for standard libraries
 
-LINK_OBJECTS = $(COVERED_OBJECTS) $(CACHEBENCH_OBJECTS) $(LRU_OBJECTS) $(SMHASHER_OBJECTS)
-
-LDDIR += $(BOOST_LDDIR)
-LDDIR += $(CACHEBENCH_LDDIR)
-LDDIR += $(ROCKSDB_LDDIR)
 LDDIR += -L/usr/lib/x86_64-linux-gnu
 
 ##############################################################################

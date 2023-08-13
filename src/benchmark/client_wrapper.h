@@ -16,6 +16,7 @@
 namespace covered
 {
     class ClientWrapperParam;
+    class ClientWrapper;
 }
 
 #include "benchmark/client_worker_param.h"

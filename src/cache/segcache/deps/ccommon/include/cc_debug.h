@@ -55,27 +55,36 @@ typedef struct {
  */
 #if defined CC_ASSERT_PANIC && CC_ASSERT_PANIC == 1 /* log and panic */
 
+// Siyuan avoid macro redef warning
+#ifndef ASSERT
 #define ASSERT(_x) do {                             \
     if (!(_x)) {                                    \
         debug_assert(#_x, __FILE__, __LINE__, 1);   \
     }                                               \
 } while (0)
+#endif
 
 #define NOT_REACHED() ASSERT(0)
 
 #elif defined CC_ASSERT_LOG && CC_ASSERT_LOG == 1 /* just log */
 
+// Siyuan avoid macro redef warning
+#ifndef ASSERT
 #define ASSERT(_x) do {                             \
     if (!(_x)) {                                    \
         debug_assert(#_x, __FILE__, __LINE__, 0);   \
     }                                               \
 } while (0)
+#endif
 
 #define NOT_REACHED() ASSERT(0)
 
 #else /* ignore all asserts */
 
+// Siyuan avoid macro redef warning
+#ifndef ASSERT
 #define ASSERT(_x)
+#endif
 
 #define NOT_REACHED()
 

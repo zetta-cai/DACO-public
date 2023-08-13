@@ -174,6 +174,25 @@ typedef struct seg_options_st_t {
     SEG_OPTION(OPTION_DECLARE)
 } seg_options_st;
 
+// Siyuan: define a new macro for OPTION_INIT in C++, which does NOT allow partial designated initialization by parentheses
+/* name, type, default, description, options_ptr */
+#define CPP_SEG_OPTION(ACTION, options_ptr)\
+{\
+    ACTION(seg_size, OPTION_TYPE_UINT, SEG_SIZE, "Segment size", options_ptr);\
+    ACTION(heap_mem, OPTION_TYPE_UINT, SEG_MEM, "Max memory used for caching (byte)", options_ptr);\
+    ACTION(seg_prealloc, OPTION_TYPE_BOOL, SEG_PREALLOC, "Pre-allocate segs at setup", options_ptr);\
+    ACTION(seg_evict_opt, OPTION_TYPE_UINT, SEG_EVICT_OPT, "Eviction strategy (0: no eviction, 1: random, 2: FIFO, 3: close to expire, 4: utilization, 5: merge fifo", options_ptr);\
+    ACTION(seg_use_cas, OPTION_TYPE_BOOL, SEG_USE_CAS, "whether use cas, should be true", options_ptr);\
+    ACTION(seg_mature_time, OPTION_TYPE_UINT, SEG_MATURE_TIME, "min time before a segment can be considered for eviction", options_ptr);\
+    ACTION(seg_n_max_merge, OPTION_TYPE_UINT, SEG_N_MAX_MERGE, "max number of segments can be evicted/merged in one eviction", options_ptr);\
+    ACTION(seg_n_merge, OPTION_TYPE_UINT, SEG_N_MERGE, "the target number of segment to be evicted/merge in one eviction", options_ptr);\
+    ACTION(hash_power, OPTION_TYPE_UINT, HASH_POWER, "Power for lookup hash table", options_ptr);\
+    ACTION(seg_n_thread, OPTION_TYPE_UINT, N_THREAD, "number of threads", options_ptr);\
+    ACTION(datapool_path, OPTION_TYPE_STR, SEG_DATAPOOL, "Path to DRAM data pool", options_ptr);\
+    ACTION(datapool_name, OPTION_TYPE_STR, SEG_DATAPOOL_NAME, "Seg DRAM data pool name", options_ptr);\
+    ACTION(datapool_prefault, OPTION_TYPE_BOOL, SEG_DATAPOOL_PREFAULT, "Prefault Pmem", options_ptr);\
+}
+
 
 /*          name                    type            description */
 #define SEG_METRIC(ACTION)                                                                   \
@@ -310,8 +329,8 @@ seg_w_deref(int32_t seg_id, struct SegCache* segcache_ptr);
 
 
 /* get the data start of the segment */
-static inline uint8_t *
-get_seg_data_start(int32_t seg_id, struct SegCache* segcache_ptr);
+uint8_t *
+get_seg_data_start(int32_t seg_id, struct SegCache* segcache_ptr); // Siyuan: remove static inline to avoid unused function warning
 
 
 void

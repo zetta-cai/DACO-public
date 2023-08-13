@@ -57,6 +57,16 @@ extern "C" {
     ._name = {.name = #_name, .set = false, .type = _type,                  \
         .default_val._type ## _VAR = _default, .description = _description},
 
+// Siyuan: define a new macro for OPTION_INIT in C++, which does NOT allow partial designated initialization by parentheses
+#define CPP_OPTION_INIT(_name, _type, _default, _description, options_ptr)\
+{\
+    options_ptr->_name.name = #_name;\
+    options_ptr->_name.set = false;\
+    options_ptr->_name.type = _type;\
+    options_ptr->_name.default_val._type ## _VAR = _default;\
+    options_ptr->_name.description = _description;\
+}
+
 #define OPTION_CARDINALITY(_o) sizeof(_o)/sizeof(struct option)
 
 /* Enum used to match setting to type in order to set values */
@@ -75,17 +85,17 @@ typedef union option_val {
     bool vbool;
     uintmax_t vuint;
     double vfpn;
-    char *vstr;
+    const char *vstr; // Siyuan: C++ forbids assign a constant string to char * -> change into const char*
 } option_val_u;
 
 /* Struct containing data for one individual setting */
 struct option {
-    char *name;
+    const char *name; // Siyuan: C++ forbids assign a constant string to char * -> change into const char*
     bool set;
     option_type_e type;
     option_val_u default_val;
     option_val_u val;
-    char *description;
+    const char *description; // Siyuan: C++ forbids assign a constant string to char * -> change into const char*
 };
 
 static inline bool
@@ -103,7 +113,8 @@ option_fpn(struct option *opt) {
     return opt->val.vfpn;
 }
 
-static inline char *
+// Siyuan: C++ forbids assign a constant string to char * -> change into const char*
+static inline const char *
 option_str(struct option *opt) {
     return opt->val.vstr;
 }

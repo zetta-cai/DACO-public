@@ -80,7 +80,8 @@ extern "C" {
  * This stringifies both a regular variable/value and a macro-defined symbol,
  * the latter needs another level of macro to pre-expand properly
  */
-#define str(_s) _str(_s)
+// Siyuan: remove str(_s) to avoid confliction with ostringstream.str()
+//#define str(_s) _str(_s)
 #define _str(_s) #_s
 
 #define cc_strlen(_s)                                           \

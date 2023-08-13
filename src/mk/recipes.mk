@@ -43,6 +43,8 @@ CFLAGS_SHARED += $(CFLAGS) -fPIC
 
 LDDIR =
 LDLIBS =
+# Uncomment for link debugging
+#LDFLAGS += -v -Wl,--trace
 LDFLAGS += $(LDDIR)
 LINK = $(CC) $(LDFLAGS)
 LINK.so = $(CC) $(LDFLAGS) -shared

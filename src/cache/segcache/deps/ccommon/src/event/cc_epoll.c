@@ -171,8 +171,9 @@ event_add_write(struct event_base *evb, int fd, void *data)
     return status;
 }
 
+// Siyuan: rename to avoid confliction with system lib
 int
-event_del(struct event_base *evb, int fd)
+cc_event_del(struct event_base *evb, int fd)
 {
     int status;
 

@@ -63,31 +63,31 @@ time_teardown(struct SegCache* segcache_ptr)
 
 // Siyuan: allow forward declaration to break circular dependency
 
-static inline time_t
+time_t
 time_started(const struct SegCache* segcache_ptr)
 {
     return __atomic_load_n(&segcache_ptr->time_start, __ATOMIC_RELAXED);
 }
 
-static inline proc_time_i
+proc_time_i
 time_proc_sec(const struct SegCache* segcache_ptr)
 {
     return __atomic_load_n(&segcache_ptr->proc_sec, __ATOMIC_RELAXED);
 }
 
-static inline proc_time_fine_i
+proc_time_fine_i
 time_proc_ms(const struct SegCache* segcache_ptr)
 {
     return __atomic_load_n(&segcache_ptr->proc_ms, __ATOMIC_RELAXED);
 }
 
-static inline proc_time_fine_i
+proc_time_fine_i
 time_proc_us(const struct SegCache* segcache_ptr)
 {
     return __atomic_load_n(&segcache_ptr->proc_us, __ATOMIC_RELAXED);
 }
 
-static inline proc_time_fine_i
+proc_time_fine_i
 time_proc_ns(const struct SegCache* segcache_ptr)
 {
     return __atomic_load_n(&segcache_ptr->proc_ns, __ATOMIC_RELAXED);

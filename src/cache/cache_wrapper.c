@@ -301,7 +301,7 @@ namespace covered
 
     // (3) Local edge cache management
 
-    void CacheWrapper::evictForFineGrainedManagement_(std::vector<Key>& keys, std::vector<Value>& values, const Key& admit_key = Key(), const Value& admit_value = Value())
+    void CacheWrapper::evictForFineGrainedManagement_(std::vector<Key>& keys, std::vector<Value>& values, const Key& admit_key, const Value& admit_value)
     {
         assert(local_cache_ptr_->hasFineGrainedManagement());
 
@@ -363,7 +363,7 @@ namespace covered
         return;
     }
 
-    void CacheWrapper::evictForCoarseGrainedManagement_(std::vector<Key>& keys, std::vector<Value>& values, const Key& admit_key = Key(), const Value& admit_value = Value())
+    void CacheWrapper::evictForCoarseGrainedManagement_(std::vector<Key>& keys, std::vector<Value>& values, const Key& admit_key, const Value& admit_value)
     {
         assert(!local_cache_ptr_->hasFineGrainedManagement());
 
