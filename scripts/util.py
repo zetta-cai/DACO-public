@@ -15,3 +15,6 @@ def warn(filename, warnmsg):
 def die(filename, errmsg):
     print(Fore.RED + "[ERROR] {}: {}".format(filename, errmsg) + Style.RESET_ALL, file=sys.stderr)
     sys.exit(1)
+
+def emphasize(filename, emphasize_msg):
+    print(Fore.MAGENTA + "{}: {}".format(filename, emphasize_msg) + Style.RESET_ALL)

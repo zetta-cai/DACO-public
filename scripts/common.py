@@ -4,6 +4,9 @@ import os
 import sys
 import subprocess
 
+# TMPDEBUG
+only_cachelib = True
+
 # (1) Path-related variables and functions
 
 filename = sys.argv[0]

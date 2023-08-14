@@ -19,6 +19,11 @@ is_install_segcache = False
 # Include util module for the following installation
 from util import *
 
+# (0) Check input CLI parameters
+
+if len(sys.argv) != 2:
+    die(filename, "Usage: sudo python3 scripts/install_lib.py $LD_LIBRARY_PATH")
+
 # (1) Install boost 1.81.0
 
 if is_install_boost:
@@ -346,15 +351,13 @@ target_ld_lib_dirpaths = ["{}/src/cache/segcache/build/ccommon/lib".format(proj_
 
 prompt(filename, "check if need to update LD_LIBRARY_PATH...")
 need_update_ld_library_path = False
-current_ld_library_path = os.environ.get("LD_LIBRARY_PATH")
-if current_ld_library_path is None:
-    need_update_ld_library_path = True
-else:
-    for tmp_lib in target_ld_libs:
-        if tmp_lib not in current_ld_library_path:
-            warn(filename, "LD_LIBRARY_PATH {} does not contain {}".format(current_ld_library_path, tmp_lib))
-            need_update_ld_library_path = True
-            break
+# NOTE: LD_LIBRARY_PATH will NOT be passed into python interpreter, so we cannot get current_ld_library_path by os.environ.get("LD_LIBRARY_PATH") or runCmd("echo $LD_LIBRARY_PATH")
+current_ld_library_path = sys.argv[1]
+for tmp_lib in target_ld_libs:
+    if tmp_lib not in current_ld_library_path:
+        warn(filename, "LD_LIBRARY_PATH {} does not contain {}".format(current_ld_library_path, tmp_lib))
+        need_update_ld_library_path = True
+        break
 
 if need_update_ld_library_path:
     prompt(filename, "find bash source filepath...")
@@ -392,7 +395,7 @@ if need_update_ld_library_path:
             if i == 0:
                 update_bash_source_grepstr = "{}".format(target_ld_lib_dirpaths[i])
             elif i == len(target_ld_lib_dirpaths) - 1:
-                update_bash_source_grepstr = "{}:{}:$LD_LIBRARY_PATH".format(update_bash_source_grepstr, target_ld_lib_dirpaths[i])
+                update_bash_source_grepstr = "{}:{}:\$LD_LIBRARY_PATH".format(update_bash_source_grepstr, target_ld_lib_dirpaths[i])
             else:
                 update_bash_source_grepstr = "{}:{}".format(update_bash_source_grepstr, target_ld_lib_dirpaths[i])
         update_bash_source_file_cmd = "echo \"export LD_LIBRARY_PATH={}\" >> {}".format(update_bash_source_grepstr, bash_source_filepath)
@@ -401,13 +404,14 @@ if need_update_ld_library_path:
             update_bash_source_file_errstr = getSubprocessErrstr(update_bash_source_file_subprocess)
             die(filename, "failed to update bash source file {}; error: {}".format(bash_source_filepath, update_bash_source_file_errstr))
 
-    # TODO: END HERE
-    prompt(filename, "source {} to update LD_LIBRARY_PATH...".format(bash_source_filepath))
-    update_ld_library_path_cmd = "source {}".format(bash_source_filepath)
-    update_ld_library_path_subprocess = runCmd(update_ld_library_path_cmd)
-    # NOTE: although source is successful, update_ld_library_path_subprocess will still return a non-zero returncode
+    # NOTE: as python will fork a non-interative bash to execute update_ld_library_path_cmd, it cannot find the built-in source command and also cannot change the environment variable of the interative bash launching the python script
+    #prompt(filename, "source {} to update LD_LIBRARY_PATH...".format(bash_source_filepath))
+    #update_ld_library_path_cmd = "source {}".format(bash_source_filepath)
+    #update_ld_library_path_subprocess = runCmd(update_ld_library_path_cmd)
     #if update_ld_library_path_subprocess.returncode != 0:
     #    update_ld_library_path_outputstr = getSubprocessErrstr(update_ld_library_path_subprocess)
     #    die(filename, "failed to source {} to update LD_LIBRARY_PATH; error: {}".format(bash_source_filepath, update_ld_library_path_outputstr))
+
+    emphasize(filename, "Please update LD_LIBRARY_PATH by this command: source {}".format(bash_source_filepath))
 else:
     prompt(filename, "LD_LIBRARY_PATH alreay contains all target libraries")

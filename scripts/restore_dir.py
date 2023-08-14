@@ -6,9 +6,6 @@ import subprocess
 
 from common import *
 
-# TMPDEBUG
-only_cachelib = True
-
 def restore_dir(original_dir, current_dir, path):
     if not os.path.exists(path):
         print("Path does not exist: " + path)
