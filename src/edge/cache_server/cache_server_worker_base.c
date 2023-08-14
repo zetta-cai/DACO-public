@@ -228,10 +228,11 @@ namespace covered
         #endif
 
         // Access cooperative edge cache for local cache miss or invalid object
-        struct timespec get_cooperative_cache_start_timestamp = Util::getCurrentTimespec();
         bool is_cooperative_cached_and_valid = false;
         if (!is_local_cached_and_valid) // not local cached or invalid
         {
+            struct timespec get_cooperative_cache_start_timestamp = Util::getCurrentTimespec();
+
             // Get data from some target edge node for local cache miss (add events of intermediate responses if with event tracking)
             is_finish = fetchDataFromNeighbor_(tmp_key, tmp_value, is_cooperative_cached_and_valid, event_list, skip_propagation_latency);
             if (is_finish) // Edge node is NOT running
@@ -242,14 +243,15 @@ namespace covered
             {
                 hitflag = Hitflag::kCooperativeHit;
             }
-        }
-        struct timespec get_cooperative_cache_end_timestamp = Util::getCurrentTimespec();
-        uint32_t get_cooperative_cache_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(get_cooperative_cache_end_timestamp, get_cooperative_cache_start_timestamp));
-        event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_GET_COOPERATIVE_CACHE_EVENT_NAME, get_cooperative_cache_latency_us); // Add intermediate event if with event tracking
 
-        #ifdef DEBUG_CACHE_SERVER
-        Util::dumpVariablesForDebug(base_instance_name_, 5, "acesss cooperative edge cache;", "is_cooperative_cached_and_valid:", Util::toString(is_cooperative_cached_and_valid).c_str(), "keystr:", tmp_key.getKeystr().c_str());
-        #endif
+            struct timespec get_cooperative_cache_end_timestamp = Util::getCurrentTimespec();
+            uint32_t get_cooperative_cache_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(get_cooperative_cache_end_timestamp, get_cooperative_cache_start_timestamp));
+            event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_GET_COOPERATIVE_CACHE_EVENT_NAME, get_cooperative_cache_latency_us); // Add intermediate event if with event tracking
+
+            #ifdef DEBUG_CACHE_SERVER
+            Util::dumpVariablesForDebug(base_instance_name_, 5, "acesss cooperative edge cache;", "is_cooperative_cached_and_valid:", Util::toString(is_cooperative_cached_and_valid).c_str(), "keystr:", tmp_key.getKeystr().c_str());
+            #endif
+        }
 
         // TODO: For COVERED, beacon node will tell the edge node if to admit, w/o independent decision
 
@@ -1160,6 +1162,7 @@ namespace covered
         bool is_finish = false;
 
         bool is_local_cached = tmp_edge_wrapper_ptr->getEdgeCachePtr()->isLocalCached(key);
+        Util::dumpVariablesForDebug(base_instance_name_, 4, "is_local_cached:", Util::toString(is_local_cached).c_str(), "key:", key.getKeystr().c_str()); // TMPDEBUG0814
         if (!is_local_cached && tmp_edge_wrapper_ptr->getEdgeCachePtr()->needIndependentAdmit(key))
         {
             is_finish = triggerIndependentAdmission_(key, value, event_list, skip_propagation_latency);

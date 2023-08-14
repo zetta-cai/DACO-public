@@ -370,18 +370,18 @@ dump_seg_info(struct SegCache* segcache_ptr);
         ", write offset %7d, occupied size %7d"                                 \
         ", %4d items, n_hit %6d, read refcount %2d, write refcount %2d"         \
         ", prev_seg %4d, next_seg %4d",                                         \
-        msg, id, setcache_ptr->heap.segs[id].create_at, setcache_ptr->heap.segs[id].merge_at,               \
-        setcache_ptr->heap.segs[id].merge_at > 0 ?                                            \
-        time_proc_sec() - setcache_ptr->heap.segs[id].merge_at :                              \
-        time_proc_sec() - setcache_ptr->heap.segs[id].create_at, setcache_ptr->heap.segs[id].ttl,           \
-        __atomic_load_n(&(setcache_ptr->heap.segs[id].evictable), __ATOMIC_RELAXED),          \
-        __atomic_load_n(&(setcache_ptr->heap.segs[id].accessible), __ATOMIC_RELAXED),         \
-        __atomic_load_n(&(setcache_ptr->heap.segs[id].write_offset), __ATOMIC_RELAXED),       \
-        __atomic_load_n(&(setcache_ptr->heap.segs[id].live_bytes), __ATOMIC_RELAXED),         \
-        __atomic_load_n(&(setcache_ptr->heap.segs[id].n_live_item), __ATOMIC_RELAXED),        \
-        __atomic_load_n(&(setcache_ptr->heap.segs[id].n_hit), __ATOMIC_RELAXED),              \
-        __atomic_load_n(&(setcache_ptr->heap.segs[id].r_refcount), __ATOMIC_RELAXED),         \
-        __atomic_load_n(&(setcache_ptr->heap.segs[id].w_refcount), __ATOMIC_RELAXED),         \
-        setcache_ptr->heap.segs[id].prev_seg_id, setcache_ptr->heap.segs[id].next_seg_id);                  \
+        msg, id, segcache_ptr->heap_ptr->segs[id].create_at, segcache_ptr->heap_ptr->segs[id].merge_at,               \
+        segcache_ptr->heap_ptr->segs[id].merge_at > 0 ?                                            \
+        time_proc_sec(segcache_ptr) - segcache_ptr->heap_ptr->segs[id].merge_at :                              \
+        time_proc_sec(segcache_ptr) - segcache_ptr->heap_ptr->segs[id].create_at, segcache_ptr->heap_ptr->segs[id].ttl,           \
+        __atomic_load_n(&(segcache_ptr->heap_ptr->segs[id].evictable), __ATOMIC_RELAXED),          \
+        __atomic_load_n(&(segcache_ptr->heap_ptr->segs[id].accessible), __ATOMIC_RELAXED),         \
+        __atomic_load_n(&(segcache_ptr->heap_ptr->segs[id].write_offset), __ATOMIC_RELAXED),       \
+        __atomic_load_n(&(segcache_ptr->heap_ptr->segs[id].live_bytes), __ATOMIC_RELAXED),         \
+        __atomic_load_n(&(segcache_ptr->heap_ptr->segs[id].n_live_item), __ATOMIC_RELAXED),        \
+        __atomic_load_n(&(segcache_ptr->heap_ptr->segs[id].n_hit), __ATOMIC_RELAXED),              \
+        __atomic_load_n(&(segcache_ptr->heap_ptr->segs[id].r_refcount), __ATOMIC_RELAXED),         \
+        __atomic_load_n(&(segcache_ptr->heap_ptr->segs[id].w_refcount), __ATOMIC_RELAXED),         \
+        segcache_ptr->heap_ptr->segs[id].prev_seg_id, segcache_ptr->heap_ptr->segs[id].next_seg_id);                  \
     } while (0)
 

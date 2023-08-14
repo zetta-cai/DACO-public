@@ -354,7 +354,7 @@ seg_merge_evict(int32_t *seg_id_ret, struct SegCache* segcache_ptr, bool need_vi
     INCR(segcache_ptr->seg_metrics, seg_evict_ex);
 
 #if defined CC_ASSERT_PANIC || defined CC_ASSERT_LOG
-    dump_seg_info();
+    dump_seg_info(segcache_ptr);
 #endif
 
     return EVICT_NO_AVAILABLE_SEG;
@@ -439,7 +439,7 @@ seg_copy(int32_t seg_id_dest, int32_t seg_id_src,
                 log_warn("seg %d: end of merge: %d items left",
                     seg_id_src, seg_src->n_live_item);
 #if defined(CC_ASSERT_PANIC)
-                scan_hashtable_find_seg(seg_id_src_ht);
+                scan_hashtable_find_seg(seg_id_src_ht, segcache_ptr);
 #endif
             }
             break;

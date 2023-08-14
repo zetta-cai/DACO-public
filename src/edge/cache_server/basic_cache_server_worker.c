@@ -109,7 +109,7 @@ namespace covered
             assert(directory_lookup_request_ptr != NULL);
 
             #ifdef DEBUG_CACHE_SERVER
-            Util::dumpVariablesForDebug(instance_name_, 4, "beacon edge index:", std::to_string(tmp_edge_wrapper_ptr->cooperation_wrapper_ptr_->getBeaconEdgeIdx(key)).c_str(), "keystr:", key.getKeystr().c_str());
+            Util::dumpVariablesForDebug(instance_name_, 4, "beacon edge index:", std::to_string(tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getBeaconEdgeIdx(key)).c_str(), "keystr:", key.getKeystr().c_str());
             #endif
 
             // Push the control request into edge-to-edge propagation simulator to send to beacon node

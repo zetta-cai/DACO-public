@@ -1121,7 +1121,7 @@ void
 verify_hashtable(const struct SegCache* segcache_ptr)
 {
 #if defined CC_ASSERT_PANIC
-#define BUCKET_HEAD(idx) (&segcache_ptr->hash_table.table[(idx) * N_SLOT_PER_BUCKET])
+#define BUCKET_HEAD(idx, segcache_ptr) (&segcache_ptr->hash_table.table[(idx) * N_SLOT_PER_BUCKET])
 
     int         bkt_chain_len;
     uint64_t    item_info;

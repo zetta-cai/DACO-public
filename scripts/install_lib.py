@@ -8,13 +8,13 @@ from common import *
 is_clear_tarball = False # whether to clear intermediate tarball files
 
 # Variables to control whether to install the corresponding softwares
-is_install_boost = False
-is_install_cachelib = False
-is_install_lrucache = False
-is_install_lfucache = False
-is_install_rocksdb = False
-is_install_smhasher = False
-is_install_segcache = False
+is_install_boost = True
+is_install_cachelib = True
+is_install_lrucache = True
+is_install_lfucache = True
+is_install_rocksdb = True
+is_install_smhasher = True
+is_install_segcache = True
 
 # Include util module for the following installation
 from util import *

@@ -128,7 +128,7 @@ item_insert(struct item *it, struct SegCache* segcache_ptr)
 
 #if defined CC_ASSERT_PANIC || defined CC_ASSERT_LOG
     ASSERT(it->magic == ITEM_MAGIC);
-    ASSERT(*(uint64_t *)(get_seg_data_start(seg_id)) == SEG_MAGIC);
+    ASSERT(*(uint64_t *)(get_seg_data_start(seg_id, segcache_ptr)) == SEG_MAGIC);
 #endif
 
 #if defined DEBUG_MODE
@@ -251,7 +251,7 @@ item_reserve_with_ttl(struct item **it_p, const struct bstring *key,
     log_verb("reserve it %p (%.*s) of size %u ttl %d in seg %d "
              "(start offset %d, seg write offset %d)",
         it, it->klen, item_key(it), item_ntotal(it), ttl, seg_id,
-        (uint8_t *)it - get_seg_data_start(seg_id),
+        (uint8_t *)it - get_seg_data_start(seg_id, segcache_ptr),
         __atomic_load_n(&segcache_ptr->heap_ptr->segs[seg_id].write_offset, __ATOMIC_RELAXED));
 
     return ITEM_OK;
@@ -292,7 +292,7 @@ item_reserve(struct item **it_p, const struct bstring *key,
     log_verb("reserve it %p (%.*s) of size %u ttl %d in seg %d "
              "(start offset %d, seg write offset %d)",
             it, it->klen, item_key(it), item_ntotal(it), ttl, seg_id,
-            (uint8_t *)it - get_seg_data_start(seg_id),
+            (uint8_t *)it - get_seg_data_start(seg_id, segcache_ptr),
             __atomic_load_n(&segcache_ptr->heap_ptr->segs[seg_id].write_offset, __ATOMIC_RELAXED));
 
     return ITEM_OK;

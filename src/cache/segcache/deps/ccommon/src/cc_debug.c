@@ -198,6 +198,9 @@ debug_teardown(void)
 void
 _log(struct debug_logger *dl, const char *file, int line, int level, const char *fmt, ...)
 {
+    // TMPDEBUG0814
+    printf("debug level: %d\n", dl->level);
+
     int len, size, errno_save;
     char buf[LOG_MAX_LEN], *timestr;
     va_list args;
