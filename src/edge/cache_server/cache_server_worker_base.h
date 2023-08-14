@@ -51,7 +51,7 @@
 #ifndef CACHE_SERVER_WORKER_BASE_H
 #define CACHE_SERVER_WORKER_BASE_H
 
-#define DEBUG_CACHE_SERVER
+//#define DEBUG_CACHE_SERVER
 
 #include <string>
 

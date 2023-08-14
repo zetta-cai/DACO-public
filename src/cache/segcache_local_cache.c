@@ -62,7 +62,7 @@ namespace covered
         seg_setup(segcache_options_ptr_, segcache_metrics_ptr_, segcache_cache_ptr_);
 
         // NOTE: uncomment to enable debug log in segcache (ONLY support a single instance now!!!)
-        debug_setup(NULL); // TMPDEBUG0814
+        //debug_setup(NULL);
     }
     
     SegcacheLocalCache::~SegcacheLocalCache()
@@ -94,9 +94,10 @@ namespace covered
 
     bool SegcacheLocalCache::isLocalCachedInternal_(const Key& key) const
     {
+        std::string key_str = key.getKeystr();
         struct bstring key_bstr;
-        key_bstr.len = static_cast<uint32_t>(key.getKeystr().length());
-        key_bstr.data = key.getKeystr().data();
+        key_bstr.len = static_cast<uint32_t>(key_str.length());
+        key_bstr.data = key_str.data();
 
         struct item* item_ptr = item_get(&key_bstr, NULL, segcache_cache_ptr_); // Will increase read refcnt of segment
         bool is_cached = (item_ptr != NULL);
@@ -105,9 +106,6 @@ namespace covered
             item_release(item_ptr, segcache_cache_ptr_); // Decrease read refcnt of segment
         }
 
-        // TMPDEBUG0814
-        Util::dumpVariablesForDebug(instance_name_, 4, "isLocalCachedInternal_() for key:", key.getKeystr().c_str(), "is_local_cached:", Util::toString(is_cached).c_str());
-
         return is_cached;
     }
 
@@ -115,9 +113,10 @@ namespace covered
 
     bool SegcacheLocalCache::getLocalCacheInternal_(const Key& key, Value& value) const
     {
+        std::string key_str = key.getKeystr();
         struct bstring key_bstr;
-        key_bstr.len = static_cast<uint32_t>(key.getKeystr().length());
-        key_bstr.data = key.getKeystr().data();
+        key_bstr.len = static_cast<uint32_t>(key_str.length());
+        key_bstr.data = key_str.data();
 
         struct item* item_ptr = item_get(&key_bstr, NULL, segcache_cache_ptr_); // Lookup hashtable to get item in segment; will increase read refcnt of segment
         bool is_local_cached = (item_ptr != NULL);
@@ -128,9 +127,6 @@ namespace covered
             
             item_release(item_ptr, segcache_cache_ptr_); // Decrease read refcnt of segment
         }
-
-        // TMPDEBUG0814
-        Util::dumpVariablesForDebug(instance_name_, 4, "getLocalCacheInternal_() for key:", key.getKeystr().c_str(), "is_local_cached:", Util::toString(is_local_cached).c_str());
 
         return is_local_cached;
     }
@@ -183,9 +179,6 @@ namespace covered
     {
 #define MAX_RETRIES 8
         assert(!hasFineGrainedManagement());
-
-        // TMPDEBUG0814
-        Util::dumpVariablesForDebug(instance_name_, 2, "evictLocalCacheInternal_() for admit_key:", admit_key.getKeystr().c_str());
 
         UNUSED(admit_key);
         UNUSED(admit_value);
@@ -297,9 +290,10 @@ namespace covered
 
     bool SegcacheLocalCache::appendLocalCache_(const Key& key, const Value& value)
     {
+        std::string keystr = key.getKeystr();
         struct bstring key_bstr;
-        key_bstr.len = static_cast<uint32_t>(key.getKeystr().length());
-        key_bstr.data = key.getKeystr().data();
+        key_bstr.len = static_cast<uint32_t>(keystr.length());
+        key_bstr.data = keystr.data();
 
         std::string valuestr = value.generateValuestr();
         struct bstring value_bstr;
@@ -314,20 +308,12 @@ namespace covered
             item_release(prev_item_ptr, segcache_cache_ptr_); // Decrease read refcnt of segment
         }
 
-        // TMPDEBUG0814
-        Util::dumpVariablesForDebug(instance_name_, 4, "appendLocalCache_() for key:", key.getKeystr().c_str(), "is_local_cached:", Util::toString(is_local_cached).c_str());
-
         // Append current item for new value no matter key has been cached or not
         struct item *cur_item_ptr = NULL;
         delta_time_i tmp_ttl = 0; // NOTE: TTL of 0 is okay, as we will always disable timeout-based expiration (out of out scope) in segcache during cooperative edge caching
         item_rstatus_e status = item_reserve_with_ttl(&cur_item_ptr, &key_bstr, &value_bstr, value_bstr.len, 0, tmp_ttl, segcache_cache_ptr_); // Append item to segment
         assert(status == ITEM_OK);
         item_insert(cur_item_ptr, segcache_cache_ptr_); // Update hashtable for newly-appended item
-
-        // TMPDEBUG0814
-        Value test_value;
-        bool test_is_local_cached = getLocalCacheInternal_(key, test_value);
-        Util::dumpVariablesForDebug(instance_name_, 4, "test_is_local_cached:", Util::toString(test_is_local_cached).c_str(), "test_value size:", std::to_string(test_value.getValuesize()).c_str());
 
         return is_local_cached;
     }
