@@ -4,8 +4,7 @@ import os
 import sys
 import subprocess
 
-# TMPDEBUG
-only_cachelib = True
+# (1) Path-related variables and functions
 
 filename = sys.argv[0]
 proj_dirname = os.path.dirname(os.path.dirname(os.path.abspath(filename)))
@@ -86,3 +85,23 @@ compiler_install_binpath = "{}/bin".format(compiler_installpath) # /usr/bin
 # For cmake
 #cmake_installpath = "/usr" # Installed by apt
 #cmake_install_binpath = "{}/bin".format(cmake_installpath)
+
+# (2) Subprocess-related variables and functions
+
+def runCmd(cmdstr):
+    tmp_subprocess = subprocess.run(cmdstr, shell=True, capture_output=True)
+    return tmp_subprocess
+
+def getSubprocessErrstr(tmp_subprocess):
+    tmp_subprocess_errstr = ""
+    if tmp_subprocess.stderr != None:
+        tmp_subprocess_errbytes = tmp_subprocess.stderr
+        tmp_subprocess_errstr = tmp_subprocess_errbytes.decode("utf-8")
+    return tmp_subprocess_errstr
+
+def getSubprocessOutputstr(tmp_subprocess):
+    tmp_subprocess_outputstr = ""
+    if tmp_subprocess.stdout != None:
+        tmp_subprocess_outputbytes = tmp_subprocess.stdout
+        tmp_subprocess_outputstr = tmp_subprocess_outputbytes.decode("utf-8")
+    return tmp_subprocess_outputstr
