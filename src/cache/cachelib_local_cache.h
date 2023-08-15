@@ -1,9 +1,11 @@
 /*
- * CachelibLocalCache: local edge cache with LRU2Q policy based on Cachelibhttps://github.com/facebook/CacheLib.git).
+ * CachelibLocalCache: local edge cache with LRU2Q policy based on Cachelib (https://github.com/facebook/CacheLib.git).
  * 
- * NOTE: all configuration and function calls refer to Cachelib files, including lib/cachelib/examples/simple_cache/main.cpp and lib/cachelib/cachebench/runner/CacheStressor.h.
+ * NOTE: all configuration and function calls refer to Cachelib files, including lib/CacheLib/examples/simple_cache/main.cpp and lib/cachelib/cachebench/runner/CacheStressor.h.
  * 
- * NOTE: handle points to CacheItem, whose kAllocation alloc_ stores key and value (it encodes key size and value size into one uint32_t variable, and concatenates key bytes and value bytes into one unsigned char array) -> getMemory() and getSize() return value bytes and size, while getKey() return Key (inheriting from folly::StringPiece) with key bytes and size.
+ * NOTEs for source code of CacheLib
+ * (1) For each insert/update, CacheAllocator uses MemoryAllocator to allocate memory for new item (automatic management based on refcnt; only manage memory for key, value, LRU/FIFO and hashtable-lookup hook/pointer, and flags, while statistics such as CMS-based access frequencies are maintained by MMContainer such as MMTinyLFU), uses MM2Q as MMContainer to admit new metadata or evict victim metadata, and uses ChainedHashTable as AccessContainer for add new item into hash table.
+ * (2) A handle's it_ points to CacheItem, whose kAllocation alloc_ stores key and value (it encodes key size and value size into one uint32_t variable, and concatenates key bytes and value bytes into one unsigned char array) -> getMemory() and getSize() return value bytes and size, while getKey() return Key (inheriting from folly::StringPiece) with key bytes and size -> deconstructor of handle will release the memory of pointed item if the refcnt is decreased to 0.
  * 
  * By Siyuan Sheng (2023.08.07).
  */
@@ -27,7 +29,7 @@ namespace covered
         typedef Lru2QCache::Item Lru2QCacheItem;
 
         // NOTE: too small cache capacity cannot support slab-based memory allocation in cachelib (see lib/CacheLib/cachelib/allocator/CacheAllocatorConfig.h and lib/CacheLib/cachelib/allocator/memory/SlabAllocator.cpp)
-        static const uint64_t CACHELIB_MIN_CAPACITY_BYTES;
+        static const uint64_t CACHELIB_MIN_CAPACITY_BYTES; // NOTE: NOT affect capacity constraint!
 
         CachelibLocalCache(const uint32_t& edge_idx, const uint64_t& capacity_bytes);
         virtual ~CachelibLocalCache();

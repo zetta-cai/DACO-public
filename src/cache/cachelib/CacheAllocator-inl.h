@@ -109,7 +109,7 @@ template <typename CacheTrait>
 uint64_t CacheAllocator<CacheTrait>::getUsedSize(PoolId pid) const
 {
   auto& pool = allocator_->getPool(pid);
-  uint64_t used_size = static_cast<uint64_t>(pool.getCurrentAllocSize());
+  uint64_t used_size = static_cast<uint64_t>(pool.getCurrentAllocSize()); // Slab memory allocated for key-value data items (including key, value, LRU/FIFO and hashtable-lookup hook/pointer, and flags)
   return used_size;
 }
 
@@ -3689,9 +3689,9 @@ facebook::cachelib::util::StatsMap CacheAllocator<CacheTrait>::getNvmCacheStatsM
 namespace covered {
 
 // Declare templates ahead of use to reduce compilation time
-extern template class CacheAllocator<LruCacheTrait>;
+//extern template class CacheAllocator<LruCacheTrait>; // Siyuan: used by COVERED local cache
 extern template class CacheAllocator<LruCacheWithSpinBucketsTrait>;
-//extern template class CacheAllocator<Lru2QCacheTrait>;
+//extern template class CacheAllocator<Lru2QCacheTrait>; // Siyuan: used by CacheLib with LRU2Q
 extern template class CacheAllocator<TinyLFUCacheTrait>;
 
 // CacheAllocator with an LRU eviction policy
