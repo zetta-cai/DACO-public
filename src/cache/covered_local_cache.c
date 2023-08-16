@@ -11,15 +11,21 @@
 namespace covered
 {
     const uint64_t CoveredLocalCache::COVERED_MIN_CAPACITY_BYTES = GB2B(1); // 1 GiB
+    const uint32_t CoveredLocalCache::COVERED_PERGROUP_MAXKEYCNT = 10; // At most 10 keys per group for local cached/uncached objects
+    const uint32_t CoveredLocalCached::COVERED_LOCALCACHED_MAXKEYCNT = 1000; // At most 1000 keys in total for local uncached objects
 
     const std::string CoveredLocalCache::kClassName("CoveredLocalCache");
 
     CoveredLocalCache::CoveredLocalCache(const uint32_t& edge_idx, const uint64_t& capacity_bytes) : LocalCacheBase(edge_idx)
     {
+        // (A) Const variable
+
         // Differentiate local edge cache in different edge nodes
         std::ostringstream oss;
         oss << kClassName << " edge" << edge_idx;
         instance_name_ = oss.str();
+
+        // (B) Non-const shared variables of local cached objects for eviction
 
         // Prepare cacheConfig for CacheLib part of COVERED local cache (most parameters are default values)
         LruCacheConfig cacheConfig;
@@ -34,12 +40,36 @@ namespace covered
         }
         cacheConfig.validate(); // will throw if bad config
 
+        // CacheLib-based key-value storage
         covered_cache_ptr_ = std::make_unique<LruCache>(cacheConfig);
         assert(covered_cache_ptr_.get() != NULL);
-
         covered_poolid_ = covered_cache_ptr_->addPool("default", covered_cache_ptr_->getCacheMemoryStats().ramCacheSize);
+
+        // Local cached object-level statistics
+        local_cached_perkey_statistics_.clear();
+
+        // Local cached group-level statistics
+        local_cached_cur_group_id_ = 0;
+        local_cached_cur_group_keycnt_ = 0;
+        local_cached_pergroup_statistics_.clear();
+
+        // Local cached popularity information
+        local_cached_sorted_popularity_.clear();
+
+        // (C) Non-const shared variables of local uncached objects for admission
+
+        // Local uncached object-level statistics
+        local_uncached_perkey_statistics_.clear();
+
+        // Local uncached group-level statistics
+        local_uncached_cur_group_id_ = 0;
+        local_uncached_cur_group_keycnt_ = 0;
+        local_uncached_pergroup_statistics_.clear();
+
+        // Local uncached popularity information
+        local_uncached_sorted_popularity_.clear();
     }
-    
+
     CoveredLocalCache::~CoveredLocalCache()
     {
         // NOTE: deconstructor of covered_cache_ptr_ will delete covered_cache_ptr_.get() automatically
@@ -71,19 +101,21 @@ namespace covered
         const std::string keystr = key.getKeystr();
 
         // NOTE: NOT take effect as cacheConfig.nvmAdmissionPolicyFactory is empty by default
-        //cachelib_cache_ptr_->recordAccess(keystr);
+        //covered_cache_ptr_->recordAccess(keystr);
 
-        LruCacheReadHandle handle = covered_cache_ptr_->find(keystr);
+        LruCacheReadHandle handle = covered_cache_ptr_->find(keystr); // NOTE: find() will move the item to the front of the LRU list to update recency information
         bool is_local_cached = (handle != nullptr);
         if (is_local_cached)
         {
             //std::string value_string{reinterpret_cast<const char*>(handle->getMemory()), handle->getSize()};
             value = Value(handle->getSize());
+
+            // TODO: Update local cached statistics
         }
-
-        // TODO: END HERE
-
-        // TODO: Update object-/group-level statistics and sorted popularity
+        else
+        {
+            // TODO: Update local uncached statistics
+        }
 
         return is_local_cached;
     }
@@ -207,7 +239,31 @@ namespace covered
         return;
     }
 
-    // (4) Other functions
+    // (4) Grouping
+
+    uint32_t CoveredLocalCache::assignGroupIdForAdmission_(const Key& key)
+    {
+        assert(local_cached_perkey_statistics_.find(key) == local_cached_perkey_statistics_.end()); // key must NOT be admitted before
+
+        local_cached_cur_group_keycnt_++;
+        if (local_cached_cur_group_keycnt_ > COVERED_PERGROUP_KEYCNT)
+        {
+            local_cached_cur_group_id_++;
+            local_cached_cur_group_keycnt_ = 1;
+        }     
+
+        return local_cached_cur_group_id_;
+    }
+    
+    uint32_t CoveredLocalCache::getGroupIdForLocalCachedKey_(const Key& key) const
+    {
+        std::unordered_map<Key, LocalCachedPerkeyStatistics, KeyHasher>::const_iterator iter = local_cached_perkey_statistics_.find(key);
+        assert(iter != local_cached_perkey_statistics_.end()); // key must be admitted before
+
+        return iter->second.getGroupId();
+    }
+
+    // (5) Other functions
 
     uint64_t CoveredLocalCache::getSizeForCapacityInternal_() const
     {
