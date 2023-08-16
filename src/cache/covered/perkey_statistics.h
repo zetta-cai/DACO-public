@@ -1,21 +1,21 @@
 /*
- * LocalCachedPerkeyStatistics: local cached object-level statistics used by covered local cache.
+ * PerkeyStatistics: local cached object-level statistics used by covered local cache.
  * 
  * By Siyuan Sheng (2023.08.16).
  */
 
-#ifndef LOCAL_CACHED_PERKEY_STATISTICS_H
-#define LOCAL_CACHED_PERKEY_STATISTICS_H
+#ifndef PERKEY_STATISTICS_H
+#define PERKEY_STATISTICS_H
 
 #include <string>
 
 namespace covered
 {
-    class LocalCachedPerkeyStatistics
+    class PerkeyStatistics
     {
     public:
-        LocalCachedPerkeyStatistics();
-        ~LocalCachedPerkeyStatistics();
+        PerkeyStatistics();
+        ~PerkeyStatistics();
 
         void update();
 

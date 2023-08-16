@@ -321,7 +321,7 @@ if is_install_segcache:
     # else:
     #     dump(filename, "{} exists (SegCache has been installed)".format(segcache_install_dirpath))
 
-    segcache_install_dirpath = "{}/src/cache/segcache/build".format(proj_dirpath)
+    segcache_install_dirpath = "{}/src/cache/segcache/build".format(proj_dirname)
     if not os.path.exists(segcache_install_dirpath):
         prompt(filename, "install SegCache from source...")
         segcache_install_cmd = "cd {} && mkdir build && cd build && cmake .. && make -j".format(segcache_clone_dirpath)

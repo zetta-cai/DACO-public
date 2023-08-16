@@ -11,18 +11,20 @@
 #ifndef COVERED_LOCAL_CACHE_H
 #define COVERED_LOCAL_CACHE_H
 
+#include <list> // std::list
 #include <string>
+#include <unordered_map> // std::unordered_map
 
 #include "cache/cachelib/CacheAllocator-inl.h"
-#include "cache/covered/local_cached_perkey_statistics.h"
-#include "cache/covered/local_uncached_perkey_statistics.h"
+#include "cache/covered/perkey_statistics.h"
+#include "cache/covered/pergroup_statistics.h"
 #include "cache/local_cache_base.h"
 
 // NOTE: although we track local cached object-level statistics outside CacheLib to avoid extensive hacking, it actually can be stored into cachelib::CacheItem -> so we do NOT need to count the size of keys for local cached object-level statistics (similar as size measurement in ValidityMap and BlockTracker)
 // NOTE: we still count all cache size usage for local cached group-level statistics, local cached sorted popularity information, and all local uncached statistics
 
 // TODO: Use homogeneous popularity calculation now, but will replace with heterogeneous popularity calculation + learning later (for both local cached and uncached objects)
-// TODO: Use learned index to replace local cached/uncached sorted_popularity_ for less memory usage
+// TODO: Use learned index to replace local cached/uncached sorted_popularity_ for less memory usage (especially for local cached objects due to limited # of uncached objects)
 
 // TODO: Use grouping settings in GL-Cache later (e.g., fix per-group cache size usage instead of COVERED_PERGROUP_MAXKEYCNT)
 
@@ -36,8 +38,7 @@ namespace covered
         typedef LruCache::ReadHandle LruCacheReadHandle;
         typedef LruCache::Item LruCacheItem;
 
-        typedef uint32_t CoveredGroupId;
-        typedef uint32_t CoveredPergroupStatistics;
+        typedef uint32_t GroupId;
 
         // NOTE: too small cache capacity cannot support slab-based memory allocation in cachelib (see lib/CacheLib/cachelib/allocator/CacheAllocatorConfig.h and lib/CacheLib/cachelib/allocator/memory/SlabAllocator.cpp)
         static const uint64_t COVERED_MIN_CAPACITY_BYTES; // NOTE: NOT affect capacity constraint!
@@ -97,25 +98,25 @@ namespace covered
         facebook::cachelib::PoolId covered_poolid_; // Pool ID for covered local edge cache
 
         // Local cached object-level statistics (NOT include recency which has been tracked by covered_cache_ptr_)
-        std::unordered_map<Key, LocalCachedPerkeyStatistics, KeyHasher> local_cached_perkey_statistics_;
+        std::unordered_map<Key, PerkeyStatistics, KeyHasher> local_cached_perkey_statistics_;
 
         // Local cached group-level statistics (grouping based on admission time)
         uint32_t local_cached_cur_group_id_;
         uint32_t local_cached_cur_group_keycnt_;
-        std::unordered_map<CoveredGroupId, CoveredPergroupStatistics> local_cached_pergroup_statistics_;
+        std::unordered_map<GroupId, PergroupStatistics> local_cached_pergroup_statistics_;
 
         // Local cached sorted popularity information (ascending order; allow duplicate popularity values)
         std::multimap<std::uint32_t, LruCacheReadHandle> local_cached_sorted_popularity_;
 
         // (C) Non-const shared variables of local uncached objects for admission
 
-        // Local uncached object-level statistics (including recency)
-        std::unordered_map<Key, LocalUncachedPerkeyStatistics, KeyHasher> local_uncached_perkey_statistics_;
+        // Local uncached object-level statistics (NOT include recency which is tracked by list index)
+        std::list<std::pair<Key, PerkeyStatistics>> local_uncached_perkey_statistics_list_; // LRU list for limited uncached objects
 
         // Local uncached group-level statistics (grouping based on tracked time)
         uint32_t local_uncached_cur_group_id_;
         uint32_t local_uncached_cur_group_keycnt_;
-        std::unordered_map<CoveredGroupId, CoveredPergroupStatistics> local_uncached_pergroup_statistics_;
+        std::unordered_map<GroupId, PergroupStatistics> local_uncached_pergroup_statistics_;
 
         // Local uncached sorted popularity information (ascending order; allow duplicate popularity values)
         std::multimap<std::uint32_t, LruCacheReadHandle> local_uncached_sorted_popularity_;

@@ -12,7 +12,7 @@ namespace covered
 {
     const uint64_t CoveredLocalCache::COVERED_MIN_CAPACITY_BYTES = GB2B(1); // 1 GiB
     const uint32_t CoveredLocalCache::COVERED_PERGROUP_MAXKEYCNT = 10; // At most 10 keys per group for local cached/uncached objects
-    const uint32_t CoveredLocalCached::COVERED_LOCALCACHED_MAXKEYCNT = 1000; // At most 1000 keys in total for local uncached objects
+    const uint32_t CoveredLocalCached::COVERED_LOCAL_UNCACHED_MAXKEYCNT = 1000; // At most 1000 keys in total for local uncached objects
 
     const std::string CoveredLocalCache::kClassName("CoveredLocalCache");
 
@@ -275,7 +275,7 @@ namespace covered
     
     uint32_t CoveredLocalCache::getGroupIdForLocalCachedKey_(const Key& key) const
     {
-        std::unordered_map<Key, LocalCachedPerkeyStatistics, KeyHasher>::const_iterator iter = local_cached_perkey_statistics_.find(key);
+        std::unordered_map<Key, PerkeyStatistics, KeyHasher>::const_iterator iter = local_cached_perkey_statistics_.find(key);
         assert(iter != local_cached_perkey_statistics_.end()); // key must be admitted before
 
         return iter->second.getGroupId();
@@ -286,12 +286,13 @@ namespace covered
     void CoveredLocalCache::updateLocalCachedStatistics_(const Key& key)
     {
         // Update local cached object-level statistics
-        std::unordered_map<Key, LocalCachedPerkeyStatistics, KeyHasher>::iterator iter = local_cached_perkey_statistics_.find(key);
+        std::unordered_map<Key, PerkeyStatistics, KeyHasher>::iterator iter = local_cached_perkey_statistics_.find(key);
         assert(iter != local_cached_perkey_statistics_.end());
         iter->second.update();
 
         // Update local cached group-level statistics
         uint32_t tmp_group_id = iter->second.getGroupId();
+        // TODO: END HERE
 
         return;
     }
