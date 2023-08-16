@@ -239,14 +239,32 @@ namespace covered
         return;
     }
 
-    // (4) Grouping
+    // (4) Other functions
+
+    uint64_t CoveredLocalCache::getSizeForCapacityInternal_() const
+    {
+        // NOTE: should NOT use cachelib_cache_ptr_->getCacheMemoryStats().ramCacheSize, which is usable cache size (i.e. capacity) instead of used size
+        uint64_t internal_size = cachelib_cache_ptr_->getUsedSize(cachelib_poolid_);
+
+        return internal_size;
+    }
+
+    void CoveredLocalCache::checkPointersInternal_() const
+    {
+        assert(cachelib_cache_ptr_ != NULL);
+        return;
+    }
+
+    // (5) COVERED-specific functions
+
+    // Grouping
 
     uint32_t CoveredLocalCache::assignGroupIdForAdmission_(const Key& key)
     {
         assert(local_cached_perkey_statistics_.find(key) == local_cached_perkey_statistics_.end()); // key must NOT be admitted before
 
         local_cached_cur_group_keycnt_++;
-        if (local_cached_cur_group_keycnt_ > COVERED_PERGROUP_KEYCNT)
+        if (local_cached_cur_group_keycnt_ > COVERED_PERGROUP_MAXKEYCNT)
         {
             local_cached_cur_group_id_++;
             local_cached_cur_group_keycnt_ = 1;
@@ -263,19 +281,18 @@ namespace covered
         return iter->second.getGroupId();
     }
 
-    // (5) Other functions
-
-    uint64_t CoveredLocalCache::getSizeForCapacityInternal_() const
+    // Update statistics
+    
+    void CoveredLocalCache::updateLocalCachedStatistics_(const Key& key)
     {
-        // NOTE: should NOT use cachelib_cache_ptr_->getCacheMemoryStats().ramCacheSize, which is usable cache size (i.e. capacity) instead of used size
-        uint64_t internal_size = cachelib_cache_ptr_->getUsedSize(cachelib_poolid_);
+        // Update local cached object-level statistics
+        std::unordered_map<Key, LocalCachedPerkeyStatistics, KeyHasher>::iterator iter = local_cached_perkey_statistics_.find(key);
+        assert(iter != local_cached_perkey_statistics_.end());
+        iter->second.update();
 
-        return internal_size;
-    }
+        // Update local cached group-level statistics
+        uint32_t tmp_group_id = iter->second.getGroupId();
 
-    void CoveredLocalCache::checkPointersInternal_() const
-    {
-        assert(cachelib_cache_ptr_ != NULL);
         return;
     }
 

@@ -69,17 +69,21 @@ namespace covered
         virtual bool evictLocalCacheIfKeyMatchInternal_(const Key& key, Value& value, const Key& admit_key, const Value& admit_value) override;
         virtual void evictLocalCacheInternal_(std::vector<Key>& keys, std::vector<Value>& values, const Key& admit_key, const Value& admit_value) override;
 
-        // (4) Grouping
-
-        uint32_t assignGroupIdForAdmission_(const Key& key);
-        uint32_t getGroupIdForLocalCachedKey_(const Key& key) const;
-
-        // (5) Other functions
+        // (4) Other functions
 
         // In units of bytes
         virtual uint64_t getSizeForCapacityInternal_() const override;
 
         virtual void checkPointersInternal_() const override;
+
+        // (5) COVERED-specific functions
+
+        // Grouping
+        uint32_t assignGroupIdForAdmission_(const Key& key);
+        uint32_t getGroupIdForLocalCachedKey_(const Key& key) const;
+
+        // Update statistics
+        void updateLocalCachedStatistics_(const Key& key);
 
         // Member variables
 
