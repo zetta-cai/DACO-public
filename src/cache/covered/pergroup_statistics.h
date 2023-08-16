@@ -21,6 +21,7 @@ namespace covered
         ~PergroupStatistics();
 
         void updateForNewlyGroupedKey(const Key& key, const Value& value); // Update group-level statistics for the key newly added into the current group
+        void updateForInGroupKey(const Key& key); // Update group-level statistics for the key already in the current group (NOT affect value-related statistics)
         void updateForInGroupKey(const Key& key, const Value& value, const Value& original_value); // Update group-level statistics for the key already in the current group
         void updateForDegroupedKey(const Key& key, const Value& original_value); // Update group-level statistics for the key being removed from the current group
 

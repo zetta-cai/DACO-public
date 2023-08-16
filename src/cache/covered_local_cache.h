@@ -51,6 +51,11 @@ namespace covered
 
         virtual const bool hasFineGrainedManagement() const;
     private:
+        typedef std::unordered_map<Key, PerkeyStatistics, KeyHasher> perkey_statistics_map_t;
+        typedef std::list<std::pair<Key, PerkeyStatistics>> perkey_statistics_list_t;
+        typedef std::unordered_map<GroupId, PergroupStatistics> pergroup_statistics_map_t;
+        typedef std::multimap<std::uint32_t, LruCacheReadHandle> sorted_popularity_multimap_t;
+
         static const std::string kClassName;
 
         // (1) Check is cached and access validity
@@ -83,8 +88,17 @@ namespace covered
         uint32_t assignGroupIdForAdmission_(const Key& key);
         uint32_t getGroupIdForLocalCachedKey_(const Key& key) const;
 
-        // Update statistics
-        void updateLocalCachedStatistics_(const Key& key);
+        // Update local cached statistics
+        //void updateLocalCachedStatisticsForAdmission_(const Key& key); // Triggered by admission of newly admitted objects
+        void updateLocalCachedStatisticsForGetreqHit_(const Key& key); // Triggered by get requests with cache hits
+        //void updateLocalCachedStatisticsForPutreqHit_(const Key& key); // Triggered by put requests with cache hits
+        //void updateLocalCachedStatisticsForEviction_(const Key& key); // Triggered by eviction of victim objects
+        void updateLocalCachedObjectLevelStaitstics_(const Key& key); // Invoked by above functions
+
+        // Update local uncached statistics
+        //void updateLocalUncachedStatisticsForGetrspMiss_(const Key& key); // Triggered by get responses for cache misses
+        //void updateLocalUncachedStatisticsForPutrspMiss_(const Key& key); // Triggered by get responses for cache misses
+        //void updateLocalUncachedObjectLevelStaitstics_(const Key& key); // Invoked by above functions
 
         // Member variables
 
@@ -98,28 +112,28 @@ namespace covered
         facebook::cachelib::PoolId covered_poolid_; // Pool ID for covered local edge cache
 
         // Local cached object-level statistics (NOT include recency which has been tracked by covered_cache_ptr_)
-        std::unordered_map<Key, PerkeyStatistics, KeyHasher> local_cached_perkey_statistics_;
+        perkey_statistics_map_t local_cached_perkey_statistics_;
 
         // Local cached group-level statistics (grouping based on admission time)
         uint32_t local_cached_cur_group_id_;
         uint32_t local_cached_cur_group_keycnt_;
-        std::unordered_map<GroupId, PergroupStatistics> local_cached_pergroup_statistics_;
+        pergroup_statistics_map_t local_cached_pergroup_statistics_;
 
         // Local cached sorted popularity information (ascending order; allow duplicate popularity values)
-        std::multimap<std::uint32_t, LruCacheReadHandle> local_cached_sorted_popularity_;
+        sorted_popularity_multimap_t local_cached_sorted_popularity_;
 
         // (C) Non-const shared variables of local uncached objects for admission
 
         // Local uncached object-level statistics (NOT include recency which is tracked by list index)
-        std::list<std::pair<Key, PerkeyStatistics>> local_uncached_perkey_statistics_list_; // LRU list for limited uncached objects
+        perkey_statistics_list_t local_uncached_perkey_statistics_list_; // LRU list for limited uncached objects
 
         // Local uncached group-level statistics (grouping based on tracked time)
         uint32_t local_uncached_cur_group_id_;
         uint32_t local_uncached_cur_group_keycnt_;
-        std::unordered_map<GroupId, PergroupStatistics> local_uncached_pergroup_statistics_;
+        pergroup_statistics_map_t local_uncached_pergroup_statistics_;
 
         // Local uncached sorted popularity information (ascending order; allow duplicate popularity values)
-        std::multimap<std::uint32_t, LruCacheReadHandle> local_uncached_sorted_popularity_;
+        sorted_popularity_multimap_t local_uncached_sorted_popularity_;
     };
 }
 

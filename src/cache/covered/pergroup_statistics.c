@@ -20,6 +20,13 @@ namespace covered
         return;
     }
 
+    void PergroupStatistics::updateForInGroupKey(const Key& key)
+    {
+        // NO need to update avg_object_size_ due to unchanged value size
+        
+        return;
+    }
+
     void PergroupStatistics::updateForInGroupKey(const Key& key, const Value& value, const Value& original_value)
     {
         uint32_t original_object_size = key.getKeystr().length() + original_value.getValuesize();

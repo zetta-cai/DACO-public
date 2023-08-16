@@ -59,7 +59,7 @@ namespace covered
         // (C) Non-const shared variables of local uncached objects for admission
 
         // Local uncached object-level statistics
-        local_uncached_perkey_statistics_.clear();
+        local_uncached_perkey_statistics_list_.clear();
 
         // Local uncached group-level statistics
         local_uncached_cur_group_id_ = 0;
@@ -275,25 +275,35 @@ namespace covered
     
     uint32_t CoveredLocalCache::getGroupIdForLocalCachedKey_(const Key& key) const
     {
-        std::unordered_map<Key, PerkeyStatistics, KeyHasher>::const_iterator iter = local_cached_perkey_statistics_.find(key);
+        perkey_statistics_map_t::const_iterator iter = local_cached_perkey_statistics_.find(key);
         assert(iter != local_cached_perkey_statistics_.end()); // key must be admitted before
 
         return iter->second.getGroupId();
     }
 
-    // Update statistics
+    // Update local cached statistics
     
-    void CoveredLocalCache::updateLocalCachedStatistics_(const Key& key)
+    void CoveredLocalCache::updateLocalCachedStatisticsForGetreqHit_(const Key& key)
     {
         // Update local cached object-level statistics
-        std::unordered_map<Key, PerkeyStatistics, KeyHasher>::iterator iter = local_cached_perkey_statistics_.find(key);
-        assert(iter != local_cached_perkey_statistics_.end());
-        iter->second.update();
+        updateLocalCachedObjectLevelStaitstics_(key);
 
         // Update local cached group-level statistics
-        uint32_t tmp_group_id = iter->second.getGroupId();
-        // TODO: END HERE
+        uint32_t tmp_group_id = getGroupIdForLocalCachedKey_(key);
+        pergroup_statistics_map_t::iterator pergroup_statistics_iter = local_cached_pergroup_statistics_.find(tmp_group_id);
+        pergroup_statistics_iter->second.updateForInGroupKey(key);
 
+        // TODO: Update local cached popularity information
+
+        return;
+    }
+
+    void CoveredLocalCache::updateLocalCachedObjectLevelStaitstics_(const Key& key)
+    {
+        // Update local cached object-level statistics
+        perkey_statistics_map_t::iterator perkey_statistics_iter = local_cached_perkey_statistics_.find(key);
+        assert(perkey_statistics_iter != local_cached_perkey_statistics_.end());
+        perkey_statistics_iter->second.update();
         return;
     }
 
