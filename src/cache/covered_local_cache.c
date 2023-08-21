@@ -283,28 +283,50 @@ namespace covered
 
     // Update local cached statistics
     
-    void CoveredLocalCache::updateLocalCachedStatisticsForGetreqHit_(const Key& key)
-    {
-        // Update local cached object-level statistics
-        updateLocalCachedObjectLevelStaitstics_(key);
-
-        // Update local cached group-level statistics
-        uint32_t tmp_group_id = getGroupIdForLocalCachedKey_(key);
-        pergroup_statistics_map_t::iterator pergroup_statistics_iter = local_cached_pergroup_statistics_.find(tmp_group_id);
-        pergroup_statistics_iter->second.updateForInGroupKey(key);
-
-        // TODO: Update local cached popularity information
-
-        return;
-    }
-
-    void CoveredLocalCache::updateLocalCachedObjectLevelStaitstics_(const Key& key)
+    void CoveredLocalCache::updateStatisticsForCachedKey_(const Key& key)
     {
         // Update local cached object-level statistics
         perkey_statistics_map_t::iterator perkey_statistics_iter = local_cached_perkey_statistics_.find(key);
         assert(perkey_statistics_iter != local_cached_perkey_statistics_.end());
         perkey_statistics_iter->second.update();
+
+        // Get group ID
+        uint32_t tmp_group_id = getGroupIdForLocalCachedKey_(key);
+
+        // Update local cached group-level statistics
+        pergroup_statistics_map_t::iterator pergroup_statistics_iter = local_cached_pergroup_statistics_.find(tmp_group_id);
+        assert(pergroup_statistics_iter != local_cached_pergroup_statistics_.end());
+        pergroup_statistics_iter->second.updateForInGroupKey(key);
+
+        // Calculate popularity
+        Popularity tmp_popularity = calculatePopularity_(perkey_statistics_iter->second, pergroup_statistics_iter->second);
+
+        // Update local cached popularity information
+        updatePopularityForCached_(key, tmp_popularity);
+
         return;
+    }
+
+    // Update local uncached statistics
+
+    // Update popularity for local cached obejects
+
+    void CoveredLocalCache::updatePopularityForCached_(const Key& key, const Popularity& popularity)
+    {
+        // TODO
+    }
+
+    // Update popularity for local uncached obejects
+
+    // Popularity calculation
+
+    uint32_t CoveredLocalCache::calculatePopularity_(const PerkeyStatistics& perkey_statistics, const PergroupStatistics& pergroup_statistics)
+    {
+        // TODO: Use heuristic or learned approach to calculate popularity (refer to state-of-the-art studies such as LRB and GL-Cache)
+
+        // NOTE: Here we use a simple approach to calculate popularity based on object-level and group-level statistics
+        Popularity popularity = static_cast<Popularity>(pergroup_statistics.getAvgObjectSize()) / static_cast<Popularity>(perkey_statistics.getFrequency()); // # of accessed bytes per cache access (similar as LHD)
+        return popularity;
     }
 
 }

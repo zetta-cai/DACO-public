@@ -20,12 +20,12 @@ namespace covered
         PergroupStatistics();
         ~PergroupStatistics();
 
-        void updateForNewlyGroupedKey(const Key& key, const Value& value); // Update group-level statistics for the key newly added into the current group
-        void updateForInGroupKey(const Key& key); // Update group-level statistics for the key already in the current group (NOT affect value-related statistics)
-        void updateForInGroupKey(const Key& key, const Value& value, const Value& original_value); // Update group-level statistics for the key already in the current group
-        void updateForDegroupedKey(const Key& key, const Value& original_value); // Update group-level statistics for the key being removed from the current group
+        void updateForNewlyGrouped(const Key& key, const Value& value); // Update group-level statistics for the key newly added into the current group (newly admitted/tracked for local cached/uncached)
+        void updateForInGroupKey(const Key& key); // Update group-level statistics for the key already in the current group; NOT affect value-related statistics (getreq-hit/getrsp-miss of admitted/tracked objects for local cached/uncached)
+        void updateForInGroupKeyValue(const Key& key, const Value& value, const Value& original_value); // Update group-level statistics for the key already in the current group (putdelreq-hit/putdelrsp-miss of admitted/tracked objects for local cached/uncached)
+        void updateForDegrouped(const Key& key, const Value& original_value); // Update group-level statistics for the key being removed from the current group (currently evicted/detracked for local cached/uncached)
 
-        uint32_t getObjectSize() const;
+        uint32_t getAvgObjectSize() const;
         uint32_t getObjectCnt() const;
     private:
         static const std::string kClassName;

@@ -12,7 +12,7 @@ namespace covered
 
     PergroupStatistics::~PergroupStatistics() {}
 
-    void PergroupStatistics::updateForNewlyGroupedKey(const Key& key, const Value& value)
+    void PergroupStatistics::updateForNewlyGrouped(const Key& key, const Value& value)
     {
         uint32_t object_size = key.getKeystr().length() + value.getValuesize();
         avg_object_size_ = (avg_object_size_ * object_cnt_ + object_size) / (object_cnt_ + 1);
@@ -27,7 +27,7 @@ namespace covered
         return;
     }
 
-    void PergroupStatistics::updateForInGroupKey(const Key& key, const Value& value, const Value& original_value)
+    void PergroupStatistics::updateForInGroupKeyValue(const Key& key, const Value& value, const Value& original_value)
     {
         uint32_t original_object_size = key.getKeystr().length() + original_value.getValuesize();
         uint32_t object_size = key.getKeystr().length() + value.getValuesize();
@@ -35,7 +35,7 @@ namespace covered
         return;
     }
 
-    void PergroupStatistics::updateForDegroupedKey(const Key& key, const Value& original_value)
+    void PergroupStatistics::updateForDegrouped(const Key& key, const Value& original_value)
     {
         uint32_t original_object_size = key.getKeystr().length() + original_value.getValuesize();
         avg_object_size_ = (avg_object_size_ * object_cnt_ - original_object_size) / (object_cnt_ - 1);
@@ -43,7 +43,7 @@ namespace covered
         return;
     }
 
-    uint32_t PergroupStatistics::getObjectSize() const
+    uint32_t PergroupStatistics::getAvgObjectSize() const
     {
         return avg_object_size_;
     }

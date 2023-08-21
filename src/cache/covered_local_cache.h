@@ -20,8 +20,8 @@
 #include "cache/covered/pergroup_statistics.h"
 #include "cache/local_cache_base.h"
 
-// NOTE: although we track local cached object-level statistics outside CacheLib to avoid extensive hacking, it actually can be stored into cachelib::CacheItem -> so we do NOT need to count the size of keys for local cached object-level statistics (similar as size measurement in ValidityMap and BlockTracker)
-// NOTE: we still count all cache size usage for local cached group-level statistics, local cached sorted popularity information, and all local uncached statistics
+// NOTE: although we track local cached statistics outside CacheLib to avoid extensive hacking, per-key statistics and popularity iterator actually can be stored into cachelib::CacheItem -> so we do NOT need to count the size of keys for local cached statistics (similar as size measurement in ValidityMap and BlockTracker)
+// NOTE: we still count the size of keys for local uncached statistics -> but only once for per-key statistics and popularity iterator, as they actually can be maintained in a single map (we just split them for implementation simplicity)
 
 // TODO: Use homogeneous popularity calculation now, but will replace with heterogeneous popularity calculation + learning later (for both local cached and uncached objects)
 // TODO: Use learned index to replace local cached/uncached sorted_popularity_ for less memory usage (especially for local cached objects due to limited # of uncached objects)
@@ -39,6 +39,7 @@ namespace covered
         typedef LruCache::Item LruCacheItem;
 
         typedef uint32_t GroupId;
+        typedef float Popularity;
 
         // NOTE: too small cache capacity cannot support slab-based memory allocation in cachelib (see lib/CacheLib/cachelib/allocator/CacheAllocatorConfig.h and lib/CacheLib/cachelib/allocator/memory/SlabAllocator.cpp)
         static const uint64_t COVERED_MIN_CAPACITY_BYTES; // NOTE: NOT affect capacity constraint!
@@ -54,7 +55,7 @@ namespace covered
         typedef std::unordered_map<Key, PerkeyStatistics, KeyHasher> perkey_statistics_map_t;
         typedef std::list<std::pair<Key, PerkeyStatistics>> perkey_statistics_list_t;
         typedef std::unordered_map<GroupId, PergroupStatistics> pergroup_statistics_map_t;
-        typedef std::multimap<std::uint32_t, LruCacheReadHandle> sorted_popularity_multimap_t;
+        typedef std::multimap<Popularity, LruCacheReadHandle> sorted_popularity_multimap_t;
 
         static const std::string kClassName;
 
@@ -89,16 +90,31 @@ namespace covered
         uint32_t getGroupIdForLocalCachedKey_(const Key& key) const;
 
         // Update local cached statistics
-        //void updateLocalCachedStatisticsForAdmission_(const Key& key); // Triggered by admission of newly admitted objects
-        void updateLocalCachedStatisticsForGetreqHit_(const Key& key); // Triggered by get requests with cache hits
-        //void updateLocalCachedStatisticsForPutreqHit_(const Key& key); // Triggered by put requests with cache hits
-        //void updateLocalCachedStatisticsForEviction_(const Key& key); // Triggered by eviction of victim objects
-        void updateLocalCachedObjectLevelStaitstics_(const Key& key); // Invoked by above functions
+        //void updateLStatisticsForAdmission_(const Key& key); // Triggered by admission of newly admitted objects
+        void updateStatisticsForCachedKey_(const Key& key); // Triggered by get requests with cache hits
+        //void updateStatisticsForCachedKeyValue_(const Key& key); // Triggered by put requests with cache hits
+        //void updateStatisticsForEviction_(const Key& key); // Triggered by eviction of victim objects
 
         // Update local uncached statistics
-        //void updateLocalUncachedStatisticsForGetrspMiss_(const Key& key); // Triggered by get responses for cache misses
-        //void updateLocalUncachedStatisticsForPutrspMiss_(const Key& key); // Triggered by get responses for cache misses
-        //void updateLocalUncachedObjectLevelStaitstics_(const Key& key); // Invoked by above functions
+        //void updateStatisticsForNewlyTracked_(const Key& key);// Triggered by newly tracked objects in candidate list
+        //void updateStatisticsForCandidateKey_(const Key& key); // Triggered by get responses for cache misses
+        //void updateStatisticsForCandidateKeyValue_(const Key& key); // Triggered by get responses for cache misses
+        //void updateStatisticsForDetracked_(const Key& key); // Triggered by detracked objects in candidate list
+
+        // Update popularity for local cached obejects
+        //Popularity getLocalCachedPopularity_(const Key& key); // Get popularity of local cached objects
+        //void updatePopularityForAdmission_(const Key& key); // Update popularity for newly admitted objects
+        void updatePopularityForCached_(const Key& key, const Popularity& popularity); // Update popularity for local cached objects
+        //void removeLocalCachedPopulartiy_(const Key& key); // Remove popularity for currently evicted objects
+
+        // Update popularity for local uncached obejects
+        //Popularity getLocalUncachedPopularity_(const Key& key); // Get popularity of local uncached objects
+        //void updatePopularityForNewlyTracked_(const Key& key); // Update popularity of new tracked objects in candidate list
+        //void updatePopularityForCandidate_(const Key& key); // Update popularity of local uncached objects tracked
+        //void removeLocalUncachedPopularity_(const Key& key); // Remove popularity for currently detracked objects
+
+        // Popularity calculation
+        uint32_t calculatePopularity_(const PerkeyStatistics& perkey_statistics, const PergroupStatistics& pergroup_statistics); // Calculate popularity based on object-level and group-level statistics
 
         // Member variables
 
@@ -125,7 +141,7 @@ namespace covered
         // (C) Non-const shared variables of local uncached objects for admission
 
         // Local uncached object-level statistics (NOT include recency which is tracked by list index)
-        perkey_statistics_list_t local_uncached_perkey_statistics_list_; // LRU list for limited uncached objects
+        perkey_statistics_list_t local_uncached_perkey_statistics_candidate_list_; // LRU-based candidate list for limited uncached objects
 
         // Local uncached group-level statistics (grouping based on tracked time)
         uint32_t local_uncached_cur_group_id_;
