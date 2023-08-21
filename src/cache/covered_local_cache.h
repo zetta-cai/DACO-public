@@ -13,11 +13,12 @@
 
 #include <list> // std::list
 #include <string>
-#include <unordered_map> // std::unordered_map
 
-#include "cache/cachelib/CacheAllocator-inl.h"
-#include "cache/covered/perkey_statistics.h"
-#include "cache/covered/pergroup_statistics.h"
+#include "cache/covered/common_header.h"
+#include "cache/covered/perkey_statistics_map.h"
+#include "cache/covered/perkey_statistics_list.h"
+#include "cache/covered/pergroup_statistics_map.h"
+#include "cache/covered/sorted_popularity_multimap.h"
 #include "cache/local_cache_base.h"
 
 // NOTE: although we track local cached statistics outside CacheLib to avoid extensive hacking, per-key statistics and popularity iterator actually can be stored into cachelib::CacheItem -> so we do NOT need to count the size of keys for local cached statistics (similar as size measurement in ValidityMap and BlockTracker)
@@ -33,30 +34,14 @@ namespace covered
     class CoveredLocalCache : public LocalCacheBase
     {
     public:
-        typedef LruAllocator LruCache; // LRU2Q cache policy
-        typedef LruCache::Config LruCacheConfig;
-        typedef LruCache::ReadHandle LruCacheReadHandle;
-        typedef LruCache::Item LruCacheItem;
-
-        typedef uint32_t GroupId;
-        typedef float Popularity;
-
         // NOTE: too small cache capacity cannot support slab-based memory allocation in cachelib (see lib/CacheLib/cachelib/allocator/CacheAllocatorConfig.h and lib/CacheLib/cachelib/allocator/memory/SlabAllocator.cpp)
         static const uint64_t COVERED_MIN_CAPACITY_BYTES; // NOTE: NOT affect capacity constraint!
-
-        static const uint32_t COVERED_PERGROUP_MAXKEYCNT; // Max keycnt per group for local cached/uncached objects
-        static const uint32_t COVERED_LOCAL_UNCACHED_MAXKEYCNT; // MAx keycnt of all groups for local uncached objects (limit memory usage for local uncached objects)
 
         CoveredLocalCache(const uint32_t& edge_idx, const uint64_t& capacity_bytes);
         virtual ~CoveredLocalCache();
 
         virtual const bool hasFineGrainedManagement() const;
     private:
-        typedef std::unordered_map<Key, PerkeyStatistics, KeyHasher> perkey_statistics_map_t;
-        typedef std::list<std::pair<Key, PerkeyStatistics>> perkey_statistics_list_t;
-        typedef std::unordered_map<GroupId, PergroupStatistics> pergroup_statistics_map_t;
-        typedef std::multimap<Popularity, LruCacheReadHandle> sorted_popularity_multimap_t;
-
         static const std::string kClassName;
 
         // (1) Check is cached and access validity
@@ -85,10 +70,6 @@ namespace covered
 
         // (5) COVERED-specific functions
 
-        // Grouping
-        uint32_t assignGroupIdForAdmission_(const Key& key);
-        uint32_t getGroupIdForLocalCachedKey_(const Key& key) const;
-
         // Update local cached statistics
         //void updateLStatisticsForAdmission_(const Key& key); // Triggered by admission of newly admitted objects
         void updateStatisticsForCachedKey_(const Key& key); // Triggered by get requests with cache hits
@@ -101,21 +82,6 @@ namespace covered
         //void updateStatisticsForCandidateKeyValue_(const Key& key); // Triggered by get responses for cache misses
         //void updateStatisticsForDetracked_(const Key& key); // Triggered by detracked objects in candidate list
 
-        // Update popularity for local cached obejects
-        //Popularity getLocalCachedPopularity_(const Key& key); // Get popularity of local cached objects
-        //void updatePopularityForAdmission_(const Key& key); // Update popularity for newly admitted objects
-        void updatePopularityForCached_(const Key& key, const Popularity& popularity); // Update popularity for local cached objects
-        //void removeLocalCachedPopulartiy_(const Key& key); // Remove popularity for currently evicted objects
-
-        // Update popularity for local uncached obejects
-        //Popularity getLocalUncachedPopularity_(const Key& key); // Get popularity of local uncached objects
-        //void updatePopularityForNewlyTracked_(const Key& key); // Update popularity of new tracked objects in candidate list
-        //void updatePopularityForCandidate_(const Key& key); // Update popularity of local uncached objects tracked
-        //void removeLocalUncachedPopularity_(const Key& key); // Remove popularity for currently detracked objects
-
-        // Popularity calculation
-        uint32_t calculatePopularity_(const PerkeyStatistics& perkey_statistics, const PergroupStatistics& pergroup_statistics); // Calculate popularity based on object-level and group-level statistics
-
         // Member variables
 
         // (A) Const variable
@@ -127,29 +93,15 @@ namespace covered
         std::unique_ptr<LruCache> covered_cache_ptr_; // Data and metadata for local edge cache (including key, value, LRU list, and lookup hashtable)
         facebook::cachelib::PoolId covered_poolid_; // Pool ID for covered local edge cache
 
-        // Local cached object-level statistics (NOT include recency which has been tracked by covered_cache_ptr_)
-        perkey_statistics_map_t local_cached_perkey_statistics_;
-
-        // Local cached group-level statistics (grouping based on admission time)
-        uint32_t local_cached_cur_group_id_;
-        uint32_t local_cached_cur_group_keycnt_;
-        pergroup_statistics_map_t local_cached_pergroup_statistics_;
-
-        // Local cached sorted popularity information (ascending order; allow duplicate popularity values)
-        sorted_popularity_multimap_t local_cached_sorted_popularity_;
+        PerkeyStatisticsMap local_cached_perkey_statistics_map_; // Local cached object-level statistics (NOT include recency which has been tracked by covered_cache_ptr_)
+        PergroupStatisticsMap local_cached_pergroup_statistics_map_; // Local cached group-level statistics (grouping based on admission time)
+        SortedPopularityMultimap local_cached_sorted_popularity_; // Local cached sorted popularity information (ascending order; allow duplicate popularity values)
 
         // (C) Non-const shared variables of local uncached objects for admission
 
-        // Local uncached object-level statistics (NOT include recency which is tracked by list index)
-        perkey_statistics_list_t local_uncached_perkey_statistics_candidate_list_; // LRU-based candidate list for limited uncached objects
-
-        // Local uncached group-level statistics (grouping based on tracked time)
-        uint32_t local_uncached_cur_group_id_;
-        uint32_t local_uncached_cur_group_keycnt_;
-        pergroup_statistics_map_t local_uncached_pergroup_statistics_;
-
-        // Local uncached sorted popularity information (ascending order; allow duplicate popularity values)
-        sorted_popularity_multimap_t local_uncached_sorted_popularity_;
+        PerkeyStatisticsList local_uncached_perkey_statistics_candidate_list_; // LRU-based candidate list for limited uncached objects; local uncached object-level statistics (NOT include recency which is tracked by list index)
+        PergroupStatisticsMap local_uncached_pergroup_statistics_map_; // Local uncached group-level statistics (grouping based on tracked time)
+        SortedPopularityMultimap local_uncached_sorted_popularity_; // Local uncached sorted popularity information (ascending order; allow duplicate popularity values)
     };
 }
 

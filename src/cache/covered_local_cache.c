@@ -11,12 +11,10 @@
 namespace covered
 {
     const uint64_t CoveredLocalCache::COVERED_MIN_CAPACITY_BYTES = GB2B(1); // 1 GiB
-    const uint32_t CoveredLocalCache::COVERED_PERGROUP_MAXKEYCNT = 10; // At most 10 keys per group for local cached/uncached objects
-    const uint32_t CoveredLocalCached::COVERED_LOCAL_UNCACHED_MAXKEYCNT = 1000; // At most 1000 keys in total for local uncached objects
 
     const std::string CoveredLocalCache::kClassName("CoveredLocalCache");
 
-    CoveredLocalCache::CoveredLocalCache(const uint32_t& edge_idx, const uint64_t& capacity_bytes) : LocalCacheBase(edge_idx)
+    CoveredLocalCache::CoveredLocalCache(const uint32_t& edge_idx, const uint64_t& capacity_bytes) : LocalCacheBase(edge_idx), local_cached_perkey_statistics_map_(), local_cached_pergroup_statistics_map_(), local_cached_sorted_popularity_(), local_uncached_perkey_statistics_candidate_list_(), local_uncached_pergroup_statistics_map_(), local_uncached_sorted_popularity_()
     {
         // (A) Const variable
 
@@ -44,30 +42,6 @@ namespace covered
         covered_cache_ptr_ = std::make_unique<LruCache>(cacheConfig);
         assert(covered_cache_ptr_.get() != NULL);
         covered_poolid_ = covered_cache_ptr_->addPool("default", covered_cache_ptr_->getCacheMemoryStats().ramCacheSize);
-
-        // Local cached object-level statistics
-        local_cached_perkey_statistics_.clear();
-
-        // Local cached group-level statistics
-        local_cached_cur_group_id_ = 0;
-        local_cached_cur_group_keycnt_ = 0;
-        local_cached_pergroup_statistics_.clear();
-
-        // Local cached popularity information
-        local_cached_sorted_popularity_.clear();
-
-        // (C) Non-const shared variables of local uncached objects for admission
-
-        // Local uncached object-level statistics
-        local_uncached_perkey_statistics_list_.clear();
-
-        // Local uncached group-level statistics
-        local_uncached_cur_group_id_ = 0;
-        local_uncached_cur_group_keycnt_ = 0;
-        local_uncached_pergroup_statistics_.clear();
-
-        // Local uncached popularity information
-        local_uncached_sorted_popularity_.clear();
     }
 
     CoveredLocalCache::~CoveredLocalCache()
@@ -257,49 +231,19 @@ namespace covered
 
     // (5) COVERED-specific functions
 
-    // Grouping
-
-    uint32_t CoveredLocalCache::assignGroupIdForAdmission_(const Key& key)
-    {
-        assert(local_cached_perkey_statistics_.find(key) == local_cached_perkey_statistics_.end()); // key must NOT be admitted before
-
-        local_cached_cur_group_keycnt_++;
-        if (local_cached_cur_group_keycnt_ > COVERED_PERGROUP_MAXKEYCNT)
-        {
-            local_cached_cur_group_id_++;
-            local_cached_cur_group_keycnt_ = 1;
-        }     
-
-        return local_cached_cur_group_id_;
-    }
-    
-    uint32_t CoveredLocalCache::getGroupIdForLocalCachedKey_(const Key& key) const
-    {
-        perkey_statistics_map_t::const_iterator iter = local_cached_perkey_statistics_.find(key);
-        assert(iter != local_cached_perkey_statistics_.end()); // key must be admitted before
-
-        return iter->second.getGroupId();
-    }
-
     // Update local cached statistics
     
     void CoveredLocalCache::updateStatisticsForCachedKey_(const Key& key)
     {
         // Update local cached object-level statistics
-        perkey_statistics_map_t::iterator perkey_statistics_iter = local_cached_perkey_statistics_.find(key);
-        assert(perkey_statistics_iter != local_cached_perkey_statistics_.end());
-        perkey_statistics_iter->second.update();
-
-        // Get group ID
-        uint32_t tmp_group_id = getGroupIdForLocalCachedKey_(key);
+        const KeyLevelStatistics& tmp_key_level_statistics = local_cached_perkey_statistics_map_.updateForExistingKey(key);
 
         // Update local cached group-level statistics
-        pergroup_statistics_map_t::iterator pergroup_statistics_iter = local_cached_pergroup_statistics_.find(tmp_group_id);
-        assert(pergroup_statistics_iter != local_cached_pergroup_statistics_.end());
-        pergroup_statistics_iter->second.updateForInGroupKey(key);
+        GroupId tmp_group_id = local_cached_perkey_statistics_map_.getGroupIdForExistingKey(key); // Get group ID
+        const GroupLevelStatistics& tmp_group_level_statistics = local_cached_pergroup_statistics_map_.updateForExistingKey(tmp_group_id, key);
 
         // Calculate popularity
-        Popularity tmp_popularity = calculatePopularity_(perkey_statistics_iter->second, pergroup_statistics_iter->second);
+        Popularity tmp_popularity = calculatePopularity_(tmp_key_level_statistics, tmp_group_level_statistics);
 
         // Update local cached popularity information
         updatePopularityForCached_(key, tmp_popularity);
@@ -308,25 +252,4 @@ namespace covered
     }
 
     // Update local uncached statistics
-
-    // Update popularity for local cached obejects
-
-    void CoveredLocalCache::updatePopularityForCached_(const Key& key, const Popularity& popularity)
-    {
-        // TODO
-    }
-
-    // Update popularity for local uncached obejects
-
-    // Popularity calculation
-
-    uint32_t CoveredLocalCache::calculatePopularity_(const PerkeyStatistics& perkey_statistics, const PergroupStatistics& pergroup_statistics)
-    {
-        // TODO: Use heuristic or learned approach to calculate popularity (refer to state-of-the-art studies such as LRB and GL-Cache)
-
-        // NOTE: Here we use a simple approach to calculate popularity based on object-level and group-level statistics
-        Popularity popularity = static_cast<Popularity>(pergroup_statistics.getAvgObjectSize()) / static_cast<Popularity>(perkey_statistics.getFrequency()); // # of accessed bytes per cache access (similar as LHD)
-        return popularity;
-    }
-
 }
