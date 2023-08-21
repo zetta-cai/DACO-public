@@ -14,7 +14,7 @@ namespace covered
 
     const std::string CoveredLocalCache::kClassName("CoveredLocalCache");
 
-    CoveredLocalCache::CoveredLocalCache(const uint32_t& edge_idx, const uint64_t& capacity_bytes) : LocalCacheBase(edge_idx), local_cached_perkey_statistics_map_(), local_cached_pergroup_statistics_map_(), local_cached_sorted_popularity_(), local_uncached_perkey_statistics_candidate_list_(), local_uncached_pergroup_statistics_map_(), local_uncached_sorted_popularity_()
+    CoveredLocalCache::CoveredLocalCache(const uint32_t& edge_idx, const uint64_t& capacity_bytes) : LocalCacheBase(edge_idx), local_cached_perkey_statistics_map_(), local_cached_pergroup_statistics_map_(), local_cached_sorted_popularity_multimap_(), local_uncached_perkey_statistics_candidate_list_(), local_uncached_pergroup_statistics_map_(), local_uncached_sorted_popularity_multimap_()
     {
         // (A) Const variable
 
@@ -84,11 +84,12 @@ namespace covered
             //std::string value_string{reinterpret_cast<const char*>(handle->getMemory()), handle->getSize()};
             value = Value(handle->getSize());
 
-            // TODO: Update local cached statistics
+            // Update local cached statistics for getreq with cache hit
+            updateStatisticsForCachedKey_(key);
         }
         else
         {
-            // TODO: Update local uncached statistics
+            // TODO: Update local uncached statistics (END HERE)
         }
 
         return is_local_cached;
@@ -178,6 +179,8 @@ namespace covered
 
     bool CoveredLocalCache::evictLocalCacheIfKeyMatchInternal_(const Key& key, Value& value, const Key& admit_key, const Value& admit_value)
     {
+        // TODO: we MUST release handle 
+
         assert(hasFineGrainedManagement());
 
         bool is_evict = false;
@@ -233,7 +236,7 @@ namespace covered
 
     // Update local cached statistics
     
-    void CoveredLocalCache::updateStatisticsForCachedKey_(const Key& key)
+    void CoveredLocalCache::updateStatisticsForCachedKey_(const Key& key) const
     {
         // Update local cached object-level statistics
         const KeyLevelStatistics& tmp_key_level_statistics = local_cached_perkey_statistics_map_.updateForExistingKey(key);
@@ -242,11 +245,8 @@ namespace covered
         GroupId tmp_group_id = local_cached_perkey_statistics_map_.getGroupIdForExistingKey(key); // Get group ID
         const GroupLevelStatistics& tmp_group_level_statistics = local_cached_pergroup_statistics_map_.updateForExistingKey(tmp_group_id, key);
 
-        // Calculate popularity
-        Popularity tmp_popularity = calculatePopularity_(tmp_key_level_statistics, tmp_group_level_statistics);
-
         // Update local cached popularity information
-        updatePopularityForCached_(key, tmp_popularity);
+        local_cached_sorted_popularity_multimap_.updateForExistingKey(key, tmp_key_level_statistics, tmp_group_level_statistics);
 
         return;
     }

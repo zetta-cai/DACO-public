@@ -13,7 +13,8 @@
 
 #include "cache/covered/common_header.h"
 
-// NOTE: we do NOT count the size of keys here, as per-key popularity iterator can be maintained in cachelib::CacheItem for local cached objects or per-key statistics for local uncached objects, we track them individually just for implementation simplicity
+// NOTE: we do NOT count the total size of popularity_lookup_table_ here, as per-key popularity iterator can be maintained in cachelib::ChainedHashTable for local cached objects (we track it here individually just for implementation simplicity) -> getSizeForCapacityWithoutLookupTable
+// NOTE: we have to count the total size of popularity_lookup_table_ for local uncached objects -> getSizeForCapacityWithLookupTable
 
 namespace covered
 {
@@ -27,9 +28,12 @@ namespace covered
 
         uint64_t getSizeForCapacity() const;
     private:
-        typedef std::multimap<Popularity, LruCacheReadHandle> sorted_popularity_multimap_t;
-        typedef sorted_popularity_multimap_t::iterator popularity_iterator_t;
-        typedef std::unordered_map<Key, popularity_iterator_t, KeyHasher> popularity_lookup_table_t;
+        //typedef std::multimap<Popularity, LruCacheReadHandle> sorted_popularity_multimap_t; // Obselete: local uncached objects cannot provide LruCacheReadHandle
+        class lookup_table_iterator_t; // Forward declaration
+        typedef std::multimap<Popularity, lookup_table_iterator_t> sorted_popularity_multimap_t;
+        typedef sorted_popularity_multimap_t::iterator multimap_iterator_t;
+        typedef std::unordered_map<Key, multimap_iterator_t, KeyHasher> popularity_lookup_table_t;
+        typedef popularity_lookup_table_t::iterator lookup_table_iterator_t;
 
         static const std::string kClassName;
 

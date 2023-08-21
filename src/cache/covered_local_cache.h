@@ -72,7 +72,7 @@ namespace covered
 
         // Update local cached statistics
         //void updateLStatisticsForAdmission_(const Key& key); // Triggered by admission of newly admitted objects
-        void updateStatisticsForCachedKey_(const Key& key); // Triggered by get requests with cache hits
+        void updateStatisticsForCachedKey_(const Key& key) const; // Triggered by get requests with cache hits
         //void updateStatisticsForCachedKeyValue_(const Key& key); // Triggered by put requests with cache hits
         //void updateStatisticsForEviction_(const Key& key); // Triggered by eviction of victim objects
 
@@ -93,15 +93,15 @@ namespace covered
         std::unique_ptr<LruCache> covered_cache_ptr_; // Data and metadata for local edge cache (including key, value, LRU list, and lookup hashtable)
         facebook::cachelib::PoolId covered_poolid_; // Pool ID for covered local edge cache
 
-        PerkeyStatisticsMap local_cached_perkey_statistics_map_; // Local cached object-level statistics (NOT include recency which has been tracked by covered_cache_ptr_)
-        PergroupStatisticsMap local_cached_pergroup_statistics_map_; // Local cached group-level statistics (grouping based on admission time)
-        SortedPopularityMultimap local_cached_sorted_popularity_; // Local cached sorted popularity information (ascending order; allow duplicate popularity values)
+        mutable PerkeyStatisticsMap local_cached_perkey_statistics_map_; // Local cached object-level statistics (NOT include recency which has been tracked by covered_cache_ptr_)
+        mutable PergroupStatisticsMap local_cached_pergroup_statistics_map_; // Local cached group-level statistics (grouping based on admission time)
+        mutable SortedPopularityMultimap local_cached_sorted_popularity_multimap_; // Local cached sorted popularity information (ascending order; allow duplicate popularity values)
 
         // (C) Non-const shared variables of local uncached objects for admission
 
         PerkeyStatisticsList local_uncached_perkey_statistics_candidate_list_; // LRU-based candidate list for limited uncached objects; local uncached object-level statistics (NOT include recency which is tracked by list index)
         PergroupStatisticsMap local_uncached_pergroup_statistics_map_; // Local uncached group-level statistics (grouping based on tracked time)
-        SortedPopularityMultimap local_uncached_sorted_popularity_; // Local uncached sorted popularity information (ascending order; allow duplicate popularity values)
+        SortedPopularityMultimap local_uncached_sorted_popularity_multimap_; // Local uncached sorted popularity information (ascending order; allow duplicate popularity values)
     };
 }
 
