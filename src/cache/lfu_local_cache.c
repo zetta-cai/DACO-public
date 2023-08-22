@@ -41,7 +41,7 @@ namespace covered
         return is_cached;
     }
 
-    // (2) Access local edge cache (KV data and local statistics)
+    // (2) Access local edge cache (KV data and local metadata)
 
     bool LfuLocalCache::getLocalCacheInternal_(const Key& key, Value& value) const
     {
@@ -57,9 +57,9 @@ namespace covered
         return is_local_cached;
     }
 
-    void LfuLocalCache::updateLocalUncachedStatisticsForRspInternal_(const Key& key, const Value& value, const bool& is_getrsp) const
+    void LfuLocalCache::updateLocalUncachedMetadataForRspInternal_(const Key& key, const Value& value, const bool& is_getrsp) const
     {
-        // LFU cache uses default admission policy (i.e., always admit), which does NOT need to update local statistics for get/putres of uncached objects
+        // LFU cache uses default admission policy (i.e., always admit), which does NOT need to update local metadata for get/putres of uncached objects
         return;
     }
 

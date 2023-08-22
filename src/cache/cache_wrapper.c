@@ -105,7 +105,7 @@ namespace covered
         return;
     }
 
-    // (2) Access local edge cache (KV data and local statistics)
+    // (2) Access local edge cache (KV data and local metadata)
 
     bool CacheWrapper::get(const Key& key, Value& value) const
     {
@@ -115,7 +115,7 @@ namespace covered
         std::string context_name = "CacheWrapper::get()";
         cache_wrapper_perkey_rwlock_ptr_->acquire_lock_shared(key, context_name);
 
-        bool is_local_cached = local_cache_ptr_->getLocalCache(key, value); // Still need to update local statistics if key is cached yet invalid
+        bool is_local_cached = local_cache_ptr_->getLocalCache(key, value); // Still need to update local metadata if key is cached yet invalid
 
         bool is_valid = false;
         if (is_local_cached)
@@ -193,8 +193,8 @@ namespace covered
         }
         else // If key is locally uncached
         {
-            // Update local uncached statistics for admission policy if any
-            local_cache_ptr_->updateLocalUncachedStatisticsForRsp(key, value, true);
+            // Update local uncached metadata for admission policy if any
+            local_cache_ptr_->updateLocalUncachedMetadataForRsp(key, value, true);
         }
 
         cache_wrapper_perkey_rwlock_ptr_->unlock(key, context_name);

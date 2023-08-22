@@ -33,7 +33,7 @@ namespace covered
         // For invalidation control requests
         void invalidateKeyForLocalCachedObject(const Key& key); // Add an invalid flag if key NOT exist
 
-        // (2) Access local edge cache (KV data and local statistics)
+        // (2) Access local edge cache (KV data and local metadata)
 
         // Return whether key is cached and valid (i.e., local cache hit) after get/update/remove
         bool get(const Key& key, Value& value) const;

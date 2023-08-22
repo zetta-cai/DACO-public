@@ -4,7 +4,7 @@
  * NOTE: all configuration and function calls refer to Cachelib files, including lib/CacheLib/examples/simple_cache/main.cpp and lib/cachelib/cachebench/runner/CacheStressor.h.
  * 
  * NOTEs for source code of CacheLib
- * (1) For each insert/update, CacheAllocator uses MemoryAllocator to allocate memory for new item (automatic management based on refcnt; only manage memory for key, value, LRU/FIFO and hashtable-lookup hook/pointer, and flags, while statistics such as CMS-based access frequencies are maintained by MMContainer such as MMTinyLFU), uses MM2Q as MMContainer to admit new metadata or evict victim metadata, and uses ChainedHashTable as AccessContainer for add new item into hash table.
+ * (1) For each insert/update, CacheAllocator uses MemoryAllocator to allocate memory for new item (automatic management based on refcnt; only manage memory for key, value, LRU/FIFO and hashtable-lookup hook/pointer, and flags, while metadata such as CMS-based access frequencies are maintained by MMContainer such as MMTinyLFU), uses MM2Q as MMContainer to admit new metadata or evict victim metadata, and uses ChainedHashTable as AccessContainer for add new item into hash table.
  * (2) A handle's it_ points to CacheItem, whose kAllocation alloc_ stores key and value (it encodes key size and value size into one uint32_t variable, and concatenates key bytes and value bytes into one unsigned char array) -> getMemory() and getSize() return value bytes and size, while getKey() return Key (inheriting from folly::StringPiece) with key bytes and size -> deconstructor of handle will release the memory of pointed item if the refcnt is decreased to 0.
  * 
  * By Siyuan Sheng (2023.08.07).
@@ -42,12 +42,12 @@ namespace covered
 
         virtual bool isLocalCachedInternal_(const Key& key) const override;
 
-        // (2) Access local edge cache (KV data and local statistics)
+        // (2) Access local edge cache (KV data and local metadata)
 
         virtual bool getLocalCacheInternal_(const Key& key, Value& value) const override;
         virtual bool updateLocalCacheInternal_(const Key& key, const Value& value) override;
 
-        virtual void updateLocalUncachedStatisticsForRspInternal_(const Key& key, const Value& value, const bool& is_getrsp) const override; // Triggered by get/put/delres for cache miss for admission policy if any
+        virtual void updateLocalUncachedMetadataForRspInternal_(const Key& key, const Value& value, const bool& is_getrsp) const override; // Triggered by get/put/delres for cache miss for admission policy if any
 
         // (3) Local edge cache management
 

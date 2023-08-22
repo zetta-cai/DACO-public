@@ -71,7 +71,7 @@ namespace covered
     {
         checkPointers_();
 
-        // Acquire a read lock for local statistics to update local statistics atomically
+        // Acquire a read lock for local metadata to update local metadata atomically
         std::string context_name = "LocalCacheBase::isLocalCached()";
         rwlock_for_local_cache_ptr_->acquire_lock_shared(context_name);
 
@@ -81,13 +81,13 @@ namespace covered
         return is_cached;
     }
 
-    // (2) Access local edge cache (KV data and local statistics)
+    // (2) Access local edge cache (KV data and local metadata)
 
     bool LocalCacheBase::getLocalCache(const Key& key, Value& value) const
     {
         checkPointers_();
 
-        // Acquire a write lock for local statistics to update local statistics atomically
+        // Acquire a write lock for local metadata to update local metadata atomically
         std::string context_name = "LocalCacheBase::getLocalCache()";
         rwlock_for_local_cache_ptr_->acquire_lock(context_name);
 
@@ -101,7 +101,7 @@ namespace covered
     {
         checkPointers_();
 
-        // Acquire a write lock for local statistics to update local statistics atomically (so no need to hack LFU cache)
+        // Acquire a write lock for local metadata to update local metadata atomically (so no need to hack LFU cache)
         std::string context_name = "LocalCacheBase::updateLocalCache()";
         rwlock_for_local_cache_ptr_->acquire_lock(context_name);
 
@@ -111,15 +111,15 @@ namespace covered
         return is_local_cached;
     }
 
-    void LocalCacheBase::updateLocalUncachedStatisticsForRsp(const Key& key, const Value& value, const bool& is_getrsp) const
+    void LocalCacheBase::updateLocalUncachedMetadataForRsp(const Key& key, const Value& value, const bool& is_getrsp) const
     {
         checkPointers_();
 
-        // Acquire a write lock for local statistics to update local statistics atomically (so no need to hack LFU cache)
-        std::string context_name = "LocalCacheBase::updateLocalUncachedStatisticsForRsp(key, value)";
+        // Acquire a write lock for local metadata to update local metadata atomically (so no need to hack LFU cache)
+        std::string context_name = "LocalCacheBase::updateLocalUncachedMetadataForRsp(key, value)";
         rwlock_for_local_cache_ptr_->acquire_lock(context_name);
 
-        updateLocalUncachedStatisticsForRspInternal_(key, value, is_getrsp);
+        updateLocalUncachedMetadataForRspInternal_(key, value, is_getrsp);
 
         rwlock_for_local_cache_ptr_->unlock(context_name);
         return;
@@ -131,7 +131,7 @@ namespace covered
     {
         checkPointers_();
 
-        // Acquire a write lock for local statistics to update local statistics atomically (so no need to hack LFU cache)
+        // Acquire a write lock for local metadata to update local metadata atomically (so no need to hack LFU cache)
         std::string context_name = "LocalCacheBase::needIndependentAdmit()";
         rwlock_for_local_cache_ptr_->acquire_lock(context_name);
 
@@ -145,7 +145,7 @@ namespace covered
     {
         checkPointers_();
 
-        // Acquire a write lock for local statistics to update local statistics atomically
+        // Acquire a write lock for local metadata to update local metadata atomically
         std::string context_name = "LocalCacheBase::admitLocalCache()";
         rwlock_for_local_cache_ptr_->acquire_lock(context_name);
 
@@ -161,7 +161,7 @@ namespace covered
 
         assert(hasFineGrainedManagement());
 
-        // Acquire a read lock for local statistics to update local statistics atomically
+        // Acquire a read lock for local metadata to update local metadata atomically
         std::string context_name = "LocalCacheBase::getLocalCacheVictimKey()";
         rwlock_for_local_cache_ptr_->acquire_lock_shared(context_name);
 
@@ -177,7 +177,7 @@ namespace covered
 
         assert(hasFineGrainedManagement());
 
-        // Acquire a write lock for local statistics to update local statistics atomically
+        // Acquire a write lock for local metadata to update local metadata atomically
         std::string context_name = "LocalCacheBase::evictLocalCacheIfKeyMatch()";
         rwlock_for_local_cache_ptr_->acquire_lock(context_name);
 
@@ -193,7 +193,7 @@ namespace covered
 
         assert(!hasFineGrainedManagement());
 
-        // Acquire a write lock for local statistics to update local statistics atomically
+        // Acquire a write lock for local metadata to update local metadata atomically
         std::string context_name = "LocalCacheBase::evictLocalCache()";
         rwlock_for_local_cache_ptr_->acquire_lock(context_name);
 
@@ -209,7 +209,7 @@ namespace covered
     {
         checkPointers_();
 
-        // Acquire a read lock for local statistics to update local statistics atomically
+        // Acquire a read lock for local metadata to update local metadata atomically
         std::string context_name = "LocalCacheBase::getSizeForCapacity()";
         rwlock_for_local_cache_ptr_->acquire_lock_shared(context_name);
 

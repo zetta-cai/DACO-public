@@ -14,7 +14,7 @@ namespace covered
 
     const std::string CoveredLocalCache::kClassName("CoveredLocalCache");
 
-    CoveredLocalCache::CoveredLocalCache(const uint32_t& edge_idx, const uint64_t& capacity_bytes) : LocalCacheBase(edge_idx), local_cached_perkey_statistics_map_(), local_cached_pergroup_statistics_map_(), local_cached_sorted_popularity_multimap_(), local_uncached_perkey_statistics_candidate_list_(), local_uncached_pergroup_statistics_map_(), local_uncached_sorted_popularity_multimap_()
+    CoveredLocalCache::CoveredLocalCache(const uint32_t& edge_idx, const uint64_t& capacity_bytes) : LocalCacheBase(edge_idx), local_cached_metadata_(), local_uncached_metadata_()
     {
         // (A) Const variable
 
@@ -60,7 +60,7 @@ namespace covered
     {
         const std::string keystr = key.getKeystr();
 
-        // NOTE: NO need to invoke recordAccess() as isLocalCached() does NOT update local statistics
+        // NOTE: NO need to invoke recordAccess() as isLocalCached() does NOT update local metadata
 
         LruCacheReadHandle handle = covered_cache_ptr_->find(keystr);
         bool is_cached = (handle != nullptr);
@@ -68,7 +68,7 @@ namespace covered
         return is_cached;
     }
 
-    // (2) Access local edge cache (KV data and local statistics)
+    // (2) Access local edge cache (KV data and local metadata)
 
     bool CoveredLocalCache::getLocalCacheInternal_(const Key& key, Value& value) const
     {
@@ -84,18 +84,18 @@ namespace covered
             //std::string value_string{reinterpret_cast<const char*>(handle->getMemory()), handle->getSize()};
             value = Value(handle->getSize());
 
-            // Update local cached statistics for getreq with cache hit
-            updateLocalCachedStatisticsForCachedKey_(key);
+            // Update local cached metadata for getreq with cache hit
+            local_cached_metadata_.updateForExistingKey(key);
         }
 
-        // NOTE: for getreq with cache miss, we will update local uncached statistics for getres by updateLocalUncachedStatisticsForAdmitInternal_(key)
+        // NOTE: for getreq with cache miss, we will update local uncached metadata for getres by updateLocalUncachedStatisticsForAdmitInternal_(key)
 
         return is_local_cached;
     }
 
     bool CoveredLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value)
     {
-        // TODO: we should invoke updateLocalUncachedStatisticsForRspInternal_(key, value, false) in CacheWrapper::update() for put/delrsp
+        // TODO: we should invoke updateLocalUncachedMetadataForRspInternal_(key, value, false) in CacheWrapper::update() for put/delrsp
 
         const std::string keystr = key.getKeystr();
 
@@ -120,14 +120,14 @@ namespace covered
         return is_local_cached;
     }
 
-    void CoveredLocalCache::updateLocalUncachedStatisticsForRspInternal_(const Key& key, const Value& value, const bool& is_getrsp) const
+    void CoveredLocalCache::updateLocalUncachedMetadataForRspInternal_(const Key& key, const Value& value, const bool& is_getrsp) const
     {
-        bool is_key_tracked = local_uncached_sorted_popularity_multimap_.isKeyExist(key);
+        bool is_key_tracked = local_uncached_metadata_.isKeyExist(key);
         if (is_key_tracked)
         {
             if (is_getrsp) // For get response with cache miss
             {
-                updateLocalUncachedStatisticsForCandidateKey_(key);
+                local_uncached_metadata_.updateForExistingKey(key);
             }
             else // For put/del response with cache miss
             {
@@ -262,27 +262,13 @@ namespace covered
 
     // (5) COVERED-specific functions
 
-    // Update local cached statistics
-    
-    void CoveredLocalCache::updateLocalCachedStatisticsForCachedKey_(const Key& key) const
-    {
-        // Update local cached object-level statistics
-        const KeyLevelStatistics& tmp_key_level_statistics = local_cached_perkey_statistics_map_.updateForExistingKey(key);
+    // Update local cached metadata
 
-        // Update local cached group-level statistics
-        GroupId tmp_group_id = local_cached_perkey_statistics_map_.getGroupIdForExistingKey(key); // Get group ID
-        const GroupLevelStatistics& tmp_group_level_statistics = local_cached_pergroup_statistics_map_.updateForExistingKey(tmp_group_id, key);
-
-        // Update local cached popularity information
-        local_cached_sorted_popularity_multimap_.updateForExistingKey(key, tmp_key_level_statistics, tmp_group_level_statistics);
-
-        return;
-    }
-
-    // Update local uncached statistics
+    // Update local uncached metadata
 
     void CoveredLocalCache::updateLocalUncachedStatisticsForCandidateKey_(const Key& key) const
     {
-        // TODO: END HERE
+        // Update local uncached object-level metadata
+        const KeyLevelMetadata& tmp_key_level_statistics = local_uncached_perkey_statistics_candidate_list_.updateForExistingKey(key);
     }
 }

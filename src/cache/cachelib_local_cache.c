@@ -56,7 +56,7 @@ namespace covered
     {
         const std::string keystr = key.getKeystr();
 
-        // NOTE: NO need to invoke recordAccess() as isLocalCached() does NOT update local statistics
+        // NOTE: NO need to invoke recordAccess() as isLocalCached() does NOT update local metadata
 
         Lru2QCacheReadHandle handle = cachelib_cache_ptr_->find(keystr);
         bool is_cached = (handle != nullptr);
@@ -64,7 +64,7 @@ namespace covered
         return is_cached;
     }
 
-    // (2) Access local edge cache (KV data and local statistics)
+    // (2) Access local edge cache (KV data and local metadata)
 
     bool CachelibLocalCache::getLocalCacheInternal_(const Key& key, Value& value) const
     {
@@ -109,9 +109,9 @@ namespace covered
         return is_local_cached;
     }
 
-    void CachelibLocalCache::updateLocalUncachedStatisticsForRspInternal_(const Key& key, const Value& value, const bool& is_getrsp) const
+    void CachelibLocalCache::updateLocalUncachedMetadataForRspInternal_(const Key& key, const Value& value, const bool& is_getrsp) const
     {
-        // CacheLib (LRU2Q) cache uses default admission policy (i.e., always admit), which does NOT need to update local statistics for get/putres of uncached objects
+        // CacheLib (LRU2Q) cache uses default admission policy (i.e., always admit), which does NOT need to update local metadata for get/putres of uncached objects
         return;
     }
 

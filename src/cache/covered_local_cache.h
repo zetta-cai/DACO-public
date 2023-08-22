@@ -1,7 +1,7 @@
 /*
  * CoveredLocalCache: local edge cache with COVERED's policy built based on Cachelib (https://github.com/facebook/CacheLib.git).
  *
- * NOTE: To avoid hacking 352.6K LOC of CacheLib, we track statistics outside CacheLib; it is similar as MMTinyLFU in CacheLib, which maintains access frequencies outside MemoryAllocator (using a CMS in MM2QTinyLFU) due to NO need of slab-based memory management for statistics; specifically, we use CacheLib CacheItem to track key, value, LRU, and lookup information (cache size usage of this part has already been counted by CacheLib), yet maintain other statistics and sorted popularity outside CacheLib in CoveredLocalCache.
+ * NOTE: To avoid hacking 352.6K LOC of CacheLib, we track metadata outside CacheLib; it is similar as MMTinyLFU in CacheLib, which maintains access frequencies outside MemoryAllocator (using a CMS in MM2QTinyLFU) due to NO need of slab-based memory management for metadata; specifically, we use CacheLib CacheItem to track key, value, LRU, and lookup information (cache size usage of this part has already been counted by CacheLib), yet maintain other metadata and sorted popularity outside CacheLib in CoveredLocalCache.
  * 
  * See other NOTEs in src/cache/cachelib_local_cache.h
  * 
@@ -15,14 +15,11 @@
 #include <string>
 
 #include "cache/covered/common_header.h"
-#include "cache/covered/perkey_statistics_map.h"
-#include "cache/covered/perkey_statistics_list.h"
-#include "cache/covered/pergroup_statistics_map.h"
-#include "cache/covered/sorted_popularity_multimap.h"
+#include "cache/covered/local_cache_metadata.h"
 #include "cache/local_cache_base.h"
 
-// NOTE: although we track local cached statistics outside CacheLib to avoid extensive hacking, per-key statistics and popularity iterator actually can be stored into cachelib::CacheItem -> so we do NOT need to count the size of keys for local cached statistics (similar as size measurement in ValidityMap and BlockTracker)
-// NOTE: we still count the size of keys for local uncached statistics -> but only once for per-key statistics and popularity iterator, as they actually can be maintained in a single map (we just split them for implementation simplicity)
+// NOTE: although we track local cached metadata outside CacheLib to avoid extensive hacking, per-key metadata and popularity iterator actually can be stored into cachelib::CacheItem -> so we do NOT need to count the size of keys for local cached metadata (similar as size measurement in ValidityMap and BlockTracker)
+// NOTE: we still count the size of keys for local uncached metadata -> but only once for per-key metadata and popularity iterator, as they actually can be maintained in a single map (we just split them for implementation simplicity)
 
 // TODO: Use homogeneous popularity calculation now, but will replace with heterogeneous popularity calculation + learning later (for both local cached and uncached objects)
 // TODO: Use learned index to replace local cached/uncached sorted_popularity_ for less memory usage (especially for local cached objects due to limited # of uncached objects)
@@ -48,12 +45,12 @@ namespace covered
 
         virtual bool isLocalCachedInternal_(const Key& key) const override;
 
-        // (2) Access local edge cache (KV data and local statistics)
+        // (2) Access local edge cache (KV data and local metadata)
 
         virtual bool getLocalCacheInternal_(const Key& key, Value& value) const override;
         virtual bool updateLocalCacheInternal_(const Key& key, const Value& value) override;
 
-        virtual void updateLocalUncachedStatisticsForRspInternal_(const Key& key, const Value& value, const bool& is_getrsp) const override; // Triggered by get/put/delres for cache miss for admission policy if any
+        virtual void updateLocalUncachedMetadataForRspInternal_(const Key& key, const Value& value, const bool& is_getrsp) const override; // Triggered by get/put/delres for cache miss for admission policy if any
 
         // (3) Local edge cache management
 
@@ -72,15 +69,13 @@ namespace covered
 
         // (5) COVERED-specific functions
 
-        // Update local cached statistics
+        // Update local cached metadata
         //void updateLocalCachedStatisticsForAdmission_(const Key& key, const Value& value) const; // Triggered by admission of newly admitted objects
-        void updateLocalCachedStatisticsForCachedKey_(const Key& key) const; // Triggered by get requests with cache hits
         //void updateLocalCachedStatisticsForCachedKeyValue_(const Key& key, const Value& value) const; // Triggered by put requests with cache hits
         //void updateLocalCachedStatisticsForEviction_(const Key& key) const; // Triggered by eviction of victim objects
 
-        // Update local uncached statistics
+        // Update local uncached metadata
         //void updateLocalUncachedStatisticsForNewlyTracked_(const Key& key, const Value& value) const;// Triggered by newly tracked objects in candidate list
-        void updateLocalUncachedStatisticsForCandidateKey_(const Key& key) const; // Triggered by get responses for cache misses
         //void updateLocalUncachedStatisticsForCandidateKeyValue_(const Key& key) const; // Triggered by put/del responses for cache misses
         //void updateLocalUncachedStatisticsForDetracked_(const Key& key) const; // Triggered by detracked objects in candidate list
 
@@ -92,18 +87,14 @@ namespace covered
         // (B) Non-const shared variables of local cached objects for eviction
 
         // CacheLib-based key-value storage
-        std::unique_ptr<LruCache> covered_cache_ptr_; // Data and metadata for local edge cache (including key, value, LRU list, and lookup hashtable)
+        std::unique_ptr<LruCache> covered_cache_ptr_; // Data engine for local edge cache
         facebook::cachelib::PoolId covered_poolid_; // Pool ID for covered local edge cache
 
-        mutable PerkeyStatisticsMap local_cached_perkey_statistics_map_; // Local cached object-level statistics (NOT include recency which has been tracked by covered_cache_ptr_)
-        mutable PergroupStatisticsMap local_cached_pergroup_statistics_map_; // Local cached group-level statistics (grouping based on admission time)
-        mutable SortedPopularityMultimap local_cached_sorted_popularity_multimap_; // Local cached sorted popularity information (ascending order; allow duplicate popularity values)
+        mutable LocalCacheMetadata local_cached_metadata_; // Metadata for local cached objects
 
         // (C) Non-const shared variables of local uncached objects for admission
 
-        PerkeyStatisticsList local_uncached_perkey_statistics_candidate_list_; // LRU-based candidate list for limited uncached objects; local uncached object-level statistics (NOT include recency which is tracked by list index)
-        PergroupStatisticsMap local_uncached_pergroup_statistics_map_; // Local uncached group-level statistics (grouping based on tracked time)
-        SortedPopularityMultimap local_uncached_sorted_popularity_multimap_; // Local uncached sorted popularity information (ascending order; allow duplicate popularity values)
+        mutable LocalCacheMetadata local_uncached_metadata_; // Metadata for local uncached objects
     };
 }
 

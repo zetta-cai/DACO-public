@@ -30,12 +30,12 @@ namespace covered
 
         bool isLocalCached(const Key& key) const;
 
-        // (2) Access local edge cache (KV data and local statistics)
+        // (2) Access local edge cache (KV data and local metadata)
 
         bool getLocalCache(const Key& key, Value& value) const; // Return whether key is cached
         bool updateLocalCache(const Key& key, const Value& value); // Return whether key is cached
 
-        void updateLocalUncachedStatisticsForRsp(const Key& key, const Value& value, const bool& is_getrsp) const; // Triggered by get/put/delres for cache miss for admission policy if any
+        void updateLocalUncachedMetadataForRsp(const Key& key, const Value& value, const bool& is_getrsp) const; // Triggered by get/put/delres for cache miss for admission policy if any
 
         // (3) Local edge cache management
 
@@ -70,12 +70,12 @@ namespace covered
 
         virtual bool isLocalCachedInternal_(const Key& key) const = 0;
 
-        // (2) Access local edge cache (KV data and local statistics)
+        // (2) Access local edge cache (KV data and local metadata)
 
         virtual bool getLocalCacheInternal_(const Key& key, Value& value) const = 0; // Return whether key is cached
         virtual bool updateLocalCacheInternal_(const Key& key, const Value& value) = 0; // Return whether key is cached
 
-        virtual void updateLocalUncachedStatisticsForRspInternal_(const Key& key, const Value& value, const bool& is_getrsp) const = 0; // Triggered by get/put/delres for cache miss for admission policy if any
+        virtual void updateLocalUncachedMetadataForRspInternal_(const Key& key, const Value& value, const bool& is_getrsp) const = 0; // Triggered by get/put/delres for cache miss for admission policy if any
 
         // (3) Local edge cache management
 
@@ -97,9 +97,9 @@ namespace covered
 
         std::string base_instance_name_; // Const shared variable
 
-        // NOTE: we use a single read-write lock for thread safety of local edge cache, including concurrent accesses of cached objects and local statistics with fair comparison
+        // NOTE: we use a single read-write lock for thread safety of local edge cache, including concurrent accesses of cached objects and local metadata with fair comparison
         // NOTE: we do NOT hack each cache for fine-grained locking to avoid extensive complexity
-        mutable Rwlock* rwlock_for_local_cache_ptr_; // Guarantee the atomicity of local edge cache and local statistics
+        mutable Rwlock* rwlock_for_local_cache_ptr_; // Guarantee the atomicity of local edge cache and local metadata
     };
 }
 
