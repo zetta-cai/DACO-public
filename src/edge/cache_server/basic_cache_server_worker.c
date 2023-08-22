@@ -507,45 +507,7 @@ namespace covered
         uint32_t update_directory_to_admit_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(update_directory_to_admit_end_timestamp, update_directory_to_admit_start_timestamp));
         event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_UPDATE_DIRECTORY_TO_ADMIT_EVENT_NAME, update_directory_to_admit_latency_us); // Add intermediate event if with event tracking
 
-        while (true) // Evict until used bytes <= capacity bytes
-        {
-            // Data and metadata for local edge cache, and cooperation metadata
-            uint64_t used_bytes = tmp_edge_wrapper_ptr->getSizeForCapacity();
-            if (used_bytes <= tmp_edge_wrapper_ptr->getCapacityBytes()) // Not exceed capacity limitation
-            {
-                break;
-            }
-            else // Exceed capacity limitation
-            {
-                struct timespec update_directory_to_evict_start_timestamp = Util::getCurrentTimespec();
-
-                std::vector<Key> victim_keys;
-                victim_keys.clear();
-                std::vector<Value> victim_values;
-                victim_values.clear();
-                tmp_edge_wrapper_ptr->getEdgeCachePtr()->evict(victim_keys, victim_values, key, value);
-
-                for (uint32_t i = 0; i < victim_keys.size(); i++)
-                {
-                    bool _unused_is_being_written = false; // NOTE: is_being_written does NOT affect cache eviction
-                    is_finish = updateDirectory_(victim_keys[i], false, _unused_is_being_written, event_list, skip_propagation_latency);
-                    if (is_finish)
-                    {
-                        return is_finish;
-                    }
-
-                    #ifdef DEBUG_CACHE_SERVER
-                    Util::dumpVariablesForDebug(instance_name_, 7, "eviction;", "keystr:", victim_keys[i].getKeystr().c_str(), "is value deleted:", Util::toString(victim_values[i].isDeleted()).c_str(), "value size:", Util::toString(victim_values[i].getValuesize()).c_str());
-                    #endif
-                }
-
-                struct timespec update_directory_to_evict_end_timestamp = Util::getCurrentTimespec();
-                    uint32_t update_directory_to_evict_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(update_directory_to_evict_end_timestamp, update_directory_to_evict_start_timestamp));
-                    event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_UPDATE_DIRECTORY_TO_EVICT_EVENT_NAME, update_directory_to_evict_latency_us); // Add intermediate event if with event tracking
-
-                continue;
-            }
-        }
+        is_finish = evictForCapacity_(key, value, event_list, skip_propagation_latency);
 
         return is_finish;
     }

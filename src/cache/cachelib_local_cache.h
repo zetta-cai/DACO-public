@@ -42,10 +42,12 @@ namespace covered
 
         virtual bool isLocalCachedInternal_(const Key& key) const override;
 
-        // (2) Access local edge cache
+        // (2) Access local edge cache (KV data and local statistics)
 
         virtual bool getLocalCacheInternal_(const Key& key, Value& value) const override;
         virtual bool updateLocalCacheInternal_(const Key& key, const Value& value) override;
+
+        virtual void updateLocalUncachedStatisticsForRspInternal_(const Key& key, const Value& value, const bool& is_getrsp) const override; // Triggered by get/put/delres for cache miss for admission policy if any
 
         // (3) Local edge cache management
 

@@ -81,7 +81,7 @@ namespace covered
         return is_cached;
     }
 
-    // (2) Access local edge cache
+    // (2) Access local edge cache (KV data and local statistics)
 
     bool LocalCacheBase::getLocalCache(const Key& key, Value& value) const
     {
@@ -109,6 +109,20 @@ namespace covered
 
         rwlock_for_local_cache_ptr_->unlock(context_name);
         return is_local_cached;
+    }
+
+    void LocalCacheBase::updateLocalUncachedStatisticsForRsp(const Key& key, const Value& value, const bool& is_getrsp) const
+    {
+        checkPointers_();
+
+        // Acquire a write lock for local statistics to update local statistics atomically (so no need to hack LFU cache)
+        std::string context_name = "LocalCacheBase::updateLocalUncachedStatisticsForRsp(key, value)";
+        rwlock_for_local_cache_ptr_->acquire_lock(context_name);
+
+        updateLocalUncachedStatisticsForRspInternal_(key, value, is_getrsp);
+
+        rwlock_for_local_cache_ptr_->unlock(context_name);
+        return;
     }
 
     // (3) Local edge cache management

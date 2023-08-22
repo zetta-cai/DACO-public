@@ -33,7 +33,7 @@ namespace covered
         // For invalidation control requests
         void invalidateKeyForLocalCachedObject(const Key& key); // Add an invalid flag if key NOT exist
 
-        // (2) Access local edge cache
+        // (2) Access local edge cache (KV data and local statistics)
 
         // Return whether key is cached and valid (i.e., local cache hit) after get/update/remove
         bool get(const Key& key, Value& value) const;
@@ -43,6 +43,10 @@ namespace covered
         // NOTE: remove() only marks the object as deleted if cached, yet not evict it
         bool update(const Key& key, const Value& value);
         bool remove(const Key& key);
+
+        // Return whether key is cached yet invalid
+        bool updateIfInvalidForGetrsp(const Key& key, const Value& value); // Update value only if key is locally cached yet invalid
+        bool removeIfInvalidForGetrsp(const Key& key); // Remove value only if it is locally cached yet invalid
 
         // (3) Local edge cache management
 

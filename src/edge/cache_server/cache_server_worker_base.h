@@ -143,6 +143,10 @@ namespace covered
         NetworkAddr getBeaconDstaddr_(const Key& key) const; // Get destination address of beacon server recvreq in beacon edge node
         NetworkAddr getTargetDstaddr_(const DirectoryInfo& directory_info) const; // Get destination address of cache server recvreq in target edge node
 
+        // (5) Admit uncached objects in local edge cache
+
+        bool evictForCapacity_(const Key& admit_key, const Value& admit_value, EventList& event_list, const bool& skip_propagation_latency) const;
+
         // (6) Utility functions
 
         void checkPointers_() const;

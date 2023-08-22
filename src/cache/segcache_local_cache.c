@@ -109,7 +109,7 @@ namespace covered
         return is_cached;
     }
 
-    // (2) Access local edge cache
+    // (2) Access local edge cache (KV data and local statistics)
 
     bool SegcacheLocalCache::getLocalCacheInternal_(const Key& key, Value& value) const
     {
@@ -136,6 +136,12 @@ namespace covered
         bool is_local_cached = appendLocalCache_(key, value);
 
         return is_local_cached;
+    }
+
+    void SegcacheLocalCache::updateLocalUncachedStatisticsForRspInternal_(const Key& key, const Value& value, const bool& is_getrsp) const
+    {
+        // SegCache cache uses default admission policy (i.e., always admit), which does NOT need to update local statistics for get/putres of uncached objects
+        return;
     }
 
     // (3) Local edge cache management

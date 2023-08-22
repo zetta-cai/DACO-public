@@ -105,7 +105,7 @@ namespace covered
         return;
     }
 
-    // (2) Access local edge cache
+    // (2) Access local edge cache (KV data and local statistics)
 
     bool CacheWrapper::get(const Key& key, Value& value) const
     {
@@ -159,6 +159,55 @@ namespace covered
         Value deleted_value;
         bool is_local_cached = update(key, deleted_value);
         return is_local_cached;
+    }
+
+    bool CacheWrapper::updateIfInvalidForGetrsp(const Key& key, const Value& value)
+    {
+        checkPointers_();
+
+        // Acquire a write lock
+        std::string context_name = "CacheWrapper::updateIfInvalidForGetrsp()";
+        if (value.isDeleted())
+        {
+            context_name = "CacheWrapper::remove()";
+        }
+        cache_wrapper_perkey_rwlock_ptr_->acquire_lock(key, context_name);
+
+        bool is_local_cached_and_invalid = false;
+
+        bool is_local_cached = local_cache_ptr_->isLocalCached(key);
+        if (is_local_cached)
+        {
+            bool is_valid = isValidKeyForLocalCachedObject_(key);
+            if (!is_valid) // If key is locally cached yet invalid
+            {
+                // Update local edge cache
+                bool tmp_is_local_cached = local_cache_ptr_->updateLocalCache(key, value);
+                assert(tmp_is_local_cached);
+
+                // Validate key
+                validateKeyForLocalCachedObject_(key);
+
+                is_local_cached_and_invalid = true;
+            }
+        }
+        else // If key is locally uncached
+        {
+            // Update local uncached statistics for admission policy if any
+            local_cache_ptr_->updateLocalUncachedStatisticsForRsp(key, value, true);
+        }
+
+        cache_wrapper_perkey_rwlock_ptr_->unlock(key, context_name);
+        return is_local_cached_and_invalid;
+    }
+
+    bool CacheWrapper::removeIfInvalidForGetrsp(const Key& key)
+    {
+        // No need to acquire a write lock, which will be done in updateIfInvalidForGetrsp()
+
+        Value deleted_value;
+        bool is_local_cached_and_invalid = update(key, deleted_value);
+        return is_local_cached_and_invalid;
     }
 
     // (3) Local edge cache management

@@ -68,7 +68,7 @@ namespace covered
         return is_cached;
     }
 
-    // (2) Access local edge cache
+    // (2) Access local edge cache (KV data and local statistics)
 
     bool CoveredLocalCache::getLocalCacheInternal_(const Key& key, Value& value) const
     {
@@ -85,18 +85,18 @@ namespace covered
             value = Value(handle->getSize());
 
             // Update local cached statistics for getreq with cache hit
-            updateStatisticsForCachedKey_(key);
+            updateLocalCachedStatisticsForCachedKey_(key);
         }
-        else
-        {
-            // TODO: Update local uncached statistics (END HERE)
-        }
+
+        // NOTE: for getreq with cache miss, we will update local uncached statistics for getres by updateLocalUncachedStatisticsForAdmitInternal_(key)
 
         return is_local_cached;
     }
 
     bool CoveredLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value)
     {
+        // TODO: we should invoke updateLocalUncachedStatisticsForRspInternal_(key, value, false) in CacheWrapper::update() for put/delrsp
+
         const std::string keystr = key.getKeystr();
 
         LruCacheReadHandle handle = cachelib_cache_ptr_->find(keystr);
@@ -118,6 +118,34 @@ namespace covered
         }
 
         return is_local_cached;
+    }
+
+    void CoveredLocalCache::updateLocalUncachedStatisticsForRspInternal_(const Key& key, const Value& value, const bool& is_getrsp) const
+    {
+        bool is_key_tracked = local_uncached_sorted_popularity_multimap_.isKeyExist(key);
+        if (is_key_tracked)
+        {
+            if (is_getrsp) // For get response with cache miss
+            {
+                updateLocalUncachedStatisticsForCandidateKey_(key);
+            }
+            else // For put/del response with cache miss
+            {
+                updateLocalUncachedStatisticsForCandidateKeyValue_(key, value);
+            }
+        }
+        else
+        {
+            updateLocalUncachedStatisticsForNewlyTracked_(key, value);
+
+            Key detracked_key;
+            bool need_detrack = local_uncached_sorted_popularity_multimap_.needDetrack(detracked_key);
+            if (need_detrack)
+            {
+                updateLocalUncachedStatisticsForDetracked_(detracked_key);
+            }
+        }
+        return;
     }
 
     // (3) Local edge cache management
@@ -236,7 +264,7 @@ namespace covered
 
     // Update local cached statistics
     
-    void CoveredLocalCache::updateStatisticsForCachedKey_(const Key& key) const
+    void CoveredLocalCache::updateLocalCachedStatisticsForCachedKey_(const Key& key) const
     {
         // Update local cached object-level statistics
         const KeyLevelStatistics& tmp_key_level_statistics = local_cached_perkey_statistics_map_.updateForExistingKey(key);
@@ -252,4 +280,9 @@ namespace covered
     }
 
     // Update local uncached statistics
+
+    void CoveredLocalCache::updateLocalUncachedStatisticsForCandidateKey_(const Key& key) const
+    {
+        // TODO: END HERE
+    }
 }

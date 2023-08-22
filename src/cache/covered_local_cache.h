@@ -48,10 +48,12 @@ namespace covered
 
         virtual bool isLocalCachedInternal_(const Key& key) const override;
 
-        // (2) Access local edge cache
+        // (2) Access local edge cache (KV data and local statistics)
 
         virtual bool getLocalCacheInternal_(const Key& key, Value& value) const override;
         virtual bool updateLocalCacheInternal_(const Key& key, const Value& value) override;
+
+        virtual void updateLocalUncachedStatisticsForRspInternal_(const Key& key, const Value& value, const bool& is_getrsp) const override; // Triggered by get/put/delres for cache miss for admission policy if any
 
         // (3) Local edge cache management
 
@@ -71,16 +73,16 @@ namespace covered
         // (5) COVERED-specific functions
 
         // Update local cached statistics
-        //void updateLStatisticsForAdmission_(const Key& key); // Triggered by admission of newly admitted objects
-        void updateStatisticsForCachedKey_(const Key& key) const; // Triggered by get requests with cache hits
-        //void updateStatisticsForCachedKeyValue_(const Key& key); // Triggered by put requests with cache hits
-        //void updateStatisticsForEviction_(const Key& key); // Triggered by eviction of victim objects
+        //void updateLocalCachedStatisticsForAdmission_(const Key& key, const Value& value) const; // Triggered by admission of newly admitted objects
+        void updateLocalCachedStatisticsForCachedKey_(const Key& key) const; // Triggered by get requests with cache hits
+        //void updateLocalCachedStatisticsForCachedKeyValue_(const Key& key, const Value& value) const; // Triggered by put requests with cache hits
+        //void updateLocalCachedStatisticsForEviction_(const Key& key) const; // Triggered by eviction of victim objects
 
         // Update local uncached statistics
-        //void updateStatisticsForNewlyTracked_(const Key& key);// Triggered by newly tracked objects in candidate list
-        //void updateStatisticsForCandidateKey_(const Key& key); // Triggered by get responses for cache misses
-        //void updateStatisticsForCandidateKeyValue_(const Key& key); // Triggered by get responses for cache misses
-        //void updateStatisticsForDetracked_(const Key& key); // Triggered by detracked objects in candidate list
+        //void updateLocalUncachedStatisticsForNewlyTracked_(const Key& key, const Value& value) const;// Triggered by newly tracked objects in candidate list
+        void updateLocalUncachedStatisticsForCandidateKey_(const Key& key) const; // Triggered by get responses for cache misses
+        //void updateLocalUncachedStatisticsForCandidateKeyValue_(const Key& key) const; // Triggered by put/del responses for cache misses
+        //void updateLocalUncachedStatisticsForDetracked_(const Key& key) const; // Triggered by detracked objects in candidate list
 
         // Member variables
 

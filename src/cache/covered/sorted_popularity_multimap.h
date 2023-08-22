@@ -12,6 +12,9 @@
 #include <unordered_map> // std::unordered_map
 
 #include "cache/covered/common_header.h"
+#include "cache/covered/key_level_statistics.h"
+#include "cache/covered/group_level_statistics.h"
+#include "common/key.h"
 
 // NOTE: we do NOT count the total size of popularity_lookup_table_ here, as per-key popularity iterator can be maintained in cachelib::ChainedHashTable for local cached objects (we track it here individually just for implementation simplicity) -> getSizeForCapacityWithoutLookupTable
 // NOTE: we have to count the total size of popularity_lookup_table_ for local uncached objects -> getSizeForCapacityWithLookupTable
@@ -23,6 +26,8 @@ namespace covered
     public:
         SortedPopularityMultimap();
         ~SortedPopularityMultimap();
+
+        bool isKeyExist(const Key& key) const;
 
         void updateForExistingKey(const Key& key, const KeyLevelStatistics& key_level_statistics, const GroupLevelStatistics& group_level_statistics); // Admitted cached key or tracked uncached key
 

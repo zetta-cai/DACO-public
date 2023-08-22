@@ -1069,30 +1069,22 @@ namespace covered
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
         bool is_finish = false;
+
+        bool is_local_cached_and_invalid = false;
+        if (value.isDeleted()) // value is deleted
+        {
+            is_local_cached_and_invalid = tmp_edge_wrapper_ptr->getEdgeCachePtr()->removeIfInvalidForGetrsp(key); // remove will NOT trigger eviction
+        }
+        else // non-deleted value
+        {
+            is_local_cached_and_invalid = tmp_edge_wrapper_ptr->getEdgeCachePtr()->updateIfInvalidForGetrsp(key, value);
+
+            if (is_local_cached_and_invalid) // update may trigger eviction
+            {
+                is_finish = evictForCapacity_(key, value, event_list, skip_propagation_latency);
+            }
+        }
         
-        bool is_local_cached = tmp_edge_wrapper_ptr->getEdgeCachePtr()->isLocalCached(key);
-        bool is_cached_and_invalid = false;
-        if (is_local_cached)
-        {
-            bool is_valid = tmp_edge_wrapper_ptr->getEdgeCachePtr()->isValidKeyForLocalCachedObject(key);
-            is_cached_and_invalid = is_local_cached && !is_valid;
-        }
-
-        if (is_cached_and_invalid)
-        {
-            bool is_local_cached_after_udpate = false;
-            if (value.isDeleted()) // value is deleted
-            {
-                removeLocalEdgeCache_(key, is_local_cached_after_udpate);
-            }
-            else // non-deleted value
-            {
-                // Add events of intermediate response if with event tracking
-                is_finish = updateLocalEdgeCache_(key, value, is_local_cached_after_udpate, event_list, skip_propagation_latency);
-            }
-            assert(is_local_cached_after_udpate);
-        }
-
         return is_finish;
     }
 
@@ -1107,35 +1099,7 @@ namespace covered
 
         is_local_cached_after_udpate = tmp_edge_wrapper_ptr->getEdgeCachePtr()->update(key, value);
 
-        while (true) // Evict until used bytes <= capacity bytes
-        {
-            // Data and metadata for local edge cache, and cooperation metadata
-            uint64_t used_bytes = tmp_edge_wrapper_ptr->getSizeForCapacity();
-            if (used_bytes <= tmp_edge_wrapper_ptr->getCapacityBytes()) // Not exceed capacity limitation
-            {
-                break;
-            }
-            else // Exceed capacity limitation
-            {
-                std::vector<Key> victim_keys;
-                victim_keys.clear();
-                std::vector<Value> victim_values;
-                victim_values.clear();
-                tmp_edge_wrapper_ptr->getEdgeCachePtr()->evict(victim_keys, victim_values, key, value);
-                
-                for (uint32_t i = 0; i < victim_keys.size(); i++)
-                {
-                    bool _unused_is_being_written = false; // NOTE: is_being_written does NOT affect cache eviction
-                    is_finish = updateDirectory_(victim_keys[i], false, _unused_is_being_written, event_list, skip_propagation_latency);
-                    if (is_finish)
-                    {
-                        return is_finish;
-                    }
-                }
-
-                continue;
-            }
-        }
+        is_finish = evictForCapacity_(key, value, event_list, skip_propagation_latency);
 
         return is_finish;
     }
@@ -1165,6 +1129,56 @@ namespace covered
         if (!is_local_cached && tmp_edge_wrapper_ptr->getEdgeCachePtr()->needIndependentAdmit(key))
         {
             is_finish = triggerIndependentAdmission_(key, value, event_list, skip_propagation_latency);
+        }
+
+        return is_finish;
+    }
+
+    bool CacheServerWorkerBase::evictForCapacity_(const Key& admit_key, const Value& admit_value, EventList& event_list, const bool& skip_propagation_latency) const
+    {
+        checkPointers_();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+
+        bool is_finish = false;
+
+        while (true) // Evict until used bytes <= capacity bytes
+        {
+            // Data and metadata for local edge cache, and cooperation metadata
+            uint64_t used_bytes = tmp_edge_wrapper_ptr->getSizeForCapacity();
+            if (used_bytes <= tmp_edge_wrapper_ptr->getCapacityBytes()) // Not exceed capacity limitation
+            {
+                break;
+            }
+            else // Exceed capacity limitation
+            {
+                struct timespec update_directory_to_evict_start_timestamp = Util::getCurrentTimespec();
+
+                std::vector<Key> victim_keys;
+                victim_keys.clear();
+                std::vector<Value> victim_values;
+                victim_values.clear();
+                tmp_edge_wrapper_ptr->getEdgeCachePtr()->evict(victim_keys, victim_values, admit_key, admit_value);
+
+                for (uint32_t i = 0; i < victim_keys.size(); i++)
+                {
+                    bool _unused_is_being_written = false; // NOTE: is_being_written does NOT affect cache eviction
+                    is_finish = updateDirectory_(victim_keys[i], false, _unused_is_being_written, event_list, skip_propagation_latency);
+                    if (is_finish)
+                    {
+                        return is_finish;
+                    }
+
+                    #ifdef DEBUG_CACHE_SERVER
+                    Util::dumpVariablesForDebug(instance_name_, 7, "eviction;", "keystr:", victim_keys[i].getKeystr().c_str(), "is value deleted:", Util::toString(victim_values[i].isDeleted()).c_str(), "value size:", Util::toString(victim_values[i].getValuesize()).c_str());
+                    #endif
+                }
+
+                struct timespec update_directory_to_evict_end_timestamp = Util::getCurrentTimespec();
+                uint32_t update_directory_to_evict_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(update_directory_to_evict_end_timestamp, update_directory_to_evict_start_timestamp));
+                event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_UPDATE_DIRECTORY_TO_EVICT_EVENT_NAME, update_directory_to_evict_latency_us); // Add intermediate event if with event tracking
+
+                continue;
+            }
         }
 
         return is_finish;
