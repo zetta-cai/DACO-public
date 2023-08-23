@@ -194,7 +194,7 @@ namespace covered
         else // If key is locally uncached
         {
             // Update local uncached metadata for admission policy if any
-            local_cache_ptr_->updateLocalUncachedMetadataForRsp(key, value, true);
+            local_cache_ptr_->updateLocalUncachedMetadataForRsp(key, value, value, false);
         }
 
         cache_wrapper_perkey_rwlock_ptr_->unlock(key, context_name);

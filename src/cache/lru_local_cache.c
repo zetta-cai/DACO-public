@@ -57,7 +57,7 @@ namespace covered
         return is_local_cached;
     }
 
-    void LruLocalCache::updateLocalUncachedMetadataForRspInternal_(const Key& key, const Value& value, const bool& is_getrsp) const
+    void LruLocalCache::updateLocalUncachedMetadataForRspInternal_(const Key& key, const Value& value, const Value& original_value, const bool& is_value_related) const
     {
         // LRU cache uses default admission policy (i.e., always admit), which does NOT need to update local metadata for get/putres of uncached objects
         return;

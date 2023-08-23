@@ -111,7 +111,7 @@ namespace covered
         return is_local_cached;
     }
 
-    void LocalCacheBase::updateLocalUncachedMetadataForRsp(const Key& key, const Value& value, const bool& is_getrsp) const
+    void LocalCacheBase::updateLocalUncachedMetadataForRsp(const Key& key, const Value& value, const Value& original_value, const bool& is_value_related) const
     {
         checkPointers_();
 
@@ -119,7 +119,7 @@ namespace covered
         std::string context_name = "LocalCacheBase::updateLocalUncachedMetadataForRsp(key, value)";
         rwlock_for_local_cache_ptr_->acquire_lock(context_name);
 
-        updateLocalUncachedMetadataForRspInternal_(key, value, is_getrsp);
+        updateLocalUncachedMetadataForRspInternal_(key, value, original_value, is_value_related);
 
         rwlock_for_local_cache_ptr_->unlock(context_name);
         return;

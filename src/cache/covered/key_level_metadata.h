@@ -17,6 +17,7 @@ namespace covered
     {
     public:
         KeyLevelMetadata(const GroupId& group_id);
+        KeyLevelMetadata(const KeyLevelMetadata& other);
         ~KeyLevelMetadata();
 
         void updateDynamicMetadata();

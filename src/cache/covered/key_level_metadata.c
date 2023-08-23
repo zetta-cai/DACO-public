@@ -9,6 +9,11 @@ namespace covered
         frequency_ = 0;
     }
 
+    KeyLevelMetadata::KeyLevelMetadata(const KeyLevelMetadata& other) : group_id_(other.group_id_)
+    {
+        frequency_ = other.frequency_;
+    }
+
     KeyLevelMetadata::~KeyLevelMetadata() {}
 
     void KeyLevelMetadata::updateDynamicMetadata()

@@ -14,7 +14,7 @@ namespace covered
 
     const std::string CoveredLocalCache::kClassName("CoveredLocalCache");
 
-    CoveredLocalCache::CoveredLocalCache(const uint32_t& edge_idx, const uint64_t& capacity_bytes) : LocalCacheBase(edge_idx), local_cached_metadata_(), local_uncached_metadata_()
+    CoveredLocalCache::CoveredLocalCache(const uint32_t& edge_idx, const uint64_t& capacity_bytes) : LocalCacheBase(edge_idx), local_cached_metadata_(false), local_uncached_metadata_(true)
     {
         // (A) Const variable
 
@@ -85,7 +85,7 @@ namespace covered
             value = Value(handle->getSize());
 
             // Update local cached metadata for getreq with cache hit
-            local_cached_metadata_.updateForExistingKey(key);
+            local_cached_metadata_.updateForExistingKey(key, value, value, false);
         }
 
         // NOTE: for getreq with cache miss, we will update local uncached metadata for getres by updateLocalUncachedStatisticsForAdmitInternal_(key)
@@ -120,30 +120,22 @@ namespace covered
         return is_local_cached;
     }
 
-    void CoveredLocalCache::updateLocalUncachedMetadataForRspInternal_(const Key& key, const Value& value, const bool& is_getrsp) const
+    void CoveredLocalCache::updateLocalUncachedMetadataForRspInternal_(const Key& key, const Value& value, const Value& original_value, const bool& is_value_related) const
     {
         bool is_key_tracked = local_uncached_metadata_.isKeyExist(key);
         if (is_key_tracked)
         {
-            if (is_getrsp) // For get response with cache miss
-            {
-                local_uncached_metadata_.updateForExistingKey(key);
-            }
-            else // For put/del response with cache miss
-            {
-                // TODO: END HERE
-                updateLocalUncachedStatisticsForCandidateKeyValue_(key, value);
-            }
+            local_uncached_metadata_.updateForExistingKey(key, value, original_value, is_value_related); // For getrsp with cache miss
         }
         else
         {
-            updateLocalUncachedStatisticsForNewlyTracked_(key, value);
+            local_uncached_metadata_.addForNewKey(key, value); // For getrsp with cache miss
 
             Key detracked_key;
-            bool need_detrack = local_uncached_sorted_popularity_multimap_.needDetrack(detracked_key);
+            bool need_detrack = local_uncached_metadata_.needDetrack(detracked_key);
             if (need_detrack)
             {
-                updateLocalUncachedStatisticsForDetracked_(detracked_key);
+                local_uncached_metadata_.removeForExistingKey(detracked_key, original_value); // For getrsp with cache miss
             }
         }
         return;
@@ -259,17 +251,5 @@ namespace covered
     {
         assert(cachelib_cache_ptr_ != NULL);
         return;
-    }
-
-    // (5) COVERED-specific functions
-
-    // Update local cached metadata
-
-    // Update local uncached metadata
-
-    void CoveredLocalCache::updateLocalUncachedStatisticsForCandidateKey_(const Key& key) const
-    {
-        // Update local uncached object-level metadata
-        const KeyLevelMetadata& tmp_key_level_statistics = local_uncached_perkey_statistics_candidate_list_.updateForExistingKey(key);
     }
 }

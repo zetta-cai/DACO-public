@@ -10,6 +10,12 @@ namespace covered
         object_cnt_ = 0;
     }
 
+    GroupLevelMetadata::GroupLevelMetadata(const GroupLevelMetadata& other)
+    {
+        avg_object_size_ = other.avg_object_size_;
+        object_cnt_ = other.object_cnt_;
+    }
+
     GroupLevelMetadata::~GroupLevelMetadata() {}
 
     void GroupLevelMetadata::updateForNewlyGrouped(const Key& key, const Value& value)
@@ -35,12 +41,14 @@ namespace covered
         return;
     }
 
-    void GroupLevelMetadata::updateForDegrouped(const Key& key, const Value& original_value)
+    bool GroupLevelMetadata::updateForDegrouped(const Key& key, const Value& original_value)
     {
         uint32_t original_object_size = key.getKeystr().length() + original_value.getValuesize();
         avg_object_size_ = (avg_object_size_ * object_cnt_ - original_object_size) / (object_cnt_ - 1);
         object_cnt_--;
-        return;
+
+        bool is_group_empty = (object_cnt_ == 0);
+        return is_group_empty;
     }
 
     uint32_t GroupLevelMetadata::getAvgObjectSize() const
