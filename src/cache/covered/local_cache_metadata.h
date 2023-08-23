@@ -34,6 +34,7 @@ namespace covered
     typedef std::multimap<Popularity, perkey_lookup_iter_t> sorted_popularity_multimap_t;
     typedef std::unordered_map<Key, LookupMetadata, KeyHasher> perkey_lookup_table_t;
     typedef perkey_lookup_table_t::iterator perkey_lookup_iter_t;
+    typedef perkey_lookup_table_t::const_iterator perkey_lookup_const_iter_t;
 
     class LookupMetadata
     {
@@ -61,33 +62,39 @@ namespace covered
         ~LocalCacheMetadata();
 
         bool isKeyExist(const Key& key) const; // Check if key has been admitted or tracked for local cached or uncached object
-        bool needDetrack(Key& detracked_key) const; // Check if need to detrack the least popular key for local uncached object
+        bool needDetrackForUncachedObjects(Key& detracked_key) const; // Check if need to detrack the least popular key for local uncached object
+        uint32_t getApproxDetrackValueForUncachedObjects(const Key& detracked_key) const; // Get approximated detrack value for local uncached object
 
         void addForNewKey(const Key& key, const Value& value); // Newly admitted cached key or currently tracked uncached key (triggered by getrsp with cache miss)
         void updateForExistingKey(const Key& key, const Value& value, const Value& original_value, const bool& is_value_related); // Admitted cached key or tracked uncached key (is_value_related = false: triggered by getreq with cache hit, getrsp with cache miss)
-        void removeForExistingKey(const Key& detracked_key, const Value& original_value); // Remove admitted cached key or tracked uncached key (triggered by getrsp with cache miss)
+        void removeForExistingKey(const Key& detracked_key, const Value& value); // Remove admitted cached key or tracked uncached key (triggered by getrsp with cache miss)
     private:
         static const std::string kClassName;
 
         // For object-level metadata
         perkey_metadata_list_t::iterator addPerkeyMetadata_(const Key& key, const GroupId& assigned_group_id); // Return new perkey metadata iterator
         const KeyLevelMetadata& updatePerkeyMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter); // Return updated KeyLevelMetadata
+        void removePerkeyMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter);
 
         // For group-level metadata
+        const GroupLevelMetadata& getGroupLevelMetadata_(const perkey_lookup_const_iter_t& perkey_lookup_const_iter) const; // Return existing GroupLevelMetadata
         const GroupLevelMetadata& addPergroupMetadata_(const Key& key, const Value& value, GroupId& assigned_group_id); // Return added/updated GroupLevelMetadata
         const GroupLevelMetadata& updatePergroupMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter, const Key& key, const Value& value, const Value& original_value, const bool& is_value_related); // Return updated GroupLevelMetadata
-        void removePergroupMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter, const Key& key, const Value& original_value);
+        void removePergroupMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter, const Key& key, const Value& value);
 
         // For popularity information
         Popularity calculatePopularity_(const KeyLevelMetadata& key_level_statistics, const GroupLevelMetadata& group_level_statistics) const; // Calculate popularity based on object-level and group-level metadata
         sorted_popularity_multimap_t::iterator addPopularity_(const Popularity& new_popularity, const perkey_lookup_iter_t& perkey_lookup_iter); // Return new sorted popularity iterator
         sorted_popularity_multimap_t::iterator updatePopularity_(const Popularity& new_popularity, const perkey_lookup_iter_t& perkey_lookup_iter); // Return updated sorted popularity iterator
+        void removePopularity_(const perkey_lookup_iter_t& perkey_lookup_iter);
 
         // For lookup table
         perkey_lookup_iter_t getLookup_(const Key& key); // Return lookup iterator (end() if not found)
+        perkey_lookup_const_iter_t getLookup_(const Key& key) const; // Return lookup const iterator (end() if not found)
         perkey_lookup_iter_t addLookup_(const Key& key); // Return new lookup iterator
         void updateLookup_(const perkey_lookup_iter_t& perkey_lookup_iter, const sorted_popularity_multimap_t::iterator& new_sorted_popularity_iter);
         void updateLookup_(const perkey_lookup_iter_t& perkey_lookup_iter, const perkey_metadata_list_t::iterator& perkey_metadata_iter, const sorted_popularity_multimap_t::iterator& sorted_popularity_iter);
+        void removeLookup_(const perkey_lookup_iter_t& perkey_lookup_iter);
 
         const bool is_for_uncached_objects_; // Whether this metadata is tracked for uncached objects for admission policy
         

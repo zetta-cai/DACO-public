@@ -62,7 +62,7 @@ namespace covered
 
         // NOTE: NO need to invoke recordAccess() as isLocalCached() does NOT update local metadata
 
-        LruCacheReadHandle handle = covered_cache_ptr_->find(keystr);
+        LruCacheReadHandle handle = covered_cache_ptr_->find(keystr); // NOTE: although find() will move the item to the front of the LRU list to update recency information inside cachelib, covered uses local cache metadata tracked outside cachelib for cache management
         bool is_cached = (handle != nullptr);
 
         return is_cached;
@@ -77,7 +77,7 @@ namespace covered
         // NOTE: NOT take effect as cacheConfig.nvmAdmissionPolicyFactory is empty by default
         //covered_cache_ptr_->recordAccess(keystr);
 
-        LruCacheReadHandle handle = covered_cache_ptr_->find(keystr); // NOTE: find() will move the item to the front of the LRU list to update recency information
+        LruCacheReadHandle handle = covered_cache_ptr_->find(keystr); // NOTE: although find() will move the item to the front of the LRU list to update recency information inside cachelib, covered uses local cache metadata tracked outside cachelib for cache management
         bool is_local_cached = (handle != nullptr);
         if (is_local_cached)
         {
@@ -95,6 +95,8 @@ namespace covered
 
     bool CoveredLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value)
     {
+        // TODO: END HERE
+
         // TODO: we should invoke updateLocalUncachedMetadataForRspInternal_(key, value, false) in CacheWrapper::update() for put/delrsp
 
         const std::string keystr = key.getKeystr();
@@ -132,10 +134,11 @@ namespace covered
             local_uncached_metadata_.addForNewKey(key, value); // For getrsp with cache miss
 
             Key detracked_key;
-            bool need_detrack = local_uncached_metadata_.needDetrack(detracked_key);
+            bool need_detrack = local_uncached_metadata_.needDetrackForUncachedObjects(detracked_key);
             if (need_detrack)
             {
-                local_uncached_metadata_.removeForExistingKey(detracked_key, original_value); // For getrsp with cache miss
+                uint32_t approx_detrack_value_size = local_uncached_metadata_.getApproxDetrackValueForUncachedObjects(detracked_key);
+                local_uncached_metadata_.removeForExistingKey(detracked_key, approx_detrack_value_size); // For getrsp with cache miss
             }
         }
         return;
