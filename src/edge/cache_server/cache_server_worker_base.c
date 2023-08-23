@@ -1118,22 +1118,6 @@ namespace covered
 
     // (5) Admit uncached objects in local edge cache
 
-    bool CacheServerWorkerBase::tryToTriggerIndependentAdmission_(const Key& key, const Value& value, EventList& event_list, const bool& skip_propagation_latency) const
-    {
-        checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
-
-        bool is_finish = false;
-
-        bool is_local_cached = tmp_edge_wrapper_ptr->getEdgeCachePtr()->isLocalCached(key);
-        if (!is_local_cached && tmp_edge_wrapper_ptr->getEdgeCachePtr()->needIndependentAdmit(key))
-        {
-            is_finish = triggerIndependentAdmission_(key, value, event_list, skip_propagation_latency);
-        }
-
-        return is_finish;
-    }
-
     bool CacheServerWorkerBase::evictForCapacity_(const Key& admit_key, const Value& admit_value, EventList& event_list, const bool& skip_propagation_latency) const
     {
         checkPointers_();

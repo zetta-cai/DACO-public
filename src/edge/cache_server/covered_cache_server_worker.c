@@ -67,12 +67,13 @@ namespace covered
 
     // (5) Admit uncached objects in local edge cache
 
-    bool CoveredCacheServerWorker::triggerIndependentAdmission_(const Key& key, const Value& value, EventList& event_list, const bool& skip_propagation_latency) const
+    bool CoveredCacheServerWorker::tryToTriggerIndependentAdmission_(const Key& key, const Value& value, EventList& event_list, const bool& skip_propagation_latency) const
     {
+        // std::ostringstream oss;
+        // Util::dumpErrorMsg(instance_name_, "tryToTriggerIndependentAdmission_() should NOT be invoked in CoveredCacheServerWorker!");
+        // exit(1);
+
         // NOTE: COVERED will NOT trigger any independent cache admission/eviction decision
-        std::ostringstream oss;
-        Util::dumpErrorMsg(instance_name_, "triggerIndependentAdmission_() should NOT be invoked in CoveredCacheServerWorker!");
-        exit(1);
         return false;
     }
 }

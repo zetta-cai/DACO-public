@@ -123,10 +123,8 @@ namespace covered
 
         // (5) Admit uncached objects in local edge cache
 
-        // Return if edge node is finished
-        bool tryToTriggerIndependentAdmission_(const Key& key, const Value& value, EventList& event_list, const bool& skip_propagation_latency) const;
-        // NOTE: we will check capacity and trigger eviction for cache admission
-        virtual bool triggerIndependentAdmission_(const Key& key, const Value& value, EventList& event_list, const bool& skip_propagation_latency) const = 0;
+        // Return if edge node is finished (we will check capacity and trigger eviction for cache admission)
+        virtual bool tryToTriggerIndependentAdmission_(const Key& key, const Value& value, EventList& event_list, const bool& skip_propagation_latency) const = 0;
 
         // Member variables
 

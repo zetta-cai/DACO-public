@@ -482,32 +482,39 @@ namespace covered
 
     // (5) Admit uncached objects in local edge cache
 
-    bool BasicCacheServerWorker::triggerIndependentAdmission_(const Key& key, const Value& value, EventList& event_list, const bool& skip_propagation_latency) const
+    bool BasicCacheServerWorker::tryToTriggerIndependentAdmission_(const Key& key, const Value& value, EventList& event_list, const bool& skip_propagation_latency) const
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
         bool is_finish = false;
 
-        #ifdef DEBUG_CACHE_SERVER
-        uint64_t used_bytes_before_admit = tmp_edge_wrapper_ptr->getSizeForCapacity();
-        Util::dumpVariablesForDebug(instance_name_, 11, "independent admission;", "keystr:", key.getKeystr().c_str(), "keysize:", std::to_string(key.getKeystr().length()).c_str(), "is value deleted:", Util::toString(value.isDeleted()).c_str(), "value size:", Util::toString(value.getValuesize()).c_str(), "used_bytes_before_admit:", std::to_string(used_bytes_before_admit).c_str());
-        #endif
+        bool is_local_cached = tmp_edge_wrapper_ptr->getEdgeCachePtr()->isLocalCached(key);
+        if (!is_local_cached && tmp_edge_wrapper_ptr->getEdgeCachePtr()->needIndependentAdmit(key))
+        { // Trigger independent admission
+            #ifdef DEBUG_CACHE_SERVER
+            uint64_t used_bytes_before_admit = tmp_edge_wrapper_ptr->getSizeForCapacity();
+            Util::dumpVariablesForDebug(instance_name_, 11, "independent admission;", "keystr:", key.getKeystr().c_str(), "keysize:", std::to_string(key.getKeystr().length()).c_str(), "is value deleted:", Util::toString(value.isDeleted()).c_str(), "value size:", Util::toString(value.getValuesize()).c_str(), "used_bytes_before_admit:", std::to_string(used_bytes_before_admit).c_str());
+            #endif
 
-        // Independently admit the new key-value pair into local edge cache
-        struct timespec update_directory_to_admit_start_timestamp = Util::getCurrentTimespec();
-        bool is_being_written = false;
-        is_finish = updateDirectory_(key, true, is_being_written, event_list, skip_propagation_latency);
-        if (is_finish)
-        {
-            return is_finish;
+            struct timespec update_directory_to_admit_start_timestamp = Util::getCurrentTimespec();
+
+            // Independently admit the new key-value pair into local edge cache
+            bool is_being_written = false;
+            is_finish = updateDirectory_(key, true, is_being_written, event_list, skip_propagation_latency);
+            if (is_finish)
+            {
+                return is_finish;
+            }
+            tmp_edge_wrapper_ptr->getEdgeCachePtr()->admit(key, value, !is_being_written); // valid if not being written
+
+            struct timespec update_directory_to_admit_end_timestamp = Util::getCurrentTimespec();
+            uint32_t update_directory_to_admit_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(update_directory_to_admit_end_timestamp, update_directory_to_admit_start_timestamp));
+            event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_UPDATE_DIRECTORY_TO_ADMIT_EVENT_NAME, update_directory_to_admit_latency_us); // Add intermediate event if with event tracking
+
+            // Trigger eviction if necessary
+            is_finish = evictForCapacity_(key, value, event_list, skip_propagation_latency);
         }
-        tmp_edge_wrapper_ptr->getEdgeCachePtr()->admit(key, value, !is_being_written); // valid if not being written
-        struct timespec update_directory_to_admit_end_timestamp = Util::getCurrentTimespec();
-        uint32_t update_directory_to_admit_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(update_directory_to_admit_end_timestamp, update_directory_to_admit_start_timestamp));
-        event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_UPDATE_DIRECTORY_TO_ADMIT_EVENT_NAME, update_directory_to_admit_latency_us); // Add intermediate event if with event tracking
-
-        is_finish = evictForCapacity_(key, value, event_list, skip_propagation_latency);
 
         return is_finish;
     }
