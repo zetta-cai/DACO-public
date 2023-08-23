@@ -64,10 +64,7 @@ namespace covered
         // TODO: Add object-level metadata for new key
 
         // Add group-level metadata for new key
-        GroupId group_id = assignGroupIdForNewKey_();
-        pergroup_metadata_map_t::iterator pergroup_metadata_iter = pergroup_metadata_map_.insert(std::pair(group_id, GroupLevelMetadata())).first;
-        assert(pergroup_metadata_iter != pergroup_metadata_map_.end());
-        pergroup_metadata_iter->second.updateForNewlyGrouped(key, value);
+        const GroupLevelMetadata& pergroup_metadata_ref = addPergroupMetadata_(key, value);
 
         // TODO: Add popularity for new key
 
@@ -77,46 +74,79 @@ namespace covered
     void LocalCacheMetadata::updateForExistingKey(const Key& key)
     {
         // Get lookup iterator
-        perkey_lookup_table_t::iterator perkey_lookup_iter = perkey_lookup_table_.find(key);
+        perkey_lookup_iter_t perkey_lookup_iter = perkey_lookup_table_.find(key);
         assert(perkey_lookup_iter != perkey_lookup_table_.end());
-        const LookupMetadata& lookup_metadata = perkey_lookup_iter->second;
 
         // Update object-level metadata
-        perkey_metadata_list_t::iterator perkey_metadata_iter = lookup_metadata.getPerkeyMetadataIter();
-        assert(perkey_metadata_iter != perkey_metadata_list_.end());
-        perkey_metadata_iter->second.updateDynamicMetadata();
+        const KeyLevelMetadata& perkey_metadata_ref = updatePerkeyMetadata_(perkey_lookup_iter);
 
         // TODO: Update LRU list order
 
         // Update group-level metadata
-        GroupId tmp_group_id = perkey_metadata_iter->second.getGroupId(); // Get group ID 
-        pergroup_metadata_map_t::iterator pergroup_metadata_iter = pergroup_metadata_map_.find(tmp_group_id);
-        assert(pergroup_metadata_iter != pergroup_metadata_map_.end());
-        pergroup_metadata_iter->second.updateForInGroupKey(key);
+        const GroupLevelMetadata& pergroup_metadata_ref = updatePergroupMetadata_(perkey_lookup_iter, key);
 
         // Update popularity
-        sorted_popularity_multimap_t::iterator old_sorted_popularity_iter = lookup_metadata.getSortedPopularityIter();
-        assert(old_sorted_popularity_iter != sorted_popularity_multimap_.end());
-        Popularity new_popularity = calculatePopularity_(perkey_metadata_iter->second, pergroup_metadata_iter->second); // Calculate popularity
-        updatePopularity_(old_sorted_popularity_iter, new_popularity, perkey_lookup_iter);
+        Popularity new_popularity = calculatePopularity_(perkey_metadata_ref, pergroup_metadata_ref); // Calculate popularity
+        updatePopularity_(perkey_lookup_iter, new_popularity);
 
         return;
     }
 
-    GroupId LocalCacheMetadata::assignGroupIdForNewKey_()
+    // For object-level metadata
+    
+    const KeyLevelMetadata& LocalCacheMetadata::updatePerkeyMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter)
     {
+        const LookupMetadata& lookup_metadata = perkey_lookup_iter->second;
+        perkey_metadata_list_t::iterator perkey_metadata_iter = lookup_metadata.getPerkeyMetadataIter();
+        assert(perkey_metadata_iter != perkey_metadata_list_.end()); // For existing key
+
+        perkey_metadata_iter->second.updateDynamicMetadata();
+
+        return perkey_metadata_iter->second;
+    }
+
+    // For group-level metadata
+
+    const GroupLevelMetadata& LocalCacheMetadata::addPergroupMetadata_(const Key& key, const Value& value)
+    {
+        // Assigne group ID for new key
         cur_group_keycnt_++;
         if (cur_group_keycnt_ > COVERED_PERGROUP_MAXKEYCNT)
         {
             cur_group_id_++;
             cur_group_keycnt_ = 1;
         }
+        GroupId assigned_group_id = cur_group_id_;
 
-        return cur_group_id_;
+        // Add group-level metadata for new key
+        pergroup_metadata_map_t::iterator pergroup_metadata_iter = pergroup_metadata_map_.insert(std::pair(assigned_group_id, GroupLevelMetadata())).first;
+        assert(pergroup_metadata_iter != pergroup_metadata_map_.end());
+        pergroup_metadata_iter->second.updateForNewlyGrouped(key, value);
+
+        return pergroup_metadata_iter->second;
     }
 
-    void LocalCacheMetadata::updatePopularity_(const sorted_popularity_multimap_t::iterator& old_sorted_popularity_iter, const Popularity& new_popularity, perkey_lookup_iter_t& perkey_lookup_iter)
+    const GroupLevelMetadata& LocalCacheMetadata::updatePergroupMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter, const Key& key)
     {
+        const LookupMetadata& lookup_metadata = perkey_lookup_iter->second;
+        perkey_metadata_list_t::iterator perkey_metadata_iter = lookup_metadata.getPerkeyMetadataIter();
+        assert(perkey_metadata_iter != perkey_metadata_list_.end()); // For existing key
+
+        GroupId tmp_group_id = perkey_metadata_iter->second.getGroupId(); // Get group ID 
+        pergroup_metadata_map_t::iterator pergroup_metadata_iter = pergroup_metadata_map_.find(tmp_group_id);
+        assert(pergroup_metadata_iter != pergroup_metadata_map_.end());
+        pergroup_metadata_iter->second.updateForInGroupKey(key);
+
+        return pergroup_metadata_iter->second;
+    }
+
+    // For popularity information
+
+    void LocalCacheMetadata::updatePopularity_(perkey_lookup_iter_t& perkey_lookup_iter, const Popularity& new_popularity)
+    {
+        const LookupMetadata& lookup_metadata = perkey_lookup_iter->second;
+        sorted_popularity_multimap_t::iterator old_sorted_popularity_iter = lookup_metadata.getSortedPopularityIter();
+        assert(old_sorted_popularity_iter != sorted_popularity_multimap_.end()); // For existing key
         assert(old_sorted_popularity_iter->second == perkey_lookup_iter);
 
         /*// Get handle referring to item by move assignment operator

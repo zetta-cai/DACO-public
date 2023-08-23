@@ -63,12 +63,16 @@ namespace covered
 
         static const std::string kClassName;
 
+        // For object-level metadata
+        const KeyLevelMetadata& updatePerkeyMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter);
+
         // For group-level metadata
-        GroupId assignGroupIdForNewKey_();
+        const GroupLevelMetadata& addPergroupMetadata_(const Key& key, const Value& value);
+        const GroupLevelMetadata& updatePergroupMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter, const Key& key);
 
         // For popularity information
         Popularity calculatePopularity_(const KeyLevelMetadata& key_level_statistics, const GroupLevelMetadata& group_level_statistics) const; // Calculate popularity based on object-level and group-level metadata
-        void updatePopularity_(const sorted_popularity_multimap_t::iterator& old_sorted_popularity_iter, const Popularity& new_popularity, perkey_lookup_iter_t& perkey_lookup_iter); // Return new sorted popularity iterator
+        void updatePopularity_(perkey_lookup_iter_t& perkey_lookup_iter, const Popularity& new_popularity); // Return new sorted popularity iterator
         
         // Object-level metadata
         perkey_metadata_list_t perkey_metadata_list_; // LRU list for object-level metadata (list index is recency information)
