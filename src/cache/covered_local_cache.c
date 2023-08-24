@@ -182,33 +182,50 @@ namespace covered
         return;
     }
 
-    bool CoveredLocalCache::getLocalCacheVictimKeyInternal_(Key& key, const Key& admit_key, const Value& admit_value) const
+    bool CoveredLocalCache::getLocalCacheVictimKeysInternal_(std::set<Key, KeyHasher>& keys, const uint64_t& required_size) const
     {
-        // TODO: END HERE
+        // TODO: this function will be invoked by beacon node for lazy fetching of candidate victims
         
         assert(hasFineGrainedManagement());
 
-        const std::string admit_keystr = admit_key.getKeystr();
-
-        // number of bytes required for this item
-        const auto requiredSize = LruCacheItem::getRequiredSize(admit_keystr, admit_value.getValuesize());
-        // TODO: maybe we can set requiredSize as 1 byte to ensure that we can always find a victim key
-
-        // the allocation class in our memory allocator.
-        const auto cid = cachelib_cache_ptr_->allocator_->getAllocationClassId(cachelib_poolid_, requiredSize);
-
-        LruCacheItem* item_ptr = cachelib_cache_ptr_->findEviction(cachelib_poolid_, cid);
-        bool has_victim_key = (item_ptr != nullptr);
-        if (has_victim_key)
+        bool has_victim_key = false;
+        uint32_t least_popular_rank = 0;
+        uint64_t conservative_victim_total_size = 0;
+        while (conservative_victim_total_size < required_size)
         {
-            std::string victim_keystr((const char*)item_ptr->getKey().data(), item_ptr->getKey().size()); // data() returns b_, while size() return e_ - b_
-            key = Key(victim_keystr);
+            Key tmp_victim_key;
+            bool is_least_popular_key_exist = local_cached_metadata_.getLeastPopularKey(least_popular_rank, tmp_victim_key);
+            if (is_least_popular_key_exist)
+            {
+                if (keys.find(tmp_victim_key) == keys.end())
+                {
+                    keys.insert(tmp_victim_key);
+
+                    const std::string tmp_victim_keystr = tmp_victim_key.getKeystr();
+                    LruCacheReadHandle tmp_victim_handle = covered_cache_ptr_->find(tmp_victim_keystr); // NOTE: although find() will move the item to the front of the LRU list to update recency information inside cachelib, covered uses local cache metadata tracked outside cachelib for cache management
+                    assert(tmp_victim_handle != nullptr); // Victim must be cached before eviction
+                    uint32_t tmp_victim_value_size = tmp_victim_handle->getSize();
+
+                    conservative_victim_total_size += (tmp_victim_key.getKeystr().length() + tmp_victim_value_size); // Count key size and value size into victim total size (conservative as we do NOT count metadata cache size usage -> the actual saved space after eviction should be larger than conservative_victim_total_size and also required_size)
+                }
+
+                has_victim_key = true;
+                least_popular_rank += 1;
+            }
+            else
+            {
+                std::ostringstream oss;
+                oss << "least_popular_rank " << least_popular_rank << " has used up popularity information for local cached objects!";
+                Util::dumpWarnMsg(instance_name_, oss.str());
+
+                break;
+            }
         }
 
         return has_victim_key;
     }
 
-    bool CoveredLocalCache::evictLocalCacheIfKeyMatchInternal_(const Key& key, Value& value, const Key& admit_key, const Value& admit_value)
+    bool CoveredLocalCache::evictLocalCacheWithGivenKeyInternal_(const Key& key, Value& value)
     {
         // TODO: we MUST release handle 
 

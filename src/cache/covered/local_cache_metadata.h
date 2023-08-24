@@ -62,6 +62,9 @@ namespace covered
         ~LocalCacheMetadata();
 
         bool isKeyExist(const Key& key) const; // Check if key has been admitted or tracked for local cached or uncached object
+        bool getLeastPopularKey(const uint32_t& least_popular_rank, Key& key) const; // Get ith least popular key
+        
+        // Only for local uncached object (i.e., is_for_uncached_objects_ = true)
         bool needDetrackForUncachedObjects(Key& detracked_key) const; // Check if need to detrack the least popular key for local uncached object
         uint32_t getApproxValueForUncachedObjects(const Key& key) const; // Get approximated value for local uncached object
 

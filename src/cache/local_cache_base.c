@@ -155,23 +155,23 @@ namespace covered
         return;
     }
 
-    bool LocalCacheBase::getLocalCacheVictimKey(Key& key, const Key& admit_key, const Value& admit_value) const
+    bool LocalCacheBase::getLocalCacheVictimKeys(std::set<Key, KeyHasher>& keys, const uint64_t& required_size) const
     {
         checkPointers_();
 
         assert(hasFineGrainedManagement());
 
         // Acquire a read lock for local metadata to update local metadata atomically
-        std::string context_name = "LocalCacheBase::getLocalCacheVictimKey()";
+        std::string context_name = "LocalCacheBase::getLocalCacheVictimKeys()";
         rwlock_for_local_cache_ptr_->acquire_lock_shared(context_name);
 
-        bool has_victim_key = getLocalCacheVictimKeyInternal_(key, admit_key, admit_value);
+        bool has_victim_key = getLocalCacheVictimKeysInternal_(keys, required_size);
 
         rwlock_for_local_cache_ptr_->unlock_shared(context_name);
         return has_victim_key;
     }
 
-    bool LocalCacheBase::evictLocalCacheIfKeyMatch(const Key& key, Value& value, const Key& admit_key, const Value& admit_value)
+    bool LocalCacheBase::evictLocalCacheWithGivenKey(const Key& key, Value& value)
     {
         checkPointers_();
 
@@ -181,7 +181,7 @@ namespace covered
         std::string context_name = "LocalCacheBase::evictLocalCacheIfKeyMatch()";
         rwlock_for_local_cache_ptr_->acquire_lock(context_name);
 
-        bool is_evict = evictLocalCacheIfKeyMatchInternal_(key, value, admit_key, admit_value);
+        bool is_evict = evictLocalCacheWithGivenKeyInternal_(key, value);
 
         rwlock_for_local_cache_ptr_->unlock(context_name);
         return is_evict;

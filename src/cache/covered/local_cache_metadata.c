@@ -65,6 +65,21 @@ namespace covered
         return (perkey_lookup_iter != perkey_lookup_table_.end());
     }
 
+    bool LocalCacheMetadata::getLeastPopularKey(const uint32_t& least_popular_rank, Key& key) const
+    {
+        bool is_least_popular_key_exist = false;
+
+        if (least_popular_rank < sorted_popularity_multimap_.size())
+        {
+            sorted_popularity_multimap_t::const_iterator sorted_popularity_iter = sorted_popularity_multimap_.begin();
+            std::advance(sorted_popularity_iter, least_popular_rank);
+            key = sorted_popularity_iter->second->first;
+            is_least_popular_key_exist = true;
+        }
+
+        return is_least_popular_key_exist;
+    }
+
     bool LocalCacheMetadata::needDetrackForUncachedObjects(Key& detracked_key) const
     {
         // NOTE: we only limit the number of tracked metadata for local uncached objects

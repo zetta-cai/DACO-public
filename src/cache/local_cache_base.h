@@ -9,6 +9,7 @@
 #ifndef LOCAL_CACHE_BASE_H
 #define LOCAL_CACHE_BASE_H
 
+#include <set>
 #include <string>
 #include <vector>
 
@@ -47,8 +48,8 @@ namespace covered
         void admitLocalCache(const Key& key, const Value& value);
 
         // If local cache supports fine-grained cache management, split evict() into two steps for key-level fine-grained locking in cache wrapper: (i) get victim key; (ii) evict if victim key matches similar as version check
-        bool getLocalCacheVictimKey(Key& key, const Key& admit_key, const Value& admit_value) const; // NOTE: return true with empty Key if without fine-grained management
-        bool evictLocalCacheIfKeyMatch(const Key& key, Value& value, const Key& admit_key, const Value& admit_value); // NOTE: NOT check whether key is matched if without fine-grained management
+        bool getLocalCacheVictimKeys(std::set<Key, KeyHasher>& keys, const uint64_t& required_size) const; // NOTE: return true with empty Key if without fine-grained management
+        bool evictLocalCacheWithGivenKey(const Key& key, Value& value); // NOTE: return false if key does NOT exist
 
         // If local cache only supports coarse-grained cache management, evict local cache directly
         void evictLocalCache(std::vector<Key>& keys, std::vector<Value>& values, const Key& admit_key, const Value& admit_value);
@@ -82,8 +83,8 @@ namespace covered
         virtual bool needIndependentAdmitInternal_(const Key& key) const = 0;
 
         virtual void admitLocalCacheInternal_(const Key& key, const Value& value) = 0;
-        virtual bool getLocalCacheVictimKeyInternal_(Key& key, const Key& admit_key, const Value& admit_value) const = 0;
-        virtual bool evictLocalCacheIfKeyMatchInternal_(const Key& key, Value& value, const Key& admit_key, const Value& admit_value) = 0;
+        virtual bool getLocalCacheVictimKeysInternal_(std::set<Key, KeyHasher>& keys, const uint64_t& required_size) const = 0;
+        virtual bool evictLocalCacheWithGivenKeyInternal_(const Key& key, Value& value) = 0;
 
         virtual void evictLocalCacheInternal_(std::vector<Key>& keys, std::vector<Value>& values, const Key& admit_key, const Value& admit_value) = 0;
 

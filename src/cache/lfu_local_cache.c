@@ -78,20 +78,29 @@ namespace covered
         return;
     }
 
-    bool LfuLocalCache::getLocalCacheVictimKeyInternal_(Key& key, const Key& admit_key, const Value& admit_value) const
+    bool LfuLocalCache::getLocalCacheVictimKeysInternal_(std::set<Key, KeyHasher>& keys, const uint64_t& required_size) const
     {
         assert(hasFineGrainedManagement());
 
-        UNUSED(admit_key);
-        UNUSED(admit_value);
+        UNUSED(required_size);
 
-        bool has_victim_key = lfu_cache_ptr_->getVictimKey(key);
+        Key tmp_victim_key;
+        bool has_victim_key = lfu_cache_ptr_->getVictimKey(tmp_victim_key);
+        if (has_victim_key)
+        {
+            if (keys.find(tmp_victim_key) == keys.end())
+            {
+                keys.insert(tmp_victim_key);   
+            }
+        }
 
         return has_victim_key;
     }
 
-    bool LfuLocalCache::evictLocalCacheIfKeyMatchInternal_(const Key& key, Value& value, const Key& admit_key, const Value& admit_value)
+    bool LfuLocalCache::evictLocalCacheWithGivenKeyInternal_(const Key& key, Value& value)
     {
+        // TODO: END HERE
+        
         assert(hasFineGrainedManagement());
 
         UNUSED(admit_key);

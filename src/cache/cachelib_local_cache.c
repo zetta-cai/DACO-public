@@ -148,17 +148,18 @@ namespace covered
         return;
     }
 
-    bool CachelibLocalCache::getLocalCacheVictimKeyInternal_(Key& key, const Key& admit_key, const Value& admit_value) const
+    bool CachelibLocalCache::getLocalCacheVictimKeysInternal_(std::set<Key, KeyHasher>& keys, const uint64_t& required_size) const
     {
         assert(hasFineGrainedManagement());
 
-        const std::string admit_keystr = admit_key.getKeystr();
+        /*const std::string admit_keystr = admit_key.getKeystr();
 
         // number of bytes required for this item
         const auto requiredSize = Lru2QCacheItem::getRequiredSize(admit_keystr, admit_value.getValuesize());
+
         // TODO: maybe we can set requiredSize as 1 byte to ensure that we can always find a victim key
 
-        // the allocation class in our memory allocator.
+        // Get allocation class in our memory allocator
         const auto cid = cachelib_cache_ptr_->allocator_->getAllocationClassId(cachelib_poolid_, requiredSize);
 
         Lru2QCacheItem* item_ptr = cachelib_cache_ptr_->findEviction(cachelib_poolid_, cid);
@@ -167,18 +168,37 @@ namespace covered
         {
             std::string victim_keystr((const char*)item_ptr->getKey().data(), item_ptr->getKey().size()); // data() returns b_, while size() return e_ - b_
             key = Key(victim_keystr);
+        }*/
+
+        UNUSED(required_size);
+
+        // Get allocation class in our memory allocator
+        const uint32_t one_byte = 1; // Ensure that cachelib must be able to find at least one vicitm
+        const auto cid = cachelib_cache_ptr_->allocator_->getAllocationClassId(cachelib_poolid_, one_byte);
+
+        Lru2QCacheItem* item_ptr = cachelib_cache_ptr_->findEviction(cachelib_poolid_, cid);
+        bool has_victim_key = (item_ptr != nullptr);
+        if (has_victim_key)
+        {
+            std::string victim_keystr((const char*)item_ptr->getKey().data(), item_ptr->getKey().size()); // data() returns b_, while size() return e_ - b_
+            Key tmp_victim_key(victim_keystr);
+
+            if (keys.find(tmp_victim_key) == keys.end())
+            {
+                keys.insert(tmp_victim_key);   
+            }
         }
 
         return has_victim_key;
     }
 
-    bool CachelibLocalCache::evictLocalCacheIfKeyMatchInternal_(const Key& key, Value& value, const Key& admit_key, const Value& admit_value)
+    bool CachelibLocalCache::evictLocalCacheWithGivenKeyInternal_(const Key& key, Value& value)
     {
         assert(hasFineGrainedManagement());
 
         bool is_evict = false;
 
-        // Select victim by LFU for version check
+        /*// Select victim by LFU for version check
         Key cur_victim_key;
         bool has_victim_key = getLocalCacheVictimKey(cur_victim_key, admit_key, admit_value);
         if (has_victim_key && cur_victim_key == key) // Key matches
@@ -191,6 +211,20 @@ namespace covered
 
             // Remove the corresponding cache item
             Lru2QCache::RemoveRes removeRes = cachelib_cache_ptr_->remove(cur_victim_key.getKeystr());
+            assert(removeRes == Lru2QCache::RemoveRes::kSuccess);
+
+            is_evict = true;
+        }*/
+
+        // Get victim value
+        Lru2QCacheReadHandle handle = cachelib_cache_ptr_->find(key.getKeystr());
+        if (handle != nullptr)
+        {
+            //std::string value_string{reinterpret_cast<const char*>(handle->getMemory()), handle->getSize()};
+            value = Value(handle->getSize());
+
+            // Remove the corresponding cache item
+            Lru2QCache::RemoveRes removeRes = cachelib_cache_ptr_->remove(key.getKeystr());
             assert(removeRes == Lru2QCache::RemoveRes::kSuccess);
 
             is_evict = true;

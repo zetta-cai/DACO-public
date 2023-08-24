@@ -52,7 +52,7 @@ namespace covered
 
         bool needIndependentAdmit(const Key& key) const;
         void admit(const Key& key, const Value& value, const bool& is_valid);
-        void evict(std::vector<Key>& keys, std::vector<Value>& values, const Key& admit_key = Key(), const Value& admit_value = Value()); // Some cache policy requires to know admit key-value pair for victim selection
+        void evict(std::vector<Key>& keys, std::vector<Value>& values, const uint64_t& required_size); // NOTE: single-thread function
 
         // (4) Other functions
         
@@ -73,8 +73,8 @@ namespace covered
 
         // (3) Local edge cache management
 
-        void evictForFineGrainedManagement_(std::vector<Key>& keys, std::vector<Value>& values, const Key& admit_key, const Value& admit_value);
-        void evictForCoarseGrainedManagement_(std::vector<Key>& keys, std::vector<Value>& values, const Key& admit_key, const Value& admit_value);
+        void evictForFineGrainedManagement_(std::vector<Key>& keys, std::vector<Value>& values, const uint64_t& required_size); // NOTE: single-thread function
+        void evictForCoarseGrainedManagement_(std::vector<Key>& keys, std::vector<Value>& values, const uint64_t& required_size); // NOTE: single-thread function
 
         // (4) Other functions
 
