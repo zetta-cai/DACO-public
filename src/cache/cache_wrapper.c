@@ -259,17 +259,17 @@ namespace covered
     }
     
     // NOTE: single-thread function
-    void CacheWrapper::evict(std::vector<Key>& keys, std::vector<Value>& values, const uint64_t& required_size)
+    void CacheWrapper::evict(std::unordered_map<Key, Value, KeyHasher>& victims, const uint64_t& required_size)
     {
         checkPointers_();
 
         if (local_cache_ptr_->hasFineGrainedManagement()) // Local cache with fine-grained management
         {
-            evictForFineGrainedManagement_(keys, values, required_size);
+            evictForFineGrainedManagement_(victims, required_size);
         }
         else // Local cache with coarse-grained management
         {
-            evictForCoarseGrainedManagement_(keys, values, required_size);
+            evictForCoarseGrainedManagement_(victims, required_size);
         }
 
         return;
@@ -357,13 +357,12 @@ namespace covered
     // (3) Local edge cache management
 
     // NOTE: single-thread function
-    void CacheWrapper::evictForFineGrainedManagement_(std::vector<Key>& keys, std::vector<Value>& values, const uint64_t& required_size)
+    void CacheWrapper::evictForFineGrainedManagement_(std::unordered_map<Key, Value, KeyHasher>& victims, const uint64_t& required_size)
     {
         assert(local_cache_ptr_->hasFineGrainedManagement());
 
-        // NOTE: keys and values are uninitialized now!!!
-        keys.clear();
-        values.clear();
+        // NOTE: victims is uninitialized now!!!
+        victims.clear();
 
         // NOTE: we should NOT modify local_cache_ptr_ outside the write lock, otherwise we cannot guarantee atomicity/order between local_cache_ptr_ and validity_map_ptr_, which may incur an inconsistent state
 
@@ -407,8 +406,7 @@ namespace covered
                     exit(1);
                 }
 
-                keys.push_back(tmp_victim_key);
-                values.push_back(tmp_victim_value);
+                victims.insert(std::pair<Key, Value>(tmp_victim_key, tmp_victim_value));
             }
             else
             {
@@ -427,29 +425,30 @@ namespace covered
     }
 
     // NOTE: single-thread function
-    void CacheWrapper::evictForCoarseGrainedManagement_(std::vector<Key>& keys, std::vector<Value>& values, const uint64_t& required_size)
+    void CacheWrapper::evictForCoarseGrainedManagement_(std::unordered_map<Key, Value, KeyHasher>& victims, const uint64_t& required_size)
     {
         assert(!local_cache_ptr_->hasFineGrainedManagement());
 
-        // NOTE: keys and values are uninitialized now!!!
-        keys.clear();
-        values.clear();
+        // NOTE: victims is uninitialized now!!!
+        victims.clear();
 
         // Acquire a write lock (pessimistic locking to avoid atomicity/order issues)
         std::string context_name = "CacheWrapper::evictForCoarseGrainedManagement_()";
         cache_wrapper_perkey_rwlock_ptr_->acquire_lock(Key(), context_name); // NOTE: parameter key will NOT be used due to NOT using fine-grained locking for coarse-grained management
 
         // Directly evict local cache for coarse-grained management
-        local_cache_ptr_->evictLocalCacheNoGivenKey(keys, values, required_size);
-        for (uint32_t i = 0; i < keys.size(); i++)
+        local_cache_ptr_->evictLocalCacheNoGivenKey(victims, required_size);
+        for (std::unordered_map<Key, Value, KeyHasher>::const_iterator victim_iter = victims.begin(); victim_iter != victims.end(); victim_iter++)
         {
+            const Key& tmp_victim_key = victim_iter->first;
+
             bool is_exist = false;
-            validity_map_ptr_->eraseFlagForKey(keys[i], is_exist);
+            validity_map_ptr_->eraseFlagForKey(tmp_victim_key, is_exist);
             if (!is_exist)
             {
                 // NOTE: each victim key is cached before eviction, so it MUST exist in validity_map_
                 std::ostringstream oss;
-                oss << "victim keys[" << i << "] " << keys[i].getKeystr() << " does not exist in validity_map_ for evictForCoarseGrainedManagement_()";
+                oss << "victim key " << tmp_victim_key.getKeystr() << " does not exist in validity_map_ for evictForCoarseGrainedManagement_()";
                 Util::dumpErrorMsg(instance_name_, oss.str());
                 exit(1);
             }

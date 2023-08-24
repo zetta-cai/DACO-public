@@ -161,11 +161,11 @@ namespace covered
             return has_victim_key;
         }
 
-        bool evictIfKeyMatch(const Key& key, Value& value)
+        bool evictWithGivenKey(const Key& key, Value& value)
         {   
             bool is_evict = false;
             
-            // Select victim by LFU for version check
+            /*// Select victim by LFU for version check
             Key cur_victim_key;
             bool has_victim_key = getVictimKey(cur_victim_key);
             if (has_victim_key && cur_victim_key == key) // Key matches
@@ -173,6 +173,26 @@ namespace covered
                 // Get victim value
                 map_iterator_t victim_map_iter = lfu_storage.find(key);
                 assert(victim_map_iter != lfu_storage.end());
+                lfu_iterator victim_list_iter = victim_map_iter->second;
+                assert(victim_list_iter != frequency_storage.end());
+                assert(victim_list_iter->second.first == key);
+                value = victim_list_iter->second.second;
+
+                // Remove the corresponding map entry
+                lfu_storage.erase(victim_map_iter);
+                size_ = Util::uint64Minus(size_, static_cast<uint64_t>(key.getKeystr().length() + sizeof(lfu_iterator)));
+
+                // Remove the corresponding list entry
+                frequency_storage.erase(victim_list_iter);
+                size_ = Util::uint64Minus(size_, static_cast<uint64_t>(sizeof(uint32_t) + key.getKeystr().length() + value.getValuesize()));
+
+                is_evict = true;
+            }*/
+
+            // Get victim value
+            map_iterator_t victim_map_iter = lfu_storage.find(key);
+            if (victim_map_iter != lfu_storage.end()) // Key exists
+            {
                 lfu_iterator victim_list_iter = victim_map_iter->second;
                 assert(victim_list_iter != frequency_storage.end());
                 assert(victim_list_iter->second.first == key);

@@ -55,7 +55,7 @@ namespace covered
         virtual void admitLocalCacheInternal_(const Key& key, const Value& value) override;
         virtual bool getLocalCacheVictimKeysInternal_(std::set<Key, KeyHasher>& keys, const uint64_t& required_size) const override;
         virtual bool evictLocalCacheWithGivenKeyInternal_(const Key& key, Value& value) override;
-        virtual void evictLocalCacheInternal_(std::vector<Key>& keys, std::vector<Value>& values, const Key& admit_key, const Value& admit_value) override;
+        virtual void evictLocalCacheNoGivenKeyInternal_(std::unordered_map<Key, Value, KeyHasher>& victims, const uint64_t& required_size) override;
 
         // (4) Other functions
 

@@ -143,7 +143,7 @@ namespace covered
 
         // (5) Admit uncached objects in local edge cache
 
-        bool evictForCapacity_(const Key& admit_key, const Value& admit_value, EventList& event_list, const bool& skip_propagation_latency) const;
+        bool evictForCapacity_(EventList& event_list, const bool& skip_propagation_latency) const;
 
         // (6) Utility functions
 

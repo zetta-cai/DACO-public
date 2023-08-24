@@ -101,19 +101,16 @@ namespace covered
     {
         assert(hasFineGrainedManagement());
 
-        UNUSED(admit_key);
-        UNUSED(admit_value);
-
-        bool is_evict = lru_cache_ptr_->evictIfKeyMatch(key, value);
+        bool is_evict = lru_cache_ptr_->evictWithGivenKey(key, value);
 
         return is_evict;
     }
 
-    void LruLocalCache::evictLocalCacheInternal_(std::vector<Key>& keys, std::vector<Value>& values, const Key& admit_key, const Value& admit_value)
+    void LruLocalCache::evictLocalCacheNoGivenKeyInternal_(std::unordered_map<Key, Value, KeyHasher>& victims, const uint64_t& required_size)
     {
         assert(!hasFineGrainedManagement());
 
-        Util::dumpErrorMsg(instance_name_, "evictLocalCacheInternal_() is not supported due to fine-grained management");
+        Util::dumpErrorMsg(instance_name_, "evictLocalCacheNoGivenKeyInternal_() is not supported due to fine-grained management");
         exit(1);
 
         return;

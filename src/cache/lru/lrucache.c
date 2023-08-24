@@ -102,18 +102,41 @@ namespace covered
 		return has_victim_key;
 	}
     
-	bool LruCache::evictIfKeyMatch(const Key& key, Value& value)
+	bool LruCache::evictWithGivenKey(const Key& key, Value& value)
 	{
 		bool is_evict = false;
 		
-		// Select victim by LRU for version check
+		/*// Select victim by LRU for version check
 		Key cur_victim_key;
 		bool has_victim_key = getVictimKey(cur_victim_key);
 		if (has_victim_key && cur_victim_key == key) // Key matches
 		{
-			list_iterator_t last_list_iter = cache_items_list_.end();
-			value = last_list_iter->second;
-			uint32_t victim_valuesize = last_list_iter->second.getValuesize();
+			map_iterator_t victim_map_iter = cache_items_map_.find(key);
+			assert(victim_map_iter != cache_items_map_.end());
+			list_iterator_t victim_list_iter = victim_map_iter->second;
+			assert(victim_list_iter != cache_items_list_.end());
+			//list_iterator_t last_list_iter = cache_items_list_.end();
+			value = victim_list_iter->second;
+			uint32_t victim_valuesize = value.getValuesize();
+
+			// Remove the corresponding map entry
+			cache_items_map_.erase(key);
+			size_ = Util::uint64Minus(size_, static_cast<uint64_t>(key.getKeystr().length() + sizeof(list_iterator_t)));
+
+			// Remove the corresponding list entry
+			cache_items_list_.pop_back();
+			size_ = Util::uint64Minus(size_, static_cast<uint64_t>(key.getKeystr().length() + victim_valuesize));
+
+			is_evict = true;
+		}*/
+
+		map_iterator_t victim_map_iter = cache_items_map_.find(key);
+		if (victim_map_iter != cache_items_map_.end()) // Key exists
+		{
+			list_iterator_t victim_list_iter = victim_map_iter->second;
+			assert(victim_list_iter != cache_items_list_.end());
+			value = victim_list_iter->second;
+			uint32_t victim_valuesize = value.getValuesize();
 
 			// Remove the corresponding map entry
 			cache_items_map_.erase(key);

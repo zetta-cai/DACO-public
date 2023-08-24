@@ -187,7 +187,7 @@ namespace covered
         return is_evict;
     }
 
-    void LocalCacheBase::evictLocalCache(std::vector<Key>& keys, std::vector<Value>& values, const Key& admit_key, const Value& admit_value)
+    void LocalCacheBase::evictLocalCacheNoGivenKey(std::unordered_map<Key, Value, KeyHasher>& victims, const uint64_t& required_size)
     {
         checkPointers_();
 
@@ -197,7 +197,7 @@ namespace covered
         std::string context_name = "LocalCacheBase::evictLocalCache()";
         rwlock_for_local_cache_ptr_->acquire_lock(context_name);
 
-        evictLocalCacheInternal_(keys, values, admit_key, admit_value);
+        evictLocalCacheNoGivenKeyInternal_(victims, required_size);
 
         rwlock_for_local_cache_ptr_->unlock(context_name);
         return;

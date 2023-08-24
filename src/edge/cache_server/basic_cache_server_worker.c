@@ -513,7 +513,7 @@ namespace covered
             event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_UPDATE_DIRECTORY_TO_ADMIT_EVENT_NAME, update_directory_to_admit_latency_us); // Add intermediate event if with event tracking
 
             // Trigger eviction if necessary
-            is_finish = evictForCapacity_(key, value, event_list, skip_propagation_latency);
+            is_finish = evictForCapacity_(event_list, skip_propagation_latency);
         }
 
         return is_finish;

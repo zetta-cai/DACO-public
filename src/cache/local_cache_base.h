@@ -48,11 +48,11 @@ namespace covered
         void admitLocalCache(const Key& key, const Value& value);
 
         // If local cache supports fine-grained cache management, split evict() into two steps for key-level fine-grained locking in cache wrapper: (i) get victim key; (ii) evict if victim key matches similar as version check
-        bool getLocalCacheVictimKeys(std::set<Key, KeyHasher>& keys, const uint64_t& required_size) const; // NOTE: return true with empty Key if without fine-grained management
-        bool evictLocalCacheWithGivenKey(const Key& key, Value& value); // NOTE: return false if key does NOT exist
+        bool getLocalCacheVictimKeys(std::set<Key, KeyHasher>& keys, const uint64_t& required_size) const; // Return false if no victim key (for fine-grained management)
+        bool evictLocalCacheWithGivenKey(const Key& key, Value& value); // Return false if key does NOT exist (for fine-grained management)
 
         // If local cache only supports coarse-grained cache management, evict local cache directly
-        void evictLocalCache(std::vector<Key>& keys, std::vector<Value>& values, const Key& admit_key, const Value& admit_value);
+        void evictLocalCacheNoGivenKey(std::unordered_map<Key, Value, KeyHasher>& victims, const uint64_t& required_size); // For coarse-grained management
 
         // (4) Other functions
         
@@ -86,7 +86,7 @@ namespace covered
         virtual bool getLocalCacheVictimKeysInternal_(std::set<Key, KeyHasher>& keys, const uint64_t& required_size) const = 0;
         virtual bool evictLocalCacheWithGivenKeyInternal_(const Key& key, Value& value) = 0;
 
-        virtual void evictLocalCacheInternal_(std::vector<Key>& keys, std::vector<Value>& values, const Key& admit_key, const Value& admit_value) = 0;
+        virtual void evictLocalCacheNoGivenKeyInternal_(std::unordered_map<Key, Value, KeyHasher>& victims, const uint64_t& required_size) = 0;
 
         // (4) Other functions
 

@@ -165,7 +165,7 @@ namespace covered
     {
         assert(hasFineGrainedManagement());
 
-        Util::dumpErrorMsg(instance_name_, "getLocalCacheVictimKeyInternal_() is not supported due to coarse-grained management");
+        Util::dumpErrorMsg(instance_name_, "getLocalCacheVictimKeysInternal_() is not supported due to coarse-grained management");
         exit(1);
 
         return false;
@@ -175,19 +175,18 @@ namespace covered
     {
         assert(hasFineGrainedManagement());
 
-        Util::dumpErrorMsg(instance_name_, "evictLocalCacheIfKeyMatchInternal_() is not supported due to coarse-grained management");
+        Util::dumpErrorMsg(instance_name_, "evictLocalCacheWithGivenKeyInternal_() is not supported due to coarse-grained management");
         exit(1);
 
         return false;
     }
 
-    void SegcacheLocalCache::evictLocalCacheInternal_(std::vector<Key>& keys, std::vector<Value>& values, const Key& admit_key, const Value& admit_value)
+    void SegcacheLocalCache::evictLocalCacheNoGivenKeyInternal_(std::unordered_map<Key, Value, KeyHasher>& victims, const uint64_t& required_size)
     {
 #define MAX_RETRIES 8
         assert(!hasFineGrainedManagement());
 
-        UNUSED(admit_key);
-        UNUSED(admit_value);
+        UNUSED(required_size);
 
         // Refer to src/cache/segcache/src/storage/seg/seg.c::seg_evict()
 
@@ -224,7 +223,7 @@ namespace covered
             if (--n_retries_left < MAX_RETRIES)
             {
                 std::ostringstream oss;
-                oss << "retry " << n_retries_left << "in evictLocalCacheIfKeyMatchInternal_()";
+                oss << "retry " << n_retries_left << "in evictLocalCacheInternal_()";
                 Util::dumpWarnMsg(instance_name_, oss.str());
 
                 INCR(segcache_cache_ptr_->seg_metrics, seg_evict_retry);
@@ -246,9 +245,8 @@ namespace covered
             for (uint32_t i = 0; i < victim_cnt; i++)
             {
                 Key tmp_key(std::string(key_bstrs[i].data, key_bstrs[i].len));
-                keys.push_back(tmp_key);
                 Value tmp_value(value_bstrs[i].len);
-                values.push_back(tmp_value);
+                victims.insert(std::pair<Key, Value>(tmp_key, tmp_value));
 
                 // Release data of key bstring
                 free(key_bstrs[i].data);

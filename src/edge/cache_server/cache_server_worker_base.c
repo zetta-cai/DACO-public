@@ -1081,7 +1081,7 @@ namespace covered
 
             if (is_local_cached_and_invalid) // update may trigger eviction
             {
-                is_finish = evictForCapacity_(key, value, event_list, skip_propagation_latency);
+                is_finish = evictForCapacity_(event_list, skip_propagation_latency);
             }
         }
         
@@ -1099,7 +1099,7 @@ namespace covered
 
         is_local_cached_after_udpate = tmp_edge_wrapper_ptr->getEdgeCachePtr()->update(key, value);
 
-        is_finish = evictForCapacity_(key, value, event_list, skip_propagation_latency);
+        is_finish = evictForCapacity_(event_list, skip_propagation_latency);
 
         return is_finish;
     }
@@ -1118,10 +1118,15 @@ namespace covered
 
     // (5) Admit uncached objects in local edge cache
 
-    bool CacheServerWorkerBase::evictForCapacity_(const Key& admit_key, const Value& admit_value, EventList& event_list, const bool& skip_propagation_latency) const
+    bool CacheServerWorkerBase::evictForCapacity_(EventList& event_list, const bool& skip_propagation_latency) const
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        Rwlock* tmp_rwlock_for_eviction_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getRwlockForEvictionPtr();
+
+        // Acquire a write lock for atomicity of eviction among different edge cache server workers
+        std::string context_name = "CacheServerWorkerBase::evictForCapacity_()";
+        tmp_rwlock_for_eviction_ptr->acquire_lock(context_name);
 
         bool is_finish = false;
 
@@ -1129,7 +1134,8 @@ namespace covered
         {
             // Data and metadata for local edge cache, and cooperation metadata
             uint64_t used_bytes = tmp_edge_wrapper_ptr->getSizeForCapacity();
-            if (used_bytes <= tmp_edge_wrapper_ptr->getCapacityBytes()) // Not exceed capacity limitation
+            uint64_t capacity_bytes = tmp_edge_wrapper_ptr->getCapacityBytes();
+            if (used_bytes <= capacity_bytes) // Not exceed capacity limitation
             {
                 break;
             }
@@ -1137,23 +1143,27 @@ namespace covered
             {
                 struct timespec update_directory_to_evict_start_timestamp = Util::getCurrentTimespec();
 
-                std::vector<Key> victim_keys;
-                victim_keys.clear();
-                std::vector<Value> victim_values;
-                victim_values.clear();
-                tmp_edge_wrapper_ptr->getEdgeCachePtr()->evict(victim_keys, victim_values, admit_key, admit_value);
+                std::unordered_map<Key, Value, KeyHasher> victims;
+                victims.clear();
 
-                for (uint32_t i = 0; i < victim_keys.size(); i++)
+                // NOTE: we calculate required size after locking to avoid duplicate evictions for the same part of required size
+                uint64_t required_size = used_bytes - capacity_bytes;
+                tmp_edge_wrapper_ptr->getEdgeCachePtr()->evict(victims, required_size);
+
+                for (std::unordered_map<Key, Value, KeyHasher>::const_iterator victim_iter = victims.begin(); victim_iter != victims.end(); victim_iter++)
                 {
+                    const Key& tmp_victim_key = victim_iter->first;
+
                     bool _unused_is_being_written = false; // NOTE: is_being_written does NOT affect cache eviction
-                    is_finish = updateDirectory_(victim_keys[i], false, _unused_is_being_written, event_list, skip_propagation_latency);
+                    is_finish = updateDirectory_(tmp_victim_key, false, _unused_is_being_written, event_list, skip_propagation_latency);
                     if (is_finish)
                     {
                         return is_finish;
                     }
 
                     #ifdef DEBUG_CACHE_SERVER
-                    Util::dumpVariablesForDebug(instance_name_, 7, "eviction;", "keystr:", victim_keys[i].getKeystr().c_str(), "is value deleted:", Util::toString(victim_values[i].isDeleted()).c_str(), "value size:", Util::toString(victim_values[i].getValuesize()).c_str());
+                    const Value& tmp_victim_value = victim_iter->second;
+                    Util::dumpVariablesForDebug(instance_name_, 7, "eviction;", "keystr:", tmp_victim_key.getKeystr().c_str(), "is value deleted:", Util::toString(tmp_victim_value.isDeleted()).c_str(), "value size:", Util::toString(tmp_victim_value.getValuesize()).c_str());
                     #endif
                 }
 
@@ -1165,6 +1175,7 @@ namespace covered
             }
         }
 
+        tmp_rwlock_for_eviction_ptr->unlock(context_name);
         return is_finish;
     }
 

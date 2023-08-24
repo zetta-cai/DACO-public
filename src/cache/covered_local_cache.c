@@ -176,6 +176,13 @@ namespace covered
 
                 // Update local cached metadata for admission
                 local_cached_metadata_.addForNewKey(key, value);
+
+                // Remove from local uncached metadata if necessary for admission
+                if (local_uncached_metadata_.isKeyExist(key))
+                {
+                    // NOTE: get/put/delrsp with cache miss MUST already udpate local uncached metadata with the current value before admission, so we can directly use current value to remove it from local uncached metadata instead of approximate value
+                    local_uncached_metadata_.removeForExistingKey(key, value);
+                }
             }
         }
 
@@ -184,7 +191,8 @@ namespace covered
 
     bool CoveredLocalCache::getLocalCacheVictimKeysInternal_(std::set<Key, KeyHasher>& keys, const uint64_t& required_size) const
     {
-        // TODO: this function will be invoked by beacon node for lazy fetching of candidate victims
+        // TODO: this function will be invoked at each candidate neighbor node by the beacon node for lazy fetching of candidate victims
+        // TODO: this function will also be invoked at each placement neighbor node by the beacon node for cache placement
         
         assert(hasFineGrainedManagement());
 
@@ -227,38 +235,37 @@ namespace covered
 
     bool CoveredLocalCache::evictLocalCacheWithGivenKeyInternal_(const Key& key, Value& value)
     {
-        // TODO: we MUST release handle 
+        // TODO: this function will be invoked at each placement neighbor node by the beacon node for cache placement
 
         assert(hasFineGrainedManagement());
 
         bool is_evict = false;
 
-        // Select victim by LFU for version check
-        Key cur_victim_key;
-        bool has_victim_key = getLocalCacheVictimKey(cur_victim_key, admit_key, admit_value);
-        if (has_victim_key && cur_victim_key == key) // Key matches
+        // Get victim value
+        LruCacheReadHandle handle = covered_cache_ptr_->find(key.getKeystr());
+        if (handle != nullptr) // Key exists
         {
-            // Get victim value
-            LruCacheReadHandle handle = cachelib_cache_ptr_->find(cur_victim_key.getKeystr());
-            assert(handle != nullptr);
             //std::string value_string{reinterpret_cast<const char*>(handle->getMemory()), handle->getSize()};
             value = Value(handle->getSize());
 
             // Remove the corresponding cache item
-            LruCache::RemoveRes removeRes = cachelib_cache_ptr_->remove(cur_victim_key.getKeystr());
+            LruCache::RemoveRes removeRes = covered_cache_ptr_->remove(key.getKeystr());
             assert(removeRes == LruCache::RemoveRes::kSuccess);
 
-            is_evict = true;
+            // Remove from local cached metadata for eviction
+            local_cached_metadata_.removeForExistingKey(key, value);
+
+            is_evict = true;   
         }
 
         return is_evict;
     }
 
-    void CoveredLocalCache::evictLocalCacheInternal_(std::vector<Key>& keys, std::vector<Value>& values, const Key& admit_key, const Value& admit_value)
+    void CoveredLocalCache::evictLocalCacheNoGivenKeyInternal_(std::unordered_map<Key, Value, KeyHasher>& victims, const uint64_t& required_size)
     {
         assert(!hasFineGrainedManagement());
 
-        Util::dumpErrorMsg(instance_name_, "evictLocalCacheInternal_() is not supported due to fine-grained management");
+        Util::dumpErrorMsg(instance_name_, "evictLocalCacheNoGivenKeyInternal_() is not supported due to fine-grained management");
         exit(1);
 
         return;

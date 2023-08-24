@@ -218,7 +218,7 @@ namespace covered
 
         // Get victim value
         Lru2QCacheReadHandle handle = cachelib_cache_ptr_->find(key.getKeystr());
-        if (handle != nullptr)
+        if (handle != nullptr) // Key exists
         {
             //std::string value_string{reinterpret_cast<const char*>(handle->getMemory()), handle->getSize()};
             value = Value(handle->getSize());
@@ -233,11 +233,11 @@ namespace covered
         return is_evict;
     }
 
-    void CachelibLocalCache::evictLocalCacheInternal_(std::vector<Key>& keys, std::vector<Value>& values, const Key& admit_key, const Value& admit_value)
+    void CachelibLocalCache::evictLocalCacheNoGivenKeyInternal_(std::unordered_map<Key, Value, KeyHasher>& victims, const uint64_t& required_size)
     {
         assert(!hasFineGrainedManagement());
 
-        Util::dumpErrorMsg(instance_name_, "evictLocalCacheInternal_() is not supported due to fine-grained management");
+        Util::dumpErrorMsg(instance_name_, "evictLocalCacheNoGivenKeyInternal_() is not supported due to fine-grained management");
         exit(1);
 
         return;

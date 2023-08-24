@@ -70,7 +70,7 @@ namespace covered
 
         void addForNewKey(const Key& key, const Value& value); // Newly admitted cached key or currently tracked uncached key (for getrsp with cache miss, put/delrsp with cache miss, admission)
         void updateForExistingKey(const Key& key, const Value& value, const Value& original_value, const bool& is_value_related); // Admitted cached key or tracked uncached key (is_value_related = false: for getreq with cache hit, getrsp with cache miss; is_value_related = true: for getrsp with invalid hit, put/delreq with cache hit, put/delrsp with cache miss)
-        void removeForExistingKey(const Key& detracked_key, const Value& value); // Remove admitted cached key or tracked uncached key (for getrsp with cache miss, put/delrsp with cache miss)
+        void removeForExistingKey(const Key& detracked_key, const Value& value); // Remove admitted cached key or tracked uncached key (for getrsp with cache miss, put/delrsp with cache miss, admission, eviction)
     private:
         static const std::string kClassName;
 
