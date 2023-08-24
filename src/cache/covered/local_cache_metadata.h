@@ -63,11 +63,11 @@ namespace covered
 
         bool isKeyExist(const Key& key) const; // Check if key has been admitted or tracked for local cached or uncached object
         bool needDetrackForUncachedObjects(Key& detracked_key) const; // Check if need to detrack the least popular key for local uncached object
-        uint32_t getApproxDetrackValueForUncachedObjects(const Key& detracked_key) const; // Get approximated detrack value for local uncached object
+        uint32_t getApproxValueForUncachedObjects(const Key& key) const; // Get approximated value for local uncached object
 
-        void addForNewKey(const Key& key, const Value& value); // Newly admitted cached key or currently tracked uncached key (triggered by getrsp with cache miss)
-        void updateForExistingKey(const Key& key, const Value& value, const Value& original_value, const bool& is_value_related); // Admitted cached key or tracked uncached key (is_value_related = false: triggered by getreq with cache hit, getrsp with cache miss)
-        void removeForExistingKey(const Key& detracked_key, const Value& value); // Remove admitted cached key or tracked uncached key (triggered by getrsp with cache miss)
+        void addForNewKey(const Key& key, const Value& value); // Newly admitted cached key or currently tracked uncached key (for getrsp with cache miss, put/delrsp with cache miss, admission)
+        void updateForExistingKey(const Key& key, const Value& value, const Value& original_value, const bool& is_value_related); // Admitted cached key or tracked uncached key (is_value_related = false: for getreq with cache hit, getrsp with cache miss; is_value_related = true: for getrsp with invalid hit, put/delreq with cache hit, put/delrsp with cache miss)
+        void removeForExistingKey(const Key& detracked_key, const Value& value); // Remove admitted cached key or tracked uncached key (for getrsp with cache miss, put/delrsp with cache miss)
     private:
         static const std::string kClassName;
 

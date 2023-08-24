@@ -50,7 +50,7 @@ namespace covered
         virtual bool getLocalCacheInternal_(const Key& key, Value& value) const override;
         virtual bool updateLocalCacheInternal_(const Key& key, const Value& value) override;
 
-        virtual void updateLocalUncachedMetadataForRspInternal_(const Key& key, const Value& value, const Value& original_value, const bool& is_value_related) const override; // Triggered by get/put/delrsp for cache miss for admission policy if any
+        virtual void updateLocalUncachedMetadataForRspInternal_(const Key& key, const Value& value, const bool& is_value_related) const override; // Triggered by get/put/delrsp for cache miss for admission policy if any
 
         // (3) Local edge cache management
 

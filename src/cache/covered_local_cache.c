@@ -88,24 +88,22 @@ namespace covered
             local_cached_metadata_.updateForExistingKey(key, value, value, false);
         }
 
-        // NOTE: for getreq with cache miss, we will update local uncached metadata for getres by updateLocalUncachedStatisticsForAdmitInternal_(key)
+        // NOTE: for getreq with cache miss, we will update local uncached metadata for getres by updateLocalUncachedMetadataForRspInternal_(key)
 
         return is_local_cached;
     }
 
     bool CoveredLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value)
     {
-        // TODO: END HERE
-
-        // TODO: we should invoke updateLocalUncachedMetadataForRspInternal_(key, value, false) in CacheWrapper::update() for put/delrsp
-
         const std::string keystr = key.getKeystr();
 
-        LruCacheReadHandle handle = cachelib_cache_ptr_->find(keystr);
+        LruCacheReadHandle handle = covered_cache_ptr_->find(keystr); // NOTE: although find() will move the item to the front of the LRU list to update recency information inside cachelib, covered uses local cache metadata tracked outside cachelib for cache management
         bool is_local_cached = (handle != nullptr);
         if (is_local_cached) // Key already exists
         {
-            auto allocate_handle = cachelib_cache_ptr_->allocate(cachelib_poolid_, keystr, value.getValuesize());
+            Value original_value(handle->getSize());
+
+            auto allocate_handle = covered_cache_ptr_->allocate(covered_poolid_, keystr, value.getValuesize());
             if (allocate_handle == nullptr)
             {
                 is_local_cached = false; // cache may fail to evict due to too many pending writes -> equivalent to NOT caching the latest value
@@ -115,30 +113,34 @@ namespace covered
                 std::string valuestr = value.generateValuestr();
                 assert(valuestr.size() == value.getValuesize());
                 std::memcpy(allocate_handle->getMemory(), valuestr.data(), value.getValuesize());
-                cachelib_cache_ptr_->insertOrReplace(allocate_handle); // Must replace
+                covered_cache_ptr_->insertOrReplace(allocate_handle); // Must replace
+
+                // Update local cached metadata for getrsp with invalid hit and put/delreq with cache hit
+                local_cached_metadata_.updateForExistingKey(key, value, original_value, true);
             }
         }
 
         return is_local_cached;
     }
 
-    void CoveredLocalCache::updateLocalUncachedMetadataForRspInternal_(const Key& key, const Value& value, const Value& original_value, const bool& is_value_related) const
+    void CoveredLocalCache::updateLocalUncachedMetadataForRspInternal_(const Key& key, const Value& value, const bool& is_value_related) const
     {
         bool is_key_tracked = local_uncached_metadata_.isKeyExist(key);
         if (is_key_tracked)
         {
-            local_uncached_metadata_.updateForExistingKey(key, value, original_value, is_value_related); // For getrsp with cache miss
+            uint32_t approx_original_value_size = local_uncached_metadata_.getApproxValueForUncachedObjects(key);
+            local_uncached_metadata_.updateForExistingKey(key, value, Value(approx_original_value_size), is_value_related); // For getrsp with cache miss, put/delrsp with cache miss
         }
         else
         {
-            local_uncached_metadata_.addForNewKey(key, value); // For getrsp with cache miss
+            local_uncached_metadata_.addForNewKey(key, value); // For getrsp with cache miss, put/delrsp with cache miss
 
             Key detracked_key;
             bool need_detrack = local_uncached_metadata_.needDetrackForUncachedObjects(detracked_key);
             if (need_detrack)
             {
-                uint32_t approx_detrack_value_size = local_uncached_metadata_.getApproxDetrackValueForUncachedObjects(detracked_key);
-                local_uncached_metadata_.removeForExistingKey(detracked_key, approx_detrack_value_size); // For getrsp with cache miss
+                uint32_t approx_detracked_value_size = local_uncached_metadata_.getApproxValueForUncachedObjects(detracked_key);
+                local_uncached_metadata_.removeForExistingKey(detracked_key, Value(approx_detracked_value_size)); // For getrsp with cache miss, put/delrsp with cache miss
             }
         }
         return;
@@ -148,19 +150,19 @@ namespace covered
 
     bool CoveredLocalCache::needIndependentAdmitInternal_(const Key& key) const
     {
-        // CacheLib (LRU2Q) cache uses default admission policy (i.e., always admit), which always returns true as long as key is not cached
-        return true;
+        // COVERED will NEVER invoke this function for independent admission
+        return false;
     }
 
     void CoveredLocalCache::admitLocalCacheInternal_(const Key& key, const Value& value)
     {
         const std::string keystr = key.getKeystr();
 
-        LruCacheReadHandle handle = cachelib_cache_ptr_->find(keystr);
+        LruCacheReadHandle handle = covered_cache_ptr_->find(keystr);
         bool is_local_cached = (handle != nullptr);
         if (!is_local_cached) // Key does NOT exist
         {
-            auto allocate_handle = cachelib_cache_ptr_->allocate(cachelib_poolid_, keystr, value.getValuesize());
+            auto allocate_handle = covered_cache_ptr_->allocate(covered_poolid_, keystr, value.getValuesize());
             if (allocate_handle == nullptr)
             {
                 is_local_cached = false; // cache may fail to evict due to too many pending writes -> equivalent to NOT admitting the new key-value pair
@@ -170,7 +172,10 @@ namespace covered
                 std::string valuestr = value.generateValuestr();
                 assert(valuestr.size() == value.getValuesize());
                 std::memcpy(allocate_handle->getMemory(), valuestr.data(), value.getValuesize());
-                cachelib_cache_ptr_->insertOrReplace(allocate_handle); // Must insert
+                covered_cache_ptr_->insertOrReplace(allocate_handle); // Must insert
+
+                // Update local cached metadata for admission
+                local_cached_metadata_.addForNewKey(key, value);
             }
         }
 
@@ -179,6 +184,8 @@ namespace covered
 
     bool CoveredLocalCache::getLocalCacheVictimKeyInternal_(Key& key, const Key& admit_key, const Value& admit_value) const
     {
+        // TODO: END HERE
+        
         assert(hasFineGrainedManagement());
 
         const std::string admit_keystr = admit_key.getKeystr();

@@ -74,6 +74,7 @@ namespace covered
         // exit(1);
 
         // NOTE: COVERED will NOT trigger any independent cache admission/eviction decision
-        return false;
+        bool is_finish = false;
+        return is_finish;
     }
 }

@@ -82,27 +82,27 @@ namespace covered
         }
     }
 
-    uint32_t LocalCacheMetadata::getApproxDetrackValueForUncachedObjects(const Key& detracked_key) const
+    uint32_t LocalCacheMetadata::getApproxValueForUncachedObjects(const Key& key) const
     {
-        // NOTE: we only get approximate detrack value size for local uncached objects
+        // NOTE: we only get approximate value size for local uncached objects
         assert(is_for_uncached_objects_);
 
         // Get lookup iterator
-        perkey_lookup_const_iter_t perkey_lookup_const_iter = getLookup_(detracked_key);
+        perkey_lookup_const_iter_t perkey_lookup_const_iter = getLookup_(key);
 
         // Get average object size
         const GroupLevelMetadata& pergroup_metadata_ref = getGroupLevelMetadata_(perkey_lookup_const_iter);
         uint32_t avg_object_size = pergroup_metadata_ref.getAvgObjectSize();
 
         // NOTE: for local uncached objects, as we do NOT know per-key value size, we use the (average object size - key size) as the approximated detrack value
-        uint32_t approx_detrack_value_size = 0;
-        uint32_t detrack_key_size = detracked_key.getKeystr().length();
+        uint32_t approx_value_size = 0;
+        uint32_t detrack_key_size = key.getKeystr().length();
         if (avg_object_size > detrack_key_size)
         {
-            approx_detrack_value_size = avg_object_size - detrack_key_size;
+            approx_value_size = avg_object_size - detrack_key_size;
         }
 
-        return approx_detrack_value_size;
+        return approx_value_size;
     }
 
     void LocalCacheMetadata::addForNewKey(const Key& key, const Value& value)
@@ -149,13 +149,13 @@ namespace covered
         return;
     }
 
-    void LocalCacheMetadata::removeForExistingKey(const Key& detracked_key, const Value& value)
+    void LocalCacheMetadata::removeForExistingKey(const Key& detracked_key, const Value& detracked_value)
     {
         // Get lookup iterator
         perkey_lookup_iter_t perkey_lookup_iter = getLookup_(detracked_key);
 
         // Remove group-level metadata
-        removePergroupMetadata_(perkey_lookup_iter, detracked_key, value);
+        removePergroupMetadata_(perkey_lookup_iter, detracked_key, detracked_value);
 
         // Remove object-level metadata
         removePerkeyMetadata_(perkey_lookup_iter);
