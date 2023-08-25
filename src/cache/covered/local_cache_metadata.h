@@ -57,11 +57,11 @@ namespace covered
     class LocalCacheMetadata
     {
     public:
-        LocalCacheMetadata(const bool& is_for_uncached_objects);
+        LocalCacheMetadata(const bool& is_for_uncached_objects, const uint64_t& max_bytes_for_uncached_objects);
         ~LocalCacheMetadata();
 
         bool isKeyExist(const Key& key) const; // Check if key has been admitted or tracked for local cached or uncached object
-        bool getLeastPopularKey(const uint32_t& least_popular_rank, Key& key) const; // Get ith least popular key
+        bool getLeastPopularKey(const uint32_t& least_popular_rank, Key& key) const; // Get ith least popular key for local cached or uncached object
         
         // Only for local uncached object (i.e., is_for_uncached_objects_ = true)
         bool needDetrackForUncachedObjects(Key& detracked_key) const; // Check if need to detrack the least popular key for local uncached object
@@ -101,6 +101,7 @@ namespace covered
         void removeLookup_(const perkey_lookup_iter_t& perkey_lookup_iter);
 
         const bool is_for_uncached_objects_; // Whether this metadata is tracked for uncached objects for admission policy
+        const uint64_t max_bytes_for_uncached_objects_; // Used only for local uncached objects (i.e., is_for_uncached_objects_ = true)
         
         // Object-level metadata
         uint64_t perkey_metadata_list_key_size_; // Total size of keys in perkey_metadata_list_

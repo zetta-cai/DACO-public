@@ -25,8 +25,9 @@ namespace covered
     // Max keycnt per group for local cached/uncached objects
     #define COVERED_PERGROUP_MAXKEYCNT 10 // At most 10 keys per group for local cached/uncached objects
 
-    // MAx keycnt of all groups for local uncached objects (limit memory usage for local uncached objects)
-    #define COVERED_LOCAL_UNCACHED_MAX_TRACKCNT 1000 // At most 1000 keys in total for local uncached objects
+    // Max memory usage for local uncached objects (min between 1% of total cache capacity and 1 MiB)
+    #define COVERED_LOCAL_UNCACHED_MAX_MEM_USAGE_RATIO 0.01 // At most 1% of total cache capacity for local uncached objects
+    #define COVERED_LOCAL_UNCACHED_MAX_MEM_USAGE_BYTES MB2B(1) // At most 1 MiB for local uncached objects
 }
 
 #endif

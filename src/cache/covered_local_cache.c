@@ -14,7 +14,7 @@ namespace covered
 
     const std::string CoveredLocalCache::kClassName("CoveredLocalCache");
 
-    CoveredLocalCache::CoveredLocalCache(const uint32_t& edge_idx, const uint64_t& capacity_bytes) : LocalCacheBase(edge_idx), local_cached_metadata_(false), local_uncached_metadata_(true)
+    CoveredLocalCache::CoveredLocalCache(const uint32_t& edge_idx, const uint64_t& capacity_bytes) : LocalCacheBase(edge_idx), local_cached_metadata_(false, 0), local_uncached_metadata_(true, capacity_bytes*COVERED_LOCAL_UNCACHED_MAX_MEM_USAGE_RATIO >= COVERED_LOCAL_UNCACHED_MAX_MEM_USAGE_BYTES ? COVERED_LOCAL_UNCACHED_MAX_MEM_USAGE_BYTES : capacity_bytes*COVERED_LOCAL_UNCACHED_MAX_MEM_USAGE_RATIO)
     {
         // (A) Const variable
 
@@ -136,11 +136,18 @@ namespace covered
             local_uncached_metadata_.addForNewKey(key, value); // For getrsp with cache miss, put/delrsp with cache miss
 
             Key detracked_key;
-            bool need_detrack = local_uncached_metadata_.needDetrackForUncachedObjects(detracked_key);
-            if (need_detrack)
+            while (true)
             {
-                uint32_t approx_detracked_value_size = local_uncached_metadata_.getApproxValueForUncachedObjects(detracked_key);
-                local_uncached_metadata_.removeForExistingKey(detracked_key, Value(approx_detracked_value_size)); // For getrsp with cache miss, put/delrsp with cache miss
+                bool need_detrack = local_uncached_metadata_.needDetrackForUncachedObjects(detracked_key);
+                if (need_detrack) // Cache size usage for local uncached objects exceeds the max bytes limitation
+                {
+                    uint32_t approx_detracked_value_size = local_uncached_metadata_.getApproxValueForUncachedObjects(detracked_key);
+                    local_uncached_metadata_.removeForExistingKey(detracked_key, Value(approx_detracked_value_size)); // For getrsp with cache miss, put/delrsp with cache miss
+                }
+                else // Local uncached objects is limited
+                {
+                    break;
+                }
             }
         }
         return;

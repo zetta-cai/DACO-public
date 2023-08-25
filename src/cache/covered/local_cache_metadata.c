@@ -56,8 +56,17 @@ namespace covered
 
     const std::string LocalCacheMetadata::kClassName("LocalCacheMetadata");
 
-    LocalCacheMetadata::LocalCacheMetadata(const bool& is_for_uncached_objects) : is_for_uncached_objects_(is_for_uncached_objects)
+    LocalCacheMetadata::LocalCacheMetadata(const bool& is_for_uncached_objects, const uint64_t& max_bytes_for_uncached_objects) : is_for_uncached_objects_(is_for_uncached_objects), max_bytes_for_uncached_objects_(max_bytes_for_uncached_objects)
     {
+        if (!is_for_uncached_objects) // For local cached objects
+        {
+            assert(max_bytes_for_uncached_objects == 0);
+        }
+        else // For local uncached objects
+        {
+            assert(max_bytes_for_uncached_objects > 0);
+        }
+
         perkey_metadata_list_key_size_ = 0;
         perkey_metadata_list_.clear();
 
@@ -98,9 +107,10 @@ namespace covered
     {
         // NOTE: we only limit the number of tracked metadata for local uncached objects
         assert(is_for_uncached_objects_);
-        
-        uint32_t cur_trackcnt = perkey_lookup_table_.size();
-        if (cur_trackcnt > COVERED_LOCAL_UNCACHED_MAX_TRACKCNT)
+
+        //uint32_t cur_trackcnt = perkey_lookup_table_.size();
+        uint64_t cache_size_usage_for_uncached_objects = getSizeForCapacity();
+        if (cache_size_usage_for_uncached_objects > max_bytes_for_uncached_objects_)
         {
             detracked_key = sorted_popularity_multimap_.begin()->second->first;
             return true;
@@ -273,7 +283,7 @@ namespace covered
 
         perkey_metadata_iter->second.updateDynamicMetadata();
 
-        // TODO: Update LRU list order
+        // push_front already places the new object-level metadata to the head of LRU list -> NO need to update LRU list order
 
         // Update size usage of key-level metadata
         perkey_metadata_list_key_size_ = Util::uint64Add(perkey_metadata_list_key_size_, key.getKeystr().length());
@@ -290,7 +300,12 @@ namespace covered
 
         perkey_metadata_iter->second.updateDynamicMetadata();
 
-        // TODO: Update LRU list order
+        // Update LRU list order
+        if (perkey_metadata_iter != perkey_metadata_list_.begin())
+        {
+            // Move the list entry pointed by perkey_metadata_iter to the head of the list (NOT change the memory address of the list entry)
+            perkey_metadata_list_.splice(perkey_metadata_list_.begin(), perkey_metadata_list_, perkey_metadata_iter);
+        }
 
         // NOTE: NO need to update size usage of key-level metadata
 
@@ -309,7 +324,7 @@ namespace covered
 
         perkey_metadata_list_.erase(perkey_metadata_iter);
 
-        // NOTE: NO need to update LRU list order
+        // NOTE: erase removes the object-level metadata yet NOT affect other iterators -> NO need to update LRU list order
 
         return;
     }
