@@ -324,7 +324,7 @@ if is_install_segcache:
     segcache_install_dirpath = "{}/src/cache/segcache/build".format(proj_dirname)
     if not os.path.exists(segcache_install_dirpath):
         prompt(filename, "install SegCache from source...")
-        segcache_install_cmd = "cd {} && mkdir build && cd build && cmake .. && make -j".format(segcache_clone_dirpath)
+        segcache_install_cmd = "cd {} && mkdir build && cd build && cmake .. && make -j".format(os.path.dirname(segcache_install_dirpath))
 
         segcache_install_subprocess = runCmd(segcache_install_cmd)
         if segcache_install_subprocess.returncode != 0:
@@ -395,7 +395,7 @@ if need_update_ld_library_path:
             if i == 0:
                 update_bash_source_grepstr = "{}".format(target_ld_lib_dirpaths[i])
             elif i == len(target_ld_lib_dirpaths) - 1:
-                update_bash_source_grepstr = "{}:{}:\$LD_LIBRARY_PATH".format(update_bash_source_grepstr, target_ld_lib_dirpaths[i])
+                update_bash_source_grepstr = "{}:{}:\$\{LD_LIBRARY_PATH\}".format(update_bash_source_grepstr, target_ld_lib_dirpaths[i])
             else:
                 update_bash_source_grepstr = "{}:{}".format(update_bash_source_grepstr, target_ld_lib_dirpaths[i])
         update_bash_source_file_cmd = "echo \"export LD_LIBRARY_PATH={}\" >> {}".format(update_bash_source_grepstr, bash_source_filepath)
