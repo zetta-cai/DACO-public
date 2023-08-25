@@ -276,14 +276,22 @@ namespace covered
     uint64_t CoveredLocalCache::getSizeForCapacityInternal_() const
     {
         // NOTE: should NOT use cachelib_cache_ptr_->getCacheMemoryStats().ramCacheSize, which is usable cache size (i.e. capacity) instead of used size
-        uint64_t internal_size = cachelib_cache_ptr_->getUsedSize(cachelib_poolid_);
+        uint64_t internal_size = covered_cache_ptr_->getUsedSize(covered_poolid_);
+
+        // Count cache size usage for local cached objects
+        uint64_t local_cached_metadata_size = local_cached_metadata_.getSizeForCapacity();
+        internal_size = Util::uint64Add(internal_size, local_cached_metadata_size);
+
+        // Count cache size usage for local uncached objects
+        uint64_t local_uncached_metadata_size = local_uncached_metadata_.getSizeForCapacity();
+        internal_size = Util::uint64Add(internal_size, local_uncached_metadata_size);
 
         return internal_size;
     }
 
     void CoveredLocalCache::checkPointersInternal_() const
     {
-        assert(cachelib_cache_ptr_ != NULL);
+        assert(covered_cache_ptr_ != NULL);
         return;
     }
 }

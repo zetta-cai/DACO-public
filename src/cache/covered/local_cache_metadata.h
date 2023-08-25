@@ -18,10 +18,6 @@
 #include "common/key.h"
 #include "common/value.h"
 
-// TODO: as we have counted the size of LRU list and lookup table for cached objects in cachelib engine, we do NOT count it again
-
-// NOTE: getSizeForCapacityWithoutKeys is used for cached objects without the size of keys; getSizeForCapacityWithKeys is used for uncached objects with the size of keys
-
 namespace covered
 {
     // Forward declaration
@@ -48,6 +44,9 @@ namespace covered
 
         void setPerkeyMetadataIter(const perkey_metadata_list_t::iterator& perkey_metadata_iter);
         void setSortedPopularityIter(const sorted_popularity_multimap_t::iterator& sorted_popularity_iter);
+
+        static uint64_t getPerkeyMetadataIterSizeForCapacity();
+        static uint64_t getSortedPopularityIterSizeForCapacity();
     private:
         static const std::string kClassName;
 
@@ -71,6 +70,8 @@ namespace covered
         void addForNewKey(const Key& key, const Value& value); // Newly admitted cached key or currently tracked uncached key (for getrsp with cache miss, put/delrsp with cache miss, admission)
         void updateForExistingKey(const Key& key, const Value& value, const Value& original_value, const bool& is_value_related); // Admitted cached key or tracked uncached key (is_value_related = false: for getreq with cache hit, getrsp with cache miss; is_value_related = true: for getrsp with invalid hit, put/delreq with cache hit, put/delrsp with cache miss)
         void removeForExistingKey(const Key& detracked_key, const Value& value); // Remove admitted cached key or tracked uncached key (for getrsp with cache miss, put/delrsp with cache miss, admission, eviction)
+
+        uint64_t getSizeForCapacity() const; // Get size for capacity constraint (different for local cached or uncached objects)
     private:
         static const std::string kClassName;
 
@@ -102,6 +103,7 @@ namespace covered
         const bool is_for_uncached_objects_; // Whether this metadata is tracked for uncached objects for admission policy
         
         // Object-level metadata
+        uint64_t perkey_metadata_list_key_size_; // Total size of keys in perkey_metadata_list_
         perkey_metadata_list_t perkey_metadata_list_; // LRU list for object-level metadata (list index is recency information)
 
         // Group-level metadata
@@ -110,9 +112,11 @@ namespace covered
         pergroup_metadata_map_t pergroup_metadata_map_; // Group-level metadata (grouping based on admission/tracked time)
 
         // Popularity information
+        // OBSOLETE (learned index cannot support duplicate popularities; actually we do NOT count the pointers of std::multimap in cache size usage): Use learned index to replace local cached/uncached sorted_popularity_ for less memory usage (especially for local cached objects due to limited # of uncached objects)
         sorted_popularity_multimap_t sorted_popularity_multimap_; // Sorted popularity information (ascending order; allow duplicate popularity values)
 
         // Lookup table
+        uint64_t perkey_lookup_table_key_size_; // Total size of keys in perkey_lookup_table_
         perkey_lookup_table_t perkey_lookup_table_;
     };
 }

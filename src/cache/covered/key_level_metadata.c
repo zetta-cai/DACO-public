@@ -31,4 +31,9 @@ namespace covered
     {
         return frequency_;
     }
+
+    uint64_t KeyLevelMetadata::getSizeForCapacity()
+    {
+        return sizeof(GroupId) + sizeof(uint32_t);
+    }
 }

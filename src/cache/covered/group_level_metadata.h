@@ -28,6 +28,8 @@ namespace covered
 
         uint32_t getAvgObjectSize() const;
         uint32_t getObjectCnt() const;
+
+        static uint64_t getSizeForCapacity();
     private:
         static const std::string kClassName;
 

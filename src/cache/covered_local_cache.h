@@ -18,14 +18,6 @@
 #include "cache/covered/local_cache_metadata.h"
 #include "cache/local_cache_base.h"
 
-// NOTE: although we track local cached metadata outside CacheLib to avoid extensive hacking, per-key metadata and popularity iterator actually can be stored into cachelib::CacheItem -> so we do NOT need to count the size of keys for local cached metadata (similar as size measurement in ValidityMap and BlockTracker)
-// NOTE: we still count the size of keys for local uncached metadata -> but only once for per-key metadata and popularity iterator, as they actually can be maintained in a single map (we just split them for implementation simplicity)
-
-// TODO: Use homogeneous popularity calculation now, but will replace with heterogeneous popularity calculation + learning later (for both local cached and uncached objects)
-// TODO: Use learned index to replace local cached/uncached sorted_popularity_ for less memory usage (especially for local cached objects due to limited # of uncached objects)
-
-// TODO: Use grouping settings in GL-Cache later (e.g., fix per-group cache size usage instead of COVERED_PERGROUP_MAXKEYCNT)
-
 namespace covered
 {
     class CoveredLocalCache : public LocalCacheBase
@@ -66,18 +58,6 @@ namespace covered
         virtual uint64_t getSizeForCapacityInternal_() const override;
 
         virtual void checkPointersInternal_() const override;
-
-        // (5) COVERED-specific functions
-
-        // Update local cached metadata
-        //void updateLocalCachedStatisticsForAdmission_(const Key& key, const Value& value) const; // Triggered by admission of newly admitted objects
-        //void updateLocalCachedStatisticsForCachedKeyValue_(const Key& key, const Value& value) const; // Triggered by put requests with cache hits
-        //void updateLocalCachedStatisticsForEviction_(const Key& key) const; // Triggered by eviction of victim objects
-
-        // Update local uncached metadata
-        //void updateLocalUncachedStatisticsForNewlyTracked_(const Key& key, const Value& value) const;// Triggered by newly tracked objects in candidate list
-        //void updateLocalUncachedStatisticsForCandidateKeyValue_(const Key& key) const; // Triggered by put/del responses for cache misses
-        //void updateLocalUncachedStatisticsForDetracked_(const Key& key) const; // Triggered by detracked objects in candidate list
 
         // Member variables
 

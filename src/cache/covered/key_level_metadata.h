@@ -24,6 +24,8 @@ namespace covered
 
         GroupId getGroupId() const;
         uint32_t getFrequency() const;
+
+        static uint64_t getSizeForCapacity();
     private:
         static const std::string kClassName;
 

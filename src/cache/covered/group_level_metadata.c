@@ -96,4 +96,9 @@ namespace covered
     {
         return object_cnt_;
     }
+
+    uint64_t GroupLevelMetadata::getSizeForCapacity()
+    {
+        return sizeof(uint32_t) + sizeof(uint32_t);
+    }
 }
