@@ -34,7 +34,7 @@ namespace covered
         }
         cacheConfig.validate(); // will throw if bad config
 
-        cachelib_cache_ptr_ = std::make_unique<Lru2QCache>(cacheConfig);
+        cachelib_cache_ptr_ = std::make_unique<CachelibLru2QCache>(cacheConfig);
         assert(cachelib_cache_ptr_.get() != NULL);
 
         cachelib_poolid_ = cachelib_cache_ptr_->addPool("default", cachelib_cache_ptr_->getCacheMemoryStats().ramCacheSize);
@@ -148,7 +148,7 @@ namespace covered
         return;
     }
 
-    bool CachelibLocalCache::getLocalCacheVictimKeysInternal_(std::set<Key, KeyHasher>& keys, const uint64_t& required_size) const
+    bool CachelibLocalCache::getLocalCacheVictimKeysInternal_(std::set<Key>& keys, const uint64_t& required_size) const
     {
         assert(hasFineGrainedManagement());
 
@@ -210,8 +210,8 @@ namespace covered
             value = Value(handle->getSize());
 
             // Remove the corresponding cache item
-            Lru2QCache::RemoveRes removeRes = cachelib_cache_ptr_->remove(cur_victim_key.getKeystr());
-            assert(removeRes == Lru2QCache::RemoveRes::kSuccess);
+            CachelibLru2QCache::RemoveRes removeRes = cachelib_cache_ptr_->remove(cur_victim_key.getKeystr());
+            assert(removeRes == CachelibLru2QCache::RemoveRes::kSuccess);
 
             is_evict = true;
         }*/
@@ -224,8 +224,8 @@ namespace covered
             value = Value(handle->getSize());
 
             // Remove the corresponding cache item
-            Lru2QCache::RemoveRes removeRes = cachelib_cache_ptr_->remove(key.getKeystr());
-            assert(removeRes == Lru2QCache::RemoveRes::kSuccess);
+            CachelibLru2QCache::RemoveRes removeRes = cachelib_cache_ptr_->remove(key.getKeystr());
+            assert(removeRes == CachelibLru2QCache::RemoveRes::kSuccess);
 
             is_evict = true;
         }

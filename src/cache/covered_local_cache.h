@@ -48,7 +48,7 @@ namespace covered
 
         virtual bool needIndependentAdmitInternal_(const Key& key) const override;
         virtual void admitLocalCacheInternal_(const Key& key, const Value& value) override;
-        virtual bool getLocalCacheVictimKeysInternal_(std::set<Key, KeyHasher>& keys, const uint64_t& required_size) const override;
+        virtual bool getLocalCacheVictimKeysInternal_(std::set<Key>& keys, const uint64_t& required_size) const override;
         virtual bool evictLocalCacheWithGivenKeyInternal_(const Key& key, Value& value) override;
         virtual void evictLocalCacheNoGivenKeyInternal_(std::unordered_map<Key, Value, KeyHasher>& victims, const uint64_t& required_size) override;
 
@@ -67,7 +67,7 @@ namespace covered
         // (B) Non-const shared variables of local cached objects for eviction
 
         // CacheLib-based key-value storage
-        std::unique_ptr<LruCache> covered_cache_ptr_; // Data engine for local edge cache
+        std::unique_ptr<CachelibLruCache> covered_cache_ptr_; // Data engine for local edge cache
         facebook::cachelib::PoolId covered_poolid_; // Pool ID for covered local edge cache
 
         mutable LocalCacheMetadata local_cached_metadata_; // Metadata for local cached objects

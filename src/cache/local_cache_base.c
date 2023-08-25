@@ -5,6 +5,7 @@
 
 #include "common/util.h"
 #include "cache/cachelib_local_cache.h"
+#include "cache/covered_local_cache.h"
 #include "cache/lfu_local_cache.h"
 #include "cache/lru_local_cache.h"
 #include "cache/segcache_local_cache.h"
@@ -19,6 +20,10 @@ namespace covered
         if (cache_name == Util::CACHELIB_CACHE_NAME)
         {
             local_cache_ptr = new CachelibLocalCache(edge_idx, capacity_bytes);
+        }
+        else if (cache_name == Util::COVERED_CACHE_NAME)
+        {
+            local_cache_ptr = new CoveredLocalCache(edge_idx, capacity_bytes);
         }
         else if (cache_name == Util::LFU_CACHE_NAME)
         {
@@ -155,7 +160,7 @@ namespace covered
         return;
     }
 
-    bool LocalCacheBase::getLocalCacheVictimKeys(std::set<Key, KeyHasher>& keys, const uint64_t& required_size) const
+    bool LocalCacheBase::getLocalCacheVictimKeys(std::set<Key>& keys, const uint64_t& required_size) const
     {
         checkPointers_();
 

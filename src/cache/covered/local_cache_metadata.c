@@ -52,6 +52,14 @@ namespace covered
         return sizeof(sorted_popularity_multimap_t::iterator);
     }
 
+    const LookupMetadata& LookupMetadata::operator=(const LookupMetadata& other)
+    {
+        perkey_metadata_iter_ = other.perkey_metadata_iter_;
+        sorted_popularity_iter_ = other.sorted_popularity_iter_;
+
+        return *this;
+    }
+
     // LocalCacheMetadata
 
     const std::string LocalCacheMetadata::kClassName("LocalCacheMetadata");
@@ -74,6 +82,7 @@ namespace covered
         cur_group_keycnt_ = 0;
         pergroup_metadata_map_.clear();
 
+        sorted_popularity_multimap_key_size_ = 0;
         sorted_popularity_multimap_.clear();
 
         perkey_lookup_table_key_size_ = 0;
@@ -96,7 +105,7 @@ namespace covered
         {
             sorted_popularity_multimap_t::const_iterator sorted_popularity_iter = sorted_popularity_multimap_.begin();
             std::advance(sorted_popularity_iter, least_popular_rank);
-            key = sorted_popularity_iter->second->first;
+            key = sorted_popularity_iter->second;
             is_least_popular_key_exist = true;
         }
 
@@ -112,7 +121,7 @@ namespace covered
         uint64_t cache_size_usage_for_uncached_objects = getSizeForCapacity();
         if (cache_size_usage_for_uncached_objects > max_bytes_for_uncached_objects_)
         {
-            detracked_key = sorted_popularity_multimap_.begin()->second->first;
+            detracked_key = sorted_popularity_multimap_.begin()->second;
             return true;
         }
         else
@@ -221,7 +230,6 @@ namespace covered
 
         // Popularity information
         uint64_t sorted_popularity_multimap_popularity_size = sorted_popularity_multimap_.size() * sizeof(Popularity);
-        uint64_t sorted_popularity_multimap_lookup_iter_size = sorted_popularity_multimap_.size() * sizeof(perkey_lookup_iter_t);
 
         // Lookup table
         uint64_t perkey_lookup_table_perkey_metadata_iter_size = perkey_lookup_table_.size() * LookupMetadata::getPerkeyMetadataIterSizeForCapacity();
@@ -241,7 +249,7 @@ namespace covered
 
             // Popularity information (locate keys in lookup table for popularity-based eviction)
             total_size = Util::uint64Add(total_size, sorted_popularity_multimap_popularity_size);
-            total_size = Util::uint64Add(total_size, sorted_popularity_multimap_lookup_iter_size);
+            total_size = Util::uint64Add(total_size, sorted_popularity_multimap_key_size_);
 
             // Lookup table (locate keys in object-level LRU list and popularity list)
             total_size = Util::uint64Add(total_size, perkey_lookup_table_key_size_);
@@ -251,7 +259,8 @@ namespace covered
         else // For local cached objects
         {
             // Object-level metadata
-            // NOTE: although we track local cached metadata outside CacheLib to avoid extensive hacking, per-key object-level metadata actually can be stored into cachelib::CacheItem -> NO need to count the size of keys of object-level metadata for local cached objects (similar as size measurement in ValidityMap and BlockTracker)
+            // NOTE: (i) LRU list does NOT need to track keys; (ii) although we track local cached metadata outside CacheLib to avoid extensive hacking, per-key object-level metadata actually can be stored into cachelib::CacheItem -> NO need to count the size of keys of object-level metadata for local cached objects (similar as size measurement in ValidityMap and BlockTracker)
+            //total_size = Util::uint64Add(total_size, perkey_metadata_list_key_size_);
             total_size = Util::uint64Add(total_size, perkey_metadata_list_metadata_size);
 
             // Group-level metadata
@@ -259,11 +268,14 @@ namespace covered
             total_size = Util::uint64Add(total_size, pergroup_metadata_map_metadata_size);
 
             // Popularity information (locate keys in lookup table for popularity-based eviction)
+            // NOTE: we only need to maintain keys in popularity list instead of LRU list (we NEVER use perkey_metadata_list_->first to locate keys) for popularity-based eviction, while cachelib has counted the size of keys in LRU list (we do NOT remove keys from LRU list in cachelib to avoid hacking too much code) -> NO need to count the size of keys of popularity list for local cached objects here
             total_size = Util::uint64Add(total_size, sorted_popularity_multimap_popularity_size);
-            total_size = Util::uint64Add(total_size, sorted_popularity_multimap_lookup_iter_size);
+            //total_size = Util::uint64Add(total_size, sorted_popularity_multimap_key_size_);
 
             // Lookup table (locate keys in object-level LRU list and popularity list)
             // NOTE: although we track local cached metadata outside CacheLib to avoid extensive hacking, per-key lookup metadata actually can be stored into cachelib::ChainedHashTable -> NO need to count the size of keys and object-level metadata iterators of lookup metadata for local cached objects
+            //total_size = Util::uint64Add(total_size, perkey_lookup_table_key_size_);
+            //total_size = Util::uint64Add(total_size, perkey_lookup_table_perkey_metadata_iter_size); // LRU list iterator
             total_size = Util::uint64Add(total_size, perkey_lookup_table_sorted_popularity_iter_size); // Popularity list iterator
         }
 
@@ -431,7 +443,10 @@ namespace covered
         // NOTE: perkey_metadata_iter_ and sorted_popularity_iter_ in perkey_lookup_iter here are invalid
 
         // Add new popularity information
-        sorted_popularity_multimap_t::iterator new_popularity_iter = sorted_popularity_multimap_.insert(std::pair(new_popularity, perkey_lookup_iter));
+        sorted_popularity_multimap_t::iterator new_popularity_iter = sorted_popularity_multimap_.insert(std::pair(new_popularity, perkey_lookup_iter->first));
+
+        // Update size usage of popularity information
+        sorted_popularity_multimap_key_size_ = Util::uint64Add(sorted_popularity_multimap_key_size_, perkey_lookup_iter->first.getKeystr().length());
 
         return new_popularity_iter;
     }
@@ -442,7 +457,7 @@ namespace covered
         const LookupMetadata& lookup_metadata = perkey_lookup_iter->second;
         sorted_popularity_multimap_t::iterator old_sorted_popularity_iter = lookup_metadata.getSortedPopularityIter();
         assert(old_sorted_popularity_iter != sorted_popularity_multimap_.end()); // For existing key
-        assert(old_sorted_popularity_iter->second == perkey_lookup_iter);
+        assert(old_sorted_popularity_iter->second == perkey_lookup_iter->first);
 
         /*// Get handle referring to item by move assignment operator
         // NOTE: now handle points to item, yet old_sorted_popularity_iter->second points to NULL)
@@ -460,7 +475,9 @@ namespace covered
         multimap_iterator_t new_popularity_iter = sorted_popularity_multimap_.insert(std::move(tmp_pair));*/
 
         // Add new popularity information
-        sorted_popularity_multimap_t::iterator new_popularity_iter = sorted_popularity_multimap_.insert(std::pair(new_popularity, perkey_lookup_iter));
+        sorted_popularity_multimap_t::iterator new_popularity_iter = sorted_popularity_multimap_.insert(std::pair(new_popularity, perkey_lookup_iter->first));
+
+        // NOTE: NO need to update size usage of popularity information
 
         return new_popularity_iter;
     }
@@ -471,10 +488,13 @@ namespace covered
         const LookupMetadata& lookup_metadata = perkey_lookup_iter->second;
         sorted_popularity_multimap_t::iterator sorted_popularity_iter = lookup_metadata.getSortedPopularityIter();
         assert(sorted_popularity_iter != sorted_popularity_multimap_.end()); // For existing key
-        assert(sorted_popularity_iter->second == perkey_lookup_iter);
+        assert(sorted_popularity_iter->second == perkey_lookup_iter->first);
 
         // Remove popularity information
         sorted_popularity_multimap_.erase(sorted_popularity_iter);
+
+        // Update size usage of popularity information
+        sorted_popularity_multimap_key_size_ = Util::uint64Minus(sorted_popularity_multimap_key_size_, perkey_lookup_iter->first.getKeystr().length());
 
         return;
     }

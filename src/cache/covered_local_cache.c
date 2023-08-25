@@ -39,7 +39,7 @@ namespace covered
         cacheConfig.validate(); // will throw if bad config
 
         // CacheLib-based key-value storage
-        covered_cache_ptr_ = std::make_unique<LruCache>(cacheConfig);
+        covered_cache_ptr_ = std::make_unique<CachelibLruCache>(cacheConfig);
         assert(covered_cache_ptr_.get() != NULL);
         covered_poolid_ = covered_cache_ptr_->addPool("default", covered_cache_ptr_->getCacheMemoryStats().ramCacheSize);
     }
@@ -196,7 +196,7 @@ namespace covered
         return;
     }
 
-    bool CoveredLocalCache::getLocalCacheVictimKeysInternal_(std::set<Key, KeyHasher>& keys, const uint64_t& required_size) const
+    bool CoveredLocalCache::getLocalCacheVictimKeysInternal_(std::set<Key>& keys, const uint64_t& required_size) const
     {
         // TODO: this function will be invoked at each candidate neighbor node by the beacon node for lazy fetching of candidate victims
         // TODO: this function will also be invoked at each placement neighbor node by the beacon node for cache placement
@@ -256,8 +256,8 @@ namespace covered
             value = Value(handle->getSize());
 
             // Remove the corresponding cache item
-            LruCache::RemoveRes removeRes = covered_cache_ptr_->remove(key.getKeystr());
-            assert(removeRes == LruCache::RemoveRes::kSuccess);
+            CachelibLruCache::RemoveRes removeRes = covered_cache_ptr_->remove(key.getKeystr());
+            assert(removeRes == CachelibLruCache::RemoveRes::kSuccess);
 
             // Remove from local cached metadata for eviction
             local_cached_metadata_.removeForExistingKey(key, value);

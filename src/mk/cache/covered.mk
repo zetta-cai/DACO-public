@@ -12,7 +12,7 @@ DEPS += $(BENCHMARK_SRCFILES:.c=.d)
 CLEANS += $(BENCHMARK_OBJECTS) $(BENCHMARK_SHARED_OBJECTS)
 
 # cache module
-CACHE_SRCFILES := $(wildcard $(COVERED_DIRPATH)/cache/*.c)
+CACHE_SRCFILES := $(wildcard $(COVERED_DIRPATH)/cache/*.c) $(wildcard $(COVERED_DIRPATH)/cache/covered/*.c)
 CACHE_OBJECTS += $(CACHE_SRCFILES:.c=.o)
 CACHE_SHARED_OBJECTS += $(CACHE_SRCFILES:.c=.shared.o)
 DEPS += $(CACHE_SRCFILES:.c=.d)

@@ -14,10 +14,10 @@ namespace covered
     // Forward declaration
     class CoveredLocalCache;
 
-    typedef LruAllocator LruCache; // LRU2Q cache policy
-    typedef LruCache::Config LruCacheConfig;
-    typedef LruCache::ReadHandle LruCacheReadHandle;
-    typedef LruCache::Item LruCacheItem;
+    typedef LruAllocator CachelibLruCache; // LRU2Q cache policy
+    typedef CachelibLruCache::Config LruCacheConfig;
+    typedef CachelibLruCache::ReadHandle LruCacheReadHandle;
+    typedef CachelibLruCache::Item LruCacheItem;
 
     typedef uint32_t GroupId;
     typedef float Popularity;

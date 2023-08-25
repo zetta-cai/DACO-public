@@ -23,10 +23,10 @@ namespace covered
     class CachelibLocalCache : public LocalCacheBase
     {
     public:
-        typedef Lru2QAllocator Lru2QCache; // LRU2Q cache policy
-        typedef Lru2QCache::Config Lru2QCacheConfig;
-        typedef Lru2QCache::ReadHandle Lru2QCacheReadHandle;
-        typedef Lru2QCache::Item Lru2QCacheItem;
+        typedef Lru2QAllocator CachelibLru2QCache; // LRU2Q cache policy
+        typedef CachelibLru2QCache::Config Lru2QCacheConfig;
+        typedef CachelibLru2QCache::ReadHandle Lru2QCacheReadHandle;
+        typedef CachelibLru2QCache::Item Lru2QCacheItem;
 
         // NOTE: too small cache capacity cannot support slab-based memory allocation in cachelib (see lib/CacheLib/cachelib/allocator/CacheAllocatorConfig.h and lib/CacheLib/cachelib/allocator/memory/SlabAllocator.cpp)
         static const uint64_t CACHELIB_MIN_CAPACITY_BYTES; // NOTE: NOT affect capacity constraint!
@@ -53,7 +53,7 @@ namespace covered
 
         virtual bool needIndependentAdmitInternal_(const Key& key) const override;
         virtual void admitLocalCacheInternal_(const Key& key, const Value& value) override;
-        virtual bool getLocalCacheVictimKeysInternal_(std::set<Key, KeyHasher>& keys, const uint64_t& required_size) const override;
+        virtual bool getLocalCacheVictimKeysInternal_(std::set<Key>& keys, const uint64_t& required_size) const override;
         virtual bool evictLocalCacheWithGivenKeyInternal_(const Key& key, Value& value) override;
         virtual void evictLocalCacheNoGivenKeyInternal_(std::unordered_map<Key, Value, KeyHasher>& victims, const uint64_t& required_size) override;
 
@@ -70,7 +70,7 @@ namespace covered
         std::string instance_name_;
 
         // Non-const shared variables
-        std::unique_ptr<Lru2QCache> cachelib_cache_ptr_; // Data and metadata for local edge cache
+        std::unique_ptr<CachelibLru2QCache> cachelib_cache_ptr_; // Data and metadata for local edge cache
         facebook::cachelib::PoolId cachelib_poolid_; // Pool ID for cachelib local edge cache
     };
 }

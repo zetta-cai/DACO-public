@@ -20,17 +20,12 @@
 
 namespace covered
 {
-    // Forward declaration
-    class perkey_lookup_iter_t;
-    class LookupMetadata;
-
-    typedef std::list<std::pair<Key, KeyLevelMetadata>> perkey_metadata_list_t;
+    typedef std::list<std::pair<Key, KeyLevelMetadata>> perkey_metadata_list_t; // LRU list of object-level metadata
     typedef std::unordered_map<GroupId, GroupLevelMetadata> pergroup_metadata_map_t;
+
+    // NOTE: typedef MUST need complete definition of class unless you use pointers or references -> cannot use perkey_lookup_iter_t in sorted_popularity_multimap_t, which will cause circular dependency between LookupMetadata and sorted_popularity_multimap_t
     //typedef std::multimap<Popularity, LruCacheReadHandle> sorted_popularity_multimap_t; // Obselete: local uncached objects cannot provide LruCacheReadHandle
-    typedef std::multimap<Popularity, perkey_lookup_iter_t> sorted_popularity_multimap_t;
-    typedef std::unordered_map<Key, LookupMetadata, KeyHasher> perkey_lookup_table_t;
-    typedef perkey_lookup_table_t::iterator perkey_lookup_iter_t;
-    typedef perkey_lookup_table_t::const_iterator perkey_lookup_const_iter_t;
+    typedef std::multimap<Popularity, Key> sorted_popularity_multimap_t; // Ordered list of per-key popularity
 
     class LookupMetadata
     {
@@ -47,12 +42,18 @@ namespace covered
 
         static uint64_t getPerkeyMetadataIterSizeForCapacity();
         static uint64_t getSortedPopularityIterSizeForCapacity();
+
+        const LookupMetadata& operator=(const LookupMetadata& other);
     private:
         static const std::string kClassName;
 
         perkey_metadata_list_t::iterator perkey_metadata_iter_;
         sorted_popularity_multimap_t::iterator sorted_popularity_iter_;
     };
+
+    typedef std::unordered_map<Key, LookupMetadata, KeyHasher> perkey_lookup_table_t;
+    typedef perkey_lookup_table_t::iterator perkey_lookup_iter_t;
+    typedef perkey_lookup_table_t::const_iterator perkey_lookup_const_iter_t;
 
     class LocalCacheMetadata
     {
@@ -114,6 +115,7 @@ namespace covered
 
         // Popularity information
         // OBSOLETE (learned index cannot support duplicate popularities; actually we do NOT count the pointers of std::multimap in cache size usage): Use learned index to replace local cached/uncached sorted_popularity_ for less memory usage (especially for local cached objects due to limited # of uncached objects)
+        uint64_t sorted_popularity_multimap_key_size_; // Total size of keys in sorted_popularity_multimap_
         sorted_popularity_multimap_t sorted_popularity_multimap_; // Sorted popularity information (ascending order; allow duplicate popularity values)
 
         // Lookup table

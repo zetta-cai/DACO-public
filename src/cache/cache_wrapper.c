@@ -369,7 +369,7 @@ namespace covered
         // NOTE: we do NOT retry here (instead we do it in cache server worker), as we need to update required_size based on cache size usage (including local edge cache and cooperation info) and cache capacity
 
         // Get victim keys for key-level fine-grained locking
-        std::set<Key, KeyHasher> tmp_victim_keys;
+        std::set<Key> tmp_victim_keys;
         bool has_victim_key = local_cache_ptr_->getLocalCacheVictimKeys(tmp_victim_keys, required_size);
 
         // At least one victim key should exist for eviction
@@ -381,7 +381,7 @@ namespace covered
         assert(tmp_victim_keys.size() > 0);
 
         std::vector<Value> tmp_victim_values;
-        for (std::set<Key, KeyHasher>::const_iterator tmp_victim_key_iter = tmp_victim_keys.begin(); tmp_victim_key_iter != tmp_victim_keys.end(); tmp_victim_key_iter++)
+        for (std::set<Key>::const_iterator tmp_victim_key_iter = tmp_victim_keys.begin(); tmp_victim_key_iter != tmp_victim_keys.end(); tmp_victim_key_iter++)
         {
             const Key& tmp_victim_key = *tmp_victim_key_iter;
             Value tmp_victim_value;

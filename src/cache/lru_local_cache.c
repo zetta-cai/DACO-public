@@ -78,7 +78,7 @@ namespace covered
         return;
     }
 
-    bool LruLocalCache::getLocalCacheVictimKeysInternal_(std::set<Key, KeyHasher>& keys, const uint64_t& required_size) const
+    bool LruLocalCache::getLocalCacheVictimKeysInternal_(std::set<Key>& keys, const uint64_t& required_size) const
     {
         assert(hasFineGrainedManagement());
 

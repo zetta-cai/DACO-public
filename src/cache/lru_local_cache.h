@@ -39,7 +39,7 @@ namespace covered
 
         virtual bool needIndependentAdmitInternal_(const Key& key) const override;
         virtual void admitLocalCacheInternal_(const Key& key, const Value& value) override;
-        virtual bool getLocalCacheVictimKeysInternal_(std::set<Key, KeyHasher>& keys, const uint64_t& required_size) const override;
+        virtual bool getLocalCacheVictimKeysInternal_(std::set<Key>& keys, const uint64_t& required_size) const override;
         virtual bool evictLocalCacheWithGivenKeyInternal_(const Key& key, Value& value) override;
         virtual void evictLocalCacheNoGivenKeyInternal_(std::unordered_map<Key, Value, KeyHasher>& victims, const uint64_t& required_size) override;
 

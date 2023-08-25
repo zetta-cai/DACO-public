@@ -161,7 +161,7 @@ namespace covered
         return;
     }
 
-    bool SegcacheLocalCache::getLocalCacheVictimKeysInternal_(std::set<Key, KeyHasher>& keys, const uint64_t& required_size) const
+    bool SegcacheLocalCache::getLocalCacheVictimKeysInternal_(std::set<Key>& keys, const uint64_t& required_size) const
     {
         assert(hasFineGrainedManagement());
 
