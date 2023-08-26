@@ -1,5 +1,7 @@
 /*
  * FacebookWorkloadWrapper: encapsulate the config parser and workload generator in cachebench for Facebook CDN trace (https://cachelib.org/docs/Cache_Library_User_Guides/Cachebench_Overview/) (thread safe).
+ *
+ * NOTE: see notes on source code of cachelib in docs/cachebench.md.
  * 
  * By Siyuan Sheng (2023.04.19).
  */

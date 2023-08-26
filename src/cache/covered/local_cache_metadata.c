@@ -268,7 +268,7 @@ namespace covered
             total_size = Util::uint64Add(total_size, pergroup_metadata_map_metadata_size);
 
             // Popularity information (locate keys in lookup table for popularity-based eviction)
-            // NOTE: we only need to maintain keys in popularity list instead of LRU list (we NEVER use perkey_metadata_list_->first to locate keys) for popularity-based eviction, while cachelib has counted the size of keys in LRU list (we do NOT remove keys from LRU list in cachelib to avoid hacking too much code) -> NO need to count the size of keys of popularity list for local cached objects here
+            // NOTE: we only need to maintain keys (or CacheItem pointers) in popularity list instead of LRU list (we NEVER use perkey_metadata_list_->first to locate keys) for popularity-based eviction, while cachelib has counted the size of keys (i.e., CacheItem pointers) in MMContainer's LRU list (we do NOT remove keys from LRU list in cachelib to avoid hacking too much code) -> NO need to count the size of keys of popularity list for local cached objects here
             total_size = Util::uint64Add(total_size, sorted_popularity_multimap_popularity_size);
             //total_size = Util::uint64Add(total_size, sorted_popularity_multimap_key_size_);
 

@@ -3,9 +3,7 @@
  * 
  * NOTE: all configuration and function calls refer to Cachelib files, including lib/CacheLib/examples/simple_cache/main.cpp and lib/cachelib/cachebench/runner/CacheStressor.h.
  * 
- * NOTEs for source code of CacheLib
- * (1) For each insert/update, CacheAllocator uses MemoryAllocator to allocate memory for new item (automatic management based on refcnt; only manage memory for key, value, LRU/FIFO and hashtable-lookup hook/pointer, and flags, while metadata such as CMS-based access frequencies are maintained by MMContainer such as MMTinyLFU), uses MM2Q as MMContainer to admit new metadata or evict victim metadata, and uses ChainedHashTable as AccessContainer for add new item into hash table.
- * (2) A handle's it_ points to CacheItem, whose kAllocation alloc_ stores key and value (it encodes key size and value size into one uint32_t variable, and concatenates key bytes and value bytes into one unsigned char array) -> getMemory() and getSize() return value bytes and size, while getKey() return Key (inheriting from folly::StringPiece) with key bytes and size -> deconstructor of handle will release the memory of pointed item if the refcnt is decreased to 0.
+ * NOTE: see notes on source code of cachelib in docs/cachelib.md.
  * 
  * By Siyuan Sheng (2023.08.07).
  */
