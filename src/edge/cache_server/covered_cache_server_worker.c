@@ -37,19 +37,35 @@ namespace covered
 
     // (2.1) Fetch data from neighbor edge nodes
 
-    bool CoveredCacheServerWorker::lookupBeaconDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, EventList& event_list, const bool& skip_propagation_latency) const
+    MessageBase* CoveredCacheServerWorker::getReqToLookupBeaconDirectory_(const Key& key, const bool& skip_propagation_latency) const
     {
         // TODO: Piggyback candidate victims in current edge node
 
-        // TODO: Piggyback local uncached popularity for key in current edge node
-        return false;
+        // TODO: Piggyback local uncached popularity for key in current edge node (END HERE)
+
+        /*checkPointers_();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+
+        // Prepare directory lookup request to check directory information in beacon node
+        uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
+        MessageBase* directory_lookup_request_ptr = new DirectoryLookupRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
+        assert(directory_lookup_request_ptr != NULL);
+
+        return directory_lookup_request_ptr;*/
+    }
+
+    void CoveredCacheServerWorker::processRspToLookupBeaconDirectory_(const DynamicArray& control_response_msg_payload, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, EventList& event_list) const
+    {
+        // TODO: Process directory lookup response for non-blocking admission placement deployment
+
+        return;
     }
 
     bool CoveredCacheServerWorker::redirectGetToTarget_(const DirectoryInfo& directory_info, const Key& key, Value& value, bool& is_cooperative_cached, bool& is_valid, EventList& event_list, const bool& skip_propagation_latency) const
     {
         // TODO: Piggyback candidate victims in current edge node
 
-        // TODO: Update/invaidate priority-based local directory cache
+        // TODO: Update/invaidate expiration-based local directory cache
         // TODO: If local uncached popularity has large change compared with last sync, explicitly sync latest local uncached popularity to beacon node by piggybacking to update aggregated uncached popularity
         return false;
     }
@@ -60,7 +76,8 @@ namespace covered
     {
         // TODO: Piggyback candidate victims in current edge node
 
-        // NOTE: NO need to piggyback local uncached popularity for key in current edge node, as updateBeaconDirectory_() is admitting a local uncached object (no need to trigger a duplicate admission), or evicting a local cached object (no local uncached popularity to sync)
+        // NOTE: If updateBeaconDirectory_() is admitting a local uncached object, beacon node has already removed local uncached popularities of plaecment nodes from aggregated uncached popularity after placement calculation, and only needs to assert node ID NOT exist in aggregate bitmap and remove the preserved node ID if any -> NO need to piggyback local uncached popularity
+        // NOTE: If updateBeaconDirectory_() is evicting a local cached object, beacon node only needs to assert node ID NOT exist in aggregate bitmap -> NO need to piggyback local uncached popularity
         return false;
     }
 

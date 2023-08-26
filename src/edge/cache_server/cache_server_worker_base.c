@@ -625,6 +625,68 @@ namespace covered
         return is_finish;
     }
 
+    bool CacheServerWorkerBase::lookupBeaconDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, EventList& event_list, const bool& skip_propagation_latency) const
+    {
+        checkPointers_();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+
+        // The current edge node must NOT be the beacon node for the key
+        bool current_is_beacon = tmp_edge_wrapper_ptr->currentIsBeacon(key);
+        assert(!current_is_beacon);
+
+        bool is_finish = false;
+        struct timespec issue_directory_lookup_req_start_timestamp = Util::getCurrentTimespec();
+
+        // Get destination address of beacon node
+        NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = getBeaconDstaddr_(key);
+
+        while (true) // Timeout-and-retry mechanism
+        {
+            MessageBase* directory_lookup_request_ptr = getReqToLookupBeaconDirectory_(key, skip_propagation_latency);
+            assert(directory_lookup_request_ptr != NULL);
+
+            #ifdef DEBUG_CACHE_SERVER
+            Util::dumpVariablesForDebug(base_instance_name_, 4, "beacon edge index:", std::to_string(tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getBeaconEdgeIdx(key)).c_str(), "keystr:", key.getKeystr().c_str());
+            #endif
+
+            // Push the control request into edge-to-edge propagation simulator to send to beacon node
+            bool is_successful = tmp_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->push(directory_lookup_request_ptr, beacon_edge_beacon_server_recvreq_dst_addr);
+            assert(is_successful);
+
+            // NOTE: directory_lookup_request_ptr will be released by edge-to-edge propagation simulator
+            directory_lookup_request_ptr = NULL;
+
+            // Receive the control repsonse from the beacon node
+            DynamicArray control_response_msg_payload;
+            bool is_timeout = edge_cache_server_worker_recvrsp_socket_server_ptr_->recv(control_response_msg_payload);
+            if (is_timeout)
+            {
+                if (!tmp_edge_wrapper_ptr->isNodeRunning())
+                {
+                    is_finish = true;
+                    break; // Edge is NOT running
+                }
+                else
+                {
+                    Util::dumpWarnMsg(base_instance_name_, "edge timeout to wait for DirectoryLookupResponse");
+                    continue; // Resend the control request message
+                }
+            } // End of (is_timeout == true)
+            else
+            {
+                processRspToLookupBeaconDirectory_(control_response_msg_payload, is_being_written, is_valid_directory_exist, directory_info, event_list);
+                break;
+            } // End of (is_timeout == false)
+        } // End of while(true)
+
+        // Add intermediate event if with event tracking
+        struct timespec issue_directory_lookup_req_end_timestamp = Util::getCurrentTimespec();
+        uint32_t issue_directory_lookup_req_latency_us = Util::getDeltaTimeUs(issue_directory_lookup_req_end_timestamp, issue_directory_lookup_req_start_timestamp);
+        event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_ISSUE_DIRECTORY_LOOKUP_REQ_EVENT_NAME, issue_directory_lookup_req_latency_us);
+
+        return is_finish;
+    }
+
     // (2.2) Update content directory information
 
     bool CacheServerWorkerBase::updateDirectory_(const Key& key, const bool& is_admit, bool& is_being_written, EventList& event_list, const bool& skip_propagation_latency) const
