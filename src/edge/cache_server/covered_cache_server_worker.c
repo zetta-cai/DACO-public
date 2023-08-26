@@ -29,6 +29,7 @@ namespace covered
 
     bool CoveredCacheServerWorker::processRedirectedGetRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& recvrsp_dst_addr) const
     {
+        // TODO: Piggyback candidate victims in current edge node
         return false;
     }
 
@@ -38,11 +39,18 @@ namespace covered
 
     bool CoveredCacheServerWorker::lookupBeaconDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, EventList& event_list, const bool& skip_propagation_latency) const
     {
+        // TODO: Piggyback candidate victims in current edge node
+
+        // TODO: Piggyback local uncached popularity for key in current edge node
         return false;
     }
 
     bool CoveredCacheServerWorker::redirectGetToTarget_(const DirectoryInfo& directory_info, const Key& key, Value& value, bool& is_cooperative_cached, bool& is_valid, EventList& event_list, const bool& skip_propagation_latency) const
     {
+        // TODO: Piggyback candidate victims in current edge node
+
+        // TODO: Update/invaidate priority-based local directory cache
+        // TODO: If local uncached popularity has large change compared with last sync, explicitly sync latest local uncached popularity to beacon node by piggybacking to update aggregated uncached popularity
         return false;
     }
 
@@ -50,6 +58,9 @@ namespace covered
 
     bool CoveredCacheServerWorker::updateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written, EventList& event_list, const bool& skip_propagation_latency) const
     {
+        // TODO: Piggyback candidate victims in current edge node
+
+        // NOTE: NO need to piggyback local uncached popularity for key in current edge node, as updateBeaconDirectory_() is admitting a local uncached object (no need to trigger a duplicate admission), or evicting a local cached object (no local uncached popularity to sync)
         return false;
     }
 
@@ -57,11 +68,17 @@ namespace covered
 
     bool CoveredCacheServerWorker::acquireBeaconWritelock_(const Key& key, LockResult& lock_result, EventList& event_list, const bool& skip_propagation_latency)
     {
+        // TODO: Piggyback candidate victims in current edge node
+
+        // TODO: Piggyback local uncached popularity for key in current edge node
         return false;
     }
 
     bool CoveredCacheServerWorker::releaseBeaconWritelock_(const Key& key, EventList& event_list, const bool& skip_propagation_latency)
     {
+        // TODO: Piggyback candidate victims in current edge node
+
+        // NOTE: NO need to piggyback local uncached popularity for key in current edge node, as it has been done by acquireBeaconWritelock_() (local uncached popularity is NOT changed when processing a single local data request)
         return false;
     }
 
