@@ -43,7 +43,7 @@ namespace covered
         // (2) Access local edge cache (KV data and local metadata)
 
         virtual bool getLocalCacheInternal_(const Key& key, Value& value) const override;
-        virtual bool getLocalCacheVictimInfoIfAnyInternal_(const Key& key, VictimInfo& cur_vicim_info, uint32_t& cur_victim_rank) const override; // Return if key is victim
+        virtual bool getLocalSyncedVictimFromLocalCacheInternal_(const Key& key, const uint32_t& peredge_synced_victimcnt, VictimInfo& cur_victim_info, uint32_t& cur_victim_rank) const override; // Return if key is victim
 
         virtual bool updateLocalCacheInternal_(const Key& key, const Value& value) override;
 

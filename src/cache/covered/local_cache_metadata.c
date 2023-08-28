@@ -91,26 +91,7 @@ namespace covered
     
     LocalCacheMetadata::~LocalCacheMetadata() {}
 
-    bool LocalCacheMetadata::isKeyExist(const Key& key) const
-    {
-        perkey_lookup_table_t::const_iterator perkey_lookup_iter = perkey_lookup_table_.find(key);
-        return (perkey_lookup_iter != perkey_lookup_table_.end());
-    }
-
-    bool LocalCacheMetadata::getLeastPopularKey(const uint32_t& least_popular_rank, Key& key) const
-    {
-        bool is_least_popular_key_exist = false;
-
-        if (least_popular_rank < sorted_popularity_multimap_.size())
-        {
-            sorted_popularity_multimap_t::const_iterator sorted_popularity_iter = sorted_popularity_multimap_.begin();
-            std::advance(sorted_popularity_iter, least_popular_rank);
-            key = sorted_popularity_iter->second;
-            is_least_popular_key_exist = true;
-        }
-
-        return is_least_popular_key_exist;
-    }
+    // Only for local uncached object (i.e., is_for_uncached_objects_ = true)
 
     bool LocalCacheMetadata::needDetrackForUncachedObjects(Key& detracked_key) const
     {
@@ -151,6 +132,47 @@ namespace covered
         }
 
         return approx_value_size;
+    }
+
+    // Only for local cached object (i.e., is_for_uncached_objects_ = false)
+    
+    uint32_t LocalCacheMetadata::getPopularityForCachedObjects(const Key& key, Popularity& local_cached_popularity, Popularity& redirected_cached_popularity) const
+    {
+        // NOTE: we only get local vicitm popularity for local cached objects
+        assert(!is_for_uncached_objects_);
+
+        // Get lookup iterator
+        perkey_lookup_const_iter_t perkey_lookup_const_iter = getLookup_(key);
+
+        local_cached_popularity = perkey_lookup_const_iter->second.getSortedPopularityIter()->first;
+        redirected_cached_popularity = 0.0; // TOOD: Update for heterogeneous popularity calculation
+        
+        uint32_t least_popular_rank = getLeastPopularRank_(perkey_lookup_const_iter);
+
+        return least_popular_rank;
+    }
+
+    // Common functions
+
+    bool LocalCacheMetadata::isKeyExist(const Key& key) const
+    {
+        perkey_lookup_table_t::const_iterator perkey_lookup_iter = perkey_lookup_table_.find(key);
+        return (perkey_lookup_iter != perkey_lookup_table_.end());
+    }
+
+    bool LocalCacheMetadata::getLeastPopularKey(const uint32_t& least_popular_rank, Key& key) const
+    {
+        bool is_least_popular_key_exist = false;
+
+        if (least_popular_rank < sorted_popularity_multimap_.size())
+        {
+            sorted_popularity_multimap_t::const_iterator sorted_popularity_iter = sorted_popularity_multimap_.begin();
+            std::advance(sorted_popularity_iter, least_popular_rank);
+            key = sorted_popularity_iter->second;
+            is_least_popular_key_exist = true;
+        }
+
+        return is_least_popular_key_exist;
     }
 
     void LocalCacheMetadata::addForNewKey(const Key& key, const Value& value)
@@ -426,6 +448,19 @@ namespace covered
     }
 
     // For popularity information
+
+    uint32_t LocalCacheMetadata::getLeastPopularRank_(const perkey_lookup_const_iter_t& perkey_lookup_const_iter) const
+    {
+        // Verify that key must exist
+        const LookupMetadata& lookup_metadata = perkey_lookup_const_iter->second;
+        sorted_popularity_multimap_t::const_iterator sorted_popularity_iter = lookup_metadata.getSortedPopularityIter();
+        assert(sorted_popularity_iter != sorted_popularity_multimap_.end()); // For existing key
+
+        uint32_t least_popular_rank = std::distance(sorted_popularity_multimap_.begin(), sorted_popularity_iter);
+        assert(least_popular_rank >= 0 && least_popular_rank < sorted_popularity_multimap_.size());
+
+        return least_popular_rank;
+    }
 
     Popularity LocalCacheMetadata::calculatePopularity_(const KeyLevelMetadata& perkey_statistics, const GroupLevelMetadata& pergroup_statistics) const
     {

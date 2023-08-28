@@ -50,14 +50,14 @@ namespace covered
         return is_local_cached;
     }
 
-    bool LruLocalCache::getLocalCacheVictimInfoIfAnyInternal_(const Key& key, VictimInfo& cur_vicim_info, uint32_t& cur_victim_rank) const
+    bool LruLocalCache::getLocalSyncedVictimFromLocalCacheInternal_(const Key& key, const uint32_t& peredge_synced_victimcnt, VictimInfo& cur_victim_info, uint32_t& cur_victim_rank) const
     {
-        bool is_victim = false;
+        bool is_local_synced_victim = false;
 
-        Util::dumpErrorMsg(instance_name_, "getLocalCacheVictimInfoIfAnyInternal_() can ONLY be invoked by COVERED local cache!");
+        Util::dumpErrorMsg(instance_name_, "getLocalSyncedVictimFromLocalCacheInternal_() can ONLY be invoked by COVERED local cache!");
         exit(1);
 
-        return is_victim;
+        return is_local_synced_victim;
     }
 
     bool LruLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value)

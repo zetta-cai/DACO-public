@@ -215,20 +215,25 @@ namespace covered
         return is_local_cached_and_invalid;
     }
 
-    bool CacheWrapper::getVictimInfoIfAny(const Key& key, VictimInfo& cur_vicim_info, uint32_t& cur_victim_rank) const
+    bool CacheWrapper::getLocalSyncedVictim(const Key& key, const uint32_t& peredge_synced_victimcnt, VictimInfo& cur_victim_info, uint32_t& cur_victim_rank) const
     {
         checkPointers_();
 
         // Acquire a read lock
-        std::string context_name = "CacheWrapper::getVictimInfoForKey()";
+        std::string context_name = "CacheWrapper::getLocalSyncedVictim()";
         cache_wrapper_perkey_rwlock_ptr_->acquire_lock_shared(key, context_name);
 
-        bool is_victim = local_cache_ptr_->getLocalCacheVictimInfoIfAny(key, cur_vicim_info, cur_victim_rank); // NOT update local metadata
+        bool is_local_synced_victim = local_cache_ptr_->getLocalSyncedVictimFromLocalCache(key, peredge_synced_victimcnt, cur_victim_info, cur_victim_rank); // NOT update local metadata
+
+        if (is_local_synced_victim) // A local victim key MUST be locally cached
+        {
+            assert(validity_map_ptr_->isKeyExist(key));
+        }
 
         // Release a read lock
         cache_wrapper_perkey_rwlock_ptr_->unlock_shared(key, context_name);
 
-        return is_victim;
+        return is_local_synced_victim;
     }
 
     // (3) Local edge cache management

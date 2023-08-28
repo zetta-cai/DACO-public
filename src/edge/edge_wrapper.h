@@ -50,6 +50,7 @@ namespace covered
         std::string getCacheName() const;
         uint64_t getCapacityBytes() const;
         uint32_t getPercacheserverWorkercnt() const;
+        uint32_t getPeredgeSyncedVictimcnt() const;
         CacheWrapper* getEdgeCachePtr() const;
         CooperationWrapperBase* getCooperationWrapperPtr() const;
         CoveredCacheManager* getCoveredCacheManagerPtr() const;
@@ -104,6 +105,7 @@ namespace covered
         const std::string cache_name_; // Come from CLI
         const uint64_t capacity_bytes_; // Come from CLI
         const uint32_t percacheserver_workercnt_; // Come from CLI
+        const uint32_t peredge_synced_victimcnt_; // Come from CLI
 
         // NOTE: we do NOT need per-key rwlock for atomicity among CacheWrapper and CooperationWrapperBase.
         // (i) CacheWrapper is already thread-safe for cache server and invalidation server, and CooperationWrapperBase is already thread-safe for cache server and beacon server.

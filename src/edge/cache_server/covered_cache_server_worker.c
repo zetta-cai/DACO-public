@@ -36,11 +36,13 @@ namespace covered
         bool is_local_cached_and_valid = tmp_edge_wrapper_ptr->getEdgeCachePtr()->get(key, value);
 
         // Update current-edge-node VictimInfos if necessary
-        uint32_t cur_victim_rank = 0; // Rank/index of key in the ordered local reward list if local cached
+        const uint32_t peredge_synced_victimcnt = tmp_edge_wrapper_ptr->getPeredgeSyncedVictimcnt();
         VictimInfo cur_victim_info;
-        bool is_victim = tmp_edge_wrapper_ptr->getEdgeCachePtr()->getVictimInfoIfAny(key, cur_victim_info, cur_victim_rank);
+        uint32_t cur_victim_rank = 0; // Rank/index of key in the ordered local reward list if local cached
+        bool is_victim = tmp_edge_wrapper_ptr->getEdgeCachePtr()->getLocalSyncedVictim(key, peredge_synced_victimcnt, cur_victim_info, cur_victim_rank);
         if (is_victim)
         {
+            // TODO: END HERE
             tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr()->updateVictimTrackerForNewLocalVictim(cur_victim_info, cur_victim_rank);
         }
         

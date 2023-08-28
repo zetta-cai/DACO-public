@@ -50,7 +50,7 @@ namespace covered
         bool removeIfInvalidForGetrsp(const Key& key); // Remove value only if it is locally cached yet invalid
 
         // Return true if the given key is one of peredge_synced_victimcnt victims with the least local rewards
-        bool getVictimInfoIfAny(const Key& key, VictimInfo& cur_vicim_info, uint32_t& cur_victim_rank) const;
+        bool getLocalSyncedVictim(const Key& key, const uint32_t& peredge_synced_victimcnt, VictimInfo& cur_victim_info, uint32_t& cur_victim_rank) const;
 
         // (3) Local edge cache management
 

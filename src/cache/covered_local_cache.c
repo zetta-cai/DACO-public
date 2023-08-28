@@ -93,13 +93,35 @@ namespace covered
         return is_local_cached;
     }
 
-    ool CoveredLocalCache::getLocalCacheVictimInfoIfAnyInternal_(const Key& key, VictimInfo& cur_vicim_info, uint32_t& cur_victim_rank) const
+    bool CoveredLocalCache::getLocalSyncedVictimFromLocalCacheInternal_(const Key& key, const uint32_t& peredge_synced_victimcnt, VictimInfo& cur_victim_info, uint32_t& cur_victim_rank) const
     {
-        bool is_victim = false;
+        bool is_local_synced_victim = false;
         
-        // TODO: END HERE
+        // Check if key is local cached
+        const std::string keystr = key.getKeystr();
+        LruCacheReadHandle handle = covered_cache_ptr_->find(keystr);
+        bool is_local_cached = (handle != nullptr);
 
-        return is_victim;
+        if (is_local_cached) // Key is local cached
+        {
+            Popularity local_cached_popularity = 0.0;
+            Popularity redirected_cached_popularity = 0.0;
+            uint32_t least_popular_rank = local_cached_metadata_.getPopularityForCachedObjects(key, local_cached_popularity, redirected_cached_popularity);
+
+            // Set is_local_synced_victim based on least_popular_rank
+            is_local_synced_victim = (least_popular_rank < peredge_synced_victimcnt);
+            if (is_local_synced_victim) // Key is peredge_synced_keycnt least popular
+            {
+                // Set victim info with object size and cached popularity
+                uint32_t object_size = keystr.length() + handle->getSize();
+                cur_victim_info = VictimInfo(key, object_size, local_cached_popularity, redirected_cached_popularity, DirectoryInfo());
+
+                // Set victim rank
+                cur_victim_rank = least_popular_rank;
+            }
+        }
+
+        return is_local_synced_victim;
     }
 
     bool CoveredLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value)

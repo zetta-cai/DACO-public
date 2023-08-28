@@ -102,18 +102,18 @@ namespace covered
         return is_local_cached;
     }
 
-    bool LocalCacheBase::getLocalCacheVictimInfoIfAny(const Key& key, VictimInfo& cur_vicim_info, uint32_t& cur_victim_rank) const
+    bool LocalCacheBase::getLocalSyncedVictimFromLocalCache(const Key& key, const uint32_t& peredge_synced_victimcnt, VictimInfo& cur_victim_info, uint32_t& cur_victim_rank) const
     {
         checkPointers_();
 
         // Acquire a read lock for local metadata to check local metadata atomically
-        std::string context_name = "LocalCacheBase::getLocalCacheVictimInfoIfAny()";
+        std::string context_name = "LocalCacheBase::getLocalSyncedVictimFromLocalCache()";
         rwlock_for_local_cache_ptr_->acquire_lock_shared(context_name);
 
-        bool is_victim = getLocalCacheVictimInfoIfAnyInternal_(key, cur_vicim_info, cur_victim_rank);
+        bool is_local_synced_victim = getLocalSyncedVictimFromLocalCacheInternal_(key, peredge_synced_victimcnt, cur_victim_info, cur_victim_rank);
 
         rwlock_for_local_cache_ptr_->unlock_shared(context_name);
-        return is_victim;
+        return is_local_synced_victim;
     }
 
     bool LocalCacheBase::updateLocalCache(const Key& key, const Value& value)

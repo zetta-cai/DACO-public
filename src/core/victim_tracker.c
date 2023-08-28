@@ -19,7 +19,7 @@ namespace covered
         rwlock_for_victim_tracker_ = new Rwlock(oss.str());
         assert(rwlock_for_victim_tracker_ != NULL);
 
-        peredge_victiminfos_.clear();
+        peredge_synced_victiminfos_.clear();
     }
 
     VictimTracker::~VictimTracker()

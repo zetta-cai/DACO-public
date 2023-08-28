@@ -89,6 +89,13 @@ namespace covered
 
     ValidityMap::~ValidityMap() {}
 
+    bool ValidityMap::isKeyExist(const Key& key) const
+    {
+        bool is_key_exist = perkey_validity_.isExist(key);
+        
+        return is_key_exist;
+    }
+
     bool ValidityMap::isValidFlagForKey(const Key& key, bool& is_exist) const
     {
         // Prepare IsValidFlagParam

@@ -54,6 +54,7 @@ namespace covered
         ValidityMap(const uint32_t& edge_idx, const PerkeyRwlock* perkey_rwlock_ptr);
         ~ValidityMap();
 
+        bool isKeyExist(const Key& key) const;
         bool isValidFlagForKey(const Key& key, bool& is_exist) const;
         void invalidateFlagForKey(const Key& key, bool& is_exist); // Add an invalid flag if key NOT exist
         void validateFlagForKey(const Key& key, bool& is_exist); // Add a valid flag if key NOT exist

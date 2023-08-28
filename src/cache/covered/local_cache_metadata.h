@@ -7,6 +7,7 @@
 #ifndef LOCAL_CACHE_METADATA_H
 #define LOCAL_CACHE_METADATA_H
 
+#include <iterator> // std::distance
 #include <list> // std::list
 #include <map> // std::multimap
 #include <string>
@@ -60,13 +61,18 @@ namespace covered
     public:
         LocalCacheMetadata(const bool& is_for_uncached_objects, const uint64_t& max_bytes_for_uncached_objects);
         ~LocalCacheMetadata();
-
-        bool isKeyExist(const Key& key) const; // Check if key has been admitted or tracked for local cached or uncached object
-        bool getLeastPopularKey(const uint32_t& least_popular_rank, Key& key) const; // Get ith least popular key for local cached or uncached object
         
         // Only for local uncached object (i.e., is_for_uncached_objects_ = true)
         bool needDetrackForUncachedObjects(Key& detracked_key) const; // Check if need to detrack the least popular key for local uncached object
         uint32_t getApproxValueForUncachedObjects(const Key& key) const; // Get approximated value for local uncached object
+
+        // Only for local cached object (i.e., is_for_uncached_objects_ = false)
+        uint32_t getPopularityForCachedObjects(const Key& key, Popularity& local_cached_popularity, Popularity& redirected_cached_popularity) const; // Return least popular rank
+
+        // Common functions
+
+        bool isKeyExist(const Key& key) const; // Check if key has been admitted or tracked for local cached or uncached object
+        bool getLeastPopularKey(const uint32_t& least_popular_rank, Key& key) const; // Get ith least popular key for local cached or uncached object
 
         void addForNewKey(const Key& key, const Value& value); // Newly admitted cached key or currently tracked uncached key (for getrsp with cache miss, put/delrsp with cache miss, admission)
         void updateForExistingKey(const Key& key, const Value& value, const Value& original_value, const bool& is_value_related); // Admitted cached key or tracked uncached key (is_value_related = false: for getreq with cache hit, getrsp with cache miss; is_value_related = true: for getrsp with invalid hit, put/delreq with cache hit, put/delrsp with cache miss)
@@ -88,6 +94,7 @@ namespace covered
         void removePergroupMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter, const Key& key, const Value& value);
 
         // For popularity information
+        uint32_t getLeastPopularRank_(const perkey_lookup_const_iter_t& perkey_lookup_const_iter) const; // Get least popular rank for the given key
         Popularity calculatePopularity_(const KeyLevelMetadata& key_level_statistics, const GroupLevelMetadata& group_level_statistics) const; // Calculate popularity based on object-level and group-level metadata
         sorted_popularity_multimap_t::iterator addPopularity_(const Popularity& new_popularity, const perkey_lookup_iter_t& perkey_lookup_iter); // Return new sorted popularity iterator
         sorted_popularity_multimap_t::iterator updatePopularity_(const Popularity& new_popularity, const perkey_lookup_iter_t& perkey_lookup_iter); // Return updated sorted popularity iterator
