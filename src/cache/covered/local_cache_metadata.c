@@ -378,7 +378,7 @@ namespace covered
             pergroup_metadata_iter = pergroup_metadata_map_.insert(std::pair(assigned_group_id, GroupLevelMetadata())).first;
         }
         assert(pergroup_metadata_iter != pergroup_metadata_map_.end());
-        pergroup_metadata_iter->second.updateForNewlyGrouped(key, value);
+        pergroup_metadata_iter->second.updateForNewlyGrouped(key, value); // TODO: update group-level metadata will affect other keys' popularities, while we use lazy update for those popularities (i.e., update them when they are accessed) to avoid maintaining groupid-keys mappings for limited metadata overhead
 
         return pergroup_metadata_iter->second;
     }
@@ -395,11 +395,11 @@ namespace covered
         assert(pergroup_metadata_iter != pergroup_metadata_map_.end());
         if (!is_value_related) // Unrelated with value
         {
-            pergroup_metadata_iter->second.updateForInGroupKey(key);
+            pergroup_metadata_iter->second.updateForInGroupKey(key); // TODO: update group-level metadata will affect other keys' popularities, while we use lazy update for those popularities (i.e., update them when they are accessed) to avoid maintaining groupid-keys mappings for limited metadata overhead
         }
         else // Related with value
         {
-            pergroup_metadata_iter->second.updateForInGroupKeyValue(key, value, original_value);
+            pergroup_metadata_iter->second.updateForInGroupKeyValue(key, value, original_value); // TODO: update group-level metadata will affect other keys' popularities, while we use lazy update for those popularities (i.e., update them when they are accessed) to avoid maintaining groupid-keys mappings for limited metadata overhead
         }
 
         return pergroup_metadata_iter->second;
@@ -416,7 +416,7 @@ namespace covered
         pergroup_metadata_map_t::iterator pergroup_metadata_iter = pergroup_metadata_map_.find(tmp_group_id);
         assert(pergroup_metadata_iter != pergroup_metadata_map_.end());
 
-        bool is_group_empty = pergroup_metadata_iter->second.updateForDegrouped(key, value);
+        bool is_group_empty = pergroup_metadata_iter->second.updateForDegrouped(key, value); // TODO: update group-level metadata will affect other keys' popularities, while we use lazy update for those popularities (i.e., update them when they are accessed) to avoid maintaining groupid-keys mappings for limited metadata overhead
         if (is_group_empty)
         {
             pergroup_metadata_map_.erase(pergroup_metadata_iter);

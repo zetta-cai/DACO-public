@@ -131,6 +131,16 @@ namespace covered
         return is_local_cached;
     }
 
+    bool SegcacheLocalCache::getLocalCacheVictimInfoIfAnyInternal_(const Key& key, VictimInfo& cur_vicim_info, uint32_t& cur_victim_rank) const
+    {
+        bool is_victim = false;
+
+        Util::dumpErrorMsg(instance_name_, "getLocalCacheVictimInfoIfAnyInternal_() can ONLY be invoked by COVERED local cache!");
+        exit(1);
+
+        return is_victim;
+    }
+
     bool SegcacheLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value)
     {
         bool is_local_cached = appendLocalCache_(key, value);

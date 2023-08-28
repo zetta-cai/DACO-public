@@ -23,19 +23,17 @@ namespace covered
         void updateDynamicMetadata();
 
         GroupId getGroupId() const;
-        uint32_t getFrequency() const;
+        Frequency getFrequency() const;
 
         static uint64_t getSizeForCapacity();
     private:
         static const std::string kClassName;
 
-        // TODO: Tune per-variable size later
-
         // Const metadata
         const GroupId group_id_;
 
         // Non-const dynamic metadata
-        uint32_t frequency_;
+        Frequency frequency_;
     };
 }
 

@@ -1,5 +1,5 @@
 /*
- * EdgeWrapper: an edge node launches BeaconServer, CacheServer, and InvalidationServer to process data/control requests based on corresponding CacheWrapper and CooperationWrapper.
+ * EdgeWrapper: an edge node launches BeaconServer, CacheServer, and InvalidationServer to process data/control requests based on corresponding CacheWrapper and CooperationWrapper (and CoveredCacheManager if cache name is COVERED).
  *
  * NOTE: all non-const shared variables in EdgeWrapper should be thread safe.
  * 
@@ -14,6 +14,7 @@
 #include "cache/cache_wrapper.h"
 #include "cli/edge_cli.h"
 #include "common/node_wrapper_base.h"
+#include "core/covered_cache_manager.h"
 #include "cooperation/cooperation_wrapper_base.h"
 #include "event/event_list.h"
 #include "network/propagation_simulator.h"
@@ -41,7 +42,7 @@ namespace covered
     public:
         static void* launchEdge(void* edge_wrapper_param_ptr);
 
-        EdgeWrapper(const std::string& cache_name, const uint64_t& capacity_bytes, const uint32_t& edge_idx, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& percacheserver_workercnt, const uint32_t& propagation_latency_clientedge_us, const uint32_t& propagation_latency_crossedge_us, const uint32_t& propagation_latency_edgecloud_us);
+        EdgeWrapper(const std::string& cache_name, const uint64_t& capacity_bytes, const uint32_t& edge_idx, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& percacheserver_workercnt, const uint32_t& peredge_synced_victimcnt, const uint32_t& propagation_latency_clientedge_us, const uint32_t& propagation_latency_crossedge_us, const uint32_t& propagation_latency_edgecloud_us);
         virtual ~EdgeWrapper();
 
         // (1) Const getters
@@ -51,6 +52,7 @@ namespace covered
         uint32_t getPercacheserverWorkercnt() const;
         CacheWrapper* getEdgeCachePtr() const;
         CooperationWrapperBase* getCooperationWrapperPtr() const;
+        CoveredCacheManager* getCoveredCacheManagerPtr() const;
         PropagationSimulatorParam* getEdgeToclientPropagationSimulatorParamPtr() const;
         PropagationSimulatorParam* getEdgeToedgePropagationSimulatorParamPtr() const;
         PropagationSimulatorParam* getEdgeTocloudPropagationSimulatorParamPtr() const;
@@ -110,6 +112,7 @@ namespace covered
         // Non-const shared variables (thread safe)
         CacheWrapper* edge_cache_ptr_; // Data and metadata for local edge cache (thread safe)
         CooperationWrapperBase* cooperation_wrapper_ptr_; // Cooperation metadata (thread safe)
+        CoveredCacheManager* covered_cache_manager_ptr_; // CoveredCacheManager for cooperative-caching-aware cache management (thread safe)
         PropagationSimulatorParam* edge_toclient_propagation_simulator_param_ptr_; // thread safe
         PropagationSimulatorParam* edge_toedge_propagation_simulator_param_ptr_; // thread safe
         PropagationSimulatorParam* edge_tocloud_propagation_simulator_param_ptr_; // thread safe

@@ -29,6 +29,16 @@ namespace covered
 
     // (1) Process data requests
 
+    bool BasicCacheServerWorker::getLocalCache_(const Key& key, Value& value) const
+    {
+        checkPointers_();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        
+        bool is_local_cached_and_valid = tmp_edge_wrapper_ptr->getEdgeCachePtr()->get(key, value);
+        
+        return is_local_cached_and_valid;
+    }
+
     bool BasicCacheServerWorker::processRedirectedGetRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& recvrsp_dst_addr) const
     {
         // Get key and value from redirected request if any

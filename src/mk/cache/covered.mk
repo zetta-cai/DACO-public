@@ -54,7 +54,7 @@ DEPS += $(COOPERATION_SRCFILES:.c=.d)
 CLEANS += $(COOPERATION_OBJECTS) $(COOPERATION_SHARED_OBJECTS)
 
 # core module
-CORE_SRCFILES := $(wildcard $(COVERED_DIRPATH)/core/*.c)
+CORE_SRCFILES := $(wildcard $(COVERED_DIRPATH)/core/*.c) $(wildcard $(COVERED_DIRPATH)/core/victim/*.c)
 CORE_OBJECTS += $(CORE_SRCFILES:.c=.o)
 CORE_SHARED_OBJECTS += $(CORE_SRCFILES:.c=.shared.o)
 DEPS += $(CORE_SRCFILES:.c=.d)

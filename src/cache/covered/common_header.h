@@ -19,7 +19,12 @@ namespace covered
     typedef CachelibLruCache::ReadHandle LruCacheReadHandle;
     typedef CachelibLruCache::Item LruCacheItem;
 
+    // TODO: Tune per-variable size later
     typedef uint32_t GroupId;
+    typedef uint32_t Frequency;
+    typedef uint32_t ObjectSize;
+    typedef uint32_t ObjectCnt;
+    
     typedef float Popularity;
 
     // Max keycnt per group for local cached/uncached objects

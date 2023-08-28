@@ -93,6 +93,15 @@ namespace covered
         return is_local_cached;
     }
 
+    ool CoveredLocalCache::getLocalCacheVictimInfoIfAnyInternal_(const Key& key, VictimInfo& cur_vicim_info, uint32_t& cur_victim_rank) const
+    {
+        bool is_victim = false;
+        
+        // TODO: END HERE
+
+        return is_victim;
+    }
+
     bool CoveredLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value)
     {
         const std::string keystr = key.getKeystr();

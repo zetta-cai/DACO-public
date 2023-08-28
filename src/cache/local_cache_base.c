@@ -76,7 +76,7 @@ namespace covered
     {
         checkPointers_();
 
-        // Acquire a read lock for local metadata to update local metadata atomically
+        // Acquire a read lock for local metadata to check local metadata atomically
         std::string context_name = "LocalCacheBase::isLocalCached()";
         rwlock_for_local_cache_ptr_->acquire_lock_shared(context_name);
 
@@ -100,6 +100,20 @@ namespace covered
 
         rwlock_for_local_cache_ptr_->unlock(context_name);
         return is_local_cached;
+    }
+
+    bool LocalCacheBase::getLocalCacheVictimInfoIfAny(const Key& key, VictimInfo& cur_vicim_info, uint32_t& cur_victim_rank) const
+    {
+        checkPointers_();
+
+        // Acquire a read lock for local metadata to check local metadata atomically
+        std::string context_name = "LocalCacheBase::getLocalCacheVictimInfoIfAny()";
+        rwlock_for_local_cache_ptr_->acquire_lock_shared(context_name);
+
+        bool is_victim = getLocalCacheVictimInfoIfAnyInternal_(key, cur_vicim_info, cur_victim_rank);
+
+        rwlock_for_local_cache_ptr_->unlock_shared(context_name);
+        return is_victim;
     }
 
     bool LocalCacheBase::updateLocalCache(const Key& key, const Value& value)

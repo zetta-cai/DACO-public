@@ -27,13 +27,13 @@ namespace covered
         return group_id_;
     }
 
-    uint32_t KeyLevelMetadata::getFrequency() const
+    Frequency KeyLevelMetadata::getFrequency() const
     {
         return frequency_;
     }
 
     uint64_t KeyLevelMetadata::getSizeForCapacity()
     {
-        return sizeof(GroupId) + sizeof(uint32_t);
+        return sizeof(GroupId) + sizeof(Frequency);
     }
 }

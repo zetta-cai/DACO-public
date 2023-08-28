@@ -61,14 +61,14 @@ namespace covered
         uint32_t edge_idx = edge_wrapper_param.getEdgeIdx();
         EdgeCLI* edge_cli_ptr = edge_wrapper_param.getEdgeCLIPtr();
 
-        EdgeWrapper local_edge(edge_cli_ptr->getCacheName(), edge_cli_ptr->getCapacityBytes(), edge_idx, edge_cli_ptr->getEdgecnt(), edge_cli_ptr->getHashName(), edge_cli_ptr->getPercacheserverWorkercnt(), edge_cli_ptr->getPropagationLatencyClientedgeUs(), edge_cli_ptr->getPropagationLatencyCrossedgeUs(), edge_cli_ptr->getPropagationLatencyEdgecloudUs());
+        EdgeWrapper local_edge(edge_cli_ptr->getCacheName(), edge_cli_ptr->getCapacityBytes(), edge_idx, edge_cli_ptr->getEdgecnt(), edge_cli_ptr->getHashName(), edge_cli_ptr->getPercacheserverWorkercnt(), edge_cli_ptr->getPeredgeSyncedVictimcnt(), edge_cli_ptr->getPropagationLatencyClientedgeUs(), edge_cli_ptr->getPropagationLatencyCrossedgeUs(), edge_cli_ptr->getPropagationLatencyEdgecloudUs());
         local_edge.start();
         
         pthread_exit(NULL);
         return NULL;
     }
 
-    EdgeWrapper::EdgeWrapper(const std::string& cache_name, const uint64_t& capacity_bytes, const uint32_t& edge_idx, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& percacheserver_workercnt, const uint32_t& propagation_latency_clientedge_us, const uint32_t& propagation_latency_crossedge_us, const uint32_t& propagation_latency_edgecloud_us) : NodeWrapperBase(NodeWrapperBase::EDGE_NODE_ROLE, edge_idx,edgecnt, true), cache_name_(cache_name), capacity_bytes_(capacity_bytes), percacheserver_workercnt_(percacheserver_workercnt)
+    EdgeWrapper::EdgeWrapper(const std::string& cache_name, const uint64_t& capacity_bytes, const uint32_t& edge_idx, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& percacheserver_workercnt, const uint32_t& peredge_synced_victimcnt, const uint32_t& propagation_latency_clientedge_us, const uint32_t& propagation_latency_crossedge_us, const uint32_t& propagation_latency_edgecloud_us) : NodeWrapperBase(NodeWrapperBase::EDGE_NODE_ROLE, edge_idx,edgecnt, true), cache_name_(cache_name), capacity_bytes_(capacity_bytes), percacheserver_workercnt_(percacheserver_workercnt)
     {
         // Differentiate different edge nodes
         std::ostringstream oss;
@@ -82,6 +82,17 @@ namespace covered
         // Allocate cooperation wrapper for cooperative edge caching
         cooperation_wrapper_ptr_ = CooperationWrapperBase::getCooperationWrapperByCacheName(cache_name, edgecnt, edge_idx, hash_name);
         assert(cooperation_wrapper_ptr_ != NULL);
+
+        // Allocate covered cache manager for COVERED only
+        if (cache_name == Util::COVERED_CACHE_NAME)
+        {
+            covered_cache_manager_ptr_ = new CoveredCacheManager(edge_idx, peredge_synced_victimcnt);
+            assert(covered_cache_manager_ptr_ != NULL);
+        }
+        else
+        {
+            covered_cache_manager_ptr_ = NULL;
+        }
 
         // Allocate edge-to-client propagation simulator param
         edge_toclient_propagation_simulator_param_ptr_ = new PropagationSimulatorParam((NodeWrapperBase*)this, propagation_latency_clientedge_us, Config::getPropagationItemBufferSizeEdgeToclient());
@@ -115,6 +126,18 @@ namespace covered
         assert(cooperation_wrapper_ptr_ != NULL);
         delete cooperation_wrapper_ptr_;
         cooperation_wrapper_ptr_ = NULL;
+
+        // Release covered cache manager
+        if (cache_name_ == Util::COVERED_CACHE_NAME)
+        {
+            assert(covered_cache_manager_ptr_ != NULL);
+            delete covered_cache_manager_ptr_;
+            covered_cache_manager_ptr_ = NULL;
+        }
+        else
+        {
+            assert(covered_cache_manager_ptr_ == NULL);
+        }
 
         // Release edge-to-client propagation simulator param
         assert(edge_toclient_propagation_simulator_param_ptr_ != NULL);
@@ -159,6 +182,14 @@ namespace covered
     {
         assert(cooperation_wrapper_ptr_ != NULL);
         return cooperation_wrapper_ptr_;
+    }
+
+    CoveredCacheManager* EdgeWrapper::getCoveredCacheManagerPtr() const
+    {
+        // NOTE: non-COVERED caches should NOT call this function
+        assert(cache_name_ == Util::COVERED_CACHE_NAME);
+        assert(covered_cache_manager_ptr_ != NULL);
+        return covered_cache_manager_ptr_;
     }
 
     PropagationSimulatorParam* EdgeWrapper::getEdgeToclientPropagationSimulatorParamPtr() const
@@ -719,6 +750,14 @@ namespace covered
 
         assert(edge_cache_ptr_ != NULL);
         assert(cooperation_wrapper_ptr_ != NULL);
+        if (cache_name_ == Util::COVERED_CACHE_NAME)
+        {
+            assert(covered_cache_manager_ptr_ != NULL);
+        }
+        else
+        {
+            assert(covered_cache_manager_ptr_ == NULL);
+        }
         assert(edge_toclient_propagation_simulator_param_ptr_ != NULL);
         assert(edge_toedge_propagation_simulator_param_ptr_ != NULL);
         assert(edge_tocloud_propagation_simulator_param_ptr_ != NULL);

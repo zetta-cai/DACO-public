@@ -79,7 +79,10 @@ namespace covered
     
         // Return if edge node is finished
         bool processDataRequest_(MessageBase* data_request_ptr, const NetworkAddr& recvrsp_dst_addr);
+
         bool processLocalGetRequest_(MessageBase* local_request_ptr, const NetworkAddr& recvrsp_dst_addr) const;
+        virtual bool getLocalCache_(const Key& key, Value& value) const = 0; // Return is local cached and valid
+
         bool processLocalWriteRequest_(MessageBase* local_request_ptr, const NetworkAddr& recvrsp_dst_addr); // For put/del
         bool processRedirectedRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& recvrsp_dst_addr);
         virtual bool processRedirectedGetRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& recvrsp_dst_addr) const = 0;
@@ -90,9 +93,11 @@ namespace covered
 
         // Return if edge node is finished
         bool fetchDataFromNeighbor_(const Key& key, Value& value, bool& is_cooperative_cached_and_valid, EventList& event_list, const bool& skip_propagation_latency) const;
+
         bool lookupBeaconDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, EventList& event_list, const bool& skip_propagation_latency) const; // Check remote directory info
         virtual MessageBase* getReqToLookupBeaconDirectory_(const Key& key, const bool& skip_propagation_latency) const = 0;
         virtual void processRspToLookupBeaconDirectory_(const DynamicArray& control_response_msg_payload, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, EventList& event_list) const = 0;
+
         virtual bool redirectGetToTarget_(const DirectoryInfo& directory_info, const Key& key, Value& value, bool& is_cooperative_cached, bool& is_valid, EventList& event_list, const bool& skip_propagation_latency) const = 0; // Request redirection
 
         // (2.2) Update content directory information

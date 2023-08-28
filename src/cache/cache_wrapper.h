@@ -17,6 +17,7 @@
 #include "common/key.h"
 #include "common/value.h"
 #include "concurrency/perkey_rwlock.h"
+#include "core/victim/victim_info.h"
 
 namespace covered
 {
@@ -47,6 +48,9 @@ namespace covered
         // Return whether key is cached yet invalid
         bool updateIfInvalidForGetrsp(const Key& key, const Value& value); // Update value only if key is locally cached yet invalid
         bool removeIfInvalidForGetrsp(const Key& key); // Remove value only if it is locally cached yet invalid
+
+        // Return true if the given key is one of peredge_synced_victimcnt victims with the least local rewards
+        bool getVictimInfoIfAny(const Key& key, VictimInfo& cur_vicim_info, uint32_t& cur_victim_rank) const;
 
         // (3) Local edge cache management
 

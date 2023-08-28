@@ -4,6 +4,7 @@
 #include <sstream>
 
 #include "common/util.h"
+#include "core/victim/victim_info.h"
 
 namespace covered
 {
@@ -26,6 +27,25 @@ namespace covered
     CoveredCacheServerWorker::~CoveredCacheServerWorker() {}
 
     // (1) Process data requests
+
+    bool CoveredCacheServerWorker::getLocalCache_(const Key& key, Value& value) const
+    {
+        checkPointers_();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        
+        bool is_local_cached_and_valid = tmp_edge_wrapper_ptr->getEdgeCachePtr()->get(key, value);
+
+        // Update current-edge-node VictimInfos if necessary
+        uint32_t cur_victim_rank = 0; // Rank/index of key in the ordered local reward list if local cached
+        VictimInfo cur_victim_info;
+        bool is_victim = tmp_edge_wrapper_ptr->getEdgeCachePtr()->getVictimInfoIfAny(key, cur_victim_info, cur_victim_rank);
+        if (is_victim)
+        {
+            tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr()->updateVictimTrackerForNewLocalVictim(cur_victim_info, cur_victim_rank);
+        }
+        
+        return is_local_cached_and_valid;
+    }
 
     bool CoveredCacheServerWorker::processRedirectedGetRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& recvrsp_dst_addr) const
     {

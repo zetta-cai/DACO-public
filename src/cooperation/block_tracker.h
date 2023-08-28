@@ -50,9 +50,6 @@ namespace covered
 
         uint64_t getSizeForCapacity() const;
     private:
-        typedef std::unordered_map<Key, bool, KeyHasher> perkey_writeflag_t;
-        typedef std::unordered_map<Key, std::unordered_set<NetworkAddr, NetworkAddrHasher>, KeyHasher> perkey_edge_blocklist_t;
-
         static const std::string kClassName;
 
         // Const shared variables

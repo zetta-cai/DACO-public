@@ -27,6 +27,7 @@ namespace covered
         uint64_t getCapacityBytes() const;
         std::string getHashName() const;
         uint32_t getPercacheserverWorkercnt() const;
+        uint32_t getPeredgeSyncedVictimcnt() const;
     private:
         static const std::string kClassName;
 
@@ -43,6 +44,7 @@ namespace covered
         uint64_t capacity_bytes_;
         std::string hash_name_;
         uint32_t percacheserver_workercnt_;
+        uint32_t peredge_synced_victimcnt_;
     protected:
         virtual void addCliParameters_();
         virtual void setParamAndConfig_(const std::string& main_class_name);

@@ -16,6 +16,7 @@
 #include "common/key.h"
 #include "common/value.h"
 #include "concurrency/rwlock.h"
+#include "core/victim/victim_info.h"
 
 namespace covered
 {
@@ -34,6 +35,8 @@ namespace covered
         // (2) Access local edge cache (KV data and local metadata)
 
         bool getLocalCache(const Key& key, Value& value) const; // Return whether key is cached
+        bool getLocalCacheVictimInfoIfAny(const Key& key, VictimInfo& cur_vicim_info, uint32_t& cur_victim_rank) const; // Return if key is victim
+
         bool updateLocalCache(const Key& key, const Value& value); // Return whether key is cached
 
         void updateLocalUncachedMetadataForRsp(const Key& key, const Value& value, const bool& is_value_related) const; // Triggered by get/put/delrsp for cache miss for admission policy if any
@@ -74,6 +77,8 @@ namespace covered
         // (2) Access local edge cache (KV data and local metadata)
 
         virtual bool getLocalCacheInternal_(const Key& key, Value& value) const = 0; // Return whether key is cached
+        virtual bool getLocalCacheVictimInfoIfAnyInternal_(const Key& key, VictimInfo& cur_vicim_info, uint32_t& cur_victim_rank) const = 0; // Return if key is victim
+
         virtual bool updateLocalCacheInternal_(const Key& key, const Value& value) = 0; // Return whether key is cached
 
         virtual void updateLocalUncachedMetadataForRspInternal_(const Key& key, const Value& value, const bool& is_value_related) const = 0; // Triggered by get/put/delrsp for cache miss for admission policy if any

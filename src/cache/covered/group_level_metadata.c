@@ -87,18 +87,18 @@ namespace covered
         return is_group_empty;
     }
 
-    uint32_t GroupLevelMetadata::getAvgObjectSize() const
+    ObjectSize GroupLevelMetadata::getAvgObjectSize() const
     {
         return avg_object_size_;
     }
     
-    uint32_t GroupLevelMetadata::getObjectCnt() const
+    ObjectCnt GroupLevelMetadata::getObjectCnt() const
     {
         return object_cnt_;
     }
 
     uint64_t GroupLevelMetadata::getSizeForCapacity()
     {
-        return sizeof(uint32_t) + sizeof(uint32_t);
+        return sizeof(ObjectSize) + sizeof(ObjectCnt);
     }
 }

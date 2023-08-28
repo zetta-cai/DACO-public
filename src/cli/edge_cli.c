@@ -13,6 +13,7 @@ namespace covered
         capacity_bytes_ = 0;
         hash_name_ = "";
         percacheserver_workercnt_ = 0;
+        peredge_synced_victimcnt_ = 0;
     }
 
     EdgeCLI::EdgeCLI(int argc, char **argv) : EdgescaleCLI(), PropagationCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_create_required_directories_(false)
@@ -42,6 +43,11 @@ namespace covered
         return percacheserver_workercnt_;
     }
 
+    uint32_t EdgeCLI::getPeredgeSyncedVictimcnt() const
+    {
+        return peredge_synced_victimcnt_;
+    }
+
     void EdgeCLI::addCliParameters_()
     {
         if (!is_add_cli_parameters_)
@@ -57,6 +63,7 @@ namespace covered
                 ("capacity_mb", boost::program_options::value<uint64_t>()->default_value(1024), "total cache capacity (including data and metadata) in units of MiB")
                 ("hash_name", boost::program_options::value<std::string>()->default_value(Util::MMH3_HASH_NAME, "the type of consistent hashing for DHT (e.g., mmh3)"))
                 ("percacheserver_workercnt", boost::program_options::value<uint32_t>()->default_value(1), "the number of worker threads for each cache server")
+                ("peredge_synced_victimcnt", boost::program_options::value<uint32_t>()->default_value(3), "the number of synced victims for each edge node")
             ;
 
             is_add_cli_parameters_ = true;
@@ -78,6 +85,7 @@ namespace covered
             uint64_t capacity_bytes = MB2B(argument_info_["capacity_mb"].as<uint64_t>()); // In units of bytes
             std::string hash_name = argument_info_["hash_name"].as<std::string>();
             uint32_t percacheserver_workercnt = argument_info_["percacheserver_workercnt"].as<uint32_t>();
+            uint32_t peredge_synced_victimcnt = argument_info_["peredge_synced_victimcnt"].as<uint32_t>();
 
             // Store edgecnt CLI parameters for dynamic configurations
             cache_name_ = cache_name;
@@ -86,6 +94,7 @@ namespace covered
             hash_name_ = hash_name;
             checkHashName_();
             percacheserver_workercnt_ = percacheserver_workercnt;
+            peredge_synced_victimcnt_ = peredge_synced_victimcnt;
             verifyIntegrity_();
 
             is_set_param_and_config_ = true;
@@ -108,7 +117,8 @@ namespace covered
             oss << "Cache name: " << cache_name_ << std::endl;
             oss << "Capacity (bytes): " << capacity_bytes_ << std::endl;
             oss << "Hash name: " << hash_name_ << std::endl;
-            oss << "Per-cache-server worker count:" << percacheserver_workercnt_;
+            oss << "Per-cache-server worker count:" << percacheserver_workercnt_ << std::endl;
+            oss << "Per-edge-node synced victim count:" << peredge_synced_victimcnt_;
             Util::dumpDebugMsg(kClassName, oss.str());
 
             is_dump_cli_parameters_ = true;
@@ -154,6 +164,7 @@ namespace covered
     {
         assert(capacity_bytes_ > 0);
         assert(percacheserver_workercnt_ > 0);
+        assert(peredge_synced_victimcnt_ > 0);
         
         return;
     }
