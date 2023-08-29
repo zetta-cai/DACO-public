@@ -1,4 +1,4 @@
-#include "cache/covered/local_cache_metadata.h"
+#include "cache/covered/cache_metadata_base.h"
 
 #include <assert.h>
 
@@ -60,21 +60,12 @@ namespace covered
         return *this;
     }
 
-    // LocalCacheMetadata
+    // CacheMetadataBase
 
-    const std::string LocalCacheMetadata::kClassName("LocalCacheMetadata");
+    const std::string CacheMetadataBase::kClassName("CacheMetadataBase");
 
-    LocalCacheMetadata::LocalCacheMetadata(const bool& is_for_uncached_objects, const uint64_t& max_bytes_for_uncached_objects) : is_for_uncached_objects_(is_for_uncached_objects), max_bytes_for_uncached_objects_(max_bytes_for_uncached_objects)
+    CacheMetadataBase::CacheMetadataBase()
     {
-        if (!is_for_uncached_objects) // For local cached objects
-        {
-            assert(max_bytes_for_uncached_objects == 0);
-        }
-        else // For local uncached objects
-        {
-            assert(max_bytes_for_uncached_objects > 0);
-        }
-
         perkey_metadata_list_key_size_ = 0;
         perkey_metadata_list_.clear();
 
@@ -89,78 +80,17 @@ namespace covered
         perkey_lookup_table_.clear();
     }
     
-    LocalCacheMetadata::~LocalCacheMetadata() {}
-
-    // Only for local uncached object (i.e., is_for_uncached_objects_ = true)
-
-    bool LocalCacheMetadata::needDetrackForUncachedObjects(Key& detracked_key) const
-    {
-        // NOTE: we only limit the number of tracked metadata for local uncached objects
-        assert(is_for_uncached_objects_);
-
-        //uint32_t cur_trackcnt = perkey_lookup_table_.size();
-        uint64_t cache_size_usage_for_uncached_objects = getSizeForCapacity();
-        if (cache_size_usage_for_uncached_objects > max_bytes_for_uncached_objects_)
-        {
-            detracked_key = sorted_popularity_multimap_.begin()->second;
-            return true;
-        }
-        else
-        {
-            return false;
-        }
-    }
-
-    uint32_t LocalCacheMetadata::getApproxValueForUncachedObjects(const Key& key) const
-    {
-        // NOTE: we only get approximate value size for local uncached objects
-        assert(is_for_uncached_objects_);
-
-        // Get lookup iterator
-        perkey_lookup_const_iter_t perkey_lookup_const_iter = getLookup_(key);
-
-        // Get average object size
-        const GroupLevelMetadata& pergroup_metadata_ref = getGroupLevelMetadata_(perkey_lookup_const_iter);
-        uint32_t avg_object_size = pergroup_metadata_ref.getAvgObjectSize();
-
-        // NOTE: for local uncached objects, as we do NOT know per-key value size, we use the (average object size - key size) as the approximated detrack value
-        uint32_t approx_value_size = 0;
-        uint32_t detrack_key_size = key.getKeystr().length();
-        if (avg_object_size > detrack_key_size)
-        {
-            approx_value_size = avg_object_size - detrack_key_size;
-        }
-
-        return approx_value_size;
-    }
-
-    // Only for local cached object (i.e., is_for_uncached_objects_ = false)
-    
-    uint32_t LocalCacheMetadata::getPopularityForCachedObjects(const Key& key, Popularity& local_cached_popularity, Popularity& redirected_cached_popularity) const
-    {
-        // NOTE: we only get local vicitm popularity for local cached objects
-        assert(!is_for_uncached_objects_);
-
-        // Get lookup iterator
-        perkey_lookup_const_iter_t perkey_lookup_const_iter = getLookup_(key);
-
-        local_cached_popularity = perkey_lookup_const_iter->second.getSortedPopularityIter()->first;
-        redirected_cached_popularity = 0.0; // TOOD: Update for heterogeneous popularity calculation
-        
-        uint32_t least_popular_rank = getLeastPopularRank_(perkey_lookup_const_iter);
-
-        return least_popular_rank;
-    }
+    CacheMetadataBase::~CacheMetadataBase() {}
 
     // Common functions
 
-    bool LocalCacheMetadata::isKeyExist(const Key& key) const
+    bool CacheMetadataBase::isKeyExist(const Key& key) const
     {
         perkey_lookup_table_t::const_iterator perkey_lookup_iter = perkey_lookup_table_.find(key);
         return (perkey_lookup_iter != perkey_lookup_table_.end());
     }
 
-    bool LocalCacheMetadata::getLeastPopularKey(const uint32_t& least_popular_rank, Key& key) const
+    bool CacheMetadataBase::getLeastPopularKey(const uint32_t& least_popular_rank, Key& key) const
     {
         bool is_least_popular_key_exist = false;
 
@@ -175,7 +105,26 @@ namespace covered
         return is_least_popular_key_exist;
     }
 
-    void LocalCacheMetadata::addForNewKey(const Key& key, const Value& value)
+    bool CacheMetadataBase::getLeastPopularKeyAndPopularity(const uint32_t& least_popular_rank, Key& key, Popularity& local_cached_popularity, Popularity& redirected_cached_popularity) const
+    {
+        bool is_least_popular_key_exist = false;
+
+        if (least_popular_rank < sorted_popularity_multimap_.size())
+        {
+            sorted_popularity_multimap_t::const_iterator sorted_popularity_iter = sorted_popularity_multimap_.begin();
+            std::advance(sorted_popularity_iter, least_popular_rank);
+
+            key = sorted_popularity_iter->second;
+            local_cached_popularity = sorted_popularity_iter->first;
+            redirected_cached_popularity = 0.0; // TODO: update after introducing heterogeneous popularity calculation
+
+            is_least_popular_key_exist = true;
+        }
+
+        return is_least_popular_key_exist;
+    }
+
+    void CacheMetadataBase::addForNewKey(const Key& key, const Value& value)
     {
         // Add lookup iterator for new key
         perkey_lookup_iter_t perkey_lookup_iter = addLookup_(key);
@@ -198,28 +147,7 @@ namespace covered
         return;
     }
 
-    void LocalCacheMetadata::updateForExistingKey(const Key& key, const Value& value, const Value& original_value, const bool& is_value_related)
-    {
-        // Get lookup iterator
-        perkey_lookup_iter_t perkey_lookup_iter = getLookup_(key);
-
-        // Update object-level metadata
-        const KeyLevelMetadata& perkey_metadata_ref = updatePerkeyMetadata_(perkey_lookup_iter);
-
-        // Update group-level metadata
-        const GroupLevelMetadata& pergroup_metadata_ref = updatePergroupMetadata_(perkey_lookup_iter, key, value, original_value, is_value_related);
-
-        // Update popularity
-        Popularity new_popularity = calculatePopularity_(perkey_metadata_ref, pergroup_metadata_ref); // Calculate popularity
-        sorted_popularity_multimap_t::iterator new_sorted_popularity_iter = updatePopularity_(new_popularity, perkey_lookup_iter);
-
-        // Update lookup table
-        updateLookup_(perkey_lookup_iter, new_sorted_popularity_iter);
-
-        return;
-    }
-
-    void LocalCacheMetadata::removeForExistingKey(const Key& detracked_key, const Value& detracked_value)
+    void CacheMetadataBase::removeForExistingKey(const Key& detracked_key, const Value& detracked_value)
     {
         // Get lookup iterator
         perkey_lookup_iter_t perkey_lookup_iter = getLookup_(detracked_key);
@@ -241,72 +169,9 @@ namespace covered
         return;
     }
 
-    uint64_t LocalCacheMetadata::getSizeForCapacity() const
-    {
-        // Object-level metadata
-        uint64_t perkey_metadata_list_metadata_size = perkey_metadata_list_.size() * KeyLevelMetadata::getSizeForCapacity();
-
-        // Group-level metadata
-        uint64_t pergroup_metadata_map_groupid_size = pergroup_metadata_map_.size() * sizeof(GroupId);
-        uint64_t pergroup_metadata_map_metadata_size = pergroup_metadata_map_.size() * GroupLevelMetadata::getSizeForCapacity();
-
-        // Popularity information
-        uint64_t sorted_popularity_multimap_popularity_size = sorted_popularity_multimap_.size() * sizeof(Popularity);
-
-        // Lookup table
-        uint64_t perkey_lookup_table_perkey_metadata_iter_size = perkey_lookup_table_.size() * LookupMetadata::getPerkeyMetadataIterSizeForCapacity();
-        uint64_t perkey_lookup_table_sorted_popularity_iter_size = perkey_lookup_table_.size() * LookupMetadata::getSortedPopularityIterSizeForCapacity();
-
-        uint64_t total_size = 0;
-        if (is_for_uncached_objects_) // For local uncached objects
-        {
-            // Object-level metadata
-            // NOTE: although we maintain keys in perkey_metadata_list_, it is just for implementation simplicity but we NEVER use perkey_metadata_list_->first to locate keys (due to popularity-based eviciton instead of LRU-based eviction) -> NO need to count the size of keys of object-level metadata for local uncached objects (cache size usage of keys will be counted in lookup table below)
-            //total_size = Util::uint64Add(total_size, perkey_metadata_list_key_size_);
-            total_size = Util::uint64Add(total_size, perkey_metadata_list_metadata_size);
-
-            // Group-level metadata
-            total_size = Util::uint64Add(total_size, pergroup_metadata_map_groupid_size);
-            total_size = Util::uint64Add(total_size, pergroup_metadata_map_metadata_size);
-
-            // Popularity information (locate keys in lookup table for popularity-based eviction)
-            total_size = Util::uint64Add(total_size, sorted_popularity_multimap_popularity_size);
-            total_size = Util::uint64Add(total_size, sorted_popularity_multimap_key_size_);
-
-            // Lookup table (locate keys in object-level LRU list and popularity list)
-            total_size = Util::uint64Add(total_size, perkey_lookup_table_key_size_);
-            total_size = Util::uint64Add(total_size, perkey_lookup_table_perkey_metadata_iter_size); // LRU list iterator
-            total_size = Util::uint64Add(total_size, perkey_lookup_table_sorted_popularity_iter_size); // Popularity list iterator
-        }
-        else // For local cached objects
-        {
-            // Object-level metadata
-            // NOTE: (i) LRU list does NOT need to track keys; (ii) although we track local cached metadata outside CacheLib to avoid extensive hacking, per-key object-level metadata actually can be stored into cachelib::CacheItem -> NO need to count the size of keys of object-level metadata for local cached objects (similar as size measurement in ValidityMap and BlockTracker)
-            //total_size = Util::uint64Add(total_size, perkey_metadata_list_key_size_);
-            total_size = Util::uint64Add(total_size, perkey_metadata_list_metadata_size);
-
-            // Group-level metadata
-            total_size = Util::uint64Add(total_size, pergroup_metadata_map_groupid_size);
-            total_size = Util::uint64Add(total_size, pergroup_metadata_map_metadata_size);
-
-            // Popularity information (locate keys in lookup table for popularity-based eviction)
-            // NOTE: we only need to maintain keys (or CacheItem pointers) in popularity list instead of LRU list (we NEVER use perkey_metadata_list_->first to locate keys) for popularity-based eviction, while cachelib has counted the size of keys (i.e., CacheItem pointers) in MMContainer's LRU list (we do NOT remove keys from LRU list in cachelib to avoid hacking too much code) -> NO need to count the size of keys of popularity list for local cached objects here
-            total_size = Util::uint64Add(total_size, sorted_popularity_multimap_popularity_size);
-            //total_size = Util::uint64Add(total_size, sorted_popularity_multimap_key_size_);
-
-            // Lookup table (locate keys in object-level LRU list and popularity list)
-            // NOTE: although we track local cached metadata outside CacheLib to avoid extensive hacking, per-key lookup metadata actually can be stored into cachelib::ChainedHashTable -> NO need to count the size of keys and object-level metadata iterators of lookup metadata for local cached objects
-            //total_size = Util::uint64Add(total_size, perkey_lookup_table_key_size_);
-            //total_size = Util::uint64Add(total_size, perkey_lookup_table_perkey_metadata_iter_size); // LRU list iterator
-            total_size = Util::uint64Add(total_size, perkey_lookup_table_sorted_popularity_iter_size); // Popularity list iterator
-        }
-
-        return total_size;
-    }
-
     // For object-level metadata
 
-    perkey_metadata_list_t::iterator LocalCacheMetadata::addPerkeyMetadata_(const Key& key, const GroupId& assigned_group_id)
+    perkey_metadata_list_t::iterator CacheMetadataBase::addPerkeyMetadata_(const Key& key, const GroupId& assigned_group_id)
     {
         // NOTE: NO need to verify key existence due to LRU-based list
 
@@ -325,7 +190,7 @@ namespace covered
         return perkey_metadata_iter;
     }
     
-    const KeyLevelMetadata& LocalCacheMetadata::updatePerkeyMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter)
+    const KeyLevelMetadata& CacheMetadataBase::updatePerkeyMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter)
     {
         // Verify that key must exist
         const LookupMetadata& lookup_metadata = perkey_lookup_iter->second;
@@ -346,7 +211,7 @@ namespace covered
         return perkey_metadata_iter->second;
     }
 
-    void LocalCacheMetadata::removePerkeyMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter)
+    void CacheMetadataBase::removePerkeyMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter)
     {
         // Verify that key must exist
         const LookupMetadata& lookup_metadata = perkey_lookup_iter->second;
@@ -365,7 +230,7 @@ namespace covered
 
     // For group-level metadata
 
-    const GroupLevelMetadata& LocalCacheMetadata::getGroupLevelMetadata_(const perkey_lookup_const_iter_t& perkey_lookup_const_iter) const
+    const GroupLevelMetadata& CacheMetadataBase::getGroupLevelMetadata_(const perkey_lookup_const_iter_t& perkey_lookup_const_iter) const
     {
         // Verify that key must exist
         const LookupMetadata& lookup_metadata = perkey_lookup_const_iter->second;
@@ -379,7 +244,7 @@ namespace covered
         return pergroup_metadata_iter->second;
     }
 
-    const GroupLevelMetadata& LocalCacheMetadata::addPergroupMetadata_(const Key& key, const Value& value, GroupId& assigned_group_id)
+    const GroupLevelMetadata& CacheMetadataBase::addPergroupMetadata_(const Key& key, const Value& value, GroupId& assigned_group_id)
     {
         // NOTE: NO need to verify key existence due to duplicate group IDs
 
@@ -405,7 +270,7 @@ namespace covered
         return pergroup_metadata_iter->second;
     }
 
-    const GroupLevelMetadata& LocalCacheMetadata::updatePergroupMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter, const Key& key, const Value& value, const Value& original_value, const bool& is_value_related)
+    const GroupLevelMetadata& CacheMetadataBase::updatePergroupMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter, const Key& key, const Value& value, const Value& original_value, const bool& is_value_related)
     {
         // Verify that key must exist
         const LookupMetadata& lookup_metadata = perkey_lookup_iter->second;
@@ -427,7 +292,7 @@ namespace covered
         return pergroup_metadata_iter->second;
     }
 
-    void LocalCacheMetadata::removePergroupMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter, const Key& key, const Value& value)
+    void CacheMetadataBase::removePergroupMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter, const Key& key, const Value& value)
     {
         // Verify that key must exist
         const LookupMetadata& lookup_metadata = perkey_lookup_iter->second;
@@ -449,20 +314,20 @@ namespace covered
 
     // For popularity information
 
-    uint32_t LocalCacheMetadata::getLeastPopularRank_(const perkey_lookup_const_iter_t& perkey_lookup_const_iter) const
+    uint32_t CacheMetadataBase::getLeastPopularRank_(const perkey_lookup_iter_t& perkey_lookup_iter)
     {
         // Verify that key must exist
-        const LookupMetadata& lookup_metadata = perkey_lookup_const_iter->second;
-        sorted_popularity_multimap_t::const_iterator sorted_popularity_iter = lookup_metadata.getSortedPopularityIter();
+        const LookupMetadata& lookup_metadata = perkey_lookup_iter->second;
+        sorted_popularity_multimap_t::iterator sorted_popularity_iter = lookup_metadata.getSortedPopularityIter();
         assert(sorted_popularity_iter != sorted_popularity_multimap_.end()); // For existing key
 
         uint32_t least_popular_rank = std::distance(sorted_popularity_multimap_.begin(), sorted_popularity_iter);
-        assert(least_popular_rank >= 0 && least_popular_rank < sorted_popularity_multimap_.size());
-
+        assert(least_popular_rank < sorted_popularity_multimap_.size());
+        
         return least_popular_rank;
     }
 
-    Popularity LocalCacheMetadata::calculatePopularity_(const KeyLevelMetadata& perkey_statistics, const GroupLevelMetadata& pergroup_statistics) const
+    Popularity CacheMetadataBase::calculatePopularity_(const KeyLevelMetadata& perkey_statistics, const GroupLevelMetadata& pergroup_statistics) const
     {
         // TODO: Use homogeneous popularity calculation now, but will replace with heterogeneous popularity calculation + learning later (for both local cached and uncached objects)
         // TODO: Use a heuristic or learning-based approach for parameter tuning in heterogeneous popularity calculation (refer to state-of-the-art studies such as LRB and GL-Cache)
@@ -472,7 +337,7 @@ namespace covered
         return popularity;
     }
 
-    sorted_popularity_multimap_t::iterator LocalCacheMetadata::addPopularity_(const Popularity& new_popularity, const perkey_lookup_iter_t& perkey_lookup_iter)
+    sorted_popularity_multimap_t::iterator CacheMetadataBase::addPopularity_(const Popularity& new_popularity, const perkey_lookup_iter_t& perkey_lookup_iter)
     {
         // NOTE: NO need to verify key existence due to duplicate popularity values
         // NOTE: perkey_metadata_iter_ and sorted_popularity_iter_ in perkey_lookup_iter here are invalid
@@ -486,7 +351,7 @@ namespace covered
         return new_popularity_iter;
     }
 
-    sorted_popularity_multimap_t::iterator LocalCacheMetadata::updatePopularity_(const Popularity& new_popularity, const perkey_lookup_iter_t& perkey_lookup_iter)
+    sorted_popularity_multimap_t::iterator CacheMetadataBase::updatePopularity_(const Popularity& new_popularity, const perkey_lookup_iter_t& perkey_lookup_iter)
     {
         // Verify that key must exist
         const LookupMetadata& lookup_metadata = perkey_lookup_iter->second;
@@ -517,7 +382,7 @@ namespace covered
         return new_popularity_iter;
     }
 
-    void LocalCacheMetadata::removePopularity_(const perkey_lookup_iter_t& perkey_lookup_iter)
+    void CacheMetadataBase::removePopularity_(const perkey_lookup_iter_t& perkey_lookup_iter)
     {
         // Verify that key must exist
         const LookupMetadata& lookup_metadata = perkey_lookup_iter->second;
@@ -536,7 +401,7 @@ namespace covered
 
     // For lookup table
 
-    perkey_lookup_iter_t LocalCacheMetadata::getLookup_(const Key& key)
+    perkey_lookup_iter_t CacheMetadataBase::getLookup_(const Key& key)
     {
         perkey_lookup_iter_t perkey_lookup_iter = perkey_lookup_table_.find(key);
         assert(perkey_lookup_iter != perkey_lookup_table_.end());
@@ -544,7 +409,7 @@ namespace covered
         return perkey_lookup_iter;
     }
 
-    perkey_lookup_const_iter_t LocalCacheMetadata::getLookup_(const Key& key) const
+    perkey_lookup_const_iter_t CacheMetadataBase::getLookup_(const Key& key) const
     {
         perkey_lookup_const_iter_t perkey_lookup_iter = perkey_lookup_table_.find(key);
         assert(perkey_lookup_iter != perkey_lookup_table_.end());
@@ -552,7 +417,7 @@ namespace covered
         return perkey_lookup_iter;
     }
 
-    perkey_lookup_iter_t LocalCacheMetadata::addLookup_(const Key& key)
+    perkey_lookup_iter_t CacheMetadataBase::addLookup_(const Key& key)
     {
         // Verify that key must NOT exist (NOT admitted/tracked)
         perkey_lookup_iter_t perkey_lookup_iter = perkey_lookup_table_.find(key);
@@ -568,7 +433,7 @@ namespace covered
         return perkey_lookup_iter;
     }
 
-    void LocalCacheMetadata::updateLookup_(const perkey_lookup_iter_t& perkey_lookup_iter, const sorted_popularity_multimap_t::iterator& new_sorted_popularity_iter)
+    void CacheMetadataBase::updateLookup_(const perkey_lookup_iter_t& perkey_lookup_iter, const sorted_popularity_multimap_t::iterator& new_sorted_popularity_iter)
     {
         // Verify that key must exist
         assert(perkey_lookup_iter != perkey_lookup_table_.end()); // For existing key
@@ -580,7 +445,7 @@ namespace covered
         return;
     }
 
-    void LocalCacheMetadata::updateLookup_(const perkey_lookup_iter_t& perkey_lookup_iter, const perkey_metadata_list_t::iterator& perkey_metadata_iter, const sorted_popularity_multimap_t::iterator& sorted_popularity_iter)
+    void CacheMetadataBase::updateLookup_(const perkey_lookup_iter_t& perkey_lookup_iter, const perkey_metadata_list_t::iterator& perkey_metadata_iter, const sorted_popularity_multimap_t::iterator& sorted_popularity_iter)
     {
         // Verify that key must exist
         assert(perkey_lookup_iter != perkey_lookup_table_.end()); // For existing key
@@ -593,7 +458,7 @@ namespace covered
         return;
     }
 
-    void LocalCacheMetadata::removeLookup_(const perkey_lookup_iter_t& perkey_lookup_iter)
+    void CacheMetadataBase::removeLookup_(const perkey_lookup_iter_t& perkey_lookup_iter)
     {
         // Verify that key must exist
         assert(perkey_lookup_iter != perkey_lookup_table_.end()); // For existing key

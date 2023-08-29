@@ -66,8 +66,10 @@ namespace covered
 
     // (2) Access local edge cache (KV data and local metadata)
 
-    bool CachelibLocalCache::getLocalCacheInternal_(const Key& key, Value& value) const
+    bool CachelibLocalCache::getLocalCacheInternal_(const Key& key, Value& value, bool& affect_victim_tracker) const
     {
+        UNUSED(affect_victim_tracker); // Only for COVERED
+
         const std::string keystr = key.getKeystr();
 
         // NOTE: NOT take effect as cacheConfig.nvmAdmissionPolicyFactory is empty by default
@@ -84,14 +86,14 @@ namespace covered
         return is_local_cached;
     }
 
-    bool CachelibLocalCache::getLocalSyncedVictimFromLocalCacheInternal_(const Key& key, const uint32_t& peredge_synced_victimcnt, VictimInfo& cur_victim_info, uint32_t& cur_victim_rank) const
+    std::list<VictimInfo> CachelibLocalCache::getLocalSyncedVictimInfosFromLocalCacheInternal_() const
     {
-        bool is_local_synced_victim = false;
+        std::list<VictimInfo> local_synced_victim_infos;
 
-        Util::dumpErrorMsg(instance_name_, "getLocalSyncedVictimFromLocalCacheInternal_() can ONLY be invoked by COVERED local cache!");
+        Util::dumpErrorMsg(instance_name_, "getLocalSyncedVictimInfosFromLocalCacheInternal_() can ONLY be invoked by COVERED local cache!");
         exit(1);
 
-        return is_local_synced_victim;
+        return local_synced_victim_infos;
     }
 
     bool CachelibLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value)

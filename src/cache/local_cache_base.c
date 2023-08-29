@@ -14,7 +14,7 @@ namespace covered
 {
     const std::string LocalCacheBase::kClassName("LocalCacheBase");
 
-    LocalCacheBase* LocalCacheBase::getLocalCacheByCacheName(const std::string& cache_name, const uint32_t& edge_idx, const uint64_t& capacity_bytes)
+    LocalCacheBase* LocalCacheBase::getLocalCacheByCacheName(const std::string& cache_name, const uint32_t& edge_idx, const uint64_t& capacity_bytes, const uint32_t& peredge_synced_victimcnt)
     {
         LocalCacheBase* local_cache_ptr = NULL;
         if (cache_name == Util::CACHELIB_CACHE_NAME)
@@ -23,7 +23,7 @@ namespace covered
         }
         else if (cache_name == Util::COVERED_CACHE_NAME)
         {
-            local_cache_ptr = new CoveredLocalCache(edge_idx, capacity_bytes);
+            local_cache_ptr = new CoveredLocalCache(edge_idx, capacity_bytes, peredge_synced_victimcnt);
         }
         else if (cache_name == Util::LFU_CACHE_NAME)
         {
@@ -88,7 +88,7 @@ namespace covered
 
     // (2) Access local edge cache (KV data and local metadata)
 
-    bool LocalCacheBase::getLocalCache(const Key& key, Value& value) const
+    bool LocalCacheBase::getLocalCache(const Key& key, Value& value, bool& affect_victim_tracker) const
     {
         checkPointers_();
 
@@ -96,24 +96,24 @@ namespace covered
         std::string context_name = "LocalCacheBase::getLocalCache()";
         rwlock_for_local_cache_ptr_->acquire_lock(context_name);
 
-        bool is_local_cached = getLocalCacheInternal_(key, value);
+        bool is_local_cached = getLocalCacheInternal_(key, value, affect_victim_tracker);
 
         rwlock_for_local_cache_ptr_->unlock(context_name);
         return is_local_cached;
     }
 
-    bool LocalCacheBase::getLocalSyncedVictimFromLocalCache(const Key& key, const uint32_t& peredge_synced_victimcnt, VictimInfo& cur_victim_info, uint32_t& cur_victim_rank) const
+    std::list<VictimInfo> LocalCacheBase::getLocalSyncedVictimInfosFromLocalCache() const
     {
         checkPointers_();
 
         // Acquire a read lock for local metadata to check local metadata atomically
-        std::string context_name = "LocalCacheBase::getLocalSyncedVictimFromLocalCache()";
+        std::string context_name = "LocalCacheBase::getLocalSyncedVictimInfosFromLocalCache()";
         rwlock_for_local_cache_ptr_->acquire_lock_shared(context_name);
 
-        bool is_local_synced_victim = getLocalSyncedVictimFromLocalCacheInternal_(key, peredge_synced_victimcnt, cur_victim_info, cur_victim_rank);
+        std::list<VictimInfo> local_synced_victim_infos = getLocalSyncedVictimInfosFromLocalCacheInternal_();
 
         rwlock_for_local_cache_ptr_->unlock_shared(context_name);
-        return is_local_synced_victim;
+        return local_synced_victim_infos;
     }
 
     bool LocalCacheBase::updateLocalCache(const Key& key, const Value& value)

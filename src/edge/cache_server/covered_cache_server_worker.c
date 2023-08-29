@@ -28,22 +28,22 @@ namespace covered
 
     // (1) Process data requests
 
-    bool CoveredCacheServerWorker::getLocalCache_(const Key& key, Value& value) const
+    bool CoveredCacheServerWorker::getLocalEdgeCache_(const Key& key, Value& value) const
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
         
-        bool is_local_cached_and_valid = tmp_edge_wrapper_ptr->getEdgeCachePtr()->get(key, value);
+        bool affect_victim_tracker = false;
+        bool is_local_cached_and_valid = tmp_edge_wrapper_ptr->getEdgeCachePtr()->get(key, value, affect_victim_tracker);
 
-        // Update current-edge-node VictimInfos if necessary
-        const uint32_t peredge_synced_victimcnt = tmp_edge_wrapper_ptr->getPeredgeSyncedVictimcnt();
-        VictimInfo cur_victim_info;
-        uint32_t cur_victim_rank = 0; // Rank/index of key in the ordered local reward list if local cached
-        bool is_victim = tmp_edge_wrapper_ptr->getEdgeCachePtr()->getLocalSyncedVictim(key, peredge_synced_victimcnt, cur_victim_info, cur_victim_rank);
-        if (is_victim)
+        // Avoid unnecessary VictimTracker update
+        if (affect_victim_tracker) // If key was a local synced victim before or is a local synced victim now
         {
-            // TODO: END HERE
-            tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr()->updateVictimTrackerForNewLocalVictim(cur_victim_info, cur_victim_rank);
+            // Update current-edge-node VictimInfos if necessary
+            std::list<VictimInfo> local_synced_victim_infos = tmp_edge_wrapper_ptr->getEdgeCachePtr()->getLocalSyncedVictimInfos();
+
+            // Update VictimInfos of the local synced victims (clear if no local synced victim infos)
+            tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr()->updateVictimTrackerForLocalSyncedVictimInfos(local_synced_victim_infos); 
         }
         
         return is_local_cached_and_valid;

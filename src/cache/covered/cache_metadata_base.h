@@ -1,11 +1,11 @@
 /*
- * LocalCacheMetadata: metadata for covered local cache (including object-level, group-level and sorted popularity metadata).
+ * CacheMetadataBase: metadata for covered local cache (including object-level, group-level and sorted popularity metadata).
  * 
  * By Siyuan Sheng (2023.08.22).
  */
 
-#ifndef LOCAL_CACHE_METADATA_H
-#define LOCAL_CACHE_METADATA_H
+#ifndef CACHE_METADATA_BASE_H
+#define CACHE_METADATA_BASE_H
 
 #include <iterator> // std::distance
 #include <list> // std::list
@@ -56,32 +56,25 @@ namespace covered
     typedef perkey_lookup_table_t::iterator perkey_lookup_iter_t;
     typedef perkey_lookup_table_t::const_iterator perkey_lookup_const_iter_t;
 
-    class LocalCacheMetadata
+    class CacheMetadataBase
     {
     public:
-        LocalCacheMetadata(const bool& is_for_uncached_objects, const uint64_t& max_bytes_for_uncached_objects);
-        ~LocalCacheMetadata();
-        
-        // Only for local uncached object (i.e., is_for_uncached_objects_ = true)
-        bool needDetrackForUncachedObjects(Key& detracked_key) const; // Check if need to detrack the least popular key for local uncached object
-        uint32_t getApproxValueForUncachedObjects(const Key& key) const; // Get approximated value for local uncached object
-
-        // Only for local cached object (i.e., is_for_uncached_objects_ = false)
-        uint32_t getPopularityForCachedObjects(const Key& key, Popularity& local_cached_popularity, Popularity& redirected_cached_popularity) const; // Return least popular rank
+        CacheMetadataBase();
+        virtual ~CacheMetadataBase();
 
         // Common functions
 
         bool isKeyExist(const Key& key) const; // Check if key has been admitted or tracked for local cached or uncached object
         bool getLeastPopularKey(const uint32_t& least_popular_rank, Key& key) const; // Get ith least popular key for local cached or uncached object
+        bool getLeastPopularKeyAndPopularity(const uint32_t& least_popular_rank, Key& key, Popularity& local_cached_popularity, Popularity& redirected_cached_popularity) const; // Get ith least popular key and its popularity for local cached or uncached object
 
         void addForNewKey(const Key& key, const Value& value); // Newly admitted cached key or currently tracked uncached key (for getrsp with cache miss, put/delrsp with cache miss, admission)
-        void updateForExistingKey(const Key& key, const Value& value, const Value& original_value, const bool& is_value_related); // Admitted cached key or tracked uncached key (is_value_related = false: for getreq with cache hit, getrsp with cache miss; is_value_related = true: for getrsp with invalid hit, put/delreq with cache hit, put/delrsp with cache miss)
         void removeForExistingKey(const Key& detracked_key, const Value& value); // Remove admitted cached key or tracked uncached key (for getrsp with cache miss, put/delrsp with cache miss, admission, eviction)
 
-        uint64_t getSizeForCapacity() const; // Get size for capacity constraint (different for local cached or uncached objects)
+        virtual uint64_t getSizeForCapacity() const = 0; // Get size for capacity constraint (different for local cached or uncached objects)
     private:
         static const std::string kClassName;
-
+    protected:
         // For object-level metadata
         perkey_metadata_list_t::iterator addPerkeyMetadata_(const Key& key, const GroupId& assigned_group_id); // Return new perkey metadata iterator
         const KeyLevelMetadata& updatePerkeyMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter); // Return updated KeyLevelMetadata
@@ -94,7 +87,7 @@ namespace covered
         void removePergroupMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter, const Key& key, const Value& value);
 
         // For popularity information
-        uint32_t getLeastPopularRank_(const perkey_lookup_const_iter_t& perkey_lookup_const_iter) const; // Get least popular rank for the given key
+        uint32_t getLeastPopularRank_(const perkey_lookup_iter_t& perkey_lookup_iter);
         Popularity calculatePopularity_(const KeyLevelMetadata& key_level_statistics, const GroupLevelMetadata& group_level_statistics) const; // Calculate popularity based on object-level and group-level metadata
         sorted_popularity_multimap_t::iterator addPopularity_(const Popularity& new_popularity, const perkey_lookup_iter_t& perkey_lookup_iter); // Return new sorted popularity iterator
         sorted_popularity_multimap_t::iterator updatePopularity_(const Popularity& new_popularity, const perkey_lookup_iter_t& perkey_lookup_iter); // Return updated sorted popularity iterator
@@ -107,9 +100,6 @@ namespace covered
         void updateLookup_(const perkey_lookup_iter_t& perkey_lookup_iter, const sorted_popularity_multimap_t::iterator& new_sorted_popularity_iter);
         void updateLookup_(const perkey_lookup_iter_t& perkey_lookup_iter, const perkey_metadata_list_t::iterator& perkey_metadata_iter, const sorted_popularity_multimap_t::iterator& sorted_popularity_iter);
         void removeLookup_(const perkey_lookup_iter_t& perkey_lookup_iter);
-
-        const bool is_for_uncached_objects_; // Whether this metadata is tracked for uncached objects for admission policy
-        const uint64_t max_bytes_for_uncached_objects_; // Used only for local uncached objects (i.e., is_for_uncached_objects_ = true)
         
         // Object-level metadata
         uint64_t perkey_metadata_list_key_size_; // Total size of keys in perkey_metadata_list_

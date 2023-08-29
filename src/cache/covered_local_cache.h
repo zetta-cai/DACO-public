@@ -15,7 +15,8 @@
 #include <string>
 
 #include "cache/covered/common_header.h"
-#include "cache/covered/local_cache_metadata.h"
+#include "cache/covered/local_cached_metadata.h"
+#include "cache/covered/local_uncached_metadata.h"
 #include "cache/local_cache_base.h"
 
 namespace covered
@@ -26,7 +27,7 @@ namespace covered
         // NOTE: too small cache capacity cannot support slab-based memory allocation in cachelib (see lib/CacheLib/cachelib/allocator/CacheAllocatorConfig.h and lib/CacheLib/cachelib/allocator/memory/SlabAllocator.cpp)
         static const uint64_t COVERED_MIN_CAPACITY_BYTES; // NOTE: NOT affect capacity constraint!
 
-        CoveredLocalCache(const uint32_t& edge_idx, const uint64_t& capacity_bytes);
+        CoveredLocalCache(const uint32_t& edge_idx, const uint64_t& capacity_bytes, const uint32_t& peredge_synced_victimcnt);
         virtual ~CoveredLocalCache();
 
         virtual const bool hasFineGrainedManagement() const;
@@ -39,8 +40,8 @@ namespace covered
 
         // (2) Access local edge cache (KV data and local metadata)
 
-        virtual bool getLocalCacheInternal_(const Key& key, Value& value) const override;
-        virtual bool getLocalSyncedVictimFromLocalCacheInternal_(const Key& key, const uint32_t& peredge_synced_victimcnt, VictimInfo& cur_victim_info, uint32_t& cur_victim_rank) const override; // Return if key is victim
+        virtual bool getLocalCacheInternal_(const Key& key, Value& value, bool& affect_victim_tracker) const override;
+        virtual std::list<VictimInfo> getLocalSyncedVictimInfosFromLocalCacheInternal_() const override; // Return up to peredge_synced_victimcnt local synced victims with the least local rewards
 
         virtual bool updateLocalCacheInternal_(const Key& key, const Value& value) override;
 
@@ -65,6 +66,7 @@ namespace covered
 
         // (A) Const variable
         std::string instance_name_;
+        const uint32_t peredge_synced_victimcnt_;
 
         // (B) Non-const shared variables of local cached objects for eviction
 
@@ -72,11 +74,11 @@ namespace covered
         std::unique_ptr<CachelibLruCache> covered_cache_ptr_; // Data engine for local edge cache
         facebook::cachelib::PoolId covered_poolid_; // Pool ID for covered local edge cache
 
-        mutable LocalCacheMetadata local_cached_metadata_; // Metadata for local cached objects
+        mutable LocalCachedMetadata local_cached_metadata_; // Metadata for local cached objects
 
         // (C) Non-const shared variables of local uncached objects for admission
 
-        mutable LocalCacheMetadata local_uncached_metadata_; // Metadata for local uncached objects
+        mutable LocalUncachedMetadata local_uncached_metadata_; // Metadata for local uncached objects
     };
 }
 

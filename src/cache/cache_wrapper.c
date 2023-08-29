@@ -10,7 +10,7 @@ namespace covered
 {
     const std::string CacheWrapper::kClassName("CacheWrapper");
 
-    CacheWrapper::CacheWrapper(const std::string& cache_name, const uint32_t& edge_idx, const uint64_t& capacity_bytes)
+    CacheWrapper::CacheWrapper(const std::string& cache_name, const uint32_t& edge_idx, const uint64_t& capacity_bytes, const uint32_t& peredge_synced_victimcnt)
     {
         // Differentiate local edge cache in different edge nodes
         std::ostringstream oss;
@@ -18,7 +18,7 @@ namespace covered
         instance_name_ = oss.str();
 
         // Allocate local edge cache
-        local_cache_ptr_ = LocalCacheBase::getLocalCacheByCacheName(cache_name, edge_idx, capacity_bytes);
+        local_cache_ptr_ = LocalCacheBase::getLocalCacheByCacheName(cache_name, edge_idx, capacity_bytes, peredge_synced_victimcnt);
         assert(local_cache_ptr_ != NULL);
 
         // Allocate per-key rwlock for cache wrapper
@@ -107,7 +107,7 @@ namespace covered
 
     // (2) Access local edge cache (KV data and local metadata)
 
-    bool CacheWrapper::get(const Key& key, Value& value) const
+    bool CacheWrapper::get(const Key& key, Value& value, bool& affect_victim_tracker) const
     {
         checkPointers_();
 
@@ -115,7 +115,7 @@ namespace covered
         std::string context_name = "CacheWrapper::get()";
         cache_wrapper_perkey_rwlock_ptr_->acquire_lock_shared(key, context_name);
 
-        bool is_local_cached = local_cache_ptr_->getLocalCache(key, value); // Still need to update local metadata if key is cached yet invalid
+        bool is_local_cached = local_cache_ptr_->getLocalCache(key, value, affect_victim_tracker); // Still need to update local metadata if key is cached yet invalid
 
         bool is_valid = false;
         if (is_local_cached)
@@ -215,25 +215,22 @@ namespace covered
         return is_local_cached_and_invalid;
     }
 
-    bool CacheWrapper::getLocalSyncedVictim(const Key& key, const uint32_t& peredge_synced_victimcnt, VictimInfo& cur_victim_info, uint32_t& cur_victim_rank) const
+    std::list<VictimInfo> CacheWrapper::getLocalSyncedVictimInfos() const
     {
         checkPointers_();
 
+        // NOTE: as we only access local edge cache (thread safe w/o per-key rwlock) instead of validity map (thread safe w/ per-key rwlock), we do NOT need to acquire a fine-grained read lock here
+
         // Acquire a read lock
-        std::string context_name = "CacheWrapper::getLocalSyncedVictim()";
-        cache_wrapper_perkey_rwlock_ptr_->acquire_lock_shared(key, context_name);
+        //std::string context_name = "CacheWrapper::getLocalSyncedVictimInfos()";
+        //cache_wrapper_perkey_rwlock_ptr_->acquire_lock_shared(key, context_name);
 
-        bool is_local_synced_victim = local_cache_ptr_->getLocalSyncedVictimFromLocalCache(key, peredge_synced_victimcnt, cur_victim_info, cur_victim_rank); // NOT update local metadata
-
-        if (is_local_synced_victim) // A local victim key MUST be locally cached
-        {
-            assert(validity_map_ptr_->isKeyExist(key));
-        }
+        std::list<VictimInfo> local_synced_victim_infos = local_cache_ptr_->getLocalSyncedVictimInfosFromLocalCache(); // NOT update local metadata
 
         // Release a read lock
-        cache_wrapper_perkey_rwlock_ptr_->unlock_shared(key, context_name);
+        //cache_wrapper_perkey_rwlock_ptr_->unlock_shared(key, context_name);
 
-        return is_local_synced_victim;
+        return local_synced_victim_infos;
     }
 
     // (3) Local edge cache management

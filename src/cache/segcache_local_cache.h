@@ -38,8 +38,8 @@ namespace covered
 
         // (2) Access local edge cache (KV data and local metadata)
 
-        virtual bool getLocalCacheInternal_(const Key& key, Value& value) const override;
-        virtual bool getLocalSyncedVictimFromLocalCacheInternal_(const Key& key, const uint32_t& peredge_synced_victimcnt, VictimInfo& cur_victim_info, uint32_t& cur_victim_rank) const override; // Return if key is victim
+        virtual bool getLocalCacheInternal_(const Key& key, Value& value, bool& affect_victim_tracker) const override;
+        virtual std::list<VictimInfo> getLocalSyncedVictimInfosFromLocalCacheInternal_() const override; // Return up to peredge_synced_victimcnt local synced victims with the least local rewards
         
         virtual bool updateLocalCacheInternal_(const Key& key, const Value& value) override;
 

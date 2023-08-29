@@ -23,7 +23,7 @@ namespace covered
 
         // (1) Process data requests
 
-        virtual bool getLocalCache_(const Key& key, Value& value) const override; // Return is local cached and valid
+        virtual bool getLocalEdgeCache_(const Key& key, Value& value) const override; // Return is local cached and valid
 
         // Return if edge node is finished
         virtual bool processRedirectedGetRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& recvrsp_dst_addr) const override;

@@ -14,7 +14,7 @@ namespace covered
 
     const std::string CoveredLocalCache::kClassName("CoveredLocalCache");
 
-    CoveredLocalCache::CoveredLocalCache(const uint32_t& edge_idx, const uint64_t& capacity_bytes) : LocalCacheBase(edge_idx), local_cached_metadata_(false, 0), local_uncached_metadata_(true, capacity_bytes*COVERED_LOCAL_UNCACHED_MAX_MEM_USAGE_RATIO >= COVERED_LOCAL_UNCACHED_MAX_MEM_USAGE_BYTES ? COVERED_LOCAL_UNCACHED_MAX_MEM_USAGE_BYTES : capacity_bytes*COVERED_LOCAL_UNCACHED_MAX_MEM_USAGE_RATIO)
+    CoveredLocalCache::CoveredLocalCache(const uint32_t& edge_idx, const uint64_t& capacity_bytes, const uint32_t& peredge_synced_victimcnt) : LocalCacheBase(edge_idx), peredge_synced_victimcnt_(peredge_synced_victimcnt), local_cached_metadata_(), local_uncached_metadata_(capacity_bytes*COVERED_LOCAL_UNCACHED_MAX_MEM_USAGE_RATIO >= COVERED_LOCAL_UNCACHED_MAX_MEM_USAGE_BYTES ? COVERED_LOCAL_UNCACHED_MAX_MEM_USAGE_BYTES : capacity_bytes*COVERED_LOCAL_UNCACHED_MAX_MEM_USAGE_RATIO)
     {
         // (A) Const variable
 
@@ -70,7 +70,7 @@ namespace covered
 
     // (2) Access local edge cache (KV data and local metadata)
 
-    bool CoveredLocalCache::getLocalCacheInternal_(const Key& key, Value& value) const
+    bool CoveredLocalCache::getLocalCacheInternal_(const Key& key, Value& value, bool& affect_victim_tracker) const
     {
         const std::string keystr = key.getKeystr();
 
@@ -85,7 +85,7 @@ namespace covered
             value = Value(handle->getSize());
 
             // Update local cached metadata for getreq with cache hit
-            local_cached_metadata_.updateForExistingKey(key, value, value, false);
+            affect_victim_tracker = local_cached_metadata_.updateForExistingKey(key, value, value, false, peredge_synced_victimcnt_);
         }
 
         // NOTE: for getreq with cache miss, we will update local uncached metadata for getres by updateLocalUncachedMetadataForRspInternal_(key)
@@ -93,35 +93,37 @@ namespace covered
         return is_local_cached;
     }
 
-    bool CoveredLocalCache::getLocalSyncedVictimFromLocalCacheInternal_(const Key& key, const uint32_t& peredge_synced_victimcnt, VictimInfo& cur_victim_info, uint32_t& cur_victim_rank) const
+    std::list<VictimInfo> CoveredLocalCache::getLocalSyncedVictimInfosFromLocalCacheInternal_() const
     {
-        bool is_local_synced_victim = false;
-        
-        // Check if key is local cached
-        const std::string keystr = key.getKeystr();
-        LruCacheReadHandle handle = covered_cache_ptr_->find(keystr);
-        bool is_local_cached = (handle != nullptr);
+        std::list<VictimInfo> local_synced_victim_infos;
 
-        if (is_local_cached) // Key is local cached
+        for (uint32_t least_popular_rank = 0; least_popular_rank < peredge_synced_victimcnt_; least_popular_rank++)
         {
-            Popularity local_cached_popularity = 0.0;
-            Popularity redirected_cached_popularity = 0.0;
-            uint32_t least_popular_rank = local_cached_metadata_.getPopularityForCachedObjects(key, local_cached_popularity, redirected_cached_popularity);
+            Key tmp_victim_key;
+            Popularity tmp_local_cached_popularity = 0.0;
+            Popularity tmp_redirected_cached_popularity = 0.0;
 
-            // Set is_local_synced_victim based on least_popular_rank
-            is_local_synced_victim = (least_popular_rank < peredge_synced_victimcnt);
-            if (is_local_synced_victim) // Key is peredge_synced_keycnt least popular
+            bool is_least_popular_key_exist = local_cached_metadata_.getLeastPopularKeyAndPopularity(least_popular_rank, tmp_victim_key, tmp_local_cached_popularity, tmp_redirected_cached_popularity);
+
+            if (is_least_popular_key_exist)
             {
-                // Set victim info with object size and cached popularity
-                uint32_t object_size = keystr.length() + handle->getSize();
-                cur_victim_info = VictimInfo(key, object_size, local_cached_popularity, redirected_cached_popularity, DirectoryInfo());
+                uint32_t tmp_victim_value_size = 0;
+                LruCacheReadHandle tmp_victim_handle = covered_cache_ptr_->find(tmp_victim_key.getKeystr()); // NOTE: although find() will move the item to the front of the LRU list to update recency information inside cachelib, covered uses local cache metadata tracked outside cachelib for cache management
+                assert(tmp_victim_handle != nullptr); // Victim must be cached before eviction
+                tmp_victim_value_size = tmp_victim_handle->getSize();
 
-                // Set victim rank
-                cur_victim_rank = least_popular_rank;
+                VictimInfo tmp_victim_info(tmp_victim_key, tmp_victim_value_size, tmp_local_cached_popularity, tmp_redirected_cached_popularity);
+                local_synced_victim_infos.push_back(tmp_victim_info); // Add to the tail of the list
+            }
+            else
+            {
+                break;
             }
         }
 
-        return is_local_synced_victim;
+        assert(local_synced_victim_infos.size() <= peredge_synced_victimcnt_);
+
+        return local_synced_victim_infos;
     }
 
     bool CoveredLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value)

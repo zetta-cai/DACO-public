@@ -29,7 +29,7 @@ namespace covered
 
     // (1) Process data requests
 
-    bool BasicCacheServerWorker::getLocalCache_(const Key& key, Value& value) const
+    bool BasicCacheServerWorker::getLocalEdgeCache_(const Key& key, Value& value) const
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();

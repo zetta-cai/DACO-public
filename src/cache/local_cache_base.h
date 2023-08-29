@@ -9,6 +9,7 @@
 #ifndef LOCAL_CACHE_BASE_H
 #define LOCAL_CACHE_BASE_H
 
+#include <list>
 #include <set>
 #include <string>
 #include <vector>
@@ -23,7 +24,7 @@ namespace covered
     class LocalCacheBase
     {
     public:
-        static LocalCacheBase* getLocalCacheByCacheName(const std::string& cache_name, const uint32_t& edge_idx, const uint64_t& capacity_bytes);
+        static LocalCacheBase* getLocalCacheByCacheName(const std::string& cache_name, const uint32_t& edge_idx, const uint64_t& capacity_bytes, const uint32_t& peredge_synced_victimcnt);
 
         LocalCacheBase(const uint32_t& edge_idx);
         virtual ~LocalCacheBase();
@@ -34,8 +35,8 @@ namespace covered
 
         // (2) Access local edge cache (KV data and local metadata)
 
-        bool getLocalCache(const Key& key, Value& value) const; // Return whether key is cached
-        bool getLocalSyncedVictimFromLocalCache(const Key& key, const uint32_t& peredge_synced_victimcnt, VictimInfo& cur_victim_info, uint32_t& cur_victim_rank) const; // Return if key is victim
+        bool getLocalCache(const Key& key, Value& value, bool& affect_victim_tracker) const; // Return whether key is cached
+        std::list<VictimInfo> getLocalSyncedVictimInfosFromLocalCache() const; // Return up to peredge_synced_victimcnt local synced victims with the least local rewards
 
         bool updateLocalCache(const Key& key, const Value& value); // Return whether key is cached
 
@@ -76,8 +77,8 @@ namespace covered
 
         // (2) Access local edge cache (KV data and local metadata)
 
-        virtual bool getLocalCacheInternal_(const Key& key, Value& value) const = 0; // Return whether key is cached
-        virtual bool getLocalSyncedVictimFromLocalCacheInternal_(const Key& key, const uint32_t& peredge_synced_victimcnt, VictimInfo& cur_victim_info, uint32_t& cur_victim_rank) const = 0; // Return if key is victim
+        virtual bool getLocalCacheInternal_(const Key& key, Value& value, bool& affect_victim_tracker) const = 0; // Return whether key is cached
+        virtual std::list<VictimInfo> getLocalSyncedVictimInfosFromLocalCacheInternal_() const = 0; // Return up to peredge_synced_victimcnt local synced victims with the least local rewards
 
         virtual bool updateLocalCacheInternal_(const Key& key, const Value& value) = 0; // Return whether key is cached
 

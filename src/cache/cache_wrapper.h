@@ -9,6 +9,7 @@
 #ifndef CACHE_WRAPPER_H
 #define CACHE_WRAPPER_H
 
+#include <list>
 #include <string>
 #include <vector>
 
@@ -24,7 +25,7 @@ namespace covered
     class CacheWrapper
     {
     public:
-        CacheWrapper(const std::string& cache_name, const uint32_t& edge_idx, const uint64_t& capacity_bytes);
+        CacheWrapper(const std::string& cache_name, const uint32_t& edge_idx, const uint64_t& capacity_bytes, const uint32_t& peredge_synced_victimcnt);
         virtual ~CacheWrapper();
 
         // (1) Check is cached and access validity
@@ -37,7 +38,7 @@ namespace covered
         // (2) Access local edge cache (KV data and local metadata)
 
         // Return whether key is cached and valid (i.e., local cache hit) after get/update/remove
-        bool get(const Key& key, Value& value) const;
+        bool get(const Key& key, Value& value, bool& affect_victim_tracker) const;
 
         // Return whether key is cached, while both update() and remove() will set validity as true
         // NOTE: update() only updates the object if cached, yet not admit a new one
@@ -49,8 +50,8 @@ namespace covered
         bool updateIfInvalidForGetrsp(const Key& key, const Value& value); // Update value only if key is locally cached yet invalid
         bool removeIfInvalidForGetrsp(const Key& key); // Remove value only if it is locally cached yet invalid
 
-        // Return true if the given key is one of peredge_synced_victimcnt victims with the least local rewards
-        bool getLocalSyncedVictim(const Key& key, const uint32_t& peredge_synced_victimcnt, VictimInfo& cur_victim_info, uint32_t& cur_victim_rank) const;
+        // Return up to peredge_synced_victimcnt local synced victims with the least local rewards
+        std::list<VictimInfo> getLocalSyncedVictimInfos() const;
 
         // (3) Local edge cache management
 

@@ -15,4 +15,10 @@ namespace covered
     }
     
     CoveredCacheManager::~CoveredCacheManager() {}
+
+    void CoveredCacheManager::updateVictimTrackerForLocalSyncedVictimInfos(const std::list<VictimInfo>& local_synced_victim_infos)
+    {
+        victim_tracker_.updateLocalSyncedVictimInfos(local_synced_victim_infos);
+        return;
+    }
 }

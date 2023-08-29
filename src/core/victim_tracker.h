@@ -14,7 +14,7 @@
 #include <list>
 
 #include "concurrency/rwlock.h"
-#include "core/victim/victim_info.h"
+#include "core/victim/synced_victim.h"
 
 namespace covered
 {
@@ -23,13 +23,18 @@ namespace covered
     public:
         VictimTracker(const uint32_t& edge_idx, const uint32_t& peredge_synced_victimcnt);
         ~VictimTracker();
+
+        void updateLocalSyncedVictimInfos(const std::list<VictimInfo>& local_synced_victim_infos);
     private:
-        // NOTE: the list of VictimInfos follows the ascending order of local rewards
-        typedef std::unordered_map<uint32_t, std::list<VictimInfo>> peredge_victiminfos_t;
+        // NOTE: the list of SyncedVictims follows the ascending order of local rewards
+        typedef std::unordered_map<uint32_t, std::list<SyncedVictim>> peredge_synced_victims_t;
 
         static const std::string kClassName;
 
+        void checkPointers_() const;
+
         // Const shared variables
+        const uint32_t edge_idx_;
         std::string instance_name_;
         const uint32_t peredge_synced_victimcnt_;
 
@@ -38,7 +43,8 @@ namespace covered
         mutable Rwlock* rwlock_for_victim_tracker_;
 
         // Non-const shared varaibles
-        peredge_victiminfos_t peredge_synced_victiminfos_;
+        // TODO: Maintain per-edge-node margin bytes to decide whether to perform placement calculation or not
+        peredge_synced_victims_t peredge_synced_victims_;
     };
 }
 

@@ -11,9 +11,11 @@
 #ifndef COVERED_CACHE_MANAGER_H
 #define COVERED_CACHE_MANAGER_H
 
+#include <list>
 #include <string>
 #include <unordered_map>
 
+#include "core/victim/victim_info.h"
 #include "core/victim_tracker.h"
 
 namespace covered
@@ -23,6 +25,8 @@ namespace covered
     public:
         CoveredCacheManager(const uint32_t& edge_idx, const uint32_t& peredge_synced_victimcnt);
         ~CoveredCacheManager();
+
+        void updateVictimTrackerForLocalSyncedVictimInfos(const std::list<VictimInfo>& local_synced_victim_infos);
     private:
         static const std::string kClassName;
 
@@ -31,9 +35,9 @@ namespace covered
 
         // Non-const shared variables (each should be thread safe)
 
-        // TODO: Aggregated uncached popularity
+        // TODO: Aggregated uncached popularity for admission (thread safe)
 
-        // Track per-edge-node least popular victims
+        // Track per-edge-node least popular victims for placement and eviction (thread safe)
         VictimTracker victim_tracker_;
     };
 }

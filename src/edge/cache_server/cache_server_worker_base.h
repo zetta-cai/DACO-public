@@ -81,7 +81,7 @@ namespace covered
         bool processDataRequest_(MessageBase* data_request_ptr, const NetworkAddr& recvrsp_dst_addr);
 
         bool processLocalGetRequest_(MessageBase* local_request_ptr, const NetworkAddr& recvrsp_dst_addr) const;
-        virtual bool getLocalCache_(const Key& key, Value& value) const = 0; // Return is local cached and valid
+        virtual bool getLocalEdgeCache_(const Key& key, Value& value) const = 0; // Return is local cached and valid
 
         bool processLocalWriteRequest_(MessageBase* local_request_ptr, const NetworkAddr& recvrsp_dst_addr); // For put/del
         bool processRedirectedRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& recvrsp_dst_addr);
