@@ -156,8 +156,6 @@ namespace covered
         return;
     }
 
-    // (1) Process data requests
-
     bool CacheServerWorkerBase::processDataRequest_(MessageBase* data_request_ptr, const NetworkAddr& recvrsp_dst_addr)
     {
         assert(data_request_ptr != NULL && data_request_ptr->isDataRequest());
@@ -190,6 +188,8 @@ namespace covered
         
         return is_finish;
     }
+
+    // (1) Process read requests
 
     bool CacheServerWorkerBase::processLocalGetRequest_(MessageBase* local_request_ptr, const NetworkAddr& recvrsp_dst_addr) const
     {
@@ -313,183 +313,9 @@ namespace covered
         return is_finish;
     }
 
-    bool CacheServerWorkerBase::processLocalWriteRequest_(MessageBase* local_request_ptr, const NetworkAddr& recvrsp_dst_addr)
-    {
-        // Get key and value from local request if any
-        assert(local_request_ptr != NULL);
-        assert(local_request_ptr->getMessageType() == MessageType::kLocalPutRequest || local_request_ptr->getMessageType() == MessageType::kLocalDelRequest);
-        assert(recvrsp_dst_addr.isValidAddr());
-        Key tmp_key;
-        Value tmp_value;
-        if (local_request_ptr->getMessageType() == MessageType::kLocalPutRequest)
-        {
-            const LocalPutRequest* const local_put_request_ptr = static_cast<const LocalPutRequest*>(local_request_ptr);
-            tmp_key = local_put_request_ptr->getKey();
-            tmp_value = local_put_request_ptr->getValue();
-            assert(tmp_value.isDeleted() == false);
-        }
-        else if (local_request_ptr->getMessageType() == MessageType::kLocalDelRequest)
-        {
-            const LocalDelRequest* const local_del_request_ptr = static_cast<const LocalDelRequest*>(local_request_ptr);
-            tmp_key = local_del_request_ptr->getKey();
-        }
-        else
-        {
-            std::ostringstream oss;
-            oss << "invalid message type " << MessageBase::messageTypeToString(local_request_ptr->getMessageType()) << " for processLocalWriteRequest_()!";
-            Util::dumpErrorMsg(base_instance_name_, oss.str());
-            exit(1);
-        }
-        const bool skip_propagation_latency = local_request_ptr->isSkipPropagationLatency();
+    // (1.1) Access local edge cache
 
-        #ifdef DEBUG_CACHE_SERVER
-        Util::dumpVariablesForDebug(base_instance_name_, 9, "receive a local write request;", "type:", MessageBase::messageTypeToString(local_request_ptr->getMessageType()).c_str(), "keystr:", tmp_key.getKeystr().c_str(), "valuesize:", std::to_string(tmp_value.getValuesize()).c_str(), "is deleted:", Util::toString(tmp_value.isDeleted()).c_str());
-        #endif
-        
-        checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
-
-        bool is_finish = false; // Mark if edge node is finished
-        const Hitflag hitflag = Hitflag::kGlobalMiss; // Must be global miss due to write-through policy
-        EventList event_list;
-
-        // Acquire write lock from beacon node no matter the locally cached object is valid or not, where the beacon will invalidate all other cache copies for cache coherence
-        struct timespec acquire_writelock_start_timestamp = Util::getCurrentTimespec();
-        LockResult lock_result = LockResult::kFailure;
-        is_finish = acquireWritelock_(tmp_key, lock_result, event_list, skip_propagation_latency);
-        if (is_finish) // Edge node is NOT running
-        {
-            return is_finish;
-        }
-        else
-        {
-            assert(lock_result == LockResult::kSuccess || lock_result == LockResult::kNoneed);
-        }
-        struct timespec acquire_writelock_end_timestamp = Util::getCurrentTimespec();
-        uint32_t acquire_writelock_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(acquire_writelock_end_timestamp, acquire_writelock_start_timestamp));
-        event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_ACQUIRE_WRITELOCK_EVENT_NAME, acquire_writelock_latency_us); // Add intermediate event if with event tracking
-
-        // Send request to cloud for write-through policy
-        struct timespec write_cloud_start_timestamp = Util::getCurrentTimespec();
-        is_finish = writeDataToCloud_(tmp_key, tmp_value, local_request_ptr->getMessageType(), event_list, skip_propagation_latency);
-        if (is_finish) // Edge node is NOT running
-        {
-            return is_finish;
-        }
-        struct timespec write_cloud_end_timestamp = Util::getCurrentTimespec();
-        uint32_t write_cloud_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(write_cloud_end_timestamp, write_cloud_start_timestamp));
-        event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_WRITE_CLOUD_EVENT_NAME, write_cloud_latency_us); // Add intermediate event if with event tracking
-
-        // Try to update/remove local edge cache
-        struct timespec write_local_cache_start_timestamp = Util::getCurrentTimespec();
-        bool is_local_cached = false;
-        NetworkAddr edge_cache_server_recvreq_source_addr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeCacheServerRecvreqSourceAddr();
-        // NOTE: message type has been checked, which must be one of the following two types
-        if (local_request_ptr->getMessageType() == MessageType::kLocalPutRequest)
-        {
-            // Add events of intermediate response if with event tracking
-            is_finish = updateLocalEdgeCache_(tmp_key, tmp_value, is_local_cached, event_list, skip_propagation_latency);
-        }
-        else if (local_request_ptr->getMessageType() == MessageType::kLocalDelRequest)
-        {
-            removeLocalEdgeCache_(tmp_key, is_local_cached);
-        }
-        UNUSED(is_local_cached);
-        struct timespec write_local_cache_end_timestamp = Util::getCurrentTimespec();
-        uint32_t write_local_cache_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(write_local_cache_end_timestamp, write_local_cache_start_timestamp));
-        event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_WRITE_LOCAL_CACHE_EVENT_NAME, write_local_cache_latency_us); // Add intermediate event if with event tracking
-
-        if (is_finish) // Edge node is NOT running
-        {
-            return is_finish;
-        }
-
-        // Trigger independent cache admission for local/global cache miss if necessary
-        struct timespec independent_admission_start_timestamp = Util::getCurrentTimespec();
-        is_finish = tryToTriggerIndependentAdmission_(tmp_key, tmp_value, event_list, skip_propagation_latency);
-        if (is_finish) // Edge node is NOT running
-        {
-            return is_finish;
-        }
-        struct timespec independent_admission_end_timestamp = Util::getCurrentTimespec();
-        uint32_t independent_admission_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(independent_admission_end_timestamp, independent_admission_start_timestamp));
-        event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_INDEPENDENT_ADMISSION_EVENT_NAME, independent_admission_latency_us); // Add intermediate event if with event tracking
-
-        // Notify beacon node to finish writes if acquiring write lock successfully
-        if (lock_result == LockResult::kSuccess)
-        {
-            struct timespec release_writelock_start_timestamp = Util::getCurrentTimespec();
-
-            is_finish = releaseWritelock_(tmp_key, event_list, skip_propagation_latency);
-
-            // Add intermediate event if with event tracking
-            struct timespec release_writelock_end_timestamp = Util::getCurrentTimespec();
-            uint32_t release_writelock_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(release_writelock_end_timestamp, release_writelock_start_timestamp));
-            event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_RELEASE_WRITELOCK_EVENT_NAME, release_writelock_latency_us);
-        }
-        if (is_finish) // Edge node is NOT running
-        {
-            return is_finish;
-        }
-        
-        // TODO: For COVERED, beacon node will tell the edge node if to admit, w/o independent decision
-
-        // Prepare local response
-        MessageBase* local_response_ptr = NULL;
-        uint64_t used_bytes = tmp_edge_wrapper_ptr->getSizeForCapacity();
-        uint64_t capacity_bytes = tmp_edge_wrapper_ptr->getCapacityBytes();
-        uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
-        if (local_request_ptr->getMessageType() == MessageType::kLocalPutRequest)
-        {
-            // Prepare LocalPutResponse for client
-            local_response_ptr = new LocalPutResponse(tmp_key, hitflag, used_bytes, capacity_bytes, edge_idx, edge_cache_server_recvreq_source_addr, event_list, skip_propagation_latency);
-        }
-        else if (local_request_ptr->getMessageType() == MessageType::kLocalDelRequest)
-        {
-            // Prepare LocalDelResponse for client
-            local_response_ptr = new LocalDelResponse(tmp_key, hitflag, used_bytes, capacity_bytes, edge_idx, edge_cache_server_recvreq_source_addr, event_list, skip_propagation_latency);
-        }
-
-        if (!is_finish) // // Edge node is STILL running
-        {
-            // Push local response message into edge-to-client propagation simulator to a client
-            assert(local_response_ptr != NULL);
-            assert(local_response_ptr->getMessageType() == MessageType::kLocalPutResponse || local_response_ptr->getMessageType() == MessageType::kLocalDelResponse);
-            bool is_successful = tmp_edge_wrapper_ptr->getEdgeToclientPropagationSimulatorParamPtr()->push(local_response_ptr, recvrsp_dst_addr);
-            assert(is_successful);
-        }
-
-        // NOTE: local_response_ptr will be released by edge-to-client propagation simulator
-        local_response_ptr = NULL;
-
-        return is_finish;
-    }
-
-    bool CacheServerWorkerBase::processRedirectedRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& recvrsp_dst_addr)
-    {
-        assert(redirected_request_ptr != NULL && redirected_request_ptr->isRedirectedDataRequest());
-
-        bool is_finish = false; // Mark if local edge node is finished
-
-        MessageType message_type = redirected_request_ptr->getMessageType();
-        if (message_type == MessageType::kRedirectedGetRequest)
-        {
-            is_finish = processRedirectedGetRequest_(redirected_request_ptr, recvrsp_dst_addr);
-        }
-        else
-        {
-            std::ostringstream oss;
-            oss << "invalid message type " << MessageBase::messageTypeToString(message_type) << " for processRedirectedRequest_()!";
-            Util::dumpErrorMsg(base_instance_name_, oss.str());
-            exit(1);
-        }
-        
-        return is_finish;
-    }
-
-    // (2) Access cooperative edge cache
-
-    // (2.1) Fetch data from neighbor edge nodes
+    // (1.2) Access cooperative edge cache to fetch data from neighbor edge nodes
 
     bool CacheServerWorkerBase::fetchDataFromNeighbor_(const Key& key, Value& value, bool& is_cooperative_cached_and_valid, EventList& event_list, const bool& skip_propagation_latency) const
     {
@@ -687,40 +513,267 @@ namespace covered
         return is_finish;
     }
 
-    // (2.2) Update content directory information
+    // (1.3) Access cloud
 
-    bool CacheServerWorkerBase::updateDirectory_(const Key& key, const bool& is_admit, bool& is_being_written, EventList& event_list, const bool& skip_propagation_latency) const
+    bool CacheServerWorkerBase::fetchDataFromCloud_(const Key& key, Value& value, EventList& event_list, const bool& skip_propagation_latency) const
+    {
+        checkPointers_();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+
+        bool is_finish = false; // Mark if edge node is finished
+        struct timespec issue_global_get_req_start_timestamp = Util::getCurrentTimespec();
+
+        while (true) // Timeout-and-retry
+        {
+            // Prepare global get request to cloud
+            uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
+            MessageBase* global_get_request_ptr = new GlobalGetRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
+            assert(global_get_request_ptr != NULL);
+
+            #ifdef DEBUG_CACHE_SERVER
+            Util::dumpVariablesForDebug(base_instance_name_, 5, "issue a global request;", "type:", MessageBase::messageTypeToString(global_get_request_ptr->getMessageType()).c_str(), "keystr:", key.getKeystr().c_str());
+            #endif
+
+            // Push the global request into edge-to-cloud propagation simulator to cloud
+            bool is_successful = tmp_edge_wrapper_ptr->getEdgeTocloudPropagationSimulatorParamPtr()->push(global_get_request_ptr, corresponding_cloud_recvreq_dst_addr_);
+            assert(is_successful);
+
+            // NOTE: global_get_request_ptr will be released by edge-to-cloud propagation simulator
+            global_get_request_ptr = NULL;
+
+            // Receive the global response message from cloud
+            DynamicArray global_response_msg_payload;
+            bool is_timeout = edge_cache_server_worker_recvrsp_socket_server_ptr_->recv(global_response_msg_payload);
+            if (is_timeout)
+            {
+                if (!tmp_edge_wrapper_ptr->isNodeRunning())
+                {
+                    is_finish = true;
+                    break; // Edge is NOT running
+                }
+                else
+                {
+                    Util::dumpWarnMsg(base_instance_name_, "edge timeout to wait for GlobalGetResponse");
+                    continue; // Resend the global request message
+                }
+            }
+            else
+            {
+                // Receive the global response message successfully
+                MessageBase* global_response_ptr = MessageBase::getResponseFromMsgPayload(global_response_msg_payload);
+                assert(global_response_ptr != NULL && global_response_ptr->getMessageType() == MessageType::kGlobalGetResponse);
+                
+                // Get value from global response message
+                const GlobalGetResponse* const global_get_response_ptr = static_cast<const GlobalGetResponse*>(global_response_ptr);
+                value = global_get_response_ptr->getValue();
+
+                // Add events of intermediate response if with event tracking
+                event_list.addEvents(global_get_response_ptr->getEventListRef());
+
+                #ifdef DEBUG_CACHE_SERVER
+                Util::dumpVariablesForDebug(base_instance_name_, 5, "receive a global response", "type:", MessageBase::messageTypeToString(global_response_ptr->getMessageType()).c_str(), "keystr:", global_get_response_ptr->getKey().getKeystr().c_str());
+                #endif
+
+                // Release global response message
+                delete global_response_ptr;
+                global_response_ptr = NULL;
+                break;
+            }
+        } // End of while loop
+
+        // Add intermediate event if with event tracking
+        struct timespec issue_global_get_req_end_timestamp = Util::getCurrentTimespec();
+        uint32_t issue_global_get_req_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(issue_global_get_req_end_timestamp, issue_global_get_req_start_timestamp));
+        event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_ISSUE_GLOBAL_GET_REQ_EVENT_NAME, issue_global_get_req_latency_us);
+        
+        return is_finish;
+    }
+
+    // (1.4) Update invalid cached objects in local edge cache
+
+    bool CacheServerWorkerBase::tryToUpdateInvalidLocalEdgeCache_(const Key& key, const Value& value, EventList& event_list, const bool& skip_propagation_latency) const
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
         bool is_finish = false;
-        struct timespec update_directory_start_timestamp = Util::getCurrentTimespec();
 
-        // Update remote address of edge_cache_server_worker_sendreq_tobeacon_socket_client_ptr_ as the beacon node for the key if remote
-        bool current_is_beacon = tmp_edge_wrapper_ptr->currentIsBeacon(key);
-
-        // Check if beacon node is the current edge node and update directory information
-        DirectoryInfo directory_info(tmp_edge_wrapper_ptr->getNodeIdx());
-        if (current_is_beacon) // Update target edge index of local directory information
+        bool is_local_cached_and_invalid = false;
+        if (value.isDeleted()) // value is deleted
         {
-            tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->updateLocalDirectory(key, is_admit, directory_info, is_being_written);
+            is_local_cached_and_invalid = tmp_edge_wrapper_ptr->getEdgeCachePtr()->removeIfInvalidForGetrsp(key); // remove will NOT trigger eviction
         }
-        else // Update remote directory information at the beacon node
+        else // non-deleted value
         {
-            // Add events of intermediate responses if with event tracking
-            is_finish = updateBeaconDirectory_(key, is_admit, directory_info, is_being_written, event_list, skip_propagation_latency);
+            is_local_cached_and_invalid = tmp_edge_wrapper_ptr->getEdgeCachePtr()->updateIfInvalidForGetrsp(key, value);
+
+            if (is_local_cached_and_invalid) // update may trigger eviction
+            {
+                is_finish = evictForCapacity_(event_list, skip_propagation_latency);
+            }
+        }
+        
+        return is_finish;
+    }
+
+    // (2) Process write requests
+
+    bool CacheServerWorkerBase::processLocalWriteRequest_(MessageBase* local_request_ptr, const NetworkAddr& recvrsp_dst_addr)
+    {
+        // Get key and value from local request if any
+        assert(local_request_ptr != NULL);
+        assert(local_request_ptr->getMessageType() == MessageType::kLocalPutRequest || local_request_ptr->getMessageType() == MessageType::kLocalDelRequest);
+        assert(recvrsp_dst_addr.isValidAddr());
+        Key tmp_key;
+        Value tmp_value;
+        if (local_request_ptr->getMessageType() == MessageType::kLocalPutRequest)
+        {
+            const LocalPutRequest* const local_put_request_ptr = static_cast<const LocalPutRequest*>(local_request_ptr);
+            tmp_key = local_put_request_ptr->getKey();
+            tmp_value = local_put_request_ptr->getValue();
+            assert(tmp_value.isDeleted() == false);
+        }
+        else if (local_request_ptr->getMessageType() == MessageType::kLocalDelRequest)
+        {
+            const LocalDelRequest* const local_del_request_ptr = static_cast<const LocalDelRequest*>(local_request_ptr);
+            tmp_key = local_del_request_ptr->getKey();
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "invalid message type " << MessageBase::messageTypeToString(local_request_ptr->getMessageType()) << " for processLocalWriteRequest_()!";
+            Util::dumpErrorMsg(base_instance_name_, oss.str());
+            exit(1);
+        }
+        const bool skip_propagation_latency = local_request_ptr->isSkipPropagationLatency();
+
+        #ifdef DEBUG_CACHE_SERVER
+        Util::dumpVariablesForDebug(base_instance_name_, 9, "receive a local write request;", "type:", MessageBase::messageTypeToString(local_request_ptr->getMessageType()).c_str(), "keystr:", tmp_key.getKeystr().c_str(), "valuesize:", std::to_string(tmp_value.getValuesize()).c_str(), "is deleted:", Util::toString(tmp_value.isDeleted()).c_str());
+        #endif
+        
+        checkPointers_();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+
+        bool is_finish = false; // Mark if edge node is finished
+        const Hitflag hitflag = Hitflag::kGlobalMiss; // Must be global miss due to write-through policy
+        EventList event_list;
+
+        // Acquire write lock from beacon node no matter the locally cached object is valid or not, where the beacon will invalidate all other cache copies for cache coherence
+        struct timespec acquire_writelock_start_timestamp = Util::getCurrentTimespec();
+        LockResult lock_result = LockResult::kFailure;
+        is_finish = acquireWritelock_(tmp_key, lock_result, event_list, skip_propagation_latency);
+        if (is_finish) // Edge node is NOT running
+        {
+            return is_finish;
+        }
+        else
+        {
+            assert(lock_result == LockResult::kSuccess || lock_result == LockResult::kNoneed);
+        }
+        struct timespec acquire_writelock_end_timestamp = Util::getCurrentTimespec();
+        uint32_t acquire_writelock_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(acquire_writelock_end_timestamp, acquire_writelock_start_timestamp));
+        event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_ACQUIRE_WRITELOCK_EVENT_NAME, acquire_writelock_latency_us); // Add intermediate event if with event tracking
+
+        // Send request to cloud for write-through policy
+        struct timespec write_cloud_start_timestamp = Util::getCurrentTimespec();
+        is_finish = writeDataToCloud_(tmp_key, tmp_value, local_request_ptr->getMessageType(), event_list, skip_propagation_latency);
+        if (is_finish) // Edge node is NOT running
+        {
+            return is_finish;
+        }
+        struct timespec write_cloud_end_timestamp = Util::getCurrentTimespec();
+        uint32_t write_cloud_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(write_cloud_end_timestamp, write_cloud_start_timestamp));
+        event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_WRITE_CLOUD_EVENT_NAME, write_cloud_latency_us); // Add intermediate event if with event tracking
+
+        // Try to update/remove local edge cache
+        struct timespec write_local_cache_start_timestamp = Util::getCurrentTimespec();
+        bool is_local_cached = false;
+        NetworkAddr edge_cache_server_recvreq_source_addr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeCacheServerRecvreqSourceAddr();
+        // NOTE: message type has been checked, which must be one of the following two types
+        if (local_request_ptr->getMessageType() == MessageType::kLocalPutRequest)
+        {
+            // Add events of intermediate response if with event tracking
+            is_local_cached = updateLocalEdgeCache_(tmp_key, tmp_value);
+
+            // NOTE: we will check capacity and trigger eviction for value updates
+            is_finish = evictForCapacity_(event_list, skip_propagation_latency);
+        }
+        else if (local_request_ptr->getMessageType() == MessageType::kLocalDelRequest)
+        {
+            removeLocalEdgeCache_(tmp_key, is_local_cached);
+        }
+        UNUSED(is_local_cached);
+        struct timespec write_local_cache_end_timestamp = Util::getCurrentTimespec();
+        uint32_t write_local_cache_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(write_local_cache_end_timestamp, write_local_cache_start_timestamp));
+        event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_WRITE_LOCAL_CACHE_EVENT_NAME, write_local_cache_latency_us); // Add intermediate event if with event tracking
+
+        if (is_finish) // Edge node is NOT running
+        {
+            return is_finish;
         }
 
-        // Add intermediate event if with event tracking
-        struct timespec update_directory_end_timestamp = Util::getCurrentTimespec();
-        uint32_t update_directory_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(update_directory_end_timestamp, update_directory_start_timestamp));
-        event_list.addEvent(current_is_beacon?Event::EDGE_CACHE_SERVER_WORKER_UPDATE_LOCAL_DIRECTORY_EVENT_NAME:Event::EDGE_CACHE_SERVER_WORKER_UPDATE_REMOTE_DIRECTORY_EVENT_NAME, update_directory_latency_us);
+        // Trigger independent cache admission for local/global cache miss if necessary
+        struct timespec independent_admission_start_timestamp = Util::getCurrentTimespec();
+        is_finish = tryToTriggerIndependentAdmission_(tmp_key, tmp_value, event_list, skip_propagation_latency);
+        if (is_finish) // Edge node is NOT running
+        {
+            return is_finish;
+        }
+        struct timespec independent_admission_end_timestamp = Util::getCurrentTimespec();
+        uint32_t independent_admission_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(independent_admission_end_timestamp, independent_admission_start_timestamp));
+        event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_INDEPENDENT_ADMISSION_EVENT_NAME, independent_admission_latency_us); // Add intermediate event if with event tracking
+
+        // Notify beacon node to finish writes if acquiring write lock successfully
+        if (lock_result == LockResult::kSuccess)
+        {
+            struct timespec release_writelock_start_timestamp = Util::getCurrentTimespec();
+
+            is_finish = releaseWritelock_(tmp_key, event_list, skip_propagation_latency);
+
+            // Add intermediate event if with event tracking
+            struct timespec release_writelock_end_timestamp = Util::getCurrentTimespec();
+            uint32_t release_writelock_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(release_writelock_end_timestamp, release_writelock_start_timestamp));
+            event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_RELEASE_WRITELOCK_EVENT_NAME, release_writelock_latency_us);
+        }
+        if (is_finish) // Edge node is NOT running
+        {
+            return is_finish;
+        }
+        
+        // TODO: For COVERED, beacon node will tell the edge node if to admit, w/o independent decision
+
+        // Prepare local response
+        MessageBase* local_response_ptr = NULL;
+        uint64_t used_bytes = tmp_edge_wrapper_ptr->getSizeForCapacity();
+        uint64_t capacity_bytes = tmp_edge_wrapper_ptr->getCapacityBytes();
+        uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
+        if (local_request_ptr->getMessageType() == MessageType::kLocalPutRequest)
+        {
+            // Prepare LocalPutResponse for client
+            local_response_ptr = new LocalPutResponse(tmp_key, hitflag, used_bytes, capacity_bytes, edge_idx, edge_cache_server_recvreq_source_addr, event_list, skip_propagation_latency);
+        }
+        else if (local_request_ptr->getMessageType() == MessageType::kLocalDelRequest)
+        {
+            // Prepare LocalDelResponse for client
+            local_response_ptr = new LocalDelResponse(tmp_key, hitflag, used_bytes, capacity_bytes, edge_idx, edge_cache_server_recvreq_source_addr, event_list, skip_propagation_latency);
+        }
+
+        if (!is_finish) // // Edge node is STILL running
+        {
+            // Push local response message into edge-to-client propagation simulator to a client
+            assert(local_response_ptr != NULL);
+            assert(local_response_ptr->getMessageType() == MessageType::kLocalPutResponse || local_response_ptr->getMessageType() == MessageType::kLocalDelResponse);
+            bool is_successful = tmp_edge_wrapper_ptr->getEdgeToclientPropagationSimulatorParamPtr()->push(local_response_ptr, recvrsp_dst_addr);
+            assert(is_successful);
+        }
+
+        // NOTE: local_response_ptr will be released by edge-to-client propagation simulator
+        local_response_ptr = NULL;
 
         return is_finish;
     }
 
-    // (2.3) Process writes and block for MSI protocol
+    // (2.1) Acquire write lock and block for MSI protocol
 
     bool CacheServerWorkerBase::acquireWritelock_(const Key& key, LockResult& lock_result, EventList& event_list, const bool& skip_propagation_latency)
     {
@@ -892,158 +945,7 @@ namespace covered
         return is_finish;
     }
 
-    bool CacheServerWorkerBase::releaseWritelock_(const Key& key, EventList& event_list, const bool& skip_propagation_latency)
-    {
-        checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
-
-        bool is_finish = false;
-        struct timespec release_local_or_remote_writelock_start_timestamp = Util::getCurrentTimespec();
-
-        // Update remote address of edge_cache_server_worker_sendreq_tobeacon_socket_client_ptr_ as the beacon node for the key if remote
-        bool current_is_beacon = tmp_edge_wrapper_ptr->currentIsBeacon(key);
-
-        // Check if beacon node is the current edge node and lookup directory information
-    
-        if (current_is_beacon) // Get target edge index from local directory information
-        {
-            DirectoryInfo current_directory_info(tmp_edge_wrapper_ptr->getNodeIdx());
-            std::unordered_set<NetworkAddr, NetworkAddrHasher> blocked_edges = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->releaseLocalWritelock(key, current_directory_info);
-
-            is_finish = tmp_edge_wrapper_ptr->notifyEdgesToFinishBlock(edge_cache_server_worker_recvrsp_socket_server_ptr_, edge_cache_server_worker_recvrsp_source_addr_, key, blocked_edges, event_list, skip_propagation_latency); // Add events of intermediate response if with event tracking
-            if (is_finish) // Edge is NOT running
-            {
-                return is_finish;
-            }
-        }
-        else // Get target edge index from remote directory information at the beacon node
-        {
-            // NOTE: beacon server of beacon node has already notified all blocked edges -> NO need to notify them again in cache server
-            is_finish = releaseBeaconWritelock_(key, event_list, skip_propagation_latency); // Add events of intermediate response if with event tracking
-            if (is_finish) // Edge is NOT running
-            {
-                return is_finish;
-            }
-        } // End of current_is_beacon
-
-        // Add intermediate event if with event tracking
-        struct timespec release_local_or_remote_writelock_end_timestamp = Util::getCurrentTimespec();
-        uint32_t release_local_or_remote_writelock_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(release_local_or_remote_writelock_end_timestamp, release_local_or_remote_writelock_start_timestamp));
-        event_list.addEvent(current_is_beacon?Event::EDGE_CACHE_SERVER_WORKER_RELEASE_LOCAL_WRITELOCK_EVENT_NAME:Event::EDGE_CACHE_SERVER_WORKER_RELEASE_REMOTE_WRITELOCK_EVENT_NAME, release_local_or_remote_writelock_latency_us);
-
-        return is_finish;
-    }
-
-    // (2.4) Utility functions for cooperative caching
-
-    NetworkAddr CacheServerWorkerBase::getBeaconDstaddr_(const Key& key) const
-    {
-        checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
-
-        // The current edge node must NOT be the beacon node for the key
-        bool current_is_beacon = tmp_edge_wrapper_ptr->currentIsBeacon(key);
-        assert(!current_is_beacon);
-
-        // Get remote address such that current edge node can communicate with the beacon node for the key
-        NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getBeaconEdgeBeaconServerRecvreqAddr(key);
-
-        return beacon_edge_beacon_server_recvreq_dst_addr;
-    }
-
-    NetworkAddr CacheServerWorkerBase::getTargetDstaddr_(const DirectoryInfo& directory_info) const
-    {
-        checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
-
-        // The current edge node must NOT be the target node
-        bool current_is_target = tmp_edge_wrapper_ptr->currentIsTarget(directory_info);
-        assert(!current_is_target);
-
-        // Set remote address such that the current edge node can communicate with the target edge node
-        uint32_t target_edge_idx = directory_info.getTargetEdgeIdx();
-        std::string target_edge_ipstr = Config::getEdgeIpstr(target_edge_idx, tmp_edge_wrapper_ptr->getNodeCnt());
-        uint16_t target_edge_cache_server_recvreq_port = Util::getEdgeCacheServerRecvreqPort(target_edge_idx, tmp_edge_wrapper_ptr->getNodeCnt());
-        NetworkAddr target_edge_cache_server_recvreq_dst_addr(target_edge_ipstr, target_edge_cache_server_recvreq_port);
-
-        return target_edge_cache_server_recvreq_dst_addr;
-    }
-
-    // (3) Access cloud
-
-    bool CacheServerWorkerBase::fetchDataFromCloud_(const Key& key, Value& value, EventList& event_list, const bool& skip_propagation_latency) const
-    {
-        checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
-
-        bool is_finish = false; // Mark if edge node is finished
-        struct timespec issue_global_get_req_start_timestamp = Util::getCurrentTimespec();
-
-        while (true) // Timeout-and-retry
-        {
-            // Prepare global get request to cloud
-            uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
-            MessageBase* global_get_request_ptr = new GlobalGetRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
-            assert(global_get_request_ptr != NULL);
-
-            #ifdef DEBUG_CACHE_SERVER
-            Util::dumpVariablesForDebug(base_instance_name_, 5, "issue a global request;", "type:", MessageBase::messageTypeToString(global_get_request_ptr->getMessageType()).c_str(), "keystr:", key.getKeystr().c_str());
-            #endif
-
-            // Push the global request into edge-to-cloud propagation simulator to cloud
-            bool is_successful = tmp_edge_wrapper_ptr->getEdgeTocloudPropagationSimulatorParamPtr()->push(global_get_request_ptr, corresponding_cloud_recvreq_dst_addr_);
-            assert(is_successful);
-
-            // NOTE: global_get_request_ptr will be released by edge-to-cloud propagation simulator
-            global_get_request_ptr = NULL;
-
-            // Receive the global response message from cloud
-            DynamicArray global_response_msg_payload;
-            bool is_timeout = edge_cache_server_worker_recvrsp_socket_server_ptr_->recv(global_response_msg_payload);
-            if (is_timeout)
-            {
-                if (!tmp_edge_wrapper_ptr->isNodeRunning())
-                {
-                    is_finish = true;
-                    break; // Edge is NOT running
-                }
-                else
-                {
-                    Util::dumpWarnMsg(base_instance_name_, "edge timeout to wait for GlobalGetResponse");
-                    continue; // Resend the global request message
-                }
-            }
-            else
-            {
-                // Receive the global response message successfully
-                MessageBase* global_response_ptr = MessageBase::getResponseFromMsgPayload(global_response_msg_payload);
-                assert(global_response_ptr != NULL && global_response_ptr->getMessageType() == MessageType::kGlobalGetResponse);
-                
-                // Get value from global response message
-                const GlobalGetResponse* const global_get_response_ptr = static_cast<const GlobalGetResponse*>(global_response_ptr);
-                value = global_get_response_ptr->getValue();
-
-                // Add events of intermediate response if with event tracking
-                event_list.addEvents(global_get_response_ptr->getEventListRef());
-
-                #ifdef DEBUG_CACHE_SERVER
-                Util::dumpVariablesForDebug(base_instance_name_, 5, "receive a global response", "type:", MessageBase::messageTypeToString(global_response_ptr->getMessageType()).c_str(), "keystr:", global_get_response_ptr->getKey().getKeystr().c_str());
-                #endif
-
-                // Release global response message
-                delete global_response_ptr;
-                global_response_ptr = NULL;
-                break;
-            }
-        } // End of while loop
-
-        // Add intermediate event if with event tracking
-        struct timespec issue_global_get_req_end_timestamp = Util::getCurrentTimespec();
-        uint32_t issue_global_get_req_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(issue_global_get_req_end_timestamp, issue_global_get_req_start_timestamp));
-        event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_ISSUE_GLOBAL_GET_REQ_EVENT_NAME, issue_global_get_req_latency_us);
-        
-        return is_finish;
-    }
+    // (2.2) Update cloud
 
     bool CacheServerWorkerBase::writeDataToCloud_(const Key& key, const Value& value, const MessageType& message_type, EventList& event_list, const bool& skip_propagation_latency)
     {        
@@ -1123,48 +1025,7 @@ namespace covered
         return is_finish;
     }
 
-    // (4) Update cached objects in local edge cache
-
-    bool CacheServerWorkerBase::tryToUpdateInvalidLocalEdgeCache_(const Key& key, const Value& value, EventList& event_list, const bool& skip_propagation_latency) const
-    {
-        checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
-
-        bool is_finish = false;
-
-        bool is_local_cached_and_invalid = false;
-        if (value.isDeleted()) // value is deleted
-        {
-            is_local_cached_and_invalid = tmp_edge_wrapper_ptr->getEdgeCachePtr()->removeIfInvalidForGetrsp(key); // remove will NOT trigger eviction
-        }
-        else // non-deleted value
-        {
-            is_local_cached_and_invalid = tmp_edge_wrapper_ptr->getEdgeCachePtr()->updateIfInvalidForGetrsp(key, value);
-
-            if (is_local_cached_and_invalid) // update may trigger eviction
-            {
-                is_finish = evictForCapacity_(event_list, skip_propagation_latency);
-            }
-        }
-        
-        return is_finish;
-    }
-
-    bool CacheServerWorkerBase::updateLocalEdgeCache_(const Key& key, const Value& value, bool& is_local_cached_after_udpate, EventList& event_list, const bool& skip_propagation_latency) const
-    {
-        // No need to acquire per-key rwlock for serializability, which has been done in processLocalGetRequest_() or processLocalWriteRequest_()
-
-        checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
-
-        bool is_finish = false;
-
-        is_local_cached_after_udpate = tmp_edge_wrapper_ptr->getEdgeCachePtr()->update(key, value);
-
-        is_finish = evictForCapacity_(event_list, skip_propagation_latency);
-
-        return is_finish;
-    }
+    // (2.3) Update cached objects in local edge cache
 
     void CacheServerWorkerBase::removeLocalEdgeCache_(const Key& key, bool& is_local_cached_after_udpate) const
     {
@@ -1173,12 +1034,86 @@ namespace covered
 
         is_local_cached_after_udpate = tmp_edge_wrapper_ptr->getEdgeCachePtr()->remove(key);
 
+        // TODO: END HERE
+
         // NOTE: no need to check capacity, as remove() only replaces the original value (value size + is_deleted) with a deleted value (zero value size + is_deleted of true), where deleted value uses minimum bytes and remove() cannot increase used bytes to trigger any eviction
 
         return;
     }
 
-    // (5) Admit uncached objects in local edge cache
+    // (2.4) Release write lock for MSI protocol
+
+    bool CacheServerWorkerBase::releaseWritelock_(const Key& key, EventList& event_list, const bool& skip_propagation_latency)
+    {
+        checkPointers_();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+
+        bool is_finish = false;
+        struct timespec release_local_or_remote_writelock_start_timestamp = Util::getCurrentTimespec();
+
+        // Update remote address of edge_cache_server_worker_sendreq_tobeacon_socket_client_ptr_ as the beacon node for the key if remote
+        bool current_is_beacon = tmp_edge_wrapper_ptr->currentIsBeacon(key);
+
+        // Check if beacon node is the current edge node and lookup directory information
+    
+        if (current_is_beacon) // Get target edge index from local directory information
+        {
+            DirectoryInfo current_directory_info(tmp_edge_wrapper_ptr->getNodeIdx());
+            std::unordered_set<NetworkAddr, NetworkAddrHasher> blocked_edges = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->releaseLocalWritelock(key, current_directory_info);
+
+            is_finish = tmp_edge_wrapper_ptr->notifyEdgesToFinishBlock(edge_cache_server_worker_recvrsp_socket_server_ptr_, edge_cache_server_worker_recvrsp_source_addr_, key, blocked_edges, event_list, skip_propagation_latency); // Add events of intermediate response if with event tracking
+            if (is_finish) // Edge is NOT running
+            {
+                return is_finish;
+            }
+        }
+        else // Get target edge index from remote directory information at the beacon node
+        {
+            // NOTE: beacon server of beacon node has already notified all blocked edges -> NO need to notify them again in cache server
+            is_finish = releaseBeaconWritelock_(key, event_list, skip_propagation_latency); // Add events of intermediate response if with event tracking
+            if (is_finish) // Edge is NOT running
+            {
+                return is_finish;
+            }
+        } // End of current_is_beacon
+
+        // Add intermediate event if with event tracking
+        struct timespec release_local_or_remote_writelock_end_timestamp = Util::getCurrentTimespec();
+        uint32_t release_local_or_remote_writelock_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(release_local_or_remote_writelock_end_timestamp, release_local_or_remote_writelock_start_timestamp));
+        event_list.addEvent(current_is_beacon?Event::EDGE_CACHE_SERVER_WORKER_RELEASE_LOCAL_WRITELOCK_EVENT_NAME:Event::EDGE_CACHE_SERVER_WORKER_RELEASE_REMOTE_WRITELOCK_EVENT_NAME, release_local_or_remote_writelock_latency_us);
+
+        return is_finish;
+    }
+
+    // (3) Process redirected requests
+
+    bool CacheServerWorkerBase::processRedirectedRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& recvrsp_dst_addr)
+    {
+        assert(redirected_request_ptr != NULL && redirected_request_ptr->isRedirectedDataRequest());
+
+        bool is_finish = false; // Mark if local edge node is finished
+
+        MessageType message_type = redirected_request_ptr->getMessageType();
+        if (message_type == MessageType::kRedirectedGetRequest)
+        {
+            is_finish = processRedirectedGetRequest_(redirected_request_ptr, recvrsp_dst_addr);
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "invalid message type " << MessageBase::messageTypeToString(message_type) << " for processRedirectedRequest_()!";
+            Util::dumpErrorMsg(base_instance_name_, oss.str());
+            exit(1);
+        }
+        
+        return is_finish;
+    }
+
+    // (4) Cache management
+
+    // (4.1) Admit uncached objects in local edge cache
+
+    // (4.2) Evict cached objects from local edge cache
 
     bool CacheServerWorkerBase::evictForCapacity_(EventList& event_list, const bool& skip_propagation_latency) const
     {
@@ -1241,7 +1176,73 @@ namespace covered
         return is_finish;
     }
 
-    // (6) Utility functions
+    // (4.3) Update content directory information
+
+    bool CacheServerWorkerBase::updateDirectory_(const Key& key, const bool& is_admit, bool& is_being_written, EventList& event_list, const bool& skip_propagation_latency) const
+    {
+        checkPointers_();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+
+        bool is_finish = false;
+        struct timespec update_directory_start_timestamp = Util::getCurrentTimespec();
+
+        // Update remote address of edge_cache_server_worker_sendreq_tobeacon_socket_client_ptr_ as the beacon node for the key if remote
+        bool current_is_beacon = tmp_edge_wrapper_ptr->currentIsBeacon(key);
+
+        // Check if beacon node is the current edge node and update directory information
+        DirectoryInfo directory_info(tmp_edge_wrapper_ptr->getNodeIdx());
+        if (current_is_beacon) // Update target edge index of local directory information
+        {
+            tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->updateLocalDirectory(key, is_admit, directory_info, is_being_written);
+        }
+        else // Update remote directory information at the beacon node
+        {
+            // Add events of intermediate responses if with event tracking
+            is_finish = updateBeaconDirectory_(key, is_admit, directory_info, is_being_written, event_list, skip_propagation_latency);
+        }
+
+        // Add intermediate event if with event tracking
+        struct timespec update_directory_end_timestamp = Util::getCurrentTimespec();
+        uint32_t update_directory_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(update_directory_end_timestamp, update_directory_start_timestamp));
+        event_list.addEvent(current_is_beacon?Event::EDGE_CACHE_SERVER_WORKER_UPDATE_LOCAL_DIRECTORY_EVENT_NAME:Event::EDGE_CACHE_SERVER_WORKER_UPDATE_REMOTE_DIRECTORY_EVENT_NAME, update_directory_latency_us);
+
+        return is_finish;
+    }
+
+    // (5) Utility functions
+
+    NetworkAddr CacheServerWorkerBase::getBeaconDstaddr_(const Key& key) const
+    {
+        checkPointers_();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+
+        // The current edge node must NOT be the beacon node for the key
+        bool current_is_beacon = tmp_edge_wrapper_ptr->currentIsBeacon(key);
+        assert(!current_is_beacon);
+
+        // Get remote address such that current edge node can communicate with the beacon node for the key
+        NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getBeaconEdgeBeaconServerRecvreqAddr(key);
+
+        return beacon_edge_beacon_server_recvreq_dst_addr;
+    }
+
+    NetworkAddr CacheServerWorkerBase::getTargetDstaddr_(const DirectoryInfo& directory_info) const
+    {
+        checkPointers_();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+
+        // The current edge node must NOT be the target node
+        bool current_is_target = tmp_edge_wrapper_ptr->currentIsTarget(directory_info);
+        assert(!current_is_target);
+
+        // Set remote address such that the current edge node can communicate with the target edge node
+        uint32_t target_edge_idx = directory_info.getTargetEdgeIdx();
+        std::string target_edge_ipstr = Config::getEdgeIpstr(target_edge_idx, tmp_edge_wrapper_ptr->getNodeCnt());
+        uint16_t target_edge_cache_server_recvreq_port = Util::getEdgeCacheServerRecvreqPort(target_edge_idx, tmp_edge_wrapper_ptr->getNodeCnt());
+        NetworkAddr target_edge_cache_server_recvreq_dst_addr(target_edge_ipstr, target_edge_cache_server_recvreq_port);
+
+        return target_edge_cache_server_recvreq_dst_addr;
+    }
 
     void CacheServerWorkerBase::checkPointers_() const
     {

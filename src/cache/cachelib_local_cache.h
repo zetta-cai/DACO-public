@@ -45,7 +45,7 @@ namespace covered
         virtual bool getLocalCacheInternal_(const Key& key, Value& value, bool& affect_victim_tracker) const override;
         virtual std::list<VictimInfo> getLocalSyncedVictimInfosFromLocalCacheInternal_() const override; // Return up to peredge_synced_victimcnt local synced victims with the least local rewards
 
-        virtual bool updateLocalCacheInternal_(const Key& key, const Value& value) override;
+        virtual bool updateLocalCacheInternal_(const Key& key, const Value& value, bool& affect_victim_tracker) override;
 
         virtual void updateLocalUncachedMetadataForRspInternal_(const Key& key, const Value& value, const bool& is_value_related) const override; // Triggered by get/put/delrsp for cache miss for admission policy if any
 

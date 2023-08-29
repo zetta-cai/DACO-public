@@ -43,7 +43,7 @@ namespace covered
         // Return whether key is cached, while both update() and remove() will set validity as true
         // NOTE: update() only updates the object if cached, yet not admit a new one
         // NOTE: remove() only marks the object as deleted if cached, yet not evict it
-        bool update(const Key& key, const Value& value);
+        bool update(const Key& key, const Value& value, bool& affect_victim_tracker);
         bool remove(const Key& key);
 
         // Return whether key is cached yet invalid

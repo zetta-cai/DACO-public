@@ -73,23 +73,22 @@ namespace covered
     private:
         static const std::string kClassName;
 
+        // Const variable
+        std::string base_instance_name_;
+
         static CacheServerWorkerBase* getCacheServerWorkerByCacheName_(CacheServerWorkerParam* cache_server_worker_param_ptr);
+    protected:
+        bool processDataRequest_(MessageBase* data_request_ptr, const NetworkAddr& recvrsp_dst_addr); // Return if edge node is finished
 
-        // (1) Process data requests
-    
-        // Return if edge node is finished
-        bool processDataRequest_(MessageBase* data_request_ptr, const NetworkAddr& recvrsp_dst_addr);
+        // (1) Process read requests
 
-        bool processLocalGetRequest_(MessageBase* local_request_ptr, const NetworkAddr& recvrsp_dst_addr) const;
+        bool processLocalGetRequest_(MessageBase* local_request_ptr, const NetworkAddr& recvrsp_dst_addr) const; // Return if edge node is finished
+
+        // (1.1) Access local edge cache
+
         virtual bool getLocalEdgeCache_(const Key& key, Value& value) const = 0; // Return is local cached and valid
 
-        bool processLocalWriteRequest_(MessageBase* local_request_ptr, const NetworkAddr& recvrsp_dst_addr); // For put/del
-        bool processRedirectedRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& recvrsp_dst_addr);
-        virtual bool processRedirectedGetRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& recvrsp_dst_addr) const = 0;
-
-        // (2) Access cooperative edge cache
-
-        // (2.1) Fetch data from neighbor edge nodes
+        // (1.2) Access cooperative edge cache to fetch data from neighbor edge nodes
 
         // Return if edge node is finished
         bool fetchDataFromNeighbor_(const Key& key, Value& value, bool& is_cooperative_cached_and_valid, EventList& event_list, const bool& skip_propagation_latency) const;
@@ -100,59 +99,68 @@ namespace covered
 
         virtual bool redirectGetToTarget_(const DirectoryInfo& directory_info, const Key& key, Value& value, bool& is_cooperative_cached, bool& is_valid, EventList& event_list, const bool& skip_propagation_latency) const = 0; // Request redirection
 
-        // (2.2) Update content directory information
+        // (1.3) Access cloud
 
         // Return if edge node is finished
-        virtual bool updateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written, EventList& event_list, const bool& skip_propagation_latency) const = 0; // Update remote directory info
+        bool fetchDataFromCloud_(const Key& key, Value& value, EventList& event_list, const bool& skip_propagation_latency) const;
 
-        // (2.3) Process writes and block for MSI protocol
+        // (1.4) Update invalid cached objects in local edge cache
+
+        bool tryToUpdateInvalidLocalEdgeCache_(const Key& key, const Value& value, EventList& event_list, const bool& skip_propagation_latency) const; // Return if edge node is finished
+
+        // (2) Process write requests
+
+        bool processLocalWriteRequest_(MessageBase* local_request_ptr, const NetworkAddr& recvrsp_dst_addr); // For put/del
+
+        // (2.1) Acquire write lock and block for MSI protocol
 
         // Return if edge node is finished
         bool acquireWritelock_(const Key& key, LockResult& lock_result, EventList& event_list, const bool& skip_propagation_latency);
         virtual bool acquireBeaconWritelock_(const Key& key, LockResult& lock_result, EventList& event_list, const bool& skip_propagation_latency) = 0;
         bool blockForWritesByInterruption_(const Key& key, EventList& event_list, const bool& skip_propagation_latency) const; // Block for MSI protocol
+
+        // (2.2) Update cloud
+
+        // Return if edge node is finished
+        bool writeDataToCloud_(const Key& key, const Value& value, const MessageType& message_type, EventList& event_list, const bool& skip_propagation_latency);
+
+        // (2.3) Update cached objects in local edge cache
+
+        virtual bool updateLocalEdgeCache_(const Key& key, const Value& value) const = 0; // Return if key is cached after udpate
+        void removeLocalEdgeCache_(const Key& key, bool& is_local_cached_after_udpate) const;
+
+        // (2.4) Release write lock for MSI protocol
+        
+        // Return if edge node is finished
         bool releaseWritelock_(const Key& key, EventList& event_list, const bool& skip_propagation_latency);
         virtual bool releaseBeaconWritelock_(const Key& key, EventList& event_list, const bool& skip_propagation_latency) = 0; // Notify beacon node to finish writes
 
-        // (3) Access cloud
+        // (3) Process redirected requests
 
-        // Return if edge node is finished
-        bool fetchDataFromCloud_(const Key& key, Value& value, EventList& event_list, const bool& skip_propagation_latency) const;
-        bool writeDataToCloud_(const Key& key, const Value& value, const MessageType& message_type, EventList& event_list, const bool& skip_propagation_latency);
+        bool processRedirectedRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& recvrsp_dst_addr);
+        virtual bool processRedirectedGetRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& recvrsp_dst_addr) const = 0;
 
-        // (4) Update cached objects in local edge cache
+        // (4) Cache management
 
-        // Return if edge node is finished
-        bool tryToUpdateInvalidLocalEdgeCache_(const Key& key, const Value& value, EventList& event_list, const bool& skip_propagation_latency) const;
-        // NOTE: we will check capacity and trigger eviction for value updates
-        bool updateLocalEdgeCache_(const Key& key, const Value& value, bool& is_local_cached_after_udpate, EventList& event_list, const bool& skip_propagation_latency) const;
-        void removeLocalEdgeCache_(const Key& key, bool& is_local_cached_after_udpate) const;
-
-        // (5) Admit uncached objects in local edge cache
+        // (4.1) Admit uncached objects in local edge cache
 
         // Return if edge node is finished (we will check capacity and trigger eviction for cache admission)
         virtual bool tryToTriggerIndependentAdmission_(const Key& key, const Value& value, EventList& event_list, const bool& skip_propagation_latency) const = 0;
 
-        // Member variables
-
-        // Const variable
-        std::string base_instance_name_;
-    protected:
-        // (2.2) Update content directory information
-
-        // Return if edge node is finished
-        bool updateDirectory_(const Key& key, const bool& is_admit, bool& is_being_written, EventList& event_list, const bool& skip_propagation_latency) const; // Update content directory information
-
-        // (2.4) Utility functions for cooperative caching
-
-        NetworkAddr getBeaconDstaddr_(const Key& key) const; // Get destination address of beacon server recvreq in beacon edge node
-        NetworkAddr getTargetDstaddr_(const DirectoryInfo& directory_info) const; // Get destination address of cache server recvreq in target edge node
-
-        // (5) Admit uncached objects in local edge cache
+        // (4.2) Evict cached objects from local edge cache
 
         bool evictForCapacity_(EventList& event_list, const bool& skip_propagation_latency) const;
 
-        // (6) Utility functions
+        // (4.3) Update content directory information
+
+        // Return if edge node is finished
+        bool updateDirectory_(const Key& key, const bool& is_admit, bool& is_being_written, EventList& event_list, const bool& skip_propagation_latency) const; // Update content directory information
+        virtual bool updateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written, EventList& event_list, const bool& skip_propagation_latency) const = 0; // Update remote directory info
+
+        // (5) Utility functions
+
+        NetworkAddr getBeaconDstaddr_(const Key& key) const; // Get destination address of beacon server recvreq in beacon edge node
+        NetworkAddr getTargetDstaddr_(const DirectoryInfo& directory_info) const; // Get destination address of cache server recvreq in target edge node
 
         void checkPointers_() const;
 

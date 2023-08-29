@@ -96,8 +96,10 @@ namespace covered
         return local_synced_victim_infos;
     }
 
-    bool CachelibLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value)
+    bool CachelibLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value, bool& affect_victim_tracker)
     {
+        UNUSED(affect_victim_tracker); // Only for COVERED
+        
         const std::string keystr = key.getKeystr();
 
         Lru2QCacheReadHandle handle = cachelib_cache_ptr_->find(keystr);

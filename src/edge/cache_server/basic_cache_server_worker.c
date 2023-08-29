@@ -27,76 +27,23 @@ namespace covered
 
     BasicCacheServerWorker::~BasicCacheServerWorker() {}
 
-    // (1) Process data requests
+    // (1.1) Access local edge cache
 
     bool BasicCacheServerWorker::getLocalEdgeCache_(const Key& key, Value& value) const
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
-        
-        bool is_local_cached_and_valid = tmp_edge_wrapper_ptr->getEdgeCachePtr()->get(key, value);
+
+        bool affected_victim_tracker = false;
+        bool is_local_cached_and_valid = tmp_edge_wrapper_ptr->getEdgeCachePtr()->get(key, value, affected_victim_tracker);
+        UNUSED(affected_victim_tracker); // ONLY for COVERED
         
         return is_local_cached_and_valid;
     }
 
-    bool BasicCacheServerWorker::processRedirectedGetRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& recvrsp_dst_addr) const
-    {
-        // Get key and value from redirected request if any
-        assert(redirected_request_ptr != NULL && redirected_request_ptr->getMessageType() == MessageType::kRedirectedGetRequest);
-        assert(recvrsp_dst_addr.isValidAddr());
-        const RedirectedGetRequest* const redirected_get_request_ptr = static_cast<const RedirectedGetRequest*>(redirected_request_ptr);
-        Key tmp_key = redirected_get_request_ptr->getKey();
-        Value tmp_value;
-        const bool skip_propagation_latency = redirected_get_request_ptr->isSkipPropagationLatency();
+     // (1.2) Access cooperative edge cache to fetch data from neighbor edge nodes
 
-        checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
-
-        bool is_finish = false;
-        Hitflag hitflag = Hitflag::kGlobalMiss;
-        EventList event_list;
-
-        // Access local edge cache for cooperative edge caching (current edge node is the target edge node)
-        struct timespec target_get_local_cache_start_timestamp = Util::getCurrentTimespec();
-        bool is_cooperative_cached_and_valid = tmp_edge_wrapper_ptr->getEdgeCachePtr()->get(tmp_key, tmp_value);
-        bool is_cooperaitve_cached = tmp_edge_wrapper_ptr->getEdgeCachePtr()->isLocalCached(tmp_key);
-        if (is_cooperative_cached_and_valid) // cached and valid
-        {
-            hitflag = Hitflag::kCooperativeHit;
-        }
-        else // not cached or invalid
-        {
-            if (is_cooperaitve_cached) // cached and invalid
-            {
-                hitflag = Hitflag::kCooperativeInvalid;
-            }
-        }
-        struct timespec target_get_local_cache_end_timestamp = Util::getCurrentTimespec();
-        uint32_t target_get_local_cache_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(target_get_local_cache_end_timestamp, target_get_local_cache_start_timestamp));
-        event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_TARGET_GET_LOCAL_CACHE_EVENT_NAME, target_get_local_cache_latency_us);
-
-        // NOTE: no need to perform recursive cooperative edge caching (current edge node is already the target edge node for cooperative edge caching)
-        // NOTE: no need to access cloud to get data, which will be performed by the closest edge node
-
-        // Prepare RedirectedGetResponse for the closest edge node
-        uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
-        NetworkAddr edge_cache_server_recvreq_source_addr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeCacheServerRecvreqSourceAddr();
-        MessageBase* redirected_get_response_ptr = new RedirectedGetResponse(tmp_key, tmp_value, hitflag, edge_idx, edge_cache_server_recvreq_source_addr, event_list, skip_propagation_latency);
-
-        // Push the redirected response message into edge-to-client propagation simulator to cache server worker in the closest edge node
-        tmp_edge_wrapper_ptr->getEdgeToclientPropagationSimulatorParamPtr()->push(redirected_get_response_ptr, recvrsp_dst_addr);
-
-        // NOTE: redirected_get_response_ptr will be released by edge-to-client propagation simulator
-        redirected_get_response_ptr = NULL;
-
-        return is_finish;
-    }
-
-    // (2) Access cooperative edge cache
-
-    // (2.1) Fetch data from neighbor edge nodes
-
-    MessageBase* BasicCacheServerWorker::getReqToLookupBeaconDirectory_(const Key& key, const bool& skip_propagation_latency) const
+     MessageBase* BasicCacheServerWorker::getReqToLookupBeaconDirectory_(const Key& key, const bool& skip_propagation_latency) const
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
@@ -227,82 +174,7 @@ namespace covered
         return is_finish;
     }
 
-    // (2.2) Update content directory information
-
-    bool BasicCacheServerWorker::updateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written, EventList& event_list, const bool& skip_propagation_latency) const
-    {
-        checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
-
-        // The current edge node must NOT be the beacon node for the key
-        bool current_is_beacon = tmp_edge_wrapper_ptr->currentIsBeacon(key);
-        assert(!current_is_beacon);
-
-        bool is_finish = false;
-        struct timespec issue_directory_update_req_start_timestamp = Util::getCurrentTimespec();
-
-        // Get destination address of beacon node
-        NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = getBeaconDstaddr_(key);
-
-        while (true) // Timeout-and-retry mechanism
-        {
-            // Prepare directory update request to check directory information in beacon node
-            uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
-            MessageBase* directory_update_request_ptr = new DirectoryUpdateRequest(key, is_admit, directory_info, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
-            assert(directory_update_request_ptr != NULL);
-
-            // Push the control request into edge-to-edge propagation simulator to the beacon node
-            bool is_successful = tmp_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->push(directory_update_request_ptr, beacon_edge_beacon_server_recvreq_dst_addr);
-            assert(is_successful);
-
-            // NOTE: directory_update_request_ptr will be released by edge-to-edge propagation simulator
-            directory_update_request_ptr = NULL;
-
-            // Receive the control repsonse from the beacon node
-            DynamicArray control_response_msg_payload;
-            bool is_timeout = edge_cache_server_worker_recvrsp_socket_server_ptr_->recv(control_response_msg_payload);
-            if (is_timeout)
-            {
-                if (!tmp_edge_wrapper_ptr->isNodeRunning())
-                {
-                    is_finish = true;
-                    break; // Edge is NOT running
-                }
-                else
-                {
-                    Util::dumpWarnMsg(instance_name_, "edge timeout to wait for DirectoryUpdateResponse");
-                    continue; // Resend the control request message
-                }
-            } // End of (is_timeout == true)
-            else
-            {
-                // Receive the control response message successfully
-                MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
-                assert(control_response_ptr != NULL && control_response_ptr->getMessageType() == MessageType::kDirectoryUpdateResponse);
-
-                // Get is_being_written from control response message
-                const DirectoryUpdateResponse* const directory_update_response_ptr = static_cast<const DirectoryUpdateResponse*>(control_response_ptr);
-                is_being_written = directory_update_response_ptr->isBeingWritten();
-
-                // Add events of intermediate response if with evet tracking
-                event_list.addEvents(directory_update_response_ptr->getEventListRef());
-
-                // Release the control response message
-                delete control_response_ptr;
-                control_response_ptr = NULL;
-                break;
-            } // End of (is_timeout == false)
-        } // End of while(true)
-
-        // Add intermediate event if with evet tracking
-        struct timespec issue_directory_update_req_end_timestamp = Util::getCurrentTimespec();
-        uint32_t issue_directory_update_req_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(issue_directory_update_req_end_timestamp, issue_directory_update_req_start_timestamp));
-        event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_ISSUE_DIRECTORY_UPDATE_REQ_EVENT_NAME, issue_directory_update_req_latency_us);
-
-        return is_finish;
-    }
-
-    // (2.3) Process writes and block for MSI protocol
+    // (2.1) Acquire write lock and block for MSI protocol
 
     bool BasicCacheServerWorker::acquireBeaconWritelock_(const Key& key, LockResult& lock_result, EventList& event_list, const bool& skip_propagation_latency)
     {
@@ -377,6 +249,20 @@ namespace covered
         return is_finish;
     }
 
+    // (2.3) Update cached objects in local edge cache
+
+    bool BasicCacheServerWorker::updateLocalEdgeCache_(const Key& key, const Value& value) const
+    {
+        checkPointers_();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+
+        bool is_local_cached_after_udpate = tmp_edge_wrapper_ptr->getEdgeCachePtr()->update(key, value);
+
+        return is_local_cached_after_udpate;
+    }
+
+    // (2.4) Release write lock for MSI protocol
+
     bool BasicCacheServerWorker::releaseBeaconWritelock_(const Key& key, EventList& event_list, const bool& skip_propagation_latency)
     {
         checkPointers_();
@@ -446,7 +332,62 @@ namespace covered
         return is_finish;
     }
 
-    // (5) Admit uncached objects in local edge cache
+    // (3) Process redirected requests
+
+    bool BasicCacheServerWorker::processRedirectedGetRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& recvrsp_dst_addr) const
+    {
+        // Get key and value from redirected request if any
+        assert(redirected_request_ptr != NULL && redirected_request_ptr->getMessageType() == MessageType::kRedirectedGetRequest);
+        assert(recvrsp_dst_addr.isValidAddr());
+        const RedirectedGetRequest* const redirected_get_request_ptr = static_cast<const RedirectedGetRequest*>(redirected_request_ptr);
+        Key tmp_key = redirected_get_request_ptr->getKey();
+        Value tmp_value;
+        const bool skip_propagation_latency = redirected_get_request_ptr->isSkipPropagationLatency();
+
+        checkPointers_();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+
+        bool is_finish = false;
+        Hitflag hitflag = Hitflag::kGlobalMiss;
+        EventList event_list;
+
+        // Access local edge cache for cooperative edge caching (current edge node is the target edge node)
+        struct timespec target_get_local_cache_start_timestamp = Util::getCurrentTimespec();
+        bool is_cooperative_cached_and_valid = tmp_edge_wrapper_ptr->getEdgeCachePtr()->get(tmp_key, tmp_value);
+        bool is_cooperaitve_cached = tmp_edge_wrapper_ptr->getEdgeCachePtr()->isLocalCached(tmp_key);
+        if (is_cooperative_cached_and_valid) // cached and valid
+        {
+            hitflag = Hitflag::kCooperativeHit;
+        }
+        else // not cached or invalid
+        {
+            if (is_cooperaitve_cached) // cached and invalid
+            {
+                hitflag = Hitflag::kCooperativeInvalid;
+            }
+        }
+        struct timespec target_get_local_cache_end_timestamp = Util::getCurrentTimespec();
+        uint32_t target_get_local_cache_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(target_get_local_cache_end_timestamp, target_get_local_cache_start_timestamp));
+        event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_TARGET_GET_LOCAL_CACHE_EVENT_NAME, target_get_local_cache_latency_us);
+
+        // NOTE: no need to perform recursive cooperative edge caching (current edge node is already the target edge node for cooperative edge caching)
+        // NOTE: no need to access cloud to get data, which will be performed by the closest edge node
+
+        // Prepare RedirectedGetResponse for the closest edge node
+        uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
+        NetworkAddr edge_cache_server_recvreq_source_addr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeCacheServerRecvreqSourceAddr();
+        MessageBase* redirected_get_response_ptr = new RedirectedGetResponse(tmp_key, tmp_value, hitflag, edge_idx, edge_cache_server_recvreq_source_addr, event_list, skip_propagation_latency);
+
+        // Push the redirected response message into edge-to-client propagation simulator to cache server worker in the closest edge node
+        tmp_edge_wrapper_ptr->getEdgeToclientPropagationSimulatorParamPtr()->push(redirected_get_response_ptr, recvrsp_dst_addr);
+
+        // NOTE: redirected_get_response_ptr will be released by edge-to-client propagation simulator
+        redirected_get_response_ptr = NULL;
+
+        return is_finish;
+    }
+
+    // (4.1) Admit uncached objects in local edge cache
 
     bool BasicCacheServerWorker::tryToTriggerIndependentAdmission_(const Key& key, const Value& value, EventList& event_list, const bool& skip_propagation_latency) const
     {
@@ -481,6 +422,81 @@ namespace covered
             // Trigger eviction if necessary
             is_finish = evictForCapacity_(event_list, skip_propagation_latency);
         }
+
+        return is_finish;
+    }
+
+    // (4.3) Update content directory information
+
+    bool BasicCacheServerWorker::updateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written, EventList& event_list, const bool& skip_propagation_latency) const
+    {
+        checkPointers_();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+
+        // The current edge node must NOT be the beacon node for the key
+        bool current_is_beacon = tmp_edge_wrapper_ptr->currentIsBeacon(key);
+        assert(!current_is_beacon);
+
+        bool is_finish = false;
+        struct timespec issue_directory_update_req_start_timestamp = Util::getCurrentTimespec();
+
+        // Get destination address of beacon node
+        NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = getBeaconDstaddr_(key);
+
+        while (true) // Timeout-and-retry mechanism
+        {
+            // Prepare directory update request to check directory information in beacon node
+            uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
+            MessageBase* directory_update_request_ptr = new DirectoryUpdateRequest(key, is_admit, directory_info, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
+            assert(directory_update_request_ptr != NULL);
+
+            // Push the control request into edge-to-edge propagation simulator to the beacon node
+            bool is_successful = tmp_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->push(directory_update_request_ptr, beacon_edge_beacon_server_recvreq_dst_addr);
+            assert(is_successful);
+
+            // NOTE: directory_update_request_ptr will be released by edge-to-edge propagation simulator
+            directory_update_request_ptr = NULL;
+
+            // Receive the control repsonse from the beacon node
+            DynamicArray control_response_msg_payload;
+            bool is_timeout = edge_cache_server_worker_recvrsp_socket_server_ptr_->recv(control_response_msg_payload);
+            if (is_timeout)
+            {
+                if (!tmp_edge_wrapper_ptr->isNodeRunning())
+                {
+                    is_finish = true;
+                    break; // Edge is NOT running
+                }
+                else
+                {
+                    Util::dumpWarnMsg(instance_name_, "edge timeout to wait for DirectoryUpdateResponse");
+                    continue; // Resend the control request message
+                }
+            } // End of (is_timeout == true)
+            else
+            {
+                // Receive the control response message successfully
+                MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
+                assert(control_response_ptr != NULL && control_response_ptr->getMessageType() == MessageType::kDirectoryUpdateResponse);
+
+                // Get is_being_written from control response message
+                const DirectoryUpdateResponse* const directory_update_response_ptr = static_cast<const DirectoryUpdateResponse*>(control_response_ptr);
+                is_being_written = directory_update_response_ptr->isBeingWritten();
+
+                // Add events of intermediate response if with evet tracking
+                event_list.addEvents(directory_update_response_ptr->getEventListRef());
+
+                // Release the control response message
+                delete control_response_ptr;
+                control_response_ptr = NULL;
+                break;
+            } // End of (is_timeout == false)
+        } // End of while(true)
+
+        // Add intermediate event if with evet tracking
+        struct timespec issue_directory_update_req_end_timestamp = Util::getCurrentTimespec();
+        uint32_t issue_directory_update_req_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(issue_directory_update_req_end_timestamp, issue_directory_update_req_start_timestamp));
+        event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_ISSUE_DIRECTORY_UPDATE_REQ_EVENT_NAME, issue_directory_update_req_latency_us);
 
         return is_finish;
     }

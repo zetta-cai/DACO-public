@@ -57,7 +57,7 @@ namespace covered
 
             for (std::list<VictimInfo>::const_iterator list_iter = local_synced_victim_infos.begin(); list_iter != local_synced_victim_infos.end(); list_iter++)
             {
-                // Get DirectoryInfo for the current local synced victim if any
+                // Keep DirectoryInfo for the current local synced victim if any
                 DirectoryInfo tmp_dirinfo;
                 for (std::list<SyncedVictim>::const_iterator old_list_iter = old_local_synced_victims.begin(); old_list_iter != old_local_synced_victims.end(); old_list_iter++)
                 {

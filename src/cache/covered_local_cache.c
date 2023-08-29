@@ -126,7 +126,7 @@ namespace covered
         return local_synced_victim_infos;
     }
 
-    bool CoveredLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value)
+    bool CoveredLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value, bool& affect_victim_tracker)
     {
         const std::string keystr = key.getKeystr();
 
@@ -149,7 +149,7 @@ namespace covered
                 covered_cache_ptr_->insertOrReplace(allocate_handle); // Must replace
 
                 // Update local cached metadata for getrsp with invalid hit and put/delreq with cache hit
-                local_cached_metadata_.updateForExistingKey(key, value, original_value, true);
+                affect_victim_tracker = local_cached_metadata_.updateForExistingKey(key, value, original_value, true, peredge_synced_victimcnt_);
             }
         }
 

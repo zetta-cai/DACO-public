@@ -116,7 +116,7 @@ namespace covered
         return local_synced_victim_infos;
     }
 
-    bool LocalCacheBase::updateLocalCache(const Key& key, const Value& value)
+    bool LocalCacheBase::updateLocalCache(const Key& key, const Value& value, bool& affect_victim_tracker)
     {
         checkPointers_();
 
@@ -124,7 +124,7 @@ namespace covered
         std::string context_name = "LocalCacheBase::updateLocalCache()";
         rwlock_for_local_cache_ptr_->acquire_lock(context_name);
 
-        bool is_local_cached = updateLocalCacheInternal_(key, value);
+        bool is_local_cached = updateLocalCacheInternal_(key, value, affect_victim_tracker);
 
         rwlock_for_local_cache_ptr_->unlock(context_name);
         return is_local_cached;

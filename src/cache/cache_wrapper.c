@@ -129,7 +129,7 @@ namespace covered
         return is_local_cached && is_valid;
     }
     
-    bool CacheWrapper::update(const Key& key, const Value& value)
+    bool CacheWrapper::update(const Key& key, const Value& value, bool& affect_victim_tracker)
     {
         checkPointers_();
 
@@ -141,7 +141,7 @@ namespace covered
         }
         cache_wrapper_perkey_rwlock_ptr_->acquire_lock(key, context_name);
 
-        bool is_local_cached = local_cache_ptr_->updateLocalCache(key, value);
+        bool is_local_cached = local_cache_ptr_->updateLocalCache(key, value, affect_victim_tracker);
 
         if (is_local_cached)
         {

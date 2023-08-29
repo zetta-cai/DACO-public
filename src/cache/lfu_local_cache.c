@@ -62,8 +62,10 @@ namespace covered
         return local_synced_victim_infos;
     }
 
-    bool LfuLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value)
+    bool LfuLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value, bool& affect_victim_tracker)
     {
+        UNUSED(affect_victim_tracker); // Only for COVERED
+        
         bool is_local_cached = lfu_cache_ptr_->update(key, value);
 
         return is_local_cached;

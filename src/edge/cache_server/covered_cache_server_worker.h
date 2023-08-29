@@ -21,16 +21,11 @@ namespace covered
     private:
         static const std::string kClassName;
 
-        // (1) Process data requests
+        // (1.1) Access local edge cache
 
         virtual bool getLocalEdgeCache_(const Key& key, Value& value) const override; // Return is local cached and valid
-        
-        // Return if edge node is finished
-        virtual bool processRedirectedGetRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& recvrsp_dst_addr) const override;
 
-        // (2) Access cooperative edge cache
-
-        // (2.1) Fetch data from neighbor edge nodes
+        // (1.2) Access cooperative edge cache to fetch data from neighbor edge nodes
 
         // Return if edge node is finished
         virtual MessageBase* getReqToLookupBeaconDirectory_(const Key& key, const bool& skip_propagation_latency) const override;
@@ -38,21 +33,34 @@ namespace covered
         
         virtual bool redirectGetToTarget_(const DirectoryInfo& directory_info, const Key& key, Value& value, bool& is_cooperative_cached, bool& is_valid, EventList& event_list, const bool& skip_propagation_latency) const override; // Request redirection
 
-        // (2.2) Update content directory information
-
-        // Return if edge node is finished
-        virtual bool updateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written, EventList& event_list, const bool& skip_propagation_latency) const override; // Update remote directory info
-
-        // (2.3) Process writes and block for MSI protocol
+        // (2.1) Acquire write lock and block for MSI protocol
 
         // Return if edge node is finished
         virtual bool acquireBeaconWritelock_(const Key& key, LockResult& lock_result, EventList& event_list, const bool& skip_propagation_latency) override;
+
+        // (2.3) Update cached objects in local edge cache
+
+        virtual bool updateLocalEdgeCache_(const Key& key, const Value& value) const override; // Return if key is cached after udpate
+
+        // (2.4) Release write lock for MSI protocol
+
+        // Return if edge node is finished
         virtual bool releaseBeaconWritelock_(const Key& key, EventList& event_list, const bool& skip_propagation_latency) override;
 
-        // (5) Admit uncached objects in local edge cache
+        // (3) Process redirected requests
+        
+        // Return if edge node is finished
+        virtual bool processRedirectedGetRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& recvrsp_dst_addr) const override;
+
+        // (4.1) Admit uncached objects in local edge cache
 
         // Return if edge node is finished
         virtual bool tryToTriggerIndependentAdmission_(const Key& key, const Value& value, EventList& event_list, const bool& skip_propagation_latency) const override;
+
+        // (4.3) Update content directory information
+
+        // Return if edge node is finished
+        virtual bool updateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written, EventList& event_list, const bool& skip_propagation_latency) const override; // Update remote directory info    
 
         // Const variable
         std::string instance_name_;

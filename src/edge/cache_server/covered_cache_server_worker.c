@@ -26,13 +26,13 @@ namespace covered
 
     CoveredCacheServerWorker::~CoveredCacheServerWorker() {}
 
-    // (1) Process data requests
+    // (1.1) Access local edge cache
 
     bool CoveredCacheServerWorker::getLocalEdgeCache_(const Key& key, Value& value) const
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
-        
+
         bool affect_victim_tracker = false;
         bool is_local_cached_and_valid = tmp_edge_wrapper_ptr->getEdgeCachePtr()->get(key, value, affect_victim_tracker);
 
@@ -49,15 +49,7 @@ namespace covered
         return is_local_cached_and_valid;
     }
 
-    bool CoveredCacheServerWorker::processRedirectedGetRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& recvrsp_dst_addr) const
-    {
-        // TODO: Piggyback candidate victims in current edge node
-        return false;
-    }
-
-    // (2) Access cooperative edge cache
-
-    // (2.1) Fetch data from neighbor edge nodes
+    // (1.2) Access cooperative edge cache to fetch data from neighbor edge nodes
 
     MessageBase* CoveredCacheServerWorker::getReqToLookupBeaconDirectory_(const Key& key, const bool& skip_propagation_latency) const
     {
@@ -92,18 +84,7 @@ namespace covered
         return false;
     }
 
-    // (2.2) Update content directory information
-
-    bool CoveredCacheServerWorker::updateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written, EventList& event_list, const bool& skip_propagation_latency) const
-    {
-        // TODO: Piggyback candidate victims in current edge node
-
-        // NOTE: If updateBeaconDirectory_() is admitting a local uncached object, beacon node has already removed local uncached popularities of plaecment nodes from aggregated uncached popularity after placement calculation, and only needs to assert node ID NOT exist in aggregate bitmap and remove the preserved node ID if any -> NO need to piggyback local uncached popularity
-        // NOTE: If updateBeaconDirectory_() is evicting a local cached object, beacon node only needs to assert node ID NOT exist in aggregate bitmap -> NO need to piggyback local uncached popularity
-        return false;
-    }
-
-    // (2.3) Process writes and block for MSI protocol
+    // (2.1) Acquire write lock and block for MSI protocol
 
     bool CoveredCacheServerWorker::acquireBeaconWritelock_(const Key& key, LockResult& lock_result, EventList& event_list, const bool& skip_propagation_latency)
     {
@@ -113,6 +94,31 @@ namespace covered
         return false;
     }
 
+    // (2.3) Update cached objects in local edge cache
+
+    bool CoveredCacheServerWorker::updateLocalEdgeCache_(const Key& key, const Value& value) const
+    {
+        checkPointers_();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+
+        bool affect_victim_tracker = false;
+        bool is_local_cached_after_udpate = tmp_edge_wrapper_ptr->getEdgeCachePtr()->update(key, value, affect_victim_tracker);
+
+        // Avoid unnecessary VictimTracker update
+        if (affect_victim_tracker) // If key was a local synced victim before or is a local synced victim now
+        {
+            // Update current-edge-node VictimInfos if necessary
+            std::list<VictimInfo> local_synced_victim_infos = tmp_edge_wrapper_ptr->getEdgeCachePtr()->getLocalSyncedVictimInfos();
+
+            // Update VictimInfos of the local synced victims (clear if no local synced victim infos)
+            tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr()->updateVictimTrackerForLocalSyncedVictimInfos(local_synced_victim_infos); 
+        }
+
+        return is_local_cached_after_udpate;
+    }
+
+    // (2.4) Release write lock for MSI protocol
+
     bool CoveredCacheServerWorker::releaseBeaconWritelock_(const Key& key, EventList& event_list, const bool& skip_propagation_latency)
     {
         // TODO: Piggyback candidate victims in current edge node
@@ -121,7 +127,15 @@ namespace covered
         return false;
     }
 
-    // (5) Admit uncached objects in local edge cache
+    // (3) Process redirected requests
+
+    bool CoveredCacheServerWorker::processRedirectedGetRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& recvrsp_dst_addr) const
+    {
+        // TODO: Piggyback candidate victims in current edge node
+        return false;
+    }
+
+    // (4.1) Admit uncached objects in local edge cache
 
     bool CoveredCacheServerWorker::tryToTriggerIndependentAdmission_(const Key& key, const Value& value, EventList& event_list, const bool& skip_propagation_latency) const
     {
@@ -133,4 +147,15 @@ namespace covered
         bool is_finish = false;
         return is_finish;
     }
+
+    // (4.3) Update content directory information
+
+    bool CoveredCacheServerWorker::updateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written, EventList& event_list, const bool& skip_propagation_latency) const
+    {
+        // TODO: Piggyback candidate victims in current edge node
+
+        // NOTE: If updateBeaconDirectory_() is admitting a local uncached object, beacon node has already removed local uncached popularities of plaecment nodes from aggregated uncached popularity after placement calculation, and only needs to assert node ID NOT exist in aggregate bitmap and remove the preserved node ID if any -> NO need to piggyback local uncached popularity
+        // NOTE: If updateBeaconDirectory_() is evicting a local cached object, beacon node only needs to assert node ID NOT exist in aggregate bitmap -> NO need to piggyback local uncached popularity
+        return false;
+    } 
 }
