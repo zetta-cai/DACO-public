@@ -44,11 +44,11 @@ namespace covered
         // NOTE: update() only updates the object if cached, yet not admit a new one
         // NOTE: remove() only marks the object as deleted if cached, yet not evict it
         bool update(const Key& key, const Value& value, bool& affect_victim_tracker);
-        bool remove(const Key& key);
+        bool remove(const Key& key, bool& affect_victim_tracker);
 
         // Return whether key is cached yet invalid
-        bool updateIfInvalidForGetrsp(const Key& key, const Value& value); // Update value only if key is locally cached yet invalid
-        bool removeIfInvalidForGetrsp(const Key& key); // Remove value only if it is locally cached yet invalid
+        bool updateIfInvalidForGetrsp(const Key& key, const Value& value, bool& affect_victim_tracker); // Update value only if key is locally cached yet invalid
+        bool removeIfInvalidForGetrsp(const Key& key, bool& affect_victim_tracker); // Remove value only if it is locally cached yet invalid
 
         // Return up to peredge_synced_victimcnt local synced victims with the least local rewards
         std::list<VictimInfo> getLocalSyncedVictimInfos() const;

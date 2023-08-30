@@ -271,7 +271,11 @@ namespace covered
 
         // Update invalid object of local edge cache if necessary
         struct timespec update_invalid_local_cache_start_timestamp = Util::getCurrentTimespec();
-        is_finish = tryToUpdateInvalidLocalEdgeCache_(tmp_key, tmp_value, event_list, skip_propagation_latency); // Add events of intermediate response if with event tracking
+        bool is_local_cached_and_invalid = tryToUpdateInvalidLocalEdgeCache_(tmp_key, tmp_value);
+        if (!tmp_value.isDeleted() && is_local_cached_and_invalid) // Update may trigger eviction
+        {
+            is_finish = evictForCapacity_(event_list, skip_propagation_latency); // Add events of intermediate response if with event tracking
+        }
         if (is_finish)
         {
             return is_finish;
@@ -591,31 +595,6 @@ namespace covered
 
     // (1.4) Update invalid cached objects in local edge cache
 
-    bool CacheServerWorkerBase::tryToUpdateInvalidLocalEdgeCache_(const Key& key, const Value& value, EventList& event_list, const bool& skip_propagation_latency) const
-    {
-        checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
-
-        bool is_finish = false;
-
-        bool is_local_cached_and_invalid = false;
-        if (value.isDeleted()) // value is deleted
-        {
-            is_local_cached_and_invalid = tmp_edge_wrapper_ptr->getEdgeCachePtr()->removeIfInvalidForGetrsp(key); // remove will NOT trigger eviction
-        }
-        else // non-deleted value
-        {
-            is_local_cached_and_invalid = tmp_edge_wrapper_ptr->getEdgeCachePtr()->updateIfInvalidForGetrsp(key, value);
-
-            if (is_local_cached_and_invalid) // update may trigger eviction
-            {
-                is_finish = evictForCapacity_(event_list, skip_propagation_latency);
-            }
-        }
-        
-        return is_finish;
-    }
-
     // (2) Process write requests
 
     bool CacheServerWorkerBase::processLocalWriteRequest_(MessageBase* local_request_ptr, const NetworkAddr& recvrsp_dst_addr)
@@ -692,15 +671,16 @@ namespace covered
         // NOTE: message type has been checked, which must be one of the following two types
         if (local_request_ptr->getMessageType() == MessageType::kLocalPutRequest)
         {
-            // Add events of intermediate response if with event tracking
             is_local_cached = updateLocalEdgeCache_(tmp_key, tmp_value);
 
-            // NOTE: we will check capacity and trigger eviction for value updates
+            // NOTE: we will check capacity and trigger eviction for value updates (add events of intermediate response if with event tracking)
             is_finish = evictForCapacity_(event_list, skip_propagation_latency);
         }
         else if (local_request_ptr->getMessageType() == MessageType::kLocalDelRequest)
         {
-            removeLocalEdgeCache_(tmp_key, is_local_cached);
+            is_local_cached = removeLocalEdgeCache_(tmp_key);
+
+            // NOTE: no need to check capacity, as remove() only replaces the original value (value size + is_deleted) with a deleted value (zero value size + is_deleted of true), where deleted value uses minimum bytes and remove() cannot increase used bytes to trigger any eviction
         }
         UNUSED(is_local_cached);
         struct timespec write_local_cache_end_timestamp = Util::getCurrentTimespec();
@@ -1027,20 +1007,6 @@ namespace covered
 
     // (2.3) Update cached objects in local edge cache
 
-    void CacheServerWorkerBase::removeLocalEdgeCache_(const Key& key, bool& is_local_cached_after_udpate) const
-    {
-        checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
-
-        is_local_cached_after_udpate = tmp_edge_wrapper_ptr->getEdgeCachePtr()->remove(key);
-
-        // TODO: END HERE
-
-        // NOTE: no need to check capacity, as remove() only replaces the original value (value size + is_deleted) with a deleted value (zero value size + is_deleted of true), where deleted value uses minimum bytes and remove() cannot increase used bytes to trigger any eviction
-
-        return;
-    }
-
     // (2.4) Release write lock for MSI protocol
 
     bool CacheServerWorkerBase::releaseWritelock_(const Key& key, EventList& event_list, const bool& skip_propagation_latency)
@@ -1106,6 +1072,59 @@ namespace covered
             exit(1);
         }
         
+        return is_finish;
+    }
+
+    bool CacheServerWorkerBase::processRedirectedGetRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& recvrsp_dst_addr) const
+    {
+        // Get key and value from redirected request if any
+        assert(redirected_request_ptr != NULL && redirected_request_ptr->getMessageType() == MessageType::kRedirectedGetRequest);
+        assert(recvrsp_dst_addr.isValidAddr());
+        const RedirectedGetRequest* const redirected_get_request_ptr = static_cast<const RedirectedGetRequest*>(redirected_request_ptr);
+        Key tmp_key = redirected_get_request_ptr->getKey();
+        Value tmp_value;
+        const bool skip_propagation_latency = redirected_get_request_ptr->isSkipPropagationLatency();
+
+        checkPointers_();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+
+        bool is_finish = false;
+        Hitflag hitflag = Hitflag::kGlobalMiss;
+        EventList event_list;
+
+        // Access local edge cache for cooperative edge caching (current edge node is the target edge node)
+        struct timespec target_get_local_cache_start_timestamp = Util::getCurrentTimespec();
+        bool is_cooperative_cached_and_valid = getLocalEdgeCache_(tmp_key, tmp_value);
+        bool is_cooperaitve_cached = tmp_edge_wrapper_ptr->getEdgeCachePtr()->isLocalCached(tmp_key);
+        if (is_cooperative_cached_and_valid) // cached and valid
+        {
+            hitflag = Hitflag::kCooperativeHit;
+        }
+        else // not cached or invalid
+        {
+            if (is_cooperaitve_cached) // cached and invalid
+            {
+                hitflag = Hitflag::kCooperativeInvalid;
+            }
+        }
+        struct timespec target_get_local_cache_end_timestamp = Util::getCurrentTimespec();
+        uint32_t target_get_local_cache_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(target_get_local_cache_end_timestamp, target_get_local_cache_start_timestamp));
+        event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_TARGET_GET_LOCAL_CACHE_EVENT_NAME, target_get_local_cache_latency_us);
+
+        // NOTE: no need to perform recursive cooperative edge caching (current edge node is already the target edge node for cooperative edge caching)
+        // NOTE: no need to access cloud to get data, which will be performed by the closest edge node
+
+        // Prepare RedirectedGetResponse for the closest edge node
+        uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
+        NetworkAddr edge_cache_server_recvreq_source_addr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeCacheServerRecvreqSourceAddr();
+        MessageBase* redirected_get_response_ptr = new RedirectedGetResponse(tmp_key, tmp_value, hitflag, edge_idx, edge_cache_server_recvreq_source_addr, event_list, skip_propagation_latency);
+
+        // Push the redirected response message into edge-to-client propagation simulator to cache server worker in the closest edge node
+        tmp_edge_wrapper_ptr->getEdgeToclientPropagationSimulatorParamPtr()->push(redirected_get_response_ptr, recvrsp_dst_addr);
+
+        // NOTE: redirected_get_response_ptr will be released by edge-to-client propagation simulator
+        redirected_get_response_ptr = NULL;
+
         return is_finish;
     }
 

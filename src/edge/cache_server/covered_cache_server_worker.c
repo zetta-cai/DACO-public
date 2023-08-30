@@ -84,6 +84,37 @@ namespace covered
         return false;
     }
 
+    // (1.4) Update invalid cached objects in local edge cache
+
+    bool CoveredCacheServerWorker::tryToUpdateInvalidLocalEdgeCache_(const Key& key, const Value& value) const
+    {
+        checkPointers_();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+
+        bool affect_victim_tracker = false;
+        bool is_local_cached_and_invalid = false;
+        if (value.isDeleted()) // value is deleted
+        {
+            is_local_cached_and_invalid = tmp_edge_wrapper_ptr->getEdgeCachePtr()->removeIfInvalidForGetrsp(key, affect_victim_tracker); // remove will NOT trigger eviction
+        }
+        else // non-deleted value
+        {
+            is_local_cached_and_invalid = tmp_edge_wrapper_ptr->getEdgeCachePtr()->updateIfInvalidForGetrsp(key, value, affect_victim_tracker); // update may trigger eviction (see CacheServerWorkerBase::processLocalGetRequest_)
+        }
+
+        // Avoid unnecessary VictimTracker update
+        if (affect_victim_tracker) // If key was a local synced victim before or is a local synced victim now
+        {
+            // Update current-edge-node VictimInfos if necessary
+            std::list<VictimInfo> local_synced_victim_infos = tmp_edge_wrapper_ptr->getEdgeCachePtr()->getLocalSyncedVictimInfos();
+
+            // Update VictimInfos of the local synced victims (clear if no local synced victim infos)
+            tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr()->updateVictimTrackerForLocalSyncedVictimInfos(local_synced_victim_infos); 
+        }
+        
+        return is_local_cached_and_invalid;
+    }
+
     // (2.1) Acquire write lock and block for MSI protocol
 
     bool CoveredCacheServerWorker::acquireBeaconWritelock_(const Key& key, LockResult& lock_result, EventList& event_list, const bool& skip_propagation_latency)
@@ -117,6 +148,27 @@ namespace covered
         return is_local_cached_after_udpate;
     }
 
+    bool CoveredCacheServerWorker::removeLocalEdgeCache_(const Key& key) const
+    {
+        checkPointers_();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+
+        bool affect_victim_tracker = false;
+        bool is_local_cached_after_remove = tmp_edge_wrapper_ptr->getEdgeCachePtr()->remove(key, affect_victim_tracker);
+
+        // Avoid unnecessary VictimTracker update
+        if (affect_victim_tracker) // If key was a local synced victim before or is a local synced victim now
+        {
+            // Update current-edge-node VictimInfos if necessary
+            std::list<VictimInfo> local_synced_victim_infos = tmp_edge_wrapper_ptr->getEdgeCachePtr()->getLocalSyncedVictimInfos();
+
+            // Update VictimInfos of the local synced victims (clear if no local synced victim infos)
+            tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr()->updateVictimTrackerForLocalSyncedVictimInfos(local_synced_victim_infos); 
+        }
+
+        return is_local_cached_after_remove;
+    }
+
     // (2.4) Release write lock for MSI protocol
 
     bool CoveredCacheServerWorker::releaseBeaconWritelock_(const Key& key, EventList& event_list, const bool& skip_propagation_latency)
@@ -129,11 +181,11 @@ namespace covered
 
     // (3) Process redirected requests
 
-    bool CoveredCacheServerWorker::processRedirectedGetRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& recvrsp_dst_addr) const
+    /*bool CoveredCacheServerWorker::processRedirectedGetRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& recvrsp_dst_addr) const
     {
         // TODO: Piggyback candidate victims in current edge node
         return false;
-    }
+    }*/
 
     // (4.1) Admit uncached objects in local edge cache
 

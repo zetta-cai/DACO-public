@@ -106,7 +106,7 @@ namespace covered
 
         // (1.4) Update invalid cached objects in local edge cache
 
-        bool tryToUpdateInvalidLocalEdgeCache_(const Key& key, const Value& value, EventList& event_list, const bool& skip_propagation_latency) const; // Return if edge node is finished
+        virtual bool tryToUpdateInvalidLocalEdgeCache_(const Key& key, const Value& value) const = 0; // Return if key is local cached yet invalid
 
         // (2) Process write requests
 
@@ -127,7 +127,7 @@ namespace covered
         // (2.3) Update cached objects in local edge cache
 
         virtual bool updateLocalEdgeCache_(const Key& key, const Value& value) const = 0; // Return if key is cached after udpate
-        void removeLocalEdgeCache_(const Key& key, bool& is_local_cached_after_udpate) const;
+        virtual bool removeLocalEdgeCache_(const Key& key) const = 0; // Return if key is cached after removal
 
         // (2.4) Release write lock for MSI protocol
         
@@ -138,7 +138,7 @@ namespace covered
         // (3) Process redirected requests
 
         bool processRedirectedRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& recvrsp_dst_addr);
-        virtual bool processRedirectedGetRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& recvrsp_dst_addr) const = 0;
+        bool processRedirectedGetRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& recvrsp_dst_addr) const;
 
         // (4) Cache management
 

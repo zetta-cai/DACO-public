@@ -33,6 +33,10 @@ namespace covered
         
         virtual bool redirectGetToTarget_(const DirectoryInfo& directory_info, const Key& key, Value& value, bool& is_cooperative_cached, bool& is_valid, EventList& event_list, const bool& skip_propagation_latency) const override; // Request redirection
 
+        // (1.4) Update invalid cached objects in local edge cache
+
+        virtual bool tryToUpdateInvalidLocalEdgeCache_(const Key& key, const Value& value) const override; // Return if key is local cached yet invalid
+
         // (2.1) Acquire write lock and block for MSI protocol
 
         // Return if edge node is finished
@@ -41,6 +45,7 @@ namespace covered
         // (2.3) Update cached objects in local edge cache
 
         virtual bool updateLocalEdgeCache_(const Key& key, const Value& value) const override; // Return if key is cached after udpate
+        virtual bool removeLocalEdgeCache_(const Key& key) const override; // Return if key is cached after removal
 
         // (2.4) Release write lock for MSI protocol
 
@@ -48,9 +53,6 @@ namespace covered
         virtual bool releaseBeaconWritelock_(const Key& key, EventList& event_list, const bool& skip_propagation_latency) override;
 
         // (3) Process redirected requests
-
-        // Return if edge node is finished
-        virtual bool processRedirectedGetRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& recvrsp_dst_addr) const override;
 
         // (4.1) Admit uncached objects in local edge cache
 

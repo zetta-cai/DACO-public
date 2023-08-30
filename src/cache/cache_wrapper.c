@@ -157,16 +157,16 @@ namespace covered
         return is_local_cached;
     }
 
-    bool CacheWrapper::remove(const Key& key)
+    bool CacheWrapper::remove(const Key& key, bool& affect_victim_tracker)
     {
         // No need to acquire a write lock, which will be done in update()
 
         Value deleted_value;
-        bool is_local_cached = update(key, deleted_value);
+        bool is_local_cached = update(key, deleted_value, affect_victim_tracker);
         return is_local_cached;
     }
 
-    bool CacheWrapper::updateIfInvalidForGetrsp(const Key& key, const Value& value)
+    bool CacheWrapper::updateIfInvalidForGetrsp(const Key& key, const Value& value, bool& affect_victim_tracker)
     {
         checkPointers_();
 
@@ -187,7 +187,7 @@ namespace covered
             if (!is_valid) // If key is locally cached yet invalid
             {
                 // Update local edge cache
-                bool tmp_is_local_cached = local_cache_ptr_->updateLocalCache(key, value);
+                bool tmp_is_local_cached = local_cache_ptr_->updateLocalCache(key, value, affect_victim_tracker);
                 assert(tmp_is_local_cached);
 
                 // Validate key
@@ -206,12 +206,12 @@ namespace covered
         return is_local_cached_and_invalid;
     }
 
-    bool CacheWrapper::removeIfInvalidForGetrsp(const Key& key)
+    bool CacheWrapper::removeIfInvalidForGetrsp(const Key& key, bool& affect_victim_tracker)
     {
         // No need to acquire a write lock, which will be done in updateIfInvalidForGetrsp()
 
         Value deleted_value;
-        bool is_local_cached_and_invalid = update(key, deleted_value);
+        bool is_local_cached_and_invalid = updateIfInvalidForGetrsp(key, deleted_value, affect_victim_tracker);
         return is_local_cached_and_invalid;
     }
 
