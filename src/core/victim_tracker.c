@@ -1,5 +1,6 @@
 #include "core/victim_tracker.h"
 
+#include <set>
 #include <sstream>
 
 namespace covered
@@ -46,7 +47,7 @@ namespace covered
 
             for (std::list<VictimInfo>::const_iterator list_iter = local_synced_victim_infos.begin(); list_iter != local_synced_victim_infos.end(); list_iter++)
             {
-                map_iter->second.push_back(SyncedVictim(*list_iter, DirectoryInfo())); // Use empty DirectoryInfo for newly inserted SyncedVictim
+                map_iter->second.push_back(SyncedVictim(*list_iter, std::set<DirectoryInfo, DirectoryInfoHasher>())); // Use empty DirectoryInfo for newly inserted SyncedVictim
             }
         }
         else // Current edge node has tracked some local synced victims before
@@ -58,21 +59,29 @@ namespace covered
             for (std::list<VictimInfo>::const_iterator list_iter = local_synced_victim_infos.begin(); list_iter != local_synced_victim_infos.end(); list_iter++)
             {
                 // Keep DirectoryInfo for the current local synced victim if any
-                DirectoryInfo tmp_dirinfo;
+                std::set<DirectoryInfo, DirectoryInfoHasher> tmp_dirinfo_set;
                 for (std::list<SyncedVictim>::const_iterator old_list_iter = old_local_synced_victims.begin(); old_list_iter != old_local_synced_victims.end(); old_list_iter++)
                 {
                     if (list_iter->getKey() == old_list_iter->getVictimInfo().getKey())
                     {
-                        tmp_dirinfo = old_list_iter->getDirinfo();
+                        tmp_dirinfo_set = old_list_iter->getDirinfoSet();
                         break;
                     }
                 }
 
-                map_iter->second.push_back(SyncedVictim(*list_iter, tmp_dirinfo)); // Insert new local synced victim
+                map_iter->second.push_back(SyncedVictim(*list_iter, tmp_dirinfo_set)); // Insert new local synced victim
             }
         }
 
         return;
+    }
+
+    void VictimTracker::updateSyncedVictimDirinfo(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info)
+    {
+        checkPointers_();
+
+        // Update directory info if the beaconed key is a local/neighbor synced victim
+        // TODO: END HERE
     }
 
     void VictimTracker::checkPointers_() const

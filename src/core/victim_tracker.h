@@ -25,6 +25,7 @@ namespace covered
         ~VictimTracker();
 
         void updateLocalSyncedVictimInfos(const std::list<VictimInfo>& local_synced_victim_infos);
+        void updateSyncedVictimDirinfo(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info);
     private:
         // NOTE: the list of SyncedVictims follows the ascending order of local rewards
         typedef std::unordered_map<uint32_t, std::list<SyncedVictim>> peredge_synced_victims_t;

@@ -77,46 +77,13 @@ namespace covered
         return is_finish;
     }
 
-    bool BasicBeaconServer::processDirectoryUpdateRequest_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr)
+    bool BasicBeaconServer::updateCooperationLocalDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, const uint32_t& edge_idx)
     {
-        // Get key, admit/evict,and directory info from control request if any
-        assert(control_request_ptr != NULL);
-        assert(control_request_ptr->getMessageType() == MessageType::kDirectoryUpdateRequest);
-        const DirectoryUpdateRequest* const directory_update_request_ptr = static_cast<const DirectoryUpdateRequest*>(control_request_ptr);
-        Key tmp_key = directory_update_request_ptr->getKey();
-        const bool skip_propagation_latency = directory_update_request_ptr->isSkipPropagationLatency();
-        bool is_admit = directory_update_request_ptr->isValidDirectoryExist();
-        DirectoryInfo directory_info = directory_update_request_ptr->getDirectoryInfo();
-
-        checkPointers_();
-
-        bool is_finish = false;
-
-        EventList event_list;
-        struct timespec update_local_directory_start_timestamp = Util::getCurrentTimespec();
-
-        // Update local directory information
+        // Update local directory information in cooperation wrapper
         bool is_being_written = false;
-        edge_wrapper_ptr_->getCooperationWrapperPtr()->updateLocalDirectory(tmp_key, is_admit, directory_info, is_being_written);
+        is_being_written = edge_wrapper_ptr_->getCooperationWrapperPtr()->updateLocalDirectory(key, is_admit, directory_info);
 
-        // Add intermediate event if with event tracking
-        struct timespec update_local_directory_end_timestamp = Util::getCurrentTimespec();
-        uint32_t update_local_directory_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(update_local_directory_end_timestamp, update_local_directory_start_timestamp));
-        event_list.addEvent(Event::EDGE_BEACON_SERVER_UPDATE_LOCAL_DIRECTORY_EVENT_NAME, update_local_directory_latency_us);
-
-        // Prepare a directory update response
-        uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
-        MessageBase* directory_update_response_ptr = new DirectoryUpdateResponse(tmp_key, is_being_written, edge_idx, edge_beacon_server_recvreq_source_addr_, event_list, skip_propagation_latency);
-        assert(directory_update_response_ptr != NULL);
-
-        // Push the directory update response into edge-to-edge propagation simulator to cache server worker
-        bool is_successful = edge_wrapper_ptr_->getEdgeToedgePropagationSimulatorParamPtr()->push(directory_update_response_ptr, edge_cache_server_worker_recvrsp_dst_addr);
-        assert(is_successful);
-
-        // NOTE: directory_update_response_ptr will be released by edge-to-edge propagation simulator
-        directory_update_response_ptr = NULL;
-
-        return is_finish;
+        return is_being_written;
     }
 
     // (2) Process writes and unblock for MSI protocol

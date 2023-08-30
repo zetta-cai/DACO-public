@@ -40,7 +40,7 @@ namespace covered
 
         void lookupLocalDirectoryByCacheServer(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const; // Check local directory information
         void lookupLocalDirectoryByBeaconServer(const Key& key, const NetworkAddr& cache_server_worker_recvreq_dst_addr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info); // Check local directory information
-        void updateLocalDirectory(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written); // Update local directory information
+        bool updateLocalDirectory(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info); // Update local directory information; return if key is being written
 
         LockResult acquireLocalWritelockByCacheServer(const Key& key, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo);
         LockResult acquireLocalWritelockByBeaconServer(const Key& key, const NetworkAddr& cache_server_worker_recvreq_dst_addr, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo);

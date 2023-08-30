@@ -4,14 +4,15 @@ namespace covered
 {
     const std::string SyncedVictim::kClassName = "SyncedVictim";
 
-    SyncedVictim::SyncedVictim() : victim_info_(), dirinfo_()
+    SyncedVictim::SyncedVictim() : victim_info_()
     {
+        dirinfo_set_.clear();
     }
 
-    SyncedVictim::SyncedVictim(const VictimInfo& victim_info, const DirectoryInfo& dirinfo)
+    SyncedVictim::SyncedVictim(const VictimInfo& victim_info, const std::set<DirectoryInfo, DirectoryInfoHasher>& dirinfo_set)
     {
         victim_info_ = victim_info;
-        dirinfo_ = dirinfo;
+        dirinfo_set_ = dirinfo_set;
     }
 
     SyncedVictim::~SyncedVictim() {}
@@ -21,15 +22,15 @@ namespace covered
         return victim_info_;
     }
 
-    const DirectoryInfo& SyncedVictim::getDirinfo() const
+    const std::set<DirectoryInfo, DirectoryInfoHasher>& SyncedVictim::getDirinfoSet() const
     {
-        return dirinfo_;
+        return dirinfo_set_;
     }
 
     const SyncedVictim& SyncedVictim::operator=(const SyncedVictim& other)
     {
         victim_info_ = other.victim_info_;
-        dirinfo_ = other.dirinfo_;
+        dirinfo_set_ = other.dirinfo_set_;
         
         return *this;
     }

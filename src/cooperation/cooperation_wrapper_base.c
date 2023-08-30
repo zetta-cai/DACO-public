@@ -151,7 +151,7 @@ namespace covered
         return;
     }
 
-    void CooperationWrapperBase::updateLocalDirectory(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written)
+    bool CooperationWrapperBase::updateLocalDirectory(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info)
     {
         checkPointers_();
 
@@ -159,6 +159,7 @@ namespace covered
         std::string context_name = "CooperationWrapperBase::updateLocalDirectory()";
         cooperation_wrapper_perkey_rwlock_ptr_->acquire_lock(key, context_name);
 
+        bool is_being_written = false;
         if (is_admit) // is_being_written affects validity of both directory info and cached object for cache admission
         {
             is_being_written = block_tracker_ptr_->isBeingWrittenForKey(key);
@@ -175,7 +176,7 @@ namespace covered
         // Release a write lock
         cooperation_wrapper_perkey_rwlock_ptr_->unlock(key, context_name);
 
-        return;
+        return is_being_written;
     }
 
     // (4) Process writes for MSI protocol

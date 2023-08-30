@@ -36,11 +36,16 @@ namespace covered
         return false;
     }
 
-    bool CoveredBeaconServer::processDirectoryUpdateRequest_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr)
+    bool CoveredBeaconServer::updateCooperationLocalDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, const uint32_t& edge_idx)
     {
-        // NOTE: For COVERED, beacon node will tell the closest edge node if to admit, w/o independent decision
+        // Update local directory information in cooperation wrapper
+        bool is_being_written = false;
+        is_being_written = edge_wrapper_ptr_->getCooperationWrapperPtr()->updateLocalDirectory(key, is_admit, directory_info);
 
-        return false;
+        // Update directory info in victim tracker if the beaconed key is a local/neighbor synced victim
+        edge_wrapper_ptr_->getCoveredCacheManagerPtr()->updateVictimTrackerForSyncedVictimDirinfo(key, is_admit, directory_info);
+
+        return is_being_written;
     }
 
     // (2) Process writes and unblock for MSI protocol

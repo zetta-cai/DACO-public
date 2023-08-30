@@ -15,6 +15,7 @@
 #include <string>
 #include <unordered_map>
 
+#include "cooperation/directory/directory_info.h"
 #include "core/victim/victim_info.h"
 #include "core/victim_tracker.h"
 
@@ -27,6 +28,7 @@ namespace covered
         ~CoveredCacheManager();
 
         void updateVictimTrackerForLocalSyncedVictimInfos(const std::list<VictimInfo>& local_synced_victim_infos);
+        void updateVictimTrackerForSyncedVictimDirinfo(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info);
     private:
         static const std::string kClassName;
 

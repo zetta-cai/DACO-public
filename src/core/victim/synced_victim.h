@@ -9,6 +9,7 @@
 #ifndef SYNCED_VICTIM_H
 #define SYNCED_VICTIM_H
 
+#include <set>
 #include <string>
 
 #include "cooperation/directory/directory_info.h"
@@ -20,18 +21,18 @@ namespace covered
     {
     public:
         SyncedVictim();
-        SyncedVictim(const VictimInfo& victim_info, const DirectoryInfo& dirinfo);
+        SyncedVictim(const VictimInfo& victim_info, const std::set<DirectoryInfo, DirectoryInfoHasher>& dirinfo_set);
         ~SyncedVictim();
 
         const VictimInfo& getVictimInfo() const;
-        const DirectoryInfo& getDirinfo() const;
+        const std::set<DirectoryInfo, DirectoryInfoHasher>& getDirinfoSet() const;
 
         const SyncedVictim& operator=(const SyncedVictim& other);
     private:
         static const std::string kClassName;
 
         VictimInfo victim_info_;
-        DirectoryInfo dirinfo_;
+        std::set<DirectoryInfo, DirectoryInfoHasher> dirinfo_set_;
     };
 }
 
