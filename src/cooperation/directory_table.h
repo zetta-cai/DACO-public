@@ -28,6 +28,7 @@ namespace covered
         DirectoryTable(const uint32_t& seed, const uint32_t& edge_idx, const PerkeyRwlock* perkey_rwlock_ptr);
         ~DirectoryTable();
 
+        dirinfo_set_t getAll(const Key& key) const;
         void lookup(const Key& key, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const;
         void update(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, const DirectoryMetadata& directory_metadata);
         bool isCooperativeCached(const Key& key) const;

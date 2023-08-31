@@ -10,14 +10,14 @@
 #define LOCAL_CACHE_BASE_H
 
 #include <list>
-#include <set>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 #include "common/key.h"
 #include "common/value.h"
 #include "concurrency/rwlock.h"
-#include "core/victim/victim_info.h"
+#include "core/victim/victim_cacheinfo.h"
 
 namespace covered
 {
@@ -36,7 +36,7 @@ namespace covered
         // (2) Access local edge cache (KV data and local metadata)
 
         bool getLocalCache(const Key& key, Value& value, bool& affect_victim_tracker) const; // Return whether key is cached
-        std::list<VictimInfo> getLocalSyncedVictimInfosFromLocalCache() const; // Return up to peredge_synced_victimcnt local synced victims with the least local rewards
+        std::list<VictimCacheinfo> getLocalSyncedVictimCacheinfosFromLocalCache() const; // Return up to peredge_synced_victimcnt local synced victims with the least local rewards
 
         bool updateLocalCache(const Key& key, const Value& value, bool& affect_victim_tracker); // Return whether key is cached
 
@@ -52,7 +52,7 @@ namespace covered
         void admitLocalCache(const Key& key, const Value& value);
 
         // If local cache supports fine-grained cache management, split evict() into two steps for key-level fine-grained locking in cache wrapper: (i) get victim key; (ii) evict if victim key matches similar as version check
-        bool getLocalCacheVictimKeys(std::set<Key>& keys, const uint64_t& required_size) const; // Return false if no victim key (for fine-grained management)
+        bool getLocalCacheVictimKeys(std::unordered_set<Key, KeyHasher>& keys, const uint64_t& required_size) const; // Return false if no victim key (for fine-grained management)
         bool evictLocalCacheWithGivenKey(const Key& key, Value& value); // Return false if key does NOT exist (for fine-grained management)
 
         // If local cache only supports coarse-grained cache management, evict local cache directly
@@ -78,7 +78,7 @@ namespace covered
         // (2) Access local edge cache (KV data and local metadata)
 
         virtual bool getLocalCacheInternal_(const Key& key, Value& value, bool& affect_victim_tracker) const = 0; // Return whether key is cached
-        virtual std::list<VictimInfo> getLocalSyncedVictimInfosFromLocalCacheInternal_() const = 0; // Return up to peredge_synced_victimcnt local synced victims with the least local rewards
+        virtual std::list<VictimCacheinfo> getLocalSyncedVictimCacheinfosFromLocalCacheInternal_() const = 0; // Return up to peredge_synced_victimcnt local synced victims with the least local rewards
 
         virtual bool updateLocalCacheInternal_(const Key& key, const Value& value, bool& affect_victim_tracker) = 0; // Return whether key is cached
 
@@ -89,7 +89,7 @@ namespace covered
         virtual bool needIndependentAdmitInternal_(const Key& key) const = 0;
 
         virtual void admitLocalCacheInternal_(const Key& key, const Value& value) = 0;
-        virtual bool getLocalCacheVictimKeysInternal_(std::set<Key>& keys, const uint64_t& required_size) const = 0;
+        virtual bool getLocalCacheVictimKeysInternal_(std::unordered_set<Key, KeyHasher>& keys, const uint64_t& required_size) const = 0;
         virtual bool evictLocalCacheWithGivenKeyInternal_(const Key& key, Value& value) = 0;
 
         virtual void evictLocalCacheNoGivenKeyInternal_(std::unordered_map<Key, Value, KeyHasher>& victims, const uint64_t& required_size) = 0;

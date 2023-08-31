@@ -16,9 +16,9 @@ namespace covered
     
     CoveredCacheManager::~CoveredCacheManager() {}
 
-    void CoveredCacheManager::updateVictimTrackerForLocalSyncedVictimInfos(const std::list<VictimInfo>& local_synced_victim_infos)
+    void CoveredCacheManager::updateVictimTrackerForLocalSyncedVictims(const std::list<VictimCacheinfo>& local_synced_victim_cacheinfos, const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& beaconed_local_synced_victim_dirinfosets)
     {
-        victim_tracker_.updateLocalSyncedVictimInfos(local_synced_victim_infos);
+        victim_tracker_.updateLocalSyncedVictims(local_synced_victim_cacheinfos, beaconed_local_synced_victim_dirinfosets);
         return;
     }
 

@@ -30,7 +30,7 @@ namespace covered
         VictimTracker(const uint32_t& edge_idx, const uint32_t& peredge_synced_victimcnt);
         ~VictimTracker();
 
-        void updateLocalSyncedVictims(const std::list<VictimCacheinfo> local_synced_victim_cacheinfos, const std::list<VictimDirinfo> local_beaconed_synced_victim_dirinfos);
+        void updateLocalSyncedVictims(const std::list<VictimCacheinfo>& local_synced_victim_cacheinfos, const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& beaconed_local_synced_victim_dirinfosets);
         void updateSyncedVictimDirinfo(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info);
     private:
         // NOTE: the list of VictimCacheinfos follows the ascending order of local rewards

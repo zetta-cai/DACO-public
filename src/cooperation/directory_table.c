@@ -28,6 +28,24 @@ namespace covered
         directory_randgen_ptr_ = NULL;
     }
 
+    dirinfo_set_t DirectoryTable::getAll(const Key& key) const
+    {
+        dirinfo_set_t all_dirinfo;
+
+        // Prepare GetAllDirinfoParam
+        DirectoryEntry::GetAllDirinfoParam tmp_param = {all_dirinfo};
+
+        bool is_exist = false;
+        directory_hashtable_.constCallIfExist(key, is_exist, DirectoryEntry::GET_ALL_DIRINFO_FUNCNAME, &tmp_param); // Get directory entry if key exists
+
+        if (!is_exist) // key does not exist
+        {
+            assert(all_dirinfo.size() == 0);
+        }
+
+        return all_dirinfo;
+    }
+
     void DirectoryTable::lookup(const Key& key, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
     {
         // Prepare GetAllValidDirinfoParam

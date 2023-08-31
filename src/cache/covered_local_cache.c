@@ -93,9 +93,9 @@ namespace covered
         return is_local_cached;
     }
 
-    std::list<VictimInfo> CoveredLocalCache::getLocalSyncedVictimInfosFromLocalCacheInternal_() const
+    std::list<VictimCacheinfo> CoveredLocalCache::getLocalSyncedVictimCacheinfosFromLocalCacheInternal_() const
     {
-        std::list<VictimInfo> local_synced_victim_infos;
+        std::list<VictimCacheinfo> local_synced_victim_cacheinfos;
 
         for (uint32_t least_popular_rank = 0; least_popular_rank < peredge_synced_victimcnt_; least_popular_rank++)
         {
@@ -112,8 +112,8 @@ namespace covered
                 assert(tmp_victim_handle != nullptr); // Victim must be cached before eviction
                 tmp_victim_value_size = tmp_victim_handle->getSize();
 
-                VictimInfo tmp_victim_info(tmp_victim_key, tmp_victim_value_size, tmp_local_cached_popularity, tmp_redirected_cached_popularity);
-                local_synced_victim_infos.push_back(tmp_victim_info); // Add to the tail of the list
+                VictimCacheinfo tmp_victim_info(tmp_victim_key, tmp_victim_value_size, tmp_local_cached_popularity, tmp_redirected_cached_popularity);
+                local_synced_victim_cacheinfos.push_back(tmp_victim_info); // Add to the tail of the list
             }
             else
             {
@@ -121,9 +121,9 @@ namespace covered
             }
         }
 
-        assert(local_synced_victim_infos.size() <= peredge_synced_victimcnt_);
+        assert(local_synced_victim_cacheinfos.size() <= peredge_synced_victimcnt_);
 
-        return local_synced_victim_infos;
+        return local_synced_victim_cacheinfos;
     }
 
     bool CoveredLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value, bool& affect_victim_tracker)
@@ -229,7 +229,7 @@ namespace covered
         return;
     }
 
-    bool CoveredLocalCache::getLocalCacheVictimKeysInternal_(std::set<Key>& keys, const uint64_t& required_size) const
+    bool CoveredLocalCache::getLocalCacheVictimKeysInternal_(std::unordered_set<Key, KeyHasher>& keys, const uint64_t& required_size) const
     {
         // TODO: this function will be invoked at each candidate neighbor node by the beacon node for lazy fetching of candidate victims
         // TODO: this function will also be invoked at each placement neighbor node by the beacon node for cache placement

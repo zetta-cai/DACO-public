@@ -215,17 +215,17 @@ namespace covered
         return is_local_cached_and_invalid;
     }
 
-    std::list<VictimInfo> CacheWrapper::getLocalSyncedVictimInfos() const
+    std::list<VictimCacheinfo> CacheWrapper::getLocalSyncedVictimCacheinfos() const
     {
         checkPointers_();
 
         // NOTE: as we only access local edge cache (thread safe w/o per-key rwlock) instead of validity map (thread safe w/ per-key rwlock), we do NOT need to acquire a fine-grained read lock here
 
         // Acquire a read lock
-        //std::string context_name = "CacheWrapper::getLocalSyncedVictimInfos()";
+        //std::string context_name = "CacheWrapper::getLocalSyncedVictimCacheinfos()";
         //cache_wrapper_perkey_rwlock_ptr_->acquire_lock_shared(key, context_name);
 
-        std::list<VictimInfo> local_synced_victim_infos = local_cache_ptr_->getLocalSyncedVictimInfosFromLocalCache(); // NOT update local metadata
+        std::list<VictimInfo> local_synced_victim_infos = local_cache_ptr_->getLocalSyncedVictimCacheinfosFromLocalCache(); // NOT update local metadata
 
         // Release a read lock
         //cache_wrapper_perkey_rwlock_ptr_->unlock_shared(key, context_name);
@@ -387,7 +387,7 @@ namespace covered
         // NOTE: we do NOT retry here (instead we do it in cache server worker), as we need to update required_size based on cache size usage (including local edge cache and cooperation info) and cache capacity
 
         // Get victim keys for key-level fine-grained locking
-        std::set<Key> tmp_victim_keys;
+        std::unordered_set<Key, KeyHasher> tmp_victim_keys;
         bool has_victim_key = local_cache_ptr_->getLocalCacheVictimKeys(tmp_victim_keys, required_size);
 
         // At least one victim key should exist for eviction
@@ -399,7 +399,7 @@ namespace covered
         assert(tmp_victim_keys.size() > 0);
 
         std::vector<Value> tmp_victim_values;
-        for (std::set<Key>::const_iterator tmp_victim_key_iter = tmp_victim_keys.begin(); tmp_victim_key_iter != tmp_victim_keys.end(); tmp_victim_key_iter++)
+        for (std::unordered_set<Key, KeyHasher>::const_iterator tmp_victim_key_iter = tmp_victim_keys.begin(); tmp_victim_key_iter != tmp_victim_keys.end(); tmp_victim_key_iter++)
         {
             const Key& tmp_victim_key = *tmp_victim_key_iter;
             Value tmp_victim_value;

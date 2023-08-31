@@ -18,7 +18,7 @@
 #include "common/key.h"
 #include "common/value.h"
 #include "concurrency/perkey_rwlock.h"
-#include "core/victim/victim_info.h"
+#include "core/victim/victim_cacheinfo.h"
 
 namespace covered
 {
@@ -51,7 +51,7 @@ namespace covered
         bool removeIfInvalidForGetrsp(const Key& key, bool& affect_victim_tracker); // Remove value only if it is locally cached yet invalid
 
         // Return up to peredge_synced_victimcnt local synced victims with the least local rewards
-        std::list<VictimInfo> getLocalSyncedVictimInfos() const;
+        std::list<VictimCacheinfo> getLocalSyncedVictimCacheinfos() const;
 
         // (3) Local edge cache management
 

@@ -133,14 +133,14 @@ namespace covered
         return is_local_cached;
     }
 
-    std::list<VictimInfo> SegcacheLocalCache::getLocalSyncedVictimInfosFromLocalCacheInternal_() const
+    std::list<VictimCacheinfo> SegcacheLocalCache::getLocalSyncedVictimCacheinfosFromLocalCacheInternal_() const
     {
-        std::list<VictimInfo> local_synced_victim_infos;
+        std::list<VictimCacheinfo> local_synced_victim_cacheinfos;
 
-        Util::dumpErrorMsg(instance_name_, "getLocalSyncedVictimInfosFromLocalCacheInternal_() can ONLY be invoked by COVERED local cache!");
+        Util::dumpErrorMsg(instance_name_, "getLocalSyncedVictimCacheinfosFromLocalCacheInternal_() can ONLY be invoked by COVERED local cache!");
         exit(1);
 
-        return local_synced_victim_infos;
+        return local_synced_victim_cacheinfos;
     }
 
     bool SegcacheLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value, bool& affect_victim_tracker)
@@ -175,7 +175,7 @@ namespace covered
         return;
     }
 
-    bool SegcacheLocalCache::getLocalCacheVictimKeysInternal_(std::set<Key>& keys, const uint64_t& required_size) const
+    bool SegcacheLocalCache::getLocalCacheVictimKeysInternal_(std::unordered_set<Key, KeyHasher>& keys, const uint64_t& required_size) const
     {
         assert(hasFineGrainedManagement());
 

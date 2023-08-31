@@ -19,6 +19,11 @@ namespace covered
     class DirectoryEntry
     {
     public:
+        struct GetAllDirinfoParam
+        {
+            dirinfo_set_t& dirinfo_set;
+        };
+
         struct GetAllValidDirinfoParam
         {
             dirinfo_set_t& dirinfo_set;
@@ -47,6 +52,7 @@ namespace covered
             const DirectoryInfo& directory_info;
         };
 
+        static const std::string GET_ALL_DIRINFO_FUNCNAME;
         static const std::string GET_ALL_VALID_DIRINFO_FUNCNAME;
         static const std::string ADD_DIRINFO_FUNCNAME;
         static const std::string REMOVE_DIRINFO_FUNCNAME;
@@ -58,6 +64,7 @@ namespace covered
 
         // (1) Access per-dirinfo metadata
 
+        void getAllDirinfo(dirinfo_set_t& dirinfo_set) const; // Get all dirinfos (including invalid ones
         void getAllValidDirinfo(dirinfo_set_t& dirinfo_set) const;
         bool addDirinfo(const DirectoryInfo& directory_info, const DirectoryMetadata& directory_metadata); // return is_directory_already_exist
         bool removeDirinfo(const DirectoryInfo& directory_info); // return is_directory_already_exist

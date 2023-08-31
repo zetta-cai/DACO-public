@@ -15,8 +15,9 @@
 #include <string>
 #include <unordered_map>
 
+#include "common/key.h"
 #include "cooperation/directory/directory_info.h"
-#include "core/victim/victim_info.h"
+#include "core/victim/victim_cacheinfo.h"
 #include "core/victim_tracker.h"
 
 namespace covered
@@ -27,7 +28,7 @@ namespace covered
         CoveredCacheManager(const uint32_t& edge_idx, const uint32_t& peredge_synced_victimcnt);
         ~CoveredCacheManager();
 
-        void updateVictimTrackerForLocalSyncedVictimInfos(const std::list<VictimInfo>& local_synced_victim_infos);
+        void updateVictimTrackerForLocalSyncedVictims(const std::list<VictimCacheinfo>& local_synced_victim_cacheinfos, const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& beaconed_local_synced_victim_dirinfosets);
         void updateVictimTrackerForSyncedVictimDirinfo(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info);
     private:
         static const std::string kClassName;

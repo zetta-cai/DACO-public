@@ -102,18 +102,18 @@ namespace covered
         return is_local_cached;
     }
 
-    std::list<VictimInfo> LocalCacheBase::getLocalSyncedVictimInfosFromLocalCache() const
+    std::list<VictimCacheinfo> LocalCacheBase::getLocalSyncedVictimCacheinfosFromLocalCache() const
     {
         checkPointers_();
 
         // Acquire a read lock for local metadata to check local metadata atomically
-        std::string context_name = "LocalCacheBase::getLocalSyncedVictimInfosFromLocalCache()";
+        std::string context_name = "LocalCacheBase::getLocalSyncedVictimCacheinfosFromLocalCache()";
         rwlock_for_local_cache_ptr_->acquire_lock_shared(context_name);
 
-        std::list<VictimInfo> local_synced_victim_infos = getLocalSyncedVictimInfosFromLocalCacheInternal_();
+        std::list<VictimCacheinfo> local_synced_victim_cacheinfos = getLocalSyncedVictimCacheinfosFromLocalCacheInternal_();
 
         rwlock_for_local_cache_ptr_->unlock_shared(context_name);
-        return local_synced_victim_infos;
+        return local_synced_victim_cacheinfos;
     }
 
     bool LocalCacheBase::updateLocalCache(const Key& key, const Value& value, bool& affect_victim_tracker)
@@ -174,7 +174,7 @@ namespace covered
         return;
     }
 
-    bool LocalCacheBase::getLocalCacheVictimKeys(std::set<Key>& keys, const uint64_t& required_size) const
+    bool LocalCacheBase::getLocalCacheVictimKeys(std::unordered_set<Key, KeyHasher>& keys, const uint64_t& required_size) const
     {
         checkPointers_();
 

@@ -11,7 +11,7 @@ namespace covered
         dirinfo_set_.clear();
     }
 
-    VictimDirinfo::VictimDirinfo(const bool& is_local_beaconed, const std::set<DirectoryInfo, DirectoryInfoHasher>& dirinfo_set)
+    VictimDirinfo::VictimDirinfo(const bool& is_local_beaconed, const dirinfo_set_t& dirinfo_set)
     {
         refcnt_ = 0;
         is_local_beaconed_ = is_local_beaconed;
@@ -55,9 +55,21 @@ namespace covered
         return is_local_beaconed_;
     }
 
-    const std::set<DirectoryInfo, DirectoryInfoHasher>& VictimDirinfo::getDirinfoSetRef() const
+    void VictimDirinfo::markLocalBeaconed()
+    {
+        is_local_beaconed_ = true;
+        return;
+    }
+
+    const dirinfo_set_t& VictimDirinfo::getDirinfoSetRef() const
     {
         return dirinfo_set_;
+    }
+
+    void VictimDirinfo::setDirinfoSet(const dirinfo_set_t& dirinfo_set)
+    {
+        dirinfo_set_ = dirinfo_set;
+        return;
     }
 
     const VictimDirinfo& VictimDirinfo::operator=(const VictimDirinfo& other)

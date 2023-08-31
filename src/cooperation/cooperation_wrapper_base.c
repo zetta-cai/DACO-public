@@ -100,6 +100,22 @@ namespace covered
 
     // (2) Access content directory information
 
+    dirinfo_set_t CooperationWrapperBase::getLocalDirectoryInfos(const Key& key) const
+    {
+        checkPointers_();
+
+        // Acquire a read lock
+        std::string context_name = "CooperationWrapperBase::getLocalDirectoryInfos()";
+        cooperation_wrapper_perkey_rwlock_ptr_->acquire_lock_shared(key, context_name);
+
+        dirinfo_set_t dirinfo_set = directory_table_ptr_->getAll(key);
+
+        // Release a read lock
+        cooperation_wrapper_perkey_rwlock_ptr_->unlock_shared(key, context_name);
+
+        return dirinfo_set;
+    }
+
     void CooperationWrapperBase::lookupLocalDirectoryByCacheServer(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
     {
         checkPointers_();

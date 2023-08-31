@@ -1,10 +1,11 @@
 #include "edge/cache_server/covered_cache_server_worker.h"
 
 #include <assert.h>
+#include <list>
 #include <sstream>
 
 #include "common/util.h"
-#include "core/victim/victim_info.h"
+#include "core/victim/victim_cacheinfo.h"
 
 namespace covered
 {
@@ -39,11 +40,7 @@ namespace covered
         // Avoid unnecessary VictimTracker update
         if (affect_victim_tracker) // If key was a local synced victim before or is a local synced victim now
         {
-            // Update current-edge-node VictimInfos if necessary
-            std::list<VictimInfo> local_synced_victim_infos = tmp_edge_wrapper_ptr->getEdgeCachePtr()->getLocalSyncedVictimInfos();
-
-            // Update VictimInfos of the local synced victims (clear if no local synced victim infos)
-            tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr()->updateVictimTrackerForLocalSyncedVictimInfos(local_synced_victim_infos); 
+            updateCacheManagerForLocalSyncedVictims_();
         }
         
         return is_local_cached_and_valid;
@@ -105,11 +102,7 @@ namespace covered
         // Avoid unnecessary VictimTracker update
         if (affect_victim_tracker) // If key was a local synced victim before or is a local synced victim now
         {
-            // Update current-edge-node VictimInfos if necessary
-            std::list<VictimInfo> local_synced_victim_infos = tmp_edge_wrapper_ptr->getEdgeCachePtr()->getLocalSyncedVictimInfos();
-
-            // Update VictimInfos of the local synced victims (clear if no local synced victim infos)
-            tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr()->updateVictimTrackerForLocalSyncedVictimInfos(local_synced_victim_infos); 
+            updateCacheManagerForLocalSyncedVictims_();
         }
         
         return is_local_cached_and_invalid;
@@ -138,11 +131,7 @@ namespace covered
         // Avoid unnecessary VictimTracker update
         if (affect_victim_tracker) // If key was a local synced victim before or is a local synced victim now
         {
-            // Update current-edge-node VictimInfos if necessary
-            std::list<VictimInfo> local_synced_victim_infos = tmp_edge_wrapper_ptr->getEdgeCachePtr()->getLocalSyncedVictimInfos();
-
-            // Update VictimInfos of the local synced victims (clear if no local synced victim infos)
-            tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr()->updateVictimTrackerForLocalSyncedVictimInfos(local_synced_victim_infos); 
+            updateCacheManagerForLocalSyncedVictims_();
         }
 
         return is_local_cached_after_udpate;
@@ -159,11 +148,7 @@ namespace covered
         // Avoid unnecessary VictimTracker update
         if (affect_victim_tracker) // If key was a local synced victim before or is a local synced victim now
         {
-            // Update current-edge-node VictimInfos if necessary
-            std::list<VictimInfo> local_synced_victim_infos = tmp_edge_wrapper_ptr->getEdgeCachePtr()->getLocalSyncedVictimInfos();
-
-            // Update VictimInfos of the local synced victims (clear if no local synced victim infos)
-            tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr()->updateVictimTrackerForLocalSyncedVictimInfos(local_synced_victim_infos); 
+            updateCacheManagerForLocalSyncedVictims_();
         }
 
         return is_local_cached_after_remove;
@@ -209,5 +194,36 @@ namespace covered
         // NOTE: If updateBeaconDirectory_() is admitting a local uncached object, beacon node has already removed local uncached popularities of plaecment nodes from aggregated uncached popularity after placement calculation, and only needs to assert node ID NOT exist in aggregate bitmap and remove the preserved node ID if any -> NO need to piggyback local uncached popularity
         // NOTE: If updateBeaconDirectory_() is evicting a local cached object, beacon node only needs to assert node ID NOT exist in aggregate bitmap -> NO need to piggyback local uncached popularity
         return false;
-    } 
+    }
+
+    // (6) covered-specific utility functions
+        
+    void CoveredCacheServerWorker::updateCacheManagerForLocalSyncedVictims_() const
+    {
+        checkPointers_();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+
+        // Get victim cacheinfos of local synced victims for the current edge node
+        std::list<VictimCacheinfo> local_synced_victim_cacheinfos = tmp_edge_wrapper_ptr->getEdgeCachePtr()->getLocalSyncedVictimCacheinfos();
+
+        // Get directory info sets for local synced victimed beaconed by the current edge node
+        const uint32_t current_edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
+        std::unordered_map<Key, dirinfo_set_t, KeyHasher> beaconed_local_synced_victim_dirinfosets;
+        for (std::list<VictimCacheinfo>::const_iterator cacheinfo_list_iter = local_synced_victim_cacheinfos.begin(); cacheinfo_list_iter != local_synced_victim_cacheinfos.end(); cacheinfo_list_iter++)
+        {
+            const Key& tmp_key = cacheinfo_list_iter->getKey();
+
+            uint32_t beacon_edge_idx = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getBeaconEdgeIdx(tmp_key);
+            if (beacon_edge_idx == current_edge_idx) // Key is beaconed by current edge node
+            {
+                dirinfo_set_t tmp_dirinfo_set = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getLocalDirectoryInfos(tmp_key);
+                beaconed_local_synced_victim_dirinfosets.insert(std::pair(tmp_key, tmp_dirinfo_set));
+            }
+        }
+
+        // Update local synced victims for the current edge node
+        tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr()->updateVictimTrackerForLocalSyncedVictims(local_synced_victim_cacheinfos, beaconed_local_synced_victim_dirinfosets); 
+
+        return;
+    }
 }

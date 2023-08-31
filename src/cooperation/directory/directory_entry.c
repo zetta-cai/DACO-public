@@ -7,6 +7,7 @@
 
 namespace covered
 {
+    const std::string DirectoryEntry::GET_ALL_DIRINFO_FUNCNAME("getAllDirinfo");
     const std::string DirectoryEntry::GET_ALL_VALID_DIRINFO_FUNCNAME("getAllValidDirinfo");
     const std::string DirectoryEntry::ADD_DIRINFO_FUNCNAME("addDirinfo");
     const std::string DirectoryEntry::REMOVE_DIRINFO_FUNCNAME("removeDirinfo");
@@ -23,6 +24,19 @@ namespace covered
     DirectoryEntry::~DirectoryEntry() {}
 
     // (1) Access per-dirinfo metadata
+
+    void DirectoryEntry::getAllDirinfo(dirinfo_set_t& dirinfo_set) const
+    {
+        dirinfo_set.clear();
+
+        // Add all directory information into directory_info_set
+        for (dirinfo_entry_t::const_iterator iter = directory_entry_.begin(); iter != directory_entry_.end(); iter++)
+        {
+            const DirectoryInfo& directory_info = iter->first;
+            dirinfo_set.insert(directory_info);
+        }
+        return;
+    }
 
     void DirectoryEntry::getAllValidDirinfo(dirinfo_set_t& dirinfo_set) const
     {
@@ -158,6 +172,11 @@ namespace covered
         {
             GetAllValidDirinfoParam* tmp_param_ptr = static_cast<GetAllValidDirinfoParam*>(param_ptr);
             getAllValidDirinfo(tmp_param_ptr->dirinfo_set);
+        }
+        else if (function_name == GET_ALL_DIRINFO_FUNCNAME)
+        {
+            GetAllDirinfoParam* tmp_param_ptr = static_cast<GetAllDirinfoParam*>(param_ptr);
+            getAllDirinfo(tmp_param_ptr->dirinfo_set);
         }
         else
         {
