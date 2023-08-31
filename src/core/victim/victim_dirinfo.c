@@ -72,6 +72,20 @@ namespace covered
         return;
     }
 
+    void VictimDirinfo::updateDirinfo(const bool& is_admit, const DirectoryInfo& directory_info)
+    {
+        if (is_admit && dirinfo_set_.find(directory_info) == dirinfo_set_.end())
+        {
+            dirinfo_set_.insert(directory_info);
+        }
+        else if (!is_admit && dirinfo_set_.find(directory_info) != dirinfo_set_.end())
+        {
+            dirinfo_set_.erase(directory_info);
+        }
+        
+        return;
+    }
+
     const VictimDirinfo& VictimDirinfo::operator=(const VictimDirinfo& other)
     {
         refcnt_ = other.refcnt_;

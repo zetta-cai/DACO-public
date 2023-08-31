@@ -411,6 +411,16 @@ namespace covered
 
     // (4.3) Update content directory information
 
+    void BasicCacheServerWorker::updateCurrentDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written) const
+    {
+        checkPointers_();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+
+        is_being_written = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->updateLocalDirectory(key, is_admit, directory_info);
+
+        return;
+    }
+
     bool BasicCacheServerWorker::updateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written, EventList& event_list, const bool& skip_propagation_latency) const
     {
         checkPointers_();

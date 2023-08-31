@@ -36,13 +36,13 @@ namespace covered
         return false;
     }
 
-    bool CoveredBeaconServer::updateCooperationLocalDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, const uint32_t& edge_idx)
+    bool CoveredBeaconServer::updateCooperationLocalDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info)
     {
         // Update local directory information in cooperation wrapper
         bool is_being_written = false;
         is_being_written = edge_wrapper_ptr_->getCooperationWrapperPtr()->updateLocalDirectory(key, is_admit, directory_info);
 
-        // Update directory info in victim tracker if the beaconed key is a local/neighbor synced victim
+        // Update directory info in victim tracker if the local beaconed key is a local/neighbor synced victim
         edge_wrapper_ptr_->getCoveredCacheManagerPtr()->updateVictimTrackerForSyncedVictimDirinfo(key, is_admit, directory_info);
 
         return is_being_written;

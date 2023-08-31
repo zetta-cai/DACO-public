@@ -51,7 +51,7 @@ namespace covered
         // NOTE: as a directory update has limited impact on cache size, we do NOT check capacity and trigger eviction for performance (capacity is only checked for cache admission and value updates)
 
         bool processDirectoryUpdateRequest_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr); // Return if edge node is finished
-        virtual bool updateCooperationLocalDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, const uint32_t& edge_idx) = 0; // Return if key is being written
+        virtual bool updateCooperationLocalDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info) = 0; // Return if key is being written
 
         // (2) Process writes and unblock for MSI protocol
 

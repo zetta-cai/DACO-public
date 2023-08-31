@@ -1212,7 +1212,7 @@ namespace covered
         DirectoryInfo directory_info(tmp_edge_wrapper_ptr->getNodeIdx());
         if (current_is_beacon) // Update target edge index of local directory information
         {
-            tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->updateLocalDirectory(key, is_admit, directory_info, is_being_written);
+            updateCurrentDirectory_(key, is_admit, directory_info, is_being_written);
         }
         else // Update remote directory information at the beacon node
         {

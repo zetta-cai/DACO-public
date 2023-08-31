@@ -62,6 +62,7 @@ namespace covered
         // (4.3) Update content directory information
 
         // Return if edge node is finished
+        virtual void updateCurrentDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written) const override; // Update directory info in current edge node
         virtual bool updateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written, EventList& event_list, const bool& skip_propagation_latency) const override; // Update remote directory info   
 
         // (6) covered-specific utility functions

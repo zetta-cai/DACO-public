@@ -189,7 +189,7 @@ namespace covered
         struct timespec update_local_directory_start_timestamp = Util::getCurrentTimespec();
 
         // Update local directory information
-        bool is_being_written = updateCooperationLocalDirectory_(tmp_key, is_admit, directory_info, tmp_edge_idx);
+        bool is_being_written = updateCooperationLocalDirectory_(tmp_key, is_admit, directory_info);
 
         // Add intermediate event if with event tracking
         struct timespec update_local_directory_end_timestamp = Util::getCurrentTimespec();

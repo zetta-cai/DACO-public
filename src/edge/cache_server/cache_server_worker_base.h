@@ -155,7 +155,8 @@ namespace covered
 
         // Return if edge node is finished
         bool updateDirectory_(const Key& key, const bool& is_admit, bool& is_being_written, EventList& event_list, const bool& skip_propagation_latency) const; // Update content directory information
-        virtual bool updateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written, EventList& event_list, const bool& skip_propagation_latency) const = 0; // Update remote directory info
+        virtual void updateCurrentDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written) const = 0; // Update directory info in current edge node
+        virtual bool updateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written, EventList& event_list, const bool& skip_propagation_latency) const = 0; // Update directory info in remote beacon node
 
         // (5) Utility functions
 

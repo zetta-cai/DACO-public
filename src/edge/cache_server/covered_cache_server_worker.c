@@ -187,6 +187,19 @@ namespace covered
 
     // (4.3) Update content directory information
 
+    void CoveredCacheServerWorker::updateCurrentDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written) const
+    {
+        checkPointers_();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+
+        is_being_written = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->updateLocalDirectory(key, is_admit, directory_info);
+
+        // Update directory info in victim tracker if the local beaconed key is a local/neighbor synced victim
+        tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr()->updateVictimTrackerForSyncedVictimDirinfo(key, is_admit, directory_info);
+
+        return;
+    }
+
     bool CoveredCacheServerWorker::updateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written, EventList& event_list, const bool& skip_propagation_latency) const
     {
         // TODO: Piggyback candidate victims in current edge node
@@ -212,9 +225,8 @@ namespace covered
         for (std::list<VictimCacheinfo>::const_iterator cacheinfo_list_iter = local_synced_victim_cacheinfos.begin(); cacheinfo_list_iter != local_synced_victim_cacheinfos.end(); cacheinfo_list_iter++)
         {
             const Key& tmp_key = cacheinfo_list_iter->getKey();
-
-            uint32_t beacon_edge_idx = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getBeaconEdgeIdx(tmp_key);
-            if (beacon_edge_idx == current_edge_idx) // Key is beaconed by current edge node
+            bool current_is_beacon = tmp_edge_wrapper_ptr->currentIsBeacon(tmp_key);
+            if (current_is_beacon) // Key is beaconed by current edge node
             {
                 dirinfo_set_t tmp_dirinfo_set = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getLocalDirectoryInfos(tmp_key);
                 beaconed_local_synced_victim_dirinfosets.insert(std::pair(tmp_key, tmp_dirinfo_set));

@@ -110,8 +110,17 @@ namespace covered
     {
         checkPointers_();
 
-        // Update directory info if the beaconed key is a local/neighbor synced victim
-        // TODO: END HERE
+        // Update directory info if the local beaconed key is a local/neighbor synced victim
+        perkey_victim_dirinfo_t::iterator dirinfo_map_iter = perkey_victim_dirinfo_.find(key);
+        if (dirinfo_map_iter != perkey_victim_dirinfo_.end()) // The beaconed key is a local/neighbor synced victim
+        {
+            assert(dirinfo_map_iter->second.isLocalBeaconed());
+            
+            // Update directory info for the key
+            dirinfo_map_iter->second.updateDirinfo(is_admit, directory_info);
+        }
+
+        return;
     }
 
     void VictimTracker::checkPointers_() const

@@ -77,7 +77,7 @@ namespace covered
         return is_finish;
     }
 
-    bool BasicBeaconServer::updateCooperationLocalDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, const uint32_t& edge_idx)
+    bool BasicBeaconServer::updateCooperationLocalDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info)
     {
         // Update local directory information in cooperation wrapper
         bool is_being_written = false;
