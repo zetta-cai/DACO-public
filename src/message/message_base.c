@@ -163,6 +163,11 @@ namespace covered
                 message_type_str = "kReleaseWritelockResponse";
                 break;
             }
+            case MessageType::kCoveredDirectoryLookupRequest:
+            {
+                message_type_str = "kCoveredDirectoryLookupRequest";
+                break;
+            }
             default:
             {
                 message_type_str = std::to_string(static_cast<uint32_t>(message_type));
@@ -379,6 +384,11 @@ namespace covered
             case MessageType::kReleaseWritelockRequest:
             {
                 message_ptr = new ReleaseWritelockRequest(msg_payload);
+                break;
+            }
+            case MessageType::kCoveredDirectoryLookupRequest:
+            {
+                message_ptr = new CoveredDirectoryLookupRequest(msg_payload);
                 break;
             }
             default:
@@ -650,6 +660,11 @@ namespace covered
             const ReleaseWritelockResponse* const release_writelock_response_ptr = static_cast<const ReleaseWritelockResponse*>(message_ptr);
             tmp_key = release_writelock_response_ptr->getKey();
         }
+        else if (message_ptr->message_type_ == MessageType::kCoveredDirectoryLookupRequest)
+        {
+            const CoveredDirectoryLookupRequest* const covered_directory_lookup_request_ptr = static_cast<const CoveredDirectoryLookupRequest*>(message_ptr);
+            tmp_key = covered_directory_lookup_request_ptr->getKey();
+        }
         else
         {
             std::ostringstream oss;
@@ -885,7 +900,7 @@ namespace covered
     bool MessageBase::isCooperationControlRequest() const
     {
         checkIsValid_();
-        if (message_type_ == MessageType::kAcquireWritelockRequest || message_type_ == MessageType::kDirectoryLookupRequest || message_type_ == MessageType::kDirectoryUpdateRequest || message_type_ == MessageType::kFinishBlockRequest || message_type_ == MessageType::kInvalidationRequest || message_type_ == MessageType::kReleaseWritelockRequest)
+        if (message_type_ == MessageType::kAcquireWritelockRequest || message_type_ == MessageType::kDirectoryLookupRequest || message_type_ == MessageType::kDirectoryUpdateRequest || message_type_ == MessageType::kFinishBlockRequest || message_type_ == MessageType::kInvalidationRequest || message_type_ == MessageType::kReleaseWritelockRequest || message_type_ == MessageType::kCoveredDirectoryLookupRequest)
         {
             return true;
         }

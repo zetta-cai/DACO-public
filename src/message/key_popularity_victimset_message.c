@@ -38,9 +38,8 @@ namespace covered
 
     uint32_t KeyPopularityVictimsetMessage::getMsgPayloadSizeInternal_() const
     {
-        // TODO: END HERE
-        // key payload
-        uint32_t msg_payload_size = key_.getKeyPayloadSize() + sizeof(Popularity) + ;
+        // key payload + local uncached popularity + victim syncset payload
+        uint32_t msg_payload_size = key_.getKeyPayloadSize() + sizeof(Popularity) + victim_syncset_.getVictimSyncsetPayloadSize();
         return msg_payload_size;
     }
 
@@ -49,6 +48,10 @@ namespace covered
         uint32_t size = position;
         uint32_t key_serialize_size = key_.serialize(msg_payload, size);
         size += key_serialize_size;
+        msg_payload.deserialize(size, (const char*)&local_uncached_popularity_, sizeof(Popularity));
+        size += sizeof(Popularity);
+        uint32_t victim_syncset_serialize_size = victim_syncset_.serialize(msg_payload, size);
+        size += victim_syncset_serialize_size;
         return size - position;
     }
 
@@ -57,6 +60,10 @@ namespace covered
         uint32_t size = position;
         uint32_t key_deserialize_size = key_.deserialize(msg_payload, size);
         size += key_deserialize_size;
+        msg_payload.serialize(size, (char*)&local_uncached_popularity_, sizeof(Popularity));
+        size += sizeof(Popularity);
+        uint32_t victim_syncset_deserialize_size = victim_syncset_.deserialize(msg_payload, size);
+        size += victim_syncset_deserialize_size;
         return size - position;
     }
 }

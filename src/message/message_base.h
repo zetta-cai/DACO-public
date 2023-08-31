@@ -59,7 +59,8 @@ namespace covered
         kInvalidationRequest,
         kInvalidationResponse,
         kReleaseWritelockRequest,
-        kReleaseWritelockResponse
+        kReleaseWritelockResponse,
+        kCoveredDirectoryLookupRequest
     };
 
     enum Hitflag
