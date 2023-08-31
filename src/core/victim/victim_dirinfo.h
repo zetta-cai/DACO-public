@@ -29,7 +29,9 @@ namespace covered
 
         const dirinfo_set_t& getDirinfoSetRef() const;
         void setDirinfoSet(const dirinfo_set_t& dirinfo_set);
-        void updateDirinfo(const bool& is_admit, const DirectoryInfo& directory_info); // Update directory info for the key (i.e., add or remove directory info from dirinfo_set_)
+        bool updateDirinfoSet(const bool& is_admit, const DirectoryInfo& directory_info); // Update directory info for the key (i.e., add or remove directory info from dirinfo_set_); return if directory info set is updated successfully
+
+        uint64_t getSizeForCapacity() const;
 
         const VictimDirinfo& operator=(const VictimDirinfo& other);
     private:

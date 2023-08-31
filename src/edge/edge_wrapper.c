@@ -218,7 +218,13 @@ namespace covered
 
         uint64_t edge_cache_size = edge_cache_ptr_->getSizeForCapacity();
         uint64_t cooperation_size = cooperation_wrapper_ptr_->getSizeForCapacity();
-        uint64_t size = edge_cache_size + cooperation_size;
+        uint64_t cache_manager_size = 0;
+        if (cache_name_ == Util::COVERED_CACHE_NAME)
+        {
+            cache_manager_size = covered_cache_manager_ptr_->getSizeForCapacity();
+        }
+
+        uint64_t size = edge_cache_size + cooperation_size + cache_manager_size;
 
         return size;
     }

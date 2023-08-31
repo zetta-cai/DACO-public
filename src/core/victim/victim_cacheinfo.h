@@ -26,6 +26,12 @@ namespace covered
         const Popularity getLocalCachedPopularity() const;
         const Popularity getRedirectedCachedPopularity() const;
 
+        uint32_t getVictimCacheinfoPayloadSize() const;
+        uint32_t serialize(DynamicArray& msg_payload, const uint32_t& position) const;
+        uint32_t deserialize(const DynamicArray& msg_payload, const uint32_t& position);
+
+        uint64_t getSizeForCapacity() const;
+
         const VictimCacheinfo& operator=(const VictimCacheinfo& other);
     private:
         static const std::string kClassName;

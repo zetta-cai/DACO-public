@@ -3,6 +3,8 @@
 #include <assert.h>
 #include <sstream>
 
+#include "common/util.h"
+
 namespace covered
 {
     const std::string VictimTracker::kClassName = "VictimTracker";
@@ -20,6 +22,7 @@ namespace covered
         rwlock_for_victim_tracker_ = new Rwlock(oss.str());
         assert(rwlock_for_victim_tracker_ != NULL);
 
+        size_bytes_ = 0;
         peredge_victim_cacheinfos_.clear();
         perkey_victim_dirinfo_.clear();
     }
@@ -38,6 +41,10 @@ namespace covered
         assert(local_synced_victim_cacheinfos.size() <= peredge_synced_victimcnt_);
         assert(beaconed_local_synced_victim_dirinfosets.size() <= local_synced_victim_cacheinfos.size());
 
+        // Acquire a write lock to update local synced victims atomically
+        std::string context_name = "VictimTracker::updateLocalSyncedVictims()";
+        rwlock_for_victim_tracker_->acquire_lock(context_name);
+
         // NOTE: limited computation overhead to update local synced victim infos, as we track limited number of local synced victims for the current edge node
 
         // Update cacheinfos of local synced victims for the current edge node
@@ -48,6 +55,8 @@ namespace covered
             // Add latest local synced victims for the current edge node
             cacheinfo_map_iter = peredge_victim_cacheinfos_.insert(std::pair(edge_idx_, local_synced_victim_cacheinfos)).first;
             assert(cacheinfo_map_iter != peredge_victim_cacheinfos_.end());
+
+            size_bytes_ = Util::uint64Add(size_bytes_, sizeof(uint32_t)); // For edge_idx_
         }
         else // Current edge node has tracked some local synced victims before
         {
@@ -61,6 +70,8 @@ namespace covered
         // Update victim dirinfos for new local synced victim keys
         for (std::list<VictimCacheinfo>::const_iterator new_cacheinfo_list_iter = local_synced_victim_cacheinfos.begin(); new_cacheinfo_list_iter != local_synced_victim_cacheinfos.end(); ++new_cacheinfo_list_iter)
         {
+            size_bytes_ = Util::uint64Add(size_bytes_, new_cacheinfo_list_iter->getSizeForCapacity()); // For cacheinfo of each latest local synced victims
+
             const Key& tmp_key = new_cacheinfo_list_iter->getKey();
             perkey_victim_dirinfo_t::iterator dirinfo_map_iter = perkey_victim_dirinfo_.find(tmp_key);
             if (dirinfo_map_iter == perkey_victim_dirinfo_.end()) // No victim dirinfo for the key
@@ -70,6 +81,8 @@ namespace covered
                 assert(dirinfo_map_iter != perkey_victim_dirinfo_.end());
 
                 dirinfo_map_iter->second.incrRefcnt();
+
+                size_bytes_ = Util::uint64Add(size_bytes_, (tmp_key.getKeystr().length() + dirinfo_map_iter->second.getSizeForCapacity())); // For each inserted victim dirinfo of a new local synced victim
             }
             else // The key already has a victim dirinfo
             {
@@ -80,6 +93,8 @@ namespace covered
         // Remove victim dirinfos for old local synced victim keys
         for (std::list<VictimCacheinfo>::const_iterator old_cacheinfo_list_iter = old_local_synced_victim_cacheinfos.begin(); old_cacheinfo_list_iter != old_local_synced_victim_cacheinfos.end(); ++old_cacheinfo_list_iter)
         {
+            size_bytes_ = Util::uint64Minus(size_bytes_, old_cacheinfo_list_iter->getSizeForCapacity()); // For cacheinfo of each old local synced victim
+
             const Key& tmp_key = old_cacheinfo_list_iter->getKey();
             perkey_victim_dirinfo_t::iterator dirinfo_map_iter = perkey_victim_dirinfo_.find(tmp_key);
             assert(dirinfo_map_iter != perkey_victim_dirinfo_.end());
@@ -87,6 +102,8 @@ namespace covered
             dirinfo_map_iter->second.decrRefcnt();
             if (dirinfo_map_iter->second.getRefcnt() == 0) // No edge node is tracking the key as a synced victim
             {
+                size_bytes_ = Util::uint64Minus(size_bytes_, (tmp_key.getKeystr().length() + dirinfo_map_iter->second.getSizeForCapacity())); // For each erased victim dirinfo of a old local synced victim
+
                 // Remove the victim dirinfo for the key
                 perkey_victim_dirinfo_.erase(dirinfo_map_iter);
             }
@@ -100,8 +117,23 @@ namespace covered
             assert(dirinfo_map_iter != perkey_victim_dirinfo_.end());
 
             dirinfo_map_iter->second.markLocalBeaconed();
+
+            uint64_t prev_victim_dirinfo_size_bytes = dirinfo_map_iter->second.getSizeForCapacity();
             dirinfo_map_iter->second.setDirinfoSet(beaconed_dirinfosets_map_iter->second);
+            uint64_t cur_victim_dirinfo_size_bytes = dirinfo_map_iter->second.getSizeForCapacity();
+
+            if (prev_victim_dirinfo_size_bytes < cur_victim_dirinfo_size_bytes)
+            {
+                size_bytes_ = Util::uint64Add(size_bytes_, (cur_victim_dirinfo_size_bytes - prev_victim_dirinfo_size_bytes));
+            }
+            else if (prev_victim_dirinfo_size_bytes > cur_victim_dirinfo_size_bytes)
+            {
+                size_bytes_ = Util::uint64Minus(size_bytes_, (prev_victim_dirinfo_size_bytes - cur_victim_dirinfo_size_bytes));
+            }
+            // NOTE: NO need to update size_bytes_ if prev_victim_dirinfo_size_bytes == cur_victim_dirinfo_size_bytes
         }
+
+        rwlock_for_victim_tracker_->unlock(context_name);
 
         return;
     }
@@ -110,6 +142,10 @@ namespace covered
     {
         checkPointers_();
 
+        // Acquire a write lock to update victim dirinfo atomically
+        std::string context_name = "VictimTracker::updateSyncedVictimDirinfo()";
+        rwlock_for_victim_tracker_->acquire_lock(context_name);
+
         // Update directory info if the local beaconed key is a local/neighbor synced victim
         perkey_victim_dirinfo_t::iterator dirinfo_map_iter = perkey_victim_dirinfo_.find(key);
         if (dirinfo_map_iter != perkey_victim_dirinfo_.end()) // The beaconed key is a local/neighbor synced victim
@@ -117,10 +153,39 @@ namespace covered
             assert(dirinfo_map_iter->second.isLocalBeaconed());
             
             // Update directory info for the key
-            dirinfo_map_iter->second.updateDirinfo(is_admit, directory_info);
+            bool is_update = dirinfo_map_iter->second.updateDirinfoSet(is_admit, directory_info);
+
+            if (is_update) // Update size_bytes_ only if directory info is added/removed successfully
+            {
+                if (is_admit)
+                {
+                    size_bytes_ = Util::uint64Add(size_bytes_, directory_info.getSizeForCapacity()); // For added directory info
+                }
+                else
+                {
+                    size_bytes_ = Util::uint64Minus(size_bytes_, directory_info.getSizeForCapacity()); // For removed directory info
+                }
+            }
         }
 
+        rwlock_for_victim_tracker_->unlock(context_name);
+
         return;
+    }
+
+    uint64_t VictimTracker::getSizeForCapacity() const
+    {
+        checkPointers_();
+
+        // Acquire a read lock to get cache size usage atomically (TODO: maybe NO need to acquire a read lock for size_bytes_ here)
+        std::string context_name = "VictimTracker::getSizeForCapacity()";
+        rwlock_for_victim_tracker_->acquire_lock_shared(context_name);
+
+        uint64_t total_size = size_bytes_;
+
+        rwlock_for_victim_tracker_->unlock_shared(context_name);
+
+        return total_size;
     }
 
     void VictimTracker::checkPointers_() const

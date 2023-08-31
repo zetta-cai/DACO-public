@@ -72,18 +72,34 @@ namespace covered
         return;
     }
 
-    void VictimDirinfo::updateDirinfo(const bool& is_admit, const DirectoryInfo& directory_info)
+    bool VictimDirinfo::updateDirinfoSet(const bool& is_admit, const DirectoryInfo& directory_info)
     {
+        bool is_update = false;
+        
         if (is_admit && dirinfo_set_.find(directory_info) == dirinfo_set_.end())
         {
             dirinfo_set_.insert(directory_info);
+            is_update = true;
         }
         else if (!is_admit && dirinfo_set_.find(directory_info) != dirinfo_set_.end())
         {
             dirinfo_set_.erase(directory_info);
+            is_update = true;
         }
         
-        return;
+        return is_update;
+    }
+
+    uint64_t VictimDirinfo::getSizeForCapacity() const
+    {
+        uint64_t total_size = sizeof(uint32_t) + sizeof(bool);
+
+        for (dirinfo_set_t::const_iterator dirinfo_iter = dirinfo_set_.begin(); dirinfo_iter != dirinfo_set_.end(); ++dirinfo_iter)
+        {
+            total_size += dirinfo_iter->getSizeForCapacity();
+        }
+
+        return total_size;
     }
 
     const VictimDirinfo& VictimDirinfo::operator=(const VictimDirinfo& other)

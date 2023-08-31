@@ -27,4 +27,13 @@ namespace covered
         victim_tracker_.updateSyncedVictimDirinfo(key, is_admit, directory_info);
         return;
     }
+
+    uint64_t CoveredCacheManager::getSizeForCapacity() const
+    {
+        uint64_t total_size = 0;
+
+        total_size += victim_tracker_.getSizeForCapacity();
+
+        return total_size;
+    }
 }

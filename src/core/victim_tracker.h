@@ -32,6 +32,8 @@ namespace covered
 
         void updateLocalSyncedVictims(const std::list<VictimCacheinfo>& local_synced_victim_cacheinfos, const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& beaconed_local_synced_victim_dirinfosets);
         void updateSyncedVictimDirinfo(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info);
+
+        uint64_t getSizeForCapacity() const;
     private:
         // NOTE: the list of VictimCacheinfos follows the ascending order of local rewards
         typedef std::unordered_map<uint32_t, std::list<VictimCacheinfo>> peredge_victim_cacheinfos_t;
@@ -52,6 +54,7 @@ namespace covered
 
         // Non-const shared varaibles
         // TODO: Maintain per-edge-node margin bytes to decide whether to perform placement calculation or not
+        uint64_t size_bytes_;
         peredge_victim_cacheinfos_t peredge_victim_cacheinfos_;
         perkey_victim_dirinfo_t perkey_victim_dirinfo_;
     };

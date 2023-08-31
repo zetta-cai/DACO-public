@@ -30,6 +30,8 @@ namespace covered
 
         void updateVictimTrackerForLocalSyncedVictims(const std::list<VictimCacheinfo>& local_synced_victim_cacheinfos, const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& beaconed_local_synced_victim_dirinfosets);
         void updateVictimTrackerForSyncedVictimDirinfo(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info);
+
+        uint64_t getSizeForCapacity() const;
     private:
         static const std::string kClassName;
 
