@@ -225,12 +225,28 @@ namespace covered
         //std::string context_name = "CacheWrapper::getLocalSyncedVictimCacheinfos()";
         //cache_wrapper_perkey_rwlock_ptr_->acquire_lock_shared(key, context_name);
 
-        std::list<VictimInfo> local_synced_victim_infos = local_cache_ptr_->getLocalSyncedVictimCacheinfosFromLocalCache(); // NOT update local metadata
+        std::list<VictimCacheinfo> local_synced_victim_cacheinfos = local_cache_ptr_->getLocalSyncedVictimCacheinfosFromLocalCache(); // NOT update local metadata
 
         // Release a read lock
         //cache_wrapper_perkey_rwlock_ptr_->unlock_shared(key, context_name);
 
-        return local_synced_victim_infos;
+        return local_synced_victim_cacheinfos;
+    }
+
+    bool CacheWrapper::getLocalUncachedPopularity(const Key& key, Popularity& local_uncached_popularity) const
+    {
+        checkPointers_();
+
+        // Acquire a read lock
+        std::string context_name = "CacheWrapper::getLocalUncachedPopularity()";
+        cache_wrapper_perkey_rwlock_ptr_->acquire_lock_shared(key, context_name);
+
+        bool is_key_tracked = local_cache_ptr_->getLocalUncachedPopularityFromLocalCache(key, local_uncached_popularity);
+
+        // Release a read lock
+        cache_wrapper_perkey_rwlock_ptr_->unlock_shared(key, context_name);
+
+        return is_key_tracked;
     }
 
     // (3) Local edge cache management

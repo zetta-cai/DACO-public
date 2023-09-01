@@ -76,7 +76,7 @@ namespace covered
     {
         checkPointers_();
 
-        // Acquire a read lock for local metadata to check local metadata atomically
+        // Acquire a read lock to check local metadata atomically
         std::string context_name = "LocalCacheBase::isLocalCached()";
         rwlock_for_local_cache_ptr_->acquire_lock_shared(context_name);
 
@@ -92,7 +92,7 @@ namespace covered
     {
         checkPointers_();
 
-        // Acquire a write lock for local metadata to update local metadata atomically
+        // Acquire a write lock to update local metadata atomically
         std::string context_name = "LocalCacheBase::getLocalCache()";
         rwlock_for_local_cache_ptr_->acquire_lock(context_name);
 
@@ -106,7 +106,7 @@ namespace covered
     {
         checkPointers_();
 
-        // Acquire a read lock for local metadata to check local metadata atomically
+        // Acquire a read lock to check local metadata atomically
         std::string context_name = "LocalCacheBase::getLocalSyncedVictimCacheinfosFromLocalCache()";
         rwlock_for_local_cache_ptr_->acquire_lock_shared(context_name);
 
@@ -114,6 +114,20 @@ namespace covered
 
         rwlock_for_local_cache_ptr_->unlock_shared(context_name);
         return local_synced_victim_cacheinfos;
+    }
+
+    bool LocalCacheBase::getLocalUncachedPopularityFromLocalCache(const Key& key, Popularity& local_uncached_popularity) const
+    {
+        checkPointers_();
+
+        // Acquire a read lock to get local metadata atomically
+        std::string context_name = "LocalCacheBase::getLocalUncachedPopularityFromLocalCache()";
+        rwlock_for_local_cache_ptr_->acquire_lock_shared(context_name);
+
+        bool is_key_tracked = getLocalUncachedPopularityFromLocalCacheInternal_(key, local_uncached_popularity);
+
+        rwlock_for_local_cache_ptr_->unlock_shared(context_name);
+        return is_key_tracked;
     }
 
     bool LocalCacheBase::updateLocalCache(const Key& key, const Value& value, bool& affect_victim_tracker)

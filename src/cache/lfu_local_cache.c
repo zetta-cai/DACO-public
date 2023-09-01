@@ -62,6 +62,16 @@ namespace covered
         return local_synced_victim_cacheinfos;
     }
 
+    bool LfuLocalCache::getLocalUncachedPopularityFromLocalCacheInternal_(const Key& key, Popularity& local_uncached_popularity) const
+    {
+        bool is_key_tracked = false;
+
+        Util::dumpErrorMsg(instance_name_, "getLocalUncachedPopularityFromLocalCacheInternal_() can ONLY be invoked by COVERED local cache!");
+        exit(1);
+
+        return is_key_tracked;
+    }
+
     bool LfuLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value, bool& affect_victim_tracker)
     {
         UNUSED(affect_victim_tracker); // Only for COVERED

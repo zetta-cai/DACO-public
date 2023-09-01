@@ -13,6 +13,7 @@
 #include <string>
 #include <vector>
 
+#include "cache/covered/common_header.h"
 #include "cache/local_cache_base.h"
 #include "cache/validity_map.h"
 #include "common/key.h"
@@ -52,6 +53,9 @@ namespace covered
 
         // Return up to peredge_synced_victimcnt local synced victims with the least local rewards
         std::list<VictimCacheinfo> getLocalSyncedVictimCacheinfos() const;
+
+        // Return true if the local uncached key is tracked
+        bool getLocalUncachedPopularity(const Key& key, Popularity& local_uncached_popularity) const;
 
         // (3) Local edge cache management
 

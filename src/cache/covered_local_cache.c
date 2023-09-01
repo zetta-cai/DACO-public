@@ -126,6 +126,13 @@ namespace covered
         return local_synced_victim_cacheinfos;
     }
 
+    bool CoveredLocalCache::getLocalUncachedPopularityFromLocalCacheInternal_(const Key& key, Popularity& local_uncached_popularity) const
+    {
+        bool is_key_tracked = local_uncached_metadata_.getPopularity(key, local_uncached_popularity);
+
+        return is_key_tracked;
+    }
+
     bool CoveredLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value, bool& affect_victim_tracker)
     {
         const std::string keystr = key.getKeystr();

@@ -40,6 +40,7 @@ namespace covered
 
         virtual bool getLocalCacheInternal_(const Key& key, Value& value, bool& affect_victim_tracker) const override;
         virtual std::list<VictimCacheinfo> getLocalSyncedVictimCacheinfosFromLocalCacheInternal_() const override; // Return up to peredge_synced_victimcnt local synced victims with the least local rewards
+        virtual bool getLocalUncachedPopularityFromLocalCacheInternal_(const Key& key, Popularity& local_uncached_popularity) const override; // Return true if local uncached key is tracked
         
         virtual bool updateLocalCacheInternal_(const Key& key, const Value& value, bool& affect_victim_tracker) override;
 

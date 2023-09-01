@@ -57,7 +57,11 @@ namespace covered
         // Prepare victim syncset for piggybacking-based victim synchronization
         VictimSyncset victim_syncset = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr()->accessVictimTrackerForVictimSyncset();
 
-        // TODO: Piggyback local uncached popularity for key in current edge node (END HERE)
+        // Prepare local uncached popularity of key for piggybacking-based popularity collection
+        Popularity local_uncached_popularity = 0.0;
+        bool is_key_tracked = tmp_edge_wrapper_ptr->getEdgeCachePtr()->getLocalUncachedPopularity(key, local_uncached_popularity); // If the local uncached key is tracked in local uncached metadata
+
+        // TODO: Prepare and send CoveredDirectoryLookupRequest
 
         /*checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
