@@ -94,7 +94,7 @@ namespace covered
     {
         uint64_t total_size = sizeof(uint32_t) + sizeof(bool);
 
-        for (dirinfo_set_t::const_iterator dirinfo_iter = dirinfo_set_.begin(); dirinfo_iter != dirinfo_set_.end(); ++dirinfo_iter)
+        for (dirinfo_set_t::const_iterator dirinfo_iter = dirinfo_set_.begin(); dirinfo_iter != dirinfo_set_.end(); dirinfo_iter++)
         {
             total_size += dirinfo_iter->getSizeForCapacity();
         }

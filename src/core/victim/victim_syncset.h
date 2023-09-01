@@ -19,7 +19,7 @@ namespace covered
     {
     public:
         VictimSyncset();
-        VictimSyncset(const std::list<VictimCacheinfo>& local_synced_victims, const std::unordered_map<Key, DirectoryInfo, KeyHasher>& local_beaconed_victims);
+        VictimSyncset(const std::list<VictimCacheinfo>& local_synced_victims, const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& local_beaconed_victims);
         ~VictimSyncset();
 
         uint32_t getVictimSyncsetPayloadSize() const;
@@ -31,7 +31,7 @@ namespace covered
         static const std::string kClassName;
 
         std::list<VictimCacheinfo> local_synced_victims_;
-        std::unordered_map<Key, DirectoryInfo, KeyHasher> local_beaconed_victims_;
+        std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_victims_;
     };
 }
 

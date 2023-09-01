@@ -28,6 +28,12 @@ namespace covered
         return;
     }
 
+    VictimSyncset CoveredCacheManager::accessVictimTrackerForVictimSyncset() const
+    {
+        VictimSyncset victim_syncset = victim_tracker_.getVictimSyncset();
+        return victim_syncset;
+    }
+
     uint64_t CoveredCacheManager::getSizeForCapacity() const
     {
         uint64_t total_size = 0;

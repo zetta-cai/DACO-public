@@ -21,6 +21,7 @@
 #include "concurrency/rwlock.h"
 #include "core/victim/victim_cacheinfo.h"
 #include "core/victim/victim_dirinfo.h"
+#include "core/victim/victim_syncset.h"
 
 namespace covered
 {
@@ -32,6 +33,8 @@ namespace covered
 
         void updateLocalSyncedVictims(const std::list<VictimCacheinfo>& local_synced_victim_cacheinfos, const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& beaconed_local_synced_victim_dirinfosets);
         void updateSyncedVictimDirinfo(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info);
+
+        VictimSyncset getVictimSyncset() const;
 
         uint64_t getSizeForCapacity() const;
     private:

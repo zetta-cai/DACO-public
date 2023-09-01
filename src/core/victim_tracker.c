@@ -68,7 +68,7 @@ namespace covered
         }
 
         // Update victim dirinfos for new local synced victim keys
-        for (std::list<VictimCacheinfo>::const_iterator new_cacheinfo_list_iter = local_synced_victim_cacheinfos.begin(); new_cacheinfo_list_iter != local_synced_victim_cacheinfos.end(); ++new_cacheinfo_list_iter)
+        for (std::list<VictimCacheinfo>::const_iterator new_cacheinfo_list_iter = local_synced_victim_cacheinfos.begin(); new_cacheinfo_list_iter != local_synced_victim_cacheinfos.end(); new_cacheinfo_list_iter++)
         {
             size_bytes_ = Util::uint64Add(size_bytes_, new_cacheinfo_list_iter->getSizeForCapacity()); // For cacheinfo of each latest local synced victims
 
@@ -91,7 +91,7 @@ namespace covered
         }
 
         // Remove victim dirinfos for old local synced victim keys
-        for (std::list<VictimCacheinfo>::const_iterator old_cacheinfo_list_iter = old_local_synced_victim_cacheinfos.begin(); old_cacheinfo_list_iter != old_local_synced_victim_cacheinfos.end(); ++old_cacheinfo_list_iter)
+        for (std::list<VictimCacheinfo>::const_iterator old_cacheinfo_list_iter = old_local_synced_victim_cacheinfos.begin(); old_cacheinfo_list_iter != old_local_synced_victim_cacheinfos.end(); old_cacheinfo_list_iter++)
         {
             size_bytes_ = Util::uint64Minus(size_bytes_, old_cacheinfo_list_iter->getSizeForCapacity()); // For cacheinfo of each old local synced victim
 
@@ -110,7 +110,7 @@ namespace covered
         }
 
         // Update victim dirinfos for local beaconed victims
-        for (std::unordered_map<Key, dirinfo_set_t, KeyHasher>::const_iterator beaconed_dirinfosets_map_iter = beaconed_local_synced_victim_dirinfosets.begin(); beaconed_dirinfosets_map_iter != beaconed_local_synced_victim_dirinfosets.end(); ++beaconed_dirinfosets_map_iter)
+        for (std::unordered_map<Key, dirinfo_set_t, KeyHasher>::const_iterator beaconed_dirinfosets_map_iter = beaconed_local_synced_victim_dirinfosets.begin(); beaconed_dirinfosets_map_iter != beaconed_local_synced_victim_dirinfosets.end(); beaconed_dirinfosets_map_iter++)
         {
             const Key& tmp_key = beaconed_dirinfosets_map_iter->first;
             perkey_victim_dirinfo_t::iterator dirinfo_map_iter = perkey_victim_dirinfo_.find(tmp_key);
@@ -171,6 +171,39 @@ namespace covered
         rwlock_for_victim_tracker_->unlock(context_name);
 
         return;
+    }
+
+    VictimSyncset VictimTracker::getVictimSyncset() const
+    {
+        // Acquire a read lock to get cache size usage atomically (TODO: maybe NO need to acquire a read lock for size_bytes_ here)
+        std::string context_name = "VictimTracker::getVictimSyncset()";
+        rwlock_for_victim_tracker_->acquire_lock_shared(context_name);
+
+        // Get local synced victims
+        std::list<VictimCacheinfo> local_synced_victims;
+        peredge_victim_cacheinfos_t::const_iterator cacheinfo_map_iter = peredge_victim_cacheinfos_.find(edge_idx_);
+        if (cacheinfo_map_iter != peredge_victim_cacheinfos_.end())
+        {
+            local_synced_victims = cacheinfo_map_iter->second;
+        }
+
+        // Get local beaconed victims
+        std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_victims;
+        for (perkey_victim_dirinfo_t::const_iterator dirinfo_map_iter = perkey_victim_dirinfo_.begin(); dirinfo_map_iter != perkey_victim_dirinfo_.end(); dirinfo_map_iter++)
+        {
+            if (dirinfo_map_iter->second.isLocalBeaconed())
+            {
+                const Key& tmp_key = dirinfo_map_iter->first;
+                const dirinfo_set_t& tmp_dirinfo_set = dirinfo_map_iter->second.getDirinfoSetRef();
+                local_beaconed_victims.insert(std::pair(tmp_key, tmp_dirinfo_set));
+            }
+        }
+
+        VictimSyncset victim_syncset(local_synced_victims, local_beaconed_victims);
+
+        rwlock_for_victim_tracker_->unlock_shared(context_name);
+
+        return victim_syncset;
     }
 
     uint64_t VictimTracker::getSizeForCapacity() const

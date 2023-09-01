@@ -18,6 +18,7 @@
 #include "common/key.h"
 #include "cooperation/directory/directory_info.h"
 #include "core/victim/victim_cacheinfo.h"
+#include "core/victim/victim_syncset.h"
 #include "core/victim_tracker.h"
 
 namespace covered
@@ -30,6 +31,8 @@ namespace covered
 
         void updateVictimTrackerForLocalSyncedVictims(const std::list<VictimCacheinfo>& local_synced_victim_cacheinfos, const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& beaconed_local_synced_victim_dirinfosets);
         void updateVictimTrackerForSyncedVictimDirinfo(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info);
+
+        VictimSyncset accessVictimTrackerForVictimSyncset() const;
 
         uint64_t getSizeForCapacity() const;
     private:

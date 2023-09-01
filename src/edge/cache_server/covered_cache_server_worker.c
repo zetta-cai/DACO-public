@@ -6,6 +6,7 @@
 
 #include "common/util.h"
 #include "core/victim/victim_cacheinfo.h"
+#include "core/victim/victim_syncset.h"
 
 namespace covered
 {
@@ -50,7 +51,11 @@ namespace covered
 
     MessageBase* CoveredCacheServerWorker::getReqToLookupBeaconDirectory_(const Key& key, const bool& skip_propagation_latency) const
     {
-        // TODO: Piggyback candidate victims in current edge node
+        checkPointers_();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+
+        // Prepare victim syncset for piggybacking-based victim synchronization
+        VictimSyncset victim_syncset = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr()->accessVictimTrackerForVictimSyncset();
 
         // TODO: Piggyback local uncached popularity for key in current edge node (END HERE)
 

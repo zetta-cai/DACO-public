@@ -105,9 +105,10 @@ namespace covered
         const uint64_t capacity_bytes_; // Come from CLI
         const uint32_t percacheserver_workercnt_; // Come from CLI
 
-        // NOTE: we do NOT need per-key rwlock for atomicity among CacheWrapper and CooperationWrapperBase.
-        // (i) CacheWrapper is already thread-safe for cache server and invalidation server, and CooperationWrapperBase is already thread-safe for cache server and beacon server.
-        // (2) Only cache server needs to access both CacheWrapper and CooperationWrapperBase, while there NOT exist any serializability/atomicity issue for requests of the same key, as cache server workers have already partitioned requests by hashing keys into ring buffer.
+        // NOTE: we do NOT need per-key rwlock for atomicity among CacheWrapper, CooperationWrapperBase, and CoveredCacheMananger.
+        // (i) CacheWrapper is already thread-safe for cache server and invalidation server, CooperationWrapperBase is already thread-safe for cache server and beacon server, and CoveredCacheMananger is already thread-safe for cache server and beacon server -> NO dead locking as each thread-safe structure releases its own lock after each function.
+        // (2) Cache server needs to access CacheWrapper, CooperationWrapperBase, and CoveredCacheManager, while there NOT exist any serializability/atomicity issue for requests of the same key, as cache server workers have already partitioned requests by hashing keys into ring buffer.
+        // (3) Beacon server needs to access CooperationWrapperBase and CoveredCacheManager, while we do NOT need strong consistency for aggregated popularity or synchronized victims in CoveredCacheManager, and hence NO need to keep serializability/atomicity.
 
         // Non-const shared variables (thread safe)
         CacheWrapper* edge_cache_ptr_; // Data and metadata for local edge cache (thread safe)
