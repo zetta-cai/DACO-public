@@ -687,6 +687,7 @@ namespace covered
         const uint32_t opcnt = evaluator_cli_ptr->getOpcnt();
         const uint32_t percacheserver_workercnt = evaluator_cli_ptr->getPercacheserverWorkercnt();
         const uint32_t perclient_workercnt = evaluator_cli_ptr->getPerclientWorkercnt();
+        const uint32_t peredge_synced_victimcnt = evaluator_cli_ptr->getPeredgeSyncedVictimcnt();
         const uint32_t propagation_latency_clientedge_us = evaluator_cli_ptr->getPropagationLatencyClientedgeUs();
         const uint32_t propagation_latency_crossedge_us = evaluator_cli_ptr->getPropagationLatencyCrossedgeUs();
         const uint32_t propagation_latency_edgecloud_us = evaluator_cli_ptr->getPropagationLatencyEdgecloudUs();
@@ -699,8 +700,8 @@ namespace covered
         // (i) Config variables from JSON, e.g., is_debug and is_track_event
         // (ii) Config variables from CLI, e.g., main_class_name, --config_filepath, and is_single_node
         // (iii) Unchanged CLI parameters, e.g., --cloud_storage.
-        // Example: covered_capacitymb1000_clientcnt1_warmupspeedup1_edgecnt1_hashnamemmh3_keycnt1000000_opcnt1000000_percacheserverworkercnt1_perclientworkercnt1_propagationus100010000100000_maxwarmupdurationsec10_stresstestdurationsec10_facebook
-        oss << cache_name << "_capacitymb" << B2MB(capacity_bytes) << "_clientcnt" << clientcnt << "_warmupspeedup" << (is_warmup_speedup?"1":"0") << "_edgecnt" << edgecnt << "_hashname" << hash_name << "_keycnt" << keycnt << "_opcnt" << opcnt << "_percacheserverworkercnt" << percacheserver_workercnt << "_perclientworkercnt" << perclient_workercnt << "_propagationus" << propagation_latency_clientedge_us << propagation_latency_crossedge_us << propagation_latency_edgecloud_us << "_maxwarmupdurationsec" << max_warmup_duration_sec << "_stresstestdurationsec" << stresstest_duration_sec << "_" << workload_name;
+        // Example: covered_capacitymb1000_clientcnt1_warmupspeedup1_edgecnt1_hashnamemmh3_keycnt1000000_opcnt1000000_percacheserverworkercnt1_perclientworkercnt1_peredgesyncedvictimcnt3_propagationus100010000100000_maxwarmupdurationsec10_stresstestdurationsec10_facebook
+        oss << cache_name << "_capacitymb" << B2MB(capacity_bytes) << "_clientcnt" << clientcnt << "_warmupspeedup" << (is_warmup_speedup?"1":"0") << "_edgecnt" << edgecnt << "_hashname" << hash_name << "_keycnt" << keycnt << "_opcnt" << opcnt << "_percacheserverworkercnt" << percacheserver_workercnt << "_perclientworkercnt" << perclient_workercnt << "_peredgesyncedvictimcnt" << peredge_synced_victimcnt << "_propagationus" << propagation_latency_clientedge_us << propagation_latency_crossedge_us << propagation_latency_edgecloud_us << "_maxwarmupdurationsec" << max_warmup_duration_sec << "_stresstestdurationsec" << stresstest_duration_sec << "_" << workload_name;
         std::string infixstr = oss.str();
         return infixstr;
     }

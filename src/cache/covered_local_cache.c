@@ -14,7 +14,7 @@ namespace covered
 
     const std::string CoveredLocalCache::kClassName("CoveredLocalCache");
 
-    CoveredLocalCache::CoveredLocalCache(const uint32_t& edge_idx, const uint64_t& capacity_bytes, const uint32_t& peredge_synced_victimcnt) : LocalCacheBase(edge_idx), peredge_synced_victimcnt_(peredge_synced_victimcnt), local_cached_metadata_(), local_uncached_metadata_(capacity_bytes*COVERED_LOCAL_UNCACHED_MAX_MEM_USAGE_RATIO >= COVERED_LOCAL_UNCACHED_MAX_MEM_USAGE_BYTES ? COVERED_LOCAL_UNCACHED_MAX_MEM_USAGE_BYTES : capacity_bytes*COVERED_LOCAL_UNCACHED_MAX_MEM_USAGE_RATIO)
+    CoveredLocalCache::CoveredLocalCache(const uint32_t& edge_idx, const uint64_t& capacity_bytes, const uint64_t& local_uncached_capacity_bytes, const uint32_t& peredge_synced_victimcnt) : LocalCacheBase(edge_idx), peredge_synced_victimcnt_(peredge_synced_victimcnt), local_cached_metadata_(), local_uncached_metadata_(local_uncached_capacity_bytes)
     {
         // (A) Const variable
 

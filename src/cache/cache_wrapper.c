@@ -10,7 +10,7 @@ namespace covered
 {
     const std::string CacheWrapper::kClassName("CacheWrapper");
 
-    CacheWrapper::CacheWrapper(const std::string& cache_name, const uint32_t& edge_idx, const uint64_t& capacity_bytes, const uint32_t& peredge_synced_victimcnt)
+    CacheWrapper::CacheWrapper(const std::string& cache_name, const uint32_t& edge_idx, const uint64_t& capacity_bytes, const uint64_t& local_uncached_capacity_bytes, const uint32_t& peredge_synced_victimcnt)
     {
         // Differentiate local edge cache in different edge nodes
         std::ostringstream oss;
@@ -18,7 +18,7 @@ namespace covered
         instance_name_ = oss.str();
 
         // Allocate local edge cache
-        local_cache_ptr_ = LocalCacheBase::getLocalCacheByCacheName(cache_name, edge_idx, capacity_bytes, peredge_synced_victimcnt);
+        local_cache_ptr_ = LocalCacheBase::getLocalCacheByCacheName(cache_name, edge_idx, capacity_bytes, local_uncached_capacity_bytes, peredge_synced_victimcnt);
         assert(local_cache_ptr_ != NULL);
 
         // Allocate per-key rwlock for cache wrapper

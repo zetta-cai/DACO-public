@@ -28,6 +28,10 @@ namespace covered
         std::string getHashName() const;
         uint32_t getPercacheserverWorkercnt() const;
         uint32_t getPeredgeSyncedVictimcnt() const;
+
+        // ONLY for COVERED
+        uint64_t getCoveredLocalUncachedMaxMemUsageBytes() const;
+        uint64_t getCoveredPopularityAggregationMaxMemUsageBytes() const;
     private:
         static const std::string kClassName;
 
@@ -45,6 +49,10 @@ namespace covered
         std::string hash_name_;
         uint32_t percacheserver_workercnt_;
         uint32_t peredge_synced_victimcnt_;
+
+        // ONLY for COVERED
+        uint64_t covered_local_uncached_max_mem_usage_bytes_;
+        uint64_t covered_popularity_aggregation_max_mem_usage_bytes_;
     protected:
         virtual void addCliParameters_();
         virtual void setParamAndConfig_(const std::string& main_class_name);

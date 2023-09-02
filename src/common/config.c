@@ -17,6 +17,8 @@ namespace covered
     const std::string Config::CLOUD_RECVMSG_STARTPORT_KEYSTR("cloud_recvmsg_startport");
     const std::string Config::CLOUD_RECVREQ_STARTPORT_KEYSTR("cloud_recvreq_startport");
     const std::string Config::CLOUD_ROCKSDB_BASEDIR_KEYSTR("cloud_rocksdb_basedir");
+    const std::string Config::COVERED_LOCAL_UNCACHED_MAX_MEM_USAGE_RATIO_KEYSTR("covered_local_uncached_max_mem_usage_ratio");
+    const std::string Config::COVERED_POPULARITY_AGGREGATION_MAX_MEM_USAGE_RATIO_KEYSTR("covered_popularity_aggregation_max_mem_usage_ratio");
     const std::string Config::DATASET_LOADER_SLEEP_FOR_COMPACTION_SEC_KEYSTR("dataset_loader_sleep_for_compaction_sec");
     const std::string Config::EDGE_BEACON_SERVER_RECVREQ_STARTPORT_KEYSTR("edge_beacon_server_recvreq_startport");
     const std::string Config::EDGE_BEACON_SERVER_RECVRSP_STARTPORT_KEYSTR("edge_beacon_server_recvrsp_startport");
@@ -61,6 +63,8 @@ namespace covered
     uint16_t Config::cloud_recvmsg_startport_ = 4300; // [4096, 65536]
     uint16_t Config::cloud_recvreq_startport_ = 4400; // [4096, 65536]
     std::string Config::cloud_rocksdb_basedir_("/tmp/cloud");
+    double Config::covered_local_uncached_max_mem_usage_ratio_ = 0.01;
+    double Config::covered_popularity_aggregation_max_mem_usage_ratio_ = 0.01;
     uint32_t Config::dataset_loader_sleep_for_compaction_sec_ = 30;
     uint16_t Config::edge_beacon_server_recvreq_startport_ = 4500; // [4096, 65536]
     uint16_t Config::edge_beacon_server_recvrsp_startport_ = 4600; // [4096, 65536]
@@ -157,6 +161,16 @@ namespace covered
                 if (kv_ptr != NULL)
                 {
                     cloud_rocksdb_basedir_ = std::string(kv_ptr->value().get_string().c_str());
+                }
+                kv_ptr = find_(COVERED_LOCAL_UNCACHED_MAX_MEM_USAGE_RATIO_KEYSTR);
+                if (kv_ptr != NULL)
+                {
+                    covered_local_uncached_max_mem_usage_ratio_ = kv_ptr->value().get_double();
+                }
+                kv_ptr = find_(COVERED_POPULARITY_AGGREGATION_MAX_MEM_USAGE_RATIO_KEYSTR);
+                if (kv_ptr != NULL)
+                {
+                    covered_popularity_aggregation_max_mem_usage_ratio_ = kv_ptr->value().get_double();
                 }
                 kv_ptr = find_(DATASET_LOADER_SLEEP_FOR_COMPACTION_SEC_KEYSTR);
                 if (kv_ptr != NULL)
@@ -428,6 +442,18 @@ namespace covered
         return cloud_rocksdb_basedir_;
     }
 
+    double Config::getCoveredLocalUncachedMaxMemUsageRatio()
+    {
+        checkIsValid_();
+        return covered_local_uncached_max_mem_usage_ratio_;
+    }
+
+    double Config::getCoveredPopularityAggregationMaxMemUsageRatio()
+    {
+        checkIsValid_();
+        return covered_popularity_aggregation_max_mem_usage_ratio_;
+    }
+
     uint32_t Config::getDatasetLoaderSleepForCompactionSec()
     {
         checkIsValid_();
@@ -627,6 +653,8 @@ namespace covered
         oss << "Cloud recvmsg startport: " << cloud_recvmsg_startport_ << std::endl;
         oss << "Cloud recvreq startport: " << cloud_recvreq_startport_ << std::endl;
         oss << "Cloud RocksDB base directory: " << cloud_rocksdb_basedir_ << std::endl;
+        oss << "Covered local uncached max mem usage ratio: " << covered_local_uncached_max_mem_usage_ratio_ << std::endl; // ONLY for COVERED
+        oss << "Covered popularity aggregation max mem usage ratio: " << covered_popularity_aggregation_max_mem_usage_ratio_ << std::endl; // ONLY for COVERED
         oss << "Dataset loader sleep for compaction seconds: " << dataset_loader_sleep_for_compaction_sec_ << std::endl;
         oss << "Edge beacon server recvreq startport: " << edge_beacon_server_recvreq_startport_ << std::endl;
         oss << "Edge cache server data request buffer size: " << edge_cache_server_data_request_buffer_size_ << std::endl;

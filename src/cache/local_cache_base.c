@@ -14,7 +14,7 @@ namespace covered
 {
     const std::string LocalCacheBase::kClassName("LocalCacheBase");
 
-    LocalCacheBase* LocalCacheBase::getLocalCacheByCacheName(const std::string& cache_name, const uint32_t& edge_idx, const uint64_t& capacity_bytes, const uint32_t& peredge_synced_victimcnt)
+    LocalCacheBase* LocalCacheBase::getLocalCacheByCacheName(const std::string& cache_name, const uint32_t& edge_idx, const uint64_t& capacity_bytes, const uint64_t& local_uncached_capacity_bytes, const uint32_t& peredge_synced_victimcnt)
     {
         LocalCacheBase* local_cache_ptr = NULL;
         if (cache_name == Util::CACHELIB_CACHE_NAME)
@@ -23,7 +23,7 @@ namespace covered
         }
         else if (cache_name == Util::COVERED_CACHE_NAME)
         {
-            local_cache_ptr = new CoveredLocalCache(edge_idx, capacity_bytes, peredge_synced_victimcnt);
+            local_cache_ptr = new CoveredLocalCache(edge_idx, capacity_bytes, local_uncached_capacity_bytes, peredge_synced_victimcnt);
         }
         else if (cache_name == Util::LFU_CACHE_NAME)
         {

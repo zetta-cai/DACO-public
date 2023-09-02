@@ -1,5 +1,7 @@
 /*
  * CoveredCacheServerWorker: cache server worker in edge for COVERED.
+ *
+ * NOTE: for each local cache miss, we piggyback local uncached popularity if any into existing cooperation control message (e.g., directory lookup request) to update aggregated uncached popularity in beacon node without extra message overhead.
  * 
  * By Siyuan Sheng (2023.06.21).
  */
