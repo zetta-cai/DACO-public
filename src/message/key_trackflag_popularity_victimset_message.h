@@ -1,11 +1,11 @@
 /*
- * KeyPopularityVictimsetMessage: the base class for messages each with a key, a local uncached popularity, and a VictimSyncset.
+ * KeyTrackflagPopularityVictimsetMessage: the base class for messages each with a key, a local uncached popularity, and a VictimSyncset.
  * 
  * By Siyuan Sheng (2023.08.31).
  */
 
-#ifndef KEY_POPULARITY_VICTIMSET_MESSAGE_H
-#define KEY_POPULARITY_VICTIMSET_MESSAGE_H
+#ifndef KEY_TRACKFLAG_POPULARITY_VICTIMSET_MESSAGE_H
+#define KEY_TRACKFLAG_POPULARITY_VICTIMSET_MESSAGE_H
 
 #include <string>
 
@@ -17,14 +17,15 @@
 
 namespace covered
 {
-    class KeyPopularityVictimsetMessage : public MessageBase
+    class KeyTrackflagPopularityVictimsetMessage : public MessageBase
     {
     public:
-        KeyPopularityVictimsetMessage(const Key& key, const Popularity& local_uncached_popularity, const VictimSyncset& victim_syncset, const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr, const EventList& event_list, const bool& skip_propagation_latency);
-        KeyPopularityVictimsetMessage(const DynamicArray& msg_payload);
-        virtual ~KeyPopularityVictimsetMessage();
+        KeyTrackflagPopularityVictimsetMessage(const Key& key, const bool& is_tracked, const Popularity& local_uncached_popularity, const VictimSyncset& victim_syncset, const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr, const EventList& event_list, const bool& skip_propagation_latency);
+        KeyTrackflagPopularityVictimsetMessage(const DynamicArray& msg_payload);
+        virtual ~KeyTrackflagPopularityVictimsetMessage();
 
         Key getKey() const;
+        bool isTracked() const;
         Popularity getLocalUncachedPopularity() const;
         const VictimSyncset& getVictimSyncsetRef() const;
     private:
@@ -36,6 +37,7 @@ namespace covered
         virtual uint32_t deserializeInternal_(const DynamicArray& msg_payload, const uint32_t& position) override;
 
         Key key_;
+        bool is_tracked_; // Whether key is tracked by the sender (i.e., whether local_uncached_popularity_ is valid)
         Popularity local_uncached_popularity_; // For popularity collection
         VictimSyncset victim_syncset_; // For victim synchronization
     };

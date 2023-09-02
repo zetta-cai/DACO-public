@@ -7,6 +7,7 @@
 #include "common/util.h"
 #include "core/victim/victim_cacheinfo.h"
 #include "core/victim/victim_syncset.h"
+#include "message/control_message.h"
 
 namespace covered
 {
@@ -61,17 +62,12 @@ namespace covered
         Popularity local_uncached_popularity = 0.0;
         bool is_key_tracked = tmp_edge_wrapper_ptr->getEdgeCachePtr()->getLocalUncachedPopularity(key, local_uncached_popularity); // If the local uncached key is tracked in local uncached metadata
 
-        // TODO: Prepare and send CoveredDirectoryLookupRequest
-
-        /*checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
-
-        // Prepare directory lookup request to check directory information in beacon node
+        // Prepare CoveredDirectoryLookupRequest to check directory information in beacon node with popularity collection and victim synchronization
         uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
-        MessageBase* directory_lookup_request_ptr = new DirectoryLookupRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
-        assert(directory_lookup_request_ptr != NULL);
+        MessageBase* covered_directory_lookup_request_ptr = new CoveredDirectoryLookupRequest(key, is_key_tracked, local_uncached_popularity, victim_syncset, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
+        assert(covered_directory_lookup_request_ptr != NULL);
 
-        return directory_lookup_request_ptr;*/
+        return covered_directory_lookup_request_ptr;
     }
 
     void CoveredCacheServerWorker::processRspToLookupBeaconDirectory_(const DynamicArray& control_response_msg_payload, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, EventList& event_list) const

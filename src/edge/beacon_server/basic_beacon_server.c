@@ -30,51 +30,17 @@ namespace covered
 
     // (1) Access content directory information
 
-    bool BasicBeaconServer::processDirectoryLookupRequest_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr) const
+    void BasicBeaconServer::lookupCooperationLocalDirectory_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvreq_source_addr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
     {
         // Get key from control request if any
         assert(control_request_ptr != NULL);
         assert(control_request_ptr->getMessageType() == MessageType::kDirectoryLookupRequest);
         const DirectoryLookupRequest* const directory_lookup_request_ptr = static_cast<const DirectoryLookupRequest*>(control_request_ptr);
         Key tmp_key = directory_lookup_request_ptr->getKey();
-        const bool skip_propagation_latency = directory_lookup_request_ptr->isSkipPropagationLatency();
 
-        assert(edge_cache_server_worker_recvrsp_dst_addr.isValidAddr());
-
-        checkPointers_();
-
-        bool is_finish = false;
-
-        EventList event_list;
-        struct timespec lookup_local_directory_start_timestamp = Util::getCurrentTimespec();
-
-        // Calculate cache server worker recvreq destination address
-        NetworkAddr edge_cache_server_worker_recvreq_source_addr = Util::getEdgeCacheServerWorkerRecvreqAddrFromRecvrspAddr(edge_cache_server_worker_recvrsp_dst_addr);
-
-        // Lookup local directory information and randomly select a target edge index
-        bool is_being_written = false;
-        bool is_valid_directory_exist = false;
-        DirectoryInfo directory_info;
         edge_wrapper_ptr_->getCooperationWrapperPtr()->lookupLocalDirectoryByBeaconServer(tmp_key, edge_cache_server_worker_recvreq_source_addr, is_being_written, is_valid_directory_exist, directory_info);
 
-        // Add intermediate event if with event tracking
-        struct timespec lookup_local_directory_end_timestamp = Util::getCurrentTimespec();
-        uint32_t lookup_local_directory_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(lookup_local_directory_end_timestamp, lookup_local_directory_start_timestamp));
-        event_list.addEvent(Event::EDGE_BEACON_SERVER_LOOKUP_LOCAL_DIRECTORY_EVENT_NAME, lookup_local_directory_latency_us);
-
-        // Prepare a directory lookup response
-        uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
-        MessageBase* directory_lookup_response_ptr = new DirectoryLookupResponse(tmp_key, is_being_written, is_valid_directory_exist, directory_info, edge_idx, edge_beacon_server_recvreq_source_addr_, event_list, skip_propagation_latency);
-        assert(directory_lookup_response_ptr != NULL);
-        
-        // Push the directory lookup response into edge-to-edge propagation simulator to cache server worker
-        bool is_successful = edge_wrapper_ptr_->getEdgeToedgePropagationSimulatorParamPtr()->push(directory_lookup_response_ptr, edge_cache_server_worker_recvrsp_dst_addr);
-        assert(is_successful);
-
-        // NOTE: directory_lookup_response_ptr will be released by edge-to-edge propagation simulator
-        directory_lookup_response_ptr = NULL;
-
-        return is_finish;
+        return;
     }
 
     bool BasicBeaconServer::updateCooperationLocalDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info)

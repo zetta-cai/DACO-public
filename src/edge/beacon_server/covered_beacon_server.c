@@ -29,11 +29,23 @@ namespace covered
 
     // (1) Access content directory information
 
-    bool CoveredBeaconServer::processDirectoryLookupRequest_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr) const
+    void CoveredBeaconServer::lookupCooperationLocalDirectory_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvreq_source_addr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
     {
-        // NOTE: For COVERED, beacon node will tell the closest edge node if to admit, w/o independent decision
+        // TODO: For COVERED, beacon node will tell the closest edge node if to admit, w/o independent decision (trade-off-aware admission placement and eviction)
 
-        return false;
+        // Get key from control request if any
+        assert(control_request_ptr != NULL);
+        assert(control_request_ptr->getMessageType() == MessageType::kCoveredDirectoryLookupRequest);
+        const CoveredDirectoryLookupRequest* const covered_directory_lookup_request_ptr = static_cast<const CoveredDirectoryLookupRequest*>(control_request_ptr);
+        Key tmp_key = covered_directory_lookup_request_ptr->getKey();
+
+        edge_wrapper_ptr_->getCooperationWrapperPtr()->lookupLocalDirectoryByBeaconServer(tmp_key, edge_cache_server_worker_recvreq_source_addr, is_being_written, is_valid_directory_exist, directory_info);
+
+        // TODO: END HERE
+        // TODO: Popularity collection
+        // TODO: Victim synchronization
+
+        return;
     }
 
     bool CoveredBeaconServer::updateCooperationLocalDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info)

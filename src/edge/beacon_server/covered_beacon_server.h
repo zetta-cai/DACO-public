@@ -23,7 +23,7 @@ namespace covered
 
         // (1) Access content directory information
 
-        virtual bool processDirectoryLookupRequest_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr) const override; // Return if edge node is finished
+        virtual void lookupCooperationLocalDirectory_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvreq_source_addr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const override;
         virtual bool updateCooperationLocalDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info) override; // Return if key is being written
 
         // (2) Process writes and unblock for MSI protocol
