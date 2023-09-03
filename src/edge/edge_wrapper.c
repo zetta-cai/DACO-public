@@ -86,7 +86,7 @@ namespace covered
         // Allocate covered cache manager for COVERED only
         if (cache_name == Util::COVERED_CACHE_NAME)
         {
-            covered_cache_manager_ptr_ = new CoveredCacheManager(edge_idx, peredge_synced_victimcnt);
+            covered_cache_manager_ptr_ = new CoveredCacheManager(edge_idx, edgecnt, peredge_synced_victimcnt);
             assert(covered_cache_manager_ptr_ != NULL);
         }
         else

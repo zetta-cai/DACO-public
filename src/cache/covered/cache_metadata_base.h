@@ -52,6 +52,7 @@ namespace covered
         sorted_popularity_multimap_t::iterator sorted_popularity_iter_;
     };
 
+    // NOTE: we MUST store Key in ordered list to locate lookup table during eviciton; use duplicate Keys in lookup table to update ordered list -> if we store Key pointer in ordered list and use duplicate popularity/LRU-order in lookup table, we still can locate lookup table during eviction, yet cannot locate the corresponding popularity entry / have to access all LRU entries to update ordered list
     typedef std::unordered_map<Key, LookupMetadata, KeyHasher> perkey_lookup_table_t;
     typedef perkey_lookup_table_t::iterator perkey_lookup_iter_t;
     typedef perkey_lookup_table_t::const_iterator perkey_lookup_const_iter_t;

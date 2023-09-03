@@ -19,7 +19,11 @@ namespace covered
         LocalCachedMetadata();
         virtual ~LocalCachedMetadata();
 
+        // ONLY for local cached objects
+
         bool getLeastPopularKeyAndPopularity(const uint32_t& least_popular_rank, Key& key, Popularity& local_cached_popularity, Popularity& redirected_cached_popularity) const; // Get ith least popular key and its local/redirected cached popularity for local cached object
+
+        // Different for local cached objects
 
         // Return if affect local synced victims in victim tracker
         bool updateForExistingKey(const Key& key, const Value& value, const Value& original_value, const bool& is_value_related, const uint32_t& peredge_synced_victimcnt); // Admitted cached key (is_value_related = false: for getreq with cache hit; is_value_related = true: for getrsp with invalid hit, put/delreq with cache hit)

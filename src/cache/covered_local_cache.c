@@ -173,22 +173,8 @@ namespace covered
         }
         else
         {
+            // NOTE: tracking a new key in local uncached metadata may detrack old keys due to local uncached capacity constraint
             local_uncached_metadata_.addForNewKey(key, value); // For getrsp with cache miss, put/delrsp with cache miss
-
-            Key detracked_key;
-            while (true)
-            {
-                bool need_detrack = local_uncached_metadata_.needDetrackForUncachedObjects(detracked_key);
-                if (need_detrack) // Cache size usage for local uncached objects exceeds the max bytes limitation
-                {
-                    uint32_t approx_detracked_value_size = local_uncached_metadata_.getApproxValueForUncachedObjects(detracked_key);
-                    local_uncached_metadata_.removeForExistingKey(detracked_key, Value(approx_detracked_value_size)); // For getrsp with cache miss, put/delrsp with cache miss
-                }
-                else // Local uncached objects is limited
-                {
-                    break;
-                }
-            }
         }
         return;
     }

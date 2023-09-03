@@ -10,6 +10,8 @@ namespace covered
 
     LocalCachedMetadata::~LocalCachedMetadata() {}
 
+    // ONLY for local cached objects
+
     bool LocalCachedMetadata::getLeastPopularKeyAndPopularity(const uint32_t& least_popular_rank, Key& key, Popularity& local_cached_popularity, Popularity& redirected_cached_popularity) const
     {
         bool is_least_popular_key_exist = false;
@@ -28,6 +30,8 @@ namespace covered
 
         return is_least_popular_key_exist;
     }
+
+    // Different for local cached objects
 
     bool LocalCachedMetadata::updateForExistingKey(const Key& key, const Value& value, const Value& original_value, const bool& is_value_related, const uint32_t& peredge_synced_victimcnt)
     {

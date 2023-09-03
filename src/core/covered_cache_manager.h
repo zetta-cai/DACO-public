@@ -17,6 +17,7 @@
 
 #include "common/key.h"
 #include "cooperation/directory/directory_info.h"
+#include "core/popularity/popularity_aggregator.h"
 #include "core/victim/victim_cacheinfo.h"
 #include "core/victim/victim_syncset.h"
 #include "core/victim_tracker.h"
@@ -26,7 +27,7 @@ namespace covered
     class CoveredCacheManager
     {
     public:
-        CoveredCacheManager(const uint32_t& edge_idx, const uint32_t& peredge_synced_victimcnt);
+        CoveredCacheManager(const uint32_t& edge_idx, const uint32_t& edgecnt, const uint32_t& peredge_synced_victimcnt);
         ~CoveredCacheManager();
 
         void updateVictimTrackerForLocalSyncedVictims(const std::list<VictimCacheinfo>& local_synced_victim_cacheinfos, const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& beaconed_local_synced_victim_dirinfosets);
@@ -43,7 +44,8 @@ namespace covered
 
         // Non-const shared variables (each should be thread safe)
 
-        // TODO: Aggregated uncached popularity for admission (thread safe)
+        // Track aggregated uncached popularity for global admission (thread safe)
+        PopularityAggregator popularity_aggregator_;
 
         // Track per-edge-node least popular victims for placement and eviction (thread safe)
         VictimTracker victim_tracker_;

@@ -13,7 +13,9 @@ namespace covered
 
     LocalUncachedMetadata::~LocalUncachedMetadata() {}
 
-    bool LocalUncachedMetadata::needDetrackForUncachedObjects(Key& detracked_key) const
+    // ONLY for local uncached objects
+
+    bool LocalUncachedMetadata::needDetrackForUncachedObjects_(Key& detracked_key) const
     {
         //uint32_t cur_trackcnt = perkey_lookup_table_.size();
         uint64_t cache_size_usage_for_uncached_objects = getSizeForCapacity();
@@ -46,6 +48,30 @@ namespace covered
         }
 
         return approx_value_size;
+    }
+
+    // Different for local uncached objects
+
+    void LocalUncachedMetadata::addForNewKey(const Key& key, const Value& value)
+    {
+        CacheMetadataBase::addForNewKey(key, value);
+
+        Key detracked_key;
+        while (true)
+        {
+            bool need_detrack = needDetrackForUncachedObjects_(detracked_key);
+            if (need_detrack) // Cache size usage for local uncached objects exceeds the max bytes limitation
+            {
+                uint32_t approx_detracked_value_size = getApproxValueForUncachedObjects(detracked_key);
+                removeForExistingKey(detracked_key, Value(approx_detracked_value_size)); // For getrsp with cache miss, put/delrsp with cache miss
+            }
+            else // Local uncached objects is limited
+            {
+                break;
+            }
+        }
+
+        return;
     }
 
     void LocalUncachedMetadata::updateForExistingKey(const Key& key, const Value& value, const Value& original_value, const bool& is_value_related)
