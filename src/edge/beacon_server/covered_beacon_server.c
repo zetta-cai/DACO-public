@@ -42,7 +42,7 @@ namespace covered
         edge_wrapper_ptr_->getCooperationWrapperPtr()->lookupLocalDirectoryByBeaconServer(tmp_key, edge_cache_server_worker_recvreq_source_addr, is_being_written, is_valid_directory_exist, directory_info);
 
         // TODO: END HERE
-        // TODO: Popularity collection
+        // TODO: Popularity collection (update aggregated popularity for new local uncached popularity if key is tracked in local uncached metadata, or remove old local uncached popularity from aggregated popularity if key is NOT tracked now)
         
         // TODO: Victim synchronization
 

@@ -27,8 +27,14 @@ namespace covered
     class CoveredCacheManager
     {
     public:
-        CoveredCacheManager(const uint32_t& edge_idx, const uint32_t& edgecnt, const uint32_t& peredge_synced_victimcnt);
+        CoveredCacheManager(const uint32_t& edge_idx, const uint32_t& edgecnt, const uint32_t& peredge_synced_victimcnt, const uint64_t& popularity_aggregation_capacity_bytes, const uint32_t& topk_edgecnt);
         ~CoveredCacheManager();
+
+        // For popularity aggregation
+
+        void updatePopularityAggregatorForAggregatedPopularity(const Key& key, const uint32_t& source_edge_idx, const Popularity& local_uncached_popularity);
+        
+        // For victim synchronization
 
         void updateVictimTrackerForLocalSyncedVictims(const std::list<VictimCacheinfo>& local_synced_victim_cacheinfos, const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& beaconed_local_synced_victim_dirinfosets);
         void updateVictimTrackerForSyncedVictimDirinfo(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info);

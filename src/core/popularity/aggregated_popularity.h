@@ -7,6 +7,7 @@
 #ifndef AGGREGATED_POPULARITY_H
 #define AGGREGATED_POPULARITY_H
 
+#include <list>
 #include <string>
 
 #include "cache/covered/common_header.h"
@@ -20,16 +21,33 @@ namespace covered
     class AggregatedPopularity
     {
     public:
-        AggregatedPopularity(const uint32_t& edgecnt);
+        AggregatedPopularity();
+        AggregatedPopularity(const Key& key, const uint32_t& edgecnt);
         ~AggregatedPopularity();
 
+        void update(const uint32_t& source_edge_idx, const Popularity& local_uncached_popularity, const uint32_t& topk_edgecnt);
+
         DeltaReward getMaxAdmissionBenefit(const bool& is_cooperative_cached) const;
+
+        const AggregatedPopularity& operator=(const AggregatedPopularity& other);
     private:
+        typedef std::pair<uint32_t, Popularity> edgeidx_popularity_pair_t;
+
+        Popularity getLocalUncachedPopularityForExistingEdgeIdx_(const uint32_t& source_edge_idx) const;
+
+        // For sum
+        void minusLocalUncachedPopularityFromSum_(const Popularity& local_uncached_popularity);
+
+        // For top-k list
+        std::list<edgeidx_popularity_pair_t>::const_iterator getTopkListIterForEdgeIdx_(const uint32_t& source_edge_idx) const;
+        bool tryToInsertForNontopkEdgeIdx_(const uint32_t& source_edge_idx, const Popularity& local_uncached_popularity, const uint32_t& topk_edgecnt); // Return if local uncached popularity is inserted into top-k list
+        bool updateTopkForExistingEdgeIdx_(const uint32_t& source_edge_idx, const Popularity& local_uncached_popularity, const uint32_t& topk_edgecnt); // Return if local uncached popularity is inserted into top-k list
+
         static const std::string kClassName;
 
         Key key_;
         Popularity sum_local_uncached_popularity_;
-        std::list<Popularity> topk_local_uncached_popularity_;
+        std::list<edgeidx_popularity_pair_t> topk_edgeidx_local_uncached_popularity_pairs_; // Sorted by local uncached popularity in ascending order
         std::vector<bool> bitmap_;
     };
 }

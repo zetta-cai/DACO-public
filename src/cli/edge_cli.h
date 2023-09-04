@@ -32,6 +32,7 @@ namespace covered
         // ONLY for COVERED
         uint64_t getCoveredLocalUncachedMaxMemUsageBytes() const;
         uint64_t getCoveredPopularityAggregationMaxMemUsageBytes() const;
+        uint32_t getCoveredTopkEdgecnt() const;
     private:
         static const std::string kClassName;
 
@@ -53,6 +54,8 @@ namespace covered
         // ONLY for COVERED
         uint64_t covered_local_uncached_max_mem_usage_bytes_;
         uint64_t covered_popularity_aggregation_max_mem_usage_bytes_;
+        uint32_t covered_topk_edgecnt_;
+
     protected:
         virtual void addCliParameters_();
         virtual void setParamAndConfig_(const std::string& main_class_name);

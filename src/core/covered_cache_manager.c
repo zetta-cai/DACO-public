@@ -6,7 +6,7 @@ namespace covered
 {
     const std::string CoveredCacheManager::kClassName("CoveredCacheManager");
 
-    CoveredCacheManager::CoveredCacheManager(const uint32_t& edge_idx, const uint32_t& edgecnt, const uint32_t& peredge_synced_victimcnt) : popularity_aggregator_(edgecnt), victim_tracker_(edge_idx, peredge_synced_victimcnt)
+    CoveredCacheManager::CoveredCacheManager(const uint32_t& edge_idx, const uint32_t& edgecnt, const uint32_t& peredge_synced_victimcnt, const uint64_t& popularity_aggregation_capacity_bytes, const uint32_t& topk_edgecnt) : popularity_aggregator_(edge_idx, edgecnt, popularity_aggregation_capacity_bytes, topk_edgecnt), victim_tracker_(edge_idx, peredge_synced_victimcnt)
     {
         // Differentiate different edge nodes
         std::stringstream ss;
@@ -15,6 +15,16 @@ namespace covered
     }
     
     CoveredCacheManager::~CoveredCacheManager() {}
+
+    // For popularity aggregation
+
+    void CoveredCacheManager::updatePopularityAggregatorForAggregatedPopularity(const Key& key, const uint32_t& source_edge_idx, const Popularity& local_uncached_popularity)
+    {
+        popularity_aggregator_.updateAggregatedPopularity(key, source_edge_idx, local_uncached_popularity);
+        return;
+    }
+
+    // For victim synchronization
 
     void CoveredCacheManager::updateVictimTrackerForLocalSyncedVictims(const std::list<VictimCacheinfo>& local_synced_victim_cacheinfos, const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& beaconed_local_synced_victim_dirinfosets)
     {
