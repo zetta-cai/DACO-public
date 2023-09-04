@@ -43,6 +43,8 @@ namespace covered
             updateAggregatedPopularityForExistingKey_(key, source_edge_idx, local_uncached_popularity);
         }
 
+        // TODO: Only keep aggregated popularities of objects with large max admission benefits for selective popularity aggregation
+
         rwlock_for_popularity_aggregator_->unlock(context_name);
         return;
     }
