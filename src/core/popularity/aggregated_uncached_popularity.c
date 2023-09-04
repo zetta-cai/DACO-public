@@ -1,4 +1,4 @@
-#include "core/popularity/aggregated_popularity.h"
+#include "core/popularity/aggregated_uncached_popularity.h"
 
 #include <assert.h>
 
@@ -6,23 +6,23 @@
 
 namespace covered
 {
-    const std::string AggregatedPopularity::kClassName("AggregatedPopularity");
+    const std::string AggregatedUncachedPopularity::kClassName("AggregatedUncachedPopularity");
 
-    AggregatedPopularity::AggregatedPopularity() : key_(), sum_local_uncached_popularity_(0.0)
+    AggregatedUncachedPopularity::AggregatedUncachedPopularity() : key_(), sum_local_uncached_popularity_(0.0)
     {
         topk_edgeidx_local_uncached_popularity_pairs_.clear();
         bitmap_.clear();
     }
 
-    AggregatedPopularity::AggregatedPopularity(const Key& key, const uint32_t& edgecnt) : key_(key), sum_local_uncached_popularity_(0.0)
+    AggregatedUncachedPopularity::AggregatedUncachedPopularity(const Key& key, const uint32_t& edgecnt) : key_(key), sum_local_uncached_popularity_(0.0)
     {
         topk_edgeidx_local_uncached_popularity_pairs_.clear();
         bitmap_.resize(edgecnt, false);
     }
     
-    AggregatedPopularity::~AggregatedPopularity() {}
+    AggregatedUncachedPopularity::~AggregatedUncachedPopularity() {}
 
-    void AggregatedPopularity::update(const uint32_t& source_edge_idx, const Popularity& local_uncached_popularity, const uint32_t& topk_edgecnt)
+    void AggregatedUncachedPopularity::update(const uint32_t& source_edge_idx, const Popularity& local_uncached_popularity, const uint32_t& topk_edgecnt)
     {
         assert(source_edge_idx < bitmap_.size());
 
@@ -58,23 +58,23 @@ namespace covered
         return;
     }
 
-    DeltaReward AggregatedPopularity::getMaxAdmissionBenefit(const bool& is_cooperative_cached) const
+    DeltaReward AggregatedUncachedPopularity::getMaxGlobalAdmissionBenefit(const bool& is_cooperative_cached) const
     {
-        // TODO: Use a heuristic or learning-based approach for parameter tuning to calculate delta rewards for max admission benefits (refer to state-of-the-art studies such as LRB and GL-Cache)
+        // TODO: Use a heuristic or learning-based approach for parameter tuning to calculate delta rewards for max global admission benefits (refer to state-of-the-art studies such as LRB and GL-Cache)
 
-        DeltaReward max_admission_benefit = 0.0;
+        DeltaReward max_global_admission_benefit = 0.0;
         if (is_cooperative_cached) // Redirected cache hits become local cache hits for the edge nodes with top-k local uncached popularity
         {
-            // max_admission_benefit = (w1 - w2) * topk_local_uncached_popularity_;
+            // max_global_admission_benefit = (w1 - w2) * topk_local_uncached_popularity_;
         }
         else // Global cache misses become local cache hits for the edge nodes with top-k local uncached popularity, and global cache misses become redirected cache hits for other edge nodes
         {
-            // max_admission_benefit = w1 * topk_local_uncached_popularity_ + w2 * (sum_local_uncached_popularity_ - topk_local_uncached_popularity_);
+            // max_global_admission_benefit = w1 * topk_local_uncached_popularity_ + w2 * (sum_local_uncached_popularity_ - topk_local_uncached_popularity_);
         }
-        return max_admission_benefit;
+        return max_global_admission_benefit;
     }
 
-    const AggregatedPopularity& AggregatedPopularity::operator=(const AggregatedPopularity& other)
+    const AggregatedUncachedPopularity& AggregatedUncachedPopularity::operator=(const AggregatedUncachedPopularity& other)
     {
         if (this != &other)
         {
@@ -86,7 +86,7 @@ namespace covered
         return *this;
     }
 
-    Popularity AggregatedPopularity::getLocalUncachedPopularityForExistingEdgeIdx_(const uint32_t& source_edge_idx) const
+    Popularity AggregatedUncachedPopularity::getLocalUncachedPopularityForExistingEdgeIdx_(const uint32_t& source_edge_idx) const
     {
         assert(bitmap_[source_edge_idx] == true);
 
@@ -127,7 +127,7 @@ namespace covered
 
     // For sum
 
-    void AggregatedPopularity::minusLocalUncachedPopularityFromSum_(const Popularity& local_uncached_popularity)
+    void AggregatedUncachedPopularity::minusLocalUncachedPopularityFromSum_(const Popularity& local_uncached_popularity)
     {
         sum_local_uncached_popularity_ -= local_uncached_popularity;
         if (sum_local_uncached_popularity_ < 0.0)
@@ -139,7 +139,7 @@ namespace covered
 
     // For top-k list
 
-    std::list<AggregatedPopularity::edgeidx_popularity_pair_t>::const_iterator AggregatedPopularity::getTopkListIterForEdgeIdx_(const uint32_t& source_edge_idx) const
+    std::list<AggregatedUncachedPopularity::edgeidx_popularity_pair_t>::const_iterator AggregatedUncachedPopularity::getTopkListIterForEdgeIdx_(const uint32_t& source_edge_idx) const
     {
         std::list<edgeidx_popularity_pair_t>::const_iterator topk_list_iter = topk_edgeidx_local_uncached_popularity_pairs_.begin();
         while (topk_list_iter != topk_edgeidx_local_uncached_popularity_pairs_.end())
@@ -153,7 +153,7 @@ namespace covered
         return topk_list_iter;
     }
 
-    bool AggregatedPopularity::tryToInsertForNontopkEdgeIdx_(const uint32_t& source_edge_idx, const Popularity& local_uncached_popularity, const uint32_t& topk_edgecnt)
+    bool AggregatedUncachedPopularity::tryToInsertForNontopkEdgeIdx_(const uint32_t& source_edge_idx, const Popularity& local_uncached_popularity, const uint32_t& topk_edgecnt)
     {
         assert(getTopkListIterForEdgeIdx_(source_edge_idx) == topk_edgeidx_local_uncached_popularity_pairs_.end());
 
@@ -199,7 +199,7 @@ namespace covered
         return need_insert;
     }
 
-    bool AggregatedPopularity::updateTopkForExistingEdgeIdx_(const uint32_t& source_edge_idx, const Popularity& local_uncached_popularity, const uint32_t& topk_edgecnt)
+    bool AggregatedUncachedPopularity::updateTopkForExistingEdgeIdx_(const uint32_t& source_edge_idx, const Popularity& local_uncached_popularity, const uint32_t& topk_edgecnt)
     {
         assert(bitmap_[source_edge_idx] == true);
 

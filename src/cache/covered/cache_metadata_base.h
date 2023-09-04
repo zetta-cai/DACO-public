@@ -112,6 +112,9 @@ namespace covered
         uint32_t cur_group_keycnt_;
         pergroup_metadata_map_t pergroup_metadata_map_; // Group-level metadata (grouping based on admission/tracked time)
 
+        // TODO: For local cached metadata, use local reward instead of local/redirected cached popularity as the ordered list
+        // TODO: For local uncached metadata, use local admission benefit instead of local uncached popularity as the ordered list (but we still piggyback local uncached popularity for popularity collection)
+
         // Popularity information
         // OBSOLETE (learned index cannot support duplicate popularities; actually we do NOT count the pointers of std::multimap in cache size usage): Use learned index to replace local cached/uncached sorted_popularity_ for less memory usage (especially for local cached objects due to limited # of uncached objects)
         uint64_t sorted_popularity_multimap_key_size_; // Total size of keys in sorted_popularity_multimap_

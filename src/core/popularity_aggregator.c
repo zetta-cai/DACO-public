@@ -25,48 +25,75 @@ namespace covered
         rwlock_for_popularity_aggregator_ = NULL;
     }
 
-    void PopularityAggregator::updateAggregatedPopularity(const Key& key, const uint32_t& source_edge_idx, const Popularity& local_uncached_popularity)
+    void PopularityAggregator::updateAggregatedUncachedPopularity(const Key& key, const uint32_t& source_edge_idx, const Popularity& local_uncached_popularity, const bool& is_cooperative_cached)
     {
         checkPointers_();
 
-        // Acquire a write lock to update aggregated popularity and max admission benefit atomically
-        const std::string context_name = "PopularityAggregator::updateAggregatedPopularity()";
+        // Acquire a write lock to update aggregated uncached popularity and max global admission benefit atomically
+        const std::string context_name = "PopularityAggregator::updateAggregatedUncachedPopularity()";
         rwlock_for_popularity_aggregator_->acquire_lock(context_name);
 
         perkey_benefit_popularity_iter_t perkey_benefit_popularity_iter = perkey_benefit_popularity_table_.find(key);
         if (perkey_benefit_popularity_iter == perkey_benefit_popularity_table_.end()) // New key
         {
-            addAggregatedPopularityForNewKey_(key, source_edge_idx, local_uncached_popularity);
+            addAggregatedUncachedPopularityForNewKey_(key, source_edge_idx, local_uncached_popularity, is_cooperative_cached);
         }
         else // Existing key
         {
-            updateAggregatedPopularityForExistingKey_(key, source_edge_idx, local_uncached_popularity);
+            updateAggregatedUncachedPopularityForExistingKey_(key, source_edge_idx, local_uncached_popularity, is_cooperative_cached);
         }
 
-        // TODO: Only keep aggregated popularities of objects with large max admission benefits for selective popularity aggregation
+        // NOTE: we try to discard global less populart objects even if we update aggregated uncached popularity for an existing key (besides add aggregated uncached popularity for a new key), as AggregatedUncachedPopularity could add new local uncached popularity for the existing key
+        // NOTE: this is different from local uncached metadata, which will NOT increase cache size usage if update local uncached metadata for an existing key (ONLY trigger removal if add local uncached metadata for a new key)
+
+        // Discard the objects with small max global admission benefits if popularity aggregation capacity bytes are used up
+        discardGlobalLessPopularObjects_();
 
         rwlock_for_popularity_aggregator_->unlock(context_name);
         return;
     }
 
-    void PopularityAggregator::addAggregatedPopularityForNewKey_(const Key& key, const uint32_t& source_edge_idx, const Popularity& local_uncached_popularity)
+    void PopularityAggregator::addAggregatedUncachedPopularityForNewKey_(const Key& key, const uint32_t& source_edge_idx, const Popularity& local_uncached_popularity, const bool& is_cooperative_cached)
     {
-        // NOTE: we have already acquired a write lock in updateAggregatedPopularity() for thread safety
+        // NOTE: we have already acquired a write lock in updateAggregatedUncachedPopularity() for thread safety
 
-        // Add new aggregated popularity for the new key
-        AggregatedPopularity new_aggregated_popularity = AggregatedPopularity(key, edgecnt_);
-        new_aggregated_popularity.update(source_edge_idx, local_uncached_popularity, topk_edgecnt_);
+        // Prepare new aggregated uncached popularity for the new key
+        AggregatedUncachedPopularity new_aggregated_uncached_popularity(key, edgecnt_);
+        new_aggregated_uncached_popularity.update(source_edge_idx, local_uncached_popularity, topk_edgecnt_);
 
-        // TODO: END HERE
+        // Prepare new max global admission benefit for the new key
+        DeltaReward new_max_global_admission_benefit = new_aggregated_uncached_popularity.getMaxGlobalAdmissionBenefit(is_cooperative_cached);
 
-        // TODO: Update benefit_popularity_multimap_
+        // Insert new aggregated uncached popularity and new max global admission benefit into benefit_popularity_multimap_ for the new key
+        benefit_popularity_iter_t new_benefit_popularity_iter = benefit_popularity_multimap_.insert(std::pair(new_max_global_admission_benefit, new_aggregated_uncached_popularity));
 
-        // TODO: Update perkey_benefit_popularity_table_
+        // Insert new key with new benfit_popularity_iter into perkey_benefit_popularity_table_
+        perkey_benefit_popularity_table_.insert(std::pair(key, new_benefit_popularity_iter));
 
         return;
     }
 
-    void updateAggregatedPopularityForExistingKey_(const Key& key, const uint32_t& source_edge_idx, const Popularity& local_uncached_popularity);
+    void updateAggregatedUncachedPopularityForExistingKey_(const Key& key, const uint32_t& source_edge_idx, const Popularity& local_uncached_popularity, const bool& is_cooperative_cached);
+
+    void PopularityAggregator::discardGlobalLessPopularObjects_()
+    {
+        while (true)
+        {
+            // TODO: (END HERE) maintain size_bytes_ for cache size usage of popularity aggregator
+
+            // Check if popularity aggregation capacity bytes are used up
+            if (size_bytes_ <= popularity_aggregation_capacity_bytes_)
+            {
+                break;
+            }
+            else
+            {
+                // TODO: Find the object with the minimum max global admission benefit
+                
+                // TODO: Remove it from benefit_popularity_multimap_ and perkey_benefit_popularity_table_
+            }
+        }
+    }
 
     void PopularityAggregator::checkPointers_() const
     {

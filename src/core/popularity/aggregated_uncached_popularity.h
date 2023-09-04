@@ -1,11 +1,11 @@
 /*
- * AggregatedPopularity: aggregated uncached popularity including key, sum, top-k, and bitmap for selective popularity aggregation with limited metadata overhead.
+ * AggregatedUncachedPopularity: aggregated uncached popularity including key, sum, top-k, and bitmap for selective popularity aggregation with limited metadata overhead.
  * 
  * By Siyuan Sheng (2023.09.03).
  */
 
-#ifndef AGGREGATED_POPULARITY_H
-#define AGGREGATED_POPULARITY_H
+#ifndef AGGREGATED_UNCACHED_POPULARITY_H
+#define AGGREGATED_UNCACHED_POPULARITY_H
 
 #include <list>
 #include <string>
@@ -16,20 +16,20 @@
 namespace covered
 {
     typedef float Reward; // Local reward for local cached objects
-    typedef float DeltaReward; // Local admission benefit for local uncached objects, global admission benefit for aggregated uncached popularity, global admission benefit and eviction cost for trade-off-aware cache placement and eviction
+    typedef float DeltaReward; // Local admission benefit for local uncached metadata, max global admission benefit for aggregated uncached popularity, global admission benefit and eviction cost for trade-off-aware cache placement and eviction
 
-    class AggregatedPopularity
+    class AggregatedUncachedPopularity
     {
     public:
-        AggregatedPopularity();
-        AggregatedPopularity(const Key& key, const uint32_t& edgecnt);
-        ~AggregatedPopularity();
+        AggregatedUncachedPopularity();
+        AggregatedUncachedPopularity(const Key& key, const uint32_t& edgecnt);
+        ~AggregatedUncachedPopularity();
 
         void update(const uint32_t& source_edge_idx, const Popularity& local_uncached_popularity, const uint32_t& topk_edgecnt);
 
-        DeltaReward getMaxAdmissionBenefit(const bool& is_cooperative_cached) const;
+        DeltaReward getMaxGlobalAdmissionBenefit(const bool& is_cooperative_cached) const;
 
-        const AggregatedPopularity& operator=(const AggregatedPopularity& other);
+        const AggregatedUncachedPopularity& operator=(const AggregatedUncachedPopularity& other);
     private:
         typedef std::pair<uint32_t, Popularity> edgeidx_popularity_pair_t;
 
