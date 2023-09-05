@@ -39,12 +39,18 @@ namespace covered
         const CoveredDirectoryLookupRequest* const covered_directory_lookup_request_ptr = static_cast<const CoveredDirectoryLookupRequest*>(control_request_ptr);
         Key tmp_key = covered_directory_lookup_request_ptr->getKey();
 
-        edge_wrapper_ptr_->getCooperationWrapperPtr()->lookupLocalDirectoryByBeaconServer(tmp_key, edge_cache_server_worker_recvreq_source_addr, is_being_written, is_valid_directory_exist, directory_info);
+        // Lookup cooperation wrapper to get valid directory information if any
+        // Also check whether the key is cached by a local/neighbor edge node (even if invalid temporarily)
+        bool is_global_cached = edge_wrapper_ptr_->getCooperationWrapperPtr()->lookupLocalDirectoryByBeaconServer(tmp_key, edge_cache_server_worker_recvreq_source_addr, is_being_written, is_valid_directory_exist, directory_info);
 
-        // TODO: END HERE
-        // TODO: Popularity collection (update aggregated popularity for new local uncached popularity if key is tracked in local uncached metadata, or remove old local uncached popularity from aggregated popularity if key is NOT tracked now)
+        // Selective popularity aggregation
+        const uint32_t source_edge_idx = covered_directory_lookup_request_ptr->getSourceIndex();
+        const Popularity local_uncached_popularity = covered_directory_lookup_request_ptr->getLocalUncachedPopularity();
+        const bool is_tracked_by_source_edge_node = covered_directory_lookup_request_ptr->isTracked(); // If key is tracked by local uncached metadata in the source edge node (i.e., if local uncached popularity is valid)
+        edge_wrapper_ptr_->getCoveredCacheManagerPtr()->updatePopularityAggregatorForAggregatedPopularity(tmp_key, source_edge_idx, is_tracked_by_source_edge_node, local_uncached_popularity, is_global_cached); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in source edge node
         
-        // TODO: Victim synchronization
+        // TODO: END HERE
+        // Victim synchronization
 
         return;
     }

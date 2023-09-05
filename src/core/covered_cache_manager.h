@@ -32,7 +32,7 @@ namespace covered
 
         // For popularity aggregation
 
-        void updatePopularityAggregatorForAggregatedPopularity(const Key& key, const uint32_t& source_edge_idx, const Popularity& local_uncached_popularity);
+        void updatePopularityAggregatorForAggregatedPopularity(const Key& key, const uint32_t& source_edge_idx, const bool& is_tracked_by_source_edge_node, const Popularity& local_uncached_popularity, const bool& is_global_cached);
         
         // For victim synchronization
 

@@ -58,12 +58,34 @@ namespace covered
         return;
     }
 
-    DeltaReward AggregatedUncachedPopularity::getMaxGlobalAdmissionBenefit(const bool& is_cooperative_cached) const
+    void AggregatedUncachedPopularity::clear(const uint32_t& source_edge_idx, const uint32_t& topk_edgecnt)
+    {
+        assert(source_edge_idx < bitmap_.size());
+
+        // NOTE: NO need to remove old local uncached popularity if never received any from the source edge idx before
+        bool is_existing = bitmap_[source_edge_idx];
+        if (is_existing) // The source edge idx has reported local uncached popularity before
+        {
+            // Get original local uncahced popularity for the existing source edge idx
+            Popularity original_local_uncached_popularity = getLocalUncachedPopularityForExistingEdgeIdx_(source_edge_idx);
+
+            // Update sum of local uncached popularity for the existing edge idx
+            minusLocalUncachedPopularityFromSum_(original_local_uncached_popularity);
+
+            // Remove old local uncached popularity from top-k list if necessary
+            clearTopkForExistingEdgeIdx_(source_edge_idx, topk_edgecnt); // NOTE: existing edge idx may already exist in top-k list or not
+
+            // Update bitmap for the removal
+            bitmap_[source_edge_idx] = false;
+        }
+    }
+
+    DeltaReward AggregatedUncachedPopularity::calcMaxGlobalAdmissionBenefit(const bool& is_global_cached) const
     {
         // TODO: Use a heuristic or learning-based approach for parameter tuning to calculate delta rewards for max global admission benefits (refer to state-of-the-art studies such as LRB and GL-Cache)
 
         DeltaReward max_global_admission_benefit = 0.0;
-        if (is_cooperative_cached) // Redirected cache hits become local cache hits for the edge nodes with top-k local uncached popularity
+        if (is_global_cached) // Redirected cache hits become local cache hits for the edge nodes with top-k local uncached popularity
         {
             // max_global_admission_benefit = (w1 - w2) * topk_local_uncached_popularity_;
         }
@@ -165,6 +187,30 @@ namespace covered
         return topk_list_iter;
     }
 
+    bool AggregatedUncachedPopularity::updateTopkForExistingEdgeIdx_(const uint32_t& source_edge_idx, const Popularity& local_uncached_popularity, const uint32_t& topk_edgecnt)
+    {
+        assert(bitmap_[source_edge_idx] == true);
+
+        // Check if local uncached popularity of the existing edge idx should be inserted into top-k list
+        bool must_insert = false;
+        std::list<edgeidx_popularity_pair_t>::const_iterator topk_list_iter = getTopkListIterForEdgeIdx_(source_edge_idx);
+        if (topk_list_iter != topk_edgeidx_local_uncached_popularity_pairs_.end()) // The existing source edge idx is in top-k list
+        {
+            // Remove the old list entry -> now the existing source edge idx becomes a non-topk edge idx
+            topk_edgeidx_local_uncached_popularity_pairs_.erase(topk_list_iter);
+
+            must_insert = true; // As top-k list MUST be not full after removal of the old list entry, local uncached popularity of the existing source edge idx MUST be inserted into top-k list
+        }
+        
+        bool is_insert = tryToInsertForNontopkEdgeIdx_(source_edge_idx, local_uncached_popularity, topk_edgecnt);
+        if (must_insert)
+        {
+            assert(is_insert == true);
+        }
+
+        return is_insert;
+    }
+
     bool AggregatedUncachedPopularity::tryToInsertForNontopkEdgeIdx_(const uint32_t& source_edge_idx, const Popularity& local_uncached_popularity, const uint32_t& topk_edgecnt)
     {
         assert(getTopkListIterForEdgeIdx_(source_edge_idx) == topk_edgeidx_local_uncached_popularity_pairs_.end());
@@ -211,27 +257,18 @@ namespace covered
         return need_insert;
     }
 
-    bool AggregatedUncachedPopularity::updateTopkForExistingEdgeIdx_(const uint32_t& source_edge_idx, const Popularity& local_uncached_popularity, const uint32_t& topk_edgecnt)
+    void AggregatedUncachedPopularity::clearTopkForExistingEdgeIdx_(const uint32_t& source_edge_idx, const uint32_t& topk_edgecnt)
     {
         assert(bitmap_[source_edge_idx] == true);
 
-        // Check if local uncached popularity of the existing edge idx should be inserted into top-k list
-        bool must_insert = false;
+        // Check if local uncached popularity of the existing edge idx should be removed from top-k list
         std::list<edgeidx_popularity_pair_t>::const_iterator topk_list_iter = getTopkListIterForEdgeIdx_(source_edge_idx);
         if (topk_list_iter != topk_edgeidx_local_uncached_popularity_pairs_.end()) // The existing source edge idx is in top-k list
         {
-            // Remove the old list entry -> now the existing source edge idx becomes a non-topk edge idx
+            // Remove the old list entry
             topk_edgeidx_local_uncached_popularity_pairs_.erase(topk_list_iter);
-
-            must_insert = true; // As top-k list MUST be not full after removal of the old list entry, local uncached popularity of the existing source edge idx MUST be inserted into top-k list
-        }
-        
-        bool is_insert = tryToInsertForNontopkEdgeIdx_(source_edge_idx, local_uncached_popularity, topk_edgecnt);
-        if (must_insert)
-        {
-            assert(is_insert == true);
         }
 
-        return is_insert;
+        return;
     }
 }

@@ -46,8 +46,10 @@ namespace covered
         return all_dirinfo;
     }
 
-    void DirectoryTable::lookup(const Key& key, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
+    bool DirectoryTable::lookup(const Key& key, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
     {
+        bool is_global_cached = false; // Whether the key is cached by a local/neighbor edge node (even if invalid temporarily)
+
         // Prepare GetAllValidDirinfoParam
         dirinfo_set_t valid_directory_info_set;
         DirectoryEntry::GetAllValidDirinfoParam tmp_param = {valid_directory_info_set};
@@ -57,6 +59,7 @@ namespace covered
         if (!is_exist) // key does not exist
         {
             is_valid_directory_exist = false;
+            is_global_cached = false;
         }
         else // key exists
         {
@@ -68,6 +71,7 @@ namespace covered
             {
                 is_valid_directory_exist = false;
             }
+            is_global_cached = true;
         } // End of if key exists
 
         // Get the target edge index from valid neighbors
@@ -89,7 +93,7 @@ namespace covered
             }
         }
 
-        return;
+        return is_global_cached;
     }
 
     void DirectoryTable::update(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, const DirectoryMetadata& directory_metadata)
@@ -148,10 +152,10 @@ namespace covered
         return;
     }
 
-    bool DirectoryTable::isCooperativeCached(const Key& key) const
+    bool DirectoryTable::isGlobalCached(const Key& key) const
     {
-        bool is_cooperative_cached = directory_hashtable_.isExist(key);
-        return is_cooperative_cached;
+        bool is_global_cached = directory_hashtable_.isExist(key); // Whether the key is cached by a local/neighbor edge node (even if invalid temporarily)
+        return is_global_cached;
     }
 
     void DirectoryTable::invalidateAllDirinfoForKeyIfExist(const Key& key, dirinfo_set_t& all_dirinfo)

@@ -18,9 +18,9 @@ namespace covered
 
     // For popularity aggregation
 
-    void CoveredCacheManager::updatePopularityAggregatorForAggregatedPopularity(const Key& key, const uint32_t& source_edge_idx, const Popularity& local_uncached_popularity)
+    void CoveredCacheManager::updatePopularityAggregatorForAggregatedPopularity(const Key& key, const uint32_t& source_edge_idx, const bool& is_tracked_by_source_edge_node, const Popularity& local_uncached_popularity, const bool& is_global_cached)
     {
-        popularity_aggregator_.updateAggregatedPopularity(key, source_edge_idx, local_uncached_popularity);
+        popularity_aggregator_.updateAggregatedPopularity(key, source_edge_idx, is_tracked_by_source_edge_node, local_uncached_popularity, is_global_cached);
         return;
     }
 

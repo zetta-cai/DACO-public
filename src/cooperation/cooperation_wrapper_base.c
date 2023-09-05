@@ -133,7 +133,7 @@ namespace covered
         return;
     }
 
-    void CooperationWrapperBase::lookupLocalDirectoryByBeaconServer(const Key& key, const NetworkAddr& cache_server_worker_recvreq_dst_addr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info)
+    bool CooperationWrapperBase::lookupLocalDirectoryByBeaconServer(const Key& key, const NetworkAddr& cache_server_worker_recvreq_dst_addr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info)
     {
         checkPointers_();
 
@@ -141,30 +141,36 @@ namespace covered
         std::string context_name = "CooperationWrapperBase::lookupLocalDirectoryByBeaconServer()";
         cooperation_wrapper_perkey_rwlock_ptr_->acquire_lock(key, context_name);
 
+        bool is_global_cached = false; // Whether the key is cached by a local/neighbor edge node (even if invalid temporarily)
+
         block_tracker_ptr_->blockEdgeForKeyIfExistAndBeingWritten(key, cache_server_worker_recvreq_dst_addr, is_being_written);
-        lookupLocalDirectory_(key, is_being_written, is_valid_directory_exist, directory_info);
+        is_global_cached = lookupLocalDirectory_(key, is_being_written, is_valid_directory_exist, directory_info);
 
         // Release a read lock
         cooperation_wrapper_perkey_rwlock_ptr_->unlock(key, context_name);
 
-        return;
+        return is_global_cached;
     }
 
-    void CooperationWrapperBase::lookupLocalDirectory_(const Key& key, const bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
+    bool CooperationWrapperBase::lookupLocalDirectory_(const Key& key, const bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
     {
         // No need to acquire a read/write lock, which has been done in public functions
+
+        bool is_global_cached = false; // Whether the key is cached by a local/neighbor edge node (even if invalid temporarily)
 
         if (!is_being_written) // if key is NOT being written
         {
             assert(directory_table_ptr_ != NULL);
-            directory_table_ptr_->lookup(key, is_valid_directory_exist, directory_info);
+            is_global_cached = directory_table_ptr_->lookup(key, is_valid_directory_exist, directory_info);
         }
         else // key is being written
         {
             is_valid_directory_exist = false;
             directory_info = DirectoryInfo();
+
+            is_global_cached = directory_table_ptr_->isGlobalCached(key);
         }
-        return;
+        return is_global_cached;
     }
 
     bool CooperationWrapperBase::updateLocalDirectory(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info)
@@ -207,10 +213,10 @@ namespace covered
 
         LockResult lock_result = LockResult::kNoneed;
 
-        // Check if key is cooperatively cached first
-        bool is_cooperative_cached = directory_table_ptr_->isCooperativeCached(key);
+        // Check if key is globally cached first
+        bool is_global_cached = directory_table_ptr_->isGlobalCached(key);
 
-        if (is_cooperative_cached) // Acquire write lock for cooperatively cached object for MSI protocol
+        if (is_global_cached) // Acquire write lock for globally cached object for MSI protocol
         {
             bool is_successful = block_tracker_ptr_->casWriteflagForKey(key);
             if (is_successful) // Acquire write lock successfully
@@ -242,10 +248,10 @@ namespace covered
 
         LockResult lock_result = LockResult::kNoneed;
 
-        // Check if key is cooperatively cached first
-        bool is_cooperative_cached = directory_table_ptr_->isCooperativeCached(key);
+        // Check if key is globally cached first
+        bool is_global_cached = directory_table_ptr_->isGlobalCached(key);
 
-        if (is_cooperative_cached) // Acquire write lock for cooperatively cached object for MSI protocol
+        if (is_global_cached) // Acquire write lock for globally cached object for MSI protocol
         {
             bool is_successful = block_tracker_ptr_->casWriteflagOrBlockEdgeForKey(key, cache_server_worker_recvreq_dst_addr);
             if (is_successful) // Acquire write lock successfully

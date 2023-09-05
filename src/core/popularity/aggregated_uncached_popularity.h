@@ -26,9 +26,11 @@ namespace covered
         ~AggregatedUncachedPopularity();
 
         void update(const uint32_t& source_edge_idx, const Popularity& local_uncached_popularity, const uint32_t& topk_edgecnt);
+        void clear(const uint32_t& source_edge_idx, const uint32_t& topk_edgecnt);
 
-        DeltaReward getMaxGlobalAdmissionBenefit(const bool& is_cooperative_cached) const;
+        const Key& getKey() const;
 
+        DeltaReward calcMaxGlobalAdmissionBenefit(const bool& is_global_cached) const;
         uint64_t getSizeForCapacity() const;
 
         const AggregatedUncachedPopularity& operator=(const AggregatedUncachedPopularity& other);
@@ -42,8 +44,9 @@ namespace covered
 
         // For top-k list
         std::list<edgeidx_popularity_pair_t>::const_iterator getTopkListIterForEdgeIdx_(const uint32_t& source_edge_idx) const;
-        bool tryToInsertForNontopkEdgeIdx_(const uint32_t& source_edge_idx, const Popularity& local_uncached_popularity, const uint32_t& topk_edgecnt); // Return if local uncached popularity is inserted into top-k list
         bool updateTopkForExistingEdgeIdx_(const uint32_t& source_edge_idx, const Popularity& local_uncached_popularity, const uint32_t& topk_edgecnt); // Return if local uncached popularity is inserted into top-k list
+        bool tryToInsertForNontopkEdgeIdx_(const uint32_t& source_edge_idx, const Popularity& local_uncached_popularity, const uint32_t& topk_edgecnt); // Return if local uncached popularity is inserted into top-k list
+        void clearTopkForExistingEdgeIdx_(const uint32_t& source_edge_idx, const uint32_t& topk_edgecnt);
 
         static const std::string kClassName;
 
