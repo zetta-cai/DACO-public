@@ -20,6 +20,7 @@ namespace covered
         Key(const std::string& keystr);
         ~Key();
 
+        uint32_t getKeyLength() const;
         std::string getKeystr() const;
 
         uint32_t getKeyPayloadSize() const;

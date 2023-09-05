@@ -183,7 +183,7 @@ namespace covered
         // push_front already places the new object-level metadata to the head of LRU list -> NO need to update LRU list order
 
         // Update size usage of key-level metadata
-        perkey_metadata_list_key_size_ = Util::uint64Add(perkey_metadata_list_key_size_, key.getKeystr().length());
+        perkey_metadata_list_key_size_ = Util::uint64Add(perkey_metadata_list_key_size_, key.getKeyLength());
 
         return perkey_metadata_iter;
     }
@@ -217,7 +217,7 @@ namespace covered
         assert(perkey_metadata_iter != perkey_metadata_list_.end()); // For existing key
 
         // Update size usage of key-level metadata
-        perkey_metadata_list_key_size_ = Util::uint64Minus(perkey_metadata_list_key_size_, perkey_metadata_iter->first.getKeystr().length());
+        perkey_metadata_list_key_size_ = Util::uint64Minus(perkey_metadata_list_key_size_, perkey_metadata_iter->first.getKeyLength());
 
         perkey_metadata_list_.erase(perkey_metadata_iter);
 
@@ -355,7 +355,7 @@ namespace covered
         sorted_popularity_multimap_t::iterator new_popularity_iter = sorted_popularity_multimap_.insert(std::pair(new_popularity, perkey_lookup_iter->first));
 
         // Update size usage of popularity information
-        sorted_popularity_multimap_key_size_ = Util::uint64Add(sorted_popularity_multimap_key_size_, perkey_lookup_iter->first.getKeystr().length());
+        sorted_popularity_multimap_key_size_ = Util::uint64Add(sorted_popularity_multimap_key_size_, perkey_lookup_iter->first.getKeyLength());
 
         return new_popularity_iter;
     }
@@ -403,7 +403,7 @@ namespace covered
         sorted_popularity_multimap_.erase(sorted_popularity_iter);
 
         // Update size usage of popularity information
-        sorted_popularity_multimap_key_size_ = Util::uint64Minus(sorted_popularity_multimap_key_size_, perkey_lookup_iter->first.getKeystr().length());
+        sorted_popularity_multimap_key_size_ = Util::uint64Minus(sorted_popularity_multimap_key_size_, perkey_lookup_iter->first.getKeyLength());
 
         return;
     }
@@ -437,7 +437,7 @@ namespace covered
         assert(perkey_lookup_iter != perkey_lookup_table_.end());
 
         // Update size usage of lookup table
-        perkey_lookup_table_key_size_ = Util::uint64Add(perkey_lookup_table_key_size_, key.getKeystr().length());
+        perkey_lookup_table_key_size_ = Util::uint64Add(perkey_lookup_table_key_size_, key.getKeyLength());
 
         return perkey_lookup_iter;
     }
@@ -473,7 +473,7 @@ namespace covered
         assert(perkey_lookup_iter != perkey_lookup_table_.end()); // For existing key
 
         // Update size usage of lookup table
-        perkey_lookup_table_key_size_ = Util::uint64Minus(perkey_lookup_table_key_size_, perkey_lookup_iter->first.getKeystr().length());
+        perkey_lookup_table_key_size_ = Util::uint64Minus(perkey_lookup_table_key_size_, perkey_lookup_iter->first.getKeyLength());
 
         perkey_lookup_table_.erase(perkey_lookup_iter);
 

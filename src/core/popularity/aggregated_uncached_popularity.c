@@ -74,6 +74,18 @@ namespace covered
         return max_global_admission_benefit;
     }
 
+    uint64_t AggregatedUncachedPopularity::getSizeForCapacity() const
+    {
+        uint64_t total_size = 0;
+
+        total_size += key_.getKeyLength();
+        total_size += sizeof(Popularity);
+        total_size += topk_edgeidx_local_uncached_popularity_pairs_.size() * (sizeof(uint32_t) + sizeof(Popularity));
+        total_size += (bitmap_.size() * sizeof(bool) - 1) / 8 + 1; // NOTE: we just use std::vector<bool> to simulate a bitmap, but it can be replaced by a bitset with bitwise operations
+
+        return total_size;
+    }
+
     const AggregatedUncachedPopularity& AggregatedUncachedPopularity::operator=(const AggregatedUncachedPopularity& other)
     {
         if (this != &other)

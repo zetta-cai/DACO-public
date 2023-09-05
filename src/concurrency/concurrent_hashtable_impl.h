@@ -109,7 +109,7 @@ namespace covered
             tmp_hashtable.insert(std::pair<Key, V>(key, value));
             is_exist = false;
 
-            Util::uint64AddForAtomic(total_key_size_, static_cast<uint64_t>(key.getKeystr().length()));
+            Util::uint64AddForAtomic(total_key_size_, static_cast<uint64_t>(key.getKeyLength()));
             Util::uint64AddForAtomic(total_value_size_, static_cast<uint64_t>(value.getSizeForCapacity()));
         }
         else // key exists
@@ -151,7 +151,7 @@ namespace covered
             tmp_hashtable.insert(std::pair<Key, V>(key, value));
             is_exist = false;
 
-            Util::uint64AddForAtomic(total_key_size_, static_cast<uint64_t>(key.getKeystr().length()));
+            Util::uint64AddForAtomic(total_key_size_, static_cast<uint64_t>(key.getKeyLength()));
             Util::uint64AddForAtomic(total_value_size_, static_cast<uint64_t>(value.getSizeForCapacity()));
         }
         else // key exists
@@ -207,7 +207,7 @@ namespace covered
             {
                 tmp_hashtable.erase(iter);
 
-                Util::uint64MinusForAtomic(total_key_size_, static_cast<uint64_t>(key.getKeystr().length()));
+                Util::uint64MinusForAtomic(total_key_size_, static_cast<uint64_t>(key.getKeyLength()));
                 Util::uint64MinusForAtomic(total_value_size_, original_value_size);
             }
         }
@@ -275,7 +275,7 @@ namespace covered
             tmp_hashtable.erase(iter);
             is_exist = true;
 
-            Util::uint64MinusForAtomic(total_key_size_, static_cast<uint64_t>(key.getKeystr().length()));
+            Util::uint64MinusForAtomic(total_key_size_, static_cast<uint64_t>(key.getKeyLength()));
             Util::uint64MinusForAtomic(total_value_size_, original_value_size);
         }
         else // key NOT exist

@@ -82,7 +82,7 @@ namespace covered
     {
         uint64_t total_size = 0;
 
-        total_size += key_.getKeystr().length();
+        total_size += key_.getKeyLength();
         total_size += sizeof(ObjectSize);
         total_size += sizeof(Popularity);
         total_size += sizeof(Popularity);

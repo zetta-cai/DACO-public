@@ -18,6 +18,11 @@ namespace covered
 
     Key::~Key() {}
 
+    uint32_t Key::getKeyLength() const
+    {
+        return keystr_.length();
+    }
+
     std::string Key::getKeystr() const
     {
         return keystr_;

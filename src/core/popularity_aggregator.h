@@ -1,7 +1,7 @@
 /*
  * PopularityAggregator: track aggregated uncached popularity for the objects locally uncached in some edge nodes (thread safe).
  *
- * NOTE: for memory efficiency of popularity metadata, we only track the global popular objects (with large max global admission benefits) instead of all local uncached objects. For each global popular object, we only track (sum + top-k + bitmap) local uncached popularities instead of those of all edge nodes.
+ * NOTE: for memory efficiency of popularity metadata, we only track the global popular objects (with large max global admission benefits) instead of all local uncached objects for selective popularity aggregation. For each global popular object, we only track (sum + top-k + bitmap) local uncached popularities instead of those of all edge nodes to reduce metadata overhead further.
  * 
  * By Siyuan Sheng (2023.09.03).
  */
@@ -54,6 +54,7 @@ namespace covered
         mutable Rwlock* rwlock_for_popularity_aggregator_;
 
         // Non-const shared variables
+        uint64_t size_bytes_; // Cache size usage of popularity aggregator
         benefit_popularity_multimap_t benefit_popularity_multimap_; // NOTE: we use multimap instead of unordered_map to support duplicate Delta rewards (i.e., max global admission benefits) for different global popular objects
         perkey_benefit_popularity_table_t perkey_benefit_popularity_table_;
     };

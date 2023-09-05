@@ -25,7 +25,7 @@ namespace covered
 
     void GroupLevelMetadata::updateForNewlyGrouped(const Key& key, const Value& value)
     {
-        uint32_t object_size = key.getKeystr().length() + value.getValuesize();
+        uint32_t object_size = key.getKeyLength() + value.getValuesize();
         avg_object_size_ = (avg_object_size_ * object_cnt_ + object_size) / (object_cnt_ + 1);
         object_cnt_++;
         return;
@@ -42,8 +42,8 @@ namespace covered
     {
         assert(object_cnt_ > 0);
 
-        uint32_t original_object_size = key.getKeystr().length() + original_value.getValuesize();
-        uint32_t object_size = key.getKeystr().length() + value.getValuesize();
+        uint32_t original_object_size = key.getKeyLength() + original_value.getValuesize();
+        uint32_t object_size = key.getKeyLength() + value.getValuesize();
         if (avg_object_size_ * object_cnt_ + object_size >= original_object_size)
         {
             avg_object_size_ = (avg_object_size_ * object_cnt_ + object_size - original_object_size) / object_cnt_;
@@ -61,7 +61,7 @@ namespace covered
 
     bool GroupLevelMetadata::updateForDegrouped(const Key& key, const Value& value)
     {
-        uint32_t object_size = key.getKeystr().length() + value.getValuesize();
+        uint32_t object_size = key.getKeyLength() + value.getValuesize();
         if (object_cnt_ > 1)
         {
             if (avg_object_size_ * object_cnt_ >= object_size)

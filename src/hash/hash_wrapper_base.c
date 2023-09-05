@@ -34,6 +34,6 @@ namespace covered
 
     uint32_t HashWrapperBase::hash(const Key& key) const
     {
-        return hashInternal_(key.getKeystr().data(), key.getKeystr().length());
+        return hashInternal_(key.getKeystr().data(), key.getKeyLength());
     }
 }

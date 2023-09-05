@@ -247,7 +247,7 @@ namespace covered
                     assert(tmp_victim_handle != nullptr); // Victim must be cached before eviction
                     uint32_t tmp_victim_value_size = tmp_victim_handle->getSize();
 
-                    conservative_victim_total_size += (tmp_victim_key.getKeystr().length() + tmp_victim_value_size); // Count key size and value size into victim total size (conservative as we do NOT count metadata cache size usage -> the actual saved space after eviction should be larger than conservative_victim_total_size and also required_size)
+                    conservative_victim_total_size += (tmp_victim_key.getKeyLength() + tmp_victim_value_size); // Count key size and value size into victim total size (conservative as we do NOT count metadata cache size usage -> the actual saved space after eviction should be larger than conservative_victim_total_size and also required_size)
                 }
 
                 has_victim_key = true;

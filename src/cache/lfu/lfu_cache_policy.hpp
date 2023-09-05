@@ -105,14 +105,14 @@ namespace covered
                 //Value original_value = list_iter->second.second;
 
                 // Erase previous list entry from frequency_storage
-                uint32_t prev_keysize = list_iter->second.first.getKeystr().length();
+                uint32_t prev_keysize = list_iter->second.first.getKeyLength();
                 uint32_t prev_valuesize = list_iter->second.second.getValuesize();
                 frequency_storage.erase(list_iter);
                 size_ = Util::uint64Minus(size_, static_cast<uint64_t>(sizeof(uint32_t) + prev_keysize + prev_valuesize));
 
                 // Add new list entry into frequency_storage
                 lfu_iterator new_list_iter = frequency_storage.emplace_hint(frequency_storage.cend(), std::make_pair(prev_frequency + 1, std::make_pair(key, value)));
-                size_ = Util::uint64Add(size_, static_cast<uint64_t>(sizeof(uint32_t) + key.getKeystr().length() + value.getValuesize()));
+                size_ = Util::uint64Add(size_, static_cast<uint64_t>(sizeof(uint32_t) + key.getKeyLength() + value.getValuesize()));
 
                 // Update key indexing with new list iterator
                 map_iter->second = new_list_iter;
@@ -136,11 +136,11 @@ namespace covered
                 // Insert the new key-value object with initial frequency of 1
                 constexpr std::uint32_t INIT_VAL = 1;
                 lfu_iterator new_list_iter = frequency_storage.emplace_hint(frequency_storage.cbegin(), INIT_VAL, std::make_pair(key, value));
-                size_ = Util::uint64Add(size_, static_cast<uint64_t>(sizeof(uint32_t) + key.getKeystr().length() + value.getValuesize()));
+                size_ = Util::uint64Add(size_, static_cast<uint64_t>(sizeof(uint32_t) + key.getKeyLength() + value.getValuesize()));
 
                 // Insert new list iterator for key indexing
                 lfu_storage.insert(std::make_pair(key, new_list_iter));
-                size_ = Util::uint64Add(size_, static_cast<uint64_t>(key.getKeystr().length() + sizeof(lfu_iterator)));
+                size_ = Util::uint64Add(size_, static_cast<uint64_t>(key.getKeyLength() + sizeof(lfu_iterator)));
             }
 
             return;
@@ -180,11 +180,11 @@ namespace covered
 
                 // Remove the corresponding map entry
                 lfu_storage.erase(victim_map_iter);
-                size_ = Util::uint64Minus(size_, static_cast<uint64_t>(key.getKeystr().length() + sizeof(lfu_iterator)));
+                size_ = Util::uint64Minus(size_, static_cast<uint64_t>(key.getKeyLength() + sizeof(lfu_iterator)));
 
                 // Remove the corresponding list entry
                 frequency_storage.erase(victim_list_iter);
-                size_ = Util::uint64Minus(size_, static_cast<uint64_t>(sizeof(uint32_t) + key.getKeystr().length() + value.getValuesize()));
+                size_ = Util::uint64Minus(size_, static_cast<uint64_t>(sizeof(uint32_t) + key.getKeyLength() + value.getValuesize()));
 
                 is_evict = true;
             }*/
@@ -200,11 +200,11 @@ namespace covered
 
                 // Remove the corresponding map entry
                 lfu_storage.erase(victim_map_iter);
-                size_ = Util::uint64Minus(size_, static_cast<uint64_t>(key.getKeystr().length() + sizeof(lfu_iterator)));
+                size_ = Util::uint64Minus(size_, static_cast<uint64_t>(key.getKeyLength() + sizeof(lfu_iterator)));
 
                 // Remove the corresponding list entry
                 frequency_storage.erase(victim_list_iter);
-                size_ = Util::uint64Minus(size_, static_cast<uint64_t>(sizeof(uint32_t) + key.getKeystr().length() + value.getValuesize()));
+                size_ = Util::uint64Minus(size_, static_cast<uint64_t>(sizeof(uint32_t) + key.getKeyLength() + value.getValuesize()));
 
                 is_evict = true;
             }

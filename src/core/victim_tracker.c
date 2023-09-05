@@ -82,7 +82,7 @@ namespace covered
 
                 dirinfo_map_iter->second.incrRefcnt();
 
-                size_bytes_ = Util::uint64Add(size_bytes_, (tmp_key.getKeystr().length() + dirinfo_map_iter->second.getSizeForCapacity())); // For each inserted victim dirinfo of a new local synced victim
+                size_bytes_ = Util::uint64Add(size_bytes_, (tmp_key.getKeyLength() + dirinfo_map_iter->second.getSizeForCapacity())); // For each inserted victim dirinfo of a new local synced victim
             }
             else // The key already has a victim dirinfo
             {
@@ -102,7 +102,7 @@ namespace covered
             dirinfo_map_iter->second.decrRefcnt();
             if (dirinfo_map_iter->second.getRefcnt() == 0) // No edge node is tracking the key as a synced victim
             {
-                size_bytes_ = Util::uint64Minus(size_bytes_, (tmp_key.getKeystr().length() + dirinfo_map_iter->second.getSizeForCapacity())); // For each erased victim dirinfo of a old local synced victim
+                size_bytes_ = Util::uint64Minus(size_bytes_, (tmp_key.getKeyLength() + dirinfo_map_iter->second.getSizeForCapacity())); // For each erased victim dirinfo of a old local synced victim
 
                 // Remove the victim dirinfo for the key
                 perkey_victim_dirinfo_.erase(dirinfo_map_iter);

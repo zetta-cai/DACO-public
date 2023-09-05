@@ -41,7 +41,7 @@ namespace covered
 
         // NOTE: for local uncached objects, as we do NOT know per-key value size, we use the (average object size - key size) as the approximated detrack value
         uint32_t approx_value_size = 0;
-        uint32_t detrack_key_size = key.getKeystr().length();
+        uint32_t detrack_key_size = key.getKeyLength();
         if (avg_object_size > detrack_key_size)
         {
             approx_value_size = avg_object_size - detrack_key_size;

@@ -57,7 +57,7 @@ namespace covered
 
         // Non-const shared varaibles
         // TODO: Maintain per-edge-node margin bytes to decide whether to perform placement calculation or not
-        uint64_t size_bytes_;
+        uint64_t size_bytes_; // Cache size usage of victim tracker
         peredge_victim_cacheinfos_t peredge_victim_cacheinfos_;
         perkey_victim_dirinfo_t perkey_victim_dirinfo_;
     };

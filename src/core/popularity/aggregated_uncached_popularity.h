@@ -1,5 +1,5 @@
 /*
- * AggregatedUncachedPopularity: aggregated uncached popularity including key, sum, top-k, and bitmap for selective popularity aggregation with limited metadata overhead.
+ * AggregatedUncachedPopularity: aggregated uncached popularity including key, sum, top-k, and bitmap to reduce metadata overhead further under selective popularity aggregation.
  * 
  * By Siyuan Sheng (2023.09.03).
  */
@@ -28,6 +28,8 @@ namespace covered
         void update(const uint32_t& source_edge_idx, const Popularity& local_uncached_popularity, const uint32_t& topk_edgecnt);
 
         DeltaReward getMaxGlobalAdmissionBenefit(const bool& is_cooperative_cached) const;
+
+        uint64_t getSizeForCapacity() const;
 
         const AggregatedUncachedPopularity& operator=(const AggregatedUncachedPopularity& other);
     private:
