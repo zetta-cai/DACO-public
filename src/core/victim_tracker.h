@@ -3,7 +3,10 @@
  *
  * NOTE: the victims are synced across edge nodes by piggybacking, while extra victims will be lazily fetched by beacon node if synced victims are not enough for admission.
  *
- * NOTE: we call the synced victims from the current edge node as local synced victims, while those from other edge nodes as neighbor synced victims. A part of local/neighbor synced victims are beaconed by the current edge node (i.e., local beaconed victims).
+ * NOTE: we call the synced victims from the current edge node as local synced victims, while those from other edge nodes as neighbor synced victims.
+ * (1) A part of local/neighbor synced victims are beaconed by the current edge node (i.e., local beaconed victims); others are neighbor beaconed victims.
+ * (2) DirectoryInfos of local beaconed victims are updated for replacement of local synced victims triggered by local edge accesses, replacement of neighbor synced victims triggered by received victim syncset, and local/remote directory updates.
+ * (3) DirectoryInfos of neighbor beaconed victims are updated for replacement of neighbor synced victims triggered by received victim syncset.
  * 
  * NOTE: we should pass DirectoryInfos of local beaconed keys for each update of VictimTracker.
  *
@@ -31,10 +34,12 @@ namespace covered
         VictimTracker(const uint32_t& edge_idx, const uint32_t& peredge_synced_victimcnt);
         ~VictimTracker();
 
-        void updateLocalSyncedVictims(const std::list<VictimCacheinfo>& local_synced_victim_cacheinfos, const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& beaconed_local_synced_victim_dirinfosets);
-        void updateSyncedVictimDirinfo(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info);
+        void updateLocalSyncedVictims(const std::list<VictimCacheinfo>& local_synced_victim_cacheinfos, const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& local_beaconed_local_synced_victim_dirinfosets); // For updates on local cached metadata
+        void updateSyncedVictimDirinfo(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info); // For updates on content directory information
 
+        // For victim synchronization
         VictimSyncset getVictimSyncset() const;
+        void updateForVictimSyncset(const uint32_t& source_edge_idx, const VictimSyncset& victim_syncset, const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& local_beaconed_neighbor_synced_victim_dirinfosets);
 
         uint64_t getSizeForCapacity() const;
     private:
@@ -43,6 +48,9 @@ namespace covered
         typedef std::unordered_map<Key, VictimDirinfo, KeyHasher> perkey_victim_dirinfo_t;
 
         static const std::string kClassName;
+
+        void replaceVictimCacheinfosForEdgeIdx_(const uint32_t& edge_idx, const std::list<VictimCacheinfo>& synced_victim_cacheinfos); // Replace cacheinfos of synced victims for a specific edge node
+        void replaceVictimDirinfoSets_(const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& beaconed_synced_victim_dirinfosets, const bool& is_local_beaconed); // Replace VictimDirinfo::dirinfoset of each beaconed synced victim
 
         void checkPointers_() const;
 

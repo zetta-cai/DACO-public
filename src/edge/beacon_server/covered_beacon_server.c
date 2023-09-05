@@ -48,7 +48,7 @@ namespace covered
         const Popularity local_uncached_popularity = covered_directory_lookup_request_ptr->getLocalUncachedPopularity();
         const bool is_tracked_by_source_edge_node = covered_directory_lookup_request_ptr->isTracked(); // If key is tracked by local uncached metadata in the source edge node (i.e., if local uncached popularity is valid)
         edge_wrapper_ptr_->getCoveredCacheManagerPtr()->updatePopularityAggregatorForAggregatedPopularity(tmp_key, source_edge_idx, is_tracked_by_source_edge_node, local_uncached_popularity, is_global_cached); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in source edge node
-        
+
         // TODO: END HERE
         // Victim synchronization
 

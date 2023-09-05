@@ -22,6 +22,8 @@ namespace covered
         VictimSyncset(const std::list<VictimCacheinfo>& local_synced_victims, const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& local_beaconed_victims);
         ~VictimSyncset();
 
+        const std::list<VictimCacheinfo>& getLocalSyncedVictimsRef() const;
+
         uint32_t getVictimSyncsetPayloadSize() const;
         uint32_t serialize(DynamicArray& msg_payload, const uint32_t& position) const;
         uint32_t deserialize(const DynamicArray& msg_payload, const uint32_t& position);

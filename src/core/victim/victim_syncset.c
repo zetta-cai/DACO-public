@@ -12,6 +12,11 @@ namespace covered
 
     VictimSyncset::~VictimSyncset() {}
 
+    const std::list<VictimCacheinfo>& VictimSyncset::getLocalSyncedVictimsRef() const
+    {
+        return local_synced_victims_;
+    }
+
     uint32_t VictimSyncset::getVictimSyncsetPayloadSize() const
     {
         // TODO: we can tune the sizes of local synched/beaconed victims, as the numbers are limited under our design (at most peredge_synced_victimcnt and peredge_synced_victimcnt * edgecnt)
