@@ -15,6 +15,7 @@
 #include "cli/edge_cli.h"
 #include "common/node_wrapper_base.h"
 #include "core/covered_cache_manager.h"
+#include "core/victim/victim_syncset.h"
 #include "cooperation/cooperation_wrapper_base.h"
 #include "event/event_list.h"
 #include "network/propagation_simulator.h"
@@ -96,6 +97,10 @@ namespace covered
         static void* launchCacheServer_(void* edge_wrapper_ptr);
         static void* launchInvalidationServer_(void* edge_wrapper_ptr);
 
+        // (6) covered-specific utility functions
+
+        std::unordered_map<Key, dirinfo_set_t, KeyHasher> getLocalBeaconedVictimsFromVictimSyncset(const VictimSyncset& victim_syncset) const; // NOTE: all edge cache/beacon/invalidation servers will access cooperation wrapper to get content directory information for local beaconed victims from received victim syncset
+
         void checkPointers_() const;
 
         std::string instance_name_;
@@ -106,9 +111,10 @@ namespace covered
         const uint32_t percacheserver_workercnt_; // Come from CLI
 
         // NOTE: we do NOT need per-key rwlock for atomicity among CacheWrapper, CooperationWrapperBase, and CoveredCacheMananger.
-        // (i) CacheWrapper is already thread-safe for cache server and invalidation server, CooperationWrapperBase is already thread-safe for cache server and beacon server, and CoveredCacheMananger is already thread-safe for cache server and beacon server -> NO dead locking as each thread-safe structure releases its own lock after each function.
+        // (1) CacheWrapper is already thread-safe for cache server and invalidation server, CooperationWrapperBase is already thread-safe for cache server and beacon server, and CoveredCacheMananger is already thread-safe for cache server and beacon server -> NO dead locking as each thread-safe structure releases its own lock after each function.
         // (2) Cache server needs to access CacheWrapper, CooperationWrapperBase, and CoveredCacheManager, while there NOT exist any serializability/atomicity issue for requests of the same key, as cache server workers have already partitioned requests by hashing keys into ring buffer.
         // (3) Beacon server needs to access CooperationWrapperBase and CoveredCacheManager, while we do NOT need strong consistency for aggregated popularity or synchronized victims in CoveredCacheManager, and hence NO need to keep serializability/atomicity.
+        // (4) Invalidation server needs to access CacheWrapper and CooperationWrapperBase, while it ONLY invalidates CacheWrapper (NOT affect directory information) and reads CooperationWrapperBase, and hence NO serializability/atomicity issue.
 
         // Non-const shared variables (thread safe)
         CacheWrapper* edge_cache_ptr_; // Data and metadata for local edge cache (thread safe)

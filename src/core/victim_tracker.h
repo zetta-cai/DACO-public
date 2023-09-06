@@ -34,8 +34,8 @@ namespace covered
         VictimTracker(const uint32_t& edge_idx, const uint32_t& peredge_synced_victimcnt);
         ~VictimTracker();
 
-        void updateLocalSyncedVictims(const std::list<VictimCacheinfo>& local_synced_victim_cacheinfos, const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& local_beaconed_local_synced_victim_dirinfosets); // For updates on local cached metadata
-        void updateSyncedVictimDirinfo(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info); // For updates on content directory information
+        void updateLocalSyncedVictims(const std::list<VictimCacheinfo>& local_synced_victim_cacheinfos, const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& local_beaconed_local_synced_victim_dirinfosets); // For updates on local cached metadata, which affects cacheinfos and dirinfos of local synced victims
+        void updateSyncedVictimDirinfo(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info); // For updates on content directory information, which affects dirinfos of local beaconed victims
 
         // For victim synchronization
         VictimSyncset getVictimSyncset() const;
@@ -49,8 +49,8 @@ namespace covered
 
         static const std::string kClassName;
 
-        void replaceVictimCacheinfosForEdgeIdx_(const uint32_t& edge_idx, const std::list<VictimCacheinfo>& synced_victim_cacheinfos); // Replace cacheinfos of synced victims for a specific edge node
-        void replaceVictimDirinfoSets_(const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& beaconed_synced_victim_dirinfosets, const bool& is_local_beaconed); // Replace VictimDirinfo::dirinfoset of each beaconed synced victim
+        void replaceVictimCacheinfosForEdgeIdx_(const uint32_t& edge_idx, const std::list<VictimCacheinfo>& synced_victim_cacheinfos); // Replace cacheinfos of local/neighbor synced victims for a specific edge node
+        void replaceVictimDirinfoSets_(const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& beaconed_synced_victim_dirinfosets, const bool& is_local_beaconed); // Replace VictimDirinfo::dirinfoset of each local/neighbor beaconed victim
 
         void checkPointers_() const;
 

@@ -69,7 +69,7 @@ namespace covered
 
         // (6) covered-specific utility functions
         
-        void updateCacheManagerForLocalSyncedVictims_() const;
+        void updateCacheManagerForLocalSyncedVictims_() const; // NOTE: ONLY edge cache server worker will access local edge cache, which affects local cached metadata and may trigger update for local synced victims
 
         // Const variable
         std::string instance_name_;

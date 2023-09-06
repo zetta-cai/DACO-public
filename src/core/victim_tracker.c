@@ -137,14 +137,16 @@ namespace covered
         // Acquire a write lock to update local synced victims atomically
         std::string context_name = "VictimTracker::updateForVictimSyncset()";
         rwlock_for_victim_tracker_->acquire_lock(context_name);
-
-        // TODO: END HERE
         
-        // TODO: Replace VictimCacheinfors for neighbor synced victims of the given edge node
+        // Replace VictimCacheinfos for neighbor synced victims of the given edge node
+        replaceVictimCacheinfosForEdgeIdx_(source_edge_idx, neighbor_synced_victim_cacheinfos);
 
-        // TODO: Try to replace VictimDirinfo::dirinfoset (if any) for each neighbor beaconed neighbor synced victim of the given edge node
+        // Try to replace VictimDirinfo::dirinfoset (if any) for each neighbor beaconed neighbor synced victim of the given edge node
+        const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& neighbor_beaconed_victim_dirinfosets = victim_syncset.getLocalBeaconedVictimsRef();
+        replaceVictimDirinfoSets_(neighbor_beaconed_victim_dirinfosets, false);
 
-        // TODO: Replace VictimDirinfo::dirinfoset for each local beaconed neighbor synced victim of the given edge node
+        // Replace VictimDirinfo::dirinfoset for each local beaconed neighbor synced victim of the given edge node
+        replaceVictimDirinfoSets_(local_beaconed_neighbor_synced_victim_dirinfosets, true);
 
         rwlock_for_victim_tracker_->unlock(context_name);
 

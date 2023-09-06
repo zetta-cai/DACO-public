@@ -750,6 +750,18 @@ namespace covered
         return NULL;
     }
 
+    // (6) covered-specific utility functions
+
+    std::unordered_map<Key, dirinfo_set_t, KeyHasher> EdgeWrapper::getLocalBeaconedVictimsFromVictimSyncset(const VictimSyncset& victim_syncset) const
+    {
+        checkPointers_();
+
+        std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_victims;
+        // TODO: END HERE
+
+        return local_beaconed_victims;
+    }
+
     void EdgeWrapper::checkPointers_() const
     {
         NodeWrapperBase::checkPointers_();

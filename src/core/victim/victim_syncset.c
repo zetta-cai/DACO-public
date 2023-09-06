@@ -17,6 +17,11 @@ namespace covered
         return local_synced_victims_;
     }
 
+    const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& VictimSyncset::getLocalBeaconedVictimsRef() const
+    {
+        return local_beaconed_victims_;
+    }
+
     uint32_t VictimSyncset::getVictimSyncsetPayloadSize() const
     {
         // TODO: we can tune the sizes of local synched/beaconed victims, as the numbers are limited under our design (at most peredge_synced_victimcnt and peredge_synced_victimcnt * edgecnt)
