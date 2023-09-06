@@ -353,7 +353,7 @@ namespace covered
             if (current_is_beacon) // Get target edge index from local directory information
             {
                 // Frequent polling
-                tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->lookupLocalDirectoryByCacheServer(key, is_being_written, is_valid_directory_exist, directory_info);
+                lookupLocalDirectory_(key, is_being_written, is_valid_directory_exist, directory_info);
                 if (is_being_written) // If key is being written, we need to wait for writes
                 {
                     continue; // Continue to lookup local directory info

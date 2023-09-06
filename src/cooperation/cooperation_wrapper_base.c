@@ -116,7 +116,7 @@ namespace covered
         return dirinfo_set;
     }
 
-    void CooperationWrapperBase::lookupLocalDirectoryByCacheServer(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
+    bool CooperationWrapperBase::lookupLocalDirectoryByCacheServer(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
     {
         checkPointers_();
 
@@ -124,13 +124,15 @@ namespace covered
         std::string context_name = "CooperationWrapperBase::lookupLocalDirectoryByCacheServer()";
         cooperation_wrapper_perkey_rwlock_ptr_->acquire_lock_shared(key, context_name);
 
+        bool is_global_cached = false; // Whether the key is cached by a local/neighbor edge node (even if invalid temporarily)
+
         is_being_written = block_tracker_ptr_->isBeingWrittenForKey(key);
-        lookupLocalDirectory_(key, is_being_written, is_valid_directory_exist, directory_info);
+        is_global_cached = lookupDirectoryTable_(key, is_being_written, is_valid_directory_exist, directory_info);
 
         // Release a read lock
         cooperation_wrapper_perkey_rwlock_ptr_->unlock_shared(key, context_name);
 
-        return;
+        return is_global_cached;
     }
 
     bool CooperationWrapperBase::lookupLocalDirectoryByBeaconServer(const Key& key, const NetworkAddr& cache_server_worker_recvreq_dst_addr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info)
@@ -144,7 +146,7 @@ namespace covered
         bool is_global_cached = false; // Whether the key is cached by a local/neighbor edge node (even if invalid temporarily)
 
         block_tracker_ptr_->blockEdgeForKeyIfExistAndBeingWritten(key, cache_server_worker_recvreq_dst_addr, is_being_written);
-        is_global_cached = lookupLocalDirectory_(key, is_being_written, is_valid_directory_exist, directory_info);
+        is_global_cached = lookupDirectoryTable_(key, is_being_written, is_valid_directory_exist, directory_info);
 
         // Release a read lock
         cooperation_wrapper_perkey_rwlock_ptr_->unlock(key, context_name);
@@ -152,7 +154,7 @@ namespace covered
         return is_global_cached;
     }
 
-    bool CooperationWrapperBase::lookupLocalDirectory_(const Key& key, const bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
+    bool CooperationWrapperBase::lookupDirectoryTable_(const Key& key, const bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
     {
         // No need to acquire a read/write lock, which has been done in public functions
 

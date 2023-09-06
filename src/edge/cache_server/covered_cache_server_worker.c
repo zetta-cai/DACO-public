@@ -50,6 +50,25 @@ namespace covered
 
     // (1.2) Access cooperative edge cache to fetch data from neighbor edge nodes
 
+    void CoveredCacheServerWorker::lookupLocalDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
+    {
+        checkPointers_();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+
+        bool is_global_cached = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->lookupLocalDirectoryByCacheServer(key, is_being_written, is_valid_directory_exist, directory_info);
+
+        // Prepare local uncached popularity of key for popularity aggregation
+        // NOTE: NOT need piggyacking-based popularity collection and victim synchronization for local directory lookup
+        Popularity local_uncached_popularity = 0.0;
+        bool is_key_tracked = tmp_edge_wrapper_ptr->getEdgeCachePtr()->getLocalUncachedPopularity(key, local_uncached_popularity); // If the local uncached key is tracked in local uncached metadata
+
+        // Selective popularity aggregation
+        uint32_t current_edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
+        edge_wrapper_ptr_->getCoveredCacheManagerPtr()->updatePopularityAggregatorForAggregatedPopularity(key, current_edge_idx, is_key_tracked, local_uncached_popularity, is_global_cached); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in current edge node
+
+        return;
+    }
+
     MessageBase* CoveredCacheServerWorker::getReqToLookupBeaconDirectory_(const Key& key, const bool& skip_propagation_latency) const
     {
         checkPointers_();
