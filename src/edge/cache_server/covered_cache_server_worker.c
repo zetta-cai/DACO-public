@@ -226,7 +226,7 @@ namespace covered
 
         // Get directory info sets for local synced victimed beaconed by the current edge node
         const uint32_t current_edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
-        std::unordered_map<Key, dirinfo_set_t, KeyHasher> beaconed_local_synced_victim_dirinfosets;
+        std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_local_synced_victim_dirinfosets;
         for (std::list<VictimCacheinfo>::const_iterator cacheinfo_list_iter = local_synced_victim_cacheinfos.begin(); cacheinfo_list_iter != local_synced_victim_cacheinfos.end(); cacheinfo_list_iter++)
         {
             const Key& tmp_key = cacheinfo_list_iter->getKey();
@@ -234,12 +234,12 @@ namespace covered
             if (current_is_beacon) // Key is beaconed by current edge node
             {
                 dirinfo_set_t tmp_dirinfo_set = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getLocalDirectoryInfos(tmp_key);
-                beaconed_local_synced_victim_dirinfosets.insert(std::pair(tmp_key, tmp_dirinfo_set));
+                local_beaconed_local_synced_victim_dirinfosets.insert(std::pair(tmp_key, tmp_dirinfo_set));
             }
         }
 
         // Update local synced victims for the current edge node
-        tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr()->updateVictimTrackerForLocalSyncedVictims(local_synced_victim_cacheinfos, beaconed_local_synced_victim_dirinfosets); 
+        tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr()->updateVictimTrackerForLocalSyncedVictims(local_synced_victim_cacheinfos, local_beaconed_local_synced_victim_dirinfosets); 
 
         return;
     }

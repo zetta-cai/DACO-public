@@ -30,7 +30,7 @@ namespace covered
 
     // (1) Access content directory information
 
-    void BasicBeaconServer::lookupCooperationLocalDirectory_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvreq_source_addr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
+    void BasicBeaconServer::processReqToLookupLocalDirectory_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvreq_source_addr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
     {
         // Get key from control request if any
         assert(control_request_ptr != NULL);
@@ -43,7 +43,18 @@ namespace covered
         return;
     }
 
-    bool BasicBeaconServer::updateCooperationLocalDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info)
+    MessageBase* BasicBeaconServer::getRspToLookupLocalDirectory_(const Key& key, const bool& is_being_written, const bool& is_valid_directory_exist, const DirectoryInfo& directory_info, const EventList& event_list, const bool& skip_propagation_latency) const
+    {
+        checkPointers_();
+
+        uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
+        MessageBase* directory_lookup_response_ptr = new DirectoryLookupResponse(key, is_being_written, is_valid_directory_exist, directory_info, edge_idx, edge_beacon_server_recvreq_source_addr_, event_list, skip_propagation_latency);
+        assert(directory_lookup_response_ptr != NULL);
+
+        return directory_lookup_response_ptr;
+    }
+
+    bool BasicBeaconServer::processReqToUpdateLocalDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info)
     {
         // Update local directory information in cooperation wrapper
         bool is_being_written = false;

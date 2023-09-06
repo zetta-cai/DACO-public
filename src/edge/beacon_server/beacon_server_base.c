@@ -194,7 +194,7 @@ namespace covered
         bool is_being_written = false;
         bool is_valid_directory_exist = false;
         DirectoryInfo directory_info;
-        lookupCooperationLocalDirectory_(control_request_ptr, edge_cache_server_worker_recvreq_source_addr, is_being_written, is_valid_directory_exist, directory_info);
+        processReqToLookupLocalDirectory_(control_request_ptr, edge_cache_server_worker_recvreq_source_addr, is_being_written, is_valid_directory_exist, directory_info);
 
         // Add intermediate event if with event tracking
         struct timespec lookup_local_directory_end_timestamp = Util::getCurrentTimespec();
@@ -202,8 +202,9 @@ namespace covered
         event_list.addEvent(Event::EDGE_BEACON_SERVER_LOOKUP_LOCAL_DIRECTORY_EVENT_NAME, lookup_local_directory_latency_us);
 
         // Prepare a directory lookup response
-        uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
-        MessageBase* directory_lookup_response_ptr = new DirectoryLookupResponse(tmp_key, is_being_written, is_valid_directory_exist, directory_info, edge_idx, edge_beacon_server_recvreq_source_addr_, event_list, skip_propagation_latency);
+        const Key tmp_key = MessageBase::getKeyFromMessage(control_request_ptr);
+        const bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();
+        MessageBase* directory_lookup_response_ptr = getRspToLookupLocalDirectory_(tmp_key, is_being_written, is_valid_directory_exist, directory_info, event_list, skip_propagation_latency);
         assert(directory_lookup_response_ptr != NULL);
         
         // Push the directory lookup response into edge-to-edge propagation simulator to cache server worker
@@ -236,7 +237,7 @@ namespace covered
         struct timespec update_local_directory_start_timestamp = Util::getCurrentTimespec();
 
         // Update local directory information
-        bool is_being_written = updateCooperationLocalDirectory_(tmp_key, is_admit, directory_info);
+        bool is_being_written = processReqToUpdateLocalDirectory_(tmp_key, is_admit, directory_info);
 
         // Add intermediate event if with event tracking
         struct timespec update_local_directory_end_timestamp = Util::getCurrentTimespec();

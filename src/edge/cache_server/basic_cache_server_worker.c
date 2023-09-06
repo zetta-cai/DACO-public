@@ -41,9 +41,9 @@ namespace covered
         return is_local_cached_and_valid;
     }
 
-     // (1.2) Access cooperative edge cache to fetch data from neighbor edge nodes
+    // (1.2) Access cooperative edge cache to fetch data from neighbor edge nodes
 
-     MessageBase* BasicCacheServerWorker::getReqToLookupBeaconDirectory_(const Key& key, const bool& skip_propagation_latency) const
+    MessageBase* BasicCacheServerWorker::getReqToLookupBeaconDirectory_(const Key& key, const bool& skip_propagation_latency) const
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();

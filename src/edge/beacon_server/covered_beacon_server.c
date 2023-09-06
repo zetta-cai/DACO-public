@@ -29,7 +29,7 @@ namespace covered
 
     // (1) Access content directory information
 
-    void CoveredBeaconServer::lookupCooperationLocalDirectory_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvreq_source_addr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
+    void CoveredBeaconServer::processReqToLookupLocalDirectory_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvreq_source_addr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
     {
         // TODO: For COVERED, beacon node will tell the closest edge node if to admit, w/o independent decision (trade-off-aware admission placement and eviction)
 
@@ -49,13 +49,29 @@ namespace covered
         const bool is_tracked_by_source_edge_node = covered_directory_lookup_request_ptr->isTracked(); // If key is tracked by local uncached metadata in the source edge node (i.e., if local uncached popularity is valid)
         edge_wrapper_ptr_->getCoveredCacheManagerPtr()->updatePopularityAggregatorForAggregatedPopularity(tmp_key, source_edge_idx, is_tracked_by_source_edge_node, local_uncached_popularity, is_global_cached); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in source edge node
 
-        // TODO: END HERE
         // Victim synchronization
+        const VictimSyncset& victim_syncset = covered_directory_lookup_request_ptr->getVictimSyncsetRef();
+        std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = edge_wrapper_ptr_->getLocalBeaconedVictimsFromVictimSyncset(victim_syncset);
+        edge_wrapper_ptr_->getCoveredCacheManagerPtr()->updateVictimTrackerForVictimSyncset(source_edge_idx, victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
 
         return;
     }
 
-    bool CoveredBeaconServer::updateCooperationLocalDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info)
+    MessageBase* CoveredBeaconServer::getRspToLookupLocalDirectory_(const Key& key, const bool& is_being_written, const bool& is_valid_directory_exist, const DirectoryInfo& directory_info, const EventList& event_list, const bool& skip_propagation_latency) const
+    {
+        checkPointers_();
+
+        // Prepare victim syncset for piggybacking-based victim synchronization
+        VictimSyncset victim_syncset = edge_wrapper_ptr_->getCoveredCacheManagerPtr()->accessVictimTrackerForVictimSyncset();
+
+        uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
+        MessageBase* covered_directory_lookup_response_ptr = new CoveredDirectoryLookupResponse(key, victim_syncset, is_being_written, is_valid_directory_exist, directory_info, edge_idx, edge_beacon_server_recvreq_source_addr_, event_list, skip_propagation_latency);
+        assert(covered_directory_lookup_response_ptr != NULL);
+
+        return covered_directory_lookup_response_ptr;
+    }
+
+    bool CoveredBeaconServer::processReqToUpdateLocalDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info)
     {
         // Update local directory information in cooperation wrapper
         bool is_being_written = false;

@@ -756,10 +756,21 @@ namespace covered
     {
         checkPointers_();
 
-        std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_victims;
-        // TODO: END HERE
+        std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets;
 
-        return local_beaconed_victims;
+        const std::list<VictimCacheinfo>& neighbor_synced_victims = victim_syncset.getLocalSyncedVictimsRef();
+        for (std::list<VictimCacheinfo>::const_iterator iter = neighbor_synced_victims.begin(); iter != neighbor_synced_victims.end(); iter++)
+        {
+            const Key& tmp_key = iter->getKey();
+            bool current_is_beacon = currentIsBeacon(tmp_key);
+            if (current_is_beacon) // Key is beaconed by current edge node
+            {
+                dirinfo_set_t tmp_dirinfo_set = cooperation_wrapper_ptr_->getLocalDirectoryInfos(tmp_key);
+                local_beaconed_neighbor_synced_victim_dirinfosets.insert(std::pair(tmp_key, tmp_dirinfo_set));
+            }
+        }
+
+        return local_beaconed_neighbor_synced_victim_dirinfosets;
     }
 
     void EdgeWrapper::checkPointers_() const

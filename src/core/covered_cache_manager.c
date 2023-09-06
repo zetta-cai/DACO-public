@@ -26,9 +26,9 @@ namespace covered
 
     // For victim synchronization
 
-    void CoveredCacheManager::updateVictimTrackerForLocalSyncedVictims(const std::list<VictimCacheinfo>& local_synced_victim_cacheinfos, const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& beaconed_local_synced_victim_dirinfosets)
+    void CoveredCacheManager::updateVictimTrackerForLocalSyncedVictims(const std::list<VictimCacheinfo>& local_synced_victim_cacheinfos, const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& local_beaconed_local_synced_victim_dirinfosets)
     {
-        victim_tracker_.updateLocalSyncedVictims(local_synced_victim_cacheinfos, beaconed_local_synced_victim_dirinfosets);
+        victim_tracker_.updateLocalSyncedVictims(local_synced_victim_cacheinfos, local_beaconed_local_synced_victim_dirinfosets);
         return;
     }
 
@@ -42,6 +42,12 @@ namespace covered
     {
         VictimSyncset victim_syncset = victim_tracker_.getVictimSyncset();
         return victim_syncset;
+    }
+
+    void CoveredCacheManager::updateVictimTrackerForVictimSyncset(const uint32_t& source_edge_idx, const VictimSyncset& victim_syncset, const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& local_beaconed_neighbor_synced_victim_dirinfosets)
+    {
+        victim_tracker_.updateForVictimSyncset(source_edge_idx, victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
+        return;
     }
 
     uint64_t CoveredCacheManager::getSizeForCapacity() const
