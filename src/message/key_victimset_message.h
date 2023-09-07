@@ -1,5 +1,5 @@
 /*
- * KeyVictimsetMessage: the base class for messages each with a key, a local uncached popularity, and a VictimSyncset.
+ * KeyVictimsetMessage: the base class for messages each with a key and a VictimSyncset.
  * 
  * By Siyuan Sheng (2023.08.31).
  */

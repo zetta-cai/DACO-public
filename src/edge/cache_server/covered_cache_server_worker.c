@@ -55,7 +55,7 @@ namespace covered
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
-        bool is_global_cached = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->lookupLocalDirectoryByCacheServer(key, is_being_written, is_valid_directory_exist, directory_info);
+        bool is_global_cached = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->lookupDirectoryTableByCacheServer(key, is_being_written, is_valid_directory_exist, directory_info);
 
         // Prepare local uncached popularity of key for popularity aggregation
         // NOTE: NOT need piggyacking-based popularity collection and victim synchronization for local directory lookup
@@ -64,7 +64,7 @@ namespace covered
 
         // Selective popularity aggregation
         uint32_t current_edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
-        edge_wrapper_ptr_->getCoveredCacheManagerPtr()->updatePopularityAggregatorForAggregatedPopularity(key, current_edge_idx, is_key_tracked, local_uncached_popularity, is_global_cached); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in current edge node
+        edge_wrapper_ptr_->getCoveredCacheManagerPtr()->updatePopularityAggregatorForAggregatedPopularity(key, current_edge_idx, CollectedPopularity(is_key_tracked, local_uncached_popularity), is_global_cached); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in current edge node
 
         return;
     }
@@ -83,7 +83,7 @@ namespace covered
 
         // Prepare CoveredDirectoryLookupRequest to check directory information in beacon node with popularity collection and victim synchronization
         uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
-        MessageBase* covered_directory_lookup_request_ptr = new CoveredDirectoryLookupRequest(key, is_key_tracked, local_uncached_popularity, victim_syncset, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
+        MessageBase* covered_directory_lookup_request_ptr = new CoveredDirectoryLookupRequest(key, is_key_tracked, CollectedPopularity(is_key_tracked, local_uncached_popularity), victim_syncset, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
         assert(covered_directory_lookup_request_ptr != NULL);
 
         return covered_directory_lookup_request_ptr;
@@ -228,12 +228,12 @@ namespace covered
 
     // (4.3) Update content directory information
 
-    void CoveredCacheServerWorker::updateCurrentDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written) const
+    void CoveredCacheServerWorker::updateLocalDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written) const
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
-        is_being_written = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->updateLocalDirectory(key, is_admit, directory_info);
+        is_being_written = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->updateDirectoryTable(key, is_admit, directory_info);
 
         // Update directory info in victim tracker if the local beaconed key is a local/neighbor synced victim
         tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr()->updateVictimTrackerForSyncedVictimDirinfo(key, is_admit, directory_info);
@@ -245,9 +245,36 @@ namespace covered
     {
         // TODO: Piggyback candidate victims in current edge node
 
-        // NOTE: If updateBeaconDirectory_() is admitting a local uncached object, beacon node has already removed local uncached popularities of plaecment nodes from aggregated uncached popularity after placement calculation, and only needs to assert node ID NOT exist in aggregate bitmap and remove the preserved node ID if any -> NO need to piggyback local uncached popularity
-        // NOTE: If updateBeaconDirectory_() is evicting a local cached object, beacon node only needs to assert node ID NOT exist in aggregate bitmap -> NO need to piggyback local uncached popularity
         return false;
+    }
+
+    MessageBase* CoveredCacheServerWorker::getReqToUpdateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, const bool& skip_propagation_latency) const
+    {
+        checkPointers_();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+
+        // Prepare victim syncset for piggybacking-based victim synchronization
+        VictimSyncset victim_syncset = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr()->accessVictimTrackerForVictimSyncset();
+
+        uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
+        MessageBase* covered_directory_update_request_ptr = NULL;
+        if (is_admit) // Try to admit a new key as local cached object (NOTE: local edge cache has NOT been admitted yet)
+        {
+            // ONLY need victim synchronization yet without popularity collection/aggregation
+            covered_directory_update_request_ptr = new CoveredDirectoryUpdateRequest(key, is_admit, directory_info, victim_syncset, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
+        }
+        else // Evict a victim as local uncached object (NOTE: local edge cache has already been evicted)
+        {
+            // Prepare local uncached popularity of key for piggybacking-based popularity collection
+            Popularity local_uncached_popularity = 0.0;
+            bool is_key_tracked = tmp_edge_wrapper_ptr->getEdgeCachePtr()->getLocalUncachedPopularity(key, local_uncached_popularity); // If the local uncached key is tracked in local uncached metadata (due to selective metadata preservation)
+
+            // Need BOTH popularity collection and victim synchronization
+            covered_directory_update_request_ptr = new CoveredDirectoryUpdateRequest(key, is_admit, directory_info, CollectedPopularity(is_key_tracked, local_uncached_popularity), victim_syncset, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
+        }
+        assert(covered_directory_update_request_ptr != NULL);
+
+        return covered_directory_update_request_ptr;
     }
 
     // (6) covered-specific utility functions

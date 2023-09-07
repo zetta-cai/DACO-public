@@ -11,14 +11,14 @@
 
 #include "common/dynamic_array.h"
 #include "common/key.h"
-#include "message/key_trackflag_popularity_victimset_message.h"
+#include "message/key_collectpop_victimset_message.h"
 
 namespace covered
 {
-    class CoveredDirectoryLookupRequest : public KeyTrackflagPopularityVictimsetMessage
+    class CoveredDirectoryLookupRequest : public KeyCollectpopVictimsetMessage
     {
     public:
-        CoveredDirectoryLookupRequest(const Key& key, const bool& is_tracked, const Popularity& local_uncached_popularity, const VictimSyncset& victim_syncset, const uint32_t& source_index, const NetworkAddr& source_addr, const bool& skip_propagation_latency);
+        CoveredDirectoryLookupRequest(const Key& key, const CollectedPopularity& collected_popularity, const VictimSyncset& victim_syncset, const uint32_t& source_index, const NetworkAddr& source_addr, const bool& skip_propagation_latency);
         CoveredDirectoryLookupRequest(const DynamicArray& msg_payload);
         virtual ~CoveredDirectoryLookupRequest();
     private:

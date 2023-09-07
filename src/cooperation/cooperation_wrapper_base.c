@@ -116,12 +116,12 @@ namespace covered
         return dirinfo_set;
     }
 
-    bool CooperationWrapperBase::lookupLocalDirectoryByCacheServer(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
+    bool CooperationWrapperBase::lookupDirectoryTableByCacheServer(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
     {
         checkPointers_();
 
         // Acquire a read lock
-        std::string context_name = "CooperationWrapperBase::lookupLocalDirectoryByCacheServer()";
+        std::string context_name = "CooperationWrapperBase::lookupDirectoryTableByCacheServer()";
         cooperation_wrapper_perkey_rwlock_ptr_->acquire_lock_shared(key, context_name);
 
         bool is_global_cached = false; // Whether the key is cached by a local/neighbor edge node (even if invalid temporarily)
@@ -135,12 +135,12 @@ namespace covered
         return is_global_cached;
     }
 
-    bool CooperationWrapperBase::lookupLocalDirectoryByBeaconServer(const Key& key, const NetworkAddr& cache_server_worker_recvreq_dst_addr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info)
+    bool CooperationWrapperBase::lookupDirectoryTableByBeaconServer(const Key& key, const NetworkAddr& cache_server_worker_recvreq_dst_addr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info)
     {
         checkPointers_();
 
         // NOTE: we have to acquire a write lock as we may need to update the blocklist in BlockTracker
-        std::string context_name = "CooperationWrapperBase::lookupLocalDirectoryByBeaconServer()";
+        std::string context_name = "CooperationWrapperBase::lookupDirectoryTableByBeaconServer()";
         cooperation_wrapper_perkey_rwlock_ptr_->acquire_lock(key, context_name);
 
         bool is_global_cached = false; // Whether the key is cached by a local/neighbor edge node (even if invalid temporarily)
@@ -175,12 +175,12 @@ namespace covered
         return is_global_cached;
     }
 
-    bool CooperationWrapperBase::updateLocalDirectory(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info)
+    bool CooperationWrapperBase::updateDirectoryTable(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info)
     {
         checkPointers_();
 
         // Acquire a write lock
-        std::string context_name = "CooperationWrapperBase::updateLocalDirectory()";
+        std::string context_name = "CooperationWrapperBase::updateDirectoryTable()";
         cooperation_wrapper_perkey_rwlock_ptr_->acquire_lock(key, context_name);
 
         bool is_being_written = false;

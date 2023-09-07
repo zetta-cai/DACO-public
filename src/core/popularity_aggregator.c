@@ -31,7 +31,7 @@ namespace covered
         rwlock_for_popularity_aggregator_ = NULL;
     }
 
-    void PopularityAggregator::updateAggregatedUncachedPopularity(const Key& key, const uint32_t& source_edge_idx, const bool& is_tracked_by_source_edge_node, const Popularity& local_uncached_popularity, const bool& is_global_cached)
+    void PopularityAggregator::updateAggregatedUncachedPopularity(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached)
     {
         checkPointers_();
 
@@ -41,8 +41,11 @@ namespace covered
 
         perkey_benefit_popularity_iter_t perkey_benefit_popularity_iter = perkey_benefit_popularity_table_.find(key);
 
+        const bool is_tracked_by_source_edge_node = collected_popularity.isTracked(); // If key is tracked by local uncached metadata in the source edge node (i.e., if local uncached popularity is valid)
+        Popularity local_uncached_popularity = 0.0;
         if (is_tracked_by_source_edge_node) // Add/update latest local uncached popularity for key in source edge node into new/existing aggregated uncached popularity
         {
+            local_uncached_popularity = collected_popularity.getLocalUncachedPopularity();
             if (perkey_benefit_popularity_iter == perkey_benefit_popularity_table_.end()) // New key
             {
                 addAggregatedUncachedPopularityForNewKey_(key, source_edge_idx, local_uncached_popularity, is_global_cached);
@@ -66,7 +69,7 @@ namespace covered
             if (perkey_benefit_popularity_iter != perkey_benefit_popularity_table_.end()) // Existing key
             {
                 // Remove old local uncached popularity of source edge node if any
-                updateAggregatedUncachedPopularityForExistingKey_(key, source_edge_idx, is_tracked_by_source_edge_node, local_uncached_popularity, is_global_cached);
+                updateAggregatedUncachedPopularityForExistingKey_(key, source_edge_idx, is_tracked_by_source_edge_node, local_uncached_popularity, is_global_cached); // local_uncached_popularity is NOT used when is_tracked_by_source_edge_node = false
             }
 
             // NOTE: NO need to try to discard global less popular objects here, as removing old local uncached popularity if any will NEVER increase cache size usage

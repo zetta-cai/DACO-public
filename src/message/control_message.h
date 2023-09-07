@@ -35,5 +35,6 @@
 // ONLY for COVERED
 #include "message/control/cooperation/covered_directory_lookup_request.h"
 #include "message/control/cooperation/covered_directory_lookup_response.h"
+#include "message/control/cooperation/covered_directory_update_request.h"
 
 #endif

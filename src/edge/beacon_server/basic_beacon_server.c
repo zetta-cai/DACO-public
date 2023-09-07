@@ -38,7 +38,7 @@ namespace covered
         const DirectoryLookupRequest* const directory_lookup_request_ptr = static_cast<const DirectoryLookupRequest*>(control_request_ptr);
         Key tmp_key = directory_lookup_request_ptr->getKey();
 
-        edge_wrapper_ptr_->getCooperationWrapperPtr()->lookupLocalDirectoryByBeaconServer(tmp_key, edge_cache_server_worker_recvreq_source_addr, is_being_written, is_valid_directory_exist, directory_info);
+        edge_wrapper_ptr_->getCooperationWrapperPtr()->lookupDirectoryTableByBeaconServer(tmp_key, edge_cache_server_worker_recvreq_source_addr, is_being_written, is_valid_directory_exist, directory_info);
 
         return;
     }
@@ -58,7 +58,7 @@ namespace covered
     {
         // Update local directory information in cooperation wrapper
         bool is_being_written = false;
-        is_being_written = edge_wrapper_ptr_->getCooperationWrapperPtr()->updateLocalDirectory(key, is_admit, directory_info);
+        is_being_written = edge_wrapper_ptr_->getCooperationWrapperPtr()->updateDirectoryTable(key, is_admit, directory_info);
 
         return is_being_written;
     }

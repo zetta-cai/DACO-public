@@ -1,7 +1,7 @@
 /*
  * CoveredDirectoryLookupResponse: a response issued by the beacon node to an edge node to reply directory information of a given key with victim synchronization for COVERED.
  * 
- * By Siyuan Sheng (2023.08.31).
+ * By Siyuan Sheng (2023.09.06).
  */
 
 #ifndef COVERED_DIRECTORY_LOOKUP_RESPONSE_H
@@ -11,14 +11,14 @@
 
 #include "common/dynamic_array.h"
 #include "common/key.h"
-#include "message/key_victimset_writeflag_validity_directory_message.h"
+#include "message/key_writeflag_validity_directory_victimset_message.h"
 
 namespace covered
 {
-    class CoveredDirectoryLookupResponse : public KeyVictimsetWriteflagValidityDirectoryMessage
+    class CoveredDirectoryLookupResponse : public KeyWriteflagValidityDirectoryVictimsetMessage
     {
     public:
-        CoveredDirectoryLookupResponse(const Key& key, const VictimSyncset& victim_syncset, const bool& is_being_written, const bool& is_valid_directory_exist, const DirectoryInfo& directory_info, const uint32_t& source_index, const NetworkAddr& source_addr, const EventList& event_list, const bool& skip_propagation_latency);
+        CoveredDirectoryLookupResponse(const Key& key, const bool& is_being_written, const bool& is_valid_directory_exist, const DirectoryInfo& directory_info, const VictimSyncset& victim_syncset, const uint32_t& source_index, const NetworkAddr& source_addr, const EventList& event_list, const bool& skip_propagation_latency);
         CoveredDirectoryLookupResponse(const DynamicArray& msg_payload);
         virtual ~CoveredDirectoryLookupResponse();
     private:
