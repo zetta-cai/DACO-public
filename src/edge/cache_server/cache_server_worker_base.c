@@ -504,7 +504,19 @@ namespace covered
             } // End of (is_timeout == true)
             else
             {
-                processRspToLookupBeaconDirectory_(control_response_msg_payload, is_being_written, is_valid_directory_exist, directory_info, event_list);
+                // Receive the control response message successfully
+                MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
+                assert(control_response_ptr != NULL);
+
+                processRspToLookupBeaconDirectory_(control_response_ptr, is_being_written, is_valid_directory_exist, directory_info);
+
+                // Add events of intermediate response if with event tracking
+                event_list.addEvents(directory_lookup_response_ptr->getEventListRef());
+
+                // Release the control response message
+                delete control_response_ptr;
+                control_response_ptr = NULL;
+
                 break;
             } // End of (is_timeout == false)
         } // End of while(true)

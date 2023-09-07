@@ -30,7 +30,7 @@ namespace covered
         CoveredCacheManager(const uint32_t& edge_idx, const uint32_t& edgecnt, const uint32_t& peredge_synced_victimcnt, const uint64_t& popularity_aggregation_capacity_bytes, const uint32_t& topk_edgecnt);
         ~CoveredCacheManager();
 
-        // For popularity aggregation
+        // For selective popularity aggregation
 
         void updatePopularityAggregatorForAggregatedPopularity(const Key& key, const uint32_t& source_edge_idx, const bool& is_tracked_by_source_edge_node, const Popularity& local_uncached_popularity, const bool& is_global_cached);
         

@@ -66,24 +66,16 @@ namespace covered
         return directory_lookup_request_ptr;
     }
 
-    void BasicCacheServerWorker::processRspToLookupBeaconDirectory_(const DynamicArray& control_response_msg_payload, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, EventList& event_list) const
+    void BasicCacheServerWorker::processRspToLookupBeaconDirectory_(MessageBase* control_response_ptr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
     {
-        // Receive the control response message successfully
-        MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
-        assert(control_response_ptr != NULL && control_response_ptr->getMessageType() == MessageType::kDirectoryLookupResponse);
+        assert(control_response_ptr != NULL);
+        assert(control_response_ptr->getMessageType() == MessageType::kDirectoryLookupResponse);
 
         // Get directory information from the control response message
         const DirectoryLookupResponse* const directory_lookup_response_ptr = static_cast<const DirectoryLookupResponse*>(control_response_ptr);
         is_being_written = directory_lookup_response_ptr->isBeingWritten();
         is_valid_directory_exist = directory_lookup_response_ptr->isValidDirectoryExist();
         directory_info = directory_lookup_response_ptr->getDirectoryInfo();
-
-        // Add events of intermediate response if with event tracking
-        event_list.addEvents(directory_lookup_response_ptr->getEventListRef());
-
-        // Release the control response message
-        delete control_response_ptr;
-        control_response_ptr = NULL;
 
         return;
     }

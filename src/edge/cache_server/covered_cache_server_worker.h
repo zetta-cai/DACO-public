@@ -33,7 +33,7 @@ namespace covered
 
         // Return if edge node is finished
         virtual MessageBase* getReqToLookupBeaconDirectory_(const Key& key, const bool& skip_propagation_latency) const override;
-        virtual void processRspToLookupBeaconDirectory_(const DynamicArray& control_response_msg_payload, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, EventList& event_list) const override;
+        virtual void processRspToLookupBeaconDirectory_(MessageBase* control_response_ptr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const override;
         
         virtual bool redirectGetToTarget_(const DirectoryInfo& directory_info, const Key& key, Value& value, bool& is_cooperative_cached, bool& is_valid, EventList& event_list, const bool& skip_propagation_latency) const override; // Request redirection
 
@@ -71,6 +71,7 @@ namespace covered
 
         // (6) covered-specific utility functions
         
+        // For victim synchronization
         void updateCacheManagerForLocalSyncedVictims_() const; // NOTE: ONLY edge cache server worker will access local edge cache, which affects local cached metadata and may trigger update for local synced victims
 
         // Const variable

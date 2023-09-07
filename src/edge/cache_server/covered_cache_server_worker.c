@@ -89,9 +89,26 @@ namespace covered
         return covered_directory_lookup_request_ptr;
     }
 
-    void CoveredCacheServerWorker::processRspToLookupBeaconDirectory_(const DynamicArray& control_response_msg_payload, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, EventList& event_list) const
+    void CoveredCacheServerWorker::processRspToLookupBeaconDirectory_(MessageBase* control_response_ptr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
     {
         // TODO: Process directory lookup response for non-blocking admission placement deployment
+
+        checkPointers_();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+
+        assert(control_response_ptr != NULL);
+        assert(control_response_ptr->getMessageType() == MessageType::kCoveredDirectoryLookupResponse);
+
+        // Get directory information from the control response message
+        const CoveredDirectoryLookupResponse* const covered_directory_lookup_response_ptr = static_cast<const CoveredDirectoryLookupResponse*>(control_response_ptr);
+        is_being_written = covered_directory_lookup_response_ptr->isBeingWritten();
+        is_valid_directory_exist = covered_directory_lookup_response_ptr->isValidDirectoryExist();
+        directory_info = covered_directory_lookup_response_ptr->getDirectoryInfo();
+
+        // Victim synchronization
+        const VictimSyncset& victim_syncset = covered_directory_lookup_response_ptr->getVictimSyncsetRef();
+        std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = tmp_edge_wrapper_ptr->getLocalBeaconedVictimsFromVictimSyncset(victim_syncset);
+        tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr()->updateVictimTrackerForVictimSyncset(source_edge_idx, victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
 
         return;
     }

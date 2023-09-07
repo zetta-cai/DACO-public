@@ -99,6 +99,7 @@ namespace covered
 
         // (6) covered-specific utility functions
 
+        // For victim synchronization
         std::unordered_map<Key, dirinfo_set_t, KeyHasher> getLocalBeaconedVictimsFromVictimSyncset(const VictimSyncset& victim_syncset) const; // NOTE: all edge cache/beacon/invalidation servers will access cooperation wrapper to get content directory information for local beaconed victims from received victim syncset
 
         void checkPointers_() const;
