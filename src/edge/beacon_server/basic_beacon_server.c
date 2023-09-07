@@ -54,11 +54,18 @@ namespace covered
         return directory_lookup_response_ptr;
     }
 
-    bool BasicBeaconServer::processReqToUpdateLocalDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info)
+    bool BasicBeaconServer::processReqToUpdateLocalDirectory_(MessageBase* control_request_ptr)
     {
+        assert(control_request_ptr != NULL);
+        assert(control_request_ptr->getMessageType() == MessageType::kDirectoryUpdateRequest);
+        const DirectoryUpdateRequest* const directory_update_request_ptr = static_cast<const DirectoryUpdateRequest*>(control_request_ptr);
+        Key tmp_key = directory_update_request_ptr->getKey();
+        bool is_admit = directory_update_request_ptr->isValidDirectoryExist();
+        DirectoryInfo directory_info = directory_update_request_ptr->getDirectoryInfo();
+
         // Update local directory information in cooperation wrapper
         bool is_being_written = false;
-        is_being_written = edge_wrapper_ptr_->getCooperationWrapperPtr()->updateDirectoryTable(key, is_admit, directory_info);
+        edge_wrapper_ptr_->getCooperationWrapperPtr()->updateDirectoryTable(tmp_key, is_admit, directory_info, is_being_written);
 
         return is_being_written;
     }

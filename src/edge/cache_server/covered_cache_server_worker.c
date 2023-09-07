@@ -233,10 +233,12 @@ namespace covered
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
-        is_being_written = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->updateDirectoryTable(key, is_admit, directory_info);
+        bool is_global_cached = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->updateDirectoryTable(key, is_admit, directory_info, is_being_written);
 
         // Update directory info in victim tracker if the local beaconed key is a local/neighbor synced victim
         tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr()->updateVictimTrackerForSyncedVictimDirinfo(key, is_admit, directory_info);
+
+        // TODO: Remove old local uncached popularity or perform selective popularity aggregation
 
         return;
     }

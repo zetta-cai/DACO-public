@@ -142,7 +142,13 @@ namespace covered
 
             if (directory_entry_.size() == 0)
             {
+                tmp_param_ptr->is_global_cached = false; // Help DirectoryTable to judge if key is global cached
                 is_erase = true; // the key-direntry pair can be erased due to empty direntry
+            }
+            else
+            {
+                tmp_param_ptr->is_global_cached = true;
+                is_erase = false;
             }
         }
         else if (function_name == INVALIDATE_METADATA_FOR_ALL_DIRINFO_IF_EXIST_FUNCNAME)

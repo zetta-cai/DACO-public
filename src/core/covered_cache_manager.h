@@ -33,6 +33,7 @@ namespace covered
         // For selective popularity aggregation
 
         void updatePopularityAggregatorForAggregatedPopularity(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached);
+        void clearPopularityAggregatorAfterAdmission(const Key& key, const uint32_t& source_edge_idx);
         
         // For victim synchronization
 

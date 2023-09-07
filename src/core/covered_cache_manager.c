@@ -24,6 +24,12 @@ namespace covered
         return;
     }
 
+    void CoveredCacheManager::clearPopularityAggregatorAfterAdmission(const Key& key, const uint32_t& source_edge_idx)
+    {
+        popularity_aggregator_.clearAggregatedUncachedPopularityAfterAdmission(key, source_edge_idx);
+        return;
+    }
+
     // For victim synchronization
 
     void CoveredCacheManager::updateVictimTrackerForLocalSyncedVictims(const std::list<VictimCacheinfo>& local_synced_victim_cacheinfos, const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& local_beaconed_local_synced_victim_dirinfosets)

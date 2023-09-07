@@ -175,7 +175,7 @@ namespace covered
         return is_global_cached;
     }
 
-    bool CooperationWrapperBase::updateDirectoryTable(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info)
+    bool CooperationWrapperBase::updateDirectoryTable(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written)
     {
         checkPointers_();
 
@@ -183,7 +183,8 @@ namespace covered
         std::string context_name = "CooperationWrapperBase::updateDirectoryTable()";
         cooperation_wrapper_perkey_rwlock_ptr_->acquire_lock(key, context_name);
 
-        bool is_being_written = false;
+        bool is_global_cached = false; // Whether the key is cached by a local/neighbor edge node (even if invalid temporarily)
+
         if (is_admit) // is_being_written affects validity of both directory info and cached object for cache admission
         {
             is_being_written = block_tracker_ptr_->isBeingWrittenForKey(key);
@@ -195,12 +196,12 @@ namespace covered
         DirectoryMetadata directory_metadata(!is_being_written); // valid if not being written
 
         assert(directory_table_ptr_ != NULL);
-        directory_table_ptr_->update(key, is_admit, directory_info, directory_metadata);
+        is_global_cached = directory_table_ptr_->update(key, is_admit, directory_info, directory_metadata);
 
         // Release a write lock
         cooperation_wrapper_perkey_rwlock_ptr_->unlock(key, context_name);
 
-        return is_being_written;
+        return is_global_cached;
     }
 
     // (4) Process writes for MSI protocol

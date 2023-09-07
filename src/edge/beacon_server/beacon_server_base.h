@@ -53,7 +53,8 @@ namespace covered
         virtual MessageBase* getRspToLookupLocalDirectory_(const Key& key, const bool& is_being_written, const bool& is_valid_directory_exist, const DirectoryInfo& directory_info, const EventList& event_list, const bool& skip_propagation_latency) const = 0;
 
         bool processDirectoryUpdateRequest_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr); // Return if edge node is finished
-        virtual bool processReqToUpdateLocalDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info) = 0; // Return if key is being written
+        virtual bool processReqToUpdateLocalDirectory_(MessageBase* control_request_ptr) = 0; // Return if key is being written
+        // TODO: (END HERE) getRspToUpdateLocalDirectory_()
 
         // (2) Process writes and unblock for MSI protocol
 

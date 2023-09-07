@@ -79,6 +79,17 @@ namespace covered
         return;
     }
 
+    void PopularityAggregator::clearAggregatedUncachedPopularityAfterAdmission(const Key& key, const uint32_t& source_edge_idx)
+    {
+        updateAggregatedUncachedPopularityForExistingKey_(key, source_edge_idx, false, 0.0, true); // Clear old local uncached popularity of source edge node if any, and update max global admission benefit for the given key
+
+        // TODO: After introducing non-blocking cache admission placement:
+        // (i) old local uncached popularity should be cleared right after placement calculation -> assert NO old local uncached popularity exists for the given key;
+        // (ii) we should clear preserved edge idx / bitmap for the source edge node after admission -> assert preserved edge idx / bitmap MUST exist (NOTE: popularity aggregation capacity bytes should NOT discard preserved edge idx / bitmap!!!)
+
+        return;
+    }
+
     void PopularityAggregator::addAggregatedUncachedPopularityForNewKey_(const Key& key, const uint32_t& source_edge_idx, const Popularity& local_uncached_popularity, const bool& is_global_cached)
     {
         // NOTE: we have already acquired a write lock in updateAggregatedUncachedPopularity() for thread safety

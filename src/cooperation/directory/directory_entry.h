@@ -40,6 +40,7 @@ namespace covered
         {
             const DirectoryInfo& directory_info;
             bool is_directory_already_exist;
+            bool is_global_cached;
         };
 
         struct InvalidateMetadataForAllDirinfoIfExistParam

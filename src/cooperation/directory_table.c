@@ -96,8 +96,10 @@ namespace covered
         return is_global_cached;
     }
 
-    void DirectoryTable::update(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, const DirectoryMetadata& directory_metadata)
+    bool DirectoryTable::update(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, const DirectoryMetadata& directory_metadata)
     {
+        bool is_global_cached = false; // Whether the key is cached by a local/neighbor edge node (even if invalid temporarily)
+
         if (is_admit) // Add a new directory info
         {
             // Prepare directory entry for the key
@@ -124,11 +126,13 @@ namespace covered
                     Util::dumpWarnMsg(kClassName, oss.str());
                 }
             }
+
+            is_global_cached = true; // Key MUST be global cached after inserting a new content directory
         } // End of (is_admit == true)
         else // Delete an existing directory info
         {
             // Prepare RemoveDirinfoParam
-            DirectoryEntry::RemoveDirinfoParam tmp_param = {directory_info, false};
+            DirectoryEntry::RemoveDirinfoParam tmp_param = {directory_info, false, false};
 
             bool is_exist = false;
             directory_hashtable_.callIfExist(key, is_exist, DirectoryEntry::REMOVE_DIRINFO_FUNCNAME, &tmp_param);
@@ -140,16 +144,20 @@ namespace covered
                     oss << "target edge index " << directory_info.getTargetEdgeIdx() << " does NOT exist for key " << key.getKeystr() << " in update() with is_admit = false!";
                     Util::dumpWarnMsg(kClassName, oss.str());
                 }
+
+                is_global_cached = tmp_param.is_global_cached;
             }
             else // key does NOT exist
             {
                 std::ostringstream oss;
                 oss << "key " << key.getKeystr() << " does not exist in directory_hashtable_ in update() with is_admit = false!";
                 Util::dumpWarnMsg(kClassName, oss.str());
+
+                is_global_cached = false;
             }
         } // ENd of (is_admit == false)
 
-        return;
+        return is_global_cached;
     }
 
     bool DirectoryTable::isGlobalCached(const Key& key) const
