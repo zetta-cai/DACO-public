@@ -247,8 +247,9 @@ namespace covered
         event_list.addEvent(Event::EDGE_BEACON_SERVER_UPDATE_LOCAL_DIRECTORY_EVENT_NAME, update_local_directory_latency_us);
 
         // Prepare a directory update response
-        uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
-        MessageBase* directory_update_response_ptr = new DirectoryUpdateResponse(tmp_key, is_being_written, edge_idx, edge_beacon_server_recvreq_source_addr_, event_list, skip_propagation_latency);
+        const Key tmp_key = MessageBase::getKeyFromMessage(control_request_ptr);
+        const bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();
+        MessageBase* directory_update_response_ptr = getRspToUpdateLocalDirectory_(tmp_key, is_being_written, event_list, skip_propagation_latency);
         assert(directory_update_response_ptr != NULL);
 
         // Push the directory update response into edge-to-edge propagation simulator to cache server worker

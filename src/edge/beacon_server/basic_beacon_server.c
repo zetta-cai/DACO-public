@@ -70,6 +70,15 @@ namespace covered
         return is_being_written;
     }
 
+    MessageBase* BasicBeaconServer::getRspToUpdateLocalDirectory_(const Key& key, const bool& is_being_written, const EventList& event_list, const bool& skip_propagation_latency) const
+    {
+        uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
+        MessageBase* directory_update_response_ptr = new DirectoryUpdateResponse(key, is_being_written, edge_idx, edge_beacon_server_recvreq_source_addr_, event_list, skip_propagation_latency);
+        assert(directory_update_response_ptr != NULL);
+
+        return directory_update_response_ptr;
+    }
+
     // (2) Process writes and unblock for MSI protocol
 
     bool BasicBeaconServer::processAcquireWritelockRequest_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr)

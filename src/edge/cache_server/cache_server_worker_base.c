@@ -1288,11 +1288,9 @@ namespace covered
             {
                 // Receive the control response message successfully
                 MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
-                assert(control_response_ptr != NULL && control_response_ptr->getMessageType() == MessageType::kDirectoryUpdateResponse);
+                assert(control_response_ptr != NULL);
 
-                // Get is_being_written from control response message
-                const DirectoryUpdateResponse* const directory_update_response_ptr = static_cast<const DirectoryUpdateResponse*>(control_response_ptr);
-                is_being_written = directory_update_response_ptr->isBeingWritten();
+                processRspToUpdateBeaconDirectory_(control_response_ptr, is_being_written); // NOTE: is_being_written is updated here
 
                 // Add events of intermediate response if with evet tracking
                 event_list.addEvents(directory_update_response_ptr->getEventListRef());

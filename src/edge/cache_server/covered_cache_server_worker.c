@@ -54,6 +54,7 @@ namespace covered
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        CoveredCacheManager* covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
 
         bool is_global_cached = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->lookupDirectoryTableByCacheServer(key, is_being_written, is_valid_directory_exist, directory_info);
 
@@ -64,7 +65,7 @@ namespace covered
 
         // Selective popularity aggregation
         uint32_t current_edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
-        edge_wrapper_ptr_->getCoveredCacheManagerPtr()->updatePopularityAggregatorForAggregatedPopularity(key, current_edge_idx, CollectedPopularity(is_key_tracked, local_uncached_popularity), is_global_cached); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in current edge node
+        covered_cache_manager_ptr->updatePopularityAggregatorForAggregatedPopularity(key, current_edge_idx, CollectedPopularity(is_key_tracked, local_uncached_popularity), is_global_cached); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in current edge node
 
         return;
     }
@@ -73,9 +74,10 @@ namespace covered
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        CoveredCacheManager* covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
 
         // Prepare victim syncset for piggybacking-based victim synchronization
-        VictimSyncset victim_syncset = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr()->accessVictimTrackerForVictimSyncset();
+        VictimSyncset victim_syncset = covered_cache_manager_ptr->accessVictimTrackerForVictimSyncset();
 
         // Prepare local uncached popularity of key for piggybacking-based popularity collection
         Popularity local_uncached_popularity = 0.0;
@@ -95,6 +97,7 @@ namespace covered
 
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        CoveredCacheManager* covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
 
         assert(control_response_ptr != NULL);
         assert(control_response_ptr->getMessageType() == MessageType::kCoveredDirectoryLookupResponse);
@@ -108,7 +111,7 @@ namespace covered
         // Victim synchronization
         const VictimSyncset& victim_syncset = covered_directory_lookup_response_ptr->getVictimSyncsetRef();
         std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = tmp_edge_wrapper_ptr->getLocalBeaconedVictimsFromVictimSyncset(victim_syncset);
-        tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr()->updateVictimTrackerForVictimSyncset(source_edge_idx, victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
+        covered_cache_manager_ptr->updateVictimTrackerForVictimSyncset(source_edge_idx, victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
 
         return;
     }
@@ -232,31 +235,41 @@ namespace covered
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        CoveredCacheManager* covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
 
         bool is_global_cached = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->updateDirectoryTable(key, is_admit, directory_info, is_being_written);
 
         // Update directory info in victim tracker if the local beaconed key is a local/neighbor synced victim
-        tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr()->updateVictimTrackerForSyncedVictimDirinfo(key, is_admit, directory_info);
+        covered_cache_manager_ptr->updateVictimTrackerForSyncedVictimDirinfo(key, is_admit, directory_info);
 
-        // TODO: Remove old local uncached popularity or perform selective popularity aggregation
+        // NOTE: NOT need piggyacking-based popularity collection and victim synchronization for local directory update
+        uint32_t current_edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
+        if (is_admit) // Admit a new key as local cached object
+        {
+            // Clear old local uncached popularity (TODO: preserved edge idx / bitmap) for the given key at soure edge node after admission
+            covered_cache_manager_ptr->clearPopularityAggregatorAfterAdmission(key, current_edge_idx);
+        }
+        else // Evict a victim as local uncached object
+        {
+            // Prepare local uncached popularity of key for popularity aggregation
+            Popularity local_uncached_popularity = 0.0;
+            bool is_key_tracked = tmp_edge_wrapper_ptr->getEdgeCachePtr()->getLocalUncachedPopularity(key, local_uncached_popularity); // If the local uncached key is tracked in local uncached metadata
+
+            // Selective popularity aggregation
+            covered_cache_manager_ptr->updatePopularityAggregatorForAggregatedPopularity(key, current_edge_idx, CollectedPopularity(is_key_tracked, local_uncached_popularity), is_global_cached); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in source edge node
+        }
 
         return;
-    }
-
-    bool CoveredCacheServerWorker::updateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written, EventList& event_list, const bool& skip_propagation_latency) const
-    {
-        // TODO: Piggyback candidate victims in current edge node
-
-        return false;
     }
 
     MessageBase* CoveredCacheServerWorker::getReqToUpdateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, const bool& skip_propagation_latency) const
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        CoveredCacheManager* covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
 
         // Prepare victim syncset for piggybacking-based victim synchronization
-        VictimSyncset victim_syncset = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr()->accessVictimTrackerForVictimSyncset();
+        VictimSyncset victim_syncset = covered_cache_manager_ptr->accessVictimTrackerForVictimSyncset();
 
         uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
         MessageBase* covered_directory_update_request_ptr = NULL;
@@ -279,12 +292,34 @@ namespace covered
         return covered_directory_update_request_ptr;
     }
 
+    void CoveredCacheServerWorker::processRspToUpdateBeaconDirectory_(MessageBase* control_response_ptr, bool& is_being_written) const
+    {
+        checkPointers_();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        CoveredCacheManager* covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
+
+        assert(control_response_ptr != NULL);
+        assert(control_response_ptr->getMessageType() == MessageType::kCoveredDirectoryUpdateResponse);
+
+        // Get is_being_written from control response message
+        const CoveredDirectoryUpdateResponse* const covered_directory_update_response_ptr = static_cast<const CoveredDirectoryUpdateResponse*>(control_response_ptr);
+        is_being_written = covered_directory_update_response_ptr->isBeingWritten();
+
+        // Victim synchronization
+        const VictimSyncset& victim_syncset = covered_directory_update_response_ptr->getVictimSyncsetRef();
+        std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = tmp_edge_wrapper_ptr->getLocalBeaconedVictimsFromVictimSyncset(victim_syncset);
+        covered_cache_manager_ptr->updateVictimTrackerForVictimSyncset(source_edge_idx, victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
+
+        return;
+    }
+
     // (6) covered-specific utility functions
         
     void CoveredCacheServerWorker::updateCacheManagerForLocalSyncedVictims_() const
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        CoveredCacheManager* covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
 
         // Get victim cacheinfos of local synced victims for the current edge node
         std::list<VictimCacheinfo> local_synced_victim_cacheinfos = tmp_edge_wrapper_ptr->getEdgeCachePtr()->getLocalSyncedVictimCacheinfos();
@@ -304,7 +339,7 @@ namespace covered
         }
 
         // Update local synced victims for the current edge node
-        tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr()->updateVictimTrackerForLocalSyncedVictims(local_synced_victim_cacheinfos, local_beaconed_local_synced_victim_dirinfosets); 
+        covered_cache_manager_ptr->updateVictimTrackerForLocalSyncedVictims(local_synced_victim_cacheinfos, local_beaconed_local_synced_victim_dirinfosets); 
 
         return;
     }

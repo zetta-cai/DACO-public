@@ -67,6 +67,7 @@ namespace covered
         virtual void updateLocalDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written) const override; // Update directory info in current edge node
 
         virtual MessageBase* getReqToUpdateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, const bool& skip_propagation_latency) const override;
+        virtual void processRspToUpdateBeaconDirectory_(MessageBase* control_response_ptr, bool& is_being_written) const override;
 
         // (6) covered-specific utility functions
         

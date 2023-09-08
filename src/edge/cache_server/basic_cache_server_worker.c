@@ -434,4 +434,16 @@ namespace covered
 
         return directory_update_request_ptr;
     }
+
+    void BasicCacheServerWorker::processRspToUpdateBeaconDirectory_(MessageBase* control_response_ptr, bool& is_being_written) const
+    {
+        assert(control_response_ptr != NULL);
+        assert(control_response_ptr->getMessageType() == MessageType::kDirectoryUpdateResponse);
+
+        // Get is_being_written from control response message
+        const DirectoryUpdateResponse* const directory_update_response_ptr = static_cast<const DirectoryUpdateResponse*>(control_response_ptr);
+        is_being_written = directory_update_response_ptr->isBeingWritten();
+
+        return;
+    }
 }
