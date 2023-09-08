@@ -92,11 +92,14 @@ namespace covered
     bool LfuLocalCache::needIndependentAdmitInternal_(const Key& key) const
     {
         // LFU cache uses default admission policy (i.e., always admit) (i.e., always admit), which always returns true as long as key is not cached
-        return true;
+        bool is_local_cached = isLocalCachedInternal_(key);
+        return !is_local_cached;
     }
 
-    void LfuLocalCache::admitLocalCacheInternal_(const Key& key, const Value& value)
+    void LfuLocalCache::admitLocalCacheInternal_(const Key& key, const Value& value, bool& affect_victim_tracker)
     {
+        UNUSED(affect_victim_tracker); // Only for COVERED
+        
         lfu_cache_ptr_->admit(key, value);
 
         return;

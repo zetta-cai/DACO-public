@@ -59,8 +59,11 @@ namespace covered
 
         // (4.1) Admit uncached objects in local edge cache
 
-        // Return if edge node is finished
-        virtual bool tryToTriggerIndependentAdmission_(const Key& key, const Value& value, EventList& event_list, const bool& skip_propagation_latency) const override;
+        virtual void admitLocalEdgeCache_(const Key& key, const Value& value, const bool& is_valid) override;
+
+        // (4.2) Evict cached objects from local edge cache
+
+        virtual void evictLocalEdgeCache_(std::unordered_map<Key, Value, KeyHasher>& victims, const uint64_t& required_size) override;
 
         // (4.3) Update content directory information
 

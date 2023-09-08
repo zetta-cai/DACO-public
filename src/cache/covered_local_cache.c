@@ -187,7 +187,7 @@ namespace covered
         return false;
     }
 
-    void CoveredLocalCache::admitLocalCacheInternal_(const Key& key, const Value& value)
+    void CoveredLocalCache::admitLocalCacheInternal_(const Key& key, const Value& value, bool& affect_victim_tracker)
     {
         const std::string keystr = key.getKeystr();
 
@@ -208,7 +208,7 @@ namespace covered
                 covered_cache_ptr_->insertOrReplace(allocate_handle); // Must insert
 
                 // Update local cached metadata for admission
-                local_cached_metadata_.addForNewKey(key, value);
+                local_cached_metadata_.addForNewKey(key, value, affect_victim_tracker);
 
                 // Remove from local uncached metadata if necessary for admission
                 if (local_uncached_metadata_.isKeyExist(key))

@@ -218,15 +218,36 @@ namespace covered
 
     // (4.1) Admit uncached objects in local edge cache
 
-    bool CoveredCacheServerWorker::tryToTriggerIndependentAdmission_(const Key& key, const Value& value, EventList& event_list, const bool& skip_propagation_latency) const
+    void CoveredCacheServerWorker::admitLocalEdgeCache_(const Key& key, const Value& value, const bool& is_valid)
     {
-        // std::ostringstream oss;
-        // Util::dumpErrorMsg(instance_name_, "tryToTriggerIndependentAdmission_() should NOT be invoked in CoveredCacheServerWorker!");
-        // exit(1);
+        checkPointers_();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
-        // NOTE: COVERED will NOT trigger any independent cache admission/eviction decision
-        bool is_finish = false;
-        return is_finish;
+        bool affect_victim_tracker = false;
+        tmp_edge_wrapper_ptr->getEdgeCachePtr()->admit(key, value, is_valid, affect_victim_tracker);
+
+        // Avoid unnecessary VictimTracker update
+        if (affect_victim_tracker) // If key is a local synced victim now
+        {
+            updateCacheManagerForLocalSyncedVictims_();
+        }
+
+        return;
+    }
+
+    // (4.2) Evict cached objects from local edge cache
+
+    void CoveredCacheServerWorker::evictLocalEdgeCache_(std::unordered_map<Key, Value, KeyHasher>& victims, const uint64_t& required_size)
+    {
+        checkPointers_();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+
+        tmp_edge_wrapper_ptr->getEdgeCachePtr()->evict(victims, required_size);
+
+        // NOTE: eviction MUST affect victim tracker due to evicting objects with least local rewards (i.e., local synced victims)
+        updateCacheManagerForLocalSyncedVictims_();
+
+        return;
     }
 
     // (4.3) Update content directory information

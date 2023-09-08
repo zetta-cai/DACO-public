@@ -69,13 +69,18 @@ namespace covered
         bool getLeastPopularKey(const uint32_t& least_popular_rank, Key& key) const; // Get ith least popular key for local cached or uncached object
         bool getPopularity(const Key& key, Popularity& popularity) const; // Get popularity for local cached or uncached object; return true if key exists (i.e., admitted/tracked)
 
-        void addForNewKey(const Key& key, const Value& value); // Newly admitted cached key or currently tracked uncached key (for getrsp with cache miss, put/delrsp with cache miss, admission)
         void removeForExistingKey(const Key& detracked_key, const Value& value); // Remove admitted cached key or tracked uncached key (for getrsp with cache miss, put/delrsp with cache miss, admission, eviction)
 
         virtual uint64_t getSizeForCapacity() const = 0; // Get size for capacity constraint (different for local cached or uncached objects)
     private:
         static const std::string kClassName;
     protected:
+        // Common functions
+
+        void addForNewKey_(const Key& key, const Value& value); // Newly admitted cached key or currently tracked uncached key (for admission, getrsp with cache miss, put/delrsp with cache miss)
+
+        void updateForExistingKey_(const Key& key, const Value& value, const Value& original_value, const bool& is_value_related); // Admitted cached key (is_value_related = false: for getreq with cache hit; is_value_related = true: for getrsp with invalid hit, put/delreq with cache hit); Or tracked uncached key (is_value_related = false: for getrsp with cache miss; is_value_related = true: put/delrsp with cache miss)
+
         // For object-level metadata
         perkey_metadata_list_t::iterator addPerkeyMetadata_(const Key& key, const GroupId& assigned_group_id); // Return new perkey metadata iterator
         const KeyLevelMetadata& updatePerkeyMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter); // Return updated KeyLevelMetadata

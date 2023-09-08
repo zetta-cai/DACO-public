@@ -146,11 +146,14 @@ namespace covered
         // (4.1) Admit uncached objects in local edge cache
 
         // Return if edge node is finished (we will check capacity and trigger eviction for cache admission)
-        virtual bool tryToTriggerIndependentAdmission_(const Key& key, const Value& value, EventList& event_list, const bool& skip_propagation_latency) const = 0;
+        bool tryToTriggerIndependentAdmission_(const Key& key, const Value& value, EventList& event_list, const bool& skip_propagation_latency); // NOTE: COVERED will NOT trigger any independent cache admission/eviction decision
+        bool admitObject_(const Key& key, const Value& value, EventList& event_list, const bool& skip_propagation_latency); // Including directory updates, admit local edge cache, and trigger eviction if necessary
+        virtual void admitLocalEdgeCache_(const Key& key, const Value& value, const bool& is_valid) = 0;
 
         // (4.2) Evict cached objects from local edge cache
 
-        bool evictForCapacity_(EventList& event_list, const bool& skip_propagation_latency) const;
+        bool evictForCapacity_(EventList& event_list, const bool& skip_propagation_latency) const; // Including evict local edge cache and directory updates
+        virtual void evictLocalEdgeCache_(std::unordered_map<Key, Value, KeyHasher>& victims, const uint64_t& required_size) = 0;
 
         // (4.3) Update content directory information
 

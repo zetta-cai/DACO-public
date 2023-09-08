@@ -144,11 +144,14 @@ namespace covered
     bool CachelibLocalCache::needIndependentAdmitInternal_(const Key& key) const
     {
         // CacheLib (LRU2Q) cache uses default admission policy (i.e., always admit), which always returns true as long as key is not cached
-        return true;
+        bool is_local_cached = isLocalCachedInternal_(key);
+        return !is_local_cached;
     }
 
-    void CachelibLocalCache::admitLocalCacheInternal_(const Key& key, const Value& value)
+    void CachelibLocalCache::admitLocalCacheInternal_(const Key& key, const Value& value, bool& affect_victim_tracker)
     {
+        UNUSED(affect_victim_tracker); // Only for COVERED
+        
         const std::string keystr = key.getKeystr();
 
         Lru2QCacheReadHandle handle = cachelib_cache_ptr_->find(keystr);

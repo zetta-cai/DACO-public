@@ -1144,6 +1144,55 @@ namespace covered
 
     // (4.1) Admit uncached objects in local edge cache
 
+    bool CacheServerWorkerBase::tryToTriggerIndependentAdmission_(const Key& key, const Value& value, EventList& event_list, const bool& skip_propagation_latency) const
+    {
+        checkPointers_();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        CacheWrapper* local_edge_cache_ptr = tmp_edge_wrapper_ptr->getEdgeCachePtr();
+
+        bool is_finish = false;
+
+        if (local_edge_cache_ptr->needIndependentAdmit(key)) // Trigger independent admission
+        {
+            // NOTE: COVERED will NOT trigger any independent cache admission/eviction decision
+            assert(tmp_edge_wrapper_ptr->getCacheName() != Util::COVERED_CACHE_NAME);
+
+            #ifdef DEBUG_CACHE_SERVER
+            uint64_t used_bytes_before_admit = tmp_edge_wrapper_ptr->getSizeForCapacity();
+            Util::dumpVariablesForDebug(instance_name_, 11, "independent admission;", "keystr:", key.getKeystr().c_str(), "keysize:", std::to_string(key.getKeyLength()).c_str(), "is value deleted:", Util::toString(value.isDeleted()).c_str(), "value size:", Util::toString(value.getValuesize()).c_str(), "used_bytes_before_admit:", std::to_string(used_bytes_before_admit).c_str());
+            #endif
+
+            is_finish = admitObject_(key, value, event_list, skip_propagation_latency);
+        }
+
+        return is_finish;
+    }
+
+    bool CacheServerWorkerBase::admitObject_(const Key& key, const Value& value, EventList& event_list, const bool& skip_propagation_latency)
+    {
+        bool is_finish = false;
+
+        struct timespec update_directory_to_admit_start_timestamp = Util::getCurrentTimespec();
+
+        // Independently admit the new key-value pair into local edge cache
+        bool is_being_written = false;
+        is_finish = updateDirectory_(key, true, is_being_written, event_list, skip_propagation_latency);
+        if (is_finish)
+        {
+            return is_finish;
+        }
+        admitLocalEdgeCache_(key, value, !is_being_written); // valid if not being written
+
+        struct timespec update_directory_to_admit_end_timestamp = Util::getCurrentTimespec();
+        uint32_t update_directory_to_admit_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(update_directory_to_admit_end_timestamp, update_directory_to_admit_start_timestamp));
+        event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_UPDATE_DIRECTORY_TO_ADMIT_EVENT_NAME, update_directory_to_admit_latency_us); // Add intermediate event if with event tracking
+
+        // Trigger eviction if necessary
+        is_finish = evictForCapacity_(event_list, skip_propagation_latency);
+
+        return is_finish;
+    }
+
     // (4.2) Evict cached objects from local edge cache
 
     bool CacheServerWorkerBase::evictForCapacity_(EventList& event_list, const bool& skip_propagation_latency) const
@@ -1176,7 +1225,9 @@ namespace covered
 
                 // NOTE: we calculate required size after locking to avoid duplicate evictions for the same part of required size
                 uint64_t required_size = used_bytes - capacity_bytes;
-                tmp_edge_wrapper_ptr->getEdgeCachePtr()->evict(victims, required_size);
+
+                // Evict unpopular objects from local edge cache for cache capacity
+                evictLocalEdgeCache_(victims, required_size);
 
                 for (std::unordered_map<Key, Value, KeyHasher>::const_iterator victim_iter = victims.begin(); victim_iter != victims.end(); victim_iter++)
                 {

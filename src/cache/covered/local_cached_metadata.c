@@ -33,6 +33,24 @@ namespace covered
 
     // Different for local cached objects
 
+    bool LocalCachedMetadata::addForNewKey(const Key& key, const Value& value, const uint32_t& peredge_synced_victimcnt)
+    {
+        CacheMetadataBase::addForNewKey_(key, value);
+
+        bool affect_victim_tracker = false;
+
+        // Get lookup iterator (key becomes existing after addForNewKey_)
+        perkey_lookup_iter_t perkey_lookup_iter = getLookup_(key);
+
+        uint32_t least_popular_rank_before_metadata_update = getLeastPopularRank_(perkey_lookup_iter);
+        if (least_popular_rank_before_metadata_update < peredge_synced_victimcnt) // If key was a local synced victim before
+        {
+            affect_victim_tracker = true;
+        }
+
+        return affect_victim_tracker;
+    }
+
     bool LocalCachedMetadata::updateForExistingKey(const Key& key, const Value& value, const Value& original_value, const bool& is_value_related, const uint32_t& peredge_synced_victimcnt)
     {
         bool affect_victim_tracker = false;
@@ -46,18 +64,7 @@ namespace covered
             affect_victim_tracker = true;
         }
 
-        // Update object-level metadata
-        const KeyLevelMetadata& perkey_metadata_ref = updatePerkeyMetadata_(perkey_lookup_iter);
-
-        // Update group-level metadata
-        const GroupLevelMetadata& pergroup_metadata_ref = updatePergroupMetadata_(perkey_lookup_iter, key, value, original_value, is_value_related);
-
-        // Update popularity
-        Popularity new_popularity = calculatePopularity_(perkey_metadata_ref, pergroup_metadata_ref); // Calculate popularity
-        sorted_popularity_multimap_t::iterator new_sorted_popularity_iter = updatePopularity_(new_popularity, perkey_lookup_iter);
-
-        // Update lookup table
-        updateLookup_(perkey_lookup_iter, new_sorted_popularity_iter);
+        CacheMetadataBase::updateForExistingKey_(key, value, original_value, is_value_related);
 
         if (!affect_victim_tracker)
         {

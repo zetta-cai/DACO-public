@@ -122,7 +122,29 @@ namespace covered
         return is_key_exist;
     }
 
-    void CacheMetadataBase::addForNewKey(const Key& key, const Value& value)
+    void CacheMetadataBase::removeForExistingKey(const Key& detracked_key, const Value& detracked_value)
+    {
+        // Get lookup iterator
+        perkey_lookup_iter_t perkey_lookup_iter = getLookup_(detracked_key);
+
+        // Remove group-level metadata
+        removePergroupMetadata_(perkey_lookup_iter, detracked_key, detracked_value);
+
+        // Remove object-level metadata
+        removePerkeyMetadata_(perkey_lookup_iter);
+        perkey_lookup_iter->second.setPerkeyMetadataIter(perkey_metadata_list_.end());
+
+        // Remove popularity
+        removePopularity_(perkey_lookup_iter);
+        perkey_lookup_iter->second.setSortedPopularityIter(sorted_popularity_multimap_.end());
+
+        // Remove lookup table
+        removeLookup_(perkey_lookup_iter);
+
+        return;
+    }
+
+    void CacheMetadataBase::addForNewKey_(const Key& key, const Value& value)
     {
         // Add lookup iterator for new key
         perkey_lookup_iter_t perkey_lookup_iter = addLookup_(key);
@@ -145,24 +167,23 @@ namespace covered
         return;
     }
 
-    void CacheMetadataBase::removeForExistingKey(const Key& detracked_key, const Value& detracked_value)
+    void CacheMetadataBase::updateForExistingKey_(const Key& key, const Value& value, const Value& original_value, const bool& is_value_related)
     {
         // Get lookup iterator
-        perkey_lookup_iter_t perkey_lookup_iter = getLookup_(detracked_key);
+        perkey_lookup_iter_t perkey_lookup_iter = getLookup_(key);
 
-        // Remove group-level metadata
-        removePergroupMetadata_(perkey_lookup_iter, detracked_key, detracked_value);
+        // Update object-level metadata
+        const KeyLevelMetadata& perkey_metadata_ref = updatePerkeyMetadata_(perkey_lookup_iter);
 
-        // Remove object-level metadata
-        removePerkeyMetadata_(perkey_lookup_iter);
-        perkey_lookup_iter->second.setPerkeyMetadataIter(perkey_metadata_list_.end());
+        // Update group-level metadata
+        const GroupLevelMetadata& pergroup_metadata_ref = updatePergroupMetadata_(perkey_lookup_iter, key, value, original_value, is_value_related);
 
-        // Remove popularity
-        removePopularity_(perkey_lookup_iter);
-        perkey_lookup_iter->second.setSortedPopularityIter(sorted_popularity_multimap_.end());
+        // Update popularity
+        Popularity new_popularity = calculatePopularity_(perkey_metadata_ref, pergroup_metadata_ref); // Calculate popularity
+        sorted_popularity_multimap_t::iterator new_sorted_popularity_iter = updatePopularity_(new_popularity, perkey_lookup_iter);
 
-        // Remove lookup table
-        removeLookup_(perkey_lookup_iter);
+        // Update lookup table
+        updateLookup_(perkey_lookup_iter, new_sorted_popularity_iter);
 
         return;
     }

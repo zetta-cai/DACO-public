@@ -25,9 +25,9 @@ namespace covered
 
         // Different for local uncached objects
 
-        void addForNewKey(const Key& key, const Value& value); // Currently tracked uncached key (for getrsp with cache miss, put/delrsp with cache miss, admission); overwrite CacheMetadataBase to detrack old keys if necessary
+        void addForNewKey(const Key& key, const Value& value); // Currently tracked uncached key (for getrsp with cache miss, put/delrsp with cache miss); overwrite CacheMetadataBase to detrack old keys if necessary
 
-        void updateForExistingKey(const Key& key, const Value& value, const Value& original_value, const bool& is_value_related); // Tracked uncached key (is_value_related = false: for getrsp with cache miss; is_value_related = true: put/delrsp with cache miss)
+        void updateForExistingKey(const Key& key, const Value& value, const Value& original_value, const bool& is_value_related); // Tracked uncached key (is_value_related = false: for getrsp with cache miss; is_value_related = true: put/delrsp with cache miss); NOT overwrite CacheMetadataBase
 
         virtual uint64_t getSizeForCapacity() const override; // Get size for capacity constraint of local uncached objects
     private:

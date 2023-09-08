@@ -174,7 +174,7 @@ namespace covered
         return need_independent_admit;
     }
 
-    void LocalCacheBase::admitLocalCache(const Key& key, const Value& value)
+    void LocalCacheBase::admitLocalCache(const Key& key, const Value& value, bool& affect_victim_tracker)
     {
         checkPointers_();
 
@@ -182,7 +182,7 @@ namespace covered
         std::string context_name = "LocalCacheBase::admitLocalCache()";
         rwlock_for_local_cache_ptr_->acquire_lock(context_name);
 
-        admitLocalCacheInternal_(key, value);
+        admitLocalCacheInternal_(key, value, affect_victim_tracker);
 
         rwlock_for_local_cache_ptr_->unlock(context_name);
         return;

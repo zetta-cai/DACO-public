@@ -173,11 +173,14 @@ namespace covered
     bool SegcacheLocalCache::needIndependentAdmitInternal_(const Key& key) const
     {
         // SegCache cache uses default independent admission policy (i.e., always admit), which always returns true as long as key is not cached
-        return true;
+        bool is_local_cached = isLocalCachedInternal_(key);
+        return !is_local_cached;
     }
 
-    void SegcacheLocalCache::admitLocalCacheInternal_(const Key& key, const Value& value)
+    void SegcacheLocalCache::admitLocalCacheInternal_(const Key& key, const Value& value, bool& affect_victim_tracker)
     {
+        UNUSED(affect_victim_tracker); // Only for COVERED
+        
         // NOTE: admission is the same as update for SegCache due to log-structured design
         bool is_local_cached = appendLocalCache_(key, value);
         assert(!is_local_cached);

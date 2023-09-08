@@ -54,7 +54,7 @@ namespace covered
 
     void LocalUncachedMetadata::addForNewKey(const Key& key, const Value& value)
     {
-        CacheMetadataBase::addForNewKey(key, value);
+        CacheMetadataBase::addForNewKey_(key, value);
 
         Key detracked_key;
         while (true)
@@ -76,21 +76,7 @@ namespace covered
 
     void LocalUncachedMetadata::updateForExistingKey(const Key& key, const Value& value, const Value& original_value, const bool& is_value_related)
     {
-        // Get lookup iterator
-        perkey_lookup_iter_t perkey_lookup_iter = getLookup_(key);
-
-        // Update object-level metadata
-        const KeyLevelMetadata& perkey_metadata_ref = updatePerkeyMetadata_(perkey_lookup_iter);
-
-        // Update group-level metadata
-        const GroupLevelMetadata& pergroup_metadata_ref = updatePergroupMetadata_(perkey_lookup_iter, key, value, original_value, is_value_related);
-
-        // Update popularity
-        Popularity new_popularity = calculatePopularity_(perkey_metadata_ref, pergroup_metadata_ref); // Calculate popularity
-        sorted_popularity_multimap_t::iterator new_sorted_popularity_iter = updatePopularity_(new_popularity, perkey_lookup_iter);
-
-        // Update lookup table
-        updateLookup_(perkey_lookup_iter, new_sorted_popularity_iter);
+        CacheMetadataBase::updateForExistingKey_(key, value, original_value, is_value_related);
 
         return;
     }

@@ -267,7 +267,7 @@ namespace covered
         return need_independent_admit;
     }
 
-    void CacheWrapper::admit(const Key& key, const Value& value, const bool& is_valid)
+    void CacheWrapper::admit(const Key& key, const Value& value, const bool& is_valid, bool& affect_victim_tracker)
     {
         checkPointers_();
 
@@ -275,7 +275,7 @@ namespace covered
         std::string context_name = "CacheWrapper::admit()";
         cache_wrapper_perkey_rwlock_ptr_->acquire_lock(key, context_name);
 
-        local_cache_ptr_->admitLocalCache(key, value);
+        local_cache_ptr_->admitLocalCache(key, value, affect_victim_tracker);
 
         if (is_valid) // w/o writes
         {

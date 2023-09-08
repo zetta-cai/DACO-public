@@ -50,7 +50,7 @@ namespace covered
         // NOTE: only COVERED never needs independent admission (i.e., always returns false)
         bool needIndependentAdmit(const Key& key) const;
 
-        void admitLocalCache(const Key& key, const Value& value);
+        void admitLocalCache(const Key& key, const Value& value, bool& affect_victim_tracker);
 
         // If local cache supports fine-grained cache management, split evict() into two steps for key-level fine-grained locking in cache wrapper: (i) get victim key; (ii) evict if victim key matches similar as version check
         bool getLocalCacheVictimKeys(std::unordered_set<Key, KeyHasher>& keys, const uint64_t& required_size) const; // Return false if no victim key (for fine-grained management)
@@ -90,7 +90,7 @@ namespace covered
 
         virtual bool needIndependentAdmitInternal_(const Key& key) const = 0;
 
-        virtual void admitLocalCacheInternal_(const Key& key, const Value& value) = 0;
+        virtual void admitLocalCacheInternal_(const Key& key, const Value& value, bool& affect_victim_tracker) = 0;
         virtual bool getLocalCacheVictimKeysInternal_(std::unordered_set<Key, KeyHasher>& keys, const uint64_t& required_size) const = 0;
         virtual bool evictLocalCacheWithGivenKeyInternal_(const Key& key, Value& value) = 0;
 

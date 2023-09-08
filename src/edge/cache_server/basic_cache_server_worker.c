@@ -374,41 +374,28 @@ namespace covered
 
     // (4.1) Admit uncached objects in local edge cache
 
-    bool BasicCacheServerWorker::tryToTriggerIndependentAdmission_(const Key& key, const Value& value, EventList& event_list, const bool& skip_propagation_latency) const
+    void BasicCacheServerWorker::admitLocalEdgeCache_(const Key& key, const Value& value, const bool& is_valid)
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
-        bool is_finish = false;
+        bool affect_victim_tracker = false;
+        tmp_edge_wrapper_ptr->getEdgeCachePtr()->admit(key, value, is_valid, affect_victim_tracker);
+        UNUSED(affect_victim_tracker); // ONLY for COVERED
 
-        bool is_local_cached = tmp_edge_wrapper_ptr->getEdgeCachePtr()->isLocalCached(key);
-        if (!is_local_cached && tmp_edge_wrapper_ptr->getEdgeCachePtr()->needIndependentAdmit(key)) // Trigger independent admission
-        {
-            #ifdef DEBUG_CACHE_SERVER
-            uint64_t used_bytes_before_admit = tmp_edge_wrapper_ptr->getSizeForCapacity();
-            Util::dumpVariablesForDebug(instance_name_, 11, "independent admission;", "keystr:", key.getKeystr().c_str(), "keysize:", std::to_string(key.getKeyLength()).c_str(), "is value deleted:", Util::toString(value.isDeleted()).c_str(), "value size:", Util::toString(value.getValuesize()).c_str(), "used_bytes_before_admit:", std::to_string(used_bytes_before_admit).c_str());
-            #endif
+        return;
+    }
 
-            struct timespec update_directory_to_admit_start_timestamp = Util::getCurrentTimespec();
+    // (4.2) Evict cached objects from local edge cache
 
-            // Independently admit the new key-value pair into local edge cache
-            bool is_being_written = false;
-            is_finish = updateDirectory_(key, true, is_being_written, event_list, skip_propagation_latency);
-            if (is_finish)
-            {
-                return is_finish;
-            }
-            tmp_edge_wrapper_ptr->getEdgeCachePtr()->admit(key, value, !is_being_written); // valid if not being written
+    void BasicCacheServerWorker::evictLocalEdgeCache_(std::unordered_map<Key, Value, KeyHasher>& victims, const uint64_t& required_size)
+    {
+        checkPointers_();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
-            struct timespec update_directory_to_admit_end_timestamp = Util::getCurrentTimespec();
-            uint32_t update_directory_to_admit_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(update_directory_to_admit_end_timestamp, update_directory_to_admit_start_timestamp));
-            event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_UPDATE_DIRECTORY_TO_ADMIT_EVENT_NAME, update_directory_to_admit_latency_us); // Add intermediate event if with event tracking
+        tmp_edge_wrapper_ptr->getEdgeCachePtr()->evict(victims, required_size);
 
-            // Trigger eviction if necessary
-            is_finish = evictForCapacity_(event_list, skip_propagation_latency);
-        }
-
-        return is_finish;
+        return;
     }
 
     // (4.3) Update content directory information

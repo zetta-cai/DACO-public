@@ -53,7 +53,7 @@ namespace covered
         // (3) Local edge cache management
 
         virtual bool needIndependentAdmitInternal_(const Key& key) const override;
-        virtual void admitLocalCacheInternal_(const Key& key, const Value& value) override;
+        virtual void admitLocalCacheInternal_(const Key& key, const Value& value, bool& affect_victim_tracker) override;
         virtual bool getLocalCacheVictimKeysInternal_(std::unordered_set<Key, KeyHasher>& keys, const uint64_t& required_size) const override;
         virtual bool evictLocalCacheWithGivenKeyInternal_(const Key& key, Value& value) override;
         virtual void evictLocalCacheNoGivenKeyInternal_(std::unordered_map<Key, Value, KeyHasher>& victims, const uint64_t& required_size) override;
