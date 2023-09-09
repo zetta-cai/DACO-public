@@ -115,9 +115,13 @@ namespace covered
 
         // (2.1) Acquire write lock and block for MSI protocol
 
+        bool acquireWritelock_(const Key& key, LockResult& lock_result, EventList& event_list, const bool& skip_propagation_latency); // Return if edge node is finished
+        virtual void acquireLocalWritelock_(const Key& key, LockResult& lock_result, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo) = 0;
+        bool acquireBeaconWritelock_(const Key& key, LockResult& lock_result, EventList& event_list, const bool& skip_propagation_latency); // Return if edge node is finished
+        virtual MessageBase* getReqToAcquireBeaconWritelock_(const Key& key, const bool& skip_propagation_latency) const = 0;
+        virtual void processRspToAcquireBeaconWritelock_(MessageBase* control_response_ptr, LockResult& lock_result) const = 0;
+
         // Return if edge node is finished
-        bool acquireWritelock_(const Key& key, LockResult& lock_result, EventList& event_list, const bool& skip_propagation_latency);
-        virtual bool acquireBeaconWritelock_(const Key& key, LockResult& lock_result, EventList& event_list, const bool& skip_propagation_latency) = 0;
         bool blockForWritesByInterruption_(const Key& key, EventList& event_list, const bool& skip_propagation_latency) const; // Block for MSI protocol
 
         // (2.2) Update cloud

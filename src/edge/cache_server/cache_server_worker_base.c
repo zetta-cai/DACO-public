@@ -791,7 +791,7 @@ namespace covered
             if (current_is_beacon) // Get target edge index from local directory information
             {
                 // Frequent polling
-                lock_result = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->acquireLocalWritelockByCacheServer(key, all_dirinfo);
+                acquireLocalWritelock_(key, lock_result, all_dirinfo);
                 if (lock_result == LockResult::kFailure) // If key has been locked by any other edge node
                 {
                     continue; // Continue to try to acquire the write lock
@@ -837,6 +837,77 @@ namespace covered
         struct timespec acquire_local_or_remote_writelock_end_timestamp = Util::getCurrentTimespec();
         uint32_t acquire_local_or_remote_writelock_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(acquire_local_or_remote_writelock_end_timestamp, acquire_local_or_remote_writelock_start_timestamp));
         event_list.addEvent(current_is_beacon?Event::EDGE_CACHE_SERVER_WORKER_ACQUIRE_LOCAL_WRITELOCK_EVENT_NAME:Event::EDGE_CACHE_SERVER_WORKER_ACQUIRE_REMOTE_WRITELOCK_EVENT_NAME, acquire_local_or_remote_writelock_latency_us);
+
+        return is_finish;
+    }
+    
+    bool CacheServerWorkerBase::acquireBeaconWritelock_(const Key& key, LockResult& lock_result, EventList& event_list, const bool& skip_propagation_latency)
+    {
+        checkPointers_();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+
+        // The current edge node must NOT be the beacon node for the key
+        bool current_is_beacon = tmp_edge_wrapper_ptr->currentIsBeacon(key);
+        assert(!current_is_beacon);
+
+        bool is_finish = false;
+        struct timespec issue_acquire_writelock_req_start_timestamp = Util::getCurrentTimespec();
+
+        // Prepare destination address of beacon server
+        NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = getBeaconDstaddr_(key);
+
+        while (true) // Timeout-and-retry mechanism
+        {
+            // Prepare acquire writelock request to acquire permission for a write
+            acquire_writelock_request_ptr = getReqToAcquireBeaconWritelock_(key, skip_propagation_latency);
+            assert(acquire_writelock_request_ptr != NULL);
+
+            // Push the control request into edge-to-edge propagation simulator to the beacon node
+            bool is_successful = tmp_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->push(acquire_writelock_request_ptr, beacon_edge_beacon_server_recvreq_dst_addr);
+            assert(is_successful);
+
+            // NOTE: acquire_writelock_request_ptr will be released by edge-to-edge propagation simulator
+            acquire_writelock_request_ptr = NULL;
+
+            // Receive the control repsonse from the beacon node
+            DynamicArray control_response_msg_payload;
+            bool is_timeout = edge_cache_server_worker_recvrsp_socket_server_ptr_->recv(control_response_msg_payload);
+            if (is_timeout)
+            {
+                if (!tmp_edge_wrapper_ptr->isNodeRunning())
+                {
+                    is_finish = true;
+                    break; // Edge is NOT running
+                }
+                else
+                {
+                    Util::dumpWarnMsg(base_instance_name_, "edge timeout to wait for AcquireWritelockResponse");
+                    continue; // Resend the control request message
+                }
+            } // End of (is_timeout == true)
+            else
+            {
+                // Receive the control response message successfully
+                MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
+                assert(control_response_ptr != NULL);
+
+                // Get lock result from control response
+                processRspToAcquireBeaconWritelock_(control_response_ptr, lock_result);
+
+                // Add events of intermediate response if with event tracking
+                event_list.addEvents(control_response_ptr->getEventListRef());
+
+                // Release the control response message
+                delete control_response_ptr;
+                control_response_ptr = NULL;
+                break;
+            } // End of (is_timeout == false)
+        } // End of while(true)
+
+        // Add intermediate event if with event tracking
+        struct timespec issue_acquire_writelock_req_end_timestamp = Util::getCurrentTimespec();
+        uint32_t issue_acquire_writelock_req_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(issue_acquire_writelock_req_end_timestamp, issue_acquire_writelock_req_start_timestamp));
+        event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_ISSUE_ACQUIRE_WRITELOCK_REQ_EVENT_NAME, issue_acquire_writelock_req_latency_us);
 
         return is_finish;
     }
@@ -1159,7 +1230,7 @@ namespace covered
 
             #ifdef DEBUG_CACHE_SERVER
             uint64_t used_bytes_before_admit = tmp_edge_wrapper_ptr->getSizeForCapacity();
-            Util::dumpVariablesForDebug(instance_name_, 11, "independent admission;", "keystr:", key.getKeystr().c_str(), "keysize:", std::to_string(key.getKeyLength()).c_str(), "is value deleted:", Util::toString(value.isDeleted()).c_str(), "value size:", Util::toString(value.getValuesize()).c_str(), "used_bytes_before_admit:", std::to_string(used_bytes_before_admit).c_str());
+            Util::dumpVariablesForDebug(base_instance_name_, 11, "independent admission;", "keystr:", key.getKeystr().c_str(), "keysize:", std::to_string(key.getKeyLength()).c_str(), "is value deleted:", Util::toString(value.isDeleted()).c_str(), "value size:", Util::toString(value.getValuesize()).c_str(), "used_bytes_before_admit:", std::to_string(used_bytes_before_admit).c_str());
             #endif
 
             is_finish = admitObject_(key, value, event_list, skip_propagation_latency);
@@ -1242,7 +1313,7 @@ namespace covered
 
                     #ifdef DEBUG_CACHE_SERVER
                     const Value& tmp_victim_value = victim_iter->second;
-                    Util::dumpVariablesForDebug(instance_name_, 7, "eviction;", "keystr:", tmp_victim_key.getKeystr().c_str(), "is value deleted:", Util::toString(tmp_victim_value.isDeleted()).c_str(), "value size:", Util::toString(tmp_victim_value.getValuesize()).c_str());
+                    Util::dumpVariablesForDebug(base_instance_name_, 7, "eviction;", "keystr:", tmp_victim_key.getKeystr().c_str(), "is value deleted:", Util::toString(tmp_victim_value.isDeleted()).c_str(), "value size:", Util::toString(tmp_victim_value.getValuesize()).c_str());
                     #endif
                 }
 
@@ -1331,7 +1402,7 @@ namespace covered
                 }
                 else
                 {
-                    Util::dumpWarnMsg(instance_name_, "edge timeout to wait for DirectoryUpdateResponse");
+                    Util::dumpWarnMsg(base_instance_name_, "edge timeout to wait for DirectoryUpdateResponse");
                     continue; // Resend the control request message
                 }
             } // End of (is_timeout == true)

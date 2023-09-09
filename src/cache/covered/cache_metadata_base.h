@@ -101,8 +101,10 @@ namespace covered
         void removePopularity_(const perkey_lookup_iter_t& perkey_lookup_iter);
 
         // For lookup table
-        perkey_lookup_iter_t getLookup_(const Key& key); // Return lookup iterator (end() if not found)
-        perkey_lookup_const_iter_t getLookup_(const Key& key) const; // Return lookup const iterator (end() if not found)
+        perkey_lookup_iter_t getLookup_(const Key& key); // Return lookup iterator (assert result != end())
+        perkey_lookup_const_iter_t getLookup_(const Key& key) const; // Return lookup const iterator (assert result != end())
+        perkey_lookup_iter_t tryToGetLookup_(const Key& key); // Return lookup iterator (end() if not found)
+        perkey_lookup_const_iter_t tryToGetLookup_(const Key& key) const; // Return lookup iterator (end() if not found)
         perkey_lookup_iter_t addLookup_(const Key& key); // Return new lookup iterator
         void updateLookup_(const perkey_lookup_iter_t& perkey_lookup_iter, const sorted_popularity_multimap_t::iterator& new_sorted_popularity_iter);
         void updateLookup_(const perkey_lookup_iter_t& perkey_lookup_iter, const perkey_metadata_list_t::iterator& perkey_metadata_iter, const sorted_popularity_multimap_t::iterator& sorted_popularity_iter);

@@ -40,8 +40,9 @@ namespace covered
 
         // (2.1) Acquire write lock and block for MSI protocol
 
-        // Return if edge node is finished
-        virtual bool acquireBeaconWritelock_(const Key& key, LockResult& lock_result, EventList& event_list, const bool& skip_propagation_latency) override;
+        virtual void acquireLocalWritelock_(const Key& key, LockResult& lock_result, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo) override;
+        virtual MessageBase* getReqToAcquireBeaconWritelock_(const Key& key, const bool& skip_propagation_latency) const override;
+        virtual void processRspToAcquireBeaconWritelock_(MessageBase* control_response_ptr, LockResult& lock_result) const override;
 
         // (2.3) Update cached objects in local edge cache
 

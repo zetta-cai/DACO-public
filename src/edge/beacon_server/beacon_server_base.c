@@ -145,15 +145,15 @@ namespace covered
         {
             is_finish = processDirectoryLookupRequest_(control_request_ptr, edge_cache_server_worker_recvrsp_dst_addr);
         }
-        else if (message_type == MessageType::kDirectoryUpdateRequest)
+        else if (message_type == MessageType::kDirectoryUpdateRequest || message_type == MessageType::kCoveredDirectoryUpdateRequest)
         {
             is_finish = processDirectoryUpdateRequest_(control_request_ptr, edge_cache_server_worker_recvrsp_dst_addr);
         }
-        else if (message_type == MessageType::kAcquireWritelockRequest)
+        else if (message_type == MessageType::kAcquireWritelockRequest || message_type == MessageType::kCoveredAcquireWritelockRequest)
         {
             is_finish = processAcquireWritelockRequest_(control_request_ptr, edge_cache_server_worker_recvrsp_dst_addr);
         }
-        else if (message_type == MessageType::kReleaseWritelockRequest)
+        else if (message_type == MessageType::kReleaseWritelockRequest || message_type == MessageType::kCoveredReleaseWritelockRequest)
         {
             is_finish = processReleaseWritelockRequest_(control_request_ptr, edge_cache_server_worker_recvrsp_dst_addr);
         }
@@ -188,13 +188,13 @@ namespace covered
         struct timespec lookup_local_directory_start_timestamp = Util::getCurrentTimespec();
 
         // Calculate cache server worker recvreq destination address
-        NetworkAddr edge_cache_server_worker_recvreq_source_addr = Util::getEdgeCacheServerWorkerRecvreqAddrFromRecvrspAddr(edge_cache_server_worker_recvrsp_dst_addr);
+        NetworkAddr edge_cache_server_worker_recvreq_dst_addr = Util::getEdgeCacheServerWorkerRecvreqAddrFromRecvrspAddr(edge_cache_server_worker_recvrsp_dst_addr);
 
         // Lookup local directory information and randomly select a target edge index
         bool is_being_written = false;
         bool is_valid_directory_exist = false;
         DirectoryInfo directory_info;
-        processReqToLookupLocalDirectory_(control_request_ptr, edge_cache_server_worker_recvreq_source_addr, is_being_written, is_valid_directory_exist, directory_info);
+        processReqToLookupLocalDirectory_(control_request_ptr, edge_cache_server_worker_recvreq_dst_addr, is_being_written, is_valid_directory_exist, directory_info);
 
         // Add intermediate event if with event tracking
         struct timespec lookup_local_directory_end_timestamp = Util::getCurrentTimespec();
@@ -258,6 +258,61 @@ namespace covered
 
         // NOTE: directory_update_response_ptr will be released by edge-to-edge propagation simulator
         directory_update_response_ptr = NULL;
+
+        return is_finish;
+    }
+
+    // (2) Process writes and unblock for MSI protocol
+
+    bool BasicBeaconServer::processAcquireWritelockRequest_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr)
+    {
+        // Get key from control request if any
+        /*assert(control_request_ptr != NULL);
+        assert(control_request_ptr->getMessageType() == MessageType::kAcquireWritelockRequest);
+        const AcquireWritelockRequest* const acquire_writelock_request_ptr = static_cast<const AcquireWritelockRequest*>(control_request_ptr);
+        Key tmp_key = acquire_writelock_request_ptr->getKey();
+        const bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();*/
+
+        checkPointers_();
+
+        bool is_finish = false;
+
+        EventList event_list;
+        struct timespec acquire_local_writelock_start_timestamp = Util::getCurrentTimespec();
+
+        // Calculate cache server worker recvreq destination address
+        NetworkAddr edge_cache_server_worker_recvreq_dst_addr = Util::getEdgeCacheServerWorkerRecvreqAddrFromRecvrspAddr(edge_cache_server_worker_recvrsp_dst_addr);
+        
+        // Try to acquire permission for the write
+        LockResult lock_result = LockResult::kFailure;
+        std::unordered_set<DirectoryInfo, DirectoryInfoHasher> all_dirinfo;
+        processReqToAcquireLocalWritelock_(control_request_ptr, edge_cache_server_worker_recvreq_dst_addr, lock_result, all_dirinfo);
+
+        // Add intermediate event if with event tracking
+        struct timespec acquire_local_writelock_end_timestamp = Util::getCurrentTimespec();
+        uint32_t acquire_local_writelock_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(acquire_local_writelock_end_timestamp, acquire_local_writelock_start_timestamp));
+        event_list.addEvent(Event::EDGE_BEACON_SERVER_ACQUIRE_LOCAL_WRITELOCK_EVENT_NAME, acquire_local_writelock_latency_us);
+
+        Key tmp_key = MessageBase::getKeyFromMessage(control_request_ptr);
+        bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();
+
+        // NOTE: we invalidate cache copies by beacon code to avoid transmitting all_dirinfo to cache server of the closest edge node
+        if (lock_result == LockResult::kSuccess) // If acquiring write permission successfully
+        {
+            // Invalidate all cache copies
+            edge_wrapper_ptr_->invalidateCacheCopies(edge_beacon_server_recvrsp_socket_server_ptr_, edge_beacon_server_recvrsp_source_addr_, tmp_key, all_dirinfo, event_list, skip_propagation_latency); // Add events of intermedate responses if with event tracking
+        }
+
+        // Prepare a acquire writelock response
+        MessageBase* acquire_writelock_response_ptr = getRspToAcquireLocalWritelock_(tmp_key, lock_result, event_list, skip_propagation_latency);
+        assert(acquire_writelock_response_ptr != NULL);
+
+        // Push acquire writelock response into edge-to-edge propagation simulator to cache server worker
+        bool is_successful = edge_wrapper_ptr_->getEdgeToedgePropagationSimulatorParamPtr()->push(acquire_writelock_response_ptr, edge_cache_server_worker_recvrsp_dst_addr);
+        assert(is_successful);
+
+        // NOTE: acquire_writelock_response_ptr will be released by edge-to-edge propagation simulator
+        acquire_writelock_response_ptr = NULL;
 
         return is_finish;
     }

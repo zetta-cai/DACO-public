@@ -176,81 +176,6 @@ namespace covered
         return is_finish;
     }
 
-    // (2.1) Acquire write lock and block for MSI protocol
-
-    bool BasicCacheServerWorker::acquireBeaconWritelock_(const Key& key, LockResult& lock_result, EventList& event_list, const bool& skip_propagation_latency)
-    {
-        checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
-
-        // The current edge node must NOT be the beacon node for the key
-        bool current_is_beacon = tmp_edge_wrapper_ptr->currentIsBeacon(key);
-        assert(!current_is_beacon);
-
-        bool is_finish = false;
-        struct timespec issue_acquire_writelock_req_start_timestamp = Util::getCurrentTimespec();
-
-        // Prepare destination address of beacon server
-        NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = getBeaconDstaddr_(key);
-
-        while (true) // Timeout-and-retry mechanism
-        {
-            // Prepare acquire writelock request to acquire permission for a write
-            uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
-            MessageBase* acquire_writelock_request_ptr = new AcquireWritelockRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
-            assert(acquire_writelock_request_ptr != NULL);
-
-            // Push the control request into edge-to-edge propagation simulator to the beacon node
-            bool is_successful = tmp_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->push(acquire_writelock_request_ptr, beacon_edge_beacon_server_recvreq_dst_addr);
-            assert(is_successful);
-
-            // NOTE: acquire_writelock_request_ptr will be released by edge-to-edge propagation simulator
-            acquire_writelock_request_ptr = NULL;
-
-            // Receive the control repsonse from the beacon node
-            DynamicArray control_response_msg_payload;
-            bool is_timeout = edge_cache_server_worker_recvrsp_socket_server_ptr_->recv(control_response_msg_payload);
-            if (is_timeout)
-            {
-                if (!tmp_edge_wrapper_ptr->isNodeRunning())
-                {
-                    is_finish = true;
-                    break; // Edge is NOT running
-                }
-                else
-                {
-                    Util::dumpWarnMsg(instance_name_, "edge timeout to wait for AcquireWritelockResponse");
-                    continue; // Resend the control request message
-                }
-            } // End of (is_timeout == true)
-            else
-            {
-                // Receive the control response message successfully
-                MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
-                assert(control_response_ptr != NULL && control_response_ptr->getMessageType() == MessageType::kAcquireWritelockResponse);
-
-                // Get lock result from control response
-                const AcquireWritelockResponse* const acquire_writelock_response_ptr = static_cast<const AcquireWritelockResponse*>(control_response_ptr);
-                lock_result = acquire_writelock_response_ptr->getLockResult();
-
-                // Add events of intermediate response if with event tracking
-                event_list.addEvents(acquire_writelock_response_ptr->getEventListRef());
-
-                // Release the control response message
-                delete control_response_ptr;
-                control_response_ptr = NULL;
-                break;
-            } // End of (is_timeout == false)
-        } // End of while(true)
-
-        // Add intermediate event if with event tracking
-        struct timespec issue_acquire_writelock_req_end_timestamp = Util::getCurrentTimespec();
-        uint32_t issue_acquire_writelock_req_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(issue_acquire_writelock_req_end_timestamp, issue_acquire_writelock_req_start_timestamp));
-        event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_ISSUE_ACQUIRE_WRITELOCK_REQ_EVENT_NAME, issue_acquire_writelock_req_latency_us);
-
-        return is_finish;
-    }
-
     // (1.4) Update invalid cached objects in local edge cache
 
     bool BasicCacheServerWorker::tryToUpdateInvalidLocalEdgeCache_(const Key& key, const Value& value) const
@@ -271,6 +196,42 @@ namespace covered
         UNUSED(affect_victim_tracker); // ONLY for COVERED
         
         return is_local_cached_and_invalid;
+    }
+
+    // (2.1) Acquire write lock and block for MSI protocol
+
+    void BasicCacheServerWorker::acquireLocalWritelock_(const Key& key, LockResult& lock_result, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo)
+    {
+        checkPointers_();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+
+        lock_result = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->acquireLocalWritelockByCacheServer(key, all_dirinfo);
+
+        return;
+    }
+
+    MessageBase* BasicCacheServerWorker::getReqToAcquireBeaconWritelock_(const Key& key, const bool& skip_propagation_latency) const
+    {
+        checkPointers_();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+
+        uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
+        MessageBase* acquire_writelock_request_ptr = new AcquireWritelockRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
+        assert(acquire_writelock_request_ptr != NULL);
+
+        return acquire_writelock_request_ptr;
+    }
+
+    void BasicCacheServerWorker::processRspToAcquireBeaconWritelock_(MessageBase* control_response_ptr, LockResult& lock_result) const
+    {
+        assert(control_response_ptr != NULL);
+        assert(control_response_ptr->getMessageType() == MessageType::kAcquireWritelockResponse);
+
+        // Get result of acquiring write lock
+        const AcquireWritelockResponse* const acquire_writelock_response_ptr = static_cast<const AcquireWritelockResponse*>(control_response_ptr);
+        lock_result = acquire_writelock_response_ptr->getLockResult();
+
+        return;
     }
 
     // (2.3) Update cached objects in local edge cache

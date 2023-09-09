@@ -29,7 +29,7 @@ namespace covered
 
     // (1) Access content directory information
 
-    void CoveredBeaconServer::processReqToLookupLocalDirectory_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvreq_source_addr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
+    void CoveredBeaconServer::processReqToLookupLocalDirectory_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvreq_dst_addr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
     {
         // TODO: For COVERED, beacon node will tell the closest edge node if to admit, w/o independent decision (trade-off-aware admission placement and eviction)
 
@@ -44,7 +44,7 @@ namespace covered
 
         // Lookup cooperation wrapper to get valid directory information if any
         // Also check whether the key is cached by a local/neighbor edge node (even if invalid temporarily)
-        bool is_global_cached = edge_wrapper_ptr_->getCooperationWrapperPtr()->lookupDirectoryTableByBeaconServer(tmp_key, edge_cache_server_worker_recvreq_source_addr, is_being_written, is_valid_directory_exist, directory_info);
+        bool is_global_cached = edge_wrapper_ptr_->getCooperationWrapperPtr()->lookupDirectoryTableByBeaconServer(tmp_key, edge_cache_server_worker_recvreq_dst_addr, is_being_written, is_valid_directory_exist, directory_info);
 
         // Selective popularity aggregation
         const uint32_t source_edge_idx = covered_directory_lookup_request_ptr->getSourceIndex();
@@ -132,9 +132,48 @@ namespace covered
 
     // (2) Process writes and unblock for MSI protocol
 
-    bool CoveredBeaconServer::processAcquireWritelockRequest_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr)
+    void BasicBeaconServer::processReqToAcquireLocalWritelock_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvreq_dst_addr, LockResult& lock_result, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo)
     {
-        return false;
+        assert(control_request_ptr != NULL);
+        assert(control_request_ptr->getMessageType() == MessageType::kCoveredAcquireWritelockRequest);
+        const CoveredAcquireWritelockRequest* const covered_acquire_writelock_request_ptr = static_cast<const CoveredAcquireWritelockRequest*>(control_request_ptr);
+        Key tmp_key = covered_acquire_writelock_request_ptr->getKey();
+
+        checkPointers_();
+        CoveredCacheManager* covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
+
+        // Try to acquire a write lock for the given key if key is global cached
+        lock_result = edge_wrapper_ptr_->getCooperationWrapperPtr()->acquireLocalWritelockByBeaconServer(tmp_key, edge_cache_server_worker_recvreq_dst_addr, all_dirinfo);
+        bool is_global_cached = (result != LockResult::kNoneed);
+
+        // OBSELETE: NO need to remove old local uncached popularity from aggregated uncached popularity for remote acquire write lock on local cached objects in source edge node, as it MUST have been removed by directory update request with is_admit = true during non-blocking admission placement
+        // NOTE: NO need to check if key is local cached or not, as collected_popularity.is_tracked_ MUST be false if key is local cached in source edge node and will NOT update/add aggregated uncached popularity
+
+        // Selective popularity aggregation
+        const uint32_t source_edge_idx = covered_acquire_writelock_request_ptr->getSourceIndex();
+        const CollectedPopularity& collected_popularity = covered_acquire_writelock_request_ptr->getCollectedPopularityRef();
+        covered_cache_manager_ptr->updatePopularityAggregatorForAggregatedPopularity(tmp_key, source_edge_idx, collected_popularity, is_global_cached); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in source edge node
+
+        // Victim synchronization
+        const VictimSyncset& victim_syncset = covered_acquire_writelock_request_ptr->getVictimSyncsetRef();
+        std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = edge_wrapper_ptr_->getLocalBeaconedVictimsFromVictimSyncset(victim_syncset);
+        covered_cache_manager_ptr->updateVictimTrackerForVictimSyncset(source_edge_idx, victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
+
+        return;
+    }
+
+    MessageBase* CoveredBeaconServer::getRspToAcquireLocalWritelock_(const Key& key, const LockResult& lock_result, const EventList& event_list, const bool& skip_propagation_latency) cons
+    {
+        checkPointers_();
+
+        // Prepare victim syncset for piggybacking-based victim synchronization
+        VictimSyncset victim_syncset = covered_cache_manager_ptr->accessVictimTrackerForVictimSyncset();
+
+        uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
+        MessageBase* covered_acquire_writelock_response_ptr = new CoveredAcquireWritelockResponse(key, lock_result, victim_syncset, edge_idx, edge_beacon_server_recvreq_source_addr_, event_list, skip_propagation_latency);
+        assert(covered_acquire_writelock_response_ptr != NULL);
+
+        return covered_acquire_writelock_response_ptr;
     }
 
     bool CoveredBeaconServer::processReleaseWritelockRequest_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr)

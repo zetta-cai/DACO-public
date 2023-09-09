@@ -30,7 +30,7 @@ namespace covered
 
     // (1) Access content directory information
 
-    void BasicBeaconServer::processReqToLookupLocalDirectory_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvreq_source_addr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
+    void BasicBeaconServer::processReqToLookupLocalDirectory_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvreq_dst_addr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
     {
         // Get key from control request if any
         assert(control_request_ptr != NULL);
@@ -38,7 +38,7 @@ namespace covered
         const DirectoryLookupRequest* const directory_lookup_request_ptr = static_cast<const DirectoryLookupRequest*>(control_request_ptr);
         Key tmp_key = directory_lookup_request_ptr->getKey();
 
-        edge_wrapper_ptr_->getCooperationWrapperPtr()->lookupDirectoryTableByBeaconServer(tmp_key, edge_cache_server_worker_recvreq_source_addr, is_being_written, is_valid_directory_exist, directory_info);
+        edge_wrapper_ptr_->getCooperationWrapperPtr()->lookupDirectoryTableByBeaconServer(tmp_key, edge_cache_server_worker_recvreq_dst_addr, is_being_written, is_valid_directory_exist, directory_info);
 
         return;
     }
@@ -81,55 +81,27 @@ namespace covered
 
     // (2) Process writes and unblock for MSI protocol
 
-    bool BasicBeaconServer::processAcquireWritelockRequest_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr)
+    void BasicBeaconServer::processReqToAcquireLocalWritelock_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvreq_dst_addr, LockResult& lock_result, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo)
     {
-        // Get key from control request if any
         assert(control_request_ptr != NULL);
         assert(control_request_ptr->getMessageType() == MessageType::kAcquireWritelockRequest);
         const AcquireWritelockRequest* const acquire_writelock_request_ptr = static_cast<const AcquireWritelockRequest*>(control_request_ptr);
         Key tmp_key = acquire_writelock_request_ptr->getKey();
-        const bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();
 
-        checkPointers_();
-
-        bool is_finish = false;
-
-        EventList event_list;
-        struct timespec acquire_local_writelock_start_timestamp = Util::getCurrentTimespec();
-
-        // Calculate cache server worker recvreq destination address
-        NetworkAddr edge_cache_server_worker_recvreq_dst_addr = Util::getEdgeCacheServerWorkerRecvreqAddrFromRecvrspAddr(edge_cache_server_worker_recvrsp_dst_addr);
-        
-        // Try to acquire permission for the write
-        LockResult lock_result = LockResult::kFailure;
-        std::unordered_set<DirectoryInfo, DirectoryInfoHasher> all_dirinfo;
         lock_result = edge_wrapper_ptr_->getCooperationWrapperPtr()->acquireLocalWritelockByBeaconServer(tmp_key, edge_cache_server_worker_recvreq_dst_addr, all_dirinfo);
 
-        // Add intermediate event if with event tracking
-        struct timespec acquire_local_writelock_end_timestamp = Util::getCurrentTimespec();
-        uint32_t acquire_local_writelock_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(acquire_local_writelock_end_timestamp, acquire_local_writelock_start_timestamp));
-        event_list.addEvent(Event::EDGE_BEACON_SERVER_ACQUIRE_LOCAL_WRITELOCK_EVENT_NAME, acquire_local_writelock_latency_us);
+        return;
+    }
 
-        // NOTE: we invalidate cache copies by beacon code to avoid transmitting all_dirinfo to cache server of the closest edge node
-        if (lock_result == LockResult::kSuccess) // If acquiring write permission successfully
-        {
-            // Invalidate all cache copies
-            edge_wrapper_ptr_->invalidateCacheCopies(edge_beacon_server_recvrsp_socket_server_ptr_, edge_beacon_server_recvrsp_source_addr_, tmp_key, all_dirinfo, event_list, skip_propagation_latency); // Add events of intermedate responses if with event tracking
-        }
+    MessageBase* BasicBeaconServer::getRspToAcquireLocalWritelock_(const Key& key, const LockResult& lock_result, const EventList& event_list, const bool& skip_propagation_latency) cons
+    {
+        checkPointers_();
 
-        // Prepare a acquire writelock response
         uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
-        MessageBase* acquire_writelock_response_ptr = new AcquireWritelockResponse(tmp_key, lock_result, edge_idx, edge_beacon_server_recvreq_source_addr_, event_list, skip_propagation_latency);
+        MessageBase* acquire_writelock_response_ptr = new AcquireWritelockResponse(key, lock_result, edge_idx, edge_beacon_server_recvreq_source_addr_, event_list, skip_propagation_latency);
         assert(acquire_writelock_response_ptr != NULL);
 
-        // Push acquire writelock response into edge-to-edge propagation simulator to cache server worker
-        bool is_successful = edge_wrapper_ptr_->getEdgeToedgePropagationSimulatorParamPtr()->push(acquire_writelock_response_ptr, edge_cache_server_worker_recvrsp_dst_addr);
-        assert(is_successful);
-
-        // NOTE: acquire_writelock_response_ptr will be released by edge-to-edge propagation simulator
-        acquire_writelock_response_ptr = NULL;
-
-        return is_finish;
+        return acquire_writelock_response_ptr;
     }
 
     bool BasicBeaconServer::processReleaseWritelockRequest_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr)

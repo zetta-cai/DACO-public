@@ -110,7 +110,7 @@ namespace covered
         bool is_key_exist = false;
 
         // Get lookup iterator
-        perkey_lookup_const_iter_t perkey_lookup_const_iter = getLookup_(key);
+        perkey_lookup_const_iter_t perkey_lookup_const_iter = tryToGetLookup_(key);
 
         // Get popularity if key exists
         if (perkey_lookup_const_iter != perkey_lookup_table_.end())
@@ -443,6 +443,20 @@ namespace covered
     {
         perkey_lookup_const_iter_t perkey_lookup_iter = perkey_lookup_table_.find(key);
         assert(perkey_lookup_iter != perkey_lookup_table_.end());
+
+        return perkey_lookup_iter;
+    }
+
+    perkey_lookup_iter_t CacheMetadataBase::tryToGetLookup_(const Key& key)
+    {
+        perkey_lookup_iter_t perkey_lookup_iter = perkey_lookup_table_.find(key);
+
+        return perkey_lookup_iter;
+    }
+
+    perkey_lookup_const_iter_t CacheMetadataBase::tryToGetLookup_(const Key& key) const
+    {
+        perkey_lookup_const_iter_t perkey_lookup_iter = perkey_lookup_table_.find(key);
 
         return perkey_lookup_iter;
     }

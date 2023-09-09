@@ -63,7 +63,9 @@ namespace covered
         kCoveredDirectoryLookupRequest,
         kCoveredDirectoryLookupResponse,
         kCoveredDirectoryUpdateRequest,
-        kCoveredDirectoryUpdateResponse
+        kCoveredDirectoryUpdateResponse,
+        kCoveredAcquireWritelockRequest,
+        kCoveredAcquireWritelockResponse
     };
 
     enum Hitflag
