@@ -39,5 +39,7 @@
 #include "message/control/cooperation/covered_directory_update_response.h"
 #include "message/control/cooperation/covered_acquire_writelock_request.h"
 #include "message/control/cooperation/covered_acquire_writelock_response.h"
+#include "message/control/cooperation/covered_release_writelock_request.h"
+#include "message/control/cooperation/covered_release_writelock_response.h"
 
 #endif

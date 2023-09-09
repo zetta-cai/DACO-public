@@ -176,9 +176,46 @@ namespace covered
         return covered_acquire_writelock_response_ptr;
     }
 
-    bool CoveredBeaconServer::processReleaseWritelockRequest_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr)
+    void CoveredBeaconServer::processReqToReleaseLocalWritelock_(MessageBase* control_request_ptr, std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges)
     {
-        return false;
+        assert(control_request_ptr != NULL);
+        assert(control_request_ptr->getMessageType() == MessageType::kCoveredReleaseWritelockRequest);
+        const CoveredReleaseWritelockRequest* const covered_release_writelock_request_ptr = static_cast<const CoveredReleaseWritelockRequest*>(control_request_ptr);
+        Key tmp_key = covered_release_writelock_request_ptr->getKey();
+
+        // Release local write lock and validate sender directory info if any
+        uint32_t sender_edge_idx = covered_release_writelock_request_ptr->getSourceIndex();
+        DirectoryInfo sender_directory_info(sender_edge_idx);
+        blocked_edges = edge_wrapper_ptr_->getCooperationWrapperPtr()->releaseLocalWritelock(tmp_key, sender_directory_info);
+
+        // OBSELETE: NO need to remove old local uncached popularity from aggregated uncached popularity for remote release write lock on local cached objects in source edge node, as it MUST have been removed by directory update request with is_admit = true during non-blocking admission placement
+        // NOTE: NO need to check if key is local cached or not, as collected_popularity.is_tracked_ MUST be false if key is local cached in source edge node and will NOT update/add aggregated uncached popularity
+
+        // Selective popularity aggregation
+        const CollectedPopularity& collected_popularity = covered_release_writelock_request_ptr->getCollectedPopularityRef();
+        const bool is_global_cached = true; // NOTE: receiving remote release writelock request means that the result of acquiring write lock is LockResult::kSuccess -> the given key MUST be global cached
+        covered_cache_manager_ptr->updatePopularityAggregatorForAggregatedPopularity(tmp_key, sender_edge_idx, collected_popularity, is_global_cached); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in source edge node
+
+        // Victim synchronization
+        const VictimSyncset& victim_syncset = covered_release_writelock_request_ptr->getVictimSyncsetRef();
+        std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = edge_wrapper_ptr_->getLocalBeaconedVictimsFromVictimSyncset(victim_syncset);
+        covered_cache_manager_ptr->updateVictimTrackerForVictimSyncset(sender_edge_idx, victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
+
+        return;
+    }
+
+    MessageBase* CoveredBeaconServer::getRspToReleaseLocalWritelock_(const Key& key, const EventList& event_list, const bool& skip_propagation_latency) const
+    {
+        checkPointers_();
+
+        // Prepare victim syncset for piggybacking-based victim synchronization
+        VictimSyncset victim_syncset = covered_cache_manager_ptr->accessVictimTrackerForVictimSyncset();
+
+        uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
+        MessageBase* covered_release_writelock_response_ptr = new CoveredReleaseWritelockResponse(key, victim_syncset, edge_idx, edge_beacon_server_recvreq_source_addr_, event_list, skip_propagation_latency);
+        assert(covered_release_writelock_response_ptr != NULL);
+
+        return covered_release_writelock_response_ptr;
     }
 
     // (3) Process other control requests

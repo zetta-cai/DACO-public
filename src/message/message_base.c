@@ -193,6 +193,16 @@ namespace covered
                 message_type_str = "kCoveredAcquireWritelockResponse";
                 break;
             }
+            case MessageType::kCoveredReleaseWritelockRequest:
+            {
+                message_type_str = "kCoveredReleaseWritelockRequest";
+                break;
+            }
+            case MessageType::kCoveredReleaseWritelockResponse:
+            {
+                message_type_str = "kCoveredReleaseWritelockResponse";
+                break;
+            }
             default:
             {
                 message_type_str = std::to_string(static_cast<uint32_t>(message_type));
@@ -426,6 +436,11 @@ namespace covered
                 message_ptr = new CoveredAcquireWritelockRequest(msg_payload);
                 break;
             }
+            case MessageType::kCoveredReleaseWritelockRequest:
+            {
+                message_ptr = new CoveredReleaseWritelockRequest(msg_payload);
+                break;
+            }
             default:
             {
                 std::ostringstream oss;
@@ -559,6 +574,11 @@ namespace covered
             case MessageType::kCoveredAcquireWritelockResponse:
             {
                 message_ptr = new CoveredAcquireWritelockResponse(msg_payload);
+                break;
+            }
+            case MessageType::kCoveredReleaseWritelockResponse:
+            {
+                message_ptr = new CoveredReleaseWritelockResponse(msg_payload);
                 break;
             }
             default:
@@ -739,6 +759,16 @@ namespace covered
         {
             const CoveredAcquireWritelockResponse* const covered_acquire_writelock_response_ptr = static_cast<const CoveredAcquireWritelockResponse*>(message_ptr);
             tmp_key = covered_acquire_writelock_response_ptr->getKey();
+        }
+        else if (message_ptr->message_type_ == MessageType::kCoveredReleaseWritelockRequest)
+        {
+            const CoveredReleaseWritelockRequest* const covered_release_writelock_request_ptr = static_cast<const CoveredReleaseWritelockRequest*>(message_ptr);
+            tmp_key = covered_release_writelock_request_ptr->getKey();
+        }
+        else if (message_ptr->message_type_ == MessageType::kCoveredReleaseWritelockResponse)
+        {
+            const CoveredReleaseWritelockResponse* const covered_release_writelock_response_ptr = static_cast<const CoveredReleaseWritelockResponse*>(message_ptr);
+            tmp_key = covered_release_writelock_response_ptr->getKey();
         }
         else
         {
@@ -975,7 +1005,7 @@ namespace covered
     bool MessageBase::isCooperationControlRequest() const
     {
         checkIsValid_();
-        if (message_type_ == MessageType::kAcquireWritelockRequest || message_type_ == MessageType::kDirectoryLookupRequest || message_type_ == MessageType::kDirectoryUpdateRequest || message_type_ == MessageType::kFinishBlockRequest || message_type_ == MessageType::kInvalidationRequest || message_type_ == MessageType::kReleaseWritelockRequest || message_type_ == MessageType::kCoveredDirectoryLookupRequest || message_type_ == MessageType::kCoveredDirectoryUpdateRequest || message_type_ == MessageType::kCoveredAcquireWritelockRequest)
+        if (message_type_ == MessageType::kAcquireWritelockRequest || message_type_ == MessageType::kDirectoryLookupRequest || message_type_ == MessageType::kDirectoryUpdateRequest || message_type_ == MessageType::kFinishBlockRequest || message_type_ == MessageType::kInvalidationRequest || message_type_ == MessageType::kReleaseWritelockRequest || message_type_ == MessageType::kCoveredDirectoryLookupRequest || message_type_ == MessageType::kCoveredDirectoryUpdateRequest || message_type_ == MessageType::kCoveredAcquireWritelockRequest || message_type_ == MessageType::kCoveredReleaseWritelockRequest)
         {
             return true;
         }
@@ -1007,7 +1037,7 @@ namespace covered
     bool MessageBase::isCooperationControlResponse() const
     {
         checkIsValid_();
-        if (message_type_ == MessageType::kAcquireWritelockResponse || message_type_ == MessageType::kDirectoryLookupResponse || message_type_ == MessageType::kDirectoryUpdateResponse || message_type_ == MessageType::kFinishBlockResponse || message_type_ == MessageType::kInvalidationResponse || message_type_ == MessageType::kReleaseWritelockResponse || message_type_ == MessageType::kCoveredDirectoryLookupResponse || message_type_ == MessageType::kCoveredDirectoryUpdateResponse || message_type_ == MessageType::kCoveredAcquireWritelockResponse)
+        if (message_type_ == MessageType::kAcquireWritelockResponse || message_type_ == MessageType::kDirectoryLookupResponse || message_type_ == MessageType::kDirectoryUpdateResponse || message_type_ == MessageType::kFinishBlockResponse || message_type_ == MessageType::kInvalidationResponse || message_type_ == MessageType::kReleaseWritelockResponse || message_type_ == MessageType::kCoveredDirectoryLookupResponse || message_type_ == MessageType::kCoveredDirectoryUpdateResponse || message_type_ == MessageType::kCoveredAcquireWritelockResponse || message_type_ == MessageType::kCoveredReleaseWritelockResponse)
         {
             return true;
         }

@@ -195,7 +195,7 @@ namespace covered
         // Prepare local uncached popularity of key for piggybacking-based popularity collection
         // NOTE: we NEED popularity aggregation for accumulated changes on local uncached popularity due to directory metadata cache
         Popularity local_uncached_popularity = 0.0;
-        bool is_key_tracked = tmp_edge_wrapper_ptr->getEdgeCachePtr()->getLocalUncachedPopularity(key, local_uncached_popularity); // If the local uncached key is tracked in local uncached metadata
+        bool is_key_tracked = tmp_edge_wrapper_ptr->getEdgeCachePtr()->getLocalUncachedPopularity(key, local_uncached_popularity); // Return false if the given key is local cached or the key is local uncached yet NOT tracked in local uncached metadata
 
         uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
         MessageBase* covered_acquire_writelock_request_ptr = new CoveredAcquireWritelockRequest(key, CollectedPopularity(is_key_tracked, local_uncached_popularity), victim_syncset, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
@@ -294,9 +294,34 @@ namespace covered
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
         CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCooperationWrapperPtr();
 
-        // NOTE: although acquireLocalWritelock_() has aggregated accumulated changes of local uncached popularity due to directory metadata cache, we still NEED popularity aggregation as local uncached metadata may be updated before releasing the write lock if the global cached key is local uncached
+        // Prepare victim syncset for piggybacking-based victim synchronization
+        VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForVictimSyncset();
 
-        // TODO: END HERE
+        // Prepare local uncached popularity of key for piggybacking-based popularity collection
+        // NOTE: although getReqToAcquireBeaconWritelock_() has aggregated accumulated changes of local uncached popularity due to directory metadata cache, we still NEED popularity aggregation as local uncached metadata may be updated before releasing the write lock if the global cached key is local uncached
+        Popularity local_uncached_popularity = 0.0;
+        bool is_key_tracked = tmp_edge_wrapper_ptr->getEdgeCachePtr()->getLocalUncachedPopularity(key, local_uncached_popularity); // Return false if the given key is local cached or the key is local uncached yet NOT tracked in local uncached metadata
+
+        uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
+        MessageBase* covered_release_writelock_request_ptr = new CoveredReleaseWritelockRequest(key, CollectedPopularity(is_key_tracked, local_uncached_popularity), victim_syncset, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
+        assert(covered_release_writelock_request_ptr != NULL);
+
+        return;
+    }
+
+    void CoveredCacheServerWorker::processRspToReleaseBeaconWritelock_(MessageBase* control_response_ptr) const
+    {
+        assert(control_response_ptr != NULL);
+        assert(control_response_ptr->getMessageType() == MessageType::kCoveredReleaseWritelockResponse);
+        const CoveredReleaseWritelockResponse* covered_release_writelock_response_ptr = static_cast<const CoveredReleaseWritelockResponse*>(control_response_ptr);
+
+        // Do nothing for CoveredReleaseWritelockResponse
+
+        // Victim synchronization
+        const uint32_t source_edge_idx = covered_release_writelock_response_ptr->getSourceIndex();
+        const VictimSyncset& victim_syncset = covered_release_writelock_response_ptr->getVictimSyncsetRef();
+        std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = tmp_edge_wrapper_ptr->getLocalBeaconedVictimsFromVictimSyncset(victim_syncset);
+        tmp_covered_cache_manager_ptr->updateVictimTrackerForVictimSyncset(source_edge_idx, victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
 
         return;
     }

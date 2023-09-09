@@ -264,7 +264,7 @@ namespace covered
 
     // (2) Process writes and unblock for MSI protocol
 
-    bool BasicBeaconServer::processAcquireWritelockRequest_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr)
+    bool BeaconServerBase::processAcquireWritelockRequest_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr)
     {
         // Get key from control request if any
         /*assert(control_request_ptr != NULL);
@@ -313,6 +313,51 @@ namespace covered
 
         // NOTE: acquire_writelock_response_ptr will be released by edge-to-edge propagation simulator
         acquire_writelock_response_ptr = NULL;
+
+        return is_finish;
+    }
+
+    bool BeaconServerBase::processReleaseWritelockRequest_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr)
+    {
+        // Get key from control request if any
+        /*assert(control_request_ptr != NULL);
+        assert(control_request_ptr->getMessageType() == MessageType::kReleaseWritelockRequest);
+        const ReleaseWritelockRequest* const release_writelock_request_ptr = static_cast<const ReleaseWritelockRequest*>(control_request_ptr);
+        Key tmp_key = release_writelock_request_ptr->getKey();
+        const bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();*/
+
+        checkPointers_();
+
+        bool is_finish = false;
+
+        EventList event_list;
+        struct timespec release_local_writelock_start_timestamp = Util::getCurrentTimespec();
+
+        // Release permission for the write
+        std::unordered_set<NetworkAddr, NetworkAddrHasher> blocked_edges;
+        processReqToReleaseLocalWritelock_(control_request_ptr, blocked_edges);
+
+        // Add intermediate event if with event tracking
+        struct timespec release_local_writelock_end_timestamp = Util::getCurrentTimespec();
+        uint32_t release_local_writelock_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(release_local_writelock_end_timestamp, release_local_writelock_start_timestamp));
+        event_list.addEvent(Event::EDGE_BEACON_SERVER_RELEASE_LOCAL_WRITELOCK_EVENT_NAME, release_local_writelock_latency_us);
+
+        Key tmp_key = MessageBase::getKeyFromMessage(control_request_ptr);
+        bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();
+
+        // NOTE: notify blocked edge nodes if any after finishing writes, to avoid transmitting blocked_edges to cache server of the closest edge node
+        is_finish = edge_wrapper_ptr_->notifyEdgesToFinishBlock(edge_beacon_server_recvrsp_socket_server_ptr_, edge_beacon_server_recvrsp_source_addr_, tmp_key, blocked_edges, event_list, skip_propagation_latency); // Add events of intermedate responses if with event tracking
+
+        // Prepare a release writelock response
+        release_writelock_response_ptr = getRspToReleaseLocalWritelock_(tmp_key, event_list, skip_propagation_latency);
+        assert(release_writelock_response_ptr != NULL);
+
+        // Push release writelock response into edge-to-edge propagation simulator to cache server worker
+        bool is_successful = edge_wrapper_ptr_->getEdgeToedgePropagationSimulatorParamPtr()->push(release_writelock_response_ptr, edge_cache_server_worker_recvrsp_dst_addr);
+        assert(is_successful);
+
+        // NOTE: release_writelock_response_ptr will be released by edge-to-edge propagation simulator
+        release_writelock_response_ptr = NULL;
 
         return is_finish;
     }

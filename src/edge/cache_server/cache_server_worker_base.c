@@ -1184,7 +1184,10 @@ namespace covered
             {
                 // Receive the control response message successfully
                 MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
-                assert(control_response_ptr != NULL && control_response_ptr->getMessageType() == MessageType::kReleaseWritelockResponse);
+                assert(control_response_ptr != NULL);
+
+                // Process release writelock response
+                processRspToReleaseBeaconWritelock_(control_response_ptr);
 
                 // Add events of intermediate response if with event tracking
                 event_list.addEvents(control_response_ptr->getEventListRef());

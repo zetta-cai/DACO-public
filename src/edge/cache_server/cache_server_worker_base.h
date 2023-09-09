@@ -141,6 +141,7 @@ namespace covered
         virtual void releaseLocalWritelock_(const Key& key, std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges) = 0;
         bool releaseBeaconWritelock_(const Key& key, EventList& event_list, const bool& skip_propagation_latency); // Notify beacon node to finish writes
         virtual MessageBase* getReqToReleaseBeaconWritelock_(const Key& key, const bool& skip_propagation_latency) const = 0;
+        virtual void processRspToReleaseBeaconWritelock_(MessageBase* control_response_ptr) const = 0;
 
         // (3) Process redirected requests
 

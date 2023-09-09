@@ -53,6 +53,7 @@ namespace covered
 
         virtual void releaseLocalWritelock_(const Key& key, std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges) override;
         virtual MessageBase* getReqToReleaseBeaconWritelock_(const Key& key, const bool& skip_propagation_latency) const override;
+        virtual void processRspToReleaseBeaconWritelock_(MessageBase* control_response_ptr) const override;
 
         // (3) Process redirected requests
 

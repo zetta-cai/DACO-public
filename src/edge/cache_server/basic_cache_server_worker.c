@@ -285,6 +285,16 @@ namespace covered
         return;
     }
 
+    void BasicCacheServerWorker::processRspToReleaseBeaconWritelock_(MessageBase* control_response_ptr) const
+    {
+        assert(control_response_ptr != NULL);
+        assert(control_response_ptr->getMessageType() == MessageType::kReleaseWritelockResponse);
+
+        // Do nothing for ReleaseWritelockResponse
+
+        return;
+    }
+
     // (3) Process redirected requests
 
     // (4.1) Admit uncached objects in local edge cache
