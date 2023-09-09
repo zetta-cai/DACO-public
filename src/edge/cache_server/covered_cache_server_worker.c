@@ -162,12 +162,14 @@ namespace covered
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
         CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCooperationWrapperPtr();
 
+        // Acquire local write lock for the given key
         lock_result = tmp_covered_cache_manager_ptr->acquireLocalWritelockByCacheServer(key, all_dirinfo);
 
         // OBSELETE: NO need to remove old local uncached popularity from aggregated uncached popularity for local acquire write lock on local cached objects, as it MUST have been removed by directory update request with is_admit = true during non-blocking admission placement
         // NOTE: NO need to check if key is local cached or not, as is_key_tracked MUST be false if key is local cached and will NOT update/add aggregated uncached popularity
 
         // Prepare local uncached popularity of key for popularity aggregation
+        // NOTE: we NEED popularity aggregation for accumulated changes on local uncached popularity due to directory metadata cache
         // NOTE: NOT need piggyacking-based popularity collection and victim synchronization for local acquire write lock
         Popularity local_uncached_popularity = 0.0;
         bool is_key_tracked = tmp_edge_wrapper_ptr->getEdgeCachePtr()->getLocalUncachedPopularity(key, local_uncached_popularity); // Return false if the given key is local cached or the key is local uncached yet NOT tracked in local uncached metadata
@@ -191,6 +193,7 @@ namespace covered
         VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForVictimSyncset();
 
         // Prepare local uncached popularity of key for piggybacking-based popularity collection
+        // NOTE: we NEED popularity aggregation for accumulated changes on local uncached popularity due to directory metadata cache
         Popularity local_uncached_popularity = 0.0;
         bool is_key_tracked = tmp_edge_wrapper_ptr->getEdgeCachePtr()->getLocalUncachedPopularity(key, local_uncached_popularity); // If the local uncached key is tracked in local uncached metadata
 
@@ -257,12 +260,45 @@ namespace covered
 
     // (2.4) Release write lock for MSI protocol
 
-    bool CoveredCacheServerWorker::releaseBeaconWritelock_(const Key& key, EventList& event_list, const bool& skip_propagation_latency)
+    void CoveredCacheServerWorker::releaseLocalWritelock_(const Key& key, std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges)
     {
-        // TODO: Piggyback candidate victims in current edge node
+        checkPointers_();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
-        // NOTE: NO need to piggyback local uncached popularity for key in current edge node, as it has been done by acquireBeaconWritelock_() (local uncached popularity is NOT changed when processing a single local data request)
-        return false;
+        // Release local write lock for the given key
+        DirectoryInfo current_directory_info(tmp_edge_wrapper_ptr->getNodeIdx());
+        blocked_edges = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->releaseLocalWritelock(key, current_directory_info);
+
+        // OBSELETE: NO need to remove old local uncached popularity from aggregated uncached popularity for local release write lock on local cached objects, as it MUST have been removed by directory update request with is_admit = true during non-blocking admission placement
+        // NOTE: NO need to check if key is local cached or not, as is_key_tracked MUST be false if key is local cached and will NOT update/add aggregated uncached popularity
+
+        // Prepare local uncached popularity of key for popularity aggregation
+        // NOTE: although acquireLocalWritelock_() has aggregated accumulated changes of local uncached popularity due to directory metadata cache, we still NEED popularity aggregation as local uncached metadata may be updated before releasing the write lock if the global cached key is local uncached
+        // NOTE: NOT need piggyacking-based popularity collection and victim synchronization for local release write lock
+        Popularity local_uncached_popularity = 0.0;
+        bool is_key_tracked = tmp_edge_wrapper_ptr->getEdgeCachePtr()->getLocalUncachedPopularity(key, local_uncached_popularity); // Return false if the given key is local cached or the key is local uncached yet NOT tracked in local uncached metadata
+
+        // Selective popularity aggregation
+        uint32_t current_edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
+        const bool is_global_cached = true; // NOTE: invoking releaseLocalWritelock_() means that the result of acquiring write lock is LockResult::kSuccess -> the given key MUST be global cached
+        tmp_covered_cache_manager_ptr->updatePopularityAggregatorForAggregatedPopularity(key, current_edge_idx, CollectedPopularity(is_key_tracked, local_uncached_popularity), is_global_cached); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in current edge node
+
+        // NOTE: NO need to update local synced victims, which will be done by updateLocalEdgeCache_() and removeLocalEdgeCache_()
+
+        return;
+    }
+
+    MessageBase* CoveredCacheServerWorker::getReqToReleaseBeaconWritelock_(const Key& key, const bool& skip_propagation_latency) const
+    {
+        checkPointers_();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCooperationWrapperPtr();
+
+        // NOTE: although acquireLocalWritelock_() has aggregated accumulated changes of local uncached popularity due to directory metadata cache, we still NEED popularity aggregation as local uncached metadata may be updated before releasing the write lock if the global cached key is local uncached
+
+        // TODO: END HERE
+
+        return;
     }
 
     // (3) Process redirected requests

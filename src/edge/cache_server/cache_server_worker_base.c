@@ -1107,9 +1107,11 @@ namespace covered
     
         if (current_is_beacon) // Get target edge index from local directory information
         {
-            DirectoryInfo current_directory_info(tmp_edge_wrapper_ptr->getNodeIdx());
-            std::unordered_set<NetworkAddr, NetworkAddrHasher> blocked_edges = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->releaseLocalWritelock(key, current_directory_info);
+            // Release write lock and get blocked edges
+            std::unordered_set<NetworkAddr, NetworkAddrHasher> blocked_edges;
+            releaseLocalWritelock_(key, blocked_edges);
 
+            // Notify blocked edge nodes to finish blocking
             is_finish = tmp_edge_wrapper_ptr->notifyEdgesToFinishBlock(edge_cache_server_worker_recvrsp_socket_server_ptr_, edge_cache_server_worker_recvrsp_source_addr_, key, blocked_edges, event_list, skip_propagation_latency); // Add events of intermediate response if with event tracking
             if (is_finish) // Edge is NOT running
             {
@@ -1130,6 +1132,74 @@ namespace covered
         struct timespec release_local_or_remote_writelock_end_timestamp = Util::getCurrentTimespec();
         uint32_t release_local_or_remote_writelock_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(release_local_or_remote_writelock_end_timestamp, release_local_or_remote_writelock_start_timestamp));
         event_list.addEvent(current_is_beacon?Event::EDGE_CACHE_SERVER_WORKER_RELEASE_LOCAL_WRITELOCK_EVENT_NAME:Event::EDGE_CACHE_SERVER_WORKER_RELEASE_REMOTE_WRITELOCK_EVENT_NAME, release_local_or_remote_writelock_latency_us);
+
+        return is_finish;
+    }
+
+    bool CacheServerWorkerBase::releaseBeaconWritelock_(const Key& key, EventList& event_list, const bool& skip_propagation_latency)
+    {
+        checkPointers_();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+
+        // The current edge node must NOT be the beacon node for the key
+        bool current_is_beacon = tmp_edge_wrapper_ptr->currentIsBeacon(key);
+        assert(!current_is_beacon);
+
+        bool is_finish = false;
+        struct timespec issue_release_writelock_req_start_timestamp = Util::getCurrentTimespec();
+
+        // Prepare destination address of beacon server
+        NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = getBeaconDstaddr_(key);
+
+        while (true) // Timeout-and-retry mechanism
+        {
+            // Prepare release writelock request to finish write
+            MessageBase* release_writelock_request_ptr = getReqToReleaseBeaconWritelock_(key, skip_propagation_latency);
+            assert(release_writelock_request_ptr != NULL);
+
+            // Push the control request into edge-to-edge propagation simulator to the beacon node
+            bool is_successful = tmp_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->push(release_writelock_request_ptr, beacon_edge_beacon_server_recvreq_dst_addr);
+            assert(is_successful);
+
+            // NOTE: release_writelock_request_ptr will be released by edge-to-edge propagation simulator
+            release_writelock_request_ptr = NULL;
+
+            // Receive the control repsonse from the beacon node
+            DynamicArray control_response_msg_payload;
+            bool is_timeout = edge_cache_server_worker_recvrsp_socket_server_ptr_->recv(control_response_msg_payload);
+            if (is_timeout)
+            {
+                if (!tmp_edge_wrapper_ptr->isNodeRunning())
+                {
+                    is_finish = true;
+                    break; // Edge is NOT running
+                }
+                else
+                {
+                    Util::dumpWarnMsg(instance_name_, "edge timeout to wait for ReleaseWritelockResponse");
+                    continue; // Resend the control request message
+                }
+            } // End of (is_timeout == true)
+            else
+            {
+                // Receive the control response message successfully
+                MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
+                assert(control_response_ptr != NULL && control_response_ptr->getMessageType() == MessageType::kReleaseWritelockResponse);
+
+                // Add events of intermediate response if with event tracking
+                event_list.addEvents(control_response_ptr->getEventListRef());
+
+                // Release the control response message
+                delete control_response_ptr;
+                control_response_ptr = NULL;
+                break;
+            } // End of (is_timeout == false)
+        } // End of while(true)
+
+        // Add intermediate event if with event tracking
+        struct timespec issue_release_writelock_req_end_timestamp = Util::getCurrentTimespec();
+        uint32_t issue_release_writelock_req_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(issue_release_writelock_req_end_timestamp, issue_release_writelock_req_start_timestamp));
+        event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_ISSUE_RELEASE_WRITELOCK_REQ_EVENT_NAME, issue_release_writelock_req_latency_us);
 
         return is_finish;
     }

@@ -53,8 +53,8 @@ namespace covered
 
         // (2.4) Release write lock for MSI protocol
 
-        // Return if edge node is finished
-        virtual bool releaseBeaconWritelock_(const Key& key, EventList& event_list, const bool& skip_propagation_latency) override;
+        virtual void releaseLocalWritelock_(const Key& key, std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges) override;
+        virtual MessageBase* getReqToReleaseBeaconWritelock_(const Key& key, const bool& skip_propagation_latency) const override;
 
         // (3) Process redirected requests
 

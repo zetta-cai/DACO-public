@@ -135,10 +135,12 @@ namespace covered
         virtual bool removeLocalEdgeCache_(const Key& key) const = 0; // Return if key is cached after removal
 
         // (2.4) Release write lock for MSI protocol
-        
+
         // Return if edge node is finished
         bool releaseWritelock_(const Key& key, EventList& event_list, const bool& skip_propagation_latency);
-        virtual bool releaseBeaconWritelock_(const Key& key, EventList& event_list, const bool& skip_propagation_latency) = 0; // Notify beacon node to finish writes
+        virtual void releaseLocalWritelock_(const Key& key, std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges) = 0;
+        bool releaseBeaconWritelock_(const Key& key, EventList& event_list, const bool& skip_propagation_latency); // Notify beacon node to finish writes
+        virtual MessageBase* getReqToReleaseBeaconWritelock_(const Key& key, const bool& skip_propagation_latency) const = 0;
 
         // (3) Process redirected requests
 
