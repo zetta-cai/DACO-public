@@ -18,6 +18,7 @@ namespace covered
         // ONLY for COVERED
         covered_local_uncached_max_mem_usage_bytes_ = 0;
         covered_popularity_aggregation_max_mem_usage_bytes_ = 0;
+        covered_popularity_collection_change_ratio_ = double(0.0);
         covered_topk_edgecnt_ = 0;
     }
 
@@ -65,6 +66,11 @@ namespace covered
         return covered_popularity_aggregation_max_mem_usage_bytes_;
     }
 
+    double EdgeCLI::getCoveredPopularityCollectionChangeRatio() const
+    {
+        return covered_popularity_collection_change_ratio_;
+    }
+
     uint32_t EdgeCLI::getCoveredTopkEdgecnt() const
     {
         return covered_topk_edgecnt_;
@@ -88,6 +94,7 @@ namespace covered
                 ("peredge_synced_victimcnt", boost::program_options::value<uint32_t>()->default_value(3), "the number of synced victims for each edge node")
                 ("covered_local_uncached_max_mem_usage_mb", boost::program_options::value<uint32_t>()->default_value(1), "the maximum memory usage for local uncached metadata in units of MiB (only for COVERED)")
                 ("covered_popularity_aggregation_max_mem_usage_mb", boost::program_options::value<uint32_t>()->default_value(1), "the maximum memory usage for popularity aggregation in units of MiB (only for COVERED)")
+                ("covered_popularity_collection_change_ratio", boost::program_options::value<double>()->default_value(0.0), "the ratio for local uncached popularity changes to trigger popularity collection (only for COVERED)")
                 ("covered_topk_edgecnt", boost::program_options::value<uint32_t>()->default_value(1), "the number of top-k edge nodes for popularity aggregation and trade-off-aware cache placement (only for COVERED)")
             ;
 
@@ -114,6 +121,7 @@ namespace covered
             // ONLY for COVERED
             uint64_t covered_local_uncached_max_mem_usage_bytes = MB2B(argument_info_["covered_local_uncached_max_mem_usage_mb"].as<uint64_t>()); // In units of bytes
             uint64_t covered_popularity_aggregation_max_mem_usage_bytes = MB2B(argument_info_["covered_popularity_aggregation_max_mem_usage_mb"].as<uint64_t>()); // In units of bytes
+            double covered_popularity_collection_change_ratio = argument_info_["covered_popularity_collection_change_ratio"].as<double>();
             uint32_t covered_topk_edgecnt = argument_info_["covered_topk_edgecnt"].as<uint32_t>();
 
             // Store edgecnt CLI parameters for dynamic configurations
@@ -143,6 +151,7 @@ namespace covered
                 {
                     covered_popularity_aggregation_max_mem_usage_bytes_ = capacity_bytes * Config::getCoveredPopularityAggregationMaxMemUsageRatio();
                 }
+                covered_popularity_collection_change_ratio_ = covered_popularity_collection_change_ratio;
                 covered_topk_edgecnt_ = covered_topk_edgecnt;
             }
 
@@ -175,6 +184,7 @@ namespace covered
                 // ONLY for COVERED
                 oss << std::endl << "Covered local uncached max mem usage (bytes): " << covered_local_uncached_max_mem_usage_bytes_ << std::endl;
                 oss << "Covered popularity aggregation max mem usage (bytes): " << covered_popularity_aggregation_max_mem_usage_bytes_ << std::endl;
+                oss << "Covered popularity collection change ratio: " << covered_popularity_collection_change_ratio_ << std::endl;
                 oss << "Covered top-k edge count: " << covered_topk_edgecnt_;
                 Util::dumpDebugMsg(kClassName, oss.str());   
             }
@@ -228,6 +238,7 @@ namespace covered
         {
             assert(covered_local_uncached_max_mem_usage_bytes_ > 0 && covered_local_uncached_max_mem_usage_bytes_ < capacity_bytes_);
             assert(covered_popularity_aggregation_max_mem_usage_bytes_ > 0 && covered_popularity_aggregation_max_mem_usage_bytes_ < capacity_bytes_);
+            assert(covered_popularity_collection_change_ratio_ >= 0.0);
             assert(covered_topk_edgecnt_ > 0 && covered_topk_edgecnt_ <= getEdgecnt());
         }
         

@@ -32,6 +32,7 @@ namespace covered
         // ONLY for COVERED
         uint64_t getCoveredLocalUncachedMaxMemUsageBytes() const;
         uint64_t getCoveredPopularityAggregationMaxMemUsageBytes() const;
+        double getCoveredPopularityCollectionChangeRatio() const;
         uint32_t getCoveredTopkEdgecnt() const;
     private:
         static const std::string kClassName;
@@ -54,6 +55,7 @@ namespace covered
         // ONLY for COVERED
         uint64_t covered_local_uncached_max_mem_usage_bytes_;
         uint64_t covered_popularity_aggregation_max_mem_usage_bytes_;
+        double covered_popularity_collection_change_ratio_;
         uint32_t covered_topk_edgecnt_;
 
     protected:
