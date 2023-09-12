@@ -27,6 +27,7 @@ namespace covered
 
         bool getCachedDirinfo(const Key& key, DirectoryInfo& dirinfo) const; // Return if key has cached valid remote dirinfo
         void removeCachedDirinfoIfAny(const Key& key);
+        void updateForNewCachedDirinfo(const Key&key, const DirectoryInfo& dirinfo); // Add or insert new cached dirinfo for the given key
     private:
         typedef std::unordered_map<Key, DirectoryInfo, KeyHasher> perkey_dirinfo_map_t;
 

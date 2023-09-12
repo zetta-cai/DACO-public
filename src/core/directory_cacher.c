@@ -77,6 +77,31 @@ namespace covered
         return;
     }
 
+    void DirectoryCacher::updateForNewCachedDirinfo(const Key&key, const DirectoryInfo& dirinfo)
+    {
+        checkPointers_();
+        
+        // Acquire a write lock to update victim dirinfo atomically
+        std::string context_name = "DirectoryCacher::updateForNewCachedDirinfo()";
+        rwlock_for_directory_cacher_->acquire_lock(context_name);
+
+        perkey_dirinfo_map_t::iterator map_iter = perkey_dirinfo_map_.find(key);
+        if (map_iter != perkey_dirinfo_map_.end()) // If key already has a cached dirinfo
+        {
+            map_iter->second = dirinfo; // Update with new cached dirinfo
+        }
+        else
+        {
+            // Insert new cached dirinfo
+            size_bytes_ = Util::uint64Add(size_bytes_, dirinfo.getSizeForCapacity());
+            perkey_dirinfo_map_.insert(std::pair(key, dirinfo));
+        }
+
+        rwlock_for_directory_cacher_->unlock(context_name);
+
+        return;
+    }
+
     void DirectoryCacher::checkPointers_() const
     {
         assert(rwlock_for_directory_cacher_ != NULL);

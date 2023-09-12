@@ -47,8 +47,8 @@ namespace covered
         // For directory metadata cache
 
         bool accessDirectoryCacherForCachedDirinfo(const Key& key, DirectoryInfo& dirinfo) const; // Return if key is tracked by directory_cacher_
-        // TODO: END HERE to remove dirinfo
-        // void updateDirectoryCacherForCachedDirinfo(const Key& key, const DirectoryInfo& dirinfo);
+        void updateDirectoryCacherToRemoveCachedDirinfo(const Key& key);
+        void updateDirectoryCacherForNewCachedDirinfo(const Key& key, const DirectoryInfo& dirinfo);
 
         uint64_t getSizeForCapacity() const;
     private:

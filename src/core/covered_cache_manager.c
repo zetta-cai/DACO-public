@@ -64,6 +64,18 @@ namespace covered
         return has_cached_dirinfo;
     }
 
+    void CoveredCacheManager::updateDirectoryCacherToRemoveCachedDirinfo(const Key& key)
+    {
+        directory_cacher_.removeCachedDirinfoIfAny(key);
+        return;
+    }
+
+    void CoveredCacheManager::updateDirectoryCacherForNewCachedDirinfo(const Key& key, const DirectoryInfo& dirinfo)
+    {
+        directory_cacher_.updateForNewCachedDirinfo(key, dirinfo);
+        return;
+    }
+
     uint64_t CoveredCacheManager::getSizeForCapacity() const
     {
         uint64_t total_size = 0;

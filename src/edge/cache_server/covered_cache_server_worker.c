@@ -82,15 +82,24 @@ namespace covered
         Popularity local_uncached_popularity = 0.0;
         bool is_key_tracked = tmp_edge_wrapper_ptr->getEdgeCachePtr()->getLocalUncachedPopularity(key, local_uncached_popularity); // If the local uncached key is tracked in local uncached metadata
         if (!is_key_tracked) // If key is NOT tracked by local uncached metadata (key is cached or key is uncached yet not popular)
-        {}
-
-        bool has_cached_dirinfo = tmp_covered_cache_manager_ptr->accessDirectoryCacherForCachedDirinfo(key, directory_info);
-        if (has_cached_dirinfo)
         {
-            is_being_written = false; // NOTE: although we do NOT know whether key is being written from directory metadata cache, we can simply assume key is NOT being written temporarily to issue redirected get request; redirected get response will return a hitflag of kCooperativeInvalid if key is being written
-            is_valid_directory_exist = true; // NOTE: we ONLY cache valid remote directory for popular local uncached objects in directory metadata cache
+            tmp_covered_cache_manager_ptr->updateDirectoryCacherToRemoveCachedDirinfo(key); // Remove cached directory info of untracked key if any
+        }
+        else
+        {
+            bool has_cached_dirinfo = tmp_covered_cache_manager_ptr->accessDirectoryCacherForCachedDirinfo(key, directory_info);
+            if (has_cached_dirinfo)
+            {
+                // NOTE: only local uncached object tracked by local uncached metadata can have cached dirinfo
+                assert(is_key_tracked == true);
 
-            need_lookup_beacon_directory = false; // NO need to send directory lookup request to beacon node if hit directory metadata cache
+                // TODO: introduce previously-collected popularity in DirectoryCacher
+
+                is_being_written = false; // NOTE: although we do NOT know whether key is being written from directory metadata cache, we can simply assume key is NOT being written temporarily to issue redirected get request; redirected get response will return a hitflag of kCooperativeInvalid if key is being written
+                is_valid_directory_exist = true; // NOTE: we ONLY cache valid remote directory for popular local uncached objects in directory metadata cache
+
+                need_lookup_beacon_directory = false; // NO need to send directory lookup request to beacon node if hit directory metadata cache
+            }
         }
 
         return need_lookup_beacon_directory;
@@ -139,6 +148,28 @@ namespace covered
         const VictimSyncset& victim_syncset = covered_directory_lookup_response_ptr->getVictimSyncsetRef();
         std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = tmp_edge_wrapper_ptr->getLocalBeaconedVictimsFromVictimSyncset(victim_syncset);
         tmp_covered_cache_manager_ptr->updateVictimTrackerForVictimSyncset(source_edge_idx, victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
+
+        // Update DirectoryCacher if necessary
+        const Key tmp_key = covered_directory_lookup_response_ptr->getKey();
+        if (is_valid_directory_exist) // If with valid dirinfo
+        {
+            // Check if key is tracked by local uncached metadata and get local uncached popularity if any
+            Popularity local_uncached_popularity = 0.0;
+            bool is_key_tracked = tmp_edge_wrapper_ptr->getEdgeCachePtr()->getLocalUncachedPopularity(tmp_key, local_uncached_popularity); // If the local uncached key is tracked in local uncached metadata
+
+            if (is_key_tracked) // If key is tracked by local uncached metadata
+            {
+                tmp_covered_cache_manager_ptr->updateDirectoryCacherForNewCachedDirinfo(tmp_key, directory_info); // Add or insert new cached dirinfo for the given key
+            }
+            else // Key is NOT tracked by local uncached metadata
+            {
+                tmp_covered_cache_manager_ptr->updateDirectoryCacherToRemoveCachedDirinfo(tmp_key); // Remove existing cached dirinfo if any
+            }
+        }
+        else // If with invalid dirinfo
+        {
+            tmp_covered_cache_manager_ptr->updateDirectoryCacherToRemoveCachedDirinfo(tmp_key); // Remove existing cached dirinfo if any
+        }
 
         return;
     }
