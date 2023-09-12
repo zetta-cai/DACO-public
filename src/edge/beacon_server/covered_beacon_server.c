@@ -132,7 +132,7 @@ namespace covered
 
     // (2) Process writes and unblock for MSI protocol
 
-    void BasicBeaconServer::processReqToAcquireLocalWritelock_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvreq_dst_addr, LockResult& lock_result, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo)
+    void CoveredBeaconServer::processReqToAcquireLocalWritelock_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvreq_dst_addr, LockResult& lock_result, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo)
     {
         assert(control_request_ptr != NULL);
         assert(control_request_ptr->getMessageType() == MessageType::kCoveredAcquireWritelockRequest);
@@ -144,7 +144,7 @@ namespace covered
 
         // Try to acquire a write lock for the given key if key is global cached
         lock_result = edge_wrapper_ptr_->getCooperationWrapperPtr()->acquireLocalWritelockByBeaconServer(tmp_key, edge_cache_server_worker_recvreq_dst_addr, all_dirinfo);
-        bool is_global_cached = (result != LockResult::kNoneed);
+        bool is_global_cached = (lock_result != LockResult::kNoneed);
 
         // OBSELETE: NO need to remove old local uncached popularity from aggregated uncached popularity for remote acquire write lock on local cached objects in source edge node, as it MUST have been removed by directory update request with is_admit = true during non-blocking admission placement
         // NOTE: NO need to check if key is local cached or not, as collected_popularity.is_tracked_ MUST be false if key is local cached in source edge node and will NOT update/add aggregated uncached popularity
@@ -162,9 +162,10 @@ namespace covered
         return;
     }
 
-    MessageBase* CoveredBeaconServer::getRspToAcquireLocalWritelock_(const Key& key, const LockResult& lock_result, const EventList& event_list, const bool& skip_propagation_latency) cons
+    MessageBase* CoveredBeaconServer::getRspToAcquireLocalWritelock_(const Key& key, const LockResult& lock_result, const EventList& event_list, const bool& skip_propagation_latency) const
     {
         checkPointers_();
+        CoveredCacheManager* covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
 
         // Prepare victim syncset for piggybacking-based victim synchronization
         VictimSyncset victim_syncset = covered_cache_manager_ptr->accessVictimTrackerForVictimSyncset();
@@ -182,6 +183,9 @@ namespace covered
         assert(control_request_ptr->getMessageType() == MessageType::kCoveredReleaseWritelockRequest);
         const CoveredReleaseWritelockRequest* const covered_release_writelock_request_ptr = static_cast<const CoveredReleaseWritelockRequest*>(control_request_ptr);
         Key tmp_key = covered_release_writelock_request_ptr->getKey();
+
+        checkPointers_();
+        CoveredCacheManager* covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
 
         // Release local write lock and validate sender directory info if any
         uint32_t sender_edge_idx = covered_release_writelock_request_ptr->getSourceIndex();
@@ -207,6 +211,9 @@ namespace covered
     MessageBase* CoveredBeaconServer::getRspToReleaseLocalWritelock_(const Key& key, const EventList& event_list, const bool& skip_propagation_latency) const
     {
         checkPointers_();
+
+        checkPointers_();
+        CoveredCacheManager* covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
 
         // Prepare victim syncset for piggybacking-based victim synchronization
         VictimSyncset victim_syncset = covered_cache_manager_ptr->accessVictimTrackerForVictimSyncset();

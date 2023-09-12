@@ -361,7 +361,12 @@ namespace covered
             }
             else // Get target edge index from remote directory information at the beacon node
             {
-                is_finish = lookupBeaconDirectory_(key, is_being_written, is_valid_directory_exist, directory_info, event_list, skip_propagation_latency); // Add events of intermediate responses if with event tracking
+                bool need_lookup_beacon_directory = needLookupBeaconDirectory_(key, is_being_written, is_valid_directory_exist, directory_info);
+                if (need_lookup_beacon_directory)
+                {
+                    is_finish = lookupBeaconDirectory_(key, is_being_written, is_valid_directory_exist, directory_info, event_list, skip_propagation_latency); // Add events of intermediate responses if with event tracking
+                }
+                
                 if (is_finish) // Edge is NOT running
                 {
                     return is_finish;
@@ -511,7 +516,7 @@ namespace covered
                 processRspToLookupBeaconDirectory_(control_response_ptr, is_being_written, is_valid_directory_exist, directory_info);
 
                 // Add events of intermediate response if with event tracking
-                event_list.addEvents(directory_lookup_response_ptr->getEventListRef());
+                event_list.addEvents(control_response_ptr->getEventListRef());
 
                 // Release the control response message
                 delete control_response_ptr;
@@ -859,7 +864,7 @@ namespace covered
         while (true) // Timeout-and-retry mechanism
         {
             // Prepare acquire writelock request to acquire permission for a write
-            acquire_writelock_request_ptr = getReqToAcquireBeaconWritelock_(key, skip_propagation_latency);
+            MessageBase* acquire_writelock_request_ptr = getReqToAcquireBeaconWritelock_(key, skip_propagation_latency);
             assert(acquire_writelock_request_ptr != NULL);
 
             // Push the control request into edge-to-edge propagation simulator to the beacon node
@@ -1176,7 +1181,7 @@ namespace covered
                 }
                 else
                 {
-                    Util::dumpWarnMsg(instance_name_, "edge timeout to wait for ReleaseWritelockResponse");
+                    Util::dumpWarnMsg(base_instance_name_, "edge timeout to wait for ReleaseWritelockResponse");
                     continue; // Resend the control request message
                 }
             } // End of (is_timeout == true)
@@ -1312,7 +1317,7 @@ namespace covered
         return is_finish;
     }
 
-    bool CacheServerWorkerBase::admitObject_(const Key& key, const Value& value, EventList& event_list, const bool& skip_propagation_latency)
+    bool CacheServerWorkerBase::admitObject_(const Key& key, const Value& value, EventList& event_list, const bool& skip_propagation_latency) const
     {
         bool is_finish = false;
 
@@ -1488,7 +1493,7 @@ namespace covered
                 processRspToUpdateBeaconDirectory_(control_response_ptr, is_being_written); // NOTE: is_being_written is updated here
 
                 // Add events of intermediate response if with evet tracking
-                event_list.addEvents(directory_update_response_ptr->getEventListRef());
+                event_list.addEvents(control_response_ptr->getEventListRef());
 
                 // Release the control response message
                 delete control_response_ptr;

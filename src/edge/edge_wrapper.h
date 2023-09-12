@@ -73,6 +73,11 @@ namespace covered
         
         // Return if edge node is finished (invoked by cache server worker or beacon server)
         bool notifyEdgesToFinishBlock(UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, const Key& key, const std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges, EventList& event_list, const bool& skip_propagation_latency) const; // Notify all blocked edges for the key simultaneously
+
+        // (6) covered-specific utility functions
+
+        // For victim synchronization
+        std::unordered_map<Key, dirinfo_set_t, KeyHasher> getLocalBeaconedVictimsFromVictimSyncset(const VictimSyncset& victim_syncset) const; // NOTE: all edge cache/beacon/invalidation servers will access cooperation wrapper to get content directory information for local beaconed victims from received victim syncset
     private:
         static const std::string kClassName;
 
@@ -96,11 +101,6 @@ namespace covered
         static void* launchBeaconServer_(void* edge_wrapper_ptr);
         static void* launchCacheServer_(void* edge_wrapper_ptr);
         static void* launchInvalidationServer_(void* edge_wrapper_ptr);
-
-        // (6) covered-specific utility functions
-
-        // For victim synchronization
-        std::unordered_map<Key, dirinfo_set_t, KeyHasher> getLocalBeaconedVictimsFromVictimSyncset(const VictimSyncset& victim_syncset) const; // NOTE: all edge cache/beacon/invalidation servers will access cooperation wrapper to get content directory information for local beaconed victims from received victim syncset
 
         void checkPointers_() const;
 

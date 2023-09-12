@@ -70,6 +70,32 @@ namespace covered
         return;
     }
 
+    bool CoveredCacheServerWorker::needLookupBeaconDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
+    {
+        checkPointers_();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
+
+        bool need_lookup_beacon_directory = true;
+
+        // Check if key is tracked by local uncached metadata and get local uncached popularity if any
+        Popularity local_uncached_popularity = 0.0;
+        bool is_key_tracked = tmp_edge_wrapper_ptr->getEdgeCachePtr()->getLocalUncachedPopularity(key, local_uncached_popularity); // If the local uncached key is tracked in local uncached metadata
+        if (!is_key_tracked) // If key is NOT tracked by local uncached metadata (key is cached or key is uncached yet not popular)
+        {}
+
+        bool has_cached_dirinfo = tmp_covered_cache_manager_ptr->accessDirectoryCacherForCachedDirinfo(key, directory_info);
+        if (has_cached_dirinfo)
+        {
+            is_being_written = false; // NOTE: although we do NOT know whether key is being written from directory metadata cache, we can simply assume key is NOT being written temporarily to issue redirected get request; redirected get response will return a hitflag of kCooperativeInvalid if key is being written
+            is_valid_directory_exist = true; // NOTE: we ONLY cache valid remote directory for popular local uncached objects in directory metadata cache
+
+            need_lookup_beacon_directory = false; // NO need to send directory lookup request to beacon node if hit directory metadata cache
+        }
+
+        return need_lookup_beacon_directory;
+    }
+
     MessageBase* CoveredCacheServerWorker::getReqToLookupBeaconDirectory_(const Key& key, const bool& skip_propagation_latency) const
     {
         checkPointers_();
@@ -160,10 +186,12 @@ namespace covered
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
-        CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCooperationWrapperPtr();
+        CooperationWrapperBase* tmp_cooperation_wrapper_ptr = tmp_edge_wrapper_ptr->getCooperationWrapperPtr();
+        CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
 
         // Acquire local write lock for the given key
-        lock_result = tmp_covered_cache_manager_ptr->acquireLocalWritelockByCacheServer(key, all_dirinfo);
+        lock_result = tmp_cooperation_wrapper_ptr->acquireLocalWritelockByCacheServer(key, all_dirinfo);
+        bool is_global_cached = (lock_result != LockResult::kNoneed);
 
         // OBSELETE: NO need to remove old local uncached popularity from aggregated uncached popularity for local acquire write lock on local cached objects, as it MUST have been removed by directory update request with is_admit = true during non-blocking admission placement
         // NOTE: NO need to check if key is local cached or not, as is_key_tracked MUST be false if key is local cached and will NOT update/add aggregated uncached popularity
@@ -187,7 +215,7 @@ namespace covered
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
-        CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCooperationWrapperPtr();
+        CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
 
         // Prepare victim syncset for piggybacking-based victim synchronization
         VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForVictimSyncset();
@@ -208,6 +236,10 @@ namespace covered
     {
         assert(control_response_ptr != NULL);
         assert(control_response_ptr->getMessageType() == MessageType::kCoveredAcquireWritelockResponse);
+
+        checkPointers_();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
 
         // Get result of acquiring write lock
         const CoveredAcquireWritelockResponse* const covered_acquire_writelock_response_ptr = static_cast<const CoveredAcquireWritelockResponse*>(control_response_ptr);
@@ -264,6 +296,7 @@ namespace covered
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
 
         // Release local write lock for the given key
         DirectoryInfo current_directory_info(tmp_edge_wrapper_ptr->getNodeIdx());
@@ -292,7 +325,7 @@ namespace covered
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
-        CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCooperationWrapperPtr();
+        CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
 
         // Prepare victim syncset for piggybacking-based victim synchronization
         VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForVictimSyncset();
@@ -315,6 +348,10 @@ namespace covered
         assert(control_response_ptr->getMessageType() == MessageType::kCoveredReleaseWritelockResponse);
         const CoveredReleaseWritelockResponse* covered_release_writelock_response_ptr = static_cast<const CoveredReleaseWritelockResponse*>(control_response_ptr);
 
+        checkPointers_();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
+
         // Do nothing for CoveredReleaseWritelockResponse
 
         // Victim synchronization
@@ -336,7 +373,7 @@ namespace covered
 
     // (4.1) Admit uncached objects in local edge cache
 
-    void CoveredCacheServerWorker::admitLocalEdgeCache_(const Key& key, const Value& value, const bool& is_valid)
+    void CoveredCacheServerWorker::admitLocalEdgeCache_(const Key& key, const Value& value, const bool& is_valid) const
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
@@ -355,7 +392,7 @@ namespace covered
 
     // (4.2) Evict cached objects from local edge cache
 
-    void CoveredCacheServerWorker::evictLocalEdgeCache_(std::unordered_map<Key, Value, KeyHasher>& victims, const uint64_t& required_size)
+    void CoveredCacheServerWorker::evictLocalEdgeCache_(std::unordered_map<Key, Value, KeyHasher>& victims, const uint64_t& required_size) const
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();

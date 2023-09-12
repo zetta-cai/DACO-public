@@ -61,7 +61,7 @@ namespace covered
         // Return if edge node is finished
         bool processAcquireWritelockRequest_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr);
         virtual void processReqToAcquireLocalWritelock_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvreq_dst_addr, LockResult& lock_result, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo) = 0;
-        virtual void getRspToAcquireLocalWritelock_(const Key& key, const LockResult& lock_result, const EventList& event_list, const bool& skip_propagation_latency) const = 0;
+        virtual MessageBase* getRspToAcquireLocalWritelock_(const Key& key, const LockResult& lock_result, const EventList& event_list, const bool& skip_propagation_latency) const = 0;
 
         // Return if edge node is finished
         bool processReleaseWritelockRequest_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr);

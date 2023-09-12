@@ -94,6 +94,7 @@ namespace covered
         bool fetchDataFromNeighbor_(const Key& key, Value& value, bool& is_cooperative_cached_and_valid, EventList& event_list, const bool& skip_propagation_latency) const;
 
         virtual void lookupLocalDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const = 0;
+        virtual bool needLookupBeaconDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const = 0; // Return if need to lookup remote directory info
         bool lookupBeaconDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, EventList& event_list, const bool& skip_propagation_latency) const; // Check remote directory info
         virtual MessageBase* getReqToLookupBeaconDirectory_(const Key& key, const bool& skip_propagation_latency) const = 0;
         virtual void processRspToLookupBeaconDirectory_(MessageBase* control_response_ptr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const = 0;
@@ -153,14 +154,14 @@ namespace covered
         // (4.1) Admit uncached objects in local edge cache
 
         // Return if edge node is finished (we will check capacity and trigger eviction for cache admission)
-        bool tryToTriggerIndependentAdmission_(const Key& key, const Value& value, EventList& event_list, const bool& skip_propagation_latency); // NOTE: COVERED will NOT trigger any independent cache admission/eviction decision
-        bool admitObject_(const Key& key, const Value& value, EventList& event_list, const bool& skip_propagation_latency); // Including directory updates, admit local edge cache, and trigger eviction if necessary
-        virtual void admitLocalEdgeCache_(const Key& key, const Value& value, const bool& is_valid) = 0;
+        bool tryToTriggerIndependentAdmission_(const Key& key, const Value& value, EventList& event_list, const bool& skip_propagation_latency) const; // NOTE: COVERED will NOT trigger any independent cache admission/eviction decision
+        bool admitObject_(const Key& key, const Value& value, EventList& event_list, const bool& skip_propagation_latency) const; // Including directory updates, admit local edge cache, and trigger eviction if necessary
+        virtual void admitLocalEdgeCache_(const Key& key, const Value& value, const bool& is_valid) const = 0;
 
         // (4.2) Evict cached objects from local edge cache
 
         bool evictForCapacity_(EventList& event_list, const bool& skip_propagation_latency) const; // Including evict local edge cache and directory updates
-        virtual void evictLocalEdgeCache_(std::unordered_map<Key, Value, KeyHasher>& victims, const uint64_t& required_size) = 0;
+        virtual void evictLocalEdgeCache_(std::unordered_map<Key, Value, KeyHasher>& victims, const uint64_t& required_size) const = 0;
 
         // (4.3) Update content directory information
 

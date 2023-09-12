@@ -17,7 +17,8 @@
 
 #include "common/key.h"
 #include "cooperation/directory/directory_info.h"
-#include "core/popularity/popularity_aggregator.h"
+#include "core/directory_cacher.h"
+#include "core/popularity_aggregator.h"
 #include "core/victim/victim_cacheinfo.h"
 #include "core/victim/victim_syncset.h"
 #include "core/victim_tracker.h"
@@ -43,6 +44,12 @@ namespace covered
         VictimSyncset accessVictimTrackerForVictimSyncset() const;
         void updateVictimTrackerForVictimSyncset(const uint32_t& source_edge_idx, const VictimSyncset& victim_syncset, const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& local_beaconed_neighbor_synced_victim_dirinfosets);
 
+        // For directory metadata cache
+
+        bool accessDirectoryCacherForCachedDirinfo(const Key& key, DirectoryInfo& dirinfo) const; // Return if key is tracked by directory_cacher_
+        // TODO: END HERE to remove dirinfo
+        // void updateDirectoryCacherForCachedDirinfo(const Key& key, const DirectoryInfo& dirinfo);
+
         uint64_t getSizeForCapacity() const;
     private:
         static const std::string kClassName;
@@ -51,12 +58,16 @@ namespace covered
         std::string instance_name_;
 
         // Non-const shared variables (each should be thread safe)
+        // NOTE: we do NOT use per-key fine-grained locking here, as CoveredCacheManager does NOT need strong serializability/atomicity for its componenets, and some components (PopularityAggregator and VictimTracker) CANNOT use per-key fine-grained locking due to accessing multiple keys in one function (e.g., discardGlobalLessPopularObjects_() and updateLocalSyncedVictims())
 
         // Track aggregated uncached popularity for global admission (thread safe)
         PopularityAggregator popularity_aggregator_;
 
         // Track per-edge-node least popular victims for placement and eviction (thread safe)
         VictimTracker victim_tracker_;
+
+        // Track cached dirinfo of popular local uncached objects to reduce message overhead (thread safe)
+        DirectoryCacher directory_cacher_;
     };
 }
 

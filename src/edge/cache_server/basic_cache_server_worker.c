@@ -53,6 +53,13 @@ namespace covered
         return;
     }
 
+    bool BasicCacheServerWorker::needLookupBeaconDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
+    {
+        // NOTE: basic cooperative edge caching does NOT have directory metadata cache, so it always needs to send request to lookup remote directory information at beacon node
+        bool need_lookup_beacon_directory = true;
+        return need_lookup_beacon_directory;
+    }
+
     MessageBase* BasicCacheServerWorker::getReqToLookupBeaconDirectory_(const Key& key, const bool& skip_propagation_latency) const
     {
         checkPointers_();
@@ -299,7 +306,7 @@ namespace covered
 
     // (4.1) Admit uncached objects in local edge cache
 
-    void BasicCacheServerWorker::admitLocalEdgeCache_(const Key& key, const Value& value, const bool& is_valid)
+    void BasicCacheServerWorker::admitLocalEdgeCache_(const Key& key, const Value& value, const bool& is_valid) const
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
@@ -313,7 +320,7 @@ namespace covered
 
     // (4.2) Evict cached objects from local edge cache
 
-    void BasicCacheServerWorker::evictLocalEdgeCache_(std::unordered_map<Key, Value, KeyHasher>& victims, const uint64_t& required_size)
+    void BasicCacheServerWorker::evictLocalEdgeCache_(std::unordered_map<Key, Value, KeyHasher>& victims, const uint64_t& required_size) const
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
