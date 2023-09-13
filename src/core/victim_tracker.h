@@ -57,7 +57,7 @@ namespace covered
         // Const shared variables
         const uint32_t edge_idx_;
         std::string instance_name_;
-        const uint32_t peredge_synced_victimcnt_;
+        const uint32_t peredge_synced_victimcnt_; // Come from CLI
 
         // For atomic access of non-const shared variables
         // NOTE: we do NOT use perkey_rwlock for fine-grained locking here, as VictimTracker's data structures have two types of keys (edge index and Key)

@@ -14,22 +14,44 @@
 #include <string>
 #include <unordered_map>
 
+#include "cache/covered/common_header.h"
 #include "concurrency/rwlock.h"
 #include "cooperation/directory/directory_info.h"
 
 namespace covered
 {
+    class CachedDirectory
+    {
+    public:
+        CachedDirectory();
+        CachedDirectory(const DirectoryInfo& dirinfo, const Popularity& prev_collect_popularity);
+        ~CachedDirectory();
+
+        DirectoryInfo getDirinfo() const;
+        Popularity getPrevCollectPopularity() const;
+
+        uint64_t getSizeForCapacity() const;
+
+        const CachedDirectory& operator=(const CachedDirectory& other);
+    private:
+        static const std::string kClassName;
+
+        DirectoryInfo dirinfo_; // Valid remote dirinfo
+        Popularity prev_collect_popularity_; // Previously-collected popularity
+    };
+
     class DirectoryCacher
     {
     public:
-        DirectoryCacher(const uint32_t& edge_idx);
+        DirectoryCacher(const uint32_t& edge_idx, const double& popularity_collection_change_ratio);
         ~DirectoryCacher();
 
-        bool getCachedDirinfo(const Key& key, DirectoryInfo& dirinfo) const; // Return if key has cached valid remote dirinfo
-        void removeCachedDirinfoIfAny(const Key& key);
-        void updateForNewCachedDirinfo(const Key&key, const DirectoryInfo& dirinfo); // Add or insert new cached dirinfo for the given key
+        bool getCachedDirectory(const Key& key, CachedDirectory& cached_directory) const; // Return if key has cached valid remote dirinfo
+        bool checkPopularityChange(const Key& key, const Popularity& local_uncached_popularity, CachedDirectory& cached_directory, bool& is_large_popularity_change) const; // Return if key has cached valid remote dirinfo
+        void removeCachedDirectoryIfAny(const Key& key);
+        void updateForNewCachedDirectory(const Key&key, const CachedDirectory& cached_directory); // Add or insert new cached directory for the given key
     private:
-        typedef std::unordered_map<Key, DirectoryInfo, KeyHasher> perkey_dirinfo_map_t;
+        typedef std::unordered_map<Key, CachedDirectory, KeyHasher> perkey_dirinfo_map_t;
 
         static const std::string kClassName;
 
@@ -37,6 +59,7 @@ namespace covered
 
         // Const shared variables
         std::string instance_name_;
+        const double popularity_collection_change_ratio_; // Come from CLI
 
         // For atomic access of non-const shared variables
         // NOTE: we do NOT use perkey_rwlock for fine-grained locking here, as # of cached directories is limited in DirectoryCacher and all other componenets in CoveredCacheManager cannot share PerkeyRwlock with Directorycacher

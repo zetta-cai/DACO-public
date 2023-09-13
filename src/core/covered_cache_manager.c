@@ -6,7 +6,7 @@ namespace covered
 {
     const std::string CoveredCacheManager::kClassName("CoveredCacheManager");
 
-    CoveredCacheManager::CoveredCacheManager(const uint32_t& edge_idx, const uint32_t& edgecnt, const uint32_t& peredge_synced_victimcnt, const uint64_t& popularity_aggregation_capacity_bytes, const uint32_t& topk_edgecnt) : popularity_aggregator_(edge_idx, edgecnt, popularity_aggregation_capacity_bytes, topk_edgecnt), victim_tracker_(edge_idx, peredge_synced_victimcnt), directory_cacher_(edge_idx)
+    CoveredCacheManager::CoveredCacheManager(const uint32_t& edge_idx, const uint32_t& edgecnt, const uint32_t& peredge_synced_victimcnt, const uint64_t& popularity_aggregation_capacity_bytes, const double& popularity_collection_change_ratio, const uint32_t& topk_edgecnt) : popularity_aggregator_(edge_idx, edgecnt, popularity_aggregation_capacity_bytes, topk_edgecnt), victim_tracker_(edge_idx, peredge_synced_victimcnt), directory_cacher_(edge_idx, popularity_collection_change_ratio)
     {
         // Differentiate different edge nodes
         std::stringstream ss;
@@ -58,21 +58,27 @@ namespace covered
 
     // For directory metadata cache
 
-    bool CoveredCacheManager::accessDirectoryCacherForCachedDirinfo(const Key& key, DirectoryInfo& dirinfo) const
+    bool CoveredCacheManager::accessDirectoryCacherForCachedDirectory(const Key& key, CachedDirectory& cached_directory) const
     {
-        bool has_cached_dirinfo = directory_cacher_.getCachedDirinfo(key, dirinfo);
-        return has_cached_dirinfo;
+        bool has_cached_directory = directory_cacher_.getCachedDirectory(key, cached_directory);
+        return has_cached_directory;
     }
 
-    void CoveredCacheManager::updateDirectoryCacherToRemoveCachedDirinfo(const Key& key)
+    bool CoveredCacheManager::accessDirectoryCacherToCheckPopularityChange(const Key& key, const Popularity& local_uncached_popularity, CachedDirectory& cached_directory, bool& is_large_popularity_change) const
     {
-        directory_cacher_.removeCachedDirinfoIfAny(key);
+        bool has_cached_directory = directory_cacher_.checkPopularityChange(key, local_uncached_popularity, cached_directory, is_large_popularity_change);
+        return has_cached_directory;
+    }
+
+    void CoveredCacheManager::updateDirectoryCacherToRemoveCachedDirectory(const Key& key)
+    {
+        directory_cacher_.removeCachedDirectoryIfAny(key);
         return;
     }
 
-    void CoveredCacheManager::updateDirectoryCacherForNewCachedDirinfo(const Key& key, const DirectoryInfo& dirinfo)
+    void CoveredCacheManager::updateDirectoryCacherForNewCachedDirectory(const Key& key, CachedDirectory& cached_directory)
     {
-        directory_cacher_.updateForNewCachedDirinfo(key, dirinfo);
+        directory_cacher_.updateForNewCachedDirectory(key, cached_directory);
         return;
     }
 

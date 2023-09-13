@@ -83,14 +83,17 @@ namespace covered
         bool is_key_tracked = tmp_edge_wrapper_ptr->getEdgeCachePtr()->getLocalUncachedPopularity(key, local_uncached_popularity); // If the local uncached key is tracked in local uncached metadata
         if (!is_key_tracked) // If key is NOT tracked by local uncached metadata (key is cached or key is uncached yet not popular)
         {
-            tmp_covered_cache_manager_ptr->updateDirectoryCacherToRemoveCachedDirinfo(key); // Remove cached directory info of untracked key if any
+            tmp_covered_cache_manager_ptr->updateDirectoryCacherToRemoveCachedDirectory(key); // Remove cached directory info of untracked key if any
         }
         else
         {
-            bool has_cached_dirinfo = tmp_covered_cache_manager_ptr->accessDirectoryCacherForCachedDirinfo(key, directory_info);
-            if (has_cached_dirinfo)
+            CachedDirectory cached_directory;
+            bool is_large_popularity_change = false;
+            bool has_cached_directory = tmp_covered_cache_manager_ptr->accessDirectoryCacherToCheckPopularityChange(key, local_uncached_popularity, cached_directory, is_large_popularity_change);
+            // TODO: END HERE
+            if (has_cached_directory)
             {
-                // NOTE: only local uncached object tracked by local uncached metadata can have cached dirinfo
+                // NOTE: only local uncached object tracked by local uncached metadata can have cached directory
                 assert(is_key_tracked == true);
 
                 // TODO: introduce previously-collected popularity in DirectoryCacher
@@ -159,16 +162,16 @@ namespace covered
 
             if (is_key_tracked) // If key is tracked by local uncached metadata
             {
-                tmp_covered_cache_manager_ptr->updateDirectoryCacherForNewCachedDirinfo(tmp_key, directory_info); // Add or insert new cached dirinfo for the given key
+                tmp_covered_cache_manager_ptr->updateDirectoryCacherForNewCachedDirectory(tmp_key, directory_info); // Add or insert new cached directory for the given key
             }
             else // Key is NOT tracked by local uncached metadata
             {
-                tmp_covered_cache_manager_ptr->updateDirectoryCacherToRemoveCachedDirinfo(tmp_key); // Remove existing cached dirinfo if any
+                tmp_covered_cache_manager_ptr->updateDirectoryCacherToRemoveCachedDirectory(tmp_key); // Remove existing cached directory if any
             }
         }
         else // If with invalid dirinfo
         {
-            tmp_covered_cache_manager_ptr->updateDirectoryCacherToRemoveCachedDirinfo(tmp_key); // Remove existing cached dirinfo if any
+            tmp_covered_cache_manager_ptr->updateDirectoryCacherToRemoveCachedDirectory(tmp_key); // Remove existing cached directory if any
         }
 
         return;

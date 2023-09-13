@@ -7,9 +7,49 @@
 
 namespace covered
 {
+    // CachedDirectory
+
+    const std::string CachedDirectory::kClassName("CachedDirectory");
+
+    CachedDirectory::CachedDirectory() : dirinfo_(), prev_collect_popularity_(0.0) {}
+
+    CachedDirectory::CachedDirectory(const DirectoryInfo& dirinfo, const Popularity& prev_collect_popularity)
+    {
+        dirinfo_ = dirinfo;
+        prev_collect_popularity_ = prev_collect_popularity;
+    }
+
+    CachedDirectory::~CachedDirectory() {}
+
+    DirectoryInfo CachedDirectory::getDirinfo() const
+    {
+        return dirinfo_;
+    }
+
+    Popularity CachedDirectory::getPrevCollectPopularity() const
+    {
+        return prev_collect_popularity_;
+    }
+
+    uint64_t CachedDirectory::getSizeForCapacity() const
+    {
+        uint64_t size_bytes = dirinfo_.getSizeForCapacity() + sizeof(Popularity);
+        return size_bytes;
+    }
+
+    const CachedDirectory& CachedDirectory::operator=(const CachedDirectory& other)
+    {
+        dirinfo_ = other.dirinfo_;
+        prev_collect_popularity_ = other.prev_collect_popularity_;
+
+        return *this;
+    }
+
+    // DirectoryCacher
+
     const std::string DirectoryCacher::kClassName("DirectoryCacher");
 
-    DirectoryCacher::DirectoryCacher(const uint32_t& edge_idx)
+    DirectoryCacher::DirectoryCacher(const uint32_t& edge_idx, const double& popularity_collection_change_ratio) : popularity_collection_change_ratio_(popularity_collection_change_ratio)
     {
         // Differentiate different edge nodes
         std::ostringstream oss;
@@ -33,38 +73,67 @@ namespace covered
         rwlock_for_directory_cacher_ = NULL;
     }
 
-    bool DirectoryCacher::getCachedDirinfo(const Key& key, DirectoryInfo& dirinfo) const
+    bool DirectoryCacher::getCachedDirectory(const Key& key, CachedDirectory& cached_directory) const
     {
         checkPointers_();
         
         // Acquire a read lock to update victim dirinfo atomically
-        std::string context_name = "DirectoryCacher::getCachedDirinfo()";
+        std::string context_name = "DirectoryCacher::getCachedDirectory()";
         rwlock_for_directory_cacher_->acquire_lock_shared(context_name);
 
-        bool has_cached_dirinfo = false;
+        bool has_cached_directory = false;
 
-        // Get cached dirinfo if any
+        // Get cached directory if any
         perkey_dirinfo_map_t::const_iterator map_iter = perkey_dirinfo_map_.find(key);
         if (map_iter != perkey_dirinfo_map_.end())
         {
-            has_cached_dirinfo = true;
-            dirinfo = map_iter->second;
+            has_cached_directory = true;
+            cached_directory = map_iter->second;
         }
 
         rwlock_for_directory_cacher_->unlock_shared(context_name);
 
-        return has_cached_dirinfo;
+        return has_cached_directory;
     }
 
-    void DirectoryCacher::removeCachedDirinfoIfAny(const Key& key)
+    bool DirectoryCacher::checkPopularityChange(const Key& key, const Popularity& local_uncached_popularity, CachedDirectory& cached_directory, bool& is_large_popularity_change) const
+    {
+        checkPointers_();
+
+        // Acquire a read lock to update victim dirinfo atomically
+        std::string context_name = "DirectoryCacher::checkPopularityChange()";
+        rwlock_for_directory_cacher_->acquire_lock_shared(context_name);
+
+        bool has_cached_directory = false;
+
+        // Get cached directory if any
+        perkey_dirinfo_map_t::const_iterator map_iter = perkey_dirinfo_map_.find(key);
+        if (map_iter != perkey_dirinfo_map_.end())
+        {
+            has_cached_directory = true;
+            cached_directory = map_iter->second;
+
+            // Check if popularity change is large
+            Popularity prev_collect_popularity = cached_directory.getPrevCollectPopularity();
+            Popularity popularity_change = (local_uncached_popularity >= prev_collect_popularity) ? (local_uncached_popularity - prev_collect_popularity) : (prev_collect_popularity - local_uncached_popularity);
+            assert(popularity_change >= 0);
+            is_large_popularity_change = (popularity_change >= popularity_collection_change_ratio_ * prev_collect_popularity);
+        }
+
+        rwlock_for_directory_cacher_->unlock_shared(context_name);
+
+        return has_cached_directory;
+    }
+
+    void DirectoryCacher::removeCachedDirectoryIfAny(const Key& key)
     {
         checkPointers_();
         
         // Acquire a write lock to update victim dirinfo atomically
-        std::string context_name = "DirectoryCacher::removeCachedDirinfoIfAny()";
+        std::string context_name = "DirectoryCacher::removeCachedDirectoryIfAny()";
         rwlock_for_directory_cacher_->acquire_lock(context_name);
 
-        // Remove cached dirinfo if any
+        // Remove cached directory if any
         perkey_dirinfo_map_t::iterator map_iter = perkey_dirinfo_map_.find(key);
         if (map_iter != perkey_dirinfo_map_.end())
         {
@@ -77,24 +146,24 @@ namespace covered
         return;
     }
 
-    void DirectoryCacher::updateForNewCachedDirinfo(const Key&key, const DirectoryInfo& dirinfo)
+    void DirectoryCacher::updateForNewCachedDirectory(const Key&key, const CachedDirectory& cached_directory)
     {
         checkPointers_();
         
         // Acquire a write lock to update victim dirinfo atomically
-        std::string context_name = "DirectoryCacher::updateForNewCachedDirinfo()";
+        std::string context_name = "DirectoryCacher::updateForNewCachedDirectory()";
         rwlock_for_directory_cacher_->acquire_lock(context_name);
 
         perkey_dirinfo_map_t::iterator map_iter = perkey_dirinfo_map_.find(key);
-        if (map_iter != perkey_dirinfo_map_.end()) // If key already has a cached dirinfo
+        if (map_iter != perkey_dirinfo_map_.end()) // If key already has a cached directory
         {
-            map_iter->second = dirinfo; // Update with new cached dirinfo
+            map_iter->second = cached_directory; // Update with new cached directory
         }
         else
         {
-            // Insert new cached dirinfo
-            size_bytes_ = Util::uint64Add(size_bytes_, dirinfo.getSizeForCapacity());
-            perkey_dirinfo_map_.insert(std::pair(key, dirinfo));
+            // Insert new cached directory
+            size_bytes_ = Util::uint64Add(size_bytes_, cached_directory.getSizeForCapacity());
+            perkey_dirinfo_map_.insert(std::pair(key, cached_directory));
         }
 
         rwlock_for_directory_cacher_->unlock(context_name);

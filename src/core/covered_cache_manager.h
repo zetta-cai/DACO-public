@@ -28,7 +28,7 @@ namespace covered
     class CoveredCacheManager
     {
     public:
-        CoveredCacheManager(const uint32_t& edge_idx, const uint32_t& edgecnt, const uint32_t& peredge_synced_victimcnt, const uint64_t& popularity_aggregation_capacity_bytes, const uint32_t& topk_edgecnt);
+        CoveredCacheManager(const uint32_t& edge_idx, const uint32_t& edgecnt, const uint32_t& peredge_synced_victimcnt, const uint64_t& popularity_aggregation_capacity_bytes, const double& popularity_collection_change_ratio, const uint32_t& topk_edgecnt);
         ~CoveredCacheManager();
 
         // For selective popularity aggregation
@@ -46,9 +46,10 @@ namespace covered
 
         // For directory metadata cache
 
-        bool accessDirectoryCacherForCachedDirinfo(const Key& key, DirectoryInfo& dirinfo) const; // Return if key is tracked by directory_cacher_
-        void updateDirectoryCacherToRemoveCachedDirinfo(const Key& key);
-        void updateDirectoryCacherForNewCachedDirinfo(const Key& key, const DirectoryInfo& dirinfo);
+        bool accessDirectoryCacherForCachedDirectory(const Key& key, CachedDirectory& cached_directory) const; // Return if key is tracked by directory_cacher_
+        bool accessDirectoryCacherToCheckPopularityChange(const Key& key, const Popularity& local_uncached_popularity, CachedDirectory& cached_directory, bool& is_large_popularity_change) const; // Return if key is tracked by directory_cacher_
+        void updateDirectoryCacherToRemoveCachedDirectory(const Key& key);
+        void updateDirectoryCacherForNewCachedDirectory(const Key& key, CachedDirectory& cached_directory);
 
         uint64_t getSizeForCapacity() const;
     private:
@@ -66,7 +67,7 @@ namespace covered
         // Track per-edge-node least popular victims for placement and eviction (thread safe)
         VictimTracker victim_tracker_;
 
-        // Track cached dirinfo of popular local uncached objects to reduce message overhead (thread safe)
+        // Track cached directory of popular local uncached objects to reduce message overhead (thread safe)
         DirectoryCacher directory_cacher_;
     };
 }
