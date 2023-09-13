@@ -1334,25 +1334,31 @@ namespace covered
 
     bool CacheServerWorkerBase::processRedirectedGetRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& recvrsp_dst_addr) const
     {
-        // Get key and value from redirected request if any
-        assert(redirected_request_ptr != NULL && redirected_request_ptr->getMessageType() == MessageType::kRedirectedGetRequest);
+        assert(redirected_request_ptr != NULL);
         assert(recvrsp_dst_addr.isValidAddr());
+
+        // Get key and value from redirected request if any
+        /*assert(redirected_request_ptr->getMessageType() == MessageType::kRedirectedGetRequest);
         const RedirectedGetRequest* const redirected_get_request_ptr = static_cast<const RedirectedGetRequest*>(redirected_request_ptr);
         Key tmp_key = redirected_get_request_ptr->getKey();
-        Value tmp_value;
-        const bool skip_propagation_latency = redirected_get_request_ptr->isSkipPropagationLatency();
+        const bool skip_propagation_latency = redirected_get_request_ptr->isSkipPropagationLatency();*/
 
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
         bool is_finish = false;
-        Hitflag hitflag = Hitflag::kGlobalMiss;
         EventList event_list;
 
-        // Access local edge cache for cooperative edge caching (current edge node is the target edge node)
         struct timespec target_get_local_cache_start_timestamp = Util::getCurrentTimespec();
-        bool is_cooperative_cached_and_valid = getLocalEdgeCache_(tmp_key, tmp_value);
-        bool is_cooperaitve_cached = tmp_edge_wrapper_ptr->getEdgeCachePtr()->isLocalCached(tmp_key);
+
+        // Access local edge cache for cooperative edge caching (current edge node is the target edge node)
+        Value tmp_value;
+        bool is_cooperaitve_cached = false;
+        bool is_cooperative_cached_and_valid = false;
+        processReqForRedirectedGet_(redirected_request_ptr, tmp_value, is_cooperaitve_cached, is_cooperative_cached_and_valid);
+
+        // Set hitflag accordingly
+        Hitflag hitflag = Hitflag::kGlobalMiss;
         if (is_cooperative_cached_and_valid) // cached and valid
         {
             hitflag = Hitflag::kCooperativeHit;
@@ -1364,6 +1370,7 @@ namespace covered
                 hitflag = Hitflag::kCooperativeInvalid;
             }
         }
+
         struct timespec target_get_local_cache_end_timestamp = Util::getCurrentTimespec();
         uint32_t target_get_local_cache_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(target_get_local_cache_end_timestamp, target_get_local_cache_start_timestamp));
         event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_TARGET_GET_LOCAL_CACHE_EVENT_NAME, target_get_local_cache_latency_us);

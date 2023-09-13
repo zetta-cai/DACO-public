@@ -61,6 +61,8 @@ namespace covered
 
         // (3) Process redirected requests
 
+        virtual void processReqForRedirectedGet_(MessageBase* redirected_request_ptr, Value& value, bool& is_cooperative_cached, bool& is_cooperative_cached_and_valid) const override;
+
         // (4.1) Admit uncached objects in local edge cache
 
         virtual void admitLocalEdgeCache_(const Key& key, const Value& value, const bool& is_valid) const override;

@@ -445,11 +445,30 @@ namespace covered
 
     // (3) Process redirected requests
 
-    /*bool CoveredCacheServerWorker::processRedirectedGetRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& recvrsp_dst_addr) const
+    void CoveredCacheServerWorker::processReqForRedirectedGet_(MessageBase* redirected_request_ptr, Value& value, bool& is_cooperative_cached, bool& is_cooperative_cached_and_valid) const
     {
-        // TODO: Piggyback candidate victims in current edge node
-        return false;
-    }*/
+        // Get key and value from redirected get request
+        assert(redirected_request_ptr != NULL);
+        assert(redirected_request_ptr->getMessageType() == MessageType::kCoveredRedirectedGetRequest);
+        const CoveredRedirectedGetRequest* const covered_redirected_get_request_ptr = static_cast<const CoveredRedirectedGetRequest*>(redirected_request_ptr);
+        Key tmp_key = covered_redirected_get_request_ptr->getKey();
+
+        checkPointers_();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
+
+        // Access local edge cache for redirected get request
+        is_cooperative_cached_and_valid = getLocalEdgeCache_(tmp_key, value);
+        is_cooperative_cached = tmp_edge_wrapper_ptr->getEdgeCachePtr()->isLocalCached(tmp_key);
+
+        // Victim synchronization
+        const uint32_t source_edge_idx = covered_redirected_get_request_ptr->getSourceIndex();
+        const VictimSyncset& victim_syncset = covered_redirected_get_request_ptr->getVictimSyncsetRef();
+        std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = tmp_edge_wrapper_ptr->getLocalBeaconedVictimsFromVictimSyncset(victim_syncset);
+        tmp_covered_cache_manager_ptr->updateVictimTrackerForVictimSyncset(source_edge_idx, victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
+        
+        return;
+    }
 
     // (4.1) Admit uncached objects in local edge cache
 

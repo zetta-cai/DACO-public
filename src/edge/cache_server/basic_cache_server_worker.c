@@ -234,6 +234,24 @@ namespace covered
 
     // (3) Process redirected requests
 
+    void BasicCacheServerWorker::processReqForRedirectedGet_(MessageBase* redirected_request_ptr, Value& value, bool& is_cooperative_cached, bool& is_cooperative_cached_and_valid) const
+    {
+        // Get key and value from redirected get request
+        assert(redirected_request_ptr != NULL);
+        assert(redirected_request_ptr->getMessageType() == MessageType::kRedirectedGetRequest);
+        const RedirectedGetRequest* const redirected_get_request_ptr = static_cast<const RedirectedGetRequest*>(redirected_request_ptr);
+        Key tmp_key = redirected_get_request_ptr->getKey();
+
+        checkPointers_();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+
+        // Access local edge cache for redirected get request
+        is_cooperative_cached_and_valid = getLocalEdgeCache_(tmp_key, value);
+        is_cooperative_cached = tmp_edge_wrapper_ptr->getEdgeCachePtr()->isLocalCached(tmp_key);
+        
+        return;
+    }
+
     // (4.1) Admit uncached objects in local edge cache
 
     void BasicCacheServerWorker::admitLocalEdgeCache_(const Key& key, const Value& value, const bool& is_valid) const

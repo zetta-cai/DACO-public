@@ -176,14 +176,14 @@ namespace covered
 
     bool BeaconServerBase::processDirectoryLookupRequest_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr) const
     {
+        assert(control_request_ptr != NULL);
+        assert(edge_cache_server_worker_recvrsp_dst_addr.isValidAddr());
+        
         // Get key from control request if any
-        /*assert(control_request_ptr != NULL);
-        assert(control_request_ptr->getMessageType() == MessageType::kDirectoryLookupRequest);
+        /*assert(control_request_ptr->getMessageType() == MessageType::kDirectoryLookupRequest);
         const DirectoryLookupRequest* const directory_lookup_request_ptr = static_cast<const DirectoryLookupRequest*>(control_request_ptr);
         Key tmp_key = directory_lookup_request_ptr->getKey();
         const bool skip_propagation_latency = directory_lookup_request_ptr->isSkipPropagationLatency();*/
-
-        assert(edge_cache_server_worker_recvrsp_dst_addr.isValidAddr());
 
         checkPointers_();
 
@@ -224,17 +224,17 @@ namespace covered
 
     bool BeaconServerBase::processDirectoryUpdateRequest_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr)
     {
+        assert(control_request_ptr != NULL);
+        assert(edge_cache_server_worker_recvrsp_dst_addr.isValidAddr());
+
         // Get key, admit/evict,and directory info from control request if any
-        /*assert(control_request_ptr != NULL);
-        assert(control_request_ptr->getMessageType() == MessageType::kDirectoryUpdateRequest);
+        /*assert(control_request_ptr->getMessageType() == MessageType::kDirectoryUpdateRequest);
         const DirectoryUpdateRequest* const directory_update_request_ptr = static_cast<const DirectoryUpdateRequest*>(control_request_ptr);
         //uint32_t tmp_edge_idx = directory_update_request_ptr->getSourceIndex();
         Key tmp_key = directory_update_request_ptr->getKey();
         const bool skip_propagation_latency = directory_update_request_ptr->isSkipPropagationLatency();
         bool is_admit = directory_update_request_ptr->isValidDirectoryExist();
         DirectoryInfo directory_info = directory_update_request_ptr->getDirectoryInfo();*/
-
-        assert(edge_cache_server_worker_recvrsp_dst_addr.isValidAddr());
 
         checkPointers_();
 
@@ -271,9 +271,11 @@ namespace covered
 
     bool BeaconServerBase::processAcquireWritelockRequest_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr)
     {
+        assert(control_request_ptr != NULL);
+        assert(edge_cache_server_worker_recvrsp_dst_addr.isValidAddr());
+
         // Get key from control request if any
-        /*assert(control_request_ptr != NULL);
-        assert(control_request_ptr->getMessageType() == MessageType::kAcquireWritelockRequest);
+        /*assert(control_request_ptr->getMessageType() == MessageType::kAcquireWritelockRequest);
         const AcquireWritelockRequest* const acquire_writelock_request_ptr = static_cast<const AcquireWritelockRequest*>(control_request_ptr);
         Key tmp_key = acquire_writelock_request_ptr->getKey();
         const bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();*/
@@ -324,9 +326,11 @@ namespace covered
 
     bool BeaconServerBase::processReleaseWritelockRequest_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr)
     {
+        assert(control_request_ptr != NULL);
+        assert(edge_cache_server_worker_recvrsp_dst_addr.isValidAddr());
+
         // Get key from control request if any
-        /*assert(control_request_ptr != NULL);
-        assert(control_request_ptr->getMessageType() == MessageType::kReleaseWritelockRequest);
+        /*assert(control_request_ptr->getMessageType() == MessageType::kReleaseWritelockRequest);
         const ReleaseWritelockRequest* const release_writelock_request_ptr = static_cast<const ReleaseWritelockRequest*>(control_request_ptr);
         Key tmp_key = release_writelock_request_ptr->getKey();
         const bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();*/
