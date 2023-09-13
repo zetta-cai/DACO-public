@@ -134,6 +134,11 @@ namespace covered
     {
         assert(control_request_ptr != NULL && control_request_ptr->isControlRequest());
 
+        // Current edge node must be the beacon node for the given key of the received control request
+        const Key& tmp_key = MessageBase::getKeyFromMessage(control_request_ptr);
+        bool current_is_beacon = edge_wrapper_ptr_->currentIsBeacon(tmp_key);
+        assert(current_is_beacon);
+
         #ifdef DEBUG_BEACON_SERVER
         Util::dumpVariablesForDebug(base_instance_name_, 5, "receive a control request", "type:", MessageBase::messageTypeToString(control_request_ptr->getMessageType()).c_str(), "keystr:", MessageBase::getKeyFromMessage(control_request_ptr).getKeystr().c_str());
         #endif

@@ -87,100 +87,30 @@ namespace covered
         return;
     }
 
-    bool BasicCacheServerWorker::redirectGetToTarget_(const DirectoryInfo& directory_info, const Key& key, Value& value, bool& is_cooperative_cached, bool& is_valid, EventList& event_list, const bool& skip_propagation_latency) const
+    MessageBase* BasicCacheServerWorker::getReqToRedirectGet_(const Key& key, const bool& skip_propagation_latency) const
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
-        bool is_finish = false;
-        struct timespec issue_redirect_get_req_start_timestamp = Util::getCurrentTimespec();
+        // Prepare redirected get request to fetch data from other edge nodes
+        uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
+        MessageBase* redirected_get_request_ptr = new RedirectedGetRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
+        assert(redirected_get_request_ptr != NULL);
 
-        // Prepare destination address of target edge cache server
-        NetworkAddr target_edge_cache_server_recvreq_dst_addr = getTargetDstaddr_(directory_info);
+        return redirected_get_request_ptr;
+    }
 
-        while (true) // Timeout-and-retry mechanism
-        {
-            // Prepare redirected get request to get data from target edge node if any
-            uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
-            MessageBase* redirected_get_request_ptr = new RedirectedGetRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
-            assert(redirected_get_request_ptr != NULL);
+    void BasicCacheServerWorker::processRspToRedirectGet_(MessageBase* redirected_response_ptr, Value& value, Hitflag& hitflag) const
+    {
+        assert(redirected_response_ptr != NULL);
+        assert(redirected_response_ptr->getMessageType() == MessageType::kRedirectedGetResponse);
 
-            // Push the redirected data request into edge-to-edge propagation simulator to target node
-            bool is_successful = tmp_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->push(redirected_get_request_ptr, target_edge_cache_server_recvreq_dst_addr);
-            assert(is_successful);
+        // Get value and hitflag from redirected response message
+        const RedirectedGetResponse* const redirected_get_response_ptr = static_cast<const RedirectedGetResponse*>(redirected_response_ptr);
+        value = redirected_get_response_ptr->getValue();
+        Hitflag hitflag = redirected_get_response_ptr->getHitflag();
 
-            // NOTE: redirected_get_request_ptr will be released by edge-to-edge propagation simulator
-            redirected_get_request_ptr = NULL;
-
-            // Receive the redirected data repsonse from the target node
-            DynamicArray redirected_response_msg_payload;
-            bool is_timeout = edge_cache_server_worker_recvrsp_socket_server_ptr_->recv(redirected_response_msg_payload);
-            if (is_timeout)
-            {
-                if (!tmp_edge_wrapper_ptr->isNodeRunning())
-                {
-                    is_finish = true;
-                    break; // Edge is NOT running
-                }
-                else
-                {
-                    Util::dumpWarnMsg(instance_name_, "edge timeout to wait for RedirectedGetResponse");
-                    continue; // Resend the redirected request message
-                }
-            } // End of (is_timeout == true)
-            else
-            {
-                // Receive the redirected response message successfully
-                MessageBase* redirected_response_ptr = MessageBase::getResponseFromMsgPayload(redirected_response_msg_payload);
-                assert(redirected_response_ptr != NULL && redirected_response_ptr->getMessageType() == MessageType::kRedirectedGetResponse);
-
-                // Get value from redirected response message
-                const RedirectedGetResponse* const redirected_get_response_ptr = static_cast<const RedirectedGetResponse*>(redirected_response_ptr);
-                value = redirected_get_response_ptr->getValue();
-                Hitflag hitflag = redirected_get_response_ptr->getHitflag();
-                if (hitflag == Hitflag::kCooperativeHit)
-                {
-                    is_cooperative_cached = true;
-                    is_valid = true;
-                }
-                else if (hitflag == Hitflag::kCooperativeInvalid)
-                {
-                    is_cooperative_cached = true;
-                    is_valid = false;
-                }
-                else if (hitflag == Hitflag::kGlobalMiss)
-                {
-                    std::ostringstream oss;
-                    oss << "target edge node does not cache the key " << key.getKeystr() << " in redirectGetToTarget_()!";
-                    Util::dumpWarnMsg(instance_name_, oss.str());
-
-                    is_cooperative_cached = false;
-                    is_valid = false;
-                }
-                else
-                {
-                    std::ostringstream oss;
-                    oss << "invalid hitflag " << MessageBase::hitflagToString(hitflag) << " for redirectGetToTarget_()!";
-                    Util::dumpErrorMsg(instance_name_, oss.str());
-                    exit(1);
-                }
-
-                // Add events of intermediate response if with event tracking
-                event_list.addEvents(redirected_response_ptr->getEventListRef());
-
-                // Release the redirected response message
-                delete redirected_response_ptr;
-                redirected_response_ptr = NULL;
-                break;
-            } // End of (is_timeout == false)
-        } // End of while(true)
-
-        // Add intermediate event if with event tracking
-        struct timespec issue_redirect_get_req_end_timestamp = Util::getCurrentTimespec();
-        uint32_t issue_redirect_get_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(issue_redirect_get_req_end_timestamp, issue_redirect_get_req_start_timestamp));
-        event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_ISSUE_REDIRECT_GET_REQ_EVENT_NAME, issue_redirect_get_latency_us);
-
-        return is_finish;
+        return;
     }
 
     // (1.4) Update invalid cached objects in local edge cache

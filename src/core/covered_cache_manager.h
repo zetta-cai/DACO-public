@@ -49,7 +49,7 @@ namespace covered
         bool accessDirectoryCacherForCachedDirectory(const Key& key, CachedDirectory& cached_directory) const; // Return if key is tracked by directory_cacher_
         bool accessDirectoryCacherToCheckPopularityChange(const Key& key, const Popularity& local_uncached_popularity, CachedDirectory& cached_directory, bool& is_large_popularity_change) const; // Return if key is tracked by directory_cacher_
         void updateDirectoryCacherToRemoveCachedDirectory(const Key& key);
-        void updateDirectoryCacherForNewCachedDirectory(const Key& key, CachedDirectory& cached_directory);
+        void updateDirectoryCacherForNewCachedDirectory(const Key& key, const CachedDirectory& cached_directory);
 
         uint64_t getSizeForCapacity() const;
     private:

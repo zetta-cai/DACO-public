@@ -203,6 +203,16 @@ namespace covered
                 message_type_str = "kCoveredReleaseWritelockResponse";
                 break;
             }
+            case MessageType::kCoveredRedirectedGetRequest:
+            {
+                message_type_str = "kCoveredRedirectedGetRequest";
+                break;
+            }
+            case MessageType::kCoveredRedirectedGetResponse:
+            {
+                message_type_str = "kCoveredRedirectedGetResponse";
+                break;
+            }
             default:
             {
                 message_type_str = std::to_string(static_cast<uint32_t>(message_type));
@@ -441,6 +451,11 @@ namespace covered
                 message_ptr = new CoveredReleaseWritelockRequest(msg_payload);
                 break;
             }
+            case MessageType::kCoveredRedirectedGetRequest:
+            {
+                message_ptr = new CoveredRedirectedGetRequest(msg_payload);
+                break;
+            }
             default:
             {
                 std::ostringstream oss;
@@ -579,6 +594,11 @@ namespace covered
             case MessageType::kCoveredReleaseWritelockResponse:
             {
                 message_ptr = new CoveredReleaseWritelockResponse(msg_payload);
+                break;
+            }
+            case MessageType::kCoveredRedirectedGetResponse:
+            {
+                message_ptr = new CoveredRedirectedGetResponse(msg_payload);
                 break;
             }
             default:
@@ -770,6 +790,16 @@ namespace covered
             const CoveredReleaseWritelockResponse* const covered_release_writelock_response_ptr = static_cast<const CoveredReleaseWritelockResponse*>(message_ptr);
             tmp_key = covered_release_writelock_response_ptr->getKey();
         }
+        else if (message_ptr->message_type_ == MessageType::kCoveredRedirectedGetRequest)
+        {
+            const CoveredRedirectedGetRequest* const covered_redirected_get_request_ptr = static_cast<const CoveredRedirectedGetRequest*>(message_ptr);
+            tmp_key = covered_redirected_get_request_ptr->getKey();
+        }
+        else if (message_ptr->message_type_ == MessageType::kCoveredRedirectedGetResponse)
+        {
+            const CoveredRedirectedGetResponse* const covered_redirected_get_response_ptr = static_cast<const CoveredRedirectedGetResponse*>(message_ptr);
+            tmp_key = covered_redirected_get_response_ptr->getKey();
+        }
         else
         {
             std::ostringstream oss;
@@ -928,7 +958,7 @@ namespace covered
     bool MessageBase::isRedirectedDataRequest() const
     {
         checkIsValid_();
-        if (message_type_ == MessageType::kRedirectedGetRequest)
+        if (message_type_ == MessageType::kRedirectedGetRequest || message_type_ == MessageType::kCoveredRedirectedGetRequest)
         {
             return true;
         }
@@ -973,7 +1003,7 @@ namespace covered
     bool MessageBase::isRedirectedDataResponse() const
     {
         checkIsValid_();
-        if (message_type_ == MessageType::kRedirectedGetResponse)
+        if (message_type_ == MessageType::kRedirectedGetResponse || message_type_ == MessageType::kCoveredRedirectedGetResponse)
         {
             return true;
         }

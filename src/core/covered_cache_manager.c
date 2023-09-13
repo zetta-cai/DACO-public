@@ -76,7 +76,7 @@ namespace covered
         return;
     }
 
-    void CoveredCacheManager::updateDirectoryCacherForNewCachedDirectory(const Key& key, CachedDirectory& cached_directory)
+    void CoveredCacheManager::updateDirectoryCacherForNewCachedDirectory(const Key& key, const CachedDirectory& cached_directory)
     {
         directory_cacher_.updateForNewCachedDirectory(key, cached_directory);
         return;

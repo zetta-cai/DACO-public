@@ -24,4 +24,8 @@
 #include "message/data/redirected/redirected_get_request.h"
 #include "message/data/redirected/redirected_get_response.h"
 
+// ONLY for COVERED
+#include "message/data/redirected/covered_redirected_get_request.h"
+#include "message/data/redirected/covered_redirected_get_response.h"
+
 #endif

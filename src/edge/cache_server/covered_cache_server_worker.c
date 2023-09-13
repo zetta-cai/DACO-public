@@ -8,6 +8,7 @@
 #include "core/victim/victim_cacheinfo.h"
 #include "core/victim/victim_syncset.h"
 #include "message/control_message.h"
+#include "message/data_message.h"
 
 namespace covered
 {
@@ -88,20 +89,23 @@ namespace covered
         else
         {
             CachedDirectory cached_directory;
-            bool is_large_popularity_change = false;
+            bool is_large_popularity_change = true;
             bool has_cached_directory = tmp_covered_cache_manager_ptr->accessDirectoryCacherToCheckPopularityChange(key, local_uncached_popularity, cached_directory, is_large_popularity_change);
-            // TODO: END HERE
-            if (has_cached_directory)
+            if (has_cached_directory) // If key has cached dirinfo
             {
                 // NOTE: only local uncached object tracked by local uncached metadata can have cached directory
                 assert(is_key_tracked == true);
 
-                // TODO: introduce previously-collected popularity in DirectoryCacher
+                if (!is_large_popularity_change) // If popularity change is NOT large
+                {
+                    is_being_written = false; // NOTE: although we do NOT know whether key is being written from directory metadata cache, we can simply assume key is NOT being written temporarily to issue redirected get request; redirected get response will return a hitflag of kCooperativeInvalid if key is being written
+                    is_valid_directory_exist = true; // NOTE: we ONLY cache valid remote directory for popular local uncached objects in directory metadata cache
+                    directory_info = cached_directory.getDirinfo();
 
-                is_being_written = false; // NOTE: although we do NOT know whether key is being written from directory metadata cache, we can simply assume key is NOT being written temporarily to issue redirected get request; redirected get response will return a hitflag of kCooperativeInvalid if key is being written
-                is_valid_directory_exist = true; // NOTE: we ONLY cache valid remote directory for popular local uncached objects in directory metadata cache
+                    need_lookup_beacon_directory = false; // NO need to send directory lookup request to beacon node if hit directory metadata cache
+                }
 
-                need_lookup_beacon_directory = false; // NO need to send directory lookup request to beacon node if hit directory metadata cache
+                // NOTE: If local uncached popularity has a large change compared with the previously-collected one, we still send directory lookup request to beacon node with piggybacking-based popularity collection for selective popularity aggregation
             }
         }
 
@@ -162,10 +166,11 @@ namespace covered
 
             if (is_key_tracked) // If key is tracked by local uncached metadata
             {
-                tmp_covered_cache_manager_ptr->updateDirectoryCacherForNewCachedDirectory(tmp_key, directory_info); // Add or insert new cached directory for the given key
+                tmp_covered_cache_manager_ptr->updateDirectoryCacherForNewCachedDirectory(tmp_key, CachedDirectory(directory_info, local_uncached_popularity)); // Add or insert new cached directory for the given key
             }
             else // Key is NOT tracked by local uncached metadata
             {
+                // NOTE: NOT insert into DirectoryCacher if key is local cached (valid/invalid), or local uncached yet not tracked by local uncached metadata
                 tmp_covered_cache_manager_ptr->updateDirectoryCacherToRemoveCachedDirectory(tmp_key); // Remove existing cached directory if any
             }
         }
@@ -177,13 +182,48 @@ namespace covered
         return;
     }
 
-    bool CoveredCacheServerWorker::redirectGetToTarget_(const DirectoryInfo& directory_info, const Key& key, Value& value, bool& is_cooperative_cached, bool& is_valid, EventList& event_list, const bool& skip_propagation_latency) const
+    MessageBase* CoveredCacheServerWorker::getReqToRedirectGet_(const Key& key, const bool& skip_propagation_latency) const
     {
-        // TODO: Piggyback candidate victims in current edge node
+        // TODO: Update/invaidate directory metadata cache
 
-        // TODO: Update/invaidate expiration-based local directory cache
-        // TODO: If local uncached popularity has large change compared with last sync, explicitly sync latest local uncached popularity to beacon node by piggybacking to update aggregated uncached popularity
-        return false;
+        checkPointers_();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
+
+        // Prepare victim syncset for piggybacking-based victim synchronization
+        VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForVictimSyncset();
+
+        // Prepare redirected get request to fetch data from other edge nodes
+        uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
+        MessageBase* covered_redirected_get_request_ptr = new CoveredRedirectedGetRequest(key, victim_syncset, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
+        assert(covered_redirected_get_request_ptr != NULL);
+
+        return covered_redirected_get_request_ptr;
+    }
+
+    void CoveredCacheServerWorker::processRspToRedirectGet_(MessageBase* redirected_response_ptr, Value& value, Hitflag& hitflag) const
+    {
+        assert(redirected_response_ptr != NULL);
+        assert(redirected_response_ptr->getMessageType() == MessageType::kCoveredRedirectedGetResponse);
+
+        checkPointers_();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
+
+        // Get value and hitflag from redirected response message
+        const CoveredRedirectedGetResponse* const covered_redirected_get_response_ptr = static_cast<const CoveredRedirectedGetResponse*>(redirected_response_ptr);
+        value = covered_redirected_get_response_ptr->getValue();
+        Hitflag hitflag = covered_redirected_get_response_ptr->getHitflag();
+
+        // Victim synchronization
+        const uint32_t source_edge_idx = covered_redirected_get_response_ptr->getSourceIndex();
+        const VictimSyncset& victim_syncset = covered_redirected_get_response_ptr->getVictimSyncsetRef();
+        std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = tmp_edge_wrapper_ptr->getLocalBeaconedVictimsFromVictimSyncset(victim_syncset);
+        tmp_covered_cache_manager_ptr->updateVictimTrackerForVictimSyncset(source_edge_idx, victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
+
+        // TODO: Validate DirectoryCacher if necessary (END HERE)
+
+        return;
     }
 
     // (1.4) Update invalid cached objects in local edge cache
@@ -487,6 +527,9 @@ namespace covered
         {
             // ONLY need victim synchronization yet without popularity collection/aggregation
             covered_directory_update_request_ptr = new CoveredDirectoryUpdateRequest(key, is_admit, directory_info, victim_syncset, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
+
+            // Remove existing cached directory if any as key will be local cached
+            tmp_covered_cache_manager_ptr->updateDirectoryCacherToRemoveCachedDirectory(key);
         }
         else // Evict a victim as local uncached object (NOTE: local edge cache has already been evicted)
         {
@@ -496,6 +539,12 @@ namespace covered
 
             // Need BOTH popularity collection and victim synchronization
             covered_directory_update_request_ptr = new CoveredDirectoryUpdateRequest(key, is_admit, directory_info, CollectedPopularity(is_key_tracked, local_uncached_popularity), victim_syncset, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
+
+            // NOTE: key MUST NOT have any cached directory, as key is local cached before eviction (even if key may be local uncached and tracked by local uncached metadata due to metadata preservation after eviction, we have NOT lookuped remote directory yet from beacon node)
+            CachedDirectory cached_directory;
+            bool has_cached_directory = tmp_covered_cache_manager_ptr->accessDirectoryCacherForCachedDirectory(key, cached_directory);
+            assert(!has_cached_directory);
+            UNUSED(cached_directory);
         }
         assert(covered_directory_update_request_ptr != NULL);
 
