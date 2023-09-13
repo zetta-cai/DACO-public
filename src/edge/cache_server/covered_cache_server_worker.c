@@ -221,7 +221,13 @@ namespace covered
         std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = tmp_edge_wrapper_ptr->getLocalBeaconedVictimsFromVictimSyncset(victim_syncset);
         tmp_covered_cache_manager_ptr->updateVictimTrackerForVictimSyncset(source_edge_idx, victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
 
-        // TODO: Validate DirectoryCacher if necessary (END HERE)
+        // Invalidate DirectoryCacher if necessary
+        if (hitflag == Hitflag::kCooperativeInvalid || hitflag == Hitflag::kGlobalMiss) // Dirinfo is invalid
+        {
+            const Key tmp_key = covered_redirected_get_response_ptr->getKey();
+            tmp_covered_cache_manager_ptr->updateDirectoryCacherToRemoveCachedDirectory(tmp_key); // Remove existing cached directory if any
+        }
+        // NOTE: If hitflag is kCooperativeHit, we do NOT need to insert/update DirectoryCacher, as it has been done during directory lookup if necessary
 
         return;
     }
