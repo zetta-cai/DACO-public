@@ -309,6 +309,10 @@ namespace covered
         MessageBase* covered_acquire_writelock_request_ptr = new CoveredAcquireWritelockRequest(key, CollectedPopularity(is_key_tracked, local_uncached_popularity), victim_syncset, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
         assert(covered_acquire_writelock_request_ptr != NULL);
 
+        // Remove existing cached directory if any as key will be local cached
+        // NOTE: aquire write lock means global cached key and acquire beacon write lock means neighbor beaconed key (i.e., remote directory) -> even if key is local uncached and tracked, NO need to update previously-collected local uncached popularity in DirectoryCacher if any, as all cache copies in other edge nodes of the given key will become invalid
+        tmp_covered_cache_manager_ptr->updateDirectoryCacherToRemoveCachedDirectory(key);
+
         return covered_acquire_writelock_request_ptr;
     }
 
@@ -419,7 +423,12 @@ namespace covered
         MessageBase* covered_release_writelock_request_ptr = new CoveredReleaseWritelockRequest(key, CollectedPopularity(is_key_tracked, local_uncached_popularity), victim_syncset, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
         assert(covered_release_writelock_request_ptr != NULL);
 
-        return;
+        // Remove existing cached directory if any as key will be local cached
+        // NOTE: aquire write lock means global cached key and acquire beacon write lock means neighbor beaconed key (i.e., remote directory) -> even if key is local uncached and tracked, NO need to update previously-collected local uncached popularity in DirectoryCacher if any, as all cache copies in other edge nodes of the given key will become invalid
+        // TODO: we may comment the removal as we have removed cached directory in getReqToAcquireBeaconWritelock_() for acquireBeaconWritelock_()
+        tmp_covered_cache_manager_ptr->updateDirectoryCacherToRemoveCachedDirectory(key);
+
+        return covered_release_writelock_request_ptr;
     }
 
     void CoveredCacheServerWorker::processRspToReleaseBeaconWritelock_(MessageBase* control_response_ptr) const
@@ -468,6 +477,24 @@ namespace covered
         tmp_covered_cache_manager_ptr->updateVictimTrackerForVictimSyncset(source_edge_idx, victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
         
         return;
+    }
+
+    MessageBase* CoveredCacheServerWorker::getRspForRedirectedGet_(const Key& key, const Value& value, const Hitflag& hitflag, const EventList& event_list, const bool& skip_propagation_latency) const
+    {
+        checkPointers_();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
+
+        // Prepare victim syncset for piggybacking-based victim synchronization
+        VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForVictimSyncset();
+
+        // Prepare redirected get response
+        uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
+        NetworkAddr edge_cache_server_recvreq_source_addr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeCacheServerRecvreqSourceAddr();
+        MessageBase* covered_redirected_get_response_ptr = new CoveredRedirectedGetResponse(key, value, hitflag, victim_syncset, edge_idx, edge_cache_server_recvreq_source_addr, event_list, skip_propagation_latency);
+        assert(covered_redirected_get_response_ptr != NULL);
+
+        return covered_redirected_get_response_ptr;
     }
 
     // (4.1) Admit uncached objects in local edge cache

@@ -1379,9 +1379,10 @@ namespace covered
         // NOTE: no need to access cloud to get data, which will be performed by the closest edge node
 
         // Prepare RedirectedGetResponse for the closest edge node
-        uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
-        NetworkAddr edge_cache_server_recvreq_source_addr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeCacheServerRecvreqSourceAddr();
-        MessageBase* redirected_get_response_ptr = new RedirectedGetResponse(tmp_key, tmp_value, hitflag, edge_idx, edge_cache_server_recvreq_source_addr, event_list, skip_propagation_latency);
+        const Key tmp_key = MessageBase::getKeyFromMessage(redirected_request_ptr);
+        const bool skip_propagation_latency = redirected_request_ptr->isSkipPropagationLatency();
+        MessageBase* redirected_get_response_ptr = getRspForRedirectedGet_(tmp_key, tmp_value, hitflag, event_list, skip_propagation_latency);
+        assert(redirected_get_response_ptr != NULL);
 
         // Push the redirected response message into edge-to-client propagation simulator to cache server worker in the closest edge node
         tmp_edge_wrapper_ptr->getEdgeToclientPropagationSimulatorParamPtr()->push(redirected_get_response_ptr, recvrsp_dst_addr);

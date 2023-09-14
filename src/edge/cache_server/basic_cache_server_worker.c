@@ -252,6 +252,20 @@ namespace covered
         return;
     }
 
+    MessageBase* BasicCacheServerWorker::getRspForRedirectedGet_(const Key& key, const Value& value, const Hitflag& hitflag, const EventList& event_list, const bool& skip_propagation_latency) const
+    {
+        checkPointers_();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+
+        // Prepare redirected get response
+        uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
+        NetworkAddr edge_cache_server_recvreq_source_addr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeCacheServerRecvreqSourceAddr();
+        MessageBase* redirected_get_response_ptr = new RedirectedGetResponse(key, value, hitflag, edge_idx, edge_cache_server_recvreq_source_addr, event_list, skip_propagation_latency);
+        assert(redirected_get_response_ptr != NULL);
+
+        return redirected_get_response_ptr;
+    }
+
     // (4.1) Admit uncached objects in local edge cache
 
     void BasicCacheServerWorker::admitLocalEdgeCache_(const Key& key, const Value& value, const bool& is_valid) const
