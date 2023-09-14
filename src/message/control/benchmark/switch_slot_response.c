@@ -4,7 +4,8 @@ namespace covered
 {
     const std::string SwitchSlotResponse::kClassName("SwitchSlotResponse");
 
-    SwitchSlotResponse::SwitchSlotResponse(const uint32_t& target_slot_idx, const AggregatedStatisticsBase& aggregated_statistics, const uint32_t& source_index, const NetworkAddr& source_addr, const EventList& event_list) : UintAggstatMessage(target_slot_idx, aggregated_statistics, MessageType::kSwitchSlotResponse, source_index, source_addr, event_list, true)
+    // NOTE: use BandwidthUsage() as we do NOT need to count benchmark control messages for data plane bandwidth usage
+    SwitchSlotResponse::SwitchSlotResponse(const uint32_t& target_slot_idx, const AggregatedStatisticsBase& aggregated_statistics, const uint32_t& source_index, const NetworkAddr& source_addr, const EventList& event_list) : UintAggstatMessage(target_slot_idx, aggregated_statistics, MessageType::kSwitchSlotResponse, source_index, source_addr, BandwidthUsage(), event_list, true)
     {
     }
 

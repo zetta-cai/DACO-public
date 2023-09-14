@@ -17,7 +17,7 @@ namespace covered
     class SimpleMessage : public MessageBase
     {
     public:
-        SimpleMessage(const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr, const EventList& event_list, const bool& skip_propagation_latency);
+        SimpleMessage(const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency);
         SimpleMessage(const DynamicArray& msg_payload);
         virtual ~SimpleMessage();
     private:

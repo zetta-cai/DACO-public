@@ -25,8 +25,8 @@ namespace covered
     class KeyValidityDirectoryCollectpopVictimsetMessage : public MessageBase
     {
     public:
-        KeyValidityDirectoryCollectpopVictimsetMessage(const Key& key, const bool& is_valid_directory_exist, const DirectoryInfo& directory_info, const VictimSyncset& victim_syncset, const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr, const EventList& event_list, const bool& skip_propagation_latency);
-        KeyValidityDirectoryCollectpopVictimsetMessage(const Key& key, const bool& is_valid_directory_exist, const DirectoryInfo& directory_info, const CollectedPopularity& collected_popularity, const VictimSyncset& victim_syncset, const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr, const EventList& event_list, const bool& skip_propagation_latency);
+        KeyValidityDirectoryCollectpopVictimsetMessage(const Key& key, const bool& is_valid_directory_exist, const DirectoryInfo& directory_info, const VictimSyncset& victim_syncset, const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency);
+        KeyValidityDirectoryCollectpopVictimsetMessage(const Key& key, const bool& is_valid_directory_exist, const DirectoryInfo& directory_info, const CollectedPopularity& collected_popularity, const VictimSyncset& victim_syncset, const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency);
         KeyValidityDirectoryCollectpopVictimsetMessage(const DynamicArray& msg_payload);
         virtual ~KeyValidityDirectoryCollectpopVictimsetMessage();
 

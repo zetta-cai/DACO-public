@@ -821,11 +821,14 @@ namespace covered
         return sizeof(uint32_t);
     }
 
-    MessageBase::MessageBase(const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr, const EventList& event_list, const bool& skip_propagation_latency)
+    MessageBase::MessageBase(const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency)
     {
         message_type_ = message_type;
+        is_response_ = isDataResponse() || isControlResponse();
+
         source_index_ = source_index;
         source_addr_ = source_addr;
+        bandwidth_usage_ = bandwidth_usage;
         event_list_ = event_list;
         skip_propagation_latency_ = skip_propagation_latency;
 
@@ -841,6 +844,7 @@ namespace covered
     MessageBase::MessageBase()
     {
         is_valid_ = false;
+        is_response_ = false;
     }
     
     MessageBase::~MessageBase() {}
@@ -871,9 +875,17 @@ namespace covered
         }
     }
 
+    const BandwidthUsage& MessageBase::getBandwidthUsageRef() const
+    {
+        checkIsValid_();
+        assert(is_response_ == true); // NOTE: ONLY response message has bandwidth usage
+        return bandwidth_usage_;
+    }
+
     const EventList& MessageBase::getEventListRef() const
     {
         checkIsValid_();
+        assert(is_response_ == true); // NOTE: ONLY response message has event list
         return event_list_;
     }
 
@@ -887,8 +899,19 @@ namespace covered
     {
         checkIsValid_();
 
-        // Message type size + source index + source addr + event list (0 if without event tracking) + skip_propagation_latency flag + internal payload size
-        return sizeof(uint32_t) + sizeof(uint32_t) + source_addr_.getAddrPayloadSize() + event_list_.getEventListPayloadSize() + sizeof(bool) + getMsgPayloadSizeInternal_();
+        uint32_t msg_payload_size = 0;
+        if (is_response_) // NOTE: ONLY response message has bandwidth usage and event list
+        {
+            // Message type size + source index + source addr + bandwidth usage + event list (0 if without event tracking) + skip_propagation_latency flag + internal payload size
+            msg_payload_size = sizeof(uint32_t) + sizeof(uint32_t) + source_addr_.getAddrPayloadSize() + bandwidth_usage_.getBandwidthUsagePayloadSize() + event_list_.getEventListPayloadSize() + sizeof(bool) + getMsgPayloadSizeInternal_();
+        }
+        else // NOTE: request message does NOT have bandwidth usage and event list
+        {
+            // Message type size + source index + source addr + skip_propagation_latency flag + internal payload size
+            msg_payload_size = sizeof(uint32_t) + sizeof(uint32_t) + source_addr_.getAddrPayloadSize() + sizeof(bool) + getMsgPayloadSizeInternal_();
+        }
+        
+        return msg_payload_size;
     }
 
     uint32_t MessageBase::serialize(DynamicArray& msg_payload) const
@@ -904,8 +927,13 @@ namespace covered
         size += sizeof(uint32_t);
         uint32_t addr_payload_size = source_addr_.serialize(msg_payload, size);
         size += addr_payload_size;
-        uint32_t eventlist_payload_size = event_list_.serialize(msg_payload, size);
-        size += eventlist_payload_size;
+        if (is_response_) // NOTE: ONLY response message has bandwidth usage and event list
+        {
+            uint32_t bandwidth_usage_size = bandwidth_usage_.serialize(msg_payload, size);
+            size += bandwidth_usage_size;
+            uint32_t eventlist_payload_size = event_list_.serialize(msg_payload, size);
+            size += eventlist_payload_size;
+        }
         msg_payload.deserialize(size, (const char *)&skip_propagation_latency_, sizeof(bool));
         size += sizeof(bool);
         uint32_t internal_size = serializeInternal_(msg_payload, size);
@@ -921,18 +949,25 @@ namespace covered
 
         uint32_t size = 0;
         uint32_t message_type_size = deserializeMessageTypeFromMsgPayload(msg_payload, message_type_);
+        is_response_ = isDataResponse() || isControlResponse();
         size += message_type_size;
         msg_payload.serialize(size, (char *)&source_index_, sizeof(uint32_t));
         source_index_ = ntohl(source_index_);
         size += sizeof(uint32_t);
         uint32_t addr_payload_size = source_addr_.deserialize(msg_payload, size);
         size += addr_payload_size;
-        uint32_t eventlist_payload_size = event_list_.deserialize(msg_payload, size);
-        size += eventlist_payload_size;
+        if (is_response_) // NOTE: ONLY response message has bandwidth usage and event list
+        {
+            uint32_t bandwidth_usage_size = bandwidth_usage_.deserialize(msg_payload, size);
+            size += bandwidth_usage_size;
+            uint32_t eventlist_payload_size = event_list_.deserialize(msg_payload, size);
+            size += eventlist_payload_size;
+        }
         msg_payload.serialize(size, (char *)&skip_propagation_latency_, sizeof(bool));
         size += sizeof(bool);
         uint32_t internal_size = this->deserializeInternal_(msg_payload, size);
         size += internal_size;
+
         return size - 0;
     }
 

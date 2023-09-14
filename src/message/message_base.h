@@ -9,6 +9,7 @@
 
 #include <string>
 
+#include "common/bandwidth_usage.h"
 #include "common/dynamic_array.h"
 #include "event/event_list.h"
 #include "workload/workload_item.h"
@@ -100,7 +101,7 @@ namespace covered
         static MessageBase* getResponseFromMsgPayload(const DynamicArray& msg_payload); // Data/control responses
         static Key getKeyFromMessage(MessageBase* message_ptr); // Get key from message (e.g., local requests)
 
-        MessageBase(const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr, const EventList& event_list, const bool& skip_propagation_latency);
+        MessageBase(const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency);
         //MessageBase(const DynamicArray& msg_payload);
         MessageBase();
         virtual ~MessageBase();
@@ -108,6 +109,7 @@ namespace covered
         MessageType getMessageType() const;
         uint32_t getSourceIndex() const;
         NetworkAddr getSourceAddr() const;
+        const BandwidthUsage& getBandwidthUsageRef() const;
         const EventList& getEventListRef() const;
         bool isSkipPropagationLatency() const;
 
@@ -148,12 +150,14 @@ namespace covered
         MessageType message_type_;
         uint32_t source_index_; // client/edge/cloud index of source node
         NetworkAddr source_addr_; // Network address of source socket server to hide propagation simulator
+        BandwidthUsage bandwidth_usage_; // NOTE: requests MUST have default bandwidth usage
         // Track intermediate events and events of intermediate responses to break down latencies for debugging
         // NOTE: requests MUST have empty event list; NOT consume bandwidth if without event tracking
         EventList event_list_;
         bool skip_propagation_latency_; // NOT simulate propagation latency for warmup speedup
 
         bool is_valid_; // NOT serialized/deserialized in msg payload
+        bool is_response_; // NOT serialized/deserialized in msg payload
     protected:
         void checkIsValid_() const;
     };

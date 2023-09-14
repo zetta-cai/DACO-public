@@ -4,7 +4,7 @@ namespace covered
 {
     const std::string LocalGetResponse::kClassName("LocalGetResponse");
 
-    LocalGetResponse::LocalGetResponse(const Key& key, const Value& value, const Hitflag& hitflag, const uint64_t& cache_size_bytes, const uint64_t& cache_capacity_bytes, const uint32_t& source_index, const NetworkAddr& source_addr, const EventList& event_list, const bool& skip_propagation_latency) : KeyValueHitflagUtilizationMessage(key, value, hitflag, cache_size_bytes, cache_capacity_bytes, MessageType::kLocalGetResponse, source_index, source_addr, event_list, skip_propagation_latency)
+    LocalGetResponse::LocalGetResponse(const Key& key, const Value& value, const Hitflag& hitflag, const uint64_t& cache_size_bytes, const uint64_t& cache_capacity_bytes, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency) : KeyValueHitflagUtilizationMessage(key, value, hitflag, cache_size_bytes, cache_capacity_bytes, MessageType::kLocalGetResponse, source_index, source_addr, event_list, skip_propagation_latency)
     {
     }
 

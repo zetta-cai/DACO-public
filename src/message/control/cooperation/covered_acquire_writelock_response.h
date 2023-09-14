@@ -18,7 +18,7 @@ namespace covered
     class CoveredAcquireWritelockResponse : public KeyByteVictimsetMessage
     {
     public:
-        CoveredAcquireWritelockResponse(const Key& key, const LockResult& lock_result, const VictimSyncset& victim_syncset, const uint32_t& source_index, const NetworkAddr& source_addr, const EventList& event_list, const bool& skip_propagation_latency);
+        CoveredAcquireWritelockResponse(const Key& key, const LockResult& lock_result, const VictimSyncset& victim_syncset, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency);
         CoveredAcquireWritelockResponse(const DynamicArray& msg_payload);
         virtual ~CoveredAcquireWritelockResponse();
 

@@ -4,7 +4,8 @@ namespace covered
 {
     const std::string FinishWarmupResponse::kClassName("FinishWarmupResponse");
 
-    FinishWarmupResponse::FinishWarmupResponse(const uint32_t& source_index, const NetworkAddr& source_addr, const EventList& event_list) : SimpleMessage(MessageType::kFinishWarmupResponse, source_index, source_addr, event_list, true)
+    // NOTE: use BandwidthUsage() as we do NOT need to count benchmark control messages for data plane bandwidth usage
+    FinishWarmupResponse::FinishWarmupResponse(const uint32_t& source_index, const NetworkAddr& source_addr, const EventList& event_list) : SimpleMessage(MessageType::kFinishWarmupResponse, source_index, source_addr, BandwidthUsage(), event_list, true)
     {
     }
 

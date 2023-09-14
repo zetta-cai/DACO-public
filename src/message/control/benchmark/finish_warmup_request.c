@@ -4,7 +4,7 @@ namespace covered
 {
     const std::string FinishWarmupRequest::kClassName("FinishWarmupRequest");
 
-    FinishWarmupRequest::FinishWarmupRequest(const uint32_t& source_index, const NetworkAddr& source_addr) : SimpleMessage(MessageType::kFinishWarmupRequest, source_index, source_addr, EventList(), true)
+    FinishWarmupRequest::FinishWarmupRequest(const uint32_t& source_index, const NetworkAddr& source_addr) : SimpleMessage(MessageType::kFinishWarmupRequest, source_index, source_addr, BandwidthUsage(), EventList(), true)
     {
     }
 
