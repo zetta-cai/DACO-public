@@ -214,7 +214,7 @@ namespace covered
         BandwidthUsage total_bandwidth_usage;
         EventList event_list;
 
-        // Update total bandwidth usage for received local request
+        // Update total bandwidth usage for received local get request
         uint32_t client_edge_local_req_bandwidth_bytes = local_request_ptr->getMsgPayloadSize();
         total_bandwidth_usage.update(BandwidthUsage(client_edge_local_req_bandwidth_bytes, 0, 0));
 
@@ -624,11 +624,11 @@ namespace covered
                     exit(1);
                 }
 
-                // Update total bandwidth usage for received redirected response
-                BandwidthUsage redirected_response_bandwidth_usage = redirected_response_ptr->getBandwidthUsageRef();
-                uint32_t cross_edge_redirected_rsp_bandwidth_bytes = redirected_response_ptr->getMsgPayloadSize();
-                redirected_response_bandwidth_usage.update(BandwidthUsage(0, cross_edge_redirected_rsp_bandwidth_bytes, 0));
-                total_bandwidth_usage.update(redirected_response_bandwidth_usage);
+                // Update total bandwidth usage for received redirected get response
+                BandwidthUsage redirected_get_response_bandwidth_usage = redirected_response_ptr->getBandwidthUsageRef();
+                uint32_t cross_edge_redirected_get_rsp_bandwidth_bytes = redirected_response_ptr->getMsgPayloadSize();
+                redirected_get_response_bandwidth_usage.update(BandwidthUsage(0, cross_edge_redirected_get_rsp_bandwidth_bytes, 0));
+                total_bandwidth_usage.update(redirected_get_response_bandwidth_usage);
 
                 // Add events of intermediate response if with event tracking
                 event_list.addEvents(redirected_response_ptr->getEventListRef());
@@ -702,7 +702,7 @@ namespace covered
                 const GlobalGetResponse* const global_get_response_ptr = static_cast<const GlobalGetResponse*>(global_response_ptr);
                 value = global_get_response_ptr->getValue();
 
-                // Update total bandwidth usage for received global response
+                // Update total bandwidth usage for received global get response
                 BandwidthUsage global_response_bandwidth_usage = global_response_ptr->getBandwidthUsageRef();
                 uint32_t edge_cloud_global_rsp_bandwidth_bytes = global_response_ptr->getMsgPayloadSize();
                 global_response_bandwidth_usage.update(BandwidthUsage(0, 0, edge_cloud_global_rsp_bandwidth_bytes));
@@ -775,7 +775,7 @@ namespace covered
         BandwidthUsage total_bandwidth_usage;
         EventList event_list;
         
-        // Update total bandwidth usage for received local request
+        // Update total bandwidth usage for received local put/del request
         uint32_t client_edge_local_req_bandwidth_bytes = local_request_ptr->getMsgPayloadSize();
         total_bandwidth_usage.update(BandwidthUsage(client_edge_local_req_bandwidth_bytes, 0, 0));
 
@@ -1212,7 +1212,7 @@ namespace covered
                 assert(global_response_ptr != NULL);
                 assert(global_response_ptr->getMessageType() == MessageType::kGlobalPutResponse || global_response_ptr->getMessageType() == MessageType::kGlobalDelResponse);
 
-                // Update total bandwidth usage for received global response
+                // Update total bandwidth usage for received global put/del response
                 BandwidthUsage global_response_bandwidth_usage = global_response_ptr->getBandwidthUsageRef();
                 uint32_t edge_cloud_global_rsp_bandwidth_bytes = global_response_ptr->getMsgPayloadSize();
                 global_response_bandwidth_usage.update(BandwidthUsage(0, 0, edge_cloud_global_rsp_bandwidth_bytes));

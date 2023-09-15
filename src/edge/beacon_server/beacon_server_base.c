@@ -2,6 +2,7 @@
 
 #include <assert.h>
 
+#include "common/bandwidth_usage.h"
 #include "common/config.h"
 #include "common/util.h"
 #include "edge/beacon_server/basic_beacon_server.h"
@@ -188,8 +189,13 @@ namespace covered
         checkPointers_();
 
         bool is_finish = false;
-
+        BandwidthUsage total_bandwidth_usage;
         EventList event_list;
+
+        // Update total bandwidth usage for received directory lookup request
+        uint32_t cross_edge_directory_lookup_req_bandwidth_bytes = control_request_ptr->getMsgPayloadSize();
+        total_bandwidth_usage.update(BandwidthUsage(0, cross_edge_directory_lookup_req_bandwidth_bytes, 0));
+
         struct timespec lookup_local_directory_start_timestamp = Util::getCurrentTimespec();
 
         // Calculate cache server worker recvreq destination address
@@ -209,7 +215,7 @@ namespace covered
         // Prepare a directory lookup response
         const Key tmp_key = MessageBase::getKeyFromMessage(control_request_ptr);
         const bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();
-        MessageBase* directory_lookup_response_ptr = getRspToLookupLocalDirectory_(tmp_key, is_being_written, is_valid_directory_exist, directory_info, event_list, skip_propagation_latency);
+        MessageBase* directory_lookup_response_ptr = getRspToLookupLocalDirectory_(tmp_key, is_being_written, is_valid_directory_exist, directory_info, total_bandwidth_usage, event_list, skip_propagation_latency);
         assert(directory_lookup_response_ptr != NULL);
         
         // Push the directory lookup response into edge-to-edge propagation simulator to cache server worker
@@ -239,8 +245,13 @@ namespace covered
         checkPointers_();
 
         bool is_finish = false;
-
+        BandwidthUsage total_bandwidth_usage;
         EventList event_list;
+
+        // Update total bandwidth usage for received directory update request
+        uint32_t cross_edge_directory_update_req_bandwidth_bytes = control_request_ptr->getMsgPayloadSize();
+        total_bandwidth_usage.update(BandwidthUsage(0, cross_edge_directory_update_req_bandwidth_bytes, 0));
+
         struct timespec update_local_directory_start_timestamp = Util::getCurrentTimespec();
 
         // Update local directory information
@@ -254,7 +265,7 @@ namespace covered
         // Prepare a directory update response
         const Key tmp_key = MessageBase::getKeyFromMessage(control_request_ptr);
         const bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();
-        MessageBase* directory_update_response_ptr = getRspToUpdateLocalDirectory_(tmp_key, is_being_written, event_list, skip_propagation_latency);
+        MessageBase* directory_update_response_ptr = getRspToUpdateLocalDirectory_(tmp_key, is_being_written, total_bandwidth_usage, event_list, skip_propagation_latency);
         assert(directory_update_response_ptr != NULL);
 
         // Push the directory update response into edge-to-edge propagation simulator to cache server worker
@@ -283,8 +294,13 @@ namespace covered
         checkPointers_();
 
         bool is_finish = false;
-
+        BandwidthUsage total_bandwidth_usage;
         EventList event_list;
+
+        // Update total bandwidth usage for received acquire writelock request
+        uint32_t cross_edge_acquire_writelock_req_bandwidth_bytes = control_request_ptr->getMsgPayloadSize();
+        total_bandwidth_usage.update(BandwidthUsage(0, cross_edge_acquire_writelock_req_bandwidth_bytes, 0));
+
         struct timespec acquire_local_writelock_start_timestamp = Util::getCurrentTimespec();
 
         // Calculate cache server worker recvreq destination address
@@ -307,11 +323,11 @@ namespace covered
         if (lock_result == LockResult::kSuccess) // If acquiring write permission successfully
         {
             // Invalidate all cache copies
-            edge_wrapper_ptr_->invalidateCacheCopies(edge_beacon_server_recvrsp_socket_server_ptr_, edge_beacon_server_recvrsp_source_addr_, tmp_key, all_dirinfo, event_list, skip_propagation_latency); // Add events of intermedate responses if with event tracking
+            edge_wrapper_ptr_->invalidateCacheCopies(edge_beacon_server_recvrsp_socket_server_ptr_, edge_beacon_server_recvrsp_source_addr_, tmp_key, all_dirinfo, total_bandwidth_usage, event_list, skip_propagation_latency); // Add events of intermedate responses if with event tracking
         }
 
         // Prepare a acquire writelock response
-        MessageBase* acquire_writelock_response_ptr = getRspToAcquireLocalWritelock_(tmp_key, lock_result, event_list, skip_propagation_latency);
+        MessageBase* acquire_writelock_response_ptr = getRspToAcquireLocalWritelock_(tmp_key, lock_result, total_bandwidth_usage, event_list, skip_propagation_latency);
         assert(acquire_writelock_response_ptr != NULL);
 
         // Push acquire writelock response into edge-to-edge propagation simulator to cache server worker
@@ -338,8 +354,13 @@ namespace covered
         checkPointers_();
 
         bool is_finish = false;
-
+        BandwidthUsage total_bandwidth_usage;
         EventList event_list;
+
+        // Update total bandwidth usage for received release writelock request
+        uint32_t cross_edge_release_writelock_req_bandwidth_bytes = control_request_ptr->getMsgPayloadSize();
+        total_bandwidth_usage.update(BandwidthUsage(0, cross_edge_release_writelock_req_bandwidth_bytes, 0));
+
         struct timespec release_local_writelock_start_timestamp = Util::getCurrentTimespec();
 
         // Release permission for the write
@@ -355,10 +376,10 @@ namespace covered
         bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();
 
         // NOTE: notify blocked edge nodes if any after finishing writes, to avoid transmitting blocked_edges to cache server of the closest edge node
-        is_finish = edge_wrapper_ptr_->notifyEdgesToFinishBlock(edge_beacon_server_recvrsp_socket_server_ptr_, edge_beacon_server_recvrsp_source_addr_, tmp_key, blocked_edges, event_list, skip_propagation_latency); // Add events of intermedate responses if with event tracking
+        is_finish = edge_wrapper_ptr_->notifyEdgesToFinishBlock(edge_beacon_server_recvrsp_socket_server_ptr_, edge_beacon_server_recvrsp_source_addr_, tmp_key, blocked_edges, total_bandwidth_usage, event_list, skip_propagation_latency); // Add events of intermedate responses if with event tracking
 
         // Prepare a release writelock response
-        release_writelock_response_ptr = getRspToReleaseLocalWritelock_(tmp_key, event_list, skip_propagation_latency);
+        MessageBase* release_writelock_response_ptr = getRspToReleaseLocalWritelock_(tmp_key, total_bandwidth_usage, event_list, skip_propagation_latency);
         assert(release_writelock_response_ptr != NULL);
 
         // Push release writelock response into edge-to-edge propagation simulator to cache server worker

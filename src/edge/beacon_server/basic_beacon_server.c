@@ -44,12 +44,12 @@ namespace covered
         return;
     }
 
-    MessageBase* BasicBeaconServer::getRspToLookupLocalDirectory_(const Key& key, const bool& is_being_written, const bool& is_valid_directory_exist, const DirectoryInfo& directory_info, const EventList& event_list, const bool& skip_propagation_latency) const
+    MessageBase* BasicBeaconServer::getRspToLookupLocalDirectory_(const Key& key, const bool& is_being_written, const bool& is_valid_directory_exist, const DirectoryInfo& directory_info, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency) const
     {
         checkPointers_();
 
         uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
-        MessageBase* directory_lookup_response_ptr = new DirectoryLookupResponse(key, is_being_written, is_valid_directory_exist, directory_info, edge_idx, edge_beacon_server_recvreq_source_addr_, event_list, skip_propagation_latency);
+        MessageBase* directory_lookup_response_ptr = new DirectoryLookupResponse(key, is_being_written, is_valid_directory_exist, directory_info, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
         assert(directory_lookup_response_ptr != NULL);
 
         return directory_lookup_response_ptr;
@@ -71,10 +71,10 @@ namespace covered
         return is_being_written;
     }
 
-    MessageBase* BasicBeaconServer::getRspToUpdateLocalDirectory_(const Key& key, const bool& is_being_written, const EventList& event_list, const bool& skip_propagation_latency) const
+    MessageBase* BasicBeaconServer::getRspToUpdateLocalDirectory_(const Key& key, const bool& is_being_written, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency) const
     {
         uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
-        MessageBase* directory_update_response_ptr = new DirectoryUpdateResponse(key, is_being_written, edge_idx, edge_beacon_server_recvreq_source_addr_, event_list, skip_propagation_latency);
+        MessageBase* directory_update_response_ptr = new DirectoryUpdateResponse(key, is_being_written, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
         assert(directory_update_response_ptr != NULL);
 
         return directory_update_response_ptr;
@@ -95,12 +95,12 @@ namespace covered
         return;
     }
 
-    MessageBase* BasicBeaconServer::getRspToAcquireLocalWritelock_(const Key& key, const LockResult& lock_result, const EventList& event_list, const bool& skip_propagation_latency) cons
+    MessageBase* BasicBeaconServer::getRspToAcquireLocalWritelock_(const Key& key, const LockResult& lock_result, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency) const
     {
         checkPointers_();
 
         uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
-        MessageBase* acquire_writelock_response_ptr = new AcquireWritelockResponse(key, lock_result, edge_idx, edge_beacon_server_recvreq_source_addr_, event_list, skip_propagation_latency);
+        MessageBase* acquire_writelock_response_ptr = new AcquireWritelockResponse(key, lock_result, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
         assert(acquire_writelock_response_ptr != NULL);
 
         return acquire_writelock_response_ptr;
@@ -121,12 +121,12 @@ namespace covered
         return;
     }
 
-    MessageBase* BasicBeaconServer::getRspToReleaseLocalWritelock_(const Key& key, const EventList& event_list, const bool& skip_propagation_latency) const
+    MessageBase* BasicBeaconServer::getRspToReleaseLocalWritelock_(const Key& key, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency) const
     {
         checkPointers_();
 
         uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
-        MessageBase* release_writelock_response_ptr = new ReleaseWritelockResponse(key, edge_idx, edge_beacon_server_recvreq_source_addr_, event_list, skip_propagation_latency);
+        MessageBase* release_writelock_response_ptr = new ReleaseWritelockResponse(key, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
         assert(release_writelock_response_ptr != NULL);
 
         return release_writelock_response_ptr;

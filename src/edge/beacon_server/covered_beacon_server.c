@@ -59,7 +59,7 @@ namespace covered
         return;
     }
 
-    MessageBase* CoveredBeaconServer::getRspToLookupLocalDirectory_(const Key& key, const bool& is_being_written, const bool& is_valid_directory_exist, const DirectoryInfo& directory_info, const EventList& event_list, const bool& skip_propagation_latency) const
+    MessageBase* CoveredBeaconServer::getRspToLookupLocalDirectory_(const Key& key, const bool& is_being_written, const bool& is_valid_directory_exist, const DirectoryInfo& directory_info, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency) const
     {
         checkPointers_();
         CoveredCacheManager* covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
@@ -68,7 +68,7 @@ namespace covered
         VictimSyncset victim_syncset = covered_cache_manager_ptr->accessVictimTrackerForVictimSyncset();
 
         uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
-        MessageBase* covered_directory_lookup_response_ptr = new CoveredDirectoryLookupResponse(key, is_being_written, is_valid_directory_exist, directory_info, victim_syncset, edge_idx, edge_beacon_server_recvreq_source_addr_, event_list, skip_propagation_latency);
+        MessageBase* covered_directory_lookup_response_ptr = new CoveredDirectoryLookupResponse(key, is_being_written, is_valid_directory_exist, directory_info, victim_syncset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
         assert(covered_directory_lookup_response_ptr != NULL);
 
         return covered_directory_lookup_response_ptr;
@@ -115,7 +115,7 @@ namespace covered
         return is_being_written;
     }
 
-    MessageBase* CoveredBeaconServer::getRspToUpdateLocalDirectory_(const Key& key, const bool& is_being_written, const EventList& event_list, const bool& skip_propagation_latency) const
+    MessageBase* CoveredBeaconServer::getRspToUpdateLocalDirectory_(const Key& key, const bool& is_being_written, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency) const
     {
         checkPointers_();
         CoveredCacheManager* covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
@@ -124,7 +124,7 @@ namespace covered
         VictimSyncset victim_syncset = covered_cache_manager_ptr->accessVictimTrackerForVictimSyncset();
 
         uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
-        MessageBase* covered_directory_update_response_ptr = new CoveredDirectoryUpdateResponse(key, is_being_written, victim_syncset, edge_idx, edge_beacon_server_recvreq_source_addr_, event_list, skip_propagation_latency);
+        MessageBase* covered_directory_update_response_ptr = new CoveredDirectoryUpdateResponse(key, is_being_written, victim_syncset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
         assert(covered_directory_update_response_ptr != NULL);
 
         return covered_directory_update_response_ptr;
@@ -162,7 +162,7 @@ namespace covered
         return;
     }
 
-    MessageBase* CoveredBeaconServer::getRspToAcquireLocalWritelock_(const Key& key, const LockResult& lock_result, const EventList& event_list, const bool& skip_propagation_latency) const
+    MessageBase* CoveredBeaconServer::getRspToAcquireLocalWritelock_(const Key& key, const LockResult& lock_result, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency) const
     {
         checkPointers_();
         CoveredCacheManager* covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
@@ -171,7 +171,7 @@ namespace covered
         VictimSyncset victim_syncset = covered_cache_manager_ptr->accessVictimTrackerForVictimSyncset();
 
         uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
-        MessageBase* covered_acquire_writelock_response_ptr = new CoveredAcquireWritelockResponse(key, lock_result, victim_syncset, edge_idx, edge_beacon_server_recvreq_source_addr_, event_list, skip_propagation_latency);
+        MessageBase* covered_acquire_writelock_response_ptr = new CoveredAcquireWritelockResponse(key, lock_result, victim_syncset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
         assert(covered_acquire_writelock_response_ptr != NULL);
 
         return covered_acquire_writelock_response_ptr;
@@ -208,10 +208,8 @@ namespace covered
         return;
     }
 
-    MessageBase* CoveredBeaconServer::getRspToReleaseLocalWritelock_(const Key& key, const EventList& event_list, const bool& skip_propagation_latency) const
+    MessageBase* CoveredBeaconServer::getRspToReleaseLocalWritelock_(const Key& key, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency) const
     {
-        checkPointers_();
-
         checkPointers_();
         CoveredCacheManager* covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
 
@@ -219,7 +217,7 @@ namespace covered
         VictimSyncset victim_syncset = covered_cache_manager_ptr->accessVictimTrackerForVictimSyncset();
 
         uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
-        MessageBase* covered_release_writelock_response_ptr = new CoveredReleaseWritelockResponse(key, victim_syncset, edge_idx, edge_beacon_server_recvreq_source_addr_, event_list, skip_propagation_latency);
+        MessageBase* covered_release_writelock_response_ptr = new CoveredReleaseWritelockResponse(key, victim_syncset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
         assert(covered_release_writelock_response_ptr != NULL);
 
         return covered_release_writelock_response_ptr;

@@ -110,7 +110,7 @@ namespace covered
         BandwidthUsage total_bandwidth_usage;
         EventList event_list;
 
-        // Update total bandwidth usage for received global request
+        // Update total bandwidth usage for received global get/put/del request
         uint32_t edge_cloud_global_req_bandwidth_bytes = global_request_ptr->getMsgPayloadSize();
         total_bandwidth_usage.update(BandwidthUsage(0, 0, edge_cloud_global_req_bandwidth_bytes));
 

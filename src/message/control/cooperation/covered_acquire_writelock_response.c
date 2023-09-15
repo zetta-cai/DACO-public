@@ -4,7 +4,7 @@ namespace covered
 {
     const std::string CoveredAcquireWritelockResponse::kClassName("CoveredAcquireWritelockResponse");
 
-    CoveredAcquireWritelockResponse::CoveredAcquireWritelockResponse(const Key& key, const LockResult& lock_result, const VictimSyncset& victim_syncset, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency) : KeyByteVictimsetMessage(key, static_cast<uint8_t>(lock_result), victim_syncset, MessageType::kCoveredAcquireWritelockResponse, source_index, source_addr, event_list, skip_propagation_latency)
+    CoveredAcquireWritelockResponse::CoveredAcquireWritelockResponse(const Key& key, const LockResult& lock_result, const VictimSyncset& victim_syncset, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency) : KeyByteVictimsetMessage(key, static_cast<uint8_t>(lock_result), victim_syncset, MessageType::kCoveredAcquireWritelockResponse, source_index, source_addr, bandwidth_usage, event_list, skip_propagation_latency)
     {
     }
 
