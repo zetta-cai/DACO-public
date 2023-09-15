@@ -479,7 +479,7 @@ namespace covered
         return;
     }
 
-    MessageBase* CoveredCacheServerWorker::getRspForRedirectedGet_(const Key& key, const Value& value, const Hitflag& hitflag, const EventList& event_list, const bool& skip_propagation_latency) const
+    MessageBase* CoveredCacheServerWorker::getRspForRedirectedGet_(const Key& key, const Value& value, const Hitflag& hitflag, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency) const
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
@@ -491,7 +491,7 @@ namespace covered
         // Prepare redirected get response
         uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
         NetworkAddr edge_cache_server_recvreq_source_addr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeCacheServerRecvreqSourceAddr();
-        MessageBase* covered_redirected_get_response_ptr = new CoveredRedirectedGetResponse(key, value, hitflag, victim_syncset, edge_idx, edge_cache_server_recvreq_source_addr, event_list, skip_propagation_latency);
+        MessageBase* covered_redirected_get_response_ptr = new CoveredRedirectedGetResponse(key, value, hitflag, victim_syncset, edge_idx, edge_cache_server_recvreq_source_addr, total_bandwidth_usage, event_list, skip_propagation_latency);
         assert(covered_redirected_get_response_ptr != NULL);
 
         return covered_redirected_get_response_ptr;

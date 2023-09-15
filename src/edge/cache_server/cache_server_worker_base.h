@@ -91,22 +91,22 @@ namespace covered
         // (1.2) Access cooperative edge cache to fetch data from neighbor edge nodes
 
         // Return if edge node is finished
-        bool fetchDataFromNeighbor_(const Key& key, Value& value, bool& is_cooperative_cached_and_valid, EventList& event_list, const bool& skip_propagation_latency) const;
+        bool fetchDataFromNeighbor_(const Key& key, Value& value, bool& is_cooperative_cached_and_valid, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const;
 
         virtual void lookupLocalDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const = 0;
         virtual bool needLookupBeaconDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const = 0; // Return if need to lookup remote directory info
-        bool lookupBeaconDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, EventList& event_list, const bool& skip_propagation_latency) const; // Check remote directory info
+        bool lookupBeaconDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const; // Check remote directory info
         virtual MessageBase* getReqToLookupBeaconDirectory_(const Key& key, const bool& skip_propagation_latency) const = 0;
         virtual void processRspToLookupBeaconDirectory_(MessageBase* control_response_ptr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const = 0;
 
-        bool redirectGetToTarget_(const DirectoryInfo& directory_info, const Key& key, Value& value, bool& is_cooperative_cached, bool& is_valid, EventList& event_list, const bool& skip_propagation_latency) const; // Request redirection
+        bool redirectGetToTarget_(const DirectoryInfo& directory_info, const Key& key, Value& value, bool& is_cooperative_cached, bool& is_valid, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const; // Request redirection
         virtual MessageBase* getReqToRedirectGet_(const Key& key, const bool& skip_propagation_latency) const = 0;
         virtual void processRspToRedirectGet_(MessageBase* redirected_response_ptr, Value& value, Hitflag& hitflag) const = 0;
 
         // (1.3) Access cloud
 
         // Return if edge node is finished
-        bool fetchDataFromCloud_(const Key& key, Value& value, EventList& event_list, const bool& skip_propagation_latency) const;
+        bool fetchDataFromCloud_(const Key& key, Value& value, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const;
 
         // (1.4) Update invalid cached objects in local edge cache
 
@@ -118,19 +118,20 @@ namespace covered
 
         // (2.1) Acquire write lock and block for MSI protocol
 
-        bool acquireWritelock_(const Key& key, LockResult& lock_result, EventList& event_list, const bool& skip_propagation_latency); // Return if edge node is finished
+        bool acquireWritelock_(const Key& key, LockResult& lock_result, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency); // Return if edge node is finished
         virtual void acquireLocalWritelock_(const Key& key, LockResult& lock_result, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo) = 0;
-        bool acquireBeaconWritelock_(const Key& key, LockResult& lock_result, EventList& event_list, const bool& skip_propagation_latency); // Return if edge node is finished
+        bool acquireBeaconWritelock_(const Key& key, LockResult& lock_result, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency); // Return if edge node is finished
         virtual MessageBase* getReqToAcquireBeaconWritelock_(const Key& key, const bool& skip_propagation_latency) const = 0;
         virtual void processRspToAcquireBeaconWritelock_(MessageBase* control_response_ptr, LockResult& lock_result) const = 0;
 
         // Return if edge node is finished
+        // NOTE: NO need to update total_bandwidth_usage, as the bandwidth usage is counted by the write request triggering FinishBlockRequest instead of the local request being blocked
         bool blockForWritesByInterruption_(const Key& key, EventList& event_list, const bool& skip_propagation_latency) const; // Block for MSI protocol
 
         // (2.2) Update cloud
 
         // Return if edge node is finished
-        bool writeDataToCloud_(const Key& key, const Value& value, const MessageType& message_type, EventList& event_list, const bool& skip_propagation_latency);
+        bool writeDataToCloud_(const Key& key, const Value& value, const MessageType& message_type, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency);
 
         // (2.3) Update cached objects in local edge cache
 
@@ -140,9 +141,9 @@ namespace covered
         // (2.4) Release write lock for MSI protocol
 
         // Return if edge node is finished
-        bool releaseWritelock_(const Key& key, EventList& event_list, const bool& skip_propagation_latency);
+        bool releaseWritelock_(const Key& key, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency);
         virtual void releaseLocalWritelock_(const Key& key, std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges) = 0;
-        bool releaseBeaconWritelock_(const Key& key, EventList& event_list, const bool& skip_propagation_latency); // Notify beacon node to finish writes
+        bool releaseBeaconWritelock_(const Key& key, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency); // Notify beacon node to finish writes
         virtual MessageBase* getReqToReleaseBeaconWritelock_(const Key& key, const bool& skip_propagation_latency) const = 0;
         virtual void processRspToReleaseBeaconWritelock_(MessageBase* control_response_ptr) const = 0;
 
@@ -151,28 +152,28 @@ namespace covered
         bool processRedirectedRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& recvrsp_dst_addr);
         bool processRedirectedGetRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& recvrsp_dst_addr) const;
         virtual void processReqForRedirectedGet_(MessageBase* redirected_request_ptr, Value& value, bool& is_cooperative_cached, bool& is_cooperative_cached_and_valid) const = 0;
-        virtual MessageBase* getRspForRedirectedGet_(const Key& key, const Value& value, const Hitflag& hitflag, const EventList& event_list, const bool& skip_propagation_latency) const = 0;
+        virtual MessageBase* getRspForRedirectedGet_(const Key& key, const Value& value, const Hitflag& hitflag, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency) const = 0;
 
         // (4) Cache management
 
         // (4.1) Admit uncached objects in local edge cache
 
         // Return if edge node is finished (we will check capacity and trigger eviction for cache admission)
-        bool tryToTriggerIndependentAdmission_(const Key& key, const Value& value, EventList& event_list, const bool& skip_propagation_latency) const; // NOTE: COVERED will NOT trigger any independent cache admission/eviction decision
-        bool admitObject_(const Key& key, const Value& value, EventList& event_list, const bool& skip_propagation_latency) const; // Including directory updates, admit local edge cache, and trigger eviction if necessary
+        bool tryToTriggerIndependentAdmission_(const Key& key, const Value& value, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const; // NOTE: COVERED will NOT trigger any independent cache admission/eviction decision
+        bool admitObject_(const Key& key, const Value& value, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const; // Including directory updates, admit local edge cache, and trigger eviction if necessary
         virtual void admitLocalEdgeCache_(const Key& key, const Value& value, const bool& is_valid) const = 0;
 
         // (4.2) Evict cached objects from local edge cache
 
-        bool evictForCapacity_(EventList& event_list, const bool& skip_propagation_latency) const; // Including evict local edge cache and directory updates
+        bool evictForCapacity_(BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const; // Including evict local edge cache and directory updates
         virtual void evictLocalEdgeCache_(std::unordered_map<Key, Value, KeyHasher>& victims, const uint64_t& required_size) const = 0;
 
         // (4.3) Update content directory information
 
         // Return if edge node is finished
-        bool updateDirectory_(const Key& key, const bool& is_admit, bool& is_being_written, EventList& event_list, const bool& skip_propagation_latency) const; // Update content directory information
+        bool updateDirectory_(const Key& key, const bool& is_admit, bool& is_being_written, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const; // Update content directory information
         virtual void updateLocalDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written) const = 0; // Update directory info in current edge node
-        bool updateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written, EventList& event_list, const bool& skip_propagation_latency) const; // Update directory info in remote beacon node
+        bool updateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const; // Update directory info in remote beacon node
         virtual MessageBase* getReqToUpdateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, const bool& skip_propagation_latency) const = 0;
         virtual void processRspToUpdateBeaconDirectory_(MessageBase* control_response_ptr, bool& is_being_written) const = 0;
 

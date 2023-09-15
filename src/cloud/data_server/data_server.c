@@ -107,9 +107,13 @@ namespace covered
         const uint32_t cloud_idx = cloud_wrapper_ptr_->getNodeIdx();
 
         bool is_finish = false;
-
         BandwidthUsage total_bandwidth_usage;
         EventList event_list;
+
+        // Update total bandwidth usage for received global request
+        uint32_t edge_cloud_global_req_bandwidth_bytes = global_request_ptr->getMsgPayloadSize();
+        total_bandwidth_usage.update(BandwidthUsage(0, 0, edge_cloud_global_req_bandwidth_bytes));
+
         struct timespec access_rocksdb_start_timestamp = Util::getCurrentTimespec();
 
         // Process global requests by RocksDB KVS
@@ -169,11 +173,6 @@ namespace covered
         oss << "receive a global request; message type: " << MessageBase::messageTypeToString(global_request_message_type) << "; keystr: " << tmp_key.getKeystr() << "; valuesize: " << tmp_value.getValuesize();
         Util::dumpDebugMsg(instance_name_, oss.str());
         #endif
-
-        // Update total bandwidth usage for received request
-        uint32_t edge_cloud_req_bandwidth_usage = global_request_ptr->getMsgPayloadSize();
-        BandwidthUsage req_bandwidth_usage(0, 0, edge_cloud_req_bandwidth_usage);
-        total_bandwidth_usage.update(req_bandwidth_usage);
 
         // Add intermediate event if with event tracking
         struct timespec access_rocksdb_end_timestamp = Util::getCurrentTimespec();

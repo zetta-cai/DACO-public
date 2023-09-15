@@ -261,7 +261,7 @@ namespace covered
 
     // (3) Invalidate and unblock for MSI protocol
 
-    bool EdgeWrapper::invalidateCacheCopies(UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, const Key& key, const std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo, EventList& event_list, const bool& skip_propagation_latency) const
+    bool EdgeWrapper::invalidateCacheCopies(UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, const Key& key, const std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
     {
         assert(recvrsp_socket_server_ptr != NULL);
         assert(recvrsp_source_addr.isValidAddr());
@@ -346,6 +346,12 @@ namespace covered
                             assert(iter_for_response->second == false); // Original ack flag should be false
                             assert(percachecopy_dstaddr[iter_for_response->first] == tmp_edge_invalidation_server_recvreq_source_addr);
 
+                            // Update total bandwidth usage for received invalidation response
+                            BandwidthUsage invalidation_response_bandwidth_usage = control_response_ptr->getBandwidthUsageRef();
+                            uint32_t cross_edge_invalidation_rsp_bandwidth_bytes = control_response_ptr->getMsgPayloadSize();
+                            invalidation_response_bandwidth_usage.update(BandwidthUsage(0, cross_edge_invalidation_rsp_bandwidth_bytes, 0));
+                            total_bandwidth_usage.update(invalidation_response_bandwidth_usage);
+
                             // Add the event of intermediate response if with event tracking
                             event_list.addEvents(control_response_ptr->getEventListRef());
 
@@ -403,7 +409,7 @@ namespace covered
         return;
     }
 
-    bool EdgeWrapper::notifyEdgesToFinishBlock(UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, const Key& key, const std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges, EventList& event_list, const bool& skip_propagation_latency) const
+    bool EdgeWrapper::notifyEdgesToFinishBlock(UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, const Key& key, const std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
     {
         assert(recvrsp_socket_server_ptr != NULL);
         assert(recvrsp_source_addr.isValidAddr());
@@ -475,6 +481,12 @@ namespace covered
                         if (iter_for_response->first == tmp_edge_cache_server_worker_recvreq_source_addr) // Match a blocked edge node
                         {
                             assert(iter_for_response->second == false); // Original ack flag should be false
+
+                            // Update total bandwidth usage for received finish block response
+                            BandwidthUsage finish_block_response_bandwidth_usage = control_response_ptr->getBandwidthUsageRef();
+                            uint32_t cross_edge_finish_block_rsp_bandwidth_bytes = control_response_ptr->getMsgPayloadSize();
+                            finish_block_response_bandwidth_usage.update(BandwidthUsage(0, cross_edge_finish_block_rsp_bandwidth_bytes, 0));
+                            total_bandwidth_usage.update(finish_block_response_bandwidth_usage);
 
                             // Add the event of intermediate response if with event tracking
                             event_list.addEvents(control_response_ptr->getEventListRef());

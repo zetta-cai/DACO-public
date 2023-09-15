@@ -2,6 +2,7 @@
 
 #include <assert.h>
 
+#include "common/bandwidth_usage.h"
 #include "common/config.h"
 #include "common/util.h"
 #include "edge/cache_server/basic_cache_server_worker.h"
@@ -210,7 +211,12 @@ namespace covered
 
         bool is_finish = false; // Mark if edge node is finished
         Hitflag hitflag = Hitflag::kGlobalMiss;
+        BandwidthUsage total_bandwidth_usage;
         EventList event_list;
+
+        // Update total bandwidth usage for received local request
+        uint32_t client_edge_local_req_bandwidth_bytes = local_request_ptr->getMsgPayloadSize();
+        total_bandwidth_usage.update(BandwidthUsage(client_edge_local_req_bandwidth_bytes, 0, 0));
 
         // Access local edge cache (current edge node is the closest edge node)
         struct timespec get_local_cache_start_timestamp = Util::getCurrentTimespec();
@@ -234,7 +240,7 @@ namespace covered
             struct timespec get_cooperative_cache_start_timestamp = Util::getCurrentTimespec();
 
             // Get data from some target edge node for local cache miss (add events of intermediate responses if with event tracking)
-            is_finish = fetchDataFromNeighbor_(tmp_key, tmp_value, is_cooperative_cached_and_valid, event_list, skip_propagation_latency);
+            is_finish = fetchDataFromNeighbor_(tmp_key, tmp_value, is_cooperative_cached_and_valid, total_bandwidth_usage, event_list, skip_propagation_latency);
             if (is_finish) // Edge node is NOT running
             {
                 return is_finish;
@@ -259,7 +265,7 @@ namespace covered
         struct timespec get_cloud_start_timestamp = Util::getCurrentTimespec();
         if (!is_local_cached_and_valid && !is_cooperative_cached_and_valid) // (not cached or invalid) in both local and cooperative cache
         {
-            is_finish = fetchDataFromCloud_(tmp_key, tmp_value, event_list, skip_propagation_latency);
+            is_finish = fetchDataFromCloud_(tmp_key, tmp_value, total_bandwidth_usage, event_list, skip_propagation_latency);
             if (is_finish) // Edge node is NOT running
             {
                 return is_finish;
@@ -274,7 +280,7 @@ namespace covered
         bool is_local_cached_and_invalid = tryToUpdateInvalidLocalEdgeCache_(tmp_key, tmp_value);
         if (!tmp_value.isDeleted() && is_local_cached_and_invalid) // Update may trigger eviction
         {
-            is_finish = evictForCapacity_(event_list, skip_propagation_latency); // Add events of intermediate response if with event tracking
+            is_finish = evictForCapacity_(total_bandwidth_usage, event_list, skip_propagation_latency); // Add events of intermediate response if with event tracking
         }
         if (is_finish)
         {
@@ -286,7 +292,7 @@ namespace covered
 
         // Trigger independent cache admission for local/global cache miss if necessary
         struct timespec independent_admission_start_timestamp = Util::getCurrentTimespec();
-        is_finish = tryToTriggerIndependentAdmission_(tmp_key, tmp_value, event_list, skip_propagation_latency); // Add events of intermediate responses if with event tracking
+        is_finish = tryToTriggerIndependentAdmission_(tmp_key, tmp_value, total_bandwidth_usage, event_list, skip_propagation_latency); // Add events of intermediate responses if with event tracking
         if (is_finish)
         {
             return is_finish;
@@ -300,7 +306,7 @@ namespace covered
         uint64_t capacity_bytes = tmp_edge_wrapper_ptr->getCapacityBytes();
         uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
         NetworkAddr edge_cache_server_recvreq_source_addr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeCacheServerRecvreqSourceAddr();
-        MessageBase* local_get_response_ptr = new LocalGetResponse(tmp_key, tmp_value, hitflag, used_bytes, capacity_bytes, edge_idx, edge_cache_server_recvreq_source_addr, event_list, skip_propagation_latency);
+        MessageBase* local_get_response_ptr = new LocalGetResponse(tmp_key, tmp_value, hitflag, used_bytes, capacity_bytes, edge_idx, edge_cache_server_recvreq_source_addr, total_bandwidth_usage, event_list, skip_propagation_latency);
         assert(local_get_response_ptr != NULL);
 
         // Push local response message into edge-to-client propagation simulator to a client
@@ -321,7 +327,7 @@ namespace covered
 
     // (1.2) Access cooperative edge cache to fetch data from neighbor edge nodes
 
-    bool CacheServerWorkerBase::fetchDataFromNeighbor_(const Key& key, Value& value, bool& is_cooperative_cached_and_valid, EventList& event_list, const bool& skip_propagation_latency) const
+    bool CacheServerWorkerBase::fetchDataFromNeighbor_(const Key& key, Value& value, bool& is_cooperative_cached_and_valid, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
@@ -364,7 +370,7 @@ namespace covered
                 bool need_lookup_beacon_directory = needLookupBeaconDirectory_(key, is_being_written, is_valid_directory_exist, directory_info);
                 if (need_lookup_beacon_directory)
                 {
-                    is_finish = lookupBeaconDirectory_(key, is_being_written, is_valid_directory_exist, directory_info, event_list, skip_propagation_latency); // Add events of intermediate responses if with event tracking
+                    is_finish = lookupBeaconDirectory_(key, is_being_written, is_valid_directory_exist, directory_info, total_bandwidth_usage, event_list, skip_propagation_latency); // Add events of intermediate responses if with event tracking
                 }
                 
                 if (is_finish) // Edge is NOT running
@@ -417,7 +423,7 @@ namespace covered
                 // Get data from the target edge node if any and update is_cooperative_cached_and_valid
                 bool is_cooperative_cached = false;
                 bool is_valid = false;
-                is_finish = redirectGetToTarget_(directory_info, key, value, is_cooperative_cached, is_valid, event_list, skip_propagation_latency); // Add events of intermediate responses if with event tracking
+                is_finish = redirectGetToTarget_(directory_info, key, value, is_cooperative_cached, is_valid, total_bandwidth_usage, event_list, skip_propagation_latency); // Add events of intermediate responses if with event tracking
                 if (is_finish) // Edge is NOT running
                 {
                     return is_finish;
@@ -460,7 +466,7 @@ namespace covered
         return is_finish;
     }
 
-    bool CacheServerWorkerBase::lookupBeaconDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, EventList& event_list, const bool& skip_propagation_latency) const
+    bool CacheServerWorkerBase::lookupBeaconDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
@@ -515,6 +521,12 @@ namespace covered
 
                 processRspToLookupBeaconDirectory_(control_response_ptr, is_being_written, is_valid_directory_exist, directory_info);
 
+                // Update total bandwidth usage for received directory lookup response
+                BandwidthUsage directory_lookup_response_bandwidth_usage = control_response_ptr->getBandwidthUsageRef();
+                uint32_t cross_edge_directory_lookup_rsp_bandwidth_bytes = control_response_ptr->getMsgPayloadSize();
+                directory_lookup_response_bandwidth_usage.update(BandwidthUsage(0, cross_edge_directory_lookup_rsp_bandwidth_bytes, 0));
+                total_bandwidth_usage.update(directory_lookup_response_bandwidth_usage);
+
                 // Add events of intermediate response if with event tracking
                 event_list.addEvents(control_response_ptr->getEventListRef());
 
@@ -534,7 +546,7 @@ namespace covered
         return is_finish;
     }
 
-    bool CacheServerWorkerBase::redirectGetToTarget_(const DirectoryInfo& directory_info, const Key& key, Value& value, bool& is_cooperative_cached, bool& is_valid, EventList& event_list, const bool& skip_propagation_latency) const
+    bool CacheServerWorkerBase::redirectGetToTarget_(const DirectoryInfo& directory_info, const Key& key, Value& value, bool& is_cooperative_cached, bool& is_valid, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
@@ -612,6 +624,12 @@ namespace covered
                     exit(1);
                 }
 
+                // Update total bandwidth usage for received redirected response
+                BandwidthUsage redirected_response_bandwidth_usage = redirected_response_ptr->getBandwidthUsageRef();
+                uint32_t cross_edge_redirected_rsp_bandwidth_bytes = redirected_response_ptr->getMsgPayloadSize();
+                redirected_response_bandwidth_usage.update(BandwidthUsage(0, cross_edge_redirected_rsp_bandwidth_bytes, 0));
+                total_bandwidth_usage.update(redirected_response_bandwidth_usage);
+
                 // Add events of intermediate response if with event tracking
                 event_list.addEvents(redirected_response_ptr->getEventListRef());
 
@@ -632,7 +650,7 @@ namespace covered
 
     // (1.3) Access cloud
 
-    bool CacheServerWorkerBase::fetchDataFromCloud_(const Key& key, Value& value, EventList& event_list, const bool& skip_propagation_latency) const
+    bool CacheServerWorkerBase::fetchDataFromCloud_(const Key& key, Value& value, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
@@ -683,6 +701,12 @@ namespace covered
                 // Get value from global response message
                 const GlobalGetResponse* const global_get_response_ptr = static_cast<const GlobalGetResponse*>(global_response_ptr);
                 value = global_get_response_ptr->getValue();
+
+                // Update total bandwidth usage for received global response
+                BandwidthUsage global_response_bandwidth_usage = global_response_ptr->getBandwidthUsageRef();
+                uint32_t edge_cloud_global_rsp_bandwidth_bytes = global_response_ptr->getMsgPayloadSize();
+                global_response_bandwidth_usage.update(BandwidthUsage(0, 0, edge_cloud_global_rsp_bandwidth_bytes));
+                total_bandwidth_usage.update(global_response_bandwidth_usage);
 
                 // Add events of intermediate response if with event tracking
                 event_list.addEvents(global_get_response_ptr->getEventListRef());
@@ -748,12 +772,17 @@ namespace covered
 
         bool is_finish = false; // Mark if edge node is finished
         const Hitflag hitflag = Hitflag::kGlobalMiss; // Must be global miss due to write-through policy
+        BandwidthUsage total_bandwidth_usage;
         EventList event_list;
+        
+        // Update total bandwidth usage for received local request
+        uint32_t client_edge_local_req_bandwidth_bytes = local_request_ptr->getMsgPayloadSize();
+        total_bandwidth_usage.update(BandwidthUsage(client_edge_local_req_bandwidth_bytes, 0, 0));
 
         // Acquire write lock from beacon node no matter the locally cached object is valid or not, where the beacon will invalidate all other cache copies for cache coherence
         struct timespec acquire_writelock_start_timestamp = Util::getCurrentTimespec();
         LockResult lock_result = LockResult::kFailure;
-        is_finish = acquireWritelock_(tmp_key, lock_result, event_list, skip_propagation_latency);
+        is_finish = acquireWritelock_(tmp_key, lock_result, total_bandwidth_usage, event_list, skip_propagation_latency);
         if (is_finish) // Edge node is NOT running
         {
             return is_finish;
@@ -768,7 +797,7 @@ namespace covered
 
         // Send request to cloud for write-through policy
         struct timespec write_cloud_start_timestamp = Util::getCurrentTimespec();
-        is_finish = writeDataToCloud_(tmp_key, tmp_value, local_request_ptr->getMessageType(), event_list, skip_propagation_latency);
+        is_finish = writeDataToCloud_(tmp_key, tmp_value, local_request_ptr->getMessageType(), total_bandwidth_usage, event_list, skip_propagation_latency);
         if (is_finish) // Edge node is NOT running
         {
             return is_finish;
@@ -787,7 +816,7 @@ namespace covered
             is_local_cached = updateLocalEdgeCache_(tmp_key, tmp_value);
 
             // NOTE: we will check capacity and trigger eviction for value updates (add events of intermediate response if with event tracking)
-            is_finish = evictForCapacity_(event_list, skip_propagation_latency);
+            is_finish = evictForCapacity_(total_bandwidth_usage, event_list, skip_propagation_latency);
         }
         else if (local_request_ptr->getMessageType() == MessageType::kLocalDelRequest)
         {
@@ -807,7 +836,7 @@ namespace covered
 
         // Trigger independent cache admission for local/global cache miss if necessary
         struct timespec independent_admission_start_timestamp = Util::getCurrentTimespec();
-        is_finish = tryToTriggerIndependentAdmission_(tmp_key, tmp_value, event_list, skip_propagation_latency);
+        is_finish = tryToTriggerIndependentAdmission_(tmp_key, tmp_value, total_bandwidth_usage, event_list, skip_propagation_latency);
         if (is_finish) // Edge node is NOT running
         {
             return is_finish;
@@ -821,7 +850,7 @@ namespace covered
         {
             struct timespec release_writelock_start_timestamp = Util::getCurrentTimespec();
 
-            is_finish = releaseWritelock_(tmp_key, event_list, skip_propagation_latency);
+            is_finish = releaseWritelock_(tmp_key, total_bandwidth_usage, event_list, skip_propagation_latency);
 
             // Add intermediate event if with event tracking
             struct timespec release_writelock_end_timestamp = Util::getCurrentTimespec();
@@ -843,12 +872,12 @@ namespace covered
         if (local_request_ptr->getMessageType() == MessageType::kLocalPutRequest)
         {
             // Prepare LocalPutResponse for client
-            local_response_ptr = new LocalPutResponse(tmp_key, hitflag, used_bytes, capacity_bytes, edge_idx, edge_cache_server_recvreq_source_addr, event_list, skip_propagation_latency);
+            local_response_ptr = new LocalPutResponse(tmp_key, hitflag, used_bytes, capacity_bytes, edge_idx, edge_cache_server_recvreq_source_addr, total_bandwidth_usage, event_list, skip_propagation_latency);
         }
         else if (local_request_ptr->getMessageType() == MessageType::kLocalDelRequest)
         {
             // Prepare LocalDelResponse for client
-            local_response_ptr = new LocalDelResponse(tmp_key, hitflag, used_bytes, capacity_bytes, edge_idx, edge_cache_server_recvreq_source_addr, event_list, skip_propagation_latency);
+            local_response_ptr = new LocalDelResponse(tmp_key, hitflag, used_bytes, capacity_bytes, edge_idx, edge_cache_server_recvreq_source_addr, total_bandwidth_usage, event_list, skip_propagation_latency);
         }
 
         if (!is_finish) // // Edge node is STILL running
@@ -868,7 +897,7 @@ namespace covered
 
     // (2.1) Acquire write lock and block for MSI protocol
 
-    bool CacheServerWorkerBase::acquireWritelock_(const Key& key, LockResult& lock_result, EventList& event_list, const bool& skip_propagation_latency)
+    bool CacheServerWorkerBase::acquireWritelock_(const Key& key, LockResult& lock_result, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency)
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
@@ -900,14 +929,14 @@ namespace covered
                 else if (lock_result == LockResult::kSuccess) // If acquire write permission successfully
                 {
                     // Invalidate all cache copies
-                    tmp_edge_wrapper_ptr->invalidateCacheCopies(edge_cache_server_worker_recvrsp_socket_server_ptr_, edge_cache_server_worker_recvrsp_source_addr_, key, all_dirinfo, event_list, skip_propagation_latency); // Add events of intermediate response if with event tracking
+                    tmp_edge_wrapper_ptr->invalidateCacheCopies(edge_cache_server_worker_recvrsp_socket_server_ptr_, edge_cache_server_worker_recvrsp_source_addr_, key, all_dirinfo, total_bandwidth_usage, event_list, skip_propagation_latency); // Add events of intermediate response if with event tracking
                 }
                 // NOTE: will directly break if lock result is kNoneed
             }
             else // Get target edge index from remote directory information at the beacon node
             {
                 // Add events of intermediate response if with event tracking
-                is_finish = acquireBeaconWritelock_(key, lock_result, event_list, skip_propagation_latency);
+                is_finish = acquireBeaconWritelock_(key, lock_result, total_bandwidth_usage, event_list, skip_propagation_latency);
                 if (is_finish) // Edge is NOT running
                 {
                     return is_finish;
@@ -942,7 +971,7 @@ namespace covered
         return is_finish;
     }
     
-    bool CacheServerWorkerBase::acquireBeaconWritelock_(const Key& key, LockResult& lock_result, EventList& event_list, const bool& skip_propagation_latency)
+    bool CacheServerWorkerBase::acquireBeaconWritelock_(const Key& key, LockResult& lock_result, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency)
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
@@ -995,6 +1024,12 @@ namespace covered
                 // Get lock result from control response
                 processRspToAcquireBeaconWritelock_(control_response_ptr, lock_result);
 
+                // Update total bandwidth usage for received acquire writelock response
+                BandwidthUsage acquire_writelock_response_bandwidth_usage = control_response_ptr->getBandwidthUsageRef();
+                uint32_t cross_edge_acquire_writelock_rsp_bandwidth_bytes = control_response_ptr->getMsgPayloadSize();
+                acquire_writelock_response_bandwidth_usage.update(BandwidthUsage(0, cross_edge_acquire_writelock_rsp_bandwidth_bytes, 0));
+                total_bandwidth_usage.update(acquire_writelock_response_bandwidth_usage);
+
                 // Add events of intermediate response if with event tracking
                 event_list.addEvents(control_response_ptr->getEventListRef());
 
@@ -1023,6 +1058,8 @@ namespace covered
         assert(!current_is_beacon);
 
         bool is_finish = false;
+        BandwidthUsage tmp_bandwidth_usage; // NOTE: NO need to update total_bandwidth_usage, as the bandwidth usage is counted by the write request triggering FinishBlockRequest instead of the local request being blocked
+
         struct timespec block_for_writes_start_timestamp = Util::getCurrentTimespec();
 
         NetworkAddr recvrsp_dstaddr; // cache server worker or beacon server
@@ -1050,6 +1087,10 @@ namespace covered
                 MessageBase* control_request_ptr = MessageBase::getResponseFromMsgPayload(control_request_msg_payload);
                 assert(control_request_ptr != NULL && control_request_ptr->getMessageType() == MessageType::kFinishBlockRequest);
                 recvrsp_dstaddr = control_request_ptr->getSourceAddr();
+
+                // Update tmp bandwidth usage for received finish block request
+                uint32_t cross_edge_finish_block_req_bandwidth_bytes = control_request_ptr->getMsgPayloadSize();
+                tmp_bandwidth_usage.update(BandwidthUsage(0, cross_edge_finish_block_req_bandwidth_bytes, 0));
 
                 // Get key from FinishBlockRequest
                 const FinishBlockRequest* const finish_block_request_ptr = static_cast<const FinishBlockRequest*>(control_request_ptr);
@@ -1090,7 +1131,7 @@ namespace covered
             // Prepare FinishBlockResponse
             // NOTE: we just execute break to finish block, so no need to add an event for FinishBlockResponse
             uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
-            MessageBase* finish_block_response_ptr = new FinishBlockResponse(key, edge_idx, edge_cache_server_worker_recvreq_source_addr_, EventList(), skip_propagation_latency); // NOTE: still use skip_propagation_latency of currently-blocked request rather than that of previous write request
+            MessageBase* finish_block_response_ptr = new FinishBlockResponse(key, edge_idx, edge_cache_server_worker_recvreq_source_addr_, tmp_bandwidth_usage, EventList(), skip_propagation_latency); // NOTE: still use skip_propagation_latency of currently-blocked request rather than that of previous write request
             assert(finish_block_response_ptr != NULL);
 
             // Push FinishBlockResponse into edge-to-edge propagation simulator to cache server worker or beacon server
@@ -1111,7 +1152,7 @@ namespace covered
 
     // (2.2) Update cloud
 
-    bool CacheServerWorkerBase::writeDataToCloud_(const Key& key, const Value& value, const MessageType& message_type, EventList& event_list, const bool& skip_propagation_latency)
+    bool CacheServerWorkerBase::writeDataToCloud_(const Key& key, const Value& value, const MessageType& message_type, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency)
     {        
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
@@ -1171,6 +1212,12 @@ namespace covered
                 assert(global_response_ptr != NULL);
                 assert(global_response_ptr->getMessageType() == MessageType::kGlobalPutResponse || global_response_ptr->getMessageType() == MessageType::kGlobalDelResponse);
 
+                // Update total bandwidth usage for received global response
+                BandwidthUsage global_response_bandwidth_usage = global_response_ptr->getBandwidthUsageRef();
+                uint32_t edge_cloud_global_rsp_bandwidth_bytes = global_response_ptr->getMsgPayloadSize();
+                global_response_bandwidth_usage.update(BandwidthUsage(0, 0, edge_cloud_global_rsp_bandwidth_bytes));
+                total_bandwidth_usage.update(global_response_bandwidth_usage);
+
                 // Add events of intermediate response if with event tracking
                 event_list.addEvents(global_response_ptr->getEventListRef());
 
@@ -1193,7 +1240,7 @@ namespace covered
 
     // (2.4) Release write lock for MSI protocol
 
-    bool CacheServerWorkerBase::releaseWritelock_(const Key& key, EventList& event_list, const bool& skip_propagation_latency)
+    bool CacheServerWorkerBase::releaseWritelock_(const Key& key, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency)
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
@@ -1213,7 +1260,7 @@ namespace covered
             releaseLocalWritelock_(key, blocked_edges);
 
             // Notify blocked edge nodes to finish blocking
-            is_finish = tmp_edge_wrapper_ptr->notifyEdgesToFinishBlock(edge_cache_server_worker_recvrsp_socket_server_ptr_, edge_cache_server_worker_recvrsp_source_addr_, key, blocked_edges, event_list, skip_propagation_latency); // Add events of intermediate response if with event tracking
+            is_finish = tmp_edge_wrapper_ptr->notifyEdgesToFinishBlock(edge_cache_server_worker_recvrsp_socket_server_ptr_, edge_cache_server_worker_recvrsp_source_addr_, key, blocked_edges, total_bandwidth_usage, event_list, skip_propagation_latency); // Add events of intermediate response if with event tracking
             if (is_finish) // Edge is NOT running
             {
                 return is_finish;
@@ -1222,7 +1269,7 @@ namespace covered
         else // Get target edge index from remote directory information at the beacon node
         {
             // NOTE: beacon server of beacon node has already notified all blocked edges -> NO need to notify them again in cache server
-            is_finish = releaseBeaconWritelock_(key, event_list, skip_propagation_latency); // Add events of intermediate response if with event tracking
+            is_finish = releaseBeaconWritelock_(key, total_bandwidth_usage, event_list, skip_propagation_latency); // Add events of intermediate response if with event tracking
             if (is_finish) // Edge is NOT running
             {
                 return is_finish;
@@ -1237,7 +1284,7 @@ namespace covered
         return is_finish;
     }
 
-    bool CacheServerWorkerBase::releaseBeaconWritelock_(const Key& key, EventList& event_list, const bool& skip_propagation_latency)
+    bool CacheServerWorkerBase::releaseBeaconWritelock_(const Key& key, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency)
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
@@ -1289,6 +1336,12 @@ namespace covered
 
                 // Process release writelock response
                 processRspToReleaseBeaconWritelock_(control_response_ptr);
+
+                // Update total bandwidth usage for received release writelock response
+                BandwidthUsage release_writelock_response_bandwidth_usage = control_response_ptr->getBandwidthUsageRef();
+                uint32_t cross_edge_release_writelock_rsp_bandwidth_bytes = control_response_ptr->getMsgPayloadSize();
+                release_writelock_response_bandwidth_usage.update(BandwidthUsage(0, cross_edge_release_writelock_rsp_bandwidth_bytes, 0));
+                total_bandwidth_usage.update(release_writelock_response_bandwidth_usage);
 
                 // Add events of intermediate response if with event tracking
                 event_list.addEvents(control_response_ptr->getEventListRef());
@@ -1347,7 +1400,12 @@ namespace covered
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
         bool is_finish = false;
+        BandwidthUsage total_bandwidth_usage;
         EventList event_list;
+
+        // Update total bandwidth usage for received redirected get request
+        uint32_t cross_edge_redirected_get_req_bandwidth_bytes = redirected_request_ptr->getMsgPayloadSize();
+        total_bandwidth_usage.update(BandwidthUsage(0, cross_edge_redirected_get_req_bandwidth_bytes, 0));
 
         struct timespec target_get_local_cache_start_timestamp = Util::getCurrentTimespec();
 
@@ -1381,7 +1439,7 @@ namespace covered
         // Prepare RedirectedGetResponse for the closest edge node
         const Key tmp_key = MessageBase::getKeyFromMessage(redirected_request_ptr);
         const bool skip_propagation_latency = redirected_request_ptr->isSkipPropagationLatency();
-        MessageBase* redirected_get_response_ptr = getRspForRedirectedGet_(tmp_key, tmp_value, hitflag, event_list, skip_propagation_latency);
+        MessageBase* redirected_get_response_ptr = getRspForRedirectedGet_(tmp_key, tmp_value, hitflag, total_bandwidth_usage, event_list, skip_propagation_latency);
         assert(redirected_get_response_ptr != NULL);
 
         // Push the redirected response message into edge-to-client propagation simulator to cache server worker in the closest edge node
@@ -1397,7 +1455,7 @@ namespace covered
 
     // (4.1) Admit uncached objects in local edge cache
 
-    bool CacheServerWorkerBase::tryToTriggerIndependentAdmission_(const Key& key, const Value& value, EventList& event_list, const bool& skip_propagation_latency) const
+    bool CacheServerWorkerBase::tryToTriggerIndependentAdmission_(const Key& key, const Value& value, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
@@ -1415,13 +1473,13 @@ namespace covered
             Util::dumpVariablesForDebug(base_instance_name_, 11, "independent admission;", "keystr:", key.getKeystr().c_str(), "keysize:", std::to_string(key.getKeyLength()).c_str(), "is value deleted:", Util::toString(value.isDeleted()).c_str(), "value size:", Util::toString(value.getValuesize()).c_str(), "used_bytes_before_admit:", std::to_string(used_bytes_before_admit).c_str());
             #endif
 
-            is_finish = admitObject_(key, value, event_list, skip_propagation_latency);
+            is_finish = admitObject_(key, value, total_bandwidth_usage, event_list, skip_propagation_latency);
         }
 
         return is_finish;
     }
 
-    bool CacheServerWorkerBase::admitObject_(const Key& key, const Value& value, EventList& event_list, const bool& skip_propagation_latency) const
+    bool CacheServerWorkerBase::admitObject_(const Key& key, const Value& value, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
     {
         bool is_finish = false;
 
@@ -1429,7 +1487,7 @@ namespace covered
 
         // Independently admit the new key-value pair into local edge cache
         bool is_being_written = false;
-        is_finish = updateDirectory_(key, true, is_being_written, event_list, skip_propagation_latency);
+        is_finish = updateDirectory_(key, true, is_being_written, total_bandwidth_usage, event_list, skip_propagation_latency);
         if (is_finish)
         {
             return is_finish;
@@ -1441,14 +1499,14 @@ namespace covered
         event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_UPDATE_DIRECTORY_TO_ADMIT_EVENT_NAME, update_directory_to_admit_latency_us); // Add intermediate event if with event tracking
 
         // Trigger eviction if necessary
-        is_finish = evictForCapacity_(event_list, skip_propagation_latency);
+        is_finish = evictForCapacity_(total_bandwidth_usage, event_list, skip_propagation_latency);
 
         return is_finish;
     }
 
     // (4.2) Evict cached objects from local edge cache
 
-    bool CacheServerWorkerBase::evictForCapacity_(EventList& event_list, const bool& skip_propagation_latency) const
+    bool CacheServerWorkerBase::evictForCapacity_(BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
@@ -1487,7 +1545,7 @@ namespace covered
                     const Key& tmp_victim_key = victim_iter->first;
 
                     bool _unused_is_being_written = false; // NOTE: is_being_written does NOT affect cache eviction
-                    is_finish = updateDirectory_(tmp_victim_key, false, _unused_is_being_written, event_list, skip_propagation_latency);
+                    is_finish = updateDirectory_(tmp_victim_key, false, _unused_is_being_written, total_bandwidth_usage, event_list, skip_propagation_latency);
                     if (is_finish)
                     {
                         return is_finish;
@@ -1513,7 +1571,7 @@ namespace covered
 
     // (4.3) Update content directory information
 
-    bool CacheServerWorkerBase::updateDirectory_(const Key& key, const bool& is_admit, bool& is_being_written, EventList& event_list, const bool& skip_propagation_latency) const
+    bool CacheServerWorkerBase::updateDirectory_(const Key& key, const bool& is_admit, bool& is_being_written, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
@@ -1533,7 +1591,7 @@ namespace covered
         else // Update remote directory information at the beacon node
         {
             // Add events of intermediate responses if with event tracking
-            is_finish = updateBeaconDirectory_(key, is_admit, directory_info, is_being_written, event_list, skip_propagation_latency);
+            is_finish = updateBeaconDirectory_(key, is_admit, directory_info, is_being_written, total_bandwidth_usage, event_list, skip_propagation_latency);
         }
 
         // Add intermediate event if with event tracking
@@ -1544,7 +1602,7 @@ namespace covered
         return is_finish;
     }
 
-    bool CacheServerWorkerBase::updateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written, EventList& event_list, const bool& skip_propagation_latency) const
+    bool CacheServerWorkerBase::updateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
@@ -1595,6 +1653,12 @@ namespace covered
                 assert(control_response_ptr != NULL);
 
                 processRspToUpdateBeaconDirectory_(control_response_ptr, is_being_written); // NOTE: is_being_written is updated here
+
+                // Update total bandwidth usage for received directory update response
+                BandwidthUsage directory_update_response_bandwidth_usage = control_response_ptr->getBandwidthUsageRef();
+                uint32_t cross_edge_directory_update_rsp_bandwidth_bytes = control_response_ptr->getMsgPayloadSize();
+                directory_update_response_bandwidth_usage.update(BandwidthUsage(0, cross_edge_directory_update_rsp_bandwidth_bytes, 0));
+                total_bandwidth_usage.update(directory_update_response_bandwidth_usage);
 
                 // Add events of intermediate response if with evet tracking
                 event_list.addEvents(control_response_ptr->getEventListRef());
