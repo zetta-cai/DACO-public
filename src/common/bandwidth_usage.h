@@ -1,5 +1,7 @@
 /*
  * BandwidthUsage: count client-edge, cross-edge, and edge-cloud bandwidth usage (in units of bytes).
+ *
+ * NOTE: empty BandwidthUsage in issued requests; update BandwidthUsage for received requests; embed BandwidthUsage for issued responses; update BandwidthUsage for received responses.
  * 
  * By Siyuan Sheng (2023.09.14).
  */
@@ -19,6 +21,8 @@ namespace covered
         BandwidthUsage();
         BandwidthUsage(const uint32_t& client_edge_bandwidth_bytes, const uint32_t& cross_edge_bandwidth_bytes, const uint32_t& edge_cloud_bandwidth_bytes);
         ~BandwidthUsage();
+
+        void update(const BandwidthUsage& other); // Add other into *this
 
         uint32_t getClientEdgeBandwidthBytes() const;
         uint32_t getCrossEdgeBandwidthBytes() const;

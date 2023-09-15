@@ -1,5 +1,6 @@
 #include "cloud/data_server/data_server.h"
 
+#include "common/bandwidth_usage.h"
 #include "common/config.h"
 #include "common/util.h"
 #include "message/data_message.h"
@@ -107,6 +108,7 @@ namespace covered
 
         bool is_finish = false;
 
+        BandwidthUsage total_bandwidth_usage;
         EventList event_list;
         struct timespec access_rocksdb_start_timestamp = Util::getCurrentTimespec();
 
@@ -168,6 +170,11 @@ namespace covered
         Util::dumpDebugMsg(instance_name_, oss.str());
         #endif
 
+        // Update total bandwidth usage for received request
+        uint32_t edge_cloud_req_bandwidth_usage = global_request_ptr->getMsgPayloadSize();
+        BandwidthUsage req_bandwidth_usage(0, 0, edge_cloud_req_bandwidth_usage);
+        total_bandwidth_usage.update(req_bandwidth_usage);
+
         // Add intermediate event if with event tracking
         struct timespec access_rocksdb_end_timestamp = Util::getCurrentTimespec();
         uint32_t access_rocksdb_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(access_rocksdb_end_timestamp, access_rocksdb_start_timestamp));
@@ -185,21 +192,21 @@ namespace covered
             case MessageType::kGlobalGetRequest:
             {
                 // Prepare global get response message
-                global_response_ptr = new GlobalGetResponse(tmp_key, tmp_value, cloud_idx, cloud_recvreq_source_addr_, event_list, skip_propagation_latency);
+                global_response_ptr = new GlobalGetResponse(tmp_key, tmp_value, cloud_idx, cloud_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
                 assert(global_response_ptr != NULL);
                 break;
             }
             case MessageType::kGlobalPutRequest:
             {
                 // Prepare global put response message
-                global_response_ptr = new GlobalPutResponse(tmp_key, cloud_idx, cloud_recvreq_source_addr_, event_list, skip_propagation_latency);
+                global_response_ptr = new GlobalPutResponse(tmp_key, cloud_idx, cloud_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
                 assert(global_response_ptr != NULL);
                 break;
             }
             case MessageType::kGlobalDelRequest:
             {
                 // Prepare global del response message
-                global_response_ptr = new GlobalDelResponse(tmp_key, cloud_idx, cloud_recvreq_source_addr_, event_list, skip_propagation_latency);
+                global_response_ptr = new GlobalDelResponse(tmp_key, cloud_idx, cloud_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
                 assert(global_response_ptr != NULL);
                 break;
             }

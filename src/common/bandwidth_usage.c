@@ -20,6 +20,14 @@ namespace covered
 
     BandwidthUsage::~BandwidthUsage() {}
 
+    void BandwidthUsage::update(const BandwidthUsage& other)
+    {
+        client_edge_bandwidth_bytes_ += other.client_edge_bandwidth_bytes_;
+        cross_edge_bandwidth_bytes_ += other.cross_edge_bandwidth_bytes_;
+        edge_cloud_bandwidth_bytes_ += other.edge_cloud_bandwidth_bytes_;
+        return;
+    }
+
     uint32_t BandwidthUsage::getClientEdgeBandwidthBytes() const
     {
         return client_edge_bandwidth_bytes_;
