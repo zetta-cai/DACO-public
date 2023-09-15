@@ -323,6 +323,12 @@ namespace covered
         }
         client_statistics_tracker_ptr_->updateWorkloadKeyValueSize(local_client_worker_idx, tmp_key.getKeyLength(), value_size, is_stresstest_phase);
 
+        // Update bandwidth usage statistics for the local client
+        BandwidthUsage local_response_bandwidth_usage = local_response_ptr->getBandwidthUsageRef();
+        uint32_t client_edge_local_rsp_bandwidth_bytes = local_response_ptr->getMsgPayloadSize();
+        local_response_bandwidth_usage.update(BandwidthUsage(client_edge_local_rsp_bandwidth_bytes, 0, 0)); // Get total bandwidth usage for received local response
+        client_statistics_tracker_ptr_->updateBandwidthUsage(local_client_worker_idx, local_response_bandwidth_usage, is_stresstest_phase);
+
         #ifdef DEBUG_CLIENT_WORKER_WRAPPER
         Util::dumpVariablesForDebug(instance_name_, 13, "receive a local response;", "type:", MessageBase::messageTypeToString(local_response_message_type).c_str(), "keystr", tmp_key.getKeystr().c_str(), "valuesize:", std::to_string(tmp_value.getValuesize()).c_str(), "hitflag:", MessageBase::hitflagToString(hitflag).c_str(), "latency:", std::to_string(rtt_us).c_str(), "eventlist:", local_response_ptr->getEventListRef().toString().c_str());
         // "msg payload:", local_response_msg_payload.getBytesHexstr().c_str()

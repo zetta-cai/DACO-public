@@ -11,6 +11,7 @@
 
 #include <string>
 
+#include "common/bandwidth_usage.h"
 #include "common/dynamic_array.h"
 
 namespace covered
@@ -55,6 +56,9 @@ namespace covered
         double getAvgWorkloadKeySize() const;
         double getAvgWorkloadValueSize() const;
 
+        // Get aggregated statistics related with bandwidth usage
+        BandwidthUsage getTotalBandwidthUsage() const;
+
         // Get string for aggregate statistics
         std::string toString() const;
 
@@ -91,6 +95,9 @@ namespace covered
         // Aggregated statistics related with workload key-value size
         double total_workload_key_size_;
         double total_workload_value_size_;
+
+        // Aggregated statistics related with bandwidth usage
+        BandwidthUsage total_bandwidth_usage_;
     };
 }
 

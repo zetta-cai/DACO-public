@@ -3,6 +3,8 @@
  *
  * NOTE: empty BandwidthUsage in issued requests; update BandwidthUsage for received requests; embed BandwidthUsage for issued responses; update BandwidthUsage for received responses.
  * 
+ * NOTE: use uint64_t for bandwidth bytes to avoid integer overflow.
+ * 
  * By Siyuan Sheng (2023.09.14).
  */
 
@@ -19,16 +21,16 @@ namespace covered
     {
     public:
         BandwidthUsage();
-        BandwidthUsage(const uint32_t& client_edge_bandwidth_bytes, const uint32_t& cross_edge_bandwidth_bytes, const uint32_t& edge_cloud_bandwidth_bytes);
+        BandwidthUsage(const uint64_t& client_edge_bandwidth_bytes, const uint64_t& cross_edge_bandwidth_bytes, const uint64_t& edge_cloud_bandwidth_bytes);
         ~BandwidthUsage();
 
         void update(const BandwidthUsage& other); // Add other into *this
 
-        uint32_t getClientEdgeBandwidthBytes() const;
-        uint32_t getCrossEdgeBandwidthBytes() const;
-        uint32_t getEdgeCloudBandwidthBytes() const;
+        uint64_t getClientEdgeBandwidthBytes() const;
+        uint64_t getCrossEdgeBandwidthBytes() const;
+        uint64_t getEdgeCloudBandwidthBytes() const;
 
-        uint32_t getBandwidthUsagePayloadSize() const;
+        static uint32_t getBandwidthUsagePayloadSize();
         uint32_t serialize(DynamicArray& msg_payload, const uint32_t& position) const;
         uint32_t deserialize(const DynamicArray& msg_payload, const uint32_t& position);
 
@@ -36,9 +38,9 @@ namespace covered
     private:
         static const std::string kClassName;
 
-        uint32_t client_edge_bandwidth_bytes_;
-        uint32_t cross_edge_bandwidth_bytes_;
-        uint32_t edge_cloud_bandwidth_bytes_;
+        uint64_t client_edge_bandwidth_bytes_;
+        uint64_t cross_edge_bandwidth_bytes_;
+        uint64_t edge_cloud_bandwidth_bytes_;
     };
 }
 

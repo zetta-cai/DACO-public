@@ -41,6 +41,8 @@ namespace covered
 
         perclientworker_total_workload_key_sizes_.resize(perclient_workercnt, double(0.0));
         perclientworker_total_workload_value_sizes_.resize(perclient_workercnt, double(0.0));
+
+        perclientworker_bandwidth_usages_.resize(perclient_workercnt, BandwidthUsage());
     }
 
     ClientRawStatistics::~ClientRawStatistics()
@@ -89,6 +91,9 @@ namespace covered
 
         perclientworker_total_workload_value_sizes_.clear();
         perclientworker_total_workload_value_sizes_.resize(perclient_workercnt_, double(0.0));
+
+        perclientworker_bandwidth_usages_.clear();
+        perclientworker_bandwidth_usages_.resize(perclient_workercnt_, BandwidthUsage());
 
         return;
     }
@@ -168,6 +173,14 @@ namespace covered
 
         perclientworker_total_workload_key_sizes_[local_client_worker_idx] += static_cast<double>(key_size);
         perclientworker_total_workload_value_sizes_[local_client_worker_idx] += static_cast<double>(value_size);
+        return;
+    }
+
+    void ClientRawStatistics::updateBandwidthUsage_(const uint32_t& local_client_worker_idx, const BandwidthUsage& bandwidth_usage)
+    {
+        assert(local_client_worker_idx < perclient_workercnt_);
+
+        perclientworker_bandwidth_usages_[local_client_worker_idx].update(bandwidth_usage);
         return;
     }
 

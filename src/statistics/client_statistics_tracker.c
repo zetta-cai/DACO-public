@@ -261,6 +261,31 @@ namespace covered
         return;
     }
 
+    // Update cur-slot/stable client raw statistics for bandwidth usage
+
+    void ClientStatisticsTracker::updateBandwidthUsage(const uint32_t& local_client_worker_idx, const BandwidthUsage& bandwidth_usage, const bool& is_stresstest_phase)
+    {
+        checkPointers_();
+
+        perclientworker_curslot_update_flags_[local_client_worker_idx].store(true, Util::STORE_CONCURRENCY_ORDER);
+
+        // Update cur-slot client raw statistics
+        ClientRawStatistics* tmp_curslot_client_raw_statistics_ptr = getCurslotClientRawStatisticsPtr_(cur_slot_idx_.load(Util::LOAD_CONCURRENCY_ORDER));
+        assert(tmp_curslot_client_raw_statistics_ptr != NULL);
+        tmp_curslot_client_raw_statistics_ptr->updateBandwidthUsage_(local_client_worker_idx, bandwidth_usage);
+
+        perclientworker_curslot_update_flags_[local_client_worker_idx].store(false, Util::STORE_CONCURRENCY_ORDER);
+        perclientworker_curslot_update_statuses_[local_client_worker_idx]++;
+
+        // Update stable client raw statistics for stresstest phase
+        if (is_stresstest_phase)
+        {
+            stable_client_raw_statistics_ptr_->updateBandwidthUsage_(local_client_worker_idx, bandwidth_usage);
+        }
+
+        return;
+    }
+
     // (2) Switch cur-slot client raw statistics (invoked by client thread ClientWrapper)
 
     ClientAggregatedStatistics ClientStatisticsTracker::switchCurslotForClientRawStatistics(const uint32_t& target_slot_idx)

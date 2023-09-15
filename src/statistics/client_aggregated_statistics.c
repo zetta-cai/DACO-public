@@ -115,6 +115,12 @@ namespace covered
             total_workload_value_size_ += client_raw_statistics_ptr->perclientworker_total_workload_value_sizes_[local_worker_idx];
         }
 
+        // Aggregate per-client-worker bandwidth usage statistics
+        for (uint32_t local_worker_idx = 0; local_worker_idx < perclient_workercnt; local_worker_idx++)
+        {
+            total_bandwidth_usage_.update(client_raw_statistics_ptr->perclientworker_bandwidth_usages_[local_worker_idx]);
+        }
+
         return;
     }
 

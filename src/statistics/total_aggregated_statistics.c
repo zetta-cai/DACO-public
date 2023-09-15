@@ -66,6 +66,9 @@ namespace covered
             // Aggregate workload key-value size statistics
             total_workload_key_size_ += tmp_client_aggregated_statistics.total_workload_key_size_;
             total_workload_value_size_ += tmp_client_aggregated_statistics.total_workload_value_size_;
+
+            // Aggregate bandwidth usage statistics
+            total_bandwidth_usage_.update(tmp_client_aggregated_statistics.total_bandwidth_usage_);
         }
 
         // Aggregate latency statistics approximately

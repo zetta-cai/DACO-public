@@ -28,6 +28,8 @@ namespace covered
 
         total_workload_key_size_ = double(0.0);
         total_workload_value_size_ = double(0.0);
+
+        total_bandwidth_usage_ = BandwidthUsage();
     }
         
     AggregatedStatisticsBase::~AggregatedStatisticsBase() {}
@@ -177,6 +179,13 @@ namespace covered
         return avg_workload_value_size;
     }
 
+    // Get aggregated statistics related with bandwidth usage
+
+    BandwidthUsage AggregatedStatisticsBase::getTotalBandwidthUsage() const
+    {
+        return total_bandwidth_usage_;
+    }
+
     // Get string for aggregate statistics
     std::string AggregatedStatisticsBase::toString() const
     {
@@ -214,6 +223,11 @@ namespace covered
         oss << "total workload value size: " << total_workload_value_size_ << std::endl;
         oss << "average workload key size: " << getAvgWorkloadKeySize() << std::endl;
         oss << "average workload value size: " << getAvgWorkloadValueSize() << std::endl;
+
+        oss << "[Bandwidth Usage Statistics]" << std::endl;
+        oss << "total client-edge bandwidth bytes: " << total_bandwidth_usage_.getClientEdgeBandwidthBytes() << std::endl;
+        oss << "total cross-edge bandwidth bytes: " << total_bandwidth_usage_.getCrossEdgeBandwidthBytes() << std::endl;
+        oss << "total edge-cloud bandwidth bytes: " << total_bandwidth_usage_.getEdgeCloudBandwidthBytes() << std::endl;
         
         std::string total_statistics_string = oss.str();
         return total_statistics_string;
@@ -221,8 +235,8 @@ namespace covered
 
     uint32_t AggregatedStatisticsBase::getAggregatedStatisticsIOSize()
     {
-        // Aggregated statistics for hit ratio + latency + read-write ratio + cache utilization + workload key-value size
-        return sizeof(uint32_t) * 3 + sizeof(uint32_t) * 7 + sizeof(uint32_t) * 2 + sizeof(uint64_t) * 2 + 2 * sizeof(double);
+        // Aggregated statistics for hit ratio + latency + read-write ratio + cache utilization + workload key-value size + bandwidth usgae
+        return sizeof(uint32_t) * 3 + sizeof(uint32_t) * 7 + sizeof(uint32_t) * 2 + sizeof(uint64_t) * 2 + 2 * sizeof(double) + BandwidthUsage::getBandwidthUsagePayloadSize();
     }
 
     uint32_t AggregatedStatisticsBase::serialize(DynamicArray& dynamic_array, const uint32_t& position) const
@@ -270,6 +284,10 @@ namespace covered
         size += sizeof(double);
         dynamic_array.deserialize(size, (const char*)&total_workload_value_size_, sizeof(double));
         size += sizeof(double);
+
+        // Serialize aggregated statistics for bandwidth usage
+        uint32_t total_bandwidth_usage_serialize_size = total_bandwidth_usage_.serialize(dynamic_array, size);
+        size += total_bandwidth_usage_serialize_size;
 
         return size - position;
     }
@@ -320,6 +338,10 @@ namespace covered
         dynamic_array.serialize(size, (char*)&total_workload_value_size_, sizeof(double));
         size += sizeof(double);
 
+        // Deserialize aggregated statistics for bandwidth usage
+        uint32_t total_bandwidth_usage_deserialize_size = total_bandwidth_usage_.deserialize(dynamic_array, size);
+        size += total_bandwidth_usage_deserialize_size;
+
         return size - position;
     }
 
@@ -350,6 +372,9 @@ namespace covered
         // Aggregated statistics related with workload key-value size
         total_workload_key_size_ = other.total_workload_key_size_;
         total_workload_value_size_ = other.total_workload_value_size_;
+
+        // Aggregated statistics related with bandwidth usage
+        total_bandwidth_usage_ = other.total_bandwidth_usage_;
 
         return *this;
     }

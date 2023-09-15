@@ -11,6 +11,8 @@
 #include <string>
 #include <vector>
 
+#include "common/bandwidth_usage.h"
+
 namespace covered
 {
     class ClientRawStatistics
@@ -45,6 +47,9 @@ namespace covered
         // Update key-value size statistics
         void updateTotalWorkloadKeyValueSize_(const uint32_t& local_client_worker_idx, const uint32_t& key_size, const uint32_t& value_size);
 
+        // Update bandwidth usage statistics
+        void updateBandwidthUsage_(const uint32_t& local_client_worker_idx, const BandwidthUsage& bandwidth_usage);
+
         void checkPointers_() const;
 
         // TODO: Actually std::atomic is unnecessary here, as different client worker threads access individual variables; while client wrapper accesses cur-slot client raw statistics only after all client workers will access the next slot, and accesses stable client raw statistics only after all client workers are finished.
@@ -72,6 +77,9 @@ namespace covered
         // Key-value size statistics
         std::vector<double> perclientworker_total_workload_key_sizes_; // Total size of all accessed keys (including duplicate keys) in workload for each client worker
         std::vector<double> perclientworker_total_workload_value_sizes_; // Total size of all accessed values (including duplicate values) in workload for each client worker
+
+        // Bandwidth usage statistics
+        std::vector<BandwidthUsage> perclientworker_bandwidth_usages_; // Bandwidth usage for each client worker
     };
 }
 

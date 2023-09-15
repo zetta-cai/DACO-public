@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <sstream>
 
+#include "common/bandwidth_usage.h"
 #include "common/util.h"
 #include "event/event.h"
 #include "event/event_list.h"
@@ -39,8 +40,13 @@ namespace covered
         checkPointers_();
 
         bool is_finish = false;
-
+        BandwidthUsage total_bandwidth_usage;
         EventList event_list;
+
+        // Update total bandwidth usage for received invalidation request
+        uint32_t cross_edge_invalidation_req_bandwidth_bytes = control_request_ptr->getMsgPayloadSize();
+        total_bandwidth_usage.update(BandwidthUsage(0, cross_edge_invalidation_req_bandwidth_bytes, 0));
+
         struct timespec invalidate_local_cache_start_timestamp = Util::getCurrentTimespec();
 
         // Invalidate cached object in local edge cache
@@ -57,7 +63,7 @@ namespace covered
 
         // Prepare a invalidation response
         uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
-        MessageBase* invalidation_response_ptr = new InvalidationResponse(tmp_key, edge_idx, edge_invalidation_server_recvreq_source_addr_, event_list, skip_propagation_latency);
+        MessageBase* invalidation_response_ptr = new InvalidationResponse(tmp_key, edge_idx, edge_invalidation_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
         assert(invalidation_response_ptr != NULL);
 
         // Push the invalidation response into edge-to-edge propagation simulator to cache server worker or beacon server

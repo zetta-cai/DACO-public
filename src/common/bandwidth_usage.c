@@ -1,6 +1,6 @@
 #include "common/bandwidth_usage.h"
 
-#include <arpa/inet.h> // htonl ntohl
+//#include <arpa/inet.h> // htonl ntohl
 
 namespace covered
 {
@@ -11,7 +11,7 @@ namespace covered
         edge_cloud_bandwidth_bytes_ = 0;
     }
 
-    BandwidthUsage::BandwidthUsage(const uint32_t& client_edge_bandwidth_bytes, const uint32_t& cross_edge_bandwidth_bytes, const uint32_t& edge_cloud_bandwidth_bytes)
+    BandwidthUsage::BandwidthUsage(const uint64_t& client_edge_bandwidth_bytes, const uint64_t& cross_edge_bandwidth_bytes, const uint64_t& edge_cloud_bandwidth_bytes)
     {
         client_edge_bandwidth_bytes_ = client_edge_bandwidth_bytes;
         cross_edge_bandwidth_bytes_ = cross_edge_bandwidth_bytes;
@@ -28,28 +28,28 @@ namespace covered
         return;
     }
 
-    uint32_t BandwidthUsage::getClientEdgeBandwidthBytes() const
+    uint64_t BandwidthUsage::getClientEdgeBandwidthBytes() const
     {
         return client_edge_bandwidth_bytes_;
     }
 
-    uint32_t BandwidthUsage::getCrossEdgeBandwidthBytes() const
+    uint64_t BandwidthUsage::getCrossEdgeBandwidthBytes() const
     {
         return cross_edge_bandwidth_bytes_;
     }
 
-    uint32_t BandwidthUsage::getEdgeCloudBandwidthBytes() const
+    uint64_t BandwidthUsage::getEdgeCloudBandwidthBytes() const
     {
         return edge_cloud_bandwidth_bytes_;
     }
 
-    uint32_t BandwidthUsage::getBandwidthUsagePayloadSize() const
+    uint32_t BandwidthUsage::getBandwidthUsagePayloadSize()
     {
         // client-edge bandwidth usage + cross-edge bandwidth usage + edge-cloud bandwidth usage
-        return sizeof(uint32_t) + sizeof(uint32_t) + sizeof(uint32_t);
+        return sizeof(uint64_t) + sizeof(uint64_t) + sizeof(uint64_t);
     }
 
-    uint32_t BandwidthUsage::serialize(DynamicArray& msg_payload, const uint32_t& position) const
+    /*uint32_t BandwidthUsage::serialize(DynamicArray& msg_payload, const uint32_t& position) const
     {
         uint32_t size = position;
         uint32_t bigendian_client_edge_bandwidth_bytes = htonl(client_edge_bandwidth_bytes_);
@@ -79,6 +79,30 @@ namespace covered
         msg_payload.serialize(size, (char *)&bigendian_edge_cloud_bandwidth_bytes, sizeof(uint32_t));
         edge_cloud_bandwidth_bytes_ = ntohl(bigendian_edge_cloud_bandwidth_bytes);
         size += sizeof(uint32_t);
+        return size - position;
+    }*/
+
+    uint32_t BandwidthUsage::serialize(DynamicArray& msg_payload, const uint32_t& position) const
+    {
+        uint32_t size = position;
+        msg_payload.deserialize(size, (const char *)&client_edge_bandwidth_bytes_, sizeof(uint64_t));
+        size += sizeof(uint64_t);
+        msg_payload.deserialize(size, (const char *)&cross_edge_bandwidth_bytes_, sizeof(uint64_t));
+        size += sizeof(uint64_t);
+        msg_payload.deserialize(size, (const char *)&edge_cloud_bandwidth_bytes_, sizeof(uint64_t));
+        size += sizeof(uint64_t);
+        return size - position;
+    }
+
+    uint32_t BandwidthUsage::deserialize(const DynamicArray& msg_payload, const uint32_t& position)
+    {
+        uint32_t size = position;
+        msg_payload.serialize(size, (char *)&client_edge_bandwidth_bytes_, sizeof(uint64_t));
+        size += sizeof(uint64_t);
+        msg_payload.serialize(size, (char *)&cross_edge_bandwidth_bytes_, sizeof(uint64_t));
+        size += sizeof(uint64_t);
+        msg_payload.serialize(size, (char *)&edge_cloud_bandwidth_bytes_, sizeof(uint64_t));
+        size += sizeof(uint64_t);
         return size - position;
     }
 
