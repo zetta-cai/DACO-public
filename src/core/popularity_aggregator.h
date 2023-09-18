@@ -26,6 +26,9 @@ namespace covered
         PopularityAggregator(const uint32_t& edge_idx, const uint32_t& edgecnt, const uint64_t& popularity_aggregation_capacity_bytes, const uint32_t& topk_edgecnt);
         ~PopularityAggregator();
 
+        bool getAggregatedUncachedPopularity(const Key& key, AggregatedUncachedPopularity& aggregated_uncached_popularity) const; // Return if key has aggregated uncached popularity
+        uint32_t getTopkEdgecnt() const;
+
         void updateAggregatedUncachedPopularity(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached); // Update aggregated uncached popularity for selective popularity aggregation
         void clearAggregatedUncachedPopularityAfterAdmission(const Key& key, const uint32_t& source_edge_idx); // Clear old local uncached popularity (TODO: preserved edge idx / bitmap) of source edge node after admission (NOTE: is_global_cached MUST be true)
     private:
@@ -34,6 +37,7 @@ namespace covered
         typedef benefit_popularity_multimap_t::iterator benefit_popularity_iter_t;
         typedef std::unordered_map<Key, benefit_popularity_iter_t, KeyHasher> perkey_benefit_popularity_table_t; // Lookup table for benefit_popularity_multimap_t
         typedef perkey_benefit_popularity_table_t::iterator perkey_benefit_popularity_iter_t;
+        typedef perkey_benefit_popularity_table_t::const_iterator perkey_benefit_popularity_const_iter_t;
 
         void addAggregatedUncachedPopularityForNewKey_(const Key& key, const uint32_t& source_edge_idx, const Popularity& local_uncached_popularity, const bool& is_global_cached);
         // If is_tracked_by_source_edge_node = true, add/update latest local uncached popularity for key in source edge node (maybe increase cache size usage)

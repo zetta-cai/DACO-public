@@ -9,7 +9,7 @@
 
 #include <string>
 
-#include "cache/covered/common_header.h"
+#include "common/covered_common_header.h"
 #include "common/dynamic_array.h"
 
 namespace covered

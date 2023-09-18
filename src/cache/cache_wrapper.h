@@ -13,7 +13,7 @@
 #include <string>
 #include <vector>
 
-#include "cache/covered/common_header.h"
+#include "common/covered_common_header.h"
 #include "cache/local_cache_base.h"
 #include "cache/validity_map.h"
 #include "common/key.h"

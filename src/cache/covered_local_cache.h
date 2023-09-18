@@ -14,7 +14,20 @@
 #include <list> // std::list
 #include <string>
 
-#include "cache/covered/common_header.h"
+#include "cache/cachelib/CacheAllocator-inl.h" // LruAllocator
+
+namespace covered
+{
+    typedef LruAllocator CachelibLruCache; // LRU2Q cache policy
+    typedef CachelibLruCache::Config LruCacheConfig;
+    typedef CachelibLruCache::ReadHandle LruCacheReadHandle;
+    typedef CachelibLruCache::Item LruCacheItem;
+    
+    // Forward declaration
+    class CoveredLocalCache;
+}
+
+#include "common/covered_common_header.h"
 #include "cache/covered/local_cached_metadata.h"
 #include "cache/covered/local_uncached_metadata.h"
 #include "cache/local_cache_base.h"

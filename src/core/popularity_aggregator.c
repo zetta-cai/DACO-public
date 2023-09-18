@@ -31,6 +31,28 @@ namespace covered
         rwlock_for_popularity_aggregator_ = NULL;
     }
 
+    bool PopularityAggregator::getAggregatedUncachedPopularity(const Key& key, AggregatedUncachedPopularity& aggregated_uncached_popularity) const
+    {
+        bool is_found = false;
+
+        perkey_benefit_popularity_const_iter_t perkey_benefit_popularity_const_iter = perkey_benefit_popularity_table_.find(key);
+        if (perkey_benefit_popularity_const_iter != perkey_benefit_popularity_table_.end())
+        {
+            benefit_popularity_iter_t benefit_popularity_iter = perkey_benefit_popularity_const_iter->second;
+            assert(benefit_popularity_iter != benefit_popularity_multimap_.end());
+            aggregated_uncached_popularity = benefit_popularity_iter->second; // Deep copy
+
+            is_found = true;
+        }
+
+        return is_found;
+    }
+
+    uint32_t PopularityAggregator::getTopkEdgecnt() const
+    {
+        return topk_edgecnt_;
+    }
+
     void PopularityAggregator::updateAggregatedUncachedPopularity(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached)
     {
         checkPointers_();

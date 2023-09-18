@@ -13,7 +13,7 @@
 #include <string>
 #include <unordered_map> // std::unordered_map
 
-#include "cache/covered/common_header.h"
+#include "common/covered_common_header.h"
 #include "cache/covered/key_level_metadata.h"
 #include "cache/covered/group_level_metadata.h"
 #include "common/key.h"

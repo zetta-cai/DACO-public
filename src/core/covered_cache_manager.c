@@ -18,9 +18,22 @@ namespace covered
 
     // For popularity aggregation
 
-    void CoveredCacheManager::updatePopularityAggregatorForAggregatedPopularity(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached)
+    void CoveredCacheManager::updatePopularityAggregatorForAggregatedPopularity(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached, const bool& need_placement_calculation)
     {
         popularity_aggregator_.updateAggregatedUncachedPopularity(key, source_edge_idx, collected_popularity, is_global_cached);
+        
+        // NOTE: we do NOT perform placement calculation for local/remote acquire writelock request, as newly-admitted cache copies will still be invalid after cache placement
+        if (need_placement_calculation)
+        {
+            const bool is_tracked_by_source_edge_node = collected_popularity.isTracked();
+            // NOTE: NO need to perform placement calculation if key is NOT tracked by source edge node, as removing old local uncached popularity if any will NEVER increase global admission benefit
+            if (is_tracked_by_source_edge_node)
+            {
+                // Perform greedy-based placement calculation for trade-off-aware cache placement
+                placementCalculation_(key, is_global_cached);
+            }
+        }
+
         return;
     }
 
@@ -89,5 +102,33 @@ namespace covered
         total_size += victim_tracker_.getSizeForCapacity();
 
         return total_size;
+    }
+
+    void CoveredCacheManager::placementCalculation_(const Key& key, const bool& is_global_cached)
+    {
+        AggregatedUncachedPopularity tmp_aggregated_uncached_popularity;
+        bool has_aggregated_uncached_popularity = popularity_aggregator_.getAggregatedUncachedPopularity(key, tmp_aggregated_uncached_popularity);
+
+        // Perform placement calculation ONLY if key is still tracked by popularity aggregator (i.e., belonging to a global popular uncached object)
+        if (has_aggregated_uncached_popularity)
+        {
+            const uint32_t tmp_topk_list_length = tmp_aggregated_uncached_popularity.getTopkListLength();
+            assert(tmp_topk_list_length > 0); // NOTE: we perform placement calculation only when add/update a new local uncached popularity -> at least one local uncached popularity in the top-k list
+            assert(tmp_topk_list_length <= popularity_aggregator_.getTopkEdgecnt()); // At most EdgeCLI::covered_topk_edgecnt_ times
+
+            // Greedy-based placement calculation
+            std::vector<PlacementGain> placement_gains;
+            for (uint32_t topicnt = 1; topicnt <= tmp_topk_list_length; topicnt++)
+            {
+                // Consider topi edge nodes ordered by local uncached popularity in a descending order
+                std::unordered_set<uint32_t> tmp_placement_edgeset;
+                const DeltaReward tmp_global_admission_benefit = tmp_aggregated_uncached_popularity.calcGlobalAdmissionBenefit(topicnt, is_global_cached, tmp_placement_edgeset);
+
+                // END HERE
+                // TODO: Calculate global eviction cost based on tmp_placement_edgeset
+            }
+        }
+
+        return;
     }
 }

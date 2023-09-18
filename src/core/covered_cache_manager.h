@@ -31,9 +31,9 @@ namespace covered
         CoveredCacheManager(const uint32_t& edge_idx, const uint32_t& edgecnt, const uint32_t& peredge_synced_victimcnt, const uint64_t& popularity_aggregation_capacity_bytes, const double& popularity_collection_change_ratio, const uint32_t& topk_edgecnt);
         ~CoveredCacheManager();
 
-        // For selective popularity aggregation
+        // For selective popularity aggregation (may trigger trade-off-aware placement calculation)
 
-        void updatePopularityAggregatorForAggregatedPopularity(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached);
+        void updatePopularityAggregatorForAggregatedPopularity(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached, const bool& need_placement_calculation); // NOTE: need_placement_calculation works only when key is tracked by local uncached metadata of sender edge node
         void clearPopularityAggregatorAfterAdmission(const Key& key, const uint32_t& source_edge_idx);
         
         // For victim synchronization
@@ -53,7 +53,12 @@ namespace covered
 
         uint64_t getSizeForCapacity() const;
     private:
+        typedef DeltaReward PlacementGain; // Global admission benefit - global eviction cost for trade-off-aware cache placement and eviction
+
         static const std::string kClassName;
+
+        // Perform placement calculation only if key belongs to a global popular uncached object (i.e., with large enough max global admission benefit)
+        void placementCalculation_(const Key& key, const bool& is_global_cached);
 
         // Const shared variables
         std::string instance_name_;

@@ -2,6 +2,7 @@
 
 #include <assert.h>
 
+#include "common/covered_weight.h"
 #include "common/util.h"
 
 namespace covered
@@ -21,6 +22,16 @@ namespace covered
     }
     
     AggregatedUncachedPopularity::~AggregatedUncachedPopularity() {}
+
+    const Key& AggregatedUncachedPopularity::getKey() const
+    {
+        return key_;
+    }
+
+    uint32_t AggregatedUncachedPopularity::getTopkListLength() const
+    {
+        return topk_edgeidx_local_uncached_popularity_pairs_.size();
+    }
 
     void AggregatedUncachedPopularity::update(const uint32_t& source_edge_idx, const Popularity& local_uncached_popularity, const uint32_t& topk_edgecnt)
     {
@@ -82,18 +93,35 @@ namespace covered
 
     DeltaReward AggregatedUncachedPopularity::calcMaxGlobalAdmissionBenefit(const bool& is_global_cached) const
     {
+        std::unordered_set<uint32_t> placement_edgeset;
+        DeltaReward max_global_admission_benefit = calcGlobalAdmissionBenefit(topk_edgeidx_local_uncached_popularity_pairs_.size(), is_global_cached, placement_edgeset);
+        UNUSED(placement_edgeset);
+        
+        return max_global_admission_benefit;
+    }
+
+    DeltaReward AggregatedUncachedPopularity::calcGlobalAdmissionBenefit(const uint32_t& topicnt, const bool& is_global_cached, std::unordered_set<uint32_t>& placement_edgeset) const
+    {
         // TODO: Use a heuristic or learning-based approach for parameter tuning to calculate delta rewards for max global admission benefits (refer to state-of-the-art studies such as LRB and GL-Cache)
 
-        DeltaReward max_global_admission_benefit = 0.0;
+        // Get weight parameters from static class atomically
+        const WeightInfo weight_info = CoveredWeight::getWeightInfo();
+        const Weight local_hit_weight = weight_info.getLocalHitWeight();
+        const Weight cooperative_hit_weight = weight_info.getCooperativeHitWeight();
+
+        DeltaReward global_admission_benefit = 0.0;
+        Popularity topi_local_uncached_popularity_ = getTopiLocalUncachedPopularitySum_(topicnt, placement_edgeset);
         if (is_global_cached) // Redirected cache hits become local cache hits for the edge nodes with top-k local uncached popularity
         {
-            // max_global_admission_benefit = (w1 - w2) * topk_local_uncached_popularity_;
+            global_admission_benefit = (local_hit_weight - cooperative_hit_weight) * topi_local_uncached_popularity_; // (w1 - w2)
         }
         else // Global cache misses become local cache hits for the edge nodes with top-k local uncached popularity, and global cache misses become redirected cache hits for other edge nodes
         {
-            // max_global_admission_benefit = w1 * topk_local_uncached_popularity_ + w2 * (sum_local_uncached_popularity_ - topk_local_uncached_popularity_);
+            global_admission_benefit = local_hit_weight * topi_local_uncached_popularity_; // w1
+            assert(sum_local_uncached_popularity_ >= topi_local_uncached_popularity_);
+            global_admission_benefit += cooperative_hit_weight * (sum_local_uncached_popularity_ - topi_local_uncached_popularity_); // w2
         }
-        return max_global_admission_benefit;
+        return global_admission_benefit;
     }
 
     uint64_t AggregatedUncachedPopularity::getSizeForCapacity() const
@@ -172,6 +200,31 @@ namespace covered
     }
 
     // For top-k list
+
+    Popularity AggregatedUncachedPopularity::getTopiLocalUncachedPopularitySum_(const uint32_t& topicnt, std::unordered_set<uint32_t>& placement_edgeset) const
+    {
+        const uint32_t topk_list_length = topk_edgeidx_local_uncached_popularity_pairs_.size();
+        assert(topicnt <= topk_list_length);
+
+        // NOTE: topk_edgeidx_local_uncached_popularity_pairs_ follows an ascending order of local uncached popularity -> we need to choose the last topicnt local uncached popularities
+        const uint32_t offset_to_head = topk_list_length - topicnt;
+        std::list<edgeidx_popularity_pair_t>::const_iterator topk_list_iter = topk_edgeidx_local_uncached_popularity_pairs_.begin();
+        if (offset_to_head > 0)
+        {
+            std::advance(topk_list_iter, offset_to_head);
+        }
+
+        // From the offset of list head to the list tail
+        Popularity topi_local_uncached_popularity_ = 0.0;
+        placement_edgeset.clear();
+        for (; topk_list_iter != topk_edgeidx_local_uncached_popularity_pairs_.end(); topk_list_iter++)
+        {
+            topi_local_uncached_popularity_ += topk_list_iter->second;
+            placement_edgeset.insert(topk_list_iter->first);
+        }
+
+        return topi_local_uncached_popularity_;
+    }
 
     std::list<AggregatedUncachedPopularity::edgeidx_popularity_pair_t>::const_iterator AggregatedUncachedPopularity::getTopkListIterForEdgeIdx_(const uint32_t& source_edge_idx) const
     {

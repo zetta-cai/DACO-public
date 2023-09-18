@@ -1,6 +1,7 @@
 #include "cli/propagation_cli.h"
 
 #include "common/config.h"
+#include "common/covered_weight.h"
 #include "common/util.h"
 
 namespace covered
@@ -68,6 +69,11 @@ namespace covered
             propagation_latency_clientedge_us_ = propagation_latency_clientedge_us;
             propagation_latency_crossedge_us_ = propagation_latency_crossedge_us;
             propagation_latency_edgecloud_us_ = propagation_latency_edgecloud_us;
+
+            // Set CoveredWeight
+            Weight local_hit_weight = propagation_latency_edgecloud_us_ - propagation_latency_clientedge_us_; // w1
+            Weight cooperative_hit_weight = propagation_latency_edgecloud_us_ - propagation_latency_crossedge_us_; // w2
+            CoveredWeight::setWeightInfo(WeightInfo(local_hit_weight, cooperative_hit_weight));
 
             is_set_param_and_config_ = true;
         }

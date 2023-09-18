@@ -14,7 +14,7 @@
 #include <string>
 #include <unordered_map>
 
-#include "cache/covered/common_header.h"
+#include "common/covered_common_header.h"
 #include "concurrency/rwlock.h"
 #include "cooperation/directory/directory_info.h"
 
