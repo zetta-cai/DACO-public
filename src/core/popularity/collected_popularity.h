@@ -34,6 +34,11 @@ namespace covered
 
         bool is_tracked_; // Whether key is tracked by the sender (i.e., whether local_uncached_popularity_ is valid)
         Popularity local_uncached_popularity_; // For popularity collection
+
+        // For placement calculation
+        // TODO: END HERE
+        ObjectSize object_size_;
+        uint64_t cache_margin_bytes_;
     };
 }
 

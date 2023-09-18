@@ -1,5 +1,7 @@
 #include "core/popularity/collected_popularity.h"
 
+#include <assert.h>
+
 namespace covered
 {
     const std::string CollectedPopularity::kClassName = "CollectedPopularity";
