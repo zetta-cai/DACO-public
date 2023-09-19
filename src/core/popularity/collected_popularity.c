@@ -46,7 +46,7 @@ namespace covered
         if (is_tracked_) // local_uncached_popularity_ and object_size_ are valid
         {
             // track flag + local uncached popularity + object size
-            collected_popularity_payload_size = sizeof(bool) + sizeof(Popularity) + sizeof(uint32_t);
+            collected_popularity_payload_size = sizeof(bool) + sizeof(Popularity) + sizeof(ObjectSize);
         }
         else // local_uncached_popularity_ is invalid
         {
@@ -65,8 +65,8 @@ namespace covered
         {
             msg_payload.deserialize(size, (const char*)&local_uncached_popularity_, sizeof(Popularity));
             size += sizeof(Popularity);
-            msg_payload.deserialize(size, (const char*)&object_size_, sizeof(uint32_t));
-            size += sizeof(uint32_t);
+            msg_payload.deserialize(size, (const char*)&object_size_, sizeof(ObjectSize));
+            size += sizeof(ObjectSize);
         }
         return size - position;
     }
@@ -80,8 +80,8 @@ namespace covered
         {
             msg_payload.serialize(size, (char*)&local_uncached_popularity_, sizeof(Popularity));
             size += sizeof(Popularity);
-            msg_payload.serialize(size, (char*)&object_size_, sizeof(uint32_t));
-            size += sizeof(uint32_t);
+            msg_payload.serialize(size, (char*)&object_size_, sizeof(ObjectSize));
+            size += sizeof(ObjectSize);
         }
         return size - position;
     }

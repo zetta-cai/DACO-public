@@ -233,20 +233,20 @@ namespace covered
         return local_synced_victim_cacheinfos;
     }
 
-    bool CacheWrapper::getLocalUncachedPopularity(const Key& key, Popularity& local_uncached_popularity, const ObjectSize& object_size) const
+    void CacheWrapper::getCollectedPopularity(const Key& key, CollectedPopularity& collected_popularity) const
     {
         checkPointers_();
 
         // Acquire a read lock
-        std::string context_name = "CacheWrapper::getLocalUncachedPopularity()";
+        std::string context_name = "CacheWrapper::getCollectedPopularity()";
         cache_wrapper_perkey_rwlock_ptr_->acquire_lock_shared(key, context_name);
 
-        bool is_key_tracked = local_cache_ptr_->getLocalUncachedPopularityFromLocalCache(key, local_uncached_popularity, object_size);
+        local_cache_ptr_->getCollectedPopularityFromLocalCache(key, collected_popularity);
 
         // Release a read lock
         cache_wrapper_perkey_rwlock_ptr_->unlock_shared(key, context_name);
 
-        return is_key_tracked;
+        return;
     }
 
     // (3) Local edge cache management

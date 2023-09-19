@@ -13,12 +13,13 @@
 #include <string>
 #include <vector>
 
-#include "common/covered_common_header.h"
 #include "cache/local_cache_base.h"
 #include "cache/validity_map.h"
+#include "common/covered_common_header.h"
 #include "common/key.h"
 #include "common/value.h"
 #include "concurrency/perkey_rwlock.h"
+#include "core/popularity/collected_popularity.h"
 #include "core/victim/victim_cacheinfo.h"
 
 namespace covered
@@ -54,9 +55,9 @@ namespace covered
         // Return up to peredge_synced_victimcnt local synced victims with the least local rewards
         std::list<VictimCacheinfo> getLocalSyncedVictimCacheinfos() const;
 
-        // Return true if the local uncached key is tracked
-        // NOTE: return false if key is either local cached or local uncached yet untracked by local uncached metadata
-        bool getLocalUncachedPopularity(const Key& key, Popularity& local_uncached_popularity, const ObjectSize& object_size) const;
+        // Set collected_popularity.is_tracked_ as true if the local uncached key is tracked
+        // NOTE: collected_popularity.is_tracked_ is false if key is either local cached or local uncached yet untracked by local uncached metadata
+        void getCollectedPopularity(const Key& key, CollectedPopularity& collected_popularity) const;
 
         // (3) Local edge cache management
 

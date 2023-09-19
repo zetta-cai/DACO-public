@@ -126,11 +126,15 @@ namespace covered
         return local_synced_victim_cacheinfos;
     }
 
-    bool CoveredLocalCache::getLocalUncachedPopularityFromLocalCacheInternal_(const Key& key, Popularity& local_uncached_popularity, const ObjectSize& object_size) const
+    void CoveredLocalCache::getCollectedPopularityFromLocalCacheInternal_(const Key& key, CollectedPopularity& collected_popularity) const
     {
-        bool is_key_tracked = local_uncached_metadata_.getPopularity(key, local_uncached_popularity, object_size);
+        Popularity local_uncached_popularity = 0.0;
+        ObjectSize object_size = 0;
+        bool is_key_tracked = local_uncached_metadata_.getLocalUncachedPopularityAndAvgObjectSize(key, local_uncached_popularity, object_size);
 
-        return is_key_tracked;
+        collected_popularity = CollectedPopularity(is_key_tracked, local_uncached_popularity, object_size);
+
+        return;
     }
 
     bool CoveredLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value, bool& affect_victim_tracker)
@@ -168,7 +172,7 @@ namespace covered
         bool is_key_tracked = local_uncached_metadata_.isKeyExist(key);
         if (is_key_tracked)
         {
-            uint32_t approx_original_value_size = local_uncached_metadata_.getApproxValueForUncachedObjects(key);
+            uint32_t approx_original_value_size = local_uncached_metadata_.getApproxValueSizeForUncachedObjects(key);
             local_uncached_metadata_.updateForExistingKey(key, value, Value(approx_original_value_size), is_value_related); // For getrsp with cache miss, put/delrsp with cache miss
         }
         else

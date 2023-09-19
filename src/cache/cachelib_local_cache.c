@@ -96,14 +96,12 @@ namespace covered
         return local_synced_victim_cacheinfos;
     }
 
-    bool CachelibLocalCache::getLocalUncachedPopularityFromLocalCacheInternal_(const Key& key, Popularity& local_uncached_popularity, const ObjectSize& object_size) const
+    void CachelibLocalCache::getCollectedPopularityFromLocalCacheInternal_(const Key& key, CollectedPopularity& collected_popularity) const
     {
-        bool is_key_tracked = false;
-
-        Util::dumpErrorMsg(instance_name_, "getLocalUncachedPopularityFromLocalCacheInternal_() can ONLY be invoked by COVERED local cache!");
+        Util::dumpErrorMsg(instance_name_, "getCollectedPopularityFromLocalCacheInternal_() can ONLY be invoked by COVERED local cache!");
         exit(1);
 
-        return is_key_tracked;
+        return;
     }
 
     bool CachelibLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value, bool& affect_victim_tracker)

@@ -15,7 +15,28 @@ namespace covered
 
     // ONLY for local uncached objects
 
-    uint32_t LocalUncachedMetadata::getApproxValueForUncachedObjects(const Key& key) const
+    bool LocalUncachedMetadata::getLocalUncachedPopularityAndAvgObjectSize(const Key& key, Popularity& local_uncached_popularity, ObjectSize& avg_object_size) const
+    {
+        bool is_key_exist = false;
+
+        // Get lookup iterator
+        perkey_lookup_const_iter_t perkey_lookup_const_iter = tryToGetLookup_(key);
+
+        // Get popularity if key exists
+        if (perkey_lookup_const_iter != perkey_lookup_table_.end())
+        {
+            local_uncached_popularity = getPopularity_(perkey_lookup_const_iter);
+
+            const GroupLevelMetadata& pergroup_metadata_ref = getGroupLevelMetadata_(perkey_lookup_const_iter);
+            avg_object_size = pergroup_metadata_ref.getAvgObjectSize();
+
+            is_key_exist = true;
+        }
+
+        return is_key_exist;
+    }
+
+    uint32_t LocalUncachedMetadata::getApproxValueSizeForUncachedObjects(const Key& key) const
     {
         // Get lookup iterator
         perkey_lookup_const_iter_t perkey_lookup_const_iter = getLookup_(key);
@@ -62,7 +83,7 @@ namespace covered
             bool need_detrack = needDetrackForUncachedObjects_(detracked_key);
             if (need_detrack) // Cache size usage for local uncached objects exceeds the max bytes limitation
             {
-                uint32_t approx_detracked_value_size = getApproxValueForUncachedObjects(detracked_key);
+                uint32_t approx_detracked_value_size = getApproxValueSizeForUncachedObjects(detracked_key);
                 removeForExistingKey(detracked_key, Value(approx_detracked_value_size)); // For getrsp with cache miss, put/delrsp with cache miss
             }
             else // Local uncached objects is limited

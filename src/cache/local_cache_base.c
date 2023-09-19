@@ -116,18 +116,18 @@ namespace covered
         return local_synced_victim_cacheinfos;
     }
 
-    bool LocalCacheBase::getLocalUncachedPopularityFromLocalCache(const Key& key, Popularity& local_uncached_popularity, const ObjectSize& object_size) const
+    void LocalCacheBase::getCollectedPopularityFromLocalCache(const Key& key, CollectedPopularity& collected_popularity) const
     {
         checkPointers_();
 
         // Acquire a read lock to get local metadata atomically
-        std::string context_name = "LocalCacheBase::getLocalUncachedPopularityFromLocalCache()";
+        std::string context_name = "LocalCacheBase::getCollectedPopularityFromLocalCache()";
         rwlock_for_local_cache_ptr_->acquire_lock_shared(context_name);
 
-        bool is_key_tracked = getLocalUncachedPopularityFromLocalCacheInternal_(key, local_uncached_popularity, object_size);
+        getCollectedPopularityFromLocalCacheInternal_(key, collected_popularity);
 
         rwlock_for_local_cache_ptr_->unlock_shared(context_name);
-        return is_key_tracked;
+        return;
     }
 
     bool LocalCacheBase::updateLocalCache(const Key& key, const Value& value, bool& affect_victim_tracker)

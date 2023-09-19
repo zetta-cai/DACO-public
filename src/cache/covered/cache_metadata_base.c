@@ -105,23 +105,6 @@ namespace covered
         return is_least_popular_key_exist;
     }
 
-    bool CacheMetadataBase::getPopularity(const Key& key, Popularity& popularity, const ObjectSize& object_size) const
-    {
-        bool is_key_exist = false;
-
-        // Get lookup iterator
-        perkey_lookup_const_iter_t perkey_lookup_const_iter = tryToGetLookup_(key);
-
-        // Get popularity if key exists
-        if (perkey_lookup_const_iter != perkey_lookup_table_.end())
-        {
-            popularity = getPopularity_(perkey_lookup_const_iter);
-            is_key_exist = true;
-        }
-
-        return is_key_exist;
-    }
-
     void CacheMetadataBase::removeForExistingKey(const Key& detracked_key, const Value& detracked_value)
     {
         // Get lookup iterator
