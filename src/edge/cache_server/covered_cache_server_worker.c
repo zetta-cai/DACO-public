@@ -638,6 +638,11 @@ namespace covered
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
         CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
 
+        // Get local edge margin bytes
+        uint64_t used_bytes = tmp_edge_wrapper_ptr->getSizeForCapacity();
+        uint64_t capacity_bytes = tmp_edge_wrapper_ptr->getCapacityBytes();
+        uint64_t local_cache_margin_bytes = (capacity_bytes >= used_bytes) ? (capacity_bytes - used_bytes) : 0;
+
         // Get victim cacheinfos of local synced victims for the current edge node
         std::list<VictimCacheinfo> local_synced_victim_cacheinfos = tmp_edge_wrapper_ptr->getEdgeCachePtr()->getLocalSyncedVictimCacheinfos();
 
@@ -656,7 +661,7 @@ namespace covered
         }
 
         // Update local synced victims for the current edge node
-        tmp_covered_cache_manager_ptr->updateVictimTrackerForLocalSyncedVictims(local_synced_victim_cacheinfos, local_beaconed_local_synced_victim_dirinfosets); 
+        tmp_covered_cache_manager_ptr->updateVictimTrackerForLocalSyncedVictims(local_cache_margin_bytes, local_synced_victim_cacheinfos, local_beaconed_local_synced_victim_dirinfosets); 
 
         return;
     }

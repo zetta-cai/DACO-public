@@ -7,6 +7,46 @@
 
 namespace covered
 {
+    // EdgeLevelVictimMetadata
+
+    const std::string EdgeLevelVictimMetadata::kClassName = "EdgeLevelVictimMetadata";
+
+    EdgeLevelVictimMetadata::EdgeLevelVictimMetadata() : cache_margin_bytes_(0)
+    {
+        victim_cacheinfos_.clear();
+    }
+
+    EdgeLevelVictimMetadata::EdgeLevelVictimMetadata(const uint64_t& cache_margin_bytes, const std::list<VictimCacheinfo>& victim_cacheinfos)
+    {
+        cache_margin_bytes_ = cache_margin_bytes;
+        victim_cacheinfos_ = victim_cacheinfos;
+    }
+
+    EdgeLevelVictimMetadata::~EdgeLevelVictimMetadata() {}
+
+    uint64_t EdgeLevelVictimMetadata::getCacheMarginBytes() const
+    {
+        return cache_margin_bytes_;
+    }
+
+    std::list<VictimCacheinfo> EdgeLevelVictimMetadata::getVictimCacheinfos() const
+    {
+        return victim_cacheinfos_;
+    }
+
+    const EdgeLevelVictimMetadata& EdgeLevelVictimMetadata::operator=(const EdgeLevelVictimMetadata& other)
+    {
+        if (this != &other)
+        {
+            cache_margin_bytes_ = other.cache_margin_bytes_;
+            victim_cacheinfos_ = other.victim_cacheinfos_;
+        }
+
+        return *this;
+    }
+
+    // VictimTracker
+
     const std::string VictimTracker::kClassName = "VictimTracker";
 
     VictimTracker::VictimTracker(const uint32_t& edge_idx, const uint32_t& peredge_synced_victimcnt) : edge_idx_(edge_idx), peredge_synced_victimcnt_(peredge_synced_victimcnt)
@@ -23,7 +63,7 @@ namespace covered
         assert(rwlock_for_victim_tracker_ != NULL);
 
         size_bytes_ = 0;
-        peredge_victim_cacheinfos_.clear();
+        peredge_victim_metadata_.clear();
         perkey_victim_dirinfo_.clear();
     }
 
@@ -34,7 +74,7 @@ namespace covered
         rwlock_for_victim_tracker_ = NULL;
     }
 
-    void VictimTracker::updateLocalSyncedVictims(const std::list<VictimCacheinfo>& local_synced_victim_cacheinfos, const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& local_beaconed_local_synced_victim_dirinfosets)
+    void VictimTracker::updateLocalSyncedVictims(const uint64_t& local_cache_margin_bytes, const std::list<VictimCacheinfo>& local_synced_victim_cacheinfos, const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& local_beaconed_local_synced_victim_dirinfosets)
     {
         // NOTE: limited computation overhead to update local synced victim infos, as we track limited number of local synced victims for the current edge node
 
@@ -47,7 +87,7 @@ namespace covered
         rwlock_for_victim_tracker_->acquire_lock(context_name);
 
         // Replace VictimCacheinfors for local synced victims of current edge node
-        replaceVictimCacheinfosForEdgeIdx_(edge_idx_, local_synced_victim_cacheinfos);
+        replaceVictimMetadataForEdgeIdx_(edge_idx_, local_cache_margin_bytes, local_synced_victim_cacheinfos);
 
         // Replace VictimDirinfo::dirinfoset for each local beaconed local synced victim of current edge node
         replaceVictimDirinfoSets_(local_beaconed_local_synced_victim_dirinfosets, true);
@@ -98,12 +138,14 @@ namespace covered
         std::string context_name = "VictimTracker::getVictimSyncset()";
         rwlock_for_victim_tracker_->acquire_lock_shared(context_name);
 
-        // Get local synced victims
+        // Get cache margin bytes and local synced victims
+        uint64_t local_cache_margin_bytes = 0;
         std::list<VictimCacheinfo> local_synced_victims;
-        peredge_victim_cacheinfos_t::const_iterator cacheinfo_map_iter = peredge_victim_cacheinfos_.find(edge_idx_);
-        if (cacheinfo_map_iter != peredge_victim_cacheinfos_.end())
+        peredge_victim_metadata_t::const_iterator victim_metadata_map_const_iter = peredge_victim_metadata_.find(edge_idx_);
+        if (victim_metadata_map_const_iter != peredge_victim_metadata_.end())
         {
-            local_synced_victims = cacheinfo_map_iter->second;
+            local_cache_margin_bytes = victim_metadata_map_const_iter->second.getCacheMarginBytes();
+            local_synced_victims = victim_metadata_map_const_iter->second.getVictimCacheinfos();
         }
 
         // Get local beaconed victims
@@ -118,7 +160,7 @@ namespace covered
             }
         }
 
-        VictimSyncset victim_syncset(local_synced_victims, local_beaconed_victims);
+        VictimSyncset victim_syncset(local_cache_margin_bytes, local_synced_victims, local_beaconed_victims);
 
         rwlock_for_victim_tracker_->unlock_shared(context_name);
 
@@ -131,6 +173,7 @@ namespace covered
 
         checkPointers_();
 
+        const uint64_t neighbor_cache_margin_bytes = victim_syncset.getCacheMarginBytes();
         const std::list<VictimCacheinfo>& neighbor_synced_victim_cacheinfos = victim_syncset.getLocalSyncedVictimsRef();
         assert(local_beaconed_neighbor_synced_victim_dirinfosets.size() <= neighbor_synced_victim_cacheinfos.size());
 
@@ -139,7 +182,7 @@ namespace covered
         rwlock_for_victim_tracker_->acquire_lock(context_name);
         
         // Replace VictimCacheinfos for neighbor synced victims of the given edge node
-        replaceVictimCacheinfosForEdgeIdx_(source_edge_idx, neighbor_synced_victim_cacheinfos);
+        replaceVictimMetadataForEdgeIdx_(source_edge_idx, neighbor_cache_margin_bytes, neighbor_synced_victim_cacheinfos);
 
         // Try to replace VictimDirinfo::dirinfoset (if any) for each neighbor beaconed neighbor synced victim of the given edge node
         const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& neighbor_beaconed_victim_dirinfosets = victim_syncset.getLocalBeaconedVictimsRef();
@@ -168,7 +211,7 @@ namespace covered
         return total_size;
     }
 
-    void VictimTracker::replaceVictimCacheinfosForEdgeIdx_(const uint32_t& edge_idx, const std::list<VictimCacheinfo>& synced_victim_cacheinfos)
+    void VictimTracker::replaceVictimMetadataForEdgeIdx_(const uint32_t& edge_idx, const uint64_t& cache_margin_bytes, const std::list<VictimCacheinfo>& synced_victim_cacheinfos)
     {
         // NOTE: NO need to acquire a write lock which has been done in updateLocalSyncedVictims() and updateForVictimSyncset()
 
@@ -176,22 +219,23 @@ namespace covered
 
         // Update cacheinfos of synced victims for the specific edge node
         std::list<VictimCacheinfo> old_synced_victim_cacheinfos;
-        peredge_victim_cacheinfos_t::iterator cacheinfo_map_iter = peredge_victim_cacheinfos_.find(edge_idx);
-        if (cacheinfo_map_iter == peredge_victim_cacheinfos_.end()) // No synced victims for the specific edge node
+        peredge_victim_metadata_t::iterator victim_metadata_map_iter = peredge_victim_metadata_.find(edge_idx);
+        if (victim_metadata_map_iter == peredge_victim_metadata_.end()) // No synced victims for the specific edge node
         {
             // Add latest synced victims for the specific edge node
-            cacheinfo_map_iter = peredge_victim_cacheinfos_.insert(std::pair(edge_idx, synced_victim_cacheinfos)).first;
-            assert(cacheinfo_map_iter != peredge_victim_cacheinfos_.end());
+            victim_metadata_map_iter = peredge_victim_metadata_.insert(std::pair(edge_idx, EdgeLevelVictimMetadata(cache_margin_bytes, synced_victim_cacheinfos))).first;
+            assert(victim_metadata_map_iter != peredge_victim_metadata_.end());
 
             size_bytes_ = Util::uint64Add(size_bytes_, sizeof(uint32_t)); // For edge_idx
+            size_bytes_ = Util::uint64Add(size_bytes_, sizeof(uint64_t)); // For cache_margin_bytes
         }
         else // Current edge node has tracked some local synced victims before
         {
             // Preserve old local synced victim cacheinfos if any
-            old_synced_victim_cacheinfos = cacheinfo_map_iter->second;
+            old_synced_victim_cacheinfos = victim_metadata_map_iter->second.getVictimCacheinfos();
 
             // Replace old local synced victim cacheinfos with the latest ones
-            cacheinfo_map_iter->second = synced_victim_cacheinfos;
+            victim_metadata_map_iter->second = EdgeLevelVictimMetadata(cache_margin_bytes, synced_victim_cacheinfos);
         }
 
         // Update victim dirinfos for new synced victim keys
@@ -241,7 +285,6 @@ namespace covered
 
     void VictimTracker::replaceVictimDirinfoSets_(const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& beaconed_synced_victim_dirinfosets, const bool& is_local_beaconed)
     {
-
         // Update victim dirinfos for beaconed victims
         for (std::unordered_map<Key, dirinfo_set_t, KeyHasher>::const_iterator beaconed_dirinfosets_map_iter = beaconed_synced_victim_dirinfosets.begin(); beaconed_dirinfosets_map_iter != beaconed_synced_victim_dirinfosets.end(); beaconed_dirinfosets_map_iter++)
         {

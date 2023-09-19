@@ -28,13 +28,31 @@
 
 namespace covered
 {
+    class EdgeLevelVictimMetadata
+    {
+    public:
+        EdgeLevelVictimMetadata();
+        EdgeLevelVictimMetadata(const uint64_t& cache_margin_bytes, const std::list<VictimCacheinfo>& victim_cacheinfos);
+        ~EdgeLevelVictimMetadata();
+
+        uint64_t getCacheMarginBytes() const;
+        std::list<VictimCacheinfo> getVictimCacheinfos() const;
+
+        const EdgeLevelVictimMetadata& operator=(const EdgeLevelVictimMetadata& other);
+    private:
+        static const std::string kClassName;
+
+        uint64_t cache_margin_bytes_;
+        std::list<VictimCacheinfo> victim_cacheinfos_;
+    };
+
     class VictimTracker
     {
     public:
         VictimTracker(const uint32_t& edge_idx, const uint32_t& peredge_synced_victimcnt);
         ~VictimTracker();
 
-        void updateLocalSyncedVictims(const std::list<VictimCacheinfo>& local_synced_victim_cacheinfos, const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& local_beaconed_local_synced_victim_dirinfosets); // For updates on local cached metadata, which affects cacheinfos and dirinfos of local synced victims
+        void updateLocalSyncedVictims(const uint64_t& local_cache_margin_bytes, const std::list<VictimCacheinfo>& local_synced_victim_cacheinfos, const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& local_beaconed_local_synced_victim_dirinfosets); // For updates on local cached metadata, which affects cacheinfos and dirinfos of local synced victims
         void updateSyncedVictimDirinfo(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info); // For updates on content directory information, which affects dirinfos of local beaconed victims
 
         // For victim synchronization
@@ -44,12 +62,12 @@ namespace covered
         uint64_t getSizeForCapacity() const;
     private:
         // NOTE: the list of VictimCacheinfos follows the ascending order of local rewards
-        typedef std::unordered_map<uint32_t, std::list<VictimCacheinfo>> peredge_victim_cacheinfos_t;
+        typedef std::unordered_map<uint32_t, EdgeLevelVictimMetadata> peredge_victim_metadata_t;
         typedef std::unordered_map<Key, VictimDirinfo, KeyHasher> perkey_victim_dirinfo_t;
 
         static const std::string kClassName;
 
-        void replaceVictimCacheinfosForEdgeIdx_(const uint32_t& edge_idx, const std::list<VictimCacheinfo>& synced_victim_cacheinfos); // Replace cacheinfos of local/neighbor synced victims for a specific edge node
+        void replaceVictimMetadataForEdgeIdx_(const uint32_t& edge_idx, const uint64_t& cache_margin_bytes, const std::list<VictimCacheinfo>& synced_victim_cacheinfos); // Replace cache margin bytes and cacheinfos of local/neighbor synced victims for a specific edge node
         void replaceVictimDirinfoSets_(const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& beaconed_synced_victim_dirinfosets, const bool& is_local_beaconed); // Replace VictimDirinfo::dirinfoset of each local/neighbor beaconed victim
 
         void checkPointers_() const;
@@ -66,7 +84,7 @@ namespace covered
         // Non-const shared varaibles
         // TODO: Maintain per-edge-node margin bytes to decide whether to perform placement calculation or not
         uint64_t size_bytes_; // Cache size usage of victim tracker
-        peredge_victim_cacheinfos_t peredge_victim_cacheinfos_;
+        peredge_victim_metadata_t peredge_victim_metadata_;
         perkey_victim_dirinfo_t perkey_victim_dirinfo_;
     };
 }

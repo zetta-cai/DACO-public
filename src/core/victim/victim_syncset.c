@@ -4,13 +4,18 @@ namespace covered
 {
     const std::string VictimSyncset::kClassName = "VictimSyncset";
 
-    VictimSyncset::VictimSyncset(const std::list<VictimCacheinfo>& local_synced_victims, const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& local_beaconed_victims) : local_synced_victims_(local_synced_victims), local_beaconed_victims_(local_beaconed_victims)
+    VictimSyncset::VictimSyncset(const uint64_t& cache_margin_bytes, const std::list<VictimCacheinfo>& local_synced_victims, const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& local_beaconed_victims) : cache_margin_bytes_(cache_margin_bytes), local_synced_victims_(local_synced_victims), local_beaconed_victims_(local_beaconed_victims)
     {
         local_synced_victims_.clear();
         local_beaconed_victims_.clear();
     }
 
     VictimSyncset::~VictimSyncset() {}
+
+    uint64_t VictimSyncset::getCacheMarginBytes() const
+    {
+        return cache_margin_bytes_;
+    }
 
     const std::list<VictimCacheinfo>& VictimSyncset::getLocalSyncedVictimsRef() const
     {
@@ -27,6 +32,9 @@ namespace covered
         // TODO: we can tune the sizes of local synched/beaconed victims, as the numbers are limited under our design (at most peredge_synced_victimcnt and peredge_synced_victimcnt * edgecnt)
 
         uint32_t victim_syncset_payload_size = 0;
+
+        // Cache margin bytes
+        victim_syncset_payload_size += sizeof(uint64_t);
 
         // Local synced victims
         victim_syncset_payload_size += sizeof(uint32_t); // Size of local_synced_victims_
@@ -56,6 +64,10 @@ namespace covered
     uint32_t VictimSyncset::serialize(DynamicArray& msg_payload, const uint32_t& position) const
     {
         uint32_t size = position;
+
+        // Cache margin bytes
+        msg_payload.deserialize(size, (const char*)&cache_margin_bytes_, sizeof(uint64_t));
+        size += sizeof(uint64_t);
 
         // Size of local synced victims
         uint32_t local_synced_victims_size = local_synced_victims_.size();
@@ -100,6 +112,10 @@ namespace covered
     uint32_t VictimSyncset::deserialize(const DynamicArray& msg_payload, const uint32_t& position)
     {
         uint32_t size = position;
+
+        // Cache margin bytes
+        msg_payload.serialize(size, (char*)&cache_margin_bytes_, sizeof(uint64_t));
+        size += sizeof(uint64_t);
 
         // Size of local synced victims
         uint32_t local_synced_victims_size = 0;
@@ -153,6 +169,7 @@ namespace covered
 
     const VictimSyncset& VictimSyncset::operator=(const VictimSyncset& other)
     {
+        cache_margin_bytes_ = other.cache_margin_bytes_;
         local_synced_victims_ = other.local_synced_victims_;
         local_beaconed_victims_ = other.local_beaconed_victims_;
         
