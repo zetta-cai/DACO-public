@@ -116,7 +116,7 @@ namespace covered
         return local_synced_victim_cacheinfos;
     }
 
-    bool LocalCacheBase::getLocalUncachedPopularityFromLocalCache(const Key& key, Popularity& local_uncached_popularity) const
+    bool LocalCacheBase::getLocalUncachedPopularityFromLocalCache(const Key& key, Popularity& local_uncached_popularity, const ObjectSize& object_size) const
     {
         checkPointers_();
 
@@ -124,7 +124,7 @@ namespace covered
         std::string context_name = "LocalCacheBase::getLocalUncachedPopularityFromLocalCache()";
         rwlock_for_local_cache_ptr_->acquire_lock_shared(context_name);
 
-        bool is_key_tracked = getLocalUncachedPopularityFromLocalCacheInternal_(key, local_uncached_popularity);
+        bool is_key_tracked = getLocalUncachedPopularityFromLocalCacheInternal_(key, local_uncached_popularity, object_size);
 
         rwlock_for_local_cache_ptr_->unlock_shared(context_name);
         return is_key_tracked;

@@ -62,7 +62,7 @@ namespace covered
         return local_synced_victim_cacheinfos;
     }
 
-    bool LruLocalCache::getLocalUncachedPopularityFromLocalCacheInternal_(const Key& key, Popularity& local_uncached_popularity) const
+    bool LruLocalCache::getLocalUncachedPopularityFromLocalCacheInternal_(const Key& key, Popularity& local_uncached_popularity, const ObjectSize& object_size) const
     {
         bool is_key_tracked = false;
 

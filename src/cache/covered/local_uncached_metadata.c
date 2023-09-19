@@ -15,21 +15,6 @@ namespace covered
 
     // ONLY for local uncached objects
 
-    bool LocalUncachedMetadata::needDetrackForUncachedObjects_(Key& detracked_key) const
-    {
-        //uint32_t cur_trackcnt = perkey_lookup_table_.size();
-        uint64_t cache_size_usage_for_uncached_objects = getSizeForCapacity();
-        if (cache_size_usage_for_uncached_objects > max_bytes_for_uncached_objects_)
-        {
-            detracked_key = sorted_popularity_multimap_.begin()->second;
-            return true;
-        }
-        else
-        {
-            return false;
-        }
-    }
-
     uint32_t LocalUncachedMetadata::getApproxValueForUncachedObjects(const Key& key) const
     {
         // Get lookup iterator
@@ -48,6 +33,21 @@ namespace covered
         }
 
         return approx_value_size;
+    }
+
+    bool LocalUncachedMetadata::needDetrackForUncachedObjects_(Key& detracked_key) const
+    {
+        //uint32_t cur_trackcnt = perkey_lookup_table_.size();
+        uint64_t cache_size_usage_for_uncached_objects = getSizeForCapacity();
+        if (cache_size_usage_for_uncached_objects > max_bytes_for_uncached_objects_)
+        {
+            detracked_key = sorted_popularity_multimap_.begin()->second;
+            return true;
+        }
+        else
+        {
+            return false;
+        }
     }
 
     // Different for local uncached objects

@@ -96,7 +96,7 @@ namespace covered
         return local_synced_victim_cacheinfos;
     }
 
-    bool CachelibLocalCache::getLocalUncachedPopularityFromLocalCacheInternal_(const Key& key, Popularity& local_uncached_popularity) const
+    bool CachelibLocalCache::getLocalUncachedPopularityFromLocalCacheInternal_(const Key& key, Popularity& local_uncached_popularity, const ObjectSize& object_size) const
     {
         bool is_key_tracked = false;
 

@@ -28,8 +28,8 @@ namespace covered
         const Key& getKey() const;
         uint32_t getTopkListLength() const; // Get length k' of top-k list (k' <= topk_edgecnt)
 
-        void update(const uint32_t& source_edge_idx, const Popularity& local_uncached_popularity, const uint32_t& topk_edgecnt);
-        void clear(const uint32_t& source_edge_idx, const uint32_t& topk_edgecnt);
+        void update(const uint32_t& source_edge_idx, const Popularity& local_uncached_popularity, const uint32_t& topk_edgecnt, const ObjectSize& object_size);
+        bool clear(const uint32_t& source_edge_idx, const uint32_t& topk_edgecnt); // Return if exist_edgecnt_ == 0 (i.e., NO local uncached popularity for key) after clear
 
         DeltaReward calcMaxGlobalAdmissionBenefit(const bool& is_global_cached) const; // Max global admission benefit if admit key into all top-k edge nodes
         DeltaReward calcGlobalAdmissionBenefit(const uint32_t& topicnt, const bool& is_global_cached, std::unordered_set<uint32_t>& placement_edgeset) const; // Global admission benefit if admit key into top-i edge nodes (i <= top-k list length)
@@ -55,9 +55,11 @@ namespace covered
         static const std::string kClassName;
 
         Key key_;
+        ObjectSize object_size_;
         Popularity sum_local_uncached_popularity_;
         std::list<edgeidx_popularity_pair_t> topk_edgeidx_local_uncached_popularity_pairs_; // Sorted by local uncached popularity in ascending order
         std::vector<bool> bitmap_;
+        uint32_t exist_edgecnt_; // # of true in bitmap_
     };
 }
 

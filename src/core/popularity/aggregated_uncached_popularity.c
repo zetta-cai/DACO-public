@@ -9,13 +9,13 @@ namespace covered
 {
     const std::string AggregatedUncachedPopularity::kClassName("AggregatedUncachedPopularity");
 
-    AggregatedUncachedPopularity::AggregatedUncachedPopularity() : key_(), sum_local_uncached_popularity_(0.0)
+    AggregatedUncachedPopularity::AggregatedUncachedPopularity() : key_(), object_size_(0), sum_local_uncached_popularity_(0.0), exist_edgecnt_(0)
     {
         topk_edgeidx_local_uncached_popularity_pairs_.clear();
         bitmap_.clear();
     }
 
-    AggregatedUncachedPopularity::AggregatedUncachedPopularity(const Key& key, const uint32_t& edgecnt) : key_(key), sum_local_uncached_popularity_(0.0)
+    AggregatedUncachedPopularity::AggregatedUncachedPopularity(const Key& key, const uint32_t& edgecnt) : key_(key), object_size_(0), sum_local_uncached_popularity_(0.0), exist_edgecnt_(0)
     {
         topk_edgeidx_local_uncached_popularity_pairs_.clear();
         bitmap_.resize(edgecnt, false);
@@ -33,7 +33,7 @@ namespace covered
         return topk_edgeidx_local_uncached_popularity_pairs_.size();
     }
 
-    void AggregatedUncachedPopularity::update(const uint32_t& source_edge_idx, const Popularity& local_uncached_popularity, const uint32_t& topk_edgecnt)
+    void AggregatedUncachedPopularity::update(const uint32_t& source_edge_idx, const Popularity& local_uncached_popularity, const uint32_t& topk_edgecnt, const ObjectSize& object_size)
     {
         assert(source_edge_idx < bitmap_.size());
 
@@ -49,6 +49,7 @@ namespace covered
 
             // Update bitmap for the new edge idx
             bitmap_[source_edge_idx] = true;
+            exist_edgecnt_ += 1;
         }
         else // The source edge idx has reported local uncached popularity before
         {
@@ -65,11 +66,12 @@ namespace covered
 
             // NO need to update bitmap for the existing edge idx
         }
+        object_size_ = object_size;
 
         return;
     }
 
-    void AggregatedUncachedPopularity::clear(const uint32_t& source_edge_idx, const uint32_t& topk_edgecnt)
+    bool AggregatedUncachedPopularity::clear(const uint32_t& source_edge_idx, const uint32_t& topk_edgecnt)
     {
         assert(source_edge_idx < bitmap_.size());
 
@@ -88,7 +90,11 @@ namespace covered
 
             // Update bitmap for the removal
             bitmap_[source_edge_idx] = false;
+            assert(exist_edgecnt_ >= 1);
+            exist_edgecnt_ -= 1;
         }
+
+        return (exist_edgecnt_ == 0);
     }
 
     DeltaReward AggregatedUncachedPopularity::calcMaxGlobalAdmissionBenefit(const bool& is_global_cached) const
@@ -129,9 +135,11 @@ namespace covered
         uint64_t total_size = 0;
 
         total_size += key_.getKeyLength();
+        total_size += sizeof(ObjectSize);
         total_size += sizeof(Popularity);
         total_size += topk_edgeidx_local_uncached_popularity_pairs_.size() * (sizeof(uint32_t) + sizeof(Popularity));
         total_size += (bitmap_.size() * sizeof(bool) - 1) / 8 + 1; // NOTE: we just use std::vector<bool> to simulate a bitmap, but it can be replaced by a bitset with bitwise operations
+        total_size += sizeof(uint32_t); // exist_edgecnt_
 
         return total_size;
     }
@@ -141,9 +149,11 @@ namespace covered
         if (this != &other)
         {
             key_ = other.key_;
+            object_size_ = other.object_size_;
             sum_local_uncached_popularity_ = other.sum_local_uncached_popularity_;
             topk_edgeidx_local_uncached_popularity_pairs_ = other.topk_edgeidx_local_uncached_popularity_pairs_;
             bitmap_ = other.bitmap_;
+            exist_edgecnt_ = other.exist_edgecnt_;
         }
         return *this;
     }
@@ -168,20 +178,12 @@ namespace covered
             }
             assert(sum_topk_local_uncached_popularity <= sum_local_uncached_popularity_);
 
-            uint32_t exist_edgecnt = 0;
-            for (uint32_t tmp_edge_idx = 0; tmp_edge_idx < bitmap_.size(); tmp_edge_idx++)
-            {
-                if (bitmap_[tmp_edge_idx])
-                {
-                    exist_edgecnt++;
-                }
-            }
-
+            // NOTE: exist_edgecnt MUST be larger than topk_edgecnt, as the existing source edge idx is NOT in top-k list
             uint32_t topk_edgecnt = topk_edgeidx_local_uncached_popularity_pairs_.size();
-            assert(topk_edgecnt < exist_edgecnt); // NOTE: exist_edgecnt MUST be larger than topk_edgecnt, as the existing source edge idx is NOT in top-k list
+            assert(topk_edgecnt < exist_edgecnt_);
 
             // Use average of non-topk local uncached popularities to approximate the original one
-            local_uncached_popularity = (sum_local_uncached_popularity_ - sum_topk_local_uncached_popularity) / (exist_edgecnt - topk_edgecnt);
+            local_uncached_popularity = (sum_local_uncached_popularity_ - sum_topk_local_uncached_popularity) / (exist_edgecnt_ - topk_edgecnt);
         }
 
         return local_uncached_popularity;
@@ -279,10 +281,12 @@ namespace covered
                 const uint32_t min_edge_idx = topk_edgeidx_local_uncached_popularity_pairs_.front().first;
                 topk_edgeidx_local_uncached_popularity_pairs_.pop_front();
 
-                // Update sum and bitmap for the minimum local uncached popularity
-                minusLocalUncachedPopularityFromSum_(min_topk_local_uncached_popularity);
-                assert(bitmap_[min_edge_idx] == true);
-                bitmap_[min_edge_idx] = false;
+                // NOTE: NO need to remove min_edge_idx from sum and bitmap, as it still tracks the given key in local uncached metadata, which should hold in sum and bitmap
+
+                // (OBSELETE) Update sum and bitmap for the minimum local uncached popularity
+                //minusLocalUncachedPopularityFromSum_(min_topk_local_uncached_popularity);
+                //assert(bitmap_[min_edge_idx] == true);
+                //bitmap_[min_edge_idx] = false;
 
                 need_insert = true;
             }

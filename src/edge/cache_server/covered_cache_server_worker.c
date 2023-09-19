@@ -62,7 +62,9 @@ namespace covered
         // Prepare local uncached popularity of key for popularity aggregation
         // NOTE: NOT need piggyacking-based popularity collection and victim synchronization for local directory lookup
         Popularity local_uncached_popularity = 0.0;
-        bool is_key_tracked = tmp_edge_wrapper_ptr->getEdgeCachePtr()->getLocalUncachedPopularity(key, local_uncached_popularity); // If the local uncached key is tracked in local uncached metadata
+        ObjectSize object_size = 0;
+        ObjectSize object_size = 0;
+        bool is_key_tracked = tmp_edge_wrapper_ptr->getEdgeCachePtr()->getLocalUncachedPopularity(key, local_uncached_popularity, ); // If the local uncached key is tracked in local uncached metadata
 
         // NOTE: we always perform victim synchronization before popularity aggregation, as we need the latest synced victim information for placement calculation (note that victim tracker has been updated by getLocalEdgeCache_() before this function)
 

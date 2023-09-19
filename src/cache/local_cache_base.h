@@ -37,7 +37,7 @@ namespace covered
 
         bool getLocalCache(const Key& key, Value& value, bool& affect_victim_tracker) const; // Return whether key is cached
         std::list<VictimCacheinfo> getLocalSyncedVictimCacheinfosFromLocalCache() const; // Return up to peredge_synced_victimcnt local synced victims with the least local rewards
-        bool getLocalUncachedPopularityFromLocalCache(const Key& key, Popularity& local_uncached_popularity) const; // Return true if local uncached key is tracked
+        bool getLocalUncachedPopularityFromLocalCache(const Key& key, Popularity& local_uncached_popularity, const ObjectSize& object_size) const; // Return true if local uncached key is tracked
 
         bool updateLocalCache(const Key& key, const Value& value, bool& affect_victim_tracker); // Return whether key is cached
 
@@ -80,7 +80,7 @@ namespace covered
 
         virtual bool getLocalCacheInternal_(const Key& key, Value& value, bool& affect_victim_tracker) const = 0; // Return whether key is cached
         virtual std::list<VictimCacheinfo> getLocalSyncedVictimCacheinfosFromLocalCacheInternal_() const = 0; // Return up to peredge_synced_victimcnt local synced victims with the least local rewards
-        virtual bool getLocalUncachedPopularityFromLocalCacheInternal_(const Key& key, Popularity& local_uncached_popularity) const = 0; // Return true if local uncached key is tracked
+        virtual bool getLocalUncachedPopularityFromLocalCacheInternal_(const Key& key, Popularity& local_uncached_popularity, const ObjectSize& object_size) const = 0; // Return true if local uncached key is tracked
 
         virtual bool updateLocalCacheInternal_(const Key& key, const Value& value, bool& affect_victim_tracker) = 0; // Return whether key is cached
 

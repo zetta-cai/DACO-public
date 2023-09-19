@@ -67,7 +67,6 @@ namespace covered
 
         bool isKeyExist(const Key& key) const; // Check if key has been admitted or tracked for local cached or uncached object
         bool getLeastPopularKey(const uint32_t& least_popular_rank, Key& key) const; // Get ith least popular key for local cached or uncached object
-        bool getPopularity(const Key& key, Popularity& popularity) const; // Get popularity for local cached or uncached object; return true if key exists (i.e., admitted/tracked)
 
         void removeForExistingKey(const Key& detracked_key, const Value& value); // Remove admitted cached key or tracked uncached key (for getrsp with cache miss, put/delrsp with cache miss, admission, eviction)
 

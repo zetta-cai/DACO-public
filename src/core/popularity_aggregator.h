@@ -39,10 +39,10 @@ namespace covered
         typedef perkey_benefit_popularity_table_t::iterator perkey_benefit_popularity_iter_t;
         typedef perkey_benefit_popularity_table_t::const_iterator perkey_benefit_popularity_const_iter_t;
 
-        void addAggregatedUncachedPopularityForNewKey_(const Key& key, const uint32_t& source_edge_idx, const Popularity& local_uncached_popularity, const bool& is_global_cached);
+        void addAggregatedUncachedPopularityForNewKey_(const Key& key, const uint32_t& source_edge_idx, const Popularity& local_uncached_popularity, const ObjectSize& object_size, const bool& is_global_cached);
         // If is_tracked_by_source_edge_node = true, add/update latest local uncached popularity for key in source edge node (maybe increase cache size usage)
-        // Otherwise, remove old local uncached popularity for key in eedge node if any (NEVER increase cache size usage)
-        void updateAggregatedUncachedPopularityForExistingKey_(const Key& key, const uint32_t& source_edge_idx, const bool& is_tracked_by_source_edge_node, const Popularity& local_uncached_popularity, const bool& is_global_cached);
+        // Otherwise, remove old local uncached popularity for key in edge node if any (NEVER increase cache size usage)
+        void updateAggregatedUncachedPopularityForExistingKey_(const Key& key, const uint32_t& source_edge_idx, const bool& is_tracked_by_source_edge_node, const Popularity& local_uncached_popularity, const ObjectSize& object_size, const bool& is_global_cached);
 
         // NOTE: we ONLY keep aggregated uncached popularities of selected objects with large max global admission benefits for selective popularity aggregation
         void discardGlobalLessPopularObjects_();

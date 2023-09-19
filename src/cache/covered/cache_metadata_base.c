@@ -105,7 +105,7 @@ namespace covered
         return is_least_popular_key_exist;
     }
 
-    bool CacheMetadataBase::getPopularity(const Key& key, Popularity& popularity) const
+    bool CacheMetadataBase::getPopularity(const Key& key, Popularity& popularity, const ObjectSize& object_size) const
     {
         bool is_key_exist = false;
 

@@ -1,5 +1,5 @@
 /*
- * CollectedPopularity: a flag indicating whether the local uncached popularity is valid (i.e., belonging to a popular key tracked by local uncached metadata) and a local uncached popularity.
+ * CollectedPopularity: use a flag to indicate whether local uncached popularity and object size are valid (i.e., belonging to a popular key tracked by local uncached metadata).
  * 
  * By Siyuan Sheng (2023.09.07).
  */
@@ -18,11 +18,16 @@ namespace covered
     {
     public:
         CollectedPopularity();
-        CollectedPopularity(const bool& is_tracked, const Popularity& local_uncached_popularity);
+        CollectedPopularity(const bool& is_tracked, const Popularity& local_uncached_popularity, const ObjectSize& object_size);
         ~CollectedPopularity();
 
         bool isTracked() const;
+
+        // For popularity collection
         Popularity getLocalUncachedPopularity() const;
+
+        // For placement calculation
+        ObjectSize getObjectSize() const;
 
         uint32_t getCollectedPopularityPayloadSize() const;
         uint32_t serialize(DynamicArray& msg_payload, const uint32_t& position) const;
@@ -32,13 +37,13 @@ namespace covered
     private:
         static const std::string kClassName;
 
-        bool is_tracked_; // Whether key is tracked by the sender (i.e., whether local_uncached_popularity_ is valid)
-        Popularity local_uncached_popularity_; // For popularity collection
+        bool is_tracked_; // Whether key is tracked by the sender (i.e., whether local_uncached_popularity_ and object_size_ is valid)
+
+        // For popularity collection
+        Popularity local_uncached_popularity_;
 
         // For placement calculation
-        // TODO: END HERE
         ObjectSize object_size_;
-        uint64_t cache_margin_bytes_;
     };
 }
 

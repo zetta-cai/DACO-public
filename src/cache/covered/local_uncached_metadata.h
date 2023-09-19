@@ -21,6 +21,9 @@ namespace covered
 
         // ONLY for local uncached objects
 
+        // TODO: END HERE (TODO: track key-level object size later)
+        bool getPopularity(const Key& key, Popularity& popularity, const ObjectSize& object_size) const; // Get popularity (and object size) for local cached or uncached object; return true if key exists (i.e., admitted/tracked)
+
         uint32_t getApproxValueForUncachedObjects(const Key& key) const; // Get approximated value for local uncached object
 
         // Different for local uncached objects

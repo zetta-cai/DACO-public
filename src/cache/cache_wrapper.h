@@ -56,7 +56,7 @@ namespace covered
 
         // Return true if the local uncached key is tracked
         // NOTE: return false if key is either local cached or local uncached yet untracked by local uncached metadata
-        bool getLocalUncachedPopularity(const Key& key, Popularity& local_uncached_popularity) const;
+        bool getLocalUncachedPopularity(const Key& key, Popularity& local_uncached_popularity, const ObjectSize& object_size) const;
 
         // (3) Local edge cache management
 

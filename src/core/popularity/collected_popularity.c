@@ -10,12 +10,15 @@ namespace covered
     {
         is_tracked_ = false;
         local_uncached_popularity_ = 0.0;
+        object_size_ = 0;
     }
 
-    CollectedPopularity::CollectedPopularity(const bool& is_tracked, const Popularity& local_uncached_popularity)
+    CollectedPopularity::CollectedPopularity(const bool& is_tracked, const Popularity& local_uncached_popularity, const ObjectSize& object_size)
     {
         is_tracked_ = is_tracked;
+
         local_uncached_popularity_ = local_uncached_popularity;
+        object_size_ = object_size;
     }
 
     CollectedPopularity::~CollectedPopularity() {}
@@ -31,13 +34,19 @@ namespace covered
         return local_uncached_popularity_;
     }
 
+    ObjectSize CollectedPopularity::getObjectSize() const
+    {
+        assert(is_tracked_ == true);
+        return object_size_;
+    }
+
     uint32_t CollectedPopularity::getCollectedPopularityPayloadSize() const
     {
         uint32_t collected_popularity_payload_size = 0;
-        if (is_tracked_) // local_uncached_popularity_ is valid
+        if (is_tracked_) // local_uncached_popularity_ and object_size_ are valid
         {
-            // track flag + local uncached popularity
-            collected_popularity_payload_size = sizeof(bool) + sizeof(Popularity);
+            // track flag + local uncached popularity + object size
+            collected_popularity_payload_size = sizeof(bool) + sizeof(Popularity) + sizeof(uint32_t);
         }
         else // local_uncached_popularity_ is invalid
         {
@@ -52,10 +61,12 @@ namespace covered
         uint32_t size = position;
         msg_payload.deserialize(size, (const char*)&is_tracked_, sizeof(bool));
         size += sizeof(bool);
-        if (is_tracked_) // local_uncached_popularity_ is valid
+        if (is_tracked_) // local_uncached_popularity_ and object_size_ are valid
         {
             msg_payload.deserialize(size, (const char*)&local_uncached_popularity_, sizeof(Popularity));
             size += sizeof(Popularity);
+            msg_payload.deserialize(size, (const char*)&object_size_, sizeof(uint32_t));
+            size += sizeof(uint32_t);
         }
         return size - position;
     }
@@ -65,10 +76,12 @@ namespace covered
         uint32_t size = position;
         msg_payload.serialize(size, (char*)&is_tracked_, sizeof(bool));
         size += sizeof(bool);
-        if (is_tracked_) // local_uncached_popularity_ is valid
+        if (is_tracked_) // local_uncached_popularity_ and object_size_ are valid
         {
             msg_payload.serialize(size, (char*)&local_uncached_popularity_, sizeof(Popularity));
             size += sizeof(Popularity);
+            msg_payload.serialize(size, (char*)&object_size_, sizeof(uint32_t));
+            size += sizeof(uint32_t);
         }
         return size - position;
     }
@@ -77,6 +90,7 @@ namespace covered
     {
         is_tracked_ = other.is_tracked_;
         local_uncached_popularity_ = other.local_uncached_popularity_;
+        object_size_ = other.object_size_;
 
         return *this;
     }
