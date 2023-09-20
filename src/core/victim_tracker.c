@@ -3,53 +3,11 @@
 #include <assert.h>
 #include <sstream>
 
+#include "common/covered_weight.h"
 #include "common/util.h"
 
 namespace covered
 {
-    // EdgeLevelVictimMetadata
-
-    const std::string EdgeLevelVictimMetadata::kClassName = "EdgeLevelVictimMetadata";
-
-    EdgeLevelVictimMetadata::EdgeLevelVictimMetadata() : cache_margin_bytes_(0)
-    {
-        victim_cacheinfos_.clear();
-    }
-
-    EdgeLevelVictimMetadata::EdgeLevelVictimMetadata(const uint64_t& cache_margin_bytes, const std::list<VictimCacheinfo>& victim_cacheinfos)
-    {
-        cache_margin_bytes_ = cache_margin_bytes;
-        victim_cacheinfos_ = victim_cacheinfos;
-    }
-
-    EdgeLevelVictimMetadata::~EdgeLevelVictimMetadata() {}
-
-    uint64_t EdgeLevelVictimMetadata::getCacheMarginBytes() const
-    {
-        return cache_margin_bytes_;
-    }
-
-    std::list<VictimCacheinfo> EdgeLevelVictimMetadata::getVictimCacheinfos() const
-    {
-        return victim_cacheinfos_;
-    }
-
-    const std::list<VictimCacheinfo>& EdgeLevelVictimMetadata::getVictimCacheinfosRef() const
-    {
-        return victim_cacheinfos_;
-    }
-
-    const EdgeLevelVictimMetadata& EdgeLevelVictimMetadata::operator=(const EdgeLevelVictimMetadata& other)
-    {
-        if (this != &other)
-        {
-            cache_margin_bytes_ = other.cache_margin_bytes_;
-            victim_cacheinfos_ = other.victim_cacheinfos_;
-        }
-
-        return *this;
-    }
-
     // VictimTracker
 
     const std::string VictimTracker::kClassName = "VictimTracker";
@@ -211,40 +169,41 @@ namespace covered
     {
         DeltaReward eviction_cost = 0.0;
 
-        // Enumerate each involved edge node to find victims
-        std::unordered_set<Key, std::unordered_set<uint32_t>, KeyHasher> pervictim_placement_edgeset;
-        std::unordered_set<Key, std::list<VictimCacheinfo>, KeyHasher> pervictim_cacheinfos;
-        for (std::unordered_set<uint32_t>::const_iterator edgeset_const_iter = placement_edgeset.begin(); edgeset_const_iter != placement_edgeset.end(); edgeset_const_iter++)
+        // Get weight parameters from static class atomically
+        const WeightInfo weight_info = CoveredWeight::getWeightInfo();
+        const Weight local_hit_weight = weight_info.getLocalHitWeight();
+        const Weight cooperative_hit_weight = weight_info.getCooperativeHitWeight();
+
+        // Find victims from placement edgeset if admit a hot object with the given size
+        std::unordered_map<Key, std::unordered_set<uint32_t>, KeyHasher> pervictim_edgeset;
+        std::unordered_map<Key, std::list<VictimCacheinfo>, KeyHasher> pervictim_cacheinfos;
+        findVictimsForPlacement_(object_size, placement_edgeset, pervictim_edgeset, pervictim_cacheinfos);
+
+        // Enumerate found victims to calculate eviction cost
+        for (std::unordered_map<Key, std::unordered_set<uint32_t>, KeyHasher>::const_iterator pervictim_edgeset_const_iter = pervictim_edgeset.begin(); pervictim_edgeset_const_iter != pervictim_edgeset.end(); pervictim_edgeset_const_iter++)
         {
-            uint32_t tmp_edge_idx = *edgeset_const_iter;
+            // Check if the victim edgeset is the last copies of the given key
+            const Key& tmp_victim_key = pervictim_edgeset_const_iter->first;
+            const std::unordered_set<uint32_t>& tmp_victim_edgeset = pervictim_edgeset_const_iter->second;
+            bool is_last_copies = isLastCopiesForVictimEdgeset_(tmp_victim_key, tmp_victim_edgeset);
 
-            // NOTE: edge-level victim metadata for tmp_edge_idx MUST exist, as we have performed victim synchronization when collecting local uncached popularity of the given key from tmp_edge_idx
-            peredge_victim_metadata_t::const_iterator victim_metadata_map_const_iter = peredge_victim_metadata_.find(tmp_edge_idx);
-            assert(victim_metadata_map_const_iter != peredge_victim_metadata_.end());
+            // NOTE: we add each pair of edgeidx and cacheinfo of a victim simultaneously in findVictimsForPlacement_() -> tmp_victim_cacheinfos MUST exist and has the same size as tmp_victim_edgeset
+            std::unordered_map<Key, std::list<VictimCacheinfo>, KeyHasher>::const_iterator pervictim_cacheinfos_const_iter = pervictim_cacheinfos.find(tmp_victim_key);
+            assert(pervictim_cacheinfos_const_iter != pervictim_cacheinfos.end());
+            const std::list<VictimCacheinfo>& tmp_victim_cacheinfos = pervictim_cacheinfos_const_iter->second;
+            assert(tmp_victim_cacheinfos.size() == tmp_victim_edgeset.size());
 
-            // Find victims in tmp_edge_idx if without sufficient cache space
-            const EdgeLevelVictimMetadata& tmp_victim_metadata = victim_metadata_map_const_iter->second;
-            const uint64_t tmp_cache_margin_bytes = tmp_victim_metadata.getCacheMarginBytes();
-            if (object_size > tmp_cache_margin_bytes) // Without sufficient cache space
+            // Calculate eviction cost based on is_last_copies and tmp_victim_cacheinfos
+            for (std::list<VictimCacheinfo>::const_iterator victim_cacheinfo_list_const_iter = tmp_victim_cacheinfos.begin(); victim_cacheinfo_list_const_iter != tmp_victim_cacheinfos.end(); victim_cacheinfo_list_const_iter++)
             {
-                const uint64_t tmp_required_bytes = object_size - tmp_cache_margin_bytes;
-                const std::list<VictimCacheinfo>& tmp_victim_cacheinfos_ref = tmp_victim_metadata.getVictimCacheinfosRef();
-
-                uint64_t tmp_saved_bytes = 0;
-                for (std::list<VictimCacheinfo>::const_iterator cacheinfo_list_const_iter = tmp_victim_cacheinfos_ref.begin(); cacheinfo_list_const_iter != tmp_victim_cacheinfos_ref.end(); cacheinfo_list_const_iter++) // Note that tmp_victim_cacheinfos_ref follows the ascending order of local rewards
+                if (is_last_copies) // All local/redirected cache hits become global cache misses
                 {
-                    const VictimCacheinfo& tmp_victim_cacheinfo = *cacheinfo_list_const_iter;
-                    const Key& tmp_victim_key = tmp_victim_cacheinfo.getKey();
-
-                    // Update per-victim placement edgeset
-                    if (pervictim_placement_edgeset.find(tmp_victim_key) == pervictim_placement_edgeset.end())
-                    {
-                        // TODO: END HERE
-                        pervictim_placement_edgeset.insert(std::pair(tmp_victim_key, std::unordered_set<uint32_t>()));
-                    }
-
-                    const ObjectSize tmp_victim_object_size = tmp_victim_cacheinfo.getObjectSize();
-                    tmp_saved_bytes += tmp_victim_object_size;
+                    eviction_cost += victim_cacheinfo_list_const_iter->getLocalCachedPopularity() * local_hit_weight; // w1
+                    eviction_cost += victim_cacheinfo_list_const_iter->getRedirectedCachedPopularity() * cooperative_hit_weight; // w2
+                }
+                else // Local cache hits become redirected cache hits
+                {
+                    eviction_cost += victim_cacheinfo_list_const_iter->getLocalCachedPopularity() * (local_hit_weight - cooperative_hit_weight); // w1 - w2
                 }
             }
         }
@@ -281,7 +240,7 @@ namespace covered
         if (victim_metadata_map_iter == peredge_victim_metadata_.end()) // No synced victims for the specific edge node
         {
             // Add latest synced victims for the specific edge node
-            victim_metadata_map_iter = peredge_victim_metadata_.insert(std::pair(edge_idx, EdgeLevelVictimMetadata(cache_margin_bytes, synced_victim_cacheinfos))).first;
+            victim_metadata_map_iter = peredge_victim_metadata_.insert(std::pair(edge_idx, EdgelevelVictimMetadata(cache_margin_bytes, synced_victim_cacheinfos))).first;
             assert(victim_metadata_map_iter != peredge_victim_metadata_.end());
 
             size_bytes_ = Util::uint64Add(size_bytes_, sizeof(uint32_t)); // For edge_idx
@@ -293,7 +252,7 @@ namespace covered
             old_synced_victim_cacheinfos = victim_metadata_map_iter->second.getVictimCacheinfos();
 
             // Replace old local synced victim cacheinfos with the latest ones
-            victim_metadata_map_iter->second = EdgeLevelVictimMetadata(cache_margin_bytes, synced_victim_cacheinfos);
+            victim_metadata_map_iter->second = EdgelevelVictimMetadata(cache_margin_bytes, synced_victim_cacheinfos);
         }
 
         // Update victim dirinfos for new synced victim keys
@@ -379,6 +338,59 @@ namespace covered
         }
 
         return;
+    }
+
+    void VictimTracker::findVictimsForPlacement_(const ObjectSize& object_size, const std::unordered_set<uint32_t>& placement_edgeset, std::unordered_map<Key, std::unordered_set<uint32_t>, KeyHasher>& pervictim_edgeset, std::unordered_map<Key, std::list<VictimCacheinfo>, KeyHasher>& pervictim_cacheinfos) const
+    {
+        pervictim_edgeset.clear();
+        pervictim_cacheinfos.clear();
+
+        // Enumerate each involved edge node to find victims
+        for (std::unordered_set<uint32_t>::const_iterator placement_edgeset_const_iter = placement_edgeset.begin(); placement_edgeset_const_iter != placement_edgeset.end(); placement_edgeset_const_iter++)
+        {
+            uint32_t tmp_edge_idx = *placement_edgeset_const_iter;
+
+            // NOTE: edge-level victim metadata for tmp_edge_idx MUST exist, as we have performed victim synchronization when collecting local uncached popularity of the given key from tmp_edge_idx
+            peredge_victim_metadata_t::const_iterator victim_metadata_map_const_iter = peredge_victim_metadata_.find(tmp_edge_idx);
+            assert(victim_metadata_map_const_iter != peredge_victim_metadata_.end());
+
+            // Find victims in tmp_edge_idx if without sufficient cache space
+            const EdgelevelVictimMetadata& tmp_edgelevel_victim_metadata = victim_metadata_map_const_iter->second;
+            bool need_more_victims = tmp_edgelevel_victim_metadata.findVictimsForObjectSize(tmp_edge_idx, object_size, pervictim_edgeset, pervictim_cacheinfos);
+
+            // TODO: proactive fetching
+            // if (need_more_victims) {}
+            
+        } // End of involved edge nodes
+
+        return;
+    }
+
+    bool VictimTracker::isLastCopiesForVictimEdgeset_(const Key& key, const std::unordered_set<uint32_t>& victim_edgeset) const
+    {
+        bool is_last_copies = true; // Whether the victim edgeset is the last copies of the given key, i.e., contains all dirinfos
+
+        perkey_victim_dirinfo_t::const_iterator victim_dirinfo_map_const_iter = perkey_victim_dirinfo_.find(key);
+        if (victim_dirinfo_map_const_iter == perkey_victim_dirinfo_.end()) // NOTE: victim key may NOT have victim dirinfo in the current edge node, as the correpsonding beacon node may have NOT synced the latest victim dirinfo to the current edge node
+        {
+            is_last_copies = true; // NOTE: if without VicimDirinfo, beacon server will treat it as the last cache copies conservatively
+        }
+        else
+        {
+            const VictimDirinfo& tmp_victim_dirinfo = victim_dirinfo_map_const_iter->second;
+            const dirinfo_set_t& tmp_dirinfo_set_ref = tmp_victim_dirinfo.getDirinfoSetRef();
+            for (dirinfo_set_t::const_iterator dirinfo_set_const_iter = tmp_dirinfo_set_ref.begin(); dirinfo_set_const_iter != tmp_dirinfo_set_ref.end(); dirinfo_set_const_iter++)
+            {
+                uint32_t tmp_edge_idx = dirinfo_set_const_iter->getTargetEdgeIdx();
+                if (victim_edgeset.find(tmp_edge_idx) == victim_edgeset.end())
+                {
+                    is_last_copies = false;
+                    break;
+                }
+            }
+        }
+
+        return is_last_copies;
     }
 
     void VictimTracker::checkPointers_() const

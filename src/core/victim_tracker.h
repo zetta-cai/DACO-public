@@ -19,34 +19,16 @@
 #include <list>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 
 #include "common/key.h"
 #include "concurrency/rwlock.h"
-#include "core/victim/victim_cacheinfo.h"
+#include "core/victim/edgelevel_victim_metadata.h"
 #include "core/victim/victim_dirinfo.h"
 #include "core/victim/victim_syncset.h"
 
 namespace covered
 {
-    class EdgeLevelVictimMetadata
-    {
-    public:
-        EdgeLevelVictimMetadata();
-        EdgeLevelVictimMetadata(const uint64_t& cache_margin_bytes, const std::list<VictimCacheinfo>& victim_cacheinfos);
-        ~EdgeLevelVictimMetadata();
-
-        uint64_t getCacheMarginBytes() const;
-        std::list<VictimCacheinfo> getVictimCacheinfos() const;
-        const std::list<VictimCacheinfo>& getVictimCacheinfosRef() const;
-
-        const EdgeLevelVictimMetadata& operator=(const EdgeLevelVictimMetadata& other);
-    private:
-        static const std::string kClassName;
-
-        uint64_t cache_margin_bytes_;
-        std::list<VictimCacheinfo> victim_cacheinfos_; // Victims are sorted in an ascending order of local rewards
-    };
-
     class VictimTracker
     {
     public:
@@ -67,7 +49,7 @@ namespace covered
         uint64_t getSizeForCapacity() const;
     private:
         // NOTE: the list of VictimCacheinfos follows the ascending order of local rewards
-        typedef std::unordered_map<uint32_t, EdgeLevelVictimMetadata> peredge_victim_metadata_t;
+        typedef std::unordered_map<uint32_t, EdgelevelVictimMetadata> peredge_victim_metadata_t;
         typedef std::unordered_map<Key, VictimDirinfo, KeyHasher> perkey_victim_dirinfo_t;
 
         static const std::string kClassName;
@@ -76,6 +58,9 @@ namespace covered
 
         void replaceVictimMetadataForEdgeIdx_(const uint32_t& edge_idx, const uint64_t& cache_margin_bytes, const std::list<VictimCacheinfo>& synced_victim_cacheinfos); // Replace cache margin bytes and cacheinfos of local/neighbor synced victims for a specific edge node
         void replaceVictimDirinfoSets_(const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& beaconed_synced_victim_dirinfosets, const bool& is_local_beaconed); // Replace VictimDirinfo::dirinfoset of each local/neighbor beaconed victim
+
+        void findVictimsForPlacement_(const ObjectSize& object_size, const std::unordered_set<uint32_t>& placement_edgeset, std::unordered_map<Key, std::unordered_set<uint32_t>, KeyHasher>& pervictim_edgeset, std::unordered_map<Key, std::list<VictimCacheinfo>, KeyHasher>& pervictim_cacheinfos) const; // Find victims from placement edgeset if admit a hot object with the given size
+        bool isLastCopiesForVictimEdgeset_(const Key& key, const std::unordered_set<uint32_t>& victim_edgeset) const; // Check whether the victim edgeset is the last cache copies of the given key
 
         void checkPointers_() const;
 
