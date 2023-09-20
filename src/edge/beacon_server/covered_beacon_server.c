@@ -94,7 +94,7 @@ namespace covered
         bool is_global_cached = edge_wrapper_ptr_->getCooperationWrapperPtr()->updateDirectoryTable(tmp_key, is_admit, directory_info, is_being_written);
 
         // Update directory info in victim tracker if the local beaconed key is a local/neighbor synced victim
-        covered_cache_manager_ptr->updateVictimTrackerForSyncedVictimDirinfo(tmp_key, is_admit, directory_info);
+        covered_cache_manager_ptr->updateVictimTrackerForLocalBeaconedVictimDirinfo(tmp_key, is_admit, directory_info);
 
         if (is_admit) // Admit a new key as local cached object
         {

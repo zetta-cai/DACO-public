@@ -21,7 +21,7 @@ namespace covered
 
         // ONLY for local uncached objects
 
-        // TODO: Track key-level object size instead of group-level one in CacheMetadataBase for global eviction cost in placement calculation if necessary
+        // TODO: Track key-level object size instead of group-level one in CacheMetadataBase for eviction cost in placement calculation if necessary
         bool getLocalUncachedPopularityAndAvgObjectSize(const Key& key, Popularity& local_uncached_popularity, ObjectSize& avg_object_size) const; // Get popularity and average object size for local uncached object; return true if key exists (i.e., tracked)
 
         uint32_t getApproxValueSizeForUncachedObjects(const Key& key) const; // Get approximated value for local uncached object

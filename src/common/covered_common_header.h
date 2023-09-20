@@ -19,8 +19,8 @@ namespace covered
     
     typedef float Popularity;
     typedef float Weight; // Weight parameters to calculate Reward
-    typedef float Reward; // Local reward for local cached objects, and conceptual global reward to define admission benefit (increased global reward) and global eviction cost (decreased global reward)
-    typedef Reward DeltaReward; // Local admission benefit for local uncached metadata, max global admission benefit for aggregated uncached popularity, global admission benefit and global eviction cost to define PlacementGain (global admission benefit - global eviction cost) for trade-off-aware cache placement and eviction
+    typedef float Reward; // Local reward for local cached objects, and conceptual global reward to define admission benefit (increased global reward) and eviction cost (decreased global reward)
+    typedef Reward DeltaReward; // Approximate admission benefit for local uncached metadata, max admission benefit for aggregated uncached popularity, admission benefit and eviction cost to define PlacementGain (admission benefit - eviction cost) for trade-off-aware cache placement and eviction
 
     // Max keycnt per group for local cached/uncached objects
     #define COVERED_PERGROUP_MAXKEYCNT 10 // At most 10 keys per group for local cached/uncached objects

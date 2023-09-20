@@ -28,6 +28,11 @@ namespace covered
         return key_;
     }
 
+    ObjectSize AggregatedUncachedPopularity::getObjectSize() const
+    {
+        return object_size_;
+    }
+
     uint32_t AggregatedUncachedPopularity::getTopkListLength() const
     {
         return topk_edgeidx_local_uncached_popularity_pairs_.size();
@@ -97,37 +102,37 @@ namespace covered
         return (exist_edgecnt_ == 0);
     }
 
-    DeltaReward AggregatedUncachedPopularity::calcMaxGlobalAdmissionBenefit(const bool& is_global_cached) const
+    DeltaReward AggregatedUncachedPopularity::calcMaxAdmissionBenefit(const bool& is_global_cached) const
     {
         std::unordered_set<uint32_t> placement_edgeset;
-        DeltaReward max_global_admission_benefit = calcGlobalAdmissionBenefit(topk_edgeidx_local_uncached_popularity_pairs_.size(), is_global_cached, placement_edgeset);
+        DeltaReward max_admission_benefit = calcAdmissionBenefit(topk_edgeidx_local_uncached_popularity_pairs_.size(), is_global_cached, placement_edgeset);
         UNUSED(placement_edgeset);
         
-        return max_global_admission_benefit;
+        return max_admission_benefit;
     }
 
-    DeltaReward AggregatedUncachedPopularity::calcGlobalAdmissionBenefit(const uint32_t& topicnt, const bool& is_global_cached, std::unordered_set<uint32_t>& placement_edgeset) const
+    DeltaReward AggregatedUncachedPopularity::calcAdmissionBenefit(const uint32_t& topicnt, const bool& is_global_cached, std::unordered_set<uint32_t>& placement_edgeset) const
     {
-        // TODO: Use a heuristic or learning-based approach for parameter tuning to calculate delta rewards for max global admission benefits (refer to state-of-the-art studies such as LRB and GL-Cache)
+        // TODO: Use a heuristic or learning-based approach for parameter tuning to calculate delta rewards for max admission benefits (refer to state-of-the-art studies such as LRB and GL-Cache)
 
         // Get weight parameters from static class atomically
         const WeightInfo weight_info = CoveredWeight::getWeightInfo();
         const Weight local_hit_weight = weight_info.getLocalHitWeight();
         const Weight cooperative_hit_weight = weight_info.getCooperativeHitWeight();
 
-        DeltaReward global_admission_benefit = 0.0;
+        DeltaReward admission_benefit = 0.0;
         Popularity topi_local_uncached_popularity_ = getTopiLocalUncachedPopularitySum_(topicnt, placement_edgeset);
         if (is_global_cached) // Redirected cache hits become local cache hits for the edge nodes with top-k local uncached popularity
         {
-            global_admission_benefit = (local_hit_weight - cooperative_hit_weight) * topi_local_uncached_popularity_; // (w1 - w2)
+            admission_benefit = (local_hit_weight - cooperative_hit_weight) * topi_local_uncached_popularity_; // (w1 - w2)
         }
         else // Global cache misses become local cache hits for the edge nodes with top-k local uncached popularity, and global cache misses become redirected cache hits for other edge nodes
         {
-            global_admission_benefit = local_hit_weight * topi_local_uncached_popularity_; // w1
+            admission_benefit = local_hit_weight * topi_local_uncached_popularity_; // w1
             assert(sum_local_uncached_popularity_ >= topi_local_uncached_popularity_);
-            global_admission_benefit += cooperative_hit_weight * (sum_local_uncached_popularity_ - topi_local_uncached_popularity_); // w2
+            admission_benefit += cooperative_hit_weight * (sum_local_uncached_popularity_ - topi_local_uncached_popularity_); // w2
         }
-        return global_admission_benefit;
+        return admission_benefit;
     }
 
     uint64_t AggregatedUncachedPopularity::getSizeForCapacity() const

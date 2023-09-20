@@ -34,6 +34,11 @@ namespace covered
         return victim_cacheinfos_;
     }
 
+    const std::list<VictimCacheinfo>& EdgeLevelVictimMetadata::getVictimCacheinfosRef() const
+    {
+        return victim_cacheinfos_;
+    }
+
     const EdgeLevelVictimMetadata& EdgeLevelVictimMetadata::operator=(const EdgeLevelVictimMetadata& other)
     {
         if (this != &other)
@@ -74,6 +79,8 @@ namespace covered
         rwlock_for_victim_tracker_ = NULL;
     }
 
+    // For local synced/beaconed victims
+
     void VictimTracker::updateLocalSyncedVictims(const uint64_t& local_cache_margin_bytes, const std::list<VictimCacheinfo>& local_synced_victim_cacheinfos, const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& local_beaconed_local_synced_victim_dirinfosets)
     {
         // NOTE: limited computation overhead to update local synced victim infos, as we track limited number of local synced victims for the current edge node
@@ -97,12 +104,12 @@ namespace covered
         return;
     }
 
-    void VictimTracker::updateSyncedVictimDirinfo(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info)
+    void VictimTracker::updateLocalBeaconedVictimDirinfo(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info)
     {
         checkPointers_();
 
         // Acquire a write lock to update victim dirinfo atomically
-        std::string context_name = "VictimTracker::updateSyncedVictimDirinfo()";
+        std::string context_name = "VictimTracker::updateLocalBeaconedVictimDirinfo()";
         rwlock_for_victim_tracker_->acquire_lock(context_name);
 
         // Update directory info if the local beaconed key is a local/neighbor synced victim
@@ -131,6 +138,8 @@ namespace covered
 
         return;
     }
+
+    // For victim synchronization
 
     VictimSyncset VictimTracker::getVictimSyncset() const
     {
@@ -196,6 +205,53 @@ namespace covered
         return;
     }
 
+    // For trade-off-aware placement calculation
+    
+    DeltaReward VictimTracker::calcEvictionCost(const ObjectSize& object_size, const std::unordered_set<uint32_t>& placement_edgeset) const
+    {
+        DeltaReward eviction_cost = 0.0;
+
+        // Enumerate each involved edge node to find victims
+        std::unordered_set<Key, std::unordered_set<uint32_t>, KeyHasher> pervictim_placement_edgeset;
+        std::unordered_set<Key, std::list<VictimCacheinfo>, KeyHasher> pervictim_cacheinfos;
+        for (std::unordered_set<uint32_t>::const_iterator edgeset_const_iter = placement_edgeset.begin(); edgeset_const_iter != placement_edgeset.end(); edgeset_const_iter++)
+        {
+            uint32_t tmp_edge_idx = *edgeset_const_iter;
+
+            // NOTE: edge-level victim metadata for tmp_edge_idx MUST exist, as we have performed victim synchronization when collecting local uncached popularity of the given key from tmp_edge_idx
+            peredge_victim_metadata_t::const_iterator victim_metadata_map_const_iter = peredge_victim_metadata_.find(tmp_edge_idx);
+            assert(victim_metadata_map_const_iter != peredge_victim_metadata_.end());
+
+            // Find victims in tmp_edge_idx if without sufficient cache space
+            const EdgeLevelVictimMetadata& tmp_victim_metadata = victim_metadata_map_const_iter->second;
+            const uint64_t tmp_cache_margin_bytes = tmp_victim_metadata.getCacheMarginBytes();
+            if (object_size > tmp_cache_margin_bytes) // Without sufficient cache space
+            {
+                const uint64_t tmp_required_bytes = object_size - tmp_cache_margin_bytes;
+                const std::list<VictimCacheinfo>& tmp_victim_cacheinfos_ref = tmp_victim_metadata.getVictimCacheinfosRef();
+
+                uint64_t tmp_saved_bytes = 0;
+                for (std::list<VictimCacheinfo>::const_iterator cacheinfo_list_const_iter = tmp_victim_cacheinfos_ref.begin(); cacheinfo_list_const_iter != tmp_victim_cacheinfos_ref.end(); cacheinfo_list_const_iter++) // Note that tmp_victim_cacheinfos_ref follows the ascending order of local rewards
+                {
+                    const VictimCacheinfo& tmp_victim_cacheinfo = *cacheinfo_list_const_iter;
+                    const Key& tmp_victim_key = tmp_victim_cacheinfo.getKey();
+
+                    // Update per-victim placement edgeset
+                    if (pervictim_placement_edgeset.find(tmp_victim_key) == pervictim_placement_edgeset.end())
+                    {
+                        // TODO: END HERE
+                        pervictim_placement_edgeset.insert(std::pair(tmp_victim_key, std::unordered_set<uint32_t>()));
+                    }
+
+                    const ObjectSize tmp_victim_object_size = tmp_victim_cacheinfo.getObjectSize();
+                    tmp_saved_bytes += tmp_victim_object_size;
+                }
+            }
+        }
+
+        return eviction_cost;
+    }
+
     uint64_t VictimTracker::getSizeForCapacity() const
     {
         checkPointers_();
@@ -210,6 +266,8 @@ namespace covered
 
         return total_size;
     }
+
+    // Utils
 
     void VictimTracker::replaceVictimMetadataForEdgeIdx_(const uint32_t& edge_idx, const uint64_t& cache_margin_bytes, const std::list<VictimCacheinfo>& synced_victim_cacheinfos)
     {

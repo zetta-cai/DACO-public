@@ -26,7 +26,7 @@ namespace covered
         if (need_placement_calculation)
         {
             const bool is_tracked_by_source_edge_node = collected_popularity.isTracked();
-            // NOTE: NO need to perform placement calculation if key is NOT tracked by source edge node, as removing old local uncached popularity if any will NEVER increase global admission benefit
+            // NOTE: NO need to perform placement calculation if key is NOT tracked by source edge node, as removing old local uncached popularity if any will NEVER increase admission benefit
             if (is_tracked_by_source_edge_node)
             {
                 // Perform greedy-based placement calculation for trade-off-aware cache placement
@@ -51,9 +51,9 @@ namespace covered
         return;
     }
 
-    void CoveredCacheManager::updateVictimTrackerForSyncedVictimDirinfo(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info)
+    void CoveredCacheManager::updateVictimTrackerForLocalBeaconedVictimDirinfo(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info)
     {
-        victim_tracker_.updateSyncedVictimDirinfo(key, is_admit, directory_info);
+        victim_tracker_.updateLocalBeaconedVictimDirinfo(key, is_admit, directory_info);
         return;
     }
 
@@ -112,6 +112,7 @@ namespace covered
         // Perform placement calculation ONLY if key is still tracked by popularity aggregator (i.e., belonging to a global popular uncached object)
         if (has_aggregated_uncached_popularity)
         {
+            const ObjectSize tmp_object_size = tmp_aggregated_uncached_popularity.getObjectSize();
             const uint32_t tmp_topk_list_length = tmp_aggregated_uncached_popularity.getTopkListLength();
             assert(tmp_topk_list_length > 0); // NOTE: we perform placement calculation only when add/update a new local uncached popularity -> at least one local uncached popularity in the top-k list
             assert(tmp_topk_list_length <= popularity_aggregator_.getTopkEdgecnt()); // At most EdgeCLI::covered_topk_edgecnt_ times
@@ -122,10 +123,10 @@ namespace covered
             {
                 // Consider topi edge nodes ordered by local uncached popularity in a descending order
                 std::unordered_set<uint32_t> tmp_placement_edgeset;
-                const DeltaReward tmp_global_admission_benefit = tmp_aggregated_uncached_popularity.calcGlobalAdmissionBenefit(topicnt, is_global_cached, tmp_placement_edgeset);
+                const DeltaReward tmp_admission_benefit = tmp_aggregated_uncached_popularity.calcAdmissionBenefit(topicnt, is_global_cached, tmp_placement_edgeset);
 
                 // END HERE
-                // TODO: Calculate global eviction cost based on tmp_placement_edgeset
+                // TODO: Calculate eviction cost based on tmp_placement_edgeset
             }
         }
 

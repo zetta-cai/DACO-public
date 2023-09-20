@@ -39,7 +39,7 @@ namespace covered
         // For victim synchronization
 
         void updateVictimTrackerForLocalSyncedVictims(const uint64_t& local_cache_margin_bytes, const std::list<VictimCacheinfo>& local_synced_victim_cacheinfos, const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& local_beaconed_local_synced_victim_dirinfosets);
-        void updateVictimTrackerForSyncedVictimDirinfo(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info);
+        void updateVictimTrackerForLocalBeaconedVictimDirinfo(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info);
 
         VictimSyncset accessVictimTrackerForVictimSyncset() const;
         void updateVictimTrackerForVictimSyncset(const uint32_t& source_edge_idx, const VictimSyncset& victim_syncset, const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& local_beaconed_neighbor_synced_victim_dirinfosets);
@@ -53,11 +53,11 @@ namespace covered
 
         uint64_t getSizeForCapacity() const;
     private:
-        typedef DeltaReward PlacementGain; // Global admission benefit - global eviction cost for trade-off-aware cache placement and eviction
+        typedef DeltaReward PlacementGain; // Admission benefit - eviction cost for trade-off-aware cache placement and eviction
 
         static const std::string kClassName;
 
-        // Perform placement calculation only if key belongs to a global popular uncached object (i.e., with large enough max global admission benefit)
+        // Perform placement calculation only if key belongs to a global popular uncached object (i.e., with large enough max admission benefit)
         void placementCalculation_(const Key& key, const bool& is_global_cached);
 
         // Const shared variables

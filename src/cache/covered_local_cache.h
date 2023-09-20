@@ -3,7 +3,7 @@
  *
  * NOTE: To avoid hacking 352.6K LOC of CacheLib, we track metadata outside CacheLib; it is similar as MMTinyLFU in CacheLib, which maintains access frequencies outside MemoryAllocator (using a CMS in MM2QTinyLFU) due to NO need of slab-based memory management for metadata; specifically, we use CacheLib CacheItem to track key, value, LRU, and lookup information (cache size usage of this part has already been counted by CacheLib), yet maintain other metadata and sorted popularity outside CacheLib in CoveredLocalCache (see other NOTEs in src/cache/cachelib_local_cache.h).
  * 
- * NOTE: we track local cached metadata and calculate local rewards to find local synced victims for victim synchronization; we track local uncached metadata and calculate local admission benefits for popularity collection.
+ * NOTE: we track local cached metadata and calculate local rewards to find local synced victims for victim synchronization; we track local uncached metadata and calculate approximate admission benefits for popularity collection.
  * 
  * By Siyuan Sheng (2023.08.15).
  */

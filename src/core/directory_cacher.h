@@ -1,5 +1,5 @@
 /*
- * DirectoryCacher: ONLY cache valid remote (i.e., neighbor beaconed) directory for local uncached objects tracked by local uncached metadata (i.e, with large local admission benefits) (thread safe).
+ * DirectoryCacher: ONLY cache valid remote (i.e., neighbor beaconed) directory for local uncached objects tracked by local uncached metadata (i.e, with large approximate admission benefits) (thread safe).
  *
  * NOTE: NO need to introduce directory metadata cache max mem usage bytes, as we have limited the cache size capacity bytes of local uncached metadata and ONLY cache valid remote directory for such tracked local uncached objects.
  *

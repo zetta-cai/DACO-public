@@ -57,7 +57,7 @@ namespace covered
     {
         checkPointers_();
 
-        // Acquire a write lock to update aggregated uncached popularity and max global admission benefit atomically
+        // Acquire a write lock to update aggregated uncached popularity and max admission benefit atomically
         const std::string context_name = "PopularityAggregator::updateAggregatedUncachedPopularity()";
         rwlock_for_popularity_aggregator_->acquire_lock(context_name);
 
@@ -83,7 +83,7 @@ namespace covered
             // NOTE: we try to discard global less populart objects even if we update aggregated uncached popularity for an existing key (besides add aggregated uncached popularity for a new key), as AggregatedUncachedPopularity could add new local uncached popularity for the existing key
             // NOTE: this is different from local uncached metadata, which will NOT increase cache size usage if update local uncached metadata for an existing key (ONLY trigger removal if add local uncached metadata for a new key)
 
-            // Discard the objects with small max global admission benefits if popularity aggregation capacity bytes are used up
+            // Discard the objects with small max admission benefits if popularity aggregation capacity bytes are used up
             discardGlobalLessPopularObjects_();
         }
         else // Remove old local uncached popularity for key in source edge node from existing aggregated uncached popularity if any
@@ -106,7 +106,7 @@ namespace covered
 
     void PopularityAggregator::clearAggregatedUncachedPopularityAfterAdmission(const Key& key, const uint32_t& source_edge_idx)
     {
-        // Clear old local uncached popularity of source edge node if any, and update max global admission benefit for the given key
+        // Clear old local uncached popularity of source edge node if any, and update max admission benefit for the given key
         // NOTE: local_uncached_popularity and object_size are NOT used when is_tracked_by_source_edge_node = false
         updateAggregatedUncachedPopularityForExistingKey_(key, source_edge_idx, false, 0.0, 0, true);
 
@@ -125,12 +125,12 @@ namespace covered
         AggregatedUncachedPopularity new_aggregated_uncached_popularity(key, edgecnt_);
         new_aggregated_uncached_popularity.update(source_edge_idx, local_uncached_popularity, topk_edgecnt_, object_size);
 
-        // Prepare new max global admission benefit for the new key
-        DeltaReward new_max_global_admission_benefit = new_aggregated_uncached_popularity.calcMaxGlobalAdmissionBenefit(is_global_cached);
+        // Prepare new max admission benefit for the new key
+        DeltaReward new_max_admission_benefit = new_aggregated_uncached_popularity.calcMaxAdmissionBenefit(is_global_cached);
 
-        // Insert new aggregated uncached popularity and new max global admission benefit into benefit_popularity_multimap_ for the new key
-        benefit_popularity_iter_t new_benefit_popularity_iter = benefit_popularity_multimap_.insert(std::pair(new_max_global_admission_benefit, new_aggregated_uncached_popularity));
-        size_bytes_ += sizeof(DeltaReward); // Max global admission benefit
+        // Insert new aggregated uncached popularity and new max admission benefit into benefit_popularity_multimap_ for the new key
+        benefit_popularity_iter_t new_benefit_popularity_iter = benefit_popularity_multimap_.insert(std::pair(new_max_admission_benefit, new_aggregated_uncached_popularity));
+        size_bytes_ += sizeof(DeltaReward); // Max admission benefit
         size_bytes_ += new_aggregated_uncached_popularity.getSizeForCapacity(); // Aggrgated uncached popularity
 
         // Insert new key with new benfit_popularity_iter into perkey_benefit_popularity_table_
@@ -174,7 +174,7 @@ namespace covered
         }
 
         // Remove old benefit-popularity pair for the given key
-        size_bytes_ = Util::uint64Minus(size_bytes_, sizeof(DeltaReward)); // Old max global admission benefit
+        size_bytes_ = Util::uint64Minus(size_bytes_, sizeof(DeltaReward)); // Old max admission benefit
         size_bytes_ = Util::uint64Minus(size_bytes_, old_aggregated_uncached_popularity_size_bytes); // Old aggregated uncached popularity
         benefit_popularity_multimap_.erase(benefit_popularity_iter);
 
@@ -186,12 +186,12 @@ namespace covered
         }
         else // Still need aggregated uncached popularity for the given key
         {
-            // Calculate a new max global admission benefit for the existing key
-            DeltaReward new_max_global_admission_benefit = existing_aggregated_uncached_popularity.calcMaxGlobalAdmissionBenefit(is_global_cached);
+            // Calculate a new max admission benefit for the existing key
+            DeltaReward new_max_admission_benefit = existing_aggregated_uncached_popularity.calcMaxAdmissionBenefit(is_global_cached);
 
-            // Update benefit_popularity_multimap_ for the new max global admission benefit of the existing key
-            benefit_popularity_iter = benefit_popularity_multimap_.insert(std::pair(new_max_global_admission_benefit, existing_aggregated_uncached_popularity));
-            size_bytes_ += sizeof(DeltaReward); // New max global admission benefit
+            // Update benefit_popularity_multimap_ for the new max admission benefit of the existing key
+            benefit_popularity_iter = benefit_popularity_multimap_.insert(std::pair(new_max_admission_benefit, existing_aggregated_uncached_popularity));
+            size_bytes_ += sizeof(DeltaReward); // New max admission benefit
             size_bytes_ += new_aggregated_uncached_popularity_size_bytes; // New aggregated uncached popularity
 
             // Update perkey_benefit_popularity_table_ for the new benefit_popularity_iter of the existing key
@@ -212,18 +212,18 @@ namespace covered
             }
             else
             {
-                // Find the object with the minimum max global admission benefit
+                // Find the object with the minimum max admission benefit
                 benefit_popularity_iter_t min_benefit_popularity_iter = benefit_popularity_multimap_.begin();
                 assert(min_benefit_popularity_iter != benefit_popularity_multimap_.end());
-                AggregatedUncachedPopularity tmp_aggregated_uncached_popularity = min_benefit_popularity_iter->second; // Aggregated uncached popularity with minimum max global admission benefit
+                AggregatedUncachedPopularity tmp_aggregated_uncached_popularity = min_benefit_popularity_iter->second; // Aggregated uncached popularity with minimum max admission benefit
                 
                 // Remove it from benefit_popularity_multimap_
                 benefit_popularity_multimap_.erase(min_benefit_popularity_iter);
-                size_bytes_ = Util::uint64Minus(size_bytes_, sizeof(DeltaReward)); // Max global admission benefit
+                size_bytes_ = Util::uint64Minus(size_bytes_, sizeof(DeltaReward)); // Max admission benefit
                 size_bytes_ = Util::uint64Minus(size_bytes_, tmp_aggregated_uncached_popularity.getSizeForCapacity()); // Aggrgated uncached popularity
                 
                 // Remove it from perkey_benefit_popularity_table_
-                Key tmp_key = tmp_aggregated_uncached_popularity.getKey(); // Key with minimum max global admission benefit
+                Key tmp_key = tmp_aggregated_uncached_popularity.getKey(); // Key with minimum max admission benefit
                 perkey_benefit_popularity_iter_t perkey_benefit_popularity_iter = perkey_benefit_popularity_table_.find(tmp_key);
                 assert(perkey_benefit_popularity_iter != perkey_benefit_popularity_table_.end());
                 perkey_benefit_popularity_table_.erase(perkey_benefit_popularity_iter);

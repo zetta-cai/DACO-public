@@ -547,7 +547,7 @@ namespace covered
         bool is_global_cached = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->updateDirectoryTable(key, is_admit, directory_info, is_being_written);
 
         // Update directory info in victim tracker if the local beaconed key is a local/neighbor synced victim
-        tmp_covered_cache_manager_ptr->updateVictimTrackerForSyncedVictimDirinfo(key, is_admit, directory_info);
+        tmp_covered_cache_manager_ptr->updateVictimTrackerForLocalBeaconedVictimDirinfo(key, is_admit, directory_info);
 
         // NOTE: NOT need piggyacking-based popularity collection and victim synchronization for local directory update
         uint32_t current_edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
