@@ -18,11 +18,12 @@ namespace covered
 
     // For popularity aggregation
 
-    void CoveredCacheManager::updatePopularityAggregatorForAggregatedPopularity(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached, const bool& need_placement_calculation)
+    bool CoveredCacheManager::updatePopularityAggregatorForAggregatedPopularity(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached, const bool& need_placement_calculation, std::unordered_set<uint32_t>& best_placement_edgeset)
     {
         popularity_aggregator_.updateAggregatedUncachedPopularity(key, source_edge_idx, collected_popularity, is_global_cached);
         
         // NOTE: we do NOT perform placement calculation for local/remote acquire writelock request, as newly-admitted cache copies will still be invalid after cache placement
+        bool has_best_placement = false;
         if (need_placement_calculation)
         {
             const bool is_tracked_by_source_edge_node = collected_popularity.isTracked();
@@ -30,11 +31,11 @@ namespace covered
             if (is_tracked_by_source_edge_node)
             {
                 // Perform greedy-based placement calculation for trade-off-aware cache placement
-                placementCalculation_(key, is_global_cached);
+                has_best_placement = placementCalculation_(key, is_global_cached, best_placement_edgeset);
             }
         }
 
-        return;
+        return has_best_placement;
     }
 
     void CoveredCacheManager::clearPopularityAggregatorAfterAdmission(const Key& key, const uint32_t& source_edge_idx)
@@ -104,8 +105,10 @@ namespace covered
         return total_size;
     }
 
-    void CoveredCacheManager::placementCalculation_(const Key& key, const bool& is_global_cached)
+    bool CoveredCacheManager::placementCalculation_(const Key& key, const bool& is_global_cached, std::unordered_set<uint32_t>& best_placement_edgeset)
     {
+        bool has_best_placement = false;
+
         AggregatedUncachedPopularity tmp_aggregated_uncached_popularity;
         bool has_aggregated_uncached_popularity = popularity_aggregator_.getAggregatedUncachedPopularity(key, tmp_aggregated_uncached_popularity);
 
@@ -118,18 +121,38 @@ namespace covered
             assert(tmp_topk_list_length <= popularity_aggregator_.getTopkEdgecnt()); // At most EdgeCLI::covered_topk_edgecnt_ times
 
             // Greedy-based placement calculation
-            std::vector<PlacementGain> placement_gains;
+            PlacementGain max_placement_gain = 0.0;
+            uint32_t best_topicnt = 0;
+            std::unordered_set<uint32_t> tmp_best_placement_edgeset;
             for (uint32_t topicnt = 1; topicnt <= tmp_topk_list_length; topicnt++)
             {
                 // Consider topi edge nodes ordered by local uncached popularity in a descending order
+
+                // Calculate admission benefit if we place the object with is_global_cached flag into topi edge nodes
                 std::unordered_set<uint32_t> tmp_placement_edgeset;
                 const DeltaReward tmp_admission_benefit = tmp_aggregated_uncached_popularity.calcAdmissionBenefit(topicnt, is_global_cached, tmp_placement_edgeset);
 
-                // END HERE
-                // TODO: Calculate eviction cost based on tmp_placement_edgeset
+                // Calculate eviction cost based on tmp_placement_edgeset
+                const DeltaReward tmp_eviction_cost = victim_tracker_.calcEvictionCost(tmp_object_size, tmp_placement_edgeset);
+
+                // Calculate placement gain (admission benefit - eviction cost)
+                const DeltaReward tmp_placement_gain = tmp_admission_benefit - tmp_eviction_cost;
+                if ((topicnt == 1) || (tmp_placement_gain > max_placement_gain))
+                {
+                    max_placement_gain = tmp_placement_gain;
+                    best_topicnt = topicnt;
+                    tmp_best_placement_edgeset = tmp_placement_edgeset;
+                }
+            }
+
+            // Update best placement if any
+            if (max_placement_gain > 0.0)
+            {
+                has_best_placement = true;
+                best_placement_edgeset = tmp_best_placement_edgeset;
             }
         }
 
-        return;
+        return has_best_placement;
     }
 }

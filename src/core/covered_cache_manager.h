@@ -33,7 +33,8 @@ namespace covered
 
         // For selective popularity aggregation (may trigger trade-off-aware placement calculation)
 
-        void updatePopularityAggregatorForAggregatedPopularity(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached, const bool& need_placement_calculation); // NOTE: need_placement_calculation works only when key is tracked by local uncached metadata of sender edge node
+        // NOTE: need_placement_calculation works only when key is tracked by local uncached metadata of sender edge node
+        bool updatePopularityAggregatorForAggregatedPopularity(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached, const bool& need_placement_calculation, std::unordered_set<uint32_t>& best_placement_edgeset); // Return if the best placement exists (i.e., with positive placement gain)
         void clearPopularityAggregatorAfterAdmission(const Key& key, const uint32_t& source_edge_idx);
         
         // For victim synchronization
@@ -58,7 +59,7 @@ namespace covered
         static const std::string kClassName;
 
         // Perform placement calculation only if key belongs to a global popular uncached object (i.e., with large enough max admission benefit)
-        void placementCalculation_(const Key& key, const bool& is_global_cached);
+        bool placementCalculation_(const Key& key, const bool& is_global_cached, std::unordered_set<uint32_t>& best_placement_edgeset); // Return if the best placement exists (i.e., with positive placement gain)
 
         // Const shared variables
         std::string instance_name_;
