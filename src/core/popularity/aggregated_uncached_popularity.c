@@ -76,7 +76,22 @@ namespace covered
         return;
     }
 
-    bool AggregatedUncachedPopularity::clear(const uint32_t& source_edge_idx, const uint32_t& topk_edgecnt)
+    bool AggregatedUncachedPopularity::clearForPlacement(const std::unordered_set<uint32_t>& placement_edgeset)
+    {
+        for (std::unordered_set<uint32_t>::const_iterator placement_edgeset_const_iter = placement_edgeset.begin(); placement_edgeset_const_iter != placement_edgeset.end(); placement_edgeset_const_iter++)
+        {
+            const uint32_t tmp_edge_idx = *placement_edgeset_const_iter;
+            assert(tmp_edge_idx < bitmap_.size());
+            assert(bitmap_[tmp_edge_idx] == true); // NOTE: as placement edgeset is selected from top-k list of aggregated uncached popularity, tmp_edge_idx MUST exist in bitmap_
+
+            // Release local uncached popularity of tmp_edge_idx from sum/topk/bitmap in aggregated uncached popularity
+            clear(tmp_edge_idx);
+        }
+
+        return (exist_edgecnt_ == 0);
+    }
+
+    bool AggregatedUncachedPopularity::clear(const uint32_t& source_edge_idx)
     {
         assert(source_edge_idx < bitmap_.size());
 
@@ -91,7 +106,7 @@ namespace covered
             minusLocalUncachedPopularityFromSum_(original_local_uncached_popularity);
 
             // Remove old local uncached popularity from top-k list if necessary
-            clearTopkForExistingEdgeIdx_(source_edge_idx, topk_edgecnt); // NOTE: existing edge idx may already exist in top-k list or not
+            clearTopkForExistingEdgeIdx_(source_edge_idx); // NOTE: existing edge idx may already exist in top-k list or not
 
             // Update bitmap for the removal
             bitmap_[source_edge_idx] = false;
@@ -319,7 +334,7 @@ namespace covered
         return need_insert;
     }
 
-    void AggregatedUncachedPopularity::clearTopkForExistingEdgeIdx_(const uint32_t& source_edge_idx, const uint32_t& topk_edgecnt)
+    void AggregatedUncachedPopularity::clearTopkForExistingEdgeIdx_(const uint32_t& source_edge_idx)
     {
         assert(bitmap_[source_edge_idx] == true);
 

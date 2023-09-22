@@ -57,7 +57,9 @@ namespace covered
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
         CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
 
-        bool is_global_cached = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->lookupDirectoryTableByCacheServer(key, is_being_written, is_valid_directory_exist, directory_info);
+        uint32_t current_edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
+        bool is_source_cached = false;
+        bool is_global_cached = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->lookupDirectoryTableByCacheServer(key, current_edge_idx, is_being_written, is_valid_directory_exist, directory_info, is_source_cached);
 
         // Prepare local uncached popularity of key for popularity aggregation
         // NOTE: NOT need piggyacking-based popularity collection and victim synchronization for local directory lookup
@@ -67,8 +69,7 @@ namespace covered
         // NOTE: we always perform victim synchronization before popularity aggregation, as we need the latest synced victim information for placement calculation (note that victim tracker has been updated by getLocalEdgeCache_() before this function)
 
         // Selective popularity aggregation
-        uint32_t current_edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
-        tmp_covered_cache_manager_ptr->updatePopularityAggregatorForAggregatedPopularity(key, current_edge_idx, collected_popularity, is_global_cached); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in current edge node
+        tmp_covered_cache_manager_ptr->updatePopularityAggregatorForAggregatedPopularity(key, current_edge_idx, collected_popularity, is_global_cached, is_source_cached); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in current edge node
 
         return;
     }
@@ -275,7 +276,9 @@ namespace covered
         CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
 
         // Acquire local write lock for the given key
-        lock_result = tmp_cooperation_wrapper_ptr->acquireLocalWritelockByCacheServer(key, all_dirinfo);
+        uint32_t current_edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
+        bool is_source_cached = false;
+        lock_result = tmp_cooperation_wrapper_ptr->acquireLocalWritelockByCacheServer(key, current_edge_idx, all_dirinfo, is_source_cached);
         bool is_global_cached = (lock_result != LockResult::kNoneed);
 
         // OBSELETE: NO need to remove old local uncached popularity from aggregated uncached popularity for local acquire write lock on local cached objects, as it MUST have been removed by directory update request with is_admit = true during non-blocking admission placement
@@ -288,8 +291,7 @@ namespace covered
         tmp_edge_wrapper_ptr->getEdgeCachePtr()->getCollectedPopularity(key, collected_popularity); // collected_popularity.is_tracked_ is false if the given key is local cached or the key is local uncached yet NOT tracked in local uncached metadata
 
         // Selective popularity aggregation
-        uint32_t current_edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
-        tmp_covered_cache_manager_ptr->updatePopularityAggregatorForAggregatedPopularity(key, current_edge_idx, collected_popularity, is_global_cached); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in current edge node
+        tmp_covered_cache_manager_ptr->updatePopularityAggregatorForAggregatedPopularity(key, current_edge_idx, collected_popularity, is_global_cached, is_source_cached); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in current edge node
 
         // NOTE: NO need to update local synced victims, which will be done by updateLocalEdgeCache_() and removeLocalEdgeCache_()
 
@@ -388,8 +390,10 @@ namespace covered
         CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
 
         // Release local write lock for the given key
+        uint32_t current_edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
         DirectoryInfo current_directory_info(tmp_edge_wrapper_ptr->getNodeIdx());
-        blocked_edges = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->releaseLocalWritelock(key, current_directory_info);
+        bool is_source_cached = false;
+        blocked_edges = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->releaseLocalWritelock(key, current_edge_idx, current_directory_info, is_source_cached);
 
         // OBSELETE: NO need to remove old local uncached popularity from aggregated uncached popularity for local release write lock on local cached objects, as it MUST have been removed by directory update request with is_admit = true during non-blocking admission placement
         // NOTE: NO need to check if key is local cached or not, as is_key_tracked MUST be false if key is local cached and will NOT update/add aggregated uncached popularity
@@ -401,9 +405,8 @@ namespace covered
         tmp_edge_wrapper_ptr->getEdgeCachePtr()->getCollectedPopularity(key, collected_popularity); // collected_popularity.is_tracked_ is false if the given key is local cached or the key is local uncached yet NOT tracked in local uncached metadata
 
         // Selective popularity aggregation
-        uint32_t current_edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
         const bool is_global_cached = true; // NOTE: invoking releaseLocalWritelock_() means that the result of acquiring write lock is LockResult::kSuccess -> the given key MUST be global cached
-        tmp_covered_cache_manager_ptr->updatePopularityAggregatorForAggregatedPopularity(key, current_edge_idx, collected_popularity, is_global_cached); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in current edge node
+        tmp_covered_cache_manager_ptr->updatePopularityAggregatorForAggregatedPopularity(key, current_edge_idx, collected_popularity, is_global_cached, is_source_cached); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in current edge node
 
         // NOTE: NO need to update local synced victims, which will be done by updateLocalEdgeCache_() and removeLocalEdgeCache_()
 
@@ -544,13 +547,14 @@ namespace covered
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
         CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
 
-        bool is_global_cached = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->updateDirectoryTable(key, is_admit, directory_info, is_being_written);
+        uint32_t current_edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
+        bool is_source_cached = false;
+        bool is_global_cached = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->updateDirectoryTable(key, current_edge_idx, is_admit, directory_info, is_being_written, is_source_cached);
 
         // Update directory info in victim tracker if the local beaconed key is a local/neighbor synced victim
         tmp_covered_cache_manager_ptr->updateVictimTrackerForLocalBeaconedVictimDirinfo(key, is_admit, directory_info);
 
         // NOTE: NOT need piggyacking-based popularity collection and victim synchronization for local directory update
-        uint32_t current_edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
         if (is_admit) // Admit a new key as local cached object
         {
             // Clear old local uncached popularity (TODO: preserved edge idx / bitmap) for the given key at soure edge node after admission
@@ -563,7 +567,7 @@ namespace covered
             tmp_edge_wrapper_ptr->getEdgeCachePtr()->getCollectedPopularity(key, collected_popularity); // collected_popularity.is_tracked_ indicates if the local uncached key is tracked in local uncached metadata
 
             // Selective popularity aggregation
-            tmp_covered_cache_manager_ptr->updatePopularityAggregatorForAggregatedPopularity(key, current_edge_idx, collected_popularity, is_global_cached); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in source edge node
+            tmp_covered_cache_manager_ptr->updatePopularityAggregatorForAggregatedPopularity(key, current_edge_idx, collected_popularity, is_global_cached, is_source_cached); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in source edge node
         }
 
         return;

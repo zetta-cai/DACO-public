@@ -22,6 +22,7 @@ namespace covered
         size_bytes_ = 0;
         benefit_popularity_multimap_.clear();
         perkey_benefit_popularity_table_.clear();
+        perkey_preserved_edgeset_.clear();
     }
     
     PopularityAggregator::~PopularityAggregator()
@@ -33,27 +34,43 @@ namespace covered
 
     bool PopularityAggregator::getAggregatedUncachedPopularity(const Key& key, AggregatedUncachedPopularity& aggregated_uncached_popularity) const
     {
+        checkPointers_();
+
+        // Acquire a READ lock to get aggregated uncached popularity atomically
+        const std::string context_name = "PopularityAggregator::getAggregatedUncachedPopularity()";
+        rwlock_for_popularity_aggregator_->acquire_lock_shared(context_name);
+
         bool is_found = false;
 
-        perkey_benefit_popularity_const_iter_t perkey_benefit_popularity_const_iter = perkey_benefit_popularity_table_.find(key);
+        perkey_benefit_popularity_table_const_iter_t perkey_benefit_popularity_const_iter = perkey_benefit_popularity_table_.find(key);
         if (perkey_benefit_popularity_const_iter != perkey_benefit_popularity_table_.end())
         {
-            benefit_popularity_iter_t benefit_popularity_iter = perkey_benefit_popularity_const_iter->second;
+            benefit_popularity_multimap_iter_t benefit_popularity_iter = perkey_benefit_popularity_const_iter->second;
             assert(benefit_popularity_iter != benefit_popularity_multimap_.end());
             aggregated_uncached_popularity = benefit_popularity_iter->second; // Deep copy
 
             is_found = true;
         }
 
+        rwlock_for_popularity_aggregator_->unlock_shared(context_name);
         return is_found;
     }
 
     uint32_t PopularityAggregator::getTopkEdgecnt() const
     {
-        return topk_edgecnt_;
+        checkPointers_();
+
+        // Acquire a read lock to get top-k list length atomically (TODO: maybe NO need to acquire a read lock for topk_edgecnt_ here)
+        std::string context_name = "PopularityAggregator::getTopkEdgecnt()";
+        rwlock_for_popularity_aggregator_->acquire_lock_shared(context_name);
+
+        uint32_t topk_edgecnt = topk_edgecnt_;
+
+        rwlock_for_popularity_aggregator_->unlock_shared(context_name);
+        return topk_edgecnt;
     }
 
-    void PopularityAggregator::updateAggregatedUncachedPopularity(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached)
+    void PopularityAggregator::updateAggregatedUncachedPopularity(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached, const bool& is_source_cached)
     {
         checkPointers_();
 
@@ -61,9 +78,20 @@ namespace covered
         const std::string context_name = "PopularityAggregator::updateAggregatedUncachedPopularity()";
         rwlock_for_popularity_aggregator_->acquire_lock(context_name);
 
-        perkey_benefit_popularity_iter_t perkey_benefit_popularity_iter = perkey_benefit_popularity_table_.find(key);
+        perkey_benefit_popularity_table_iter_t perkey_benefit_popularity_iter = perkey_benefit_popularity_table_.find(key);
 
-        const bool is_tracked_by_source_edge_node = collected_popularity.isTracked(); // If key is tracked by local uncached metadata in the source edge node (i.e., if local uncached popularity is valid)
+        bool is_tracked_by_source_edge_node = collected_popularity.isTracked(); // If key is tracked by local uncached metadata in the source edge node (i.e., if local uncached popularity is valid)
+
+        // Ignore local uncached popularity if necessary
+        if (is_source_cached) // Ignore local uncached popularity if key is cached by source edge node based on directory table
+        {
+            // NOTE: we do NOT add/update latest local uncached popularity if key has directory info for the source edge node, to avoid duplicate admission on the source edge node, after directory update request with is_admit = true clearing preserved edgeset in the beacon node, yet the source edge node has NOT admitted the object into local edge cache to clear local uncached metadata
+            // NOTE: this will delay the latest local uncached popularity of newly-evicted keys, after the source edge node has evicted the object and updated local uncached metadata for metadata preservation, yet directory update request with is_admit = false has NOT cleared directory info in the beacon node -> BUT acceptable as this is a corner case (newly-evicted keys are NOT popular enough and NO need to add/update latest local uncached popularity in most cases after eviciton)
+            is_tracked_by_source_edge_node = false;
+        }
+        // END HERE
+        // TODO: Ignore local uncached popularity if source edge node is in preserved edgeset
+
         Popularity local_uncached_popularity = 0.0;
         ObjectSize object_size = 0;
         if (is_tracked_by_source_edge_node) // Add/update latest local uncached popularity for key in source edge node into new/existing aggregated uncached popularity
@@ -104,8 +132,53 @@ namespace covered
         return;
     }
 
+    void PopularityAggregator::updatePreservedEdgesetForPlacement(const Key& key, const std::unordered_set<uint32_t>& placement_edgeset, const bool& is_global_cached)
+    {
+        checkPointers_();
+
+        // Acquire a write lock to preserve edge ndoes for non-blocking placement deployment atomically
+        const std::string context_name = "PopularityAggregator::updatePreservedEdgesetForPlacement()";
+        rwlock_for_popularity_aggregator_->acquire_lock(context_name);
+
+        // NOTE: key MUST have aggregated uncached popularity if with placement edgeset
+        AggregatedUncachedPopularity existing_aggregated_uncached_popularity;
+        bool has_aggregated_uncached_popularity = getAggregatedUncachedPopularity(key, existing_aggregated_uncached_popularity);
+        assert(has_aggregated_uncached_popularity == true);
+
+        // Preserve edge nodes of placement edgeset to ignore subsequent local uncached popularities from them
+        perkey_preserved_edgeset_t::iterator perkey_preserved_edgeset_iter = perkey_preserved_edgeset_.find(key);
+        if (perkey_preserved_edgeset_iter == perkey_preserved_edgeset_.end())
+        {
+            perkey_preserved_edgeset_iter = perkey_preserved_edgeset_.insert(std::pair(key, PreservedEdgeset(edgecnt_))).first;
+            size_bytes_ += key.getKeyLength(); // Key
+            size_bytes_ += perkey_preserved_edgeset_iter->second.getSizeForCapacity(); // Preserved edgeset
+        }
+        assert(perkey_preserved_edgeset_iter != perkey_preserved_edgeset_.end());
+        perkey_preserved_edgeset_iter->second.preserveEdgesetForPlacement(placement_edgeset);
+
+        // Release local uncached popularities of the edge nodes from aggregated uncached popularity
+        bool is_aggregated_uncached_popularity_empty = false;
+        is_aggregated_uncached_popularity_empty = existing_aggregated_uncached_popularity.clearForPlacement(placement_edgeset);
+
+        // Update benefit-popularity multimap and per-key lookup table for existing yet updated aggregated uncached popularity
+        //const bool is_size_bytes_increased = false or true; // NOTE: NOT sure if size_bytes_ is increased or decreased here, as we may add preserved edgeset yet release local uncached popularities
+        updateBenefitPopularityForExistingKey_(key, existing_aggregated_uncached_popularity, is_aggregated_uncached_popularity_empty, is_global_cached);
+
+        // Discard the objects with small max admission benefits if popularity aggregation capacity bytes are used up
+        discardGlobalLessPopularObjects_();
+
+        rwlock_for_popularity_aggregator_->unlock(context_name);
+        return;
+    }
+
     void PopularityAggregator::clearAggregatedUncachedPopularityAfterAdmission(const Key& key, const uint32_t& source_edge_idx)
     {
+        checkPointers_();
+
+        // Acquire a write lock to clear preserved edge ndoes from aggregated uncached popularity atomically
+        const std::string context_name = "PopularityAggregator::clearAggregatedUncachedPopularityAfterAdmission()";
+        rwlock_for_popularity_aggregator_->acquire_lock(context_name);
+
         // Clear old local uncached popularity of source edge node if any, and update max admission benefit for the given key
         // NOTE: local_uncached_popularity and object_size are NOT used when is_tracked_by_source_edge_node = false
         updateAggregatedUncachedPopularityForExistingKey_(key, source_edge_idx, false, 0.0, 0, true);
@@ -114,8 +187,11 @@ namespace covered
         // (i) old local uncached popularity should be cleared right after placement calculation -> assert NO old local uncached popularity exists for the given key;
         // (ii) we should clear preserved edge idx / bitmap for the source edge node after admission -> assert preserved edge idx / bitmap MUST exist (NOTE: popularity aggregation capacity bytes should NOT discard preserved edge idx / bitmap!!!)
 
+        rwlock_for_popularity_aggregator_->unlock(context_name);
         return;
     }
+
+    // Utils
 
     void PopularityAggregator::addAggregatedUncachedPopularityForNewKey_(const Key& key, const uint32_t& source_edge_idx, const Popularity& local_uncached_popularity, const ObjectSize& object_size, const bool& is_global_cached)
     {
@@ -125,18 +201,8 @@ namespace covered
         AggregatedUncachedPopularity new_aggregated_uncached_popularity(key, edgecnt_);
         new_aggregated_uncached_popularity.update(source_edge_idx, local_uncached_popularity, topk_edgecnt_, object_size);
 
-        // Prepare new max admission benefit for the new key
-        DeltaReward new_max_admission_benefit = new_aggregated_uncached_popularity.calcMaxAdmissionBenefit(is_global_cached);
-
-        // Insert new aggregated uncached popularity and new max admission benefit into benefit_popularity_multimap_ for the new key
-        benefit_popularity_iter_t new_benefit_popularity_iter = benefit_popularity_multimap_.insert(std::pair(new_max_admission_benefit, new_aggregated_uncached_popularity));
-        size_bytes_ += sizeof(DeltaReward); // Max admission benefit
-        size_bytes_ += new_aggregated_uncached_popularity.getSizeForCapacity(); // Aggrgated uncached popularity
-
-        // Insert new key with new benfit_popularity_iter into perkey_benefit_popularity_table_
-        perkey_benefit_popularity_table_.insert(std::pair(key, new_benefit_popularity_iter));
-        size_bytes_ += key.getKeyLength(); // Key
-        size_bytes_ += sizeof(benefit_popularity_iter_t); // Lookup table iterator
+        // Update benefit-popularity multimap and per-key lookup table for new aggregated uncached popularity
+        addBenefitPopularityForNewKey_(key, new_aggregated_uncached_popularity, is_global_cached);
 
         return;
     }
@@ -146,12 +212,9 @@ namespace covered
         // NOTE: we have already acquired a write lock in updateAggregatedUncachedPopularity() for thread safety
 
         // Find the aggregated uncached popularity for the existing key
-        perkey_benefit_popularity_iter_t perkey_benefit_popularity_iter = perkey_benefit_popularity_table_.find(key);
-        assert(perkey_benefit_popularity_iter != perkey_benefit_popularity_table_.end()); // For existing key
-        benefit_popularity_iter_t benefit_popularity_iter = perkey_benefit_popularity_iter->second;
-        assert(benefit_popularity_iter != benefit_popularity_multimap_.end());
-        AggregatedUncachedPopularity existing_aggregated_uncached_popularity = benefit_popularity_iter->second; // Deep copy
-        const uint64_t old_aggregated_uncached_popularity_size_bytes = existing_aggregated_uncached_popularity.getSizeForCapacity();
+        AggregatedUncachedPopularity existing_aggregated_uncached_popularity;
+        bool has_aggregatd_uncached_popularity = getAggregatedUncachedPopularity(key, existing_aggregated_uncached_popularity); // Deep copy
+        assert(has_aggregatd_uncached_popularity == true); // For existing key
 
         // Update the aggregated uncached popularity for the existing key
         bool is_aggregated_uncached_popularity_empty = false;
@@ -161,41 +224,81 @@ namespace covered
         }
         else // Clear aggregated uncached popularity to remove old local uncached popularity of source edge node if any
         {
-            is_aggregated_uncached_popularity_empty = existing_aggregated_uncached_popularity.clear(source_edge_idx, topk_edgecnt_);
+            is_aggregated_uncached_popularity_empty = existing_aggregated_uncached_popularity.clear(source_edge_idx);
         }
-        const uint64_t new_aggregated_uncached_popularity_size_bytes = existing_aggregated_uncached_popularity.getSizeForCapacity();
-        if (is_tracked_by_source_edge_node)
+
+        // Update benefit-popularity multimap and per-key lookup table for existing yet updated aggregated uncached popularity
+        //const bool is_size_bytes_increased = is_tracked_by_source_edge_node;
+        updateBenefitPopularityForExistingKey_(key, existing_aggregated_uncached_popularity, is_aggregated_uncached_popularity_empty, is_global_cached);
+
+        return;
+    }
+
+    void PopularityAggregator::addBenefitPopularityForNewKey_(const Key& key, const AggregatedUncachedPopularity& new_aggregated_uncached_popularity, const bool& is_global_cached)
+    {
+        // NOTE: we have already acquired a write lock in updateAggregatedUncachedPopularity() for thread safety
+
+        perkey_benefit_popularity_table_iter_t perkey_benefit_popularity_iter = perkey_benefit_popularity_table_.find(key);
+        assert(perkey_benefit_popularity_iter == perkey_benefit_popularity_table_.end()); // For new key
+
+        // Prepare new max admission benefit for the new key
+        DeltaReward new_max_admission_benefit = new_aggregated_uncached_popularity.calcMaxAdmissionBenefit(is_global_cached);
+
+        // Insert new aggregated uncached popularity and new max admission benefit into benefit_popularity_multimap_ for the new key
+        benefit_popularity_multimap_iter_t new_benefit_popularity_iter = benefit_popularity_multimap_.insert(std::pair(new_max_admission_benefit, new_aggregated_uncached_popularity));
+        size_bytes_ += sizeof(DeltaReward); // Max admission benefit
+        size_bytes_ += new_aggregated_uncached_popularity.getSizeForCapacity(); // Aggrgated uncached popularity
+
+        // Insert new key with new benfit_popularity_iter into perkey_benefit_popularity_table_
+        perkey_benefit_popularity_table_.insert(std::pair(key, new_benefit_popularity_iter));
+        size_bytes_ += key.getKeyLength(); // Key
+        size_bytes_ += sizeof(benefit_popularity_multimap_iter_t); // Lookup table iterator
+
+        return;
+    }
+
+    void PopularityAggregator::updateBenefitPopularityForExistingKey_(const Key& key, const AggregatedUncachedPopularity& updated_aggregated_uncached_popularity, const bool& is_aggregated_uncached_popularity_empty, const bool& is_global_cached)
+    {
+        perkey_benefit_popularity_table_iter_t perkey_benefit_popularity_iter = perkey_benefit_popularity_table_.find(key);
+        assert(perkey_benefit_popularity_iter != perkey_benefit_popularity_table_.end()); // For existing key
+        benefit_popularity_multimap_iter_t old_benefit_popularity_iter = perkey_benefit_popularity_iter->second;
+        assert(old_benefit_popularity_iter != benefit_popularity_multimap_.end());
+
+        // Verify cache size usage changes (OBSELETE)
+        const uint64_t old_aggregated_uncached_popularity_size_bytes = old_benefit_popularity_iter->second.getSizeForCapacity();
+        const uint64_t new_aggregated_uncached_popularity_size_bytes = updated_aggregated_uncached_popularity.getSizeForCapacity();
+        /*if (is_size_bytes_increased)
         {
             assert(new_aggregated_uncached_popularity_size_bytes >= old_aggregated_uncached_popularity_size_bytes); // Maybe increase cache size usage
         }
         else
         {
             assert(new_aggregated_uncached_popularity_size_bytes <= old_aggregated_uncached_popularity_size_bytes); // NEVER increase cache size usage
-        }
+        }*/
 
         // Remove old benefit-popularity pair for the given key
         size_bytes_ = Util::uint64Minus(size_bytes_, sizeof(DeltaReward)); // Old max admission benefit
         size_bytes_ = Util::uint64Minus(size_bytes_, old_aggregated_uncached_popularity_size_bytes); // Old aggregated uncached popularity
-        benefit_popularity_multimap_.erase(benefit_popularity_iter);
+        benefit_popularity_multimap_.erase(old_benefit_popularity_iter);
 
         if (is_aggregated_uncached_popularity_empty) // NO need aggregated uncached popularity for the given key
         {
             perkey_benefit_popularity_table_.erase(perkey_benefit_popularity_iter);
             size_bytes_ = Util::uint64Minus(size_bytes_, key.getKeyLength()); // Erased key
-            size_bytes_ = Util::uint64Minus(size_bytes_, sizeof(benefit_popularity_iter_t)); // Erased lookup table iterator
+            size_bytes_ = Util::uint64Minus(size_bytes_, sizeof(benefit_popularity_multimap_iter_t)); // Erased lookup table iterator
         }
         else // Still need aggregated uncached popularity for the given key
         {
             // Calculate a new max admission benefit for the existing key
-            DeltaReward new_max_admission_benefit = existing_aggregated_uncached_popularity.calcMaxAdmissionBenefit(is_global_cached);
+            DeltaReward new_max_admission_benefit = updated_aggregated_uncached_popularity.calcMaxAdmissionBenefit(is_global_cached);
 
             // Update benefit_popularity_multimap_ for the new max admission benefit of the existing key
-            benefit_popularity_iter = benefit_popularity_multimap_.insert(std::pair(new_max_admission_benefit, existing_aggregated_uncached_popularity));
+            benefit_popularity_multimap_iter_t new_benefit_popularity_iter = benefit_popularity_multimap_.insert(std::pair(new_max_admission_benefit, updated_aggregated_uncached_popularity));
             size_bytes_ += sizeof(DeltaReward); // New max admission benefit
             size_bytes_ += new_aggregated_uncached_popularity_size_bytes; // New aggregated uncached popularity
 
             // Update perkey_benefit_popularity_table_ for the new benefit_popularity_iter of the existing key
-            perkey_benefit_popularity_iter->second = benefit_popularity_iter;
+            perkey_benefit_popularity_iter->second = new_benefit_popularity_iter;
         }
 
         return;
@@ -203,6 +306,8 @@ namespace covered
 
     void PopularityAggregator::discardGlobalLessPopularObjects_()
     {
+        // NOTE: we have already acquired a write lock in updateAggregatedUncachedPopularity() for thread safety
+
         while (true)
         {
             // Check if popularity aggregation capacity bytes are used up
@@ -213,7 +318,7 @@ namespace covered
             else
             {
                 // Find the object with the minimum max admission benefit
-                benefit_popularity_iter_t min_benefit_popularity_iter = benefit_popularity_multimap_.begin();
+                benefit_popularity_multimap_iter_t min_benefit_popularity_iter = benefit_popularity_multimap_.begin();
                 assert(min_benefit_popularity_iter != benefit_popularity_multimap_.end());
                 AggregatedUncachedPopularity tmp_aggregated_uncached_popularity = min_benefit_popularity_iter->second; // Aggregated uncached popularity with minimum max admission benefit
                 
@@ -224,11 +329,11 @@ namespace covered
                 
                 // Remove it from perkey_benefit_popularity_table_
                 Key tmp_key = tmp_aggregated_uncached_popularity.getKey(); // Key with minimum max admission benefit
-                perkey_benefit_popularity_iter_t perkey_benefit_popularity_iter = perkey_benefit_popularity_table_.find(tmp_key);
+                perkey_benefit_popularity_table_iter_t perkey_benefit_popularity_iter = perkey_benefit_popularity_table_.find(tmp_key);
                 assert(perkey_benefit_popularity_iter != perkey_benefit_popularity_table_.end());
                 perkey_benefit_popularity_table_.erase(perkey_benefit_popularity_iter);
                 size_bytes_ = Util::uint64Minus(size_bytes_, tmp_key.getKeyLength()); // Key
-                size_bytes_ = Util::uint64Minus(size_bytes_, sizeof(benefit_popularity_iter_t)); // Lookup table iterator
+                size_bytes_ = Util::uint64Minus(size_bytes_, sizeof(benefit_popularity_multimap_iter_t)); // Lookup table iterator
             }
         }
 

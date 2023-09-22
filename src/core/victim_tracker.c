@@ -101,7 +101,9 @@ namespace covered
 
     VictimSyncset VictimTracker::getVictimSyncset() const
     {
-        // Acquire a read lock to get cache size usage atomically (TODO: maybe NO need to acquire a read lock for size_bytes_ here)
+        checkPointers_();
+
+        // Acquire a read lock to get victim syncset atomically
         std::string context_name = "VictimTracker::getVictimSyncset()";
         rwlock_for_victim_tracker_->acquire_lock_shared(context_name);
 
@@ -167,6 +169,12 @@ namespace covered
     
     DeltaReward VictimTracker::calcEvictionCost(const ObjectSize& object_size, const std::unordered_set<uint32_t>& placement_edgeset) const
     {
+        checkPointers_();
+        
+        // Acquire a read lock to calculate eviction cost atomically
+        std::string context_name = "VictimTracker::calcEvictionCost()";
+        rwlock_for_victim_tracker_->acquire_lock_shared(context_name);
+
         DeltaReward eviction_cost = 0.0;
 
         // Get weight parameters from static class atomically
@@ -208,6 +216,7 @@ namespace covered
             }
         }
 
+        rwlock_for_victim_tracker_->unlock_shared(context_name);
         return eviction_cost;
     }
 

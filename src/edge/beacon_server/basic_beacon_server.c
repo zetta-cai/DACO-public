@@ -39,7 +39,10 @@ namespace covered
         Key tmp_key = directory_lookup_request_ptr->getKey();
 
         // Lookup local content directory
-        edge_wrapper_ptr_->getCooperationWrapperPtr()->lookupDirectoryTableByBeaconServer(tmp_key, edge_cache_server_worker_recvreq_dst_addr, is_being_written, is_valid_directory_exist, directory_info);
+        const uint32_t source_edge_idx = control_request_ptr->getSourceIndex();
+        bool is_source_cached = false;
+        edge_wrapper_ptr_->getCooperationWrapperPtr()->lookupDirectoryTableByBeaconServer(tmp_key, source_edge_idx, edge_cache_server_worker_recvreq_dst_addr, is_being_written, is_valid_directory_exist, directory_info, is_source_cached);
+        UNUSED(is_source_cached);
 
         return;
     }
@@ -65,8 +68,11 @@ namespace covered
         DirectoryInfo directory_info = directory_update_request_ptr->getDirectoryInfo();
 
         // Update local directory information in cooperation wrapper
+        const uint32_t source_edge_idx = control_request_ptr->getSourceIndex();
         bool is_being_written = false;
-        edge_wrapper_ptr_->getCooperationWrapperPtr()->updateDirectoryTable(tmp_key, is_admit, directory_info, is_being_written);
+        bool is_source_cached = false;
+        edge_wrapper_ptr_->getCooperationWrapperPtr()->updateDirectoryTable(tmp_key, source_edge_idx, is_admit, directory_info, is_being_written, is_source_cached);
+        UNUSED(is_source_cached);
 
         return is_being_written;
     }
@@ -90,7 +96,10 @@ namespace covered
         Key tmp_key = acquire_writelock_request_ptr->getKey();
 
         // Get result of acquiring local write lock
-        lock_result = edge_wrapper_ptr_->getCooperationWrapperPtr()->acquireLocalWritelockByBeaconServer(tmp_key, edge_cache_server_worker_recvreq_dst_addr, all_dirinfo);
+        const uint32_t source_edge_idx = control_request_ptr->getSourceIndex();
+        bool is_source_cached = false;
+        lock_result = edge_wrapper_ptr_->getCooperationWrapperPtr()->acquireLocalWritelockByBeaconServer(tmp_key, source_edge_idx, edge_cache_server_worker_recvreq_dst_addr, all_dirinfo, is_source_cached);
+        UNUSED(is_source_cached);
 
         return;
     }
@@ -116,7 +125,9 @@ namespace covered
         // Release local write lock and validate sender directory info if any
         uint32_t sender_edge_idx = release_writelock_request_ptr->getSourceIndex();
         DirectoryInfo sender_directory_info(sender_edge_idx);
-        blocked_edges = edge_wrapper_ptr_->getCooperationWrapperPtr()->releaseLocalWritelock(tmp_key, sender_directory_info);
+        bool is_source_cached = false;
+        blocked_edges = edge_wrapper_ptr_->getCooperationWrapperPtr()->releaseLocalWritelock(tmp_key, sender_edge_idx, sender_directory_info, is_source_cached);
+        UNUSED(is_source_cached);
 
         return;
     }

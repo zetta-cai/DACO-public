@@ -48,7 +48,10 @@ namespace covered
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
-        tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->lookupDirectoryTableByCacheServer(key, is_being_written, is_valid_directory_exist, directory_info);
+        uint32_t current_edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
+        bool is_source_cached = false;
+        tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->lookupDirectoryTableByCacheServer(key, current_edge_idx, is_being_written, is_valid_directory_exist, directory_info, is_source_cached);
+        UNUSED(is_source_cached);
 
         return;
     }
@@ -142,7 +145,10 @@ namespace covered
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
-        lock_result = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->acquireLocalWritelockByCacheServer(key, all_dirinfo);
+        uint32_t current_edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
+        bool is_source_cached = false;
+        lock_result = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->acquireLocalWritelockByCacheServer(key, current_edge_idx, all_dirinfo, is_source_cached);
+        UNUSED(is_source_cached);
 
         return;
     }
@@ -204,8 +210,10 @@ namespace covered
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
+        uint32_t current_edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
         DirectoryInfo current_directory_info(tmp_edge_wrapper_ptr->getNodeIdx());
-        blocked_edges = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->releaseLocalWritelock(key, current_directory_info);
+        bool is_source_cached = false;
+        blocked_edges = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->releaseLocalWritelock(key, current_edge_idx, current_directory_info, is_source_cached);
 
         return;
     }
@@ -299,7 +307,10 @@ namespace covered
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
-        tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->updateDirectoryTable(key, is_admit, directory_info, is_being_written);
+        uint32_t current_edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
+        bool is_source_cached = false;
+        tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->updateDirectoryTable(key, current_edge_idx, is_admit, directory_info, is_being_written, is_source_cached);
+        UNUSED(is_source_cached);
 
         return;
     }

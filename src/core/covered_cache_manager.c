@@ -18,9 +18,9 @@ namespace covered
 
     // For popularity aggregation
 
-    bool CoveredCacheManager::updatePopularityAggregatorForAggregatedPopularity(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached, const bool& need_placement_calculation, std::unordered_set<uint32_t>& best_placement_edgeset)
+    bool CoveredCacheManager::updatePopularityAggregatorForAggregatedPopularity(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached, const bool& is_source_cached, const bool& need_placement_calculation, std::unordered_set<uint32_t>& best_placement_edgeset)
     {
-        popularity_aggregator_.updateAggregatedUncachedPopularity(key, source_edge_idx, collected_popularity, is_global_cached);
+        popularity_aggregator_.updateAggregatedUncachedPopularity(key, source_edge_idx, collected_popularity, is_global_cached, is_source_cached);
         
         // NOTE: we do NOT perform placement calculation for local/remote acquire writelock request, as newly-admitted cache copies will still be invalid after cache placement
         bool has_best_placement = false;
@@ -32,6 +32,12 @@ namespace covered
             {
                 // Perform greedy-based placement calculation for trade-off-aware cache placement
                 has_best_placement = placementCalculation_(key, is_global_cached, best_placement_edgeset);
+
+                // Preserve placement edgeset, release local uncached popularities, and update max admission benefit with aggregated uncached popularity for non-blocking placement deployment
+                popularity_aggregator_.updatePreservedEdgesetForPlacement(key, best_placement_edgeset, is_global_cached);
+
+                // END HERE
+                // TODO: Release involved victims from victim tracker
             }
         }
 

@@ -116,7 +116,7 @@ namespace covered
         return dirinfo_set;
     }
 
-    bool CooperationWrapperBase::lookupDirectoryTableByCacheServer(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
+    bool CooperationWrapperBase::lookupDirectoryTableByCacheServer(const Key& key, const uint32_t& source_edge_idx, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, bool& is_source_cached) const
     {
         checkPointers_();
 
@@ -127,7 +127,7 @@ namespace covered
         bool is_global_cached = false; // Whether the key is cached by a local/neighbor edge node (even if invalid temporarily)
 
         is_being_written = block_tracker_ptr_->isBeingWrittenForKey(key);
-        is_global_cached = lookupDirectoryTable_(key, is_being_written, is_valid_directory_exist, directory_info);
+        is_global_cached = lookupDirectoryTable_(key, source_edge_idx, is_being_written, is_valid_directory_exist, directory_info, is_source_cached);
 
         // Release a read lock
         cooperation_wrapper_perkey_rwlock_ptr_->unlock_shared(key, context_name);
@@ -135,7 +135,7 @@ namespace covered
         return is_global_cached;
     }
 
-    bool CooperationWrapperBase::lookupDirectoryTableByBeaconServer(const Key& key, const NetworkAddr& cache_server_worker_recvreq_dst_addr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info)
+    bool CooperationWrapperBase::lookupDirectoryTableByBeaconServer(const Key& key, const uint32_t& source_edge_idx, const NetworkAddr& cache_server_worker_recvreq_dst_addr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, bool& is_source_cached)
     {
         checkPointers_();
 
@@ -146,7 +146,7 @@ namespace covered
         bool is_global_cached = false; // Whether the key is cached by a local/neighbor edge node (even if invalid temporarily)
 
         block_tracker_ptr_->blockEdgeForKeyIfExistAndBeingWritten(key, cache_server_worker_recvreq_dst_addr, is_being_written);
-        is_global_cached = lookupDirectoryTable_(key, is_being_written, is_valid_directory_exist, directory_info);
+        is_global_cached = lookupDirectoryTable_(key, source_edge_idx, is_being_written, is_valid_directory_exist, directory_info, is_source_cached);
 
         // Release a read lock
         cooperation_wrapper_perkey_rwlock_ptr_->unlock(key, context_name);
@@ -154,7 +154,7 @@ namespace covered
         return is_global_cached;
     }
 
-    bool CooperationWrapperBase::lookupDirectoryTable_(const Key& key, const bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
+    bool CooperationWrapperBase::lookupDirectoryTable_(const Key& key, const uint32_t& source_edge_idx, const bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, bool& is_source_cached) const
     {
         // No need to acquire a read/write lock, which has been done in public functions
 
@@ -172,10 +172,12 @@ namespace covered
 
             is_global_cached = directory_table_ptr_->isGlobalCached(key);
         }
+        is_source_cached = directory_table_ptr_->isCachedByGivenEdge(key, source_edge_idx);
+
         return is_global_cached;
     }
 
-    bool CooperationWrapperBase::updateDirectoryTable(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written)
+    bool CooperationWrapperBase::updateDirectoryTable(const Key& key, const uint32_t& source_edge_idx, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written, bool& is_source_cached)
     {
         checkPointers_();
 
@@ -198,6 +200,8 @@ namespace covered
         assert(directory_table_ptr_ != NULL);
         is_global_cached = directory_table_ptr_->update(key, is_admit, directory_info, directory_metadata);
 
+        is_source_cached = directory_table_ptr_->isCachedByGivenEdge(key, source_edge_idx);
+
         // Release a write lock
         cooperation_wrapper_perkey_rwlock_ptr_->unlock(key, context_name);
 
@@ -206,7 +210,7 @@ namespace covered
 
     // (4) Process writes for MSI protocol
 
-    LockResult CooperationWrapperBase::acquireLocalWritelockByCacheServer(const Key& key, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo)
+    LockResult CooperationWrapperBase::acquireLocalWritelockByCacheServer(const Key& key, const uint32_t& source_edge_idx, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo, bool& is_source_cached)
     {
         checkPointers_();
 
@@ -235,13 +239,15 @@ namespace covered
             }
         }
 
+        is_source_cached = directory_table_ptr_->isCachedByGivenEdge(key, source_edge_idx);
+
         // Release a write lock
         cooperation_wrapper_perkey_rwlock_ptr_->unlock(key, context_name);
 
         return lock_result;
     }
 
-    LockResult CooperationWrapperBase::acquireLocalWritelockByBeaconServer(const Key& key, const NetworkAddr& cache_server_worker_recvreq_dst_addr, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo)
+    LockResult CooperationWrapperBase::acquireLocalWritelockByBeaconServer(const Key& key, const uint32_t& source_edge_idx, const NetworkAddr& cache_server_worker_recvreq_dst_addr, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo, bool& is_source_cached)
     {
         checkPointers_();
 
@@ -270,13 +276,15 @@ namespace covered
             }
         }
 
+        is_source_cached = directory_table_ptr_->isCachedByGivenEdge(key, source_edge_idx);
+
         // Release a write lock
         cooperation_wrapper_perkey_rwlock_ptr_->unlock(key, context_name);
 
         return lock_result;
     }
 
-    std::unordered_set<NetworkAddr, NetworkAddrHasher> CooperationWrapperBase::releaseLocalWritelock(const Key& key, const DirectoryInfo& sender_dirinfo)
+    std::unordered_set<NetworkAddr, NetworkAddrHasher> CooperationWrapperBase::releaseLocalWritelock(const Key& key, const uint32_t& source_edge_idx, const DirectoryInfo& sender_dirinfo, bool& is_source_cached)
     {
         checkPointers_();
 
@@ -288,6 +296,8 @@ namespace covered
 
         // Validate content directory if any for the closest edge node releasing the write lock
         directory_table_ptr_->validateDirinfoForKeyIfExist(key, sender_dirinfo);
+
+        is_source_cached = directory_table_ptr_->isCachedByGivenEdge(key, source_edge_idx);
 
         // Release a write lock
         cooperation_wrapper_perkey_rwlock_ptr_->unlock(key, context_name);

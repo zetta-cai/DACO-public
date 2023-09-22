@@ -166,6 +166,23 @@ namespace covered
         return is_global_cached;
     }
 
+    bool DirectoryTable::isCachedByGivenEdge(const Key& key, const uint32_t& edge_idx) const
+    {
+        bool is_cached_by_given_edge = false;
+
+        dirinfo_set_t all_dirinfo = getAll(key);
+        for (dirinfo_set_t::const_iterator dirinfo_const_iter = all_dirinfo.begin(); dirinfo_const_iter != all_dirinfo.end(); dirinfo_const_iter++)
+        {
+            if (edge_idx == dirinfo_const_iter->getTargetEdgeIdx())
+            {
+                is_cached_by_given_edge = true;
+                break;
+            }
+        }
+
+        return is_cached_by_given_edge;
+    }
+
     void DirectoryTable::invalidateAllDirinfoForKeyIfExist(const Key& key, dirinfo_set_t& all_dirinfo)
     {
         // Prepare InvalidateMetadataForAllDirinfoParam

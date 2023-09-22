@@ -34,7 +34,7 @@ namespace covered
         // For selective popularity aggregation (may trigger trade-off-aware placement calculation)
 
         // NOTE: need_placement_calculation works only when key is tracked by local uncached metadata of sender edge node
-        bool updatePopularityAggregatorForAggregatedPopularity(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached, const bool& need_placement_calculation, std::unordered_set<uint32_t>& best_placement_edgeset); // Return if the best placement exists (i.e., with positive placement gain)
+        bool updatePopularityAggregatorForAggregatedPopularity(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached, const bool& is_source_cached, const bool& need_placement_calculation, std::unordered_set<uint32_t>& best_placement_edgeset); // Return if the best placement exists (i.e., with positive placement gain)
         void clearPopularityAggregatorAfterAdmission(const Key& key, const uint32_t& source_edge_idx);
         
         // For victim synchronization
