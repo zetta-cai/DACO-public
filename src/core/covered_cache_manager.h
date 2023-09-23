@@ -59,7 +59,8 @@ namespace covered
         static const std::string kClassName;
 
         // Perform placement calculation only if key belongs to a global popular uncached object (i.e., with large enough max admission benefit)
-        bool placementCalculation_(const Key& key, const bool& is_global_cached, std::unordered_set<uint32_t>& best_placement_edgeset); // Return if the best placement exists (i.e., with positive placement gain)
+        // NOTE: best_placement_edgeset is used for perserved edgeset and placement notifications, while best_placement_peredge_victimset is used for victim removal (both for non-blocking placement deployment)
+        bool placementCalculation_(const Key& key, const bool& is_global_cached, std::unordered_set<uint32_t>& best_placement_edgeset, std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& best_placement_peredge_victimset); // Return if the best placement exists (i.e., with positive placement gain)
 
         // Const shared variables
         std::string instance_name_;

@@ -34,9 +34,9 @@ namespace covered
         return victim_cacheinfos_;
     }
 
-    bool EdgelevelVictimMetadata::findVictimsForObjectSize(const uint32_t& cur_edge_idx, const ObjectSize& object_size, std::unordered_map<Key, std::unordered_set<uint32_t>, KeyHasher>& pervictim_edgeset, std::unordered_map<Key, std::list<VictimCacheinfo>, KeyHasher>& pervictim_cacheinfos) const
+    bool EdgelevelVictimMetadata::findVictimsForObjectSize(const uint32_t& cur_edge_idx, const ObjectSize& object_size, std::unordered_map<Key, std::unordered_set<uint32_t>, KeyHasher>& pervictim_edgeset, std::unordered_map<Key, std::list<VictimCacheinfo>, KeyHasher>& pervictim_cacheinfos, std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& peredge_victimset) const
     {
-        // NOTE: NO need to clear pervictim_edgeset and pervictim_cacheinfos, which has been done by VictimTracker::findVictimsForPlacement_()
+        // NOTE: NO need to clear pervictim_edgeset, pervictim_cacheinfos, and peredge_victimset, which has been done by VictimTracker::findVictimsForPlacement_()
 
         bool need_more_victims = false;
 
@@ -68,6 +68,15 @@ namespace covered
                 }
                 assert(pervictim_cacheinfos_iter != pervictim_cacheinfos.end());
                 pervictim_cacheinfos_iter->second.push_back(tmp_victim_cacheinfo);
+
+                // Update per-edge victim keyset
+                std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>::iterator peredge_victimset_iter = peredge_victimset.find(cur_edge_idx);
+                if (peredge_victimset_iter == peredge_victimset.end())
+                {
+                    peredge_victimset_iter = peredge_victimset.insert(std::pair(cur_edge_idx, std::unordered_set<Key, KeyHasher>())).first;
+                }
+                assert(peredge_victimset_iter != peredge_victimset.end());
+                peredge_victimset_iter->second.insert(tmp_victim_key);
 
                 // Check if we have found sufficient victims for the required bytes
                 const ObjectSize tmp_victim_object_size = tmp_victim_cacheinfo.getObjectSize();

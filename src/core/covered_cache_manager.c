@@ -31,14 +31,24 @@ namespace covered
             if (is_tracked_by_source_edge_node)
             {
                 // Perform greedy-based placement calculation for trade-off-aware cache placement
-                // TODO: (END HERE) get per-edge victims to remove involved victims from victim tracker to avoid duplicate eviction
-                has_best_placement = placementCalculation_(key, is_global_cached, best_placement_edgeset);
+                // NOTE: set best_placement_edgeset for preserved edgeset and placement notifications; set best_placement_peredge_victimset for victim removal to avoid duplicate eviction (both for non-blocking placement deployment)
+                std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>> best_placement_peredge_victimset;
+                has_best_placement = placementCalculation_(key, is_global_cached, best_placement_edgeset, best_placement_peredge_victimset);
 
-                // Preserve placement edgeset, release local uncached popularities, and update max admission benefit with aggregated uncached popularity for non-blocking placement deployment
-                popularity_aggregator_.updatePreservedEdgesetForPlacement(key, best_placement_edgeset, is_global_cached);
+                if (has_best_placement)
+                {
+                    // Preserve placement edgeset, release local uncached popularities, and update max admission benefit with aggregated uncached popularity for non-blocking placement deployment
+                    popularity_aggregator_.updatePreservedEdgesetForPlacement(key, best_placement_edgeset, is_global_cached);
 
-                // TODO: Remove involved victims from victim tracker for each edge node in placement edgeset to avoid duplication eviction
-                // NOTE: removed victims should NOT be reused <- if synced victims in the edge node do NOT change, removed victims will NOT be reported to the beacon node due to dedup/delta-compression in victim synchronization; if need more victims, victim fetching request MUST be later than placement notification request, which has changed the synced victims in the edge node
+                    // Remove involved victims from victim tracker for each edge node in placement edgeset to avoid duplication eviction
+                    // NOTE: removed victims should NOT be reused <- if synced victims in the edge node do NOT change, removed victims will NOT be reported to the beacon node due to dedup/delta-compression in victim synchronization; if need more victims, victim fetching request MUST be later than placement notification request, which has changed the synced victims in the edge node
+                    for (std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>::const_iterator best_placement_peredge_victimset_const_iter = best_placement_peredge_victimset.begin(); best_placement_peredge_victimset_const_iter != best_placement_peredge_victimset.end(); best_placement_peredge_victimset_const_iter++)
+                    {
+                        const uint32_t tmp_edge_idx = best_placement_peredge_victimset_const_iter->first;
+                        const std::unordered_set<Key, KeyHasher>& tmp_victim_keyset_const_ref = best_placement_peredge_victimset_const_iter->second;
+                        victim_tracker_.removeVictimsForGivenEdge(tmp_edge_idx, tmp_victim_keyset_const_ref);
+                    }
+                }
             }
         }
 
@@ -112,7 +122,7 @@ namespace covered
         return total_size;
     }
 
-    bool CoveredCacheManager::placementCalculation_(const Key& key, const bool& is_global_cached, std::unordered_set<uint32_t>& best_placement_edgeset)
+    bool CoveredCacheManager::placementCalculation_(const Key& key, const bool& is_global_cached, std::unordered_set<uint32_t>& best_placement_edgeset, std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& best_placement_peredge_victimset)
     {
         bool has_best_placement = false;
 
@@ -130,7 +140,8 @@ namespace covered
             // Greedy-based placement calculation
             PlacementGain max_placement_gain = 0.0;
             uint32_t best_topicnt = 0;
-            std::unordered_set<uint32_t> tmp_best_placement_edgeset;
+            std::unordered_set<uint32_t> tmp_best_placement_edgeset; // For preserved edgeset and placement notifications under non-blocking placement deployment
+            std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>> tmp_best_placement_peredge_victimset; // For victim removal under non-blocking placement deployment
             for (uint32_t topicnt = 1; topicnt <= tmp_topk_list_length; topicnt++)
             {
                 // Consider topi edge nodes ordered by local uncached popularity in a descending order
@@ -140,7 +151,8 @@ namespace covered
                 const DeltaReward tmp_admission_benefit = tmp_aggregated_uncached_popularity.calcAdmissionBenefit(topicnt, is_global_cached, tmp_placement_edgeset);
 
                 // Calculate eviction cost based on tmp_placement_edgeset
-                const DeltaReward tmp_eviction_cost = victim_tracker_.calcEvictionCost(tmp_object_size, tmp_placement_edgeset);
+                std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>> tmp_placement_peredge_victimset;
+                const DeltaReward tmp_eviction_cost = victim_tracker_.calcEvictionCost(tmp_object_size, tmp_placement_edgeset, tmp_placement_peredge_victimset);
 
                 // Calculate placement gain (admission benefit - eviction cost)
                 const DeltaReward tmp_placement_gain = tmp_admission_benefit - tmp_eviction_cost;
@@ -149,6 +161,7 @@ namespace covered
                     max_placement_gain = tmp_placement_gain;
                     best_topicnt = topicnt;
                     tmp_best_placement_edgeset = tmp_placement_edgeset;
+                    tmp_best_placement_peredge_victimset = tmp_placement_peredge_victimset;
                 }
             }
 
@@ -157,6 +170,7 @@ namespace covered
             {
                 has_best_placement = true;
                 best_placement_edgeset = tmp_best_placement_edgeset;
+                best_placement_peredge_victimset = tmp_best_placement_peredge_victimset;
             }
         }
 
