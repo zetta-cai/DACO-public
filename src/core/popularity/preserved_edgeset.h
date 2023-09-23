@@ -19,6 +19,8 @@ namespace covered
         PreservedEdgeset(const uint32_t& edgecnt);
         ~PreservedEdgeset();
 
+        bool isPreserved(const uint32_t edge_idx) const;
+
         void preserveEdgesetForPlacement(const std::unordered_set<uint32_t>& placement_edgeset);
 
         uint64_t getSizeForCapacity() const;

@@ -78,8 +78,6 @@ namespace covered
         const std::string context_name = "PopularityAggregator::updateAggregatedUncachedPopularity()";
         rwlock_for_popularity_aggregator_->acquire_lock(context_name);
 
-        perkey_benefit_popularity_table_iter_t perkey_benefit_popularity_iter = perkey_benefit_popularity_table_.find(key);
-
         bool is_tracked_by_source_edge_node = collected_popularity.isTracked(); // If key is tracked by local uncached metadata in the source edge node (i.e., if local uncached popularity is valid)
 
         // Ignore local uncached popularity if necessary
@@ -89,11 +87,16 @@ namespace covered
             // NOTE: this will delay the latest local uncached popularity of newly-evicted keys, after the source edge node has evicted the object and updated local uncached metadata for metadata preservation, yet directory update request with is_admit = false has NOT cleared directory info in the beacon node -> BUT acceptable as this is a corner case (newly-evicted keys are NOT popular enough and NO need to add/update latest local uncached popularity in most cases after eviciton)
             is_tracked_by_source_edge_node = false;
         }
-        // END HERE
-        // TODO: Ignore local uncached popularity if source edge node is in preserved edgeset
+        perkey_preserved_edgeset_t::const_iterator perkey_preserved_edgeset_const_iter = perkey_preserved_edgeset_.find(key);
+        if (perkey_preserved_edgeset_const_iter != perkey_preserved_edgeset_.end() && perkey_preserved_edgeset_const_iter->second.isPreserved(source_edge_idx)) // Ignore local uncached popularity if source edge node is in preserved edgeset
+        {
+            // NOTE: we do NOT add/update latest local uncached popularity if source edge node is in preserved edgeset for the given key to avoid duplication admission on the source edge node
+            is_tracked_by_source_edge_node = false;
+        }
 
         Popularity local_uncached_popularity = 0.0;
         ObjectSize object_size = 0;
+        perkey_benefit_popularity_table_iter_t perkey_benefit_popularity_iter = perkey_benefit_popularity_table_.find(key);
         if (is_tracked_by_source_edge_node) // Add/update latest local uncached popularity for key in source edge node into new/existing aggregated uncached popularity
         {
             local_uncached_popularity = collected_popularity.getLocalUncachedPopularity();

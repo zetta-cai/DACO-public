@@ -31,13 +31,14 @@ namespace covered
             if (is_tracked_by_source_edge_node)
             {
                 // Perform greedy-based placement calculation for trade-off-aware cache placement
+                // TODO: (END HERE) get per-edge victims to remove involved victims from victim tracker to avoid duplicate eviction
                 has_best_placement = placementCalculation_(key, is_global_cached, best_placement_edgeset);
 
                 // Preserve placement edgeset, release local uncached popularities, and update max admission benefit with aggregated uncached popularity for non-blocking placement deployment
                 popularity_aggregator_.updatePreservedEdgesetForPlacement(key, best_placement_edgeset, is_global_cached);
 
-                // END HERE
-                // TODO: Release involved victims from victim tracker
+                // TODO: Remove involved victims from victim tracker for each edge node in placement edgeset to avoid duplication eviction
+                // NOTE: removed victims should NOT be reused <- if synced victims in the edge node do NOT change, removed victims will NOT be reported to the beacon node due to dedup/delta-compression in victim synchronization; if need more victims, victim fetching request MUST be later than placement notification request, which has changed the synced victims in the edge node
             }
         }
 

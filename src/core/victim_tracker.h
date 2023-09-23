@@ -46,6 +46,9 @@ namespace covered
         // For trade-off-aware placement calculation
         DeltaReward calcEvictionCost(const ObjectSize& object_size, const std::unordered_set<uint32_t>& placement_edgeset) const;
 
+        // For non-blocking placement deployment
+        void removeVictimsForGivenEdge(const uint32_t& edge_idx, const std::unordered_set<Key, KeyHasher>& victim_keyset); // NOTE: removed victims should NOT be reused <- if synced victims in the edge node do NOT change, removed victims will NOT be reported to the beacon node due to dedup/delta-compression in victim synchronization; if need more victims, victim fetching request MUST be later than placement notification request, which has changed the synced victims in the edge node
+
         uint64_t getSizeForCapacity() const;
     private:
         // NOTE: the list of VictimCacheinfos follows the ascending order of local rewards

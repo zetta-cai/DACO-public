@@ -220,6 +220,26 @@ namespace covered
         return eviction_cost;
     }
 
+    // For non-blocking placement deployment
+
+    void VictimTracker::removeVictimsForGivenEdge(const uint32_t& edge_idx, const std::unordered_set<Key, KeyHasher>& victim_keyset)
+    {
+        checkPointers_();
+
+        // Acquire a write lock to remove victims atomically
+        std::string context_name = "VictimTracker::removeVictimsForGivenEdge()";
+        rwlock_for_victim_tracker_->acquire_lock(context_name);
+
+        // NOTE: each edge node in placement edgeset MUST have EdgeLevelVictimMetadata
+        peredge_victim_metadata_t::iterator peredge_victim_metadata_iter = peredge_victim_metadata_.find(edge_idx);
+        assert(peredge_victim_metadata_iter != peredge_victim_metadata_.end());
+
+        peredge_victim_metadata_iter->second.removeVictimsForPlacement(victim_keyset);
+
+        rwlock_for_victim_tracker_->unlock(context_name);
+        return;
+    }
+
     uint64_t VictimTracker::getSizeForCapacity() const
     {
         checkPointers_();
@@ -360,6 +380,7 @@ namespace covered
             uint32_t tmp_edge_idx = *placement_edgeset_const_iter;
 
             // NOTE: edge-level victim metadata for tmp_edge_idx MUST exist, as we have performed victim synchronization when collecting local uncached popularity of the given key from tmp_edge_idx
+            // NOTE: even if all victim cacheinfos in the edge-level victim metadata are removed after placement calculation, we will NOT erase the edge-level victim metadata from peredge_victim_metadata_
             peredge_victim_metadata_t::const_iterator victim_metadata_map_const_iter = peredge_victim_metadata_.find(tmp_edge_idx);
             assert(victim_metadata_map_const_iter != peredge_victim_metadata_.end());
 
