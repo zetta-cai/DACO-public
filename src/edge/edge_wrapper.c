@@ -762,29 +762,6 @@ namespace covered
         return NULL;
     }
 
-    // (6) covered-specific utility functions
-
-    std::unordered_map<Key, dirinfo_set_t, KeyHasher> EdgeWrapper::getLocalBeaconedVictimsFromVictimSyncset(const VictimSyncset& victim_syncset) const
-    {
-        checkPointers_();
-
-        std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets;
-
-        const std::list<VictimCacheinfo>& neighbor_synced_victims = victim_syncset.getLocalSyncedVictimsRef();
-        for (std::list<VictimCacheinfo>::const_iterator iter = neighbor_synced_victims.begin(); iter != neighbor_synced_victims.end(); iter++)
-        {
-            const Key& tmp_key = iter->getKey();
-            bool current_is_beacon = currentIsBeacon(tmp_key);
-            if (current_is_beacon) // Key is beaconed by current edge node
-            {
-                dirinfo_set_t tmp_dirinfo_set = cooperation_wrapper_ptr_->getLocalDirectoryInfos(tmp_key);
-                local_beaconed_neighbor_synced_victim_dirinfosets.insert(std::pair(tmp_key, tmp_dirinfo_set));
-            }
-        }
-
-        return local_beaconed_neighbor_synced_victim_dirinfosets;
-    }
-
     void EdgeWrapper::checkPointers_() const
     {
         NodeWrapperBase::checkPointers_();
@@ -804,5 +781,119 @@ namespace covered
         assert(edge_tocloud_propagation_simulator_param_ptr_ != NULL);
 
         return;
+    }
+
+    // (6) covered-specific utility functions
+
+    void EdgeWrapper::updateCacheManagerForLocalSyncedVictims() const
+    {
+        checkPointers_();
+
+        // Get local edge margin bytes
+        uint64_t used_bytes = getSizeForCapacity();
+        uint64_t capacity_bytes = getCapacityBytes();
+        uint64_t local_cache_margin_bytes = (capacity_bytes >= used_bytes) ? (capacity_bytes - used_bytes) : 0;
+
+        // Get victim cacheinfos of local synced victims for the current edge node
+        std::list<VictimCacheinfo> local_synced_victim_cacheinfos = edge_cache_ptr_->getLocalSyncedVictimCacheinfos();
+
+        // Get directory info sets for local synced victimed beaconed by the current edge node
+        const uint32_t current_edge_idx = getNodeIdx();
+        std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_local_synced_victim_dirinfosets;
+        for (std::list<VictimCacheinfo>::const_iterator cacheinfo_list_iter = local_synced_victim_cacheinfos.begin(); cacheinfo_list_iter != local_synced_victim_cacheinfos.end(); cacheinfo_list_iter++)
+        {
+            const Key& tmp_key = cacheinfo_list_iter->getKey();
+            bool current_is_beacon = currentIsBeacon(tmp_key);
+            if (current_is_beacon) // Key is beaconed by current edge node
+            {
+                dirinfo_set_t tmp_dirinfo_set = cooperation_wrapper_ptr_->getLocalDirectoryInfos(tmp_key);
+                local_beaconed_local_synced_victim_dirinfosets.insert(std::pair(tmp_key, tmp_dirinfo_set));
+            }
+        }
+
+        // Update local synced victims for the current edge node
+        covered_cache_manager_ptr_->updateVictimTrackerForLocalSyncedVictims(local_cache_margin_bytes, local_synced_victim_cacheinfos, local_beaconed_local_synced_victim_dirinfosets); 
+
+        return;
+    }
+
+    std::unordered_map<Key, dirinfo_set_t, KeyHasher> EdgeWrapper::getLocalBeaconedVictimsFromVictimSyncset(const VictimSyncset& victim_syncset) const
+    {
+        checkPointers_();
+        assert(cache_name_ == Util::COVERED_CACHE_NAME);
+
+        std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets;
+
+        const std::list<VictimCacheinfo>& neighbor_synced_victims = victim_syncset.getLocalSyncedVictimsRef();
+        for (std::list<VictimCacheinfo>::const_iterator iter = neighbor_synced_victims.begin(); iter != neighbor_synced_victims.end(); iter++)
+        {
+            const Key& tmp_key = iter->getKey();
+            bool current_is_beacon = currentIsBeacon(tmp_key);
+            if (current_is_beacon) // Key is beaconed by current edge node
+            {
+                dirinfo_set_t tmp_dirinfo_set = cooperation_wrapper_ptr_->getLocalDirectoryInfos(tmp_key);
+                local_beaconed_neighbor_synced_victim_dirinfosets.insert(std::pair(tmp_key, tmp_dirinfo_set));
+            }
+        }
+
+        return local_beaconed_neighbor_synced_victim_dirinfosets;
+    }
+
+    bool EdgeWrapper::nonblockDataFetchForPlacement(const Key& key, const std::unordered_set<uint32_t>& best_placement_edgeset) const
+    {
+        checkPointers_();
+        assert(cache_name_ == Util::COVERED_CACHE_NAME);
+
+        bool need_hybrid_fetching = false;
+
+        // Check local edge cache in local/remote beacon node first
+        Value value;
+        bool affect_victim_tracker = false;
+        bool is_local_cached_and_valid = edge_cache_ptr_->get(key, value, affect_victim_tracker);
+
+        // Avoid unnecessary VictimTracker update
+        if (affect_victim_tracker) // If key was a local synced victim before or is a local synced victim now
+        {
+            updateCacheManagerForLocalSyncedVictims();
+        }
+
+        if (is_local_cached_and_valid) // Directly get valid value from local edge cache in local/remote beacon node
+        {
+            // TODO: Perform non-blocking placement notification
+            //nonblockNotifyForPlacement(key, value, best_placement_edgeset);
+        }
+        else // No valid value in local edge cache in local/remote beacon node
+        {
+            // Check if exist valid dirinfo to fetch data from neighbor
+            uint32_t current_edge_idx = getNodeIdx();
+            bool is_being_written = false;
+            bool is_valid_directory_exist = false;
+            DirectoryInfo directory_info;
+            bool is_source_cached = false;
+            bool is_global_cached = cooperation_wrapper_ptr_->lookupDirectoryTableByCacheServer(key, current_edge_idx, is_being_written, is_valid_directory_exist, directory_info, is_source_cached); // NOTE: local/remote beacon node lookup its own local directory table (= current is beacon for cache server)
+            UNUSED(is_source_cached);
+            UNUSED(is_global_cached);
+
+            if (is_valid_directory_exist) // A neighbor edge node has cached the object
+            {
+                assert(!is_being_written); // Being-written object CANNOT have any valid dirinfo
+
+                // END HERE
+                // TODO: Send CoveredPlacementRedirectedGetRequest to the neighbor node
+
+                // NOTE: we use edge_beacon_server_recvreq_source_addr_ as the soure address even if invoker is cache server to wait for responses
+                // (i) Although current is beacon for cache server, the role is still beacon node, which should be responsible for non-blocking placement deployment. And we don't want to resort cache server worker, which may degrade KV request processing
+                // (ii) Although we may wait for responses, beacon server is blocking for recvreq port and we don't want to introduce another blocking for recvrsp port
+
+                // NOTE: CoveredPlacementRedirectedGetResponse will be processed by covered beacon server (current edge node is a remote beacon node for neighbor edge node, as neighbor MUST NOT be a different edge node for request redirection)
+            }
+            else // No valid cache copy in edge layer
+            {
+                // We need hybrid fetching to resort the sender to fetch data from cloud for reducing edge-cloud bandwidth usage
+                need_hybrid_fetching = true;
+            }
+        }
+
+        return need_hybrid_fetching;
     }
 }

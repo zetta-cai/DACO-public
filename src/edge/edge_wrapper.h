@@ -77,7 +77,11 @@ namespace covered
         // (6) covered-specific utility functions
 
         // For victim synchronization
+        void updateCacheManagerForLocalSyncedVictims() const; // NOTE: both edge cache server worker and local/remote beacon node (non-blocking data fetching for placement deployment) will access local edge cache, which affects local cached metadata and may trigger update for local synced victims
         std::unordered_map<Key, dirinfo_set_t, KeyHasher> getLocalBeaconedVictimsFromVictimSyncset(const VictimSyncset& victim_syncset) const; // NOTE: all edge cache/beacon/invalidation servers will access cooperation wrapper to get content directory information for local beaconed victims from received victim syncset
+
+        // For non-blocking placement deployment
+        bool nonblockDataFetchForPlacement(const Key& key, const std::unordered_set<uint32_t>& best_placement_edgeset) const; // Return if we need hybrid fetching (i.e., resort sender to fetch data from cloud)
     private:
         static const std::string kClassName;
 

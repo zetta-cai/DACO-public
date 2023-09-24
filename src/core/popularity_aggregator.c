@@ -159,7 +159,7 @@ namespace covered
         assert(perkey_preserved_edgeset_iter != perkey_preserved_edgeset_.end());
         perkey_preserved_edgeset_iter->second.preserveEdgesetForPlacement(placement_edgeset);
 
-        // Release local uncached popularities of the edge nodes from aggregated uncached popularity
+        // Remove local uncached popularities of the edge nodes from aggregated uncached popularity to avoid duplicate placement
         bool is_aggregated_uncached_popularity_empty = false;
         is_aggregated_uncached_popularity_empty = existing_aggregated_uncached_popularity.clearForPlacement(placement_edgeset);
 

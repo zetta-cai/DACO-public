@@ -79,11 +79,6 @@ namespace covered
         virtual MessageBase* getReqToUpdateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, const bool& skip_propagation_latency) const override;
         virtual void processRspToUpdateBeaconDirectory_(MessageBase* control_response_ptr, bool& is_being_written) const override;
 
-        // (6) covered-specific utility functions
-        
-        // For victim synchronization
-        void updateCacheManagerForLocalSyncedVictims_() const; // NOTE: ONLY edge cache server worker will access local edge cache, which affects local cached metadata and may trigger update for local synced victims
-
         // Const variable
         std::string instance_name_;
     };

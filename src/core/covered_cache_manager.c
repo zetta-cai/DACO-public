@@ -37,7 +37,7 @@ namespace covered
 
                 if (has_best_placement)
                 {
-                    // Preserve placement edgeset, release local uncached popularities, and update max admission benefit with aggregated uncached popularity for non-blocking placement deployment
+                    // Preserve placement edgeset + perform local-uncached-popularity removal to avoid duplicate placement, and update max admission benefit with aggregated uncached popularity for non-blocking placement deployment
                     popularity_aggregator_.updatePreservedEdgesetForPlacement(key, best_placement_edgeset, is_global_cached);
 
                     // Remove involved victims from victim tracker for each edge node in placement edgeset to avoid duplication eviction
