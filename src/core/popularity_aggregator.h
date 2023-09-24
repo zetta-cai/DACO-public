@@ -17,6 +17,7 @@
 #include "concurrency/rwlock.h"
 #include "core/popularity/aggregated_uncached_popularity.h"
 #include "core/popularity/collected_popularity.h"
+#include "core/popularity/edgeset.h"
 #include "core/popularity/preserved_edgeset.h"
 
 namespace covered
@@ -31,7 +32,7 @@ namespace covered
         uint32_t getTopkEdgecnt() const;
 
         void updateAggregatedUncachedPopularity(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached, const bool& is_source_cached); // Update aggregated uncached popularity for selective popularity aggregation
-        void updatePreservedEdgesetForPlacement(const Key& key, const std::unordered_set<uint32_t>& placement_edgeset, const bool& is_global_cached); // Preserve edge nodes in placement edgeset for non-blocking placement deployment
+        void updatePreservedEdgesetForPlacement(const Key& key, const Edgeset& placement_edgeset, const bool& is_global_cached); // Preserve edge nodes in placement edgeset for non-blocking placement deployment
         void clearAggregatedUncachedPopularityAfterAdmission(const Key& key, const uint32_t& source_edge_idx); // Clear old local uncached popularity (TODO: preserved edge idx / bitmap) of source edge node after admission (NOTE: is_global_cached MUST be true)
     private:
         // NOTE: we MUST store Key in ordered list to locate lookup table during eviciton; use duplicate Keys in lookup table to update ordered list -> if we store Key pointer in ordered list and use duplicate popularity/LRU-order in lookup table, we still can locate lookup table during eviction, yet cannot locate the corresponding popularity entry / have to access all LRU entries to update ordered list

@@ -76,7 +76,7 @@ namespace covered
         return;
     }
 
-    bool AggregatedUncachedPopularity::clearForPlacement(const std::unordered_set<uint32_t>& placement_edgeset)
+    bool AggregatedUncachedPopularity::clearForPlacement(const Edgeset& placement_edgeset)
     {
         for (std::unordered_set<uint32_t>::const_iterator placement_edgeset_const_iter = placement_edgeset.begin(); placement_edgeset_const_iter != placement_edgeset.end(); placement_edgeset_const_iter++)
         {
@@ -119,14 +119,14 @@ namespace covered
 
     DeltaReward AggregatedUncachedPopularity::calcMaxAdmissionBenefit(const bool& is_global_cached) const
     {
-        std::unordered_set<uint32_t> placement_edgeset;
+        Edgeset placement_edgeset;
         DeltaReward max_admission_benefit = calcAdmissionBenefit(topk_edgeidx_local_uncached_popularity_pairs_.size(), is_global_cached, placement_edgeset);
         UNUSED(placement_edgeset);
         
         return max_admission_benefit;
     }
 
-    DeltaReward AggregatedUncachedPopularity::calcAdmissionBenefit(const uint32_t& topicnt, const bool& is_global_cached, std::unordered_set<uint32_t>& placement_edgeset) const
+    DeltaReward AggregatedUncachedPopularity::calcAdmissionBenefit(const uint32_t& topicnt, const bool& is_global_cached, Edgeset& placement_edgeset) const
     {
         // TODO: Use a heuristic or learning-based approach for parameter tuning to calculate delta rewards for max admission benefits (refer to state-of-the-art studies such as LRB and GL-Cache)
 
@@ -223,7 +223,7 @@ namespace covered
 
     // For top-k list
 
-    Popularity AggregatedUncachedPopularity::getTopiLocalUncachedPopularitySum_(const uint32_t& topicnt, std::unordered_set<uint32_t>& placement_edgeset) const
+    Popularity AggregatedUncachedPopularity::getTopiLocalUncachedPopularitySum_(const uint32_t& topicnt, Edgeset& placement_edgeset) const
     {
         const uint32_t topk_list_length = topk_edgeidx_local_uncached_popularity_pairs_.size();
         assert(topicnt <= topk_list_length);

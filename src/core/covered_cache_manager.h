@@ -18,6 +18,7 @@
 #include "common/key.h"
 #include "cooperation/directory/directory_info.h"
 #include "core/directory_cacher.h"
+#include "core/popularity/edgeset.h"
 #include "core/popularity_aggregator.h"
 #include "core/victim/victim_cacheinfo.h"
 #include "core/victim/victim_syncset.h"
@@ -34,7 +35,7 @@ namespace covered
         // For selective popularity aggregation (may trigger trade-off-aware placement calculation)
 
         // NOTE: need_placement_calculation works only when key is tracked by local uncached metadata of sender edge node
-        bool updatePopularityAggregatorForAggregatedPopularity(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached, const bool& is_source_cached, const bool& need_placement_calculation, std::unordered_set<uint32_t>& best_placement_edgeset); // Return if the best placement exists (i.e., with positive placement gain)
+        bool updatePopularityAggregatorForAggregatedPopularity(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached, const bool& is_source_cached, const bool& need_placement_calculation, Edgeset& best_placement_edgeset); // Return if the best placement exists (i.e., with positive placement gain)
         void clearPopularityAggregatorAfterAdmission(const Key& key, const uint32_t& source_edge_idx);
         
         // For victim synchronization
@@ -60,10 +61,11 @@ namespace covered
 
         // Perform placement calculation only if key belongs to a global popular uncached object (i.e., with large enough max admission benefit)
         // NOTE: best_placement_edgeset is used for perserved edgeset and placement notifications, while best_placement_peredge_victimset is used for victim removal (both for non-blocking placement deployment)
-        bool placementCalculation_(const Key& key, const bool& is_global_cached, std::unordered_set<uint32_t>& best_placement_edgeset, std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& best_placement_peredge_victimset); // Return if the best placement exists (i.e., with positive placement gain)
+        bool placementCalculation_(const Key& key, const bool& is_global_cached, Edgeset& best_placement_edgeset, std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& best_placement_peredge_victimset); // Return if the best placement exists (i.e., with positive placement gain)
 
         // Const shared variables
         std::string instance_name_;
+        const uint32_t topk_edgecnt_; // Come from CLI
 
         // Non-const shared variables (each should be thread safe)
         // NOTE: we do NOT use per-key fine-grained locking here, as CoveredCacheManager does NOT need strong serializability/atomicity for its componenets, and some components (PopularityAggregator and VictimTracker) CANNOT use per-key fine-grained locking due to accessing multiple keys in one function (e.g., discardGlobalLessPopularObjects_() and updateLocalSyncedVictims())

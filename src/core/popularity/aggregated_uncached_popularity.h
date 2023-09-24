@@ -15,6 +15,7 @@
 
 #include "common/covered_common_header.h"
 #include "common/key.h"
+#include "core/popularity/edgeset.h"
 
 namespace covered
 {
@@ -30,14 +31,14 @@ namespace covered
         uint32_t getTopkListLength() const; // Get length k' of top-k list (k' <= topk_edgecnt)
 
         void update(const uint32_t& source_edge_idx, const Popularity& local_uncached_popularity, const uint32_t& topk_edgecnt, const ObjectSize& object_size);
-        bool clearForPlacement(const std::unordered_set<uint32_t>& placement_edgeset); // Return if exist_edgecnt_ == 0 (i.e., NO local uncached popularity for key) after clear
+        bool clearForPlacement(const Edgeset& placement_edgeset); // Return if exist_edgecnt_ == 0 (i.e., NO local uncached popularity for key) after clear
         bool clear(const uint32_t& source_edge_idx); // Return if exist_edgecnt_ == 0 (i.e., NO local uncached popularity for key) after clear
 
         // For selective popularity aggregation
         DeltaReward calcMaxAdmissionBenefit(const bool& is_global_cached) const; // Max admission benefit if admit key into all top-k edge nodes
 
         // For trade-off-aware placement calculation
-        DeltaReward calcAdmissionBenefit(const uint32_t& topicnt, const bool& is_global_cached, std::unordered_set<uint32_t>& placement_edgeset) const; // Admission benefit if admit key into top-i edge nodes (i <= top-k list length)
+        DeltaReward calcAdmissionBenefit(const uint32_t& topicnt, const bool& is_global_cached, Edgeset& placement_edgeset) const; // Admission benefit if admit key into top-i edge nodes (i <= top-k list length)
 
         uint64_t getSizeForCapacity() const;
 
@@ -51,7 +52,7 @@ namespace covered
         void minusLocalUncachedPopularityFromSum_(const Popularity& local_uncached_popularity);
 
         // For top-k list
-        Popularity getTopiLocalUncachedPopularitySum_(const uint32_t& topicnt, std::unordered_set<uint32_t>& placement_edgeset) const; // Return sum of top-i uncached popularities (i <= top-k list length)
+        Popularity getTopiLocalUncachedPopularitySum_(const uint32_t& topicnt, Edgeset& placement_edgeset) const; // Return sum of top-i uncached popularities (i <= top-k list length)
         std::list<edgeidx_popularity_pair_t>::const_iterator getTopkListIterForEdgeIdx_(const uint32_t& source_edge_idx) const; // Return an iterator pointing to edgeidx_popularity_pair_t if source_edge_idx is in top-k list
         bool updateTopkForExistingEdgeIdx_(const uint32_t& source_edge_idx, const Popularity& local_uncached_popularity, const uint32_t& topk_edgecnt); // Return if local uncached popularity is inserted into top-k list
         bool tryToInsertForNontopkEdgeIdx_(const uint32_t& source_edge_idx, const Popularity& local_uncached_popularity, const uint32_t& topk_edgecnt); // Return if local uncached popularity is inserted into top-k list

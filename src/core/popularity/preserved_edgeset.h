@@ -11,6 +11,8 @@
 #include <unordered_set>
 #include <vector>
 
+#include "core/popularity/edgeset.h"
+
 namespace covered
 {
     class PreservedEdgeset
@@ -21,7 +23,7 @@ namespace covered
 
         bool isPreserved(const uint32_t edge_idx) const;
 
-        void preserveEdgesetForPlacement(const std::unordered_set<uint32_t>& placement_edgeset);
+        void preserveEdgesetForPlacement(const Edgeset& placement_edgeset);
 
         uint64_t getSizeForCapacity() const;
     private:

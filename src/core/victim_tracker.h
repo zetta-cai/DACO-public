@@ -23,6 +23,7 @@
 
 #include "common/key.h"
 #include "concurrency/rwlock.h"
+#include "core/popularity/edgeset.h"
 #include "core/victim/edgelevel_victim_metadata.h"
 #include "core/victim/victim_dirinfo.h"
 #include "core/victim/victim_syncset.h"
@@ -44,7 +45,7 @@ namespace covered
         void updateForVictimSyncset(const uint32_t& source_edge_idx, const VictimSyncset& victim_syncset, const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& local_beaconed_neighbor_synced_victim_dirinfosets);
 
         // For trade-off-aware placement calculation
-        DeltaReward calcEvictionCost(const ObjectSize& object_size, const std::unordered_set<uint32_t>& placement_edgeset, std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& placement_peredge_victimset) const; // NOTE: placement_peredge_victimset is used for victim removal under non-blocking placement deployment
+        DeltaReward calcEvictionCost(const ObjectSize& object_size, const Edgeset& placement_edgeset, std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& placement_peredge_victimset) const; // NOTE: placement_peredge_victimset is used for victim removal under non-blocking placement deployment
 
         // For non-blocking placement deployment
         void removeVictimsForGivenEdge(const uint32_t& edge_idx, const std::unordered_set<Key, KeyHasher>& victim_keyset); // NOTE: removed victims should NOT be reused <- if synced victims in the edge node do NOT change, removed victims will NOT be reported to the beacon node due to dedup/delta-compression in victim synchronization; if need more victims, victim fetching request MUST be later than placement notification request, which has changed the synced victims in the edge node
@@ -64,8 +65,8 @@ namespace covered
         void tryToReleaseVictimDirinfo_(const Key& key); // Decrease refcnt of existing VictimDirinfo if any for the given key and release space if refcnt becomes zero
 
         // NOTE: pervictim_edgeset and pervictim_cacheinfos are used for eviction cost in placement calculation, while peredge_victimset is used for victim removal in non-blocking placement deployment
-        void findVictimsForPlacement_(const ObjectSize& object_size, const std::unordered_set<uint32_t>& placement_edgeset, std::unordered_map<Key, std::unordered_set<uint32_t>, KeyHasher>& pervictim_edgeset, std::unordered_map<Key, std::list<VictimCacheinfo>, KeyHasher>& pervictim_cacheinfos, std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& peredge_victimset) const; // Find victims from placement edgeset if admit a hot object with the given size
-        bool isLastCopiesForVictimEdgeset_(const Key& key, const std::unordered_set<uint32_t>& victim_edgeset) const; // Check whether the victim edgeset is the last cache copies of the given key
+        void findVictimsForPlacement_(const ObjectSize& object_size, const Edgeset& placement_edgeset, std::unordered_map<Key, Edgeset, KeyHasher>& pervictim_edgeset, std::unordered_map<Key, std::list<VictimCacheinfo>, KeyHasher>& pervictim_cacheinfos, std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& peredge_victimset) const; // Find victims from placement edgeset if admit a hot object with the given size
+        bool isLastCopiesForVictimEdgeset_(const Key& key, const Edgeset& victim_edgeset) const; // Check whether the victim edgeset is the last cache copies of the given key
 
         void checkPointers_() const;
 

@@ -57,12 +57,14 @@ namespace covered
         // Selective popularity aggregation
         const CollectedPopularity& collected_popularity = covered_directory_lookup_request_ptr->getCollectedPopularityRef();
         const bool need_placement_calculation = true;
-        std::unordered_set<uint32_t> best_placement_edgeset;
+        Edgeset best_placement_edgeset;
         bool has_best_placement = covered_cache_manager_ptr->updatePopularityAggregatorForAggregatedPopularity(tmp_key, source_edge_idx, collected_popularity, is_global_cached, is_source_cached, need_placement_calculation, best_placement_edgeset); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in source edge node
 
         // Non-blocking data fetching
         if (has_best_placement)
-        {}
+        {
+            // TODO: END HERE
+        }
 
         return;
     }

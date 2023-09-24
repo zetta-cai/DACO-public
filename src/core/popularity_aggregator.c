@@ -135,7 +135,7 @@ namespace covered
         return;
     }
 
-    void PopularityAggregator::updatePreservedEdgesetForPlacement(const Key& key, const std::unordered_set<uint32_t>& placement_edgeset, const bool& is_global_cached)
+    void PopularityAggregator::updatePreservedEdgesetForPlacement(const Key& key, const Edgeset& placement_edgeset, const bool& is_global_cached)
     {
         checkPointers_();
 

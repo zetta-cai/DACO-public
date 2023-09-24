@@ -34,7 +34,7 @@ namespace covered
         return victim_cacheinfos_;
     }
 
-    bool EdgelevelVictimMetadata::findVictimsForObjectSize(const uint32_t& cur_edge_idx, const ObjectSize& object_size, std::unordered_map<Key, std::unordered_set<uint32_t>, KeyHasher>& pervictim_edgeset, std::unordered_map<Key, std::list<VictimCacheinfo>, KeyHasher>& pervictim_cacheinfos, std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& peredge_victimset) const
+    bool EdgelevelVictimMetadata::findVictimsForObjectSize(const uint32_t& cur_edge_idx, const ObjectSize& object_size, std::unordered_map<Key, Edgeset, KeyHasher>& pervictim_edgeset, std::unordered_map<Key, std::list<VictimCacheinfo>, KeyHasher>& pervictim_cacheinfos, std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& peredge_victimset) const
     {
         // NOTE: NO need to clear pervictim_edgeset, pervictim_cacheinfos, and peredge_victimset, which has been done by VictimTracker::findVictimsForPlacement_()
 
@@ -52,10 +52,10 @@ namespace covered
                 const Key& tmp_victim_key = tmp_victim_cacheinfo.getKey();
 
                 // Update per-victim edgeset
-                std::unordered_map<Key, std::unordered_set<uint32_t>, KeyHasher>::iterator pervictim_edgeset_iter = pervictim_edgeset.find(tmp_victim_key);
+                std::unordered_map<Key, Edgeset, KeyHasher>::iterator pervictim_edgeset_iter = pervictim_edgeset.find(tmp_victim_key);
                 if (pervictim_edgeset_iter == pervictim_edgeset.end())
                 {
-                    pervictim_edgeset_iter = pervictim_edgeset.insert(std::pair(tmp_victim_key, std::unordered_set<uint32_t>())).first;
+                    pervictim_edgeset_iter = pervictim_edgeset.insert(std::pair(tmp_victim_key, Edgeset())).first;
                 }
                 assert(pervictim_edgeset_iter != pervictim_edgeset.end());
                 pervictim_edgeset_iter->second.insert(cur_edge_idx);

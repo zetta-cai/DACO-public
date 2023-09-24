@@ -16,7 +16,7 @@ namespace covered
         return preserved_bitmap_[edge_idx];
     }
 
-    void PreservedEdgeset::preserveEdgesetForPlacement(const std::unordered_set<uint32_t>& placement_edgeset)
+    void PreservedEdgeset::preserveEdgesetForPlacement(const Edgeset& placement_edgeset)
     {
         for (std::unordered_set<uint32_t>::const_iterator placement_edgeset_const_iter = placement_edgeset.begin(); placement_edgeset_const_iter != placement_edgeset.end(); placement_edgeset_const_iter++)
         {
