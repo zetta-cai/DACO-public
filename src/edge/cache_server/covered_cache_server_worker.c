@@ -485,11 +485,31 @@ namespace covered
 
     void CoveredCacheServerWorker::processReqForRedirectedGet_(MessageBase* redirected_request_ptr, Value& value, bool& is_cooperative_cached, bool& is_cooperative_cached_and_valid) const
     {
-        // Get key and value from redirected get request
+        // Get key and victim syncset from redirected get request
         assert(redirected_request_ptr != NULL);
-        assert(redirected_request_ptr->getMessageType() == MessageType::kCoveredRedirectedGetRequest);
-        const CoveredRedirectedGetRequest* const covered_redirected_get_request_ptr = static_cast<const CoveredRedirectedGetRequest*>(redirected_request_ptr);
-        Key tmp_key = covered_redirected_get_request_ptr->getKey();
+        assert(redirected_request_ptr->getMessageType() == MessageType::kCoveredRedirectedGetRequest || redirected_request_ptr->getMessageType() == MessageType::kCoveredPlacementRedirectedGetRequest);
+        Key tmp_key;
+        uint32_t source_edge_idx = redirected_request_ptr->getSourceIndex();
+        VictimSyncset victim_syncset;
+        if (redirected_request_ptr->getMessageType() == MessageType::kCoveredRedirectedGetRequest)
+        {
+            const CoveredRedirectedGetRequest* const covered_redirected_get_request_ptr = static_cast<const CoveredRedirectedGetRequest*>(redirected_request_ptr);
+            tmp_key = covered_redirected_get_request_ptr->getKey();
+            victim_syncset = covered_redirected_get_request_ptr->getVictimSyncsetRef();
+        }
+        else if (redirected_request_ptr->getMessageType() == MessageType::kCoveredPlacementRedirectedGetRequest)
+        {
+            const CoveredPlacementRedirectedGetRequest* const covered_placement_redirected_get_request_ptr = static_cast<const CoveredPlacementRedirectedGetRequest*>(redirected_request_ptr);
+            tmp_key = covered_placement_redirected_get_request_ptr->getKey();
+            victim_syncset = covered_placement_redirected_get_request_ptr->getVictimSyncsetRef();
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "Invalid message type " << MessageBase::messageTypeToString(redirected_request_ptr->getMessageType()) << " for processReqForRedirectedGet_()";
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
 
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
@@ -500,16 +520,41 @@ namespace covered
         is_cooperative_cached = tmp_edge_wrapper_ptr->getEdgeCachePtr()->isLocalCached(tmp_key);
 
         // Victim synchronization
-        const uint32_t source_edge_idx = covered_redirected_get_request_ptr->getSourceIndex();
-        const VictimSyncset& victim_syncset = covered_redirected_get_request_ptr->getVictimSyncsetRef();
         std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = tmp_edge_wrapper_ptr->getLocalBeaconedVictimsFromVictimSyncset(victim_syncset);
         tmp_covered_cache_manager_ptr->updateVictimTrackerForVictimSyncset(source_edge_idx, victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
         
         return;
     }
 
-    MessageBase* CoveredCacheServerWorker::getRspForRedirectedGet_(const Key& key, const Value& value, const Hitflag& hitflag, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency) const
+    MessageBase* CoveredCacheServerWorker::getRspForRedirectedGet_(MessageBase* redirected_request_ptr, const Value& value, const Hitflag& hitflag, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list) const
     {
+        // Get key (and placement edgeset) from redirected get request
+        assert(redirected_request_ptr != NULL);
+        assert(redirected_request_ptr->getMessageType() == MessageType::kCoveredRedirectedGetRequest || redirected_request_ptr->getMessageType() == MessageType::kCoveredPlacementRedirectedGetRequest);
+        Key tmp_key;
+        bool is_nonblock_data_fetching = false;
+        Edgeset placement_edgeset;
+        bool skip_propagation_latency = redirected_request_ptr->isSkipPropagationLatency();
+        if (redirected_request_ptr->getMessageType() == MessageType::kCoveredRedirectedGetRequest)
+        {
+            const CoveredRedirectedGetRequest* const covered_redirected_get_request_ptr = static_cast<const CoveredRedirectedGetRequest*>(redirected_request_ptr);
+            tmp_key = covered_redirected_get_request_ptr->getKey();
+        }
+        else if (redirected_request_ptr->getMessageType() == MessageType::kCoveredPlacementRedirectedGetRequest)
+        {
+            const CoveredPlacementRedirectedGetRequest* const covered_placement_redirected_get_request_ptr = static_cast<const CoveredPlacementRedirectedGetRequest*>(redirected_request_ptr);
+            tmp_key = covered_placement_redirected_get_request_ptr->getKey();
+            is_nonblock_data_fetching = true;
+            placement_edgeset = covered_placement_redirected_get_request_ptr->getEdgesetRef();
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "Invalid message type " << MessageBase::messageTypeToString(redirected_request_ptr->getMessageType()) << " for processReqForRedirectedGet_()";
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
+
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
         CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
@@ -520,10 +565,20 @@ namespace covered
         // Prepare redirected get response
         uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
         NetworkAddr edge_cache_server_recvreq_source_addr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeCacheServerRecvreqSourceAddr();
-        MessageBase* covered_redirected_get_response_ptr = new CoveredRedirectedGetResponse(key, value, hitflag, victim_syncset, edge_idx, edge_cache_server_recvreq_source_addr, total_bandwidth_usage, event_list, skip_propagation_latency);
-        assert(covered_redirected_get_response_ptr != NULL);
+        MessageBase* response_ptr = NULL;
+        if (!is_nonblock_data_fetching) // Send back normal redirected get response
+        {
+            // NOTE: CoveredRedirectedGetResponse will be processed by edge cache server worker of the sender edge node
+            response_ptr = new CoveredRedirectedGetResponse(tmp_key, value, hitflag, victim_syncset, edge_idx, edge_cache_server_recvreq_source_addr, total_bandwidth_usage, event_list, skip_propagation_latency);
+        }
+        else // Send back redirected get response for non-blocking placement deploymeng
+        {
+            // NOTE: CoveredPlacementRedirectedGetResponse will be processed by edge beacon server of the sender edge node
+            response_ptr = new CoveredPlacementRedirectedGetResponse(tmp_key, value, hitflag, victim_syncset, placement_edgeset, edge_idx, edge_cache_server_recvreq_source_addr, total_bandwidth_usage, event_list, skip_propagation_latency);
+        }
+        assert(response_ptr != NULL);
 
-        return covered_redirected_get_response_ptr;
+        return response_ptr;
     }
 
     // (4.1) Admit uncached objects in local edge cache

@@ -1370,7 +1370,7 @@ namespace covered
         bool is_finish = false; // Mark if local edge node is finished
 
         MessageType message_type = redirected_request_ptr->getMessageType();
-        if (message_type == MessageType::kRedirectedGetRequest)
+        if (message_type == MessageType::kRedirectedGetRequest || message_type == MessageType::kCoveredRedirectedGetRequest || message_type == MessageType::kCoveredPlacementRedirectedGetRequest)
         {
             is_finish = processRedirectedGetRequest_(redirected_request_ptr, recvrsp_dst_addr);
         }
@@ -1437,9 +1437,7 @@ namespace covered
         // NOTE: no need to access cloud to get data, which will be performed by the closest edge node
 
         // Prepare RedirectedGetResponse for the closest edge node
-        const Key tmp_key = MessageBase::getKeyFromMessage(redirected_request_ptr);
-        const bool skip_propagation_latency = redirected_request_ptr->isSkipPropagationLatency();
-        MessageBase* redirected_get_response_ptr = getRspForRedirectedGet_(tmp_key, tmp_value, hitflag, total_bandwidth_usage, event_list, skip_propagation_latency);
+        MessageBase* redirected_get_response_ptr = getRspForRedirectedGet_(redirected_request_ptr, tmp_value, hitflag, total_bandwidth_usage, event_list);
         assert(redirected_get_response_ptr != NULL);
 
         // Push the redirected response message into edge-to-client propagation simulator to cache server worker in the closest edge node

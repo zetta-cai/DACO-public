@@ -1,7 +1,7 @@
 /*
- * CoveredRedirectedGetResponse: a response issued by the target edge node to an edge node for RedirectedGetRequest.
+ * CoveredRedirectedGetResponse: a response issued by the target edge node to an edge node for CoveredRedirectedGetRequest.
  * 
- * By Siyuan Sheng (2023.06.08).
+ * By Siyuan Sheng (2023.09.13).
  */
 
 #ifndef COVERED_REDIRECTED_GET_RESPONSE_H

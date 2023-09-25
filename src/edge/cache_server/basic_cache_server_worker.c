@@ -248,7 +248,7 @@ namespace covered
 
     void BasicCacheServerWorker::processReqForRedirectedGet_(MessageBase* redirected_request_ptr, Value& value, bool& is_cooperative_cached, bool& is_cooperative_cached_and_valid) const
     {
-        // Get key and value from redirected get request
+        // Get key from redirected get request
         assert(redirected_request_ptr != NULL);
         assert(redirected_request_ptr->getMessageType() == MessageType::kRedirectedGetRequest);
         const RedirectedGetRequest* const redirected_get_request_ptr = static_cast<const RedirectedGetRequest*>(redirected_request_ptr);
@@ -264,15 +264,22 @@ namespace covered
         return;
     }
 
-    MessageBase* BasicCacheServerWorker::getRspForRedirectedGet_(const Key& key, const Value& value, const Hitflag& hitflag, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency) const
+    MessageBase* BasicCacheServerWorker::getRspForRedirectedGet_(MessageBase* redirected_request_ptr, const Value& value, const Hitflag& hitflag, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list) const
     {
+        // Get key from redirected get request
+        assert(redirected_request_ptr != NULL);
+        assert(redirected_request_ptr->getMessageType() == MessageType::kRedirectedGetRequest);
+        const RedirectedGetRequest* const redirected_get_request_ptr = static_cast<const RedirectedGetRequest*>(redirected_request_ptr);
+        Key tmp_key = redirected_get_request_ptr->getKey();
+        const bool skip_propagation_latency = redirected_get_request_ptr->isSkipPropagationLatency();
+
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
         // Prepare redirected get response
         uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
         NetworkAddr edge_cache_server_recvreq_source_addr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeCacheServerRecvreqSourceAddr();
-        MessageBase* redirected_get_response_ptr = new RedirectedGetResponse(key, value, hitflag, edge_idx, edge_cache_server_recvreq_source_addr, total_bandwidth_usage, event_list, skip_propagation_latency);
+        MessageBase* redirected_get_response_ptr = new RedirectedGetResponse(tmp_key, value, hitflag, edge_idx, edge_cache_server_recvreq_source_addr, total_bandwidth_usage, event_list, skip_propagation_latency);
         assert(redirected_get_response_ptr != NULL);
 
         return redirected_get_response_ptr;
