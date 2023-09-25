@@ -43,7 +43,7 @@ namespace covered
 
     // (1.2) Access cooperative edge cache to fetch data from neighbor edge nodes
 
-    void BasicCacheServerWorker::lookupLocalDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
+    void BasicCacheServerWorker::lookupLocalDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, const bool& skip_propagation_latency) const
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
@@ -52,6 +52,8 @@ namespace covered
         bool is_source_cached = false;
         tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->lookupDirectoryTableByCacheServer(key, current_edge_idx, is_being_written, is_valid_directory_exist, directory_info, is_source_cached);
         UNUSED(is_source_cached);
+
+        UNUSED(skip_propagation_latency);
 
         return;
     }
@@ -205,7 +207,7 @@ namespace covered
 
     // (2.4) Release write lock for MSI protocol
 
-    void BasicCacheServerWorker::releaseLocalWritelock_(const Key& key, std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges)
+    void BasicCacheServerWorker::releaseLocalWritelock_(const Key& key, std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges, const bool& skip_propagation_latency)
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
@@ -214,6 +216,8 @@ namespace covered
         DirectoryInfo current_directory_info(tmp_edge_wrapper_ptr->getNodeIdx());
         bool is_source_cached = false;
         blocked_edges = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->releaseLocalWritelock(key, current_edge_idx, current_directory_info, is_source_cached);
+
+        UNUSED(skip_propagation_latency);
 
         return;
     }
@@ -302,7 +306,7 @@ namespace covered
 
     // (4.3) Update content directory information
 
-    void BasicCacheServerWorker::updateLocalDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written) const
+    void BasicCacheServerWorker::updateLocalDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written, const bool& skip_propagation_latency) const
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
@@ -311,6 +315,8 @@ namespace covered
         bool is_source_cached = false;
         tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->updateDirectoryTable(key, current_edge_idx, is_admit, directory_info, is_being_written, is_source_cached);
         UNUSED(is_source_cached);
+
+        UNUSED(skip_propagation_latency);
 
         return;
     }

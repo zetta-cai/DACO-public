@@ -213,6 +213,11 @@ namespace covered
                 message_type_str = "kCoveredRedirectedGetResponse";
                 break;
             }
+            case MessageType::kCoveredPlacementRedirectedGetRequest:
+            {
+                message_type_str = "kCoveredPlacementRedirectedGetRequest";
+                break;
+            }
             default:
             {
                 message_type_str = std::to_string(static_cast<uint32_t>(message_type));
@@ -454,6 +459,11 @@ namespace covered
             case MessageType::kCoveredRedirectedGetRequest:
             {
                 message_ptr = new CoveredRedirectedGetRequest(msg_payload);
+                break;
+            }
+            case MessageType::kCoveredPlacementRedirectedGetRequest:
+            {
+                message_ptr = new CoveredPlacementRedirectedGetRequest(msg_payload);
                 break;
             }
             default:
@@ -800,6 +810,11 @@ namespace covered
             const CoveredRedirectedGetResponse* const covered_redirected_get_response_ptr = static_cast<const CoveredRedirectedGetResponse*>(message_ptr);
             tmp_key = covered_redirected_get_response_ptr->getKey();
         }
+        else if (message_ptr->message_type_ == MessageType::kCoveredPlacementRedirectedGetRequest)
+        {
+            const CoveredPlacementRedirectedGetRequest* const covered_placement_redirected_get_request_ptr = static_cast<const CoveredPlacementRedirectedGetRequest*>(message_ptr);
+            tmp_key = covered_placement_redirected_get_request_ptr->getKey();
+        }
         else
         {
             std::ostringstream oss;
@@ -993,7 +1008,7 @@ namespace covered
     bool MessageBase::isRedirectedDataRequest() const
     {
         checkIsValid_();
-        if (message_type_ == MessageType::kRedirectedGetRequest || message_type_ == MessageType::kCoveredRedirectedGetRequest)
+        if (message_type_ == MessageType::kRedirectedGetRequest || message_type_ == MessageType::kCoveredRedirectedGetRequest || message_type_ == MessageType::kCoveredPlacementRedirectedGetRequest)
         {
             return true;
         }

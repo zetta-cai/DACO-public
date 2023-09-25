@@ -93,7 +93,7 @@ namespace covered
         // Return if edge node is finished
         bool fetchDataFromNeighbor_(const Key& key, Value& value, bool& is_cooperative_cached_and_valid, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const;
 
-        virtual void lookupLocalDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const = 0;
+        virtual void lookupLocalDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, const bool& skip_propagation_latency) const = 0;
         virtual bool needLookupBeaconDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const = 0; // Return if need to lookup remote directory info
         bool lookupBeaconDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const; // Check remote directory info
         virtual MessageBase* getReqToLookupBeaconDirectory_(const Key& key, const bool& skip_propagation_latency) const = 0;
@@ -142,7 +142,7 @@ namespace covered
 
         // Return if edge node is finished
         bool releaseWritelock_(const Key& key, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency);
-        virtual void releaseLocalWritelock_(const Key& key, std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges) = 0;
+        virtual void releaseLocalWritelock_(const Key& key, std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges, const bool& skip_propagation_latency) = 0;
         bool releaseBeaconWritelock_(const Key& key, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency); // Notify beacon node to finish writes
         virtual MessageBase* getReqToReleaseBeaconWritelock_(const Key& key, const bool& skip_propagation_latency) const = 0;
         virtual void processRspToReleaseBeaconWritelock_(MessageBase* control_response_ptr) const = 0;
@@ -172,7 +172,7 @@ namespace covered
 
         // Return if edge node is finished
         bool updateDirectory_(const Key& key, const bool& is_admit, bool& is_being_written, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const; // Update content directory information
-        virtual void updateLocalDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written) const = 0; // Update directory info in current edge node
+        virtual void updateLocalDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written, const bool& skip_propagation_latency) const = 0; // Update directory info in current edge node
         bool updateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const; // Update directory info in remote beacon node
         virtual MessageBase* getReqToUpdateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, const bool& skip_propagation_latency) const = 0;
         virtual void processRspToUpdateBeaconDirectory_(MessageBase* control_response_ptr, bool& is_being_written) const = 0;
@@ -180,7 +180,6 @@ namespace covered
         // (5) Utility functions
 
         NetworkAddr getBeaconDstaddr_(const Key& key) const; // Get destination address of beacon server recvreq in beacon edge node
-        NetworkAddr getTargetDstaddr_(const DirectoryInfo& directory_info) const; // Get destination address of cache server recvreq in target edge node
 
         void checkPointers_() const;
 

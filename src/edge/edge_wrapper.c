@@ -9,6 +9,7 @@
 #include "edge/cache_server/cache_server.h"
 #include "edge/invalidation_server/invalidation_server_base.h"
 #include "event/event.h"
+#include "message/data_message.h"
 #include "message/control_message.h"
 #include "network/propagation_simulator.h"
 
@@ -68,8 +69,13 @@ namespace covered
         return NULL;
     }
 
-    EdgeWrapper::EdgeWrapper(const std::string& cache_name, const uint64_t& capacity_bytes, const uint32_t& edge_idx, const uint32_t& edgecnt, const std::string& hash_name, const uint64_t& local_uncached_capacity_bytes, const uint32_t& percacheserver_workercnt, const uint32_t& peredge_synced_victimcnt, const uint64_t& popularity_aggregation_capacity_bytes, const double& popularity_collection_change_ratio, const uint32_t& propagation_latency_clientedge_us, const uint32_t& propagation_latency_crossedge_us, const uint32_t& propagation_latency_edgecloud_us, const uint32_t& topk_edgecnt) : NodeWrapperBase(NodeWrapperBase::EDGE_NODE_ROLE, edge_idx,edgecnt, true), cache_name_(cache_name), capacity_bytes_(capacity_bytes), percacheserver_workercnt_(percacheserver_workercnt), topk_edgecnt_(topk_edgecnt)
+    EdgeWrapper::EdgeWrapper(const std::string& cache_name, const uint64_t& capacity_bytes, const uint32_t& edge_idx, const uint32_t& edgecnt, const std::string& hash_name, const uint64_t& local_uncached_capacity_bytes, const uint32_t& percacheserver_workercnt, const uint32_t& peredge_synced_victimcnt, const uint64_t& popularity_aggregation_capacity_bytes, const double& popularity_collection_change_ratio, const uint32_t& propagation_latency_clientedge_us, const uint32_t& propagation_latency_crossedge_us, const uint32_t& propagation_latency_edgecloud_us, const uint32_t& topk_edgecnt) : NodeWrapperBase(NodeWrapperBase::EDGE_NODE_ROLE, edge_idx,edgecnt, true), cache_name_(cache_name), capacity_bytes_(capacity_bytes), percacheserver_workercnt_(percacheserver_workercnt), topk_edgecnt_for_placement_(topk_edgecnt)
     {
+        // Get source address of beacon server recvreq for non-blokcing placement deployment
+        std::string edge_ipstr = Config::getEdgeIpstr(edge_idx, edgecnt);
+        uint16_t edge_beacon_server_recvreq_port = Util::getEdgeBeaconServerRecvreqPort(edge_idx, edgecnt);
+        edge_beacon_server_recvreq_source_addr_for_placement_ = NetworkAddr(edge_ipstr, edge_beacon_server_recvreq_port);
+
         // Differentiate different edge nodes
         std::ostringstream oss;
         oss << kClassName << " edge" << edge_idx;
@@ -257,6 +263,23 @@ namespace covered
         }
 
         return current_is_target;
+    }
+
+    NetworkAddr EdgeWrapper::getTargetDstaddr(const DirectoryInfo& directory_info) const
+    {
+        checkPointers_();
+
+        // The current edge node must NOT be the target node
+        bool current_is_target = currentIsTarget(directory_info);
+        assert(!current_is_target);
+
+        // Set remote address such that the current edge node can communicate with the target edge node
+        uint32_t target_edge_idx = directory_info.getTargetEdgeIdx();
+        std::string target_edge_ipstr = Config::getEdgeIpstr(target_edge_idx, getNodeCnt());
+        uint16_t target_edge_cache_server_recvreq_port = Util::getEdgeCacheServerRecvreqPort(target_edge_idx, getNodeCnt());
+        NetworkAddr target_edge_cache_server_recvreq_dst_addr(target_edge_ipstr, target_edge_cache_server_recvreq_port);
+
+        return target_edge_cache_server_recvreq_dst_addr;
     }
 
     // (3) Invalidate and unblock for MSI protocol
@@ -839,11 +862,11 @@ namespace covered
         return local_beaconed_neighbor_synced_victim_dirinfosets;
     }
 
-    bool EdgeWrapper::nonblockDataFetchForPlacement(const Key& key, const Edgeset& best_placement_edgeset) const
+    bool EdgeWrapper::nonblockDataFetchForPlacement(const Key& key, const Edgeset& best_placement_edgeset, const bool& skip_propagation_latency) const
     {
         checkPointers_();
         assert(cache_name_ == Util::COVERED_CACHE_NAME);
-        assert(best_placement_edgeset.size() <= topk_edgecnt_); // At most k placement edge nodes each time
+        assert(best_placement_edgeset.size() <= topk_edgecnt_for_placement_); // At most k placement edge nodes each time
 
         bool need_hybrid_fetching = false;
 
@@ -860,7 +883,7 @@ namespace covered
 
         if (is_local_cached_and_valid) // Directly get valid value from local edge cache in local/remote beacon node
         {
-            // TODO: Perform non-blocking placement notification
+            // TODO: (END HERE) Perform non-blocking placement notification
             //nonblockNotifyForPlacement(key, value, best_placement_edgeset);
         }
         else // No valid value in local edge cache in local/remote beacon node
@@ -879,14 +902,19 @@ namespace covered
             {
                 assert(!is_being_written); // Being-written object CANNOT have any valid dirinfo
 
-                // END HERE
-                // TODO: Send CoveredPlacementRedirectedGetRequest to the neighbor node
-
-                // NOTE: we use edge_beacon_server_recvreq_source_addr_ as the soure address even if invoker is cache server to wait for responses
+                // Send CoveredPlacementRedirectedGetRequest to the neighbor node
+                // NOTE: we use edge_beacon_server_recvreq_source_addr_ as the source address even if invoker is cache server to wait for responses
                 // (i) Although current is beacon for cache server, the role is still beacon node, which should be responsible for non-blocking placement deployment. And we don't want to resort cache server worker, which may degrade KV request processing
                 // (ii) Although we may wait for responses, beacon server is blocking for recvreq port and we don't want to introduce another blocking for recvrsp port
+                const VictimSyncset victim_syncset = covered_cache_manager_ptr_->accessVictimTrackerForVictimSyncset();
+                CoveredPlacementRedirectedGetRequest* covered_placement_redirected_get_request_ptr = new CoveredPlacementRedirectedGetRequest(key, victim_syncset, best_placement_edgeset, current_edge_idx, edge_beacon_server_recvreq_source_addr_for_placement_, skip_propagation_latency);
+                assert(covered_placement_redirected_get_request_ptr != NULL);
+                NetworkAddr target_edge_cache_server_recvreq_dst_addr = getTargetDstaddr(directory_info);
+                bool is_successful = edge_toedge_propagation_simulator_param_ptr_->push(covered_placement_redirected_get_request_ptr, target_edge_cache_server_recvreq_dst_addr);
+                assert(is_successful);
+                covered_placement_redirected_get_request_ptr = NULL; // NOTE: covered_placement_redirected_get_request_ptr will be released by edge-to-edge propagation simulator
 
-                // NOTE: CoveredPlacementRedirectedGetResponse will be processed by covered beacon server (current edge node is a remote beacon node for neighbor edge node, as neighbor MUST NOT be a different edge node for request redirection)
+                // NOTE: CoveredPlacementRedirectedGetResponse will be processed by covered beacon server in the current edge node (current edge node is a remote beacon node for neighbor edge node, as neighbor MUST NOT be a different edge node for request redirection)
             }
             else // No valid cache copy in edge layer
             {

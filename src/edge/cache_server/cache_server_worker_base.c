@@ -359,7 +359,7 @@ namespace covered
             if (current_is_beacon) // Get target edge index from local directory information
             {
                 // Frequent polling
-                lookupLocalDirectory_(key, is_being_written, is_valid_directory_exist, directory_info);
+                lookupLocalDirectory_(key, is_being_written, is_valid_directory_exist, directory_info, skip_propagation_latency);
                 if (is_being_written) // If key is being written, we need to wait for writes
                 {
                     continue; // Continue to lookup local directory info
@@ -555,7 +555,7 @@ namespace covered
         struct timespec issue_redirect_get_req_start_timestamp = Util::getCurrentTimespec();
 
         // Prepare destination address of target edge cache server
-        NetworkAddr target_edge_cache_server_recvreq_dst_addr = getTargetDstaddr_(directory_info);
+        NetworkAddr target_edge_cache_server_recvreq_dst_addr = tmp_edge_wrapper_ptr->getTargetDstaddr(directory_info);
 
         while (true) // Timeout-and-retry mechanism
         {
@@ -1257,7 +1257,7 @@ namespace covered
         {
             // Release write lock and get blocked edges
             std::unordered_set<NetworkAddr, NetworkAddrHasher> blocked_edges;
-            releaseLocalWritelock_(key, blocked_edges);
+            releaseLocalWritelock_(key, blocked_edges, skip_propagation_latency);
 
             // Notify blocked edge nodes to finish blocking
             is_finish = tmp_edge_wrapper_ptr->notifyEdgesToFinishBlock(edge_cache_server_worker_recvrsp_socket_server_ptr_, edge_cache_server_worker_recvrsp_source_addr_, key, blocked_edges, total_bandwidth_usage, event_list, skip_propagation_latency); // Add events of intermediate response if with event tracking
@@ -1586,7 +1586,7 @@ namespace covered
         DirectoryInfo directory_info(tmp_edge_wrapper_ptr->getNodeIdx());
         if (current_is_beacon) // Update target edge index of local directory information
         {
-            updateLocalDirectory_(key, is_admit, directory_info, is_being_written);
+            updateLocalDirectory_(key, is_admit, directory_info, is_being_written, skip_propagation_latency);
         }
         else // Update remote directory information at the beacon node
         {
@@ -1693,24 +1693,6 @@ namespace covered
         NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getBeaconEdgeBeaconServerRecvreqAddr(key);
 
         return beacon_edge_beacon_server_recvreq_dst_addr;
-    }
-
-    NetworkAddr CacheServerWorkerBase::getTargetDstaddr_(const DirectoryInfo& directory_info) const
-    {
-        checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
-
-        // The current edge node must NOT be the target node
-        bool current_is_target = tmp_edge_wrapper_ptr->currentIsTarget(directory_info);
-        assert(!current_is_target);
-
-        // Set remote address such that the current edge node can communicate with the target edge node
-        uint32_t target_edge_idx = directory_info.getTargetEdgeIdx();
-        std::string target_edge_ipstr = Config::getEdgeIpstr(target_edge_idx, tmp_edge_wrapper_ptr->getNodeCnt());
-        uint16_t target_edge_cache_server_recvreq_port = Util::getEdgeCacheServerRecvreqPort(target_edge_idx, tmp_edge_wrapper_ptr->getNodeCnt());
-        NetworkAddr target_edge_cache_server_recvreq_dst_addr(target_edge_ipstr, target_edge_cache_server_recvreq_port);
-
-        return target_edge_cache_server_recvreq_dst_addr;
     }
 
     void CacheServerWorkerBase::checkPointers_() const

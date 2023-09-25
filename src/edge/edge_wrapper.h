@@ -66,6 +66,9 @@ namespace covered
         bool currentIsBeacon(const Key& key) const; // Check if current is beacon node
         bool currentIsTarget(const DirectoryInfo& directory_info) const; // Check if current is target node
 
+        // For request redirection (triggered by client-issued local requests and COVERED's non-blocking placement deployment)
+        NetworkAddr getTargetDstaddr(const DirectoryInfo& directory_info) const; // Get destination address of cache server recvreq in target edge node
+
         // (3) Invalidate and unblock for MSI protocol
 
         // Return if edge node is finished (invoked by cache server worker or beacon server)
@@ -82,7 +85,7 @@ namespace covered
         std::unordered_map<Key, dirinfo_set_t, KeyHasher> getLocalBeaconedVictimsFromVictimSyncset(const VictimSyncset& victim_syncset) const; // NOTE: all edge cache/beacon/invalidation servers will access cooperation wrapper to get content directory information for local beaconed victims from received victim syncset
 
         // For non-blocking placement deployment
-        bool nonblockDataFetchForPlacement(const Key& key, const Edgeset& best_placement_edgeset) const; // Return if we need hybrid fetching (i.e., resort sender to fetch data from cloud)
+        bool nonblockDataFetchForPlacement(const Key& key, const Edgeset& best_placement_edgeset, const bool& skip_propagation_latency) const; // Return if we need hybrid fetching (i.e., resort sender to fetch data from cloud)
     private:
         static const std::string kClassName;
 
@@ -115,7 +118,8 @@ namespace covered
         const std::string cache_name_; // Come from CLI
         const uint64_t capacity_bytes_; // Come from CLI
         const uint32_t percacheserver_workercnt_; // Come from CLI
-        const uint32_t topk_edgecnt_; // Come from CLI
+        const uint32_t topk_edgecnt_for_placement_; // Come from CLI for non-blocking placement deployment
+        NetworkAddr edge_beacon_server_recvreq_source_addr_for_placement_; // Calculated from edgeidx and edgecnt for non-blocking placement deployment
 
         // NOTE: we do NOT need per-key rwlock for atomicity among CacheWrapper, CooperationWrapperBase, and CoveredCacheMananger.
         // (1) CacheWrapper is already thread-safe for cache server and invalidation server, CooperationWrapperBase is already thread-safe for cache server and beacon server, and CoveredCacheMananger is already thread-safe for cache server and beacon server -> NO dead locking as each thread-safe structure releases its own lock after each function.
