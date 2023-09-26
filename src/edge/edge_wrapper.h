@@ -52,6 +52,7 @@ namespace covered
         std::string getCacheName() const;
         uint64_t getCapacityBytes() const;
         uint32_t getPercacheserverWorkercnt() const;
+        uint32_t getTopkEdgecntForPlacement() const;
         CacheWrapper* getEdgeCachePtr() const;
         CooperationWrapperBase* getCooperationWrapperPtr() const;
         CoveredCacheManager* getCoveredCacheManagerPtr() const;
@@ -85,7 +86,8 @@ namespace covered
         std::unordered_map<Key, dirinfo_set_t, KeyHasher> getLocalBeaconedVictimsFromVictimSyncset(const VictimSyncset& victim_syncset) const; // NOTE: all edge cache/beacon/invalidation servers will access cooperation wrapper to get content directory information for local beaconed victims from received victim syncset
 
         // For non-blocking placement deployment
-        bool nonblockDataFetchForPlacement(const Key& key, const Edgeset& best_placement_edgeset, const bool& skip_propagation_latency) const; // Return if we need hybrid fetching (i.e., resort sender to fetch data from cloud)
+        bool nonblockDataFetchForPlacement(const Key& key, const Edgeset& best_placement_edgeset, const bool& skip_propagation_latency) const; // Fetch data from local cache or neighbor to trigger non-blocking placement notification; return if we need hybrid fetching (i.e., resort sender to fetch data from cloud)
+        void nonblockDataFetchFromCloudForPlacement(const Key& key, const Edgeset& best_placement_edgeset, const bool& skip_propagation_latency) const; // Fetch data from cloud without hybrid data fetching (a corner case)
     private:
         static const std::string kClassName;
 

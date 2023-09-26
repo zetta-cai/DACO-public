@@ -178,6 +178,11 @@ namespace covered
         return percacheserver_workercnt_;
     }
 
+    uint32_t EdgeWrapper::getTopkEdgecntForPlacement() const
+    {
+        return topk_edgecnt_for_placement_;
+    }
+
     CacheWrapper* EdgeWrapper::getEdgeCachePtr() const
     {
         assert(edge_cache_ptr_ != NULL);
@@ -924,5 +929,23 @@ namespace covered
         }
 
         return need_hybrid_fetching;
+    }
+
+    void EdgeWrapper::nonblockDataFetchFromCloudForPlacement(const Key& key, const Edgeset& best_placement_edgeset, const bool& skip_propagation_latency) const
+    {
+        checkPointers_();
+        assert(cache_name_ == Util::COVERED_CACHE_NAME);
+        assert(best_placement_edgeset.size() <= topk_edgecnt_for_placement_); // At most k placement edge nodes each time
+
+        // NOTE: as we have replied the sender without hybrid data fetching before, beacon server directly fetches data from cloud by itself here in a non-blocking manner (this is a corner case, as valid dirinfo has cooperative hit in most time)
+
+        // Send CoveredPlacementGlobalGetRequest to cloud
+        // NOTE: we use edge_beacon_server_recvreq_source_addr_ as the source address even if the invoker (i.e., beacon server) is waiting for global responses
+        // (i) Although wait for global responses, beacon server is blocking for recvreq port and we don't want to introduce another blocking for recvrsp port
+        // TODO: END HERE
+
+        // NOTE: CoveredPlacementRedirectedGetResponse will be processed by covered beacon server in the current edge node
+
+        return;
     }
 }

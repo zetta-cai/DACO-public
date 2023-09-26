@@ -278,14 +278,16 @@ namespace covered
         checkPointers_();
         assert(redirected_get_response_ptr != NULL);
         assert(edge_wrapper_ptr_->getCacheName() == Util::COVERED_CACHE_NAME);
+        CoveredCacheManager* covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
 
-        // Get key, value, hitflag, victim syncset, and edgeset
         const CoveredPlacementRedirectedGetResponse* const covered_placement_redirected_get_response_ptr = static_cast<const CoveredPlacementRedirectedGetResponse*>(redirected_get_response_ptr);
-        const Key tmp_key = covered_placement_redirected_get_response_ptr->getKey();
-        const Value tmp_value = covered_placement_redirected_get_response_ptr->getValue();
-        const bool tmp_hitflag = covered_placement_redirected_get_response_ptr->getHitflag();
+        //const Value tmp_value = covered_placement_redirected_get_response_ptr->getValue();
+
+        // Victim synchronization
+        const uint32_t sender_edge_idx = covered_placement_redirected_get_response_ptr->getSourceIndex();
         const VictimSyncset& victim_syncset = covered_placement_redirected_get_response_ptr->getVictimSyncsetRef();
-        const Edgeset& edgeset = covered_placement_redirected_get_response_ptr->getEdgesetRef();
+        std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = edge_wrapper_ptr_->getLocalBeaconedVictimsFromVictimSyncset(victim_syncset);
+        covered_cache_manager_ptr->updateVictimTrackerForVictimSyncset(sender_edge_idx, victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
 
         // Get background eventlist and bandwidth usage to update background counter for beacon server
         const EventList& background_event_list = covered_placement_redirected_get_response_ptr->getEventListRef();
@@ -295,7 +297,22 @@ namespace covered
         edge_beacon_server_background_counter_.updateBandwidthUsgae(background_bandwidth_usage);
         edge_beacon_server_background_counter_.addEvents(background_event_list);
 
-        // TODO: END HERE
+        // Get Hitflag for non-blocking placement deployment
+        const bool tmp_hitflag = covered_placement_redirected_get_response_ptr->getHitflag();
+        if (tmp_hitflag == Hitflag::kCooperativeHit)
+        {
+            // TODO: (END HERE) Perform non-blocking placement notification
+            //nonblockNotifyForPlacement(key, value, best_placement_edgeset);
+        }
+        else // Cooperative invalid or global miss
+        {
+            // NOTE: as we have replied the sender without hybrid data fetching before, beacon server directly fetches data from cloud by itself here in a non-blocking manner (this is a corner case, as valid dirinfo has cooperative hit in most time)
+            const bool skip_propagation_latency = redirected_get_response_ptr->isSkipPropagationLatency();
+            const Key tmp_key = covered_placement_redirected_get_response_ptr->getKey();
+            const Edgeset& placement_edgeset = covered_placement_redirected_get_response_ptr->getEdgesetRef();
+            assert(placement_edgeset.size() <= edge_wrapper_ptr_->getTopkEdgecntForPlacement()); // At most k placement edge nodes each time
+            edge_wrapper_ptr_->nonblockDataFetchFromCloudForPlacement(tmp_key, placement_edgeset, skip_propagation_latency);
+        }
 
         return;
     }

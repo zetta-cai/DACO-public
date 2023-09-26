@@ -573,6 +573,8 @@ namespace covered
         }
         else // Send back redirected get response for non-blocking placement deploymeng
         {
+            assert(placement_edgeset.size() <= tmp_edge_wrapper_ptr->getTopkEdgecntForPlacement()); // At most k placement edge nodes each time
+
             // NOTE: CoveredPlacementRedirectedGetResponse will be processed by edge beacon server of the sender edge node
             response_ptr = new CoveredPlacementRedirectedGetResponse(tmp_key, value, hitflag, victim_syncset, placement_edgeset, edge_idx, edge_cache_server_recvreq_source_addr, total_bandwidth_usage, event_list, skip_propagation_latency);
         }
