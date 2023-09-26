@@ -62,6 +62,9 @@ namespace covered
     const std::string Event::CLOUD_PUT_ROCKSDB_EVENT_NAME("cloud::put_rocksdb");
     const std::string Event::CLOUD_DEL_ROCKSDB_EVENT_NAME("cloud::del_rocksdb");
 
+    // For background events
+    const std::string Event::BG_EDGE_CACHE_SERVER_WORKER_TARGET_GET_LOCAL_CACHE_EVENT_NAME("bg::edge::cache_server_worker::target_get_local_cache"); // For reads in edge cache server worker
+
     const std::string Event::kClassName("Event");
 
     Event::Event()
@@ -88,6 +91,18 @@ namespace covered
     uint32_t Event::getEventLatencyUs() const
     {
         return event_latency_us_;
+    }
+
+    bool Event::isBackgroundEvent() const
+    {
+        if (event_name_ == BG_EDGE_CACHE_SERVER_WORKER_TARGET_GET_LOCAL_CACHE_EVENT_NAME)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
     }
 
     uint32_t Event::getEventPayloadSize() const

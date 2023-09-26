@@ -349,6 +349,7 @@ namespace covered
         // Get message based on message type
         // NOTE: message_ptr is freed outside MessageBase
         MessageBase* message_ptr = NULL;
+        bool special_case = false;
         switch (message_type)
         {
             case MessageType::kLocalGetRequest:
@@ -471,6 +472,12 @@ namespace covered
                 message_ptr = new CoveredPlacementRedirectedGetRequest(msg_payload);
                 break;
             }
+            case MessageType::kCoveredPlacementRedirectedGetResponse: // NOTE: this is a special case for COVERED to process directed get response by beacon server recvreq port for non-blocking placement deployment
+            {
+                message_ptr = new CoveredPlacementRedirectedGetResponse(msg_payload);
+                special_case = true;
+                break;
+            }
             default:
             {
                 std::ostringstream oss;
@@ -481,7 +488,10 @@ namespace covered
         }
 
         assert(message_ptr != NULL);
-        assert(message_ptr->isDataRequest() || message_ptr->isControlRequest());
+        if (!special_case)
+        {
+            assert(message_ptr->isDataRequest() || message_ptr->isControlRequest());
+        }
         return message_ptr;
     }
 
@@ -1146,6 +1156,38 @@ namespace covered
     {
         checkIsValid_();
         if (message_type_ == MessageType::kInitializationResponse || message_type_ == MessageType::kStartrunResponse || message_type_ == MessageType::kSwitchSlotResponse || message_type_ == MessageType::kFinishWarmupResponse || message_type_ == MessageType::kFinishrunResponse || message_type_ == MessageType::kSimpleFinishrunResponse)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    bool MessageBase::isBackgroundMessage() const
+    {
+        checkIsValid_();
+        return isBackgroundRequest() || isBackgroundResponse();
+    }
+
+    bool MessageBase::isBackgroundRequest() const
+    {
+        checkIsValid_();
+        if (message_type_ == MessageType::kCoveredPlacementRedirectedGetRequest)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    bool MessageBase::isBackgroundResponse() const
+    {
+        checkIsValid_();
+        if (message_type_ == MessageType::kCoveredPlacementRedirectedGetResponse)
         {
             return true;
         }

@@ -71,12 +71,16 @@ namespace covered
         static const std::string CLOUD_PUT_ROCKSDB_EVENT_NAME;
         static const std::string CLOUD_DEL_ROCKSDB_EVENT_NAME;
 
+        // For background events
+        static const std::string BG_EDGE_CACHE_SERVER_WORKER_TARGET_GET_LOCAL_CACHE_EVENT_NAME; // For reads in edge cache server worker
+
         Event();
         Event(const std::string& event_name, const uint32_t& event_latency_us);
         ~Event();
 
         std::string getEventName() const;
         uint32_t getEventLatencyUs() const;
+        bool isBackgroundEvent() const;
 
         uint32_t getEventPayloadSize() const;
         uint32_t serialize(DynamicArray& msg_payload, const uint32_t& position) const;

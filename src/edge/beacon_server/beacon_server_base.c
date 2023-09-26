@@ -33,7 +33,7 @@ namespace covered
         return beacon_server_ptr;
     }
 
-    BeaconServerBase::BeaconServerBase(EdgeWrapper* edge_wrapper_ptr) : edge_wrapper_ptr_(edge_wrapper_ptr)
+    BeaconServerBase::BeaconServerBase(EdgeWrapper* edge_wrapper_ptr) : edge_wrapper_ptr_(edge_wrapper_ptr), edge_beacon_server_background_counter_()
     {
         assert(edge_wrapper_ptr != NULL);
         const uint32_t edge_idx = edge_wrapper_ptr->getNodeIdx();
@@ -107,6 +107,11 @@ namespace covered
                 if (control_request_ptr->isControlRequest()) // Control requests (e.g., invalidation and cache admission/eviction requests)
                 {
                     is_finish = processControlRequest_(control_request_ptr, edge_cache_server_worker_recvrsp_dst_addr);
+                }
+                else if (control_request_ptr->getMessageType() == MessageType::kCoveredPlacementRedirectedGetResponse) // Non-blocking placement deployment
+                {
+                    // NOTE: NOT embed background events/bandwidth-usage into CoveredPlacementRedirectedGetResponse even if it is received by beacon server, as we need to embed such information into foreground messages to be tracked by clients
+                    processRspToRedirectGetForPlacement_(control_request_ptr);
                 }
                 else
                 {
@@ -213,6 +218,7 @@ namespace covered
         event_list.addEvent(Event::EDGE_BEACON_SERVER_LOOKUP_LOCAL_DIRECTORY_EVENT_NAME, lookup_local_directory_latency_us);
 
         // Prepare a directory lookup response
+        embedBackgroundCounterIfNotEmpty_(total_bandwidth_usage, event_list); // Embed background events/bandwidth if any into control response message
         const Key tmp_key = MessageBase::getKeyFromMessage(control_request_ptr);
         const bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();
         MessageBase* directory_lookup_response_ptr = getRspToLookupLocalDirectory_(tmp_key, is_being_written, is_valid_directory_exist, directory_info, total_bandwidth_usage, event_list, skip_propagation_latency);
@@ -263,6 +269,7 @@ namespace covered
         event_list.addEvent(Event::EDGE_BEACON_SERVER_UPDATE_LOCAL_DIRECTORY_EVENT_NAME, update_local_directory_latency_us);
 
         // Prepare a directory update response
+        embedBackgroundCounterIfNotEmpty_(total_bandwidth_usage, event_list); // Embed background events/bandwidth if any into control response message
         const Key tmp_key = MessageBase::getKeyFromMessage(control_request_ptr);
         const bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();
         MessageBase* directory_update_response_ptr = getRspToUpdateLocalDirectory_(tmp_key, is_being_written, total_bandwidth_usage, event_list, skip_propagation_latency);
@@ -327,6 +334,7 @@ namespace covered
         }
 
         // Prepare a acquire writelock response
+        embedBackgroundCounterIfNotEmpty_(total_bandwidth_usage, event_list); // Embed background events/bandwidth if any into control response message
         MessageBase* acquire_writelock_response_ptr = getRspToAcquireLocalWritelock_(tmp_key, lock_result, total_bandwidth_usage, event_list, skip_propagation_latency);
         assert(acquire_writelock_response_ptr != NULL);
 
@@ -379,6 +387,7 @@ namespace covered
         is_finish = edge_wrapper_ptr_->notifyEdgesToFinishBlock(edge_beacon_server_recvrsp_socket_server_ptr_, edge_beacon_server_recvrsp_source_addr_, tmp_key, blocked_edges, total_bandwidth_usage, event_list, skip_propagation_latency); // Add events of intermedate responses if with event tracking
 
         // Prepare a release writelock response
+        embedBackgroundCounterIfNotEmpty_(total_bandwidth_usage, event_list); // Embed background events/bandwidth if any into control response message
         MessageBase* release_writelock_response_ptr = getRspToReleaseLocalWritelock_(tmp_key, total_bandwidth_usage, event_list, skip_propagation_latency);
         assert(release_writelock_response_ptr != NULL);
 
@@ -392,7 +401,17 @@ namespace covered
         return is_finish;
     }
 
-    // (4) Utility functions
+    // (5) Embed background events and bandwidth usage
+
+    void BeaconServerBase::embedBackgroundCounterIfNotEmpty_(BandwidthUsage& bandwidth_usage, EventList& event_list) const
+    {
+        bool is_empty_before_reset = edge_beacon_server_background_counter_.loadAndReset(bandwidth_usage, event_list);
+        UNUSED(is_empty_before_reset);
+
+        return;
+    }
+
+    // (6) Utility functions
 
     void BeaconServerBase::checkPointers_() const
     {

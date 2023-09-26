@@ -23,6 +23,7 @@
 
 #include <string>
 
+#include "edge/background_counter.h"
 #include "edge/edge_wrapper.h"
 #include "message/message_base.h"
 #include "network/udp_msg_socket_server.h"
@@ -73,18 +74,30 @@ namespace covered
         // Return if edge node is finished
         virtual bool processOtherControlRequest_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr) = 0;
 
+        // (4) Process redirected get response for non-blocking placement deployment (ONLY for COVERED)
+
+        virtual void processRspToRedirectGetForPlacement_(MessageBase* redirected_get_response_ptr) = 0;
+
+        // (5) Embed background events and bandwidth usage
+
+        void embedBackgroundCounterIfNotEmpty_(BandwidthUsage& bandwidth_usage, EventList& event_list) const;
+
         // Member varaibles
 
         // Const variable
         std::string base_instance_name_;
     protected:
-        // (4) Utility functions
+        // (6) Utility functions
         void checkPointers_() const;
 
         // Member variables
 
         // Const variable
         const EdgeWrapper* edge_wrapper_ptr_;
+
+        // Non-const variable
+        // COVERED uses beacon background counter to track background events and bandwidth usage for non-blocking placement deployment (NOTE: NOT count events for non-blocking data fetching from local edge cache and non-blocking metadata releasing, due to limited computation overhead and NO bandwidth usage)
+        mutable BackgroundCounter edge_beacon_server_background_counter_; // Update and load by beacon server (thread safe)
 
         // For receiving control requests
         NetworkAddr edge_beacon_server_recvreq_source_addr_; // The same as cache server worker to send control requests (const individual variable)

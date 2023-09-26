@@ -139,6 +139,10 @@ namespace covered
         bool isControlResponse() const;
         bool isCooperationControlResponse() const;
         bool isBenchmarkControlResponse() const;
+
+        bool isBackgroundMessage() const;
+        bool isBackgroundRequest() const;
+        bool isBackgroundResponse() const;
     private:
         static const std::string kClassName;
 

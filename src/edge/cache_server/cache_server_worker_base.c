@@ -1431,7 +1431,15 @@ namespace covered
 
         struct timespec target_get_local_cache_end_timestamp = Util::getCurrentTimespec();
         uint32_t target_get_local_cache_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(target_get_local_cache_end_timestamp, target_get_local_cache_start_timestamp));
-        event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_TARGET_GET_LOCAL_CACHE_EVENT_NAME, target_get_local_cache_latency_us);
+        bool is_background_request = redirected_request_ptr->isBackgroundRequest();
+        if (is_background_request)
+        {
+            event_list.addEvent(Event::BG_EDGE_CACHE_SERVER_WORKER_TARGET_GET_LOCAL_CACHE_EVENT_NAME, target_get_local_cache_latency_us);
+        }
+        else
+        {
+            event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_TARGET_GET_LOCAL_CACHE_EVENT_NAME, target_get_local_cache_latency_us);
+        }
 
         // NOTE: no need to perform recursive cooperative edge caching (current edge node is already the target edge node for cooperative edge caching)
         // NOTE: no need to access cloud to get data, which will be performed by the closest edge node

@@ -6,6 +6,7 @@
 #include "common/util.h"
 #include "event/event.h"
 #include "event/event_list.h"
+#include "message/data_message.h"
 #include "message/control_message.h"
 #include "network/propagation_simulator.h"
 
@@ -268,5 +269,34 @@ namespace covered
     bool CoveredBeaconServer::processOtherControlRequest_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr)
     {
         return false;
+    }
+
+    // (4) Process redirected get response for non-blocking placement deployment (ONLY for COVERED)
+
+    void CoveredBeaconServer::processRspToRedirectGetForPlacement_(MessageBase* redirected_get_response_ptr)
+    {
+        checkPointers_();
+        assert(redirected_get_response_ptr != NULL);
+        assert(edge_wrapper_ptr_->getCacheName() == Util::COVERED_CACHE_NAME);
+
+        // Get key, value, hitflag, victim syncset, and edgeset
+        const CoveredPlacementRedirectedGetResponse* const covered_placement_redirected_get_response_ptr = static_cast<const CoveredPlacementRedirectedGetResponse*>(redirected_get_response_ptr);
+        const Key tmp_key = covered_placement_redirected_get_response_ptr->getKey();
+        const Value tmp_value = covered_placement_redirected_get_response_ptr->getValue();
+        const bool tmp_hitflag = covered_placement_redirected_get_response_ptr->getHitflag();
+        const VictimSyncset& victim_syncset = covered_placement_redirected_get_response_ptr->getVictimSyncsetRef();
+        const Edgeset& edgeset = covered_placement_redirected_get_response_ptr->getEdgesetRef();
+
+        // Get background eventlist and bandwidth usage to update background counter for beacon server
+        const EventList& background_event_list = covered_placement_redirected_get_response_ptr->getEventListRef();
+        BandwidthUsage background_bandwidth_usage = covered_placement_redirected_get_response_ptr->getBandwidthUsageRef();
+        uint32_t cross_edge_redirected_get_rsp_bandwidth_bytes = covered_placement_redirected_get_response_ptr->getMsgPayloadSize();
+        background_bandwidth_usage.update(BandwidthUsage(0, cross_edge_redirected_get_rsp_bandwidth_bytes, 0));
+        edge_beacon_server_background_counter_.updateBandwidthUsgae(background_bandwidth_usage);
+        edge_beacon_server_background_counter_.addEvents(background_event_list);
+
+        // TODO: END HERE
+
+        return;
     }
 }
