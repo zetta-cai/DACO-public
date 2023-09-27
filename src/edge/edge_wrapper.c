@@ -943,6 +943,7 @@ namespace covered
         // NOTE: we use edge_beacon_server_recvreq_source_addr_ as the source address even if the invoker (i.e., beacon server) is waiting for global responses
         // (i) Although wait for global responses, beacon server is blocking for recvreq port and we don't want to introduce another blocking for recvrsp port
         // TODO: END HERE
+        CoveredPlacementGlobalGetRequest* covered_placement_global_get_request_ptr = new CoveredPlacementGlobalGetRequest(key, best_placement_edgeset, edge_beacon_server_recvreq_source_addr_for_placement_, skip_propagation_latency);
 
         // NOTE: CoveredPlacementRedirectedGetResponse will be processed by covered beacon server in the current edge node
 

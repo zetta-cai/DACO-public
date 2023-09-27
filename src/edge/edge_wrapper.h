@@ -87,7 +87,7 @@ namespace covered
 
         // For non-blocking placement deployment
         bool nonblockDataFetchForPlacement(const Key& key, const Edgeset& best_placement_edgeset, const bool& skip_propagation_latency) const; // Fetch data from local cache or neighbor to trigger non-blocking placement notification; return if we need hybrid fetching (i.e., resort sender to fetch data from cloud)
-        void nonblockDataFetchFromCloudForPlacement(const Key& key, const Edgeset& best_placement_edgeset, const bool& skip_propagation_latency) const; // Fetch data from cloud without hybrid data fetching (a corner case)
+        void nonblockDataFetchFromCloudForPlacement(const Key& key, const Edgeset& best_placement_edgeset, const bool& skip_propagation_latency) const; // Fetch data from cloud without hybrid data fetching (a corner case) (ONLY invoked by edge beacon server instead of cache server of the beacon edge node)
     private:
         static const std::string kClassName;
 

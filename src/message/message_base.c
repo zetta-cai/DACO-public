@@ -223,6 +223,11 @@ namespace covered
                 message_type_str = "kCoveredPlacementRedirectedGetResponse";
                 break;
             }
+            case MessageType::kCoveredPlacementGlobalGetRequest:
+            {
+                message_type_str = "kCoveredPlacementGlobalGetRequest";
+                break;
+            }
             default:
             {
                 message_type_str = std::to_string(static_cast<uint32_t>(message_type));
@@ -476,6 +481,11 @@ namespace covered
             {
                 message_ptr = new CoveredPlacementRedirectedGetResponse(msg_payload);
                 special_case = true;
+                break;
+            }
+            case MessageType::kCoveredPlacementGlobalGetRequest:
+            {
+                message_ptr = new CoveredPlacementGlobalGetRequest(msg_payload);
                 break;
             }
             default:
@@ -840,6 +850,11 @@ namespace covered
             const CoveredPlacementRedirectedGetResponse* const covered_placement_redirected_get_response_ptr = static_cast<const CoveredPlacementRedirectedGetResponse*>(message_ptr);
             tmp_key = covered_placement_redirected_get_response_ptr->getKey();
         }
+        else if (message_ptr->message_type_ == MessageType::kCoveredPlacementGlobalGetRequest)
+        {
+            const CoveredPlacementGlobalGetRequest* const covered_placement_global_get_request_ptr = static_cast<const CoveredPlacementGlobalGetRequest*>(message_ptr);
+            tmp_key = covered_placement_global_get_request_ptr->getKey();
+        }
         else
         {
             std::ostringstream oss;
@@ -1046,7 +1061,7 @@ namespace covered
     bool MessageBase::isGlobalDataRequest() const
     {
         checkIsValid_();
-        if (message_type_ == MessageType::kGlobalGetRequest || message_type_ == MessageType::kGlobalPutRequest || message_type_ == MessageType::kGlobalDelRequest)
+        if (message_type_ == MessageType::kGlobalGetRequest || message_type_ == MessageType::kGlobalPutRequest || message_type_ == MessageType::kGlobalDelRequest || message_type_ == MessageType::kCoveredPlacementGlobalGetRequest)
         {
             return true;
         }
@@ -1174,7 +1189,7 @@ namespace covered
     bool MessageBase::isBackgroundRequest() const
     {
         checkIsValid_();
-        if (message_type_ == MessageType::kCoveredPlacementRedirectedGetRequest)
+        if (message_type_ == MessageType::kCoveredPlacementRedirectedGetRequest || message_type_ == MessageType::kCoveredPlacementGlobalGetRequest)
         {
             return true;
         }
