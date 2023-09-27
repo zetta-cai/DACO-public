@@ -71,10 +71,15 @@ namespace covered
 
     EdgeWrapper::EdgeWrapper(const std::string& cache_name, const uint64_t& capacity_bytes, const uint32_t& edge_idx, const uint32_t& edgecnt, const std::string& hash_name, const uint64_t& local_uncached_capacity_bytes, const uint32_t& percacheserver_workercnt, const uint32_t& peredge_synced_victimcnt, const uint64_t& popularity_aggregation_capacity_bytes, const double& popularity_collection_change_ratio, const uint32_t& propagation_latency_clientedge_us, const uint32_t& propagation_latency_crossedge_us, const uint32_t& propagation_latency_edgecloud_us, const uint32_t& topk_edgecnt) : NodeWrapperBase(NodeWrapperBase::EDGE_NODE_ROLE, edge_idx,edgecnt, true), cache_name_(cache_name), capacity_bytes_(capacity_bytes), percacheserver_workercnt_(percacheserver_workercnt), topk_edgecnt_for_placement_(topk_edgecnt)
     {
-        // Get source address of beacon server recvreq for non-blokcing placement deployment
+        // Get source address of beacon server recvreq for non-blocking placement deployment
         std::string edge_ipstr = Config::getEdgeIpstr(edge_idx, edgecnt);
         uint16_t edge_beacon_server_recvreq_port = Util::getEdgeBeaconServerRecvreqPort(edge_idx, edgecnt);
         edge_beacon_server_recvreq_source_addr_for_placement_ = NetworkAddr(edge_ipstr, edge_beacon_server_recvreq_port);
+
+        // Get destination address towards the corresponding cloud recvreq for non-blocking placement deployment
+        std::string cloud_ipstr = Config::getCloudIpstr();
+        uint16_t cloud_recvreq_port = Util::getCloudRecvreqPort(0); // TODO: only support 1 cloud node now!
+        corresponding_cloud_recvreq_dst_addr_for_placement_ = NetworkAddr(cloud_ipstr, cloud_recvreq_port);
 
         // Differentiate different edge nodes
         std::ostringstream oss;
@@ -942,8 +947,13 @@ namespace covered
         // Send CoveredPlacementGlobalGetRequest to cloud
         // NOTE: we use edge_beacon_server_recvreq_source_addr_ as the source address even if the invoker (i.e., beacon server) is waiting for global responses
         // (i) Although wait for global responses, beacon server is blocking for recvreq port and we don't want to introduce another blocking for recvrsp port
-        // TODO: END HERE
-        CoveredPlacementGlobalGetRequest* covered_placement_global_get_request_ptr = new CoveredPlacementGlobalGetRequest(key, best_placement_edgeset, edge_beacon_server_recvreq_source_addr_for_placement_, skip_propagation_latency);
+        uint32_t current_edge_idx = getNodeIdx();
+        CoveredPlacementGlobalGetRequest* covered_placement_global_get_request_ptr = new CoveredPlacementGlobalGetRequest(key, best_placement_edgeset, current_edge_idx, edge_beacon_server_recvreq_source_addr_for_placement_, skip_propagation_latency);
+        assert(covered_placement_global_get_request_ptr != NULL);
+        // Push the global request into edge-to-cloud propagation simulator to cloud
+        bool is_successful = edge_tocloud_propagation_simulator_param_ptr_->push(covered_placement_global_get_request_ptr, corresponding_cloud_recvreq_dst_addr_for_placement_);
+        assert(is_successful);
+        covered_placement_global_get_request_ptr = NULL; // NOTE: covered_placement_global_get_request_ptr will be released by edge-to-cloud propagation simulator
 
         // NOTE: CoveredPlacementRedirectedGetResponse will be processed by covered beacon server in the current edge node
 

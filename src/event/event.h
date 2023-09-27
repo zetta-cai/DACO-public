@@ -73,6 +73,7 @@ namespace covered
 
         // For background events
         static const std::string BG_EDGE_CACHE_SERVER_WORKER_TARGET_GET_LOCAL_CACHE_EVENT_NAME; // For reads in edge cache server worker
+        static const std::string BG_CLOUD_GET_ROCKSDB_EVENT_NAME; // For cloud
 
         Event();
         Event(const std::string& event_name, const uint32_t& event_latency_us);

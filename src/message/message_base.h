@@ -74,7 +74,8 @@ namespace covered
         kCoveredRedirectedGetResponse,
         kCoveredPlacementRedirectedGetRequest,
         kCoveredPlacementRedirectedGetResponse,
-        kCoveredPlacementGlobalGetRequest
+        kCoveredPlacementGlobalGetRequest,
+        kCoveredPlacementGlobalGetResponse,
     };
 
     enum Hitflag

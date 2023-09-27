@@ -228,6 +228,11 @@ namespace covered
                 message_type_str = "kCoveredPlacementGlobalGetRequest";
                 break;
             }
+            case MessageType::kCoveredPlacementGlobalGetResponse:
+            {
+                message_type_str = "kCoveredPlacementGlobalGetResponse";
+                break;
+            }
             default:
             {
                 message_type_str = std::to_string(static_cast<uint32_t>(message_type));
@@ -488,6 +493,12 @@ namespace covered
                 message_ptr = new CoveredPlacementGlobalGetRequest(msg_payload);
                 break;
             }
+            case MessageType::kCoveredPlacementGlobalGetResponse: // NOTE: this is a special case for COVERED to process global get response by beacon server recvreq port for non-blocking placement deployment
+            {
+                message_ptr = new CoveredPlacementGlobalGetResponse(msg_payload);
+                special_case = true;
+                break;
+            }
             default:
             {
                 std::ostringstream oss;
@@ -639,6 +650,11 @@ namespace covered
             case MessageType::kCoveredPlacementRedirectedGetResponse:
             {
                 message_ptr = new CoveredPlacementRedirectedGetResponse(msg_payload);
+                break;
+            }
+            case MessageType::kCoveredPlacementGlobalGetResponse:
+            {
+                message_ptr = new CoveredPlacementGlobalGetResponse(msg_payload);
                 break;
             }
             default:
@@ -854,6 +870,11 @@ namespace covered
         {
             const CoveredPlacementGlobalGetRequest* const covered_placement_global_get_request_ptr = static_cast<const CoveredPlacementGlobalGetRequest*>(message_ptr);
             tmp_key = covered_placement_global_get_request_ptr->getKey();
+        }
+        else if (message_ptr->message_type_ == MessageType::kCoveredPlacementGlobalGetResponse)
+        {
+            const CoveredPlacementGlobalGetResponse* const covered_placement_global_get_response_ptr = static_cast<const CoveredPlacementGlobalGetResponse*>(message_ptr);
+            tmp_key = covered_placement_global_get_response_ptr->getKey();
         }
         else
         {
@@ -1106,7 +1127,7 @@ namespace covered
     bool MessageBase::isGlobalDataResponse() const
     {
         checkIsValid_();
-        if (message_type_ == MessageType::kGlobalGetResponse || message_type_ == MessageType::kGlobalPutResponse || message_type_ == MessageType::kGlobalDelResponse)
+        if (message_type_ == MessageType::kGlobalGetResponse || message_type_ == MessageType::kGlobalPutResponse || message_type_ == MessageType::kGlobalDelResponse || message_type_ == MessageType::kCoveredPlacementGlobalGetResponse)
         {
             return true;
         }
@@ -1202,7 +1223,7 @@ namespace covered
     bool MessageBase::isBackgroundResponse() const
     {
         checkIsValid_();
-        if (message_type_ == MessageType::kCoveredPlacementRedirectedGetResponse)
+        if (message_type_ == MessageType::kCoveredPlacementRedirectedGetResponse || message_type_ == MessageType::kCoveredPlacementGlobalGetResponse)
         {
             return true;
         }

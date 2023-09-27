@@ -532,8 +532,7 @@ namespace covered
         assert(redirected_request_ptr != NULL);
         assert(redirected_request_ptr->getMessageType() == MessageType::kCoveredRedirectedGetRequest || redirected_request_ptr->getMessageType() == MessageType::kCoveredPlacementRedirectedGetRequest);
         Key tmp_key;
-        bool is_nonblock_data_fetching = false;
-        Edgeset placement_edgeset;
+        Edgeset tmp_placement_edgeset;
         bool skip_propagation_latency = redirected_request_ptr->isSkipPropagationLatency();
         if (redirected_request_ptr->getMessageType() == MessageType::kCoveredRedirectedGetRequest)
         {
@@ -544,8 +543,7 @@ namespace covered
         {
             const CoveredPlacementRedirectedGetRequest* const covered_placement_redirected_get_request_ptr = static_cast<const CoveredPlacementRedirectedGetRequest*>(redirected_request_ptr);
             tmp_key = covered_placement_redirected_get_request_ptr->getKey();
-            is_nonblock_data_fetching = true;
-            placement_edgeset = covered_placement_redirected_get_request_ptr->getEdgesetRef();
+            tmp_placement_edgeset = covered_placement_redirected_get_request_ptr->getEdgesetRef();
         }
         else
         {
@@ -566,17 +564,17 @@ namespace covered
         uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
         NetworkAddr edge_cache_server_recvreq_source_addr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeCacheServerRecvreqSourceAddr();
         MessageBase* response_ptr = NULL;
-        if (!is_nonblock_data_fetching) // Send back normal redirected get response
+        if (!redirected_request_ptr->isBackgroundRequest()) // Send back normal redirected get response
         {
             // NOTE: CoveredRedirectedGetResponse will be processed by edge cache server worker of the sender edge node
             response_ptr = new CoveredRedirectedGetResponse(tmp_key, value, hitflag, victim_syncset, edge_idx, edge_cache_server_recvreq_source_addr, total_bandwidth_usage, event_list, skip_propagation_latency);
         }
         else // Send back redirected get response for non-blocking placement deploymeng
         {
-            assert(placement_edgeset.size() <= tmp_edge_wrapper_ptr->getTopkEdgecntForPlacement()); // At most k placement edge nodes each time
+            assert(tmp_placement_edgeset.size() <= tmp_edge_wrapper_ptr->getTopkEdgecntForPlacement()); // At most k placement edge nodes each time
 
             // NOTE: CoveredPlacementRedirectedGetResponse will be processed by edge beacon server of the sender edge node
-            response_ptr = new CoveredPlacementRedirectedGetResponse(tmp_key, value, hitflag, victim_syncset, placement_edgeset, edge_idx, edge_cache_server_recvreq_source_addr, total_bandwidth_usage, event_list, skip_propagation_latency);
+            response_ptr = new CoveredPlacementRedirectedGetResponse(tmp_key, value, hitflag, victim_syncset, tmp_placement_edgeset, edge_idx, edge_cache_server_recvreq_source_addr, total_bandwidth_usage, event_list, skip_propagation_latency);
         }
         assert(response_ptr != NULL);
 

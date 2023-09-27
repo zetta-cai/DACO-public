@@ -113,6 +113,11 @@ namespace covered
                     // NOTE: NOT embed background events/bandwidth-usage into CoveredPlacementRedirectedGetResponse even if it is received by beacon server, as we need to embed such information into foreground messages to be tracked by clients
                     processRspToRedirectGetForPlacement_(control_request_ptr);
                 }
+                else if (control_request_ptr->getMessageType() == MessageType::kCoveredPlacementGlobalGetResponse) // Non-blocking placement deployment
+                {
+                    // NOTE: NOT embed background events/bandwidth-usage into CoveredPlacementRedirectedGetResponse even if it is received by beacon server, as we need to embed such information into foreground messages to be tracked by clients
+                    processRspToAccessCloudForPlacement_(control_request_ptr);
+                }
                 else
                 {
                     std::ostringstream oss;

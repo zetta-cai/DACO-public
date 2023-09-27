@@ -271,7 +271,7 @@ namespace covered
         return false;
     }
 
-    // (4) Process redirected get response for non-blocking placement deployment (ONLY for COVERED)
+    // (4) Process redirected/global get response for non-blocking placement deployment (ONLY for COVERED)
 
     void CoveredBeaconServer::processRspToRedirectGetForPlacement_(MessageBase* redirected_get_response_ptr)
     {
@@ -299,6 +299,8 @@ namespace covered
 
         // Get Hitflag for non-blocking placement deployment
         const bool tmp_hitflag = covered_placement_redirected_get_response_ptr->getHitflag();
+        const Edgeset& best_placement_edgeset = covered_placement_redirected_get_response_ptr->getEdgesetRef();
+        assert(best_placement_edgeset.size() <= edge_wrapper_ptr_->getTopkEdgecntForPlacement()); // At most k placement edge nodes each time
         if (tmp_hitflag == Hitflag::kCooperativeHit)
         {
             // TODO: (END HERE) Perform non-blocking placement notification
@@ -309,11 +311,35 @@ namespace covered
             // NOTE: as we have replied the sender without hybrid data fetching before, beacon server directly fetches data from cloud by itself here in a non-blocking manner (this is a corner case, as valid dirinfo has cooperative hit in most time)
             const bool skip_propagation_latency = redirected_get_response_ptr->isSkipPropagationLatency();
             const Key tmp_key = covered_placement_redirected_get_response_ptr->getKey();
-            const Edgeset& placement_edgeset = covered_placement_redirected_get_response_ptr->getEdgesetRef();
-            assert(placement_edgeset.size() <= edge_wrapper_ptr_->getTopkEdgecntForPlacement()); // At most k placement edge nodes each time
-            edge_wrapper_ptr_->nonblockDataFetchFromCloudForPlacement(tmp_key, placement_edgeset, skip_propagation_latency);
+            edge_wrapper_ptr_->nonblockDataFetchFromCloudForPlacement(tmp_key, best_placement_edgeset, skip_propagation_latency);
         }
 
         return;
+    }
+
+    void CoveredBeaconServer::processRspToAccessCloudForPlacement_(MessageBase* global_get_response_ptr)
+    {
+        checkPointers_();
+        assert(global_get_response_ptr != NULL);
+        assert(edge_wrapper_ptr_->getCacheName() == Util::COVERED_CACHE_NAME);
+        CoveredCacheManager* covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
+
+        const CoveredPlacementGlobalGetResponse* const covered_placement_global_get_response_ptr = static_cast<const CoveredPlacementGlobalGetResponse*>(global_get_response_ptr);
+        //const Value tmp_value = covered_placement_global_get_response_ptr->getValue();
+
+        // NOTE: NO need for victim synchronization due to edge-cloud communication
+
+        // Get background eventlist and bandwidth usage to update background counter for beacon server
+        const EventList& background_event_list = covered_placement_global_get_response_ptr->getEventListRef();
+        BandwidthUsage background_bandwidth_usage = covered_placement_global_get_response_ptr->getBandwidthUsageRef();
+        uint32_t edge_cloud_global_get_rsp_bandwidth_bytes = covered_placement_global_get_response_ptr->getMsgPayloadSize();
+        background_bandwidth_usage.update(BandwidthUsage(0, 0, edge_cloud_global_get_rsp_bandwidth_bytes));
+        edge_beacon_server_background_counter_.updateBandwidthUsgae(background_bandwidth_usage);
+        edge_beacon_server_background_counter_.addEvents(background_event_list);
+
+        // TODO: (END HERE) Perform non-blocking placement notification
+        const Edgeset& best_placement_edgeset = covered_placement_global_get_response_ptr->getEdgesetRef();
+        assert(best_placement_edgeset.size() <= edge_wrapper_ptr_->getTopkEdgecntForPlacement()); // At most k placement edge nodes each time
+        //nonblockNotifyForPlacement(key, value, best_placement_edgeset);
     }
 }

@@ -159,7 +159,7 @@ namespace covered
         return is_finish;
     }
 
-    // (4) Process redirected get response for non-blocking placement deployment (ONLY for COVERED)
+    // (4) Process redirected/global get response for non-blocking placement deployment (ONLY for COVERED)
 
     void BasicBeaconServer::processRspToRedirectGetForPlacement_(MessageBase* redirected_get_response_ptr)
     {
@@ -167,6 +167,18 @@ namespace covered
         
         std::ostringstream oss;
         oss << edge_wrapper_ptr_->getCacheName() << " should NOT receive CoveredPlacementRedirectedGetResponse which is ONLY for COVERED!!!";
+        Util::dumpErrorMsg(instance_name_, oss.str());
+        exit(1);
+
+        return;
+    }
+
+    void BasicBeaconServer::processRspToAccessCloudForPlacement_(MessageBase* cloud_get_response_ptr)
+    {
+        checkPointers_();
+        
+        std::ostringstream oss;
+        oss << edge_wrapper_ptr_->getCacheName() << " should NOT receive CoveredPlacementGlobalGetResponse which is ONLY for COVERED!!!";
         Util::dumpErrorMsg(instance_name_, oss.str());
         exit(1);
 

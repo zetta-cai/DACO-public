@@ -122,6 +122,7 @@ namespace covered
         const uint32_t percacheserver_workercnt_; // Come from CLI
         const uint32_t topk_edgecnt_for_placement_; // Come from CLI for non-blocking placement deployment
         NetworkAddr edge_beacon_server_recvreq_source_addr_for_placement_; // Calculated from edgeidx and edgecnt for non-blocking placement deployment
+        NetworkAddr corresponding_cloud_recvreq_dst_addr_for_placement_; // For non-blocking placement deployment
 
         // NOTE: we do NOT need per-key rwlock for atomicity among CacheWrapper, CooperationWrapperBase, and CoveredCacheMananger.
         // (1) CacheWrapper is already thread-safe for cache server and invalidation server, CooperationWrapperBase is already thread-safe for cache server and beacon server, and CoveredCacheMananger is already thread-safe for cache server and beacon server -> NO dead locking as each thread-safe structure releases its own lock after each function.

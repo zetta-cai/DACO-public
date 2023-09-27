@@ -3,6 +3,7 @@
 #include "common/bandwidth_usage.h"
 #include "common/config.h"
 #include "common/util.h"
+#include "core/popularity/edgeset.h"
 #include "message/data_message.h"
 
 namespace covered
@@ -120,6 +121,7 @@ namespace covered
         MessageType global_request_message_type = global_request_ptr->getMessageType();
         Key tmp_key;
         Value tmp_value;
+        Edgeset tmp_placement_edgeset;
         const bool skip_propagation_latency = global_request_ptr->isSkipPropagationLatency();
         std::string event_name;
         switch (global_request_message_type)
@@ -157,6 +159,18 @@ namespace covered
                 cloud_wrapper_ptr_->getCloudRocksdbPtr()->remove(tmp_key);
 
                 event_name = Event::CLOUD_DEL_ROCKSDB_EVENT_NAME;
+                break;
+            }
+            case MessageType::kCoveredPlacementGlobalGetRequest: // ONLY for COVERED
+            {
+                const CoveredPlacementGlobalGetRequest* const covered_placement_global_get_request_ptr = static_cast<const CoveredPlacementGlobalGetRequest*>(global_request_ptr);
+                tmp_key = covered_placement_global_get_request_ptr->getKey();
+                tmp_placement_edgeset = covered_placement_global_get_request_ptr->getEdgesetRef();
+
+                // Get value from RocksDB KVS
+                cloud_wrapper_ptr_->getCloudRocksdbPtr()->get(tmp_key, tmp_value);
+
+                event_name = Event::BG_CLOUD_GET_ROCKSDB_EVENT_NAME;
                 break;
             }
             default:
@@ -206,6 +220,16 @@ namespace covered
             {
                 // Prepare global del response message
                 global_response_ptr = new GlobalDelResponse(tmp_key, cloud_idx, cloud_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+                assert(global_response_ptr != NULL);
+                break;
+            }
+            case MessageType::kCoveredPlacementGlobalGetRequest: // ONLY for COVERED
+            {
+                // NOTE: NOT assert here as cloud does NOT need to know topk_edgecnt_
+                //assert(tmp_placement_edgeset.size() <= topk_edgecnt_); // At most k placement edge nodes each time
+
+                // Prepare covered placement global get response message
+                global_response_ptr = new CoveredPlacementGlobalGetResponse(tmp_key, tmp_value, tmp_placement_edgeset, cloud_idx, cloud_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
                 assert(global_response_ptr != NULL);
                 break;
             }

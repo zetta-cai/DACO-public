@@ -42,9 +42,10 @@ namespace covered
         // Return if edge node is finished
         virtual bool processOtherControlRequest_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr) override;
 
-        // (4) Process redirected get response for non-blocking placement deployment (ONLY for COVERED)
+        // (4) Process redirected/global get response for non-blocking placement deployment (ONLY for COVERED)
 
         virtual void processRspToRedirectGetForPlacement_(MessageBase* redirected_get_response_ptr) override;
+        virtual void processRspToAccessCloudForPlacement_(MessageBase* global_get_response_ptr) override;
 
         // Member variables
 
