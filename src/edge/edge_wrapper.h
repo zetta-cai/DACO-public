@@ -88,6 +88,7 @@ namespace covered
         // For non-blocking placement deployment
         bool nonblockDataFetchForPlacement(const Key& key, const Edgeset& best_placement_edgeset, const bool& skip_propagation_latency) const; // Fetch data from local cache or neighbor to trigger non-blocking placement notification; return if we need hybrid fetching (i.e., resort sender to fetch data from cloud)
         void nonblockDataFetchFromCloudForPlacement(const Key& key, const Edgeset& best_placement_edgeset, const bool& skip_propagation_latency) const; // Fetch data from cloud without hybrid data fetching (a corner case) (ONLY invoked by edge beacon server instead of cache server of the beacon edge node)
+        void nonblockNotifyForPlacement(const Key& key, const Value& value, const Edgeset& best_placement_edgeset, const bool& skip_propagation_latency) const; // Notify all edges in best_placement_edgeset to admit key-value pair into their local edge cache
     private:
         static const std::string kClassName;
 
@@ -127,7 +128,9 @@ namespace covered
         // NOTE: we do NOT need per-key rwlock for atomicity among CacheWrapper, CooperationWrapperBase, and CoveredCacheMananger.
         // (1) CacheWrapper is already thread-safe for cache server and invalidation server, CooperationWrapperBase is already thread-safe for cache server and beacon server, and CoveredCacheMananger is already thread-safe for cache server and beacon server -> NO dead locking as each thread-safe structure releases its own lock after each function.
         // (2) Cache server needs to access CacheWrapper, CooperationWrapperBase, and CoveredCacheManager, while there NOT exist any serializability/atomicity issue for requests of the same key, as cache server workers have already partitioned requests by hashing keys into ring buffer.
-        // (3) Beacon server needs to access CooperationWrapperBase and CoveredCacheManager, while we do NOT need strong consistency for aggregated popularity or synchronized victims in CoveredCacheManager, and hence NO need to keep serializability/atomicity.
+        // (2-1) Note that CacheWrapper and CooperationWrapperBase do NOT have any serializability issue, as the former tracks data and cache metadata, while the latter tracks directory metadata.
+        // (3) Beacon server needs to access CacheWrapper, CooperationWrapperBase, and CoveredCacheManager, while we do NOT need strong consistency for aggregated popularity or synchronized victims in CoveredCacheManager, and hence NO need to keep serializability/atomicity.
+        // (3-1) Note that CoveredCacheManager in nature has serializaiblity issues with CacheWrapper and CooperationWrapperBase due to aggregated popularity + victim cacheinfo and dirinfo, yet NO need for strong consistency.
         // (4) Invalidation server needs to access CacheWrapper and CooperationWrapperBase, while it ONLY invalidates CacheWrapper (NOT affect directory information) and reads CooperationWrapperBase, and hence NO serializability/atomicity issue.
 
         // Non-const shared variables (thread safe)

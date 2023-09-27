@@ -959,4 +959,18 @@ namespace covered
 
         return;
     }
+
+    void EdgeWrapper::nonblockNotifyForPlacement(const Key& key, const Value& value, const Edgeset& best_placement_edgeset, const bool& skip_propagation_latency) const
+    {
+        checkPointers_();
+        assert(cache_name_ == Util::COVERED_CACHE_NAME);
+        assert(best_placement_edgeset.size() <= topk_edgecnt_for_placement_); // At most k placement edge nodes each time
+
+        // TODO: Check writelock for validity of cache placement
+
+        // TODO: Send placement notification for each non-local edge node in best_placement_edgeset in a non-blocking manner
+
+        // TODO: Perform cache admission for local edge cache if current edge node is also in best_placement_edgeset
+        // NOTE: will NOT trigger placement calculation due to admitting a cached object
+    }
 }
