@@ -33,7 +33,7 @@ namespace covered
         return beacon_server_ptr;
     }
 
-    BeaconServerBase::BeaconServerBase(EdgeWrapper* edge_wrapper_ptr) : edge_wrapper_ptr_(edge_wrapper_ptr), edge_beacon_server_background_counter_()
+    BeaconServerBase::BeaconServerBase(EdgeWrapper* edge_wrapper_ptr) : edge_wrapper_ptr_(edge_wrapper_ptr)
     {
         assert(edge_wrapper_ptr != NULL);
         const uint32_t edge_idx = edge_wrapper_ptr->getNodeIdx();
@@ -410,7 +410,9 @@ namespace covered
 
     void BeaconServerBase::embedBackgroundCounterIfNotEmpty_(BandwidthUsage& bandwidth_usage, EventList& event_list) const
     {
-        bool is_empty_before_reset = edge_beacon_server_background_counter_.loadAndReset(bandwidth_usage, event_list);
+        checkPointers_();
+
+        bool is_empty_before_reset = edge_wrapper_ptr_->getEdgeBackgroundCounterForBeaconServerRef().loadAndReset(bandwidth_usage, event_list);
         UNUSED(is_empty_before_reset);
 
         return;

@@ -220,7 +220,7 @@ namespace covered
 
         // Access local edge cache (current edge node is the closest edge node)
         struct timespec get_local_cache_start_timestamp = Util::getCurrentTimespec();
-        bool is_local_cached_and_valid = getLocalEdgeCache_(tmp_key, tmp_value);
+        bool is_local_cached_and_valid = tmp_edge_wrapper_ptr->getLocalEdgeCache_(tmp_key, tmp_value);
         if (is_local_cached_and_valid) // local cached and valid
         {
             hitflag = Hitflag::kLocalHit;
@@ -280,7 +280,7 @@ namespace covered
         bool is_local_cached_and_invalid = tryToUpdateInvalidLocalEdgeCache_(tmp_key, tmp_value);
         if (!tmp_value.isDeleted() && is_local_cached_and_invalid) // Update may trigger eviction
         {
-            is_finish = evictForCapacity_(total_bandwidth_usage, event_list, skip_propagation_latency); // Add events of intermediate response if with event tracking
+            is_finish = tmp_edge_wrapper_ptr->evictForCapacity_(edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency); // Add events of intermediate response if with event tracking
         }
         if (is_finish)
         {
@@ -479,7 +479,7 @@ namespace covered
         struct timespec issue_directory_lookup_req_start_timestamp = Util::getCurrentTimespec();
 
         // Get destination address of beacon node
-        NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = getBeaconDstaddr_(key);
+        NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = tmp_edge_wrapper_ptr->getBeaconDstaddr_(key);
 
         while (true) // Timeout-and-retry mechanism
         {
@@ -816,7 +816,7 @@ namespace covered
             is_local_cached = updateLocalEdgeCache_(tmp_key, tmp_value);
 
             // NOTE: we will check capacity and trigger eviction for value updates (add events of intermediate response if with event tracking)
-            is_finish = evictForCapacity_(total_bandwidth_usage, event_list, skip_propagation_latency);
+            is_finish = tmp_edge_wrapper_ptr->evictForCapacity_(edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency);
         }
         else if (local_request_ptr->getMessageType() == MessageType::kLocalDelRequest)
         {
@@ -984,7 +984,7 @@ namespace covered
         struct timespec issue_acquire_writelock_req_start_timestamp = Util::getCurrentTimespec();
 
         // Prepare destination address of beacon server
-        NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = getBeaconDstaddr_(key);
+        NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = tmp_edge_wrapper_ptr->getBeaconDstaddr_(key);
 
         while (true) // Timeout-and-retry mechanism
         {
@@ -1297,7 +1297,7 @@ namespace covered
         struct timespec issue_release_writelock_req_start_timestamp = Util::getCurrentTimespec();
 
         // Prepare destination address of beacon server
-        NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = getBeaconDstaddr_(key);
+        NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = tmp_edge_wrapper_ptr->getBeaconDstaddr_(key);
 
         while (true) // Timeout-and-retry mechanism
         {
@@ -1487,125 +1487,35 @@ namespace covered
 
     bool CacheServerWorkerBase::admitObject_(const Key& key, const Value& value, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
     {
+        checkPointers_();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+
         bool is_finish = false;
 
         struct timespec update_directory_to_admit_start_timestamp = Util::getCurrentTimespec();
 
         // Independently admit the new key-value pair into local edge cache
         bool is_being_written = false;
-        is_finish = updateDirectory_(key, true, is_being_written, total_bandwidth_usage, event_list, skip_propagation_latency);
+        is_finish = admitDirectory_(key, is_being_written, total_bandwidth_usage, event_list, skip_propagation_latency);
         if (is_finish)
         {
             return is_finish;
         }
-        admitLocalEdgeCache_(key, value, !is_being_written); // valid if not being written
+        tmp_edge_wrapper_ptr->admitLocalEdgeCache_(key, value, !is_being_written); // valid if not being written
 
         struct timespec update_directory_to_admit_end_timestamp = Util::getCurrentTimespec();
         uint32_t update_directory_to_admit_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(update_directory_to_admit_end_timestamp, update_directory_to_admit_start_timestamp));
         event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_UPDATE_DIRECTORY_TO_ADMIT_EVENT_NAME, update_directory_to_admit_latency_us); // Add intermediate event if with event tracking
 
         // Trigger eviction if necessary
-        is_finish = evictForCapacity_(total_bandwidth_usage, event_list, skip_propagation_latency);
+        is_finish = tmp_edge_wrapper_ptr->evictForCapacity_(edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency);
 
         return is_finish;
     }
 
-    // (4.2) Evict cached objects from local edge cache
+    // (4.2) Update content directory information
 
-    bool CacheServerWorkerBase::evictForCapacity_(BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
-    {
-        checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
-        Rwlock* tmp_rwlock_for_eviction_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getRwlockForEvictionPtr();
-
-        // Acquire a write lock for atomicity of eviction among different edge cache server workers
-        std::string context_name = "CacheServerWorkerBase::evictForCapacity_()";
-        tmp_rwlock_for_eviction_ptr->acquire_lock(context_name);
-
-        bool is_finish = false;
-
-        std::unordered_map<Key, Value, KeyHasher> total_victims;
-        total_victims.clear();
-        while (true) // Evict until used bytes <= capacity bytes
-        {
-            // Data and metadata for local edge cache, and cooperation metadata
-            uint64_t used_bytes = tmp_edge_wrapper_ptr->getSizeForCapacity();
-            uint64_t capacity_bytes = tmp_edge_wrapper_ptr->getCapacityBytes();
-            if (used_bytes <= capacity_bytes) // Not exceed capacity limitation
-            {
-                break;
-            }
-            else // Exceed capacity limitation
-            {
-                std::unordered_map<Key, Value, KeyHasher> tmp_victims;
-                tmp_victims.clear();
-
-                // NOTE: we calculate required size after locking to avoid duplicate evictions for the same part of required size
-                uint64_t required_size = used_bytes - capacity_bytes;
-
-                // Evict unpopular objects from local edge cache for cache capacity
-                evictLocalEdgeCache_(tmp_victims, required_size);
-
-                total_victims.insert(tmp_victims.begin(), tmp_victims.end());
-
-                continue;
-            }
-        }
-
-        // NOTE: we can release writelock here as cache size usage has already been updated after evicting local edge cache
-        tmp_rwlock_for_eviction_ptr->unlock(context_name);
-
-        struct timespec update_directory_to_evict_start_timestamp = Util::getCurrentTimespec();
-
-        // TODO: updateDirectory_ -> admitDirectory_ for each single admission
-        // TODO: Introduce parallelEvictDirectory_ for parallel multi-eviction
-
-        // Track whether all keys have received directory update responses
-        uint32_t acked_cnt = 0;
-        std::unordered_map<Key, bool, KeyHasher> acked_flags;
-        for (std::unordered_map<Key, Value, KeyHasher>::const_iterator victim_iter = total_victims.begin(); victim_iter != total_victims.end(); victim_iter++)
-        {
-            acked_flags.insert(std::pair(victim_iter->first, false));
-        }
-
-        // Issue multiple directory update requests with is_admit = false simultaneously
-        const uint32_t total_victim_cnt = total_victims.size();
-        while (acked_cnt != total_victim_cnt)
-        {
-            // Send (total_victim_cnt - acked_cnt) directory update requests to the beacon nodes that have not acknowledged
-            for (std::unordered_map<Key, bool, KeyHasher>::const_iterator iter_for_request = acked_flags.begin(); iter_for_request != acked_flags.end(); iter_for_request++)
-            {
-                if (iter_for_request->second) // Skip the key that has received directory update response
-                {
-                    continue;
-                }
-
-                const Key& tmp_victim_key = iter_for_request->first; // key that has NOT received any directory update response
-                bool _unused_is_being_written = false; // NOTE: is_being_written does NOT affect cache eviction
-                // TODO: (END HERE) use sth like evictDirectory_()
-                is_finish = updateDirectory_(tmp_victim_key, false, _unused_is_being_written, total_bandwidth_usage, event_list, skip_propagation_latency);
-                if (is_finish)
-                {
-                    return is_finish;
-                }
-
-                #ifdef DEBUG_CACHE_SERVER
-                const Value& tmp_victim_value = total_victims.find(tmp_victim_key)->second;
-                Util::dumpVariablesForDebug(base_instance_name_, 7, "eviction;", "keystr:", tmp_victim_key.getKeystr().c_str(), "is value deleted:", Util::toString(tmp_victim_value.isDeleted()).c_str(), "value size:", Util::toString(tmp_victim_value.getValuesize()).c_str());
-                #endif
-            } // End of iter_for_request
-        } // End of (acked_cnt != total_victim_cnt)
-
-        struct timespec update_directory_to_evict_end_timestamp = Util::getCurrentTimespec();
-        uint32_t update_directory_to_evict_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(update_directory_to_evict_end_timestamp, update_directory_to_evict_start_timestamp));
-        event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_UPDATE_DIRECTORY_TO_EVICT_EVENT_NAME, update_directory_to_evict_latency_us); // Add intermediate event if with event tracking
-
-        return is_finish;
-    }
-
-    // (4.3) Update content directory information
-
-    bool CacheServerWorkerBase::updateDirectory_(const Key& key, const bool& is_admit, bool& is_being_written, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
+    bool CacheServerWorkerBase::admitDirectory_(const Key& key, bool& is_being_written, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
@@ -1620,12 +1530,12 @@ namespace covered
         DirectoryInfo directory_info(tmp_edge_wrapper_ptr->getNodeIdx());
         if (current_is_beacon) // Update target edge index of local directory information
         {
-            updateLocalDirectory_(key, is_admit, directory_info, is_being_written, skip_propagation_latency);
+            tmp_edge_wrapper_ptr->admitLocalDirectory_(key, directory_info, is_being_written);
         }
         else // Update remote directory information at the beacon node
         {
             // Add events of intermediate responses if with event tracking
-            is_finish = updateBeaconDirectory_(key, is_admit, directory_info, is_being_written, total_bandwidth_usage, event_list, skip_propagation_latency);
+            is_finish = admitBeaconDirectory_(key, directory_info, is_being_written, total_bandwidth_usage, event_list, skip_propagation_latency);
         }
 
         // Add intermediate event if with event tracking
@@ -1636,7 +1546,7 @@ namespace covered
         return is_finish;
     }
 
-    bool CacheServerWorkerBase::updateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
+    bool CacheServerWorkerBase::admitBeaconDirectory_(const Key& key, const DirectoryInfo& directory_info, bool& is_being_written, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
@@ -1649,12 +1559,12 @@ namespace covered
         struct timespec issue_directory_update_req_start_timestamp = Util::getCurrentTimespec();
 
         // Get destination address of beacon node
-        NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = getBeaconDstaddr_(key);
+        NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = tmp_edge_wrapper_ptr->getBeaconDstaddr_(key);
 
         while (true) // Timeout-and-retry mechanism
         {
             // Prepare directory update request to check directory information in beacon node
-            MessageBase* directory_update_request_ptr = getReqToUpdateBeaconDirectory_(key, is_admit, directory_info, skip_propagation_latency);
+            MessageBase* directory_update_request_ptr = getReqToAdmitBeaconDirectory_(key, directory_info, skip_propagation_latency);
             assert(directory_update_request_ptr != NULL);
 
             // Push the control request into edge-to-edge propagation simulator to the beacon node
@@ -1686,7 +1596,7 @@ namespace covered
                 MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
                 assert(control_response_ptr != NULL);
 
-                processRspToUpdateBeaconDirectory_(control_response_ptr, is_being_written); // NOTE: is_being_written is updated here
+                processRspToAdmitBeaconDirectory_(control_response_ptr, is_being_written); // NOTE: is_being_written is updated here
 
                 // Update total bandwidth usage for received directory update response
                 BandwidthUsage directory_update_response_bandwidth_usage = control_response_ptr->getBandwidthUsageRef();
@@ -1713,21 +1623,6 @@ namespace covered
     }
 
     // (5) Utility functions
-
-    NetworkAddr CacheServerWorkerBase::getBeaconDstaddr_(const Key& key) const
-    {
-        checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
-
-        // The current edge node must NOT be the beacon node for the key
-        bool current_is_beacon = tmp_edge_wrapper_ptr->currentIsBeacon(key);
-        assert(!current_is_beacon);
-
-        // Get remote address such that current edge node can communicate with the beacon node for the key
-        NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getBeaconEdgeBeaconServerRecvreqAddr(key);
-
-        return beacon_edge_beacon_server_recvreq_dst_addr;
-    }
 
     void CacheServerWorkerBase::checkPointers_() const
     {

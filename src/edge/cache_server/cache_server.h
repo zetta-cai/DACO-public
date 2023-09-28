@@ -33,7 +33,6 @@ namespace covered
 
         EdgeWrapper* getEdgeWrapperPtr() const;
         NetworkAddr getEdgeCacheServerRecvreqSourceAddr() const;
-        Rwlock* getRwlockForEvictionPtr() const;
     private:
         static const std::string kClassName;
 
@@ -53,8 +52,6 @@ namespace covered
         // For receiving local requests
         NetworkAddr edge_cache_server_recvreq_source_addr_; // The same as that used by clients or neighbors to send local/redirected requests (const shared variable)
         UdpMsgSocketServer* edge_cache_server_recvreq_socket_server_ptr_; // Used by cache server to receive local requests from clients and redirected requests from neighbors (non-const individual variable)
-
-        mutable Rwlock* rwlock_for_eviction_ptr_; // Guarantee the atomicity of eviction among different edge cache server workers
     };
 }
 

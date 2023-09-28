@@ -29,18 +29,6 @@ namespace covered
 
     // (1.1) Access local edge cache
 
-    bool BasicCacheServerWorker::getLocalEdgeCache_(const Key& key, Value& value) const
-    {
-        checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
-
-        bool affected_victim_tracker = false;
-        bool is_local_cached_and_valid = tmp_edge_wrapper_ptr->getEdgeCachePtr()->get(key, value, affected_victim_tracker);
-        UNUSED(affected_victim_tracker); // ONLY for COVERED
-        
-        return is_local_cached_and_valid;
-    }
-
     // (1.2) Access cooperative edge cache to fetch data from neighbor edge nodes
 
     void BasicCacheServerWorker::lookupLocalDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, const bool& skip_propagation_latency) const
@@ -258,7 +246,7 @@ namespace covered
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
         // Access local edge cache for redirected get request
-        is_cooperative_cached_and_valid = getLocalEdgeCache_(tmp_key, value);
+        is_cooperative_cached_and_valid = tmp_edge_wrapper_ptr->getLocalEdgeCache_(tmp_key, value);
         is_cooperative_cached = tmp_edge_wrapper_ptr->getEdgeCachePtr()->isLocalCached(tmp_key);
         
         return;
@@ -287,52 +275,14 @@ namespace covered
 
     // (4.1) Admit uncached objects in local edge cache
 
-    void BasicCacheServerWorker::admitLocalEdgeCache_(const Key& key, const Value& value, const bool& is_valid) const
+    // (4.2) Admit content directory information
+
+    MessageBase* BasicCacheServerWorker::getReqToAdmitBeaconDirectory_(const Key& key, const DirectoryInfo& directory_info, const bool& skip_propagation_latency) const
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
-        bool affect_victim_tracker = false;
-        tmp_edge_wrapper_ptr->getEdgeCachePtr()->admit(key, value, is_valid, affect_victim_tracker);
-        UNUSED(affect_victim_tracker); // ONLY for COVERED
-
-        return;
-    }
-
-    // (4.2) Evict cached objects from local edge cache
-
-    void BasicCacheServerWorker::evictLocalEdgeCache_(std::unordered_map<Key, Value, KeyHasher>& victims, const uint64_t& required_size) const
-    {
-        checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
-
-        tmp_edge_wrapper_ptr->getEdgeCachePtr()->evict(victims, required_size);
-
-        return;
-    }
-
-    // (4.3) Update content directory information
-
-    void BasicCacheServerWorker::updateLocalDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written, const bool& skip_propagation_latency) const
-    {
-        checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
-
-        uint32_t current_edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
-        bool is_source_cached = false;
-        tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->updateDirectoryTable(key, current_edge_idx, is_admit, directory_info, is_being_written, is_source_cached);
-        UNUSED(is_source_cached);
-
-        UNUSED(skip_propagation_latency);
-
-        return;
-    }
-
-    MessageBase* BasicCacheServerWorker::getReqToUpdateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, const bool& skip_propagation_latency) const
-    {
-        checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
-
+        const bool is_admit = true; // Admit content directory
         uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
         MessageBase* directory_update_request_ptr = new DirectoryUpdateRequest(key, is_admit, directory_info, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
         assert(directory_update_request_ptr != NULL);
@@ -340,7 +290,7 @@ namespace covered
         return directory_update_request_ptr;
     }
 
-    void BasicCacheServerWorker::processRspToUpdateBeaconDirectory_(MessageBase* control_response_ptr, bool& is_being_written) const
+    void BasicCacheServerWorker::processRspToAdmitBeaconDirectory_(MessageBase* control_response_ptr, bool& is_being_written) const
     {
         assert(control_response_ptr != NULL);
         assert(control_response_ptr->getMessageType() == MessageType::kDirectoryUpdateResponse);

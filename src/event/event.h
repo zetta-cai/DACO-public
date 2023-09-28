@@ -35,7 +35,6 @@ namespace covered
         // For independent admission in edge cache server worker
         static const std::string EDGE_CACHE_SERVER_WORKER_INDEPENDENT_ADMISSION_EVENT_NAME;
         static const std::string EDGE_CACHE_SERVER_WORKER_UPDATE_DIRECTORY_TO_ADMIT_EVENT_NAME;
-        static const std::string EDGE_CACHE_SERVER_WORKER_UPDATE_DIRECTORY_TO_EVICT_EVENT_NAME;
         static const std::string EDGE_CACHE_SERVER_WORKER_UPDATE_LOCAL_DIRECTORY_EVENT_NAME;
         static const std::string EDGE_CACHE_SERVER_WORKER_UPDATE_REMOTE_DIRECTORY_EVENT_NAME;
         static const std::string EDGE_CACHE_SERVER_WORKER_ISSUE_DIRECTORY_UPDATE_REQ_EVENT_NAME;
@@ -62,6 +61,7 @@ namespace covered
         // For edge beacon server or cache server worker
         static const std::string EDGE_INVALIDATE_CACHE_COPIES_EVENT_NAME;
         static const std::string EDGE_FINISH_BLOCK_EVENT_NAME;
+        static const std::string EDGE_UPDATE_DIRECTORY_TO_EVICT_EVENT_NAME;
 
         // For edge invalidation server
         static const std::string EDGE_INVALIDATION_SERVER_INVALIDATE_LOCAL_CACHE_EVENT_NAME;
@@ -74,6 +74,7 @@ namespace covered
         // For background events
         static const std::string BG_EDGE_CACHE_SERVER_WORKER_TARGET_GET_LOCAL_CACHE_EVENT_NAME; // For reads in edge cache server worker
         static const std::string BG_CLOUD_GET_ROCKSDB_EVENT_NAME; // For cloud
+        static const std::string BG_EDGE_UPDATE_DIRECTORY_TO_EVICT_EVENT_NAME; // For edge beacon server or cache server worker
 
         Event();
         Event(const std::string& event_name, const uint32_t& event_latency_us);

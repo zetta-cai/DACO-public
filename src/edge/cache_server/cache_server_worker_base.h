@@ -86,8 +86,6 @@ namespace covered
 
         // (1.1) Access local edge cache
 
-        virtual bool getLocalEdgeCache_(const Key& key, Value& value) const = 0; // Return is local cached and valid
-
         // (1.2) Access cooperative edge cache to fetch data from neighbor edge nodes
 
         // Return if edge node is finished
@@ -161,25 +159,16 @@ namespace covered
         // Return if edge node is finished (we will check capacity and trigger eviction for cache admission)
         bool tryToTriggerIndependentAdmission_(const Key& key, const Value& value, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const; // NOTE: COVERED will NOT trigger any independent cache admission/eviction decision
         bool admitObject_(const Key& key, const Value& value, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const; // Including directory updates, admit local edge cache, and trigger eviction if necessary
-        virtual void admitLocalEdgeCache_(const Key& key, const Value& value, const bool& is_valid) const = 0;
 
-        // (4.2) Evict cached objects from local edge cache
-
-        bool evictForCapacity_(BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const; // Including evict local edge cache and directory updates
-        virtual void evictLocalEdgeCache_(std::unordered_map<Key, Value, KeyHasher>& victims, const uint64_t& required_size) const = 0;
-
-        // (4.3) Update content directory information
+        // (4.2) Admit content directory information
 
         // Return if edge node is finished
-        bool updateDirectory_(const Key& key, const bool& is_admit, bool& is_being_written, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const; // Update content directory information
-        virtual void updateLocalDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written, const bool& skip_propagation_latency) const = 0; // Update directory info in current edge node
-        bool updateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const; // Update directory info in remote beacon node
-        virtual MessageBase* getReqToUpdateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, const bool& skip_propagation_latency) const = 0;
-        virtual void processRspToUpdateBeaconDirectory_(MessageBase* control_response_ptr, bool& is_being_written) const = 0;
+        bool admitDirectory_(const Key& key, bool& is_being_written, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const; // Admit content directory information
+        bool admitBeaconDirectory_(const Key& key, const DirectoryInfo& directory_info, bool& is_being_written, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const; // Admit directory info in remote beacon node
+        virtual MessageBase* getReqToAdmitBeaconDirectory_(const Key& key, const DirectoryInfo& directory_info, const bool& skip_propagation_latency) const = 0;
+        virtual void processRspToAdmitBeaconDirectory_(MessageBase* control_response_ptr, bool& is_being_written) const = 0;
 
         // (5) Utility functions
-
-        NetworkAddr getBeaconDstaddr_(const Key& key) const; // Get destination address of beacon server recvreq in beacon edge node
 
         void checkPointers_() const;
 

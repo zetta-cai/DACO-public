@@ -26,7 +26,6 @@ namespace covered
     // For independent admission in edge cache server worker
     const std::string Event::EDGE_CACHE_SERVER_WORKER_INDEPENDENT_ADMISSION_EVENT_NAME("edge::cache_server_worker::independent_admission");
     const std::string Event::EDGE_CACHE_SERVER_WORKER_UPDATE_DIRECTORY_TO_ADMIT_EVENT_NAME("edge::cache_server_worker::update_directory_to_admit");
-    const std::string Event::EDGE_CACHE_SERVER_WORKER_UPDATE_DIRECTORY_TO_EVICT_EVENT_NAME("edge::cache_server_worker::update_directory_to_evict");
     const std::string Event::EDGE_CACHE_SERVER_WORKER_UPDATE_LOCAL_DIRECTORY_EVENT_NAME("edge::cache_server_worker::update_local_directory");
     const std::string Event::EDGE_CACHE_SERVER_WORKER_UPDATE_REMOTE_DIRECTORY_EVENT_NAME("edge::cache_server_worker::update_remote_directory");
     const std::string Event::EDGE_CACHE_SERVER_WORKER_ISSUE_DIRECTORY_UPDATE_REQ_EVENT_NAME("edge::cache_server_worker::issue_directory_update_req");
@@ -53,6 +52,7 @@ namespace covered
     // For edge beacon server or cache server worker
     const std::string Event::EDGE_INVALIDATE_CACHE_COPIES_EVENT_NAME("edge::invalidate_cache_copies");
     const std::string Event::EDGE_FINISH_BLOCK_EVENT_NAME("edge::finish_block");
+    const std::string Event::EDGE_UPDATE_DIRECTORY_TO_EVICT_EVENT_NAME("edge::update_directory_to_evict");
 
     // For edge invalidation server
     const std::string Event::EDGE_INVALIDATION_SERVER_INVALIDATE_LOCAL_CACHE_EVENT_NAME("edge::invalidation_server::invalidate_local_cache");
@@ -64,6 +64,8 @@ namespace covered
 
     // For background events
     const std::string Event::BG_EDGE_CACHE_SERVER_WORKER_TARGET_GET_LOCAL_CACHE_EVENT_NAME("bg::edge::cache_server_worker::target_get_local_cache"); // For reads in edge cache server worker
+    const std::string Event::BG_CLOUD_GET_ROCKSDB_EVENT_NAME("bg::cloud::get_rocksdb");
+    const std::string Event::BG_EDGE_UPDATE_DIRECTORY_TO_EVICT_EVENT_NAME("bg::edge::update_directory_to_evict");
 
     const std::string Event::kClassName("Event");
 

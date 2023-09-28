@@ -23,7 +23,6 @@
 
 #include <string>
 
-#include "edge/background_counter.h"
 #include "edge/edge_wrapper.h"
 #include "message/message_base.h"
 #include "network/udp_msg_socket_server.h"
@@ -94,11 +93,7 @@ namespace covered
         // Member variables
 
         // Const variable
-        const EdgeWrapper* edge_wrapper_ptr_;
-
-        // Non-const variable
-        // COVERED uses beacon background counter to track background events and bandwidth usage for non-blocking placement deployment (NOTE: NOT count events for non-blocking data fetching from local edge cache and non-blocking metadata releasing, due to limited computation overhead and NO bandwidth usage)
-        mutable BackgroundCounter edge_beacon_server_background_counter_; // Update and load by beacon server (thread safe)
+        mutable EdgeWrapper* edge_wrapper_ptr_; // Mutable to update and load&reset beacon background counter
 
         // For receiving control requests
         NetworkAddr edge_beacon_server_recvreq_source_addr_; // The same as cache server worker to send control requests (const individual variable)

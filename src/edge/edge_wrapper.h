@@ -18,6 +18,7 @@
 #include "core/popularity/edgeset.h"
 #include "core/victim/victim_syncset.h"
 #include "cooperation/cooperation_wrapper_base.h"
+#include "edge/background_counter.h"
 #include "event/event_list.h"
 #include "network/propagation_simulator.h"
 
@@ -59,6 +60,8 @@ namespace covered
         PropagationSimulatorParam* getEdgeToclientPropagationSimulatorParamPtr() const;
         PropagationSimulatorParam* getEdgeToedgePropagationSimulatorParamPtr() const;
         PropagationSimulatorParam* getEdgeTocloudPropagationSimulatorParamPtr() const;
+        BackgroundCounter& getEdgeBackgroundCounterForBeaconServerRef();
+        Rwlock* getRwlockForEvictionPtr() const;
 
         // (2) Utility functions
 
@@ -68,6 +71,7 @@ namespace covered
         bool currentIsTarget(const DirectoryInfo& directory_info) const; // Check if current is target node
 
         // For request redirection (triggered by client-issued local requests and COVERED's non-blocking placement deployment)
+        NetworkAddr getBeaconDstaddr_(const Key& key) const; // Get destination address of beacon server recvreq in beacon edge node
         NetworkAddr getTargetDstaddr(const DirectoryInfo& directory_info) const; // Get destination address of cache server recvreq in target edge node
 
         // (3) Invalidate and unblock for MSI protocol
@@ -79,16 +83,33 @@ namespace covered
         // Return if edge node is finished (invoked by cache server worker or beacon server)
         bool notifyEdgesToFinishBlock(UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, const Key& key, const std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const; // Notify all blocked edges for the key simultaneously
 
-        // (6) covered-specific utility functions
+        // (6) common utility functions (invoked by edge cache server or edge beacon server of closest/beacon edge node)
 
-        // For victim synchronization
+        // (6.1) For local edge cache access
+        bool getLocalEdgeCache_(const Key& key, Value& value) const; // Return is local cached and valid
+
+        // (6.2) For local edge cache admission and directory admission
+        void admitLocalEdgeCache_(const Key& key, const Value& value, const bool& is_valid) const;
+        void admitLocalDirectory_(const Key& key, const DirectoryInfo& directory_info, bool& is_being_written) const; // Admit directory info in current edge node
+
+        // (6.3) For blocking-based cache eviction and local/remote directory eviction
+        bool evictForCapacity_(const NetworkAddr& source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency, const bool& is_background = false) const; // Including evict local edge cache and directory updates; return if edge is finished
+        void evictLocalEdgeCache_(std::unordered_map<Key, Value, KeyHasher>& victims, const uint64_t& required_size) const; // Evict local edge cache
+        bool parallelEvictDirectory_(const std::unordered_map<Key, Value, KeyHasher>& total_victims, const NetworkAddr& source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency, const bool& is_background) const; // Perform directory updates for evicted victims in parallel; return if edge is finished
+        void evictLocalDirectory_(const Key& key, const DirectoryInfo& directory_info, bool& is_being_written, const NetworkAddr& source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, const bool& skip_propagation_latency, const bool& is_background) const; // Evict directory info from current edge node
+        MessageBase* getReqToEvictBeaconDirectory_(const Key& key, const DirectoryInfo& directory_info, const NetworkAddr& source_addr, const bool& skip_propagation_latency, const bool& is_background) const; // Send directory update request with is_admit = false to remove dirinfo of evicted victim
+        void processRspToEvictBeaconDirectory_(MessageBase* control_response_ptr, bool& is_being_written, const bool& is_background) const;
+
+        // (7) covered-specific utility functions (invoked by edge cache server or edge beacon server of closest/beacon edge node)
+
+        // (7.1) For victim synchronization
         void updateCacheManagerForLocalSyncedVictims() const; // NOTE: both edge cache server worker and local/remote beacon node (non-blocking data fetching for placement deployment) will access local edge cache, which affects local cached metadata and may trigger update for local synced victims
         std::unordered_map<Key, dirinfo_set_t, KeyHasher> getLocalBeaconedVictimsFromVictimSyncset(const VictimSyncset& victim_syncset) const; // NOTE: all edge cache/beacon/invalidation servers will access cooperation wrapper to get content directory information for local beaconed victims from received victim syncset
 
-        // For non-blocking placement deployment
-        bool nonblockDataFetchForPlacement(const Key& key, const Edgeset& best_placement_edgeset, const bool& skip_propagation_latency) const; // Fetch data from local cache or neighbor to trigger non-blocking placement notification; return if we need hybrid fetching (i.e., resort sender to fetch data from cloud)
+        // (7.2) For non-blocking placement deployment (ONLY invoked by beacon edge node)
+        bool nonblockDataFetchForPlacement(const Key& key, const Edgeset& best_placement_edgeset, const NetworkAddr& source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, const bool& skip_propagation_latency, bool& need_hybrid_fetching) const; // Fetch data from local cache or neighbor to trigger non-blocking placement notification; need_hybrid_fetching indicates if we need hybrid fetching (i.e., resort sender to fetch data from cloud); return if edge is finished
         void nonblockDataFetchFromCloudForPlacement(const Key& key, const Edgeset& best_placement_edgeset, const bool& skip_propagation_latency) const; // Fetch data from cloud without hybrid data fetching (a corner case) (ONLY invoked by edge beacon server instead of cache server of the beacon edge node)
-        void nonblockNotifyForPlacement(const Key& key, const Value& value, const Edgeset& best_placement_edgeset, const bool& skip_propagation_latency) const; // Notify all edges in best_placement_edgeset to admit key-value pair into their local edge cache
+        bool nonblockNotifyForPlacement(const Key& key, const Value& value, const Edgeset& best_placement_edgeset, const NetworkAddr& source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, const bool& skip_propagation_latency) const; // Notify all edges in best_placement_edgeset to admit key-value pair into their local edge cache; return if edge is finished
     private:
         static const std::string kClassName;
 
@@ -140,6 +161,8 @@ namespace covered
         PropagationSimulatorParam* edge_toclient_propagation_simulator_param_ptr_; // thread safe
         PropagationSimulatorParam* edge_toedge_propagation_simulator_param_ptr_; // thread safe
         PropagationSimulatorParam* edge_tocloud_propagation_simulator_param_ptr_; // thread safe
+        // COVERED uses beacon background counter to track background events and bandwidth usage for non-blocking placement deployment (NOTE: NOT count events for non-blocking data fetching from local edge cache and non-blocking metadata releasing, due to limited computation overhead and NO bandwidth usage)
+        mutable BackgroundCounter edge_background_counter_for_beacon_server_; // Update and load by beacon server (thread safe)
 
         // Sub-threads
         pthread_t edge_toclient_propagation_simulator_thread_;
@@ -148,6 +171,8 @@ namespace covered
         pthread_t beacon_server_thread_;
         pthread_t cache_server_thread_;
         pthread_t invalidation_server_thread_;
+
+        mutable Rwlock* rwlock_for_eviction_ptr_; // Guarantee the atomicity of eviction among different edge cache server workers
     };
 }
 

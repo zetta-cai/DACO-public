@@ -47,12 +47,6 @@ namespace covered
         NetworkAddr host_addr(Util::ANY_IPSTR, edge_cache_server_recvreq_port);
         edge_cache_server_recvreq_socket_server_ptr_ = new UdpMsgSocketServer(host_addr);
         assert(edge_cache_server_recvreq_socket_server_ptr_ != NULL);
-
-        oss.clear();
-        oss.str("");
-        oss << instance_name_ << " " << "rwlock_for_eviction_ptr_";
-        rwlock_for_eviction_ptr_ = new Rwlock(oss.str());
-        assert(rwlock_for_eviction_ptr_ != NULL);
     }
 
     CacheServer::~CacheServer()
@@ -68,10 +62,6 @@ namespace covered
         assert(edge_cache_server_recvreq_socket_server_ptr_ != NULL);
         delete edge_cache_server_recvreq_socket_server_ptr_;
         edge_cache_server_recvreq_socket_server_ptr_ = NULL;
-
-        assert(rwlock_for_eviction_ptr_ != NULL);
-        delete rwlock_for_eviction_ptr_;
-        rwlock_for_eviction_ptr_ = NULL;
     }
 
     void CacheServer::start()
@@ -127,11 +117,6 @@ namespace covered
     {
         return edge_cache_server_recvreq_source_addr_;
     }
-
-    Rwlock* CacheServer::getRwlockForEvictionPtr() const
-    {
-        assert(rwlock_for_eviction_ptr_ != NULL);
-        return rwlock_for_eviction_ptr_;}
 
     void CacheServer::receiveRequestsAndPartition_()
     {

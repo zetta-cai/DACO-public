@@ -69,7 +69,7 @@ namespace covered
         return NULL;
     }
 
-    EdgeWrapper::EdgeWrapper(const std::string& cache_name, const uint64_t& capacity_bytes, const uint32_t& edge_idx, const uint32_t& edgecnt, const std::string& hash_name, const uint64_t& local_uncached_capacity_bytes, const uint32_t& percacheserver_workercnt, const uint32_t& peredge_synced_victimcnt, const uint64_t& popularity_aggregation_capacity_bytes, const double& popularity_collection_change_ratio, const uint32_t& propagation_latency_clientedge_us, const uint32_t& propagation_latency_crossedge_us, const uint32_t& propagation_latency_edgecloud_us, const uint32_t& topk_edgecnt) : NodeWrapperBase(NodeWrapperBase::EDGE_NODE_ROLE, edge_idx,edgecnt, true), cache_name_(cache_name), capacity_bytes_(capacity_bytes), percacheserver_workercnt_(percacheserver_workercnt), topk_edgecnt_for_placement_(topk_edgecnt)
+    EdgeWrapper::EdgeWrapper(const std::string& cache_name, const uint64_t& capacity_bytes, const uint32_t& edge_idx, const uint32_t& edgecnt, const std::string& hash_name, const uint64_t& local_uncached_capacity_bytes, const uint32_t& percacheserver_workercnt, const uint32_t& peredge_synced_victimcnt, const uint64_t& popularity_aggregation_capacity_bytes, const double& popularity_collection_change_ratio, const uint32_t& propagation_latency_clientedge_us, const uint32_t& propagation_latency_crossedge_us, const uint32_t& propagation_latency_edgecloud_us, const uint32_t& topk_edgecnt) : NodeWrapperBase(NodeWrapperBase::EDGE_NODE_ROLE, edge_idx,edgecnt, true), cache_name_(cache_name), capacity_bytes_(capacity_bytes), percacheserver_workercnt_(percacheserver_workercnt), topk_edgecnt_for_placement_(topk_edgecnt), edge_background_counter_for_beacon_server_()
     {
         // Get source address of beacon server recvreq for non-blocking placement deployment
         std::string edge_ipstr = Config::getEdgeIpstr(edge_idx, edgecnt);
@@ -124,6 +124,12 @@ namespace covered
         beacon_server_thread_ = 0;
         cache_server_thread_ = 0;
         invalidation_server_thread_ = 0;
+
+        oss.clear();
+        oss.str("");
+        oss << instance_name_ << " " << "rwlock_for_eviction_ptr_";
+        rwlock_for_eviction_ptr_ = new Rwlock(oss.str());
+        assert(rwlock_for_eviction_ptr_ != NULL);
     }
         
     EdgeWrapper::~EdgeWrapper()
@@ -164,6 +170,10 @@ namespace covered
         assert(edge_tocloud_propagation_simulator_param_ptr_ != NULL);
         delete edge_tocloud_propagation_simulator_param_ptr_;
         edge_tocloud_propagation_simulator_param_ptr_ = NULL;
+
+        assert(rwlock_for_eviction_ptr_ != NULL);
+        delete rwlock_for_eviction_ptr_;
+        rwlock_for_eviction_ptr_ = NULL;
     }
 
     // (1) Const getters
@@ -226,6 +236,17 @@ namespace covered
         return edge_tocloud_propagation_simulator_param_ptr_;
     }
 
+    BackgroundCounter& EdgeWrapper::getEdgeBackgroundCounterForBeaconServerRef()
+    {
+        return edge_background_counter_for_beacon_server_;
+    }
+
+    Rwlock* EdgeWrapper::getRwlockForEvictionPtr() const
+    {
+        assert(rwlock_for_eviction_ptr_ != NULL);
+        return rwlock_for_eviction_ptr_;
+    }
+
     // (2) Utility functions
 
     uint64_t EdgeWrapper::getSizeForCapacity() const
@@ -273,6 +294,20 @@ namespace covered
         }
 
         return current_is_target;
+    }
+
+    NetworkAddr EdgeWrapper::getBeaconDstaddr_(const Key& key) const
+    {
+        checkPointers_();
+
+        // The current edge node must NOT be the beacon node for the key
+        bool current_is_beacon = currentIsBeacon(key);
+        assert(!current_is_beacon);
+
+        // Get remote address such that current edge node can communicate with the beacon node for the key
+        NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = cooperation_wrapper_ptr_->getBeaconEdgeBeaconServerRecvreqAddr(key);
+
+        return beacon_edge_beacon_server_recvreq_dst_addr;
     }
 
     NetworkAddr EdgeWrapper::getTargetDstaddr(const DirectoryInfo& directory_info) const
@@ -812,11 +847,429 @@ namespace covered
         assert(edge_toclient_propagation_simulator_param_ptr_ != NULL);
         assert(edge_toedge_propagation_simulator_param_ptr_ != NULL);
         assert(edge_tocloud_propagation_simulator_param_ptr_ != NULL);
+        assert(rwlock_for_eviction_ptr_ != NULL);
 
         return;
     }
 
     // (6) covered-specific utility functions
+
+    // (6.1) For local edge cache access
+
+    bool EdgeWrapper::getLocalEdgeCache_(const Key& key, Value& value) const
+    {
+        checkPointers_();
+
+        bool affect_victim_tracker = false;
+        bool is_local_cached_and_valid = edge_cache_ptr_->get(key, value, affect_victim_tracker);
+        
+        if (cache_name_ == Util::COVERED_CACHE_NAME) // ONLY for COVERED
+        {
+            // Avoid unnecessary VictimTracker update
+            if (affect_victim_tracker) // If key was a local synced victim before or is a local synced victim now
+            {
+                updateCacheManagerForLocalSyncedVictims();
+            }
+        }
+        
+        return is_local_cached_and_valid;
+    }
+
+    // (6.2) For local edge cache admission and directory admission
+
+    void EdgeWrapper::admitLocalEdgeCache_(const Key& key, const Value& value, const bool& is_valid) const
+    {
+        checkPointers_();
+
+        bool affect_victim_tracker = false;
+        edge_cache_ptr_->admit(key, value, is_valid, affect_victim_tracker);
+        
+        if (cache_name_ == Util::COVERED_CACHE_NAME) // ONLY for COVERED
+        {
+            // Avoid unnecessary VictimTracker update
+            if (affect_victim_tracker) // If key is a local synced victim now
+            {
+                updateCacheManagerForLocalSyncedVictims();
+            }
+        }
+
+        return;
+    }
+
+    void EdgeWrapper::admitLocalDirectory_(const Key& key, const DirectoryInfo& directory_info, bool& is_being_written) const
+    {
+        checkPointers_();
+
+        uint32_t current_edge_idx = getNodeIdx();
+        const bool is_admit = true; // Admit content directory
+        bool is_source_cached = false;
+        cooperation_wrapper_ptr_->updateDirectoryTable(key, current_edge_idx, is_admit, directory_info, is_being_written, is_source_cached);
+        UNUSED(is_source_cached);
+
+        if (cache_name_ == Util::COVERED_CACHE_NAME) // ONLY for COVERED
+        {
+            // Update directory info in victim tracker if the local beaconed key is a local/neighbor synced victim
+            covered_cache_manager_ptr_->updateVictimTrackerForLocalBeaconedVictimDirinfo(key, is_admit, directory_info);
+
+            // NOTE: we always perform victim synchronization before popularity aggregation, as we need the latest synced victim information for placement calculation (here we update victim dirinfo in victim tracker before popularity aggregation)
+
+            // NOTE: NOT need piggyacking-based popularity collection and victim synchronization for local directory update
+
+            // Clear old local uncached popularity (TODO: preserved edge idx / bitmap) for the given key at soure edge node after admission
+            covered_cache_manager_ptr_->clearPopularityAggregatorAfterAdmission(key, current_edge_idx);
+
+            // NOTE: NO need to clear directory metadata cache, as key is a local-beaconed uncached object
+        }
+
+        return;
+    }
+
+    // (6.3) For blocking-based cache eviction and local/remote directory eviction
+
+    bool EdgeWrapper::evictForCapacity_(const NetworkAddr& source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency, const bool& is_background) const
+    {
+        checkPointers_();
+
+        // Acquire a write lock for atomicity of eviction among different edge cache server workers
+        std::string context_name = "EdgeWrapper::evictForCapacity_()";
+        rwlock_for_eviction_ptr_->acquire_lock(context_name);
+
+        bool is_finish = false;
+
+        // Evict victims from local edge cache and also update cache size usage
+        std::unordered_map<Key, Value, KeyHasher> total_victims;
+        total_victims.clear();
+        while (true) // Evict until used bytes <= capacity bytes
+        {
+            // Data and metadata for local edge cache, and cooperation metadata
+            uint64_t used_bytes = getSizeForCapacity();
+            uint64_t capacity_bytes = getCapacityBytes();
+            if (used_bytes <= capacity_bytes) // Not exceed capacity limitation
+            {
+                break;
+            }
+            else // Exceed capacity limitation
+            {
+                std::unordered_map<Key, Value, KeyHasher> tmp_victims;
+                tmp_victims.clear();
+
+                // NOTE: we calculate required size after locking to avoid duplicate evictions for the same part of required size
+                uint64_t required_size = used_bytes - capacity_bytes;
+
+                // Evict unpopular objects from local edge cache for cache capacity
+                evictLocalEdgeCache_(tmp_victims, required_size);
+
+                total_victims.insert(tmp_victims.begin(), tmp_victims.end());
+
+                continue;
+            }
+        }
+
+        // NOTE: we can release writelock here as cache size usage has already been updated after evicting local edge cache
+        rwlock_for_eviction_ptr_->unlock(context_name);
+
+        // TODO: updateDirectory_ -> admitDirectory_ for each single admission
+
+        // Perform directory updates for all evicted victims in parallel
+        struct timespec update_directory_to_evict_start_timestamp = Util::getCurrentTimespec();
+        is_finish = parallelEvictDirectory_(total_victims, source_addr, recvrsp_socket_server_ptr, total_bandwidth_usage, event_list, skip_propagation_latency, is_background);
+        struct timespec update_directory_to_evict_end_timestamp = Util::getCurrentTimespec();
+        uint32_t update_directory_to_evict_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(update_directory_to_evict_end_timestamp, update_directory_to_evict_start_timestamp));
+        if (!is_background)
+        {
+            event_list.addEvent(Event::EDGE_UPDATE_DIRECTORY_TO_EVICT_EVENT_NAME, update_directory_to_evict_latency_us); // Add intermediate event if with event tracking
+        }
+        else
+        {
+            event_list.addEvent(Event::BG_EDGE_UPDATE_DIRECTORY_TO_EVICT_EVENT_NAME, update_directory_to_evict_latency_us); // Add intermediate event if with event tracking
+        }
+
+        return is_finish;
+    }
+
+    void EdgeWrapper::evictLocalEdgeCache_(std::unordered_map<Key, Value, KeyHasher>& victims, const uint64_t& required_size) const
+    {
+        checkPointers_();
+
+        edge_cache_ptr_->evict(victims, required_size);
+
+        if (cache_name_ == Util::COVERED_CACHE_NAME) // ONLY for COVERED
+        {
+            // NOTE: eviction MUST affect victim tracker due to evicting objects with least local rewards (i.e., local synced victims)
+            updateCacheManagerForLocalSyncedVictims();
+        }
+
+        return;
+    }
+
+    bool EdgeWrapper::parallelEvictDirectory_(const std::unordered_map<Key, Value, KeyHasher>& total_victims, const NetworkAddr& source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency, const bool& is_background) const
+    {
+        checkPointers_();
+        assert(recvrsp_socket_server_ptr != NULL);
+
+        bool is_finish = false;
+
+        // Track whether all keys have received directory update responses
+        uint32_t acked_cnt = 0;
+        std::unordered_map<Key, bool, KeyHasher> acked_flags;
+        for (std::unordered_map<Key, Value, KeyHasher>::const_iterator victim_iter = total_victims.begin(); victim_iter != total_victims.end(); victim_iter++)
+        {
+            acked_flags.insert(std::pair(victim_iter->first, false));
+        }
+
+        // Issue multiple directory update requests with is_admit = false simultaneously
+        const uint32_t total_victim_cnt = total_victims.size();
+        const DirectoryInfo directory_info(getNodeIdx());
+        bool _unused_is_being_written = false; // NOTE: is_being_written does NOT affect cache eviction
+        while (acked_cnt != total_victim_cnt)
+        {
+            // Send (total_victim_cnt - acked_cnt) directory update requests to the beacon nodes that have not acknowledged
+            for (std::unordered_map<Key, bool, KeyHasher>::const_iterator iter_for_request = acked_flags.begin(); iter_for_request != acked_flags.end(); iter_for_request++)
+            {
+                if (iter_for_request->second) // Skip the key that has received directory update response
+                {
+                    continue;
+                }
+
+                const Key& tmp_victim_key = iter_for_request->first; // key that has NOT received any directory update response
+                bool current_is_beacon = currentIsBeacon(tmp_victim_key);
+                if (current_is_beacon) // Evict local directory info for the victim key
+                {
+                    evictLocalDirectory_(tmp_victim_key, directory_info, _unused_is_being_written, source_addr, recvrsp_socket_server_ptr, skip_propagation_latency, is_background);
+
+                    assert(!acked_flags[tmp_victim_key]);
+                    acked_flags[tmp_victim_key] = true;
+                    acked_cnt += 1;
+                }
+                else // Send directory update req with is_admit = false to evict remote directory info for the victim key
+                {
+                    MessageBase* directory_update_request_ptr = getReqToEvictBeaconDirectory_(tmp_victim_key, directory_info, source_addr, skip_propagation_latency, is_background);
+                    assert(directory_update_request_ptr != NULL);
+
+                    // Push the control request into edge-to-edge propagation simulator to the beacon node
+                    NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = getBeaconDstaddr_(tmp_victim_key);
+                    bool is_successful = edge_toedge_propagation_simulator_param_ptr_->push(directory_update_request_ptr, beacon_edge_beacon_server_recvreq_dst_addr);
+                    assert(is_successful);
+
+                    // NOTE: directory_update_request_ptr will be released by edge-to-edge propagation simulator
+                    directory_update_request_ptr = NULL;
+                }
+
+                #ifdef DEBUG_CACHE_SERVER
+                const Value& tmp_victim_value = total_victims.find(tmp_victim_key)->second;
+                Util::dumpVariablesForDebug(base_instance_name_, 7, "eviction;", "keystr:", tmp_victim_key.getKeystr().c_str(), "is value deleted:", Util::toString(tmp_victim_value.isDeleted()).c_str(), "value size:", Util::toString(tmp_victim_value.getValuesize()).c_str());
+                #endif
+            } // End of iter_for_request
+
+            // Receive (total_victim_cnt - acked_cnt) directory update repsonses from the beacon edge nodes
+            // NOTE: acked_cnt has already been increased for local diretory eviction
+            for (uint32_t keyidx_for_response = 0; keyidx_for_response < total_victim_cnt - acked_cnt; keyidx_for_response++)
+            {
+                DynamicArray control_response_msg_payload;
+                bool is_timeout = recvrsp_socket_server_ptr->recv(control_response_msg_payload);
+                if (is_timeout)
+                {
+                    if (!isNodeRunning())
+                    {
+                        is_finish = true;
+                        break; // Break as edge is NOT running
+                    }
+                    else
+                    {
+                        Util::dumpWarnMsg(instance_name_, "edge timeout to wait for DirectoryUpdateResponse");
+                        break; // Break to resend the remaining control requests not acked yet
+                    }
+                } // End of (is_timeout == true)
+                else
+                {
+                    // Receive the diretory update response message successfully
+                    MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
+                    assert(control_response_ptr != NULL);
+                    processRspToEvictBeaconDirectory_(control_response_ptr, _unused_is_being_written, is_background);
+
+                    // Mark the key has been acknowledged with DirectoryUpdateResponse
+                    bool is_match = false;
+                    const Key tmp_received_key = MessageBase::getKeyFromMessage(control_response_ptr);
+                    for (std::unordered_map<Key, bool, KeyHasher>::iterator iter_for_response = acked_flags.begin(); iter_for_response != acked_flags.end(); iter_for_response++)
+                    {
+                        if (iter_for_response->first == tmp_received_key) // Match an un-acked key
+                        {
+                            assert(iter_for_response->second == false); // Original ack flag should be false
+
+                            // Update total bandwidth usage for received directory update repsonse
+                            BandwidthUsage directory_update_response_bandwidth_usage = control_response_ptr->getBandwidthUsageRef();
+                            uint32_t cross_edge_directory_update_rsp_bandwidth_bytes = control_response_ptr->getMsgPayloadSize();
+                            directory_update_response_bandwidth_usage.update(BandwidthUsage(0, cross_edge_directory_update_rsp_bandwidth_bytes, 0));
+                            total_bandwidth_usage.update(directory_update_response_bandwidth_usage);
+
+                            // Add the event of intermediate response if with event tracking
+                            event_list.addEvents(control_response_ptr->getEventListRef());
+
+                            // Update ack information
+                            iter_for_response->second = true;
+                            acked_cnt += 1;
+                            is_match = true;
+                            break;
+                        }
+                    } // End of edgeidx_for_ack
+
+                    if (!is_match) // Must match at least one closest edge node
+                    {
+                        std::ostringstream oss;
+                        oss << "receive DirectoryUpdateResponse from edge node " << control_response_ptr->getSourceIndex() << " for key " << tmp_received_key.getKeystr() << ", which is NOT in the victim list!";
+                        Util::dumpWarnMsg(instance_name_, oss.str());
+                    } // End of !is_match
+
+                    // Release the control response message
+                    delete control_response_ptr;
+                    control_response_ptr = NULL;
+                } // End of (is_timeout == false)
+            } // End of edgeidx_for_response
+
+            if (is_finish) // Edge node is NOT running now
+            {
+                break;
+            }
+        } // End of (acked_cnt != total_victim_cnt)
+
+        return is_finish;
+    }
+
+    void EdgeWrapper::evictLocalDirectory_(const Key& key, const DirectoryInfo& directory_info, bool& is_being_written, const NetworkAddr& source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, const bool& skip_propagation_latency, const bool& is_background) const
+    {
+        checkPointers_();
+
+        uint32_t current_edge_idx = getNodeIdx();
+        const bool is_admit = false; // Evict a victim as local uncached object
+        bool is_source_cached = false;
+        bool is_global_cached = cooperation_wrapper_ptr_->updateDirectoryTable(key, current_edge_idx, is_admit, directory_info, is_being_written, is_source_cached);
+        UNUSED(skip_propagation_latency);
+
+        if (cache_name_ == Util::COVERED_CACHE_NAME) // ONLY for COVERED
+        {
+            // Update directory info in victim tracker if the local beaconed key is a local/neighbor synced victim
+            covered_cache_manager_ptr_->updateVictimTrackerForLocalBeaconedVictimDirinfo(key, is_admit, directory_info);
+
+            // NOTE: we always perform victim synchronization before popularity aggregation, as we need the latest synced victim information for placement calculation (here we update victim dirinfo in victim tracker before popularity aggregation)
+
+            // NOTE: NOT need piggyacking-based popularity collection and victim synchronization for local directory update
+
+            // Prepare local uncached popularity of key for popularity aggregation
+            CollectedPopularity collected_popularity;
+            edge_cache_ptr_->getCollectedPopularity(key, collected_popularity); // collected_popularity.is_tracked_ indicates if the local uncached key is tracked in local uncached metadata
+
+            // Selective popularity aggregation
+            bool need_placement_calculation = !is_admit; // MUST be true here for is_admit = false
+            if (is_background) // If evictLocalDirectory_() is triggered by background cache placement
+            {
+                // NOTE: DISABLE recursive cache placement
+                need_placement_calculation = false;
+            }
+            Edgeset best_placement_edgeset;
+            bool has_best_placement = covered_cache_manager_ptr_->updatePopularityAggregatorForAggregatedPopularity(key, current_edge_idx, collected_popularity, is_global_cached, is_source_cached, need_placement_calculation, best_placement_edgeset); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in source edge node
+
+            // Non-blocking data fetching if with best placement
+            if (need_placement_calculation && has_best_placement)
+            {
+                assert(!is_background);
+
+                bool need_hybrid_fetching = false;
+                bool is_finish = nonblockDataFetchForPlacement(key, best_placement_edgeset, source_addr, recvrsp_socket_server_ptr, skip_propagation_latency, need_hybrid_fetching);
+
+                // TODO: (END HERE) Process is_finish and need_hybrid_fetching
+            }
+        }
+
+        return;
+    }
+
+    MessageBase* EdgeWrapper::getReqToEvictBeaconDirectory_(const Key& key, const DirectoryInfo& directory_info, const NetworkAddr& source_addr, const bool& skip_propagation_latency, const bool& is_background) const
+    {
+        uint32_t edge_idx = getNodeIdx();
+        const bool is_admit = false; // Evict a victim as local uncached object (NOTE: local edge cache has already been evicted)
+        MessageBase* directory_update_request_ptr = NULL;
+    
+        if (cache_name_ == Util::COVERED_CACHE_NAME) // ONLY for COVERED
+        {
+            // Prepare local uncached popularity of key for piggybacking-based popularity collection
+            CollectedPopularity collected_popularity;
+            edge_cache_ptr_->getCollectedPopularity(key, collected_popularity); // collected_popularity.is_tracked_ indicates if the local uncached key is tracked in local uncached metadata (due to selective metadata preservation)
+
+            // Prepare victim syncset for piggybacking-based victim synchronization
+            VictimSyncset victim_syncset = covered_cache_manager_ptr_->accessVictimTrackerForVictimSyncset();
+
+            // Need BOTH popularity collection and victim synchronization
+            if (!is_background)
+            {
+                directory_update_request_ptr = new CoveredDirectoryUpdateRequest(key, is_admit, directory_info, collected_popularity, victim_syncset, edge_idx, source_addr, skip_propagation_latency);
+            }
+            else
+            {
+                // NOTE: DISABLE recursive cache placement by sending CoveredPlacementDirectoryUpdateRequest
+                directory_update_request_ptr = new CoveredPlacementDirectoryUpdateRequest(key, is_admit, directory_info, collected_popularity, victim_syncset, edge_idx, source_addr, skip_propagation_latency);
+            }
+
+            // NOTE: key MUST NOT have any cached directory, as key is local cached before eviction (even if key may be local uncached and tracked by local uncached metadata due to metadata preservation after eviction, we have NOT lookuped remote directory yet from beacon node)
+            CachedDirectory cached_directory;
+            bool has_cached_directory = covered_cache_manager_ptr_->accessDirectoryCacherForCachedDirectory(key, cached_directory);
+            assert(!has_cached_directory);
+            UNUSED(cached_directory);
+        }
+        else // Baselines
+        {
+            directory_update_request_ptr = new DirectoryUpdateRequest(key, is_admit, directory_info, edge_idx, source_addr, skip_propagation_latency);
+        }
+
+        assert(directory_update_request_ptr != NULL);
+        return directory_update_request_ptr;
+    }
+
+    void EdgeWrapper::processRspToEvictBeaconDirectory_(MessageBase* control_response_ptr, bool& is_being_written, const bool& is_background) const
+    {
+        checkPointers_();
+        assert(control_response_ptr != NULL);
+
+        if (cache_name_ == Util::COVERED_CACHE_NAME) // ONLY for COVERED
+        {
+            if (!is_background)
+            {
+                assert(control_response_ptr->getMessageType() == MessageType::kCoveredDirectoryUpdateResponse);
+
+                // Get is_being_written (UNUSED) from control response message
+                const CoveredDirectoryUpdateResponse* covered_directory_update_response_ptr = static_cast<const CoveredDirectoryUpdateResponse*>(control_response_ptr);
+                is_being_written = covered_directory_update_response_ptr->isBeingWritten();
+            }
+            else
+            {
+                assert(control_response_ptr->getMessageType() == MessageType::kCoveredPlacementDirectoryUpdateResponse);
+
+                // Get is_being_written (UNUSED) from control response message
+                const CoveredPlacementDirectoryUpdateResponse* covered_placement_directory_update_response_ptr = static_cast<const CoveredPlacementDirectoryUpdateResponse*>(control_response_ptr);
+                is_being_written = covered_placement_directory_update_response_ptr->isBeingWritten();
+            }
+
+            // Victim synchronization
+            const KeyByteVictimsetMessage* directory_update_response_ptr = static_cast<const KeyByteVictimsetMessage*>(control_response_ptr);
+            const uint32_t source_edge_idx = directory_update_response_ptr->getSourceIndex();
+            const VictimSyncset& victim_syncset = directory_update_response_ptr->getVictimSyncsetRef();
+            std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = getLocalBeaconedVictimsFromVictimSyncset(victim_syncset);
+            covered_cache_manager_ptr_->updateVictimTrackerForVictimSyncset(source_edge_idx, victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
+        }
+        else // Baselines
+        {
+            assert(control_response_ptr->getMessageType() == MessageType::kDirectoryUpdateResponse);
+
+            // Get is_being_written (UNUSED) from control response message
+            const DirectoryUpdateResponse* const directory_update_response_ptr = static_cast<const DirectoryUpdateResponse*>(control_response_ptr);
+            is_being_written = directory_update_response_ptr->isBeingWritten();
+        }
+
+        return;
+    }
+
+    // (7) covered-specific utility functions (invoked by edge cache server or edge beacon server of closest/beacon edge node)
+
+    // (7.1) For victim synchronization
 
     void EdgeWrapper::updateCacheManagerForLocalSyncedVictims() const
     {
@@ -873,30 +1326,26 @@ namespace covered
         return local_beaconed_neighbor_synced_victim_dirinfosets;
     }
 
-    bool EdgeWrapper::nonblockDataFetchForPlacement(const Key& key, const Edgeset& best_placement_edgeset, const bool& skip_propagation_latency) const
+    // (7.2) For non-blocking placement deployment (ONLY invoked by beacon edge node)
+
+    bool EdgeWrapper::nonblockDataFetchForPlacement(const Key& key, const Edgeset& best_placement_edgeset, const NetworkAddr& source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, const bool& skip_propagation_latency, bool& need_hybrid_fetching) const
     {
         checkPointers_();
         assert(cache_name_ == Util::COVERED_CACHE_NAME);
         assert(best_placement_edgeset.size() <= topk_edgecnt_for_placement_); // At most k placement edge nodes each time
 
-        bool need_hybrid_fetching = false;
+        bool is_finish = false;
+        need_hybrid_fetching = false;
 
         // Check local edge cache in local/remote beacon node first
         // NOTE: NOT update aggregated uncached popularity to avoid recursive placement calculation even if local uncached popularity is cached
         Value value;
-        bool affect_victim_tracker = false;
-        bool is_local_cached_and_valid = edge_cache_ptr_->get(key, value, affect_victim_tracker);
-
-        // Avoid unnecessary VictimTracker update
-        if (affect_victim_tracker) // If key was a local synced victim before or is a local synced victim now
-        {
-            updateCacheManagerForLocalSyncedVictims();
-        }
+        bool is_local_cached_and_valid = getLocalEdgeCache_(key, value);
 
         if (is_local_cached_and_valid) // Directly get valid value from local edge cache in local/remote beacon node
         {
-            // TODO: (END HERE) Perform non-blocking placement notification
-            //nonblockNotifyForPlacement(key, value, best_placement_edgeset);
+            // Perform non-blocking placement notification
+            is_finish = nonblockNotifyForPlacement(key, value, best_placement_edgeset, source_addr, recvrsp_socket_server_ptr, skip_propagation_latency);
         }
         else // No valid value in local edge cache in local/remote beacon node
         {
@@ -935,7 +1384,7 @@ namespace covered
             }
         }
 
-        return need_hybrid_fetching;
+        return is_finish;
     }
 
     void EdgeWrapper::nonblockDataFetchFromCloudForPlacement(const Key& key, const Edgeset& best_placement_edgeset, const bool& skip_propagation_latency) const
@@ -962,38 +1411,53 @@ namespace covered
         return;
     }
 
-    void EdgeWrapper::nonblockNotifyForPlacement(const Key& key, const Value& value, const Edgeset& best_placement_edgeset, const bool& skip_propagation_latency) const
+    bool EdgeWrapper::nonblockNotifyForPlacement(const Key& key, const Value& value, const Edgeset& best_placement_edgeset, const NetworkAddr& source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, const bool& skip_propagation_latency) const
     {
         checkPointers_();
         assert(cache_name_ == Util::COVERED_CACHE_NAME);
         assert(best_placement_edgeset.size() <= topk_edgecnt_for_placement_); // At most k placement edge nodes each time
 
-        // Check writelock for validity of cache placement
-        const bool is_being_written = cooperation_wrapper_ptr_->isBeingWritten(key);
-        const bool is_valid = !is_being_written;
+        bool is_finish = false;
+        BandwidthUsage total_bandwidth_usage;
+        EventList event_list;
+        const bool is_background = true;
 
-        // TODO: Send placement notification for each non-local edge node in best_placement_edgeset in a non-blocking manner
+        // Check writelock for validity of cache placement
+        bool is_being_written = cooperation_wrapper_ptr_->isBeingWritten(key);
+        bool is_valid = !is_being_written;
+
+        // TODO: (END HERE) Send placement notification for each non-local edge node in best_placement_edgeset in a non-blocking manner
 
         const uint32_t current_edge_idx = getNodeIdx();
         std::unordered_set<uint32_t>::const_iterator edgeset_const_iter = best_placement_edgeset.find(current_edge_idx);
         if (edgeset_const_iter != best_placement_edgeset.end()) // If current edge node is also in best_placement_edgeset
         {
-            // Perform cache admission for local edge cache
-            // NOTE: NO need to update aggregated uncached popularity due to admitting a cached object
-            bool affect_victim_tracker = false;
-            // TODO: Assert current edge node must be the beacon node for the given key
-            // TODO: Admit local directory information
-            // TODO: Double-check is_being_written to udpate is_valid if necessary
-            edge_cache_ptr_->admit(key, value, is_valid, affect_victim_tracker);
+            // Current edge node MUST be the beacon node for the given key
+            assert(currentIsBeacon(key));
 
-            // Avoid unnecessary VictimTracker update
-            if (affect_victim_tracker) // If key is a local synced victim now
+            // Admit local directory information
+            // NOTE: NO need to update aggregated uncached popularity due to admitting a cached object
+            bool tmp_is_being_written = false;
+            admitLocalDirectory_(key, DirectoryInfo(current_edge_idx), tmp_is_being_written);
+            if (tmp_is_being_written) // Double-check is_being_written to udpate is_valid if necessary
             {
-                updateCacheManagerForLocalSyncedVictims();
+                // NOTE: ONLY update is_valid if tmp_is_being_written is true; if tmp_is_being_written is false (i.e., key is NOT being written now), we still keep original is_valid, as the value MUST be stale if is_being_written was true before
+                is_being_written = true;
+                is_valid = false;
             }
 
-            // TODO: Perform cache eviction if necessary
-            // NOTE: NOT update aggregated uncached popularity to avoid recursive placement calculation even if with metadata preservation during cache eviction
+            // Perform cache admission for local edge cache (equivalent to local placement notification)
+            admitLocalEdgeCache_(key, value, is_valid);
+
+            // Perform cache eviction if necessary in a blocking manner for consistent directory information (note that cache eviction happens after non-blocking placement notification)
+            // NOTE: we update aggregated uncached popularity yet DISABLE recursive cache placement for metadata preservation during cache eviction
+            is_finish = evictForCapacity_(source_addr, recvrsp_socket_server_ptr, total_bandwidth_usage, event_list, skip_propagation_latency, is_background);
         }
-    }
+
+        // Get background eventlist and bandwidth usage to update background counter for beacon server
+        edge_background_counter_for_beacon_server_.updateBandwidthUsgae(total_bandwidth_usage);
+        edge_background_counter_for_beacon_server_.addEvents(event_list);
+
+        return is_finish;
+    } 
 }

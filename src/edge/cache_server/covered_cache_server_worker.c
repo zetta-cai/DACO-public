@@ -32,23 +32,6 @@ namespace covered
 
     // (1.1) Access local edge cache
 
-    bool CoveredCacheServerWorker::getLocalEdgeCache_(const Key& key, Value& value) const
-    {
-        checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
-
-        bool affect_victim_tracker = false;
-        bool is_local_cached_and_valid = tmp_edge_wrapper_ptr->getEdgeCachePtr()->get(key, value, affect_victim_tracker);
-
-        // Avoid unnecessary VictimTracker update
-        if (affect_victim_tracker) // If key was a local synced victim before or is a local synced victim now
-        {
-            tmp_edge_wrapper_ptr->updateCacheManagerForLocalSyncedVictims();
-        }
-        
-        return is_local_cached_and_valid;
-    }
-
     // (1.2) Access cooperative edge cache to fetch data from neighbor edge nodes
 
     void CoveredCacheServerWorker::lookupLocalDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, const bool& skip_propagation_latency) const
@@ -76,7 +59,10 @@ namespace covered
         // Non-blocking data fetching if with best placement
         if (need_placement_calculation && has_best_placement)
         {
-            tmp_edge_wrapper_ptr->nonblockDataFetchForPlacement(key, best_placement_edgeset, skip_propagation_latency);
+            bool need_hybrid_fetching = false;
+            bool is_finish = tmp_edge_wrapper_ptr->nonblockDataFetchForPlacement(key, best_placement_edgeset, edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, skip_propagation_latency, need_hybrid_fetching);
+
+            // TODO: (END HERE) Process is_finish and need_hybrid_fetching
         }
 
         return;
@@ -428,7 +414,10 @@ namespace covered
         // Non-blocking data fetching if with best placement
         if (need_placement_calculation && has_best_placement)
         {
-            tmp_edge_wrapper_ptr->nonblockDataFetchForPlacement(key, best_placement_edgeset, skip_propagation_latency);
+            bool need_hybrid_fetching = false;
+            bool is_finish = tmp_edge_wrapper_ptr->nonblockDataFetchForPlacement(key, best_placement_edgeset, edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, skip_propagation_latency, need_hybrid_fetching);
+
+            // TODO: (END HERE) Process is_finish and need_hybrid_fetching
         }
 
         return;
@@ -516,7 +505,7 @@ namespace covered
         CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
 
         // Access local edge cache for redirected get request
-        is_cooperative_cached_and_valid = getLocalEdgeCache_(tmp_key, value);
+        is_cooperative_cached_and_valid = tmp_edge_wrapper_ptr->getLocalEdgeCache_(tmp_key, value);
         is_cooperative_cached = tmp_edge_wrapper_ptr->getEdgeCachePtr()->isLocalCached(tmp_key);
 
         // Victim synchronization
@@ -583,83 +572,9 @@ namespace covered
 
     // (4.1) Admit uncached objects in local edge cache
 
-    void CoveredCacheServerWorker::admitLocalEdgeCache_(const Key& key, const Value& value, const bool& is_valid) const
-    {
-        checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+    // (4.2) Admit content directory information
 
-        bool affect_victim_tracker = false;
-        tmp_edge_wrapper_ptr->getEdgeCachePtr()->admit(key, value, is_valid, affect_victim_tracker);
-
-        // Avoid unnecessary VictimTracker update
-        if (affect_victim_tracker) // If key is a local synced victim now
-        {
-            tmp_edge_wrapper_ptr->updateCacheManagerForLocalSyncedVictims();
-        }
-
-        return;
-    }
-
-    // (4.2) Evict cached objects from local edge cache
-
-    void CoveredCacheServerWorker::evictLocalEdgeCache_(std::unordered_map<Key, Value, KeyHasher>& victims, const uint64_t& required_size) const
-    {
-        checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
-
-        tmp_edge_wrapper_ptr->getEdgeCachePtr()->evict(victims, required_size);
-
-        // NOTE: eviction MUST affect victim tracker due to evicting objects with least local rewards (i.e., local synced victims)
-        tmp_edge_wrapper_ptr->updateCacheManagerForLocalSyncedVictims();
-
-        return;
-    }
-
-    // (4.3) Update content directory information
-
-    void CoveredCacheServerWorker::updateLocalDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written, const bool& skip_propagation_latency) const
-    {
-        checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
-        CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
-
-        uint32_t current_edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
-        bool is_source_cached = false;
-        bool is_global_cached = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->updateDirectoryTable(key, current_edge_idx, is_admit, directory_info, is_being_written, is_source_cached);
-
-        // Update directory info in victim tracker if the local beaconed key is a local/neighbor synced victim
-        tmp_covered_cache_manager_ptr->updateVictimTrackerForLocalBeaconedVictimDirinfo(key, is_admit, directory_info);
-
-        // NOTE: we always perform victim synchronization before popularity aggregation, as we need the latest synced victim information for placement calculation (here we update victim dirinfo in victim tracker before popularity aggregation)
-
-        // NOTE: NOT need piggyacking-based popularity collection and victim synchronization for local directory update
-        if (is_admit) // Admit a new key as local cached object
-        {
-            // Clear old local uncached popularity (TODO: preserved edge idx / bitmap) for the given key at soure edge node after admission
-            tmp_covered_cache_manager_ptr->clearPopularityAggregatorAfterAdmission(key, current_edge_idx);
-        }
-        else // Evict a victim as local uncached object
-        {
-            // Prepare local uncached popularity of key for popularity aggregation
-            CollectedPopularity collected_popularity;
-            tmp_edge_wrapper_ptr->getEdgeCachePtr()->getCollectedPopularity(key, collected_popularity); // collected_popularity.is_tracked_ indicates if the local uncached key is tracked in local uncached metadata
-
-            // Selective popularity aggregation
-            const bool need_placement_calculation = !is_admit; // MUST be true here for is_admit = false
-            Edgeset best_placement_edgeset;
-            bool has_best_placement = tmp_covered_cache_manager_ptr->updatePopularityAggregatorForAggregatedPopularity(key, current_edge_idx, collected_popularity, is_global_cached, is_source_cached, need_placement_calculation, best_placement_edgeset); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in source edge node
-
-            // Non-blocking data fetching if with best placement
-            if (need_placement_calculation && has_best_placement)
-            {
-                tmp_edge_wrapper_ptr->nonblockDataFetchForPlacement(key, best_placement_edgeset, skip_propagation_latency);
-            }
-        }
-
-        return;
-    }
-
-    MessageBase* CoveredCacheServerWorker::getReqToUpdateBeaconDirectory_(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, const bool& skip_propagation_latency) const
+    MessageBase* CoveredCacheServerWorker::getReqToAdmitBeaconDirectory_(const Key& key, const DirectoryInfo& directory_info, const bool& skip_propagation_latency) const
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
@@ -669,36 +584,20 @@ namespace covered
         VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForVictimSyncset();
 
         uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
-        MessageBase* covered_directory_update_request_ptr = NULL;
-        if (is_admit) // Try to admit a new key as local cached object (NOTE: local edge cache has NOT been admitted yet)
-        {
-            // ONLY need victim synchronization yet without popularity collection/aggregation
-            covered_directory_update_request_ptr = new CoveredDirectoryUpdateRequest(key, is_admit, directory_info, victim_syncset, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
+        const bool is_admit = true; // Try to admit a new key as local cached object (NOTE: local edge cache has NOT been admitted yet)
 
-            // Remove existing cached directory if any as key will be local cached
-            tmp_covered_cache_manager_ptr->updateDirectoryCacherToRemoveCachedDirectory(key);
-        }
-        else // Evict a victim as local uncached object (NOTE: local edge cache has already been evicted)
-        {
-            // Prepare local uncached popularity of key for piggybacking-based popularity collection
-            CollectedPopularity collected_popularity;
-            tmp_edge_wrapper_ptr->getEdgeCachePtr()->getCollectedPopularity(key, collected_popularity); // collected_popularity.is_tracked_ indicates if the local uncached key is tracked in local uncached metadata (due to selective metadata preservation)
+        // ONLY need victim synchronization yet without popularity collection/aggregation
+        MessageBase* covered_directory_update_request_ptr = new CoveredDirectoryUpdateRequest(key, is_admit, directory_info, victim_syncset, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
 
-            // Need BOTH popularity collection and victim synchronization
-            covered_directory_update_request_ptr = new CoveredDirectoryUpdateRequest(key, is_admit, directory_info, collected_popularity, victim_syncset, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
-
-            // NOTE: key MUST NOT have any cached directory, as key is local cached before eviction (even if key may be local uncached and tracked by local uncached metadata due to metadata preservation after eviction, we have NOT lookuped remote directory yet from beacon node)
-            CachedDirectory cached_directory;
-            bool has_cached_directory = tmp_covered_cache_manager_ptr->accessDirectoryCacherForCachedDirectory(key, cached_directory);
-            assert(!has_cached_directory);
-            UNUSED(cached_directory);
-        }
+        // Remove existing cached directory if any as key will be local cached
+        tmp_covered_cache_manager_ptr->updateDirectoryCacherToRemoveCachedDirectory(key);
+        
         assert(covered_directory_update_request_ptr != NULL);
 
         return covered_directory_update_request_ptr;
     }
 
-    void CoveredCacheServerWorker::processRspToUpdateBeaconDirectory_(MessageBase* control_response_ptr, bool& is_being_written) const
+    void CoveredCacheServerWorker::processRspToAdmitBeaconDirectory_(MessageBase* control_response_ptr, bool& is_being_written) const
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
