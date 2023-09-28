@@ -38,6 +38,7 @@ namespace covered
 
         // (2) Access content directory table and block tracker for MSI protocol
 
+        bool isBeingWritten(const Key& key) const;
         dirinfo_set_t getLocalDirectoryInfos(const Key& key) const;
 
         // Return whether the key is cached by a local/neighbor edge node (even if invalid temporarily)

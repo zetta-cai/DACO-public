@@ -821,6 +821,7 @@ namespace covered
     void EdgeWrapper::updateCacheManagerForLocalSyncedVictims() const
     {
         checkPointers_();
+        assert(cache_name_ == Util::COVERED_CACHE_NAME);
 
         // Get local edge margin bytes
         uint64_t used_bytes = getSizeForCapacity();
@@ -881,6 +882,7 @@ namespace covered
         bool need_hybrid_fetching = false;
 
         // Check local edge cache in local/remote beacon node first
+        // NOTE: NOT update aggregated uncached popularity to avoid recursive placement calculation even if local uncached popularity is cached
         Value value;
         bool affect_victim_tracker = false;
         bool is_local_cached_and_valid = edge_cache_ptr_->get(key, value, affect_victim_tracker);
@@ -966,11 +968,32 @@ namespace covered
         assert(cache_name_ == Util::COVERED_CACHE_NAME);
         assert(best_placement_edgeset.size() <= topk_edgecnt_for_placement_); // At most k placement edge nodes each time
 
-        // TODO: Check writelock for validity of cache placement
+        // Check writelock for validity of cache placement
+        const bool is_being_written = cooperation_wrapper_ptr_->isBeingWritten(key);
+        const bool is_valid = !is_being_written;
 
         // TODO: Send placement notification for each non-local edge node in best_placement_edgeset in a non-blocking manner
 
-        // TODO: Perform cache admission for local edge cache if current edge node is also in best_placement_edgeset
-        // NOTE: will NOT trigger placement calculation due to admitting a cached object
+        const uint32_t current_edge_idx = getNodeIdx();
+        std::unordered_set<uint32_t>::const_iterator edgeset_const_iter = best_placement_edgeset.find(current_edge_idx);
+        if (edgeset_const_iter != best_placement_edgeset.end()) // If current edge node is also in best_placement_edgeset
+        {
+            // Perform cache admission for local edge cache
+            // NOTE: NO need to update aggregated uncached popularity due to admitting a cached object
+            bool affect_victim_tracker = false;
+            // TODO: Assert current edge node must be the beacon node for the given key
+            // TODO: Admit local directory information
+            // TODO: Double-check is_being_written to udpate is_valid if necessary
+            edge_cache_ptr_->admit(key, value, is_valid, affect_victim_tracker);
+
+            // Avoid unnecessary VictimTracker update
+            if (affect_victim_tracker) // If key is a local synced victim now
+            {
+                updateCacheManagerForLocalSyncedVictims();
+            }
+
+            // TODO: Perform cache eviction if necessary
+            // NOTE: NOT update aggregated uncached popularity to avoid recursive placement calculation even if with metadata preservation during cache eviction
+        }
     }
 }

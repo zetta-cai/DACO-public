@@ -100,6 +100,22 @@ namespace covered
 
     // (2) Access content directory information
 
+    bool CooperationWrapperBase::isBeingWritten(const Key& key) const
+    {
+        checkPointers_();
+
+        // Acquire a read lock
+        std::string context_name = "CooperationWrapperBase::isBeingWritten()";
+        cooperation_wrapper_perkey_rwlock_ptr_->acquire_lock_shared(key, context_name);
+
+        bool is_being_written = block_tracker_ptr_->isBeingWrittenForKey(key);
+
+        // Release a read lock
+        cooperation_wrapper_perkey_rwlock_ptr_->unlock_shared(key, context_name);
+
+        return is_being_written;
+    }
+
     dirinfo_set_t CooperationWrapperBase::getLocalDirectoryInfos(const Key& key) const
     {
         checkPointers_();

@@ -1524,6 +1524,8 @@ namespace covered
 
         bool is_finish = false;
 
+        std::unordered_map<Key, Value, KeyHasher> total_victims;
+        total_victims.clear();
         while (true) // Evict until used bytes <= capacity bytes
         {
             // Data and metadata for local edge cache, and cooperation metadata
@@ -1535,43 +1537,69 @@ namespace covered
             }
             else // Exceed capacity limitation
             {
-                struct timespec update_directory_to_evict_start_timestamp = Util::getCurrentTimespec();
-
-                std::unordered_map<Key, Value, KeyHasher> victims;
-                victims.clear();
+                std::unordered_map<Key, Value, KeyHasher> tmp_victims;
+                tmp_victims.clear();
 
                 // NOTE: we calculate required size after locking to avoid duplicate evictions for the same part of required size
                 uint64_t required_size = used_bytes - capacity_bytes;
 
                 // Evict unpopular objects from local edge cache for cache capacity
-                evictLocalEdgeCache_(victims, required_size);
+                evictLocalEdgeCache_(tmp_victims, required_size);
 
-                for (std::unordered_map<Key, Value, KeyHasher>::const_iterator victim_iter = victims.begin(); victim_iter != victims.end(); victim_iter++)
-                {
-                    const Key& tmp_victim_key = victim_iter->first;
-
-                    bool _unused_is_being_written = false; // NOTE: is_being_written does NOT affect cache eviction
-                    is_finish = updateDirectory_(tmp_victim_key, false, _unused_is_being_written, total_bandwidth_usage, event_list, skip_propagation_latency);
-                    if (is_finish)
-                    {
-                        return is_finish;
-                    }
-
-                    #ifdef DEBUG_CACHE_SERVER
-                    const Value& tmp_victim_value = victim_iter->second;
-                    Util::dumpVariablesForDebug(base_instance_name_, 7, "eviction;", "keystr:", tmp_victim_key.getKeystr().c_str(), "is value deleted:", Util::toString(tmp_victim_value.isDeleted()).c_str(), "value size:", Util::toString(tmp_victim_value.getValuesize()).c_str());
-                    #endif
-                }
-
-                struct timespec update_directory_to_evict_end_timestamp = Util::getCurrentTimespec();
-                uint32_t update_directory_to_evict_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(update_directory_to_evict_end_timestamp, update_directory_to_evict_start_timestamp));
-                event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_UPDATE_DIRECTORY_TO_EVICT_EVENT_NAME, update_directory_to_evict_latency_us); // Add intermediate event if with event tracking
+                total_victims.insert(tmp_victims.begin(), tmp_victims.end());
 
                 continue;
             }
         }
 
+        // NOTE: we can release writelock here as cache size usage has already been updated after evicting local edge cache
         tmp_rwlock_for_eviction_ptr->unlock(context_name);
+
+        struct timespec update_directory_to_evict_start_timestamp = Util::getCurrentTimespec();
+
+        // TODO: updateDirectory_ -> admitDirectory_ for each single admission
+        // TODO: Introduce parallelEvictDirectory_ for parallel multi-eviction
+
+        // Track whether all keys have received directory update responses
+        uint32_t acked_cnt = 0;
+        std::unordered_map<Key, bool, KeyHasher> acked_flags;
+        for (std::unordered_map<Key, Value, KeyHasher>::const_iterator victim_iter = total_victims.begin(); victim_iter != total_victims.end(); victim_iter++)
+        {
+            acked_flags.insert(std::pair(victim_iter->first, false));
+        }
+
+        // Issue multiple directory update requests with is_admit = false simultaneously
+        const uint32_t total_victim_cnt = total_victims.size();
+        while (acked_cnt != total_victim_cnt)
+        {
+            // Send (total_victim_cnt - acked_cnt) directory update requests to the beacon nodes that have not acknowledged
+            for (std::unordered_map<Key, bool, KeyHasher>::const_iterator iter_for_request = acked_flags.begin(); iter_for_request != acked_flags.end(); iter_for_request++)
+            {
+                if (iter_for_request->second) // Skip the key that has received directory update response
+                {
+                    continue;
+                }
+
+                const Key& tmp_victim_key = iter_for_request->first; // key that has NOT received any directory update response
+                bool _unused_is_being_written = false; // NOTE: is_being_written does NOT affect cache eviction
+                // TODO: (END HERE) use sth like evictDirectory_()
+                is_finish = updateDirectory_(tmp_victim_key, false, _unused_is_being_written, total_bandwidth_usage, event_list, skip_propagation_latency);
+                if (is_finish)
+                {
+                    return is_finish;
+                }
+
+                #ifdef DEBUG_CACHE_SERVER
+                const Value& tmp_victim_value = total_victims.find(tmp_victim_key)->second;
+                Util::dumpVariablesForDebug(base_instance_name_, 7, "eviction;", "keystr:", tmp_victim_key.getKeystr().c_str(), "is value deleted:", Util::toString(tmp_victim_value.isDeleted()).c_str(), "value size:", Util::toString(tmp_victim_value.getValuesize()).c_str());
+                #endif
+            } // End of iter_for_request
+        } // End of (acked_cnt != total_victim_cnt)
+
+        struct timespec update_directory_to_evict_end_timestamp = Util::getCurrentTimespec();
+        uint32_t update_directory_to_evict_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(update_directory_to_evict_end_timestamp, update_directory_to_evict_start_timestamp));
+        event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_UPDATE_DIRECTORY_TO_EVICT_EVENT_NAME, update_directory_to_evict_latency_us); // Add intermediate event if with event tracking
+
         return is_finish;
     }
 
