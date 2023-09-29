@@ -6,14 +6,20 @@ namespace covered
 {
     const std::string CoveredRedirectedGetResponse::kClassName("CoveredRedirectedGetResponse");
 
-    CoveredRedirectedGetResponse::CoveredRedirectedGetResponse(const Key& key, const Value& value, const Hitflag& hitflag, const VictimSyncset& victim_syncset, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency) : KeyValueHitflagVictimsetMessage(key, value, hitflag, victim_syncset, MessageType::kCoveredRedirectedGetResponse, source_index, source_addr, bandwidth_usage, event_list, skip_propagation_latency)
+    CoveredRedirectedGetResponse::CoveredRedirectedGetResponse(const Key& key, const Value& value, const Hitflag& hitflag, const VictimSyncset& victim_syncset, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency) : KeyValueByteVictimsetMessage(key, value, static_cast<uint8_t>(hitflag), victim_syncset, MessageType::kCoveredRedirectedGetResponse, source_index, source_addr, bandwidth_usage, event_list, skip_propagation_latency)
     {
+        // TODO: hitflag may be Hitflag::kCooperativeInvalid in corner cases???
         assert(hitflag == Hitflag::kCooperativeHit || hitflag == Hitflag::kGlobalMiss);
     }
 
-    CoveredRedirectedGetResponse::CoveredRedirectedGetResponse(const DynamicArray& msg_payload) : KeyValueHitflagVictimsetMessage(msg_payload)
+    CoveredRedirectedGetResponse::CoveredRedirectedGetResponse(const DynamicArray& msg_payload) : KeyValueByteVictimsetMessage(msg_payload)
     {
     }
 
     CoveredRedirectedGetResponse::~CoveredRedirectedGetResponse() {}
+
+    Hitflag CoveredRedirectedGetResponse::getHitflag() const
+    {
+        return static_cast<Hitflag>(getByte_());
+    }
 }
