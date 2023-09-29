@@ -5,6 +5,7 @@
 
 #include "common/config.h"
 #include "common/util.h"
+#include "edge/cache_server/cache_server_placement_processor.h"
 #include "edge/cache_server/cache_server_worker_base.h"
 #include "network/network_addr.h"
 
@@ -35,6 +36,10 @@ namespace covered
             CacheServerWorkerParam tmp_cache_server_worker_param(this, local_cache_server_worker_idx, Config::getEdgeCacheServerDataRequestBufferSize());
             cache_server_worker_params_[local_cache_server_worker_idx] = tmp_cache_server_worker_param;
         }
+
+        // Prepare parameters for cache server placement processor thread
+        CacheServerPlacementProcessorParam tmp_cache_server_placement_processor_param(this, Config::getEdgeCacheServerDataRequestBufferSize());
+        cache_server_placement_processor_param_ = tmp_cache_server_placement_processor_param;
 
         // For receiving local requests
 
@@ -73,6 +78,7 @@ namespace covered
 
         int pthread_returncode;
         pthread_t cache_server_worker_threads[percacheserver_workercnt];
+        pthread_t cache_server_placement_processor_thread;
 
         // Launch cache server workers
         for (uint32_t local_cache_server_worker_idx = 0; local_cache_server_worker_idx < percacheserver_workercnt; local_cache_server_worker_idx++)
@@ -86,6 +92,17 @@ namespace covered
                 covered::Util::dumpErrorMsg(instance_name_, oss.str());
                 exit(1);
             }
+        }
+
+        // Launch cache server placement processor
+        //pthread_returncode = pthread_create(&cache_server_placement_processor_thread, NULL, CacheServerPlacementProcessor::launchCacheServerPlacementProcessor, (void*)(&cache_server_placement_processor_param_));
+        pthread_returncode = Util::pthreadCreateHighPriority(&cache_server_placement_processor_thread, CacheServerPlacementProcessor::launchCacheServerPlacementProcessor, (void*)(&cache_server_placement_processor_param_));
+        if (pthread_returncode != 0)
+        {
+            std::ostringstream oss;
+            oss << "edge " << edge_idx << " failed to launch cache server placement processor (error code: " << pthread_returncode << ")" << std::endl;
+            covered::Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
         }
 
         // Receive data requests and partition to different cache server workers
@@ -102,6 +119,16 @@ namespace covered
                 covered::Util::dumpErrorMsg(instance_name_, oss.str());
                 exit(1);
             }
+        }
+
+        // Wait for cache server placement processor
+        pthread_returncode = pthread_join(cache_server_placement_processor_thread, NULL); // void* retval = NULL
+        if (pthread_returncode != 0)
+        {
+            std::ostringstream oss;
+            oss << "edge " << edge_idx << " failed to join cache server placement processor (error code: " << pthread_returncode << ")" << std::endl;
+            covered::Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
         }
 
         return;
@@ -136,7 +163,7 @@ namespace covered
                 MessageBase* data_request_ptr = MessageBase::getRequestFromMsgPayload(data_request_msg_payload);
                 assert(data_request_ptr != NULL);
 
-                if (data_request_ptr->isDataRequest()) // Data requests (e.g., local/redirected requests)
+                if (data_request_ptr->isDataRequest()) // Data requests (e.g., local/redirected/management requests)
                 {
                     // Pass data request and network address to corresponding cache server worker by ring buffer
                     // NOTE: data request will be released by the corresponding cache server worker
@@ -161,16 +188,33 @@ namespace covered
 
         const uint32_t percacheserver_workercnt = edge_wrapper_ptr_->getPercacheserverWorkercnt();
 
-        // Calculate the corresponding cache server worker index by hashing
-        assert(cache_server_worker_params_.size() == percacheserver_workercnt);
-        Key tmp_key = MessageBase::getKeyFromMessage(data_requeset_ptr);
-        uint32_t local_cache_server_worker_idx = hash_wrapper_ptr_->hash(tmp_key) % percacheserver_workercnt;
-        assert(local_cache_server_worker_idx < percacheserver_workercnt);
+        if (data_requeset_ptr->isLocalDataRequest() || data_requeset_ptr->isRedirectedDataRequest()) // Local/redirected data requests
+        {
+            // Calculate the corresponding cache server worker index by hashing
+            assert(cache_server_worker_params_.size() == percacheserver_workercnt);
+            Key tmp_key = MessageBase::getKeyFromMessage(data_requeset_ptr);
+            uint32_t local_cache_server_worker_idx = hash_wrapper_ptr_->hash(tmp_key) % percacheserver_workercnt;
+            assert(local_cache_server_worker_idx < percacheserver_workercnt);
 
-        // Pass cache server worker item into ring buffer
-        CacheServerWorkerItem tmp_cache_server_worker_item(data_requeset_ptr);
-        bool is_successful = cache_server_worker_params_[local_cache_server_worker_idx].getDataRequestBufferPtr()->push(tmp_cache_server_worker_item);
-        assert(is_successful == true); // Ring buffer must NOT be full
+            // Pass cache server item into ring buffer of the corresponding cache server worker
+            CacheServerItem tmp_cache_server_item(data_requeset_ptr);
+            bool is_successful = cache_server_worker_params_[local_cache_server_worker_idx].getDataRequestBufferPtr()->push(tmp_cache_server_item);
+            assert(is_successful == true); // Ring buffer must NOT be full
+        }
+        else if (data_requeset_ptr->isManagementDataRequest()) // Management data requests
+        {
+            // Pass cache server item into ring buffer of the cache server placement processor
+            CacheServerItem tmp_cache_server_item(data_requeset_ptr);
+            bool is_successful = cache_server_placement_processor_param_.getDataRequestBufferPtr()->push(tmp_cache_server_item);
+            assert(is_successful == true); // Ring buffer must NOT be full
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "invalid message type " << MessageBase::messageTypeToString(data_requeset_ptr->getMessageType()) << " for partitionRequest_()!";
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
 
         return;
     }
@@ -180,7 +224,6 @@ namespace covered
         assert(edge_wrapper_ptr_ != NULL);        
         assert(hash_wrapper_ptr_ != NULL);
         assert(edge_cache_server_recvreq_socket_server_ptr_ != NULL);
-        assert(rwlock_for_eviction_ptr_ != NULL);
 
         return;
     }

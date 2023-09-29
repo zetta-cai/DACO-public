@@ -968,8 +968,6 @@ namespace covered
         // NOTE: we can release writelock here as cache size usage has already been updated after evicting local edge cache
         rwlock_for_eviction_ptr_->unlock(context_name);
 
-        // TODO: updateDirectory_ -> admitDirectory_ for each single admission
-
         // Perform directory updates for all evicted victims in parallel
         struct timespec update_directory_to_evict_start_timestamp = Util::getCurrentTimespec();
         is_finish = parallelEvictDirectory_(total_victims, source_addr, recvrsp_socket_server_ptr, total_bandwidth_usage, event_list, skip_propagation_latency, is_background);

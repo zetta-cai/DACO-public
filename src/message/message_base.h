@@ -76,6 +76,7 @@ namespace covered
         kCoveredPlacementRedirectedGetResponse,
         kCoveredPlacementGlobalGetRequest,
         kCoveredPlacementGlobalGetResponse,
+        kCoveredPlacementNotifyRequest,
     };
 
     enum Hitflag
@@ -128,6 +129,7 @@ namespace covered
         bool isLocalDataRequest() const;
         bool isRedirectedDataRequest() const;
         bool isGlobalDataRequest() const;
+        bool isManagementDataRequest() const;
 
         bool isDataResponse() const;
         bool isLocalDataResponse() const;

@@ -16,6 +16,7 @@ namespace covered
 }
 
 #include "concurrency/rwlock.h"
+#include "edge/cache_server/cache_server_placement_processor_param.h"
 #include "edge/cache_server/cache_server_worker_param.h"
 #include "edge/edge_wrapper.h"
 #include "hash/hash_wrapper_base.h"
@@ -48,6 +49,7 @@ namespace covered
 
         // Non-const individual variable
         std::vector<CacheServerWorkerParam> cache_server_worker_params_; // Each cache server thread has a unique param
+        CacheServerPlacementProcessorParam cache_server_placement_processor_param_; // Only one cache server placement processor thread
 
         // For receiving local requests
         NetworkAddr edge_cache_server_recvreq_source_addr_; // The same as that used by clients or neighbors to send local/redirected requests (const shared variable)

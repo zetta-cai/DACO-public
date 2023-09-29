@@ -118,15 +118,15 @@ namespace covered
         while (tmp_edge_wrapper_ptr->isNodeRunning()) // edge_running_ is set as true by default
         {
             // Try to get the data request from ring buffer partitioned by cache server
-            CacheServerWorkerItem tmp_cache_server_worker_item;
-            bool is_successful = cache_server_worker_param_ptr_->getDataRequestBufferPtr()->pop(tmp_cache_server_worker_item);
+            CacheServerItem tmp_cache_server_item;
+            bool is_successful = cache_server_worker_param_ptr_->getDataRequestBufferPtr()->pop(tmp_cache_server_item);
             if (!is_successful)
             {
                 continue; // Retry to receive an item if edge is still running
             } // End of (is_successful == true)
             else
             {
-                MessageBase* data_request_ptr = tmp_cache_server_worker_item.getDataRequestPtr();
+                MessageBase* data_request_ptr = tmp_cache_server_item.getDataRequestPtr();
                 assert(data_request_ptr != NULL);
 
                 if (data_request_ptr->isDataRequest()) // Data requests (e.g., local/redirected requests)

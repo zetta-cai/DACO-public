@@ -233,6 +233,11 @@ namespace covered
                 message_type_str = "kCoveredPlacementGlobalGetResponse";
                 break;
             }
+            case MessageType::kCoveredPlacementNotifyRequest:
+            {
+                message_type_str = "kCoveredPlacementNotifyRequest";
+                break;
+            }
             default:
             {
                 message_type_str = std::to_string(static_cast<uint32_t>(message_type));
@@ -497,6 +502,11 @@ namespace covered
             {
                 message_ptr = new CoveredPlacementGlobalGetResponse(msg_payload);
                 special_case = true;
+                break;
+            }
+            case MessageType::kCoveredPlacementNotifyRequest:
+            {
+                message_ptr = new CoveredPlacementNotifyRequest(msg_payload);
                 break;
             }
             default:
@@ -876,6 +886,11 @@ namespace covered
             const CoveredPlacementGlobalGetResponse* const covered_placement_global_get_response_ptr = static_cast<const CoveredPlacementGlobalGetResponse*>(message_ptr);
             tmp_key = covered_placement_global_get_response_ptr->getKey();
         }
+        else if (message_ptr->message_type_ == MessageType::kCoveredPlacementNotifyRequest)
+        {
+            const CoveredPlacementNotifyRequest* const covered_placement_notify_request_ptr = static_cast<const CoveredPlacementNotifyRequest*>(message_ptr);
+            tmp_key = covered_placement_notify_request_ptr->getKey();
+        }
         else
         {
             std::ostringstream oss;
@@ -1050,7 +1065,7 @@ namespace covered
     bool MessageBase::isDataRequest() const
     {
         checkIsValid_();
-        return isLocalDataRequest() || isRedirectedDataRequest() || isGlobalDataRequest();
+        return isLocalDataRequest() || isRedirectedDataRequest() || isGlobalDataRequest() || isManagementDataRequest();
     }
 
     bool MessageBase::isLocalDataRequest() const
@@ -1083,6 +1098,19 @@ namespace covered
     {
         checkIsValid_();
         if (message_type_ == MessageType::kGlobalGetRequest || message_type_ == MessageType::kGlobalPutRequest || message_type_ == MessageType::kGlobalDelRequest || message_type_ == MessageType::kCoveredPlacementGlobalGetRequest)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    bool MessageBase::isManagementDataRequest() const
+    {
+        checkIsValid_();
+        if (message_type_ == MessageType::kCoveredPlacementNotifyRequest)
         {
             return true;
         }
@@ -1210,7 +1238,7 @@ namespace covered
     bool MessageBase::isBackgroundRequest() const
     {
         checkIsValid_();
-        if (message_type_ == MessageType::kCoveredPlacementRedirectedGetRequest || message_type_ == MessageType::kCoveredPlacementGlobalGetRequest)
+        if (message_type_ == MessageType::kCoveredPlacementRedirectedGetRequest || message_type_ == MessageType::kCoveredPlacementGlobalGetRequest || message_type_ == MessageType::kCoveredPlacementNotifyRequest)
         {
             return true;
         }

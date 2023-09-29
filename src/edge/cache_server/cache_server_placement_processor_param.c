@@ -1,31 +1,29 @@
-#include "edge/cache_server/cache_server_worker_param.h"
+#include "edge/cache_server/cache_server_placement_processor_param.h"
 
 #include "common/util.h"
 
 namespace covered
 {
-    const std::string CacheServerWorkerParam::kClassName("CacheServerWorkerParam");
+    const std::string CacheServerPlacementProcessorParam::kClassName("CacheServerPlacementProcessorParam");
 
-    CacheServerWorkerParam::CacheServerWorkerParam()
+    CacheServerPlacementProcessorParam::CacheServerPlacementProcessorParam()
     {
         cache_server_ptr_ = NULL;
-        local_cache_server_worker_idx_ = 0;
         data_request_buffer_ptr_ = NULL;
     }
 
-    CacheServerWorkerParam::CacheServerWorkerParam(CacheServer* cache_server_ptr, const uint32_t& local_cache_server_worker_idx, const uint32_t& data_request_buffer_size)
+    CacheServerPlacementProcessorParam::CacheServerPlacementProcessorParam(CacheServer* cache_server_ptr, const uint32_t& data_request_buffer_size)
     {
         cache_server_ptr_ = cache_server_ptr;
-        local_cache_server_worker_idx_ = local_cache_server_worker_idx;
         
         // Allocate ring buffer for local requests
         data_request_buffer_ptr_ = new RingBuffer<CacheServerItem>(CacheServerItem(), data_request_buffer_size);
         assert(data_request_buffer_ptr_ != NULL);
     }
 
-    CacheServerWorkerParam::~CacheServerWorkerParam()
+    CacheServerPlacementProcessorParam::~CacheServerPlacementProcessorParam()
     {
-        // NOTE: no need to release cache_server_ptr_, which will be released outside CacheServerWorkerParam (e.g., by simulator)
+        // NOTE: no need to release cache_server_ptr_, which will be released outside CacheServerPlacementProcessorParam (e.g., by simulator)
 
         if (data_request_buffer_ptr_ != NULL)
         {
@@ -34,12 +32,10 @@ namespace covered
         }
     }
 
-    const CacheServerWorkerParam& CacheServerWorkerParam::operator=(const CacheServerWorkerParam& other)
+    const CacheServerPlacementProcessorParam& CacheServerPlacementProcessorParam::operator=(const CacheServerPlacementProcessorParam& other)
     {
-        // Shallow copy is okay, as cache_server_ptr_ is maintained outside CacheServerWorkerParam (e.g., by simulator)
+        // Shallow copy is okay, as cache_server_ptr_ is maintained outside CacheServerPlacementProcessorParam (e.g., by simulator)
         cache_server_ptr_ = other.cache_server_ptr_;
-
-        local_cache_server_worker_idx_ = other.local_cache_server_worker_idx_;
 
         // Must deep copy the ring buffer of local requests
         if (data_request_buffer_ptr_ != NULL) // Release original ring buffer if any
@@ -58,18 +54,13 @@ namespace covered
         return *this;
     }
 
-    CacheServer* CacheServerWorkerParam::getCacheServerPtr() const
+    CacheServer* CacheServerPlacementProcessorParam::getCacheServerPtr() const
     {
         assert(cache_server_ptr_ != NULL);
         return cache_server_ptr_;
     }
 
-    uint32_t CacheServerWorkerParam::getLocalCacheServerWorkerIdx() const
-    {
-        return local_cache_server_worker_idx_;
-    }
-
-    RingBuffer<CacheServerItem>* CacheServerWorkerParam::getDataRequestBufferPtr() const
+    RingBuffer<CacheServerItem>* CacheServerPlacementProcessorParam::getDataRequestBufferPtr() const
     {
         assert(data_request_buffer_ptr_ != NULL);
         return data_request_buffer_ptr_;

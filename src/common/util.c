@@ -498,6 +498,12 @@ namespace covered
         return getNodePort_(edge_cache_server_recvreq_startport, edge_idx, edgecnt, Config::getEdgeIpstrCnt());
     }
 
+    uint16_t Util::getEdgeCacheServerPlacementProcessorRecvrspPort(const uint32_t& edge_idx, const uint32_t& edgecnt)
+    {
+        int64_t edge_cache_server_placement_processor_recvrsp_startport = static_cast<int64_t>(Config::getEdgeCacheServerPlacementProcessorRecvrspStartport());
+        return getNodePort_(edge_cache_server_placement_processor_recvrsp_startport, edge_idx, edgecnt, Config::getEdgeIpstrCnt());
+    }
+
     NetworkAddr Util::getEdgeCacheServerWorkerRecvreqAddrFromRecvrspAddr(const NetworkAddr& edge_cache_server_worker_recvrsp_addr)
     {
         std::string edge_ipstr = edge_cache_server_worker_recvrsp_addr.getIpstr();
