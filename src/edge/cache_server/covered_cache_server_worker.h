@@ -66,9 +66,6 @@ namespace covered
 
         // (4.2) Admit content directory information
 
-        virtual MessageBase* getReqToAdmitBeaconDirectory_(const Key& key, const DirectoryInfo& directory_info, const bool& skip_propagation_latency) const override;
-        virtual void processRspToAdmitBeaconDirectory_(MessageBase* control_response_ptr, bool& is_being_written) const override;
-
         // Const variable
         std::string instance_name_;
     };

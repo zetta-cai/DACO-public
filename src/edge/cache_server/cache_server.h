@@ -34,11 +34,19 @@ namespace covered
 
         EdgeWrapper* getEdgeWrapperPtr() const;
         NetworkAddr getEdgeCacheServerRecvreqSourceAddr() const;
+
+        // Return if edge node is finished
+        bool admitBeaconDirectory_(const Key& key, const DirectoryInfo& directory_info, bool& is_being_written, const NetworkAddr& source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const; // Admit directory info in remote beacon node
     private:
         static const std::string kClassName;
 
         void receiveRequestsAndPartition_();
         void partitionRequest_(MessageBase* data_requeset_ptr);
+
+        // Admit content directory information (invoked by edge cache server worker or placement processor)
+
+        MessageBase* getReqToAdmitBeaconDirectory_(const Key& key, const DirectoryInfo& directory_info, const NetworkAddr& source_addr, const bool& skip_propagation_latency) const;
+        void processRspToAdmitBeaconDirectory_(MessageBase* control_response_ptr, bool& is_being_written) const;
 
         void checkPointers_() const;
 

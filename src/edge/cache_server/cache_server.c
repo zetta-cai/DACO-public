@@ -7,6 +7,7 @@
 #include "common/util.h"
 #include "edge/cache_server/cache_server_placement_processor.h"
 #include "edge/cache_server/cache_server_worker_base.h"
+#include "message/control_message.h"
 #include "network/network_addr.h"
 
 namespace covered
@@ -214,6 +215,146 @@ namespace covered
             oss << "invalid message type " << MessageBase::messageTypeToString(data_requeset_ptr->getMessageType()) << " for partitionRequest_()!";
             Util::dumpErrorMsg(instance_name_, oss.str());
             exit(1);
+        }
+
+        return;
+    }
+
+    // Admit content directory information (invoked by edge cache server worker or placement processor)
+
+    bool CacheServer::admitBeaconDirectory_(const Key& key, const DirectoryInfo& directory_info, bool& is_being_written, const NetworkAddr& source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list,const bool& skip_propagation_latency) const
+    {
+        checkPointers_();
+
+        // The current edge node must NOT be the beacon node for the key
+        bool current_is_beacon = edge_wrapper_ptr_->currentIsBeacon(key);
+        assert(!current_is_beacon);
+
+        bool is_finish = false;
+        struct timespec issue_directory_update_req_start_timestamp = Util::getCurrentTimespec();
+
+        // Get destination address of beacon node
+        NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = edge_wrapper_ptr_->getBeaconDstaddr_(key);
+
+        while (true) // Timeout-and-retry mechanism
+        {
+            // Prepare directory update request to check directory information in beacon node
+            MessageBase* directory_update_request_ptr = getReqToAdmitBeaconDirectory_(key, directory_info, source_addr, skip_propagation_latency);
+            assert(directory_update_request_ptr != NULL);
+
+            // Push the control request into edge-to-edge propagation simulator to the beacon node
+            bool is_successful = edge_wrapper_ptr_->getEdgeToedgePropagationSimulatorParamPtr()->push(directory_update_request_ptr, beacon_edge_beacon_server_recvreq_dst_addr);
+            assert(is_successful);
+
+            // NOTE: directory_update_request_ptr will be released by edge-to-edge propagation simulator
+            directory_update_request_ptr = NULL;
+
+            // Receive the control repsonse from the beacon node
+            DynamicArray control_response_msg_payload;
+            bool is_timeout = recvrsp_socket_server_ptr->recv(control_response_msg_payload);
+            if (is_timeout)
+            {
+                if (!edge_wrapper_ptr_->isNodeRunning())
+                {
+                    is_finish = true;
+                    break; // Edge is NOT running
+                }
+                else
+                {
+                    Util::dumpWarnMsg(instance_name_, "edge timeout to wait for DirectoryUpdateResponse");
+                    continue; // Resend the control request message
+                }
+            } // End of (is_timeout == true)
+            else
+            {
+                // Receive the control response message successfully
+                MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
+                assert(control_response_ptr != NULL);
+
+                processRspToAdmitBeaconDirectory_(control_response_ptr, is_being_written); // NOTE: is_being_written is updated here
+
+                // Update total bandwidth usage for received directory update response
+                BandwidthUsage directory_update_response_bandwidth_usage = control_response_ptr->getBandwidthUsageRef();
+                uint32_t cross_edge_directory_update_rsp_bandwidth_bytes = control_response_ptr->getMsgPayloadSize();
+                directory_update_response_bandwidth_usage.update(BandwidthUsage(0, cross_edge_directory_update_rsp_bandwidth_bytes, 0));
+                total_bandwidth_usage.update(directory_update_response_bandwidth_usage);
+
+                // Add events of intermediate response if with evet tracking
+                event_list.addEvents(control_response_ptr->getEventListRef());
+
+                // Release the control response message
+                delete control_response_ptr;
+                control_response_ptr = NULL;
+                break;
+            } // End of (is_timeout == false)
+        } // End of while(true)
+
+        // Add intermediate event if with evet tracking
+        struct timespec issue_directory_update_req_end_timestamp = Util::getCurrentTimespec();
+        uint32_t issue_directory_update_req_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(issue_directory_update_req_end_timestamp, issue_directory_update_req_start_timestamp));
+        event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_ISSUE_DIRECTORY_UPDATE_REQ_EVENT_NAME, issue_directory_update_req_latency_us);
+
+        return is_finish;
+    }
+
+    MessageBase* CacheServer::getReqToAdmitBeaconDirectory_(const Key& key, const DirectoryInfo& directory_info, const NetworkAddr& source_addr, const bool& skip_propagation_latency) const
+    {
+        checkPointers_();
+
+        const bool is_admit = true; // Try to admit a new key as local cached object (NOTE: local edge cache has NOT been admitted yet)
+        uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
+
+        MessageBase* directory_update_request_ptr = NULL;
+        if (edge_wrapper_ptr_->getCacheName() == Util::COVERED_CACHE_NAME) // ONLY for COVERED
+        {
+            CoveredCacheManager* tmp_covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
+
+            // Prepare victim syncset for piggybacking-based victim synchronization
+            VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForVictimSyncset();
+
+            // ONLY need victim synchronization yet without popularity collection/aggregation
+            MessageBase* covered_directory_update_request_ptr = new CoveredDirectoryUpdateRequest(key, is_admit, directory_info, victim_syncset, edge_idx, source_addr, skip_propagation_latency);
+
+            // Remove existing cached directory if any as key will be local cached
+            tmp_covered_cache_manager_ptr->updateDirectoryCacherToRemoveCachedDirectory(key);
+        }
+        else // Baselines
+        {
+            directory_update_request_ptr = new DirectoryUpdateRequest(key, is_admit, directory_info, edge_idx, source_addr, skip_propagation_latency);
+        }
+        assert(directory_update_request_ptr != NULL);
+
+        return directory_update_request_ptr;
+    }
+
+    void CacheServer::processRspToAdmitBeaconDirectory_(MessageBase* control_response_ptr, bool& is_being_written) const
+    {
+        checkPointers_();
+        assert(control_response_ptr != NULL);
+
+        if (edge_wrapper_ptr_->getCacheName() == Util::COVERED_CACHE_NAME) // ONLY for COVERED
+        {
+            assert(control_response_ptr->getMessageType() == MessageType::kCoveredDirectoryUpdateResponse);
+
+            CoveredCacheManager* tmp_covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
+
+            // Get is_being_written from control response message
+            const CoveredDirectoryUpdateResponse* const covered_directory_update_response_ptr = static_cast<const CoveredDirectoryUpdateResponse*>(control_response_ptr);
+            is_being_written = covered_directory_update_response_ptr->isBeingWritten();
+
+            // Victim synchronization
+            const uint32_t source_edge_idx = covered_directory_update_response_ptr->getSourceIndex();
+            const VictimSyncset& victim_syncset = covered_directory_update_response_ptr->getVictimSyncsetRef();
+            std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = edge_wrapper_ptr_->getLocalBeaconedVictimsFromVictimSyncset(victim_syncset);
+            tmp_covered_cache_manager_ptr->updateVictimTrackerForVictimSyncset(source_edge_idx, victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
+        }
+        else // Baselines
+        {
+            assert(control_response_ptr->getMessageType() == MessageType::kDirectoryUpdateResponse);
+
+            // Get is_being_written from control response message
+            const DirectoryUpdateResponse* const directory_update_response_ptr = static_cast<const DirectoryUpdateResponse*>(control_response_ptr);
+            is_being_written = directory_update_response_ptr->isBeingWritten();
         }
 
         return;

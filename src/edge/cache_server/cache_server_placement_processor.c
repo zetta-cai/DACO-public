@@ -3,6 +3,7 @@
 #include <assert.h>
 
 #include "common/config.h"
+#include "message/data_message.h"
 
 namespace covered
 {
@@ -103,9 +104,82 @@ namespace covered
 
     bool CacheServerPlacementProcessor::processManagementDataRequest_(MessageBase* data_request_ptr, const NetworkAddr& recvrsp_dst_addr)
     {
+        checkPointers_();
+        assert(data_request_ptr != NULL);
+        assert(data_request_ptr->isManagementDataRequest());
+
         bool is_finish = false;
 
-        // TODO: (END HERE) Process received CoveredPlacementNotifyRequest
+        if (data_request_ptr->getMessageType() == MessageType::kCoveredPlacementNotifyRequest)
+        {
+            is_finish = processPlacementNotifyRequest_(data_request_ptr, recvrsp_dst_addr);
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "invalid message type " << MessageBase::messageTypeToString(data_request_ptr->getMessageType()) << " for processManagementDataRequest_()!";
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
+
+        return is_finish;
+    }
+
+    bool CacheServerPlacementProcessor::processPlacementNotifyRequest_(MessageBase* data_request_ptr, const NetworkAddr& recvrsp_dst_addr)
+    {
+        assert(data_request_ptr != NULL);
+        assert(data_request_ptr->getMessageType() == MessageType::kCoveredPlacementNotifyRequest);
+
+        checkPointers_();
+        CacheServer* tmp_cache_server_ptr = cache_serer_placement_processor_param_ptr_->getCacheServerPtr();
+        EdgeWrapper* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();
+        CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
+
+        bool is_finish = false;
+        BandwidthUsage total_bandwidth_usage;
+        EventList event_list;
+        const bool is_background = true;
+
+        const CoveredPlacementNotifyRequest* const covered_placement_notify_request_ptr = static_cast<const CoveredPlacementNotifyRequest*>(data_request_ptr);
+
+        // TODO: Embed placement edgeset into CoveredPlacementNotifyRequest for hybrid data fetching
+        //PlacementEdgeset tmp_placement_edgeset = covered_placement_notify_request_ptr->getEdgesetRef();
+        //assert(tmp_placement_edgeset.size() <= tmp_edge_wrapper_ptr->getTopkEdgecntForPlacement()); // At most k placement edge nodes each time
+
+        // Victim synchronization
+        const uint32_t source_edge_idx = covered_placement_notify_request_ptr->getSourceIndex();
+        const VictimSyncset& victim_syncset = covered_placement_notify_request_ptr->getVictimSyncsetRef();
+        std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = tmp_edge_wrapper_ptr->getLocalBeaconedVictimsFromVictimSyncset(victim_syncset);
+        tmp_covered_cache_manager_ptr->updateVictimTrackerForVictimSyncset(source_edge_idx, victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
+
+        // Issue directory update request with is_admit = true
+        const Key tmp_key = covered_placement_notify_request_ptr->getKey();
+        bool is_being_written = false;
+        const bool& skip_propagation_latency = covered_placement_notify_request_ptr->isSkipPropagationLatency();
+        is_finish = tmp_cache_server_ptr->admitBeaconDirectory_(tmp_key, DirectoryInfo(source_edge_idx), is_being_written, edge_cache_server_placement_processor_recvrsp_source_addr_, edge_cache_server_placement_processor_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+        if (is_finish)
+        {
+            return is_finish;
+        }
+
+        bool is_valid = covered_placement_notify_request_ptr->isValid();
+        if (is_being_written) // Double-check is_being_written to udpate is_valid if necessary
+        {
+            // NOTE: ONLY update is_valid if is_being_written is true; if is_being_written is false (i.e., key is NOT being written now), we still keep original is_valid, as the value MUST be stale if is_being_written was true before
+            is_valid = false;
+        }
+
+        // Admit into local edge cache for the received remote placement notification
+        const Value tmp_value = covered_placement_notify_request_ptr->getValue();
+        tmp_edge_wrapper_ptr->admitLocalEdgeCache_(tmp_key, tmp_value, is_valid); // May update local synced victims
+
+        // Perform background cache eviction in a blocking manner for consistent directory information (note that cache eviction happens after non-blocking placement notification)
+        // NOTE: we update aggregated uncached popularity yet DISABLE recursive cache placement for metadata preservation during cache eviction
+        is_finish = tmp_edge_wrapper_ptr->evictForCapacity_(edge_cache_server_placement_processor_recvrsp_source_addr_, edge_cache_server_placement_processor_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency, is_background); // May update local synced victims
+
+        // Get background eventlist and bandwidth usage to update background counter for beacon server
+        tmp_edge_wrapper_ptr->getEdgeBackgroundCounterForBeaconServerRef().updateBandwidthUsgae(total_bandwidth_usage);
+        tmp_edge_wrapper_ptr->getEdgeBackgroundCounterForBeaconServerRef().addEvents(event_list);
 
         return is_finish;
     }
@@ -114,5 +188,7 @@ namespace covered
     {
         assert(cache_serer_placement_processor_param_ptr_ != NULL);
         assert(edge_cache_server_placement_processor_recvrsp_socket_server_ptr_ != NULL);
+
+        return;
     }
 }

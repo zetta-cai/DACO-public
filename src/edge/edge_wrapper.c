@@ -1468,7 +1468,7 @@ namespace covered
             // Perform cache admission for local edge cache (equivalent to local placement notification)
             admitLocalEdgeCache_(key, value, is_valid);
 
-            // Perform cache eviction if necessary in a blocking manner for consistent directory information (note that cache eviction happens after non-blocking placement notification)
+            // Perform background cache eviction if necessary in a blocking manner for consistent directory information (note that cache eviction happens after non-blocking placement notification)
             // NOTE: we update aggregated uncached popularity yet DISABLE recursive cache placement for metadata preservation during cache eviction
             // TODO: If local placement notification is NOT a minor case, we need to notify placement processor of the current beacon edge node for cache eviction to avoid blocking cache placement
             is_finish = evictForCapacity_(source_addr, recvrsp_socket_server_ptr, total_bandwidth_usage, event_list, skip_propagation_latency, is_background);

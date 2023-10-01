@@ -83,7 +83,7 @@ namespace covered
         // Return if edge node is finished (invoked by cache server worker or beacon server)
         bool notifyEdgesToFinishBlock(UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, const Key& key, const std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const; // Notify all blocked edges for the key simultaneously
 
-        // (6) common utility functions (invoked by edge cache server or edge beacon server of closest/beacon edge node)
+        // (6) common utility functions (invoked by edge cache server worker/placement-processor or edge beacon server of closest/beacon edge node)
 
         // (6.1) For local edge cache access
         bool getLocalEdgeCache_(const Key& key, Value& value) const; // Return is local cached and valid

@@ -276,29 +276,4 @@ namespace covered
     // (4.1) Admit uncached objects in local edge cache
 
     // (4.2) Admit content directory information
-
-    MessageBase* BasicCacheServerWorker::getReqToAdmitBeaconDirectory_(const Key& key, const DirectoryInfo& directory_info, const bool& skip_propagation_latency) const
-    {
-        checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
-
-        const bool is_admit = true; // Admit content directory
-        uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
-        MessageBase* directory_update_request_ptr = new DirectoryUpdateRequest(key, is_admit, directory_info, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
-        assert(directory_update_request_ptr != NULL);
-
-        return directory_update_request_ptr;
-    }
-
-    void BasicCacheServerWorker::processRspToAdmitBeaconDirectory_(MessageBase* control_response_ptr, bool& is_being_written) const
-    {
-        assert(control_response_ptr != NULL);
-        assert(control_response_ptr->getMessageType() == MessageType::kDirectoryUpdateResponse);
-
-        // Get is_being_written from control response message
-        const DirectoryUpdateResponse* const directory_update_response_ptr = static_cast<const DirectoryUpdateResponse*>(control_response_ptr);
-        is_being_written = directory_update_response_ptr->isBeingWritten();
-
-        return;
-    }
 }

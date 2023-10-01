@@ -164,9 +164,6 @@ namespace covered
 
         // Return if edge node is finished
         bool admitDirectory_(const Key& key, bool& is_being_written, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const; // Admit content directory information
-        bool admitBeaconDirectory_(const Key& key, const DirectoryInfo& directory_info, bool& is_being_written, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const; // Admit directory info in remote beacon node
-        virtual MessageBase* getReqToAdmitBeaconDirectory_(const Key& key, const DirectoryInfo& directory_info, const bool& skip_propagation_latency) const = 0;
-        virtual void processRspToAdmitBeaconDirectory_(MessageBase* control_response_ptr, bool& is_being_written) const = 0;
 
         // (5) Utility functions
 

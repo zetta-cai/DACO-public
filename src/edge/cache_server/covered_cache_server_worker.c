@@ -573,49 +573,4 @@ namespace covered
     // (4.1) Admit uncached objects in local edge cache
 
     // (4.2) Admit content directory information
-
-    MessageBase* CoveredCacheServerWorker::getReqToAdmitBeaconDirectory_(const Key& key, const DirectoryInfo& directory_info, const bool& skip_propagation_latency) const
-    {
-        checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
-        CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
-
-        // Prepare victim syncset for piggybacking-based victim synchronization
-        VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForVictimSyncset();
-
-        uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
-        const bool is_admit = true; // Try to admit a new key as local cached object (NOTE: local edge cache has NOT been admitted yet)
-
-        // ONLY need victim synchronization yet without popularity collection/aggregation
-        MessageBase* covered_directory_update_request_ptr = new CoveredDirectoryUpdateRequest(key, is_admit, directory_info, victim_syncset, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
-
-        // Remove existing cached directory if any as key will be local cached
-        tmp_covered_cache_manager_ptr->updateDirectoryCacherToRemoveCachedDirectory(key);
-        
-        assert(covered_directory_update_request_ptr != NULL);
-
-        return covered_directory_update_request_ptr;
-    }
-
-    void CoveredCacheServerWorker::processRspToAdmitBeaconDirectory_(MessageBase* control_response_ptr, bool& is_being_written) const
-    {
-        checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
-        CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
-
-        assert(control_response_ptr != NULL);
-        assert(control_response_ptr->getMessageType() == MessageType::kCoveredDirectoryUpdateResponse);
-
-        // Get is_being_written from control response message
-        const CoveredDirectoryUpdateResponse* const covered_directory_update_response_ptr = static_cast<const CoveredDirectoryUpdateResponse*>(control_response_ptr);
-        is_being_written = covered_directory_update_response_ptr->isBeingWritten();
-
-        // Victim synchronization
-        const uint32_t source_edge_idx = covered_directory_update_response_ptr->getSourceIndex();
-        const VictimSyncset& victim_syncset = covered_directory_update_response_ptr->getVictimSyncsetRef();
-        std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = tmp_edge_wrapper_ptr->getLocalBeaconedVictimsFromVictimSyncset(victim_syncset);
-        tmp_covered_cache_manager_ptr->updateVictimTrackerForVictimSyncset(source_edge_idx, victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
-
-        return;
-    }
 }
