@@ -21,7 +21,7 @@ namespace covered
     class CoveredPlacementNotifyRequest : public KeyValueByteVictimsetMessage
     {
     public:
-        CoveredPlacementNotifyRequest(const Key& key, const Value& value, const bool& is_valid, const VictimSyncset& victim_syncset, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency);
+        CoveredPlacementNotifyRequest(const Key& key, const Value& value, const bool& is_valid, const VictimSyncset& victim_syncset, const uint32_t& source_index, const NetworkAddr& source_addr, const bool& skip_propagation_latency);
         CoveredPlacementNotifyRequest(const DynamicArray& msg_payload);
         virtual ~CoveredPlacementNotifyRequest();
 

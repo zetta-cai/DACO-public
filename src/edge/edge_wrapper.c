@@ -1424,11 +1424,32 @@ namespace covered
         bool is_being_written = cooperation_wrapper_ptr_->isBeingWritten(key);
         bool is_valid = !is_being_written;
 
-        // TODO: (END HERE) Send placement notification for each non-local edge node in best_placement_edgeset in a non-blocking manner
-
+        // Send placement notification for each non-local edge node in best_placement_edgeset in a non-blocking manner
         const uint32_t current_edge_idx = getNodeIdx();
-        std::unordered_set<uint32_t>::const_iterator edgeset_const_iter = best_placement_edgeset.find(current_edge_idx);
-        if (edgeset_const_iter != best_placement_edgeset.end()) // If current edge node is also in best_placement_edgeset
+        std::unordered_set<uint32_t>::const_iterator edgeset_const_iter_for_local_notification = best_placement_edgeset.end();
+        for (std::unordered_set<uint32_t>::const_iterator edgeset_const_iter_for_remote_notification = best_placement_edgeset.begin(); edgeset_const_iter_for_remote_notification != best_placement_edgeset.end(); edgeset_const_iter_for_remote_notification++)
+        {
+            const uint32_t& tmp_edge_idx = *edgeset_const_iter_for_remote_notification;
+            if (tmp_edge_idx == current_edge_idx) // Skip local edge node
+            {
+                edgeset_const_iter_for_local_notification = edgeset_const_iter_for_remote_notification;
+                continue;
+            }
+
+            // Send CoveredPlacementNotifyRequest to remote edge node
+            // NOTE: source addr will NOT be used by placement processor of remote edge node due to without explicit notification ACK (we use directory update request with is_admit = true as the implicit ACK for placement notification)
+            const VictimSyncset victim_syncset = covered_cache_manager_ptr_->accessVictimTrackerForVictimSyncset();
+            CoveredPlacementNotifyRequest* covered_placement_notify_request_ptr = new CoveredPlacementNotifyRequest(key, value, is_valid, victim_syncset, current_edge_idx, edge_beacon_server_recvreq_source_addr_for_placement_, skip_propagation_latency);
+            assert(covered_placement_notify_request_ptr != NULL);
+            // Push the global request into edge-to-edge propagation simulator to the remote edge node
+            NetworkAddr remote_edge_cache_server_recvreq_dst_addr = getTargetDstaddr(DirectoryInfo(tmp_edge_idx));
+            bool is_successful = edge_toedge_propagation_simulator_param_ptr_->push(covered_placement_notify_request_ptr, remote_edge_cache_server_recvreq_dst_addr);
+            assert(is_successful);
+            covered_placement_notify_request_ptr = NULL; // NOTE: covered_placement_notify_request_ptr will be released by edge-to-edge propagation simulator
+        }
+
+        // Local placement notification if necessary
+        if (edgeset_const_iter_for_local_notification != best_placement_edgeset.end()) // If current edge node is also in best_placement_edgeset
         {
             // Current edge node MUST be the beacon node for the given key
             assert(currentIsBeacon(key));
@@ -1449,6 +1470,7 @@ namespace covered
 
             // Perform cache eviction if necessary in a blocking manner for consistent directory information (note that cache eviction happens after non-blocking placement notification)
             // NOTE: we update aggregated uncached popularity yet DISABLE recursive cache placement for metadata preservation during cache eviction
+            // TODO: If local placement notification is NOT a minor case, we need to notify placement processor of the current beacon edge node for cache eviction to avoid blocking cache placement
             is_finish = evictForCapacity_(source_addr, recvrsp_socket_server_ptr, total_bandwidth_usage, event_list, skip_propagation_latency, is_background);
         }
 
