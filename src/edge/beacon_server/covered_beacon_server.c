@@ -95,13 +95,13 @@ namespace covered
         assert(control_request_ptr != NULL);
         uint32_t source_edge_idx = control_request_ptr->getSourceIndex();
 
-        MessageType tmp_msg_type = control_request_ptr->getMessageType();
+        MessageType message_type = control_request_ptr->getMessageType();
         Key tmp_key;
         bool is_admit = false;
         DirectoryInfo directory_info;
         VictimSyncset victim_syncset;
         CollectedPopularity collected_popularity;
-        if (tmp_msg_type == MessageType::kCoveredDirectoryUpdateRequest)
+        if (message_type == MessageType::kCoveredDirectoryUpdateRequest)
         {
             // Get key, is_admit, directory info, victim syncset, and collected popularity (if any) from directory update request
             const CoveredDirectoryUpdateRequest* const covered_directory_update_request_ptr = static_cast<const CoveredDirectoryUpdateRequest*>(control_request_ptr);
@@ -114,7 +114,7 @@ namespace covered
                 collected_popularity = covered_directory_update_request_ptr->getCollectedPopularityRef();
             }
         }
-        else if (tmp_msg_type == MessageType::kCoveredPlacementDirectoryUpdateRequest)
+        else if (message_type == MessageType::kCoveredPlacementDirectoryUpdateRequest)
         {
             // Get key, is_admit, directory info, victim syncset, and collected popularity (if any) from directory update request
             const CoveredPlacementDirectoryUpdateRequest* const covered_placement_directory_update_request_ptr = static_cast<const CoveredPlacementDirectoryUpdateRequest*>(control_request_ptr);
@@ -130,7 +130,7 @@ namespace covered
         else
         {
             std::ostringstream oss;
-            oss << "Invalid message type " << tmp_msg_type << " for processReqToUpdateLocalDirectory_()";
+            oss << "Invalid message type " << message_type << " for processReqToUpdateLocalDirectory_()";
             Util::dumpErrorMsg(instance_name_, oss.str());
             exit(1);
         }
@@ -153,8 +153,11 @@ namespace covered
 
         if (is_admit) // Admit a new key as local cached object
         {
-            // Clear old local uncached popularity (TODO: preserved edge idx / bitmap) for the given key at soure edge node after admission
-            covered_cache_manager_ptr->clearPopularityAggregatorAfterAdmission(tmp_key, source_edge_idx);
+            // NOTE: For COVERED, although there still exist foreground directory update requests for eviction (triggered by local gets to update invalid value and local puts to update cached value), all directory update requests for admission MUST be background due to non-blocking placement deployment
+            assert(control_request_ptr->isBackgroundRequest());
+
+            // Clear preserved edge nodes for the given key at the source edge node for metadata releasing after local/remote admission notification
+            covered_cache_manager_ptr->clearPopularityAggregatorForPreservedEdgesetAfterAdmission(tmp_key, source_edge_idx);
         }
         else // Evict a victim as local uncached object
         {

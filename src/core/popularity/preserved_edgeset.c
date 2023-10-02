@@ -1,6 +1,9 @@
 #include "core/popularity/preserved_edgeset.h"
 
 #include <assert.h>
+#include <sstream>
+
+#include "common/util.h"
 
 namespace covered
 {
@@ -29,6 +32,33 @@ namespace covered
         }
         
         return;
+    }
+
+    bool PreservedEdgeset::clearPreservedEdgeNode(const uint32_t edge_idx)
+    {
+        assert(edge_idx < preserved_bitmap_.size());
+
+        if (preserved_bitmap_[edge_idx])
+        {
+            preserved_bitmap_[edge_idx] = false;
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "Edge node " << edge_idx << " is NOT preserved in preserved edgeset";
+            Util::dumpWarnMsg(kClassName, oss.str());
+        }
+
+        bool is_empty = true;
+        for (std::vector<bool>::const_iterator preserved_bitmap_const_iter = preserved_bitmap_.begin(); preserved_bitmap_const_iter != preserved_bitmap_.end(); preserved_bitmap_const_iter++)
+        {
+            if (*preserved_bitmap_const_iter == true)
+            {
+                is_empty = false;
+            }
+        }
+
+        return is_empty;
     }
 
     uint64_t PreservedEdgeset::getSizeForCapacity() const

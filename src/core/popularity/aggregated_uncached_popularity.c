@@ -38,6 +38,12 @@ namespace covered
         return topk_edgeidx_local_uncached_popularity_pairs_.size();
     }
 
+    bool AggregatedUncachedPopularity::hasLocalUncachedPopularity(const uint32_t& source_edge_idx) const
+    {
+        assert(source_edge_idx < bitmap_.size());
+        return bitmap_[source_edge_idx];
+    }
+
     void AggregatedUncachedPopularity::update(const uint32_t& source_edge_idx, const Popularity& local_uncached_popularity, const uint32_t& topk_edgecnt, const ObjectSize& object_size)
     {
         assert(source_edge_idx < bitmap_.size());

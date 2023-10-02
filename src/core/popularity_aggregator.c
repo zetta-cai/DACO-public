@@ -174,21 +174,43 @@ namespace covered
         return;
     }
 
-    void PopularityAggregator::clearAggregatedUncachedPopularityAfterAdmission(const Key& key, const uint32_t& source_edge_idx)
+    void PopularityAggregator::clearPreservedEdgesetAfterAdmission(const Key& key, const uint32_t& source_edge_idx)
     {
         checkPointers_();
 
         // Acquire a write lock to clear preserved edge ndoes from aggregated uncached popularity atomically
-        const std::string context_name = "PopularityAggregator::clearAggregatedUncachedPopularityAfterAdmission()";
+        const std::string context_name = "PopularityAggregator::clearPreservedEdgesetAfterAdmission()";
         rwlock_for_popularity_aggregator_->acquire_lock(context_name);
 
-        // Clear old local uncached popularity of source edge node if any, and update max admission benefit for the given key
-        // NOTE: local_uncached_popularity and object_size are NOT used when is_tracked_by_source_edge_node = false
-        updateAggregatedUncachedPopularityForExistingKey_(key, source_edge_idx, false, 0.0, 0, true);
+        // Clear preserved edge node for the source edge node after admission notification
+        perkey_preserved_edgeset_t::iterator perkey_preserved_edgeset_iter = perkey_preserved_edgeset_.find(key);
+        if (perkey_preserved_edgeset_iter != perkey_preserved_edgeset_.end())
+        {
+            bool is_empty = perkey_preserved_edgeset_iter->second.clearPreservedEdgeNode(source_edge_idx);
+            if (is_empty) // All preserved edge nodes have received local/remote placement notification
+            {
+                perkey_preserved_edgeset_.erase(perkey_preserved_edgeset_iter);
+            }
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "Key " << key.getKeystr() << " has NO preserved edgeset for non-blocking placement deployment";
+            Util::dumpWarnMsg(instance_name_, oss.str());
+        }
 
-        // TODO: After introducing non-blocking cache admission placement:
-        // (i) old local uncached popularity should be cleared right after placement calculation -> assert NO old local uncached popularity exists for the given key;
-        // (ii) we should clear preserved edge idx / bitmap for the source edge node after admission -> assert preserved edge idx / bitmap MUST exist (NOTE: popularity aggregation capacity bytes should NOT discard preserved edge idx / bitmap!!!)
+        // NOTE: all old local uncached popularities have already been cleared right after placement calculation in updatePreservedEdgesetForPlacement()
+        // (1) NO need to clear old local uncached popularity for the source edge node
+        //updateAggregatedUncachedPopularityForExistingKey_(key, source_edge_idx, false, 0.0, 0, true);
+        // (2) Assert old local uncached popularity for the source edge node MUST NOT exist
+        AggregatedUncachedPopularity existing_aggregated_uncached_popularity;
+        bool has_aggregated_uncached_popularity = getAggregatedUncachedPopularity(key, existing_aggregated_uncached_popularity);
+        if (has_aggregated_uncached_popularity)
+        {
+            assert(existing_aggregated_uncached_popularity.hasLocalUncachedPopularity(source_edge_idx) == false);
+        }
+
+        // NOTE: NO need to try to discard objects for popularity aggregation capacity bytes, as size_byte_ will NOT increase here
 
         rwlock_for_popularity_aggregator_->unlock(context_name);
         return;
@@ -309,7 +331,9 @@ namespace covered
 
     void PopularityAggregator::discardGlobalLessPopularObjects_()
     {
-        // NOTE: we have already acquired a write lock in updateAggregatedUncachedPopularity() for thread safety
+        // NOTE: we have already acquired a write lock in updateAggregatedUncachedPopularity() or updatePreservedEdgesetForPlacement() for thread safety
+
+        // NOTE: we should NOT discard preserved edge nodes for popularity aggregation capacity bytes!!!
 
         while (true)
         {

@@ -24,6 +24,7 @@ namespace covered
         bool isPreserved(const uint32_t edge_idx) const;
 
         void preserveEdgesetForPlacement(const Edgeset& placement_edgeset);
+        bool clearPreservedEdgeNode(const uint32_t edge_idx); // Return if NO preserved edge node in the preserved edgeset (i.e., the preserved edgeset is empty)
 
         uint64_t getSizeForCapacity() const;
     private:

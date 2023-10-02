@@ -915,8 +915,8 @@ namespace covered
 
             // NOTE: NOT need piggyacking-based popularity collection and victim synchronization for local directory update
 
-            // Clear old local uncached popularity (TODO: preserved edge idx / bitmap) for the given key at soure edge node after admission
-            covered_cache_manager_ptr_->clearPopularityAggregatorAfterAdmission(key, current_edge_idx);
+            // Clear preserved edge nodes for the given key at the source edge node for metadata releasing after local/remote admission notification
+            covered_cache_manager_ptr_->clearPopularityAggregatorForPreservedEdgesetAfterAdmission(key, current_edge_idx);
 
             // NOTE: NO need to clear directory metadata cache, as key is a local-beaconed uncached object
         }
@@ -1457,7 +1457,7 @@ namespace covered
             // Admit local directory information
             // NOTE: NO need to update aggregated uncached popularity due to admitting a cached object
             bool tmp_is_being_written = false;
-            admitLocalDirectory_(key, DirectoryInfo(current_edge_idx), tmp_is_being_written);
+            admitLocalDirectory_(key, DirectoryInfo(current_edge_idx), tmp_is_being_written); // Local directory update for local placement notification
             if (tmp_is_being_written) // Double-check is_being_written to udpate is_valid if necessary
             {
                 // NOTE: ONLY update is_valid if tmp_is_being_written is true; if tmp_is_being_written is false (i.e., key is NOT being written now), we still keep original is_valid, as the value MUST be stale if is_being_written was true before

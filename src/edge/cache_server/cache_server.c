@@ -315,6 +315,9 @@ namespace covered
             // ONLY need victim synchronization yet without popularity collection/aggregation
             if (!is_background)
             {
+                // NOTE: For COVERED, although there still exist foreground directory update requests for eviction (triggered by local gets to update invalid value and local puts to update cached value), all directory update requests for admission MUST be background due to non-blocking placement deployment
+                assert(edge_wrapper_ptr_->getCacheName() != Util::COVERED_CACHE_NAME);
+
                 directory_update_request_ptr = new CoveredDirectoryUpdateRequest(key, is_admit, directory_info, victim_syncset, edge_idx, source_addr, skip_propagation_latency);
             }
             else

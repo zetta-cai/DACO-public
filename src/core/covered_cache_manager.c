@@ -56,9 +56,9 @@ namespace covered
         return has_best_placement;
     }
 
-    void CoveredCacheManager::clearPopularityAggregatorAfterAdmission(const Key& key, const uint32_t& source_edge_idx)
+    void CoveredCacheManager::clearPopularityAggregatorForPreservedEdgesetAfterAdmission(const Key& key, const uint32_t& source_edge_idx)
     {
-        popularity_aggregator_.clearAggregatedUncachedPopularityAfterAdmission(key, source_edge_idx);
+        popularity_aggregator_.clearPreservedEdgesetAfterAdmission(key, source_edge_idx);
         return;
     }
 

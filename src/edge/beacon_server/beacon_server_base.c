@@ -161,7 +161,7 @@ namespace covered
         {
             is_finish = processDirectoryLookupRequest_(control_request_ptr, edge_cache_server_worker_recvrsp_dst_addr);
         }
-        else if (message_type == MessageType::kDirectoryUpdateRequest || message_type == MessageType::kCoveredDirectoryUpdateRequest)
+        else if (message_type == MessageType::kDirectoryUpdateRequest || message_type == MessageType::kCoveredDirectoryUpdateRequest || message_type == MessageType::kCoveredPlacementDirectoryUpdateRequest)
         {
             is_finish = processDirectoryUpdateRequest_(control_request_ptr, edge_cache_server_worker_recvrsp_dst_addr);
         }
