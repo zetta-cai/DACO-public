@@ -146,6 +146,10 @@ namespace covered
         //PlacementEdgeset tmp_placement_edgeset = covered_placement_notify_request_ptr->getEdgesetRef();
         //assert(tmp_placement_edgeset.size() <= tmp_edge_wrapper_ptr->getTopkEdgecntForPlacement()); // At most k placement edge nodes each time
 
+        // Current edge node MUST NOT be the beacon node for the given key due to remote placement notification
+        const Key tmp_key = covered_placement_notify_request_ptr->getKey();
+        assert(!tmp_edge_wrapper_ptr->currentIsBeacon(tmp_key));
+
         // Victim synchronization
         const uint32_t source_edge_idx = covered_placement_notify_request_ptr->getSourceIndex();
         const VictimSyncset& victim_syncset = covered_placement_notify_request_ptr->getVictimSyncsetRef();
@@ -153,10 +157,9 @@ namespace covered
         tmp_covered_cache_manager_ptr->updateVictimTrackerForVictimSyncset(source_edge_idx, victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
 
         // Issue directory update request with is_admit = true
-        const Key tmp_key = covered_placement_notify_request_ptr->getKey();
         bool is_being_written = false;
         const bool& skip_propagation_latency = covered_placement_notify_request_ptr->isSkipPropagationLatency();
-        is_finish = tmp_cache_server_ptr->admitBeaconDirectory_(tmp_key, DirectoryInfo(source_edge_idx), is_being_written, edge_cache_server_placement_processor_recvrsp_source_addr_, edge_cache_server_placement_processor_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+        is_finish = tmp_cache_server_ptr->admitBeaconDirectory_(tmp_key, DirectoryInfo(source_edge_idx), is_being_written, edge_cache_server_placement_processor_recvrsp_source_addr_, edge_cache_server_placement_processor_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency, is_background);
         if (is_finish)
         {
             return is_finish;

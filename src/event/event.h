@@ -75,6 +75,7 @@ namespace covered
         static const std::string BG_EDGE_CACHE_SERVER_WORKER_TARGET_GET_LOCAL_CACHE_EVENT_NAME; // For reads in edge cache server worker
         static const std::string BG_CLOUD_GET_ROCKSDB_EVENT_NAME; // For cloud
         static const std::string BG_EDGE_UPDATE_DIRECTORY_TO_EVICT_EVENT_NAME; // For edge beacon server or cache server worker
+        static const std::string BG_EDGE_BEACON_SERVER_UPDATE_LOCAL_DIRECTORY_EVENT_NAME; // For edge invalidation server
 
         Event();
         Event(const std::string& event_name, const uint32_t& event_latency_us);

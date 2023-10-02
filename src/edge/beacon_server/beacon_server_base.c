@@ -271,13 +271,18 @@ namespace covered
         // Add intermediate event if with event tracking
         struct timespec update_local_directory_end_timestamp = Util::getCurrentTimespec();
         uint32_t update_local_directory_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(update_local_directory_end_timestamp, update_local_directory_start_timestamp));
-        event_list.addEvent(Event::EDGE_BEACON_SERVER_UPDATE_LOCAL_DIRECTORY_EVENT_NAME, update_local_directory_latency_us);
+        if (control_request_ptr->isBackgroundMessage())
+        {
+            event_list.addEvent(Event::BG_EDGE_BEACON_SERVER_UPDATE_LOCAL_DIRECTORY_EVENT_NAME, update_local_directory_latency_us);
+        }
+        else
+        {
+            event_list.addEvent(Event::EDGE_BEACON_SERVER_UPDATE_LOCAL_DIRECTORY_EVENT_NAME, update_local_directory_latency_us);
+        }
 
         // Prepare a directory update response
         embedBackgroundCounterIfNotEmpty_(total_bandwidth_usage, event_list); // Embed background events/bandwidth if any into control response message
-        const Key tmp_key = MessageBase::getKeyFromMessage(control_request_ptr);
-        const bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();
-        MessageBase* directory_update_response_ptr = getRspToUpdateLocalDirectory_(tmp_key, is_being_written, total_bandwidth_usage, event_list, skip_propagation_latency);
+        MessageBase* directory_update_response_ptr = getRspToUpdateLocalDirectory_(control_request_ptr, is_being_written, total_bandwidth_usage, event_list);
         assert(directory_update_response_ptr != NULL);
 
         // Push the directory update response into edge-to-edge propagation simulator to cache server worker

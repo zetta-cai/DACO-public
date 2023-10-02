@@ -1,5 +1,7 @@
 /*
  * RequestBase: the base class for different messages.
+ *
+ * Conditional serialization/deserialization: (i) In CoveredDirectoryUpdateRequest and CoveredPlacementUpdateRequest, is_admit determines whether to embed CollectedPopularity; (ii) In CollectedPopularity, is_tracked determines whether to embed local uncached popularity and object size; (iii) In VictimSyncset, (TODO for delta-based victim synchronization).
  * 
  * By Siyuan Sheng (2023.05.17).
  */
@@ -77,6 +79,8 @@ namespace covered
         kCoveredPlacementGlobalGetRequest,
         kCoveredPlacementGlobalGetResponse,
         kCoveredPlacementNotifyRequest,
+        kCoveredPlacementDirectoryUpdateRequest,
+        kCoveredPlacementDirectoryUpdateResponse,
     };
 
     enum Hitflag

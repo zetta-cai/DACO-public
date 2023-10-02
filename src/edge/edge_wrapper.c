@@ -1203,7 +1203,7 @@ namespace covered
             }
             else
             {
-                // NOTE: DISABLE recursive cache placement by sending CoveredPlacementDirectoryUpdateRequest
+                // NOTE: use background event names and DISABLE recursive cache placement by sending CoveredPlacementDirectoryUpdateRequest
                 directory_update_request_ptr = new CoveredPlacementDirectoryUpdateRequest(key, is_admit, directory_info, collected_popularity, victim_syncset, edge_idx, source_addr, skip_propagation_latency);
             }
 

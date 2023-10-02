@@ -222,7 +222,7 @@ namespace covered
 
     // Admit content directory information (invoked by edge cache server worker or placement processor)
 
-    bool CacheServer::admitBeaconDirectory_(const Key& key, const DirectoryInfo& directory_info, bool& is_being_written, const NetworkAddr& source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list,const bool& skip_propagation_latency) const
+    bool CacheServer::admitBeaconDirectory_(const Key& key, const DirectoryInfo& directory_info, bool& is_being_written, const NetworkAddr& source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list,const bool& skip_propagation_latency, const bool& is_background) const
     {
         checkPointers_();
 
@@ -239,7 +239,7 @@ namespace covered
         while (true) // Timeout-and-retry mechanism
         {
             // Prepare directory update request to check directory information in beacon node
-            MessageBase* directory_update_request_ptr = getReqToAdmitBeaconDirectory_(key, directory_info, source_addr, skip_propagation_latency);
+            MessageBase* directory_update_request_ptr = getReqToAdmitBeaconDirectory_(key, directory_info, source_addr, skip_propagation_latency, is_background);
             assert(directory_update_request_ptr != NULL);
 
             // Push the control request into edge-to-edge propagation simulator to the beacon node
@@ -271,7 +271,7 @@ namespace covered
                 MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
                 assert(control_response_ptr != NULL);
 
-                processRspToAdmitBeaconDirectory_(control_response_ptr, is_being_written); // NOTE: is_being_written is updated here
+                processRspToAdmitBeaconDirectory_(control_response_ptr, is_being_written, is_background); // NOTE: is_being_written is updated here
 
                 // Update total bandwidth usage for received directory update response
                 BandwidthUsage directory_update_response_bandwidth_usage = control_response_ptr->getBandwidthUsageRef();
@@ -297,7 +297,7 @@ namespace covered
         return is_finish;
     }
 
-    MessageBase* CacheServer::getReqToAdmitBeaconDirectory_(const Key& key, const DirectoryInfo& directory_info, const NetworkAddr& source_addr, const bool& skip_propagation_latency) const
+    MessageBase* CacheServer::getReqToAdmitBeaconDirectory_(const Key& key, const DirectoryInfo& directory_info, const NetworkAddr& source_addr, const bool& skip_propagation_latency, const bool& is_background) const
     {
         checkPointers_();
 
@@ -313,7 +313,15 @@ namespace covered
             VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForVictimSyncset();
 
             // ONLY need victim synchronization yet without popularity collection/aggregation
-            MessageBase* covered_directory_update_request_ptr = new CoveredDirectoryUpdateRequest(key, is_admit, directory_info, victim_syncset, edge_idx, source_addr, skip_propagation_latency);
+            if (!is_background)
+            {
+                directory_update_request_ptr = new CoveredDirectoryUpdateRequest(key, is_admit, directory_info, victim_syncset, edge_idx, source_addr, skip_propagation_latency);
+            }
+            else
+            {
+                // NOTE: use background event names by sending CoveredPlacementDirectoryUpdateRequest (NOT DISABLE recursive cache placement due to is_admit = true)
+                directory_update_request_ptr = new CoveredPlacementDirectoryUpdateRequest(key, is_admit, directory_info, victim_syncset, edge_idx, source_addr, skip_propagation_latency);
+            }
 
             // Remove existing cached directory if any as key will be local cached
             tmp_covered_cache_manager_ptr->updateDirectoryCacherToRemoveCachedDirectory(key);
@@ -327,24 +335,38 @@ namespace covered
         return directory_update_request_ptr;
     }
 
-    void CacheServer::processRspToAdmitBeaconDirectory_(MessageBase* control_response_ptr, bool& is_being_written) const
+    void CacheServer::processRspToAdmitBeaconDirectory_(MessageBase* control_response_ptr, bool& is_being_written, const bool& is_background) const
     {
         checkPointers_();
         assert(control_response_ptr != NULL);
 
         if (edge_wrapper_ptr_->getCacheName() == Util::COVERED_CACHE_NAME) // ONLY for COVERED
         {
-            assert(control_response_ptr->getMessageType() == MessageType::kCoveredDirectoryUpdateResponse);
-
             CoveredCacheManager* tmp_covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
 
-            // Get is_being_written from control response message
-            const CoveredDirectoryUpdateResponse* const covered_directory_update_response_ptr = static_cast<const CoveredDirectoryUpdateResponse*>(control_response_ptr);
-            is_being_written = covered_directory_update_response_ptr->isBeingWritten();
+            uint32_t source_edge_idx = control_response_ptr->getSourceIndex();
+            VictimSyncset victim_syncset;
+
+            if (!is_background)
+            {
+                assert(control_response_ptr->getMessageType() == MessageType::kCoveredDirectoryUpdateResponse);
+
+                // Get is_being_written and victim syncset from control response message
+                const CoveredDirectoryUpdateResponse* const covered_directory_update_response_ptr = static_cast<const CoveredDirectoryUpdateResponse*>(control_response_ptr);
+                is_being_written = covered_directory_update_response_ptr->isBeingWritten();
+                victim_syncset = covered_directory_update_response_ptr->getVictimSyncsetRef();
+            }
+            else
+            {
+                assert(control_response_ptr->getMessageType() == MessageType::kCoveredPlacementDirectoryUpdateResponse);
+
+                // Get is_being_written and victim syncset from control response message
+                const CoveredPlacementDirectoryUpdateResponse* const covered_placement_directory_update_response_ptr = static_cast<const CoveredPlacementDirectoryUpdateResponse*>(control_response_ptr);
+                is_being_written = covered_placement_directory_update_response_ptr->isBeingWritten();
+                victim_syncset = covered_placement_directory_update_response_ptr->getVictimSyncsetRef();
+            }
 
             // Victim synchronization
-            const uint32_t source_edge_idx = covered_directory_update_response_ptr->getSourceIndex();
-            const VictimSyncset& victim_syncset = covered_directory_update_response_ptr->getVictimSyncsetRef();
             std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = edge_wrapper_ptr_->getLocalBeaconedVictimsFromVictimSyncset(victim_syncset);
             tmp_covered_cache_manager_ptr->updateVictimTrackerForVictimSyncset(source_edge_idx, victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
         }

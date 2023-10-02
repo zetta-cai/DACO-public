@@ -77,10 +77,19 @@ namespace covered
         return is_being_written;
     }
 
-    MessageBase* BasicBeaconServer::getRspToUpdateLocalDirectory_(const Key& key, const bool& is_being_written, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency) const
+    MessageBase* BasicBeaconServer::getRspToUpdateLocalDirectory_(MessageBase* control_request_ptr, const bool& is_being_written, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list) const
     {
+        assert(control_request_ptr != NULL);
+        assert(control_request_ptr->getMessageType() == MessageType::kDirectoryUpdateRequest);
+        const DirectoryUpdateRequest* const directory_update_request_ptr = static_cast<const DirectoryUpdateRequest*>(control_request_ptr);
+
+        const Key tmp_key = directory_update_request_ptr->getKey();
+        const bool skip_propagation_latency = directory_update_request_ptr->isSkipPropagationLatency();
+
+        checkPointers_();
+
         uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
-        MessageBase* directory_update_response_ptr = new DirectoryUpdateResponse(key, is_being_written, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+        MessageBase* directory_update_response_ptr = new DirectoryUpdateResponse(tmp_key, is_being_written, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
         assert(directory_update_response_ptr != NULL);
 
         return directory_update_response_ptr;

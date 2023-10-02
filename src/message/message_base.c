@@ -238,6 +238,16 @@ namespace covered
                 message_type_str = "kCoveredPlacementNotifyRequest";
                 break;
             }
+            case MessageType::kCoveredPlacementDirectoryUpdateRequest:
+            {
+                message_type_str = "kCoveredPlacementDirectoryUpdateRequest";
+                break;
+            }
+            case MessageType::kCoveredPlacementDirectoryUpdateResponse:
+            {
+                message_type_str = "kCoveredPlacementDirectoryUpdateResponse";
+                break;
+            }
             default:
             {
                 message_type_str = std::to_string(static_cast<uint32_t>(message_type));
@@ -509,6 +519,11 @@ namespace covered
                 message_ptr = new CoveredPlacementNotifyRequest(msg_payload);
                 break;
             }
+            case MessageType::kCoveredPlacementDirectoryUpdateRequest:
+            {
+                message_ptr = new CoveredPlacementDirectoryUpdateRequest(msg_payload);
+                break;
+            }
             default:
             {
                 std::ostringstream oss;
@@ -665,6 +680,11 @@ namespace covered
             case MessageType::kCoveredPlacementGlobalGetResponse:
             {
                 message_ptr = new CoveredPlacementGlobalGetResponse(msg_payload);
+                break;
+            }
+            case MessageType::kCoveredPlacementDirectoryUpdateResponse:
+            {
+                message_ptr = new CoveredPlacementDirectoryUpdateResponse(msg_payload);
                 break;
             }
             default:
@@ -890,6 +910,16 @@ namespace covered
         {
             const CoveredPlacementNotifyRequest* const covered_placement_notify_request_ptr = static_cast<const CoveredPlacementNotifyRequest*>(message_ptr);
             tmp_key = covered_placement_notify_request_ptr->getKey();
+        }
+        else if (message_ptr->message_type_ == MessageType::kCoveredPlacementDirectoryUpdateRequest)
+        {
+            const CoveredPlacementDirectoryUpdateRequest* const covered_placement_directory_update_request_ptr = static_cast<const CoveredPlacementDirectoryUpdateRequest*>(message_ptr);
+            tmp_key = covered_placement_directory_update_request_ptr->getKey();
+        }
+        else if (message_ptr->message_type_ == MessageType::kCoveredPlacementDirectoryUpdateResponse)
+        {
+            const CoveredPlacementDirectoryUpdateResponse* const covered_placement_directory_update_response_ptr = static_cast<const CoveredPlacementDirectoryUpdateResponse*>(message_ptr);
+            tmp_key = covered_placement_directory_update_response_ptr->getKey();
         }
         else
         {
@@ -1174,7 +1204,7 @@ namespace covered
     bool MessageBase::isCooperationControlRequest() const
     {
         checkIsValid_();
-        if (message_type_ == MessageType::kAcquireWritelockRequest || message_type_ == MessageType::kDirectoryLookupRequest || message_type_ == MessageType::kDirectoryUpdateRequest || message_type_ == MessageType::kFinishBlockRequest || message_type_ == MessageType::kInvalidationRequest || message_type_ == MessageType::kReleaseWritelockRequest || message_type_ == MessageType::kCoveredDirectoryLookupRequest || message_type_ == MessageType::kCoveredDirectoryUpdateRequest || message_type_ == MessageType::kCoveredAcquireWritelockRequest || message_type_ == MessageType::kCoveredReleaseWritelockRequest)
+        if (message_type_ == MessageType::kAcquireWritelockRequest || message_type_ == MessageType::kDirectoryLookupRequest || message_type_ == MessageType::kDirectoryUpdateRequest || message_type_ == MessageType::kFinishBlockRequest || message_type_ == MessageType::kInvalidationRequest || message_type_ == MessageType::kReleaseWritelockRequest || message_type_ == MessageType::kCoveredDirectoryLookupRequest || message_type_ == MessageType::kCoveredDirectoryUpdateRequest || message_type_ == MessageType::kCoveredAcquireWritelockRequest || message_type_ == MessageType::kCoveredReleaseWritelockRequest || message_type_ == MessageType::kCoveredPlacementDirectoryUpdateRequest)
         {
             return true;
         }
@@ -1206,7 +1236,7 @@ namespace covered
     bool MessageBase::isCooperationControlResponse() const
     {
         checkIsValid_();
-        if (message_type_ == MessageType::kAcquireWritelockResponse || message_type_ == MessageType::kDirectoryLookupResponse || message_type_ == MessageType::kDirectoryUpdateResponse || message_type_ == MessageType::kFinishBlockResponse || message_type_ == MessageType::kInvalidationResponse || message_type_ == MessageType::kReleaseWritelockResponse || message_type_ == MessageType::kCoveredDirectoryLookupResponse || message_type_ == MessageType::kCoveredDirectoryUpdateResponse || message_type_ == MessageType::kCoveredAcquireWritelockResponse || message_type_ == MessageType::kCoveredReleaseWritelockResponse)
+        if (message_type_ == MessageType::kAcquireWritelockResponse || message_type_ == MessageType::kDirectoryLookupResponse || message_type_ == MessageType::kDirectoryUpdateResponse || message_type_ == MessageType::kFinishBlockResponse || message_type_ == MessageType::kInvalidationResponse || message_type_ == MessageType::kReleaseWritelockResponse || message_type_ == MessageType::kCoveredDirectoryLookupResponse || message_type_ == MessageType::kCoveredDirectoryUpdateResponse || message_type_ == MessageType::kCoveredAcquireWritelockResponse || message_type_ == MessageType::kCoveredReleaseWritelockResponse || message_type_ == MessageType::kCoveredPlacementDirectoryUpdateResponse)
         {
             return true;
         }
@@ -1238,7 +1268,7 @@ namespace covered
     bool MessageBase::isBackgroundRequest() const
     {
         checkIsValid_();
-        if (message_type_ == MessageType::kCoveredPlacementRedirectedGetRequest || message_type_ == MessageType::kCoveredPlacementGlobalGetRequest || message_type_ == MessageType::kCoveredPlacementNotifyRequest)
+        if (message_type_ == MessageType::kCoveredPlacementRedirectedGetRequest || message_type_ == MessageType::kCoveredPlacementGlobalGetRequest || message_type_ == MessageType::kCoveredPlacementNotifyRequest || message_type_ == MessageType::kCoveredPlacementDirectoryUpdateRequest)
         {
             return true;
         }
@@ -1251,7 +1281,7 @@ namespace covered
     bool MessageBase::isBackgroundResponse() const
     {
         checkIsValid_();
-        if (message_type_ == MessageType::kCoveredPlacementRedirectedGetResponse || message_type_ == MessageType::kCoveredPlacementGlobalGetResponse)
+        if (message_type_ == MessageType::kCoveredPlacementRedirectedGetResponse || message_type_ == MessageType::kCoveredPlacementGlobalGetResponse || message_type_ == MessageType::kCoveredPlacementDirectoryUpdateResponse)
         {
             return true;
         }

@@ -54,7 +54,7 @@ namespace covered
 
         bool processDirectoryUpdateRequest_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr); // Return if edge node is finished
         virtual bool processReqToUpdateLocalDirectory_(MessageBase* control_request_ptr) = 0; // Return if key is being written
-        virtual MessageBase* getRspToUpdateLocalDirectory_(const Key& key, const bool& is_being_written, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency) const = 0;
+        virtual MessageBase* getRspToUpdateLocalDirectory_(MessageBase* control_request_ptr, const bool& is_being_written, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list) const = 0;
 
         // (2) Process writes and unblock for MSI protocol
 

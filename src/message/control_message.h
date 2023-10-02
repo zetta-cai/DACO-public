@@ -41,5 +41,7 @@
 #include "message/control/cooperation/covered_acquire_writelock_response.h"
 #include "message/control/cooperation/covered_release_writelock_request.h"
 #include "message/control/cooperation/covered_release_writelock_response.h"
+#include "message/control/cooperation/covered_placement_directory_update_request.h"
+#include "message/control/cooperation/covered_placement_directory_update_response.h"
 
 #endif
