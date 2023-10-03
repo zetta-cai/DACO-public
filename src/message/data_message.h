@@ -31,6 +31,5 @@
 #include "message/data/redirected/covered_placement_redirected_get_response.h"
 #include "message/data/global/covered_placement_global_get_request.h"
 #include "message/data/global/covered_placement_global_get_response.h"
-#include "message/data/management/covered_placement_notify_request.h"
 
 #endif

@@ -1,5 +1,8 @@
 /*
  * UintMessage: the base class for messages with an 32-bit unsigned integer.
+ *
+ * (1) For SwitchSlotRequest, unsigned_integer_ is a target measurement slot index.
+ * (2) For CoveredVictimFetchRequest, unsigned_integer_ is an object size for the to-be-admitted object.
  * 
  * By Siyuan Sheng (2023.07.26).
  */

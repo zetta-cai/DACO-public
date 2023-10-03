@@ -26,7 +26,6 @@ namespace covered
         static const std::string kClassName;
 
         // Return if edge node is finished
-        bool processManagementDataRequest_(MessageBase* data_request_ptr, const NetworkAddr& recvrsp_dst_addr);
         bool processPlacementNotifyRequest_(MessageBase* data_request_ptr, const NetworkAddr& recvrsp_dst_addr); // Process remote placement notification request
 
         void checkPointers_() const;

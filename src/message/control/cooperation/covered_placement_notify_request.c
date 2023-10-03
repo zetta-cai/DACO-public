@@ -1,4 +1,4 @@
-#include "message/data/management/covered_placement_notify_request.h"
+#include "message/control/cooperation/covered_placement_notify_request.h"
 
 #include <assert.h>
 

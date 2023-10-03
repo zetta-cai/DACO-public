@@ -43,5 +43,7 @@
 #include "message/control/cooperation/covered_release_writelock_response.h"
 #include "message/control/cooperation/covered_placement_directory_update_request.h"
 #include "message/control/cooperation/covered_placement_directory_update_response.h"
+#include "message/control/cooperation/covered_placement_notify_request.h" // For cooperative cache placement deployment
+#include "message/control/cooperation/covered_victim_fetch_request.h" // For cooperative cache placement calculation
 
 #endif

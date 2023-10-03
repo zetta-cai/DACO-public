@@ -3,7 +3,7 @@
 #include <assert.h>
 
 #include "common/config.h"
-#include "message/data_message.h"
+#include "message/control_message.h"
 
 namespace covered
 {
@@ -74,10 +74,10 @@ namespace covered
                 MessageBase* data_request_ptr = tmp_cache_server_item.getDataRequestPtr();
                 assert(data_request_ptr != NULL);
 
-                if (data_request_ptr->isManagementDataRequest()) // Management data requests
+                if (data_request_ptr->getMessageType() == MessageType::kCoveredPlacementNotifyRequest) // Placement notification
                 {
                     NetworkAddr recvrsp_dst_addr = data_request_ptr->getSourceAddr(); // A beacon edge node
-                    is_finish = processManagementDataRequest_(data_request_ptr, recvrsp_dst_addr);
+                    is_finish = processPlacementNotifyRequest_(data_request_ptr, recvrsp_dst_addr);
                 }
                 else
                 {
@@ -100,29 +100,6 @@ namespace covered
         } // End of while loop
 
         return;
-    }
-
-    bool CacheServerPlacementProcessor::processManagementDataRequest_(MessageBase* data_request_ptr, const NetworkAddr& recvrsp_dst_addr)
-    {
-        checkPointers_();
-        assert(data_request_ptr != NULL);
-        assert(data_request_ptr->isManagementDataRequest());
-
-        bool is_finish = false;
-
-        if (data_request_ptr->getMessageType() == MessageType::kCoveredPlacementNotifyRequest)
-        {
-            is_finish = processPlacementNotifyRequest_(data_request_ptr, recvrsp_dst_addr);
-        }
-        else
-        {
-            std::ostringstream oss;
-            oss << "invalid message type " << MessageBase::messageTypeToString(data_request_ptr->getMessageType()) << " for processManagementDataRequest_()!";
-            Util::dumpErrorMsg(instance_name_, oss.str());
-            exit(1);
-        }
-
-        return is_finish;
     }
 
     bool CacheServerPlacementProcessor::processPlacementNotifyRequest_(MessageBase* data_request_ptr, const NetworkAddr& recvrsp_dst_addr)

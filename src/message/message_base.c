@@ -248,6 +248,11 @@ namespace covered
                 message_type_str = "kCoveredPlacementDirectoryUpdateResponse";
                 break;
             }
+            case MessageType::kCoveredVictimFetchRequest:
+            {
+                message_type_str = "kCoveredVictimFetchRequest";
+                break;
+            }
             default:
             {
                 message_type_str = std::to_string(static_cast<uint32_t>(message_type));
@@ -522,6 +527,11 @@ namespace covered
             case MessageType::kCoveredPlacementDirectoryUpdateRequest:
             {
                 message_ptr = new CoveredPlacementDirectoryUpdateRequest(msg_payload);
+                break;
+            }
+            case MessageType::kCoveredVictimFetchRequest:
+            {
+                message_ptr = new CoveredVictimFetchRequest(msg_payload);
                 break;
             }
             default:
@@ -1095,7 +1105,7 @@ namespace covered
     bool MessageBase::isDataRequest() const
     {
         checkIsValid_();
-        return isLocalDataRequest() || isRedirectedDataRequest() || isGlobalDataRequest() || isManagementDataRequest();
+        return isLocalDataRequest() || isRedirectedDataRequest() || isGlobalDataRequest();
     }
 
     bool MessageBase::isLocalDataRequest() const
@@ -1128,19 +1138,6 @@ namespace covered
     {
         checkIsValid_();
         if (message_type_ == MessageType::kGlobalGetRequest || message_type_ == MessageType::kGlobalPutRequest || message_type_ == MessageType::kGlobalDelRequest || message_type_ == MessageType::kCoveredPlacementGlobalGetRequest)
-        {
-            return true;
-        }
-        else
-        {
-            return false;
-        }
-    }
-
-    bool MessageBase::isManagementDataRequest() const
-    {
-        checkIsValid_();
-        if (message_type_ == MessageType::kCoveredPlacementNotifyRequest)
         {
             return true;
         }
@@ -1204,7 +1201,7 @@ namespace covered
     bool MessageBase::isCooperationControlRequest() const
     {
         checkIsValid_();
-        if (message_type_ == MessageType::kAcquireWritelockRequest || message_type_ == MessageType::kDirectoryLookupRequest || message_type_ == MessageType::kDirectoryUpdateRequest || message_type_ == MessageType::kFinishBlockRequest || message_type_ == MessageType::kInvalidationRequest || message_type_ == MessageType::kReleaseWritelockRequest || message_type_ == MessageType::kCoveredDirectoryLookupRequest || message_type_ == MessageType::kCoveredDirectoryUpdateRequest || message_type_ == MessageType::kCoveredAcquireWritelockRequest || message_type_ == MessageType::kCoveredReleaseWritelockRequest || message_type_ == MessageType::kCoveredPlacementDirectoryUpdateRequest)
+        if (message_type_ == MessageType::kAcquireWritelockRequest || message_type_ == MessageType::kDirectoryLookupRequest || message_type_ == MessageType::kDirectoryUpdateRequest || message_type_ == MessageType::kFinishBlockRequest || message_type_ == MessageType::kInvalidationRequest || message_type_ == MessageType::kReleaseWritelockRequest || message_type_ == MessageType::kCoveredDirectoryLookupRequest || message_type_ == MessageType::kCoveredDirectoryUpdateRequest || message_type_ == MessageType::kCoveredAcquireWritelockRequest || message_type_ == MessageType::kCoveredReleaseWritelockRequest || message_type_ == MessageType::kCoveredPlacementDirectoryUpdateRequest || message_type_ == MessageType::kCoveredPlacementNotifyRequest || message_type_ == MessageType::kCoveredVictimFetchRequest)
         {
             return true;
         }

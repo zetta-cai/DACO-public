@@ -202,7 +202,7 @@ namespace covered
             bool is_successful = cache_server_worker_params_[local_cache_server_worker_idx].getDataRequestBufferPtr()->push(tmp_cache_server_item);
             assert(is_successful == true); // Ring buffer must NOT be full
         }
-        else if (data_requeset_ptr->isManagementDataRequest()) // Management data requests
+        else if (data_requeset_ptr->getMessageType() == MessageType::kCoveredPlacementNotifyRequest) // Placement notification
         {
             // Pass cache server item into ring buffer of the cache server placement processor
             CacheServerItem tmp_cache_server_item(data_requeset_ptr);

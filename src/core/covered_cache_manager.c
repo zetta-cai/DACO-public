@@ -225,7 +225,8 @@ namespace covered
         if (need_victim_fetching)
         {
             // TODO: Issue CoveredVictimFetchRequest to fetch more victims (note that CoveredVictimFetchRequest is a foreground message before non-blocking placement deployment)
-            // TODO: Redo placement calculation after fetching more victims
+
+            // TODO: Redo placement calculation after victim fetching to double-check the best placement
         }
 
         return has_best_placement;
