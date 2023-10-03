@@ -167,7 +167,7 @@ namespace covered
 
     // For trade-off-aware placement calculation
     
-    DeltaReward VictimTracker::calcEvictionCost(const ObjectSize& object_size, const Edgeset& placement_edgeset, std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& placement_peredge_victimset) const
+    DeltaReward VictimTracker::calcEvictionCost(const ObjectSize& object_size, const Edgeset& placement_edgeset, std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& placement_peredge_victimset, Edgeset& victim_fetch_edgeset) const
     {
         checkPointers_();
         
@@ -182,10 +182,10 @@ namespace covered
         const Weight local_hit_weight = weight_info.getLocalHitWeight();
         const Weight cooperative_hit_weight = weight_info.getCooperativeHitWeight();
 
-        // Find victims from placement edgeset if admit a hot object with the given size
+        // Find victims from placement edgeset if admit a hot object with the given size (set victim_fetch_edgeset for lazy victim fetching)
         std::unordered_map<Key, Edgeset, KeyHasher> pervictim_edgeset;
         std::unordered_map<Key, std::list<VictimCacheinfo>, KeyHasher> pervictim_cacheinfos;
-        findVictimsForPlacement_(object_size, placement_edgeset, pervictim_edgeset, pervictim_cacheinfos, placement_peredge_victimset);
+        findVictimsForPlacement_(object_size, placement_edgeset, pervictim_edgeset, pervictim_cacheinfos, placement_peredge_victimset, victim_fetch_edgeset);
 
         // Enumerate found victims to calculate eviction cost
         for (std::unordered_map<Key, Edgeset, KeyHasher>::const_iterator pervictim_edgeset_const_iter = pervictim_edgeset.begin(); pervictim_edgeset_const_iter != pervictim_edgeset.end(); pervictim_edgeset_const_iter++)
@@ -384,11 +384,12 @@ namespace covered
         return;
     }
 
-    void VictimTracker::findVictimsForPlacement_(const ObjectSize& object_size, const Edgeset& placement_edgeset, std::unordered_map<Key, Edgeset, KeyHasher>& pervictim_edgeset, std::unordered_map<Key, std::list<VictimCacheinfo>, KeyHasher>& pervictim_cacheinfos, std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& peredge_victimset) const
+    void VictimTracker::findVictimsForPlacement_(const ObjectSize& object_size, const Edgeset& placement_edgeset, std::unordered_map<Key, Edgeset, KeyHasher>& pervictim_edgeset, std::unordered_map<Key, std::list<VictimCacheinfo>, KeyHasher>& pervictim_cacheinfos, std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& peredge_victimset, Edgeset& victim_fetch_edgeset) const
     {
         pervictim_edgeset.clear();
         pervictim_cacheinfos.clear();
         peredge_victimset.clear();
+        victim_fetch_edgeset.clear();
 
         // Enumerate each involved edge node to find victims
         for (std::unordered_set<uint32_t>::const_iterator placement_edgeset_const_iter = placement_edgeset.begin(); placement_edgeset_const_iter != placement_edgeset.end(); placement_edgeset_const_iter++)
@@ -402,11 +403,7 @@ namespace covered
 
             // Find victims in tmp_edge_idx if without sufficient cache space
             const EdgelevelVictimMetadata& tmp_edgelevel_victim_metadata = victim_metadata_map_const_iter->second;
-            bool need_more_victims = tmp_edgelevel_victim_metadata.findVictimsForObjectSize(tmp_edge_idx, object_size, pervictim_edgeset, pervictim_cacheinfos, peredge_victimset);
-
-            // TODO: proactive fetching
-            // if (need_more_victims) {}
-            
+            tmp_edgelevel_victim_metadata.findVictimsForObjectSize(tmp_edge_idx, object_size, pervictim_edgeset, pervictim_cacheinfos, peredge_victimset, victim_fetch_edgeset);  
         } // End of involved edge nodes
 
         return;

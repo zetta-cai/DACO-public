@@ -157,6 +157,10 @@ namespace covered
     bool CoveredCacheManager::placementCalculation_(const Key& key, const bool& is_global_cached, Edgeset& best_placement_edgeset, std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& best_placement_peredge_victimset)
     {
         bool has_best_placement = false;
+        
+        // For lazy victim fetching before non-blocking placement deployment
+        bool need_victim_fetching = false;
+        Edgeset best_placement_victim_fetch_edgeset;
 
         AggregatedUncachedPopularity tmp_aggregated_uncached_popularity;
         bool has_aggregated_uncached_popularity = popularity_aggregator_.getAggregatedUncachedPopularity(key, tmp_aggregated_uncached_popularity);
@@ -184,7 +188,8 @@ namespace covered
 
                 // Calculate eviction cost based on tmp_placement_edgeset
                 std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>> tmp_placement_peredge_victimset;
-                const DeltaReward tmp_eviction_cost = victim_tracker_.calcEvictionCost(tmp_object_size, tmp_placement_edgeset, tmp_placement_peredge_victimset);
+                Edgeset tmp_best_placement_victim_fetch_edgeset;
+                const DeltaReward tmp_eviction_cost = victim_tracker_.calcEvictionCost(tmp_object_size, tmp_placement_edgeset, tmp_placement_peredge_victimset, tmp_best_placement_victim_fetch_edgeset); // NOTE: tmp_eviction_cost may be partial eviction cost if without enough victims
 
                 // Calculate placement gain (admission benefit - eviction cost)
                 const DeltaReward tmp_placement_gain = tmp_admission_benefit - tmp_eviction_cost;
@@ -194,16 +199,33 @@ namespace covered
                     best_topicnt = topicnt;
                     tmp_best_placement_edgeset = tmp_placement_edgeset;
                     tmp_best_placement_peredge_victimset = tmp_placement_peredge_victimset;
+                    best_placement_victim_fetch_edgeset = tmp_best_placement_victim_fetch_edgeset;
                 }
             }
 
             // Update best placement if any
             if (max_placement_gain > 0.0)
             {
-                has_best_placement = true;
-                best_placement_edgeset = tmp_best_placement_edgeset;
-                best_placement_peredge_victimset = tmp_best_placement_peredge_victimset;
+                if (best_placement_victim_fetch_edgeset.size() == 0) // NO need for lazy victim fetching
+                {
+                    has_best_placement = true;
+                    best_placement_edgeset = tmp_best_placement_edgeset;
+                    best_placement_peredge_victimset = tmp_best_placement_peredge_victimset;
+                }
+                else // Need lazy victim fetching
+                {
+                    // Fetch victims ONLY if admission benefit > partial eviction cost under the best placement
+                    need_victim_fetching = true;
+                }
             }
+        }
+
+        // Lazy victim fetching before non-blocking placement deployment (minor cases ONLY if cache margin bytes + size of victims < object size and admission benefit > partial eviction cost; a small per-edge victim cnt is sufficient for most admissions)
+        // TODO: Maintain a small vicitm cache in each beacon edge node if with frequent lazy victim fetching to avoid degrading directory lookup performance
+        if (need_victim_fetching)
+        {
+            // TODO: Issue CoveredVictimFetchRequest to fetch more victims (note that CoveredVictimFetchRequest is a foreground message before non-blocking placement deployment)
+            // TODO: Redo placement calculation after fetching more victims
         }
 
         return has_best_placement;

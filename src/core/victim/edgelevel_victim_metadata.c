@@ -34,13 +34,13 @@ namespace covered
         return victim_cacheinfos_;
     }
 
-    bool EdgelevelVictimMetadata::findVictimsForObjectSize(const uint32_t& cur_edge_idx, const ObjectSize& object_size, std::unordered_map<Key, Edgeset, KeyHasher>& pervictim_edgeset, std::unordered_map<Key, std::list<VictimCacheinfo>, KeyHasher>& pervictim_cacheinfos, std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& peredge_victimset) const
+    void EdgelevelVictimMetadata::findVictimsForObjectSize(const uint32_t& cur_edge_idx, const ObjectSize& object_size, std::unordered_map<Key, Edgeset, KeyHasher>& pervictim_edgeset, std::unordered_map<Key, std::list<VictimCacheinfo>, KeyHasher>& pervictim_cacheinfos, std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& peredge_victimset, Edgeset& victim_fetch_edgeset) const
     {
         // NOTE: NO need to clear pervictim_edgeset, pervictim_cacheinfos, and peredge_victimset, which has been done by VictimTracker::findVictimsForPlacement_()
 
         bool need_more_victims = false;
 
-        // NOTE: If object size of admitted object <= cache margin bytes, the edge node does NOT need to evict any victim and hence contribute zero to eviction cost; otherwise, find victims based on required bytes and trigger proactive fetching if necessary (i.e., set need_more_victims = true)
+        // NOTE: If object size of admitted object <= cache margin bytes, the edge node does NOT need to evict any victim and hence contribute zero to eviction cost; otherwise, find victims based on required bytes and trigger lazy victim fetching if necessary (i.e., set need_more_victims = true)
         if (object_size > cache_margin_bytes_) // Without sufficient cache space
         {
             const uint64_t tmp_required_bytes = object_size - cache_margin_bytes_;
@@ -93,7 +93,16 @@ namespace covered
             }
         } // End of (object_size > tmp_cache_margin_bytes)
 
-        return need_more_victims;
+        // Update victim fetch edgeset for lazy victim fetching
+        if (need_more_victims)
+        {
+            std::unordered_set<uint32_t>::iterator victim_fetch_edgeset_iter = victim_fetch_edgeset.find(cur_edge_idx);
+            assert(victim_fetch_edgeset_iter == victim_fetch_edgeset.end());
+            victim_fetch_edgeset_iter = victim_fetch_edgeset.insert(cur_edge_idx).first;
+            assert(victim_fetch_edgeset_iter != victim_fetch_edgeset.end());
+        }
+
+        return;
     }
 
     void EdgelevelVictimMetadata::removeVictimsForPlacement(const std::unordered_set<Key, KeyHasher>& victim_keyset)

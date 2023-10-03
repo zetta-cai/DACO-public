@@ -28,9 +28,9 @@ namespace covered
         std::list<VictimCacheinfo> getVictimCacheinfos() const;
         const std::list<VictimCacheinfo>& getVictimCacheinfosRef() const;
 
-        // Return if need to proactively fetch more victims (cur_edge_idx is the edge node corresponding to this EdgelevelVictimMetadata)
-        // NOTE: pervictim_edgeset and pervictim_cacheinfos are used for eviction cost in placement calculation, while peredge_victimset is used for victim removal in non-blocking placement deployment
-        bool findVictimsForObjectSize(const uint32_t& cur_edge_idx, const ObjectSize& object_size, std::unordered_map<Key, Edgeset, KeyHasher>& pervictim_edgeset, std::unordered_map<Key, std::list<VictimCacheinfo>, KeyHasher>& pervictim_cacheinfos, std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& peredge_victimset) const;
+        // NOTE: cur_edge_idx is the edge node corresponding to this EdgelevelVictimMetadata
+        // NOTE: pervictim_edgeset and pervictim_cacheinfos are used for eviction cost in placement calculation, peredge_victimset is used for victim removal in non-blocking placement deployment, and victim_fetch_edgeset is used for lazy victim fetching
+        void findVictimsForObjectSize(const uint32_t& cur_edge_idx, const ObjectSize& object_size, std::unordered_map<Key, Edgeset, KeyHasher>& pervictim_edgeset, std::unordered_map<Key, std::list<VictimCacheinfo>, KeyHasher>& pervictim_cacheinfos, std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& peredge_victimset, Edgeset& victim_fetch_edgeset) const;
 
         // NOTE: removed victims should NOT be reused <- if synced victims in the edge node do NOT change, removed victims will NOT be reported to the beacon node due to dedup/delta-compression in victim synchronization; if need more victims, victim fetching request MUST be later than placement notification request, which has changed the synced victims in the edge node
         void removeVictimsForPlacement(const std::unordered_set<Key, KeyHasher>& victim_keyset);
