@@ -38,6 +38,8 @@ namespace covered
         bool updatePopularityAggregatorForAggregatedPopularity(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached, const bool& is_source_cached, const bool& need_placement_calculation, Edgeset& best_placement_edgeset); // Return if the best placement exists (i.e., with positive placement gain)
         void clearPopularityAggregatorForPreservedEdgesetAfterAdmission(const Key& key, const uint32_t& source_edge_idx);
 
+        void assertNoLocalUncachedPopularity(const Key& key, const uint32_t& source_edge_idx) const;
+
         // For victim synchronization
 
         void updateVictimTrackerForLocalSyncedVictims(const uint64_t& local_cache_margin_bytes, const std::list<VictimCacheinfo>& local_synced_victim_cacheinfos, const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& local_beaconed_local_synced_victim_dirinfosets);

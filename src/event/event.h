@@ -72,10 +72,11 @@ namespace covered
         static const std::string CLOUD_DEL_ROCKSDB_EVENT_NAME;
 
         // For background events
-        static const std::string BG_EDGE_CACHE_SERVER_WORKER_TARGET_GET_LOCAL_CACHE_EVENT_NAME; // For reads in edge cache server worker
-        static const std::string BG_CLOUD_GET_ROCKSDB_EVENT_NAME; // For cloud
-        static const std::string BG_EDGE_UPDATE_DIRECTORY_TO_EVICT_EVENT_NAME; // For edge beacon server or cache server worker
-        static const std::string BG_EDGE_BEACON_SERVER_UPDATE_LOCAL_DIRECTORY_EVENT_NAME; // For edge invalidation server
+        static const std::string BG_EDGE_CACHE_SERVER_WORKER_TARGET_GET_LOCAL_CACHE_EVENT_NAME; // For reads in edge cache server worker (non-blocking data fetching)
+        static const std::string BG_CLOUD_GET_ROCKSDB_EVENT_NAME; // For cloud (non-blocking data fetching)
+        static const std::string BG_EDGE_CACHE_SERVER_PLACEMENT_PROCESSOR_ADMISSION_EVENT_NAME; // For admission in edge cache server placement processor (non-blocking placement notification)
+        static const std::string BG_EDGE_UPDATE_DIRECTORY_TO_EVICT_EVENT_NAME; // For edge beacon server or cache server worker (non-blocking placement notification)
+        static const std::string BG_EDGE_BEACON_SERVER_UPDATE_LOCAL_DIRECTORY_EVENT_NAME; // For edge beacon server (non-blocking placement notification)
 
         Event();
         Event(const std::string& event_name, const uint32_t& event_latency_us);

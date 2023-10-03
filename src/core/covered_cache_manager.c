@@ -20,7 +20,19 @@ namespace covered
 
     bool CoveredCacheManager::updatePopularityAggregatorForAggregatedPopularity(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached, const bool& is_source_cached, const bool& need_placement_calculation, Edgeset& best_placement_edgeset)
     {
-        popularity_aggregator_.updateAggregatedUncachedPopularity(key, source_edge_idx, collected_popularity, is_global_cached, is_source_cached);
+        // Double-check preserved edgeset to set is global cached flag to avoid over-estimating (max) admission benefit
+        bool tmp_is_global_cached = is_global_cached;
+        if (!is_global_cached)
+        {
+            // Set is_global_cached to true if key is being admitted
+            bool is_being_admitted = popularity_aggregator_.isKeyBeingAdmitted(key);
+            if (is_being_admitted)
+            {
+                tmp_is_global_cached = true;
+            }
+        }
+
+        popularity_aggregator_.updateAggregatedUncachedPopularity(key, source_edge_idx, collected_popularity, tmp_is_global_cached, is_source_cached);
         
         // NOTE: we do NOT perform placement calculation for local/remote acquire writelock request, as newly-admitted cache copies will still be invalid after cache placement
         bool has_best_placement = false;
@@ -33,13 +45,13 @@ namespace covered
                 // Perform greedy-based placement calculation for trade-off-aware cache placement
                 // NOTE: set best_placement_edgeset for preserved edgeset and placement notifications; set best_placement_peredge_victimset for victim removal to avoid duplicate eviction (both for non-blocking placement deployment)
                 std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>> best_placement_peredge_victimset;
-                has_best_placement = placementCalculation_(key, is_global_cached, best_placement_edgeset, best_placement_peredge_victimset);
+                has_best_placement = placementCalculation_(key, tmp_is_global_cached, best_placement_edgeset, best_placement_peredge_victimset);
                 assert(best_placement_edgeset.size() <= topk_edgecnt_); // At most k placement edge nodes each time
 
                 if (has_best_placement)
                 {
                     // Preserve placement edgeset + perform local-uncached-popularity removal to avoid duplicate placement, and update max admission benefit with aggregated uncached popularity for non-blocking placement deployment
-                    popularity_aggregator_.updatePreservedEdgesetForPlacement(key, best_placement_edgeset, is_global_cached);
+                    popularity_aggregator_.updatePreservedEdgesetForPlacement(key, best_placement_edgeset, tmp_is_global_cached);
 
                     // Remove involved victims from victim tracker for each edge node in placement edgeset to avoid duplication eviction
                     // NOTE: removed victims should NOT be reused <- if synced victims in the edge node do NOT change, removed victims will NOT be reported to the beacon node due to dedup/delta-compression in victim synchronization; if need more victims, victim fetching request MUST be later than placement notification request, which has changed the synced victims in the edge node
@@ -59,6 +71,25 @@ namespace covered
     void CoveredCacheManager::clearPopularityAggregatorForPreservedEdgesetAfterAdmission(const Key& key, const uint32_t& source_edge_idx)
     {
         popularity_aggregator_.clearPreservedEdgesetAfterAdmission(key, source_edge_idx);
+
+        // NOTE: all old local uncached popularities have already been cleared right after placement calculation in updatePreservedEdgesetForPlacement()
+        // (1) NO need to clear old local uncached popularity for the source edge node
+        //updateAggregatedUncachedPopularityForExistingKey_(key, source_edge_idx, false, 0.0, 0, true);
+        // (2) Assert old local uncached popularity for the source edge node MUST NOT exist
+        assertNoLocalUncachedPopularity(key, source_edge_idx);
+
+        return;
+    }
+
+    void CoveredCacheManager::assertNoLocalUncachedPopularity(const Key& key, const uint32_t& source_edge_idx) const
+    {
+        // Assert old local uncached popularity for the source edge node MUST NOT exist
+        AggregatedUncachedPopularity tmp_aggregated_uncached_popularity;
+        bool has_aggregated_uncached_popularity = popularity_aggregator_.getAggregatedUncachedPopularity(key, tmp_aggregated_uncached_popularity);
+        if (has_aggregated_uncached_popularity)
+        {
+            assert(tmp_aggregated_uncached_popularity.hasLocalUncachedPopularity(source_edge_idx) == false);
+        }
         return;
     }
 

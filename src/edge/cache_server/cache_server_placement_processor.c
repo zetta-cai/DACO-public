@@ -141,6 +141,9 @@ namespace covered
         const bool is_background = true;
 
         const CoveredPlacementNotifyRequest* const covered_placement_notify_request_ptr = static_cast<const CoveredPlacementNotifyRequest*>(data_request_ptr);
+        total_bandwidth_usage.update(BandwidthUsage(0, covered_placement_notify_request_ptr->getMsgPayloadSize(), 0));
+
+        struct timespec admission_start_timestamp = Util::getCurrentTimespec();
 
         // TODO: Embed placement edgeset into CoveredPlacementNotifyRequest for hybrid data fetching
         //PlacementEdgeset tmp_placement_edgeset = covered_placement_notify_request_ptr->getEdgesetRef();
@@ -179,6 +182,10 @@ namespace covered
         // Perform background cache eviction in a blocking manner for consistent directory information (note that cache eviction happens after non-blocking placement notification)
         // NOTE: we update aggregated uncached popularity yet DISABLE recursive cache placement for metadata preservation during cache eviction
         is_finish = tmp_edge_wrapper_ptr->evictForCapacity_(edge_cache_server_placement_processor_recvrsp_source_addr_, edge_cache_server_placement_processor_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency, is_background); // May update local synced victims
+
+        struct timespec admission_end_timestamp = Util::getCurrentTimespec();
+        uint32_t admission_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(admission_end_timestamp, admission_start_timestamp));
+        event_list.addEvent(Event::BG_EDGE_CACHE_SERVER_PLACEMENT_PROCESSOR_ADMISSION_EVENT_NAME, admission_latency_us); // Add admission event if with event tracking
 
         // Get background eventlist and bandwidth usage to update background counter for beacon server
         tmp_edge_wrapper_ptr->getEdgeBackgroundCounterForBeaconServerRef().updateBandwidthUsgae(total_bandwidth_usage);

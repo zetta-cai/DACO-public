@@ -1156,6 +1156,9 @@ namespace covered
             CollectedPopularity collected_popularity;
             edge_cache_ptr_->getCollectedPopularity(key, collected_popularity); // collected_popularity.is_tracked_ indicates if the local uncached key is tracked in local uncached metadata
 
+            // NOTE: MUST NO old local uncached popularity for the newly evicted object at the source edge node before popularity aggregation
+            covered_cache_manager_ptr_->assertNoLocalUncachedPopularity(key, current_edge_idx);
+
             // Selective popularity aggregation
             bool need_placement_calculation = !is_admit; // MUST be true here for is_admit = false
             if (is_background) // If evictLocalDirectory_() is triggered by background cache placement

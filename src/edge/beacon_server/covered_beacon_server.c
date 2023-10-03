@@ -168,6 +168,9 @@ namespace covered
                 need_placement_calculation = false;
             }
 
+            // NOTE: MUST NO old local uncached popularity for the newly evicted object at the source edge node before popularity aggregation
+            covered_cache_manager_ptr->assertNoLocalUncachedPopularity(tmp_key, source_edge_idx);
+
             // Selective popularity aggregation
             Edgeset best_placement_edgeset;
             bool has_best_placement = covered_cache_manager_ptr->updatePopularityAggregatorForAggregatedPopularity(tmp_key, source_edge_idx, collected_popularity, is_global_cached, is_source_cached, need_placement_calculation, best_placement_edgeset); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in source edge node

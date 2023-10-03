@@ -70,6 +70,12 @@ namespace covered
         return topk_edgecnt;
     }
 
+    bool PopularityAggregator::isKeyBeingAdmitted(const Key& key) const
+    {
+        bool is_being_admitted = (perkey_preserved_edgeset_.find(key) != perkey_preserved_edgeset_.end());
+        return is_being_admitted;
+    }
+
     void PopularityAggregator::updateAggregatedUncachedPopularity(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached, const bool& is_source_cached)
     {
         checkPointers_();
@@ -197,17 +203,6 @@ namespace covered
             std::ostringstream oss;
             oss << "Key " << key.getKeystr() << " has NO preserved edgeset for non-blocking placement deployment";
             Util::dumpWarnMsg(instance_name_, oss.str());
-        }
-
-        // NOTE: all old local uncached popularities have already been cleared right after placement calculation in updatePreservedEdgesetForPlacement()
-        // (1) NO need to clear old local uncached popularity for the source edge node
-        //updateAggregatedUncachedPopularityForExistingKey_(key, source_edge_idx, false, 0.0, 0, true);
-        // (2) Assert old local uncached popularity for the source edge node MUST NOT exist
-        AggregatedUncachedPopularity existing_aggregated_uncached_popularity;
-        bool has_aggregated_uncached_popularity = getAggregatedUncachedPopularity(key, existing_aggregated_uncached_popularity);
-        if (has_aggregated_uncached_popularity)
-        {
-            assert(existing_aggregated_uncached_popularity.hasLocalUncachedPopularity(source_edge_idx) == false);
         }
 
         // NOTE: NO need to try to discard objects for popularity aggregation capacity bytes, as size_byte_ will NOT increase here

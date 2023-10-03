@@ -30,6 +30,7 @@ namespace covered
 
         bool getAggregatedUncachedPopularity(const Key& key, AggregatedUncachedPopularity& aggregated_uncached_popularity) const; // Return if key has aggregated uncached popularity
         uint32_t getTopkEdgecnt() const;
+        bool isKeyBeingAdmitted(const Key& key) const;
 
         void updateAggregatedUncachedPopularity(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached, const bool& is_source_cached); // Update aggregated uncached popularity for selective popularity aggregation
         void updatePreservedEdgesetForPlacement(const Key& key, const Edgeset& placement_edgeset, const bool& is_global_cached); // Preserve edge nodes in placement edgeset for non-blocking placement deployment
