@@ -30,8 +30,10 @@ namespace covered
 
     // (1) Access content directory information
 
-    void BasicBeaconServer::processReqToLookupLocalDirectory_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvreq_dst_addr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
+    bool BasicBeaconServer::processReqToLookupLocalDirectory_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvreq_dst_addr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, BandwidthUsage& total_bandwidth_usage, EventList& event_list) const
     {
+        bool is_finish = false;
+
         // Get key from control request if any
         assert(control_request_ptr != NULL);
         assert(control_request_ptr->getMessageType() == MessageType::kDirectoryLookupRequest);
@@ -40,11 +42,14 @@ namespace covered
 
         // Lookup local content directory
         const uint32_t source_edge_idx = control_request_ptr->getSourceIndex();
+        is_being_written = false;
         bool is_source_cached = false;
         edge_wrapper_ptr_->getCooperationWrapperPtr()->lookupDirectoryTableByBeaconServer(tmp_key, source_edge_idx, edge_cache_server_worker_recvreq_dst_addr, is_being_written, is_valid_directory_exist, directory_info, is_source_cached);
         UNUSED(is_source_cached);
 
-        return;
+        UNUSED(total_bandwidth_usage);
+        UNUSED(event_list);
+        return is_finish;
     }
 
     MessageBase* BasicBeaconServer::getRspToLookupLocalDirectory_(const Key& key, const bool& is_being_written, const bool& is_valid_directory_exist, const DirectoryInfo& directory_info, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency) const
@@ -58,7 +63,7 @@ namespace covered
         return directory_lookup_response_ptr;
     }
 
-    bool BasicBeaconServer::processReqToUpdateLocalDirectory_(MessageBase* control_request_ptr)
+    bool BasicBeaconServer::processReqToUpdateLocalDirectory_(MessageBase* control_request_ptr, bool& is_being_written, BandwidthUsage& total_bandwidth_usage, EventList& event_list)
     {
         assert(control_request_ptr != NULL);
         assert(control_request_ptr->getMessageType() == MessageType::kDirectoryUpdateRequest);
@@ -67,14 +72,18 @@ namespace covered
         bool is_admit = directory_update_request_ptr->isValidDirectoryExist();
         DirectoryInfo directory_info = directory_update_request_ptr->getDirectoryInfo();
 
+        bool is_finish = false;
+
         // Update local directory information in cooperation wrapper
         const uint32_t source_edge_idx = control_request_ptr->getSourceIndex();
-        bool is_being_written = false;
+        is_being_written = false;
         bool is_source_cached = false;
         edge_wrapper_ptr_->getCooperationWrapperPtr()->updateDirectoryTable(tmp_key, source_edge_idx, is_admit, directory_info, is_being_written, is_source_cached);
         UNUSED(is_source_cached);
 
-        return is_being_written;
+        UNUSED(total_bandwidth_usage);
+        UNUSED(event_list);
+        return is_finish;
     }
 
     MessageBase* BasicBeaconServer::getRspToUpdateLocalDirectory_(MessageBase* control_request_ptr, const bool& is_being_written, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list) const
@@ -97,12 +106,14 @@ namespace covered
 
     // (2) Process writes and unblock for MSI protocol
 
-    void BasicBeaconServer::processReqToAcquireLocalWritelock_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvreq_dst_addr, LockResult& lock_result, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo)
+    bool BasicBeaconServer::processReqToAcquireLocalWritelock_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvreq_dst_addr, LockResult& lock_result, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo, BandwidthUsage& total_bandwidth_usage, EventList& event_list)
     {
         assert(control_request_ptr != NULL);
         assert(control_request_ptr->getMessageType() == MessageType::kAcquireWritelockRequest);
         const AcquireWritelockRequest* const acquire_writelock_request_ptr = static_cast<const AcquireWritelockRequest*>(control_request_ptr);
         Key tmp_key = acquire_writelock_request_ptr->getKey();
+
+        bool is_finish = false;
 
         // Get result of acquiring local write lock
         const uint32_t source_edge_idx = control_request_ptr->getSourceIndex();
@@ -110,7 +121,9 @@ namespace covered
         lock_result = edge_wrapper_ptr_->getCooperationWrapperPtr()->acquireLocalWritelockByBeaconServer(tmp_key, source_edge_idx, edge_cache_server_worker_recvreq_dst_addr, all_dirinfo, is_source_cached);
         UNUSED(is_source_cached);
 
-        return;
+        UNUSED(total_bandwidth_usage);
+        UNUSED(event_list);
+        return is_finish;
     }
 
     MessageBase* BasicBeaconServer::getRspToAcquireLocalWritelock_(const Key& key, const LockResult& lock_result, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency) const
@@ -124,12 +137,14 @@ namespace covered
         return acquire_writelock_response_ptr;
     }
 
-    void BasicBeaconServer::processReqToReleaseLocalWritelock_(MessageBase* control_request_ptr, std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges)
+    bool BasicBeaconServer::processReqToReleaseLocalWritelock_(MessageBase* control_request_ptr, std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges, BandwidthUsage& total_bandwidth_usage, EventList& event_list)
     {
         assert(control_request_ptr != NULL);
         assert(control_request_ptr->getMessageType() == MessageType::kReleaseWritelockRequest);
         const ReleaseWritelockRequest* const release_writelock_request_ptr = static_cast<const ReleaseWritelockRequest*>(control_request_ptr);
         Key tmp_key = release_writelock_request_ptr->getKey();
+
+        bool is_finish = false;
 
         // Release local write lock and validate sender directory info if any
         uint32_t sender_edge_idx = release_writelock_request_ptr->getSourceIndex();
@@ -138,7 +153,9 @@ namespace covered
         blocked_edges = edge_wrapper_ptr_->getCooperationWrapperPtr()->releaseLocalWritelock(tmp_key, sender_edge_idx, sender_directory_info, is_source_cached);
         UNUSED(is_source_cached);
 
-        return;
+        UNUSED(total_bandwidth_usage);
+        UNUSED(event_list);
+        return is_finish;
     }
 
     MessageBase* BasicBeaconServer::getRspToReleaseLocalWritelock_(const Key& key, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency) const

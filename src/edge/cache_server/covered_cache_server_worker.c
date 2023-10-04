@@ -34,11 +34,13 @@ namespace covered
 
     // (1.2) Access cooperative edge cache to fetch data from neighbor edge nodes
 
-    void CoveredCacheServerWorker::lookupLocalDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, const bool& skip_propagation_latency) const
+    bool CoveredCacheServerWorker::lookupLocalDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
         CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
+
+        bool is_finish = false;
 
         uint32_t current_edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
         bool is_source_cached = false;
@@ -53,19 +55,16 @@ namespace covered
 
         // Selective popularity aggregation
         const bool need_placement_calculation = true;
-        Edgeset best_placement_edgeset;
-        bool has_best_placement = tmp_covered_cache_manager_ptr->updatePopularityAggregatorForAggregatedPopularity(key, current_edge_idx, collected_popularity, is_global_cached, is_source_cached, need_placement_calculation, best_placement_edgeset); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in current edge node
-
-        // Non-blocking data fetching if with best placement
-        if (need_placement_calculation && has_best_placement)
+        bool need_hybrid_fetching = false;
+        is_finish = tmp_covered_cache_manager_ptr->updatePopularityAggregatorForAggregatedPopularity(key, current_edge_idx, collected_popularity, is_global_cached, is_source_cached, need_placement_calculation, need_hybrid_fetching, tmp_edge_wrapper_ptr, edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in current edge node
+        if (is_finish)
         {
-            bool need_hybrid_fetching = false;
-            bool is_finish = tmp_edge_wrapper_ptr->nonblockDataFetchForPlacement(key, best_placement_edgeset, edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, skip_propagation_latency, need_hybrid_fetching);
-
-            // TODO: (END HERE) Process is_finish and need_hybrid_fetching
+            return is_finish; // Edge node is NOT running now
         }
 
-        return;
+        // TODO: (END HERE) Process need_hybrid_fetching
+
+        return is_finish;
     }
 
     bool CoveredCacheServerWorker::needLookupBeaconDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
@@ -262,12 +261,14 @@ namespace covered
 
     // (2.1) Acquire write lock and block for MSI protocol
 
-    void CoveredCacheServerWorker::acquireLocalWritelock_(const Key& key, LockResult& lock_result, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo)
+    bool CoveredCacheServerWorker::acquireLocalWritelock_(const Key& key, LockResult& lock_result, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency)
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
         CooperationWrapperBase* tmp_cooperation_wrapper_ptr = tmp_edge_wrapper_ptr->getCooperationWrapperPtr();
         CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
+
+        bool is_finish = false;
 
         // Acquire local write lock for the given key
         uint32_t current_edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
@@ -289,10 +290,11 @@ namespace covered
         // Selective popularity aggregation
         // NOTE: we do NOT perform placement calculation for local/remote acquire writelock request, as newly-admitted cache copies will still be invalid even after cache placement
         const bool need_placement_calculation = false;
-        Edgeset best_placement_edgeset;
-        bool has_best_placement = tmp_covered_cache_manager_ptr->updatePopularityAggregatorForAggregatedPopularity(key, current_edge_idx, collected_popularity, is_global_cached, is_source_cached, need_placement_calculation, best_placement_edgeset); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in current edge node
-        assert(!has_best_placement);
-        UNUSED(best_placement_edgeset);
+        bool need_hybrid_fetching = false;
+        is_finish = tmp_covered_cache_manager_ptr->updatePopularityAggregatorForAggregatedPopularity(key, current_edge_idx, collected_popularity, is_global_cached, is_source_cached, need_placement_calculation, need_hybrid_fetching, tmp_edge_wrapper_ptr, edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in current edge node
+        //assert(!has_best_placement);
+        assert(!is_finish);
+        assert(!need_hybrid_fetching);
 
         return;
     }
@@ -382,11 +384,13 @@ namespace covered
 
     // (2.4) Release write lock for MSI protocol
 
-    void CoveredCacheServerWorker::releaseLocalWritelock_(const Key& key, std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges, const bool& skip_propagation_latency)
+    bool CoveredCacheServerWorker::releaseLocalWritelock_(const Key& key, std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges, BandwidthUsage& total_bandwidth_usgae, EventList& event_list, const bool& skip_propagation_latency)
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
         CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
+
+        bool is_finish = false;
 
         // Release local write lock for the given key
         uint32_t current_edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
@@ -408,17 +412,14 @@ namespace covered
         // Selective popularity aggregation
         const bool is_global_cached = true; // NOTE: invoking releaseLocalWritelock_() means that the result of acquiring write lock is LockResult::kSuccess -> the given key MUST be global cached
         const bool need_placement_calculation = true;
-        Edgeset best_placement_edgeset;
-        bool has_best_placement = tmp_covered_cache_manager_ptr->updatePopularityAggregatorForAggregatedPopularity(key, current_edge_idx, collected_popularity, is_global_cached, is_source_cached, need_placement_calculation, best_placement_edgeset); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in current edge node
-
-        // Non-blocking data fetching if with best placement
-        if (need_placement_calculation && has_best_placement)
+        bool need_hybrid_fetching = false;
+        is_finish = tmp_covered_cache_manager_ptr->updatePopularityAggregatorForAggregatedPopularity(key, current_edge_idx, collected_popularity, is_global_cached, is_source_cached, need_placement_calculation, need_hybrid_fetching, tmp_edge_wrapper_ptr, edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, total_bandwidth_usgae, event_list, skip_propagation_latency); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in current edge node
+        if (is_finish)
         {
-            bool need_hybrid_fetching = false;
-            bool is_finish = tmp_edge_wrapper_ptr->nonblockDataFetchForPlacement(key, best_placement_edgeset, edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, skip_propagation_latency, need_hybrid_fetching);
-
-            // TODO: (END HERE) Process is_finish and need_hybrid_fetching
+            return is_finish; // Edge node is NOT running now
         }
+
+        // TODO: (END HERE) Process need_hybrid_fetching
 
         return;
     }

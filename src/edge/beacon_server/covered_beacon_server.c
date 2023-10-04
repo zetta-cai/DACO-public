@@ -30,7 +30,7 @@ namespace covered
 
     // (1) Access content directory information
 
-    void CoveredBeaconServer::processReqToLookupLocalDirectory_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvreq_dst_addr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
+    bool CoveredBeaconServer::processReqToLookupLocalDirectory_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvreq_dst_addr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, BandwidthUsage& total_bandwidth_usage, EventList& event_list) const
     {
         // TODO: For COVERED, beacon node will tell the closest edge node if to admit, w/o independent decision (trade-off-aware admission placement and eviction)
 
@@ -43,9 +43,12 @@ namespace covered
         checkPointers_();
         CoveredCacheManager* covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
 
+        bool is_finish = false;
+
         // Lookup cooperation wrapper to get valid directory information if any
         // Also check whether the key is cached by a local/neighbor edge node (even if invalid temporarily)
         const uint32_t source_edge_idx = covered_directory_lookup_request_ptr->getSourceIndex();
+        is_being_written = false;
         bool is_source_cached = false;
         bool is_global_cached = edge_wrapper_ptr_->getCooperationWrapperPtr()->lookupDirectoryTableByBeaconServer(tmp_key, source_edge_idx, edge_cache_server_worker_recvreq_dst_addr, is_being_written, is_valid_directory_exist, directory_info, is_source_cached);
 
@@ -58,20 +61,13 @@ namespace covered
         // Selective popularity aggregation
         const CollectedPopularity& collected_popularity = covered_directory_lookup_request_ptr->getCollectedPopularityRef();
         const bool need_placement_calculation = true;
-        Edgeset best_placement_edgeset;
-        bool has_best_placement = covered_cache_manager_ptr->updatePopularityAggregatorForAggregatedPopularity(tmp_key, source_edge_idx, collected_popularity, is_global_cached, is_source_cached, need_placement_calculation, best_placement_edgeset); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in source edge node
+        bool need_hybrid_fetching = false;
+        const bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();
+        is_finish = covered_cache_manager_ptr->updatePopularityAggregatorForAggregatedPopularity(tmp_key, source_edge_idx, collected_popularity, is_global_cached, is_source_cached, need_placement_calculation, need_hybrid_fetching, edge_wrapper_ptr_, edge_beacon_server_recvrsp_source_addr_, edge_beacon_server_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in source edge node
 
-        // Non-blocking data fetching if with best placement
-        if (need_placement_calculation && has_best_placement)
-        {
-            const bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();
-            bool need_hybrid_fetching = false;
-            bool is_finish = edge_wrapper_ptr_->nonblockDataFetchForPlacement(tmp_key, best_placement_edgeset, edge_beacon_server_recvrsp_source_addr_, edge_beacon_server_recvrsp_socket_server_ptr_, skip_propagation_latency, need_hybrid_fetching);
+        // TODO: (END HERE) Process need_hybrid_fetching
 
-            // TODO: (END HERE) Process is_finish and need_hybrid_fetching
-        }
-
-        return;
+        return is_finish;
     }
 
     MessageBase* CoveredBeaconServer::getRspToLookupLocalDirectory_(const Key& key, const bool& is_being_written, const bool& is_valid_directory_exist, const DirectoryInfo& directory_info, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency) const
@@ -89,8 +85,10 @@ namespace covered
         return covered_directory_lookup_response_ptr;
     }
 
-    bool CoveredBeaconServer::processReqToUpdateLocalDirectory_(MessageBase* control_request_ptr)
+    bool CoveredBeaconServer::processReqToUpdateLocalDirectory_(MessageBase* control_request_ptr, bool& is_being_written, BandwidthUsage& total_bandwidth_usage, EventList& event_list)
     {
+        bool is_finish = false;
+
         // Get key and directory update information from control request
         assert(control_request_ptr != NULL);
         uint32_t source_edge_idx = control_request_ptr->getSourceIndex();
@@ -139,7 +137,7 @@ namespace covered
         CoveredCacheManager* covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
 
         // Update local directory information in cooperation wrapper
-        bool is_being_written = false;
+        is_being_written = false;
         bool is_source_cached = false;
         bool is_global_cached = edge_wrapper_ptr_->getCooperationWrapperPtr()->updateDirectoryTable(tmp_key, source_edge_idx, is_admit, directory_info, is_being_written, is_source_cached);
 
@@ -172,21 +170,18 @@ namespace covered
             covered_cache_manager_ptr->assertNoLocalUncachedPopularity(tmp_key, source_edge_idx);
 
             // Selective popularity aggregation
-            Edgeset best_placement_edgeset;
-            bool has_best_placement = covered_cache_manager_ptr->updatePopularityAggregatorForAggregatedPopularity(tmp_key, source_edge_idx, collected_popularity, is_global_cached, is_source_cached, need_placement_calculation, best_placement_edgeset); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in source edge node
-
-            // Non-blocking data fetching if with best placement
-            if (need_placement_calculation && has_best_placement)
+            const bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();
+            bool need_hybrid_fetching = false;
+            is_finish = covered_cache_manager_ptr->updatePopularityAggregatorForAggregatedPopularity(tmp_key, source_edge_idx, collected_popularity, is_global_cached, is_source_cached, need_placement_calculation, need_hybrid_fetching, edge_wrapper_ptr_, edge_beacon_server_recvrsp_source_addr_, edge_beacon_server_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in source edge node
+            if (is_finish)
             {
-                const bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();
-                bool need_hybrid_fetching = false;
-                bool is_finish = edge_wrapper_ptr_->nonblockDataFetchForPlacement(tmp_key, best_placement_edgeset, edge_beacon_server_recvrsp_source_addr_, edge_beacon_server_recvrsp_socket_server_ptr_, skip_propagation_latency, need_hybrid_fetching);
-
-                // TODO: (END HERE) Process is_finish and need_hybrid_fetching
+                return is_finish; // Edge node is finished
             }
+
+            // TODO: (END HERE) Process need_hybrid_fetching
         }
 
-        return is_being_written;
+        return is_finish;
     }
 
     MessageBase* CoveredBeaconServer::getRspToUpdateLocalDirectory_(MessageBase* control_request_ptr, const bool& is_being_written, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list) const
@@ -220,7 +215,7 @@ namespace covered
 
     // (2) Process writes and unblock for MSI protocol
 
-    void CoveredBeaconServer::processReqToAcquireLocalWritelock_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvreq_dst_addr, LockResult& lock_result, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo)
+    bool CoveredBeaconServer::processReqToAcquireLocalWritelock_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvreq_dst_addr, LockResult& lock_result, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo, BandwidthUsage& total_bandwidth_usage, EventList& event_list)
     {
         assert(control_request_ptr != NULL);
         assert(control_request_ptr->getMessageType() == MessageType::kCoveredAcquireWritelockRequest);
@@ -229,6 +224,8 @@ namespace covered
 
         checkPointers_();
         CoveredCacheManager* covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
+
+        bool is_finish = false;
 
         // Try to acquire a write lock for the given key if key is global cached
         const uint32_t source_edge_idx = covered_acquire_writelock_request_ptr->getSourceIndex();
@@ -249,12 +246,14 @@ namespace covered
         // NOTE: we do NOT perform placement calculation for local/remote acquire writelock request, as newly-admitted cache copies will still be invalid even after cache placement
         const CollectedPopularity& collected_popularity = covered_acquire_writelock_request_ptr->getCollectedPopularityRef();
         const bool need_placement_calculation = false;
-        Edgeset best_placement_edgeset;
-        bool has_best_placement = covered_cache_manager_ptr->updatePopularityAggregatorForAggregatedPopularity(tmp_key, source_edge_idx, collected_popularity, is_global_cached, is_source_cached, need_placement_calculation, best_placement_edgeset); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in source edge node
-        assert(!has_best_placement);
-        UNUSED(best_placement_edgeset);
+        bool need_hybrid_fetching = false;
+        const bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();
+        is_finish = covered_cache_manager_ptr->updatePopularityAggregatorForAggregatedPopularity(tmp_key, source_edge_idx, collected_popularity, is_global_cached, is_source_cached, need_placement_calculation, need_hybrid_fetching, edge_wrapper_ptr_, edge_beacon_server_recvrsp_source_addr_, edge_beacon_server_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in source edge node
+        //assert(!has_best_placement);
+        assert(!is_finish);
+        assert(!need_hybrid_fetching);
 
-        return;
+        return is_finish;
     }
 
     MessageBase* CoveredBeaconServer::getRspToAcquireLocalWritelock_(const Key& key, const LockResult& lock_result, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency) const
@@ -272,7 +271,7 @@ namespace covered
         return covered_acquire_writelock_response_ptr;
     }
 
-    void CoveredBeaconServer::processReqToReleaseLocalWritelock_(MessageBase* control_request_ptr, std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges)
+    bool CoveredBeaconServer::processReqToReleaseLocalWritelock_(MessageBase* control_request_ptr, std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges, BandwidthUsage& total_bandwidth_usage, EventList& event_list)
     {
         assert(control_request_ptr != NULL);
         assert(control_request_ptr->getMessageType() == MessageType::kCoveredReleaseWritelockRequest);
@@ -281,6 +280,8 @@ namespace covered
 
         checkPointers_();
         CoveredCacheManager* covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
+
+        bool is_finish = false;
 
         // Release local write lock and validate sender directory info if any
         uint32_t sender_edge_idx = covered_release_writelock_request_ptr->getSourceIndex();
@@ -301,20 +302,17 @@ namespace covered
         const CollectedPopularity& collected_popularity = covered_release_writelock_request_ptr->getCollectedPopularityRef();
         const bool is_global_cached = true; // NOTE: receiving remote release writelock request means that the result of acquiring write lock is LockResult::kSuccess -> the given key MUST be global cached
         const bool need_placement_calculation = true;
-        Edgeset best_placement_edgeset;
-        bool has_best_placement = covered_cache_manager_ptr->updatePopularityAggregatorForAggregatedPopularity(tmp_key, sender_edge_idx, collected_popularity, is_global_cached, is_source_cached, need_placement_calculation, best_placement_edgeset); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in source edge node
-
-        // Non-blocking data fetching if with best placement
-        if (need_placement_calculation && has_best_placement)
+        const bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();
+        bool need_hybrid_fetching = false;
+        is_finish = covered_cache_manager_ptr->updatePopularityAggregatorForAggregatedPopularity(tmp_key, sender_edge_idx, collected_popularity, is_global_cached, is_source_cached, need_placement_calculation, need_hybrid_fetching, edge_wrapper_ptr_, edge_beacon_server_recvrsp_source_addr_, edge_beacon_server_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in source edge node
+        if (is_finish)
         {
-            const bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();
-            bool need_hybrid_fetching = false;
-            bool is_finish = edge_wrapper_ptr_->nonblockDataFetchForPlacement(tmp_key, best_placement_edgeset, edge_beacon_server_recvrsp_source_addr_, edge_beacon_server_recvrsp_socket_server_ptr_, skip_propagation_latency, need_hybrid_fetching);
-
-            // TODO: (END HERE) Process is_finish and need_hybrid_fetching
+            return is_finish; // Edge node is finished
         }
 
-        return;
+        // TODO: (END HERE) Process need_hybrid_fetching
+
+        return is_finish;
     }
 
     MessageBase* CoveredBeaconServer::getRspToReleaseLocalWritelock_(const Key& key, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency) const

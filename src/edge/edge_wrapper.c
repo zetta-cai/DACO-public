@@ -329,7 +329,7 @@ namespace covered
 
     // (3) Invalidate and unblock for MSI protocol
 
-    bool EdgeWrapper::invalidateCacheCopies(UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, const Key& key, const std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
+    bool EdgeWrapper::parallelInvalidateCacheCopies(UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, const Key& key, const std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
     {
         assert(recvrsp_socket_server_ptr != NULL);
         assert(recvrsp_source_addr.isValidAddr());
@@ -458,7 +458,7 @@ namespace covered
         return is_finish;
     }
 
-    void EdgeWrapper::sendInvalidationRequest_(const Key& key, const NetworkAddr& recvrsp_source_addr, const NetworkAddr edge_invalidation_server_recvreq_dst_addr, const bool& skip_propagation_latency) const
+    void EdgeWrapper::sendInvalidationRequest_(const Key& key, const NetworkAddr& recvrsp_source_addr, const NetworkAddr& edge_invalidation_server_recvreq_dst_addr, const bool& skip_propagation_latency) const
     {
         checkPointers_();
 
@@ -477,7 +477,7 @@ namespace covered
         return;
     }
 
-    bool EdgeWrapper::notifyEdgesToFinishBlock(UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, const Key& key, const std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
+    bool EdgeWrapper::parallelNotifyEdgesToFinishBlock(UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, const Key& key, const std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
     {
         assert(recvrsp_socket_server_ptr != NULL);
         assert(recvrsp_source_addr.isValidAddr());
@@ -1033,7 +1033,11 @@ namespace covered
                 bool current_is_beacon = currentIsBeacon(tmp_victim_key);
                 if (current_is_beacon) // Evict local directory info for the victim key
                 {
-                    evictLocalDirectory_(tmp_victim_key, directory_info, _unused_is_being_written, source_addr, recvrsp_socket_server_ptr, skip_propagation_latency, is_background);
+                    is_finish = evictLocalDirectory_(tmp_victim_key, directory_info, _unused_is_being_written, source_addr, recvrsp_socket_server_ptr, total_bandwidth_usage, event_list, skip_propagation_latency, is_background);
+                    if (is_finish)
+                    {
+                        return is_finish;
+                    }
 
                     assert(!acked_flags[tmp_victim_key]);
                     acked_flags[tmp_victim_key] = true;
@@ -1133,9 +1137,11 @@ namespace covered
         return is_finish;
     }
 
-    void EdgeWrapper::evictLocalDirectory_(const Key& key, const DirectoryInfo& directory_info, bool& is_being_written, const NetworkAddr& source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, const bool& skip_propagation_latency, const bool& is_background) const
+    bool EdgeWrapper::evictLocalDirectory_(const Key& key, const DirectoryInfo& directory_info, bool& is_being_written, const NetworkAddr& source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency, const bool& is_background) const
     {
         checkPointers_();
+
+        bool is_finish = false;
 
         uint32_t current_edge_idx = getNodeIdx();
         const bool is_admit = false; // Evict a victim as local uncached object
@@ -1166,22 +1172,17 @@ namespace covered
                 // NOTE: DISABLE recursive cache placement
                 need_placement_calculation = false;
             }
-            Edgeset best_placement_edgeset;
-            bool has_best_placement = covered_cache_manager_ptr_->updatePopularityAggregatorForAggregatedPopularity(key, current_edge_idx, collected_popularity, is_global_cached, is_source_cached, need_placement_calculation, best_placement_edgeset); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in source edge node
-
-            // Non-blocking data fetching if with best placement
-            if (need_placement_calculation && has_best_placement)
+            bool need_hybrid_fetching = false;
+            is_finish = covered_cache_manager_ptr_->updatePopularityAggregatorForAggregatedPopularity(key, current_edge_idx, collected_popularity, is_global_cached, is_source_cached, need_placement_calculation, need_hybrid_fetching, this, source_addr, recvrsp_socket_server_ptr, total_bandwidth_usage, event_list, skip_propagation_latency); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in source edge node
+            if (is_finish)
             {
-                assert(!is_background);
-
-                bool need_hybrid_fetching = false;
-                bool is_finish = nonblockDataFetchForPlacement(key, best_placement_edgeset, source_addr, recvrsp_socket_server_ptr, skip_propagation_latency, need_hybrid_fetching);
-
-                // TODO: (END HERE) Process is_finish and need_hybrid_fetching
+                return is_finish;
             }
+
+            // TODO: (END HERE) Process need_hybrid_fetching
         }
 
-        return;
+        return is_finish;
     }
 
     MessageBase* EdgeWrapper::getReqToEvictBeaconDirectory_(const Key& key, const DirectoryInfo& directory_info, const NetworkAddr& source_addr, const bool& skip_propagation_latency, const bool& is_background) const
@@ -1371,7 +1372,7 @@ namespace covered
                 const VictimSyncset victim_syncset = covered_cache_manager_ptr_->accessVictimTrackerForVictimSyncset();
                 CoveredPlacementRedirectedGetRequest* covered_placement_redirected_get_request_ptr = new CoveredPlacementRedirectedGetRequest(key, victim_syncset, best_placement_edgeset, current_edge_idx, edge_beacon_server_recvreq_source_addr_for_placement_, skip_propagation_latency);
                 assert(covered_placement_redirected_get_request_ptr != NULL);
-                NetworkAddr target_edge_cache_server_recvreq_dst_addr = getTargetDstaddr(directory_info);
+                NetworkAddr target_edge_cache_server_recvreq_dst_addr = getTargetDstaddr(directory_info); // Send to cache server of the target edge node for cache server worker
                 bool is_successful = edge_toedge_propagation_simulator_param_ptr_->push(covered_placement_redirected_get_request_ptr, target_edge_cache_server_recvreq_dst_addr);
                 assert(is_successful);
                 covered_placement_redirected_get_request_ptr = NULL; // NOTE: covered_placement_redirected_get_request_ptr will be released by edge-to-edge propagation simulator
@@ -1445,7 +1446,7 @@ namespace covered
             CoveredPlacementNotifyRequest* covered_placement_notify_request_ptr = new CoveredPlacementNotifyRequest(key, value, is_valid, victim_syncset, current_edge_idx, edge_beacon_server_recvreq_source_addr_for_placement_, skip_propagation_latency);
             assert(covered_placement_notify_request_ptr != NULL);
             // Push the global request into edge-to-edge propagation simulator to the remote edge node
-            NetworkAddr remote_edge_cache_server_recvreq_dst_addr = getTargetDstaddr(DirectoryInfo(tmp_edge_idx));
+            NetworkAddr remote_edge_cache_server_recvreq_dst_addr = getTargetDstaddr(DirectoryInfo(tmp_edge_idx)); // Send to cache server of the target edge node for cache server placement processor
             bool is_successful = edge_toedge_propagation_simulator_param_ptr_->push(covered_placement_notify_request_ptr, remote_edge_cache_server_recvreq_dst_addr);
             assert(is_successful);
             covered_placement_notify_request_ptr = NULL; // NOTE: covered_placement_notify_request_ptr will be released by edge-to-edge propagation simulator

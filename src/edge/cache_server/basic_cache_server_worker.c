@@ -31,19 +31,23 @@ namespace covered
 
     // (1.2) Access cooperative edge cache to fetch data from neighbor edge nodes
 
-    void BasicCacheServerWorker::lookupLocalDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, const bool& skip_propagation_latency) const
+    bool BasicCacheServerWorker::lookupLocalDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+
+        bool is_finish = false;
 
         uint32_t current_edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
         bool is_source_cached = false;
         tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->lookupDirectoryTableByCacheServer(key, current_edge_idx, is_being_written, is_valid_directory_exist, directory_info, is_source_cached);
         UNUSED(is_source_cached);
 
+        UNUSED(total_bandwidth_usage);
+        UNUSED(event_list);
         UNUSED(skip_propagation_latency);
 
-        return;
+        return is_finish;
     }
 
     bool BasicCacheServerWorker::needLookupBeaconDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
@@ -130,17 +134,22 @@ namespace covered
 
     // (2.1) Acquire write lock and block for MSI protocol
 
-    void BasicCacheServerWorker::acquireLocalWritelock_(const Key& key, LockResult& lock_result, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo)
+    bool BasicCacheServerWorker::acquireLocalWritelock_(const Key& key, LockResult& lock_result, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency)
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+
+        bool is_finish = false;
 
         uint32_t current_edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
         bool is_source_cached = false;
         lock_result = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->acquireLocalWritelockByCacheServer(key, current_edge_idx, all_dirinfo, is_source_cached);
         UNUSED(is_source_cached);
 
-        return;
+        UNUSED(total_bandwidth_usage);
+        UNUSED(event_list);
+        UNUSED(skip_propagation_latency);
+        return is_finish;
     }
 
     MessageBase* BasicCacheServerWorker::getReqToAcquireBeaconWritelock_(const Key& key, const bool& skip_propagation_latency) const
@@ -195,19 +204,23 @@ namespace covered
 
     // (2.4) Release write lock for MSI protocol
 
-    void BasicCacheServerWorker::releaseLocalWritelock_(const Key& key, std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges, const bool& skip_propagation_latency)
+    bool BasicCacheServerWorker::releaseLocalWritelock_(const Key& key, std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges, BandwidthUsage& total_bandwidth_usgae, EventList& event_list, const bool& skip_propagation_latency)
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+
+        bool is_finish = false;
 
         uint32_t current_edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
         DirectoryInfo current_directory_info(tmp_edge_wrapper_ptr->getNodeIdx());
         bool is_source_cached = false;
         blocked_edges = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->releaseLocalWritelock(key, current_edge_idx, current_directory_info, is_source_cached);
 
+        UNUSED(total_bandwidth_usgae);
+        UNUSED(event_list);
         UNUSED(skip_propagation_latency);
 
-        return;
+        return is_finish;
     }
 
     MessageBase* BasicCacheServerWorker::getReqToReleaseBeaconWritelock_(const Key& key, const bool& skip_propagation_latency) const

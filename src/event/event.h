@@ -62,6 +62,7 @@ namespace covered
         static const std::string EDGE_INVALIDATE_CACHE_COPIES_EVENT_NAME;
         static const std::string EDGE_FINISH_BLOCK_EVENT_NAME;
         static const std::string EDGE_UPDATE_DIRECTORY_TO_EVICT_EVENT_NAME;
+        static const std::string EDGE_VICTIM_FETCH_EVENT_NAME;
 
         // For edge invalidation server
         static const std::string EDGE_INVALIDATION_SERVER_INVALIDATE_LOCAL_CACHE_EVENT_NAME;
@@ -70,6 +71,9 @@ namespace covered
         static const std::string CLOUD_GET_ROCKSDB_EVENT_NAME;
         static const std::string CLOUD_PUT_ROCKSDB_EVENT_NAME;
         static const std::string CLOUD_DEL_ROCKSDB_EVENT_NAME;
+
+        // For edge cache server victim fetch processor
+        static const std::string EDGE_CACHE_SERVER_VICTIM_FETCH_PROCESSOR_FETCHING_EVENT_NAME;
 
         // For background events
         static const std::string BG_EDGE_CACHE_SERVER_WORKER_TARGET_GET_LOCAL_CACHE_EVENT_NAME; // For reads in edge cache server worker (non-blocking data fetching)

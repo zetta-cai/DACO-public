@@ -1,18 +1,18 @@
-#include "edge/cache_server/cache_server_placement_processor_param.h"
+#include "edge/cache_server/cache_server_processor_param.h"
 
 #include "common/util.h"
 
 namespace covered
 {
-    const std::string CacheServerPlacementProcessorParam::kClassName("CacheServerPlacementProcessorParam");
+    const std::string CacheServerProcessorParam::kClassName("CacheServerProcessorParam");
 
-    CacheServerPlacementProcessorParam::CacheServerPlacementProcessorParam()
+    CacheServerProcessorParam::CacheServerProcessorParam()
     {
         cache_server_ptr_ = NULL;
         data_request_buffer_ptr_ = NULL;
     }
 
-    CacheServerPlacementProcessorParam::CacheServerPlacementProcessorParam(CacheServer* cache_server_ptr, const uint32_t& data_request_buffer_size)
+    CacheServerProcessorParam::CacheServerProcessorParam(CacheServer* cache_server_ptr, const uint32_t& data_request_buffer_size)
     {
         cache_server_ptr_ = cache_server_ptr;
         
@@ -21,9 +21,9 @@ namespace covered
         assert(data_request_buffer_ptr_ != NULL);
     }
 
-    CacheServerPlacementProcessorParam::~CacheServerPlacementProcessorParam()
+    CacheServerProcessorParam::~CacheServerProcessorParam()
     {
-        // NOTE: no need to release cache_server_ptr_, which will be released outside CacheServerPlacementProcessorParam (e.g., by simulator)
+        // NOTE: no need to release cache_server_ptr_, which will be released outside CacheServerProcessorParam (e.g., by simulator)
 
         if (data_request_buffer_ptr_ != NULL)
         {
@@ -32,9 +32,9 @@ namespace covered
         }
     }
 
-    const CacheServerPlacementProcessorParam& CacheServerPlacementProcessorParam::operator=(const CacheServerPlacementProcessorParam& other)
+    const CacheServerProcessorParam& CacheServerProcessorParam::operator=(const CacheServerProcessorParam& other)
     {
-        // Shallow copy is okay, as cache_server_ptr_ is maintained outside CacheServerPlacementProcessorParam (e.g., by simulator)
+        // Shallow copy is okay, as cache_server_ptr_ is maintained outside CacheServerProcessorParam (e.g., by simulator)
         cache_server_ptr_ = other.cache_server_ptr_;
 
         // Must deep copy the ring buffer of local requests
@@ -54,13 +54,13 @@ namespace covered
         return *this;
     }
 
-    CacheServer* CacheServerPlacementProcessorParam::getCacheServerPtr() const
+    CacheServer* CacheServerProcessorParam::getCacheServerPtr() const
     {
         assert(cache_server_ptr_ != NULL);
         return cache_server_ptr_;
     }
 
-    RingBuffer<CacheServerItem>* CacheServerPlacementProcessorParam::getDataRequestBufferPtr() const
+    RingBuffer<CacheServerItem>* CacheServerProcessorParam::getDataRequestBufferPtr() const
     {
         assert(data_request_buffer_ptr_ != NULL);
         return data_request_buffer_ptr_;

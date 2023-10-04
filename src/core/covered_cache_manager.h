@@ -23,6 +23,9 @@
 #include "core/victim/victim_cacheinfo.h"
 #include "core/victim/victim_syncset.h"
 #include "core/victim_tracker.h"
+#include "edge/edge_wrapper.h"
+#include "network/network_addr.h"
+#include "network/udp_msg_socket_server.h"
 
 namespace covered
 {
@@ -35,7 +38,8 @@ namespace covered
         // For selective popularity aggregation (may trigger trade-off-aware placement calculation)
 
         // NOTE: need_placement_calculation works only when key is tracked by local uncached metadata of sender edge node
-        bool updatePopularityAggregatorForAggregatedPopularity(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached, const bool& is_source_cached, const bool& need_placement_calculation, Edgeset& best_placement_edgeset); // Return if the best placement exists (i.e., with positive placement gain)
+        // NOTE: (for lazy victim fetching) edge_wrapper_ptr is used for issuing victim fetch requests; recvrsp_source_addr and recvrsp_socket_server_ptr are used for receiving victim fetch responses; bandwidth usage, event list, and skip propagation latency is used for victim fetch messages
+        bool updatePopularityAggregatorForAggregatedPopularity(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached, const bool& is_source_cached, const bool& need_placement_calculation, bool& need_hybrid_fetching, const EdgeWrapper* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency); // Return if edge node is finished
         void clearPopularityAggregatorForPreservedEdgesetAfterAdmission(const Key& key, const uint32_t& source_edge_idx);
 
         void assertNoLocalUncachedPopularity(const Key& key, const uint32_t& source_edge_idx) const;
@@ -63,7 +67,11 @@ namespace covered
 
         // Perform placement calculation only if key belongs to a global popular uncached object (i.e., with large enough max admission benefit)
         // NOTE: best_placement_edgeset is used for perserved edgeset and placement notifications, while best_placement_peredge_victimset is used for victim removal (both for non-blocking placement deployment)
-        bool placementCalculation_(const Key& key, const bool& is_global_cached, Edgeset& best_placement_edgeset, std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& best_placement_peredge_victimset); // Return if the best placement exists (i.e., with positive placement gain)
+        bool placementCalculation_(const Key& key, const bool& is_global_cached, bool& has_best_placement, Edgeset& best_placement_edgeset, std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& best_placement_peredge_victimset, const EdgeWrapper* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency); // has_best_placement indicates if the best placement exists (i.e., with positive placement gain) (return if edge node is finished)
+
+        // For lazy victim fetching
+        bool parallelFetchVictims_(const ObjectSize& object_size, const Edgeset& best_placement_victim_fetch_edgeset, const EdgeWrapper* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const; // For each edge node index in victim fetch edgeset (return if edge node is finished)
+        void sendVictimFetchRequest_(const ObjectSize& object_size, const EdgeWrapper* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, const NetworkAddr& edge_cache_server_recvreq_dst_addr, const bool& skip_propagation_latency) const;
 
         // Const shared variables
         std::string instance_name_;

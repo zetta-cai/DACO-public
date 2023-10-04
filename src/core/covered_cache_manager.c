@@ -18,8 +18,15 @@ namespace covered
 
     // For popularity aggregation
 
-    bool CoveredCacheManager::updatePopularityAggregatorForAggregatedPopularity(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached, const bool& is_source_cached, const bool& need_placement_calculation, Edgeset& best_placement_edgeset)
+    bool CoveredCacheManager::updatePopularityAggregatorForAggregatedPopularity(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached, const bool& is_source_cached, const bool& need_placement_calculation, bool& need_hybrid_fetching, const EdgeWrapper* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency)
     {
+        assert(edge_wrapper_ptr != NULL);
+        
+        bool is_finish = false;
+        bool has_best_placement = false;
+        Edgeset best_placement_edgeset;
+        need_hybrid_fetching = false;
+
         // Double-check preserved edgeset to set is global cached flag to avoid over-estimating (max) admission benefit
         bool tmp_is_global_cached = is_global_cached;
         if (!is_global_cached)
@@ -35,7 +42,6 @@ namespace covered
         popularity_aggregator_.updateAggregatedUncachedPopularity(key, source_edge_idx, collected_popularity, tmp_is_global_cached, is_source_cached);
         
         // NOTE: we do NOT perform placement calculation for local/remote acquire writelock request, as newly-admitted cache copies will still be invalid after cache placement
-        bool has_best_placement = false;
         if (need_placement_calculation)
         {
             const bool is_tracked_by_source_edge_node = collected_popularity.isTracked();
@@ -44,9 +50,13 @@ namespace covered
             {
                 // Perform greedy-based placement calculation for trade-off-aware cache placement
                 // NOTE: set best_placement_edgeset for preserved edgeset and placement notifications; set best_placement_peredge_victimset for victim removal to avoid duplicate eviction (both for non-blocking placement deployment)
-                std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>> best_placement_peredge_victimset;
-                has_best_placement = placementCalculation_(key, tmp_is_global_cached, best_placement_edgeset, best_placement_peredge_victimset);
+                std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>> best_placement_peredge_victimset; 
+                is_finish = placementCalculation_(key, tmp_is_global_cached, has_best_placement, best_placement_edgeset, best_placement_peredge_victimset, edge_wrapper_ptr, recvrsp_source_addr, recvrsp_socket_server_ptr, total_bandwidth_usage, event_list, skip_propagation_latency);
                 assert(best_placement_edgeset.size() <= topk_edgecnt_); // At most k placement edge nodes each time
+                if (is_finish)
+                {
+                    return is_finish; // Edge node is NOT running now
+                }
 
                 if (has_best_placement)
                 {
@@ -61,11 +71,18 @@ namespace covered
                         const std::unordered_set<Key, KeyHasher>& tmp_victim_keyset_const_ref = best_placement_peredge_victimset_const_iter->second;
                         victim_tracker_.removeVictimsForGivenEdge(tmp_edge_idx, tmp_victim_keyset_const_ref);
                     }
+
+                    // Non-blocking data fetching if with best placement
+                    is_finish = edge_wrapper_ptr_->nonblockDataFetchForPlacement(key, best_placement_edgeset, recvrsp_source_addr, recvrsp_socket_server_ptr, skip_propagation_latency, need_hybrid_fetching);
+                    if (is_finish)
+                    {
+                        return is_finish; // Edge node is NOT running now
+                    }
                 }
             }
         }
 
-        return has_best_placement;
+        return is_finish;
     }
 
     void CoveredCacheManager::clearPopularityAggregatorForPreservedEdgesetAfterAdmission(const Key& key, const uint32_t& source_edge_idx)
@@ -154,9 +171,10 @@ namespace covered
         return total_size;
     }
 
-    bool CoveredCacheManager::placementCalculation_(const Key& key, const bool& is_global_cached, Edgeset& best_placement_edgeset, std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& best_placement_peredge_victimset)
+    bool CoveredCacheManager::placementCalculation_(const Key& key, const bool& is_global_cached, bool& has_best_placement, Edgeset& best_placement_edgeset, std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& best_placement_peredge_victimset, const EdgeWrapper* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency)
     {
-        bool has_best_placement = false;
+        bool is_finish = false;
+        has_best_placement = false;
         
         // For lazy victim fetching before non-blocking placement deployment
         bool need_victim_fetching = false;
@@ -224,11 +242,152 @@ namespace covered
         // TODO: Maintain a small vicitm cache in each beacon edge node if with frequent lazy victim fetching to avoid degrading directory lookup performance
         if (need_victim_fetching)
         {
-            // TODO: Issue CoveredVictimFetchRequest to fetch more victims (note that CoveredVictimFetchRequest is a foreground message before non-blocking placement deployment)
+            assert(has_aggregated_uncached_popularity == true);
+            const ObjectSize tmp_object_size = tmp_aggregated_uncached_popularity.getObjectSize();
+
+            // Issue CoveredVictimFetchRequest to fetch more victims in parallel (note that CoveredVictimFetchRequest is a foreground message before non-blocking placement deployment)
+            is_finish = parallelFetchVictims_(tmp_object_size, best_placement_victim_fetch_edgeset, edge_wrapper_ptr, recvrsp_source_addr, recvrsp_socket_server_ptr, total_bandwidth_usage, event_list, skip_propagation_latency);
+            if (is_finish)
+            {
+                return is_finish; // Edge node is NOT running now
+            }
 
             // TODO: Redo placement calculation after victim fetching to double-check the best placement
         }
 
-        return has_best_placement;
+        return is_finish;
+    }
+
+    bool CoveredCacheManager::parallelFetchVictims_(const ObjectSize& object_size, const Edgeset& best_placement_victim_fetch_edgeset, const EdgeWrapper* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
+    {
+        const uint32_t victim_fetch_edgecnt = best_placement_victim_fetch_edgeset.size();
+        assert(victim_fetch_edgecnt > 0); // At least one edge node for victim fetching
+        assert(edge_wrapper_ptr != NULL);
+        assert(recvrsp_socket_server_ptr != NULL);
+
+        bool is_finish = false;
+        struct timespec victim_fetch_start_timestamp = Util::getCurrentTimespec();
+
+        // Track whether victim fetch requests to all involved edge nodes have been acknowledged
+        uint32_t acked_edgecnt = 0;
+        std::unordered_map<uint32_t, bool> acked_flags;
+        for (std::unordered_set<uint32_t>::const_iterator iter_for_ackflag = best_placement_victim_fetch_edgeset.begin(); iter_for_ackflag != best_placement_victim_fetch_edgeset.end(); iter_for_ackflag++)
+        {
+            acked_flags.insert(std::pair<uint32_t, bool>(*iter_for_ackflag, false));
+        }
+
+        // Issue all victim fetch requests simultaneously
+        while (acked_edgecnt != victim_fetch_edgecnt) // Timeout-and-retry mechanism
+        {
+            // Send (victim_fetch_edgecnt - acked_edgecnt) control requests to each involved edge node that has not acknowledged victim fetch request
+            for (std::unordered_map<uint32_t, bool>::const_iterator iter_for_request = acked_flags.begin(); iter_for_request != acked_flags.end(); iter_for_request++)
+            {
+                if (iter_for_request->second) // Skip the edge node that has acknowledged the victim fetch request
+                {
+                    continue;
+                }
+
+                const uint32_t tmp_edge_idx = iter_for_request->first; // Edge node index of an involved edge node that has not acknowledged victim fetch request
+                NetworkAddr target_edge_cache_server_recvreq_dst_addr = edge_wrapper_ptr->getTargetDstaddr(DirectoryInfo(tmp_edge_idx)); // Send to cache server of the target edge node for victim fetch processor
+                // TODO: Check if tmp_edge_idx is current beacon edge node (similar as EdgeWrapper::parallelEvictDirectory_())
+                sendVictimFetchRequest_(object_size, edge_wrapper_ptr, recvrsp_source_addr, target_edge_cache_server_recvreq_dst_addr, skip_propagation_latency);
+            } // End of edgeidx_for_request
+
+            // Receive (blocked_edgecnt - acked_edgecnt) control repsonses from the closest edge nodes
+            for (uint32_t edgeidx_for_response = 0; edgeidx_for_response < victim_fetch_edgecnt - acked_edgecnt; edgeidx_for_response++)
+            {
+                DynamicArray control_response_msg_payload;
+                bool is_timeout = recvrsp_socket_server_ptr->recv(control_response_msg_payload);
+                if (is_timeout)
+                {
+                    if (!edge_wrapper_ptr->isNodeRunning())
+                    {
+                        is_finish = true;
+                        break; // Break as edge is NOT running
+                    }
+                    else
+                    {
+                        Util::dumpWarnMsg(instance_name_, "edge timeout to wait for CoveredVictimFetchResponse");
+                        break; // Break to resend the remaining control requests not acked yet
+                    }
+                } // End of (is_timeout == true)
+                else
+                {
+                    // Receive the control response message successfully
+                    MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
+                    assert(control_response_ptr != NULL && control_response_ptr->getMessageType() == MessageType::kCoveredVictimFetchResponse);
+                    uint32_t tmp_edge_idx = control_response_ptr->getSourceIndex();
+
+                    // Mark the edge node has acknowledged the victim fetch request
+                    bool is_match = false;
+                    for (std::unordered_map<uint32_t, bool>::iterator iter_for_response = acked_flags.begin(); iter_for_response != acked_flags.end(); iter_for_response++)
+                    {
+                        if (iter_for_response->first == tmp_edge_idx) // Match an edge node requiring victim fetching
+                        {
+                            assert(iter_for_response->second == false); // Original ack flag should be false
+
+                            // TODO: Collect received victim information for further placement calculation
+
+                            // Update total bandwidth usage for received victim fetch response
+                            BandwidthUsage victim_fetch_response_bandwidth_usage = control_response_ptr->getBandwidthUsageRef();
+                            uint32_t cross_edge_victim_fetch_rsp_bandwidth_bytes = control_response_ptr->getMsgPayloadSize();
+                            victim_fetch_response_bandwidth_usage.update(BandwidthUsage(0, cross_edge_victim_fetch_rsp_bandwidth_bytes, 0));
+                            total_bandwidth_usage.update(victim_fetch_response_bandwidth_usage);
+
+                            // Add the event of intermediate response if with event tracking
+                            event_list.addEvents(control_response_ptr->getEventListRef());
+
+                            // Update ack information
+                            iter_for_response->second = true;
+                            acked_edgecnt += 1;
+                            is_match = true;
+                            break;
+                        }
+                    } // End of edgeidx_for_ack
+
+                    if (!is_match) // Must match at least one edge node
+                    {
+                        std::ostringstream oss;
+                        oss << "receive VictimFetchResponse from edge node " << tmp_edge_idx << ", which is NOT in the victim fetch edgeset!";
+                        Util::dumpWarnMsg(instance_name_, oss.str());
+                    } // End of !is_match
+
+                    // Release the control response message
+                    delete control_response_ptr;
+                    control_response_ptr = NULL;
+                } // End of (is_timeout == false)
+            } // End of edgeidx_for_response
+
+            if (is_finish) // Edge node is NOT running now
+            {
+                break;
+            }
+        } // End of while(acked_edgecnt != blocked_edgecnt)
+
+        // Add intermediate event if with event tracking
+        struct timespec victim_fetch_end_timestamp = Util::getCurrentTimespec();
+        uint32_t victim_fetch_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(victim_fetch_end_timestamp, victim_fetch_start_timestamp));
+        event_list.addEvent(Event::EDGE_VICTIM_FETCH_EVENT_NAME, victim_fetch_latency_us);
+
+        return is_finish;
+    }
+
+    void CoveredCacheManager::sendVictimFetchRequest_(const ObjectSize& object_size, const EdgeWrapper* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, const NetworkAddr& edge_cache_server_recvreq_dst_addr, const bool& skip_propagation_latency) const
+    {
+        assert(edge_wrapper_ptr != NULL);
+
+        // Prepare victim fetch request to fetch victims from the target edge node
+        const uint32_t current_edge_idx = edge_wrapper_ptr->getNodeIdx();
+        MessageBase* victim_fetch_request_ptr = new CoveredVictimFetchRequest(object_size, current_edge_idx, recvrsp_source_addr);
+        assert(victim_fetch_request_ptr != NULL);
+
+        // Push CoveredVictimFetchRequest into edge-to-edge propagation simulator to send to the target edge node
+        bool is_successful = edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->push(victim_fetch_request_ptr, edge_cache_server_recvreq_dst_addr);
+        assert(is_successful);
+
+        // NOTE: victim_fetch_request_ptr will be released by edge-to-edge propagation simulator
+        victim_fetch_request_ptr = NULL;
+
+        return;
     }
 }

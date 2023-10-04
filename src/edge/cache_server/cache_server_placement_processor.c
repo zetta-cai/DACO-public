@@ -13,14 +13,14 @@ namespace covered
     {
         assert(cache_serer_placement_processor_param_ptr != NULL);
 
-        CacheServerPlacementProcessor cache_server_placement_processor((CacheServerPlacementProcessorParam*)cache_serer_placement_processor_param_ptr);
+        CacheServerPlacementProcessor cache_server_placement_processor((CacheServerProcessorParam*)cache_serer_placement_processor_param_ptr);
         cache_server_placement_processor.start();
 
         pthread_exit(NULL);
         return NULL;
     }
 
-    CacheServerPlacementProcessor::CacheServerPlacementProcessor(CacheServerPlacementProcessorParam* cache_serer_placement_processor_param_ptr) : cache_serer_placement_processor_param_ptr_(cache_serer_placement_processor_param_ptr)
+    CacheServerPlacementProcessor::CacheServerPlacementProcessor(CacheServerProcessorParam* cache_serer_placement_processor_param_ptr) : cache_serer_placement_processor_param_ptr_(cache_serer_placement_processor_param_ptr)
     {
         assert(cache_serer_placement_processor_param_ptr != NULL);
         const uint32_t edge_idx = cache_serer_placement_processor_param_ptr->getCacheServerPtr()->getEdgeWrapperPtr()->getNodeIdx();
@@ -122,7 +122,7 @@ namespace covered
 
         struct timespec admission_start_timestamp = Util::getCurrentTimespec();
 
-        // TODO: Embed placement edgeset into CoveredPlacementNotifyRequest for hybrid data fetching
+        // TODO: Embed placement edgeset into CoveredPlacementNotifyRequest for hybrid data fetching (NO need???)
         //PlacementEdgeset tmp_placement_edgeset = covered_placement_notify_request_ptr->getEdgesetRef();
         //assert(tmp_placement_edgeset.size() <= tmp_edge_wrapper_ptr->getTopkEdgecntForPlacement()); // At most k placement edge nodes each time
 

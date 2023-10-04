@@ -37,6 +37,7 @@ namespace covered
         static const std::string EDGE_CACHE_SERVER_DATA_REQUEST_BUFFER_SIZE_KEYSTR;
         static const std::string EDGE_CACHE_SERVER_RECVREQ_STARTPORT_KEYSTR;
         static const std::string EDGE_CACHE_SERVER_PLACEMENT_PROCESSOR_RECVRSP_STARTPORT_KEYSTR;
+        static const std::string EDGE_CACHE_SERVER_VICTIM_FETCH_PROCESSOR_RECVRSP_STARTPORT_KEYSTR;
         static const std::string EDGE_CACHE_SERVER_WORKER_RECVREQ_STARTPORT_KEYSTR;
         static const std::string EDGE_CACHE_SERVER_WORKER_RECVRSP_STARTPORT_KEYSTR;
         static const std::string EDGE_INVALIDATION_SERVER_RECVREQ_STARTPORT_KEYSTR;
@@ -80,6 +81,7 @@ namespace covered
         static uint32_t getEdgeCacheServerDataRequestBufferSize();
         static uint16_t getEdgeCacheServerRecvreqStartport();
         static uint16_t getEdgeCacheServerPlacementProcessorRecvrspStartport();
+        static uint16_t getEdgeCacheServerVictimFetchProcessorRecvrspStartport();
         static uint16_t getEdgeCacheServerWorkerRecvreqStartport();
         static uint16_t getEdgeCacheServerWorkerRecvrspStartport();
         static uint16_t getEdgeInvalidationServerRecvreqStartport();
@@ -135,6 +137,7 @@ namespace covered
         static uint32_t edge_cache_server_data_request_buffer_size_; // Buffer size for edge cache server to store local/redirected data requests
         static uint16_t edge_cache_server_recvreq_startport_; // Start UDP port for edge cache server to receive local/redirected requests
         static uint16_t edge_cache_server_placement_processor_recvrsp_startport_; // Start UDP port for edge cache server placement processor to receive cooperation control responses
+        static uint16_t edge_cache_server_victim_fetch_processor_recvrsp_startport_; // Start UDP port for edge cache server victim fetch processor to receive cooperation control responses
         static uint16_t edge_cache_server_worker_recvreq_startport_; // Start UDP port for edge cache server worker to receive cooperation control requests
         static uint16_t edge_cache_server_worker_recvrsp_startport_; // Start UDP port for edge cache server worker to receive global responses
         static uint16_t edge_invalidation_server_recvreq_startport_; // Start UDP port for edge invalidation server to receive cooperation control requests

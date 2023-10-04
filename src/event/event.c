@@ -53,6 +53,7 @@ namespace covered
     const std::string Event::EDGE_INVALIDATE_CACHE_COPIES_EVENT_NAME("edge::invalidate_cache_copies");
     const std::string Event::EDGE_FINISH_BLOCK_EVENT_NAME("edge::finish_block");
     const std::string Event::EDGE_UPDATE_DIRECTORY_TO_EVICT_EVENT_NAME("edge::update_directory_to_evict");
+    const std::string Event::EDGE_VICTIM_FETCH_EVENT_NAME("edge::victim_fetch");
 
     // For edge invalidation server
     const std::string Event::EDGE_INVALIDATION_SERVER_INVALIDATE_LOCAL_CACHE_EVENT_NAME("edge::invalidation_server::invalidate_local_cache");
@@ -61,6 +62,9 @@ namespace covered
     const std::string Event::CLOUD_GET_ROCKSDB_EVENT_NAME("cloud::get_rocksdb");
     const std::string Event::CLOUD_PUT_ROCKSDB_EVENT_NAME("cloud::put_rocksdb");
     const std::string Event::CLOUD_DEL_ROCKSDB_EVENT_NAME("cloud::del_rocksdb");
+
+    // For edge cache server victim fetch processor
+    const std::string Event::EDGE_CACHE_SERVER_VICTIM_FETCH_PROCESSOR_FETCHING_EVENT_NAME("edge::cache_server_victim_fetch_processor::fetching");
 
     // For background events
     const std::string Event::BG_EDGE_CACHE_SERVER_WORKER_TARGET_GET_LOCAL_CACHE_EVENT_NAME("bg::edge::cache_server_worker::target_get_local_cache");

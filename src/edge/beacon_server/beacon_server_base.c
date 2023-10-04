@@ -215,7 +215,11 @@ namespace covered
         bool is_being_written = false;
         bool is_valid_directory_exist = false;
         DirectoryInfo directory_info;
-        processReqToLookupLocalDirectory_(control_request_ptr, edge_cache_server_worker_recvreq_dst_addr, is_being_written, is_valid_directory_exist, directory_info);
+        is_finish = processReqToLookupLocalDirectory_(control_request_ptr, edge_cache_server_worker_recvreq_dst_addr, is_being_written, is_valid_directory_exist, directory_info, total_bandwidth_usage, event_list);
+        if (is_finish)
+        {
+            return is_finish; // Edge node is NOT running now
+        }
 
         // Add intermediate event if with event tracking
         struct timespec lookup_local_directory_end_timestamp = Util::getCurrentTimespec();
@@ -266,7 +270,12 @@ namespace covered
         struct timespec update_local_directory_start_timestamp = Util::getCurrentTimespec();
 
         // Update local directory information
-        bool is_being_written = processReqToUpdateLocalDirectory_(control_request_ptr);
+        bool is_being_written = false;
+        is_finish = processReqToUpdateLocalDirectory_(control_request_ptr, is_being_written, total_bandwidth_usage, event_list);
+        if (is_finish)
+        {
+            return is_finish; // Edge node is NOT running now
+        }
 
         // Add intermediate event if with event tracking
         struct timespec update_local_directory_end_timestamp = Util::getCurrentTimespec();
@@ -326,7 +335,11 @@ namespace covered
         // Try to acquire permission for the write
         LockResult lock_result = LockResult::kFailure;
         std::unordered_set<DirectoryInfo, DirectoryInfoHasher> all_dirinfo;
-        processReqToAcquireLocalWritelock_(control_request_ptr, edge_cache_server_worker_recvreq_dst_addr, lock_result, all_dirinfo);
+        is_finish = processReqToAcquireLocalWritelock_(control_request_ptr, edge_cache_server_worker_recvreq_dst_addr, lock_result, all_dirinfo, total_bandwidth_usage, event_list);
+        if (is_finish)
+        {
+            return is_finish; // Edge node is NOT running now
+        }
 
         // Add intermediate event if with event tracking
         struct timespec acquire_local_writelock_end_timestamp = Util::getCurrentTimespec();
@@ -340,7 +353,7 @@ namespace covered
         if (lock_result == LockResult::kSuccess) // If acquiring write permission successfully
         {
             // Invalidate all cache copies
-            edge_wrapper_ptr_->invalidateCacheCopies(edge_beacon_server_recvrsp_socket_server_ptr_, edge_beacon_server_recvrsp_source_addr_, tmp_key, all_dirinfo, total_bandwidth_usage, event_list, skip_propagation_latency); // Add events of intermedate responses if with event tracking
+            edge_wrapper_ptr_->parallelInvalidateCacheCopies(edge_beacon_server_recvrsp_socket_server_ptr_, edge_beacon_server_recvrsp_source_addr_, tmp_key, all_dirinfo, total_bandwidth_usage, event_list, skip_propagation_latency); // Add events of intermedate responses if with event tracking
         }
 
         // Prepare a acquire writelock response
@@ -383,7 +396,11 @@ namespace covered
 
         // Release permission for the write
         std::unordered_set<NetworkAddr, NetworkAddrHasher> blocked_edges;
-        processReqToReleaseLocalWritelock_(control_request_ptr, blocked_edges);
+        is_finish = processReqToReleaseLocalWritelock_(control_request_ptr, blocked_edges, total_bandwidth_usage, event_list);
+        if (is_finish)
+        {
+            return is_finish; // Edge node is NOT running now
+        }
 
         // Add intermediate event if with event tracking
         struct timespec release_local_writelock_end_timestamp = Util::getCurrentTimespec();
@@ -394,7 +411,7 @@ namespace covered
         bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();
 
         // NOTE: notify blocked edge nodes if any after finishing writes, to avoid transmitting blocked_edges to cache server of the closest edge node
-        is_finish = edge_wrapper_ptr_->notifyEdgesToFinishBlock(edge_beacon_server_recvrsp_socket_server_ptr_, edge_beacon_server_recvrsp_source_addr_, tmp_key, blocked_edges, total_bandwidth_usage, event_list, skip_propagation_latency); // Add events of intermedate responses if with event tracking
+        is_finish = edge_wrapper_ptr_->parallelNotifyEdgesToFinishBlock(edge_beacon_server_recvrsp_socket_server_ptr_, edge_beacon_server_recvrsp_source_addr_, tmp_key, blocked_edges, total_bandwidth_usage, event_list, skip_propagation_latency); // Add events of intermedate responses if with event tracking
 
         // Prepare a release writelock response
         embedBackgroundCounterIfNotEmpty_(total_bandwidth_usage, event_list); // Embed background events/bandwidth if any into control response message

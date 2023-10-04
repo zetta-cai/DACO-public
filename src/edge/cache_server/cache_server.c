@@ -38,8 +38,12 @@ namespace covered
             cache_server_worker_params_[local_cache_server_worker_idx] = tmp_cache_server_worker_param;
         }
 
+        // Prepare parameters for cache server victim fetch processor thread
+        CacheServerProcessorParam tmp_cache_server_victim_fetch_processor_param(this, Config::getEdgeCacheServerDataRequestBufferSize());
+        cache_server_victim_fetch_processor_param_ = tmp_cache_server_victim_fetch_processor_param;
+
         // Prepare parameters for cache server placement processor thread
-        CacheServerPlacementProcessorParam tmp_cache_server_placement_processor_param(this, Config::getEdgeCacheServerDataRequestBufferSize());
+        CacheServerProcessorParam tmp_cache_server_placement_processor_param(this, Config::getEdgeCacheServerDataRequestBufferSize());
         cache_server_placement_processor_param_ = tmp_cache_server_placement_processor_param;
 
         // For receiving local requests
@@ -79,6 +83,7 @@ namespace covered
 
         int pthread_returncode;
         pthread_t cache_server_worker_threads[percacheserver_workercnt];
+        pthread_t cache_server_victim_fetch_processor_thread;
         pthread_t cache_server_placement_processor_thread;
 
         // Launch cache server workers
@@ -93,6 +98,17 @@ namespace covered
                 covered::Util::dumpErrorMsg(instance_name_, oss.str());
                 exit(1);
             }
+        }
+
+        // Launch cache server victim fetch processor
+        //pthread_returncode = pthread_create(&cache_server_victim_fetch_processor_thread, NULL, CacheServerVictimFetchProcessor::launchCacheServerVictimFetchProcessor, (void*)(&cache_server_victim_fetch_processor_param_));
+        pthread_returncode = Util::pthreadCreateHighPriority(&cache_server_victim_fetch_processor_thread, CacheServerVictimFetchProcessor::launchCacheServerVictimFetchProcessor, (void*)(&cache_server_victim_fetch_processor_param_));
+        if (pthread_returncode != 0)
+        {
+            std::ostringstream oss;
+            oss << "edge " << edge_idx << " failed to launch cache server victim fetch processor (error code: " << pthread_returncode << ")" << std::endl;
+            covered::Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
         }
 
         // Launch cache server placement processor
@@ -200,6 +216,13 @@ namespace covered
             // Pass cache server item into ring buffer of the corresponding cache server worker
             CacheServerItem tmp_cache_server_item(data_requeset_ptr);
             bool is_successful = cache_server_worker_params_[local_cache_server_worker_idx].getDataRequestBufferPtr()->push(tmp_cache_server_item);
+            assert(is_successful == true); // Ring buffer must NOT be full
+        }
+        else if (data_requeset_ptr->getMessageType() == MessageType::kCoveredVictimFetchRequest) // Lazy victim fetching
+        {
+            // Pass cache server item into ring buffer of the cache server victim fetch processor
+            CacheServerItem tmp_cache_server_item(data_requeset_ptr);
+            bool is_successful = cache_server_victim_fetch_processor_param_.getDataRequestBufferPtr()->push(tmp_cache_server_item);
             assert(is_successful == true); // Ring buffer must NOT be full
         }
         else if (data_requeset_ptr->getMessageType() == MessageType::kCoveredPlacementNotifyRequest) // Placement notification

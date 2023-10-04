@@ -359,7 +359,11 @@ namespace covered
             if (current_is_beacon) // Get target edge index from local directory information
             {
                 // Frequent polling
-                lookupLocalDirectory_(key, is_being_written, is_valid_directory_exist, directory_info, skip_propagation_latency);
+                is_finish = lookupLocalDirectory_(key, is_being_written, is_valid_directory_exist, directory_info, total_bandwidth_usage, event_list, skip_propagation_latency);
+                if (is_finish)
+                {
+                    return is_finish; // Edge is NOT running
+                }
                 if (is_being_written) // If key is being written, we need to wait for writes
                 {
                     continue; // Continue to lookup local directory info
@@ -555,7 +559,7 @@ namespace covered
         struct timespec issue_redirect_get_req_start_timestamp = Util::getCurrentTimespec();
 
         // Prepare destination address of target edge cache server
-        NetworkAddr target_edge_cache_server_recvreq_dst_addr = tmp_edge_wrapper_ptr->getTargetDstaddr(directory_info);
+        NetworkAddr target_edge_cache_server_recvreq_dst_addr = tmp_edge_wrapper_ptr->getTargetDstaddr(directory_info); // Send to cache server of the target edge node for cache server worker
 
         while (true) // Timeout-and-retry mechanism
         {
@@ -921,7 +925,11 @@ namespace covered
             if (current_is_beacon) // Get target edge index from local directory information
             {
                 // Frequent polling
-                acquireLocalWritelock_(key, lock_result, all_dirinfo);
+                is_finish = acquireLocalWritelock_(key, lock_result, all_dirinfo, total_bandwidth_usage, event_list, skip_propagation_latency);
+                if (is_finish)
+                {
+                    return is_finish; // Edge is NOT running
+                }
                 if (lock_result == LockResult::kFailure) // If key has been locked by any other edge node
                 {
                     continue; // Continue to try to acquire the write lock
@@ -929,7 +937,7 @@ namespace covered
                 else if (lock_result == LockResult::kSuccess) // If acquire write permission successfully
                 {
                     // Invalidate all cache copies
-                    tmp_edge_wrapper_ptr->invalidateCacheCopies(edge_cache_server_worker_recvrsp_socket_server_ptr_, edge_cache_server_worker_recvrsp_source_addr_, key, all_dirinfo, total_bandwidth_usage, event_list, skip_propagation_latency); // Add events of intermediate response if with event tracking
+                    tmp_edge_wrapper_ptr->parallelInvalidateCacheCopies(edge_cache_server_worker_recvrsp_socket_server_ptr_, edge_cache_server_worker_recvrsp_source_addr_, key, all_dirinfo, total_bandwidth_usage, event_list, skip_propagation_latency); // Add events of intermediate response if with event tracking
                 }
                 // NOTE: will directly break if lock result is kNoneed
             }
@@ -1257,10 +1265,14 @@ namespace covered
         {
             // Release write lock and get blocked edges
             std::unordered_set<NetworkAddr, NetworkAddrHasher> blocked_edges;
-            releaseLocalWritelock_(key, blocked_edges, skip_propagation_latency);
+            is_finish = releaseLocalWritelock_(key, blocked_edges, total_bandwidth_usage, event_list, skip_propagation_latency);
+            if (is_finish)
+            {
+                return is_finish; // Edge is NOT running
+            }
 
             // Notify blocked edge nodes to finish blocking
-            is_finish = tmp_edge_wrapper_ptr->notifyEdgesToFinishBlock(edge_cache_server_worker_recvrsp_socket_server_ptr_, edge_cache_server_worker_recvrsp_source_addr_, key, blocked_edges, total_bandwidth_usage, event_list, skip_propagation_latency); // Add events of intermediate response if with event tracking
+            is_finish = tmp_edge_wrapper_ptr->parallelNotifyEdgesToFinishBlock(edge_cache_server_worker_recvrsp_socket_server_ptr_, edge_cache_server_worker_recvrsp_source_addr_, key, blocked_edges, total_bandwidth_usage, event_list, skip_propagation_latency); // Add events of intermediate response if with event tracking
             if (is_finish) // Edge is NOT running
             {
                 return is_finish;

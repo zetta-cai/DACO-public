@@ -25,6 +25,7 @@ namespace covered
     const std::string Config::EDGE_CACHE_SERVER_DATA_REQUEST_BUFFER_SIZE_KEYSTR("edge_cache_server_data_request_buffer_size");
     const std::string Config::EDGE_CACHE_SERVER_RECVREQ_STARTPORT_KEYSTR("edge_cache_server_recvreq_startport");
     const std::string Config::EDGE_CACHE_SERVER_PLACEMENT_PROCESSOR_RECVRSP_STARTPORT_KEYSTR("edge_cache_server_placement_processor_recvrsp_startport");
+    const std::string Config::EDGE_CACHE_SERVER_VICTIM_FETCH_PROCESSOR_RECVRSP_STARTPORT_KEYSTR("edge_cache_server_victim_fetch_processor_recvrsp_startport");
     const std::string Config::EDGE_CACHE_SERVER_WORKER_RECVREQ_STARTPORT_KEYSTR("edge_cache_server_worker_recvreq_startport");
     const std::string Config::EDGE_CACHE_SERVER_WORKER_RECVRSP_STARTPORT_KEYSTR("edge_cache_server_worker_recvrsp_startport");
     const std::string Config::EDGE_INVALIDATION_SERVER_RECVREQ_STARTPORT_KEYSTR("edge_invalidation_server_recvreq_startport");
@@ -72,13 +73,14 @@ namespace covered
     uint32_t Config::edge_cache_server_data_request_buffer_size_ = 1000;
     uint16_t Config::edge_cache_server_recvreq_startport_ = 4700; // [4096, 65536]
     uint16_t Config::edge_cache_server_placement_processor_recvrsp_startport_ = 4800; // [4096, 65536]
-    uint16_t Config::edge_cache_server_worker_recvreq_startport_ = 4900; // [4096, 65536]
-    uint16_t Config::edge_cache_server_worker_recvrsp_startport_ = 5000; // [4096, 65536]
-    uint16_t Config::edge_invalidation_server_recvreq_startport_ = 5100; // [4096, 65536]
+    uint16_t Config::edge_cache_server_victim_fetch_processor_recvrsp_startport_ = 4900; // [4096, 65536]
+    uint16_t Config::edge_cache_server_worker_recvreq_startport_ = 5000; // [4096, 65536]
+    uint16_t Config::edge_cache_server_worker_recvrsp_startport_ = 5100; // [4096, 65536]
+    uint16_t Config::edge_invalidation_server_recvreq_startport_ = 5200; // [4096, 65536]
     std::vector<std::string> Config::edge_ipstrs_(0);
-    uint16_t Config::edge_recvmsg_startport_ = 5200; // [4096, 65536]
+    uint16_t Config::edge_recvmsg_startport_ = 5300; // [4096, 65536]
     std::string Config::evaluator_ipstr_ = Util::LOCALHOST_IPSTR;
-    uint16_t Config::evaluator_recvmsg_port_ = 5300; // [4096, 65536]
+    uint16_t Config::evaluator_recvmsg_port_ = 5400; // [4096, 65536]
     std::string Config::facebook_config_filepath_("lib/CacheLib/cachelib/cachebench/test_configs/hit_ratio/cdn/config.json");
     uint32_t Config::fine_grained_locking_size_ = 1000;
     bool Config::is_debug_ = false;
@@ -209,6 +211,12 @@ namespace covered
                 {
                     int64_t tmp_port = kv_ptr->value().get_int64();
                     edge_cache_server_placement_processor_recvrsp_startport_ = Util::toUint16(tmp_port);
+                }
+                kv_ptr = find_(EDGE_CACHE_SERVER_VICTIM_FETCH_PROCESSOR_RECVRSP_STARTPORT_KEYSTR);
+                if (kv_ptr != NULL)
+                {
+                    int64_t tmp_port = kv_ptr->value().get_int64();
+                    edge_cache_server_victim_fetch_processor_recvrsp_startport_ = Util::toUint16(tmp_port);
                 }
                 kv_ptr = find_(EDGE_CACHE_SERVER_WORKER_RECVREQ_STARTPORT_KEYSTR);
                 if (kv_ptr != NULL)
@@ -498,6 +506,12 @@ namespace covered
         return edge_cache_server_placement_processor_recvrsp_startport_;
     }
 
+    uint16_t Config::getEdgeCacheServerVictimFetchProcessorRecvrspStartport()
+    {
+        checkIsValid_();
+        return edge_cache_server_victim_fetch_processor_recvrsp_startport_;
+    }
+
     uint16_t Config::getEdgeCacheServerWorkerRecvreqStartport()
     {
         checkIsValid_();
@@ -674,6 +688,7 @@ namespace covered
         oss << "Edge cache server data request buffer size: " << edge_cache_server_data_request_buffer_size_ << std::endl;
         oss << "Edge cache server recvreq startport: " << edge_cache_server_recvreq_startport_ << std::endl;
         oss << "Edge cache server placement processor recvrsp startport: " << edge_cache_server_placement_processor_recvrsp_startport_ << std::endl;
+        oss << "Edge cache server victim fetch processor recvrsp startport: " << edge_cache_server_victim_fetch_processor_recvrsp_startport_ << std::endl;
         oss << "Edge cache server worker recvreq startport: " << edge_cache_server_worker_recvreq_startport_ << std::endl;
         oss << "Edge cache server worker recvrsp startport: " << edge_cache_server_worker_recvrsp_startport_ << std::endl;
         oss << "Edge invalidation server recvreq startport: " << edge_invalidation_server_recvreq_startport_ << std::endl;
