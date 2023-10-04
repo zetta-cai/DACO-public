@@ -188,7 +188,7 @@ namespace covered
         return;
     }
 
-    bool LocalCacheBase::getLocalCacheVictimKeys(std::unordered_set<Key, KeyHasher>& keys, const uint64_t& required_size) const
+    bool LocalCacheBase::getLocalCacheVictimKeys(std::unordered_set<Key, KeyHasher>& keys, std::list<VictimCacheinfo>& victim_cacheinfos, const uint64_t& required_size) const
     {
         checkPointers_();
 
@@ -198,7 +198,7 @@ namespace covered
         std::string context_name = "LocalCacheBase::getLocalCacheVictimKeys()";
         rwlock_for_local_cache_ptr_->acquire_lock_shared(context_name);
 
-        bool has_victim_key = getLocalCacheVictimKeysInternal_(keys, required_size);
+        bool has_victim_key = getLocalCacheVictimKeysInternal_(keys, victim_cacheinfos, required_size);
 
         rwlock_for_local_cache_ptr_->unlock_shared(context_name);
         return has_victim_key;

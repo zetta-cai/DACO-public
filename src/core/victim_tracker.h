@@ -56,7 +56,7 @@ namespace covered
         // NOTE: the list of VictimCacheinfos follows the ascending order of local rewards
         typedef std::unordered_map<uint32_t, EdgelevelVictimMetadata> peredge_victim_metadata_t;
         typedef std::unordered_map<Key, VictimDirinfo, KeyHasher> perkey_victim_dirinfo_t;
-
+        
         static const std::string kClassName;
 
         // Utils

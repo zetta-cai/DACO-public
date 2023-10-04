@@ -54,7 +54,8 @@ namespace covered
         void admitLocalCache(const Key& key, const Value& value, bool& affect_victim_tracker);
 
         // If local cache supports fine-grained cache management, split evict() into two steps for key-level fine-grained locking in cache wrapper: (i) get victim key; (ii) evict if victim key matches similar as version check
-        bool getLocalCacheVictimKeys(std::unordered_set<Key, KeyHasher>& keys, const uint64_t& required_size) const; // Return false if no victim key (for fine-grained management)
+        // NOTE: keys is used for local edge cache eviction, while victim_cacheinfos is used for lazy victim fetching (for COVERED)
+        bool getLocalCacheVictimKeys(std::unordered_set<Key, KeyHasher>& keys, std::list<VictimCacheinfo>& victim_cacheinfos, const uint64_t& required_size) const; // Return false if no victim key (for fine-grained management)
         bool evictLocalCacheWithGivenKey(const Key& key, Value& value); // Return false if key does NOT exist (for fine-grained management)
 
         // If local cache only supports coarse-grained cache management, evict local cache directly
@@ -92,7 +93,7 @@ namespace covered
         virtual bool needIndependentAdmitInternal_(const Key& key) const = 0;
 
         virtual void admitLocalCacheInternal_(const Key& key, const Value& value, bool& affect_victim_tracker) = 0;
-        virtual bool getLocalCacheVictimKeysInternal_(std::unordered_set<Key, KeyHasher>& keys, const uint64_t& required_size) const = 0;
+        virtual bool getLocalCacheVictimKeysInternal_(std::unordered_set<Key, KeyHasher>& keys, std::list<VictimCacheinfo>& victim_cacheinfos, const uint64_t& required_size) const = 0;
         virtual bool evictLocalCacheWithGivenKeyInternal_(const Key& key, Value& value) = 0;
 
         virtual void evictLocalCacheNoGivenKeyInternal_(std::unordered_map<Key, Value, KeyHasher>& victims, const uint64_t& required_size) = 0;

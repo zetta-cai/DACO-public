@@ -103,11 +103,12 @@ namespace covered
         return;
     }
 
-    bool LruLocalCache::getLocalCacheVictimKeysInternal_(std::unordered_set<Key, KeyHasher>& keys, const uint64_t& required_size) const
+    bool LruLocalCache::getLocalCacheVictimKeysInternal_(std::unordered_set<Key, KeyHasher>& keys, std::list<VictimCacheinfo>& victim_cacheinfos, const uint64_t& required_size) const
     {
         assert(hasFineGrainedManagement());
 
-        UNUSED(required_size);
+        UNUSED(required_size); // NO need to provide multiple victims based on required size due to without victim fetching
+        UNUSED(victim_cacheinfos); // ONLY for COVERED
 
         Key tmp_victim_key;
         bool has_victim_key = lru_cache_ptr_->getVictimKey(tmp_victim_key);

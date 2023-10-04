@@ -55,6 +55,9 @@ namespace covered
         // Return up to peredge_synced_victimcnt local synced victims with the least local rewards
         std::list<VictimCacheinfo> getLocalSyncedVictimCacheinfos() const;
 
+        // Return if exist victims for the required size
+        bool fetchVictimCacheinfosForRequiredSize(std::list<VictimCacheinfo>& victim_cacheinfos, const uint64_t& required_size) const;
+
         // Set collected_popularity.is_tracked_ as true if the local uncached key is tracked
         // NOTE: collected_popularity.is_tracked_ is false if key is either local cached or local uncached yet untracked by local uncached metadata
         void getCollectedPopularity(const Key& key, CollectedPopularity& collected_popularity) const;

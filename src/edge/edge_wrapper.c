@@ -1039,6 +1039,7 @@ namespace covered
                         return is_finish;
                     }
 
+                    // Update ack information
                     assert(!acked_flags[tmp_victim_key]);
                     acked_flags[tmp_victim_key] = true;
                     acked_cnt += 1;

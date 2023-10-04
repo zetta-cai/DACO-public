@@ -233,6 +233,26 @@ namespace covered
         return local_synced_victim_cacheinfos;
     }
 
+    bool CacheWrapper::fetchVictimCacheinfosForRequiredSize(std::list<VictimCacheinfo>& victim_cacheinfos, const uint64_t& required_size) const
+    {
+        checkPointers_();
+
+        // NOTE: as we only access local edge cache (thread safe w/o per-key rwlock) instead of validity map (thread safe w/ per-key rwlock), we do NOT need to acquire a fine-grained read lock here
+
+        // Acquire a read lock
+        //std::string context_name = "CacheWrapper::fetchVictimCacheinfosForRequiredSize()";
+        //cache_wrapper_perkey_rwlock_ptr_->acquire_lock_shared(key, context_name);
+
+        std::unordered_set<Key, KeyHasher> tmp_victim_keys;
+        bool has_victim_key = local_cache_ptr_->getLocalCacheVictimKeys(tmp_victim_keys, victim_cacheinfos, required_size);
+        UNUSED(tmp_victim_keys);
+
+        // Release a read lock
+        //cache_wrapper_perkey_rwlock_ptr_->unlock_shared(key, context_name);
+
+        return has_victim_key;
+    }
+
     void CacheWrapper::getCollectedPopularity(const Key& key, CollectedPopularity& collected_popularity) const
     {
         checkPointers_();
@@ -404,7 +424,9 @@ namespace covered
 
         // Get victim keys for key-level fine-grained locking
         std::unordered_set<Key, KeyHasher> tmp_victim_keys;
-        bool has_victim_key = local_cache_ptr_->getLocalCacheVictimKeys(tmp_victim_keys, required_size);
+        std::list<VictimCacheinfo> tmp_victim_cacheinfos;
+        bool has_victim_key = local_cache_ptr_->getLocalCacheVictimKeys(tmp_victim_keys, tmp_victim_cacheinfos, required_size);
+        UNUSED(tmp_victim_cacheinfos); // victim_cacheinfos is ONLY used for COVERED's lazy victim fetching, yet NOT used for local edge cache eviction
 
         // At least one victim key should exist for eviction
         if (!has_victim_key)

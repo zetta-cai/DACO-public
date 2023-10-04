@@ -10,14 +10,14 @@
 #include <string>
 
 #include "common/dynamic_array.h"
-#include "message/uint_message.h"
+#include "message/uint_victimset_message.h"
 
 namespace covered
 {
-    class CoveredVictimFetchRequest : public UintMessage
+    class CoveredVictimFetchRequest : public UintVictimsetMessage
     {
     public:
-        CoveredVictimFetchRequest(const uint32_t& object_size, const uint32_t& source_index, const NetworkAddr& source_addr);
+        CoveredVictimFetchRequest(const uint32_t& object_size, const VictimSyncset& victim_syncset, const uint32_t& source_index, const NetworkAddr& source_addr);
         CoveredVictimFetchRequest(const DynamicArray& msg_payload);
         virtual ~CoveredVictimFetchRequest();
 
