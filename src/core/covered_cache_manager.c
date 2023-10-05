@@ -257,7 +257,7 @@ namespace covered
                 return is_finish; // Edge node is NOT running now
             }
 
-            // TODO: Redo placement calculation after victim fetching to double-check the best placement (ONLY need to re-calculate eviction cost)
+            // TODO: (END HERE) Redo placement calculation after victim fetching to double-check the best placement (ONLY need to re-calculate eviction cost)
         }
 
         return is_finish;
@@ -308,13 +308,13 @@ namespace covered
                     extra_peredge_victim_cacheinfos.insert(std::pair<uint32_t, std::list<VictimCacheinfo>>(tmp_edge_idx, tmp_victim_cacheinfos));
 
                     // Update extra_perkey_victim_dirinfoset
-                    for (std::list<VictimCacheinfo>::const_iterator tmp_victim_cacheinfos_const_iter = tmp_victim_cacheinfos.begin(); tmp_victim_cacheinfos_const_iter != tmp_victim_cacheinfos.end(); tmp_victim_cacheinfos_const_iter++)
+                    std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_local_fetched_victim_dirinfosets = edge_wrapper_ptr->getLocalBeaconedVictimsFromCacheinfos(tmp_victim_cacheinfos);
+                    for (std::unordered_map<Key, dirinfo_set_t, KeyHasher>::const_iterator tmp_victim_dirinfosets_const_iter = local_beaconed_local_fetched_victim_dirinfosets.begin(); tmp_victim_dirinfosets_const_iter != local_beaconed_local_fetched_victim_dirinfosets.end(); tmp_victim_dirinfosets_const_iter++)
                     {
-                        const Key& tmp_victim_key = tmp_victim_cacheinfos_const_iter->getKey();
+                        const Key& tmp_victim_key = tmp_victim_dirinfosets_const_iter->first;
                         if (extra_perkey_victim_dirinfoset.find(tmp_victim_key) == extra_perkey_victim_dirinfoset.end())
                         {
-                            dirinfo_set_t tmp_dirinfo_set = edge_wrapper_ptr->getCooperationWrapperPtr()->getLocalDirectoryInfos(tmp_victim_key);
-                            extra_perkey_victim_dirinfoset.insert(std::pair<Key, dirinfo_set_t>(tmp_victim_key, tmp_dirinfo_set));
+                            extra_perkey_victim_dirinfoset.insert(std::pair<Key, dirinfo_set_t>(tmp_victim_key, tmp_victim_dirinfosets_const_iter->second));
                         }
                     }
 
@@ -363,7 +363,7 @@ namespace covered
                         {
                             assert(iter_for_response->second == false); // Original ack flag should be false
 
-                            // TODO: Collect received victim information to update extra_peredge_victim_cacheinfos and extra_perkey_victim_dirinfoset
+                            processVictimFetchResponse_(control_response_ptr, edge_wrapper_ptr, extra_peredge_victim_cacheinfos, extra_perkey_victim_dirinfoset);
 
                             // Update total bandwidth usage for received victim fetch response
                             BandwidthUsage victim_fetch_response_bandwidth_usage = control_response_ptr->getBandwidthUsageRef();
@@ -418,7 +418,7 @@ namespace covered
 
         // Prepare victim fetch request to fetch victims from the target edge node
         const uint32_t current_edge_idx = edge_wrapper_ptr->getNodeIdx();
-        MessageBase* victim_fetch_request_ptr = new CoveredVictimFetchRequest(object_size, victim_syncset, current_edge_idx, recvrsp_source_addr);
+        MessageBase* victim_fetch_request_ptr = new CoveredVictimFetchRequest(object_size, victim_syncset, current_edge_idx, recvrsp_source_addr, skip_propagation_latency);
         assert(victim_fetch_request_ptr != NULL);
 
         // Push CoveredVictimFetchRequest into edge-to-edge propagation simulator to send to the target edge node
@@ -427,6 +427,51 @@ namespace covered
 
         // NOTE: victim_fetch_request_ptr will be released by edge-to-edge propagation simulator
         victim_fetch_request_ptr = NULL;
+
+        return;
+    }
+
+    void CoveredCacheManager::processVictimFetchResponse_(const MessageBase* control_respnose_ptr, const EdgeWrapper* edge_wrapper_ptr, std::unordered_map<uint32_t, std::list<VictimCacheinfo>>& extra_peredge_victim_cacheinfos, std::unordered_map<Key, dirinfo_set_t, KeyHasher>& extra_perkey_victim_dirinfoset) const
+    {
+        assert(control_respnose_ptr != NULL);
+        assert(control_respnose_ptr->getMessageType() == MessageType::kCoveredVictimFetchResponse);
+        assert(edge_wrapper_ptr != NULL);
+
+        const CoveredVictimFetchResponse* const covered_victim_fetch_response_ptr = static_cast<const CoveredVictimFetchResponse*>(control_respnose_ptr);
+        CoveredCacheManager* tmp_covered_cache_manager_ptr = edge_wrapper_ptr->getCoveredCacheManagerPtr();
+
+        // Victim synchronization
+        const uint32_t source_edge_idx = covered_victim_fetch_response_ptr->getSourceIndex();
+        const VictimSyncset& victim_syncset = covered_victim_fetch_response_ptr->getVictimSyncsetRef();
+        std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = edge_wrapper_ptr->getLocalBeaconedVictimsFromVictimSyncset(victim_syncset);
+        tmp_covered_cache_manager_ptr->updateVictimTrackerForVictimSyncset(source_edge_idx, victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
+
+        // Update extra_peredge_victim_cacheinfos
+        const VictimSyncset& victim_fetchset = covered_victim_fetch_response_ptr->getVictimFetchsetRef();
+        const std::list<VictimCacheinfo>& fetched_victim_cacheinfos = victim_fetchset.getLocalSyncedVictimsRef();
+        extra_peredge_victim_cacheinfos.insert(std::pair<uint32_t, std::list<VictimCacheinfo>>(source_edge_idx, fetched_victim_cacheinfos));
+
+        // Update extra_perkey_victim_dirinfoset
+        const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& neighbor_beaconed_neighbor_fetched_victim_dirinfosets = victim_fetchset.getLocalBeaconedVictimsRef(); // Neighbor beaconed ones of neighbor fetched victims
+        const std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_neighbor_fetched_victim_dirinfosets = edge_wrapper_ptr->getLocalBeaconedVictimsFromVictimSyncset(victim_fetchset); // Local beaconed ones of fetched victims
+        // Insert neighbor beaconed neighbor fetched victims
+        for (std::unordered_map<Key, dirinfo_set_t, KeyHasher>::const_iterator victim_dirinfosets_const_iter = neighbor_beaconed_neighbor_fetched_victim_dirinfosets.begin(); victim_dirinfosets_const_iter != neighbor_beaconed_neighbor_fetched_victim_dirinfosets.end(); victim_dirinfosets_const_iter++)
+        {
+            const Key& tmp_victim_key = victim_dirinfosets_const_iter->first;
+            if (extra_perkey_victim_dirinfoset.find(tmp_victim_key) == extra_perkey_victim_dirinfoset.end())
+            {
+                extra_perkey_victim_dirinfoset.insert(std::pair<Key, dirinfo_set_t>(tmp_victim_key, victim_dirinfosets_const_iter->second));
+            }
+        }
+        // Insert local beaconed neighbor fetched victims
+        for (std::unordered_map<Key, dirinfo_set_t, KeyHasher>::const_iterator victim_dirinfosets_const_iter = local_beaconed_neighbor_fetched_victim_dirinfosets.begin(); victim_dirinfosets_const_iter != local_beaconed_neighbor_fetched_victim_dirinfosets.end(); victim_dirinfosets_const_iter++)
+        {
+            const Key& tmp_victim_key = victim_dirinfosets_const_iter->first;
+            if (extra_perkey_victim_dirinfoset.find(tmp_victim_key) == extra_perkey_victim_dirinfoset.end())
+            {
+                extra_perkey_victim_dirinfoset.insert(std::pair<Key, dirinfo_set_t>(tmp_victim_key, victim_dirinfosets_const_iter->second));
+            }
+        }
 
         return;
     }

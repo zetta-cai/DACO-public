@@ -253,6 +253,11 @@ namespace covered
                 message_type_str = "kCoveredVictimFetchRequest";
                 break;
             }
+            case MessageType::kCoveredVictimFetchResponse:
+            {
+                message_type_str = "kCoveredVictimFetchResponse";
+                break;
+            }
             default:
             {
                 message_type_str = std::to_string(static_cast<uint32_t>(message_type));
@@ -695,6 +700,11 @@ namespace covered
             case MessageType::kCoveredPlacementDirectoryUpdateResponse:
             {
                 message_ptr = new CoveredPlacementDirectoryUpdateResponse(msg_payload);
+                break;
+            }
+            case MessageType::kCoveredVictimFetchResponse:
+            {
+                message_ptr = new CoveredVictimFetchResponse(msg_payload);
                 break;
             }
             default:
@@ -1233,7 +1243,7 @@ namespace covered
     bool MessageBase::isCooperationControlResponse() const
     {
         checkIsValid_();
-        if (message_type_ == MessageType::kAcquireWritelockResponse || message_type_ == MessageType::kDirectoryLookupResponse || message_type_ == MessageType::kDirectoryUpdateResponse || message_type_ == MessageType::kFinishBlockResponse || message_type_ == MessageType::kInvalidationResponse || message_type_ == MessageType::kReleaseWritelockResponse || message_type_ == MessageType::kCoveredDirectoryLookupResponse || message_type_ == MessageType::kCoveredDirectoryUpdateResponse || message_type_ == MessageType::kCoveredAcquireWritelockResponse || message_type_ == MessageType::kCoveredReleaseWritelockResponse || message_type_ == MessageType::kCoveredPlacementDirectoryUpdateResponse)
+        if (message_type_ == MessageType::kAcquireWritelockResponse || message_type_ == MessageType::kDirectoryLookupResponse || message_type_ == MessageType::kDirectoryUpdateResponse || message_type_ == MessageType::kFinishBlockResponse || message_type_ == MessageType::kInvalidationResponse || message_type_ == MessageType::kReleaseWritelockResponse || message_type_ == MessageType::kCoveredDirectoryLookupResponse || message_type_ == MessageType::kCoveredDirectoryUpdateResponse || message_type_ == MessageType::kCoveredAcquireWritelockResponse || message_type_ == MessageType::kCoveredReleaseWritelockResponse || message_type_ == MessageType::kCoveredPlacementDirectoryUpdateResponse || message_type_ == MessageType::kCoveredVictimFetchResponse)
         {
             return true;
         }

@@ -4,7 +4,7 @@ namespace covered
 {
     const std::string CoveredVictimFetchRequest::kClassName("CoveredVictimFetchRequest");
 
-    CoveredVictimFetchRequest::CoveredVictimFetchRequest(const uint32_t& object_size, const VictimSyncset& victim_syncset, const uint32_t& source_index, const NetworkAddr& source_addr) : UintVictimsetMessage(object_size, victim_syncset, MessageType::kCoveredVictimFetchRequest, source_index, source_addr, BandwidthUsage(), EventList(), true)
+    CoveredVictimFetchRequest::CoveredVictimFetchRequest(const uint32_t& object_size, const VictimSyncset& victim_syncset, const uint32_t& source_index, const NetworkAddr& source_addr, const bool& skip_propagation_latency) : UintVictimsetMessage(object_size, victim_syncset, MessageType::kCoveredVictimFetchRequest, source_index, source_addr, BandwidthUsage(), EventList(), skip_propagation_latency)
     {
     }
 

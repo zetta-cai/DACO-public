@@ -72,6 +72,7 @@ namespace covered
         // For lazy victim fetching
         bool parallelFetchVictims_(const ObjectSize& object_size, const Edgeset& best_placement_victim_fetch_edgeset, const EdgeWrapper* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency, std::unordered_map<uint32_t, std::list<VictimCacheinfo>>& extra_peredge_victim_cacheinfos, std::unordered_map<Key, dirinfo_set_t, KeyHasher>& extra_perkey_victim_dirinfoset) const; // For each edge node index in victim fetch edgeset (return if edge node is finished)
         void sendVictimFetchRequest_(const ObjectSize& object_size, const EdgeWrapper* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, const NetworkAddr& edge_cache_server_recvreq_dst_addr, const bool& skip_propagation_latency) const;
+        void processVictimFetchResponse_(const MessageBase* control_respnose_ptr, const EdgeWrapper* edge_wrapper_ptr, std::unordered_map<uint32_t, std::list<VictimCacheinfo>>& extra_peredge_victim_cacheinfos, std::unordered_map<Key, dirinfo_set_t, KeyHasher>& extra_perkey_victim_dirinfoset) const;
 
         // Const shared variables
         std::string instance_name_;

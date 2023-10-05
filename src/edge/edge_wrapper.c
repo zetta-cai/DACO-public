@@ -1289,17 +1289,7 @@ namespace covered
 
         // Get directory info sets for local synced victimed beaconed by the current edge node
         const uint32_t current_edge_idx = getNodeIdx();
-        std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_local_synced_victim_dirinfosets;
-        for (std::list<VictimCacheinfo>::const_iterator cacheinfo_list_iter = local_synced_victim_cacheinfos.begin(); cacheinfo_list_iter != local_synced_victim_cacheinfos.end(); cacheinfo_list_iter++)
-        {
-            const Key& tmp_key = cacheinfo_list_iter->getKey();
-            bool current_is_beacon = currentIsBeacon(tmp_key);
-            if (current_is_beacon) // Key is beaconed by current edge node
-            {
-                dirinfo_set_t tmp_dirinfo_set = cooperation_wrapper_ptr_->getLocalDirectoryInfos(tmp_key);
-                local_beaconed_local_synced_victim_dirinfosets.insert(std::pair(tmp_key, tmp_dirinfo_set));
-            }
-        }
+        std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_local_synced_victim_dirinfosets = getLocalBeaconedVictimsFromCacheinfos(local_synced_victim_cacheinfos);
 
         // Update local synced victims for the current edge node
         covered_cache_manager_ptr_->updateVictimTrackerForLocalSyncedVictims(local_cache_margin_bytes, local_synced_victim_cacheinfos, local_beaconed_local_synced_victim_dirinfosets); 
@@ -1312,21 +1302,26 @@ namespace covered
         checkPointers_();
         assert(cache_name_ == Util::COVERED_CACHE_NAME);
 
-        std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets;
-
         const std::list<VictimCacheinfo>& neighbor_synced_victims = victim_syncset.getLocalSyncedVictimsRef();
-        for (std::list<VictimCacheinfo>::const_iterator iter = neighbor_synced_victims.begin(); iter != neighbor_synced_victims.end(); iter++)
+        std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = getLocalBeaconedVictimsFromCacheinfos(neighbor_synced_victims);
+
+        return local_beaconed_neighbor_synced_victim_dirinfosets;
+    }
+
+    std::unordered_map<Key, dirinfo_set_t, KeyHasher> EdgeWrapper::getLocalBeaconedVictimsFromCacheinfos(const std::list<VictimCacheinfo>& victim_cacheinfos) const
+    {
+        std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_victim_dirinfosets;
+        for (std::list<VictimCacheinfo>::const_iterator iter = victim_cacheinfos.begin(); iter != victim_cacheinfos.end(); iter++)
         {
             const Key& tmp_key = iter->getKey();
             bool current_is_beacon = currentIsBeacon(tmp_key);
             if (current_is_beacon) // Key is beaconed by current edge node
             {
                 dirinfo_set_t tmp_dirinfo_set = cooperation_wrapper_ptr_->getLocalDirectoryInfos(tmp_key);
-                local_beaconed_neighbor_synced_victim_dirinfosets.insert(std::pair(tmp_key, tmp_dirinfo_set));
+                local_beaconed_victim_dirinfosets.insert(std::pair(tmp_key, tmp_dirinfo_set));
             }
         }
-
-        return local_beaconed_neighbor_synced_victim_dirinfosets;
+        return local_beaconed_victim_dirinfosets;
     }
 
     // (7.2) For non-blocking placement deployment (ONLY invoked by beacon edge node)
