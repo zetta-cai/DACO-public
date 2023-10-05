@@ -364,19 +364,20 @@ namespace covered
         edge_wrapper_ptr_->getEdgeBackgroundCounterForBeaconServerRef().addEvents(background_event_list);
 
         // Get Hitflag for non-blocking placement deployment
+        const Key tmp_key = covered_placement_redirected_get_response_ptr->getKey();
         const bool tmp_hitflag = covered_placement_redirected_get_response_ptr->getHitflag();
+        const bool skip_propagation_latency = redirected_get_response_ptr->isSkipPropagationLatency();
         const Edgeset& best_placement_edgeset = covered_placement_redirected_get_response_ptr->getEdgesetRef();
         assert(best_placement_edgeset.size() <= edge_wrapper_ptr_->getTopkEdgecntForPlacement()); // At most k placement edge nodes each time
         if (tmp_hitflag == Hitflag::kCooperativeHit)
         {
-            // TODO: (END HERE) Perform non-blocking placement notification
-            //nonblockNotifyForPlacement(key, value, best_placement_edgeset);
+            // Perform non-blocking placement notification for neighbor data fetching
+            const Value tmp_value = covered_placement_redirected_get_response_ptr->getValue();
+            edge_wrapper_ptr_->nonblockNotifyForPlacement(tmp_key, tmp_value, best_placement_edgeset, edge_beacon_server_recvrsp_source_addr_, edge_beacon_server_recvrsp_socket_server_ptr_, skip_propagation_latency);
         }
         else // Cooperative invalid or global miss
         {
             // NOTE: as we have replied the sender without hybrid data fetching before, beacon server directly fetches data from cloud by itself here in a non-blocking manner (this is a corner case, as valid dirinfo has cooperative hit in most time)
-            const bool skip_propagation_latency = redirected_get_response_ptr->isSkipPropagationLatency();
-            const Key tmp_key = covered_placement_redirected_get_response_ptr->getKey();
             edge_wrapper_ptr_->nonblockDataFetchFromCloudForPlacement(tmp_key, best_placement_edgeset, skip_propagation_latency);
         }
 
@@ -403,9 +404,12 @@ namespace covered
         edge_wrapper_ptr_->getEdgeBackgroundCounterForBeaconServerRef().updateBandwidthUsgae(background_bandwidth_usage);
         edge_wrapper_ptr_->getEdgeBackgroundCounterForBeaconServerRef().addEvents(background_event_list);
 
-        // TODO: (END HERE) Perform non-blocking placement notification
+        // Perform non-blocking placement notification for cloud data fetching
+        const Key& tmp_key = covered_placement_global_get_response_ptr->getKey();
+        const Value& tmp_value = covered_placement_global_get_response_ptr->getValue();
+        const bool skip_propagation_latency = global_get_response_ptr->isSkipPropagationLatency();
         const Edgeset& best_placement_edgeset = covered_placement_global_get_response_ptr->getEdgesetRef();
         assert(best_placement_edgeset.size() <= edge_wrapper_ptr_->getTopkEdgecntForPlacement()); // At most k placement edge nodes each time
-        //nonblockNotifyForPlacement(key, value, best_placement_edgeset);
+        edge_wrapper_ptr_->nonblockNotifyForPlacement(tmp_key, tmp_value, best_placement_edgeset, edge_beacon_server_recvrsp_source_addr_, edge_beacon_server_recvrsp_socket_server_ptr_, skip_propagation_latency);
     }
 }

@@ -1342,7 +1342,7 @@ namespace covered
 
         if (is_local_cached_and_valid) // Directly get valid value from local edge cache in local/remote beacon node
         {
-            // Perform non-blocking placement notification
+            // Perform non-blocking placement notification for local data fetching
             is_finish = nonblockNotifyForPlacement(key, value, best_placement_edgeset, source_addr, recvrsp_socket_server_ptr, skip_propagation_latency);
         }
         else // No valid value in local edge cache in local/remote beacon node

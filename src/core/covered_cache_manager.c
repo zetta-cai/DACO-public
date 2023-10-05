@@ -51,9 +51,10 @@ namespace covered
             if (is_tracked_by_source_edge_node)
             {
                 // Perform greedy-based placement calculation for trade-off-aware cache placement
-                // NOTE: set best_placement_edgeset for preserved edgeset and placement notifications; set best_placement_peredge_victimset for victim removal to avoid duplicate eviction (both for non-blocking placement deployment)
-                std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>> best_placement_peredge_victimset; 
-                is_finish = placementCalculation_(key, tmp_is_global_cached, has_best_placement, best_placement_edgeset, best_placement_peredge_victimset, edge_wrapper_ptr, recvrsp_source_addr, recvrsp_socket_server_ptr, total_bandwidth_usage, event_list, skip_propagation_latency);
+                // NOTE: set best_placement_edgeset for preserved edgeset and placement notifications; set best_placement_peredge_synced_victimset for synced victim removal from victim tracker and best_placement_peredge_fetched_victimset for fetched victim removal from victim cache, to avoid duplicate eviction (all for non-blocking placement deployment)
+                std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>> best_placement_peredge_synced_victimset;
+                std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>> best_placement_peredge_fetched_victimset;
+                is_finish = placementCalculation_(key, tmp_is_global_cached, has_best_placement, best_placement_edgeset, best_placement_peredge_synced_victimset, best_placement_peredge_fetched_victimset, edge_wrapper_ptr, recvrsp_source_addr, recvrsp_socket_server_ptr, total_bandwidth_usage, event_list, skip_propagation_latency);
                 assert(best_placement_edgeset.size() <= topk_edgecnt_); // At most k placement edge nodes each time
                 if (is_finish)
                 {
@@ -65,14 +66,20 @@ namespace covered
                     // Preserve placement edgeset + perform local-uncached-popularity removal to avoid duplicate placement, and update max admission benefit with aggregated uncached popularity for non-blocking placement deployment
                     popularity_aggregator_.updatePreservedEdgesetForPlacement(key, best_placement_edgeset, tmp_is_global_cached);
 
-                    // Remove involved victims from victim tracker for each edge node in placement edgeset to avoid duplication eviction
-                    // NOTE: removed victims should NOT be reused <- if synced victims in the edge node do NOT change, removed victims will NOT be reported to the beacon node due to dedup/delta-compression in victim synchronization; if need more victims, victim fetching request MUST be later than placement notification request, which has changed the synced victims in the edge node
-                    for (std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>::const_iterator best_placement_peredge_victimset_const_iter = best_placement_peredge_victimset.begin(); best_placement_peredge_victimset_const_iter != best_placement_peredge_victimset.end(); best_placement_peredge_victimset_const_iter++)
+                    // Remove involved synced victims from victim tracker for each edge node in placement edgeset to avoid duplication eviction
+                    // NOTE: synced victims MUST exist in edge-level victim metadata of victim tracker
+                    // NOTE: removed synced victims should NOT be reused <- if synced victims in the edge node do NOT change, removed victims will NOT be reported to the beacon node due to dedup/delta-compression in victim synchronization; if need more victims, victim fetching request MUST be later than placement notification request, which has changed the synced victims in the edge node
+                    for (std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>::const_iterator best_placement_peredge_synced_victimset_const_iter = best_placement_peredge_synced_victimset.begin(); best_placement_peredge_synced_victimset_const_iter != best_placement_peredge_synced_victimset.end(); best_placement_peredge_synced_victimset_const_iter++)
                     {
-                        const uint32_t tmp_edge_idx = best_placement_peredge_victimset_const_iter->first;
-                        const std::unordered_set<Key, KeyHasher>& tmp_victim_keyset_const_ref = best_placement_peredge_victimset_const_iter->second;
-                        victim_tracker_.removeVictimsForGivenEdge(tmp_edge_idx, tmp_victim_keyset_const_ref);
+                        const uint32_t tmp_edge_idx = best_placement_peredge_synced_victimset_const_iter->first;
+                        const std::unordered_set<Key, KeyHasher>& tmp_synced_victim_keyset_const_ref = best_placement_peredge_synced_victimset_const_iter->second;
+                        victim_tracker_.removeVictimsForGivenEdge(tmp_edge_idx, tmp_synced_victim_keyset_const_ref);
                     }
+
+                    // TODO: Remove involved extra fetched victims from victim cache for each edge node in placement edgeset to avoid duplication eviction
+                    // NOTE: extra fetched victims may NOT exist in victim cache
+                    // NOTE: removed extra fetched victims should NOT be reused <- if the edge node needs more victims and triggers victim fetching again, the request MUST be later than placement notification request, which has changed the synced victims in the edge node
+                    UNUSED(best_placement_peredge_fetched_victimset);
 
                     // Non-blocking data fetching if with best placement
                     is_finish = edge_wrapper_ptr->nonblockDataFetchForPlacement(key, best_placement_edgeset, recvrsp_source_addr, recvrsp_socket_server_ptr, skip_propagation_latency, need_hybrid_fetching);
@@ -173,13 +180,17 @@ namespace covered
         return total_size;
     }
 
-    bool CoveredCacheManager::placementCalculation_(const Key& key, const bool& is_global_cached, bool& has_best_placement, Edgeset& best_placement_edgeset, std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& best_placement_peredge_victimset, const EdgeWrapper* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency)
+    bool CoveredCacheManager::placementCalculation_(const Key& key, const bool& is_global_cached, bool& has_best_placement, Edgeset& best_placement_edgeset, std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& best_placement_peredge_synced_victimset, std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& best_placement_peredge_fetched_victimset, const EdgeWrapper* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency)
     {
         bool is_finish = false;
         has_best_placement = false;
         
         // For lazy victim fetching before non-blocking placement deployment
         bool need_victim_fetching = false;
+        DeltaReward best_placement_admission_benefit;
+        Edgeset tmp_best_placement_edgeset; // For preserved edgeset and placement notifications under non-blocking placement deployment
+        std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>> tmp_best_placement_peredge_synced_victimset; // For synced victim removal under non-blocking placement deployment
+        std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>> tmp_best_placement_peredge_fetched_victimset; // For fetched victim removal under non-blocking placement deployment
         Edgeset best_placement_victim_fetch_edgeset;
 
         AggregatedUncachedPopularity tmp_aggregated_uncached_popularity;
@@ -195,9 +206,6 @@ namespace covered
 
             // Greedy-based placement calculation
             PlacementGain max_placement_gain = 0.0;
-            uint32_t best_topicnt = 0;
-            Edgeset tmp_best_placement_edgeset; // For preserved edgeset and placement notifications under non-blocking placement deployment
-            std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>> tmp_best_placement_peredge_victimset; // For victim removal under non-blocking placement deployment
             for (uint32_t topicnt = 1; topicnt <= tmp_topk_list_length; topicnt++)
             {
                 // Consider topi edge nodes ordered by local uncached popularity in a descending order
@@ -207,19 +215,22 @@ namespace covered
                 const DeltaReward tmp_admission_benefit = tmp_aggregated_uncached_popularity.calcAdmissionBenefit(topicnt, is_global_cached, tmp_placement_edgeset);
 
                 // Calculate eviction cost based on tmp_placement_edgeset
-                std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>> tmp_placement_peredge_victimset;
-                Edgeset tmp_best_placement_victim_fetch_edgeset;
-                const DeltaReward tmp_eviction_cost = victim_tracker_.calcEvictionCost(tmp_object_size, tmp_placement_edgeset, tmp_placement_peredge_victimset, tmp_best_placement_victim_fetch_edgeset); // NOTE: tmp_eviction_cost may be partial eviction cost if without enough victims
+                std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>> tmp_placement_peredge_synced_victimset;
+                std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>> tmp_placement_peredge_fetched_victimset;
+                Edgeset tmp_placement_victim_fetch_edgeset;
+                const DeltaReward tmp_eviction_cost = victim_tracker_.calcEvictionCost(tmp_object_size, tmp_placement_edgeset, tmp_placement_peredge_synced_victimset, tmp_placement_peredge_fetched_victimset, tmp_placement_victim_fetch_edgeset); // NOTE: tmp_eviction_cost may be partial eviction cost if without enough victims
 
                 // Calculate placement gain (admission benefit - eviction cost)
                 const DeltaReward tmp_placement_gain = tmp_admission_benefit - tmp_eviction_cost;
                 if ((topicnt == 1) || (tmp_placement_gain > max_placement_gain))
                 {
                     max_placement_gain = tmp_placement_gain;
-                    best_topicnt = topicnt;
+
+                    best_placement_admission_benefit = tmp_admission_benefit;
                     tmp_best_placement_edgeset = tmp_placement_edgeset;
-                    tmp_best_placement_peredge_victimset = tmp_placement_peredge_victimset;
-                    best_placement_victim_fetch_edgeset = tmp_best_placement_victim_fetch_edgeset;
+                    tmp_best_placement_peredge_synced_victimset = tmp_placement_peredge_synced_victimset;
+                    tmp_best_placement_peredge_fetched_victimset = tmp_placement_peredge_fetched_victimset;
+                    best_placement_victim_fetch_edgeset = tmp_placement_victim_fetch_edgeset;
                 }
             }
 
@@ -230,7 +241,8 @@ namespace covered
                 {
                     has_best_placement = true;
                     best_placement_edgeset = tmp_best_placement_edgeset;
-                    best_placement_peredge_victimset = tmp_best_placement_peredge_victimset;
+                    best_placement_peredge_synced_victimset = tmp_best_placement_peredge_synced_victimset;
+                    best_placement_peredge_fetched_victimset = tmp_best_placement_peredge_fetched_victimset;
                 }
                 else // Need lazy victim fetching
                 {
@@ -242,13 +254,13 @@ namespace covered
 
         // Lazy victim fetching before non-blocking placement deployment
         // NOTE: MINOR cases ONLY if cache margin bytes + size of victims < object size and admission benefit > partial eviction cost (actually, a small per-edge victim cnt is sufficient for most admissions)
-        // TODO: Maintain a small vicitm cache in each beacon edge node if with frequent lazy victim fetching to avoid degrading directory lookup performance
         if (need_victim_fetching)
         {
             assert(has_aggregated_uncached_popularity == true);
             const ObjectSize tmp_object_size = tmp_aggregated_uncached_popularity.getObjectSize();
 
             // Issue CoveredVictimFetchRequest to fetch more victims in parallel (note that CoveredVictimFetchRequest is a foreground message before non-blocking placement deployment)
+            // TODO: Maintain a small vicitm cache in each beacon edge node if with frequent lazy victim fetching to avoid degrading directory lookup performance
             std::unordered_map<uint32_t, std::list<VictimCacheinfo>> extra_peredge_victim_cacheinfos;
             std::unordered_map<Key, dirinfo_set_t, KeyHasher> extra_perkey_victim_dirinfoset;
             is_finish = parallelFetchVictims_(tmp_object_size, best_placement_victim_fetch_edgeset, edge_wrapper_ptr, recvrsp_source_addr, recvrsp_socket_server_ptr, total_bandwidth_usage, event_list, skip_propagation_latency, extra_peredge_victim_cacheinfos, extra_perkey_victim_dirinfoset);
@@ -257,7 +269,25 @@ namespace covered
                 return is_finish; // Edge node is NOT running now
             }
 
-            // TODO: (END HERE) Redo placement calculation after victim fetching to double-check the best placement (ONLY need to re-calculate eviction cost)
+            if (extra_peredge_victim_cacheinfos.size() > 0) // With extra fetched victims
+            {
+                // Re-calculate eviction cost with extra fetched victims
+                std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>> tmp_placement_peredge_synced_victimset;
+                std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>> tmp_placement_peredge_fetched_victimset;
+                Edgeset tmp_placement_victim_fetch_edgeset;
+                const DeltaReward tmp_eviction_cost = victim_tracker_.calcEvictionCost(tmp_object_size, tmp_best_placement_edgeset, tmp_placement_peredge_synced_victimset, tmp_placement_peredge_fetched_victimset, tmp_placement_victim_fetch_edgeset, extra_peredge_victim_cacheinfos, extra_perkey_victim_dirinfoset); // NOTE: tmp_eviction_cost may be partial eviction cost if without enough victims
+                assert(tmp_placement_victim_fetch_edgeset.size() == 0); // NOTE: we DISABLE recursive victim fetching
+
+                // Double-check the best placement
+                const DeltaReward tmp_placement_gain = best_placement_admission_benefit - tmp_eviction_cost;
+                if (tmp_placement_gain > 0.0) // Still with positive placement gain
+                {
+                    has_best_placement = true;
+                    best_placement_edgeset = tmp_best_placement_edgeset; // tmp_best_placement_edgeset is the best placement
+                    best_placement_peredge_synced_victimset = tmp_placement_peredge_synced_victimset; // For synced victim removal
+                    best_placement_victim_fetch_edgeset = tmp_placement_victim_fetch_edgeset; // For fetched victim removal
+                }
+            }
         }
 
         return is_finish;

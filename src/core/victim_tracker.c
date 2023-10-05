@@ -167,7 +167,7 @@ namespace covered
 
     // For trade-off-aware placement calculation
     
-    DeltaReward VictimTracker::calcEvictionCost(const ObjectSize& object_size, const Edgeset& placement_edgeset, std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& placement_peredge_victimset, Edgeset& victim_fetch_edgeset) const
+    DeltaReward VictimTracker::calcEvictionCost(const ObjectSize& object_size, const Edgeset& placement_edgeset, std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& placement_peredge_synced_victimset, std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& placement_peredge_fetched_victimset, Edgeset& victim_fetch_edgeset, const std::unordered_map<uint32_t, std::list<VictimCacheinfo>>& extra_peredge_victim_cacheinfos, const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& extra_perkey_victim_dirinfoset) const
     {
         checkPointers_();
         
@@ -175,6 +175,7 @@ namespace covered
         std::string context_name = "VictimTracker::calcEvictionCost()";
         rwlock_for_victim_tracker_->acquire_lock_shared(context_name);
 
+        const bool with_extra_victims = (extra_peredge_victim_cacheinfos.size() > 0);
         DeltaReward eviction_cost = 0.0;
 
         // Get weight parameters from static class atomically
@@ -185,7 +186,11 @@ namespace covered
         // Find victims from placement edgeset if admit a hot object with the given size (set victim_fetch_edgeset for lazy victim fetching)
         std::unordered_map<Key, Edgeset, KeyHasher> pervictim_edgeset;
         std::unordered_map<Key, std::list<VictimCacheinfo>, KeyHasher> pervictim_cacheinfos;
-        findVictimsForPlacement_(object_size, placement_edgeset, pervictim_edgeset, pervictim_cacheinfos, placement_peredge_victimset, victim_fetch_edgeset);
+        findVictimsForPlacement_(object_size, placement_edgeset, pervictim_edgeset, pervictim_cacheinfos, placement_peredge_synced_victimset, placement_peredge_fetched_victimset, victim_fetch_edgeset, extra_peredge_victim_cacheinfos);
+        if (with_extra_victims)
+        {
+            assert(victim_fetch_edgeset.size() == 0); // NOTE: we DISABLE recursive victim fetching
+        }
 
         // Enumerate found victims to calculate eviction cost
         for (std::unordered_map<Key, Edgeset, KeyHasher>::const_iterator pervictim_edgeset_const_iter = pervictim_edgeset.begin(); pervictim_edgeset_const_iter != pervictim_edgeset.end(); pervictim_edgeset_const_iter++)
@@ -193,7 +198,7 @@ namespace covered
             // Check if the victim edgeset is the last copies of the given key
             const Key& tmp_victim_key = pervictim_edgeset_const_iter->first;
             const Edgeset& tmp_victim_edgeset_ref = pervictim_edgeset_const_iter->second;
-            bool is_last_copies = isLastCopiesForVictimEdgeset_(tmp_victim_key, tmp_victim_edgeset_ref);
+            bool is_last_copies = isLastCopiesForVictimEdgeset_(tmp_victim_key, tmp_victim_edgeset_ref, extra_perkey_victim_dirinfoset);
 
             // NOTE: we add each pair of edgeidx and cacheinfo of a victim simultaneously in findVictimsForPlacement_() -> tmp_victim_cacheinfos MUST exist and has the same size as tmp_victim_edgeset_ref
             std::unordered_map<Key, std::list<VictimCacheinfo>, KeyHasher>::const_iterator pervictim_cacheinfos_const_iter = pervictim_cacheinfos.find(tmp_victim_key);
@@ -384,12 +389,15 @@ namespace covered
         return;
     }
 
-    void VictimTracker::findVictimsForPlacement_(const ObjectSize& object_size, const Edgeset& placement_edgeset, std::unordered_map<Key, Edgeset, KeyHasher>& pervictim_edgeset, std::unordered_map<Key, std::list<VictimCacheinfo>, KeyHasher>& pervictim_cacheinfos, std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& peredge_victimset, Edgeset& victim_fetch_edgeset) const
+    void VictimTracker::findVictimsForPlacement_(const ObjectSize& object_size, const Edgeset& placement_edgeset, std::unordered_map<Key, Edgeset, KeyHasher>& pervictim_edgeset, std::unordered_map<Key, std::list<VictimCacheinfo>, KeyHasher>& pervictim_cacheinfos, std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& peredge_synced_victimset, std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& peredge_fetched_victimset, Edgeset& victim_fetch_edgeset, const std::unordered_map<uint32_t, std::list<VictimCacheinfo>>& extra_peredge_victim_cacheinfos) const
     {
         pervictim_edgeset.clear();
         pervictim_cacheinfos.clear();
-        peredge_victimset.clear();
+        peredge_synced_victimset.clear();
+        peredge_fetched_victimset.clear();
         victim_fetch_edgeset.clear();
+
+        const bool with_extra_victims = (extra_peredge_victim_cacheinfos.size() > 0);
 
         // Enumerate each involved edge node to find victims
         for (std::unordered_set<uint32_t>::const_iterator placement_edgeset_const_iter = placement_edgeset.begin(); placement_edgeset_const_iter != placement_edgeset.end(); placement_edgeset_const_iter++)
@@ -401,35 +409,61 @@ namespace covered
             peredge_victim_metadata_t::const_iterator victim_metadata_map_const_iter = peredge_victim_metadata_.find(tmp_edge_idx);
             assert(victim_metadata_map_const_iter != peredge_victim_metadata_.end());
 
+            // Prepare extra victim cacheinfos for tmp_edge_idx if any
+            std::list<VictimCacheinfo> tmp_extra_victim_cacheinfos;
+            if (with_extra_victims)
+            {
+                std::unordered_map<uint32_t, std::list<VictimCacheinfo>>::const_iterator extra_victim_cacheinfos_map_const_iter = extra_peredge_victim_cacheinfos.find(tmp_edge_idx);
+                assert(extra_victim_cacheinfos_map_const_iter != extra_peredge_victim_cacheinfos.end());
+                tmp_extra_victim_cacheinfos = extra_victim_cacheinfos_map_const_iter->second;
+            }
+
             // Find victims in tmp_edge_idx if without sufficient cache space
             const EdgelevelVictimMetadata& tmp_edgelevel_victim_metadata = victim_metadata_map_const_iter->second;
-            tmp_edgelevel_victim_metadata.findVictimsForObjectSize(tmp_edge_idx, object_size, pervictim_edgeset, pervictim_cacheinfos, peredge_victimset, victim_fetch_edgeset);  
+            tmp_edgelevel_victim_metadata.findVictimsForObjectSize(tmp_edge_idx, object_size, pervictim_edgeset, pervictim_cacheinfos, peredge_synced_victimset, peredge_fetched_victimset, victim_fetch_edgeset, tmp_extra_victim_cacheinfos);
         } // End of involved edge nodes
+
+        if (with_extra_victims)
+        {
+            victim_fetch_edgeset.clear(); // NOTE: we DISABLE recursive victim fetching
+        }
 
         return;
     }
 
-    bool VictimTracker::isLastCopiesForVictimEdgeset_(const Key& key, const Edgeset& victim_edgeset) const
+    bool VictimTracker::isLastCopiesForVictimEdgeset_(const Key& key, const Edgeset& victim_edgeset, const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& extra_perkey_victim_dirinfoset) const
     {
         bool is_last_copies = true; // Whether the victim edgeset is the last copies of the given key, i.e., contains all dirinfos
 
+        dirinfo_set_t tmp_dirinfo_set;
+
         perkey_victim_dirinfo_t::const_iterator victim_dirinfo_map_const_iter = perkey_victim_dirinfo_.find(key);
-        if (victim_dirinfo_map_const_iter == perkey_victim_dirinfo_.end()) // NOTE: victim key may NOT have victim dirinfo in the current edge node, as the correpsonding beacon node may have NOT synced the latest victim dirinfo to the current edge node
+        if (victim_dirinfo_map_const_iter == perkey_victim_dirinfo_.end()) // NOTE: synced/extra-fetched victim key may NOT have synced victim dirinfo in the current edge node, as the correpsonding beacon node may have NOT synced the latest victim dirinfo to the current edge node
         {
-            is_last_copies = true; // NOTE: if without VicimDirinfo, beacon server will treat it as the last cache copies conservatively
+            std::unordered_map<Key, dirinfo_set_t, KeyHasher>::const_iterator victim_dirinfosets_const_iter = extra_perkey_victim_dirinfoset.find(key);
+            if (victim_dirinfosets_const_iter == extra_perkey_victim_dirinfoset.end()) // NOTE: synced/extra-fetched victim key may NOT have extra fetched dirinfo set in extra_perkey_victim_dirinfoset
+            {
+                // NOTE: if without synced VicimDirinfo and without extra fetched dirinfo set, beacon server will treat it as the last cache copies conservatively
+                is_last_copies = true;
+            }
+            else
+            {
+                tmp_dirinfo_set = victim_dirinfosets_const_iter->second;
+            }
         }
         else
         {
             const VictimDirinfo& tmp_victim_dirinfo = victim_dirinfo_map_const_iter->second;
-            const dirinfo_set_t& tmp_dirinfo_set_ref = tmp_victim_dirinfo.getDirinfoSetRef();
-            for (dirinfo_set_t::const_iterator dirinfo_set_const_iter = tmp_dirinfo_set_ref.begin(); dirinfo_set_const_iter != tmp_dirinfo_set_ref.end(); dirinfo_set_const_iter++)
+            tmp_dirinfo_set = tmp_victim_dirinfo.getDirinfoSetRef();
+        }
+
+        for (dirinfo_set_t::const_iterator dirinfo_set_const_iter = tmp_dirinfo_set.begin(); dirinfo_set_const_iter != tmp_dirinfo_set.end(); dirinfo_set_const_iter++)
+        {
+            uint32_t tmp_edge_idx = dirinfo_set_const_iter->getTargetEdgeIdx();
+            if (victim_edgeset.find(tmp_edge_idx) == victim_edgeset.end())
             {
-                uint32_t tmp_edge_idx = dirinfo_set_const_iter->getTargetEdgeIdx();
-                if (victim_edgeset.find(tmp_edge_idx) == victim_edgeset.end())
-                {
-                    is_last_copies = false;
-                    break;
-                }
+                is_last_copies = false;
+                break;
             }
         }
 
