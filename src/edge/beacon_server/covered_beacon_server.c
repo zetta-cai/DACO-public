@@ -160,7 +160,7 @@ namespace covered
         else // Evict a victim as local uncached object
         {
             bool need_placement_calculation = !is_admit; // MUST be true here for is_admit = false
-            if (control_request_ptr->isBackgroundRequest()) // If evictLocalDirectory_() is triggered by background cache placement
+            if (control_request_ptr->isBackgroundRequest()) // If processReqToUpdateLocalDirectory_() is triggered by background cache placement
             {
                 // NOTE: DISABLE recursive cache placement
                 need_placement_calculation = false;
@@ -251,7 +251,7 @@ namespace covered
         is_finish = covered_cache_manager_ptr->updatePopularityAggregatorForAggregatedPopularity(tmp_key, source_edge_idx, collected_popularity, is_global_cached, is_source_cached, need_placement_calculation, need_hybrid_fetching, edge_wrapper_ptr_, edge_beacon_server_recvrsp_source_addr_, edge_beacon_server_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in source edge node
         //assert(!has_best_placement);
         assert(!is_finish);
-        assert(!need_hybrid_fetching);
+        assert(!need_hybrid_fetching); // NOTE: local/remote acquire writelock request MUST NOT need hybrid data fetching due to NO need for placement calculation (newly-admitted cache copies will still be invalid after cache placement)
 
         return is_finish;
     }

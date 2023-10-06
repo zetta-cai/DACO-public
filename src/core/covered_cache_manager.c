@@ -20,13 +20,13 @@ namespace covered
 
     // For popularity aggregation
 
-    bool CoveredCacheManager::updatePopularityAggregatorForAggregatedPopularity(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached, const bool& is_source_cached, const bool& need_placement_calculation, bool& need_hybrid_fetching, const EdgeWrapper* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency)
+    bool CoveredCacheManager::updatePopularityAggregatorForAggregatedPopularity(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached, const bool& is_source_cached, const bool& need_placement_calculation, const bool& sender_is_beacon, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, const EdgeWrapper* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency)
     {
         assert(edge_wrapper_ptr != NULL);
         
         bool is_finish = false;
         bool has_best_placement = false;
-        Edgeset best_placement_edgeset;
+        best_placement_edgeset.clear();
         need_hybrid_fetching = false;
 
         // Double-check preserved edgeset to set is global cached flag to avoid over-estimating (max) admission benefit
@@ -82,7 +82,7 @@ namespace covered
                     UNUSED(best_placement_peredge_fetched_victimset);
 
                     // Non-blocking data fetching if with best placement
-                    is_finish = edge_wrapper_ptr->nonblockDataFetchForPlacement(key, best_placement_edgeset, recvrsp_source_addr, recvrsp_socket_server_ptr, skip_propagation_latency, need_hybrid_fetching);
+                    is_finish = edge_wrapper_ptr->nonblockDataFetchForPlacement(key, best_placement_edgeset, recvrsp_source_addr, recvrsp_socket_server_ptr, skip_propagation_latency, sender_is_beacon, need_hybrid_fetching);
                     if (is_finish)
                     {
                         return is_finish; // Edge node is NOT running now

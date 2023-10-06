@@ -235,12 +235,14 @@ namespace covered
 
         // Access cooperative edge cache for local cache miss or invalid object
         bool is_cooperative_cached_and_valid = false;
+        Edgeset best_placement_edgeset; // Used for non-blocking placement notification if need hybrid data fetching for COVERED
+        bool need_hybrid_fetching = false;
         if (!is_local_cached_and_valid) // not local cached or invalid
         {
             struct timespec get_cooperative_cache_start_timestamp = Util::getCurrentTimespec();
 
             // Get data from some target edge node for local cache miss (add events of intermediate responses if with event tracking)
-            is_finish = fetchDataFromNeighbor_(tmp_key, tmp_value, is_cooperative_cached_and_valid, total_bandwidth_usage, event_list, skip_propagation_latency);
+            is_finish = fetchDataFromNeighbor_(tmp_key, tmp_value, is_cooperative_cached_and_valid, best_placement_edgeset, need_hybrid_fetching, total_bandwidth_usage, event_list, skip_propagation_latency);
             if (is_finish) // Edge node is NOT running
             {
                 return is_finish;
@@ -259,8 +261,6 @@ namespace covered
             #endif
         }
 
-        // TODO: For COVERED, beacon node will tell the edge node if to admit, w/o independent decision
-
         // Get data from cloud for global cache miss
         struct timespec get_cloud_start_timestamp = Util::getCurrentTimespec();
         if (!is_local_cached_and_valid && !is_cooperative_cached_and_valid) // (not cached or invalid) in both local and cooperative cache
@@ -274,6 +274,17 @@ namespace covered
         struct timespec get_cloud_end_timestamp = Util::getCurrentTimespec();
         uint32_t get_cloud_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(get_cloud_end_timestamp, get_cloud_start_timestamp));
         event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_GET_CLOUD_EVENT_NAME, get_cloud_latency_us); // Add intermediate event if with event tracking
+
+        // Trigger non-blocking placement notification if need hybrid fetching for non-blocking data fetching (ONLY for COVERED)
+        if (need_hybrid_fetching)
+        {
+            assert(tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME);
+            is_finish = tmp_edge_wrapper_ptr->nonblockNotifyForPlacement(tmp_key, tmp_value, best_placement_edgeset, edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, skip_propagation_latency);
+            if (is_finish) // Edge node is NOT running
+            {
+                return is_finish;
+            }
+        }
 
         // Update invalid object of local edge cache if necessary
         struct timespec update_invalid_local_cache_start_timestamp = Util::getCurrentTimespec();
@@ -291,6 +302,7 @@ namespace covered
         event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_UPDATE_INVALID_LOCAL_CACHE_EVENT_NAME, update_invalid_local_cache_latency_us); // Add intermediate event if with event tracking
 
         // Trigger independent cache admission for local/global cache miss if necessary
+        // NOTE: For COVERED, beacon node will tell the edge node whether to admit or not, w/o independent decision
         struct timespec independent_admission_start_timestamp = Util::getCurrentTimespec();
         is_finish = tryToTriggerIndependentAdmission_(tmp_key, tmp_value, total_bandwidth_usage, event_list, skip_propagation_latency); // Add events of intermediate responses if with event tracking
         if (is_finish)
@@ -327,7 +339,7 @@ namespace covered
 
     // (1.2) Access cooperative edge cache to fetch data from neighbor edge nodes
 
-    bool CacheServerWorkerBase::fetchDataFromNeighbor_(const Key& key, Value& value, bool& is_cooperative_cached_and_valid, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
+    bool CacheServerWorkerBase::fetchDataFromNeighbor_(const Key& key, Value& value, bool& is_cooperative_cached_and_valid, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
@@ -346,6 +358,7 @@ namespace covered
         bool is_being_written = false;
         bool is_valid_directory_exist = false;
         DirectoryInfo directory_info;
+        need_hybrid_fetching = false;
         while (true) // Wait for valid directory after writes by polling or interruption
         {
             if (!tmp_edge_wrapper_ptr->isNodeRunning()) // edge node is NOT running
@@ -359,7 +372,7 @@ namespace covered
             if (current_is_beacon) // Get target edge index from local directory information
             {
                 // Frequent polling
-                is_finish = lookupLocalDirectory_(key, is_being_written, is_valid_directory_exist, directory_info, total_bandwidth_usage, event_list, skip_propagation_latency);
+                is_finish = lookupLocalDirectory_(key, is_being_written, is_valid_directory_exist, directory_info, best_placement_edgeset, need_hybrid_fetching, total_bandwidth_usage, event_list, skip_propagation_latency);
                 if (is_finish)
                 {
                     return is_finish; // Edge is NOT running

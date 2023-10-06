@@ -1030,10 +1030,11 @@ namespace covered
                 }
 
                 const Key& tmp_victim_key = iter_for_request->first; // key that has NOT received any directory update response
+                const Value& tmp_victim_value = total_victims.find(tmp_victim_key)->second; // Used for non-blocking placement notification if need hybrid data fetching for COVERED
                 bool current_is_beacon = currentIsBeacon(tmp_victim_key);
                 if (current_is_beacon) // Evict local directory info for the victim key
                 {
-                    is_finish = evictLocalDirectory_(tmp_victim_key, directory_info, _unused_is_being_written, source_addr, recvrsp_socket_server_ptr, total_bandwidth_usage, event_list, skip_propagation_latency, is_background);
+                    is_finish = evictLocalDirectory_(tmp_victim_key, tmp_victim_value, directory_info, _unused_is_being_written, source_addr, recvrsp_socket_server_ptr, total_bandwidth_usage, event_list, skip_propagation_latency, is_background);
                     if (is_finish)
                     {
                         return is_finish;
@@ -1138,7 +1139,7 @@ namespace covered
         return is_finish;
     }
 
-    bool EdgeWrapper::evictLocalDirectory_(const Key& key, const DirectoryInfo& directory_info, bool& is_being_written, const NetworkAddr& source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency, const bool& is_background) const
+    bool EdgeWrapper::evictLocalDirectory_(const Key& key, const Value& value, const DirectoryInfo& directory_info, bool& is_being_written, const NetworkAddr& source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency, const bool& is_background) const
     {
         checkPointers_();
 
@@ -1173,14 +1174,36 @@ namespace covered
                 // NOTE: DISABLE recursive cache placement
                 need_placement_calculation = false;
             }
+            const bool sender_is_beacon = true; // Sender and beacon is the same edge node for non-blocking placement deployment for the victim key (note that victim key is different from the key triggering eviction, e.g., update invalid/valid value by local get/put, indepdent admission, local placement notification at local/remote beacon edge node, remote placement nofication)
+            Edgeset best_placement_edgeset; // Used for non-blocking placement notification if need hybrid data fetching for COVERED
             bool need_hybrid_fetching = false;
-            is_finish = covered_cache_manager_ptr_->updatePopularityAggregatorForAggregatedPopularity(key, current_edge_idx, collected_popularity, is_global_cached, is_source_cached, need_placement_calculation, need_hybrid_fetching, this, source_addr, recvrsp_socket_server_ptr, total_bandwidth_usage, event_list, skip_propagation_latency); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in source edge node
-            if (is_finish)
-            {
-                return is_finish;
-            }
+            is_finish = covered_cache_manager_ptr_->updatePopularityAggregatorForAggregatedPopularity(key, current_edge_idx, collected_popularity, is_global_cached, is_source_cached, need_placement_calculation, sender_is_beacon, best_placement_edgeset, need_hybrid_fetching, this, source_addr, recvrsp_socket_server_ptr, total_bandwidth_usage, event_list, skip_propagation_latency); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in source edge node
 
-            // TODO: (END HERE) Process need_hybrid_fetching
+            if (is_background) // Background local directory eviction
+            {
+                // NOTE: background local directory eviction MUST NOT need hybrid data fetching due to NO need for placement calculation (we DISABLE recursive cache placement)
+                assert(!is_finish);
+                assert(best_placement_edgeset.size() == 0);
+                assert(!need_hybrid_fetching);
+            }
+            else // Foreground local directory eviction (triggered by invalid/valid value update by local get/put, indepdent admission, local placement notification at local/remote beacon edge node, remote placement nofication)
+            {
+                if (is_finish) // Edge node is NOT running
+                {
+                    return is_finish;
+                }
+
+                // Trigger non-blocking placement notification if need hybrid fetching for non-blocking data fetching (ONLY for COVERED)
+                if (need_hybrid_fetching)
+                {
+                    assert(cache_name_ == Util::COVERED_CACHE_NAME);
+                    is_finish = nonblockNotifyForPlacement(key, value, best_placement_edgeset, source_addr, recvrsp_socket_server_ptr, skip_propagation_latency);
+                    if (is_finish) // Edge node is NOT running
+                    {
+                        return is_finish;
+                    }
+                }
+            }
         }
 
         return is_finish;
@@ -1326,7 +1349,7 @@ namespace covered
 
     // (7.2) For non-blocking placement deployment (ONLY invoked by beacon edge node)
 
-    bool EdgeWrapper::nonblockDataFetchForPlacement(const Key& key, const Edgeset& best_placement_edgeset, const NetworkAddr& source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, const bool& skip_propagation_latency, bool& need_hybrid_fetching) const
+    bool EdgeWrapper::nonblockDataFetchForPlacement(const Key& key, const Edgeset& best_placement_edgeset, const NetworkAddr& source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, const bool& skip_propagation_latency, const bool& sender_is_beacon, bool& need_hybrid_fetching) const
     {
         checkPointers_();
         assert(cache_name_ == Util::COVERED_CACHE_NAME);
@@ -1347,38 +1370,47 @@ namespace covered
         }
         else // No valid value in local edge cache in local/remote beacon node
         {
-            // Check if exist valid dirinfo to fetch data from neighbor
-            uint32_t current_edge_idx = getNodeIdx();
-            bool is_being_written = false;
-            bool is_valid_directory_exist = false;
-            DirectoryInfo directory_info;
-            bool is_source_cached = false;
-            bool is_global_cached = cooperation_wrapper_ptr_->lookupDirectoryTableByCacheServer(key, current_edge_idx, is_being_written, is_valid_directory_exist, directory_info, is_source_cached); // NOTE: local/remote beacon node lookup its own local directory table (= current is beacon for cache server)
-            UNUSED(is_source_cached);
-            UNUSED(is_global_cached);
-
-            if (is_valid_directory_exist) // A neighbor edge node has cached the object
+            if (sender_is_beacon) // Sender and beacon is the same edge node
             {
-                assert(!is_being_written); // Being-written object CANNOT have any valid dirinfo
-
-                // Send CoveredPlacementRedirectedGetRequest to the neighbor node
-                // NOTE: we use edge_beacon_server_recvreq_source_addr_ as the source address even if invoker is cache server to wait for responses
-                // (i) Although current is beacon for cache server, the role is still beacon node, which should be responsible for non-blocking placement deployment. And we don't want to resort cache server worker, which may degrade KV request processing
-                // (ii) Although we may wait for responses, beacon server is blocking for recvreq port and we don't want to introduce another blocking for recvrsp port
-                const VictimSyncset victim_syncset = covered_cache_manager_ptr_->accessVictimTrackerForVictimSyncset();
-                CoveredPlacementRedirectedGetRequest* covered_placement_redirected_get_request_ptr = new CoveredPlacementRedirectedGetRequest(key, victim_syncset, best_placement_edgeset, current_edge_idx, edge_beacon_server_recvreq_source_addr_for_placement_, skip_propagation_latency);
-                assert(covered_placement_redirected_get_request_ptr != NULL);
-                NetworkAddr target_edge_cache_server_recvreq_dst_addr = getTargetDstaddr(directory_info); // Send to cache server of the target edge node for cache server worker
-                bool is_successful = edge_toedge_propagation_simulator_param_ptr_->push(covered_placement_redirected_get_request_ptr, target_edge_cache_server_recvreq_dst_addr);
-                assert(is_successful);
-                covered_placement_redirected_get_request_ptr = NULL; // NOTE: covered_placement_redirected_get_request_ptr will be released by edge-to-edge propagation simulator
-
-                // NOTE: CoveredPlacementRedirectedGetResponse will be processed by covered beacon server in the current edge node (current edge node is a remote beacon node for neighbor edge node, as neighbor MUST NOT be a different edge node for request redirection)
-            }
-            else // No valid cache copy in edge layer
-            {
-                // We need hybrid fetching to resort the sender to fetch data from cloud for reducing edge-cloud bandwidth usage
+                // NOTE: we always resort sender for hybrid data fetching if sender and beacon is the same edge node, due to zero extra latency between sender and beacon!
                 need_hybrid_fetching = true;
+            }
+            else // Sender and beacon are two different dge nodes
+            {
+                // Check if exist valid dirinfo to fetch data from neighbor
+                uint32_t current_edge_idx = getNodeIdx();
+                bool is_being_written = false;
+                bool is_valid_directory_exist = false;
+                DirectoryInfo directory_info;
+                bool is_source_cached = false;
+                bool is_global_cached = cooperation_wrapper_ptr_->lookupDirectoryTableByCacheServer(key, current_edge_idx, is_being_written, is_valid_directory_exist, directory_info, is_source_cached); // NOTE: local/remote beacon node lookup its own local directory table (= current is beacon for cache server)
+                UNUSED(is_source_cached);
+                UNUSED(is_global_cached);
+
+                if (is_valid_directory_exist) // A neighbor edge node has cached the object
+                {
+                    assert(!is_being_written); // Being-written object CANNOT have any valid dirinfo
+
+                    // Send CoveredPlacementRedirectedGetRequest to the neighbor node
+                    // NOTE: we use edge_beacon_server_recvreq_source_addr_ as the source address even if invoker is cache server to wait for responses
+                    // (i) Although current is beacon for cache server, the role is still beacon node, which should be responsible for non-blocking placement deployment. And we don't want to resort cache server worker, which may degrade KV request processing
+                    // (ii) Although we may wait for responses, beacon server is blocking for recvreq port and we don't want to introduce another blocking for recvrsp port
+                    const VictimSyncset victim_syncset = covered_cache_manager_ptr_->accessVictimTrackerForVictimSyncset();
+                    CoveredPlacementRedirectedGetRequest* covered_placement_redirected_get_request_ptr = new CoveredPlacementRedirectedGetRequest(key, victim_syncset, best_placement_edgeset, current_edge_idx, edge_beacon_server_recvreq_source_addr_for_placement_, skip_propagation_latency);
+                    assert(covered_placement_redirected_get_request_ptr != NULL);
+                    NetworkAddr target_edge_cache_server_recvreq_dst_addr = getTargetDstaddr(directory_info); // Send to cache server of the target edge node for cache server worker
+                    bool is_successful = edge_toedge_propagation_simulator_param_ptr_->push(covered_placement_redirected_get_request_ptr, target_edge_cache_server_recvreq_dst_addr);
+                    assert(is_successful);
+                    covered_placement_redirected_get_request_ptr = NULL; // NOTE: covered_placement_redirected_get_request_ptr will be released by edge-to-edge propagation simulator
+
+                    // NOTE: CoveredPlacementRedirectedGetResponse will be processed by covered beacon server in the current edge node (current edge node is a remote beacon node for neighbor edge node, as neighbor MUST NOT be a different edge node for request redirection)
+                }
+                else // No valid cache copy in edge layer
+                {
+                    // We need hybrid fetching to resort the sender to fetch data from cloud for reducing edge-cloud bandwidth usage
+                    // NOTE: extra latency between sender and beacon is limited compared with edge-cloud latency (i.e., w1 - w2 / w1)
+                    need_hybrid_fetching = true;
+                }
             }
         }
 
