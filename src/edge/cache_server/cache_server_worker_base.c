@@ -867,7 +867,7 @@ namespace covered
         {
             struct timespec release_writelock_start_timestamp = Util::getCurrentTimespec();
 
-            is_finish = releaseWritelock_(tmp_key, total_bandwidth_usage, event_list, skip_propagation_latency);
+            is_finish = releaseWritelock_(tmp_key, tmp_value, total_bandwidth_usage, event_list, skip_propagation_latency);
 
             // Add intermediate event if with event tracking
             struct timespec release_writelock_end_timestamp = Util::getCurrentTimespec();
@@ -1261,7 +1261,7 @@ namespace covered
 
     // (2.4) Release write lock for MSI protocol
 
-    bool CacheServerWorkerBase::releaseWritelock_(const Key& key, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency)
+    bool CacheServerWorkerBase::releaseWritelock_(const Key& key, const Value& value, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency)
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
@@ -1278,7 +1278,7 @@ namespace covered
         {
             // Release write lock and get blocked edges
             std::unordered_set<NetworkAddr, NetworkAddrHasher> blocked_edges;
-            is_finish = releaseLocalWritelock_(key, blocked_edges, total_bandwidth_usage, event_list, skip_propagation_latency);
+            is_finish = releaseLocalWritelock_(key, value, blocked_edges, total_bandwidth_usage, event_list, skip_propagation_latency);
             if (is_finish)
             {
                 return is_finish; // Edge is NOT running

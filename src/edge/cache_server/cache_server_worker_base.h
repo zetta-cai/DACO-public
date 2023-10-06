@@ -139,8 +139,8 @@ namespace covered
         // (2.4) Release write lock for MSI protocol
 
         // Return if edge node is finished
-        bool releaseWritelock_(const Key& key, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency);
-        virtual bool releaseLocalWritelock_(const Key& key, std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges, BandwidthUsage& total_bandwidth_usgae, EventList& event_list, const bool& skip_propagation_latency) = 0; // Return if edge node is finished
+        bool releaseWritelock_(const Key& key, const Value& value, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency); // NOTE: value is used for COVERED's non-blocking placement notification after hybrid data fetching
+        virtual bool releaseLocalWritelock_(const Key& key, const Value& value, std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges, BandwidthUsage& total_bandwidth_usgae, EventList& event_list, const bool& skip_propagation_latency) = 0; // Return if edge node is finished (NOTE: value is used for COVERED's non-blocking placement notification after hybrid data fetching)
         bool releaseBeaconWritelock_(const Key& key, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency); // Notify beacon node to finish writes
         virtual MessageBase* getReqToReleaseBeaconWritelock_(const Key& key, const bool& skip_propagation_latency) const = 0;
         virtual void processRspToReleaseBeaconWritelock_(MessageBase* control_response_ptr) const = 0;

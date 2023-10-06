@@ -63,7 +63,7 @@ namespace covered
             return is_finish; // Edge node is NOT running now
         }
 
-        // TODO: (END HERE) Process need_hybrid_fetching
+        // NOTE: need_hybrid_fetching is processed in CacheServerWorkerBase::processLocalGetRequest_(), as we do NOT have value yet when lookuping directory information
 
         return is_finish;
     }
@@ -389,7 +389,7 @@ namespace covered
 
     // (2.4) Release write lock for MSI protocol
 
-    bool CoveredCacheServerWorker::releaseLocalWritelock_(const Key& key, std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges, BandwidthUsage& total_bandwidth_usgae, EventList& event_list, const bool& skip_propagation_latency)
+    bool CoveredCacheServerWorker::releaseLocalWritelock_(const Key& key, const Value& value, std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges, BandwidthUsage& total_bandwidth_usgae, EventList& event_list, const bool& skip_propagation_latency)
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
@@ -417,14 +417,25 @@ namespace covered
         // Selective popularity aggregation
         const bool is_global_cached = true; // NOTE: invoking releaseLocalWritelock_() means that the result of acquiring write lock is LockResult::kSuccess -> the given key MUST be global cached
         const bool need_placement_calculation = true;
+        const bool sender_is_beacon = true; // Sender and beacon is the same edge node for placement calculation
+        Edgeset best_placement_edgeset; // Used for non-blocking placement notification if need hybrid data fetching for COVERED
         bool need_hybrid_fetching = false;
-        is_finish = tmp_covered_cache_manager_ptr->updatePopularityAggregatorForAggregatedPopularity(key, current_edge_idx, collected_popularity, is_global_cached, is_source_cached, need_placement_calculation, need_hybrid_fetching, tmp_edge_wrapper_ptr, edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, total_bandwidth_usgae, event_list, skip_propagation_latency); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in current edge node
+        is_finish = tmp_covered_cache_manager_ptr->updatePopularityAggregatorForAggregatedPopularity(key, current_edge_idx, collected_popularity, is_global_cached, is_source_cached, need_placement_calculation, sender_is_beacon, best_placement_edgeset, need_hybrid_fetching, tmp_edge_wrapper_ptr, edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, total_bandwidth_usgae, event_list, skip_propagation_latency); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in current edge node
         if (is_finish)
         {
             return is_finish; // Edge node is NOT running now
         }
 
-        // TODO: (END HERE) Process need_hybrid_fetching
+        // Trigger non-blocking placement notification if need hybrid fetching for non-blocking data fetching (ONLY for COVERED)
+        if (need_hybrid_fetching)
+        {
+            assert(tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME);
+            is_finish = tmp_edge_wrapper_ptr->nonblockNotifyForPlacement(key, value, best_placement_edgeset, edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, skip_propagation_latency);
+            if (is_finish) // Edge node is NOT running
+            {
+                return is_finish;
+            }
+        }
 
         return;
     }
