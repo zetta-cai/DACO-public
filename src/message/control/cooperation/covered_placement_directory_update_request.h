@@ -7,9 +7,9 @@
  * 
  * NOTE: the collected popularity will be serialized/deserialized ONLY if validity = false (i.e., is_admit = false), where collected_popularity_.isTracked() indicates that whether the evicted key is selected for metadata preservation.
  * 
- * NOTE: CoveredPlacementDirectoryUpdateRequest does NOT need placement edgeset.
- * 
  * NOTE: CoveredPlacementDirectoryUpdateRequest with is_admit = true is equivalent to ACK for CoveredPlacementNotifyRequest.
+ * 
+ * NOTE: CoveredPlacementDirectoryUpdateRequest is ONLY used for background events and bandwidth usage, yet NOT related with hybrid data fetching; while CoveredPlacementDirectoryAdmitRequest is a foreground message and ONLY used for hybrid data fetching to trigger non-blocking placement notification.
  * 
  * By Siyuan Sheng (2023.10.02).
  */

@@ -43,6 +43,9 @@ namespace covered
     const std::string Event::EDGE_CACHE_SERVER_WORKER_RELEASE_REMOTE_WRITELOCK_EVENT_NAME("edge::cache_server_worker::release_remote_writelock");
     const std::string Event::EDGE_CACHE_SERVER_WORKER_ISSUE_RELEASE_WRITELOCK_REQ_EVENT_NAME("edge::cache_server_worker::issue_release_writelock_req");
 
+    // For triggering non-blocking placement notification in edge cache server worker
+    const std::string Event::EDGE_CACHE_SERVER_WORKER_TRIGGER_PLACEMENT_EVENT_NAME("edge::cache_server_worker::trigger_placement");
+
     // For edge beacon server
     const std::string Event::EDGE_BEACON_SERVER_LOOKUP_LOCAL_DIRECTORY_EVENT_NAME("edge::beacon_server::lookup_local_directory");
     const std::string Event::EDGE_BEACON_SERVER_UPDATE_LOCAL_DIRECTORY_EVENT_NAME("edge::beacon_server::update_local_directory");

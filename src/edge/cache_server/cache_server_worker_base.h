@@ -55,6 +55,7 @@
 
 #include <string>
 
+#include "core/popularity/edgeset.h"
 #include "edge/cache_server/cache_server_worker_param.h"
 #include "event/event_list.h"
 #include "message/message_base.h"
@@ -154,7 +155,7 @@ namespace covered
 
         // (4) Cache management
 
-        // (4.1) Admit uncached objects in local edge cache
+        // (4.1) Admit uncached objects in local edge cache independently (ONLY for baselines)
 
         // Return if edge node is finished (we will check capacity and trigger eviction for cache admission)
         bool tryToTriggerIndependentAdmission_(const Key& key, const Value& value, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const; // NOTE: COVERED will NOT trigger any independent cache admission/eviction decision
@@ -164,6 +165,12 @@ namespace covered
 
         // Return if edge node is finished
         bool admitDirectory_(const Key& key, bool& is_being_written, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const; // Admit content directory information
+
+        // (4.3) Trigger non-blocking placement notification (ONLY for COVERED)
+
+        // Return if edge node is finished
+        bool tryToTriggerPlacementNotification_(const Key& key, const Value& value, const Edgeset& best_placement_edgeset, const bool& skip_propagation_latency) const;
+        bool notifyBeaconForPlacement_(const Key& key, const Value& value, const Edgeset& best_placement_edgeset, const bool& skip_propagation_latency) const; // Sender is NOT beacon
 
         // (5) Utility functions
 

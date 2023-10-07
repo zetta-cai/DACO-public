@@ -6,6 +6,7 @@
 #include "common/config.h"
 #include "common/util.h"
 #include "edge/cache_server/cache_server_placement_processor.h"
+#include "edge/cache_server/cache_server_victim_fetch_processor.h"
 #include "edge/cache_server/cache_server_worker_base.h"
 #include "message/control_message.h"
 #include "network/network_addr.h"
@@ -336,14 +337,14 @@ namespace covered
             VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForVictimSyncset();
 
             // ONLY need victim synchronization yet without popularity collection/aggregation
-            if (!is_background)
+            if (!is_background) // Foreground remote directory admission triggered by hybrid data fetching at the sender/closest edge node (different from beacon)
             {
                 // NOTE: For COVERED, although there still exist foreground directory update requests for eviction (triggered by local gets to update invalid value and local puts to update cached value), all directory update requests for admission MUST be background due to non-blocking placement deployment
                 assert(edge_wrapper_ptr_->getCacheName() != Util::COVERED_CACHE_NAME);
 
                 directory_update_request_ptr = new CoveredDirectoryUpdateRequest(key, is_admit, directory_info, victim_syncset, edge_idx, source_addr, skip_propagation_latency);
             }
-            else
+            else // Background remote directory admission triggered by remote placement notification
             {
                 // NOTE: use background event names by sending CoveredPlacementDirectoryUpdateRequest (NOT DISABLE recursive cache placement due to is_admit = true)
                 directory_update_request_ptr = new CoveredPlacementDirectoryUpdateRequest(key, is_admit, directory_info, victim_syncset, edge_idx, source_addr, skip_propagation_latency);

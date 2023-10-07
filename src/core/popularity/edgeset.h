@@ -33,6 +33,8 @@ namespace covered
 
         void clear();
         std::pair<std::unordered_set<uint32_t>::iterator, bool> insert(const uint32_t& edge_idx);
+        void erase(const uint32_t& edge_idx);
+        void erase(std::unordered_set<uint32_t>::const_iterator iter);
 
         uint32_t getEdgesetPayloadSize() const;
         uint32_t serialize(DynamicArray& msg_payload, const uint32_t& position) const;

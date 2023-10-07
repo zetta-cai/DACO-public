@@ -898,6 +898,9 @@ namespace covered
 
     void EdgeWrapper::admitLocalDirectory_(const Key& key, const DirectoryInfo& directory_info, bool& is_being_written) const
     {
+        // Foreground local directory admission is triggered by independent admission
+        // Background local directory admission is triggered by local placement notification at local/remote beacon edge node)
+
         checkPointers_();
 
         uint32_t current_edge_idx = getNodeIdx();
@@ -1179,14 +1182,14 @@ namespace covered
             bool need_hybrid_fetching = false;
             is_finish = covered_cache_manager_ptr_->updatePopularityAggregatorForAggregatedPopularity(key, current_edge_idx, collected_popularity, is_global_cached, is_source_cached, need_placement_calculation, sender_is_beacon, best_placement_edgeset, need_hybrid_fetching, this, source_addr, recvrsp_socket_server_ptr, total_bandwidth_usage, event_list, skip_propagation_latency); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in source edge node
 
-            if (is_background) // Background local directory eviction
+            if (is_background) // Background local directory eviction (triggered by remote placement nofication and local placement notification at local/remote beacon edge node)
             {
                 // NOTE: background local directory eviction MUST NOT need hybrid data fetching due to NO need for placement calculation (we DISABLE recursive cache placement)
                 assert(!is_finish);
                 assert(best_placement_edgeset.size() == 0);
                 assert(!need_hybrid_fetching);
             }
-            else // Foreground local directory eviction (triggered by invalid/valid value update by local get/put, indepdent admission, local placement notification at local/remote beacon edge node, remote placement nofication)
+            else // Foreground local directory eviction (triggered by invalid/valid value update by local get/put and independent admission)
             {
                 if (is_finish) // Edge node is NOT running
                 {
@@ -1225,11 +1228,11 @@ namespace covered
             VictimSyncset victim_syncset = covered_cache_manager_ptr_->accessVictimTrackerForVictimSyncset();
 
             // Need BOTH popularity collection and victim synchronization
-            if (!is_background)
+            if (!is_background) // Foreground remote directory eviction (triggered by invalid/valid value update by local get/put and independent admission)
             {
                 directory_update_request_ptr = new CoveredDirectoryUpdateRequest(key, is_admit, directory_info, collected_popularity, victim_syncset, edge_idx, source_addr, skip_propagation_latency);
             }
-            else
+            else // Background remote directory eviction (triggered by remote placement nofication and local placement notification at local/remote beacon edge node)
             {
                 // NOTE: use background event names and DISABLE recursive cache placement by sending CoveredPlacementDirectoryUpdateRequest
                 directory_update_request_ptr = new CoveredPlacementDirectoryUpdateRequest(key, is_admit, directory_info, collected_popularity, victim_syncset, edge_idx, source_addr, skip_propagation_latency);
@@ -1257,7 +1260,7 @@ namespace covered
 
         if (cache_name_ == Util::COVERED_CACHE_NAME) // ONLY for COVERED
         {
-            if (!is_background)
+            if (!is_background) // Foreground remote directory eviction (triggered by invalid/valid value update by local get/put and independent admission)
             {
                 assert(control_response_ptr->getMessageType() == MessageType::kCoveredDirectoryUpdateResponse);
 
@@ -1265,7 +1268,7 @@ namespace covered
                 const CoveredDirectoryUpdateResponse* covered_directory_update_response_ptr = static_cast<const CoveredDirectoryUpdateResponse*>(control_response_ptr);
                 is_being_written = covered_directory_update_response_ptr->isBeingWritten();
             }
-            else
+            else // Background remote directory eviction (triggered by remote placement nofication and local placement notification at local/remote beacon edge node)
             {
                 assert(control_response_ptr->getMessageType() == MessageType::kCoveredPlacementDirectoryUpdateResponse);
 
@@ -1483,6 +1486,8 @@ namespace covered
         // Local placement notification if necessary
         if (edgeset_const_iter_for_local_notification != best_placement_edgeset.end()) // If current edge node is also in best_placement_edgeset
         {
+            // TODO: If local placement notification is NOT a minor case, we need to notify placement processor of the current beacon edge node for local placement to avoid blocking subsequent cache placement
+
             // Current edge node MUST be the beacon node for the given key
             assert(currentIsBeacon(key));
 
@@ -1502,7 +1507,6 @@ namespace covered
 
             // Perform background cache eviction if necessary in a blocking manner for consistent directory information (note that cache eviction happens after non-blocking placement notification)
             // NOTE: we update aggregated uncached popularity yet DISABLE recursive cache placement for metadata preservation during cache eviction
-            // TODO: If local placement notification is NOT a minor case, we need to notify placement processor of the current beacon edge node for cache eviction to avoid blocking cache placement
             is_finish = evictForCapacity_(source_addr, recvrsp_socket_server_ptr, total_bandwidth_usage, event_list, skip_propagation_latency, is_background);
         }
 

@@ -47,6 +47,8 @@
 #include "message/control/cooperation/covered_placement_directory_update_request.h"
 #include "message/control/cooperation/covered_placement_directory_update_response.h"
 // For cooperative cache placement management (non-blocking placement notification)
+#include "message/control/cooperation/covered_placement_hybrid_fetched_request.h"
+#include "message/control/cooperation/covered_placement_directory_admit_request.h"
 #include "message/control/cooperation/covered_placement_notify_request.h"
 // For cooperative cache placement management (lazy victim fetching for placement calculation)
 #include "message/control/cooperation/covered_victim_fetch_request.h"

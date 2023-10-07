@@ -84,6 +84,8 @@ namespace covered
         kCoveredVictimFetchRequest,
         kCoveredVictimFetchResponse,
         kCoveredPlacementDirectoryLookupResponse,
+        kCoveredPlacementHybridFetchedRequest,
+        kCoveredPlacementDirectoryAdmitRequest
     };
 
     enum Hitflag

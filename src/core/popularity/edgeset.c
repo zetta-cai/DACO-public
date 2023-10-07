@@ -68,6 +68,18 @@ namespace covered
         return result;
     }
 
+    void Edgeset::erase(const uint32_t& edge_idx)
+    {
+        edgeset_.erase(edge_idx);
+        return;
+    }
+
+    void Edgeset::erase(std::unordered_set<uint32_t>::const_iterator iter)
+    {
+        edgeset_.erase(iter);
+        return;
+    }
+
     uint32_t Edgeset::getEdgesetPayloadSize() const
     {
         uint32_t edgeset_payload_size = sizeof(uint32_t) + edgeset_.size() * sizeof(uint32_t);

@@ -263,6 +263,16 @@ namespace covered
                 message_type_str = "kCoveredPlacementDirectoryLookupResponse";
                 break;
             }
+            case MessageType::kCoveredPlacementHybridFetchedRequest:
+            {
+                message_type_str = "kCoveredPlacementHybridFetchedRequest";
+                break;
+            }
+            case MessageType::kCoveredPlacementDirectoryAdmitRequest:
+            {
+                message_type_str = "kCoveredPlacementDirectoryAdmitRequest";
+                break;
+            }
             default:
             {
                 message_type_str = std::to_string(static_cast<uint32_t>(message_type));
@@ -542,6 +552,16 @@ namespace covered
             case MessageType::kCoveredVictimFetchRequest:
             {
                 message_ptr = new CoveredVictimFetchRequest(msg_payload);
+                break;
+            }
+            case MessageType::kCoveredPlacementHybridFetchedRequest:
+            {
+                message_ptr = new CoveredPlacementHybridFetchedRequest(msg_payload);
+                break;
+            }
+            case MessageType::kCoveredPlacementDirectoryAdmitRequest:
+            {
+                message_ptr = new CoveredPlacementDirectoryAdmitRequest(msg_payload);
                 break;
             }
             default:
@@ -956,6 +976,16 @@ namespace covered
             const CoveredPlacementDirectoryLookupResponse* const covered_placement_directory_lookup_response_ptr = static_cast<const CoveredPlacementDirectoryLookupResponse*>(message_ptr);
             tmp_key = covered_placement_directory_lookup_response_ptr->getKey();
         }
+        else if (message_ptr->message_type_ == MessageType::kCoveredPlacementHybridFetchedRequest)
+        {
+            const CoveredPlacementHybridFetchedRequest* const covered_placement_hybrid_fetched_request_ptr = static_cast<const CoveredPlacementHybridFetchedRequest*>(message_ptr);
+            tmp_key = covered_placement_hybrid_fetched_request_ptr->getKey();
+        }
+        else if (message_ptr->message_type_ == MessageType::kCoveredPlacementDirectoryAdmitRequest)
+        {
+            const CoveredPlacementDirectoryAdmitRequest* const covered_placement_directory_admit_request_ptr = static_cast<const CoveredPlacementDirectoryAdmitRequest*>(message_ptr);
+            tmp_key = covered_placement_directory_admit_request_ptr->getKey();
+        }
         else
         {
             std::ostringstream oss;
@@ -1226,7 +1256,7 @@ namespace covered
     bool MessageBase::isCooperationControlRequest() const
     {
         checkIsValid_();
-        if (message_type_ == MessageType::kAcquireWritelockRequest || message_type_ == MessageType::kDirectoryLookupRequest || message_type_ == MessageType::kDirectoryUpdateRequest || message_type_ == MessageType::kFinishBlockRequest || message_type_ == MessageType::kInvalidationRequest || message_type_ == MessageType::kReleaseWritelockRequest || message_type_ == MessageType::kCoveredDirectoryLookupRequest || message_type_ == MessageType::kCoveredDirectoryUpdateRequest || message_type_ == MessageType::kCoveredAcquireWritelockRequest || message_type_ == MessageType::kCoveredReleaseWritelockRequest || message_type_ == MessageType::kCoveredPlacementDirectoryUpdateRequest || message_type_ == MessageType::kCoveredPlacementNotifyRequest || message_type_ == MessageType::kCoveredVictimFetchRequest)
+        if (message_type_ == MessageType::kAcquireWritelockRequest || message_type_ == MessageType::kDirectoryLookupRequest || message_type_ == MessageType::kDirectoryUpdateRequest || message_type_ == MessageType::kFinishBlockRequest || message_type_ == MessageType::kInvalidationRequest || message_type_ == MessageType::kReleaseWritelockRequest || message_type_ == MessageType::kCoveredDirectoryLookupRequest || message_type_ == MessageType::kCoveredDirectoryUpdateRequest || message_type_ == MessageType::kCoveredAcquireWritelockRequest || message_type_ == MessageType::kCoveredReleaseWritelockRequest || message_type_ == MessageType::kCoveredPlacementDirectoryUpdateRequest || message_type_ == MessageType::kCoveredPlacementNotifyRequest || message_type_ == MessageType::kCoveredVictimFetchRequest || message_type_ == MessageType::kCoveredPlacementHybridFetchedRequest || message_type_ == MessageType::kCoveredPlacementDirectoryAdmitRequest)
         {
             return true;
         }
