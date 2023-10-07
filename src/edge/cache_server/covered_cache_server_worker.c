@@ -63,7 +63,7 @@ namespace covered
             return is_finish; // Edge node is NOT running now
         }
 
-        // NOTE: need_hybrid_fetching is processed in CacheServerWorkerBase::processLocalGetRequest_(), as we do NOT have value yet when lookuping directory information
+        // NOTE: need_hybrid_fetching with best_placement_edgeset is processed in CacheServerWorkerBase::processLocalGetRequest_(), as we do NOT have value yet when lookuping directory information
 
         return is_finish;
     }
@@ -132,31 +132,65 @@ namespace covered
         return covered_directory_lookup_request_ptr;
     }
 
-    void CoveredCacheServerWorker::processRspToLookupBeaconDirectory_(MessageBase* control_response_ptr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
+    void CoveredCacheServerWorker::processRspToLookupBeaconDirectory_(MessageBase* control_response_ptr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching) const
     {
-        // TODO: Process directory lookup response for non-blocking admission placement deployment
-
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
         CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
 
         assert(control_response_ptr != NULL);
-        assert(control_response_ptr->getMessageType() == MessageType::kCoveredDirectoryLookupResponse);
+        const MessageType message_type = control_response_ptr->getMessageType();
 
-        // Get directory information from the control response message
-        const CoveredDirectoryLookupResponse* const covered_directory_lookup_response_ptr = static_cast<const CoveredDirectoryLookupResponse*>(control_response_ptr);
-        is_being_written = covered_directory_lookup_response_ptr->isBeingWritten();
-        is_valid_directory_exist = covered_directory_lookup_response_ptr->isValidDirectoryExist();
-        directory_info = covered_directory_lookup_response_ptr->getDirectoryInfo();
+        Key tmp_key;
+        uint32_t source_edge_idx = 0;
+        VictimSyncset victim_syncset;
+        if (message_type == MessageType::kCoveredDirectoryLookupResponse) // Normal directory lookup response
+        {
+            // Get directory information from the control response message
+            const CoveredDirectoryLookupResponse* const covered_directory_lookup_response_ptr = static_cast<const CoveredDirectoryLookupResponse*>(control_response_ptr);
+            is_being_written = covered_directory_lookup_response_ptr->isBeingWritten();
+            is_valid_directory_exist = covered_directory_lookup_response_ptr->isValidDirectoryExist();
+            directory_info = covered_directory_lookup_response_ptr->getDirectoryInfo();
+
+            // Get key, source edge idx, and victim syncset
+            tmp_key = covered_directory_lookup_response_ptr->getKey();
+            source_edge_idx = covered_directory_lookup_response_ptr->getSourceIndex();
+            victim_syncset = covered_directory_lookup_response_ptr->getVictimSyncsetRef();
+
+            // NO hybrid data fetching
+            best_placement_edgeset.clear();
+            need_hybrid_fetching = false;
+        }
+        else if (message_type == MessageType::kCoveredPlacementDirectoryLookupResponse) // Directory lookup response with hybrid data fetching
+        {
+            // Get directory information from the control response message
+            const CoveredPlacementDirectoryLookupResponse* const covered_placement_directory_lookup_response_ptr = static_cast<const CoveredPlacementDirectoryLookupResponse*>(control_response_ptr);
+            is_being_written = covered_placement_directory_lookup_response_ptr->isBeingWritten();
+            is_valid_directory_exist = covered_placement_directory_lookup_response_ptr->isValidDirectoryExist();
+            directory_info = covered_placement_directory_lookup_response_ptr->getDirectoryInfo();
+
+            // Get key, source edge idx, and victim syncset
+            tmp_key = covered_placement_directory_lookup_response_ptr->getKey();
+            source_edge_idx = covered_placement_directory_lookup_response_ptr->getSourceIndex();
+            victim_syncset = covered_placement_directory_lookup_response_ptr->getVictimSyncsetRef();
+
+            // Get best placement edgeset for hybrid data fetching
+            best_placement_edgeset = covered_placement_directory_lookup_response_ptr->getEdgesetRef();
+            need_hybrid_fetching = true;
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "Invalid message type: " << message_type << " for processRspToLookupBeaconDirectory_()";
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
 
         // Victim synchronization
-        const uint32_t source_edge_idx = covered_directory_lookup_response_ptr->getSourceIndex();
-        const VictimSyncset& victim_syncset = covered_directory_lookup_response_ptr->getVictimSyncsetRef();
         std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = tmp_edge_wrapper_ptr->getLocalBeaconedVictimsFromVictimSyncset(victim_syncset);
         tmp_covered_cache_manager_ptr->updateVictimTrackerForVictimSyncset(source_edge_idx, victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
 
         // Update DirectoryCacher if necessary
-        const Key tmp_key = covered_directory_lookup_response_ptr->getKey();
         if (is_valid_directory_exist) // If with valid dirinfo
         {
             // Check if key is tracked by local uncached metadata and get local uncached popularity if any
@@ -184,8 +218,6 @@ namespace covered
 
     MessageBase* CoveredCacheServerWorker::getReqToRedirectGet_(const Key& key, const bool& skip_propagation_latency) const
     {
-        // TODO: Update/invaidate directory metadata cache
-
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
         CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();

@@ -1,6 +1,8 @@
 /*
  * CoveredPlacementRedirectedGetResponse: a response issued by the target edge node to an edge node for CoveredPlacementRedirectedGetRequest.
  * 
+ * NOTE: background response with placement edgeset to trigger non-blocking placement notification.
+ * 
  * By Siyuan Sheng (2023.09.25).
  */
 

@@ -279,7 +279,18 @@ namespace covered
         if (need_hybrid_fetching)
         {
             assert(tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME);
-            is_finish = tmp_edge_wrapper_ptr->nonblockNotifyForPlacement(tmp_key, tmp_value, best_placement_edgeset, edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, skip_propagation_latency);
+            const bool sender_is_beacon = tmp_edge_wrapper_ptr->currentIsBeacon(tmp_key);
+
+            if (sender_is_beacon) // best_placement_edgeset and need_hybrid_fetching come from lookupLocalDirectory_()
+            {
+                is_finish = tmp_edge_wrapper_ptr->nonblockNotifyForPlacement(tmp_key, tmp_value, best_placement_edgeset, edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, skip_propagation_latency);
+            }
+            else // best_placement_edgeset and need_hybrid_fetching come from lookupBeaconDirectory_()
+            {
+                // TODO: END HERE
+                //is_finish = tmp_edge_wrapper_ptr->notifyBeaconForPlacement()
+            }
+
             if (is_finish) // Edge node is NOT running
             {
                 return is_finish;
@@ -387,7 +398,7 @@ namespace covered
                 bool need_lookup_beacon_directory = needLookupBeaconDirectory_(key, is_being_written, is_valid_directory_exist, directory_info);
                 if (need_lookup_beacon_directory)
                 {
-                    is_finish = lookupBeaconDirectory_(key, is_being_written, is_valid_directory_exist, directory_info, total_bandwidth_usage, event_list, skip_propagation_latency); // Add events of intermediate responses if with event tracking
+                    is_finish = lookupBeaconDirectory_(key, is_being_written, is_valid_directory_exist, directory_info, best_placement_edgeset, need_hybrid_fetching, total_bandwidth_usage, event_list, skip_propagation_latency); // Add events of intermediate responses if with event tracking
                 }
                 
                 if (is_finish) // Edge is NOT running
@@ -483,7 +494,7 @@ namespace covered
         return is_finish;
     }
 
-    bool CacheServerWorkerBase::lookupBeaconDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
+    bool CacheServerWorkerBase::lookupBeaconDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
@@ -536,7 +547,7 @@ namespace covered
                 MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
                 assert(control_response_ptr != NULL);
 
-                processRspToLookupBeaconDirectory_(control_response_ptr, is_being_written, is_valid_directory_exist, directory_info);
+                processRspToLookupBeaconDirectory_(control_response_ptr, is_being_written, is_valid_directory_exist, directory_info, best_placement_edgeset, need_hybrid_fetching);
 
                 // Update total bandwidth usage for received directory lookup response
                 BandwidthUsage directory_lookup_response_bandwidth_usage = control_response_ptr->getBandwidthUsageRef();
@@ -878,8 +889,6 @@ namespace covered
         {
             return is_finish;
         }
-        
-        // TODO: For COVERED, beacon node will tell the edge node if to admit, w/o independent decision
 
         // Prepare local response
         MessageBase* local_response_ptr = NULL;

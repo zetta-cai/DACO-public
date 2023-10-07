@@ -45,7 +45,7 @@ namespace covered
         void updatePervictimCacheinfos_(std::unordered_map<Key, std::list<VictimCacheinfo>, KeyHasher>& pervictim_cacheinfos, const Key& victim_key, const VictimCacheinfo& victim_cacheinfo) const;
         void updatePeredgeVictimset_(std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& peredge_victimset, const uint32_t& edge_idx, const Key& victim_key) const;
 
-        uint64_t cache_margin_bytes_;
+        uint64_t cache_margin_bytes_; // Maintain per-edge-node margin bytes to decide whether to find victims or not
         std::list<VictimCacheinfo> victim_cacheinfos_; // Victims are sorted in an ascending order of local rewards
     };
 }

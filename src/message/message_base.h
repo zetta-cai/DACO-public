@@ -83,6 +83,7 @@ namespace covered
         kCoveredPlacementDirectoryUpdateResponse,
         kCoveredVictimFetchRequest,
         kCoveredVictimFetchResponse,
+        kCoveredPlacementDirectoryLookupResponse,
     };
 
     enum Hitflag

@@ -66,7 +66,7 @@ namespace covered
                     // Preserve placement edgeset + perform local-uncached-popularity removal to avoid duplicate placement, and update max admission benefit with aggregated uncached popularity for non-blocking placement deployment
                     popularity_aggregator_.updatePreservedEdgesetForPlacement(key, best_placement_edgeset, tmp_is_global_cached);
 
-                    // Remove involved synced victims from victim tracker for each edge node in placement edgeset to avoid duplication eviction
+                    // Remove involved synced victims from victim tracker for each edge node in placement edgeset to avoid duplicate eviction
                     // NOTE: synced victims MUST exist in edge-level victim metadata of victim tracker
                     // NOTE: removed synced victims should NOT be reused <- if synced victims in the edge node do NOT change, removed victims will NOT be reported to the beacon node due to dedup/delta-compression in victim synchronization; if need more victims, victim fetching request MUST be later than placement notification request, which has changed the synced victims in the edge node
                     for (std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>::const_iterator best_placement_peredge_synced_victimset_const_iter = best_placement_peredge_synced_victimset.begin(); best_placement_peredge_synced_victimset_const_iter != best_placement_peredge_synced_victimset.end(); best_placement_peredge_synced_victimset_const_iter++)
@@ -76,7 +76,7 @@ namespace covered
                         victim_tracker_.removeVictimsForGivenEdge(tmp_edge_idx, tmp_synced_victim_keyset_const_ref);
                     }
 
-                    // TODO: Remove involved extra fetched victims from victim cache for each edge node in placement edgeset to avoid duplication eviction
+                    // TODO: Remove involved extra fetched victims from victim cache for each edge node in placement edgeset to avoid duplicate eviction
                     // NOTE: extra fetched victims may NOT exist in victim cache
                     // NOTE: removed extra fetched victims should NOT be reused <- if the edge node needs more victims and triggers victim fetching again, the request MUST be later than placement notification request, which has changed the synced victims in the edge node
                     UNUSED(best_placement_peredge_fetched_victimset);

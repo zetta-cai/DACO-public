@@ -41,10 +41,14 @@
 #include "message/control/cooperation/covered_acquire_writelock_response.h"
 #include "message/control/cooperation/covered_release_writelock_request.h"
 #include "message/control/cooperation/covered_release_writelock_response.h"
+// For cooperative cache placement management (hybrid data fetching)
+#include "message/control/cooperation/covered_placement_directory_lookup_response.h"
+// For cooperative cache placement management (during non-blocking placement deployment)
 #include "message/control/cooperation/covered_placement_directory_update_request.h"
 #include "message/control/cooperation/covered_placement_directory_update_response.h"
-// For cooperative cache placement deployment
+// For cooperative cache placement management (non-blocking placement notification)
 #include "message/control/cooperation/covered_placement_notify_request.h"
+// For cooperative cache placement management (lazy victim fetching for placement calculation)
 #include "message/control/cooperation/covered_victim_fetch_request.h"
 #include "message/control/cooperation/covered_victim_fetch_response.h"
 

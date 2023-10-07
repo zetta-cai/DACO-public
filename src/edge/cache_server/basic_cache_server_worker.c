@@ -72,7 +72,7 @@ namespace covered
         return directory_lookup_request_ptr;
     }
 
-    void BasicCacheServerWorker::processRspToLookupBeaconDirectory_(MessageBase* control_response_ptr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
+    void BasicCacheServerWorker::processRspToLookupBeaconDirectory_(MessageBase* control_response_ptr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching) const
     {
         assert(control_response_ptr != NULL);
         assert(control_response_ptr->getMessageType() == MessageType::kDirectoryLookupResponse);
@@ -82,6 +82,9 @@ namespace covered
         is_being_written = directory_lookup_response_ptr->isBeingWritten();
         is_valid_directory_exist = directory_lookup_response_ptr->isValidDirectoryExist();
         directory_info = directory_lookup_response_ptr->getDirectoryInfo();
+
+        UNUSED(best_placement_edgeset);
+        UNUSED(need_hybrid_fetching);
 
         return;
     }

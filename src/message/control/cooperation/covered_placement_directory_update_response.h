@@ -1,7 +1,7 @@
 /*
  * CoveredPlacementDirectoryUpdateResponse: a response issued by the beacon node to the closest node to acknowledge CoveredPlacementDirectoryUpdateRequest with victim synchronization for COVERED during non-blocking placement deployment.
  *
- * NOTE: CoveredPlacementDirectoryUpdateResponse does NOT need placement edgeset.
+ * NOTE: background response without placement edgeset to trigger non-blocking placement notification.
  * 
  * By Siyuan Sheng (2023.10.02).
  */

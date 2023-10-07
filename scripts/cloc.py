@@ -27,7 +27,8 @@ print("")
 
 # (2) Count LOC for design-related C/C++ source code
 
-design_c_dirs = ["src/cache/covered*", "src/core", "src/edge/*/covered*", "src/message/*/covered*"]
+# "src/message/*/*/covered*"
+design_c_dirs = ["src/cache/covered*", "src/core", "src/edge/*/covered*"]
 design_c_dir_str = ""
 for tmp_dir in design_c_dirs:
     design_c_dir_str += tmp_dir + " "

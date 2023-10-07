@@ -27,6 +27,7 @@
 // ONLY for COVERED
 #include "message/data/redirected/covered_redirected_get_request.h"
 #include "message/data/redirected/covered_redirected_get_response.h"
+// For cooperative cache placement management (non-blocking data fetching)
 #include "message/data/redirected/covered_placement_redirected_get_request.h"
 #include "message/data/redirected/covered_placement_redirected_get_response.h"
 #include "message/data/global/covered_placement_global_get_request.h"

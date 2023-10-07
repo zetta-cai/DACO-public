@@ -44,7 +44,7 @@ namespace covered
         // (3) For FinishWrite
 
         //void resetWriteflagForKeyIfExist(const Key& key); // Reset write flag only if key exists (NOT add an MSI metadata with writeflag_ = false is key NOT exist)
-        std::unordered_set<NetworkAddr, NetworkAddrHasher> unblockAllEdgesAndFinishWriteForKeyIfExist(const Key& key); // Pop all edges from block list and finish writes if key exists (MUST exist and being written) (TODO: trigger erase)
+        std::unordered_set<NetworkAddr, NetworkAddrHasher> unblockAllEdgesAndFinishWriteForKeyIfExist(const Key& key); // Pop all edges from block list and finish writes if key exists (MUST exist and being written) (NOTE: trigger erase of perkey_msimetadata_)
 
         // (4) Get size for capacity check
 

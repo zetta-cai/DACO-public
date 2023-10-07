@@ -81,7 +81,6 @@ namespace covered
         mutable Rwlock* rwlock_for_victim_tracker_;
 
         // Non-const shared varaibles
-        // TODO: Maintain per-edge-node margin bytes to decide whether to perform placement calculation or not
         uint64_t size_bytes_; // Cache size usage of victim tracker
         peredge_victim_metadata_t peredge_victim_metadata_;
         perkey_victim_dirinfo_t perkey_victim_dirinfo_;

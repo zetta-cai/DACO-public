@@ -215,7 +215,9 @@ namespace covered
         bool is_being_written = false;
         bool is_valid_directory_exist = false;
         DirectoryInfo directory_info;
-        is_finish = processReqToLookupLocalDirectory_(control_request_ptr, edge_cache_server_worker_recvreq_dst_addr, is_being_written, is_valid_directory_exist, directory_info, total_bandwidth_usage, event_list);
+        Edgeset best_placement_edgeset;
+        bool need_hybrid_fetching = false;
+        is_finish = processReqToLookupLocalDirectory_(control_request_ptr, edge_cache_server_worker_recvreq_dst_addr, is_being_written, is_valid_directory_exist, directory_info, best_placement_edgeset, need_hybrid_fetching, total_bandwidth_usage, event_list);
         if (is_finish)
         {
             return is_finish; // Edge node is NOT running now
@@ -230,7 +232,7 @@ namespace covered
         embedBackgroundCounterIfNotEmpty_(total_bandwidth_usage, event_list); // Embed background events/bandwidth if any into control response message
         const Key tmp_key = MessageBase::getKeyFromMessage(control_request_ptr);
         const bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();
-        MessageBase* directory_lookup_response_ptr = getRspToLookupLocalDirectory_(tmp_key, is_being_written, is_valid_directory_exist, directory_info, total_bandwidth_usage, event_list, skip_propagation_latency);
+        MessageBase* directory_lookup_response_ptr = getRspToLookupLocalDirectory_(tmp_key, is_being_written, is_valid_directory_exist, directory_info, best_placement_edgeset, need_hybrid_fetching, total_bandwidth_usage, event_list, skip_propagation_latency);
         assert(directory_lookup_response_ptr != NULL);
         
         // Push the directory lookup response into edge-to-edge propagation simulator to cache server worker

@@ -122,7 +122,7 @@ namespace covered
 
         struct timespec admission_start_timestamp = Util::getCurrentTimespec();
 
-        // TODO: Embed placement edgeset into CoveredPlacementNotifyRequest for hybrid data fetching (NO need???)
+        // NOTE: CoveredPlacementNotifyRequest does NOT need placement edgeset, as placement notification has already been triggered
         //PlacementEdgeset tmp_placement_edgeset = covered_placement_notify_request_ptr->getEdgesetRef();
         //assert(tmp_placement_edgeset.size() <= tmp_edge_wrapper_ptr->getTopkEdgecntForPlacement()); // At most k placement edge nodes each time
 

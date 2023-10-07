@@ -1,5 +1,7 @@
 /*
  * CoveredPlacementCoveredPlacementGlobalGetRequest: a request issued by an edge node to cloud to get an existing value if any for COVERED's non-blocking placement deployment.
+ *
+ * NOTE: background request with placement edgeset to trigger non-blocking placement notification.
  * 
  * By Siyuan Sheng (2023.09.27).
  */

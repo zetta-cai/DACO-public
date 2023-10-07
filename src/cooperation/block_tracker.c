@@ -149,7 +149,7 @@ namespace covered
         MsiMetadata::UnblockAllEdgesAndFinishWriteParam tmp_param = {blocked_edges};
 
         bool is_exist = false;
-        perkey_msimetadata_.callIfExist(key, is_exist, MsiMetadata::UNBLOCK_ALL_EDGES_AND_FINISH_WRITE_FUNCNAME, &tmp_param);
+        perkey_msimetadata_.callIfExist(key, is_exist, MsiMetadata::UNBLOCK_ALL_EDGES_AND_FINISH_WRITE_FUNCNAME, &tmp_param); // NOTE: trigger erase of perkey_msimetadata_
         
         // key MUST exist
         assert(is_exist);

@@ -1,6 +1,8 @@
 /*
  * CoveredPlacementRedirectedGetRequest: a request issued by an edge node to the target edge node to get an existing value if any with victim synchronization and placement edgeset for non-blocking placement deployment in COVERED.
  * 
+ * NOTE: background request with placement edgeset to trigger non-blocking placement notification.
+ * 
  * By Siyuan Sheng (2023.09.25).
  */
 

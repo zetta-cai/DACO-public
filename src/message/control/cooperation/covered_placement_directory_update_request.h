@@ -1,6 +1,8 @@
 /*
  * CoveredPlacementDirectoryUpdateRequest: a request issued by the closest node to the beacon node to update directory information of a given key with popularity collection (if key is evicted) and victim synchronization for COVERED during non-blocking placement deployment.
  *
+ * NOTE: background request without placement edgeset to trigger non-blocking placement notification.
+ *
  * NOTE: is_valid_directory_exist indicates whether to add or delete the directory information.
  * 
  * NOTE: the collected popularity will be serialized/deserialized ONLY if validity = false (i.e., is_admit = false), where collected_popularity_.isTracked() indicates that whether the evicted key is selected for metadata preservation.

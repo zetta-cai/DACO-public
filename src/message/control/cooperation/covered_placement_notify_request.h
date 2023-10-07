@@ -1,7 +1,7 @@
 /*
  * CoveredPlacementNotifyRequest: a request issued by a beacon edge node to an involved edge node for COVERED's non-blocking placement notification.
  * 
- * NOTE: CoveredPlacementNotifyRequest does NOT need placement edgeset.
+ * NOTE: background request without placement edgeset to trigger non-blocking placement notification.
  * 
  * By Siyuan Sheng (2023.09.29).
  */

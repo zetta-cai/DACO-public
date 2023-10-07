@@ -1,6 +1,8 @@
 /*
  * CoveredPlacementGlobalGetResponse: a response issued by cloud to an edge node for GlobalGetRequest.
  * 
+ * NOTE: background response with placement edgeset to trigger non-blocking placement notification.
+ * 
  * By Siyuan Sheng (2023.05.18).
  */
 

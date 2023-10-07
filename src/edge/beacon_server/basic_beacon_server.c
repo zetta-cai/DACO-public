@@ -30,7 +30,7 @@ namespace covered
 
     // (1) Access content directory information
 
-    bool BasicBeaconServer::processReqToLookupLocalDirectory_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvreq_dst_addr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, BandwidthUsage& total_bandwidth_usage, EventList& event_list) const
+    bool BasicBeaconServer::processReqToLookupLocalDirectory_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvreq_dst_addr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, BandwidthUsage& total_bandwidth_usage, EventList& event_list) const
     {
         bool is_finish = false;
 
@@ -47,18 +47,23 @@ namespace covered
         edge_wrapper_ptr_->getCooperationWrapperPtr()->lookupDirectoryTableByBeaconServer(tmp_key, source_edge_idx, edge_cache_server_worker_recvreq_dst_addr, is_being_written, is_valid_directory_exist, directory_info, is_source_cached);
         UNUSED(is_source_cached);
 
+        UNUSED(best_placement_edgeset);
+        UNUSED(need_hybrid_fetching);
         UNUSED(total_bandwidth_usage);
         UNUSED(event_list);
         return is_finish;
     }
 
-    MessageBase* BasicBeaconServer::getRspToLookupLocalDirectory_(const Key& key, const bool& is_being_written, const bool& is_valid_directory_exist, const DirectoryInfo& directory_info, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency) const
+    MessageBase* BasicBeaconServer::getRspToLookupLocalDirectory_(const Key& key, const bool& is_being_written, const bool& is_valid_directory_exist, const DirectoryInfo& directory_info, const Edgeset& best_placement_edgeset, const bool& need_hybrid_fetching, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency) const
     {
         checkPointers_();
 
         uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
         MessageBase* directory_lookup_response_ptr = new DirectoryLookupResponse(key, is_being_written, is_valid_directory_exist, directory_info, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
         assert(directory_lookup_response_ptr != NULL);
+
+        UNUSED(best_placement_edgeset);
+        UNUSED(need_hybrid_fetching);
 
         return directory_lookup_response_ptr;
     }
