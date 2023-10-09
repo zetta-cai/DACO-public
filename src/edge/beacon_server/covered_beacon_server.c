@@ -143,6 +143,10 @@ namespace covered
             tmp_value = covered_placement_hybrid_fetched_request_ptr->getValue();
             best_placement_edgeset = covered_placement_hybrid_fetched_request_ptr->getEdgesetRef();
         }
+        else if (message_type == MessageType::kCoveredPlacementDirectoryAdmitRequest) // Foreground directory admission with including-sender hybrid data fetching for COVERED
+        {
+            // TODO: END HERE
+        }
         else if (message_type == MessageType::kCoveredDirectoryUpdateRequest) // Foreground directory updates (with only-sender hybrid data fetching for COVERED if is_admit = true)
         {
             // Get key, is_admit, directory info, victim syncset, and collected popularity (if any) from directory update request
@@ -252,7 +256,6 @@ namespace covered
     MessageBase* CoveredBeaconServer::getRspToUpdateLocalDirectory_(MessageBase* control_request_ptr, const bool& is_being_written, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list) const
     {
         assert(control_request_ptr != NULL);
-        assert(control_request_ptr->getMessageType() == MessageType::kCoveredDirectoryUpdateRequest || control_request_ptr->getMessageType() == MessageType::kCoveredPlacementDirectoryUpdateRequest);
 
         const Key tmp_key = MessageBase::getKeyFromMessage(control_request_ptr);
         const bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();
@@ -263,20 +266,36 @@ namespace covered
         // Prepare victim syncset for piggybacking-based victim synchronization
         VictimSyncset victim_syncset = covered_cache_manager_ptr->accessVictimTrackerForVictimSyncset();
 
-        // TODO: (END HERE) Send back corresponding response based on request type
+        // Send back corresponding response based on request type
+        MessageType message_type = control_request_ptr->getMessageType();
         uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
-        MessageBase* covered_directory_update_response_ptr = NULL;
-        if (control_request_ptr->isBackgroundRequest())
+        MessageBase* control_response_ptr = NULL;
+        if (message_type == MessageType::kCoveredPlacementDirectoryUpdateRequest) // Background directory updates w/o hybrid data fetching for COVERED
         {
-            covered_directory_update_response_ptr = new CoveredPlacementDirectoryUpdateResponse(tmp_key, is_being_written, victim_syncset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+            control_response_ptr = new CoveredPlacementDirectoryUpdateResponse(tmp_key, is_being_written, victim_syncset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+        }
+        else if (message_type == MessageType::kCoveredPlacementHybridFetchedRequest) // Foreground request to notify the result of excluding-sender hybrid data fetching for COVERED (NO directory update)
+        {
+            control_response_ptr = new CoveredPlacementHybridFetchedResponse(tmp_key, victim_syncset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+        }
+        else if (message_type == MessageType::kCoveredPlacementDirectoryAdmitRequest) // Foreground directory admission with including-sender hybrid data fetching for COVERED
+        {
+            // TODO: END HERE
+        }
+        else if (message_type == MessageType::kCoveredDirectoryUpdateRequest) // Foreground directory updates (with only-sender hybrid data fetching for COVERED if is_admit = true)
+        {
+            control_response_ptr = new CoveredDirectoryUpdateResponse(tmp_key, is_being_written, victim_syncset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
         }
         else
         {
-            covered_directory_update_response_ptr = new CoveredDirectoryUpdateResponse(tmp_key, is_being_written, victim_syncset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+            std::ostringstream oss;
+            oss << "Invalid message type " << message_type << " for getRspToUpdateLocalDirectory_()";
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
         }
-        assert(covered_directory_update_response_ptr != NULL);
+        assert(control_response_ptr != NULL);
 
-        return covered_directory_update_response_ptr;
+        return control_response_ptr;
     }
 
     // (2) Process writes and unblock for MSI protocol

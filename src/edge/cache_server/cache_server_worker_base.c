@@ -279,7 +279,7 @@ namespace covered
         struct timespec trigger_placement_start_timestamp = Util::getCurrentTimespec();
         if (need_hybrid_fetching)
         {
-            is_finish = tryToTriggerPlacementNotification_(tmp_key, tmp_value, best_placement_edgeset, skip_propagation_latency);
+            is_finish = tryToTriggerPlacementNotification_(tmp_key, tmp_value, best_placement_edgeset, total_bandwidth_usage, event_list, skip_propagation_latency);
             if (is_finish) // Edge is NOT running now
             {
                 return is_finish;
@@ -1575,7 +1575,7 @@ namespace covered
 
     // (4.3) Trigger non-blocking placement notification (ONLY for COVERED)
 
-    bool CacheServerWorkerBase::tryToTriggerPlacementNotification_(const Key& key, const Value& value, const Edgeset& best_placement_edgeset, const bool& skip_propagation_latency) const
+    bool CacheServerWorkerBase::tryToTriggerPlacementNotification_(const Key& key, const Value& value, const Edgeset& best_placement_edgeset, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
@@ -1592,14 +1592,16 @@ namespace covered
         else // best_placement_edgeset and need_hybrid_fetching come from lookupBeaconDirectory_()
         {
             // Trigger placement notification remotely at the beacon edge node
-            is_finish = notifyBeaconForPlacement_(key, value, best_placement_edgeset, skip_propagation_latency);
+            is_finish = notifyBeaconForPlacement_(key, value, best_placement_edgeset, total_bandwidth_usage, event_list, skip_propagation_latency);
         }
 
         return is_finish;
     }
 
-    bool CacheServerWorkerBase::notifyBeaconForPlacement_(const Key& key, const Value& value, const Edgeset& best_placement_edgeset, const bool& skip_propagation_latency) const
+    bool CacheServerWorkerBase::notifyBeaconForPlacement_(const Key& key, const Value& value, const Edgeset& best_placement_edgeset, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
     {
+        Edgeset tmp_best_placement_edgest = best_placement_edgeset; // Deep copy for excluding sender if with local placement
+
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
         CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
@@ -1610,14 +1612,14 @@ namespace covered
 
         // Check if current edge node needs placement
         const uint32_t current_edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
-        std::unordered_set<uint32_t>::const_iterator best_placement_edgeset_const_iter = best_placement_edgeset.find(current_edge_idx);
+        std::unordered_set<uint32_t>::const_iterator tmp_best_placement_edgeset_const_iter = tmp_best_placement_edgest.find(current_edge_idx);
         bool current_need_placement = false;
         bool current_is_only_placement = false;
-        if (best_placement_edgeset_const_iter != best_placement_edgeset.end())
+        if (tmp_best_placement_edgeset_const_iter != tmp_best_placement_edgest.end())
         {
             current_need_placement = true;
-            best_placement_edgeset.erase(best_placement_edgeset_const_iter); // NOTE: we exclude current edge idx from best placement edgeset
-            if (best_placement_edgeset.size() == 0) // Current edge node is the only placement
+            tmp_best_placement_edgest.erase(tmp_best_placement_edgeset_const_iter); // NOTE: we exclude current edge idx from best placement edgeset
+            if (tmp_best_placement_edgest.size() == 0) // Current edge node is the only placement
             {
                 current_is_only_placement = true;
             }
@@ -1637,14 +1639,14 @@ namespace covered
             if (!current_need_placement) // Current edge node does NOT need placement
             {
                 // Prepare CoveredPlacementHybridFetchedRequest
-                control_request_ptr = new CoveredPlacementHybridFetchedRequest(key, value, victim_syncset, best_placement_edgeset, current_edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
+                control_request_ptr = new CoveredPlacementHybridFetchedRequest(key, value, victim_syncset, tmp_best_placement_edgest, current_edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
             }
             else
             {
                 if (!current_is_only_placement) // Current edge node is NOT the only placement
                 {
                     // Prepare CoveredPlacementDirectoryAdmitRequest (also equivalent to directory admission request)
-                    control_request_ptr = new CoveredPlacementDirectoryAdmitRequest(key, value, victim_syncset, best_placement_edgeset, current_edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
+                    control_request_ptr = new CoveredPlacementDirectoryAdmitRequest(key, value, DirectoryInfo(current_edge_idx), victim_syncset, tmp_best_placement_edgest, current_edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
                 }
                 else // Current edge node is the only placement
                 {
@@ -1662,7 +1664,57 @@ namespace covered
             // NOTE: control_request_ptr will be released by edge-to-edge propagation simulator
             control_request_ptr = NULL;
 
-            // TODO: Wait for the corresponding CoveredDirectoryUpdateResponse from the beacon edge node
+            // Wait for the corresponding CoveredDirectoryUpdateResponse from the beacon edge node
+            DynamicArray control_response_msg_payload;
+            bool is_timeout = edge_cache_server_worker_recvrsp_socket_server_ptr_->recv(control_response_msg_payload);
+            if (is_timeout)
+            {
+                if (!tmp_edge_wrapper_ptr->isNodeRunning())
+                {
+                    is_finish = true; // Edge is NOT running
+                    break; // Break from while (true)
+                }
+                else
+                {
+                    Util::dumpWarnMsg(base_instance_name_, "edge timeout to wait for foreground directory update response after hybrid data fetching");
+                    continue; // Resend the control request message
+                }
+            } // End of (is_timeout == true)
+            else
+            {
+                // Receive the control response message successfully
+                MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
+                assert(control_response_ptr != NULL);
+
+                if (!current_need_placement)
+                {
+                    assert(control_response_ptr->getMessageType() == MessageType::kCoveredPlacementHybridFetchedResponse);
+                }
+                else
+                {
+                    // TODO
+                }
+
+                // Update total bandwidth usage for received control response
+                BandwidthUsage control_response_bandwidth_usage = control_response_ptr->getBandwidthUsageRef();
+                uint32_t cross_edge_control_rsp_bandwidth_bytes = control_response_ptr->getMsgPayloadSize();
+                control_response_bandwidth_usage.update(BandwidthUsage(0, cross_edge_control_rsp_bandwidth_bytes, 0));
+                total_bandwidth_usage.update(control_response_bandwidth_usage);
+
+                // Add events of intermediate response if with event tracking
+                event_list.addEvents(control_response_ptr->getEventListRef());
+
+                // Release the control response message
+                delete control_response_ptr;
+                control_response_ptr = NULL;
+
+                break; // Break from while (true)
+            } // End of (is_timeout == false)
+        } // End of while (true)
+
+        if (is_finish)
+        {
+            return is_finish; // Edge is NOT running now
         }
 
         // Perform local placement if necessary

@@ -169,8 +169,8 @@ namespace covered
         // (4.3) Trigger non-blocking placement notification (ONLY for COVERED)
 
         // Return if edge node is finished
-        bool tryToTriggerPlacementNotification_(const Key& key, const Value& value, const Edgeset& best_placement_edgeset, const bool& skip_propagation_latency) const;
-        bool notifyBeaconForPlacement_(const Key& key, const Value& value, const Edgeset& best_placement_edgeset, const bool& skip_propagation_latency) const; // Sender is NOT beacon
+        bool tryToTriggerPlacementNotification_(const Key& key, const Value& value, const Edgeset& best_placement_edgeset, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const;
+        bool notifyBeaconForPlacement_(const Key& key, const Value& value, const Edgeset& best_placement_edgeset, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const; // Sender is NOT beacon
 
         // (5) Utility functions
 
