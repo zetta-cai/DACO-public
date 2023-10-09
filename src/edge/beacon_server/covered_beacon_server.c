@@ -95,43 +95,70 @@ namespace covered
 
     bool CoveredBeaconServer::processReqToUpdateLocalDirectory_(MessageBase* control_request_ptr, bool& is_being_written, BandwidthUsage& total_bandwidth_usage, EventList& event_list)
     {
+        checkPointers_();
+        assert(control_request_ptr != NULL);
+
         bool is_finish = false;
 
         // Get key and directory update information from control request
-        assert(control_request_ptr != NULL);
         uint32_t source_edge_idx = control_request_ptr->getSourceIndex();
+        const bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();
 
         MessageType message_type = control_request_ptr->getMessageType();
         Key tmp_key;
-        bool is_admit = false;
-        DirectoryInfo directory_info;
         VictimSyncset victim_syncset;
-        CollectedPopularity collected_popularity;
-        if (message_type == MessageType::kCoveredDirectoryUpdateRequest)
-        {
-            // Get key, is_admit, directory info, victim syncset, and collected popularity (if any) from directory update request
-            const CoveredDirectoryUpdateRequest* const covered_directory_update_request_ptr = static_cast<const CoveredDirectoryUpdateRequest*>(control_request_ptr);
-            tmp_key = covered_directory_update_request_ptr->getKey();
-            is_admit = covered_directory_update_request_ptr->isValidDirectoryExist();
-            directory_info = covered_directory_update_request_ptr->getDirectoryInfo();
-            victim_syncset = covered_directory_update_request_ptr->getVictimSyncsetRef();
-            if (!is_admit)
-            {
-                collected_popularity = covered_directory_update_request_ptr->getCollectedPopularityRef();
-            }
-        }
-        else if (message_type == MessageType::kCoveredPlacementDirectoryUpdateRequest)
+        bool is_directory_update = false;
+        bool is_admit = false; // ONLY used if is_directory_update = true
+        DirectoryInfo directory_info; // ONLY used if is_directory_update = true
+        CollectedPopularity collected_popularity; // ONLY used if is_directory_update = true and is_admit = false
+        bool with_extra_hybrid_fetching_result = false; // If with extra hybrid fetching result (except/besides sender) to trigger non-blocking placement notification
+        Value tmp_value; // ONLY used if  with_extra_hybrid_fetching_result = true
+        Edgeset best_placement_edgeset; // ONLY used if with_extra_hybrid_fetching_result = true
+        if (message_type == MessageType::kCoveredPlacementDirectoryUpdateRequest) // Background directory updates w/o hybrid data fetching for COVERED
         {
             // Get key, is_admit, directory info, victim syncset, and collected popularity (if any) from directory update request
             const CoveredPlacementDirectoryUpdateRequest* const covered_placement_directory_update_request_ptr = static_cast<const CoveredPlacementDirectoryUpdateRequest*>(control_request_ptr);
             tmp_key = covered_placement_directory_update_request_ptr->getKey();
+            victim_syncset = covered_placement_directory_update_request_ptr->getVictimSyncsetRef();
+
+            is_directory_update = true;
             is_admit = covered_placement_directory_update_request_ptr->isValidDirectoryExist();
             directory_info = covered_placement_directory_update_request_ptr->getDirectoryInfo();
-            victim_syncset = covered_placement_directory_update_request_ptr->getVictimSyncsetRef();
             if (!is_admit)
             {
                 collected_popularity = covered_placement_directory_update_request_ptr->getCollectedPopularityRef();
             }
+
+            with_extra_hybrid_fetching_result = false; // NO hybrid data fetching result
+        }
+        else if (message_type == kCoveredPlacementHybridFetchedRequest) // Foreground request to notify the result of excluding-sender hybrid data fetching for COVERED (NO directory update)
+        {
+            const CoveredPlacementHybridFetchedRequest* const covered_placement_hybrid_fetched_request_ptr = static_cast<const CoveredPlacementHybridFetchedRequest*>(control_request_ptr);
+            tmp_key = covered_placement_hybrid_fetched_request_ptr->getKey();
+            victim_syncset = covered_placement_hybrid_fetched_request_ptr->getVictimSyncsetRef();
+
+            is_directory_update = false;
+
+            with_extra_hybrid_fetching_result = true; // With extra hybrid data fetching result (except sender)
+            tmp_value = covered_placement_hybrid_fetched_request_ptr->getValue();
+            best_placement_edgeset = covered_placement_hybrid_fetched_request_ptr->getEdgesetRef();
+        }
+        else if (message_type == MessageType::kCoveredDirectoryUpdateRequest) // Foreground directory updates (with only-sender hybrid data fetching for COVERED if is_admit = true)
+        {
+            // Get key, is_admit, directory info, victim syncset, and collected popularity (if any) from directory update request
+            const CoveredDirectoryUpdateRequest* const covered_directory_update_request_ptr = static_cast<const CoveredDirectoryUpdateRequest*>(control_request_ptr);
+            tmp_key = covered_directory_update_request_ptr->getKey();
+            victim_syncset = covered_directory_update_request_ptr->getVictimSyncsetRef();
+
+            is_directory_update = true;
+            is_admit = covered_directory_update_request_ptr->isValidDirectoryExist();
+            directory_info = covered_directory_update_request_ptr->getDirectoryInfo();
+            if (!is_admit)
+            {
+                collected_popularity = covered_directory_update_request_ptr->getCollectedPopularityRef();
+            }
+
+            with_extra_hybrid_fetching_result = false; // Without extra hybrid data fetching result (besides sender)
         }
         else
         {
@@ -144,49 +171,79 @@ namespace covered
         checkPointers_();
         CoveredCacheManager* covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
 
-        // Update local directory information in cooperation wrapper
-        is_being_written = false;
-        bool is_source_cached = false;
-        bool is_global_cached = edge_wrapper_ptr_->getCooperationWrapperPtr()->updateDirectoryTable(tmp_key, source_edge_idx, is_admit, directory_info, is_being_written, is_source_cached);
-
-        // Update directory info in victim tracker if the local beaconed key is a local/neighbor synced victim
-        covered_cache_manager_ptr->updateVictimTrackerForLocalBeaconedVictimDirinfo(tmp_key, is_admit, directory_info);
-
         // Victim synchronization
         // NOTE: we always perform victim synchronization before popularity aggregation, as we need the latest synced victim information for placement calculation
         std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = edge_wrapper_ptr_->getLocalBeaconedVictimsFromVictimSyncset(victim_syncset);
         covered_cache_manager_ptr->updateVictimTrackerForVictimSyncset(source_edge_idx, victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
 
-        if (is_admit) // Admit a new key as local cached object
+        if (is_directory_update) // Update directory information
         {
-            // NOTE: For COVERED, although there still exist foreground directory update requests for eviction (triggered by local gets to update invalid value and local puts to update cached value), all directory update requests for admission MUST be background due to non-blocking placement deployment
-            assert(control_request_ptr->isBackgroundRequest());
+            // Update local directory information in cooperation wrapper
+            is_being_written = false;
+            bool is_source_cached = false;
+            bool is_global_cached = edge_wrapper_ptr_->getCooperationWrapperPtr()->updateDirectoryTable(tmp_key, source_edge_idx, is_admit, directory_info, is_being_written, is_source_cached);
 
-            // Clear preserved edge nodes for the given key at the source edge node for metadata releasing after local/remote admission notification
-            covered_cache_manager_ptr->clearPopularityAggregatorForPreservedEdgesetAfterAdmission(tmp_key, source_edge_idx);
+            // Update directory info in victim tracker if the local beaconed key is a local/neighbor synced victim
+            covered_cache_manager_ptr->updateVictimTrackerForLocalBeaconedVictimDirinfo(tmp_key, is_admit, directory_info);
+
+            if (is_admit) // Admit a new key as local cached object
+            {
+                // NOTE: For COVERED, although there still exist foreground directory update requests for eviction (triggered by local gets to update invalid value and local puts to update cached value), all directory update requests for admission MUST be background due to non-blocking placement deployment
+                assert(control_request_ptr->isBackgroundRequest());
+
+                // Clear preserved edge nodes for the given key at the source edge node for metadata releasing after local/remote admission notification
+                covered_cache_manager_ptr->clearPopularityAggregatorForPreservedEdgesetAfterAdmission(tmp_key, source_edge_idx);
+            }
+            else // Evict a victim as local uncached object
+            {
+                assert(!with_extra_hybrid_fetching_result); // NOTE: hybrid data fetching result must be embedded into directory admission instead of eviction to avoid recursive hybrid data fetching
+
+                bool need_placement_calculation = !is_admit; // MUST be true here for is_admit = false
+                if (control_request_ptr->isBackgroundRequest()) // If processReqToUpdateLocalDirectory_() is triggered by background cache placement
+                {
+                    // NOTE: DISABLE recursive cache placement for CoveredPlacementDirectoryUpdateRequest
+                    // NOTE: CoveredPlacementHybridFetchedRequest will NOT arrive here due to is_directory_update = false; CoveredPlacementDirectoryAdmitRequest will also NOT arrive here due to is_admit = true
+                    // NOTE: NOT DISABLE cache placement for CoveredDirectoryUpdateRequest, as foreground directory eviction is allowed to perform placement calculation (while local/remote placement notification must issue CoveredPlacementDirectoryUpdateRequest for background directory eviction to avoid recursive cache placement)
+                    need_placement_calculation = false;
+                }
+
+                // NOTE: MUST NO old local uncached popularity for the newly evicted object at the source edge node before popularity aggregation
+                covered_cache_manager_ptr->assertNoLocalUncachedPopularity(tmp_key, source_edge_idx);
+
+                // Selective popularity aggregation
+                bool need_hybrid_fetching = false;
+                is_finish = covered_cache_manager_ptr->updatePopularityAggregatorForAggregatedPopularity(tmp_key, source_edge_idx, collected_popularity, is_global_cached, is_source_cached, need_placement_calculation, need_hybrid_fetching, edge_wrapper_ptr_, edge_beacon_server_recvrsp_source_addr_, edge_beacon_server_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in source edge node
+                if (is_finish)
+                {
+                    return is_finish; // Edge node is finished
+                }
+
+                // TODO: (END HERE) Process need_hybrid_fetching
+            }
         }
-        else // Evict a victim as local uncached object
+        
+        if (with_extra_hybrid_fetching_result) // With extra hybrid fetching result (except/besides sender) to trigger non-blocking placement notification
         {
-            bool need_placement_calculation = !is_admit; // MUST be true here for is_admit = false
-            if (control_request_ptr->isBackgroundRequest()) // If processReqToUpdateLocalDirectory_() is triggered by background cache placement
+            if (!is_directory_update) // is_being_written has NOT been set
             {
-                // NOTE: DISABLE recursive cache placement
-                need_placement_calculation = false;
+                is_being_written = edge_wrapper_ptr_->getCooperationWrapperPtr()->isBeingWritten(tmp_key);
             }
 
-            // NOTE: MUST NO old local uncached popularity for the newly evicted object at the source edge node before popularity aggregation
-            covered_cache_manager_ptr->assertNoLocalUncachedPopularity(tmp_key, source_edge_idx);
-
-            // Selective popularity aggregation
-            const bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();
-            bool need_hybrid_fetching = false;
-            is_finish = covered_cache_manager_ptr->updatePopularityAggregatorForAggregatedPopularity(tmp_key, source_edge_idx, collected_popularity, is_global_cached, is_source_cached, need_placement_calculation, need_hybrid_fetching, edge_wrapper_ptr_, edge_beacon_server_recvrsp_source_addr_, edge_beacon_server_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in source edge node
-            if (is_finish)
+            // NOTE: source edge index must NOT in the best placement edgeset, as placement edge idx of sender if any has already been removed in CacheServerWorkerBase::notifyBeaconForPlacement_()
+            for (std::unordered_set<uint32_t>::const_iterator best_placement_edgeset_const_iter = best_placement_edgeset.begin(); best_placement_edgeset_const_iter != best_placement_edgeset.end(); best_placement_edgeset_const_iter++)
             {
-                return is_finish; // Edge node is finished
+                if (source_edge_idx == *best_placement_edgeset_const_iter)
+                {
+                    std::ostringstream oss;
+                    oss << "Source edge index " << source_edge_idx << " should NOT in the placement edgeset for key " << tmp_key << " in processReqToUpdateLocalDirectory_()";
+                    Util::dumpErrorMsg(instance_name_, oss.str());
+                    exit(1);
+                }
             }
 
-            // TODO: (END HERE) Process need_hybrid_fetching
+            // Trigger non-blocking placement notification for the extra hybrid fetching result (ONLY for COVERED)
+            assert(edge_wrapper_ptr_->getCacheName() == Util::COVERED_CACHE_NAME);
+            is_finish = edge_wrapper_ptr_->nonblockNotifyForPlacement(tmp_key, tmp_value, best_placement_edgeset, edge_beacon_server_recvrsp_source_addr_, edge_beacon_server_recvrsp_socket_server_ptr_, skip_propagation_latency);
         }
 
         return is_finish;
@@ -206,6 +263,7 @@ namespace covered
         // Prepare victim syncset for piggybacking-based victim synchronization
         VictimSyncset victim_syncset = covered_cache_manager_ptr->accessVictimTrackerForVictimSyncset();
 
+        // TODO: (END HERE) Send back corresponding response based on request type
         uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
         MessageBase* covered_directory_update_response_ptr = NULL;
         if (control_request_ptr->isBackgroundRequest())
@@ -241,7 +299,7 @@ namespace covered
         lock_result = edge_wrapper_ptr_->getCooperationWrapperPtr()->acquireLocalWritelockByBeaconServer(tmp_key, source_edge_idx, edge_cache_server_worker_recvreq_dst_addr, all_dirinfo, is_source_cached);
         bool is_global_cached = (lock_result != LockResult::kNoneed);
 
-        // OBSELETE: NO need to remove old local uncached popularity from aggregated uncached popularity for remote acquire write lock on local cached objects in source edge node, as it MUST have been removed by directory update request with is_admit = true during non-blocking admission placement
+        // OBSOLETE: NO need to remove old local uncached popularity from aggregated uncached popularity for remote acquire write lock on local cached objects in source edge node, as it MUST have been removed by directory update request with is_admit = true during non-blocking admission placement
         // NOTE: NO need to check if key is local cached or not, as collected_popularity.is_tracked_ MUST be false if key is local cached in source edge node and will NOT update/add aggregated uncached popularity
 
         // Victim synchronization
@@ -297,7 +355,7 @@ namespace covered
         bool is_source_cached = false;
         blocked_edges = edge_wrapper_ptr_->getCooperationWrapperPtr()->releaseLocalWritelock(tmp_key, sender_edge_idx, sender_directory_info, is_source_cached);
 
-        // OBSELETE: NO need to remove old local uncached popularity from aggregated uncached popularity for remote release write lock on local cached objects in source edge node, as it MUST have been removed by directory update request with is_admit = true during non-blocking admission placement
+        // OBSOLETE: NO need to remove old local uncached popularity from aggregated uncached popularity for remote release write lock on local cached objects in source edge node, as it MUST have been removed by directory update request with is_admit = true during non-blocking admission placement
         // NOTE: NO need to check if key is local cached or not, as collected_popularity.is_tracked_ MUST be false if key is local cached in source edge node and will NOT update/add aggregated uncached popularity
 
         // Victim synchronization

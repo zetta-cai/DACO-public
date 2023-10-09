@@ -1486,7 +1486,7 @@ namespace covered
         // Local placement notification if necessary
         if (edgeset_const_iter_for_local_notification != best_placement_edgeset.end()) // If current edge node is also in best_placement_edgeset
         {
-            // TODO: If local placement notification is NOT a minor case, we need to notify placement processor of the current beacon edge node for local placement to avoid blocking subsequent cache placement
+            // TODO: NOTE: we need to notify placement processor of the current sender/closest edge node for local placement for non-blocking placement deployment of local placement notification to avoid blocking subsequent cache placement
 
             // Current edge node MUST be the beacon node for the given key
             assert(currentIsBeacon(key));

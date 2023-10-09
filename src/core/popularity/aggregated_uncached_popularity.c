@@ -309,7 +309,7 @@ namespace covered
 
                 // NOTE: NO need to remove min_edge_idx from sum and bitmap, as it still tracks the given key in local uncached metadata, which should hold in sum and bitmap
 
-                // (OBSELETE) Update sum and bitmap for the minimum local uncached popularity
+                // (OBSOLETE) Update sum and bitmap for the minimum local uncached popularity
                 //minusLocalUncachedPopularityFromSum_(min_topk_local_uncached_popularity);
                 //assert(bitmap_[min_edge_idx] == true);
                 //bitmap_[min_edge_idx] = false;

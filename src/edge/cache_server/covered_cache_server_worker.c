@@ -309,7 +309,7 @@ namespace covered
         lock_result = tmp_cooperation_wrapper_ptr->acquireLocalWritelockByCacheServer(key, current_edge_idx, all_dirinfo, is_source_cached);
         bool is_global_cached = (lock_result != LockResult::kNoneed);
 
-        // OBSELETE: NO need to remove old local uncached popularity from aggregated uncached popularity for local acquire write lock on local cached objects, as it MUST have been removed by directory update request with is_admit = true during non-blocking admission placement
+        // OBSOLETE: NO need to remove old local uncached popularity from aggregated uncached popularity for local acquire write lock on local cached objects, as it MUST have been removed by directory update request with is_admit = true during non-blocking admission placement
         // NOTE: NO need to check if key is local cached or not, as is_key_tracked MUST be false if key is local cached and will NOT update/add aggregated uncached popularity
 
         // Prepare local uncached popularity of key for popularity aggregation
@@ -435,7 +435,7 @@ namespace covered
         bool is_source_cached = false;
         blocked_edges = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->releaseLocalWritelock(key, current_edge_idx, current_directory_info, is_source_cached);
 
-        // OBSELETE: NO need to remove old local uncached popularity from aggregated uncached popularity for local release write lock on local cached objects, as it MUST have been removed by directory update request with is_admit = true during non-blocking admission placement
+        // OBSOLETE: NO need to remove old local uncached popularity from aggregated uncached popularity for local release write lock on local cached objects, as it MUST have been removed by directory update request with is_admit = true during non-blocking admission placement
         // NOTE: NO need to check if key is local cached or not, as is_key_tracked MUST be false if key is local cached and will NOT update/add aggregated uncached popularity
 
         // Prepare local uncached popularity of key for popularity aggregation

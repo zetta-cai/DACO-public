@@ -284,7 +284,7 @@ namespace covered
         benefit_popularity_multimap_iter_t old_benefit_popularity_iter = perkey_benefit_popularity_iter->second;
         assert(old_benefit_popularity_iter != benefit_popularity_multimap_.end());
 
-        // Verify cache size usage changes (OBSELETE)
+        // Verify cache size usage changes (OBSOLETE)
         const uint64_t old_aggregated_uncached_popularity_size_bytes = old_benefit_popularity_iter->second.getSizeForCapacity();
         const uint64_t new_aggregated_uncached_popularity_size_bytes = updated_aggregated_uncached_popularity.getSizeForCapacity();
         /*if (is_size_bytes_increased)

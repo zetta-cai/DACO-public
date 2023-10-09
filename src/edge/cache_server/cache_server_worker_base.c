@@ -1632,6 +1632,7 @@ namespace covered
         // Notify result of hybrid data fetching towards the beacon edge node to trigger non-blocking placement notification
         while (true) // Timeout-and-retry mechanism
         {
+            // Prepare control request message to notify the beacon edge node
             MessageBase* control_request_ptr = NULL;
             if (!current_need_placement) // Current edge node does NOT need placement
             {
@@ -1649,7 +1650,7 @@ namespace covered
                 {
                     // Prepare CoveredDirectoryUpdateRequest (NOT trigger placement notification; also equivalent to directory admission request)
                     // NOTE: unlike CoveredPlacementDirectoryUpdateRequest, CoveredDirectoryUpdateRequest is a foreground message with foreground events and bandwidth usage
-                    control_request_ptr = new CoveredDirectoryUpdateRequest(key, value, victim_syncset, current_edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency)
+                    control_request_ptr = new CoveredDirectoryUpdateRequest(key, value, victim_syncset, current_edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
                 }
             }
             assert(control_request_ptr != NULL);
@@ -1660,16 +1661,18 @@ namespace covered
 
             // NOTE: control_request_ptr will be released by edge-to-edge propagation simulator
             control_request_ptr = NULL;
+
+            // TODO: Wait for the corresponding CoveredDirectoryUpdateResponse from the beacon edge node
         }
 
         // Perform local placement if necessary
         if (current_need_placement)
         {
-            // NOTE: we do NOT need to notify placement processor of the current sender/closest edge node for local placement, as in EdgeWrapper::nonblockNotifyForPlacement() invoked by local/remote beacon edge node, because sender is NOT beacon and waiting for response will NOT block subsequent local/remote placement calculation
+            // (OBSOLETE) NOTE: we do NOT need to notify placement processor of the current sender/closest edge node for local placement, as in EdgeWrapper::nonblockNotifyForPlacement() invoked by local/remote beacon edge node, because sender is NOT beacon and waiting for response will NOT block subsequent local/remote placement calculation
 
-            // TODO: Admit local edge cache (similar as placement processor)
+            // NOTE: we need to notify placement processor of the current sender/closest edge node for local placement, as in EdgeWrapper::nonblockNotifyForPlacement() invoked by local/remote beacon edge node, because we need to use the background directory update requests to DISABLE recursive cache placement
 
-            // TODO: Trigger local cache eviciton (similar as placement processor)
+            // TODO: Notify placement processor to admit local edge cache (NOTE: NO need to admit directory) and trigger local cache eviciton
         }
 
         return is_finish;
