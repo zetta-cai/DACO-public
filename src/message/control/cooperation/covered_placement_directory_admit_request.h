@@ -1,5 +1,5 @@
 /*
- * CoveredPlacementDirectoryAdmitRequest: a request issued by the closest node to the beacon node to add directory information of a newly-admitted key, perform victim synchronization, and notify the result of hybrid data fetching to trigger COVERED's non-blocking placement notification.
+ * CoveredPlacementDirectoryAdmitRequest: a request issued by the closest node to the beacon node to add directory information of a newly-admitted key, perform victim synchronization, and notify the result of including-sender hybrid data fetching to trigger COVERED's non-blocking placement notification.
  *
  * NOTE: foreground request with placement edgeset to trigger non-blocking placement notification.
  * 

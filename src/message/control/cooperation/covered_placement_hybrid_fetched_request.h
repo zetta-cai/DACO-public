@@ -1,5 +1,5 @@
 /*
- * CoveredPlacementHybridFetchedRequest: a request issued by a closest edge node to the beacon edge node to notify the result of hybrid data fetching to trigger COVERED's non-blocking placement notification.
+ * CoveredPlacementHybridFetchedRequest: a request issued by a closest edge node to the beacon edge node to notify the result of excluding-sender hybrid data fetching to trigger COVERED's non-blocking placement notification.
  * 
  * NOTE: foreground request with placement edgeset to trigger non-blocking placement notification.
  * 

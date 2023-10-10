@@ -1632,6 +1632,7 @@ namespace covered
         VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForVictimSyncset();
 
         // Notify result of hybrid data fetching towards the beacon edge node to trigger non-blocking placement notification
+        bool is_being_written = false;
         while (true) // Timeout-and-retry mechanism
         {
             // Prepare control request message to notify the beacon edge node
@@ -1652,7 +1653,8 @@ namespace covered
                 {
                     // Prepare CoveredDirectoryUpdateRequest (NOT trigger placement notification; also equivalent to directory admission request)
                     // NOTE: unlike CoveredPlacementDirectoryUpdateRequest, CoveredDirectoryUpdateRequest is a foreground message with foreground events and bandwidth usage
-                    control_request_ptr = new CoveredDirectoryUpdateRequest(key, value, victim_syncset, current_edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
+                    const bool is_admit = true;
+                    control_request_ptr = new CoveredDirectoryUpdateRequest(key, is_admit, DirectoryInfo(current_edge_idx), victim_syncset, current_edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
                 }
             }
             assert(control_request_ptr != NULL);
@@ -1689,10 +1691,20 @@ namespace covered
                 if (!current_need_placement)
                 {
                     assert(control_response_ptr->getMessageType() == MessageType::kCoveredPlacementHybridFetchedResponse);
+                    UNUSED(is_being_written); // NOTE: is_being_written will NOT be used as the current edge node (sender) is NOT a placement
                 }
                 else
                 {
-                    // TODO
+                    if (!current_is_only_placement) // Current edge node is NOT the only placement
+                    {
+                        assert(control_response_ptr->getMessageType() == MessageType::kCoveredPlacementDirectoryAdmitResponse);
+                        const CoveredPlacementDirectoryAdmitResponse* const covered_placement_directory_admit_response_ptr = static_cast<const CoveredPlacementDirectoryAdmitResponse*>(control_response_ptr);
+                        is_being_written = covered_placement_directory_admit_response_ptr->isBeingWritten(); // Used by local edge cache admission later
+                    }
+                    else // Current edge node is the only placement
+                    {
+                        // TODO
+                    }
                 }
 
                 // Update total bandwidth usage for received control response

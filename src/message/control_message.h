@@ -50,6 +50,7 @@
 #include "message/control/cooperation/covered_placement_hybrid_fetched_request.h"
 #include "message/control/cooperation/covered_placement_hybrid_fetched_response.h"
 #include "message/control/cooperation/covered_placement_directory_admit_request.h"
+#include "message/control/cooperation/covered_placement_directory_admit_response.h"
 #include "message/control/cooperation/covered_placement_notify_request.h"
 // For cooperative cache placement management (non-blocking placement deployment)
 #include "message/control/cooperation/covered_placement_directory_update_request.h"

@@ -166,7 +166,7 @@ namespace covered
         // CoveredPlacementHybridFetchedRequest: foreground request to notify the result of excluding-sender hybrid data fetching for COVERED (NO directory update)
         // CoveredPlacementDirectoryAdmitRequest: foreground directory admission with including-sender hybrid data fetching for COVERED
         // CoveredDirectoryUpdateRequest: foreground directory updates (with only-sender hybrid data fetching for COVERED if is_admit = true)
-        else if (message_type == MessageType::kDirectoryUpdateRequest || message_type == MessageType::kCoveredPlacementDirectoryUpdateRequest || message_type == MessageType::kCoveredPlacementHybridFetchedRequest || message_type == MessageType::kCoveredDirectoryUpdateRequest)
+        else if (message_type == MessageType::kDirectoryUpdateRequest || message_type == MessageType::kCoveredPlacementDirectoryUpdateRequest || message_type == MessageType::kCoveredPlacementHybridFetchedRequest || message_type == MessageType::kCoveredPlacementDirectoryAdmitRequest || message_type == MessageType::kCoveredDirectoryUpdateRequest)
         {
             is_finish = processDirectoryUpdateRequest_(control_request_ptr, edge_cache_server_worker_recvrsp_dst_addr);
         }

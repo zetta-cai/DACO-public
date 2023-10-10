@@ -145,7 +145,19 @@ namespace covered
         }
         else if (message_type == MessageType::kCoveredPlacementDirectoryAdmitRequest) // Foreground directory admission with including-sender hybrid data fetching for COVERED
         {
-            // TODO: END HERE
+            // Get key, is_admit, directory info, victim syncset, and collected popularity (if any) from directory update request
+            const CoveredPlacementDirectoryAdmitRequest* const covered_placement_directory_admit_request_ptr = static_cast<const CoveredPlacementDirectoryAdmitRequest*>(control_request_ptr);
+            tmp_key = covered_placement_directory_admit_request_ptr->getKey();
+            victim_syncset = covered_placement_directory_admit_request_ptr->getVictimSyncsetRef();
+
+            is_directory_update = true;
+            is_admit = true;
+            directory_info = covered_placement_directory_admit_request_ptr->getDirectoryInfo();
+            // NOTE: must NO collected popularity as is_admit = true for directory admission
+
+            with_extra_hybrid_fetching_result = true; // With extra hybrid data fetching result (besides sender)
+            tmp_value = covered_placement_directory_admit_request_ptr->getValue();
+            best_placement_edgeset = covered_placement_directory_admit_request_ptr->getEdgesetRef();
         }
         else if (message_type == MessageType::kCoveredDirectoryUpdateRequest) // Foreground directory updates (with only-sender hybrid data fetching for COVERED if is_admit = true)
         {
@@ -192,8 +204,10 @@ namespace covered
 
             if (is_admit) // Admit a new key as local cached object
             {
-                // NOTE: For COVERED, although there still exist foreground directory update requests for eviction (triggered by local gets to update invalid value and local puts to update cached value), all directory update requests for admission MUST be background due to non-blocking placement deployment
-                assert(control_request_ptr->isBackgroundRequest());
+                // (OBSOLETE) NOTE: For COVERED, although there still exist foreground directory update requests for eviction (triggered by local gets to update invalid value and local puts to update cached value), all directory update requests for admission MUST be background due to non-blocking placement deployment
+                //assert(control_request_ptr->isBackgroundRequest());
+
+                // NOTE: For COVERED, both directory eviction (triggered by value update and local/remote placement notification) and directory admission (triggered by only-sender hybrid data fetching and local/remote placement notification) can be foreground and background
 
                 // Clear preserved edge nodes for the given key at the source edge node for metadata releasing after local/remote admission notification
                 covered_cache_manager_ptr->clearPopularityAggregatorForPreservedEdgesetAfterAdmission(tmp_key, source_edge_idx);
@@ -280,7 +294,7 @@ namespace covered
         }
         else if (message_type == MessageType::kCoveredPlacementDirectoryAdmitRequest) // Foreground directory admission with including-sender hybrid data fetching for COVERED
         {
-            // TODO: END HERE
+            control_response_ptr = new CoveredPlacementDirectoryAdmitResponse(tmp_key, is_being_written, victim_syncset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
         }
         else if (message_type == MessageType::kCoveredDirectoryUpdateRequest) // Foreground directory updates (with only-sender hybrid data fetching for COVERED if is_admit = true)
         {
