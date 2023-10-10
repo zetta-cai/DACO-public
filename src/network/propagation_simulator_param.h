@@ -42,9 +42,10 @@ namespace covered
         NodeWrapperBase* node_wrapper_ptr_;
         uint32_t propagation_latency_us_;
         std::string instance_name_;
+
+        Rwlock rwlock_for_propagation_item_buffer_; // Ensure the atomicity of all non-const variables due to multiple providers (all subthreads of a client/edge/cloud node)
         
         // Non-const variables shared by working threads of each ndoe and propagation simulator
-        Rwlock rwlock_for_propagation_item_buffer_; // Ensure the atomicity of ring buffer due to multiple providers
         // NOTE: there will be multiple writers (processing threads of each componenet) yet a single reader (the corresponding propagation simulator) -> NOT need to acquire lock for pop()
         RingBuffer<PropagationItem>* propagation_item_buffer_ptr_;
         bool is_first_item_;

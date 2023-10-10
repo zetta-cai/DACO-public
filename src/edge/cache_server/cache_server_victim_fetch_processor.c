@@ -13,14 +13,14 @@ namespace covered
     {
         assert(cache_serer_victim_fetch_processor_param_ptr != NULL);
 
-        CacheServerVictimFetchProcessor cache_server_victim_fetch_processor((CacheServerProcessorParam*)cache_serer_victim_fetch_processor_param_ptr);
+        CacheServerVictimFetchProcessor cache_server_victim_fetch_processor((CacheServerVictimFetchProcessorParam*)cache_serer_victim_fetch_processor_param_ptr);
         cache_server_victim_fetch_processor.start();
 
         pthread_exit(NULL);
         return NULL;
     }
 
-    CacheServerVictimFetchProcessor::CacheServerVictimFetchProcessor(CacheServerProcessorParam* cache_serer_victim_fetch_processor_param_ptr) : cache_serer_victim_fetch_processor_param_ptr_(cache_serer_victim_fetch_processor_param_ptr)
+    CacheServerVictimFetchProcessor::CacheServerVictimFetchProcessor(CacheServerVictimFetchProcessorParam* cache_serer_victim_fetch_processor_param_ptr) : cache_serer_victim_fetch_processor_param_ptr_(cache_serer_victim_fetch_processor_param_ptr)
     {
         assert(cache_serer_victim_fetch_processor_param_ptr != NULL);
         const uint32_t edge_idx = cache_serer_victim_fetch_processor_param_ptr->getCacheServerPtr()->getEdgeWrapperPtr()->getNodeIdx();
@@ -64,33 +64,33 @@ namespace covered
         {
             // Try to get the data management request from ring buffer partitioned by cache server
             CacheServerItem tmp_cache_server_item;
-            bool is_successful = cache_serer_victim_fetch_processor_param_ptr_->getDataRequestBufferPtr()->pop(tmp_cache_server_item);
+            bool is_successful = cache_serer_victim_fetch_processor_param_ptr_->getControlRequestBufferPtr()->pop(tmp_cache_server_item);
             if (!is_successful)
             {
                 continue; // Retry to receive an item if edge is still running
             } // End of (is_successful == true)
             else
             {
-                MessageBase* data_request_ptr = tmp_cache_server_item.getDataRequestPtr();
-                assert(data_request_ptr != NULL);
+                MessageBase* control_request_ptr = tmp_cache_server_item.getRequestPtr();
+                assert(control_request_ptr != NULL);
 
-                if (data_request_ptr->getMessageType() == MessageType::kCoveredVictimFetchRequest) // Victim fetch request
+                if (control_request_ptr->getMessageType() == MessageType::kCoveredVictimFetchRequest) // Victim fetch request
                 {
-                    NetworkAddr recvrsp_dst_addr = data_request_ptr->getSourceAddr(); // A beacon edge node
-                    is_finish = processVictimFetchRequest_(data_request_ptr, recvrsp_dst_addr);
+                    NetworkAddr recvrsp_dst_addr = control_request_ptr->getSourceAddr(); // A beacon edge node
+                    is_finish = processVictimFetchRequest_(control_request_ptr, recvrsp_dst_addr);
                 }
                 else
                 {
                     std::ostringstream oss;
-                    oss << "invalid message type " << MessageBase::messageTypeToString(data_request_ptr->getMessageType()) << " for start()!";
+                    oss << "invalid message type " << MessageBase::messageTypeToString(control_request_ptr->getMessageType()) << " for start()!";
                     Util::dumpErrorMsg(instance_name_, oss.str());
                     exit(1);
                 }
 
                 // Release data request by the cache server victim fetch processor thread
-                assert(data_request_ptr != NULL);
-                delete data_request_ptr;
-                data_request_ptr = NULL;
+                assert(control_request_ptr != NULL);
+                delete control_request_ptr;
+                control_request_ptr = NULL;
 
                 if (is_finish) // Check is_finish
                 {
@@ -102,10 +102,10 @@ namespace covered
         return;
     }
 
-    bool CacheServerVictimFetchProcessor::processVictimFetchRequest_(MessageBase* data_request_ptr, const NetworkAddr& recvrsp_dst_addr)
+    bool CacheServerVictimFetchProcessor::processVictimFetchRequest_(MessageBase* control_request_ptr, const NetworkAddr& recvrsp_dst_addr)
     {
-        assert(data_request_ptr != NULL);
-        assert(data_request_ptr->getMessageType() == MessageType::kCoveredVictimFetchRequest);
+        assert(control_request_ptr != NULL);
+        assert(control_request_ptr->getMessageType() == MessageType::kCoveredVictimFetchRequest);
 
         checkPointers_();
         CacheServer* tmp_cache_server_ptr = cache_serer_victim_fetch_processor_param_ptr_->getCacheServerPtr();
@@ -117,7 +117,7 @@ namespace covered
         EventList event_list;
         const bool is_background = true;
 
-        const CoveredVictimFetchRequest* const covered_victim_fetch_request_ptr = static_cast<const CoveredVictimFetchRequest*>(data_request_ptr);
+        const CoveredVictimFetchRequest* const covered_victim_fetch_request_ptr = static_cast<const CoveredVictimFetchRequest*>(control_request_ptr);
         total_bandwidth_usage.update(BandwidthUsage(0, covered_victim_fetch_request_ptr->getMsgPayloadSize(), 0));
 
         struct timespec victim_fetch_start_timestamp = Util::getCurrentTimespec();

@@ -8,6 +8,7 @@ namespace covered
 {
     const std::string PropagationSimulatorParam::kClassName("PropagationSimulatorParam");
 
+
     PropagationSimulatorParam::PropagationSimulatorParam() : propagation_latency_us_(0), rwlock_for_propagation_item_buffer_("rwlock_for_propagation_item_buffer_"), is_first_item_(true), prev_timespec_()
     {
         propagation_item_buffer_ptr_ = NULL;
@@ -23,7 +24,8 @@ namespace covered
         oss << kClassName << " " << node_wrapper_ptr->getNodeRoleIdxStr();
         instance_name_ = oss.str();
 
-        propagation_item_buffer_ptr_ = new RingBuffer<PropagationItem>(PropagationItem(), propagation_item_buffer_size);
+        const bool with_multi_providers = false; // Although with multiple providers (all subthreads of a client/edge/cloud node), rwlock_for_propagation_item_buffer_ has already guaranteed the atomicity of propagation_item_buffer_ptr_
+        propagation_item_buffer_ptr_ = new RingBuffer<PropagationItem>(PropagationItem(), propagation_item_buffer_size, with_multi_providers);
         assert(propagation_item_buffer_ptr_ != NULL);
     }
 
@@ -141,7 +143,10 @@ namespace covered
         }
         if (other.propagation_item_buffer_ptr_ != NULL)
         {
-            propagation_item_buffer_ptr_ = new RingBuffer<PropagationItem>(PropagationItem(), other.propagation_item_buffer_ptr_->getBufferSize());
+            const bool with_multi_providers = other.propagation_item_buffer_ptr_->withMultiProviders();
+            assert(!with_multi_providers); // Although with multiple providers (all subthreads of a client/edge/cloud node), rwlock_for_propagation_item_buffer_ has already guaranteed the atomicity of propagation_item_buffer_ptr_
+
+            propagation_item_buffer_ptr_ = new RingBuffer<PropagationItem>(PropagationItem(), other.propagation_item_buffer_ptr_->getBufferSize(), with_multi_providers);
             assert(propagation_item_buffer_ptr_ != NULL);
             
             *propagation_item_buffer_ptr_ = *other.propagation_item_buffer_ptr_; // deep copy

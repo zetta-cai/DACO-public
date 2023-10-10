@@ -17,16 +17,16 @@ namespace covered
     {
     public:
         CacheServerItem();
-        CacheServerItem(MessageBase* data_request_ptr);
+        CacheServerItem(MessageBase* request_ptr);
         ~CacheServerItem();
 
-        MessageBase* getDataRequestPtr() const;
+        MessageBase* getRequestPtr() const;
 
         const CacheServerItem& operator=(const CacheServerItem& other);
     private:
         static const std::string kClassName;
 
-        MessageBase* data_request_ptr_;
+        MessageBase* request_ptr_;
     };
 }
 

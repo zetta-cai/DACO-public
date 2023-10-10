@@ -14,9 +14,19 @@ namespace covered
     const std::string RingBuffer<T>::kClassName = "RingBuffer<" + std::string(typeid(T).name()) + ">";
 
     template<class T>
-    RingBuffer<T>::RingBuffer(const T& default_element, const uint32_t& buffer_size)
+    RingBuffer<T>::RingBuffer(const T& default_element, const uint32_t& buffer_size, const bool& with_multi_providers) : with_multi_providers_(with_multi_providers)
     {
         assert(buffer_size > 0);
+
+        if (with_multi_providers)
+        {
+            rwlock_for_multi_providers_ptr_ = new Rwlock("rwlock_for_multi_providers_ptr_");
+            assert(rwlock_for_multi_providers_ptr_ != NULL)
+        }
+        else
+        {
+            rwlock_for_multi_providers_ptr_ = NULL;
+        }
 
         head_ = 0;
         tail_ = 0;
@@ -44,6 +54,13 @@ namespace covered
             }
         }
         */
+        
+        if (with_multi_providers)
+        {
+            assert(rwlock_for_multi_providers_ptr_ != NULL);
+            delete rwlock_for_multi_providers_ptr_;
+            rwlock_for_multi_providers_ptr_ = NULL;
+        }
     }
 
     template<class T>
@@ -56,6 +73,14 @@ namespace covered
             exit(1);
         }
         */
+        
+        // Acquire a write lock
+        const std::string context_name = "RingBuffer::push()";
+        if (with_multi_providers)
+        {
+            assert(rwlock_for_multi_providers_ptr_ != NULL);
+            rwlock_for_multi_providers_ptr_->acquire_lock(context_name);
+        }
 
         bool is_successful = false;
 
@@ -74,12 +99,26 @@ namespace covered
             is_successful = true;
         }
 
+        if (with_multi_providers)
+        {
+            rwlock_for_multi_providers_ptr_->unlock(context_name);
+        }
+
         return is_successful;
     }
 
     template<class T>
     bool RingBuffer<T>::pop(T& element)
     {
+        // NOTE: NO need to acquire a write lock, as there will be ONLY one reader even if with multiple providers
+
+        //const std::string context_name = "RingBuffer::pop()";
+        //if (with_multi_providers)
+        //{
+        //    assert(rwlock_for_multi_providers_ptr_ != NULL);
+        //    rwlock_for_multi_providers_ptr_->acquire_lock(context_name);
+        //}
+
         bool is_successful = false;
 
         if (tail_ == head_) // ring buffer is empty
@@ -96,7 +135,18 @@ namespace covered
             is_successful = true;
         }
 
+        //if (with_multi_providers)
+        //{
+        //    rwlock_for_multi_providers_ptr_->unlock(context_name);
+        //}
+
         return is_successful;
+    }
+
+    template<class T>
+    bool RingBuffer<T>::withMultiProviders() const
+    {
+        return with_multi_providers_;
     }
 
     template<class T>
@@ -165,6 +215,18 @@ namespace covered
     template<class T>
     const RingBuffer<T>& RingBuffer<T>::operator=(const RingBuffer<T>& other)
     {
+        with_multi_providers_ = other.with_multi_providers_;
+        if (with_multi_providers_ && rwlock_for_multi_providers_ptr_ == NULL)
+        {
+            rwlock_for_multi_providers_ptr_ = new Rwlock("rwlock_for_multi_providers_ptr_");
+            assert(rwlock_for_multi_providers_ptr_ != NULL)
+        }
+        else if (!with_multi_providers_ && rwlock_for_multi_providers_ptr_ != NULL)
+        {
+            delete rwlock_for_multi_providers_ptr_;
+            rwlock_for_multi_providers_ptr_ = NULL;
+        }
+
         head_ = other.head_;
         tail_ = other.tail_;
         buffer_size_ = other.buffer_size_;

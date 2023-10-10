@@ -247,7 +247,7 @@ namespace covered
                 is_being_written = edge_wrapper_ptr_->getCooperationWrapperPtr()->isBeingWritten(tmp_key);
             }
 
-            // NOTE: source edge index must NOT in the best placement edgeset, as placement edge idx of sender if any has already been removed in CacheServerWorkerBase::notifyBeaconForPlacement_()
+            // NOTE: source edge index must NOT in the best placement edgeset, as placement edge idx of sender if any has already been removed in CacheServerWorkerBase::notifyBeaconForPlacementAfterHybridFetch_()
             for (std::unordered_set<uint32_t>::const_iterator best_placement_edgeset_const_iter = best_placement_edgeset.begin(); best_placement_edgeset_const_iter != best_placement_edgeset.end(); best_placement_edgeset_const_iter++)
             {
                 if (source_edge_idx == *best_placement_edgeset_const_iter)

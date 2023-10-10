@@ -19,7 +19,8 @@ namespace covered
         local_cache_server_worker_idx_ = local_cache_server_worker_idx;
         
         // Allocate ring buffer for local requests
-        data_request_buffer_ptr_ = new RingBuffer<CacheServerItem>(CacheServerItem(), data_request_buffer_size);
+        const bool with_multi_providers = false; // ONLY one provider (i.e., edge cache server) for local/redirected data requests
+        data_request_buffer_ptr_ = new RingBuffer<CacheServerItem>(CacheServerItem(), data_request_buffer_size, with_multi_providers);
         assert(data_request_buffer_ptr_ != NULL);
     }
 
@@ -49,7 +50,10 @@ namespace covered
         }
         if (other.data_request_buffer_ptr_ != NULL) // Deep copy other's ring buffer if any
         {
-            data_request_buffer_ptr_ = new RingBuffer<CacheServerItem>(other.data_request_buffer_ptr_->getDefaultElement(), other.data_request_buffer_ptr_->getBufferSize());
+            const bool other_with_multi_providers = other.data_request_buffer_ptr_->withMultiProviders();
+            assert(!other_with_multi_providers); // ONLY one provider (i.e., edge cache server) for local/redirected data requests
+
+            data_request_buffer_ptr_ = new RingBuffer<CacheServerItem>(other.data_request_buffer_ptr_->getDefaultElement(), other.data_request_buffer_ptr_->getBufferSize(), other_with_multi_providers);
             assert(data_request_buffer_ptr_ != NULL);
 
             *data_request_buffer_ptr_ = *(other.data_request_buffer_ptr_);

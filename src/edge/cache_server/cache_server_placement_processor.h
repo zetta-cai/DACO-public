@@ -9,7 +9,7 @@
 
 #include <string>
 
-#include "edge/cache_server/cache_server_processor_param.h"
+#include "edge/cache_server/cache_server_placement_processor_param.h"
 
 namespace covered
 {
@@ -18,7 +18,7 @@ namespace covered
     public:
         static void* launchCacheServerPlacementProcessor(void* cache_serer_placement_processor_param_ptr);
     
-        CacheServerPlacementProcessor(CacheServerProcessorParam* cache_serer_placement_processor_param_ptr);
+        CacheServerPlacementProcessor(CacheServerPlacementProcessorParam* cache_serer_placement_processor_param_ptr);
         virtual ~CacheServerPlacementProcessor();
 
         void start();
@@ -27,6 +27,7 @@ namespace covered
 
         // Return if edge node is finished
         bool processPlacementNotifyRequest_(MessageBase* data_request_ptr, const NetworkAddr& recvrsp_dst_addr); // Process remote placement notification request
+        bool processLocalCacheAdmission_(const LocalCacheAdmissionItem& local_cache_admission_item); // Process local cache admission
 
         void checkPointers_() const;
 
@@ -34,7 +35,7 @@ namespace covered
 
         // Const variable
         std::string instance_name_;
-        const CacheServerProcessorParam* cache_serer_placement_processor_param_ptr_;
+        const CacheServerPlacementProcessorParam* cache_server_placement_processor_param_ptr_;
 
         // NOTE: destination addresses for sending control requests come from beacon edge index
 

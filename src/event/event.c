@@ -72,7 +72,8 @@ namespace covered
     // For background events
     const std::string Event::BG_EDGE_CACHE_SERVER_WORKER_TARGET_GET_LOCAL_CACHE_EVENT_NAME("bg::edge::cache_server_worker::target_get_local_cache");
     const std::string Event::BG_CLOUD_GET_ROCKSDB_EVENT_NAME("bg::cloud::get_rocksdb");
-    const std::string Event::BG_EDGE_CACHE_SERVER_PLACEMENT_PROCESSOR_ADMISSION_EVENT_NAME("bg::edge::cache_server_placement_processor::admission");
+    const std::string Event::BG_EDGE_CACHE_SERVER_PLACEMENT_PROCESSOR_PLACEMENT_NOTIFY_EVENT_NAME("bg::edge::cache_server_placement_processor::placement_notify");
+    const std::string Event::BG_EDGE_CACHE_SERVER_PLACEMENT_PROCESSOR_LOCAL_CACHE_ADMISSION_EVENT_NAME("bg::edge::cache_server_placement_processor::local_cache_admission");
     const std::string Event::BG_EDGE_UPDATE_DIRECTORY_TO_EVICT_EVENT_NAME("bg::edge::update_directory_to_evict");
     const std::string Event::BG_EDGE_BEACON_SERVER_UPDATE_LOCAL_DIRECTORY_EVENT_NAME("bg::edge::beacon_server::update_local_directory");
 

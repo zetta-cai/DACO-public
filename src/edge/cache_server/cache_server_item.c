@@ -20,7 +20,7 @@ namespace covered
         // NOTE: no need to release data_request_ptr_, which will be released outside CacheServerItem (by the corresponding cache server subthread)
     }
 
-    MessageBase* CacheServerItem::getDataRequestPtr() const
+    MessageBase* CacheServerItem::getRequestPtr() const
     {
         assert(data_request_ptr_ != NULL);
         return data_request_ptr_;

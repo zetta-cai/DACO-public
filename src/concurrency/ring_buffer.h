@@ -10,6 +10,8 @@
 #include <string>
 #include <vector>
 
+#include "concurrency/rwlock.h"
+
 namespace covered
 {
     // NOTE: class T must support default constructor and operator=.
@@ -17,13 +19,14 @@ namespace covered
     class RingBuffer
     {
     public:
-        RingBuffer(const T& default_element, const uint32_t& buffer_size);
+        RingBuffer(const T& default_element, const uint32_t& buffer_size, const bool& with_multi_providers);
         ~RingBuffer();
 
         // NOTE: thread-safe structure cannot return a reference, which may violate atomicity
         bool push(const T& element);
         bool pop(T& element);
 
+        bool withMultiProviders() const;
         uint32_t getElementCnt() const;
         uint32_t getBufferSize() const;
         T getDefaultElement() const;
@@ -36,6 +39,9 @@ namespace covered
         const RingBuffer<T>& operator=(const RingBuffer<T>& other);
     private:
         static const std::string kClassName;
+
+        bool with_multi_providers_; // If need to support multiple providers
+        Rwlock* rwlock_for_multi_providers_ptr_; // Provide atomicity for multiple providers (only work if with_multi_providers_ is true)
 
         volatile uint32_t head_;
 		volatile uint32_t tail_;

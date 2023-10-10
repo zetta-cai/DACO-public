@@ -16,7 +16,8 @@ namespace covered
 }
 
 #include "concurrency/rwlock.h"
-#include "edge/cache_server/cache_server_processor_param.h"
+#include "edge/cache_server/cache_server_placement_processor_param.h"
+#include "edge/cache_server/cache_server_victim_fetch_processor_param.h"
 #include "edge/cache_server/cache_server_worker_param.h"
 #include "edge/edge_wrapper.h"
 #include "hash/hash_wrapper_base.h"
@@ -34,6 +35,7 @@ namespace covered
 
         EdgeWrapper* getEdgeWrapperPtr() const;
         NetworkAddr getEdgeCacheServerRecvreqSourceAddr() const;
+        CacheServerPlacementProcessorParam* getCacheServerPlacementProcessorParamPtr();
 
         // Return if edge node is finished
         bool admitBeaconDirectory_(const Key& key, const DirectoryInfo& directory_info, bool& is_being_written, const NetworkAddr& source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency, const bool& is_background = false) const; // Admit directory info in remote beacon node
@@ -57,8 +59,8 @@ namespace covered
 
         // Non-const individual variable
         std::vector<CacheServerWorkerParam> cache_server_worker_params_; // Each cache server thread has a unique param
-        CacheServerProcessorParam cache_server_victim_fetch_processor_param_; // Only one cache server victim fetch processor thread
-        CacheServerProcessorParam cache_server_placement_processor_param_; // Only one cache server placement processor thread
+        CacheServerVictimFetchProcessorParam cache_server_victim_fetch_processor_param_; // Only one cache server victim fetch processor thread
+        CacheServerPlacementProcessorParam cache_server_placement_processor_param_; // Only one cache server placement processor thread
 
         // For receiving local requests
         NetworkAddr edge_cache_server_recvreq_source_addr_; // The same as that used by clients or neighbors to send local/redirected requests (const shared variable)

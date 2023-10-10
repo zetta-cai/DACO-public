@@ -40,11 +40,11 @@ namespace covered
         }
 
         // Prepare parameters for cache server victim fetch processor thread
-        CacheServerProcessorParam tmp_cache_server_victim_fetch_processor_param(this, Config::getEdgeCacheServerDataRequestBufferSize());
+        CacheServerVictimFetchProcessorParam tmp_cache_server_victim_fetch_processor_param(this, Config::getEdgeCacheServerDataRequestBufferSize());
         cache_server_victim_fetch_processor_param_ = tmp_cache_server_victim_fetch_processor_param;
 
         // Prepare parameters for cache server placement processor thread
-        CacheServerProcessorParam tmp_cache_server_placement_processor_param(this, Config::getEdgeCacheServerDataRequestBufferSize());
+        CacheServerPlacementProcessorParam tmp_cache_server_placement_processor_param(this, Config::getEdgeCacheServerDataRequestBufferSize());
         cache_server_placement_processor_param_ = tmp_cache_server_placement_processor_param;
 
         // For receiving local requests
@@ -163,6 +163,11 @@ namespace covered
         return edge_cache_server_recvreq_source_addr_;
     }
 
+    CacheServerPlacementProcessorParam* CacheServer::getCacheServerPlacementProcessorParamPtr()
+    {
+        return &cache_server_placement_processor_param_;
+    }
+
     void CacheServer::receiveRequestsAndPartition_()
     {
         checkPointers_();
@@ -223,14 +228,14 @@ namespace covered
         {
             // Pass cache server item into ring buffer of the cache server victim fetch processor
             CacheServerItem tmp_cache_server_item(data_requeset_ptr);
-            bool is_successful = cache_server_victim_fetch_processor_param_.getDataRequestBufferPtr()->push(tmp_cache_server_item);
+            bool is_successful = cache_server_victim_fetch_processor_param_.getControlRequestBufferPtr()->push(tmp_cache_server_item);
             assert(is_successful == true); // Ring buffer must NOT be full
         }
         else if (data_requeset_ptr->getMessageType() == MessageType::kCoveredPlacementNotifyRequest) // Placement notification
         {
             // Pass cache server item into ring buffer of the cache server placement processor
             CacheServerItem tmp_cache_server_item(data_requeset_ptr);
-            bool is_successful = cache_server_placement_processor_param_.getDataRequestBufferPtr()->push(tmp_cache_server_item);
+            bool is_successful = cache_server_placement_processor_param_.getNotifyPlacementRequestBufferPtr()->push(tmp_cache_server_item);
             assert(is_successful == true); // Ring buffer must NOT be full
         }
         else
