@@ -462,11 +462,7 @@ namespace covered
         if (need_hybrid_fetching)
         {
             assert(tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME);
-            is_finish = tmp_edge_wrapper_ptr->nonblockNotifyForPlacement(key, value, best_placement_edgeset, edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, skip_propagation_latency);
-            if (is_finish) // Edge node is NOT running
-            {
-                return is_finish;
-            }
+            tmp_edge_wrapper_ptr->nonblockNotifyForPlacement(key, value, best_placement_edgeset, skip_propagation_latency);
         }
 
         return;

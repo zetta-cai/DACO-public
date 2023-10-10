@@ -96,7 +96,8 @@ namespace covered
 
             // Try to get local cache admission from ring buffer pushed by edge cache server workers or edge beacon server
             LocalCacheAdmissionItem tmp_local_cache_admission_item;
-            bool is_successful_for_local_cache_admission = cache_server_placement_processor_param_ptr_->getLocalCacheAdmissionBufferPtr()->pop(tmp_local_cache_admission_item);
+            //bool is_successful_for_local_cache_admission = cache_server_placement_processor_param_ptr_->getLocalCacheAdmissionBufferPtr()->pop(tmp_local_cache_admission_item);
+            bool is_successful_for_local_cache_admission = tmp_edge_wrapper_ptr->getLocalCacheAdmissionBufferPtr()->pop(tmp_local_cache_admission_item);
             if (is_successful_for_local_cache_admission) // Receive a local cache admission successfully
             {
                 is_finish = processLocalCacheAdmission_(tmp_local_cache_admission_item);

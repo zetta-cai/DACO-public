@@ -17,8 +17,11 @@
 #include "core/covered_cache_manager.h"
 #include "core/popularity/edgeset.h"
 #include "core/victim/victim_syncset.h"
+#include "concurrency/ring_buffer_impl.h"
 #include "cooperation/cooperation_wrapper_base.h"
 #include "edge/background_counter.h"
+#include "edge/cache_server/cache_server.h"
+#include "edge/local_cache_admission_item.h"
 #include "event/event_list.h"
 #include "network/propagation_simulator.h"
 
@@ -61,6 +64,7 @@ namespace covered
         PropagationSimulatorParam* getEdgeToedgePropagationSimulatorParamPtr() const;
         PropagationSimulatorParam* getEdgeTocloudPropagationSimulatorParamPtr() const;
         BackgroundCounter& getEdgeBackgroundCounterForBeaconServerRef();
+        RingBuffer<LocalCacheAdmissionItem>* getLocalCacheAdmissionBufferPtr() const;
         Rwlock* getRwlockForEvictionPtr() const;
 
         // (2) Utility functions
@@ -112,10 +116,11 @@ namespace covered
         // (7.2) For non-blocking placement deployment (ONLY invoked by beacon edge node)
         // NOTE: (for non-blocking placement deployment) source_addr and recvrsp_socket_server_ptr are used for receiving eviction directory update responses if with local placement notification in current beacon edge node; skip propagation latency is used for all messages during non-blocking placement deployment (intermediate bandwidth usage and event list are counted by edge_background_counter_for_beacon_server_)
         // NOTE: sender_is_beacon indicates whether sender is cache server worker in beacon edge node to trigger local placement calculation, or sender is beacon server in beacon edge node to trigger placement calculation for remote requests; need_hybrid_fetching MUST be true under sender_is_beacon = true if local edge cache misses for local data fetching
-        bool nonblockDataFetchForPlacement(const Key& key, const Edgeset& best_placement_edgeset, const NetworkAddr& source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, const bool& skip_propagation_latency, const bool& sender_is_beacon, bool& need_hybrid_fetching) const; // Fetch data from local cache or neighbor to trigger non-blocking placement notification; need_hybrid_fetching indicates if we need hybrid fetching (i.e., resort sender to fetch data from cloud); return if edge is finished
+        //bool nonblockDataFetchForPlacement(const Key& key, const Edgeset& best_placement_edgeset, const NetworkAddr& source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, const bool& skip_propagation_latency, const bool& sender_is_beacon, bool& need_hybrid_fetching) const; // (OBSELETE for non-blocking placement deployment) Fetch data from local cache or neighbor to trigger non-blocking placement notification; need_hybrid_fetching indicates if we need hybrid fetching (i.e., resort sender to fetch data from cloud); return if edge is finished
+        void nonblockDataFetchForPlacement(const Key& key, const Edgeset& best_placement_edgeset, const bool& skip_propagation_latency, const bool& sender_is_beacon, bool& need_hybrid_fetching) const; // Fetch data from local cache or neighbor to trigger non-blocking placement notification; need_hybrid_fetching indicates if we need hybrid fetching (i.e., resort sender to fetch data from cloud)
         void nonblockDataFetchFromCloudForPlacement(const Key& key, const Edgeset& best_placement_edgeset, const bool& skip_propagation_latency) const; // Fetch data from cloud without hybrid data fetching (a corner case) (ONLY invoked by edge beacon server instead of cache server of the beacon edge node)
-        // TODO: END HERE
-        bool nonblockNotifyForPlacement(const Key& key, const Value& value, const Edgeset& best_placement_edgeset, const NetworkAddr& source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, const bool& skip_propagation_latency) const; // Notify all edges in best_placement_edgeset to admit key-value pair into their local edge cache; return if edge is finished
+        //bool nonblockNotifyForPlacement(const Key& key, const Value& value, const Edgeset& best_placement_edgeset, const NetworkAddr& source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, const bool& skip_propagation_latency) const; // (OBSELETE for non-blocking placement deployment) Notify all edges in best_placement_edgeset to admit key-value pair into their local edge cache; return if edge is finished
+        void nonblockNotifyForPlacement(const Key& key, const Value& value, const Edgeset& best_placement_edgeset, const bool& skip_propagation_latency) const; // Notify all edges in best_placement_edgeset to admit key-value pair into their local edge cache
     private:
         static const std::string kClassName;
 
@@ -177,6 +182,12 @@ namespace covered
         pthread_t beacon_server_thread_;
         pthread_t cache_server_thread_;
         pthread_t invalidation_server_thread_;
+
+        // Common data structure shared by edge cache server and edge beacon server
+        // -> Pushed by cache server worker (for in-advance remote placement notification after hybrid data fetching and local placement notification if sender is beacon) and beacon server (for local placement notification if sender is NOT beacon)
+        // -> Popped by cache server placement processor
+        // NOTE: we CANNOT expose CacheServer* in EdgeWrapper, as CacheServer and BeaconServer have shorter life span than EdgeWrapper -> if we expose CacheServer* in EdgeWrapper, BeaconServer may still access CacheServer, which has already been released by cache server thread yet
+        RingBuffer<LocalCacheAdmissionItem>* local_cache_admission_buffer_ptr_; // thread safe (local cached admission + eviction)
 
         mutable Rwlock* rwlock_for_eviction_ptr_; // Guarantee the atomicity of eviction among different edge cache server workers
     };

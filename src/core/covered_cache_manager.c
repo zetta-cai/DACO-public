@@ -82,11 +82,7 @@ namespace covered
                     UNUSED(best_placement_peredge_fetched_victimset);
 
                     // Non-blocking data fetching if with best placement
-                    is_finish = edge_wrapper_ptr->nonblockDataFetchForPlacement(key, best_placement_edgeset, recvrsp_source_addr, recvrsp_socket_server_ptr, skip_propagation_latency, sender_is_beacon, need_hybrid_fetching);
-                    if (is_finish)
-                    {
-                        return is_finish; // Edge node is NOT running now
-                    }
+                    edge_wrapper_ptr->nonblockDataFetchForPlacement(key, best_placement_edgeset, skip_propagation_latency, sender_is_beacon, need_hybrid_fetching);
                 }
             }
         }

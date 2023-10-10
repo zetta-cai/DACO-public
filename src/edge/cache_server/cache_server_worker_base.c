@@ -1587,7 +1587,7 @@ namespace covered
         if (sender_is_beacon) // best_placement_edgeset and need_hybrid_fetching come from lookupLocalDirectory_()
         {
             // Trigger placement notification locally
-            is_finish = tmp_edge_wrapper_ptr->nonblockNotifyForPlacement(key, value, best_placement_edgeset, edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, skip_propagation_latency);
+            tmp_edge_wrapper_ptr->nonblockNotifyForPlacement(key, value, best_placement_edgeset, skip_propagation_latency);
         }
         else // best_placement_edgeset and need_hybrid_fetching come from lookupBeaconDirectory_()
         {
@@ -1741,17 +1741,18 @@ namespace covered
             return is_finish; // Edge is NOT running now
         }
 
-        // Perform local placement if necessary
+        // Perform local placement (equivalent an in-advance remote placement notification) if necessary
         if (current_need_placement)
         {
-            // (OBSOLETE) NOTE: we do NOT need to notify placement processor of the current sender/closest edge node for local placement, as in EdgeWrapper::nonblockNotifyForPlacement() invoked by local/remote beacon edge node, because sender is NOT beacon and waiting for response will NOT block subsequent local/remote placement calculation
+            // (OBSOLETE) NOTE: we do NOT need to notify placement processor of the current sender/closest edge node for local placement, because sender is NOT beacon and waiting for response will NOT block subsequent local/remote placement calculation
 
-            // NOTE: we need to notify placement processor of the current sender/closest edge node for local placement, as in EdgeWrapper::nonblockNotifyForPlacement() invoked by local/remote beacon edge node, because we need to use the background directory update requests to DISABLE recursive cache placement
+            // NOTE: we need to notify placement processor of the current sender/closest edge node for local placement, because we need to use the background directory update requests to DISABLE recursive cache placement and also avoid blocking cache server worker which may serve subsequent placement calculation if sender is beacon (similar as EdgeWrapper::nonblockNotifyForPlacement() invoked by local/remote beacon edge node)
 
-            // Notify placement processor to admit local edge cache (NOTE: NO need to admit directory) and trigger local cache eviciton
-            CacheServerPlacementProcessorParam* tmp_cache_server_placement_processor_param_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getCacheServerPlacementProcessorParamPtr();
+            // Notify placement processor to admit local edge cache (NOTE: NO need to admit directory) and trigger local cache eviciton, to avoid blocking cache server worker which may serve subsequent placement calculation if sender is beacon
+            //CacheServerPlacementProcessorParam* tmp_cache_server_placement_processor_param_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getCacheServerPlacementProcessorParamPtr();
             const bool is_valid = !is_being_written;
-            bool is_successful = tmp_cache_server_placement_processor_param_ptr->getLocalCacheAdmissionBufferPtr()->push(LocalCacheAdmissionItem(key, value, is_valid, skip_propagation_latency));
+            //bool is_successful = tmp_cache_server_placement_processor_param_ptr->getLocalCacheAdmissionBufferPtr()->push(LocalCacheAdmissionItem(key, value, is_valid, skip_propagation_latency));
+            bool is_successful = tmp_edge_wrapper_ptr->getLocalCacheAdmissionBufferPtr()->push(LocalCacheAdmissionItem(key, value, is_valid, skip_propagation_latency));
             assert(is_successful);
         }
 

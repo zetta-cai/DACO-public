@@ -125,6 +125,11 @@ namespace covered
         cache_server_thread_ = 0;
         invalidation_server_thread_ = 0;
 
+        // Allocate ring buffer for local edge cache admissions
+        const bool local_cache_admission_with_multi_providers = true; // Multiple providers (edge cache server workers after hybrid data fetching; edge cache server workers and edge beacon server for local placement notifications)
+        local_cache_admission_buffer_ptr_ = new RingBuffer<LocalCacheAdmissionItem>(LocalCacheAdmissionItem(), Config::getEdgeCacheServerDataRequestBufferSize(), local_cache_admission_with_multi_providers);
+        assert(local_cache_admission_buffer_ptr_ != NULL);
+
         oss.clear();
         oss.str("");
         oss << instance_name_ << " " << "rwlock_for_eviction_ptr_";
@@ -170,6 +175,11 @@ namespace covered
         assert(edge_tocloud_propagation_simulator_param_ptr_ != NULL);
         delete edge_tocloud_propagation_simulator_param_ptr_;
         edge_tocloud_propagation_simulator_param_ptr_ = NULL;
+
+        // Release local cache admission ring buffer
+        assert(local_cache_admission_buffer_ptr_ != NULL);
+        delete local_cache_admission_buffer_ptr_;
+        local_cache_admission_buffer_ptr_ = NULL;
 
         assert(rwlock_for_eviction_ptr_ != NULL);
         delete rwlock_for_eviction_ptr_;
@@ -239,6 +249,12 @@ namespace covered
     BackgroundCounter& EdgeWrapper::getEdgeBackgroundCounterForBeaconServerRef()
     {
         return edge_background_counter_for_beacon_server_;
+    }
+
+    RingBuffer<LocalCacheAdmissionItem>* EdgeWrapper::getLocalCacheAdmissionBufferPtr() const
+    {
+        assert(local_cache_admission_buffer_ptr_ != NULL);
+        return local_cache_admission_buffer_ptr_;
     }
 
     Rwlock* EdgeWrapper::getRwlockForEvictionPtr() const
@@ -1200,11 +1216,7 @@ namespace covered
                 if (need_hybrid_fetching)
                 {
                     assert(cache_name_ == Util::COVERED_CACHE_NAME);
-                    is_finish = nonblockNotifyForPlacement(key, value, best_placement_edgeset, source_addr, recvrsp_socket_server_ptr, skip_propagation_latency);
-                    if (is_finish) // Edge node is NOT running
-                    {
-                        return is_finish;
-                    }
+                    nonblockNotifyForPlacement(key, value, best_placement_edgeset, skip_propagation_latency);
                 }
             }
         }
@@ -1352,13 +1364,13 @@ namespace covered
 
     // (7.2) For non-blocking placement deployment (ONLY invoked by beacon edge node)
 
-    bool EdgeWrapper::nonblockDataFetchForPlacement(const Key& key, const Edgeset& best_placement_edgeset, const NetworkAddr& source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, const bool& skip_propagation_latency, const bool& sender_is_beacon, bool& need_hybrid_fetching) const
+    //bool EdgeWrapper::nonblockDataFetchForPlacement(const Key& key, const Edgeset& best_placement_edgeset, const NetworkAddr& source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, const bool& skip_propagation_latency, const bool& sender_is_beacon, bool& need_hybrid_fetching) const
+    void EdgeWrapper::nonblockDataFetchForPlacement(const Key& key, const Edgeset& best_placement_edgeset, const bool& skip_propagation_latency, const bool& sender_is_beacon, bool& need_hybrid_fetching) const
     {
         checkPointers_();
         assert(cache_name_ == Util::COVERED_CACHE_NAME);
         assert(best_placement_edgeset.size() <= topk_edgecnt_for_placement_); // At most k placement edge nodes each time
 
-        bool is_finish = false;
         need_hybrid_fetching = false;
 
         // Check local edge cache in local/remote beacon node first
@@ -1369,7 +1381,7 @@ namespace covered
         if (is_local_cached_and_valid) // Directly get valid value from local edge cache in local/remote beacon node
         {
             // Perform non-blocking placement notification for local data fetching
-            is_finish = nonblockNotifyForPlacement(key, value, best_placement_edgeset, source_addr, recvrsp_socket_server_ptr, skip_propagation_latency);
+            nonblockNotifyForPlacement(key, value, best_placement_edgeset, skip_propagation_latency);
         }
         else // No valid value in local edge cache in local/remote beacon node
         {
@@ -1417,7 +1429,7 @@ namespace covered
             }
         }
 
-        return is_finish;
+        return;
     }
 
     void EdgeWrapper::nonblockDataFetchFromCloudForPlacement(const Key& key, const Edgeset& best_placement_edgeset, const bool& skip_propagation_latency) const
@@ -1444,16 +1456,17 @@ namespace covered
         return;
     }
 
-    bool EdgeWrapper::nonblockNotifyForPlacement(const Key& key, const Value& value, const Edgeset& best_placement_edgeset, const NetworkAddr& source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, const bool& skip_propagation_latency) const
+    //bool EdgeWrapper::nonblockNotifyForPlacement(const Key& key, const Value& value, const Edgeset& best_placement_edgeset, const NetworkAddr& source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, const bool& skip_propagation_latency) const
+    void EdgeWrapper::nonblockNotifyForPlacement(const Key& key, const Value& value, const Edgeset& best_placement_edgeset, const bool& skip_propagation_latency) const
     {
         checkPointers_();
         assert(cache_name_ == Util::COVERED_CACHE_NAME);
         assert(best_placement_edgeset.size() <= topk_edgecnt_for_placement_); // At most k placement edge nodes each time
 
-        bool is_finish = false;
-        BandwidthUsage total_bandwidth_usage;
-        EventList event_list;
-        const bool is_background = true;
+        //bool is_finish = false;
+        //BandwidthUsage total_bandwidth_usage;
+        //EventList event_list;
+        //const bool is_background = true;
 
         // Check writelock for validity of cache placement
         bool is_being_written = cooperation_wrapper_ptr_->isBeingWritten(key);
@@ -1486,8 +1499,6 @@ namespace covered
         // Local placement notification if necessary
         if (edgeset_const_iter_for_local_notification != best_placement_edgeset.end()) // If current edge node is also in best_placement_edgeset
         {
-            // TODO: NOTE: we need to notify placement processor of the current sender/closest edge node for local placement for non-blocking placement deployment of local placement notification to avoid blocking subsequent cache placement
-
             // Current edge node MUST be the beacon node for the given key
             assert(currentIsBeacon(key));
 
@@ -1502,20 +1513,28 @@ namespace covered
                 is_valid = false;
             }
 
-            // TODO: END HERE
+            // NOTE: we need to notify placement processor of the current local/remote beacon edge node for non-blocking placement deployment of local placement notification to avoid blocking subsequent placement calculation (similar as CacheServerWorkerBase::notifyBeaconForPlacementAfterHybridFetch_() invoked by sender edge node)
 
+            // Notify placement processor to admit local edge cache (NOTE: NO need to admit directory) and trigger local cache eviciton, to avoid blocking cache server worker / beacon server for subsequent placement calculation
+            bool is_successful = local_cache_admission_buffer_ptr_->push(LocalCacheAdmissionItem(key, value, is_valid, skip_propagation_latency));
+            assert(is_successful);
+
+            /* (OBSOLETE for non-blocking placement deployment)
             // Perform cache admission for local edge cache (equivalent to local placement notification)
             admitLocalEdgeCache_(key, value, is_valid);
 
             // Perform background cache eviction if necessary in a blocking manner for consistent directory information (note that cache eviction happens after non-blocking placement notification)
             // NOTE: we update aggregated uncached popularity yet DISABLE recursive cache placement for metadata preservation during cache eviction
             is_finish = evictForCapacity_(source_addr, recvrsp_socket_server_ptr, total_bandwidth_usage, event_list, skip_propagation_latency, is_background);
+            */
         }
 
         // Get background eventlist and bandwidth usage to update background counter for beacon server
-        edge_background_counter_for_beacon_server_.updateBandwidthUsgae(total_bandwidth_usage);
-        edge_background_counter_for_beacon_server_.addEvents(event_list);
+        //edge_background_counter_for_beacon_server_.updateBandwidthUsgae(total_bandwidth_usage);
+        //edge_background_counter_for_beacon_server_.addEvents(event_list);
 
-        return is_finish;
+        //return is_finish;
+
+        return;
     } 
 }

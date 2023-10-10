@@ -261,7 +261,7 @@ namespace covered
 
             // Trigger non-blocking placement notification for the extra hybrid fetching result (ONLY for COVERED)
             assert(edge_wrapper_ptr_->getCacheName() == Util::COVERED_CACHE_NAME);
-            is_finish = edge_wrapper_ptr_->nonblockNotifyForPlacement(tmp_key, tmp_value, best_placement_edgeset, edge_beacon_server_recvrsp_source_addr_, edge_beacon_server_recvrsp_socket_server_ptr_, skip_propagation_latency);
+            edge_wrapper_ptr_->nonblockNotifyForPlacement(tmp_key, tmp_value, best_placement_edgeset, skip_propagation_latency);
         }
 
         return is_finish;
@@ -472,7 +472,7 @@ namespace covered
         {
             // Perform non-blocking placement notification for neighbor data fetching
             const Value tmp_value = covered_placement_redirected_get_response_ptr->getValue();
-            edge_wrapper_ptr_->nonblockNotifyForPlacement(tmp_key, tmp_value, best_placement_edgeset, edge_beacon_server_recvrsp_source_addr_, edge_beacon_server_recvrsp_socket_server_ptr_, skip_propagation_latency);
+            edge_wrapper_ptr_->nonblockNotifyForPlacement(tmp_key, tmp_value, best_placement_edgeset, skip_propagation_latency);
         }
         else // Cooperative invalid or global miss
         {
@@ -509,6 +509,6 @@ namespace covered
         const bool skip_propagation_latency = global_get_response_ptr->isSkipPropagationLatency();
         const Edgeset& best_placement_edgeset = covered_placement_global_get_response_ptr->getEdgesetRef();
         assert(best_placement_edgeset.size() <= edge_wrapper_ptr_->getTopkEdgecntForPlacement()); // At most k placement edge nodes each time
-        edge_wrapper_ptr_->nonblockNotifyForPlacement(tmp_key, tmp_value, best_placement_edgeset, edge_beacon_server_recvrsp_source_addr_, edge_beacon_server_recvrsp_socket_server_ptr_, skip_propagation_latency);
+        edge_wrapper_ptr_->nonblockNotifyForPlacement(tmp_key, tmp_value, best_placement_edgeset, skip_propagation_latency);
     }
 }
