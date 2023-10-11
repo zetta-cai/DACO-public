@@ -294,7 +294,7 @@ namespace covered
         bool is_local_cached_and_invalid = tryToUpdateInvalidLocalEdgeCache_(tmp_key, tmp_value);
         if (!tmp_value.isDeleted() && is_local_cached_and_invalid) // Update may trigger eviction
         {
-            is_finish = tmp_edge_wrapper_ptr->evictForCapacity_(edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency); // Add events of intermediate response if with event tracking
+            is_finish = tmp_cache_server_ptr->evictForCapacity_(edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency); // Add events of intermediate response if with event tracking
         }
         if (is_finish)
         {
@@ -836,7 +836,7 @@ namespace covered
             is_local_cached = updateLocalEdgeCache_(tmp_key, tmp_value);
 
             // NOTE: we will check capacity and trigger eviction for value updates (add events of intermediate response if with event tracking)
-            is_finish = tmp_edge_wrapper_ptr->evictForCapacity_(edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+            is_finish = tmp_cache_server_ptr->evictForCapacity_(edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency);
         }
         else if (local_request_ptr->getMessageType() == MessageType::kLocalDelRequest)
         {
@@ -1514,7 +1514,8 @@ namespace covered
     bool CacheServerWorkerBase::admitObject_(const Key& key, const Value& value, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
     {
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        CacheServer* tmp_cache_server_ptr = cache_server_worker_param_ptr_->getCacheServerPtr();
+        EdgeWrapper* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();
 
         bool is_finish = false;
 
@@ -1527,14 +1528,14 @@ namespace covered
         {
             return is_finish;
         }
-        tmp_edge_wrapper_ptr->admitLocalEdgeCache_(key, value, !is_being_written); // valid if not being written
+        tmp_cache_server_ptr->admitLocalEdgeCache_(key, value, !is_being_written); // valid if not being written
 
         struct timespec update_directory_to_admit_end_timestamp = Util::getCurrentTimespec();
         uint32_t update_directory_to_admit_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(update_directory_to_admit_end_timestamp, update_directory_to_admit_start_timestamp));
         event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_UPDATE_DIRECTORY_TO_ADMIT_EVENT_NAME, update_directory_to_admit_latency_us); // Add intermediate event if with event tracking
 
         // Trigger eviction if necessary
-        is_finish = tmp_edge_wrapper_ptr->evictForCapacity_(edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+        is_finish = tmp_cache_server_ptr->evictForCapacity_(edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency);
 
         return is_finish;
     }

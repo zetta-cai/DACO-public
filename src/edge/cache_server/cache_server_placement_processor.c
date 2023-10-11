@@ -164,11 +164,11 @@ namespace covered
 
         // Admit into local edge cache for the received remote placement notification
         const Value tmp_value = covered_placement_notify_request_ptr->getValue();
-        tmp_edge_wrapper_ptr->admitLocalEdgeCache_(tmp_key, tmp_value, is_valid); // May update local synced victims
+        tmp_cache_server_ptr->admitLocalEdgeCache_(tmp_key, tmp_value, is_valid); // May update local synced victims
 
         // Perform background cache eviction in a blocking manner for consistent directory information (note that cache eviction happens after non-blocking placement notification)
         // NOTE: we update aggregated uncached popularity yet DISABLE recursive cache placement for metadata preservation during cache eviction
-        is_finish = tmp_edge_wrapper_ptr->evictForCapacity_(edge_cache_server_placement_processor_recvrsp_source_addr_, edge_cache_server_placement_processor_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency, is_background); // May update local synced victims
+        is_finish = tmp_cache_server_ptr->evictForCapacity_(edge_cache_server_placement_processor_recvrsp_source_addr_, edge_cache_server_placement_processor_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency, is_background); // May update local synced victims
 
         struct timespec placement_notify_end_timestamp = Util::getCurrentTimespec();
         uint32_t placement_notify_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(placement_notify_end_timestamp, placement_notify_start_timestamp));
@@ -203,12 +203,12 @@ namespace covered
         const Key tmp_key = local_cache_admission_item.getKey();
         const Value tmp_value = local_cache_admission_item.getValue();
         const bool is_valid = local_cache_admission_item.isValid();
-        tmp_edge_wrapper_ptr->admitLocalEdgeCache_(tmp_key, tmp_value, is_valid); // May update local synced victims
+        tmp_cache_server_ptr->admitLocalEdgeCache_(tmp_key, tmp_value, is_valid); // May update local synced victims
 
         // Perform background cache eviction in a blocking manner for consistent directory information (note that cache eviction happens after non-blocking placement notification)
         // NOTE: we update aggregated uncached popularity yet DISABLE recursive cache placement for metadata preservation during cache eviction
         const bool skip_propagation_latency = local_cache_admission_item.skipPropagationLatency();
-        is_finish = tmp_edge_wrapper_ptr->evictForCapacity_(edge_cache_server_placement_processor_recvrsp_source_addr_, edge_cache_server_placement_processor_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency, is_background); // May update local synced victims
+        is_finish = tmp_cache_server_ptr->evictForCapacity_(edge_cache_server_placement_processor_recvrsp_source_addr_, edge_cache_server_placement_processor_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency, is_background); // May update local synced victims
 
         struct timespec admission_end_timestamp = Util::getCurrentTimespec();
         uint32_t admission_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(admission_end_timestamp, admission_start_timestamp));

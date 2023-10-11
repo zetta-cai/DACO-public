@@ -52,10 +52,12 @@ namespace covered
     const std::string Event::EDGE_BEACON_SERVER_ACQUIRE_LOCAL_WRITELOCK_EVENT_NAME("edge::beacon_server::acquire_local_writelock");
     const std::string Event::EDGE_BEACON_SERVER_RELEASE_LOCAL_WRITELOCK_EVENT_NAME("edge::beacon_server::release_local_writelock");
 
+    // For edge cache server (worker or placement processor)
+    const std::string Event::EDGE_CACHE_SERVER_UPDATE_DIRECTORY_TO_EVICT_EVENT_NAME("edge::cache_server::update_directory_to_evict");
+
     // For edge beacon server or cache server worker
     const std::string Event::EDGE_INVALIDATE_CACHE_COPIES_EVENT_NAME("edge::invalidate_cache_copies");
     const std::string Event::EDGE_FINISH_BLOCK_EVENT_NAME("edge::finish_block");
-    const std::string Event::EDGE_UPDATE_DIRECTORY_TO_EVICT_EVENT_NAME("edge::update_directory_to_evict");
     const std::string Event::EDGE_VICTIM_FETCH_EVENT_NAME("edge::victim_fetch");
 
     // For edge invalidation server
@@ -74,7 +76,7 @@ namespace covered
     const std::string Event::BG_CLOUD_GET_ROCKSDB_EVENT_NAME("bg::cloud::get_rocksdb");
     const std::string Event::BG_EDGE_CACHE_SERVER_PLACEMENT_PROCESSOR_PLACEMENT_NOTIFY_EVENT_NAME("bg::edge::cache_server_placement_processor::placement_notify");
     const std::string Event::BG_EDGE_CACHE_SERVER_PLACEMENT_PROCESSOR_LOCAL_CACHE_ADMISSION_EVENT_NAME("bg::edge::cache_server_placement_processor::local_cache_admission");
-    const std::string Event::BG_EDGE_UPDATE_DIRECTORY_TO_EVICT_EVENT_NAME("bg::edge::update_directory_to_evict");
+    const std::string Event::BG_EDGE_CACHE_SERVER_UPDATE_DIRECTORY_TO_EVICT_EVENT_NAME("bg::edge::cache_server::update_directory_to_evict");
     const std::string Event::BG_EDGE_BEACON_SERVER_UPDATE_LOCAL_DIRECTORY_EVENT_NAME("bg::edge::beacon_server::update_local_directory");
 
     const std::string Event::kClassName("Event");
@@ -107,7 +109,7 @@ namespace covered
 
     bool Event::isBackgroundEvent() const
     {
-        if (event_name_ == BG_EDGE_CACHE_SERVER_WORKER_TARGET_GET_LOCAL_CACHE_EVENT_NAME || event_name_ == BG_CLOUD_GET_ROCKSDB_EVENT_NAME || event_name_ == BG_EDGE_UPDATE_DIRECTORY_TO_EVICT_EVENT_NAME || event_name_ == BG_EDGE_BEACON_SERVER_UPDATE_LOCAL_DIRECTORY_EVENT_NAME)
+        if (event_name_ == BG_EDGE_CACHE_SERVER_WORKER_TARGET_GET_LOCAL_CACHE_EVENT_NAME || event_name_ == BG_CLOUD_GET_ROCKSDB_EVENT_NAME || event_name_ == BG_EDGE_CACHE_SERVER_UPDATE_DIRECTORY_TO_EVICT_EVENT_NAME || event_name_ == BG_EDGE_BEACON_SERVER_UPDATE_LOCAL_DIRECTORY_EVENT_NAME)
         {
             return true;
         }

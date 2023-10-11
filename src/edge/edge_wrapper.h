@@ -65,7 +65,6 @@ namespace covered
         PropagationSimulatorParam* getEdgeTocloudPropagationSimulatorParamPtr() const;
         BackgroundCounter& getEdgeBackgroundCounterForBeaconServerRef();
         RingBuffer<LocalCacheAdmissionItem>* getLocalCacheAdmissionBufferPtr() const;
-        Rwlock* getRwlockForEvictionPtr() const;
 
         // (2) Utility functions
 
@@ -93,18 +92,8 @@ namespace covered
         // (6.1) For local edge cache access
         bool getLocalEdgeCache_(const Key& key, Value& value) const; // Return is local cached and valid
 
-        // (6.2) For local edge cache admission and directory admission
-        void admitLocalEdgeCache_(const Key& key, const Value& value, const bool& is_valid) const;
+        // (6.2) For local directory admission (invoked by cache server worker for independent admission or local placement notification if sender is beacon; or by beacon server for local placement notification if sender is not beacon)
         void admitLocalDirectory_(const Key& key, const DirectoryInfo& directory_info, bool& is_being_written) const; // Admit directory info in current edge node
-
-        // (6.3) For blocking-based cache eviction and local/remote directory eviction
-        bool evictForCapacity_(const NetworkAddr& source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency, const bool& is_background = false) const; // Including evict local edge cache and directory updates; return if edge is finished
-        void evictLocalEdgeCache_(std::unordered_map<Key, Value, KeyHasher>& victims, const uint64_t& required_size) const; // Evict local edge cache
-        // Perform directory updates for evicted victims in parallel; return if edge is finished
-        bool parallelEvictDirectory_(const std::unordered_map<Key, Value, KeyHasher>& total_victims, const NetworkAddr& source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency, const bool& is_background) const; // For each evicted key in total victims
-        bool evictLocalDirectory_(const Key& key, const Value& value, const DirectoryInfo& directory_info, bool& is_being_written, const NetworkAddr& source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency, const bool& is_background) const; // Evict directory info from current edge node (return if edge node is finished)
-        MessageBase* getReqToEvictBeaconDirectory_(const Key& key, const DirectoryInfo& directory_info, const NetworkAddr& source_addr, const bool& skip_propagation_latency, const bool& is_background) const; // Send directory update request with is_admit = false to remove dirinfo of evicted victim
-        void processRspToEvictBeaconDirectory_(MessageBase* control_response_ptr, bool& is_being_written, const bool& is_background) const;
 
         // (7) covered-specific utility functions (invoked by edge cache server or edge beacon server of closest/beacon edge node)
 
@@ -188,8 +177,6 @@ namespace covered
         // -> Popped by cache server placement processor
         // NOTE: we CANNOT expose CacheServer* in EdgeWrapper, as CacheServer and BeaconServer have shorter life span than EdgeWrapper -> if we expose CacheServer* in EdgeWrapper, BeaconServer may still access CacheServer, which has already been released by cache server thread yet
         RingBuffer<LocalCacheAdmissionItem>* local_cache_admission_buffer_ptr_; // thread safe (local cached admission + eviction)
-
-        mutable Rwlock* rwlock_for_eviction_ptr_; // Guarantee the atomicity of eviction among different edge cache server workers
     };
 }
 

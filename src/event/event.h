@@ -61,10 +61,12 @@ namespace covered
         static const std::string EDGE_BEACON_SERVER_ACQUIRE_LOCAL_WRITELOCK_EVENT_NAME;
         static const std::string EDGE_BEACON_SERVER_RELEASE_LOCAL_WRITELOCK_EVENT_NAME;
 
+        // For edge cache server (worker or placement processor)
+        static const std::string EDGE_CACHE_SERVER_UPDATE_DIRECTORY_TO_EVICT_EVENT_NAME;
+
         // For edge beacon server or cache server worker
         static const std::string EDGE_INVALIDATE_CACHE_COPIES_EVENT_NAME;
         static const std::string EDGE_FINISH_BLOCK_EVENT_NAME;
-        static const std::string EDGE_UPDATE_DIRECTORY_TO_EVICT_EVENT_NAME;
         static const std::string EDGE_VICTIM_FETCH_EVENT_NAME;
 
         // For edge invalidation server
@@ -83,7 +85,7 @@ namespace covered
         static const std::string BG_CLOUD_GET_ROCKSDB_EVENT_NAME; // For cloud (non-blocking data fetching)
         static const std::string BG_EDGE_CACHE_SERVER_PLACEMENT_PROCESSOR_PLACEMENT_NOTIFY_EVENT_NAME; // For placement notify requests in edge cache server placement processor (non-blocking placement notification)
         static const std::string BG_EDGE_CACHE_SERVER_PLACEMENT_PROCESSOR_LOCAL_CACHE_ADMISSION_EVENT_NAME; // For local cache admissions in edge cache server placement processor (for local placement notification or hybrid data fetching)
-        static const std::string BG_EDGE_UPDATE_DIRECTORY_TO_EVICT_EVENT_NAME; // For edge beacon server or cache server worker (non-blocking placement notification)
+        static const std::string BG_EDGE_CACHE_SERVER_UPDATE_DIRECTORY_TO_EVICT_EVENT_NAME; // For edge cache server worker or placement processor (non-blocking placement notification)
         static const std::string BG_EDGE_BEACON_SERVER_UPDATE_LOCAL_DIRECTORY_EVENT_NAME; // For edge beacon server (non-blocking placement notification)
 
         Event();
