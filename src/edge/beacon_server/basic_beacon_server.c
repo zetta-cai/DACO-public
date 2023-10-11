@@ -68,7 +68,7 @@ namespace covered
         return directory_lookup_response_ptr;
     }
 
-    bool BasicBeaconServer::processReqToUpdateLocalDirectory_(MessageBase* control_request_ptr, bool& is_being_written, BandwidthUsage& total_bandwidth_usage, EventList& event_list)
+    bool BasicBeaconServer::processReqToUpdateLocalDirectory_(MessageBase* control_request_ptr, bool& is_being_written, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, BandwidthUsage& total_bandwidth_usage, EventList& event_list)
     {
         // Foreground directory updates for baselines
         assert(control_request_ptr != NULL);
@@ -87,12 +87,14 @@ namespace covered
         edge_wrapper_ptr_->getCooperationWrapperPtr()->updateDirectoryTable(tmp_key, source_edge_idx, is_admit, directory_info, is_being_written, is_source_cached);
         UNUSED(is_source_cached);
 
+        UNUSED(best_placement_edgeset);
+        UNUSED(need_hybrid_fetching);
         UNUSED(total_bandwidth_usage);
         UNUSED(event_list);
         return is_finish;
     }
 
-    MessageBase* BasicBeaconServer::getRspToUpdateLocalDirectory_(MessageBase* control_request_ptr, const bool& is_being_written, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list) const
+    MessageBase* BasicBeaconServer::getRspToUpdateLocalDirectory_(MessageBase* control_request_ptr, const bool& is_being_written, const Edgeset& best_placement_edgeset, const bool& need_hybrid_fetching, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list) const
     {
         assert(control_request_ptr != NULL);
         assert(control_request_ptr->getMessageType() == MessageType::kDirectoryUpdateRequest);
@@ -106,6 +108,9 @@ namespace covered
         uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
         MessageBase* directory_update_response_ptr = new DirectoryUpdateResponse(tmp_key, is_being_written, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
         assert(directory_update_response_ptr != NULL);
+
+        UNUSED(best_placement_edgeset);
+        UNUSED(need_hybrid_fetching);
 
         return directory_update_response_ptr;
     }

@@ -3,6 +3,8 @@
  *
  * NOTE: background response without placement edgeset to trigger non-blocking placement notification.
  * 
+ * NOTE: CoveredPlacementDirectoryUpdateResponse is background and ONLY used for background events and bandwidth usage, yet NOT related with hybrid data fetching under non-blocking placement deployment, while CoveredPlacementDirectoryEvictResponse is foreground and ONLY used for hybrid data fetching under non-blocking placement deployment.
+ * 
  * By Siyuan Sheng (2023.10.02).
  */
 

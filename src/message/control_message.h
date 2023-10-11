@@ -46,6 +46,7 @@
 #include "message/control/cooperation/covered_victim_fetch_response.h"
 // For cooperative cache placement management (hybrid data fetching)
 #include "message/control/cooperation/covered_placement_directory_lookup_response.h"
+#include "message/control/cooperation/covered_placement_directory_evict_response.h"
 // For cooperative cache placement management (non-blocking placement notification after hybrid data fetching)
 #include "message/control/cooperation/covered_placement_hybrid_fetched_request.h"
 #include "message/control/cooperation/covered_placement_hybrid_fetched_response.h"

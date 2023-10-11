@@ -170,7 +170,6 @@ namespace covered
 
         // Return if edge node is finished
         bool tryToTriggerPlacementNotificationAfterHybridFetch_(const Key& key, const Value& value, const Edgeset& best_placement_edgeset, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const;
-        bool notifyBeaconForPlacementAfterHybridFetch_(const Key& key, const Value& value, const Edgeset& best_placement_edgeset, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const; // Sender is NOT beacon
 
         // (5) Utility functions
 

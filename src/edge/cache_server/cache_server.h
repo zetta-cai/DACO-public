@@ -46,6 +46,8 @@ namespace covered
         // (1) For local edge cache admission and remote directory admission (invoked by edge cache server worker for independent admission; or by placement processor for remote placement notification)
         void admitLocalEdgeCache_(const Key& key, const Value& value, const bool& is_valid) const;
         bool admitBeaconDirectory_(const Key& key, const DirectoryInfo& directory_info, bool& is_being_written, const NetworkAddr& source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency, const bool& is_background = false) const; // Admit directory info in remote beacon node; return if edge node is finished
+        MessageBase* getReqToAdmitBeaconDirectory_(const Key& key, const DirectoryInfo& directory_info, const NetworkAddr& source_addr, const bool& skip_propagation_latency, const bool& is_background) const;
+        void processRspToAdmitBeaconDirectory_(MessageBase* control_response_ptr, bool& is_being_written, const bool& is_background) const;
 
         // (2) For blocking-based cache eviction and local/remote directory eviction (invoked by edge cache server worker for independent admission or value update; or by placement processor for remote placement notification)
         bool evictForCapacity_(const NetworkAddr& source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency, const bool& is_background = false) const; // Including evict local edge cache and directory updates; return if edge is finished
@@ -54,17 +56,16 @@ namespace covered
         bool parallelEvictDirectory_(const std::unordered_map<Key, Value, KeyHasher>& total_victims, const NetworkAddr& source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency, const bool& is_background) const; // For each evicted key in total victims
         bool evictLocalDirectory_(const Key& key, const Value& value, const DirectoryInfo& directory_info, bool& is_being_written, const NetworkAddr& source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency, const bool& is_background) const; // Evict directory info from current edge node (return if edge node is finished)
         MessageBase* getReqToEvictBeaconDirectory_(const Key& key, const DirectoryInfo& directory_info, const NetworkAddr& source_addr, const bool& skip_propagation_latency, const bool& is_background) const; // Send directory update request with is_admit = false to remove dirinfo of evicted victim
-        void processRspToEvictBeaconDirectory_(MessageBase* control_response_ptr, bool& is_being_written, const bool& is_background) const;
+        bool processRspToEvictBeaconDirectory_(MessageBase* control_response_ptr, const Value& value, bool& is_being_written, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency, const bool& is_background) const;
+
+        // (3) Trigger non-blocking placement notification (ONLY for COVERED)
+        // NOTE: recvrsp_source_addr and recvrsp_socket_server_ptr refer to some edge cache server worker
+        bool notifyBeaconForPlacementAfterHybridFetch_(const Key& key, const Value& value, const Edgeset& best_placement_edgeset, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const; // Sender is NOT beacon; return if edge node is finished
     private:
         static const std::string kClassName;
 
         void receiveRequestsAndPartition_();
         void partitionRequest_(MessageBase* data_requeset_ptr);
-
-        // (1) For local edge cache admission and remote directory admission (invoked by edge cache server worker for independent admission; or by placement processor for remote placement notification)
-
-        MessageBase* getReqToAdmitBeaconDirectory_(const Key& key, const DirectoryInfo& directory_info, const NetworkAddr& source_addr, const bool& skip_propagation_latency, const bool& is_background) const;
-        void processRspToAdmitBeaconDirectory_(MessageBase* control_response_ptr, bool& is_being_written, const bool& is_background) const;
 
         void checkPointers_() const;
 

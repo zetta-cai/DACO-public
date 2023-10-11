@@ -93,7 +93,7 @@ namespace covered
         return covered_directory_lookup_response_ptr;
     }
 
-    bool CoveredBeaconServer::processReqToUpdateLocalDirectory_(MessageBase* control_request_ptr, bool& is_being_written, BandwidthUsage& total_bandwidth_usage, EventList& event_list)
+    bool CoveredBeaconServer::processReqToUpdateLocalDirectory_(MessageBase* control_request_ptr, bool& is_being_written, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, BandwidthUsage& total_bandwidth_usage, EventList& event_list)
     {
         checkPointers_();
         assert(control_request_ptr != NULL);
@@ -113,7 +113,7 @@ namespace covered
         CollectedPopularity collected_popularity; // ONLY used if is_directory_update = true and is_admit = false
         bool with_extra_hybrid_fetching_result = false; // If with extra hybrid fetching result (except/besides sender) to trigger non-blocking placement notification
         Value tmp_value; // ONLY used if  with_extra_hybrid_fetching_result = true
-        Edgeset best_placement_edgeset; // ONLY used if with_extra_hybrid_fetching_result = true
+        Edgeset extra_placement_edgeset; // ONLY used if with_extra_hybrid_fetching_result = true
         if (message_type == MessageType::kCoveredPlacementDirectoryUpdateRequest) // Background directory updates w/o hybrid data fetching for COVERED
         {
             // Get key, is_admit, directory info, victim syncset, and collected popularity (if any) from directory update request
@@ -141,7 +141,7 @@ namespace covered
 
             with_extra_hybrid_fetching_result = true; // With extra hybrid data fetching result (except sender)
             tmp_value = covered_placement_hybrid_fetched_request_ptr->getValue();
-            best_placement_edgeset = covered_placement_hybrid_fetched_request_ptr->getEdgesetRef();
+            extra_placement_edgeset = covered_placement_hybrid_fetched_request_ptr->getEdgesetRef();
         }
         else if (message_type == MessageType::kCoveredPlacementDirectoryAdmitRequest) // Foreground directory admission with including-sender hybrid data fetching for COVERED
         {
@@ -157,7 +157,7 @@ namespace covered
 
             with_extra_hybrid_fetching_result = true; // With extra hybrid data fetching result (besides sender)
             tmp_value = covered_placement_directory_admit_request_ptr->getValue();
-            best_placement_edgeset = covered_placement_directory_admit_request_ptr->getEdgesetRef();
+            extra_placement_edgeset = covered_placement_directory_admit_request_ptr->getEdgesetRef();
         }
         else if (message_type == MessageType::kCoveredDirectoryUpdateRequest) // Foreground directory updates (with only-sender hybrid data fetching for COVERED if is_admit = true)
         {
@@ -229,14 +229,12 @@ namespace covered
                 covered_cache_manager_ptr->assertNoLocalUncachedPopularity(tmp_key, source_edge_idx);
 
                 // Selective popularity aggregation
-                bool need_hybrid_fetching = false;
-                is_finish = covered_cache_manager_ptr->updatePopularityAggregatorForAggregatedPopularity(tmp_key, source_edge_idx, collected_popularity, is_global_cached, is_source_cached, need_placement_calculation, need_hybrid_fetching, edge_wrapper_ptr_, edge_beacon_server_recvrsp_source_addr_, edge_beacon_server_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in source edge node
+                const bool sender_is_beacon = false; // Sender is NOT the beacon
+                is_finish = covered_cache_manager_ptr->updatePopularityAggregatorForAggregatedPopularity(tmp_key, source_edge_idx, collected_popularity, is_global_cached, is_source_cached, need_placement_calculation, sender_is_beacon, best_placement_edgeset, need_hybrid_fetching, edge_wrapper_ptr_, edge_beacon_server_recvrsp_source_addr_, edge_beacon_server_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in source edge node
                 if (is_finish)
                 {
                     return is_finish; // Edge node is finished
                 }
-
-                // TODO: (END HERE) Process need_hybrid_fetching
             }
         }
         
@@ -247,13 +245,13 @@ namespace covered
                 is_being_written = edge_wrapper_ptr_->getCooperationWrapperPtr()->isBeingWritten(tmp_key);
             }
 
-            // NOTE: source edge index must NOT in the best placement edgeset, as placement edge idx of sender if any has already been removed in CacheServerWorkerBase::notifyBeaconForPlacementAfterHybridFetch_()
-            for (std::unordered_set<uint32_t>::const_iterator best_placement_edgeset_const_iter = best_placement_edgeset.begin(); best_placement_edgeset_const_iter != best_placement_edgeset.end(); best_placement_edgeset_const_iter++)
+            // NOTE: source edge index must NOT in the extra placement edgeset, as placement edge idx of sender if any has already been removed in CacheServerWorkerBase::notifyBeaconForPlacementAfterHybridFetch_()
+            for (std::unordered_set<uint32_t>::const_iterator extra_placement_edgeset_const_iter = extra_placement_edgeset.begin(); extra_placement_edgeset_const_iter != extra_placement_edgeset.end(); extra_placement_edgeset_const_iter++)
             {
-                if (source_edge_idx == *best_placement_edgeset_const_iter)
+                if (source_edge_idx == *extra_placement_edgeset_const_iter)
                 {
                     std::ostringstream oss;
-                    oss << "Source edge index " << source_edge_idx << " should NOT in the placement edgeset for key " << tmp_key << " in processReqToUpdateLocalDirectory_()";
+                    oss << "Source edge index " << source_edge_idx << " should NOT in the extra placement edgeset for key " << tmp_key.getKeystr() << " in processReqToUpdateLocalDirectory_()";
                     Util::dumpErrorMsg(instance_name_, oss.str());
                     exit(1);
                 }
@@ -261,13 +259,13 @@ namespace covered
 
             // Trigger non-blocking placement notification for the extra hybrid fetching result (ONLY for COVERED)
             assert(edge_wrapper_ptr_->getCacheName() == Util::COVERED_CACHE_NAME);
-            edge_wrapper_ptr_->nonblockNotifyForPlacement(tmp_key, tmp_value, best_placement_edgeset, skip_propagation_latency);
+            edge_wrapper_ptr_->nonblockNotifyForPlacement(tmp_key, tmp_value, extra_placement_edgeset, skip_propagation_latency);
         }
 
         return is_finish;
     }
 
-    MessageBase* CoveredBeaconServer::getRspToUpdateLocalDirectory_(MessageBase* control_request_ptr, const bool& is_being_written, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list) const
+    MessageBase* CoveredBeaconServer::getRspToUpdateLocalDirectory_(MessageBase* control_request_ptr, const bool& is_being_written, const Edgeset& best_placement_edgeset, const bool& need_hybrid_fetching, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list) const
     {
         assert(control_request_ptr != NULL);
 
@@ -286,19 +284,38 @@ namespace covered
         MessageBase* control_response_ptr = NULL;
         if (message_type == MessageType::kCoveredPlacementDirectoryUpdateRequest) // Background directory updates w/o hybrid data fetching for COVERED
         {
+            assert(!need_hybrid_fetching); // NOTE: ONLY foreground directory eviction could trigger hybrid data fetching
+
             control_response_ptr = new CoveredPlacementDirectoryUpdateResponse(tmp_key, is_being_written, victim_syncset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
         }
         else if (message_type == MessageType::kCoveredPlacementHybridFetchedRequest) // Foreground request to notify the result of excluding-sender hybrid data fetching for COVERED (NO directory update)
         {
+            assert(!need_hybrid_fetching); // NOTE: ONLY foreground directory eviction could trigger hybrid data fetching
+
             control_response_ptr = new CoveredPlacementHybridFetchedResponse(tmp_key, victim_syncset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
         }
         else if (message_type == MessageType::kCoveredPlacementDirectoryAdmitRequest) // Foreground directory admission with including-sender hybrid data fetching for COVERED
         {
+            assert(!need_hybrid_fetching); // NOTE: ONLY foreground directory eviction could trigger hybrid data fetching
+
             control_response_ptr = new CoveredPlacementDirectoryAdmitResponse(tmp_key, is_being_written, victim_syncset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
         }
         else if (message_type == MessageType::kCoveredDirectoryUpdateRequest) // Foreground directory updates (with only-sender hybrid data fetching for COVERED if is_admit = true)
         {
-            control_response_ptr = new CoveredDirectoryUpdateResponse(tmp_key, is_being_written, victim_syncset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+            if (need_hybrid_fetching) // Directory update (must be eviction) response w/ hybrid data fetching
+            {
+                // NOTE: must be foreground directory eviction
+                assert(!control_request_ptr->isBackgroundRequest());
+                const CoveredDirectoryUpdateRequest* const covered_directory_update_request_ptr = static_cast<const CoveredDirectoryUpdateRequest*>(control_request_ptr);
+                assert(!covered_directory_update_request_ptr->isValidDirectoryExist());
+
+                // NOTE: beacon node uses best_placement_edgeset to tell the closest edge node if to perform hybrid data fetching and trigger non-blocking placement notification
+                control_response_ptr = new CoveredPlacementDirectoryEvictResponse(tmp_key, is_being_written, victim_syncset, best_placement_edgeset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+            }
+            else // Normal directory update response (foreground directory admission/eviction)
+            {
+                control_response_ptr = new CoveredDirectoryUpdateResponse(tmp_key, is_being_written, victim_syncset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+            }
         }
         else
         {
