@@ -405,7 +405,9 @@ namespace covered
 
         // Release permission for the write
         std::unordered_set<NetworkAddr, NetworkAddrHasher> blocked_edges;
-        is_finish = processReqToReleaseLocalWritelock_(control_request_ptr, blocked_edges, total_bandwidth_usage, event_list);
+        Edgeset best_placement_edgeset;
+        bool need_hybrid_fetching = false;
+        is_finish = processReqToReleaseLocalWritelock_(control_request_ptr, blocked_edges, best_placement_edgeset, need_hybrid_fetching, total_bandwidth_usage, event_list);
         if (is_finish)
         {
             return is_finish; // Edge node is NOT running now
@@ -424,7 +426,7 @@ namespace covered
 
         // Prepare a release writelock response
         embedBackgroundCounterIfNotEmpty_(total_bandwidth_usage, event_list); // Embed background events/bandwidth if any into control response message
-        MessageBase* release_writelock_response_ptr = getRspToReleaseLocalWritelock_(tmp_key, total_bandwidth_usage, event_list, skip_propagation_latency);
+        MessageBase* release_writelock_response_ptr = getRspToReleaseLocalWritelock_(tmp_key, best_placement_edgeset, need_hybrid_fetching, total_bandwidth_usage, event_list, skip_propagation_latency);
         assert(release_writelock_response_ptr != NULL);
 
         // Push release writelock response into edge-to-edge propagation simulator to cache server worker

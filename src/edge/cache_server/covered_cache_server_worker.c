@@ -56,6 +56,7 @@ namespace covered
         // Selective popularity aggregation
         const bool need_placement_calculation = true;
         const bool sender_is_beacon = true; // Sender and beacon is the same edge node for placement calculation
+        best_placement_edgeset.clear();
         need_hybrid_fetching = false;
         is_finish = tmp_covered_cache_manager_ptr->updatePopularityAggregatorForAggregatedPopularity(key, current_edge_idx, collected_popularity, is_global_cached, is_source_cached, need_placement_calculation, sender_is_beacon, best_placement_edgeset, need_hybrid_fetching, tmp_edge_wrapper_ptr, edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in current edge node
         if (is_finish)
@@ -328,10 +329,10 @@ namespace covered
         bool need_hybrid_fetching = false;
         is_finish = tmp_covered_cache_manager_ptr->updatePopularityAggregatorForAggregatedPopularity(key, current_edge_idx, collected_popularity, is_global_cached, is_source_cached, need_placement_calculation, sender_is_beacon, best_placement_edgeset, need_hybrid_fetching, tmp_edge_wrapper_ptr, edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in current edge node
     
-        // NOTE: local/remote acquire writelock request MUST NOT need hybrid data fetching due to NO need for placement calculation (newly-admitted cache copies will still be invalid after cache placement)
-        assert(!is_finish);
-        assert(best_placement_edgeset.size() == 0);
-        assert(!need_hybrid_fetching);
+        // NOTE: local acquire writelock MUST NOT need hybrid data fetching due to NO need for placement calculation (newly-admitted cache copies will still be invalid after cache placement)
+        assert(!is_finish); // NO victim fetching due to NO placement calculation
+        assert(best_placement_edgeset.size() == 0); // NO placement deployment due to NO placement calculation
+        assert(!need_hybrid_fetching); // Also NO hybrid data fetching
 
         return;
     }
@@ -494,25 +495,62 @@ namespace covered
         return covered_release_writelock_request_ptr;
     }
 
-    void CoveredCacheServerWorker::processRspToReleaseBeaconWritelock_(MessageBase* control_response_ptr) const
+    bool CoveredCacheServerWorker::processRspToReleaseBeaconWritelock_(MessageBase* control_response_ptr, const Value& value, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
     {
         assert(control_response_ptr != NULL);
-        assert(control_response_ptr->getMessageType() == MessageType::kCoveredReleaseWritelockResponse);
-        const CoveredReleaseWritelockResponse* covered_release_writelock_response_ptr = static_cast<const CoveredReleaseWritelockResponse*>(control_response_ptr);
+        const uint32_t source_edge_idx = control_response_ptr->getSourceIndex();
+
+        bool is_finish = false;
+
+        const MessageType message_type = control_response_ptr->getMessageType();
+        Key tmp_key;
+        VictimSyncset victim_syncset;
+        bool need_hybrid_fetching = false;
+        Edgeset best_placement_edgeset; // Used only if need_hybrid_fetching = true
+        if (message_type == MessageType::kCoveredReleaseWritelockResponse) // Normal release writelock response
+        {
+            const CoveredReleaseWritelockResponse* covered_release_writelock_response_ptr = static_cast<const CoveredReleaseWritelockResponse*>(control_response_ptr);
+            tmp_key = covered_release_writelock_response_ptr->getKey();
+            victim_syncset = covered_release_writelock_response_ptr->getVictimSyncsetRef();
+        }
+        else if (message_type == MessageType::kCoveredPlacementReleaseWritelockResponse) // Release writelock response with hybrid data fetching
+        {
+            const CoveredPlacementReleaseWritelockResponse* covered_placement_release_writelock_response_ptr = static_cast<const CoveredPlacementReleaseWritelockResponse*>(control_response_ptr);
+            tmp_key = covered_placement_release_writelock_response_ptr->getKey();
+            victim_syncset = covered_placement_release_writelock_response_ptr->getVictimSyncsetRef();
+
+            need_hybrid_fetching = true;
+            best_placement_edgeset = covered_placement_release_writelock_response_ptr->getEdgesetRef();
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "Invalid message type: " << message_type << " for processRspToReleaseBeaconWritelock_()";
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
 
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        CacheServer* tmp_cache_server_ptr = cache_server_worker_param_ptr_->getCacheServerPtr();
+        EdgeWrapper* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();
         CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
 
-        // Do nothing for CoveredReleaseWritelockResponse
-
         // Victim synchronization
-        const uint32_t source_edge_idx = covered_release_writelock_response_ptr->getSourceIndex();
-        const VictimSyncset& victim_syncset = covered_release_writelock_response_ptr->getVictimSyncsetRef();
         std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = tmp_edge_wrapper_ptr->getLocalBeaconedVictimsFromVictimSyncset(victim_syncset);
         tmp_covered_cache_manager_ptr->updateVictimTrackerForVictimSyncset(source_edge_idx, victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
 
-        return;
+        // Do nothing for CoveredReleaseWritelockResponse, yet notify beacon for non-blocking placement notification for CoveredPlacementReleaseWritelockResponse after hybrid data fetching
+        if (need_hybrid_fetching)
+        {
+            // Trigger placement notification remotely at the beacon edge node
+            is_finish = tmp_cache_server_ptr->notifyBeaconForPlacementAfterHybridFetch_(tmp_key, value, best_placement_edgeset, edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+            if (is_finish)
+            {
+                return is_finish;
+            }
+        }
+
+        return is_finish;
     }
 
     // (3) Process redirected requests

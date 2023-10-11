@@ -241,14 +241,20 @@ namespace covered
         return;
     }
 
-    void BasicCacheServerWorker::processRspToReleaseBeaconWritelock_(MessageBase* control_response_ptr) const
+    bool BasicCacheServerWorker::processRspToReleaseBeaconWritelock_(MessageBase* control_response_ptr, const Value& value, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
     {
         assert(control_response_ptr != NULL);
         assert(control_response_ptr->getMessageType() == MessageType::kReleaseWritelockResponse);
 
+        bool is_finish = false;
+
         // Do nothing for ReleaseWritelockResponse
 
-        return;
+        UNUSED(total_bandwidth_usage);
+        UNUSED(event_list);
+        UNUSED(skip_propagation_latency);
+
+        return is_finish;
     }
 
     // (3) Process redirected requests

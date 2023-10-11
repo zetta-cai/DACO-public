@@ -793,6 +793,13 @@ namespace covered
 
         if (edge_wrapper_ptr_->getCacheName() == Util::COVERED_CACHE_NAME) // ONLY for COVERED
         {
+            // Victim synchronization
+            const KeyByteVictimsetMessage* directory_update_response_ptr = static_cast<const KeyByteVictimsetMessage*>(control_response_ptr);
+            const uint32_t source_edge_idx = directory_update_response_ptr->getSourceIndex();
+            const VictimSyncset& victim_syncset = directory_update_response_ptr->getVictimSyncsetRef();
+            std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = edge_wrapper_ptr_->getLocalBeaconedVictimsFromVictimSyncset(victim_syncset);
+            tmp_covered_cache_manager_ptr->updateVictimTrackerForVictimSyncset(source_edge_idx, victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
+            
             if (!is_background) // Foreground remote directory eviction (triggered by invalid/valid value update by local get/put and independent admission)
             {
                 // NOTE: ONLY foreground directory eviction could trigger hybrid data fetching
@@ -836,13 +843,6 @@ namespace covered
                 const CoveredPlacementDirectoryUpdateResponse* covered_placement_directory_update_response_ptr = static_cast<const CoveredPlacementDirectoryUpdateResponse*>(control_response_ptr);
                 is_being_written = covered_placement_directory_update_response_ptr->isBeingWritten();
             }
-
-            // Victim synchronization
-            const KeyByteVictimsetMessage* directory_update_response_ptr = static_cast<const KeyByteVictimsetMessage*>(control_response_ptr);
-            const uint32_t source_edge_idx = directory_update_response_ptr->getSourceIndex();
-            const VictimSyncset& victim_syncset = directory_update_response_ptr->getVictimSyncsetRef();
-            std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = edge_wrapper_ptr_->getLocalBeaconedVictimsFromVictimSyncset(victim_syncset);
-            tmp_covered_cache_manager_ptr->updateVictimTrackerForVictimSyncset(source_edge_idx, victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
         }
         else // Baselines
         {

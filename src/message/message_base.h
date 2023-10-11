@@ -85,6 +85,7 @@ namespace covered
         kCoveredVictimFetchResponse,
         kCoveredPlacementDirectoryLookupResponse,
         kCoveredPlacementDirectoryEvictResponse,
+        kCoveredPlacementReleaseWritelockResponse,
         kCoveredPlacementHybridFetchedRequest,
         kCoveredPlacementHybridFetchedResponse,
         kCoveredPlacementDirectoryAdmitRequest,

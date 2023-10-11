@@ -1297,7 +1297,7 @@ namespace covered
         else // Get target edge index from remote directory information at the beacon node
         {
             // NOTE: beacon server of beacon node has already notified all blocked edges -> NO need to notify them again in cache server
-            is_finish = releaseBeaconWritelock_(key, total_bandwidth_usage, event_list, skip_propagation_latency); // Add events of intermediate response if with event tracking
+            is_finish = releaseBeaconWritelock_(key, value, total_bandwidth_usage, event_list, skip_propagation_latency); // Add events of intermediate response if with event tracking
             if (is_finish) // Edge is NOT running
             {
                 return is_finish;
@@ -1312,7 +1312,7 @@ namespace covered
         return is_finish;
     }
 
-    bool CacheServerWorkerBase::releaseBeaconWritelock_(const Key& key, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency)
+    bool CacheServerWorkerBase::releaseBeaconWritelock_(const Key& key, const Value& value, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency)
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
@@ -1363,7 +1363,11 @@ namespace covered
                 assert(control_response_ptr != NULL);
 
                 // Process release writelock response
-                processRspToReleaseBeaconWritelock_(control_response_ptr);
+                bool is_finish = processRspToReleaseBeaconWritelock_(control_response_ptr, value, total_bandwidth_usage, event_list, skip_propagation_latency);
+                if (is_finish)
+                {
+                    return is_finish; // Edge is NOT running
+                }
 
                 // Update total bandwidth usage for received release writelock response
                 BandwidthUsage release_writelock_response_bandwidth_usage = control_response_ptr->getBandwidthUsageRef();

@@ -148,7 +148,7 @@ namespace covered
         return acquire_writelock_response_ptr;
     }
 
-    bool BasicBeaconServer::processReqToReleaseLocalWritelock_(MessageBase* control_request_ptr, std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges, BandwidthUsage& total_bandwidth_usage, EventList& event_list)
+    bool BasicBeaconServer::processReqToReleaseLocalWritelock_(MessageBase* control_request_ptr, std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, BandwidthUsage& total_bandwidth_usage, EventList& event_list)
     {
         assert(control_request_ptr != NULL);
         assert(control_request_ptr->getMessageType() == MessageType::kReleaseWritelockRequest);
@@ -164,18 +164,23 @@ namespace covered
         blocked_edges = edge_wrapper_ptr_->getCooperationWrapperPtr()->releaseLocalWritelock(tmp_key, sender_edge_idx, sender_directory_info, is_source_cached);
         UNUSED(is_source_cached);
 
+        UNUSED(best_placement_edgeset);
+        UNUSED(need_hybrid_fetching);
         UNUSED(total_bandwidth_usage);
         UNUSED(event_list);
         return is_finish;
     }
 
-    MessageBase* BasicBeaconServer::getRspToReleaseLocalWritelock_(const Key& key, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency) const
+    MessageBase* BasicBeaconServer::getRspToReleaseLocalWritelock_(const Key& key, const Edgeset& best_placement_edgeset, const bool& need_hybrid_fetching, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency) const
     {
         checkPointers_();
 
         uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
         MessageBase* release_writelock_response_ptr = new ReleaseWritelockResponse(key, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
         assert(release_writelock_response_ptr != NULL);
+
+        UNUSED(best_placement_edgeset);
+        UNUSED(need_hybrid_fetching);
 
         return release_writelock_response_ptr;
     }

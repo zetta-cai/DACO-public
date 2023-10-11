@@ -53,7 +53,7 @@ namespace covered
 
         virtual bool releaseLocalWritelock_(const Key& key, const Value& value, std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges, BandwidthUsage& total_bandwidth_usgae, EventList& event_list, const bool& skip_propagation_latency) override; // Return if edge node is finished
         virtual MessageBase* getReqToReleaseBeaconWritelock_(const Key& key, const bool& skip_propagation_latency) const override;
-        virtual void processRspToReleaseBeaconWritelock_(MessageBase* control_response_ptr) const override;
+        virtual bool processRspToReleaseBeaconWritelock_(MessageBase* control_response_ptr, const Value& value, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const override;
 
         // (3) Process redirected requests
 
