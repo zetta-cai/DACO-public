@@ -422,7 +422,7 @@ namespace covered
             peredge_victim_metadata_t::const_iterator victim_metadata_map_const_iter = peredge_victim_metadata_.find(tmp_edge_idx);
 
             // (MINOR CASE) Non-existing edge-level victim metadata indicates empty victim syncset carried by the request triggering placement calculation, i.e., system is just starting and tmp_edge_idx has NOT cached any object
-            if (victim_metadata_map_const_iter != peredge_victim_metadata_.end())
+            if (victim_metadata_map_const_iter == peredge_victim_metadata_.end())
             {
                 continue; // Equivalent to that tmp_edge_idx has NOT used any cache size (i.e., sufficiently large cache margin bytes) and hence NOT find any victim from tmp_edge_idx
             }

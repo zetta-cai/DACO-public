@@ -41,7 +41,13 @@ namespace covered
             }
         }
 
+        // TMPDEBUG1012
+        Util::dumpDebugMsg(instance_name_, "updateAggregatedUncachedPopularity...");
+
         popularity_aggregator_.updateAggregatedUncachedPopularity(key, source_edge_idx, collected_popularity, tmp_is_global_cached, is_source_cached);
+
+        // TMPDEBUG1012
+        Util::dumpVariablesForDebug(instance_name_, 4, "need_placement_calculation:", Util::toString(need_placement_calculation).c_str(), "is_tracked_by_source_edge_node:", Util::toString(collected_popularity.isTracked()).c_str());
         
         // NOTE: we do NOT perform placement calculation for local/remote acquire writelock request, as newly-admitted cache copies will still be invalid after cache placement
         if (need_placement_calculation)
@@ -50,6 +56,9 @@ namespace covered
             // NOTE: NO need to perform placement calculation if key is NOT tracked by source edge node, as removing old local uncached popularity if any will NEVER increase admission benefit
             if (is_tracked_by_source_edge_node)
             {
+                // TMPDEBUG1012
+                Util::dumpDebugMsg(instance_name_, "placementCalculation_...");
+
                 // Perform greedy-based placement calculation for trade-off-aware cache placement
                 // NOTE: set best_placement_edgeset for preserved edgeset and placement notifications; set best_placement_peredge_synced_victimset for synced victim removal from victim tracker and best_placement_peredge_fetched_victimset for fetched victim removal from victim cache, to avoid duplicate eviction (all for non-blocking placement deployment)
                 std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>> best_placement_peredge_synced_victimset;
@@ -61,10 +70,21 @@ namespace covered
                     return is_finish; // Edge node is NOT running now
                 }
 
+                // TMPDEBUG1012
+                Util::dumpVariablesForDebug(instance_name_, 2, "has_best_placement:", Util::toString(has_best_placement).c_str());
+
                 if (has_best_placement)
                 {
+                    // TMPDEBUG1012
+                    Util::dumpDebugMsg(instance_name_, "updatePreservedEdgesetForPlacement...");
+
+                    // TODO: END HERE
+
                     // Preserve placement edgeset + perform local-uncached-popularity removal to avoid duplicate placement, and update max admission benefit with aggregated uncached popularity for non-blocking placement deployment
                     popularity_aggregator_.updatePreservedEdgesetForPlacement(key, best_placement_edgeset, tmp_is_global_cached);
+
+                    // TMPDEBUG1012
+                    Util::dumpDebugMsg(instance_name_, "removeVictimsForGivenEdge...");
 
                     // Remove involved synced victims from victim tracker for each edge node in placement edgeset to avoid duplicate eviction
                     // NOTE: synced victims MUST exist in edge-level victim metadata of victim tracker
@@ -80,6 +100,9 @@ namespace covered
                     // NOTE: extra fetched victims may NOT exist in victim cache
                     // NOTE: removed extra fetched victims should NOT be reused <- if the edge node needs more victims and triggers victim fetching again, the request MUST be later than placement notification request, which has changed the synced victims in the edge node
                     UNUSED(best_placement_peredge_fetched_victimset);
+
+                    // TMPDEBUG1012
+                    Util::dumpDebugMsg(instance_name_, "nonblockDataFetchForPlacement...");
 
                     // Non-blocking data fetching if with best placement
                     edge_wrapper_ptr->nonblockDataFetchForPlacement(key, best_placement_edgeset, skip_propagation_latency, sender_is_beacon, need_hybrid_fetching);

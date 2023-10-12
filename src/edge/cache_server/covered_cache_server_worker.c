@@ -42,6 +42,9 @@ namespace covered
 
         bool is_finish = false;
 
+        // TMPDEBUG1012
+        Util::dumpDebugMsg(instance_name_, "start to look up local directory...");
+
         uint32_t current_edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
         bool is_source_cached = false;
         bool is_global_cached = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->lookupDirectoryTableByCacheServer(key, current_edge_idx, is_being_written, is_valid_directory_exist, directory_info, is_source_cached);
@@ -65,6 +68,9 @@ namespace covered
         }
 
         // NOTE: need_hybrid_fetching with best_placement_edgeset is processed in CacheServerWorkerBase::processLocalGetRequest_(), as we do NOT have value yet when lookuping directory information
+
+        // TMPDEBUG1012
+        Util::dumpDebugMsg(instance_name_, "finish to look up local directory...");
 
         return is_finish;
     }

@@ -177,12 +177,12 @@ namespace covered
             oss << "Cache name: " << cache_name_ << std::endl;
             oss << "Capacity (bytes): " << capacity_bytes_ << std::endl;
             oss << "Hash name: " << hash_name_ << std::endl;
-            oss << "Per-cache-server worker count:" << percacheserver_workercnt_ << std::endl;
+            oss << "Per-cache-server worker count:" << percacheserver_workercnt_;
             if (cache_name_ == Util::COVERED_CACHE_NAME)
             {
                 // ONLY for COVERED
                 oss << std::endl << "Covered local uncached max mem usage (bytes): " << covered_local_uncached_max_mem_usage_bytes_ << std::endl;
-                oss << "Covered per-edge-node synced victim count:" << covered_peredge_synced_victimcnt_;
+                oss << "Covered per-edge-node synced victim count:" << covered_peredge_synced_victimcnt_ << std::endl;
                 oss << "Covered popularity aggregation max mem usage (bytes): " << covered_popularity_aggregation_max_mem_usage_bytes_ << std::endl;
                 oss << "Covered popularity collection change ratio: " << covered_popularity_collection_change_ratio_ << std::endl;
                 oss << "Covered top-k edge count: " << covered_topk_edgecnt_;

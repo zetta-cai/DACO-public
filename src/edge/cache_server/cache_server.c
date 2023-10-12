@@ -587,8 +587,7 @@ namespace covered
                 }
 
                 #ifdef DEBUG_CACHE_SERVER
-                const Value& tmp_victim_value = total_victims.find(tmp_victim_key)->second;
-                Util::dumpVariablesForDebug(base_instance_name_, 7, "eviction;", "keystr:", tmp_victim_key.getKeystr().c_str(), "is value deleted:", Util::toString(tmp_victim_value.isDeleted()).c_str(), "value size:", Util::toString(tmp_victim_value.getValuesize()).c_str());
+                Util::dumpVariablesForDebug(instance_name_, 7, "eviction;", "keystr:", tmp_victim_key.getKeystr().c_str(), "is value deleted:", Util::toString(tmp_victim_value.isDeleted()).c_str(), "value size:", Util::toString(tmp_victim_value.getValuesize()).c_str());
                 #endif
             } // End of iter_for_request
 

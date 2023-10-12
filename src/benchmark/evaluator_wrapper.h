@@ -9,7 +9,7 @@
 #ifndef EVALUATOR_WRAPPER_H
 #define EVALUATOR_WRAPPER_H
 
-#define DEBUG_EVALUATOR_WRAPPER
+//#define DEBUG_EVALUATOR_WRAPPER
 
 #include <string>
 #include <unordered_map>
