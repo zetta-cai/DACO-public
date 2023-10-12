@@ -33,7 +33,7 @@ namespace covered
         void findVictimsForObjectSize(const uint32_t& cur_edge_idx, const ObjectSize& object_size, std::unordered_map<Key, Edgeset, KeyHasher>& pervictim_edgeset, std::unordered_map<Key, std::list<VictimCacheinfo>, KeyHasher>& pervictim_cacheinfos, std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& peredge_synced_victimset, std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& peredge_fetched_victimset, Edgeset& victim_fetch_edgeset, const std::list<VictimCacheinfo>& extra_victim_cacheinfos) const;
 
         // NOTE: removed victims should NOT be reused <- if synced victims in the edge node do NOT change, removed victims will NOT be reported to the beacon node due to dedup/delta-compression in victim synchronization; if need more victims, victim fetching request MUST be later than placement notification request, which has changed the synced victims in the edge node
-        void removeVictimsForPlacement(const std::unordered_set<Key, KeyHasher>& victim_keyset);
+        bool removeVictimsForPlacement(const std::unordered_set<Key, KeyHasher>& victim_keyset, uint64_t& removed_cacheinfos_size); // Return if victim_cacheinfos_ is empty; removed_size indicates the size of all removed victim cacheinfos
 
         const EdgelevelVictimMetadata& operator=(const EdgelevelVictimMetadata& other);
     private:

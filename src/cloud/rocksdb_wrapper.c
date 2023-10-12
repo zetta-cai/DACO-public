@@ -59,7 +59,14 @@ namespace covered
 
         // Parent directory must exit
         std::string parentDirpath = Util::getParentDirpath(db_dirpath);
-        assert(Util::isDirectoryExist(parentDirpath));
+        if (!Util::isDirectoryExist(parentDirpath))
+        {
+            oss.clear();
+            oss.str("");
+            oss << "cloud RocksDB's parent directory " << parentDirpath << " does not exist; please run dataset_loader first before evaluation!";
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
 
         // Open RocksDB KVS with suggested settings
         open_(cloud_storage, db_dirpath);

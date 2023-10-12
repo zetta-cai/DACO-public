@@ -7,6 +7,7 @@
 #include "common/config.h"
 #include "common/util.h"
 #include "cooperation/basic_cooperation_wrapper.h"
+#include "cooperation/covered_cooperation_wrapper.h"
 #include "network/network_addr.h"
 
 namespace covered
@@ -19,7 +20,7 @@ namespace covered
 
         if (cache_name == Util::COVERED_CACHE_NAME)
         {
-            //cooperation_wrapper_ptr = new CoveredCooperationWrapper(edgecnt, edge_idx, hash_name);
+            cooperation_wrapper_ptr = new CoveredCooperationWrapper(edgecnt, edge_idx, hash_name);
         }
         else
         {

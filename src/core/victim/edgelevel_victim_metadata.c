@@ -132,9 +132,10 @@ namespace covered
         return;
     }
 
-    void EdgelevelVictimMetadata::removeVictimsForPlacement(const std::unordered_set<Key, KeyHasher>& victim_keyset)
+    bool EdgelevelVictimMetadata::removeVictimsForPlacement(const std::unordered_set<Key, KeyHasher>& victim_keyset, uint64_t& removed_cacheinfos_size)
     {
         // Remove victims from victim_cacheinfos_
+        removed_cacheinfos_size = 0;
         for (std::unordered_set<Key, KeyHasher>::const_iterator victim_keyset_const_iter = victim_keyset.begin(); victim_keyset_const_iter != victim_keyset.end(); victim_keyset_const_iter++)
         {
             bool found_victim = false;
@@ -142,6 +143,8 @@ namespace covered
             {
                 if (cacheinfo_list_iter->getKey() == *victim_keyset_const_iter) // Find the correpsonding victim cacheinfo
                 {
+                    removed_cacheinfos_size += cacheinfo_list_iter->getSizeForCapacity();
+
                     victim_cacheinfos_.erase(cacheinfo_list_iter);
                     found_victim = true;
                     break;
@@ -154,7 +157,8 @@ namespace covered
 
         // NOTE: even if all victim cacheinfos are removed, we still keep the EdgeLevelVictimMetadata for placement calculation (see VictimTracker::findVictimsForPlacement_())
         
-        return;
+        bool is_empty = (victim_cacheinfos_.size() == 0);
+        return is_empty;
     }
 
     const EdgelevelVictimMetadata& EdgelevelVictimMetadata::operator=(const EdgelevelVictimMetadata& other)

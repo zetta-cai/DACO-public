@@ -27,10 +27,10 @@ namespace covered
         uint64_t getCapacityBytes() const;
         std::string getHashName() const;
         uint32_t getPercacheserverWorkercnt() const;
-        uint32_t getPeredgeSyncedVictimcnt() const;
 
         // ONLY for COVERED
         uint64_t getCoveredLocalUncachedMaxMemUsageBytes() const;
+        uint32_t getCoveredPeredgeSyncedVictimcnt() const;
         uint64_t getCoveredPopularityAggregationMaxMemUsageBytes() const;
         double getCoveredPopularityCollectionChangeRatio() const;
         uint32_t getCoveredTopkEdgecnt() const;
@@ -50,10 +50,10 @@ namespace covered
         uint64_t capacity_bytes_;
         std::string hash_name_;
         uint32_t percacheserver_workercnt_;
-        uint32_t peredge_synced_victimcnt_;
 
         // ONLY for COVERED
         uint64_t covered_local_uncached_max_mem_usage_bytes_;
+        uint32_t covered_peredge_synced_victimcnt_;
         uint64_t covered_popularity_aggregation_max_mem_usage_bytes_;
         double covered_popularity_collection_change_ratio_;
         uint32_t covered_topk_edgecnt_;

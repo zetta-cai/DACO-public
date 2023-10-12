@@ -1071,7 +1071,6 @@ namespace covered
     MessageBase::MessageBase(const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency)
     {
         message_type_ = message_type;
-        is_response_ = isDataResponse() || isControlResponse();
 
         source_index_ = source_index;
         source_addr_ = source_addr;
@@ -1080,6 +1079,7 @@ namespace covered
         skip_propagation_latency_ = skip_propagation_latency;
 
         is_valid_ = true;
+        is_response_ = isDataResponse() || isControlResponse(); // NOTE: isDataResponse() and isControlResponse() require is_valid_ = true
     }
 
     // NOTE: CANNOT call pure method in constructor or destructor, as the derived object has not been contructed or has already been destructed

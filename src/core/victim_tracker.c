@@ -239,8 +239,23 @@ namespace covered
         peredge_victim_metadata_t::iterator peredge_victim_metadata_iter = peredge_victim_metadata_.find(edge_idx);
         assert(peredge_victim_metadata_iter != peredge_victim_metadata_.end());
 
-        // Remove corresponding victim cacheinfos from peredge_victim_metadata_ if any
-        peredge_victim_metadata_iter->second.removeVictimsForPlacement(victim_keyset);
+        // Remove corresponding victim cacheinfos from peredge_victim_metadata_iter->second if any
+        uint64_t removed_cacheinfos_size = 0;
+        bool is_empty = peredge_victim_metadata_iter->second.removeVictimsForPlacement(victim_keyset, removed_cacheinfos_size);
+        if (removed_cacheinfos_size > 0)
+        {
+            size_bytes_ = Util::uint64Minus(size_bytes_, removed_cacheinfos_size); // For removed victim cacheinfos
+        }
+
+        // NOTE: even if all victim cacheinfos in the edge-level victim metadata are removed after placement calculation, we will NOT erase the edge-level victim metadata from peredge_victim_metadata_, as we need to find victims based on its cache margin bytes (see VictimTracker::findVictimsForPlacement_())
+        /*// Remove edgeidx-edge_level_metadata pair (i.e., peredge_victim_metadata_iter) from peredge_victim_metadata_
+        if (is_empty)
+        {
+            peredge_victim_metadata_.erase(peredge_victim_metadata_iter);
+
+            size_bytes_ = Util::uint64Minus(size_bytes_, sizeof(uint32_t)); // For edge_idx
+            size_bytes_ = Util::uint64Minus(size_bytes_, sizeof(uint64_t)); // For cache_margin_bytes
+        }*/
 
         // Remove corresponding victim dirinfos from perkey_victim_dirinfo_ if refcnt becomes zero
         for (std::unordered_set<Key, KeyHasher>::const_iterator victim_keyset_const_iter = victim_keyset.begin(); victim_keyset_const_iter != victim_keyset.end(); victim_keyset_const_iter++)
@@ -404,9 +419,16 @@ namespace covered
         {
             uint32_t tmp_edge_idx = *placement_edgeset_const_iter;
 
-            // NOTE: edge-level victim metadata for tmp_edge_idx MUST exist, as we have performed victim synchronization when collecting local uncached popularity of the given key from tmp_edge_idx
-            // NOTE: even if all victim cacheinfos in the edge-level victim metadata are removed after placement calculation, we will NOT erase the edge-level victim metadata from peredge_victim_metadata_
             peredge_victim_metadata_t::const_iterator victim_metadata_map_const_iter = peredge_victim_metadata_.find(tmp_edge_idx);
+
+            // (MINOR CASE) Non-existing edge-level victim metadata indicates empty victim syncset carried by the request triggering placement calculation, i.e., system is just starting and tmp_edge_idx has NOT cached any object
+            if (victim_metadata_map_const_iter != peredge_victim_metadata_.end())
+            {
+                continue; // Equivalent to that tmp_edge_idx has NOT used any cache size (i.e., sufficiently large cache margin bytes) and hence NOT find any victim from tmp_edge_idx
+            }
+
+            // NOTE: from here, edge-level victim metadata for tmp_edge_idx MUST exist, as we have performed victim synchronization when collecting local uncached popularity of the given key from tmp_edge_idx
+            // NOTE: even if all victim cacheinfos in the edge-level victim metadata are removed after placement calculation, we will NOT erase the edge-level victim metadata from peredge_victim_metadata_
             assert(victim_metadata_map_const_iter != peredge_victim_metadata_.end());
 
             // Prepare extra victim cacheinfos for tmp_edge_idx if any

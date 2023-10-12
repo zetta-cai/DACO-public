@@ -3,6 +3,8 @@
  * 
  * NOTE: all non-const shared variables in CooperationWrapperBase should be thread safe.
  * 
+ * NOTE: CooperationWrapper is used by beacon edge node to maintain content diretory information and MSI metadata, while DirectoryCacher is used by sender edge node to cache remote valid directory information, so we maintain DirectoryCacher in CoveredCacheMananger instead of CooperationWrapper.
+ * 
  * By Siyuan Sheng (2023.06.06).
  */
 

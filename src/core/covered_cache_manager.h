@@ -5,6 +5,8 @@
  * 
  * NOTE: in COVERED with cooperative-caching-aware cache management, local edge cache needs to provide/update metadata (e.g., local uncached popularity and current-edge-node victims), while cooperation wrapper needs to sync metadata (e.g., popularity aggregation and victim synchronization) to gain a global view of all involved edge nodes for cache management with cooperation awareness.
  * 
+ * NOTE: DirectoryCacher is used by sender edge node to cache remote valid directory information, while CooperationWrapper is used by beacon edge node to maintain content diretory information and MSI metadata, so we maintain DirectoryCacher in CoveredCacheMananger instead of CooperationWrapper.
+ * 
  * By Siyuan Sheng (2023.08.26).
  */
 
@@ -89,13 +91,13 @@ namespace covered
         // Non-const shared variables (each should be thread safe)
         // NOTE: we do NOT use per-key fine-grained locking here, as CoveredCacheManager does NOT need strong serializability/atomicity for its componenets, and some components (PopularityAggregator and VictimTracker) CANNOT use per-key fine-grained locking due to accessing multiple keys in one function (e.g., discardGlobalLessPopularObjects_() and updateLocalSyncedVictims())
 
-        // Track aggregated uncached popularity for global admission (thread safe)
+        // Track aggregated uncached popularity for global admission (thread safe; used by beacon edge node)
         PopularityAggregator popularity_aggregator_;
 
-        // Track per-edge-node least popular victims for placement and eviction (thread safe)
+        // Track per-edge-node least popular victims for placement and eviction (thread safe; used by sender/beacon edge node)
         VictimTracker victim_tracker_;
 
-        // Track cached directory of popular local uncached objects to reduce message overhead (thread safe)
+        // Track cached directory of popular local uncached objects to reduce message overhead (thread safe; used by sender edge node)
         DirectoryCacher directory_cacher_;
     };
 }
