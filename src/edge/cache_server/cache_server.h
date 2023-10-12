@@ -76,7 +76,7 @@ namespace covered
 
         // Non-const individual variable
         std::vector<CacheServerWorkerParam> cache_server_worker_params_; // Each cache server thread has a unique param
-        CacheServerVictimFetchProcessorParam cache_server_victim_fetch_processor_param_; // Only one cache server victim fetch processor thread
+        CacheServerVictimFetchProcessorParam* cache_server_victim_fetch_processor_param_ptr_; // Only one cache server victim fetch processor thread
         CacheServerPlacementProcessorParam cache_server_placement_processor_param_; // Only one cache server placement processor thread
 
         // For receiving local requests

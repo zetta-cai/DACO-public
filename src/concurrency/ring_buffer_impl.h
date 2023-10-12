@@ -21,7 +21,7 @@ namespace covered
         if (with_multi_providers)
         {
             rwlock_for_multi_providers_ptr_ = new Rwlock("rwlock_for_multi_providers_ptr_");
-            assert(rwlock_for_multi_providers_ptr_ != NULL)
+            assert(rwlock_for_multi_providers_ptr_ != NULL);
         }
         else
         {
@@ -55,7 +55,7 @@ namespace covered
         }
         */
         
-        if (with_multi_providers)
+        if (with_multi_providers_)
         {
             assert(rwlock_for_multi_providers_ptr_ != NULL);
             delete rwlock_for_multi_providers_ptr_;
@@ -76,7 +76,7 @@ namespace covered
         
         // Acquire a write lock
         const std::string context_name = "RingBuffer::push()";
-        if (with_multi_providers)
+        if (with_multi_providers_)
         {
             assert(rwlock_for_multi_providers_ptr_ != NULL);
             rwlock_for_multi_providers_ptr_->acquire_lock(context_name);
@@ -99,7 +99,7 @@ namespace covered
             is_successful = true;
         }
 
-        if (with_multi_providers)
+        if (with_multi_providers_)
         {
             rwlock_for_multi_providers_ptr_->unlock(context_name);
         }
@@ -219,7 +219,7 @@ namespace covered
         if (with_multi_providers_ && rwlock_for_multi_providers_ptr_ == NULL)
         {
             rwlock_for_multi_providers_ptr_ = new Rwlock("rwlock_for_multi_providers_ptr_");
-            assert(rwlock_for_multi_providers_ptr_ != NULL)
+            assert(rwlock_for_multi_providers_ptr_ != NULL);
         }
         else if (!with_multi_providers_ && rwlock_for_multi_providers_ptr_ != NULL)
         {

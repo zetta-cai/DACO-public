@@ -111,7 +111,7 @@ namespace covered
                 LruCacheReadHandle tmp_victim_handle = covered_cache_ptr_->find(tmp_victim_key.getKeystr()); // NOTE: although find() will move the item to the front of the LRU list to update recency information inside cachelib, covered uses local cache metadata tracked outside cachelib for cache management
                 assert(tmp_victim_handle != nullptr); // Victim must be cached before eviction
                 tmp_victim_value_size = tmp_victim_handle->getSize();
-                tmp_victim_object_size = tmp_victim_key.getKeyLength() + tmp_victim_value_size;
+                uint32_t tmp_victim_object_size = tmp_victim_key.getKeyLength() + tmp_victim_value_size;
 
                 VictimCacheinfo tmp_victim_info(tmp_victim_key, tmp_victim_object_size, tmp_local_cached_popularity, tmp_redirected_cached_popularity);
                 local_synced_victim_cacheinfos.push_back(tmp_victim_info); // Add to the tail of the list

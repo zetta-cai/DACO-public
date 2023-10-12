@@ -5,7 +5,7 @@
  */
 
 #ifndef EDGESET_H
-#define EDGEEST_H
+#define EDGESET_H
 
 #include <string>
 #include <unordered_set>

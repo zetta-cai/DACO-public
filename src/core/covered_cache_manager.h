@@ -15,6 +15,12 @@
 #include <string>
 #include <unordered_map>
 
+namespace covered
+{
+    // Forward declaration
+    class CoveredCacheManager;
+}
+
 #include "common/key.h"
 #include "cooperation/directory/directory_info.h"
 #include "core/directory_cacher.h"

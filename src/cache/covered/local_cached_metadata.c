@@ -114,6 +114,7 @@ namespace covered
         // NOTE: although we track local cached metadata outside CacheLib to avoid extensive hacking, per-key lookup metadata actually can be stored into cachelib::ChainedHashTable -> NO need to count the size of keys and object-level metadata iterators of lookup metadata for local cached objects
         //total_size = Util::uint64Add(total_size, perkey_lookup_table_key_size_);
         //total_size = Util::uint64Add(total_size, perkey_lookup_table_perkey_metadata_iter_size); // LRU list iterator
+        UNUSED(perkey_lookup_table_perkey_metadata_iter_size);
         total_size = Util::uint64Add(total_size, perkey_lookup_table_sorted_popularity_iter_size); // Popularity list iterator
 
         return total_size;

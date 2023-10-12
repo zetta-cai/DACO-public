@@ -11,6 +11,12 @@
 
 #include <string>
 
+namespace covered
+{
+    // Forward declaration
+    class EdgeWrapper;
+}
+
 #include "cache/cache_wrapper.h"
 #include "cli/edge_cli.h"
 #include "common/node_wrapper_base.h"

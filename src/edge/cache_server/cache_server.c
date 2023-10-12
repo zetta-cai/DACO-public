@@ -40,8 +40,8 @@ namespace covered
         }
 
         // Prepare parameters for cache server victim fetch processor thread
-        CacheServerVictimFetchProcessorParam tmp_cache_server_victim_fetch_processor_param(this, Config::getEdgeCacheServerDataRequestBufferSize());
-        cache_server_victim_fetch_processor_param_ = tmp_cache_server_victim_fetch_processor_param;
+        cache_server_victim_fetch_processor_param_ptr_ = new CacheServerVictimFetchProcessorParam(this, Config::getEdgeCacheServerDataRequestBufferSize());
+        assert(cache_server_victim_fetch_processor_param_ptr_ != NULL);
 
         // Prepare parameters for cache server placement processor thread
         CacheServerPlacementProcessorParam tmp_cache_server_placement_processor_param(this, Config::getEdgeCacheServerDataRequestBufferSize());
@@ -74,6 +74,11 @@ namespace covered
         assert(hash_wrapper_ptr_ != NULL);
         delete hash_wrapper_ptr_;
         hash_wrapper_ptr_ = NULL;
+
+        // Release cache server victim fetch processor param
+        assert(cache_server_victim_fetch_processor_param_ptr_ != NULL);
+        delete cache_server_victim_fetch_processor_param_ptr_;
+        cache_server_victim_fetch_processor_param_ptr_ = NULL;
 
         // Release the socket server on recvreq port
         assert(edge_cache_server_recvreq_socket_server_ptr_ != NULL);
@@ -112,8 +117,8 @@ namespace covered
         }
 
         // Launch cache server victim fetch processor
-        //pthread_returncode = pthread_create(&cache_server_victim_fetch_processor_thread, NULL, CacheServerVictimFetchProcessor::launchCacheServerVictimFetchProcessor, (void*)(&cache_server_victim_fetch_processor_param_));
-        pthread_returncode = Util::pthreadCreateHighPriority(&cache_server_victim_fetch_processor_thread, CacheServerVictimFetchProcessor::launchCacheServerVictimFetchProcessor, (void*)(&cache_server_victim_fetch_processor_param_));
+        //pthread_returncode = pthread_create(&cache_server_victim_fetch_processor_thread, NULL, CacheServerVictimFetchProcessor::launchCacheServerVictimFetchProcessor, (void*)(cache_server_victim_fetch_processor_param_ptr_));
+        pthread_returncode = Util::pthreadCreateHighPriority(&cache_server_victim_fetch_processor_thread, CacheServerVictimFetchProcessor::launchCacheServerVictimFetchProcessor, (void*)(cache_server_victim_fetch_processor_param_ptr_));
         if (pthread_returncode != 0)
         {
             std::ostringstream oss;
@@ -238,7 +243,7 @@ namespace covered
         {
             // Pass cache server item into ring buffer of the cache server victim fetch processor
             CacheServerItem tmp_cache_server_item(data_requeset_ptr);
-            bool is_successful = cache_server_victim_fetch_processor_param_.getControlRequestBufferPtr()->push(tmp_cache_server_item);
+            bool is_successful = cache_server_victim_fetch_processor_param_ptr_->getControlRequestBufferPtr()->push(tmp_cache_server_item);
             assert(is_successful == true); // Ring buffer must NOT be full
         }
         else if (data_requeset_ptr->getMessageType() == MessageType::kCoveredPlacementNotifyRequest) // Placement notification
