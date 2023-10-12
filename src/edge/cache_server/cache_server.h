@@ -41,7 +41,6 @@ namespace covered
 
         EdgeWrapper* getEdgeWrapperPtr() const;
         NetworkAddr getEdgeCacheServerRecvreqSourceAddr() const;
-        CacheServerPlacementProcessorParam* getCacheServerPlacementProcessorParamPtr();
 
         // (1) For local edge cache admission and remote directory admission (invoked by edge cache server worker for independent admission; or by placement processor for remote placement notification)
         void admitLocalEdgeCache_(const Key& key, const Value& value, const bool& is_valid) const;
@@ -77,7 +76,7 @@ namespace covered
         // Non-const individual variable
         std::vector<CacheServerWorkerParam> cache_server_worker_params_; // Each cache server thread has a unique param
         CacheServerVictimFetchProcessorParam* cache_server_victim_fetch_processor_param_ptr_; // Only one cache server victim fetch processor thread
-        CacheServerPlacementProcessorParam cache_server_placement_processor_param_; // Only one cache server placement processor thread
+        CacheServerPlacementProcessorParam* cache_server_placement_processor_param_ptr_; // Only one cache server placement processor thread
 
         // For receiving local requests
         NetworkAddr edge_cache_server_recvreq_source_addr_; // The same as that used by clients or neighbors to send local/redirected requests (const shared variable)

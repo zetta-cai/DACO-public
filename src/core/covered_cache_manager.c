@@ -183,7 +183,7 @@ namespace covered
         
         // For lazy victim fetching before non-blocking placement deployment
         bool need_victim_fetching = false;
-        DeltaReward best_placement_admission_benefit;
+        DeltaReward best_placement_admission_benefit = 0.0;
         Edgeset tmp_best_placement_edgeset; // For preserved edgeset and placement notifications under non-blocking placement deployment
         std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>> tmp_best_placement_peredge_synced_victimset; // For synced victim removal under non-blocking placement deployment
         std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>> tmp_best_placement_peredge_fetched_victimset; // For fetched victim removal under non-blocking placement deployment

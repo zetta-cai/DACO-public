@@ -92,8 +92,8 @@ namespace covered
                 ("hash_name", boost::program_options::value<std::string>()->default_value(Util::MMH3_HASH_NAME, "the type of consistent hashing for DHT (e.g., mmh3)"))
                 ("percacheserver_workercnt", boost::program_options::value<uint32_t>()->default_value(1), "the number of worker threads for each cache server")
                 ("peredge_synced_victimcnt", boost::program_options::value<uint32_t>()->default_value(3), "the number of synced victims for each edge node")
-                ("covered_local_uncached_max_mem_usage_mb", boost::program_options::value<uint32_t>()->default_value(1), "the maximum memory usage for local uncached metadata in units of MiB (only for COVERED)")
-                ("covered_popularity_aggregation_max_mem_usage_mb", boost::program_options::value<uint32_t>()->default_value(1), "the maximum memory usage for popularity aggregation in units of MiB (only for COVERED)")
+                ("covered_local_uncached_max_mem_usage_mb", boost::program_options::value<uint64_t>()->default_value(1), "the maximum memory usage for local uncached metadata in units of MiB (only for COVERED)")
+                ("covered_popularity_aggregation_max_mem_usage_mb", boost::program_options::value<uint64_t>()->default_value(1), "the maximum memory usage for popularity aggregation in units of MiB (only for COVERED)")
                 ("covered_popularity_collection_change_ratio", boost::program_options::value<double>()->default_value(0.0), "the ratio for local uncached popularity changes to trigger popularity collection (only for COVERED)")
                 ("covered_topk_edgecnt", boost::program_options::value<uint32_t>()->default_value(1), "the number of top-k edge nodes for popularity aggregation and trade-off-aware cache placement (only for COVERED)")
             ;

@@ -4,10 +4,16 @@ namespace covered
 {
     const std::string VictimSyncset::kClassName = "VictimSyncset";
 
-    VictimSyncset::VictimSyncset(const uint64_t& cache_margin_bytes, const std::list<VictimCacheinfo>& local_synced_victims, const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& local_beaconed_victims) : cache_margin_bytes_(cache_margin_bytes), local_synced_victims_(local_synced_victims), local_beaconed_victims_(local_beaconed_victims)
+    VictimSyncset::VictimSyncset() : cache_margin_bytes_(0)
     {
         local_synced_victims_.clear();
         local_beaconed_victims_.clear();
+    }
+
+    VictimSyncset::VictimSyncset(const uint64_t& cache_margin_bytes, const std::list<VictimCacheinfo>& local_synced_victims, const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& local_beaconed_victims) : cache_margin_bytes_(cache_margin_bytes)
+    {
+        local_synced_victims_ = local_synced_victims;
+        local_beaconed_victims_ = local_beaconed_victims;
     }
 
     VictimSyncset::~VictimSyncset() {}

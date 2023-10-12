@@ -18,6 +18,6 @@ namespace covered
 
     bool CoveredPlacementDirectoryAdmitResponse::isBeingWritten() const
     {
-        return static_cast<bool>(this->getByte());
+        return static_cast<bool>(this->getByte_());
     }
 }

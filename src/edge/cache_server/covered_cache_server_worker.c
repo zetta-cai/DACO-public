@@ -246,7 +246,7 @@ namespace covered
         // Get value and hitflag from redirected response message
         const CoveredRedirectedGetResponse* const covered_redirected_get_response_ptr = static_cast<const CoveredRedirectedGetResponse*>(redirected_response_ptr);
         value = covered_redirected_get_response_ptr->getValue();
-        Hitflag hitflag = covered_redirected_get_response_ptr->getHitflag();
+        hitflag = covered_redirected_get_response_ptr->getHitflag();
 
         // Victim synchronization
         const uint32_t source_edge_idx = covered_redirected_get_response_ptr->getSourceIndex();
@@ -334,7 +334,7 @@ namespace covered
         assert(best_placement_edgeset.size() == 0); // NO placement deployment due to NO placement calculation
         assert(!need_hybrid_fetching); // Also NO hybrid data fetching
 
-        return;
+        return is_finish;
     }
 
     MessageBase* CoveredCacheServerWorker::getReqToAcquireBeaconWritelock_(const Key& key, const bool& skip_propagation_latency) const
@@ -466,7 +466,7 @@ namespace covered
             tmp_edge_wrapper_ptr->nonblockNotifyForPlacement(key, value, best_placement_edgeset, skip_propagation_latency);
         }
 
-        return;
+        return is_finish;
     }
 
     MessageBase* CoveredCacheServerWorker::getReqToReleaseBeaconWritelock_(const Key& key, const bool& skip_propagation_latency) const

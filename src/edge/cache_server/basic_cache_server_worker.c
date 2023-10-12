@@ -110,7 +110,7 @@ namespace covered
         // Get value and hitflag from redirected response message
         const RedirectedGetResponse* const redirected_get_response_ptr = static_cast<const RedirectedGetResponse*>(redirected_response_ptr);
         value = redirected_get_response_ptr->getValue();
-        Hitflag hitflag = redirected_get_response_ptr->getHitflag();
+        hitflag = redirected_get_response_ptr->getHitflag();
 
         return;
     }
@@ -238,7 +238,7 @@ namespace covered
         MessageBase* release_writelock_request_ptr = new ReleaseWritelockRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
         assert(release_writelock_request_ptr != NULL);
 
-        return;
+        return release_writelock_request_ptr;
     }
 
     bool BasicCacheServerWorker::processRspToReleaseBeaconWritelock_(MessageBase* control_response_ptr, const Value& value, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const

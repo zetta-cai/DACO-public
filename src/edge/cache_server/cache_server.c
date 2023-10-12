@@ -44,8 +44,8 @@ namespace covered
         assert(cache_server_victim_fetch_processor_param_ptr_ != NULL);
 
         // Prepare parameters for cache server placement processor thread
-        CacheServerPlacementProcessorParam tmp_cache_server_placement_processor_param(this, Config::getEdgeCacheServerDataRequestBufferSize());
-        cache_server_placement_processor_param_ = tmp_cache_server_placement_processor_param;
+        cache_server_placement_processor_param_ptr_ = new CacheServerPlacementProcessorParam(this, Config::getEdgeCacheServerDataRequestBufferSize());
+        assert(cache_server_placement_processor_param_ptr_ != NULL);
 
         // For receiving local requests
 
@@ -79,6 +79,11 @@ namespace covered
         assert(cache_server_victim_fetch_processor_param_ptr_ != NULL);
         delete cache_server_victim_fetch_processor_param_ptr_;
         cache_server_victim_fetch_processor_param_ptr_ = NULL;
+
+        // Release cache server placement processor param
+        assert(cache_server_placement_processor_param_ptr_ != NULL);
+        delete cache_server_placement_processor_param_ptr_;
+        cache_server_placement_processor_param_ptr_ = NULL;
 
         // Release the socket server on recvreq port
         assert(edge_cache_server_recvreq_socket_server_ptr_ != NULL);
@@ -128,8 +133,8 @@ namespace covered
         }
 
         // Launch cache server placement processor
-        //pthread_returncode = pthread_create(&cache_server_placement_processor_thread, NULL, CacheServerPlacementProcessor::launchCacheServerPlacementProcessor, (void*)(&cache_server_placement_processor_param_));
-        pthread_returncode = Util::pthreadCreateHighPriority(&cache_server_placement_processor_thread, CacheServerPlacementProcessor::launchCacheServerPlacementProcessor, (void*)(&cache_server_placement_processor_param_));
+        //pthread_returncode = pthread_create(&cache_server_placement_processor_thread, NULL, CacheServerPlacementProcessor::launchCacheServerPlacementProcessor, (void*)(cache_server_placement_processor_param_ptr_));
+        pthread_returncode = Util::pthreadCreateHighPriority(&cache_server_placement_processor_thread, CacheServerPlacementProcessor::launchCacheServerPlacementProcessor, (void*)(cache_server_placement_processor_param_ptr_));
         if (pthread_returncode != 0)
         {
             std::ostringstream oss;
@@ -176,11 +181,6 @@ namespace covered
     NetworkAddr CacheServer::getEdgeCacheServerRecvreqSourceAddr() const
     {
         return edge_cache_server_recvreq_source_addr_;
-    }
-
-    CacheServerPlacementProcessorParam* CacheServer::getCacheServerPlacementProcessorParamPtr()
-    {
-        return &cache_server_placement_processor_param_;
     }
 
     void CacheServer::receiveRequestsAndPartition_()
@@ -250,7 +250,7 @@ namespace covered
         {
             // Pass cache server item into ring buffer of the cache server placement processor
             CacheServerItem tmp_cache_server_item(data_requeset_ptr);
-            bool is_successful = cache_server_placement_processor_param_.getNotifyPlacementRequestBufferPtr()->push(tmp_cache_server_item);
+            bool is_successful = cache_server_placement_processor_param_ptr_->getNotifyPlacementRequestBufferPtr()->push(tmp_cache_server_item);
             assert(is_successful == true); // Ring buffer must NOT be full
         }
         else
@@ -1019,9 +1019,7 @@ namespace covered
             // NOTE: we need to notify placement processor of the current sender/closest edge node for local placement, because we need to use the background directory update requests to DISABLE recursive cache placement and also avoid blocking cache server worker which may serve subsequent placement calculation if sender is beacon (similar as EdgeWrapper::nonblockNotifyForPlacement() invoked by local/remote beacon edge node)
 
             // Notify placement processor to admit local edge cache (NOTE: NO need to admit directory) and trigger local cache eviciton, to avoid blocking cache server worker which may serve subsequent placement calculation if sender is beacon
-            //CacheServerPlacementProcessorParam* tmp_cache_server_placement_processor_param_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getCacheServerPlacementProcessorParamPtr();
             const bool is_valid = !is_being_written;
-            //bool is_successful = tmp_cache_server_placement_processor_param_ptr->getLocalCacheAdmissionBufferPtr()->push(LocalCacheAdmissionItem(key, value, is_valid, skip_propagation_latency));
             bool is_successful = edge_wrapper_ptr_->getLocalCacheAdmissionBufferPtr()->push(LocalCacheAdmissionItem(key, value, is_valid, skip_propagation_latency));
             assert(is_successful);
         }

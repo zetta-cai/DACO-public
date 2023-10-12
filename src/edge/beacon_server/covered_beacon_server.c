@@ -496,7 +496,7 @@ namespace covered
 
         // Get Hitflag for non-blocking placement deployment
         const Key tmp_key = covered_placement_redirected_get_response_ptr->getKey();
-        const bool tmp_hitflag = covered_placement_redirected_get_response_ptr->getHitflag();
+        const Hitflag tmp_hitflag = covered_placement_redirected_get_response_ptr->getHitflag();
         const bool skip_propagation_latency = redirected_get_response_ptr->isSkipPropagationLatency();
         const Edgeset& best_placement_edgeset = covered_placement_redirected_get_response_ptr->getEdgesetRef();
         assert(best_placement_edgeset.size() <= edge_wrapper_ptr_->getTopkEdgecntForPlacement()); // At most k placement edge nodes each time
@@ -520,7 +520,6 @@ namespace covered
         checkPointers_();
         assert(global_get_response_ptr != NULL);
         assert(edge_wrapper_ptr_->getCacheName() == Util::COVERED_CACHE_NAME);
-        CoveredCacheManager* covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
 
         const CoveredPlacementGlobalGetResponse* const covered_placement_global_get_response_ptr = static_cast<const CoveredPlacementGlobalGetResponse*>(global_get_response_ptr);
         //const Value tmp_value = covered_placement_global_get_response_ptr->getValue();

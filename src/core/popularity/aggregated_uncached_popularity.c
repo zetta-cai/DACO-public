@@ -304,7 +304,7 @@ namespace covered
             if (local_uncached_popularity > min_topk_local_uncached_popularity) // If local uncached popularity is larger than the minimum one in top-k list
             {
                 // Remove minimum local uncached popularity from the top-k
-                const uint32_t min_edge_idx = topk_edgeidx_local_uncached_popularity_pairs_.front().first;
+                //const uint32_t min_edge_idx = topk_edgeidx_local_uncached_popularity_pairs_.front().first;
                 topk_edgeidx_local_uncached_popularity_pairs_.pop_front();
 
                 // NOTE: NO need to remove min_edge_idx from sum and bitmap, as it still tracks the given key in local uncached metadata, which should hold in sum and bitmap

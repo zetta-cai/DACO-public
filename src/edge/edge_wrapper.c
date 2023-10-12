@@ -925,7 +925,6 @@ namespace covered
         std::list<VictimCacheinfo> local_synced_victim_cacheinfos = edge_cache_ptr_->getLocalSyncedVictimCacheinfos();
 
         // Get directory info sets for local synced victimed beaconed by the current edge node
-        const uint32_t current_edge_idx = getNodeIdx();
         std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_local_synced_victim_dirinfosets = getLocalBeaconedVictimsFromCacheinfos(local_synced_victim_cacheinfos);
 
         // Update local synced victims for the current edge node
