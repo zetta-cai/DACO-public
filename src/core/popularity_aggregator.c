@@ -40,17 +40,7 @@ namespace covered
         const std::string context_name = "PopularityAggregator::getAggregatedUncachedPopularity()";
         rwlock_for_popularity_aggregator_->acquire_lock_shared(context_name);
 
-        bool is_found = false;
-
-        perkey_benefit_popularity_table_const_iter_t perkey_benefit_popularity_const_iter = perkey_benefit_popularity_table_.find(key);
-        if (perkey_benefit_popularity_const_iter != perkey_benefit_popularity_table_.end())
-        {
-            benefit_popularity_multimap_iter_t benefit_popularity_iter = perkey_benefit_popularity_const_iter->second;
-            assert(benefit_popularity_iter != benefit_popularity_multimap_.end());
-            aggregated_uncached_popularity = benefit_popularity_iter->second; // Deep copy
-
-            is_found = true;
-        }
+        bool is_found = getAggregatedUncachedPopularity_(key, aggregated_uncached_popularity);
 
         rwlock_for_popularity_aggregator_->unlock_shared(context_name);
         return is_found;
@@ -151,7 +141,7 @@ namespace covered
 
         // NOTE: key MUST have aggregated uncached popularity if with placement edgeset
         AggregatedUncachedPopularity existing_aggregated_uncached_popularity;
-        bool has_aggregated_uncached_popularity = getAggregatedUncachedPopularity(key, existing_aggregated_uncached_popularity);
+        bool has_aggregated_uncached_popularity = getAggregatedUncachedPopularity_(key, existing_aggregated_uncached_popularity);
         assert(has_aggregated_uncached_popularity == true);
 
         // Preserve edge nodes of placement edgeset to ignore subsequent local uncached popularities from them
@@ -213,6 +203,25 @@ namespace covered
 
     // Utils
 
+    bool PopularityAggregator::getAggregatedUncachedPopularity_(const Key& key, AggregatedUncachedPopularity& aggregated_uncached_popularity) const
+    {
+        // NOTE: we have already acquired a read lock in getAggregatedUncachedPopularity() or updatePreservedEdgesetForPlacement() or updateAggregatedUncachedPopularity() for thread safety
+
+        bool is_found = false;
+
+        perkey_benefit_popularity_table_const_iter_t perkey_benefit_popularity_const_iter = perkey_benefit_popularity_table_.find(key);
+        if (perkey_benefit_popularity_const_iter != perkey_benefit_popularity_table_.end())
+        {
+            benefit_popularity_multimap_iter_t benefit_popularity_iter = perkey_benefit_popularity_const_iter->second;
+            assert(benefit_popularity_iter != benefit_popularity_multimap_.end());
+            aggregated_uncached_popularity = benefit_popularity_iter->second; // Deep copy
+
+            is_found = true;
+        }
+
+        return is_found;
+    }
+
     void PopularityAggregator::addAggregatedUncachedPopularityForNewKey_(const Key& key, const uint32_t& source_edge_idx, const Popularity& local_uncached_popularity, const ObjectSize& object_size, const bool& is_global_cached)
     {
         // NOTE: we have already acquired a write lock in updateAggregatedUncachedPopularity() for thread safety
@@ -233,7 +242,7 @@ namespace covered
 
         // Find the aggregated uncached popularity for the existing key
         AggregatedUncachedPopularity existing_aggregated_uncached_popularity;
-        bool has_aggregatd_uncached_popularity = getAggregatedUncachedPopularity(key, existing_aggregated_uncached_popularity); // Deep copy
+        bool has_aggregatd_uncached_popularity = getAggregatedUncachedPopularity_(key, existing_aggregated_uncached_popularity); // Deep copy
         assert(has_aggregatd_uncached_popularity == true); // For existing key
 
         // Update the aggregated uncached popularity for the existing key

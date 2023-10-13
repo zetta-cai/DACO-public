@@ -101,21 +101,28 @@ namespace covered
             TotalAggregatedStatistics prev_total_aggregated_statistics = getPrevslotTotalAggregatedStatistics();
             double prev_total_hit_ratio = prev_total_aggregated_statistics.getTotalHitRatio();
 
-            // If cache is filled up
-            bool is_cache_fillup = false;
-            if (cur_total_cache_margin_bytes <= CACHE_MARGIN_BYTES_IOTA_FOR_FILLUP || cur_total_cache_utilization >= CACHE_UTILIZATION_THRESHOLD_FOR_FILLUP)
-            {
-                is_cache_fillup = true;
-            }
-
-            // If cache becomes stable
             bool is_cache_stable = false;
-            if (is_cache_fillup)
+            if (cur_total_hit_ratio == 1.0) // Fully hit due to over-provisioned cache size capacity
             {
-                double abs_cache_hit_ratio_change = (cur_total_hit_ratio >= prev_total_hit_ratio)?(cur_total_hit_ratio - prev_total_hit_ratio):(prev_total_hit_ratio - cur_total_hit_ratio);
-                if (cur_total_hit_ratio > 0.0 && prev_total_hit_ratio > 0.0 && abs_cache_hit_ratio_change <= CACHE_HIT_RATIO_CHANGE_THRESHOLD_FOR_STABLE)
+                is_cache_stable = true;
+            }
+            else // Non-fully hit due to under-provisioned cache size capacity
+            {
+                // If cache is filled up
+                bool is_cache_fillup = false;
+                if (cur_total_cache_margin_bytes <= CACHE_MARGIN_BYTES_IOTA_FOR_FILLUP || cur_total_cache_utilization >= CACHE_UTILIZATION_THRESHOLD_FOR_FILLUP)
                 {
-                    is_cache_stable = true;
+                    is_cache_fillup = true;
+                }
+
+                // If cache becomes stable
+                if (is_cache_fillup)
+                {
+                    double abs_cache_hit_ratio_change = (cur_total_hit_ratio >= prev_total_hit_ratio)?(cur_total_hit_ratio - prev_total_hit_ratio):(prev_total_hit_ratio - cur_total_hit_ratio);
+                    if (cur_total_hit_ratio > 0.0 && prev_total_hit_ratio > 0.0 && abs_cache_hit_ratio_change <= CACHE_HIT_RATIO_CHANGE_THRESHOLD_FOR_STABLE) // Limited change on cache hit ratio
+                    {
+                        is_cache_stable = true;
+                    }
                 }
             }
 

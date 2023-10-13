@@ -13,6 +13,8 @@
 #ifndef COVERED_CACHE_MANAGER_H
 #define COVERED_CACHE_MANAGER_H
 
+//#define DEBUG_COVERED_CACHE_MANAGER
+
 #include <list>
 #include <string>
 #include <unordered_map>
