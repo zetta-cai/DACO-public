@@ -105,28 +105,6 @@ namespace covered
         return is_least_popular_key_exist;
     }
 
-    void CacheMetadataBase::removeForExistingKey(const Key& detracked_key, const Value& detracked_value)
-    {
-        // Get lookup iterator
-        perkey_lookup_iter_t perkey_lookup_iter = getLookup_(detracked_key);
-
-        // Remove group-level metadata
-        removePergroupMetadata_(perkey_lookup_iter, detracked_key, detracked_value);
-
-        // Remove object-level metadata
-        removePerkeyMetadata_(perkey_lookup_iter);
-        perkey_lookup_iter->second.setPerkeyMetadataIter(perkey_metadata_list_.end());
-
-        // Remove popularity
-        removePopularity_(perkey_lookup_iter);
-        perkey_lookup_iter->second.setSortedPopularityIter(sorted_popularity_multimap_.end());
-
-        // Remove lookup table
-        removeLookup_(perkey_lookup_iter);
-
-        return;
-    }
-
     void CacheMetadataBase::addForNewKey_(const Key& key, const Value& value)
     {
         // Add lookup iterator for new key
@@ -167,6 +145,28 @@ namespace covered
 
         // Update lookup table
         updateLookup_(perkey_lookup_iter, new_sorted_popularity_iter);
+
+        return;
+    }
+
+    void CacheMetadataBase::removeForExistingKey_(const Key& detracked_key, const Value& detracked_value, const bool& is_local_cached_metadata)
+    {
+        // Get lookup iterator
+        perkey_lookup_iter_t perkey_lookup_iter = getLookup_(detracked_key);
+
+        // Remove group-level metadata
+        removePergroupMetadata_(perkey_lookup_iter, detracked_key, detracked_value, is_local_cached_metadata);
+
+        // Remove object-level metadata
+        removePerkeyMetadata_(perkey_lookup_iter);
+        perkey_lookup_iter->second.setPerkeyMetadataIter(perkey_metadata_list_.end());
+
+        // Remove popularity
+        removePopularity_(perkey_lookup_iter);
+        perkey_lookup_iter->second.setSortedPopularityIter(sorted_popularity_multimap_.end());
+
+        // Remove lookup table
+        removeLookup_(perkey_lookup_iter);
 
         return;
     }
@@ -287,25 +287,31 @@ namespace covered
             pergroup_metadata_iter->second.updateForInGroupKey(key); // TODO: update group-level metadata will affect other keys' popularities, while we use lazy update for those popularities (i.e., update them when they are accessed) to avoid maintaining groupid-keys mappings for limited metadata overhead
         }
         else // Related with value
-        {
+        {        
             pergroup_metadata_iter->second.updateForInGroupKeyValue(key, value, original_value); // TODO: update group-level metadata will affect other keys' popularities, while we use lazy update for those popularities (i.e., update them when they are accessed) to avoid maintaining groupid-keys mappings for limited metadata overhead
         }
 
         return pergroup_metadata_iter->second;
     }
 
-    void CacheMetadataBase::removePergroupMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter, const Key& key, const Value& value)
+    void CacheMetadataBase::removePergroupMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter, const Key& key, const Value& value, const bool& is_local_cached_metadata)
     {
         // Verify that key must exist
         const LookupMetadata& lookup_metadata = perkey_lookup_iter->second;
         perkey_metadata_list_t::iterator perkey_metadata_iter = lookup_metadata.getPerkeyMetadataIter();
         assert(perkey_metadata_iter != perkey_metadata_list_.end()); // For existing key
 
+        // NOTE: we should NOT decrease cur_group_keycnt_ here, which will make the number of GroupLevelMetadata in cur_group_id_ exceed COVERED_PERGROUP_MAXKEYCNT, if the degrouped key is tracked by previous groups (i.e., group ids < cur_group_id_)
+        //cur_group_keycnt_--;
+
         GroupId tmp_group_id = perkey_metadata_iter->second.getGroupId(); // Get group ID
         pergroup_metadata_map_t::iterator pergroup_metadata_iter = pergroup_metadata_map_.find(tmp_group_id);
         assert(pergroup_metadata_iter != pergroup_metadata_map_.end());
 
-        bool is_group_empty = pergroup_metadata_iter->second.updateForDegrouped(key, value); // TODO: update group-level metadata will affect other keys' popularities, while we use lazy update for those popularities (i.e., update them when they are accessed) to avoid maintaining groupid-keys mappings for limited metadata overhead
+        // NOTE: for local cached metadata, as we always use accurate value sizes for group-level metadata of cached objects, we need to warn for valid avg_object_size_ and object_cnt_
+        // NOTE: for local uncached metadata, although we have accurate value sizes when adding new objects into group-level metadata of uncached objects or detracking existing objects caused by cache admission, we still need to use approximate value sizes when replacing original value sizes with latest ones or detracking old objects caused by newly-tracked objects of local uncached metadata due to metadata capacity limitation -> disable warnings of invalid avg_object_size_ and object_cnt_ due to normal cases
+        const bool need_warning = is_local_cached_metadata;
+        bool is_group_empty = pergroup_metadata_iter->second.updateForDegrouped(key, value, need_warning); // TODO: update group-level metadata will affect other keys' popularities, while we use lazy update for those popularities (i.e., update them when they are accessed) to avoid maintaining groupid-keys mappings for limited metadata overhead
         if (is_group_empty)
         {
             pergroup_metadata_map_.erase(pergroup_metadata_iter);

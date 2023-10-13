@@ -32,6 +32,8 @@ namespace covered
 
         void updateForExistingKey(const Key& key, const Value& value, const Value& original_value, const bool& is_value_related); // Tracked uncached key (is_value_related = false: for getrsp with cache miss; is_value_related = true: put/delrsp with cache miss); NOT overwrite CacheMetadataBase
 
+        void removeForExistingKey(const Key& detracked_key, const Value& value); // Remove tracked uncached key (for getrsp with cache miss, put/delrsp with cache miss, admission)
+
         virtual uint64_t getSizeForCapacity() const override; // Get size for capacity constraint of local uncached objects
     private:
         static const std::string kClassName;

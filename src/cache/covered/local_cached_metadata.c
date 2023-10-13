@@ -78,6 +78,13 @@ namespace covered
         return affect_victim_tracker;
     }
 
+    void LocalCachedMetadata::removeForExistingKey(const Key& detracked_key, const Value& value)
+    {
+        const bool is_local_cached_metadata = true;
+        CacheMetadataBase::removeForExistingKey_(detracked_key, value, is_local_cached_metadata);
+        return;
+    }
+
     uint64_t LocalCachedMetadata::getSizeForCapacity() const
     {
         // Object-level metadata

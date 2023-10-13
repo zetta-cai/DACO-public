@@ -29,6 +29,8 @@ namespace covered
         bool addForNewKey(const Key& key, const Value& value, const uint32_t& peredge_synced_victimcnt); // Newly admitted cached key (for admission); overwrite CacheMetadataBase to return if affect local synced victims in victim tracker
         bool updateForExistingKey(const Key& key, const Value& value, const Value& original_value, const bool& is_value_related, const uint32_t& peredge_synced_victimcnt); // Admitted cached key (is_value_related = false: for getreq with cache hit; is_value_related = true: for getrsp with invalid hit, put/delreq with cache hit); overwrite CacheMetadataBase to return if affect local synced victims in victim tracker
 
+        void removeForExistingKey(const Key& detracked_key, const Value& value); // Remove admitted cached key (for eviction)
+
         virtual uint64_t getSizeForCapacity() const override; // Get size for capacity constraint of local cached objects
     private:
         static const std::string kClassName;

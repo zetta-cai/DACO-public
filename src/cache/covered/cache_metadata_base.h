@@ -68,8 +68,6 @@ namespace covered
         bool isKeyExist(const Key& key) const; // Check if key has been admitted or tracked for local cached or uncached object
         bool getLeastPopularKey(const uint32_t& least_popular_rank, Key& key) const; // Get ith least popular key for local cached or uncached object
 
-        void removeForExistingKey(const Key& detracked_key, const Value& value); // Remove admitted cached key or tracked uncached key (for getrsp with cache miss, put/delrsp with cache miss, admission, eviction)
-
         virtual uint64_t getSizeForCapacity() const = 0; // Get size for capacity constraint (different for local cached or uncached objects)
     private:
         static const std::string kClassName;
@@ -80,6 +78,8 @@ namespace covered
 
         void updateForExistingKey_(const Key& key, const Value& value, const Value& original_value, const bool& is_value_related); // Admitted cached key (is_value_related = false: for getreq with cache hit; is_value_related = true: for getrsp with invalid hit, put/delreq with cache hit); Or tracked uncached key (is_value_related = false: for getrsp with cache miss; is_value_related = true: put/delrsp with cache miss)
 
+        void removeForExistingKey_(const Key& detracked_key, const Value& value, const bool& is_local_cached_metadata); // Remove admitted cached key or tracked uncached key (for getrsp with cache miss, put/delrsp with cache miss, admission, eviction)
+
         // For object-level metadata
         perkey_metadata_list_t::iterator addPerkeyMetadata_(const Key& key, const GroupId& assigned_group_id); // Return new perkey metadata iterator
         const KeyLevelMetadata& updatePerkeyMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter); // Return updated KeyLevelMetadata
@@ -89,7 +89,7 @@ namespace covered
         const GroupLevelMetadata& getGroupLevelMetadata_(const perkey_lookup_const_iter_t& perkey_lookup_const_iter) const; // Return existing GroupLevelMetadata
         const GroupLevelMetadata& addPergroupMetadata_(const Key& key, const Value& value, GroupId& assigned_group_id); // Return added/updated GroupLevelMetadata
         const GroupLevelMetadata& updatePergroupMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter, const Key& key, const Value& value, const Value& original_value, const bool& is_value_related); // Return updated GroupLevelMetadata
-        void removePergroupMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter, const Key& key, const Value& value);
+        void removePergroupMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter, const Key& key, const Value& value, const bool& is_local_cached_metadata);
 
         // For popularity information
         Popularity getPopularity_(const perkey_lookup_const_iter_t& perkey_lookup_iter) const;

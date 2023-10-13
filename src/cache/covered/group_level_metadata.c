@@ -28,6 +28,7 @@ namespace covered
         uint32_t object_size = key.getKeyLength() + value.getValuesize();
         avg_object_size_ = (avg_object_size_ * object_cnt_ + object_size) / (object_cnt_ + 1);
         object_cnt_++;
+
         return;
     }
 
@@ -56,10 +57,11 @@ namespace covered
 
             avg_object_size_ = 0;
         }
+
         return;
     }
 
-    bool GroupLevelMetadata::updateForDegrouped(const Key& key, const Value& value)
+    bool GroupLevelMetadata::updateForDegrouped(const Key& key, const Value& value, const bool& need_warning)
     {
         uint32_t object_size = key.getKeyLength() + value.getValuesize();
         if (object_cnt_ > 1)
@@ -70,9 +72,12 @@ namespace covered
             }
             else
             {
-                std::ostringstream oss;
-                oss << "avg_object_size_ * object_cnt_ (" << avg_object_size_ << " * " << object_cnt_ << ") < object_size (" << object_size << ")";
-                Util::dumpWarnMsg(kClassName, oss.str());
+                if (need_warning)
+                {
+                    std::ostringstream oss;
+                    oss << "Key " << key.getKeystr() << ": avg_object_size_ * object_cnt_ (" << avg_object_size_ << " * " << object_cnt_ << ") < object_size (" << object_size << ")";
+                    Util::dumpWarnMsg(kClassName, oss.str());
+                }
 
                 avg_object_size_ = 0;
             }
