@@ -23,6 +23,10 @@ WorkloadGenerator::WorkloadGenerator(const StressorConfig& config, const uint32_
 
     avg_dataset_keysize_ = 0;
     avg_dataset_valuesize_ = 0;
+    min_dataset_keysize_ = 0;
+    min_dataset_valuesize_ = 0;
+    max_dataset_keysize_ = 0;
+    max_dataset_valuesize_ = 0;
   }
 
   if (config_.numKeys > std::numeric_limits<uint32_t>::max()) {
@@ -71,6 +75,26 @@ double WorkloadGenerator::getAvgDatasetKeysize() const
 double WorkloadGenerator::getAvgDatasetValuesize() const
 {
   return avg_dataset_valuesize_;
+}
+
+uint32_t WorkloadGenerator::getMinDatasetKeysize() const
+{
+  return min_dataset_keysize_;
+}
+
+uint32_t WorkloadGenerator::getMinDatasetValuesize() const
+{
+  return min_dataset_valuesize_;
+}
+
+uint32_t WorkloadGenerator::getMaxDatasetKeysize() const
+{
+  return max_dataset_keysize_;
+}
+
+uint32_t WorkloadGenerator::getMaxDatasetValuesize() const
+{
+  return max_dataset_valuesize_;
 }
 
 void WorkloadGenerator::generateKeys() {
@@ -122,10 +146,27 @@ void WorkloadGenerator::generateKeys() {
   auto sortDuration = std::chrono::duration_cast<std::chrono::seconds>(
       std::chrono::steady_clock::now() - startTime);
 
-  // Siyuan: update avg_dataset_keysize_
+  // Siyuan: update avg/min/max dataset key size
   for (size_t i = 0; i < keys_.size(); i++)
   {
-    avg_dataset_keysize_ += static_cast<double>(keys_[i].size());
+    uint32_t tmp_keysize = keys_[i].size();
+    avg_dataset_keysize_ += static_cast<double>(tmp_keysize);
+    if (i == 0)
+    {
+      min_dataset_keysize_ = tmp_keysize;
+      max_dataset_keysize_ = tmp_keysize;
+    }
+    else
+    {
+      if (tmp_keysize < min_dataset_keysize_)
+      {
+        min_dataset_keysize_ = tmp_keysize;
+      }
+      if (tmp_keysize > max_dataset_keysize_)
+      {
+        max_dataset_keysize_ = tmp_keysize;
+      }
+    }
   }
   avg_dataset_keysize_ /= static_cast<double>(keys_.size());
 
@@ -159,8 +200,25 @@ void WorkloadGenerator::generateReqs() {
       auto reqSizes = sizes_.end() - 1;
       reqs_.emplace_back(keys_[j], reqSizes->begin(), reqSizes->end());
 
-      // Siyuan: update avg_dataset_valuesize_
-      avg_dataset_valuesize_ += static_cast<double>(*(reqSizes->begin()));
+      // Siyuan: update avg/min/max dataset value size
+      uint32_t tmp_valuesize = *(reqSizes->begin());
+      avg_dataset_valuesize_ += static_cast<double>(tmp_valuesize);
+      if (i == 0 && j == firstKeyIndexForPool_[i])
+      {
+        min_dataset_valuesize_ = tmp_valuesize;
+        max_dataset_valuesize_ = tmp_valuesize;
+      }
+      else
+      {
+        if (tmp_valuesize < min_dataset_valuesize_)
+        {
+          min_dataset_valuesize_ = tmp_valuesize;
+        }
+        if (tmp_valuesize > max_dataset_valuesize_)
+        {
+          max_dataset_valuesize_ = tmp_valuesize;
+        }
+      }
     }
   }
   avg_dataset_valuesize_ /= static_cast<double>(reqs_.size());

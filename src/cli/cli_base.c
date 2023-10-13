@@ -2,6 +2,7 @@
 
 #include "common/config.h"
 #include "common/util.h"
+#include "network/udp_pkt_socket.h"
 
 namespace covered
 {
@@ -9,6 +10,22 @@ namespace covered
 
     CLIBase::CLIBase() : is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), argument_desc_("Allowed arguments:"), argument_info_()
     {
+        // Verify system settings
+        uint32_t net_core_rmem_max = Util::getNetCoreRmemMax();
+        uint32_t udp_large_recvbuf_size = UdpPktSocket::UDP_LARGE_RCVBUFSIZE;
+        if (net_core_rmem_max < udp_large_recvbuf_size)
+        {
+            std::ostringstream oss;
+            oss << "net.core.rmem_max " << std::to_string(net_core_rmem_max) << " < udp_large_recvbuf_size " << std::to_string(udp_large_recvbuf_size) << " -> please run scripts/install_prerequisite.py to set net.core.rmem_max!";
+            Util::dumpErrorMsg(kClassName, oss.str());
+            exit(1);
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "net.core.rmem_max " << std::to_string(net_core_rmem_max) << " >= udp_large_recvbuf_size " << std::to_string(udp_large_recvbuf_size);
+            Util::dumpNormalMsg(kClassName, oss.str());
+        }
     }
 
     CLIBase::~CLIBase() {}

@@ -7,7 +7,7 @@
 #ifndef DATA_SERVER_H
 #define DATA_SERVER_H
 
-//#define DEBUG_DATA_SERVER
+#define DEBUG_DATA_SERVER
 
 #include <string>
 

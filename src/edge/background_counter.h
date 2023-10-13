@@ -31,6 +31,8 @@ namespace covered
     private:
         static const std::string kClassName;
 
+        void assertBackgroundEvent_(const Event& event) const;
+
         Rwlock* rwlock_for_bankground_counter_ptr_; // For atomicity
 
         bool is_empty_;

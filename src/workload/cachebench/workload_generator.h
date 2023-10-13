@@ -43,9 +43,13 @@ class WorkloadGenerator : public covered::GeneratorBase {
 
   const std::vector<std::string>& getAllKeys() const override { return keys_; }
 
-  // Siyuan: average dataset key/value size
+  // Siyuan: average/min/max dataset key/value size
   double getAvgDatasetKeysize() const;
   double getAvgDatasetValuesize() const;
+  uint32_t getMinDatasetKeysize() const;
+  uint32_t getMinDatasetValuesize() const;
+  uint32_t getMaxDatasetKeysize() const;
+  uint32_t getMaxDatasetValuesize() const;
 
  private:
   static const std::string kClassName;
@@ -73,8 +77,12 @@ class WorkloadGenerator : public covered::GeneratorBase {
 
   std::vector<WorkloadDistribution> workloadDist_;
   
-  // Siyuan: average dataset key/value size
+  // Siyuan: average/min/max dataset key/value size
   double avg_dataset_keysize_;
   double avg_dataset_valuesize_;
+  uint32_t min_dataset_keysize_;
+  uint32_t min_dataset_valuesize_;
+  uint32_t max_dataset_keysize_;
+  uint32_t max_dataset_valuesize_;
 };
 } // namespace covered

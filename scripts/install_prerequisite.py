@@ -32,7 +32,7 @@ if is_upgrade_python3:
         python3_checkversion_outputbytes = python3_checkversion_subprocess.stdout
         python3_checkversion_outputstr = python3_checkversion_outputbytes.decode("utf-8")
 
-        python3_current_version_tuple = versionToTuple(python3_checkversion_outputstr)
+        python3_current_version_tuple = versionToTuple(python3_checkversion_outputstr.split(" ")[-1])
         python3_target_version_tuple = versionToTuple(python3_target_version)
         if python3_current_version_tuple == python3_target_version_tuple:
             print("{}: current python3 version is the same as the target {}".format(filename, python3_target_version))
@@ -142,10 +142,9 @@ if is_upgrade_gcc:
         if compiler_checkversion_subprocess.returncode != 0:
             die(filename, "failed to get the current version of {}".format(compiler_name))
         else:
-            compiler_checkversion_outputbytes = compiler_checkversion_subprocess.stdout
-            compiler_checkversion_outputstr = compiler_checkversion_outputbytes.decode("utf-8")
+            compiler_checkversion_outputstr = getSubprocessOutputstr(compiler_checkversion_subprocess)
 
-            compiler_current_version_tuple = versionToTuple(compiler_checkversion_outputstr)
+            compiler_current_version_tuple = versionToTuple(compiler_checkversion_outputstr.split("\n")[0].split(" ")[-1])
             compiler_target_version_tuple = versionToTuple(compiler_target_version)
             if compiler_current_version_tuple == compiler_target_version_tuple:
                 dump(filename, "current {} version is the same as the target {}".format(compiler_name, compiler_target_version))
@@ -161,8 +160,7 @@ if is_upgrade_gcc:
             compiler_check_old_subprocess = subprocess.run(compiler_check_old_cmd, shell=True, capture_output=True)
             need_preserve_old_compiler = True;
             if compiler_check_old_subprocess.returncode == 0:
-                compiler_check_old_outputbytes = compiler_check_old_subprocess.stdout
-                compiler_check_old_outputstr = compiler_check_old_outputbytes.decode("utf-8")
+                compiler_check_old_outputstr = getSubprocessOutputstr(compiler_check_old_subprocess)
                 if compiler_check_old_outputstr != "":
                     need_preserve_old_compiler = False
 
@@ -204,10 +202,9 @@ if is_link_cpp:
     cpp_checkversion_subprocess = subprocess.run(cpp_checkversion_cmd, shell=True, capture_output=True)
     need_link_cpp = True
     if cpp_checkversion_subprocess.returncode == 0:
-        cpp_checkversion_outputbytes = cpp_checkversion_subprocess.stdout
-        cpp_checkversion_outputstr = cpp_checkversion_outputbytes.decode("utf-8")
+        cpp_checkversion_outputstr = getSubprocessOutputstr(cpp_checkversion_subprocess)
 
-        cpp_current_version_tuple = versionToTuple(cpp_checkversion_outputstr)
+        cpp_current_version_tuple = versionToTuple(cpp_checkversion_outputstr.split("\n")[0].split(" ")[-1])
         cpp_target_version_tuple = versionToTuple(compiler_target_version)
         if cpp_current_version_tuple == cpp_target_version_tuple:
             dump(filename, "current c++ binary version is the same as the target {}".format(compiler_target_version))
@@ -228,7 +225,7 @@ if is_link_cpp:
 # (5) Upgrade CMake if necessary (required by cachelib for CMake 3.12 or higher)
 
 if is_upgrade_cmake:
-    prompt(fiename, "check version of CMake...")
+    prompt(filename, "check version of CMake...")
     need_upgrade_cmake = False
     cmake_target_version = "3.25.2"
     cmake_checkversion_cmd = "cmake --version"
@@ -236,10 +233,9 @@ if is_upgrade_cmake:
     if cmake_checkversion_subprocess.returncode != 0:
         die(filename, "failed to get the current version of cmake")
     else:
-        cmake_checkversion_outputbytes = cmake_checkversion_subprocess.stdout
-        cmake_checkversion_outputstr = cmake_checkversion_outputbytes.decode("utf-8")
+        cmake_checkversion_outputstr = getSubprocessOutputstr(cmake_checkversion_subprocess)
 
-        cmake_current_version_tuple = versionToTuple(cmake_checkversion_outputstr)
+        cmake_current_version_tuple = versionToTuple(cmake_checkversion_outputstr.split("\n")[0].split(" ")[-1])
         cmake_target_version_tuple = versionToTuple(cmake_target_version)
         if cmake_current_version_tuple == cmake_target_version_tuple:
             dump(filename, "current cmake version is the same as the target {}".format(cmake_target_version))
@@ -258,8 +254,7 @@ if is_upgrade_cmake:
         if cmake_check_apt_repo_subprocess.returncode != 0:
             die(filename, "failed to check apt repot for CMake")
         else:
-            cmake_check_apt_repo_outputbytes = cmake_check_apt_repo_subprocess.stdout
-            cmake_check_apt_repo_outputstr = cmake_check_apt_repo_outputbytes.decode("utf-8")
+            cmake_check_apt_repo_outputstr = getSubprocessOutputstr(cmake_check_apt_repo_subprocess)
 
             if cmake_repo_website in cmake_check_apt_repo_outputstr:
                 is_add_apt_repo_for_cmake = False
@@ -276,3 +271,28 @@ if is_upgrade_cmake:
         cmake_install_subprocess = subprocess.run(cmake_install_cmd)
         if cmake_install_subprocess.returncode != 0:
             die(filename, "failed to install CMake by apt")
+
+# (6) Change system settings
+
+prompt(filename, "check net.core.rmem_max...")
+target_rmem_max = 16777216
+need_set_rmem_max = False
+check_rmem_max_cmd = "sysctl -a 2>/dev/null | grep net.core.rmem_max"
+check_rmem_max_subprocess = subprocess.run(check_rmem_max_cmd, shell=True, capture_output=True)
+if check_rmem_max_subprocess.returncode != 0:
+    die(filename, "failed to check net.core.rmem_max")
+else:
+    check_rmem_max_outputstr = getSubprocessOutputstr(check_rmem_max_subprocess)
+    cur_rmem_max = int(check_rmem_max_outputstr.split("=")[-1])
+    if cur_rmem_max < target_rmem_max:
+        dump(filename, "current net.core.rmem_max {} < target {}, which needs reset".format(cur_rmem_max, target_rmem_max))
+        need_set_rmem_max = True
+    else:
+        dump(filename, "current net.core.rmem_max {} already >= target {}, which does not need reset".format(cur_rmem_max, target_rmem_max))
+
+if need_set_rmem_max:
+    prompt(filename, "set net.core.rmem_max as {}...".format(target_rmem_max))
+    set_rmem_max_cmd = "sudo sysctl -w net.core.rmem_max={}".format(target_rmem_max)
+    set_rmem_max_subprocess = subprocess.run(set_rmem_max_cmd, shell=True)
+    if set_rmem_max_subprocess.returncode != 0:
+        die(filename, "failed to set net.core.rmem_max")

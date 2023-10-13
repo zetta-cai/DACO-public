@@ -28,7 +28,7 @@ namespace covered
         static const uint32_t SOCKET_TIMEOUT_SECONDS;
         static const uint32_t SOCKET_TIMEOUT_USECONDS;
         static const uint32_t UDP_DEFAULT_RCVBUFSIZE;
-        //static const uint32_t UDP_LARGE_RCVBUFSIZE;
+        static const uint32_t UDP_LARGE_RCVBUFSIZE;
 
         UdpPktSocket(const bool& need_timeout); // for UDP client
         UdpPktSocket(const bool& need_timeout, const NetworkAddr& host_addr); // for UDP server

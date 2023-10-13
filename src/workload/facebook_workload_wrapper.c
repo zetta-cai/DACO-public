@@ -134,7 +134,8 @@ namespace covered
         return WorkloadItem(tmp_covered_key, tmp_covered_value, WorkloadItemType::kWorkloadItemPut);
     }
 
-    // Get average dataset key/value size
+    // Get average/min/max dataset key/value size
+
     double FacebookWorkloadWrapper::getAvgDatasetKeysize() const
     {
         return workload_generator_->getAvgDatasetKeysize();
@@ -143,6 +144,26 @@ namespace covered
     double FacebookWorkloadWrapper::getAvgDatasetValuesize() const
     {
         return workload_generator_->getAvgDatasetValuesize();
+    }
+
+    uint32_t FacebookWorkloadWrapper::getMinDatasetKeysize() const
+    {
+        return workload_generator_->getMinDatasetKeysize();
+    }
+
+    uint32_t FacebookWorkloadWrapper::getMinDatasetValuesize() const
+    {
+        return workload_generator_->getMinDatasetValuesize();
+    }
+
+    uint32_t FacebookWorkloadWrapper::getMaxDatasetKeysize() const
+    {
+        return workload_generator_->getMaxDatasetKeysize();
+    }
+
+    uint32_t FacebookWorkloadWrapper::getMaxDatasetValuesize() const
+    {
+        return workload_generator_->getMaxDatasetValuesize();
     }
 
     // The same makeGenerator as in lib/CacheLib/cachelib/cachebench/runner/Stressor.cpp

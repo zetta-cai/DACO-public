@@ -11,7 +11,7 @@ namespace covered
     const uint32_t UdpPktSocket::SOCKET_TIMEOUT_SECONDS = 5; // 5s
     const uint32_t UdpPktSocket::SOCKET_TIMEOUT_USECONDS = 0; // 0us
     const uint32_t UdpPktSocket::UDP_DEFAULT_RCVBUFSIZE = 212992; // 208KB used in linux by default
-    //const uint32_t UdpPktSocket::UDP_LARGE_RCVBUFSIZE = 8388608; // 8MB used for large data
+    const uint32_t UdpPktSocket::UDP_LARGE_RCVBUFSIZE = 8388608; // 8MB used for large data
 
     const std::string UdpPktSocket::kClassName("UdpPktSocket");
 
@@ -151,7 +151,8 @@ namespace covered
         }
 
         // Set UDP receive buffer size
-        if (setsockopt(sockfd_, SOL_SOCKET, SO_RCVBUF, &UDP_DEFAULT_RCVBUFSIZE, sizeof(int)) < 0)
+        //if (setsockopt(sockfd_, SOL_SOCKET, SO_RCVBUF, &UDP_DEFAULT_RCVBUFSIZE, sizeof(int)) < 0)
+        if (setsockopt(sockfd_, SOL_SOCKET, SO_RCVBUF, &UDP_LARGE_RCVBUFSIZE, sizeof(int)) < 0)
         {
             std::ostringstream oss;
             oss << "failed to set UDP receive bufsize (errno: " << errno << ")!";

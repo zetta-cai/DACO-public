@@ -39,9 +39,13 @@ class GeneratorBase {
 
   virtual const std::vector<std::string>& getAllKeys() const = 0;
 
-  // Siyuan: average dataset key/value size
+  // Siyuan: average/min/max dataset key/value size
   virtual double getAvgDatasetKeysize() const = 0;
   virtual double getAvgDatasetValuesize() const = 0;
+  virtual uint32_t getMinDatasetKeysize() const = 0;
+  virtual uint32_t getMinDatasetValuesize() const = 0;
+  virtual uint32_t getMaxDatasetKeysize() const = 0;
+  virtual uint32_t getMaxDatasetValuesize() const = 0;
 
   // Notify the workload generator that the nvm cache has already warmed up.
   virtual void setNvmCacheWarmedUp(uint64_t /*timestamp*/) {

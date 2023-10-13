@@ -178,7 +178,10 @@ namespace covered
         static int pthreadCreateLowPriority(pthread_t* tid_ptr, void *(*start_routine)(void *), void* arg_ptr);
         static int pthreadCreateHighPriority(pthread_t* tid_ptr, void *(*start_routine)(void *), void* arg_ptr);
 
-        // (8) Others
+        // (8) System settings
+        static uint32_t getNetCoreRmemMax();
+
+        // (9) Others
 
         static uint32_t getTimeBasedRandomSeed(); // Get a random seed (instead of deterministic) based on current time
         static std::string getRandomString(const uint32_t& length);

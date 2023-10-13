@@ -811,7 +811,63 @@ namespace covered
         return;
     }
 
-    // (8) Others
+    // (8) System settings
+    uint32_t Util::getNetCoreRmemMax()
+    {
+        std::string cmd = "sysctl -a 2>/dev/null | grep net.core.rmem_max";
+
+        // Execute cmd
+        FILE* stream = popen(cmd.c_str(), "r");
+        if (stream == NULL)
+        {
+            dumpErrorMsg(kClassName, "popen() failed!");
+            exit(1);
+        }
+
+        // Get cmd output string
+        std::string output_str = "";
+        try
+        {
+            const uint32_t tmp_buffer_bytecnt = 128;
+            char tmp_buffer[tmp_buffer_bytecnt];
+            while (fgets(tmp_buffer, tmp_buffer_bytecnt, stream) != NULL)
+            {
+                output_str += tmp_buffer;
+                memset(tmp_buffer, 0, tmp_buffer_bytecnt);
+            }
+
+            pclose(stream);
+            stream = NULL;
+        }
+        catch (...)
+        {
+            pclose(stream);
+            stream = NULL;
+            
+            dumpErrorMsg(kClassName, "getNetCoreRmemMax() failed!");
+            exit(1);
+        }
+
+        // Extract net.core.rmem_max value from output string
+        size_t last_space_pos = output_str.find_last_of(' ');
+        if (last_space_pos != std::string::npos)
+        {
+            std::string rmem_max_str = output_str.substr(last_space_pos + 1);
+            uint32_t rmem_max = std::stoi(rmem_max_str);
+            return rmem_max;
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "fail to get net.core.rmem_max value from output string: " << output_str;
+            dumpErrorMsg(kClassName, oss.str());
+            exit(1);
+        }
+
+        return 0;
+    }
+
+    // (9) Others
 
     uint32_t Util::getTimeBasedRandomSeed()
     {

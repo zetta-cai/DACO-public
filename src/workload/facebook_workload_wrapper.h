@@ -30,9 +30,13 @@ namespace covered
 
         virtual uint32_t getPracticalKeycnt() const;
 
-        // Get average dataset key/value size
+        // Get average/min/max dataset key/value size
         virtual double getAvgDatasetKeysize() const override;
         virtual double getAvgDatasetValuesize() const override;
+        virtual uint32_t getMinDatasetKeysize() const override;
+        virtual uint32_t getMinDatasetValuesize() const override;
+        virtual uint32_t getMaxDatasetKeysize() const override;
+        virtual uint32_t getMaxDatasetValuesize() const override;
     private:
         static const std::string kClassName;
 
