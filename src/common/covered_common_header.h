@@ -15,6 +15,7 @@ namespace covered
     typedef uint32_t GroupId;
     typedef uint32_t Frequency;
     typedef uint32_t ObjectSize;
+    typedef float AvgObjectSize;
     typedef uint32_t ObjectCnt;
     
     typedef float Popularity;

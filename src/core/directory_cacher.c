@@ -115,9 +115,9 @@ namespace covered
 
             // Check if popularity change is large
             Popularity prev_collect_popularity = cached_directory.getPrevCollectPopularity();
-            Popularity popularity_change = (local_uncached_popularity >= prev_collect_popularity) ? (local_uncached_popularity - prev_collect_popularity) : (prev_collect_popularity - local_uncached_popularity);
+            Popularity popularity_change = Util::popularityAbsMinus(local_uncached_popularity, prev_collect_popularity);
             assert(popularity_change >= 0);
-            is_large_popularity_change = (popularity_change >= popularity_collection_change_ratio_ * prev_collect_popularity);
+            is_large_popularity_change = (popularity_change >= Util::popularityMultiply(popularity_collection_change_ratio_, prev_collect_popularity));
         }
 
         rwlock_for_directory_cacher_->unlock_shared(context_name);

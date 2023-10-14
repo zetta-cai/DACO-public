@@ -11,7 +11,7 @@ namespace covered
 
     GroupLevelMetadata::GroupLevelMetadata()
     {
-        avg_object_size_ = 0;
+        avg_object_size_ = 0.0;
         object_cnt_ = 0;
     }
 
@@ -45,7 +45,7 @@ namespace covered
 
         uint32_t original_object_size = key.getKeyLength() + original_value.getValuesize();
         uint32_t object_size = key.getKeyLength() + value.getValuesize();
-        if (avg_object_size_ * object_cnt_ + object_size >= original_object_size)
+        if (avg_object_size_ * object_cnt_ + object_size >= static_cast<AvgObjectSize>(original_object_size))
         {
             avg_object_size_ = (avg_object_size_ * object_cnt_ + object_size - original_object_size) / object_cnt_;
         }
@@ -55,7 +55,7 @@ namespace covered
             oss << "avg_object_size_ * object_cnt_ (" << avg_object_size_ << " * " << object_cnt_ << ") + object_size (" << object_size << ") < original_object_size (" << original_object_size << ")";
             Util::dumpWarnMsg(kClassName, oss.str());
 
-            avg_object_size_ = 0;
+            avg_object_size_ = 0.0;
         }
 
         return;
@@ -66,7 +66,7 @@ namespace covered
         uint32_t object_size = key.getKeyLength() + value.getValuesize();
         if (object_cnt_ > 1)
         {
-            if (avg_object_size_ * object_cnt_ >= object_size)
+            if (avg_object_size_ * object_cnt_ >= static_cast<AvgObjectSize>(object_size))
             {
                 avg_object_size_ = (avg_object_size_ * object_cnt_ - object_size) / (object_cnt_ - 1);
             }
@@ -79,12 +79,12 @@ namespace covered
                     Util::dumpWarnMsg(kClassName, oss.str());
                 }
 
-                avg_object_size_ = 0;
+                avg_object_size_ = 0.0;
             }
         }
         else
         {
-            avg_object_size_ = 0;
+            avg_object_size_ = 0.0;
         }
         object_cnt_--;
 
@@ -92,8 +92,9 @@ namespace covered
         return is_group_empty;
     }
 
-    ObjectSize GroupLevelMetadata::getAvgObjectSize() const
+    AvgObjectSize GroupLevelMetadata::getAvgObjectSize() const
     {
+        assert(object_cnt_ > 0);
         return avg_object_size_;
     }
     

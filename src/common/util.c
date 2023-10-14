@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <chrono> // system_clock
 #include <errno.h> // ENOENT
+#include <math.h> // isnan and isinf
 #include <sched.h> // sched_param
 #include <sstream> // ostringstream
 #include <cmath> // pow
@@ -393,46 +394,127 @@ namespace covered
         return;
     }
 
-    bool Util::isLarger(const double& a, const double& b)
+    Popularity Util::popularityDivide(const Popularity& a, const Popularity& b)
     {
-        return a > b;
+        assertPopularity_(a);
+        assertPopularity_(b);
+
+        Popularity c = a / b;
+
+        std::ostringstream oss;
+        oss << a << " / " << b;
+        assertPopularity_(c, oss.str());
+
+        return c;
     }
 
-    bool Util::isEqual(const double& a, const double& b)
+    Popularity Util::popularityNonegMinus(const Popularity& a, const Popularity& b)
     {
-        if (a == b)
+        assertPopularity_(a);
+        assertPopularity_(b);
+
+        Popularity c = a - b;
+
+        std::ostringstream oss;
+        oss << "min(" << a << " - " << b << ", 0)";
+        assertPopularity_(c, oss.str());
+
+        if (c < 0)
+        {
+            c = 0.0;
+        }
+
+        assert(c >= 0);
+        return c;
+    }
+
+    Popularity Util::popularityAbsMinus(const Popularity& a, const Popularity& b)
+    {
+        assertPopularity_(a);
+        assertPopularity_(b);
+
+        Popularity c = 0.0;
+        if (a >= b)
+        {
+            c = a - b;
+        }
+        else
+        {
+            c = b - a;
+        }
+
+        std::ostringstream oss;
+        oss << "|" << a << " - " << b << "|";
+        assertPopularity_(c, oss.str());
+
+        assert(c >= 0);
+        return c;
+    }
+
+    Popularity Util::popularityMultiply(const Popularity& a, const Popularity& b)
+    {
+        assertPopularity_(a);
+        assertPopularity_(b);
+
+        Popularity c = a * b;
+
+        std::ostringstream oss;
+        oss << a << " * " << b;
+        assertPopularity_(c, oss.str());
+
+        return c;
+    }
+
+    Popularity Util::popularityAdd(const Popularity& a, const Popularity& b)
+    {
+        assertPopularity_(a);
+        assertPopularity_(b);
+
+        Popularity c = a + b;
+
+        std::ostringstream oss;
+        oss << a << " + " << b;
+        assertPopularity_(c, oss.str());
+
+        return c;
+    }
+
+    void Util::assertPopularity_(const Popularity& a, const std::string& opstr)
+    {
+        if (std::isnan(a) || std::isinf(a))
+        {
+            std::ostringstream oss;
+            oss << "invalid popularity " << a;
+            if (opstr != "")
+            {
+                oss << " got by " << opstr;
+            }
+            Util::dumpErrorMsg(kClassName, oss.str());
+            exit(1);
+        }
+        return;
+    }
+
+    bool Util::isLargerEqual(const double& a, const double& b)
+    {
+        if (a > b)
         {
             return true;
         }
-        else if (a > b && (a - b) <= DOUBLE_IOTA)
+        else if (a == b)
         {
             return true;
         }
-        else if (a < b && (b - a) <= DOUBLE_IOTA)
+        else if ((b - a) <= DOUBLE_IOTA) // b must < a here
         {
             return true;
         }
         return false;
     }
 
-    bool Util::isSmaller(const double& a, const double& b)
+    bool Util::isLargerEqual(const float& a, const float& b)
     {
-        return a < b;
-    }
-
-    bool Util::isLarger(const float& a, const float& b)
-    {
-        return a > b;
-    }
-
-    bool Util::isEqual(const float& a, const float& b)
-    {
-        return isEqual(static_cast<double>(a), static_cast<double>(b));
-    }
-
-    bool Util::isSmaller(const float& a, const float& b)
-    {
-        return a < b;
+        return isLargerEqual(static_cast<double>(a), static_cast<double>(b));
     }
 
     std::string Util::toString(void* pointer)

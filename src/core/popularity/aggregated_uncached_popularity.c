@@ -52,7 +52,7 @@ namespace covered
         if (!is_existing) // Never receive any local uncached popularity from the source edge idx before
         {
             // Update sum of local uncached popularity for the new edge idx
-            sum_local_uncached_popularity_ += local_uncached_popularity;
+            sum_local_uncached_popularity_ = Util::popularityAdd(sum_local_uncached_popularity_, local_uncached_popularity);
 
             // Update top-k local uncached popularities for the new edge idx if necessary
             bool is_insert = tryToInsertForNontopkEdgeIdx_(source_edge_idx, local_uncached_popularity, topk_edgecnt); // NOTE: new edge idx MUST not exist in top-k list
@@ -68,7 +68,7 @@ namespace covered
             Popularity original_local_uncached_popularity = getLocalUncachedPopularityForExistingEdgeIdx_(source_edge_idx);
 
             // Update sum of local uncached popularity for the existing edge idx
-            sum_local_uncached_popularity_ += local_uncached_popularity;
+            sum_local_uncached_popularity_ = Util::popularityAdd(sum_local_uncached_popularity_, local_uncached_popularity);
             minusLocalUncachedPopularityFromSum_(original_local_uncached_popularity);
 
             // Update top-k local uncached popularities for the existing edge idx if necessary
@@ -145,19 +145,24 @@ namespace covered
         Popularity topi_local_uncached_popularity_ = getTopiLocalUncachedPopularitySum_(topicnt, placement_edgeset);
         if (is_global_cached) // Redirected cache hits become local cache hits for the edge nodes with top-k local uncached popularity
         {
-            admission_benefit = (local_hit_weight - cooperative_hit_weight) * topi_local_uncached_popularity_; // (w1 - w2)
+            Weight w1_minux_w2 = Util::popularityNonegMinus(local_hit_weight, cooperative_hit_weight);
+            admission_benefit = Util::popularityMultiply(w1_minux_w2, topi_local_uncached_popularity_); // w1 - w2
         }
         else // Global cache misses become local cache hits for the edge nodes with top-k local uncached popularity, and global cache misses become redirected cache hits for other edge nodes
         {
-            admission_benefit = local_hit_weight * topi_local_uncached_popularity_; // w1
-            if (!(Util::isLarger(sum_local_uncached_popularity_, topi_local_uncached_popularity_) || Util::isEqual(sum_local_uncached_popularity_, topi_local_uncached_popularity_)))
+            admission_benefit = Util::popularityMultiply(local_hit_weight, topi_local_uncached_popularity_); // w1
+            if (!(Util::isLargerEqual(sum_local_uncached_popularity_, topi_local_uncached_popularity_)))
             {
                 std::ostringstream oss;
                 oss << "sum_local_uncached_popularity_ " << sum_local_uncached_popularity_ << " should >= topi_local_uncached_popularity_ " << topi_local_uncached_popularity_ << "!";
                 Util::dumpErrorMsg(kClassName, oss.str());
                 exit(1);
             }
-            admission_benefit += cooperative_hit_weight * (sum_local_uncached_popularity_ - topi_local_uncached_popularity_); // w2
+
+            Popularity sum_minus_topi = Util::popularityNonegMinus(sum_local_uncached_popularity_, topi_local_uncached_popularity_);
+            Popularity tmp_admission_benefit = Util::popularityMultiply(cooperative_hit_weight, sum_minus_topi); // w2
+
+            admission_benefit = Util::popularityAdd(admission_benefit, tmp_admission_benefit);
         }
         return admission_benefit;
     }
@@ -253,7 +258,7 @@ namespace covered
         placement_edgeset.clear();
         for (; topk_list_iter != topk_edgeidx_local_uncached_popularity_pairs_.end(); topk_list_iter++)
         {
-            topi_local_uncached_popularity_ += topk_list_iter->second;
+            topi_local_uncached_popularity_ = Util::popularityAdd(topi_local_uncached_popularity_, topk_list_iter->second);
             placement_edgeset.insert(topk_list_iter->first);
         }
 

@@ -27,14 +27,14 @@ namespace covered
         void updateForInGroupKeyValue(const Key& key, const Value& value, const Value& original_value); // Update group-level metadata for the key already in the current group (putdelreq-hit/putdelrsp-miss of admitted/tracked objects for local cached/uncached)
         bool updateForDegrouped(const Key& key, const Value& value, const bool& need_warning); // Update group-level metadata for the key being removed from the current group (currently evicted/detracked for local cached/uncached); return true if object_cnt_ is zero (i.e., all keys in the group have been removed and the group can also be removed)
 
-        ObjectSize getAvgObjectSize() const;
+        AvgObjectSize getAvgObjectSize() const;
         ObjectCnt getObjectCnt() const;
 
         static uint64_t getSizeForCapacity();
     private:
         static const std::string kClassName;
 
-        ObjectSize avg_object_size_;
+        AvgObjectSize avg_object_size_;
         ObjectCnt object_cnt_;
     };
 }

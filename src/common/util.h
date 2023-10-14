@@ -20,6 +20,7 @@
 #include <time.h> // struct timespec
 
 #include "cli/evaluator_cli.h"
+#include "common/covered_common_header.h"
 #include "network/network_addr.h"
 
 #define UNUSED(var) (void(var))
@@ -27,7 +28,6 @@
 #define KB2B(var) var * 1024
 #define MB2B(var) var * 1024 * 1024
 #define GB2B(var) var * 1024 * 1024 * 1024
-#define B2KB(var) var / 1024
 #define B2MB(var) var / 1024 / 1024
 
 #define MS2US(var) var * 1000
@@ -127,16 +127,21 @@ namespace covered
 
         static uint16_t toUint16(const int64_t& val);
         static uint32_t toUint32(const int64_t& val);
+
         static uint64_t uint64Add(const uint64_t& a, const uint64_t& b); // a + b
         static uint64_t uint64Minus(const uint64_t& a, const uint64_t& b); // a - b
         static void uint64AddForAtomic(std::atomic<uint64_t>& a, const uint64_t& b); // a + b
         static void uint64MinusForAtomic(std::atomic<uint64_t>& a, const uint64_t& b); // a - b
-        static bool isLarger(const double& a, const double& b); // a > b
-        static bool isEqual(const double& a, const double& b); // a = b (with iota)
-        static bool isSmaller(const double& a, const double& b); // a < b
-        static bool isLarger(const float& a, const float& b); // a > b
-        static bool isEqual(const float& a, const float& b); // a = b (with iota)
-        static bool isSmaller(const float& a, const float& b); // a < b
+
+        static Popularity popularityDivide(const Popularity& a, const Popularity& b); // a / b
+        static Popularity popularityNonegMinus(const Popularity& a, const Popularity& b); // min(a - b, 0)
+        static Popularity popularityAbsMinus(const Popularity& a, const Popularity& b); // |a - b|
+        static Popularity popularityMultiply(const Popularity& a, const Popularity& b); // a * b
+        static Popularity popularityAdd(const Popularity& a, const Popularity& b); // a + b
+
+        static bool isLargerEqual(const double& a, const double& b); // a >= b (with iota)
+        static bool isLargerEqual(const float& a, const float& b); // a >= b (with iota)
+
         static std::string toString(void* pointer);
         static std::string toString(const bool& boolean);
         static std::string toString(const uint32_t& val);
@@ -208,17 +213,20 @@ namespace covered
     private:
         static const std::string kClassName;
 
-        // I/O
+        // (1) I/O
         static std::mutex msgdump_lock_;
         static bool isPathExist_(const std::string& path, const bool& is_file, const bool& is_silent); // File or directory 
 
-        // Client-edge-cloud scenario
+        // (3) Type conversion
+        static void assertPopularity_(const Popularity& a, const std::string& opstr = "");
+
+        // (4) Client-edge-cloud scenario
         static uint16_t getNodePort_(const int64_t& start_port, const uint32_t& node_idx, const uint32_t& nodecnt, const uint32_t& machine_cnt);
 
-        // Intermediate files
+        // (6) Intermediate files
         static std::string getInfixForEvaluatorStatisticsFilepath_(EvaluatorCLI* evaluator_cli_ptr);
 
-        // Task scheduling
+        // (7) Task scheduling
         static std::mt19937_64 string_randgen_;
         static std::uniform_int_distribution<uint32_t> string_randdist_;
         static void preparePthreadAttr_(pthread_attr_t* attr_ptr);
