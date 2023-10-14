@@ -49,6 +49,7 @@ namespace covered
     // Type conversion/checking
     const int64_t Util::MAX_UINT16 = 65536;
     const int64_t Util::MAX_UINT32 = 4294967296;
+    const double Util::DOUBLE_IOTA = 0.1;
     // Network
     const std::string Util::LOCALHOST_IPSTR("127.0.0.1"); // Pass network card
     //const std::string Util::LOCALHOST_IPSTR("localhost"); // NOT pass network card
@@ -391,6 +392,48 @@ namespace covered
             exit(1);
         }
         return;
+    }
+
+    bool Util::isLarger(const double& a, const double& b)
+    {
+        return a > b;
+    }
+
+    bool Util::isEqual(const double& a, const double& b)
+    {
+        if (a == b)
+        {
+            return true;
+        }
+        else if (a > b && (a - b) <= DOUBLE_IOTA)
+        {
+            return true;
+        }
+        else if (a < b && (b - a) <= DOUBLE_IOTA)
+        {
+            return true;
+        }
+        return false;
+    }
+
+    bool Util::isSmaller(const double& a, const double& b)
+    {
+        return a < b;
+    }
+
+    bool Util::isLarger(const float& a, const float& b)
+    {
+        return a > b;
+    }
+
+    bool Util::isEqual(const float& a, const float& b)
+    {
+        return isEqual(static_cast<double>(a), static_cast<double>(b));
+    }
+
+    bool Util::isSmaller(const float& a, const float& b)
+    {
+        return a < b;
     }
 
     std::string Util::toString(void* pointer)

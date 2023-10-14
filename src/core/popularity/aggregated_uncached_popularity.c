@@ -150,7 +150,7 @@ namespace covered
         else // Global cache misses become local cache hits for the edge nodes with top-k local uncached popularity, and global cache misses become redirected cache hits for other edge nodes
         {
             admission_benefit = local_hit_weight * topi_local_uncached_popularity_; // w1
-            assert(sum_local_uncached_popularity_ >= topi_local_uncached_popularity_);
+            assert(Util::isLarger(sum_local_uncached_popularity_, topi_local_uncached_popularity_) || Util::isEqual(sum_local_uncached_popularity_, topi_local_uncached_popularity_));
             admission_benefit += cooperative_hit_weight * (sum_local_uncached_popularity_ - topi_local_uncached_popularity_); // w2
         }
         return admission_benefit;

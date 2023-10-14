@@ -128,6 +128,7 @@ namespace covered
             cache_name_ = cache_name;
             checkCacheName_();
             capacity_bytes_ = capacity_bytes;
+            checkCapacityBytes_();
             hash_name_ = hash_name;
             checkHashName_();
             percacheserver_workercnt_ = percacheserver_workercnt;
@@ -210,6 +211,19 @@ namespace covered
         {
             std::ostringstream oss;
             oss << "cache name " << cache_name_ << " is not supported!";
+            Util::dumpErrorMsg(kClassName, oss.str());
+            exit(1);
+        }
+        return;
+    }
+
+    void EdgeCLI::checkCapacityBytes_() const
+    {
+        uint64_t min_capacity_bytes = MB2B(Config::getMinCapacityMB());
+        if (capacity_bytes_ < min_capacity_bytes)
+        {
+            std::ostringstream oss;
+            oss << "capacity (bytes) " << capacity_bytes_ << " is less than the minimum capacity (bytes) " << min_capacity_bytes << " -> please use a larger capacity_mb in CLI!";
             Util::dumpErrorMsg(kClassName, oss.str());
             exit(1);
         }

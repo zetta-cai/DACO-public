@@ -261,6 +261,9 @@ namespace covered
             cache_manager_size = covered_cache_manager_ptr_->getSizeForCapacity();
         }
 
+        // TMPDEBUG231014
+        Util::dumpVariablesForDebug(instance_name_, 6, "edge_cache_size:", std::to_string(edge_cache_size).c_str(), "cooperation_size:", std::to_string(cooperation_size).c_str(), "cache_manager_size:", std::to_string(cache_manager_size).c_str());
+
         uint64_t size = edge_cache_size + cooperation_size + cache_manager_size;
 
         return size;

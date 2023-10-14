@@ -107,6 +107,10 @@ namespace covered
         assert(control_request_ptr != NULL);
         assert(control_request_ptr->getMessageType() == MessageType::kCoveredVictimFetchRequest);
 
+        // TMPDEBUG231014
+        Util::dumpDebugMsg(instance_name_, "CacheServerVictimFetchProcessor::processVictimFetchRequest_...");
+        cache_serer_victim_fetch_processor_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr()->getSizeForCapacity();
+
         checkPointers_();
         CacheServer* tmp_cache_server_ptr = cache_serer_victim_fetch_processor_param_ptr_->getCacheServerPtr();
         EdgeWrapper* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();

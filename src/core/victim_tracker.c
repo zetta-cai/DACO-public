@@ -256,6 +256,7 @@ namespace covered
             size_bytes_ = Util::uint64Minus(size_bytes_, sizeof(uint32_t)); // For edge_idx
             size_bytes_ = Util::uint64Minus(size_bytes_, sizeof(uint64_t)); // For cache_margin_bytes
         }*/
+        UNUSED(is_empty);
 
         // Remove corresponding victim dirinfos from perkey_victim_dirinfo_ if refcnt becomes zero
         for (std::unordered_set<Key, KeyHasher>::const_iterator victim_keyset_const_iter = victim_keyset.begin(); victim_keyset_const_iter != victim_keyset.end(); victim_keyset_const_iter++)

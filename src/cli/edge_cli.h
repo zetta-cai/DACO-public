@@ -38,6 +38,7 @@ namespace covered
         static const std::string kClassName;
 
         void checkCacheName_() const;
+        void checkCapacityBytes_() const;
         void checkHashName_() const;
         void verifyIntegrity_() const;
 

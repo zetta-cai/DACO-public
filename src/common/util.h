@@ -69,6 +69,7 @@ namespace covered
         // Type conversion
         static const int64_t MAX_UINT16;
         static const int64_t MAX_UINT32;
+        static const double DOUBLE_IOTA;
         // Network (UDP message payload -> UDP fragment payloads; UDP fragment payload + UDP fragment header -> UDP packet payload)
         static const std::string LOCALHOST_IPSTR;
         static const std::string ANY_IPSTR;
@@ -128,6 +129,12 @@ namespace covered
         static uint64_t uint64Minus(const uint64_t& a, const uint64_t& b); // a - b
         static void uint64AddForAtomic(std::atomic<uint64_t>& a, const uint64_t& b); // a + b
         static void uint64MinusForAtomic(std::atomic<uint64_t>& a, const uint64_t& b); // a - b
+        static bool isLarger(const double& a, const double& b); // a > b
+        static bool isEqual(const double& a, const double& b); // a = b (with iota)
+        static bool isSmaller(const double& a, const double& b); // a < b
+        static bool isLarger(const float& a, const float& b); // a > b
+        static bool isEqual(const float& a, const float& b); // a = b (with iota)
+        static bool isSmaller(const float& a, const float& b); // a < b
         static std::string toString(void* pointer);
         static std::string toString(const bool& boolean);
         static std::string toString(const uint32_t& val);

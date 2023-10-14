@@ -39,6 +39,7 @@ namespace covered
     const std::string Config::IS_GENERATE_RANDOM_VALUESTR_KEYSTR("is_generate_random_valuestr");
     const std::string Config::IS_TRACK_EVENT_KEYSTR("is_track_event");
     const std::string Config::LATENCY_HISTOGRAM_SIZE_KEYSTR("latency_histogram_size");
+    const std::string Config::MIN_CAPACITY_MB_KEYSTR("min_capacity_mb");
     const std::string Config::OUTPUT_BASEDIR_KEYSTR("output_basedir");
     const std::string Config::PROPAGATION_ITEM_BUFFER_SIZE_CLIENT_TOEDGE_KEYSTR("propagation_item_buffer_size_client_toedge");
     const std::string Config::PROPAGATION_ITEM_BUFFER_SIZE_EDGE_TOCLIENT_KEYSTR("propagation_item_buffer_size_edge_toclient");
@@ -87,6 +88,7 @@ namespace covered
     bool Config::is_generate_random_valuestr_ = false;
     bool Config::is_track_event_ = false;
     uint32_t Config::latency_histogram_size_ = 1000000; // Track latency up to 1000 ms
+    uint64_t Config::min_capacity_mb_ = 10;
     std::string Config::output_basedir_("output");
     uint32_t Config::propagation_item_buffer_size_client_toedge_ = 1000;
     uint32_t Config::propagation_item_buffer_size_edge_toclient_ = 1000;
@@ -292,6 +294,12 @@ namespace covered
                 {
                     int64_t tmp_size = kv_ptr->value().get_int64();
                     latency_histogram_size_ = Util::toUint32(tmp_size);
+                }
+                kv_ptr = find_(MIN_CAPACITY_MB_KEYSTR);
+                if (kv_ptr != NULL)
+                {
+                    int64_t tmp_capacity = kv_ptr->value().get_int64();
+                    min_capacity_mb_ = static_cast<uint64_t>(tmp_capacity);
                 }
                 kv_ptr = find_(OUTPUT_BASEDIR_KEYSTR);
                 if (kv_ptr != NULL)
@@ -619,6 +627,12 @@ namespace covered
         return latency_histogram_size_;
     }
 
+    uint64_t Config::getMinCapacityMB()
+    {
+        checkIsValid_();
+        return min_capacity_mb_;
+    }
+
     std::string Config::getOutputBasedir()
     {
         checkIsValid_();
@@ -707,6 +721,7 @@ namespace covered
         oss << "Is generate random valuestr: " << (is_generate_random_valuestr_?"true":"false") << std::endl;
         oss << "Is track event: " << (is_track_event_?"true":"false") << std::endl;
         oss << "Latency histogram size: " << latency_histogram_size_ << std::endl;
+        oss << "Min capacity MiB: " << min_capacity_mb_ << std::endl;
         oss << "Output base directory: " << output_basedir_ << std::endl;
         oss << "Propagation item buffer size from client to edge: " << propagation_item_buffer_size_client_toedge_ << std::endl;
         oss << "Propagation item buffer size from edge to client: " << propagation_item_buffer_size_edge_toclient_ << std::endl;
