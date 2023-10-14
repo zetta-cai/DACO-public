@@ -170,6 +170,8 @@ namespace covered
 
     void CoveredLocalCache::updateLocalUncachedMetadataForRspInternal_(const Key& key, const Value& value, const bool& is_value_related) const
     {
+        assertCapacityForLargeObj_(key, value);
+        
         bool is_key_tracked = local_uncached_metadata_.isKeyExist(key);
         if (is_key_tracked)
         {
@@ -234,9 +236,6 @@ namespace covered
         
         assert(hasFineGrainedManagement());
 
-        // TMPDEBUG231014
-        Util::dumpDebugMsg(instance_name_, "CoveredLocalCache::getLocalCacheVictimKeysInternal_...");
-
         bool has_victim_key = false;
         uint32_t least_popular_rank = 0;
         uint64_t conservative_victim_total_size = 0;
@@ -265,9 +264,6 @@ namespace covered
 
                     // NOTE: we CANNOT use delta of cachelib internal sizes as conservative_victim_total_size (still conservative due to NOT considering saved metadata space), as we have NOT really evicted the victims from covered_cache_ptr_ yet
                     conservative_victim_total_size += (tmp_victim_object_size); // Count key size and value size into victim total size (conservative as we do NOT count metadata cache size usage -> the actual saved space after eviction should be larger than conservative_victim_total_size and also required_size)
-
-                    // TMPDEBUG231014
-                    Util::dumpVariablesForDebug(instance_name_, 6, "tmp_victim_object_size:", std::to_string(tmp_victim_object_size).c_str(), "conservative_victim_total_size:", std::to_string(conservative_victim_total_size).c_str(), "required_size:", std::to_string(required_size).c_str());
                 }
 
                 has_victim_key = true;
@@ -340,15 +336,19 @@ namespace covered
         uint64_t local_uncached_metadata_size = local_uncached_metadata_.getSizeForCapacity();
         internal_size = Util::uint64Add(internal_size, local_uncached_metadata_size);
 
-        // TMPDEBUG231014
-        Util::dumpVariablesForDebug(instance_name_, 6, "cache size usage:", std::to_string(covered_cache_ptr_->getUsedSize(covered_poolid_)).c_str(), "local_cached_metadata_size:", std::to_string(local_cached_metadata_size).c_str(), "local_uncached_metadata_size:", std::to_string(local_uncached_metadata_size).c_str());
-
         return internal_size;
     }
 
     void CoveredLocalCache::checkPointersInternal_() const
     {
         assert(covered_cache_ptr_ != NULL);
+        return;
+    }
+
+    void CoveredLocalCache::assertCapacityForLargeObj_(const Key& key, const Value& value) const
+    {
+        const uint32_t object_size = key.getKeyLength() + value.getValuesize();
+        assert(capacity_bytes_ > object_size);
         return;
     }
 }

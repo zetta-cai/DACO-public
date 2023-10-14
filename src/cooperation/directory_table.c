@@ -46,7 +46,7 @@ namespace covered
         return all_dirinfo;
     }
 
-    bool DirectoryTable::lookup(const Key& key, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
+    bool DirectoryTable::lookup(const Key& key, const uint32_t& source_edge_idx, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
     {
         bool is_global_cached = false; // Whether the key is cached by a local/neighbor edge node (even if invalid temporarily)
 
@@ -63,6 +63,13 @@ namespace covered
         }
         else // key exists
         {
+            // Remove source edge idx from valid_directory_info_set if any due to finding a non-source valid dirinfo
+            dirinfo_set_t::const_iterator source_dirinfo_iter = valid_directory_info_set.find(DirectoryInfo(source_edge_idx));
+            if (source_dirinfo_iter != valid_directory_info_set.end())
+            {
+                valid_directory_info_set.erase(source_dirinfo_iter);
+            }
+
             if (valid_directory_info_set.size() > 0) // At least one valid directory
             {
                 is_valid_directory_exist = true;
@@ -87,6 +94,7 @@ namespace covered
                 if (i == random_number)
                 {
                     directory_info = *iter;
+                    assert(directory_info.getTargetEdgeIdx() != source_edge_idx); // NOTE: find a non-source valid directory info if any
                     break;
                 }
                 i++;

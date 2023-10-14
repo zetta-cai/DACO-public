@@ -352,7 +352,8 @@ namespace covered
         // TODO: Use a heuristic or learning-based approach for parameter tuning to calculate local rewards for heterogeneous popularity calculation (refer to state-of-the-art studies such as LRB and GL-Cache)
 
         // NOTE: Here we use a simple approach to calculate popularity based on object-level and group-level metadata
-        Popularity popularity = static_cast<Popularity>(pergroup_statistics.getAvgObjectSize()) / static_cast<Popularity>(perkey_statistics.getFrequency()); // # of accessed bytes per cache access (similar as LHD)
+        Popularity objsize_kb = B2KB(static_cast<Popularity>(pergroup_statistics.getAvgObjectSize()));
+        Popularity popularity = static_cast<Popularity>(perkey_statistics.getFrequency()) / objsize_kb; // # of accessed bytes per cache access (similar as LHD)
         return popularity;
     }
 

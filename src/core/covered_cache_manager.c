@@ -300,9 +300,6 @@ namespace covered
         assert(edge_wrapper_ptr != NULL);
         assert(recvrsp_socket_server_ptr != NULL);
 
-        // TMPDEBUG231014
-        Util::dumpDebugMsg(instance_name_, "CoveredCacheManager::parallelFetchVictims_...");
-
         extra_peredge_victim_cacheinfos.clear();
         extra_perkey_victim_dirinfoset.clear();
 
@@ -332,9 +329,6 @@ namespace covered
                 const uint32_t tmp_edge_idx = iter_for_request->first; // Edge node index of an involved edge node that has not acknowledged victim fetch request
                 if (tmp_edge_idx == current_edge_idx) // Local victim fetching
                 {
-                    //TMPDEBUG231014
-                    edge_wrapper_ptr->getSizeForCapacity();
-
                     // Get victim cacheinfos from local edge cache for object size
                     std::list<VictimCacheinfo> tmp_victim_cacheinfos;
                     bool has_victim_key = edge_wrapper_ptr->getEdgeCachePtr()->fetchVictimCacheinfosForRequiredSize(tmp_victim_cacheinfos, object_size);

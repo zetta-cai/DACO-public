@@ -10,7 +10,6 @@ namespace covered
     EdgeCLI::EdgeCLI() : EdgescaleCLI(), PropagationCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_create_required_directories_(false)
     {
         cache_name_ = "";
-        capacity_bytes_ = 0;
         hash_name_ = "";
         percacheserver_workercnt_ = 0;
 
@@ -32,11 +31,6 @@ namespace covered
     std::string EdgeCLI::getCacheName() const
     {
         return cache_name_;
-    }
-
-    uint64_t EdgeCLI::getCapacityBytes() const
-    {
-        return capacity_bytes_;
     }
 
     std::string EdgeCLI::getHashName() const
@@ -88,7 +82,6 @@ namespace covered
             // Dynamic configurations for client
             argument_desc_.add_options()
                 ("cache_name", boost::program_options::value<std::string>()->default_value(Util::LRU_CACHE_NAME), "cache name (e.g., cachelib, lfu, lru, segcache, and covered)")
-                ("capacity_mb", boost::program_options::value<uint64_t>()->default_value(1024), "total cache capacity (including data and metadata) in units of MiB")
                 ("hash_name", boost::program_options::value<std::string>()->default_value(Util::MMH3_HASH_NAME, "the type of consistent hashing for DHT (e.g., mmh3)"))
                 ("percacheserver_workercnt", boost::program_options::value<uint32_t>()->default_value(1), "the number of worker threads for each cache server")
                 ("covered_local_uncached_max_mem_usage_mb", boost::program_options::value<uint64_t>()->default_value(1), "the maximum memory usage for local uncached metadata in units of MiB (only for COVERED)")
@@ -114,7 +107,6 @@ namespace covered
             // (3) Get CLI parameters for client dynamic configurations
 
             std::string cache_name = argument_info_["cache_name"].as<std::string>();
-            uint64_t capacity_bytes = MB2B(argument_info_["capacity_mb"].as<uint64_t>()); // In units of bytes
             std::string hash_name = argument_info_["hash_name"].as<std::string>();
             uint32_t percacheserver_workercnt = argument_info_["percacheserver_workercnt"].as<uint32_t>();
             // ONLY for COVERED
@@ -127,14 +119,13 @@ namespace covered
             // Store edgecnt CLI parameters for dynamic configurations
             cache_name_ = cache_name;
             checkCacheName_();
-            capacity_bytes_ = capacity_bytes;
-            checkCapacityBytes_();
             hash_name_ = hash_name;
             checkHashName_();
             percacheserver_workercnt_ = percacheserver_workercnt;
             // ONLY for COVERED
             if (cache_name == Util::COVERED_CACHE_NAME)
             {
+                const uint64_t capacity_bytes = EdgescaleCLI::getCapacityBytes();
                 if (capacity_bytes * Config::getCoveredLocalUncachedMaxMemUsageRatio() >= covered_local_uncached_max_mem_usage_bytes)
                 {
                     covered_local_uncached_max_mem_usage_bytes_ = covered_local_uncached_max_mem_usage_bytes;
@@ -176,7 +167,6 @@ namespace covered
             std::ostringstream oss;
             oss << "[Dynamic configurations from CLI parameters in " << kClassName << "]" << std::endl;
             oss << "Cache name: " << cache_name_ << std::endl;
-            oss << "Capacity (bytes): " << capacity_bytes_ << std::endl;
             oss << "Hash name: " << hash_name_ << std::endl;
             oss << "Per-cache-server worker count:" << percacheserver_workercnt_;
             if (cache_name_ == Util::COVERED_CACHE_NAME)
@@ -217,19 +207,6 @@ namespace covered
         return;
     }
 
-    void EdgeCLI::checkCapacityBytes_() const
-    {
-        uint64_t min_capacity_bytes = MB2B(Config::getMinCapacityMB());
-        if (capacity_bytes_ < min_capacity_bytes)
-        {
-            std::ostringstream oss;
-            oss << "capacity (bytes) " << capacity_bytes_ << " is less than the minimum capacity (bytes) " << min_capacity_bytes << " -> please use a larger capacity_mb in CLI!";
-            Util::dumpErrorMsg(kClassName, oss.str());
-            exit(1);
-        }
-        return;
-    }
-
     void EdgeCLI::checkHashName_() const
     {
         if (hash_name_ != Util::MMH3_HASH_NAME)
@@ -244,14 +221,14 @@ namespace covered
 
     void EdgeCLI::verifyIntegrity_() const
     {
-        assert(capacity_bytes_ > 0);
         assert(percacheserver_workercnt_ > 0);
         // ONLY for COVERED
         if (cache_name_ == Util::COVERED_CACHE_NAME)
         {
-            assert(covered_local_uncached_max_mem_usage_bytes_ > 0 && covered_local_uncached_max_mem_usage_bytes_ < capacity_bytes_);
+            const uint64_t capacity_bytes = EdgescaleCLI::getCapacityBytes();
+            assert(covered_local_uncached_max_mem_usage_bytes_ > 0 && covered_local_uncached_max_mem_usage_bytes_ < capacity_bytes);
             assert(covered_peredge_synced_victimcnt_ > 0);
-            assert(covered_popularity_aggregation_max_mem_usage_bytes_ > 0 && covered_popularity_aggregation_max_mem_usage_bytes_ < capacity_bytes_);
+            assert(covered_popularity_aggregation_max_mem_usage_bytes_ > 0 && covered_popularity_aggregation_max_mem_usage_bytes_ < capacity_bytes);
             assert(covered_popularity_collection_change_ratio_ >= 0.0);
             assert(covered_topk_edgecnt_ > 0 && covered_topk_edgecnt_ <= getEdgecnt());
         }

@@ -679,7 +679,6 @@ namespace covered
     {
         checkPointers_();
         CooperationWrapperBase* tmp_cooperation_wrapper_ptr = edge_wrapper_ptr_->getCooperationWrapperPtr();
-        CoveredCacheManager* tmp_covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
 
         bool is_finish = false;
 
@@ -691,6 +690,8 @@ namespace covered
 
         if (edge_wrapper_ptr_->getCacheName() == Util::COVERED_CACHE_NAME) // ONLY for COVERED
         {
+            CoveredCacheManager* tmp_covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
+
             // Update directory info in victim tracker if the local beaconed key is a local/neighbor synced victim
             tmp_covered_cache_manager_ptr->updateVictimTrackerForLocalBeaconedVictimDirinfo(key, is_admit, directory_info);
 
@@ -746,7 +747,6 @@ namespace covered
     MessageBase* CacheServer::getReqToEvictBeaconDirectory_(const Key& key, const DirectoryInfo& directory_info, const NetworkAddr& source_addr, const bool& skip_propagation_latency, const bool& is_background) const
     {
         checkPointers_();
-        CoveredCacheManager* tmp_covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
 
         uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
         const bool is_admit = false; // Evict a victim as local uncached object (NOTE: local edge cache has already been evicted)
@@ -754,6 +754,8 @@ namespace covered
     
         if (edge_wrapper_ptr_->getCacheName() == Util::COVERED_CACHE_NAME) // ONLY for COVERED
         {
+            CoveredCacheManager* tmp_covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
+
             // Prepare local uncached popularity of key for piggybacking-based popularity collection
             CollectedPopularity collected_popularity;
             edge_wrapper_ptr_->getEdgeCachePtr()->getCollectedPopularity(key, collected_popularity); // collected_popularity.is_tracked_ indicates if the local uncached key is tracked in local uncached metadata (due to selective metadata preservation)
@@ -791,12 +793,13 @@ namespace covered
     {
         checkPointers_();
         assert(control_response_ptr != NULL);
-        CoveredCacheManager* tmp_covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
 
         bool is_finish = false;
 
         if (edge_wrapper_ptr_->getCacheName() == Util::COVERED_CACHE_NAME) // ONLY for COVERED
         {
+            CoveredCacheManager* tmp_covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
+            
             // Victim synchronization
             const KeyByteVictimsetMessage* directory_update_response_ptr = static_cast<const KeyByteVictimsetMessage*>(control_response_ptr);
             const uint32_t source_edge_idx = directory_update_response_ptr->getSourceIndex();

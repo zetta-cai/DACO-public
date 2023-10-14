@@ -31,6 +31,24 @@ namespace covered
         return workload_ptr;
     }
 
+    WorkloadWrapperBase* WorkloadWrapperBase::getWorkloadGeneratorByWorkloadName(const uint64_t& capacity_bytes, const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name)
+    {
+        WorkloadWrapperBase* workload_ptr = getWorkloadGeneratorByWorkloadName(clientcnt, client_idx, keycnt, opcnt, perclient_workercnt, workload_name);
+        assert(workload_ptr != NULL);
+
+        // NOTE: cache capacity MUST be larger than the maximum object size in the workload
+        const uint32_t max_obj_size = workload_ptr->getMaxDatasetKeysize() + workload_ptr->getMaxDatasetValuesize();
+        if (capacity_bytes <= max_obj_size)
+        {
+            std::ostringstream oss;
+            oss << "cache capacity (" << capacity_bytes << " bytes) should > the maximum object size (" << max_obj_size << " bytes) in workload " << workload_name << "!";
+            Util::dumpErrorMsg(kClassName, oss.str());
+            exit(1);
+        }
+
+        return workload_ptr;
+    }
+
     WorkloadWrapperBase::WorkloadWrapperBase(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& perclient_workercnt) : clientcnt_(clientcnt), client_idx_(client_idx), keycnt_(keycnt), opcnt_(opcnt), perclient_workercnt_(perclient_workercnt)
     {
         // Differentiate workload generator in different clients

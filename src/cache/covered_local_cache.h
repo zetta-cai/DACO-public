@@ -76,6 +76,8 @@ namespace covered
 
         virtual void checkPointersInternal_() const override;
 
+        void assertCapacityForLargeObj_(const Key& key, const Value& value) const;
+
         // Member variables
 
         // (A) Const variable

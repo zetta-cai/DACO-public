@@ -3,7 +3,6 @@
 #include <assert.h>
 #include <chrono> // system_clock
 #include <errno.h> // ENOENT
-#include <iostream> // cerr
 #include <sched.h> // sched_param
 #include <sstream> // ostringstream
 #include <cmath> // pow

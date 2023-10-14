@@ -144,7 +144,7 @@ namespace covered
         bool is_global_cached = false; // Whether the key is cached by a local/neighbor edge node (even if invalid temporarily)
 
         is_being_written = block_tracker_ptr_->isBeingWrittenForKey(key);
-        is_global_cached = lookupDirectoryTable_(key, source_edge_idx, is_being_written, is_valid_directory_exist, directory_info, is_source_cached);
+        is_global_cached = lookupDirectoryTable_(key, source_edge_idx, is_being_written, is_valid_directory_exist, directory_info, is_source_cached); // NOTE: find a non-source valid directory info if any
 
         // Release a read lock
         cooperation_wrapper_perkey_rwlock_ptr_->unlock_shared(key, context_name);
@@ -163,7 +163,7 @@ namespace covered
         bool is_global_cached = false; // Whether the key is cached by a local/neighbor edge node (even if invalid temporarily)
 
         block_tracker_ptr_->blockEdgeForKeyIfExistAndBeingWritten(key, cache_server_worker_recvreq_dst_addr, is_being_written);
-        is_global_cached = lookupDirectoryTable_(key, source_edge_idx, is_being_written, is_valid_directory_exist, directory_info, is_source_cached);
+        is_global_cached = lookupDirectoryTable_(key, source_edge_idx, is_being_written, is_valid_directory_exist, directory_info, is_source_cached); // NOTE: find a non-source valid directory info if any
 
         // Release a read lock
         cooperation_wrapper_perkey_rwlock_ptr_->unlock(key, context_name);
@@ -180,7 +180,7 @@ namespace covered
         if (!is_being_written) // if key is NOT being written
         {
             assert(directory_table_ptr_ != NULL);
-            is_global_cached = directory_table_ptr_->lookup(key, is_valid_directory_exist, directory_info);
+            is_global_cached = directory_table_ptr_->lookup(key, source_edge_idx, is_valid_directory_exist, directory_info); // NOTE: find a non-source valid directory info if any
         }
         else // key is being written
         {

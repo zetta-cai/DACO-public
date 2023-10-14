@@ -202,7 +202,7 @@ namespace covered
         Value tmp_value;
         const bool skip_propagation_latency = local_request_ptr->isSkipPropagationLatency();
 
-        #ifdef DEBUG_CACHE_SERVER
+        #ifdef DEBUG_CACHE_SERVER_WORKER
         Util::dumpVariablesForDebug(base_instance_name_, 5, "receive a local get request;", "type:", MessageBase::messageTypeToString(local_request_ptr->getMessageType()).c_str(), "keystr:", tmp_key.getKeystr().c_str());
         #endif
 
@@ -230,7 +230,7 @@ namespace covered
         uint32_t get_local_cache_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(get_local_cache_end_timestamp, get_local_cache_start_timestamp));
         event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_GET_LOCAL_CACHE_EVENT_NAME, get_local_cache_latency_us); // Add intermediate event if with event tracking
 
-        #ifdef DEBUG_CACHE_SERVER
+        #ifdef DEBUG_CACHE_SERVER_WORKER
         Util::dumpVariablesForDebug(base_instance_name_, 5, "acesss local edge cache;", "is_local_cached_and_valid:", Util::toString(is_local_cached_and_valid).c_str(), "keystr:", tmp_key.getKeystr().c_str());
         #endif
 
@@ -257,7 +257,7 @@ namespace covered
             uint32_t get_cooperative_cache_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(get_cooperative_cache_end_timestamp, get_cooperative_cache_start_timestamp));
             event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_GET_COOPERATIVE_CACHE_EVENT_NAME, get_cooperative_cache_latency_us); // Add intermediate event if with event tracking
 
-            #ifdef DEBUG_CACHE_SERVER
+            #ifdef DEBUG_CACHE_SERVER_WORKER
             Util::dumpVariablesForDebug(base_instance_name_, 5, "acesss cooperative edge cache;", "is_cooperative_cached_and_valid:", Util::toString(is_cooperative_cached_and_valid).c_str(), "keystr:", tmp_key.getKeystr().c_str());
             #endif
         }
@@ -329,7 +329,7 @@ namespace covered
         bool is_successful = tmp_edge_wrapper_ptr->getEdgeToclientPropagationSimulatorParamPtr()->push(local_get_response_ptr, recvrsp_dst_addr);
         assert(is_successful);
 
-        #ifdef DEBUG_CACHE_SERVER
+        #ifdef DEBUG_CACHE_SERVER_WORKER
         Util::dumpVariablesForDebug(base_instance_name_, 5, "issue a local response;", "type:", MessageBase::messageTypeToString(local_get_response_ptr->getMessageType()).c_str(), "keystr:", tmp_key.getKeystr().c_str());
         #endif
 
@@ -353,7 +353,7 @@ namespace covered
         // Update remote address of edge_cache_server_worker_sendreq_tocloud_socket_client_ptr_ as the beacon node for the key if remote
         bool current_is_beacon = tmp_edge_wrapper_ptr->currentIsBeacon(key);
 
-        #ifdef DEBUG_CACHE_SERVER
+        #ifdef DEBUG_CACHE_SERVER_WORKER
         Util::dumpVariablesForDebug(base_instance_name_, 4, "current_is_beacon:", Util::toString(current_is_beacon).c_str(), "keystr:", key.getKeystr().c_str());
         #endif
 
@@ -423,7 +423,7 @@ namespace covered
             uint32_t lookup_directory_latency_us = Util::getDeltaTimeUs(lookup_directory_end_timestamp, lookup_directory_start_timestamp);
             event_list.addEvent(current_is_beacon?Event::EDGE_CACHE_SERVER_WORKER_LOOKUP_LOCAL_DIRECTORY_EVENT_NAME:Event::EDGE_CACHE_SERVER_WORKER_LOOKUP_REMOTE_DIRECTORY_EVENT_NAME, lookup_directory_latency_us);
 
-            #ifdef DEBUG_CACHE_SERVER
+            #ifdef DEBUG_CACHE_SERVER_WORKER
             Util::dumpVariablesForDebug(base_instance_name_, 4, "is_valid_directory_exist:", Util::toString(is_valid_directory_exist).c_str(), "keystr:", key.getKeystr().c_str());
             #endif
 
@@ -436,7 +436,7 @@ namespace covered
                 if (current_is_target)
                 {
                     std::ostringstream oss;
-                    oss << "current edge node " << directory_info.getTargetEdgeIdx() << " should not be the target edge node for cooperative edge caching under a local cache miss!";
+                    oss << "current edge node " << directory_info.getTargetEdgeIdx() << " should not be the target edge node for cooperative edge caching under a local cache miss of key " << key.getKeystr() << "!";
                     Util::dumpWarnMsg(base_instance_name_, oss.str());
                     return is_finish; // NOTE: is_finish is still false, as edge is STILL running
                 }
@@ -455,7 +455,7 @@ namespace covered
                 uint32_t redirect_get_latency_us = Util::getDeltaTimeUs(redirect_get_end_timestamp, redirect_get_start_timestamp);
                 event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_REDIRECT_GET_EVENT_NAME, redirect_get_latency_us);
 
-                #ifdef DEBUG_CACHE_SERVER
+                #ifdef DEBUG_CACHE_SERVER_WORKER
                 Util::dumpVariablesForDebug(base_instance_name_, 9, "issue redirected get request:", "target:", Util::toString(directory_info.getTargetEdgeIdx()).c_str(), "is_cooperative_cached:", Util::toString(is_cooperative_cached).c_str(), "is_valid", Util::toString(is_valid).c_str(), "keystr:", key.getKeystr().c_str());
                 #endif
 
@@ -507,7 +507,7 @@ namespace covered
             MessageBase* directory_lookup_request_ptr = getReqToLookupBeaconDirectory_(key, skip_propagation_latency);
             assert(directory_lookup_request_ptr != NULL);
 
-            #ifdef DEBUG_CACHE_SERVER
+            #ifdef DEBUG_CACHE_SERVER_WORKER
             Util::dumpVariablesForDebug(base_instance_name_, 4, "beacon edge index:", std::to_string(tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getBeaconEdgeIdx(key)).c_str(), "keystr:", key.getKeystr().c_str());
             #endif
 
@@ -686,7 +686,7 @@ namespace covered
             MessageBase* global_get_request_ptr = new GlobalGetRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
             assert(global_get_request_ptr != NULL);
 
-            #ifdef DEBUG_CACHE_SERVER
+            #ifdef DEBUG_CACHE_SERVER_WORKER
             Util::dumpVariablesForDebug(base_instance_name_, 5, "issue a global request;", "type:", MessageBase::messageTypeToString(global_get_request_ptr->getMessageType()).c_str(), "keystr:", key.getKeystr().c_str());
             #endif
 
@@ -732,7 +732,7 @@ namespace covered
                 // Add events of intermediate response if with event tracking
                 event_list.addEvents(global_get_response_ptr->getEventListRef());
 
-                #ifdef DEBUG_CACHE_SERVER
+                #ifdef DEBUG_CACHE_SERVER_WORKER
                 Util::dumpVariablesForDebug(base_instance_name_, 5, "receive a global response", "type:", MessageBase::messageTypeToString(global_response_ptr->getMessageType()).c_str(), "keystr:", global_get_response_ptr->getKey().getKeystr().c_str());
                 #endif
 
@@ -784,7 +784,7 @@ namespace covered
         }
         const bool skip_propagation_latency = local_request_ptr->isSkipPropagationLatency();
 
-        #ifdef DEBUG_CACHE_SERVER
+        #ifdef DEBUG_CACHE_SERVER_WORKER
         Util::dumpVariablesForDebug(base_instance_name_, 9, "receive a local write request;", "type:", MessageBase::messageTypeToString(local_request_ptr->getMessageType()).c_str(), "keystr:", tmp_key.getKeystr().c_str(), "valuesize:", std::to_string(tmp_value.getValuesize()).c_str(), "is deleted:", Util::toString(tmp_value.isDeleted()).c_str());
         #endif
         
@@ -1506,9 +1506,9 @@ namespace covered
             // NOTE: COVERED will NOT trigger any independent cache admission/eviction decision
             assert(tmp_edge_wrapper_ptr->getCacheName() != Util::COVERED_CACHE_NAME);
 
-            #ifdef DEBUG_CACHE_SERVER
+            #ifdef DEBUG_CACHE_SERVER_WORKER
             uint64_t used_bytes_before_admit = tmp_edge_wrapper_ptr->getSizeForCapacity();
-            Util::dumpVariablesForDebug(base_instance_name_, 11, "independent admission;", "keystr:", key.getKeystr().c_str(), "keysize:", std::to_string(key.getKeyLength()).c_str(), "is value deleted:", Util::toString(value.isDeleted()).c_str(), "value size:", Util::toString(value.getValuesize()).c_str(), "used_bytes_before_admit:", std::to_string(used_bytes_before_admit).c_str());
+            //Util::dumpVariablesForDebug(base_instance_name_, 11, "independent admission;", "keystr:", key.getKeystr().c_str(), "keysize:", std::to_string(key.getKeyLength()).c_str(), "is value deleted:", Util::toString(value.isDeleted()).c_str(), "value size:", Util::toString(value.getValuesize()).c_str(), "used_bytes_before_admit:", std::to_string(used_bytes_before_admit).c_str());
             #endif
 
             is_finish = admitObject_(key, value, total_bandwidth_usage, event_list, skip_propagation_latency);

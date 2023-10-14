@@ -237,9 +237,6 @@ namespace covered
     {
         checkPointers_();
 
-        // TMPDEBUG231014
-        Util::dumpDebugMsg(instance_name_, "CacheWrapper::fetchVictimCacheinfosForRequiredSize...");
-
         // NOTE: as we only access local edge cache (thread safe w/o per-key rwlock) instead of validity map (thread safe w/ per-key rwlock), we do NOT need to acquire a fine-grained read lock here
 
         // Acquire a read lock
@@ -343,9 +340,6 @@ namespace covered
         uint64_t local_edge_cache_size = local_cache_ptr_->getSizeForCapacity();
         uint64_t validity_map_size = validity_map_ptr_->getSizeForCapacity();
         uint64_t total_size = Util::uint64Add(local_edge_cache_size, validity_map_size);
-
-        // TMPDEBUG231014
-        Util::dumpVariablesForDebug(instance_name_, 4, "local_edge_cache_size:", std::to_string(local_edge_cache_size).c_str(), "validity_map_size:", std::to_string(validity_map_size).c_str());
 
         return total_size;
     }

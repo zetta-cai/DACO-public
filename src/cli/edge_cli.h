@@ -24,7 +24,6 @@ namespace covered
         virtual ~EdgeCLI();
 
         std::string getCacheName() const;
-        uint64_t getCapacityBytes() const;
         std::string getHashName() const;
         uint32_t getPercacheserverWorkercnt() const;
 
@@ -38,7 +37,6 @@ namespace covered
         static const std::string kClassName;
 
         void checkCacheName_() const;
-        void checkCapacityBytes_() const;
         void checkHashName_() const;
         void verifyIntegrity_() const;
 
@@ -48,7 +46,6 @@ namespace covered
         bool is_create_required_directories_;
 
         std::string cache_name_;
-        uint64_t capacity_bytes_;
         std::string hash_name_;
         uint32_t percacheserver_workercnt_;
 

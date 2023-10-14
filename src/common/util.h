@@ -11,6 +11,7 @@
 
 #include <atomic> // std::memory_order
 #include <cstdarg> // std::va_list, va_start, va_arg, and va_end
+#include <iostream> // cout, cerr
 #include <fstream>
 #include <mutex>
 #include <pthread.h>
@@ -26,6 +27,7 @@
 #define KB2B(var) var * 1024
 #define MB2B(var) var * 1024 * 1024
 #define GB2B(var) var * 1024 * 1024 * 1024
+#define B2KB(var) var / 1024
 #define B2MB(var) var / 1024 / 1024
 
 #define MS2US(var) var * 1000
