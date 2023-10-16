@@ -1,11 +1,18 @@
 /*
  * CoveredCacheManager: COVERED's manager tracks metadata to integrate local edge cache and cooperation wrapper for cooperative-caching-aware cache management (thread safe).
  *
- * NOTE: in baselines with independent cache management, local edge cache (KV data and local cache metadata) and cooperation wrapper (content discovery and request redirection) are orthogonal/independent.
- * 
- * NOTE: in COVERED with cooperative-caching-aware cache management, local edge cache needs to provide/update metadata (e.g., local uncached popularity and current-edge-node victims), while cooperation wrapper needs to sync metadata (e.g., popularity aggregation and victim synchronization) to gain a global view of all involved edge nodes for cache management with cooperation awareness.
+ * NOTE: (1) in baselines with independent cache management, local edge cache (KV data and local cache metadata) and cooperation wrapper (content discovery and request redirection) are orthogonal/independent; (2) however, in COVERED with cooperative-caching-aware cache management, local edge cache needs to provide/update metadata (e.g., local uncached popularity and current-edge-node victims), while cooperation wrapper needs to sync metadata (e.g., popularity aggregation and victim synchronization) to gain a global view of all involved edge nodes for cache management with cooperation awareness -> so we encapsulate CoveredCacheManger to integrate local edge cache and cooperation wrapper for COVERED's core design.
  * 
  * NOTE: DirectoryCacher is used by sender edge node to cache remote valid directory information, while CooperationWrapper is used by beacon edge node to maintain content diretory information and MSI metadata, so we maintain DirectoryCacher in CoveredCacheMananger instead of CooperationWrapper.
+ * 
+ * NOTE: we focus on metadata scalability on # of objects instead of # of edge nodes, as long as we can guarantee limited metadata overhead per edge node
+ * (1) For local uncached metadata, ONLY track the uncached objects with top approximate admission benefits
+ * (2) For victim synchronization, track per-edge victims, yet ONLY peredge_victimcnt cached objects with least local rewards in each edge node
+ * (2-1) For prev victim syncset (reduce bandwidth overhead of victim synchronization), track per-edge previously-issued victim syncset, yet local synced/beaconed victims in a single victim syncset for each edge node is limited due to peredge_victimcnt limitation
+ * (2-2) TODO: For victim metadata cache (reduce overhead of lazy victim fetching), ONLY track the extra fetched victims with top fetching frequencies
+ * (3) For popularity aggregation, ONLY track the uncached objects with top max admission benefits
+ * (3-1) NOTE: it is okay to maintain per-edge local uncached popularity in aggregated uncached popularity for each object, as metadata overhead of a single local uncached popularity is limited for each edge node -> we ONLY track top-k and sum local uncached popularity just beacuse we ONLY need the partial information for greedy placement calculation
+ * (4) For directory metadata cache, track valid remote directory information ONLY for the locally-uncached objects with top approximate admission benefits
  * 
  * By Siyuan Sheng (2023.08.26).
  */
@@ -61,8 +68,8 @@ namespace covered
         void updateVictimTrackerForLocalSyncedVictims(const uint64_t& local_cache_margin_bytes, const std::list<VictimCacheinfo>& local_synced_victim_cacheinfos, const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& local_beaconed_local_synced_victim_dirinfosets);
         void updateVictimTrackerForLocalBeaconedVictimDirinfo(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info);
 
-        VictimSyncset accessVictimTrackerForVictimSyncset() const;
-        void updateVictimTrackerForVictimSyncset(const uint32_t& source_edge_idx, const VictimSyncset& victim_syncset, const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& local_beaconed_neighbor_synced_victim_dirinfosets);
+        VictimSyncset accessVictimTrackerForVictimSyncset(const uint32_t& dst_edge_idx) const; // Get complete/delta victim syncset from victim tracker for piggybacking-based victim synchronization
+        void updateVictimTrackerForNeighborVictimSyncset(const uint32_t& source_edge_idx, const VictimSyncset& neighbor_victim_syncset, const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& local_beaconed_neighbor_synced_victim_dirinfosets); // Update victim tracker in the current edge node for the received victim syncset from neighbor edge node
 
         // For directory metadata cache
 
@@ -83,7 +90,7 @@ namespace covered
 
         // For lazy victim fetching
         bool parallelFetchVictims_(const ObjectSize& object_size, const Edgeset& best_placement_victim_fetch_edgeset, const EdgeWrapper* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency, std::unordered_map<uint32_t, std::list<VictimCacheinfo>>& extra_peredge_victim_cacheinfos, std::unordered_map<Key, dirinfo_set_t, KeyHasher>& extra_perkey_victim_dirinfoset) const; // For each edge node index in victim fetch edgeset (return if edge node is finished)
-        void sendVictimFetchRequest_(const ObjectSize& object_size, const EdgeWrapper* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, const NetworkAddr& edge_cache_server_recvreq_dst_addr, const bool& skip_propagation_latency) const;
+        void sendVictimFetchRequest_(const uint32_t& dst_edge_idx, const ObjectSize& object_size, const EdgeWrapper* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, const NetworkAddr& edge_cache_server_recvreq_dst_addr, const bool& skip_propagation_latency) const;
         void processVictimFetchResponse_(const MessageBase* control_respnose_ptr, const EdgeWrapper* edge_wrapper_ptr, std::unordered_map<uint32_t, std::list<VictimCacheinfo>>& extra_peredge_victim_cacheinfos, std::unordered_map<Key, dirinfo_set_t, KeyHasher>& extra_perkey_victim_dirinfoset) const;
 
         // Const shared variables
@@ -97,7 +104,7 @@ namespace covered
         PopularityAggregator popularity_aggregator_;
 
         // Track per-edge-node least popular victims for placement and eviction (thread safe; used by sender/beacon edge node)
-        VictimTracker victim_tracker_;
+        mutable VictimTracker victim_tracker_;
 
         // Track cached directory of popular local uncached objects to reduce message overhead (thread safe; used by sender edge node)
         DirectoryCacher directory_cacher_;

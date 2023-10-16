@@ -99,7 +99,7 @@ namespace covered
         virtual void processRspToLookupBeaconDirectory_(MessageBase* control_response_ptr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching) const = 0;
 
         bool redirectGetToTarget_(const DirectoryInfo& directory_info, const Key& key, Value& value, bool& is_cooperative_cached, bool& is_valid, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const; // Request redirection
-        virtual MessageBase* getReqToRedirectGet_(const Key& key, const bool& skip_propagation_latency) const = 0;
+        virtual MessageBase* getReqToRedirectGet_(const uint32_t& dst_edge_idx, const Key& key, const bool& skip_propagation_latency) const = 0;
         virtual void processRspToRedirectGet_(MessageBase* redirected_response_ptr, Value& value, Hitflag& hitflag) const = 0;
 
         // (1.3) Access cloud

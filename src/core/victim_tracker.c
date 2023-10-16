@@ -136,25 +136,46 @@ namespace covered
         return victim_syncset;
     }
 
-    void VictimTracker::updateForVictimSyncset(const uint32_t& source_edge_idx, const VictimSyncset& victim_syncset, const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& local_beaconed_neighbor_synced_victim_dirinfosets)
+    bool VictimTracker::replacePrevVictimSyncset(const uint32_t& dst_edge_idx, const VictimSyncset& current_victim_syncset, VictimSyncset& prev_victim_syncset)
+    {
+        bool is_prev_victim_syncset_exist = false;
+
+        peredge_victim_syncset_t::iterator peredge_prev_victim_syncset_iter = peredge_prev_victim_syncset_.find(dst_edge_idx);
+        if (peredge_prev_victim_syncset_iter != peredge_prev_victim_syncset_.end())
+        {
+            is_prev_victim_syncset_exist = true;
+            prev_victim_syncset = peredge_prev_victim_syncset_iter->second;
+            peredge_prev_victim_syncset_iter->second = current_victim_syncset;
+        }
+        else
+        {
+            is_prev_victim_syncset_exist = false;
+            peredge_prev_victim_syncset_iter = peredge_prev_victim_syncset_.insert(std::pair(dst_edge_idx, current_victim_syncset)).first;
+            assert(peredge_prev_victim_syncset_iter != peredge_prev_victim_syncset_.end());
+        }
+
+        return is_prev_victim_syncset_exist;
+    }
+
+    void VictimTracker::updateForNeighborVictimSyncset(const uint32_t& source_edge_idx, const VictimSyncset& neighbor_victim_syncset, const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& local_beaconed_neighbor_synced_victim_dirinfosets)
     {
         // NOTE: limited computation overhead to update neighbor synced victim infos, as we track limited number of neighbor synced victims for the specific edge node
 
         checkPointers_();
 
-        const uint64_t neighbor_cache_margin_bytes = victim_syncset.getCacheMarginBytes();
-        const std::list<VictimCacheinfo>& neighbor_synced_victim_cacheinfos = victim_syncset.getLocalSyncedVictimsRef();
+        const uint64_t neighbor_cache_margin_bytes = neighbor_victim_syncset.getCacheMarginBytes();
+        const std::list<VictimCacheinfo>& neighbor_synced_victim_cacheinfos = neighbor_victim_syncset.getLocalSyncedVictimsRef();
         assert(local_beaconed_neighbor_synced_victim_dirinfosets.size() <= neighbor_synced_victim_cacheinfos.size());
 
         // Acquire a write lock to update local synced victims atomically
-        std::string context_name = "VictimTracker::updateForVictimSyncset()";
+        std::string context_name = "VictimTracker::updateForNeighborVictimSyncset()";
         rwlock_for_victim_tracker_->acquire_lock(context_name);
         
         // Replace VictimCacheinfos for neighbor synced victims of the given edge node
         replaceVictimMetadataForEdgeIdx_(source_edge_idx, neighbor_cache_margin_bytes, neighbor_synced_victim_cacheinfos);
 
         // Try to replace VictimDirinfo::dirinfoset (if any) for each neighbor beaconed neighbor synced victim of the given edge node
-        const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& neighbor_beaconed_victim_dirinfosets = victim_syncset.getLocalBeaconedVictimsRef();
+        const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& neighbor_beaconed_victim_dirinfosets = neighbor_victim_syncset.getLocalBeaconedVictimsRef();
         replaceVictimDirinfoSets_(neighbor_beaconed_victim_dirinfosets, false);
 
         // Replace VictimDirinfo::dirinfoset for each local beaconed neighbor synced victim of the given edge node
@@ -288,7 +309,7 @@ namespace covered
 
     void VictimTracker::replaceVictimMetadataForEdgeIdx_(const uint32_t& edge_idx, const uint64_t& cache_margin_bytes, const std::list<VictimCacheinfo>& synced_victim_cacheinfos)
     {
-        // NOTE: NO need to acquire a write lock which has been done in updateLocalSyncedVictims() and updateForVictimSyncset()
+        // NOTE: NO need to acquire a write lock which has been done in updateLocalSyncedVictims() and updateForNeighborVictimSyncset()
 
         assert(synced_victim_cacheinfos.size() <= peredge_synced_victimcnt_);
 

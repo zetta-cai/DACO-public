@@ -42,7 +42,8 @@ namespace covered
 
         // For victim synchronization
         VictimSyncset getVictimSyncset() const;
-        void updateForVictimSyncset(const uint32_t& source_edge_idx, const VictimSyncset& victim_syncset, const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& local_beaconed_neighbor_synced_victim_dirinfosets);
+        bool replacePrevVictimSyncset(const uint32_t& dst_edge_idx, const VictimSyncset& current_victim_syncset, VictimSyncset& prev_victim_syncset); // Return if prev victim syncset for dst edge idx exists
+        void updateForNeighborVictimSyncset(const uint32_t& source_edge_idx, const VictimSyncset& neighbor_victim_syncset, const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& local_beaconed_neighbor_synced_victim_dirinfosets); // Update victim tracker in the current edge node for the received victim syncset from neighbor edge node
 
         // For trade-off-aware placement calculation
         // NOTE: placement_edgeset is used for preserved edgeset, old local uncached popularities removal; placement_peredge_synced_victimset is used for synced victim removal from victim tracker, while placement_peredge_fetched_victimset is used for fetched victim removal from victim cache; victim_fetch_edgeset is used for lazy victim fetching (all under non-blocking placement deployment)
@@ -56,6 +57,7 @@ namespace covered
         // NOTE: the list of VictimCacheinfos follows the ascending order of local rewards
         typedef std::unordered_map<uint32_t, EdgelevelVictimMetadata> peredge_victim_metadata_t;
         typedef std::unordered_map<Key, VictimDirinfo, KeyHasher> perkey_victim_dirinfo_t;
+        typedef std::unordered_map<uint32_t, VictimSyncset> peredge_victim_syncset_t;
         
         static const std::string kClassName;
 
@@ -84,6 +86,7 @@ namespace covered
         uint64_t size_bytes_; // Cache size usage of victim tracker
         peredge_victim_metadata_t peredge_victim_metadata_;
         perkey_victim_dirinfo_t perkey_victim_dirinfo_;
+        peredge_victim_syncset_t peredge_prev_victim_syncset_; // Previous victim syncset for dedup/delta-compression in victim synchronization
     };
 }
 

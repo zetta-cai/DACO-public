@@ -117,16 +117,18 @@ namespace covered
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
         CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
+        uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
 
         // Prepare victim syncset for piggybacking-based victim synchronization
-        VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForVictimSyncset();
+        const uint32_t dst_beacon_edge_idx = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
+        assert(dst_beacon_edge_idx != edge_idx); // Current edge node MUST NOT be the beacon edge node for the given key
+        VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForVictimSyncset(dst_beacon_edge_idx);
 
         // Prepare local uncached popularity of key for piggybacking-based popularity collection
         CollectedPopularity collected_popularity;
         tmp_edge_wrapper_ptr->getEdgeCachePtr()->getCollectedPopularity(key, collected_popularity); // collected_popularity.is_tracked_ indicates if the local uncached key is tracked in local uncached metadata
 
         // Prepare CoveredDirectoryLookupRequest to check directory information in beacon node with popularity collection and victim synchronization
-        uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
         MessageBase* covered_directory_lookup_request_ptr = new CoveredDirectoryLookupRequest(key, collected_popularity, victim_syncset, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
         assert(covered_directory_lookup_request_ptr != NULL);
 
@@ -144,7 +146,7 @@ namespace covered
 
         Key tmp_key;
         uint32_t source_edge_idx = 0;
-        VictimSyncset victim_syncset;
+        VictimSyncset neighbor_victim_syncset;
         if (message_type == MessageType::kCoveredDirectoryLookupResponse) // Normal directory lookup response
         {
             // Get directory information from the control response message
@@ -156,7 +158,7 @@ namespace covered
             // Get key, source edge idx, and victim syncset
             tmp_key = covered_directory_lookup_response_ptr->getKey();
             source_edge_idx = covered_directory_lookup_response_ptr->getSourceIndex();
-            victim_syncset = covered_directory_lookup_response_ptr->getVictimSyncsetRef();
+            neighbor_victim_syncset = covered_directory_lookup_response_ptr->getVictimSyncsetRef();
 
             // NO hybrid data fetching
             best_placement_edgeset.clear();
@@ -173,7 +175,7 @@ namespace covered
             // Get key, source edge idx, and victim syncset
             tmp_key = covered_placement_directory_lookup_response_ptr->getKey();
             source_edge_idx = covered_placement_directory_lookup_response_ptr->getSourceIndex();
-            victim_syncset = covered_placement_directory_lookup_response_ptr->getVictimSyncsetRef();
+            neighbor_victim_syncset = covered_placement_directory_lookup_response_ptr->getVictimSyncsetRef();
 
             // Get best placement edgeset for hybrid data fetching
             best_placement_edgeset = covered_placement_directory_lookup_response_ptr->getEdgesetRef();
@@ -188,8 +190,8 @@ namespace covered
         }
 
         // Victim synchronization
-        std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = tmp_edge_wrapper_ptr->getLocalBeaconedVictimsFromVictimSyncset(victim_syncset);
-        tmp_covered_cache_manager_ptr->updateVictimTrackerForVictimSyncset(source_edge_idx, victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
+        std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = tmp_edge_wrapper_ptr->getLocalBeaconedVictimsFromVictimSyncset(neighbor_victim_syncset);
+        tmp_covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
 
         // Update DirectoryCacher if necessary
         if (is_valid_directory_exist) // If with valid dirinfo
@@ -217,14 +219,14 @@ namespace covered
         return;
     }
 
-    MessageBase* CoveredCacheServerWorker::getReqToRedirectGet_(const Key& key, const bool& skip_propagation_latency) const
+    MessageBase* CoveredCacheServerWorker::getReqToRedirectGet_(const uint32_t& dst_edge_idx, const Key& key, const bool& skip_propagation_latency) const
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
         CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
 
         // Prepare victim syncset for piggybacking-based victim synchronization
-        VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForVictimSyncset();
+        VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForVictimSyncset(dst_edge_idx);
 
         // Prepare redirected get request to fetch data from other edge nodes
         uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
@@ -250,9 +252,9 @@ namespace covered
 
         // Victim synchronization
         const uint32_t source_edge_idx = covered_redirected_get_response_ptr->getSourceIndex();
-        const VictimSyncset& victim_syncset = covered_redirected_get_response_ptr->getVictimSyncsetRef();
-        std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = tmp_edge_wrapper_ptr->getLocalBeaconedVictimsFromVictimSyncset(victim_syncset);
-        tmp_covered_cache_manager_ptr->updateVictimTrackerForVictimSyncset(source_edge_idx, victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
+        const VictimSyncset& neighbor_victim_syncset = covered_redirected_get_response_ptr->getVictimSyncsetRef();
+        std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = tmp_edge_wrapper_ptr->getLocalBeaconedVictimsFromVictimSyncset(neighbor_victim_syncset);
+        tmp_covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
 
         // Invalidate DirectoryCacher if necessary
         if (hitflag == Hitflag::kCooperativeInvalid || hitflag == Hitflag::kGlobalMiss) // Dirinfo is invalid
@@ -342,16 +344,18 @@ namespace covered
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
         CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
+        uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
 
         // Prepare victim syncset for piggybacking-based victim synchronization
-        VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForVictimSyncset();
+        const uint32_t dst_beacon_edge_idx = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
+        assert(dst_beacon_edge_idx != edge_idx); // Current edge node MUST NOT be the beacon edge node for the given key
+        VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForVictimSyncset(dst_beacon_edge_idx);
 
         // Prepare local uncached popularity of key for piggybacking-based popularity collection
         // NOTE: we NEED popularity aggregation for accumulated changes on local uncached popularity due to directory metadata cache
         CollectedPopularity collected_popularity;
         tmp_edge_wrapper_ptr->getEdgeCachePtr()->getCollectedPopularity(key, collected_popularity); // collected_popularity.is_tracked_ is false if the given key is local cached or the key is local uncached yet NOT tracked in local uncached metadata
 
-        uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
         MessageBase* covered_acquire_writelock_request_ptr = new CoveredAcquireWritelockRequest(key, collected_popularity, victim_syncset, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
         assert(covered_acquire_writelock_request_ptr != NULL);
 
@@ -377,9 +381,9 @@ namespace covered
 
         // Victim synchronization
         const uint32_t source_edge_idx = covered_acquire_writelock_response_ptr->getSourceIndex();
-        const VictimSyncset& victim_syncset = covered_acquire_writelock_response_ptr->getVictimSyncsetRef();
-        std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = tmp_edge_wrapper_ptr->getLocalBeaconedVictimsFromVictimSyncset(victim_syncset);
-        tmp_covered_cache_manager_ptr->updateVictimTrackerForVictimSyncset(source_edge_idx, victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
+        const VictimSyncset& neighbor_victim_syncset = covered_acquire_writelock_response_ptr->getVictimSyncsetRef();
+        std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = tmp_edge_wrapper_ptr->getLocalBeaconedVictimsFromVictimSyncset(neighbor_victim_syncset);
+        tmp_covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
 
         return;
     }
@@ -474,16 +478,18 @@ namespace covered
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
         CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
+        uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
 
         // Prepare victim syncset for piggybacking-based victim synchronization
-        VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForVictimSyncset();
+        const uint32_t dst_beacon_edge_idx = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
+        assert(dst_beacon_edge_idx != edge_idx); // Current edge node MUST NOT be the beacon edge node for the given key
+        VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForVictimSyncset(dst_beacon_edge_idx);
 
         // Prepare local uncached popularity of key for piggybacking-based popularity collection
         // NOTE: although getReqToAcquireBeaconWritelock_() has aggregated accumulated changes of local uncached popularity due to directory metadata cache, we still NEED popularity aggregation as local uncached metadata may be updated before releasing the write lock if the global cached key is local uncached
         CollectedPopularity collected_popularity;
         tmp_edge_wrapper_ptr->getEdgeCachePtr()->getCollectedPopularity(key, collected_popularity); // collected_popularity.is_tracked_ is false if the given key is local cached or the key is local uncached yet NOT tracked in local uncached metadata
 
-        uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
         MessageBase* covered_release_writelock_request_ptr = new CoveredReleaseWritelockRequest(key, collected_popularity, victim_syncset, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
         assert(covered_release_writelock_request_ptr != NULL);
 
@@ -504,20 +510,20 @@ namespace covered
 
         const MessageType message_type = control_response_ptr->getMessageType();
         Key tmp_key;
-        VictimSyncset victim_syncset;
+        VictimSyncset neighbor_victim_syncset;
         bool need_hybrid_fetching = false;
         Edgeset best_placement_edgeset; // Used only if need_hybrid_fetching = true
         if (message_type == MessageType::kCoveredReleaseWritelockResponse) // Normal release writelock response
         {
             const CoveredReleaseWritelockResponse* covered_release_writelock_response_ptr = static_cast<const CoveredReleaseWritelockResponse*>(control_response_ptr);
             tmp_key = covered_release_writelock_response_ptr->getKey();
-            victim_syncset = covered_release_writelock_response_ptr->getVictimSyncsetRef();
+            neighbor_victim_syncset = covered_release_writelock_response_ptr->getVictimSyncsetRef();
         }
         else if (message_type == MessageType::kCoveredPlacementReleaseWritelockResponse) // Release writelock response with hybrid data fetching
         {
             const CoveredPlacementReleaseWritelockResponse* covered_placement_release_writelock_response_ptr = static_cast<const CoveredPlacementReleaseWritelockResponse*>(control_response_ptr);
             tmp_key = covered_placement_release_writelock_response_ptr->getKey();
-            victim_syncset = covered_placement_release_writelock_response_ptr->getVictimSyncsetRef();
+            neighbor_victim_syncset = covered_placement_release_writelock_response_ptr->getVictimSyncsetRef();
 
             need_hybrid_fetching = true;
             best_placement_edgeset = covered_placement_release_writelock_response_ptr->getEdgesetRef();
@@ -536,8 +542,8 @@ namespace covered
         CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
 
         // Victim synchronization
-        std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = tmp_edge_wrapper_ptr->getLocalBeaconedVictimsFromVictimSyncset(victim_syncset);
-        tmp_covered_cache_manager_ptr->updateVictimTrackerForVictimSyncset(source_edge_idx, victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
+        std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = tmp_edge_wrapper_ptr->getLocalBeaconedVictimsFromVictimSyncset(neighbor_victim_syncset);
+        tmp_covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
 
         // Do nothing for CoveredReleaseWritelockResponse, yet notify beacon for non-blocking placement notification for CoveredPlacementReleaseWritelockResponse after hybrid data fetching
         if (need_hybrid_fetching)
@@ -562,18 +568,18 @@ namespace covered
         assert(redirected_request_ptr->getMessageType() == MessageType::kCoveredRedirectedGetRequest || redirected_request_ptr->getMessageType() == MessageType::kCoveredPlacementRedirectedGetRequest);
         Key tmp_key;
         uint32_t source_edge_idx = redirected_request_ptr->getSourceIndex();
-        VictimSyncset victim_syncset;
+        VictimSyncset neighbor_victim_syncset;
         if (redirected_request_ptr->getMessageType() == MessageType::kCoveredRedirectedGetRequest)
         {
             const CoveredRedirectedGetRequest* const covered_redirected_get_request_ptr = static_cast<const CoveredRedirectedGetRequest*>(redirected_request_ptr);
             tmp_key = covered_redirected_get_request_ptr->getKey();
-            victim_syncset = covered_redirected_get_request_ptr->getVictimSyncsetRef();
+            neighbor_victim_syncset = covered_redirected_get_request_ptr->getVictimSyncsetRef();
         }
         else if (redirected_request_ptr->getMessageType() == MessageType::kCoveredPlacementRedirectedGetRequest)
         {
             const CoveredPlacementRedirectedGetRequest* const covered_placement_redirected_get_request_ptr = static_cast<const CoveredPlacementRedirectedGetRequest*>(redirected_request_ptr);
             tmp_key = covered_placement_redirected_get_request_ptr->getKey();
-            victim_syncset = covered_placement_redirected_get_request_ptr->getVictimSyncsetRef();
+            neighbor_victim_syncset = covered_placement_redirected_get_request_ptr->getVictimSyncsetRef();
         }
         else
         {
@@ -592,8 +598,8 @@ namespace covered
         is_cooperative_cached = tmp_edge_wrapper_ptr->getEdgeCachePtr()->isLocalCached(tmp_key);
 
         // Victim synchronization
-        std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = tmp_edge_wrapper_ptr->getLocalBeaconedVictimsFromVictimSyncset(victim_syncset);
-        tmp_covered_cache_manager_ptr->updateVictimTrackerForVictimSyncset(source_edge_idx, victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
+        std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = tmp_edge_wrapper_ptr->getLocalBeaconedVictimsFromVictimSyncset(neighbor_victim_syncset);
+        tmp_covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
         
         return;
     }
@@ -630,7 +636,8 @@ namespace covered
         CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
 
         // Prepare victim syncset for piggybacking-based victim synchronization
-        VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForVictimSyncset();
+        const uint32_t dst_edge_idx = redirected_request_ptr->getSourceIndex();
+        VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForVictimSyncset(dst_edge_idx);
 
         // Prepare redirected get response
         uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();

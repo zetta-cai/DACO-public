@@ -581,7 +581,7 @@ namespace covered
         while (true) // Timeout-and-retry mechanism
         {
             // Prepare redirected get request to get data from target edge node if any
-            MessageBase* redirected_get_request_ptr = getReqToRedirectGet_(key, skip_propagation_latency);
+            MessageBase* redirected_get_request_ptr = getReqToRedirectGet_(directory_info.getTargetEdgeIdx(), key, skip_propagation_latency);
             assert(redirected_get_request_ptr != NULL);
 
             // Push the redirected data request into edge-to-edge propagation simulator to target node

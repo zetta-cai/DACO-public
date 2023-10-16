@@ -235,9 +235,7 @@ namespace covered
 
         // Prepare a directory lookup response
         embedBackgroundCounterIfNotEmpty_(total_bandwidth_usage, event_list); // Embed background events/bandwidth if any into control response message
-        const Key tmp_key = MessageBase::getKeyFromMessage(control_request_ptr);
-        const bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();
-        MessageBase* directory_lookup_response_ptr = getRspToLookupLocalDirectory_(tmp_key, is_being_written, is_valid_directory_exist, directory_info, best_placement_edgeset, need_hybrid_fetching, total_bandwidth_usage, event_list, skip_propagation_latency);
+        MessageBase* directory_lookup_response_ptr = getRspToLookupLocalDirectory_(control_request_ptr, is_being_written, is_valid_directory_exist, directory_info, best_placement_edgeset, need_hybrid_fetching, total_bandwidth_usage, event_list);
         assert(directory_lookup_response_ptr != NULL);
         
         // Push the directory lookup response into edge-to-edge propagation simulator to cache server worker
@@ -367,7 +365,7 @@ namespace covered
 
         // Prepare a acquire writelock response
         embedBackgroundCounterIfNotEmpty_(total_bandwidth_usage, event_list); // Embed background events/bandwidth if any into control response message
-        MessageBase* acquire_writelock_response_ptr = getRspToAcquireLocalWritelock_(tmp_key, lock_result, total_bandwidth_usage, event_list, skip_propagation_latency);
+        MessageBase* acquire_writelock_response_ptr = getRspToAcquireLocalWritelock_(control_request_ptr, lock_result, total_bandwidth_usage, event_list);
         assert(acquire_writelock_response_ptr != NULL);
 
         // Push acquire writelock response into edge-to-edge propagation simulator to cache server worker
@@ -426,7 +424,7 @@ namespace covered
 
         // Prepare a release writelock response
         embedBackgroundCounterIfNotEmpty_(total_bandwidth_usage, event_list); // Embed background events/bandwidth if any into control response message
-        MessageBase* release_writelock_response_ptr = getRspToReleaseLocalWritelock_(tmp_key, best_placement_edgeset, need_hybrid_fetching, total_bandwidth_usage, event_list, skip_propagation_latency);
+        MessageBase* release_writelock_response_ptr = getRspToReleaseLocalWritelock_(control_request_ptr, best_placement_edgeset, need_hybrid_fetching, total_bandwidth_usage, event_list);
         assert(release_writelock_response_ptr != NULL);
 
         // Push release writelock response into edge-to-edge propagation simulator to cache server worker

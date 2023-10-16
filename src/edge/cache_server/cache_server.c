@@ -373,7 +373,9 @@ namespace covered
             CoveredCacheManager* tmp_covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
 
             // Prepare victim syncset for piggybacking-based victim synchronization
-            VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForVictimSyncset();
+            const uint32_t dst_beacon_edge_idx = edge_wrapper_ptr_->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
+            assert(dst_beacon_edge_idx != edge_idx); // Current edge node MUST NOT be the beacon edge node for the given key
+            VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForVictimSyncset(dst_beacon_edge_idx);
 
             // ONLY need victim synchronization yet without popularity collection/aggregation
             if (!is_background) // Foreground remote directory admission triggered by hybrid data fetching at the sender/closest edge node (different from beacon)
@@ -413,7 +415,7 @@ namespace covered
             CoveredCacheManager* tmp_covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
 
             uint32_t source_edge_idx = control_response_ptr->getSourceIndex();
-            VictimSyncset victim_syncset;
+            VictimSyncset neighbor_victim_syncset;
 
             // NOTE: ONLY foreground directory eviction could trigger hybrid data fetching, while foreground/background directory admission will NEVER perform placement calculation and hence NO hybrid data fetching
             if (!is_background)
@@ -423,7 +425,7 @@ namespace covered
                 // Get is_being_written and victim syncset from control response message
                 const CoveredDirectoryUpdateResponse* const covered_directory_update_response_ptr = static_cast<const CoveredDirectoryUpdateResponse*>(control_response_ptr);
                 is_being_written = covered_directory_update_response_ptr->isBeingWritten();
-                victim_syncset = covered_directory_update_response_ptr->getVictimSyncsetRef();
+                neighbor_victim_syncset = covered_directory_update_response_ptr->getVictimSyncsetRef();
             }
             else
             {
@@ -432,12 +434,12 @@ namespace covered
                 // Get is_being_written and victim syncset from control response message
                 const CoveredPlacementDirectoryUpdateResponse* const covered_placement_directory_update_response_ptr = static_cast<const CoveredPlacementDirectoryUpdateResponse*>(control_response_ptr);
                 is_being_written = covered_placement_directory_update_response_ptr->isBeingWritten();
-                victim_syncset = covered_placement_directory_update_response_ptr->getVictimSyncsetRef();
+                neighbor_victim_syncset = covered_placement_directory_update_response_ptr->getVictimSyncsetRef();
             }
 
             // Victim synchronization
-            std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = edge_wrapper_ptr_->getLocalBeaconedVictimsFromVictimSyncset(victim_syncset);
-            tmp_covered_cache_manager_ptr->updateVictimTrackerForVictimSyncset(source_edge_idx, victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
+            std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = edge_wrapper_ptr_->getLocalBeaconedVictimsFromVictimSyncset(neighbor_victim_syncset);
+            tmp_covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
         }
         else // Baselines
         {
@@ -761,7 +763,9 @@ namespace covered
             edge_wrapper_ptr_->getEdgeCachePtr()->getCollectedPopularity(key, collected_popularity); // collected_popularity.is_tracked_ indicates if the local uncached key is tracked in local uncached metadata (due to selective metadata preservation)
 
             // Prepare victim syncset for piggybacking-based victim synchronization
-            VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForVictimSyncset();
+            const uint32_t dst_beacon_edge_idx = edge_wrapper_ptr_->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
+            assert(dst_beacon_edge_idx != edge_idx); // Current edge node MUST NOT be the beacon edge node for the given key
+            VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForVictimSyncset(dst_beacon_edge_idx);
 
             // Need BOTH popularity collection and victim synchronization
             if (!is_background) // Foreground remote directory eviction (triggered by invalid/valid value update by local get/put and independent admission)
@@ -803,9 +807,9 @@ namespace covered
             // Victim synchronization
             const KeyByteVictimsetMessage* directory_update_response_ptr = static_cast<const KeyByteVictimsetMessage*>(control_response_ptr);
             const uint32_t source_edge_idx = directory_update_response_ptr->getSourceIndex();
-            const VictimSyncset& victim_syncset = directory_update_response_ptr->getVictimSyncsetRef();
-            std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = edge_wrapper_ptr_->getLocalBeaconedVictimsFromVictimSyncset(victim_syncset);
-            tmp_covered_cache_manager_ptr->updateVictimTrackerForVictimSyncset(source_edge_idx, victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
+            const VictimSyncset& neighbor_victim_syncset = directory_update_response_ptr->getVictimSyncsetRef();
+            std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = edge_wrapper_ptr_->getLocalBeaconedVictimsFromVictimSyncset(neighbor_victim_syncset);
+            tmp_covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
             
             if (!is_background) // Foreground remote directory eviction (triggered by invalid/valid value update by local get/put and independent admission)
             {
@@ -901,7 +905,9 @@ namespace covered
         NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = edge_wrapper_ptr_->getBeaconDstaddr_(key);
 
         // Prepare victim syncset for piggybacking-based victim synchronization
-        VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForVictimSyncset();
+        const uint32_t dst_beacon_edge_idx = edge_wrapper_ptr_->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
+        assert(dst_beacon_edge_idx != current_edge_idx); // Current edge node MUST NOT be the beacon edge node for the given key
+        VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForVictimSyncset(dst_beacon_edge_idx);
 
         // Notify result of hybrid data fetching towards the beacon edge node to trigger non-blocking placement notification
         bool is_being_written = false;
@@ -989,7 +995,7 @@ namespace covered
                 // Victim synchronization
                 const uint32_t beacon_edge_idx = control_response_ptr->getSourceIndex();
                 std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = edge_wrapper_ptr_->getLocalBeaconedVictimsFromVictimSyncset(received_beacon_victim_syncset);
-                tmp_covered_cache_manager_ptr->updateVictimTrackerForVictimSyncset(beacon_edge_idx, received_beacon_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
+                tmp_covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(beacon_edge_idx, received_beacon_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
 
                 // Update total bandwidth usage for received control response
                 BandwidthUsage control_response_bandwidth_usage = control_response_ptr->getBandwidthUsageRef();

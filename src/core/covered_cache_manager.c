@@ -133,15 +133,31 @@ namespace covered
         return;
     }
 
-    VictimSyncset CoveredCacheManager::accessVictimTrackerForVictimSyncset() const
+    VictimSyncset CoveredCacheManager::accessVictimTrackerForVictimSyncset(const uint32_t& dst_edge_idx) const
     {
-        VictimSyncset victim_syncset = victim_tracker_.getVictimSyncset();
-        return victim_syncset;
+        // Get current complete victim syncset from victim tracker
+        VictimSyncset current_victim_syncset = victim_tracker_.getVictimSyncset();
+
+        // Replace previously-issued complete victim syncset for dst edge idx by current complete victim syncset if necessary
+        VictimSyncset prev_victim_syncset;
+        bool is_prev_victim_syncset_exist = victim_tracker_.replacePrevVictimSyncset(dst_edge_idx, current_victim_syncset, prev_victim_syncset);
+
+        if (!is_prev_victim_syncset_exist) // No previous victim syncset for dedup/delta-compression
+        {
+            return current_victim_syncset;
+        }
+        else
+        {
+            // TODO: Calculate delta victim syncset by dedup/delta-compression based on current and prev complete victim syncset
+            VictimSyncset delta_victim_syncset;
+
+            return delta_victim_syncset;
+        }
     }
 
-    void CoveredCacheManager::updateVictimTrackerForVictimSyncset(const uint32_t& source_edge_idx, const VictimSyncset& victim_syncset, const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& local_beaconed_neighbor_synced_victim_dirinfosets)
+    void CoveredCacheManager::updateVictimTrackerForNeighborVictimSyncset(const uint32_t& source_edge_idx, const VictimSyncset& neighbor_victim_syncset, const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& local_beaconed_neighbor_synced_victim_dirinfosets)
     {
-        victim_tracker_.updateForVictimSyncset(source_edge_idx, victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
+        victim_tracker_.updateForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
         return;
     }
 
@@ -356,7 +372,7 @@ namespace covered
                 else // Remote victim fetching
                 {
                     NetworkAddr target_edge_cache_server_recvreq_dst_addr = edge_wrapper_ptr->getTargetDstaddr(DirectoryInfo(tmp_edge_idx)); // Send to cache server of the target edge node for victim fetch processor
-                    sendVictimFetchRequest_(object_size, edge_wrapper_ptr, recvrsp_source_addr, target_edge_cache_server_recvreq_dst_addr, skip_propagation_latency);
+                    sendVictimFetchRequest_(tmp_edge_idx, object_size, edge_wrapper_ptr, recvrsp_source_addr, target_edge_cache_server_recvreq_dst_addr, skip_propagation_latency);
                 }
             } // End of edgeidx_for_request
 
@@ -439,12 +455,12 @@ namespace covered
         return is_finish;
     }
 
-    void CoveredCacheManager::sendVictimFetchRequest_(const ObjectSize& object_size, const EdgeWrapper* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, const NetworkAddr& edge_cache_server_recvreq_dst_addr, const bool& skip_propagation_latency) const
+    void CoveredCacheManager::sendVictimFetchRequest_(const uint32_t& dst_edge_idx, const ObjectSize& object_size, const EdgeWrapper* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, const NetworkAddr& edge_cache_server_recvreq_dst_addr, const bool& skip_propagation_latency) const
     {
         assert(edge_wrapper_ptr != NULL);
 
         // Prepare victim syncset for piggybacking-based victim synchronization
-        VictimSyncset victim_syncset = edge_wrapper_ptr->getCoveredCacheManagerPtr()->accessVictimTrackerForVictimSyncset();
+        VictimSyncset victim_syncset = edge_wrapper_ptr->getCoveredCacheManagerPtr()->accessVictimTrackerForVictimSyncset(dst_edge_idx);
 
         // Prepare victim fetch request to fetch victims from the target edge node
         const uint32_t current_edge_idx = edge_wrapper_ptr->getNodeIdx();
@@ -472,9 +488,9 @@ namespace covered
 
         // Victim synchronization
         const uint32_t source_edge_idx = covered_victim_fetch_response_ptr->getSourceIndex();
-        const VictimSyncset& victim_syncset = covered_victim_fetch_response_ptr->getVictimSyncsetRef();
-        std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = edge_wrapper_ptr->getLocalBeaconedVictimsFromVictimSyncset(victim_syncset);
-        tmp_covered_cache_manager_ptr->updateVictimTrackerForVictimSyncset(source_edge_idx, victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
+        const VictimSyncset& neighbor_victim_syncset = covered_victim_fetch_response_ptr->getVictimSyncsetRef();
+        std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = edge_wrapper_ptr->getLocalBeaconedVictimsFromVictimSyncset(neighbor_victim_syncset);
+        tmp_covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
 
         // Update extra_peredge_victim_cacheinfos
         const VictimSyncset& victim_fetchset = covered_victim_fetch_response_ptr->getVictimFetchsetRef();
