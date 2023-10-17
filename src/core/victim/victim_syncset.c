@@ -4,6 +4,13 @@ namespace covered
 {
     const std::string VictimSyncset::kClassName = "VictimSyncset";
 
+    const uint8_t VictimSyncset::COMPLETE_BITMAP = 0b00000000;
+    const uint8_t VictimSyncset::CACHE_MARGIN_BYTES_DELTA_MASK = 0b00000001;
+    const uint8_t VictimSyncset::LOCAL_SYNCED_VICTIMS_DEDUP_MASK = 0b00000010;
+    const uint8_t VictimSyncset::LOCAL_BEACONED_VICTIMS_DEDUP_MASK = 0b00000100;
+
+    // TODO: END HERE
+
     VictimSyncset::VictimSyncset() : cache_margin_bytes_(0)
     {
         local_synced_victims_.clear();
