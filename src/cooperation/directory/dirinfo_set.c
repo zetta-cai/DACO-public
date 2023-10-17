@@ -24,6 +24,11 @@ namespace covered
     {
     }
 
+    bool DirinfoSet::isInvalid() const
+    {
+        return (delta_bitmap_ == INVALID_BITMAP);
+    }
+
     bool DirinfoSet::isComplete() const
     {
         assert(delta_bitmap_ != INVALID_BITMAP);
@@ -36,6 +41,19 @@ namespace covered
         assert(delta_bitmap_ != INVALID_BITMAP);
 
         return (delta_bitmap_ != COMPLETE_BITMAP);
+    }
+
+    bool DirinfoSet::getDirinfoSetSize(uint32_t& dirinfo_set_size) const
+    {
+        assert(delta_bitmap_ != INVALID_BITMAP);
+
+        bool with_complete_dirinfo_set = (delta_bitmap_ == COMPLETE_BITMAP);
+        if (with_complete_dirinfo_set)
+        {
+            dirinfo_set_size = dirinfo_set_.size();
+        }
+
+        return with_complete_dirinfo_set;
     }
 
     bool DirinfoSet::getDirinfoSetOrDelta(std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& dirinfo_set, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& new_dirinfo_delta_set, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& stale_dirinfo_delta_set) const

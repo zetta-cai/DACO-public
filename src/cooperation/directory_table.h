@@ -18,6 +18,7 @@
 #include "concurrency/concurrent_hashtable_impl.h"
 #include "concurrency/perkey_rwlock.h"
 #include "cooperation/directory/directory_entry.h"
+#include "cooperation/directory/dirinfo_set.h"
 
 namespace covered
 {
@@ -28,7 +29,7 @@ namespace covered
         DirectoryTable(const uint32_t& seed, const uint32_t& edge_idx, const PerkeyRwlock* perkey_rwlock_ptr);
         ~DirectoryTable();
 
-        dirinfo_set_t getAll(const Key& key) const;
+        DirinfoSet getAll(const Key& key) const;
 
         // Return whether the key is cached by a local/neighbor edge node (even if invalid temporarily)
         bool lookup(const Key& key, const uint32_t& source_edge_idx, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const; // Find a non-source valid directory info if any
@@ -36,7 +37,7 @@ namespace covered
         bool isGlobalCached(const Key& key) const;
         bool isCachedByGivenEdge(const Key& key, const uint32_t& edge_idx) const;
 
-        void invalidateAllDirinfoForKeyIfExist(const Key& key, dirinfo_set_t& all_dirinfo); // Invalidate all dirinfos only if key exists (NOT add an empty direntry)
+        void invalidateAllDirinfoForKeyIfExist(const Key& key, DirinfoSet& all_dirinfo); // Invalidate all dirinfos only if key exists (NOT add an empty direntry)
         void validateDirinfoForKeyIfExist(const Key& key, const DirectoryInfo& directory_info); // Validate only if key and dirinfo exist (NOT add a valid dirinfo)
 
         uint64_t getSizeForCapacity() const;

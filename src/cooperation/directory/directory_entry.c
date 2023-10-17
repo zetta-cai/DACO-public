@@ -25,22 +25,26 @@ namespace covered
 
     // (1) Access per-dirinfo metadata
 
-    void DirectoryEntry::getAllDirinfo(dirinfo_set_t& dirinfo_set) const
+    void DirectoryEntry::getAllDirinfo(DirinfoSet& dirinfo_set) const
     {
-        dirinfo_set.clear();
+        std::unordered_set<DirectoryInfo, DirectoryInfoHasher> tmp_dirinfo_set;
+        tmp_dirinfo_set.clear();
 
         // Add all directory information into directory_info_set
         for (dirinfo_entry_t::const_iterator iter = directory_entry_.begin(); iter != directory_entry_.end(); iter++)
         {
             const DirectoryInfo& directory_info = iter->first;
-            dirinfo_set.insert(directory_info);
+            tmp_dirinfo_set.insert(directory_info);
         }
+
+        dirinfo_set = DirinfoSet(tmp_dirinfo_set);
         return;
     }
 
-    void DirectoryEntry::getAllValidDirinfo(dirinfo_set_t& dirinfo_set) const
+    void DirectoryEntry::getAllValidDirinfo(DirinfoSet& dirinfo_set) const
     {
-        dirinfo_set.clear();
+        std::unordered_set<DirectoryInfo, DirectoryInfoHasher> tmp_dirinfo_set;
+        tmp_dirinfo_set.clear();
 
         // Add all valid directory information into valid_directory_info_set
         for (dirinfo_entry_t::const_iterator iter = directory_entry_.begin(); iter != directory_entry_.end(); iter++)
@@ -49,9 +53,11 @@ namespace covered
             const DirectoryMetadata& directory_metadata = iter->second;
             if (directory_metadata.isValidMetadata()) // validity = true
             {
-                dirinfo_set.insert(directory_info);
+                tmp_dirinfo_set.insert(directory_info);
             }
         }
+
+        dirinfo_set = DirinfoSet(tmp_dirinfo_set);
         return;
     }
 
@@ -91,13 +97,15 @@ namespace covered
         return is_directory_already_exist;
     }
 
-    void DirectoryEntry::invalidateMetadataForAllDirinfoIfExist(dirinfo_set_t& all_dirinfo)
+    void DirectoryEntry::invalidateMetadataForAllDirinfoIfExist(DirinfoSet& all_dirinfo)
     {
+        std::unordered_set<DirectoryInfo, DirectoryInfoHasher> tmp_dirinfo_set;
         for (dirinfo_entry_t::iterator iter = directory_entry_.begin(); iter != directory_entry_.end(); iter++)
         {
             iter->second.invalidateMetadata();
-            all_dirinfo.insert(iter->first);
+            tmp_dirinfo_set.insert(iter->first);
         }
+        all_dirinfo = DirinfoSet(tmp_dirinfo_set);
         return;
     }
 

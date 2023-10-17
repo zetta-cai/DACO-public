@@ -20,6 +20,7 @@
 #include "cooperation/block_tracker.h"
 #include "cooperation/dht_wrapper.h"
 #include "cooperation/directory/directory_info.h"
+#include "cooperation/directory/dirinfo_set.h"
 #include "cooperation/directory_table.h"
 #include "message/message_base.h"
 
@@ -41,7 +42,7 @@ namespace covered
         // (2) Access content directory table and block tracker for MSI protocol
 
         bool isBeingWritten(const Key& key) const;
-        dirinfo_set_t getLocalDirectoryInfos(const Key& key) const;
+        DirinfoSet getLocalDirectoryInfos(const Key& key) const;
 
         // Return whether the key is cached by a local/neighbor edge node (even if invalid temporarily)
         bool lookupDirectoryTableByCacheServer(const Key& key, const uint32_t& source_edge_idx, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, bool& is_source_cached) const; // Check local directory information (NOTE: find a non-source valid directory info if any)

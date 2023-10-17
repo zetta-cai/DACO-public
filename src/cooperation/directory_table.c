@@ -28,9 +28,9 @@ namespace covered
         directory_randgen_ptr_ = NULL;
     }
 
-    dirinfo_set_t DirectoryTable::getAll(const Key& key) const
+    DirinfoSet DirectoryTable::getAll(const Key& key) const
     {
-        dirinfo_set_t all_dirinfo;
+        DirinfoSet all_dirinfo;
 
         // Prepare GetAllDirinfoParam
         DirectoryEntry::GetAllDirinfoParam tmp_param = {all_dirinfo};
@@ -40,7 +40,14 @@ namespace covered
 
         if (!is_exist) // key does not exist
         {
-            assert(all_dirinfo.size() == 0);
+            assert(all_dirinfo.isInvalid()); // Uninitialized DirinfoSet
+        }
+        else // key (i.e., directory entry) exists
+        {
+            uint32_t tmp_size = 0;
+            bool with_complete_dirinfo_set = all_dirinfo.getDirinfoSetSize(tmp_size);
+            assert(with_complete_dirinfo_set); // dirinfo set from directory entry MUST be complete
+            assert(tmp_size > 0); // Directory entry MUST NOT be empty
         }
 
         return all_dirinfo;
@@ -191,14 +198,20 @@ namespace covered
         return is_cached_by_given_edge;
     }
 
-    void DirectoryTable::invalidateAllDirinfoForKeyIfExist(const Key& key, dirinfo_set_t& all_dirinfo)
+    void DirectoryTable::invalidateAllDirinfoForKeyIfExist(const Key& key, DirinfoSet& all_dirinfo)
     {
         // Prepare InvalidateMetadataForAllDirinfoParam
         DirectoryEntry::InvalidateMetadataForAllDirinfoIfExistParam tmp_param = {all_dirinfo};
 
         bool is_exist = false;
         directory_hashtable_.callIfExist(key, is_exist, DirectoryEntry::INVALIDATE_METADATA_FOR_ALL_DIRINFO_IF_EXIST_FUNCNAME, &tmp_param);
-        UNUSED(is_exist);
+        
+        assert(is_exist == true); // NOTE: invalidateAllDirinfoForKeyIfExist() is invoked ONLY if key exists
+
+        uint32_t tmp_size = 0;
+        bool with_complete_dirinfo_set = all_dirinfo.getDirinfoSetSize(tmp_size);
+        assert(with_complete_dirinfo_set); // dirinfo set from directory entry MUST be complete
+        assert(tmp_size > 0); // Directory entry MUST NOT be empty
 
         return;
     }

@@ -21,9 +21,11 @@ namespace covered
         DirinfoSet(const std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& dirinfo_set);
         ~DirinfoSet();
 
+        bool isInvalid() const;
         bool isComplete() const;
         bool isCompressed() const; // Delta compression
 
+        bool getDirinfoSetSize(uint32_t& dirinfo_set_size) const; // Return if with complete dirinfo set
         bool getDirinfoSetOrDelta(std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& dirinfo_set, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& new_dirinfo_delta_set, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& stale_dirinfo_delta_set) const; // Return if with complete dirinfo set
 
         uint32_t getDirinfoSetPayloadSize() const;

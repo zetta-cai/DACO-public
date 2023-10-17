@@ -117,7 +117,7 @@ namespace covered
         return is_being_written;
     }
 
-    dirinfo_set_t CooperationWrapperBase::getLocalDirectoryInfos(const Key& key) const
+    DirinfoSet CooperationWrapperBase::getLocalDirectoryInfos(const Key& key) const
     {
         checkPointers_();
 
@@ -125,7 +125,7 @@ namespace covered
         std::string context_name = "CooperationWrapperBase::getLocalDirectoryInfos()";
         cooperation_wrapper_perkey_rwlock_ptr_->acquire_lock_shared(key, context_name);
 
-        dirinfo_set_t dirinfo_set = directory_table_ptr_->getAll(key);
+        DirinfoSet dirinfo_set = directory_table_ptr_->getAll(key);
 
         // Release a read lock
         cooperation_wrapper_perkey_rwlock_ptr_->unlock_shared(key, context_name);

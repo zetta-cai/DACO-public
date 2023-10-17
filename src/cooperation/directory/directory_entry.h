@@ -13,6 +13,7 @@
 
 #include "cooperation/directory/directory_info.h"
 #include "cooperation/directory/directory_metadata.h"
+#include "cooperation/directory/dirinfo_set.h"
 
 namespace covered
 {
@@ -21,7 +22,7 @@ namespace covered
     public:
         struct GetAllDirinfoParam
         {
-            dirinfo_set_t& dirinfo_set;
+            DirinfoSet& dirinfo_set;
         };
 
         struct GetAllValidDirinfoParam
@@ -45,7 +46,7 @@ namespace covered
 
         struct InvalidateMetadataForAllDirinfoIfExistParam
         {
-            dirinfo_set_t& all_dirinfo;
+            DirinfoSet& all_dirinfo;
         };
         
         struct ValidateMetadataForDirinfoIfExistParam
@@ -65,11 +66,11 @@ namespace covered
 
         // (1) Access per-dirinfo metadata
 
-        void getAllDirinfo(dirinfo_set_t& dirinfo_set) const; // Get all dirinfos (including invalid ones
+        void getAllDirinfo(DirinfoSet& dirinfo_set) const; // Get all dirinfos (including invalid ones
         void getAllValidDirinfo(dirinfo_set_t& dirinfo_set) const;
         bool addDirinfo(const DirectoryInfo& directory_info, const DirectoryMetadata& directory_metadata); // return is_directory_already_exist
         bool removeDirinfo(const DirectoryInfo& directory_info); // return is_directory_already_exist
-        void invalidateMetadataForAllDirinfoIfExist(dirinfo_set_t& all_dirinfo); // Invalidate all metadatas only if dirinfos exist (NOT add invalid metadata)
+        void invalidateMetadataForAllDirinfoIfExist(DirinfoSet& all_dirinfo); // Invalidate all metadatas only if dirinfos exist (NOT add invalid metadata)
         void validateMetadataForDirinfoIfExist(const DirectoryInfo& directory_info); // Validate metadata only if dirinfo exists (NOT add invalid metadata)
 
         // (2) For ConcurrentHashtable
