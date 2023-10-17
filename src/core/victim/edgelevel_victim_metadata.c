@@ -65,7 +65,9 @@ namespace covered
                 updatePeredgeVictimset_(peredge_synced_victimset, cur_edge_idx, tmp_victim_key);
 
                 // Check if we have found sufficient victims for the required bytes
-                const ObjectSize tmp_victim_object_size = tmp_victim_cacheinfo.getObjectSize();
+                ObjectSize tmp_victim_object_size = 0;
+                bool with_complete_victim_object_size = tmp_victim_cacheinfo.getObjectSize(tmp_victim_object_size);
+                assert(with_complete_victim_object_size == true); // NOTE: victim cacheinfo in victim_cacheinfos_ MUST be complete
                 tmp_saved_bytes += tmp_victim_object_size;
                 if (tmp_saved_bytes >= tmp_required_bytes) // With sufficient victims for the required bytes
                 {
@@ -112,7 +114,9 @@ namespace covered
                     updatePeredgeVictimset_(peredge_fetched_victimset, cur_edge_idx, tmp_victim_key);
 
                     // Check if we have found sufficient victims for the required bytes
-                    const ObjectSize tmp_victim_object_size = extra_victim_cacheinfos_const_iter->getObjectSize();
+                    ObjectSize tmp_victim_object_size = 0;
+                    bool with_complete_victim_object_size = extra_victim_cacheinfos_const_iter->getObjectSize(tmp_victim_object_size);
+                    assert(with_complete_victim_object_size); // NOTE: victim cacheinfo in extra_victim_cacheinfos MUST be complete
                     tmp_saved_bytes += tmp_victim_object_size;
                     if (tmp_saved_bytes >= tmp_required_bytes) // With sufficient victims for the required bytes
                     {

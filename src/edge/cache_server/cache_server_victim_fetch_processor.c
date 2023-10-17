@@ -132,7 +132,7 @@ namespace covered
         tmp_covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
 
         // Get victim cacheinfos from local edge cache for object size
-        const ObjectSize object_size = covered_victim_fetch_request_ptr->getObjectSize();
+        const ObjectSize object_size = covered_victim_fetch_request_ptr->getObjectSize(); // Size of newly-admitted object (i.e., required size)
         std::list<VictimCacheinfo> tmp_victim_cacheinfos;
         bool has_victim_key = tmp_edge_wrapper_ptr->getEdgeCachePtr()->fetchVictimCacheinfosForRequiredSize(tmp_victim_cacheinfos, object_size);
         assert(has_victim_key == true);

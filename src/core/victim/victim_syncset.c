@@ -4,45 +4,93 @@ namespace covered
 {
     const std::string VictimSyncset::kClassName = "VictimSyncset";
 
+    const uint8_t VictimSyncset::INVALID_BITMAP = 0b11111111;
     const uint8_t VictimSyncset::COMPLETE_BITMAP = 0b00000000;
-    const uint8_t VictimSyncset::CACHE_MARGIN_BYTES_DELTA_MASK = 0b00000001;
-    const uint8_t VictimSyncset::LOCAL_SYNCED_VICTIMS_DEDUP_MASK = 0b00000010;
-    const uint8_t VictimSyncset::LOCAL_BEACONED_VICTIMS_DEDUP_MASK = 0b00000100;
+    const uint8_t VictimSyncset::CACHE_MARGIN_BYTES_DELTA_MASK = 0b00000011;
+    const uint8_t VictimSyncset::LOCAL_SYNCED_VICTIMS_DEDUP_MASK = 0b00000101;
+    const uint8_t VictimSyncset::LOCAL_BEACONED_VICTIMS_DEDUP_MASK = 0b00001001;
 
     // TODO: END HERE
 
-    VictimSyncset::VictimSyncset() : cache_margin_bytes_(0)
+    VictimSyncset::VictimSyncset() : compressed_bitmap_(INVALID_BITMAP), cache_margin_bytes_(0), cache_margin_delta_bytes_(0)
     {
         local_synced_victims_.clear();
         local_beaconed_victims_.clear();
     }
 
-    VictimSyncset::VictimSyncset(const uint64_t& cache_margin_bytes, const std::list<VictimCacheinfo>& local_synced_victims, const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& local_beaconed_victims) : cache_margin_bytes_(cache_margin_bytes)
+    VictimSyncset::VictimSyncset(const uint64_t& cache_margin_bytes, const std::list<VictimCacheinfo>& local_synced_victims, const std::unordered_map<Key, DirinfoSet, KeyHasher>& local_beaconed_victims) : cache_margin_bytes_(cache_margin_bytes)
     {
+        compressed_bitmap_ = COMPLETE_BITMAP;
+        cache_margin_delta_bytes_ = 0;
         local_synced_victims_ = local_synced_victims;
         local_beaconed_victims_ = local_beaconed_victims;
+
+        assertAllCacheinfosComplete_();
+        assertAllDirinfoSetsComplete_();
     }
 
     VictimSyncset::~VictimSyncset() {}
 
-    uint64_t VictimSyncset::getCacheMarginBytes() const
+    bool VictimSyncset::getCacheMarginBytesOrDelta(uint64_t& cache_margin_bytes, uint32_t cache_margin_delta_bytes) const
     {
-        return cache_margin_bytes_;
+        assert(compressed_bitmap_ != INVALID_BITMAP);
+
+        bool with_complete_cache_margin_bytes = ((compressed_bitmap_ & CACHE_MARGIN_BYTES_DELTA_MASK) != CACHE_MARGIN_BYTES_DELTA_MASK);
+        if (!with_complete_cache_margin_bytes)
+        {
+            cache_margin_delta_bytes = cache_margin_delta_bytes_;
+        }
+        else
+        {
+            cache_margin_bytes = cache_margin_bytes_;
+        }
+
+        return with_complete_cache_margin_bytes;
     }
 
-    const std::list<VictimCacheinfo>& VictimSyncset::getLocalSyncedVictimsRef() const
+    bool VictimSyncset::getLocalSyncedVictims(std::list<VictimCacheinfo>& local_synced_vitims) const
     {
-        return local_synced_victims_;
+        assert(compressed_bitmap_ != INVALID_BITMAP);
+
+        bool with_complete_local_synced_victims = ((compressed_bitmap_ & LOCAL_SYNCED_VICTIMS_DEDUP_MASK) != LOCAL_SYNCED_VICTIMS_DEDUP_MASK);
+        if (!with_complete_local_synced_victims) // At least one victim cacheinfo is deduped
+        {
+            assertAtLeastOneCacheinfoDeduped_();
+        }
+        else // All victim cacheinfos should be complete
+        {
+            assertAllCacheinfosComplete_();
+        }
+
+        local_synced_vitims = local_synced_victims_;
+
+        return with_complete_local_synced_victims;
     }
 
-    const std::unordered_map<Key, dirinfo_set_t, KeyHasher>& VictimSyncset::getLocalBeaconedVictimsRef() const
+    bool VictimSyncset::getLocalBeaconedVictims(std::unordered_map<Key, DirinfoSet, KeyHasher>& local_beaconed_victims) const
     {
-        return local_beaconed_victims_;
+        assert(compressed_bitmap_ != INVALID_BITMAP);
+
+        bool with_complete_local_beaconed_victims = ((compressed_bitmap_ & LOCAL_BEACONED_VICTIMS_DEDUP_MASK) != LOCAL_BEACONED_VICTIMS_DEDUP_MASK);
+        if (!with_complete_local_beaconed_victims) // At least one dirinfo set is deduped
+        {
+            assertAtLeastOneDirinfoSetCompressed_();
+        }
+        else // All dirinfo sets should be complete
+        {
+            assertAllDirinfoSetsComplete_();
+        }
+
+        local_beaconed_victims = local_beaconed_victims_;
+
+        return with_complete_local_beaconed_victims;
     }
 
     uint32_t VictimSyncset::getVictimSyncsetPayloadSize() const
     {
         // TODO: we can tune the sizes of local synched/beaconed victims, as the numbers are limited under our design (at most peredge_synced_victimcnt and peredge_synced_victimcnt * edgecnt)
+
+        // TODO: END HERE
 
         uint32_t victim_syncset_payload_size = 0;
 
@@ -187,5 +235,69 @@ namespace covered
         local_beaconed_victims_ = other.local_beaconed_victims_;
         
         return *this;
+    }
+
+    void VictimSyncset::assertAtLeastOneCacheinfoDeduped_() const
+    {
+        bool tmp_at_least_one_dedup = false;
+        for (std::list<VictimCacheinfo>::const_iterator cacheinfo_list_const_iter = local_synced_victims_.begin(); cacheinfo_list_const_iter != local_synced_victims_.end(); cacheinfo_list_const_iter++)
+        {
+            if (cacheinfo_list_const_iter->isDeduped())
+            {
+                tmp_at_least_one_dedup = true;
+                break;
+            }
+        }
+        assert(tmp_at_least_one_dedup == true);
+
+        return;
+    }
+
+    void VictimSyncset::assertAllCacheinfosComplete_() const
+    {
+        bool tmp_all_complete = true;
+        for (std::list<VictimCacheinfo>::const_iterator cacheinfo_list_const_iter = local_synced_victims_.begin(); cacheinfo_list_const_iter != local_synced_victims_.end(); cacheinfo_list_const_iter++)
+        {
+            if (!cacheinfo_list_const_iter->isComplete())
+            {
+                tmp_all_complete = false;
+                break;
+            }
+        }
+        assert(tmp_all_complete == true);
+
+        return;
+    }
+
+    void VictimSyncset::assertAtLeastOneDirinfoSetCompressed_() const
+    {
+        bool tmp_at_least_one_dedup = false;
+        for (std::unordered_map<Key, DirinfoSet, KeyHasher>::const_iterator dirinfo_map_const_iter = local_beaconed_victims_.begin(); dirinfo_map_const_iter != local_beaconed_victims_.end(); dirinfo_map_const_iter++)
+        {
+            if (dirinfo_map_const_iter->second.isCompressed())
+            {
+                tmp_at_least_one_dedup = true;
+                break;
+            }
+        }
+        assert(tmp_at_least_one_dedup == true);
+
+        return;
+    }
+
+    void VictimSyncset::assertAllDirinfoSetsComplete_() const
+    {
+        bool tmp_all_complete = true;
+        for (std::unordered_map<Key, DirinfoSet, KeyHasher>::const_iterator dirinfo_map_const_iter = local_beaconed_victims_.begin(); dirinfo_map_const_iter != local_beaconed_victims_.end(); dirinfo_map_const_iter++)
+        {
+            if (!dirinfo_map_const_iter->second.isComplete())
+            {
+                tmp_all_complete = false;
+                break;
+            }
+        }
+        assert(tmp_all_complete == true);
+
+        return;
     }
 }

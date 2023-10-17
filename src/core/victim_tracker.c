@@ -230,14 +230,21 @@ namespace covered
             // Calculate eviction cost based on is_last_copies and tmp_victim_cacheinfos
             for (std::list<VictimCacheinfo>::const_iterator victim_cacheinfo_list_const_iter = tmp_victim_cacheinfos.begin(); victim_cacheinfo_list_const_iter != tmp_victim_cacheinfos.end(); victim_cacheinfo_list_const_iter++)
             {
+                Popularity tmp_local_cached_popularity = 0.0;
+                bool with_complete_local_cached_popularity = victim_cacheinfo_list_const_iter->getLocalCachedPopularity(tmp_local_cached_popularity);
+                assert(with_complete_local_cached_popularity); // NOTE: victim cacheinfo of pervictim_cacheinfos (from peredge_victim_metadata_ in victim tracker) MUST be complete
                 if (is_last_copies) // All local/redirected cache hits become global cache misses
                 {
-                    eviction_cost += victim_cacheinfo_list_const_iter->getLocalCachedPopularity() * local_hit_weight; // w1
-                    eviction_cost += victim_cacheinfo_list_const_iter->getRedirectedCachedPopularity() * cooperative_hit_weight; // w2
+                    Popularity tmp_redirected_cached_popularity = 0.0;
+                    bool with_complete_redirected_cached_popularity = victim_cacheinfo_list_const_iter->getRedirectedCachedPopularity(tmp_redirected_cached_popularity);
+                    assert(with_complete_redirected_cached_popularity); // NOTE: victim cacheinfo of pervictim_cacheinfos (from peredge_victim_metadata_ in victim tracker) MUST be complete
+
+                    eviction_cost += tmp_local_cached_popularity * local_hit_weight; // w1
+                    eviction_cost += tmp_redirected_cached_popularity * cooperative_hit_weight; // w2
                 }
                 else // Local cache hits become redirected cache hits
                 {
-                    eviction_cost += victim_cacheinfo_list_const_iter->getLocalCachedPopularity() * (local_hit_weight - cooperative_hit_weight); // w1 - w2
+                    eviction_cost += tmp_local_cached_popularity * (local_hit_weight - cooperative_hit_weight); // w1 - w2
                 }
             }
         }

@@ -26,9 +26,9 @@ namespace covered
         bool isDeduped() const; // Whether at least one field is deduped (but NOT all fields)
 
         const Key getKey() const;
-        bool getObjectSize(ObjectSize& object_size) const; // Return if object size exstis
-        bool getLocalCachedPopularity(Popularity& local_cached_popularity) const; // Return if local cached popularity exists
-        bool getRedirectedCachedPopularity(Popularity& redirected_cached_popularity) const; // Return if redirected cached popularity exists
+        bool getObjectSize(ObjectSize& object_size) const; // Return if with complete object size
+        bool getLocalCachedPopularity(Popularity& local_cached_popularity) const; // Return if with complete local cached popularity
+        bool getRedirectedCachedPopularity(Popularity& redirected_cached_popularity) const; // Return if with complete redirected cached popularity
 
         uint32_t getVictimCacheinfoPayloadSize() const;
         uint32_t serialize(DynamicArray& msg_payload, const uint32_t& position) const;
@@ -40,16 +40,18 @@ namespace covered
     private:
         static const std::string kClassName;
 
-        // NOTE: as we do NOT need to sync victim cache info if all three fields are deduped, so we use dedup_bitmap_ = STALE_BITMAP (i.e., all three lowest bits are 1) to indicate that the stale victim cacheinfo of key_ needs to be removed (i.e., key_ is NOT a local synced victim)
+        static const uint8_t INVALID_BITMAP; // Invalid bitmap
         static const uint8_t COMPLETE_BITMAP; // All fields are NOT deduped
+        // NOTE: as we do NOT need to sync victim cache info if all three fields are deduped, so we use dedup_bitmap_ = STALE_BITMAP (i.e., all four lowest bits are 1) to indicate that the stale victim cacheinfo of key_ needs to be removed (i.e., key_ is NOT a local synced victim)
         static const uint8_t STALE_BITMAP; // The given key is NOT local synced victim yet and should be removed from victim tracker
         static const uint8_t OBJECT_SIZE_DEDUP_MASK; // Whether object size is deduped or complete
         static const uint8_t LOCAL_CACHED_POPULARITY_DEDUP_MASK; // Whether local cached popularity is deduped or complete
         static const uint8_t REDIRECTED_CACHED_POPULARITY_DEDUP_MASK; // Whether redirected cached popularity is deduped or complete
 
-        uint8_t dedup_bitmap_; // Whether the cacheinfo is a compressed victim cacheinfo (1st lowest bit for object size; 2nd lowest bit for local cached popularity; 3rd lowest bit for redirected cached popularity)
+        uint8_t dedup_bitmap_; // 1st lowest bit indicates if the cacheinfo is a compressed victim cacheinfo (2nd lowest bit for object size; 3rd lowest bit for local cached popularity; 4th lowest bit for redirected cached popularity)
         Key key_;
 
+        // For both complete and compressed victim cacheinfo
         ObjectSize object_size_;
         Popularity local_cached_popularity_;
         Popularity redirected_cached_popularity_;

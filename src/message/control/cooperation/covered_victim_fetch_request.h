@@ -21,7 +21,7 @@ namespace covered
         CoveredVictimFetchRequest(const DynamicArray& msg_payload);
         virtual ~CoveredVictimFetchRequest();
 
-        uint32_t getObjectSize() const;
+        uint32_t getObjectSize() const; // Size of newly-admitted object (i.e., required size)
     private:
         static const std::string kClassName;
     };

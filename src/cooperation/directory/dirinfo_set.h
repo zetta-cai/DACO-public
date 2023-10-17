@@ -1,0 +1,60 @@
+/*
+ * DirinfoSet: a set of DirectoryInfo (support compressed mode for dedup-/delta-compression-based victim synchronization).
+ * 
+ * By Siyuan Sheng (2023.10.17).
+ */
+
+#ifndef DIRINFO_SET_H
+#define DIRINFO_SET_H
+
+#include <string>
+#include <unordered_set>
+
+#include "cooperation/directory/directory_info.h"
+
+namespace covered
+{
+    class DirinfoSet
+    {
+    public:
+        DirinfoSet();
+        DirinfoSet(const std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& dirinfo_set);
+        ~DirinfoSet();
+
+        bool isComplete() const;
+        bool isCompressed() const; // Delta compression
+
+        bool getDirinfoSetOrDelta(std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& dirinfo_set, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& new_dirinfo_delta_set, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& stale_dirinfo_delta_set) const; // Return if with complete dirinfo set
+
+        uint32_t getDirinfoSetPayloadSize() const;
+        uint32_t serialize(DynamicArray& msg_payload, const uint32_t& position) const;
+        uint32_t deserialize(const DynamicArray& msg_payload, const uint32_t& position);
+
+        uint64_t getSizeForCapacity() const;
+
+        const DirinfoSet& operator=(const DirinfoSet& other);
+    private:
+        static const std::string kClassName;
+
+        static const uint8_t INVALID_BITMAP; // Invalid bitmap
+        static const uint8_t COMPLETE_BITMAP; // All fields are NOT deduped
+        static const uint8_t NEW_DIRINFO_SET_DELTA_MASK; // Whether new dirinfo set exists after delta compression
+        static const uint8_t STALE_DIRINFO_SET_DELTA_MASK; // Whether stale dirinfo set exists after delta compression
+
+        uint32_t getDirinfoSetPayloadSizeInternal_(const std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& dirinfo_set) const;
+        uint32_t serializeDirinfoSetInternal_(DynamicArray& msg_payload, const uint32_t& position, const std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& dirinfo_set) const;
+        uint32_t deserializeDirinfoSetInternal_(const DynamicArray& msg_payload, const uint32_t& position, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& dirinfo_set);
+
+        uint32_t getDirinfoSetSizeForCapacityInternal_(const std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& dirinfo_set) const;
+
+        uint8_t delta_bitmap_; // 1st lowest bit indicates if the dirinfo set is a compressed dirinfo set (2nd lowest bit for new dirinfo delta set; 3rd lowest bit for stale dirinfo delta set)
+
+        // For complete dirinfo set
+        std::unordered_set<DirectoryInfo, DirectoryInfoHasher> dirinfo_set_;
+        // For compressed dirinfo set
+        std::unordered_set<DirectoryInfo, DirectoryInfoHasher> new_dirinfo_delta_set_;
+        std::unordered_set<DirectoryInfo, DirectoryInfoHasher> stale_dirinfo_delta_set_;
+    };
+}
+
+#endif

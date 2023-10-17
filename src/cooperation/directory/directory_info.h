@@ -47,8 +47,6 @@ namespace covered
             return std::hash<uint32_t>{}(directory_info.getTargetEdgeIdx());
         }
     };
-
-    typedef std::unordered_set<DirectoryInfo, DirectoryInfoHasher> dirinfo_set_t;
 }
 
 #endif
