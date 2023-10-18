@@ -27,7 +27,7 @@ namespace covered
 
         struct GetAllValidDirinfoParam
         {
-            dirinfo_set_t& dirinfo_set;
+            DirinfoSet& dirinfo_set;
         };
 
         struct AddDirinfoParam
@@ -67,7 +67,7 @@ namespace covered
         // (1) Access per-dirinfo metadata
 
         void getAllDirinfo(DirinfoSet& dirinfo_set) const; // Get all dirinfos (including invalid ones
-        void getAllValidDirinfo(dirinfo_set_t& dirinfo_set) const;
+        void getAllValidDirinfo(DirinfoSet& dirinfo_set) const;
         bool addDirinfo(const DirectoryInfo& directory_info, const DirectoryMetadata& directory_metadata); // return is_directory_already_exist
         bool removeDirinfo(const DirectoryInfo& directory_info); // return is_directory_already_exist
         void invalidateMetadataForAllDirinfoIfExist(DirinfoSet& all_dirinfo); // Invalidate all metadatas only if dirinfos exist (NOT add invalid metadata)

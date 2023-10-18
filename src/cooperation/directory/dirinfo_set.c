@@ -43,20 +43,9 @@ namespace covered
         return (delta_bitmap_ != COMPLETE_BITMAP);
     }
 
-    bool DirinfoSet::getDirinfoSetSize(uint32_t& dirinfo_set_size) const
-    {
-        assert(delta_bitmap_ != INVALID_BITMAP);
+    // For both complete/compressed dirinfo set
 
-        bool with_complete_dirinfo_set = (delta_bitmap_ == COMPLETE_BITMAP);
-        if (with_complete_dirinfo_set)
-        {
-            dirinfo_set_size = dirinfo_set_.size();
-        }
-
-        return with_complete_dirinfo_set;
-    }
-
-    bool DirinfoSet::getDirinfoSetOrDelta(std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& dirinfo_set, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& new_dirinfo_delta_set, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& stale_dirinfo_delta_set) const
+    bool DirinfoSet::getDirinfoSetOrDeltaSet(std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& dirinfo_set, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& new_dirinfo_delta_set, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& stale_dirinfo_delta_set) const
     {
         assert(delta_bitmap_ != INVALID_BITMAP);
 
@@ -86,6 +75,67 @@ namespace covered
             }
         }
 
+        return with_complete_dirinfo_set;
+    }
+
+    // ONLY for complete dirinfo set
+
+    bool DirinfoSet::isExistIfComplete(const DirectoryInfo& directory_info, bool& is_exist) const
+    {
+        assert(delta_bitmap_ != INVALID_BITMAP);
+
+        bool with_complete_dirinfo_set = (delta_bitmap_ == COMPLETE_BITMAP);
+        if (with_complete_dirinfo_set)
+        {
+            // Check if directory info exists
+            std::unordered_set<DirectoryInfo, DirectoryInfoHasher>::const_iterator dirinfo_set_const_iter = dirinfo_set_.find(directory_info);
+            is_exist = (dirinfo_set_const_iter != dirinfo_set_.end());
+        }
+        
+        return with_complete_dirinfo_set;
+    }
+
+    bool DirinfoSet::getDirinfoSetSizeIfComplete(uint32_t& dirinfo_set_size) const
+    {
+        assert(delta_bitmap_ != INVALID_BITMAP);
+
+        bool with_complete_dirinfo_set = (delta_bitmap_ == COMPLETE_BITMAP);
+        if (with_complete_dirinfo_set)
+        {
+            dirinfo_set_size = dirinfo_set_.size();
+        }
+
+        return with_complete_dirinfo_set;
+    }
+
+    bool DirinfoSet::tryToEraseIfComplete(const DirectoryInfo& directory_info)
+    {
+        bool with_complete_dirinfo_set = (delta_bitmap_ == COMPLETE_BITMAP);
+        if (with_complete_dirinfo_set)
+        {
+            // Try to erase directory info if exists
+            std::unordered_set<DirectoryInfo, DirectoryInfoHasher>::const_iterator dirinfo_set_const_iter = dirinfo_set_.find(directory_info);
+            if (dirinfo_set_const_iter != dirinfo_set_.end())
+            {
+                dirinfo_set_.erase(dirinfo_set_const_iter);
+            }
+        }
+        return with_complete_dirinfo_set;
+    }
+
+    bool DirinfoSet::getDirinfoIfComplete(const uint32_t advance_idx, DirectoryInfo& directory_info) const
+    {
+        bool with_complete_dirinfo_set = (delta_bitmap_ == COMPLETE_BITMAP);
+        if (with_complete_dirinfo_set)
+        {
+            assert(advance_idx < dirinfo_set_.size());
+
+            // Get ith directory info if exists
+            std::unordered_set<DirectoryInfo, DirectoryInfoHasher>::const_iterator dirinfo_set_const_iter = dirinfo_set_.begin();
+            std::advance(dirinfo_set_const_iter, advance_idx);
+            assert(dirinfo_set_const_iter != dirinfo_set_.end());
+            directory_info = *dirinfo_set_const_iter;
+        }
         return with_complete_dirinfo_set;
     }
 

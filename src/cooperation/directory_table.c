@@ -45,7 +45,7 @@ namespace covered
         else // key (i.e., directory entry) exists
         {
             uint32_t tmp_size = 0;
-            bool with_complete_dirinfo_set = all_dirinfo.getDirinfoSetSize(tmp_size);
+            bool with_complete_dirinfo_set = all_dirinfo.getDirinfoSetSizeIfComplete(tmp_size);
             assert(with_complete_dirinfo_set); // dirinfo set from directory entry MUST be complete
             assert(tmp_size > 0); // Directory entry MUST NOT be empty
         }
@@ -58,10 +58,11 @@ namespace covered
         bool is_global_cached = false; // Whether the key is cached by a local/neighbor edge node (even if invalid temporarily)
 
         // Prepare GetAllValidDirinfoParam
-        dirinfo_set_t valid_directory_info_set;
+        DirinfoSet valid_directory_info_set;
         DirectoryEntry::GetAllValidDirinfoParam tmp_param = {valid_directory_info_set};
 
         bool is_exist = false;
+        uint32_t dirinfo_set_size = 0;
         directory_hashtable_.constCallIfExist(key, is_exist, DirectoryEntry::GET_ALL_VALID_DIRINFO_FUNCNAME, &tmp_param); // Get directory entry if key exists
         if (!is_exist) // key does not exist
         {
@@ -71,13 +72,12 @@ namespace covered
         else // key exists
         {
             // Remove source edge idx from valid_directory_info_set if any due to finding a non-source valid dirinfo
-            dirinfo_set_t::const_iterator source_dirinfo_iter = valid_directory_info_set.find(DirectoryInfo(source_edge_idx));
-            if (source_dirinfo_iter != valid_directory_info_set.end())
-            {
-                valid_directory_info_set.erase(source_dirinfo_iter);
-            }
+            bool with_complete_dirinfo_set = valid_directory_info_set.tryToEraseIfComplete(DirectoryInfo(source_edge_idx));
+            assert(with_complete_dirinfo_set); // dirinfo set from directory entry MUST be complete
 
-            if (valid_directory_info_set.size() > 0) // At least one valid directory
+            with_complete_dirinfo_set = valid_directory_info_set.getDirinfoSetSizeIfComplete(dirinfo_set_size);
+            assert(with_complete_dirinfo_set); // dirinfo set from directory entry MUST be complete
+            if (dirinfo_set_size > 0) // At least one valid directory
             {
                 is_valid_directory_exist = true;
             }
@@ -91,21 +91,14 @@ namespace covered
         // Get the target edge index from valid neighbors
         if (is_valid_directory_exist)
         {
+            assert(dirinfo_set_size > 0); // At least one valid dirinfo
+
             // Randomly select a valid edge node as the target edge node
-            std::uniform_int_distribution<uint32_t> uniform_dist(0, valid_directory_info_set.size() - 1); // Range of [0, # of directory info - 1]
+            std::uniform_int_distribution<uint32_t> uniform_dist(0, dirinfo_set_size - 1); // Range of [0, # of directory info - 1]
             uint32_t random_number = uniform_dist(*directory_randgen_ptr_);
-            assert(random_number < valid_directory_info_set.size());
-            uint32_t i = 0;
-            for (dirinfo_set_t::const_iterator iter = valid_directory_info_set.begin(); iter != valid_directory_info_set.end(); iter++)
-            {
-                if (i == random_number)
-                {
-                    directory_info = *iter;
-                    assert(directory_info.getTargetEdgeIdx() != source_edge_idx); // NOTE: find a non-source valid directory info if any
-                    break;
-                }
-                i++;
-            }
+            assert(random_number < dirinfo_set_size);
+            bool with_complete_dirinfo_set = valid_directory_info_set.getDirinfoIfComplete(random_number, directory_info);
+            assert(directory_info.getTargetEdgeIdx() != source_edge_idx); // NOTE: find a non-source valid directory info if any
         }
 
         return is_global_cached;
@@ -185,15 +178,9 @@ namespace covered
     {
         bool is_cached_by_given_edge = false;
 
-        dirinfo_set_t all_dirinfo = getAll(key);
-        for (dirinfo_set_t::const_iterator dirinfo_const_iter = all_dirinfo.begin(); dirinfo_const_iter != all_dirinfo.end(); dirinfo_const_iter++)
-        {
-            if (edge_idx == dirinfo_const_iter->getTargetEdgeIdx())
-            {
-                is_cached_by_given_edge = true;
-                break;
-            }
-        }
+        DirinfoSet all_dirinfo = getAll(key);
+        bool with_complete_dirinfo_set = all_dirinfo.isExistIfComplete(DirectoryInfo(edge_idx), is_cached_by_given_edge);
+        assert(with_complete_dirinfo_set); // dirinfo set from directory entry MUST be complete
 
         return is_cached_by_given_edge;
     }
@@ -209,7 +196,7 @@ namespace covered
         assert(is_exist == true); // NOTE: invalidateAllDirinfoForKeyIfExist() is invoked ONLY if key exists
 
         uint32_t tmp_size = 0;
-        bool with_complete_dirinfo_set = all_dirinfo.getDirinfoSetSize(tmp_size);
+        bool with_complete_dirinfo_set = all_dirinfo.getDirinfoSetSizeIfComplete(tmp_size);
         assert(with_complete_dirinfo_set); // dirinfo set from directory entry MUST be complete
         assert(tmp_size > 0); // Directory entry MUST NOT be empty
 
