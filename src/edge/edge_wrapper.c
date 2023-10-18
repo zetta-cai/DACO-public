@@ -948,6 +948,8 @@ namespace covered
 
     std::unordered_map<Key, DirinfoSet, KeyHasher> EdgeWrapper::getLocalBeaconedVictimsFromCacheinfos(const std::list<VictimCacheinfo>& victim_cacheinfos) const
     {
+        // NOTE: victim_cacheinfos is from local edge cache or neighbor edge node, which can be either complete or compressed
+        
         std::unordered_map<Key, DirinfoSet, KeyHasher> local_beaconed_victim_dirinfosets;
         for (std::list<VictimCacheinfo>::const_iterator iter = victim_cacheinfos.begin(); iter != victim_cacheinfos.end(); iter++)
         {

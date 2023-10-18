@@ -261,6 +261,7 @@ namespace covered
                     uint32_t tmp_victim_object_size = tmp_victim_key.getKeyLength() + tmp_victim_value_size;
 
                     VictimCacheinfo tmp_victim_info(tmp_victim_key, tmp_victim_object_size, tmp_local_cached_popularity, tmp_redirected_cached_popularity);
+                    assert(tmp_victim_info.isComplete()); // NOTE: victim cacheinfos from local edge cache MUST be complete
                     victim_cacheinfos.push_back(tmp_victim_info); // Add to the tail of the list
 
                     // NOTE: we CANNOT use delta of cachelib internal sizes as conservative_victim_total_size (still conservative due to NOT considering saved metadata space), as we have NOT really evicted the victims from covered_cache_ptr_ yet
