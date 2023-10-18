@@ -283,7 +283,7 @@ test -d cachelib || die "expected 'cachelib' directory not found in $PWD"
 
 # After ensuring we are in the correct directory, set the installation prefix"
 CMAKE_PARAMS="$CMAKE_PARAMS -DCMAKE_INSTALL_PREFIX=$PREFIX"
-# Siyuan: change CMAKE_PREFIX_PATH to search the custom path first before the default path in FindBoost.cmake for libboost 1.81.0
+# Siyuan: change CMAKE_PREFIX_PATH to search the custom path first before the default path in FindBoost.cmake for libboost 1.81.0 by find_package in cachelib/CMakeLists.txt
 CMAKE_PREFIX_PATH="/home/ssy/projects/covered-private/lib/boost_1_81_0/install:$PREFIX/lib/cmake:$PREFIX/lib64/cmake:$PREFIX/lib:$PREFIX/lib64:$PREFIX:${CMAKE_PREFIX_PATH:-}"
 export CMAKE_PREFIX_PATH
 PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig:$PREFIX/lib64/pkgconfig:${PKG_CONFIG_PATH:-}"

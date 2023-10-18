@@ -1,6 +1,8 @@
 /*
  * EdgelevelVictimMetadata: track victim cacheinfos and cache margin bytes in an edge node.
  *
+ * NOTE: all victim cacheinfos stored in each edge node (including local edge cache, edge-level victim metadata, extra fetched victims, and victim metadata cache of victim tracker) MUST be complete (ONLY transmitted victim cacheinfos could be compressed).
+ *
  * By Siyuan Sheng (2023.09.20).
  */
 

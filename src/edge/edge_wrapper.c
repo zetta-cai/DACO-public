@@ -922,10 +922,10 @@ namespace covered
         uint64_t local_cache_margin_bytes = (capacity_bytes >= used_bytes) ? (capacity_bytes - used_bytes) : 0;
 
         // Get victim cacheinfos of local synced victims for the current edge node
-        std::list<VictimCacheinfo> local_synced_victim_cacheinfos = edge_cache_ptr_->getLocalSyncedVictimCacheinfos();
+        std::list<VictimCacheinfo> local_synced_victim_cacheinfos = edge_cache_ptr_->getLocalSyncedVictimCacheinfos(); // NOTE: victim cacheinfos from local edge cache MUST be complete
 
         // Get directory info sets for local synced victimed beaconed by the current edge node
-        std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_local_synced_victim_dirinfosets = getLocalBeaconedVictimsFromCacheinfos(local_synced_victim_cacheinfos);
+        std::unordered_map<Key, DirinfoSet, KeyHasher> local_beaconed_local_synced_victim_dirinfosets = getLocalBeaconedVictimsFromCacheinfos(local_synced_victim_cacheinfos); // NOTE: dirinfo sets from local directory table MUST be complete
 
         // Update local synced victims for the current edge node
         covered_cache_manager_ptr_->updateVictimTrackerForLocalSyncedVictims(local_cache_margin_bytes, local_synced_victim_cacheinfos, local_beaconed_local_synced_victim_dirinfosets); 
@@ -933,27 +933,30 @@ namespace covered
         return;
     }
 
-    std::unordered_map<Key, dirinfo_set_t, KeyHasher> EdgeWrapper::getLocalBeaconedVictimsFromVictimSyncset(const VictimSyncset& victim_syncset) const
+    std::unordered_map<Key, DirinfoSet, KeyHasher> EdgeWrapper::getLocalBeaconedVictimsFromVictimSyncset(const VictimSyncset& victim_syncset) const
     {
         checkPointers_();
         assert(cache_name_ == Util::COVERED_CACHE_NAME);
 
-        const std::list<VictimCacheinfo>& neighbor_synced_victims = victim_syncset.getLocalSyncedVictimsRef();
-        std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = getLocalBeaconedVictimsFromCacheinfos(neighbor_synced_victims);
+        std::list<VictimCacheinfo> neighbor_synced_victims;
+        bool with_complete_victim_syncset = victim_syncset.getLocalSyncedVictims(neighbor_synced_victims);
+        UNUSED(with_complete_victim_syncset); // Transmitted victim syncset received from neighbor edge node can be either complete or compressed
+        std::unordered_map<Key, DirinfoSet, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = getLocalBeaconedVictimsFromCacheinfos(neighbor_synced_victims); // NOTE: dirinfo sets from local directory table MUST be complete
 
         return local_beaconed_neighbor_synced_victim_dirinfosets;
     }
 
-    std::unordered_map<Key, dirinfo_set_t, KeyHasher> EdgeWrapper::getLocalBeaconedVictimsFromCacheinfos(const std::list<VictimCacheinfo>& victim_cacheinfos) const
+    std::unordered_map<Key, DirinfoSet, KeyHasher> EdgeWrapper::getLocalBeaconedVictimsFromCacheinfos(const std::list<VictimCacheinfo>& victim_cacheinfos) const
     {
-        std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_victim_dirinfosets;
+        std::unordered_map<Key, DirinfoSet, KeyHasher> local_beaconed_victim_dirinfosets;
         for (std::list<VictimCacheinfo>::const_iterator iter = victim_cacheinfos.begin(); iter != victim_cacheinfos.end(); iter++)
         {
             const Key& tmp_key = iter->getKey();
             bool current_is_beacon = currentIsBeacon(tmp_key);
             if (current_is_beacon) // Key is beaconed by current edge node
             {
-                dirinfo_set_t tmp_dirinfo_set = cooperation_wrapper_ptr_->getLocalDirectoryInfos(tmp_key);
+                DirinfoSet tmp_dirinfo_set = cooperation_wrapper_ptr_->getLocalDirectoryInfos(tmp_key);
+                assert(tmp_dirinfo_set.isComplete()); // NOTE: dirinfo sets from local directory table MUST be complete
                 local_beaconed_victim_dirinfosets.insert(std::pair(tmp_key, tmp_dirinfo_set));
             }
         }

@@ -72,8 +72,10 @@ namespace covered
         else // key exists
         {
             // Remove source edge idx from valid_directory_info_set if any due to finding a non-source valid dirinfo
-            bool with_complete_dirinfo_set = valid_directory_info_set.tryToEraseIfComplete(DirectoryInfo(source_edge_idx));
+            bool is_erase = false;
+            bool with_complete_dirinfo_set = valid_directory_info_set.tryToEraseIfComplete(DirectoryInfo(source_edge_idx), is_erase);
             assert(with_complete_dirinfo_set); // dirinfo set from directory entry MUST be complete
+            UNUSED(is_erase);
 
             with_complete_dirinfo_set = valid_directory_info_set.getDirinfoSetSizeIfComplete(dirinfo_set_size);
             assert(with_complete_dirinfo_set); // dirinfo set from directory entry MUST be complete

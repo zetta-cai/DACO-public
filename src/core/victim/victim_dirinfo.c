@@ -6,16 +6,24 @@ namespace covered
 {
     const std::string VictimDirinfo::kClassName = "VictimDirinfo";
 
-    VictimDirinfo::VictimDirinfo() : refcnt_(0), is_local_beaconed_(false)
+    VictimDirinfo::VictimDirinfo() : refcnt_(0), is_local_beaconed_(false), dirinfo_set_()
     {
-        dirinfo_set_.clear();
+        // NOTE: dirinfo set is INVALID now
+    }
+    
+    VictimDirinfo::VictimDirinfo(const bool& is_local_beaconed) : refcnt_(0), is_local_beaconed_(is_local_beaconed), dirinfo_set_(std::unordered_set<DirectoryInfo, DirectoryInfoHasher>())
+    {
+        assert(dirinfo_set_.isComplete()); // NOTE: dirinfo set in victim dirinfo MUST be complete
     }
 
-    VictimDirinfo::VictimDirinfo(const bool& is_local_beaconed, const dirinfo_set_t& dirinfo_set)
+    VictimDirinfo::VictimDirinfo(const bool& is_local_beaconed, const DirinfoSet& dirinfo_set)
     {
         refcnt_ = 0;
         is_local_beaconed_ = is_local_beaconed;
         dirinfo_set_ = dirinfo_set;
+
+        // NOTE: as a victim MUST be cached by at least one edge node, dirinfo_set cannot be empty/invalid
+        assert(dirinfo_set.isComplete()); // NOTE: dirinfo set in victim dirinfo MUST be complete
     }
 
     VictimDirinfo::~VictimDirinfo() {}
@@ -61,13 +69,15 @@ namespace covered
         return;
     }
 
-    const dirinfo_set_t& VictimDirinfo::getDirinfoSetRef() const
+    const DirinfoSet& VictimDirinfo::getDirinfoSetRef() const
     {
+        assert(dirinfo_set_.isComplete()); // NOTE: dirinfo set in victim dirinfo MUST be complete
         return dirinfo_set_;
     }
 
-    void VictimDirinfo::setDirinfoSet(const dirinfo_set_t& dirinfo_set)
+    void VictimDirinfo::setDirinfoSet(const DirinfoSet& dirinfo_set)
     {
+        assert(dirinfo_set.isComplete()); // NOTE: dirinfo set in victim dirinfo MUST be complete
         dirinfo_set_ = dirinfo_set;
         return;
     }
@@ -75,17 +85,16 @@ namespace covered
     bool VictimDirinfo::updateDirinfoSet(const bool& is_admit, const DirectoryInfo& directory_info)
     {
         bool is_update = false;
-        
-        if (is_admit && dirinfo_set_.find(directory_info) == dirinfo_set_.end())
+        bool with_complete_dirinfo_set = false;
+        if (is_admit)
         {
-            dirinfo_set_.insert(directory_info);
-            is_update = true;
+            with_complete_dirinfo_set = dirinfo_set_.tryToInsertIfComplete(directory_info, is_update);
         }
-        else if (!is_admit && dirinfo_set_.find(directory_info) != dirinfo_set_.end())
+        else
         {
-            dirinfo_set_.erase(directory_info);
-            is_update = true;
+            with_complete_dirinfo_set = dirinfo_set_.tryToEraseIfComplete(directory_info, is_update);
         }
+        assert(with_complete_dirinfo_set == true); // NOTE: dirinfo set in victim dirinfo MUST be complete
         
         return is_update;
     }
@@ -94,10 +103,8 @@ namespace covered
     {
         uint64_t total_size = sizeof(uint32_t) + sizeof(bool);
 
-        for (dirinfo_set_t::const_iterator dirinfo_iter = dirinfo_set_.begin(); dirinfo_iter != dirinfo_set_.end(); dirinfo_iter++)
-        {
-            total_size += dirinfo_iter->getSizeForCapacity();
-        }
+        assert(dirinfo_set_.isComplete()); // NOTE: dirinfo set in victim dirinfo MUST be complete
+        total_size += dirinfo_set_.getSizeForCapacity();
 
         return total_size;
     }

@@ -26,13 +26,15 @@ namespace covered
         bool isCompressed() const; // Delta compression
 
         // For both complete/compressed dirinfo set
-        bool getDirinfoSetOrDeltaSet(std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& dirinfo_set, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& new_dirinfo_delta_set, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& stale_dirinfo_delta_set) const; // Return if with complete dirinfo set
+        //bool getDirinfoSetOrDeltaSet(std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& dirinfo_set, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& new_dirinfo_delta_set, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& stale_dirinfo_delta_set) const; // Return if with complete dirinfo set
 
         // ONLY for complete dirinfo set
         bool isExistIfComplete(const DirectoryInfo& directory_info, bool& is_exist) const; // Return if with complete dirinfo set
         bool getDirinfoSetSizeIfComplete(uint32_t& dirinfo_set_size) const; // Return if with complete dirinfo set
-        bool tryToEraseIfComplete(const DirectoryInfo& directory_info); // Return if with complete dirinfo set
+        bool tryToInsertIfComplete(const DirectoryInfo& directory_info, bool& is_insert); // Return if with complete dirinfo set
+        bool tryToEraseIfComplete(const DirectoryInfo& directory_info, bool& is_erase); // Return if with complete dirinfo set
         bool getDirinfoIfComplete(const uint32_t advance_idx, DirectoryInfo& directory_info) const; // Return if with complete dirinfo set
+        bool getDirinfoSetIfComplete(std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& dirinfo_set) const; // Return if with complete dirinfo set
 
         uint32_t getDirinfoSetPayloadSize() const;
         uint32_t serialize(DynamicArray& msg_payload, const uint32_t& position) const;

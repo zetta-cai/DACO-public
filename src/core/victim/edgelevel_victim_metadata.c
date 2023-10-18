@@ -17,6 +17,11 @@ namespace covered
     {
         cache_margin_bytes_ = cache_margin_bytes;
         victim_cacheinfos_ = victim_cacheinfos;
+
+        for (std::list<VictimCacheinfo>::const_iterator victim_cacheinfos_const_iter = victim_cacheinfos.begin(); victim_cacheinfos_const_iter != victim_cacheinfos.end(); victim_cacheinfos_const_iter++)
+        {
+            assert(victim_cacheinfos_const_iter->isComplete()); // NOTE: victim cacheinfos in edge-level victim metadata of victim tracker MUST be complete
+        }
     }
 
     EdgelevelVictimMetadata::~EdgelevelVictimMetadata() {}
@@ -53,6 +58,7 @@ namespace covered
             for (std::list<VictimCacheinfo>::const_iterator cacheinfo_list_const_iter = victim_cacheinfos_.begin(); cacheinfo_list_const_iter != victim_cacheinfos_.end(); cacheinfo_list_const_iter++) // Note that victim_cacheinfos_ follows the ascending order of local rewards
             {
                 const VictimCacheinfo& tmp_victim_cacheinfo = *cacheinfo_list_const_iter;
+                assert(tmp_victim_cacheinfo.isComplete()); // NOTE: victim cacheinfos in edge-level victim metadata of victim tracker MUST be complete
                 const Key& tmp_victim_key = tmp_victim_cacheinfo.getKey();
 
                 // Update per-victim edgeset
@@ -92,6 +98,7 @@ namespace covered
                 std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>::const_iterator peredge_synced_victimset_const_iter = peredge_synced_victimset.find(cur_edge_idx);
                 for (std::list<VictimCacheinfo>::const_iterator extra_victim_cacheinfos_const_iter = extra_victim_cacheinfos.begin(); extra_victim_cacheinfos_const_iter != extra_victim_cacheinfos.end(); extra_victim_cacheinfos_const_iter++)
                 {
+                    assert(extra_victim_cacheinfos_const_iter->isComplete()); // NOTE: victim cacheinfos of extra fetched victims MUST be complete
                     const Key tmp_victim_key = extra_victim_cacheinfos_const_iter->getKey();
 
                     // Skip the extra victim that has already been considered by the current edge idx

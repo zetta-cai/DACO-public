@@ -137,6 +137,7 @@ namespace covered
     {
         // Get current complete victim syncset from victim tracker
         VictimSyncset current_victim_syncset = victim_tracker_.getVictimSyncset();
+        assert(current_victim_syncset.isComplete());
 
         // Replace previously-issued complete victim syncset for dst edge idx by current complete victim syncset if necessary
         VictimSyncset prev_victim_syncset;
@@ -148,7 +149,9 @@ namespace covered
         }
         else
         {
-            // TODO: Calculate delta victim syncset by dedup/delta-compression based on current and prev complete victim syncset
+            assert(prev_victim_syncset.isComplete());
+
+            // TODO: (END HERE) Calculate delta victim syncset by dedup/delta-compression based on current and prev complete victim syncset
             VictimSyncset delta_victim_syncset;
 
             return delta_victim_syncset;
@@ -493,7 +496,9 @@ namespace covered
         tmp_covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
 
         // Update extra_peredge_victim_cacheinfos
+        // NOTE: cache margin bytes of victim_fetchset will NOT be used
         const VictimSyncset& victim_fetchset = covered_victim_fetch_response_ptr->getVictimFetchsetRef();
+        assert(victim_fetchset.isComplete()); // NOTE: extra fetched victim cacheinfos and dirinfo sets in victim fetchset MUST be complete
         const std::list<VictimCacheinfo>& fetched_victim_cacheinfos = victim_fetchset.getLocalSyncedVictimsRef();
         extra_peredge_victim_cacheinfos.insert(std::pair<uint32_t, std::list<VictimCacheinfo>>(source_edge_idx, fetched_victim_cacheinfos));
 

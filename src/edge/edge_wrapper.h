@@ -25,6 +25,7 @@ namespace covered
 #include "core/victim/victim_syncset.h"
 #include "concurrency/ring_buffer_impl.h"
 #include "cooperation/cooperation_wrapper_base.h"
+#include "cooperation/directory/dirinfo_set.h"
 #include "edge/background_counter.h"
 #include "edge/cache_server/cache_server.h"
 #include "edge/local_cache_admission_item.h"
@@ -105,8 +106,8 @@ namespace covered
 
         // (7.1) For victim synchronization
         void updateCacheManagerForLocalSyncedVictims() const; // NOTE: both edge cache server worker and local/remote beacon node (non-blocking data fetching for placement deployment) will access local edge cache, which affects local cached metadata and may trigger update for local synced victims
-        std::unordered_map<Key, dirinfo_set_t, KeyHasher> getLocalBeaconedVictimsFromVictimSyncset(const VictimSyncset& victim_syncset) const; // NOTE: all edge cache/beacon/invalidation servers will access cooperation wrapper to get content directory information for local beaconed victims from received victim syncset
-        std::unordered_map<Key, dirinfo_set_t, KeyHasher> getLocalBeaconedVictimsFromCacheinfos(const std::list<VictimCacheinfo>& victim_cacheinfos) const;
+        std::unordered_map<Key, DirinfoSet, KeyHasher> getLocalBeaconedVictimsFromVictimSyncset(const VictimSyncset& victim_syncset) const; // NOTE: all edge cache/beacon/invalidation servers will access cooperation wrapper to get content directory information for local beaconed victims from received victim syncset
+        std::unordered_map<Key, DirinfoSet, KeyHasher> getLocalBeaconedVictimsFromCacheinfos(const std::list<VictimCacheinfo>& victim_cacheinfos) const;
 
         // (7.2) For non-blocking placement deployment (ONLY invoked by beacon edge node)
         // NOTE: (for non-blocking placement deployment) source_addr and recvrsp_socket_server_ptr are used for receiving eviction directory update responses if with local placement notification in current beacon edge node; skip propagation latency is used for all messages during non-blocking placement deployment (intermediate bandwidth usage and event list are counted by edge_background_counter_for_beacon_server_)

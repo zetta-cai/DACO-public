@@ -128,17 +128,17 @@ namespace covered
         // Victim synchronization
         const uint32_t source_edge_idx = covered_victim_fetch_request_ptr->getSourceIndex();
         const VictimSyncset& neighbor_victim_syncset = covered_victim_fetch_request_ptr->getVictimSyncsetRef();
-        std::unordered_map<Key, dirinfo_set_t, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = tmp_edge_wrapper_ptr->getLocalBeaconedVictimsFromVictimSyncset(neighbor_victim_syncset);
+        std::unordered_map<Key, DirinfoSet, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = tmp_edge_wrapper_ptr->getLocalBeaconedVictimsFromVictimSyncset(neighbor_victim_syncset);
         tmp_covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
 
         // Get victim cacheinfos from local edge cache for object size
         const ObjectSize object_size = covered_victim_fetch_request_ptr->getObjectSize(); // Size of newly-admitted object (i.e., required size)
         std::list<VictimCacheinfo> tmp_victim_cacheinfos;
-        bool has_victim_key = tmp_edge_wrapper_ptr->getEdgeCachePtr()->fetchVictimCacheinfosForRequiredSize(tmp_victim_cacheinfos, object_size);
+        bool has_victim_key = tmp_edge_wrapper_ptr->getEdgeCachePtr()->fetchVictimCacheinfosForRequiredSize(tmp_victim_cacheinfos, object_size); // NOTE: victim cacheinfos from local edge cache MUST be complete
         assert(has_victim_key == true);
 
         // Get dirinfo sets for local beaconed ones of fetched victims
-        std::unordered_map<Key, dirinfo_set_t, KeyHasher> tmp_perkey_dirinfoset = tmp_edge_wrapper_ptr->getLocalBeaconedVictimsFromCacheinfos(tmp_victim_cacheinfos);
+        std::unordered_map<Key, DirinfoSet, KeyHasher> tmp_perkey_dirinfoset = tmp_edge_wrapper_ptr->getLocalBeaconedVictimsFromCacheinfos(tmp_victim_cacheinfos);
 
         struct timespec victim_fetch_end_timestamp = Util::getCurrentTimespec();
         uint32_t victim_fetch_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(victim_fetch_end_timestamp, victim_fetch_start_timestamp));
@@ -146,11 +146,12 @@ namespace covered
         
         // Prepare victim syncset for piggybacking-based victim synchronization
         const uint32_t dst_edge_idx = control_request_ptr->getSourceIndex();
-        VictimSyncset local_victim_syncset = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr()->accessVictimTrackerForVictimSyncset(dst_edge_idx);
+        VictimSyncset local_victim_syncset = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr()->accessVictimTrackerForVictimSyncset(dst_edge_idx); // complete or compressed
 
         // Prepare victim fetchset for lazy victim fetching
         // NOTE: we do NOT care about cache margin bytes in victim_fetchset
-        VictimSyncset local_victim_fetchset(local_victim_syncset.getCacheMarginBytes(), tmp_victim_cacheinfos, tmp_perkey_dirinfoset);
+        VictimSyncset local_victim_fetchset(0, tmp_victim_cacheinfos, tmp_perkey_dirinfoset);
+        assert(local_victim_fetchset.isComplete()); // NOTE: extra fetched victim cacheinfos and dirinfo sets in victim fetchset MUST be complete
         
         // Prepare CoveredVictimFetchResponse with total_bandwidth_usage and event_list
         const uint32_t current_edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();

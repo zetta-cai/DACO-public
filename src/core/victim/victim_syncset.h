@@ -1,6 +1,8 @@
 /*
  * VictimSyncset: maintain VictimCacheinfos of local synced victims and DirinfoSets of synced victims beaconed by the current edge node for vicitm syncrhonizatino across edge nodes by piggybacking.
  *
+ * NOTE: transmited victim cacheinfos and dirinfo sets could be either completed or compressed.
+ * 
  * By Siyuan Sheng (2023.08.31).
  */
 
@@ -22,6 +24,8 @@ namespace covered
         VictimSyncset();
         VictimSyncset(const uint64_t& cache_margin_bytes, const std::list<VictimCacheinfo>& local_synced_victims, const std::unordered_map<Key, DirinfoSet, KeyHasher>& local_beaconed_victims);
         ~VictimSyncset();
+
+        bool isComplete() const;
 
         bool getCacheMarginBytesOrDelta(uint64_t& cache_margin_bytes, uint32_t cache_margin_delta_bytes) const; // Return if with complete cache margin bytes
         bool getLocalSyncedVictims(std::list<VictimCacheinfo>& local_synced_vitims) const; // Return if with complete local synced vitim cacheinfos

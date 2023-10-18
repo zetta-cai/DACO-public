@@ -45,7 +45,7 @@ namespace covered
 
     // For both complete/compressed dirinfo set
 
-    bool DirinfoSet::getDirinfoSetOrDeltaSet(std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& dirinfo_set, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& new_dirinfo_delta_set, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& stale_dirinfo_delta_set) const
+    /*bool DirinfoSet::getDirinfoSetOrDeltaSet(std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& dirinfo_set, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& new_dirinfo_delta_set, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& stale_dirinfo_delta_set) const
     {
         assert(delta_bitmap_ != INVALID_BITMAP);
 
@@ -76,7 +76,7 @@ namespace covered
         }
 
         return with_complete_dirinfo_set;
-    }
+    }*/
 
     // ONLY for complete dirinfo set
 
@@ -108,9 +108,27 @@ namespace covered
         return with_complete_dirinfo_set;
     }
 
-    bool DirinfoSet::tryToEraseIfComplete(const DirectoryInfo& directory_info)
+    bool DirinfoSet::tryToInsertIfComplete(const DirectoryInfo& directory_info, bool& is_insert)
     {
         bool with_complete_dirinfo_set = (delta_bitmap_ == COMPLETE_BITMAP);
+        is_insert = false;
+        if (with_complete_dirinfo_set)
+        {
+            // Try to insert directory info if not exists
+            std::unordered_set<DirectoryInfo, DirectoryInfoHasher>::const_iterator dirinfo_set_const_iter = dirinfo_set_.find(directory_info);
+            if (dirinfo_set_const_iter == dirinfo_set_.end())
+            {
+                dirinfo_set_.insert(directory_info);
+                is_insert = true;
+            }
+        }
+        return with_complete_dirinfo_set;
+    }
+
+    bool DirinfoSet::tryToEraseIfComplete(const DirectoryInfo& directory_info, bool& is_erase)
+    {
+        bool with_complete_dirinfo_set = (delta_bitmap_ == COMPLETE_BITMAP);
+        is_erase = false;
         if (with_complete_dirinfo_set)
         {
             // Try to erase directory info if exists
@@ -118,6 +136,7 @@ namespace covered
             if (dirinfo_set_const_iter != dirinfo_set_.end())
             {
                 dirinfo_set_.erase(dirinfo_set_const_iter);
+                is_erase = true;
             }
         }
         return with_complete_dirinfo_set;
@@ -136,6 +155,21 @@ namespace covered
             assert(dirinfo_set_const_iter != dirinfo_set_.end());
             directory_info = *dirinfo_set_const_iter;
         }
+        return with_complete_dirinfo_set;
+    }
+
+    bool DirinfoSet::getDirinfoSetIfComplete(std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& dirinfo_set) const
+    {
+        assert(delta_bitmap_ != INVALID_BITMAP);
+
+        dirinfo_set.clear();
+
+        bool with_complete_dirinfo_set = (delta_bitmap_ == COMPLETE_BITMAP);
+        if (with_complete_dirinfo_set)
+        {
+            dirinfo_set = dirinfo_set_;
+        }
+
         return with_complete_dirinfo_set;
     }
 

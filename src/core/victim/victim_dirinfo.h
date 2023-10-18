@@ -1,6 +1,8 @@
 /*
  * VictimDirinfo: track refcnt, is local beaconed flag, and a set of DirectoryInfos of a victim.
  *
+ * NOTE: all dirinfo sets stored in each edge node (including local directory table, victim dirinfo, extra fetched victims, and victim metadata cache of victim tracker) MUST be complete (ONLY transmitted dirinfo sets could be compressed).
+ *
  * By Siyuan Sheng (2023.08.28).
  */
 
@@ -9,7 +11,7 @@
 
 #include <string>
 
-#include "cooperation/directory/directory_info.h"
+#include "cooperation/directory/dirinfo_set.h"
 
 namespace covered
 {
@@ -17,7 +19,8 @@ namespace covered
     {
     public:
         VictimDirinfo();
-        VictimDirinfo(const bool& is_local_beaconed, const dirinfo_set_t& dirinfo_set);
+        VictimDirinfo(const bool& is_local_beaconed);
+        VictimDirinfo(const bool& is_local_beaconed, const DirinfoSet& dirinfo_set);
         ~VictimDirinfo();
 
         uint32_t getRefcnt() const;
@@ -27,8 +30,8 @@ namespace covered
         bool isLocalBeaconed() const;
         void markLocalBeaconed();
 
-        const dirinfo_set_t& getDirinfoSetRef() const;
-        void setDirinfoSet(const dirinfo_set_t& dirinfo_set);
+        const DirinfoSet& getDirinfoSetRef() const;
+        void setDirinfoSet(const DirinfoSet& dirinfo_set);
         bool updateDirinfoSet(const bool& is_admit, const DirectoryInfo& directory_info); // Update directory info for the key (i.e., add or remove directory info from dirinfo_set_); return if directory info set is updated successfully
 
         uint64_t getSizeForCapacity() const;
@@ -39,7 +42,7 @@ namespace covered
 
         uint32_t refcnt_;
         bool is_local_beaconed_;
-        dirinfo_set_t dirinfo_set_;
+        DirinfoSet dirinfo_set_;
     };
 }
 
