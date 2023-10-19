@@ -21,15 +21,21 @@ namespace covered
     class VictimSyncset
     {
     public:
+        static VictimSyncset compress(const VictimSyncset& current_victim_syncset, const VictimSyncset& prev_victim_syncset); // Compress current victim syncset w.r.t. previous victim syncset
+
         VictimSyncset();
         VictimSyncset(const uint64_t& cache_margin_bytes, const std::list<VictimCacheinfo>& local_synced_victims, const std::unordered_map<Key, DirinfoSet, KeyHasher>& local_beaconed_victims);
         ~VictimSyncset();
 
         bool isComplete() const;
 
-        bool getCacheMarginBytesOrDelta(uint64_t& cache_margin_bytes, uint32_t cache_margin_delta_bytes) const; // Return if with complete cache margin bytes
+        // For both complete and compressed victim syncsets
+        bool getCacheMarginBytesOrDelta(uint64_t& cache_margin_bytes, int& cache_margin_delta_bytes) const; // Return if with complete cache margin bytes
         bool getLocalSyncedVictims(std::list<VictimCacheinfo>& local_synced_vitims) const; // Return if with complete local synced vitim cacheinfos
         bool getLocalBeaconedVictims(std::unordered_map<Key, DirinfoSet, KeyHasher>& local_beaconed_victims) const;
+
+        // For compressed victim syncset
+        void setCacheMarginDeltaBytes(const int& cache_margin_delta_bytes);
 
         uint32_t getVictimSyncsetPayloadSize() const;
         uint32_t serialize(DynamicArray& msg_payload, const uint32_t& position) const;
@@ -54,7 +60,7 @@ namespace covered
 
         // Delta compression (32-bit delta is enough for limited changes of cache margin bytes)
         uint64_t cache_margin_bytes_; // ONLY for complete victim syncset: remaining bytes of local edge cache in sender
-        uint32_t cache_margin_delta_bytes_; // ONLY for compressed victim syncset: delta of cache margin bytes will NOT exceed max object size (e.g., several MiBs in Facebook CDN traces)
+        int cache_margin_delta_bytes_; // ONLY for compressed victim syncset: delta of cache margin bytes will NOT exceed max object size (e.g., several MiBs in Facebook CDN traces)
 
         // Deduplication (relatively stable victim cacheinfos of unpopular cached objects)
         // (1) For complete victim syncset: all complete victim cacheinfos; (2) for compressed victim syncset: new victim cacheinfos (complete newly-synced victims or compressed existing victims w/ cacheinfo changes)

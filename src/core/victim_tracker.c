@@ -171,7 +171,7 @@ namespace covered
 
         // NOTE: neighbor victim syncset can be either complete or compressed
         uint64_t neighbor_cache_margin_bytes = 0;
-        uint32_t neighbor_cache_margin_delta_bytes = 0;
+        int neighbor_cache_margin_delta_bytes = 0;
         bool with_complete_vicitm_syncset = neighbor_victim_syncset.getCacheMarginBytesOrDelta(neighbor_cache_margin_bytes, neighbor_cache_margin_delta_bytes);
         std::list<VictimCacheinfo> neighbor_synced_victim_cacheinfos;
         bool unused_with_complete_vicitm_syncset_0 = neighbor_victim_syncset.getLocalSyncedVictims(neighbor_synced_victim_cacheinfos);

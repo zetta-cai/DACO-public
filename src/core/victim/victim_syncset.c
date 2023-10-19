@@ -1,5 +1,7 @@
 #include "core/victim/victim_syncset.h"
 
+#include <assert.h>
+
 namespace covered
 {
     const std::string VictimSyncset::kClassName = "VictimSyncset";
@@ -9,6 +11,47 @@ namespace covered
     const uint8_t VictimSyncset::CACHE_MARGIN_BYTES_DELTA_MASK = 0b00000011;
     const uint8_t VictimSyncset::LOCAL_SYNCED_VICTIMS_DEDUP_MASK = 0b00000101;
     const uint8_t VictimSyncset::LOCAL_BEACONED_VICTIMS_DEDUP_MASK = 0b00001001;
+
+    VictimSyncset VictimSyncset::compress(const VictimSyncset& current_victim_syncset, const VictimSyncset& prev_victim_syncset)
+    {
+        // Perform dedup/delta-compression based on two complete victim syncsets
+        assert(current_victim_syncset.isComplete());
+        assert(prev_victim_syncset.isComplete());
+
+        VictimSyncset delta_victim_syncset;
+
+        // Perform delta compression on cache margin bytes
+        uint64_t current_cache_margin_bytes = current_victim_syncset.cache_margin_bytes_;
+        uint64_t prev_cache_margin_bytes = prev_victim_syncset.cache_margin_bytes_;
+        int cache_margin_delta_bytes = 0;
+        bool with_cache_margin_bytes_complete = true;
+        if (current_cache_margin_bytes >= prev_cache_margin_bytes)
+        {
+            uint64_t tmp_delta = current_cache_margin_bytes - prev_cache_margin_bytes;
+            uint64_t max_int = static_cast<uint64_t>(std::numeric_limits<int>::max());
+            if (tmp_delta <= max_int) // Within valid range to be delta-compressed
+            {
+                cache_margin_delta_bytes = static_cast<int>(tmp_delta);
+                with_cache_margin_bytes_complete = false;
+            }
+        }
+        else
+        {
+            uint64_t tmp_delta_abs = prev_cache_margin_bytes - current_cache_margin_bytes;
+            uint64_t min_int_abs = static_cast<uint64_t>(-1 * std::numeric_limits<int>::min());
+            if (tmp_delta_abs <= min_int_abs) // Within valid range to be delta-compressed
+            {
+                cache_margin_delta_bytes = -1 * static_cast<int>(tmp_delta_abs);
+                with_cache_margin_bytes_complete = false;
+            }
+        }
+        if (!with_cache_margin_bytes_complete)
+        {
+            delta_victim_syncset.setCacheMarginDeltaBytes(cache_margin_delta_bytes);
+        }
+
+        // TODO: (END HERE) Perform dedup on victim cacheinfos
+    }
 
     VictimSyncset::VictimSyncset() : compressed_bitmap_(INVALID_BITMAP), cache_margin_bytes_(0), cache_margin_delta_bytes_(0)
     {
@@ -36,7 +79,9 @@ namespace covered
         return (compressed_bitmap_ == COMPLETE_BITMAP);
     }
 
-    bool VictimSyncset::getCacheMarginBytesOrDelta(uint64_t& cache_margin_bytes, uint32_t cache_margin_delta_bytes) const
+    // For both complete and compressed victim syncsets
+
+    bool VictimSyncset::getCacheMarginBytesOrDelta(uint64_t& cache_margin_bytes, int& cache_margin_delta_bytes) const
     {
         assert(compressed_bitmap_ != INVALID_BITMAP);
 
@@ -91,6 +136,22 @@ namespace covered
         return with_complete_local_beaconed_victims;
     }
 
+    // For compressed victim syncset
+
+    void VictimSyncset::setCacheMarginDeltaBytes(const int& cache_margin_delta_bytes)
+    {
+        if (compressed_bitmap_ == INVALID_BITMAP)
+        {
+            compressed_bitmap_ = CACHE_MARGIN_BYTES_DELTA_MASK;
+        }
+        else
+        {
+            compressed_bitmap_ |= CACHE_MARGIN_BYTES_DELTA_MASK;
+        }
+        cache_margin_delta_bytes_ = cache_margin_delta_bytes;
+        return;
+    }
+
     uint32_t VictimSyncset::getVictimSyncsetPayloadSize() const
     {
         // TODO: we can tune the sizes of local synched/beaconed victims, as the numbers are limited under our design (at most peredge_synced_victimcnt and peredge_synced_victimcnt * edgecnt)
@@ -108,7 +169,7 @@ namespace covered
         }
         else
         {
-            victim_syncset_payload_size += sizeof(uint32_t);
+            victim_syncset_payload_size += sizeof(int);
         }
 
         // Local synced victims
@@ -149,8 +210,8 @@ namespace covered
         }
         else
         {
-            msg_payload.deserialize(size, (const char*)&cache_margin_delta_bytes_, sizeof(uint32_t));
-            size += sizeof(uint32_t);
+            msg_payload.deserialize(size, (const char*)&cache_margin_delta_bytes_, sizeof(int));
+            size += sizeof(int);
         }
 
         // Size of local synced victims
@@ -202,8 +263,8 @@ namespace covered
         }
         else
         {
-            msg_payload.serialize(size, (char*)&cache_margin_delta_bytes_, sizeof(uint32_t));
-            size += sizeof(uint32_t);
+            msg_payload.serialize(size, (char*)&cache_margin_delta_bytes_, sizeof(int));
+            size += sizeof(int);
         }
 
         // Size of local synced victims
