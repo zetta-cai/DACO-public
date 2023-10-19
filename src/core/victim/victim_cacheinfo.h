@@ -27,7 +27,8 @@ namespace covered
 
         bool isComplete() const; // Whether all fields are NOT deduped
         bool isStale() const; // Whether the given key is NOT local synced victim yet and should be removed from victim tracker
-        bool isDeduped() const; // Whether at least one field is deduped (but NOT all fields)
+        bool isDeduped() const; // Whether at least one field is deduped
+        bool isFullyDeduped() const; // Whether all fields are deduped (i.e., no need for victim synchronization)
 
         // For complete victim cacheinfo
         const Key getKey() const;
@@ -53,7 +54,7 @@ namespace covered
 
         static const uint8_t INVALID_BITMAP; // Invalid bitmap
         static const uint8_t COMPLETE_BITMAP; // All fields are NOT deduped
-        // NOTE: as we do NOT need to sync victim cache info if all three fields are deduped, so we use dedup_bitmap_ = STALE_BITMAP (i.e., all four lowest bits are 1) to indicate that the stale victim cacheinfo of key_ needs to be removed (i.e., key_ is NOT a local synced victim)
+        static const uint8_t DEDUP_MASK; // At least one field is deduped
         static const uint8_t STALE_BITMAP; // The given key is NOT local synced victim yet and should be removed from victim tracker
         static const uint8_t OBJECT_SIZE_DEDUP_MASK; // Whether object size is deduped or complete
         static const uint8_t LOCAL_CACHED_POPULARITY_DEDUP_MASK; // Whether local cached popularity is deduped or complete

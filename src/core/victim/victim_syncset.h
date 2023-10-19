@@ -55,16 +55,19 @@ namespace covered
 
         static const uint8_t INVALID_BITMAP; // Invalid bitmap
         static const uint8_t COMPLETE_BITMAP; // All fields are NOT deduped/delta-compressed
+        static const uint8_t COMPRESS_MASK; // At least one filed is deduped/delta-compressed
         static const uint8_t CACHE_MARGIN_BYTES_DELTA_MASK; // Whether cache margin bytes is delta compressed
         static const uint8_t LOCAL_SYNCED_VICTIMS_DEDUP_MASK; // Whether at least one victim cacheinfo of a local synced victim is deduped
+        static const uint8_t LOCAL_SYNCED_VICTIMS_EMPTY_MASK; // Whether local synced victims is empty (e.g., no local synced victim for complete victim syncset, or all local synced victims are fully-deduped and hence NOT tracked for compressed victim syncset)
         static const uint8_t LOCAL_BEACONED_VICTIMS_DEDUP_MASK; // Whether at least one dirinfo set of a local beaconed victim is deduped
+        static const uint8_t LOCAL_BEACONED_VICTIMS_EMPTY_MASK; // Whether local beaconed victims is empty (e.g., no local beaconed victim for complete victim syncset, or all local beaconed victims are fully-compressed and hence NOT tracked for compressed victim syncset)
 
         void assertAtLeastOneCacheinfoDeduped_() const;
         void assertAllCacheinfosComplete_() const;
         void assertAtLeastOneDirinfoSetCompressed_() const;
         void assertAllDirinfoSetsComplete_() const;
 
-        uint8_t compressed_bitmap_; // 1st lowest bit indicates if the syncset is a compressed victim syncset (2nd lowest bit for cache margin bytes; 3rd lowest bit for local synced victims; 4th lowest bit for local beaconed victims)
+        uint8_t compressed_bitmap_; // 1st lowest bit indicates if the syncset is a compressed victim syncset (2nd lowest bit for cache margin bytes; 3rd/4th lowest bit for local synced victims; 5th/6th lowest bit for local beaconed victims)
 
         // Delta compression (32-bit delta is enough for limited changes of cache margin bytes)
         uint64_t cache_margin_bytes_; // ONLY for complete victim syncset: remaining bytes of local edge cache in sender
