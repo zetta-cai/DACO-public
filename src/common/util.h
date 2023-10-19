@@ -139,8 +139,10 @@ namespace covered
         static Popularity popularityMultiply(const Popularity& a, const Popularity& b); // a * b
         static Popularity popularityAdd(const Popularity& a, const Popularity& b); // a + b
 
-        static bool isLargerEqual(const double& a, const double& b); // a >= b (with iota)
-        static bool isLargerEqual(const float& a, const float& b); // a >= b (with iota)
+        static bool isApproxLargerEqual(const double& a, const double& b); // a >= b (with iota)
+        static bool isApproxLargerEqual(const float& a, const float& b); // a >= b (with iota)
+        static bool isApproxEqual(const double& a, const double& b); // a == b (with iota)
+        static bool isApproxEqual(const float& a, const float& b); // a == b (with iota)
 
         static std::string toString(void* pointer);
         static std::string toString(const bool& boolean);

@@ -7,6 +7,8 @@
 #ifndef VICTIM_CACHEINFO_H
 #define VICTIM_CACHEINFO_H
 
+#define DEBUG_VICTIM_CACHEINFO
+
 #include <string>
 
 #include "common/covered_common_header.h"
@@ -17,6 +19,8 @@ namespace covered
     class VictimCacheinfo
     {
     public:
+        static VictimCacheinfo dedup(const VictimCacheinfo& current_victim_cacheinfo, const VictimCacheinfo& prev_victim_cacheinfo);
+
         VictimCacheinfo();
         VictimCacheinfo(const Key& key, const ObjectSize& object_size, const Popularity& local_cached_popularity, const Popularity& redirected_cached_popularity);
         ~VictimCacheinfo();
@@ -25,10 +29,17 @@ namespace covered
         bool isStale() const; // Whether the given key is NOT local synced victim yet and should be removed from victim tracker
         bool isDeduped() const; // Whether at least one field is deduped (but NOT all fields)
 
+        // For complete victim cacheinfo
         const Key getKey() const;
         bool getObjectSize(ObjectSize& object_size) const; // Return if with complete object size
         bool getLocalCachedPopularity(Popularity& local_cached_popularity) const; // Return if with complete local cached popularity
         bool getRedirectedCachedPopularity(Popularity& redirected_cached_popularity) const; // Return if with complete redirected cached popularity
+
+        // For compressed victim cacheinfo
+        void markStale(); // Dedup all fields
+        void dedupObjectSize();
+        void dedupLocalCachedPopularity();
+        void dedupRedirectedCachedPopularity();
 
         uint32_t getVictimCacheinfoPayloadSize() const;
         uint32_t serialize(DynamicArray& msg_payload, const uint32_t& position) const;

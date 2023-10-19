@@ -9,6 +9,8 @@
 #ifndef VICTIM_SYNCSET_H
 #define VICTIM_SYNCSET_H
 
+#define DEBUG_VICTIM_SYNCSET
+
 #include <list>
 #include <string>
 #include <unordered_map>
@@ -32,10 +34,16 @@ namespace covered
         // For both complete and compressed victim syncsets
         bool getCacheMarginBytesOrDelta(uint64_t& cache_margin_bytes, int& cache_margin_delta_bytes) const; // Return if with complete cache margin bytes
         bool getLocalSyncedVictims(std::list<VictimCacheinfo>& local_synced_vitims) const; // Return if with complete local synced vitim cacheinfos
-        bool getLocalBeaconedVictims(std::unordered_map<Key, DirinfoSet, KeyHasher>& local_beaconed_victims) const;
+        bool getLocalSyncedVictimsAsMap(std::unordered_map<Key,VictimCacheinfo, KeyHasher>& local_synced_vitims_map) const; // Return if with complete local synced vitim cacheinfos
+        bool getLocalBeaconedVictims(std::unordered_map<Key, DirinfoSet, KeyHasher>& local_beaconed_victims) const; // Return if with complete local beaconed vitim dirinfo sets
+
+        // For complete victim syncset
+        //void setCacheMarginBytes(const uint64_t& cache_margin_bytes);
 
         // For compressed victim syncset
         void setCacheMarginDeltaBytes(const int& cache_margin_delta_bytes);
+        void setLocalSyncedVictimsForCompress(const std::list<VictimCacheinfo>& local_synced_victims);
+        void setLocalBeaconedVictimsForCompress(const std::unordered_map<Key, DirinfoSet, KeyHasher>& local_beaconed_victims);
 
         uint32_t getVictimSyncsetPayloadSize() const;
         uint32_t serialize(DynamicArray& msg_payload, const uint32_t& position) const;
@@ -64,10 +72,12 @@ namespace covered
 
         // Deduplication (relatively stable victim cacheinfos of unpopular cached objects)
         // (1) For complete victim syncset: all complete victim cacheinfos; (2) for compressed victim syncset: new victim cacheinfos (complete newly-synced victims or compressed existing victims w/ cacheinfo changes)
+        // NOTE: we need to track stale victim cacheinfos of local-unsynced keys to remove them from victim tracker at neighbor edge node
         std::list<VictimCacheinfo> local_synced_victims_; // For both complete and compressed victim syncset
 
         // Delta compression (most-eviction-few-admission victim dirinfo set of unpopular cached objects)
         // (1) For complete victim syncset: all complete victim dirinfo sets; (2) for compressed victim syncset: new victim dirinfo sets (complete newly-beaconed victims or compressed existing victims w/ dirinfo set changes)
+        // NOTE: we do NOT need to track stale dirinfo sets of local-/neighbor-unsynced keys, as they will be removed after refcnt changes to zero (triggered by stale victim cacheinfo removal)
         std::unordered_map<Key, DirinfoSet, KeyHasher> local_beaconed_victims_; // For both complete and compressed victim syncset
     };
 }

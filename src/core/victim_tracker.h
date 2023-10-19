@@ -86,7 +86,7 @@ namespace covered
         uint64_t size_bytes_; // Cache size usage of victim tracker
         peredge_victim_metadata_t peredge_victim_metadata_;
         perkey_victim_dirinfo_t perkey_victim_dirinfo_;
-        peredge_victim_syncset_t peredge_prev_victim_syncset_; // Previous victim syncset for dedup/delta-compression in victim synchronization
+        peredge_victim_syncset_t peredge_prev_victim_syncset_; // Previous victim syncset for dedup/delta-compression in victim synchronization (TODO: count into size_bytes_)
     };
 }
 

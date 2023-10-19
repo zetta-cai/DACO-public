@@ -1,5 +1,7 @@
 #include "core/victim/victim_cacheinfo.h"
 
+#include "common/util.h"
+
 namespace covered
 {
     const std::string VictimCacheinfo::kClassName = "VictimCacheinfo";
@@ -10,6 +12,57 @@ namespace covered
     const uint8_t VictimCacheinfo::OBJECT_SIZE_DEDUP_MASK = 0b00000011;
     const uint8_t VictimCacheinfo::LOCAL_CACHED_POPULARITY_DEDUP_MASK = 0b00000101;
     const uint8_t VictimCacheinfo::REDIRECTED_CACHED_POPULARITY_DEDUP_MASK = 0b00001001;
+
+    VictimCacheinfo VictimCacheinfo::dedup(const VictimCacheinfo& current_victim_cacheinfo, const VictimCacheinfo& prev_victim_cacheinfo)
+    {
+        // Perform deduplication based on two complete victim cacheinfos
+        assert(current_victim_cacheinfo.isComplete() == true);
+        assert(prev_victim_cacheinfo.isComplete() == true);
+
+        VictimCacheinfo deduped_victim_cacheinfo = current_victim_cacheinfo;
+
+        // (1) Perform dedup on object size
+        ObjectSize current_object_size = current_victim_cacheinfo.object_size_;
+        ObjectSize prev_object_size = prev_victim_cacheinfo.object_size_;
+        if (current_object_size == prev_object_size)
+        {
+            deduped_victim_cacheinfo.dedupObjectSize();
+        }
+
+        // (2) Perform dedup on local cached popularity
+        Popularity current_local_cached_popularity = current_victim_cacheinfo.local_cached_popularity_;
+        Popularity prev_local_cached_popularity = prev_victim_cacheinfo.local_cached_popularity_;
+        if (Util::isApproxEqual(current_local_cached_popularity, prev_local_cached_popularity))
+        {
+            deduped_victim_cacheinfo.dedupLocalCachedPopularity();
+        }
+
+        // (3) Perform dedup on redirected cached popularity
+        Popularity current_redirected_cached_popularity = current_victim_cacheinfo.redirected_cached_popularity_;
+        Popularity prev_redirected_cached_popularity = prev_victim_cacheinfo.redirected_cached_popularity_;
+        if (Util::isApproxEqual(current_redirected_cached_popularity, prev_redirected_cached_popularity))
+        {
+            deduped_victim_cacheinfo.dedupRedirectedCachedPopularity();
+        }
+
+        // (4) Get final victim cacheinfo
+        const uint32_t deduped_victim_cacheinfo_payload_size = deduped_victim_cacheinfo.getVictimCacheinfoPayloadSize();
+        const uint32_t current_victim_cacheinfo_payload_size = current_victim_cacheinfo.getVictimCacheinfoPayloadSize();
+        if (deduped_victim_cacheinfo_payload_size < current_victim_cacheinfo_payload_size)
+        {
+            #ifdef DEBUG_VICTIM_CACHEINFO
+                Util::dumpVariablesForDebug(kClassName, 5, "use deduped victim cacheinfo!", "deduped_victim_cacheinfo_payload_size:", std::to_string(deduped_victim_cacheinfo_payload_size).c_str(), "current_victim_cacheinfo_payload_size:", std::to_string(current_victim_cacheinfo_payload_size).c_str());
+            #endif
+            return deduped_victim_cacheinfo;
+        }
+        else
+        {
+            #ifdef DEBUG_VICTIM_CACHEINFO
+                Util::dumpVariablesForDebug(kClassName, 5, "use complete victim cacheinfo!", "deduped_victim_cacheinfo_payload_size:", std::to_string(deduped_victim_cacheinfo_payload_size).c_str(), "current_victim_cacheinfo_payload_size:", std::to_string(current_victim_cacheinfo_payload_size).c_str());
+            #endif
+            return current_victim_cacheinfo;
+        }
+    }
 
     VictimCacheinfo::VictimCacheinfo() : dedup_bitmap_(INVALID_BITMAP), key_(), object_size_(0), local_cached_popularity_(0.0), redirected_cached_popularity_(0.0)
     {
@@ -46,6 +99,8 @@ namespace covered
 
         return (dedup_bitmap_ != COMPLETE_BITMAP && dedup_bitmap_ != STALE_BITMAP);
     }
+
+    // For complete victim cacheinfo
 
     const Key VictimCacheinfo::getKey() const
     {
@@ -86,6 +141,46 @@ namespace covered
             redirected_cached_popularity = redirected_cached_popularity_;
         }
         return with_complete_redirected_cached_popularity;
+    }
+
+    // For compressed victim cacheinfo
+
+    void VictimCacheinfo::markStale()
+    {
+        assert(dedup_bitmap_ != INVALID_BITMAP);
+
+        dedup_bitmap_ |= OBJECT_SIZE_DEDUP_MASK;
+        dedup_bitmap_ |= LOCAL_CACHED_POPULARITY_DEDUP_MASK;
+        dedup_bitmap_ |= REDIRECTED_CACHED_POPULARITY_DEDUP_MASK;
+        assert(dedup_bitmap_ == STALE_BITMAP);
+        return;
+    }
+    
+    void VictimCacheinfo::dedupObjectSize()
+    {
+        assert(dedup_bitmap_ != INVALID_BITMAP);
+
+        dedup_bitmap_ |= OBJECT_SIZE_DEDUP_MASK;
+        object_size_ = 0;
+        return;
+    }
+
+    void VictimCacheinfo::dedupLocalCachedPopularity()
+    {
+        assert(dedup_bitmap_ != INVALID_BITMAP);
+
+        dedup_bitmap_ |= LOCAL_CACHED_POPULARITY_DEDUP_MASK;
+        local_cached_popularity_ = 0.0;
+        return;
+    }
+
+    void VictimCacheinfo::dedupRedirectedCachedPopularity()
+    {
+        assert(dedup_bitmap_ != INVALID_BITMAP);
+
+        dedup_bitmap_ |= REDIRECTED_CACHED_POPULARITY_DEDUP_MASK;
+        redirected_cached_popularity_ = 0.0;
+        return;
     }
 
     uint32_t VictimCacheinfo::getVictimCacheinfoPayloadSize() const

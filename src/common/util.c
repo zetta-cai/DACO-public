@@ -495,26 +495,46 @@ namespace covered
         return;
     }
 
-    bool Util::isLargerEqual(const double& a, const double& b)
+    bool Util::isApproxLargerEqual(const double& a, const double& b)
     {
         if (a > b)
         {
             return true;
         }
-        else if (a == b)
-        {
-            return true;
-        }
-        else if ((b - a) <= DOUBLE_IOTA) // b must < a here
+        else if (Util::isApproxEqual(a, b))
         {
             return true;
         }
         return false;
     }
 
-    bool Util::isLargerEqual(const float& a, const float& b)
+    bool Util::isApproxLargerEqual(const float& a, const float& b)
     {
-        return isLargerEqual(static_cast<double>(a), static_cast<double>(b));
+        return isApproxLargerEqual(static_cast<double>(a), static_cast<double>(b));
+    }
+
+    bool Util::isApproxEqual(const double& a, const double& b)
+    {
+        if (a >= b)
+        {
+            if (a - b <= DOUBLE_IOTA)
+            {
+                return true;
+            }
+        }
+        else
+        {
+            if (b - a <= DOUBLE_IOTA)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool Util::isApproxEqual(const float& a, const float& b)
+    {
+        return isApproxEqual(static_cast<double>(a), static_cast<double>(b));
     }
 
     std::string Util::toString(void* pointer)
