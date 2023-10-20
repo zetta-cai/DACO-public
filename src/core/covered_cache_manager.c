@@ -137,7 +137,7 @@ namespace covered
     VictimSyncset CoveredCacheManager::accessVictimTrackerForVictimSyncset(const uint32_t& dst_edge_idx) const
     {
         // Get current complete victim syncset from victim tracker
-        VictimSyncset current_victim_syncset = victim_tracker_.getVictimSyncset();
+        VictimSyncset current_victim_syncset = victim_tracker_.getLocalVictimSyncset();
         assert(current_victim_syncset.isComplete());
 
         // Replace previously-issued complete victim syncset for dst edge idx by current complete victim syncset if necessary
@@ -152,17 +152,33 @@ namespace covered
         {
             assert(prev_victim_syncset.isComplete());
 
-            // TODO: (END HERE) Calculate delta victim syncset by dedup/delta-compression based on current and prev complete victim syncset
-            VictimSyncset delta_victim_syncset;
+            // Calculate compressed victim syncset by dedup/delta-compression based on current and prev complete victim syncset
+            VictimSyncset compressed_victim_syncset = VictimSyncset::compress(current_victim_syncset, prev_victim_syncset);
 
-            return delta_victim_syncset;
+            return compressed_victim_syncset;
         }
     }
 
     void CoveredCacheManager::updateVictimTrackerForNeighborVictimSyncset(const uint32_t& source_edge_idx, const VictimSyncset& neighbor_victim_syncset, const std::unordered_map<Key, DirinfoSet, KeyHasher>& local_beaconed_neighbor_synced_victim_dirinfosets)
     {
         // NOTE: victim cacheinfos and dirinfo sets of neighbor_victim_syncset can be either complete or compressed; while dirinfo sets of local_beaconed_neighbor_synced_victim_dirinfosets MUST be complete
-        victim_tracker_.updateForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
+
+        bool is_complete = neighbor_victim_syncset.isComplete();
+        if (is_complete) // neighbor_victim_syncset is complete already
+        {
+            victim_tracker_.updateForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
+            return;
+        }
+        assert(!is_complete);
+
+        // Get existing complete victim syncset from victim tracker for source edge idx
+        VictimSyncset existing_complete_victim_syncset = victim_tracker_.getVictimSyncset(source_edge_idx);
+
+        // Recover neighbor complete victim syncset based on existing complete victim syncset of source edge idx and received neighbor_victim_syncset if compressed
+        VictimSyncset neighbor_complete_victim_syncset = VictimSyncset::recover(neighbor_victim_syncset, existing_complete_victim_syncset);
+        assert(neighbor_complete_victim_syncset.isComplete());
+        
+        victim_tracker_.updateForNeighborVictimSyncset(source_edge_idx, neighbor_complete_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
         return;
     }
 

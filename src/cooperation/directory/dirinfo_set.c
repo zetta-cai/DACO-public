@@ -86,6 +86,55 @@ namespace covered
         }
     }
 
+    DirinfoSet DirinfoSet::recover(const DirinfoSet& compressed_dirinfo_set, const DirinfoSet& existing_dirinfo_set)
+    {
+        // Recover complete dirinfo set based on compressed one and existing complete one
+        assert(compressed_dirinfo_set.isCompressed());
+        assert(existing_dirinfo_set.isComplete());
+
+        DirinfoSet complete_dirinfo_set = existing_dirinfo_set;
+
+        // (1) Recover complete dirinfo unordered set
+
+        // Start from existing complete dirinfo unordered set
+        std::unordered_set<DirectoryInfo, DirectoryInfoHasher> complete_dirinfo_unordered_set;
+        bool tmp_with_complete_dirinfo_unordered_set = existing_dirinfo_set.getDirinfoSetIfComplete(complete_dirinfo_unordered_set);
+        assert(tmp_with_complete_dirinfo_unordered_set);
+
+        // Get delta dirinfo sets
+        std::unordered_set<DirectoryInfo, DirectoryInfoHasher> new_dirinfo_set;
+        std::unordered_set<DirectoryInfo, DirectoryInfoHasher> stale_dirinfo_set;
+        tmp_with_complete_dirinfo_unordered_set = compressed_dirinfo_set.getDeltaDirinfoSetIfCompressed(new_dirinfo_set, stale_dirinfo_set);
+        assert(!tmp_with_complete_dirinfo_unordered_set);
+
+        // Add new dirinfos into complete dirinfo set
+        for (std::unordered_set<DirectoryInfo, DirectoryInfoHasher>::const_iterator new_dirinfo_set_const_iter = new_dirinfo_set.begin(); new_dirinfo_set_const_iter != new_dirinfo_set.end(); new_dirinfo_set_const_iter++)
+        {
+            const DirectoryInfo& tmp_dirinfo = *new_dirinfo_set_const_iter;
+            if (complete_dirinfo_unordered_set.find(tmp_dirinfo) == complete_dirinfo_unordered_set.end())
+            {
+                complete_dirinfo_unordered_set.insert(tmp_dirinfo);
+            }
+        }
+
+        // Remove stale dirinfos from complete dirinfo set
+        for (std::unordered_set<DirectoryInfo, DirectoryInfoHasher>::const_iterator stale_dirinfo_set_const_iter = stale_dirinfo_set.begin(); stale_dirinfo_set_const_iter != stale_dirinfo_set.end(); stale_dirinfo_set_const_iter++)
+        {
+            const DirectoryInfo& tmp_dirinfo = *stale_dirinfo_set_const_iter;
+            std::unordered_set<DirectoryInfo, DirectoryInfoHasher>::const_iterator tmp_complete_dirinfo_unordered_set_const_iter = complete_dirinfo_unordered_set.find(tmp_dirinfo);
+            if (tmp_complete_dirinfo_unordered_set_const_iter != complete_dirinfo_unordered_set.end())
+            {
+                complete_dirinfo_unordered_set.erase(tmp_complete_dirinfo_unordered_set_const_iter);
+            }
+        }
+
+        // Replace existing complete dirinfo set with recovered one
+        complete_dirinfo_set.setDirinfoSetForComplete(complete_dirinfo_unordered_set);
+
+        assert(complete_dirinfo_set.isComplete());
+        return complete_dirinfo_set;
+    }
+
     DirinfoSet::DirinfoSet() : dirinfo_set_(), new_dirinfo_delta_set_(), stale_dirinfo_delta_set_()
     {
         delta_bitmap_ = INVALID_BITMAP;
@@ -134,41 +183,6 @@ namespace covered
 
         return is_fully_compressed;
     }
-
-    // For both complete/compressed dirinfo set
-
-    /*bool DirinfoSet::getDirinfoSetOrDeltaSet(std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& dirinfo_set, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& new_dirinfo_delta_set, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& stale_dirinfo_delta_set) const
-    {
-        assert(delta_bitmap_ != INVALID_BITMAP);
-
-        dirinfo_set.clear();
-        new_dirinfo_delta_set.clear();
-        stale_dirinfo_delta_set.clear();
-
-        bool with_complete_dirinfo_set = isComplete();
-
-        if (with_complete_dirinfo_set)
-        {
-            dirinfo_set = dirinfo_set_;
-        }
-        else
-        {
-            if ((delta_bitmap_ & NEW_DIRINFO_SET_DELTA_MASK) == NEW_DIRINFO_SET_DELTA_MASK)
-            {
-                assert(new_dirinfo_delta_set_.size() > 0);
-
-                new_dirinfo_delta_set = new_dirinfo_delta_set_;
-            }
-            if ((delta_bitmap_ & STALE_DIRINFO_SET_DELTA_MASK) == STALE_DIRINFO_SET_DELTA_MASK)
-            {
-                assert(stale_dirinfo_delta_set_.size() > 0);
-
-                stale_dirinfo_delta_set = stale_dirinfo_delta_set_;
-            }
-        }
-
-        return with_complete_dirinfo_set;
-    }*/
 
     // For complete dirinfo set
 
@@ -265,7 +279,46 @@ namespace covered
         return with_complete_dirinfo_set;
     }
 
+    void DirinfoSet::setDirinfoSetForComplete(const std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& dirinfo_set)
+    {
+        assert(delta_bitmap_ != INVALID_BITMAP);
+
+        delta_bitmap_ = COMPLETE_BITMAP;
+        new_dirinfo_delta_set_.clear();
+        stale_dirinfo_delta_set_.clear();
+        dirinfo_set_ = dirinfo_set;
+
+        return;
+    }
+
     // For compressed dirinfo set
+
+    bool DirinfoSet::getDeltaDirinfoSetIfCompressed(std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& new_dirinfo_delta_set, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& stale_dirinfo_delta_set) const
+    {
+        assert(delta_bitmap_ != INVALID_BITMAP);
+
+        new_dirinfo_delta_set.clear();
+        stale_dirinfo_delta_set.clear();
+
+        bool with_complete_dirinfo_set = isComplete();
+        if (!with_complete_dirinfo_set)
+        {
+            if ((delta_bitmap_ & NEW_DIRINFO_SET_DELTA_MASK) == NEW_DIRINFO_SET_DELTA_MASK)
+            {
+                assert(new_dirinfo_delta_set_.size() > 0);
+
+                new_dirinfo_delta_set = new_dirinfo_delta_set_;
+            }
+            if ((delta_bitmap_ & STALE_DIRINFO_SET_DELTA_MASK) == STALE_DIRINFO_SET_DELTA_MASK)
+            {
+                assert(stale_dirinfo_delta_set_.size() > 0);
+
+                stale_dirinfo_delta_set = stale_dirinfo_delta_set_;
+            }
+        }
+
+        return with_complete_dirinfo_set;
+    }
 
     void DirinfoSet::setDeltaDirinfoSetForCompress(const std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& new_dirinfo_delta_set, const std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& stale_dirinfo_delta_set)
     {

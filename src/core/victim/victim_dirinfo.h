@@ -19,16 +19,21 @@ namespace covered
     {
     public:
         VictimDirinfo();
-        VictimDirinfo(const bool& is_local_beaconed);
-        VictimDirinfo(const bool& is_local_beaconed, const DirinfoSet& dirinfo_set);
+        //VictimDirinfo(const bool& is_local_beaconed);
+        //VictimDirinfo(const bool& is_local_beaconed, const DirinfoSet& dirinfo_set);
+        VictimDirinfo(const uint32_t& beacon_edge_idx);
+        VictimDirinfo(const uint32_t& beacon_edge_idx, const DirinfoSet& dirinfo_set);
         ~VictimDirinfo();
 
         uint32_t getRefcnt() const;
         void incrRefcnt();
         bool decrRefcnt(); // Return true if refcnt_ is 0 after decrement
 
-        bool isLocalBeaconed() const;
-        void markLocalBeaconed();
+        //bool isLocalBeaconed() const;
+        //void markLocalBeaconed();
+
+        uint32_t getBeaconEdgeIdx() const;
+        void setBeaconEdgeIdx(const uint32_t& beacon_edge_idx);
 
         const DirinfoSet& getDirinfoSetRef() const;
         void setDirinfoSet(const DirinfoSet& dirinfo_set);
@@ -41,7 +46,8 @@ namespace covered
         static const std::string kClassName;
 
         uint32_t refcnt_;
-        bool is_local_beaconed_;
+        //bool is_local_beaconed_;
+        uint32_t beacon_edge_idx_; // NOTE: used by VictimTracker get victim syncset of a specific edge idx for delta recovery of delta-based victim synchronization in CoveredCacheManager (outside VictimTracker)
         DirinfoSet dirinfo_set_;
     };
 }

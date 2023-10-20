@@ -37,13 +37,14 @@ namespace covered
         ~VictimTracker();
 
         // For local synced/beaconed victims
-        void updateLocalSyncedVictims(const uint64_t& local_cache_margin_bytes, const std::list<VictimCacheinfo>& local_synced_victim_cacheinfos, const std::unordered_map<Key, DirinfoSet, KeyHasher>& local_beaconed_local_synced_victim_dirinfosets); // For updates on local cached metadata, which affects cacheinfos and dirinfos of local synced victims
+        void updateLocalSyncedVictims(const uint64_t& local_cache_margin_bytes, const std::list<VictimCacheinfo>& local_synced_victim_cacheinfos, const std::list<uint32_t> local_synced_victim_beacon_edge_idxes, const std::unordered_map<Key, DirinfoSet, KeyHasher>& local_beaconed_local_synced_victim_dirinfosets); // For updates on local cached metadata, which affects cacheinfos and dirinfos of local synced victims
         void updateLocalBeaconedVictimDirinfo(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info); // For updates on content directory information, which affects dirinfos of local beaconed victims
 
         // For victim synchronization
-        VictimSyncset getVictimSyncset() const; // Get complete victim syncset
+        VictimSyncset getLocalVictimSyncset() const; // Get complete victi syncset for current edge node (i.e., edge_idx_)
+        VictimSyncset getVictimSyncset(const uint32_t& edge_idx) const; // Get complete victim syncset for edge idx
         bool replacePrevVictimSyncset(const uint32_t& dst_edge_idx, const VictimSyncset& current_victim_syncset, VictimSyncset& prev_victim_syncset); // Return if prev victim syncset for dst edge idx exists
-        void updateForNeighborVictimSyncset(const uint32_t& source_edge_idx, const VictimSyncset& neighbor_victim_syncset, const std::unordered_map<Key, DirinfoSet, KeyHasher>& local_beaconed_neighbor_synced_victim_dirinfosets); // Update victim tracker in the current edge node for the received victim syncset from neighbor edge node
+        void updateForNeighborVictimSyncset(const uint32_t& source_edge_idx, const VictimSyncset& neighbor_complete_victim_syncset, const std::list<uint32_t> neighbor_synced_victim_beacon_edge_idxes, const std::unordered_map<Key, DirinfoSet, KeyHasher>& local_beaconed_neighbor_synced_victim_dirinfosets); // Update victim tracker in the current edge node for the received victim syncset from neighbor edge node (neighbor_complete_victim_syncset MUST be complete)
 
         // For trade-off-aware placement calculation
         // NOTE: placement_edgeset is used for preserved edgeset, old local uncached popularities removal; placement_peredge_synced_victimset is used for synced victim removal from victim tracker, while placement_peredge_fetched_victimset is used for fetched victim removal from victim cache; victim_fetch_edgeset is used for lazy victim fetching (all under non-blocking placement deployment)
@@ -63,7 +64,7 @@ namespace covered
 
         // Utils
 
-        void replaceVictimMetadataForEdgeIdx_(const uint32_t& edge_idx, const uint64_t& cache_margin_bytes, const std::list<VictimCacheinfo>& synced_victim_cacheinfos, const std::unordered_map<Key, DirinfoSet, KeyHasher>& local_beaconed_synced_victim_dirinfosets); // Replace cache margin bytes and cacheinfos of local/neighbor synced victims for a specific edge node
+        void replaceVictimMetadataForEdgeIdx_(const uint32_t& edge_idx, const uint64_t& cache_margin_bytes, const std::list<VictimCacheinfo>& synced_victim_cacheinfos, const std::list<uint32_t> synced_victim_beacon_edge_idxes); // Replace cache margin bytes and cacheinfos of local/neighbor synced victims for a specific edge node (synced_victim_cacheinfos MUST be complete)
         void replaceVictimDirinfoSets_(const std::unordered_map<Key, DirinfoSet, KeyHasher>& beaconed_synced_victim_dirinfosets, const bool& is_local_beaconed); // Replace dirinfoset in existing VictimDirinfo if any of each local/neighbor beaconed victim
         void tryToReleaseVictimDirinfo_(const Key& key); // Decrease refcnt of existing VictimDirinfo if any for the given key and release space if refcnt becomes zero
 
@@ -86,7 +87,7 @@ namespace covered
         uint64_t size_bytes_; // Cache size usage of victim tracker
         peredge_victim_metadata_t peredge_victim_metadata_;
         perkey_victim_dirinfo_t perkey_victim_dirinfo_;
-        peredge_victim_syncset_t peredge_prev_victim_syncset_; // Previous victim syncset for dedup/delta-compression in victim synchronization (TODO: count into size_bytes_)
+        peredge_victim_syncset_t peredge_prev_victim_syncset_; // Previous victim syncset for dedup/delta-compression in victim synchronization
     };
 }
 

@@ -24,12 +24,14 @@ namespace covered
     {
     public:
         static VictimSyncset compress(const VictimSyncset& current_victim_syncset, const VictimSyncset& prev_victim_syncset); // Compress current victim syncset w.r.t. previous victim syncset
+        static VictimSyncset recover(const VictimSyncset& compressed_victim_syncset, const VictimSyncset& existing_victim_syncset); // Recover existing victim syncset w.r.t. compressed victim syncset
 
         VictimSyncset();
         VictimSyncset(const uint64_t& cache_margin_bytes, const std::list<VictimCacheinfo>& local_synced_victims, const std::unordered_map<Key, DirinfoSet, KeyHasher>& local_beaconed_victims);
         ~VictimSyncset();
 
         bool isComplete() const;
+        bool isCompressed() const;
 
         // For both complete and compressed victim syncsets
         bool getCacheMarginBytesOrDelta(uint64_t& cache_margin_bytes, int& cache_margin_delta_bytes) const; // Return if with complete cache margin bytes
@@ -38,7 +40,9 @@ namespace covered
         bool getLocalBeaconedVictims(std::unordered_map<Key, DirinfoSet, KeyHasher>& local_beaconed_victims) const; // Return if with complete local beaconed vitim dirinfo sets
 
         // For complete victim syncset
-        //void setCacheMarginBytes(const uint64_t& cache_margin_bytes);
+        void setCacheMarginBytes(const uint64_t& cache_margin_bytes);
+        void setLocalSyncedVictims(const std::list<VictimCacheinfo>& local_synced_victims);
+        void setLocalBeaconedVictims(const std::unordered_map<Key, DirinfoSet, KeyHasher>& local_beaconed_victims);
 
         // For compressed victim syncset
         void setCacheMarginDeltaBytes(const int& cache_margin_delta_bytes);
@@ -48,6 +52,8 @@ namespace covered
         uint32_t getVictimSyncsetPayloadSize() const;
         uint32_t serialize(DynamicArray& msg_payload, const uint32_t& position) const;
         uint32_t deserialize(const DynamicArray& msg_payload, const uint32_t& position);
+
+        uint64_t getSizeForCapacity() const;
 
         const VictimSyncset& operator=(const VictimSyncset& other);
     private:

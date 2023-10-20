@@ -25,32 +25,26 @@ namespace covered
         VictimCacheinfo deduped_victim_cacheinfo = current_victim_cacheinfo;
 
         // (1) Perform dedup on object size
-        bool with_complete_object_size = true;
         ObjectSize current_object_size = current_victim_cacheinfo.object_size_;
         ObjectSize prev_object_size = prev_victim_cacheinfo.object_size_;
         if (current_object_size == prev_object_size)
         {
-            with_complete_object_size = false;
             deduped_victim_cacheinfo.dedupObjectSize();
         }
 
         // (2) Perform dedup on local cached popularity
-        bool with_complete_local_cached_popularity = true;
         Popularity current_local_cached_popularity = current_victim_cacheinfo.local_cached_popularity_;
         Popularity prev_local_cached_popularity = prev_victim_cacheinfo.local_cached_popularity_;
         if (Util::isApproxEqual(current_local_cached_popularity, prev_local_cached_popularity))
         {
-            with_complete_local_cached_popularity = false;
             deduped_victim_cacheinfo.dedupLocalCachedPopularity();
         }
 
         // (3) Perform dedup on redirected cached popularity
-        bool with_complete_redirected_cached_popularity = true;
         Popularity current_redirected_cached_popularity = current_victim_cacheinfo.redirected_cached_popularity_;
         Popularity prev_redirected_cached_popularity = prev_victim_cacheinfo.redirected_cached_popularity_;
         if (Util::isApproxEqual(current_redirected_cached_popularity, prev_redirected_cached_popularity))
         {
-            with_complete_redirected_cached_popularity = false;
             deduped_victim_cacheinfo.dedupRedirectedCachedPopularity();
         }
 
@@ -73,6 +67,43 @@ namespace covered
 
             return current_victim_cacheinfo;
         }
+    }
+
+    VictimCacheinfo VictimCacheinfo::recover(const VictimCacheinfo& compressed_victim_cacheinfo, const VictimCacheinfo& existing_victim_cacheinfo)
+    {
+        // Recover current complete victim cacheinfo based on received compressed yet non-fully-deduped victim cacheinfo and prev complete victim cacheinfo
+        assert(compressed_victim_cacheinfo.isDeduped());
+        assert(!compressed_victim_cacheinfo.isFullyDeduped());
+        assert(existing_victim_cacheinfo.isComplete());
+
+        VictimCacheinfo complete_victim_cacheinfo = existing_victim_cacheinfo;
+
+        // (1) Recover object size
+        ObjectSize current_object_size = 0;
+        bool with_complete_object_size = compressed_victim_cacheinfo.getObjectSize(current_object_size);
+        if (with_complete_object_size)
+        {
+            complete_victim_cacheinfo.object_size_ = current_object_size;
+        }
+
+        // (2) Recover local cached popularity
+        Popularity current_local_cached_popularity = 0.0;
+        bool with_complete_local_cached_popularity = compressed_victim_cacheinfo.getLocalCachedPopularity(current_local_cached_popularity);
+        if (with_complete_local_cached_popularity)
+        {
+            complete_victim_cacheinfo.local_cached_popularity_ = current_local_cached_popularity;
+        }
+
+        // (3) Recover redirected cached popularity
+        Popularity current_redirected_cached_popularity = 0.0;
+        bool with_complete_redirected_cached_popularity = compressed_victim_cacheinfo.getRedirectedCachedPopularity(current_redirected_cached_popularity);
+        if (with_complete_redirected_cached_popularity)
+        {
+            complete_victim_cacheinfo.redirected_cached_popularity_ = current_redirected_cached_popularity;
+        }
+
+        assert(complete_victim_cacheinfo.isComplete());
+        return complete_victim_cacheinfo;
     }
 
     VictimCacheinfo::VictimCacheinfo() : dedup_bitmap_(INVALID_BITMAP), key_(), object_size_(0), local_cached_popularity_(0.0), redirected_cached_popularity_(0.0)

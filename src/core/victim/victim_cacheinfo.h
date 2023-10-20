@@ -20,6 +20,7 @@ namespace covered
     {
     public:
         static VictimCacheinfo dedup(const VictimCacheinfo& current_victim_cacheinfo, const VictimCacheinfo& prev_victim_cacheinfo);
+        static VictimCacheinfo recover(const VictimCacheinfo& compressed_victim_cacheinfo, const VictimCacheinfo& existing_victim_cacheinfo);
 
         VictimCacheinfo();
         VictimCacheinfo(const Key& key, const ObjectSize& object_size, const Popularity& local_cached_popularity, const Popularity& redirected_cached_popularity);

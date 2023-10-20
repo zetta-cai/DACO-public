@@ -6,12 +6,13 @@ namespace covered
 {
     const std::string VictimDirinfo::kClassName = "VictimDirinfo";
 
-    VictimDirinfo::VictimDirinfo() : refcnt_(0), is_local_beaconed_(false), dirinfo_set_()
+    //is_local_beaconed_(false)
+    VictimDirinfo::VictimDirinfo() : refcnt_(0), beacon_edge_idx_(0), dirinfo_set_()
     {
         // NOTE: dirinfo set is INVALID now
     }
     
-    VictimDirinfo::VictimDirinfo(const bool& is_local_beaconed) : refcnt_(0), is_local_beaconed_(is_local_beaconed), dirinfo_set_(std::unordered_set<DirectoryInfo, DirectoryInfoHasher>())
+    /*VictimDirinfo::VictimDirinfo(const bool& is_local_beaconed) : refcnt_(0), is_local_beaconed_(is_local_beaconed), dirinfo_set_(std::unordered_set<DirectoryInfo, DirectoryInfoHasher>())
     {
         assert(dirinfo_set_.isComplete()); // NOTE: dirinfo set in victim dirinfo MUST be complete
     }
@@ -20,6 +21,21 @@ namespace covered
     {
         refcnt_ = 0;
         is_local_beaconed_ = is_local_beaconed;
+        dirinfo_set_ = dirinfo_set;
+
+        // NOTE: as a victim MUST be cached by at least one edge node, dirinfo_set cannot be empty/invalid
+        assert(dirinfo_set.isComplete()); // NOTE: dirinfo set in victim dirinfo MUST be complete
+    }*/
+
+    VictimDirinfo::VictimDirinfo(const uint32_t& beacon_edge_idx) : refcnt_(0), beacon_edge_idx_(beacon_edge_idx), dirinfo_set_(std::unordered_set<DirectoryInfo, DirectoryInfoHasher>())
+    {
+        assert(dirinfo_set_.isComplete()); // NOTE: dirinfo set in victim dirinfo MUST be complete
+    }
+
+    VictimDirinfo::VictimDirinfo(const uint32_t& beacon_edge_idx, const DirinfoSet& dirinfo_set)
+    {
+        refcnt_ = 0;
+        beacon_edge_idx_ = beacon_edge_idx;
         dirinfo_set_ = dirinfo_set;
 
         // NOTE: as a victim MUST be cached by at least one edge node, dirinfo_set cannot be empty/invalid
@@ -58,7 +74,7 @@ namespace covered
         return is_zero;
     }
 
-    bool VictimDirinfo::isLocalBeaconed() const
+    /*bool VictimDirinfo::isLocalBeaconed() const
     {
         return is_local_beaconed_;
     }
@@ -66,6 +82,17 @@ namespace covered
     void VictimDirinfo::markLocalBeaconed()
     {
         is_local_beaconed_ = true;
+        return;
+    }*/
+
+    uint32_t VictimDirinfo::getBeaconEdgeIdx() const
+    {
+        return beacon_edge_idx_;
+    }
+
+    void VictimDirinfo::setBeaconEdgeIdx(const uint32_t& beacon_edge_idx)
+    {
+        beacon_edge_idx_ = beacon_edge_idx;
         return;
     }
 
@@ -101,7 +128,11 @@ namespace covered
 
     uint64_t VictimDirinfo::getSizeForCapacity() const
     {
-        uint64_t total_size = sizeof(uint32_t) + sizeof(bool);
+        ////uint64_t total_size = sizeof(uint32_t) + sizeof(bool);
+        //uint64_t total_size = sizeof(uint32_t) + sizeof(uint32_t);
+
+        // NOTE: beacon edge idx is just an impl trick to avoid passing hash function for beacon calculation as a parameter, so we do NOT count it in the size for capacity
+        uint64_t total_size = sizeof(uint32_t); // refcnt
 
         assert(dirinfo_set_.isComplete()); // NOTE: dirinfo set in victim dirinfo MUST be complete
         total_size += dirinfo_set_.getSizeForCapacity();
@@ -112,7 +143,8 @@ namespace covered
     const VictimDirinfo& VictimDirinfo::operator=(const VictimDirinfo& other)
     {
         refcnt_ = other.refcnt_;
-        is_local_beaconed_ = other.is_local_beaconed_;
+        //is_local_beaconed_ = other.is_local_beaconed_;
+        beacon_edge_idx_ = other.beacon_edge_idx_;
         dirinfo_set_ = other.dirinfo_set_;
         
         return *this;
