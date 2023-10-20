@@ -54,7 +54,7 @@ namespace covered
         // NOTE: we always perform victim synchronization before popularity aggregation, as we need the latest synced victim information for placement calculation
         const VictimSyncset& neighbor_victim_syncset = covered_directory_lookup_request_ptr->getVictimSyncsetRef();
         std::unordered_map<Key, DirinfoSet, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = edge_wrapper_ptr_->getLocalBeaconedVictimsFromVictimSyncset(neighbor_victim_syncset);
-        covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
+        covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets, edge_wrapper_ptr_->getCooperationWrapperPtr());
 
         // Selective popularity aggregation
         const CollectedPopularity& collected_popularity = covered_directory_lookup_request_ptr->getCollectedPopularityRef();
@@ -197,7 +197,7 @@ namespace covered
         // Victim synchronization
         // NOTE: we always perform victim synchronization before popularity aggregation, as we need the latest synced victim information for placement calculation
         std::unordered_map<Key, DirinfoSet, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = edge_wrapper_ptr_->getLocalBeaconedVictimsFromVictimSyncset(neighbor_victim_syncset);
-        covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
+        covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets, edge_wrapper_ptr_->getCooperationWrapperPtr());
 
         if (is_directory_update) // Update directory information
         {
@@ -366,7 +366,7 @@ namespace covered
         // NOTE: we always perform victim synchronization before popularity aggregation, as we need the latest synced victim information for placement calculation
         const VictimSyncset& neighbor_victim_syncset = covered_acquire_writelock_request_ptr->getVictimSyncsetRef();
         std::unordered_map<Key, DirinfoSet, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = edge_wrapper_ptr_->getLocalBeaconedVictimsFromVictimSyncset(neighbor_victim_syncset);
-        covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
+        covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets, edge_wrapper_ptr_->getCooperationWrapperPtr());
 
         // Selective popularity aggregation
         // NOTE: we do NOT perform placement calculation for local/remote acquire writelock request, as newly-admitted cache copies will still be invalid even after cache placement
@@ -431,7 +431,7 @@ namespace covered
         // NOTE: we always perform victim synchronization before popularity aggregation, as we need the latest synced victim information for placement calculation
         const VictimSyncset& neighbor_victim_syncset = covered_release_writelock_request_ptr->getVictimSyncsetRef();
         std::unordered_map<Key, DirinfoSet, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = edge_wrapper_ptr_->getLocalBeaconedVictimsFromVictimSyncset(neighbor_victim_syncset);
-        covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(sender_edge_idx, neighbor_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
+        covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(sender_edge_idx, neighbor_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets, edge_wrapper_ptr_->getCooperationWrapperPtr());
 
         // Selective popularity aggregation
         const CollectedPopularity& collected_popularity = covered_release_writelock_request_ptr->getCollectedPopularityRef();
@@ -501,7 +501,7 @@ namespace covered
         const uint32_t sender_edge_idx = covered_placement_redirected_get_response_ptr->getSourceIndex();
         const VictimSyncset& neighbor_victim_syncset = covered_placement_redirected_get_response_ptr->getVictimSyncsetRef();
         std::unordered_map<Key, DirinfoSet, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = edge_wrapper_ptr_->getLocalBeaconedVictimsFromVictimSyncset(neighbor_victim_syncset);
-        covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(sender_edge_idx, neighbor_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
+        covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(sender_edge_idx, neighbor_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets, edge_wrapper_ptr_->getCooperationWrapperPtr());
 
         // Get background eventlist and bandwidth usage to update background counter for beacon server
         const EventList& background_event_list = covered_placement_redirected_get_response_ptr->getEventListRef();

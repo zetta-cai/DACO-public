@@ -121,10 +121,10 @@ namespace covered
 
     // For victim synchronization
 
-    void CoveredCacheManager::updateVictimTrackerForLocalSyncedVictims(const uint64_t& local_cache_margin_bytes, const std::list<VictimCacheinfo>& local_synced_victim_cacheinfos, const std::unordered_map<Key, DirinfoSet, KeyHasher>& local_beaconed_local_synced_victim_dirinfosets)
+    void CoveredCacheManager::updateVictimTrackerForLocalSyncedVictims(const uint64_t& local_cache_margin_bytes, const std::list<VictimCacheinfo>& local_synced_victim_cacheinfos, const std::unordered_map<Key, DirinfoSet, KeyHasher>& local_beaconed_local_synced_victim_dirinfosets, const CooperationWrapperBase* cooperation_wrapper_ptr)
     {
         // NOTE: victim cacheinfos of local_synced_victim_cacheinfos and victim dirinfo sets of local_beaconed_local_synced_victim_dirinfosets MUST be complete
-        victim_tracker_.updateLocalSyncedVictims(local_cache_margin_bytes, local_synced_victim_cacheinfos, local_beaconed_local_synced_victim_dirinfosets);
+        victim_tracker_.updateLocalSyncedVictims(local_cache_margin_bytes, local_synced_victim_cacheinfos, local_beaconed_local_synced_victim_dirinfosets, cooperation_wrapper_ptr);
         return;
     }
 
@@ -159,14 +159,14 @@ namespace covered
         }
     }
 
-    void CoveredCacheManager::updateVictimTrackerForNeighborVictimSyncset(const uint32_t& source_edge_idx, const VictimSyncset& neighbor_victim_syncset, const std::unordered_map<Key, DirinfoSet, KeyHasher>& local_beaconed_neighbor_synced_victim_dirinfosets)
+    void CoveredCacheManager::updateVictimTrackerForNeighborVictimSyncset(const uint32_t& source_edge_idx, const VictimSyncset& neighbor_victim_syncset, const std::unordered_map<Key, DirinfoSet, KeyHasher>& local_beaconed_neighbor_synced_victim_dirinfosets, const CooperationWrapperBase* cooperation_wrapper_ptr)
     {
         // NOTE: victim cacheinfos and dirinfo sets of neighbor_victim_syncset can be either complete or compressed; while dirinfo sets of local_beaconed_neighbor_synced_victim_dirinfosets MUST be complete
 
         bool is_complete = neighbor_victim_syncset.isComplete();
         if (is_complete) // neighbor_victim_syncset is complete already
         {
-            victim_tracker_.updateForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
+            victim_tracker_.updateForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets, cooperation_wrapper_ptr);
             return;
         }
         assert(!is_complete);
@@ -178,7 +178,7 @@ namespace covered
         VictimSyncset neighbor_complete_victim_syncset = VictimSyncset::recover(neighbor_victim_syncset, existing_complete_victim_syncset);
         assert(neighbor_complete_victim_syncset.isComplete());
         
-        victim_tracker_.updateForNeighborVictimSyncset(source_edge_idx, neighbor_complete_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
+        victim_tracker_.updateForNeighborVictimSyncset(source_edge_idx, neighbor_complete_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets, cooperation_wrapper_ptr);
         return;
     }
 
@@ -513,7 +513,7 @@ namespace covered
         const uint32_t source_edge_idx = covered_victim_fetch_response_ptr->getSourceIndex();
         const VictimSyncset& neighbor_victim_syncset = covered_victim_fetch_response_ptr->getVictimSyncsetRef();
         std::unordered_map<Key, DirinfoSet, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = edge_wrapper_ptr->getLocalBeaconedVictimsFromVictimSyncset(neighbor_victim_syncset);
-        tmp_covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
+        tmp_covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets, edge_wrapper_ptr->getCooperationWrapperPtr());
 
         // NOTE: cache margin bytes of victim_fetchset will NOT be used
         const VictimSyncset& victim_fetchset = covered_victim_fetch_response_ptr->getVictimFetchsetRef();

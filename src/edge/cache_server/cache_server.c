@@ -439,7 +439,7 @@ namespace covered
 
             // Victim synchronization
             std::unordered_map<Key, DirinfoSet, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = edge_wrapper_ptr_->getLocalBeaconedVictimsFromVictimSyncset(neighbor_victim_syncset);
-            tmp_covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
+            tmp_covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets, edge_wrapper_ptr_->getCooperationWrapperPtr());
         }
         else // Baselines
         {
@@ -809,7 +809,7 @@ namespace covered
             const uint32_t source_edge_idx = directory_update_response_ptr->getSourceIndex();
             const VictimSyncset& neighbor_victim_syncset = directory_update_response_ptr->getVictimSyncsetRef();
             std::unordered_map<Key, DirinfoSet, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = edge_wrapper_ptr_->getLocalBeaconedVictimsFromVictimSyncset(neighbor_victim_syncset);
-            tmp_covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
+            tmp_covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets, edge_wrapper_ptr_->getCooperationWrapperPtr());
             
             if (!is_background) // Foreground remote directory eviction (triggered by invalid/valid value update by local get/put and independent admission)
             {
@@ -995,7 +995,7 @@ namespace covered
                 // Victim synchronization
                 const uint32_t beacon_edge_idx = control_response_ptr->getSourceIndex();
                 std::unordered_map<Key, DirinfoSet, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = edge_wrapper_ptr_->getLocalBeaconedVictimsFromVictimSyncset(received_beacon_victim_syncset);
-                tmp_covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(beacon_edge_idx, received_beacon_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
+                tmp_covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(beacon_edge_idx, received_beacon_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets, edge_wrapper_ptr_->getCooperationWrapperPtr());
 
                 // Update total bandwidth usage for received control response
                 BandwidthUsage control_response_bandwidth_usage = control_response_ptr->getBandwidthUsageRef();

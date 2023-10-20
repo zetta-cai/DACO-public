@@ -129,7 +129,7 @@ namespace covered
         const uint32_t source_edge_idx = covered_victim_fetch_request_ptr->getSourceIndex();
         const VictimSyncset& neighbor_victim_syncset = covered_victim_fetch_request_ptr->getVictimSyncsetRef();
         std::unordered_map<Key, DirinfoSet, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = tmp_edge_wrapper_ptr->getLocalBeaconedVictimsFromVictimSyncset(neighbor_victim_syncset);
-        tmp_covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets);
+        tmp_covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets, tmp_edge_wrapper_ptr->getCooperationWrapperPtr());
 
         // Get victim cacheinfos from local edge cache for object size
         const ObjectSize object_size = covered_victim_fetch_request_ptr->getObjectSize(); // Size of newly-admitted object (i.e., required size)

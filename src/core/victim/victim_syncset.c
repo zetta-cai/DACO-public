@@ -237,7 +237,7 @@ namespace covered
             complete_victim_syncset.setCacheMarginBytes(synced_victim_cache_margin_bytes);
         }
 
-        // (2) Recover complete victim cacheinfos if necessary
+        // (2) Recover complete victim cacheinfos and beacom edge indexes if necessary
 
         std::list<VictimCacheinfo> synced_victim_cacheinfos;
         bool with_complete_synced_victim_cacheinfos = compressed_victim_syncset.getLocalSyncedVictims(synced_victim_cacheinfos);
@@ -254,11 +254,13 @@ namespace covered
                 const Key& tmp_synced_victim_key = synced_victim_cacheinfos_const_iter->getKey();
                 const VictimCacheinfo& tmp_synced_victim_cacheinfo = *synced_victim_cacheinfos_const_iter;
                 std::unordered_map<Key, VictimCacheinfo, KeyHasher>::iterator tmp_complete_victim_cacheinfos_map_iter = tmp_complete_victim_cacheinfos_map.find(tmp_synced_victim_key);
+
                 if (tmp_synced_victim_cacheinfo.isComplete()) // New complete victim cacheinfo (should not exist in existing victim cacheinfos)
                 {
                     if (tmp_complete_victim_cacheinfos_map_iter == tmp_complete_victim_cacheinfos_map.end())
                     {
                         tmp_complete_victim_cacheinfos_map.insert(std::pair(tmp_synced_victim_key, tmp_synced_victim_cacheinfo));
+
                     }
                     else
                     {

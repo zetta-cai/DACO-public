@@ -39,7 +39,7 @@ namespace covered
 
     // For local synced/beaconed victims
 
-    void VictimTracker::updateLocalSyncedVictims(const uint64_t& local_cache_margin_bytes, const std::list<VictimCacheinfo>& local_synced_victim_cacheinfos, const std::list<uint32_t> local_synced_victim_beacon_edge_idxes, const std::unordered_map<Key, DirinfoSet, KeyHasher>& local_beaconed_local_synced_victim_dirinfosets)
+    void VictimTracker::updateLocalSyncedVictims(const uint64_t& local_cache_margin_bytes, const std::list<VictimCacheinfo>& local_synced_victim_cacheinfos, const std::unordered_map<Key, DirinfoSet, KeyHasher>& local_beaconed_local_synced_victim_dirinfosets, const CooperationWrapperBase* cooperation_wrapper_ptr)
     {
         // NOTE: limited computation overhead to update local synced victim infos, as we track limited number of local synced victims for the current edge node
 
@@ -53,7 +53,7 @@ namespace covered
 
         // Replace VictimCacheinfors for local synced victims of current edge node
         // NOTE: local_synced_victim_cacheinfos from local edge cache MUST be complete which has been verified by CoveredLocalCache; local_beaconed_local_synced_victim_dirinfosets from local directory table also MUST be complete which has been verified by EdgeWrapper
-        replaceVictimMetadataForEdgeIdx_(edge_idx_, local_cache_margin_bytes, local_synced_victim_cacheinfos, local_synced_victim_beacon_edge_idxes);
+        replaceVictimMetadataForEdgeIdx_(edge_idx_, local_cache_margin_bytes, local_synced_victim_cacheinfos, cooperation_wrapper_ptr);
 
         // Replace VictimDirinfo::dirinfoset for each local beaconed local synced victim of current edge node
         replaceVictimDirinfoSets_(local_beaconed_local_synced_victim_dirinfosets, true);
@@ -103,7 +103,8 @@ namespace covered
 
     VictimSyncset VictimTracker::getLocalVictimSyncset() const
     {
-        return getVictimSyncset(edge_idx_);
+        VictimSyncset local_victim_syncset = getVictimSyncset(edge_idx_);
+        return local_victim_syncset;
     }
 
     VictimSyncset VictimTracker::getVictimSyncset(const uint32_t& edge_idx) const
@@ -185,7 +186,7 @@ namespace covered
         return is_prev_victim_syncset_exist;
     }
 
-    void VictimTracker::updateForNeighborVictimSyncset(const uint32_t& source_edge_idx, const VictimSyncset& neighbor_complete_victim_syncset, const std::list<uint32_t> neighbor_synced_victim_beacon_edge_idxes, const std::unordered_map<Key, DirinfoSet, KeyHasher>& local_beaconed_neighbor_synced_victim_dirinfosets)
+    void VictimTracker::updateForNeighborVictimSyncset(const uint32_t& source_edge_idx, const VictimSyncset& neighbor_complete_victim_syncset, const std::unordered_map<Key, DirinfoSet, KeyHasher>& local_beaconed_neighbor_synced_victim_dirinfosets, const CooperationWrapperBase* cooperation_wrapper_ptr)
     {
         // NOTE: limited computation overhead to update neighbor synced victim infos, as we track limited number of neighbor synced victims for the specific edge node
 
@@ -215,7 +216,7 @@ namespace covered
         rwlock_for_victim_tracker_->acquire_lock(context_name);
         
         // Replace VictimCacheinfos for neighbor synced victims of the given edge node
-        replaceVictimMetadataForEdgeIdx_(source_edge_idx, neighbor_cache_margin_bytes, neighbor_synced_victim_cacheinfos, neighbor_synced_victim_beacon_edge_idxes);
+        replaceVictimMetadataForEdgeIdx_(source_edge_idx, neighbor_cache_margin_bytes, neighbor_synced_victim_cacheinfos, cooperation_wrapper_ptr);
 
         // Try to replace VictimDirinfo::dirinfoset (if any) for each neighbor beaconed neighbor synced victim of the given edge node
         replaceVictimDirinfoSets_(neighbor_beaconed_victim_dirinfosets, false);
@@ -359,11 +360,12 @@ namespace covered
 
     // Utils
 
-    void VictimTracker::replaceVictimMetadataForEdgeIdx_(const uint32_t& edge_idx, const uint64_t& cache_margin_bytes, const std::list<VictimCacheinfo>& synced_victim_cacheinfos, const std::list<uint32_t> synced_victim_beacon_edge_idxes)
+    void VictimTracker::replaceVictimMetadataForEdgeIdx_(const uint32_t& edge_idx, const uint64_t& cache_margin_bytes, const std::list<VictimCacheinfo>& synced_victim_cacheinfos, const CooperationWrapperBase* cooperation_wrapper_ptr)
     {
         // NOTE: NO need to acquire a write lock which has been done in updateLocalSyncedVictims() and updateForNeighborVictimSyncset()
 
         assert(synced_victim_cacheinfos.size() <= peredge_synced_victimcnt_);
+        assert(cooperation_wrapper_ptr != NULL);
 
         // Update cacheinfos of synced victims for the specific edge node
         std::list<VictimCacheinfo> old_synced_victim_cacheinfos;
@@ -391,15 +393,13 @@ namespace covered
         }
 
         // Update victim dirinfos for new synced victim keys
-        assert(synced_victim_beacon_edge_idxes.size() == synced_victim_cacheinfos.size());
-        std::list<uint32_t>::const_iterator synced_victim_beacon_edge_idxes_const_iter = synced_victim_beacon_edge_idxes.begin();
         for (std::list<VictimCacheinfo>::const_iterator new_cacheinfo_list_iter = synced_victim_cacheinfos.begin(); new_cacheinfo_list_iter != synced_victim_cacheinfos.end(); new_cacheinfo_list_iter++)
         {
             size_bytes_ = Util::uint64Add(size_bytes_, new_cacheinfo_list_iter->getSizeForCapacity()); // For cacheinfo of each latest local synced victims
 
             const Key& tmp_key = new_cacheinfo_list_iter->getKey();
             //bool tmp_is_local_beaconed = (local_beaconed_synced_victim_dirinfosets.find(tmp_key) != local_beaconed_synced_victim_dirinfosets.end());
-            uint32_t tmp_beacon_edge_idx = *synced_victim_beacon_edge_idxes_const_iter;
+            uint32_t tmp_beacon_edge_idx = cooperation_wrapper_ptr->getBeaconEdgeIdx(tmp_key);
             perkey_victim_dirinfo_t::iterator dirinfo_map_iter = perkey_victim_dirinfo_.find(tmp_key);
             if (dirinfo_map_iter == perkey_victim_dirinfo_.end()) // No victim dirinfo for the key
             {
@@ -419,8 +419,6 @@ namespace covered
 
                 dirinfo_map_iter->second.incrRefcnt();
             }
-
-            synced_victim_beacon_edge_idxes_const_iter++;
         }
 
         // Remove victim dirinfos for old synced victim keys

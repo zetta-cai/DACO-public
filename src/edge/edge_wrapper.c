@@ -928,7 +928,7 @@ namespace covered
         std::unordered_map<Key, DirinfoSet, KeyHasher> local_beaconed_local_synced_victim_dirinfosets = getLocalBeaconedVictimsFromCacheinfos(local_synced_victim_cacheinfos); // NOTE: dirinfo sets from local directory table MUST be complete
 
         // Update local synced victims for the current edge node
-        covered_cache_manager_ptr_->updateVictimTrackerForLocalSyncedVictims(local_cache_margin_bytes, local_synced_victim_cacheinfos, local_beaconed_local_synced_victim_dirinfosets); 
+        covered_cache_manager_ptr_->updateVictimTrackerForLocalSyncedVictims(local_cache_margin_bytes, local_synced_victim_cacheinfos, local_beaconed_local_synced_victim_dirinfosets, cooperation_wrapper_ptr_);
 
         return;
     }
