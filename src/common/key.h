@@ -40,10 +40,7 @@ namespace covered
     class KeyHasher
     {
     public:
-        size_t operator()(const Key& key) const
-        {
-            return std::hash<std::string>{}(key.getKeystr());
-        }
+        size_t operator()(const Key& key) const;
     };
 }
 

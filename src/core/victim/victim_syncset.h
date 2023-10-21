@@ -36,7 +36,7 @@ namespace covered
         // For both complete and compressed victim syncsets
         bool getCacheMarginBytesOrDelta(uint64_t& cache_margin_bytes, int& cache_margin_delta_bytes) const; // Return if with complete cache margin bytes
         bool getLocalSyncedVictims(std::list<VictimCacheinfo>& local_synced_vitims) const; // Return if with complete local synced vitim cacheinfos
-        bool getLocalSyncedVictimsAsMap(std::unordered_map<Key,VictimCacheinfo, KeyHasher>& local_synced_vitims_map) const; // Return if with complete local synced vitim cacheinfos
+        bool getLocalSyncedVictimsAsMap(std::unordered_map<Key, VictimCacheinfo, KeyHasher>& local_synced_vitims_map) const; // Return if with complete local synced vitim cacheinfos
         bool getLocalBeaconedVictims(std::unordered_map<Key, DirinfoSet, KeyHasher>& local_beaconed_victims) const; // Return if with complete local beaconed vitim dirinfo sets
 
         // For complete victim syncset
@@ -80,7 +80,7 @@ namespace covered
         int cache_margin_delta_bytes_; // ONLY for compressed victim syncset: delta of cache margin bytes will NOT exceed max object size (e.g., several MiBs in Facebook CDN traces)
 
         // Deduplication (relatively stable victim cacheinfos of unpopular cached objects)
-        // (1) For complete victim syncset: all complete victim cacheinfos; (2) for compressed victim syncset: new victim cacheinfos (complete newly-synced victims or compressed existing victims w/ cacheinfo changes)
+        // (1) For complete victim syncset: all complete victim cacheinfos with ascending order of local rewards; (2) for compressed victim syncset: new victim cacheinfos (complete newly-synced victims or compressed existing victims w/ cacheinfo changes) w/o order
         // NOTE: we need to track stale victim cacheinfos of local-unsynced keys to remove them from victim tracker at neighbor edge node
         std::list<VictimCacheinfo> local_synced_victims_; // For both complete and compressed victim syncset
 

@@ -12,7 +12,7 @@ namespace covered
 
     // ONLY for local cached objects
 
-    bool LocalCachedMetadata::getLeastPopularKeyAndPopularity(const uint32_t& least_popular_rank, Key& key, Popularity& local_cached_popularity, Popularity& redirected_cached_popularity) const
+    bool LocalCachedMetadata::getLeastPopularKeyAndPopularity(const uint32_t& least_popular_rank, Key& key, Popularity& local_cached_popularity, Popularity& redirected_cached_popularity, Reward& local_reward) const
     {
         bool is_least_popular_key_exist = false;
 
@@ -22,8 +22,9 @@ namespace covered
             std::advance(sorted_popularity_iter, least_popular_rank);
 
             key = sorted_popularity_iter->second;
-            local_cached_popularity = sorted_popularity_iter->first;
-            redirected_cached_popularity = 0.0; // TODO: update after introducing heterogeneous popularity calculation
+            local_cached_popularity = sorted_popularity_iter->first; // TODO: update after introducing heterogeneous popularity calculation (tracked by key-level cache metadata)
+            redirected_cached_popularity = 0.0; // TODO: update after introducing heterogeneous popularity calculation (tracked by key-level cache metadata)
+            local_reward = sorted_popularity_iter->first; // TODO: update after introducing heterogeneous popularity calculation (used for ranking/sorting)
 
             is_least_popular_key_exist = true;
         }

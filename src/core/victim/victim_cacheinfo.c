@@ -11,10 +11,11 @@ namespace covered
     const uint8_t VictimCacheinfo::DEDUP_MASK = 0b00000001;
     // NOTE: use STALE_BITMAP (i.e., all five lowest bits are 1) to indicate that the stale victim cacheinfo of key_ needs to be removed (i.e., key_ is NOT a local synced victim)
     // NOTE: although we do NOT need to sync victim cache info if all three fields are deduped, we do NOT use 0x00001111 as STALE_BITMAP to avoid confusion
-    const uint8_t VictimCacheinfo::STALE_BITMAP = 0b00011111;
+    const uint8_t VictimCacheinfo::STALE_BITMAP = 0b00111111;
     const uint8_t VictimCacheinfo::OBJECT_SIZE_DEDUP_MASK = 0b00000010 | DEDUP_MASK;
     const uint8_t VictimCacheinfo::LOCAL_CACHED_POPULARITY_DEDUP_MASK = 0b00000100 | DEDUP_MASK;
     const uint8_t VictimCacheinfo::REDIRECTED_CACHED_POPULARITY_DEDUP_MASK = 0b00001000 | DEDUP_MASK;
+    const uint8_t VictimCacheinfo::LOCAL_REWARD_DEDUP_MASK = 0b00010000 | DEDUP_MASK;
 
     VictimCacheinfo VictimCacheinfo::dedup(const VictimCacheinfo& current_victim_cacheinfo, const VictimCacheinfo& prev_victim_cacheinfo)
     {
@@ -48,7 +49,15 @@ namespace covered
             deduped_victim_cacheinfo.dedupRedirectedCachedPopularity();
         }
 
-        // (4) Get final victim cacheinfo
+        // (4) Perform dedup on local reward
+        Reward current_local_reward = current_victim_cacheinfo.local_reward_;
+        Reward prev_local_reward = prev_victim_cacheinfo.local_reward_;
+        if (Util::isApproxEqual(current_local_reward, prev_local_reward))
+        {
+            deduped_victim_cacheinfo.dedupLocalReward();
+        }
+
+        // (5) Get final victim cacheinfo
         const uint32_t deduped_victim_cacheinfo_payload_size = deduped_victim_cacheinfo.getVictimCacheinfoPayloadSize();
         const uint32_t current_victim_cacheinfo_payload_size = current_victim_cacheinfo.getVictimCacheinfoPayloadSize();
         if (deduped_victim_cacheinfo_payload_size < current_victim_cacheinfo_payload_size)
@@ -102,21 +111,37 @@ namespace covered
             complete_victim_cacheinfo.redirected_cached_popularity_ = current_redirected_cached_popularity;
         }
 
+        // (4) Recover local reward
+        Reward current_local_reward = 0.0;
+        bool with_complete_local_reward = compressed_victim_cacheinfo.getLocalReward(current_local_reward);
+        if (with_complete_local_reward)
+        {
+            complete_victim_cacheinfo.local_reward_ = current_local_reward;
+        }
+
         assert(complete_victim_cacheinfo.isComplete());
         return complete_victim_cacheinfo;
     }
 
-    VictimCacheinfo::VictimCacheinfo() : dedup_bitmap_(INVALID_BITMAP), key_(), object_size_(0), local_cached_popularity_(0.0), redirected_cached_popularity_(0.0)
+    void VictimCacheinfo::sortByLocalRewards(std::list<VictimCacheinfo>& victim_cacheinfos)
+    {
+        // Sort victim cacheinfos by local rewards (ascending order)
+        victim_cacheinfos.sort(VictimCacheinfoCompare());
+        return;
+    }
+
+    VictimCacheinfo::VictimCacheinfo() : dedup_bitmap_(INVALID_BITMAP), key_(), object_size_(0), local_cached_popularity_(0.0), redirected_cached_popularity_(0.0), local_reward_(0.0)
     {
     }
 
-    VictimCacheinfo::VictimCacheinfo(const Key& key, const ObjectSize& object_size, const Popularity& local_cached_popularity, const Popularity& redirected_cached_popularity)
+    VictimCacheinfo::VictimCacheinfo(const Key& key, const ObjectSize& object_size, const Popularity& local_cached_popularity, const Popularity& redirected_cached_popularity, const Reward& local_reward)
     {
         dedup_bitmap_ = COMPLETE_BITMAP;
         key_ = key;
         object_size_ = object_size;
         local_cached_popularity_ = local_cached_popularity;
         redirected_cached_popularity_ = redirected_cached_popularity;
+        local_reward_ = local_reward;
     }
 
     VictimCacheinfo::~VictimCacheinfo() {}
@@ -146,7 +171,7 @@ namespace covered
     {
         assert(dedup_bitmap_ != INVALID_BITMAP);
 
-        return ((dedup_bitmap_ & OBJECT_SIZE_DEDUP_MASK) == OBJECT_SIZE_DEDUP_MASK) && ((dedup_bitmap_ & LOCAL_CACHED_POPULARITY_DEDUP_MASK) == LOCAL_CACHED_POPULARITY_DEDUP_MASK) && ((dedup_bitmap_ & REDIRECTED_CACHED_POPULARITY_DEDUP_MASK) == REDIRECTED_CACHED_POPULARITY_DEDUP_MASK);
+        return ((dedup_bitmap_ & OBJECT_SIZE_DEDUP_MASK) == OBJECT_SIZE_DEDUP_MASK) && ((dedup_bitmap_ & LOCAL_CACHED_POPULARITY_DEDUP_MASK) == LOCAL_CACHED_POPULARITY_DEDUP_MASK) && ((dedup_bitmap_ & REDIRECTED_CACHED_POPULARITY_DEDUP_MASK) == REDIRECTED_CACHED_POPULARITY_DEDUP_MASK) && ((dedup_bitmap_ & LOCAL_REWARD_DEDUP_MASK) == LOCAL_REWARD_DEDUP_MASK);
     }
 
     // For complete victim cacheinfo
@@ -192,6 +217,18 @@ namespace covered
         return with_complete_redirected_cached_popularity;
     }
 
+    bool VictimCacheinfo::getLocalReward(Reward& local_reward) const
+    {
+        assert(dedup_bitmap_ != INVALID_BITMAP);
+
+        bool with_complete_local_reward = ((dedup_bitmap_ & LOCAL_REWARD_DEDUP_MASK) != LOCAL_REWARD_DEDUP_MASK);
+        if (with_complete_local_reward) // NOT deduped
+        {
+            local_reward = local_reward_;
+        }
+        return with_complete_local_reward;
+    }
+
     // For compressed victim cacheinfo
 
     void VictimCacheinfo::markStale()
@@ -229,6 +266,15 @@ namespace covered
         return;
     }
 
+    void VictimCacheinfo::dedupLocalReward()
+    {
+        assert(dedup_bitmap_ != INVALID_BITMAP);
+
+        dedup_bitmap_ |= LOCAL_REWARD_DEDUP_MASK;
+        local_reward_ = 0.0;
+        return;
+    }
+
     uint32_t VictimCacheinfo::getVictimCacheinfoPayloadSize() const
     {
         assert(dedup_bitmap_ != INVALID_BITMAP);
@@ -251,6 +297,11 @@ namespace covered
         if (with_complete_redirected_cached_popularity)
         {
             victim_cacheinfo_payload_size += sizeof(Popularity); // redirected cached popularity
+        }
+        bool with_complete_local_reward = ((dedup_bitmap_ & LOCAL_REWARD_DEDUP_MASK) != LOCAL_REWARD_DEDUP_MASK);
+        if (with_complete_local_reward)
+        {
+            victim_cacheinfo_payload_size += sizeof(Reward); // local reward
         }
 
         return victim_cacheinfo_payload_size;
@@ -283,6 +334,13 @@ namespace covered
             msg_payload.deserialize(size, (const char*)&redirected_cached_popularity_, sizeof(Popularity));
             size += sizeof(Popularity);
         }
+        bool with_complete_local_reward = ((dedup_bitmap_ & LOCAL_REWARD_DEDUP_MASK) != LOCAL_REWARD_DEDUP_MASK);
+        if (with_complete_local_reward)
+        {
+            msg_payload.deserialize(size, (const char*)&local_reward_, sizeof(Reward));
+            size += sizeof(Reward);
+        }
+
         return size - position;
     }
 
@@ -313,6 +371,13 @@ namespace covered
             msg_payload.serialize(size, (char*)&redirected_cached_popularity_, sizeof(Popularity));
             size += sizeof(Popularity);
         }
+        bool with_complete_local_reward = ((dedup_bitmap_ & LOCAL_REWARD_DEDUP_MASK) != LOCAL_REWARD_DEDUP_MASK);
+        if (with_complete_local_reward)
+        {
+            msg_payload.serialize(size, (char*)&local_reward_, sizeof(Reward));
+            size += sizeof(Reward);
+        }
+
         return size - position;
     }
 
@@ -325,6 +390,7 @@ namespace covered
         const bool with_complete_object_size = true;
         const bool with_complete_local_cached_popularity = true;
         const bool with_complete_redirected_cached_popularity = true;
+        const bool with_complete_local_reward = true;
 
         uint64_t total_size = 0;
 
@@ -342,6 +408,10 @@ namespace covered
         {
             total_size += sizeof(Popularity);
         }
+        if (with_complete_local_reward)
+        {
+            total_size += sizeof(Reward);
+        }
 
         return total_size;
     }
@@ -353,7 +423,19 @@ namespace covered
         object_size_ = other.object_size_;
         local_cached_popularity_ = other.local_cached_popularity_;
         redirected_cached_popularity_ = other.redirected_cached_popularity_;
+        local_reward_ = other.local_reward_;
         
         return *this;
+    }
+
+    bool VictimCacheinfo::operator<(const VictimCacheinfo& other) const
+    {
+        // NOTE: this is used for std::list::sort() in VictimSyncset::recover()
+        return (local_reward_ < other.local_reward_);
+    }
+
+    bool VictimCacheinfoCompare::operator()(const VictimCacheinfo& lhs, const VictimCacheinfo& rhs) const
+    {
+        return lhs < rhs; // Ascending order
     }
 }

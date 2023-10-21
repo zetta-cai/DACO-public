@@ -79,4 +79,9 @@ namespace covered
         keystr_ = other.keystr_; // Deep copy
         return *this;
     }
+
+    size_t KeyHasher::operator()(const Key& key) const
+    {
+        return std::hash<std::string>{}(key.getKeystr());
+    }
 }
