@@ -134,7 +134,7 @@ namespace covered
         return;
     }
 
-    VictimSyncset CoveredCacheManager::accessVictimTrackerForVictimSyncset(const uint32_t& dst_edge_idx) const
+    VictimSyncset CoveredCacheManager::accessVictimTrackerForLocalVictimSyncset(const uint32_t& dst_edge_idx) const
     {
         // Get current complete victim syncset from victim tracker
         VictimSyncset current_victim_syncset = victim_tracker_.getLocalVictimSyncset();
@@ -483,7 +483,7 @@ namespace covered
         assert(edge_wrapper_ptr != NULL);
 
         // Prepare victim syncset for piggybacking-based victim synchronization
-        VictimSyncset victim_syncset = edge_wrapper_ptr->getCoveredCacheManagerPtr()->accessVictimTrackerForVictimSyncset(dst_edge_idx);
+        VictimSyncset victim_syncset = edge_wrapper_ptr->getCoveredCacheManagerPtr()->accessVictimTrackerForLocalVictimSyncset(dst_edge_idx);
 
         // Prepare victim fetch request to fetch victims from the target edge node
         const uint32_t current_edge_idx = edge_wrapper_ptr->getNodeIdx();

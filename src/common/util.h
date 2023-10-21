@@ -168,6 +168,7 @@ namespace covered
         static uint16_t getEdgeCacheServerPlacementProcessorRecvrspPort(const uint32_t& edge_idx, const uint32_t& edgecnt);
         static uint16_t getEdgeCacheServerVictimFetchProcessorRecvrspPort(const uint32_t& edge_idx, const uint32_t& edgecnt);
         static NetworkAddr getEdgeCacheServerWorkerRecvreqAddrFromRecvrspAddr(const NetworkAddr& edge_cache_server_worker_recvrsp_addr);
+        static uint32_t getEdgeIdxFromCacheServerWorkerRecvreqAddr(const NetworkAddr& edge_cache_server_worker_recvreq_addr, const uint32_t& edgecnt);
         static uint16_t getEdgeCacheServerWorkerRecvreqPort(const uint32_t& edge_idx, const uint32_t& edgecnt, const uint32_t& local_cache_server_worker_idx, const uint32_t& percacheserver_workercnt);
         static uint16_t getEdgeCacheServerWorkerRecvrspPort(const uint32_t& edge_idx, const uint32_t& edgecnt, const uint32_t& local_cache_server_worker_idx, const uint32_t& percacheserver_workercnt);
         static uint16_t getEdgeInvalidationServerRecvreqPort(const uint32_t& edge_idx, const uint32_t& edgecnt);

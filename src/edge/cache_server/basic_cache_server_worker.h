@@ -44,6 +44,9 @@ namespace covered
         virtual MessageBase* getReqToAcquireBeaconWritelock_(const Key& key, const bool& skip_propagation_latency) const override;
         virtual void processRspToAcquireBeaconWritelock_(MessageBase* control_response_ptr, LockResult& lock_result) const override;
 
+        virtual void processReqToFinishBlock_(MessageBase* control_request_ptr) const override;
+        virtual MessageBase* getRspToFinishBlock_(MessageBase* control_request_ptr, const BandwidthUsage& tmp_bandwidth_usage) const override;
+
         // (2.3) Update cached objects in local edge cache
 
         virtual bool updateLocalEdgeCache_(const Key& key, const Value& value) const override; // Return if key is cached after udpate

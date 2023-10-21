@@ -82,7 +82,7 @@ namespace covered
 
         // Prepare victim syncset for piggybacking-based victim synchronization
         const uint32_t dst_edge_idx = control_request_ptr->getSourceIndex();
-        VictimSyncset victim_syncset = covered_cache_manager_ptr->accessVictimTrackerForVictimSyncset(dst_edge_idx);
+        VictimSyncset victim_syncset = covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_edge_idx);
 
         const uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
         MessageBase* covered_directory_lookup_response_ptr = NULL;
@@ -286,7 +286,7 @@ namespace covered
 
         // Prepare victim syncset for piggybacking-based victim synchronization
         const uint32_t dst_edge_idx = control_request_ptr->getSourceIndex();
-        VictimSyncset victim_syncset = covered_cache_manager_ptr->accessVictimTrackerForVictimSyncset(dst_edge_idx);
+        VictimSyncset victim_syncset = covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_edge_idx);
 
         // Send back corresponding response based on request type
         MessageType message_type = control_request_ptr->getMessageType();
@@ -397,7 +397,7 @@ namespace covered
 
         // Prepare victim syncset for piggybacking-based victim synchronization
         const uint32_t dst_edge_idx = control_request_ptr->getSourceIndex();
-        VictimSyncset victim_syncset = covered_cache_manager_ptr->accessVictimTrackerForVictimSyncset(dst_edge_idx);
+        VictimSyncset victim_syncset = covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_edge_idx);
 
         uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
         MessageBase* covered_acquire_writelock_response_ptr = new CoveredAcquireWritelockResponse(tmp_key, lock_result, victim_syncset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
@@ -461,7 +461,7 @@ namespace covered
 
         // Prepare victim syncset for piggybacking-based victim synchronization
         const uint32_t dst_edge_idx = control_request_ptr->getSourceIndex();
-        VictimSyncset victim_syncset = covered_cache_manager_ptr->accessVictimTrackerForVictimSyncset(dst_edge_idx);
+        VictimSyncset victim_syncset = covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_edge_idx);
 
         uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
         MessageBase* covered_release_writelock_response_ptr = NULL;

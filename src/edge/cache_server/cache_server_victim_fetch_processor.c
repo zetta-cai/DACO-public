@@ -138,6 +138,7 @@ namespace covered
         assert(has_victim_key == true);
 
         // Get dirinfo sets for local beaconed ones of fetched victims
+        // NOTE: victim dirinfo sets from local directory table MUST be complete
         std::unordered_map<Key, DirinfoSet, KeyHasher> tmp_perkey_dirinfoset = tmp_edge_wrapper_ptr->getLocalBeaconedVictimsFromCacheinfos(tmp_victim_cacheinfos);
 
         struct timespec victim_fetch_end_timestamp = Util::getCurrentTimespec();
@@ -146,7 +147,7 @@ namespace covered
         
         // Prepare victim syncset for piggybacking-based victim synchronization
         const uint32_t dst_edge_idx = control_request_ptr->getSourceIndex();
-        VictimSyncset local_victim_syncset = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr()->accessVictimTrackerForVictimSyncset(dst_edge_idx); // complete or compressed
+        VictimSyncset local_victim_syncset = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr()->accessVictimTrackerForLocalVictimSyncset(dst_edge_idx); // complete or compressed
 
         // Prepare victim fetchset for lazy victim fetching
         // NOTE: we do NOT care about cache margin bytes in victim_fetchset

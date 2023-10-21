@@ -130,6 +130,7 @@ namespace covered
         // Release a read lock
         cooperation_wrapper_perkey_rwlock_ptr_->unlock_shared(key, context_name);
 
+        assert(dirinfo_set.isComplete()); // NOTE: vicitm dirinfo set from local directory table MUST be complete
         return dirinfo_set;
     }
 

@@ -663,6 +663,25 @@ namespace covered
         return edge_cache_server_worker_recvreq_addr;
     }
 
+    uint32_t Util::getEdgeIdxFromCacheServerWorkerRecvreqAddr(const NetworkAddr& edge_cache_server_worker_recvreq_addr, const uint32_t& edgecnt)
+    {
+        std::string edge_ipstr = edge_cache_server_worker_recvreq_addr.getIpstr();
+        uint32_t machine_idx = Config::getEdgeMachineIdxByIpstr(edge_ipstr);
+        uint32_t machine_cnt = Config::getEdgeIpstrCnt();
+        assert(machine_idx < machine_cnt);
+
+        uint32_t local_edge_idx = edge_cache_server_worker_recvreq_addr.getPort() - Config::getEdgeCacheServerWorkerRecvreqStartport();
+        uint32_t permachine_edgecnt = edgecnt / machine_cnt;
+        assert(permachine_edgecnt > 0);
+        if (machine_idx < machine_cnt - 1)
+        {
+            assert(local_edge_idx < permachine_edgecnt);
+        }
+        uint32_t global_edge_idx = machine_idx * permachine_edgecnt + local_edge_idx;
+
+        return global_edge_idx;
+    }
+
     uint16_t Util::getEdgeCacheServerWorkerRecvreqPort(const uint32_t& edge_idx, const uint32_t& edgecnt, const uint32_t& local_cache_server_worker_idx, const uint32_t& percacheserver_workercnt)
     {
         int64_t edge_cache_server_worker_recvreq_startport = static_cast<int64_t>(Config::getEdgeCacheServerWorkerRecvreqStartport());

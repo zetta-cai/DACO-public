@@ -361,6 +361,27 @@ namespace covered
         return;
     }
 
+    std::string Config::getMainClassName()
+    {
+        checkIsValid_();
+        return main_class_name_;
+    }
+
+    bool Config::isSingleNode()
+    {
+        checkIsValid_();
+
+        if (!(main_class_name_ == Util::SIMULATOR_MAIN_NAME || main_class_name_ == Util::CLIENT_MAIN_NAME || main_class_name_ == Util::EDGE_MAIN_NAME || main_class_name_ == Util::CLOUD_MAIN_NAME || main_class_name_ == Util::EVALUATOR_MAIN_NAME))
+        {
+            std::ostringstream oss;
+            oss << main_class_name_ << " should NOT use is_single_node!";
+            Util::dumpErrorMsg(kClassName, oss.str());
+            exit(1);
+        }
+
+        return is_single_node_;
+    }
+
     std::string Config::getClientIpstr(const uint32_t& client_idx, const uint32_t& clientcnt)
     {
         checkIsValid_();
@@ -390,27 +411,6 @@ namespace covered
         }
     }
 
-    std::string Config::getMainClassName()
-    {
-        checkIsValid_();
-        return main_class_name_;
-    }
-
-    bool Config::isSingleNode()
-    {
-        checkIsValid_();
-
-        if (!(main_class_name_ == Util::SIMULATOR_MAIN_NAME || main_class_name_ == Util::CLIENT_MAIN_NAME || main_class_name_ == Util::EDGE_MAIN_NAME || main_class_name_ == Util::CLOUD_MAIN_NAME || main_class_name_ == Util::EVALUATOR_MAIN_NAME))
-        {
-            std::ostringstream oss;
-            oss << main_class_name_ << " should NOT use is_single_node!";
-            Util::dumpErrorMsg(kClassName, oss.str());
-            exit(1);
-        }
-
-        return is_single_node_;
-    }
-
     uint32_t Config::getClientRawStatisticsSlotIntervalSec()
     {
         checkIsValid_();
@@ -426,7 +426,14 @@ namespace covered
     uint32_t Config::getClientIpstrCnt()
     {
         checkIsValid_();
-        return client_ipstrs_.size();
+        if (isSingleNode()) // NOT check client_ipstrs_ for single-node mode
+        {
+            return 1;
+        }
+        else
+        {
+            return client_ipstrs_.size();
+        }
     }
 
     uint16_t Config::getClientWorkerRecvrspStartport()
@@ -438,7 +445,7 @@ namespace covered
     std::string Config::getCloudIpstr()
     {
         checkIsValid_();
-        if (isSingleNode())
+        if (isSingleNode()) // NOT check cloud_idx for single-node mode
         {
             return Util::LOCALHOST_IPSTR;
         }
@@ -567,10 +574,41 @@ namespace covered
         }
     }
 
+    uint32_t Config::getEdgeMachineIdxByIpstr(const std::string& edge_ipstr)
+    {
+        checkIsValid_();
+
+        if (isSingleNode()) // NOT check edge_ipstrs_ for single-node mode
+        {
+            return 0;
+        }
+        else
+        {
+            assert(edge_ipstrs_.size() > 0);
+
+            for (uint32_t machine_idx = 0; machine_idx < edge_ipstrs_.size(); machine_idx++)
+            {
+                if (edge_ipstrs_[machine_idx] == edge_ipstr)
+                {
+                    return machine_idx;
+                }
+            }
+
+            assert(false); // Should NOT arrive here
+        }
+    }
+
     uint32_t Config::getEdgeIpstrCnt()
     {
         checkIsValid_();
-        return edge_ipstrs_.size();
+        if (isSingleNode()) // NOT check edge_ipstrs_ for single-node mode
+        {
+            return 1;
+        }
+        else
+        {
+            return edge_ipstrs_.size();
+        }
     }
 
     uint16_t Config::getEdgeRecvmsgStartport()

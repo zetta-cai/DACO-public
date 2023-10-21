@@ -132,7 +132,7 @@ namespace covered
             if (dirinfo_map_iter->second.getBeaconEdgeIdx() == edge_idx)
             {
                 const Key& tmp_key = dirinfo_map_iter->first;
-                const DirinfoSet& tmp_dirinfo_set = dirinfo_map_iter->second.getDirinfoSetRef();
+                const DirinfoSet& tmp_dirinfo_set = dirinfo_map_iter->second.getDirinfoSetRef(); // NOTE: dirinfo set from victim dirinfo MUST be complete
                 beaconed_victims.insert(std::pair(tmp_key, tmp_dirinfo_set));
             }
         }
@@ -191,6 +191,8 @@ namespace covered
         // NOTE: limited computation overhead to update neighbor synced victim infos, as we track limited number of neighbor synced victims for the specific edge node
 
         checkPointers_();
+
+        assert(neighbor_complete_victim_syncset.isComplete()); // NOTE: victim cacheinfos and dirinfo sets of neighbor victim syncset passed into victim tracker MUST be complete
 
         // NOTE: neighbor complete victim syncset MUST be complete
         // Get cache margin bytes
@@ -395,6 +397,9 @@ namespace covered
         // Update victim dirinfos for new synced victim keys
         for (std::list<VictimCacheinfo>::const_iterator new_cacheinfo_list_iter = synced_victim_cacheinfos.begin(); new_cacheinfo_list_iter != synced_victim_cacheinfos.end(); new_cacheinfo_list_iter++)
         {
+            // Local/neighbor synced victim cacheinfos passed into victim tracker MUST be complete
+            assert(new_cacheinfo_list_iter->isComplete());
+
             size_bytes_ = Util::uint64Add(size_bytes_, new_cacheinfo_list_iter->getSizeForCapacity()); // For cacheinfo of each latest local synced victims
 
             const Key& tmp_key = new_cacheinfo_list_iter->getKey();
@@ -424,6 +429,8 @@ namespace covered
         // Remove victim dirinfos for old synced victim keys
         for (std::list<VictimCacheinfo>::const_iterator old_cacheinfo_list_iter = old_synced_victim_cacheinfos.begin(); old_cacheinfo_list_iter != old_synced_victim_cacheinfos.end(); old_cacheinfo_list_iter++)
         {
+            assert(old_cacheinfo_list_iter->isComplete()); // NOTE: old victim cacheinfo stored in victim tracker MUST be complete
+
             size_bytes_ = Util::uint64Minus(size_bytes_, old_cacheinfo_list_iter->getSizeForCapacity()); // For cacheinfo of each old synced victim
 
             const Key& tmp_key = old_cacheinfo_list_iter->getKey();

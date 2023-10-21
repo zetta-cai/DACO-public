@@ -28,26 +28,12 @@ namespace covered
 
     BasicInvalidationServer::~BasicInvalidationServer() {}
 
-    bool BasicInvalidationServer::processInvalidationRequest_(MessageBase* control_request_ptr, const NetworkAddr& recvrsp_dst_addr)
+    void BasicInvalidationServer::processReqForInvalidation_(MessageBase* control_request_ptr)
     {
-        // Get key from control request if any
-        assert(control_request_ptr != NULL);
         assert(control_request_ptr->getMessageType() == MessageType::kInvalidationRequest);
+
         const InvalidationRequest* const invalidation_request_ptr = static_cast<const InvalidationRequest*>(control_request_ptr);
         Key tmp_key = invalidation_request_ptr->getKey();
-        const bool skip_propagation_latency = invalidation_request_ptr->isSkipPropagationLatency();
-
-        checkPointers_();
-
-        bool is_finish = false;
-        BandwidthUsage total_bandwidth_usage;
-        EventList event_list;
-
-        // Update total bandwidth usage for received invalidation request
-        uint32_t cross_edge_invalidation_req_bandwidth_bytes = control_request_ptr->getMsgPayloadSize();
-        total_bandwidth_usage.update(BandwidthUsage(0, cross_edge_invalidation_req_bandwidth_bytes, 0));
-
-        struct timespec invalidate_local_cache_start_timestamp = Util::getCurrentTimespec();
 
         // Invalidate cached object in local edge cache
         bool is_local_cached = edge_wrapper_ptr_->getEdgeCachePtr()->isLocalCached(tmp_key);
@@ -56,23 +42,22 @@ namespace covered
             edge_wrapper_ptr_->getEdgeCachePtr()->invalidateKeyForLocalCachedObject(tmp_key);
         }
 
-        // Add intermediate event if with event tracking
-        struct timespec invalidate_local_cache_end_timestamp = Util::getCurrentTimespec();
-        uint32_t invalidate_local_cache_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(invalidate_local_cache_end_timestamp, invalidate_local_cache_start_timestamp));
-        event_list.addEvent(Event::EDGE_INVALIDATION_SERVER_INVALIDATE_LOCAL_CACHE_EVENT_NAME, invalidate_local_cache_latency_us);
+        return;
+    }
 
-        // Prepare a invalidation response
+    MessageBase* BasicInvalidationServer::getRspForInvalidation_(MessageBase* control_request_ptr, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list)
+    {
+        assert(control_request_ptr->getMessageType() == MessageType::kInvalidationRequest);
+
+        const InvalidationRequest* const invalidation_request_ptr = static_cast<const InvalidationRequest*>(control_request_ptr);
+        Key tmp_key = invalidation_request_ptr->getKey();
+        const bool skip_propagation_latency = invalidation_request_ptr->isSkipPropagationLatency();
+
+        // Prepare invalidation response
         uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
         MessageBase* invalidation_response_ptr = new InvalidationResponse(tmp_key, edge_idx, edge_invalidation_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
         assert(invalidation_response_ptr != NULL);
 
-        // Push the invalidation response into edge-to-edge propagation simulator to cache server worker or beacon server
-        bool is_successful = edge_wrapper_ptr_->getEdgeToedgePropagationSimulatorParamPtr()->push(invalidation_response_ptr, recvrsp_dst_addr);
-        assert(is_successful);
-        
-        // NOTE: invalidation_response_ptr will be released by edge-to-edge propagation simulator
-        invalidation_response_ptr = NULL;
-
-        return is_finish;
+        return invalidation_response_ptr;
     }
 }

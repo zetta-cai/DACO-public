@@ -87,6 +87,7 @@ namespace covered
         static uint16_t getEdgeCacheServerWorkerRecvrspStartport();
         static uint16_t getEdgeInvalidationServerRecvreqStartport();
         static std::string getEdgeIpstr(const uint32_t& edge_idx, const uint32_t& edgecnt);
+        static uint32_t getEdgeMachineIdxByIpstr(const std::string& edge_ipstr);
         static uint32_t getEdgeIpstrCnt();
         static uint16_t getEdgeRecvmsgStartport();
         static std::string getEvaluatorIpstr();

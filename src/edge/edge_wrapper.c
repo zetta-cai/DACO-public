@@ -375,8 +375,9 @@ namespace covered
                     continue;
                 }
 
-                const NetworkAddr& tmp_edge_invalidation_server_recvreq_dst_addr = percachecopy_dstaddr[iter_for_request->first]; // cache server address of a blocked closest edge node          
-                sendInvalidationRequest_(key, recvrsp_source_addr, tmp_edge_invalidation_server_recvreq_dst_addr, skip_propagation_latency);
+                const uint32_t& tmp_dst_edge_idx = iter_for_request->first;
+                const NetworkAddr& tmp_edge_invalidation_server_recvreq_dst_addr = percachecopy_dstaddr[tmp_dst_edge_idx]; // cache server address of a blocked closest edge node          
+                sendInvalidationRequest_(key, recvrsp_source_addr, tmp_dst_edge_idx, tmp_edge_invalidation_server_recvreq_dst_addr, skip_propagation_latency);
             } // End of edgeidx_for_request
 
             // Receive (invalidate_edgecnt - acked_edgecnt) control repsonses from involved edge nodes
@@ -401,7 +402,7 @@ namespace covered
                 {
                     // Receive the control response message successfully
                     MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
-                    assert(control_response_ptr != NULL && control_response_ptr->getMessageType() == MessageType::kInvalidationResponse);
+                    assert(control_response_ptr != NULL);
                     uint32_t tmp_edgeidx = control_response_ptr->getSourceIndex();
                     NetworkAddr tmp_edge_invalidation_server_recvreq_source_addr = control_response_ptr->getSourceAddr();
 
@@ -413,6 +414,9 @@ namespace covered
                         {
                             assert(iter_for_response->second == false); // Original ack flag should be false
                             assert(percachecopy_dstaddr[iter_for_response->first] == tmp_edge_invalidation_server_recvreq_source_addr);
+
+                            // Process invalidation response
+                            processInvalidationResponse_(control_response_ptr);
 
                             // Update total bandwidth usage for received invalidation response
                             BandwidthUsage invalidation_response_bandwidth_usage = control_response_ptr->getBandwidthUsageRef();
@@ -458,22 +462,59 @@ namespace covered
         return is_finish;
     }
 
-    void EdgeWrapper::sendInvalidationRequest_(const Key& key, const NetworkAddr& recvrsp_source_addr, const NetworkAddr& edge_invalidation_server_recvreq_dst_addr, const bool& skip_propagation_latency) const
+    void EdgeWrapper::sendInvalidationRequest_(const Key& key, const NetworkAddr& recvrsp_source_addr, const uint32_t& dst_edge_idx, const NetworkAddr& edge_invalidation_server_recvreq_dst_addr, const bool& skip_propagation_latency) const
     {
         checkPointers_();
 
-        // Prepare invalidation request to invalidate the cache copy
         uint32_t edge_idx = node_idx_;
-        MessageBase* invalidation_request_ptr = new InvalidationRequest(key, edge_idx, recvrsp_source_addr, skip_propagation_latency);
+        MessageBase* invalidation_request_ptr = NULL;
+        if (cache_name_ == Util::COVERED_CACHE_NAME) // ONLY for COVERED
+        {
+            // Prepare victim syncset for piggybacking-based victim synchronization
+            assert(dst_edge_idx != edge_idx);
+            VictimSyncset victim_syncset = covered_cache_manager_ptr_->accessVictimTrackerForLocalVictimSyncset(dst_edge_idx);
+
+            // Prepare invalidation request to invalidate the cache copy
+            invalidation_request_ptr = new CoveredInvalidationRequest(key, victim_syncset, edge_idx, recvrsp_source_addr, skip_propagation_latency);
+        }
+        else // Baselines
+        {
+            // Prepare invalidation request to invalidate the cache copy
+            invalidation_request_ptr = new InvalidationRequest(key, edge_idx, recvrsp_source_addr, skip_propagation_latency);
+        }
         assert(invalidation_request_ptr != NULL);
 
-        // Push InvalidationRequest into edge-to-edge propagation simulator to send to neighbor edge node
+        // Push invalidation request into edge-to-edge propagation simulator to send to neighbor edge node
         bool is_successful = edge_toedge_propagation_simulator_param_ptr_->push(invalidation_request_ptr, edge_invalidation_server_recvreq_dst_addr);
         assert(is_successful);
 
         // NOTE: invalidation_request_ptr will be released by edge-to-edge propagation simulator
         invalidation_request_ptr = NULL;
 
+        return;
+    }
+
+    void EdgeWrapper::processInvalidationResponse_(MessageBase* invalidation_response_ptr) const
+    {
+        if (cache_name_ == Util::COVERED_CACHE_NAME) // ONLY for COVERED
+        {
+            assert(invalidation_response_ptr != NULL);
+            assert(invalidation_response_ptr->getMessageType() == MessageType::kCoveredInvalidationResponse);
+
+            const CoveredInvalidationResponse* covered_invalidation_response_ptr = static_cast<const CoveredInvalidationResponse*>(invalidation_response_ptr);
+            const uint32_t source_edge_idx = covered_invalidation_response_ptr->getSourceIndex();
+
+            // Victim synchronization
+            // NOTE: we always perform victim synchronization before popularity aggregation, as we need the latest synced victim information for placement calculation
+            const VictimSyncset& neighbor_victim_syncset = covered_invalidation_response_ptr->getVictimSyncsetRef();
+            std::unordered_map<Key, DirinfoSet, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = getLocalBeaconedVictimsFromVictimSyncset(neighbor_victim_syncset);
+            covered_cache_manager_ptr_->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets, cooperation_wrapper_ptr_);
+        }
+        else
+        {
+            assert(invalidation_response_ptr != NULL);
+            assert(invalidation_response_ptr->getMessageType() == MessageType::kInvalidationResponse);
+        }
         return;
     }
 
@@ -512,8 +553,14 @@ namespace covered
                     continue;
                 }
 
-                const NetworkAddr& tmp_edge_cache_server_worker_recvreq_dst_addr = iter_for_request->first; // cache server address of a blocked closest edge node          
-                sendFinishBlockRequest_(key, recvrsp_source_addr, tmp_edge_cache_server_worker_recvreq_dst_addr, skip_propagation_latency);     
+                const NetworkAddr& tmp_edge_cache_server_worker_recvreq_dst_addr = iter_for_request->first; // cache server address of a blocked closest edge node
+
+                // NOTE: dst edge idx to finish blocking MUST NOT be the current local/remote beacon edge node, as requests on a being-written object MUST poll instead of block if sender is beacon
+                uint32_t tmp_dst_edge_idx = Util::getEdgeIdxFromCacheServerWorkerRecvreqAddr(tmp_edge_cache_server_worker_recvreq_dst_addr, getNodeCnt());
+                assert(tmp_dst_edge_idx != node_idx_);
+   
+                // Issue finish block request to dst edge node
+                sendFinishBlockRequest_(key, recvrsp_source_addr, tmp_dst_edge_idx, tmp_edge_cache_server_worker_recvreq_dst_addr, skip_propagation_latency);     
             } // End of edgeidx_for_request
 
             // Receive (blocked_edgecnt - acked_edgecnt) control repsonses from the closest edge nodes
@@ -538,9 +585,12 @@ namespace covered
                 {
                     // Receive the control response message successfully
                     MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
-                    assert(control_response_ptr != NULL && control_response_ptr->getMessageType() == MessageType::kFinishBlockResponse);
+                    assert(control_response_ptr != NULL);
                     uint32_t tmp_edgeidx = control_response_ptr->getSourceIndex();
                     NetworkAddr tmp_edge_cache_server_worker_recvreq_source_addr = control_response_ptr->getSourceAddr();
+
+                    // Process finish block response
+                    processFinishBlockResponse_(control_response_ptr);
 
                     // Mark the closest edge node has acknowledged the FinishBlockRequest
                     bool is_match = false;
@@ -594,13 +644,26 @@ namespace covered
         return is_finish;
     }
 
-    void EdgeWrapper::sendFinishBlockRequest_(const Key& key, const NetworkAddr& recvrsp_source_addr, const NetworkAddr& edge_cache_server_worker_recvreq_dst_addr, const bool& skip_propagation_latency) const
+    void EdgeWrapper::sendFinishBlockRequest_(const Key& key, const NetworkAddr& recvrsp_source_addr, const uint32_t& dst_edge_idx, const NetworkAddr& edge_cache_server_worker_recvreq_dst_addr, const bool& skip_propagation_latency) const
     {
         checkPointers_();
 
-        // Prepare finish block request to finish blocking for writes in all closest edge nodes
         uint32_t edge_idx = node_idx_;
-        MessageBase* finish_block_request_ptr = new FinishBlockRequest(key, edge_idx, recvrsp_source_addr, skip_propagation_latency);
+        MessageBase* finish_block_request_ptr = NULL;
+        if (cache_name_ == Util::COVERED_CACHE_NAME) // ONLY for COVERED
+        {
+            // Prepare victim syncset for piggybacking-based victim synchronization
+            assert(dst_edge_idx != edge_idx);
+            VictimSyncset victim_syncset = covered_cache_manager_ptr_->accessVictimTrackerForLocalVictimSyncset(dst_edge_idx);
+
+            // Prepare finish block request to finish blocking for writes in all closest edge nodes
+            finish_block_request_ptr = new CoveredFinishBlockRequest(key, victim_syncset, edge_idx, recvrsp_source_addr, skip_propagation_latency);
+        }
+        else // Baselines
+        {
+            // Prepare finish block request to finish blocking for writes in all closest edge nodes
+            finish_block_request_ptr = new FinishBlockRequest(key, edge_idx, recvrsp_source_addr, skip_propagation_latency);
+        }
         assert(finish_block_request_ptr != NULL);
 
         // Push FinishBlockRequest into edge-to-edge propagation simulator to send to blocked edge node
@@ -610,6 +673,30 @@ namespace covered
         // NOTE: finish_block_request_ptr will be released by edge-to-edge propagation simulator
         finish_block_request_ptr = NULL;
 
+        return;
+    }
+
+    void EdgeWrapper::processFinishBlockResponse_(MessageBase* finish_block_response_ptr) const
+    {
+        if (cache_name_ == Util::COVERED_CACHE_NAME) // ONLY for COVERED
+        {
+            assert(finish_block_response_ptr != NULL);
+            assert(finish_block_response_ptr->getMessageType() == MessageType::kCoveredFinishBlockResponse);
+
+            const CoveredFinishBlockResponse* covered_finish_block_response_ptr = static_cast<const CoveredFinishBlockResponse*>(finish_block_response_ptr);
+            const uint32_t source_edge_idx = covered_finish_block_response_ptr->getSourceIndex();
+
+            // Victim synchronization
+            // NOTE: we always perform victim synchronization before popularity aggregation, as we need the latest synced victim information for placement calculation
+            const VictimSyncset& neighbor_victim_syncset = covered_finish_block_response_ptr->getVictimSyncsetRef();
+            std::unordered_map<Key, DirinfoSet, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = getLocalBeaconedVictimsFromVictimSyncset(neighbor_victim_syncset);
+            covered_cache_manager_ptr_->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets, cooperation_wrapper_ptr_);
+        }
+        else
+        {
+            assert(finish_block_response_ptr != NULL);
+            assert(finish_block_response_ptr->getMessageType() == MessageType::kFinishBlockResponse);
+        }
         return;
     }
 
@@ -1013,7 +1100,7 @@ namespace covered
                     // NOTE: we use edge_beacon_server_recvreq_source_addr_ as the source address even if invoker is cache server to wait for responses
                     // (i) Although current is beacon for cache server, the role is still beacon node, which should be responsible for non-blocking placement deployment. And we don't want to resort cache server worker, which may degrade KV request processing
                     // (ii) Although we may wait for responses, beacon server is blocking for recvreq port and we don't want to introduce another blocking for recvrsp port
-                    const VictimSyncset victim_syncset = covered_cache_manager_ptr_->accessVictimTrackerForVictimSyncset(directory_info.getTargetEdgeIdx());
+                    const VictimSyncset victim_syncset = covered_cache_manager_ptr_->accessVictimTrackerForLocalVictimSyncset(directory_info.getTargetEdgeIdx());
                     CoveredPlacementRedirectedGetRequest* covered_placement_redirected_get_request_ptr = new CoveredPlacementRedirectedGetRequest(key, victim_syncset, best_placement_edgeset, current_edge_idx, edge_beacon_server_recvreq_source_addr_for_placement_, skip_propagation_latency);
                     assert(covered_placement_redirected_get_request_ptr != NULL);
                     NetworkAddr target_edge_cache_server_recvreq_dst_addr = getTargetDstaddr(directory_info); // Send to cache server of the target edge node for cache server worker
@@ -1089,7 +1176,7 @@ namespace covered
 
             // Send CoveredPlacementNotifyRequest to remote edge node
             // NOTE: source addr will NOT be used by placement processor of remote edge node due to without explicit notification ACK (we use directory update request with is_admit = true as the implicit ACK for placement notification)
-            const VictimSyncset victim_syncset = covered_cache_manager_ptr_->accessVictimTrackerForVictimSyncset(tmp_edge_idx);
+            const VictimSyncset victim_syncset = covered_cache_manager_ptr_->accessVictimTrackerForLocalVictimSyncset(tmp_edge_idx);
             CoveredPlacementNotifyRequest* covered_placement_notify_request_ptr = new CoveredPlacementNotifyRequest(key, value, is_valid, victim_syncset, current_edge_idx, edge_beacon_server_recvreq_source_addr_for_placement_, skip_propagation_latency);
             assert(covered_placement_notify_request_ptr != NULL);
             // Push the global request into edge-to-edge propagation simulator to the remote edge node

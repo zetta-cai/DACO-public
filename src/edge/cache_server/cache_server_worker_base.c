@@ -1086,7 +1086,7 @@ namespace covered
 
         struct timespec block_for_writes_start_timestamp = Util::getCurrentTimespec();
 
-        NetworkAddr recvrsp_dstaddr; // cache server worker or beacon server
+        MessageBase* control_request_ptr = NULL; // For finish block request from cache server worker or beacon server
         while (true) // Wait for FinishBlockRequest from beacon node by interruption
         {
             // Receive the control repsonse from the beacon node
@@ -1108,20 +1108,18 @@ namespace covered
             else
             {
                 // Receive the control request message successfully
-                MessageBase* control_request_ptr = MessageBase::getResponseFromMsgPayload(control_request_msg_payload);
-                assert(control_request_ptr != NULL && control_request_ptr->getMessageType() == MessageType::kFinishBlockRequest);
-                recvrsp_dstaddr = control_request_ptr->getSourceAddr();
+                control_request_ptr = MessageBase::getResponseFromMsgPayload(control_request_msg_payload);
+                assert(control_request_ptr != NULL);
+
+                // Process finish block request
+                processReqToFinishBlock_(control_request_ptr);
 
                 // Update tmp bandwidth usage for received finish block request
                 uint32_t cross_edge_finish_block_req_bandwidth_bytes = control_request_ptr->getMsgPayloadSize();
                 tmp_bandwidth_usage.update(BandwidthUsage(0, cross_edge_finish_block_req_bandwidth_bytes, 0));
 
-                // Get key from FinishBlockRequest
-                const FinishBlockRequest* const finish_block_request_ptr = static_cast<const FinishBlockRequest*>(control_request_ptr);
-                Key tmp_key = finish_block_request_ptr->getKey();
-                const bool finish_block_request_skip_propagation_latency = finish_block_request_ptr->isSkipPropagationLatency();
-
                 // NOTE: skip_propagation_latency comes from local request A (currently blocked), while finish_block_request_skip_propagation_latency comes from local write request B, where B is processed before A to block A.
+                const bool finish_block_request_skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();
                 if (skip_propagation_latency != finish_block_request_skip_propagation_latency)
                 {
                     // Still hold skip_propagation_latency to simulate propagation latency for local request A (currently blocked), yet pose a warning
@@ -1130,11 +1128,8 @@ namespace covered
                     Util::dumpWarnMsg(base_instance_name_, oss.str());
                 }
 
-                // Release the control request message
-                delete control_request_ptr;
-                control_request_ptr = NULL;
-
                 // Double-check if key matches
+                const Key tmp_key = MessageBase::getKeyFromMessage(control_request_ptr);
                 if (key == tmp_key) // key matches
                 {
                     break; // Break the while loop to send back FinishBlockResponse
@@ -1145,25 +1140,40 @@ namespace covered
                     oss << "wait for key " << key.getKeystr() << " != received key " << tmp_key.getKeystr();
                     Util::dumpWarnMsg(base_instance_name_, oss.str());
 
+                    // Release the control request message
+                    delete control_request_ptr;
+                    control_request_ptr = NULL;
+
                     continue; // Receive the next FinishBlockRequest
                 }
             } // End of is_timeout
         } // End of while(true)
 
-        if (!is_finish)
+        if (!is_finish) // Must receive a matched finish block request if edge is still running
         {
+            assert(control_request_ptr != NULL);
+            assert(key == MessageBase::getKeyFromMessage(control_request_ptr));
+
             // Prepare FinishBlockResponse
             // NOTE: we just execute break to finish block, so no need to add an event for FinishBlockResponse
-            uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
-            MessageBase* finish_block_response_ptr = new FinishBlockResponse(key, edge_idx, edge_cache_server_worker_recvreq_source_addr_, tmp_bandwidth_usage, EventList(), skip_propagation_latency); // NOTE: still use skip_propagation_latency of currently-blocked request rather than that of previous write request
+            MessageBase* finish_block_response_ptr = getRspToFinishBlock_(control_request_ptr, tmp_bandwidth_usage);
             assert(finish_block_response_ptr != NULL);
 
             // Push FinishBlockResponse into edge-to-edge propagation simulator to cache server worker or beacon server
+            const NetworkAddr recvrsp_dstaddr = control_request_ptr->getSourceAddr();
             bool is_successful = tmp_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->push(finish_block_response_ptr, recvrsp_dstaddr);
             assert(is_successful);
 
             // NOTE: finish_block_response_ptr will be released by edge-to-edge propagation simulator
             finish_block_response_ptr = NULL;
+
+            // Release the control request message
+            delete control_request_ptr;
+            control_request_ptr = NULL;
+        }
+        else // Edge is NOT running
+        {
+            assert(control_request_ptr == NULL);
         }
 
         // Add intermediate event if with event tracking

@@ -82,11 +82,11 @@ namespace covered
                 continue; // Retry to receive a message if edge is still running
             } // End of (is_timeout == true)
             else
-            {   
+            {
                 MessageBase* control_request_ptr = MessageBase::getRequestFromMsgPayload(control_request_msg_payload);
                 assert(control_request_ptr != NULL);
 
-                if (control_request_ptr->getMessageType() == MessageType::kInvalidationRequest)
+                if (control_request_ptr->getMessageType() == MessageType::kInvalidationRequest || control_request_ptr->getMessageType() == MessageType::kCoveredInvalidationRequest)
                 {
                     NetworkAddr recvrsp_dst_addr = control_request_ptr->getSourceAddr(); // cache server worker or beacon server
                     is_finish = processInvalidationRequest_(control_request_ptr, recvrsp_dst_addr);
@@ -112,6 +112,44 @@ namespace covered
         } // End of while loop
 
         return;
+    }
+
+    bool InvalidationServerBase::processInvalidationRequest_(MessageBase* control_request_ptr, const NetworkAddr& recvrsp_dst_addr)
+    {
+        // Get key from control request if any
+        assert(control_request_ptr != NULL);
+
+        checkPointers_();
+
+        bool is_finish = false;
+        BandwidthUsage total_bandwidth_usage;
+        EventList event_list;
+
+        // Update total bandwidth usage for received invalidation request
+        uint32_t cross_edge_invalidation_req_bandwidth_bytes = control_request_ptr->getMsgPayloadSize();
+        total_bandwidth_usage.update(BandwidthUsage(0, cross_edge_invalidation_req_bandwidth_bytes, 0));
+
+        struct timespec invalidate_local_cache_start_timestamp = Util::getCurrentTimespec();
+
+        // Process invalidation request
+        processReqForInvalidation_(control_request_ptr);
+
+        // Add intermediate event if with event tracking
+        struct timespec invalidate_local_cache_end_timestamp = Util::getCurrentTimespec();
+        uint32_t invalidate_local_cache_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(invalidate_local_cache_end_timestamp, invalidate_local_cache_start_timestamp));
+        event_list.addEvent(Event::EDGE_INVALIDATION_SERVER_INVALIDATE_LOCAL_CACHE_EVENT_NAME, invalidate_local_cache_latency_us);
+
+        // Prepare a invalidation response
+        MessageBase* invalidation_response_ptr = getRspForInvalidation_(control_request_ptr, total_bandwidth_usage, event_list);
+
+        // Push the invalidation response into edge-to-edge propagation simulator to cache server worker or beacon server
+        bool is_successful = edge_wrapper_ptr_->getEdgeToedgePropagationSimulatorParamPtr()->push(invalidation_response_ptr, recvrsp_dst_addr);
+        assert(is_successful);
+        
+        // NOTE: invalidation_response_ptr will be released by edge-to-edge propagation simulator
+        invalidation_response_ptr = NULL;
+
+        return is_finish;
     }
 
     void InvalidationServerBase::checkPointers_() const

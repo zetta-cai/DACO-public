@@ -41,6 +41,10 @@
 #include "message/control/cooperation/covered_acquire_writelock_response.h"
 #include "message/control/cooperation/covered_release_writelock_request.h"
 #include "message/control/cooperation/covered_release_writelock_response.h"
+#include "message/control/cooperation/covered_invalidation_request.h"
+#include "message/control/cooperation/covered_invalidation_response.h"
+#include "message/control/cooperation/covered_finish_block_request.h"
+#include "message/control/cooperation/covered_finish_block_response.h"
 // For cooperative cache placement management (lazy victim fetching for placement calculation)
 #include "message/control/cooperation/covered_victim_fetch_request.h"
 #include "message/control/cooperation/covered_victim_fetch_response.h"

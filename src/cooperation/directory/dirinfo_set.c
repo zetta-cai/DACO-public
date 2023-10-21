@@ -90,6 +90,7 @@ namespace covered
     {
         // Recover complete dirinfo set based on compressed one and existing complete one
         assert(compressed_dirinfo_set.isCompressed());
+        assert(!compressed_dirinfo_set.isFullyCompressed());
         assert(existing_dirinfo_set.isComplete());
 
         DirinfoSet complete_dirinfo_set = existing_dirinfo_set;

@@ -25,8 +25,49 @@ namespace covered
 
     CoveredInvalidationServer::~CoveredInvalidationServer() {}
 
-    bool CoveredInvalidationServer::processInvalidationRequest_(MessageBase* control_request_ptr, const NetworkAddr& recvrsp_dst_addr)
+    void CoveredInvalidationServer::processReqForInvalidation_(MessageBase* control_request_ptr)
     {
-        return false;
+        assert(control_request_ptr->getMessageType() == MessageType::kCoveredInvalidationRequest);
+        CoveredCacheManager* tmp_covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
+
+        const CoveredInvalidationRequest* const covered_invalidation_request_ptr = static_cast<const CoveredInvalidationRequest*>(control_request_ptr);
+        const uint32_t source_edge_idx = covered_invalidation_request_ptr->getSourceIndex();
+        Key tmp_key = covered_invalidation_request_ptr->getKey();
+
+        // Invalidate cached object in local edge cache
+        bool is_local_cached = edge_wrapper_ptr_->getEdgeCachePtr()->isLocalCached(tmp_key);
+        if (is_local_cached)
+        {
+            edge_wrapper_ptr_->getEdgeCachePtr()->invalidateKeyForLocalCachedObject(tmp_key);
+        }
+
+        // Victim synchronization
+        // NOTE: we always perform victim synchronization before popularity aggregation, as we need the latest synced victim information for placement calculation
+        const VictimSyncset& neighbor_victim_syncset = covered_invalidation_request_ptr->getVictimSyncsetRef();
+        std::unordered_map<Key, DirinfoSet, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = edge_wrapper_ptr_->getLocalBeaconedVictimsFromVictimSyncset(neighbor_victim_syncset);
+        tmp_covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets, edge_wrapper_ptr_->getCooperationWrapperPtr());
+
+        return;
+    }
+
+    MessageBase* CoveredInvalidationServer::getRspForInvalidation_(MessageBase* control_request_ptr, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list)
+    {
+        assert(control_request_ptr->getMessageType() == MessageType::kCoveredInvalidationRequest);
+        CoveredCacheManager* tmp_covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
+
+        const CoveredInvalidationRequest* const covered_invalidation_request_ptr = static_cast<const CoveredInvalidationRequest*>(control_request_ptr);
+        Key tmp_key = covered_invalidation_request_ptr->getKey();
+        const bool skip_propagation_latency = covered_invalidation_request_ptr->isSkipPropagationLatency();
+
+        // Prepare victim syncset for piggybacking-based victim synchronization
+        const uint32_t dst_edge_idx = covered_invalidation_request_ptr->getSourceIndex();
+        VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_edge_idx);
+
+        // Prepare invalidation response
+        uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
+        MessageBase* covered_invalidation_response_ptr = new CoveredInvalidationResponse(tmp_key, victim_syncset, edge_idx, edge_invalidation_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+        assert(covered_invalidation_response_ptr != NULL);
+
+        return covered_invalidation_response_ptr;
     }
 }

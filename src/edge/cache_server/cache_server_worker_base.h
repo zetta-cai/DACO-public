@@ -126,6 +126,8 @@ namespace covered
         // Return if edge node is finished
         // NOTE: NO need to update total_bandwidth_usage, as the bandwidth usage is counted by the write request triggering FinishBlockRequest instead of the local request being blocked
         bool blockForWritesByInterruption_(const Key& key, EventList& event_list, const bool& skip_propagation_latency) const; // Block for MSI protocol
+        virtual void processReqToFinishBlock_(MessageBase* control_request_ptr) const = 0;
+        virtual MessageBase* getRspToFinishBlock_(MessageBase* control_request_ptr, const BandwidthUsage& tmp_bandwidth_usage) const = 0;
 
         // (2.2) Update cloud
 

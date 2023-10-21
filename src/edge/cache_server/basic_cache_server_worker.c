@@ -183,6 +183,32 @@ namespace covered
         return;
     }
 
+    void BasicCacheServerWorker::processReqToFinishBlock_(MessageBase* control_request_ptr) const
+    {
+        assert(control_request_ptr != NULL);
+        assert(control_request_ptr->getMessageType() == MessageType::kFinishBlockRequest);
+
+        return;
+    }
+
+    MessageBase* BasicCacheServerWorker::getRspToFinishBlock_(MessageBase* control_request_ptr, const BandwidthUsage& tmp_bandwidth_usage) const
+    {
+        assert(control_request_ptr != NULL);
+        assert(control_request_ptr->getMessageType() == MessageType::kFinishBlockRequest);
+        
+        const FinishBlockRequest* const finish_block_request_ptr = static_cast<const FinishBlockRequest*>(control_request_ptr);
+        const Key tmp_key = finish_block_request_ptr->getKey();
+        const bool skip_propagation_latency = finish_block_request_ptr->isSkipPropagationLatency();
+
+        checkPointers_();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+
+        uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
+        MessageBase* finish_block_response_ptr = new FinishBlockResponse(tmp_key, edge_idx, edge_cache_server_worker_recvreq_source_addr_, tmp_bandwidth_usage, EventList(), skip_propagation_latency); // NOTE: still use skip_propagation_latency of currently-blocked request rather than that of previous write request
+
+        return finish_block_response_ptr;
+    }
+
     // (2.3) Update cached objects in local edge cache
 
     bool BasicCacheServerWorker::updateLocalEdgeCache_(const Key& key, const Value& value) const

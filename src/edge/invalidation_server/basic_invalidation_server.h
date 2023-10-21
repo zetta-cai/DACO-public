@@ -21,7 +21,8 @@ namespace covered
     private:
         static const std::string kClassName;
 
-        virtual bool processInvalidationRequest_(MessageBase* control_request_ptr, const NetworkAddr& recvrsp_dst_addr) override;
+        virtual void processReqForInvalidation_(MessageBase* control_request_ptr) override;
+        virtual MessageBase* getRspForInvalidation_(MessageBase* control_request_ptr, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list) override;
 
         // Member variables
 

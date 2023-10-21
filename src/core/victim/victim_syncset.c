@@ -351,8 +351,8 @@ namespace covered
         if (!with_complete_synced_victim_dirinfo_sets) // Recover ONLY if compressed
         {
             // Start from existing complete victim dirinfos sets
-            std::unordered_map<Key, DirinfoSet, KeyHasher> complete_victim_dirinfo_sets;
-            bool tmp_with_complete_victim_dirinfo_sets = existing_victim_syncset.getLocalBeaconedVictims(complete_victim_dirinfo_sets);
+            std::unordered_map<Key, DirinfoSet, KeyHasher> tmp_complete_victim_dirinfo_sets;
+            bool tmp_with_complete_victim_dirinfo_sets = existing_victim_syncset.getLocalBeaconedVictims(tmp_complete_victim_dirinfo_sets);
             assert(tmp_with_complete_victim_dirinfo_sets);
 
             // Recover complete victim dirinfo sets
@@ -360,12 +360,12 @@ namespace covered
             {
                 const Key& tmp_synced_victim_key = synced_victim_dirinfo_sets_const_iter->first;
                 const DirinfoSet& tmp_synced_dirinfo_set = synced_victim_dirinfo_sets_const_iter->second;
-                std::unordered_map<Key, DirinfoSet, KeyHasher>::iterator tmp_complete_victim_dirinfo_sets_iter = complete_victim_dirinfo_sets.find(tmp_synced_victim_key);
+                std::unordered_map<Key, DirinfoSet, KeyHasher>::iterator tmp_complete_victim_dirinfo_sets_iter = tmp_complete_victim_dirinfo_sets.find(tmp_synced_victim_key);
                 if (tmp_synced_dirinfo_set.isComplete()) // New victim dirinfo set (should NOT exist in existing dirinfo sets)
                 {
-                    if (tmp_complete_victim_dirinfo_sets_iter == complete_victim_dirinfo_sets.end())
+                    if (tmp_complete_victim_dirinfo_sets_iter == tmp_complete_victim_dirinfo_sets.end())
                     {
-                        complete_victim_dirinfo_sets.insert(std::pair(tmp_synced_victim_key, tmp_synced_dirinfo_set));
+                        tmp_complete_victim_dirinfo_sets.insert(std::pair(tmp_synced_victim_key, tmp_synced_dirinfo_set));
                     }
                     else
                     {
@@ -378,9 +378,10 @@ namespace covered
                 } // End of tmp_synced_dirinfo_set.isComplete()
                 else // Compressed dirinfo sets (should exist in existing dirinfo sets or already removed by victim removal)
                 {
+                    // NOTE: received victim dirinfo set MUST NOT fully compressed
                     assert(!tmp_synced_dirinfo_set.isFullyCompressed());
 
-                    if (tmp_complete_victim_dirinfo_sets_iter != complete_victim_dirinfo_sets.end())
+                    if (tmp_complete_victim_dirinfo_sets_iter != tmp_complete_victim_dirinfo_sets.end())
                     {
                         DirinfoSet tmp_complete_dirinfo_set = DirinfoSet::recover(tmp_synced_dirinfo_set, tmp_complete_victim_dirinfo_sets_iter->second);
                         tmp_complete_victim_dirinfo_sets_iter->second = tmp_complete_dirinfo_set;
@@ -391,7 +392,7 @@ namespace covered
             } // End of enumeration of synced dirinfo sets
 
             // Replace existing complete victim dirinfo sets with recovered ones
-            complete_victim_syncset.setLocalBeaconedVictims(complete_victim_dirinfo_sets);
+            complete_victim_syncset.setLocalBeaconedVictims(tmp_complete_victim_dirinfo_sets);
         } // End of !with_complete_synced_victim_dirinfo_sets
         /*else // Directly use if not compressed
         {

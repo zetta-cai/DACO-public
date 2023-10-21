@@ -293,6 +293,26 @@ namespace covered
                 message_type_str = "kCoveredPlacementDirectoryAdmitResponse";
                 break;
             }
+            case MessageType::kCoveredInvalidationRequest:
+            {
+                message_type_str = "kCoveredInvalidationRequest";
+                break;
+            }
+            case MessageType::kCoveredInvalidationResponse:
+            {
+                message_type_str = "kCoveredInvalidationResponse";
+                break;
+            }
+            case MessageType::kCoveredFinishBlockRequest:
+            {
+                message_type_str = "kCoveredFinishBlockRequest";
+                break;
+            }
+            case MessageType::kCoveredFinishBlockResponse:
+            {
+                message_type_str = "kCoveredFinishBlockResponse";
+                break;
+            }
             default:
             {
                 message_type_str = std::to_string(static_cast<uint32_t>(message_type));
@@ -584,6 +604,16 @@ namespace covered
                 message_ptr = new CoveredPlacementDirectoryAdmitRequest(msg_payload);
                 break;
             }
+            case MessageType::kCoveredInvalidationRequest:
+            {
+                message_ptr = new CoveredInvalidationRequest(msg_payload);
+                break;
+            }
+            case MessageType::kCoveredFinishBlockRequest:
+            {
+                message_ptr = new CoveredFinishBlockRequest(msg_payload);
+                break;
+            }
             default:
             {
                 std::ostringstream oss;
@@ -775,6 +805,16 @@ namespace covered
             case MessageType::kCoveredPlacementDirectoryAdmitResponse:
             {
                 message_ptr = new CoveredPlacementDirectoryAdmitResponse(msg_payload);
+                break;
+            }
+            case MessageType::kCoveredInvalidationResponse:
+            {
+                message_ptr = new CoveredInvalidationResponse(msg_payload);
+                break;
+            }
+            case MessageType::kCoveredFinishBlockResponse:
+            {
+                message_ptr = new CoveredFinishBlockResponse(msg_payload);
                 break;
             }
             default:
@@ -1047,6 +1087,26 @@ namespace covered
             const CoveredPlacementDirectoryAdmitResponse* const covered_placement_directory_admit_response_ptr = static_cast<const CoveredPlacementDirectoryAdmitResponse*>(message_ptr);
             tmp_key = covered_placement_directory_admit_response_ptr->getKey();
         }
+        else if (message_ptr->message_type_ == MessageType::kCoveredInvalidationRequest)
+        {
+            const CoveredInvalidationRequest* const covered_invalidation_request_ptr = static_cast<const CoveredInvalidationRequest*>(message_ptr);
+            tmp_key = covered_invalidation_request_ptr->getKey();
+        }
+        else if (message_ptr->message_type_ == MessageType::kCoveredInvalidationResponse)
+        {
+            const CoveredInvalidationResponse* const covered_invalidation_response_ptr = static_cast<const CoveredInvalidationResponse*>(message_ptr);
+            tmp_key = covered_invalidation_response_ptr->getKey();
+        }
+        else if (message_ptr->message_type_ == MessageType::kCoveredFinishBlockRequest)
+        {
+            const CoveredFinishBlockRequest* const covered_finish_block_request_ptr = static_cast<const CoveredFinishBlockRequest*>(message_ptr);
+            tmp_key = covered_finish_block_request_ptr->getKey();
+        }
+        else if (message_ptr->message_type_ == MessageType::kCoveredFinishBlockResponse)
+        {
+            const CoveredFinishBlockResponse* const covered_finish_block_response_ptr = static_cast<const CoveredFinishBlockResponse*>(message_ptr);
+            tmp_key = covered_finish_block_response_ptr->getKey();
+        }
         else
         {
             std::ostringstream oss;
@@ -1317,7 +1377,7 @@ namespace covered
     bool MessageBase::isCooperationControlRequest() const
     {
         checkIsValid_();
-        if (message_type_ == MessageType::kAcquireWritelockRequest || message_type_ == MessageType::kDirectoryLookupRequest || message_type_ == MessageType::kDirectoryUpdateRequest || message_type_ == MessageType::kFinishBlockRequest || message_type_ == MessageType::kInvalidationRequest || message_type_ == MessageType::kReleaseWritelockRequest || message_type_ == MessageType::kCoveredDirectoryLookupRequest || message_type_ == MessageType::kCoveredDirectoryUpdateRequest || message_type_ == MessageType::kCoveredAcquireWritelockRequest || message_type_ == MessageType::kCoveredReleaseWritelockRequest || message_type_ == MessageType::kCoveredPlacementDirectoryUpdateRequest || message_type_ == MessageType::kCoveredPlacementNotifyRequest || message_type_ == MessageType::kCoveredVictimFetchRequest || message_type_ == MessageType::kCoveredPlacementHybridFetchedRequest || message_type_ == MessageType::kCoveredPlacementDirectoryAdmitRequest)
+        if (message_type_ == MessageType::kAcquireWritelockRequest || message_type_ == MessageType::kDirectoryLookupRequest || message_type_ == MessageType::kDirectoryUpdateRequest || message_type_ == MessageType::kFinishBlockRequest || message_type_ == MessageType::kInvalidationRequest || message_type_ == MessageType::kReleaseWritelockRequest || message_type_ == MessageType::kCoveredDirectoryLookupRequest || message_type_ == MessageType::kCoveredDirectoryUpdateRequest || message_type_ == MessageType::kCoveredAcquireWritelockRequest || message_type_ == MessageType::kCoveredReleaseWritelockRequest || message_type_ == MessageType::kCoveredPlacementDirectoryUpdateRequest || message_type_ == MessageType::kCoveredPlacementNotifyRequest || message_type_ == MessageType::kCoveredVictimFetchRequest || message_type_ == MessageType::kCoveredPlacementHybridFetchedRequest || message_type_ == MessageType::kCoveredPlacementDirectoryAdmitRequest || message_type_ == MessageType::kCoveredInvalidationRequest || message_type_ == MessageType::kCoveredFinishBlockRequest)
         {
             return true;
         }
@@ -1349,7 +1409,7 @@ namespace covered
     bool MessageBase::isCooperationControlResponse() const
     {
         checkIsValid_();
-        if (message_type_ == MessageType::kAcquireWritelockResponse || message_type_ == MessageType::kDirectoryLookupResponse || message_type_ == MessageType::kDirectoryUpdateResponse || message_type_ == MessageType::kFinishBlockResponse || message_type_ == MessageType::kInvalidationResponse || message_type_ == MessageType::kReleaseWritelockResponse || message_type_ == MessageType::kCoveredDirectoryLookupResponse || message_type_ == MessageType::kCoveredDirectoryUpdateResponse || message_type_ == MessageType::kCoveredAcquireWritelockResponse || message_type_ == MessageType::kCoveredReleaseWritelockResponse || message_type_ == MessageType::kCoveredPlacementDirectoryUpdateResponse || message_type_ == MessageType::kCoveredVictimFetchResponse || message_type_ == MessageType::kCoveredPlacementDirectoryLookupResponse || message_type_ == MessageType::kCoveredPlacementDirectoryEvictResponse || message_type_ == MessageType::kCoveredPlacementReleaseWritelockResponse || message_type_ == MessageType::kCoveredPlacementHybridFetchedResponse || message_type_ == MessageType::kCoveredPlacementDirectoryAdmitResponse)
+        if (message_type_ == MessageType::kAcquireWritelockResponse || message_type_ == MessageType::kDirectoryLookupResponse || message_type_ == MessageType::kDirectoryUpdateResponse || message_type_ == MessageType::kFinishBlockResponse || message_type_ == MessageType::kInvalidationResponse || message_type_ == MessageType::kReleaseWritelockResponse || message_type_ == MessageType::kCoveredDirectoryLookupResponse || message_type_ == MessageType::kCoveredDirectoryUpdateResponse || message_type_ == MessageType::kCoveredAcquireWritelockResponse || message_type_ == MessageType::kCoveredReleaseWritelockResponse || message_type_ == MessageType::kCoveredPlacementDirectoryUpdateResponse || message_type_ == MessageType::kCoveredVictimFetchResponse || message_type_ == MessageType::kCoveredPlacementDirectoryLookupResponse || message_type_ == MessageType::kCoveredPlacementDirectoryEvictResponse || message_type_ == MessageType::kCoveredPlacementReleaseWritelockResponse || message_type_ == MessageType::kCoveredPlacementHybridFetchedResponse || message_type_ == MessageType::kCoveredPlacementDirectoryAdmitResponse || message_type_ == MessageType::kCoveredInvalidationResponse || message_type_ == MessageType::kCoveredFinishBlockResponse)
         {
             return true;
         }

@@ -30,7 +30,9 @@ namespace covered
         static const std::string kClassName;
 
         // Return if edge node is finished
-        virtual bool processInvalidationRequest_(MessageBase* control_request_ptr, const NetworkAddr& recvrsp_dst_addr) = 0;
+        bool processInvalidationRequest_(MessageBase* control_request_ptr, const NetworkAddr& recvrsp_dst_addr);
+        virtual void processReqForInvalidation_(MessageBase* control_request_ptr) = 0;
+        virtual MessageBase* getRspForInvalidation_(MessageBase* control_request_ptr, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list) = 0;
 
         // Member varaibles
 
