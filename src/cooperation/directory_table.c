@@ -100,6 +100,7 @@ namespace covered
             uint32_t random_number = uniform_dist(*directory_randgen_ptr_);
             assert(random_number < dirinfo_set_size);
             bool with_complete_dirinfo_set = valid_directory_info_set.getDirinfoIfComplete(random_number, directory_info);
+            assert(with_complete_dirinfo_set); // NOTE: dirinfo set from directory entry MUST be complete
             assert(directory_info.getTargetEdgeIdx() != source_edge_idx); // NOTE: find a non-source valid directory info if any
         }
 

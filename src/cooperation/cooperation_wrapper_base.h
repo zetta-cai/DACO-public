@@ -49,8 +49,8 @@ namespace covered
         bool lookupDirectoryTableByBeaconServer(const Key& key, const uint32_t& source_edge_idx, const NetworkAddr& cache_server_worker_recvreq_dst_addr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, bool& is_source_cached); // Check local directory information (NOTE: find a non-source valid directory info if any)
         bool updateDirectoryTable(const Key& key, const uint32_t& source_edge_idx, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written, bool& is_source_cached); // Update local directory information
 
-        LockResult acquireLocalWritelockByCacheServer(const Key& key, const uint32_t& source_edge_idx, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo, bool& is_source_cached);
-        LockResult acquireLocalWritelockByBeaconServer(const Key& key, const uint32_t& source_edge_idx, const NetworkAddr& cache_server_worker_recvreq_dst_addr, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo, bool& is_source_cached);
+        LockResult acquireLocalWritelockByCacheServer(const Key& key, const uint32_t& source_edge_idx, DirinfoSet& all_dirinfo, bool& is_source_cached);
+        LockResult acquireLocalWritelockByBeaconServer(const Key& key, const uint32_t& source_edge_idx, const NetworkAddr& cache_server_worker_recvreq_dst_addr, DirinfoSet& all_dirinfo, bool& is_source_cached);
         std::unordered_set<NetworkAddr, NetworkAddrHasher> releaseLocalWritelock(const Key& key, const uint32_t& source_edge_idx, const DirectoryInfo& sender_dirinfo, bool& is_source_cached);
 
         // (3) Other functions

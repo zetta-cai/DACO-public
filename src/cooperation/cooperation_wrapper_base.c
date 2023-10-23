@@ -228,7 +228,7 @@ namespace covered
 
     // (4) Process writes for MSI protocol
 
-    LockResult CooperationWrapperBase::acquireLocalWritelockByCacheServer(const Key& key, const uint32_t& source_edge_idx, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo, bool& is_source_cached)
+    LockResult CooperationWrapperBase::acquireLocalWritelockByCacheServer(const Key& key, const uint32_t& source_edge_idx, DirinfoSet& all_dirinfo, bool& is_source_cached)
     {
         checkPointers_();
 
@@ -265,7 +265,7 @@ namespace covered
         return lock_result;
     }
 
-    LockResult CooperationWrapperBase::acquireLocalWritelockByBeaconServer(const Key& key, const uint32_t& source_edge_idx, const NetworkAddr& cache_server_worker_recvreq_dst_addr, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo, bool& is_source_cached)
+    LockResult CooperationWrapperBase::acquireLocalWritelockByBeaconServer(const Key& key, const uint32_t& source_edge_idx, const NetworkAddr& cache_server_worker_recvreq_dst_addr, DirinfoSet& all_dirinfo, bool& is_source_cached)
     {
         checkPointers_();
 

@@ -150,7 +150,7 @@ namespace covered
     {
         assert(dedup_bitmap_ != INVALID_BITMAP);
 
-        return (dedup_bitmap_ & DEDUP_MASK == COMPLETE_BITMAP & DEDUP_MASK);
+        return ((dedup_bitmap_ & DEDUP_MASK) == (COMPLETE_BITMAP & DEDUP_MASK));
     }
 
     bool VictimCacheinfo::isStale() const

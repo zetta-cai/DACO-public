@@ -329,7 +329,7 @@ namespace covered
 
     // (3) Invalidate and unblock for MSI protocol
 
-    bool EdgeWrapper::parallelInvalidateCacheCopies(UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, const Key& key, const std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& all_dirinfo, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
+    bool EdgeWrapper::parallelInvalidateCacheCopies(UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, const Key& key, const DirinfoSet& all_dirinfo, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
     {
         assert(recvrsp_socket_server_ptr != NULL);
         assert(recvrsp_source_addr.isValidAddr());
@@ -338,7 +338,12 @@ namespace covered
         bool is_finish = false;
         struct timespec invalidate_cache_copies_start_timestamp = Util::getCurrentTimespec();
 
-        uint32_t invalidate_edgecnt = all_dirinfo.size();
+        // Get dirinfo unordered set from dirinfo set
+        std::unordered_set<DirectoryInfo, DirectoryInfoHasher> tmp_all_dirinfo_unordered_set;
+        bool with_complete_dirinfo_set = all_dirinfo.getDirinfoSetIfComplete(tmp_all_dirinfo_unordered_set);
+        assert(with_complete_dirinfo_set); // NOTE: dirinfo set from local directory table MUST be complete
+
+        uint32_t invalidate_edgecnt = tmp_all_dirinfo_unordered_set.size();
         if (invalidate_edgecnt == 0)
         {
             return is_finish;
@@ -347,7 +352,7 @@ namespace covered
 
         // Convert directory informations into destination network addresses
         std::unordered_map<uint32_t, NetworkAddr> percachecopy_dstaddr;
-        for (std::unordered_set<DirectoryInfo, DirectoryInfoHasher>::const_iterator iter = all_dirinfo.begin(); iter != all_dirinfo.end(); iter++)
+        for (std::unordered_set<DirectoryInfo, DirectoryInfoHasher>::const_iterator iter = tmp_all_dirinfo_unordered_set.begin(); iter != tmp_all_dirinfo_unordered_set.end(); iter++)
         {
             uint32_t tmp_edgeidx = iter->getTargetEdgeIdx();
             std::string tmp_edge_ipstr = Config::getEdgeIpstr(tmp_edgeidx, node_cnt_);

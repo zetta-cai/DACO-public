@@ -160,7 +160,7 @@ namespace covered
     {
         assert(delta_bitmap_ != INVALID_BITMAP);
 
-        return (delta_bitmap_ & DELTA_MASK == COMPLETE_BITMAP & DELTA_MASK);
+        return ((delta_bitmap_ & DELTA_MASK) == (COMPLETE_BITMAP & DELTA_MASK));
     }
 
     bool DirinfoSet::isCompressed() const

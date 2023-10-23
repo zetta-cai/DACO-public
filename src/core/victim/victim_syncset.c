@@ -46,7 +46,8 @@ namespace covered
         else
         {
             uint64_t tmp_delta_abs = prev_cache_margin_bytes - current_cache_margin_bytes;
-            uint64_t min_int_abs = static_cast<uint64_t>(-1 * std::numeric_limits<int>::min());
+            // NOTE: directly using (-1 * std::numeric_limits<int>::min()) will incur integer overflow as std::numeric_limits<int>::max() = -1 * std::numeric_limits<int>::min() - 1
+            uint64_t min_int_abs = static_cast<uint64_t>(-1 * static_cast<int64_t>(std::numeric_limits<int>::min()));
             if (tmp_delta_abs <= min_int_abs) // Within valid range to be delta-compressed
             {
                 cache_margin_delta_bytes = -1 * static_cast<int>(tmp_delta_abs);
@@ -313,6 +314,7 @@ namespace covered
                 Reward local_reward = 0.0;
                 tmp_complete_victim_cacheinfo.getLocalReward(local_reward);
                 oss <<"[" << i << "] key: " << tmp_complete_victim_cacheinfo.getKey().getKeystr() << " reward: " << local_reward << std::endl;
+                i++;
             }
             Util::dumpDebugMsg(kClassName, oss.str());
             #endif
@@ -324,13 +326,14 @@ namespace covered
             oss.str("");
             oss.clear();
             oss << "[after sort]" << std::endl;
-            uint32_t i = 0;
+            uint32_t j = 0;
             for (std::list<VictimCacheinfo>::const_iterator complete_victim_cacheinfos_const_iter = complete_victim_cacheinfos.begin(); complete_victim_cacheinfos_const_iter != complete_victim_cacheinfos.end(); complete_victim_cacheinfos_const_iter++)
             {
                 const VictimCacheinfo& tmp_complete_victim_cacheinfo = *complete_victim_cacheinfos_const_iter;
                 Reward local_reward = 0.0;
                 tmp_complete_victim_cacheinfo.getLocalReward(local_reward);
-                oss <<"[" << i << "] key: " << tmp_complete_victim_cacheinfo.getKey().getKeystr() << " reward: " << local_reward << std::endl;
+                oss <<"[" << j << "] key: " << tmp_complete_victim_cacheinfo.getKey().getKeystr() << " reward: " << local_reward << std::endl;
+                j++;
             }
             Util::dumpDebugMsg(kClassName, oss.str());
             #endif
@@ -442,14 +445,14 @@ namespace covered
     {
         assert(compressed_bitmap_ != INVALID_BITMAP);
 
-        return (compressed_bitmap_ & COMPRESS_MASK == COMPLETE_BITMAP & COMPRESS_MASK);
+        return ((compressed_bitmap_ & COMPRESS_MASK) == (COMPLETE_BITMAP & COMPRESS_MASK));
     }
 
     bool VictimSyncset::isCompressed() const
     {
         assert(compressed_bitmap_ != INVALID_BITMAP);
 
-        return (compressed_bitmap_ & CACHE_MARGIN_BYTES_DELTA_MASK == CACHE_MARGIN_BYTES_DELTA_MASK) || (compressed_bitmap_ & LOCAL_SYNCED_VICTIMS_DEDUP_MASK == LOCAL_SYNCED_VICTIMS_DEDUP_MASK) || (compressed_bitmap_ & LOCAL_BEACONED_VICTIMS_DEDUP_MASK == LOCAL_BEACONED_VICTIMS_DEDUP_MASK);
+        return ((compressed_bitmap_ & CACHE_MARGIN_BYTES_DELTA_MASK) == CACHE_MARGIN_BYTES_DELTA_MASK) || ((compressed_bitmap_ & LOCAL_SYNCED_VICTIMS_DEDUP_MASK) == LOCAL_SYNCED_VICTIMS_DEDUP_MASK) || ((compressed_bitmap_ & LOCAL_BEACONED_VICTIMS_DEDUP_MASK) == LOCAL_BEACONED_VICTIMS_DEDUP_MASK);
     }
 
     // For both complete and compressed victim syncsets
