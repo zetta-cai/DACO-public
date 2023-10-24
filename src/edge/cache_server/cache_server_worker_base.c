@@ -530,7 +530,9 @@ namespace covered
                 }
                 else
                 {
-                    Util::dumpWarnMsg(base_instance_name_, "edge timeout to wait for DirectoryLookupResponse");
+                    std::ostringstream oss;
+                    oss << "edge timeout to wait for DirectoryLookupResponse for key " << key.getKeystr();
+                    Util::dumpWarnMsg(base_instance_name_, oss.str());
                     continue; // Resend the control request message
                 }
             } // End of (is_timeout == true)
@@ -580,6 +582,11 @@ namespace covered
 
         while (true) // Timeout-and-retry mechanism
         {
+            // TMPDEBUG231024
+            std::ostringstream oss;
+            oss << "edge " << tmp_edge_wrapper_ptr->getNodeIdx() << " issues redirected get request to edge " << directory_info.getTargetEdgeIdx() << " for key " << key.getKeystr();
+            Util::dumpDebugMsg(base_instance_name_, oss.str());
+
             // Prepare redirected get request to get data from target edge node if any
             MessageBase* redirected_get_request_ptr = getReqToRedirectGet_(directory_info.getTargetEdgeIdx(), key, skip_propagation_latency);
             assert(redirected_get_request_ptr != NULL);
@@ -603,7 +610,9 @@ namespace covered
                 }
                 else
                 {
-                    Util::dumpWarnMsg(base_instance_name_, "edge timeout to wait for RedirectedGetResponse");
+                    std::ostringstream oss;
+                    oss << "edge timeout to wait for RedirectedGetResponse for key " << key.getKeystr();
+                    Util::dumpWarnMsg(base_instance_name_, oss.str());
                     continue; // Resend the redirected request message
                 }
             } // End of (is_timeout == true)
@@ -630,9 +639,10 @@ namespace covered
                 }
                 else if (hitflag == Hitflag::kGlobalMiss)
                 {
+                    // NOTE: this is a minor yet normal case, as the target edge node has evicted the object yet the directory info in the beacon edge node has not been updated yet before answering the directory lookup request
                     std::ostringstream oss;
-                    oss << "target edge node does not cache the key " << key.getKeystr() << " in redirectGetToTarget_()!";
-                    Util::dumpWarnMsg(base_instance_name_, oss.str());
+                    oss << "redirectGetToTarget_(): target edge node does not cache the key " << key.getKeystr() << ", which may be already evicted yet w/o directory update yet!";
+                    Util::dumpInfoMsg(base_instance_name_, oss.str());
 
                     is_cooperative_cached = false;
                     is_valid = false;
@@ -709,7 +719,9 @@ namespace covered
                 }
                 else
                 {
-                    Util::dumpWarnMsg(base_instance_name_, "edge timeout to wait for GlobalGetResponse");
+                    std::ostringstream oss;
+                    oss << "edge timeout to wait for GlobalGetResponse for key " << key.getKeystr();
+                    Util::dumpWarnMsg(base_instance_name_, oss.str());
                     continue; // Resend the global request message
                 }
             }
@@ -1035,7 +1047,9 @@ namespace covered
                 }
                 else
                 {
-                    Util::dumpWarnMsg(base_instance_name_, "edge timeout to wait for AcquireWritelockResponse");
+                    std::ostringstream oss;
+                    oss << "edge timeout to wait for AcquireWritelockResponse for key " << key.getKeystr();
+                    Util::dumpWarnMsg(base_instance_name_, oss.str());
                     continue; // Resend the control request message
                 }
             } // End of (is_timeout == true)
@@ -1101,7 +1115,9 @@ namespace covered
                 }
                 else // Retry to receive a message if edge is still running
                 {
-                    Util::dumpWarnMsg(base_instance_name_, "edge timeout to wait for FinishBlockRequest");
+                    std::ostringstream oss;
+                    oss << "edge timeout to wait for FinishBlockRequest for key " << key.getKeystr();
+                    Util::dumpWarnMsg(base_instance_name_, oss.str());
                     continue;
                 }
             } // End of (is_timeout == true)
@@ -1235,7 +1251,9 @@ namespace covered
                 }
                 else
                 {
-                    Util::dumpWarnMsg(base_instance_name_, "edge timeout to wait for GlobalPutResponse/GlobalDelResponse");
+                    std::ostringstream oss;
+                    oss << "edge timeout to wait for GlobalPutResponse/GlobalDelResponse for key " << key.getKeystr();
+                    Util::dumpWarnMsg(base_instance_name_, oss.str());
                     continue; // Resend the global request message
                 }
             }
@@ -1362,7 +1380,9 @@ namespace covered
                 }
                 else
                 {
-                    Util::dumpWarnMsg(base_instance_name_, "edge timeout to wait for ReleaseWritelockResponse");
+                    std::ostringstream oss;
+                    oss << "edge timeout to wait for ReleaseWritelockResponse for key " << key.getKeystr();
+                    Util::dumpWarnMsg(base_instance_name_, oss.str());
                     continue; // Resend the control request message
                 }
             } // End of (is_timeout == true)
@@ -1441,6 +1461,11 @@ namespace covered
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
+        // TMPDEBUG231024
+        std::ostringstream oss;
+        oss << "edge " << tmp_edge_wrapper_ptr->getNodeIdx() << " receives redirected get request from edge " << redirected_request_ptr->getSourceIndex() << " for key " << MessageBase::getKeyFromMessage(redirected_request_ptr).getKeystr();
+        Util::dumpDebugMsg(base_instance_name_, oss.str());
+
         bool is_finish = false;
         BandwidthUsage total_bandwidth_usage;
         EventList event_list;
@@ -1490,6 +1515,12 @@ namespace covered
         MessageBase* redirected_get_response_ptr = getRspForRedirectedGet_(redirected_request_ptr, tmp_value, hitflag, total_bandwidth_usage, event_list);
         assert(redirected_get_response_ptr != NULL);
 
+        // TMPDEBUG231024
+        oss.clear();
+        oss.str("");
+        oss << "edge " << tmp_edge_wrapper_ptr->getNodeIdx() << " issues redirected get response to edge " << redirected_request_ptr->getSourceIndex() << " for key " << MessageBase::getKeyFromMessage(redirected_get_response_ptr).getKeystr() << " with hitflag " << MessageBase::hitflagToString(hitflag);
+        Util::dumpDebugMsg(base_instance_name_, oss.str());
+
         // Push the redirected response message into edge-to-client propagation simulator to cache server worker in the closest edge node
         tmp_edge_wrapper_ptr->getEdgeToclientPropagationSimulatorParamPtr()->push(redirected_get_response_ptr, recvrsp_dst_addr);
 
@@ -1518,7 +1549,7 @@ namespace covered
 
             #ifdef DEBUG_CACHE_SERVER_WORKER
             uint64_t used_bytes_before_admit = tmp_edge_wrapper_ptr->getSizeForCapacity();
-            //Util::dumpVariablesForDebug(base_instance_name_, 11, "independent admission;", "keystr:", key.getKeystr().c_str(), "keysize:", std::to_string(key.getKeyLength()).c_str(), "is value deleted:", Util::toString(value.isDeleted()).c_str(), "value size:", Util::toString(value.getValuesize()).c_str(), "used_bytes_before_admit:", std::to_string(used_bytes_before_admit).c_str());
+            Util::dumpVariablesForDebug(base_instance_name_, 11, "independent admission;", "keystr:", key.getKeystr().c_str(), "keysize:", std::to_string(key.getKeyLength()).c_str(), "is value deleted:", Util::toString(value.isDeleted()).c_str(), "value size:", Util::toString(value.getValuesize()).c_str(), "used_bytes_before_admit:", std::to_string(used_bytes_before_admit).c_str());
             #endif
 
             is_finish = admitObject_(key, value, total_bandwidth_usage, event_list, skip_propagation_latency);

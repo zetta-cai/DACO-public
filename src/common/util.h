@@ -101,6 +101,7 @@ namespace covered
 
         // (1.1) stdout/stderr I/O
         static void dumpNormalMsg(const std::string& class_name, const std::string& normal_message);
+        static void dumpInfoMsg(const std::string& class_name, const std::string& info_message);
         static void dumpDebugMsg(const std::string& class_name, const std::string& debug_message);
         static void dumpWarnMsg(const std::string& class_name, const std::string& warn_message);
         static void dumpErrorMsg(const std::string& class_name, const std::string& error_message);

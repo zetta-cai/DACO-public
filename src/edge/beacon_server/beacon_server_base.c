@@ -228,6 +228,10 @@ namespace covered
             return is_finish; // Edge node is NOT running now
         }
 
+        #ifdef DEBUG_BEACON_SERVER
+        Util::dumpVariablesForDebug(base_instance_name_, 6, "is_being_written:", Util::toString(is_being_written).c_str(), "is_valid_directory_exist:", Util::toString(is_valid_directory_exist).c_str(), "directory_info:", std::to_string(directory_info.getTargetEdgeIdx()).c_str());
+        #endif
+
         // Add intermediate event if with event tracking
         struct timespec lookup_local_directory_end_timestamp = Util::getCurrentTimespec();
         uint32_t lookup_local_directory_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(lookup_local_directory_end_timestamp, lookup_local_directory_start_timestamp));

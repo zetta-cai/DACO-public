@@ -324,7 +324,9 @@ namespace covered
                 }
                 else
                 {
-                    Util::dumpWarnMsg(instance_name_, "edge timeout to wait for DirectoryUpdateResponse");
+                    std::ostringstream oss;
+                    oss << "edge timeout to wait for DirectoryUpdateResponse for key " << key.getKeystr();
+                    Util::dumpWarnMsg(instance_name_, oss.str());
                     continue; // Resend the control request message
                 }
             } // End of (is_timeout == true)
@@ -496,6 +498,17 @@ namespace covered
 
         // NOTE: we can release writelock here as cache size usage has already been updated after evicting local edge cache
         rwlock_for_eviction_ptr_->unlock(context_name);
+
+        #ifdef DEBUG_CACHE_SERVER
+        std::ostringstream oss;
+        oss << total_victims.size() << " victims in evictForCapacity_(): ";
+        uint32_t i = 0;
+        for (std::unordered_map<Key, Value, KeyHasher>::const_iterator total_victims_const_iter = total_victims.begin(); total_victims_const_iter != total_victims.end(); total_victims_const_iter++)
+        {
+            oss << "[" << i << "] victim_key " << total_victims_const_iter->first.getKeystr() << " valuesize " << total_victims_const_iter->second.getValuesize();
+        }
+        Util::dumpDebugMsg(instance_name_, oss.str());
+        #endif
 
         // Perform directory updates for all evicted victims in parallel
         struct timespec update_directory_to_evict_start_timestamp = Util::getCurrentTimespec();
@@ -958,7 +971,9 @@ namespace covered
                 }
                 else
                 {
-                    Util::dumpWarnMsg(instance_name_, "edge timeout to wait for foreground directory update response after hybrid data fetching");
+                    std::ostringstream oss;
+                    oss << "edge timeout to wait for foreground directory update response after hybrid data fetching for key " << key.getKeystr();
+                    Util::dumpWarnMsg(instance_name_, oss.str());
                     continue; // Resend the control request message
                 }
             } // End of (is_timeout == true)
