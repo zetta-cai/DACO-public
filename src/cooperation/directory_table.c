@@ -30,7 +30,7 @@ namespace covered
 
     DirinfoSet DirectoryTable::getAll(const Key& key) const
     {
-        DirinfoSet all_dirinfo;
+        DirinfoSet all_dirinfo = DirinfoSet(std::unordered_set<DirectoryInfo, DirectoryInfoHasher>());
 
         // Prepare GetAllDirinfoParam
         DirectoryEntry::GetAllDirinfoParam tmp_param = {all_dirinfo};
@@ -40,7 +40,7 @@ namespace covered
 
         if (!is_exist) // key does not exist
         {
-            assert(all_dirinfo.isInvalid()); // Uninitialized DirinfoSet
+            assert(!all_dirinfo.isInvalid()); // Still valid DirinfoSet with an empty unordered set
         }
         else // key (i.e., directory entry) exists
         {

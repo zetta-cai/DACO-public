@@ -400,7 +400,8 @@ namespace covered
             } // End of edgeidx_for_request
 
             // Receive (blocked_edgecnt - acked_edgecnt) control repsonses from the closest edge nodes
-            for (uint32_t edgeidx_for_response = 0; edgeidx_for_response < victim_fetch_edgecnt - acked_edgecnt; edgeidx_for_response++)
+            const uint32_t expected_rspcnt = victim_fetch_edgecnt - acked_edgecnt;
+            for (uint32_t edgeidx_for_response = 0; edgeidx_for_response < expected_rspcnt; edgeidx_for_response++)
             {
                 DynamicArray control_response_msg_payload;
                 bool is_timeout = recvrsp_socket_server_ptr->recv(control_response_msg_payload);

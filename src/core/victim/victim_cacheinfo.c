@@ -146,6 +146,11 @@ namespace covered
 
     VictimCacheinfo::~VictimCacheinfo() {}
 
+    bool VictimCacheinfo::isInvalid() const
+    {
+        return (dedup_bitmap_ == INVALID_BITMAP);
+    }
+
     bool VictimCacheinfo::isComplete() const
     {
         assert(dedup_bitmap_ != INVALID_BITMAP);

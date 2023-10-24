@@ -325,7 +325,8 @@ namespace covered
             issueMsgToUnackedNodes_((MessageBase*)&tmp_startrun_request, startrun_acked_flags);
 
             // Receive StartrunResponses for unacked clients
-            for (uint32_t i = 0; i < (startrun_acked_flags.size() - acked_cnt); i++)
+            const uint32_t expected_rspcnt = startrun_acked_flags.size() - acked_cnt;
+            for (uint32_t i = 0; i < expected_rspcnt; i++)
             {
                 DynamicArray control_response_msg_payload;
                 bool is_timeout = evaluator_recvmsg_socket_server_ptr_->recv(control_response_msg_payload);
@@ -381,8 +382,9 @@ namespace covered
             SwitchSlotRequest tmp_switch_slot_request(target_slot_idx_, 0, evaluator_recvmsg_source_addr_);
             issueMsgToUnackedNodes_((MessageBase*)&tmp_switch_slot_request, switchslot_acked_flags);
 
-            // Receive SwitchSlotResponses for unacked clients
-            for (uint32_t i = 0; i < (switchslot_acked_flags.size() - acked_cnt); i++)
+            // Receive SwitchSlotResponses for unacked clients    
+            const uint32_t expected_rspcnt = switchslot_acked_flags.size() - acked_cnt;
+            for (uint32_t i = 0; i < expected_rspcnt; i++)
             {
                 DynamicArray control_response_msg_payload;
                 bool is_timeout = evaluator_recvmsg_socket_server_ptr_->recv(control_response_msg_payload);
@@ -400,11 +402,23 @@ namespace covered
                     bool is_first_rsp_for_ack = processMsgForAck_(control_response_ptr, switchslot_acked_flags);
                     if (is_first_rsp_for_ack)
                     {
+                        /*// (OBSOLETE as std::unordered_map does NOT follow insertion order) Calculate client idx
                         std::unordered_map<NetworkAddr, bool, NetworkAddrHasher>::iterator iter = switchslot_acked_flags.find(control_response_ptr->getSourceAddr());
                         assert(iter != switchslot_acked_flags.end());
+                        uint32_t client_idx = static_cast<uint32_t>(std::distance(switchslot_acked_flags.begin(), iter));*/
 
-                        // Calculate and check client idx
-                        uint32_t client_idx = static_cast<uint32_t>(std::distance(switchslot_acked_flags.begin(), iter));
+                        // Calculate client idx
+                        uint32_t client_idx = clientcnt_;
+                        for (uint32_t i = 0; i < clientcnt_; i++)
+                        {
+                            if (perclient_recvmsg_dst_addrs_[i] == control_response_ptr->getSourceAddr())
+                            {
+                                client_idx = i;
+                                break;
+                            }
+                        }
+
+                        // Check client idx
                         assert(client_idx == control_response_ptr->getSourceIndex());
                         assert(client_idx < clientcnt_);
 
@@ -456,7 +470,8 @@ namespace covered
             issueMsgToUnackedNodes_((MessageBase*)&tmp_finish_warmup_request, finish_warmup_acked_flags);
 
             // Receive FinishWarmupResponses for unacked clients
-            for (uint32_t i = 0; i < (finish_warmup_acked_flags.size() - acked_cnt); i++)
+            const uint32_t expected_rspcnt = finish_warmup_acked_flags.size() - acked_cnt;
+            for (uint32_t i = 0; i < expected_rspcnt; i++)
             {
                 DynamicArray control_response_msg_payload;
                 bool is_timeout = evaluator_recvmsg_socket_server_ptr_->recv(control_response_msg_payload);
@@ -523,7 +538,8 @@ namespace covered
             issueMsgToUnackedNodes_((MessageBase*)&tmp_finishrun_request, finishrun_acked_flags);
 
             // Receive FinishrunResponses for unacked clients
-            for (uint32_t i = 0; i < (finishrun_acked_flags.size() - acked_cnt); i++)
+            const uint32_t expected_rspcnt = finishrun_acked_flags.size() - acked_cnt;
+            for (uint32_t i = 0; i < expected_rspcnt; i++)
             {
                 DynamicArray control_response_msg_payload;
                 bool is_timeout = evaluator_recvmsg_socket_server_ptr_->recv(control_response_msg_payload);
@@ -541,11 +557,23 @@ namespace covered
                     bool is_first_rsp_for_ack = processMsgForAck_(control_response_ptr, finishrun_acked_flags);
                     if (is_first_rsp_for_ack)
                     {
+                        /*// (OBSOLETE as std::unordered_map does NOT follow insertion order) Calculate client idx
                         std::unordered_map<NetworkAddr, bool, NetworkAddrHasher>::iterator iter = finishrun_acked_flags.find(control_response_ptr->getSourceAddr());
                         assert(iter != finishrun_acked_flags.end());
+                        uint32_t client_idx = static_cast<uint32_t>(std::distance(finishrun_acked_flags.begin(), iter));*/
 
-                        // Calculate and check client idx
-                        uint32_t client_idx = static_cast<uint32_t>(std::distance(finishrun_acked_flags.begin(), iter));
+                        // Calculate client idx
+                        uint32_t client_idx = clientcnt_;
+                        for (uint32_t i = 0; i < clientcnt_; i++)
+                        {
+                            if (perclient_recvmsg_dst_addrs_[i] == control_response_ptr->getSourceAddr())
+                            {
+                                client_idx = i;
+                                break;
+                            }
+                        }
+
+                        // Check client idx
                         assert(client_idx == control_response_ptr->getSourceIndex());
                         assert(client_idx < clientcnt_);
 
@@ -593,7 +621,8 @@ namespace covered
             issueMsgToUnackedNodes_((MessageBase*)&tmp_finishrun_request, finishrun_acked_flags);
 
             // Receive SimpleFinishrunResponses for unacked edge/cloud nodes
-            for (uint32_t i = 0; i < (finishrun_acked_flags.size() - acked_cnt); i++)
+            const uint32_t expected_rspcnt = finishrun_acked_flags.size() - acked_cnt;
+            for (uint32_t i = 0; i < expected_rspcnt; i++)
             {
                 DynamicArray control_response_msg_payload;
                 bool is_timeout = evaluator_recvmsg_socket_server_ptr_->recv(control_response_msg_payload);

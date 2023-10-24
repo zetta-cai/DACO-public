@@ -812,6 +812,8 @@ namespace covered
                 VictimCacheinfo cacheinfo;
                 uint32_t cacheinfo_deserialize_size = cacheinfo.deserialize(msg_payload, size); // Complete or compressed
                 size += cacheinfo_deserialize_size;
+                assert(!cacheinfo.isInvalid());
+                
                 local_synced_victims_.push_back(cacheinfo);
             }
         }
@@ -836,6 +838,7 @@ namespace covered
                 DirinfoSet tmp_dirinfo_set;
                 uint32_t dirinfo_set_deserialize_size = tmp_dirinfo_set.deserialize(msg_payload, size); // Complete or compressed
                 size += dirinfo_set_deserialize_size;
+                assert(!tmp_dirinfo_set.isInvalid());
 
                 local_beaconed_victims_.insert(std::pair(key, tmp_dirinfo_set));
             }

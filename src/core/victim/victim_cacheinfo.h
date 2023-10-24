@@ -29,6 +29,7 @@ namespace covered
         VictimCacheinfo(const Key& key, const ObjectSize& object_size, const Popularity& local_cached_popularity, const Popularity& redirected_cached_popularity, const Reward& local_reward);
         ~VictimCacheinfo();
 
+        bool isInvalid() const;
         bool isComplete() const; // Whether all fields are NOT deduped
         bool isStale() const; // Whether the given key is NOT local synced victim yet and should be removed from victim tracker
         bool isDeduped() const; // Whether at least one field is deduped

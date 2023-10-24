@@ -595,7 +595,8 @@ namespace covered
 
             // Receive (total_victim_cnt - acked_cnt) directory update repsonses from the beacon edge nodes
             // NOTE: acked_cnt has already been increased for local diretory eviction
-            for (uint32_t keyidx_for_response = 0; keyidx_for_response < total_victim_cnt - acked_cnt; keyidx_for_response++)
+            const uint32_t expected_rspcnt = total_victim_cnt - acked_cnt;
+            for (uint32_t keyidx_for_response = 0; keyidx_for_response < expected_rspcnt; keyidx_for_response++)
             {
                 DynamicArray control_response_msg_payload;
                 bool is_timeout = recvrsp_socket_server_ptr->recv(control_response_msg_payload);

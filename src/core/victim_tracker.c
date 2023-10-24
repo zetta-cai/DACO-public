@@ -556,43 +556,56 @@ namespace covered
     {
         bool is_last_copies = true; // Whether the victim edgeset is the last copies of the given key, i.e., contains all dirinfos
 
-        DirinfoSet tmp_dirinfo_set;
+        std::vector<DirinfoSet> tmp_dirinfo_sets;
 
+        // Get synced victim dirinfo set of perkey_victim_dirinfo_ for the given key if any
         perkey_victim_dirinfo_t::const_iterator victim_dirinfo_map_const_iter = perkey_victim_dirinfo_.find(key);
-        if (victim_dirinfo_map_const_iter == perkey_victim_dirinfo_.end()) // NOTE: synced/extra-fetched victim key may NOT have synced victim dirinfo in the current edge node, as the correpsonding beacon node may have NOT synced the latest victim dirinfo to the current edge node
-        {
-            std::unordered_map<Key, DirinfoSet, KeyHasher>::const_iterator victim_dirinfosets_const_iter = extra_perkey_victim_dirinfoset.find(key);
-            if (victim_dirinfosets_const_iter == extra_perkey_victim_dirinfoset.end()) // NOTE: synced/extra-fetched victim key may NOT have extra fetched dirinfo set in extra_perkey_victim_dirinfoset
-            {
-                // NOTE: if without synced VicimDirinfo and without extra fetched dirinfo set, beacon server will treat it as the last cache copies conservatively
-                is_last_copies = true;
-            }
-            else
-            {
-                tmp_dirinfo_set = victim_dirinfosets_const_iter->second;
-            }
-        }
-        else
+        if (victim_dirinfo_map_const_iter != perkey_victim_dirinfo_.end()) // NOTE: synced/extra-fetched victim key may be neighbor-beaconed and NOT have synced victim dirinfo in the current edge node, as the correpsonding beacon node may have NOT synced the latest victim dirinfo to the current edge node
         {
             const VictimDirinfo& tmp_victim_dirinfo = victim_dirinfo_map_const_iter->second;
-            tmp_dirinfo_set = tmp_victim_dirinfo.getDirinfoSetRef();
+            DirinfoSet tmp_dirinfo_set = tmp_victim_dirinfo.getDirinfoSetRef();
+            assert(tmp_dirinfo_set.isComplete()); // NOTE: victim dirinfo set from victim dirinfo of victim tracker and extra fetched dirinfo set from extra_perkey_victim_dirinfoset MUST be complete
+
+            tmp_dirinfo_sets.push_back(tmp_dirinfo_set);
         }
 
-        assert(tmp_dirinfo_set.isComplete()); // NOTE: victim dirinfo set from victim dirinfo of victim tracker and extra fetched dirinfo set from extra_perkey_victim_dirinfoset MUST be complete
-
-        std::unordered_set<DirectoryInfo, DirectoryInfoHasher> tmp_dirinfo_unordered_set;
-        bool with_complete_dirinfo_set = tmp_dirinfo_set.getDirinfoSetIfComplete(tmp_dirinfo_unordered_set);
-        assert(with_complete_dirinfo_set == true); // NOTE: victim dirinfo set from victim dirinfo of victim tracker and extra fetched dirinfo set from extra_perkey_victim_dirinfoset MUST be complete
-        for (std::unordered_set<DirectoryInfo, DirectoryInfoHasher>::const_iterator dirinfo_unordered_set_const_iter = tmp_dirinfo_unordered_set.begin(); dirinfo_unordered_set_const_iter != tmp_dirinfo_unordered_set.end(); dirinfo_unordered_set_const_iter++)
+        // Get extra fetched victim dirinfo set of extra_perkey_victim_dirinfoset for the given key if any
+        std::unordered_map<Key, DirinfoSet, KeyHasher>::const_iterator extra_victim_dirinfo_map_const_iter = extra_perkey_victim_dirinfoset.find(key);
+        if (extra_victim_dirinfo_map_const_iter != extra_perkey_victim_dirinfoset.end()) // NOTE: synced/extra-fetched victim key may be neighbor-beaconed and NOT have extra fetched dirinfo set in extra_perkey_victim_dirinfoset, as the correpsonding beacon node may have NOT synced the latest victim dirinfo to the fetched edge node
         {
-            uint32_t tmp_edge_idx = dirinfo_unordered_set_const_iter->getTargetEdgeIdx();
-            if (victim_edgeset.find(tmp_edge_idx) == victim_edgeset.end())
+            DirinfoSet tmp_dirinfo_set = extra_victim_dirinfo_map_const_iter->second;
+            assert(tmp_dirinfo_set.isComplete()); // NOTE: victim dirinfo set from victim dirinfo of victim tracker and extra fetched dirinfo set from extra_perkey_victim_dirinfoset MUST be complete
+
+            tmp_dirinfo_sets.push_back(tmp_dirinfo_set);
+        }
+
+        // Check synced/extra-fetched victim dirinfo set
+        for (uint32_t i = 0; i < tmp_dirinfo_sets.size(); i++)
+        {
+            assert(is_last_copies == true); // NOTE: we will break the for loop as long as is_last_copies becomes false
+
+            const DirinfoSet& tmp_dirinfo_set = tmp_dirinfo_sets[i];
+
+            std::unordered_set<DirectoryInfo, DirectoryInfoHasher> tmp_dirinfo_unordered_set;
+            bool with_complete_dirinfo_set = tmp_dirinfo_set.getDirinfoSetIfComplete(tmp_dirinfo_unordered_set);
+            assert(with_complete_dirinfo_set == true); // NOTE: victim dirinfo set from victim dirinfo of victim tracker and extra fetched dirinfo set from extra_perkey_victim_dirinfoset MUST be complete
+            for (std::unordered_set<DirectoryInfo, DirectoryInfoHasher>::const_iterator dirinfo_unordered_set_const_iter = tmp_dirinfo_unordered_set.begin(); dirinfo_unordered_set_const_iter != tmp_dirinfo_unordered_set.end(); dirinfo_unordered_set_const_iter++)
             {
-                is_last_copies = false;
+                uint32_t tmp_edge_idx = dirinfo_unordered_set_const_iter->getTargetEdgeIdx();
+                if (victim_edgeset.find(tmp_edge_idx) == victim_edgeset.end())
+                {
+                    is_last_copies = false;
+                    break;
+                }
+            }
+
+            if (!is_last_copies)
+            {
                 break;
             }
         }
 
+        // NOTE: if without synced VicimDirinfo and without extra fetched dirinfo set, beacon server will treat it as the last cache copies conservatively
         return is_last_copies;
     }
 
