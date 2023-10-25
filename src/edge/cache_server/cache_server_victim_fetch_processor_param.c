@@ -16,7 +16,7 @@ namespace covered
     {
         cache_server_ptr_ = cache_server_ptr;
         
-        // Allocate ring buffer for local requests
+        // Allocate ring buffer for victim fetch requests
         const bool with_multi_providers = false; // ONLY one provider (i.e., edge cache server) for victim fetch requests
         control_request_buffer_ptr_ = new RingBuffer<CacheServerItem>(CacheServerItem(), data_request_buffer_size, with_multi_providers);
         assert(control_request_buffer_ptr_ != NULL);
@@ -24,7 +24,7 @@ namespace covered
 
     CacheServerVictimFetchProcessorParam::~CacheServerVictimFetchProcessorParam()
     {
-        // NOTE: no need to release cache_server_ptr_, which will be released outside CacheServerVictimFetchProcessorParam (e.g., by simulator)
+        // NOTE: no need to release cache_server_ptr_, which will be released outside CacheServerVictimFetchProcessorParam (e.g., by a sub-thread of EdgeWrapper)
 
         if (control_request_buffer_ptr_ != NULL)
         {
@@ -35,7 +35,7 @@ namespace covered
 
     const CacheServerVictimFetchProcessorParam& CacheServerVictimFetchProcessorParam::operator=(const CacheServerVictimFetchProcessorParam& other)
     {
-        // Shallow copy is okay, as cache_server_ptr_ is maintained outside CacheServerVictimFetchProcessorParam (e.g., by simulator)
+        // Shallow copy is okay, as cache_server_ptr_ is maintained outside CacheServerVictimFetchProcessorParam (e.g., by a sub-thread of EdgeWrapper)
         cache_server_ptr_ = other.cache_server_ptr_;
 
         // Must deep copy the ring buffer of local requests

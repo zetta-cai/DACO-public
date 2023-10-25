@@ -25,6 +25,7 @@ namespace covered
 
 #include "concurrency/rwlock.h"
 #include "edge/cache_server/cache_server_placement_processor_param.h"
+#include "edge/cache_server/cache_server_redirection_processor_param.h"
 #include "edge/cache_server/cache_server_victim_fetch_processor_param.h"
 #include "edge/cache_server/cache_server_worker_param.h"
 #include "edge/edge_wrapper.h"
@@ -78,6 +79,7 @@ namespace covered
         // Non-const individual variable
         std::vector<CacheServerWorkerParam> cache_server_worker_params_; // Each cache server thread has a unique param
         CacheServerVictimFetchProcessorParam* cache_server_victim_fetch_processor_param_ptr_; // Only one cache server victim fetch processor thread
+        CacheServerRedirectionProcessorParam* cache_server_redirection_processor_param_ptr_; // Only one cache server redirection processor thread
         CacheServerPlacementProcessorParam* cache_server_placement_processor_param_ptr_; // Only one cache server placement processor thread
 
         // For receiving local requests

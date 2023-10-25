@@ -6,6 +6,7 @@
 #include "common/config.h"
 #include "common/util.h"
 #include "edge/cache_server/cache_server_placement_processor.h"
+#include "edge/cache_server/cache_server_redirection_processor.h"
 #include "edge/cache_server/cache_server_victim_fetch_processor.h"
 #include "edge/cache_server/cache_server_worker_base.h"
 #include "message/control_message.h"
@@ -42,6 +43,10 @@ namespace covered
         // Prepare parameters for cache server victim fetch processor thread
         cache_server_victim_fetch_processor_param_ptr_ = new CacheServerVictimFetchProcessorParam(this, Config::getEdgeCacheServerDataRequestBufferSize());
         assert(cache_server_victim_fetch_processor_param_ptr_ != NULL);
+
+        // Prepare parameters for cache server redirection processor thread
+        cache_server_redirection_processor_param_ptr_ = new CacheServerRedirectionProcessorParam(this, Config::getEdgeCacheServerDataRequestBufferSize());
+        assert(cache_server_redirection_processor_param_ptr_ != NULL);
 
         // Prepare parameters for cache server placement processor thread
         cache_server_placement_processor_param_ptr_ = new CacheServerPlacementProcessorParam(this, Config::getEdgeCacheServerDataRequestBufferSize());
@@ -80,6 +85,11 @@ namespace covered
         delete cache_server_victim_fetch_processor_param_ptr_;
         cache_server_victim_fetch_processor_param_ptr_ = NULL;
 
+        // Release cache server redirection processor param
+        assert(cache_server_redirection_processor_param_ptr_ != NULL);
+        delete cache_server_redirection_processor_param_ptr_;
+        cache_server_redirection_processor_param_ptr_ = NULL;
+
         // Release cache server placement processor param
         assert(cache_server_placement_processor_param_ptr_ != NULL);
         delete cache_server_placement_processor_param_ptr_;
@@ -105,6 +115,7 @@ namespace covered
         int pthread_returncode;
         pthread_t cache_server_worker_threads[percacheserver_workercnt];
         pthread_t cache_server_victim_fetch_processor_thread;
+        pthread_t cache_server_redirection_processor_thread;
         pthread_t cache_server_placement_processor_thread;
 
         // Launch cache server workers
@@ -128,6 +139,17 @@ namespace covered
         {
             std::ostringstream oss;
             oss << "edge " << edge_idx << " failed to launch cache server victim fetch processor (error code: " << pthread_returncode << ")" << std::endl;
+            covered::Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
+
+        // Launch cache server redirection processor
+        //pthread_returncode = pthread_create(&cache_server_redirection_processor_thread, NULL, CacheServerRedirectionProcessor::launchCacheServerRedirectionProcessor, (void*)(cache_server_redirection_processor_param_ptr_));
+        pthread_returncode = Util::pthreadCreateHighPriority(&cache_server_redirection_processor_thread, CacheServerRedirectionProcessor::launchCacheServerRedirectionProcessor, (void*)(cache_server_redirection_processor_param_ptr_));
+        if (pthread_returncode != 0)
+        {
+            std::ostringstream oss;
+            oss << "edge " << edge_idx << " failed to launch cache server redirection processor (error code: " << pthread_returncode << ")" << std::endl;
             covered::Util::dumpErrorMsg(instance_name_, oss.str());
             exit(1);
         }
@@ -157,6 +179,26 @@ namespace covered
                 covered::Util::dumpErrorMsg(instance_name_, oss.str());
                 exit(1);
             }
+        }
+
+        // Wait for cache server victim fetch processor
+        pthread_returncode = pthread_join(cache_server_victim_fetch_processor_thread, NULL); // void* retval = NULL
+        if (pthread_returncode != 0)
+        {
+            std::ostringstream oss;
+            oss << "edge " << edge_idx << " failed to join cache server victim fetch processor (error code: " << pthread_returncode << ")" << std::endl;
+            covered::Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
+
+        // Wait for cache server redirection processor
+        pthread_returncode = pthread_join(cache_server_redirection_processor_thread, NULL); // void* retval = NULL
+        if (pthread_returncode != 0)
+        {
+            std::ostringstream oss;
+            oss << "edge " << edge_idx << " failed to join cache server redirection processor (error code: " << pthread_returncode << ")" << std::endl;
+            covered::Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
         }
 
         // Wait for cache server placement processor
@@ -201,10 +243,11 @@ namespace covered
                 MessageBase* data_request_ptr = MessageBase::getRequestFromMsgPayload(data_request_msg_payload);
                 assert(data_request_ptr != NULL);
 
-                if (data_request_ptr->isDataRequest()) // Data requests (e.g., local/redirected/management requests)
+                const MessageType message_type = data_request_ptr->getMessageType();
+                if (data_request_ptr->isDataRequest() || message_type == MessageType::kCoveredVictimFetchRequest || message_type == MessageType::kCoveredPlacementNotifyRequest) // Local data requests for cache server workers; redirected data requests for cache server redirection processor; lazy victim fetching for cache server victim fetch processor; placement notification for cache server placement processor
                 {
-                    // Pass data request and network address to corresponding cache server worker by ring buffer
-                    // NOTE: data request will be released by the corresponding cache server worker
+                    // Pass received request and network address to corresponding cache server worker/processor by ring buffer
+                    // NOTE: received request will be released by the corresponding cache server worker/processor
                     partitionRequest_(data_request_ptr);
                 }
                 else
@@ -226,7 +269,7 @@ namespace covered
 
         const uint32_t percacheserver_workercnt = edge_wrapper_ptr_->getPercacheserverWorkercnt();
 
-        if (data_requeset_ptr->isLocalDataRequest() || data_requeset_ptr->isRedirectedDataRequest()) // Local/redirected data requests
+        if (data_requeset_ptr->isLocalDataRequest()) // Local data requests
         {
             // Calculate the corresponding cache server worker index by hashing
             assert(cache_server_worker_params_.size() == percacheserver_workercnt);
@@ -237,6 +280,13 @@ namespace covered
             // Pass cache server item into ring buffer of the corresponding cache server worker
             CacheServerItem tmp_cache_server_item(data_requeset_ptr);
             bool is_successful = cache_server_worker_params_[local_cache_server_worker_idx].getDataRequestBufferPtr()->push(tmp_cache_server_item);
+            assert(is_successful == true); // Ring buffer must NOT be full
+        }
+        else if (data_requeset_ptr->isRedirectedDataRequest()) // Redirected data requests
+        {
+            // Pass cache server item into ring buffer of the cache server redirection processor
+            CacheServerItem tmp_cache_server_item(data_requeset_ptr);
+            bool is_successful = cache_server_redirection_processor_param_ptr_->getDataRequestBufferPtr()->push(tmp_cache_server_item);
             assert(is_successful == true); // Ring buffer must NOT be full
         }
         else if (data_requeset_ptr->getMessageType() == MessageType::kCoveredVictimFetchRequest) // Lazy victim fetching

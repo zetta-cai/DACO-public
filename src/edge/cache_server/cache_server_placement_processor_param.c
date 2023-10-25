@@ -30,7 +30,7 @@ namespace covered
 
     CacheServerPlacementProcessorParam::~CacheServerPlacementProcessorParam()
     {
-        // NOTE: no need to release cache_server_ptr_, which will be released outside CacheServerPlacementProcessorParam (e.g., by simulator)
+        // NOTE: no need to release cache_server_ptr_, which will be released outside CacheServerPlacementProcessorParam (e.g., by a sub-thread of EdgeWrapper)
 
         if (notify_placement_request_buffer_ptr_ != NULL)
         {
@@ -47,7 +47,7 @@ namespace covered
 
     const CacheServerPlacementProcessorParam& CacheServerPlacementProcessorParam::operator=(const CacheServerPlacementProcessorParam& other)
     {
-        // Shallow copy is okay, as cache_server_ptr_ is maintained outside CacheServerPlacementProcessorParam (e.g., by simulator)
+        // Shallow copy is okay, as cache_server_ptr_ is maintained outside CacheServerPlacementProcessorParam (e.g., by a sub-thread of EdgeWrapper)
         cache_server_ptr_ = other.cache_server_ptr_;
 
         // Must deep copy the ring buffer of notify placement requests

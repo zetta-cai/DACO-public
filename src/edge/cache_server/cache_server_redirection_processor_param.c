@@ -1,32 +1,30 @@
-#include "edge/cache_server/cache_server_worker_param.h"
+#include "edge/cache_server/cache_server_redirection_processor_param.h"
 
 #include "common/util.h"
 
 namespace covered
 {
-    const std::string CacheServerWorkerParam::kClassName("CacheServerWorkerParam");
+    const std::string CacheServerRedirectionProcessorParam::kClassName("CacheServerRedirectionProcessorParam");
 
-    CacheServerWorkerParam::CacheServerWorkerParam()
+    CacheServerRedirectionProcessorParam::CacheServerRedirectionProcessorParam()
     {
         cache_server_ptr_ = NULL;
-        local_cache_server_worker_idx_ = 0;
         data_request_buffer_ptr_ = NULL;
     }
 
-    CacheServerWorkerParam::CacheServerWorkerParam(CacheServer* cache_server_ptr, const uint32_t& local_cache_server_worker_idx, const uint32_t& data_request_buffer_size)
+    CacheServerRedirectionProcessorParam::CacheServerRedirectionProcessorParam(CacheServer* cache_server_ptr, const uint32_t& data_request_buffer_size)
     {
         cache_server_ptr_ = cache_server_ptr;
-        local_cache_server_worker_idx_ = local_cache_server_worker_idx;
         
-        // Allocate ring buffer for local requests
-        const bool with_multi_providers = false; // ONLY one provider (i.e., edge cache server) for local/redirected data requests
+        // Allocate ring buffer for redirected data requests
+        const bool with_multi_providers = false; // ONLY one provider (i.e., edge cache server) for redirected data requests
         data_request_buffer_ptr_ = new RingBuffer<CacheServerItem>(CacheServerItem(), data_request_buffer_size, with_multi_providers);
         assert(data_request_buffer_ptr_ != NULL);
     }
 
-    CacheServerWorkerParam::~CacheServerWorkerParam()
+    CacheServerRedirectionProcessorParam::~CacheServerRedirectionProcessorParam()
     {
-        // NOTE: no need to release cache_server_ptr_, which will be released outside CacheServerWorkerParam (e.g., by a sub-thread of EdgeWrapper)
+        // NOTE: no need to release cache_server_ptr_, which will be released outside CacheServerRedirectionProcessorParam (e.g., by a sub-thread of EdgeWrapper)
 
         if (data_request_buffer_ptr_ != NULL)
         {
@@ -35,12 +33,10 @@ namespace covered
         }
     }
 
-    const CacheServerWorkerParam& CacheServerWorkerParam::operator=(const CacheServerWorkerParam& other)
+    const CacheServerRedirectionProcessorParam& CacheServerRedirectionProcessorParam::operator=(const CacheServerRedirectionProcessorParam& other)
     {
-        // Shallow copy is okay, as cache_server_ptr_ is maintained outside CacheServerWorkerParam (e.g., by a sub-thread of EdgeWrapper)
+        // Shallow copy is okay, as cache_server_ptr_ is maintained outside CacheServerRedirectionProcessorParam (e.g., by a sub-thread of EdgeWrapper)
         cache_server_ptr_ = other.cache_server_ptr_;
-
-        local_cache_server_worker_idx_ = other.local_cache_server_worker_idx_;
 
         // Must deep copy the ring buffer of local requests
         if (data_request_buffer_ptr_ != NULL) // Release original ring buffer if any
@@ -51,7 +47,7 @@ namespace covered
         if (other.data_request_buffer_ptr_ != NULL) // Deep copy other's ring buffer if any
         {
             const bool other_with_multi_providers = other.data_request_buffer_ptr_->withMultiProviders();
-            assert(!other_with_multi_providers); // ONLY one provider (i.e., edge cache server) for local/redirected data requests
+            assert(!other_with_multi_providers); // ONLY one provider (i.e., edge cache server) for redirected data requests
 
             data_request_buffer_ptr_ = new RingBuffer<CacheServerItem>(other.data_request_buffer_ptr_->getDefaultElement(), other.data_request_buffer_ptr_->getBufferSize(), other_with_multi_providers);
             assert(data_request_buffer_ptr_ != NULL);
@@ -62,18 +58,13 @@ namespace covered
         return *this;
     }
 
-    CacheServer* CacheServerWorkerParam::getCacheServerPtr() const
+    CacheServer* CacheServerRedirectionProcessorParam::getCacheServerPtr() const
     {
         assert(cache_server_ptr_ != NULL);
         return cache_server_ptr_;
     }
 
-    uint32_t CacheServerWorkerParam::getLocalCacheServerWorkerIdx() const
-    {
-        return local_cache_server_worker_idx_;
-    }
-
-    RingBuffer<CacheServerItem>* CacheServerWorkerParam::getDataRequestBufferPtr() const
+    RingBuffer<CacheServerItem>* CacheServerRedirectionProcessorParam::getDataRequestBufferPtr() const
     {
         assert(data_request_buffer_ptr_ != NULL);
         return data_request_buffer_ptr_;

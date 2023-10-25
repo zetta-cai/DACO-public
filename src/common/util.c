@@ -379,7 +379,8 @@ namespace covered
     void Util::uint64AddForAtomic(std::atomic<uint64_t>& a, const uint64_t& b)
     {
         uint64_t original_a = a.fetch_add(b, RMW_CONCURRENCY_ORDER);
-        uint64_t results = a.load(LOAD_CONCURRENCY_ORDER);
+        //uint64_t results = a.load(LOAD_CONCURRENCY_ORDER); // OBSOLETE: the value of the atomic integer a may be changed by other threads
+        uint64_t results = original_a + b;
         if (results < original_a || results < b)
         {
             std::ostringstream oss;
@@ -393,7 +394,8 @@ namespace covered
     void Util::uint64MinusForAtomic(std::atomic<uint64_t>& a, const uint64_t& b)
     {
         uint64_t original_a = a.fetch_sub(b, RMW_CONCURRENCY_ORDER);
-        uint64_t results = a.load(LOAD_CONCURRENCY_ORDER);
+        //uint64_t results = a.load(LOAD_CONCURRENCY_ORDER); // OBSOLETE: the value of the atomic integer a may be changed by other threads
+        uint64_t results = original_a - b;
         if (results > original_a)
         {
             std::ostringstream oss;
@@ -656,6 +658,12 @@ namespace covered
     {
         int64_t edge_cache_server_placement_processor_recvrsp_startport = static_cast<int64_t>(Config::getEdgeCacheServerPlacementProcessorRecvrspStartport());
         return getNodePort_(edge_cache_server_placement_processor_recvrsp_startport, edge_idx, edgecnt, Config::getEdgeIpstrCnt());
+    }
+
+    uint16_t Util::getEdgeCacheServerRedirectionProcessorRecvrspPort(const uint32_t& edge_idx, const uint32_t& edgecnt)
+    {
+        int64_t edge_cache_server_redirection_processor_recvrsp_startport = static_cast<int64_t>(Config::getEdgeCacheServerRedirectionProcessorRecvrspStartport());
+        return getNodePort_(edge_cache_server_redirection_processor_recvrsp_startport, edge_idx, edgecnt, Config::getEdgeIpstrCnt());
     }
 
     uint16_t Util::getEdgeCacheServerVictimFetchProcessorRecvrspPort(const uint32_t& edge_idx, const uint32_t& edgecnt)

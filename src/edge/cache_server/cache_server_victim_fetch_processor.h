@@ -4,8 +4,8 @@
  * By Siyuan Sheng (2023.10.04).
  */
 
-#ifndef EDGE_CACHE_SERVER_CACHE_SERVER_VICTIM_FETCH_PROCESSOR_H
-#define EDGE_CACHE_SERVER_CACHE_SERVER_VICTIM_FETCH_PROCESSOR_H
+#ifndef CACHE_SERVER_VICTIM_FETCH_PROCESSOR_H
+#define CACHE_SERVER_VICTIM_FETCH_PROCESSOR_H
 
 #include <string>
 
@@ -39,8 +39,8 @@ namespace covered
         // NOTE: destination addresses for sending control requests come from beacon edge index
 
         // For receiving control responses
-        NetworkAddr edge_cache_server_victim_fetch_processor_recvrsp_source_addr_; // Used by cache server victim fetch processor to send back control responses (const individual variable)
-        UdpMsgSocketServer* edge_cache_server_victim_fetch_processor_recvrsp_socket_server_ptr_; // Used by cache server victim fetch processor to receive control responses from beacon server (non-const individual variable)
+        //NetworkAddr edge_cache_server_victim_fetch_processor_recvrsp_source_addr_; // Used by cache server victim fetch processor to send back control responses (const individual variable)
+        //UdpMsgSocketServer* edge_cache_server_victim_fetch_processor_recvrsp_socket_server_ptr_; // Used by cache server victim fetch processor to receive control responses from beacon server (non-const individual variable)
     };
 }
 

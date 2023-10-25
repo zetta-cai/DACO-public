@@ -79,7 +79,7 @@ namespace covered
 
         static CacheServerWorkerBase* getCacheServerWorkerByCacheName_(CacheServerWorkerParam* cache_server_worker_param_ptr);
     protected:
-        bool processDataRequest_(MessageBase* data_request_ptr, const NetworkAddr& recvrsp_dst_addr); // Return if edge node is finished
+        bool processLocalDataRequest_(MessageBase* data_request_ptr, const NetworkAddr& recvrsp_dst_addr); // Return if edge node is finished
 
         // (1) Process read requests
 
@@ -148,12 +148,7 @@ namespace covered
         virtual MessageBase* getReqToReleaseBeaconWritelock_(const Key& key, const bool& skip_propagation_latency) const = 0;
         virtual bool processRspToReleaseBeaconWritelock_(MessageBase* control_response_ptr, const Value& value, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const = 0;
 
-        // (3) Process redirected requests
-
-        bool processRedirectedRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& recvrsp_dst_addr);
-        bool processRedirectedGetRequest_(MessageBase* redirected_request_ptr, const NetworkAddr& recvrsp_dst_addr) const;
-        virtual void processReqForRedirectedGet_(MessageBase* redirected_request_ptr, Value& value, bool& is_cooperative_cached, bool& is_cooperative_cached_and_valid) const = 0;
-        virtual MessageBase* getRspForRedirectedGet_(MessageBase* redirected_request_ptr, const Value& value, const Hitflag& hitflag, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list) const = 0;
+        // (3) Process redirected requests (see src/cache_server/cache_server_redirection_processor.*)
 
         // (4) Cache management
 
@@ -192,8 +187,8 @@ namespace covered
         NetworkAddr corresponding_cloud_recvreq_dst_addr_;
 
         // For receiving control responses, redirected data responses, and global data responses
-        NetworkAddr edge_cache_server_worker_recvrsp_source_addr_; // Used by beacon server to send back control responses, cache server to send back redirected data responses, and cloud to send back global data responses (const individual variable)
-        UdpMsgSocketServer* edge_cache_server_worker_recvrsp_socket_server_ptr_; // Used by cache server worker to receive control responses from beacon server, redirected responses from cache server, and global responses from cloud (non-const individual variable)
+        NetworkAddr edge_cache_server_worker_recvrsp_source_addr_; // Used by beacon server to send back control responses, cache server redirection processor to send back redirected data responses, and cloud to send back global data responses (const individual variable)
+        UdpMsgSocketServer* edge_cache_server_worker_recvrsp_socket_server_ptr_; // Used by cache server worker to receive control responses from beacon server, redirected responses from cache server redirection processor, and global responses from cloud (non-const individual variable)
 
         // For receiving finish block requests
         NetworkAddr edge_cache_server_worker_recvreq_source_addr_; // The same as that used by cache server worker or beacon server to send finish block requests (const individual variable)
