@@ -346,8 +346,8 @@ if chown_subprocess.returncode != 0:
 
 ## Update LD_LIBRARY_PATH
 
-target_ld_libs = ["segcache", "cachelib", "x86_64-linux-gnu"]
-target_ld_lib_dirpaths = ["{}/src/cache/segcache/build/ccommon/lib".format(proj_dirname), "{}/CacheLib/opt/cachelib/lib".format(lib_dirpath), "/usr/lib/x86_64-linux-gnu"]
+target_ld_libs = ["segcache", "cachelib", "boost", "x86_64-linux-gnu"]
+target_ld_lib_dirpaths = ["{}/src/cache/segcache/build/ccommon/lib".format(proj_dirname), "{}/CacheLib/opt/cachelib/lib".format(lib_dirpath), "{}/boost_1_81_0/install/lib".format(lib_dirpath), "/usr/lib/x86_64-linux-gnu"]
 
 prompt(filename, "check if need to update LD_LIBRARY_PATH...")
 need_update_ld_library_path = False
