@@ -112,10 +112,9 @@ if is_install_cachelib:
             die(filename, "failed to replace contrib/build-package.sh; error: {}".format(replace_build_package_errstr))
 
         # Build cachelib and its dependencies
-        prompt(filename, "execute contrib/build.sh in {} to install cachelib...".format(cachelib_clone_dirpath))
-        # NOTE: add -S for ./contrib/build.sh to skip git-clone/git-pull step if you have already downloaded external libs required by cachelib in lib/CacheLib/cachelib/external
-        cachelib_install_cmd = "cd {} && ./contrib/build.sh -j -T".format(cachelib_clone_dirpath)
-        #cachelib_install_cmd = "cd {} && ./contrib/build.sh -j -T -v".format(cachelib_clone_dirpath) # For debugging
+        prompt(filename, "execute contrib/build.sh in {} to install cachelib (it takes some time)...".format(cachelib_clone_dirpath))
+        cachelib_install_cmd = "cd {} && ./contrib/build.sh -j -T -v".format(cachelib_clone_dirpath)
+        #cachelib_install_cmd = "cd {} && ./contrib/build.sh -j -T -v -S".format(cachelib_clone_dirpath) # For debugging (NOTE: add -S for ./contrib/build.sh to skip git-clone/git-pull step if you have already downloaded external libs required by cachelib in lib/CacheLib/cachelib/external)
 
         cachelib_install_subprocess = runCmd(cachelib_install_cmd)
         if cachelib_install_subprocess.returncode != 0:
@@ -222,7 +221,7 @@ if is_install_rocksdb:
 
     rocksdb_install_dirpath = "{}/librocksdb.a".format(rocksdb_decompress_dirpath)
     if not os.path.exists(rocksdb_install_dirpath):
-        prompt(filename, "install librocksdb.a from source...")
+        prompt(filename, "install librocksdb.a from source (it takes some time)...")
         rocksdb_install_cmd = "sudo apt-get install libgflags-dev libsnappy-dev zlib1g-dev libbz2-dev liblz4-dev libzstd-dev libjemalloc-dev libsnappy-dev && cd {} && PORTABLE=1 make static_lib".format(rocksdb_decompress_dirpath)
 
         rocksdb_install_subprocess = runCmd(rocksdb_install_cmd)
@@ -396,7 +395,7 @@ if need_update_ld_library_path:
             if i == 0:
                 update_bash_source_grepstr = "{}".format(target_ld_lib_dirpaths[i])
             elif i == len(target_ld_lib_dirpaths) - 1:
-                update_bash_source_grepstr = "{}:{}:\$\{LD_LIBRARY_PATH\}".format(update_bash_source_grepstr, target_ld_lib_dirpaths[i])
+                update_bash_source_grepstr = "{}:{}:${{LD_LIBRARY_PATH}}".format(update_bash_source_grepstr, target_ld_lib_dirpaths[i])
             else:
                 update_bash_source_grepstr = "{}:{}".format(update_bash_source_grepstr, target_ld_lib_dirpaths[i])
         update_bash_source_file_cmd = "echo \"export LD_LIBRARY_PATH={}\" >> {}".format(update_bash_source_grepstr, bash_source_filepath)
