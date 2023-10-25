@@ -92,6 +92,7 @@ compiler_install_binpath = "{}/bin".format(compiler_installpath) # /usr/bin
 # (2) Subprocess-related variables and functions
 
 def runCmd(cmdstr):
+    print("[shell] {}".format(cmdstr))
     tmp_subprocess = subprocess.run(cmdstr, shell=True, capture_output=True)
     return tmp_subprocess
 

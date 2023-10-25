@@ -29,7 +29,7 @@ restore_dir(default_cachebench_dirpath, current_cachebench_dirpath, "src/mk/lib/
 
 if not only_cachelib:
     # Update project lib directory for CMAKE_PREFIX_PATH in cachelib
-    default_lib_dirpath = "/home/ssy/projects/covered-private/lib"
+    default_lib_dirpath = "/home/sysheng/projects/covered-private/lib"
     restore_dir(default_lib_dirpath, lib_dirpath, "scripts/cachelib/build-package.sh")
 
     # Update LFU_DIRPATH for LFU cache

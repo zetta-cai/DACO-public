@@ -113,8 +113,9 @@ if is_install_cachelib:
 
         # Build cachelib and its dependencies
         prompt(filename, "execute contrib/build.sh in {} to install cachelib...".format(cachelib_clone_dirpath))
-        #cachelib_install_cmd = "cd {} && ./contrib/build.sh -j -T".format(cachelib_clone_dirpath)
-        cachelib_install_cmd = "cd {} && ./contrib/build.sh -j -T -v -S".format(cachelib_clone_dirpath) # For debugging
+        # NOTE: add -S for ./contrib/build.sh to skip git-clone/git-pull step if you have already downloaded external libs required by cachelib in lib/CacheLib/cachelib/external
+        cachelib_install_cmd = "cd {} && ./contrib/build.sh -j -T".format(cachelib_clone_dirpath)
+        #cachelib_install_cmd = "cd {} && ./contrib/build.sh -j -T -v".format(cachelib_clone_dirpath) # For debugging
 
         cachelib_install_subprocess = runCmd(cachelib_install_cmd)
         if cachelib_install_subprocess.returncode != 0:

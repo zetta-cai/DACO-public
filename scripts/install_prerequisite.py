@@ -23,7 +23,7 @@ if is_upgrade_python3:
     print("{}: check version of python3...".format(filename))
     python3_target_version = "3.7.5"
     python3_checkversion_cmd = "python3 --version"
-    python3_checkversion_subprocess = subprocess.run(python3_checkversion_cmd, shell=True, capture_output=True)
+    python3_checkversion_subprocess = runCmd(python3_checkversion_cmd)
     need_upgrade_python3 = False
     if python3_checkversion_subprocess.returncode != 0:
         print("{}: failed to get the current version of python3".format(filename))
@@ -45,7 +45,7 @@ if is_upgrade_python3:
     if need_upgrade_python3:
         print("{}: check if old python3 is preserved...".format(filename))
         python3_check_old_cmd = "sudo update-alternatives --query python3 | grep $(readlink -f $(which python3))"
-        python3_check_old_subprocess = subprocess.run(python3_check_old_cmd, shell=True, capture_output=True)
+        python3_check_old_subprocess = runCmd(python3_check_old_cmd)
         need_preserve_old_python3 = True;
         if python3_check_old_subprocess.returncode == 0:
             python3_check_old_outputbytes = python3_check_old_subprocess.stdout
@@ -56,7 +56,7 @@ if is_upgrade_python3:
         if need_preserve_old_python3:
             print("{}: preserve old python3...".format(filename))
             python3_preserve_old_cmd = "sudo update-alternatives --install {}/python3 python3 $(readlink -f $(which python3) 40".format(python3_preferred_binpath)
-            python3_preserve_old_subprocess = subprocess.run(python3_preserve_old_cmd, shell=True)
+            python3_preserve_old_subprocess = runCmd(python3_preserve_old_cmd)
             if python3_preserve_old_subprocess.returncode != 0:
                 print("{}: failed to preserve old python3".format(filename))
                 sys.exit(1)
@@ -68,7 +68,7 @@ if is_upgrade_python3:
             print("{}: download {}...".format(filename, python3_download_filepath))
             python3_download_cmd = "cd {} && wget https://www.python.org/ftp/python/3.7.5/Python-3.7.5.tgz".format(lib_dirpath)
 
-            python3_download_subprocess = subprocess.run(python3_download_cmd, shell=True)
+            python3_download_subprocess = runCmd(python3_download_cmd)
             if python3_download_subprocess.returncode != 0:
                 print("{}: failed to download {}".format(filename, python3_download_filepath))
                 sys.exit(1)
@@ -80,7 +80,7 @@ if is_upgrade_python3:
             print("{}: decompress {}...".format(filename, python3_download_filepath))
             python3_decompress_cmd = "cd {} && tar -xvf Python-3.7.5.tgz".format(lib_dirpath)
 
-            python3_decompress_subprocess = subprocess.run(python3_decompress_cmd, shell=True)
+            python3_decompress_subprocess = runCmd(python3_decompress_cmd)
             if python3_decompress_subprocess.returncode != 0:
                 print("{}: failed to decompress {}".format(filename, python3_download_filepath))
                 sys.exit(1)
@@ -91,7 +91,7 @@ if is_upgrade_python3:
         if not os.path.exists(python3_install_filepath):
             print("{}: install python3.7.5 from source...".format(filename))
             python3_install_cmd = "cd {0} && ./configure --enable-optimizations --prefix={1} --exec_prefix={1} && sudo make altinstall".format(python3_decompress_dirpath, python3_installpath)
-            python3_install_subprocess = subprocess.run(python3_install_cmd, shell=True)
+            python3_install_subprocess = runCmd(python3_install_cmd)
             if python3_install_subprocess.returncode != 0:
                 print("{}: failed to install python3.7.5".format(filename))
                 sys.exit(1)
@@ -100,7 +100,7 @@ if is_upgrade_python3:
 
         print("{}: switch to python3.7.5...".format(filename))
         python3_switch_new_cmd = "sudo update-alternatives --install {0}/python3 python3 {1}/python3.7 50".format(python3_preferred_binpath, python3_install_binpath)
-        python3_switch_new_subprocess = subprocess.run(python3_switch_new_cmd, shell=True)
+        python3_switch_new_subprocess = runCmd(python3_switch_new_cmd)
         if python3_switch_new_subprocess.returncode != 0:
             print("{}: failed to switch python3.7.5".format(filename))
             sys.exit(1)
@@ -109,7 +109,7 @@ if is_upgrade_python3:
             print("{}: clear {}".format(filename, python3_download_filepath))
             python3_clear_cmd = "cd {} && rm {}".format(lib_dirpath, python3_download_filepath)
 
-            python3_clear_subprocess = subprocess.run(python3_clear_cmd, shell=True)
+            python3_clear_subprocess = runCmd(python3_clear_cmd)
             if python3_clear_subprocess.returncode != 0:
                 print("{}: failed to clear {}".format(filename, python3_download_filepath))
                 sys.exit(1)
@@ -121,7 +121,7 @@ if is_install_pylib:
     print("{}: install python libraries based on {}...".format(filename, pylib_requirement_filepath))
     pylib_install_cmd = "python3 -m pip install -r {}".format(pylib_requirement_filepath)
 
-    pylib_install_subprocess = subprocess.run(pylib_install_cmd, shell=True)
+    pylib_install_subprocess = runCmd(pylib_install_cmd)
     if pylib_install_subprocess.returncode != 0:
         print("{}: failed to install python libraries based on {}".format(filename, pylib_requirement_filepath))
         sys.exit(1)
@@ -137,7 +137,7 @@ if is_upgrade_gcc:
     for compiler_name in ["gcc", "g++"]:
         prompt(filename, "check version of {}...".format(compiler_name))
         compiler_checkversion_cmd = "{} --version".format(compiler_name)
-        compiler_checkversion_subprocess = subprocess.run(compiler_checkversion_cmd, shell=True, capture_output=True)
+        compiler_checkversion_subprocess = runCmd(compiler_checkversion_cmd)
         need_upgrade_compiler = False
         if compiler_checkversion_subprocess.returncode != 0:
             die(filename, "failed to get the current version of {}".format(compiler_name))
@@ -157,7 +157,7 @@ if is_upgrade_gcc:
         if need_upgrade_compiler:
             prompt(filename, "check if old {} is preserved...".format(compiler_name))
             compiler_check_old_cmd = "sudo update-alternatives --query {0} | grep $(readlink -f $(which {0}))".format(compiler_name)
-            compiler_check_old_subprocess = subprocess.run(compiler_check_old_cmd, shell=True, capture_output=True)
+            compiler_check_old_subprocess = runCmd(compiler_check_old_cmd)
             need_preserve_old_compiler = True;
             if compiler_check_old_subprocess.returncode == 0:
                 compiler_check_old_outputstr = getSubprocessOutputstr(compiler_check_old_subprocess)
@@ -167,7 +167,7 @@ if is_upgrade_gcc:
             if need_preserve_old_compiler:
                 prompt(filename, "preserve old {}...".format(compiler_name))
                 compiler_preserve_old_cmd = "sudo update-alternatives --install {0}/{1} {1} $(readlink -f $(which {1})) 40".format(compiler_preferred_binpaths[compiler_name], compiler_name)
-                compiler_preserve_old_subprocess = subprocess.run(compiler_preserve_old_cmd, shell=True)
+                compiler_preserve_old_subprocess = runCmd(compiler_preserve_old_cmd)
                 if compiler_preserve_old_subprocess.returncode != 0:
                     die(filename, "failed to preserve old {}".format(compiler_name))
             else:
@@ -177,20 +177,20 @@ if is_upgrade_gcc:
             if not is_add_apt_repo_for_compiler:
                 prompt(filename, "add apt repo for {}...".format(compiler_name))
                 compiler_addrepo_cmd = "sudo add-apt-repository ppa:ubuntu-toolchain-r/test && sudo apt update"
-                compiler_addrepo_subprocess = subprocess.run(compiler_addrepo_cmd, shell=True)
+                compiler_addrepo_subprocess = runCmd(compiler_addrepo_cmd)
                 if compiler_addrepo_subprocess.returncode != 0:
                     die(filename, "failed to add apt repo for {}".format(compiler_name))
                 is_add_apt_repo_for_compiler = True
 
             prompt(filename, "install {} by apt...".format(compiler_name))
             compiler_install_cmd = "sudo apt install {}-9".format(compiler_name)
-            compiler_install_subprocess = subprocess.run(compiler_install_cmd, shell=True)
+            compiler_install_subprocess = runCmd(compiler_install_cmd)
             if compiler_install_subprocess.returncode != 0:
                 die(filename, "failed to install {}-9".format(compiler_name))
 
             prompt(filename, "switch to {}-9...".format(compiler_name))
             compiler_switch_cmd = "sudo update-alternatives --install {0}/{1} {1} {2}/{1}-9 50".format(compiler_preferred_binpaths[compiler_name], compiler_name, compiler_install_binpath)
-            compiler_switch_subprocess = subprocess.run(compiler_switch_cmd, shell=True)
+            compiler_switch_subprocess = runCmd(compiler_switch_cmd)
             if compiler_switch_subprocess.returncode != 0:
                 die(filename, "failed to switch {}-9".format(compiler_name))
     
@@ -199,7 +199,7 @@ if is_upgrade_gcc:
 if is_link_cpp:
     prompt(filename, "check version of c++ binary...")
     cpp_checkversion_cmd = "c++ --version"
-    cpp_checkversion_subprocess = subprocess.run(cpp_checkversion_cmd, shell=True, capture_output=True)
+    cpp_checkversion_subprocess = runCmd(cpp_checkversion_cmd)
     need_link_cpp = True
     if cpp_checkversion_subprocess.returncode == 0:
         cpp_checkversion_outputstr = getSubprocessOutputstr(cpp_checkversion_subprocess)
@@ -218,7 +218,7 @@ if is_link_cpp:
     if need_link_cpp:
         prompt(filename, "link g++-9 to c++ binary...")
         link_cpp_cmd = "sudo mv $(which c++) $(which c++).bak; sudo ln -s {0}/g++ {0}/c++".foramt(compiler_preferred_binpaths["g++"])
-        link_cpp_subprocess = subprocess.run(link_cpp_cmd, shell=True)
+        link_cpp_subprocess = runCmd(link_cpp_cmd)
         if link_cpp_subprocess.returncode != 0:
             die(filename, "failed to link g++-9 to c++ binary")
 
@@ -229,7 +229,7 @@ if is_upgrade_cmake:
     need_upgrade_cmake = False
     cmake_target_version = "3.25.2"
     cmake_checkversion_cmd = "cmake --version"
-    cmake_checkversion_subprocess = subprocess.run(cmake_checkversion_cmd, shell=True, capture_output=True)
+    cmake_checkversion_subprocess = runCmd(cmake_checkversion_cmd)
     if cmake_checkversion_subprocess.returncode != 0:
         die(filename, "failed to get the current version of cmake")
     else:
@@ -250,7 +250,7 @@ if is_upgrade_cmake:
         is_add_apt_repo_for_cmake = True
         cmake_repo_website = "https://apt.kitware.com/ubuntu"
         cmake_check_apt_repo_cmd = "sudo cat /etc/apt/sources.list | grep {}".format(cmake_repo_website)
-        cmake_check_apt_repo_subprocess = subprocess.run(cmake_check_apt_repo_cmd, shell=True, capture_output=True)
+        cmake_check_apt_repo_subprocess = runCmd(cmake_check_apt_repo_cmd)
         if cmake_check_apt_repo_subprocess.returncode != 0:
             die(filename, "failed to check apt repot for CMake")
         else:
@@ -262,13 +262,13 @@ if is_upgrade_cmake:
         if is_add_apt_repo_for_cmake:
             prompt(filename, "Add apt repo for CMake...")
             cmake_add_apt_repo_cmd = "wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | sudo apt-key add - && sudo apt-add-repository 'deb https://apt.kitware.com/ubuntu/ bionic main' && sudo apt-get update && sudo apt-get install kitware-archive-keyring && sudo apt-key --keyring /etc/apt/trusted.gpg del C1F34CDD40CD72DA"
-            cmake_add_apt_repo_subprocess = subprocess.run(cmake_add_apt_repo_cmd, shell=True)
+            cmake_add_apt_repo_subprocess = runCmd(cmake_add_apt_repo_cmd)
             if cmake_add_apt_repo_subprocess.returncode != 0:
                 die(filename, "failed to add apt repo for CMake")
         
         prompt(filename, "install CMake by apt...")
         cmake_install_cmd = "sudo apt-get install cmake"
-        cmake_install_subprocess = subprocess.run(cmake_install_cmd)
+        cmake_install_subprocess = runCmd(cmake_install_cmd)
         if cmake_install_subprocess.returncode != 0:
             die(filename, "failed to install CMake by apt")
 
@@ -278,7 +278,7 @@ prompt(filename, "check net.core.rmem_max...")
 target_rmem_max = 16777216
 need_set_rmem_max = False
 check_rmem_max_cmd = "sysctl -a 2>/dev/null | grep net.core.rmem_max"
-check_rmem_max_subprocess = subprocess.run(check_rmem_max_cmd, shell=True, capture_output=True)
+check_rmem_max_subprocess = runCmd(check_rmem_max_cmd)
 if check_rmem_max_subprocess.returncode != 0:
     die(filename, "failed to check net.core.rmem_max")
 else:
@@ -293,6 +293,6 @@ else:
 if need_set_rmem_max:
     prompt(filename, "set net.core.rmem_max as {}...".format(target_rmem_max))
     set_rmem_max_cmd = "sudo sysctl -w net.core.rmem_max={}".format(target_rmem_max)
-    set_rmem_max_subprocess = subprocess.run(set_rmem_max_cmd, shell=True)
+    set_rmem_max_subprocess = runCmd(set_rmem_max_cmd)
     if set_rmem_max_subprocess.returncode != 0:
         die(filename, "failed to set net.core.rmem_max")
