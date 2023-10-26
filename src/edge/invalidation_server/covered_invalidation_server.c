@@ -60,8 +60,8 @@ namespace covered
         const bool skip_propagation_latency = covered_invalidation_request_ptr->isSkipPropagationLatency();
 
         // Prepare victim syncset for piggybacking-based victim synchronization
-        const uint32_t dst_edge_idx = covered_invalidation_request_ptr->getSourceIndex();
-        VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_edge_idx);
+        const uint32_t dst_edge_idx_for_compression = covered_invalidation_request_ptr->getSourceIndex();
+        VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_edge_idx_for_compression, edge_wrapper_ptr_->getCacheMarginBytes());
 
         // Prepare invalidation response
         uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();

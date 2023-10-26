@@ -134,15 +134,15 @@ namespace covered
         return;
     }
 
-    VictimSyncset CoveredCacheManager::accessVictimTrackerForLocalVictimSyncset(const uint32_t& dst_edge_idx) const
+    VictimSyncset CoveredCacheManager::accessVictimTrackerForLocalVictimSyncset(const uint32_t& dst_edge_idx_for_compression, const uint64_t& latest_local_cache_margin_bytes) const
     {
         // Get current complete victim syncset from victim tracker
-        VictimSyncset current_victim_syncset = victim_tracker_.getLocalVictimSyncset();
+        VictimSyncset current_victim_syncset = victim_tracker_.getLocalVictimSyncset(latest_local_cache_margin_bytes);
         assert(current_victim_syncset.isComplete());
 
         // Replace previously-issued complete victim syncset for dst edge idx by current complete victim syncset if necessary
         VictimSyncset prev_victim_syncset;
-        bool is_prev_victim_syncset_exist = victim_tracker_.replacePrevVictimSyncset(dst_edge_idx, current_victim_syncset, prev_victim_syncset);
+        bool is_prev_victim_syncset_exist = victim_tracker_.replacePrevVictimSyncset(dst_edge_idx_for_compression, current_victim_syncset, prev_victim_syncset);
 
         if (!is_prev_victim_syncset_exist) // No previous victim syncset for dedup/delta-compression
         {
@@ -163,9 +163,20 @@ namespace covered
     {
         // NOTE: victim cacheinfos and dirinfo sets of neighbor_victim_syncset can be either complete or compressed; while dirinfo sets of local_beaconed_neighbor_synced_victim_dirinfosets MUST be complete
 
+        // TMPDEBUG23
+        std::ostringstream oss;
+        oss << "receive victim syncset from edge " << source_edge_idx;
+
         bool is_complete = neighbor_victim_syncset.isComplete();
         if (is_complete) // neighbor_victim_syncset is complete already
         {
+            // TMPDEBUG23
+            uint64_t cache_margin_bytes = 0;
+            int cache_margin_delta_bytes = 0;
+            neighbor_victim_syncset.getCacheMarginBytesOrDelta(cache_margin_bytes, cache_margin_delta_bytes);
+            oss << " (complete); cache margin bytes: " << cache_margin_bytes;
+            Util::dumpDebugMsg(instance_name_, oss.str());
+
             victim_tracker_.updateForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets, cooperation_wrapper_ptr);
             return;
         }
@@ -177,6 +188,13 @@ namespace covered
         // Recover neighbor complete victim syncset based on existing complete victim syncset of source edge idx and received neighbor_victim_syncset if compressed
         VictimSyncset neighbor_complete_victim_syncset = VictimSyncset::recover(neighbor_victim_syncset, existing_complete_victim_syncset);
         assert(neighbor_complete_victim_syncset.isComplete());
+
+        // TMPDEBUG23
+        uint64_t cache_margin_bytes = 0;
+        int cache_margin_delta_bytes = 0;
+        neighbor_complete_victim_syncset.getCacheMarginBytesOrDelta(cache_margin_bytes, cache_margin_delta_bytes);
+        oss << " (compressed); cache margin bytes after recovery: " << cache_margin_bytes;
+        Util::dumpDebugMsg(instance_name_, oss.str());
         
         victim_tracker_.updateForNeighborVictimSyncset(source_edge_idx, neighbor_complete_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets, cooperation_wrapper_ptr);
         return;
@@ -479,12 +497,13 @@ namespace covered
         return is_finish;
     }
 
-    void CoveredCacheManager::sendVictimFetchRequest_(const uint32_t& dst_edge_idx, const ObjectSize& object_size, const EdgeWrapper* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, const NetworkAddr& edge_cache_server_recvreq_dst_addr, const bool& skip_propagation_latency) const
+    void CoveredCacheManager::sendVictimFetchRequest_(const uint32_t& dst_edge_idx_for_compression, const ObjectSize& object_size, const EdgeWrapper* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, const NetworkAddr& edge_cache_server_recvreq_dst_addr, const bool& skip_propagation_latency) const
     {
         assert(edge_wrapper_ptr != NULL);
 
         // Prepare victim syncset for piggybacking-based victim synchronization
-        VictimSyncset victim_syncset = edge_wrapper_ptr->getCoveredCacheManagerPtr()->accessVictimTrackerForLocalVictimSyncset(dst_edge_idx);
+        // NOTE: need to fetch more victims means that the cache of the dst edge node does NOT have sufficient space for the newly-admited object (i.e., NOT empty), so there MUST exist the corresponding edge-level victim metadata for the dst edge node -> while we still need to provide cache margin bytes of the current edge node, as we are getting victim syncset of the current edge node, which may NOT have edge-level metadata
+        VictimSyncset victim_syncset = edge_wrapper_ptr->getCoveredCacheManagerPtr()->accessVictimTrackerForLocalVictimSyncset(dst_edge_idx_for_compression, edge_wrapper_ptr->getCacheMarginBytes());
 
         // Prepare victim fetch request to fetch victims from the target edge node
         const uint32_t current_edge_idx = edge_wrapper_ptr->getNodeIdx();

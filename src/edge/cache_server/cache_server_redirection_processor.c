@@ -299,8 +299,8 @@ namespace covered
             }
 
             // Prepare victim syncset for piggybacking-based victim synchronization
-            const uint32_t dst_edge_idx = redirected_request_ptr->getSourceIndex();
-            VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_edge_idx);
+            const uint32_t dst_edge_idx_for_compression = redirected_request_ptr->getSourceIndex();
+            VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_edge_idx_for_compression, tmp_edge_wrapper_ptr->getCacheMarginBytes());
 
             // Prepare redirected get response
             if (!redirected_request_ptr->isBackgroundRequest()) // Send back normal redirected get response

@@ -120,9 +120,9 @@ namespace covered
         uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
 
         // Prepare victim syncset for piggybacking-based victim synchronization
-        const uint32_t dst_beacon_edge_idx = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
-        assert(dst_beacon_edge_idx != edge_idx); // Current edge node MUST NOT be the beacon edge node for the given key
-        VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_beacon_edge_idx);
+        const uint32_t dst_beacon_edge_idx_for_compression = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
+        assert(dst_beacon_edge_idx_for_compression != edge_idx); // Current edge node MUST NOT be the beacon edge node for the given key
+        VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_beacon_edge_idx_for_compression, tmp_edge_wrapper_ptr->getCacheMarginBytes());
 
         // Prepare local uncached popularity of key for piggybacking-based popularity collection
         CollectedPopularity collected_popularity;
@@ -219,14 +219,14 @@ namespace covered
         return;
     }
 
-    MessageBase* CoveredCacheServerWorker::getReqToRedirectGet_(const uint32_t& dst_edge_idx, const Key& key, const bool& skip_propagation_latency) const
+    MessageBase* CoveredCacheServerWorker::getReqToRedirectGet_(const uint32_t& dst_edge_idx_for_compression, const Key& key, const bool& skip_propagation_latency) const
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
         CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
 
         // Prepare victim syncset for piggybacking-based victim synchronization
-        VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_edge_idx);
+        VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_edge_idx_for_compression, tmp_edge_wrapper_ptr->getCacheMarginBytes());
 
         // Prepare redirected get request to fetch data from other edge nodes
         uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
@@ -347,9 +347,9 @@ namespace covered
         uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
 
         // Prepare victim syncset for piggybacking-based victim synchronization
-        const uint32_t dst_beacon_edge_idx = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
-        assert(dst_beacon_edge_idx != edge_idx); // Current edge node MUST NOT be the beacon edge node for the given key
-        VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_beacon_edge_idx);
+        const uint32_t dst_beacon_edge_idx_for_compression = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
+        assert(dst_beacon_edge_idx_for_compression != edge_idx); // Current edge node MUST NOT be the beacon edge node for the given key
+        VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_beacon_edge_idx_for_compression, tmp_edge_wrapper_ptr->getCacheMarginBytes());
 
         // Prepare local uncached popularity of key for piggybacking-based popularity collection
         // NOTE: we NEED popularity aggregation for accumulated changes on local uncached popularity due to directory metadata cache
@@ -421,8 +421,8 @@ namespace covered
         CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
 
         // Prepare victim syncset for piggybacking-based victim synchronization
-        const uint32_t tmp_dst_edge_idx = covered_finish_block_request_ptr->getSourceIndex();
-        VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(tmp_dst_edge_idx);
+        const uint32_t tmp_dst_edge_idx_for_compression = covered_finish_block_request_ptr->getSourceIndex();
+        VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(tmp_dst_edge_idx_for_compression, tmp_edge_wrapper_ptr->getCacheMarginBytes());
 
         uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
         MessageBase* covered_finish_block_response_ptr = new CoveredFinishBlockResponse(tmp_key, victim_syncset, edge_idx, edge_cache_server_worker_recvreq_source_addr_, tmp_bandwidth_usage, EventList(), skip_propagation_latency); // NOTE: still use skip_propagation_latency of currently-blocked request rather than that of previous write request
@@ -523,9 +523,9 @@ namespace covered
         uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
 
         // Prepare victim syncset for piggybacking-based victim synchronization
-        const uint32_t dst_beacon_edge_idx = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
-        assert(dst_beacon_edge_idx != edge_idx); // Current edge node MUST NOT be the beacon edge node for the given key
-        VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_beacon_edge_idx);
+        const uint32_t dst_beacon_edge_idx_for_compression = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
+        assert(dst_beacon_edge_idx_for_compression != edge_idx); // Current edge node MUST NOT be the beacon edge node for the given key
+        VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_beacon_edge_idx_for_compression, tmp_edge_wrapper_ptr->getCacheMarginBytes());
 
         // Prepare local uncached popularity of key for piggybacking-based popularity collection
         // NOTE: although getReqToAcquireBeaconWritelock_() has aggregated accumulated changes of local uncached popularity due to directory metadata cache, we still NEED popularity aggregation as local uncached metadata may be updated before releasing the write lock if the global cached key is local uncached

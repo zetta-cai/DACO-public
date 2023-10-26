@@ -81,8 +81,8 @@ namespace covered
         const bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();
 
         // Prepare victim syncset for piggybacking-based victim synchronization
-        const uint32_t dst_edge_idx = control_request_ptr->getSourceIndex();
-        VictimSyncset victim_syncset = covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_edge_idx);
+        const uint32_t dst_edge_idx_for_compression = control_request_ptr->getSourceIndex();
+        VictimSyncset victim_syncset = covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_edge_idx_for_compression, edge_wrapper_ptr_->getCacheMarginBytes());
 
         const uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
         MessageBase* covered_directory_lookup_response_ptr = NULL;
@@ -285,8 +285,8 @@ namespace covered
         CoveredCacheManager* covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
 
         // Prepare victim syncset for piggybacking-based victim synchronization
-        const uint32_t dst_edge_idx = control_request_ptr->getSourceIndex();
-        VictimSyncset victim_syncset = covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_edge_idx);
+        const uint32_t dst_edge_idx_for_compression = control_request_ptr->getSourceIndex();
+        VictimSyncset victim_syncset = covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_edge_idx_for_compression, edge_wrapper_ptr_->getCacheMarginBytes());
 
         // Send back corresponding response based on request type
         MessageType message_type = control_request_ptr->getMessageType();
@@ -396,8 +396,8 @@ namespace covered
         bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();
 
         // Prepare victim syncset for piggybacking-based victim synchronization
-        const uint32_t dst_edge_idx = control_request_ptr->getSourceIndex();
-        VictimSyncset victim_syncset = covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_edge_idx);
+        const uint32_t dst_edge_idx_for_compression = control_request_ptr->getSourceIndex();
+        VictimSyncset victim_syncset = covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_edge_idx_for_compression, edge_wrapper_ptr_->getCacheMarginBytes());
 
         uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
         MessageBase* covered_acquire_writelock_response_ptr = new CoveredAcquireWritelockResponse(tmp_key, lock_result, victim_syncset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
@@ -460,8 +460,8 @@ namespace covered
         bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();
 
         // Prepare victim syncset for piggybacking-based victim synchronization
-        const uint32_t dst_edge_idx = control_request_ptr->getSourceIndex();
-        VictimSyncset victim_syncset = covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_edge_idx);
+        const uint32_t dst_edge_idx_for_compression = control_request_ptr->getSourceIndex();
+        VictimSyncset victim_syncset = covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_edge_idx_for_compression, edge_wrapper_ptr_->getCacheMarginBytes());
 
         uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
         MessageBase* covered_release_writelock_response_ptr = NULL;

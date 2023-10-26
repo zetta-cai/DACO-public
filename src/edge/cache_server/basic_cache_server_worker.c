@@ -89,12 +89,12 @@ namespace covered
         return;
     }
 
-    MessageBase* BasicCacheServerWorker::getReqToRedirectGet_(const uint32_t& dst_edge_idx, const Key& key, const bool& skip_propagation_latency) const
+    MessageBase* BasicCacheServerWorker::getReqToRedirectGet_(const uint32_t& dst_edge_idx_for_compression, const Key& key, const bool& skip_propagation_latency) const
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
-        UNUSED(dst_edge_idx);
+        UNUSED(dst_edge_idx_for_compression);
 
         // Prepare redirected get request to fetch data from other edge nodes
         uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();

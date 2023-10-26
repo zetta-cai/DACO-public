@@ -410,11 +410,11 @@ namespace covered
 
     uint32_t DirinfoSet::deserialize(const DynamicArray& msg_payload, const uint32_t& position)
     {
-        assert(delta_bitmap_ != INVALID_BITMAP);
-
         uint32_t size = position;
         msg_payload.serialize(size, (char*)&delta_bitmap_, sizeof(uint8_t));
         size += sizeof(uint8_t);
+        assert(delta_bitmap_ != INVALID_BITMAP);
+        
         bool with_complete_dirinfo_set = isComplete();
         if (with_complete_dirinfo_set)
         {

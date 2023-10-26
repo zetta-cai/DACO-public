@@ -717,10 +717,12 @@ namespace covered
 
     uint32_t VictimSyncset::serialize(DynamicArray& msg_payload, const uint32_t& position) const
     {
+        assert(compressed_bitmap_ != INVALID_BITMAP);
+
         uint32_t size = position;
 
         // Compressed bitmap
-        msg_payload.serialize(size, (char*)&compressed_bitmap_, sizeof(uint8_t));
+        msg_payload.deserialize(size, (const char*)&compressed_bitmap_, sizeof(uint8_t));
         size += sizeof(uint8_t);
 
         // Cache margin bytes
@@ -783,6 +785,7 @@ namespace covered
         // Compressed bitmap
         msg_payload.serialize(size, (char*)&compressed_bitmap_, sizeof(uint8_t));
         size += sizeof(uint8_t);
+        assert(compressed_bitmap_ != INVALID_BITMAP);
 
         // Cache margin bytes
         bool with_complete_cache_margin_bytes = ((compressed_bitmap_ & CACHE_MARGIN_BYTES_DELTA_MASK) != CACHE_MARGIN_BYTES_DELTA_MASK);

@@ -147,8 +147,8 @@ namespace covered
         event_list.addEvent(Event::EDGE_CACHE_SERVER_VICTIM_FETCH_PROCESSOR_FETCHING_EVENT_NAME, victim_fetch_latency_us); // Add admission event if with event tracking
         
         // Prepare victim syncset for piggybacking-based victim synchronization
-        const uint32_t dst_edge_idx = control_request_ptr->getSourceIndex();
-        VictimSyncset local_victim_syncset = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr()->accessVictimTrackerForLocalVictimSyncset(dst_edge_idx); // complete or compressed
+        const uint32_t dst_edge_idx_for_compression = control_request_ptr->getSourceIndex();
+        VictimSyncset local_victim_syncset = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr()->accessVictimTrackerForLocalVictimSyncset(dst_edge_idx_for_compression, tmp_edge_wrapper_ptr->getCacheMarginBytes()); // complete or compressed
 
         // Prepare victim fetchset for lazy victim fetching
         // NOTE: we do NOT care about cache margin bytes in victim_fetchset

@@ -31,7 +31,7 @@ namespace covered
         virtual MessageBase* getReqToLookupBeaconDirectory_(const Key& key, const bool& skip_propagation_latency) const override;
         virtual void processRspToLookupBeaconDirectory_(MessageBase* control_response_ptr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching) const override;
         
-        virtual MessageBase* getReqToRedirectGet_(const uint32_t& dst_edge_idx, const Key& key, const bool& skip_propagation_latency) const override;
+        virtual MessageBase* getReqToRedirectGet_(const uint32_t& dst_edge_idx_for_compression, const Key& key, const bool& skip_propagation_latency) const override;
         virtual void processRspToRedirectGet_(MessageBase* redirected_response_ptr, Value& value, Hitflag& hitflag) const override;
 
         // (1.4) Update invalid cached objects in local edge cache

@@ -468,7 +468,7 @@ namespace covered
         return is_finish;
     }
 
-    void EdgeWrapper::sendInvalidationRequest_(const Key& key, const NetworkAddr& recvrsp_source_addr, const uint32_t& dst_edge_idx, const NetworkAddr& edge_invalidation_server_recvreq_dst_addr, const bool& skip_propagation_latency) const
+    void EdgeWrapper::sendInvalidationRequest_(const Key& key, const NetworkAddr& recvrsp_source_addr, const uint32_t& dst_edge_idx_for_compression, const NetworkAddr& edge_invalidation_server_recvreq_dst_addr, const bool& skip_propagation_latency) const
     {
         checkPointers_();
 
@@ -477,8 +477,8 @@ namespace covered
         if (cache_name_ == Util::COVERED_CACHE_NAME) // ONLY for COVERED
         {
             // Prepare victim syncset for piggybacking-based victim synchronization
-            assert(dst_edge_idx != edge_idx);
-            VictimSyncset victim_syncset = covered_cache_manager_ptr_->accessVictimTrackerForLocalVictimSyncset(dst_edge_idx);
+            assert(dst_edge_idx_for_compression != edge_idx);
+            VictimSyncset victim_syncset = covered_cache_manager_ptr_->accessVictimTrackerForLocalVictimSyncset(dst_edge_idx_for_compression, getCacheMarginBytes());
 
             // Prepare invalidation request to invalidate the cache copy
             invalidation_request_ptr = new CoveredInvalidationRequest(key, victim_syncset, edge_idx, recvrsp_source_addr, skip_propagation_latency);
@@ -651,7 +651,7 @@ namespace covered
         return is_finish;
     }
 
-    void EdgeWrapper::sendFinishBlockRequest_(const Key& key, const NetworkAddr& recvrsp_source_addr, const uint32_t& dst_edge_idx, const NetworkAddr& edge_cache_server_worker_recvreq_dst_addr, const bool& skip_propagation_latency) const
+    void EdgeWrapper::sendFinishBlockRequest_(const Key& key, const NetworkAddr& recvrsp_source_addr, const uint32_t& dst_edge_idx_for_compression, const NetworkAddr& edge_cache_server_worker_recvreq_dst_addr, const bool& skip_propagation_latency) const
     {
         checkPointers_();
 
@@ -660,8 +660,8 @@ namespace covered
         if (cache_name_ == Util::COVERED_CACHE_NAME) // ONLY for COVERED
         {
             // Prepare victim syncset for piggybacking-based victim synchronization
-            assert(dst_edge_idx != edge_idx);
-            VictimSyncset victim_syncset = covered_cache_manager_ptr_->accessVictimTrackerForLocalVictimSyncset(dst_edge_idx);
+            assert(dst_edge_idx_for_compression != edge_idx);
+            VictimSyncset victim_syncset = covered_cache_manager_ptr_->accessVictimTrackerForLocalVictimSyncset(dst_edge_idx_for_compression, getCacheMarginBytes());
 
             // Prepare finish block request to finish blocking for writes in all closest edge nodes
             finish_block_request_ptr = new CoveredFinishBlockRequest(key, victim_syncset, edge_idx, recvrsp_source_addr, skip_propagation_latency);
@@ -1005,7 +1005,7 @@ namespace covered
 
     // (7.1) For victim synchronization
 
-    void EdgeWrapper::updateCacheManagerForLocalSyncedVictims() const
+    uint64_t EdgeWrapper::getCacheMarginBytes() const
     {
         checkPointers_();
         assert(cache_name_ == Util::COVERED_CACHE_NAME);
@@ -1014,6 +1014,17 @@ namespace covered
         uint64_t used_bytes = getSizeForCapacity();
         uint64_t capacity_bytes = getCapacityBytes();
         uint64_t local_cache_margin_bytes = (capacity_bytes >= used_bytes) ? (capacity_bytes - used_bytes) : 0;
+
+        return local_cache_margin_bytes;
+    }
+
+    void EdgeWrapper::updateCacheManagerForLocalSyncedVictims() const
+    {
+        checkPointers_();
+        assert(cache_name_ == Util::COVERED_CACHE_NAME);
+
+        // Get local edge margin bytes
+        uint64_t local_cache_margin_bytes = getCacheMarginBytes();
 
         // Get victim cacheinfos of local synced victims for the current edge node
         std::list<VictimCacheinfo> local_synced_victim_cacheinfos = edge_cache_ptr_->getLocalSyncedVictimCacheinfos(); // NOTE: victim cacheinfos from local edge cache MUST be complete
@@ -1107,7 +1118,7 @@ namespace covered
                     // NOTE: we use edge_beacon_server_recvreq_source_addr_ as the source address even if invoker is cache server to wait for responses
                     // (i) Although current is beacon for cache server, the role is still beacon node, which should be responsible for non-blocking placement deployment. And we don't want to resort cache server worker, which may degrade KV request processing
                     // (ii) Although we may wait for responses, beacon server is blocking for recvreq port and we don't want to introduce another blocking for recvrsp port
-                    const VictimSyncset victim_syncset = covered_cache_manager_ptr_->accessVictimTrackerForLocalVictimSyncset(directory_info.getTargetEdgeIdx());
+                    const VictimSyncset victim_syncset = covered_cache_manager_ptr_->accessVictimTrackerForLocalVictimSyncset(directory_info.getTargetEdgeIdx(), getCacheMarginBytes());
                     CoveredPlacementRedirectedGetRequest* covered_placement_redirected_get_request_ptr = new CoveredPlacementRedirectedGetRequest(key, victim_syncset, best_placement_edgeset, current_edge_idx, edge_beacon_server_recvreq_source_addr_for_placement_, skip_propagation_latency);
                     assert(covered_placement_redirected_get_request_ptr != NULL);
                     NetworkAddr target_edge_cache_server_recvreq_dst_addr = getTargetDstaddr(directory_info); // Send to cache server of the target edge node for cache server worker
@@ -1183,7 +1194,7 @@ namespace covered
 
             // Send CoveredPlacementNotifyRequest to remote edge node
             // NOTE: source addr will NOT be used by placement processor of remote edge node due to without explicit notification ACK (we use directory update request with is_admit = true as the implicit ACK for placement notification)
-            const VictimSyncset victim_syncset = covered_cache_manager_ptr_->accessVictimTrackerForLocalVictimSyncset(tmp_edge_idx);
+            const VictimSyncset victim_syncset = covered_cache_manager_ptr_->accessVictimTrackerForLocalVictimSyncset(tmp_edge_idx, getCacheMarginBytes());
             CoveredPlacementNotifyRequest* covered_placement_notify_request_ptr = new CoveredPlacementNotifyRequest(key, value, is_valid, victim_syncset, current_edge_idx, edge_beacon_server_recvreq_source_addr_for_placement_, skip_propagation_latency);
             assert(covered_placement_notify_request_ptr != NULL);
             // Push the global request into edge-to-edge propagation simulator to the remote edge node

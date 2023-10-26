@@ -42,9 +42,9 @@ namespace covered
         void updateLocalBeaconedVictimDirinfo(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info); // For updates on content directory information, which affects dirinfos of local beaconed victims
 
         // For victim synchronization
-        VictimSyncset getLocalVictimSyncset() const; // Get complete victi syncset for current edge node (i.e., edge_idx_)
+        VictimSyncset getLocalVictimSyncset(const uint64_t& latest_local_cache_margin_bytes) const; // Get complete victim syncset for current edge node (i.e., edge_idx_) (NOTE: we always use the latest cache margin bytes for local victim syncset, instead of using that in edge-level victim metadata of the current edge node, which may be stale)
         VictimSyncset getVictimSyncset(const uint32_t& edge_idx) const; // Get complete victim syncset for edge idx
-        bool replacePrevVictimSyncset(const uint32_t& dst_edge_idx, const VictimSyncset& current_victim_syncset, VictimSyncset& prev_victim_syncset); // Return if prev victim syncset for dst edge idx exists
+        bool replacePrevVictimSyncset(const uint32_t& dst_edge_idx_for_compression, const VictimSyncset& current_victim_syncset, VictimSyncset& prev_victim_syncset); // Return if prev victim syncset for dst edge idx exists
         void updateForNeighborVictimSyncset(const uint32_t& source_edge_idx, const VictimSyncset& neighbor_complete_victim_syncset, const std::unordered_map<Key, DirinfoSet, KeyHasher>& local_beaconed_neighbor_synced_victim_dirinfosets, const CooperationWrapperBase* cooperation_wrapper_ptr); // Update victim tracker in the current edge node for the received victim syncset from neighbor edge node (neighbor_complete_victim_syncset MUST be complete)
 
         // For trade-off-aware placement calculation

@@ -351,11 +351,11 @@ namespace covered
 
     uint32_t VictimCacheinfo::deserialize(const DynamicArray& msg_payload, const uint32_t& position)
     {
-        assert(dedup_bitmap_ != INVALID_BITMAP);
-
         uint32_t size = position;
         msg_payload.serialize(size, (char*)&dedup_bitmap_, sizeof(uint8_t));
         size += sizeof(uint8_t);
+        assert(dedup_bitmap_ != INVALID_BITMAP);
+        
         uint32_t key_deserialize_size = key_.deserialize(msg_payload, size);
         size += key_deserialize_size;
         bool with_complete_object_size = ((dedup_bitmap_ & OBJECT_SIZE_DEDUP_MASK) != OBJECT_SIZE_DEDUP_MASK);

@@ -265,7 +265,7 @@ namespace covered
 
     void CacheServer::partitionRequest_(MessageBase* data_requeset_ptr)
     {
-        assert(data_requeset_ptr != NULL && data_requeset_ptr->isDataRequest());
+        assert(data_requeset_ptr != NULL);
 
         const uint32_t percacheserver_workercnt = edge_wrapper_ptr_->getPercacheserverWorkercnt();
 
@@ -425,9 +425,9 @@ namespace covered
             CoveredCacheManager* tmp_covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
 
             // Prepare victim syncset for piggybacking-based victim synchronization
-            const uint32_t dst_beacon_edge_idx = edge_wrapper_ptr_->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
-            assert(dst_beacon_edge_idx != edge_idx); // Current edge node MUST NOT be the beacon edge node for the given key
-            VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_beacon_edge_idx);
+            const uint32_t dst_beacon_edge_idx_for_compression = edge_wrapper_ptr_->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
+            assert(dst_beacon_edge_idx_for_compression != edge_idx); // Current edge node MUST NOT be the beacon edge node for the given key
+            VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_beacon_edge_idx_for_compression, edge_wrapper_ptr_->getCacheMarginBytes());
 
             // ONLY need victim synchronization yet without popularity collection/aggregation
             if (!is_background) // Foreground remote directory admission triggered by hybrid data fetching at the sender/closest edge node (different from beacon)
@@ -827,9 +827,9 @@ namespace covered
             edge_wrapper_ptr_->getEdgeCachePtr()->getCollectedPopularity(key, collected_popularity); // collected_popularity.is_tracked_ indicates if the local uncached key is tracked in local uncached metadata (due to selective metadata preservation)
 
             // Prepare victim syncset for piggybacking-based victim synchronization
-            const uint32_t dst_beacon_edge_idx = edge_wrapper_ptr_->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
-            assert(dst_beacon_edge_idx != edge_idx); // Current edge node MUST NOT be the beacon edge node for the given key
-            VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_beacon_edge_idx);
+            const uint32_t dst_beacon_edge_idx_for_compression = edge_wrapper_ptr_->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
+            assert(dst_beacon_edge_idx_for_compression != edge_idx); // Current edge node MUST NOT be the beacon edge node for the given key
+            VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_beacon_edge_idx_for_compression, edge_wrapper_ptr_->getCacheMarginBytes());
 
             // Need BOTH popularity collection and victim synchronization
             if (!is_background) // Foreground remote directory eviction (triggered by invalid/valid value update by local get/put and independent admission)
@@ -969,9 +969,9 @@ namespace covered
         NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = edge_wrapper_ptr_->getBeaconDstaddr_(key);
 
         // Prepare victim syncset for piggybacking-based victim synchronization
-        const uint32_t dst_beacon_edge_idx = edge_wrapper_ptr_->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
-        assert(dst_beacon_edge_idx != current_edge_idx); // Current edge node MUST NOT be the beacon edge node for the given key
-        VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_beacon_edge_idx);
+        const uint32_t dst_beacon_edge_idx_for_compression = edge_wrapper_ptr_->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
+        assert(dst_beacon_edge_idx_for_compression != current_edge_idx); // Current edge node MUST NOT be the beacon edge node for the given key
+        VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_beacon_edge_idx_for_compression, edge_wrapper_ptr_->getCacheMarginBytes());
 
         // Notify result of hybrid data fetching towards the beacon edge node to trigger non-blocking placement notification
         bool is_being_written = false;
