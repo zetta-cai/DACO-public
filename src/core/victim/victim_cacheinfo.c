@@ -176,7 +176,8 @@ namespace covered
     {
         assert(dedup_bitmap_ != INVALID_BITMAP);
 
-        return ((dedup_bitmap_ & OBJECT_SIZE_DEDUP_MASK) == OBJECT_SIZE_DEDUP_MASK) && ((dedup_bitmap_ & LOCAL_CACHED_POPULARITY_DEDUP_MASK) == LOCAL_CACHED_POPULARITY_DEDUP_MASK) && ((dedup_bitmap_ & REDIRECTED_CACHED_POPULARITY_DEDUP_MASK) == REDIRECTED_CACHED_POPULARITY_DEDUP_MASK) && ((dedup_bitmap_ & LOCAL_REWARD_DEDUP_MASK) == LOCAL_REWARD_DEDUP_MASK);
+        // NOTE: STALE_BITMAP can also cover all dedup masks
+        return ((dedup_bitmap_ != STALE_BITMAP) && (dedup_bitmap_ & OBJECT_SIZE_DEDUP_MASK) == OBJECT_SIZE_DEDUP_MASK) && ((dedup_bitmap_ & LOCAL_CACHED_POPULARITY_DEDUP_MASK) == LOCAL_CACHED_POPULARITY_DEDUP_MASK) && ((dedup_bitmap_ & REDIRECTED_CACHED_POPULARITY_DEDUP_MASK) == REDIRECTED_CACHED_POPULARITY_DEDUP_MASK) && ((dedup_bitmap_ & LOCAL_REWARD_DEDUP_MASK) == LOCAL_REWARD_DEDUP_MASK);
     }
 
     // For complete victim cacheinfo

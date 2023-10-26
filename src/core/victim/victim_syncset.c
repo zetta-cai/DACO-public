@@ -305,37 +305,37 @@ namespace covered
             }
 
             #ifdef DEBUG_VICTIM_SYNCSET
-            std::ostringstream oss;
-            oss << "[before sort]" << std::endl;
-            uint32_t i = 0;
-            for (std::list<VictimCacheinfo>::const_iterator complete_victim_cacheinfos_const_iter = complete_victim_cacheinfos.begin(); complete_victim_cacheinfos_const_iter != complete_victim_cacheinfos.end(); complete_victim_cacheinfos_const_iter++)
-            {
-                const VictimCacheinfo& tmp_complete_victim_cacheinfo = *complete_victim_cacheinfos_const_iter;
-                Reward local_reward = 0.0;
-                tmp_complete_victim_cacheinfo.getLocalReward(local_reward);
-                oss <<"[" << i << "] key: " << tmp_complete_victim_cacheinfo.getKey().getKeystr() << " reward: " << local_reward << std::endl;
-                i++;
-            }
-            Util::dumpDebugMsg(kClassName, oss.str());
+            // std::ostringstream oss;
+            // oss << "[before sort]" << std::endl;
+            // uint32_t i = 0;
+            // for (std::list<VictimCacheinfo>::const_iterator complete_victim_cacheinfos_const_iter = complete_victim_cacheinfos.begin(); complete_victim_cacheinfos_const_iter != complete_victim_cacheinfos.end(); complete_victim_cacheinfos_const_iter++)
+            // {
+            //     const VictimCacheinfo& tmp_complete_victim_cacheinfo = *complete_victim_cacheinfos_const_iter;
+            //     Reward local_reward = 0.0;
+            //     tmp_complete_victim_cacheinfo.getLocalReward(local_reward);
+            //     oss <<"[" << i << "] key: " << tmp_complete_victim_cacheinfo.getKey().getKeystr() << " reward: " << local_reward << std::endl;
+            //     i++;
+            // }
+            // Util::dumpDebugMsg(kClassName, oss.str());
             #endif
 
             // Sort by local rewards in an ascending order
             VictimCacheinfo::sortByLocalRewards(complete_victim_cacheinfos);
 
             #ifdef DEBUG_VICTIM_SYNCSET
-            oss.str("");
-            oss.clear();
-            oss << "[after sort]" << std::endl;
-            uint32_t j = 0;
-            for (std::list<VictimCacheinfo>::const_iterator complete_victim_cacheinfos_const_iter = complete_victim_cacheinfos.begin(); complete_victim_cacheinfos_const_iter != complete_victim_cacheinfos.end(); complete_victim_cacheinfos_const_iter++)
-            {
-                const VictimCacheinfo& tmp_complete_victim_cacheinfo = *complete_victim_cacheinfos_const_iter;
-                Reward local_reward = 0.0;
-                tmp_complete_victim_cacheinfo.getLocalReward(local_reward);
-                oss <<"[" << j << "] key: " << tmp_complete_victim_cacheinfo.getKey().getKeystr() << " reward: " << local_reward << std::endl;
-                j++;
-            }
-            Util::dumpDebugMsg(kClassName, oss.str());
+            // oss.str("");
+            // oss.clear();
+            // oss << "[after sort]" << std::endl;
+            // uint32_t j = 0;
+            // for (std::list<VictimCacheinfo>::const_iterator complete_victim_cacheinfos_const_iter = complete_victim_cacheinfos.begin(); complete_victim_cacheinfos_const_iter != complete_victim_cacheinfos.end(); complete_victim_cacheinfos_const_iter++)
+            // {
+            //     const VictimCacheinfo& tmp_complete_victim_cacheinfo = *complete_victim_cacheinfos_const_iter;
+            //     Reward local_reward = 0.0;
+            //     tmp_complete_victim_cacheinfo.getLocalReward(local_reward);
+            //     oss <<"[" << j << "] key: " << tmp_complete_victim_cacheinfo.getKey().getKeystr() << " reward: " << local_reward << std::endl;
+            //     j++;
+            // }
+            // Util::dumpDebugMsg(kClassName, oss.str());
             #endif
 
             // Replace existing complete victim cacheinfos with recovered ones
@@ -731,11 +731,13 @@ namespace covered
         {
             msg_payload.deserialize(size, (const char*)&cache_margin_bytes_, sizeof(uint64_t));
             size += sizeof(uint64_t);
+
         }
         else
         {
             msg_payload.deserialize(size, (const char*)&cache_margin_delta_bytes_, sizeof(int));
             size += sizeof(int);
+
         }
 
         // Size of local synced victims

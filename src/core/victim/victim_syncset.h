@@ -9,7 +9,7 @@
 #ifndef VICTIM_SYNCSET_H
 #define VICTIM_SYNCSET_H
 
-#define DEBUG_VICTIM_SYNCSET
+//#define DEBUG_VICTIM_SYNCSET
 
 #include <list>
 #include <string>

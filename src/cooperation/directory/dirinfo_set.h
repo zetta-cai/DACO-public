@@ -7,7 +7,7 @@
 #ifndef DIRINFO_SET_H
 #define DIRINFO_SET_H
 
-#define DEBUG_DIRINFO_SET
+//#define DEBUG_DIRINFO_SET
 
 #include <string>
 #include <unordered_set>

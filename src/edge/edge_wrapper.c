@@ -1043,9 +1043,12 @@ namespace covered
         checkPointers_();
         assert(cache_name_ == Util::COVERED_CACHE_NAME);
 
+        // Get victim cacheinfos of neighbor synced victims (complete/compressed)
         std::list<VictimCacheinfo> neighbor_synced_victims;
         bool with_complete_victim_syncset = victim_syncset.getLocalSyncedVictims(neighbor_synced_victims);
         UNUSED(with_complete_victim_syncset); // Transmitted victim syncset received from neighbor edge node can be either complete or compressed
+
+        // Get directory info sets for neighbor synced victimed beaconed by the current edge node
         std::unordered_map<Key, DirinfoSet, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = getLocalBeaconedVictimsFromCacheinfos(neighbor_synced_victims); // NOTE: dirinfo sets from local directory table MUST be complete
 
         return local_beaconed_neighbor_synced_victim_dirinfosets;
@@ -1058,6 +1061,15 @@ namespace covered
         std::unordered_map<Key, DirinfoSet, KeyHasher> local_beaconed_victim_dirinfosets;
         for (std::list<VictimCacheinfo>::const_iterator iter = victim_cacheinfos.begin(); iter != victim_cacheinfos.end(); iter++)
         {
+            // NOTE: local/neighbor synced victim MUST NOT invalid or fully-deduped
+            assert(!iter->isInvalid());
+            assert(!iter->isFullyDeduped());
+
+            if (iter->isStale()) // NOTE: NO need to get local dirinfo set for a stale victim, as victim tracker will remove the corresponding victim cacheinfo and may also remove the victim dirinfo if refcnt becomes zero
+            {
+                continue;
+            }
+
             const Key& tmp_key = iter->getKey();
             bool current_is_beacon = currentIsBeacon(tmp_key);
             if (current_is_beacon) // Key is beaconed by current edge node

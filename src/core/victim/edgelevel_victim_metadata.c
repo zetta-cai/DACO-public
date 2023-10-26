@@ -48,10 +48,6 @@ namespace covered
         bool need_more_victims = false;
         const bool with_extra_victims = (extra_victim_cacheinfos.size() > 0);
 
-        // TMPDEBUG23
-        std::ostringstream oss;
-        oss << "find victims for edge " << cur_edge_idx << " with object size " << object_size << " and extra victims " << extra_victim_cacheinfos.size() << "; cache_margin_bytes_: " << cache_margin_bytes_;
-
         // NOTE: If object size of admitted object <= cache margin bytes, the edge node does NOT need to evict any victim and hence contribute zero to eviction cost; otherwise, find victims based on required bytes and trigger lazy victim fetching if necessary (i.e., set need_more_victims = true)
         uint64_t tmp_required_bytes = 0;
         uint64_t tmp_saved_bytes = 0;
@@ -85,20 +81,11 @@ namespace covered
                 }
             } // End of tmp_victim_cacheinfos_ref in the tmp_edge_idx
 
-            // TMPDEBUG23
-            oss << " tmp_saved_bytes: " << tmp_saved_bytes;
-
             if (tmp_saved_bytes < tmp_required_bytes)
             {
-                // TMPDEBUG23
-                oss << " need_more_victims: " << Util::toString(need_more_victims);
-
                 need_more_victims = true;
             }
         } // End of (object_size > tmp_cache_margin_bytes)
-
-        // TMPDEBUG23
-        Util::dumpDebugMsg(kClassName, oss.str());
 
         // Update victim fetch edgeset for lazy victim fetching
         if (need_more_victims)

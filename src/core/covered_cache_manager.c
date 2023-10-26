@@ -163,20 +163,9 @@ namespace covered
     {
         // NOTE: victim cacheinfos and dirinfo sets of neighbor_victim_syncset can be either complete or compressed; while dirinfo sets of local_beaconed_neighbor_synced_victim_dirinfosets MUST be complete
 
-        // TMPDEBUG23
-        std::ostringstream oss;
-        oss << "receive victim syncset from edge " << source_edge_idx;
-
         bool is_complete = neighbor_victim_syncset.isComplete();
         if (is_complete) // neighbor_victim_syncset is complete already
         {
-            // TMPDEBUG23
-            uint64_t cache_margin_bytes = 0;
-            int cache_margin_delta_bytes = 0;
-            neighbor_victim_syncset.getCacheMarginBytesOrDelta(cache_margin_bytes, cache_margin_delta_bytes);
-            oss << " (complete); cache margin bytes: " << cache_margin_bytes;
-            Util::dumpDebugMsg(instance_name_, oss.str());
-
             victim_tracker_.updateForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets, cooperation_wrapper_ptr);
             return;
         }
@@ -188,13 +177,6 @@ namespace covered
         // Recover neighbor complete victim syncset based on existing complete victim syncset of source edge idx and received neighbor_victim_syncset if compressed
         VictimSyncset neighbor_complete_victim_syncset = VictimSyncset::recover(neighbor_victim_syncset, existing_complete_victim_syncset);
         assert(neighbor_complete_victim_syncset.isComplete());
-
-        // TMPDEBUG23
-        uint64_t cache_margin_bytes = 0;
-        int cache_margin_delta_bytes = 0;
-        neighbor_complete_victim_syncset.getCacheMarginBytesOrDelta(cache_margin_bytes, cache_margin_delta_bytes);
-        oss << " (compressed); cache margin bytes after recovery: " << cache_margin_bytes;
-        Util::dumpDebugMsg(instance_name_, oss.str());
         
         victim_tracker_.updateForNeighborVictimSyncset(source_edge_idx, neighbor_complete_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets, cooperation_wrapper_ptr);
         return;

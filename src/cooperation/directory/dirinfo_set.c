@@ -361,13 +361,13 @@ namespace covered
             {
                 assert(new_dirinfo_delta_set_.size() > 0);
 
-                getDirinfoSetPayloadSizeInternal_(new_dirinfo_delta_set_);
+                dirinfo_set_payload_size += getDirinfoSetPayloadSizeInternal_(new_dirinfo_delta_set_);
             }
             if ((delta_bitmap_ & STALE_DIRINFO_SET_DELTA_MASK) == STALE_DIRINFO_SET_DELTA_MASK)
             {
                 assert(stale_dirinfo_delta_set_.size() > 0);
 
-                getDirinfoSetPayloadSizeInternal_(stale_dirinfo_delta_set_);
+                dirinfo_set_payload_size += getDirinfoSetPayloadSizeInternal_(stale_dirinfo_delta_set_);
             }
         }
 
@@ -425,17 +425,17 @@ namespace covered
         {
             if ((delta_bitmap_ & NEW_DIRINFO_SET_DELTA_MASK) == NEW_DIRINFO_SET_DELTA_MASK)
             {
-                assert(new_dirinfo_delta_set_.size() > 0);
-
                 uint32_t new_dirinfo_delta_set_deserialize_size = deserializeDirinfoSetInternal_(msg_payload, size, new_dirinfo_delta_set_);
                 size += new_dirinfo_delta_set_deserialize_size;
+
+                assert(new_dirinfo_delta_set_.size() > 0);
             }
             if ((delta_bitmap_ & STALE_DIRINFO_SET_DELTA_MASK) == STALE_DIRINFO_SET_DELTA_MASK)
             {
-                assert(stale_dirinfo_delta_set_.size() > 0);
-
                 uint32_t stale_dirinfo_delta_set_deserialize_size = deserializeDirinfoSetInternal_(msg_payload, size, stale_dirinfo_delta_set_);
                 size += stale_dirinfo_delta_set_deserialize_size;
+
+                assert(stale_dirinfo_delta_set_.size() > 0);
             }
         }
 
@@ -488,7 +488,7 @@ namespace covered
         uint32_t dirinfo_set_payload_size = 0;
 
         dirinfo_set_payload_size += sizeof(uint32_t); // dirinfo set size
-        for (std::unordered_set<DirectoryInfo, DirectoryInfoHasher>::const_iterator dirinfo_const_iter = dirinfo_set_.begin(); dirinfo_const_iter != dirinfo_set_.end(); dirinfo_const_iter++)
+        for (std::unordered_set<DirectoryInfo, DirectoryInfoHasher>::const_iterator dirinfo_const_iter = dirinfo_set.begin(); dirinfo_const_iter != dirinfo_set.end(); dirinfo_const_iter++)
         {
             dirinfo_set_payload_size += dirinfo_const_iter->getDirectoryInfoPayloadSize(); // complete dirinfos
         }
@@ -502,7 +502,7 @@ namespace covered
         uint32_t dirinfo_set_size = dirinfo_set.size();
         msg_payload.deserialize(size, (const char*)&dirinfo_set_size, sizeof(uint32_t));
         size += sizeof(uint32_t);
-        for (std::unordered_set<DirectoryInfo, DirectoryInfoHasher>::const_iterator dirinfo_const_iter = dirinfo_set_.begin(); dirinfo_const_iter != dirinfo_set_.end(); dirinfo_const_iter++)
+        for (std::unordered_set<DirectoryInfo, DirectoryInfoHasher>::const_iterator dirinfo_const_iter = dirinfo_set.begin(); dirinfo_const_iter != dirinfo_set.end(); dirinfo_const_iter++)
         {
             uint32_t dirinfo_serialize_size = dirinfo_const_iter->serialize(msg_payload, size);
             size += dirinfo_serialize_size;
@@ -529,7 +529,7 @@ namespace covered
     uint32_t DirinfoSet::getDirinfoSetSizeForCapacityInternal_(const std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& dirinfo_set) const
     {
         uint32_t dirinfo_set_total_size  = 0;
-        for (std::unordered_set<DirectoryInfo, DirectoryInfoHasher>::const_iterator dirinfo_const_iter = dirinfo_set_.begin(); dirinfo_const_iter != dirinfo_set_.end(); dirinfo_const_iter++)
+        for (std::unordered_set<DirectoryInfo, DirectoryInfoHasher>::const_iterator dirinfo_const_iter = dirinfo_set.begin(); dirinfo_const_iter != dirinfo_set.end(); dirinfo_const_iter++)
         {
             dirinfo_set_total_size += dirinfo_const_iter->getSizeForCapacity(); // complete dirinfos
         }

@@ -221,7 +221,7 @@ namespace covered
         // Acquire a write lock to update local synced victims atomically
         std::string context_name = "VictimTracker::updateForNeighborVictimSyncset()";
         rwlock_for_victim_tracker_->acquire_lock(context_name);
-        
+
         // Replace VictimCacheinfos for neighbor synced victims of the given edge node
         replaceVictimMetadataForEdgeIdx_(source_edge_idx, neighbor_cache_margin_bytes, neighbor_synced_victim_cacheinfos, cooperation_wrapper_ptr);
 
@@ -552,14 +552,6 @@ namespace covered
         if (with_extra_victims)
         {
             victim_fetch_edgeset.clear(); // NOTE: we DISABLE recursive victim fetching
-        }
-
-        // TMPDEBUG23
-        std::ostringstream oss;
-        oss << "victim fetch edgeset (size " << victim_fetch_edgeset.size() << "): ";
-        for (std::unordered_set<uint32_t>::const_iterator victim_fetch_edgeset_const_iter = victim_fetch_edgeset.begin(); victim_fetch_edgeset_const_iter != victim_fetch_edgeset.end(); victim_fetch_edgeset_const_iter++)
-        {
-            oss << *victim_fetch_edgeset_const_iter << " ";
         }
 
         return;

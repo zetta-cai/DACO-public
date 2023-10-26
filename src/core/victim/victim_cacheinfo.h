@@ -7,7 +7,7 @@
 #ifndef VICTIM_CACHEINFO_H
 #define VICTIM_CACHEINFO_H
 
-#define DEBUG_VICTIM_CACHEINFO
+//#define DEBUG_VICTIM_CACHEINFO
 
 #include <list>
 #include <string>
