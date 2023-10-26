@@ -62,7 +62,15 @@ namespace covered
 
     bool PopularityAggregator::isKeyBeingAdmitted(const Key& key) const
     {
+        checkPointers_();
+
+        // Acquire a read lock to check if key is being admitted (i.e., with preserved edge nodes) atomically (TODO: maybe NO need to acquire a read lock for is_being_admitted here)
+        std::string context_name = "PopularityAggregator::isKeyBeingAdmitted()";
+        rwlock_for_popularity_aggregator_->acquire_lock_shared(context_name);
+
         bool is_being_admitted = (perkey_preserved_edgeset_.find(key) != perkey_preserved_edgeset_.end());
+
+        rwlock_for_popularity_aggregator_->unlock_shared(context_name);
         return is_being_admitted;
     }
 
@@ -205,7 +213,7 @@ namespace covered
 
     bool PopularityAggregator::getAggregatedUncachedPopularity_(const Key& key, AggregatedUncachedPopularity& aggregated_uncached_popularity) const
     {
-        // NOTE: we have already acquired a read lock in getAggregatedUncachedPopularity() or updatePreservedEdgesetForPlacement() or updateAggregatedUncachedPopularity() for thread safety
+        // NOTE: we have already acquired a read lock in getAggregatedUncachedPopularity() or updatePreservedEdgesetForPlacement() or updateAggregatedUncachedPopularityForExistingKey_() (from updateAggregatedUncachedPopularity()) for thread safety
 
         bool is_found = false;
 
@@ -288,6 +296,8 @@ namespace covered
 
     void PopularityAggregator::updateBenefitPopularityForExistingKey_(const Key& key, const AggregatedUncachedPopularity& updated_aggregated_uncached_popularity, const bool& is_aggregated_uncached_popularity_empty, const bool& is_global_cached)
     {
+        // NOTE: we have already acquired a write lock in updatePreservedEdgesetForPlacement() and updateAggregatedUncachedPopularityForExistingKey_() (from updateAggregatedUncachedPopularity()) for thread safety
+        
         perkey_benefit_popularity_table_iter_t perkey_benefit_popularity_iter = perkey_benefit_popularity_table_.find(key);
         assert(perkey_benefit_popularity_iter != perkey_benefit_popularity_table_.end()); // For existing key
         benefit_popularity_multimap_iter_t old_benefit_popularity_iter = perkey_benefit_popularity_iter->second;

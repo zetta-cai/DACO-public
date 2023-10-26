@@ -31,8 +31,8 @@ CPPFLAGS += $(INCDIR)
 CPPFLAGS += $(EXTRA_CPPFLAGS)
 
 CC := g++
-# For debugging
-#CC := g++ -v
+# For compile debugging (excluding -v)
+#CC := g++ -fsanitize=address
 
 #CFLAGS += -std=c++17 -O3 -g -Wall -Werror -march=native -fno-omit-frame-pointer
 #CFLAGS += -std=c++17 -O3 -g -Wall -march=native -fno-omit-frame-pointer
@@ -43,8 +43,8 @@ CFLAGS_SHARED += $(CFLAGS) -fPIC
 
 LDDIR =
 LDLIBS =
-# Uncomment for link debugging
-#LDFLAGS += -v -Wl,--trace
+# Uncomment for link debugging (excluding -v)
+#LDFLAGS += -Wl,--trace
 LDFLAGS += $(LDDIR)
 LINK = $(CC) $(LDFLAGS)
 LINK.so = $(CC) $(LDFLAGS) -shared

@@ -65,6 +65,7 @@ namespace covered
 
         // Utils
 
+        VictimSyncset getVictimSyncset_(const uint32_t& edge_idx) const;
         void replaceVictimMetadataForEdgeIdx_(const uint32_t& edge_idx, const uint64_t& cache_margin_bytes, const std::list<VictimCacheinfo>& synced_victim_cacheinfos, const CooperationWrapperBase* cooperation_wrapper_ptr); // Replace cache margin bytes and cacheinfos of local/neighbor synced victims for a specific edge node (synced_victim_cacheinfos MUST be complete)
         void replaceVictimDirinfoSets_(const std::unordered_map<Key, DirinfoSet, KeyHasher>& beaconed_synced_victim_dirinfosets, const bool& is_local_beaconed); // Replace dirinfoset in existing VictimDirinfo if any of each local/neighbor beaconed victim
         void tryToReleaseVictimDirinfo_(const Key& key); // Decrease refcnt of existing VictimDirinfo if any for the given key and release space if refcnt becomes zero

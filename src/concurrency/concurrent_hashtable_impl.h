@@ -13,7 +13,7 @@ namespace covered
     const std::string ConcurrentHashtable<V>::kClassName("ConcurrentHashtable");
 
     template<class V>
-    ConcurrentHashtable<V>::ConcurrentHashtable(const std::string& table_name, const V& default_value, const PerkeyRwlock* perkey_rwlock_ptr) : perkey_rwlock_ptr_(perkey_rwlock_ptr)
+    ConcurrentHashtable<V>::ConcurrentHashtable(const std::string& table_name, const V& default_value, const PerkeyRwlock* perkey_rwlock_ptr) : perkey_rwlock_ptr_(perkey_rwlock_ptr), total_key_size_(0), total_value_size_(0)
     {
         std::ostringstream oss;
         oss << kClassName << " of " << table_name;
