@@ -139,27 +139,10 @@ namespace covered
         // TMPDEBUG23
         Util::dumpVariablesForDebug(instance_name_, 1, "CoveredCacheManager::accessVictimTrackerForLocalVictimSyncset()");
 
-        // Get current complete victim syncset from victim tracker
-        VictimSyncset current_victim_syncset = victim_tracker_.getLocalVictimSyncset(latest_local_cache_margin_bytes);
-        assert(current_victim_syncset.isComplete());
+        // Get current complete/compressed victim syncset from victim tracker
+        // NOTE: we should perform compression inside updateForNeighborVictimSyncset for atomicity
+        VictimSyncset current_victim_syncset = victim_tracker_.getLocalVictimSyncsetForSynchronization(latest_local_cache_margin_bytes);
 
-        // Replace previously-issued complete victim syncset for dst edge idx by current complete victim syncset if necessary
-        VictimSyncset prev_victim_syncset;
-        bool is_prev_victim_syncset_exist = victim_tracker_.replacePrevVictimSyncset(dst_edge_idx_for_compression, current_victim_syncset, prev_victim_syncset);
-
-        if (!is_prev_victim_syncset_exist) // No previous victim syncset for dedup/delta-compression
-        {
-            return current_victim_syncset;
-        }
-        else
-        {
-            assert(prev_victim_syncset.isComplete());
-
-            // Calculate compressed victim syncset by dedup/delta-compression based on current and prev complete victim syncset
-            VictimSyncset compressed_victim_syncset = VictimSyncset::compress(current_victim_syncset, prev_victim_syncset);
-
-            return compressed_victim_syncset;
-        }
         return current_victim_syncset;
     }
 
@@ -170,6 +153,8 @@ namespace covered
         // TMPDEBUG23
         Util::dumpVariablesForDebug(instance_name_, 1, "CoveredCacheManager::updateVictimTrackerForNeighborVictimSyncset()");
 
+        // TODO: we should perform recovery insidhe updateForNeighborVictimSyncset for atomicity
+
         bool is_complete = neighbor_victim_syncset.isComplete();
         if (is_complete) // neighbor_victim_syncset is complete already
         {
@@ -179,7 +164,7 @@ namespace covered
         assert(!is_complete);
 
         // Get existing complete victim syncset from victim tracker for source edge idx
-        VictimSyncset existing_complete_victim_syncset = victim_tracker_.getVictimSyncset(source_edge_idx);
+        VictimSyncset existing_complete_victim_syncset = victim_tracker_.getNeighborVictimSyncsetForRecovery(source_edge_idx);
 
         // Recover neighbor complete victim syncset based on existing complete victim syncset of source edge idx and received neighbor_victim_syncset if compressed
         VictimSyncset neighbor_complete_victim_syncset = VictimSyncset::recover(neighbor_victim_syncset, existing_complete_victim_syncset);
@@ -224,7 +209,7 @@ namespace covered
         return total_size;
     }
 
-    bool CoveredCacheManager::placementCalculation_(const Key& key, const bool& is_global_cached, bool& has_best_placement, Edgeset& best_placement_edgeset, std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& best_placement_peredge_synced_victimset, std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& best_placement_peredge_fetched_victimset, const EdgeWrapper* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency)
+    bool CoveredCacheManager::placementCalculation_(const Key& key, const bool& is_global_cached, bool& has_best_placement, Edgeset& best_placement_edgeset, std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& best_placement_peredge_synced_victimset, std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& best_placement_peredge_fetched_victimset, const EdgeWrapper* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
     {
         bool is_finish = false;
         has_best_placement = false;

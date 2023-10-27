@@ -155,21 +155,21 @@ namespace covered
     {
         assert(dedup_bitmap_ != INVALID_BITMAP);
 
-        return ((dedup_bitmap_ & DEDUP_MASK) == (COMPLETE_BITMAP & DEDUP_MASK));
+        return (dedup_bitmap_ != STALE_BITMAP) && ((dedup_bitmap_ & DEDUP_MASK) == (COMPLETE_BITMAP & DEDUP_MASK));
     }
 
     bool VictimCacheinfo::isStale() const
     {
         assert(dedup_bitmap_ != INVALID_BITMAP);
 
-        return (dedup_bitmap_ == STALE_BITMAP);
+        return dedup_bitmap_ == STALE_BITMAP;
     }
 
     bool VictimCacheinfo::isDeduped() const
     {
         assert(dedup_bitmap_ != INVALID_BITMAP);
 
-        return ((dedup_bitmap_ & DEDUP_MASK) == DEDUP_MASK);
+        return (dedup_bitmap_ != STALE_BITMAP) && ((dedup_bitmap_ & DEDUP_MASK) == DEDUP_MASK);
     }
 
     bool VictimCacheinfo::isFullyDeduped() const

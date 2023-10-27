@@ -42,9 +42,9 @@ namespace covered
         void updateLocalBeaconedVictimDirinfo(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info); // For updates on content directory information, which affects dirinfos of local beaconed victims
 
         // For victim synchronization
-        VictimSyncset getLocalVictimSyncset(const uint64_t& latest_local_cache_margin_bytes) const; // Get complete victim syncset for current edge node (i.e., edge_idx_) (NOTE: we always use the latest cache margin bytes for local victim syncset, instead of using that in edge-level victim metadata of the current edge node, which may be stale)
-        VictimSyncset getVictimSyncset(const uint32_t& edge_idx) const; // Get complete victim syncset for edge idx
-        bool replacePrevVictimSyncset(const uint32_t& dst_edge_idx_for_compression, const VictimSyncset& current_victim_syncset, VictimSyncset& prev_victim_syncset); // Return if prev victim syncset for dst edge idx exists
+        // NOTE: getLocalVictimSyncsetForSynchronization() can ONLY be used to issue local synced victims for victim synchronization, as it will increase cur_seqnum_ of the current edge node towards the given dst edge node in peredge_cur_seqnum_
+        VictimSyncset getLocalVictimSyncsetForSynchronization(const uint32_t& dst_edge_idx_for_compression, const uint64_t& latest_local_cache_margin_bytes) const; // Get complete victim syncset for current edge node (i.e., edge_idx_) (NOTE: we always use the latest cache margin bytes for local victim syncset, instead of using that in edge-level victim metadata of the current edge node, which may be stale)
+        VictimSyncset getNeighborVictimSyncsetForRecovery(const uint32_t& edge_idx) const; // Get complete victim syncset for edge idx
         void updateForNeighborVictimSyncset(const uint32_t& source_edge_idx, const VictimSyncset& neighbor_complete_victim_syncset, const std::unordered_map<Key, DirinfoSet, KeyHasher>& local_beaconed_neighbor_synced_victim_dirinfosets, const CooperationWrapperBase* cooperation_wrapper_ptr); // Update victim tracker in the current edge node for the received victim syncset from neighbor edge node (neighbor_complete_victim_syncset MUST be complete)
 
         // For trade-off-aware placement calculation
@@ -60,16 +60,23 @@ namespace covered
         typedef std::unordered_map<uint32_t, EdgelevelVictimMetadata> peredge_victim_metadata_t;
         typedef std::unordered_map<Key, VictimDirinfo, KeyHasher> perkey_victim_dirinfo_t;
         typedef std::unordered_map<uint32_t, VictimSyncset> peredge_victim_syncset_t;
+        typedef std::unordered_map<uint32_t, SeqNum> peredge_seqnum_t;
         
         static const std::string kClassName;
 
         // Utils
 
-        VictimSyncset getVictimSyncset_(const uint32_t& edge_idx) const;
+        // For victim synchronization
+        SeqNum getAndIncrCurSeqnum_(const uint32_t& dst_edge_idx_for_compression) const;
+        VictimSyncset getVictimSyncset_(const uint32_t& edge_idx, const SeqNum& seqnum) const; // For local edge idx to synchronize victim info, seqnum is the cur_seqnum_ of to-be-piggybacked victim syncset; for neighbor edge idx to recover complete victim info, seqnum is the tracked_seqnum_ of existing tracked victim info synced from neighbor before
+        bool replacePrevVictimSyncset_(const uint32_t& dst_edge_idx_for_compression, const VictimSyncset& current_victim_syncset, VictimSyncset& prev_victim_syncset) const; // Return if prev victim syncset for dst edge idx exists
+
+        // For victim update and removal
         void replaceVictimMetadataForEdgeIdx_(const uint32_t& edge_idx, const uint64_t& cache_margin_bytes, const std::list<VictimCacheinfo>& synced_victim_cacheinfos, const CooperationWrapperBase* cooperation_wrapper_ptr); // Replace cache margin bytes and cacheinfos of local/neighbor synced victims for a specific edge node (synced_victim_cacheinfos MUST be complete)
         void replaceVictimDirinfoSets_(const std::unordered_map<Key, DirinfoSet, KeyHasher>& beaconed_synced_victim_dirinfosets, const bool& is_local_beaconed); // Replace dirinfoset in existing VictimDirinfo if any of each local/neighbor beaconed victim
         void tryToReleaseVictimDirinfo_(const Key& key); // Decrease refcnt of existing VictimDirinfo if any for the given key and release space if refcnt becomes zero
 
+        // For trade-off-aware placement calculation
         // NOTE: pervictim_edgeset and pervictim_cacheinfos are used for eviction cost in placement calculation, while peredge_synced_victimset and peredge_fetched_victimset are used for victim removal in non-blocking placement deployment
         void findVictimsForPlacement_(const ObjectSize& object_size, const Edgeset& placement_edgeset, std::unordered_map<Key, Edgeset, KeyHasher>& pervictim_edgeset, std::unordered_map<Key, std::list<VictimCacheinfo>, KeyHasher>& pervictim_cacheinfos, std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& peredge_synced_victimset, std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& peredge_fetched_victimset, Edgeset& victim_fetch_edgeset, const std::unordered_map<uint32_t, std::list<VictimCacheinfo>>& extra_peredge_victim_cacheinfos) const; // Find victims from placement edgeset if admit a hot object with the given size
         bool isLastCopiesForVictimEdgeset_(const Key& key, const Edgeset& victim_edgeset, const std::unordered_map<Key, DirinfoSet, KeyHasher>& extra_perkey_victim_dirinfoset) const; // Check whether the victim edgeset is the last cache copies of the given key
@@ -86,10 +93,14 @@ namespace covered
         mutable Rwlock* rwlock_for_victim_tracker_;
 
         // Non-const shared varaibles
-        uint64_t size_bytes_; // Cache size usage of victim tracker
+        mutable uint64_t size_bytes_; // Cache size usage of victim tracker
         peredge_victim_metadata_t peredge_victim_metadata_;
         perkey_victim_dirinfo_t perkey_victim_dirinfo_;
-        peredge_victim_syncset_t peredge_prev_victim_syncset_; // Previous victim syncset for dedup/delta-compression in victim synchronization
+        mutable peredge_victim_syncset_t peredge_prev_victim_syncset_; // Previous victim syncset for dedup/delta-compression in victim synchronization
+
+        // NOTE: dedup-/delta-based victim syncset compression/recovery MUST follow strict seqnum order (unless the received victim syncset for recovery is complete)
+        // NOTE: we assert that seqnum should NOT overflow if using uint64_t (TODO: fix it by integer wrapping in the future if necessary)
+        mutable peredge_seqnum_t peredge_cur_seqnum_; // Used by the current edge node to track the latest seqnum that will be used to issue the next victim syncset for victim synchronization towards the given dst edge node
     };
 }
 

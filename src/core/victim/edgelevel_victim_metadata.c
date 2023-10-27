@@ -8,13 +8,17 @@ namespace covered
 {
     const std::string EdgelevelVictimMetadata::kClassName = "EdgelevelVictimMetadata";
 
-    EdgelevelVictimMetadata::EdgelevelVictimMetadata() : cache_margin_bytes_(0)
+    EdgelevelVictimMetadata::EdgelevelVictimMetadata() : tracked_seqnum_(0), inconsistent_seqnum_(0), wait_for_complete_victim_syncset_(false), cache_margin_bytes_(0)
     {
         victim_cacheinfos_.clear();
     }
 
-    EdgelevelVictimMetadata::EdgelevelVictimMetadata(const uint64_t& cache_margin_bytes, const std::list<VictimCacheinfo>& victim_cacheinfos)
+    EdgelevelVictimMetadata::EdgelevelVictimMetadata(const SeqNum& cur_seqnum, const SeqNum& inconsistent_seqnum, const bool& wait_for_complete_victim_syncset, const uint64_t& cache_margin_bytes, const std::list<VictimCacheinfo>& victim_cacheinfos)
     {
+        tracked_seqnum_ = cur_seqnum;
+        inconsistent_seqnum_ = inconsistent_seqnum;
+        wait_for_complete_victim_syncset_ = wait_for_complete_victim_syncset;
+
         cache_margin_bytes_ = cache_margin_bytes;
         victim_cacheinfos_ = victim_cacheinfos;
 
@@ -25,6 +29,21 @@ namespace covered
     }
 
     EdgelevelVictimMetadata::~EdgelevelVictimMetadata() {}
+
+    SeqNum EdgelevelVictimMetadata::getCurSeqnum() const
+    {
+        return tracked_seqnum_;
+    }
+
+    SeqNum EdgelevelVictimMetadata::getInconsistentSeqnum() const
+    {
+        return inconsistent_seqnum_;
+    }
+
+    bool EdgelevelVictimMetadata::isWaitForCompleteVictimSyncset() const
+    {
+        return wait_for_complete_victim_syncset_;
+    }
 
     uint64_t EdgelevelVictimMetadata::getCacheMarginBytes() const
     {
@@ -44,6 +63,8 @@ namespace covered
     void EdgelevelVictimMetadata::findVictimsForObjectSize(const uint32_t& cur_edge_idx, const ObjectSize& object_size, std::unordered_map<Key, Edgeset, KeyHasher>& pervictim_edgeset, std::unordered_map<Key, std::list<VictimCacheinfo>, KeyHasher>& pervictim_cacheinfos, std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& peredge_synced_victimset, std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& peredge_fetched_victimset, Edgeset& victim_fetch_edgeset, const std::list<VictimCacheinfo>& extra_victim_cacheinfos) const
     {
         // NOTE: NO need to clear pervictim_edgeset, pervictim_cacheinfos, peredge_synced_victimset, and peredge_fetched_victimset, which has been done by VictimTracker::findVictimsForPlacement_()
+
+        // NOTE: NOT check seqnums here, as placement calculation allows temporarily inconsistent victim information
 
         bool need_more_victims = false;
         const bool with_extra_victims = (extra_victim_cacheinfos.size() > 0);
@@ -145,6 +166,8 @@ namespace covered
 
     bool EdgelevelVictimMetadata::removeVictimsForPlacement(const std::unordered_set<Key, KeyHasher>& victim_keyset, uint64_t& removed_cacheinfos_size)
     {
+        // NOTE: victim removal after placement calculation does NOT affect seqnums
+
         // Remove victims from victim_cacheinfos_
         removed_cacheinfos_size = 0;
         for (std::unordered_set<Key, KeyHasher>::const_iterator victim_keyset_const_iter = victim_keyset.begin(); victim_keyset_const_iter != victim_keyset.end(); victim_keyset_const_iter++)
@@ -176,6 +199,10 @@ namespace covered
     {
         if (this != &other)
         {
+            tracked_seqnum_ = other.tracked_seqnum_;
+            inconsistent_seqnum_ = other.inconsistent_seqnum_;
+            wait_for_complete_victim_syncset_ = other.wait_for_complete_victim_syncset_;
+            
             cache_margin_bytes_ = other.cache_margin_bytes_;
             victim_cacheinfos_ = other.victim_cacheinfos_;
         }

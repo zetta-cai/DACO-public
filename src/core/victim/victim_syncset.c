@@ -23,7 +23,10 @@ namespace covered
         assert(current_victim_syncset.isComplete());
         assert(prev_victim_syncset.isComplete());
 
-        VictimSyncset compressed_victim_syncset = current_victim_syncset;
+        // NOTE: dedup-/delta-based victim syncset compression MUST follow strict seqnum order
+        assert(current_victim_syncset.getSeqnum() == Util::uint64Add(prev_victim_syncset.getSeqnum(), 1)); // Current seqnum MUST be prev seqnum + 1
+
+        VictimSyncset compressed_victim_syncset = current_victim_syncset; // Use current seqnum
 
         // (1) Perform delta compression on cache margin bytes
 
@@ -183,11 +186,30 @@ namespace covered
                 {
                     tmp_flagstr = "stale";
                 }
-                oss << "final compressed victim cacheinfo for key " << tmp_iter0->getKey().getKeystr() << "(" << tmp_flagstr << "); ";
+                oss << "final compressed victim cacheinfo for key " << tmp_iter0->getKey().getKeystr() << "(" << tmp_flagstr << "); " << std::endl;
             }
         }
-
-        Util::dumpDebugMsg(kClassName, oss.str()); // TMPDEBUG23
+        else // TMPDEBUG23
+        {
+            // TMPDEBUG23
+            for (std::list<VictimCacheinfo>::const_iterator tmp_iter0 = final_local_synced_victims.begin(); tmp_iter0 != final_local_synced_victims.end(); tmp_iter0++)
+            {
+                std::string tmp_flagstr = "";
+                if (tmp_iter0->isComplete())
+                {
+                    tmp_flagstr = "complete";
+                }
+                else if (tmp_iter0->isDeduped())
+                {
+                    tmp_flagstr = "deduped";
+                }
+                else if (tmp_iter0->isStale())
+                {
+                    tmp_flagstr = "stale";
+                }
+                oss << "[use current complete victim cacheinfos] final compressed victim cacheinfo for key " << tmp_iter0->getKey().getKeystr() << "(" << tmp_flagstr << "); " << std::endl;
+            }
+        }
 
         // (3) Perform delta compression on victim dirinfo sets
 
@@ -249,14 +271,60 @@ namespace covered
             #ifdef DEBUG_VICTIM_SYNCSET
                 Util::dumpVariablesForDebug(kClassName, 5, "use compressed victim syncset!", "compressed_victim_syncset_payload_size:", std::to_string(compressed_victim_syncset_payload_size).c_str(), "current_victim_syncset_payload_size:", std::to_string(current_victim_syncset_payload_size).c_str());
             #endif
-            return compressed_victim_syncset;
+
+            // TMPDEBUG23
+            std::list<VictimCacheinfo> tmp_list0;
+            compressed_victim_syncset.getLocalSyncedVictims(tmp_list0);
+            for (std::list<VictimCacheinfo>::const_iterator tmp_iter0 = tmp_list0.begin(); tmp_iter0 != tmp_list0.end(); tmp_iter0++)
+            {
+                std::string tmp_flagstr = "";
+                if (tmp_iter0->isComplete())
+                {
+                    tmp_flagstr = "complete";
+                }
+                else if (tmp_iter0->isDeduped())
+                {
+                    tmp_flagstr = "deduped";
+                }
+                else if (tmp_iter0->isStale())
+                {
+                    tmp_flagstr = "stale";
+                }
+                oss << "compressed_victim_syncset for key " << tmp_iter0->getKey().getKeystr() << "(" << tmp_flagstr << "); ";
+            }
+            Util::dumpDebugMsg(kClassName, oss.str()); // TMPDEBUG23
+
+            return compressed_victim_syncset; // Use current seqnum
         }
         else
         {
             #ifdef DEBUG_VICTIM_SYNCSET
                 Util::dumpVariablesForDebug(kClassName, 5, "use complete victim syncset!", "compressed_victim_syncset_payload_size:", std::to_string(compressed_victim_syncset_payload_size).c_str(), "current_victim_syncset_payload_size:", std::to_string(current_victim_syncset_payload_size).c_str());
             #endif
-            return current_victim_syncset;
+
+            // TMPDEBUG23
+            std::list<VictimCacheinfo> tmp_list0;
+            current_victim_syncset.getLocalSyncedVictims(tmp_list0);
+            for (std::list<VictimCacheinfo>::const_iterator tmp_iter0 = tmp_list0.begin(); tmp_iter0 != tmp_list0.end(); tmp_iter0++)
+            {
+                std::string tmp_flagstr = "";
+                if (tmp_iter0->isComplete())
+                {
+                    tmp_flagstr = "complete";
+                }
+                else if (tmp_iter0->isDeduped())
+                {
+                    tmp_flagstr = "deduped";
+                }
+                else if (tmp_iter0->isStale())
+                {
+                    tmp_flagstr = "stale";
+                }
+                oss << "current_victim_syncset for key " << tmp_iter0->getKey().getKeystr() << "(" << tmp_flagstr << "); ";
+            }
+            Util::dumpDebugMsg(kClassName, oss.str()); // TMPDEBUG23
+
+            return current_victim_syncset; // Use current seqnum
         }
     }
 
@@ -266,7 +334,10 @@ namespace covered
         assert(compressed_victim_syncset.isCompressed());
         assert(existing_victim_syncset.isComplete());
 
-        VictimSyncset complete_victim_syncset = compressed_victim_syncset;
+        // NOTE: dedup-/delta-based victim syncset recovery MUST follow strict seqnum order (NOTE: compressed_victim_syncset must NOT complete here)
+        assert(compressed_victim_syncset.getSeqnum() == Util::uint64Add(existing_victim_syncset.getSeqnum(), 1)); // Compressed seqnum MUST be existing seqnum + 1
+
+        VictimSyncset complete_victim_syncset = compressed_victim_syncset; // Use compressed seqnum
 
         // (1) Recover cache margin bytes if necessary
 
@@ -305,6 +376,29 @@ namespace covered
 
         std::list<VictimCacheinfo> synced_victim_cacheinfos;
         bool with_complete_synced_victim_cacheinfos = compressed_victim_syncset.getLocalSyncedVictims(synced_victim_cacheinfos);
+
+        // TMPDEBUG23
+        std::ostringstream oss;
+        oss << "VictimSyncset::recover() with_complete_synced_victim_cacheinfos: " << (with_complete_synced_victim_cacheinfos?"true":"false") << std::endl;
+        for (std::list<VictimCacheinfo>::const_iterator tmp_iter0 = synced_victim_cacheinfos.begin(); tmp_iter0 != synced_victim_cacheinfos.end(); tmp_iter0++)
+        {
+            std::string tmp_flagstr = "";
+            if (tmp_iter0->isComplete())
+            {
+                tmp_flagstr = "complete";
+            }
+            else if (tmp_iter0->isDeduped())
+            {
+                tmp_flagstr = "deduped";
+            }
+            else if (tmp_iter0->isStale())
+            {
+                tmp_flagstr = "stale";
+            }
+            oss << "current piggybacked victim cacheinfo for key " << tmp_iter0->getKey().getKeystr() << "(" << tmp_flagstr << "); ";
+        }
+        oss << std::endl;
+
         if (!with_complete_synced_victim_cacheinfos) // Recover ONLY if compressed
         {
             // Start from existing synced victim cacheinfos
@@ -313,26 +407,6 @@ namespace covered
             assert(tmp_with_complete_existing_victim_cacheinfos); // Existing victim cacheinfos MUST be complete
 
             // TMPDEBUG23
-            std::ostringstream oss;
-            oss << "VictimSyncset::recover()" << std::endl;
-            for (std::list<VictimCacheinfo>::const_iterator tmp_iter0 = synced_victim_cacheinfos.begin(); tmp_iter0 != synced_victim_cacheinfos.end(); tmp_iter0++)
-            {
-                std::string tmp_flagstr = "";
-                if (tmp_iter0->isComplete())
-                {
-                    tmp_flagstr = "complete";
-                }
-                else if (tmp_iter0->isDeduped())
-                {
-                    tmp_flagstr = "deduped";
-                }
-                else if (tmp_iter0->isStale())
-                {
-                    tmp_flagstr = "stale";
-                }
-                oss << "current piggybacked victim cacheinfo for key " << tmp_iter0->getKey().getKeystr() << "(" << tmp_flagstr << "); ";
-            }
-            oss << std::endl;
             for (std::unordered_map<Key, VictimCacheinfo, KeyHasher>::const_iterator tmp_iter0 = tmp_complete_victim_cacheinfos_map.begin(); tmp_iter0 != tmp_complete_victim_cacheinfos_map.end(); tmp_iter0++)
             {
                 std::string tmp_flagstr = "";
@@ -528,16 +602,16 @@ namespace covered
         } // End of with_complete_synced_victim_dirinfo_sets*/
 
         assert(complete_victim_syncset.isComplete());
-        return complete_victim_syncset;
+        return complete_victim_syncset; // Use compressed seqnum
     }
 
-    VictimSyncset::VictimSyncset() : compressed_bitmap_(INVALID_BITMAP), cache_margin_bytes_(0), cache_margin_delta_bytes_(0)
+    VictimSyncset::VictimSyncset() : compressed_bitmap_(INVALID_BITMAP), seqnum_(0), cache_margin_bytes_(0), cache_margin_delta_bytes_(0)
     {
         local_synced_victims_.clear();
         local_beaconed_victims_.clear();
     }
 
-    VictimSyncset::VictimSyncset(const uint64_t& cache_margin_bytes, const std::list<VictimCacheinfo>& local_synced_victims, const std::unordered_map<Key, DirinfoSet, KeyHasher>& local_beaconed_victims) : cache_margin_bytes_(cache_margin_bytes)
+    VictimSyncset::VictimSyncset(const SeqNum& seqnum, const uint64_t& cache_margin_bytes, const std::list<VictimCacheinfo>& local_synced_victims, const std::unordered_map<Key, DirinfoSet, KeyHasher>& local_beaconed_victims) : seqnum_(seqnum), cache_margin_bytes_(cache_margin_bytes)
     {
         compressed_bitmap_ = COMPLETE_BITMAP;
         cache_margin_delta_bytes_ = 0;
@@ -577,6 +651,13 @@ namespace covered
         assert(compressed_bitmap_ != INVALID_BITMAP);
 
         return ((compressed_bitmap_ & CACHE_MARGIN_BYTES_DELTA_MASK) == CACHE_MARGIN_BYTES_DELTA_MASK) || ((compressed_bitmap_ & LOCAL_SYNCED_VICTIMS_DEDUP_MASK) == LOCAL_SYNCED_VICTIMS_DEDUP_MASK) || ((compressed_bitmap_ & LOCAL_BEACONED_VICTIMS_DEDUP_MASK) == LOCAL_BEACONED_VICTIMS_DEDUP_MASK);
+    }
+
+    uint64_t VictimSyncset::getSeqnum() const
+    {
+        assert(compressed_bitmap_ != INVALID_BITMAP);
+
+        return seqnum_;
     }
 
     // For both complete and compressed victim syncsets
@@ -795,6 +876,9 @@ namespace covered
         // Compressed bitmap
         victim_syncset_payload_size += sizeof(uint8_t);
 
+        // Seqnum
+        victim_syncset_payload_size += sizeof(SeqNum);
+
         // Cache margin bytes
         bool with_complete_cache_margin_bytes = ((compressed_bitmap_ & CACHE_MARGIN_BYTES_DELTA_MASK) != CACHE_MARGIN_BYTES_DELTA_MASK);
         if (with_complete_cache_margin_bytes)
@@ -848,6 +932,10 @@ namespace covered
         // Compressed bitmap
         msg_payload.deserialize(size, (const char*)&compressed_bitmap_, sizeof(uint8_t));
         size += sizeof(uint8_t);
+
+        // Seqnum
+        msg_payload.deserialize(size, (const char*)&seqnum_, sizeof(SeqNum));
+        size += sizeof(SeqNum);
 
         // Cache margin bytes
         bool with_complete_cache_margin_bytes = ((compressed_bitmap_ & CACHE_MARGIN_BYTES_DELTA_MASK) != CACHE_MARGIN_BYTES_DELTA_MASK);
@@ -912,6 +1000,10 @@ namespace covered
         msg_payload.serialize(size, (char*)&compressed_bitmap_, sizeof(uint8_t));
         size += sizeof(uint8_t);
         assert(compressed_bitmap_ != INVALID_BITMAP);
+
+        // Seqnum
+        msg_payload.serialize(size, (char*)&seqnum_, sizeof(SeqNum));
+        size += sizeof(SeqNum);
 
         // Cache margin bytes
         bool with_complete_cache_margin_bytes = ((compressed_bitmap_ & CACHE_MARGIN_BYTES_DELTA_MASK) != CACHE_MARGIN_BYTES_DELTA_MASK);
@@ -985,6 +1077,9 @@ namespace covered
         // Compressed bitmap
         victim_syncset_size_bytes += sizeof(uint8_t);
 
+        // Seqnum
+        victim_syncset_size_bytes += sizeof(SeqNum);
+
         // Cache margin bytes
         bool with_complete_cache_margin_bytes = ((compressed_bitmap_ & CACHE_MARGIN_BYTES_DELTA_MASK) != CACHE_MARGIN_BYTES_DELTA_MASK);
         if (with_complete_cache_margin_bytes)
@@ -1030,6 +1125,7 @@ namespace covered
     const VictimSyncset& VictimSyncset::operator=(const VictimSyncset& other)
     {
         compressed_bitmap_ = other.compressed_bitmap_;
+        seqnum_ = other.seqnum_;
         cache_margin_bytes_ = other.cache_margin_bytes_;
         cache_margin_delta_bytes_ = other.cache_margin_delta_bytes_;
         local_synced_victims_ = other.local_synced_victims_;
