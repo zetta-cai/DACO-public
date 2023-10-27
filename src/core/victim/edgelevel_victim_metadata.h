@@ -26,7 +26,7 @@ namespace covered
         EdgelevelVictimMetadata(const SeqNum& cur_seqnum, const SeqNum& inconsistent_seqnum, const bool& wait_for_complete_victim_syncset, const uint64_t& cache_margin_bytes, const std::list<VictimCacheinfo>& victim_cacheinfos);
         ~EdgelevelVictimMetadata();
 
-        SeqNum getCurSeqnum() const;
+        SeqNum getTrackedSeqnum() const;
         SeqNum getInconsistentSeqnum() const;
         bool isWaitForCompleteVictimSyncset() const;
 
@@ -53,7 +53,7 @@ namespace covered
 
         // NOTE: dedup-/delta-based victim syncset compression/recovery MUST follow strict seqnum order (unless the received victim syncset for recovery is complete)
         // NOTE: we assert that seqnum should NOT overflow if using uint64_t (TODO: fix it by integer wrapping in the future if necessary)
-        SeqNum tracked_seqnum_; // ONLY for neighbor edge node, which is the seqnum of the victim information tracked by the current edge node synced from the neighbor, which may NOT be the latest one in the neighbor edge node (NOTE: MUST be zero for local edge node)
+        SeqNum tracked_seqnum_; // ONLY for neighbor edge node, which is the seqnum of the victim information tracked by the current edge node synced from the neighbor, which may NOT be the latest one in the neighbor edge node (NOTE: MUST be zero for local edge node) (i.e., seqnum for received neighbor victim syncset)
         SeqNum inconsistent_seqnum_; // ONLY for neighbor edge node, which is the seqnum of victim syncset triggering ClearPrevVictimsetRequest for packet loss/reordering (NOTE: MUST be zero for local edge node)
         bool wait_for_complete_victim_syncset_; // Whether we have sent ClearPrevVictimsetRequest to acquire complete victim syncset for packet loss/reordering
 

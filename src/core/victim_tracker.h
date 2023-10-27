@@ -44,8 +44,7 @@ namespace covered
         // For victim synchronization
         // NOTE: getLocalVictimSyncsetForSynchronization() can ONLY be used to issue local synced victims for victim synchronization, as it will increase cur_seqnum_ of the current edge node towards the given dst edge node in peredge_cur_seqnum_
         VictimSyncset getLocalVictimSyncsetForSynchronization(const uint32_t& dst_edge_idx_for_compression, const uint64_t& latest_local_cache_margin_bytes) const; // Get complete victim syncset for current edge node (i.e., edge_idx_) (NOTE: we always use the latest cache margin bytes for local victim syncset, instead of using that in edge-level victim metadata of the current edge node, which may be stale)
-        VictimSyncset getNeighborVictimSyncsetForRecovery(const uint32_t& edge_idx) const; // Get complete victim syncset for edge idx
-        void updateForNeighborVictimSyncset(const uint32_t& source_edge_idx, const VictimSyncset& neighbor_complete_victim_syncset, const std::unordered_map<Key, DirinfoSet, KeyHasher>& local_beaconed_neighbor_synced_victim_dirinfosets, const CooperationWrapperBase* cooperation_wrapper_ptr); // Update victim tracker in the current edge node for the received victim syncset from neighbor edge node (neighbor_complete_victim_syncset MUST be complete)
+        void updateForNeighborVictimSyncset(const uint32_t& source_edge_idx, const VictimSyncset& neighbor_victim_syncset, const std::unordered_map<Key, DirinfoSet, KeyHasher>& local_beaconed_neighbor_synced_victim_dirinfosets, const CooperationWrapperBase* cooperation_wrapper_ptr); // Update victim tracker in the current edge node for the received victim syncset from neighbor edge node (neighbor_victim_syncset may be complete/compressed)
 
         // For trade-off-aware placement calculation
         // NOTE: placement_edgeset is used for preserved edgeset, old local uncached popularities removal; placement_peredge_synced_victimset is used for synced victim removal from victim tracker, while placement_peredge_fetched_victimset is used for fetched victim removal from victim cache; victim_fetch_edgeset is used for lazy victim fetching (all under non-blocking placement deployment)
@@ -68,7 +67,7 @@ namespace covered
 
         // For victim synchronization
         SeqNum getAndIncrCurSeqnum_(const uint32_t& dst_edge_idx_for_compression) const;
-        VictimSyncset getVictimSyncset_(const uint32_t& edge_idx, const SeqNum& seqnum) const; // For local edge idx to synchronize victim info, seqnum is the cur_seqnum_ of to-be-piggybacked victim syncset; for neighbor edge idx to recover complete victim info, seqnum is the tracked_seqnum_ of existing tracked victim info synced from neighbor before
+        VictimSyncset getVictimSyncset_(const uint32_t& edge_idx, const SeqNum& seqnum) const; // For local edge idx to synchronize victim info, seqnum is the cur_seqnum_ of to-be-issued local victim syncset; for neighbor edge idx to recover complete victim info, seqnum is the tracked_seqnum_ of existing tracked victim info synced from neighbor before
         bool replacePrevVictimSyncset_(const uint32_t& dst_edge_idx_for_compression, const VictimSyncset& current_victim_syncset, VictimSyncset& prev_victim_syncset) const; // Return if prev victim syncset for dst edge idx exists
 
         // For victim update and removal
@@ -100,7 +99,7 @@ namespace covered
 
         // NOTE: dedup-/delta-based victim syncset compression/recovery MUST follow strict seqnum order (unless the received victim syncset for recovery is complete)
         // NOTE: we assert that seqnum should NOT overflow if using uint64_t (TODO: fix it by integer wrapping in the future if necessary)
-        mutable peredge_seqnum_t peredge_cur_seqnum_; // Used by the current edge node to track the latest seqnum that will be used to issue the next victim syncset for victim synchronization towards the given dst edge node
+        mutable peredge_seqnum_t peredge_cur_seqnum_; // Used by the current edge node to track the latest seqnum that will be used to issue the next victim syncset for victim synchronization towards the given dst edge node (i.e., seqnums for issued local victim syncset)
     };
 }
 

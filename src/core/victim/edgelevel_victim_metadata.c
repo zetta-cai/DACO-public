@@ -30,7 +30,7 @@ namespace covered
 
     EdgelevelVictimMetadata::~EdgelevelVictimMetadata() {}
 
-    SeqNum EdgelevelVictimMetadata::getCurSeqnum() const
+    SeqNum EdgelevelVictimMetadata::getTrackedSeqnum() const
     {
         return tracked_seqnum_;
     }

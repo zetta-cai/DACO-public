@@ -140,7 +140,7 @@ namespace covered
         Util::dumpVariablesForDebug(instance_name_, 1, "CoveredCacheManager::accessVictimTrackerForLocalVictimSyncset()");
 
         // Get current complete/compressed victim syncset from victim tracker
-        // NOTE: we should perform compression inside updateForNeighborVictimSyncset for atomicity
+        // NOTE: we perform compression inside VictimTrackker:getLocalVictimSyncsetForSynchronization() for atomicity
         VictimSyncset current_victim_syncset = victim_tracker_.getLocalVictimSyncsetForSynchronization(latest_local_cache_margin_bytes);
 
         return current_victim_syncset;
@@ -153,24 +153,8 @@ namespace covered
         // TMPDEBUG23
         Util::dumpVariablesForDebug(instance_name_, 1, "CoveredCacheManager::updateVictimTrackerForNeighborVictimSyncset()");
 
-        // TODO: we should perform recovery insidhe updateForNeighborVictimSyncset for atomicity
-
-        bool is_complete = neighbor_victim_syncset.isComplete();
-        if (is_complete) // neighbor_victim_syncset is complete already
-        {
-            victim_tracker_.updateForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets, cooperation_wrapper_ptr);
-            return;
-        }
-        assert(!is_complete);
-
-        // Get existing complete victim syncset from victim tracker for source edge idx
-        VictimSyncset existing_complete_victim_syncset = victim_tracker_.getNeighborVictimSyncsetForRecovery(source_edge_idx);
-
-        // Recover neighbor complete victim syncset based on existing complete victim syncset of source edge idx and received neighbor_victim_syncset if compressed
-        VictimSyncset neighbor_complete_victim_syncset = VictimSyncset::recover(neighbor_victim_syncset, existing_complete_victim_syncset);
-        assert(neighbor_complete_victim_syncset.isComplete());
-        
-        victim_tracker_.updateForNeighborVictimSyncset(source_edge_idx, neighbor_complete_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets, cooperation_wrapper_ptr);
+        // NOTE: we perform recovery insidhe VictimTracker::updateForNeighborVictimSyncset() for atomicity
+        victim_tracker_.updateForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets, cooperation_wrapper_ptr);
         return;
     }
 
