@@ -69,9 +69,11 @@ namespace covered
         SeqNum getAndIncrCurSeqnum_(const uint32_t& dst_edge_idx_for_compression) const;
         VictimSyncset getVictimSyncset_(const uint32_t& edge_idx, const SeqNum& seqnum) const; // For local edge idx to synchronize victim info, seqnum is the cur_seqnum_ of to-be-issued local victim syncset; for neighbor edge idx to recover complete victim info, seqnum is the tracked_seqnum_ of existing tracked victim info synced from neighbor before
         bool replacePrevVictimSyncset_(const uint32_t& dst_edge_idx_for_compression, const VictimSyncset& current_victim_syncset, VictimSyncset& prev_victim_syncset) const; // Return if prev victim syncset for dst edge idx exists
+        void tryToClearInconsistentStatus_(const uint32_t& source_edge_idx, const SeqNum& synced_seqnum); // Clear inconsistent status for the given source edge idx if receiving complete victim syncset from neighbor for ClearPrevVictimsetRequest issued before
+        void tryToClearNeighborPrevVictimset_(const uint32_t& source_edge_idx, const SeqNum& synced_seqnum); // Send ClearPrevVictimsetRequest to clear prev-issued victim syncset in the source edge node for the current edge node if NOT issued before
 
         // For victim update and removal
-        void replaceVictimMetadataForEdgeIdx_(const uint32_t& edge_idx, const uint64_t& cache_margin_bytes, const std::list<VictimCacheinfo>& synced_victim_cacheinfos, const CooperationWrapperBase* cooperation_wrapper_ptr); // Replace cache margin bytes and cacheinfos of local/neighbor synced victims for a specific edge node (synced_victim_cacheinfos MUST be complete)
+        void replaceVictimMetadataForEdgeIdx_(const SeqNum& synced_seqnum, const uint32_t& edge_idx, const uint64_t& cache_margin_bytes, const std::list<VictimCacheinfo>& synced_victim_cacheinfos, const CooperationWrapperBase* cooperation_wrapper_ptr); // Replace cache margin bytes and cacheinfos of local/neighbor synced victims for a specific edge node (synced_victim_cacheinfos MUST be complete)
         void replaceVictimDirinfoSets_(const std::unordered_map<Key, DirinfoSet, KeyHasher>& beaconed_synced_victim_dirinfosets, const bool& is_local_beaconed); // Replace dirinfoset in existing VictimDirinfo if any of each local/neighbor beaconed victim
         void tryToReleaseVictimDirinfo_(const Key& key); // Decrease refcnt of existing VictimDirinfo if any for the given key and release space if refcnt becomes zero
 

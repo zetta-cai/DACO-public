@@ -29,6 +29,8 @@ namespace covered
         SeqNum getTrackedSeqnum() const;
         SeqNum getInconsistentSeqnum() const;
         bool isWaitForCompleteVictimSyncset() const;
+        void clearInconsistentStatus();
+        void setInconsistentStatus(const SeqNum& synced_seqnum);
 
         uint64_t getCacheMarginBytes() const;
         std::list<VictimCacheinfo> getVictimCacheinfos() const;

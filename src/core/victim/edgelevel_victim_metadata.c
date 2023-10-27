@@ -45,6 +45,20 @@ namespace covered
         return wait_for_complete_victim_syncset_;
     }
 
+    void EdgelevelVictimMetadata::clearInconsistentStatus()
+    {
+        inconsistent_seqnum_ = 0;
+        wait_for_complete_victim_syncset_ = false;
+        return;
+    }
+
+    void EdgelevelVictimMetadata::setInconsistentStatus(const SeqNum& synced_seqnum)
+    {
+        inconsistent_seqnum_ = synced_seqnum;
+        wait_for_complete_victim_syncset_ = true;
+        return;
+    }
+
     uint64_t EdgelevelVictimMetadata::getCacheMarginBytes() const
     {
         return cache_margin_bytes_;
