@@ -136,6 +136,9 @@ namespace covered
 
     VictimSyncset CoveredCacheManager::accessVictimTrackerForLocalVictimSyncset(const uint32_t& dst_edge_idx_for_compression, const uint64_t& latest_local_cache_margin_bytes) const
     {
+        // TMPDEBUG23
+        Util::dumpVariablesForDebug(instance_name_, 1, "CoveredCacheManager::accessVictimTrackerForLocalVictimSyncset()");
+
         // Get current complete victim syncset from victim tracker
         VictimSyncset current_victim_syncset = victim_tracker_.getLocalVictimSyncset(latest_local_cache_margin_bytes);
         assert(current_victim_syncset.isComplete());
@@ -163,6 +166,9 @@ namespace covered
     void CoveredCacheManager::updateVictimTrackerForNeighborVictimSyncset(const uint32_t& source_edge_idx, const VictimSyncset& neighbor_victim_syncset, const std::unordered_map<Key, DirinfoSet, KeyHasher>& local_beaconed_neighbor_synced_victim_dirinfosets, const CooperationWrapperBase* cooperation_wrapper_ptr)
     {
         // NOTE: victim cacheinfos and dirinfo sets of neighbor_victim_syncset can be either complete or compressed; while dirinfo sets of local_beaconed_neighbor_synced_victim_dirinfosets MUST be complete
+
+        // TMPDEBUG23
+        Util::dumpVariablesForDebug(instance_name_, 1, "CoveredCacheManager::updateVictimTrackerForNeighborVictimSyncset()");
 
         bool is_complete = neighbor_victim_syncset.isComplete();
         if (is_complete) // neighbor_victim_syncset is complete already

@@ -75,6 +75,47 @@ namespace covered
         std::unordered_map<Key, VictimCacheinfo, KeyHasher> prev_local_synced_victims_map;
         const bool prev_with_complete_local_synced_victims = prev_victim_syncset.getLocalSyncedVictimsAsMap(prev_local_synced_victims_map);
         assert(prev_with_complete_local_synced_victims == true);
+
+        // TMPDEBUG23
+        std::ostringstream oss;
+        oss << "VictimSyncset::compress()" << std::endl;
+        for (std::unordered_map<Key, VictimCacheinfo, KeyHasher>::const_iterator tmp_iter0 = current_local_synced_victims_map.begin(); tmp_iter0 != current_local_synced_victims_map.end(); tmp_iter0++)
+        {
+            std::string tmp_flagstr = "";
+            if (tmp_iter0->second.isComplete())
+            {
+                tmp_flagstr = "complete";
+            }
+            else if (tmp_iter0->second.isDeduped())
+            {
+                tmp_flagstr = "deduped";
+            }
+            else if (tmp_iter0->second.isStale())
+            {
+                tmp_flagstr = "stale";
+            }
+            oss << "current complete victim cacheinfo for key " << tmp_iter0->first.getKeystr() << "(" << tmp_flagstr << "); ";
+        }
+        oss << std::endl;
+        for (std::unordered_map<Key, VictimCacheinfo, KeyHasher>::const_iterator tmp_iter0 = prev_local_synced_victims_map.begin(); tmp_iter0 != prev_local_synced_victims_map.end(); tmp_iter0++)
+        {
+            std::string tmp_flagstr = "";
+            if (tmp_iter0->second.isComplete())
+            {
+                tmp_flagstr = "complete";
+            }
+            else if (tmp_iter0->second.isDeduped())
+            {
+                tmp_flagstr = "deduped";
+            }
+            else if (tmp_iter0->second.isStale())
+            {
+                tmp_flagstr = "stale";
+            }
+            oss << "prev complete victim cacheinfo for key " << tmp_iter0->first.getKeystr() << "(" << tmp_flagstr << "); ";
+        }
+        oss << std::endl;
+
         for (std::unordered_map<Key, VictimCacheinfo, KeyHasher>::const_iterator current_local_synced_victims_map_const_iter = current_local_synced_victims_map.begin(); current_local_synced_victims_map_const_iter != current_local_synced_victims_map.end(); current_local_synced_victims_map_const_iter++)
         {
             const Key& tmp_current_victim_key = current_local_synced_victims_map_const_iter->first;
@@ -125,7 +166,28 @@ namespace covered
         {
             // NOTE: if with at least one compressed or fully-deduped (yet NOT in list) victim cacheinfo, NO need to sort the list of victim cacheinfos (will be sorted during VictimSyncset::recover() after receiving neighbor victim syncset)
             compressed_victim_syncset.setLocalSyncedVictimsForCompress(final_local_synced_victims);
+
+            // TMPDEBUG23
+            for (std::list<VictimCacheinfo>::const_iterator tmp_iter0 = final_local_synced_victims.begin(); tmp_iter0 != final_local_synced_victims.end(); tmp_iter0++)
+            {
+                std::string tmp_flagstr = "";
+                if (tmp_iter0->isComplete())
+                {
+                    tmp_flagstr = "complete";
+                }
+                else if (tmp_iter0->isDeduped())
+                {
+                    tmp_flagstr = "deduped";
+                }
+                else if (tmp_iter0->isStale())
+                {
+                    tmp_flagstr = "stale";
+                }
+                oss << "final compressed victim cacheinfo for key " << tmp_iter0->getKey().getKeystr() << "(" << tmp_flagstr << "); ";
+            }
         }
+
+        Util::dumpDebugMsg(kClassName, oss.str()); // TMPDEBUG23
 
         // (3) Perform delta compression on victim dirinfo sets
 
@@ -250,6 +312,46 @@ namespace covered
             bool tmp_with_complete_existing_victim_cacheinfos = existing_victim_syncset.getLocalSyncedVictimsAsMap(tmp_complete_victim_cacheinfos_map);
             assert(tmp_with_complete_existing_victim_cacheinfos); // Existing victim cacheinfos MUST be complete
 
+            // TMPDEBUG23
+            std::ostringstream oss;
+            oss << "VictimSyncset::recover()" << std::endl;
+            for (std::list<VictimCacheinfo>::const_iterator tmp_iter0 = synced_victim_cacheinfos.begin(); tmp_iter0 != synced_victim_cacheinfos.end(); tmp_iter0++)
+            {
+                std::string tmp_flagstr = "";
+                if (tmp_iter0->isComplete())
+                {
+                    tmp_flagstr = "complete";
+                }
+                else if (tmp_iter0->isDeduped())
+                {
+                    tmp_flagstr = "deduped";
+                }
+                else if (tmp_iter0->isStale())
+                {
+                    tmp_flagstr = "stale";
+                }
+                oss << "current piggybacked victim cacheinfo for key " << tmp_iter0->getKey().getKeystr() << "(" << tmp_flagstr << "); ";
+            }
+            oss << std::endl;
+            for (std::unordered_map<Key, VictimCacheinfo, KeyHasher>::const_iterator tmp_iter0 = tmp_complete_victim_cacheinfos_map.begin(); tmp_iter0 != tmp_complete_victim_cacheinfos_map.end(); tmp_iter0++)
+            {
+                std::string tmp_flagstr = "";
+                if (tmp_iter0->second.isComplete())
+                {
+                    tmp_flagstr = "complete";
+                }
+                else if (tmp_iter0->second.isDeduped())
+                {
+                    tmp_flagstr = "deduped";
+                }
+                else if (tmp_iter0->second.isStale())
+                {
+                    tmp_flagstr = "stale";
+                }
+                oss << "prev victim cacheinfo for key " << tmp_iter0->first.getKeystr() << "(" << tmp_flagstr << "); ";
+            }
+            oss << std::endl;
+
             // Recover complete victim cacheinfos based on existing complete victim cacheinfos and synced victim cacheinfos if compressed
             for (std::list<VictimCacheinfo>::const_iterator synced_victim_cacheinfos_const_iter = synced_victim_cacheinfos.begin(); synced_victim_cacheinfos_const_iter != synced_victim_cacheinfos.end(); synced_victim_cacheinfos_const_iter++)
             {
@@ -257,7 +359,7 @@ namespace covered
                 const VictimCacheinfo& tmp_synced_victim_cacheinfo = *synced_victim_cacheinfos_const_iter;
                 std::unordered_map<Key, VictimCacheinfo, KeyHasher>::iterator tmp_complete_victim_cacheinfos_map_iter = tmp_complete_victim_cacheinfos_map.find(tmp_synced_victim_key);
 
-                if (tmp_synced_victim_cacheinfo.isComplete()) // New complete victim cacheinfo (should not exist in existing victim cacheinfos)
+                if (tmp_synced_victim_cacheinfo.isComplete()) // Complete victim cacheinfo indicates a new neighbor synced victim (should not exist in existing victim cacheinfos)
                 {
                     if (tmp_complete_victim_cacheinfos_map_iter == tmp_complete_victim_cacheinfos_map.end())
                     {
@@ -266,6 +368,7 @@ namespace covered
                     }
                     else
                     {
+                        // TODO: Actually complete victim cacheinfo may also exist in prev victim syncset, as VictimCacheinfo::dedup() may return a complete victim cacheinfo -> but we still warn here, as in most time VictimCacheinfo::dedup() will return deduped victim cacheinfos
                         std::ostringstream oss;
                         oss << "New complete victim cacheinfo already exists for key " << tmp_synced_victim_key.getKeystr() << " in existing complete victim cacheinfos!";
                         Util::dumpWarnMsg(kClassName, oss.str());
@@ -303,6 +406,26 @@ namespace covered
             {
                 complete_victim_cacheinfos.push_back(complete_victim_cacheinfos_map_const_iter->second);
             }
+
+            // TMPDEBUG23
+            for (std::list<VictimCacheinfo>::const_iterator tmp_iter0 = complete_victim_cacheinfos.begin(); tmp_iter0 != complete_victim_cacheinfos.end(); tmp_iter0++)
+            {
+                std::string tmp_flagstr = "";
+                if (tmp_iter0->isComplete())
+                {
+                    tmp_flagstr = "complete";
+                }
+                else if (tmp_iter0->isDeduped())
+                {
+                    tmp_flagstr = "deduped";
+                }
+                else if (tmp_iter0->isStale())
+                {
+                    tmp_flagstr = "stale";
+                }
+                oss << "recovered complete victim cacheinfo for key " << tmp_iter0->getKey().getKeystr() << "(" << tmp_flagstr << "); ";
+            }
+            Util::dumpDebugMsg(kClassName, oss.str());
 
             #ifdef DEBUG_VICTIM_SYNCSET
             // std::ostringstream oss;
@@ -364,7 +487,7 @@ namespace covered
                 const Key& tmp_synced_victim_key = synced_victim_dirinfo_sets_const_iter->first;
                 const DirinfoSet& tmp_synced_dirinfo_set = synced_victim_dirinfo_sets_const_iter->second;
                 std::unordered_map<Key, DirinfoSet, KeyHasher>::iterator tmp_complete_victim_dirinfo_sets_iter = tmp_complete_victim_dirinfo_sets.find(tmp_synced_victim_key);
-                if (tmp_synced_dirinfo_set.isComplete()) // New victim dirinfo set (should NOT exist in existing dirinfo sets)
+                if (tmp_synced_dirinfo_set.isComplete()) // Complete victim dirinfo set for new neighbor beaconed victim (should NOT exist in existing dirinfo sets) or existing neighbor beaconed victim (exist in existing dirinfo sets)
                 {
                     if (tmp_complete_victim_dirinfo_sets_iter == tmp_complete_victim_dirinfo_sets.end())
                     {
@@ -372,9 +495,10 @@ namespace covered
                     }
                     else
                     {
-                        std::ostringstream oss;
-                        oss << "New complete victim dirinfo set already exists for key " << tmp_synced_victim_key.getKeystr() << " in existing complete victim dirinfo sets!";
-                        Util::dumpWarnMsg(kClassName, oss.str());
+                        // NOTE: as DirinfoSet::compress() could return a complete dirinfo set, the complete dirinfo set may also exist in prev victim syncset -> we do NOT warn here, as this is NOT a minor case
+                        // std::ostringstream oss;
+                        // oss << "New complete victim dirinfo set already exists for key " << tmp_synced_victim_key.getKeystr() << " in existing complete victim dirinfo sets!";
+                        // Util::dumpWarnMsg(kClassName, oss.str());
 
                         tmp_complete_victim_dirinfo_sets_iter->second = tmp_synced_dirinfo_set;
                     }

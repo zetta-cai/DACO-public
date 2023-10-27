@@ -147,9 +147,11 @@ namespace covered
         tmp_covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets, tmp_edge_wrapper_ptr->getCooperationWrapperPtr());
 
         // Issue directory update request with is_admit = true
+        // NOTE: remote beacon edge node sends remote placement notification to notify the current edge node for edge cache admission, so we should use current edge index for directory admission instead of source edge index
+        const uint32_t current_edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
         bool is_being_written = false;
         const bool& skip_propagation_latency = covered_placement_notify_request_ptr->isSkipPropagationLatency();
-        is_finish = tmp_cache_server_ptr->admitBeaconDirectory_(tmp_key, DirectoryInfo(source_edge_idx), is_being_written, edge_cache_server_placement_processor_recvrsp_source_addr_, edge_cache_server_placement_processor_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency, is_background);
+        is_finish = tmp_cache_server_ptr->admitBeaconDirectory_(tmp_key, DirectoryInfo(current_edge_idx), is_being_written, edge_cache_server_placement_processor_recvrsp_source_addr_, edge_cache_server_placement_processor_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency, is_background);
         if (is_finish)
         {
             return is_finish;

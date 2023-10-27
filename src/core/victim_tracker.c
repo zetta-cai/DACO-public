@@ -396,6 +396,15 @@ namespace covered
     {
         // NOTE: NO need to acquire a write lock which has been done in updateLocalSyncedVictims() and updateForNeighborVictimSyncset()
 
+        // TMPDEBUG23
+        std::ostringstream oss;
+        oss << "VictimTracker::replaceVictimMetadataForEdgeIdx_() for edge " << edge_idx;
+        for (std::list<VictimCacheinfo>::const_iterator tmp_iter0 = synced_victim_cacheinfos.begin(); tmp_iter0 != synced_victim_cacheinfos.end(); tmp_iter0++)
+        {
+            oss << "current complete victim cacheinfo for key " << tmp_iter0->getKey().getKeystr() << "; ";
+        }
+        Util::dumpDebugMsg(instance_name_, oss.str());
+
         assert(synced_victim_cacheinfos.size() <= peredge_synced_victimcnt_);
         assert(cooperation_wrapper_ptr != NULL);
 
