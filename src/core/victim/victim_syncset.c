@@ -611,6 +611,11 @@ namespace covered
         local_beaconed_victims_.clear();
     }
 
+    VictimSyncset::VictimSyncset(const VictimSyncset& other)
+    {
+        *this = other;
+    }
+
     VictimSyncset::VictimSyncset(const SeqNum& seqnum, const bool& is_enforce_complete, const uint64_t& cache_margin_bytes, const std::list<VictimCacheinfo>& local_synced_victims, const std::unordered_map<Key, DirinfoSet, KeyHasher>& local_beaconed_victims) : seqnum_(seqnum), is_enforce_complete_(is_enforce_complete), cache_margin_bytes_(cache_margin_bytes)
     {
         compressed_bitmap_ = COMPLETE_BITMAP;

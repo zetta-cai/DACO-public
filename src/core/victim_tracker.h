@@ -68,8 +68,10 @@ namespace covered
 
         // For victim synchronization
         SeqNum getAndIncrCurSeqnum_(const uint32_t& dst_edge_idx_for_compression) const;
-        VictimSyncset getVictimSyncset_(const uint32_t& edge_idx, const SeqNum& seqnum) const; // For local edge idx to synchronize victim info, seqnum is the cur_seqnum_ of to-be-issued local victim syncset; for neighbor edge idx to recover complete victim info, seqnum is the tracked_seqnum_ of existing tracked victim info synced from neighbor before
+        bool checkAndResetNeedEnforcement_(const uint32_t& dst_edge_idx_for_compression) const;
+        VictimSyncset getVictimSyncset_(const uint32_t& edge_idx, const SeqNum& seqnum, const bool& is_enforce_complete) const; // For local edge idx to synchronize victim info, seqnum is the cur_seqnum_ of to-be-issued local victim syncset; for neighbor edge idx to recover complete victim info, seqnum is the tracked_seqnum_ of existing tracked victim info synced from neighbor before
         bool replacePrevVictimSyncset_(const uint32_t& dst_edge_idx_for_compression, const VictimSyncset& current_victim_syncset, VictimSyncset& prev_victim_syncset) const; // Return if prev victim syncset for dst edge idx exists
+        void enforceCompleteVictimSyncset_(const uint32_t& source_edge_idx); // Enforce the current edge node to issue complete victim syncset without compression for the given source edge node
         void tryToClearInconsistentStatus_(const uint32_t& source_edge_idx, const SeqNum& synced_seqnum); // Clear inconsistent status for the given source edge idx if receiving complete victim syncset from neighbor for ClearPrevVictimsetRequest issued before
         void tryToClearNeighborPrevVictimset_(const uint32_t& source_edge_idx, const SeqNum& synced_seqnum); // Send ClearPrevVictimsetRequest to clear prev-issued victim syncset in the source edge node for the current edge node if NOT issued before
 
@@ -98,10 +100,7 @@ namespace covered
         mutable uint64_t size_bytes_; // Cache size usage of victim tracker
         peredge_victim_metadata_t peredge_victim_metadata_;
         perkey_victim_dirinfo_t perkey_victim_dirinfo_;
-        mutable peredge_victim_syncset_t peredge_prev_victim_syncset_; // Previous victim syncset for dedup/delta-compression in victim synchronization
-
-        // Sequence-based victim synchronization monitor for each source/dst edge node
-        mutable peredge_victimsync_monitor_t peredge_victimsync_monitor_;
+        mutable peredge_victimsync_monitor_t peredge_victimsync_monitor_; // Sequence-based victim synchronization monitor for each source/dst edge node
     };
 }
 

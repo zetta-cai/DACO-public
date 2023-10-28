@@ -22,15 +22,31 @@ namespace covered
 
         // As sender edge node
 
+        SeqNum getCurSeqnum() const;
+        void incrCurSeqnum();
+
+        bool getPrevVictimSyncset(VictimSyncset& prev_victim_syncset) const; // Return if prev victim syncset exists
+        void setPrevVictimSyncset(const VictimSyncset& prev_victim_syncset);
+        void releasePrevVictimSyncset();
+
+        bool needEnforcement() const;
+        void resetEnforcement();
+
         // As receiver edge node
 
         bool isFirstReceived() const;
+        void clearFirstReceived(const uint32_t& synced_seqnum);
+
         SeqNum getTrackedSeqnum() const;
         SeqNum getEnforcementSeqnum() const;
         bool isWaitForCompleteVictimSyncset() const;
 
         void clearEnforcementStatus();
         void setEnforcementStatus(const SeqNum& synced_seqnum);
+
+        // Utils
+
+        uint64_t getSizeForCapacity() const;
     private:
         static const std::string kClassName;
 
@@ -39,7 +55,7 @@ namespace covered
 
         // As sender edge node
         SeqNum cur_seqnum_; // The seqnum for current victim syncset towards a specific neighbor
-        VictimSyncset* prev_victim_syncset_ptr_; // Prev issued victim syncset towards a specific neighbor
+        VictimSyncset* prev_victim_syncset_ptr_; // Prev issued victim syncset towards a specific neighbor for dedup-/delta-based compression
         bool need_enforcement_; // If the current edge node needs to notify the specific neighbor for the enforcement on complete victim syncset (avoid duplicate notification)
 
         // As receiver edge node
