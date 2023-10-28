@@ -27,13 +27,14 @@ namespace covered
         static VictimSyncset recover(const VictimSyncset& compressed_victim_syncset, const VictimSyncset& existing_victim_syncset); // Recover existing victim syncset w.r.t. compressed victim syncset
 
         VictimSyncset();
-        VictimSyncset(const SeqNum& seqnum, const uint64_t& cache_margin_bytes, const std::list<VictimCacheinfo>& local_synced_victims, const std::unordered_map<Key, DirinfoSet, KeyHasher>& local_beaconed_victims);
+        VictimSyncset(const SeqNum& seqnum, const bool& is_enforce_complete, const uint64_t& cache_margin_bytes, const std::list<VictimCacheinfo>& local_synced_victims, const std::unordered_map<Key, DirinfoSet, KeyHasher>& local_beaconed_victims);
         ~VictimSyncset();
 
         bool isComplete() const;
         bool isCompressed() const;
 
         SeqNum getSeqnum() const;
+        bool isEnforceComplete() const;
 
         // For both complete and compressed victim syncsets
         bool getCacheMarginBytesOrDelta(uint64_t& cache_margin_bytes, int& cache_margin_delta_bytes) const; // Return if with complete cache margin bytes
@@ -77,9 +78,9 @@ namespace covered
 
         uint8_t compressed_bitmap_; // 1st lowest bit indicates if the syncset is a compressed victim syncset (2nd lowest bit for cache margin bytes; 3rd/4th lowest bit for local synced victims; 5th/6th lowest bit for local beaconed victims)
 
-        // NOTE: dedup-/delta-based victim syncset compression/recovery MUST follow strict seqnum order (unless the received victim syncset for recovery is complete)
-        // NOTE: we assert that seqnum should NOT overflow if using uint64_t (TODO: fix it by integer wrapping in the future if necessary)
-        SeqNum seqnum_; // Sequence number of the victim syncset for recovery under packet loss/reordering issues
+        // Used for sequence-based synchronization monitoring
+        SeqNum seqnum_; // Sender's cur_seqnum_ to the destination edge node when sender issues the victim syncset
+        bool is_enforce_complete_; // Whether the receiver should enforce complete victim syncset without copmression to the sender edge node for packet loss/reoridering
 
         // Delta compression (32-bit delta is enough for limited changes of cache margin bytes)
         uint64_t cache_margin_bytes_; // ONLY for complete victim syncset: remaining bytes of local edge cache in sender

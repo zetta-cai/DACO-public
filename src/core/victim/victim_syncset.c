@@ -26,7 +26,7 @@ namespace covered
         // NOTE: dedup-/delta-based victim syncset compression MUST follow strict seqnum order
         assert(current_victim_syncset.getSeqnum() == Util::uint64Add(prev_victim_syncset.getSeqnum(), 1)); // Current seqnum MUST be prev seqnum + 1
 
-        VictimSyncset compressed_victim_syncset = current_victim_syncset; // Use current seqnum
+        VictimSyncset compressed_victim_syncset = current_victim_syncset; // Use seqnum and is_enforce_complete of current victim syncset
 
         // (1) Perform delta compression on cache margin bytes
 
@@ -294,7 +294,7 @@ namespace covered
             }
             Util::dumpDebugMsg(kClassName, oss.str()); // TMPDEBUG23
 
-            return compressed_victim_syncset; // Use current seqnum
+            return compressed_victim_syncset; // Use seqnum and is_enforce_complete of current victim syncset
         }
         else
         {
@@ -324,7 +324,7 @@ namespace covered
             }
             Util::dumpDebugMsg(kClassName, oss.str()); // TMPDEBUG23
 
-            return current_victim_syncset; // Use current seqnum
+            return current_victim_syncset; // Use seqnum and is_enforce_complete of current victim syncset
         }
     }
 
@@ -337,7 +337,7 @@ namespace covered
         // NOTE: dedup-/delta-based victim syncset recovery MUST follow strict seqnum order (NOTE: compressed_victim_syncset must NOT complete here)
         assert(compressed_victim_syncset.getSeqnum() == Util::uint64Add(existing_victim_syncset.getSeqnum(), 1)); // Compressed seqnum MUST be existing seqnum + 1
 
-        VictimSyncset complete_victim_syncset = compressed_victim_syncset; // Use compressed seqnum
+        VictimSyncset complete_victim_syncset = compressed_victim_syncset; // Use seqnum and is_enforce_complete of compressed victim syncset
 
         // (1) Recover cache margin bytes if necessary
 
@@ -602,16 +602,16 @@ namespace covered
         } // End of with_complete_synced_victim_dirinfo_sets*/
 
         assert(complete_victim_syncset.isComplete());
-        return complete_victim_syncset; // Use compressed seqnum
+        return complete_victim_syncset; // Use seqnum and is_enforce_complete of compressed victim syncset
     }
 
-    VictimSyncset::VictimSyncset() : compressed_bitmap_(INVALID_BITMAP), seqnum_(0), cache_margin_bytes_(0), cache_margin_delta_bytes_(0)
+    VictimSyncset::VictimSyncset() : compressed_bitmap_(INVALID_BITMAP), seqnum_(0), is_enforce_complete_(false), cache_margin_bytes_(0), cache_margin_delta_bytes_(0)
     {
         local_synced_victims_.clear();
         local_beaconed_victims_.clear();
     }
 
-    VictimSyncset::VictimSyncset(const SeqNum& seqnum, const uint64_t& cache_margin_bytes, const std::list<VictimCacheinfo>& local_synced_victims, const std::unordered_map<Key, DirinfoSet, KeyHasher>& local_beaconed_victims) : seqnum_(seqnum), cache_margin_bytes_(cache_margin_bytes)
+    VictimSyncset::VictimSyncset(const SeqNum& seqnum, const bool& is_enforce_complete, const uint64_t& cache_margin_bytes, const std::list<VictimCacheinfo>& local_synced_victims, const std::unordered_map<Key, DirinfoSet, KeyHasher>& local_beaconed_victims) : seqnum_(seqnum), is_enforce_complete_(is_enforce_complete), cache_margin_bytes_(cache_margin_bytes)
     {
         compressed_bitmap_ = COMPLETE_BITMAP;
         cache_margin_delta_bytes_ = 0;
@@ -658,6 +658,13 @@ namespace covered
         assert(compressed_bitmap_ != INVALID_BITMAP);
 
         return seqnum_;
+    }
+
+    bool VictimSyncset::isEnforceComplete() const
+    {
+        assert(compressed_bitmap_ != INVALID_BITMAP);
+
+        return is_enforce_complete_;
     }
 
     // For both complete and compressed victim syncsets
@@ -879,6 +886,9 @@ namespace covered
         // Seqnum
         victim_syncset_payload_size += sizeof(SeqNum);
 
+        // is_enforce_complete
+        victim_syncset_payload_size += sizeof(bool);
+
         // Cache margin bytes
         bool with_complete_cache_margin_bytes = ((compressed_bitmap_ & CACHE_MARGIN_BYTES_DELTA_MASK) != CACHE_MARGIN_BYTES_DELTA_MASK);
         if (with_complete_cache_margin_bytes)
@@ -936,6 +946,10 @@ namespace covered
         // Seqnum
         msg_payload.deserialize(size, (const char*)&seqnum_, sizeof(SeqNum));
         size += sizeof(SeqNum);
+
+        // is_enforce_complete
+        msg_payload.deserialize(size, (const char*)&is_enforce_complete_, sizeof(bool));
+        size += sizeof(bool);
 
         // Cache margin bytes
         bool with_complete_cache_margin_bytes = ((compressed_bitmap_ & CACHE_MARGIN_BYTES_DELTA_MASK) != CACHE_MARGIN_BYTES_DELTA_MASK);
@@ -1004,6 +1018,10 @@ namespace covered
         // Seqnum
         msg_payload.serialize(size, (char*)&seqnum_, sizeof(SeqNum));
         size += sizeof(SeqNum);
+
+        // is_enforce_complete
+        msg_payload.serialize(size, (char*)&is_enforce_complete_, sizeof(bool));
+        size += sizeof(bool);
 
         // Cache margin bytes
         bool with_complete_cache_margin_bytes = ((compressed_bitmap_ & CACHE_MARGIN_BYTES_DELTA_MASK) != CACHE_MARGIN_BYTES_DELTA_MASK);
@@ -1080,6 +1098,9 @@ namespace covered
         // Seqnum
         victim_syncset_size_bytes += sizeof(SeqNum);
 
+        // is_enforce_complete
+        victim_syncset_size_bytes += sizeof(bool);
+
         // Cache margin bytes
         bool with_complete_cache_margin_bytes = ((compressed_bitmap_ & CACHE_MARGIN_BYTES_DELTA_MASK) != CACHE_MARGIN_BYTES_DELTA_MASK);
         if (with_complete_cache_margin_bytes)
@@ -1126,6 +1147,7 @@ namespace covered
     {
         compressed_bitmap_ = other.compressed_bitmap_;
         seqnum_ = other.seqnum_;
+        is_enforce_complete_ = other.is_enforce_complete_;
         cache_margin_bytes_ = other.cache_margin_bytes_;
         cache_margin_delta_bytes_ = other.cache_margin_delta_bytes_;
         local_synced_victims_ = other.local_synced_victims_;

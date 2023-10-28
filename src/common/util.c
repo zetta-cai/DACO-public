@@ -890,6 +890,7 @@ namespace covered
         // ONLY for COVERED
         uint64_t local_uncached_capacitymb = B2MB(evaluator_cli_ptr->getCoveredLocalUncachedMaxMemUsageBytes());
         const uint32_t covered_peredge_synced_victimcnt = evaluator_cli_ptr->getCoveredPeredgeSyncedVictimcnt();
+        const uint32_t covered_peredge_monitored_victimsetcnt = evaluator_cli_ptr->getCoveredPeredgeMonitoredVictimsetcnt();
         uint64_t popularity_aggregation_capacitymb = B2MB(evaluator_cli_ptr->getCoveredPopularityAggregationMaxMemUsageBytes());
         double popularity_collection_change_ratio = evaluator_cli_ptr->getCoveredPopularityCollectionChangeRatio();
         uint32_t topk_edgecnt = evaluator_cli_ptr->getCoveredTopkEdgecnt();
@@ -903,8 +904,8 @@ namespace covered
         oss << cache_name << "_capacitymb" << B2MB(capacity_bytes) << "_clientcnt" << clientcnt << "_warmupspeedup" << (is_warmup_speedup?"1":"0") << "_edgecnt" << edgecnt << "_hashname" << hash_name << "_keycnt" << keycnt << "_opcnt" << opcnt << "_percacheserverworkercnt" << percacheserver_workercnt << "_perclientworkercnt" << perclient_workercnt << "_propagationus" << propagation_latency_clientedge_us << propagation_latency_crossedge_us << propagation_latency_edgecloud_us << "_maxwarmupdurationsec" << max_warmup_duration_sec << "_stresstestdurationsec" << stresstest_duration_sec << "_" << workload_name;
         if (cache_name == "covered")
         {
-            // Example: XXX/localuncachedcapacitymb1_peredgesyncedvictimcnt3_popaggregationcapacitymb1_popcollectchangeratio0.0_topkedgecnt3
-            oss << "/localuncachedcapacitymb" << local_uncached_capacitymb << "_peredgesyncedvictimcnt" << covered_peredge_synced_victimcnt << "_popaggregationcapacitymb" << popularity_aggregation_capacitymb << "_popcollectchangeratio" << popularity_collection_change_ratio << "_topkedgecnt" << topk_edgecnt;
+            // Example: XXX/localuncachedcapacitymb1_peredgesyncedvictimcnt3_peredgemonitoredsetcnt3_popaggregationcapacitymb1_popcollectchangeratio0.0_topkedgecnt3
+            oss << "/localuncachedcapacitymb" << local_uncached_capacitymb << "_peredgesyncedvictimcnt" << covered_peredge_synced_victimcnt << "peredgemonitoredsetcnt" << covered_peredge_monitored_victimsetcnt << "_popaggregationcapacitymb" << popularity_aggregation_capacitymb << "_popcollectchangeratio" << popularity_collection_change_ratio << "_topkedgecnt" << topk_edgecnt;
         }
         std::string infixstr = oss.str();
         return infixstr;

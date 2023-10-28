@@ -8,17 +8,13 @@ namespace covered
 {
     const std::string EdgelevelVictimMetadata::kClassName = "EdgelevelVictimMetadata";
 
-    EdgelevelVictimMetadata::EdgelevelVictimMetadata() : tracked_seqnum_(0), inconsistent_seqnum_(0), wait_for_complete_victim_syncset_(false), cache_margin_bytes_(0)
+    EdgelevelVictimMetadata::EdgelevelVictimMetadata() : cache_margin_bytes_(0)
     {
         victim_cacheinfos_.clear();
     }
 
-    EdgelevelVictimMetadata::EdgelevelVictimMetadata(const SeqNum& cur_seqnum, const SeqNum& inconsistent_seqnum, const bool& wait_for_complete_victim_syncset, const uint64_t& cache_margin_bytes, const std::list<VictimCacheinfo>& victim_cacheinfos)
+    EdgelevelVictimMetadata::EdgelevelVictimMetadata(const bool& wait_for_complete_victim_syncset, const uint64_t& cache_margin_bytes, const std::list<VictimCacheinfo>& victim_cacheinfos)
     {
-        tracked_seqnum_ = cur_seqnum;
-        inconsistent_seqnum_ = inconsistent_seqnum;
-        wait_for_complete_victim_syncset_ = wait_for_complete_victim_syncset;
-
         cache_margin_bytes_ = cache_margin_bytes;
         victim_cacheinfos_ = victim_cacheinfos;
 
@@ -29,35 +25,6 @@ namespace covered
     }
 
     EdgelevelVictimMetadata::~EdgelevelVictimMetadata() {}
-
-    SeqNum EdgelevelVictimMetadata::getTrackedSeqnum() const
-    {
-        return tracked_seqnum_;
-    }
-
-    SeqNum EdgelevelVictimMetadata::getInconsistentSeqnum() const
-    {
-        return inconsistent_seqnum_;
-    }
-
-    bool EdgelevelVictimMetadata::isWaitForCompleteVictimSyncset() const
-    {
-        return wait_for_complete_victim_syncset_;
-    }
-
-    void EdgelevelVictimMetadata::clearInconsistentStatus()
-    {
-        inconsistent_seqnum_ = 0;
-        wait_for_complete_victim_syncset_ = false;
-        return;
-    }
-
-    void EdgelevelVictimMetadata::setInconsistentStatus(const SeqNum& synced_seqnum)
-    {
-        inconsistent_seqnum_ = synced_seqnum;
-        wait_for_complete_victim_syncset_ = true;
-        return;
-    }
 
     uint64_t EdgelevelVictimMetadata::getCacheMarginBytes() const
     {
@@ -213,10 +180,6 @@ namespace covered
     {
         if (this != &other)
         {
-            tracked_seqnum_ = other.tracked_seqnum_;
-            inconsistent_seqnum_ = other.inconsistent_seqnum_;
-            wait_for_complete_victim_syncset_ = other.wait_for_complete_victim_syncset_;
-            
             cache_margin_bytes_ = other.cache_margin_bytes_;
             victim_cacheinfos_ = other.victim_cacheinfos_;
         }

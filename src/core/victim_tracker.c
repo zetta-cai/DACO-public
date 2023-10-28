@@ -29,7 +29,7 @@ namespace covered
         peredge_victim_metadata_.clear();
         perkey_victim_dirinfo_.clear();
         peredge_prev_victim_syncset_.clear();
-        peredge_cur_seqnum_.clear();
+        peredge_victimsync_monitor_.clear();
     }
 
     VictimTracker::~VictimTracker()

@@ -28,6 +28,7 @@
 #include "core/victim/edgelevel_victim_metadata.h"
 #include "core/victim/victim_dirinfo.h"
 #include "core/victim/victim_syncset.h"
+#include "core/victim/victimsync_monitor.h"
 
 namespace covered
 {
@@ -42,7 +43,7 @@ namespace covered
         void updateLocalBeaconedVictimDirinfo(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info); // For updates on content directory information, which affects dirinfos of local beaconed victims
 
         // For victim synchronization
-        // NOTE: getLocalVictimSyncsetForSynchronization() can ONLY be used to issue local synced victims for victim synchronization, as it will increase cur_seqnum_ of the current edge node towards the given dst edge node in peredge_cur_seqnum_
+        // NOTE: getLocalVictimSyncsetForSynchronization() can ONLY be used to issue local synced victims for victim synchronization, as it will increase cur_seqnum_ of the current edge node towards the given dst edge node in peredge_victimsync_monitor_
         VictimSyncset getLocalVictimSyncsetForSynchronization(const uint32_t& dst_edge_idx_for_compression, const uint64_t& latest_local_cache_margin_bytes) const; // Get complete victim syncset for current edge node (i.e., edge_idx_) (NOTE: we always use the latest cache margin bytes for local victim syncset, instead of using that in edge-level victim metadata of the current edge node, which may be stale)
         void updateForNeighborVictimSyncset(const uint32_t& source_edge_idx, const VictimSyncset& neighbor_victim_syncset, const std::unordered_map<Key, DirinfoSet, KeyHasher>& local_beaconed_neighbor_synced_victim_dirinfosets, const CooperationWrapperBase* cooperation_wrapper_ptr); // Update victim tracker in the current edge node for the received victim syncset from neighbor edge node (neighbor_victim_syncset may be complete/compressed)
 
@@ -59,7 +60,7 @@ namespace covered
         typedef std::unordered_map<uint32_t, EdgelevelVictimMetadata> peredge_victim_metadata_t;
         typedef std::unordered_map<Key, VictimDirinfo, KeyHasher> perkey_victim_dirinfo_t;
         typedef std::unordered_map<uint32_t, VictimSyncset> peredge_victim_syncset_t;
-        typedef std::unordered_map<uint32_t, SeqNum> peredge_seqnum_t;
+        typedef std::unordered_map<uint32_t, VictimsyncMonitor> peredge_victimsync_monitor_t;
         
         static const std::string kClassName;
 
@@ -99,9 +100,8 @@ namespace covered
         perkey_victim_dirinfo_t perkey_victim_dirinfo_;
         mutable peredge_victim_syncset_t peredge_prev_victim_syncset_; // Previous victim syncset for dedup/delta-compression in victim synchronization
 
-        // NOTE: dedup-/delta-based victim syncset compression/recovery MUST follow strict seqnum order (unless the received victim syncset for recovery is complete)
-        // NOTE: we assert that seqnum should NOT overflow if using uint64_t (TODO: fix it by integer wrapping in the future if necessary)
-        mutable peredge_seqnum_t peredge_cur_seqnum_; // Used by the current edge node to track the latest seqnum that will be used to issue the next victim syncset for victim synchronization towards the given dst edge node (i.e., seqnums for issued local victim syncset)
+        // Sequence-based victim synchronization monitor for each source/dst edge node
+        mutable peredge_victimsync_monitor_t peredge_victimsync_monitor_;
     };
 }
 
