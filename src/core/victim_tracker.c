@@ -12,7 +12,7 @@ namespace covered
 
     const std::string VictimTracker::kClassName = "VictimTracker";
 
-    VictimTracker::VictimTracker(const uint32_t& edge_idx, const uint32_t& peredge_synced_victimcnt) : edge_idx_(edge_idx), peredge_synced_victimcnt_(peredge_synced_victimcnt)
+    VictimTracker::VictimTracker(const uint32_t& edge_idx, const uint32_t& peredge_synced_victimcnt, const uint32_t& peredge_monitored_victimsetcnt) : edge_idx_(edge_idx), peredge_synced_victimcnt_(peredge_synced_victimcnt), peredge_monitored_victimsetcnt_(peredge_monitored_victimsetcnt)
     {
         // Differentiate different edge nodes
         std::ostringstream oss;
@@ -54,8 +54,7 @@ namespace covered
 
         // Replace VictimCacheinfors for local synced victims of current edge node
         // NOTE: local_synced_victim_cacheinfos from local edge cache MUST be complete which has been verified by CoveredLocalCache; local_beaconed_local_synced_victim_dirinfosets from local directory table also MUST be complete which has been verified by EdgeWrapper
-        const SeqNum synced_seqnum = 0; // NOTE: NOT affect EdgelevelVictimMetadata for current edge node
-        replaceVictimMetadataForEdgeIdx_(synced_seqnum, edge_idx_, local_cache_margin_bytes, local_synced_victim_cacheinfos, cooperation_wrapper_ptr);
+        replaceVictimMetadataForEdgeIdx_(edge_idx_, local_cache_margin_bytes, local_synced_victim_cacheinfos, cooperation_wrapper_ptr);
 
         // Replace VictimDirinfo::dirinfoset for each local beaconed local synced victim of current edge node
         replaceVictimDirinfoSets_(local_beaconed_local_synced_victim_dirinfosets, true);
@@ -155,13 +154,15 @@ namespace covered
         rwlock_for_victim_tracker_->acquire_lock(context_name);
 
         // Enforce complete victim syncset for the next message to source edge node if necessary
-        if (neighbor_victim_syncset.isEnforceComplete())
+        peredge_victimsync_monitor_t::iterator peredge_victimsync_monitor_iter = peredge_victimsync_monitor_.find(source_edge_idx);
+        if (neighbor_victim_syncset.isEnforceComplete()) // Enforce the current edge node to issue complete victim syncset without compression for the given source edge node
         {
-            enforceCompleteVictimSyncset_(source_edge_idx);
+            assert(peredge_victimsync_monitor_iter != peredge_victimsync_monitor_.end()); // NOTE: if the source edge node notifies the current edge node to enforce complete victim syncset without compression, it means that the current edge node has sent at least one victim syncset to the source edge node -> current edge node MUST have VictimsyncMonitor for the source edge node
+
+            peredge_victimsync_monitor_iter->second.releasePrevVictimSyncset(); // Release prev victim syncset for the source edge node such that the next message will piggyback a complete victim syncset
         }
 
         // Allocate VictimsyncMonitor for the source edge node if this is the first victim syncset received from the source edge node
-        peredge_victimsync_monitor_t::iterator peredge_victimsync_monitor_iter = peredge_victimsync_monitor_.find(source_edge_idx);
         if (peredge_victimsync_monitor_iter == peredge_victimsync_monitor_.end()) // No VictimsyncMonitor means that this is the first victim syncset from the source edge idx
         {
             // NOTE: cur_seqnum_ will be initialized as 0 such that the first victim syncset from current to source will have a seqnum of 0
@@ -183,16 +184,14 @@ namespace covered
             assert(neighbor_victim_syncset.isComplete());
             assert(synced_seqnum == 0);
 
-            peredge_victimsync_monitor_iter->second.clearEnforcementStatus();
+            peredge_victimsync_monitor_iter->second.clearFirstReceived(synced_seqnum);
 
-            need_update_victim_tracker_ = true; // Directly update victim tracker without recovery (will set tracked_seqnum as synced_seqnum of 0 in edge-level victim metadata)
+            need_update_victim_tracker_ = true; // Directly update victim tracker without recovery (will set tracked_seqnum as synced_seqnum of 0 in VictimsyncMonitor)
         }
         else // Decide whether and how to update victim tracker based on existing complete victim syncset tracked for the source edge idx in the current edge node
         {
-            // TODO END HERE
-
-            // Get tracked seqnum from existing edge-level victim metadata
-            const SeqNum tracked_seqnum = victim_metadata_map_const_iter->second.getTrackedSeqnum();
+            // Get tracked seqnum from existing VictimsyncMonitor
+            const SeqNum tracked_seqnum = peredge_victimsync_monitor_iter->second.getTrackedSeqnum();
 
             // Compare synced seqnum with tracked seqnum
             if (synced_seqnum <= tracked_seqnum) // An outdated victim syncset from source edge node
@@ -212,22 +211,24 @@ namespace covered
 
                     // Recover neighbor complete victim syncset based on existing complete victim syncset of source edge idx and received neighbor_victim_syncset if compressed
                     neighbor_complete_victim_syncset = VictimSyncset::recover(neighbor_victim_syncset, existing_complete_victim_syncset);
-                    assert(neighbor_complete_victim_syncset.isComplete());   
+                    assert(neighbor_complete_victim_syncset.isComplete());  
                 }
 
-                need_update_victim_tracker_ = true; // Update victim tracker with recovered/synced complete vicitm syncset (will set tracked_seqnum as synced_seqnum (i.e., tracked_seqnum + 1) in edge-level victim metadata)
+                need_update_victim_tracker_ = true; // Update victim tracker with recovered/synced complete vicitm syncset
+
+                peredge_victimsync_monitor_iter->second.tryToClearEnforcementStatus_(synced_seqnum, peredge_monitored_victimsetcnt_); // This will set tracked_seqnum as synced_seqnum (i.e., tracked_seqnum + 1), clear stale cached victim syncsets, and clear enforcement status (set need_enforcement_ = false, enforcement_seqnum_ = 0, and wait_for_complete_victim_syncset_ = false) if necessary in VictimsyncMonitor
             }
             else if (is_neighbor_victim_syncset_complete) // A complete victim syncset w/ synced_seqnum > tracked_seqnum + 1
             {
                 need_update_victim_tracker_ = true; // Directly use complete victim syncset to update victim tracker (will set tracked_seqnum as synced_seqnum in edge-level victim metadata)
 
-                tryToClearInconsistentStatus_(source_edge_idx, synced_seqnum); // This will reset inconsistent_seqnum_ and wait_for_complete_victim_syncset_ in edge-level victim metadata if is_wait_for_complete_victim_syncset == true and synced_seqnum > inconsistent_seqnum_
+                peredge_victimsync_monitor_iter->second.tryToClearEnforcementStatus_(synced_seqnum, peredge_monitored_victimsetcnt_); // This will set tracked_seqnum as synced_seqnum (i.e., tracked_seqnum + 1), clear stale cached victim syncsets, and clear enforcement status (set need_enforcement_ = false, enforcement_seqnum_ = 0, and wait_for_complete_victim_syncset_ = false) if necessary in VictimsyncMonitor
             }
             else // A compressed victim syncset w/ synced_seqnum > tracked_seqnum + 1
             {
                 need_update_victim_tracker_ = false; // No need to update victim tracker
 
-                tryToClearNeighborPrevVictimset_(source_edge_idx, synced_seqnum); // Send ClearPrevVictimsetRequest to source edge node to clear prev victim syncset for the current edge node (NO explicit response)
+                peredge_victimsync_monitor_iter->second.tryToEnableEnforcementStatus_(peredge_monitored_victimsetcnt_, neighbor_victim_syncset, synced_seqnum); // Trigger complete enforcement if cached victim syncsets is full
             }
         }
 
@@ -258,7 +259,7 @@ namespace covered
             assert(local_beaconed_neighbor_synced_victim_dirinfosets.size() <= neighbor_synced_victim_cacheinfos.size());
 
             // Replace VictimCacheinfos for neighbor synced victims of the given edge node
-            replaceVictimMetadataForEdgeIdx_(synced_seqnum, source_edge_idx, neighbor_cache_margin_bytes, neighbor_synced_victim_cacheinfos, cooperation_wrapper_ptr); // TODO: NOTE: this will update tracked_seqnum of the neighbor edge node as synced_seqnum
+            replaceVictimMetadataForEdgeIdx_(source_edge_idx, neighbor_cache_margin_bytes, neighbor_synced_victim_cacheinfos, cooperation_wrapper_ptr);
 
             // Try to replace VictimDirinfo::dirinfoset (if any) for each neighbor beaconed neighbor synced victim of the given edge node
             replaceVictimDirinfoSets_(neighbor_beaconed_victim_dirinfosets, false);
@@ -460,12 +461,6 @@ namespace covered
             synced_victims = victim_metadata_map_const_iter->second.getVictimCacheinfos();
         }
 
-        // NOTE: we use tracked seqnum for existing complete victim syncset of neighbor edge idx for recovery based on neighbor synced victimset
-        if (edge_idx != edge_idx_)
-        {
-            assert(seqnum == victim_metadata_map_const_iter->second.getTrackedSeqnum());
-        }
-
         // Get beaconed victims of edge idx
         std::unordered_map<Key, DirinfoSet, KeyHasher> beaconed_victims;
         for (perkey_victim_dirinfo_t::const_iterator dirinfo_map_iter = perkey_victim_dirinfo_.begin(); dirinfo_map_iter != perkey_victim_dirinfo_.end(); dirinfo_map_iter++)
@@ -526,65 +521,11 @@ namespace covered
         return is_prev_victim_syncset_exist;
     }
 
-    void VictimTracker::enforceCompleteVictimSyncset_(const uint32_t& source_edge_idx)
-    {
-        // NOTE: NO need to acquire a write lock for enforcing complete victim syncset, which has been done by updateForNeighborVictimSyncset()
-
-        peredge_victimsync_monitor_t::iterator peredge_victimsync_monitor_iter = peredge_victimsync_monitor_.find(source_edge_idx);
-        assert(peredge_victimsync_monitor_iter != peredge_victimsync_monitor_.end()); // NOTE: if the source edge node notifies the current edge node to enforce complete victim syncset without compression, it means that the current edge node has sent at least one victim syncset to the source edge node -> current edge node MUST have VictimsyncMonitor for the source edge node
-
-        peredge_victimsync_monitor_iter->second.releasePrevVictimSyncset(); // Release prev victim syncset for the source edge node such that the next message will piggyback a complete victim syncset
-
-        return;
-    }
-
-    void VictimTracker::tryToClearInconsistentStatus_(const uint32_t& source_edge_idx, const SeqNum& synced_seqnum)
-    {
-        // NOTE: NO need to acquire a write lock for changing inconsistent status of edge-level victim metadata, which has been done by updateForNeighborVictimSyncset()
-
-        // NOTE: MUST exist corresponding edge-level victim metadata
-        peredge_victim_metadata_t::iterator peredge_victim_metadata_iter = peredge_victim_metadata_.find(source_edge_idx);
-        assert(peredge_victim_metadata_iter != peredge_victim_metadata_.end());
-
-        const bool is_wait_for_complete_victim_syncset = peredge_victim_metadata_iter->second.isWaitForCompleteVictimSyncset();
-        const SeqNum inconsistent_seqnum = peredge_victim_metadata_iter->second.getInconsistentSeqnum();
-        if (is_wait_for_complete_victim_syncset && (synced_seqnum > inconsistent_seqnum)) // Equivalent to receiving complete victim syncset after explicitly clear sender's prev victim syncset history for the current edge node
-        {
-            peredge_victim_metadata_iter->second.clearInconsistentStatus();
-        }
-
-        return;
-    }
-
-    void VictimTracker::tryToClearNeighborPrevVictimset_(const uint32_t& source_edge_idx, const SeqNum& synced_seqnum)
-    {
-        // NOTE: NO need to acquire a write lock for updating inconsistent status and issuing ClearPrevVictimsetRequest, which has been done by updateForNeighborVictimSyncset()
-
-        // NOTE: MUST exist corresponding edge-level victim metadata
-        peredge_victim_metadata_t::iterator peredge_victim_metadata_iter = peredge_victim_metadata_.find(source_edge_idx);
-        assert(peredge_victim_metadata_iter != peredge_victim_metadata_.end());
-
-        const bool is_wait_for_complete_victim_syncset = peredge_victim_metadata_iter->second.isWaitForCompleteVictimSyncset();
-        const SeqNum inconsistent_seqnum = peredge_victim_metadata_iter->second.getInconsistentSeqnum();
-        if (!is_wait_for_complete_victim_syncset) // NOT issued before
-        {
-            assert(inconsistent_seqnum == 0);
-
-            peredge_victim_metadata_iter->second.setInconsistentStatus(synced_seqnum);
-
-            // TODO: Send ClearPrevVictimsetRequest to edge cache server of the sender edge node
-        }
-
-        return;
-    }
-
     // For victim update and removal
 
-    void VictimTracker::replaceVictimMetadataForEdgeIdx_(const SeqNum& synced_seqnum, const uint32_t& edge_idx, const uint64_t& cache_margin_bytes, const std::list<VictimCacheinfo>& synced_victim_cacheinfos, const CooperationWrapperBase* cooperation_wrapper_ptr)
+    void VictimTracker::replaceVictimMetadataForEdgeIdx_(const uint32_t& edge_idx, const uint64_t& cache_margin_bytes, const std::list<VictimCacheinfo>& synced_victim_cacheinfos, const CooperationWrapperBase* cooperation_wrapper_ptr)
     {
         // NOTE: NO need to acquire a write lock which has been done in updateLocalSyncedVictims() and updateForNeighborVictimSyncset()
-
-        // NOTE: for local synced vicitms, synced_seqnum will always be zero, which is okay as EdgelevelVictimMetadata::tracked_seqnum_ is ONLY for neighbor edge node instead of the current one
 
         // TMPDEBUG23
         std::ostringstream oss;
@@ -607,7 +548,7 @@ namespace covered
 
             // Add latest synced victims for the specific edge node
             // NOTE: EdgelevelVictimMetadata will assert that all victim cacheinfos are complete
-            victim_metadata_map_iter = peredge_victim_metadata_.insert(std::pair(edge_idx, EdgelevelVictimMetadata(synced_seqnum, 0, false, cache_margin_bytes, synced_victim_cacheinfos))).first;
+            victim_metadata_map_iter = peredge_victim_metadata_.insert(std::pair(edge_idx, EdgelevelVictimMetadata(cache_margin_bytes, synced_victim_cacheinfos))).first;
             assert(victim_metadata_map_iter != peredge_victim_metadata_.end());
 
             size_bytes_ = Util::uint64Add(size_bytes_, sizeof(uint32_t)); // For edge_idx
@@ -618,13 +559,9 @@ namespace covered
             // Preserve old local synced victim cacheinfos (MUST be complete) if any
             old_synced_victim_cacheinfos = victim_metadata_map_iter->second.getVictimCacheinfos();
 
-            // Keep original inconsistent status
-            const SeqNum old_inconsistent_seqnum = victim_metadata_map_iter->second.getInconsistentSeqnum();
-            const bool old_is_wait_for_complete_victim_syncset = victim_metadata_map_iter->second.isWaitForCompleteVictimSyncset();
-
             // Replace old local synced victim cacheinfos with the latest ones
             // NOTE: EdgelevelVictimMetadata will assert that all victim cacheinfos are complete
-            victim_metadata_map_iter->second = EdgelevelVictimMetadata(synced_seqnum, old_inconsistent_seqnum, old_is_wait_for_complete_victim_syncset, cache_margin_bytes, synced_victim_cacheinfos);
+            victim_metadata_map_iter->second = EdgelevelVictimMetadata(cache_margin_bytes, synced_victim_cacheinfos);
         }
 
         // Update victim dirinfos for new synced victim keys

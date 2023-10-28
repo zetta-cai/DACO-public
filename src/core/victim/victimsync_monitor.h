@@ -38,17 +38,18 @@ namespace covered
         void clearFirstReceived(const uint32_t& synced_seqnum);
 
         SeqNum getTrackedSeqnum() const;
-        SeqNum getEnforcementSeqnum() const;
-        bool isWaitForCompleteVictimSyncset() const;
 
-        void clearEnforcementStatus();
-        void setEnforcementStatus(const SeqNum& synced_seqnum);
+        void tryToClearEnforcementStatus_(const SeqNum& synced_seqnum, const uint32_t& peredge_monitored_victimsetcnt);
+        void tryToEnableEnforcementStatus_(const uint32_t& peredge_monitored_victimsetcnt, const VictimSyncset& neighbor_compressed_victim_syncset, const SeqNum& synced_seqnum);
 
         // Utils
 
         uint64_t getSizeForCapacity() const;
     private:
         static const std::string kClassName;
+
+        void clearStaleCachedVictimSyncsets_(const uint32_t& peredge_monitored_victimsetcnt);
+        SeqNum getMaxSeqnumFromCachedVictimSyncsets_(const uint32_t& peredge_monitored_victimsetcnt) const;
 
         // NOTE: dedup-/delta-based victim syncset compression/recovery MUST follow strict seqnum order (unless the received victim syncset for recovery is complete)
         // NOTE: we assert that seqnum should NOT overflow if using uint64_t (TODO: fix it by integer wrapping in the future if necessary)

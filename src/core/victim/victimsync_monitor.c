@@ -107,14 +107,46 @@ namespace covered
         return tracked_seqnum_;
     }
 
-    SeqNum VictimsyncMonitor::getEnforcementSeqnum() const
+    void VictimsyncMonitor::tryToClearEnforcementStatus_(const SeqNum& synced_seqnum, const uint32_t& peredge_monitored_victimsetcnt)
     {
-        return enforcement_seqnum_;
+        // Set tracked seqnum as synced seqnum
+        tracked_seqnum_ = synced_seqnum;
+
+        // Clear stale cached victim syncsets based on updated tracked seqnum
+        clearStaleCachedVictimSyncsets_(peredge_monitored_victimsetcnt);
+
+        if (wait_for_complete_victim_syncset_ && (synced_seqnum > enforcement_seqnum_)) // Equivalent to receiving complete victim syncset after enforcing sender to clear prev victim syncset history for the current edge node
+        {
+            // Clear enforcement status
+            need_enforcement_ = false;
+            enforcement_seqnum_ = 0;
+            wait_for_complete_victim_syncset_ = false;
+        }
+
+        return;
     }
 
-    bool VictimsyncMonitor::isWaitForCompleteVictimSyncset() const
+    void VictimsyncMonitor::tryToEnableEnforcementStatus_(const uint32_t& peredge_monitored_victimsetcnt, const VictimSyncset& neighbor_compressed_victim_syncset, const SeqNum& synced_seqnum)
     {
-        return wait_for_complete_victim_syncset_;
+        assert(neighbor_compressed_victim_syncset.isCompressed());
+        
+        if (cached_victim_syncsets_.size() < peredge_monitored_victimsetcnt) // NOT full
+        {
+            cached_victim_syncsets_.push_back(neighbor_compressed_victim_syncset);
+        }
+        else if (wait_for_complete_victim_syncset_ == false) // Full and NOT trigger complete enforcement before
+        {
+            // Set enforcement_seqnum_ = (max seqnum between cached victim syncsets and synced seqnum)
+            const SeqNum tmp_max_seqnum = getMaxSeqnumFromCachedVictimSyncsets_(peredge_monitored_victimsetcnt);
+            enforcement_seqnum_ = synced_seqnum >= tmp_max_seqnum ? synced_seqnum : tmp_max_seqnum;
+
+            wait_for_complete_victim_syncset_ = true;
+
+            assert(need_enforcement_ == false);
+            need_enforcement_ = true;
+        }
+
+        return;
     }
 
     // Utils
@@ -140,5 +172,45 @@ namespace covered
         size += sizeof(bool); // wait_for_complete_victim_syncset_
 
         return size;
+    }
+
+    void VictimsyncMonitor::clearStaleCachedVictimSyncsets_(const uint32_t& peredge_monitored_victimsetcnt)
+    {
+        assert(cached_victim_syncsets_.size() <= peredge_monitored_victimsetcnt);
+
+        for (std::vector<VictimSyncset>::iterator iter = cached_victim_syncsets_.begin(); iter != cached_victim_syncsets_.end();)
+        {
+            if (iter->getSeqnum() <= tracked_seqnum_)
+            {
+                iter = cached_victim_syncsets_.erase(iter);
+            }
+            else
+            {
+                iter++;
+            }
+        }
+
+        return;
+    }
+
+    SeqNum VictimsyncMonitor::getMaxSeqnumFromCachedVictimSyncsets_(const uint32_t& peredge_monitored_victimsetcnt) const
+    {
+        assert(cached_victim_syncsets_.size() <= peredge_monitored_victimsetcnt);
+
+        SeqNum max_seqnum = 0;
+        for (std::vector<VictimSyncset>::const_iterator iter = cached_victim_syncsets_.begin(); iter != cached_victim_syncsets_.end(); iter++)
+        {
+            const SeqNum tmp_seqnum = iter->getSeqnum();
+            if (iter == cached_victim_syncsets_.begin())
+            {
+                max_seqnum = tmp_seqnum;
+            }
+            else if (max_seqnum < tmp_seqnum)
+            {
+                max_seqnum = tmp_seqnum;
+            }
+        }
+
+        return max_seqnum;
     }
 }

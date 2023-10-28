@@ -13,7 +13,7 @@ namespace covered
         victim_cacheinfos_.clear();
     }
 
-    EdgelevelVictimMetadata::EdgelevelVictimMetadata(const bool& wait_for_complete_victim_syncset, const uint64_t& cache_margin_bytes, const std::list<VictimCacheinfo>& victim_cacheinfos)
+    EdgelevelVictimMetadata::EdgelevelVictimMetadata(const uint64_t& cache_margin_bytes, const std::list<VictimCacheinfo>& victim_cacheinfos)
     {
         cache_margin_bytes_ = cache_margin_bytes;
         victim_cacheinfos_ = victim_cacheinfos;

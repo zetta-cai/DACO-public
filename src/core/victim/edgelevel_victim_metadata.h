@@ -23,7 +23,7 @@ namespace covered
     {
     public:
         EdgelevelVictimMetadata();
-        EdgelevelVictimMetadata(const bool& wait_for_complete_victim_syncset, const uint64_t& cache_margin_bytes, const std::list<VictimCacheinfo>& victim_cacheinfos);
+        EdgelevelVictimMetadata(const uint64_t& cache_margin_bytes, const std::list<VictimCacheinfo>& victim_cacheinfos);
         ~EdgelevelVictimMetadata();
 
         uint64_t getCacheMarginBytes() const;

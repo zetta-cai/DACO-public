@@ -8,7 +8,7 @@ namespace covered
 {
     const std::string CoveredCacheManager::kClassName("CoveredCacheManager");
 
-    CoveredCacheManager::CoveredCacheManager(const uint32_t& edge_idx, const uint32_t& edgecnt, const uint32_t& peredge_synced_victimcnt, const uint64_t& popularity_aggregation_capacity_bytes, const double& popularity_collection_change_ratio, const uint32_t& topk_edgecnt) : topk_edgecnt_(topk_edgecnt), popularity_aggregator_(edge_idx, edgecnt, popularity_aggregation_capacity_bytes, topk_edgecnt), victim_tracker_(edge_idx, peredge_synced_victimcnt), directory_cacher_(edge_idx, popularity_collection_change_ratio)
+    CoveredCacheManager::CoveredCacheManager(const uint32_t& edge_idx, const uint32_t& edgecnt, const uint32_t& peredge_synced_victimcnt, const uint32_t& peredge_monitored_victimsetcnt, const uint64_t& popularity_aggregation_capacity_bytes, const double& popularity_collection_change_ratio, const uint32_t& topk_edgecnt) : topk_edgecnt_(topk_edgecnt), popularity_aggregator_(edge_idx, edgecnt, popularity_aggregation_capacity_bytes, topk_edgecnt), victim_tracker_(edge_idx, peredge_synced_victimcnt, peredge_monitored_victimsetcnt), directory_cacher_(edge_idx, popularity_collection_change_ratio)
     {
         // Differentiate different edge nodes
         std::stringstream ss;
@@ -141,7 +141,7 @@ namespace covered
 
         // Get current complete/compressed victim syncset from victim tracker
         // NOTE: we perform compression inside VictimTrackker:getLocalVictimSyncsetForSynchronization() for atomicity
-        VictimSyncset current_victim_syncset = victim_tracker_.getLocalVictimSyncsetForSynchronization(latest_local_cache_margin_bytes);
+        VictimSyncset current_victim_syncset = victim_tracker_.getLocalVictimSyncsetForSynchronization(dst_edge_idx_for_compression, latest_local_cache_margin_bytes);
 
         return current_victim_syncset;
     }
