@@ -295,24 +295,19 @@ namespace covered
         std::string context_name = "CacheWrapper::admit()";
         cache_wrapper_perkey_rwlock_ptr_->acquire_lock(key, context_name);
 
-        Util::dumpDebugMsg(instance_name_, "admitLocalCache()"); // TMPDEBUG23
         local_cache_ptr_->admitLocalCache(key, value, affect_victim_tracker);
 
         if (is_valid) // w/o writes
         {
-            Util::dumpDebugMsg(instance_name_, "validateKeyForLocalUncachedObject_()"); // TMPDEBUG23
             validateKeyForLocalUncachedObject_(key);
         }
         else // w/ writes
         {
-            Util::dumpDebugMsg(instance_name_, "invalidateKeyForLocalUncachedObject_()"); // TMPDEBUG23
             invalidateKeyForLocalUncachedObject_(key);
         }
 
         // Release a write lock
         cache_wrapper_perkey_rwlock_ptr_->unlock(key, context_name);
-
-        Util::dumpDebugMsg(instance_name_, "after admit()"); // TMPDEBUG23
 
         return;
     }

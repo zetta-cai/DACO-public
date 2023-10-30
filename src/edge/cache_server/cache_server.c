@@ -321,7 +321,6 @@ namespace covered
         checkPointers_();
 
         bool affect_victim_tracker = false;
-        Util::dumpDebugMsg(instance_name_, "admit()"); // TMPDEBUG23
         edge_wrapper_ptr_->getEdgeCachePtr()->admit(key, value, is_valid, affect_victim_tracker);
         
         if (edge_wrapper_ptr_->getCacheName() == Util::COVERED_CACHE_NAME) // ONLY for COVERED

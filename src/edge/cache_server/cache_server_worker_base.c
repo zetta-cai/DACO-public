@@ -1458,9 +1458,7 @@ namespace covered
         {
             return is_finish;
         }
-        Util::dumpDebugMsg(base_instance_name_, "before admitLocalEdgeCache_()"); // TMPDEBUG23
         tmp_cache_server_ptr->admitLocalEdgeCache_(key, value, !is_being_written); // valid if not being written
-        Util::dumpDebugMsg(base_instance_name_, "after admitLocalEdgeCache_()"); // TMPDEBUG23
 
         struct timespec update_directory_to_admit_end_timestamp = Util::getCurrentTimespec();
         uint32_t update_directory_to_admit_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(update_directory_to_admit_end_timestamp, update_directory_to_admit_start_timestamp));

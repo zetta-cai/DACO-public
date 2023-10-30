@@ -91,7 +91,10 @@ array_data_assign(struct array *arr, uint32_t nalloc, size_t size, void *data)
     arr->size = size;
     arr->nalloc = nalloc;
     arr->nelem = 0;
-    arr->data = data;
+
+    // Siyuan: fix invalid conversion during compilation with -fpermissive
+    //arr->data = data;
+    arr->data = (uint8_t*)data;
 }
 
 /**
