@@ -630,7 +630,7 @@ namespace covered
                 {
                     // NOTE: this is a minor yet normal case, as the target edge node has evicted the object yet the directory info in the beacon edge node has not been updated yet before answering the directory lookup request
                     std::ostringstream oss;
-                    oss << "redirectGetToTarget_(): target edge node does not cache the key " << key.getKeystr() << ", which may be already evicted yet w/o directory update yet!";
+                    oss << "redirectGetToTarget_(): target edge node does not cache the key " << key.getKeystr() << ", which may be already evicted after directory lookup yet before request redirection";
                     Util::dumpInfoMsg(base_instance_name_, oss.str());
 
                     is_cooperative_cached = false;
@@ -1458,7 +1458,9 @@ namespace covered
         {
             return is_finish;
         }
+        Util::dumpDebugMsg(base_instance_name_, "before admitLocalEdgeCache_()"); // TMPDEBUG23
         tmp_cache_server_ptr->admitLocalEdgeCache_(key, value, !is_being_written); // valid if not being written
+        Util::dumpDebugMsg(base_instance_name_, "after admitLocalEdgeCache_()"); // TMPDEBUG23
 
         struct timespec update_directory_to_admit_end_timestamp = Util::getCurrentTimespec();
         uint32_t update_directory_to_admit_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(update_directory_to_admit_end_timestamp, update_directory_to_admit_start_timestamp));

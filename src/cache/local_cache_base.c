@@ -182,6 +182,7 @@ namespace covered
         std::string context_name = "LocalCacheBase::admitLocalCache()";
         rwlock_for_local_cache_ptr_->acquire_lock(context_name);
 
+        Util::dumpDebugMsg(base_instance_name_, "admitLocalCacheInternal_()"); // TMPDEBUG23
         admitLocalCacheInternal_(key, value, affect_victim_tracker);
 
         rwlock_for_local_cache_ptr_->unlock(context_name);

@@ -61,8 +61,8 @@ namespace covered
         initialize_segcache(segcache_cache_ptr_);
         seg_setup(segcache_options_ptr_, segcache_metrics_ptr_, segcache_cache_ptr_);
 
-        // NOTE: uncomment to enable debug log in segcache (ONLY support a single instance now!!!)
-        //debug_setup(NULL);
+        // NOTE: uncomment the following code and set HAVE_LOGGING = ON in CmakeLists.txt to enable debug log in segcache (ONLY support a single instance now!!!)
+        debug_setup(NULL); // TMPDEBUG23
     }
     
     SegcacheLocalCache::~SegcacheLocalCache()
@@ -178,6 +178,8 @@ namespace covered
     void SegcacheLocalCache::admitLocalCacheInternal_(const Key& key, const Value& value, bool& affect_victim_tracker)
     {
         UNUSED(affect_victim_tracker); // Only for COVERED
+
+        Util::dumpDebugMsg(instance_name_, "appendLocalCache_()"); // TMPDEBUG23
         
         // NOTE: admission is the same as update for SegCache due to log-structured design
         bool is_local_cached = appendLocalCache_(key, value);
@@ -329,6 +331,8 @@ namespace covered
         value_bstr.len = static_cast<uint32_t>(valuestr.length());
         value_bstr.data = valuestr.data();
 
+        Util::dumpDebugMsg(instance_name_, "item_get()"); // TMPDEBUG23
+
         // Check whether key has already been cached
         struct item* prev_item_ptr = item_get(&key_bstr, NULL, segcache_cache_ptr_); // Lookup hashtable to get item in segment; will increase read refcnt of segment
         bool is_local_cached = (prev_item_ptr != NULL);
@@ -336,6 +340,8 @@ namespace covered
         {
             item_release(prev_item_ptr, segcache_cache_ptr_); // Decrease read refcnt of segment
         }
+
+        Util::dumpDebugMsg(instance_name_, "item_reserve_with_ttl()"); // TMPDEBUG23
 
         // Append current item for new value no matter key has been cached or not
         struct item *cur_item_ptr = NULL;
