@@ -330,6 +330,9 @@ namespace covered
             {
                 edge_wrapper_ptr_->updateCacheManagerForLocalSyncedVictims();
             }
+
+            // Remove existing cached directory if any as key is local cached, while we ONLY cache valid remote dirinfo for local uncached objects
+            edge_wrapper_ptr_->getCoveredCacheManagerPtr()->updateDirectoryCacherToRemoveCachedDirectory(key);
         }
 
         return;
@@ -444,9 +447,6 @@ namespace covered
                 // NOTE: use background event names by sending CoveredPlacementDirectoryUpdateRequest (NOT DISABLE recursive cache placement due to is_admit = true)
                 directory_update_request_ptr = new CoveredPlacementDirectoryUpdateRequest(key, is_admit, directory_info, victim_syncset, edge_idx, source_addr, skip_propagation_latency);
             }
-
-            // Remove existing cached directory if any as key will be local cached
-            tmp_covered_cache_manager_ptr->updateDirectoryCacherToRemoveCachedDirectory(key);
         }
         else // Baselines
         {

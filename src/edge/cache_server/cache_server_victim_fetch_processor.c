@@ -151,8 +151,8 @@ namespace covered
         VictimSyncset local_victim_syncset = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr()->accessVictimTrackerForLocalVictimSyncset(dst_edge_idx_for_compression, tmp_edge_wrapper_ptr->getCacheMarginBytes()); // complete or compressed
 
         // Prepare victim fetchset for lazy victim fetching
-        // NOTE: we do NOT care about cache margin bytes in victim_fetchset
-        VictimSyncset local_victim_fetchset(0, tmp_victim_cacheinfos, tmp_perkey_dirinfoset);
+        // NOTE: we do NOT care about seqnum, is_enforce_complete, and cache_margin_bytes in victim_fetchset
+        VictimSyncset local_victim_fetchset(0, false, 0, tmp_victim_cacheinfos, tmp_perkey_dirinfoset);
         assert(local_victim_fetchset.isComplete()); // NOTE: extra fetched victim cacheinfos and dirinfo sets in victim fetchset MUST be complete
         
         // Prepare CoveredVictimFetchResponse with total_bandwidth_usage and event_list

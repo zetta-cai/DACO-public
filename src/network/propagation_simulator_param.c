@@ -32,6 +32,26 @@ namespace covered
     PropagationSimulatorParam::~PropagationSimulatorParam()
     {
         assert(propagation_item_buffer_ptr_ != NULL);
+
+        // Release not-issued messages in propagation_item_buffer_ptr_ (NOTE: now edge is NOT running and propagation simulator will NOT pop messages from param, so ONLY one consumer and hence NO need to acquire a write lock for edge wrapper to release messages)
+        while (true)
+        {
+            PropagationItem tmp_item;
+            bool is_successful = propagation_item_buffer_ptr_->pop(tmp_item);
+            if (is_successful)
+            {
+                MessageBase* tmp_msgptr = tmp_item.getMessagePtr();
+                assert(tmp_msgptr != NULL);
+                delete tmp_msgptr;
+                tmp_msgptr = NULL;
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        // Release ring buffer itself
         delete propagation_item_buffer_ptr_;
         propagation_item_buffer_ptr_ = NULL;
     }
