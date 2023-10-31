@@ -581,7 +581,8 @@ seg_copy(int32_t seg_id_dest, int32_t seg_id_src,
     // Siyuan: update victim_cnt_ptr
     if (need_victims)
     {
-        *victim_cnt_ptr = victim_cnt;
+        //*victim_cnt_ptr = victim_cnt;
+        *victim_cnt_ptr = victim_idx; // NOTE: NOT all victim_cnt objects are evicted!!!
     }
 
     /* using this one will crash, there must be some data race which incr

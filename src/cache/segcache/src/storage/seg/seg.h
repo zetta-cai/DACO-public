@@ -149,7 +149,9 @@ struct seg_heapinfo {
 #define SEG_DATAPOOL_PREFAULT true
 #define SEG_DATAPOOL_NAME "seg_datapool"
 
-#define SEG_MATURE_TIME 20
+// Siyuan: allow to evict newly-created segments (checked by seg_evictable() in src/cache/segcache/src/storage/seg/segevict.c) due to NOT consider expiration and cache flush in cooperative edge caching
+#define SEG_MATURE_TIME 0
+//#define SEG_MATURE_TIME 20
 #define SEG_N_MAX_MERGE 8
 #define SEG_N_MERGE     4
 
