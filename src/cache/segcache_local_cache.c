@@ -67,7 +67,8 @@ namespace covered
         ////admin_process_setup();
 
         // NOTE: uncomment the following code and set HAVE_LOGGING = ON in CmakeLists.txt to enable debug log in segcache (ONLY support a single instance now!!!)
-        //debug_setup(NULL);
+        // TMPDEBUG23
+        debug_setup(NULL);
     }
     
     SegcacheLocalCache::~SegcacheLocalCache()
@@ -218,6 +219,11 @@ namespace covered
 
         UNUSED(required_size);
 
+        // TMPDEBUG23
+        std::ostringstream oss;
+        oss << "SegcacheLocalCache::evictLocalCacheNoGivenKeyInternal_() for required size " << required_size << "; cache size usage before eviction " << getSizeForCapacityInternal_();
+        Util::dumpDebugMsg(instance_name_, oss.str());
+
         // Refer to src/cache/segcache/src/storage/seg/seg.c::seg_evict()
 
         evict_rstatus_e status;
@@ -296,6 +302,11 @@ namespace covered
             value_bstrs = NULL;
             victim_cnt = 0;
         }
+
+        oss.clear();
+        oss.str("");
+        oss << "SegcacheLocalCache::evictLocalCacheNoGivenKeyInternal_() for required size " << required_size << "; cache size usage after eviction " << getSizeForCapacityInternal_();
+        Util::dumpDebugMsg(instance_name_, oss.str());
 
         return;
     }

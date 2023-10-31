@@ -1447,6 +1447,11 @@ namespace covered
         checkPointers_();
         CacheServer* tmp_cache_server_ptr = cache_server_worker_param_ptr_->getCacheServerPtr();
 
+        // TMPDEBUG23
+        std::ostringstream oss;
+        oss << "LocalCacheBase::evictLocalCacheNoGivenKey() for key " << key.getKeystr();
+        Util::dumpDebugMsg(base_instance_name_, oss.str());
+
         bool is_finish = false;
 
         struct timespec update_directory_to_admit_start_timestamp = Util::getCurrentTimespec();

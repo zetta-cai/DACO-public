@@ -77,7 +77,9 @@ uint64_t get_segcache_size_bytes(struct SegCache* segcache_ptr)
     uint64_t seg_data_size = 0;
     for (uint32_t i = 0; i < segcache_ptr->heap_ptr->max_nseg; i++)
     {
-        seg_data_size += segcache_ptr->heap_ptr->segs[i].total_bytes;
+        // NOTE: as Segcache does NOT reset total_bytes for evicted segments, we should use write_offset to calculate cache size usage including delete bytes due to log-structured design
+        //seg_data_size += segcache_ptr->heap_ptr->segs[i].total_bytes;
+        seg_data_size += segcache_ptr->heap_ptr->segs[i].write_offset;
     }
 
     size_bytes = hashtable_size + ttl_metadata_size + seg_metadata_size + seg_data_size;

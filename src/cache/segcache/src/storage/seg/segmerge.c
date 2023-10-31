@@ -269,6 +269,14 @@ seg_merge_evict(int32_t *seg_id_ret, struct SegCache* segcache_ptr, bool need_vi
               &segcache_ptr->heap_ptr->segs[ttl_bkt->first_seg_id];
 
         seg = find_n_consecutive_evictable_seg(seg, segcache_ptr);
+        if (seg != NULL)
+        {
+            log_warn("seg==NULL: %d, seg_id: %d", seg==NULL, seg->seg_id); // TMPDEBUG23
+        }
+        else
+        {
+            log_warn("seg==NULL: %d", seg==NULL); // TMPDEBUG23
+        }
         if (seg == NULL) {
             /* cannot find enough evictable seg in this TTL bucket */
             segcache_ptr->ttl_buckets[bkt_idx].next_seg_to_merge = -1;

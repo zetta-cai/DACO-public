@@ -103,13 +103,18 @@ else()
 endif()
 
 set(CMAKE_MACOSX_RPATH 1)
+# Siyuan: add -g and -fsanitize=address (libasan.so should be at least v5 to capture memory leakage) to fix heap-use-after-free bug of segcache (TMPDEBUG23)
+# -> NOTE: comment signal_override in src/cache/segcache/deps/ccommon/src/cc_debug.c to allow ASan to capture segmentation faults
+# -> NOTE: under build folder, use cmake -DCMAKE_C_COMPILER=gcc .. to generate makefiles (gcc version determines libasan version, which MUST be the same as mk/recipes.mk for address sanitizing)
 string(CONCAT CFLAGS
     "-std=c11 "
     "-ggdb3 "
     "-Wall "
     "-Wmissing-prototypes -Wmissing-declarations -Wredundant-decls "
     "-Wunused-function -Wunused-value -Wunused-variable "
-    "-fstrict-aliasing ")
+    "-fstrict-aliasing "
+    "-g "
+    "-fsanitize=address ")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}  ${CFLAGS}")
 
 if(CMAKE_COMPILER_IS_GNUCC)

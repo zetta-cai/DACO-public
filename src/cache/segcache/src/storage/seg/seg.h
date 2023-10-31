@@ -66,13 +66,13 @@ enum seg_state_change {
 struct seg {
     int32_t         seg_id;
 
-    int32_t write_offset;   /* current write pos */
+    int32_t write_offset;   /* current write pos */ // Siyuan: including delete bytes
     int32_t live_bytes;     /* the number of live bytes, smaller than seg_size
-                             * due to fragmentation and item update/deletion */
+                             * due to fragmentation and item update/deletion */ // Siyuan: NOT including delete bytes
 
     int32_t n_live_item;   /* # live items in the segment */
 
-    int32_t total_bytes;   /* total used bytes, including delete bytes */
+    int32_t total_bytes;   /* total used bytes, including delete bytes */ // Siyuan: CANNOT use total_bytes to count cache size usage as Segcache forgets to reset it for each evicted segment
     int32_t n_total_item;  /* # total items (including deleted) in the segment */
 
     int32_t prev_seg_id;   /* prev seg in ttl_bucket or free pool */
