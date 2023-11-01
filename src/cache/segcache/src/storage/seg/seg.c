@@ -749,7 +749,14 @@ seg_teardown(struct SegCache* segcache_ptr)
 
     segcache_ptr->stop = true;
 
-    pthread_join(segcache_ptr->bg_tid, NULL);
+    if (!segcache_ptr->disable_expiration) // Siyuan: wait for background thread of expiration if enabled (always disabled for cooperative edge caching framework, as we do NOT target timeout-based cache)
+    {
+        // Siyuan: should NOT arrive here!!!
+        printf("ERROR: should NOT arrive here for expiration in seg_teardown()!!!");
+        exit(1);
+
+        pthread_join(segcache_ptr->bg_tid, NULL);
+    }
 
     if (!segcache_ptr->seg_initialized) {
         log_warn("%s has never been set up", SEG_MODULE_NAME);
@@ -827,7 +834,7 @@ seg_setup(seg_options_st *options, seg_metrics_st *metrics, struct SegCache* seg
     if (!segcache_ptr->disable_expiration) // Siyuan: start background thread for expiration if enabled (always disabled for cooperative edge caching framework, as we do NOT target timeout-based cache)
     {
         // Siyuan: should NOT arrive here!!!
-        printf("ERROR: should NOT arrive here for expiration!!!");
+        printf("ERROR: should NOT arrive here for expiration in seg_setup()!!!");
         exit(1);
 
         start_background_thread(NULL, segcache_ptr);
