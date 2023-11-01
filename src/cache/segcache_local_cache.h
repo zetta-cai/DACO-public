@@ -63,7 +63,8 @@ namespace covered
 
         // (5) SegCache-specific functions
 
-        bool appendLocalCache_(const Key& key, const Value& value, bool& is_successful); // Return whether key is local cached
+        // Update cached object for writes or insert for admission
+        bool appendLocalCache_(const Key& key, const Value& value, const bool& is_insert, bool& is_successful); // Return whether key is local cached (is_successful indicates whether value is updated/inserted successfully)
 
         // Member variables
 

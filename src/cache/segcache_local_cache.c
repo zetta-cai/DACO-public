@@ -160,8 +160,9 @@ namespace covered
     {
         UNUSED(affect_victim_tracker); // Only for COVERED
         
+        const bool is_insert = false;
         is_successful = false;
-        bool is_local_cached = appendLocalCache_(key, value, is_successful);
+        bool is_local_cached = appendLocalCache_(key, value, is_insert, is_successful);
 
         return is_local_cached;
     }
@@ -190,14 +191,11 @@ namespace covered
         assert(value.getValuesize() <= segcache_cache_ptr_->heap_ptr->seg_size);
 
         // NOTE: admission is the same as update for SegCache due to log-structured design
+        const bool is_insert = true;
         bool is_successful = false;
-        bool is_local_cached = appendLocalCache_(key, value, is_successful);
+        bool is_local_cached = appendLocalCache_(key, value, is_insert, is_successful);
         assert(!is_local_cached);
-
-        if (is_local_cached)
-        {
-            assert(is_successful); // MUST be successful if key is local cached, as we have checked value length in needIndependentAdmitInternal_()
-        }
+        assert(is_successful); // Value MUST be inserted successfully, as we have checked value length in needIndependentAdmitInternal_()
 
         return;
     }
@@ -333,16 +331,10 @@ namespace covered
 
     // (5) SegCache-specific functions
 
-    bool SegcacheLocalCache::appendLocalCache_(const Key& key, const Value& value, bool& is_successful)
+    bool SegcacheLocalCache::appendLocalCache_(const Key& key, const Value& value, const bool& is_insert, bool& is_successful)
     {
         bool is_local_cached = true;
-        is_successful = false;
-
-        if (value.getValuesize() > segcache_cache_ptr_->heap_ptr->seg_size)
-        {
-            is_successful = false;
-            return is_successful;
-        }
+        is_successful = false; // Whether the value is updated/inserted successfully
 
         std::string keystr = key.getKeystr();
         struct bstring key_bstr;
@@ -357,10 +349,27 @@ namespace covered
         // Check whether key has already been cached
         struct item* prev_item_ptr = item_get(&key_bstr, NULL, segcache_cache_ptr_); // Lookup hashtable to get item in segment; will increase read refcnt of segment
         is_local_cached = (prev_item_ptr != NULL);
-        if (is_local_cached)
+        if (is_local_cached) // prev_item_ptr != NULL
         {
             item_release(prev_item_ptr, segcache_cache_ptr_); // Decrease read refcnt of segment
+        }
 
+        // Check value length vs. segment size
+        if (!is_insert) // Not write for update w/ too large value
+        {
+            if (value.getValuesize() > segcache_cache_ptr_->heap_ptr->seg_size)
+            {
+                is_successful = false;
+                return is_local_cached;
+            }
+        }
+        else // NOTE: value length MUST be valid for insert, as we have check value length in needIndependentAdmitInternal_()
+        {
+            assert(value.getValuesize() <= segcache_cache_ptr_->heap_ptr->seg_size);
+        }
+
+        if (is_insert || is_local_cached) // Always write for insert, yet only write for update if key is cached
+        {
             // Append current item for new value if key is cached (will trigger independent admission later if key is NOT cached now)
             struct item *cur_item_ptr = NULL;
             delta_time_i tmp_ttl = 0; // NOTE: TTL of 0 is okay, as we will always disable timeout-based expiration (out of out scope) in segcache during cooperative edge caching
@@ -371,7 +380,7 @@ namespace covered
             is_successful = true;
         }
 
-        return is_successful;
+        return is_local_cached;
     }
 
 }
