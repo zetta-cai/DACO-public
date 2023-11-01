@@ -183,16 +183,16 @@ namespace covered
         return !is_local_cached && is_valid_valuesize;
     }
 
-    void SegcacheLocalCache::admitLocalCacheInternal_(const Key& key, const Value& value, bool& affect_victim_tracker)
+    void SegcacheLocalCache::admitLocalCacheInternal_(const Key& key, const Value& value, bool& affect_victim_tracker, bool& is_successful)
     {
         UNUSED(affect_victim_tracker); // Only for COVERED
+        is_successful = false;
 
         // NOTE: MUST with a valid value length, as we always return false in needIndependentAdmitInternal_() if value is too large
         assert(value.getValuesize() <= segcache_cache_ptr_->heap_ptr->seg_size);
 
         // NOTE: admission is the same as update for SegCache due to log-structured design
         const bool is_insert = true;
-        bool is_successful = false;
         bool is_local_cached = appendLocalCache_(key, value, is_insert, is_successful);
         assert(!is_local_cached);
         assert(is_successful); // Value MUST be inserted successfully, as we have checked value length in needIndependentAdmitInternal_()

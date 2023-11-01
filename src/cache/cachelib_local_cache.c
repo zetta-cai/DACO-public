@@ -23,6 +23,8 @@ namespace covered
 
         // Prepare cacheConfig for Cachelib local cache (most parameters are default values)
         Lru2QCacheConfig cacheConfig;
+        // NOTE: we use default allocationClassSizeFactor, maxAllocationClassSize, and minAllocationClassSize (lib/CacheLib/cachelib/allocator/CacheAllocatorConfig.h) to set allocSizes in MemoryAllocator.config_ for slab-based memory allocation
+        max_allocation_class_size_ = cacheConfig.maxAllocationClassSize;
         // NOTE: we limit cache capacity outside CachelibLocalCache (in EdgeWrapper); here we set cachelib local cache size as overall cache capacity to avoid cache capacity constraint inside CachelibLocalCache
         if (capacity_bytes >= CACHELIB_MIN_CAPACITY_BYTES)
         {
@@ -113,12 +115,22 @@ namespace covered
 
         Lru2QCacheReadHandle handle = cachelib_cache_ptr_->find(keystr);
         bool is_local_cached = (handle != nullptr);
+
+        // Check value length
+        if ((value.getValuesize() > max_allocation_class_size_))
+        {
+            is_successful = false; // NOT cache too large value due to slab class size limitation of Cachelib -> equivalent to NOT caching the latest value (will be invalidated by CacheWrapper later if key is local cached)
+            return is_local_cached;
+        }
+
         if (is_local_cached) // Key already exists
         {
             auto allocate_handle = cachelib_cache_ptr_->allocate(cachelib_poolid_, keystr, value.getValuesize());
             if (allocate_handle == nullptr)
             {
-                is_local_cached = false; // cache may fail to evict due to too many pending writes -> equivalent to NOT caching the latest value
+                //is_local_cached = false; // (OBSOLETE) cache may fail to evict due to too many pending writes -> equivalent to NOT caching the latest value
+
+                is_successful = false; // cache may fail to evict due to too many pending writes -> equivalent to NOT caching the latest value (BUT still local cached, yet will be invalidated by CacheWrapper later)
             }
             else
             {
@@ -148,31 +160,39 @@ namespace covered
         
         // CacheLib (LRU2Q) cache uses default admission policy (i.e., always admit), which always returns true as long as key is not cached
         bool is_local_cached = isLocalCachedInternal_(key);
-        return !is_local_cached;
+        const bool is_valid_valuesize = (value.getValuesize() <= max_allocation_class_size_);
+        return !is_local_cached && is_valid_valuesize;
     }
 
-    void CachelibLocalCache::admitLocalCacheInternal_(const Key& key, const Value& value, bool& affect_victim_tracker)
+    void CachelibLocalCache::admitLocalCacheInternal_(const Key& key, const Value& value, bool& affect_victim_tracker, bool& is_successful)
     {
         UNUSED(affect_victim_tracker); // Only for COVERED
+        is_successful = false;
+
+        // NOTE: MUST with a valid value length, as we always return false in needIndependentAdmitInternal_() if value is too large
+        assert(value.getValuesize() <= max_allocation_class_size_);
         
         const std::string keystr = key.getKeystr();
 
         Lru2QCacheReadHandle handle = cachelib_cache_ptr_->find(keystr);
         bool is_local_cached = (handle != nullptr);
-        if (!is_local_cached) // Key does NOT exist
+        assert(!is_local_cached); // Key should NOT exist
+
+        auto allocate_handle = cachelib_cache_ptr_->allocate(cachelib_poolid_, keystr, value.getValuesize());
+        if (allocate_handle == nullptr)
         {
-            auto allocate_handle = cachelib_cache_ptr_->allocate(cachelib_poolid_, keystr, value.getValuesize());
-            if (allocate_handle == nullptr)
-            {
-                is_local_cached = false; // cache may fail to evict due to too many pending writes -> equivalent to NOT admitting the new key-value pair
-            }
-            else
-            {
-                std::string valuestr = value.generateValuestr();
-                assert(valuestr.size() == value.getValuesize());
-                std::memcpy(allocate_handle->getMemory(), valuestr.data(), value.getValuesize());
-                cachelib_cache_ptr_->insertOrReplace(allocate_handle); // Must insert
-            }
+            //is_local_cached = false; // (OBSOLETE) cache may fail to evict due to too many pending writes -> equivalent to NOT admitting the new key-value pair
+
+            is_successful = false; // cache may fail to evict due to too many pending writes -> equivalent to NOT admitting the new key-value pair (CacheWrapper will NOT add track validity flag for the object)
+        }
+        else
+        {
+            std::string valuestr = value.generateValuestr();
+            assert(valuestr.size() == value.getValuesize());
+            std::memcpy(allocate_handle->getMemory(), valuestr.data(), value.getValuesize());
+            cachelib_cache_ptr_->insertOrReplace(allocate_handle); // Must insert
+            
+            is_successful = true;
         }
 
         return;
@@ -182,41 +202,51 @@ namespace covered
     {
         assert(hasFineGrainedManagement());
 
-        /*const std::string admit_keystr = admit_key.getKeystr();
-
-        // number of bytes required for this item
-        const auto requiredSize = Lru2QCacheItem::getRequiredSize(admit_keystr, admit_value.getValuesize());
-
-        // TODO: maybe we can set requiredSize as 1 byte to ensure that we can always find a victim key
-
-        // Get allocation class in our memory allocator
-        const auto cid = cachelib_cache_ptr_->allocator_->getAllocationClassId(cachelib_poolid_, requiredSize);
-
-        Lru2QCacheItem* item_ptr = cachelib_cache_ptr_->findEviction(cachelib_poolid_, cid);
-        bool has_victim_key = (item_ptr != nullptr);
-        if (has_victim_key)
-        {
-            std::string victim_keystr((const char*)item_ptr->getKey().data(), item_ptr->getKey().size()); // data() returns b_, while size() return e_ - b_
-            key = Key(victim_keystr);
-        }*/
-
-        UNUSED(required_size); // NO need to provide multiple victims based on required size due to without victim fetching
         UNUSED(victim_cacheinfos); // ONLY for COVERED
 
         // Get allocation class in our memory allocator
-        const uint32_t one_byte = 1; // Ensure that cachelib must be able to find at least one vicitm
-        const auto cid = cachelib_cache_ptr_->allocator_->getAllocationClassId(cachelib_poolid_, one_byte);
+        assert(required_size <= std::numeric_limits<uint32_t>::max());
+        assert(required_size <= max_allocation_class_size_);
 
-        Lru2QCacheItem* item_ptr = cachelib_cache_ptr_->findEviction(cachelib_poolid_, cid);
-        bool has_victim_key = (item_ptr != nullptr);
-        if (has_victim_key)
+        // NOTE: we enumerate all slabs (from min-size to max-size slabs), as we may need multiple victims to make room for the required size (CacheServer will use a while loop to evict multiple victims until required size is satisfied)
+        const uint32_t one_byte = 1;
+        auto cid = cachelib_cache_ptr_->allocator_->getAllocationClassId(cachelib_poolid_, static_cast<uint32_t>(one_byte));
+        // (OBSOLETE due to NO victim bug for small/large slab class sizes) OTE: Cachelib performs eviction in the given slab class, so we should use the lower-bound slab class for required size to find a victim instead of using the minimum slab class, which may NOT be able to find victims
+        //auto cid = cachelib_cache_ptr_->allocator_->getAllocationClassId(cachelib_poolid_, static_cast<uint32_t>(required_size));
+        bool has_victim_key = false;
+        while (true)
         {
-            std::string victim_keystr((const char*)item_ptr->getKey().data(), item_ptr->getKey().size()); // data() returns b_, while size() return e_ - b_
-            Key tmp_victim_key(victim_keystr);
+            const uint32_t tmp_slab_class_size = cachelib_cache_ptr_->allocator_->getAllocSize(cachelib_poolid_, cid);
 
-            if (keys.find(tmp_victim_key) == keys.end())
+            // NOTE: Cachelib will directly evict the found victim object in findEviction()!!!
+            Lru2QCacheItem* item_ptr = cachelib_cache_ptr_->findEviction(cachelib_poolid_, cid);
+            if (item_ptr != nullptr) // Find a victim for the given slab class size
             {
-                keys.insert(tmp_victim_key);   
+                std::string victim_keystr((const char*)item_ptr->getKey().data(), item_ptr->getKey().size()); // data() returns b_, while size() return e_ - b_
+                Key tmp_victim_key(victim_keystr);
+
+                if (keys.find(tmp_victim_key) == keys.end())
+                {
+                    keys.insert(tmp_victim_key);
+                }
+
+                // NOTE: we do NOT need to recycle the memory of victim CacheItem, so we free it here (refer to src/cache/cachelib/CacheAllocator-inl.h)
+                cachelib_cache_ptr_->allocator_->free(item_ptr); // NOTE: this will decrease currAllocSize_ of corresponding MemoryPool and hence affect cache size usage bytes for capacity
+                item_ptr = NULL;
+
+                has_victim_key = true;
+                break;
+            }
+            else // NO victim for given slab class size (e.g., Cachelib will NOT maintain small slabs after sufficient admissions and hence NO victim for small slab class sizes)
+            {
+                if (tmp_slab_class_size == max_allocation_class_size_) // Already achieve the last slab
+                {
+                    break;
+                }
+                else // Move to the next slab
+                {
+                    cid++;
+                }
             }
         }
 
@@ -229,27 +259,11 @@ namespace covered
 
         bool is_evict = false;
 
-        /*// Select victim by LFU for version check
-        Key cur_victim_key;
-        bool has_victim_key = getLocalCacheVictimKey(cur_victim_key, admit_key, admit_value);
-        if (has_victim_key && cur_victim_key == key) // Key matches
-        {
-            // Get victim value
-            Lru2QCacheReadHandle handle = cachelib_cache_ptr_->find(cur_victim_key.getKeystr());
-            assert(handle != nullptr);
-            //std::string value_string{reinterpret_cast<const char*>(handle->getMemory()), handle->getSize()};
-            value = Value(handle->getSize());
-
-            // Remove the corresponding cache item
-            CachelibLru2QCache::RemoveRes removeRes = cachelib_cache_ptr_->remove(cur_victim_key.getKeystr());
-            assert(removeRes == CachelibLru2QCache::RemoveRes::kSuccess);
-
-            is_evict = true;
-        }*/
-
         // Get victim value
         Lru2QCacheReadHandle handle = cachelib_cache_ptr_->find(key.getKeystr());
-        if (handle != nullptr) // Key exists
+
+        // (OBSOLETE as we do NOT need to evict the victim again, which has been done in getLocalCacheVictimKeysInternal_() under Cachelib)
+        /*if (handle != nullptr) // Key exists
         {
             //std::string value_string{reinterpret_cast<const char*>(handle->getMemory()), handle->getSize()};
             value = Value(handle->getSize());
@@ -259,7 +273,11 @@ namespace covered
             assert(removeRes == CachelibLru2QCache::RemoveRes::kSuccess);
 
             is_evict = true;
-        }
+        }*/
+
+        // NOTE: Cachelib will directly evict the found victim object in findEviction()!!!
+        assert(handle == nullptr);
+        is_evict = true;
 
         return is_evict;
     }

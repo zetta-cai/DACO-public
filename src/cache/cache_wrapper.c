@@ -311,16 +311,21 @@ namespace covered
         std::string context_name = "CacheWrapper::admit()";
         cache_wrapper_perkey_rwlock_ptr_->acquire_lock(key, context_name);
 
-        local_cache_ptr_->admitLocalCache(key, value, affect_victim_tracker);
+        bool is_successful = false;
+        local_cache_ptr_->admitLocalCache(key, value, affect_victim_tracker, is_successful);
 
-        if (is_valid) // w/o writes
+        if (is_successful) // If key is admited successfully
         {
-            validateKeyForLocalUncachedObject_(key);
+            if (is_valid) // w/o writes
+            {
+                validateKeyForLocalUncachedObject_(key);
+            }
+            else // w/ writes
+            {
+                invalidateKeyForLocalUncachedObject_(key);
+            }
         }
-        else // w/ writes
-        {
-            invalidateKeyForLocalUncachedObject_(key);
-        }
+        // NOTE: NO need to add validity flag if admission fails
 
         // Release a write lock
         cache_wrapper_perkey_rwlock_ptr_->unlock(key, context_name);

@@ -1282,6 +1282,7 @@ CacheAllocator<CacheTrait>::findEviction(PoolId pid, ClassId cid) {
     // recycles the child we intend to.
     bool evictionSuccessful = false;
     {
+      // Siyuan: note that here Cachelib will evict the victim item from accessContainer_ (for lookup) and mmContainer_ (for cache metadata, e.g., LRU list) -> note that the memory of corresponding CacheItem will NOT be released; instead, it will be returned as toRecycle for Cachelib to reuse
       auto toReleaseHandle =
           itr->isChainedItem()
               ? advanceIteratorAndTryEvictChainedItem(itr)
@@ -1293,6 +1294,8 @@ CacheAllocator<CacheTrait>::findEviction(PoolId pid, ClassId cid) {
 
     const auto ref = candidate->unmarkMoving();
     if (ref == 0u) {
+      // Siyuan: here Cachelib will update the eviction stats and track the eviction event
+
       // Invalidate iterator since later on we may use this mmContainer
       // again, which cannot be done unless we drop this iterator
       itr.destroy();

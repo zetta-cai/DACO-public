@@ -40,7 +40,7 @@ namespace covered
         std::list<VictimCacheinfo> getLocalSyncedVictimCacheinfosFromLocalCache() const; // Return up to peredge_synced_victimcnt local synced victims with the least local rewards
         void getCollectedPopularityFromLocalCache(const Key& key, CollectedPopularity& collected_popularity) const; // Return true if local uncached key is tracked
 
-        bool updateLocalCache(const Key& key, const Value& value, bool& affect_victim_tracker, bool& is_successful); // Return whether key is local cached
+        bool updateLocalCache(const Key& key, const Value& value, bool& affect_victim_tracker, bool& is_successful); // Return whether key is local cached (is_successful indicates whether value is updated successfully)
 
         void updateLocalUncachedMetadataForRsp(const Key& key, const Value& value, const bool& is_value_related) const; // Triggered by get/put/delrsp for cache miss for admission policy if any
 
@@ -51,7 +51,7 @@ namespace covered
         // NOTE: only COVERED never needs independent admission (i.e., always returns false)
         bool needIndependentAdmit(const Key& key, const Value& value) const;
 
-        void admitLocalCache(const Key& key, const Value& value, bool& affect_victim_tracker);
+        void admitLocalCache(const Key& key, const Value& value, bool& affect_victim_tracker, bool& is_successful); // is_successful indicates whether object is admited successfully
 
         // If local cache supports fine-grained cache management, split evict() into two steps for key-level fine-grained locking in cache wrapper: (i) get victim key; (ii) evict if victim key matches similar as version check
         // NOTE: keys is used for local edge cache eviction, while victim_cacheinfos is used for lazy victim fetching (for COVERED)
@@ -92,7 +92,7 @@ namespace covered
 
         virtual bool needIndependentAdmitInternal_(const Key& key, const Value& value) const = 0;
 
-        virtual void admitLocalCacheInternal_(const Key& key, const Value& value, bool& affect_victim_tracker) = 0;
+        virtual void admitLocalCacheInternal_(const Key& key, const Value& value, bool& affect_victim_tracker, bool& is_successful) = 0; // is_successful indicates whether object is admited successfully
         virtual bool getLocalCacheVictimKeysInternal_(std::unordered_set<Key, KeyHasher>& keys, std::list<VictimCacheinfo>& victim_cacheinfos, const uint64_t& required_size) const = 0;
         virtual bool evictLocalCacheWithGivenKeyInternal_(const Key& key, Value& value) = 0;
 

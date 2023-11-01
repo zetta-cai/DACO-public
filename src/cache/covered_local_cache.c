@@ -202,36 +202,40 @@ namespace covered
         return false;
     }
 
-    void CoveredLocalCache::admitLocalCacheInternal_(const Key& key, const Value& value, bool& affect_victim_tracker)
+    void CoveredLocalCache::admitLocalCacheInternal_(const Key& key, const Value& value, bool& affect_victim_tracker, bool& is_successful)
     {
+        is_successful = false;
         const std::string keystr = key.getKeystr();
 
         LruCacheReadHandle handle = covered_cache_ptr_->find(keystr);
         bool is_local_cached = (handle != nullptr);
-        if (!is_local_cached) // Key does NOT exist
+        assert(!is_local_cached); // Key should NOT exist
+
+        auto allocate_handle = covered_cache_ptr_->allocate(covered_poolid_, keystr, value.getValuesize());
+        if (allocate_handle == nullptr)
         {
-            auto allocate_handle = covered_cache_ptr_->allocate(covered_poolid_, keystr, value.getValuesize());
-            if (allocate_handle == nullptr)
-            {
-                is_local_cached = false; // cache may fail to evict due to too many pending writes -> equivalent to NOT admitting the new key-value pair
-            }
-            else
-            {
-                std::string valuestr = value.generateValuestr();
-                assert(valuestr.size() == value.getValuesize());
-                std::memcpy(allocate_handle->getMemory(), valuestr.data(), value.getValuesize());
-                covered_cache_ptr_->insertOrReplace(allocate_handle); // Must insert
+            //is_local_cached = false; // (OBSOLETE) cache may fail to evict due to too many pending writes -> equivalent to NOT admitting the new key-value pair
 
-                // Update local cached metadata for admission
-                local_cached_metadata_.addForNewKey(key, value, affect_victim_tracker);
+            is_successful = false; // cache may fail to evict due to too many pending writes -> equivalent to NOT admitting the new key-value pair (CacheWrapper will NOT add track validity flag for the object)
+        }
+        else
+        {
+            std::string valuestr = value.generateValuestr();
+            assert(valuestr.size() == value.getValuesize());
+            std::memcpy(allocate_handle->getMemory(), valuestr.data(), value.getValuesize());
+            covered_cache_ptr_->insertOrReplace(allocate_handle); // Must insert
 
-                // Remove from local uncached metadata if necessary for admission
-                if (local_uncached_metadata_.isKeyExist(key))
-                {
-                    // NOTE: get/put/delrsp with cache miss MUST already udpate local uncached metadata with the current value before admission, so we can directly use current value to remove it from local uncached metadata instead of approximate value
-                    local_uncached_metadata_.removeForExistingKey(key, value);
-                }
+            // Update local cached metadata for admission
+            local_cached_metadata_.addForNewKey(key, value, affect_victim_tracker);
+
+            // Remove from local uncached metadata if necessary for admission
+            if (local_uncached_metadata_.isKeyExist(key))
+            {
+                // NOTE: get/put/delrsp with cache miss MUST already udpate local uncached metadata with the current value before admission, so we can directly use current value to remove it from local uncached metadata instead of approximate value
+                local_uncached_metadata_.removeForExistingKey(key, value);
             }
+
+            is_successful = true;
         }
 
         return;
