@@ -308,11 +308,6 @@ namespace covered
             victim_cnt = 0;
         }
 
-        oss.clear();
-        oss.str("");
-        oss << "SegcacheLocalCache::evictLocalCacheNoGivenKeyInternal_() for required size " << required_size << "; cache size usage after eviction " << getSizeForCapacityInternal_();
-        Util::dumpDebugMsg(instance_name_, oss.str());
-
         return;
     }
 
