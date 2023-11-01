@@ -10,7 +10,7 @@
 
 namespace covered
 {
-    const uint64_t CachelibLocalCache::CACHELIB_MIN_CAPACITY_BYTES = GB2B(1); // 1 GiB
+    //const uint64_t CachelibLocalCache::CACHELIB_MIN_CAPACITY_BYTES = GB2B(1); // 1 GiB
 
     const std::string CachelibLocalCache::kClassName("CachelibLocalCache");
 
@@ -23,16 +23,18 @@ namespace covered
 
         // Prepare cacheConfig for Cachelib local cache (most parameters are default values)
         Lru2QCacheConfig cacheConfig;
-        // NOTE: we use default allocationClassSizeFactor, maxAllocationClassSize, and minAllocationClassSize (lib/CacheLib/cachelib/allocator/CacheAllocatorConfig.h) to set allocSizes in MemoryAllocator.config_ for slab-based memory allocation
+        // NOTE: we use default allocationClassSizeFactor and minAllocationClassSize yet modify maxAllocationClassSize (lib/CacheLib/cachelib/allocator/CacheAllocatorConfig.h) to set allocSizes in MemoryAllocator.config_ for slab-based memory allocation
+        cacheConfig.setDefaultAllocSizes(cacheConfig.allocationClassSizeFactor, CACHELIB_ENGINE_MAX_SLAB_SIZE, cacheConfig.minAllocationClassSize, cacheConfig.reduceFragmentationInAllocationClass);
         max_allocation_class_size_ = cacheConfig.maxAllocationClassSize;
+        assert(max_allocation_class_size_ == CACHELIB_ENGINE_MAX_SLAB_SIZE);
         // NOTE: we limit cache capacity outside CachelibLocalCache (in EdgeWrapper); here we set cachelib local cache size as overall cache capacity to avoid cache capacity constraint inside CachelibLocalCache
-        if (capacity_bytes >= CACHELIB_MIN_CAPACITY_BYTES)
+        if (capacity_bytes >= CACHELIB_ENGINE_MIN_CAPACITY_BYTES)
         {
             cacheConfig.setCacheSize(capacity_bytes);
         }
         else
         {
-            cacheConfig.setCacheSize(CACHELIB_MIN_CAPACITY_BYTES);
+            cacheConfig.setCacheSize(CACHELIB_ENGINE_MIN_CAPACITY_BYTES);
         }
         cacheConfig.validate(); // will throw if bad config
 
@@ -49,7 +51,9 @@ namespace covered
 
     const bool CachelibLocalCache::hasFineGrainedManagement() const
     {
-        return true; // Key-level (i.e., object-level) cache management
+        //return true; // (OBSOLETE) Key-level (i.e., object-level) cache management
+
+        return false; // Slab-level cache management
     }
 
     // (1) Check is cached and access validity
@@ -202,68 +206,30 @@ namespace covered
     {
         assert(hasFineGrainedManagement());
 
-        UNUSED(victim_cacheinfos); // ONLY for COVERED
+        Util::dumpErrorMsg(instance_name_, "getLocalCacheVictimKeysInternal_() is not supported due to coarse-grained management");
+        exit(1);
 
-        // Get allocation class in our memory allocator
-        assert(required_size <= std::numeric_limits<uint32_t>::max());
-        assert(required_size <= max_allocation_class_size_);
-
-        // NOTE: we enumerate all slabs (from min-size to max-size slabs), as we may need multiple victims to make room for the required size (CacheServer will use a while loop to evict multiple victims until required size is satisfied)
-        const uint32_t one_byte = 1;
-        auto cid = cachelib_cache_ptr_->allocator_->getAllocationClassId(cachelib_poolid_, static_cast<uint32_t>(one_byte));
-        // (OBSOLETE due to NO victim bug for small/large slab class sizes) OTE: Cachelib performs eviction in the given slab class, so we should use the lower-bound slab class for required size to find a victim instead of using the minimum slab class, which may NOT be able to find victims
-        //auto cid = cachelib_cache_ptr_->allocator_->getAllocationClassId(cachelib_poolid_, static_cast<uint32_t>(required_size));
-        bool has_victim_key = false;
-        while (true)
-        {
-            const uint32_t tmp_slab_class_size = cachelib_cache_ptr_->allocator_->getAllocSize(cachelib_poolid_, cid);
-
-            // NOTE: Cachelib will directly evict the found victim object in findEviction()!!!
-            Lru2QCacheItem* item_ptr = cachelib_cache_ptr_->findEviction(cachelib_poolid_, cid);
-            if (item_ptr != nullptr) // Find a victim for the given slab class size
-            {
-                std::string victim_keystr((const char*)item_ptr->getKey().data(), item_ptr->getKey().size()); // data() returns b_, while size() return e_ - b_
-                Key tmp_victim_key(victim_keystr);
-
-                if (keys.find(tmp_victim_key) == keys.end())
-                {
-                    keys.insert(tmp_victim_key);
-                }
-
-                // NOTE: we do NOT need to recycle the memory of victim CacheItem, so we free it here (refer to src/cache/cachelib/CacheAllocator-inl.h)
-                cachelib_cache_ptr_->allocator_->free(item_ptr); // NOTE: this will decrease currAllocSize_ of corresponding MemoryPool and hence affect cache size usage bytes for capacity
-                item_ptr = NULL;
-
-                has_victim_key = true;
-                break;
-            }
-            else // NO victim for given slab class size (e.g., Cachelib will NOT maintain small slabs after sufficient admissions and hence NO victim for small slab class sizes)
-            {
-                if (tmp_slab_class_size == max_allocation_class_size_) // Already achieve the last slab
-                {
-                    break;
-                }
-                else // Move to the next slab
-                {
-                    cid++;
-                }
-            }
-        }
-
-        return has_victim_key;
+        return false;
     }
 
     bool CachelibLocalCache::evictLocalCacheWithGivenKeyInternal_(const Key& key, Value& value)
     {
         assert(hasFineGrainedManagement());
 
+        Util::dumpErrorMsg(instance_name_, "evictLocalCacheWithGivenKeyInternal_() is not supported due to coarse-grained management");
+        exit(1);
+
+        return false;
+
+        // OBSOLETE: as we do NOT need to evict the victim again, which has been done in getLocalCacheVictimKeysInternal_() under Cachelib
+
+        /*assert(hasFineGrainedManagement());
+
         bool is_evict = false;
 
         // Get victim value
         Lru2QCacheReadHandle handle = cachelib_cache_ptr_->find(key.getKeystr());
-
-        // (OBSOLETE as we do NOT need to evict the victim again, which has been done in getLocalCacheVictimKeysInternal_() under Cachelib)
-        /*if (handle != nullptr) // Key exists
+        if (handle != nullptr) // Key exists
         {
             //std::string value_string{reinterpret_cast<const char*>(handle->getMemory()), handle->getSize()};
             value = Value(handle->getSize());
@@ -273,21 +239,63 @@ namespace covered
             assert(removeRes == CachelibLru2QCache::RemoveRes::kSuccess);
 
             is_evict = true;
-        }*/
+        }
 
-        // NOTE: Cachelib will directly evict the found victim object in findEviction()!!!
-        assert(handle == nullptr);
-        is_evict = true;
-
-        return is_evict;
+        return is_evict;*/
     }
 
     void CachelibLocalCache::evictLocalCacheNoGivenKeyInternal_(std::unordered_map<Key, Value, KeyHasher>& victims, const uint64_t& required_size)
     {
         assert(!hasFineGrainedManagement());
 
-        Util::dumpErrorMsg(instance_name_, "evictLocalCacheNoGivenKeyInternal_() is not supported due to fine-grained management");
-        exit(1);
+        UNUSED(required_size); // CacheServer will use a while loop to evict multiple victims until required size is satisfied
+
+        // Get allocation class in our memory allocator
+        assert(required_size <= std::numeric_limits<uint32_t>::max());
+        assert(required_size <= max_allocation_class_size_);
+
+        // NOTE: Cachelib performs slab-based eviction, so we use the lower-bound slab class for required size to try to find a victim first
+        const auto cid = cachelib_cache_ptr_->allocator_->getAllocationClassId(cachelib_poolid_, static_cast<uint32_t>(required_size));
+        Lru2QCacheItem* item_ptr = cachelib_cache_ptr_->findEviction(cachelib_poolid_, cid); // NOTE: Cachelib will directly evict the found victim object in findEviction()!!!
+        if (item_ptr == nullptr) // NO single victim can be found under the lower-bound slab class (this could happen sometimes due to Cachelib's bug of NO vicitm if lower-bound slab size is too small/large)
+        {
+            // NOTE: we enumerate all slabs (from min-size to max-size slabs) such that we can find multiple victims to make room for the required size (rely on the while loop outside CachelibLocalCache in CacheServer)
+            const uint32_t one_byte = 1;
+            auto tmp_cid = cachelib_cache_ptr_->allocator_->getAllocationClassId(cachelib_poolid_, static_cast<uint32_t>(one_byte));
+            while (true)
+            {
+                const uint32_t tmp_slab_class_size = cachelib_cache_ptr_->allocator_->getAllocSize(cachelib_poolid_, tmp_cid);
+
+                item_ptr = cachelib_cache_ptr_->findEviction(cachelib_poolid_, tmp_cid); // NOTE: Cachelib will directly evict the found victim object in findEviction()!!!
+                if (item_ptr != nullptr) // Find a victim for the given slab class size
+                {
+                    break;
+                }
+                else // NO victim for given slab class size (e.g., Cachelib will NOT maintain small slabs after sufficient admissions and hence NO victim for small slab class sizes)
+                {
+                    if (tmp_slab_class_size == max_allocation_class_size_) // Already achieve the last slab
+                    {
+                        break;
+                    }
+                    else // Move to the next slab
+                    {
+                        tmp_cid++;
+                    }
+                }
+            }
+        }
+
+        assert(item_ptr != nullptr); // Must find at least one victim from a slab
+
+        // Insert into victims
+        std::string victim_keystr((const char*)item_ptr->getKey().data(), item_ptr->getKey().size()); // data() returns b_, while size() return e_ - b_
+        Key tmp_victim_key(victim_keystr);
+        Value tmp_victim_value(item_ptr->getSize());
+        victims.insert(std::pair(tmp_victim_key, tmp_victim_value));
+
+        // NOTE: we do NOT need to recycle the memory of victim CacheItem, so we free it here (refer to src/cache/cachelib/CacheAllocator-inl.h)
+        cachelib_cache_ptr_->allocator_->free(item_ptr); // NOTE: this will decrease currAllocSize_ of corresponding MemoryPool and hence affect cache size usage bytes for capacity
+        item_ptr = NULL;
 
         return;
     }

@@ -168,11 +168,6 @@ namespace covered
         const Value tmp_value = covered_placement_notify_request_ptr->getValue();
         tmp_cache_server_ptr->admitLocalEdgeCache_(tmp_key, tmp_value, is_valid); // May update local synced victims
 
-        // TMPDEBUG
-        std::ostringstream oss;
-        oss << "CacheServerPlacementProcessor::processPlacementNotifyRequest_() admit key " << tmp_key.getKeystr();
-        Util::dumpDebugMsg(instance_name_, oss.str());
-
         // Perform background cache eviction in a blocking manner for consistent directory information (note that cache eviction happens after non-blocking placement notification)
         // NOTE: we update aggregated uncached popularity yet DISABLE recursive cache placement for metadata preservation during cache eviction
         is_finish = tmp_cache_server_ptr->evictForCapacity_(edge_cache_server_placement_processor_recvrsp_source_addr_, edge_cache_server_placement_processor_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency, is_background); // May update local synced victims

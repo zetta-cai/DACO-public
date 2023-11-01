@@ -10,7 +10,7 @@
 
 namespace covered
 {
-    const uint64_t CoveredLocalCache::CACHELIB_ENGINE_MIN_CAPACITY_BYTES = GB2B(1); // 1 GiB
+    //const uint64_t CoveredLocalCache::CACHELIB_ENGINE_MIN_CAPACITY_BYTES = GB2B(1); // 1 GiB
 
     const std::string CoveredLocalCache::kClassName("CoveredLocalCache");
 
@@ -27,6 +27,10 @@ namespace covered
 
         // Prepare cacheConfig for CacheLib part of COVERED local cache (most parameters are default values)
         LruCacheConfig cacheConfig;
+        // NOTE: we use default allocationClassSizeFactor and minAllocationClassSize yet modify maxAllocationClassSize (lib/CacheLib/cachelib/allocator/CacheAllocatorConfig.h) to set allocSizes in MemoryAllocator.config_ for slab-based memory allocation
+        cacheConfig.setDefaultAllocSizes(cacheConfig.allocationClassSizeFactor, CACHELIB_ENGINE_MAX_SLAB_SIZE, cacheConfig.minAllocationClassSize, cacheConfig.reduceFragmentationInAllocationClass);
+        max_allocation_class_size_ = cacheConfig.maxAllocationClassSize;
+        assert(max_allocation_class_size_ == CACHELIB_ENGINE_MAX_SLAB_SIZE);
         // NOTE: we limit cache capacity outside CoveredLocalCache (in EdgeWrapper); here we set cachelib local cache size as overall cache capacity to avoid cache capacity constraint inside CoveredLocalCache
         if (capacity_bytes >= CACHELIB_ENGINE_MIN_CAPACITY_BYTES)
         {
@@ -147,6 +151,14 @@ namespace covered
 
         LruCacheReadHandle handle = covered_cache_ptr_->find(keystr); // NOTE: although find() will move the item to the front of the LRU list to update recency information inside cachelib, covered uses local cache metadata tracked outside cachelib for cache management
         bool is_local_cached = (handle != nullptr);
+
+        // Check value length
+        if ((value.getValuesize() > max_allocation_class_size_))
+        {
+            is_successful = false; // NOT cache too large value due to slab class size limitation of Cachelib -> equivalent to NOT caching the latest value (will be invalidated by CacheWrapper later if key is local cached)
+            return is_local_cached;
+        }
+
         if (is_local_cached) // Key already exists
         {
             Value original_value(handle->getSize());
@@ -197,6 +209,9 @@ namespace covered
     {
         UNUSED(key);
         UNUSED(value);
+    
+        // TODO (END HERE): NOT track large-value uncached object in both local uncached metadata and aggregated uncached metadata; NOT trigger placement calculation for large-value uncached object
+        // const bool is_valid_valuesize = (value.getValuesize() <= max_allocation_class_size_);
         
         // COVERED will NEVER invoke this function for independent admission
         return false;
@@ -206,6 +221,9 @@ namespace covered
     {
         is_successful = false;
         const std::string keystr = key.getKeystr();
+
+        // NOTE: MUST with a valid value length, as we will never track, aggregate, and notify placement for large-value uncached objects
+        assert(value.getValuesize() <= max_allocation_class_size_);
 
         LruCacheReadHandle handle = covered_cache_ptr_->find(keystr);
         bool is_local_cached = (handle != nullptr);
@@ -247,6 +265,7 @@ namespace covered
         // TODO: this function will also be invoked at each placement neighbor node by the beacon node for cache placement
         
         assert(hasFineGrainedManagement());
+        assert(required_size <= max_allocation_class_size_); // NOTE: required size must <= newly-admited object size, while we will never admit large-value objects
 
         bool has_victim_key = false;
         uint32_t least_popular_rank = 0;
@@ -311,6 +330,7 @@ namespace covered
         {
             //std::string value_string{reinterpret_cast<const char*>(handle->getMemory()), handle->getSize()};
             value = Value(handle->getSize());
+            assert(value.getValuesize() <= max_allocation_class_size_); // NOTE: we will never admit large-value objects into edge cache
 
             // Remove the corresponding cache item
             CachelibLruCache::RemoveRes removeRes = covered_cache_ptr_->remove(key.getKeystr());

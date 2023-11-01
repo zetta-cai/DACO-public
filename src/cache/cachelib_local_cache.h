@@ -27,7 +27,7 @@ namespace covered
         typedef CachelibLru2QCache::Item Lru2QCacheItem;
 
         // NOTE: too small cache capacity cannot support slab-based memory allocation in cachelib (see lib/CacheLib/cachelib/allocator/CacheAllocatorConfig.h and lib/CacheLib/cachelib/allocator/memory/SlabAllocator.cpp)
-        static const uint64_t CACHELIB_MIN_CAPACITY_BYTES; // NOTE: NOT affect capacity constraint!
+        //static const uint64_t CACHELIB_MIN_CAPACITY_BYTES; // (OBSOLETE: move to Util) NOTE: NOT affect capacity constraint!
 
         CachelibLocalCache(const uint32_t& edge_idx, const uint64_t& capacity_bytes);
         virtual ~CachelibLocalCache();

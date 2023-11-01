@@ -33,6 +33,10 @@
 #define MS2US(var) var * 1000
 #define SEC2US(var) var * 1000 * 1000
 
+// For Cachelib and COVERED (4MiB for max slab size and 1GiB for min capacit bytes by default)
+#define CACHELIB_ENGINE_MAX_SLAB_SIZE 4 * 1024 * 1024
+#define CACHELIB_ENGINE_MIN_CAPACITY_BYTES 1 * 1024 * 1024 * 1024
+
 namespace covered
 {
     class Util

@@ -38,7 +38,7 @@ namespace covered
     {
     public:
         // NOTE: too small cache capacity cannot support slab-based memory allocation in cachelib (see lib/CacheLib/cachelib/allocator/CacheAllocatorConfig.h and lib/CacheLib/cachelib/allocator/memory/SlabAllocator.cpp)
-        static const uint64_t CACHELIB_ENGINE_MIN_CAPACITY_BYTES; // NOTE: NOT affect capacity constraint!
+        //static const uint64_t CACHELIB_ENGINE_MIN_CAPACITY_BYTES; // (OBSOLETE: move to Util) NOTE: NOT affect capacity constraint!
 
         CoveredLocalCache(const uint32_t& edge_idx, const uint64_t& capacity_bytes, const uint64_t& local_uncached_capacity_bytes, const uint32_t& peredge_synced_victimcnt);
         virtual ~CoveredLocalCache();
@@ -84,6 +84,7 @@ namespace covered
         std::string instance_name_;
         const uint64_t capacity_bytes_;
         const uint32_t peredge_synced_victimcnt_;
+        uint32_t max_allocation_class_size_; // 4MiB in Cachelib by default
 
         // (B) Non-const shared variables of local cached objects for eviction
 
