@@ -70,11 +70,16 @@ namespace covered
         return;
     }
 
-    bool LfuLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value, bool& affect_victim_tracker)
+    bool LfuLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value, bool& affect_victim_tracker, bool& is_successful)
     {
         UNUSED(affect_victim_tracker); // Only for COVERED
+        is_successful = false;
         
         bool is_local_cached = lfu_cache_ptr_->update(key, value);
+        if (is_local_cached)
+        {
+            is_successful = true;
+        }
 
         return is_local_cached;
     }
@@ -87,8 +92,10 @@ namespace covered
 
     // (3) Local edge cache management
 
-    bool LfuLocalCache::needIndependentAdmitInternal_(const Key& key) const
+    bool LfuLocalCache::needIndependentAdmitInternal_(const Key& key, const Value& value) const
     {
+        UNUSED(value);
+        
         // LFU cache uses default admission policy (i.e., always admit) (i.e., always admit), which always returns true as long as key is not cached
         bool is_local_cached = isLocalCachedInternal_(key);
         return !is_local_cached;

@@ -67,8 +67,7 @@ namespace covered
         ////admin_process_setup();
 
         // NOTE: uncomment the following code and set HAVE_LOGGING = ON in CmakeLists.txt to enable debug log in segcache (ONLY support a single instance now!!!)
-        // TMPDEBUG23
-        debug_setup(NULL);
+        //debug_setup(NULL);
     }
     
     SegcacheLocalCache::~SegcacheLocalCache()
@@ -157,11 +156,12 @@ namespace covered
         return;
     }
 
-    bool SegcacheLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value, bool& affect_victim_tracker)
+    bool SegcacheLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value, bool& affect_victim_tracker, bool& is_successful)
     {
         UNUSED(affect_victim_tracker); // Only for COVERED
         
-        bool is_local_cached = appendLocalCache_(key, value);
+        is_successful = false;
+        bool is_local_cached = appendLocalCache_(key, value, is_successful);
 
         return is_local_cached;
     }
@@ -174,20 +174,30 @@ namespace covered
 
     // (3) Local edge cache management
 
-    bool SegcacheLocalCache::needIndependentAdmitInternal_(const Key& key) const
+    bool SegcacheLocalCache::needIndependentAdmitInternal_(const Key& key, const Value& value) const
     {
         // SegCache cache uses default independent admission policy (i.e., always admit), which always returns true as long as key is not cached
         bool is_local_cached = isLocalCachedInternal_(key);
-        return !is_local_cached;
+        const bool is_valid_valuesize = (value.getValuesize() <= segcache_cache_ptr_->heap_ptr->seg_size);
+        return !is_local_cached && is_valid_valuesize;
     }
 
     void SegcacheLocalCache::admitLocalCacheInternal_(const Key& key, const Value& value, bool& affect_victim_tracker)
     {
         UNUSED(affect_victim_tracker); // Only for COVERED
 
+        // NOTE: MUST with a valid value length, as we always return false in needIndependentAdmitInternal_() if value is too large
+        assert(value.getValuesize() <= segcache_cache_ptr_->heap_ptr->seg_size);
+
         // NOTE: admission is the same as update for SegCache due to log-structured design
-        bool is_local_cached = appendLocalCache_(key, value);
+        bool is_successful = false;
+        bool is_local_cached = appendLocalCache_(key, value, is_successful);
         assert(!is_local_cached);
+
+        if (is_local_cached)
+        {
+            assert(is_successful); // MUST be successful if key is local cached, as we have checked value length in needIndependentAdmitInternal_()
+        }
 
         return;
     }
@@ -218,11 +228,6 @@ namespace covered
         assert(!hasFineGrainedManagement());
 
         UNUSED(required_size);
-
-        // TMPDEBUG23
-        std::ostringstream oss;
-        oss << "SegcacheLocalCache::evictLocalCacheNoGivenKeyInternal_() for required size " << required_size << "; cache size usage before eviction " << getSizeForCapacityInternal_();
-        Util::dumpDebugMsg(instance_name_, oss.str());
 
         // Refer to src/cache/segcache/src/storage/seg/seg.c::seg_evict()
 
@@ -333,8 +338,17 @@ namespace covered
 
     // (5) SegCache-specific functions
 
-    bool SegcacheLocalCache::appendLocalCache_(const Key& key, const Value& value)
+    bool SegcacheLocalCache::appendLocalCache_(const Key& key, const Value& value, bool& is_successful)
     {
+        bool is_local_cached = true;
+        is_successful = false;
+
+        if (value.getValuesize() > segcache_cache_ptr_->heap_ptr->seg_size)
+        {
+            is_successful = false;
+            return is_successful;
+        }
+
         std::string keystr = key.getKeystr();
         struct bstring key_bstr;
         key_bstr.len = static_cast<uint32_t>(keystr.length());
@@ -347,20 +361,22 @@ namespace covered
 
         // Check whether key has already been cached
         struct item* prev_item_ptr = item_get(&key_bstr, NULL, segcache_cache_ptr_); // Lookup hashtable to get item in segment; will increase read refcnt of segment
-        bool is_local_cached = (prev_item_ptr != NULL);
+        is_local_cached = (prev_item_ptr != NULL);
         if (is_local_cached)
         {
             item_release(prev_item_ptr, segcache_cache_ptr_); // Decrease read refcnt of segment
+
+            // Append current item for new value if key is cached (will trigger independent admission later if key is NOT cached now)
+            struct item *cur_item_ptr = NULL;
+            delta_time_i tmp_ttl = 0; // NOTE: TTL of 0 is okay, as we will always disable timeout-based expiration (out of out scope) in segcache during cooperative edge caching
+            item_rstatus_e status = item_reserve_with_ttl(&cur_item_ptr, &key_bstr, &value_bstr, value_bstr.len, 0, tmp_ttl, segcache_cache_ptr_); // Append item to segment
+            assert(status == ITEM_OK);
+            item_insert(cur_item_ptr, segcache_cache_ptr_); // Update hashtable for newly-appended item
+
+            is_successful = true;
         }
 
-        // Append current item for new value no matter key has been cached or not
-        struct item *cur_item_ptr = NULL;
-        delta_time_i tmp_ttl = 0; // NOTE: TTL of 0 is okay, as we will always disable timeout-based expiration (out of out scope) in segcache during cooperative edge caching
-        item_rstatus_e status = item_reserve_with_ttl(&cur_item_ptr, &key_bstr, &value_bstr, value_bstr.len, 0, tmp_ttl, segcache_cache_ptr_); // Append item to segment
-        assert(status == ITEM_OK);
-        item_insert(cur_item_ptr, segcache_cache_ptr_); // Update hashtable for newly-appended item
-
-        return is_local_cached;
+        return is_successful;
     }
 
 }

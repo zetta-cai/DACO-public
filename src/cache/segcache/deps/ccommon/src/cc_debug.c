@@ -162,11 +162,10 @@ debug_setup(debug_options_st *options)
 
     /* some adjustment on signal handling */
     // Siyuan: we should comment the following code such that address sanitizer can capture segmentation error and pose debug information
-    // TMPDEBUG23
-    /*if (signal_override(SIGSEGV, "printing stacktrace when segfault", 0, 0,
+    if (signal_override(SIGSEGV, "printing stacktrace when segfault", 0, 0,
             _stacktrace) < 0) {
         goto error;
-    }*/
+    }
 
     /* to allow logrotate with nocopytruncate, use SIGHUP to reopen log */
     if (signal_override(SIGHUP, "reopen log file", 0, 0, _logrotate) < 0) {

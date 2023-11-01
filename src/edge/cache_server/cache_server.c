@@ -525,12 +525,6 @@ namespace covered
             // Data and metadata for local edge cache, and cooperation metadata
             uint64_t used_bytes = edge_wrapper_ptr_->getSizeForCapacity();
             uint64_t capacity_bytes = edge_wrapper_ptr_->getCapacityBytes();
-
-            // TMPDEBUG23
-            std::ostringstream oss;
-            oss << "CacheServer::evictForCapacity_() used_bytes " << used_bytes << " capacity_bytes " << capacity_bytes;
-            Util::dumpDebugMsg(instance_name_, oss.str());
-            
             if (used_bytes <= capacity_bytes) // Not exceed capacity limitation
             {
                 break;

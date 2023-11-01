@@ -104,9 +104,10 @@ namespace covered
         return;
     }
 
-    bool CachelibLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value, bool& affect_victim_tracker)
+    bool CachelibLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value, bool& affect_victim_tracker, bool& is_successful)
     {
         UNUSED(affect_victim_tracker); // Only for COVERED
+        is_successful = false;
         
         const std::string keystr = key.getKeystr();
 
@@ -125,6 +126,8 @@ namespace covered
                 assert(valuestr.size() == value.getValuesize());
                 std::memcpy(allocate_handle->getMemory(), valuestr.data(), value.getValuesize());
                 cachelib_cache_ptr_->insertOrReplace(allocate_handle); // Must replace
+
+                is_successful = true;
             }
         }
 
@@ -139,8 +142,10 @@ namespace covered
 
     // (3) Local edge cache management
 
-    bool CachelibLocalCache::needIndependentAdmitInternal_(const Key& key) const
+    bool CachelibLocalCache::needIndependentAdmitInternal_(const Key& key, const Value& value) const
     {
+        UNUSED(value);
+        
         // CacheLib (LRU2Q) cache uses default admission policy (i.e., always admit), which always returns true as long as key is not cached
         bool is_local_cached = isLocalCachedInternal_(key);
         return !is_local_cached;

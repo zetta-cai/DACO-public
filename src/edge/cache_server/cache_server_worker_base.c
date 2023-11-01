@@ -1426,7 +1426,7 @@ namespace covered
 
         bool is_finish = false;
 
-        if (local_edge_cache_ptr->needIndependentAdmit(key)) // Trigger independent admission
+        if (local_edge_cache_ptr->needIndependentAdmit(key, value)) // Trigger independent admission
         {
             // NOTE: COVERED will NOT trigger any independent cache admission/eviction decision
             assert(tmp_edge_wrapper_ptr->getCacheName() != Util::COVERED_CACHE_NAME);
@@ -1446,11 +1446,6 @@ namespace covered
     {
         checkPointers_();
         CacheServer* tmp_cache_server_ptr = cache_server_worker_param_ptr_->getCacheServerPtr();
-
-        // TMPDEBUG23
-        std::ostringstream oss;
-        oss << "LocalCacheBase::evictLocalCacheNoGivenKey() for key " << key.getKeystr();
-        Util::dumpDebugMsg(base_instance_name_, oss.str());
 
         bool is_finish = false;
 

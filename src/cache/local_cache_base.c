@@ -130,7 +130,7 @@ namespace covered
         return;
     }
 
-    bool LocalCacheBase::updateLocalCache(const Key& key, const Value& value, bool& affect_victim_tracker)
+    bool LocalCacheBase::updateLocalCache(const Key& key, const Value& value, bool& affect_victim_tracker, bool& is_successful)
     {
         checkPointers_();
 
@@ -138,7 +138,8 @@ namespace covered
         std::string context_name = "LocalCacheBase::updateLocalCache()";
         rwlock_for_local_cache_ptr_->acquire_lock(context_name);
 
-        bool is_local_cached = updateLocalCacheInternal_(key, value, affect_victim_tracker);
+        is_successful = false;
+        bool is_local_cached = updateLocalCacheInternal_(key, value, affect_victim_tracker, is_successful);
 
         rwlock_for_local_cache_ptr_->unlock(context_name);
         return is_local_cached;
@@ -160,7 +161,7 @@ namespace covered
 
     // (3) Local edge cache management
 
-    bool LocalCacheBase::needIndependentAdmit(const Key& key) const
+    bool LocalCacheBase::needIndependentAdmit(const Key& key, const Value& value) const
     {
         checkPointers_();
 
@@ -168,7 +169,7 @@ namespace covered
         std::string context_name = "LocalCacheBase::needIndependentAdmit()";
         rwlock_for_local_cache_ptr_->acquire_lock(context_name);
 
-        bool need_independent_admit = needIndependentAdmitInternal_(key);
+        bool need_independent_admit = needIndependentAdmitInternal_(key, value);
 
         rwlock_for_local_cache_ptr_->unlock(context_name);
         return need_independent_admit;

@@ -40,7 +40,7 @@ namespace covered
         std::list<VictimCacheinfo> getLocalSyncedVictimCacheinfosFromLocalCache() const; // Return up to peredge_synced_victimcnt local synced victims with the least local rewards
         void getCollectedPopularityFromLocalCache(const Key& key, CollectedPopularity& collected_popularity) const; // Return true if local uncached key is tracked
 
-        bool updateLocalCache(const Key& key, const Value& value, bool& affect_victim_tracker); // Return whether key is cached
+        bool updateLocalCache(const Key& key, const Value& value, bool& affect_victim_tracker, bool& is_successful); // Return whether key is local cached
 
         void updateLocalUncachedMetadataForRsp(const Key& key, const Value& value, const bool& is_value_related) const; // Triggered by get/put/delrsp for cache miss for admission policy if any
 
@@ -49,7 +49,7 @@ namespace covered
         // If get() or update() or remove() in CacheWrapper returns false (i.e., key is not cached), EdgeWrapper will invoke needIndependentAdmit() for admission policy
         // NOTE: cache methods w/o admission policy (i.e., always admit) will always return true if key is not cached, while others will return true/false based on other independent admission policy
         // NOTE: only COVERED never needs independent admission (i.e., always returns false)
-        bool needIndependentAdmit(const Key& key) const;
+        bool needIndependentAdmit(const Key& key, const Value& value) const;
 
         void admitLocalCache(const Key& key, const Value& value, bool& affect_victim_tracker);
 
@@ -84,13 +84,13 @@ namespace covered
         virtual std::list<VictimCacheinfo> getLocalSyncedVictimCacheinfosFromLocalCacheInternal_() const = 0; // Return up to peredge_synced_victimcnt local synced victims with the least local rewards
         virtual void getCollectedPopularityFromLocalCacheInternal_(const Key& key, CollectedPopularity& collected_popularity) const = 0; // Return true if local uncached key is tracked
 
-        virtual bool updateLocalCacheInternal_(const Key& key, const Value& value, bool& affect_victim_tracker) = 0; // Return whether key is cached
+        virtual bool updateLocalCacheInternal_(const Key& key, const Value& value, bool& affect_victim_tracker, bool& is_successful) = 0; // Return whether key is local cached
 
         virtual void updateLocalUncachedMetadataForRspInternal_(const Key& key, const Value& value, const bool& is_value_related) const = 0; // Triggered by get/put/delrsp for cache miss for admission policy if any
 
         // (3) Local edge cache management
 
-        virtual bool needIndependentAdmitInternal_(const Key& key) const = 0;
+        virtual bool needIndependentAdmitInternal_(const Key& key, const Value& value) const = 0;
 
         virtual void admitLocalCacheInternal_(const Key& key, const Value& value, bool& affect_victim_tracker) = 0;
         virtual bool getLocalCacheVictimKeysInternal_(std::unordered_set<Key, KeyHasher>& keys, std::list<VictimCacheinfo>& victim_cacheinfos, const uint64_t& required_size) const = 0;

@@ -140,9 +140,10 @@ namespace covered
         return;
     }
 
-    bool CoveredLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value, bool& affect_victim_tracker)
+    bool CoveredLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value, bool& affect_victim_tracker, bool& is_successful)
     {
         const std::string keystr = key.getKeystr();
+        is_successful = false;
 
         LruCacheReadHandle handle = covered_cache_ptr_->find(keystr); // NOTE: although find() will move the item to the front of the LRU list to update recency information inside cachelib, covered uses local cache metadata tracked outside cachelib for cache management
         bool is_local_cached = (handle != nullptr);
@@ -164,6 +165,8 @@ namespace covered
 
                 // Update local cached metadata for getrsp with invalid hit and put/delreq with cache hit
                 affect_victim_tracker = local_cached_metadata_.updateForExistingKey(key, value, original_value, true, peredge_synced_victimcnt_);
+
+                is_successful = true;
             }
         }
 
@@ -190,8 +193,11 @@ namespace covered
 
     // (3) Local edge cache management
 
-    bool CoveredLocalCache::needIndependentAdmitInternal_(const Key& key) const
+    bool CoveredLocalCache::needIndependentAdmitInternal_(const Key& key, const Value& value) const
     {
+        UNUSED(key);
+        UNUSED(value);
+        
         // COVERED will NEVER invoke this function for independent admission
         return false;
     }

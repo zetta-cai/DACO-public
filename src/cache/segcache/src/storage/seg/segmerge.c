@@ -269,14 +269,6 @@ seg_merge_evict(int32_t *seg_id_ret, struct SegCache* segcache_ptr, bool need_vi
               &segcache_ptr->heap_ptr->segs[ttl_bkt->first_seg_id];
 
         seg = find_n_consecutive_evictable_seg(seg, segcache_ptr);
-        if (seg != NULL)
-        {
-            log_warn("seg==NULL: %d, seg_id: %d", seg==NULL, seg->seg_id); // TMPDEBUG23
-        }
-        else
-        {
-            log_warn("seg==NULL: %d", seg==NULL); // TMPDEBUG23
-        }
         if (seg == NULL) {
             /* cannot find enough evictable seg in this TTL bucket */
             segcache_ptr->ttl_buckets[bkt_idx].next_seg_to_merge = -1;
@@ -769,20 +761,62 @@ merge_segs(struct seg *segs_to_merge[],
                     (*value_bstrs_ptr)[victim_idx].data = (char*)malloc(tmp_value_bstrs[j].len);
                     memcpy((*value_bstrs_ptr)[victim_idx].data, tmp_value_bstrs[j].data, tmp_value_bstrs[j].len);
                     victim_idx++;
-
-                    // Release tmp evicted key-value pair
-                    free(tmp_key_bstrs[j].data);
-                    tmp_key_bstrs[j].len = 0;
-                    tmp_key_bstrs[j].data = NULL;
-                    free(tmp_value_bstrs[j].data);
-                    tmp_value_bstrs[j].len = 0;
-                    tmp_value_bstrs[j].data = NULL;
                 }
             }
         }
 
         // Update victim_cnt_ptr
         *victim_cnt_ptr = victim_cnt;
+
+        for (uint32_t i = 0; i < merge_cnt; i++)
+        {
+            struct bstring* tmp_key_bstrs = key_bstrs_array[i];
+            struct bstring* tmp_value_bstrs = value_bstrs_array[i];
+
+            // Release the array of struct bstring if necessary
+            if (tmp_key_bstrs != NULL)
+            {
+                uint32_t tmp_n_live_item = sizeof(tmp_key_bstrs) / sizeof(struct bstring);
+                for (uint32_t j = 0; j < tmp_n_live_item; j++)
+                {
+                    // Release tmp evicted keys
+                    if (tmp_key_bstrs[j].data != NULL)
+                    {
+                        free(tmp_key_bstrs[j].data);
+                        tmp_key_bstrs[j].len = 0;
+                        tmp_key_bstrs[j].data = NULL;
+                    }
+                }
+
+                free(tmp_key_bstrs);
+                tmp_key_bstrs = NULL;
+            }
+            if (tmp_value_bstrs != NULL)
+            {
+                uint32_t tmp_n_live_item = sizeof(tmp_value_bstrs) / sizeof(struct bstring);
+                for (uint32_t j = 0; j < tmp_n_live_item; j++)
+                {
+                    // Release tmp evicted values
+                    if (tmp_value_bstrs[j].data != NULL)
+                    {
+                        free(tmp_value_bstrs[j].data);
+                        tmp_value_bstrs[j].len = 0;
+                        tmp_value_bstrs[j].data = NULL;
+                    }
+                }
+
+                free(tmp_value_bstrs);
+                tmp_value_bstrs = NULL;
+            }
+        }
+
+        // Release the array of (struct bstring*) and uint32_t
+        free(key_bstrs_array);
+        key_bstrs_array = NULL;
+        free(value_bstrs_array);
+        value_bstrs_array = NULL;
+        free(victim_cnt_array);
+        victim_cnt_array = NULL;
     }
 
     if (new_seg->live_bytes <= 8) {

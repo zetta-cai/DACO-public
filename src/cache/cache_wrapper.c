@@ -10,7 +10,7 @@ namespace covered
 {
     const std::string CacheWrapper::kClassName("CacheWrapper");
 
-    CacheWrapper::CacheWrapper(const std::string& cache_name, const uint32_t& edge_idx, const uint64_t& capacity_bytes, const uint64_t& local_uncached_capacity_bytes, const uint32_t& peredge_synced_victimcnt)
+    CacheWrapper::CacheWrapper(const std::string& cache_name, const uint32_t& edge_idx, const uint64_t& capacity_bytes, const uint64_t& local_uncached_capacity_bytes, const uint32_t& peredge_synced_victimcnt) : cache_name_(cache_name)
     {
         // Differentiate local edge cache in different edge nodes
         std::ostringstream oss;
@@ -90,14 +90,7 @@ namespace covered
         std::string context_name = "CacheWrapper::invalidateKeyForLocalCachedObject()";
         cache_wrapper_perkey_rwlock_ptr_->acquire_lock(key, context_name);
 
-        bool is_exist = false;
-        validity_map_ptr_->invalidateFlagForKey(key, is_exist);
-        if (!is_exist) // a key locally cached is not found in validity_map_
-        {
-            std::ostringstream oss;
-            oss << "key " << key.getKeystr() << " does not exist in validity_map_ for invalidateIfCached()";
-            Util::dumpWarnMsg(instance_name_, oss.str());
-        }
+        invalidateKeyForLocalCachedObject_(key);
 
         // Release a write lock
         cache_wrapper_perkey_rwlock_ptr_->unlock(key, context_name);
@@ -141,14 +134,27 @@ namespace covered
         }
         cache_wrapper_perkey_rwlock_ptr_->acquire_lock(key, context_name);
 
-        bool is_local_cached = local_cache_ptr_->updateLocalCache(key, value, affect_victim_tracker);
+        bool is_successful = false;
+        bool is_local_cached = local_cache_ptr_->updateLocalCache(key, value, affect_victim_tracker, is_successful);
 
         if (is_local_cached)
         {
-            validateKeyForLocalCachedObject_(key);
+            if (is_successful) // Validate key ONLY if update successfully
+            {
+                validateKeyForLocalCachedObject_(key);
+            }
+            else // Invalidate otherwise
+            {
+                // NOTE: ONLY Segcache will fail to update due to object size > segment size
+                assert(cache_name_ == Util::SEGCACHE_CACHE_NAME);
+
+                invalidateKeyForLocalCachedObject_(key);
+            }
         }
         else
         {
+            assert(!is_successful);
+
             // Update local uncached metadata for admission policy if any
             local_cache_ptr_->updateLocalUncachedMetadataForRsp(key, value, true);
         }
@@ -187,11 +193,21 @@ namespace covered
             if (!is_valid) // If key is locally cached yet invalid
             {
                 // Update local edge cache
-                bool tmp_is_local_cached = local_cache_ptr_->updateLocalCache(key, value, affect_victim_tracker);
+                bool is_successful = false;
+                bool tmp_is_local_cached = local_cache_ptr_->updateLocalCache(key, value, affect_victim_tracker, is_successful);
                 assert(tmp_is_local_cached);
 
-                // Validate key
-                validateKeyForLocalCachedObject_(key);
+                if (is_successful) // Validate key ONLY if update successfully
+                {
+                    validateKeyForLocalCachedObject_(key);
+                }
+                else // Invalidate otherwise
+                {
+                    // NOTE: ONLY Segcache will fail to update due to object size > segment size
+                    assert(cache_name_ == Util::SEGCACHE_CACHE_NAME);
+
+                    invalidateKeyForLocalCachedObject_(key);
+                }
 
                 is_local_cached_and_invalid = true;
             }
@@ -271,7 +287,7 @@ namespace covered
 
     // (3) Local edge cache management
 
-    bool CacheWrapper::needIndependentAdmit(const Key& key) const
+    bool CacheWrapper::needIndependentAdmit(const Key& key, const Value& value) const
     {
         checkPointers_();
 
@@ -279,7 +295,7 @@ namespace covered
         std::string context_name = "CacheWrapper::needIndependentAdmit()";
         cache_wrapper_perkey_rwlock_ptr_->acquire_lock_shared(key, context_name);
 
-        bool need_independent_admit = local_cache_ptr_->needIndependentAdmit(key);
+        bool need_independent_admit = local_cache_ptr_->needIndependentAdmit(key, value);
 
         // Release a read lock
         cache_wrapper_perkey_rwlock_ptr_->unlock_shared(key, context_name);
@@ -378,6 +394,21 @@ namespace covered
         return;
     }
 
+    void CacheWrapper::invalidateKeyForLocalCachedObject_(const Key& key)
+    {
+        // No need to acquire a write lock, which has been done in public functions
+
+        bool is_exist = false;
+        validity_map_ptr_->invalidateFlagForKey(key, is_exist);
+        if (!is_exist) // a key locally cached is not found in validity_map_
+        {
+            std::ostringstream oss;
+            oss << "key " << key.getKeystr() << " does not exist in validity_map_ for invalidateKeyForLocalCachedObject_()";
+            Util::dumpWarnMsg(instance_name_, oss.str());
+        }
+        return;
+    }
+
     void CacheWrapper::validateKeyForLocalUncachedObject_(const Key& key)
     {
         // No need to acquire a write lock, which has been done in public functions
@@ -387,7 +418,7 @@ namespace covered
         if (is_exist) // a key not locally cached is found in validity_map_
         {
             std::ostringstream oss;
-            oss << "key " << key.getKeystr() << " already exists in validity_map_ for validateIfUncached_()";
+            oss << "key " << key.getKeystr() << " already exists in validity_map_ for validateKeyForLocalUncachedObject_()";
             Util::dumpWarnMsg(instance_name_, oss.str());
         }
         return;
@@ -402,7 +433,7 @@ namespace covered
         if (is_exist) // a key not locally cached is found in validity_map_
         {
             std::ostringstream oss;
-            oss << "key " << key.getKeystr() << " already exists in validity_map_ for invalidateIfUncached_()";
+            oss << "key " << key.getKeystr() << " already exists in validity_map_ for invalidateKeyForLocalUncachedObject_()";
             Util::dumpWarnMsg(instance_name_, oss.str());
         }
         return;

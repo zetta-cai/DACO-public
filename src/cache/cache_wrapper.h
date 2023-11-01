@@ -64,7 +64,7 @@ namespace covered
 
         // (3) Local edge cache management
 
-        bool needIndependentAdmit(const Key& key) const;
+        bool needIndependentAdmit(const Key& key, const Value& value) const;
         void admit(const Key& key, const Value& value, const bool& is_valid, bool& affect_victim_tracker);
         void evict(std::unordered_map<Key, Value, KeyHasher>& victims, const uint64_t& required_size); // NOTE: single-thread function; eviction MUST affect victim tracker due to evicting objects with least local rewards (i.e., local synced victims)
 
@@ -80,6 +80,8 @@ namespace covered
         bool isValidKeyForLocalCachedObject_(const Key& key) const;
         // For local put/del requests invoked by update() and remove()
         void validateKeyForLocalCachedObject_(const Key& key); // Add a valid flag if key NOT exist
+        // For invalidation control requests and unsuccessful local put/del requests invoked by update() and remove()
+        void invalidateKeyForLocalCachedObject_(const Key& key); // Add an invalid flag if key NOT exist
         // For local get/put/del requests invoked by admit() w/o writes
         void validateKeyForLocalUncachedObject_(const Key& key); // Add an invalid flag if key NOT exist
         // For local get/put/del requests invoked by admit() w/ writes
@@ -97,6 +99,7 @@ namespace covered
         // Member variables
 
         std::string instance_name_; // Const shared variable
+        const std::string cache_name_; // Come from CLI
 
         // Non-const shared variable
         LocalCacheBase* local_cache_ptr_; // Maintain key-value objects for local edge cache (thread safe)

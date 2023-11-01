@@ -56,7 +56,7 @@ set(${PROJECT_NAME}_RELEASE_VERSION
 # flags => compile-time variables: use modules/macros
 option(HAVE_ASSERT_LOG "assert_log enabled by default" OFF)
 option(HAVE_ASSERT_PANIC "assert_panic disabled by default" OFF) # Siyuan: enable ASSERT for debugging if necessary
-option(HAVE_LOGGING "logging enabled by default" ON) # Siyuan: enable log_verb and uncomment debug_setup(NULL) in segcache_local_cache.c for debugging if necessary (TMPDEBUG23)
+option(HAVE_LOGGING "logging enabled by default" OFF) # Siyuan: enable log_verb and uncomment debug_setup(NULL) in segcache_local_cache.c for debugging if necessary
 option(HAVE_STATS "stats enabled by default" OFF)
 option(HAVE_TEST "test built by default" OFF)
 option(HAVE_DEBUG_MM "debugging oriented memory management disabled by default" OFF) 
@@ -117,7 +117,7 @@ else()
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2")
 endif()
 add_definitions()
-# Siyuan: add -g and -fsanitize=address (libasan.so should be at least v5 to capture memory leakage) to fix heap-use-after-free bug of segcache (TMPDEBUG23)
+# Siyuan: add -g and -fsanitize=address (libasan.so should be at least v5 to capture memory leakage) to fix heap-use-after-free bug of segcache
 # -> NOTE: comment signal_override in src/cache/segcache/deps/ccommon/src/cc_debug.c to allow ASan to capture segmentation faults
 # -> NOTE: under build folder, use cmake -DCMAKE_C_COMPILER=gcc .. to generate makefiles (gcc version determines libasan version, which MUST be the same as mk/recipes.mk for address sanitizing)
 set(CFLAGS_LIST
@@ -127,9 +127,9 @@ set(CFLAGS_LIST
     "-Wstrict-prototypes -Wmissing-prototypes "
     "-Wmissing-declarations -Wredundant-decls "
     "-Wunused-function -Wunused-value -Wunused-variable "
-    "-fno-strict-aliasing "
-    "-g "
-    "-fsanitize=address ")
+    "-fno-strict-aliasing ")
+#    "-g "
+#    "-fsanitize=address ")
 
 if(BUILD_AND_INSTALL_CHECK)
     # (simms) What follows is a crime against build systems as we run the build/install
