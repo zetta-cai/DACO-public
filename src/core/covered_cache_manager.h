@@ -95,6 +95,7 @@ namespace covered
 
         // Const shared variables
         std::string instance_name_;
+        const uint32_t edge_idx_; // Come from CLI
         const uint32_t topk_edgecnt_; // Come from CLI
 
         // Non-const shared variables (each should be thread safe)

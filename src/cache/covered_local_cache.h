@@ -21,6 +21,7 @@ namespace covered
     typedef LruAllocator CachelibLruCache; // LRU2Q cache policy
     typedef CachelibLruCache::Config LruCacheConfig;
     typedef CachelibLruCache::ReadHandle LruCacheReadHandle;
+    typedef CachelibLruCache::WriteHandle LruCacheWriteHandle;
     typedef CachelibLruCache::Item LruCacheItem;
     
     // Forward declaration

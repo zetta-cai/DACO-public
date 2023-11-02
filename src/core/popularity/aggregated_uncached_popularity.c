@@ -126,13 +126,15 @@ namespace covered
     DeltaReward AggregatedUncachedPopularity::calcMaxAdmissionBenefit(const bool& is_global_cached) const
     {
         Edgeset placement_edgeset;
-        DeltaReward max_admission_benefit = calcAdmissionBenefit(topk_edgeidx_local_uncached_popularity_pairs_.size(), is_global_cached, placement_edgeset);
+        //DeltaReward max_admission_benefit = calcAdmissionBenefit(topk_edgeidx_local_uncached_popularity_pairs_.size(), is_global_cached, placement_edgeset);
+        DeltaReward max_admission_benefit = calcAdmissionBenefit(0, Key(""), topk_edgeidx_local_uncached_popularity_pairs_.size(), is_global_cached, placement_edgeset); // TMPDEBUG23
         UNUSED(placement_edgeset);
         
         return max_admission_benefit;
     }
 
-    DeltaReward AggregatedUncachedPopularity::calcAdmissionBenefit(const uint32_t& topicnt, const bool& is_global_cached, Edgeset& placement_edgeset) const
+    //DeltaReward AggregatedUncachedPopularity::calcAdmissionBenefit(const uint32_t& topicnt, const bool& is_global_cached, Edgeset& placement_edgeset) const
+    DeltaReward AggregatedUncachedPopularity::calcAdmissionBenefit(const uint32_t& edgeidx, const Key& key, const uint32_t& topicnt, const bool& is_global_cached, Edgeset& placement_edgeset) const // TMPDEBUG23
     {
         // TODO: Use a heuristic or learning-based approach for parameter tuning to calculate delta rewards for max admission benefits (refer to state-of-the-art studies such as LRB and GL-Cache)
 
@@ -164,6 +166,13 @@ namespace covered
 
             admission_benefit = Util::popularityAdd(admission_benefit, tmp_admission_benefit);
         }
+
+        // TMPDEBUG23
+        if (key.getKeystr() != "")
+        {
+            Util::dumpVariablesForDebug(kClassName, 16, "edge", std::to_string(edgeidx).c_str(), "for key", key.getKeystr().c_str(), "calcAdmissionBenefit for topicnt", std::to_string(topicnt).c_str(), "is_global_cached:", Util::toString(is_global_cached).c_str(), "w1:", std::to_string(local_hit_weight).c_str(), "w2:", std::to_string(cooperative_hit_weight).c_str(), "topi_local_uncached_popularity_:", std::to_string(topi_local_uncached_popularity_).c_str(), "sum_local_uncached_popularity_:", std::to_string(sum_local_uncached_popularity_).c_str());
+        }
+
         return admission_benefit;
     }
 

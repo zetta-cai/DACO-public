@@ -53,9 +53,16 @@ namespace covered
         // NOTE: If object size of admitted object <= cache margin bytes, the edge node does NOT need to evict any victim and hence contribute zero to eviction cost; otherwise, find victims based on required bytes and trigger lazy victim fetching if necessary (i.e., set need_more_victims = true)
         uint64_t tmp_required_bytes = 0;
         uint64_t tmp_saved_bytes = 0;
+
+        // TMPDEBUG23
+        Util::dumpVariablesForDebug(kClassName, 6, "findVictimsForObjectSize for edge", std::to_string(cur_edge_idx).c_str(), "object_size:", std::to_string(object_size).c_str(), "cache_margin_bytes_:", std::to_string(cache_margin_bytes_).c_str());
+
         if (object_size > cache_margin_bytes_) // Without sufficient cache space
         {
             tmp_required_bytes = object_size - cache_margin_bytes_;
+
+            // TMPDEBUG23
+            Util::dumpVariablesForDebug(kClassName, 6, "findVictimsForObjectSize for edge", std::to_string(cur_edge_idx).c_str(), "tmp_required_bytes:", std::to_string(tmp_required_bytes).c_str(), "victim_cacheinfos_.size():", std::to_string(victim_cacheinfos_.size()).c_str());
 
             for (std::list<VictimCacheinfo>::const_iterator cacheinfo_list_const_iter = victim_cacheinfos_.begin(); cacheinfo_list_const_iter != victim_cacheinfos_.end(); cacheinfo_list_const_iter++) // Note that victim_cacheinfos_ follows the ascending order of local rewards
             {
@@ -77,6 +84,10 @@ namespace covered
                 bool with_complete_victim_object_size = tmp_victim_cacheinfo.getObjectSize(tmp_victim_object_size);
                 assert(with_complete_victim_object_size == true); // NOTE: victim cacheinfo in victim_cacheinfos_ MUST be complete
                 tmp_saved_bytes += tmp_victim_object_size;
+
+                // TMPDEBUG23
+                Util::dumpVariablesForDebug(kClassName, 8, "findVictimsForObjectSize for edge", std::to_string(cur_edge_idx).c_str(), "tmp_victim_key:", tmp_victim_key.getKeystr().c_str(), "tmp_saved_bytes:", std::to_string(tmp_saved_bytes).c_str(), "tmp_required_bytes:", std::to_string(tmp_required_bytes).c_str());
+
                 if (tmp_saved_bytes >= tmp_required_bytes) // With sufficient victims for the required bytes
                 {
                     break;

@@ -305,6 +305,9 @@ namespace covered
 
     void CacheWrapper::admit(const Key& key, const Value& value, const bool& is_valid, bool& affect_victim_tracker)
     {
+        // TMPDEBUG23
+        Util::dumpVariablesForDebug(instance_name_, 2, "admit for key", key.getKeystr().c_str());
+
         checkPointers_();
 
         // Acquire a write lock
@@ -477,6 +480,9 @@ namespace covered
         {
             const Key& tmp_victim_key = *tmp_victim_key_iter;
             Value tmp_victim_value;
+
+            // TMPDEBUG23
+            Util::dumpVariablesForDebug(instance_name_, 2, "evict for tmp_victim_key", tmp_victim_key.getKeystr().c_str());
 
             // Acquire a write lock (pessimistic locking to avoid atomicity/order issues)
             // NOTE: we still need to acquire fine-grained locking for tmp_victim_key even if we have acquired cache eviction mutex in cache server worker, otherwise tmp_victim_key may be accessed/motified/invalidated during eviction

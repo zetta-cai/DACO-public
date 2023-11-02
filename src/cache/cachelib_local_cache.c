@@ -235,8 +235,14 @@ namespace covered
             value = Value(handle->getSize());
 
             // Remove the corresponding cache item
+            // NOTE: although CacheLib does NOT free slab memory immediately after remove, it will reclaim slab memory after all handles to the key are destoryed
             CachelibLru2QCache::RemoveRes removeRes = cachelib_cache_ptr_->remove(key.getKeystr());
             assert(removeRes == CachelibLru2QCache::RemoveRes::kSuccess);
+
+            //// (OBSOLETE: we CANNOT explicitly free the slab memory pointed by handle, which will be freed by CacheLib after all handles are destroyed!!!) NOTE: remove() just evicts the victim object from Cachelib yet NOT reclaim its slab memory!!!
+            ////LruCacheWriteHandle tmp_write_handle = std::move(handle).toWriteHandle(); // NOTE: from now we should NOT use handle, which has been converted to a rvalue reference
+            ////assert(tmp_write_handle.get() != nullptr);
+            ////covered_cache_ptr_->allocator_->free(tmp_write_handle.get());
 
             is_evict = true;
         }
@@ -293,6 +299,7 @@ namespace covered
         Value tmp_victim_value(item_ptr->getSize());
         victims.insert(std::pair(tmp_victim_key, tmp_victim_value));
 
+        // NOTE: findEviction() just evicts the victim object from Cachelib yet NOT reclaim its slab memory!!!
         // NOTE: we do NOT need to recycle the memory of victim CacheItem, so we free it here (refer to src/cache/cachelib/CacheAllocator-inl.h)
         cachelib_cache_ptr_->allocator_->free(item_ptr); // NOTE: this will decrease currAllocSize_ of corresponding MemoryPool and hence affect cache size usage bytes for capacity
         item_ptr = NULL;

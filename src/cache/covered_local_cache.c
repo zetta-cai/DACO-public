@@ -353,6 +353,7 @@ namespace covered
 
         // Get victim value
         LruCacheReadHandle handle = covered_cache_ptr_->find(key.getKeystr());
+
         if (handle != nullptr) // Key exists
         {
             //std::string value_string{reinterpret_cast<const char*>(handle->getMemory()), handle->getSize()};
@@ -360,8 +361,14 @@ namespace covered
             assert(value.getValuesize() <= max_allocation_class_size_); // NOTE: we will never admit large-value objects into edge cache
 
             // Remove the corresponding cache item
+            // NOTE: although CacheLib does NOT free slab memory immediately after remove, it will reclaim slab memory after all handles to the key are destoryed
             CachelibLruCache::RemoveRes removeRes = covered_cache_ptr_->remove(key.getKeystr());
             assert(removeRes == CachelibLruCache::RemoveRes::kSuccess);
+
+            // (OBSOLETE: we CANNOT explicitly free the slab memory pointed by handle, which will be freed by CacheLib after all handles are destroyed!!!) NOTE: remove() just evicts the victim object from Cachelib yet NOT reclaim its slab memory!!!
+            //LruCacheWriteHandle tmp_write_handle = std::move(handle).toWriteHandle(); // NOTE: from now we should NOT use handle, which has been converted to a rvalue reference
+            //assert(tmp_write_handle.get() != nullptr);
+            //covered_cache_ptr_->allocator_->free(tmp_write_handle.get());
 
             // Remove from local cached metadata for eviction
             local_cached_metadata_.removeForExistingKey(key, value);

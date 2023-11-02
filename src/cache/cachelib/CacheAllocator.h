@@ -242,6 +242,7 @@ class CacheAllocator : public facebook::cachelib::CacheBase {
  public:
   // Siyuan: expose allocator_ to CachelibLocalCache
   friend class CachelibLocalCache;
+  friend class CoveredLocalCache;
 
   using CacheT = CacheAllocator<CacheTrait>;
   using MMType = typename CacheTrait::MMType;
