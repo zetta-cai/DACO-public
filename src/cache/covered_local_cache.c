@@ -139,6 +139,15 @@ namespace covered
         ObjectSize object_size = 0;
         bool is_key_tracked = local_uncached_metadata_.getLocalUncachedPopularityAndAvgObjectSize(key, local_uncached_popularity, object_size);
 
+        // NOTE: (value size checking) NOT local-get/remote-collect large-value uncached object for aggregated uncached metadata due to slab-based memory management in Cachelib cache engine
+        if ((object_size >= key.getKeyLength()) && ((object_size - key.getKeyLength()) > max_allocation_class_size_)) // May be with large value size
+        {
+            // NOTE: warn instead of assert, as approximate avg object size includes key size which introduces uncertainty
+            std::ostringstream oss;
+            oss << "getCollectedPopularityFromLocalCacheInternal_() may get a large-value uncached object for key " << key.getKeystr() << " with avg object size " << object_size << " bytes";
+            Util::dumpWarnMsg(instance_name_, oss.str());
+        }
+
         collected_popularity = CollectedPopularity(is_key_tracked, local_uncached_popularity, object_size);
 
         return;
@@ -188,17 +197,30 @@ namespace covered
     void CoveredLocalCache::updateLocalUncachedMetadataForRspInternal_(const Key& key, const Value& value, const bool& is_value_related) const
     {
         assertCapacityForLargeObj_(key, value);
+
+        // NOTE: (value size checking) NOT track large-value uncached object in local uncached metadata due to slab-based memory management in Cachelib cache engine
+        const bool is_valid_valuesize = (value.getValuesize() <= max_allocation_class_size_);
         
         bool is_key_tracked = local_uncached_metadata_.isKeyExist(key);
-        if (is_key_tracked)
+        if (is_key_tracked) // Key is tracked by local uncached metadata
         {
             uint32_t approx_original_value_size = local_uncached_metadata_.getApproxValueSizeForUncachedObjects(key);
-            local_uncached_metadata_.updateForExistingKey(key, value, Value(approx_original_value_size), is_value_related); // For getrsp with cache miss, put/delrsp with cache miss
+            if (is_valid_valuesize) // With valid value size
+            {
+                local_uncached_metadata_.updateForExistingKey(key, value, Value(approx_original_value_size), is_value_related); // For getrsp with cache miss, put/delrsp with cache miss
+            }
+            else // Large value size -> NOT track the key in local uncached metadata
+            {
+                local_uncached_metadata_.removeForExistingKey(key, Value(approx_original_value_size)); // Remove original value size to detrack the key from local uncached metadata
+            }
         }
-        else
+        else // Key is NOT tracked by local uncached metadata
         {
-            // NOTE: tracking a new key in local uncached metadata may detrack old keys due to local uncached capacity constraint
-            local_uncached_metadata_.addForNewKey(key, value); // For getrsp with cache miss, put/delrsp with cache miss
+            if (is_valid_valuesize) // With valid value size
+            {
+                // NOTE: tracking a new key in local uncached metadata may detrack old keys due to local uncached capacity constraint
+                local_uncached_metadata_.addForNewKey(key, value); // For getrsp with cache miss, put/delrsp with cache miss
+            }
         }
         return;
     }
@@ -209,9 +231,6 @@ namespace covered
     {
         UNUSED(key);
         UNUSED(value);
-    
-        // TODO (END HERE): NOT track large-value uncached object in both local uncached metadata and aggregated uncached metadata; NOT trigger placement calculation for large-value uncached object
-        // const bool is_valid_valuesize = (value.getValuesize() <= max_allocation_class_size_);
         
         // COVERED will NEVER invoke this function for independent admission
         return false;
@@ -222,8 +241,16 @@ namespace covered
         is_successful = false;
         const std::string keystr = key.getKeystr();
 
-        // NOTE: MUST with a valid value length, as we will never track, aggregate, and notify placement for large-value uncached objects
-        assert(value.getValuesize() <= max_allocation_class_size_);
+        // NOTE: (value size checking) NOT admit large-value uncached object after local/remote placement notification due to slab-based memory management in Cachelib cache engine
+        /*// (OBSOLETE due to approximate avg object size tracked in local uncached metadata) NOTE: MUST with a valid value length, as we will never track local uncached metadata, collect for aggregated uncached metadata, and receive local/remote placement notification for large-value uncached objects
+        assert(value.getValuesize() <= max_allocation_class_size_);*/
+        if (value.getValuesize() > max_allocation_class_size_)
+        {
+            // NOTE: warn instead of assert, as approximate avg object size includes key size which introduces uncertainty
+            std::ostringstream oss;
+            oss << "admitLocalCacheInternal_() admits a large-value uncached object for key " << key.getKeystr() << " with value size " << value.getValuesize() << " bytes";
+            Util::dumpWarnMsg(instance_name_, oss.str());
+        }
 
         LruCacheReadHandle handle = covered_cache_ptr_->find(keystr);
         bool is_local_cached = (handle != nullptr);
