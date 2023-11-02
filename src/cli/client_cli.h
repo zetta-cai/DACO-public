@@ -26,7 +26,7 @@ namespace covered
 
         uint32_t getClientcnt() const;
         bool isWarmupSpeedup() const;
-        uint32_t getOpcnt() const;
+        uint32_t getPerclientOpcnt() const;
         uint32_t getPerclientWorkercnt() const;
     private:
         static const std::string kClassName;
@@ -40,7 +40,7 @@ namespace covered
 
         uint32_t clientcnt_;
         bool is_warmup_speedup_; // Come from --disable_warmup_speedup
-        uint32_t opcnt_;
+        uint32_t perclient_opcnt_;
         uint32_t perclient_workercnt_;
     protected:
         virtual void addCliParameters_();

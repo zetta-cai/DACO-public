@@ -28,6 +28,11 @@ namespace covered
         // Allocate validity map
         validity_map_ptr_ = new ValidityMap(edge_idx, cache_wrapper_perkey_rwlock_ptr_);
         assert(validity_map_ptr_ != NULL);
+
+        #ifdef DEBUG_CACHE_WRAPPER
+        cache_wrapper_rwlock_for_debug_ptr_ = new Rwlock("cache_wrapper_rwlock_for_debug_ptr_");
+        cached_keys_for_debug_.clear();
+        #endif
     }
     
     CacheWrapper::~CacheWrapper()
@@ -46,6 +51,12 @@ namespace covered
         assert(validity_map_ptr_ != NULL);
         delete validity_map_ptr_;
         validity_map_ptr_ = NULL;
+
+        #ifdef DEBUG_CACHE_WRAPPER
+        assert(cache_wrapper_rwlock_for_debug_ptr_ != NULL);
+        delete cache_wrapper_rwlock_for_debug_ptr_;
+        cache_wrapper_rwlock_for_debug_ptr_ = NULL;
+        #endif
     }
 
     // (1) Check is cached and access validity
@@ -306,7 +317,7 @@ namespace covered
     void CacheWrapper::admit(const Key& key, const Value& value, const bool& is_valid, bool& affect_victim_tracker)
     {
         // TMPDEBUG23
-        Util::dumpVariablesForDebug(instance_name_, 2, "admit for key", key.getKeystr().c_str());
+        Util::dumpVariablesForDebug(instance_name_, 6, "admit local edge cache for key", key.getKeystr().c_str(), "valuesize:", std::to_string(value.getValuesize()).c_str(), "cache size usage:", std::to_string(getSizeForCapacity()).c_str());
 
         checkPointers_();
 
@@ -330,6 +341,26 @@ namespace covered
         }
         // NOTE: NO need to add validity flag if admission fails
 
+        #ifdef DEBUG_CACHE_WRAPPER
+        cache_wrapper_rwlock_for_debug_ptr_->acquire_lock(context_name);
+
+        if (cached_keys_for_debug_.find(key) == cached_keys_for_debug_.end())
+        {
+            cached_keys_for_debug_.insert(key);
+        }
+
+        // TMPDEBUG23
+        std::ostringstream oss;
+        oss << "After admit, " << cached_keys_for_debug_.size() << " cached keys:";
+        for (std::unordered_set<Key, KeyHasher>::const_iterator tmp_iter = cached_keys_for_debug_.begin(); tmp_iter != cached_keys_for_debug_.end(); tmp_iter++)
+        {
+            oss << " " << tmp_iter->getKeystr() << ";";
+        }
+        Util::dumpDebugMsg(instance_name_, oss.str());
+
+        cache_wrapper_rwlock_for_debug_ptr_->unlock(context_name);
+        #endif
+
         // Release a write lock
         cache_wrapper_perkey_rwlock_ptr_->unlock(key, context_name);
 
@@ -349,6 +380,30 @@ namespace covered
         {
             evictForCoarseGrainedManagement_(victims, required_size);
         }
+
+        #ifdef DEBUG_CACHE_WRAPPER
+        std::string context_name = "CacheWrapper::evict()";
+        cache_wrapper_rwlock_for_debug_ptr_->acquire_lock(context_name);
+
+        for (std::unordered_map<Key, Value, KeyHasher>::const_iterator victims_const_iter = victims.begin(); victims_const_iter != victims.end(); victims_const_iter++)
+        {
+            if (cached_keys_for_debug_.find(victims_const_iter->first) != cached_keys_for_debug_.end())
+            {
+                cached_keys_for_debug_.erase(victims_const_iter->first);
+            }
+        }
+
+        // TMPDEBUG23
+        std::ostringstream oss;
+        oss << "After evict, " << cached_keys_for_debug_.size() << " cached keys:";
+        for (std::unordered_set<Key, KeyHasher>::const_iterator tmp_iter = cached_keys_for_debug_.begin(); tmp_iter != cached_keys_for_debug_.end(); tmp_iter++)
+        {
+            oss << " " << tmp_iter->getKeystr() << ";";
+        }
+        Util::dumpDebugMsg(instance_name_, oss.str());
+
+        cache_wrapper_rwlock_for_debug_ptr_->unlock(context_name);
+        #endif
 
         return;
     }
@@ -482,7 +537,7 @@ namespace covered
             Value tmp_victim_value;
 
             // TMPDEBUG23
-            Util::dumpVariablesForDebug(instance_name_, 2, "evict for tmp_victim_key", tmp_victim_key.getKeystr().c_str());
+            Util::dumpVariablesForDebug(instance_name_, 2, "evict local edge cache for tmp_victim_key", tmp_victim_key.getKeystr().c_str());
 
             // Acquire a write lock (pessimistic locking to avoid atomicity/order issues)
             // NOTE: we still need to acquire fine-grained locking for tmp_victim_key even if we have acquired cache eviction mutex in cache server worker, otherwise tmp_victim_key may be accessed/motified/invalidated during eviction
@@ -565,5 +620,9 @@ namespace covered
         assert(cache_wrapper_perkey_rwlock_ptr_ != NULL);
         assert(validity_map_ptr_ != NULL);
         assert(local_cache_ptr_ != NULL);
+
+        #ifdef DEBUG_CACHE_WRAPPER
+        assert(cache_wrapper_rwlock_for_debug_ptr_ != NULL);
+        #endif
     }
 }

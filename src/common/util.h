@@ -91,7 +91,8 @@ namespace covered
         // NOTE: SLEEP_INTERVAL_US MUST be able to support EvaluatorCLI::max_warmup_duration_sec/stresstest_duration_sec and Config::client_raw_statistics_slot_interval_sec
         static const unsigned int SLEEP_INTERVAL_US; // Sleep interval for polling
         // Workload generation
-        static const uint32_t KVPAIR_GENERATION_SEED; // Deterministic seed to generate key-value objects (dataset instead of workload; the same for all clients to ensure the same dataset)
+        static const uint32_t DATASET_KVPAIR_GENERATION_SEED; // Deterministic seed to generate key-value objects for dataset (the same for all clients to ensure the same dataset)
+        static const uint32_t WORKLOAD_KVPAIR_GENERATION_SEED; // Deterministic seed to generate key-value objects for workload (the same for all clients to ensure homogeneous cache access patterns)
         // Time measurement
         static const int START_YEAR;
         static const long NANOSECONDS_PERSECOND; // # of nanoseconds per second

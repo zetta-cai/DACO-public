@@ -15,7 +15,7 @@ namespace covered
 {
     const std::string FacebookWorkloadWrapper::kClassName("FacebookWorkloadWrapper");
 
-    FacebookWorkloadWrapper::FacebookWorkloadWrapper(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& perclient_workercnt) : WorkloadWrapperBase(clientcnt, client_idx, keycnt, opcnt, perclient_workercnt)
+    FacebookWorkloadWrapper::FacebookWorkloadWrapper(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt) : WorkloadWrapperBase(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt)
     {
         // Differentiate facebook workload generator in different clients
         std::ostringstream oss;
@@ -55,7 +55,7 @@ namespace covered
     {
         assert(clientcnt_ > 0);
         assert(perclient_workercnt_ > 0);
-        uint32_t perclientworker_opcnt = opcnt_ / clientcnt_ / perclient_workercnt_;
+        uint32_t perclientworker_opcnt = perclient_opcnt_ / perclient_workercnt_;
 
         facebook_stressor_config_.numOps = static_cast<uint64_t>(perclientworker_opcnt);
         facebook_stressor_config_.numThreads = static_cast<uint64_t>(perclient_workercnt_);
@@ -72,7 +72,7 @@ namespace covered
 
     void FacebookWorkloadWrapper::createWorkloadGenerator_()
     {
-        // facebook::cachelib::cachebench::WorkloadGenerator will generate keycnt key-value pairs by generateReqs() and generate opcnt requests by generateKeyDistributions() in constructor
+        // facebook::cachelib::cachebench::WorkloadGenerator will generate keycnt key-value pairs by generateReqs() and generate perclient_opcnt_ requests by generateKeyDistributions() in constructor
         workload_generator_ = makeGenerator_(facebook_stressor_config_, client_idx_);
     }
 

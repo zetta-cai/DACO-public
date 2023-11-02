@@ -46,11 +46,11 @@ const facebook::cachelib::cachebench::Request& WorkloadGenerator::getReq(uint8_t
   XDCHECK_LT(poolId, keyIndicesForPool_.size());
   XDCHECK_LT(poolId, keyGenForPool_.size());
 
-  size_t idx = keyIndicesForPool_[poolId][keyGenForPool_[poolId](gen)];
+  size_t indice = keyIndicesForPool_[poolId][keyGenForPool_[poolId](gen)];
   auto op =
       static_cast<facebook::cachelib::cachebench::OpType>(workloadDist_[workloadIdx(poolId)].sampleOpDist(gen));
-  reqs_[idx].setOp(op);
-  return reqs_[idx];
+  reqs_[indice].setOp(op);
+  return reqs_[indice];
 }
 
 const facebook::cachelib::cachebench::Request& WorkloadGenerator::getReq(uint8_t poolId, uint32_t itemidx)
@@ -103,8 +103,8 @@ void WorkloadGenerator::generateKeys() {
     // All keys are printable lower case english alphabet.
     std::uniform_int_distribution<char> charDis('a', 'z');
     //std::mt19937_64 gen(folly::Random::rand64());
-    // Siyuan: use Util::KVPAIR_GENERATION_SEED as the deterministic seed to ensure that multiple clients generate the same set of key-value pairs
-    std::mt19937_64 gen(Util::KVPAIR_GENERATION_SEED + local_thread_idx);
+    // Siyuan: use Util::DATASET_KVPAIR_GENERATION_SEED as the deterministic seed to ensure that multiple clients generate the same set of key-value pairs
+    std::mt19937_64 gen(Util::DATASET_KVPAIR_GENERATION_SEED + local_thread_idx);
     for (uint64_t i = start; i < end; i++) {
       size_t keySize =
           facebook::cachelib::util::narrow_cast<size_t>(workloadDist_[pid].sampleKeySizeDist(gen));
@@ -181,8 +181,8 @@ void WorkloadGenerator::generateReqs() {
   generateFirstKeyIndexForPool();
   generateKeys();
   //std::mt19937_64 gen(folly::Random::rand64());
-  // Siyuan: Util::KVPAIR_GENERATION_SEED as the deterministic seed to ensure that multiple clients generate the same set of key-value pairs
-  std::mt19937_64 gen(Util::KVPAIR_GENERATION_SEED);
+  // Siyuan: Util::DATASET_KVPAIR_GENERATION_SEED as the deterministic seed to ensure that multiple clients generate the same set of key-value pairs
+  std::mt19937_64 gen(Util::DATASET_KVPAIR_GENERATION_SEED);
   for (size_t i = 0; i < config_.keyPoolDistribution.size(); i++) {
     size_t idx = workloadIdx(i);
     for (size_t j = firstKeyIndexForPool_[i]; j < firstKeyIndexForPool_[i + 1];
@@ -225,7 +225,7 @@ void WorkloadGenerator::generateReqs() {
 
   // TMPDEBUG
   std::ostringstream oss;
-  oss << "first key: " << reqs_[0].key << "; valuesize: " << (*reqs_[0].sizeBegin);
+  oss << "dataset: first key: " << reqs_[0].key << "; valuesize: " << (*reqs_[0].sizeBegin);
   Util::dumpNormalMsg(kClassName, oss.str());
 }
 
@@ -267,10 +267,11 @@ void WorkloadGenerator::generateKeyDistributions() {
     duration += covered::executeParallel(
         [&, this](size_t start, size_t end, size_t local_thread_idx) {
           //std::mt19937_64 gen(folly::Random::rand64());
-          // Siyuan: use global_thread_idx as the deterministic seed to ensure that multiple clients generate different sets of requests/workload-items
-          // Siyuan: we need this->config_.numThreads + 1, as Parallel may create an extra thread to generate remaining requests
+          // (OBSOLETE) Siyuan: use global_thread_idx as the deterministic seed to ensure that multiple clients generate different sets of requests/workload-items
+          // (OBSOLETE) Siyuan: we need this->config_.numThreads + 1, as Parallel may create an extra thread to generate remaining requests
           //uint32_t global_thread_idx = this->client_idx_ * (this->config_.numThreads + 1) + local_thread_idx;
-          uint32_t global_thread_idx = 0 * (this->config_.numThreads + 1) + local_thread_idx; // TMPDEBUG23
+          // NOTE: we use WORKLOAD_KVPAIR_GENERATION_SEED to generate workload items with homogeneous cache access patterns
+          uint32_t global_thread_idx = Util::WORKLOAD_KVPAIR_GENERATION_SEED + local_thread_idx;
           std::mt19937_64 gen(global_thread_idx);
           auto popDist = workloadDist_[idx].getPopDist(left, right); // FastDiscreteDistribution
           for (uint64_t j = start; j < end; j++) {

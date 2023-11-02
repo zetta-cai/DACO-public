@@ -1,5 +1,5 @@
 /*
- * WorkloadWrapperBase: the base class for workload generator to generate keycnt dataset key-value pairs with Util::KVPAIR_GENERATION_SEED as the seed and opcnt/clientcnt workload requests/items with client_idx as the seed (thread safe).
+ * WorkloadWrapperBase: the base class for workload generator to generate keycnt dataset key-value pairs with Util::DATASET_KVPAIR_GENERATION_SEED as the seed and opcnt/clientcnt workload requests/items with client_idx as the seed (thread safe).
  *
  * Access global covered::Config and covered::Param for static and dynamic configurations.
  * Overwrite some workload parameters (e.g., numOps and numKeys) based on static/dynamic configurations.
@@ -20,10 +20,10 @@ namespace covered
     class WorkloadWrapperBase
     {
     public:
-        static WorkloadWrapperBase* getWorkloadGeneratorByWorkloadName(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name);
-        static WorkloadWrapperBase* getWorkloadGeneratorByWorkloadName(const uint64_t& capacity_bytes, const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name);
+        static WorkloadWrapperBase* getWorkloadGeneratorByWorkloadName(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name);
+        static WorkloadWrapperBase* getWorkloadGeneratorByWorkloadName(const uint64_t& capacity_bytes, const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name);
 
-        WorkloadWrapperBase(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& perclient_workercnt);
+        WorkloadWrapperBase(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt);
         virtual ~WorkloadWrapperBase();
 
         void validate(); // Provide individual validate() as contructor cannot invoke virtual functions
@@ -63,7 +63,7 @@ namespace covered
         const uint32_t clientcnt_;
         const uint32_t client_idx_;
         const uint32_t keycnt_;
-        const uint32_t opcnt_;
+        const uint32_t perclient_opcnt_;
         const uint32_t perclient_workercnt_;
     };
 }

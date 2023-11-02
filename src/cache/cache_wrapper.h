@@ -9,6 +9,8 @@
 #ifndef CACHE_WRAPPER_H
 #define CACHE_WRAPPER_H
 
+//#define DEBUG_CACHE_WRAPPER
+
 #include <list>
 #include <string>
 #include <vector>
@@ -107,6 +109,12 @@ namespace covered
         mutable PerkeyRwlock* cache_wrapper_perkey_rwlock_ptr_;
         // NOTE: Due to the write-through policy, we only need to maintain an invalidity flag for MSI protocol (i.e., both M and S refers to validity)
         ValidityMap* validity_map_ptr_; // Maintain per-key validity flag for local edge cache (thread safe)
+
+        #ifdef DEBUG_CACHE_WRAPPER
+        // For debugging
+        mutable Rwlock* cache_wrapper_rwlock_for_debug_ptr_;
+        std::unordered_set<Key, KeyHasher> cached_keys_for_debug_;
+        #endif
     };
 }
 

@@ -11,7 +11,7 @@ namespace covered
     {
         clientcnt_ = 0;
         is_warmup_speedup_ = true;
-        opcnt_ = 0;
+        perclient_opcnt_ = 0;
         perclient_workercnt_ = 0;
     }
 
@@ -32,9 +32,9 @@ namespace covered
         return is_warmup_speedup_;
     }
 
-    uint32_t ClientCLI::getOpcnt() const
+    uint32_t ClientCLI::getPerclientOpcnt() const
     {
-        return opcnt_;
+        return perclient_opcnt_;
     }
 
     uint32_t ClientCLI::getPerclientWorkercnt() const
@@ -56,7 +56,7 @@ namespace covered
             argument_desc_.add_options()
                 ("clientcnt", boost::program_options::value<uint32_t>()->default_value(1), "the total number of clients")
                 ("disable_warmup_speedup", "disable speedup mode for warmup phase")
-                ("opcnt", boost::program_options::value<uint32_t>()->default_value(1000000), "the total number of operations")
+                ("perclient_opcnt", boost::program_options::value<uint32_t>()->default_value(1000000), "the number of operations for each client")
                 ("perclient_workercnt", boost::program_options::value<uint32_t>()->default_value(1), "the number of worker threads for each client")
             ;
 
@@ -82,13 +82,13 @@ namespace covered
             {
                 is_warmup_speedup = false;
             }
-            uint32_t opcnt = argument_info_["opcnt"].as<uint32_t>();
+            uint32_t perclient_opcnt = argument_info_["perclient_opcnt"].as<uint32_t>();
             uint32_t perclient_workercnt = argument_info_["perclient_workercnt"].as<uint32_t>();
 
             // Store client CLI parameters for dynamic configurations
             clientcnt_ = clientcnt;
             is_warmup_speedup_ = is_warmup_speedup;
-            opcnt_ = opcnt;
+            perclient_opcnt_ = perclient_opcnt;
             perclient_workercnt_ = perclient_workercnt;
             verifyIntegrity_();
 
@@ -112,7 +112,7 @@ namespace covered
             oss << "[Dynamic configurations from CLI parameters in " << kClassName << "]" << std::endl;
             oss << "Client count: " << clientcnt_ << std::endl;
             oss << "Warmup speedup flag: " << (is_warmup_speedup_?"true":"false") << std::endl;
-            oss << "Operation count (workload size): " << opcnt_ << std::endl;
+            oss << "Per-client operation count (workload size): " << perclient_opcnt_ << std::endl;
             oss << "Per-client worker count: " << perclient_workercnt_;
             Util::dumpDebugMsg(kClassName, oss.str());
 
@@ -134,7 +134,7 @@ namespace covered
     void ClientCLI::verifyIntegrity_() const
     {
         assert(clientcnt_ > 0);
-        assert(opcnt_ > 0);
+        assert(perclient_opcnt_ > 0);
         assert(perclient_workercnt_ > 0);
 
         uint32_t edgecnt = getEdgecnt();
