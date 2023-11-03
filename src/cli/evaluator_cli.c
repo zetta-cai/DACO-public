@@ -39,8 +39,8 @@ namespace covered
 
             // Dynamic configurations for client
             argument_desc_.add_options()
-                ("max_warmup_duration_sec", boost::program_options::value<uint32_t>()->default_value(10), "duration of warmup phase (seconds)")
-                ("stresstest_duration_sec", boost::program_options::value<uint32_t>()->default_value(10), "duration of stresstest phase (seconds)")
+                ("max_warmup_duration_sec", boost::program_options::value<uint32_t>()->default_value(30), "duration of warmup phase (seconds)")
+                ("stresstest_duration_sec", boost::program_options::value<uint32_t>()->default_value(30), "duration of stresstest phase (seconds)")
             ;
 
             is_add_cli_parameters_ = true;
