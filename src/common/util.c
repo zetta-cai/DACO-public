@@ -100,11 +100,14 @@ namespace covered
 
     void Util::dumpInfoMsg(const std::string& class_name, const std::string& info_message)
     {
-        std::string cur_timestr = getCurrentTimestr();
-        msgdump_lock_.lock();
-        // \033 means ESC character, 1 means bold, 34 means blue foreground, 0 means reset, and m is end character
-        std::cout << "\033[1;34m" << cur_timestr << " [INFO] <" << class_name << "> " << info_message << std::endl << "\033[0m";
-        msgdump_lock_.unlock();
+        if (Config::isInfo())
+        {
+            std::string cur_timestr = getCurrentTimestr();
+            msgdump_lock_.lock();
+            // \033 means ESC character, 1 means bold, 34 means blue foreground, 0 means reset, and m is end character
+            std::cout << "\033[1;34m" << cur_timestr << " [INFO] <" << class_name << "> " << info_message << std::endl << "\033[0m";
+            msgdump_lock_.unlock();
+        }
         return;
     }
 

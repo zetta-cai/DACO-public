@@ -23,7 +23,16 @@ namespace covered
 		} else {
 			list_iterator_t list_iter = map_iter->second;
 			assert(list_iter != cache_items_list_.end());
-			assert(list_iter->first == key);
+
+			// Key check
+			if (!(list_iter->first == key))
+			{
+				std::ostringstream oss;
+				oss << "get() for key " << key.getKeystr() << " failed due to mismatched key of list_iter->first " << list_iter->first.getKeystr();
+				Util::dumpErrorMsg(kClassName, oss.str());
+				exit(1);
+			}
+
 			cache_items_list_.splice(cache_items_list_.begin(), cache_items_list_, list_iter); // Move the list entry pointed by list_iter to the head of the list (NOT change the memory address of the list entry)
 			value = list_iter->second;
 			is_local_cached = true;
@@ -143,7 +152,9 @@ namespace covered
 			size_ = Util::uint64Minus(size_, static_cast<uint64_t>(key.getKeyLength() + sizeof(list_iterator_t)));
 
 			// Remove the corresponding list entry
-			cache_items_list_.pop_back();
+			// NOTE: we cannot simply pop the least recent object from LRU list, which may NOT be the same as the given victim due to multi-threading access
+			//cache_items_list_.pop_back();
+			cache_items_list_.erase(victim_list_iter);
 			size_ = Util::uint64Minus(size_, static_cast<uint64_t>(key.getKeyLength() + victim_valuesize));
 
 			is_evict = true;

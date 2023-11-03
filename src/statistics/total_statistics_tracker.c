@@ -64,22 +64,23 @@ namespace covered
 
     TotalAggregatedStatistics TotalStatisticsTracker::getCurslotTotalAggregatedStatistics() const
     {
-        assert(allow_update_ == true);
-
-        const uint32_t slotcnt = perslot_total_aggregated_statistics_.size();
-        assert(slotcnt > 0);
-
-        return perslot_total_aggregated_statistics_[slotcnt - 1];
+        return getGivenslotTotalAggregatedStatistics(perslot_total_aggregated_statistics_.size() - 1);
     }
     
     TotalAggregatedStatistics TotalStatisticsTracker::getPrevslotTotalAggregatedStatistics() const
+    {
+        return getGivenslotTotalAggregatedStatistics(perslot_total_aggregated_statistics_.size() - 2);
+    }
+
+    TotalAggregatedStatistics TotalStatisticsTracker::getGivenslotTotalAggregatedStatistics(const uint32_t& slotidx) const
     {
         assert(allow_update_ == true);
 
         const uint32_t slotcnt = perslot_total_aggregated_statistics_.size();
         assert(slotcnt > 1);
+        assert(slotidx < slotcnt);
 
-        return perslot_total_aggregated_statistics_[slotcnt - 2];
+        return perslot_total_aggregated_statistics_[slotidx];
     }
 
     bool TotalStatisticsTracker::isPerSlotTotalAggregatedStatisticsStable(double& cache_hit_ratio)
@@ -89,47 +90,56 @@ namespace covered
         bool is_stable = false;
 
         const uint32_t slotcnt = perslot_total_aggregated_statistics_.size();
-        if (slotcnt > 1)
+        const uint32_t slot_checkcnt = 2; // Make slot_checkcnt cache stability checkings
+        if (slotcnt > slot_checkcnt)
         {
-            //return true; // TMPDEBUG
-
-            TotalAggregatedStatistics cur_total_aggregated_statistics = getCurslotTotalAggregatedStatistics();
-            uint64_t cur_total_cache_margin_bytes = cur_total_aggregated_statistics.getTotalCacheMarginBytes();
-            double cur_total_cache_utilization = cur_total_aggregated_statistics.getTotalCacheUtilization();
-            double cur_total_hit_ratio = cur_total_aggregated_statistics.getTotalHitRatio();
-
-            TotalAggregatedStatistics prev_total_aggregated_statistics = getPrevslotTotalAggregatedStatistics();
-            double prev_total_hit_ratio = prev_total_aggregated_statistics.getTotalHitRatio();
-
-            bool is_cache_stable = false;
-            if (cur_total_hit_ratio == 1.0) // Fully hit due to over-provisioned cache size capacity
+            bool is_cache_stable = true;
+            for (uint32_t tmp_checkidx = 0; tmp_checkidx < slot_checkcnt; tmp_checkidx++)
             {
-                is_cache_stable = true;
-            }
-            else // Non-fully hit due to under-provisioned cache size capacity
-            {
-                // If cache is filled up
-                bool is_cache_fillup = false;
-                if (cur_total_cache_margin_bytes <= CACHE_MARGIN_BYTES_IOTA_FOR_FILLUP || cur_total_cache_utilization >= CACHE_UTILIZATION_THRESHOLD_FOR_FILLUP)
+                // Get more recent total aggregated statistics
+                uint32_t tmp_cur_slotidx = slotcnt - 1 - tmp_checkidx;
+                TotalAggregatedStatistics tmp_cur_total_aggregated_statistics = getGivenslotTotalAggregatedStatistics(tmp_cur_slotidx);
+                uint64_t tmp_cur_total_cache_margin_bytes = tmp_cur_total_aggregated_statistics.getTotalCacheMarginBytes();
+                double tmp_cur_total_cache_utilization = tmp_cur_total_aggregated_statistics.getTotalCacheUtilization();
+                double tmp_cur_total_hit_ratio = tmp_cur_total_aggregated_statistics.getTotalHitRatio();
+
+                // Get less recent total aggregated statistics
+                uint32_t tmp_prev_slotidx = slotcnt - 1 - tmp_checkidx - 1;
+                TotalAggregatedStatistics tmp_prev_total_aggregated_statistics = getGivenslotTotalAggregatedStatistics(tmp_prev_slotidx);
+                double tmp_prev_total_hit_ratio = tmp_prev_total_aggregated_statistics.getTotalHitRatio();
+
+                if (tmp_cur_total_hit_ratio == 1.0) // Fully hit due to over-provisioned cache size capacity
                 {
-                    is_cache_fillup = true;
+                    continue;
                 }
-
-                // If cache becomes stable
-                if (is_cache_fillup)
+                else // Non-fully hit due to under-provisioned cache size capacity
                 {
-                    double abs_cache_hit_ratio_change = (cur_total_hit_ratio >= prev_total_hit_ratio)?(cur_total_hit_ratio - prev_total_hit_ratio):(prev_total_hit_ratio - cur_total_hit_ratio);
-                    if (cur_total_hit_ratio > 0.0 && prev_total_hit_ratio > 0.0 && abs_cache_hit_ratio_change <= CACHE_HIT_RATIO_CHANGE_THRESHOLD_FOR_STABLE) // Limited change on cache hit ratio
+                    // If cache is filled up
+                    bool is_cache_fillup = false;
+                    if (tmp_cur_total_cache_margin_bytes <= CACHE_MARGIN_BYTES_IOTA_FOR_FILLUP || tmp_cur_total_cache_utilization >= CACHE_UTILIZATION_THRESHOLD_FOR_FILLUP)
                     {
-                        is_cache_stable = true;
+                        is_cache_fillup = true;
+                    }
+
+                    // If cache becomes stable
+                    if (is_cache_fillup)
+                    {
+                        double abs_cache_hit_ratio_change = (tmp_cur_total_hit_ratio >= tmp_prev_total_hit_ratio)?(tmp_cur_total_hit_ratio - tmp_prev_total_hit_ratio):(tmp_prev_total_hit_ratio - tmp_cur_total_hit_ratio);
+                        if (tmp_cur_total_hit_ratio > 0.0 && tmp_prev_total_hit_ratio > 0.0 && abs_cache_hit_ratio_change <= CACHE_HIT_RATIO_CHANGE_THRESHOLD_FOR_STABLE) // Limited change on cache hit ratio
+                        {
+                            continue;
+                        }
                     }
                 }
+
+                is_cache_stable = false;
+                break;
             }
 
             if (is_cache_stable)
             {
                 is_stable = true;
-                cache_hit_ratio = cur_total_hit_ratio;
+                cache_hit_ratio = getCurslotTotalAggregatedStatistics().getCooperativeHitRatio();
             }
         }
 

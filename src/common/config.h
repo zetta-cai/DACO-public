@@ -49,6 +49,7 @@ namespace covered
         static const std::string FACEBOOK_CONFIG_FILEPATH_KEYSTR;
         static const std::string FINE_GRAINED_LOCKING_SIZE_KEYSTR;
         static const std::string IS_DEBUG_KEYSTR;
+        static const std::string IS_INFO_KEYSTR;
         static const std::string IS_GENERATE_RANDOM_VALUESTR_KEYSTR;
         static const std::string IS_TRACK_EVENT_KEYSTR;
         static const std::string LATENCY_HISTOGRAM_SIZE_KEYSTR;
@@ -97,6 +98,7 @@ namespace covered
         static std::string getFacebookConfigFilepath();
         static uint32_t getFineGrainedLockingSize();
         static bool isDebug();
+        static bool isInfo();
         static bool isGenerateRandomValuestr();
         static bool isTrackEvent();
         static uint32_t getLatencyHistogramSize();
@@ -154,6 +156,7 @@ namespace covered
         static std::string facebook_config_filepath_; // Configuration file path for Facebook CDN workload
         static uint32_t fine_grained_locking_size_; // Bucket size of fine-grained locking
         static bool is_debug_; // Whether to dump debug information -> NOT affect evaluation results and NOT changed during evaluation
+        static bool is_info_; // Whether to dump info log -> NOT affect evaluation and NOT changed during evaluation
         static bool is_generate_random_valuestr_; // Whether to generate random string to fill up value content
         static bool is_track_event_; // Whether to track per-message events for debugging -> NOT affect evaluation results and NOT changed during evaluation
         static uint32_t latency_histogram_size_; // Size of latency histogram

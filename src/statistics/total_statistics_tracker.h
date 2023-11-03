@@ -33,6 +33,7 @@ namespace covered
         // Get cur-slot total cache hit ratio
         TotalAggregatedStatistics getCurslotTotalAggregatedStatistics() const;
         TotalAggregatedStatistics getPrevslotTotalAggregatedStatistics() const;
+        TotalAggregatedStatistics getGivenslotTotalAggregatedStatistics(const uint32_t& slotidx) const;
 
         // Cache is stable if cache is filled up and total hit ratio converges
         bool isPerSlotTotalAggregatedStatisticsStable(double& cache_hit_ratio);
