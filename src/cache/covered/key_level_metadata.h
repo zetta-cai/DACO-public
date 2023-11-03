@@ -20,10 +20,13 @@ namespace covered
         KeyLevelMetadata(const KeyLevelMetadata& other);
         ~KeyLevelMetadata();
 
-        void updateDynamicMetadata();
+        void updateDynamicMetadata(const ObjectSize& object_size);
 
         GroupId getGroupId() const;
         Frequency getFrequency() const;
+        #ifdef TRACK_PERKEY_OBJSIZE
+        ObjectSize getObjectSize() const;
+        #endif
 
         static uint64_t getSizeForCapacity();
     private:
@@ -34,6 +37,9 @@ namespace covered
 
         // Non-const dynamic metadata
         Frequency frequency_;
+        #ifdef TRACK_PERKEY_OBJSIZE
+        ObjectSize object_size_;
+        #endif
     };
 }
 

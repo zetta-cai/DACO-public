@@ -7,6 +7,13 @@
 #ifndef COVERED_COMMON_HEADER_H
 #define COVERED_COMMON_HEADER_H
 
+// Used in src/cache/covered/*
+// NOTE: we track key-level accurate object size to avoid affecting cache management decisions
+#define TRACK_PERKEY_OBJSIZE // Track accurate object size in key-level metadata
+#ifndef TRACK_PERKEY_OBJSIZE
+#define TRACK_PERGROUP_OBJSIZE // Track approximate object size in group-level metadata
+#endif
+
 #include <cstdint> // uint32_t, uint64_t
 
 namespace covered

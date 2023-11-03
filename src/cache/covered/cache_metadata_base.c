@@ -134,7 +134,7 @@ namespace covered
         perkey_lookup_iter_t perkey_lookup_iter = getLookup_(key);
 
         // Update object-level metadata
-        const KeyLevelMetadata& perkey_metadata_ref = updatePerkeyMetadata_(perkey_lookup_iter);
+        const KeyLevelMetadata& perkey_metadata_ref = updatePerkeyMetadata_(perkey_lookup_iter, value);
 
         // Update group-level metadata
         const GroupLevelMetadata& pergroup_metadata_ref = updatePergroupMetadata_(perkey_lookup_iter, key, value, original_value, is_value_related);
@@ -192,14 +192,16 @@ namespace covered
         return perkey_metadata_iter;
     }
     
-    const KeyLevelMetadata& CacheMetadataBase::updatePerkeyMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter)
+    const KeyLevelMetadata& CacheMetadataBase::updatePerkeyMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter, const Value& value)
     {
         // Verify that key must exist
         const LookupMetadata& lookup_metadata = perkey_lookup_iter->second;
         perkey_metadata_list_t::iterator perkey_metadata_iter = lookup_metadata.getPerkeyMetadataIter();
         assert(perkey_metadata_iter != perkey_metadata_list_.end()); // For existing key
 
-        perkey_metadata_iter->second.updateDynamicMetadata();
+        // Update object-level metadata
+        const ObjectSize tmp_object_size = perkey_lookup_iter->first.getKeyLength() + value.getValuesize();
+        perkey_metadata_iter->second.updateDynamicMetadata(tmp_object_size);
 
         // Update LRU list order
         if (perkey_metadata_iter != perkey_metadata_list_.begin())
@@ -274,6 +276,8 @@ namespace covered
 
     const GroupLevelMetadata& CacheMetadataBase::updatePergroupMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter, const Key& key, const Value& value, const Value& original_value, const bool& is_value_related)
     {
+        // TODO: END HERE
+        
         // Verify that key must exist
         const LookupMetadata& lookup_metadata = perkey_lookup_iter->second;
         perkey_metadata_list_t::iterator perkey_metadata_iter = lookup_metadata.getPerkeyMetadataIter();
