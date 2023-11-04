@@ -1,5 +1,7 @@
 #include "cache/covered/key_level_metadata.h"
 
+#include <assert.h>
+
 namespace covered
 {
     const std::string KeyLevelMetadata::kClassName("KeyLevelMetadata");
