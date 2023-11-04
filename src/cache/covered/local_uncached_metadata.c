@@ -80,8 +80,8 @@ namespace covered
             bool need_detrack = needDetrackForUncachedObjects_(detracked_key);
             if (need_detrack) // Cache size usage for local uncached objects exceeds the max bytes limitation
             {
-                uint32_t approx_detracked_value_size = getApproxValueSizeForUncachedObjects(detracked_key);                
-                removeForExistingKey(detracked_key, Value(approx_detracked_value_size)); // For getrsp with cache miss, put/delrsp with cache miss
+                uint32_t detracked_value_size = getValueSizeForUncachedObjects(detracked_key);                
+                removeForExistingKey(detracked_key, Value(detracked_value_size)); // For getrsp with cache miss, put/delrsp with cache miss
             }
             else // Local uncached objects is limited
             {

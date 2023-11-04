@@ -151,8 +151,6 @@ namespace covered
 
     void CacheMetadataBase::removeForExistingKey_(const Key& detracked_key, const Value& detracked_value, const bool& is_local_cached_metadata)
     {
-        // TODO: END HERE
-
         // Get lookup iterator
         perkey_lookup_iter_t perkey_lookup_iter = getLookup_(detracked_key);
 
@@ -177,10 +175,10 @@ namespace covered
     {
         #ifdef TRACK_PERKEY_OBJSIZE
         const KeyLevelMetadata& perkey_metadata_ref = getkeyLevelMetadata_(perkey_lookup_const_iter);
-        object_size = perkey_metadata_ref.getObjectSize();
+        ObjectSize object_size = perkey_metadata_ref.getObjectSize();
         #else
         const GroupLevelMetadata& pergroup_metadata_ref = getGroupLevelMetadata_(perkey_lookup_const_iter);
-        object_size = static_cast<ObjectSize>(pergroup_metadata_ref.getAvgObjectSize());
+        ObjectSize object_size = static_cast<ObjectSize>(pergroup_metadata_ref.getAvgObjectSize());
         #endif
 
         return object_size;

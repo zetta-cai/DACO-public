@@ -8,9 +8,9 @@
 #define COVERED_COMMON_HEADER_H
 
 // Used in src/cache/covered/*
-// NOTE: we track key-level accurate object size to avoid affecting cache management decisions
-// If defined, we track accurate object size in key-level metadata
-// If not defined, we track approximate object size in group-level metadata
+// NOTE: we track key-level accurate object size by default to avoid affecting cache management decisions -> although existing studies (e.g., Segcache) use group-level object size, they may have similar object sizes, while edge caching has significantly different object sizes, which will affect cache management decisions
+// -> If defined, we track accurate object size in key-level metadata
+// -> If not defined, we track approximate object size in group-level metadata
 #define TRACK_PERKEY_OBJSIZE
 
 #include <cstdint> // uint32_t, uint64_t

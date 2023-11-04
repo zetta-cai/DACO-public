@@ -118,8 +118,10 @@ namespace covered
                 assert(tmp_victim_handle != nullptr); // Victim must be cached before eviction
                 tmp_victim_value_size = tmp_victim_handle->getSize();
                 #ifdef TRACK_PERKEY_OBJSIZE
+                // NOTE: tmp_victim_object_size got from key-level metadata is already accurate
                 assert(tmp_victim_object_size == (tmp_victim_key.getKeyLength() + tmp_victim_value_size));
                 #else
+                // NOTE: tmp_victim_object_size got from group-level metadata is approximate, which should be replaced with the accurate one from local edge cache
                 tmp_victim_object_size = tmp_victim_key.getKeyLength() + tmp_victim_value_size;
                 #endif
 
@@ -245,8 +247,6 @@ namespace covered
 
     void CoveredLocalCache::admitLocalCacheInternal_(const Key& key, const Value& value, bool& affect_victim_tracker, bool& is_successful)
     {
-        // TODO: END HERE
-        
         is_successful = false;
         const std::string keystr = key.getKeystr();
 
@@ -314,7 +314,8 @@ namespace covered
             Reward tmp_local_reward = 0.0;
 
             //bool is_least_popular_key_exist = local_cached_metadata_.getLeastPopularKey(least_popular_rank, tmp_victim_key);
-            bool is_least_popular_key_exist = local_cached_metadata_.getLeastPopularKeyAndPopularity(least_popular_rank, tmp_victim_key, tmp_local_cached_popularity, tmp_redirected_cached_popularity, tmp_local_reward);
+            ObjectSize tmp_victim_object_size = 0;
+            bool is_least_popular_key_exist = local_cached_metadata_.getLeastPopularKeyObjsizePopularity(least_popular_rank, tmp_victim_key, tmp_victim_object_size, tmp_local_cached_popularity, tmp_redirected_cached_popularity, tmp_local_reward);
             if (is_least_popular_key_exist)
             {
                 if (keys.find(tmp_victim_key) == keys.end())
@@ -325,7 +326,13 @@ namespace covered
                     LruCacheReadHandle tmp_victim_handle = covered_cache_ptr_->find(tmp_victim_keystr); // NOTE: although find() will move the item to the front of the LRU list to update recency information inside cachelib, covered uses local cache metadata tracked outside cachelib for cache management
                     assert(tmp_victim_handle != nullptr); // Victim must be cached before eviction
                     uint32_t tmp_victim_value_size = tmp_victim_handle->getSize();
-                    uint32_t tmp_victim_object_size = tmp_victim_key.getKeyLength() + tmp_victim_value_size;
+                    #ifdef TRACK_PERKEY_OBJSIZE
+                    // NOTE: tmp_victim_object_size got from key-level metadata is already accurate
+                    assert(tmp_victim_object_size == (tmp_victim_key.getKeyLength() + tmp_victim_value_size));
+                    #else
+                    // NOTE: tmp_victim_object_size got from group-level metadata is approximate, which should be replaced with the accurate one from local edge cache
+                    tmp_victim_object_size = tmp_victim_key.getKeyLength() + tmp_victim_value_size;
+                    #endif
 
                     VictimCacheinfo tmp_victim_info(tmp_victim_key, tmp_victim_object_size, tmp_local_cached_popularity, tmp_redirected_cached_popularity, tmp_local_reward);
                     assert(tmp_victim_info.isComplete()); // NOTE: victim cacheinfos from local edge cache MUST be complete
