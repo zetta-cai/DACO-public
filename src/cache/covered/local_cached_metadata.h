@@ -21,7 +21,7 @@ namespace covered
 
         // ONLY for local cached objects
 
-        bool getLeastPopularKeyAndPopularity(const uint32_t& least_popular_rank, Key& key, Popularity& local_cached_popularity, Popularity& redirected_cached_popularity, Reward& local_reward) const; // Get ith least popular key and its local/redirected cached popularity for local cached object with local reward (determine the ranking order)
+        bool getLeastPopularKeyObjsizePopularity(const uint32_t& least_popular_rank, Key& key, ObjectSize& object_size, Popularity& local_cached_popularity, Popularity& redirected_cached_popularity, Reward& local_reward) const; // Get ith least popular key and its local/redirected cached popularity for local cached object with local reward (determine the ranking order)
 
         // Different for local cached objects
 

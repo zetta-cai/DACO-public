@@ -11,13 +11,17 @@ namespace covered
 
     GroupLevelMetadata::GroupLevelMetadata()
     {
+        #ifndef TRACK_PERKEY_OBJSIZE
         avg_object_size_ = 0.0;
+        #endif
         object_cnt_ = 0;
     }
 
     GroupLevelMetadata::GroupLevelMetadata(const GroupLevelMetadata& other)
     {
+        #ifndef TRACK_PERKEY_OBJSIZE
         avg_object_size_ = other.avg_object_size_;
+        #endif
         object_cnt_ = other.object_cnt_;
     }
 
@@ -25,8 +29,10 @@ namespace covered
 
     void GroupLevelMetadata::updateForNewlyGrouped(const Key& key, const Value& value)
     {
+        #ifndef TRACK_PERKEY_OBJSIZE
         uint32_t object_size = key.getKeyLength() + value.getValuesize();
         avg_object_size_ = (avg_object_size_ * object_cnt_ + object_size) / (object_cnt_ + 1);
+        #endif
         object_cnt_++;
 
         return;
@@ -43,6 +49,7 @@ namespace covered
     {
         assert(object_cnt_ > 0);
 
+        #ifndef TRACK_PERKEY_OBJSIZE
         uint32_t original_object_size = key.getKeyLength() + original_value.getValuesize();
         uint32_t object_size = key.getKeyLength() + value.getValuesize();
         if (avg_object_size_ * object_cnt_ + object_size >= static_cast<AvgObjectSize>(original_object_size))
@@ -57,12 +64,14 @@ namespace covered
 
             avg_object_size_ = 0.0;
         }
+        #endif
 
         return;
     }
 
     bool GroupLevelMetadata::updateForDegrouped(const Key& key, const Value& value, const bool& need_warning)
     {
+        #ifndef TRACK_PERKEY_OBJSIZE
         uint32_t object_size = key.getKeyLength() + value.getValuesize();
         if (object_cnt_ > 1)
         {
@@ -86,17 +95,21 @@ namespace covered
         {
             avg_object_size_ = 0.0;
         }
+        #endif
+
         object_cnt_--;
 
         bool is_group_empty = (object_cnt_ == 0);
         return is_group_empty;
     }
 
+    #ifndef TRACK_PERKEY_OBJSIZE
     AvgObjectSize GroupLevelMetadata::getAvgObjectSize() const
     {
         assert(object_cnt_ > 0);
         return avg_object_size_;
     }
+    #endif
     
     ObjectCnt GroupLevelMetadata::getObjectCnt() const
     {
@@ -105,6 +118,10 @@ namespace covered
 
     uint64_t GroupLevelMetadata::getSizeForCapacity()
     {
-        return sizeof(ObjectSize) + sizeof(ObjectCnt);
+        #ifndef TRACK_PERKEY_OBJSIZE
+        return sizeof(AvgObjectSize) + sizeof(ObjectCnt);
+        #else
+        return sizeof(ObjectCnt);
+        #endif
     }
 }

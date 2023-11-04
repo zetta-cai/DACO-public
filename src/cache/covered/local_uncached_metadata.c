@@ -15,7 +15,7 @@ namespace covered
 
     // ONLY for local uncached objects
 
-    bool LocalUncachedMetadata::getLocalUncachedPopularityAndAvgObjectSize(const Key& key, Popularity& local_uncached_popularity, ObjectSize& avg_object_size) const
+    bool LocalUncachedMetadata::getLocalUncachedObjsizePopularityForKey(const Key& key, ObjectSize& object_size, Popularity& local_uncached_popularity) const
     {
         bool is_key_exist = false;
 
@@ -26,9 +26,7 @@ namespace covered
         if (perkey_lookup_const_iter != perkey_lookup_table_.end())
         {
             local_uncached_popularity = getPopularity_(perkey_lookup_const_iter);
-
-            const GroupLevelMetadata& pergroup_metadata_ref = getGroupLevelMetadata_(perkey_lookup_const_iter);
-            avg_object_size = pergroup_metadata_ref.getAvgObjectSize();
+            object_size = getObjectSize_(perkey_lookup_const_iter);
 
             is_key_exist = true;
         }
@@ -36,24 +34,23 @@ namespace covered
         return is_key_exist;
     }
 
-    uint32_t LocalUncachedMetadata::getApproxValueSizeForUncachedObjects(const Key& key) const
+    uint32_t LocalUncachedMetadata::getValueSizeForUncachedObjects(const Key& key) const
     {
         // Get lookup iterator
         perkey_lookup_const_iter_t perkey_lookup_const_iter = getLookup_(key);
 
-        // Get average object size
-        const GroupLevelMetadata& pergroup_metadata_ref = getGroupLevelMetadata_(perkey_lookup_const_iter);
-        uint32_t avg_object_size = pergroup_metadata_ref.getAvgObjectSize();
+        // Get accurate/average object size
+        ObjectSize object_size = getObjectSize_(perkey_lookup_const_iter);
 
-        // NOTE: for local uncached objects, as we do NOT know per-key value size, we use the (average object size - key size) as the approximated detrack value
-        uint32_t approx_value_size = 0;
+        // NOTE: for local uncached objects, as we do NOT know per-key value size (ifndef TRACK_PERKEY_OBJSIZE), we use the (average object size - key size) as the approximate detrack value
+        uint32_t value_size = 0;
         uint32_t detrack_key_size = key.getKeyLength();
-        if (avg_object_size > detrack_key_size)
+        if (object_size > detrack_key_size)
         {
-            approx_value_size = avg_object_size - detrack_key_size;
+            value_size = object_size - detrack_key_size;
         }
 
-        return approx_value_size;
+        return value_size;
     }
 
     bool LocalUncachedMetadata::needDetrackForUncachedObjects_(Key& detracked_key) const

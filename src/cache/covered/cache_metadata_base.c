@@ -115,7 +115,7 @@ namespace covered
         const GroupLevelMetadata& pergroup_metadata_ref = addPergroupMetadata_(key, value, assigned_group_id);
 
         // Add object-level metadata for new key
-        perkey_metadata_list_t::iterator perkey_metadata_iter = addPerkeyMetadata_(key, assigned_group_id);
+        perkey_metadata_list_t::iterator perkey_metadata_iter = addPerkeyMetadata_(key, value, assigned_group_id);
         const KeyLevelMetadata& perkey_metadata_ref = perkey_metadata_iter->second;
 
         // Add popularity for new key
@@ -134,7 +134,7 @@ namespace covered
         perkey_lookup_iter_t perkey_lookup_iter = getLookup_(key);
 
         // Update object-level metadata
-        const KeyLevelMetadata& perkey_metadata_ref = updatePerkeyMetadata_(perkey_lookup_iter, value);
+        const KeyLevelMetadata& perkey_metadata_ref = updatePerkeyMetadata_(perkey_lookup_iter, value, original_value, is_value_related);
 
         // Update group-level metadata
         const GroupLevelMetadata& pergroup_metadata_ref = updatePergroupMetadata_(perkey_lookup_iter, key, value, original_value, is_value_related);
@@ -151,6 +151,8 @@ namespace covered
 
     void CacheMetadataBase::removeForExistingKey_(const Key& detracked_key, const Value& detracked_value, const bool& is_local_cached_metadata)
     {
+        // TODO: END HERE
+
         // Get lookup iterator
         perkey_lookup_iter_t perkey_lookup_iter = getLookup_(detracked_key);
 
@@ -171,9 +173,31 @@ namespace covered
         return;
     }
 
+    ObjectSize CacheMetadataBase::getObjectSize_(const perkey_lookup_const_iter_t& perkey_lookup_const_iter) const
+    {
+        #ifdef TRACK_PERKEY_OBJSIZE
+        const KeyLevelMetadata& perkey_metadata_ref = getkeyLevelMetadata_(perkey_lookup_const_iter);
+        object_size = perkey_metadata_ref.getObjectSize();
+        #else
+        const GroupLevelMetadata& pergroup_metadata_ref = getGroupLevelMetadata_(perkey_lookup_const_iter);
+        object_size = static_cast<ObjectSize>(pergroup_metadata_ref.getAvgObjectSize());
+        #endif
+
+        return object_size;
+    }
+
     // For object-level metadata
 
-    perkey_metadata_list_t::iterator CacheMetadataBase::addPerkeyMetadata_(const Key& key, const GroupId& assigned_group_id)
+    const KeyLevelMetadata& CacheMetadataBase::getkeyLevelMetadata_(const perkey_lookup_const_iter_t& perkey_lookup_const_iter) const
+    {
+        const LookupMetadata& lookup_metadata = perkey_lookup_const_iter->second;
+        perkey_metadata_list_t::iterator perkey_metadata_iter = lookup_metadata.getPerkeyMetadataIter();
+        assert(perkey_metadata_iter != perkey_metadata_list_.end()); // NOTE: object-level metadata MUST exist for the key
+
+        return perkey_metadata_iter->second;
+    }
+
+    perkey_metadata_list_t::iterator CacheMetadataBase::addPerkeyMetadata_(const Key& key, const Value& value, const GroupId& assigned_group_id)
     {
         // NOTE: NO need to verify key existence due to LRU-based list
 
@@ -182,7 +206,8 @@ namespace covered
         perkey_metadata_list_t::iterator perkey_metadata_iter = perkey_metadata_list_.begin();
         assert(perkey_metadata_iter != perkey_metadata_list_.end());
 
-        perkey_metadata_iter->second.updateDynamicMetadata();
+        const ObjectSize object_size = key.getKeyLength() + value.getValuesize();
+        perkey_metadata_iter->second.updateDynamicMetadata(object_size, 0, true);
 
         // push_front already places the new object-level metadata to the head of LRU list -> NO need to update LRU list order
 
@@ -192,7 +217,7 @@ namespace covered
         return perkey_metadata_iter;
     }
     
-    const KeyLevelMetadata& CacheMetadataBase::updatePerkeyMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter, const Value& value)
+    const KeyLevelMetadata& CacheMetadataBase::updatePerkeyMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter, const Value& value, const Value& original_value, const bool& is_value_related)
     {
         // Verify that key must exist
         const LookupMetadata& lookup_metadata = perkey_lookup_iter->second;
@@ -201,7 +226,8 @@ namespace covered
 
         // Update object-level metadata
         const ObjectSize tmp_object_size = perkey_lookup_iter->first.getKeyLength() + value.getValuesize();
-        perkey_metadata_iter->second.updateDynamicMetadata(tmp_object_size);
+        const ObjectSize tmp_original_object_size = perkey_lookup_iter->first.getKeyLength() + original_value.getValuesize();
+        perkey_metadata_iter->second.updateDynamicMetadata(tmp_object_size, tmp_original_object_size, is_value_related);
 
         // Update LRU list order
         if (perkey_metadata_iter != perkey_metadata_list_.begin())
@@ -275,9 +301,7 @@ namespace covered
     }
 
     const GroupLevelMetadata& CacheMetadataBase::updatePergroupMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter, const Key& key, const Value& value, const Value& original_value, const bool& is_value_related)
-    {
-        // TODO: END HERE
-        
+    {        
         // Verify that key must exist
         const LookupMetadata& lookup_metadata = perkey_lookup_iter->second;
         perkey_metadata_list_t::iterator perkey_metadata_iter = lookup_metadata.getPerkeyMetadataIter();
@@ -357,7 +381,11 @@ namespace covered
 
         // NOTE: Here we use a simple approach to calculate popularity based on object-level and group-level metadata
         Popularity popularity = 0.0;
+        #ifdef TRACK_PERKEY_OBJSIZE
+        AvgObjectSize avg_objsize_bytes = static_cast<AvgObjectSize>(perkey_statistics.getObjectSize());
+        #else
         AvgObjectSize avg_objsize_bytes = pergroup_statistics.getAvgObjectSize();
+        #endif
         if (avg_objsize_bytes == 0.0) // Zero avg object size due to approximate value sizes in local uncached metadata
         {
             popularity = 0; // Set popularity as zero to avoid mis-admiting the uncached object with unknow object size

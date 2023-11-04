@@ -22,11 +22,19 @@ namespace covered
 
     KeyLevelMetadata::~KeyLevelMetadata() {}
 
-    void KeyLevelMetadata::updateDynamicMetadata(const ObjectSize& object_size)
+    void KeyLevelMetadata::updateDynamicMetadata(const ObjectSize& object_size, const ObjectSize& original_object_size, const bool& is_value_related)
     {
         frequency_++;
         #ifdef TRACK_PERKEY_OBJSIZE
-        object_size_ = object_size;
+        assert(object_size_ == original_object_size);
+        if (is_value_related)
+        {
+            object_size_ = object_size;
+        }
+        else
+        {
+            assert(object_size_ == object_size);
+        }
         #endif
         return;
     }

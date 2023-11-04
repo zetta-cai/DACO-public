@@ -80,9 +80,12 @@ namespace covered
 
         void removeForExistingKey_(const Key& detracked_key, const Value& value, const bool& is_local_cached_metadata); // Remove admitted cached key or tracked uncached key (for getrsp with cache miss, put/delrsp with cache miss, admission, eviction)
 
+        ObjectSize getObjectSize_(const perkey_lookup_const_iter_t& perkey_lookup_const_iter) const; // Get accurate/approximate object size
+
         // For object-level metadata
-        perkey_metadata_list_t::iterator addPerkeyMetadata_(const Key& key, const GroupId& assigned_group_id); // Return new perkey metadata iterator
-        const KeyLevelMetadata& updatePerkeyMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter, const Value& value); // Return updated KeyLevelMetadata
+        const KeyLevelMetadata& getkeyLevelMetadata_(const perkey_lookup_const_iter_t& perkey_lookup_const_iter) const; // Return existing KeyLevelMetadata
+        perkey_metadata_list_t::iterator addPerkeyMetadata_(const Key& key, const Value& value, const GroupId& assigned_group_id); // Return new perkey metadata iterator
+        const KeyLevelMetadata& updatePerkeyMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter, const Value& value, const Value& original_value, const bool& is_value_related); // Return updated KeyLevelMetadata
         void removePerkeyMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter);
 
         // For group-level metadata

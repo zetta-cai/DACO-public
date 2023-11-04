@@ -12,7 +12,7 @@ namespace covered
 
     // ONLY for local cached objects
 
-    bool LocalCachedMetadata::getLeastPopularKeyAndPopularity(const uint32_t& least_popular_rank, Key& key, Popularity& local_cached_popularity, Popularity& redirected_cached_popularity, Reward& local_reward) const
+    bool LocalCachedMetadata::getLeastPopularKeyObjsizePopularity(const uint32_t& least_popular_rank, Key& key, ObjectSize& object_size, Popularity& local_cached_popularity, Popularity& redirected_cached_popularity, Reward& local_reward) const
     {
         bool is_least_popular_key_exist = false;
 
@@ -25,6 +25,11 @@ namespace covered
             local_cached_popularity = sorted_popularity_iter->first; // TODO: update after introducing heterogeneous popularity calculation (tracked by key-level cache metadata)
             redirected_cached_popularity = 0.0; // TODO: update after introducing heterogeneous popularity calculation (tracked by key-level cache metadata)
             local_reward = sorted_popularity_iter->first; // TODO: update after introducing heterogeneous popularity calculation (used for ranking/sorting)
+
+            // Get tracked object-level/group-level object size
+            perkey_lookup_const_iter_t perkey_lookup_const_iter = tryToGetLookup_(key);
+            assert(perkey_lookup_const_iter != perkey_lookup_table_.end()); // NOTE: key MUST exist
+            object_size = getObjectSize_(perkey_lookup_const_iter);
 
             is_least_popular_key_exist = true;
         }

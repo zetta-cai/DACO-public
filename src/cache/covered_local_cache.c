@@ -108,7 +108,8 @@ namespace covered
             Popularity tmp_redirected_cached_popularity = 0.0;
             Reward tmp_local_reward = 0.0;
 
-            bool is_least_popular_key_exist = local_cached_metadata_.getLeastPopularKeyAndPopularity(least_popular_rank, tmp_victim_key, tmp_local_cached_popularity, tmp_redirected_cached_popularity, tmp_local_reward);
+            ObjectSize tmp_victim_object_size = 0;
+            bool is_least_popular_key_exist = local_cached_metadata_.getLeastPopularKeyObjsizePopularity(least_popular_rank, tmp_victim_key, tmp_victim_object_size, tmp_local_cached_popularity, tmp_redirected_cached_popularity, tmp_local_reward);
 
             if (is_least_popular_key_exist)
             {
@@ -116,7 +117,11 @@ namespace covered
                 LruCacheReadHandle tmp_victim_handle = covered_cache_ptr_->find(tmp_victim_key.getKeystr()); // NOTE: although find() will move the item to the front of the LRU list to update recency information inside cachelib, covered uses local cache metadata tracked outside cachelib for cache management
                 assert(tmp_victim_handle != nullptr); // Victim must be cached before eviction
                 tmp_victim_value_size = tmp_victim_handle->getSize();
-                uint32_t tmp_victim_object_size = tmp_victim_key.getKeyLength() + tmp_victim_value_size;
+                #ifdef TRACK_PERKEY_OBJSIZE
+                assert(tmp_victim_object_size == (tmp_victim_key.getKeyLength() + tmp_victim_value_size));
+                #else
+                tmp_victim_object_size = tmp_victim_key.getKeyLength() + tmp_victim_value_size;
+                #endif
 
                 VictimCacheinfo tmp_victim_info(tmp_victim_key, tmp_victim_object_size, tmp_local_cached_popularity, tmp_redirected_cached_popularity, tmp_local_reward);
                 assert(tmp_victim_info.isComplete()); // NOTE: victim cacheinfos from local edge cache MUST be complete
@@ -135,9 +140,9 @@ namespace covered
 
     void CoveredLocalCache::getCollectedPopularityFromLocalCacheInternal_(const Key& key, CollectedPopularity& collected_popularity) const
     {
-        Popularity local_uncached_popularity = 0.0;
         ObjectSize object_size = 0;
-        bool is_key_tracked = local_uncached_metadata_.getLocalUncachedPopularityAndAvgObjectSize(key, local_uncached_popularity, object_size);
+        Popularity local_uncached_popularity = 0.0;
+        bool is_key_tracked = local_uncached_metadata_.getLocalUncachedObjsizePopularityForKey(key, object_size, local_uncached_popularity);
 
         // NOTE: (value size checking) NOT local-get/remote-collect large-value uncached object for aggregated uncached metadata due to slab-based memory management in Cachelib cache engine
         if ((object_size >= key.getKeyLength()) && ((object_size - key.getKeyLength()) > max_allocation_class_size_)) // May be with large value size
@@ -175,7 +180,9 @@ namespace covered
             auto allocate_handle = covered_cache_ptr_->allocate(covered_poolid_, keystr, value.getValuesize());
             if (allocate_handle == nullptr)
             {
-                is_local_cached = false; // cache may fail to evict due to too many pending writes -> equivalent to NOT caching the latest value
+                //is_local_cached = false; // (OBSOLETE) cache may fail to evict due to too many pending writes -> equivalent to NOT caching the latest value
+
+                is_successful = false; // cache may fail to evict due to too many pending writes -> equivalent to NOT caching the latest value (BUT still local cached, yet will be invalidated by CacheWrapper later)
             }
             else
             {
@@ -204,14 +211,14 @@ namespace covered
         bool is_key_tracked = local_uncached_metadata_.isKeyExist(key);
         if (is_key_tracked) // Key is tracked by local uncached metadata
         {
-            uint32_t approx_original_value_size = local_uncached_metadata_.getApproxValueSizeForUncachedObjects(key);
+            uint32_t original_value_size = local_uncached_metadata_.getValueSizeForUncachedObjects(key);
             if (is_valid_valuesize) // With valid value size
             {
-                local_uncached_metadata_.updateForExistingKey(key, value, Value(approx_original_value_size), is_value_related); // For getrsp with cache miss, put/delrsp with cache miss
+                local_uncached_metadata_.updateForExistingKey(key, value, Value(original_value_size), is_value_related); // For getrsp with cache miss, put/delrsp with cache miss
             }
             else // Large value size -> NOT track the key in local uncached metadata
             {
-                local_uncached_metadata_.removeForExistingKey(key, Value(approx_original_value_size)); // Remove original value size to detrack the key from local uncached metadata
+                local_uncached_metadata_.removeForExistingKey(key, Value(original_value_size)); // Remove original value size to detrack the key from local uncached metadata
             }
         }
         else // Key is NOT tracked by local uncached metadata
@@ -238,6 +245,8 @@ namespace covered
 
     void CoveredLocalCache::admitLocalCacheInternal_(const Key& key, const Value& value, bool& affect_victim_tracker, bool& is_successful)
     {
+        // TODO: END HERE
+        
         is_successful = false;
         const std::string keystr = key.getKeystr();
 

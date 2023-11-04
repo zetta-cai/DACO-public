@@ -20,7 +20,7 @@ namespace covered
         KeyLevelMetadata(const KeyLevelMetadata& other);
         ~KeyLevelMetadata();
 
-        void updateDynamicMetadata(const ObjectSize& object_size);
+        void updateDynamicMetadata(const ObjectSize& object_size, const ObjectSize& original_object_size, const bool& is_value_related);
 
         GroupId getGroupId() const;
         Frequency getFrequency() const;
