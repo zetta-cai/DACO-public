@@ -7,6 +7,8 @@
 #include "ttlbucket.h"
 #include "datapool/datapool.h"
 
+#include <assert.h>
+
 #include <cc_mm.h>
 #include <cc_util.h>
 
@@ -396,6 +398,12 @@ rm_all_item_on_seg(int32_t seg_id, enum seg_state_change reason, struct SegCache
             victim_idx++;
         }
 
+        // TMPDEBUG23
+        if (strncmp(item_key(it), "abybyugmdcilxq", it->klen) == 0)
+        {
+            log_error("rm_all_item_on_seg() evicts item_key(it) %.*s from seg_id %d with need_victims %d", it->klen, item_key(it), seg->seg_id, need_victims?1:0);
+        }
+
 #if defined DEBUG_MODE
         hashtable_evict(item_key(it), it->klen, seg->seg_id_non_decr,
             curr - seg_data, segcache_ptr);
@@ -428,8 +436,8 @@ rm_all_item_on_seg(int32_t seg_id, enum seg_state_change reason, struct SegCache
      * writing (_item_define) and insert after we clear the hashtable entries,
      * so we need to double check, in most cases, this should not happen */
 
-    bool is_realloc = false; // Siyuan: realloc at most once
-    uint32_t extra_victim_cnt = __atomic_load_n(&seg->n_live_item, __ATOMIC_SEQ_CST); // Siyuan: save extra victim_cnt before being changed by hashtable_evict()
+    //bool is_realloc = false; // Siyuan: realloc at most once
+    //uint32_t extra_victim_cnt = __atomic_load_n(&seg->n_live_item, __ATOMIC_SEQ_CST); // Siyuan: save extra victim_cnt before being changed by hashtable_evict()
     if (__atomic_load_n(&seg->n_live_item, __ATOMIC_SEQ_CST) > 0) {
         INCR(segcache_ptr->seg_metrics, seg_evict_retry);
         /* because we don't know which item is newly written, so we
@@ -441,8 +449,11 @@ rm_all_item_on_seg(int32_t seg_id, enum seg_state_change reason, struct SegCache
         while (curr - seg_data < offset) {
             it = (struct item *) curr;
 
-            // Siyuan: check if we need to allocate more memory for evicted key-value pairs
-            if (need_victims && (victim_idx + extra_victim_cnt > victim_cnt) && !is_realloc)
+            // NOTE: as n_live_item will be decreased by 1 in each hashtable_evict() call, victim_idx MUST < victim_cnt now if n_live_item is still > 0
+            assert(victim_idx < victim_cnt);
+
+            // (OBSOLETE) Siyuan: check if we need to allocate more memory for evicted key-value pairs
+            /*(if (need_victims && (victim_idx + extra_victim_cnt > victim_cnt) && !is_realloc)
             {
                 // Temporarily save original evicted key-value pair metadata
                 uint32_t original_victim_cnt = victim_cnt;
@@ -450,7 +461,8 @@ rm_all_item_on_seg(int32_t seg_id, enum seg_state_change reason, struct SegCache
                 struct bstring* original_value_bstrs = *value_bstrs_ptr;
 
                 // Re-allocate memory for evicted key-value pairs
-                victim_cnt = victim_idx + extra_victim_cnt;
+                //victim_cnt = victim_idx + extra_victim_cnt;
+                victim_cnt = original_victim_cnt + extra_victim_cnt;
                 *key_bstrs_ptr = (struct bstring*)malloc(sizeof(struct bstring) * victim_cnt);
                 memset(*key_bstrs_ptr, 0, sizeof(struct bstring) * victim_cnt);
                 *value_bstrs_ptr = (struct bstring*)malloc(sizeof(struct bstring) * victim_cnt);
@@ -472,7 +484,7 @@ rm_all_item_on_seg(int32_t seg_id, enum seg_state_change reason, struct SegCache
                 original_value_bstrs = NULL;
 
                 is_realloc = true;
-            }
+            }*/
 
             // Siyuan: deep copy the current evicted key-value pair
             if (need_victims)
@@ -485,6 +497,12 @@ rm_all_item_on_seg(int32_t seg_id, enum seg_state_change reason, struct SegCache
                 (*value_bstrs_ptr)[victim_idx].data = (char*)malloc(it->vlen);
                 memcpy((*value_bstrs_ptr)[victim_idx].data, item_val(it), it->vlen);
                 victim_idx++;
+            }
+
+            // TMPDEBUG23
+            if (strncmp(item_key(it), "abybyugmdcilxq", it->klen) == 0)
+            {
+                log_error("rm_all_item_on_seg()::tail_processing evicts item_key(it) %.*s from seg_id %d with need_victims %d", it->klen, item_key(it), seg->seg_id, need_victims?1:0);
             }
 
 #if defined DEBUG_MODE
@@ -500,7 +518,8 @@ rm_all_item_on_seg(int32_t seg_id, enum seg_state_change reason, struct SegCache
     // Siyuan: update victim_cnt_ptr
     if (need_victims)
     {
-        *victim_cnt_ptr = victim_cnt;
+        //*victim_cnt_ptr = victim_cnt;
+        *victim_cnt_ptr = victim_idx;
     }
 
     /* expensive debug commands */

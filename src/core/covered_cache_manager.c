@@ -196,9 +196,6 @@ namespace covered
     {
         bool is_finish = false;
         has_best_placement = false;
-
-        // TMPDEBUG23
-        Util::dumpVariablesForDebug(instance_name_, 4, "placementCalculation_ for key", key.getKeystr().c_str(), "is_global_cached:", Util::toString(is_global_cached).c_str());
         
         // For lazy victim fetching before non-blocking placement deployment
         bool need_victim_fetching = false;
@@ -210,6 +207,9 @@ namespace covered
 
         AggregatedUncachedPopularity tmp_aggregated_uncached_popularity;
         bool has_aggregated_uncached_popularity = popularity_aggregator_.getAggregatedUncachedPopularity(key, tmp_aggregated_uncached_popularity);
+
+        // TMPDEBUG23
+        Util::dumpVariablesForDebug(instance_name_, 6, "placementCalculation_ for key", key.getKeystr().c_str(), "is_global_cached:", Util::toString(is_global_cached).c_str(), "has_aggregated_uncached_popularity:", Util::toString(has_aggregated_uncached_popularity).c_str());
 
         // Perform placement calculation ONLY if key is still tracked by popularity aggregator (i.e., belonging to a global popular uncached object)
         if (has_aggregated_uncached_popularity)
@@ -231,7 +231,7 @@ namespace covered
                 const DeltaReward tmp_admission_benefit = tmp_aggregated_uncached_popularity.calcAdmissionBenefit(edge_idx_, key, topicnt, is_global_cached, tmp_placement_edgeset); // TMPDEBUG23
 
                 // TMPDEBUG23
-                Util::dumpVariablesForDebug(instance_name_, 6, "calcAdmissionBenefit for key", key.getKeystr().c_str(), "is_global_cached:", Util::toString(is_global_cached).c_str(), "tmp_admission_benefit:", std::to_string(tmp_admission_benefit).c_str());
+                //Util::dumpVariablesForDebug(instance_name_, 6, "calcAdmissionBenefit for key", key.getKeystr().c_str(), "is_global_cached:", Util::toString(is_global_cached).c_str(), "tmp_admission_benefit:", std::to_string(tmp_admission_benefit).c_str());
 
                 // Calculate eviction cost based on tmp_placement_edgeset
                 std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>> tmp_placement_peredge_synced_victimset;
@@ -240,7 +240,7 @@ namespace covered
                 const DeltaReward tmp_eviction_cost = victim_tracker_.calcEvictionCost(tmp_object_size, tmp_placement_edgeset, tmp_placement_peredge_synced_victimset, tmp_placement_peredge_fetched_victimset, tmp_placement_victim_fetch_edgeset); // NOTE: tmp_eviction_cost may be partial eviction cost if without enough victims
 
                 // TMPDEBUG23
-                Util::dumpVariablesForDebug(instance_name_, 6, "calcEvictionCost for key", key.getKeystr().c_str(), "is_global_cached:", Util::toString(is_global_cached).c_str(), "tmp_eviction_cost:", std::to_string(tmp_eviction_cost).c_str());
+                //Util::dumpVariablesForDebug(instance_name_, 6, "calcEvictionCost for key", key.getKeystr().c_str(), "is_global_cached:", Util::toString(is_global_cached).c_str(), "tmp_eviction_cost:", std::to_string(tmp_eviction_cost).c_str());
 
                 // Calculate placement gain (admission benefit - eviction cost)
                 const DeltaReward tmp_placement_gain = tmp_admission_benefit - tmp_eviction_cost;

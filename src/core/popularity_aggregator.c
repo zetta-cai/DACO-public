@@ -150,7 +150,15 @@ namespace covered
         // NOTE: key MUST have aggregated uncached popularity if with placement edgeset
         AggregatedUncachedPopularity existing_aggregated_uncached_popularity;
         bool has_aggregated_uncached_popularity = getAggregatedUncachedPopularity_(key, existing_aggregated_uncached_popularity);
-        assert(has_aggregated_uncached_popularity == true);
+
+        // NOTE: the corresponding aggregated uncached popularity may already be removed, if all local uncached popularities are removed during popularity aggregation (is_tracked = false) or after placement calculation (clear placement edgeset), else if capacity bytes for popularity aggregation are used up
+        //assert(has_aggregated_uncached_popularity == true);
+        if (has_aggregated_uncached_popularity == false)
+        {
+            std::ostringstream oss;
+            oss << "aggregated uncached popularity for key " << key.getKeystr() << " has already been erased due to multi-threading access -> NO need to clear local cached popularities for placement";
+            Util::dumpInfoMsg(instance_name_, oss.str());
+        }
 
         // Preserve edge nodes of placement edgeset to ignore subsequent local uncached popularities from them
         perkey_preserved_edgeset_t::iterator perkey_preserved_edgeset_iter = perkey_preserved_edgeset_.find(key);

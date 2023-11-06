@@ -340,7 +340,7 @@ namespace covered
                 eviction_cost += tmp_eviction_cost;
 
                 // TMPDEBUG23
-                Util::dumpVariablesForDebug(kClassName, 14, "calcEvictionCost for tmp victim key", victim_cacheinfo_list_const_iter->getKey().getKeystr().c_str(), "is_last_copies:", Util::toString(is_last_copies).c_str(), "w1:", std::to_string(local_hit_weight).c_str(), "w2:", std::to_string(cooperative_hit_weight).c_str(), "tmp_local_cached_popularity:", std::to_string(tmp_local_cached_popularity).c_str(), "tmp_redirected_cached_popularity:", std::to_string(tmp_redirected_cached_popularity).c_str(), "tmp_eviction_cost:", std::to_string(tmp_eviction_cost).c_str());
+                //Util::dumpVariablesForDebug(kClassName, 14, "calcEvictionCost for tmp victim key", victim_cacheinfo_list_const_iter->getKey().getKeystr().c_str(), "is_last_copies:", Util::toString(is_last_copies).c_str(), "w1:", std::to_string(local_hit_weight).c_str(), "w2:", std::to_string(cooperative_hit_weight).c_str(), "tmp_local_cached_popularity:", std::to_string(tmp_local_cached_popularity).c_str(), "tmp_redirected_cached_popularity:", std::to_string(tmp_redirected_cached_popularity).c_str(), "tmp_eviction_cost:", std::to_string(tmp_eviction_cost).c_str());
             }
         }
 
@@ -680,7 +680,7 @@ namespace covered
         // NOTE: NO need to acquire a read lock which has been done in calcEvictionCost()
 
         // TMPDEBUG23
-        Util::dumpVariablesForDebug(instance_name_, 2, "findVictimsForPlacement_ for topicnt", std::to_string(placement_edgeset.size()).c_str());
+        //Util::dumpVariablesForDebug(instance_name_, 2, "findVictimsForPlacement_ for topicnt", std::to_string(placement_edgeset.size()).c_str());
 
         pervictim_edgeset.clear();
         pervictim_cacheinfos.clear();

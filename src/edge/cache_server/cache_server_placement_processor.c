@@ -148,6 +148,7 @@ namespace covered
 
         // Issue directory update request with is_admit = true
         // NOTE: remote beacon edge node sends remote placement notification to notify the current edge node for edge cache admission, so we should use current edge index for directory admission instead of source edge index
+        // NOTE: we cannot optimistically admit valid object into local edge cache first before issuing dirinfo admission request, as clients may get incorrect value if key is being written
         const uint32_t current_edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
         bool is_being_written = false;
         const bool& skip_propagation_latency = covered_placement_notify_request_ptr->isSkipPropagationLatency();

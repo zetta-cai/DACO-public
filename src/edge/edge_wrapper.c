@@ -1224,6 +1224,7 @@ namespace covered
 
             // Admit local directory information
             // NOTE: NO need to update aggregated uncached popularity due to admitting a cached object
+            // NOTE: we cannot optimistically admit valid object into local edge cache first before admiting local dirinfo, as clients may get incorrect value if key is being written
             bool tmp_is_being_written = false;
             admitLocalDirectory_(key, DirectoryInfo(current_edge_idx), tmp_is_being_written); // Local directory update for local placement notification
             if (tmp_is_being_written) // Double-check is_being_written to udpate is_valid if necessary
@@ -1236,7 +1237,7 @@ namespace covered
             // NOTE: we need to notify placement processor of the current local/remote beacon edge node for non-blocking placement deployment of local placement notification to avoid blocking subsequent placement calculation (similar as CacheServerWorkerBase::notifyBeaconForPlacementAfterHybridFetch_() invoked by sender edge node)
 
             // Notify placement processor to admit local edge cache (NOTE: NO need to admit directory) and trigger local cache eviciton, to avoid blocking cache server worker / beacon server for subsequent placement calculation
-            bool is_successful = local_cache_admission_buffer_ptr_->push(LocalCacheAdmissionItem(key, value, is_valid, skip_propagation_latency));
+            bool is_successful = getLocalCacheAdmissionBufferPtr()->push(LocalCacheAdmissionItem(key, value, is_valid, skip_propagation_latency));
             assert(is_successful);
 
             /* (OBSOLETE for non-blocking placement deployment)

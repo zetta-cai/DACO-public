@@ -1452,6 +1452,7 @@ namespace covered
         struct timespec update_directory_to_admit_start_timestamp = Util::getCurrentTimespec();
 
         // Independently admit the new key-value pair into local edge cache
+        // NOTE: we cannot optimistically admit valid object into local edge cache first before issuing dirinfo admission request, as clients may get incorrect value if key is being written
         bool is_being_written = false;
         is_finish = admitDirectory_(key, is_being_written, total_bandwidth_usage, event_list, skip_propagation_latency);
         if (is_finish)

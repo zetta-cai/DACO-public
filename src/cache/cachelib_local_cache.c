@@ -261,36 +261,64 @@ namespace covered
         assert(required_size <= max_allocation_class_size_);
 
         // NOTE: Cachelib performs slab-based eviction, so we use the lower-bound slab class for required size to try to find a victim first
-        const auto cid = cachelib_cache_ptr_->allocator_->getAllocationClassId(cachelib_poolid_, static_cast<uint32_t>(required_size));
-        Lru2QCacheItem* item_ptr = cachelib_cache_ptr_->findEviction(cachelib_poolid_, cid); // NOTE: Cachelib will directly evict the found victim object in findEviction()!!!
-        if (item_ptr == nullptr) // NO single victim can be found under the lower-bound slab class (this could happen sometimes due to Cachelib's bug of NO vicitm if lower-bound slab size is too small/large)
-        {
-            // NOTE: we enumerate all slabs (from min-size to max-size slabs) such that we can find multiple victims to make room for the required size (rely on the while loop outside CachelibLocalCache in CacheServer)
-            const uint32_t one_byte = 1;
-            auto tmp_cid = cachelib_cache_ptr_->allocator_->getAllocationClassId(cachelib_poolid_, static_cast<uint32_t>(one_byte));
-            while (true)
-            {
-                const uint32_t tmp_slab_class_size = cachelib_cache_ptr_->allocator_->getAllocSize(cachelib_poolid_, tmp_cid);
+        const auto lower_bound_cid = cachelib_cache_ptr_->allocator_->getAllocationClassId(cachelib_poolid_, static_cast<uint32_t>(required_size));
+        assert(lower_bound_cid >= 0);
+        Lru2QCacheItem* item_ptr = cachelib_cache_ptr_->findEviction(cachelib_poolid_, lower_bound_cid); // NOTE: Cachelib will directly evict the found victim object in findEviction()!!!
 
-                item_ptr = cachelib_cache_ptr_->findEviction(cachelib_poolid_, tmp_cid); // NOTE: Cachelib will directly evict the found victim object in findEviction()!!!
-                if (item_ptr != nullptr) // Find a victim for the given slab class size
+        // NOTE: under limited cache capacity, the lower-bound class NOT have any cached objects and hence cannot find any victims -> find victims from nearby slab classes isntead
+        if (item_ptr == nullptr) // NO single victim can be found under the lower-bound slab class
+        {
+            const uint32_t lower_bound_slab_class_size = cachelib_cache_ptr_->allocator_->getAllocSize(cachelib_poolid_, lower_bound_cid);
+
+            if (lower_bound_slab_class_size < max_allocation_class_size_) // Subsequent slab classes exist (i.e., lower-bound slab is NOT the last slab)
+            {
+                // First enumuerate all subsequent slab classes to find a victim for the required size
+                auto tmp_subsequent_cid = lower_bound_cid + 1;
+                while (true)
                 {
-                    break;
-                }
-                else // NO victim for given slab class size (e.g., Cachelib will NOT maintain small slabs after sufficient admissions and hence NO victim for small slab class sizes)
-                {
-                    if (tmp_slab_class_size == max_allocation_class_size_) // Already achieve the last slab
+                    item_ptr = cachelib_cache_ptr_->findEviction(cachelib_poolid_, tmp_subsequent_cid); // NOTE: Cachelib will directly evict the found victim object in findEviction()!!!
+                    if (item_ptr != nullptr) // Find a victim for the given slab class size
                     {
                         break;
                     }
-                    else // Move to the next slab
+                    else // NO victim for the given slab class size (e.g., NO cached objects in the slab class under limited cache capacity)
                     {
-                        tmp_cid++;
+                        const uint32_t tmp_slab_class_size = cachelib_cache_ptr_->allocator_->getAllocSize(cachelib_poolid_, tmp_subsequent_cid);
+                        if (tmp_slab_class_size == max_allocation_class_size_) // Already achieve the last slab
+                        {
+                            break;
+                        }
+                        else // Move to the next slab
+                        {
+                            tmp_subsequent_cid++;
+                        }
                     }
                 }
             }
-        }
 
+            if (item_ptr == nullptr && lower_bound_cid >= 1) // NO single victim can be found under all subsequent slab classes, and previous slab classes exist (i.e., lower-bound slab is NOT the first slab)
+            {
+                // Then enumerate all previous slab classes to find a victim for the required size
+                auto tmp_previous_cid = lower_bound_cid - 1;
+                while (tmp_previous_cid >= 0)
+                {
+                    const uint32_t tmp_slab_class_size = cachelib_cache_ptr_->allocator_->getAllocSize(cachelib_poolid_, tmp_previous_cid);
+                    assert(tmp_slab_class_size < max_allocation_class_size_); // Prev slab MUST NOT be the last slab
+
+                    item_ptr = cachelib_cache_ptr_->findEviction(cachelib_poolid_, tmp_previous_cid); // NOTE: Cachelib will directly evict the found victim object in findEviction()!!!
+                    if (item_ptr != nullptr) // Find a victim for the given slab class size
+                    {
+                        break;
+                    }
+                    else // NO victim for the given slab class size (e.g., NO cached objects in the slab class under limited cache capacity)
+                    {
+                        tmp_previous_cid--; // Move to the prev slab
+                    }
+                }
+            }
+
+            // NOTE: we can finally find multiple victims to make room for the required size (rely on the while loop outside CachelibLocalCache in CacheServer)
+        }
         assert(item_ptr != nullptr); // Must find at least one victim from a slab
 
         // Insert into victims

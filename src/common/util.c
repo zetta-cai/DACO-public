@@ -66,7 +66,7 @@ namespace covered
     const unsigned int Util::SLEEP_INTERVAL_US = MS2US(100); // 100ms
     // Workload generation
     const uint32_t Util::DATASET_KVPAIR_GENERATION_SEED = 0;
-    const uint32_t Util::WORKLOAD_KVPAIR_GENERATION_SEED = 1;
+    //const uint32_t Util::WORKLOAD_KVPAIR_GENERATION_SEED = 1;
     // Time measurement
     const int Util::START_YEAR = 1900;
     const long Util::NANOSECONDS_PERSECOND = 1000000000L;

@@ -96,7 +96,7 @@ namespace covered
 
         // Non-const shared varaibles
         mutable uint64_t size_bytes_; // Cache size usage of victim tracker
-        peredge_victim_metadata_t peredge_victim_metadata_;
+        peredge_victim_metadata_t peredge_victim_metadata_; // NOTE: even if all victim cacheinfos in the edge-level victim metadata are removed after placement calculation, we will NOT erase the edge-level victim metadata from peredge_victim_metadata_, as we need to find victims based on its cache margin bytes (see VictimTracker::findVictimsForPlacement_())
         perkey_victim_dirinfo_t perkey_victim_dirinfo_;
         mutable peredge_victimsync_monitor_t peredge_victimsync_monitor_; // Sequence-based victim synchronization monitor for each source/dst edge node
     };

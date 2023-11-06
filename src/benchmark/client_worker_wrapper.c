@@ -51,10 +51,10 @@ namespace covered
         instance_name_ = oss.str();
 
         // Each per-client worker uses worker_idx as deterministic seed to create a random generator and get different requests
-        // (OBSOLETE) NOTE: we use global_client_worker_idx to randomly generate requests from workload items
-        //client_worker_item_randgen_ptr_ = new std::mt19937_64(global_client_worker_idx);
-        // NOTE: we use WORKLOAD_KVPAIR_GENERATION_SEED to generate requests with homogeneous cache access patterns
-        client_worker_item_randgen_ptr_ = new std::mt19937_64(Util::WORKLOAD_KVPAIR_GENERATION_SEED);
+        // NOTE: we use global_client_worker_idx to randomly generate requests from workload items
+        client_worker_item_randgen_ptr_ = new std::mt19937_64(global_client_worker_idx);
+        // (OBSOLETE: homogeneous cache access patterns is a WRONG assumption -> we should ONLY follow homogeneous workload distribution yet still with heterogeneous cache access patterns) NOTE: we use WORKLOAD_KVPAIR_GENERATION_SEED to generate requests with homogeneous cache access patterns
+        //client_worker_item_randgen_ptr_ = new std::mt19937_64(Util::WORKLOAD_KVPAIR_GENERATION_SEED);
         if (client_worker_item_randgen_ptr_ == NULL)
         {
             Util::dumpErrorMsg(instance_name_, "failed to create a random generator for requests!");

@@ -168,10 +168,10 @@ namespace covered
         }
 
         // TMPDEBUG23
-        if (key.getKeystr() != "")
-        {
-            Util::dumpVariablesForDebug(kClassName, 16, "edge", std::to_string(edgeidx).c_str(), "for key", key.getKeystr().c_str(), "calcAdmissionBenefit for topicnt", std::to_string(topicnt).c_str(), "is_global_cached:", Util::toString(is_global_cached).c_str(), "w1:", std::to_string(local_hit_weight).c_str(), "w2:", std::to_string(cooperative_hit_weight).c_str(), "topi_local_uncached_popularity_:", std::to_string(topi_local_uncached_popularity_).c_str(), "sum_local_uncached_popularity_:", std::to_string(sum_local_uncached_popularity_).c_str());
-        }
+        // if (key.getKeystr() != "")
+        // {
+        //     Util::dumpVariablesForDebug(kClassName, 16, "edge", std::to_string(edgeidx).c_str(), "for key", key.getKeystr().c_str(), "calcAdmissionBenefit for topicnt", std::to_string(topicnt).c_str(), "is_global_cached:", Util::toString(is_global_cached).c_str(), "w1:", std::to_string(local_hit_weight).c_str(), "w2:", std::to_string(cooperative_hit_weight).c_str(), "topi_local_uncached_popularity_:", std::to_string(topi_local_uncached_popularity_).c_str(), "sum_local_uncached_popularity_:", std::to_string(sum_local_uncached_popularity_).c_str());
+        // }
 
         return admission_benefit;
     }

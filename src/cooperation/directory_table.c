@@ -132,9 +132,17 @@ namespace covered
             {
                 if (tmp_param.is_directory_already_exist) // directory_info should NOT exist for key
                 {
-                    std::ostringstream oss;
-                    oss << "target edge index " << directory_info.getTargetEdgeIdx() << " already exists for key " << key.getKeystr() << " in update() with is_admit = true!";
-                    Util::dumpWarnMsg(kClassName, oss.str());
+                    // TMPDEBUG23
+                    if (key.getKeystr() == "ahouihfbdkkrrvybxedatasxwhjkajdzzwtxpowrvegca")
+                    {
+                        std::ostringstream oss;
+                        oss << "target edge index " << directory_info.getTargetEdgeIdx() << " already exists for key " << key.getKeystr() << " in update() with is_admit = true!";
+                        Util::dumpWarnMsg(instance_name_, oss.str());
+                    }
+                    
+                    // std::ostringstream oss;
+                    // oss << "target edge index " << directory_info.getTargetEdgeIdx() << " already exists for key " << key.getKeystr() << " in update() with is_admit = true!";
+                    // Util::dumpWarnMsg(instance_name_, oss.str());
                 }
             }
 
@@ -153,7 +161,7 @@ namespace covered
                 {
                     std::ostringstream oss;
                     oss << "target edge index " << directory_info.getTargetEdgeIdx() << " does NOT exist for key " << key.getKeystr() << " in update() with is_admit = false!";
-                    Util::dumpWarnMsg(kClassName, oss.str());
+                    Util::dumpWarnMsg(instance_name_, oss.str());
                 }
 
                 is_global_cached = tmp_param.is_global_cached;
@@ -162,7 +170,7 @@ namespace covered
             {
                 std::ostringstream oss;
                 oss << "key " << key.getKeystr() << " does not exist in directory_hashtable_ in update() with is_admit = false!";
-                Util::dumpWarnMsg(kClassName, oss.str());
+                Util::dumpWarnMsg(instance_name_, oss.str());
 
                 is_global_cached = false;
             }

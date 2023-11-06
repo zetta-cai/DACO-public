@@ -506,6 +506,12 @@ bool
 hashtable_evict(const char *oit_key, const uint32_t oit_klen,
                 const uint64_t seg_id, const uint64_t offset, struct SegCache* segcache_ptr)
 {
+    // TMPDEBUG23
+    if (strncmp(oit_key, "abybyugmdcilxq", oit_klen) == 0)
+    {
+        log_error("evict oit_key %.*s from seg_id %d", oit_klen, oit_key, seg_id);
+    }
+
     INCR(segcache_ptr->seg_metrics, hash_evict);
 
     uint64_t hv        = CAL_HV(oit_key, oit_klen);

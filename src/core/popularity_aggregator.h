@@ -79,7 +79,7 @@ namespace covered
 
         // Non-const shared variables
         uint64_t size_bytes_; // Cache size usage of popularity aggregator
-        benefit_popularity_multimap_t benefit_popularity_multimap_; // NOTE: we use multimap instead of unordered_map to support duplicate Delta rewards (i.e., max admission benefits) for different global popular objects
+        benefit_popularity_multimap_t benefit_popularity_multimap_; // NOTE: we use multimap instead of unordered_map to support duplicate Delta rewards (i.e., max admission benefits) for different global popular objects -> NOTE: if all local uncached popularities are removed during popularity aggregation (is_tracked = false) or after placement calculation (clear placement edgeset), else if capacity bytes for popularity aggregation are used up, we will erase the corresponding aggregated uncached popularity (unlike edge-level victim metadata in victim tracker that will never be erased due to cache margin bytes)
         perkey_benefit_popularity_table_t perkey_benefit_popularity_table_; // Track per-key iterator to lookup benefit_popularity_multimap_ for selective popularity aggregation (for unplaced keys)
         perkey_preserved_edgeset_t perkey_preserved_edgeset_; // Preserve edge nodes for each key being admitted for non-blocking placement deployment (for being-placed keys)
     };

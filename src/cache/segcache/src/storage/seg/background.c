@@ -1,4 +1,6 @@
 
+#include <assert.h>
+
 #include "background.h"
 #include "item.h"
 #include "seg.h"
@@ -98,6 +100,8 @@ background_main(void *background_param_ptr)
 void
 start_background_thread(void *arg, struct SegCache* segcache_ptr)
 {
+    assert(!segcache_ptr->disable_expiration); // Siyuan: we MUST NOT disable expiration if start background thread
+
     struct background_param_t background_param;
     initialize_background_param(&background_param);
     background_param.arg = arg;

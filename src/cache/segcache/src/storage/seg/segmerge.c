@@ -202,6 +202,9 @@ replace_seg_in_chain(int32_t new_seg_id, int32_t old_seg_id, struct SegCache* se
 evict_rstatus_e
 seg_merge_evict(int32_t *seg_id_ret, struct SegCache* segcache_ptr, bool need_victims, struct bstring** key_bstrs_ptr, struct bstring** value_bstrs_ptr, uint32_t* victim_cnt_ptr)
 {
+    // TMPDEBUG23
+    log_error("seg_merge_evict() with need_victims %d", need_victims?1:0);
+
     struct merge_opts *mopt = &segcache_ptr->evict_info_ptr->merge_opt;
     struct seg        *seg  = NULL;
 
@@ -489,6 +492,12 @@ seg_copy(int32_t seg_id_dest, int32_t seg_id_src,
                 victim_idx++;
             }
 
+            // TMPDEBUG23
+            if (strncmp(item_key(it), "abybyugmdcilxq", it->klen) == 0)
+            {
+                log_error("seg_copy()::it->deleted evicts item_key(it) %.*s from seg_id %d with need_victims %d", it->klen, item_key(it), seg_id_src_ht, need_victims?1:0);
+            }
+
             /* this is necessary for current hash table design */
             hashtable_evict(item_key(it), item_nkey(it),
                             seg_id_src_ht, curr_src - seg_data_src, segcache_ptr);
@@ -521,6 +530,12 @@ seg_copy(int32_t seg_id_dest, int32_t seg_id_src,
                 victim_idx++;
             }
 
+            // TMPDEBUG23
+            if (strncmp(item_key(it), "abybyugmdcilxq", it->klen) == 0)
+            {
+                log_error("seg_copy()::!copy_all_items evicts item_key(it) %.*s from seg_id %d with need_victims %d", it->klen, item_key(it), seg_id_src_ht, need_victims?1:0);
+            }
+
             hashtable_evict(item_key(it), it->klen, seg_id_src_ht, it_offset, segcache_ptr);
             curr_src += it_sz;
             continue;
@@ -546,6 +561,12 @@ seg_copy(int32_t seg_id_dest, int32_t seg_id_src,
                 (*value_bstrs_ptr)[victim_idx].data = (char*)malloc(it->vlen);
                 memcpy((*value_bstrs_ptr)[victim_idx].data, item_val(it), it->vlen);
                 victim_idx++;
+            }
+
+            // TMPDEBUG23
+            if (strncmp(item_key(it), "abybyugmdcilxq", it->klen) == 0)
+            {
+                log_error("seg_copy()::tail_processing evicts item_key(it) %.*s from seg_id %d with need_victims %d", it->klen, item_key(it), seg_id_src_ht, need_victims?1:0);
             }
 
             hashtable_evict(item_key(it), it->klen, seg_id_src_ht, it_offset, segcache_ptr);

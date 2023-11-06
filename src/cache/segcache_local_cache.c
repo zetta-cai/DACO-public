@@ -67,7 +67,8 @@ namespace covered
         ////admin_process_setup();
 
         // NOTE: uncomment the following code and set HAVE_LOGGING = ON in CmakeLists.txt to enable debug log in segcache (ONLY support a single instance now!!!)
-        //debug_setup(NULL);
+        // TMPDEBUG23
+        debug_setup(NULL);
     }
     
     SegcacheLocalCache::~SegcacheLocalCache()
@@ -296,6 +297,16 @@ namespace covered
                 free(value_bstrs[i].data);
                 value_bstrs[i].len = 0;
                 value_bstrs[i].data = NULL;
+
+                // TMPDEBUG23
+                if (tmp_key.getKeystr() == "abybyugmdcilxq")
+                {
+                    bool is_local_cached = isLocalCachedInternal_(tmp_key);
+
+                    std::ostringstream oss;
+                    oss << "evict key " << tmp_key.getKeystr() << " is_local_cached after eviction " << Util::toString(is_local_cached);
+                    Util::dumpDebugMsg(instance_name_, oss.str());
+                }
             }
 
             // Release bstring structs

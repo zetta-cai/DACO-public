@@ -27,9 +27,8 @@ extern "C" {
 
 #include <stdint.h>
 
-// Siyuan: enable log_vverb for debugging
-//#define DEBUG_LOG_LEVEL 4       /* default log level */
-#define DEBUG_LOG_LEVEL 7       /* default log level */
+#define DEBUG_LOG_LEVEL 2       /* default log level */
+//#define DEBUG_LOG_LEVEL 7       /* default log level */ // Siyuan: enable log_vverb for debugging
 #define DEBUG_LOG_FILE  NULL    /* default log file */
 #define DEBUG_LOG_NBUF  0       /* default log buf size */
 
@@ -193,7 +192,6 @@ extern struct debug_logger *dlog;
 } while (0)
 
 #define log_verb(...) do {                                          \
-    printf("dlog->level: %d, LOG_VERB: %d\n", dlog->level, LOG_VERB); \
     if (dlog->level >= LOG_VERB) {                                  \
         _log(dlog, __FILE__, __LINE__, LOG_VERB, __VA_ARGS__);      \
     }                                                               \

@@ -267,11 +267,11 @@ void WorkloadGenerator::generateKeyDistributions() {
     duration += covered::executeParallel(
         [&, this](size_t start, size_t end, size_t local_thread_idx) {
           //std::mt19937_64 gen(folly::Random::rand64());
-          // (OBSOLETE) Siyuan: use global_thread_idx as the deterministic seed to ensure that multiple clients generate different sets of requests/workload-items
-          // (OBSOLETE) Siyuan: we need this->config_.numThreads + 1, as Parallel may create an extra thread to generate remaining requests
-          //uint32_t global_thread_idx = this->client_idx_ * (this->config_.numThreads + 1) + local_thread_idx;
-          // NOTE: we use WORKLOAD_KVPAIR_GENERATION_SEED to generate workload items with homogeneous cache access patterns
-          uint32_t global_thread_idx = Util::WORKLOAD_KVPAIR_GENERATION_SEED + local_thread_idx;
+          // Siyuan: use global_thread_idx as the deterministic seed to ensure that multiple clients generate different sets of requests/workload-items
+          // Siyuan: we need this->config_.numThreads + 1, as Parallel may create an extra thread to generate remaining requests
+          uint32_t global_thread_idx = this->client_idx_ * (this->config_.numThreads + 1) + local_thread_idx;
+          // (OBSOLETE: homogeneous cache access patterns is a WRONG assumption -> we should ONLY follow homogeneous workload distribution yet still with heterogeneous cache access patterns) NOTE: we use WORKLOAD_KVPAIR_GENERATION_SEED to generate workload items with homogeneous cache access patterns
+          //uint32_t global_thread_idx = Util::WORKLOAD_KVPAIR_GENERATION_SEED + local_thread_idx;
           std::mt19937_64 gen(global_thread_idx);
           auto popDist = workloadDist_[idx].getPopDist(left, right); // FastDiscreteDistribution
           for (uint64_t j = start; j < end; j++) {
