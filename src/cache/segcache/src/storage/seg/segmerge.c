@@ -5,6 +5,7 @@
 #include "segevict.h"
 #include "ttlbucket.h"
 
+#include <assert.h>
 #include <cc_mm.h>
 
 #include <sys/types.h>
@@ -27,7 +28,7 @@ seg_copy(int32_t seg_id_dest, int32_t seg_id_src,
 int32_t
 merge_segs(struct seg *segs_to_merge[],
            int n_evictable,
-           double *merge_keep_ratio, struct SegCache* segcache_ptr, bool need_victims, struct bstring** key_bstrs_ptr, struct bstring** value_bstrs_ptr, uint32_t* victim_cnt_ptr);
+           double *merge_keep_ratio, struct SegCache* segcache_ptr, bool need_victims, struct bstring** key_bstrs_ptr, struct bstring** value_bstrs_ptr, uint32_t* victim_cnt_ptr, bool is_seg_get_new);
 
 static inline uint64_t
 n_evicted_seg(struct SegCache* segcache_ptr)
@@ -200,7 +201,7 @@ replace_seg_in_chain(int32_t new_seg_id, int32_t old_seg_id, struct SegCache* se
 
 
 evict_rstatus_e
-seg_merge_evict(int32_t *seg_id_ret, struct SegCache* segcache_ptr, bool need_victims, struct bstring** key_bstrs_ptr, struct bstring** value_bstrs_ptr, uint32_t* victim_cnt_ptr)
+seg_merge_evict(int32_t *seg_id_ret, struct SegCache* segcache_ptr, bool need_victims, struct bstring** key_bstrs_ptr, struct bstring** value_bstrs_ptr, uint32_t* victim_cnt_ptr, bool is_seg_get_new)
 {
     // TMPDEBUG23
     log_error("seg_merge_evict() with need_victims %d", need_victims?1:0);
@@ -321,7 +322,7 @@ seg_merge_evict(int32_t *seg_id_ret, struct SegCache* segcache_ptr, bool need_vi
 
 #else 
         segcache_ptr->ttl_buckets[bkt_idx].next_seg_to_merge =
-            merge_segs(segs_to_merge, n_evictable_seg, merge_keep_ratio, segcache_ptr, need_victims, key_bstrs_ptr, value_bstrs_ptr, victim_cnt_ptr);
+            merge_segs(segs_to_merge, n_evictable_seg, merge_keep_ratio, segcache_ptr, need_victims, key_bstrs_ptr, value_bstrs_ptr, victim_cnt_ptr, is_seg_get_new);
 
         pthread_mutex_unlock(&ttl_bkt->mtx);
 #endif 
@@ -635,7 +636,7 @@ seg_copy(int32_t seg_id_dest, int32_t seg_id_src,
 int32_t
 merge_segs(struct seg *segs_to_merge[],
            int n_evictable,
-           double *merge_keep_ratio, struct SegCache* segcache_ptr, bool need_victims, struct bstring** key_bstrs_ptr, struct bstring** value_bstrs_ptr, uint32_t* victim_cnt_ptr)
+           double *merge_keep_ratio, struct SegCache* segcache_ptr, bool need_victims, struct bstring** key_bstrs_ptr, struct bstring** value_bstrs_ptr, uint32_t* victim_cnt_ptr, bool is_seg_get_new)
 {
     INCR(segcache_ptr->seg_metrics, seg_merge);
 
@@ -695,6 +696,9 @@ merge_segs(struct seg *segs_to_merge[],
         memset(victim_cnt_array, 0, sizeof(uint32_t) * merge_cnt);
     }
 
+    // TMPDEBUG23
+    log_error("before merge evict, segcache_ptr->heap_ptr->n_free_seg: %d", segcache_ptr->heap_ptr->n_free_seg);
+
     /* start from start_seg until new_seg is full or no seg can be merged */
     while (new_seg->write_offset < mopt->stop_bytes && n_merged < n_evictable) {
         curr_seg    = segs_to_merge[n_merged];
@@ -724,12 +728,22 @@ merge_segs(struct seg *segs_to_merge[],
             /* place the new seg at the position of the first evicted seg and
              * not return this seg to freepool, keep it for the immediate use */
             replace_seg_in_chain(new_seg_id, curr_seg_id, segcache_ptr);
+
+            // Siyuan: invoke merge_segs() for purely eviction instead of getting a new free segment for immediate use
+            if (!is_seg_get_new)
+            {
+                // NOTE: we MUST need victims for dirinfo updates of cooperative edge caching if invoke merge_segs() for purely eviction
+                assert(need_victims);
+
+                // Also add the first evicted seg into freepool due to NO immediate use
+                rm_seg_from_ttl_bucket(curr_seg_id, segcache_ptr);
+                seg_add_to_freepool(curr_seg_id, SEG_EVICTION, segcache_ptr);
+            }
         }
         else {
             rm_seg_from_ttl_bucket(curr_seg_id, segcache_ptr);
             seg_add_to_freepool(curr_seg_id, SEG_EVICTION, segcache_ptr);
         }
-
         pthread_mutex_unlock(&segcache_ptr->heap_ptr->mtx);
 
         n_merged++;
@@ -738,6 +752,9 @@ merge_segs(struct seg *segs_to_merge[],
             time_proc_sec(segcache_ptr) - curr_seg->create_at);
         INCR(segcache_ptr->seg_metrics, segcache_ptr->seg_evict_seg_cnt);
     }
+
+    // TMPDEBUG23
+    log_error("after merge evict, segcache_ptr->heap_ptr->n_free_seg: %d", segcache_ptr->heap_ptr->n_free_seg);
 
     ASSERT(n_merged > 0);
 

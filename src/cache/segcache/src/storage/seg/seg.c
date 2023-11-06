@@ -657,12 +657,17 @@ seg_get_new(struct SegCache* segcache_ptr, bool need_victims, struct bstring** k
 
     INCR(segcache_ptr->seg_metrics, seg_get);
 
+    // TMPDEBUG23
+    log_error("before seg_get_new, segcache_ptr->heap_ptr->n_free_seg: %d", segcache_ptr->heap_ptr->n_free_seg);
+
     seg_id_ret = seg_get_from_freepool(false, segcache_ptr);
 
     while (seg_id_ret == -1 && n_retries_left >= 0) {
         /* evict seg */
         if (segcache_ptr->evict_info_ptr->policy == EVICT_MERGE_FIFO) {
-            status = seg_merge_evict(&seg_id_ret, segcache_ptr, need_victims, key_bstrs_ptr, value_bstrs_ptr, victim_cnt_ptr);
+            assert(need_victims == false);
+            const bool is_seg_get_new = true;
+            status = seg_merge_evict(&seg_id_ret, segcache_ptr, need_victims, key_bstrs_ptr, value_bstrs_ptr, victim_cnt_ptr, is_seg_get_new);
         } else {
             status = seg_evict(&seg_id_ret, segcache_ptr, need_victims, key_bstrs_ptr, value_bstrs_ptr, victim_cnt_ptr);
         }
@@ -677,6 +682,9 @@ seg_get_new(struct SegCache* segcache_ptr, bool need_victims, struct bstring** k
             INCR(segcache_ptr->seg_metrics, seg_evict_retry);
         }
     }
+
+    // TMPDEBUG23
+    log_error("after seg_get_new, segcache_ptr->heap_ptr->n_free_seg: %d", segcache_ptr->heap_ptr->n_free_seg);
 
     if (seg_id_ret == -1) {
         INCR(segcache_ptr->seg_metrics, seg_get_ex);
@@ -757,6 +765,9 @@ seg_heap_setup(struct SegCache* segcache_ptr)
         }
         pthread_mutex_unlock(&segcache_ptr->heap_ptr->mtx);
     }
+
+    // TMPDEBUG23
+    log_error("after seg_heap_setup, segcache_ptr->heap_ptr->n_free_seg: %d", segcache_ptr->heap_ptr->n_free_seg);
 
     return CC_OK;
 }
