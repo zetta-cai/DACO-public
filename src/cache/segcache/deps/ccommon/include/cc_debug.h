@@ -27,7 +27,7 @@ extern "C" {
 
 #include <stdint.h>
 
-#define DEBUG_LOG_LEVEL 2       /* default log level */
+#define DEBUG_LOG_LEVEL 5       /* default log level */
 //#define DEBUG_LOG_LEVEL 7       /* default log level */ // Siyuan: enable log_vverb for debugging
 #define DEBUG_LOG_FILE  NULL    /* default log file */
 #define DEBUG_LOG_NBUF  0       /* default log buf size */

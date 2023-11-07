@@ -33,7 +33,12 @@
 #define MS2US(var) var * 1000
 #define SEC2US(var) var * 1000 * 1000
 
-// For Cachelib and COVERED (4MiB for max slab size and 1GiB for min capacit bytes by default)
+// For internal cache engine (e.g., Segcache, CacheLib, and COVERED)
+// (i) Common: 100MiB for internal unused capacity to avoid internal eviction (NOT used for cooperative edge caching and hence NOT affect cache performance)
+#define COMMON_ENGINE_INTERNAL_UNUSED_CAPACITY_BYTES 100 * 1024 * 1024
+// (ii) Segcache: 1GiB for min capacity bytes by default (over-provisioned capacity will NOT be used for cooperative edge caching and hence NOT affect cache performance)
+#define SEGCACHE_ENGINE_MIN_CAPACITY_BYTES 1* 1024 * 1024 * 1024
+// (iii) CacheLib and COVERED: 4MiB for max slab size and 1GiB for min capacity bytes by default (over-provisioned capacity will NOT be used for cooperative edge caching and hence NOT affect cache performance)
 #define CACHELIB_ENGINE_MAX_SLAB_SIZE 4 * 1024 * 1024
 #define CACHELIB_ENGINE_MIN_CAPACITY_BYTES 1 * 1024 * 1024 * 1024
 

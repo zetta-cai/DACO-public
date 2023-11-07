@@ -127,14 +127,6 @@ namespace covered
             is_valid = isValidKeyForLocalCachedObject_(key);
         }
 
-        // TMPDEBUG23
-        if (key.getKeystr() == "abybyugmdcilxq")
-        {
-            std::ostringstream oss;
-            oss << "get key " << key.getKeystr() << " is_local_cached " << Util::toString(is_local_cached) << " is_valid " << Util::toString(is_valid);
-            Util::dumpDebugMsg(instance_name_, oss.str());
-        }
-
         // Release a read lock
         cache_wrapper_perkey_rwlock_ptr_->unlock_shared(key, context_name);
 
@@ -324,10 +316,6 @@ namespace covered
 
     void CacheWrapper::admit(const Key& key, const Value& value, const bool& is_valid, bool& affect_victim_tracker)
     {
-        // TMPDEBUG23
-        bool is_local_cached = local_cache_ptr_->isLocalCached(key);
-        Util::dumpVariablesForDebug(instance_name_, 8, "admit local edge cache for key", key.getKeystr().c_str(), "valuesize:", std::to_string(value.getValuesize()).c_str(), "cache size usage:", std::to_string(getSizeForCapacity()).c_str(), "is_local_cached:", Util::toString(is_local_cached).c_str());
-
         checkPointers_();
 
         // Acquire a write lock
@@ -336,16 +324,6 @@ namespace covered
 
         bool is_successful = false;
         local_cache_ptr_->admitLocalCache(key, value, affect_victim_tracker, is_successful);
-
-        // TMPDEBUG23
-        if (key.getKeystr() == "abybyugmdcilxq")
-        {
-            bool is_local_cached = local_cache_ptr_->isLocalCached(key);
-
-            std::ostringstream oss;
-            oss << "admit key " << key.getKeystr() << " is_successful " << Util::toString(is_successful) << " is_local_cached after admission " << Util::toString(is_local_cached);
-            Util::dumpDebugMsg(instance_name_, oss.str());
-        }
 
         if (is_successful) // If key is admited successfully
         {
@@ -368,14 +346,14 @@ namespace covered
             cached_keys_for_debug_.insert(key);
         }
 
-        // TMPDEBUG23
-        std::ostringstream oss;
-        oss << "After admit, " << cached_keys_for_debug_.size() << " cached keys:";
-        for (std::unordered_set<Key, KeyHasher>::const_iterator tmp_iter = cached_keys_for_debug_.begin(); tmp_iter != cached_keys_for_debug_.end(); tmp_iter++)
-        {
-            oss << " " << tmp_iter->getKeystr() << ";";
-        }
-        Util::dumpDebugMsg(instance_name_, oss.str());
+        // Used for debugging
+        // std::ostringstream oss;
+        // oss << "After admit, " << cached_keys_for_debug_.size() << " cached keys:";
+        // for (std::unordered_set<Key, KeyHasher>::const_iterator tmp_iter = cached_keys_for_debug_.begin(); tmp_iter != cached_keys_for_debug_.end(); tmp_iter++)
+        // {
+        //     oss << " " << tmp_iter->getKeystr() << ";";
+        // }
+        // Util::dumpDebugMsg(instance_name_, oss.str());
 
         cache_wrapper_rwlock_for_debug_ptr_->unlock(context_name);
         #endif
@@ -412,14 +390,14 @@ namespace covered
             }
         }
 
-        // TMPDEBUG23
-        std::ostringstream oss;
-        oss << "After evict, " << cached_keys_for_debug_.size() << " cached keys:";
-        for (std::unordered_set<Key, KeyHasher>::const_iterator tmp_iter = cached_keys_for_debug_.begin(); tmp_iter != cached_keys_for_debug_.end(); tmp_iter++)
-        {
-            oss << " " << tmp_iter->getKeystr() << ";";
-        }
-        Util::dumpDebugMsg(instance_name_, oss.str());
+        // Used for debugging
+        // std::ostringstream oss;
+        // oss << "After evict, " << cached_keys_for_debug_.size() << " cached keys:";
+        // for (std::unordered_set<Key, KeyHasher>::const_iterator tmp_iter = cached_keys_for_debug_.begin(); tmp_iter != cached_keys_for_debug_.end(); tmp_iter++)
+        // {
+        //     oss << " " << tmp_iter->getKeystr() << ";";
+        // }
+        // Util::dumpDebugMsg(instance_name_, oss.str());
 
         cache_wrapper_rwlock_for_debug_ptr_->unlock(context_name);
         #endif
@@ -502,12 +480,6 @@ namespace covered
             std::ostringstream oss;
             oss << "key " << key.getKeystr() << " already exists in validity_map_ for validateKeyForLocalUncachedObject_()";
             Util::dumpWarnMsg(instance_name_, oss.str());
-
-            // TMPDEBUG23
-            if (key.getKeystr() == "abybyugmdcilxq")
-            {
-                exit(1);
-            }
         }
         return;
     }
@@ -560,9 +532,6 @@ namespace covered
         {
             const Key& tmp_victim_key = *tmp_victim_key_iter;
             Value tmp_victim_value;
-
-            // TMPDEBUG23
-            Util::dumpVariablesForDebug(instance_name_, 2, "evict local edge cache for tmp_victim_key", tmp_victim_key.getKeystr().c_str());
 
             // Acquire a write lock (pessimistic locking to avoid atomicity/order issues)
             // NOTE: we still need to acquire fine-grained locking for tmp_victim_key even if we have acquired cache eviction mutex in cache server worker, otherwise tmp_victim_key may be accessed/motified/invalidated during eviction

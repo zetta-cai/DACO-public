@@ -525,7 +525,6 @@ namespace covered
             // Data and metadata for local edge cache, and cooperation metadata
             uint64_t used_bytes = edge_wrapper_ptr_->getSizeForCapacity();
             uint64_t capacity_bytes = edge_wrapper_ptr_->getCapacityBytes();
-            //Util::dumpVariablesForDebug(instance_name_, 4, "used_bytes:", std::to_string(used_bytes).c_str(), "capacity_bytes:", std::to_string(capacity_bytes).c_str()); // TMPDEBUG23
             if (used_bytes <= capacity_bytes) // Not exceed capacity limitation
             {
                 break;

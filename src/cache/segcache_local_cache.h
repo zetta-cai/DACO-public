@@ -22,9 +22,6 @@ namespace covered
     class SegcacheLocalCache : public LocalCacheBase
     {
     public:
-        // NOTE: too small cache capacity cannot support segment-based memory allocation in SegCache (see src/cache/segcache/benchmarks/storage_seg/storage_seg.c)
-        static const uint64_t SEGCACHE_MIN_CAPACITY_BYTES;
-
         SegcacheLocalCache(const uint32_t& edge_idx, const uint64_t& capacity_bytes);
         virtual ~SegcacheLocalCache();
 

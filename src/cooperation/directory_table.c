@@ -126,23 +126,16 @@ namespace covered
             directory_hashtable_.insertOrCall(key, directory_entry, is_exist, DirectoryEntry::ADD_DIRINFO_FUNCNAME, (void*)&tmp_param);
             if (!is_exist) // key does not exist
             {
-                //assert(directory_metadata.isValidDirinfo()); // invalid directory info if key is being written
+                // NOTE: maybe  invalid directory info if key is being written
+                //assert(directory_metadata.isValidDirinfo());
             }
             else // key already exists
             {
                 if (tmp_param.is_directory_already_exist) // directory_info should NOT exist for key
-                {
-                    // TMPDEBUG23
-                    if (key.getKeystr() == "ahouihfbdkkrrvybxedatasxwhjkajdzzwtxpowrvegca")
-                    {
-                        std::ostringstream oss;
-                        oss << "target edge index " << directory_info.getTargetEdgeIdx() << " already exists for key " << key.getKeystr() << " in update() with is_admit = true!";
-                        Util::dumpWarnMsg(instance_name_, oss.str());
-                    }
-                    
-                    // std::ostringstream oss;
-                    // oss << "target edge index " << directory_info.getTargetEdgeIdx() << " already exists for key " << key.getKeystr() << " in update() with is_admit = true!";
-                    // Util::dumpWarnMsg(instance_name_, oss.str());
+                {                    
+                    std::ostringstream oss;
+                    oss << "target edge index " << directory_info.getTargetEdgeIdx() << " already exists for key " << key.getKeystr() << " in update() with is_admit = true!";
+                    Util::dumpWarnMsg(instance_name_, oss.str());
                 }
             }
 

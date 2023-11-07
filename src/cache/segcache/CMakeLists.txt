@@ -56,7 +56,7 @@ set(${PROJECT_NAME}_RELEASE_VERSION
 # flags => compile-time variables: use modules/macros
 option(HAVE_ASSERT_LOG "assert_log enabled by default" OFF)
 option(HAVE_ASSERT_PANIC "assert_panic disabled by default" OFF) # Siyuan: enable ASSERT for debugging if necessary
-option(HAVE_LOGGING "logging enabled by default" ON) # Siyuan: set as ON and uncomment debug_setup(NULL) in segcache_local_cache.c to enable debugging if necessary (change log level in src/cache/segcache/deps/ccommon/include/cc_debug.h if necessary) (TMPDEBUG23)
+option(HAVE_LOGGING "logging enabled by default" OFF) # Siyuan: set as ON and uncomment debug_setup(NULL) in segcache_local_cache.c to enable debugging if necessary (change log level in src/cache/segcache/deps/ccommon/include/cc_debug.h if necessary)
 option(HAVE_STATS "stats enabled by default" OFF)
 option(HAVE_TEST "test built by default" OFF)
 option(HAVE_DEBUG_MM "debugging oriented memory management disabled by default" OFF) 

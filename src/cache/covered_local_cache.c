@@ -32,9 +32,10 @@ namespace covered
         max_allocation_class_size_ = cacheConfig.maxAllocationClassSize;
         assert(max_allocation_class_size_ == CACHELIB_ENGINE_MAX_SLAB_SIZE);
         // NOTE: we limit cache capacity outside CoveredLocalCache (in EdgeWrapper); here we set cachelib local cache size as overall cache capacity to avoid cache capacity constraint inside CoveredLocalCache
-        if (capacity_bytes >= CACHELIB_ENGINE_MIN_CAPACITY_BYTES)
+        uint64_t over_provisioned_capacity_bytes = capacity_bytes + COMMON_ENGINE_INTERNAL_UNUSED_CAPACITY_BYTES; // Just avoid internal eviction yet NOT affect cooperative edge caching
+        if (over_provisioned_capacity_bytes >= CACHELIB_ENGINE_MIN_CAPACITY_BYTES)
         {
-            cacheConfig.setCacheSize(capacity_bytes);
+            cacheConfig.setCacheSize(over_provisioned_capacity_bytes);
         }
         else
         {

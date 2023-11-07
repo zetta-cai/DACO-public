@@ -398,12 +398,6 @@ rm_all_item_on_seg(int32_t seg_id, enum seg_state_change reason, struct SegCache
             victim_idx++;
         }
 
-        // TMPDEBUG23
-        if (strncmp(item_key(it), "abybyugmdcilxq", it->klen) == 0)
-        {
-            log_error("rm_all_item_on_seg() evicts item_key(it) %.*s from seg_id %d with need_victims %d", it->klen, item_key(it), seg->seg_id, need_victims?1:0);
-        }
-
 #if defined DEBUG_MODE
         hashtable_evict(item_key(it), it->klen, seg->seg_id_non_decr,
             curr - seg_data, segcache_ptr);
@@ -497,12 +491,6 @@ rm_all_item_on_seg(int32_t seg_id, enum seg_state_change reason, struct SegCache
                 (*value_bstrs_ptr)[victim_idx].data = (char*)malloc(it->vlen);
                 memcpy((*value_bstrs_ptr)[victim_idx].data, item_val(it), it->vlen);
                 victim_idx++;
-            }
-
-            // TMPDEBUG23
-            if (strncmp(item_key(it), "abybyugmdcilxq", it->klen) == 0)
-            {
-                log_error("rm_all_item_on_seg()::tail_processing evicts item_key(it) %.*s from seg_id %d with need_victims %d", it->klen, item_key(it), seg->seg_id, need_victims?1:0);
             }
 
 #if defined DEBUG_MODE
@@ -657,9 +645,6 @@ seg_get_new(struct SegCache* segcache_ptr, bool need_victims, struct bstring** k
 
     INCR(segcache_ptr->seg_metrics, seg_get);
 
-    // TMPDEBUG23
-    log_error("before seg_get_new, segcache_ptr->heap_ptr->n_free_seg: %d", segcache_ptr->heap_ptr->n_free_seg);
-
     seg_id_ret = seg_get_from_freepool(false, segcache_ptr);
 
     while (seg_id_ret == -1 && n_retries_left >= 0) {
@@ -682,9 +667,6 @@ seg_get_new(struct SegCache* segcache_ptr, bool need_victims, struct bstring** k
             INCR(segcache_ptr->seg_metrics, seg_evict_retry);
         }
     }
-
-    // TMPDEBUG23
-    log_error("after seg_get_new, segcache_ptr->heap_ptr->n_free_seg: %d", segcache_ptr->heap_ptr->n_free_seg);
 
     if (seg_id_ret == -1) {
         INCR(segcache_ptr->seg_metrics, seg_get_ex);
@@ -765,9 +747,6 @@ seg_heap_setup(struct SegCache* segcache_ptr)
         }
         pthread_mutex_unlock(&segcache_ptr->heap_ptr->mtx);
     }
-
-    // TMPDEBUG23
-    log_error("after seg_heap_setup, segcache_ptr->heap_ptr->n_free_seg: %d", segcache_ptr->heap_ptr->n_free_seg);
 
     return CC_OK;
 }

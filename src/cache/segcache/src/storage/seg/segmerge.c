@@ -203,9 +203,6 @@ replace_seg_in_chain(int32_t new_seg_id, int32_t old_seg_id, struct SegCache* se
 evict_rstatus_e
 seg_merge_evict(int32_t *seg_id_ret, struct SegCache* segcache_ptr, bool need_victims, struct bstring** key_bstrs_ptr, struct bstring** value_bstrs_ptr, uint32_t* victim_cnt_ptr, bool is_seg_get_new)
 {
-    // TMPDEBUG23
-    log_error("seg_merge_evict() with need_victims %d", need_victims?1:0);
-
     struct merge_opts *mopt = &segcache_ptr->evict_info_ptr->merge_opt;
     struct seg        *seg  = NULL;
 
@@ -327,6 +324,19 @@ seg_merge_evict(int32_t *seg_id_ret, struct SegCache* segcache_ptr, bool need_vi
         pthread_mutex_unlock(&ttl_bkt->mtx);
 #endif 
 
+        // (Siyuan) Used for debugging
+        // uint32_t tmp_debug_seg_id = segcache_ptr->ttl_buckets[bkt_idx].first_seg_id;
+        // uint32_t tmp_i = 0;
+        // log_error("ttl_buckets bkt_idx: %d", bkt_idx);
+        // while (true)
+        // {
+        //     log_error("segs[%d] id: %d", tmp_i, tmp_debug_seg_id);
+        //     tmp_debug_seg_id = segcache_ptr->heap_ptr->segs[tmp_debug_seg_id].next_seg_id;
+        //     if (tmp_debug_seg_id == -1)
+        //     {
+        //         break;
+        //     }
+        // }
 
         last_bkt_idx = bkt_idx;
 
@@ -493,12 +503,6 @@ seg_copy(int32_t seg_id_dest, int32_t seg_id_src,
                 victim_idx++;
             }
 
-            // TMPDEBUG23
-            if (strncmp(item_key(it), "abybyugmdcilxq", it->klen) == 0)
-            {
-                log_error("seg_copy()::it->deleted evicts item_key(it) %.*s from seg_id %d with need_victims %d", it->klen, item_key(it), seg_id_src_ht, need_victims?1:0);
-            }
-
             /* this is necessary for current hash table design */
             hashtable_evict(item_key(it), item_nkey(it),
                             seg_id_src_ht, curr_src - seg_data_src, segcache_ptr);
@@ -531,12 +535,6 @@ seg_copy(int32_t seg_id_dest, int32_t seg_id_src,
                 victim_idx++;
             }
 
-            // TMPDEBUG23
-            if (strncmp(item_key(it), "abybyugmdcilxq", it->klen) == 0)
-            {
-                log_error("seg_copy()::!copy_all_items evicts item_key(it) %.*s from seg_id %d with need_victims %d", it->klen, item_key(it), seg_id_src_ht, need_victims?1:0);
-            }
-
             hashtable_evict(item_key(it), it->klen, seg_id_src_ht, it_offset, segcache_ptr);
             curr_src += it_sz;
             continue;
@@ -562,12 +560,6 @@ seg_copy(int32_t seg_id_dest, int32_t seg_id_src,
                 (*value_bstrs_ptr)[victim_idx].data = (char*)malloc(it->vlen);
                 memcpy((*value_bstrs_ptr)[victim_idx].data, item_val(it), it->vlen);
                 victim_idx++;
-            }
-
-            // TMPDEBUG23
-            if (strncmp(item_key(it), "abybyugmdcilxq", it->klen) == 0)
-            {
-                log_error("seg_copy()::tail_processing evicts item_key(it) %.*s from seg_id %d with need_victims %d", it->klen, item_key(it), seg_id_src_ht, need_victims?1:0);
             }
 
             hashtable_evict(item_key(it), it->klen, seg_id_src_ht, it_offset, segcache_ptr);
@@ -696,9 +688,6 @@ merge_segs(struct seg *segs_to_merge[],
         memset(victim_cnt_array, 0, sizeof(uint32_t) * merge_cnt);
     }
 
-    // TMPDEBUG23
-    log_error("before merge evict, segcache_ptr->heap_ptr->n_free_seg: %d", segcache_ptr->heap_ptr->n_free_seg);
-
     /* start from start_seg until new_seg is full or no seg can be merged */
     while (new_seg->write_offset < mopt->stop_bytes && n_merged < n_evictable) {
         curr_seg    = segs_to_merge[n_merged];
@@ -736,8 +725,9 @@ merge_segs(struct seg *segs_to_merge[],
                 assert(need_victims);
 
                 // Also add the first evicted seg into freepool due to NO immediate use
-                rm_seg_from_ttl_bucket(curr_seg_id, segcache_ptr);
-                seg_add_to_freepool(curr_seg_id, SEG_EVICTION, segcache_ptr);
+                //rm_seg_from_ttl_bucket(curr_seg_id, segcache_ptr); // NOTE: NOT use rm_seg_from_ttl_bucket(), which will change the correct linked list (already set by replace_seg_in_chain()) in ttl bucket
+                seg_init(curr_seg_id, segcache_ptr); // Set prev/next seg id as -1
+                seg_add_to_freepool(curr_seg_id, SEG_EVICTION, segcache_ptr); // Add the first evicted seg into freepool
             }
         }
         else {
@@ -752,9 +742,6 @@ merge_segs(struct seg *segs_to_merge[],
             time_proc_sec(segcache_ptr) - curr_seg->create_at);
         INCR(segcache_ptr->seg_metrics, segcache_ptr->seg_evict_seg_cnt);
     }
-
-    // TMPDEBUG23
-    log_error("after merge evict, segcache_ptr->heap_ptr->n_free_seg: %d", segcache_ptr->heap_ptr->n_free_seg);
 
     ASSERT(n_merged > 0);
 
@@ -894,18 +881,18 @@ merge_segs(struct seg *segs_to_merge[],
         successful_merge += 1;
 
         // /* print stat */
-        // char     merged_segs[1024];
-        // int      pos       = 0;
-        // for (int i         = 0; i < n_merged; i++) {
-        //     pos += snprintf(merged_segs + pos, 1024 - pos, "%d, ",
-        //         segs_to_merge[i]->seg_id);
-        // }
-        // log_debug("ttl %d, merged %d/%d segs (%s) to seg %d, "
-        //           "curr #free segs %d, new seg offset %d, occupied size %d, "
-        //           "%d items",
-        //     new_seg->ttl, n_merged, n_evictable, merged_segs, new_seg_id,
-        //     segcache_ptr->heap_ptr->n_free_seg, new_seg->write_offset,
-        //     new_seg->live_bytes, new_seg->n_live_item);
+        char     merged_segs[1024];
+        int      pos       = 0;
+        for (int i         = 0; i < n_merged; i++) {
+            pos += snprintf(merged_segs + pos, 1024 - pos, "%d, ",
+                segs_to_merge[i]->seg_id);
+        }
+        log_debug("ttl %d, merged %d/%d segs (%s) to seg %d, "
+                  "curr #free segs %d, new seg offset %d, occupied size %d, "
+                  "%d items",
+            new_seg->ttl, n_merged, n_evictable, merged_segs, new_seg_id,
+            segcache_ptr->heap_ptr->n_free_seg, new_seg->write_offset,
+            new_seg->live_bytes, new_seg->n_live_item);
 
         // log_verb("***************************************************");
 
