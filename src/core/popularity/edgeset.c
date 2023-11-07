@@ -1,5 +1,7 @@
 #include "core/popularity/edgeset.h"
 
+#include <sstream>
+
 namespace covered
 {
     const std::string Edgeset::kClassName("Edgeset");
@@ -115,6 +117,20 @@ namespace covered
             edgeset_.insert(edge_idx);
         }
         return size - position;
+    }
+
+    std::string Edgeset::toString() const
+    {
+        std::ostringstream oss;
+        oss << "edgeset size: " << edgeset_.size();
+        uint32_t i = 0;
+        for (std::unordered_set<uint32_t>::const_iterator edgeset_const_iter = edgeset_.begin(); edgeset_const_iter != edgeset_.end(); edgeset_const_iter++)
+        {
+            uint32_t edge_idx = *edgeset_const_iter;
+            oss << "; edge[" << i << "]: " << edge_idx;
+            i++;
+        }
+        return oss.str();
     }
 
     const Edgeset& Edgeset::operator=(const Edgeset& other)

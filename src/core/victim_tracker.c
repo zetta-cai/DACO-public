@@ -181,7 +181,16 @@ namespace covered
         bool is_first_received = peredge_victimsync_monitor_iter->second.isFirstReceived();
         if (is_first_received) // This is the first victim syncset from the source edge idx
         {
-            assert(neighbor_victim_syncset.isComplete());
+            //assert(neighbor_victim_syncset.isComplete());
+            // TPMDEBUG231107
+            if (neighbor_complete_victim_syncset.isComplete() == false)
+            {
+                std::ostringstream oss;
+                oss << "updateForNeighborVictimSyncset() neighbor_victim_syncset from edge " << source_edge_idx << "; is complete: " << neighbor_victim_syncset.isComplete() << "; is compressed: " << neighbor_victim_syncset.isCompressed() << "; synced_seqnum: " << synced_seqnum;
+                Util::dumpErrorMsg(instance_name_, oss.str());
+                exit(1);
+            }
+            
             assert(synced_seqnum == 0);
 
             peredge_victimsync_monitor_iter->second.clearFirstReceived(synced_seqnum);

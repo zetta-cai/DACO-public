@@ -139,7 +139,7 @@ namespace covered
             if (is_cache_stable)
             {
                 is_stable = true;
-                cache_hit_ratio = getCurslotTotalAggregatedStatistics().getCooperativeHitRatio();
+                cache_hit_ratio = getCurslotTotalAggregatedStatistics().getTotalHitRatio();
             }
         }
 

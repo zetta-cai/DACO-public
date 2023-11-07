@@ -259,10 +259,18 @@ namespace covered
 
         // Get allocation class in our memory allocator
         assert(required_size <= std::numeric_limits<uint32_t>::max());
-        assert(required_size <= max_allocation_class_size_);
+        
+        // NOTE: although we ONLY trigger independent admission for uncached objects w/ reasonable value sizes (NOT exceed max slab size) due to slab-based memory management in CacheLib engine, required size could still exceed max slab size due to multiple admissions in parallel
+        //assert(required_size <= max_allocation_class_size_); // (OBSOLETE) NOTE: required size must <= newly-admited object size, while we will never admit large-value objects
+        uint64_t tmp_required_size = required_size;
+        if (required_size > max_allocation_class_size_)
+        {
+            // NOTE: extra bytes will be evicted outside CachelibLocalCache in the while loop of CacheServer
+            tmp_required_size = max_allocation_class_size_;
+        }
 
         // NOTE: Cachelib performs slab-based eviction, so we use the lower-bound slab class for required size to try to find a victim first
-        const auto lower_bound_cid = cachelib_cache_ptr_->allocator_->getAllocationClassId(cachelib_poolid_, static_cast<uint32_t>(required_size));
+        const auto lower_bound_cid = cachelib_cache_ptr_->allocator_->getAllocationClassId(cachelib_poolid_, static_cast<uint32_t>(tmp_required_size));
         assert(lower_bound_cid >= 0);
         Lru2QCacheItem* item_ptr = cachelib_cache_ptr_->findEviction(cachelib_poolid_, lower_bound_cid); // NOTE: Cachelib will directly evict the found victim object in findEviction()!!!
 

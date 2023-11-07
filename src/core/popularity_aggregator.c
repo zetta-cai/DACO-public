@@ -147,19 +147,6 @@ namespace covered
         const std::string context_name = "PopularityAggregator::updatePreservedEdgesetForPlacement()";
         rwlock_for_popularity_aggregator_->acquire_lock(context_name);
 
-        // NOTE: key MUST have aggregated uncached popularity if with placement edgeset
-        AggregatedUncachedPopularity existing_aggregated_uncached_popularity;
-        bool has_aggregated_uncached_popularity = getAggregatedUncachedPopularity_(key, existing_aggregated_uncached_popularity);
-
-        // NOTE: the corresponding aggregated uncached popularity may already be removed, if all local uncached popularities are removed during popularity aggregation (is_tracked = false) or after placement calculation (clear placement edgeset), else if capacity bytes for popularity aggregation are used up
-        //assert(has_aggregated_uncached_popularity == true);
-        if (has_aggregated_uncached_popularity == false)
-        {
-            std::ostringstream oss;
-            oss << "aggregated uncached popularity for key " << key.getKeystr() << " has already been erased due to multi-threading access -> NO need to clear local cached popularities for placement";
-            Util::dumpInfoMsg(instance_name_, oss.str());
-        }
-
         // Preserve edge nodes of placement edgeset to ignore subsequent local uncached popularities from them
         perkey_preserved_edgeset_t::iterator perkey_preserved_edgeset_iter = perkey_preserved_edgeset_.find(key);
         if (perkey_preserved_edgeset_iter == perkey_preserved_edgeset_.end())
@@ -171,13 +158,28 @@ namespace covered
         assert(perkey_preserved_edgeset_iter != perkey_preserved_edgeset_.end());
         perkey_preserved_edgeset_iter->second.preserveEdgesetForPlacement(placement_edgeset);
 
-        // Remove local uncached popularities of the edge nodes from aggregated uncached popularity to avoid duplicate placement
-        bool is_aggregated_uncached_popularity_empty = false;
-        is_aggregated_uncached_popularity_empty = existing_aggregated_uncached_popularity.clearForPlacement(placement_edgeset);
+        // Get aggregated uncached popularity for local uncached popularity removal and max admission benefit update
+        AggregatedUncachedPopularity existing_aggregated_uncached_popularity;
+        bool has_aggregated_uncached_popularity = getAggregatedUncachedPopularity_(key, existing_aggregated_uncached_popularity);
+        // (OBSOLETE) NOTE: key MUST have aggregated uncached popularity if with placement edgeset
+        //assert(has_aggregated_uncached_popularity == true);
+        // NOTE: the corresponding aggregated uncached popularity may already be removed, if all local uncached popularities are removed during popularity aggregation (is_tracked = false) or after placement calculation (clear placement edgeset), else if capacity bytes for popularity aggregation are used up
+        if (has_aggregated_uncached_popularity == false)
+        {
+            std::ostringstream oss;
+            oss << "aggregated uncached popularity for key " << key.getKeystr() << " has already been erased due to multi-threading access -> NO need to clear local cached popularities for placement";
+            Util::dumpInfoMsg(instance_name_, oss.str());
+        }
+        else
+        {
+            // Remove local uncached popularities of the edge nodes from aggregated uncached popularity to avoid duplicate placement
+            bool is_aggregated_uncached_popularity_empty = false;
+            is_aggregated_uncached_popularity_empty = existing_aggregated_uncached_popularity.clearForPlacement(placement_edgeset);
 
-        // Update benefit-popularity multimap and per-key lookup table for existing yet updated aggregated uncached popularity
-        //const bool is_size_bytes_increased = false or true; // NOTE: NOT sure if size_bytes_ is increased or decreased here, as we may add preserved edgeset yet release local uncached popularities
-        updateBenefitPopularityForExistingKey_(key, existing_aggregated_uncached_popularity, is_aggregated_uncached_popularity_empty, is_global_cached);
+            // Update benefit-popularity multimap and per-key lookup table for existing yet updated aggregated uncached popularity
+            //const bool is_size_bytes_increased = false or true; // NOTE: NOT sure if size_bytes_ is increased or decreased here, as we may add preserved edgeset yet release local uncached popularities
+            updateBenefitPopularityForExistingKey_(key, existing_aggregated_uncached_popularity, is_aggregated_uncached_popularity_empty, is_global_cached);
+        }
 
         // Discard the objects with small max admission benefits if popularity aggregation capacity bytes are used up
         discardGlobalLessPopularObjects_();

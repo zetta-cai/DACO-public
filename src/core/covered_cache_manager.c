@@ -43,13 +43,10 @@ namespace covered
             }
         }
 
-        // TMPDEBUG23
-        Util::dumpVariablesForDebug(instance_name_, 6, "updatePopularityAggregatorForAggregatedPopularity for key", key.getKeystr().c_str(), "is_gobal_cached:", Util::toString(is_global_cached).c_str(), "tmp_is_global_cached:", Util::toString(tmp_is_global_cached).c_str());
-
         popularity_aggregator_.updateAggregatedUncachedPopularity(key, source_edge_idx, collected_popularity, tmp_is_global_cached, is_source_cached);
 
         #ifdef DEBUG_COVERED_CACHE_MANAGER
-        Util::dumpVariablesForDebug(instance_name_, 4, "need_placement_calculation:", Util::toString(need_placement_calculation).c_str(), "is_tracked_by_source_edge_node:", Util::toString(collected_popularity.isTracked()).c_str());
+        Util::dumpVariablesForDebug(instance_name_, 10, "updatePopularityAggregatorForAggregatedPopularity() for key", key.getKeystr().c_str(), "is_gobal_cached:", Util::toString(is_global_cached).c_str(), "tmp_is_global_cached:", Util::toString(tmp_is_global_cached).c_str(), "need_placement_calculation:", Util::toString(need_placement_calculation).c_str(), "is_tracked_by_source_edge_node:", Util::toString(collected_popularity.isTracked()).c_str());
         #endif
         
         // NOTE: we do NOT perform placement calculation for local/remote acquire writelock request, as newly-admitted cache copies will still be invalid after cache placement
@@ -69,6 +66,10 @@ namespace covered
                 {
                     return is_finish; // Edge node is NOT running now
                 }
+
+                #ifdef DEBUG_COVERED_CACHE_MANAGER
+                Util::dumpVariablesForDebug(instance_name_, 6, "after placement calculation for key", key.getKeystr().c_str(), "has_best_placement:", Util::toString(has_best_placement).c_str(), "best_placement_edgeset:", best_placement_edgeset.toString().c_str());
+                #endif
 
                 if (has_best_placement)
                 {
@@ -209,7 +210,7 @@ namespace covered
         bool has_aggregated_uncached_popularity = popularity_aggregator_.getAggregatedUncachedPopularity(key, tmp_aggregated_uncached_popularity);
 
         // TMPDEBUG23
-        Util::dumpVariablesForDebug(instance_name_, 6, "placementCalculation_ for key", key.getKeystr().c_str(), "is_global_cached:", Util::toString(is_global_cached).c_str(), "has_aggregated_uncached_popularity:", Util::toString(has_aggregated_uncached_popularity).c_str());
+        //Util::dumpVariablesForDebug(instance_name_, 6, "placementCalculation_ for key", key.getKeystr().c_str(), "is_global_cached:", Util::toString(is_global_cached).c_str(), "has_aggregated_uncached_popularity:", Util::toString(has_aggregated_uncached_popularity).c_str());
 
         // Perform placement calculation ONLY if key is still tracked by popularity aggregator (i.e., belonging to a global popular uncached object)
         if (has_aggregated_uncached_popularity)

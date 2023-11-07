@@ -302,7 +302,9 @@ namespace covered
         // TODO: this function will also be invoked at each placement neighbor node by the beacon node for cache placement
         
         assert(hasFineGrainedManagement());
-        assert(required_size <= max_allocation_class_size_); // NOTE: required size must <= newly-admited object size, while we will never admit large-value objects
+        
+        // NOTE: (i) we find victims via COVERED's heterogeneous popularity tracking instead of slab-based eviction in CacheLib engine, so required size of eviction is NOT limited by max slab size; (ii) although we ONLY track and admit popular uncached objects w/ reasonable value sizes (NOT exceed max slab size) due to slab-based memory management in CacheLib engine, required size could still exceed max slab size due to multiple admissions in parallel
+        //assert(required_size <= max_allocation_class_size_); // (OBSOLETE) NOTE: required size must <= newly-admited object size, while we will never admit large-value objects
 
         bool has_victim_key = false;
         uint32_t least_popular_rank = 0;

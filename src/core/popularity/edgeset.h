@@ -40,6 +40,8 @@ namespace covered
         uint32_t serialize(DynamicArray& msg_payload, const uint32_t& position) const;
         uint32_t deserialize(const DynamicArray& msg_payload, const uint32_t& position);
 
+        std::string toString() const;
+
         const Edgeset& operator=(const Edgeset& other);
     private:
         static const std::string kClassName;
