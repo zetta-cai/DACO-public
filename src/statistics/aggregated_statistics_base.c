@@ -2,6 +2,8 @@
 
 #include <sstream>
 
+#include "common/covered_weight.h"
+
 namespace covered
 {
     const std::string AggregatedStatisticsBase::kClassName("AggregatedStatisticsBase");
@@ -198,6 +200,8 @@ namespace covered
         oss << "local hit ratio: " << getLocalHitRatio() << std::endl;
         oss << "cooperative hit ratio: " << getCooperativeHitRatio() << std::endl;
         oss << "total hit ratio: " << getTotalHitRatio() << std::endl;
+        const double tmp_weight = static_cast<double>(CoveredWeight::getWeightInfo().getCooperativeHitWeight() / CoveredWeight::getWeightInfo().getLocalHitWeight()); // w2/w1
+        oss << "total hit ratio (weighted by " << tmp_weight << "): " << getLocalHitRatio() + tmp_weight * getCooperativeHitRatio() << std::endl; // local hit ratio + w2/w1 * cooperative hit ratio
 
         oss << "[Latency Statistics]" << std::endl;
         oss << "average latency: " << avg_latency_ << std::endl;
