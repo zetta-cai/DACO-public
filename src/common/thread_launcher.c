@@ -13,6 +13,8 @@ namespace covered
     //const int ThreadLauncher::SCHEDULING_POLICY = SCHED_OTHER; // Default policy used by Linux (nice value: min 19 to max -20), which relies on kernel.sched_latency_ns and kernel.sched_min_granularity_ns
     const int ThreadLauncher::SCHEDULING_POLICY = SCHED_RR; // Round-robin (priority: min 1 to max 99), which relies on /proc/sys/kernel/sched_rr_timeslice_ms
 
+    const std::string ThreadLauncher::kClassName = "ThreadLauncher";
+
     std::atomic<uint32_t> ThreadLauncher::low_priority_threadcnt_(0);
     std::atomic<uint32_t> ThreadLauncher::high_priority_threadcnt_(0);
 

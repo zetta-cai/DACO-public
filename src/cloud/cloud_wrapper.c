@@ -117,10 +117,8 @@ namespace covered
     {
         checkPointers_();
 
-        int pthread_returncode = 0;
-
         // Launch cloud-to-client propagation simulator
-        //pthread_returncode = pthread_create(&cloud_toedge_propagation_simulator_thread, NULL, PropagationSimulator::launchPropagationSimulator, (void*)cloud_toedge_propagation_simulator_param_ptr_);
+        //int pthread_returncode = pthread_create(&cloud_toedge_propagation_simulator_thread, NULL, PropagationSimulator::launchPropagationSimulator, (void*)cloud_toedge_propagation_simulator_param_ptr_);
         // if (pthread_returncode != 0)
         // {
         //     std::ostringstream oss;

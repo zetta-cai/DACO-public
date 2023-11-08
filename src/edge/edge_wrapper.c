@@ -714,10 +714,8 @@ namespace covered
     {
         checkPointers_();
 
-        int pthread_returncode = 0;
-
         // Launch edge-to-client propagation simulator
-        //pthread_returncode = pthread_create(&edge_toclient_propagation_simulator_thread_, NULL, PropagationSimulator::launchPropagationSimulator, (void*)edge_toclient_propagation_simulator_param_ptr_);
+        //int pthread_returncode = pthread_create(&edge_toclient_propagation_simulator_thread_, NULL, PropagationSimulator::launchPropagationSimulator, (void*)edge_toclient_propagation_simulator_param_ptr_);
         // if (pthread_returncode != 0)
         // {
         //     std::ostringstream oss;
@@ -773,7 +771,7 @@ namespace covered
         //     Util::dumpErrorMsg(instance_name_, oss.str());
         //     exit(1);
         // }
-        std::string tmp_thread_name = "edge-cache-server-" + std::to_string(node_idx_);
+        tmp_thread_name = "edge-cache-server-" + std::to_string(node_idx_);
         ThreadLauncher::pthreadCreateLowPriority(tmp_thread_name, &cache_server_thread_, launchCacheServer_, (void*)(this));
 
         // Launch invalidation server

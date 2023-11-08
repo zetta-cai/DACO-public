@@ -792,8 +792,8 @@ namespace covered
         oss << "Cloud RocksDB base directory: " << cloud_rocksdb_basedir_ << std::endl;
         oss << "Covered local uncached max mem usage ratio: " << covered_local_uncached_max_mem_usage_ratio_ << std::endl; // ONLY for COVERED
         oss << "Covered popularity aggregation max mem usage ratio: " << covered_popularity_aggregation_max_mem_usage_ratio_ << std::endl; // ONLY for COVERED
-        oss << "CPU dedicated corecnt: " << cpu_dedicated_corecnt_ << std::endl;
-        oss << "CPU shared corecnt: " << cpu_shared_corecnt_ << std::endl;
+        oss << "CPU dedicated corecnt: " << cpu_dedicated_corecnt_  << " (total corecnt: " << std::thread::hardware_concurrency() << ")" << std::endl;
+        oss << "CPU shared corecnt: " << cpu_shared_corecnt_ << " (total corecnt: " << std::thread::hardware_concurrency() << ")" << std::endl;
         oss << "Dataset loader sleep for compaction seconds: " << dataset_loader_sleep_for_compaction_sec_ << std::endl;
         oss << "Edge beacon server recvreq startport: " << edge_beacon_server_recvreq_startport_ << std::endl;
         oss << "Edge cache server data request buffer size: " << edge_cache_server_data_request_buffer_size_ << std::endl;
