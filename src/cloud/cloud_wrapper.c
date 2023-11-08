@@ -5,6 +5,7 @@
 
 #include "cloud/data_server/data_server.h"
 #include "common/config.h"
+#include "common/thread_launcher.h"
 #include "common/util.h"
 #include "message/control_message.h"
 #include "network/propagation_simulator.h"
@@ -120,25 +121,27 @@ namespace covered
 
         // Launch cloud-to-client propagation simulator
         //pthread_returncode = pthread_create(&cloud_toedge_propagation_simulator_thread, NULL, PropagationSimulator::launchPropagationSimulator, (void*)cloud_toedge_propagation_simulator_param_ptr_);
-        pthread_returncode = Util::pthreadCreateHighPriority(&cloud_toedge_propagation_simulator_thread_, PropagationSimulator::launchPropagationSimulator, (void*)cloud_toedge_propagation_simulator_param_ptr_);
-        if (pthread_returncode != 0)
-        {
-            std::ostringstream oss;
-            oss << " failed to launch cloud-to-edge propagation simulator (error code: " << pthread_returncode << ")" << std::endl;
-            Util::dumpErrorMsg(instance_name_, oss.str());
-            exit(1);
-        }
+        // if (pthread_returncode != 0)
+        // {
+        //     std::ostringstream oss;
+        //     oss << " failed to launch cloud-to-edge propagation simulator (error code: " << pthread_returncode << ")" << std::endl;
+        //     Util::dumpErrorMsg(instance_name_, oss.str());
+        //     exit(1);
+        // }
+        std::string tmp_thread_name = "cloud-toedge-propagation-simulator-" + std::to_string(node_idx_);
+        ThreadLauncher::pthreadCreateHighPriority(tmp_thread_name, &cloud_toedge_propagation_simulator_thread_, PropagationSimulator::launchPropagationSimulator, (void*)cloud_toedge_propagation_simulator_param_ptr_);
 
         // Launch a data server thread in the local cloud
         //pthread_returncode = pthread_create(&data_server_thread_, NULL, DataServer::launchDataServer, (void*)(&cloud_worker_param));
-        pthread_returncode = Util::pthreadCreateHighPriority(&data_server_thread_, DataServer::launchDataServer, (void*)(this));
-        if (pthread_returncode != 0)
-        {
-            std::ostringstream oss;
-            oss << " failed to launch cloud data server (error code: " << pthread_returncode << ")" << std::endl;
-            Util::dumpErrorMsg(instance_name_, oss.str());
-            exit(1);
-        }
+        // if (pthread_returncode != 0)
+        // {
+        //     std::ostringstream oss;
+        //     oss << " failed to launch cloud data server (error code: " << pthread_returncode << ")" << std::endl;
+        //     Util::dumpErrorMsg(instance_name_, oss.str());
+        //     exit(1);
+        // }
+        tmp_thread_name = "cloud-data-server-" + std::to_string(node_idx_);
+        ThreadLauncher::pthreadCreateHighPriority(tmp_thread_name, &data_server_thread_, DataServer::launchDataServer, (void*)(this));
 
         return;
     }

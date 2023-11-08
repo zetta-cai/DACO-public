@@ -67,7 +67,7 @@ int main(int argc, char **argv) {
         covered::Util::dumpNormalMsg(main_class_name, oss.str());
 
         //pthread_returncode = pthread_create(&loader_threads[client_idx], NULL, launchLoader, (void*)(&(loader_params[client_idx])));
-        pthread_returncode = covered::Util::pthreadCreateHighPriority(&loader_threads[client_idx], launchLoader, (void*)(&(loader_params[client_idx])));
+        pthread_returncode = covered::ThreadLauncher::pthreadCreateHighPriority(&loader_threads[client_idx], launchLoader, (void*)(&(loader_params[client_idx])));
         if (pthread_returncode != 0)
         {
             std::ostringstream oss;

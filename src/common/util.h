@@ -102,8 +102,6 @@ namespace covered
         static const int START_YEAR;
         static const long NANOSECONDS_PERSECOND; // # of nanoseconds per second
         static const uint32_t SECOND_PRECISION; // # of digits after decimal point of second shown in time string
-        // Task scheduling
-        static const int SCHEDULING_POLICY;
         // Charset
         static const std::string CHARSET;
 
@@ -202,15 +200,10 @@ namespace covered
         static std::string getCloudRocksdbBasedirForWorkload(const uint32_t& keycnt, const std::string& workload_name);
         static std::string getCloudRocksdbDirpath(const uint32_t& keycnt, const std::string& workload_name, const uint32_t& cloud_idx); // Calculate the RocksDB dirpath for the cloud node
 
-        // (7) Task scheduling
-
-        static int pthreadCreateLowPriority(pthread_t* tid_ptr, void *(*start_routine)(void *), void* arg_ptr);
-        static int pthreadCreateHighPriority(pthread_t* tid_ptr, void *(*start_routine)(void *), void* arg_ptr);
-
-        // (8) System settings
+        // (7) System settings
         static uint32_t getNetCoreRmemMax();
 
-        // (9) Others
+        // (8) Others
 
         static uint32_t getTimeBasedRandomSeed(); // Get a random seed (instead of deterministic) based on current time
         static std::string getRandomString(const uint32_t& length);
@@ -241,10 +234,9 @@ namespace covered
         // (6) Intermediate files
         static std::string getInfixForEvaluatorStatisticsFilepath_(EvaluatorCLI* evaluator_cli_ptr);
 
-        // (7) Task scheduling
+        // (8) Others
         static std::mt19937_64 string_randgen_;
         static std::uniform_int_distribution<uint32_t> string_randdist_;
-        static void preparePthreadAttr_(pthread_attr_t* attr_ptr);
     };
 }
 

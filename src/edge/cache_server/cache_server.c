@@ -4,6 +4,7 @@
 #include <sstream>
 
 #include "common/config.h"
+#include "common/thread_launcher.h"
 #include "common/util.h"
 #include "edge/cache_server/cache_server_placement_processor.h"
 #include "edge/cache_server/cache_server_redirection_processor.h"
@@ -122,48 +123,52 @@ namespace covered
         for (uint32_t local_cache_server_worker_idx = 0; local_cache_server_worker_idx < percacheserver_workercnt; local_cache_server_worker_idx++)
         {
             //pthread_returncode = pthread_create(&cache_server_worker_threads[local_cache_server_worker_idx], NULL, CacheServerWorkerBase::launchCacheServerWorker, (void*)(&cache_server_worker_params_[local_cache_server_worker_idx]));
-            pthread_returncode = Util::pthreadCreateHighPriority(&cache_server_worker_threads[local_cache_server_worker_idx], CacheServerWorkerBase::launchCacheServerWorker, (void*)(&cache_server_worker_params_[local_cache_server_worker_idx]));
-            if (pthread_returncode != 0)
-            {
-                std::ostringstream oss;
-                oss << "edge " << edge_idx << " failed to launch cache server worker " << local_cache_server_worker_idx << " (error code: " << pthread_returncode << ")" << std::endl;
-                covered::Util::dumpErrorMsg(instance_name_, oss.str());
-                exit(1);
-            }
+            // if (pthread_returncode != 0)
+            // {
+            //     std::ostringstream oss;
+            //     oss << "edge " << edge_idx << " failed to launch cache server worker " << local_cache_server_worker_idx << " (error code: " << pthread_returncode << ")" << std::endl;
+            //     covered::Util::dumpErrorMsg(instance_name_, oss.str());
+            //     exit(1);
+            // }
+            std::string tmp_thread_name = "edge-cache-server-worker-" + std::to_string(edge_idx) + "-" + std::to_string(local_cache_server_worker_idx);
+            ThreadLauncher::pthreadCreateHighPriority(tmp_thread_name, &cache_server_worker_threads[local_cache_server_worker_idx], CacheServerWorkerBase::launchCacheServerWorker, (void*)(&cache_server_worker_params_[local_cache_server_worker_idx]));
         }
 
         // Launch cache server victim fetch processor
         //pthread_returncode = pthread_create(&cache_server_victim_fetch_processor_thread, NULL, CacheServerVictimFetchProcessor::launchCacheServerVictimFetchProcessor, (void*)(cache_server_victim_fetch_processor_param_ptr_));
-        pthread_returncode = Util::pthreadCreateHighPriority(&cache_server_victim_fetch_processor_thread, CacheServerVictimFetchProcessor::launchCacheServerVictimFetchProcessor, (void*)(cache_server_victim_fetch_processor_param_ptr_));
-        if (pthread_returncode != 0)
-        {
-            std::ostringstream oss;
-            oss << "edge " << edge_idx << " failed to launch cache server victim fetch processor (error code: " << pthread_returncode << ")" << std::endl;
-            covered::Util::dumpErrorMsg(instance_name_, oss.str());
-            exit(1);
-        }
+        // if (pthread_returncode != 0)
+        // {
+        //     std::ostringstream oss;
+        //     oss << "edge " << edge_idx << " failed to launch cache server victim fetch processor (error code: " << pthread_returncode << ")" << std::endl;
+        //     covered::Util::dumpErrorMsg(instance_name_, oss.str());
+        //     exit(1);
+        // }
+        std::string tmp_thread_name = "edge-cache-server-victim-fetch-processor-" + std::to_string(edge_idx);
+        ThreadLauncher::pthreadCreateLowPriority(tmp_thread_name, &cache_server_victim_fetch_processor_thread, CacheServerVictimFetchProcessor::launchCacheServerVictimFetchProcessor, (void*)(cache_server_victim_fetch_processor_param_ptr_));
 
         // Launch cache server redirection processor
         //pthread_returncode = pthread_create(&cache_server_redirection_processor_thread, NULL, CacheServerRedirectionProcessor::launchCacheServerRedirectionProcessor, (void*)(cache_server_redirection_processor_param_ptr_));
-        pthread_returncode = Util::pthreadCreateHighPriority(&cache_server_redirection_processor_thread, CacheServerRedirectionProcessor::launchCacheServerRedirectionProcessor, (void*)(cache_server_redirection_processor_param_ptr_));
-        if (pthread_returncode != 0)
-        {
-            std::ostringstream oss;
-            oss << "edge " << edge_idx << " failed to launch cache server redirection processor (error code: " << pthread_returncode << ")" << std::endl;
-            covered::Util::dumpErrorMsg(instance_name_, oss.str());
-            exit(1);
-        }
+        // if (pthread_returncode != 0)
+        // {
+        //     std::ostringstream oss;
+        //     oss << "edge " << edge_idx << " failed to launch cache server redirection processor (error code: " << pthread_returncode << ")" << std::endl;
+        //     covered::Util::dumpErrorMsg(instance_name_, oss.str());
+        //     exit(1);
+        // }
+        tmp_thread_name = "edge-cache-server-redirection-processor-" + std::to_string(edge_idx);
+        ThreadLauncher::pthreadCreateHighPriority(tmp_thread_name, &cache_server_redirection_processor_thread, CacheServerRedirectionProcessor::launchCacheServerRedirectionProcessor, (void*)(cache_server_redirection_processor_param_ptr_));
 
         // Launch cache server placement processor
         //pthread_returncode = pthread_create(&cache_server_placement_processor_thread, NULL, CacheServerPlacementProcessor::launchCacheServerPlacementProcessor, (void*)(cache_server_placement_processor_param_ptr_));
-        pthread_returncode = Util::pthreadCreateHighPriority(&cache_server_placement_processor_thread, CacheServerPlacementProcessor::launchCacheServerPlacementProcessor, (void*)(cache_server_placement_processor_param_ptr_));
-        if (pthread_returncode != 0)
-        {
-            std::ostringstream oss;
-            oss << "edge " << edge_idx << " failed to launch cache server placement processor (error code: " << pthread_returncode << ")" << std::endl;
-            covered::Util::dumpErrorMsg(instance_name_, oss.str());
-            exit(1);
-        }
+        // if (pthread_returncode != 0)
+        // {
+        //     std::ostringstream oss;
+        //     oss << "edge " << edge_idx << " failed to launch cache server placement processor (error code: " << pthread_returncode << ")" << std::endl;
+        //     covered::Util::dumpErrorMsg(instance_name_, oss.str());
+        //     exit(1);
+        // }
+        tmp_thread_name = "edge-cache-server-placement-processor-" + std::to_string(edge_idx);
+        ThreadLauncher::pthreadCreateHighPriority(tmp_thread_name, &cache_server_placement_processor_thread, CacheServerPlacementProcessor::launchCacheServerPlacementProcessor, (void*)(cache_server_placement_processor_param_ptr_));
 
         // Receive data requests and partition to different cache server workers
         receiveRequestsAndPartition_();

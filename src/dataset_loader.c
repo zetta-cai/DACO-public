@@ -12,6 +12,7 @@
 #include "cloud/rocksdb_wrapper.h"
 #include "cli/dataset_loader_cli.h"
 #include "common/config.h"
+#include "common/thread_launcher.h"
 #include "common/util.h"
 #include "workload/workload_item.h"
 #include "workload/workload_wrapper_base.h"
@@ -82,7 +83,9 @@ int main(int argc, char **argv) {
 
     covered::DatasetLoaderCLI dataset_loader_cli(argc, argv);
 
+    // Bind main thread of dataset loader to a shared CPU core
     const std::string main_class_name = covered::Config::getMainClassName();
+    covered::ThreadLauncher::bindMainThreadToSharedCpuCore(main_class_name);
 
     const uint32_t cloud_idx = dataset_loader_cli.getCloudIdx();
     const uint32_t dataset_loadercnt = dataset_loader_cli.getDatasetLoadercnt();
@@ -124,22 +127,23 @@ int main(int argc, char **argv) {
 
     // (3) Launch dataset loaders for loading phase
     covered::Util::dumpNormalMsg(main_class_name, "launch dataset loaders...");
-    int pthread_returncode = 0;
     pthread_t dataset_loader_threads[dataset_loadercnt];
     for (uint32_t dataset_loader_idx = 0; dataset_loader_idx < dataset_loadercnt; dataset_loader_idx++)
     {
-        pthread_returncode = covered::Util::pthreadCreateHighPriority(&dataset_loader_threads[dataset_loader_idx], launchDatasetLoader, (void*)(&dataset_loader_params[dataset_loader_idx]));
-        if (pthread_returncode != 0)
-        {
-            oss.clear();
-            oss.str("");
-            oss << "failed to launch dataset loader (error code: " << pthread_returncode << ")";
-            covered::Util::dumpErrorMsg(main_class_name, oss.str());
-            exit(1);
-        }
+        std::string tmp_thread_name = "dataset-loader-" + std::to_string(dataset_loader_idx);
+        covered::ThreadLauncher::pthreadCreateHighPriority(tmp_thread_name, &dataset_loader_threads[dataset_loader_idx], launchDatasetLoader, (void*)(&dataset_loader_params[dataset_loader_idx]));
+        // if (pthread_returncode != 0)
+        // {
+        //     oss.clear();
+        //     oss.str("");
+        //     oss << "failed to launch dataset loader (error code: " << pthread_returncode << ")";
+        //     covered::Util::dumpErrorMsg(main_class_name, oss.str());
+        //     exit(1);
+        // }
     }
 
     // (4) Wait for dataset loaders
+    int pthread_returncode = 0;
     covered::Util::dumpNormalMsg(main_class_name, "wait for all dataset loaders...");
     for (uint32_t dataset_loader_idx = 0; dataset_loader_idx < dataset_loadercnt; dataset_loader_idx++)
     {

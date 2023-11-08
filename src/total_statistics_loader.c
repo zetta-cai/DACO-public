@@ -15,6 +15,7 @@ int main(int argc, char **argv) {
     // (1) Parse and process CLI parameters and store them into EvaluatorParam
     covered::EvaluatorCLI evaluator_cli(argc, argv);
 
+    // NOTE: NO need to bind main thread of total statistics loader to a shared CPU core
     const std::string main_class_name = covered::Config::getMainClassName();
 
     // (2) Load total aggregated statistics

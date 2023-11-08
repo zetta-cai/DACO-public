@@ -4,7 +4,6 @@
 #include <chrono> // system_clock
 #include <errno.h> // ENOENT
 #include <math.h> // isnan and isinf
-#include <sched.h> // sched_param
 #include <sstream> // ostringstream
 #include <cmath> // pow
 
@@ -71,10 +70,6 @@ namespace covered
     const int Util::START_YEAR = 1900;
     const long Util::NANOSECONDS_PERSECOND = 1000000000L;
     const uint32_t Util::SECOND_PRECISION = 4;
-    // Task scheduling
-    // TODO: pass nice value into each pthread for SCHED_OTHER
-    //const int Util::SCHEDULING_POLICY = SCHED_OTHER; // Default policy used by Linux (nice value: min 19 to max -20), which relies on kernel.sched_latency_ns and kernel.sched_min_granularity_ns
-    const int Util::SCHEDULING_POLICY = SCHED_RR; // Round-robin (priority: min 1 to max 99), which relies on /proc/sys/kernel/sched_rr_timeslice_ms
 
     // For charset
     const std::string Util::CHARSET("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz");
@@ -915,89 +910,7 @@ namespace covered
         return infixstr;
     }
 
-    // (7) Task scheduling
-
-    int Util::pthreadCreateLowPriority(pthread_t* tid_ptr, void *(*start_routine)(void *), void* arg_ptr)
-    {
-        int ret = 0;
-
-        // Prepare thread attributes
-        pthread_attr_t attr;
-        preparePthreadAttr_(&attr);
-
-        // Prepare scheduling parameters
-        sched_param param;
-        ret = pthread_attr_getschedparam(&attr, &param);
-        assert(ret >= 0);
-        param.sched_priority = sched_get_priority_min(SCHEDULING_POLICY);
-        ret = pthread_attr_setschedparam(&attr, &param);
-        assert(ret >= 0);
-
-        // Launch pthread
-        ret = pthread_create(tid_ptr, &attr, start_routine, arg_ptr);
-        return ret;
-    }
-    
-    int Util::pthreadCreateHighPriority(pthread_t* tid_ptr, void *(*start_routine)(void *), void* arg_ptr)
-    {
-        int ret = 0;
-
-        // Prepare thread attributes
-        pthread_attr_t attr;
-        preparePthreadAttr_(&attr);
-
-        // Prepare scheduling parameters
-        sched_param param;
-        ret = pthread_attr_getschedparam(&attr, &param);
-        assert(ret >= 0);
-        param.sched_priority = sched_get_priority_max(SCHEDULING_POLICY);
-        ret = pthread_attr_setschedparam(&attr, &param);
-        assert(ret >= 0);
-
-        // Launch pthread
-        ret = pthread_create(tid_ptr, &attr, start_routine, arg_ptr);
-        return ret;
-    }
-
-    void Util::preparePthreadAttr_(pthread_attr_t* attr_ptr)
-    {
-        int ret = 0;
-
-        // Init pthread attr by default
-        ret = pthread_attr_init(attr_ptr);
-        assert(ret >= 0);
-
-        // Get and print default policy
-        /*int policy = 0;
-        ret = pthread_attr_getschedpolicy(attr_ptr, &policy);
-        assert(ret >= 0);
-        if (policy == SCHED_OTHER) // This is the default policy in Ubuntu
-        {
-            Util::dumpDebugMsg(kClassName, "default policy is SCHED_OTHER");
-        }
-        else if (policy == SCHED_RR)
-        {
-            Util::dumpDebugMsg(kClassName, "default policy is SCHED_RR");
-        }
-        else if (policy == SCHED_FIFO)
-        {
-            Util::dumpDebugMsg(kClassName, "default policy is SCHED_FIFO");
-        }
-        else
-        {
-            std::ostringstream oss;
-            oss << "default policy is " << policy;
-            Util::dumpDebugMsg(kClassName, oss.str());
-        }*/
-
-        // Set scheduling policy
-        ret = pthread_attr_setschedpolicy(attr_ptr, SCHEDULING_POLICY);
-        assert(ret >= 0);
-
-        return;
-    }
-
-    // (8) System settings
+    // (7) System settings
     uint32_t Util::getNetCoreRmemMax()
     {
         std::string cmd = "sysctl -a 2>/dev/null | grep net.core.rmem_max";
@@ -1053,7 +966,7 @@ namespace covered
         return 0;
     }
 
-    // (9) Others
+    // (8) Others
 
     uint32_t Util::getTimeBasedRandomSeed()
     {

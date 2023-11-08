@@ -4,6 +4,7 @@
 #include <sstream>
 
 #include "common/config.h"
+#include "common/thread_launcher.h"
 #include "common/util.h"
 #include "edge/beacon_server/beacon_server_base.h"
 #include "edge/cache_server/cache_server.h"
@@ -717,69 +718,75 @@ namespace covered
 
         // Launch edge-to-client propagation simulator
         //pthread_returncode = pthread_create(&edge_toclient_propagation_simulator_thread_, NULL, PropagationSimulator::launchPropagationSimulator, (void*)edge_toclient_propagation_simulator_param_ptr_);
-        pthread_returncode = Util::pthreadCreateHighPriority(&edge_toclient_propagation_simulator_thread_, PropagationSimulator::launchPropagationSimulator, (void*)edge_toclient_propagation_simulator_param_ptr_);
-        if (pthread_returncode != 0)
-        {
-            std::ostringstream oss;
-            oss << " failed to launch edge-to-client propagation simulator (error code: " << pthread_returncode << ")" << std::endl;
-            Util::dumpErrorMsg(instance_name_, oss.str());
-            exit(1);
-        }
+        // if (pthread_returncode != 0)
+        // {
+        //     std::ostringstream oss;
+        //     oss << " failed to launch edge-to-client propagation simulator (error code: " << pthread_returncode << ")" << std::endl;
+        //     Util::dumpErrorMsg(instance_name_, oss.str());
+        //     exit(1);
+        // }
+        std::string tmp_thread_name = "edge-toclient-propagation-simulator-" + std::to_string(node_idx_);
+        ThreadLauncher::pthreadCreateHighPriority(tmp_thread_name, &edge_toclient_propagation_simulator_thread_, PropagationSimulator::launchPropagationSimulator, (void*)edge_toclient_propagation_simulator_param_ptr_);
 
         // Launch edge-to-edge propagation simulator
         //pthread_returncode = pthread_create(&edge_toedge_propagation_simulator_thread_, NULL, PropagationSimulator::launchPropagationSimulator, (void*)edge_toedge_propagation_simulator_param_ptr_);
-        pthread_returncode = Util::pthreadCreateHighPriority(&edge_toedge_propagation_simulator_thread_, PropagationSimulator::launchPropagationSimulator, (void*)edge_toedge_propagation_simulator_param_ptr_);
-        if (pthread_returncode != 0)
-        {
-            std::ostringstream oss;
-            oss << " failed to launch edge-to-edge propagation simulator (error code: " << pthread_returncode << ")" << std::endl;
-            Util::dumpErrorMsg(instance_name_, oss.str());
-            exit(1);
-        }
+        // if (pthread_returncode != 0)
+        // {
+        //     std::ostringstream oss;
+        //     oss << " failed to launch edge-to-edge propagation simulator (error code: " << pthread_returncode << ")" << std::endl;
+        //     Util::dumpErrorMsg(instance_name_, oss.str());
+        //     exit(1);
+        // }
+        tmp_thread_name = "edge-toedge-propagation-simulator-" + std::to_string(node_idx_);
+        ThreadLauncher::pthreadCreateHighPriority(tmp_thread_name, &edge_toedge_propagation_simulator_thread_, PropagationSimulator::launchPropagationSimulator, (void*)edge_toedge_propagation_simulator_param_ptr_);
 
         // Launch edge-to-cloud propagation simulator
         //pthread_returncode = pthread_create(&edge_tocloud_propagation_simulator_thread_, NULL, PropagationSimulator::launchPropagationSimulator, (void*)edge_tocloud_propagation_simulator_param_ptr_);
-        pthread_returncode = Util::pthreadCreateHighPriority(&edge_tocloud_propagation_simulator_thread_, PropagationSimulator::launchPropagationSimulator, (void*)edge_tocloud_propagation_simulator_param_ptr_);
-        if (pthread_returncode != 0)
-        {
-            std::ostringstream oss;
-            oss << " failed to launch edge-to-cloud propagation simulator (error code: " << pthread_returncode << ")" << std::endl;
-            Util::dumpErrorMsg(instance_name_, oss.str());
-            exit(1);
-        }
+        // if (pthread_returncode != 0)
+        // {
+        //     std::ostringstream oss;
+        //     oss << " failed to launch edge-to-cloud propagation simulator (error code: " << pthread_returncode << ")" << std::endl;
+        //     Util::dumpErrorMsg(instance_name_, oss.str());
+        //     exit(1);
+        // }
+        tmp_thread_name = "edge-tocloud-propagation-simulator-" + std::to_string(node_idx_);
+        ThreadLauncher::pthreadCreateHighPriority(tmp_thread_name, &edge_tocloud_propagation_simulator_thread_, PropagationSimulator::launchPropagationSimulator, (void*)edge_tocloud_propagation_simulator_param_ptr_);
 
         // Launch beacon server
         //pthread_returncode = pthread_create(&beacon_server_thread_, NULL, launchBeaconServer_, (void*)(this));
-        pthread_returncode = Util::pthreadCreateHighPriority(&beacon_server_thread_, launchBeaconServer_, (void*)(this));
-        if (pthread_returncode != 0)
-        {
-            std::ostringstream oss;
-            oss << "edge " << node_idx_ << " failed to launch beacon server (error code: " << pthread_returncode << ")" << std::endl;
-            Util::dumpErrorMsg(instance_name_, oss.str());
-            exit(1);
-        }
+        // if (pthread_returncode != 0)
+        // {
+        //     std::ostringstream oss;
+        //     oss << "edge " << node_idx_ << " failed to launch beacon server (error code: " << pthread_returncode << ")" << std::endl;
+        //     Util::dumpErrorMsg(instance_name_, oss.str());
+        //     exit(1);
+        // }
+        tmp_thread_name = "edge-beacon-server-" + std::to_string(node_idx_);
+        ThreadLauncher::pthreadCreateHighPriority(tmp_thread_name, &beacon_server_thread_, launchBeaconServer_, (void*)(this));
 
         // Launch cache server
         //pthread_returncode = pthread_create(&cache_server_thread_, NULL, launchCacheServer_, (void*)(this));
-        pthread_returncode = Util::pthreadCreateLowPriority(&cache_server_thread_, launchCacheServer_, (void*)(this));
-        if (pthread_returncode != 0)
-        {
-            std::ostringstream oss;
-            oss << "edge " << node_idx_ << " failed to launch cache server (error code: " << pthread_returncode << ")" << std::endl;
-            Util::dumpErrorMsg(instance_name_, oss.str());
-            exit(1);
-        }
+        // if (pthread_returncode != 0)
+        // {
+        //     std::ostringstream oss;
+        //     oss << "edge " << node_idx_ << " failed to launch cache server (error code: " << pthread_returncode << ")" << std::endl;
+        //     Util::dumpErrorMsg(instance_name_, oss.str());
+        //     exit(1);
+        // }
+        std::string tmp_thread_name = "edge-cache-server-" + std::to_string(node_idx_);
+        ThreadLauncher::pthreadCreateLowPriority(tmp_thread_name, &cache_server_thread_, launchCacheServer_, (void*)(this));
 
         // Launch invalidation server
         //pthread_returncode = pthread_create(&invalidation_server_thread_, NULL, launchInvalidationServer_, (void*)(this));
-        pthread_returncode = Util::pthreadCreateHighPriority(&invalidation_server_thread_, launchInvalidationServer_, (void*)(this));
-        if (pthread_returncode != 0)
-        {
-            std::ostringstream oss;
-            oss << "edge " << node_idx_ << " failed to launch invalidation server (error code: " << pthread_returncode << ")" << std::endl;
-            Util::dumpErrorMsg(instance_name_, oss.str());
-            exit(1);
-        }
+        // if (pthread_returncode != 0)
+        // {
+        //     std::ostringstream oss;
+        //     oss << "edge " << node_idx_ << " failed to launch invalidation server (error code: " << pthread_returncode << ")" << std::endl;
+        //     Util::dumpErrorMsg(instance_name_, oss.str());
+        //     exit(1);
+        // }
+        tmp_thread_name = "edge-invalidation-server-" + std::to_string(node_idx_);
+        ThreadLauncher::pthreadCreateLowPriority(tmp_thread_name, &invalidation_server_thread_, launchInvalidationServer_, (void*)(this));
 
         return;
     }

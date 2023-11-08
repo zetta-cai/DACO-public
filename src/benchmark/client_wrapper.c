@@ -6,6 +6,7 @@
 
 #include "benchmark/client_worker_wrapper.h"
 #include "common/config.h"
+#include "common/thread_launcher.h"
 #include "common/util.h"
 #include "message/control_message.h"
 #include "network/propagation_simulator.h"
@@ -184,27 +185,29 @@ namespace covered
 
         // Launch client-to-edge propagation simulator
         //pthread_returncode = pthread_create(&client_toedge_propagation_simulator_thread, NULL, PropagationSimulator::launchPropagationSimulator, (void*)client_toedge_propagation_simulator_param_ptr_);
-        pthread_returncode = Util::pthreadCreateHighPriority(&client_toedge_propagation_simulator_thread_, PropagationSimulator::launchPropagationSimulator, (void*)client_toedge_propagation_simulator_param_ptr_);
-        if (pthread_returncode != 0)
-        {
-            std::ostringstream oss;
-            oss << " failed to launch client-to-edge propagation simulator (error code: " << pthread_returncode << ")" << std::endl;
-            Util::dumpErrorMsg(instance_name_, oss.str());
-            exit(1);
-        }
+        // if (pthread_returncode != 0)
+        // {
+        //     std::ostringstream oss;
+        //     oss << " failed to launch client-to-edge propagation simulator (error code: " << pthread_returncode << ")" << std::endl;
+        //     Util::dumpErrorMsg(instance_name_, oss.str());
+        //     exit(1);
+        // }
+        std::string tmp_thread_name = "client-toedge-propagation-simluator-" + std::to_string(node_idx_);
+        ThreadLauncher::pthreadCreateHighPriority(tmp_thread_name, &client_toedge_propagation_simulator_thread_, PropagationSimulator::launchPropagationSimulator, (void*)client_toedge_propagation_simulator_param_ptr_);
 
         // Launch perclient_workercnt worker threads in the local client
         for (uint32_t local_client_worker_idx = 0; local_client_worker_idx < perclient_workercnt_; local_client_worker_idx++)
         {
             //pthread_returncode = pthread_create(&client_worker_threads[local_client_worker_idx], NULL, launchClientWorker, (void*)(&(client_worker_params[local_client_worker_idx])));
-            pthread_returncode = Util::pthreadCreateHighPriority(&client_worker_threads_[local_client_worker_idx], ClientWorkerWrapper::launchClientWorker, (void*)(&(client_worker_params_[local_client_worker_idx])));
-            if (pthread_returncode != 0)
-            {
-                std::ostringstream oss;
-                oss << " failed to launch worker " << local_client_worker_idx << " (error code: " << pthread_returncode << ")" << std::endl;
-                Util::dumpErrorMsg(instance_name_, oss.str());
-                exit(1);
-            }
+            // if (pthread_returncode != 0)
+            // {
+            //     std::ostringstream oss;
+            //     oss << " failed to launch worker " << local_client_worker_idx << " (error code: " << pthread_returncode << ")" << std::endl;
+            //     Util::dumpErrorMsg(instance_name_, oss.str());
+            //     exit(1);
+            // }
+            tmp_thread_name = "client-worker-" + std::to_string(node_idx_) + "-" + std::to_string(local_client_worker_idx);
+            ThreadLauncher::pthreadCreateHighPriority(tmp_thread_name, &client_worker_threads_[local_client_worker_idx], ClientWorkerWrapper::launchClientWorker, (void*)(&(client_worker_params_[local_client_worker_idx])));
         }
 
         return;

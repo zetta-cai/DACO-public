@@ -3,6 +3,7 @@
 #include <assert.h> // assert
 #include <fstream> // ifstream
 #include <sstream> // ostringstream
+#include <thread> // std::thread::hardware_concurrency
 #include <vector>
 
 #include "common/util.h"
@@ -19,6 +20,8 @@ namespace covered
     const std::string Config::CLOUD_ROCKSDB_BASEDIR_KEYSTR("cloud_rocksdb_basedir");
     const std::string Config::COVERED_LOCAL_UNCACHED_MAX_MEM_USAGE_RATIO_KEYSTR("covered_local_uncached_max_mem_usage_ratio");
     const std::string Config::COVERED_POPULARITY_AGGREGATION_MAX_MEM_USAGE_RATIO_KEYSTR("covered_popularity_aggregation_max_mem_usage_ratio");
+    const std::string Config::CPU_DEDICATED_CORECNT_KEYSTR("cpu_dedicated_corecnt");
+    const std::string Config::CPU_SHARED_CORECNT_KEYSTR("cpu_shared_corecnt");
     const std::string Config::DATASET_LOADER_SLEEP_FOR_COMPACTION_SEC_KEYSTR("dataset_loader_sleep_for_compaction_sec");
     const std::string Config::EDGE_BEACON_SERVER_RECVREQ_STARTPORT_KEYSTR("edge_beacon_server_recvreq_startport");
     const std::string Config::EDGE_BEACON_SERVER_RECVRSP_STARTPORT_KEYSTR("edge_beacon_server_recvrsp_startport");
@@ -70,6 +73,8 @@ namespace covered
     std::string Config::cloud_rocksdb_basedir_("/tmp/cloud");
     double Config::covered_local_uncached_max_mem_usage_ratio_ = 0.01;
     double Config::covered_popularity_aggregation_max_mem_usage_ratio_ = 0.01;
+    uint32_t Config::cpu_dedicated_corecnt_ = 24;
+    uint32_t Config::cpu_shared_corecnt_ = 8;
     uint32_t Config::dataset_loader_sleep_for_compaction_sec_ = 30;
     uint16_t Config::edge_beacon_server_recvreq_startport_ = 4500; // [4096, 65536]
     uint16_t Config::edge_beacon_server_recvrsp_startport_ = 4600; // [4096, 65536]
@@ -182,6 +187,19 @@ namespace covered
                 {
                     covered_popularity_aggregation_max_mem_usage_ratio_ = kv_ptr->value().get_double();
                 }
+                kv_ptr = find_(CPU_DEDICATED_CORECNT_KEYSTR);
+                if (kv_ptr != NULL)
+                {
+                    int64_t tmp_corecnt = kv_ptr->value().get_int64();
+                    cpu_dedicated_corecnt_ = Util::toUint32(tmp_corecnt);
+                }
+                kv_ptr = find_(CPU_SHARED_CORECNT_KEYSTR);
+                if (kv_ptr != NULL)
+                {
+                    int64_t tmp_corecnt = kv_ptr->value().get_int64();
+                    cpu_shared_corecnt_ = Util::toUint32(tmp_corecnt);
+                }
+                checkCpuCorecnt_();
                 kv_ptr = find_(DATASET_LOADER_SLEEP_FOR_COMPACTION_SEC_KEYSTR);
                 if (kv_ptr != NULL)
                 {
@@ -500,6 +518,18 @@ namespace covered
         return covered_popularity_aggregation_max_mem_usage_ratio_;
     }
 
+    uint32_t Config::getCpuDedicatedCorecnt()
+    {
+        checkIsValid_();
+        return cpu_dedicated_corecnt_;
+    }
+
+    uint32_t Config::getCpuSharedCorecnt()
+    {
+        checkIsValid_();
+        return cpu_shared_corecnt_;
+    }
+
     uint32_t Config::getDatasetLoaderSleepForCompactionSec()
     {
         checkIsValid_();
@@ -762,6 +792,8 @@ namespace covered
         oss << "Cloud RocksDB base directory: " << cloud_rocksdb_basedir_ << std::endl;
         oss << "Covered local uncached max mem usage ratio: " << covered_local_uncached_max_mem_usage_ratio_ << std::endl; // ONLY for COVERED
         oss << "Covered popularity aggregation max mem usage ratio: " << covered_popularity_aggregation_max_mem_usage_ratio_ << std::endl; // ONLY for COVERED
+        oss << "CPU dedicated corecnt: " << cpu_dedicated_corecnt_ << std::endl;
+        oss << "CPU shared corecnt: " << cpu_shared_corecnt_ << std::endl;
         oss << "Dataset loader sleep for compaction seconds: " << dataset_loader_sleep_for_compaction_sec_ << std::endl;
         oss << "Edge beacon server recvreq startport: " << edge_beacon_server_recvreq_startport_ << std::endl;
         oss << "Edge cache server data request buffer size: " << edge_cache_server_data_request_buffer_size_ << std::endl;
@@ -878,6 +910,31 @@ namespace covered
             Util::dumpErrorMsg(kClassName, oss.str());
             exit(1);
         }
+        return;
+    }
+
+    void Config::checkCpuCorecnt_()
+    {
+        assert(cpu_dedicated_corecnt_ > 0);
+        assert(cpu_shared_corecnt_ > 0);
+
+        uint32_t total_cpu_corecnt = std::thread::hardware_concurrency();
+        if (total_cpu_corecnt < cpu_dedicated_corecnt_ + cpu_shared_corecnt_)
+        {
+            // NOTE: total # of CPU cores should >= cpu_dedicated_corecnt + cpu_shared_corecnt
+            std::ostringstream oss;
+            oss << "total_cpu_corecnt " << total_cpu_corecnt << " is less than cpu_dedicated_corecnt " << cpu_dedicated_corecnt_ << " + cpu_shared_corecnt " << cpu_shared_corecnt_ << "!";
+            Util::dumpErrorMsg(kClassName, oss.str());
+            exit(1);
+        }
+        else if (total_cpu_corecnt > cpu_dedicated_corecnt_ + cpu_shared_corecnt_)
+        {
+            // Pose INFO to hint more CPU cores can be used if total # of CPU cores < cpu_dedicated_corecnt + cpu_shared_corecnt
+            std::ostringstream oss;
+            oss << "total_cpu_corecnt " << total_cpu_corecnt << " is more than cpu_dedicated_corecnt " << cpu_dedicated_corecnt_ << " + cpu_shared_corecnt " << cpu_shared_corecnt_ << " -> more CPU cores can be assigned to high-/low-priority threads for dedicated/shared usage!";
+            Util::dumpWarnMsg(kClassName, oss.str());
+        }
+
         return;
     }
 }

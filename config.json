@@ -9,6 +9,8 @@
     "cloud_rocksdb_basedir": "/tmp/cloud",
     "covered_local_uncached_max_mem_usage_ratio": 0.01,
     "covered_popularity_aggregation_max_mem_usage_ratio": 0.01,
+    "cpu_dedicated_corecnt": 24,
+    "cpu_shared_corecnt": 8,
     "dataset_loader_sleep_for_compaction_sec": 30,
     "edge_beacon_server_recvreq_startport": 4500,
     "edge_beacon_server_recvrsp_startport": 4600,

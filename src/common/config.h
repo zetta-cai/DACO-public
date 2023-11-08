@@ -31,6 +31,8 @@ namespace covered
         static const std::string CLOUD_ROCKSDB_BASEDIR_KEYSTR;
         static const std::string COVERED_LOCAL_UNCACHED_MAX_MEM_USAGE_RATIO_KEYSTR;
         static const std::string COVERED_POPULARITY_AGGREGATION_MAX_MEM_USAGE_RATIO_KEYSTR;
+        static const std::string CPU_DEDICATED_CORECNT_KEYSTR;
+        static const std::string CPU_SHARED_CORECNT_KEYSTR;
         static const std::string DATASET_LOADER_SLEEP_FOR_COMPACTION_SEC_KEYSTR;
         static const std::string EDGE_BEACON_SERVER_RECVREQ_STARTPORT_KEYSTR;
         static const std::string EDGE_BEACON_SERVER_RECVRSP_STARTPORT_KEYSTR;
@@ -78,6 +80,8 @@ namespace covered
         static std::string getCloudRocksdbBasedir();
         static double getCoveredLocalUncachedMaxMemUsageRatio();
         static double getCoveredPopularityAggregationMaxMemUsageRatio();
+        static uint32_t getCpuDedicatedCorecnt();
+        static uint32_t getCpuSharedCorecnt();
         static uint32_t getDatasetLoaderSleepForCompactionSec();
         static uint16_t getEdgeBeaconServerRecvreqStartport();
         static uint16_t getEdgeBeaconServerRecvrspStartport();
@@ -119,6 +123,7 @@ namespace covered
         static boost::json::key_value_pair* find_(const std::string& key);
         static void checkIsValid_();
         static void checkMainClassName_();
+        static void checkCpuCorecnt_();
 
         static bool is_valid_;
         static boost::json::object json_object_;
@@ -138,6 +143,8 @@ namespace covered
         static std::string cloud_rocksdb_basedir_; // Base directory of RocksDB in cloud
         static double covered_local_uncached_max_mem_usage_ratio_; // The maximum memory usage ratio for local uncached metadata (ONLY for COVERED)
         static double covered_popularity_aggregation_max_mem_usage_ratio_; // The maximum memory usage ratio for popularity aggregation (ONLY for COVERED)
+        static uint32_t cpu_dedicated_corecnt_; // The number of CPU cores dedicated for high-priority threads
+        static uint32_t cpu_shared_corecnt_; // The number of CPU cores shared by low-priority threads
         static uint32_t dataset_loader_sleep_for_compaction_sec_; // Sleep time for dataset loader to wait for compaction in units of seconds
         static uint16_t edge_beacon_server_recvreq_startport_; // Start UDP port for edge beacon server to receive cooperation control requests
         static uint16_t edge_beacon_server_recvrsp_startport_; // Start UDP port for edge beacon server to receive cooperation control responses

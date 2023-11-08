@@ -15,6 +15,7 @@
 #include "benchmark/evaluator_wrapper.h"
 #include "cli/simulator_cli.h"
 #include "common/config.h"
+#include "common/thread_launcher.h"
 #include "common/util.h"
 #include "cloud/cloud_wrapper.h"
 #include "edge/edge_wrapper.h"
@@ -27,9 +28,9 @@ int main(int argc, char **argv) {
 
     covered::SimulatorCLI simulator_cli(argc, argv);
 
+    // Bind main thread of simulator to a shared CPU core
     const std::string main_class_name = covered::Config::getMainClassName();
-
-    int pthread_returncode;
+    covered::ThreadLauncher::bindMainThreadToSharedCpuCore(main_class_name);
 
     // (2) Launch evaluator to control benchmark workflow
 
@@ -38,14 +39,15 @@ int main(int argc, char **argv) {
 
     covered::Util::dumpNormalMsg(main_class_name, "launch evaluator");
 
-    pthread_returncode = covered::Util::pthreadCreateHighPriority(&evaluator_thread, covered::EvaluatorWrapper::launchEvaluator, (void*)(&evaluator_param));
-    if (pthread_returncode != 0)
-    {
-        std::ostringstream oss;
-        oss << "failed to launch evaluator (error code: " << pthread_returncode << ")";
-        covered::Util::dumpErrorMsg(main_class_name, oss.str());
-        exit(1);
-    }
+    std::string tmp_thread_name = "evaluator-wrapper";
+    covered::ThreadLauncher::pthreadCreateHighPriority(tmp_thread_name, &evaluator_thread, covered::EvaluatorWrapper::launchEvaluator, (void*)(&evaluator_param));
+    // if (pthread_returncode != 0)
+    // {
+    //     std::ostringstream oss;
+    //     oss << "failed to launch evaluator (error code: " << pthread_returncode << ")";
+    //     covered::Util::dumpErrorMsg(main_class_name, oss.str());
+    //     exit(1);
+    // }
 
     // Block until evaluator is initialized
     while (!evaluator_param.isEvaluatorInitialized()) {}
@@ -65,14 +67,15 @@ int main(int argc, char **argv) {
     covered::Util::dumpNormalMsg(main_class_name, "launch cloud node");
 
     //pthread_returncode = pthread_create(&cloud_thread, NULL, covered::CloudWrapper::launchCloud, (void*)(&(cloud_idx)));
-    pthread_returncode = covered::Util::pthreadCreateHighPriority(&cloud_thread, covered::CloudWrapper::launchCloud, (void*)(&(cloud_param)));
-    if (pthread_returncode != 0)
-    {
-        std::ostringstream oss;
-        oss << "failed to launch cloud node (error code: " << pthread_returncode << ")";
-        covered::Util::dumpErrorMsg(main_class_name, oss.str());
-        exit(1);
-    }
+    // if (pthread_returncode != 0)
+    // {
+    //     std::ostringstream oss;
+    //     oss << "failed to launch cloud node (error code: " << pthread_returncode << ")";
+    //     covered::Util::dumpErrorMsg(main_class_name, oss.str());
+    //     exit(1);
+    // }
+    tmp_thread_name = "cloud-wrapper-" + std::to_string(cloud_idx);
+    covered::ThreadLauncher::pthreadCreateLowPriority(tmp_thread_name, &cloud_thread, covered::CloudWrapper::launchCloud, (void*)(&(cloud_param)));
 
     // (3) Simulate edgecnt edge nodes with cooperative caching
 
@@ -97,14 +100,16 @@ int main(int argc, char **argv) {
         covered::Util::dumpNormalMsg(main_class_name, oss.str());
 
         //pthread_returncode = pthread_create(&edge_threads[edge_idx], NULL, covered::EdgeWrapper::launchEdge, (void*)(&(edge_idxes[edge_idx])));
-        pthread_returncode = covered::Util::pthreadCreateLowPriority(&edge_threads[edge_idx], covered::EdgeWrapper::launchEdge, (void*)(&(edge_params[edge_idx])));
-        if (pthread_returncode != 0)
-        {
-            std::ostringstream oss;
-            oss << "failed to launch edge node " << edge_idx << " (error code: " << pthread_returncode << ")";
-            covered::Util::dumpErrorMsg(main_class_name, oss.str());
-            exit(1);
-        }
+        // if (pthread_returncode != 0)
+        // {
+        //     std::ostringstream oss;
+        //     oss << "failed to launch edge node " << edge_idx << " (error code: " << pthread_returncode << ")";
+        //     covered::Util::dumpErrorMsg(main_class_name, oss.str());
+        //     exit(1);
+        // }
+
+        tmp_thread_name = "edge-wrapper-" + std::to_string(edge_idx);
+        covered::ThreadLauncher::pthreadCreateLowPriority(tmp_thread_name, &edge_threads[edge_idx], covered::EdgeWrapper::launchEdge, (void*)(&(edge_params[edge_idx])));
     }
     
     // (4) Simulate clientcnt clients by multi-threading
@@ -130,17 +135,20 @@ int main(int argc, char **argv) {
         covered::Util::dumpNormalMsg(main_class_name, oss.str());
 
         //pthread_returncode = pthread_create(&client_threads[client_idx], NULL, covered::ClientWrapper::launchClient, (void*)(&(client_idxes[client_idx])));
-        pthread_returncode = covered::Util::pthreadCreateLowPriority(&client_threads[client_idx], covered::ClientWrapper::launchClient, (void*)(&(client_params[client_idx])));
-        if (pthread_returncode != 0)
-        {
-            std::ostringstream oss;
-            oss << "failed to launch client " << client_idx << " (error code: " << pthread_returncode << ")";
-            covered::Util::dumpErrorMsg(main_class_name, oss.str());
-            exit(1);
-        }
+        // if (pthread_returncode != 0)
+        // {
+        //     std::ostringstream oss;
+        //     oss << "failed to launch client " << client_idx << " (error code: " << pthread_returncode << ")";
+        //     covered::Util::dumpErrorMsg(main_class_name, oss.str());
+        //     exit(1);
+        // }
+        tmp_thread_name = "client-wrapper-" + std::to_string(client_idx);
+        covered::ThreadLauncher::pthreadCreateLowPriority(tmp_thread_name, &client_threads[client_idx], covered::ClientWrapper::launchClient, (void*)(&(client_params[client_idx])));
     }
 
     // (5) Wait for all threads
+
+    int pthread_returncode = 0;
 
     // (5.1) Wait for clientcnt clients
 
