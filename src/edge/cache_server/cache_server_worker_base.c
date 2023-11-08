@@ -1450,9 +1450,9 @@ namespace covered
         bool is_finish = false;
 
         // TMPDEBUG231108
-        std::ostringstream oss;
-        oss << "Start to admit object of key " << key.getKeystr() << " into local edge " << tmp_cache_server_ptr->getEdgeWrapperPtr()->getNodeIdx() << " (beacon node: " << tmp_cache_server_ptr->getEdgeWrapperPtr()->getCooperationWrapperPtr()->getBeaconEdgeIdx(key) << ")";
-        Util::dumpDebugMsg(base_instance_name_, oss.str());
+        // std::ostringstream oss;
+        // oss << "Start to admit object of key " << key.getKeystr() << " into local edge " << tmp_cache_server_ptr->getEdgeWrapperPtr()->getNodeIdx() << " (beacon node: " << tmp_cache_server_ptr->getEdgeWrapperPtr()->getCooperationWrapperPtr()->getBeaconEdgeIdx(key) << ")";
+        // Util::dumpDebugMsg(base_instance_name_, oss.str());
 
         struct timespec update_directory_to_admit_start_timestamp = Util::getCurrentTimespec();
 
@@ -1474,10 +1474,10 @@ namespace covered
         is_finish = tmp_cache_server_ptr->evictForCapacity_(key, edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency);
 
         // TMPDEBUG231108
-        oss.clear();
-        oss.str("");
-        oss << "Finish admission of key " << key.getKeystr() << " into local edge " << tmp_cache_server_ptr->getEdgeWrapperPtr()->getNodeIdx() << " (beacon node: " << tmp_cache_server_ptr->getEdgeWrapperPtr()->getCooperationWrapperPtr()->getBeaconEdgeIdx(key) << ") w/ necessary eviction";
-        Util::dumpDebugMsg(base_instance_name_, oss.str());
+        // oss.clear();
+        // oss.str("");
+        // oss << "Finish admission of key " << key.getKeystr() << " into local edge " << tmp_cache_server_ptr->getEdgeWrapperPtr()->getNodeIdx() << " (beacon node: " << tmp_cache_server_ptr->getEdgeWrapperPtr()->getCooperationWrapperPtr()->getBeaconEdgeIdx(key) << ") w/ necessary eviction";
+        // Util::dumpDebugMsg(base_instance_name_, oss.str());
 
         return is_finish;
     }

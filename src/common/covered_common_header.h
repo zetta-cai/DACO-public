@@ -13,6 +13,9 @@
 // -> If not defined, we track approximate object size in group-level metadata
 #define TRACK_PERKEY_OBJSIZE
 
+// TMPDEBUG231108
+#define ENABLE_APPROX_UNCACHED_POP
+
 #include <cstdint> // uint32_t, uint64_t
 
 namespace covered

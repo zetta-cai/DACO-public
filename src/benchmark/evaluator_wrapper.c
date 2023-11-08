@@ -228,7 +228,7 @@ namespace covered
                         finish_warmup_phase = true;
 
                         // TMPDEBUG231108
-                        exit(1);
+                        //exit(1);
                     }
                 } // End of within max_warmup_duration_sec_
 

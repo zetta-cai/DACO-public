@@ -92,6 +92,11 @@ namespace covered
             // Update local cached metadata for getreq with cache hit
             affect_victim_tracker = local_cached_metadata_.updateForExistingKey(key, value, value, false, peredge_synced_victimcnt_);
         }
+        else // key is NOT cached
+        {
+            #ifdef ENABLE_APPROX_UNCACHED_POP
+            #endif
+        }
 
         // NOTE: for getreq with cache miss, we will update local uncached metadata for getres by updateLocalUncachedMetadataForRspInternal_(key)
 
