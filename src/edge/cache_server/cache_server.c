@@ -410,7 +410,12 @@ namespace covered
         // Add intermediate event if with evet tracking
         struct timespec issue_directory_update_req_end_timestamp = Util::getCurrentTimespec();
         uint32_t issue_directory_update_req_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(issue_directory_update_req_end_timestamp, issue_directory_update_req_start_timestamp));
-        event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_ISSUE_DIRECTORY_UPDATE_REQ_EVENT_NAME, issue_directory_update_req_latency_us);
+        if (is_background)
+        {}
+        else
+        {
+            event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_ISSUE_DIRECTORY_UPDATE_REQ_EVENT_NAME, issue_directory_update_req_latency_us);
+        }
 
         return is_finish;
     }
@@ -507,7 +512,7 @@ namespace covered
 
     // (2) For blocking-based cache eviction and local/remote directory eviction
 
-    bool CacheServer::evictForCapacity_(const NetworkAddr& source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency, const bool& is_background) const
+    bool CacheServer::evictForCapacity_(const Key& key, const NetworkAddr& source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency, const bool& is_background) const
     {
         checkPointers_();
 
@@ -549,15 +554,31 @@ namespace covered
         // NOTE: we can release writelock here as cache size usage has already been updated after evicting local edge cache
         rwlock_for_eviction_ptr_->unlock(context_name);
 
-        #ifdef DEBUG_CACHE_SERVER
-        std::ostringstream oss;
-        oss << total_victims.size() << " victims in evictForCapacity_(): ";
-        uint32_t i = 0;
-        for (std::unordered_map<Key, Value, KeyHasher>::const_iterator total_victims_const_iter = total_victims.begin(); total_victims_const_iter != total_victims.end(); total_victims_const_iter++)
+        // TMPDEBUG231108
+        if (total_victims.size() > 0)
         {
-            oss << "[" << i << "] victim_key " << total_victims_const_iter->first.getKeystr() << " valuesize " << total_victims_const_iter->second.getValuesize();
+            std::ostringstream oss;
+            oss << "evict " << total_victims.size() << " victims for key " << key.getKeystr() << "(beacon node: " << edge_wrapper_ptr_->getCooperationWrapperPtr()->getBeaconEdgeIdx(key) << ") in local edge " << edge_wrapper_ptr_->getNodeIdx();
+            uint32_t i = 0;
+            for (std::unordered_map<Key, Value, KeyHasher>::const_iterator total_victims_const_iter = total_victims.begin(); total_victims_const_iter != total_victims.end(); total_victims_const_iter++)
+            {
+                oss << "[" << i << "] victim_key " << total_victims_const_iter->first.getKeystr() << " valuesize " << total_victims_const_iter->second.getValuesize();
+            }
+            Util::dumpDebugMsg(instance_name_, oss.str());
         }
-        Util::dumpDebugMsg(instance_name_, oss.str());
+
+        #ifdef DEBUG_CACHE_SERVER
+        if (total_victims.size() > 0)
+        {
+            std::ostringstream oss;
+            oss << "evict " << total_victims.size() << " victims for key " << key.getKeystr() << "(beacon node: " << edge_wrapper_ptr_->getCooperationWrapperPtr()->getBeaconEdgeIdx(key) << ") in local edge " << edge_wrapper_ptr_->getNodeIdx();
+            uint32_t i = 0;
+            for (std::unordered_map<Key, Value, KeyHasher>::const_iterator total_victims_const_iter = total_victims.begin(); total_victims_const_iter != total_victims.end(); total_victims_const_iter++)
+            {
+                oss << "[" << i << "] victim_key " << total_victims_const_iter->first.getKeystr() << " valuesize " << total_victims_const_iter->second.getValuesize();
+            }
+            Util::dumpDebugMsg(instance_name_, oss.str());
+        }
         #endif
 
         // Perform directory updates for all evicted victims in parallel
@@ -965,6 +986,11 @@ namespace covered
             }
         }
 
+        // TMPDEBUG231108
+        std::ostringstream oss;
+        oss << "notifyBeaconForPlacementAfterHybridFetch_() for key " << key.getKeystr() << " towards beacon edge " << edge_wrapper_ptr_->getCooperationWrapperPtr()->getBeaconEdgeIdx(key) << " with best_placement_edgeset: " << best_placement_edgeset.toString();
+        Util::dumpDebugMsg(instance_name_, oss.str());
+
         // Prepare destination address of beacon server
         NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = edge_wrapper_ptr_->getBeaconDstaddr_(key);
 
@@ -1089,6 +1115,11 @@ namespace covered
         // Perform local placement (equivalent an in-advance remote placement notification) if necessary
         if (current_need_placement)
         {
+            // TMPDEBUG231108
+            std::ostringstream tmposs;
+            tmposs << "push local cache admission for key " << key.getKeystr();
+            Util::dumpDebugMsg(instance_name_, tmposs.str());
+
             // (OBSOLETE) NOTE: we do NOT need to notify placement processor of the current sender/closest edge node for local placement, because sender is NOT beacon and waiting for response will NOT block subsequent local/remote placement calculation
 
             // NOTE: we need to notify placement processor of the current sender/closest edge node for local placement, because we need to use the background directory update requests to DISABLE recursive cache placement and also avoid blocking cache server worker which may serve subsequent placement calculation if sender is beacon (similar as EdgeWrapper::nonblockNotifyForPlacement() invoked by local/remote beacon edge node)

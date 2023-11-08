@@ -289,7 +289,7 @@ namespace covered
         bool is_local_cached_and_invalid = tryToUpdateInvalidLocalEdgeCache_(tmp_key, tmp_value);
         if (!tmp_value.isDeleted() && is_local_cached_and_invalid) // Update may trigger eviction
         {
-            is_finish = tmp_cache_server_ptr->evictForCapacity_(edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency); // Add events of intermediate response if with event tracking
+            is_finish = tmp_cache_server_ptr->evictForCapacity_(tmp_key, edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency); // Add events of intermediate response if with event tracking
         }
         if (is_finish)
         {
@@ -839,7 +839,7 @@ namespace covered
             is_local_cached = updateLocalEdgeCache_(tmp_key, tmp_value);
 
             // NOTE: we will check capacity and trigger eviction for value updates (add events of intermediate response if with event tracking)
-            is_finish = tmp_cache_server_ptr->evictForCapacity_(edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+            is_finish = tmp_cache_server_ptr->evictForCapacity_(tmp_key, edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency);
         }
         else if (local_request_ptr->getMessageType() == MessageType::kLocalDelRequest)
         {
@@ -1449,6 +1449,11 @@ namespace covered
 
         bool is_finish = false;
 
+        // TMPDEBUG231108
+        std::ostringstream oss;
+        oss << "Start to admit object of key " << key.getKeystr() << " into local edge " << tmp_cache_server_ptr->getEdgeWrapperPtr()->getNodeIdx() << " (beacon node: " << tmp_cache_server_ptr->getEdgeWrapperPtr()->getCooperationWrapperPtr()->getBeaconEdgeIdx(key) << ")";
+        Util::dumpDebugMsg(base_instance_name_, oss.str());
+
         struct timespec update_directory_to_admit_start_timestamp = Util::getCurrentTimespec();
 
         // Independently admit the new key-value pair into local edge cache
@@ -1466,7 +1471,13 @@ namespace covered
         event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_UPDATE_DIRECTORY_TO_ADMIT_EVENT_NAME, update_directory_to_admit_latency_us); // Add intermediate event if with event tracking
 
         // Trigger eviction if necessary
-        is_finish = tmp_cache_server_ptr->evictForCapacity_(edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+        is_finish = tmp_cache_server_ptr->evictForCapacity_(key, edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+
+        // TMPDEBUG231108
+        oss.clear();
+        oss.str("");
+        oss << "Finish admission of key " << key.getKeystr() << " into local edge " << tmp_cache_server_ptr->getEdgeWrapperPtr()->getNodeIdx() << " (beacon node: " << tmp_cache_server_ptr->getEdgeWrapperPtr()->getCooperationWrapperPtr()->getBeaconEdgeIdx(key) << ") w/ necessary eviction";
+        Util::dumpDebugMsg(base_instance_name_, oss.str());
 
         return is_finish;
     }

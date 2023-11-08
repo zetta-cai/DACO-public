@@ -72,6 +72,11 @@ namespace covered
 
                 if (data_request_ptr->getMessageType() == MessageType::kCoveredPlacementNotifyRequest) // Placement notification
                 {
+                    // TMPDEBUG231108
+                    std::ostringstream tmposs;
+                    tmposs << "receive remote placement notification for key " << MessageBase::getKeyFromMessage(data_request_ptr).getKeystr();
+                    Util::dumpDebugMsg(instance_name_, tmposs.str());
+
                     NetworkAddr recvrsp_dst_addr = data_request_ptr->getSourceAddr(); // A beacon edge node
                     is_finish = processPlacementNotifyRequest_(data_request_ptr, recvrsp_dst_addr);
                 }
@@ -100,6 +105,11 @@ namespace covered
             bool is_successful_for_local_cache_admission = tmp_edge_wrapper_ptr->getLocalCacheAdmissionBufferPtr()->pop(tmp_local_cache_admission_item);
             if (is_successful_for_local_cache_admission) // Receive a local cache admission successfully
             {
+                // TMPDEBUG231108
+                std::ostringstream tmposs;
+                tmposs << "receive local cache admission for key " << tmp_local_cache_admission_item.getKey().getKeystr();
+                Util::dumpDebugMsg(instance_name_, tmposs.str());
+
                 is_finish = processLocalCacheAdmission_(tmp_local_cache_admission_item);
 
                 if (is_finish) // Check is_finish
@@ -171,7 +181,7 @@ namespace covered
 
         // Perform background cache eviction in a blocking manner for consistent directory information (note that cache eviction happens after non-blocking placement notification)
         // NOTE: we update aggregated uncached popularity yet DISABLE recursive cache placement for metadata preservation during cache eviction
-        is_finish = tmp_cache_server_ptr->evictForCapacity_(edge_cache_server_placement_processor_recvrsp_source_addr_, edge_cache_server_placement_processor_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency, is_background); // May update local synced victims
+        is_finish = tmp_cache_server_ptr->evictForCapacity_(tmp_key, edge_cache_server_placement_processor_recvrsp_source_addr_, edge_cache_server_placement_processor_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency, is_background); // May update local synced victims
 
         struct timespec placement_notify_end_timestamp = Util::getCurrentTimespec();
         uint32_t placement_notify_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(placement_notify_end_timestamp, placement_notify_start_timestamp));
@@ -180,6 +190,11 @@ namespace covered
         // Get background eventlist and bandwidth usage to update background counter for beacon server
         tmp_edge_wrapper_ptr->getEdgeBackgroundCounterForBeaconServerRef().updateBandwidthUsgae(total_bandwidth_usage);
         tmp_edge_wrapper_ptr->getEdgeBackgroundCounterForBeaconServerRef().addEvents(event_list);
+
+        // TMPDEBUG231108
+        std::ostringstream oss;
+        oss << "finish admission for key " << tmp_key.getKeystr() << " in current edge " << current_edge_idx << " notified by beacon edge " << source_edge_idx;
+        Util::dumpDebugMsg(instance_name_, oss.str());
 
         return is_finish;
     }
@@ -210,7 +225,7 @@ namespace covered
         // Perform background cache eviction in a blocking manner for consistent directory information (note that cache eviction happens after non-blocking placement notification)
         // NOTE: we update aggregated uncached popularity yet DISABLE recursive cache placement for metadata preservation during cache eviction
         const bool skip_propagation_latency = local_cache_admission_item.skipPropagationLatency();
-        is_finish = tmp_cache_server_ptr->evictForCapacity_(edge_cache_server_placement_processor_recvrsp_source_addr_, edge_cache_server_placement_processor_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency, is_background); // May update local synced victims
+        is_finish = tmp_cache_server_ptr->evictForCapacity_(tmp_key, edge_cache_server_placement_processor_recvrsp_source_addr_, edge_cache_server_placement_processor_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency, is_background); // May update local synced victims
 
         struct timespec admission_end_timestamp = Util::getCurrentTimespec();
         uint32_t admission_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(admission_end_timestamp, admission_start_timestamp));
@@ -219,6 +234,11 @@ namespace covered
         // Get background eventlist and bandwidth usage to update background counter for beacon server
         tmp_edge_wrapper_ptr->getEdgeBackgroundCounterForBeaconServerRef().updateBandwidthUsgae(total_bandwidth_usage);
         tmp_edge_wrapper_ptr->getEdgeBackgroundCounterForBeaconServerRef().addEvents(event_list);
+
+        // TMPDEBUG231108
+        std::ostringstream oss;
+        oss << "finish admission for key " << tmp_key.getKeystr() << " in current edge " << tmp_edge_wrapper_ptr->getNodeIdx() << " by local cache admission (sender is beacon " << tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getBeaconEdgeIdx(tmp_key) << ")";
+        Util::dumpDebugMsg(instance_name_, oss.str());
 
         return is_finish;
     }

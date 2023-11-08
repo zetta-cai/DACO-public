@@ -1183,6 +1183,11 @@ namespace covered
         assert(cache_name_ == Util::COVERED_CACHE_NAME);
         assert(best_placement_edgeset.size() <= topk_edgecnt_for_placement_); // At most k placement edge nodes each time
 
+        // TMPDEBUG231108
+        std::ostringstream oss;
+        oss << "nonblockNotifyForPlacement() for key " << key.getKeystr() << " by beacon edge " << node_idx_ << " with best_placement_edgeset: " << best_placement_edgeset.toString();
+        Util::dumpDebugMsg(instance_name_, oss.str());
+
         //bool is_finish = false;
         //BandwidthUsage total_bandwidth_usage;
         //EventList event_list;
@@ -1234,6 +1239,11 @@ namespace covered
                 is_valid = false;
             }
 
+            // TMPDEBUG231108
+            std::ostringstream tmposs;
+            tmposs << "push local cache admission for key " << key.getKeystr();
+            Util::dumpDebugMsg(instance_name_, tmposs.str());
+
             // NOTE: we need to notify placement processor of the current local/remote beacon edge node for non-blocking placement deployment of local placement notification to avoid blocking subsequent placement calculation (similar as CacheServerWorkerBase::notifyBeaconForPlacementAfterHybridFetch_() invoked by sender edge node)
 
             // Notify placement processor to admit local edge cache (NOTE: NO need to admit directory) and trigger local cache eviciton, to avoid blocking cache server worker / beacon server for subsequent placement calculation
@@ -1246,7 +1256,7 @@ namespace covered
 
             // Perform background cache eviction if necessary in a blocking manner for consistent directory information (note that cache eviction happens after non-blocking placement notification)
             // NOTE: we update aggregated uncached popularity yet DISABLE recursive cache placement for metadata preservation during cache eviction
-            is_finish = evictForCapacity_(source_addr, recvrsp_socket_server_ptr, total_bandwidth_usage, event_list, skip_propagation_latency, is_background);
+            is_finish = evictForCapacity_(key, source_addr, recvrsp_socket_server_ptr, total_bandwidth_usage, event_list, skip_propagation_latency, is_background);
             */
         }
 

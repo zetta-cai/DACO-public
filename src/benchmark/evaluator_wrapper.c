@@ -226,6 +226,9 @@ namespace covered
                         Util::dumpNormalMsg(kClassName, oss.str());
 
                         finish_warmup_phase = true;
+
+                        // TMPDEBUG231108
+                        exit(1);
                     }
                 } // End of within max_warmup_duration_sec_
 
