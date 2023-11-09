@@ -101,14 +101,14 @@ namespace covered
                 // Update local uncached metadata for getreq with cache miss (ONLY value-unrelated metadata)
                 local_uncached_metadata_.updateNoValueStatsForExistingKey(key);
 
-                // NOTE: NOT update value-related metadata, as we approximately treat the objsize unchanged (okay due to read-intensive edge cache trace)
+                // NOTE: NOT update value-related metadata, as we conservatively treat the objsize unchanged (okay due to read-intensive edge cache trace)
             }
             else // Key will be newly tracked
             {
-                #ifdef ENABLE_APPROX_UNCACHED_POP
+                #ifdef ENABLE_CONSERVATIVE_UNCACHED_POP
                 // Initialize and update local uncached metadata for getreq with cache miss (both value-unrelated and value-related metadata)
-                // NOTE: we use max slab size as approximate object size, which should NOT affect other tracked uncached objects due to under-estimating local uncached popularity of the newly-tracked key
-                // NOTE: if the approximate local uncached popularity of the newly-tracked key is NOT detracked in addForNewKey() under local uncached metadata capacity limitation, local/remote directory lookup will get the approximate local uncached popularity for popularity aggregation to trigger placement calculation
+                // NOTE: we use max slab size as conservative object size, which should NOT affect other tracked uncached objects due to under-estimating local uncached popularity of the newly-tracked key
+                // NOTE: if the conservative local uncached popularity of the newly-tracked key is NOT detracked in addForNewKey() under local uncached metadata capacity limitation, local/remote directory lookup will get the conservative local uncached popularity for popularity aggregation to trigger placement calculation
                 local_uncached_metadata_.addForNewKey(key, Value(max_allocation_class_size_ - key.getKeyLength()));
                 #endif
             }
@@ -260,10 +260,10 @@ namespace covered
                 {
                     const uint32_t original_value_size = local_uncached_metadata_.getValueSizeForUncachedObjects(key);
                     
-                    // Update local uncached value-related metadata for put/delreq with cache miss or getrsp with cache miss if ENABLE_APPROX_UNCACHED_POP
-                    if (is_getrsp) // getrsp with cache miss if ENABLE_APPROX_UNCACHED_POP
+                    // Update local uncached value-related metadata for put/delreq with cache miss or getrsp with cache miss if ENABLE_CONSERVATIVE_UNCACHED_POP
+                    if (is_getrsp) // getrsp with cache miss if ENABLE_CONSERVATIVE_UNCACHED_POP
                     {
-                        #ifdef ENABLE_APPROX_UNCACHED_POP
+                        #ifdef ENABLE_CONSERVATIVE_UNCACHED_POP
                         // NOTE: NO update local uncached value-unrelated metadata for getrsp with cache miss, which has been done in getLocalCacheInternal_() for the corresponding getreq before
                         local_uncached_metadata_.updateValueStatsForExistingKey(key, value, original_value_size);
                         #endif

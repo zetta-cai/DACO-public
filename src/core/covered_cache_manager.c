@@ -50,10 +50,12 @@ namespace covered
         #endif
         
         // NOTE: we do NOT perform placement calculation for local/remote acquire writelock request, as newly-admitted cache copies will still be invalid after cache placement
+        bool tmp_is_tracked = false; // TMPDEBUG231108
         if (need_placement_calculation)
         {
             const bool is_tracked_by_source_edge_node = collected_popularity.isTracked();
             // NOTE: NO need to perform placement calculation if key is NOT tracked by source edge node, as removing old local uncached popularity if any will NEVER increase admission benefit
+            tmp_is_tracked = is_tracked_by_source_edge_node; // TMPDEBUG231108
             if (is_tracked_by_source_edge_node)
             {
                 // Perform greedy-based placement calculation for trade-off-aware cache placement
@@ -96,6 +98,11 @@ namespace covered
                 }
             }
         }
+
+        // TMPDEBUG1108
+        std::ostringstream tmposs;
+        tmposs << "updatePopularityAggregatorForAggregatedPopularity for key " << key.getKeystr() << " need_placement_calculation: " << Util::toString(need_placement_calculation) << " tmp_is_tracked: " << Util::toString(tmp_is_tracked) << " has_best_placement: " << Util::toString(has_best_placement);
+        Util::dumpDebugMsg(instance_name_, tmposs.str());
 
         return is_finish;
     }

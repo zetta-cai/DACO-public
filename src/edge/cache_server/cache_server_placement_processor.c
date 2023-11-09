@@ -73,9 +73,9 @@ namespace covered
                 if (data_request_ptr->getMessageType() == MessageType::kCoveredPlacementNotifyRequest) // Placement notification
                 {
                     // TMPDEBUG231108
-                    // std::ostringstream tmposs;
-                    // tmposs << "receive remote placement notification for key " << MessageBase::getKeyFromMessage(data_request_ptr).getKeystr();
-                    // Util::dumpDebugMsg(instance_name_, tmposs.str());
+                    std::ostringstream tmposs;
+                    tmposs << "receive remote placement notification for key " << MessageBase::getKeyFromMessage(data_request_ptr).getKeystr();
+                    Util::dumpDebugMsg(instance_name_, tmposs.str());
 
                     NetworkAddr recvrsp_dst_addr = data_request_ptr->getSourceAddr(); // A beacon edge node
                     is_finish = processPlacementNotifyRequest_(data_request_ptr, recvrsp_dst_addr);
@@ -106,9 +106,9 @@ namespace covered
             if (is_successful_for_local_cache_admission) // Receive a local cache admission successfully
             {
                 // TMPDEBUG231108
-                // std::ostringstream tmposs;
-                // tmposs << "receive local cache admission for key " << tmp_local_cache_admission_item.getKey().getKeystr();
-                // Util::dumpDebugMsg(instance_name_, tmposs.str());
+                std::ostringstream tmposs;
+                tmposs << "receive local cache admission for key " << tmp_local_cache_admission_item.getKey().getKeystr();
+                Util::dumpDebugMsg(instance_name_, tmposs.str());
 
                 is_finish = processLocalCacheAdmission_(tmp_local_cache_admission_item);
 
@@ -192,9 +192,11 @@ namespace covered
         tmp_edge_wrapper_ptr->getEdgeBackgroundCounterForBeaconServerRef().addEvents(event_list);
 
         // TMPDEBUG231108
-        // std::ostringstream oss;
-        // oss << "finish admission for key " << tmp_key.getKeystr() << " in current edge " << current_edge_idx << " notified by beacon edge " << source_edge_idx;
-        // Util::dumpDebugMsg(instance_name_, oss.str());
+        uint32_t cache_size_usage = tmp_edge_wrapper_ptr->getSizeForCapacity();
+        uint32_t cache_capacity = tmp_edge_wrapper_ptr->getCapacityBytes();
+        std::ostringstream oss;
+        oss << "finish admission for key " << tmp_key.getKeystr() << " in current edge " << current_edge_idx << " notified by beacon edge " << source_edge_idx << "; cache_size_usage: " << cache_size_usage << "; cache_capacity: " << cache_capacity;
+        Util::dumpDebugMsg(instance_name_, oss.str());
 
         return is_finish;
     }
@@ -236,9 +238,11 @@ namespace covered
         tmp_edge_wrapper_ptr->getEdgeBackgroundCounterForBeaconServerRef().addEvents(event_list);
 
         // TMPDEBUG231108
-        // std::ostringstream oss;
-        // oss << "finish admission for key " << tmp_key.getKeystr() << " in current edge " << tmp_edge_wrapper_ptr->getNodeIdx() << " by local cache admission (sender is beacon " << tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getBeaconEdgeIdx(tmp_key) << ")";
-        // Util::dumpDebugMsg(instance_name_, oss.str());
+        uint32_t cache_size_usage = tmp_edge_wrapper_ptr->getSizeForCapacity();
+        uint32_t cache_capacity = tmp_edge_wrapper_ptr->getCapacityBytes();
+        std::ostringstream oss;
+        oss << "finish admission for key " << tmp_key.getKeystr() << " in current edge " << tmp_edge_wrapper_ptr->getNodeIdx() << " by local cache admission (sender is beacon " << tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getBeaconEdgeIdx(tmp_key) << ")" << "; cache_size_usage: " << cache_size_usage << "; cache_capacity: " << cache_capacity;
+        Util::dumpDebugMsg(instance_name_, oss.str());
 
         return is_finish;
     }

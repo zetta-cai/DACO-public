@@ -13,8 +13,8 @@
 // -> If not defined, we track approximate object size in group-level metadata (NOT recommend due to inaccurate object size and less-effective cache management)
 #define TRACK_PERKEY_OBJSIZE
 
-// NOTE: use max slab size as approximate object size to track uncached key in local uncached metadata for getreq with cache miss if NOT tracked instead of waiting for the second getreq to trigger cache management, which will slow down admission rate especially for the beginning of warmup phase
-#define ENABLE_APPROX_UNCACHED_POP
+// (OBSOLETE due to one-hit-wonder issues) NOTE: use max slab size as conservative object size to track uncached key in local uncached metadata for getreq with cache miss if NOT tracked instead of waiting for the second getreq to trigger cache management, which will slow down admission rate especially for the beginning of warmup phase
+//#define ENABLE_CONSERVATIVE_UNCACHED_POP
 
 #include <cstdint> // uint32_t, uint64_t
 

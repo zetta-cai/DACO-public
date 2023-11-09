@@ -22,9 +22,9 @@ namespace covered
         GroupLevelMetadata(const GroupLevelMetadata& other);
         ~GroupLevelMetadata();
 
-        void updateForNewlyGrouped(const Key& key, const Value& value); // For admission and getrsp/put/delreq w/ miss (also getreq w/ miss if ENABLE_APPROX_UNCACHED_POP), update group-level metadata (both value-unrelated and value-related) for the key newly added into the current group (newly admitted/tracked for local cached/uncached)
+        void updateForNewlyGrouped(const Key& key, const Value& value); // For admission and getrsp/put/delreq w/ miss (also getreq w/ miss if ENABLE_CONSERVATIVE_UNCACHED_POP), update group-level metadata (both value-unrelated and value-related) for the key newly added into the current group (newly admitted/tracked for local cached/uncached)
         void updateNoValueStatsForInGroupKey(); // For get/put/delreq w/ hit/miss, update group-level value-unrelated metadata for the key already in the current group (i.e., already admitted/tracked objects for local cached/uncached)
-        void updateValueStatsForInGroupKey(const Key& key, const Value& value, const Value& original_value); // For put/delreq w/ hit/miss and getrsp w/ invalid-hit (also getrsp w/ miss if ENABLE_APPROX_UNCACHED_POP), update group-level value-related metadata for the key already in the current group (i.e., already admitted/tracked objects for local cached/uncached)
+        void updateValueStatsForInGroupKey(const Key& key, const Value& value, const Value& original_value); // For put/delreq w/ hit/miss and getrsp w/ invalid-hit (also getrsp w/ miss if ENABLE_CONSERVATIVE_UNCACHED_POP), update group-level value-related metadata for the key already in the current group (i.e., already admitted/tracked objects for local cached/uncached)
         bool updateForDegrouped(const Key& key, const Value& value, const bool& need_warning); // Update group-level metadata for the key being removed from the current group (currently evicted/detracked for local cached/uncached); return true if object_cnt_ is zero (i.e., all keys in the group have been removed and the group can also be removed)
 
         #ifndef TRACK_PERKEY_OBJSIZE
