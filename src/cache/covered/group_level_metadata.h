@@ -23,8 +23,8 @@ namespace covered
         ~GroupLevelMetadata();
 
         void updateForNewlyGrouped(const Key& key, const Value& value); // Update group-level metadata for the key newly added into the current group (newly admitted/tracked for local cached/uncached)
-        void updateForInGroupKey(const Key& key); // Update group-level metadata for the key already in the current group; NOT affect value-related metadata (getreq-hit/getrsp-miss of admitted/tracked objects for local cached/uncached)
-        void updateForInGroupKeyValue(const Key& key, const Value& value, const Value& original_value); // Update group-level metadata for the key already in the current group (putdelreq-hit/putdelrsp-miss of admitted/tracked objects for local cached/uncached)
+        void updateNoValueStatsForInGroupKey(); // For get/put/delreq w/ hit/miss, update group-level value-unrelated metadata for the key already in the current group (i.e., already admitted/tracked objects for local cached/uncached)
+        void updateValueStatsForInGroupKey(const Key& key, const Value& value, const Value& original_value); // For put/delreq w/ hit/miss and getrsp w/ invalid-hit/miss (and getreq w/ miss if ENABLE_APPROX_UNCACHED_POP and key is newly tracked), update group-level value-related metadata for the key already in the current group (i.e., already admitted/tracked objects for local cached/uncached)
         bool updateForDegrouped(const Key& key, const Value& value, const bool& need_warning); // Update group-level metadata for the key being removed from the current group (currently evicted/detracked for local cached/uncached); return true if object_cnt_ is zero (i.e., all keys in the group have been removed and the group can also be removed)
 
         #ifndef TRACK_PERKEY_OBJSIZE
@@ -37,9 +37,12 @@ namespace covered
         static const std::string kClassName;
 
         #ifndef TRACK_PERKEY_OBJSIZE
+        // Value-related metadata
         AvgObjectSize avg_object_size_;
         #endif
-        ObjectCnt object_cnt_;
+
+        // Value-unrelated metadata
+        ObjectCnt object_cnt_; // ONLY for newly-grouped or degrouped keys
     };
 }
 

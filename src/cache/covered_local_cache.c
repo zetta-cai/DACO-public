@@ -95,6 +95,11 @@ namespace covered
         else // key is NOT cached
         {
             #ifdef ENABLE_APPROX_UNCACHED_POP
+            bool is_tracked = local_uncached_metadata_.isKeyExist(key);
+            if (is_tracked)
+            {}
+            else
+            {}
             #endif
         }
 

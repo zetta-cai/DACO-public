@@ -38,14 +38,14 @@ namespace covered
         return;
     }
 
-    void GroupLevelMetadata::updateForInGroupKey(const Key& key)
+    void GroupLevelMetadata::updateNoValueStatsForInGroupKey()
     {
-        // NO need to update avg_object_size_ due to unchanged value size
+        // NO value-unrelated metadata to update for existing keys
         
         return;
     }
 
-    void GroupLevelMetadata::updateForInGroupKeyValue(const Key& key, const Value& value, const Value& original_value)
+    void GroupLevelMetadata::updateValueStatsForInGroupKey(const Key& key, const Value& value, const Value& original_value)
     {
         assert(object_cnt_ > 0);
 

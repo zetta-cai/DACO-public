@@ -24,22 +24,23 @@ namespace covered
 
     KeyLevelMetadata::~KeyLevelMetadata() {}
 
-    void KeyLevelMetadata::updateDynamicMetadata(const ObjectSize& object_size, const ObjectSize& original_object_size, const bool& is_value_related)
+    void KeyLevelMetadata::updateNoValueDynamicMetadata()
     {
         frequency_++;
-        #ifdef TRACK_PERKEY_OBJSIZE
-        assert(object_size_ == original_object_size);
-        if (is_value_related)
-        {
-            object_size_ = object_size;
-        }
-        else
-        {
-            assert(object_size_ == object_size);
-        }
-        #endif
+
         return;
     }
+
+    #ifdef TRACK_PERKEY_OBJSIZE
+    void KeyLevelMetadata::updateValueDynamicMetadata(const ObjectSize& object_size, const ObjectSize& original_object_size)
+    {
+        
+        assert(object_size_ == original_object_size);
+        object_size_ = object_size;
+
+        return;
+    }
+    #endif
 
     GroupId KeyLevelMetadata::getGroupId() const
     {
