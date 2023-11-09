@@ -41,6 +41,7 @@ namespace covered
 
     bool LocalCachedMetadata::addForNewKey(const Key& key, const Value& value, const uint32_t& peredge_synced_victimcnt)
     {
+        // Initialize and update both value-unrelated and value-related metadata for newly-admited key
         CacheMetadataBase::addForNewKey_(key, value);
 
         bool affect_victim_tracker = false;
@@ -57,7 +58,7 @@ namespace covered
         return affect_victim_tracker;
     }
 
-    bool LocalCachedMetadata::updateForExistingKey(const Key& key, const Value& value, const Value& original_value, const bool& is_value_related, const uint32_t& peredge_synced_victimcnt)
+    bool LocalCachedMetadata::updateNoValueStatsForExistingKey(const Key& key, const uint32_t& peredge_synced_victimcnt)
     {
         bool affect_victim_tracker = false;
 
@@ -70,7 +71,36 @@ namespace covered
             affect_victim_tracker = true;
         }
 
-        CacheMetadataBase::updateForExistingKey_(key, value, original_value, is_value_related);
+        // Update value-unrelated metadata
+        CacheMetadataBase::updateNoValueStatsForExistingKey_(key);
+
+        if (!affect_victim_tracker)
+        {
+            uint32_t least_popular_rank_after_metadata_update = getLeastPopularRank_(perkey_lookup_iter);
+            if (least_popular_rank_after_metadata_update < peredge_synced_victimcnt) // If key is a local synced victim now
+            {
+                affect_victim_tracker = true;
+            }
+        }
+
+        return affect_victim_tracker;
+    }
+
+    bool LocalCachedMetadata::updateValueStatsForExistingKey(const Key& key, const Value& value, const Value& original_value, const uint32_t& peredge_synced_victimcnt)
+    {
+        bool affect_victim_tracker = false;
+
+        // Get lookup iterator
+        perkey_lookup_iter_t perkey_lookup_iter = getLookup_(key);
+
+        uint32_t least_popular_rank_before_metadata_update = getLeastPopularRank_(perkey_lookup_iter);
+        if (least_popular_rank_before_metadata_update < peredge_synced_victimcnt) // If key was a local synced victim before
+        {
+            affect_victim_tracker = true;
+        }
+
+        // Update value-related metadata
+        CacheMetadataBase::updateValueStatsForExistingKey_(key, value, original_value);
 
         if (!affect_victim_tracker)
         {

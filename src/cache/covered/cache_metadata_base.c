@@ -110,16 +110,16 @@ namespace covered
         // Add lookup iterator for new key
         perkey_lookup_iter_t perkey_lookup_iter = addLookup_(key);
 
-        // Add group-level metadata for new key
+        // Add group-level metadata (both value-unrelated and value-related) for new key
         GroupId assigned_group_id = 0;
-        const GroupLevelMetadata& pergroup_metadata_ref = addPergroupMetadata_(key, value, assigned_group_id);
+        const GroupLevelMetadata& group_level_metadata_ref = addPergroupMetadata_(key, value, assigned_group_id);
 
-        // Add object-level metadata for new key
+        // Add object-level metadata (both value-unrelated and value-related) for new key
         perkey_metadata_list_t::iterator perkey_metadata_iter = addPerkeyMetadata_(key, value, assigned_group_id);
-        const KeyLevelMetadata& perkey_metadata_ref = perkey_metadata_iter->second;
+        const KeyLevelMetadata& key_level_metadata_ref = perkey_metadata_iter->second;
 
         // Add popularity for new key
-        Popularity new_popularity = calculatePopularity_(perkey_metadata_ref, pergroup_metadata_ref); // Calculate popularity
+        Popularity new_popularity = calculatePopularity_(key_level_metadata_ref, group_level_metadata_ref); // Calculate popularity
         sorted_popularity_multimap_t::iterator sorted_popularity_iter = addPopularity_(new_popularity, perkey_lookup_iter);
 
         // Update lookup table
@@ -134,13 +134,13 @@ namespace covered
         perkey_lookup_iter_t perkey_lookup_iter = getLookup_(key);
 
         // Update object-level value-unrelated metadata
-        updateNoValuePerkeyMetadata_(perkey_lookup_iter);
+        const KeyLevelMetadata& key_level_metadata_ref = updateNoValuePerkeyMetadata_(perkey_lookup_iter);
 
         // Update group-level value-unrelated metadata
-        updateNoValuePergroupMetadata_(perkey_lookup_iter);
+        const GroupLevelMetadata& group_level_metadata_ref = updateNoValuePergroupMetadata_(perkey_lookup_iter);
 
         // Update popularity
-        Popularity new_popularity = calculatePopularity_(perkey_lookup_iter); // Calculate popularity
+        Popularity new_popularity = calculatePopularity_(key_level_metadata_ref, group_level_metadata_ref); // Calculate popularity
         sorted_popularity_multimap_t::iterator new_sorted_popularity_iter = updatePopularity_(new_popularity, perkey_lookup_iter);
 
         // Update lookup table
@@ -157,13 +157,13 @@ namespace covered
         perkey_lookup_iter_t perkey_lookup_iter = getLookup_(key);
 
         // Update object-level value-related metadata
-        updateValuePerkeyMetadata_(perkey_lookup_iter, value, original_value);
+        const KeyLevelMetadata& key_level_metadata_ref = updateValuePerkeyMetadata_(perkey_lookup_iter, value, original_value);
 
         // Update group-level value-related metadata
-        updateValuePergroupMetadata_(perkey_lookup_iter, key, value, original_value);
+        const GroupLevelMetadata& group_level_metadata_ref = updateValuePergroupMetadata_(perkey_lookup_iter, key, value, original_value);
 
         // Update popularity
-        Popularity new_popularity = calculatePopularity_(perkey_lookup_iter); // Calculate popularity
+        Popularity new_popularity = calculatePopularity_(key_level_metadata_ref, group_level_metadata_ref); // Calculate popularity
         sorted_popularity_multimap_t::iterator new_sorted_popularity_iter = updatePopularity_(new_popularity, perkey_lookup_iter);
 
         // Update lookup table
@@ -227,8 +227,10 @@ namespace covered
         perkey_metadata_list_t::iterator perkey_metadata_iter = perkey_metadata_list_.begin();
         assert(perkey_metadata_iter != perkey_metadata_list_.end());
 
+        // Update both value-unrelated and value-related metadata for new key
         const ObjectSize object_size = key.getKeyLength() + value.getValuesize();
-        perkey_metadata_iter->second.updateDynamicMetadata(object_size, 0, true);
+        perkey_metadata_iter->second.updateNoValueDynamicMetadata();
+        perkey_metadata_iter->second.updateValueDynamicMetadata(object_size, 0);
 
         // push_front already places the new object-level metadata to the head of LRU list -> NO need to update LRU list order
 
@@ -238,7 +240,7 @@ namespace covered
         return perkey_metadata_iter;
     }
 
-    void CacheMetadataBase::updateNoValuePerkeyMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter)
+    const KeyLevelMetadata& CacheMetadataBase::updateNoValuePerkeyMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter)
     {
         // Verify that key must exist
         const LookupMetadata& lookup_metadata = perkey_lookup_iter->second;
@@ -257,10 +259,10 @@ namespace covered
 
         // NOTE: NO need to update size usage of key-level metadata
 
-        return;
+        return perkey_metadata_iter->second;
     }
     
-    void CacheMetadataBase::updateValuePerkeyMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter, const Value& value, const Value& original_value)
+    const KeyLevelMetadata& CacheMetadataBase::updateValuePerkeyMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter, const Value& value, const Value& original_value)
     {
         // Verify that key must exist
         const LookupMetadata& lookup_metadata = perkey_lookup_iter->second;
@@ -276,7 +278,7 @@ namespace covered
 
         // NOTE: NO need to update size usage of key-level metadata
 
-        return;
+        return perkey_metadata_iter->second;
     }
 
     void CacheMetadataBase::removePerkeyMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter)
@@ -333,12 +335,14 @@ namespace covered
             pergroup_metadata_iter = pergroup_metadata_map_.insert(std::pair(assigned_group_id, GroupLevelMetadata())).first;
         }
         assert(pergroup_metadata_iter != pergroup_metadata_map_.end());
+
+        // Update both value-unrelated and value-related metadata for newly-grouped key
         pergroup_metadata_iter->second.updateForNewlyGrouped(key, value); // TODO: update group-level metadata will affect other keys' popularities, while we use lazy update for those popularities (i.e., update them when they are accessed) to avoid maintaining groupid-keys mappings for limited metadata overhead
 
         return pergroup_metadata_iter->second;
     }
 
-    void CacheMetadataBase::updateNoValuePergroupMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter)
+    const GroupLevelMetadata& CacheMetadataBase::updateNoValuePergroupMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter)
     {
         // Verify that key must exist
         const LookupMetadata& lookup_metadata = perkey_lookup_iter->second;
@@ -351,10 +355,10 @@ namespace covered
         assert(pergroup_metadata_iter != pergroup_metadata_map_.end());
         pergroup_metadata_iter->second.updateNoValueStatsForInGroupKey(); // TODO: update group-level metadata will affect other keys' popularities, while we use lazy update for those popularities (i.e., update them when they are accessed) to avoid maintaining groupid-keys mappings for limited metadata overhead
 
-        return;
+        return pergroup_metadata_iter->second;
     }
 
-    void CacheMetadataBase::updateValuePergroupMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter, const Key& key, const Value& value, const Value& original_value)
+    const GroupLevelMetadata& CacheMetadataBase::updateValuePergroupMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter, const Key& key, const Value& value, const Value& original_value)
     {        
         // Verify that key must exist
         const LookupMetadata& lookup_metadata = perkey_lookup_iter->second;
@@ -367,7 +371,7 @@ namespace covered
         assert(pergroup_metadata_iter != pergroup_metadata_map_.end());
         pergroup_metadata_iter->second.updateValueStatsForInGroupKey(key, value, original_value); // TODO: update group-level metadata will affect other keys' popularities, while we use lazy update for those popularities (i.e., update them when they are accessed) to avoid maintaining groupid-keys mappings for limited metadata overhead
 
-        return;
+        return pergroup_metadata_iter->second;
     }
 
     void CacheMetadataBase::removePergroupMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter, const Key& key, const Value& value, const bool& is_local_cached_metadata)
@@ -422,13 +426,10 @@ namespace covered
         return least_popular_rank;
     }
 
-    Popularity CacheMetadataBase::calculatePopularity_(const perkey_lookup_const_iter_t& perkey_lookup_const_iter) const
+    Popularity CacheMetadataBase::calculatePopularity_(const KeyLevelMetadata& key_level_metadata_ref, const GroupLevelMetadata& group_level_metadata_ref) const
     {
         // TODO: Use homogeneous popularity calculation now, but will replace with heterogeneous popularity calculation + learning later (for both local cached and uncached objects)
         // TODO: Use a heuristic or learning-based approach for parameter tuning to calculate local rewards for heterogeneous popularity calculation (refer to state-of-the-art studies such as LRB and GL-Cache)
-
-        const KeyLevelMetadata& key_level_metadata_ref = getkeyLevelMetadata_(perkey_lookup_const_iter);
-        const GroupLevelMetadata& group_level_metadata_ref = getGroupLevelMetadata_(perkey_lookup_const_iter);
 
         // NOTE: Here we use a simple approach to calculate popularity based on object-level and group-level metadata
         Popularity popularity = 0.0;

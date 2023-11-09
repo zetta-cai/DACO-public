@@ -130,7 +130,7 @@ namespace covered
         return;
     }
 
-    bool LocalCacheBase::updateLocalCache(const Key& key, const Value& value, bool& affect_victim_tracker, bool& is_successful)
+    bool LocalCacheBase::updateLocalCache(const Key& key, const Value& value, const bool& is_getrsp, bool& affect_victim_tracker, bool& is_successful)
     {
         checkPointers_();
 
@@ -139,24 +139,10 @@ namespace covered
         rwlock_for_local_cache_ptr_->acquire_lock(context_name);
 
         is_successful = false;
-        bool is_local_cached = updateLocalCacheInternal_(key, value, affect_victim_tracker, is_successful);
+        bool is_local_cached = updateLocalCacheInternal_(key, value, is_getrsp, affect_victim_tracker, is_successful);
 
         rwlock_for_local_cache_ptr_->unlock(context_name);
         return is_local_cached;
-    }
-
-    void LocalCacheBase::updateLocalUncachedMetadataForRsp(const Key& key, const Value& value, const bool& is_value_related) const
-    {
-        checkPointers_();
-
-        // Acquire a write lock for local metadata to update local metadata atomically (so no need to hack LFU cache)
-        std::string context_name = "LocalCacheBase::updateLocalUncachedMetadataForRsp(key, value)";
-        rwlock_for_local_cache_ptr_->acquire_lock(context_name);
-
-        updateLocalUncachedMetadataForRspInternal_(key, value, is_value_related);
-
-        rwlock_for_local_cache_ptr_->unlock(context_name);
-        return;
     }
 
     // (3) Local edge cache management

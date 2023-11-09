@@ -145,8 +145,10 @@ namespace covered
         }
         cache_wrapper_perkey_rwlock_ptr_->acquire_lock(key, context_name);
 
+        // Try to update local edge cache for put/delreq
+        const bool is_getrsp = false;
         bool is_successful = false;
-        bool is_local_cached = local_cache_ptr_->updateLocalCache(key, value, affect_victim_tracker, is_successful);
+        bool is_local_cached = local_cache_ptr_->updateLocalCache(key, value, is_getrsp, affect_victim_tracker, is_successful);
 
         if (is_local_cached)
         {
@@ -165,9 +167,6 @@ namespace covered
         else
         {
             assert(!is_successful);
-
-            // Update local uncached metadata for admission policy if any
-            local_cache_ptr_->updateLocalUncachedMetadataForRsp(key, value, true);
         }
 
         cache_wrapper_perkey_rwlock_ptr_->unlock(key, context_name);
@@ -198,14 +197,15 @@ namespace covered
         bool is_local_cached_and_invalid = false;
 
         bool is_local_cached = local_cache_ptr_->isLocalCached(key);
+        const bool is_getrsp = true;
         if (is_local_cached)
         {
             bool is_valid = isValidKeyForLocalCachedObject_(key);
             if (!is_valid) // If key is locally cached yet invalid
             {
-                // Update local edge cache
+                // Update local edge cache for getrsp with invalid hit
                 bool is_successful = false;
-                bool tmp_is_local_cached = local_cache_ptr_->updateLocalCache(key, value, affect_victim_tracker, is_successful);
+                bool tmp_is_local_cached = local_cache_ptr_->updateLocalCache(key, value, is_getrsp, affect_victim_tracker, is_successful);
                 assert(tmp_is_local_cached);
 
                 if (is_successful) // Validate key ONLY if update successfully
@@ -223,10 +223,13 @@ namespace covered
                 is_local_cached_and_invalid = true;
             }
         }
-        else // If key is locally uncached
+        else // If key is NOT local cached
         {
-            // Update local uncached metadata for admission policy if any
-            local_cache_ptr_->updateLocalUncachedMetadataForRsp(key, value, false);
+            // Update local edge cache for getrsp with cache miss
+            bool is_successful = false;
+            bool tmp_is_local_cached = local_cache_ptr_->updateLocalCache(key, value, is_getrsp, affect_victim_tracker, is_successful);
+            assert(!tmp_is_local_cached);
+            assert(!is_successful);
         }
 
         cache_wrapper_perkey_rwlock_ptr_->unlock(key, context_name);

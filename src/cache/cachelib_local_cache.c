@@ -111,8 +111,9 @@ namespace covered
         return;
     }
 
-    bool CachelibLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value, bool& affect_victim_tracker, bool& is_successful)
+    bool CachelibLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value, const bool& is_getrsp, bool& affect_victim_tracker, bool& is_successful)
     {
+        UNUSED(is_getrsp); // Only for COVERED
         UNUSED(affect_victim_tracker); // Only for COVERED
         is_successful = false;
         
@@ -122,9 +123,9 @@ namespace covered
         bool is_local_cached = (handle != nullptr);
 
         // Check value length
-        if ((value.getValuesize() > max_allocation_class_size_))
+        if ((key.getKeyLength() + value.getValuesize()) > max_allocation_class_size_)
         {
-            is_successful = false; // NOT cache too large value due to slab class size limitation of Cachelib -> equivalent to NOT caching the latest value (will be invalidated by CacheWrapper later if key is local cached)
+            is_successful = false; // NOT cache too large object size due to slab class size limitation of Cachelib -> equivalent to NOT caching the latest value (will be invalidated by CacheWrapper later if key is local cached)
             return is_local_cached;
         }
 
@@ -151,12 +152,6 @@ namespace covered
         return is_local_cached;
     }
 
-    void CachelibLocalCache::updateLocalUncachedMetadataForRspInternal_(const Key& key, const Value& value, const bool& is_value_related) const
-    {
-        // CacheLib (LRU2Q) cache uses default admission policy (i.e., always admit), which does NOT need to update local metadata for get/putres of uncached objects
-        return;
-    }
-
     // (3) Local edge cache management
 
     bool CachelibLocalCache::needIndependentAdmitInternal_(const Key& key, const Value& value) const
@@ -165,7 +160,7 @@ namespace covered
         
         // CacheLib (LRU2Q) cache uses default admission policy (i.e., always admit), which always returns true as long as key is not cached
         bool is_local_cached = isLocalCachedInternal_(key);
-        const bool is_valid_valuesize = (value.getValuesize() <= max_allocation_class_size_);
+        const bool is_valid_valuesize = ((key.getKeyLength() + value.getValuesize()) <= max_allocation_class_size_);
         return !is_local_cached && is_valid_valuesize;
     }
 
@@ -174,8 +169,8 @@ namespace covered
         UNUSED(affect_victim_tracker); // Only for COVERED
         is_successful = false;
 
-        // NOTE: MUST with a valid value length, as we always return false in needIndependentAdmitInternal_() if value is too large
-        assert(value.getValuesize() <= max_allocation_class_size_);
+        // NOTE: MUST with a valid value length, as we always return false in needIndependentAdmitInternal_() if object size is too large
+        assert((key.getKeyLength() + value.getValuesize()) <= max_allocation_class_size_);
         
         const std::string keystr = key.getKeystr();
 

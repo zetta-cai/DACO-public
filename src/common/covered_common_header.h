@@ -9,11 +9,11 @@
 
 // Used in src/cache/covered/*
 // NOTE: we track key-level accurate object size by default to avoid affecting cache management decisions -> although existing studies (e.g., Segcache) use group-level object size, they may have similar object sizes, while edge caching has significantly different object sizes, which will affect cache management decisions
-// -> If defined, we track accurate object size in key-level metadata
-// -> If not defined, we track approximate object size in group-level metadata
+// -> If defined, we track accurate object size in key-level metadata (by default)
+// -> If not defined, we track approximate object size in group-level metadata (NOT recommend due to inaccurate object size and less-effective cache management)
 #define TRACK_PERKEY_OBJSIZE
 
-// TMPDEBUG231108
+// NOTE: use max slab size as approximate object size to track uncached key in local uncached metadata for getreq with cache miss if NOT tracked instead of waiting for the second getreq to trigger cache management, which will slow down admission rate especially for the beginning of warmup phase
 #define ENABLE_APPROX_UNCACHED_POP
 
 #include <cstdint> // uint32_t, uint64_t

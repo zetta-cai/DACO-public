@@ -70,8 +70,9 @@ namespace covered
         return;
     }
 
-    bool LfuLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value, bool& affect_victim_tracker, bool& is_successful)
+    bool LfuLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value, const bool& is_getrsp, bool& affect_victim_tracker, bool& is_successful)
     {
+        UNUSED(is_getrsp); // ONLY for COVERED
         UNUSED(affect_victim_tracker); // Only for COVERED
         is_successful = false;
         
@@ -82,12 +83,6 @@ namespace covered
         }
 
         return is_local_cached;
-    }
-
-    void LfuLocalCache::updateLocalUncachedMetadataForRspInternal_(const Key& key, const Value& value, const bool& is_value_related) const
-    {
-        // LFU cache uses default admission policy (i.e., always admit), which does NOT need to update local metadata for get/putres of uncached objects
-        return;
     }
 
     // (3) Local edge cache management

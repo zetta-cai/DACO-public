@@ -28,11 +28,12 @@ namespace covered
 
         // Different for local uncached objects
 
-        void addForNewKey(const Key& key, const Value& value); // Currently tracked uncached key (for getrsp with cache miss, put/delrsp with cache miss); overwrite CacheMetadataBase to detrack old keys if necessary
+        void addForNewKey(const Key& key, const Value& value); // For getrsp/put/delreq w/ miss (also getreq w/ miss if ENABLE_APPROX_UNCACHED_POP for newly-tracked key), initialize and update both value-unrelated and value-related metadata for newly-tracked key
 
-        void updateForExistingKey(const Key& key, const Value& value, const Value& original_value, const bool& is_value_related); // Tracked uncached key (is_value_related = false: for getrsp with cache miss; is_value_related = true: put/delrsp with cache miss); NOT overwrite CacheMetadataBase
+        void updateNoValueStatsForExistingKey(const Key& key); // For get/put/delreq w/ miss, update object-level value-unrelated metadata for existing key (i.e., already tracked objects for local uncached)
+        void updateValueStatsForExistingKey(const Key& key, const Value& value, const Value& original_value); // For put/delreq w/ miss (also getrsp w/ miss if ENABLE_APPROX_UNCACHED_POP for existing key), update object-level value-related metadata for existing key (i.e., already tracked objects for local uncached)
 
-        void removeForExistingKey(const Key& detracked_key, const Value& value); // Remove tracked uncached key (for getrsp with cache miss, put/delrsp with cache miss, admission)
+        void removeForExistingKey(const Key& detracked_key, const Value& value); // Remove tracked uncached key (for getrsp/put/delreq with cache miss and admission)
 
         virtual uint64_t getSizeForCapacity() const override; // Get size for capacity constraint of local uncached objects
     private:

@@ -29,10 +29,15 @@ namespace covered
 
     void GroupLevelMetadata::updateForNewlyGrouped(const Key& key, const Value& value)
     {
+        // NO value-unrelated metadata to update for newly-grouped keys
+
         #ifndef TRACK_PERKEY_OBJSIZE
+        // Update value-related metadata for newly-grouped keys
         uint32_t object_size = key.getKeyLength() + value.getValuesize();
         avg_object_size_ = (avg_object_size_ * object_cnt_ + object_size) / (object_cnt_ + 1);
         #endif
+
+        // Update object count
         object_cnt_++;
 
         return;

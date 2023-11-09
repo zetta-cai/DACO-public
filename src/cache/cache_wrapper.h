@@ -60,8 +60,8 @@ namespace covered
         // Return if exist victims for the required size
         bool fetchVictimCacheinfosForRequiredSize(std::list<VictimCacheinfo>& victim_cacheinfos, const uint64_t& required_size) const;
 
-        // Set collected_popularity.is_tracked_ as true if the local uncached key is tracked
-        // NOTE: collected_popularity.is_tracked_ is false if key is either local cached or local uncached yet untracked by local uncached metadata
+        // Set collected_popularity.is_tracked_ as true if the local uncached key is tracked; set collected_popularity.is_tracked_ as false if key is either local cached or local uncached yet untracked by local uncached metadata
+        // NOTE: for directory lookup req, directory eviction req, acquire writelock req, and release writelock req, is_key_tracked flag could still be false for returned collected popularity -> reason: under local uncached metadata capacity limitation, newly-tracked or preserved-after-eviciton local uncached popularity could be immediately detracked from local uncached metadata and hence NO need for popularity collection/aggregation
         void getCollectedPopularity(const Key& key, CollectedPopularity& collected_popularity) const;
 
         // (3) Local edge cache management

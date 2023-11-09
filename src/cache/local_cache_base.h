@@ -40,9 +40,7 @@ namespace covered
         std::list<VictimCacheinfo> getLocalSyncedVictimCacheinfosFromLocalCache() const; // Return up to peredge_synced_victimcnt local synced victims with the least local rewards
         void getCollectedPopularityFromLocalCache(const Key& key, CollectedPopularity& collected_popularity) const; // Return true if local uncached key is tracked
 
-        bool updateLocalCache(const Key& key, const Value& value, bool& affect_victim_tracker, bool& is_successful); // Return whether key is local cached (is_successful indicates whether value is updated successfully)
-
-        void updateLocalUncachedMetadataForRsp(const Key& key, const Value& value, const bool& is_value_related) const; // Triggered by get/put/delrsp for cache miss for admission policy if any
+        bool updateLocalCache(const Key& key, const Value& value, const bool& is_getrsp, bool& affect_victim_tracker, bool& is_successful); // Return whether key is local cached for getrsp/put/delreq (is_getrsp indicates getrsp w/ invalid hit or cache miss; is_successful indicates whether value is updated successfully)
 
         // (3) Local edge cache management
 
@@ -84,9 +82,7 @@ namespace covered
         virtual std::list<VictimCacheinfo> getLocalSyncedVictimCacheinfosFromLocalCacheInternal_() const = 0; // Return up to peredge_synced_victimcnt local synced victims with the least local rewards
         virtual void getCollectedPopularityFromLocalCacheInternal_(const Key& key, CollectedPopularity& collected_popularity) const = 0; // Return true if local uncached key is tracked
 
-        virtual bool updateLocalCacheInternal_(const Key& key, const Value& value, bool& affect_victim_tracker, bool& is_successful) = 0; // Return whether key is local cached (is_successful indicates whether value is updated successfully)
-
-        virtual void updateLocalUncachedMetadataForRspInternal_(const Key& key, const Value& value, const bool& is_value_related) const = 0; // Triggered by get/put/delrsp for cache miss for admission policy if any
+        virtual bool updateLocalCacheInternal_(const Key& key, const Value& value, const bool& is_getrsp, bool& affect_victim_tracker, bool& is_successful) = 0; // Return whether key is local cached for getrsp/put/delreq (is_getrsp indicates getrsp w/ invalid hit or cache miss; is_successful indicates whether value is updated successfully)
 
         // (3) Local edge cache management
 

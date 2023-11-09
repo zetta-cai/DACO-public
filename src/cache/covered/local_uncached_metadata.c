@@ -72,6 +72,7 @@ namespace covered
 
     void LocalUncachedMetadata::addForNewKey(const Key& key, const Value& value)
     {
+        // Initialize and update both value-unrelated and value-related metadata for newly-tracked key
         CacheMetadataBase::addForNewKey_(key, value);
 
         Key detracked_key;
@@ -92,9 +93,18 @@ namespace covered
         return;
     }
 
-    void LocalUncachedMetadata::updateForExistingKey(const Key& key, const Value& value, const Value& original_value, const bool& is_value_related)
+    void LocalUncachedMetadata::updateNoValueStatsForExistingKey(const Key& key)
     {
-        CacheMetadataBase::updateForExistingKey_(key, value, original_value, is_value_related);
+        // Update value-unrelated metadata
+        CacheMetadataBase::updateNoValueStatsForExistingKey_(key);
+
+        return;
+    }
+
+    void LocalUncachedMetadata::updateValueStatsForExistingKey(const Key& key, const Value& value, const Value& original_value)
+    {
+        // Update value-related metadata
+        CacheMetadataBase::updateValueStatsForExistingKey_(key, value, original_value);
 
         return;
     }
