@@ -27,7 +27,7 @@ namespace covered
         void updateValueStatsForInGroupKey(const Key& key, const Value& value, const Value& original_value); // For put/delreq w/ hit/miss and getrsp w/ invalid-hit (also getrsp w/ miss if ENABLE_CONSERVATIVE_UNCACHED_POP), update group-level value-related metadata for the key already in the current group (i.e., already admitted/tracked objects for local cached/uncached)
         bool updateForDegrouped(const Key& key, const Value& value, const bool& need_warning); // Update group-level metadata for the key being removed from the current group (currently evicted/detracked for local cached/uncached); return true if object_cnt_ is zero (i.e., all keys in the group have been removed and the group can also be removed)
 
-        #ifndef TRACK_PERKEY_OBJSIZE
+        #ifndef ENABLE_TRACK_PERKEY_OBJSIZE
         AvgObjectSize getAvgObjectSize() const;
         #endif
         ObjectCnt getObjectCnt() const;
@@ -36,7 +36,7 @@ namespace covered
     private:
         static const std::string kClassName;
 
-        #ifndef TRACK_PERKEY_OBJSIZE
+        #ifndef ENABLE_TRACK_PERKEY_OBJSIZE
         // Value-related metadata
         AvgObjectSize avg_object_size_;
         #endif

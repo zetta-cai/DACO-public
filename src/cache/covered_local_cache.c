@@ -139,7 +139,7 @@ namespace covered
                 LruCacheReadHandle tmp_victim_handle = covered_cache_ptr_->find(tmp_victim_key.getKeystr()); // NOTE: although find() will move the item to the front of the LRU list to update recency information inside cachelib, covered uses local cache metadata tracked outside cachelib for cache management
                 assert(tmp_victim_handle != nullptr); // Victim must be cached before eviction
                 tmp_victim_value_size = tmp_victim_handle->getSize();
-                #ifdef TRACK_PERKEY_OBJSIZE
+                #ifdef ENABLE_TRACK_PERKEY_OBJSIZE
                 // NOTE: tmp_victim_object_size got from key-level metadata is already accurate
                 assert(tmp_victim_object_size == (tmp_victim_key.getKeyLength() + tmp_victim_value_size));
                 #else
@@ -166,7 +166,9 @@ namespace covered
     {
         ObjectSize object_size = 0;
         Popularity local_uncached_popularity = 0.0;
-        bool is_key_tracked = local_uncached_metadata_.getLocalUncachedObjsizePopularityForKey(key, object_size, local_uncached_popularity);
+        bool with_valid_value = false;
+        Value tmp_value;
+        bool is_key_tracked = local_uncached_metadata_.getLocalUncachedObjsizePopularityValueForKey(key, object_size, local_uncached_popularity, with_valid_value, tmp_value);
 
         // NOTE: (value size checking) NOT local-get/remote-collect large-objsize uncached object for aggregated uncached metadata due to slab-based memory management in Cachelib cache engine
         if (object_size > max_allocation_class_size_) // May be with large object size
@@ -177,7 +179,7 @@ namespace covered
             Util::dumpWarnMsg(instance_name_, oss.str());
         }
 
-        collected_popularity = CollectedPopularity(is_key_tracked, local_uncached_popularity, object_size);
+        collected_popularity = CollectedPopularity(is_key_tracked, local_uncached_popularity, object_size, with_valid_value, tmp_value);
 
         return;
     }
@@ -377,7 +379,7 @@ namespace covered
                     LruCacheReadHandle tmp_victim_handle = covered_cache_ptr_->find(tmp_victim_keystr); // NOTE: although find() will move the item to the front of the LRU list to update recency information inside cachelib, covered uses local cache metadata tracked outside cachelib for cache management
                     assert(tmp_victim_handle != nullptr); // Victim must be cached before eviction
                     uint32_t tmp_victim_value_size = tmp_victim_handle->getSize();
-                    #ifdef TRACK_PERKEY_OBJSIZE
+                    #ifdef ENABLE_TRACK_PERKEY_OBJSIZE
                     // NOTE: tmp_victim_object_size got from key-level metadata is already accurate
                     assert(tmp_victim_object_size == (tmp_victim_key.getKeyLength() + tmp_victim_value_size));
                     #else

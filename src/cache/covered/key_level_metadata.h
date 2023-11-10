@@ -21,13 +21,13 @@ namespace covered
         ~KeyLevelMetadata();
 
         void updateNoValueDynamicMetadata(); // For get/put/delreq w/ hit/miss, update object-level value-unrelated metadata
-        #ifdef TRACK_PERKEY_OBJSIZE
+        #ifdef ENABLE_TRACK_PERKEY_OBJSIZE
         void updateValueDynamicMetadata(const ObjectSize& object_size, const ObjectSize& original_object_size); // For admission, put/delreq w/ hit/miss, and getrsp w/ invalid-hit (also getreq w/ miss if ENABLE_CONSERVATIVE_UNCACHED_POP for newly-tracked key, and getrsp w/ miss if for newly-tracked key or ENABLE_CONSERVATIVE_UNCACHED_POP for existing key), update object-level value-related metadata
         #endif
 
         GroupId getGroupId() const;
         Frequency getFrequency() const;
-        #ifdef TRACK_PERKEY_OBJSIZE
+        #ifdef ENABLE_TRACK_PERKEY_OBJSIZE
         ObjectSize getObjectSize() const;
         #endif
 
@@ -41,7 +41,7 @@ namespace covered
         // Non-const value-unrelated dynamic metadata
         Frequency frequency_;
 
-        #ifdef TRACK_PERKEY_OBJSIZE
+        #ifdef ENABLE_TRACK_PERKEY_OBJSIZE
         // Non-const value-related dynamic metadata
         ObjectSize object_size_;
         #endif

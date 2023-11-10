@@ -21,12 +21,26 @@
 
 namespace covered
 {
+    // LRU for objects with the same popularity (e.g., zero-popularity one-hit-wonders)
+    class PopularityLruCompare
+    {
+    public:
+        bool operator()(const Popularity& lhs, const Popularity& rhs) const;
+    };
+
+    // MRU for objects with the same popularity (e.g., zero-popularity one-hit-wonders)
+    class PopularityMruCompare
+    {
+    public:
+        bool operator()(const Popularity& lhs, const Popularity& rhs) const;
+    };
+    
     typedef std::list<std::pair<Key, KeyLevelMetadata>> perkey_metadata_list_t; // LRU list of object-level metadata
     typedef std::unordered_map<GroupId, GroupLevelMetadata> pergroup_metadata_map_t;
 
     // NOTE: typedef MUST need complete definition of class unless you use pointers or references -> cannot use perkey_lookup_iter_t in sorted_popularity_multimap_t, which will cause circular dependency between LookupMetadata and sorted_popularity_multimap_t (using Key here is just for implementation simplicity, yet actually we can move CacheItem pointers from MMContainer's LRU list into popularity list to replace keys for popularity list if we hack cachelib)
     //typedef std::multimap<Popularity, LruCacheReadHandle> sorted_popularity_multimap_t; // Obselete: local uncached objects cannot provide LruCacheReadHandle
-    typedef std::multimap<Popularity, Key> sorted_popularity_multimap_t; // Ordered list of per-key popularity
+    typedef std::multimap<Popularity, Key, PopularityMruCompare> sorted_popularity_multimap_t; // Ordered list of per-key popularity (with MRU policy for one-hit-wonders)
 
     class LookupMetadata
     {
@@ -86,8 +100,8 @@ namespace covered
         // For object-level metadata
         const KeyLevelMetadata& getkeyLevelMetadata_(const perkey_lookup_const_iter_t& perkey_lookup_const_iter) const; // Return existing KeyLevelMetadata
         perkey_metadata_list_t::iterator addPerkeyMetadata_(const Key& key, const Value& value, const GroupId& assigned_group_id); // For admission and getrsp/put/delreq w/ miss (also getreq w/ miss if ENABLE_CONSERVATIVE_UNCACHED_POP), initialize and update key-level value-unrelated and value-related metadata for newly-admited/tracked key; return new perkey metadata iterator
-        const KeyLevelMetadata& updateNoValuePerkeyMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter); // For get/put/delreq w/ hit/miss, update object-level value-unrelated metadata for existing key (i.e., already admitted/tracked objects for local cached/uncached); return updated KeyLevelMetadata
-        const KeyLevelMetadata& updateValuePerkeyMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter, const Value& value, const Value& original_value); // For put/delreq w/ hit/miss and getrsp w/ invalid-hit (also getrsp w/ miss if ENABLE_CONSERVATIVE_UNCACHED_POP), update object-level value-related metadata for existing key (i.e., already admitted/tracked objects for local cached/uncached); return updated KeyLevelMetadata
+        perkey_metadata_list_t::iterator updateNoValuePerkeyMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter); // For get/put/delreq w/ hit/miss, update object-level value-unrelated metadata for existing key (i.e., already admitted/tracked objects for local cached/uncached); return updated KeyLevelMetadata
+        perkey_metadata_list_t::iterator updateValuePerkeyMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter, const Value& value, const Value& original_value); // For put/delreq w/ hit/miss and getrsp w/ invalid-hit (also getrsp w/ miss if ENABLE_CONSERVATIVE_UNCACHED_POP), update object-level value-related metadata for existing key (i.e., already admitted/tracked objects for local cached/uncached); return updated KeyLevelMetadata
         void removePerkeyMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter);
 
         // For group-level metadata
@@ -100,7 +114,7 @@ namespace covered
         // For popularity information
         Popularity getPopularity_(const perkey_lookup_const_iter_t& perkey_lookup_iter) const;
         uint32_t getLeastPopularRank_(const perkey_lookup_const_iter_t& perkey_lookup_iter) const;
-        Popularity calculatePopularity_(const KeyLevelMetadata& key_level_metadata_ref, const GroupLevelMetadata& group_level_metadata_ref) const; // Calculate popularity based on object-level and group-level metadata
+        Popularity calculatePopularity_(const perkey_metadata_list_t::const_iterator& perkey_metadata_const_iter, const KeyLevelMetadata& key_level_metadata_ref, const GroupLevelMetadata& group_level_metadata_ref) const; // Calculate popularity based on object-level and group-level metadata
         sorted_popularity_multimap_t::iterator addPopularity_(const Popularity& new_popularity, const perkey_lookup_iter_t& perkey_lookup_iter); // Return new sorted popularity iterator
         sorted_popularity_multimap_t::iterator updatePopularity_(const Popularity& new_popularity, const perkey_lookup_iter_t& perkey_lookup_iter); // Return updated sorted popularity iterator
         void removePopularity_(const perkey_lookup_iter_t& perkey_lookup_iter);
@@ -117,7 +131,7 @@ namespace covered
         
         // Object-level metadata
         uint64_t perkey_metadata_list_key_size_; // Total size of keys in perkey_metadata_list_
-        perkey_metadata_list_t perkey_metadata_list_; // LRU list for object-level metadata (list index is recency information)
+        perkey_metadata_list_t perkey_metadata_list_; // LRU list for object-level metadata (list index is recency information (NOT used yet); descending order of recency)
 
         // Group-level metadata
         GroupId cur_group_id_;
@@ -130,7 +144,7 @@ namespace covered
         // Popularity information
         // OBSOLETE (learned index cannot support duplicate popularities; actually we do NOT count the pointers of std::multimap in cache size usage): Use learned index to replace local cached/uncached sorted_popularity_ for less memory usage (especially for local cached objects due to limited # of uncached objects)
         uint64_t sorted_popularity_multimap_key_size_; // Total size of keys in sorted_popularity_multimap_
-        sorted_popularity_multimap_t sorted_popularity_multimap_; // Sorted popularity information (ascending order; allow duplicate popularity values)
+        sorted_popularity_multimap_t sorted_popularity_multimap_; // Sorted popularity information (allow duplicate popularity values with insertion order; descending order for MRU of zero-popularity objects)
 
         // Lookup table
         uint64_t perkey_lookup_table_key_size_; // Total size of keys in perkey_lookup_table_

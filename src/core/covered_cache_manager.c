@@ -93,8 +93,21 @@ namespace covered
                     // NOTE: removed extra fetched victims should NOT be reused <- if the edge node needs more victims and triggers victim fetching again, the request MUST be later than placement notification request, which has changed the synced victims in the edge node
                     UNUSED(best_placement_peredge_fetched_victimset);
 
+                    #ifdef ENABLE_AUXILIARY_DATA_CACHE
+                    if (collected_popularity.withValidValue()) // Valid value to directly perform placement notification (avoid unnecessary data fetching for fast warmup)
+                    {
+                        // Non-blocking placement notification if with best placement and valid value (from auxiliary data cache of source edge node)
+                        edge_wrapper_ptr->nonblockNotifyForPlacement(key, collected_popularity.getValue(), best_placement_edgeset, skip_propagation_latency);
+                    }
+                    else // NO valid value for placement notification
+                    {
+                        // Non-blocking data fetching if with best placement
+                        edge_wrapper_ptr->nonblockDataFetchForPlacement(key, best_placement_edgeset, skip_propagation_latency, sender_is_beacon, need_hybrid_fetching);
+                    }
+                    #else
                     // Non-blocking data fetching if with best placement
                     edge_wrapper_ptr->nonblockDataFetchForPlacement(key, best_placement_edgeset, skip_propagation_latency, sender_is_beacon, need_hybrid_fetching);
+                    #endif
                 }
             }
         }

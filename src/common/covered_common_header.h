@@ -7,14 +7,23 @@
 #ifndef COVERED_COMMON_HEADER_H
 #define COVERED_COMMON_HEADER_H
 
-// Used in src/cache/covered/*
+// Used in src/cache/covered_local_cache.c and src/cache/covered/*
 // NOTE: we track key-level accurate object size by default to avoid affecting cache management decisions -> although existing studies (e.g., Segcache) use group-level object size, they may have similar object sizes, while edge caching has significantly different object sizes, which will affect cache management decisions
 // -> If defined, we track accurate object size in key-level metadata (by default)
 // -> If not defined, we track approximate object size in group-level metadata (NOT recommend due to inaccurate object size and less-effective cache management)
-#define TRACK_PERKEY_OBJSIZE
+#define ENABLE_TRACK_PERKEY_OBJSIZE
 
+// Used in src/cache/covered_local_cache.c and src/cache/covered/*
 // (OBSOLETE due to one-hit-wonder issues) NOTE: use max slab size as conservative object size to track uncached key in local uncached metadata for getreq with cache miss if NOT tracked instead of waiting for the second getreq to trigger cache management, which will slow down admission rate especially for the beginning of warmup phase
+// -> If defined, we use conservative local uncached popularity for the first cache miss for each uncached object to fill up cache quickly
+// -> If not defined, we wait for at least the second cache miss for each uncached object to trigger cache management
 //#define ENABLE_CONSERVATIVE_UNCACHED_POP
+
+// Used in src/cache/covered_local_cache.c, src/cache/covered/*, and src/core/popularity/collected_popularity.c
+// (OBSOLETE due to still waiting for at least second request especially under scan patterns) NOTE: maintain an auxiliary data cache for the values of local uncached objects tracked by local uncached metadata
+// -> If defined, we track the values in object-level metadata of local uncached metadata (constrained by local uncached metadata capacity limitation)
+// -> If not defined, we access neighbor/cloud again for at least the second cache miss of each uncached object for trade-off-aware placement calculation
+//#define ENABLE_AUXILIARY_DATA_CACHE
 
 #include <cstdint> // uint32_t, uint64_t
 

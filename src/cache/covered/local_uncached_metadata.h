@@ -8,6 +8,7 @@
 #define LOCAL_UNCACHED_METADATA_H
 
 #include <string>
+#include <unordered_map>
 
 #include "cache/covered/cache_metadata_base.h"
 
@@ -22,7 +23,7 @@ namespace covered
         // ONLY for local uncached objects
 
         // TODO: Track key-level object size instead of group-level one in CacheMetadataBase for eviction cost in placement calculation if necessary
-        bool getLocalUncachedObjsizePopularityForKey(const Key& key, ObjectSize& object_size, Popularity& local_uncached_popularity) const; // Get popularity and average object size for local uncached object; return true if key exists (i.e., tracked)
+        bool getLocalUncachedObjsizePopularityValueForKey(const Key& key, ObjectSize& object_size, Popularity& local_uncached_popularity, bool& with_valid_value, Value& value) const; // Get popularity and average object size (and value if ENABLE_AUXILIARY_DATA_CACHE) for local uncached object; return true if key exists (i.e., tracked)
 
         uint32_t getValueSizeForUncachedObjects(const Key& key) const; // Get accurate/approximate value size for local uncached object
 
@@ -42,6 +43,11 @@ namespace covered
         // ONLY for local uncached objects
 
         bool needDetrackForUncachedObjects_(Key& detracked_key) const; // Check if need to detrack the least popular key for local uncached object
+
+        #ifdef ENABLE_AUXILIARY_DATA_CACHE
+        // NOTE: maintain auxiliary data cache outside CacheMetadataBase is just for implementation simplicity (e.g., we can track the value in KeyLevelMetadata at CacheMetadataBase if the key is local uncached), while we NEVER use auxiliary_data_cache_ to lookup keys for cache metadata of local uncached objects, so we ONLY count the space usage of values instead of keys for auxiliary_data_cache_ here
+        std::unordered_map<Key, Value, KeyHasher> auxiliary_data_cache_; // Auxiliary data cache for local uncached objects
+        #endif
 
         const uint64_t max_bytes_for_uncached_objects_; // Used only for local uncached objects
     };

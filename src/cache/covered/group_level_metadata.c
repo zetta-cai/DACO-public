@@ -11,7 +11,7 @@ namespace covered
 
     GroupLevelMetadata::GroupLevelMetadata()
     {
-        #ifndef TRACK_PERKEY_OBJSIZE
+        #ifndef ENABLE_TRACK_PERKEY_OBJSIZE
         avg_object_size_ = 0.0;
         #endif
         object_cnt_ = 0;
@@ -19,7 +19,7 @@ namespace covered
 
     GroupLevelMetadata::GroupLevelMetadata(const GroupLevelMetadata& other)
     {
-        #ifndef TRACK_PERKEY_OBJSIZE
+        #ifndef ENABLE_TRACK_PERKEY_OBJSIZE
         avg_object_size_ = other.avg_object_size_;
         #endif
         object_cnt_ = other.object_cnt_;
@@ -31,7 +31,7 @@ namespace covered
     {
         // NO value-unrelated metadata to update for newly-grouped keys
 
-        #ifndef TRACK_PERKEY_OBJSIZE
+        #ifndef ENABLE_TRACK_PERKEY_OBJSIZE
         // Update value-related metadata for newly-grouped keys
         uint32_t object_size = key.getKeyLength() + value.getValuesize();
         avg_object_size_ = (avg_object_size_ * object_cnt_ + object_size) / (object_cnt_ + 1);
@@ -54,7 +54,7 @@ namespace covered
     {
         assert(object_cnt_ > 0);
 
-        #ifndef TRACK_PERKEY_OBJSIZE
+        #ifndef ENABLE_TRACK_PERKEY_OBJSIZE
         uint32_t original_object_size = key.getKeyLength() + original_value.getValuesize();
         uint32_t object_size = key.getKeyLength() + value.getValuesize();
         if (avg_object_size_ * object_cnt_ + object_size >= static_cast<AvgObjectSize>(original_object_size))
@@ -76,7 +76,7 @@ namespace covered
 
     bool GroupLevelMetadata::updateForDegrouped(const Key& key, const Value& value, const bool& need_warning)
     {
-        #ifndef TRACK_PERKEY_OBJSIZE
+        #ifndef ENABLE_TRACK_PERKEY_OBJSIZE
         uint32_t object_size = key.getKeyLength() + value.getValuesize();
         if (object_cnt_ > 1)
         {
@@ -108,7 +108,7 @@ namespace covered
         return is_group_empty;
     }
 
-    #ifndef TRACK_PERKEY_OBJSIZE
+    #ifndef ENABLE_TRACK_PERKEY_OBJSIZE
     AvgObjectSize GroupLevelMetadata::getAvgObjectSize() const
     {
         assert(object_cnt_ > 0);
@@ -123,7 +123,7 @@ namespace covered
 
     uint64_t GroupLevelMetadata::getSizeForCapacity()
     {
-        #ifndef TRACK_PERKEY_OBJSIZE
+        #ifndef ENABLE_TRACK_PERKEY_OBJSIZE
         return sizeof(AvgObjectSize) + sizeof(ObjectCnt);
         #else
         return sizeof(ObjectCnt);
