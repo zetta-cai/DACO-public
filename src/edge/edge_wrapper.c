@@ -958,8 +958,14 @@ namespace covered
     {
         checkPointers_();
 
+        // TMPDEBUGTMPDEBUG
+        Util::dumpVariablesForDebug(instance_name_, 2, "before get for key", key.getKeystr().c_str());
+
         bool affect_victim_tracker = false;
         bool is_local_cached_and_valid = edge_cache_ptr_->get(key, value, affect_victim_tracker);
+
+        // TMPDEBUGTMPDEBUG
+        Util::dumpVariablesForDebug(instance_name_, 2, "after get for key", key.getKeystr().c_str());
         
         if (cache_name_ == Util::COVERED_CACHE_NAME) // ONLY for COVERED
         {
@@ -1015,8 +1021,15 @@ namespace covered
         checkPointers_();
         assert(cache_name_ == Util::COVERED_CACHE_NAME);
 
+        // TMPDEBUGTMPDEBUG
+        Util::dumpVariablesForDebug(instance_name_, 1, "before getSizeForCapacity");
+
         // Get local edge margin bytes
         uint64_t used_bytes = getSizeForCapacity();
+
+        // TMPDEBUGTMPDEBUG
+        Util::dumpVariablesForDebug(instance_name_, 1, "after getSizeForCapacity");
+
         uint64_t capacity_bytes = getCapacityBytes();
         uint64_t local_cache_margin_bytes = (capacity_bytes >= used_bytes) ? (capacity_bytes - used_bytes) : 0;
 
@@ -1027,6 +1040,9 @@ namespace covered
     {
         checkPointers_();
         assert(cache_name_ == Util::COVERED_CACHE_NAME);
+
+        // TMPDEBUGTMPDEBUG
+        Util::dumpVariablesForDebug(instance_name_, 1, "before updateCacheManagerForLocalSyncedVictims");
 
         // Get local edge margin bytes
         uint64_t local_cache_margin_bytes = getCacheMarginBytes();
@@ -1039,6 +1055,9 @@ namespace covered
 
         // Update local synced victims for the current edge node
         covered_cache_manager_ptr_->updateVictimTrackerForLocalSyncedVictims(local_cache_margin_bytes, local_synced_victim_cacheinfos, local_beaconed_local_synced_victim_dirinfosets, cooperation_wrapper_ptr_);
+
+        // TMPDEBUGTMPDEBUG
+        Util::dumpVariablesForDebug(instance_name_, 1, "after updateCacheManagerForLocalSyncedVictims for key");
 
         return;
     }

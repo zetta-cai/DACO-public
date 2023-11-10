@@ -25,6 +25,9 @@ namespace covered
     bool CoveredCacheManager::updatePopularityAggregatorForAggregatedPopularity(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached, const bool& is_source_cached, const bool& need_placement_calculation, const bool& sender_is_beacon, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, const EdgeWrapper* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency)
     {
         assert(edge_wrapper_ptr != NULL);
+
+        // TMPDEBUGTMPDEBUG
+        Util::dumpVariablesForDebug(instance_name_, 2, "beginning of updatePopularityAggregatorForAggregatedPopularity for key", key.getKeystr().c_str());
         
         bool is_finish = false;
         bool has_best_placement = false;
@@ -301,6 +304,9 @@ namespace covered
         {
             assert(has_aggregated_uncached_popularity == true);
             const ObjectSize tmp_object_size = tmp_aggregated_uncached_popularity.getObjectSize();
+
+            // TMPDEBUGTMPDEBUG
+            Util::dumpVariablesForDebug(instance_name_, 4, "beginning of parallelFetchVictims_ for key", key.getKeystr().c_str(), "best_placement_victim_fetch_edgeset:", best_placement_victim_fetch_edgeset.toString().c_str());
 
             // Issue CoveredVictimFetchRequest to fetch more victims in parallel (note that CoveredVictimFetchRequest is a foreground message before non-blocking placement deployment)
             // TODO: Maintain a small vicitm cache in each beacon edge node if with frequent lazy victim fetching to avoid degrading directory lookup performance

@@ -101,27 +101,6 @@ namespace covered
         return (perkey_lookup_iter != perkey_lookup_table_.end());
     }
 
-    bool CacheMetadataBase::getLeastPopularKey(const uint32_t& least_popular_rank, Key& key) const
-    {
-        bool is_least_popular_key_exist = false;
-
-        if (least_popular_rank < sorted_popularity_multimap_.size())
-        {
-            // LRU for equal popularity values
-            //sorted_popularity_multimap_t::const_iterator sorted_popularity_iter = sorted_popularity_multimap_.begin();
-            //std::advance(sorted_popularity_iter, least_popular_rank);
-
-            // MRU for equal popularity values (especially for zero-popularity one-hit-wonders)
-            sorted_popularity_multimap_t::const_iterator sorted_popularity_iter = sorted_popularity_multimap_.end();
-            std::advance(sorted_popularity_iter, -1 * static_cast<int>(least_popular_rank + 1));
-
-            key = sorted_popularity_iter->second;
-            is_least_popular_key_exist = true;
-        }
-
-        return is_least_popular_key_exist;
-    }
-
     void CacheMetadataBase::addForNewKey_(const Key& key, const Value& value)
     {
         // Add lookup iterator for new key
@@ -439,17 +418,42 @@ namespace covered
         sorted_popularity_multimap_t::const_iterator sorted_popularity_iter = lookup_metadata.getSortedPopularityIter();
         assert(sorted_popularity_iter != sorted_popularity_multimap_.end()); // For existing key
 
-        // LRU for equal popularity values
-        //uint32_t least_popular_rank = std::distance(sorted_popularity_multimap_.begin(), sorted_popularity_iter);
-        //assert(least_popular_rank < sorted_popularity_multimap_.size());
-
+        #ifdef ENABLE_MRU_FOR_ONE_HIT_WONDERS
         // MRU for equal popularity values (especially for zero-popularity one-hit-wonders)
-        uint32_t least_popular_rank = std::distance(sorted_popularity_multimap_.end(), sorted_popularity_iter);
+        uint32_t least_popular_rank = std::distance(sorted_popularity_iter, sorted_popularity_multimap_.end()); // NOTE: std::distance MUST from previous iter to subsequent iter
         assert(least_popular_rank >= 1);
         least_popular_rank -= 1;
+        #else
+        // LRU for equal popularity values
+        uint32_t least_popular_rank = std::distance(sorted_popularity_multimap_.begin(), sorted_popularity_iter);
+        #endif
         assert(least_popular_rank < sorted_popularity_multimap_.size());
         
         return least_popular_rank;
+    }
+
+    bool CacheMetadataBase::getLeastPopularKeyPopularity_(const uint32_t& least_popular_rank, Key& key, Popularity& popularity) const
+    {
+        bool is_least_popular_key_exist = false;
+
+        if (least_popular_rank < sorted_popularity_multimap_.size())
+        {
+            #ifdef ENABLE_MRU_FOR_ONE_HIT_WONDERS
+            // MRU for equal popularity values (especially for zero-popularity one-hit-wonders)
+            sorted_popularity_multimap_t::const_iterator sorted_popularity_iter = sorted_popularity_multimap_.end();
+            std::advance(sorted_popularity_iter, -1 * static_cast<int>(least_popular_rank + 1));
+            #else
+            // LRU for equal popularity values
+            sorted_popularity_multimap_t::const_iterator sorted_popularity_iter = sorted_popularity_multimap_.begin();
+            std::advance(sorted_popularity_iter, least_popular_rank);
+            #endif
+
+            key = sorted_popularity_iter->second;
+            popularity = sorted_popularity_iter->first;
+            is_least_popular_key_exist = true;
+        }
+
+        return is_least_popular_key_exist;
     }
 
     Popularity CacheMetadataBase::calculatePopularity_(const perkey_metadata_list_t::const_iterator& perkey_metadata_const_iter, const KeyLevelMetadata& key_level_metadata_ref, const GroupLevelMetadata& group_level_metadata_ref) const
@@ -457,11 +461,13 @@ namespace covered
         // TODO: Use homogeneous popularity calculation now, but will replace with heterogeneous popularity calculation + learning later (for both local cached and uncached objects)
         // TODO: Use a heuristic or learning-based approach for parameter tuning to calculate local rewards for heterogeneous popularity calculation (refer to state-of-the-art studies such as LRB and GL-Cache)
 
+        #ifdef ENABLE_MRU_FOR_ONE_HIT_WONDERS
         // Set popularity as zero for one-hit-wonders such that we will use MRU policy to quickly evict them
         if (key_level_metadata_ref.getFrequency() <= 1)
         {
             return 0;
         }
+        #endif
 
         // NOTE: Here we use a simple approach to calculate popularity based on object-level and group-level metadata
         Popularity popularity = 0.0;
@@ -472,7 +478,7 @@ namespace covered
         #endif
 
         // (OBSOLETE: we CANNOT directly use recency_index, as each object has an recency_index of 1 when updating popularity and we will NOT update recency info of all objects for each cache hit/miss)
-        //uint32_t recency_index = std::distance(perkey_metadata_const_iter, perkey_metadata_list_.begin()) + 1;
+        //uint32_t recency_index = std::distance(perkey_metadata_list_.begin(), perkey_metadata_const_iter) + 1;
         //avg_objsize_bytes *= recency_index;
 
         if (avg_objsize_bytes == 0.0) // Zero avg object size due to approximate value sizes in local uncached metadata

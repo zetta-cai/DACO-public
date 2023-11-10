@@ -106,15 +106,24 @@ namespace covered
     {
         checkPointers_();
 
+        // TMPDEBUGTMPDEBUG
+        Util::dumpVariablesForDebug(instance_name_, 1, "before acquire_lock of getLocalVictimSyncsetForSynchronization");
+
         // Acquire a write lock to get local victim syncset atomically (NOTE: we need write lock here as we need to update VictimsyncMonitor)
         std::string context_name = "VictimTracker::getLocalVictimSyncsetForSynchronization()";
         rwlock_for_victim_tracker_->acquire_lock(context_name);
+
+        // TMPDEBUGTMPDEBUG
+        Util::dumpVariablesForDebug(instance_name_, 1, "after acquire_lock of getLocalVictimSyncsetForSynchronization");
 
         // Get local complete victim syncset of the current edge node
         const SeqNum cur_seqnum = getAndIncrCurSeqnum_(dst_edge_idx_for_compression); // NOTE: this will increase cur_seqnum_ for the given dst edge node
         const bool need_enforcement = checkAndResetNeedEnforcement_(dst_edge_idx_for_compression); // NOTE: this will reset need_enforcement_ for the given dst edge node if need enforcement
         VictimSyncset current_victim_syncset = getVictimSyncset_(edge_idx_, cur_seqnum, need_enforcement); // NOTE: set VictimSyncset::is_enforce_complete as true if need enforcement (dst edge node will enforce complete victim syncset for the next message towards the current edge node)
         assert(current_victim_syncset.isComplete());
+
+        // TMPDEBUGTMPDEBUG
+        Util::dumpVariablesForDebug(instance_name_, 1, "after getting complete victim syncset");
 
         // NOTE: we always use the latest cache margin bytes for local victim syncset, instead of using that in edge-level victim metadata of the current edge node, which may be stale
         current_victim_syncset.setCacheMarginBytes(latest_local_cache_margin_bytes);
@@ -123,6 +132,9 @@ namespace covered
         // Replace previously-issued complete victim syncset for dst edge idx by current complete victim syncset if necessary
         VictimSyncset prev_victim_syncset;
         bool is_prev_victim_syncset_exist = replacePrevVictimSyncset_(dst_edge_idx_for_compression, current_victim_syncset, prev_victim_syncset);
+
+        // TMPDEBUGTMPDEBUG
+        Util::dumpVariablesForDebug(instance_name_, 1, "after replacePrevVictimSyncset_");
 
         rwlock_for_victim_tracker_->unlock(context_name);
 
@@ -288,6 +300,9 @@ namespace covered
     DeltaReward VictimTracker::calcEvictionCost(const ObjectSize& object_size, const Edgeset& placement_edgeset, std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& placement_peredge_synced_victimset, std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& placement_peredge_fetched_victimset, Edgeset& victim_fetch_edgeset, const std::unordered_map<uint32_t, std::list<VictimCacheinfo>>& extra_peredge_victim_cacheinfos, const std::unordered_map<Key, DirinfoSet, KeyHasher>& extra_perkey_victim_dirinfoset) const
     {
         checkPointers_();
+
+        // TMPDEBUGTMPDEBUG
+        Util::dumpVariablesForDebug(instance_name_, 1, "beginning of calcEvictionCost");
 
         const bool with_extra_victims = (extra_peredge_victim_cacheinfos.size() > 0);
         DeltaReward eviction_cost = 0.0;

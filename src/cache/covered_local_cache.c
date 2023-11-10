@@ -84,6 +84,7 @@ namespace covered
         //covered_cache_ptr_->recordAccess(keystr);
 
         LruCacheReadHandle handle = covered_cache_ptr_->find(keystr); // NOTE: although find() will move the item to the front of the LRU list to update recency information inside cachelib, covered uses local cache metadata tracked outside cachelib for cache management
+
         bool is_local_cached = (handle != nullptr);
         if (is_local_cached)
         {
@@ -366,7 +367,6 @@ namespace covered
             Popularity tmp_redirected_cached_popularity = 0.0;
             Reward tmp_local_reward = 0.0;
 
-            //bool is_least_popular_key_exist = local_cached_metadata_.getLeastPopularKey(least_popular_rank, tmp_victim_key);
             ObjectSize tmp_victim_object_size = 0;
             bool is_least_popular_key_exist = local_cached_metadata_.getLeastPopularKeyObjsizePopularity(least_popular_rank, tmp_victim_key, tmp_victim_object_size, tmp_local_cached_popularity, tmp_redirected_cached_popularity, tmp_local_reward);
             if (is_least_popular_key_exist)

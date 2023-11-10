@@ -16,15 +16,13 @@ namespace covered
     {
         bool is_least_popular_key_exist = false;
 
-        if (least_popular_rank < sorted_popularity_multimap_.size())
+        Popularity tmp_popularity = 0.0;
+        is_least_popular_key_exist = CacheMetadataBase::getLeastPopularKeyPopularity_(least_popular_rank, key, tmp_popularity);
+        if (is_least_popular_key_exist)
         {
-            sorted_popularity_multimap_t::const_iterator sorted_popularity_iter = sorted_popularity_multimap_.begin();
-            std::advance(sorted_popularity_iter, least_popular_rank);
-
-            key = sorted_popularity_iter->second;
-            local_cached_popularity = sorted_popularity_iter->first; // TODO: update after introducing heterogeneous popularity calculation (tracked by key-level cache metadata)
+            local_cached_popularity = tmp_popularity; // TODO: update after introducing heterogeneous popularity calculation (tracked by key-level cache metadata)
             redirected_cached_popularity = 0.0; // TODO: update after introducing heterogeneous popularity calculation (tracked by key-level cache metadata)
-            local_reward = sorted_popularity_iter->first; // TODO: update after introducing heterogeneous popularity calculation (used for ranking/sorting)
+            local_reward = tmp_popularity; // TODO: update after introducing heterogeneous popularity calculation (used for ranking/sorting)
 
             // Get tracked object-level/group-level object size
             perkey_lookup_const_iter_t perkey_lookup_const_iter = tryToGetLookup_(key);

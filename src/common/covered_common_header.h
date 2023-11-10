@@ -14,7 +14,7 @@
 #define ENABLE_TRACK_PERKEY_OBJSIZE
 
 // Used in src/cache/covered_local_cache.c and src/cache/covered/*
-// (OBSOLETE due to one-hit-wonder issues) NOTE: use max slab size as conservative object size to track uncached key in local uncached metadata for getreq with cache miss if NOT tracked instead of waiting for the second getreq to trigger cache management, which will slow down admission rate especially for the beginning of warmup phase
+// (OBSOLETE due to waiting for 2nd request to evict one-hit-wonders when cache is close to full) NOTE: use max slab size as conservative object size to track uncached key in local uncached metadata for getreq with cache miss if NOT tracked instead of waiting for the second getreq to trigger cache management, which will slow down admission rate especially for the beginning of warmup phase
 // -> If defined, we use conservative local uncached popularity for the first cache miss for each uncached object to fill up cache quickly
 // -> If not defined, we wait for at least the second cache miss for each uncached object to trigger cache management
 //#define ENABLE_CONSERVATIVE_UNCACHED_POP
@@ -24,6 +24,20 @@
 // -> If defined, we track the values in object-level metadata of local uncached metadata (constrained by local uncached metadata capacity limitation)
 // -> If not defined, we access neighbor/cloud again for at least the second cache miss of each uncached object for trade-off-aware placement calculation
 //#define ENABLE_AUXILIARY_DATA_CACHE
+
+// NOTE: ENABLE_CONSERVATIVE_UNCACHED_POP and ENABLE_AUXILIARY_DATA_CACHE cannot defined simultaneously, which will admit max slab size into local edge cache for getreq w/ first cache miss
+// #ifdef ENABLE_AUXILIARY_DATA_CACHE
+// #undef ENABLE_CONSERVATIVE_UNCACHED_POP
+// #endif
+// #ifdef ENABLE_CONSERVATIVE_UNCACHED_POP
+// #undef ENABLE_AUXILIARY_DATA_CACHE
+// #endif
+
+// Used in src/cache/covered/*
+// (OBSOLETE due to one-hit-wonder is NOT issue of slow warmup and freq/objsize is even better) Use zero popularity values with MRU for one-hit-wonders to quickly evict them
+// -> If defined, we use MRU policy for zero-popularity one-hit-wonders
+// -> If not defined, we use LRU policy for equal popularity values (use non-zero freq/objsize as popularity for one-hit-wonders)
+//#define ENABLE_MRU_FOR_ONE_HIT_WONDERS
 
 #include <cstdint> // uint32_t, uint64_t
 

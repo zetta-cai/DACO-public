@@ -40,7 +40,11 @@ namespace covered
 
     // NOTE: typedef MUST need complete definition of class unless you use pointers or references -> cannot use perkey_lookup_iter_t in sorted_popularity_multimap_t, which will cause circular dependency between LookupMetadata and sorted_popularity_multimap_t (using Key here is just for implementation simplicity, yet actually we can move CacheItem pointers from MMContainer's LRU list into popularity list to replace keys for popularity list if we hack cachelib)
     //typedef std::multimap<Popularity, LruCacheReadHandle> sorted_popularity_multimap_t; // Obselete: local uncached objects cannot provide LruCacheReadHandle
+    #ifdef ENABLE_MRU_FOR_ONE_HIT_WONDERS
     typedef std::multimap<Popularity, Key, PopularityMruCompare> sorted_popularity_multimap_t; // Ordered list of per-key popularity (with MRU policy for one-hit-wonders)
+    #else
+    typedef std::multimap<Popularity, Key, PopularityLruCompare> sorted_popularity_multimap_t; // Ordered list of per-key popularity (with LRU policy for one-hit-wonders)
+    #endif
 
     class LookupMetadata
     {
@@ -80,7 +84,6 @@ namespace covered
         // Common functions
 
         bool isKeyExist(const Key& key) const; // Check if key has been admitted or tracked for local cached or uncached object
-        bool getLeastPopularKey(const uint32_t& least_popular_rank, Key& key) const; // Get ith least popular key for local cached or uncached object
 
         virtual uint64_t getSizeForCapacity() const = 0; // Get size for capacity constraint (different for local cached or uncached objects)
     private:
@@ -114,6 +117,7 @@ namespace covered
         // For popularity information
         Popularity getPopularity_(const perkey_lookup_const_iter_t& perkey_lookup_iter) const;
         uint32_t getLeastPopularRank_(const perkey_lookup_const_iter_t& perkey_lookup_iter) const;
+        bool getLeastPopularKeyPopularity_(const uint32_t& least_popular_rank, Key& key, Popularity& popularity) const; // Get ith least popular key for local cached or uncached object
         Popularity calculatePopularity_(const perkey_metadata_list_t::const_iterator& perkey_metadata_const_iter, const KeyLevelMetadata& key_level_metadata_ref, const GroupLevelMetadata& group_level_metadata_ref) const; // Calculate popularity based on object-level and group-level metadata
         sorted_popularity_multimap_t::iterator addPopularity_(const Popularity& new_popularity, const perkey_lookup_iter_t& perkey_lookup_iter); // Return new sorted popularity iterator
         sorted_popularity_multimap_t::iterator updatePopularity_(const Popularity& new_popularity, const perkey_lookup_iter_t& perkey_lookup_iter); // Return updated sorted popularity iterator
@@ -144,7 +148,7 @@ namespace covered
         // Popularity information
         // OBSOLETE (learned index cannot support duplicate popularities; actually we do NOT count the pointers of std::multimap in cache size usage): Use learned index to replace local cached/uncached sorted_popularity_ for less memory usage (especially for local cached objects due to limited # of uncached objects)
         uint64_t sorted_popularity_multimap_key_size_; // Total size of keys in sorted_popularity_multimap_
-        sorted_popularity_multimap_t sorted_popularity_multimap_; // Sorted popularity information (allow duplicate popularity values with insertion order; descending order for MRU of zero-popularity objects)
+        sorted_popularity_multimap_t sorted_popularity_multimap_; // Sorted popularity information (allow duplicate popularity values with insertion order; descending/ascending order for MRU/LRU of zero-popularity objects)
 
         // Lookup table
         uint64_t perkey_lookup_table_key_size_; // Total size of keys in perkey_lookup_table_

@@ -97,7 +97,14 @@ namespace covered
         uint64_t cache_size_usage_for_uncached_objects = getSizeForCapacity();
         if (cache_size_usage_for_uncached_objects > max_bytes_for_uncached_objects_)
         {
-            detracked_key = sorted_popularity_multimap_.begin()->second;
+            Key tmp_key;
+            Popularity tmp_popularity = 0.0;
+            bool is_least_popular_key_exist = CacheMetadataBase::getLeastPopularKeyPopularity_(0, tmp_key, tmp_popularity);
+            assert(is_least_popular_key_exist == true); // NOTE: the least popular uncached object MUST exist
+
+            detracked_key = tmp_key;
+            UNUSED(tmp_popularity);
+
             return true;
         }
         else
