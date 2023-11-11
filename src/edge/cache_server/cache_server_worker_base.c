@@ -230,10 +230,14 @@ namespace covered
         uint32_t get_local_cache_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(get_local_cache_end_timestamp, get_local_cache_start_timestamp));
         event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_GET_LOCAL_CACHE_EVENT_NAME, get_local_cache_latency_us); // Add intermediate event if with event tracking
 
-        // Get is tracked by local uncached metadata before fetching value from neighbor/cloud
+        // Get is tracked by local uncached metadata before fetching value from neighbor/cloud (ONLY for COVERED)
         CollectedPopularity tmp_collected_popularity_before_fetch_value;
-        tmp_edge_wrapper_ptr->getEdgeCachePtr()->getCollectedPopularity(tmp_key, tmp_collected_popularity_before_fetch_value);
-        const bool is_tracked_before_fetch_value = tmp_collected_popularity_before_fetch_value.isTracked();
+        bool is_tracked_before_fetch_value = false;
+        if (tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME)
+        {
+            tmp_edge_wrapper_ptr->getEdgeCachePtr()->getCollectedPopularity(tmp_key, tmp_collected_popularity_before_fetch_value);
+            is_tracked_before_fetch_value = tmp_collected_popularity_before_fetch_value.isTracked();
+        }
 
         // TMPDEBUGTMPDEBUG
         Util::dumpVariablesForDebug(base_instance_name_, 4, "getLocalEdgeCache_ for key", tmp_key.getKeystr().c_str(), "is_local_cached_and_valid:", Util::toString(is_local_cached_and_valid).c_str());
@@ -243,6 +247,8 @@ namespace covered
         #endif
 
         // Access cooperative edge cache for local cache miss or invalid object
+        bool is_cooperative_cached = false;
+        bool is_cooperative_valid = false;
         bool is_cooperative_cached_and_valid = false;
         Edgeset best_placement_edgeset; // Used for non-blocking placement notification if need hybrid data fetching for COVERED
         bool need_hybrid_fetching = false;
@@ -252,14 +258,17 @@ namespace covered
             struct timespec get_cooperative_cache_start_timestamp = Util::getCurrentTimespec();
 
             // Get data from some target edge node for local cache miss (add events of intermediate responses if with event tracking)
-            is_finish = fetchDataFromNeighbor_(tmp_key, tmp_value, is_cooperative_cached_and_valid, best_placement_edgeset, need_hybrid_fetching, fast_path_hint, total_bandwidth_usage, event_list, skip_propagation_latency);
+            is_finish = fetchDataFromNeighbor_(tmp_key, tmp_value, is_cooperative_cached, is_cooperative_valid, best_placement_edgeset, need_hybrid_fetching, fast_path_hint, total_bandwidth_usage, event_list, skip_propagation_latency);
             if (is_finish) // Edge node is NOT running
             {
                 return is_finish;
             }
-            if (is_cooperative_cached_and_valid) // cooperative cached and valid
+
+            assert(!(is_cooperative_cached && !is_cooperative_valid)); // Cooperative cached yet invalid MUST be blocked by redirectGetToTarget_()
+            if (is_cooperative_cached && is_cooperative_valid) // cooperative cached and valid
             {
                 hitflag = Hitflag::kCooperativeHit;
+                is_cooperative_cached_and_valid = true;
             }
 
             struct timespec get_cooperative_cache_end_timestamp = Util::getCurrentTimespec();
@@ -340,16 +349,21 @@ namespace covered
         event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_INDEPENDENT_ADMISSION_EVENT_NAME, independent_admission_latency_us); // Add intermediate event if with event tracking
 
         // Trigger cache placement for getrsp w/ sender-is-beacon or fast-path placement, if key is local uncached and newly-tracked after fetching value from neighbor/cloud (ONLY for COVERED)
-        if (!tmp_edge_wrapper_ptr->getEdgeCachePtr()->isLocalCached(tmp_key)) // Local uncached object
+        if (tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME && !tmp_edge_wrapper_ptr->getEdgeCachePtr()->isLocalCached(tmp_key)) // Local uncached object
         {
             CollectedPopularity tmp_collected_popularity_after_fetch_value;
             tmp_edge_wrapper_ptr->getEdgeCachePtr()->getCollectedPopularity(tmp_key, tmp_collected_popularity_after_fetch_value);
             const bool is_tracked_after_fetch_value = tmp_collected_popularity_after_fetch_value.isTracked();
-            if (is_tracked_after_fetch_value) // Newly-tracked after fetching value from neighbor/cloud
+            if (!is_tracked_before_fetch_value && is_tracked_after_fetch_value) // Newly-tracked after fetching value from neighbor/cloud
             {
                 assert(tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME); // ONLY for COVERED
 
-                tryToTriggerCachePlacementForGetrsp_();
+                // Try to trigger cache placement if necessary
+                is_finish = tryToTriggerCachePlacementForGetrsp_(tmp_key, tmp_value, tmp_collected_popularity_after_fetch_value, fast_path_hint, is_cooperative_cached, total_bandwidth_usage, event_list, skip_propagation_latency);
+                if (is_finish)
+                {
+                    return is_finish;
+                }
             }
         }
 
@@ -379,7 +393,7 @@ namespace covered
 
     // (1.2) Access cooperative edge cache to fetch data from neighbor edge nodes
 
-    bool CacheServerWorkerBase::fetchDataFromNeighbor_(const Key& key, Value& value, bool& is_cooperative_cached_and_valid, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, FastPathHint& fast_path_hint, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
+    bool CacheServerWorkerBase::fetchDataFromNeighbor_(const Key& key, Value& value, bool& is_cooperative_cached, bool& is_cooperative_valid, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, FastPathHint& fast_path_hint, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
@@ -490,9 +504,9 @@ namespace covered
                 Util::dumpVariablesForDebug(base_instance_name_, 4, "redirectGetToTarget_ for key", key.getKeystr().c_str(), "target edge node:", std::to_string(directory_info.getTargetEdgeIdx()).c_str());
 
                 // Get data from the target edge node if any and update is_cooperative_cached_and_valid
-                bool is_cooperative_cached = false;
-                bool is_valid = false;
-                is_finish = redirectGetToTarget_(directory_info, key, value, is_cooperative_cached, is_valid, total_bandwidth_usage, event_list, skip_propagation_latency); // Add events of intermediate responses if with event tracking
+                is_cooperative_cached = false;
+                is_cooperative_valid = false;
+                is_finish = redirectGetToTarget_(directory_info, key, value, is_cooperative_cached, is_cooperative_valid, total_bandwidth_usage, event_list, skip_propagation_latency); // Add events of intermediate responses if with event tracking
                 if (is_finish) // Edge is NOT running
                 {
                     return is_finish;
@@ -510,13 +524,13 @@ namespace covered
                 // Check is_cooperative_cached and is_valid
                 if (!is_cooperative_cached) // Target edge node does not cache the object
                 {
-                    assert(!is_valid);
-                    is_cooperative_cached_and_valid = false; // Closest edge node will fetch data from cloud
+                    assert(!is_cooperative_valid);
+                    //is_cooperative_cached_and_valid = false; // Closest edge node will fetch data from cloud
                     break;
                 }
-                else if (is_valid) // Target edge node caches a valid object
+                else if (is_cooperative_valid) // Target edge node caches a valid object
                 {
-                    is_cooperative_cached_and_valid = true; // Closest edge node will directly reply clients
+                    //is_cooperative_cached_and_valid = true; // Closest edge node will directly reply clients
                     break;
                 }
                 else // Target edge node caches an invalid object
@@ -527,7 +541,7 @@ namespace covered
             }
             else // The object is not cached by any target edge node
             {
-                is_cooperative_cached_and_valid = false;
+                //is_cooperative_cached_and_valid = false;
                 break;
             }
         } // End of while (true)

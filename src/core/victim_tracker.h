@@ -54,6 +54,9 @@ namespace covered
         // For non-blocking placement deployment
         void removeVictimsForGivenEdge(const uint32_t& edge_idx, const std::unordered_set<Key, KeyHasher>& victim_keyset); // NOTE: removed victims should NOT be reused <- if synced victims in the edge node do NOT change, removed victims will NOT be reported to the beacon node due to dedup/delta-compression in victim synchronization; if need more victims, victim fetching request MUST be later than placement notification request, which has changed the synced victims in the edge node
 
+        // For fast-path single-placement calculation in current edge node (NOT as a beacon node)
+        DeltaReward calcEvictionCostForFastPathPlacement(const std::list<VictimCacheinfo>& curedge_local_cached_victim_cacheinfos, const std::unordered_map<Key, DirinfoSet, KeyHasher>& curedge_local_beaconed_local_cached_victim_dirinfosets) const; // NOTE: ONLY consider a single placement of edge_idx_
+
         uint64_t getSizeForCapacity() const;
     private:
         // NOTE: the list of VictimCacheinfos follows the ascending order of local rewards

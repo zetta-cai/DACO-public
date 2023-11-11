@@ -42,7 +42,7 @@ namespace covered
 
         // (1.5) Trigger cache placement for getrsp (ONLY for COVERED)
 
-        virtual bool tryToTriggerCachePlacementForGetrsp_(const Key& key, const Value& value, const CollectedPopularity& collected_popularity_after_fetch_value, const FastPathHint& fast_path_hint, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const override; // Return is edge is finished
+        virtual bool tryToTriggerCachePlacementForGetrsp_(const Key& key, const Value& value, const CollectedPopularity& collected_popularity_after_fetch_value, const FastPathHint& fast_path_hint, const bool& is_global_cached, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const override; // Return is edge is finished
 
         // (2.1) Acquire write lock and block for MSI protocol
 

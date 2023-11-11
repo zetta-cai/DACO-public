@@ -214,6 +214,13 @@ namespace covered
         return;
     }
 
+    // For fast-path single-placement calculation in current edge node (NOT as a beacon node)
+
+    DeltaReward CoveredCacheManager::accessVictimTrackerForFastPathEvictionCost(const std::list<VictimCacheinfo>& curedge_local_cached_victim_cacheinfos, const std::unordered_map<Key, DirinfoSet, KeyHasher>& curedge_local_beaconed_local_cached_victim_dirinfosets) const
+    {
+        return victim_tracker_.calcEvictionCostForFastPathPlacement(curedge_local_cached_victim_cacheinfos, curedge_local_beaconed_local_cached_victim_dirinfosets);
+    }
+
     uint64_t CoveredCacheManager::getSizeForCapacity() const
     {
         uint64_t total_size = 0;

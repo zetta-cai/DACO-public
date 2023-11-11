@@ -140,6 +140,16 @@ namespace covered
         return is_local_cached_and_invalid;
     }
 
+    // (1.5) Trigger cache placement for getrsp (ONLY for COVERED)
+
+    bool BasicCacheServerWorker::tryToTriggerCachePlacementForGetrsp_(const Key& key, const Value& value, const CollectedPopularity& collected_popularity_after_fetch_value, const FastPathHint& fast_path_hint, const bool& is_global_cached, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
+    {
+        std::ostringstream oss;
+        oss << "Baseline " << cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr()->getCacheName() << " should NOT invoke tryToTriggerCachePlacementForGetrsp_(), which is ONLY for COVERED!";
+        Util::dumpErrorMsg(instance_name_, oss.str());
+        exit(1);
+    }
+
     // (2.1) Acquire write lock and block for MSI protocol
 
     bool BasicCacheServerWorker::acquireLocalWritelock_(const Key& key, LockResult& lock_result, DirinfoSet& all_dirinfo, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency)

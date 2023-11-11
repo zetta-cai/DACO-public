@@ -78,6 +78,10 @@ namespace covered
         void updateDirectoryCacherToRemoveCachedDirectory(const Key& key);
         void updateDirectoryCacherForNewCachedDirectory(const Key& key, const CachedDirectory& cached_directory);
 
+        // For fast-path single-placement calculation in current edge node (NOT as a beacon node)
+
+        DeltaReward accessVictimTrackerForFastPathEvictionCost(const std::list<VictimCacheinfo>& curedge_local_cached_victim_cacheinfos, const std::unordered_map<Key, DirinfoSet, KeyHasher>& curedge_local_beaconed_local_cached_victim_dirinfosets) const; // NOTE: ONLY consider a single placement of edge_idx_
+
         uint64_t getSizeForCapacity() const;
     private:
         typedef DeltaReward PlacementGain; // Admission benefit - eviction cost for trade-off-aware cache placement and eviction

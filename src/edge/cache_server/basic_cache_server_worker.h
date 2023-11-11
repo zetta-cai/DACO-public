@@ -38,6 +38,10 @@ namespace covered
 
         virtual bool tryToUpdateInvalidLocalEdgeCache_(const Key& key, const Value& value) const override; // Return if key is local cached yet invalid
 
+        // (1.5) Trigger cache placement for getrsp (ONLY for COVERED)
+
+        virtual bool tryToTriggerCachePlacementForGetrsp_(const Key& key, const Value& value, const CollectedPopularity& collected_popularity_after_fetch_value, const FastPathHint& fast_path_hint, const bool& is_global_cached, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const override; // Return is edge is finished
+
         // (2.1) Acquire write lock and block for MSI protocol
 
         virtual bool acquireLocalWritelock_(const Key& key, LockResult& lock_result, DirinfoSet& all_dirinfo, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) override; // Return if edge node is finished
