@@ -41,6 +41,7 @@ namespace covered
 
         // (2) Access content directory table and block tracker for MSI protocol
 
+        void isGlobalAndSourceCached(const Key& key, const uint32_t& source_edge_idx, bool& is_global_cached, bool& is_source_cached) const;
         bool isBeingWritten(const Key& key) const;
         DirinfoSet getLocalDirectoryInfos(const Key& key) const;
 

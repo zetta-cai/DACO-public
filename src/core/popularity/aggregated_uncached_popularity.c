@@ -33,6 +33,11 @@ namespace covered
         return object_size_;
     }
 
+    Popularity AggregatedUncachedPopularity::getSumLocalUncachedPopularity() const
+    {
+        return sum_local_uncached_popularity_;
+    }
+
     uint32_t AggregatedUncachedPopularity::getTopkListLength() const
     {
         return topk_edgeidx_local_uncached_popularity_pairs_.size();
@@ -91,15 +96,18 @@ namespace covered
             assert(bitmap_[tmp_edge_idx] == true); // NOTE: as placement edgeset is selected from top-k list of aggregated uncached popularity, tmp_edge_idx MUST exist in bitmap_
 
             // Release local uncached popularity of tmp_edge_idx from sum/topk/bitmap in aggregated uncached popularity
-            clear(tmp_edge_idx);
+            bool tmp_is_clear = false;
+            clear(tmp_edge_idx, tmp_is_clear);
+            UNUSED(tmp_is_clear);
         }
 
         return (exist_edgecnt_ == 0);
     }
 
-    bool AggregatedUncachedPopularity::clear(const uint32_t& source_edge_idx)
+    bool AggregatedUncachedPopularity::clear(const uint32_t& source_edge_idx, bool& is_clear)
     {
         assert(source_edge_idx < bitmap_.size());
+        is_clear = false;
 
         // NOTE: NO need to remove old local uncached popularity if never received any from the source edge idx before
         bool is_existing = bitmap_[source_edge_idx];
@@ -118,6 +126,8 @@ namespace covered
             bitmap_[source_edge_idx] = false;
             assert(exist_edgecnt_ >= 1);
             exist_edgecnt_ -= 1;
+
+            is_clear = true;
         }
 
         return (exist_edgecnt_ == 0);

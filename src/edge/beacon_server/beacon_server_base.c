@@ -225,7 +225,8 @@ namespace covered
         DirectoryInfo directory_info;
         Edgeset best_placement_edgeset;
         bool need_hybrid_fetching = false;
-        is_finish = processReqToLookupLocalDirectory_(control_request_ptr, edge_cache_server_worker_recvreq_dst_addr, is_being_written, is_valid_directory_exist, directory_info, best_placement_edgeset, need_hybrid_fetching, total_bandwidth_usage, event_list);
+        FastPathHint fast_path_hint;
+        is_finish = processReqToLookupLocalDirectory_(control_request_ptr, edge_cache_server_worker_recvreq_dst_addr, is_being_written, is_valid_directory_exist, directory_info, best_placement_edgeset, need_hybrid_fetching, fast_path_hint, total_bandwidth_usage, event_list);
         if (is_finish)
         {
             return is_finish; // Edge node is NOT running now
@@ -245,7 +246,7 @@ namespace covered
 
         // Prepare a directory lookup response
         embedBackgroundCounterIfNotEmpty_(total_bandwidth_usage, event_list); // Embed background events/bandwidth if any into control response message
-        MessageBase* directory_lookup_response_ptr = getRspToLookupLocalDirectory_(control_request_ptr, is_being_written, is_valid_directory_exist, directory_info, best_placement_edgeset, need_hybrid_fetching, total_bandwidth_usage, event_list);
+        MessageBase* directory_lookup_response_ptr = getRspToLookupLocalDirectory_(control_request_ptr, is_being_written, is_valid_directory_exist, directory_info, best_placement_edgeset, need_hybrid_fetching, fast_path_hint, total_bandwidth_usage, event_list);
         assert(directory_lookup_response_ptr != NULL);
 
         // TMPDEBUGTMPDEBUG

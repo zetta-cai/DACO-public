@@ -30,7 +30,7 @@ namespace covered
 
     // (1) Access content directory information
 
-    bool BasicBeaconServer::processReqToLookupLocalDirectory_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvreq_dst_addr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, BandwidthUsage& total_bandwidth_usage, EventList& event_list) const
+    bool BasicBeaconServer::processReqToLookupLocalDirectory_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvreq_dst_addr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, FastPathHint& fast_path_hint, BandwidthUsage& total_bandwidth_usage, EventList& event_list) const
     {
         bool is_finish = false;
 
@@ -49,12 +49,13 @@ namespace covered
 
         UNUSED(best_placement_edgeset);
         UNUSED(need_hybrid_fetching);
+        UNUSED(fast_path_hint);
         UNUSED(total_bandwidth_usage);
         UNUSED(event_list);
         return is_finish;
     }
 
-    MessageBase* BasicBeaconServer::getRspToLookupLocalDirectory_(MessageBase* control_request_ptr, const bool& is_being_written, const bool& is_valid_directory_exist, const DirectoryInfo& directory_info, const Edgeset& best_placement_edgeset, const bool& need_hybrid_fetching, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list) const
+    MessageBase* BasicBeaconServer::getRspToLookupLocalDirectory_(MessageBase* control_request_ptr, const bool& is_being_written, const bool& is_valid_directory_exist, const DirectoryInfo& directory_info, const Edgeset& best_placement_edgeset, const bool& need_hybrid_fetching, const FastPathHint& fast_path_hint, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list) const
     {
         checkPointers_();
 
@@ -71,6 +72,7 @@ namespace covered
 
         UNUSED(best_placement_edgeset);
         UNUSED(need_hybrid_fetching);
+        UNUSED(fast_path_hint);
 
         return directory_lookup_response_ptr;
     }

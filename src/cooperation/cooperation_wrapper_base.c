@@ -101,6 +101,23 @@ namespace covered
 
     // (2) Access content directory information
 
+    void CooperationWrapperBase::isGlobalAndSourceCached(const Key& key, const uint32_t& source_edge_idx, bool& is_global_cached, bool& is_source_cached) const
+    {
+        checkPointers_();
+
+        // Acquire a read lock
+        std::string context_name = "CooperationWrapperBase::isGlobalCached()";
+        cooperation_wrapper_perkey_rwlock_ptr_->acquire_lock_shared(key, context_name);
+
+        is_global_cached = directory_table_ptr_->isGlobalCached(key);
+        is_source_cached = directory_table_ptr_->isCachedByGivenEdge(key, source_edge_idx);
+
+        // Release a read lock
+        cooperation_wrapper_perkey_rwlock_ptr_->unlock_shared(key, context_name);
+
+        return;
+    }
+
     bool CooperationWrapperBase::isBeingWritten(const Key& key) const
     {
         checkPointers_();

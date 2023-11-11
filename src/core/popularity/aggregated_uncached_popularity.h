@@ -28,12 +28,13 @@ namespace covered
 
         const Key& getKey() const;
         ObjectSize getObjectSize() const;
+        Popularity getSumLocalUncachedPopularity() const;
         uint32_t getTopkListLength() const; // Get length k' of top-k list (k' <= topk_edgecnt)
         bool hasLocalUncachedPopularity(const uint32_t& source_edge_idx) const; // Check if exist local uncached popularity for the given edge node
 
         void update(const uint32_t& source_edge_idx, const Popularity& local_uncached_popularity, const uint32_t& topk_edgecnt, const ObjectSize& object_size);
         bool clearForPlacement(const Edgeset& placement_edgeset); // Return if exist_edgecnt_ == 0 (i.e., NO local uncached popularity for key) after clear
-        bool clear(const uint32_t& source_edge_idx); // Return if exist_edgecnt_ == 0 (i.e., NO local uncached popularity for key) after clear
+        bool clear(const uint32_t& source_edge_idx, bool& is_clear); // Return if exist_edgecnt_ == 0 (i.e., NO local uncached popularity for key) after clear
 
         // For selective popularity aggregation
         DeltaReward calcMaxAdmissionBenefit(const bool& is_global_cached) const; // Max admission benefit if admit key into all top-k edge nodes

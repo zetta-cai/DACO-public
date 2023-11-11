@@ -30,7 +30,7 @@ namespace covered
 
     // (1) Access content directory information
 
-    bool CoveredBeaconServer::processReqToLookupLocalDirectory_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvreq_dst_addr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, BandwidthUsage& total_bandwidth_usage, EventList& event_list) const
+    bool CoveredBeaconServer::processReqToLookupLocalDirectory_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvreq_dst_addr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, FastPathHint& fast_path_hint, BandwidthUsage& total_bandwidth_usage, EventList& event_list) const
     {
         // Get key from control request if any
         assert(control_request_ptr != NULL);
@@ -66,7 +66,7 @@ namespace covered
         best_placement_edgeset.clear();
         need_hybrid_fetching = false;
         const bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();
-        is_finish = covered_cache_manager_ptr->updatePopularityAggregatorForAggregatedPopularity(tmp_key, source_edge_idx, collected_popularity, is_global_cached, is_source_cached, need_placement_calculation, sender_is_beacon, best_placement_edgeset, need_hybrid_fetching, edge_wrapper_ptr_, edge_beacon_server_recvrsp_source_addr_, edge_beacon_server_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in source edge node
+        is_finish = covered_cache_manager_ptr->updatePopularityAggregatorForAggregatedPopularity(tmp_key, source_edge_idx, collected_popularity, is_global_cached, is_source_cached, need_placement_calculation, sender_is_beacon, best_placement_edgeset, need_hybrid_fetching, edge_wrapper_ptr_, edge_beacon_server_recvrsp_source_addr_, edge_beacon_server_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency, &fast_path_hint); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in source edge node
 
         // TMPDEBUGTMPDEBUG
         Util::dumpVariablesForDebug(instance_name_, 2, "after updatePopularityAggregatorForAggregatedPopularity for key", tmp_key.getKeystr().c_str());
@@ -76,7 +76,7 @@ namespace covered
         return is_finish;
     }
 
-    MessageBase* CoveredBeaconServer::getRspToLookupLocalDirectory_(MessageBase* control_request_ptr, const bool& is_being_written, const bool& is_valid_directory_exist, const DirectoryInfo& directory_info, const Edgeset& best_placement_edgeset, const bool& need_hybrid_fetching, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list) const
+    MessageBase* CoveredBeaconServer::getRspToLookupLocalDirectory_(MessageBase* control_request_ptr, const bool& is_being_written, const bool& is_valid_directory_exist, const DirectoryInfo& directory_info, const Edgeset& best_placement_edgeset, const bool& need_hybrid_fetching, const FastPathHint& fast_path_hint, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list) const
     {
         checkPointers_();
         CoveredCacheManager* covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
@@ -104,12 +104,25 @@ namespace covered
         MessageBase* covered_directory_lookup_response_ptr = NULL;
         if (need_hybrid_fetching) // Directory lookup response w/ hybrid data fetching
         {
+            // NOTE: if need_hybrid_fetching == true, key MUST be tracked by sender local uncached metadata and hence NO need fast-path single-placement calculation
+
             // NOTE: beacon node uses best_placement_edgeset to tell the closest edge node if to perform hybrid data fetching and trigger non-blocking placement notification
             covered_directory_lookup_response_ptr = new CoveredPlacementDirectoryLookupResponse(tmp_key, is_being_written, is_valid_directory_exist, directory_info, victim_syncset, best_placement_edgeset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
         }
         else // Normal directory lookup response
         {
+            #ifdef ENABLE_FAST_PATH_PLACEMENT
+            if (!fast_path_hint.isValid()) // Normal directory lookup rsp w/o fast-path placement
+            {
+                covered_directory_lookup_response_ptr = new CoveredDirectoryLookupResponse(tmp_key, is_being_written, is_valid_directory_exist, directory_info, victim_syncset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+            }
+            else // Corresponding local getreq may be the first cache miss w/o objsize -> need fast-path placement
+            {
+                covered_directory_lookup_response_ptr = new CoveredFastDirectoryLookupResponse(tmp_key, is_being_written, is_valid_directory_exist, directory_info, victim_syncset, fast_path_hint, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+            }
+            #else
             covered_directory_lookup_response_ptr = new CoveredDirectoryLookupResponse(tmp_key, is_being_written, is_valid_directory_exist, directory_info, victim_syncset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+            #endif
         }
         assert(covered_directory_lookup_response_ptr != NULL);
 

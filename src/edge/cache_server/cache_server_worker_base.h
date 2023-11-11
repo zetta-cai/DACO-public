@@ -56,6 +56,7 @@
 #include <string>
 
 #include "core/popularity/edgeset.h"
+#include "core/popularity/fast_path_hint.h"
 #include "edge/cache_server/cache_server_worker_param.h"
 #include "event/event_list.h"
 #include "message/message_base.h"
@@ -90,13 +91,13 @@ namespace covered
         // (1.2) Access cooperative edge cache to fetch data from neighbor edge nodes
 
         // Return if edge node is finished
-        bool fetchDataFromNeighbor_(const Key& key, Value& value, bool& is_cooperative_cached_and_valid, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const;
+        bool fetchDataFromNeighbor_(const Key& key, Value& value, bool& is_cooperative_cached_and_valid, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, FastPathHint& fast_path_hint, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const;
 
         virtual bool lookupLocalDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const = 0; // Return if edge node is finished
         virtual bool needLookupBeaconDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const = 0; // Return if need to lookup remote directory info
-        bool lookupBeaconDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const; // Check remote directory info
+        bool lookupBeaconDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, FastPathHint& fast_path_hint, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const; // Check remote directory info
         virtual MessageBase* getReqToLookupBeaconDirectory_(const Key& key, const bool& skip_propagation_latency) const = 0;
-        virtual void processRspToLookupBeaconDirectory_(MessageBase* control_response_ptr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching) const = 0;
+        virtual void processRspToLookupBeaconDirectory_(MessageBase* control_response_ptr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, FastPathHint& fast_path_hint) const = 0;
 
         bool redirectGetToTarget_(const DirectoryInfo& directory_info, const Key& key, Value& value, bool& is_cooperative_cached, bool& is_valid, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const; // Request redirection
         virtual MessageBase* getReqToRedirectGet_(const uint32_t& dst_edge_idx_for_compression, const Key& key, const bool& skip_propagation_latency) const = 0;
@@ -110,6 +111,10 @@ namespace covered
         // (1.4) Update invalid cached objects in local edge cache
 
         virtual bool tryToUpdateInvalidLocalEdgeCache_(const Key& key, const Value& value) const = 0; // Return if key is local cached yet invalid
+
+        // (1.5) Trigger cache placement for getrsp (ONLY for COVERED)
+
+        virtual bool tryToTriggerCachePlacementForGetrsp_(const Key& key, const Value& value, const FastPathHint& fast_path_hint, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const = 0; // Return is edge is finished
 
         // (2) Process write requests
 

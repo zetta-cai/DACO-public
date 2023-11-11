@@ -481,18 +481,18 @@ namespace covered
         //uint32_t recency_index = std::distance(perkey_metadata_list_.begin(), perkey_metadata_const_iter) + 1;
         //avg_objsize_bytes *= recency_index;
 
-        if (avg_objsize_bytes == 0.0) // Zero avg object size due to approximate value sizes in local uncached metadata
+        if (avg_objsize_bytes == 0.0) // Zero avg object size due to delreqs or approximate value sizes in local uncached metadata
         {
             #ifdef ENABLE_TRACK_PERKEY_OBJSIZE
-            assert(false); // avg_objsize_bytes MUST > 0 if with accurate key-level objsize
+            avg_objsize_bytes = 1.0; // Give the largest possible popularity for delreqs due to zero space usage for deleted value
+            #else
+            popularity = 0; // Set popularity as zero to avoid mis-admiting the uncached object with unknow object size if w/ approximate value sizes
+            return popularity;
             #endif
-            popularity = 0; // Set popularity as zero to avoid mis-admiting the uncached object with unknow object size
         }
-        else
-        {
-            //Popularity avg_objsize_kb = Util::popularityDivide(static_cast<Popularity>(avg_objsize_bytes), 1024.0);
-            popularity = Util::popularityDivide(static_cast<Popularity>(key_level_metadata_ref.getFrequency()), avg_objsize_bytes); // # of cache accesses per space unit (similar as LHD)
-        }
+        
+        //Popularity avg_objsize_kb = Util::popularityDivide(static_cast<Popularity>(avg_objsize_bytes), 1024.0);
+        popularity = Util::popularityDivide(static_cast<Popularity>(key_level_metadata_ref.getFrequency()), avg_objsize_bytes); // # of cache accesses per space unit (similar as LHD)
 
         return popularity;
     }

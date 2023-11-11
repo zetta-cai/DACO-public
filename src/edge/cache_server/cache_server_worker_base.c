@@ -230,6 +230,11 @@ namespace covered
         uint32_t get_local_cache_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(get_local_cache_end_timestamp, get_local_cache_start_timestamp));
         event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_GET_LOCAL_CACHE_EVENT_NAME, get_local_cache_latency_us); // Add intermediate event if with event tracking
 
+        // Get is tracked by local uncached metadata before fetching value from neighbor/cloud
+        CollectedPopularity tmp_collected_popularity_before_fetch_value;
+        tmp_edge_wrapper_ptr->getEdgeCachePtr()->getCollectedPopularity(tmp_key, tmp_collected_popularity_before_fetch_value);
+        const bool is_tracked_before_fetch_value = tmp_collected_popularity_before_fetch_value.isTracked();
+
         // TMPDEBUGTMPDEBUG
         Util::dumpVariablesForDebug(base_instance_name_, 4, "getLocalEdgeCache_ for key", tmp_key.getKeystr().c_str(), "is_local_cached_and_valid:", Util::toString(is_local_cached_and_valid).c_str());
 
@@ -241,12 +246,13 @@ namespace covered
         bool is_cooperative_cached_and_valid = false;
         Edgeset best_placement_edgeset; // Used for non-blocking placement notification if need hybrid data fetching for COVERED
         bool need_hybrid_fetching = false;
+        FastPathHint fast_path_hint;
         if (!is_local_cached_and_valid) // not local cached or invalid
         {
             struct timespec get_cooperative_cache_start_timestamp = Util::getCurrentTimespec();
 
             // Get data from some target edge node for local cache miss (add events of intermediate responses if with event tracking)
-            is_finish = fetchDataFromNeighbor_(tmp_key, tmp_value, is_cooperative_cached_and_valid, best_placement_edgeset, need_hybrid_fetching, total_bandwidth_usage, event_list, skip_propagation_latency);
+            is_finish = fetchDataFromNeighbor_(tmp_key, tmp_value, is_cooperative_cached_and_valid, best_placement_edgeset, need_hybrid_fetching, fast_path_hint, total_bandwidth_usage, event_list, skip_propagation_latency);
             if (is_finish) // Edge node is NOT running
             {
                 return is_finish;
@@ -263,6 +269,19 @@ namespace covered
             #ifdef DEBUG_CACHE_SERVER_WORKER
             Util::dumpVariablesForDebug(base_instance_name_, 5, "acesss cooperative edge cache;", "is_cooperative_cached_and_valid:", Util::toString(is_cooperative_cached_and_valid).c_str(), "keystr:", tmp_key.getKeystr().c_str());
             #endif
+        }
+
+        // NOTE: hybrid fetching MUST NOT trigger fast-path placement due to key is already tracked by local uncached metadata (no matter sender is beacon or not)
+        if (need_hybrid_fetching)
+        {
+            assert(!fast_path_hint.isValid());
+        }
+        if (fast_path_hint.isValid())
+        {
+            assert(!need_hybrid_fetching);
+
+            // NOTE: key MUST NOT tracked by local uncached metadata before fetching value from neighbor/cloud
+            assert(!is_tracked_before_fetch_value);
         }
 
         // Get data from cloud for global cache miss
@@ -320,6 +339,20 @@ namespace covered
         uint32_t independent_admission_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(independent_admission_end_timestamp, independent_admission_start_timestamp));
         event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_INDEPENDENT_ADMISSION_EVENT_NAME, independent_admission_latency_us); // Add intermediate event if with event tracking
 
+        // Trigger cache placement for getrsp w/ sender-is-beacon or fast-path placement, if key is local uncached and newly-tracked after fetching value from neighbor/cloud (ONLY for COVERED)
+        if (!tmp_edge_wrapper_ptr->getEdgeCachePtr()->isLocalCached(tmp_key)) // Local uncached object
+        {
+            CollectedPopularity tmp_collected_popularity_after_fetch_value;
+            tmp_edge_wrapper_ptr->getEdgeCachePtr()->getCollectedPopularity(tmp_key, tmp_collected_popularity_after_fetch_value);
+            const bool is_tracked_after_fetch_value = tmp_collected_popularity_after_fetch_value.isTracked();
+            if (is_tracked_after_fetch_value) // Newly-tracked after fetching value from neighbor/cloud
+            {
+                assert(tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME); // ONLY for COVERED
+
+                tryToTriggerCachePlacementForGetrsp_();
+            }
+        }
+
         // Prepare LocalGetResponse for client
         uint64_t used_bytes = tmp_edge_wrapper_ptr->getSizeForCapacity();
         uint64_t capacity_bytes = tmp_edge_wrapper_ptr->getCapacityBytes();
@@ -346,7 +379,7 @@ namespace covered
 
     // (1.2) Access cooperative edge cache to fetch data from neighbor edge nodes
 
-    bool CacheServerWorkerBase::fetchDataFromNeighbor_(const Key& key, Value& value, bool& is_cooperative_cached_and_valid, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
+    bool CacheServerWorkerBase::fetchDataFromNeighbor_(const Key& key, Value& value, bool& is_cooperative_cached_and_valid, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, FastPathHint& fast_path_hint, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
@@ -400,7 +433,7 @@ namespace covered
                 bool need_lookup_beacon_directory = needLookupBeaconDirectory_(key, is_being_written, is_valid_directory_exist, directory_info);
                 if (need_lookup_beacon_directory)
                 {
-                    is_finish = lookupBeaconDirectory_(key, is_being_written, is_valid_directory_exist, directory_info, best_placement_edgeset, need_hybrid_fetching, total_bandwidth_usage, event_list, skip_propagation_latency); // Add events of intermediate responses if with event tracking
+                    is_finish = lookupBeaconDirectory_(key, is_being_written, is_valid_directory_exist, directory_info, best_placement_edgeset, need_hybrid_fetching, fast_path_hint, total_bandwidth_usage, event_list, skip_propagation_latency); // Add events of intermediate responses if with event tracking
                 }
                 
                 if (is_finish) // Edge is NOT running
@@ -502,7 +535,7 @@ namespace covered
         return is_finish;
     }
 
-    bool CacheServerWorkerBase::lookupBeaconDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
+    bool CacheServerWorkerBase::lookupBeaconDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, FastPathHint& fast_path_hint, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
@@ -560,7 +593,7 @@ namespace covered
                 // TMPDEBUGTMPDEBUG
                 Util::dumpVariablesForDebug(base_instance_name_, 2, "processRspToLookupBeaconDirectory_ for key", key.getKeystr().c_str());
 
-                processRspToLookupBeaconDirectory_(control_response_ptr, is_being_written, is_valid_directory_exist, directory_info, best_placement_edgeset, need_hybrid_fetching);
+                processRspToLookupBeaconDirectory_(control_response_ptr, is_being_written, is_valid_directory_exist, directory_info, best_placement_edgeset, need_hybrid_fetching, fast_path_hint);
 
                 // Update total bandwidth usage for received directory lookup response
                 BandwidthUsage directory_lookup_response_bandwidth_usage = control_response_ptr->getBandwidthUsageRef();

@@ -135,7 +135,7 @@ namespace covered
         return covered_directory_lookup_request_ptr;
     }
 
-    void CoveredCacheServerWorker::processRspToLookupBeaconDirectory_(MessageBase* control_response_ptr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching) const
+    void CoveredCacheServerWorker::processRspToLookupBeaconDirectory_(MessageBase* control_response_ptr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, FastPathHint& fast_path_hint) const
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
@@ -164,6 +164,29 @@ namespace covered
             best_placement_edgeset.clear();
             need_hybrid_fetching = false;
         }
+        #ifdef ENABLE_FAST_PATH_PLACEMENT
+        else if (message_type == MessageType::kCoveredFastDirectoryLookupResponse) // Directory lookup response with fast-path placement
+        {
+            // Get directory information from the control response message
+            const CoveredFastDirectoryLookupResponse* const covered_fast_directory_lookup_response_ptr = static_cast<const CoveredFastDirectoryLookupResponse*>(control_response_ptr);
+            is_being_written = covered_fast_directory_lookup_response_ptr->isBeingWritten();
+            is_valid_directory_exist = covered_fast_directory_lookup_response_ptr->isValidDirectoryExist();
+            directory_info = covered_fast_directory_lookup_response_ptr->getDirectoryInfo();
+
+            // Get key, source edge idx, and victim syncset
+            tmp_key = covered_fast_directory_lookup_response_ptr->getKey();
+            source_edge_idx = covered_fast_directory_lookup_response_ptr->getSourceIndex();
+            neighbor_victim_syncset = covered_fast_directory_lookup_response_ptr->getVictimSyncsetRef();
+
+            // NO hybrid data fetching
+            best_placement_edgeset.clear();
+            need_hybrid_fetching = false;
+
+            // Fast-path placement
+            fast_path_hint = covered_fast_directory_lookup_response_ptr->getFastPathHintRef();
+            assert(fast_path_hint.isValid());
+        }
+        #endif
         else if (message_type == MessageType::kCoveredPlacementDirectoryLookupResponse) // Directory lookup response with hybrid data fetching
         {
             // Get directory information from the control response message
@@ -293,6 +316,53 @@ namespace covered
         }
         
         return is_local_cached_and_invalid;
+    }
+
+    // (1.5) Trigger cache placement for getrsp (ONLY for COVERED)
+
+    bool CoveredCacheServerWorker::tryToTriggerCachePlacementForGetrsp_(const Key& key, const Value& value, const CollectedPopularity& collected_popularity_after_fetch_value, const FastPathHint& fast_path_hint, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
+    {
+        checkPointers_();
+        assert(collected_popularity_after_fetch_value.isTracked()); // MUST be tracked (actually newly-tracked) after fetching value from neighbor/cloud
+
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        CooperationWrapperBase* tmp_cooperation_wrapper_ptr = tmp_edge_wrapper_ptr->getCooperationWrapperPtr();
+        CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
+
+        bool is_finish = false;
+
+        if (tmp_edge_wrapper_ptr->currentIsBeacon(key)) // Trigger normal cache placement by popularity aggregation if sender is beacon
+        {
+            uint32_t current_edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
+            bool is_global_cached = false;
+            bool is_source_cached = false;
+            tmp_cooperation_wrapper_ptr->isGlobalAndSourceCached(key, current_edge_idx, is_global_cached, is_source_cached);
+
+            // Selective popularity aggregation
+            const bool need_placement_calculation = true;
+            const bool sender_is_beacon = true; // Sender and beacon is the same edge node for placement calculation
+            Edgeset best_placement_edgeset;
+            best_placement_edgeset.clear();
+            bool need_hybrid_fetching = false;
+            is_finish = tmp_covered_cache_manager_ptr->updatePopularityAggregatorForAggregatedPopularity(key, current_edge_idx, collected_popularity_after_fetch_value, is_global_cached, is_source_cached, need_placement_calculation, sender_is_beacon, best_placement_edgeset, need_hybrid_fetching, tmp_edge_wrapper_ptr, edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in current edge node
+            if (is_finish)
+            {
+                return is_finish; // Edge node is NOT running now
+            }
+
+            // Trigger non-blocking placement notification if need hybrid fetching for non-blocking data fetching (ONLY for COVERED)
+            if (need_hybrid_fetching)
+            {
+                assert(tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME);
+                tmp_edge_wrapper_ptr->nonblockNotifyForPlacement(key, value, best_placement_edgeset, skip_propagation_latency);
+            }
+        }
+        else if (fast_path_hint.isValid()) // Trigger fast-path single-placement calculation if with valid FastPathHint
+        {
+            // TODO: END HERE
+        }
+
+        return is_finish;
     }
 
     // (2.1) Acquire write lock and block for MSI protocol

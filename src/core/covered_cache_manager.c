@@ -22,7 +22,7 @@ namespace covered
 
     // For popularity aggregation
 
-    bool CoveredCacheManager::updatePopularityAggregatorForAggregatedPopularity(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached, const bool& is_source_cached, const bool& need_placement_calculation, const bool& sender_is_beacon, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, const EdgeWrapper* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency)
+    bool CoveredCacheManager::updatePopularityAggregatorForAggregatedPopularity(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached, const bool& is_source_cached, const bool& need_placement_calculation, const bool& sender_is_beacon, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, const EdgeWrapper* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency, FastPathHint* fast_path_hint_ptr)
     {
         assert(edge_wrapper_ptr != NULL);
 
@@ -46,7 +46,14 @@ namespace covered
             }
         }
 
-        popularity_aggregator_.updateAggregatedUncachedPopularity(key, source_edge_idx, collected_popularity, tmp_is_global_cached, is_source_cached);
+        FastPathHint tmp_fast_path_hint;
+        popularity_aggregator_.updateAggregatedUncachedPopularity(key, source_edge_idx, collected_popularity, tmp_is_global_cached, is_source_cached, tmp_fast_path_hint);
+        #ifdef ENABLE_FAST_PATH_PLACEMENT
+        if (fast_path_hint_ptr != NULL)
+        {
+            *fast_path_hint_ptr = tmp_fast_path_hint;
+        }
+        #endif
 
         #ifdef DEBUG_COVERED_CACHE_MANAGER
         Util::dumpVariablesForDebug(instance_name_, 10, "updatePopularityAggregatorForAggregatedPopularity() for key", key.getKeystr().c_str(), "is_gobal_cached:", Util::toString(is_global_cached).c_str(), "tmp_is_global_cached:", Util::toString(tmp_is_global_cached).c_str(), "need_placement_calculation:", Util::toString(need_placement_calculation).c_str(), "is_tracked_by_source_edge_node:", Util::toString(collected_popularity.isTracked()).c_str());

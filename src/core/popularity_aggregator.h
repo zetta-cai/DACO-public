@@ -18,6 +18,7 @@
 #include "core/popularity/aggregated_uncached_popularity.h"
 #include "core/popularity/collected_popularity.h"
 #include "core/popularity/edgeset.h"
+#include "core/popularity/fast_path_hint.h"
 #include "core/popularity/preserved_edgeset.h"
 
 namespace covered
@@ -32,7 +33,7 @@ namespace covered
         uint32_t getTopkEdgecnt() const;
         bool isKeyBeingAdmitted(const Key& key) const;
 
-        void updateAggregatedUncachedPopularity(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached, const bool& is_source_cached); // Update aggregated uncached popularity for selective popularity aggregation
+        void updateAggregatedUncachedPopularity(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached, const bool& is_source_cached, FastPathHint& fast_path_hint); // Update aggregated uncached popularity for selective popularity aggregation
         void updatePreservedEdgesetForPlacement(const Key& key, const Edgeset& placement_edgeset, const bool& is_global_cached); // Preserve edge nodes in placement edgeset for non-blocking placement deployment
         void clearPreservedEdgesetAfterAdmission(const Key& key, const uint32_t& source_edge_idx); // Clear preserved edge nodes for the given key at the source edge node for metadata releasing after local/remote admission notification (NOTE: is_global_cached MUST be true)
     private:
@@ -53,7 +54,7 @@ namespace covered
         void addAggregatedUncachedPopularityForNewKey_(const Key& key, const uint32_t& source_edge_idx, const Popularity& local_uncached_popularity, const ObjectSize& object_size, const bool& is_global_cached);
         // If is_tracked_by_source_edge_node = true, add/update latest local uncached popularity for key in source edge node (maybe increase cache size usage)
         // Otherwise, remove old local uncached popularity for key in edge node if any (NEVER increase cache size usage)
-        void updateAggregatedUncachedPopularityForExistingKey_(const Key& key, const uint32_t& source_edge_idx, const bool& is_tracked_by_source_edge_node, const Popularity& local_uncached_popularity, const ObjectSize& object_size, const bool& is_global_cached);
+        bool updateAggregatedUncachedPopularityForExistingKey_(const Key& key, const uint32_t& source_edge_idx, const bool& is_tracked_by_source_edge_node, const Popularity& local_uncached_popularity, const ObjectSize& object_size, const bool& is_global_cached); // Return if add/remove local uncached popularity successfully
 
         // Update benefit-popularity multimap and per-key lookup table for new aggregated uncached popularity
         void addBenefitPopularityForNewKey_(const Key& key, const AggregatedUncachedPopularity& new_aggregated_uncached_popularity, const bool& is_global_cached);

@@ -61,5 +61,7 @@
 // For cooperative cache placement management (non-blocking placement deployment)
 #include "message/control/cooperation/covered_placement_directory_update_request.h"
 #include "message/control/cooperation/covered_placement_directory_update_response.h"
+// For fast-path single-placement calculation
+#include "message/control/cooperation/covered_fast_directory_lookup_response.h"
 
 #endif

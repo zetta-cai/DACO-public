@@ -74,7 +74,7 @@ namespace covered
         return is_being_admitted;
     }
 
-    void PopularityAggregator::updateAggregatedUncachedPopularity(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached, const bool& is_source_cached)
+    void PopularityAggregator::updateAggregatedUncachedPopularity(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached, const bool& is_source_cached, FastPathHint& fast_path_hint)
     {
         checkPointers_();
 
@@ -82,7 +82,19 @@ namespace covered
         const std::string context_name = "PopularityAggregator::updateAggregatedUncachedPopularity()";
         rwlock_for_popularity_aggregator_->acquire_lock(context_name);
 
+        #ifdef ENABLE_FAST_PATH_PLACEMENT
+        // NOTE: ONLY if key is NOT tracked by sender local uncached metadata, NOT in preserved edgeset (i.e., NOT being admited), NO dirinfo of sender (i.e., NOT finish placement notification in sender), and NOT in bitmap of aggregated pop that needs to be removed (i.e., NOT tracked before), we will treat the key as need_fast_path_hint (i.e., possibly the first cache miss w/o objsize)
+        bool need_fast_path_hint = true; // For fast-path single-placement calculation
+        #endif
+
         bool is_tracked_by_source_edge_node = collected_popularity.isTracked(); // If key is tracked by local uncached metadata in the source edge node (i.e., if local uncached popularity is valid)
+        #ifdef ENABLE_FAST_PATH_PLACEMENT
+        if (is_tracked_by_source_edge_node)
+        {
+            // Tracked by sender local uncached metadata
+            need_fast_path_hint = false;
+        }
+        #endif
 
         // Ignore local uncached popularity if necessary
         if (is_source_cached) // Ignore local uncached popularity if key is cached by source edge node based on directory table
@@ -90,12 +102,23 @@ namespace covered
             // NOTE: we do NOT add/update latest local uncached popularity if key has directory info for the source edge node, to avoid duplicate admission on the source edge node, after directory update request with is_admit = true clearing preserved edgeset in the beacon node, yet the source edge node has NOT admitted the object into local edge cache to clear local uncached metadata
             // NOTE: this will delay the latest local uncached popularity of newly-evicted keys, after the source edge node has evicted the object and updated local uncached metadata for metadata preservation, yet directory update request with is_admit = false has NOT cleared directory info in the beacon node -> BUT acceptable as this is a corner case (newly-evicted keys are NOT popular enough and NO need to add/update latest local uncached popularity in most cases after eviciton)
             is_tracked_by_source_edge_node = false;
+
+            #ifdef ENABLE_FAST_PATH_PLACEMENT
+            // With dirinfo of sender (i.e., finish placement notification in sender)
+            need_fast_path_hint = false;
+            #endif
         }
+
         perkey_preserved_edgeset_t::const_iterator perkey_preserved_edgeset_const_iter = perkey_preserved_edgeset_.find(key);
         if (perkey_preserved_edgeset_const_iter != perkey_preserved_edgeset_.end() && perkey_preserved_edgeset_const_iter->second.isPreserved(source_edge_idx)) // Ignore local uncached popularity if source edge node is in preserved edgeset
         {
             // NOTE: we do NOT add/update latest local uncached popularity if source edge node is in preserved edgeset for the given key to avoid duplication admission on the source edge node
             is_tracked_by_source_edge_node = false;
+
+            #ifdef ENABLE_FAST_PATH_PLACEMENT
+            // In preserved edgeset (i.e., being admited)
+            need_fast_path_hint = false;
+            #endif
         }
 
         Popularity local_uncached_popularity = 0.0;
@@ -112,7 +135,8 @@ namespace covered
             else // Existing key
             {
                 // Add/update local uncached popularity of source edge node
-                updateAggregatedUncachedPopularityForExistingKey_(key, source_edge_idx, is_tracked_by_source_edge_node, local_uncached_popularity, object_size, is_global_cached);
+                bool is_successful = updateAggregatedUncachedPopularityForExistingKey_(key, source_edge_idx, is_tracked_by_source_edge_node, local_uncached_popularity, object_size, is_global_cached);
+                assert(is_successful);
             }
 
             // NOTE: we try to discard global less populart objects even if we update aggregated uncached popularity for an existing key (besides add aggregated uncached popularity for a new key), as AggregatedUncachedPopularity could add new local uncached popularity for the existing key
@@ -129,11 +153,58 @@ namespace covered
             {
                 // Remove old local uncached popularity of source edge node if any
                 // NOTE: local_uncached_popularity and object_size are NOT used when is_tracked_by_source_edge_node = false
-                updateAggregatedUncachedPopularityForExistingKey_(key, source_edge_idx, is_tracked_by_source_edge_node, local_uncached_popularity, object_size, is_global_cached);
+                bool is_successful = updateAggregatedUncachedPopularityForExistingKey_(key, source_edge_idx, is_tracked_by_source_edge_node, local_uncached_popularity, object_size, is_global_cached);
+                #ifdef ENABLE_FAST_PATH_PLACEMENT
+                if (is_successful)
+                {
+                    // In bitmap of aggregated uncached popularity that needs to be removed (i.e., tracked before)
+                    need_fast_path_hint = false;
+                }
+                #else
+                UNUSED(is_successful);
+                #endif
             }
 
             // NOTE: NO need to try to discard global less popular objects here, as removing old local uncached popularity if any will NEVER increase cache size usage
         }
+
+        #ifdef ENABLE_FAST_PATH_PLACEMENT
+        // Prepare the correpsonding FastPathHint if necessary
+        if (need_fast_path_hint) // Key is possibly the first cache miss w/o objsize
+        {
+            // Prepare sum_local_uncached_popularity (NOTE: sum_local_uncached_popularity MUST NOT include local uncached popularity of sender edge node)
+            Popularity tmp_sum_local_uncached_popularity = 0.0;
+            AggregatedUncachedPopularity tmp_aggregated_uncached_popularity;
+            bool tmp_has_aggregated_uncached_popularity = getAggregatedUncachedPopularity_(key, tmp_aggregated_uncached_popularity);
+            if (tmp_has_aggregated_uncached_popularity)
+            {
+                tmp_sum_local_uncached_popularity = tmp_aggregated_uncached_popularity.getSumLocalUncachedPopularity();
+            }
+            
+            // Approximately estimate margin bytes of popularity aggregation capacity limitation
+            uint64_t tmp_margin_bytes = 0;
+            if (tmp_has_aggregated_uncached_popularity)
+            {
+                tmp_margin_bytes = sizeof(uint32_t) + sizeof(Popularity); // Sender edgeidx + local uncached popularity
+            }
+            else
+            {
+                tmp_margin_bytes = sizeof(DeltaReward); // Max admission benefit
+                tmp_margin_bytes += key.getKeyLength() + sizeof(ObjectSize) + sizeof(Popularity) + (sizeof(uint32_t) + sizeof(Popularity)) + (edgecnt_ * sizeof(bool) - 1) / 8 + 1 + sizeof(uint32_t); // Aggregated uncached popularity
+                tmp_margin_bytes += key.getKeyLength() + sizeof(benefit_popularity_multimap_iter_t); // Key and iterator for lookup table
+            }
+
+            // Prepare smallest_max_admission_benefit
+            DeltaReward smallest_max_admission_benefit = MIN_ADMISSION_BENEFIT; // NOTE: the smallest max_admission_benefit == MIN_ADMISSION_BENEFIT (i.e., 0.0) means that beacon has sufficient space for popularity aggregation and the current object MUST be global popular to trigger fast-path placement calculation
+            if (size_bytes_ + tmp_margin_bytes >= popularity_aggregation_capacity_bytes_ && benefit_popularity_multimap_.size() > 0)
+            {
+                smallest_max_admission_benefit = benefit_popularity_multimap_.begin()->first; // NOTE: benefit_popularity_multimap_ follows ascending order of max admission benefit by default
+            }
+
+            fast_path_hint = FastPathHint(tmp_sum_local_uncached_popularity, smallest_max_admission_benefit);
+            assert(fast_path_hint.isValid());
+        }
+        #endif
 
         rwlock_for_popularity_aggregator_->unlock(context_name);
         return;
@@ -254,9 +325,11 @@ namespace covered
         return;
     }
 
-    void PopularityAggregator::updateAggregatedUncachedPopularityForExistingKey_(const Key& key, const uint32_t& source_edge_idx, const bool& is_tracked_by_source_edge_node, const Popularity& local_uncached_popularity, const ObjectSize& object_size, const bool& is_global_cached)
+    bool PopularityAggregator::updateAggregatedUncachedPopularityForExistingKey_(const Key& key, const uint32_t& source_edge_idx, const bool& is_tracked_by_source_edge_node, const Popularity& local_uncached_popularity, const ObjectSize& object_size, const bool& is_global_cached)
     {
         // NOTE: we have already acquired a write lock in updateAggregatedUncachedPopularity() for thread safety
+
+        bool is_successful = false; // Is add/remove local uncached popularity successfully
 
         // Find the aggregated uncached popularity for the existing key
         AggregatedUncachedPopularity existing_aggregated_uncached_popularity;
@@ -268,10 +341,11 @@ namespace covered
         if (is_tracked_by_source_edge_node) // Add/update local uncached popularity of source edge node
         {
             existing_aggregated_uncached_popularity.update(source_edge_idx, local_uncached_popularity, topk_edgecnt_, object_size);
+            is_successful = true;
         }
         else // Clear aggregated uncached popularity to remove old local uncached popularity of source edge node if any
         {
-            is_aggregated_uncached_popularity_empty = existing_aggregated_uncached_popularity.clear(source_edge_idx);
+            is_aggregated_uncached_popularity_empty = existing_aggregated_uncached_popularity.clear(source_edge_idx, is_successful);
         }
 
         // Update benefit-popularity multimap and per-key lookup table for existing yet updated aggregated uncached popularity
