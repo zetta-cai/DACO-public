@@ -90,7 +90,7 @@ namespace covered
         bool is_stable = false;
 
         const uint32_t slotcnt = perslot_total_aggregated_statistics_.size();
-        const uint32_t slot_checkcnt = 2; // Make slot_checkcnt cache stability checkings
+        const uint32_t slot_checkcnt = 5; // Make slot_checkcnt cache stability checkings
         if (slotcnt > slot_checkcnt)
         {
             bool is_cache_stable = true;

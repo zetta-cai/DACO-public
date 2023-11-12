@@ -58,6 +58,7 @@ namespace covered
         msg_payload.serialize(size, (char *)&smallest_max_admission_benefit_, sizeof(DeltaReward));
         size += sizeof(DeltaReward);
         is_valid_ = true;
+        return size - position;
     }
 
     const FastPathHint& FastPathHint::operator=(const FastPathHint& other)

@@ -44,9 +44,13 @@ namespace covered
         }
         else
         {
+            #ifdef ENABLE_FAST_PATH_PLACEMENT
+            // NOTE: as fast-path placement is performed in sender edge node which is NOT awared by beacon edge node, beacon edge node may NOT preserve the sender edge idx
+            #else
             std::ostringstream oss;
             oss << "Edge node " << edge_idx << " is NOT preserved in preserved edgeset";
             Util::dumpWarnMsg(kClassName, oss.str());
+            #endif
         }
 
         bool is_empty = true;

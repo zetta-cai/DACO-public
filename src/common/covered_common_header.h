@@ -39,7 +39,7 @@
 // -> If not defined, we use LRU policy for equal popularity values (use non-zero freq/objsize as popularity for one-hit-wonders)
 //#define ENABLE_MRU_FOR_ONE_HIT_WONDERS
 
-// Used in
+// Used in src/core/covered_cache_mananger.c, src/core/popularity_aggregator.c, src/edge/beacon_server/covered_beacon_server.c, and src/edge/cache_server/covered_cache_server_worker.c
 // NOTE: we could ONLY trigger fast-path single-placement calculation for local/remote directory lookup if key is NOT tracked by sender local uncached metadata -> NO need for local/remote dirinfo eviction, as the object is just evicted from local edge cache instead of NO objsize due to (possibly) the first cache miss w/o objsize; also NO need for local/remote acquire writelock and release writelock, as the object has the latest objsize (provided by the put/del request) instead of NO objsize due to (possibly) the first cache miss w/o objsize
 // NOTE: we use single placement calculation, as aggregated popularity info will be stale after sender edge node fetches value from cloud/neighbor, but local uncached popularity is always latest, which can be used for trade-off-aware placement calculation for the sender edge node!!!
 // NOTE: although fast path uses approximate global admission policy and cooperation-aware cache placement, it is just used for fast cache warmup -> after cache is warmed up (i.e., most requests are NOT the first cache miss of the objects and hence with object size information), we can rely on the beacon edge node for global admission and cache placement with the latest global view

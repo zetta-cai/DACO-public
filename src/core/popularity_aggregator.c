@@ -279,9 +279,13 @@ namespace covered
         }
         else
         {
+            #ifdef ENABLE_FAST_PATH_PLACEMENT
+            // NOTE: as fast-path placement is performed in sender edge node which is NOT awared by beacon edge node, beacon edge node may NOT preserve the sender edge idx
+            #else
             std::ostringstream oss;
             oss << "Key " << key.getKeystr() << " has NO preserved edgeset for non-blocking placement deployment";
             Util::dumpWarnMsg(instance_name_, oss.str());
+            #endif
         }
 
         // NOTE: NO need to try to discard objects for popularity aggregation capacity bytes, as size_byte_ will NOT increase here
@@ -352,7 +356,7 @@ namespace covered
         //const bool is_size_bytes_increased = is_tracked_by_source_edge_node;
         updateBenefitPopularityForExistingKey_(key, existing_aggregated_uncached_popularity, is_aggregated_uncached_popularity_empty, is_global_cached);
 
-        return;
+        return is_successful;
     }
 
     void PopularityAggregator::addBenefitPopularityForNewKey_(const Key& key, const AggregatedUncachedPopularity& new_aggregated_uncached_popularity, const bool& is_global_cached)
