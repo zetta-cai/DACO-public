@@ -3,6 +3,8 @@
  *
  * NOTE: Config tracks all static parameters as well as debugging parameters (NOT changed during evaluation).
  * 
+ * NOTE: when get ipstr of client/edge/cloud/evaluator, is_launch indicates whether the logical node is being launched at the current physical machine; if is_launch = true, assert that the physical machine idx of the logical node MUST be current physical machine idx.
+ * 
  * By Siyuan Sheng (2023.04.10).
  */
 
@@ -44,11 +46,11 @@ namespace covered
     {
     public:
         // Key strings of JSON config file for static configurations (only used by Config)
-        static const std::string CLIENT_MACHINES_KEYSTR;
+        static const std::string CLIENT_MACHINE_INDEXES_KEYSTR;
         static const std::string CLIENT_RAW_STATISTICS_SLOT_INTERVAL_SEC_KEYSTR;
         static const std::string CLIENT_RECVMSG_STARTPORT_KEYSTR;
         static const std::string CLIENT_WORKER_RECVRSP_STARTPORT_KEYSTR;
-        static const std::string CLOUD_IPSTR_KEYSTR;
+        static const std::string CLOUD_MACHINE_INDEX_KEYSTR;
         static const std::string CLOUD_RECVMSG_STARTPORT_KEYSTR;
         static const std::string CLOUD_RECVREQ_STARTPORT_KEYSTR;
         static const std::string CLOUD_ROCKSDB_BASEDIR_KEYSTR;
@@ -65,9 +67,9 @@ namespace covered
         static const std::string EDGE_CACHE_SERVER_WORKER_RECVREQ_STARTPORT_KEYSTR;
         static const std::string EDGE_CACHE_SERVER_WORKER_RECVRSP_STARTPORT_KEYSTR;
         static const std::string EDGE_INVALIDATION_SERVER_RECVREQ_STARTPORT_KEYSTR;
-        static const std::string EDGE_IPSTRS_KEYSTR;
+        static const std::string EDGE_MACHINE_INDEXES_KEYSTR;
         static const std::string EDGE_RECVMSG_STARTPORT_KEYSTR;
-        static const std::string EVALUATOR_IPSTR_KEYSTR;
+        static const std::string EVALUATOR_MACHINE_INDEX_KEYSTR;
         static const std::string EVALUATOR_RECVMSG_PORT_KEYSTR;
         static const std::string FACEBOOK_CONFIG_FILEPATH_KEYSTR;
         static const std::string FINE_GRAINED_LOCKING_SIZE_KEYSTR;
@@ -91,16 +93,15 @@ namespace covered
         static void loadConfig(const std::string& config_filepath, const std::string& main_class_name);
 
         static std::string getMainClassName();
-        //static bool isSingleNode();
 
         // For client physical machines
         static uint32_t getClientMachineCnt();
-        static std::string getClientIpstr(const uint32_t& client_idx, const uint32_t& clientcnt); // clientcnt is the number of logical client nodes
+        static std::string getClientIpstr(const uint32_t& client_idx, const uint32_t& clientcnt, const bool& is_launch); // clientcnt is the number of logical client nodes
 
         static uint32_t getClientRawStatisticsSlotIntervalSec();
         static uint16_t getClientRecvmsgStartport();
         static uint16_t getClientWorkerRecvrspStartport();
-        static std::string getCloudIpstr();
+        static std::string getCloudIpstr(const bool& is_launch); // For cloud physical machine
         static uint16_t getCloudRecvmsgStartport();
         static uint16_t getCloudRecvreqStartport();
         static std::string getCloudRocksdbBasedir();
@@ -117,11 +118,14 @@ namespace covered
         static uint16_t getEdgeCacheServerWorkerRecvreqStartport();
         static uint16_t getEdgeCacheServerWorkerRecvrspStartport();
         static uint16_t getEdgeInvalidationServerRecvreqStartport();
-        static std::string getEdgeIpstr(const uint32_t& edge_idx, const uint32_t& edgecnt);
-        static uint32_t getEdgeMachineIdxByIpstr(const std::string& edge_ipstr);
-        static uint32_t getEdgeIpstrCnt();
+
+        // For edge physical machines
+        static uint32_t getEdgeMachineCnt();
+        static std::string getEdgeIpstr(const uint32_t& edge_idx, const uint32_t& edgecnt, const bool& is_launch); // edgecnt is the number of logical edge nodes
+        static uint32_t getEdgeLocalMachineIdxByIpstr(const std::string& edge_ipstr); // Return the position (i.e., local machine index) in edge_machine_idxes_, instead of the position (i.e., global machine index = edge_machine_idxes_[local_machine_index]) in physical_machines_
+
         static uint16_t getEdgeRecvmsgStartport();
-        static std::string getEvaluatorIpstr();
+        static std::string getEvaluatorIpstr(const bool& is_launch); // For evaluator physical machine
         static std::uint16_t getEvaluatorRecvmsgPort();
         static std::string getFacebookConfigFilepath();
         static uint32_t getFineGrainedLockingSize();
@@ -162,11 +166,11 @@ namespace covered
         static std::string config_filepath_; // Configuration file path for COVERED to load static configurations
         static std::string main_class_name_; // Come from argv[0]
 
-        static std::vector<uint32_t> client_physical_machine_idxes_; // Physical machine indexes of physical client nodes
+        static std::vector<uint32_t> client_machine_idxes_; // Physical machine indexes of physical client nodes
         static uint32_t client_raw_statistics_slot_interval_sec_; // Slot interval for client raw statistics in units of seconds
         static uint16_t client_recvmsg_startport_; // Start UDP port for client to receive benchmark control messages
         static uint16_t client_worker_recvrsp_startport_; // Start UDP port for client worker to receive local responses
-        static std::string cloud_ipstr_; // IP string of physical cloud node
+        static uint32_t cloud_machine_idx_; // Physical machine index of physical cloud node
         static uint16_t cloud_recvmsg_startport_; // Start UDP port for cloud to receive benchmark control messages
         static uint16_t cloud_recvreq_startport_; // Start UDP port for cloud to receive global requests
         static std::string cloud_rocksdb_basedir_; // Base directory of RocksDB in cloud
@@ -183,9 +187,9 @@ namespace covered
         static uint16_t edge_cache_server_worker_recvreq_startport_; // Start UDP port for edge cache server worker to receive cooperation control requests
         static uint16_t edge_cache_server_worker_recvrsp_startport_; // Start UDP port for edge cache server worker to receive global responses
         static uint16_t edge_invalidation_server_recvreq_startport_; // Start UDP port for edge invalidation server to receive cooperation control requests
-        static std::vector<std::string> edge_ipstrs_; // IP strings of physical edge nodes
+        static std::vector<uint32_t> edge_machine_idxes_; // Physical machine indexes of physical edge nodes
         static uint16_t edge_recvmsg_startport_; // Start UDP port for edge to receive benchmark control messages
-        static std::string evaluator_ipstr_; // IP string of physical evaluator node
+        static uint32_t evaluator_machine_idx_; // Physical machine index of physical evaluator node
         static uint16_t evaluator_recvmsg_port_; // UDP port for evaluator to receive benchmark control messages
         static std::string facebook_config_filepath_; // Configuration file path for Facebook CDN workload
         static uint32_t fine_grained_locking_size_; // Bucket size of fine-grained locking
@@ -205,7 +209,7 @@ namespace covered
 
         // For all physical machines
         static std::vector<PhysicalMachine> physical_machines_; // Physical machines
-        static uint32_t current_physical_machine_idx_; // Current physical machine index
+        static uint32_t current_machine_idx_; // Current physical machine index
     };
 }
 

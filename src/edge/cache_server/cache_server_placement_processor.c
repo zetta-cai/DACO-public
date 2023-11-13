@@ -34,7 +34,8 @@ namespace covered
         // For receiving control responses
 
         // Get source address of cache server placement processor to receive control responses and redirected data responses
-        std::string edge_ipstr = Config::getEdgeIpstr(edge_idx, edgecnt);
+        const bool is_launch_edge = true; // The edge cache server placement processor belongs to the logical edge node launched in the current physical machine
+        std::string edge_ipstr = Config::getEdgeIpstr(edge_idx, edgecnt, is_launch_edge);
         uint16_t edge_cache_server_placement_processor_recvrsp_port = Util::getEdgeCacheServerPlacementProcessorRecvrspPort(edge_idx, edgecnt);
         edge_cache_server_placement_processor_recvrsp_source_addr_ = NetworkAddr(edge_ipstr, edge_cache_server_placement_processor_recvrsp_port);
 

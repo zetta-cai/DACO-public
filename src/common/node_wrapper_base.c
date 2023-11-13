@@ -30,19 +30,20 @@ namespace covered
 
         std::string node_ipstr = "";
         uint16_t node_recvmsg_port = 0;
+        const bool is_launch_node = true; // We are launching a logical node in the current physical machine
         if (node_role == CLIENT_NODE_ROLE)
         {
-            node_ipstr = Config::getClientIpstr(node_idx, node_cnt);
+            node_ipstr = Config::getClientIpstr(node_idx, node_cnt, is_launch_node);
             node_recvmsg_port = Util::getClientRecvmsgPort(node_idx, node_cnt);
         }
         else if (node_role == EDGE_NODE_ROLE)
         {
-            node_ipstr = Config::getEdgeIpstr(node_idx, node_cnt);
+            node_ipstr = Config::getEdgeIpstr(node_idx, node_cnt, is_launch_node);
             node_recvmsg_port = Util::getEdgeRecvmsgPort(node_idx, node_cnt);
         }
         else if (node_role == CLOUD_NODE_ROLE)
         {
-            node_ipstr = Config::getCloudIpstr();
+            node_ipstr = Config::getCloudIpstr(is_launch_node);
             node_recvmsg_port = Util::getCloudRecvmsgPort(node_idx);
         }
         else
@@ -55,7 +56,7 @@ namespace covered
         }
         node_recvmsg_source_addr_ = NetworkAddr(node_ipstr, node_recvmsg_port);
 
-        std::string evaluator_ipstr = Config::getEvaluatorIpstr();
+        std::string evaluator_ipstr = Config::getEvaluatorIpstr(is_launch_node);
         uint16_t evaluator_recvmsg_port = Config::getEvaluatorRecvmsgPort();
         evaluator_recvmsg_dst_addr_ = NetworkAddr(evaluator_ipstr, evaluator_recvmsg_port);
         

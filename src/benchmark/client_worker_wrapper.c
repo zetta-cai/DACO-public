@@ -71,7 +71,8 @@ namespace covered
         // For receiving local responses
 
         // Get source address of client worker to receive local responses
-        std::string client_ipstr = Config::getClientIpstr(client_idx, clientcnt);
+        const bool is_launch_client = true; // The client worker belones to the logical client node launched in the current physical machine
+        std::string client_ipstr = Config::getClientIpstr(client_idx, clientcnt, is_launch_client);
         uint16_t client_worker_recvrsp_port = Util::getClientWorkerRecvrspPort(client_idx, clientcnt, local_client_worker_idx, perclient_workercnt);
         client_worker_recvrsp_source_addr_ = NetworkAddr(client_ipstr, client_worker_recvrsp_port);
 

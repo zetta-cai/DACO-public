@@ -83,7 +83,8 @@ namespace covered
         // (1) Manage evaluation phases
 
         // Prepare evaluator recvmsg source addr
-        std::string evaluator_ipstr = Config::getEvaluatorIpstr();
+        const bool is_launch_evaluator = true; // We are launching logical evaluator node in the current physical machine
+        std::string evaluator_ipstr = Config::getEvaluatorIpstr(is_launch_evaluator);
         uint16_t evaluator_recvmsg_port = Config::getEvaluatorRecvmsgPort();
         evaluator_recvmsg_source_addr_ = NetworkAddr(evaluator_ipstr, evaluator_recvmsg_port);
 
@@ -92,7 +93,8 @@ namespace covered
         assert(perclient_recvmsg_dst_addrs_ != NULL);
         for (uint32_t client_idx = 0; client_idx < clientcnt; client_idx++)
         {
-            std::string tmp_client_ipstr = Config::getClientIpstr(client_idx, clientcnt);
+            const bool is_launch_client = false; // Just connect client by evaluator instead of launching the client
+            std::string tmp_client_ipstr = Config::getClientIpstr(client_idx, clientcnt, is_launch_client);
             uint16_t tmp_client_recvmsg_port = Util::getClientRecvmsgPort(client_idx, clientcnt);
             perclient_recvmsg_dst_addrs_[client_idx] = NetworkAddr(tmp_client_ipstr, tmp_client_recvmsg_port);
         }
@@ -102,13 +104,15 @@ namespace covered
         assert(peredge_recvmsg_dst_addrs_ != NULL);
         for (uint32_t edge_idx = 0; edge_idx < edgecnt; edge_idx++)
         {
-            std::string tmp_edge_ipstr = Config::getEdgeIpstr(edge_idx, edgecnt);
+            const bool is_launch_edge = false; // Just connect edge by evaluator instead of launching the edge
+            std::string tmp_edge_ipstr = Config::getEdgeIpstr(edge_idx, edgecnt, is_launch_edge);
             uint16_t tmp_edge_recvmsg_port = Util::getEdgeRecvmsgPort(edge_idx, edgecnt);
             peredge_recvmsg_dst_addrs_[edge_idx] = NetworkAddr(tmp_edge_ipstr, tmp_edge_recvmsg_port);
         }
 
         // Prepare cloud recvmsg dst addr
-        std::string cloud_ipstr = Config::getCloudIpstr();
+        const bool is_launch_cloud = false; // Just connect cloud by evaluator instead of launching the cloud
+        std::string cloud_ipstr = Config::getCloudIpstr(is_launch_cloud);
         uint16_t cloud_recvmsg_port = Util::getCloudRecvmsgPort(0);
         cloud_recvmsg_dst_addr_ = NetworkAddr(cloud_ipstr, cloud_recvmsg_port);
 

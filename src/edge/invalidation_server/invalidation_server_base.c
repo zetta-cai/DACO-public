@@ -46,7 +46,8 @@ namespace covered
         // For receiving invalidation requests
 
         // Get source address of invalidation server recvreq
-        std::string edge_ipstr = Config::getEdgeIpstr(edge_idx, edgecnt);
+        const bool is_launch_edge = true; // The edge invalidation server belongs to the logical edge node launched in the current physical machine
+        std::string edge_ipstr = Config::getEdgeIpstr(edge_idx, edgecnt, is_launch_edge);
         uint16_t edge_invalidation_server_recvreq_port = Util::getEdgeInvalidationServerRecvreqPort(edge_idx, edgecnt);
         edge_invalidation_server_recvreq_source_addr_ = NetworkAddr(edge_ipstr, edge_invalidation_server_recvreq_port);
 

@@ -73,12 +73,14 @@ namespace covered
     EdgeWrapper::EdgeWrapper(const std::string& cache_name, const uint64_t& capacity_bytes, const uint32_t& edge_idx, const uint32_t& edgecnt, const std::string& hash_name, const uint64_t& local_uncached_capacity_bytes, const uint32_t& percacheserver_workercnt, const uint32_t& peredge_synced_victimcnt, const uint32_t& peredge_monitored_victimsetcnt, const uint64_t& popularity_aggregation_capacity_bytes, const double& popularity_collection_change_ratio, const uint32_t& propagation_latency_clientedge_us, const uint32_t& propagation_latency_crossedge_us, const uint32_t& propagation_latency_edgecloud_us, const uint32_t& topk_edgecnt) : NodeWrapperBase(NodeWrapperBase::EDGE_NODE_ROLE, edge_idx,edgecnt, true), cache_name_(cache_name), capacity_bytes_(capacity_bytes), percacheserver_workercnt_(percacheserver_workercnt), topk_edgecnt_for_placement_(topk_edgecnt), edge_background_counter_for_beacon_server_()
     {
         // Get source address of beacon server recvreq for non-blocking placement deployment
-        std::string edge_ipstr = Config::getEdgeIpstr(edge_idx, edgecnt);
+        const bool is_launch_edge = true; // The beacon server belongs to the logical edge node launched in the current physical machine
+        std::string edge_ipstr = Config::getEdgeIpstr(edge_idx, edgecnt, is_launch_edge);
         uint16_t edge_beacon_server_recvreq_port = Util::getEdgeBeaconServerRecvreqPort(edge_idx, edgecnt);
         edge_beacon_server_recvreq_source_addr_for_placement_ = NetworkAddr(edge_ipstr, edge_beacon_server_recvreq_port);
 
         // Get destination address towards the corresponding cloud recvreq for non-blocking placement deployment
-        std::string cloud_ipstr = Config::getCloudIpstr();
+        const bool is_launch_cloud = false; // Just connect cloud by the logical edge node instead of launching the cloud
+        std::string cloud_ipstr = Config::getCloudIpstr(is_launch_cloud);
         uint16_t cloud_recvreq_port = Util::getCloudRecvreqPort(0); // TODO: only support 1 cloud node now!
         corresponding_cloud_recvreq_dst_addr_for_placement_ = NetworkAddr(cloud_ipstr, cloud_recvreq_port);
 
@@ -355,8 +357,9 @@ namespace covered
         std::unordered_map<uint32_t, NetworkAddr> percachecopy_dstaddr;
         for (std::unordered_set<DirectoryInfo, DirectoryInfoHasher>::const_iterator iter = tmp_all_dirinfo_unordered_set.begin(); iter != tmp_all_dirinfo_unordered_set.end(); iter++)
         {
+            const bool is_launch_edge = false; // Just connect neighbor to invalidate cache copies instead of launching the neighbor
             uint32_t tmp_edgeidx = iter->getTargetEdgeIdx();
-            std::string tmp_edge_ipstr = Config::getEdgeIpstr(tmp_edgeidx, node_cnt_);
+            std::string tmp_edge_ipstr = Config::getEdgeIpstr(tmp_edgeidx, node_cnt_, is_launch_edge);
             uint16_t tmp_edge_invaliation_server_port = Util::getEdgeInvalidationServerRecvreqPort(tmp_edgeidx, node_cnt_);
             NetworkAddr tmp_edge_invalidation_server_recvreq_dst_addr(tmp_edge_ipstr, tmp_edge_invaliation_server_port);
             percachecopy_dstaddr.insert(std::pair<uint32_t, NetworkAddr>(tmp_edgeidx, tmp_edge_invalidation_server_recvreq_dst_addr));

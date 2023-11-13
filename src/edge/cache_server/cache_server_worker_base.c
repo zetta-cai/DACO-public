@@ -66,14 +66,16 @@ namespace covered
         base_instance_name_ = oss.str();
 
         // Prepare destination address to the corresponding cloud
-        std::string cloud_ipstr = Config::getCloudIpstr();
+        const bool is_launch_cloud = false; // Just connect cloud by the logical edge node instead of launching the cloud
+        std::string cloud_ipstr = Config::getCloudIpstr(is_launch_cloud);
         uint16_t cloud_recvreq_port = Util::getCloudRecvreqPort(0); // TODO: only support 1 cloud node now!
         corresponding_cloud_recvreq_dst_addr_ = NetworkAddr(cloud_ipstr, cloud_recvreq_port);
 
         // For receiving control responses and redirected data responses
 
         // Get source address of cache server worker to receive control responses and redirected data responses
-        std::string edge_ipstr = Config::getEdgeIpstr(edge_idx, edgecnt);
+        const bool is_launch_edge = true; // The edge cache server worker belongs to the logical edge node launched in the current physical machine
+        std::string edge_ipstr = Config::getEdgeIpstr(edge_idx, edgecnt, is_launch_edge);
         uint16_t edge_cache_server_worker_recvrsp_port = Util::getEdgeCacheServerWorkerRecvrspPort(edge_idx, edgecnt, local_cache_server_worker_idx, percacheserver_workercnt);
         edge_cache_server_worker_recvrsp_source_addr_ = NetworkAddr(edge_ipstr, edge_cache_server_worker_recvrsp_port);
 

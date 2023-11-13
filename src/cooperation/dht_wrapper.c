@@ -53,8 +53,9 @@ namespace covered
 
     std::string DhtWrapper::getBeaconEdgeIpstr(const Key& key) const
     {
+        const bool is_launch_edge = false; // Just connect the beacon edge node by the current edge node instead of launching the beacon edge node
         uint32_t beacon_edge_idx = getBeaconEdgeIdx(key);
-        return Config::getEdgeIpstr(beacon_edge_idx, edgecnt_);
+        return Config::getEdgeIpstr(beacon_edge_idx, edgecnt_, is_launch_edge);
     }
 
     uint16_t DhtWrapper::getBeaconEdgeBeaconServerRecvreqPort(const Key& key) const

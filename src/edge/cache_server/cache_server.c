@@ -56,7 +56,8 @@ namespace covered
         // For receiving local requests
 
         // Get source address of cache server to receive local requests
-        std::string edge_ipstr = Config::getEdgeIpstr(edge_idx, edgecnt);
+        const bool is_launch_edge = true; // The edge cache server belongs to the logical edge node launched in the current physical machine
+        std::string edge_ipstr = Config::getEdgeIpstr(edge_idx, edgecnt, is_launch_edge);
         uint16_t edge_cache_server_recvreq_port = Util::getEdgeCacheServerRecvreqPort(edge_idx, edgecnt);
         edge_cache_server_recvreq_source_addr_ = NetworkAddr(edge_ipstr, edge_cache_server_recvreq_port);
 

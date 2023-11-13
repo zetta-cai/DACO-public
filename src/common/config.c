@@ -63,11 +63,11 @@ namespace covered
 
     // Config
 
-    const std::string Config::CLIENT_MACHINES_KEYSTR("client_machines");
+    const std::string Config::CLIENT_MACHINE_INDEXES_KEYSTR("client_machine_indexes");
     const std::string Config::CLIENT_RAW_STATISTICS_SLOT_INTERVAL_SEC_KEYSTR("client_raw_statistics_slot_interval_sec");
     const std::string Config::CLIENT_RECVMSG_STARTPORT_KEYSTR("client_recvmsg_startport");
     const std::string Config::CLIENT_WORKER_RECVRSP_STARTPORT_KEYSTR("client_worker_recvrsp_startport");
-    const std::string Config::CLOUD_IPSTR_KEYSTR("cloud_ipstr");
+    const std::string Config::CLOUD_MACHINE_INDEX_KEYSTR("cloud_machine_index");
     const std::string Config::CLOUD_RECVMSG_STARTPORT_KEYSTR("cloud_recvmsg_startport");
     const std::string Config::CLOUD_RECVREQ_STARTPORT_KEYSTR("cloud_recvreq_startport");
     const std::string Config::CLOUD_ROCKSDB_BASEDIR_KEYSTR("cloud_rocksdb_basedir");
@@ -84,9 +84,9 @@ namespace covered
     const std::string Config::EDGE_CACHE_SERVER_WORKER_RECVREQ_STARTPORT_KEYSTR("edge_cache_server_worker_recvreq_startport");
     const std::string Config::EDGE_CACHE_SERVER_WORKER_RECVRSP_STARTPORT_KEYSTR("edge_cache_server_worker_recvrsp_startport");
     const std::string Config::EDGE_INVALIDATION_SERVER_RECVREQ_STARTPORT_KEYSTR("edge_invalidation_server_recvreq_startport");
-    const std::string Config::EDGE_IPSTRS_KEYSTR("edge_ipstrs");
+    const std::string Config::EDGE_MACHINE_INDEXES_KEYSTR("edge_machine_indexes");
     const std::string Config::EDGE_RECVMSG_STARTPORT_KEYSTR("edge_recvmsg_startport");
-    const std::string Config::EVALUATOR_IPSTR_KEYSTR("evaluator_ipstr");
+    const std::string Config::EVALUATOR_MACHINE_INDEX_KEYSTR("evaluator_machine_index");
     const std::string Config::EVALUATOR_RECVMSG_PORT_KEYSTR("evaluator_recvmsg_port");
     const std::string Config::FACEBOOK_CONFIG_FILEPATH_KEYSTR("facebook_config_filepath");
     const std::string Config::FINE_GRAINED_LOCKING_SIZE_KEYSTR("fine_grained_locking_size");
@@ -116,11 +116,11 @@ namespace covered
     std::string Config::config_filepath_("");
     std::string Config::main_class_name_(""); // Come from argv[0]
 
-    std::vector<uint32_t> Config::client_physical_machine_idxes_(0);
+    std::vector<uint32_t> Config::client_machine_idxes_(0);
     uint32_t Config::client_raw_statistics_slot_interval_sec_(1);
     uint16_t Config::client_recvmsg_startport_ = 4100; // [4096, 65536]
     uint16_t Config::client_worker_recvrsp_startport_ = 4200; // [4096, 65536]
-    std::string Config::cloud_ipstr_ = Util::LOCALHOST_IPSTR;
+    uint32_t Config::cloud_machine_idx_ = 0;
     uint16_t Config::cloud_recvmsg_startport_ = 4300; // [4096, 65536]
     uint16_t Config::cloud_recvreq_startport_ = 4400; // [4096, 65536]
     std::string Config::cloud_rocksdb_basedir_("/tmp/cloud");
@@ -137,9 +137,9 @@ namespace covered
     uint16_t Config::edge_cache_server_worker_recvreq_startport_ = 5100; // [4096, 65536]
     uint16_t Config::edge_cache_server_worker_recvrsp_startport_ = 5200; // [4096, 65536]
     uint16_t Config::edge_invalidation_server_recvreq_startport_ = 5300; // [4096, 65536]
-    std::vector<std::string> Config::edge_ipstrs_(0);
+    std::vector<uint32_t> Config::edge_machine_idxes_(0);
     uint16_t Config::edge_recvmsg_startport_ = 5400; // [4096, 65536]
-    std::string Config::evaluator_ipstr_ = Util::LOCALHOST_IPSTR;
+    uint32_t Config::evaluator_machine_idx_ = 0;
     uint16_t Config::evaluator_recvmsg_port_ = 5500; // [4096, 65536]
     std::string Config::facebook_config_filepath_("lib/CacheLib/cachelib/cachebench/test_configs/hit_ratio/cdn/config.json");
     uint32_t Config::fine_grained_locking_size_ = 1000;
@@ -159,7 +159,7 @@ namespace covered
 
     // For all physical machines
     std::vector<PhysicalMachine> Config::physical_machines_(0);
-    uint32_t Config::current_physical_machine_idx_ = 0;
+    uint32_t Config::current_machine_idx_ = 0;
 
     void Config::loadConfig(const std::string& config_filepath, const std::string& main_class_name)
     {
@@ -183,13 +183,13 @@ namespace covered
 
                 // Overwrite default values of config variables if any
                 boost::json::key_value_pair* kv_ptr = NULL;
-                kv_ptr = find_(CLIENT_MACHINES_KEYSTR);
+                kv_ptr = find_(CLIENT_MACHINE_INDEXES_KEYSTR);
                 if (kv_ptr != NULL)
                 {
                     for (boost::json::array::iterator iter = kv_ptr->value().get_array().begin(); iter != kv_ptr->value().get_array().end(); iter++)
                     {
-                        int64_t tmp_physical_machine_idx = iter->get_int64();
-                        client_physical_machine_idxes_.push_back(Util::toUint32(tmp_physical_machine_idx));
+                        int64_t tmp_machine_idx = iter->get_int64();
+                        client_machine_idxes_.push_back(Util::toUint32(tmp_machine_idx));
                     }
                 }
                 kv_ptr = find_(CLIENT_RAW_STATISTICS_SLOT_INTERVAL_SEC_KEYSTR);
@@ -210,10 +210,10 @@ namespace covered
                     int64_t tmp_port = kv_ptr->value().get_int64();
                     client_worker_recvrsp_startport_ = Util::toUint16(tmp_port);
                 }
-                kv_ptr = find_(CLOUD_IPSTR_KEYSTR);
+                kv_ptr = find_(CLOUD_MACHINE_INDEX_KEYSTR);
                 if (kv_ptr != NULL)
                 {
-                    cloud_ipstr_ = std::string(kv_ptr->value().get_string().c_str());
+                    cloud_machine_idx_ = Util::toUint32(kv_ptr->value().get_int64());
                 }
                 kv_ptr = find_(CLOUD_RECVMSG_STARTPORT_KEYSTR);
                 if (kv_ptr != NULL)
@@ -308,12 +308,13 @@ namespace covered
                     int64_t tmp_port = kv_ptr->value().get_int64();
                     edge_invalidation_server_recvreq_startport_ = Util::toUint16(tmp_port);
                 }
-                kv_ptr = find_(EDGE_IPSTRS_KEYSTR);
+                kv_ptr = find_(EDGE_MACHINE_INDEXES_KEYSTR);
                 if (kv_ptr != NULL)
                 {
                     for (boost::json::array::iterator iter = kv_ptr->value().get_array().begin(); iter != kv_ptr->value().get_array().end(); iter++)
                     {
-                        edge_ipstrs_.push_back(std::string(iter->get_string().c_str()));
+                        int64_t tmp_machine_idx = iter->get_int64();
+                        edge_machine_idxes_.push_back(Util::toUint32(tmp_machine_idx));
                     }
                 }
                 kv_ptr = find_(EDGE_RECVMSG_STARTPORT_KEYSTR);
@@ -322,10 +323,10 @@ namespace covered
                     int64_t tmp_port = kv_ptr->value().get_int64();
                     edge_recvmsg_startport_ = Util::toUint16(tmp_port);
                 }
-                kv_ptr = find_(EVALUATOR_IPSTR_KEYSTR);
+                kv_ptr = find_(EVALUATOR_MACHINE_INDEX_KEYSTR);
                 if (kv_ptr != NULL)
                 {
-                    evaluator_ipstr_ = std::string(kv_ptr->value().get_string().c_str());
+                    evaluator_machine_idx_ = Util::toUint32(kv_ptr->value().get_int64());
                 }
                 kv_ptr = find_(EVALUATOR_RECVMSG_PORT_KEYSTR);
                 if (kv_ptr != NULL)
@@ -462,36 +463,47 @@ namespace covered
     uint32_t Config::getClientMachineCnt()
     {
         checkIsValid_();
-        return client_physical_machine_idxes_.size();
+        return client_machine_idxes_.size();
     }
     
-    std::string Config::getClientIpstr(const uint32_t& client_idx, const uint32_t& clientcnt)
+    std::string Config::getClientIpstr(const uint32_t& client_idx, const uint32_t& clientcnt, const bool& is_launch)
     {
         checkIsValid_();
 
         assert(client_idx < clientcnt);
 
-        const uint32_t client_physical_machine_cnt = client_physical_machine_idxes_.size();
+        const uint32_t client_physical_machine_cnt = client_machine_idxes_.size();
         assert(client_physical_machine_cnt > 0);
 
-        uint32_t tmp_client_physical_machine_local_idx = 0;
+        uint32_t tmp_client_local_machine_idx = 0;
         if (clientcnt <= client_physical_machine_cnt)
         {
-            tmp_client_physical_machine_local_idx = client_idx;
+            tmp_client_local_machine_idx = client_idx;
         }
         else
         {
             uint32_t permachine_clientcnt = clientcnt / client_physical_machine_cnt;
             assert(permachine_clientcnt > 0);
-            tmp_client_physical_machine_local_idx = client_idx / permachine_clientcnt;
-            if (tmp_client_physical_machine_local_idx >= client_physical_machine_cnt)
+            tmp_client_local_machine_idx = client_idx / permachine_clientcnt;
+            if (tmp_client_local_machine_idx >= client_physical_machine_cnt)
             {
-                tmp_client_physical_machine_local_idx = client_physical_machine_cnt - 1; // Assign tail clients to the last client physical machine
+                tmp_client_local_machine_idx = client_physical_machine_cnt - 1; // Assign tail clients to the last client physical machine
             }
         }
 
-        const uint32_t tmp_client_physical_machine_global_idx = client_physical_machine_idxes_[tmp_client_physical_machine_local_idx];
-        return physical_machines_[tmp_client_physical_machine_global_idx].getIpstr();
+        const uint32_t tmp_client_global_machine_idx = client_machine_idxes_[tmp_client_local_machine_idx];
+        if (is_launch)
+        {
+            if (tmp_client_global_machine_idx != current_machine_idx_)
+            {
+                std::ostringstream oss;
+                oss << "client " << client_idx << " should be launched in physical machine " << tmp_client_global_machine_idx << " instead of current machine " << current_machine_idx_ << "!";
+                Util::dumpErrorMsg(kClassName, oss.str());
+                exit(1);
+            }
+        }
+
+        return getPhysicalMachine_(tmp_client_global_machine_idx).getIpstr();
     }
 
     uint32_t Config::getClientRawStatisticsSlotIntervalSec()
@@ -512,17 +524,23 @@ namespace covered
         return client_worker_recvrsp_startport_;
     }
 
-    std::string Config::getCloudIpstr()
+    std::string Config::getCloudIpstr(const bool& is_launch)
     {
         checkIsValid_();
-        if (isSingleNode()) // NOT check cloud_idx for single-node mode
+
+        if (is_launch)
         {
-            return Util::LOCALHOST_IPSTR;
+            if (cloud_machine_idx_ != current_machine_idx_)
+            {
+                std::ostringstream oss;
+                const uint32_t cloud_idx = 0; // TODO: ONLY support one cloud node now
+                oss << "cloud " << cloud_idx << " should be launched in physical machine " << cloud_machine_idx_ << " instead of current machine " << current_machine_idx_ << "!";
+                Util::dumpErrorMsg(kClassName, oss.str());
+                exit(1);
+            }
         }
-        else
-        {
-            return cloud_ipstr_;
-        }
+        
+        return getPhysicalMachine_(cloud_machine_idx_).getIpstr();
     }
 
     uint16_t Config::getCloudRecvmsgStartport()
@@ -621,70 +639,70 @@ namespace covered
         return edge_invalidation_server_recvreq_startport_;
     }
 
-    std::string Config::getEdgeIpstr(const uint32_t& edge_idx, const uint32_t& edgecnt)
+    // For edge physical machines
+
+    uint32_t Config::getEdgeMachineCnt()
     {
         checkIsValid_();
-        if (isSingleNode()) // NOT check edge_idx for single-node mode
-        {
-            return Util::LOCALHOST_IPSTR;
-        }
-        else
-        {
-            assert(edge_idx < edgecnt);
-            assert(edge_ipstrs_.size() > 0);
-            if (edgecnt <= edge_ipstrs_.size())
-            {
-                return edge_ipstrs_[edge_idx];
-            }
-            else
-            {
-                uint32_t permachine_edgecnt = edgecnt / edge_ipstrs_.size();
-                assert(permachine_edgecnt > 0);
-                uint32_t machine_idx = edge_idx / permachine_edgecnt;
-                if (machine_idx >= edge_ipstrs_.size())
-                {
-                    machine_idx = edge_ipstrs_.size() - 1; // Assign tail edges to the last machine
-                }
-                return edge_ipstrs_[machine_idx];
-            }
-        }
+        return edge_machine_idxes_.size();
     }
 
-    uint32_t Config::getEdgeMachineIdxByIpstr(const std::string& edge_ipstr)
+    std::string Config::getEdgeIpstr(const uint32_t& edge_idx, const uint32_t& edgecnt, const bool& is_launch)
     {
         checkIsValid_();
 
-        if (isSingleNode()) // NOT check edge_ipstrs_ for single-node mode
+        assert(edge_idx < edgecnt);
+        
+        const uint32_t edge_physical_machine_cnt = edge_machine_idxes_.size();
+        assert(edge_physical_machine_cnt > 0);
+
+        uint32_t tmp_edge_local_machine_idx = 0;
+        if (edgecnt <= edge_physical_machine_cnt)
         {
-            return 0;
+            tmp_edge_local_machine_idx = edge_idx;
         }
         else
         {
-            assert(edge_ipstrs_.size() > 0);
-
-            for (uint32_t machine_idx = 0; machine_idx < edge_ipstrs_.size(); machine_idx++)
+            uint32_t permachine_edgecnt = edgecnt / edge_physical_machine_cnt;
+            assert(permachine_edgecnt > 0);
+            tmp_edge_local_machine_idx = edge_idx / permachine_edgecnt;
+            if (tmp_edge_local_machine_idx >= edge_physical_machine_cnt)
             {
-                if (edge_ipstrs_[machine_idx] == edge_ipstr)
-                {
-                    return machine_idx;
-                }
+                tmp_edge_local_machine_idx = edge_physical_machine_cnt - 1; // Assign tail edges to the last machine
             }
-
-            assert(false); // Should NOT arrive here
         }
+
+        const uint32_t tmp_edge_global_machine_idx = edge_machine_idxes_[tmp_edge_local_machine_idx];
+        if (is_launch)
+        {
+            if (tmp_edge_global_machine_idx != current_machine_idx_)
+            {
+                std::ostringstream oss;
+                oss << "edge " << edge_idx << " should be launched in physical machine " << tmp_edge_global_machine_idx << " instead of current machine " << current_machine_idx_ << "!";
+                Util::dumpErrorMsg(kClassName, oss.str());
+                exit(1);
+            }
+        }
+
+        return getPhysicalMachine_(tmp_edge_global_machine_idx).getIpstr();
     }
 
-    uint32_t Config::getEdgeIpstrCnt()
+    uint32_t Config::getEdgeLocalMachineIdxByIpstr(const std::string& edge_ipstr)
     {
         checkIsValid_();
-        if (isSingleNode()) // NOT check edge_ipstrs_ for single-node mode
+
+        assert(edge_machine_idxes_.size() > 0);
+
+        for (uint32_t tmp_edge_local_machine_idx = 0; tmp_edge_local_machine_idx < edge_machine_idxes_.size(); tmp_edge_local_machine_idx++)
         {
-            return 1;
+            const uint32_t tmp_edge_global_machine_idx = edge_machine_idxes_[tmp_edge_local_machine_idx];
+            if (getPhysicalMachine_(tmp_edge_global_machine_idx).getIpstr() == edge_ipstr)
+            {
+                return tmp_edge_local_machine_idx;
+            }
         }
-        else
-        {
-            return edge_ipstrs_.size();
-        }
+
+        assert(false); // Should NOT arrive here
     }
 
     uint16_t Config::getEdgeRecvmsgStartport()
@@ -693,10 +711,22 @@ namespace covered
         return edge_recvmsg_startport_;
     }
 
-    std::string Config::getEvaluatorIpstr()
+    std::string Config::getEvaluatorIpstr(const bool& is_launch)
     {
         checkIsValid_();
-        return evaluator_ipstr_;
+
+        if (is_launch)
+        {
+            if (evaluator_machine_idx_ != current_machine_idx_)
+            {
+                std::ostringstream oss;
+                oss << "evaluator should be launched in physical machine " << evaluator_machine_idx_ << " instead of current machine " << current_machine_idx_ << "!";
+                Util::dumpErrorMsg(kClassName, oss.str());
+                exit(1);
+            }
+        }
+        
+        return getPhysicalMachine_(evaluator_machine_idx_).getIpstr();
     }
 
     uint16_t Config::getEvaluatorRecvmsgPort()
@@ -800,7 +830,7 @@ namespace covered
     PhysicalMachine Config::getCurrentPhysicalMachine()
     {
         checkIsValid_();
-        return getPhysicalMachine_(current_physical_machine_idx_);
+        return getPhysicalMachine_(current_machine_idx_);
     }
 
     std::string Config::toString()
@@ -810,15 +840,15 @@ namespace covered
         oss << "[Static configurations from " << config_filepath_ << "]" << std::endl;
         oss << "Main class name: " << main_class_name_ << std::endl;
         oss << "Client physical machine indexes: ";
-        for (uint32_t i = 0; i < client_physical_machine_idxes_.size(); i++)
+        for (uint32_t i = 0; i < client_machine_idxes_.size(); i++)
         {
-            oss << client_physical_machine_idxes_[i] << " ";
+            oss << client_machine_idxes_[i] << " ";
         }
         oss << std::endl;
         oss << "Client raw statistics slot interval second: " << client_raw_statistics_slot_interval_sec_ << std::endl;
         oss << "Client recvmsg startport: " << client_recvmsg_startport_ << std::endl;
         oss << "Client worker recvrsp startport: " << client_worker_recvrsp_startport_ << std::endl;
-        oss << "Cloud ipstr: " << cloud_ipstr_ << std::endl;
+        oss << "Cloud physical machine index: " << cloud_machine_idx_ << std::endl;
         oss << "Cloud recvmsg startport: " << cloud_recvmsg_startport_ << std::endl;
         oss << "Cloud recvreq startport: " << cloud_recvreq_startport_ << std::endl;
         oss << "Cloud RocksDB base directory: " << cloud_rocksdb_basedir_ << std::endl;
@@ -834,14 +864,14 @@ namespace covered
         oss << "Edge cache server worker recvreq startport: " << edge_cache_server_worker_recvreq_startport_ << std::endl;
         oss << "Edge cache server worker recvrsp startport: " << edge_cache_server_worker_recvrsp_startport_ << std::endl;
         oss << "Edge invalidation server recvreq startport: " << edge_invalidation_server_recvreq_startport_ << std::endl;
-        oss << "Edge ipstrs: ";
-        for (uint32_t i = 0; i < edge_ipstrs_.size(); i++)
+        oss << "Edge physical machine indexes: ";
+        for (uint32_t i = 0; i < edge_machine_idxes_.size(); i++)
         {
-            oss << edge_ipstrs_[i] << " ";
+            oss << edge_machine_idxes_[i] << " ";
         }
         oss << std::endl;
         oss << "Edge recvmsg startport: " << edge_recvmsg_startport_ << std::endl;
-        oss << "Evaluator ipstr:" << evaluator_ipstr_ << std::endl;
+        oss << "Evaluator physical machine index:" << evaluator_machine_idx_ << std::endl;
         oss << "Evaluator recvmsg port: " << evaluator_recvmsg_port_ << std::endl;
         oss << "Facebook config filepath: " << facebook_config_filepath_ << std::endl;
         oss << "Fine-grained locking size: " << fine_grained_locking_size_ << std::endl;
@@ -1019,7 +1049,7 @@ namespace covered
             {
                 char tmp_ipstr[INET6_ADDRSTRLEN];
                 memset(tmp_ipstr, 0, INET6_ADDRSTRLEN);
-                inet_ntop(tmp_address_family, &((struct sockaddr_in*)(tmp_ifaddr_ptr->ifa_addr))->sin6_addr, tmp_ipstr, INET6_ADDRSTRLEN);
+                inet_ntop(tmp_address_family, &((struct sockaddr_in6*)(tmp_ifaddr_ptr->ifa_addr))->sin6_addr, tmp_ipstr, INET6_ADDRSTRLEN);
                 current_ipstrs.insert(std::string(tmp_ipstr));
             }
             else // Others such as AF_UNIX, AF_UNSPEC, and AF_PACKET
@@ -1038,7 +1068,7 @@ namespace covered
             {
                 if (tmp_ipstr == *current_ipstrs_const_iter)
                 {
-                    current_physical_machine_idx_ = i;
+                    current_machine_idx_ = i;
                     is_found = true;
                     break;
                 }
@@ -1052,8 +1082,8 @@ namespace covered
 
         // (iv) cpu_dedicated_corecnt + cpu_shared_corecnt MUST <= total CPU corecnt for the current physical machine
 
-        const uint32_t current_cpu_dedicated_corecnt = physical_machines_[current_physical_machine_idx_].getCpuDedicatedCorecnt();
-        const uint32_t current_cpu_shared_corecnt = physical_machines_[current_physical_machine_idx_].getCpuSharedCorecnt();
+        const uint32_t current_cpu_dedicated_corecnt = physical_machines_[current_machine_idx_].getCpuDedicatedCorecnt();
+        const uint32_t current_cpu_shared_corecnt = physical_machines_[current_machine_idx_].getCpuSharedCorecnt();
         const uint32_t current_total_cpu_corecnt = std::thread::hardware_concurrency();
         if (current_total_cpu_corecnt < current_cpu_dedicated_corecnt + current_cpu_shared_corecnt)
         {
@@ -1072,11 +1102,17 @@ namespace covered
         }
 
         // (v) client/edge/cloud physical machine indexes MUST be valid
-        assert(client_physical_machine_idxes_.size() > 0);
-        for (uint32_t i = 0; i < client_physical_machine_idxes_.size(); i++)
+        assert(client_machine_idxes_.size() > 0);
+        for (uint32_t i = 0; i < client_machine_idxes_.size(); i++)
         {
-            assert(client_physical_machine_idxes_[i] < physical_machines_.size());
+            assert(client_machine_idxes_[i] < physical_machines_.size());
         }
+        assert(edge_machine_idxes_.size() > 0);
+        for (uint32_t i = 0; i < edge_machine_idxes_.size(); i++)
+        {
+            assert(edge_machine_idxes_[i] < physical_machines_.size());
+        }
+        assert(cloud_machine_idx_ < physical_machines_.size());
 
         return;
     }
