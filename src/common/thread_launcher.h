@@ -10,6 +10,7 @@
 #define DEBUG_THREAD_LAUNCHER
 
 #include <atomic>
+#include <sched.h> // sched_param, cpu_set_t, CPU_ZERO, CPU_SET
 #include <string>
 
 namespace covered
@@ -32,6 +33,9 @@ namespace covered
 
         static std::atomic<uint32_t> low_priority_threadcnt_;
         static std::atomic<uint32_t> high_priority_threadcnt_;
+
+        static cpu_set_t cpu_shared_coreset_;
+        static cpu_set_t cpu_dedicated_coreset_;
     };
 }
 

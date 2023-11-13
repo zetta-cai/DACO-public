@@ -9,6 +9,7 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+#include <vector>
 #include <string>
 
 #include <boost/json.hpp>
@@ -17,11 +18,33 @@
 
 namespace covered
 {
+    class PhysicalMachine
+    {
+    public:
+        PhysicalMachine();
+        PhysicalMachine(const std::string& ipstr, const uint32_t& cpu_dedicated_corecnt, const uint32_t& cpu_shared_corecnt);
+        ~PhysicalMachine();
+
+        std::string getIpstr() const;
+        uint32_t getCpuDedicatedCorecnt() const;
+        uint32_t getCpuSharedCorecnt() const;
+
+        std::string toString() const;
+
+        const PhysicalMachine& operator=(const PhysicalMachine& other);
+    private:
+        static const std::string kClassName;
+
+        std::string ipstr_;
+        uint32_t cpu_dedicated_corecnt_;
+        uint32_t cpu_shared_corecnt_;
+    };
+
     class Config
     {
     public:
         // Key strings of JSON config file for static configurations (only used by Config)
-        static const std::string CLIENT_IPSTRS_KEYSTR;
+        static const std::string CLIENT_MACHINES_KEYSTR;
         static const std::string CLIENT_RAW_STATISTICS_SLOT_INTERVAL_SEC_KEYSTR;
         static const std::string CLIENT_RECVMSG_STARTPORT_KEYSTR;
         static const std::string CLIENT_WORKER_RECVRSP_STARTPORT_KEYSTR;
@@ -31,8 +54,6 @@ namespace covered
         static const std::string CLOUD_ROCKSDB_BASEDIR_KEYSTR;
         static const std::string COVERED_LOCAL_UNCACHED_MAX_MEM_USAGE_RATIO_KEYSTR;
         static const std::string COVERED_POPULARITY_AGGREGATION_MAX_MEM_USAGE_RATIO_KEYSTR;
-        static const std::string CPU_DEDICATED_CORECNT_KEYSTR;
-        static const std::string CPU_SHARED_CORECNT_KEYSTR;
         static const std::string DATASET_LOADER_SLEEP_FOR_COMPACTION_SEC_KEYSTR;
         static const std::string EDGE_BEACON_SERVER_RECVREQ_STARTPORT_KEYSTR;
         static const std::string EDGE_BEACON_SERVER_RECVRSP_STARTPORT_KEYSTR;
@@ -64,15 +85,20 @@ namespace covered
         static const std::string PROPAGATION_ITEM_BUFFER_SIZE_CLOUD_TOEDGE_KEYSTR;
         static const std::string VERSION_KEYSTR;
 
-        static void loadConfig(const std::string& config_filepath, const std::string& main_class_name, const bool& is_single_node);
+        // For all physical machines
+        static const std::string PHYSICAL_MACHINES_KEYSTR;
+
+        static void loadConfig(const std::string& config_filepath, const std::string& main_class_name);
 
         static std::string getMainClassName();
-        static bool isSingleNode();
+        //static bool isSingleNode();
 
-        static std::string getClientIpstr(const uint32_t& client_idx, const uint32_t& clientcnt);
+        // For client physical machines
+        static uint32_t getClientMachineCnt();
+        static std::string getClientIpstr(const uint32_t& client_idx, const uint32_t& clientcnt); // clientcnt is the number of logical client nodes
+
         static uint32_t getClientRawStatisticsSlotIntervalSec();
         static uint16_t getClientRecvmsgStartport();
-        static uint32_t getClientIpstrCnt();
         static uint16_t getClientWorkerRecvrspStartport();
         static std::string getCloudIpstr();
         static uint16_t getCloudRecvmsgStartport();
@@ -80,8 +106,6 @@ namespace covered
         static std::string getCloudRocksdbBasedir();
         static double getCoveredLocalUncachedMaxMemUsageRatio();
         static double getCoveredPopularityAggregationMaxMemUsageRatio();
-        static uint32_t getCpuDedicatedCorecnt();
-        static uint32_t getCpuSharedCorecnt();
         static uint32_t getDatasetLoaderSleepForCompactionSec();
         static uint16_t getEdgeBeaconServerRecvreqStartport();
         static uint16_t getEdgeBeaconServerRecvrspStartport();
@@ -115,6 +139,9 @@ namespace covered
         static uint32_t getPropagationItemBufferSizeCloudToedge();
         static std::string getVersion();
 
+        // For current physical machine
+        static PhysicalMachine getCurrentPhysicalMachine();
+
         static std::string toString();
     private:
         static const std::string kClassName;
@@ -123,17 +150,19 @@ namespace covered
         static boost::json::key_value_pair* find_(const std::string& key);
         static void checkIsValid_();
         static void checkMainClassName_();
-        static void checkCpuCorecnt_();
+        
+        // For all physical machines
+        static void checkPhysicalMachinesAndSetCuridx_();
+        static PhysicalMachine getPhysicalMachine_(const uint32_t& physial_machine_idx);
 
         static bool is_valid_;
         static boost::json::object json_object_;
 
-        // Come CLI parameters yet NOT affect evaluation results (with sufficient CPU and memory power -> irrelevant with is_single_node) and NOT changed during evaluation (with fixed evaluation testbed -> irrelevant with main_class_name)
+        // Come from CLI parameters yet NOT affect evaluation results
         static std::string config_filepath_; // Configuration file path for COVERED to load static configurations
         static std::string main_class_name_; // Come from argv[0]
-        static bool is_single_node_; // Decided by CLIBase::main_class_name_
 
-        static std::vector<std::string> client_ipstrs_; // IP strings of physical client nodes
+        static std::vector<uint32_t> client_physical_machine_idxes_; // Physical machine indexes of physical client nodes
         static uint32_t client_raw_statistics_slot_interval_sec_; // Slot interval for client raw statistics in units of seconds
         static uint16_t client_recvmsg_startport_; // Start UDP port for client to receive benchmark control messages
         static uint16_t client_worker_recvrsp_startport_; // Start UDP port for client worker to receive local responses
@@ -143,8 +172,6 @@ namespace covered
         static std::string cloud_rocksdb_basedir_; // Base directory of RocksDB in cloud
         static double covered_local_uncached_max_mem_usage_ratio_; // The maximum memory usage ratio for local uncached metadata (ONLY for COVERED)
         static double covered_popularity_aggregation_max_mem_usage_ratio_; // The maximum memory usage ratio for popularity aggregation (ONLY for COVERED)
-        static uint32_t cpu_dedicated_corecnt_; // The number of CPU cores dedicated for high-priority threads
-        static uint32_t cpu_shared_corecnt_; // The number of CPU cores shared by low-priority threads
         static uint32_t dataset_loader_sleep_for_compaction_sec_; // Sleep time for dataset loader to wait for compaction in units of seconds
         static uint16_t edge_beacon_server_recvreq_startport_; // Start UDP port for edge beacon server to receive cooperation control requests
         static uint16_t edge_beacon_server_recvrsp_startport_; // Start UDP port for edge beacon server to receive cooperation control responses
@@ -175,6 +202,10 @@ namespace covered
         static uint32_t propagation_item_buffer_size_edge_tocloud_; // Buffer size for edge-to-cloud propagated messages
         static uint32_t propagation_item_buffer_size_cloud_toedge_; // Buffer size for cloud-to-edge propagated messages
         static std::string version_; // Version of COVERED
+
+        // For all physical machines
+        static std::vector<PhysicalMachine> physical_machines_; // Physical machines
+        static uint32_t current_physical_machine_idx_; // Current physical machine index
     };
 }
 

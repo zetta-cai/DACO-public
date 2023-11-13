@@ -102,52 +102,9 @@ namespace covered
 
             std::string config_filepath = argument_info_["config_file"].as<std::string>();
 
-            bool is_single_node = true; // Enable single-node mode by default
-            if (main_class_name == Util::SIMULATOR_MAIN_NAME)
-            {
-                is_single_node = true;
-            }
-            else if (main_class_name == Util::CLIENT_MAIN_NAME || main_class_name == Util::EDGE_MAIN_NAME || main_class_name == Util::CLOUD_MAIN_NAME || main_class_name == Util::EVALUATOR_MAIN_NAME)
-            {
-                is_single_node = false;
-            }
-            else
-            {
-                std::ostringstream oss;
-                oss << main_class_name << " will NOT use is_single_node";
-                Util::dumpNormalMsg(kClassName, oss.str());
-            }
-            
-            // Obsolete
-            /*
-            if (argument_info_.count("multinode"))
-            {
-                if (main_class_name == Util::SIMULATOR_MAIN_NAME)
-                {
-                    std::ostringstream oss;
-                    oss << "--multinode does not work for " << main_class_name << " -> still enable single-node mode!";
-                    Util::dumpWarnMsg(kClassName, oss.str());
-                }
-                else
-                {
-                    is_single_node = false;
-                }
-            }
-            bool is_debug = false;
-            if (argument_info_.count("debug"))
-            {
-                is_debug = true;
-            }
-            bool track_event = false;
-            if (argument_info_.count("track_event"))
-            {
-                track_event = true;
-            }
-            */
-
             // (4) Load config file for static configurations
 
-            Config::loadConfig(config_filepath, main_class_name, is_single_node);
+            Config::loadConfig(config_filepath, main_class_name);
 
             is_set_param_and_config_ = true;
         }

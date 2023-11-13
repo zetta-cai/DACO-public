@@ -1,5 +1,5 @@
 {
-    "client_ipstrs": ["127.0.0.1"],
+    "client_machines": [0],
     "client_raw_statistics_slot_interval_sec": 1,
     "client_recvmsg_startport": 4100,
     "client_worker_recvrsp_startport": 4200,
@@ -9,8 +9,6 @@
     "cloud_rocksdb_basedir": "/tmp/cloud",
     "covered_local_uncached_max_mem_usage_ratio": 0.01,
     "covered_popularity_aggregation_max_mem_usage_ratio": 0.01,
-    "cpu_dedicated_corecnt": 30,
-    "cpu_shared_corecnt": 2,
     "dataset_loader_sleep_for_compaction_sec": 30,
     "edge_beacon_server_recvreq_startport": 4500,
     "edge_beacon_server_recvrsp_startport": 4600,
@@ -40,5 +38,12 @@
     "propagation_item_buffer_size_edge_toedge": 1000,
     "propagation_item_buffer_size_edge_tocloud": 1000,
     "propagation_item_buffer_size_cloud_toedge": 1000,
-    "version": "1.0"
+    "version": "1.0",
+    "physical_machines": [
+        {
+            "ipstr": "127.0.0.1",
+            "cpu_dedicated_corecnt": 30,
+            "cpu_shared_corecnt": 2
+        }
+    ]
 }

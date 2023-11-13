@@ -19,7 +19,7 @@ namespace covered
     {
     public:
         CollectedPopularity();
-        CollectedPopularity(const bool& is_tracked, const Popularity& local_uncached_popularity, const ObjectSize& object_size);
+        CollectedPopularity(const bool& is_tracked, const Popularity& local_uncached_popularity, const ObjectSize& object_size, const bool& with_valid_value, const Value& value);
         ~CollectedPopularity();
 
         bool isTracked() const;
@@ -29,6 +29,12 @@ namespace covered
 
         // For placement calculation
         ObjectSize getObjectSize() const;
+
+        #ifdef ENABLE_AUXILIARY_DATA_CACHE
+        // For fast cache warmup
+        bool withValidValue() const;
+        Value getValue() const;
+        #endif
 
         uint32_t getCollectedPopularityPayloadSize() const;
         uint32_t serialize(DynamicArray& msg_payload, const uint32_t& position) const;
@@ -45,6 +51,12 @@ namespace covered
 
         // For placement calculation
         ObjectSize object_size_;
+
+        #ifdef ENABLE_AUXILIARY_DATA_CACHE
+        // For fast cache warmup
+        bool with_valid_value_;
+        Value value_;
+        #endif
     };
 }
 

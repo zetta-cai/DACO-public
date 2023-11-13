@@ -82,7 +82,6 @@ namespace covered
         static const int64_t MAX_UINT32;
         static const double DOUBLE_IOTA;
         // Network (UDP message payload -> UDP fragment payloads; UDP fragment payload + UDP fragment header -> UDP packet payload)
-        static const std::string LOCALHOST_IPSTR;
         static const std::string ANY_IPSTR;
         static const uint32_t UDP_MAX_PKT_PAYLOAD; // Pkt payload = fraghdr + frag payload
         static const uint32_t UDP_FRAGHDR_SIZE;

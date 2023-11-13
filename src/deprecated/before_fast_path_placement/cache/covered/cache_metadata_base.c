@@ -418,14 +418,15 @@ namespace covered
         sorted_popularity_multimap_t::const_iterator sorted_popularity_iter = lookup_metadata.getSortedPopularityIter();
         assert(sorted_popularity_iter != sorted_popularity_multimap_.end()); // For existing key
 
-        // // MRU for equal popularity values (especially for zero-popularity one-hit-wonders)
-        // uint32_t least_popular_rank = std::distance(sorted_popularity_iter, sorted_popularity_multimap_.end()); // NOTE: std::distance MUST from previous iter to subsequent iter
-        // assert(least_popular_rank >= 1);
-        // least_popular_rank -= 1;
-
+        #ifdef ENABLE_MRU_FOR_ONE_HIT_WONDERS
+        // MRU for equal popularity values (especially for zero-popularity one-hit-wonders)
+        uint32_t least_popular_rank = std::distance(sorted_popularity_iter, sorted_popularity_multimap_.end()); // NOTE: std::distance MUST from previous iter to subsequent iter
+        assert(least_popular_rank >= 1);
+        least_popular_rank -= 1;
+        #else
         // LRU for equal popularity values
         uint32_t least_popular_rank = std::distance(sorted_popularity_multimap_.begin(), sorted_popularity_iter);
-
+        #endif
         assert(least_popular_rank < sorted_popularity_multimap_.size());
         
         return least_popular_rank;
@@ -437,13 +438,15 @@ namespace covered
 
         if (least_popular_rank < sorted_popularity_multimap_.size())
         {
-            // // MRU for equal popularity values (especially for zero-popularity one-hit-wonders)
-            // sorted_popularity_multimap_t::const_iterator sorted_popularity_iter = sorted_popularity_multimap_.end();
-            // std::advance(sorted_popularity_iter, -1 * static_cast<int>(least_popular_rank + 1));
-
+            #ifdef ENABLE_MRU_FOR_ONE_HIT_WONDERS
+            // MRU for equal popularity values (especially for zero-popularity one-hit-wonders)
+            sorted_popularity_multimap_t::const_iterator sorted_popularity_iter = sorted_popularity_multimap_.end();
+            std::advance(sorted_popularity_iter, -1 * static_cast<int>(least_popular_rank + 1));
+            #else
             // LRU for equal popularity values
             sorted_popularity_multimap_t::const_iterator sorted_popularity_iter = sorted_popularity_multimap_.begin();
             std::advance(sorted_popularity_iter, least_popular_rank);
+            #endif
 
             key = sorted_popularity_iter->second;
             popularity = sorted_popularity_iter->first;
@@ -458,11 +461,13 @@ namespace covered
         // TODO: Use homogeneous popularity calculation now, but will replace with heterogeneous popularity calculation + learning later (for both local cached and uncached objects)
         // TODO: Use a heuristic or learning-based approach for parameter tuning to calculate local rewards for heterogeneous popularity calculation (refer to state-of-the-art studies such as LRB and GL-Cache)
 
-        // (OBSOLETE: zero-popularity for one-hit-wonders will mis-evict hot keys) Set popularity as zero for one-hit-wonders to quickly evict them
-        // if (key_level_metadata_ref.getFrequency() <= 1)
-        // {
-        //     return 0;
-        // }
+        #ifdef ENABLE_MRU_FOR_ONE_HIT_WONDERS
+        // Set popularity as zero for one-hit-wonders such that we will use MRU policy to quickly evict them
+        if (key_level_metadata_ref.getFrequency() <= 1)
+        {
+            return 0;
+        }
+        #endif
 
         // NOTE: Here we use a simple approach to calculate popularity based on object-level and group-level metadata
         Popularity popularity = 0.0;

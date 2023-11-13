@@ -40,10 +40,11 @@ namespace covered
 
     // NOTE: typedef MUST need complete definition of class unless you use pointers or references -> cannot use perkey_lookup_iter_t in sorted_popularity_multimap_t, which will cause circular dependency between LookupMetadata and sorted_popularity_multimap_t (using Key here is just for implementation simplicity, yet actually we can move CacheItem pointers from MMContainer's LRU list into popularity list to replace keys for popularity list if we hack cachelib)
     //typedef std::multimap<Popularity, LruCacheReadHandle> sorted_popularity_multimap_t; // Obselete: local uncached objects cannot provide LruCacheReadHandle
-
-    // NOTE: using which policy for equal-popularity objects has little difference, the key point is that we should NOT simply set popularity as zero for one-hit-wonders, as we may mis-evict some hot keys whose frequency is 1 during cache warmup
+    #ifdef ENABLE_MRU_FOR_ONE_HIT_WONDERS
+    typedef std::multimap<Popularity, Key, PopularityMruCompare> sorted_popularity_multimap_t; // Ordered list of per-key popularity (with MRU policy for one-hit-wonders)
+    #else
     typedef std::multimap<Popularity, Key, PopularityLruCompare> sorted_popularity_multimap_t; // Ordered list of per-key popularity (with LRU policy for one-hit-wonders)
-    //typedef std::multimap<Popularity, Key, PopularityMruCompare> sorted_popularity_multimap_t; // Ordered list of per-key popularity (with MRU policy for one-hit-wonders)
+    #endif
 
     class LookupMetadata
     {
@@ -90,10 +91,10 @@ namespace covered
     protected:
         // Common functions
 
-        void addForNewKey_(const Key& key, const Value& value); // For admission and getrsp/put/delreq w/ miss, intialize and update object-/group-level metadata (both value-unrelated and value-related) for newly admitted cached key or currently tracked uncached key
+        void addForNewKey_(const Key& key, const Value& value); // For admission and getrsp/put/delreq w/ miss (also getreq w/ miss if ENABLE_CONSERVATIVE_UNCACHED_POP), intialize and update object-/group-level metadata (both value-unrelated and value-related) for newly admitted cached key or currently tracked uncached key
 
         void updateNoValueStatsForExistingKey_(const Key& key); // For get/put/delreq w/ hit/miss, update object-/group-level value-unrelated metadata for existing key (i.e., already admitted/tracked objects for local cached/uncached)
-        void updateValueStatsForExistingKey_(const Key& key, const Value& value, const Value& original_value); // For put/delreq w/ hit/miss and getrsp w/ invalid-hit, update object-/group-level value-related metadata for existing key (i.e., already admitted/tracked objects for local cached/uncached)
+        void updateValueStatsForExistingKey_(const Key& key, const Value& value, const Value& original_value); // For put/delreq w/ hit/miss and getrsp w/ invalid-hit (also getrsp w/ miss if ENABLE_CONSERVATIVE_UNCACHED_POP), update object-/group-level value-related metadata for existing key (i.e., already admitted/tracked objects for local cached/uncached)
 
         void removeForExistingKey_(const Key& detracked_key, const Value& value, const bool& is_local_cached_metadata); // Remove admitted cached key or tracked uncached key (for getrsp with cache miss, put/delrsp with cache miss, admission, eviction)
 
@@ -101,16 +102,16 @@ namespace covered
 
         // For object-level metadata
         const KeyLevelMetadata& getkeyLevelMetadata_(const perkey_lookup_const_iter_t& perkey_lookup_const_iter) const; // Return existing KeyLevelMetadata
-        perkey_metadata_list_t::iterator addPerkeyMetadata_(const Key& key, const Value& value, const GroupId& assigned_group_id); // For admission and getrsp/put/delreq w/ miss, initialize and update key-level value-unrelated and value-related metadata for newly-admited/tracked key; return new perkey metadata iterator
+        perkey_metadata_list_t::iterator addPerkeyMetadata_(const Key& key, const Value& value, const GroupId& assigned_group_id); // For admission and getrsp/put/delreq w/ miss (also getreq w/ miss if ENABLE_CONSERVATIVE_UNCACHED_POP), initialize and update key-level value-unrelated and value-related metadata for newly-admited/tracked key; return new perkey metadata iterator
         perkey_metadata_list_t::iterator updateNoValuePerkeyMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter); // For get/put/delreq w/ hit/miss, update object-level value-unrelated metadata for existing key (i.e., already admitted/tracked objects for local cached/uncached); return updated KeyLevelMetadata
-        perkey_metadata_list_t::iterator updateValuePerkeyMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter, const Value& value, const Value& original_value); // For put/delreq w/ hit/miss and getrsp w/ invalid-hit, update object-level value-related metadata for existing key (i.e., already admitted/tracked objects for local cached/uncached); return updated KeyLevelMetadata
+        perkey_metadata_list_t::iterator updateValuePerkeyMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter, const Value& value, const Value& original_value); // For put/delreq w/ hit/miss and getrsp w/ invalid-hit (also getrsp w/ miss if ENABLE_CONSERVATIVE_UNCACHED_POP), update object-level value-related metadata for existing key (i.e., already admitted/tracked objects for local cached/uncached); return updated KeyLevelMetadata
         void removePerkeyMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter);
 
         // For group-level metadata
         const GroupLevelMetadata& getGroupLevelMetadata_(const perkey_lookup_const_iter_t& perkey_lookup_const_iter) const; // Return existing GroupLevelMetadata
-        const GroupLevelMetadata& addPergroupMetadata_(const Key& key, const Value& value, GroupId& assigned_group_id); // For admission and getrsp/put/delreq w/ miss, initialize and update group-level value-unrelated and value-related metadata for newly-admited/tracked key; return added/updated GroupLevelMetadata
+        const GroupLevelMetadata& addPergroupMetadata_(const Key& key, const Value& value, GroupId& assigned_group_id); // For admission and getrsp/put/delreq w/ miss (also getreq w/ miss if ENABLE_CONSERVATIVE_UNCACHED_POP), initialize and update group-level value-unrelated and value-related metadata for newly-admited/tracked key; return added/updated GroupLevelMetadata
         const GroupLevelMetadata& updateNoValuePergroupMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter); // For get/put/delreq w/ hit/miss, update group-level value-unrelated metadata for the key already in the group (i.e., already admitted/tracked objects for local cached/uncached); return updated GroupLevelMetadata
-        const GroupLevelMetadata& updateValuePergroupMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter, const Key& key, const Value& value, const Value& original_value); // For put/delreq w/ hit/miss and getrsp w/ invalid-hit, update group-level value-related metadata for the key already in the group (i.e., already admitted/tracked objects for local cached/uncached); return updated GroupLevelMetadata
+        const GroupLevelMetadata& updateValuePergroupMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter, const Key& key, const Value& value, const Value& original_value); // For put/delreq w/ hit/miss and getrsp w/ invalid-hit (also getrsp w/ miss if ENABLE_CONSERVATIVE_UNCACHED_POP), update group-level value-related metadata for the key already in the group (i.e., already admitted/tracked objects for local cached/uncached); return updated GroupLevelMetadata
         void removePergroupMetadata_(const perkey_lookup_iter_t& perkey_lookup_iter, const Key& key, const Value& value, const bool& is_local_cached_metadata);
 
         // For popularity information

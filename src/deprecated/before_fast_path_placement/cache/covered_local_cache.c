@@ -106,7 +106,12 @@ namespace covered
             }
             else // Key will be newly tracked
             {
-                // NOTE: NOT track local uncached object into local uncached metadata by addForNewKey() here, as the get request of untracked object with (the first) cache miss cannot provide object size information to initialize and update local uncached metadata, and also cannot trigger placement
+                #ifdef ENABLE_CONSERVATIVE_UNCACHED_POP
+                // Initialize and update local uncached metadata for getreq with cache miss (both value-unrelated and value-related metadata)
+                // NOTE: we use max slab size as conservative object size, which should NOT affect other tracked uncached objects due to under-estimating local uncached popularity of the newly-tracked key
+                // NOTE: if the conservative local uncached popularity of the newly-tracked key is NOT detracked in addForNewKey() under local uncached metadata capacity limitation, local/remote directory lookup will get the conservative local uncached popularity for popularity aggregation to trigger placement calculation
+                local_uncached_metadata_.addForNewKey(key, Value(max_allocation_class_size_ - key.getKeyLength()));
+                #endif
             }
         }
 
@@ -162,7 +167,9 @@ namespace covered
     {
         ObjectSize object_size = 0;
         Popularity local_uncached_popularity = 0.0;
-        bool is_key_tracked = local_uncached_metadata_.getLocalUncachedObjsizePopularityForKey(key, object_size, local_uncached_popularity);
+        bool with_valid_value = false;
+        Value tmp_value;
+        bool is_key_tracked = local_uncached_metadata_.getLocalUncachedObjsizePopularityValueForKey(key, object_size, local_uncached_popularity, with_valid_value, tmp_value);
 
         // NOTE: (value size checking) NOT local-get/remote-collect large-objsize uncached object for aggregated uncached metadata due to slab-based memory management in Cachelib cache engine
         if (object_size > max_allocation_class_size_) // May be with large object size
@@ -173,7 +180,7 @@ namespace covered
             Util::dumpWarnMsg(instance_name_, oss.str());
         }
 
-        collected_popularity = CollectedPopularity(is_key_tracked, local_uncached_popularity, object_size);
+        collected_popularity = CollectedPopularity(is_key_tracked, local_uncached_popularity, object_size, with_valid_value, tmp_value);
 
         return;
     }
@@ -256,11 +263,13 @@ namespace covered
                 {
                     const uint32_t original_value_size = local_uncached_metadata_.getValueSizeForUncachedObjects(key);
                     
-                    // Update local uncached value-related metadata for put/delreq with cache miss (NOT for getrsp with cache miss)
-                    if (is_getrsp) // getrsp with cache miss
+                    // Update local uncached value-related metadata for put/delreq with cache miss or getrsp with cache miss if ENABLE_CONSERVATIVE_UNCACHED_POP
+                    if (is_getrsp) // getrsp with cache miss if ENABLE_CONSERVATIVE_UNCACHED_POP
                     {
-                        // NOTE: NOT update local uncached value-unrelated metadata for getrsp with cache miss, which has been done in getLocalCacheInternal_() for the corresponding getreq before
-                        // NOTE: also NOT update local uncached value-related metadata for getrsp with cache miss, as getreq will NOT update the value of the uncached object
+                        #ifdef ENABLE_CONSERVATIVE_UNCACHED_POP
+                        // NOTE: NO update local uncached value-unrelated metadata for getrsp with cache miss, which has been done in getLocalCacheInternal_() for the corresponding getreq before
+                        local_uncached_metadata_.updateValueStatsForExistingKey(key, value, original_value_size);
+                        #endif
                     }
                     else // put/delreq with cache miss
                     {

@@ -1,16 +1,69 @@
 #include "common/config.h"
 
+#include <arpa/inet.h> // INET_ADDRSTRLEN
 #include <assert.h> // assert
 #include <fstream> // ifstream
+#include <ifaddrs.h> // getifaddrs
 #include <sstream> // ostringstream
 #include <thread> // std::thread::hardware_concurrency
+#include <unordered_set>
 #include <vector>
 
 #include "common/util.h"
 
 namespace covered
 {
-    const std::string Config::CLIENT_IPSTRS_KEYSTR("client_ipstrs");
+    // PhysicalMachine
+
+    const std::string PhysicalMachine::kClassName("PhysicalMachine");
+
+    PhysicalMachine::PhysicalMachine() : ipstr_(""), cpu_dedicated_corecnt_(0), cpu_shared_corecnt_(0)
+    {
+    }
+
+    PhysicalMachine::PhysicalMachine(const std::string& ipstr, const uint32_t& cpu_dedicated_corecnt, const uint32_t& cpu_shared_corecnt)
+    {
+        ipstr_ = ipstr;
+        cpu_dedicated_corecnt_ = cpu_dedicated_corecnt;
+        cpu_shared_corecnt_ = cpu_shared_corecnt;
+    }
+
+    PhysicalMachine::~PhysicalMachine() {}
+
+    std::string PhysicalMachine::getIpstr() const
+    {
+        return ipstr_;
+    }
+
+    uint32_t PhysicalMachine::getCpuDedicatedCorecnt() const
+    {
+        return cpu_dedicated_corecnt_;
+    }
+
+    uint32_t PhysicalMachine::getCpuSharedCorecnt() const
+    {
+        return cpu_shared_corecnt_;
+    }
+
+    std::string PhysicalMachine::toString() const
+    {
+        std::ostringstream oss;
+        oss << "ipstr: " << ipstr_ << ", cpu_dedicated_corecnt: " << cpu_dedicated_corecnt_ << ", cpu_shared_corecnt: " << cpu_shared_corecnt_;
+        return oss.str();
+    }
+
+    const PhysicalMachine& PhysicalMachine::operator=(const PhysicalMachine& other)
+    {
+        ipstr_ = other.ipstr_;
+        cpu_dedicated_corecnt_ = other.cpu_dedicated_corecnt_;
+        cpu_shared_corecnt_ = other.cpu_shared_corecnt_;
+
+        return *this;
+    }
+
+    // Config
+
+    const std::string Config::CLIENT_MACHINES_KEYSTR("client_machines");
     const std::string Config::CLIENT_RAW_STATISTICS_SLOT_INTERVAL_SEC_KEYSTR("client_raw_statistics_slot_interval_sec");
     const std::string Config::CLIENT_RECVMSG_STARTPORT_KEYSTR("client_recvmsg_startport");
     const std::string Config::CLIENT_WORKER_RECVRSP_STARTPORT_KEYSTR("client_worker_recvrsp_startport");
@@ -20,8 +73,6 @@ namespace covered
     const std::string Config::CLOUD_ROCKSDB_BASEDIR_KEYSTR("cloud_rocksdb_basedir");
     const std::string Config::COVERED_LOCAL_UNCACHED_MAX_MEM_USAGE_RATIO_KEYSTR("covered_local_uncached_max_mem_usage_ratio");
     const std::string Config::COVERED_POPULARITY_AGGREGATION_MAX_MEM_USAGE_RATIO_KEYSTR("covered_popularity_aggregation_max_mem_usage_ratio");
-    const std::string Config::CPU_DEDICATED_CORECNT_KEYSTR("cpu_dedicated_corecnt");
-    const std::string Config::CPU_SHARED_CORECNT_KEYSTR("cpu_shared_corecnt");
     const std::string Config::DATASET_LOADER_SLEEP_FOR_COMPACTION_SEC_KEYSTR("dataset_loader_sleep_for_compaction_sec");
     const std::string Config::EDGE_BEACON_SERVER_RECVREQ_STARTPORT_KEYSTR("edge_beacon_server_recvreq_startport");
     const std::string Config::EDGE_BEACON_SERVER_RECVRSP_STARTPORT_KEYSTR("edge_beacon_server_recvrsp_startport");
@@ -53,6 +104,9 @@ namespace covered
     const std::string Config::PROPAGATION_ITEM_BUFFER_SIZE_CLOUD_TOEDGE_KEYSTR("propagation_item_buffer_size_cloud_toedge");
     const std::string Config::VERSION_KEYSTR("version");
 
+    // For all physical machines
+    const std::string Config::PHYSICAL_MACHINES_KEYSTR("physical_machines");
+
     const std::string Config::kClassName("Config");
 
     // Initialize config variables by default
@@ -61,9 +115,8 @@ namespace covered
 
     std::string Config::config_filepath_("");
     std::string Config::main_class_name_(""); // Come from argv[0]
-    bool Config::is_single_node_ = true;
 
-    std::vector<std::string> Config::client_ipstrs_(0);
+    std::vector<uint32_t> Config::client_physical_machine_idxes_(0);
     uint32_t Config::client_raw_statistics_slot_interval_sec_(1);
     uint16_t Config::client_recvmsg_startport_ = 4100; // [4096, 65536]
     uint16_t Config::client_worker_recvrsp_startport_ = 4200; // [4096, 65536]
@@ -73,8 +126,6 @@ namespace covered
     std::string Config::cloud_rocksdb_basedir_("/tmp/cloud");
     double Config::covered_local_uncached_max_mem_usage_ratio_ = 0.01;
     double Config::covered_popularity_aggregation_max_mem_usage_ratio_ = 0.01;
-    uint32_t Config::cpu_dedicated_corecnt_ = 24;
-    uint32_t Config::cpu_shared_corecnt_ = 8;
     uint32_t Config::dataset_loader_sleep_for_compaction_sec_ = 30;
     uint16_t Config::edge_beacon_server_recvreq_startport_ = 4500; // [4096, 65536]
     uint16_t Config::edge_beacon_server_recvrsp_startport_ = 4600; // [4096, 65536]
@@ -106,7 +157,11 @@ namespace covered
     uint32_t Config::propagation_item_buffer_size_cloud_toedge_ = 1000;
     std::string Config::version_("1.0");
 
-    void Config::loadConfig(const std::string& config_filepath, const std::string& main_class_name, const bool& is_single_node)
+    // For all physical machines
+    std::vector<PhysicalMachine> Config::physical_machines_(0);
+    uint32_t Config::current_physical_machine_idx_ = 0;
+
+    void Config::loadConfig(const std::string& config_filepath, const std::string& main_class_name)
     {
         if (!is_valid_) // Invoked at most once
         {
@@ -118,7 +173,6 @@ namespace covered
                 config_filepath_ = config_filepath;
                 main_class_name_ = main_class_name;
                 checkMainClassName_();
-                is_single_node_ = is_single_node;
 
                 std::ostringstream oss;
                 oss << "load config file from " << config_filepath << "!";
@@ -129,12 +183,13 @@ namespace covered
 
                 // Overwrite default values of config variables if any
                 boost::json::key_value_pair* kv_ptr = NULL;
-                kv_ptr = find_(CLIENT_IPSTRS_KEYSTR);
+                kv_ptr = find_(CLIENT_MACHINES_KEYSTR);
                 if (kv_ptr != NULL)
                 {
                     for (boost::json::array::iterator iter = kv_ptr->value().get_array().begin(); iter != kv_ptr->value().get_array().end(); iter++)
                     {
-                        client_ipstrs_.push_back(std::string(iter->get_string().c_str()));
+                        int64_t tmp_physical_machine_idx = iter->get_int64();
+                        client_physical_machine_idxes_.push_back(Util::toUint32(tmp_physical_machine_idx));
                     }
                 }
                 kv_ptr = find_(CLIENT_RAW_STATISTICS_SLOT_INTERVAL_SEC_KEYSTR);
@@ -187,19 +242,6 @@ namespace covered
                 {
                     covered_popularity_aggregation_max_mem_usage_ratio_ = kv_ptr->value().get_double();
                 }
-                kv_ptr = find_(CPU_DEDICATED_CORECNT_KEYSTR);
-                if (kv_ptr != NULL)
-                {
-                    int64_t tmp_corecnt = kv_ptr->value().get_int64();
-                    cpu_dedicated_corecnt_ = Util::toUint32(tmp_corecnt);
-                }
-                kv_ptr = find_(CPU_SHARED_CORECNT_KEYSTR);
-                if (kv_ptr != NULL)
-                {
-                    int64_t tmp_corecnt = kv_ptr->value().get_int64();
-                    cpu_shared_corecnt_ = Util::toUint32(tmp_corecnt);
-                }
-                checkCpuCorecnt_();
                 kv_ptr = find_(DATASET_LOADER_SLEEP_FOR_COMPACTION_SEC_KEYSTR);
                 if (kv_ptr != NULL)
                 {
@@ -375,6 +417,21 @@ namespace covered
                     version_ = std::string(kv_ptr->value().get_string().c_str());
                 }
 
+                // For all physical machines
+                kv_ptr = find_(PHYSICAL_MACHINES_KEYSTR);
+                if (kv_ptr != NULL)
+                {
+                    for (boost::json::array::iterator iter = kv_ptr->value().get_array().begin(); iter != kv_ptr->value().get_array().end(); iter++)
+                    {
+                        std::string ipstr = std::string(iter->get_object().at("ipstr").get_string().c_str());
+                        int64_t tmp_cpu_dedicated_corecnt = iter->get_object().at("cpu_dedicated_corecnt").get_int64();
+                        int64_t tmp_cpu_shared_corecnt = iter->get_object().at("cpu_shared_corecnt").get_int64();
+                        physical_machines_.push_back(PhysicalMachine(ipstr, Util::toUint32(tmp_cpu_dedicated_corecnt), Util::toUint32(tmp_cpu_shared_corecnt)));
+                    }
+                    assert(physical_machines_.size() == kv_ptr->value().get_array().size());
+                }
+                checkPhysicalMachinesAndSetCuridx_();
+
                 is_valid_ = true; // valid Config
             }
             else
@@ -400,48 +457,41 @@ namespace covered
         return main_class_name_;
     }
 
-    bool Config::isSingleNode()
+    // For client physical machines
+    
+    uint32_t Config::getClientMachineCnt()
     {
         checkIsValid_();
-
-        if (!(main_class_name_ == Util::SIMULATOR_MAIN_NAME || main_class_name_ == Util::CLIENT_MAIN_NAME || main_class_name_ == Util::EDGE_MAIN_NAME || main_class_name_ == Util::CLOUD_MAIN_NAME || main_class_name_ == Util::EVALUATOR_MAIN_NAME))
-        {
-            std::ostringstream oss;
-            oss << main_class_name_ << " should NOT use is_single_node!";
-            Util::dumpErrorMsg(kClassName, oss.str());
-            exit(1);
-        }
-
-        return is_single_node_;
+        return client_physical_machine_idxes_.size();
     }
-
+    
     std::string Config::getClientIpstr(const uint32_t& client_idx, const uint32_t& clientcnt)
     {
         checkIsValid_();
-        if (isSingleNode()) // NOT check client_idx for single-node mode
+
+        assert(client_idx < clientcnt);
+
+        const uint32_t client_physical_machine_cnt = client_physical_machine_idxes_.size();
+        assert(client_physical_machine_cnt > 0);
+
+        uint32_t tmp_client_physical_machine_local_idx = 0;
+        if (clientcnt <= client_physical_machine_cnt)
         {
-            return Util::LOCALHOST_IPSTR;
+            tmp_client_physical_machine_local_idx = client_idx;
         }
         else
         {
-            assert(client_idx < clientcnt);
-            assert(client_ipstrs_.size() > 0);
-            if (clientcnt <= client_ipstrs_.size())
+            uint32_t permachine_clientcnt = clientcnt / client_physical_machine_cnt;
+            assert(permachine_clientcnt > 0);
+            tmp_client_physical_machine_local_idx = client_idx / permachine_clientcnt;
+            if (tmp_client_physical_machine_local_idx >= client_physical_machine_cnt)
             {
-                return client_ipstrs_[client_idx];
-            }
-            else
-            {
-                uint32_t permachine_clientcnt = clientcnt / client_ipstrs_.size();
-                assert(permachine_clientcnt > 0);
-                uint32_t machine_idx = client_idx / permachine_clientcnt;
-                if (machine_idx >= client_ipstrs_.size())
-                {
-                    machine_idx = client_ipstrs_.size() - 1; // Assign tail clients to the last machine
-                }
-                return client_ipstrs_[machine_idx];
+                tmp_client_physical_machine_local_idx = client_physical_machine_cnt - 1; // Assign tail clients to the last client physical machine
             }
         }
+
+        const uint32_t tmp_client_physical_machine_global_idx = client_physical_machine_idxes_[tmp_client_physical_machine_local_idx];
+        return physical_machines_[tmp_client_physical_machine_global_idx].getIpstr();
     }
 
     uint32_t Config::getClientRawStatisticsSlotIntervalSec()
@@ -454,19 +504,6 @@ namespace covered
     {
         checkIsValid_();
         return client_recvmsg_startport_;
-    }
-
-    uint32_t Config::getClientIpstrCnt()
-    {
-        checkIsValid_();
-        if (isSingleNode()) // NOT check client_ipstrs_ for single-node mode
-        {
-            return 1;
-        }
-        else
-        {
-            return client_ipstrs_.size();
-        }
     }
 
     uint16_t Config::getClientWorkerRecvrspStartport()
@@ -516,18 +553,6 @@ namespace covered
     {
         checkIsValid_();
         return covered_popularity_aggregation_max_mem_usage_ratio_;
-    }
-
-    uint32_t Config::getCpuDedicatedCorecnt()
-    {
-        checkIsValid_();
-        return cpu_dedicated_corecnt_;
-    }
-
-    uint32_t Config::getCpuSharedCorecnt()
-    {
-        checkIsValid_();
-        return cpu_shared_corecnt_;
     }
 
     uint32_t Config::getDatasetLoaderSleepForCompactionSec()
@@ -770,17 +795,24 @@ namespace covered
         return version_;
     }
 
+    // For current physical machine
+
+    PhysicalMachine Config::getCurrentPhysicalMachine()
+    {
+        checkIsValid_();
+        return getPhysicalMachine_(current_physical_machine_idx_);
+    }
+
     std::string Config::toString()
     {
         checkIsValid_();
         std::ostringstream oss;
         oss << "[Static configurations from " << config_filepath_ << "]" << std::endl;
         oss << "Main class name: " << main_class_name_ << std::endl;
-        oss << "Is single node: " << (is_single_node_?"true":"false") << std::endl;
-        oss << "Client ipstrs: ";
-        for (uint32_t i = 0; i < client_ipstrs_.size(); i++)
+        oss << "Client physical machine indexes: ";
+        for (uint32_t i = 0; i < client_physical_machine_idxes_.size(); i++)
         {
-            oss << client_ipstrs_[i] << " ";
+            oss << client_physical_machine_idxes_[i] << " ";
         }
         oss << std::endl;
         oss << "Client raw statistics slot interval second: " << client_raw_statistics_slot_interval_sec_ << std::endl;
@@ -792,8 +824,6 @@ namespace covered
         oss << "Cloud RocksDB base directory: " << cloud_rocksdb_basedir_ << std::endl;
         oss << "Covered local uncached max mem usage ratio: " << covered_local_uncached_max_mem_usage_ratio_ << std::endl; // ONLY for COVERED
         oss << "Covered popularity aggregation max mem usage ratio: " << covered_popularity_aggregation_max_mem_usage_ratio_ << std::endl; // ONLY for COVERED
-        oss << "CPU dedicated corecnt: " << cpu_dedicated_corecnt_  << " (total corecnt: " << std::thread::hardware_concurrency() << ")" << std::endl;
-        oss << "CPU shared corecnt: " << cpu_shared_corecnt_ << " (total corecnt: " << std::thread::hardware_concurrency() << ")" << std::endl;
         oss << "Dataset loader sleep for compaction seconds: " << dataset_loader_sleep_for_compaction_sec_ << std::endl;
         oss << "Edge beacon server recvreq startport: " << edge_beacon_server_recvreq_startport_ << std::endl;
         oss << "Edge cache server data request buffer size: " << edge_cache_server_data_request_buffer_size_ << std::endl;
@@ -827,7 +857,16 @@ namespace covered
         oss << "Propagation item buffer size from edge to edge: " << propagation_item_buffer_size_edge_toedge_ << std::endl;
         oss << "Propagation item buffer size from edge to cloud: " << propagation_item_buffer_size_edge_tocloud_ << std::endl;
         oss << "Propagation item buffer size from cloud to edge: " << propagation_item_buffer_size_cloud_toedge_ << std::endl;
-        oss << "Version: " << version_;
+        oss << "Version: " << version_ << std::endl;
+
+        for (uint32_t i = 0; i < physical_machines_.size(); i++)
+        {
+            oss << "Physical machine [" << i << "]: " << physical_machines_[i].toString();
+            if (i != physical_machines_.size() - 1)
+            {
+                oss << std::endl;
+            }
+        }
         return oss.str();
     }
 
@@ -913,28 +952,140 @@ namespace covered
         return;
     }
 
-    void Config::checkCpuCorecnt_()
-    {
-        assert(cpu_dedicated_corecnt_ > 0);
-        assert(cpu_shared_corecnt_ > 0);
+    // For all physical machines
 
-        uint32_t total_cpu_corecnt = std::thread::hardware_concurrency();
-        if (total_cpu_corecnt < cpu_dedicated_corecnt_ + cpu_shared_corecnt_)
+    void Config::checkPhysicalMachinesAndSetCuridx_()
+    {
+        assert(physical_machines_.size() > 0);
+
+        // (i) Different physical machines should NOT have duplicate ipstrs
+        std::unordered_set<std::string> tmp_ipstr_set;
+        for (uint32_t i = 0; i < physical_machines_.size(); i++)
         {
-            // NOTE: total # of CPU cores should >= cpu_dedicated_corecnt + cpu_shared_corecnt
+            std::string tmp_ipstr = physical_machines_[i].getIpstr();
+            if (tmp_ipstr_set.find(tmp_ipstr) != tmp_ipstr_set.end())
+            {
+                std::ostringstream oss;
+                oss << "physical machine [" << i << "] has a duplicate ipstr " << tmp_ipstr << "!";
+                Util::dumpErrorMsg(kClassName, oss.str());
+                exit(1);
+            }
+            else
+            {
+                tmp_ipstr_set.insert(tmp_ipstr);
+            }
+        }
+
+        // (ii) Each physical machine MUST have positive cpu dedicated/shared corecnt
+        for (uint32_t i = 0; i < physical_machines_.size(); i++)
+        {
+            assert(physical_machines_[i].getCpuDedicatedCorecnt() > 0);
+            assert(physical_machines_[i].getCpuSharedCorecnt() > 0);
+        }
+
+        // (iii) Set current physical machine index by mathcing ipstr
+
+        // Get ifaddrs of all interfaces in current physical machine
+        struct ifaddrs* current_ifaddrs = NULL;
+        int result = getifaddrs(&current_ifaddrs);
+        if (result != 0)
+        {
             std::ostringstream oss;
-            oss << "total_cpu_corecnt " << total_cpu_corecnt << " is less than cpu_dedicated_corecnt " << cpu_dedicated_corecnt_ << " + cpu_shared_corecnt " << cpu_shared_corecnt_ << "!";
+            oss << "failed to getifaddrs() (errno: " << errno << ")!";
             Util::dumpErrorMsg(kClassName, oss.str());
             exit(1);
         }
-        else if (total_cpu_corecnt > cpu_dedicated_corecnt_ + cpu_shared_corecnt_)
+        assert(current_ifaddrs != NULL);
+
+        // Convert ifaddrs into ipstrs in current physical machine
+        std::unordered_set<std::string> current_ipstrs;
+        for (struct ifaddrs* tmp_ifaddr_ptr = current_ifaddrs; tmp_ifaddr_ptr != nullptr; tmp_ifaddr_ptr = tmp_ifaddr_ptr->ifa_next)
+        {
+            // Skip interface without valid network address
+            if (tmp_ifaddr_ptr->ifa_addr == nullptr)
+            {
+                continue;
+            }
+
+            sa_family_t tmp_address_family = tmp_ifaddr_ptr->ifa_addr->sa_family;
+            if (tmp_address_family == AF_INET) // IPv4
+            {
+                char tmp_ipstr[INET_ADDRSTRLEN];
+                memset(tmp_ipstr, 0, INET_ADDRSTRLEN);
+                inet_ntop(tmp_address_family, &((struct sockaddr_in*)(tmp_ifaddr_ptr->ifa_addr))->sin_addr, tmp_ipstr, INET_ADDRSTRLEN);
+                current_ipstrs.insert(std::string(tmp_ipstr));
+            }
+            else if (tmp_address_family == AF_INET6) // IPv6
+            {
+                char tmp_ipstr[INET6_ADDRSTRLEN];
+                memset(tmp_ipstr, 0, INET6_ADDRSTRLEN);
+                inet_ntop(tmp_address_family, &((struct sockaddr_in*)(tmp_ifaddr_ptr->ifa_addr))->sin6_addr, tmp_ipstr, INET6_ADDRSTRLEN);
+                current_ipstrs.insert(std::string(tmp_ipstr));
+            }
+            else // Others such as AF_UNIX, AF_UNSPEC, and AF_PACKET
+            {
+                // Do nothing
+            }
+        }
+        assert(current_ipstrs.size() > 0);
+
+        // Match ipstr to set current physical machine index
+        bool is_found = false;
+        for (uint32_t i = 0; i < physical_machines_.size(); i++)
+        {
+            std::string tmp_ipstr = physical_machines_[i].getIpstr();
+            for (std::unordered_set<std::string>::const_iterator current_ipstrs_const_iter = current_ipstrs.cbegin(); current_ipstrs_const_iter != current_ipstrs.cend(); current_ipstrs_const_iter++)
+            {
+                if (tmp_ipstr == *current_ipstrs_const_iter)
+                {
+                    current_physical_machine_idx_ = i;
+                    is_found = true;
+                    break;
+                }
+            }
+        }
+        assert(is_found);
+
+        // Release ifaddrs of all interfaces in current physical machine
+        freeifaddrs(current_ifaddrs);
+        current_ifaddrs = NULL;
+
+        // (iv) cpu_dedicated_corecnt + cpu_shared_corecnt MUST <= total CPU corecnt for the current physical machine
+
+        const uint32_t current_cpu_dedicated_corecnt = physical_machines_[current_physical_machine_idx_].getCpuDedicatedCorecnt();
+        const uint32_t current_cpu_shared_corecnt = physical_machines_[current_physical_machine_idx_].getCpuSharedCorecnt();
+        const uint32_t current_total_cpu_corecnt = std::thread::hardware_concurrency();
+        if (current_total_cpu_corecnt < current_cpu_dedicated_corecnt + current_cpu_shared_corecnt)
+        {
+            // NOTE: total # of CPU cores should >= cpu_dedicated_corecnt + cpu_shared_corecnt
+            std::ostringstream oss;
+            oss << "In current physical machine, total_cpu_corecnt " << current_total_cpu_corecnt << " is less than cpu_dedicated_corecnt " << current_cpu_dedicated_corecnt << " + cpu_shared_corecnt " << current_cpu_shared_corecnt << "!";
+            Util::dumpErrorMsg(kClassName, oss.str());
+            exit(1);
+        }
+        else if (current_total_cpu_corecnt > current_cpu_dedicated_corecnt + current_cpu_shared_corecnt)
         {
             // Pose INFO to hint more CPU cores can be used if total # of CPU cores < cpu_dedicated_corecnt + cpu_shared_corecnt
             std::ostringstream oss;
-            oss << "total_cpu_corecnt " << total_cpu_corecnt << " is more than cpu_dedicated_corecnt " << cpu_dedicated_corecnt_ << " + cpu_shared_corecnt " << cpu_shared_corecnt_ << " -> more CPU cores can be assigned to high-/low-priority threads for dedicated/shared usage!";
+            oss << "In current physical machine, total_cpu_corecnt " << current_total_cpu_corecnt << " is more than cpu_dedicated_corecnt " << current_cpu_dedicated_corecnt << " + cpu_shared_corecnt " << current_cpu_shared_corecnt << " -> more CPU cores can be assigned to high-/low-priority threads for dedicated/shared usage!";
             Util::dumpWarnMsg(kClassName, oss.str());
         }
 
+        // (v) client/edge/cloud physical machine indexes MUST be valid
+        assert(client_physical_machine_idxes_.size() > 0);
+        for (uint32_t i = 0; i < client_physical_machine_idxes_.size(); i++)
+        {
+            assert(client_physical_machine_idxes_[i] < physical_machines_.size());
+        }
+
         return;
+    }
+
+    PhysicalMachine Config::getPhysicalMachine_(const uint32_t& physial_machine_idx)
+    {
+        checkIsValid_();
+        assert(physial_machine_idx < physical_machines_.size());
+
+        return physical_machines_[physial_machine_idx];
     }
 }

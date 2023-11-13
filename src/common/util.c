@@ -50,8 +50,6 @@ namespace covered
     const int64_t Util::MAX_UINT32 = 4294967296;
     const double Util::DOUBLE_IOTA = 0.1;
     // Network
-    const std::string Util::LOCALHOST_IPSTR("127.0.0.1"); // Pass network card
-    //const std::string Util::LOCALHOST_IPSTR("localhost"); // NOT pass network card
     const std::string Util::ANY_IPSTR("0.0.0.0");
     const uint32_t Util::UDP_MAX_PKT_PAYLOAD = 65507; // 65535(ipmax) - 20(iphdr) - 8(udphdr)
     const uint32_t Util::UDP_FRAGHDR_SIZE = 5 * sizeof(uint32_t) + sizeof(uint16_t); // 4(fragment_idx) + 4(fragment_cnt) + 4(msg_payload_size) + 4(msg_seqnum) + 4(source_ip) + 2(source_port)
@@ -897,7 +895,7 @@ namespace covered
         std::ostringstream oss;
         // NOTE: NOT consider variables which do NOT affect evaluation results
         // (i) Config variables from JSON, e.g., is_debug and is_track_event
-        // (ii) Config variables from CLI, e.g., main_class_name, --config_filepath, and is_single_node
+        // (ii) Config variables from CLI, e.g., main_class_name and --config_filepath
         // (iii) Unchanged CLI parameters, e.g., --cloud_storage
         // Example: covered_capacitymb1000_clientcnt1_warmupspeedup1_edgecnt1_hashnamemmh3_keycnt1000000_perclientopcnt1000000_percacheserverworkercnt1_perclientworkercnt1_propagationus100010000100000_maxwarmupdurationsec10_stresstestdurationsec10_facebook
         oss << cache_name << "_capacitymb" << B2MB(capacity_bytes) << "_clientcnt" << clientcnt << "_warmupspeedup" << (is_warmup_speedup?"1":"0") << "_edgecnt" << edgecnt << "_hashname" << hash_name << "_keycnt" << keycnt << "_perclientopcnt" << perclient_opcnt << "_percacheserverworkercnt" << percacheserver_workercnt << "_perclientworkercnt" << perclient_workercnt << "_propagationus" << propagation_latency_clientedge_us << propagation_latency_crossedge_us << propagation_latency_edgecloud_us << "_maxwarmupdurationsec" << max_warmup_duration_sec << "_stresstestdurationsec" << stresstest_duration_sec << "_" << workload_name;

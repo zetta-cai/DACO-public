@@ -1186,15 +1186,8 @@ namespace covered
     NetworkAddr MessageBase::getSourceAddr() const
     {
         checkIsValid_();
-        if (Config::isSingleNode())
-        {
-            // Fix invalid ipstr of localhost under single-node mode
-            return NetworkAddr(Util::LOCALHOST_IPSTR, source_addr_.getPort());
-        }
-        else
-        {
-            return source_addr_;
-        }
+
+        return source_addr_;
     }
 
     const BandwidthUsage& MessageBase::getBandwidthUsageRef() const

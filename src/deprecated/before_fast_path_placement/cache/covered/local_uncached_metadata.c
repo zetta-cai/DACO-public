@@ -11,13 +11,17 @@ namespace covered
     LocalUncachedMetadata::LocalUncachedMetadata(const uint64_t& max_bytes_for_uncached_objects) : CacheMetadataBase(), max_bytes_for_uncached_objects_(max_bytes_for_uncached_objects)
     {
         assert(max_bytes_for_uncached_objects > 0);
+
+        #ifdef ENABLE_AUXILIARY_DATA_CACHE
+        auxiliary_data_cache_.clear();
+        #endif
     }
 
     LocalUncachedMetadata::~LocalUncachedMetadata() {}
 
     // ONLY for local uncached objects
 
-    bool LocalUncachedMetadata::getLocalUncachedObjsizePopularityForKey(const Key& key, ObjectSize& object_size, Popularity& local_uncached_popularity) const
+    bool LocalUncachedMetadata::getLocalUncachedObjsizePopularityValueForKey(const Key& key, ObjectSize& object_size, Popularity& local_uncached_popularity, bool& with_valid_value, Value& value) const
     {
         bool is_key_exist = false;
 
@@ -29,6 +33,27 @@ namespace covered
         {
             local_uncached_popularity = getPopularity_(perkey_lookup_const_iter);
             object_size = getObjectSize_(perkey_lookup_const_iter);
+
+            #ifdef ENABLE_AUXILIARY_DATA_CACHE
+            std::unordered_map<Key, Value, KeyHasher>::const_iterator auxiliary_data_cache_const_iter = auxiliary_data_cache_.find(key);
+            // NOTE: value could NOT exist in auxiliary data cache even if key has been tracked by local uncached metadata, as we will remove value from auxiliary data cache if <with writes under MSI protocol or object size is too large for slab-based memory management> on local uncached objects tracked by local uncached metadata
+            if (auxiliary_data_cache_const_iter != auxiliary_data_cache_.end())
+            {
+                with_valid_value = true;
+                value = auxiliary_data_cache_const_iter->second;
+            }
+            else
+            {
+                std::ostringstream oss;
+                oss << "value does NOT exist for key " << key.getKeystr() << " in auxiliary data cache, which may be removed by writes under MSI protocol or too-large object size under slab-based memory management";
+                Util::dumpInfoMsg(kClassName, oss.str());
+
+                with_valid_value = false;
+            }
+            #else
+            UNUSED(with_valid_value);
+            UNUSED(value);
+            #endif
 
             is_key_exist = true;
         }
@@ -51,6 +76,17 @@ namespace covered
         {
             value_size = object_size - key_size;
         }
+
+        #ifdef ENABLE_AUXILIARY_DATA_CACHE
+        #ifdef ENABLE_TRACK_PERKEY_OBJSIZE
+        // NOTE: value size from CacheMetadataBase should equal with that from auxiliary data cache if any
+        std::unordered_map<Key, Value, KeyHasher>::const_iterator auxiliary_data_cache_const_iter = auxiliary_data_cache_.find(key);
+        if (auxiliary_data_cache_const_iter != auxiliary_data_cache_.end())
+        {
+            assert(value_size == auxiliary_data_cache_const_iter->second.getValuesize());
+        }
+        #endif
+        #endif
 
         return value_size;
     }
@@ -88,6 +124,20 @@ namespace covered
 
         // Initialize and update both value-unrelated and value-related metadata for newly-tracked key
         CacheMetadataBase::addForNewKey_(key, value);
+
+        #ifdef ENABLE_AUXILIARY_DATA_CACHE
+        // Add/update value into auxiliary data cache
+        std::unordered_map<Key, Value, KeyHasher>::iterator auxiliary_data_cache_iter = auxiliary_data_cache_.find(key);
+        if (auxiliary_data_cache_iter == auxiliary_data_cache_.end())
+        {
+            auxiliary_data_cache_iter = auxiliary_data_cache_.insert(std::pair(key, value)).first;
+        }
+        else
+        {
+            auxiliary_data_cache_iter->second = value;
+        }
+        assert(auxiliary_data_cache_iter != auxiliary_data_cache_.end());
+        #endif
 
         // Detrack key for uncached capacity limitation if necessary
         Key detracked_key;
@@ -127,6 +177,21 @@ namespace covered
         // Update value-related metadata
         CacheMetadataBase::updateValueStatsForExistingKey_(key, value, original_value);
 
+        #ifdef ENABLE_AUXILIARY_DATA_CACHE
+        // Add/update value into auxiliary data cache
+        std::unordered_map<Key, Value, KeyHasher>::iterator auxiliary_data_cache_iter = auxiliary_data_cache_.find(key);
+        if (auxiliary_data_cache_iter == auxiliary_data_cache_.end())
+        {
+            auxiliary_data_cache_iter = auxiliary_data_cache_.insert(std::pair(key, value)).first;
+        }
+        else
+        {
+            assert(auxiliary_data_cache_iter->second.getValuesize() == original_value.getValuesize());
+            auxiliary_data_cache_iter->second = value;
+        }
+        assert(auxiliary_data_cache_iter != auxiliary_data_cache_.end());
+        #endif
+
         return;
     }
 
@@ -134,6 +199,15 @@ namespace covered
     {
         const bool is_local_cached_metadata = false;
         CacheMetadataBase::removeForExistingKey_(detracked_key, value, is_local_cached_metadata);
+
+        #ifdef ENABLE_AUXILIARY_DATA_CACHE
+        // Remove value from auxiliary data cache if any (for <too large object size or admission> on local uncached objects tracked by local uncached metadata, yet object-/group-level metadata in CacheMetadataBase still exist)
+        std::unordered_map<Key, Value, KeyHasher>::const_iterator auxiliary_data_cache_const_iter = auxiliary_data_cache_.find(detracked_key);
+        if (auxiliary_data_cache_const_iter != auxiliary_data_cache_.end())
+        {
+            auxiliary_data_cache_.erase(auxiliary_data_cache_const_iter);
+        }
+        #endif
 
         return;
     }
@@ -173,6 +247,16 @@ namespace covered
         total_size = Util::uint64Add(total_size, perkey_lookup_table_key_size_);
         total_size = Util::uint64Add(total_size, perkey_lookup_table_perkey_metadata_iter_size); // LRU list iterator
         total_size = Util::uint64Add(total_size, perkey_lookup_table_sorted_popularity_iter_size); // Popularity list iterator
+
+        #ifdef ENABLE_AUXILIARY_DATA_CACHE
+        // Auxiliary data cache
+        for (std::unordered_map<Key, Value, KeyHasher>::const_iterator auxiliary_data_cache_const_iter = auxiliary_data_cache_.begin(); auxiliary_data_cache_const_iter != auxiliary_data_cache_.end(); auxiliary_data_cache_const_iter++)
+        {
+            // NOTE: NO need to count key bytes in auxiliary data cache due to just an impl trick, which has been counted by CacheMetadataBase
+            //total_size = Util::uint64Add(total_size, auxiliary_data_cache_const_iter->first.getKeyLength());
+            total_size = Util::uint64Add(total_size, auxiliary_data_cache_const_iter->second.getValuesize());
+        }
+        #endif
 
         return total_size;
     }
