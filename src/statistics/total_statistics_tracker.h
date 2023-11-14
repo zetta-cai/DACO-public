@@ -20,23 +20,23 @@ namespace covered
     public:
         static const double CACHE_UTILIZATION_THRESHOLD_FOR_FILLUP;
         static const uint64_t CACHE_MARGIN_BYTES_IOTA_FOR_FILLUP;
-        static const double CACHE_HIT_RATIO_CHANGE_THRESHOLD_FOR_STABLE;
+        static const double CACHE_OBJECT_HIT_RATIO_CHANGE_THRESHOLD_FOR_STABLE;
 
         TotalStatisticsTracker();
         TotalStatisticsTracker(const std::string& filepath);
         ~TotalStatisticsTracker();
 
         // Aggregate cur-slot/stable client aggregated statistics into per-slot/stable total aggregated statistics
-        void updatePerslotTotalAggregatedStatistics(const std::vector<ClientAggregatedStatistics>& curslot_perclient_aggregated_statistics);
-        void updateStableTotalAggregatedStatistics(const std::vector<ClientAggregatedStatistics>& stable_perclient_aggregated_statistics);
+        void updatePerslotTotalAggregatedStatistics(const std::vector<ClientAggregatedStatistics>& curslot_perclient_aggregated_statistics, const uint32_t& slot_interval_sec);
+        void updateStableTotalAggregatedStatistics(const std::vector<ClientAggregatedStatistics>& stable_perclient_aggregated_statistics, const uint32_t& stable_sec);
 
-        // Get cur-slot total cache hit ratio
+        // Get cur-slot total aggregated statistics
         TotalAggregatedStatistics getCurslotTotalAggregatedStatistics() const;
         TotalAggregatedStatistics getPrevslotTotalAggregatedStatistics() const;
         TotalAggregatedStatistics getGivenslotTotalAggregatedStatistics(const uint32_t& slotidx) const;
 
-        // Cache is stable if cache is filled up and total hit ratio converges
-        bool isPerSlotTotalAggregatedStatisticsStable(double& cache_hit_ratio);
+        // Cache is stable if cache is filled up and total object hit ratio converges
+        bool isPerSlotTotalAggregatedStatisticsStable(double& cache_object_hit_ratio);
 
         uint32_t dump(const std::string filepath) const;
 

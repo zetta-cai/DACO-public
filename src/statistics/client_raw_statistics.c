@@ -24,6 +24,10 @@ namespace covered
         assert(perclientworker_reqcnts_ != NULL);
         Util::initializeAtomicArray<uint32_t>(perclientworker_reqcnts_, perclient_workercnt, 0);
 
+        perclientworker_local_hitbytes_.resize(perclient_workercnt, double(0.0));
+        perclientworker_cooperative_hitbytes_.resize(perclient_workercnt, double(0.0));
+        perclientworker_reqbytes_.resize(perclient_workercnt, double(0.0));
+
         latency_histogram_ = new std::atomic<uint32_t>[latency_histogram_size_];
         assert(latency_histogram_ != NULL);
         Util::initializeAtomicArray<uint32_t>(latency_histogram_, latency_histogram_size_, 0);
@@ -78,6 +82,13 @@ namespace covered
         Util::initializeAtomicArray<uint32_t>(perclientworker_cooperative_hitcnts_, perclient_workercnt_, 0);
         Util::initializeAtomicArray<uint32_t>(perclientworker_reqcnts_, perclient_workercnt_, 0);
 
+        perclientworker_local_hitbytes_.clear();
+        perclientworker_local_hitbytes_.resize(perclient_workercnt_, double(0.0));
+        perclientworker_cooperative_hitbytes_.clear();
+        perclientworker_cooperative_hitbytes_.resize(perclient_workercnt_, double(0.0));
+        perclientworker_reqbytes_.clear();
+        perclientworker_reqbytes_.resize(perclient_workercnt_, double(0.0));
+
         Util::initializeAtomicArray<uint32_t>(latency_histogram_, latency_histogram_size_, 0);
 
         Util::initializeAtomicArray<uint32_t>(perclientworker_readcnts_, perclient_workercnt_, 0);
@@ -124,6 +135,32 @@ namespace covered
         assert(local_client_worker_idx < perclient_workercnt_);
 
         perclientworker_reqcnts_[local_client_worker_idx]++;
+        return;
+    }
+
+    void ClientRawStatistics::updateLocalHitbytes_(const uint32_t& local_client_worker_idx, const uint32_t& object_size)
+    {
+        assert(local_client_worker_idx < perclient_workercnt_);
+
+        perclientworker_local_hitbytes_[local_client_worker_idx] += static_cast<double>(object_size);
+        updateReqbytes_(local_client_worker_idx, object_size);
+        return;
+    }
+
+    void ClientRawStatistics::updateCooperativeHitbytes_(const uint32_t& local_client_worker_idx, const uint32_t& object_size)
+    {
+        assert(local_client_worker_idx < perclient_workercnt_);
+
+        perclientworker_cooperative_hitbytes_[local_client_worker_idx] += static_cast<double>(object_size);
+        updateReqbytes_(local_client_worker_idx, object_size);
+        return;
+    }
+
+    void ClientRawStatistics::updateReqbytes_(const uint32_t& local_client_worker_idx, const uint32_t& object_size)
+    {
+        assert(local_client_worker_idx < perclient_workercnt_);
+
+        perclientworker_reqbytes_[local_client_worker_idx] += static_cast<double>(object_size);
         return;
     }
 

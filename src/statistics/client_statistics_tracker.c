@@ -143,6 +143,75 @@ namespace covered
         return;
     }
 
+    void ClientStatisticsTracker::updateLocalHitbytes(const uint32_t& local_client_worker_idx, const uint32_t& object_size, const bool& is_stresstest_phase)
+    {
+        checkPointers_();
+
+        perclientworker_curslot_update_flags_[local_client_worker_idx].store(true, Util::STORE_CONCURRENCY_ORDER);
+
+        // Update cur-slot client raw statistics
+        ClientRawStatistics* tmp_curslot_client_raw_statistics_ptr = getCurslotClientRawStatisticsPtr_(cur_slot_idx_.load(Util::LOAD_CONCURRENCY_ORDER));
+        assert(tmp_curslot_client_raw_statistics_ptr != NULL);
+        tmp_curslot_client_raw_statistics_ptr->updateLocalHitbytes_(local_client_worker_idx, object_size);
+
+        perclientworker_curslot_update_flags_[local_client_worker_idx].store(false, Util::STORE_CONCURRENCY_ORDER);
+        perclientworker_curslot_update_statuses_[local_client_worker_idx]++;
+
+        // Update stable client raw statistics for stresstest phase
+        if (is_stresstest_phase)
+        {
+            stable_client_raw_statistics_ptr_->updateLocalHitbytes_(local_client_worker_idx, object_size);
+        }
+
+        return;
+    }
+
+    void ClientStatisticsTracker::updateCooperativeHitbytes(const uint32_t& local_client_worker_idx, const uint32_t& object_size, const bool& is_stresstest_phase)
+    {
+        checkPointers_();
+
+        perclientworker_curslot_update_flags_[local_client_worker_idx].store(true, Util::STORE_CONCURRENCY_ORDER);
+        
+        // Update cur-slot client raw statistics
+        ClientRawStatistics* tmp_curslot_client_raw_statistics_ptr = getCurslotClientRawStatisticsPtr_(cur_slot_idx_.load(Util::LOAD_CONCURRENCY_ORDER)); 
+        assert(tmp_curslot_client_raw_statistics_ptr != NULL);
+        tmp_curslot_client_raw_statistics_ptr->updateCooperativeHitbytes_(local_client_worker_idx, object_size);
+
+        perclientworker_curslot_update_flags_[local_client_worker_idx].store(false, Util::STORE_CONCURRENCY_ORDER);
+        perclientworker_curslot_update_statuses_[local_client_worker_idx]++;
+        
+        // Update stable client raw statistics for stresstest phase
+        if (is_stresstest_phase)
+        {
+            stable_client_raw_statistics_ptr_->updateCooperativeHitbytes_(local_client_worker_idx, object_size);
+        }
+
+        return;
+    }
+
+    void ClientStatisticsTracker::updateReqbytes(const uint32_t& local_client_worker_idx, const uint32_t& object_size, const bool& is_stresstest_phase)
+    {
+        checkPointers_();
+
+        perclientworker_curslot_update_flags_[local_client_worker_idx].store(true, Util::STORE_CONCURRENCY_ORDER);
+        
+        // Update cur-slot client raw statistics
+        ClientRawStatistics* tmp_curslot_client_raw_statistics_ptr = getCurslotClientRawStatisticsPtr_(cur_slot_idx_.load(Util::LOAD_CONCURRENCY_ORDER)); 
+        assert(tmp_curslot_client_raw_statistics_ptr != NULL);
+        tmp_curslot_client_raw_statistics_ptr->updateReqbytes_(local_client_worker_idx, object_size);
+
+        perclientworker_curslot_update_flags_[local_client_worker_idx].store(false, Util::STORE_CONCURRENCY_ORDER);
+        perclientworker_curslot_update_statuses_[local_client_worker_idx]++;
+        
+        // Update stable client raw statistics for stresstest phase
+        if (is_stresstest_phase)
+        {
+            stable_client_raw_statistics_ptr_->updateReqbytes_(local_client_worker_idx, object_size);
+        }
+
+        return;
+    }
+
     void ClientStatisticsTracker::updateLatency(const uint32_t& local_client_worker_idx, const uint32_t& latency_us, const bool& is_stresstest_phase)
     {
         checkPointers_();

@@ -13,7 +13,7 @@ namespace covered
 {
     const double TotalStatisticsTracker::CACHE_UTILIZATION_THRESHOLD_FOR_FILLUP = double(0.999); // >= 99.9% cache utilization
     const uint64_t TotalStatisticsTracker::CACHE_MARGIN_BYTES_IOTA_FOR_FILLUP = MB2B(1); // <= 1MiB
-    const double TotalStatisticsTracker::CACHE_HIT_RATIO_CHANGE_THRESHOLD_FOR_STABLE = double(0.001); // <= 0.1% cache hit ratio change
+    const double TotalStatisticsTracker::CACHE_OBJECT_HIT_RATIO_CHANGE_THRESHOLD_FOR_STABLE = double(0.001); // <= 0.1% cache object hit ratio change
 
     const std::string TotalStatisticsTracker::kClassName("TotalStatisticsTracker");
     
@@ -36,27 +36,27 @@ namespace covered
         
     TotalStatisticsTracker::~TotalStatisticsTracker() {}
 
-    void TotalStatisticsTracker::updatePerslotTotalAggregatedStatistics(const std::vector<ClientAggregatedStatistics>& curslot_perclient_aggregated_statistics)
+    void TotalStatisticsTracker::updatePerslotTotalAggregatedStatistics(const std::vector<ClientAggregatedStatistics>& curslot_perclient_aggregated_statistics, const uint32_t& slot_interval_sec)
     {
         assert(allow_update_ == true);
 
         const uint32_t clientcnt = curslot_perclient_aggregated_statistics.size();
         assert(clientcnt > 0);
 
-        TotalAggregatedStatistics total_aggregated_statistics(curslot_perclient_aggregated_statistics);
+        TotalAggregatedStatistics total_aggregated_statistics(curslot_perclient_aggregated_statistics, slot_interval_sec);
         perslot_total_aggregated_statistics_.push_back(total_aggregated_statistics);
 
         return;
     }
 
-    void TotalStatisticsTracker::updateStableTotalAggregatedStatistics(const std::vector<ClientAggregatedStatistics>& stable_perclient_aggregated_statistics)
+    void TotalStatisticsTracker::updateStableTotalAggregatedStatistics(const std::vector<ClientAggregatedStatistics>& stable_perclient_aggregated_statistics, const uint32_t& stable_sec)
     {
         assert(allow_update_ == true);
 
         const uint32_t clientcnt = stable_perclient_aggregated_statistics.size();
         assert(clientcnt > 0);
 
-        TotalAggregatedStatistics total_aggregated_statistics(stable_perclient_aggregated_statistics);
+        TotalAggregatedStatistics total_aggregated_statistics(stable_perclient_aggregated_statistics, stable_sec);
         stable_total_aggregated_statistics_ = total_aggregated_statistics;
 
         return;
@@ -83,7 +83,7 @@ namespace covered
         return perslot_total_aggregated_statistics_[slotidx];
     }
 
-    bool TotalStatisticsTracker::isPerSlotTotalAggregatedStatisticsStable(double& cache_hit_ratio)
+    bool TotalStatisticsTracker::isPerSlotTotalAggregatedStatisticsStable(double& cache_object_hit_ratio)
     {
         assert(allow_update_ == true);
 
@@ -101,14 +101,14 @@ namespace covered
                 TotalAggregatedStatistics tmp_cur_total_aggregated_statistics = getGivenslotTotalAggregatedStatistics(tmp_cur_slotidx);
                 uint64_t tmp_cur_total_cache_margin_bytes = tmp_cur_total_aggregated_statistics.getTotalCacheMarginBytes();
                 double tmp_cur_total_cache_utilization = tmp_cur_total_aggregated_statistics.getTotalCacheUtilization();
-                double tmp_cur_total_hit_ratio = tmp_cur_total_aggregated_statistics.getTotalHitRatio();
+                double tmp_cur_total_object_hit_ratio = tmp_cur_total_aggregated_statistics.getTotalObjectHitRatio();
 
                 // Get less recent total aggregated statistics
                 uint32_t tmp_prev_slotidx = slotcnt - 1 - tmp_checkidx - 1;
                 TotalAggregatedStatistics tmp_prev_total_aggregated_statistics = getGivenslotTotalAggregatedStatistics(tmp_prev_slotidx);
-                double tmp_prev_total_hit_ratio = tmp_prev_total_aggregated_statistics.getTotalHitRatio();
+                double tmp_prev_total_object_hit_ratio = tmp_prev_total_aggregated_statistics.getTotalObjectHitRatio();
 
-                if (tmp_cur_total_hit_ratio == 1.0) // Fully hit due to over-provisioned cache size capacity
+                if (tmp_cur_total_object_hit_ratio == 1.0) // Fully hit due to over-provisioned cache size capacity
                 {
                     continue;
                 }
@@ -124,8 +124,8 @@ namespace covered
                     // If cache becomes stable
                     if (is_cache_fillup)
                     {
-                        double abs_cache_hit_ratio_change = (tmp_cur_total_hit_ratio >= tmp_prev_total_hit_ratio)?(tmp_cur_total_hit_ratio - tmp_prev_total_hit_ratio):(tmp_prev_total_hit_ratio - tmp_cur_total_hit_ratio);
-                        if (tmp_cur_total_hit_ratio > 0.0 && tmp_prev_total_hit_ratio > 0.0 && abs_cache_hit_ratio_change <= CACHE_HIT_RATIO_CHANGE_THRESHOLD_FOR_STABLE) // Limited change on cache hit ratio
+                        double abs_cache_hit_ratio_change = (tmp_cur_total_object_hit_ratio >= tmp_prev_total_object_hit_ratio)?(tmp_cur_total_object_hit_ratio - tmp_prev_total_object_hit_ratio):(tmp_prev_total_object_hit_ratio - tmp_cur_total_object_hit_ratio);
+                        if (tmp_cur_total_object_hit_ratio > 0.0 && tmp_prev_total_object_hit_ratio > 0.0 && abs_cache_hit_ratio_change <= CACHE_OBJECT_HIT_RATIO_CHANGE_THRESHOLD_FOR_STABLE) // Limited change on cache object hit ratio
                         {
                             continue;
                         }
@@ -139,7 +139,7 @@ namespace covered
             if (is_cache_stable)
             {
                 is_stable = true;
-                cache_hit_ratio = getCurslotTotalAggregatedStatistics().getTotalHitRatio();
+                cache_object_hit_ratio = getCurslotTotalAggregatedStatistics().getTotalObjectHitRatio();
             }
         }
 

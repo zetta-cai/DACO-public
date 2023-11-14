@@ -22,14 +22,23 @@ namespace covered
         AggregatedStatisticsBase();
         ~AggregatedStatisticsBase();
 
-        // Get aggregate statistics related with hit ratio
+        // Get aggregate statistics related with object hit ratio
         uint32_t getTotalLocalHitcnt() const;
         uint32_t getTotalCooperativeHitcnt() const;
         uint32_t getTotalReqcnt() const;
-        // Calculate hit ratio based on aggregated statistics
-        double getLocalHitRatio() const;
-        double getCooperativeHitRatio() const;
-        double getTotalHitRatio() const;
+        // Calculate object hit ratio based on aggregated statistics
+        double getLocalObjectHitRatio() const;
+        double getCooperativeObjectHitRatio() const;
+        double getTotalObjectHitRatio() const;
+
+        // Get aggregated statistics related with byte hit ratio
+        double getTotalLocalHitbytes() const;
+        double getTotalCooperativeHitbytes() const;
+        double getTotalReqbytes() const;
+        // Calculate byte hit ratio based on aggregated statistics
+        double getLocalByteHitRatio() const;
+        double getCooperativeByteHitRatio() const;
+        double getTotalByteHitRatio() const;
 
         // Get aggregate statistics related with latency
         uint32_t getAvgLatency() const;
@@ -62,6 +71,7 @@ namespace covered
         // Get string for aggregate statistics
         std::string toString() const;
 
+        // Used by ClientAggregatedStatistics for network I/O (message payload); used by TotalAggregatedStatsitics for disk I/O (file content)
         static uint32_t getAggregatedStatisticsIOSize(); // For file I/O (dump/load) and network I/O (message payload)
         uint32_t serialize(DynamicArray& dynamic_array, const uint32_t& position) const;
         uint32_t deserialize(const DynamicArray& dynamic_array, const uint32_t& position);
@@ -70,10 +80,15 @@ namespace covered
     private:
         static const std::string kClassName;
     protected:
-        // Aggregated statistics related with hit ratio
+        // Aggregated statistics related with object hit ratio
         uint32_t total_local_hitcnt_;
         uint32_t total_cooperative_hitcnt_;
         uint32_t total_reqcnt_;
+
+        // Aggregated statistics related with byte hit ratio
+        double total_local_hitbytes_;
+        double total_cooperative_hitbytes_;
+        double total_reqbytes_;
 
         // Aggregated statistics related with latency
         uint32_t avg_latency_;

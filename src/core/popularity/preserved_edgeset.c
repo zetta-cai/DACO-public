@@ -26,9 +26,20 @@ namespace covered
             const uint32_t tmp_edge_idx = *placement_edgeset_const_iter;
             assert(tmp_edge_idx < preserved_bitmap_.size());
 
-            // NOTE: there should NOT be duplicate placement on the same edge node
-            assert(preserved_bitmap_[tmp_edge_idx] == false);
-            preserved_bitmap_[tmp_edge_idx] = true;
+            // (OBSOLETE) NOTE: there should NOT be duplicate placement on the same edge node
+            //assert(preserved_bitmap_[tmp_edge_idx] == false);
+
+            // NOTE: cache server worker and beacon server may perform cache placement for the same key simultaneously (triggered by local/remote directory lookup) and CoveredManager::placementCalculation_() is NOT atomic -> one placement decision may already preserve the edge node before another
+            if (preserved_bitmap_[tmp_edge_idx] == true)
+            {
+                std::ostringstream oss;
+                oss << "Edge node " << tmp_edge_idx << " is already preserved in preserved edgeset for placement " << placement_edgeset.toString() << ", which may be caused by occasional duplicate placement decision due to NOT strong atomicity of CoveredManager::placementCalculation_()";
+                Util::dumpInfoMsg(kClassName, oss.str());
+            }
+            else
+            {
+                preserved_bitmap_[tmp_edge_idx] = true;
+            }
         }
         
         return;

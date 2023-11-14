@@ -306,7 +306,19 @@ namespace covered
 
         LruCacheReadHandle handle = covered_cache_ptr_->find(keystr);
         bool is_local_cached = (handle != nullptr);
-        assert(!is_local_cached); // Key should NOT exist
+    
+        // assert(!is_local_cached); // (OBSOLETE) Key should NOT exist
+
+        // NOTE: cache server worker and beacon server may perform cache placement for the same key simultaneously (triggered by local/remote directory lookup) and CoveredManager::placementCalculation_() is NOT atomic -> current edge node may receive duplicate local/remote placement notification
+        if (is_local_cached)
+        {
+            std::ostringstream oss;
+            oss << "key " << key.getKeystr() << " is already local cached before admitLocalCacheInternal_(), which may be caused by occasional duplicate placement notification due to NOT strong atomicity of CoveredManager";
+            Util::dumpInfoMsg(instance_name_, oss.str());
+
+            is_successful = true;
+            return;
+        }
 
         auto allocate_handle = covered_cache_ptr_->allocate(covered_poolid_, keystr, value.getValuesize());
         if (allocate_handle == nullptr)

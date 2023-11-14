@@ -28,10 +28,15 @@ namespace covered
 
         // (1) Update cur-slot/stable client raw statistics (invoked by client workers)
 
-        // Update cur-slot/stable client raw statistics for cache hit ratio
+        // Update cur-slot/stable client raw statistics for cache object hit ratio
         void updateLocalHitcnt(const uint32_t& local_client_worker_idx, const bool& is_stresstest_phase);
         void updateCooperativeHitcnt(const uint32_t& local_client_worker_idx, const bool& is_stresstest_phase);
         void updateReqcnt(const uint32_t& local_client_worker_idx, const bool& is_stresstest_phase);
+
+        // Update cur-slot/stable client raw statistics for cache byte hit ratio
+        void updateLocalHitbytes(const uint32_t& local_client_worker_idx, const uint32_t& object_size, const bool& is_stresstest_phase);
+        void updateCooperativeHitbytes(const uint32_t& local_client_worker_idx, const uint32_t& object_size, const bool& is_stresstest_phase);
+        void updateReqbytes(const uint32_t& local_client_worker_idx, const uint32_t& object_size, const bool& is_stresstest_phase);
 
         // Update cur-slot/stable client raw statistics for latency
         void updateLatency(const uint32_t& local_client_worker_idx, const uint32_t& latency_us, const bool& is_stresstest_phase);

@@ -31,7 +31,7 @@ namespace covered
         return cooperation_wrapper_ptr;
     }
 
-    CooperationWrapperBase::CooperationWrapperBase(const uint32_t& edgecnt, const uint32_t& edge_idx, const std::string& hash_name)
+    CooperationWrapperBase::CooperationWrapperBase(const uint32_t& edgecnt, const uint32_t& edge_idx, const std::string& hash_name) : edge_idx_(edge_idx)
     {
         // Differentiate CooperationWrapper in different edge nodes
         std::ostringstream oss;
@@ -99,7 +99,7 @@ namespace covered
         return beacon_edge_beacon_server_recvreq_addr;
     }
 
-    // (2) Access content directory information
+    // (2) Access content directory table and block tracker for MSI protocol
 
     void CooperationWrapperBase::isGlobalAndSourceCached(const Key& key, const uint32_t& source_edge_idx, bool& is_global_cached, bool& is_source_cached) const
     {
@@ -243,8 +243,6 @@ namespace covered
         return is_global_cached;
     }
 
-    // (4) Process writes for MSI protocol
-
     LockResult CooperationWrapperBase::acquireLocalWritelockByCacheServer(const Key& key, const uint32_t& source_edge_idx, DirinfoSet& all_dirinfo, bool& is_source_cached)
     {
         checkPointers_();
@@ -340,7 +338,7 @@ namespace covered
         return blocked_edges;
     }
 
-    // (5) Get size for capacity check
+    // (4) Other functions
 
     uint64_t CooperationWrapperBase::getSizeForCapacity() const
     {

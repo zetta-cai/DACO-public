@@ -36,12 +36,20 @@ namespace covered
 
         // Aggregate ClientRawStatistics of client workers in a client
 
-        // Aggregate per-client-worker hit ratio statistics
+        // Aggregate per-client-worker object hit ratio statistics
         for (uint32_t local_worker_idx = 0; local_worker_idx < perclient_workercnt; local_worker_idx++)
         {
             total_local_hitcnt_ += client_raw_statistics_ptr->perclientworker_local_hitcnts_[local_worker_idx].load(Util::LOAD_CONCURRENCY_ORDER);
             total_cooperative_hitcnt_ += client_raw_statistics_ptr->perclientworker_cooperative_hitcnts_[local_worker_idx].load(Util::LOAD_CONCURRENCY_ORDER);
             total_reqcnt_ += client_raw_statistics_ptr->perclientworker_reqcnts_[local_worker_idx].load(Util::LOAD_CONCURRENCY_ORDER);
+        }
+
+        // Aggregate per-client-worker byte hit ratio statistics
+        for (uint32_t local_worker_idx = 0; local_worker_idx < perclient_workercnt; local_worker_idx++)
+        {
+            total_local_hitbytes_ += client_raw_statistics_ptr->perclientworker_local_hitbytes_[local_worker_idx];
+            total_cooperative_hitbytes_ += client_raw_statistics_ptr->perclientworker_cooperative_hitbytes_[local_worker_idx];
+            total_reqbytes_ += client_raw_statistics_ptr->perclientworker_reqbytes_[local_worker_idx];
         }
 
         // Aggregate per-client-worker latency statistics accurately

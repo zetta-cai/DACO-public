@@ -279,21 +279,25 @@ namespace covered
         }
 
         // Update hit ratio statistics for the local client
+        const uint32_t tmp_object_size = tmp_key.getKeyLength() + tmp_value.getValuesize();
         switch (hitflag)
         {
             case Hitflag::kLocalHit:
             {
                 client_statistics_tracker_ptr_->updateLocalHitcnt(local_client_worker_idx, is_stresstest_phase);
+                client_statistics_tracker_ptr_->updateLocalHitbytes(local_client_worker_idx, tmp_object_size, is_stresstest_phase);
                 break;
             }
             case Hitflag::kCooperativeHit:
             {
                 client_statistics_tracker_ptr_->updateCooperativeHitcnt(local_client_worker_idx, is_stresstest_phase);
+                client_statistics_tracker_ptr_->updateCooperativeHitbytes(local_client_worker_idx, tmp_object_size, is_stresstest_phase);
                 break;
             }
             case Hitflag::kGlobalMiss:
             {
                 client_statistics_tracker_ptr_->updateReqcnt(local_client_worker_idx, is_stresstest_phase);
+                client_statistics_tracker_ptr_->updateReqbytes(local_client_worker_idx, tmp_object_size, is_stresstest_phase);
                 break;
             }
             default:

@@ -144,10 +144,10 @@ namespace covered
 
     // For victim synchronization
 
-    void CoveredCacheManager::updateVictimTrackerForLocalSyncedVictims(const uint64_t& local_cache_margin_bytes, const std::list<VictimCacheinfo>& local_synced_victim_cacheinfos, const std::unordered_map<Key, DirinfoSet, KeyHasher>& local_beaconed_local_synced_victim_dirinfosets, const CooperationWrapperBase* cooperation_wrapper_ptr)
+    void CoveredCacheManager::updateVictimTrackerForLocalSyncedVictims(const uint64_t& local_cache_margin_bytes, const std::list<VictimCacheinfo>& local_synced_victim_cacheinfos, const CooperationWrapperBase* cooperation_wrapper_ptr)
     {
         // NOTE: victim cacheinfos of local_synced_victim_cacheinfos and victim dirinfo sets of local_beaconed_local_synced_victim_dirinfosets MUST be complete
-        victim_tracker_.updateLocalSyncedVictims(local_cache_margin_bytes, local_synced_victim_cacheinfos, local_beaconed_local_synced_victim_dirinfosets, cooperation_wrapper_ptr);
+        victim_tracker_.updateLocalSyncedVictims(local_cache_margin_bytes, local_synced_victim_cacheinfos, cooperation_wrapper_ptr);
         return;
     }
 
@@ -166,12 +166,12 @@ namespace covered
         return current_victim_syncset;
     }
 
-    void CoveredCacheManager::updateVictimTrackerForNeighborVictimSyncset(const uint32_t& source_edge_idx, const VictimSyncset& neighbor_victim_syncset, const std::unordered_map<Key, DirinfoSet, KeyHasher>& local_beaconed_neighbor_synced_victim_dirinfosets, const CooperationWrapperBase* cooperation_wrapper_ptr)
+    void CoveredCacheManager::updateVictimTrackerForNeighborVictimSyncset(const uint32_t& source_edge_idx, const VictimSyncset& neighbor_victim_syncset, const CooperationWrapperBase* cooperation_wrapper_ptr)
     {
         // NOTE: victim cacheinfos and dirinfo sets of neighbor_victim_syncset can be either complete or compressed; while dirinfo sets of local_beaconed_neighbor_synced_victim_dirinfosets MUST be complete
 
-        // NOTE: we perform recovery insidhe VictimTracker::updateForNeighborVictimSyncset() for atomicity
-        victim_tracker_.updateForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets, cooperation_wrapper_ptr);
+        // NOTE: we perform recovery inside VictimTracker::updateForNeighborVictimSyncset() for atomicity
+        victim_tracker_.updateForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, cooperation_wrapper_ptr);
         return;
     }
 
@@ -390,7 +390,7 @@ namespace covered
 
                     // Update extra_perkey_victim_dirinfoset
                     // NOTE: extra fetched victim dirinfo sets from local directory table MUST be complete
-                    std::unordered_map<Key, DirinfoSet, KeyHasher> local_beaconed_local_fetched_victim_dirinfosets = edge_wrapper_ptr->getLocalBeaconedVictimsFromCacheinfos(tmp_victim_cacheinfos);
+                    std::unordered_map<Key, DirinfoSet, KeyHasher> local_beaconed_local_fetched_victim_dirinfosets = edge_wrapper_ptr->getCooperationWrapperPtr()->getLocalBeaconedVictimsFromCacheinfos(tmp_victim_cacheinfos);
                     for (std::unordered_map<Key, DirinfoSet, KeyHasher>::const_iterator tmp_victim_dirinfosets_const_iter = local_beaconed_local_fetched_victim_dirinfosets.begin(); tmp_victim_dirinfosets_const_iter != local_beaconed_local_fetched_victim_dirinfosets.end(); tmp_victim_dirinfosets_const_iter++)
                     {
                         const Key& tmp_victim_key = tmp_victim_dirinfosets_const_iter->first;
@@ -527,8 +527,7 @@ namespace covered
         // Victim synchronization
         const uint32_t source_edge_idx = covered_victim_fetch_response_ptr->getSourceIndex();
         const VictimSyncset& neighbor_victim_syncset = covered_victim_fetch_response_ptr->getVictimSyncsetRef();
-        std::unordered_map<Key, DirinfoSet, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = edge_wrapper_ptr->getLocalBeaconedVictimsFromVictimSyncset(neighbor_victim_syncset);
-        tmp_covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets, edge_wrapper_ptr->getCooperationWrapperPtr());
+        tmp_covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, edge_wrapper_ptr->getCooperationWrapperPtr());
 
         // NOTE: cache margin bytes of victim_fetchset will NOT be used
         const VictimSyncset& victim_fetchset = covered_victim_fetch_response_ptr->getVictimFetchsetRef();
@@ -544,7 +543,7 @@ namespace covered
         std::unordered_map<Key, DirinfoSet, KeyHasher> neighbor_beaconed_neighbor_fetched_victim_dirinfosets;
         with_complete_victim_syncset = victim_fetchset.getLocalBeaconedVictims(neighbor_beaconed_neighbor_fetched_victim_dirinfosets); // Neighbor beaconed ones of neighbor fetched victims
         assert(with_complete_victim_syncset == true); // NOTE: extra fetched victim dirinfo sets in victim fetchset MUST be complete
-        const std::unordered_map<Key, DirinfoSet, KeyHasher> local_beaconed_neighbor_fetched_victim_dirinfosets = edge_wrapper_ptr->getLocalBeaconedVictimsFromVictimSyncset(victim_fetchset); // Local beaconed ones of fetched victims (dirinfo sets MUST be complete)
+        const std::unordered_map<Key, DirinfoSet, KeyHasher> local_beaconed_neighbor_fetched_victim_dirinfosets = edge_wrapper_ptr->getCooperationWrapperPtr()->getLocalBeaconedVictimsFromVictimSyncset(victim_fetchset); // Local beaconed ones of fetched victims (dirinfo sets MUST be complete)
         // Insert neighbor beaconed neighbor fetched victims
         for (std::unordered_map<Key, DirinfoSet, KeyHasher>::const_iterator victim_dirinfosets_const_iter = neighbor_beaconed_neighbor_fetched_victim_dirinfosets.begin(); victim_dirinfosets_const_iter != neighbor_beaconed_neighbor_fetched_victim_dirinfosets.end(); victim_dirinfosets_const_iter++)
         {

@@ -214,8 +214,7 @@ namespace covered
         }
 
         // Victim synchronization
-        std::unordered_map<Key, DirinfoSet, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = tmp_edge_wrapper_ptr->getLocalBeaconedVictimsFromVictimSyncset(neighbor_victim_syncset);
-        tmp_covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets, tmp_edge_wrapper_ptr->getCooperationWrapperPtr());
+        tmp_covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, tmp_edge_wrapper_ptr->getCooperationWrapperPtr());
 
         // Update DirectoryCacher if necessary
         if (is_valid_directory_exist) // If with valid dirinfo
@@ -277,8 +276,7 @@ namespace covered
         // Victim synchronization
         const uint32_t source_edge_idx = covered_redirected_get_response_ptr->getSourceIndex();
         const VictimSyncset& neighbor_victim_syncset = covered_redirected_get_response_ptr->getVictimSyncsetRef();
-        std::unordered_map<Key, DirinfoSet, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = tmp_edge_wrapper_ptr->getLocalBeaconedVictimsFromVictimSyncset(neighbor_victim_syncset);
-        tmp_covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets, tmp_edge_wrapper_ptr->getCooperationWrapperPtr());
+        tmp_covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, tmp_edge_wrapper_ptr->getCooperationWrapperPtr());
 
         // Invalidate DirectoryCacher if necessary
         if (hitflag == Hitflag::kCooperativeInvalid || hitflag == Hitflag::kGlobalMiss) // Dirinfo is invalid
@@ -424,7 +422,7 @@ namespace covered
                     assert(tmp_is_exist_victims == true);
 
                     // Get dirinfo for local beaconed victims
-                    std::unordered_map<Key, DirinfoSet, KeyHasher> tmp_local_beaconed_local_cached_victim_dirinfoset = tmp_edge_wrapper_ptr->getLocalBeaconedVictimsFromCacheinfos(tmp_local_cached_victim_cacheinfos);
+                    std::unordered_map<Key, DirinfoSet, KeyHasher> tmp_local_beaconed_local_cached_victim_dirinfoset = tmp_cooperation_wrapper_ptr->getLocalBeaconedVictimsFromCacheinfos(tmp_local_cached_victim_cacheinfos);
 
                     // Calculate local eviction cost by VictimTracker (to utilize perkey_victim_dirinfo_)
                     local_eviction_cost = tmp_covered_cache_manager_ptr->accessVictimTrackerForFastPathEvictionCost(tmp_local_cached_victim_cacheinfos, tmp_local_beaconed_local_cached_victim_dirinfoset);
@@ -541,8 +539,7 @@ namespace covered
         // Victim synchronization
         const uint32_t source_edge_idx = covered_acquire_writelock_response_ptr->getSourceIndex();
         const VictimSyncset& neighbor_victim_syncset = covered_acquire_writelock_response_ptr->getVictimSyncsetRef();
-        std::unordered_map<Key, DirinfoSet, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = tmp_edge_wrapper_ptr->getLocalBeaconedVictimsFromVictimSyncset(neighbor_victim_syncset);
-        tmp_covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets, tmp_edge_wrapper_ptr->getCooperationWrapperPtr());
+        tmp_covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, tmp_edge_wrapper_ptr->getCooperationWrapperPtr());
 
         return;
     }
@@ -560,8 +557,7 @@ namespace covered
         const CoveredFinishBlockRequest* const covered_finish_block_request_ptr = static_cast<const CoveredFinishBlockRequest*>(control_request_ptr);
         const uint32_t source_edge_idx = covered_finish_block_request_ptr->getSourceIndex();
         const VictimSyncset& neighbor_victim_syncset = covered_finish_block_request_ptr->getVictimSyncsetRef();
-        std::unordered_map<Key, DirinfoSet, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = tmp_edge_wrapper_ptr->getLocalBeaconedVictimsFromVictimSyncset(neighbor_victim_syncset);
-        tmp_covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets, tmp_edge_wrapper_ptr->getCooperationWrapperPtr());
+        tmp_covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, tmp_edge_wrapper_ptr->getCooperationWrapperPtr());
 
         return;
     }
@@ -743,8 +739,7 @@ namespace covered
         CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
 
         // Victim synchronization
-        std::unordered_map<Key, DirinfoSet, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = tmp_edge_wrapper_ptr->getLocalBeaconedVictimsFromVictimSyncset(neighbor_victim_syncset);
-        tmp_covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets, tmp_edge_wrapper_ptr->getCooperationWrapperPtr());
+        tmp_covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, tmp_edge_wrapper_ptr->getCooperationWrapperPtr());
 
         // Do nothing for CoveredReleaseWritelockResponse, yet notify beacon for non-blocking placement notification for CoveredPlacementReleaseWritelockResponse after hybrid data fetching
         if (need_hybrid_fetching)

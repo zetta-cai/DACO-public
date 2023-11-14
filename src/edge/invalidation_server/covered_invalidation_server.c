@@ -44,8 +44,7 @@ namespace covered
         // Victim synchronization
         // NOTE: we always perform victim synchronization before popularity aggregation, as we need the latest synced victim information for placement calculation
         const VictimSyncset& neighbor_victim_syncset = covered_invalidation_request_ptr->getVictimSyncsetRef();
-        std::unordered_map<Key, DirinfoSet, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = edge_wrapper_ptr_->getLocalBeaconedVictimsFromVictimSyncset(neighbor_victim_syncset);
-        tmp_covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, local_beaconed_neighbor_synced_victim_dirinfosets, edge_wrapper_ptr_->getCooperationWrapperPtr());
+        tmp_covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, edge_wrapper_ptr_->getCooperationWrapperPtr());
 
         return;
     }

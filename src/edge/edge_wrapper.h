@@ -117,8 +117,6 @@ namespace covered
         // (7.1) For victim synchronization
         uint64_t getCacheMarginBytes() const;
         void updateCacheManagerForLocalSyncedVictims() const; // NOTE: both edge cache server worker and local/remote beacon node (non-blocking data fetching for placement deployment) will access local edge cache, which affects local cached metadata and may trigger update for local synced victims
-        std::unordered_map<Key, DirinfoSet, KeyHasher> getLocalBeaconedVictimsFromVictimSyncset(const VictimSyncset& victim_syncset) const; // NOTE: all edge cache/beacon/invalidation servers will access cooperation wrapper to get content directory information for local beaconed victims from received victim syncset
-        std::unordered_map<Key, DirinfoSet, KeyHasher> getLocalBeaconedVictimsFromCacheinfos(const std::list<VictimCacheinfo>& victim_cacheinfos) const;
 
         // (7.2) For non-blocking placement deployment (ONLY invoked by beacon edge node)
         // NOTE: (for non-blocking placement deployment) source_addr and recvrsp_socket_server_ptr are used for receiving eviction directory update responses if with local placement notification in current beacon edge node; skip propagation latency is used for all messages during non-blocking placement deployment (intermediate bandwidth usage and event list are counted by edge_background_counter_for_beacon_server_)

@@ -29,10 +29,15 @@ namespace covered
     private:
         static const std::string kClassName;
 
-        // Update hit ratio statistics of a client worker
+        // Update object hit ratio statistics of a client worker
         void updateLocalHitcnt_(const uint32_t& local_client_worker_idx);
         void updateCooperativeHitcnt_(const uint32_t& local_client_worker_idx);
         void updateReqcnt_(const uint32_t& local_client_worker_idx);
+
+        // Per-client-worker byte hit ratio statistics
+        void updateLocalHitbytes_(const uint32_t& local_client_worker_idx, const uint32_t& object_size);
+        void updateCooperativeHitbytes_(const uint32_t& local_client_worker_idx, const uint32_t& object_size);
+        void updateReqbytes_(const uint32_t& local_client_worker_idx, const uint32_t& object_size);
 
         // Update latency statistics of a client worker
         void updateLatency_(const uint32_t& latency_us);
@@ -58,10 +63,15 @@ namespace covered
         uint32_t perclient_workercnt_; // Come from CLI
         uint32_t latency_histogram_size_; // Come from Config::latency_histogram_size_
 
-        // Per-client-worker hit ratio statistics
+        // Per-client-worker object hit ratio statistics
         std::atomic<uint32_t>* perclientworker_local_hitcnts_; // Hit local edge cache of closest edge node
         std::atomic<uint32_t>* perclientworker_cooperative_hitcnts_; // Hit cooperative edge cache of some target edge node
-        std::atomic<uint32_t>* perclientworker_reqcnts_;
+        std::atomic<uint32_t>* perclientworker_reqcnts_; // Number of requested objects
+
+        // Per-client-worker byte hit ratio statistics
+        std::vector<double> perclientworker_local_hitbytes_; // Hit local edge cache of closest edge node
+        std::vector<double> perclientworker_cooperative_hitbytes_; // Hit cooperative edge cache of some target edge node
+        std::vector<double> perclientworker_reqbytes_; // Number of requested bytes
 
         // Per-client-worker latency statistics
         std::atomic<uint32_t>* latency_histogram_; // thread safe

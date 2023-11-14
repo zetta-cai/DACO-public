@@ -129,14 +129,14 @@ namespace covered
             wait_for_complete_victim_syncset_ = false;
         }
 
-        return;
+        return final_victim_syncset;
     }
 
     void VictimsyncMonitor::tryToEnableEnforcementStatus_(const VictimSyncset& neighbor_compressed_victim_syncset, const SeqNum& synced_seqnum, const uint32_t& peredge_monitored_victimsetcnt)
     {
         assert(neighbor_compressed_victim_syncset.isCompressed());
         assert(neighbor_compressed_victim_syncset.getSeqnum() == synced_seqnum);
-        
+
         if (cached_victim_syncsets_.size() < peredge_monitored_victimsetcnt) // NOT full
         {
             cached_victim_syncsets_.push_back(neighbor_compressed_victim_syncset);
@@ -218,14 +218,21 @@ namespace covered
                 assert(iter->isCompressed() == true); // NOTE: only compressed victim syncsets are cached in cached_victim_syncsets_
 
                 const SeqNum tmp_cached_seqnum = iter->getSeqnum();
+
                 assert(tmp_cached_seqnum > tmp_final_seqnum); // NOTE: stale cached victim syncsets have been cleared by clearStaleCachedVictimSyncsets_()
 
                 if (tmp_cached_seqnum == Util::uint64Add(tmp_final_seqnum, 1)) // Continuous cached victim syncset
                 {
+                    // Recover based on the continuous cached victim syncset
                     final_victim_syncset = VictimSyncset::recover(*iter, final_victim_syncset);
                     assert(final_victim_syncset.isComplete());
                     assert(final_victim_syncset.getSeqnum() == tmp_cached_seqnum);
 
+                    // Clear the continuous cached victim syncset
+                    cached_victim_syncsets_.erase(iter);
+                    iter = cached_victim_syncsets_.end();
+
+                    // Update tracked seqnum as the lastet complete victim syncset
                     tracked_seqnum_ = final_victim_syncset.getSeqnum();
 
                     is_continuous_exist = true;

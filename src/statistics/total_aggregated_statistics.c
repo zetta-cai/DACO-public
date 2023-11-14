@@ -2,23 +2,76 @@
 
 #include <algorithm> // sort
 #include <assert.h>
+#include <sstream>
 
 namespace covered
 {
     const std::string TotalAggregatedStatistics::kClassName("TotalAggregatedStatistics");
 
-    TotalAggregatedStatistics::TotalAggregatedStatistics() : AggregatedStatisticsBase()
+    TotalAggregatedStatistics::TotalAggregatedStatistics() : AggregatedStatisticsBase(), sec_(0)
     {
     }
 
-    TotalAggregatedStatistics::TotalAggregatedStatistics(const std::vector<ClientAggregatedStatistics>& curslot_perclient_aggregated_statistics) : AggregatedStatisticsBase()
+    TotalAggregatedStatistics::TotalAggregatedStatistics(const std::vector<ClientAggregatedStatistics>& curslot_perclient_aggregated_statistics, const uint32_t& sec) : AggregatedStatisticsBase()
     {
         assert(curslot_perclient_aggregated_statistics.size() > 0);
 
         aggregateClientAggregatedStatistics_(curslot_perclient_aggregated_statistics);
+
+        assert(sec > 0);
+        sec_ = sec;
     }
     
     TotalAggregatedStatistics::~TotalAggregatedStatistics() {}
+
+    std::string TotalAggregatedStatistics::toString() const
+    {
+        std::ostringstream oss;
+
+        oss << AggregatedStatisticsBase::toString();
+
+        oss << "[Throughput Statistics]" << std::endl;
+        oss << "time: " << sec_ << " seconds" << std::endl;
+        oss << "throughput: " << static_cast<double>(total_reqcnt_) / static_cast<double>(sec_) << " OPS" << std::endl;
+
+        return oss.str();
+    }
+
+    uint32_t TotalAggregatedStatistics::getAggregatedStatisticsIOSize()
+    {
+        // AggregatedStatisticsBase + sec_
+        return AggregatedStatisticsBase::getAggregatedStatisticsIOSize() + sizeof(uint32_t);
+    }
+
+    uint32_t TotalAggregatedStatistics::serialize(DynamicArray& dynamic_array, const uint32_t& position) const
+    {
+        uint32_t size = position;
+
+        // Serialize AggregatedStatisticsBase
+        uint32_t aggregated_statistics_base_serialize_size = AggregatedStatisticsBase::serialize(dynamic_array, size);
+        size += aggregated_statistics_base_serialize_size;
+
+        // Serialize sec_
+        dynamic_array.deserialize(size, (const char*)&sec_, sizeof(uint32_t));
+        size += sizeof(uint32_t);
+
+        return size - position;
+    }
+
+    uint32_t TotalAggregatedStatistics::deserialize(const DynamicArray& dynamic_array, const uint32_t& position)
+    {
+        uint32_t size = position;
+
+        // Deserialize AggregatedStatisticsBase
+        uint32_t aggregated_statistics_base_deserialize_size = AggregatedStatisticsBase::deserialize(dynamic_array, size);
+        size += aggregated_statistics_base_deserialize_size;
+
+        // Deserialize sec_
+        dynamic_array.serialize(size, (char*)&sec_, sizeof(uint32_t));
+        size += sizeof(uint32_t);
+
+        return size - position;
+    }
 
     void TotalAggregatedStatistics::aggregateClientAggregatedStatistics_(const std::vector<ClientAggregatedStatistics>& curslot_perclient_aggregated_statistics)
     {
@@ -35,10 +88,15 @@ namespace covered
         {
             const ClientAggregatedStatistics& tmp_client_aggregated_statistics = curslot_perclient_aggregated_statistics[clientidx];
 
-            // Aggregate hit ratio statistics
+            // Aggregate object hit ratio statistics
             total_local_hitcnt_ += tmp_client_aggregated_statistics.total_local_hitcnt_;
             total_cooperative_hitcnt_ += tmp_client_aggregated_statistics.total_cooperative_hitcnt_;
             total_reqcnt_ += tmp_client_aggregated_statistics.total_reqcnt_;
+
+            // Aggregate byte hit ratio statistics
+            total_local_hitbytes_ += tmp_client_aggregated_statistics.total_local_hitbytes_;
+            total_cooperative_hitbytes_ += tmp_client_aggregated_statistics.total_cooperative_hitbytes_;
+            total_reqbytes_ += tmp_client_aggregated_statistics.total_reqbytes_;
 
             // Pre-process latency statistics
             total_avg_latency += tmp_client_aggregated_statistics.avg_latency_;

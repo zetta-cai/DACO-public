@@ -22,6 +22,7 @@
 #include "cooperation/directory/directory_info.h"
 #include "cooperation/directory/dirinfo_set.h"
 #include "cooperation/directory_table.h"
+#include "core/victim/victim_syncset.h"
 #include "message/message_base.h"
 
 namespace covered
@@ -33,6 +34,11 @@ namespace covered
 
         CooperationWrapperBase(const uint32_t& edgecnt, const uint32_t& edge_idx, const std::string& hash_name);
         virtual ~CooperationWrapperBase();
+
+        // (0) Get dirinfo of local beaconed keys over the given keyset (NOTE: we do NOT guarantee the atomicity for thess keyset-level functions due to per-key fine-grained locking in cooperation wrapper) (ONLY for COVERED)
+
+        virtual std::unordered_map<Key, DirinfoSet, KeyHasher> getLocalBeaconedVictimsFromVictimSyncset(const VictimSyncset& victim_syncset) const = 0; // NOTE: all edge cache/beacon/invalidation servers will access cooperation wrapper to get content directory information for local beaconed victims from received victim syncset
+        virtual std::unordered_map<Key, DirinfoSet, KeyHasher> getLocalBeaconedVictimsFromCacheinfos(const std::list<VictimCacheinfo>& victim_cacheinfos) const = 0;
 
         // (1) Locate beacon edge node
 
@@ -60,6 +66,9 @@ namespace covered
     private:
         static const std::string kClassName;
 
+        // Const shared variables
+        std::string base_instance_name_;
+    protected:
         // (2) Access content directory information
 
         // NOTE: find a non-source valid directory info if any
@@ -72,7 +81,7 @@ namespace covered
         // Member varaibles
 
         // Const shared variables
-        std::string base_instance_name_;
+        const uint32_t edge_idx_;
         DhtWrapper* dht_wrapper_ptr_;
 
         // Fine-graind locking

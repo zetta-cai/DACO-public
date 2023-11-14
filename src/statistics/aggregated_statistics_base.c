@@ -3,6 +3,7 @@
 #include <sstream>
 
 #include "common/covered_weight.h"
+#include "common/util.h"
 
 namespace covered
 {
@@ -13,6 +14,10 @@ namespace covered
         total_local_hitcnt_ = 0;
         total_cooperative_hitcnt_ = 0;
         total_reqcnt_ = 0;
+
+        total_local_hitbytes_ = 0.0;
+        total_cooperative_hitbytes_ = 0.0;
+        total_reqbytes_ = 0.0;
 
         avg_latency_ = 0;
         min_latency_ = 0;
@@ -36,7 +41,7 @@ namespace covered
         
     AggregatedStatisticsBase::~AggregatedStatisticsBase() {}
 
-    // Get aggregate statistics related with hit ratio
+    // Get aggregate statistics related with object hit ratio
 
     uint32_t AggregatedStatisticsBase::getTotalLocalHitcnt() const
     {
@@ -53,21 +58,63 @@ namespace covered
         return total_reqcnt_;
     }
 
-    double AggregatedStatisticsBase::getLocalHitRatio() const
+    double AggregatedStatisticsBase::getLocalObjectHitRatio() const
     {
         double local_hit_ratio = static_cast<double>(total_local_hitcnt_) / static_cast<double>(total_reqcnt_);
         return local_hit_ratio;
     }
 
-    double AggregatedStatisticsBase::getCooperativeHitRatio() const
+    double AggregatedStatisticsBase::getCooperativeObjectHitRatio() const
     {
         double cooperative_hit_ratio = static_cast<double>(total_cooperative_hitcnt_) / static_cast<double>(total_reqcnt_);
         return cooperative_hit_ratio;
     }
     
-    double AggregatedStatisticsBase::getTotalHitRatio() const
+    double AggregatedStatisticsBase::getTotalObjectHitRatio() const
     {
-        return getLocalHitRatio() + getCooperativeHitRatio();
+        return getLocalObjectHitRatio() + getCooperativeObjectHitRatio();
+    }
+
+    // Get aggregate statistics related with byte hit ratio
+
+    double AggregatedStatisticsBase::getTotalLocalHitbytes() const
+    {
+        return total_local_hitbytes_;
+    }
+
+    double AggregatedStatisticsBase::getTotalCooperativeHitbytes() const
+    {
+        return total_cooperative_hitbytes_;
+    }
+
+    double AggregatedStatisticsBase::getTotalReqbytes() const
+    {
+        return total_reqbytes_;
+    }
+
+    double AggregatedStatisticsBase::getLocalByteHitRatio() const
+    {
+        double local_byte_hit_ratio = double(0.0);
+        if (total_reqbytes_ > double(0.0))
+        {
+            local_byte_hit_ratio = total_local_hitbytes_ / total_reqbytes_;
+        }
+        return local_byte_hit_ratio;
+    }
+
+    double AggregatedStatisticsBase::getCooperativeByteHitRatio() const
+    {
+        double cooperative_byte_hit_ratio = double(0.0);
+        if (total_reqbytes_ > double(0.0))
+        {
+            cooperative_byte_hit_ratio = total_cooperative_hitbytes_ / total_reqbytes_;
+        }
+        return cooperative_byte_hit_ratio;
+    }
+
+    double AggregatedStatisticsBase::getTotalByteHitRatio() const
+    {
+        return getLocalByteHitRatio() + getCooperativeByteHitRatio();
     }
 
     // Get aggregate statistics related with latency
@@ -193,15 +240,24 @@ namespace covered
     {
         std::ostringstream oss;
 
-        oss << "[Hit Ratio Statistics]" << std::endl;
+        oss << "[Object Hit Ratio Statistics]" << std::endl;
         oss << "total local hit cnts: " << total_local_hitcnt_ << std::endl;
         oss << "total cooperative hit cnts: " << total_cooperative_hitcnt_ << std::endl;
         oss << "total request cnts: " << total_reqcnt_ << std::endl;
-        oss << "local hit ratio: " << getLocalHitRatio() << std::endl;
-        oss << "cooperative hit ratio: " << getCooperativeHitRatio() << std::endl;
-        oss << "total hit ratio: " << getTotalHitRatio() << std::endl;
+        oss << "local object hit ratio: " << getLocalObjectHitRatio() << std::endl;
+        oss << "cooperative object hit ratio: " << getCooperativeObjectHitRatio() << std::endl;
+        oss << "total object hit ratio: " << getTotalObjectHitRatio() << std::endl;
         const double tmp_weight = static_cast<double>(CoveredWeight::getWeightInfo().getCooperativeHitWeight() / CoveredWeight::getWeightInfo().getLocalHitWeight()); // w2/w1
-        oss << "total hit ratio (weighted by " << tmp_weight << "): " << getLocalHitRatio() + tmp_weight * getCooperativeHitRatio() << std::endl; // local hit ratio + w2/w1 * cooperative hit ratio
+        oss << "total object hit ratio (weighted by " << tmp_weight << "): " << getLocalObjectHitRatio() + tmp_weight * getCooperativeObjectHitRatio() << std::endl; // local object hit ratio + w2/w1 * cooperative object hit ratio
+
+        oss << "[Byte Hit Ratio Statistics]" << std::endl;
+        oss << "total local hit bytes: " << B2MB(total_local_hitbytes_) << " MiB" << std::endl;
+        oss << "total cooperative hit bytes: " << B2MB(total_cooperative_hitbytes_) << " MiB" << std::endl;
+        oss << "total request bytes: " << B2MB(total_reqbytes_) << " MiB" << std::endl;
+        oss << "local byte hit ratio: " << getLocalByteHitRatio() << std::endl;
+        oss << "cooperative byte hit ratio: " << getCooperativeByteHitRatio() << std::endl;
+        oss << "total byte hit ratio: " << getTotalByteHitRatio() << std::endl;
+        oss << "total byte hit ratio (weighted by " << tmp_weight << "): " << getLocalByteHitRatio() + tmp_weight * getCooperativeByteHitRatio() << std::endl;
 
         oss << "[Latency Statistics]" << std::endl;
         oss << "average latency: " << avg_latency_ << std::endl;
@@ -223,15 +279,21 @@ namespace covered
         oss << "total cache utilization: " << getTotalCacheUtilization() << std::endl;
 
         oss << "[Workload key-value Size Statistics]" << std::endl;
-        oss << "total workload key size: " << total_workload_key_size_ << std::endl;
-        oss << "total workload value size: " << total_workload_value_size_ << std::endl;
-        oss << "average workload key size: " << getAvgWorkloadKeySize() << std::endl;
-        oss << "average workload value size: " << getAvgWorkloadValueSize() << std::endl;
+        oss << "total workload key size: " << B2MB(total_workload_key_size_) << " MiB" << std::endl;
+        oss << "total workload value size: " << B2MB(total_workload_value_size_) << " MiB" << std::endl;
+        oss << "average workload key size: " << getAvgWorkloadKeySize() << " bytes" << std::endl;
+        oss << "average workload value size: " << B2KB(getAvgWorkloadValueSize()) << " KiB" << std::endl;
 
         oss << "[Bandwidth Usage Statistics]" << std::endl;
-        oss << "total client-edge bandwidth bytes: " << total_bandwidth_usage_.getClientEdgeBandwidthBytes() << std::endl;
-        oss << "total cross-edge bandwidth bytes: " << total_bandwidth_usage_.getCrossEdgeBandwidthBytes() << std::endl;
-        oss << "total edge-cloud bandwidth bytes: " << total_bandwidth_usage_.getEdgeCloudBandwidthBytes() << std::endl;
+        oss << "total client-edge bandwidth usage: " << B2MB(static_cast<double>(total_bandwidth_usage_.getClientEdgeBandwidthBytes())) << " MiB" << std::endl;
+        oss << "total cross-edge bandwidth usage: " << B2MB(static_cast<double>(total_bandwidth_usage_.getCrossEdgeBandwidthBytes())) << " MiB" << std::endl;
+        oss << "total edge-cloud bandwidth usage: " << B2MB(static_cast<double>(total_bandwidth_usage_.getEdgeCloudBandwidthBytes())) << " MiB" << std::endl;
+        if (total_reqcnt_ > 0)
+        {
+            oss << "per-request client-edge bandwidth usage: " << B2MB(static_cast<double>(total_bandwidth_usage_.getClientEdgeBandwidthBytes()) / static_cast<double>(total_reqcnt_)) << " MiB/req" << std::endl;
+            oss << "per-request cross-edge bandwidth usage: " << B2MB(static_cast<double>(total_bandwidth_usage_.getCrossEdgeBandwidthBytes()) / static_cast<double>(total_reqcnt_)) << " MiB/req" << std::endl;
+            oss << "per-request edge-cloud bandwidth usage: " << B2MB(static_cast<double>(total_bandwidth_usage_.getEdgeCloudBandwidthBytes()) / static_cast<double>(total_reqcnt_)) << " MiB/req" << std::endl;
+        }
         
         std::string total_statistics_string = oss.str();
         return total_statistics_string;
@@ -239,21 +301,29 @@ namespace covered
 
     uint32_t AggregatedStatisticsBase::getAggregatedStatisticsIOSize()
     {
-        // Aggregated statistics for hit ratio + latency + read-write ratio + cache utilization + workload key-value size + bandwidth usgae
-        return sizeof(uint32_t) * 3 + sizeof(uint32_t) * 7 + sizeof(uint32_t) * 2 + sizeof(uint64_t) * 2 + 2 * sizeof(double) + BandwidthUsage::getBandwidthUsagePayloadSize();
+        // Aggregated statistics for object hit ratio + byte hit ratio + latency + read-write ratio + cache utilization + workload key-value size + bandwidth usgae
+        return sizeof(uint32_t) * 3 + sizeof(double) * 3 + sizeof(uint32_t) * 7 + sizeof(uint32_t) * 2 + sizeof(uint64_t) * 2 + 2 * sizeof(double) + BandwidthUsage::getBandwidthUsagePayloadSize();
     }
 
     uint32_t AggregatedStatisticsBase::serialize(DynamicArray& dynamic_array, const uint32_t& position) const
     {
         uint32_t size = position;
 
-        // Seritalize aggregated statistics for hit ratio
+        // Serialize aggregated statistics for object hit ratio
         dynamic_array.deserialize(size, (const char*)&total_local_hitcnt_, sizeof(uint32_t));
         size += sizeof(uint32_t);
         dynamic_array.deserialize(size, (const char*)&total_cooperative_hitcnt_, sizeof(uint32_t));
         size += sizeof(uint32_t);
         dynamic_array.deserialize(size, (const char*)&total_reqcnt_, sizeof(uint32_t));
         size += sizeof(uint32_t);
+
+        // Serialize aggregated statistis for byte hit raito
+        dynamic_array.deserialize(size, (const char*)&total_local_hitbytes_, sizeof(double));
+        size += sizeof(double);
+        dynamic_array.deserialize(size, (const char*)&total_cooperative_hitbytes_, sizeof(double));
+        size += sizeof(double);
+        dynamic_array.deserialize(size, (const char*)&total_reqbytes_, sizeof(double));
+        size += sizeof(double);
 
         // Serialize aggregated statistics for latency
         dynamic_array.deserialize(size, (const char*)&avg_latency_, sizeof(uint32_t));
@@ -300,13 +370,21 @@ namespace covered
     {
         uint32_t size = position;
 
-        // Deserialize aggregated statistics for hit ratio
+        // Deserialize aggregated statistics for object hit ratio
         dynamic_array.serialize(size, (char *)&total_local_hitcnt_, sizeof(uint32_t));
         size += sizeof(uint32_t);
         dynamic_array.serialize(size, (char *)&total_cooperative_hitcnt_, sizeof(uint32_t));
         size += sizeof(uint32_t);
         dynamic_array.serialize(size, (char *)&total_reqcnt_, sizeof(uint32_t));
         size += sizeof(uint32_t);
+
+        // Deserialize aggregated statistics for byte hit ratio
+        dynamic_array.serialize(size, (char *)&total_local_hitbytes_, sizeof(double));
+        size += sizeof(double);
+        dynamic_array.serialize(size, (char *)&total_cooperative_hitbytes_, sizeof(double));
+        size += sizeof(double);
+        dynamic_array.serialize(size, (char *)&total_reqbytes_, sizeof(double));
+        size += sizeof(double);
 
         // Deserialize aggregated statistics for latency
         dynamic_array.serialize(size, (char *)&avg_latency_, sizeof(uint32_t));
@@ -351,10 +429,15 @@ namespace covered
 
     const AggregatedStatisticsBase& AggregatedStatisticsBase::operator=(const AggregatedStatisticsBase& other)
     {
-        // Aggregated statistics related with hit ratio
+        // Aggregated statistics related with object hit ratio
         total_local_hitcnt_ = other.total_local_hitcnt_;
         total_cooperative_hitcnt_ = other.total_cooperative_hitcnt_;
         total_reqcnt_ = other.total_reqcnt_;
+
+        // Aggregated statistics related with byte hit ratio
+        total_local_hitbytes_ = other.total_local_hitbytes_;
+        total_cooperative_hitbytes_ = other.total_cooperative_hitbytes_;
+        total_reqbytes_ = other.total_reqbytes_;
 
         // Aggregated statistics related with latency
         avg_latency_ = other.avg_latency_;

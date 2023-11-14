@@ -166,10 +166,10 @@ namespace covered
         // Notify all clients to start running
         notifyClientsToStartrun_();
 
-        // Monitor cache hit ratio for warmup and stresstest phases
+        // Monitor cache object hit ratio for warmup and stresstest phases
         const uint32_t client_raw_statistics_slot_interval_sec = Config::getClientRawStatisticsSlotIntervalSec();
         bool is_stable = false;
-        double stable_hit_ratio = double(0.0);
+        double stable_object_hit_ratio = double(0.0);
         struct timespec start_timestamp = Util::getCurrentTimespec(); // For max duration of warmup phase and duration of stresstest phase
         struct timespec prev_timestamp = start_timestamp; // For switch slot
         while (true)
@@ -204,7 +204,7 @@ namespace covered
                 prev_timestamp = cur_timestamp;
             }
 
-            // Monitor if cache hit ratio is stable to finish the warmup phase if any
+            // Monitor if cache object hit ratio is stable to finish the warmup phase if any
             if (is_warmup_phase_) // Warmup phase
             {
                 bool finish_warmup_phase = false;
@@ -213,20 +213,20 @@ namespace covered
                 if (delta_us_for_finishwarmup >= SEC2US(max_warmup_duration_sec_))
                 {
                     std::ostringstream oss;
-                    oss << "achieve max warmup duration of " << max_warmup_duration_sec_ << " seconds with cache hit ratio of " << total_statistics_tracker_ptr_->getCurslotTotalAggregatedStatistics().getTotalHitRatio() << " -> finish warmup phase";
+                    oss << "achieve max warmup duration of " << max_warmup_duration_sec_ << " seconds with cache object hit ratio of " << total_statistics_tracker_ptr_->getCurslotTotalAggregatedStatistics().getTotalObjectHitRatio() << " -> finish warmup phase";
                     Util::dumpNormalMsg(kClassName, oss.str());
 
                     finish_warmup_phase = true;
                 } // End of achieving max_warmup_duration_sec_
                 else
                 {
-                    is_stable = total_statistics_tracker_ptr_->isPerSlotTotalAggregatedStatisticsStable(stable_hit_ratio);
+                    is_stable = total_statistics_tracker_ptr_->isPerSlotTotalAggregatedStatisticsStable(stable_object_hit_ratio);
 
-                    // Cache hit ratio becomes stable
+                    // Cache object hit ratio becomes stable
                     if (is_stable)
                     {
                         std::ostringstream oss;
-                        oss << "cache hit ratio becomes stable at " << stable_hit_ratio << " -> finish warmup phase";
+                        oss << "cache object hit ratio becomes stable at " << stable_object_hit_ratio << " -> finish warmup phase";
                         Util::dumpNormalMsg(kClassName, oss.str());
 
                         finish_warmup_phase = true;
@@ -446,7 +446,7 @@ namespace covered
         Util::dumpNormalMsg(kClassName, oss.str());
 
         // Update per-slot total aggregated statistics
-        total_statistics_tracker_ptr_->updatePerslotTotalAggregatedStatistics(curslot_perclient_aggregated_statistics);
+        total_statistics_tracker_ptr_->updatePerslotTotalAggregatedStatistics(curslot_perclient_aggregated_statistics, Config::getClientRawStatisticsSlotIntervalSec());
 
         #ifdef DEBUG_EVALUATOR_WRAPPER
         TotalAggregatedStatistics tmp_curslot_total_aggregated_statistics = total_statistics_tracker_ptr_->getCurslotTotalAggregatedStatistics();
@@ -599,10 +599,10 @@ namespace covered
         Util::dumpNormalMsg(kClassName, "All clients have finished running!");
 
         // Update per-slot total aggregated statistics
-        total_statistics_tracker_ptr_->updatePerslotTotalAggregatedStatistics(lastslot_perclient_aggregated_statistics);
+        total_statistics_tracker_ptr_->updatePerslotTotalAggregatedStatistics(lastslot_perclient_aggregated_statistics, Config::getClientRawStatisticsSlotIntervalSec());
 
         // Update stable total aggregated statistics
-        total_statistics_tracker_ptr_->updateStableTotalAggregatedStatistics(stable_perclient_aggregated_statistics);
+        total_statistics_tracker_ptr_->updateStableTotalAggregatedStatistics(stable_perclient_aggregated_statistics, stresstest_duration_sec_);
 
         return;
     }

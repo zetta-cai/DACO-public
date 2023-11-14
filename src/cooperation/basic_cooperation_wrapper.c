@@ -20,4 +20,18 @@ namespace covered
     }
 
     BasicCooperationWrapper::~BasicCooperationWrapper() {}
+
+    // (0) Get dirinfo of local beaconed keys over the given keyset (NOTE: we do NOT guarantee the atomicity for thess keyset-level functions due to per-key fine-grained locking in cooperation wrapper) (ONLY for COVERED)
+
+    std::unordered_map<Key, DirinfoSet, KeyHasher> BasicCooperationWrapper::getLocalBeaconedVictimsFromVictimSyncset(const VictimSyncset& victim_syncset) const
+    {
+        Util::dumpErrorMsg(instance_name_, "Baselines should NOT invoke getLocalBeaconedVictimsFromVictimSyncset(), which is ONLY for COVERED!");
+        exit(1);
+    }
+
+    std::unordered_map<Key, DirinfoSet, KeyHasher> BasicCooperationWrapper::getLocalBeaconedVictimsFromCacheinfos(const std::list<VictimCacheinfo>& victim_cacheinfos) const
+    {
+        Util::dumpErrorMsg(instance_name_, "Baselines should NOT invoke getLocalBeaconedVictimsFromCacheinfos(), which is ONLY for COVERED!");
+        exit(1);
+    }
 }
