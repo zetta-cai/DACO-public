@@ -415,8 +415,12 @@ namespace covered
             complete_victim_syncset.setLocalBeaconedVictims(synced_victim_dirinfo_sets);
         } // End of with_complete_synced_victim_dirinfo_sets*/
 
+        // NOTE: use the same seqnum and is_enforce_complete as compressed victim syncset
         assert(complete_victim_syncset.isComplete());
-        return complete_victim_syncset; // Use seqnum and is_enforce_complete of compressed victim syncset
+        assert(complete_victim_syncset.getSeqnum() == compressed_victim_syncset.getSeqnum());
+        assert(complete_victim_syncset.isEnforceComplete() == compressed_victim_syncset.isEnforceComplete());
+
+        return complete_victim_syncset;
     }
 
     VictimSyncset::VictimSyncset() : compressed_bitmap_(INVALID_BITMAP), seqnum_(0), is_enforce_complete_(false), cache_margin_bytes_(0), cache_margin_delta_bytes_(0)

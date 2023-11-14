@@ -34,13 +34,13 @@ namespace covered
 
         // As receiver edge node
 
-        bool isFirstReceived() const;
-        void clearFirstReceived(const uint32_t& synced_seqnum);
+        bool isFirstCompleteReceived() const;
+        void clearFirstCompleteReceived();
 
         SeqNum getTrackedSeqnum() const;
 
-        void tryToClearEnforcementStatus_(const SeqNum& synced_seqnum, const uint32_t& peredge_monitored_victimsetcnt);
-        void tryToEnableEnforcementStatus_(const uint32_t& peredge_monitored_victimsetcnt, const VictimSyncset& neighbor_compressed_victim_syncset, const SeqNum& synced_seqnum);
+        VictimSyncset tryToClearEnforcementStatus_(const VictimSyncset& neighbor_complete_victim_syncset, const SeqNum& synced_seqnum, const uint32_t& peredge_monitored_victimsetcnt); // If no continous compressed victim syncsets in cached_victim_syncsets_, returned victim syncset will be the same as neighbor_complete_victim_syncset
+        void tryToEnableEnforcementStatus_(const VictimSyncset& neighbor_compressed_victim_syncset, const SeqNum& synced_seqnum, const uint32_t& peredge_monitored_victimsetcnt);
 
         // Utils
 
@@ -49,6 +49,7 @@ namespace covered
         static const std::string kClassName;
 
         void clearStaleCachedVictimSyncsets_(const uint32_t& peredge_monitored_victimsetcnt);
+        VictimSyncset clearContinuousCachedVictimSyncsets_(const VictimSyncset& neighbor_complete_victim_syncset, const uint32_t& peredge_monitored_victimsetcnt); // If no continous compressed victim syncsets in cached_victim_syncsets_, returned victim syncset will be the same as neighbor_complete_victim_syncset (this could update tracked seqnum)
         SeqNum getMaxSeqnumFromCachedVictimSyncsets_(const uint32_t& peredge_monitored_victimsetcnt) const;
 
         // NOTE: dedup-/delta-based victim syncset compression/recovery MUST follow strict seqnum order (unless the received victim syncset for recovery is complete)
@@ -60,9 +61,9 @@ namespace covered
         bool need_enforcement_; // If the current edge node needs to notify the specific neighbor for the enforcement on complete victim syncset (avoid duplicate notification)
 
         // As receiver edge node
-        bool is_first_received_; // If the victim syncset is the first one from a specific neighbor
+        bool is_first_complete_received_; // If the victim syncset is the first complete one from a specific neighbor
         SeqNum tracked_seqnum_; // The seqnum for tracked victim syncset from a specific neighbor
-        std::vector<VictimSyncset> cached_victim_syncsets_; // Cached in-advance victim syncsets from a specific neighbor
+        std::vector<VictimSyncset> cached_victim_syncsets_; // Cached in-advance compressed victim syncsets from a specific neighbor
         SeqNum enforcement_seqnum_; // The max seqnum between cached_victim_syncsets_ and the victim syncset triggering the enforcement of complete victim syncset from a specific neighbor
         bool wait_for_complete_victim_syncset_; // If the current edge node is waiting for a complete victim syncset from a specific neighbor (avoid duplicate enforcement)
     };

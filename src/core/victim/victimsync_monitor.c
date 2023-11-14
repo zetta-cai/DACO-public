@@ -6,7 +6,7 @@ namespace covered
 {
     const std::string VictimsyncMonitor::kClassName = "VictimsyncMonitor";
 
-    VictimsyncMonitor::VictimsyncMonitor() : cur_seqnum_(0), prev_victim_syncset_ptr_(nullptr), need_enforcement_(false), is_first_received_(true), tracked_seqnum_(0), enforcement_seqnum_(0), wait_for_complete_victim_syncset_(false)
+    VictimsyncMonitor::VictimsyncMonitor() : cur_seqnum_(0), prev_victim_syncset_ptr_(nullptr), need_enforcement_(false), is_first_complete_received_(true), tracked_seqnum_(0), enforcement_seqnum_(0), wait_for_complete_victim_syncset_(false)
     {
         cached_victim_syncsets_.clear();
     }
@@ -88,17 +88,16 @@ namespace covered
 
     // As receiver edge node
 
-    bool VictimsyncMonitor::isFirstReceived() const
+    bool VictimsyncMonitor::isFirstCompleteReceived() const
     {
-        return is_first_received_;
+        return is_first_complete_received_;
     }
 
-    void VictimsyncMonitor::clearFirstReceived(const uint32_t& synced_seqnum)
+    void VictimsyncMonitor::clearFirstCompleteReceived()
     {
-        assert(synced_seqnum == 0); // NOTE: the first received victim syncset MUST have a seqnum of 0
+        assert(tracked_seqnum_ == 0); // NOTE: before the first complete victim syncset is received, tracked seqnum MUST be 0 after initialization
 
-        is_first_received_ = false;
-        tracked_seqnum_ = synced_seqnum;
+        is_first_complete_received_ = false;
         return;
     }
 
@@ -107,15 +106,22 @@ namespace covered
         return tracked_seqnum_;
     }
 
-    void VictimsyncMonitor::tryToClearEnforcementStatus_(const SeqNum& synced_seqnum, const uint32_t& peredge_monitored_victimsetcnt)
+    VictimSyncset VictimsyncMonitor::tryToClearEnforcementStatus_(const VictimSyncset& neighbor_complete_victim_syncset, const SeqNum& synced_seqnum, const uint32_t& peredge_monitored_victimsetcnt)
     {
+        assert(neighbor_complete_victim_syncset.isComplete());
+        assert(neighbor_complete_victim_syncset.getSeqnum() == synced_seqnum);
+
         // Set tracked seqnum as synced seqnum
         tracked_seqnum_ = synced_seqnum;
 
         // Clear stale cached victim syncsets based on updated tracked seqnum
         clearStaleCachedVictimSyncsets_(peredge_monitored_victimsetcnt);
 
-        if (wait_for_complete_victim_syncset_ && (synced_seqnum > enforcement_seqnum_)) // Equivalent to receiving complete victim syncset after enforcing sender to clear prev victim syncset history for the current edge node
+        // Clear continuous cached victim syncsets and update tracked sequm if any
+        VictimSyncset final_victim_syncset = clearContinuousCachedVictimSyncsets_(neighbor_complete_victim_syncset, peredge_monitored_victimsetcnt);
+        assert(tracked_seqnum_ >= synced_seqnum);
+
+        if (wait_for_complete_victim_syncset_ && (tracked_seqnum_ > enforcement_seqnum_)) // Equivalent to receiving complete victim syncset after enforcing sender to clear prev victim syncset history for the current edge node
         {
             // Clear enforcement status
             need_enforcement_ = false;
@@ -126,9 +132,10 @@ namespace covered
         return;
     }
 
-    void VictimsyncMonitor::tryToEnableEnforcementStatus_(const uint32_t& peredge_monitored_victimsetcnt, const VictimSyncset& neighbor_compressed_victim_syncset, const SeqNum& synced_seqnum)
+    void VictimsyncMonitor::tryToEnableEnforcementStatus_(const VictimSyncset& neighbor_compressed_victim_syncset, const SeqNum& synced_seqnum, const uint32_t& peredge_monitored_victimsetcnt)
     {
         assert(neighbor_compressed_victim_syncset.isCompressed());
+        assert(neighbor_compressed_victim_syncset.getSeqnum() == synced_seqnum);
         
         if (cached_victim_syncsets_.size() < peredge_monitored_victimsetcnt) // NOT full
         {
@@ -191,6 +198,50 @@ namespace covered
         }
 
         return;
+    }
+
+    VictimSyncset VictimsyncMonitor::clearContinuousCachedVictimSyncsets_(const VictimSyncset& neighbor_complete_victim_syncset, const uint32_t& peredge_monitored_victimsetcnt)
+    {
+        assert(neighbor_complete_victim_syncset.isComplete());
+        assert(tracked_seqnum_ == neighbor_complete_victim_syncset.getSeqnum()); // NOTE: tracked_seqnum_ MUST already be updated as the current complete victim syncset before clearContinuousCachedVictimSyncsets_()
+        assert(cached_victim_syncsets_.size() <= peredge_monitored_victimsetcnt);
+
+        VictimSyncset final_victim_syncset = neighbor_complete_victim_syncset; // Start from the current complete victim syncset
+        while (true)
+        {
+            bool is_continuous_exist = false;
+
+            // Try to find continuous cached victim syncset to update final victim syncset
+            SeqNum tmp_final_seqnum = final_victim_syncset.getSeqnum();
+            for (std::vector<VictimSyncset>::const_iterator iter = cached_victim_syncsets_.begin(); iter != cached_victim_syncsets_.end(); iter++)
+            {
+                assert(iter->isCompressed() == true); // NOTE: only compressed victim syncsets are cached in cached_victim_syncsets_
+
+                const SeqNum tmp_cached_seqnum = iter->getSeqnum();
+                assert(tmp_cached_seqnum > tmp_final_seqnum); // NOTE: stale cached victim syncsets have been cleared by clearStaleCachedVictimSyncsets_()
+
+                if (tmp_cached_seqnum == Util::uint64Add(tmp_final_seqnum, 1)) // Continuous cached victim syncset
+                {
+                    final_victim_syncset = VictimSyncset::recover(*iter, final_victim_syncset);
+                    assert(final_victim_syncset.isComplete());
+                    assert(final_victim_syncset.getSeqnum() == tmp_cached_seqnum);
+
+                    tracked_seqnum_ = final_victim_syncset.getSeqnum();
+
+                    is_continuous_exist = true;
+                    break;
+                }
+            }
+
+            // No continuous cached victim syncset for final victim syncset
+            if (!is_continuous_exist)
+            {
+                break;
+            }
+        }
+
+        assert(final_victim_syncset.isComplete());
+        return final_victim_syncset;
     }
 
     SeqNum VictimsyncMonitor::getMaxSeqnumFromCachedVictimSyncsets_(const uint32_t& peredge_monitored_victimsetcnt) const

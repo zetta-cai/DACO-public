@@ -190,24 +190,25 @@ namespace covered
 
         // Check if this is the first victim syncset received from the source edge node
         bool need_update_victim_tracker_ = false;
-        bool is_first_received = peredge_victimsync_monitor_iter->second.isFirstReceived();
-        if (is_first_received) // This is the first victim syncset from the source edge idx
+        bool is_first_complete_received = peredge_victimsync_monitor_iter->second.isFirstCompleteReceived();
+        if (is_first_complete_received) // This is the first complete victim syncset received from the source edge idx
         {
-            //assert(neighbor_victim_syncset.isComplete());
-            // TPMDEBUG231107
-            if (neighbor_complete_victim_syncset.isComplete() == false)
+            if (is_neighbor_victim_syncset_complete) // Complete victim syncset
             {
-                std::ostringstream oss;
-                oss << "updateForNeighborVictimSyncset() neighbor_victim_syncset from edge " << source_edge_idx << "; is complete: " << neighbor_victim_syncset.isComplete() << "; is compressed: " << neighbor_victim_syncset.isCompressed() << "; synced_seqnum: " << synced_seqnum;
-                Util::dumpErrorMsg(instance_name_, oss.str());
-                exit(1);
+                assert(synced_seqnum >= 0); // NOTE: seqnum of the first complete victim syncset received from the specific source edge node could >= 0 due to some in-advance complete victim syncset under packet loss/reordering
+
+                peredge_victimsync_monitor_iter->second.clearFirstCompleteReceived(); // This will set is_first_complete_received_ = false in VictimsyncMonitor
+
+                neighbor_complete_victim_syncset = peredge_victimsync_monitor_iter->second.tryToClearEnforcementStatus_(neighbor_complete_victim_syncset, synced_seqnum, peredge_monitored_victimsetcnt_); // This will set tracked_seqnum as synced_seqnum, clear stale and continuous cached victim syncsets, and clear enforcement status (set need_enforcement_ = false, enforcement_seqnum_ = 0, and wait_for_complete_victim_syncset_ = false) if necessary in VictimsyncMonitor
+
+                need_update_victim_tracker_ = true; // Directly update victim tracker without recovery
             }
-            
-            assert(synced_seqnum == 0);
+            else // Compressed victim syncset
+            {
+                need_update_victim_tracker_ = false; // No need to update victim tracker
 
-            peredge_victimsync_monitor_iter->second.clearFirstReceived(synced_seqnum);
-
-            need_update_victim_tracker_ = true; // Directly update victim tracker without recovery (will set tracked_seqnum as synced_seqnum of 0 in VictimsyncMonitor)
+                peredge_victimsync_monitor_iter->second.tryToEnableEnforcementStatus_(neighbor_victim_syncset, synced_seqnum, peredge_monitored_victimsetcnt_); // Trigger complete enforcement if cached victim syncsets is full (this will cache compressed victim syncset if cached_victim_syncsets_ is not full, or enable enforcement status (set need_enforcement_ = true, enforcement_seqnum_ = synced_seqnum, and wait_for_complete_victim_syncset_ = true) otherwise)
+            }
         }
         else // Decide whether and how to update victim tracker based on existing complete victim syncset tracked for the source edge idx in the current edge node
         {
@@ -237,23 +238,23 @@ namespace covered
 
                 need_update_victim_tracker_ = true; // Update victim tracker with recovered/synced complete vicitm syncset
 
-                peredge_victimsync_monitor_iter->second.tryToClearEnforcementStatus_(synced_seqnum, peredge_monitored_victimsetcnt_); // This will set tracked_seqnum as synced_seqnum (i.e., tracked_seqnum + 1), clear stale cached victim syncsets, and clear enforcement status (set need_enforcement_ = false, enforcement_seqnum_ = 0, and wait_for_complete_victim_syncset_ = false) if necessary in VictimsyncMonitor
+                neighbor_complete_victim_syncset = peredge_victimsync_monitor_iter->second.tryToClearEnforcementStatus_(neighbor_complete_victim_syncset, synced_seqnum, peredge_monitored_victimsetcnt_); // This will set tracked_seqnum as synced_seqnum (i.e., tracked_seqnum + 1), clear stale and continuous cached victim syncsets, and clear enforcement status (set need_enforcement_ = false, enforcement_seqnum_ = 0, and wait_for_complete_victim_syncset_ = false) if necessary in VictimsyncMonitor
             }
             else if (is_neighbor_victim_syncset_complete) // A complete victim syncset w/ synced_seqnum > tracked_seqnum + 1
             {
-                need_update_victim_tracker_ = true; // Directly use complete victim syncset to update victim tracker (will set tracked_seqnum as synced_seqnum in edge-level victim metadata)
+                need_update_victim_tracker_ = true; // Directly use complete victim syncset to update victim tracker
 
-                peredge_victimsync_monitor_iter->second.tryToClearEnforcementStatus_(synced_seqnum, peredge_monitored_victimsetcnt_); // This will set tracked_seqnum as synced_seqnum (i.e., tracked_seqnum + 1), clear stale cached victim syncsets, and clear enforcement status (set need_enforcement_ = false, enforcement_seqnum_ = 0, and wait_for_complete_victim_syncset_ = false) if necessary in VictimsyncMonitor
+                neighbor_complete_victim_syncset = peredge_victimsync_monitor_iter->second.tryToClearEnforcementStatus_(neighbor_complete_victim_syncset, synced_seqnum, peredge_monitored_victimsetcnt_); // This will set tracked_seqnum as synced_seqnum (i.e., tracked_seqnum + 1), clear stale and continuous cached victim syncsets, and clear enforcement status (set need_enforcement_ = false, enforcement_seqnum_ = 0, and wait_for_complete_victim_syncset_ = false) if necessary in VictimsyncMonitor
             }
             else // A compressed victim syncset w/ synced_seqnum > tracked_seqnum + 1
             {
                 need_update_victim_tracker_ = false; // No need to update victim tracker
 
-                peredge_victimsync_monitor_iter->second.tryToEnableEnforcementStatus_(peredge_monitored_victimsetcnt_, neighbor_victim_syncset, synced_seqnum); // Trigger complete enforcement if cached victim syncsets is full
+                peredge_victimsync_monitor_iter->second.tryToEnableEnforcementStatus_(neighbor_victim_syncset, synced_seqnum, peredge_monitored_victimsetcnt_); // Trigger complete enforcement if cached victim syncsets is full (this will cache compressed victim syncset if cached_victim_syncsets_ is not full, or enable enforcement status (set need_enforcement_ = true, enforcement_seqnum_ = synced_seqnum, and wait_for_complete_victim_syncset_ = true) otherwise)
             }
         }
 
-        // NOTE: when update victim tracker, we will set tracked_seqnum_ as synced seqnum, yet keep original inconsistent status (inconsistent_seqnum and wait_for_complete_victim_syncset flag)
+        // Update edge-level victim metadata and victim dirinfo sets in victim tracker
         if (need_update_victim_tracker_)
         {
             assert(neighbor_complete_victim_syncset.isComplete()); // NOTE: victim cacheinfos and dirinfo sets of neighbor victim syncset passed into victim tracker MUST be complete

@@ -322,8 +322,9 @@ namespace covered
         assert(!current_is_target);
 
         // Set remote address such that the current edge node can communicate with the target edge node
+        const bool is_launch_edge = false; // Just connect target edge node by the current edge node instead of launching the target edge node
         uint32_t target_edge_idx = directory_info.getTargetEdgeIdx();
-        std::string target_edge_ipstr = Config::getEdgeIpstr(target_edge_idx, getNodeCnt());
+        std::string target_edge_ipstr = Config::getEdgeIpstr(target_edge_idx, getNodeCnt(), is_launch_edge);
         uint16_t target_edge_cache_server_recvreq_port = Util::getEdgeCacheServerRecvreqPort(target_edge_idx, getNodeCnt());
         NetworkAddr target_edge_cache_server_recvreq_dst_addr(target_edge_ipstr, target_edge_cache_server_recvreq_port);
 
