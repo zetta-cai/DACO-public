@@ -1,5 +1,7 @@
 /*
  * LocalCachedMetadata: metadata for local cached objects in covered.
+ *
+ * NOTE: for each local cached object, local reward (i.e., max eviction cost, as the local edge node does NOT know cache hit status of all other edge nodes and conservatively treat it as the last copy) is calculated by heterogeneous local/redirected cached popularity.
  * 
  * By Siyuan Sheng (2023.08.29).
  */
@@ -26,7 +28,7 @@ namespace covered
         // Different for local cached objects
 
         // For reward information
-        virtual Reward calculateReward_(const Popularity& local_popularity, const Popularity& redirected_popularity) const override;
+        virtual Reward calculateReward_(const Popularity& local_cached_popularity) const override;
 
         // All the following functions return if affect local synced victims in victim tracker
         bool addForNewKey(const Key& key, const Value& value, const uint32_t& peredge_synced_victimcnt); // For admission, initialize and update both value-unrelated and value-related metadata for newly-admited key

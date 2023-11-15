@@ -1,5 +1,6 @@
 #include "cache/covered/local_cached_metadata.h"
 
+#include "common/covered_weight.h"
 #include "common/util.h"
 
 namespace covered
@@ -38,8 +39,21 @@ namespace covered
     // Different for local cached objects
 
     // For reward information
-    Reward LocalCachedMetadata::calculateReward_(const Popularity& local_popularity, const Popularity& redirected_popularity) const
-    {}
+    Reward LocalCachedMetadata::calculateReward_(const Popularity& local_cached_popularity) const
+    {
+        // Get weight parameters from static class atomically
+        const WeightInfo weight_info = CoveredWeight::getWeightInfo();
+        const Weight local_hit_weight = weight_info.getLocalHitWeight();
+        const Weight cooperative_hit_weight = weight_info.getCooperativeHitWeight();
+
+        // TODO: Get redirected popularity
+        const Popularity redirected_cached_popularity = 0.0;
+
+        // Calculte local reward (i.e., max eviction cost, as the local edge node does NOT know cache hit status of all other edge nodes and conservatively treat it as the last copy)
+        Reward local_reward = static_cast<Reward>(Util::popularityMultiply(local_hit_weight, local_cached_popularity)) + static_cast<Reward>(Util::popularityMultiply(cooperative_hit_weight, redirected_cached_popularity)); // w1 * local_cached_popularity + w2 * redirected_cached_popularity
+
+        return local_reward;
+    }
 
     bool LocalCachedMetadata::addForNewKey(const Key& key, const Value& value, const uint32_t& peredge_synced_victimcnt)
     {

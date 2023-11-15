@@ -122,9 +122,9 @@ namespace covered
         Popularity getPopularity_(const perkey_lookup_const_iter_t& perkey_lookup_iter) const;
         uint32_t getLeastPopularRank_(const perkey_lookup_const_iter_t& perkey_lookup_iter) const;
         bool getLeastPopularKeyPopularity_(const uint32_t& least_popular_rank, Key& key, Popularity& popularity) const; // Get ith least popular key for local cached or uncached object
-        virtual Reward calculateReward_(const Popularity& local_popularity, const Popularity& redirected_popularity = 0.0) const = 0; // NOTE: ONLY local cached metadata needs redirected_popularity for local cached objects
+        virtual Reward calculateReward_(const Popularity& local_popularity) const = 0; // NOTE: ONLY local cached metadata needs redirected_popularity for local cached objects
         sorted_reward_multimap_t::iterator addReward_(const Reward& new_reward, const perkey_lookup_iter_t& perkey_lookup_iter); // Return new sorted reward iterator
-        sorted_popularity_multimap_t::iterator updatePopularity_(const Popularity& new_popularity, const perkey_lookup_iter_t& perkey_lookup_iter); // Return updated sorted popularity iterator
+        sorted_reward_multimap_t::iterator updateReward_(const Reward& new_reward, const perkey_lookup_iter_t& perkey_lookup_iter); // Return updated sorted reward iterator
         void removePopularity_(const perkey_lookup_iter_t& perkey_lookup_iter);
 
         // For lookup table
@@ -133,8 +133,8 @@ namespace covered
         perkey_lookup_iter_t tryToGetLookup_(const Key& key); // Return lookup iterator (end() if not found)
         perkey_lookup_const_iter_t tryToGetLookup_(const Key& key) const; // Return lookup iterator (end() if not found)
         perkey_lookup_iter_t addLookup_(const Key& key); // Return new lookup iterator
-        void updateLookup_(const perkey_lookup_iter_t& perkey_lookup_iter, const sorted_popularity_multimap_t::iterator& new_sorted_popularity_iter);
-        void updateLookup_(const perkey_lookup_iter_t& perkey_lookup_iter, const perkey_metadata_list_t::iterator& perkey_metadata_iter, const sorted_popularity_multimap_t::iterator& sorted_popularity_iter);
+        void updateLookup_(const perkey_lookup_iter_t& perkey_lookup_iter, const sorted_reward_multimap_t::iterator& new_sorted_reward_iter);
+        void updateLookup_(const perkey_lookup_iter_t& perkey_lookup_iter, const perkey_metadata_list_t::iterator& perkey_metadata_iter, const sorted_reward_multimap_t::iterator& sorted_reward_iter);
         void removeLookup_(const perkey_lookup_iter_t& perkey_lookup_iter);
         
         // Object-level metadata for local hits/misses
@@ -151,8 +151,6 @@ namespace covered
 
         // Reward information
         // OBSOLETE (learned index cannot support duplicate popularities; actually we do NOT count the pointers of std::multimap in cache size usage): Use learned index to replace local cached/uncached sorted_reward_ for less memory usage (especially for local cached objects due to limited # of uncached objects)
-        // NOTE: for each local cached object, local reward (i.e., max eviction cost, as the local edge node does NOT know cache hit status of all other edge nodes and conservatively treat it as the last copy) is calculated by heterogeneous local/redirected cached popularity
-        // NOTE: for each local uncached object, local reward (i.e., min admission benefit, as the local edge node does NOT know cache miss status of all other edge nodes and conservatively treat it as a local single placement) is calculated by local uncached popularity with heterogeneous weights
         uint64_t sorted_reward_multimap_key_size_; // Total size of keys in sorted_reward_multimap_
         sorted_reward_multimap_t sorted_reward_multimap_; // Sorted reward information (allow duplicate reward values with insertion order; descending/ascending order for MRU/LRU of zero-reward objects)
 

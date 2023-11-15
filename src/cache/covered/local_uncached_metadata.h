@@ -1,5 +1,7 @@
 /*
  * LocalUncachedMetadata: metadata for local cached objects in covered.
+ *
+ * NOTE: for each local uncached object, local reward (i.e., min admission benefit, as the local edge node does NOT know cache miss status of all other edge nodes and conservatively treat it as a local single placement) is calculated by local uncached popularity with heterogeneous weights.
  * 
  * By Siyuan Sheng (2023.08.29).
  */
@@ -27,6 +29,9 @@ namespace covered
         uint32_t getValueSizeForUncachedObjects(const Key& key) const; // Get accurate/approximate value size for local uncached object
 
         // Different for local uncached objects
+
+        // For reward information
+        virtual Reward calculateReward_(const Popularity& local_cached_popularity) const override;
 
         void addForNewKey(const Key& key, const Value& value); // For getrsp/put/delreq w/ miss, initialize and update both value-unrelated and value-related metadata for newly-tracked key
 

@@ -118,10 +118,11 @@ namespace covered
         Popularity local_popularity = calculateLocalPopularity_((perkey_metadata_list_t::const_iterator)perkey_metadata_iter, key_level_metadata_ref, group_level_metadata_ref); // Calculate local popularity for local requests
 
         // Calculate and add reward for new key
-        sorted_popularity_multimap_t::iterator sorted_popularity_iter = addPopularity_(new_popularity, perkey_lookup_iter);
+        Reward new_reward = calculateReward_(local_popularity);
+        sorted_reward_multimap_t::iterator sorted_reward_iter = addReward_(new_reward, perkey_lookup_iter);
 
         // Update lookup table
-        updateLookup_(perkey_lookup_iter, perkey_metadata_iter, sorted_popularity_iter);
+        updateLookup_(perkey_lookup_iter, perkey_metadata_iter, sorted_reward_iter);
 
         return;
     }
@@ -131,19 +132,22 @@ namespace covered
         // Get lookup iterator
         perkey_lookup_iter_t perkey_lookup_iter = getLookup_(key);
 
-        // Update object-level value-unrelated metadata
+        // Update object-level value-unrelated metadata for local requests (local hits/misses)
         perkey_metadata_list_t::iterator perkey_metadata_iter = updateNoValuePerkeyMetadata_(perkey_lookup_iter);
         const KeyLevelMetadata& key_level_metadata_ref = perkey_metadata_iter->second;
 
-        // Update group-level value-unrelated metadata
+        // Update group-level value-unrelated metadata for all requests (local/redirected hits; local misses)
         const GroupLevelMetadata& group_level_metadata_ref = updateNoValuePergroupMetadata_(perkey_lookup_iter);
 
-        // Update popularity
-        Popularity new_popularity = calculatePopularity_((perkey_metadata_list_t::const_iterator)perkey_metadata_iter, key_level_metadata_ref, group_level_metadata_ref); // Calculate popularity
-        sorted_popularity_multimap_t::iterator new_sorted_popularity_iter = updatePopularity_(new_popularity, perkey_lookup_iter);
+        // Calculate updated local popularity
+        Popularity updated_local_popularity = calculateLocalPopularity_((perkey_metadata_list_t::const_iterator)perkey_metadata_iter, key_level_metadata_ref, group_level_metadata_ref);
+
+        // Update reward
+        Reward new_reward = calculateReward_(updated_local_popularity);
+        sorted_reward_multimap_t::iterator new_sorted_reward_iter = updateReward_(new_reward, perkey_lookup_iter);
 
         // Update lookup table
-        updateLookup_(perkey_lookup_iter, new_sorted_popularity_iter);
+        updateLookup_(perkey_lookup_iter, new_sorted_reward_iter);
 
         return;
     }
@@ -155,25 +159,30 @@ namespace covered
         // Get lookup iterator
         perkey_lookup_iter_t perkey_lookup_iter = getLookup_(key);
 
-        // Update object-level value-related metadata
+        // Update object-level value-related metadata for local requests (local hits/misses)
         perkey_metadata_list_t::iterator perkey_metadata_iter = updateValuePerkeyMetadata_(perkey_lookup_iter, value, original_value);
         const KeyLevelMetadata& key_level_metadata_ref = perkey_metadata_iter->second;
 
-        // Update group-level value-related metadata
+        // Update group-level value-related metadata for all requests (local/redirected hits and local misses)
         const GroupLevelMetadata& group_level_metadata_ref = updateValuePergroupMetadata_(perkey_lookup_iter, key, value, original_value);
 
-        // Update popularity
-        Popularity new_popularity = calculatePopularity_((perkey_metadata_list_t::const_iterator)perkey_metadata_iter, key_level_metadata_ref, group_level_metadata_ref); // Calculate popularity
-        sorted_popularity_multimap_t::iterator new_sorted_popularity_iter = updatePopularity_(new_popularity, perkey_lookup_iter);
+        // Calculate updated local popularity
+        Popularity updated_local_popularity = calculateLocalPopularity_((perkey_metadata_list_t::const_iterator)perkey_metadata_iter, key_level_metadata_ref, group_level_metadata_ref);
+
+        // Update reward
+        Reward new_reward = calculateReward_(updated_local_popularity);
+        sorted_reward_multimap_t::iterator new_sorted_reward_iter = updateReward_(new_reward, perkey_lookup_iter);
 
         // Update lookup table
-        updateLookup_(perkey_lookup_iter, new_sorted_popularity_iter);
+        updateLookup_(perkey_lookup_iter, new_sorted_reward_iter);
 
         return;
     }
 
     void CacheMetadataBase::removeForExistingKey_(const Key& detracked_key, const Value& detracked_value, const bool& is_local_cached_metadata)
     {
+        // TODO: END HERE
+
         // Get lookup iterator
         perkey_lookup_iter_t perkey_lookup_iter = getLookup_(detracked_key);
 
@@ -494,49 +503,49 @@ namespace covered
         return is_least_popular_key_exist;
     }
 
-    sorted_popularity_multimap_t::iterator CacheMetadataBase::addPopularity_(const Popularity& new_popularity, const perkey_lookup_iter_t& perkey_lookup_iter)
+    sorted_reward_multimap_t::iterator CacheMetadataBase::addReward_(const Reward& new_reward, const perkey_lookup_iter_t& perkey_lookup_iter)
     {
-        // NOTE: NO need to verify key existence due to duplicate popularity values
-        // NOTE: perkey_metadata_iter_ and sorted_popularity_iter_ in perkey_lookup_iter here are invalid
+        // NOTE: NO need to verify key existence due to duplicate reward values
+        // NOTE: perkey_metadata_iter_ and sorted_reward_iter_ in perkey_lookup_iter here are invalid
 
-        // Add new popularity information
-        sorted_popularity_multimap_t::iterator new_popularity_iter = sorted_popularity_multimap_.insert(std::pair(new_popularity, perkey_lookup_iter->first));
+        // Add new reward information
+        sorted_reward_multimap_t::iterator new_reward_iter = sorted_reward_multimap_.insert(std::pair(new_reward, perkey_lookup_iter->first));
 
         // Update size usage of popularity information
-        sorted_popularity_multimap_key_size_ = Util::uint64Add(sorted_popularity_multimap_key_size_, perkey_lookup_iter->first.getKeyLength());
+        sorted_reward_multimap_key_size_ = Util::uint64Add(sorted_reward_multimap_key_size_, perkey_lookup_iter->first.getKeyLength());
 
-        return new_popularity_iter;
+        return new_reward_iter;
     }
 
-    sorted_popularity_multimap_t::iterator CacheMetadataBase::updatePopularity_(const Popularity& new_popularity, const perkey_lookup_iter_t& perkey_lookup_iter)
+    sorted_reward_multimap_t::iterator CacheMetadataBase::updateReward_(const Popularity& new_reward, const perkey_lookup_iter_t& perkey_lookup_iter)
     {
         // Verify that key must exist
         const LookupMetadata& lookup_metadata = perkey_lookup_iter->second;
-        sorted_popularity_multimap_t::iterator old_sorted_popularity_iter = lookup_metadata.getSortedPopularityIter();
-        assert(old_sorted_popularity_iter != sorted_popularity_multimap_.end()); // For existing key
-        assert(old_sorted_popularity_iter->second == perkey_lookup_iter->first);
+        sorted_reward_multimap_t::iterator old_sorted_reward_iter = lookup_metadata.getSortedRewardIter();
+        assert(old_sorted_reward_iter != sorted_reward_multimap_.end()); // For existing key
+        assert(old_sorted_reward_iter->second == perkey_lookup_iter->first);
 
         /*// Get handle referring to item by move assignment operator
-        // NOTE: now handle points to item, yet old_sorted_popularity_iter->second points to NULL)
-        LruCacheReadHandle handle = std::move(old_sorted_popularity_iter->second);*/
+        // NOTE: now handle points to item, yet old_sorted_reward_iter->second points to NULL)
+        LruCacheReadHandle handle = std::move(old_sorted_reward_iter->second);*/
 
-        // Remove old popularity information
-        sorted_popularity_multimap_.erase(old_sorted_popularity_iter);
+        // Remove old reward information
+        sorted_reward_multimap_.erase(old_sorted_reward_iter);
         
-        /*// Create pair for new popularity by std::pair<T1, T2>(T1&&, T2&&) -> move constructor of T1 and T2
+        /*// Create pair for new reward by std::pair<T1, T2>(T1&&, T2&&) -> move constructor of T1 and T2
         // NOTE: now tmp_pair->second points to item, yet handle points to NULL
-        std::pair<Popularity, LruCacheReadHandle> tmp_pair(std::move(new_popularity), std::move(handle));*/
+        std::pair<Reward, LruCacheReadHandle> tmp_pair(std::move(new_reward), std::move(handle));
 
-        /*// Add new popularity information by std::multimap::insert(value_type&&) -> move constructor of std::pair<T1, T2>(std::pair&&) -> move constructor of T1 and T2 (note that members of rvalue is still rvalue)
-        // NOTE: now new_popularity_iter points to item, yet tmp_pair->second points to NULL
-        multimap_iterator_t new_popularity_iter = sorted_popularity_multimap_.insert(std::move(tmp_pair));*/
+        // Add new reward information by std::multimap::insert(value_type&&) -> move constructor of std::pair<T1, T2>(std::pair&&) -> move constructor of T1 and T2 (note that members of rvalue is still rvalue)
+        // NOTE: now new_reward_iter points to item, yet tmp_pair->second points to NULL
+        multimap_iterator_t new_reward_iter = sorted_reward_multimap_.insert(std::move(tmp_pair));*/
 
-        // Add new popularity information
-        sorted_popularity_multimap_t::iterator new_popularity_iter = sorted_popularity_multimap_.insert(std::pair(new_popularity, perkey_lookup_iter->first));
+        // Add new reward information
+        sorted_reward_multimap_t::iterator new_reward_iter = sorted_reward_multimap_.insert(std::pair(new_reward, perkey_lookup_iter->first));
 
-        // NOTE: NO need to update size usage of popularity information
+        // NOTE: NO need to update size usage of reward information
 
-        return new_popularity_iter;
+        return new_reward_iter;
     }
 
     void CacheMetadataBase::removePopularity_(const perkey_lookup_iter_t& perkey_lookup_iter)
@@ -604,25 +613,25 @@ namespace covered
         return perkey_lookup_iter;
     }
 
-    void CacheMetadataBase::updateLookup_(const perkey_lookup_iter_t& perkey_lookup_iter, const sorted_popularity_multimap_t::iterator& new_sorted_popularity_iter)
+    void CacheMetadataBase::updateLookup_(const perkey_lookup_iter_t& perkey_lookup_iter, const sorted_reward_multimap_t::iterator& new_sorted_reward_iter)
     {
         // Verify that key must exist
         assert(perkey_lookup_iter != perkey_lookup_table_.end()); // For existing key
 
-        perkey_lookup_iter->second.setSortedPopularityIter(new_sorted_popularity_iter);
+        perkey_lookup_iter->second.setSortedRewardIter(new_sorted_reward_iter);
 
         // NOTE: NO need to update size usage of lookup table
 
         return;
     }
 
-    void CacheMetadataBase::updateLookup_(const perkey_lookup_iter_t& perkey_lookup_iter, const perkey_metadata_list_t::iterator& perkey_metadata_iter, const sorted_popularity_multimap_t::iterator& sorted_popularity_iter)
+    void CacheMetadataBase::updateLookup_(const perkey_lookup_iter_t& perkey_lookup_iter, const perkey_metadata_list_t::iterator& perkey_metadata_iter, const sorted_reward_multimap_t::iterator& sorted_reward_iter)
     {
         // Verify that key must exist
         assert(perkey_lookup_iter != perkey_lookup_table_.end()); // For existing key
 
         perkey_lookup_iter->second.setPerkeyMetadataIter(perkey_metadata_iter);
-        perkey_lookup_iter->second.setSortedPopularityIter(sorted_popularity_iter);
+        perkey_lookup_iter->second.setSortedRewardIter(sorted_reward_iter);
 
         // NOTE: NO need to update size usage of lookup table
 

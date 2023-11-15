@@ -79,6 +79,12 @@ namespace covered
 
     // Different for local uncached objects
 
+    // For reward information
+    Reward LocalUncachedMetadata::calculateReward_(const Popularity& local_cached_popularity) const
+    {
+        // TODO: END HERE
+    }
+
     void LocalUncachedMetadata::addForNewKey(const Key& key, const Value& value)
     {
         // TMPDEBUG231110
