@@ -25,6 +25,9 @@ namespace covered
 
         // Different for local cached objects
 
+        // For reward information
+        virtual Reward calculateReward_(const Popularity& local_popularity, const Popularity& redirected_popularity) const override;
+
         // All the following functions return if affect local synced victims in victim tracker
         bool addForNewKey(const Key& key, const Value& value, const uint32_t& peredge_synced_victimcnt); // For admission, initialize and update both value-unrelated and value-related metadata for newly-admited key
         bool updateNoValueStatsForExistingKey(const Key& key, const uint32_t& peredge_synced_victimcnt); // For get/put/delreq w/ hit, update object-/group-level value-unrelated metadata for existing key (i.e., already admitted objects for local cached)

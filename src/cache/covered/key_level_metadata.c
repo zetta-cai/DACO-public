@@ -12,6 +12,7 @@ namespace covered
         #ifdef ENABLE_TRACK_PERKEY_OBJSIZE
         object_size_ = 0;
         #endif
+        local_popularity_ = 0.0;
     }
 
     KeyLevelMetadata::KeyLevelMetadata(const KeyLevelMetadata& other) : group_id_(other.group_id_)
@@ -20,6 +21,7 @@ namespace covered
         #ifdef ENABLE_TRACK_PERKEY_OBJSIZE
         object_size_ = other.object_size_;
         #endif
+        local_popularity_ = 0.0;
     }
 
     KeyLevelMetadata::~KeyLevelMetadata() {}
@@ -42,6 +44,13 @@ namespace covered
     }
     #endif
 
+    void KeyLevelMetadata::updateLocalPopularity(const Popularity& local_popularity)
+    {
+        local_popularity_ = local_popularity;
+
+        return;
+    }
+
     GroupId KeyLevelMetadata::getGroupId() const
     {
         return group_id_;
@@ -59,12 +68,18 @@ namespace covered
     }
     #endif
 
+    Popularity KeyLevelMetadata::getLocalPopularity() const
+    {
+        return local_popularity_;
+    }
+
     uint64_t KeyLevelMetadata::getSizeForCapacity()
     {
         uint64_t total_size = sizeof(GroupId) + sizeof(Frequency);
         #ifdef ENABLE_TRACK_PERKEY_OBJSIZE
         total_size += sizeof(ObjectSize);
         #endif
+        total_size += sizeof(Popularity);
         return total_size;
     }
 }

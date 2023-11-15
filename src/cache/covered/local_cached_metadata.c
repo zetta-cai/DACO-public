@@ -37,6 +37,10 @@ namespace covered
 
     // Different for local cached objects
 
+    // For reward information
+    Reward LocalCachedMetadata::calculateReward_(const Popularity& local_popularity, const Popularity& redirected_popularity) const
+    {}
+
     bool LocalCachedMetadata::addForNewKey(const Key& key, const Value& value, const uint32_t& peredge_synced_victimcnt)
     {
         // Initialize and update both value-unrelated and value-related metadata for newly-admited key

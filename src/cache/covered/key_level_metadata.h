@@ -24,12 +24,14 @@ namespace covered
         #ifdef ENABLE_TRACK_PERKEY_OBJSIZE
         void updateValueDynamicMetadata(const ObjectSize& object_size, const ObjectSize& original_object_size); // For admission, put/delreq w/ hit/miss, and getrsp w/ invalid-hit (also getrsp w/ miss if for newly-tracked key), update object-level value-related metadata
         #endif
+        void updateLocalPopularity(const Popularity& local_popularity);
 
         GroupId getGroupId() const;
         Frequency getFrequency() const;
         #ifdef ENABLE_TRACK_PERKEY_OBJSIZE
         ObjectSize getObjectSize() const;
         #endif
+        Popularity getLocalPopularity() const; // Get local popularity for local requests (local hits for local cached objects or local misses for local uncached objects)
 
         static uint64_t getSizeForCapacity();
     private:
@@ -45,6 +47,9 @@ namespace covered
         // Non-const value-related dynamic metadata
         ObjectSize object_size_;
         #endif
+
+        // Popularity information
+        Popularity local_popularity_; // Popularity for local requests (local hits for local cached objects or local misses for local uncached objects)
     };
 }
 

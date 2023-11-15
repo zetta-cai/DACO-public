@@ -7,12 +7,12 @@
 
 namespace covered
 {
-    bool PopularityLruCompare::operator()(const Popularity& lhs, const Popularity& rhs) const
+    bool RewardLruCompare::operator()(const Reward& lhs, const Reward& rhs) const
     {
         return lhs < rhs; // Ascending order
     }
 
-    bool PopularityMruCompare::operator()(const Popularity& lhs, const Popularity& rhs) const
+    bool RewardMruCompare::operator()(const Reward& lhs, const Reward& rhs) const
     {
         return lhs > rhs; // Descending order
     }
@@ -26,7 +26,7 @@ namespace covered
     LookupMetadata::LookupMetadata(const LookupMetadata& other)
     {
         perkey_metadata_iter_ = other.perkey_metadata_iter_;
-        sorted_popularity_iter_ = other.sorted_popularity_iter_;
+        sorted_reward_iter_ = other.sorted_reward_iter_;
     }
 
     LookupMetadata::~LookupMetadata() {}
@@ -36,9 +36,9 @@ namespace covered
         return perkey_metadata_iter_;
     }
 
-    sorted_popularity_multimap_t::iterator LookupMetadata::getSortedPopularityIter() const
+    sorted_reward_multimap_t::iterator LookupMetadata::getSortedRewardIter() const
     {
-        return sorted_popularity_iter_;
+        return sorted_reward_iter_;
     }
 
     void LookupMetadata::setPerkeyMetadataIter(const perkey_metadata_list_t::iterator& perkey_metadata_iter)
@@ -47,9 +47,9 @@ namespace covered
         return;
     }
     
-    void LookupMetadata::setSortedPopularityIter(const sorted_popularity_multimap_t::iterator& sorted_popularity_iter)
+    void LookupMetadata::setSortedRewardIter(const sorted_reward_multimap_t::iterator& sorted_reward_iter)
     {
-        sorted_popularity_iter_ = sorted_popularity_iter;
+        sorted_reward_iter_ = sorted_reward_iter;
         return;
     }
 
@@ -58,15 +58,15 @@ namespace covered
         return sizeof(perkey_metadata_list_t::iterator);
     }
 
-    uint64_t LookupMetadata::getSortedPopularityIterSizeForCapacity()
+    uint64_t LookupMetadata::getSortedRewardIterSizeForCapacity()
     {
-        return sizeof(sorted_popularity_multimap_t::iterator);
+        return sizeof(sorted_reward_multimap_t::iterator);
     }
 
     const LookupMetadata& LookupMetadata::operator=(const LookupMetadata& other)
     {
         perkey_metadata_iter_ = other.perkey_metadata_iter_;
-        sorted_popularity_iter_ = other.sorted_popularity_iter_;
+        sorted_reward_iter_ = other.sorted_reward_iter_;
 
         return *this;
     }
@@ -84,8 +84,8 @@ namespace covered
         cur_group_keycnt_ = 0;
         pergroup_metadata_map_.clear();
 
-        sorted_popularity_multimap_key_size_ = 0;
-        sorted_popularity_multimap_.clear();
+        sorted_reward_multimap_key_size_ = 0;
+        sorted_reward_multimap_.clear();
 
         perkey_lookup_table_key_size_ = 0;
         perkey_lookup_table_.clear();
@@ -106,16 +106,18 @@ namespace covered
         // Add lookup iterator for new key
         perkey_lookup_iter_t perkey_lookup_iter = addLookup_(key);
 
-        // Add group-level metadata (both value-unrelated and value-related) for new key
+        // Add group-level metadata for all requests (both value-unrelated and value-related) for new key
         GroupId assigned_group_id = 0;
         const GroupLevelMetadata& group_level_metadata_ref = addPergroupMetadata_(key, value, assigned_group_id);
 
-        // Add object-level metadata (both value-unrelated and value-related) for new key
+        // Add object-level metadata for local requests (both value-unrelated and value-related) for new key
         perkey_metadata_list_t::iterator perkey_metadata_iter = addPerkeyMetadata_(key, value, assigned_group_id);
         const KeyLevelMetadata& key_level_metadata_ref = perkey_metadata_iter->second;
 
-        // Add popularity for new key
-        Popularity new_popularity = calculatePopularity_((perkey_metadata_list_t::const_iterator)perkey_metadata_iter, key_level_metadata_ref, group_level_metadata_ref); // Calculate popularity
+        // Calculate local popularity for new key
+        Popularity local_popularity = calculateLocalPopularity_((perkey_metadata_list_t::const_iterator)perkey_metadata_iter, key_level_metadata_ref, group_level_metadata_ref); // Calculate local popularity for local requests
+
+        // Calculate and add reward for new key
         sorted_popularity_multimap_t::iterator sorted_popularity_iter = addPopularity_(new_popularity, perkey_lookup_iter);
 
         // Update lookup table
@@ -398,7 +400,46 @@ namespace covered
         return;
     }
 
-    // For popularity information
+    // For local (cached/uncached) popularity (local hits for local cached metadata; local misses for local uncached metadata)
+
+    Popularity CacheMetadataBase::calculateLocalPopularity_(const perkey_metadata_list_t::const_iterator& perkey_metadata_const_iter, const KeyLevelMetadata& key_level_metadata_ref, const GroupLevelMetadata& group_level_metadata_ref) const
+    {
+        // (OBSOLETE: zero-reward for one-hit-wonders will mis-evict hot keys) Set local popularity as zero for zero-reward of one-hit-wonders to quickly evict them
+        // if (key_level_metadata_ref.getFrequency() <= 1)
+        // {
+        //     return 0;
+        // }
+
+        // NOTE: Here we use a simple approach to calculate local popularity based on object-level metadata for local requests and group-level metadata for all requests
+        Popularity local_popularity = 0.0;
+        #ifdef ENABLE_TRACK_PERKEY_OBJSIZE
+        AvgObjectSize avg_objsize_bytes = static_cast<AvgObjectSize>(key_level_metadata_ref.getObjectSize());
+        #else
+        AvgObjectSize avg_objsize_bytes = group_level_metadata_ref.getAvgObjectSize();
+        #endif
+
+        // (OBSOLETE: we CANNOT directly use recency_index, as each object has an recency_index of 1 when updating popularity and we will NOT update recency info of all objects for each cache hit/miss)
+        //uint32_t recency_index = std::distance(perkey_metadata_list_.begin(), perkey_metadata_const_iter) + 1;
+        //avg_objsize_bytes *= recency_index;
+        UNUSED(perkey_metadata_const_iter);
+
+        if (avg_objsize_bytes == 0.0) // Zero avg object size due to delreqs or approximate value sizes in local uncached metadata
+        {
+            #ifdef ENABLE_TRACK_PERKEY_OBJSIZE
+            avg_objsize_bytes = 1.0; // Give the largest possible local popularity for delreqs due to zero space usage for deleted value
+            #else
+            local_popularity = 0; // Set local popularity as zero to avoid mis-admiting the uncached object with unknow object size if w/ approximate value sizes
+            return local_popularity;
+            #endif
+        }
+        
+        //Popularity avg_objsize_kb = Util::popularityDivide(static_cast<Popularity>(avg_objsize_bytes), 1024.0);
+        local_popularity = Util::popularityDivide(static_cast<Popularity>(key_level_metadata_ref.getFrequency()), avg_objsize_bytes); // # of cache accesses per space unit (similar as LHD)
+
+        return local_popularity;
+    }
+
+    // For reward information
 
     Popularity CacheMetadataBase::getPopularity_(const perkey_lookup_const_iter_t& perkey_lookup_iter) const
     {
@@ -451,45 +492,6 @@ namespace covered
         }
 
         return is_least_popular_key_exist;
-    }
-
-    Popularity CacheMetadataBase::calculatePopularity_(const perkey_metadata_list_t::const_iterator& perkey_metadata_const_iter, const KeyLevelMetadata& key_level_metadata_ref, const GroupLevelMetadata& group_level_metadata_ref) const
-    {
-        // TODO: Use homogeneous popularity calculation now, but will replace with heterogeneous popularity calculation + learning later (for both local cached and uncached objects)
-        // TODO: Use a heuristic or learning-based approach for parameter tuning to calculate local rewards for heterogeneous popularity calculation (refer to state-of-the-art studies such as LRB and GL-Cache)
-
-        // (OBSOLETE: zero-popularity for one-hit-wonders will mis-evict hot keys) Set popularity as zero for one-hit-wonders to quickly evict them
-        // if (key_level_metadata_ref.getFrequency() <= 1)
-        // {
-        //     return 0;
-        // }
-
-        // NOTE: Here we use a simple approach to calculate popularity based on object-level and group-level metadata
-        Popularity popularity = 0.0;
-        #ifdef ENABLE_TRACK_PERKEY_OBJSIZE
-        AvgObjectSize avg_objsize_bytes = static_cast<AvgObjectSize>(key_level_metadata_ref.getObjectSize());
-        #else
-        AvgObjectSize avg_objsize_bytes = group_level_metadata_ref.getAvgObjectSize();
-        #endif
-
-        // (OBSOLETE: we CANNOT directly use recency_index, as each object has an recency_index of 1 when updating popularity and we will NOT update recency info of all objects for each cache hit/miss)
-        //uint32_t recency_index = std::distance(perkey_metadata_list_.begin(), perkey_metadata_const_iter) + 1;
-        //avg_objsize_bytes *= recency_index;
-
-        if (avg_objsize_bytes == 0.0) // Zero avg object size due to delreqs or approximate value sizes in local uncached metadata
-        {
-            #ifdef ENABLE_TRACK_PERKEY_OBJSIZE
-            avg_objsize_bytes = 1.0; // Give the largest possible popularity for delreqs due to zero space usage for deleted value
-            #else
-            popularity = 0; // Set popularity as zero to avoid mis-admiting the uncached object with unknow object size if w/ approximate value sizes
-            return popularity;
-            #endif
-        }
-        
-        //Popularity avg_objsize_kb = Util::popularityDivide(static_cast<Popularity>(avg_objsize_bytes), 1024.0);
-        popularity = Util::popularityDivide(static_cast<Popularity>(key_level_metadata_ref.getFrequency()), avg_objsize_bytes); // # of cache accesses per space unit (similar as LHD)
-
-        return popularity;
     }
 
     sorted_popularity_multimap_t::iterator CacheMetadataBase::addPopularity_(const Popularity& new_popularity, const perkey_lookup_iter_t& perkey_lookup_iter)
