@@ -74,7 +74,7 @@ namespace covered
         return;
     }
 
-    bool GroupLevelMetadata::updateForDegrouped(const Key& key, const Value& value, const bool& need_warning)
+    bool GroupLevelMetadata::updateForDegrouped(const Key& key, const Value& value)
     {
         #ifndef ENABLE_TRACK_PERKEY_OBJSIZE
         uint32_t object_size = key.getKeyLength() + value.getValuesize();
@@ -86,12 +86,10 @@ namespace covered
             }
             else
             {
-                if (need_warning)
-                {
-                    std::ostringstream oss;
-                    oss << "Key " << key.getKeystr() << ": avg_object_size_ * object_cnt_ (" << avg_object_size_ << " * " << object_cnt_ << ") < object_size (" << object_size << ")";
-                    Util::dumpWarnMsg(kClassName, oss.str());
-                }
+                // NOTE: this is possible under approximate value size for local uncached metadata
+                // std::ostringstream oss;
+                // oss << "Key " << key.getKeystr() << ": avg_object_size_ * object_cnt_ (" << avg_object_size_ << " * " << object_cnt_ << ") < object_size (" << object_size << ")";
+                // Util::dumpWarnMsg(kClassName, oss.str());
 
                 avg_object_size_ = 0.0;
             }

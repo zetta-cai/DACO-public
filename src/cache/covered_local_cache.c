@@ -80,6 +80,9 @@ namespace covered
         const std::string keystr = key.getKeystr();
         affect_victim_tracker = false;
 
+        // TODO: END HERE
+        bool is_redirected = false;
+
         // NOTE: NOT take effect as cacheConfig.nvmAdmissionPolicyFactory is empty by default
         //covered_cache_ptr_->recordAccess(keystr);
 
@@ -92,21 +95,25 @@ namespace covered
             value = Value(handle->getSize());
 
             // Update local cached metadata for getreq with valid/invalid cache hit (ONLY value-unrelated metadata)
-            affect_victim_tracker = local_cached_metadata_.updateNoValueStatsForExistingKey(key, peredge_synced_victimcnt_);
+            affect_victim_tracker = local_cached_metadata_.updateNoValueStatsForExistingKey(key, peredge_synced_victimcnt_, is_redirected);
         }
         else // key is NOT cached
         {
-            bool is_tracked = local_uncached_metadata_.isKeyExist(key);
-            if (is_tracked) // Key is already tracked
+            // NOTE: we ONLY update local uncached metadata for local getreq w/ cache miss instead of redirected getreq w/ cache miss
+            if (!is_redirected)
             {
-                // Update local uncached metadata for getreq with cache miss (ONLY value-unrelated metadata)
-                local_uncached_metadata_.updateNoValueStatsForExistingKey(key);
+                bool is_tracked = local_uncached_metadata_.isKeyExist(key);
+                if (is_tracked) // Key is already tracked
+                {
+                    // Update local uncached metadata for getreq with cache miss (ONLY value-unrelated metadata)
+                    local_uncached_metadata_.updateNoValueStatsForExistingKey(key, peredge_synced_victimcnt_,is_redirected);
 
-                // NOTE: NOT update value-related metadata, as we conservatively treat the objsize unchanged (okay due to read-intensive edge cache trace)
-            }
-            else // Key will be newly tracked
-            {
-                // NOTE: NOT track local uncached object into local uncached metadata by addForNewKey() here, as the get request of untracked object with (the first) cache miss cannot provide object size information to initialize and update local uncached metadata, and also cannot trigger placement
+                    // NOTE: NOT update value-related metadata, as we conservatively treat the objsize unchanged (okay due to read-intensive edge cache trace)
+                }
+                else // Key will be newly tracked
+                {
+                    // NOTE: NOT track local uncached object into local uncached metadata by addForNewKey() here, as the get request of untracked object with (the first) cache miss cannot provide object size information to initialize and update local uncached metadata, and also cannot trigger placement
+                }
             }
         }
 
@@ -122,15 +129,18 @@ namespace covered
         for (uint32_t least_popular_rank = 0; least_popular_rank < peredge_synced_victimcnt_; least_popular_rank++)
         {
             Key tmp_victim_key;
+            ObjectSize tmp_victim_object_size = 0;
             Popularity tmp_local_cached_popularity = 0.0;
             Popularity tmp_redirected_cached_popularity = 0.0;
             Reward tmp_local_reward = 0.0;
 
-            ObjectSize tmp_victim_object_size = 0;
-            bool is_least_popular_key_exist = local_cached_metadata_.getLeastPopularKeyObjsizePopularity(least_popular_rank, tmp_victim_key, tmp_victim_object_size, tmp_local_cached_popularity, tmp_redirected_cached_popularity, tmp_local_reward);
+            bool is_least_popular_key_exist = local_cached_metadata_.getLeastRewardKeyAndReward(least_popular_rank, tmp_victim_key, tmp_local_reward);
 
             if (is_least_popular_key_exist)
             {
+                tmp_victim_object_size = local_cached_metadata_.getObjectSize(tmp_victim_key);
+                local_cached_metadata_.getPopularity(tmp_victim_key, tmp_local_cached_popularity, tmp_redirected_cached_popularity);
+
                 uint32_t tmp_victim_value_size = 0;
                 LruCacheReadHandle tmp_victim_handle = covered_cache_ptr_->find(tmp_victim_key.getKeystr()); // NOTE: although find() will move the item to the front of the LRU list to update recency information inside cachelib, covered uses local cache metadata tracked outside cachelib for cache management
                 assert(tmp_victim_handle != nullptr); // Victim must be cached before eviction
@@ -162,7 +172,15 @@ namespace covered
     {
         ObjectSize object_size = 0;
         Popularity local_uncached_popularity = 0.0;
-        bool is_key_tracked = local_uncached_metadata_.getLocalUncachedObjsizePopularityForKey(key, object_size, local_uncached_popularity);
+        bool is_key_tracked = local_uncached_metadata_.isKeyExist(key);
+        if (is_key_tracked)
+        {
+            object_size = local_uncached_metadata_.getObjectSize(key);
+
+            Popularity unused_redirection_popularity = 0.0;
+            local_uncached_metadata_.getPopularity(key, local_uncached_popularity, unused_redirection_popularity);
+            UNUSED(unused_redirection_popularity);
+        }
 
         // NOTE: (value size checking) NOT local-get/remote-collect large-objsize uncached object for aggregated uncached metadata due to slab-based memory management in Cachelib cache engine
         if (object_size > max_allocation_class_size_) // May be with large object size
@@ -185,6 +203,8 @@ namespace covered
         const std::string keystr = key.getKeystr();
         affect_victim_tracker = false;
         is_successful = false;
+
+        const bool is_redirected = false; // NOTE: getrsp/putreq/delreq MUST NOT redirected getreq
 
         LruCacheReadHandle handle = covered_cache_ptr_->find(keystr); // NOTE: although find() will move the item to the front of the LRU list to update recency information inside cachelib, covered uses local cache metadata tracked outside cachelib for cache management
         bool is_local_cached = (handle != nullptr);
@@ -224,7 +244,7 @@ namespace covered
                 }
                 else
                 {
-                    bool tmp_affect_victim_tracker0 = local_cached_metadata_.updateNoValueStatsForExistingKey(key, peredge_synced_victimcnt_);
+                    bool tmp_affect_victim_tracker0 = local_cached_metadata_.updateNoValueStatsForExistingKey(key, peredge_synced_victimcnt_, is_redirected);
                     bool tmp_affect_victim_tracker1 = local_cached_metadata_.updateValueStatsForExistingKey(key, value, original_value, peredge_synced_victimcnt_);
                     affect_victim_tracker = tmp_affect_victim_tracker0 || tmp_affect_victim_tracker1;
                 }
@@ -236,11 +256,13 @@ namespace covered
         {
             bool is_key_tracked = local_uncached_metadata_.isKeyExist(key);
 
+            const uint32_t keylen = key.getKeyLength();
             if (!is_valid_valuesize) // Large object size -> NOT track the key in local uncached metadata
             {
                 if (is_key_tracked) // Key is already tracked by local uncached metadata
                 {
-                    const uint32_t original_value_size = local_uncached_metadata_.getValueSizeForUncachedObjects(key);
+                    const uint32_t original_object_size = local_uncached_metadata_.getObjectSize(key);
+                    const uint32_t original_value_size = original_object_size >= keylen ? original_object_size - keylen : 0;
                     local_uncached_metadata_.removeForExistingKey(key, Value(original_value_size)); // Remove original value size to detrack the key from local uncached metadata
                 }
             }
@@ -250,11 +272,12 @@ namespace covered
                 {
                     // Initialize and update local uncached metadata for getrsp/put/delreq with cache miss (both value-unrelated and value-related)
                     // NOTE: if the latest local uncached popularity of the newly-tracked key is NOT detracked in addForNewKey() under local uncached metadata capacity limitation, local/remote release writelock (for put/delreq) or local/remote directory lookup for the next getreq (for getrsp) will get the latest local uncached popularity for popularity aggregation to trigger placement calculation
-                    local_uncached_metadata_.addForNewKey(key, value);
+                    local_uncached_metadata_.addForNewKey(key, value, peredge_synced_victimcnt_); // NOTE: peredge_synced_victimcnt_ will NOT be used for local uncached metadata
                 }
                 else // Key is tracked by local uncached metadata
                 {
-                    const uint32_t original_value_size = local_uncached_metadata_.getValueSizeForUncachedObjects(key);
+                    const uint32_t original_object_size = local_uncached_metadata_.getObjectSize(key);
+                    const uint32_t original_value_size = original_object_size >= keylen ? original_object_size - keylen : 0;
                     
                     // Update local uncached value-related metadata for put/delreq with cache miss (NOT for getrsp with cache miss)
                     if (is_getrsp) // getrsp with cache miss
@@ -265,9 +288,9 @@ namespace covered
                     else // put/delreq with cache miss
                     {
                         // Update local uncached value-unrelated metadata for put/delreq with cache miss
-                        local_uncached_metadata_.updateNoValueStatsForExistingKey(key);
+                        local_uncached_metadata_.updateNoValueStatsForExistingKey(key, peredge_synced_victimcnt_, is_redirected);
                         
-                        local_uncached_metadata_.updateValueStatsForExistingKey(key, value, original_value_size);
+                        local_uncached_metadata_.updateValueStatsForExistingKey(key, value, original_value_size, peredge_synced_victimcnt_); // NOTE: peredge_synced_victimcnt_ will NOT be used by local uncached metadata
                     }
                 }
             }
@@ -366,14 +389,18 @@ namespace covered
         while (conservative_victim_total_size < required_size) // Provide multiple victims based on required size for lazy victim fetching
         {
             Key tmp_victim_key;
+            ObjectSize tmp_victim_object_size = 0;
             Popularity tmp_local_cached_popularity = 0.0;
             Popularity tmp_redirected_cached_popularity = 0.0;
             Reward tmp_local_reward = 0.0;
 
-            ObjectSize tmp_victim_object_size = 0;
-            bool is_least_popular_key_exist = local_cached_metadata_.getLeastPopularKeyObjsizePopularity(least_popular_rank, tmp_victim_key, tmp_victim_object_size, tmp_local_cached_popularity, tmp_redirected_cached_popularity, tmp_local_reward);
+            bool is_least_popular_key_exist = local_cached_metadata_.getLeastRewardKeyAndReward(least_popular_rank, tmp_victim_key, tmp_local_reward);
+
             if (is_least_popular_key_exist)
             {
+                tmp_victim_object_size = local_cached_metadata_.getObjectSize(tmp_victim_key);
+                local_cached_metadata_.getPopularity(tmp_victim_key, tmp_local_cached_popularity, tmp_redirected_cached_popularity);
+
                 if (keys.find(tmp_victim_key) == keys.end())
                 {
                     keys.insert(tmp_victim_key);

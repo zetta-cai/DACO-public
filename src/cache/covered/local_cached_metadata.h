@@ -11,35 +11,39 @@
 
 #include <string>
 
-#include "cache/covered/cache_metadata_base.h"
+#include "cache/covered/hetero_key_level_metadata.h"
+#include "cache/covered/cache_metadata_base_impl.h"
 
 namespace covered
 {
-    class LocalCachedMetadata : public CacheMetadataBase
+    class LocalCachedMetadata : public CacheMetadataBase<HeteroKeyLevelMetadata>
     {
     public:
         LocalCachedMetadata();
         virtual ~LocalCachedMetadata();
 
-        // ONLY for local cached objects
-
-        bool getLeastPopularKeyObjsizePopularity(const uint32_t& least_popular_rank, Key& key, ObjectSize& object_size, Popularity& local_cached_popularity, Popularity& redirected_cached_popularity, Reward& local_reward) const; // Get ith least popular key and its local/redirected cached popularity for local cached object with local reward (determine the ranking order)
-
-        // Different for local cached objects
-
-        // For reward information
-        virtual Reward calculateReward_(const Popularity& local_cached_popularity) const override;
-
-        // All the following functions return if affect local synced victims in victim tracker
-        bool addForNewKey(const Key& key, const Value& value, const uint32_t& peredge_synced_victimcnt); // For admission, initialize and update both value-unrelated and value-related metadata for newly-admited key
-        bool updateNoValueStatsForExistingKey(const Key& key, const uint32_t& peredge_synced_victimcnt); // For get/put/delreq w/ hit, update object-/group-level value-unrelated metadata for existing key (i.e., already admitted objects for local cached)
-        bool updateValueStatsForExistingKey(const Key& key, const Value& value, const Value& original_value, const uint32_t& peredge_synced_victimcnt); // For put/delreq w/ hit and getrsp w/ invalid-hit, update object-/group-level value-related metadata for existing key (i.e., already admitted objects for local cached)
-
-        void removeForExistingKey(const Key& detracked_key, const Value& value); // Remove admitted cached key (for eviction)
+        // For popularity information
+        virtual void getPopularity(const Key& key, Popularity& local_popularity, Popularity& redirected_popularity) const override;
 
         virtual uint64_t getSizeForCapacity() const override; // Get size for capacity constraint of local cached objects
     private:
         static const std::string kClassName;
+
+        // For newly-admited/tracked keys
+        virtual bool afterAddForNewKey_(const typename perkey_lookup_table_t::const_iterator& perkey_lookup_const_iter, const uint32_t& peredge_synced_victimcnt) override; // Return if affect victim tracker
+
+        // For existing key
+        virtual bool beforeUpdateStatsForExistingKey_(const typename perkey_lookup_table_t::const_iterator& perkey_lookup_const_iter, const uint32_t& peredge_synced_victimcnt) const override; // Return if affect local synced victims in victim tracker
+        virtual bool afterUpdateStatsForExistingKey_(const typename perkey_lookup_table_t::const_iterator& perkey_lookup_const_iter, const uint32_t& peredge_synced_victimcnt) const override; // Return if affect local synced victims in victim tracker
+
+        // For popularity information
+        virtual void calculateAndUpdatePopularity_(perkey_metadata_list_t::iterator& perkey_metadata_iter, const HeteroKeyLevelMetadata& key_level_metadata_ref, const GroupLevelMetadata& group_level_metadata_ref) override; // Calculate local/redirected uncached popularity based on object-level metadata for local/redirected hits and group-level metadata for all requests
+
+        // For reward information
+        virtual Reward calculateReward_(perkey_metadata_list_t::iterator perkey_metadata_iter) const override;
+
+        // ONLY for local cached metadata
+        bool isAffectVictimTracker_(const typename perkey_lookup_table_t::const_iterator& perkey_lookup_const_iter, const uint32_t& peredge_synced_victimcnt) const;
     };
 }
 

@@ -1,11 +1,11 @@
 /*
- * KeyLevelMetadata: key-level metadata for each object in local edge cache.
+ * HomoKeyLevelMetadata: homogeneous key-level metadata for each local uncached object in local edge cache.
  * 
  * By Siyuan Sheng (2023.08.16).
  */
 
-#ifndef KEY_LEVEL_METADATA_H
-#define KEY_LEVEL_METADATA_H
+#ifndef HOMO_KEY_LEVEL_METADATA_H
+#define HOMO_KEY_LEVEL_METADATA_H
 
 #include <string>
 
@@ -13,21 +13,21 @@
 
 namespace covered
 {
-    class KeyLevelMetadata
+    class HomoKeyLevelMetadata
     {
     public:
-        KeyLevelMetadata(const GroupId& group_id);
-        KeyLevelMetadata(const KeyLevelMetadata& other);
-        ~KeyLevelMetadata();
+        HomoKeyLevelMetadata(const GroupId& group_id);
+        HomoKeyLevelMetadata(const HomoKeyLevelMetadata& other);
+        ~HomoKeyLevelMetadata();
 
-        void updateNoValueDynamicMetadata(); // For get/put/delreq w/ hit/miss, update object-level value-unrelated metadata
+        void updateNoValueDynamicMetadata(const bool& is_redirected = false); // For get/put/delreq w/ hit/miss, update object-level value-unrelated metadata
         #ifdef ENABLE_TRACK_PERKEY_OBJSIZE
         void updateValueDynamicMetadata(const ObjectSize& object_size, const ObjectSize& original_object_size); // For admission, put/delreq w/ hit/miss, and getrsp w/ invalid-hit (also getrsp w/ miss if for newly-tracked key), update object-level value-related metadata
         #endif
         void updateLocalPopularity(const Popularity& local_popularity);
 
         GroupId getGroupId() const;
-        Frequency getFrequency() const;
+        Frequency getLocalFrequency() const;
         #ifdef ENABLE_TRACK_PERKEY_OBJSIZE
         ObjectSize getObjectSize() const;
         #endif
@@ -41,15 +41,15 @@ namespace covered
         const GroupId group_id_;
 
         // Non-const value-unrelated dynamic metadata
-        Frequency frequency_;
+        Frequency local_frequency_;
 
         #ifdef ENABLE_TRACK_PERKEY_OBJSIZE
         // Non-const value-related dynamic metadata
         ObjectSize object_size_;
         #endif
 
-        // Popularity information
-        Popularity local_popularity_; // Popularity for local requests (local hits for local cached objects or local misses for local uncached objects)
+        // Local popularity information
+        Popularity local_popularity_; // Local popularity for local requests (local hits for local cached objects or local misses for local uncached objects)
     };
 }
 

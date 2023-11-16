@@ -2,6 +2,7 @@
 
 #include <assert.h>
 
+#include "common/covered_weight.h"
 #include "common/util.h"
 
 namespace covered
@@ -15,45 +16,93 @@ namespace covered
 
     LocalUncachedMetadata::~LocalUncachedMetadata() {}
 
-    // ONLY for local uncached objects
-
-    bool LocalUncachedMetadata::getLocalUncachedObjsizePopularityForKey(const Key& key, ObjectSize& object_size, Popularity& local_uncached_popularity) const
+    uint64_t LocalUncachedMetadata::getSizeForCapacity() const
     {
-        bool is_key_exist = false;
-
-        // Get lookup iterator
-        perkey_lookup_const_iter_t perkey_lookup_const_iter = tryToGetLookup_(key);
-
-        // Get popularity if key exists
-        if (perkey_lookup_const_iter != perkey_lookup_table_.end())
-        {
-            local_uncached_popularity = getPopularity_(perkey_lookup_const_iter);
-            object_size = getObjectSize_(perkey_lookup_const_iter);
-
-            is_key_exist = true;
-        }
-
-        return is_key_exist;
+        const bool is_local_cached_metadata = false;
+        return getSizeForCapacity_(is_local_cached_metadata);   
     }
 
-    uint32_t LocalUncachedMetadata::getValueSizeForUncachedObjects(const Key& key) const
+    // For newly-admited/tracked keys
+
+    bool LocalUncachedMetadata::afterAddForNewKey_(const typename perkey_lookup_table_t::const_iterator& perkey_lookup_const_iter, const uint32_t& peredge_synced_victimcnt)
     {
-        // Get lookup iterator
-        perkey_lookup_const_iter_t perkey_lookup_const_iter = getLookup_(key);
-
-        // Get accurate/average object size
-        ObjectSize object_size = getObjectSize_(perkey_lookup_const_iter);
-
-        // NOTE: for local uncached objects, as we do NOT know per-key value size (ifndef ENABLE_TRACK_PERKEY_OBJSIZE), we use the (average object size - key size) as the approximate detrack value
-        uint32_t value_size = 0;
-        uint32_t key_size = key.getKeyLength();
-        if (object_size > key_size)
+        // Detrack key for uncached capacity limitation if necessary
+        Key detracked_key;
+        while (true)
         {
-            value_size = object_size - key_size;
+            bool need_detrack = needDetrackForUncachedObjects_(detracked_key);
+            if (need_detrack) // Cache size usage for local uncached objects exceeds the max bytes limitation
+            {
+                const uint32_t detracked_keylen = detracked_key.getKeyLength();
+                const uint32_t detracked_object_size = getObjectSize(detracked_key);
+                uint32_t detracked_value_size = detracked_object_size >= detracked_keylen ? detracked_object_size - detracked_keylen: 0;
+                removeForExistingKey(detracked_key, Value(detracked_value_size)); // For getrsp with cache miss, put/delrsp with cache miss (NOTE: this will remove value from auxiliary data cache if any)
+            }
+            else // Local uncached objects is limited
+            {
+                break;
+            }
         }
 
-        return value_size;
+        return false; // Local uncached metadata always returns false
     }
+
+    // For existing keys
+
+    bool LocalUncachedMetadata::beforeUpdateStatsForExistingKey_(const typename perkey_lookup_table_t::const_iterator& perkey_lookup_const_iter, const uint32_t& peredge_synced_victimcnt) const
+    {
+        return false;
+    }
+
+    bool LocalUncachedMetadata::afterUpdateStatsForExistingKey_(const typename perkey_lookup_table_t::const_iterator& perkey_lookup_const_iter, const uint32_t& peredge_synced_victimcnt) const
+    {
+        return false;
+    }
+
+    // For popularity information
+
+    void LocalUncachedMetadata::getPopularity(const Key& key, Popularity& local_popularity, Popularity& redirected_popularity) const
+    {
+        const HomoKeyLevelMetadata& key_level_metadata_ref = getkeyLevelMetadata(key);
+        local_popularity = key_level_metadata_ref.getLocalPopularity();
+        redirected_popularity = 0.0; // Local uncached metadata does NOT have redirected popularity
+        return;
+    }
+
+    void LocalUncachedMetadata::calculateAndUpdatePopularity_(perkey_metadata_list_t::iterator& perkey_metadata_list_iter, const HomoKeyLevelMetadata& key_level_metadata_ref, const GroupLevelMetadata& group_level_metadata_ref)
+    {
+        #ifdef ENABLE_TRACK_PERKEY_OBJSIZE
+        ObjectSize object_size = key_level_metadata_ref.getObjectSize();
+        #else
+        ObjectSize objsize_size = static_cast<ObjectSize>(group_level_metadata_ref.getAvgObjectSize());
+        #endif
+
+        // Calculate and update local uncached popularity
+        Frequency local_frequency = key_level_metadata_ref.getLocalFrequency();
+        Popularity local_uncached_popularity = calculatePopularity_(local_frequency, object_size);
+        perkey_metadata_list_iter->second.updateLocalPopularity(local_uncached_popularity);
+
+        return;
+    }
+
+    // For reward information
+    Reward LocalUncachedMetadata::calculateReward_(perkey_metadata_list_t::iterator perkey_metadata_list_iter) const
+    {
+        // Get weight parameters from static class atomically
+        const WeightInfo weight_info = CoveredWeight::getWeightInfo();
+        const Weight local_hit_weight = weight_info.getLocalHitWeight();
+        const Weight cooperative_hit_weight = weight_info.getCooperativeHitWeight();
+
+        // Get local uncached popularity
+        const Popularity local_uncached_popularity = perkey_metadata_list_iter->second.getLocalPopularity();
+
+        // TODO: Calculte local reward (i.e., min admission benefit, as the local edge node does NOT know cache miss status of all other edge nodes and conservatively treat it as a local single placement)
+        Reward local_reward = local_uncached_popularity;
+
+        return local_reward;
+    }
+
+    // ONLY for local uncached metadata
 
     bool LocalUncachedMetadata::needDetrackForUncachedObjects_(Key& detracked_key) const
     {
@@ -62,12 +111,11 @@ namespace covered
         if (cache_size_usage_for_uncached_objects > max_bytes_for_uncached_objects_)
         {
             Key tmp_key;
-            Popularity tmp_popularity = 0.0;
-            bool is_least_popular_key_exist = CacheMetadataBase::getLeastPopularKeyPopularity_(0, tmp_key, tmp_popularity);
-            assert(is_least_popular_key_exist == true); // NOTE: the least popular uncached object MUST exist
+            Reward tmp_reward = 0.0;
+            bool is_least_reward_key_exist = getLeastRewardKeyAndReward(0, tmp_key, tmp_reward);
+            assert(is_least_reward_key_exist == true); // NOTE: the least reward uncached object MUST exist
 
             detracked_key = tmp_key;
-            UNUSED(tmp_popularity);
 
             return true;
         }
@@ -75,111 +123,5 @@ namespace covered
         {
             return false;
         }
-    }
-
-    // Different for local uncached objects
-
-    // For reward information
-    Reward LocalUncachedMetadata::calculateReward_(const Popularity& local_cached_popularity) const
-    {
-        // TODO: END HERE
-    }
-
-    void LocalUncachedMetadata::addForNewKey(const Key& key, const Value& value)
-    {
-        // TMPDEBUG231110
-        // std::ostringstream oss;
-        // oss << "addForNewKey: key " << key.getKeystr() << ", value size " << value.getValuesize();
-        // Util::dumpDebugMsg(kClassName, oss.str());
-
-        // Initialize and update both value-unrelated and value-related metadata for newly-tracked key
-        CacheMetadataBase::addForNewKey_(key, value);
-
-        // Detrack key for uncached capacity limitation if necessary
-        Key detracked_key;
-        while (true)
-        {
-            bool need_detrack = needDetrackForUncachedObjects_(detracked_key);
-            if (need_detrack) // Cache size usage for local uncached objects exceeds the max bytes limitation
-            {
-                uint32_t detracked_value_size = getValueSizeForUncachedObjects(detracked_key);                
-                removeForExistingKey(detracked_key, Value(detracked_value_size)); // For getrsp with cache miss, put/delrsp with cache miss (NOTE: this will remove value from auxiliary data cache if any)
-
-                // TMPDEBUG231110
-                // oss.clear();
-                // oss.str("");
-                // oss << "need_detrack: key " << detracked_key.getKeystr() << ", value size " << detracked_value_size;
-                // Util::dumpDebugMsg(kClassName, oss.str());
-            }
-            else // Local uncached objects is limited
-            {
-                break;
-            }
-        }
-
-        return;
-    }
-
-    void LocalUncachedMetadata::updateNoValueStatsForExistingKey(const Key& key)
-    {
-        // Update value-unrelated metadata
-        CacheMetadataBase::updateNoValueStatsForExistingKey_(key);
-
-        return;
-    }
-
-    void LocalUncachedMetadata::updateValueStatsForExistingKey(const Key& key, const Value& value, const Value& original_value)
-    {
-        // Update value-related metadata
-        CacheMetadataBase::updateValueStatsForExistingKey_(key, value, original_value);
-
-        return;
-    }
-
-    void LocalUncachedMetadata::removeForExistingKey(const Key& detracked_key, const Value& value)
-    {
-        const bool is_local_cached_metadata = false;
-        CacheMetadataBase::removeForExistingKey_(detracked_key, value, is_local_cached_metadata);
-
-        return;
-    }
-
-    uint64_t LocalUncachedMetadata::getSizeForCapacity() const
-    {
-        // Object-level metadata
-        uint64_t perkey_metadata_list_metadata_size = perkey_metadata_list_.size() * KeyLevelMetadata::getSizeForCapacity();
-
-        // Group-level metadata
-        uint64_t pergroup_metadata_map_groupid_size = pergroup_metadata_map_.size() * sizeof(GroupId);
-        uint64_t pergroup_metadata_map_metadata_size = pergroup_metadata_map_.size() * GroupLevelMetadata::getSizeForCapacity();
-
-        // Popularity information
-        uint64_t sorted_popularity_multimap_popularity_size = sorted_popularity_multimap_.size() * sizeof(Popularity);
-
-        // Lookup table
-        uint64_t perkey_lookup_table_perkey_metadata_iter_size = perkey_lookup_table_.size() * LookupMetadata::getPerkeyMetadataIterSizeForCapacity();
-        uint64_t perkey_lookup_table_sorted_popularity_iter_size = perkey_lookup_table_.size() * LookupMetadata::getSortedPopularityIterSizeForCapacity();
-
-        uint64_t total_size = 0;
-
-        // Object-level metadata
-        // NOTE: although we maintain keys in perkey_metadata_list_, it is just for implementation simplicity (e.g., key can be replaced by a pointer referring to the corresponding lookup table entry) but we NEVER use perkey_metadata_list_->first to locate keys (due to popularity-based eviciton instead of LRU-based eviction) -> NO need to count the size of keys of object-level metadata for local uncached objects (cache size usage of keys will be counted in lookup table below)
-        //total_size = Util::uint64Add(total_size, perkey_metadata_list_key_size_);
-        total_size = Util::uint64Add(total_size, perkey_metadata_list_metadata_size);
-
-        // Group-level metadata
-        total_size = Util::uint64Add(total_size, pergroup_metadata_map_groupid_size);
-        total_size = Util::uint64Add(total_size, pergroup_metadata_map_metadata_size);
-
-        // Popularity information (locate keys in lookup table for popularity-based eviction)
-        total_size = Util::uint64Add(total_size, sorted_popularity_multimap_popularity_size);
-        total_size = Util::uint64Add(total_size, sorted_popularity_multimap_key_size_);
-
-        // Lookup table (locate keys in object-level LRU list and popularity list)
-        total_size = Util::uint64Add(total_size, perkey_lookup_table_key_size_);
-        total_size = Util::uint64Add(total_size, perkey_lookup_table_perkey_metadata_iter_size); // LRU list iterator
-        total_size = Util::uint64Add(total_size, perkey_lookup_table_sorted_popularity_iter_size); // Popularity list iterator
-
-        return total_size;
     }
 }
