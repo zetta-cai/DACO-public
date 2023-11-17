@@ -1,5 +1,9 @@
 /*
  * HeteroKeyLevelMetadata: heterogeneous key-level metadata for each local cached object in local edge cache.
+ *
+ * NOTE: we will provide redirected cached popularity as a part of victim cacheinfo for victim synchronization of local synced victims by getLocalSyncedVictimCacheinfosFromLocalCacheInternal_() and extra victim fetching for placement calculation by getLocalCacheVictimKeysInternal_().
+ * 
+ * NOTE: redirected cached popularity will be used to calculate eviction cost in the beacon edge node during cache placement by VictimTracker::calcEvictionCost().
  * 
  * By Siyuan Sheng (2023.11.16).
  */

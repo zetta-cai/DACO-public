@@ -210,6 +210,7 @@ namespace covered
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_redirection_processor_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
+        const bool is_redirected = true;
         if (tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME) // ONLY for COVERED
         {
             assert(redirected_request_ptr->getMessageType() == MessageType::kCoveredRedirectedGetRequest || redirected_request_ptr->getMessageType() == MessageType::kCoveredPlacementRedirectedGetRequest);
@@ -240,7 +241,7 @@ namespace covered
             }
 
             // Access local edge cache for redirected get request
-            is_cooperative_cached_and_valid = tmp_edge_wrapper_ptr->getLocalEdgeCache_(tmp_key, value);
+            is_cooperative_cached_and_valid = tmp_edge_wrapper_ptr->getLocalEdgeCache_(tmp_key, is_redirected, value);
             is_cooperative_cached = tmp_edge_wrapper_ptr->getEdgeCachePtr()->isLocalCached(tmp_key);
 
             // Victim synchronization
@@ -255,7 +256,7 @@ namespace covered
             Key tmp_key = redirected_get_request_ptr->getKey();
 
             // Access local edge cache for redirected get request
-            is_cooperative_cached_and_valid = tmp_edge_wrapper_ptr->getLocalEdgeCache_(tmp_key, value);
+            is_cooperative_cached_and_valid = tmp_edge_wrapper_ptr->getLocalEdgeCache_(tmp_key, is_redirected, value);
             is_cooperative_cached = tmp_edge_wrapper_ptr->getEdgeCachePtr()->isLocalCached(tmp_key);
         }
         

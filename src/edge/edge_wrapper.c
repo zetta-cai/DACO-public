@@ -956,7 +956,7 @@ namespace covered
 
     // (6.1) For local edge cache access
 
-    bool EdgeWrapper::getLocalEdgeCache_(const Key& key, Value& value) const
+    bool EdgeWrapper::getLocalEdgeCache_(const Key& key, const bool& is_redirected, Value& value) const
     {
         checkPointers_();
 
@@ -964,7 +964,7 @@ namespace covered
         Util::dumpVariablesForDebug(instance_name_, 2, "before get for key", key.getKeystr().c_str());
 
         bool affect_victim_tracker = false;
-        bool is_local_cached_and_valid = edge_cache_ptr_->get(key, value, affect_victim_tracker);
+        bool is_local_cached_and_valid = edge_cache_ptr_->get(key, is_redirected, value, affect_victim_tracker);
 
         // TMPDEBUGTMPDEBUG
         Util::dumpVariablesForDebug(instance_name_, 2, "after get for key", key.getKeystr().c_str());
@@ -1076,7 +1076,8 @@ namespace covered
         // Check local edge cache in local/remote beacon node first
         // NOTE: NOT update aggregated uncached popularity to avoid recursive placement calculation even if local uncached popularity is cached
         Value value;
-        bool is_local_cached_and_valid = getLocalEdgeCache_(key, value);
+        const bool is_redirected = !sender_is_beacon; // Approximately treat local control message as local cache access if sender is beacon, yet treat remote control message as remote cache access if sender is NOT beacon
+        bool is_local_cached_and_valid = getLocalEdgeCache_(key, is_redirected, value);
 
         if (is_local_cached_and_valid) // Directly get valid value from local edge cache in local/remote beacon node
         {

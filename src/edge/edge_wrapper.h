@@ -107,7 +107,7 @@ namespace covered
         // (6) common utility functions (invoked by edge cache server worker/placement-processor or edge beacon server of closest/beacon edge node)
 
         // (6.1) For local edge cache access
-        bool getLocalEdgeCache_(const Key& key, Value& value) const; // Return is local cached and valid
+        bool getLocalEdgeCache_(const Key& key, const bool& is_redirected, Value& value) const; // Return is local cached and valid
 
         // (6.2) For local directory admission (invoked by cache server worker for independent admission or local placement notification if sender is beacon; or by beacon server for local placement notification if sender is not beacon)
         void admitLocalDirectory_(const Key& key, const DirectoryInfo& directory_info, bool& is_being_written) const; // Admit directory info in current edge node

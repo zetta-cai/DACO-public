@@ -88,7 +88,7 @@ namespace covered
 
     // (2) Access local edge cache (KV data and local metadata)
 
-    bool LocalCacheBase::getLocalCache(const Key& key, Value& value, bool& affect_victim_tracker) const
+    bool LocalCacheBase::getLocalCache(const Key& key, const bool& is_redirected, Value& value, bool& affect_victim_tracker) const
     {
         checkPointers_();
 
@@ -96,7 +96,7 @@ namespace covered
         std::string context_name = "LocalCacheBase::getLocalCache()";
         rwlock_for_local_cache_ptr_->acquire_lock(context_name);
 
-        bool is_local_cached = getLocalCacheInternal_(key, value, affect_victim_tracker);
+        bool is_local_cached = getLocalCacheInternal_(key, is_redirected, value, affect_victim_tracker);
 
         rwlock_for_local_cache_ptr_->unlock(context_name);
         return is_local_cached;

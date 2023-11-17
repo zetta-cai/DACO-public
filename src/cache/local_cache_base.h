@@ -36,7 +36,7 @@ namespace covered
 
         // (2) Access local edge cache (KV data and local metadata)
 
-        bool getLocalCache(const Key& key, Value& value, bool& affect_victim_tracker) const; // Return whether key is cached
+        bool getLocalCache(const Key& key, const bool& is_redirected, Value& value, bool& affect_victim_tracker) const; // Return whether key is cached
         std::list<VictimCacheinfo> getLocalSyncedVictimCacheinfosFromLocalCache() const; // Return up to peredge_synced_victimcnt local synced victims with the least local rewards
         void getCollectedPopularityFromLocalCache(const Key& key, CollectedPopularity& collected_popularity) const; // Return true if local uncached key is tracked
 
@@ -78,7 +78,7 @@ namespace covered
 
         // (2) Access local edge cache (KV data and local metadata)
 
-        virtual bool getLocalCacheInternal_(const Key& key, Value& value, bool& affect_victim_tracker) const = 0; // Return whether key is cached
+        virtual bool getLocalCacheInternal_(const Key& key, const bool& is_redirected, Value& value, bool& affect_victim_tracker) const = 0; // Return whether key is cached
         virtual std::list<VictimCacheinfo> getLocalSyncedVictimCacheinfosFromLocalCacheInternal_() const = 0; // Return up to peredge_synced_victimcnt local synced victims with the least local rewards
         virtual void getCollectedPopularityFromLocalCacheInternal_(const Key& key, CollectedPopularity& collected_popularity) const = 0; // Return true if local uncached key is tracked
 

@@ -569,6 +569,7 @@ namespace covered
         if (tmp_object_size == 0) // Zero object size due to delreqs or approximate value sizes in local uncached metadata
         {
             #ifdef ENABLE_TRACK_PERKEY_OBJSIZE
+            assert(false); // TMPDEBUG23
             tmp_object_size = 1; // Give the largest possible popularity for delreqs due to zero space usage for deleted value
             #else
             popularity = 0; // Set popularity as zero to avoid mis-admiting the uncached object with unknow object size if w/ approximate value sizes

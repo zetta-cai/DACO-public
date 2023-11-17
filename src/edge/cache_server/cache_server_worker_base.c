@@ -223,7 +223,8 @@ namespace covered
 
         // Access local edge cache (current edge node is the closest edge node)
         struct timespec get_local_cache_start_timestamp = Util::getCurrentTimespec();
-        bool is_local_cached_and_valid = tmp_edge_wrapper_ptr->getLocalEdgeCache_(tmp_key, tmp_value);
+        const bool is_redirected = false;
+        bool is_local_cached_and_valid = tmp_edge_wrapper_ptr->getLocalEdgeCache_(tmp_key, is_redirected, tmp_value);
         if (is_local_cached_and_valid) // local cached and valid
         {
             hitflag = Hitflag::kLocalHit;

@@ -43,8 +43,9 @@ namespace covered
 
     // (2) Access local edge cache (KV data and local metadata)
 
-    bool LfuLocalCache::getLocalCacheInternal_(const Key& key, Value& value, bool& affect_victim_tracker) const
+    bool LfuLocalCache::getLocalCacheInternal_(const Key& key, const bool& is_redirected, Value& value, bool& affect_victim_tracker) const
     {
+        UNUSED(is_redirected); // ONLY for COVERED
         UNUSED(affect_victim_tracker); // Only for COVERED
 
         bool is_local_cached = lfu_cache_ptr_->get(key, value);

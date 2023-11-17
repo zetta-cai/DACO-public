@@ -75,13 +75,10 @@ namespace covered
 
     // (2) Access local edge cache (KV data and local metadata)
 
-    bool CoveredLocalCache::getLocalCacheInternal_(const Key& key, Value& value, bool& affect_victim_tracker) const
+    bool CoveredLocalCache::getLocalCacheInternal_(const Key& key, const bool& is_redirected, Value& value, bool& affect_victim_tracker) const
     {
         const std::string keystr = key.getKeystr();
         affect_victim_tracker = false;
-
-        // TODO: END HERE
-        bool is_redirected = false;
 
         // NOTE: NOT take effect as cacheConfig.nvmAdmissionPolicyFactory is empty by default
         //covered_cache_ptr_->recordAccess(keystr);
@@ -106,7 +103,7 @@ namespace covered
                 if (is_tracked) // Key is already tracked
                 {
                     // Update local uncached metadata for getreq with cache miss (ONLY value-unrelated metadata)
-                    local_uncached_metadata_.updateNoValueStatsForExistingKey(key, peredge_synced_victimcnt_,is_redirected);
+                    local_uncached_metadata_.updateNoValueStatsForExistingKey(key, peredge_synced_victimcnt_, is_redirected);
 
                     // NOTE: NOT update value-related metadata, as we conservatively treat the objsize unchanged (okay due to read-intensive edge cache trace)
                 }
