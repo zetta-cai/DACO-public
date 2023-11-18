@@ -1164,11 +1164,6 @@ namespace covered
         assert(cache_name_ == Util::COVERED_CACHE_NAME);
         assert(best_placement_edgeset.size() <= topk_edgecnt_for_placement_); // At most k placement edge nodes each time
 
-        // TMPDEBUG231108
-        std::ostringstream oss;
-        oss << "nonblockNotifyForPlacement() for key " << key.getKeystr() << " by beacon edge " << node_idx_ << " with best_placement_edgeset: " << best_placement_edgeset.toString();
-        Util::dumpDebugMsg(instance_name_, oss.str());
-
         //bool is_finish = false;
         //BandwidthUsage total_bandwidth_usage;
         //EventList event_list;
@@ -1219,11 +1214,6 @@ namespace covered
                 is_being_written = true;
                 is_valid = false;
             }
-
-            // TMPDEBUG231108
-            std::ostringstream tmposs;
-            tmposs << "push local cache admission for key " << key.getKeystr();
-            Util::dumpDebugMsg(instance_name_, tmposs.str());
 
             // NOTE: we need to notify placement processor of the current local/remote beacon edge node for non-blocking placement deployment of local placement notification to avoid blocking subsequent placement calculation (similar as CacheServerWorkerBase::notifyBeaconForPlacementAfterHybridFetch_() invoked by sender edge node)
 

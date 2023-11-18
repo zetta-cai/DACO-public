@@ -112,9 +112,10 @@ namespace covered
         return;
     }
 
-    bool CachelibLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value, const bool& is_getrsp, bool& affect_victim_tracker, bool& is_successful)
+    bool CachelibLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value, const bool& is_getrsp, const bool& is_global_cached, bool& affect_victim_tracker, bool& is_successful)
     {
         UNUSED(is_getrsp); // Only for COVERED
+        UNUSED(is_global_cached); // ONLY for COVERED
         UNUSED(affect_victim_tracker); // Only for COVERED
         is_successful = false;
         

@@ -36,7 +36,7 @@ namespace covered
 
         // (1.4) Update invalid cached objects in local edge cache
 
-        virtual bool tryToUpdateInvalidLocalEdgeCache_(const Key& key, const Value& value) const override; // Return if key is local cached yet invalid
+        virtual bool tryToUpdateInvalidLocalEdgeCache_(const Key& key, const Value& value, const bool& is_global_cached) const override; // Return if key is local cached yet invalid
 
         // (1.5) Trigger cache placement for getrsp (ONLY for COVERED)
 
@@ -53,8 +53,8 @@ namespace covered
 
         // (2.3) Update cached objects in local edge cache
 
-        virtual bool updateLocalEdgeCache_(const Key& key, const Value& value) const override; // Return if key is cached after udpate
-        virtual bool removeLocalEdgeCache_(const Key& key) const override; // Return if key is cached after removal
+        virtual bool updateLocalEdgeCache_(const Key& key, const Value& value, const bool& is_global_cached) const override; // Return if key is cached after udpate
+        virtual bool removeLocalEdgeCache_(const Key& key, const bool& is_global_cached) const override; // Return if key is cached after removal
 
         // (2.4) Release write lock for MSI protocol
 

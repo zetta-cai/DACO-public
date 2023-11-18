@@ -17,7 +17,7 @@
 // NOTE: we bind high-priority threads to different CPU cores to avoid CPU contention
 // -> If defined, perform strict CPU binding for high-priority threads, such that each high-priority thread is bound to an individual CPU core (used if w/ sufficient CPU cores)
 // -> If not defined, bind each high-priority thread to the set of dedicated CPU cores, such that high-priority threads can share the dedicated CPU cores (used if w/o sufficient CPU cores)
-//#define ENABLE_STRICT_CPU_BINDING
+#define ENABLE_STRICT_CPU_BINDING
 
 // Used in src/core/covered_cache_mananger.c, src/core/popularity_aggregator.c, src/edge/beacon_server/covered_beacon_server.c, and src/edge/cache_server/covered_cache_server_worker.c
 // NOTE: we could ONLY trigger fast-path single-placement calculation for local/remote directory lookup if key is NOT tracked by sender local uncached metadata -> NO need for local/remote dirinfo eviction, as the object is just evicted from local edge cache instead of NO objsize due to (possibly) the first cache miss w/o objsize; also NO need for local/remote acquire writelock and release writelock, as the object has the latest objsize (provided by the put/del request) instead of NO objsize due to (possibly) the first cache miss w/o objsize

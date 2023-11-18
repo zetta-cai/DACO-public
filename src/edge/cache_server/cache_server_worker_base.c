@@ -326,7 +326,8 @@ namespace covered
 
         // Update invalid object of local edge cache if necessary
         struct timespec update_invalid_local_cache_start_timestamp = Util::getCurrentTimespec();
-        bool is_local_cached_and_invalid = tryToUpdateInvalidLocalEdgeCache_(tmp_key, tmp_value);
+        const bool is_global_cached = (tmp_edge_wrapper_ptr->getEdgeCachePtr()->isLocalCached(tmp_key) || is_cooperative_cached);
+        bool is_local_cached_and_invalid = tryToUpdateInvalidLocalEdgeCache_(tmp_key, tmp_value, is_global_cached);
         if (!tmp_value.isDeleted() && is_local_cached_and_invalid) // Update may trigger eviction
         {
             is_finish = tmp_cache_server_ptr->evictForCapacity_(tmp_key, edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency); // Add events of intermediate response if with event tracking
@@ -908,16 +909,17 @@ namespace covered
         bool is_local_cached = false;
         NetworkAddr edge_cache_server_recvreq_source_addr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeCacheServerRecvreqSourceAddr();
         // NOTE: message type has been checked, which must be one of the following two types
+        const bool is_global_cached = (lock_result == LockResult::kSuccess); // NOTE: put/delreq needs to try to acquire writelock first -> kSuccess means global cached, otherwise kNoNeed means NOT global cached
         if (local_request_ptr->getMessageType() == MessageType::kLocalPutRequest)
         {
-            is_local_cached = updateLocalEdgeCache_(tmp_key, tmp_value);
+            is_local_cached = updateLocalEdgeCache_(tmp_key, tmp_value, is_global_cached);
 
             // NOTE: we will check capacity and trigger eviction for value updates (add events of intermediate response if with event tracking)
             is_finish = tmp_cache_server_ptr->evictForCapacity_(tmp_key, edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency);
         }
         else if (local_request_ptr->getMessageType() == MessageType::kLocalDelRequest)
         {
-            is_local_cached = removeLocalEdgeCache_(tmp_key);
+            is_local_cached = removeLocalEdgeCache_(tmp_key, is_global_cached);
 
             // NOTE: no need to check capacity, as remove() only replaces the original value (value size + is_deleted) with a deleted value (zero value size + is_deleted of true), where deleted value uses minimum bytes and remove() cannot increase used bytes to trigger any eviction
         }
@@ -1523,11 +1525,6 @@ namespace covered
 
         bool is_finish = false;
 
-        // TMPDEBUG231108
-        std::ostringstream oss;
-        oss << "Start to admit object of key " << key.getKeystr() << " into local edge " << tmp_cache_server_ptr->getEdgeWrapperPtr()->getNodeIdx() << " (beacon node: " << tmp_cache_server_ptr->getEdgeWrapperPtr()->getCooperationWrapperPtr()->getBeaconEdgeIdx(key) << ")";
-        Util::dumpDebugMsg(base_instance_name_, oss.str());
-
         struct timespec update_directory_to_admit_start_timestamp = Util::getCurrentTimespec();
 
         // Independently admit the new key-value pair into local edge cache
@@ -1546,12 +1543,6 @@ namespace covered
 
         // Trigger eviction if necessary
         is_finish = tmp_cache_server_ptr->evictForCapacity_(key, edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency);
-
-        // TMPDEBUG231108
-        oss.clear();
-        oss.str("");
-        oss << "Finish admission of key " << key.getKeystr() << " into local edge " << tmp_cache_server_ptr->getEdgeWrapperPtr()->getNodeIdx() << " (beacon node: " << tmp_cache_server_ptr->getEdgeWrapperPtr()->getCooperationWrapperPtr()->getBeaconEdgeIdx(key) << ") w/ necessary eviction";
-        Util::dumpDebugMsg(base_instance_name_, oss.str());
 
         return is_finish;
     }

@@ -6,82 +6,43 @@ namespace covered
 {
     const std::string HomoKeyLevelMetadata::kClassName("HomoKeyLevelMetadata");
 
-    HomoKeyLevelMetadata::HomoKeyLevelMetadata(const GroupId& group_id) : group_id_(group_id)
+    HomoKeyLevelMetadata::HomoKeyLevelMetadata(const GroupId& group_id) : KeyLevelMetadataBase(group_id)
     {
-        local_frequency_ = 0;
-        #ifdef ENABLE_TRACK_PERKEY_OBJSIZE
-        object_size_ = 0;
-        #endif
-        local_popularity_ = 0.0;
+        is_global_cached_ = true; // Conservatively treat the object is already global cached
     }
 
-    HomoKeyLevelMetadata::HomoKeyLevelMetadata(const HomoKeyLevelMetadata& other) : group_id_(other.group_id_)
+    HomoKeyLevelMetadata::HomoKeyLevelMetadata(const HomoKeyLevelMetadata& other) : KeyLevelMetadataBase(other)
     {
-        local_frequency_ = other.local_frequency_;
-        #ifdef ENABLE_TRACK_PERKEY_OBJSIZE
-        object_size_ = other.object_size_;
-        #endif
-        local_popularity_ = other.local_popularity_;
+        is_global_cached_ = other.is_global_cached_;
     }
 
     HomoKeyLevelMetadata::~HomoKeyLevelMetadata() {}
 
-    void HomoKeyLevelMetadata::updateNoValueDynamicMetadata(const bool& is_redirected)
+    void HomoKeyLevelMetadata::updateNoValueDynamicMetadata(const bool& is_redirected, const bool& is_global_cached)
     {
-        assert(!is_redirected); // MUST be local request
+        assert(!is_redirected); // MUST be local request for local uncached objects
 
-        local_frequency_++;
+        KeyLevelMetadataBase::updateNoValueDynamicMetadata_();
+        is_global_cached_ = is_global_cached;
 
         return;
     }
 
-    #ifdef ENABLE_TRACK_PERKEY_OBJSIZE
-    void HomoKeyLevelMetadata::updateValueDynamicMetadata(const ObjectSize& object_size, const ObjectSize& original_object_size)
+    bool HomoKeyLevelMetadata::isGlobalCached() const
     {
-        
-        assert(object_size_ == original_object_size);
-        object_size_ = object_size;
+        return is_global_cached_;
+    }
 
+    void HomoKeyLevelMetadata::updateIsGlobalCached(const bool& is_global_cached)
+    {
+        is_global_cached_ = is_global_cached;
         return;
-    }
-    #endif
-
-    void HomoKeyLevelMetadata::updateLocalPopularity(const Popularity& local_popularity)
-    {
-        local_popularity_ = local_popularity;
-
-        return;
-    }
-
-    GroupId HomoKeyLevelMetadata::getGroupId() const
-    {
-        return group_id_;
-    }
-
-    Frequency HomoKeyLevelMetadata::getLocalFrequency() const
-    {
-        return local_frequency_;
-    }
-
-    #ifdef ENABLE_TRACK_PERKEY_OBJSIZE
-    ObjectSize HomoKeyLevelMetadata::getObjectSize() const
-    {
-        return object_size_;
-    }
-    #endif
-
-    Popularity HomoKeyLevelMetadata::getLocalPopularity() const
-    {
-        return local_popularity_;
     }
 
     uint64_t HomoKeyLevelMetadata::getSizeForCapacity()
     {
-        uint64_t total_size = sizeof(GroupId) + sizeof(Frequency);
-        #ifdef ENABLE_TRACK_PERKEY_OBJSIZE
-        total_size += sizeof(ObjectSize);
-        #endif
-        total_size += sizeof(Popularity);
+        uint64_t total_size = KeyLevelMetadataBase::getSizeForCapacity();
+        total_size += sizeof(bool);
         return total_size;
     }
 }

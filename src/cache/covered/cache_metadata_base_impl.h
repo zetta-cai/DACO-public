@@ -110,7 +110,7 @@ namespace covered
     // For newly-admited/tracked keys
 
     template<class T>
-    bool CacheMetadataBase<T>::addForNewKey(const Key& key, const Value& value, const uint32_t& peredge_synced_victimcnt)
+    bool CacheMetadataBase<T>::addForNewKey(const Key& key, const Value& value, const uint32_t& peredge_synced_victimcnt, const bool& is_global_cached)
     {
         bool affect_victim_tracker = false;
 
@@ -122,7 +122,7 @@ namespace covered
         const GroupLevelMetadata& group_level_metadata_ref = addPergroupMetadata_(key, value, assigned_group_id);
 
         // Add object-level metadata for local requests (both value-unrelated and value-related) for new key
-        perkey_metadata_list_iter_t perkey_metadata_list_iter = addPerkeyMetadata_(key, value, assigned_group_id);
+        perkey_metadata_list_iter_t perkey_metadata_list_iter = addPerkeyMetadata_(key, value, assigned_group_id, is_global_cached);
         const T& key_level_metadata_ref = perkey_metadata_list_iter->second;
 
         // Calculate and update popularity for newly-admited key
@@ -144,7 +144,7 @@ namespace covered
     // For existing key
 
     template<class T>
-    bool CacheMetadataBase<T>::updateNoValueStatsForExistingKey(const Key& key, const uint32_t& peredge_synced_victimcnt, const bool& is_redirected)
+    bool CacheMetadataBase<T>::updateNoValueStatsForExistingKey(const Key& key, const uint32_t& peredge_synced_victimcnt, const bool& is_redirected, const bool& is_global_cached)
     {
         // Get lookup iterator
         perkey_lookup_table_iter_t perkey_lookup_iter = getLookup_(key);
@@ -152,7 +152,7 @@ namespace covered
         bool affect_victim_tracker = beforeUpdateStatsForExistingKey_(perkey_lookup_iter, peredge_synced_victimcnt);
 
         // Update object-level value-unrelated metadata for local requests (local hits/misses)
-        perkey_metadata_list_iter_t perkey_metadata_list_iter = updateNoValuePerkeyMetadata_(perkey_lookup_iter, is_redirected);
+        perkey_metadata_list_iter_t perkey_metadata_list_iter = updateNoValuePerkeyMetadata_(perkey_lookup_iter, is_redirected, is_global_cached);
         const T& key_level_metadata_ref = perkey_metadata_list_iter->second;
 
         // Update group-level value-unrelated metadata for all requests (local/redirected hits; local misses)
@@ -351,7 +351,7 @@ namespace covered
     }
 
     template<class T>
-    typename CacheMetadataBase<T>::perkey_metadata_list_iter_t CacheMetadataBase<T>::addPerkeyMetadata_(const Key& key, const Value& value, const GroupId& assigned_group_id)
+    typename CacheMetadataBase<T>::perkey_metadata_list_iter_t CacheMetadataBase<T>::addPerkeyMetadata_(const Key& key, const Value& value, const GroupId& assigned_group_id, const bool& is_global_cached)
     {
         // NOTE: NO need to verify key existence due to LRU-based list
 
@@ -363,7 +363,7 @@ namespace covered
         // Update both value-unrelated and value-related metadata for new key
         const bool is_redirected = false; // ONLY local-request-related messages (e.g., directory lookup, foreground directory eviction, acquire/release writelock; getrsp/put/delreq w/ local misses) can admit/track new keys in local cached/uncached metadata
         const ObjectSize object_size = key.getKeyLength() + value.getValuesize();
-        perkey_metadata_list_iter->second.updateNoValueDynamicMetadata(is_redirected);
+        perkey_metadata_list_iter->second.updateNoValueDynamicMetadata(is_redirected, is_global_cached);
         perkey_metadata_list_iter->second.updateValueDynamicMetadata(object_size, 0);
         // NOTE: local popularity of the key-level metadata will be updated by addForNewKey()
 
@@ -376,7 +376,7 @@ namespace covered
     }
 
     template<class T>
-    typename CacheMetadataBase<T>::perkey_metadata_list_iter_t CacheMetadataBase<T>::updateNoValuePerkeyMetadata_(const typename CacheMetadataBase<T>::perkey_lookup_table_iter_t& perkey_lookup_iter, const bool& is_redirected)
+    typename CacheMetadataBase<T>::perkey_metadata_list_iter_t CacheMetadataBase<T>::updateNoValuePerkeyMetadata_(const typename CacheMetadataBase<T>::perkey_lookup_table_iter_t& perkey_lookup_iter, const bool& is_redirected, const bool& is_global_cached)
     {
         // Verify that key must exist
         const LookupMetadata<perkey_metadata_list_t>& lookup_metadata = perkey_lookup_iter->second;
@@ -384,7 +384,7 @@ namespace covered
         assert(perkey_metadata_list_iter != perkey_metadata_list_.end()); // For existing key
 
         // Update object-level value-unrelated metadata
-        perkey_metadata_list_iter->second.updateNoValueDynamicMetadata(is_redirected);
+        perkey_metadata_list_iter->second.updateNoValueDynamicMetadata(is_redirected, is_global_cached);
 
         // Update LRU list order
         if (perkey_metadata_list_iter != perkey_metadata_list_.begin())

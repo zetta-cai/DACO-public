@@ -291,7 +291,7 @@ namespace covered
 
     // (1.4) Update invalid cached objects in local edge cache
 
-    bool CoveredCacheServerWorker::tryToUpdateInvalidLocalEdgeCache_(const Key& key, const Value& value) const
+    bool CoveredCacheServerWorker::tryToUpdateInvalidLocalEdgeCache_(const Key& key, const Value& value, const bool& is_global_cached) const
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
@@ -301,11 +301,11 @@ namespace covered
         bool is_local_cached_and_invalid = false;
         if (value.isDeleted()) // value is deleted
         {
-            is_local_cached_and_invalid = tmp_edge_cache_ptr->removeIfInvalidForGetrsp(key, affect_victim_tracker); // remove will NOT trigger eviction
+            is_local_cached_and_invalid = tmp_edge_cache_ptr->removeIfInvalidForGetrsp(key, is_global_cached, affect_victim_tracker); // remove will NOT trigger eviction
         }
         else // non-deleted value
         {
-            is_local_cached_and_invalid = tmp_edge_cache_ptr->updateIfInvalidForGetrsp(key, value, affect_victim_tracker); // update may trigger eviction (see CacheServerWorkerBase::processLocalGetRequest_)
+            is_local_cached_and_invalid = tmp_edge_cache_ptr->updateIfInvalidForGetrsp(key, value, is_global_cached, affect_victim_tracker); // update may trigger eviction (see CacheServerWorkerBase::processLocalGetRequest_)
         }
 
         // Avoid unnecessary VictimTracker update
@@ -587,13 +587,13 @@ namespace covered
 
     // (2.3) Update cached objects in local edge cache
 
-    bool CoveredCacheServerWorker::updateLocalEdgeCache_(const Key& key, const Value& value) const
+    bool CoveredCacheServerWorker::updateLocalEdgeCache_(const Key& key, const Value& value, const bool& is_global_cached) const
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
         bool affect_victim_tracker = false;
-        bool is_local_cached_after_udpate = tmp_edge_wrapper_ptr->getEdgeCachePtr()->update(key, value, affect_victim_tracker);
+        bool is_local_cached_after_udpate = tmp_edge_wrapper_ptr->getEdgeCachePtr()->update(key, value, is_global_cached, affect_victim_tracker);
 
         // Avoid unnecessary VictimTracker update
         if (affect_victim_tracker) // If key was a local synced victim before or is a local synced victim now
@@ -604,13 +604,13 @@ namespace covered
         return is_local_cached_after_udpate;
     }
 
-    bool CoveredCacheServerWorker::removeLocalEdgeCache_(const Key& key) const
+    bool CoveredCacheServerWorker::removeLocalEdgeCache_(const Key& key, const bool& is_global_cached) const
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
         bool affect_victim_tracker = false;
-        bool is_local_cached_after_remove = tmp_edge_wrapper_ptr->getEdgeCachePtr()->remove(key, affect_victim_tracker);
+        bool is_local_cached_after_remove = tmp_edge_wrapper_ptr->getEdgeCachePtr()->remove(key, is_global_cached, affect_victim_tracker);
 
         // Avoid unnecessary VictimTracker update
         if (affect_victim_tracker) // If key was a local synced victim before or is a local synced victim now

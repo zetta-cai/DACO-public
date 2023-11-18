@@ -92,7 +92,8 @@ namespace covered
             value = Value(handle->getSize());
 
             // Update local cached metadata for getreq with valid/invalid cache hit (ONLY value-unrelated metadata)
-            affect_victim_tracker = local_cached_metadata_.updateNoValueStatsForExistingKey(key, peredge_synced_victimcnt_, is_redirected);
+            const bool is_global_cached = true; // Local cached objects MUST be global cached
+            affect_victim_tracker = local_cached_metadata_.updateNoValueStatsForExistingKey(key, peredge_synced_victimcnt_, is_redirected, is_global_cached);
         }
         else // key is NOT cached
         {
@@ -103,7 +104,8 @@ namespace covered
                 if (is_tracked) // Key is already tracked
                 {
                     // Update local uncached metadata for getreq with cache miss (ONLY value-unrelated metadata)
-                    local_uncached_metadata_.updateNoValueStatsForExistingKey(key, peredge_synced_victimcnt_, is_redirected);
+                    const bool original_is_global_cached = local_uncached_metadata_.isGlobalCachedForExistingKey(key); // Conservatively keep original is_global_cached flag
+                    local_uncached_metadata_.updateNoValueStatsForExistingKey(key, peredge_synced_victimcnt_, is_redirected, original_is_global_cached);
 
                     // NOTE: NOT update value-related metadata, as we conservatively treat the objsize unchanged (okay due to read-intensive edge cache trace)
                 }
@@ -193,7 +195,7 @@ namespace covered
         return;
     }
 
-    bool CoveredLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value, const bool& is_getrsp, bool& affect_victim_tracker, bool& is_successful)
+    bool CoveredLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value, const bool& is_getrsp, const bool& is_global_cached, bool& affect_victim_tracker, bool& is_successful)
     {
         assertCapacityForLargeObj_(key, value);
 
@@ -241,7 +243,8 @@ namespace covered
                 }
                 else
                 {
-                    bool tmp_affect_victim_tracker0 = local_cached_metadata_.updateNoValueStatsForExistingKey(key, peredge_synced_victimcnt_, is_redirected);
+                    const bool tmp_is_global_cached = true; // Local cached objects MUST be global cached
+                    bool tmp_affect_victim_tracker0 = local_cached_metadata_.updateNoValueStatsForExistingKey(key, peredge_synced_victimcnt_, is_redirected, tmp_is_global_cached);
                     bool tmp_affect_victim_tracker1 = local_cached_metadata_.updateValueStatsForExistingKey(key, value, original_value, peredge_synced_victimcnt_);
                     affect_victim_tracker = tmp_affect_victim_tracker0 || tmp_affect_victim_tracker1;
                 }
@@ -269,7 +272,7 @@ namespace covered
                 {
                     // Initialize and update local uncached metadata for getrsp/put/delreq with cache miss (both value-unrelated and value-related)
                     // NOTE: if the latest local uncached popularity of the newly-tracked key is NOT detracked in addForNewKey() under local uncached metadata capacity limitation, local/remote release writelock (for put/delreq) or local/remote directory lookup for the next getreq (for getrsp) will get the latest local uncached popularity for popularity aggregation to trigger placement calculation
-                    local_uncached_metadata_.addForNewKey(key, value, peredge_synced_victimcnt_); // NOTE: peredge_synced_victimcnt_ will NOT be used for local uncached metadata
+                    local_uncached_metadata_.addForNewKey(key, value, peredge_synced_victimcnt_, is_global_cached); // NOTE: peredge_synced_victimcnt_ will NOT be used for local uncached metadata
                 }
                 else // Key is tracked by local uncached metadata
                 {
@@ -281,11 +284,17 @@ namespace covered
                     {
                         // NOTE: NOT update local uncached value-unrelated metadata for getrsp with cache miss, which has been done in getLocalCacheInternal_() for the corresponding getreq before
                         // NOTE: also NOT update local uncached value-related metadata for getrsp with cache miss, as getreq will NOT update the value of the uncached object
+
+                        const bool original_is_global_cached = local_uncached_metadata_.isGlobalCachedForExistingKey(key);
+                        if (is_global_cached != original_is_global_cached) // If is_global_cached flag changes
+                        {
+                            local_uncached_metadata_.updateIsGlobalCachedForExistingKey(key, is_getrsp, is_global_cached); // Update is_global_cached and reward
+                        }
                     }
                     else // put/delreq with cache miss
                     {
                         // Update local uncached value-unrelated metadata for put/delreq with cache miss
-                        local_uncached_metadata_.updateNoValueStatsForExistingKey(key, peredge_synced_victimcnt_, is_redirected);
+                        local_uncached_metadata_.updateNoValueStatsForExistingKey(key, peredge_synced_victimcnt_, is_redirected, is_global_cached);
                         
                         local_uncached_metadata_.updateValueStatsForExistingKey(key, value, original_value_size, peredge_synced_victimcnt_); // NOTE: peredge_synced_victimcnt_ will NOT be used by local uncached metadata
                     }
@@ -355,7 +364,8 @@ namespace covered
             covered_cache_ptr_->insertOrReplace(allocate_handle); // Must insert
 
             // Update local cached metadata for admission
-            affect_victim_tracker = local_cached_metadata_.addForNewKey(key, value, peredge_synced_victimcnt_);
+            const bool is_global_cached = true; // Local cached objects MUST be global cached
+            affect_victim_tracker = local_cached_metadata_.addForNewKey(key, value, peredge_synced_victimcnt_, is_global_cached);
 
             // Remove from local uncached metadata if necessary for admission
             if (local_uncached_metadata_.isKeyExist(key))

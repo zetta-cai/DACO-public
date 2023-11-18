@@ -77,11 +77,11 @@ namespace covered
 
         // For newly-admited/tracked keys
         // NOTE: for admission and getrsp/put/delreq w/ miss, intialize and update object-/group-level metadata (both value-unrelated and value-related) for newly admitted cached key or currently tracked uncached key
-        bool addForNewKey(const Key& key, const Value& value, const uint32_t& peredge_synced_victimcnt); // Return if affect local synced victims in victim tracker (always return false for local uncached metadata)
+        bool addForNewKey(const Key& key, const Value& value, const uint32_t& peredge_synced_victimcnt, const bool& is_global_cached); // Return if affect local synced victims in victim tracker (always return false for local uncached metadata)
 
         // For existing key
         // NOTE: for get/put/delreq w/ hit/miss, update object-/group-level value-unrelated metadata for existing key (i.e., already admitted/tracked objects for local cached/uncached)
-        bool updateNoValueStatsForExistingKey(const Key& key, const uint32_t& peredge_synced_victimcnt, const bool& is_redirected); // Return if affect local synced victims in victim tracker (always return false for local uncached metadata)
+        bool updateNoValueStatsForExistingKey(const Key& key, const uint32_t& peredge_synced_victimcnt, const bool& is_redirected, const bool& is_global_cached); // Return if affect local synced victims in victim tracker (always return false for local uncached metadata)
         // NOTE: for put/delreq w/ hit/miss and getrsp w/ invalid-hit, update object-/group-level value-related metadata for existing key (i.e., already admitted/tracked objects for local cached/uncached)
         bool updateValueStatsForExistingKey(const Key& key, const Value& value, const Value& original_value, const uint32_t& peredge_synced_victimcnt); // Return if affect local synced victims in victim tracker (always return false for local uncached metadata)
         void removeForExistingKey(const Key& detracked_key, const Value& value); // Remove admitted cached key or tracked uncached key (for getrsp with cache miss, put/delrsp with cache miss, admission, eviction)
@@ -107,6 +107,13 @@ namespace covered
 
         // For reward information
         uint32_t getLeastRewardRank_(const perkey_lookup_table_const_iter_t& perkey_lookup_iter) const;
+        sorted_reward_multimap_t::iterator updateReward_(const Reward& new_reward, const perkey_lookup_table_iter_t& perkey_lookup_iter); // Return updated sorted reward iterator
+
+        // For lookup table
+        perkey_lookup_table_iter_t getLookup_(const Key& key); // Return lookup iterator (assert result != end())
+        perkey_lookup_table_const_iter_t getLookup_(const Key& key) const; // Return lookup const iterator (assert result != end())
+        void updateLookup_(const perkey_lookup_table_iter_t& perkey_lookup_iter, const sorted_reward_multimap_t::iterator& new_sorted_reward_iter);
+        void updateLookup_(const perkey_lookup_table_iter_t& perkey_lookup_iter, const perkey_metadata_list_iter_t& perkey_metadata_list_iter, const sorted_reward_multimap_t::iterator& sorted_reward_iter);
     private:
         static const std::string kClassName;
 
@@ -122,8 +129,8 @@ namespace covered
 
         // For object-level metadata
         const T& getkeyLevelMetadata_(const perkey_lookup_table_const_iter_t& perkey_lookup_const_iter) const; // Return existing key-level metadata
-        perkey_metadata_list_iter_t addPerkeyMetadata_(const Key& key, const Value& value, const GroupId& assigned_group_id); // For admission and getrsp/put/delreq w/ miss, initialize and update key-level value-unrelated and value-related metadata for newly-admited/tracked key; return new perkey metadata iterator
-        perkey_metadata_list_iter_t updateNoValuePerkeyMetadata_(const perkey_lookup_table_iter_t& perkey_lookup_iter, const bool& is_redirected); // For get/put/delreq w/ hit/miss, update object-level value-unrelated metadata for existing key (i.e., already admitted/tracked objects for local cached/uncached); return updated KeyLevelMetadata
+        perkey_metadata_list_iter_t addPerkeyMetadata_(const Key& key, const Value& value, const GroupId& assigned_group_id, const bool& is_global_cached); // For admission and getrsp/put/delreq w/ miss, initialize and update key-level value-unrelated and value-related metadata for newly-admited/tracked key; return new perkey metadata iterator
+        perkey_metadata_list_iter_t updateNoValuePerkeyMetadata_(const perkey_lookup_table_iter_t& perkey_lookup_iter, const bool& is_redirected, const bool& is_global_cached); // For get/put/delreq w/ hit/miss, update object-level value-unrelated metadata for existing key (i.e., already admitted/tracked objects for local cached/uncached); return updated KeyLevelMetadata
         perkey_metadata_list_iter_t updateValuePerkeyMetadata_(const perkey_lookup_table_iter_t& perkey_lookup_iter, const Value& value, const Value& original_value); // For put/delreq w/ hit/miss and getrsp w/ invalid-hit, update object-level value-related metadata for existing key (i.e., already admitted/tracked objects for local cached/uncached); return updated KeyLevelMetadata
         void removePerkeyMetadata_(const perkey_lookup_table_iter_t& perkey_lookup_iter);
 
@@ -137,17 +144,12 @@ namespace covered
         // For reward information
         virtual Reward calculateReward_(perkey_metadata_list_iter_t perkey_metadata_list_iter) const = 0; // NOTE: ONLY local cached metadata needs redirected_popularity for local cached objects
         sorted_reward_multimap_t::iterator addReward_(const Reward& new_reward, const perkey_lookup_table_iter_t& perkey_lookup_iter); // Return new sorted reward iterator
-        sorted_reward_multimap_t::iterator updateReward_(const Reward& new_reward, const perkey_lookup_table_iter_t& perkey_lookup_iter); // Return updated sorted reward iterator
         void removeReward_(const perkey_lookup_table_iter_t& perkey_lookup_iter);
 
         // For lookup table
-        perkey_lookup_table_iter_t getLookup_(const Key& key); // Return lookup iterator (assert result != end())
-        perkey_lookup_table_const_iter_t getLookup_(const Key& key) const; // Return lookup const iterator (assert result != end())
         perkey_lookup_table_iter_t tryToGetLookup_(const Key& key); // Return lookup iterator (end() if not found)
         perkey_lookup_table_const_iter_t tryToGetLookup_(const Key& key) const; // Return lookup iterator (end() if not found)
         perkey_lookup_table_iter_t addLookup_(const Key& key); // Return new lookup iterator
-        void updateLookup_(const perkey_lookup_table_iter_t& perkey_lookup_iter, const sorted_reward_multimap_t::iterator& new_sorted_reward_iter);
-        void updateLookup_(const perkey_lookup_table_iter_t& perkey_lookup_iter, const perkey_metadata_list_iter_t& perkey_metadata_list_iter, const sorted_reward_multimap_t::iterator& sorted_reward_iter);
         void removeLookup_(const perkey_lookup_table_iter_t& perkey_lookup_iter);
         
         // Object-level metadata for local hits/misses

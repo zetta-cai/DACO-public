@@ -130,7 +130,7 @@ namespace covered
         return;
     }
 
-    bool LocalCacheBase::updateLocalCache(const Key& key, const Value& value, const bool& is_getrsp, bool& affect_victim_tracker, bool& is_successful)
+    bool LocalCacheBase::updateLocalCache(const Key& key, const Value& value, const bool& is_getrsp, const bool& is_global_cached, bool& affect_victim_tracker, bool& is_successful)
     {
         checkPointers_();
 
@@ -139,7 +139,7 @@ namespace covered
         rwlock_for_local_cache_ptr_->acquire_lock(context_name);
 
         is_successful = false;
-        bool is_local_cached = updateLocalCacheInternal_(key, value, is_getrsp, affect_victim_tracker, is_successful);
+        bool is_local_cached = updateLocalCacheInternal_(key, value, is_getrsp, is_global_cached, affect_victim_tracker, is_successful);
 
         rwlock_for_local_cache_ptr_->unlock(context_name);
         return is_local_cached;

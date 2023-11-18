@@ -22,6 +22,10 @@ namespace covered
         LocalUncachedMetadata(const uint64_t& max_bytes_for_uncached_objects);
         virtual ~LocalUncachedMetadata();
 
+        // For existig key
+        bool isGlobalCachedForExistingKey(const Key& key) const;
+        void updateIsGlobalCachedForExistingKey(const Key& key, const bool& is_getrsp, const bool& is_global_cached); // NOTE: ONLY for getrsp (put/delreq will update is_global_cached when update value-unrelated metadata)
+
         // For popularity information
         virtual void getPopularity(const Key& key, Popularity& local_popularity, Popularity& redirected_popularity) const override; // Local uncached metadata NOT set redirected_popularity
 

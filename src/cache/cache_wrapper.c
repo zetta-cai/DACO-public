@@ -133,7 +133,7 @@ namespace covered
         return is_local_cached && is_valid;
     }
     
-    bool CacheWrapper::update(const Key& key, const Value& value, bool& affect_victim_tracker)
+    bool CacheWrapper::update(const Key& key, const Value& value, const bool& is_global_cached, bool& affect_victim_tracker)
     {
         checkPointers_();
 
@@ -148,7 +148,7 @@ namespace covered
         // Try to update local edge cache for put/delreq
         const bool is_getrsp = false;
         bool is_successful = false;
-        bool is_local_cached = local_cache_ptr_->updateLocalCache(key, value, is_getrsp, affect_victim_tracker, is_successful);
+        bool is_local_cached = local_cache_ptr_->updateLocalCache(key, value, is_getrsp, is_global_cached, affect_victim_tracker, is_successful);
 
         if (is_local_cached)
         {
@@ -173,16 +173,16 @@ namespace covered
         return is_local_cached;
     }
 
-    bool CacheWrapper::remove(const Key& key, bool& affect_victim_tracker)
+    bool CacheWrapper::remove(const Key& key, const bool& is_global_cached, bool& affect_victim_tracker)
     {
         // No need to acquire a write lock, which will be done in update()
 
         Value deleted_value;
-        bool is_local_cached = update(key, deleted_value, affect_victim_tracker);
+        bool is_local_cached = update(key, deleted_value, is_global_cached, affect_victim_tracker);
         return is_local_cached;
     }
 
-    bool CacheWrapper::updateIfInvalidForGetrsp(const Key& key, const Value& value, bool& affect_victim_tracker)
+    bool CacheWrapper::updateIfInvalidForGetrsp(const Key& key, const Value& value, const bool& is_global_cached, bool& affect_victim_tracker)
     {
         checkPointers_();
 
@@ -205,7 +205,8 @@ namespace covered
             {
                 // Update local edge cache for getrsp with invalid hit
                 bool is_successful = false;
-                bool tmp_is_local_cached = local_cache_ptr_->updateLocalCache(key, value, is_getrsp, affect_victim_tracker, is_successful);
+                const bool tmp_is_global_cached = true; // Local cached objects MUST be global cached
+                bool tmp_is_local_cached = local_cache_ptr_->updateLocalCache(key, value, is_getrsp, tmp_is_global_cached, affect_victim_tracker, is_successful);
                 assert(tmp_is_local_cached);
 
                 if (is_successful) // Validate key ONLY if update successfully
@@ -227,7 +228,7 @@ namespace covered
         {
             // Update local edge cache for getrsp with cache miss
             bool is_successful = false;
-            bool tmp_is_local_cached = local_cache_ptr_->updateLocalCache(key, value, is_getrsp, affect_victim_tracker, is_successful);
+            bool tmp_is_local_cached = local_cache_ptr_->updateLocalCache(key, value, is_getrsp, is_global_cached, affect_victim_tracker, is_successful);
             assert(!tmp_is_local_cached);
             assert(!is_successful);
         }
@@ -236,12 +237,12 @@ namespace covered
         return is_local_cached_and_invalid;
     }
 
-    bool CacheWrapper::removeIfInvalidForGetrsp(const Key& key, bool& affect_victim_tracker)
+    bool CacheWrapper::removeIfInvalidForGetrsp(const Key& key, const bool& is_global_cached, bool& affect_victim_tracker)
     {
         // No need to acquire a write lock, which will be done in updateIfInvalidForGetrsp()
 
         Value deleted_value;
-        bool is_local_cached_and_invalid = updateIfInvalidForGetrsp(key, deleted_value, affect_victim_tracker);
+        bool is_local_cached_and_invalid = updateIfInvalidForGetrsp(key, deleted_value, is_global_cached, affect_victim_tracker);
         return is_local_cached_and_invalid;
     }
 

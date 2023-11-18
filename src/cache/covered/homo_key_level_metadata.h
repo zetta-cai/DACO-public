@@ -1,7 +1,7 @@
 /*
  * HomoKeyLevelMetadata: homogeneous key-level metadata for each local uncached object in local edge cache.
  * 
- * By Siyuan Sheng (2023.08.16).
+ * By Siyuan Sheng (2023.11.18).
  */
 
 #ifndef HOMO_KEY_LEVEL_METADATA_H
@@ -9,47 +9,29 @@
 
 #include <string>
 
+#include "cache/covered/key_level_metadata_base.h"
 #include "common/covered_common_header.h"
 
 namespace covered
 {
-    class HomoKeyLevelMetadata
+    class HomoKeyLevelMetadata : public KeyLevelMetadataBase
     {
     public:
         HomoKeyLevelMetadata(const GroupId& group_id);
         HomoKeyLevelMetadata(const HomoKeyLevelMetadata& other);
         ~HomoKeyLevelMetadata();
 
-        void updateNoValueDynamicMetadata(const bool& is_redirected = false); // For get/put/delreq w/ hit/miss, update object-level value-unrelated metadata
-        #ifdef ENABLE_TRACK_PERKEY_OBJSIZE
-        void updateValueDynamicMetadata(const ObjectSize& object_size, const ObjectSize& original_object_size); // For admission, put/delreq w/ hit/miss, and getrsp w/ invalid-hit (also getrsp w/ miss if for newly-tracked key), update object-level value-related metadata
-        #endif
-        void updateLocalPopularity(const Popularity& local_popularity);
+        virtual void updateNoValueDynamicMetadata(const bool& is_redirected, const bool& is_global_cached) override; // For get/put/delreq w/ hit/miss, update object-level value-unrelated metadata (is_redirected MUST be false and will NOT be used)
 
-        GroupId getGroupId() const;
-        Frequency getLocalFrequency() const;
-        #ifdef ENABLE_TRACK_PERKEY_OBJSIZE
-        ObjectSize getObjectSize() const;
-        #endif
-        Popularity getLocalPopularity() const; // Get local popularity for local requests (local hits for local cached objects or local misses for local uncached objects)
+        bool isGlobalCached() const;
+        void updateIsGlobalCached(const bool& is_global_cached);
 
         static uint64_t getSizeForCapacity();
     private:
         static const std::string kClassName;
 
-        // Const metadata
-        const GroupId group_id_;
-
-        // Non-const value-unrelated dynamic metadata
-        Frequency local_frequency_;
-
-        #ifdef ENABLE_TRACK_PERKEY_OBJSIZE
-        // Non-const value-related dynamic metadata
-        ObjectSize object_size_;
-        #endif
-
-        // Local popularity information
-        Popularity local_popularity_; // Local popularity for local requests (local hits for local cached objects or local misses for local uncached objects)
+        // For heterogeneous local uncached objects
+        bool is_global_cached_;
     };
 }
 

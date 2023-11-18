@@ -4,8 +4,6 @@
 
 #include "message/control_message.h"
 
-#include "common/covered_weight.h" // TMPDEBUG23
-
 namespace covered
 {
     const std::string CoveredCacheManager::kClassName("CoveredCacheManager");
@@ -60,12 +58,10 @@ namespace covered
         #endif
         
         // NOTE: we do NOT perform placement calculation for local/remote acquire writelock request, as newly-admitted cache copies will still be invalid after cache placement
-        bool tmp_is_tracked = false; // TMPDEBUG231108
         if (need_placement_calculation)
         {
             const bool is_tracked_by_source_edge_node = collected_popularity.isTracked();
             // NOTE: NO need to perform placement calculation if key is NOT tracked by source edge node, as removing old local uncached popularity if any will NEVER increase admission benefit
-            tmp_is_tracked = is_tracked_by_source_edge_node; // TMPDEBUG231108
             if (is_tracked_by_source_edge_node)
             {
                 // Perform greedy-based placement calculation for trade-off-aware cache placement
@@ -108,11 +104,6 @@ namespace covered
                 }
             }
         }
-
-        // TMPDEBUG1108
-        std::ostringstream tmposs;
-        tmposs << "updatePopularityAggregatorForAggregatedPopularity for key " << key.getKeystr() << " need_placement_calculation: " << Util::toString(need_placement_calculation) << " tmp_is_tracked: " << Util::toString(tmp_is_tracked) << " has_best_placement: " << Util::toString(has_best_placement);
-        Util::dumpDebugMsg(instance_name_, tmposs.str());
 
         return is_finish;
     }
@@ -233,9 +224,6 @@ namespace covered
         AggregatedUncachedPopularity tmp_aggregated_uncached_popularity;
         bool has_aggregated_uncached_popularity = popularity_aggregator_.getAggregatedUncachedPopularity(key, tmp_aggregated_uncached_popularity);
 
-        // TMPDEBUG23
-        //Util::dumpVariablesForDebug(instance_name_, 6, "placementCalculation_ for key", key.getKeystr().c_str(), "is_global_cached:", Util::toString(is_global_cached).c_str(), "has_aggregated_uncached_popularity:", Util::toString(has_aggregated_uncached_popularity).c_str());
-
         // Perform placement calculation ONLY if key is still tracked by popularity aggregator (i.e., belonging to a global popular uncached object)
         if (has_aggregated_uncached_popularity)
         {
@@ -255,17 +243,11 @@ namespace covered
                 //const DeltaReward tmp_admission_benefit = tmp_aggregated_uncached_popularity.calcAdmissionBenefit(topicnt, is_global_cached, tmp_placement_edgeset);
                 const DeltaReward tmp_admission_benefit = tmp_aggregated_uncached_popularity.calcAdmissionBenefit(edge_idx_, key, topicnt, is_global_cached, tmp_placement_edgeset); // TMPDEBUG23
 
-                // TMPDEBUG23
-                //Util::dumpVariablesForDebug(instance_name_, 6, "calcAdmissionBenefit for key", key.getKeystr().c_str(), "is_global_cached:", Util::toString(is_global_cached).c_str(), "tmp_admission_benefit:", std::to_string(tmp_admission_benefit).c_str());
-
                 // Calculate eviction cost based on tmp_placement_edgeset
                 std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>> tmp_placement_peredge_synced_victimset;
                 std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>> tmp_placement_peredge_fetched_victimset;
                 Edgeset tmp_placement_victim_fetch_edgeset;
                 const DeltaReward tmp_eviction_cost = victim_tracker_.calcEvictionCost(tmp_object_size, tmp_placement_edgeset, tmp_placement_peredge_synced_victimset, tmp_placement_peredge_fetched_victimset, tmp_placement_victim_fetch_edgeset); // NOTE: tmp_eviction_cost may be partial eviction cost if without enough victims
-
-                // TMPDEBUG23
-                //Util::dumpVariablesForDebug(instance_name_, 6, "calcEvictionCost for key", key.getKeystr().c_str(), "is_global_cached:", Util::toString(is_global_cached).c_str(), "tmp_eviction_cost:", std::to_string(tmp_eviction_cost).c_str());
 
                 // Calculate placement gain (admission benefit - eviction cost)
                 const DeltaReward tmp_placement_gain = tmp_admission_benefit - tmp_eviction_cost;

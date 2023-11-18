@@ -6,13 +6,13 @@ namespace covered
 {
     const std::string HeteroKeyLevelMetadata::kClassName("HeteroKeyLevelMetadata");
 
-    HeteroKeyLevelMetadata::HeteroKeyLevelMetadata(const GroupId& group_id) : HomoKeyLevelMetadata(group_id)
+    HeteroKeyLevelMetadata::HeteroKeyLevelMetadata(const GroupId& group_id) : KeyLevelMetadataBase(group_id)
     {
         redirected_frequency_ = 0;
         redirected_popularity_ = 0.0;
     }
 
-    HeteroKeyLevelMetadata::HeteroKeyLevelMetadata(const HeteroKeyLevelMetadata& other) : HomoKeyLevelMetadata(other)
+    HeteroKeyLevelMetadata::HeteroKeyLevelMetadata(const HeteroKeyLevelMetadata& other) : KeyLevelMetadataBase(other)
     {
         redirected_frequency_ = other.redirected_frequency_;
         redirected_popularity_ = other.redirected_popularity_;
@@ -20,15 +20,17 @@ namespace covered
 
     HeteroKeyLevelMetadata::~HeteroKeyLevelMetadata() {}
 
-    void HeteroKeyLevelMetadata::updateNoValueDynamicMetadata(const bool& is_redirected)
+    void HeteroKeyLevelMetadata::updateNoValueDynamicMetadata(const bool& is_redirected, const bool& is_global_cached)
     {
+        assert(is_global_cached == true); // Local cached objects MUST be global cached
+        
         if (is_redirected)
         {
             redirected_frequency_++;
         }
         else
         {
-            HomoKeyLevelMetadata::updateNoValueDynamicMetadata(is_redirected);
+            KeyLevelMetadataBase::updateNoValueDynamicMetadata_();
         }
 
         return;
@@ -53,7 +55,7 @@ namespace covered
 
     uint64_t HeteroKeyLevelMetadata::getSizeForCapacity()
     {
-        uint64_t total_size = HomoKeyLevelMetadata::getSizeForCapacity();
+        uint64_t total_size = KeyLevelMetadataBase::getSizeForCapacity();
         total_size += sizeof(Frequency) + sizeof(Popularity);
         return total_size;
     }

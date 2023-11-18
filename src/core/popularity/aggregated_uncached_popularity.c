@@ -157,8 +157,8 @@ namespace covered
         Popularity topi_local_uncached_popularity_ = getTopiLocalUncachedPopularitySum_(topicnt, placement_edgeset);
         if (is_global_cached) // Redirected cache hits become local cache hits for the edge nodes with top-k local uncached popularity
         {
-            Weight w1_minux_w2 = Util::popularityNonegMinus(local_hit_weight, cooperative_hit_weight);
-            admission_benefit = Util::popularityMultiply(w1_minux_w2, topi_local_uncached_popularity_); // w1 - w2
+            const Weight w1_minus_w2 = Util::popularityNonegMinus(local_hit_weight, cooperative_hit_weight);
+            admission_benefit = Util::popularityMultiply(w1_minus_w2, topi_local_uncached_popularity_); // w1 - w2
         }
         else // Global cache misses become local cache hits for the edge nodes with top-k local uncached popularity, and global cache misses become redirected cache hits for other edge nodes
         {
@@ -176,12 +176,6 @@ namespace covered
 
             admission_benefit = Util::popularityAdd(admission_benefit, tmp_admission_benefit);
         }
-
-        // TMPDEBUG23
-        // if (key.getKeystr() != "")
-        // {
-        //     Util::dumpVariablesForDebug(kClassName, 16, "edge", std::to_string(edgeidx).c_str(), "for key", key.getKeystr().c_str(), "calcAdmissionBenefit for topicnt", std::to_string(topicnt).c_str(), "is_global_cached:", Util::toString(is_global_cached).c_str(), "w1:", std::to_string(local_hit_weight).c_str(), "w2:", std::to_string(cooperative_hit_weight).c_str(), "topi_local_uncached_popularity_:", std::to_string(topi_local_uncached_popularity_).c_str(), "sum_local_uncached_popularity_:", std::to_string(sum_local_uncached_popularity_).c_str());
-        // }
 
         return admission_benefit;
     }
