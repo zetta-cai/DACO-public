@@ -4,14 +4,7 @@
 *.pyc
 *.bak
 output/*
-lib/boost_1_81_0
-lib/CacheLib
-lib/cpp-lru-cache
-lib/caches
-lib/rocksdb-8.1.1
-lib/smhasher
-lib/Segcache
-lib/webcachesim
+lib/*
 src/cache/segcache/build
 simulator
 total_statistics_loader

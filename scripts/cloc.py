@@ -5,7 +5,7 @@ import sys
 import subprocess
 
 from common import *
-from util import *
+from utils.util import *
 
 exclude_exts = "d,o,pyc"
 exclude_dirs = "\"(src/mk|src/workload/cachebench|src/cache/cachelib|src/cache/lfu|src/cache/lru|src/cache/segcache|src/deprecated|scripts/cachelib|scripts/deprecated)\""
