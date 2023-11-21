@@ -27,27 +27,26 @@ default_cachebench_dirpath = "lib/CacheLib"
 current_cachebench_dirpath = "{}/CacheLib".format(lib_dirpath)
 replace_dir(default_cachebench_dirpath, current_cachebench_dirpath, "src/mk/lib/cachebench.mk")
 
-if not only_cachelib:
-    # Update project lib directory for CMAKE_PREFIX_PATH in cachelib
-    default_lib_dirpath = "/home/sysheng/projects/covered-private/lib"
-    replace_dir(default_lib_dirpath, lib_dirpath, "scripts/cachelib/build-package.sh")
+# Update project lib directory for CMAKE_PREFIX_PATH in cachelib
+default_lib_dirpath = "/home/sysheng/projects/covered-private/lib"
+replace_dir(default_lib_dirpath, lib_dirpath, "scripts/cachelib/build-package.sh")
 
-    # Update LFU_DIRPATH for LFU cache
-    default_lfu_dirpath = "lib/caches"
-    current_lfu_dirpath = "{}/caches".format(lib_dirpath)
-    replace_dir(default_lfu_dirpath, current_lfu_dirpath, "src/mk/cache/lfu.mk")
+# Update LFU_DIRPATH for LFU cache
+default_lfu_dirpath = "lib/caches"
+current_lfu_dirpath = "{}/caches".format(lib_dirpath)
+replace_dir(default_lfu_dirpath, current_lfu_dirpath, "src/mk/cache/lfu.mk")
 
-    # Update BOOST_DIRPATH for libboost
-    default_boost_dirpath = "lib/boost_1_81_0"
-    current_boost_dirpath = "{}/boost_1_81_0".format(lib_dirpath)
-    replace_dir(default_boost_dirpath, current_boost_dirpath, "src/mk/lib/boost.mk")
+# Update BOOST_DIRPATH for libboost
+default_boost_dirpath = "lib/boost_1_81_0"
+current_boost_dirpath = "{}/boost_1_81_0".format(lib_dirpath)
+replace_dir(default_boost_dirpath, current_boost_dirpath, "src/mk/lib/boost.mk")
 
-    # Update ROCKSDB_DIRPATH for rocksdb
-    default_rocksdb_dirpath = "lib/rocksdb-8.1.1"
-    current_rocksdb_dirpath = "{}/rocksdb-8.1.1".format(lib_dirpath)
-    replace_dir(default_rocksdb_dirpath, current_rocksdb_dirpath, "src/mk/lib/rocksdb.mk")
+# Update ROCKSDB_DIRPATH for rocksdb
+default_rocksdb_dirpath = "lib/rocksdb-8.1.1"
+current_rocksdb_dirpath = "{}/rocksdb-8.1.1".format(lib_dirpath)
+replace_dir(default_rocksdb_dirpath, current_rocksdb_dirpath, "src/mk/lib/rocksdb.mk")
 
-    # Update SMHASHER_DIRPATH for mmh3
-    default_smhasher_dirpath = "lib/smhasher"
-    current_smhasher_dirpath = "{}/smhasher".format(lib_dirpath)
-    replace_dir(default_smhasher_dirpath, current_smhasher_dirpath, "src/mk/lib/smhasher.mk")
+# Update SMHASHER_DIRPATH for mmh3
+default_smhasher_dirpath = "lib/smhasher"
+current_smhasher_dirpath = "{}/smhasher".format(lib_dirpath)
+replace_dir(default_smhasher_dirpath, current_smhasher_dirpath, "src/mk/lib/smhasher.mk")

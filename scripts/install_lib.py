@@ -4,20 +4,19 @@ import os
 import sys
 
 from common import *
+from utils.util import *
 
 is_clear_tarball = False # whether to clear intermediate tarball files
 
 # Variables to control whether to install the corresponding softwares
 is_install_boost = True
 is_install_cachelib = True
-is_install_lrucache = True
+is_install_lrucache = True # Completely use hacked version
 is_install_lfucache = True
 is_install_rocksdb = True
 is_install_smhasher = True
-is_install_segcache = True
-
-# Include util module for the following installation
-from util import *
+is_install_segcache = True # Completely use hacked version
+is_install_gdsf = True # Completely use hacked version
 
 # (0) Check input CLI parameters
 
@@ -125,6 +124,7 @@ if is_install_cachelib:
 
 # (3) Install LRU cache (commit ID: de1c4a0)
 
+# NOTE: we just use LRU downloaded from github in lib/cpp-lru-cache as a reference, while always use our hacked version in src/cache/lru to support required interfaces
 if is_install_lrucache:
     lrucache_clone_dirpath = "{}/cpp-lru-cache".format(lib_dirpath)
     if not os.path.exists(lrucache_clone_dirpath):
@@ -278,10 +278,10 @@ if is_install_smhasher:
 
 # NOTE: we just use SegCache downloaded from github in lib/segcache as a reference, while always use our hacked version in src/cache/segcache to fix SegCache's implementation issues
 if is_install_segcache:
-    segcache_clone_dirpath = "{}/segcache".format(lib_dirpath)
+    segcache_clone_dirpath = "{}/Segcache".format(lib_dirpath)
     if not os.path.exists(segcache_clone_dirpath):
         prompt(filename, "clone SegCache into {}...".format(segcache_clone_dirpath))
-        segcache_clone_cmd = "cd {} && git clone https://github.com/thesys-lab/segcache".format(lib_dirpath)
+        segcache_clone_cmd = "cd {} && git clone https://github.com/Thesys-lab/Segcache.git".format(lib_dirpath)
 
         segcache_clone_subprocess = runCmd(segcache_clone_cmd)
         if segcache_clone_subprocess.returncode != 0:
@@ -310,17 +310,6 @@ if is_install_segcache:
             dump(filename, "the latest commit ID of SegCache is already {}".format(segcache_targetcommit))
     
     # segcache_install_dirpath = "{}/build".format(segcache_clone_dirpath)
-    # if not os.path.exists(segcache_install_dirpath):
-    #     prompt(filename, "install SegCache from source...")
-    #     segcache_install_cmd = "cd {} && mkdir build && cd build && cmake .. && make -j".format(segcache_clone_dirpath)
-
-    #     segcache_install_subprocess = runCmd(segcache_install_cmd)
-    #     if segcache_install_subprocess.returncode != 0:
-    #         segcache_install_errstr = getSubprocessErrstr(segcache_install_subprocess)
-    #         die(filename, "failed to install {}; error: {}".format(segcache_install_dirpath, segcache_install_errstr))
-    # else:
-    #     dump(filename, "{} exists (SegCache has been installed)".format(segcache_install_dirpath))
-
     segcache_install_dirpath = "{}/src/cache/segcache/build".format(proj_dirname)
     if not os.path.exists(segcache_install_dirpath):
         prompt(filename, "install SegCache from source...")
@@ -333,7 +322,42 @@ if is_install_segcache:
     else:
         dump(filename, "{} exists (SegCache has been installed)".format(segcache_install_dirpath))
 
-# (8) Others: chown of libraries and update LD_LIBRARY_PATH
+# (7) Install GDSF (commit ID: 8818442)
+
+# NOTE: we just use GDSF downloaded from github in lib/webcachesim as a reference, while always use our hacked version in src/cache/greedydual to support required interfaces
+if is_install_gdsf:
+    gdsf_clone_dirpath = "{}/webcachesim".format(lib_dirpath)
+    if not os.path.exists(gdsf_clone_dirpath):
+        prompt(filename, "clone GDSF into {}...".format(gdsf_clone_dirpath))
+        gdsf_clone_cmd = "cd {} && git clone https://github.com/dasebe/webcachesim.git".format(lib_dirpath)
+
+        gdsf_clone_subprocess = runCmd(gdsf_clone_cmd)
+        if gdsf_clone_subprocess.returncode != 0:
+            gdsf_clone_errstr = getSubprocessErrstr(gdsf_clone_subprocess)
+            die(filename, "failed to clone GDSF into {}; error: {}".format(gdsf_clone_dirpath, gdsf_clone_errstr))
+    else:
+        dump(filename, "{} exists (GDSF has been cloned)".format(gdsf_clone_dirpath))
+    
+    gdsf_targetcommit = "8818442"
+    gdsf_checkversion_cmd = "cd {} && git log --format=\"%H\" -n 1".format(gdsf_clone_dirpath)
+    gdsf_checkversion_subprocess = runCmd(gdsf_checkversion_cmd)
+    if gdsf_checkversion_subprocess.returncode != 0:
+        gdsf_checkversion_errstr = getSubprocessErrstr(gdsf_checkversion_subprocess)
+        die(filename, "failed to get the latest commit ID of GDSF; error: {}".format(gdsf_checkversion_errstr))
+    else:
+        gdsf_checkversion_outputstr = getSubprocessOutputstr(gdsf_checkversion_subprocess)
+        if gdsf_targetcommit not in gdsf_checkversion_outputstr:
+            prompt(filename, "the latest commit ID of GDSF is {} -> reset GDSF to commit {}...".format(gdsf_checkversion_outputstr, gdsf_targetcommit))
+            gdsf_reset_cmd = "cd {} && git reset --hard {}".format(gdsf_clone_dirpath, gdsf_targetcommit)
+            
+            gdsf_reset_subprocess = runCmd(gdsf_reset_cmd)
+            if gdsf_reset_subprocess.returncode != 0:
+                gdsf_reset_errstr = getSubprocessErrstr(gdsf_reset_subprocess)
+                die(filename, "failed to reset GDSF; error: {}".format(gdsf_reset_errstr))
+        else:
+            dump(filename, "the latest commit ID of GDSF is already {}".format(gdsf_targetcommit))
+
+# (9) Others: chown of libraries and update LD_LIBRARY_PATH
 
 ## Chown of libraries
 

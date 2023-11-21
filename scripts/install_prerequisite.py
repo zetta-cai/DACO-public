@@ -4,6 +4,7 @@ import os
 import sys
 
 from common import *
+from utils.util import *
 
 is_clear_tarball = False # whether to clear intermediate tarball files
 
@@ -19,15 +20,19 @@ is_upgrade_cmake = True
 
 # (1) Upgrade python3 if necessary
 
+# For python3
+python3_preferred_binpath = getPreferredDirpathForTarget(filename, "python3", system_bin_pathstr) # e.g., /usr/local/bin
+python3_installpath = os.path.dirname(python3_preferred_binpath) # e.g., /usr/local
+python3_install_binpath = "{}/bin".format(python3_installpath) # e.g., /usr/local/bin
+
 if is_upgrade_python3:
-    print("{}: check version of python3...".format(filename))
+    prompt(filename, "{}: check version of python3...")
     python3_target_version = "3.7.5"
     python3_checkversion_cmd = "python3 --version"
     python3_checkversion_subprocess = runCmd(python3_checkversion_cmd)
     need_upgrade_python3 = False
     if python3_checkversion_subprocess.returncode != 0:
-        print("{}: failed to get the current version of python3".format(filename))
-        sys.exit(1)
+        die(filename, "failed to get the current version of python3")
     else:
         python3_checkversion_outputbytes = python3_checkversion_subprocess.stdout
         python3_checkversion_outputstr = python3_checkversion_outputbytes.decode("utf-8")
@@ -35,12 +40,14 @@ if is_upgrade_python3:
         python3_current_version_tuple = versionToTuple(python3_checkversion_outputstr.split(" ")[-1])
         python3_target_version_tuple = versionToTuple(python3_target_version)
         if python3_current_version_tuple == python3_target_version_tuple:
-            print("{}: current python3 version is the same as the target {}".format(filename, python3_target_version))
+            dump(filename, "current python3 version is the same as the target {}".format(python3_target_version))
         elif python3_current_version_tuple > python3_target_version_tuple:
-            print("{}: current python3 version {} > target version {} (please check if with any issue in subsequent steps)".format(filename, python3_checkversion_outputstr, python3_target_version))
+            dump(filename, "current python3 version {} > target version {} (please check if with any issue in subsequent steps)".format(python3_checkversion_outputstr, python3_target_version))
         else:
             need_upgrade_python3 = True
-            print("{}: current python3 version {} < target version {} (need to upgrade python3)".format(filename, python3_checkversion_outputstr, python3_target_version))
+            warn(filename, "current python3 version {} < target version {} (need to upgrade python3)".format(python3_checkversion_outputstr, python3_target_version))
+
+    # TODO: END HERE
 
     if need_upgrade_python3:
         print("{}: check if old python3 is preserved...".format(filename))
@@ -126,10 +133,14 @@ if is_install_pylib:
         print("{}: failed to install python libraries based on {}".format(filename, pylib_requirement_filepath))
         sys.exit(1)
 
-# Include util module for the following installation
-from util import *
-
 # (3) Upgrade gcc/g++ if necessary
+
+# For gcc/g++
+compiler_preferred_binpaths = {}
+for compiler_name in ["gcc", "g++"]:
+    compiler_preferred_binpaths[compiler_name] = getPreferredDirpathForTarget(filename, compiler_name, system_bin_pathstr) # e.g., /usr/local/bin
+compiler_installpath = "/usr" # Installed by apt
+compiler_install_binpath = "{}/bin".format(compiler_installpath) # /usr/bin
 
 if is_upgrade_gcc:
     compiler_target_version = "9.4.0"
