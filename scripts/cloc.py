@@ -17,12 +17,12 @@ exclude_command = "--exclude-ext={} --fullpath --not-match-d={} --not-match-f={}
 
 c_dirs = ["src"]
 for tmp_dir in c_dirs:
-    prompt(filename, "Count LOC for all C/C++ source code in {}...".format(tmp_dir))
+    prompt(scriptname, "Count LOC for all C/C++ source code in {}...".format(tmp_dir))
     tmp_cloc_cmd = "cloc {} {}".format(exclude_command, tmp_dir)
 
     tmp_cloc_subprocess = subprocess.run(tmp_cloc_cmd, shell=True)
     if tmp_cloc_subprocess.returncode != 0:
-        die(filename, "failed to count LOC for all C/C++ source code in {}".format(tmp_dir))
+        die(scriptname, "failed to count LOC for all C/C++ source code in {}".format(tmp_dir))
 print("")
 
 # (2) Count LOC for design-related C/C++ source code
@@ -33,21 +33,21 @@ design_c_dir_str = ""
 for tmp_dir in design_c_dirs:
     design_c_dir_str += tmp_dir + " "
 
-prompt(filename, "Count LOC for design-related C/C++ source code in {}...".format(design_c_dir_str))
+prompt(scriptname, "Count LOC for design-related C/C++ source code in {}...".format(design_c_dir_str))
 tmp_cloc_cmd = "cloc {} {}".format(exclude_command, design_c_dir_str)
 
 tmp_cloc_subprocess = subprocess.run(tmp_cloc_cmd, shell=True)
 if tmp_cloc_subprocess.returncode != 0:
-    die(filename, "failed to count LOC for design-related C/C++ source code in {}".format(tmp_dir))
+    die(scriptname, "failed to count LOC for design-related C/C++ source code in {}".format(tmp_dir))
 print("")
 
 # (3) Count LOC for python scripts
 
 py_dirs = ["scripts"]
 for tmp_dir in py_dirs:
-    prompt(filename, "Count LOC for python script code in {}...".format(tmp_dir))
+    prompt(scriptname, "Count LOC for python script code in {}...".format(tmp_dir))
     tmp_cloc_cmd = "cloc {} {}".format(exclude_command, tmp_dir)
 
     tmp_cloc_subprocess = subprocess.run(tmp_cloc_cmd, shell=True)
     if tmp_cloc_subprocess.returncode != 0:
-        die(filename, "failed to count python script code in {}".format(tmp_dir))
+        die(scriptname, "failed to count python script code in {}".format(tmp_dir))

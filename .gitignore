@@ -10,7 +10,8 @@ lib/cpp-lru-cache
 lib/caches
 lib/rocksdb-8.1.1
 lib/smhasher
-lib/segcache
+lib/Segcache
+lib/webcachesim
 src/cache/segcache/build
 simulator
 total_statistics_loader

@@ -7,6 +7,7 @@ with_colorama = False
 # Log-related variables and functions
 
 def checkColorama():
+    global with_colorama, Fore, Back, Style
     if with_colorama == False:
         try:
             from colorama import Fore, Back, Style
@@ -14,35 +15,35 @@ def checkColorama():
         except ImportError:
             with_colorama = False
 
-def dump(filename, dumpmsg):
+def dump(scriptname, dumpmsg):
     checkColorama()
-    print("{}: {}".format(filename, dumpmsg))
+    print("{}: {}".format(scriptname, dumpmsg))
 
-def prompt(filename, promptmsg):
+def prompt(scriptname, promptmsg):
     checkColorama()
     if with_colorama:
-        print(Fore.GREEN + "{}: {}".format(filename, promptmsg) + Style.RESET_ALL)
+        print(Fore.GREEN + "{}: {}".format(scriptname, promptmsg) + Style.RESET_ALL)
     else:
-        print("{}: {}".format(filename, promptmsg))
+        print("{}: {}".format(scriptname, promptmsg))
 
-def warn(filename, warnmsg):
+def warn(scriptname, warnmsg):
     checkColorama()
     if with_colorama:
-        print(Fore.YELLOW + "[WARN] {}: {}".format(filename, warnmsg) + Style.RESET_ALL)
+        print(Fore.YELLOW + "[WARN] {}: {}".format(scriptname, warnmsg) + Style.RESET_ALL)
     else:
-        print("[WARN] {}: {}".format(filename, warnmsg))
+        print("[WARN] {}: {}".format(scriptname, warnmsg))
 
-def die(filename, errmsg):
+def die(scriptname, errmsg):
     checkColorama()
     if with_colorama:
-        print(Fore.RED + "[ERROR] {}: {}".format(filename, errmsg) + Style.RESET_ALL, file=sys.stderr)
+        print(Fore.RED + "[ERROR] {}: {}".format(scriptname, errmsg) + Style.RESET_ALL, file=sys.stderr)
     else:
-        print("[ERROR] {}: {}".format(filename, errmsg), file=sys.stderr)
+        print("[ERROR] {}: {}".format(scriptname, errmsg), file=sys.stderr)
     sys.exit(1)
 
-def emphasize(filename, emphasize_msg):
+def emphasize(scriptname, emphasize_msg):
     checkColorama()
     if with_colorama:
-        print(Fore.MAGENTA + "{}: {}".format(filename, emphasize_msg) + Style.RESET_ALL)
+        print(Fore.MAGENTA + "{}: {}".format(scriptname, emphasize_msg) + Style.RESET_ALL)
     else:
-        print("{}: {}".format(filename, emphasize_msg))
+        print("{}: {}".format(scriptname, emphasize_msg))

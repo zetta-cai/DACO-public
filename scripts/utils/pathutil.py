@@ -19,11 +19,11 @@ def list_immediate_files_and_directories(directory):
 
 # Return the first dirpath including target_name from env_pathstr
 # If no dirpath includes target_name, the first dirpath including /usr or /usr/local will be returned
-def getPreferredDirpathForTarget(filename, target_name, env_pathstr):
+def getPreferredDirpathForTarget(scriptname, target_name, env_pathstr):
     if env_pathstr == None:
-        die(filename, "env_pathstr for {} is None!",format(target_name))
+        die(scriptname, "env_pathstr for {} is None!",format(target_name))
     #else:
-    #    dump(filename, "env_pathstr for {}: {}".format(target_name, env_pathstr))
+    #    dump(scriptname, "env_pathstr for {}: {}".format(target_name, env_pathstr))
 
     preferred_dirpath = ""
     env_paths = env_pathstr.split(":")
@@ -39,7 +39,7 @@ def getPreferredDirpathForTarget(filename, target_name, env_pathstr):
                     break
     
     if preferred_dirpath == "":
-        warn(filename, "{} are NOT found in {}!".format(target_name, env_pathstr))
+        warn(scriptname, "{} are NOT found in {}!".format(target_name, env_pathstr))
         for i in range(len(env_paths)):
             tmp_env_path = env_paths[i].strip()
 
@@ -48,6 +48,6 @@ def getPreferredDirpathForTarget(filename, target_name, env_pathstr):
                 break
     
     if preferred_dirpath == "":
-        die(filename, "/usr or /usr/local are also NOT found in {}!".format(env_pathstr))
+        die(scriptname, "/usr or /usr/local are also NOT found in {}!".format(env_pathstr))
     
     return preferred_dirpath
