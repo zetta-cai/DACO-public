@@ -8,8 +8,12 @@ from common import *
 from utils.util import *
 
 exclude_exts = "d,o,pyc"
-exclude_dirs = "\"(src/mk|src/workload/cachebench|src/cache/cachelib|src/cache/lfu|src/cache/lru|src/cache/segcache|src/deprecated|scripts/cachelib|scripts/deprecated)\""
-exclude_files = "\"(src/Makefile|scripts/requirements\.txt)\""
+exclude_dirs = "\"(src/mk" # Module makefiles
+exclude_dirs += "|src/deprecated|scripts/deprecated" # Deprecated source code and scripts
+exclude_dirs += "|src/workload/cachebench" # Workload source code
+exclude_dirs += "|src/cache/cachelib|src/cache/greedydual|src/cache/lfu|src/cache/lru|src/cache/segcache" # Baselines (NOTE: src/cache/covered is for COVERED instead of baseline)
+exclude_dirs += "|scripts/cachelib|scripts/requirements\.txt)\"" # Intermediate files used by scripts
+exclude_files = "\"(src/Makefile)\""
 # --fullpath add the current working directory (pwd) ahead of --not-match-d and --not-match-f
 exclude_command = "--exclude-ext={} --fullpath --not-match-d={} --not-match-f={}".format(exclude_exts, exclude_dirs, exclude_files)
 
@@ -20,9 +24,12 @@ for tmp_dir in c_dirs:
     prompt(scriptname, "Count LOC for all C/C++ source code in {}...".format(tmp_dir))
     tmp_cloc_cmd = "cloc {} {}".format(exclude_command, tmp_dir)
 
-    tmp_cloc_subprocess = subprocess.run(tmp_cloc_cmd, shell=True)
+    tmp_cloc_subprocess = runCmd(tmp_cloc_cmd)
     if tmp_cloc_subprocess.returncode != 0:
         die(scriptname, "failed to count LOC for all C/C++ source code in {}".format(tmp_dir))
+    else:
+        tmp_outputstr = getSubprocessOutputstr(tmp_cloc_subprocess)
+        print(tmp_outputstr)
 print("")
 
 # (2) Count LOC for design-related C/C++ source code
@@ -36,9 +43,12 @@ for tmp_dir in design_c_dirs:
 prompt(scriptname, "Count LOC for design-related C/C++ source code in {}...".format(design_c_dir_str))
 tmp_cloc_cmd = "cloc {} {}".format(exclude_command, design_c_dir_str)
 
-tmp_cloc_subprocess = subprocess.run(tmp_cloc_cmd, shell=True)
+tmp_cloc_subprocess = runCmd(tmp_cloc_cmd)
 if tmp_cloc_subprocess.returncode != 0:
     die(scriptname, "failed to count LOC for design-related C/C++ source code in {}".format(tmp_dir))
+else:
+    tmp_outputstr = getSubprocessOutputstr(tmp_cloc_subprocess)
+    print(tmp_outputstr)
 print("")
 
 # (3) Count LOC for python scripts
@@ -48,6 +58,9 @@ for tmp_dir in py_dirs:
     prompt(scriptname, "Count LOC for python script code in {}...".format(tmp_dir))
     tmp_cloc_cmd = "cloc {} {}".format(exclude_command, tmp_dir)
 
-    tmp_cloc_subprocess = subprocess.run(tmp_cloc_cmd, shell=True)
+    tmp_cloc_subprocess = runCmd(tmp_cloc_cmd)
     if tmp_cloc_subprocess.returncode != 0:
         die(scriptname, "failed to count python script code in {}".format(tmp_dir))
+    else:
+        tmp_outputstr = getSubprocessOutputstr(tmp_cloc_subprocess)
+        print(tmp_outputstr)
