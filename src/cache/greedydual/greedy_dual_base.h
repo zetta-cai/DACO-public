@@ -34,7 +34,10 @@ namespace covered
 
         virtual ~GreedyDualBase();
 
+        virtual bool exists(const Key& key); // Check if key exists in cache (NOT udpate cache metadata)
+
         virtual bool lookup(const Key& key, Value& value);
+        virtual bool update(const Key& key, const Value& value);
         virtual void admit(const Key& key, const Value& value);
         virtual void evict(const Key& key); // Evict the given key if any
         virtual void evict(Key& key, Value& value); // Evict the victim with the smallest hval

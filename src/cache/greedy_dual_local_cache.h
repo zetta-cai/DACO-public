@@ -1,24 +1,24 @@
 /*
- * GDSizeLocalCache: local edge cache with GD-Size policy (https://github.com/dasebe/webcachesim).
+ * GreedyDualLocalCache: local edge cache with greedy dual policy including LRU-K, GD-Size, GDSF, and LFU-DA (https://github.com/dasebe/webcachesim).
  * 
  * By Siyuan Sheng (2023.11.22).
  */
 
-#ifndef GDSIZE_LOCAL_CACHE_H
-#define GDSIZE_LOCAL_CACHE_H
+#ifndef GREEDY_DUAL_LOCAL_CACHE_H
+#define GREEDY_DUAL_LOCAL_CACHE_H
 
 #include <string>
 
 #include "cache/local_cache_base.h"
-#include "cache/greedydual/gdsize_cache.h"
+#include "cache/greedydual/greedy_dual_base.h"
 
 namespace covered
 {
-    class GDSizeLocalCache : public LocalCacheBase
+    class GreedyDualLocalCache : public LocalCacheBase
     {
     public:
-        GDSizeLocalCache(const uint32_t& edge_idx);
-        virtual ~GDSizeLocalCache();
+        GreedyDualLocalCache(const uint32_t& edge_idx, const uint64_t& capacity_bytes);
+        virtual ~GreedyDualLocalCache();
 
         virtual const bool hasFineGrainedManagement() const;
     private:
@@ -57,7 +57,7 @@ namespace covered
         std::string instance_name_;
 
         // Non-const shared variables
-        GDSizeCache* gdsize_cache_ptr_; // Data and metadata for local edge cache
+        GreedyDualBase* greedy_dual_cache_ptr_; // Data and metadata for local edge cache
     };
 }
 

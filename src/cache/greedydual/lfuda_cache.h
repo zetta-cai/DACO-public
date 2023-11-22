@@ -23,6 +23,7 @@ namespace covered
         virtual ~LfuDACache();
 
         virtual bool lookup(const Key& key, Value& value);
+        virtual bool update(const Key& key, const Value& value);
         virtual void admit(const Key& key, const Value& value);
         virtual void evict(const Key& key); // Evict the given key if any
         virtual void evict(Key& key, Value& value); // Evict the victim with the smallest hval

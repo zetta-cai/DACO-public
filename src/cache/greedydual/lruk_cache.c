@@ -37,6 +37,28 @@ namespace covered
         return is_hit;
     }
 
+    bool LRUKCache::update(const Key& key, const Value& value)
+    {
+        // Update current timepoint
+        _curTime++;
+
+        // NOTE: add new cache access history before GreedyDualBase::update(), which will use cache access history to calculate hval
+        LrukMapType::iterator reqs_map_iter = _reqsMap.find(key);
+        if (reqs_map_iter != _reqsMap.end()) // Key is cached
+        {
+            reqs_map_iter->second.push(_curTime); // Add new cache access history
+            _currentSize = Util::uint64Add(_currentSize, sizeof(uint64_t));
+        }
+
+        bool is_hit = GreedyDualBase::update(key, value); // Update hval and value
+        if (reqs_map_iter != _reqsMap.end()) // Key is cached
+        {
+            assert(is_hit == true); // Should be cache hit for cached key
+        }
+
+        return is_hit;
+    }
+
     void LRUKCache::admit(const Key& key, const Value& value)
     {
         // NOTE: initialize cache access history before GreedyDualBase::admit(), which will use cache access history to calculate hval

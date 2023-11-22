@@ -34,6 +34,25 @@ namespace covered
         return is_hit;
     }
 
+    bool LfuDACache::update(const Key& key, const Value& value)
+    {
+        // NOTE: update frequency before GreedyDualBase::update(), which will use frequency to calculate hval
+        CacheStatsMapType::iterator cache_stats_map_iter = _refsMap.find(key);
+        if (cache_stats_map_iter != _refsMap.end()) // Key is cached
+        {
+            // Update frequency
+            cache_stats_map_iter->second++;
+        }
+
+        bool is_hit = GreedyDualBase::update(key, value); // Update hval and value
+        if (cache_stats_map_iter != _refsMap.end()) // Key is cached
+        {
+            assert(is_hit == true); // Should be cache hit for cached key
+        }
+
+        return is_hit;
+    }
+
     void LfuDACache::admit(const Key& key, const Value& value)
     {
         // NOTE: initialize frequency before GreedyDualBase::admit(), which will use frequency to calculate hval

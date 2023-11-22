@@ -20,6 +20,19 @@ namespace covered
 
     GreedyDualBase::~GreedyDualBase() {}
 
+    bool GreedyDualBase::exists(const Key& key)
+    {
+        bool is_exist = false;
+
+        GdCacheMapType::const_iterator cache_map_const_iter = _cacheMap.find(key);
+        if (cache_map_const_iter != _cacheMap.end())
+        {
+            is_exist = true;
+        }
+
+        return is_exist;
+    }
+
     bool GreedyDualBase::lookup(const Key& key, Value& value)
     {
         bool is_hit = false;
@@ -42,6 +55,44 @@ namespace covered
         return is_hit;
     }
 
+    bool GreedyDualBase::update(const Key& key, const Value& value)
+    {
+        bool is_hit = false;
+
+        GdCacheMapType::iterator cache_map_iter = _cacheMap.find(key);
+        if (cache_map_iter != _cacheMap.end())
+        {
+            // NOTE: we update value first before hit_(), which needs to use value to calculate hval
+            ValueMapType::iterator value_map_iter = cache_map_iter->second;
+            assert(value_map_iter != _valueMap.end());
+            const Value original_value = value_map_const_iter->second.second;
+            value_map_const_iter->second.second = value;
+
+            hit_(key); // Update hval
+
+            // Update _currentSize for value change
+            _currentSize = Util::uint64Add(_currentSize, value.getValuesize());
+            _currentSize = Util::uint64Minus(_currentSize, original_value.getValuesize());
+
+            // Check eviction needed
+            while (_currentSize > _cacheSize)
+            {
+                // NOTE: NEVER triggered due to over-provisioned capacity bytes for internal cache engine, while we perform cache eviction outside internal cache engine
+                assert(false);
+
+                Key tmp_key;
+                Value tmp_value;
+                evict(tmp_key, tmp_value); // Will update _currentL and reduce _currentSize
+                UNUSED(tmp_key);
+                UNUSED(tmp_value);
+            }
+
+            is_hit = true;
+        }
+
+        return is_hit;
+    }
+
     void GreedyDualBase::admit(const Key& key, const Value& value)
     {
         assert(_cacheMap.find(key) == _cacheMap.end());
@@ -58,9 +109,12 @@ namespace covered
             return;
         }
 
-        // Check eviction needed (NOTE: NEVER triggered due to over-provisioned capacity bytes for internal cache engine, while we perform cache eviction outside internal cache engine)
+        // Check eviction needed
         while (_currentSize + object_size > _cacheSize)
         {
+            // NOTE: NEVER triggered due to over-provisioned capacity bytes for internal cache engine, while we perform cache eviction outside internal cache engine
+            assert(false);
+
             Key tmp_key;
             Value tmp_value;
             evict(tmp_key, tmp_value); // Will update _currentL and reduce _currentSize

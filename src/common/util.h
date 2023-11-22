@@ -68,6 +68,10 @@ namespace covered
 
         // Cache name
         static const std::string CACHELIB_CACHE_NAME;
+        static const std::string GDSF_CACHE_NAME; // Greedy dual
+        static const std::string GDSIZE_CACHE_NAME; // Greedy dual
+        static const std::string LFUDA_CACHE_NAME; // Greedy dual
+        static const std::string LRUK_CACHE_NAME; // Greedy dual
         static const std::string LFU_CACHE_NAME;
         static const std::string LRU_CACHE_NAME;
         static const std::string SEGCACHE_CACHE_NAME;

@@ -1,61 +1,87 @@
-#include "cache/gdsize_local_cache.h"
+#include "cache/greedy_dual_local_cache.h"
 
 #include <assert.h>
 #include <sstream>
 
+#include "cache/greedydual/gdsf_cache.h"
+#include "cache/greedydual/gdsize_cache.h"
+#include "cache/greedydual/lfuda_cache.h"
+#include "cache/greedydual/lruk_cache.h"
 #include "common/util.h"
 
 namespace covered
 {
-    // TODO: END HERE
+    const std::string GDSizeLocalCache::kClassName("GDSizeLocalCache");
 
-    const std::string LruLocalCache::kClassName("LruLocalCache");
-
-    LruLocalCache::LruLocalCache(const uint32_t& edge_idx) : LocalCacheBase(edge_idx)
+    GDSizeLocalCache::GDSizeLocalCache(const std::string& cache_name, const uint32_t& edge_idx, const uint64_t& capacity_bytes) : LocalCacheBase(edge_idx)
     {
         // Differentiate local edge cache in different edge nodes
         std::ostringstream oss;
         oss << kClassName << " edge" << edge_idx;
         instance_name_ = oss.str();
 
-        lru_cache_ptr_ = new LruCache();
-        assert(lru_cache_ptr_ != NULL);
+        uint64_t over_provisioned_capacity_bytes = capacity_bytes + COMMON_ENGINE_INTERNAL_UNUSED_CAPACITY_BYTES; // Just avoid internal eviction yet NOT affect cooperative edge caching
+        if (cache_name == Util::GDSF_CACHE_NAME)
+        {
+            greedy_dual_cache_ptr_ = new GDSFCache(over_provisioned_capacity_bytes);
+        }
+        else if (cache_name == Util::GDSIZE_CACHE_NAME)
+        {
+            greedy_dual_cache_ptr_ = new GDSizeCache(over_provisioned_capacity_bytes);
+        }
+        else if (cache_name == Util::LFUDA_CACHE_NAME)
+        {
+            greedy_dual_cache_ptr_ = new LFUDACache(over_provisioned_capacity_bytes);
+        }
+        else if (cache_name == Util::LRUK_CACHE_NAME)
+        {
+            greedy_dual_cache_ptr_ = new LRUKCache(over_provisioned_capacity_bytes);
+        }
+        else
+        {
+            oss.clear();
+            oss.str("");
+            oss << "invalid cache name " << cache_name << " for GreedyDualLocalCache";
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
+        assert(greedy_dual_cache_ptr_ != NULL);
     }
     
-    LruLocalCache::~LruLocalCache()
+    GDSizeLocalCache::~GDSizeLocalCache()
     {
-        assert(lru_cache_ptr_ != NULL);
-        delete lru_cache_ptr_;
-        lru_cache_ptr_ = NULL;
+        assert(greedy_dual_cache_ptr_ != NULL);
+        delete greedy_dual_cache_ptr_;
+        greedy_dual_cache_ptr_ = NULL;
     }
 
-    const bool LruLocalCache::hasFineGrainedManagement() const
+    const bool GDSizeLocalCache::hasFineGrainedManagement() const
     {
         return true; // Key-level (i.e., object-level) cache management
     }
 
     // (1) Check is cached and access validity
 
-    bool LruLocalCache::isLocalCachedInternal_(const Key& key) const
+    bool GDSizeLocalCache::isLocalCachedInternal_(const Key& key) const
     {
-        bool is_cached = lru_cache_ptr_->exists(key);
+        bool is_cached = greedy_dual_cache_ptr_->exists(key);
 
         return is_cached;
     }
 
     // (2) Access local edge cache (KV data and local metadata)
 
-    bool LruLocalCache::getLocalCacheInternal_(const Key& key, const bool& is_redirected, Value& value, bool& affect_victim_tracker) const
+    bool GDSizeLocalCache::getLocalCacheInternal_(const Key& key, const bool& is_redirected, Value& value, bool& affect_victim_tracker) const
     {
         UNUSED(is_redirected); // ONLY for COVERED
         UNUSED(affect_victim_tracker); // Only for COVERED
 
-        bool is_local_cached = lru_cache_ptr_->get(key, value);
+        bool is_local_cached = greedy_dual_cache_ptr_->lookup(key, value);
 
         return is_local_cached;
     }
 
-    std::list<VictimCacheinfo> LruLocalCache::getLocalSyncedVictimCacheinfosFromLocalCacheInternal_() const
+    std::list<VictimCacheinfo> GDSizeLocalCache::getLocalSyncedVictimCacheinfosFromLocalCacheInternal_() const
     {
         std::list<VictimCacheinfo> local_synced_victim_cacheinfos;
 
@@ -65,7 +91,7 @@ namespace covered
         return local_synced_victim_cacheinfos;
     }
 
-    void LruLocalCache::getCollectedPopularityFromLocalCacheInternal_(const Key& key, CollectedPopularity& collected_popularity) const
+    void GDSizeLocalCache::getCollectedPopularityFromLocalCacheInternal_(const Key& key, CollectedPopularity& collected_popularity) const
     {
         Util::dumpErrorMsg(instance_name_, "getCollectedPopularityFromLocalCacheInternal_() can ONLY be invoked by COVERED local cache!");
         exit(1);
@@ -73,14 +99,14 @@ namespace covered
         return;
     }
 
-    bool LruLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value, const bool& is_getrsp, const bool& is_global_cached, bool& affect_victim_tracker, bool& is_successful)
+    bool GDSizeLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value, const bool& is_getrsp, const bool& is_global_cached, bool& affect_victim_tracker, bool& is_successful)
     {
         UNUSED(is_getrsp); // ONLY for COVERED
         UNUSED(is_global_cached); // ONLY for COVERED
         UNUSED(affect_victim_tracker); // Only for COVERED
         is_successful = false;
         
-        bool is_local_cached = lru_cache_ptr_->update(key, value);
+        bool is_local_cached = greedy_dual_cache_ptr_->update(key, value);
         if (is_local_cached)
         {
             is_successful = true;
@@ -91,17 +117,19 @@ namespace covered
 
     // (3) Local edge cache management
 
-    bool LruLocalCache::needIndependentAdmitInternal_(const Key& key, const Value& value) const
+    bool GDSizeLocalCache::needIndependentAdmitInternal_(const Key& key, const Value& value) const
     {
         UNUSED(value);
         
-        // LRU cache uses default admission policy (i.e., always admit), which always returns true as long as key is not cached
+        // GreedyDual cache uses default admission policy (i.e., always admit), which always returns true as long as key is not cached
         bool is_local_cached = isLocalCachedInternal_(key);
         return !is_local_cached;
     }
 
     void LruLocalCache::admitLocalCacheInternal_(const Key& key, const Value& value, bool& affect_victim_tracker, bool& is_successful)
     {
+        // TODO: END HERE
+        
         UNUSED(affect_victim_tracker); // Only for COVERED
         
         lru_cache_ptr_->admit(key, value);
