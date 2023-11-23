@@ -11,9 +11,9 @@
 
 namespace covered
 {
-    const std::string GDSizeLocalCache::kClassName("GDSizeLocalCache");
+    const std::string GreedyDualLocalCache::kClassName("GreedyDualLocalCache");
 
-    GDSizeLocalCache::GDSizeLocalCache(const std::string& cache_name, const uint32_t& edge_idx, const uint64_t& capacity_bytes) : LocalCacheBase(edge_idx)
+    GreedyDualLocalCache::GreedyDualLocalCache(const std::string& cache_name, const uint32_t& edge_idx, const uint64_t& capacity_bytes) : LocalCacheBase(edge_idx)
     {
         // Differentiate local edge cache in different edge nodes
         std::ostringstream oss;
@@ -48,21 +48,21 @@ namespace covered
         assert(greedy_dual_cache_ptr_ != NULL);
     }
     
-    GDSizeLocalCache::~GDSizeLocalCache()
+    GreedyDualLocalCache::~GreedyDualLocalCache()
     {
         assert(greedy_dual_cache_ptr_ != NULL);
         delete greedy_dual_cache_ptr_;
         greedy_dual_cache_ptr_ = NULL;
     }
 
-    const bool GDSizeLocalCache::hasFineGrainedManagement() const
+    const bool GreedyDualLocalCache::hasFineGrainedManagement() const
     {
         return true; // Key-level (i.e., object-level) cache management
     }
 
     // (1) Check is cached and access validity
 
-    bool GDSizeLocalCache::isLocalCachedInternal_(const Key& key) const
+    bool GreedyDualLocalCache::isLocalCachedInternal_(const Key& key) const
     {
         bool is_cached = greedy_dual_cache_ptr_->exists(key);
 
@@ -71,7 +71,7 @@ namespace covered
 
     // (2) Access local edge cache (KV data and local metadata)
 
-    bool GDSizeLocalCache::getLocalCacheInternal_(const Key& key, const bool& is_redirected, Value& value, bool& affect_victim_tracker) const
+    bool GreedyDualLocalCache::getLocalCacheInternal_(const Key& key, const bool& is_redirected, Value& value, bool& affect_victim_tracker) const
     {
         UNUSED(is_redirected); // ONLY for COVERED
         UNUSED(affect_victim_tracker); // Only for COVERED
@@ -81,7 +81,7 @@ namespace covered
         return is_local_cached;
     }
 
-    std::list<VictimCacheinfo> GDSizeLocalCache::getLocalSyncedVictimCacheinfosFromLocalCacheInternal_() const
+    std::list<VictimCacheinfo> GreedyDualLocalCache::getLocalSyncedVictimCacheinfosFromLocalCacheInternal_() const
     {
         std::list<VictimCacheinfo> local_synced_victim_cacheinfos;
 
@@ -91,7 +91,7 @@ namespace covered
         return local_synced_victim_cacheinfos;
     }
 
-    void GDSizeLocalCache::getCollectedPopularityFromLocalCacheInternal_(const Key& key, CollectedPopularity& collected_popularity) const
+    void GreedyDualLocalCache::getCollectedPopularityFromLocalCacheInternal_(const Key& key, CollectedPopularity& collected_popularity) const
     {
         Util::dumpErrorMsg(instance_name_, "getCollectedPopularityFromLocalCacheInternal_() can ONLY be invoked by COVERED local cache!");
         exit(1);
@@ -99,7 +99,7 @@ namespace covered
         return;
     }
 
-    bool GDSizeLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value, const bool& is_getrsp, const bool& is_global_cached, bool& affect_victim_tracker, bool& is_successful)
+    bool GreedyDualLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value, const bool& is_getrsp, const bool& is_global_cached, bool& affect_victim_tracker, bool& is_successful)
     {
         UNUSED(is_getrsp); // ONLY for COVERED
         UNUSED(is_global_cached); // ONLY for COVERED
@@ -117,7 +117,7 @@ namespace covered
 
     // (3) Local edge cache management
 
-    bool GDSizeLocalCache::needIndependentAdmitInternal_(const Key& key, const Value& value) const
+    bool GreedyDualLocalCache::needIndependentAdmitInternal_(const Key& key, const Value& value) const
     {
         UNUSED(value);
         
@@ -126,7 +126,7 @@ namespace covered
         return !is_local_cached;
     }
 
-    void GDSizeLocalCache::admitLocalCacheInternal_(const Key& key, const Value& value, bool& affect_victim_tracker, bool& is_successful)
+    void GreedyDualLocalCache::admitLocalCacheInternal_(const Key& key, const Value& value, bool& affect_victim_tracker, bool& is_successful)
     {
 s        UNUSED(affect_victim_tracker); // Only for COVERED
         
@@ -136,7 +136,7 @@ s        UNUSED(affect_victim_tracker); // Only for COVERED
         return;
     }
 
-    bool GDSizeLocalCache::getLocalCacheVictimKeysInternal_(std::unordered_set<Key, KeyHasher>& keys, std::list<VictimCacheinfo>& victim_cacheinfos, const uint64_t& required_size) const
+    bool GreedyDualLocalCache::getLocalCacheVictimKeysInternal_(std::unordered_set<Key, KeyHasher>& keys, std::list<VictimCacheinfo>& victim_cacheinfos, const uint64_t& required_size) const
     {
         assert(hasFineGrainedManagement());
 
@@ -156,7 +156,7 @@ s        UNUSED(affect_victim_tracker); // Only for COVERED
         return has_victim_key;
     }
 
-    bool GDSizeLocalCache::evictLocalCacheWithGivenKeyInternal_(const Key& key, Value& value)
+    bool GreedyDualLocalCache::evictLocalCacheWithGivenKeyInternal_(const Key& key, Value& value)
     {
         assert(hasFineGrainedManagement());
 
@@ -165,7 +165,7 @@ s        UNUSED(affect_victim_tracker); // Only for COVERED
         return is_evict;
     }
 
-    void GDSizeLocalCache::evictLocalCacheNoGivenKeyInternal_(std::unordered_map<Key, Value, KeyHasher>& victims, const uint64_t& required_size)
+    void GreedyDualLocalCache::evictLocalCacheNoGivenKeyInternal_(std::unordered_map<Key, Value, KeyHasher>& victims, const uint64_t& required_size)
     {
         assert(!hasFineGrainedManagement());
 
@@ -177,14 +177,14 @@ s        UNUSED(affect_victim_tracker); // Only for COVERED
 
     // (4) Other functions
 
-    uint64_t GDSizeLocalCache::getSizeForCapacityInternal_() const
+    uint64_t GreedyDualLocalCache::getSizeForCapacityInternal_() const
     {
         uint64_t internal_size = greedy_dual_cache_ptr_->getSizeForCapacity();
 
         return internal_size;
     }
 
-    void GDSizeLocalCache::checkPointersInternal_() const
+    void GreedyDualLocalCache::checkPointersInternal_() const
     {
         assert(greedy_dual_cache_ptr_ != NULL);
         return;
