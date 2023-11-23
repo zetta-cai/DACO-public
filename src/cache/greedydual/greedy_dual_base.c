@@ -65,8 +65,8 @@ namespace covered
             // NOTE: we update value first before hit_(), which needs to use value to calculate hval
             ValueMapType::iterator value_map_iter = cache_map_iter->second;
             assert(value_map_iter != _valueMap.end());
-            const Value original_value = value_map_const_iter->second.second;
-            value_map_const_iter->second.second = value;
+            const Value original_value = value_map_iter->second.second;
+            value_map_iter->second.second = value;
 
             hit_(key); // Update hval
 
@@ -124,7 +124,6 @@ namespace covered
 
         // Admit new object with new GF value
         long double ageVal = ageValue_(key, value); // Calculate hval based on latest _currentL
-        const uint64_t object_size = key.getKeyLength() + value.getValuesize();
 
         // Admit hval and key-value pair into valuemap
         ValueMapIteratorType value_map_iter = _valueMap.emplace(ageVal, std::pair(key, value));

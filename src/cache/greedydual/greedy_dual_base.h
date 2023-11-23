@@ -3,6 +3,10 @@
  *
  * Hack to support required interfaces and cache size in units of bytes for capacity constraint.
  * 
+ * NOTE: in eval, NOT consider BostonConference'97 LRV, WWW'97 Hybrid, and USITS'97 GD-Size, due to either NOT general if consider object-size-aware network cost, or worse than GDSF otherwise (GDSF considers all of frequency, object size, and aging factor).
+ * 
+ * NOTE: in eval, also NOT consider LFU-DA (frequency + aging factor) due to targeting cache byte hit rate instead of object hit rate (worse than GDSF).
+ * 
  * By Siyuan Sheng (2023.11.21).
  */
 

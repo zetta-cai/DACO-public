@@ -31,7 +31,7 @@ namespace covered
         }
         else if (cache_name == Util::LFUDA_CACHE_NAME)
         {
-            greedy_dual_cache_ptr_ = new LFUDACache(over_provisioned_capacity_bytes);
+            greedy_dual_cache_ptr_ = new LfuDACache(over_provisioned_capacity_bytes);
         }
         else if (cache_name == Util::LRUK_CACHE_NAME)
         {

@@ -428,6 +428,14 @@ namespace covered
                     local_eviction_cost = tmp_covered_cache_manager_ptr->accessVictimTrackerForFastPathEvictionCost(tmp_local_cached_victim_cacheinfos, tmp_local_beaconed_local_cached_victim_dirinfoset);
                 }
 
+                #ifdef ENABLE_TEMPORARY_DUPLICATION_AVOIDANCE
+                // Enforce duplication avoidance when cache is not full
+                if (is_global_cached && local_eviction_cost == 0.0)
+                {
+                    local_admission_benefit = 0.0;
+                }
+                #endif
+
                 // Trigger local cache placement if local admission benefit is larger than local eviction cost
                 if (local_admission_benefit > local_eviction_cost)
                 {
