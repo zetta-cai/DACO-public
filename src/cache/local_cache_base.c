@@ -8,6 +8,7 @@
 #include "cache/covered_local_cache.h"
 #include "cache/lfu_local_cache.h"
 #include "cache/lru_local_cache.h"
+#include "cache/greedy_dual_local_cache.h"
 #include "cache/segcache_local_cache.h"
 
 namespace covered
@@ -20,6 +21,10 @@ namespace covered
         if (cache_name == Util::CACHELIB_CACHE_NAME)
         {
             local_cache_ptr = new CachelibLocalCache(edge_idx, capacity_bytes);
+        }
+        else if (cache_name == Util::LRUK_CACHE_NAME || cache_name == Util::GDSIZE_CACHE_NAME || cache_name == Util::GDSF_CACHE_NAME || cache_name == Util::LFUDA_CACHE_NAME)
+        {
+            local_cache_ptr = new GreedyDualLocalCache(cache_name, edge_idx, capacity_bytes);
         }
         else if (cache_name == Util::COVERED_CACHE_NAME)
         {

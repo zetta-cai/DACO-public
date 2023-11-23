@@ -128,7 +128,7 @@ namespace covered
 
     void GreedyDualLocalCache::admitLocalCacheInternal_(const Key& key, const Value& value, bool& affect_victim_tracker, bool& is_successful)
     {
-s        UNUSED(affect_victim_tracker); // Only for COVERED
+        UNUSED(affect_victim_tracker); // Only for COVERED
         
         greedy_dual_cache_ptr_->admit(key, value);
         is_successful = true;
