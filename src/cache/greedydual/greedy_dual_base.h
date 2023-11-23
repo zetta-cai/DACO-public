@@ -39,8 +39,11 @@ namespace covered
         virtual bool lookup(const Key& key, Value& value);
         virtual bool update(const Key& key, const Value& value);
         virtual void admit(const Key& key, const Value& value);
-        virtual void evict(const Key& key); // Evict the given key if any
+        virtual bool getVictimKey(Key& key); // Get the victim key yet NOT evict
+        virtual bool evict(const Key& key, Value& value); // Evict the given key if any
         virtual void evict(Key& key, Value& value); // Evict the victim with the smallest hval
+
+        uint64_t getSizeForCapacity();
     protected:
         typedef std::multimap<long double, std::pair<Key, Value>> ValueMapType;
         typedef ValueMapType::iterator ValueMapIteratorType;

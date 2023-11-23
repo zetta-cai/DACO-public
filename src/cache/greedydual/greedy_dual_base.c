@@ -139,15 +139,36 @@ namespace covered
         return;
     }
 
-    void GreedyDualBase::evict(const Key& key)
+    bool GreedyDualBase::getVictimKey(Key& key)
     {
+        bool has_victim = false;
+
+        // Choose the first list element (smallest hval)
+        if (_valueMap.size() > 0)
+        {
+            ValueMapIteratorType value_map_iter  = _valueMap.begin();
+            assert(value_map_iter != _valueMap.end()); // Bug if this happens
+
+            // Just get victim key yet NOT evict the victim
+            key = value_map_iter->second.first;
+
+            has_victim = true;
+        }
+
+        return has_victim;
+    }
+
+    bool GreedyDualBase::evict(const Key& key, Value& value)
+    {
+        bool is_evict = false;
+
         // Evict the object with the given key
         GdCacheMapType::const_iterator cache_map_const_iter = _cacheMap.find(key);
         if (cache_map_const_iter != _cacheMap.end())
         {
             ValueMapIteratorType value_map_iter = cache_map_const_iter->second;
-            const Key key = value_map_iter->second.first;
-            const Value value = value_map_iter->second.second;
+            assert(key == value_map_iter->second.first);
+            value = value_map_iter->second.second;
             const uint64_t object_size = key.getKeyLength() + value.getValuesize();
 
             // Remove hval and key-value pair from valuemap
@@ -157,9 +178,11 @@ namespace covered
             // Remove key and valuemap iter from lookup table
             _cacheMap.erase(cache_map_const_iter);
             _currentSize = Util::uint64Minus(_currentSize, Util::uint64Add(key.getKeyLength(), sizeof(ValueMapIteratorType)));
+
+            is_evict = true;
         }
 
-        return;
+        return is_evict;
     }
 
     void GreedyDualBase::evict(Key& key, Value& value)
@@ -178,8 +201,8 @@ namespace covered
             }
             assert(value_map_iter != _valueMap.end()); // Bug if this happens
 
-            const Key key = value_map_iter->second.first;
-            const Value value = value_map_iter->second.second;
+            key = value_map_iter->second.first;
+            value = value_map_iter->second.second;
             const uint64_t object_size = key.getKeyLength() + value.getValuesize();
             _currentL = value_map_iter->first; // update L
 
@@ -193,6 +216,11 @@ namespace covered
         }
 
         return;
+    }
+
+    uint64_t GreedyDualBase::getSizeForCapacity()
+    {
+        return _currentSize;
     }
 
     long double GreedyDualBase::ageValue_(const Key& key, const Value& value)

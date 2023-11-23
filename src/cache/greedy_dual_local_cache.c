@@ -126,19 +126,17 @@ namespace covered
         return !is_local_cached;
     }
 
-    void LruLocalCache::admitLocalCacheInternal_(const Key& key, const Value& value, bool& affect_victim_tracker, bool& is_successful)
+    void GDSizeLocalCache::admitLocalCacheInternal_(const Key& key, const Value& value, bool& affect_victim_tracker, bool& is_successful)
     {
-        // TODO: END HERE
+s        UNUSED(affect_victim_tracker); // Only for COVERED
         
-        UNUSED(affect_victim_tracker); // Only for COVERED
-        
-        lru_cache_ptr_->admit(key, value);
+        greedy_dual_cache_ptr_->admit(key, value);
         is_successful = true;
 
         return;
     }
 
-    bool LruLocalCache::getLocalCacheVictimKeysInternal_(std::unordered_set<Key, KeyHasher>& keys, std::list<VictimCacheinfo>& victim_cacheinfos, const uint64_t& required_size) const
+    bool GDSizeLocalCache::getLocalCacheVictimKeysInternal_(std::unordered_set<Key, KeyHasher>& keys, std::list<VictimCacheinfo>& victim_cacheinfos, const uint64_t& required_size) const
     {
         assert(hasFineGrainedManagement());
 
@@ -146,7 +144,7 @@ namespace covered
         UNUSED(victim_cacheinfos); // ONLY for COVERED
 
         Key tmp_victim_key;
-        bool has_victim_key = lru_cache_ptr_->getVictimKey(tmp_victim_key);
+        bool has_victim_key = greedy_dual_cache_ptr_->getVictimKey(tmp_victim_key);
         if (has_victim_key)
         {
             if (keys.find(tmp_victim_key) == keys.end())
@@ -158,16 +156,16 @@ namespace covered
         return has_victim_key;
     }
 
-    bool LruLocalCache::evictLocalCacheWithGivenKeyInternal_(const Key& key, Value& value)
+    bool GDSizeLocalCache::evictLocalCacheWithGivenKeyInternal_(const Key& key, Value& value)
     {
         assert(hasFineGrainedManagement());
 
-        bool is_evict = lru_cache_ptr_->evictWithGivenKey(key, value);
+        bool is_evict = greedy_dual_cache_ptr_->evict(key, value);
 
         return is_evict;
     }
 
-    void LruLocalCache::evictLocalCacheNoGivenKeyInternal_(std::unordered_map<Key, Value, KeyHasher>& victims, const uint64_t& required_size)
+    void GDSizeLocalCache::evictLocalCacheNoGivenKeyInternal_(std::unordered_map<Key, Value, KeyHasher>& victims, const uint64_t& required_size)
     {
         assert(!hasFineGrainedManagement());
 
@@ -179,16 +177,16 @@ namespace covered
 
     // (4) Other functions
 
-    uint64_t LruLocalCache::getSizeForCapacityInternal_() const
+    uint64_t GDSizeLocalCache::getSizeForCapacityInternal_() const
     {
-        uint64_t internal_size = lru_cache_ptr_->getSizeForCapacity();
+        uint64_t internal_size = greedy_dual_cache_ptr_->getSizeForCapacity();
 
         return internal_size;
     }
 
-    void LruLocalCache::checkPointersInternal_() const
+    void GDSizeLocalCache::checkPointersInternal_() const
     {
-        assert(lru_cache_ptr_ != NULL);
+        assert(greedy_dual_cache_ptr_ != NULL);
         return;
     }
 

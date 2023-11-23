@@ -69,19 +69,21 @@ namespace covered
         return;
     }
 
-    void GDSFCache::evict(const Key& key)
+    bool GDSFCache::evict(const Key& key, Value& value)
     {
-        GreedyDualBase::evict(key); // Evict the given key if any; remove hval-kvpair from valuemap; remove key-iterator from lookup table
+        bool is_evict = GreedyDualBase::evict(key, value); // Evict the given key if any; remove hval-kvpair from valuemap; remove key-iterator from lookup table
 
         CacheStatsMapType::iterator cache_stats_map_iter = _refsMap.find(key);
-        if (cache_stats_map_iter != _refsMap.end())
+        if (is_evict)
         {
+            assert(cache_stats_map_iter != _refsMap.end());
+
             // Remove key and frequency from statsmap
             _refsMap.erase(cache_stats_map_iter);
             _currentSize = Util::uint64Minus(_currentSize, Util::uint64Add(key.getKeyLength(), sizeof(uint64_t)));
         }
 
-        return;
+        return is_evict;
     }
 
     void GDSFCache::evict(Key& key, Value& value)

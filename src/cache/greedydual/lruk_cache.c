@@ -76,20 +76,22 @@ namespace covered
         return;
     }
 
-    void LRUKCache::evict(const Key& key)
+    bool LRUKCache::evict(const Key& key, Value& value)
     {
-        GreedyDualBase::evict(key); // Evict the given key if any; remove hval-kvpair from valuemap; remove key-iterator from lookup table
+        bool is_evict = GreedyDualBase::evict(key, value); // Evict the given key if any; remove hval-kvpair from valuemap; remove key-iterator from lookup table
 
         LrukMapType::iterator reqs_map_iter = _reqsMap.find(key);
-        if (reqs_map_iter != _reqsMap.end())
+        if (is_evict)
         {
+            assert(reqs_map_iter != _reqsMap.end());
+            
             // Remove key and cache access history from statsmap
             const uint64_t history_cnt = reqs_map_iter->second.size();
             _reqsMap.erase(reqs_map_iter);
             _currentSize = Util::uint64Minus(_currentSize, Util::uint64Add(key.getKeyLength(), history_cnt * sizeof(uint64_t)));
         }
 
-        return;
+        return is_evict;
     }
 
     void LRUKCache::evict(Key& key, Value& value)
