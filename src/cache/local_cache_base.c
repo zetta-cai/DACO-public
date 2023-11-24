@@ -166,7 +166,7 @@ namespace covered
         return need_independent_admit;
     }
 
-    void LocalCacheBase::admitLocalCache(const Key& key, const Value& value, bool& affect_victim_tracker, bool& is_successful)
+    void LocalCacheBase::admitLocalCache(const Key& key, const Value& value, const bool& is_neighbor_cached, bool& affect_victim_tracker, bool& is_successful)
     {
         checkPointers_();
 
@@ -175,7 +175,7 @@ namespace covered
         rwlock_for_local_cache_ptr_->acquire_lock(context_name);
 
         is_successful = false;
-        admitLocalCacheInternal_(key, value, affect_victim_tracker, is_successful);
+        admitLocalCacheInternal_(key, value, is_neighbor_cached, affect_victim_tracker, is_successful);
 
         rwlock_for_local_cache_ptr_->unlock(context_name);
         return;

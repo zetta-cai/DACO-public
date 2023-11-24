@@ -6,7 +6,7 @@ namespace covered
 {
     const std::string HomoKeyLevelMetadata::kClassName("HomoKeyLevelMetadata");
 
-    HomoKeyLevelMetadata::HomoKeyLevelMetadata(const GroupId& group_id) : KeyLevelMetadataBase(group_id)
+    HomoKeyLevelMetadata::HomoKeyLevelMetadata(const GroupId& group_id, const bool& is_neighbor_cached) : KeyLevelMetadataBase(group_id, is_neighbor_cached)
     {
         is_global_cached_ = true; // Conservatively treat the object is already global cached
     }

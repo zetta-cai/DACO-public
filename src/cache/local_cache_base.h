@@ -49,7 +49,7 @@ namespace covered
         // NOTE: only COVERED never needs independent admission (i.e., always returns false)
         bool needIndependentAdmit(const Key& key, const Value& value) const;
 
-        void admitLocalCache(const Key& key, const Value& value, bool& affect_victim_tracker, bool& is_successful); // is_successful indicates whether object is admited successfully
+        void admitLocalCache(const Key& key, const Value& value, const bool& is_neighbor_cached, bool& affect_victim_tracker, bool& is_successful); // is_successful indicates whether object is admited successfully
 
         // If local cache supports fine-grained cache management, split evict() into two steps for key-level fine-grained locking in cache wrapper: (i) get victim key; (ii) evict if victim key matches similar as version check
         // NOTE: keys is used for local edge cache eviction, while victim_cacheinfos is used for lazy victim fetching (for COVERED)
@@ -88,7 +88,7 @@ namespace covered
 
         virtual bool needIndependentAdmitInternal_(const Key& key, const Value& value) const = 0;
 
-        virtual void admitLocalCacheInternal_(const Key& key, const Value& value, bool& affect_victim_tracker, bool& is_successful) = 0; // is_successful indicates whether object is admited successfully
+        virtual void admitLocalCacheInternal_(const Key& key, const Value& value, const bool& is_neighbor_cached, bool& affect_victim_tracker, bool& is_successful) = 0; // is_successful indicates whether object is admited successfully
         virtual bool getLocalCacheVictimKeysInternal_(std::unordered_set<Key, KeyHasher>& keys, std::list<VictimCacheinfo>& victim_cacheinfos, const uint64_t& required_size) const = 0;
         virtual bool evictLocalCacheWithGivenKeyInternal_(const Key& key, Value& value) = 0;
 

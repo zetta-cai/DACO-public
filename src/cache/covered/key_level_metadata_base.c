@@ -2,12 +2,16 @@
 
 #include <assert.h>
 
+#include "common/util.h"
+
 namespace covered
 {
     const std::string KeyLevelMetadataBase::kClassName("KeyLevelMetadataBase");
 
-    KeyLevelMetadataBase::KeyLevelMetadataBase(const GroupId& group_id) : group_id_(group_id)
+    KeyLevelMetadataBase::KeyLevelMetadataBase(const GroupId& group_id, const bool& is_neighbor_cached) : group_id_(group_id)
     {
+        UNUSED(is_neighbor_cached);
+
         local_frequency_ = 0;
         #ifdef ENABLE_TRACK_PERKEY_OBJSIZE
         object_size_ = 0;

@@ -18,11 +18,12 @@ namespace covered
     {
     public:
         LocalCacheAdmissionItem();
-        LocalCacheAdmissionItem(const Key& key, const Value& value, const bool& is_valid, const bool& skip_propagation_latency);
+        LocalCacheAdmissionItem(const Key& key, const Value& value, const bool& is_neighbor_cached, const bool& is_valid, const bool& skip_propagation_latency);
         ~LocalCacheAdmissionItem();
 
         Key getKey() const;
         Value getValue() const;
+        bool isNeighborCached() const;
         bool isValid() const;
         bool skipPropagationLatency() const;
 
@@ -32,6 +33,7 @@ namespace covered
 
         Key key_;
         Value value_;
+        bool is_neighbor_cached_;
         bool is_valid_;
         bool skip_propagation_latency_;
     };

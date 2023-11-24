@@ -98,8 +98,9 @@ namespace covered
         return !is_local_cached;
     }
 
-    void LruLocalCache::admitLocalCacheInternal_(const Key& key, const Value& value, bool& affect_victim_tracker, bool& is_successful)
+    void LruLocalCache::admitLocalCacheInternal_(const Key& key, const Value& value, const bool& is_neighbor_cached, bool& affect_victim_tracker, bool& is_successful)
     {
+        UNUSED(is_neighbor_cached); // ONLY for COVERED
         UNUSED(affect_victim_tracker); // Only for COVERED
         
         lru_cache_ptr_->admit(key, value);

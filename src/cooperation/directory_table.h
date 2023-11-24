@@ -36,6 +36,7 @@ namespace covered
         bool update(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, const DirectoryMetadata& directory_metadata);
         bool isGlobalCached(const Key& key) const;
         bool isCachedByGivenEdge(const Key& key, const uint32_t& edge_idx) const;
+        bool isNeighborCached(const Key& key, const uint32_t& edge_idx) const;
 
         void invalidateAllDirinfoForKeyIfExist(const Key& key, DirinfoSet& all_dirinfo); // Invalidate all dirinfos only if key exists (NOT add an empty direntry)
         void validateDirinfoForKeyIfExist(const Key& key, const DirectoryInfo& directory_info); // Validate only if key and dirinfo exist (NOT add a valid dirinfo)

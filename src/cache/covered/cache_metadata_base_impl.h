@@ -110,7 +110,7 @@ namespace covered
     // For newly-admited/tracked keys
 
     template<class T>
-    bool CacheMetadataBase<T>::addForNewKey(const Key& key, const Value& value, const uint32_t& peredge_synced_victimcnt, const bool& is_global_cached)
+    bool CacheMetadataBase<T>::addForNewKey(const Key& key, const Value& value, const uint32_t& peredge_synced_victimcnt, const bool& is_global_cached, const bool& is_neighbor_cached)
     {
         bool affect_victim_tracker = false;
 
@@ -122,7 +122,7 @@ namespace covered
         const GroupLevelMetadata& group_level_metadata_ref = addPergroupMetadata_(key, value, assigned_group_id);
 
         // Add object-level metadata for local requests (both value-unrelated and value-related) for new key
-        perkey_metadata_list_iter_t perkey_metadata_list_iter = addPerkeyMetadata_(key, value, assigned_group_id, is_global_cached);
+        perkey_metadata_list_iter_t perkey_metadata_list_iter = addPerkeyMetadata_(key, value, assigned_group_id, is_global_cached, is_neighbor_cached);
         const T& key_level_metadata_ref = perkey_metadata_list_iter->second;
 
         // Calculate and update popularity for newly-admited key
@@ -351,12 +351,12 @@ namespace covered
     }
 
     template<class T>
-    typename CacheMetadataBase<T>::perkey_metadata_list_iter_t CacheMetadataBase<T>::addPerkeyMetadata_(const Key& key, const Value& value, const GroupId& assigned_group_id, const bool& is_global_cached)
+    typename CacheMetadataBase<T>::perkey_metadata_list_iter_t CacheMetadataBase<T>::addPerkeyMetadata_(const Key& key, const Value& value, const GroupId& assigned_group_id, const bool& is_global_cached, const bool& is_neighbor_cached)
     {
         // NOTE: NO need to verify key existence due to LRU-based list
 
         // Add object-level metadata for new key
-        perkey_metadata_list_.push_front(std::pair<Key, T>(key, T(assigned_group_id)));
+        perkey_metadata_list_.push_front(std::pair<Key, T>(key, T(assigned_group_id, is_neighbor_cached)));
         perkey_metadata_list_iter_t perkey_metadata_list_iter = perkey_metadata_list_.begin();
         assert(perkey_metadata_list_iter != perkey_metadata_list_.end());
 

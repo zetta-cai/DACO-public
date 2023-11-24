@@ -16,7 +16,7 @@ namespace covered
     class KeyLevelMetadataBase
     {
     public:
-        KeyLevelMetadataBase(const GroupId& group_id);
+        KeyLevelMetadataBase(const GroupId& group_id, const bool& is_neighbor_cached); // NOTE: is_neighbor_cached ONLY used by HeteroKeyLevelMetadata for local cached metadata
         KeyLevelMetadataBase(const KeyLevelMetadataBase& other);
         ~KeyLevelMetadataBase();
 

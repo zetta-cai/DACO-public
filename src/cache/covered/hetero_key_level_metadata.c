@@ -6,10 +6,14 @@ namespace covered
 {
     const std::string HeteroKeyLevelMetadata::kClassName("HeteroKeyLevelMetadata");
 
-    HeteroKeyLevelMetadata::HeteroKeyLevelMetadata(const GroupId& group_id) : KeyLevelMetadataBase(group_id)
+    HeteroKeyLevelMetadata::HeteroKeyLevelMetadata(const GroupId& group_id, const bool& is_neighbor_cached) : KeyLevelMetadataBase(group_id, is_neighbor_cached)
     {
         redirected_frequency_ = 0;
         redirected_popularity_ = 0.0;
+
+        #ifdef ENABLE_BEACON_BASED_CACHED_METADATA_UPDATE
+        is_neighbor_cached_ = is_neighbor_cached;
+        #endif
     }
 
     HeteroKeyLevelMetadata::HeteroKeyLevelMetadata(const HeteroKeyLevelMetadata& other) : KeyLevelMetadataBase(other)

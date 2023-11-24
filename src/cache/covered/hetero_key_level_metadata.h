@@ -21,7 +21,7 @@ namespace covered
     class HeteroKeyLevelMetadata : public KeyLevelMetadataBase
     {
     public:
-        HeteroKeyLevelMetadata(const GroupId& group_id);
+        HeteroKeyLevelMetadata(const GroupId& group_id, const bool& is_neighbor_cached); // NOTE: is_neighbor_cached ONLY used by HeteroKeyLevelMetadata for local cached metadata
         HeteroKeyLevelMetadata(const HeteroKeyLevelMetadata& other);
         ~HeteroKeyLevelMetadata();
 
@@ -39,6 +39,12 @@ namespace covered
         // For redirected hits of local cached objects
         Frequency redirected_frequency_;
         Popularity redirected_popularity_;
+
+        #ifdef ENABLE_BEACON_BASED_CACHED_METADATA_UPDATE
+        // For beacon-based cached metadata update
+        // NOTE: is_neighbor_cached is different from is_global_cached in local uncached metadata -> is_neighbor_cached is ONLY updated when perform admission of normal/fast-path placement or beacon notification of last/not-last cache copy after directory eviction/admission
+        bool is_neighbor_cached_;
+        #endif
     };
 }
 

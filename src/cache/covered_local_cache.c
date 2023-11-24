@@ -316,7 +316,7 @@ namespace covered
         return false;
     }
 
-    void CoveredLocalCache::admitLocalCacheInternal_(const Key& key, const Value& value, bool& affect_victim_tracker, bool& is_successful)
+    void CoveredLocalCache::admitLocalCacheInternal_(const Key& key, const Value& value, const bool& is_neighbor_cached, bool& affect_victim_tracker, bool& is_successful)
     {
         affect_victim_tracker = false;
         is_successful = false;
@@ -365,7 +365,7 @@ namespace covered
 
             // Update local cached metadata for admission
             const bool is_global_cached = true; // Local cached objects MUST be global cached
-            affect_victim_tracker = local_cached_metadata_.addForNewKey(key, value, peredge_synced_victimcnt_, is_global_cached);
+            affect_victim_tracker = local_cached_metadata_.addForNewKey(key, value, peredge_synced_victimcnt_, is_global_cached, is_neighbor_cached);
 
             // Remove from local uncached metadata if necessary for admission
             if (local_uncached_metadata_.isKeyExist(key))

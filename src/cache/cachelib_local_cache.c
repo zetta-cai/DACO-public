@@ -166,8 +166,9 @@ namespace covered
         return !is_local_cached && is_valid_valuesize;
     }
 
-    void CachelibLocalCache::admitLocalCacheInternal_(const Key& key, const Value& value, bool& affect_victim_tracker, bool& is_successful)
+    void CachelibLocalCache::admitLocalCacheInternal_(const Key& key, const Value& value, const bool& is_neighbor_cached, bool& affect_victim_tracker, bool& is_successful)
     {
+        UNUSED(is_neighbor_cached); // ONLY for COVERED
         UNUSED(affect_victim_tracker); // Only for COVERED
         is_successful = false;
 

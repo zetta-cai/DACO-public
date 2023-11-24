@@ -109,8 +109,28 @@ namespace covered
         std::string context_name = "CooperationWrapperBase::isGlobalCached()";
         cooperation_wrapper_perkey_rwlock_ptr_->acquire_lock_shared(key, context_name);
 
+        assert(dht_wrapper_ptr_->getBeaconEdgeIdx(key) == edge_idx_); // Current edge node MUST be beacon for the given key
+
         is_global_cached = directory_table_ptr_->isGlobalCached(key);
         is_source_cached = directory_table_ptr_->isCachedByGivenEdge(key, source_edge_idx);
+
+        // Release a read lock
+        cooperation_wrapper_perkey_rwlock_ptr_->unlock_shared(key, context_name);
+
+        return;
+    }
+
+    bool CooperationWrapperBase::isNeighborCached(const Key& key, const uint32_t& source_edge_idx) const
+    {
+        checkPointers_();
+
+        // Acquire a read lock
+        std::string context_name = "CooperationWrapperBase::isNeighborCached()";
+        cooperation_wrapper_perkey_rwlock_ptr_->acquire_lock_shared(key, context_name);
+
+        assert(dht_wrapper_ptr_->getBeaconEdgeIdx(key) == edge_idx_); // Current edge node MUST be beacon for the given key
+
+        is_global_cached = directory_table_ptr_->isNeighborCached(key, source_edge_idx);
 
         // Release a read lock
         cooperation_wrapper_perkey_rwlock_ptr_->unlock_shared(key, context_name);
@@ -125,6 +145,8 @@ namespace covered
         // Acquire a read lock
         std::string context_name = "CooperationWrapperBase::isBeingWritten()";
         cooperation_wrapper_perkey_rwlock_ptr_->acquire_lock_shared(key, context_name);
+
+        assert(dht_wrapper_ptr_->getBeaconEdgeIdx(key) == edge_idx_); // Current edge node MUST be beacon for the given key
 
         bool is_being_written = block_tracker_ptr_->isBeingWrittenForKey(key);
 
@@ -142,6 +164,8 @@ namespace covered
         std::string context_name = "CooperationWrapperBase::getLocalDirectoryInfos()";
         cooperation_wrapper_perkey_rwlock_ptr_->acquire_lock_shared(key, context_name);
 
+        assert(dht_wrapper_ptr_->getBeaconEdgeIdx(key) == edge_idx_); // Current edge node MUST be beacon for the given key
+
         DirinfoSet dirinfo_set = directory_table_ptr_->getAll(key);
 
         // Release a read lock
@@ -158,6 +182,8 @@ namespace covered
         // Acquire a read lock
         std::string context_name = "CooperationWrapperBase::lookupDirectoryTableByCacheServer()";
         cooperation_wrapper_perkey_rwlock_ptr_->acquire_lock_shared(key, context_name);
+
+        assert(dht_wrapper_ptr_->getBeaconEdgeIdx(key) == edge_idx_); // Current edge node MUST be beacon for the given key
 
         bool is_global_cached = false; // Whether the key is cached by a local/neighbor edge node (even if invalid temporarily)
 
@@ -177,6 +203,8 @@ namespace covered
         // NOTE: we have to acquire a write lock as we may need to update the blocklist in BlockTracker
         std::string context_name = "CooperationWrapperBase::lookupDirectoryTableByBeaconServer()";
         cooperation_wrapper_perkey_rwlock_ptr_->acquire_lock(key, context_name);
+
+        assert(dht_wrapper_ptr_->getBeaconEdgeIdx(key) == edge_idx_); // Current edge node MUST be beacon for the given key
 
         bool is_global_cached = false; // Whether the key is cached by a local/neighbor edge node (even if invalid temporarily)
 
@@ -220,6 +248,8 @@ namespace covered
         std::string context_name = "CooperationWrapperBase::updateDirectoryTable()";
         cooperation_wrapper_perkey_rwlock_ptr_->acquire_lock(key, context_name);
 
+        assert(dht_wrapper_ptr_->getBeaconEdgeIdx(key) == edge_idx_); // Current edge node MUST be beacon for the given key
+
         bool is_global_cached = false; // Whether the key is cached by a local/neighbor edge node (even if invalid temporarily)
 
         if (is_admit) // is_being_written affects validity of both directory info and cached object for cache admission
@@ -250,6 +280,8 @@ namespace covered
         // Acquire a write lock
         std::string context_name = "CooperationWrapperBase::acquireLocalWritelockByCacheServer()";
         cooperation_wrapper_perkey_rwlock_ptr_->acquire_lock(key, context_name);
+
+        assert(dht_wrapper_ptr_->getBeaconEdgeIdx(key) == edge_idx_); // Current edge node MUST be beacon for the given key
 
         LockResult lock_result = LockResult::kNoneed;
 
@@ -288,6 +320,8 @@ namespace covered
         std::string context_name = "CooperationWrapperBase::acquireLocalWritelockByBeaconServer()";
         cooperation_wrapper_perkey_rwlock_ptr_->acquire_lock(key, context_name);
 
+        assert(dht_wrapper_ptr_->getBeaconEdgeIdx(key) == edge_idx_); // Current edge node MUST be beacon for the given key
+
         LockResult lock_result = LockResult::kNoneed;
 
         // Check if key is globally cached first
@@ -324,6 +358,8 @@ namespace covered
         // Acquire a write lock
         std::string context_name = "CooperationWrapperBase::releaseLocalWritelock()";
         cooperation_wrapper_perkey_rwlock_ptr_->acquire_lock(key, context_name);
+
+        assert(dht_wrapper_ptr_->getBeaconEdgeIdx(key) == edge_idx_); // Current edge node MUST be beacon for the given key
 
         std::unordered_set<NetworkAddr, NetworkAddrHasher> blocked_edges = block_tracker_ptr_->unblockAllEdgesAndFinishWriteForKeyIfExist(key);
 

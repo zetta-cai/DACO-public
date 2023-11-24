@@ -189,6 +189,31 @@ namespace covered
         return is_cached_by_given_edge;
     }
 
+    bool DirectoryTable::isNeighborCached(const Key& key, const uint32_t& edge_idx) const
+    {
+        bool is_neighbor_cached = false;
+
+        DirinfoSet all_dirinfo = getAll(key);
+        std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& dirinfo_unordered_set;
+        bool with_complete_dirinfo_set = getDirinfoSetIfComplete(dirinfo_unordered_set);
+        assert(with_complete_dirinfo_set); // dirinfo set from directory entry MUST be complete
+
+        // Check if any neighbor edge node (NOT the current node with the given edge_idx) caches the object
+        if (dirinfo_unordered_set.size() > 0)
+        {
+            for (std::unordered_set<DirectoryInfo, DirectoryInfoHasher>::const_iterator dirinfo_const_iter = dirinfo_unordered_set.begin(); dirinfo_const_iter != dirinfo_unordered_set.end(); dirinfo_const_iter++)
+            {
+                if (dirinfo_const_iter->getTargetEdgeIdx() != edge_idx)
+                {
+                    is_neighbor_cached = true;
+                    break;
+                }
+            }
+        }
+
+        return is_neighbor_cached;
+    }
+
     void DirectoryTable::invalidateAllDirinfoForKeyIfExist(const Key& key, DirinfoSet& all_dirinfo)
     {
         // Prepare InvalidateMetadataForAllDirinfoParam

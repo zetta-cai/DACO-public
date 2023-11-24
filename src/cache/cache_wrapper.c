@@ -318,7 +318,7 @@ namespace covered
         return need_independent_admit;
     }
 
-    void CacheWrapper::admit(const Key& key, const Value& value, const bool& is_valid, bool& affect_victim_tracker)
+    void CacheWrapper::admit(const Key& key, const Value& value, const bool& is_neighbor_cached, const bool& is_valid, bool& affect_victim_tracker)
     {
         checkPointers_();
 
@@ -327,7 +327,7 @@ namespace covered
         cache_wrapper_perkey_rwlock_ptr_->acquire_lock(key, context_name);
 
         bool is_successful = false;
-        local_cache_ptr_->admitLocalCache(key, value, affect_victim_tracker, is_successful);
+        local_cache_ptr_->admitLocalCache(key, value, is_neighbor_cached, affect_victim_tracker, is_successful);
 
         if (is_successful) // If key is admited successfully
         {

@@ -1218,7 +1218,8 @@ namespace covered
             // NOTE: we need to notify placement processor of the current local/remote beacon edge node for non-blocking placement deployment of local placement notification to avoid blocking subsequent placement calculation (similar as CacheServerWorkerBase::notifyBeaconForPlacementAfterHybridFetch_() invoked by sender edge node)
 
             // Notify placement processor to admit local edge cache (NOTE: NO need to admit directory) and trigger local cache eviciton, to avoid blocking cache server worker / beacon server for subsequent placement calculation
-            bool is_successful = getLocalCacheAdmissionBufferPtr()->push(LocalCacheAdmissionItem(key, value, is_valid, skip_propagation_latency));
+            const bool is_neighbor_cached = cooperation_wrapper_ptr_->isNeighborCached(key, current_edge_idx); // NOTE: current edge nodes MUST be beacon for normal placement (triggered by local/remote controlreq maybe w/ extra victim fetching, or getrsp if sender is beacon)
+            bool is_successful = getLocalCacheAdmissionBufferPtr()->push(LocalCacheAdmissionItem(key, value, is_neighbor_cached, is_valid, skip_propagation_latency));
             assert(is_successful);
 
             /* (OBSOLETE for non-blocking placement deployment)

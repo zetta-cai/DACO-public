@@ -449,8 +449,10 @@ namespace covered
                     }
 
                     // Notify placement processor to admit local edge cache (NOTE: NO need to admit directory) and trigger local cache eviciton, to avoid blocking cache server worker which may serve subsequent fast-path single-placement calculation
+                    // NOTE: we do NOT use cooperation wrapper to check is_neighbor_cached, as sender must NOT be the beacon here
+                    const bool is_neighbor_cached = is_global_cached; // NOTE: local edge node must NOT cache the object if with fast-path placement for the first cache miss
                     const bool tmp_is_valid = !tmp_is_being_written;
-                    bool tmp_is_successful = tmp_edge_wrapper_ptr->getLocalCacheAdmissionBufferPtr()->push(LocalCacheAdmissionItem(key, value, tmp_is_valid, skip_propagation_latency));
+                    bool tmp_is_successful = tmp_edge_wrapper_ptr->getLocalCacheAdmissionBufferPtr()->push(LocalCacheAdmissionItem(key, value, is_neighbor_cached, tmp_is_valid, skip_propagation_latency));
                     assert(tmp_is_successful);
                 }
             }

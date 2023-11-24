@@ -31,6 +31,7 @@
 // (i) (OBSOLETE) Temporary duplication avoidance: enforce duplication avoidance when cache is not full, while allow duplicate cache copies when cache is full -> avoid unnecessary duplicate cache copies admited under eviction cost = 0 due to not-full cache, yet CANNOT fix it under extremely small eviction cost due to one-hit-wonders (when cache is not full, only allow to admit unique objects, most of which are one-hit-wonders)
 // Used in src/edge/cache_server/covered_cache_server_worker.c (fast-path placement) and src/core/covered_cache_manager.c (controlreq/getrsp placement and extra victim fetching placement)
 #define ENABLE_TEMPORARY_DUPLICATION_AVOIDANCE
+// Used in src/cache/covered/hetero_key_level_metadata.*
 // (ii) (TODO) Beacon-based cached metadata update
 //#define ENABLE_BEACON_BASED_CACHED_METADATA_UPDATE
 

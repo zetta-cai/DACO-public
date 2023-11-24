@@ -322,12 +322,12 @@ namespace covered
 
     // (1) For local edge cache admission and remote directory admission
 
-    void CacheServer::admitLocalEdgeCache_(const Key& key, const Value& value, const bool& is_valid) const
+    void CacheServer::admitLocalEdgeCache_(const Key& key, const Value& value, const bool& is_neighbor_cached, const bool& is_valid) const
     {
         checkPointers_();
 
         bool affect_victim_tracker = false;
-        edge_wrapper_ptr_->getEdgeCachePtr()->admit(key, value, is_valid, affect_victim_tracker);
+        edge_wrapper_ptr_->getEdgeCachePtr()->admit(key, value, is_neighbor_cached, is_valid, affect_victim_tracker);
 
         if (edge_wrapper_ptr_->getCacheName() == Util::COVERED_CACHE_NAME) // ONLY for COVERED
         {
@@ -906,6 +906,8 @@ namespace covered
                     is_being_written = covered_placement_directory_evict_response_ptr->isBeingWritten();
                     Edgeset best_placement_edgeset = covered_placement_directory_evict_response_ptr->getEdgesetRef();
 
+                    // TODO: END HERE
+
                     // Trigger placement notification remotely at the beacon edge node
                     const Key tmp_key = covered_placement_directory_evict_response_ptr->getKey();
                     is_finish = notifyBeaconForPlacementAfterHybridFetch_(tmp_key, value, best_placement_edgeset, recvrsp_source_addr, recvrsp_socket_server_ptr, total_bandwidth_usage, event_list, skip_propagation_latency);
@@ -951,7 +953,7 @@ namespace covered
 
     // (3) Trigger non-blocking placement notification (ONLY for COVERED)
 
-    bool CacheServer::notifyBeaconForPlacementAfterHybridFetch_(const Key& key, const Value& value, const Edgeset& best_placement_edgeset, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
+    bool CacheServer::notifyBeaconForPlacementAfterHybridFetch_(const Key& key, const Value& value, const bool& is_neighbor_cached, const Edgeset& best_placement_edgeset, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
     {
         Edgeset tmp_best_placement_edgest = best_placement_edgeset; // Deep copy for excluding sender if with local placement
 
@@ -1105,8 +1107,9 @@ namespace covered
             // NOTE: we need to notify placement processor of the current sender/closest edge node for local placement, because we need to use the background directory update requests to DISABLE recursive cache placement and also avoid blocking cache server worker which may serve subsequent placement calculation if sender is beacon (similar as EdgeWrapper::nonblockNotifyForPlacement() invoked by local/remote beacon edge node)
 
             // Notify placement processor to admit local edge cache (NOTE: NO need to admit directory) and trigger local cache eviciton, to avoid blocking cache server worker which may serve subsequent placement calculation if sender is beacon
+            // NOTE: we do NOT use coooperation wrapper to check is_neighbor_cached, as sender is NOT beacon here
             const bool is_valid = !is_being_written;
-            bool is_successful = edge_wrapper_ptr_->getLocalCacheAdmissionBufferPtr()->push(LocalCacheAdmissionItem(key, value, is_valid, skip_propagation_latency));
+            bool is_successful = edge_wrapper_ptr_->getLocalCacheAdmissionBufferPtr()->push(LocalCacheAdmissionItem(key, value, is_neighbor_cached, is_valid, skip_propagation_latency));
             assert(is_successful);
         }
 

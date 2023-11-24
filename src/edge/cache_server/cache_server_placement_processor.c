@@ -204,8 +204,9 @@ namespace covered
         // Admit into local edge cache for the received local cache admission decision
         const Key tmp_key = local_cache_admission_item.getKey();
         const Value tmp_value = local_cache_admission_item.getValue();
+        const bool is_neighbor_cached = local_cache_admission_item.isNeighborCached();
         const bool is_valid = local_cache_admission_item.isValid();
-        tmp_cache_server_ptr->admitLocalEdgeCache_(tmp_key, tmp_value, is_valid); // May update local synced victims
+        tmp_cache_server_ptr->admitLocalEdgeCache_(tmp_key, tmp_value, is_neighbor_cached, is_valid); // May update local synced victims
 
         // Perform background cache eviction in a blocking manner for consistent directory information (note that cache eviction happens after non-blocking placement notification)
         // NOTE: we update aggregated uncached popularity yet DISABLE recursive cache placement for metadata preservation during cache eviction

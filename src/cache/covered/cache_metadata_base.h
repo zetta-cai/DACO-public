@@ -77,7 +77,7 @@ namespace covered
 
         // For newly-admited/tracked keys
         // NOTE: for admission and getrsp/put/delreq w/ miss, intialize and update object-/group-level metadata (both value-unrelated and value-related) for newly admitted cached key or currently tracked uncached key
-        bool addForNewKey(const Key& key, const Value& value, const uint32_t& peredge_synced_victimcnt, const bool& is_global_cached); // Return if affect local synced victims in victim tracker (always return false for local uncached metadata)
+        bool addForNewKey(const Key& key, const Value& value, const uint32_t& peredge_synced_victimcnt, const bool& is_global_cached, const bool& is_neighbor_cached); // Return if affect local synced victims in victim tracker (always return false for local uncached metadata)
 
         // For existing key
         // NOTE: for get/put/delreq w/ hit/miss, update object-/group-level value-unrelated metadata for existing key (i.e., already admitted/tracked objects for local cached/uncached)
@@ -129,7 +129,7 @@ namespace covered
 
         // For object-level metadata
         const T& getkeyLevelMetadata_(const perkey_lookup_table_const_iter_t& perkey_lookup_const_iter) const; // Return existing key-level metadata
-        perkey_metadata_list_iter_t addPerkeyMetadata_(const Key& key, const Value& value, const GroupId& assigned_group_id, const bool& is_global_cached); // For admission and getrsp/put/delreq w/ miss, initialize and update key-level value-unrelated and value-related metadata for newly-admited/tracked key; return new perkey metadata iterator
+        perkey_metadata_list_iter_t addPerkeyMetadata_(const Key& key, const Value& value, const GroupId& assigned_group_id, const bool& is_global_cached, const bool& is_neighbor_cached); // For admission and getrsp/put/delreq w/ miss, initialize and update key-level value-unrelated and value-related metadata for newly-admited/tracked key; return new perkey metadata iterator
         perkey_metadata_list_iter_t updateNoValuePerkeyMetadata_(const perkey_lookup_table_iter_t& perkey_lookup_iter, const bool& is_redirected, const bool& is_global_cached); // For get/put/delreq w/ hit/miss, update object-level value-unrelated metadata for existing key (i.e., already admitted/tracked objects for local cached/uncached); return updated KeyLevelMetadata
         perkey_metadata_list_iter_t updateValuePerkeyMetadata_(const perkey_lookup_table_iter_t& perkey_lookup_iter, const Value& value, const Value& original_value); // For put/delreq w/ hit/miss and getrsp w/ invalid-hit, update object-level value-related metadata for existing key (i.e., already admitted/tracked objects for local cached/uncached); return updated KeyLevelMetadata
         void removePerkeyMetadata_(const perkey_lookup_table_iter_t& perkey_lookup_iter);

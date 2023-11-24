@@ -126,8 +126,9 @@ namespace covered
         return !is_local_cached;
     }
 
-    void GreedyDualLocalCache::admitLocalCacheInternal_(const Key& key, const Value& value, bool& affect_victim_tracker, bool& is_successful)
+    void GreedyDualLocalCache::admitLocalCacheInternal_(const Key& key, const Value& value, const bool& is_neighbor_cached, bool& affect_victim_tracker, bool& is_successful)
     {
+        UNUSED(is_neighbor_cached); // ONLY for COVERED
         UNUSED(affect_victim_tracker); // Only for COVERED
         
         greedy_dual_cache_ptr_->admit(key, value);
