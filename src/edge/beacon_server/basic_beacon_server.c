@@ -92,9 +92,7 @@ namespace covered
         // Update local directory information in cooperation wrapper
         const uint32_t source_edge_idx = control_request_ptr->getSourceIndex();
         is_being_written = false;
-        bool is_source_cached = false;
-        edge_wrapper_ptr_->getCooperationWrapperPtr()->updateDirectoryTable(tmp_key, source_edge_idx, is_admit, directory_info, is_being_written, is_source_cached);
-        UNUSED(is_source_cached);
+        edge_wrapper_ptr_->getCooperationWrapperPtr()->updateDirectoryTable(tmp_key, source_edge_idx, is_admit, directory_info, is_being_written);
 
         UNUSED(best_placement_edgeset);
         UNUSED(need_hybrid_fetching);

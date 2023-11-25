@@ -314,8 +314,7 @@ namespace covered
         struct timespec trigger_placement_start_timestamp = Util::getCurrentTimespec();
         if (need_hybrid_fetching)
         {
-            const bool is_neighbor_cached = is_cooperative_cached; // NOTE: no matter hybrid fetching due to sender is beacon or sender is not beacon yet with cloud access, local edge cache MUST NOT cache the object
-            is_finish = tryToTriggerPlacementNotificationAfterHybridFetch_(tmp_key, tmp_value, is_neighbor_cached, best_placement_edgeset, total_bandwidth_usage, event_list, skip_propagation_latency);
+            is_finish = tryToTriggerPlacementNotificationAfterHybridFetch_(tmp_key, tmp_value, best_placement_edgeset, total_bandwidth_usage, event_list, skip_propagation_latency);
             if (is_finish) // Edge is NOT running now
             {
                 return is_finish;
@@ -1585,7 +1584,7 @@ namespace covered
 
     // (4.3) Trigger non-blocking placement notification (ONLY for COVERED)
 
-    bool CacheServerWorkerBase::tryToTriggerPlacementNotificationAfterHybridFetch_(const Key& key, const Value& value, const bool& is_neighbor_cached, const Edgeset& best_placement_edgeset, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
+    bool CacheServerWorkerBase::tryToTriggerPlacementNotificationAfterHybridFetch_(const Key& key, const Value& value, const Edgeset& best_placement_edgeset, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
     {
         checkPointers_();
         CacheServer* tmp_cache_server_ptr = cache_server_worker_param_ptr_->getCacheServerPtr();
@@ -1597,14 +1596,13 @@ namespace covered
         const bool sender_is_beacon = tmp_edge_wrapper_ptr->currentIsBeacon(key);
         if (sender_is_beacon) // best_placement_edgeset and need_hybrid_fetching come from lookupLocalDirectory_()
         {
-            UNUSED(is_neighbor_cached); // NOTE: NOT pass is_neighbor_cached for local directory lookup, which always needs "hybrid fetching" to get value and trigger normal placement (sender MUST be beacon and can check is_neighbor_cached by cooperation wrapper)
             // Trigger placement notification locally
             tmp_edge_wrapper_ptr->nonblockNotifyForPlacement(key, value, best_placement_edgeset, skip_propagation_latency);
         }
         else // best_placement_edgeset and need_hybrid_fetching come from lookupBeaconDirectory_()
         {
             // Trigger placement notification remotely at the beacon edge node
-            is_finish = tmp_cache_server_ptr->notifyBeaconForPlacementAfterHybridFetch_(key, value, is_neighbor_cached, best_placement_edgeset, edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+            is_finish = tmp_cache_server_ptr->notifyBeaconForPlacementAfterHybridFetch_(key, value, best_placement_edgeset, edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency);
         }
 
         return is_finish;

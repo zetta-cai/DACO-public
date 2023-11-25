@@ -983,7 +983,7 @@ namespace covered
 
     // (6.2) For local directory admission
 
-    void EdgeWrapper::admitLocalDirectory_(const Key& key, const DirectoryInfo& directory_info, bool& is_being_written) const
+    void EdgeWrapper::admitLocalDirectory_(const Key& key, const DirectoryInfo& directory_info, bool& is_being_written, bool& is_neighbor_cached) const
     {
         // Foreground local directory admission is triggered by independent admission
         // Background local directory admission is triggered by local placement notification at local/remote beacon edge node)
@@ -992,9 +992,7 @@ namespace covered
 
         uint32_t current_edge_idx = getNodeIdx();
         const bool is_admit = true; // Admit content directory
-        bool is_source_cached = false;
-        cooperation_wrapper_ptr_->updateDirectoryTable(key, current_edge_idx, is_admit, directory_info, is_being_written, is_source_cached);
-        UNUSED(is_source_cached);
+        cooperation_wrapper_ptr_->updateDirectoryTable(key, current_edge_idx, is_admit, directory_info, is_being_written, is_neighbor_cached);
 
         if (cache_name_ == Util::COVERED_CACHE_NAME) // ONLY for COVERED
         {
@@ -1207,7 +1205,8 @@ namespace covered
             // NOTE: NO need to update aggregated uncached popularity due to admitting a cached object
             // NOTE: we cannot optimistically admit valid object into local edge cache first before admiting local dirinfo, as clients may get incorrect value if key is being written
             bool tmp_is_being_written = false;
-            admitLocalDirectory_(key, DirectoryInfo(current_edge_idx), tmp_is_being_written); // Local directory update for local placement notification
+            bool tmp_is_neighbor_cached = false; // NOTE: we directly use coooperation wrapper to get is_neighbor_cached, as target edge node for local placement notification MUST be beacon here
+            admitLocalDirectory_(key, DirectoryInfo(current_edge_idx), tmp_is_being_written, tmp_is_neighbor_cached); // Local directory update for local placement notification
             if (tmp_is_being_written) // Double-check is_being_written to udpate is_valid if necessary
             {
                 // NOTE: ONLY update is_valid if tmp_is_being_written is true; if tmp_is_being_written is false (i.e., key is NOT being written now), we still keep original is_valid, as the value MUST be stale if is_being_written was true before
@@ -1218,8 +1217,7 @@ namespace covered
             // NOTE: we need to notify placement processor of the current local/remote beacon edge node for non-blocking placement deployment of local placement notification to avoid blocking subsequent placement calculation (similar as CacheServerWorkerBase::notifyBeaconForPlacementAfterHybridFetch_() invoked by sender edge node)
 
             // Notify placement processor to admit local edge cache (NOTE: NO need to admit directory) and trigger local cache eviciton, to avoid blocking cache server worker / beacon server for subsequent placement calculation
-            const bool is_neighbor_cached = cooperation_wrapper_ptr_->isNeighborCached(key, current_edge_idx); // NOTE: current edge nodes MUST be beacon for normal placement (triggered by local/remote controlreq maybe w/ extra victim fetching, or getrsp if sender is beacon)
-            bool is_successful = getLocalCacheAdmissionBufferPtr()->push(LocalCacheAdmissionItem(key, value, is_neighbor_cached, is_valid, skip_propagation_latency));
+            bool is_successful = getLocalCacheAdmissionBufferPtr()->push(LocalCacheAdmissionItem(key, value, tmp_is_neighbor_cached, is_valid, skip_propagation_latency));
             assert(is_successful);
 
             /* (OBSOLETE for non-blocking placement deployment)

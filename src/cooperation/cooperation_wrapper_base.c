@@ -120,24 +120,6 @@ namespace covered
         return;
     }
 
-    bool CooperationWrapperBase::isNeighborCached(const Key& key, const uint32_t& source_edge_idx) const
-    {
-        checkPointers_();
-
-        // Acquire a read lock
-        std::string context_name = "CooperationWrapperBase::isNeighborCached()";
-        cooperation_wrapper_perkey_rwlock_ptr_->acquire_lock_shared(key, context_name);
-
-        assert(dht_wrapper_ptr_->getBeaconEdgeIdx(key) == edge_idx_); // Current edge node MUST be beacon for the given key
-
-        is_global_cached = directory_table_ptr_->isNeighborCached(key, source_edge_idx);
-
-        // Release a read lock
-        cooperation_wrapper_perkey_rwlock_ptr_->unlock_shared(key, context_name);
-
-        return;
-    }
-
     bool CooperationWrapperBase::isBeingWritten(const Key& key) const
     {
         checkPointers_();
@@ -240,9 +222,10 @@ namespace covered
         return is_global_cached;
     }
 
-    bool CooperationWrapperBase::updateDirectoryTable(const Key& key, const uint32_t& source_edge_idx, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written, bool& is_source_cached)
+    bool CooperationWrapperBase::updateDirectoryTable(const Key& key, const uint32_t& source_edge_idx, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written, bool& is_neighbor_cached)
     {
         checkPointers_();
+        assert(source_edge_idx == directory_info.getTargetEdgeIdx()); // Receive a directory udpate request from the source edge node to admit/evict itself
 
         // Acquire a write lock
         std::string context_name = "CooperationWrapperBase::updateDirectoryTable()";
@@ -265,7 +248,8 @@ namespace covered
         assert(directory_table_ptr_ != NULL);
         is_global_cached = directory_table_ptr_->update(key, is_admit, directory_info, directory_metadata);
 
-        is_source_cached = directory_table_ptr_->isCachedByGivenEdge(key, source_edge_idx);
+        // Return if key is cached by any other edge node except the source edge node
+        is_neighbor_cached = directory_table_ptr_->isNeighborCached(key, source_edge_idx);
 
         // Release a write lock
         cooperation_wrapper_perkey_rwlock_ptr_->unlock(key, context_name);

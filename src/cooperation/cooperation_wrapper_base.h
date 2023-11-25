@@ -48,14 +48,13 @@ namespace covered
         // (2) Access content directory table and block tracker for MSI protocol
 
         void isGlobalAndSourceCached(const Key& key, const uint32_t& source_edge_idx, bool& is_global_cached, bool& is_source_cached) const;
-        bool isNeighborCached(const Key& key, const uint32_t& source_edge_idx) const;
         bool isBeingWritten(const Key& key) const;
         DirinfoSet getLocalDirectoryInfos(const Key& key) const;
 
         // Return whether the key is cached by a local/neighbor edge node (even if invalid temporarily)
         bool lookupDirectoryTableByCacheServer(const Key& key, const uint32_t& source_edge_idx, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, bool& is_source_cached) const; // Check local directory information (NOTE: find a non-source valid directory info if any)
         bool lookupDirectoryTableByBeaconServer(const Key& key, const uint32_t& source_edge_idx, const NetworkAddr& cache_server_worker_recvreq_dst_addr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, bool& is_source_cached); // Check local directory information (NOTE: find a non-source valid directory info if any)
-        bool updateDirectoryTable(const Key& key, const uint32_t& source_edge_idx, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written, bool& is_source_cached); // Update local directory information
+        bool updateDirectoryTable(const Key& key, const uint32_t& source_edge_idx, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written, bool& is_neighbor_cached); // Update local directory information
 
         LockResult acquireLocalWritelockByCacheServer(const Key& key, const uint32_t& source_edge_idx, DirinfoSet& all_dirinfo, bool& is_source_cached);
         LockResult acquireLocalWritelockByBeaconServer(const Key& key, const uint32_t& source_edge_idx, const NetworkAddr& cache_server_worker_recvreq_dst_addr, DirinfoSet& all_dirinfo, bool& is_source_cached);

@@ -442,15 +442,14 @@ namespace covered
                     // Admit dirinfo into remote beacon edge node
                     bool tmp_is_being_written = false;
                     const bool is_background = true; // Similar as only-sender hybrid data fetching
-                    is_finish = tmp_cache_server_ptr->admitBeaconDirectory_(key, DirectoryInfo(tmp_edge_wrapper_ptr->getNodeIdx()), tmp_is_being_written, edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency, is_background);
+                    bool is_neighbor_cached = false; // NOTE: we do NOT use cooperation wrapper to check is_neighbor_cached, as sender must NOT be the beacon here
+                    is_finish = tmp_cache_server_ptr->admitBeaconDirectory_(key, DirectoryInfo(tmp_edge_wrapper_ptr->getNodeIdx()), tmp_is_being_written, edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency, is_background); // TODO: Set is_neighbor_cached in admitBeaconDirectory_()
                     if (is_finish) // Edge is NOT running now
                     {
                         return is_finish;
                     }
 
                     // Notify placement processor to admit local edge cache (NOTE: NO need to admit directory) and trigger local cache eviciton, to avoid blocking cache server worker which may serve subsequent fast-path single-placement calculation
-                    // NOTE: we do NOT use cooperation wrapper to check is_neighbor_cached, as sender must NOT be the beacon here
-                    const bool is_neighbor_cached = is_global_cached; // NOTE: local edge node must NOT cache the object if with fast-path placement for the first cache miss
                     const bool tmp_is_valid = !tmp_is_being_written;
                     bool tmp_is_successful = tmp_edge_wrapper_ptr->getLocalCacheAdmissionBufferPtr()->push(LocalCacheAdmissionItem(key, value, is_neighbor_cached, tmp_is_valid, skip_propagation_latency));
                     assert(tmp_is_successful);

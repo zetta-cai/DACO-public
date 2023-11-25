@@ -171,7 +171,7 @@ namespace covered
         // (4.3) Trigger non-blocking placement notification (ONLY for COVERED)
 
         // Return if edge node is finished
-        bool tryToTriggerPlacementNotificationAfterHybridFetch_(const Key& key, const Value& value, const bool& is_neighbor_cached, const Edgeset& best_placement_edgeset, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const;
+        bool tryToTriggerPlacementNotificationAfterHybridFetch_(const Key& key, const Value& value, const Edgeset& best_placement_edgeset, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const;
 
         // (5) Utility functions
 

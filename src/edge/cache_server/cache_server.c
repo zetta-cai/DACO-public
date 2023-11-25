@@ -344,7 +344,7 @@ namespace covered
         return;
     }
 
-    bool CacheServer::admitBeaconDirectory_(const Key& key, const DirectoryInfo& directory_info, bool& is_being_written, const NetworkAddr& source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list,const bool& skip_propagation_latency, const bool& is_background) const
+    bool CacheServer::admitBeaconDirectory_(const Key& key, const DirectoryInfo& directory_info, bool& is_being_written, bool& is_neighbor_cached, const NetworkAddr& source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list,const bool& skip_propagation_latency, const bool& is_background) const
     {
         checkPointers_();
 
@@ -395,6 +395,7 @@ namespace covered
                 MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
                 assert(control_response_ptr != NULL);
 
+                // TODO: (END HERE) update is_neighbor_cached for directory admission response
                 processRspToAdmitBeaconDirectory_(control_response_ptr, is_being_written, is_background); // NOTE: is_being_written is updated here
 
                 // Update total bandwidth usage for received directory update response
@@ -763,8 +764,7 @@ namespace covered
 
         uint32_t current_edge_idx = edge_wrapper_ptr_->getNodeIdx();
         const bool is_admit = false; // Evict a victim as local uncached object
-        bool is_source_cached = false;
-        bool is_global_cached = tmp_cooperation_wrapper_ptr->updateDirectoryTable(key, current_edge_idx, is_admit, directory_info, is_being_written, is_source_cached);
+        bool is_global_cached = tmp_cooperation_wrapper_ptr->updateDirectoryTable(key, current_edge_idx, is_admit, directory_info, is_being_written);
         UNUSED(skip_propagation_latency);
 
         if (edge_wrapper_ptr_->getCacheName() == Util::COVERED_CACHE_NAME) // ONLY for COVERED
@@ -786,6 +786,7 @@ namespace covered
             tmp_covered_cache_manager_ptr->assertNoLocalUncachedPopularity(key, current_edge_idx);
 
             // Selective popularity aggregation
+            const bool is_source_cached = false; // NOTE: current edge node MUST NOT cache the object after directory eviction for itself
             bool need_placement_calculation = !is_admit; // MUST be true here for is_admit = false
             if (is_background) // If evictLocalDirectory_() is triggered by background cache placement
             {
@@ -906,8 +907,6 @@ namespace covered
                     is_being_written = covered_placement_directory_evict_response_ptr->isBeingWritten();
                     Edgeset best_placement_edgeset = covered_placement_directory_evict_response_ptr->getEdgesetRef();
 
-                    // TODO: END HERE
-
                     // Trigger placement notification remotely at the beacon edge node
                     const Key tmp_key = covered_placement_directory_evict_response_ptr->getKey();
                     is_finish = notifyBeaconForPlacementAfterHybridFetch_(tmp_key, value, best_placement_edgeset, recvrsp_source_addr, recvrsp_socket_server_ptr, total_bandwidth_usage, event_list, skip_propagation_latency);
@@ -953,7 +952,7 @@ namespace covered
 
     // (3) Trigger non-blocking placement notification (ONLY for COVERED)
 
-    bool CacheServer::notifyBeaconForPlacementAfterHybridFetch_(const Key& key, const Value& value, const bool& is_neighbor_cached, const Edgeset& best_placement_edgeset, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
+    bool CacheServer::notifyBeaconForPlacementAfterHybridFetch_(const Key& key, const Value& value, const Edgeset& best_placement_edgeset, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
     {
         Edgeset tmp_best_placement_edgest = best_placement_edgeset; // Deep copy for excluding sender if with local placement
 
@@ -990,6 +989,7 @@ namespace covered
         // Notify result of hybrid data fetching towards the beacon edge node to trigger non-blocking placement notification
         bool is_being_written = false;
         VictimSyncset received_beacon_victim_syncset; // For victim synchronization
+        bool is_neighbor_cached = false; // ONLY used if current_need_placement (NOTE: we do NOT use coooperation wrapper to check is_neighbor_cached, as sender is NOT beacon here)
         while (true) // Timeout-and-retry mechanism
         {
             // Prepare control request message to notify the beacon edge node
@@ -1063,6 +1063,8 @@ namespace covered
                         const CoveredPlacementDirectoryAdmitResponse* const covered_placement_directory_admit_response_ptr = static_cast<const CoveredPlacementDirectoryAdmitResponse*>(control_response_ptr);
                         is_being_written = covered_placement_directory_admit_response_ptr->isBeingWritten(); // Used by local edge cache admission later
                         received_beacon_victim_syncset = covered_placement_directory_admit_response_ptr->getVictimSyncsetRef();
+
+                        //is_neighbor_cached = TODO; // Get is_neighbor_cached for including-sender hybrid fetching
                     }
                     else // Current edge node is the only placement
                     {
@@ -1070,6 +1072,8 @@ namespace covered
                         const CoveredDirectoryUpdateResponse* const covered_directory_update_response_ptr = static_cast<const CoveredDirectoryUpdateResponse*>(control_response_ptr);
                         is_being_written = covered_directory_update_response_ptr->isBeingWritten(); // Used by local edge cache admission later
                         received_beacon_victim_syncset = covered_directory_update_response_ptr->getVictimSyncsetRef();
+
+                        //is_neighbor_cached = TODO; // Get is_neighbor_cached for only-sender hybrid fetching
                     }
                 }
 
@@ -1107,7 +1111,6 @@ namespace covered
             // NOTE: we need to notify placement processor of the current sender/closest edge node for local placement, because we need to use the background directory update requests to DISABLE recursive cache placement and also avoid blocking cache server worker which may serve subsequent placement calculation if sender is beacon (similar as EdgeWrapper::nonblockNotifyForPlacement() invoked by local/remote beacon edge node)
 
             // Notify placement processor to admit local edge cache (NOTE: NO need to admit directory) and trigger local cache eviciton, to avoid blocking cache server worker which may serve subsequent placement calculation if sender is beacon
-            // NOTE: we do NOT use coooperation wrapper to check is_neighbor_cached, as sender is NOT beacon here
             const bool is_valid = !is_being_written;
             bool is_successful = edge_wrapper_ptr_->getLocalCacheAdmissionBufferPtr()->push(LocalCacheAdmissionItem(key, value, is_neighbor_cached, is_valid, skip_propagation_latency));
             assert(is_successful);

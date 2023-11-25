@@ -230,8 +230,7 @@ namespace covered
         {
             // Update local directory information in cooperation wrapper
             is_being_written = false;
-            bool is_source_cached = false;
-            bool is_global_cached = edge_wrapper_ptr_->getCooperationWrapperPtr()->updateDirectoryTable(tmp_key, source_edge_idx, is_admit, directory_info, is_being_written, is_source_cached);
+            bool is_global_cached = edge_wrapper_ptr_->getCooperationWrapperPtr()->updateDirectoryTable(tmp_key, source_edge_idx, is_admit, directory_info, is_being_written);
 
             // Update directory info in victim tracker if the local beaconed key is a local/neighbor synced victim
             covered_cache_manager_ptr->updateVictimTrackerForLocalBeaconedVictimDirinfo(tmp_key, is_admit, directory_info);
@@ -263,6 +262,7 @@ namespace covered
                 covered_cache_manager_ptr->assertNoLocalUncachedPopularity(tmp_key, source_edge_idx);
 
                 // Selective popularity aggregation
+                const bool is_source_cached = false; // NOTE: source edge node MUST NOT cache the object after directory eviction for itself
                 const bool sender_is_beacon = false; // Sender is NOT the beacon
                 best_placement_edgeset.clear();
                 need_hybrid_fetching = false;
