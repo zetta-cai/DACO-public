@@ -1,8 +1,7 @@
 /*
  * KeyByteVictimsetMessage: the base class for messages each with a key, a single byte, and a victim syncset for COVERED.
  *
- * (1) For CoveredDirectoryUpdateResponse, the byte is a write flag.
- * (2) For CoveredAcquireWritelockResponse, the byte is a success flag.
+ * For CoveredAcquireWritelockResponse, the byte is a success flag.
  * 
  * By Siyuan Sheng (2023.09.08).
  */

@@ -291,9 +291,10 @@ namespace covered
 
         // Update local directory information
         bool is_being_written = false;
+        bool is_neighbor_cached = false;
         Edgeset best_placement_edgeset;
         bool need_hybrid_fetching = false;
-        is_finish = processReqToUpdateLocalDirectory_(control_request_ptr, is_being_written, best_placement_edgeset, need_hybrid_fetching, total_bandwidth_usage, event_list);
+        is_finish = processReqToUpdateLocalDirectory_(control_request_ptr, is_being_written, is_neighbor_cached, best_placement_edgeset, need_hybrid_fetching, total_bandwidth_usage, event_list);
         if (is_finish)
         {
             return is_finish; // Edge node is NOT running now
@@ -313,7 +314,7 @@ namespace covered
 
         // Prepare a directory update response
         embedBackgroundCounterIfNotEmpty_(total_bandwidth_usage, event_list); // Embed background events/bandwidth if any into control response message
-        MessageBase* directory_update_response_ptr = getRspToUpdateLocalDirectory_(control_request_ptr, is_being_written, best_placement_edgeset, need_hybrid_fetching, total_bandwidth_usage, event_list);
+        MessageBase* directory_update_response_ptr = getRspToUpdateLocalDirectory_(control_request_ptr, is_being_written, is_neighbor_cached, best_placement_edgeset, need_hybrid_fetching, total_bandwidth_usage, event_list);
         assert(directory_update_response_ptr != NULL);
 
         // Push the directory update response into edge-to-edge propagation simulator to cache server worker

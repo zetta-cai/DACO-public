@@ -395,8 +395,8 @@ namespace covered
                 MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
                 assert(control_response_ptr != NULL);
 
-                // TODO: (END HERE) update is_neighbor_cached for directory admission response
-                processRspToAdmitBeaconDirectory_(control_response_ptr, is_being_written, is_background); // NOTE: is_being_written is updated here
+                // Update is_neighbor_cached based on remote directory admission response
+                processRspToAdmitBeaconDirectory_(control_response_ptr, is_being_written, is_neighbor_cached, is_background); // NOTE: is_being_written is updated here
 
                 // Update total bandwidth usage for received directory update response
                 BandwidthUsage directory_update_response_bandwidth_usage = control_response_ptr->getBandwidthUsageRef();
@@ -469,7 +469,7 @@ namespace covered
         return directory_update_request_ptr;
     }
 
-    void CacheServer::processRspToAdmitBeaconDirectory_(MessageBase* control_response_ptr, bool& is_being_written, const bool& is_background) const
+    void CacheServer::processRspToAdmitBeaconDirectory_(MessageBase* control_response_ptr, bool& is_being_written, bool& is_neighbor_cached, const bool& is_background) const
     {
         checkPointers_();
         assert(control_response_ptr != NULL);
@@ -489,6 +489,7 @@ namespace covered
                 // Get is_being_written and victim syncset from control response message
                 const CoveredDirectoryUpdateResponse* const covered_directory_update_response_ptr = static_cast<const CoveredDirectoryUpdateResponse*>(control_response_ptr);
                 is_being_written = covered_directory_update_response_ptr->isBeingWritten();
+                is_neighbor_cached = covered_directory_update_response_ptr->isNeighborCached();
                 neighbor_victim_syncset = covered_directory_update_response_ptr->getVictimSyncsetRef();
             }
             else
@@ -498,6 +499,7 @@ namespace covered
                 // Get is_being_written and victim syncset from control response message
                 const CoveredPlacementDirectoryUpdateResponse* const covered_placement_directory_update_response_ptr = static_cast<const CoveredPlacementDirectoryUpdateResponse*>(control_response_ptr);
                 is_being_written = covered_placement_directory_update_response_ptr->isBeingWritten();
+                is_neighbor_cached = covered_placement_directory_update_response_ptr->isNeighborCached();
                 neighbor_victim_syncset = covered_placement_directory_update_response_ptr->getVictimSyncsetRef();
             }
 
@@ -764,7 +766,9 @@ namespace covered
 
         uint32_t current_edge_idx = edge_wrapper_ptr_->getNodeIdx();
         const bool is_admit = false; // Evict a victim as local uncached object
-        bool is_global_cached = tmp_cooperation_wrapper_ptr->updateDirectoryTable(key, current_edge_idx, is_admit, directory_info, is_being_written);
+        bool unused_is_neighbor_cached = false; // NOTE: ONLY need is_neighbor_cached for directory admission to initizalize cached metadata, yet NO need for directory eviction
+        bool is_global_cached = tmp_cooperation_wrapper_ptr->updateDirectoryTable(key, current_edge_idx, is_admit, directory_info, is_being_written, unused_is_neighbor_cached);
+        UNUSED(unused_is_neighbor_cached);
         UNUSED(skip_propagation_latency);
 
         if (edge_wrapper_ptr_->getCacheName() == Util::COVERED_CACHE_NAME) // ONLY for COVERED
@@ -989,7 +993,10 @@ namespace covered
         // Notify result of hybrid data fetching towards the beacon edge node to trigger non-blocking placement notification
         bool is_being_written = false;
         VictimSyncset received_beacon_victim_syncset; // For victim synchronization
-        bool is_neighbor_cached = false; // ONLY used if current_need_placement (NOTE: we do NOT use coooperation wrapper to check is_neighbor_cached, as sender is NOT beacon here)
+        // NOTE: for only-/including-sender hybrid fetching, ONLY consider remote directory lookup/eviction and release writelock instead of local ones
+        // -> (i) Remote ones NEVER use coooperation wrapper to get is_neighbor_cached, as sender is NOT beacon here
+        // -> (ii) Local ones always need "hybrid fetching" to get value and trigger normal placement (sender MUST be beacon and can get is_neighbor_cached by cooperation wrapper when admiting local directory)
+        bool is_neighbor_cached = false; // ONLY used if current_need_placement
         while (true) // Timeout-and-retry mechanism
         {
             // Prepare control request message to notify the beacon edge node
@@ -1064,7 +1071,7 @@ namespace covered
                         is_being_written = covered_placement_directory_admit_response_ptr->isBeingWritten(); // Used by local edge cache admission later
                         received_beacon_victim_syncset = covered_placement_directory_admit_response_ptr->getVictimSyncsetRef();
 
-                        //is_neighbor_cached = TODO; // Get is_neighbor_cached for including-sender hybrid fetching
+                        is_neighbor_cached = covered_placement_directory_admit_response_ptr->isNeighborCached(); // Get is_neighbor_cached for including-sender hybrid fetching
                     }
                     else // Current edge node is the only placement
                     {
@@ -1073,7 +1080,7 @@ namespace covered
                         is_being_written = covered_directory_update_response_ptr->isBeingWritten(); // Used by local edge cache admission later
                         received_beacon_victim_syncset = covered_directory_update_response_ptr->getVictimSyncsetRef();
 
-                        //is_neighbor_cached = TODO; // Get is_neighbor_cached for only-sender hybrid fetching
+                        is_neighbor_cached = covered_directory_update_response_ptr->isNeighborCached(); // Get is_neighbor_cached for only-sender hybrid fetching
                     }
                 }
 

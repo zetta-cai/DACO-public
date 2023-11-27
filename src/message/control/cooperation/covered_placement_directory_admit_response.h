@@ -11,18 +11,19 @@
 
 #include <string>
 
-#include "message/key_byte_victimset_message.h"
+#include "message/key_two_byte_victimset_message.h"
 
 namespace covered
 {
-    class CoveredPlacementDirectoryAdmitResponse : public KeyByteVictimsetMessage
+    class CoveredPlacementDirectoryAdmitResponse : public KeyTwoByteVictimsetMessage
     {
     public:
-        CoveredPlacementDirectoryAdmitResponse(const Key& key, const bool& is_being_written, const VictimSyncset& victim_syncset, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency);
+        CoveredPlacementDirectoryAdmitResponse(const Key& key, const bool& is_being_written, const bool& is_neighbor_cached, const VictimSyncset& victim_syncset, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency);
         CoveredPlacementDirectoryAdmitResponse(const DynamicArray& msg_payload);
         virtual ~CoveredPlacementDirectoryAdmitResponse();
 
         bool isBeingWritten() const;
+        bool isNeighborCached() const;
     private:
         static const std::string kClassName;
     };

@@ -1535,8 +1535,9 @@ namespace covered
         {
             return is_finish;
         }
-        const bool is_neighbor_cached = false; // NOTE: NEVER used by baselines
-        tmp_cache_server_ptr->admitLocalEdgeCache_(key, value, is_neighbor_cached, !is_being_written); // valid if not being written
+        const bool unused_is_neighbor_cached = false; // NOTE: NEVER used by baselines
+        tmp_cache_server_ptr->admitLocalEdgeCache_(key, value, unused_is_neighbor_cached, !is_being_written); // valid if not being written
+        UNUSED(unused_is_neighbor_cached);
 
         struct timespec update_directory_to_admit_end_timestamp = Util::getCurrentTimespec();
         uint32_t update_directory_to_admit_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(update_directory_to_admit_end_timestamp, update_directory_to_admit_start_timestamp));
@@ -1564,15 +1565,17 @@ namespace covered
 
         // Check if beacon node is the current edge node and update directory information
         DirectoryInfo directory_info(tmp_edge_wrapper_ptr->getNodeIdx());
+        bool unused_is_neighbor_cached = false; // NOTE: NEVER used by baselines
         if (current_is_beacon) // Update target edge index of local directory information
         {
-            tmp_edge_wrapper_ptr->admitLocalDirectory_(key, directory_info, is_being_written);
+            tmp_edge_wrapper_ptr->admitLocalDirectory_(key, directory_info, is_being_written, unused_is_neighbor_cached);
         }
         else // Update remote directory information at the beacon node
         {
             // Add events of intermediate responses if with event tracking
-            is_finish = tmp_cache_server_ptr->admitBeaconDirectory_(key, directory_info, is_being_written, edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+            is_finish = tmp_cache_server_ptr->admitBeaconDirectory_(key, directory_info, is_being_written, unused_is_neighbor_cached, edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency);
         }
+        UNUSED(unused_is_neighbor_cached);
 
         // Add intermediate event if with event tracking
         struct timespec update_directory_end_timestamp = Util::getCurrentTimespec();

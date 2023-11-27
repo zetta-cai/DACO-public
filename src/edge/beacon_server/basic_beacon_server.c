@@ -77,7 +77,7 @@ namespace covered
         return directory_lookup_response_ptr;
     }
 
-    bool BasicBeaconServer::processReqToUpdateLocalDirectory_(MessageBase* control_request_ptr, bool& is_being_written, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, BandwidthUsage& total_bandwidth_usage, EventList& event_list)
+    bool BasicBeaconServer::processReqToUpdateLocalDirectory_(MessageBase* control_request_ptr, bool& is_being_written, bool& is_neighbor_cached, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, BandwidthUsage& total_bandwidth_usage, EventList& event_list)
     {
         // Foreground directory updates for baselines
         assert(control_request_ptr != NULL);
@@ -92,8 +92,8 @@ namespace covered
         // Update local directory information in cooperation wrapper
         const uint32_t source_edge_idx = control_request_ptr->getSourceIndex();
         is_being_written = false;
-        edge_wrapper_ptr_->getCooperationWrapperPtr()->updateDirectoryTable(tmp_key, source_edge_idx, is_admit, directory_info, is_being_written);
-
+        edge_wrapper_ptr_->getCooperationWrapperPtr()->updateDirectoryTable(tmp_key, source_edge_idx, is_admit, directory_info, is_being_written, is_neighbor_cached);
+        
         UNUSED(best_placement_edgeset);
         UNUSED(need_hybrid_fetching);
         UNUSED(total_bandwidth_usage);
@@ -101,7 +101,7 @@ namespace covered
         return is_finish;
     }
 
-    MessageBase* BasicBeaconServer::getRspToUpdateLocalDirectory_(MessageBase* control_request_ptr, const bool& is_being_written, const Edgeset& best_placement_edgeset, const bool& need_hybrid_fetching, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list) const
+    MessageBase* BasicBeaconServer::getRspToUpdateLocalDirectory_(MessageBase* control_request_ptr, const bool& is_being_written, const bool& is_neighbor_cached, const Edgeset& best_placement_edgeset, const bool& need_hybrid_fetching, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list) const
     {
         assert(control_request_ptr != NULL);
         assert(control_request_ptr->getMessageType() == MessageType::kDirectoryUpdateRequest);
@@ -116,6 +116,7 @@ namespace covered
         MessageBase* directory_update_response_ptr = new DirectoryUpdateResponse(tmp_key, is_being_written, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
         assert(directory_update_response_ptr != NULL);
 
+        UNUSED(is_neighbor_cached);
         UNUSED(best_placement_edgeset);
         UNUSED(need_hybrid_fetching);
 
