@@ -34,16 +34,16 @@ namespace covered
     class LookupMetadata
     {
     public:
-        typedef typename T::iterator perkey_metadata_list_t;
+        typedef typename T::iterator perkey_metadata_list_iter_t;
 
         LookupMetadata();
         LookupMetadata(const LookupMetadata& other);
         ~LookupMetadata();
 
-        perkey_metadata_list_t getPerkeyMetadataListIter() const;
+        perkey_metadata_list_iter_t getPerkeyMetadataListIter() const;
         sorted_reward_multimap_t::iterator getSortedRewardIter() const;
 
-        void setPerkeyMetadataListIter(const perkey_metadata_list_t& perkey_metadata_list_iter);
+        void setPerkeyMetadataListIter(const perkey_metadata_list_iter_t& perkey_metadata_list_iter);
         void setSortedRewardIter(const sorted_reward_multimap_t::iterator& sorted_reward_iter);
 
         static uint64_t getPerkeyMetadataListIterSizeForCapacity();
@@ -53,7 +53,7 @@ namespace covered
     private:
         static const std::string kClassName;
 
-        perkey_metadata_list_t perkey_metadata_list_iter_; // Key-level metadata for local requests
+        perkey_metadata_list_iter_t perkey_metadata_list_iter_; // Key-level metadata for local requests
         sorted_reward_multimap_t::iterator sorted_reward_iter_;
     };
 

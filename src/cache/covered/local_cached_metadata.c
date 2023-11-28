@@ -17,6 +17,22 @@ namespace covered
         return getSizeForCapacity_(is_local_cached_metadata);
     }
 
+    // For beacon-based metadata update
+    void LocalCachedMetadata::updateIsNeighborcachedForExistingKey(const Key& key, const bool& is_neighbor_cached)
+    {
+        perkey_lookup_table_iter_t perkey_lookup_iter = getLookup_(key);
+        HeteroKeyLevelMetadata& key_level_metadata_ref = perkey_lookup_iter->second.getPerkeyMetadataListIter()->second;
+        if (is_neighbor_cached)
+        {
+            key_level_metadata_ref.enableNeighborCached();
+        }
+        else
+        {
+            key_level_metadata_ref.disableNeighborCached();
+        }
+        return;
+    }
+
     // For newly-admited/tracked keys
 
     bool LocalCachedMetadata::afterAddForNewKey_(const typename perkey_lookup_table_t::const_iterator& perkey_lookup_const_iter, const uint32_t& peredge_synced_victimcnt)

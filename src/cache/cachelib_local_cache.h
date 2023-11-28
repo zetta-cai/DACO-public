@@ -58,6 +58,8 @@ namespace covered
 
         // (4) Other functions
 
+        void updateLocalCacheMetadataInternal_(const Key& key, const std::string& func_name, void* func_param_ptr) override; // Update local metadata (e.g., is_neighbor_cached) for local edge cache
+
         // In units of bytes
         virtual uint64_t getSizeForCapacityInternal_() const override;
 

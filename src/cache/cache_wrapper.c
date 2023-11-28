@@ -411,6 +411,21 @@ namespace covered
 
     // (4) Other functions
 
+    void CacheWrapper::metadataUpdate(const Key& key, const std::string& func_name, void* func_param_ptr)
+    {
+        checkPointers_();
+
+        // Acquire a write lock
+        std::string context_name = "CacheWrapper::metadataUpdate()";
+        cache_wrapper_perkey_rwlock_ptr_->acquire_lock(key, context_name);
+
+        local_cache_ptr_->updateLocalCacheMetadata(key, func_name, func_param_ptr);
+
+        // Release a write lock
+        cache_wrapper_perkey_rwlock_ptr_->unlock(key, context_name);
+        return;
+    }
+
     uint64_t CacheWrapper::getSizeForCapacity() const
     {
         checkPointers_();

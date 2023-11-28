@@ -38,6 +38,9 @@ namespace covered
     class CoveredLocalCache : public LocalCacheBase
     {
     public:
+        // For updateLocalCacheMetadataInternal_()
+        static const std::string UPDATE_IS_NEIGHBOR_CACHED_FLAG_FUNC_NAME; // Update is_neighbor_cached flag in local cached metadata (func param is bool)
+
         // NOTE: too small cache capacity cannot support slab-based memory allocation in cachelib (see lib/CacheLib/cachelib/allocator/CacheAllocatorConfig.h and lib/CacheLib/cachelib/allocator/memory/SlabAllocator.cpp)
         //static const uint64_t CACHELIB_ENGINE_MIN_CAPACITY_BYTES; // (OBSOLETE: move to Util) NOTE: NOT affect capacity constraint!
 
@@ -69,6 +72,8 @@ namespace covered
         virtual void evictLocalCacheNoGivenKeyInternal_(std::unordered_map<Key, Value, KeyHasher>& victims, const uint64_t& required_size) override;
 
         // (4) Other functions
+
+        void updateLocalCacheMetadataInternal_(const Key& key, const std::string& func_name, void* func_param_ptr) override; // Update local metadata (e.g., is_neighbor_cached) for local edge cache
 
         // In units of bytes
         virtual uint64_t getSizeForCapacityInternal_() const override;

@@ -150,6 +150,14 @@ namespace covered
 
     // (4) Other functions
 
+    void LruLocalCache::updateLocalCacheMetadataInternal_(const Key& key, const std::string& func_name, void* func_param_ptr) override
+    {
+        Util::dumpErrorMsg(instance_name_, "updateLocalCacheMetadataInternal_() is ONLY for COVERED
+        !");
+        exit(1);
+        return;
+    }
+
     uint64_t LruLocalCache::getSizeForCapacityInternal_() const
     {
         uint64_t internal_size = lru_cache_ptr_->getSizeForCapacity();

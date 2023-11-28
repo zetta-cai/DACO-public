@@ -231,6 +231,20 @@ namespace covered
 
     // (4) Other functions
 
+    void LocalCacheBase::updateLocalCacheMetadata(const Key& key, const std::string& func_name, void* func_param_ptr)
+    {
+        checkPointers_();
+
+        // Acquire a write lock for local metadata to update local metadata atomically
+        std::string context_name = "LocalCacheBase::updateLocalCacheMetadata()";
+        rwlock_for_local_cache_ptr_->acquire_lock(context_name);
+
+        updateLocalCacheMetadataInternal_(key, func_name, func_param_ptr);
+
+        rwlock_for_local_cache_ptr_->unlock(context_name);
+        return;
+    }
+
     uint64_t LocalCacheBase::getSizeForCapacity() const
     {
         checkPointers_();

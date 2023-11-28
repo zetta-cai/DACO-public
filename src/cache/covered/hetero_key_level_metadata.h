@@ -32,6 +32,11 @@ namespace covered
         Frequency getRedirectedFrequency() const;
         Popularity getRedirectedPopularity() const; // Get redirected popularity for redirected hits of local cached objectds
 
+        #ifdef ENABLE_BEACON_BASED_CACHED_METADATA_UPDATE
+        void enableIsNeighborCached();
+        void disableIsNeighborCached();
+        #endif
+
         static uint64_t getSizeForCapacity();
     private:
         static const std::string kClassName;

@@ -60,6 +60,8 @@ namespace covered
         void evictLocalCacheNoGivenKey(std::unordered_map<Key, Value, KeyHasher>& victims, const uint64_t& required_size); // For coarse-grained management
 
         // (4) Other functions
+
+        void updateLocalCacheMetadata(const Key& key, const std::string& func_name, void* func_param_ptr); // Update local metadata (e.g., is_neighbor_cached) for local edge cache
         
         // In units of bytes
         uint64_t getSizeForCapacity() const; // Get size of data and metadata for local edge cache
@@ -95,6 +97,8 @@ namespace covered
         virtual void evictLocalCacheNoGivenKeyInternal_(std::unordered_map<Key, Value, KeyHasher>& victims, const uint64_t& required_size) = 0;
 
         // (4) Other functions
+
+        void updateLocalCacheMetadataInternal_(const Key& key, const std::string& func_name, void* func_param_ptr) = 0; // Update local metadata (e.g., is_neighbor_cached) for local edge cache
 
         virtual uint64_t getSizeForCapacityInternal_() const = 0; // Get size of data and metadata for local edge cache
 

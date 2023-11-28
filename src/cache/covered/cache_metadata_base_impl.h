@@ -29,7 +29,7 @@ namespace covered
     LookupMetadata<T>::~LookupMetadata() {}
 
     template<class T>
-    typename LookupMetadata<T>::perkey_metadata_list_t LookupMetadata<T>::getPerkeyMetadataListIter() const
+    typename LookupMetadata<T>::perkey_metadata_list_iter_t LookupMetadata<T>::getPerkeyMetadataListIter() const
     {
         return perkey_metadata_list_iter_;
     }
@@ -41,7 +41,7 @@ namespace covered
     }
 
     template<class T>
-    void LookupMetadata<T>::setPerkeyMetadataListIter(const typename LookupMetadata<T>::perkey_metadata_list_t& perkey_metadata_list_iter)
+    void LookupMetadata<T>::setPerkeyMetadataListIter(const typename LookupMetadata<T>::perkey_metadata_list_iter_t& perkey_metadata_list_iter)
     {
         perkey_metadata_list_iter_ = perkey_metadata_list_iter;
         return;
@@ -57,7 +57,7 @@ namespace covered
     template<class T>
     uint64_t LookupMetadata<T>::getPerkeyMetadataListIterSizeForCapacity()
     {
-        return sizeof(perkey_metadata_list_t);
+        return sizeof(perkey_metadata_list_iter_t);
     }
 
     template<class T>

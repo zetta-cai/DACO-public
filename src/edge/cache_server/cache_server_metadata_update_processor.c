@@ -115,11 +115,7 @@ namespace covered
 
         // Update is_neighbor_cached flag in local cached metadata
         const bool is_neighbor_cached = covered_metadata_update_request_ptr->isNeighborCached();
-        // TODO: END HERE
-        if (is_neighbor_cached) // Enable is_neighbor_cached
-        {}
-        else // Disable is_neighbor_cached
-        {}
+        tmp_edge_wrapper_ptr->getEdgeCachePtr()->metadataUpdate(tmp_key, CoveredLocalCache::UPDATE_IS_NEIGHBOR_CACHED_FLAG_FUNC_NAME, &is_neighbor_cached);
 
         struct timespec metadata_update_end_timestamp = Util::getCurrentTimespec();
         uint32_t metadata_update_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(metadata_update_end_timestamp, metadata_update_start_timestamp));

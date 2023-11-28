@@ -178,6 +178,14 @@ namespace covered
 
     // (4) Other functions
 
+    void GreedyDualLocalCache::updateLocalCacheMetadataInternal_(const Key& key, const std::string& func_name, void* func_param_ptr) override
+    {
+        Util::dumpErrorMsg(instance_name_, "updateLocalCacheMetadataInternal_() is ONLY for COVERED
+        !");
+        exit(1);
+        return;
+    }
+
     uint64_t GreedyDualLocalCache::getSizeForCapacityInternal_() const
     {
         uint64_t internal_size = greedy_dual_cache_ptr_->getSizeForCapacity();

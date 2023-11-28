@@ -10,6 +10,8 @@
 
 namespace covered
 {
+    const std::string CoveredLocalCache::UPDATE_IS_NEIGHBOR_CACHED_FLAG_FUNC_NAME("update_is_neighbor_cached_flag");
+
     //const uint64_t CoveredLocalCache::CACHELIB_ENGINE_MIN_CAPACITY_BYTES = GB2B(1); // 1 GiB
 
     const std::string CoveredLocalCache::kClassName("CoveredLocalCache");
@@ -496,6 +498,29 @@ namespace covered
     }
 
     // (4) Other functions
+
+    void CoveredLocalCache::updateLocalCacheMetadataInternal_(const Key& key, const std::string& func_name, void* func_param_ptr) override
+    {
+        assert(func_param_ptr != NULL);
+
+        if (func_name == UPDATE_IS_NEIGHBOR_CACHED_FLAG_FUNC_NAME)
+        {
+            const bool is_exist = local_cached_metadata_.isExist(key);
+            if (is_exist) // Enable/disable is_neighbor_cached for local cached metadata if key exists
+            {
+                const bool is_neighbor_cached = *((bool*)func_param_ptr);
+                local_cached_metadata_.updateIsNeighborCachedForExistingKey(key, is_neighbor_cached);
+            }
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "updateLocalCacheMetadataInternal_() does NOT support func_name " << func_name;
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
+        return;
+    }
 
     uint64_t CoveredLocalCache::getSizeForCapacityInternal_() const
     {

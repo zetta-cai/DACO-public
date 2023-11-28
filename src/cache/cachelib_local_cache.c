@@ -344,6 +344,14 @@ namespace covered
 
     // (4) Other functions
 
+    void CachelibLocalCache::updateLocalCacheMetadataInternal_(const Key& key, const std::string& func_name, void* func_param_ptr) override
+    {
+        Util::dumpErrorMsg(instance_name_, "updateLocalCacheMetadataInternal_() is ONLY for COVERED
+        !");
+        exit(1);
+        return;
+    }
+
     uint64_t CachelibLocalCache::getSizeForCapacityInternal_() const
     {
         // NOTE: should NOT use cachelib_cache_ptr_->getCacheMemoryStats().ramCacheSize, which is usable cache size (i.e. capacity) instead of used size

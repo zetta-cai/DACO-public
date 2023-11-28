@@ -57,6 +57,20 @@ namespace covered
         return redirected_popularity_;
     }
 
+    #ifdef ENABLE_BEACON_BASED_CACHED_METADATA_UPDATE
+    void HeteroKeyLevelMetadata::enableIsNeighborCached()
+    {
+        is_neighbor_cached_ = true;
+        return;
+    }
+
+    void HeteroKeyLevelMetadata::disableIsNeighborCached()
+    {
+        is_neighbor_cached_ = false;
+        return;
+    }
+    #endif
+
     uint64_t HeteroKeyLevelMetadata::getSizeForCapacity()
     {
         uint64_t total_size = KeyLevelMetadataBase::getSizeForCapacity();
