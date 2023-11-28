@@ -996,6 +996,8 @@ namespace covered
 
         if (cache_name_ == Util::COVERED_CACHE_NAME) // ONLY for COVERED
         {
+            // TODO: END HERE (admit local directory)
+
             // Update directory info in victim tracker if the local beaconed key is a local/neighbor synced victim
             covered_cache_manager_ptr_->updateVictimTrackerForLocalBeaconedVictimDirinfo(key, is_admit, directory_info);
 

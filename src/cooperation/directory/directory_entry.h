@@ -14,6 +14,7 @@
 #include "cooperation/directory/directory_info.h"
 #include "cooperation/directory/directory_metadata.h"
 #include "cooperation/directory/dirinfo_set.h"
+#include "cooperation/directory/metadata_update_requirement.h"
 
 namespace covered
 {
@@ -35,6 +36,7 @@ namespace covered
             const DirectoryInfo& directory_info;
             const DirectoryMetadata& directory_metadata;
             bool is_directory_already_exist;
+            MetadataUpdateRequirement& metadata_update_requirement_ref;
         };
         
         struct RemoveDirinfoParam
@@ -42,6 +44,7 @@ namespace covered
             const DirectoryInfo& directory_info;
             bool is_directory_already_exist;
             bool is_global_cached;
+            MetadataUpdateRequirement& metadata_update_requirement_ref;
         };
 
         struct InvalidateMetadataForAllDirinfoIfExistParam
@@ -68,8 +71,8 @@ namespace covered
 
         void getAllDirinfo(DirinfoSet& dirinfo_set) const; // Get all dirinfos (including invalid ones
         void getAllValidDirinfo(DirinfoSet& dirinfo_set) const;
-        bool addDirinfo(const DirectoryInfo& directory_info, const DirectoryMetadata& directory_metadata); // return is_directory_already_exist
-        bool removeDirinfo(const DirectoryInfo& directory_info); // return is_directory_already_exist
+        bool addDirinfo(const DirectoryInfo& directory_info, const DirectoryMetadata& directory_metadata, MetadataUpdateRequirement& metadata_update_requirement); // return is_directory_already_exist
+        bool removeDirinfo(const DirectoryInfo& directory_info, MetadataUpdateRequirement& metadata_update_requirement); // return is_directory_already_exist
         void invalidateMetadataForAllDirinfoIfExist(DirinfoSet& all_dirinfo); // Invalidate all metadatas only if dirinfos exist (NOT add invalid metadata)
         void validateMetadataForDirinfoIfExist(const DirectoryInfo& directory_info); // Validate metadata only if dirinfo exists (NOT add invalid metadata)
 

@@ -775,6 +775,8 @@ namespace covered
         {
             CoveredCacheManager* tmp_covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
 
+            // TODO: END HERE (evict local directory)
+
             // Update directory info in victim tracker if the local beaconed key is a local/neighbor synced victim
             tmp_covered_cache_manager_ptr->updateVictimTrackerForLocalBeaconedVictimDirinfo(key, is_admit, directory_info);
 

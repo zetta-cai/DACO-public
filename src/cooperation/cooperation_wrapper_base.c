@@ -222,7 +222,7 @@ namespace covered
         return is_global_cached;
     }
 
-    bool CooperationWrapperBase::updateDirectoryTable(const Key& key, const uint32_t& source_edge_idx, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written, bool& is_neighbor_cached)
+    bool CooperationWrapperBase::updateDirectoryTable(const Key& key, const uint32_t& source_edge_idx, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written, bool& is_neighbor_cached, MetadataUpdateRequirement& metadata_update_requirement)
     {
         checkPointers_();
         assert(source_edge_idx == directory_info.getTargetEdgeIdx()); // Receive a directory udpate request from the source edge node to admit/evict itself
@@ -246,10 +246,20 @@ namespace covered
         DirectoryMetadata directory_metadata(!is_being_written); // valid if not being written
 
         assert(directory_table_ptr_ != NULL);
-        is_global_cached = directory_table_ptr_->update(key, is_admit, directory_info, directory_metadata);
+        is_global_cached = directory_table_ptr_->update(key, is_admit, directory_info, directory_metadata, metadata_update_requirement);
 
         // Return if key is cached by any other edge node except the source edge node
         is_neighbor_cached = directory_table_ptr_->isNeighborCached(key, source_edge_idx);
+
+        // Correctness verification
+        if (metadata_update_requirement.isFromSingleToMultiple())
+        {
+            assert(is_admit && is_neighbor_cached);
+        }
+        else if (metadata_update_requirement.isFromMultipleToSingle())
+        {
+            assert(!is_admit && is_neighbor_cached);
+        }
 
         // Release a write lock
         cooperation_wrapper_perkey_rwlock_ptr_->unlock(key, context_name);

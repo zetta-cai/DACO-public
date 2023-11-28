@@ -107,10 +107,13 @@ namespace covered
         return is_global_cached;
     }
 
-    bool DirectoryTable::update(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, const DirectoryMetadata& directory_metadata)
+    bool DirectoryTable::update(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, const DirectoryMetadata& directory_metadata, MetadataUpdateRequirement& metadata_update_requirement)
     {
         bool is_global_cached = false; // Whether the key is cached by a local/neighbor edge node (even if invalid temporarily)
 
+        bool is_from_single_to_multiple = false;
+        bool is_from_multiple_to_single = false;
+        uint32_t notify_edge_idx = 0;
         if (is_admit) // Add a new directory info
         {
             // Prepare directory entry for the key
@@ -119,15 +122,17 @@ namespace covered
             assert(tmp_is_directory_already_exist == false);
 
             // Prepare AddDirinfoParam
-            DirectoryEntry::AddDirinfoParam tmp_param = {directory_info, directory_metadata, false};
+            DirectoryEntry::AddDirinfoParam tmp_param = {directory_info, directory_metadata, false, metadata_update_requirement};
 
             // Insert a new directory entry, or add directory info into existing directory entry
             bool is_exist = false;
             directory_hashtable_.insertOrCall(key, directory_entry, is_exist, DirectoryEntry::ADD_DIRINFO_FUNCNAME, (void*)&tmp_param);
             if (!is_exist) // key does not exist
             {
-                // NOTE: maybe  invalid directory info if key is being written
+                // NOTE: maybe invalid directory info if key is being written
                 //assert(directory_metadata.isValidDirinfo());
+
+                metadata_update_requirement = MetadataUpdateRequirement(); // NO need to notify the first cache copy on metadata update for first-to-multiple due to empty-to-first
             }
             else // key already exists
             {
@@ -144,7 +149,7 @@ namespace covered
         else // Delete an existing directory info
         {
             // Prepare RemoveDirinfoParam
-            DirectoryEntry::RemoveDirinfoParam tmp_param = {directory_info, false, false};
+            DirectoryEntry::RemoveDirinfoParam tmp_param = {directory_info, false, false, metadata_update_requirement};
 
             bool is_exist = false;
             directory_hashtable_.callIfExist(key, is_exist, DirectoryEntry::REMOVE_DIRINFO_FUNCNAME, &tmp_param);
@@ -164,6 +169,8 @@ namespace covered
                 std::ostringstream oss;
                 oss << "key " << key.getKeystr() << " does not exist in directory_hashtable_ in update() with is_admit = false!";
                 Util::dumpWarnMsg(instance_name_, oss.str());
+
+                metadata_update_requirement = MetadataUpdateRequirement(); // NO need to notify the last cache copy on metadata update for multiple-to-first due to empty-to-empty
 
                 is_global_cached = false;
             }

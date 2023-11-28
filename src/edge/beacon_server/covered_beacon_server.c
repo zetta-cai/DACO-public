@@ -232,6 +232,8 @@ namespace covered
             is_being_written = false;
             bool is_global_cached = edge_wrapper_ptr_->getCooperationWrapperPtr()->updateDirectoryTable(tmp_key, source_edge_idx, is_admit, directory_info, is_being_written, is_neighbor_cached);
 
+            // TODO: END HERE (admit/evict remote directory)
+
             // Update directory info in victim tracker if the local beaconed key is a local/neighbor synced victim
             covered_cache_manager_ptr->updateVictimTrackerForLocalBeaconedVictimDirinfo(tmp_key, is_admit, directory_info);
 

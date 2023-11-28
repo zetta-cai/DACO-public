@@ -61,38 +61,76 @@ namespace covered
         return;
     }
 
-    bool DirectoryEntry::addDirinfo(const DirectoryInfo& directory_info, const DirectoryMetadata& directory_metadata)
+    bool DirectoryEntry::addDirinfo(const DirectoryInfo& directory_info, const DirectoryMetadata& directory_metadata, MetadataUpdateRequirement& metadata_update_requirement)
     {
         bool is_directory_already_exist = false;
         dirinfo_entry_t::iterator iter = directory_entry_.find(directory_info);
         if (iter == directory_entry_.end()) // directory info does not exist
         {
+            const bool is_from_single_to_multiple = (directory_entry_.size() == 1);
+            const bool is_from_multiple_to_single = false; // Must NOT multiple-to-single due to NOT directory eviction
+            uint32_t notify_edge_idx = 0; // The edge node index of the first cache copy
+            if (is_from_single_to_multiple)
+            {
+                notify_edge_idx = directory_entry_.begin()->first.getTargetEdgeIdx();
+            }
+
             directory_entry_.insert(std::pair<DirectoryInfo, DirectoryMetadata>(directory_info, directory_metadata));
 
             is_directory_already_exist = false;
+
+            if (is_from_single_to_multiple) // Need to notify the first cache copy for single-to-multiple
+            {
+                metadata_update_requirement = MetadataUpdateRequirement(is_from_single_to_multiple, is_from_multiple_to_single, notify_edge_idx);
+            }
+            else // NO need to notify the first cache copy for empty-to-single or multiple-to-multiple
+            {
+                metadata_update_requirement = MetadataUpdateRequirement();
+            }
         }
         else // directory info already exists
         {
             iter->second = directory_metadata;
 
             is_directory_already_exist = true;
+
+            metadata_update_requirement = MetadataUpdateRequirement(); // No need to notify the first cache copy on metadata update for single-to-multiple due to NOT admiting a new dirinfo
         }
         return is_directory_already_exist;
     }
 
-    bool DirectoryEntry::removeDirinfo(const DirectoryInfo& directory_info)
+    bool DirectoryEntry::removeDirinfo(const DirectoryInfo& directory_info, MetadataUpdateRequirement& metadata_update_requirement)
     {
         bool is_directory_already_exist = false;
         dirinfo_entry_t::const_iterator iter = directory_entry_.find(directory_info);
         if (iter == directory_entry_.end()) // directory info does not exist
         {
             is_directory_already_exist = false;
+
+            metadata_update_requirement = MetadataUpdateRequirement(); // NO need to notify the last cache copy on metadata update for multiple-to-single due to NOT evicting an existing dirinfo
         }
         else // directory info already exists
         {
             directory_entry_.erase(iter);
 
+            const bool is_single_to_multiple = false; // Must NOT single-to-multiple due to evicting instead of admiting dirinfo
+            const bool is_multiple_to_single = (directory_entry_.size() == 1);
+            uint32_t notify_edge_idx = 0; // The edge node index of the last cache copy
+            if (is_multiple_to_single)
+            {
+                notify_edge_idx = directory_entry_.begin()->first.getTargetEdgeIdx();
+            }
+
             is_directory_already_exist = true;
+
+            if (is_multiple_to_single) // Need to notify the last cache copy for multiple-to-single
+            {
+                metadata_update_requirement = MetadataUpdateRequirement(is_single_to_multiple, is_multiple_to_single, notify_edge_idx);
+            }
+            else // NO need to notify the last cache copy for multiple-to-multiple or single-to-empty
+            {
+                metadata_update_requirement = MetadataUpdateRequirement();
+            }
         }
         return is_directory_already_exist;
     }
@@ -141,12 +179,12 @@ namespace covered
         if (function_name == ADD_DIRINFO_FUNCNAME)
         {
             AddDirinfoParam* tmp_param_ptr = static_cast<AddDirinfoParam*>(param_ptr);
-            tmp_param_ptr->is_directory_already_exist = addDirinfo(tmp_param_ptr->directory_info, tmp_param_ptr->directory_metadata);
+            tmp_param_ptr->is_directory_already_exist = addDirinfo(tmp_param_ptr->directory_info, tmp_param_ptr->directory_metadata, tmp_param_ptr->metadata_update_requirement_ref);
         }
         else if (function_name == REMOVE_DIRINFO_FUNCNAME)
         {
             RemoveDirinfoParam* tmp_param_ptr = static_cast<RemoveDirinfoParam*>(param_ptr);
-            tmp_param_ptr->is_directory_already_exist = removeDirinfo(tmp_param_ptr->directory_info);
+            tmp_param_ptr->is_directory_already_exist = removeDirinfo(tmp_param_ptr->directory_info, tmp_param_ptr->metadata_update_requirement_ref);
 
             if (directory_entry_.size() == 0)
             {
