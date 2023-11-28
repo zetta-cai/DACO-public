@@ -88,6 +88,7 @@ namespace covered
         static const std::string BG_EDGE_CACHE_SERVER_UPDATE_DIRECTORY_TO_ADMIT_EVENT_NAME; // For edge cache server worker or placement processor (non-blocking placement notification)
         static const std::string BG_EDGE_CACHE_SERVER_UPDATE_DIRECTORY_TO_EVICT_EVENT_NAME; // For edge cache server worker or placement processor (non-blocking placement notification)
         static const std::string BG_EDGE_BEACON_SERVER_UPDATE_LOCAL_DIRECTORY_EVENT_NAME; // For edge beacon server (non-blocking placement notification)
+        static const std::string BG_EDGE_CACHE_SERVER_METADATA_UPDATE_PROCESSOR_UPDATE_EVENT_NAME; // For edge cache server metadata update processor (background)
 
         Event();
         Event(const std::string& event_name, const uint32_t& event_latency_us);

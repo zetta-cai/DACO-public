@@ -16,9 +16,9 @@ namespace covered
     class CacheServerVictimFetchProcessor
     {
     public:
-        static void* launchCacheServerVictimFetchProcessor(void* cache_serer_victim_fetch_processor_param_ptr);
+        static void* launchCacheServerVictimFetchProcessor(void* cache_server_victim_fetch_processor_param_ptr);
     
-        CacheServerVictimFetchProcessor(CacheServerVictimFetchProcessorParam* cache_serer_victim_fetch_processor_param_ptr);
+        CacheServerVictimFetchProcessor(CacheServerVictimFetchProcessorParam* cache_server_victim_fetch_processor_param_ptr);
         virtual ~CacheServerVictimFetchProcessor();
 
         void start();
@@ -34,7 +34,7 @@ namespace covered
 
         // Const variable
         std::string instance_name_;
-        const CacheServerVictimFetchProcessorParam* cache_serer_victim_fetch_processor_param_ptr_;
+        const CacheServerVictimFetchProcessorParam* cache_server_victim_fetch_processor_param_ptr_;
 
         // NOTE: destination addresses for sending control requests come from beacon edge index
 

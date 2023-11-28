@@ -79,6 +79,7 @@ namespace covered
     const std::string Event::BG_EDGE_CACHE_SERVER_UPDATE_DIRECTORY_TO_ADMIT_EVENT_NAME("bg::edge:cache_server::update_diretory_to_admit");
     const std::string Event::BG_EDGE_CACHE_SERVER_UPDATE_DIRECTORY_TO_EVICT_EVENT_NAME("bg::edge::cache_server::update_directory_to_evict");
     const std::string Event::BG_EDGE_BEACON_SERVER_UPDATE_LOCAL_DIRECTORY_EVENT_NAME("bg::edge::beacon_server::update_local_directory");
+    const std::string Event::BG_EDGE_CACHE_SERVER_METADATA_UPDATE_PROCESSOR_UPDATE_EVENT_NAME("bg::edge::cache_server_metadata_update_processor::update");
 
     const std::string Event::kClassName("Event");
 
@@ -110,7 +111,7 @@ namespace covered
 
     bool Event::isBackgroundEvent() const
     {
-        if (event_name_ == BG_EDGE_CACHE_SERVER_WORKER_TARGET_GET_LOCAL_CACHE_EVENT_NAME || event_name_ == BG_CLOUD_GET_ROCKSDB_EVENT_NAME || event_name_ == BG_EDGE_CACHE_SERVER_PLACEMENT_PROCESSOR_PLACEMENT_NOTIFY_EVENT_NAME || event_name_ == BG_EDGE_CACHE_SERVER_PLACEMENT_PROCESSOR_LOCAL_CACHE_ADMISSION_EVENT_NAME || event_name_ == BG_EDGE_CACHE_SERVER_UPDATE_DIRECTORY_TO_ADMIT_EVENT_NAME || event_name_ == BG_EDGE_CACHE_SERVER_UPDATE_DIRECTORY_TO_EVICT_EVENT_NAME || event_name_ == BG_EDGE_BEACON_SERVER_UPDATE_LOCAL_DIRECTORY_EVENT_NAME)
+        if (event_name_ == BG_EDGE_CACHE_SERVER_WORKER_TARGET_GET_LOCAL_CACHE_EVENT_NAME || event_name_ == BG_CLOUD_GET_ROCKSDB_EVENT_NAME || event_name_ == BG_EDGE_CACHE_SERVER_PLACEMENT_PROCESSOR_PLACEMENT_NOTIFY_EVENT_NAME || event_name_ == BG_EDGE_CACHE_SERVER_PLACEMENT_PROCESSOR_LOCAL_CACHE_ADMISSION_EVENT_NAME || event_name_ == BG_EDGE_CACHE_SERVER_UPDATE_DIRECTORY_TO_ADMIT_EVENT_NAME || event_name_ == BG_EDGE_CACHE_SERVER_UPDATE_DIRECTORY_TO_EVICT_EVENT_NAME || event_name_ == BG_EDGE_BEACON_SERVER_UPDATE_LOCAL_DIRECTORY_EVENT_NAME || event_name_ == BG_EDGE_CACHE_SERVER_METADATA_UPDATE_PROCESSOR_UPDATE_EVENT_NAME)
         {
             return true;
         }

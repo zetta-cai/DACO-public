@@ -9,22 +9,22 @@ namespace covered
 {
     const std::string CacheServerVictimFetchProcessor::kClassName = "CacheServerVictimFetchProcessor";
 
-    void* CacheServerVictimFetchProcessor::launchCacheServerVictimFetchProcessor(void* cache_serer_victim_fetch_processor_param_ptr)
+    void* CacheServerVictimFetchProcessor::launchCacheServerVictimFetchProcessor(void* cache_server_victim_fetch_processor_param_ptr)
     {
-        assert(cache_serer_victim_fetch_processor_param_ptr != NULL);
+        assert(cache_server_victim_fetch_processor_param_ptr != NULL);
 
-        CacheServerVictimFetchProcessor cache_server_victim_fetch_processor((CacheServerVictimFetchProcessorParam*)cache_serer_victim_fetch_processor_param_ptr);
+        CacheServerVictimFetchProcessor cache_server_victim_fetch_processor((CacheServerVictimFetchProcessorParam*)cache_server_victim_fetch_processor_param_ptr);
         cache_server_victim_fetch_processor.start();
 
         pthread_exit(NULL);
         return NULL;
     }
 
-    CacheServerVictimFetchProcessor::CacheServerVictimFetchProcessor(CacheServerVictimFetchProcessorParam* cache_serer_victim_fetch_processor_param_ptr) : cache_serer_victim_fetch_processor_param_ptr_(cache_serer_victim_fetch_processor_param_ptr)
+    CacheServerVictimFetchProcessor::CacheServerVictimFetchProcessor(CacheServerVictimFetchProcessorParam* cache_server_victim_fetch_processor_param_ptr) : cache_server_victim_fetch_processor_param_ptr_(cache_server_victim_fetch_processor_param_ptr)
     {
-        assert(cache_serer_victim_fetch_processor_param_ptr != NULL);
-        const uint32_t edge_idx = cache_serer_victim_fetch_processor_param_ptr->getCacheServerPtr()->getEdgeWrapperPtr()->getNodeIdx();
-        const uint32_t edgecnt = cache_serer_victim_fetch_processor_param_ptr->getCacheServerPtr()->getEdgeWrapperPtr()->getNodeCnt();
+        assert(cache_server_victim_fetch_processor_param_ptr != NULL);
+        const uint32_t edge_idx = cache_server_victim_fetch_processor_param_ptr->getCacheServerPtr()->getEdgeWrapperPtr()->getNodeIdx();
+        const uint32_t edgecnt = cache_server_victim_fetch_processor_param_ptr->getCacheServerPtr()->getEdgeWrapperPtr()->getNodeCnt();
 
         // Differentiate cache servers of different edge nodes
         std::ostringstream oss;
@@ -48,7 +48,7 @@ namespace covered
 
     CacheServerVictimFetchProcessor::~CacheServerVictimFetchProcessor()
     {
-        // NOTE: no need to release cache_serer_victim_fetch_processor_param_ptr_, which will be released outside CacheServerVictimFetchProcessor (by CacheServer)
+        // NOTE: no need to release cache_server_victim_fetch_processor_param_ptr_, which will be released outside CacheServerVictimFetchProcessor (by CacheServer)
 
         // Release the socket server to receive control responses,
         // assert(edge_cache_server_victim_fetch_processor_recvrsp_socket_server_ptr_ != NULL);
@@ -59,14 +59,14 @@ namespace covered
     void CacheServerVictimFetchProcessor::start()
     {
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_serer_victim_fetch_processor_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_victim_fetch_processor_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
         bool is_finish = false; // Mark if edge node is finished
         while (tmp_edge_wrapper_ptr->isNodeRunning()) // edge_running_ is set as true by default
         {
             // Try to get the data management request from ring buffer partitioned by cache server
             CacheServerItem tmp_cache_server_item;
-            bool is_successful = cache_serer_victim_fetch_processor_param_ptr_->getControlRequestBufferPtr()->pop(tmp_cache_server_item);
+            bool is_successful = cache_server_victim_fetch_processor_param_ptr_->getControlRequestBufferPtr()->pop(tmp_cache_server_item);
             if (!is_successful)
             {
                 continue; // Retry to receive an item if edge is still running
@@ -110,7 +110,7 @@ namespace covered
         assert(control_request_ptr->getMessageType() == MessageType::kCoveredVictimFetchRequest);
 
         checkPointers_();
-        CacheServer* tmp_cache_server_ptr = cache_serer_victim_fetch_processor_param_ptr_->getCacheServerPtr();
+        CacheServer* tmp_cache_server_ptr = cache_server_victim_fetch_processor_param_ptr_->getCacheServerPtr();
         EdgeWrapper* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();
         CooperationWrapperBase* tmp_cooperation_wrapper_ptr = tmp_edge_wrapper_ptr->getCooperationWrapperPtr();
         CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
@@ -145,7 +145,7 @@ namespace covered
 
         struct timespec victim_fetch_end_timestamp = Util::getCurrentTimespec();
         uint32_t victim_fetch_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(victim_fetch_end_timestamp, victim_fetch_start_timestamp));
-        event_list.addEvent(Event::EDGE_CACHE_SERVER_VICTIM_FETCH_PROCESSOR_FETCHING_EVENT_NAME, victim_fetch_latency_us); // Add admission event if with event tracking
+        event_list.addEvent(Event::EDGE_CACHE_SERVER_VICTIM_FETCH_PROCESSOR_FETCHING_EVENT_NAME, victim_fetch_latency_us); // Add victim fetching event if with event tracking
         
         // Prepare victim syncset for piggybacking-based victim synchronization
         const uint32_t dst_edge_idx_for_compression = control_request_ptr->getSourceIndex();
@@ -158,7 +158,7 @@ namespace covered
         
         // Prepare CoveredVictimFetchResponse with total_bandwidth_usage and event_list
         const uint32_t current_edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
-        const NetworkAddr edge_cache_server_recvreq_source_addr = cache_serer_victim_fetch_processor_param_ptr_->getCacheServerPtr()->getEdgeCacheServerRecvreqSourceAddr();
+        const NetworkAddr edge_cache_server_recvreq_source_addr = cache_server_victim_fetch_processor_param_ptr_->getCacheServerPtr()->getEdgeCacheServerRecvreqSourceAddr();
         const bool skip_propagation_latency = covered_victim_fetch_request_ptr->isSkipPropagationLatency();
         MessageBase* covered_victim_fetch_response_ptr = new CoveredVictimFetchResponse(local_victim_fetchset, local_victim_syncset, current_edge_idx, edge_cache_server_recvreq_source_addr, total_bandwidth_usage, event_list, skip_propagation_latency);
         assert(covered_victim_fetch_response_ptr != NULL);
@@ -175,7 +175,7 @@ namespace covered
 
     void CacheServerVictimFetchProcessor::checkPointers_() const
     {
-        assert(cache_serer_victim_fetch_processor_param_ptr_ != NULL);
+        assert(cache_server_victim_fetch_processor_param_ptr_ != NULL);
         //assert(edge_cache_server_victim_fetch_processor_recvrsp_socket_server_ptr_ != NULL);
 
         return;

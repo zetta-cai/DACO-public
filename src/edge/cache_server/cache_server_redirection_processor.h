@@ -16,9 +16,9 @@ namespace covered
     class CacheServerRedirectionProcessor
     {
     public:
-        static void* launchCacheServerRedirectionProcessor(void* cache_serer_redirection_processor_param_ptr);
+        static void* launchCacheServerRedirectionProcessor(void* cache_server_redirection_processor_param_ptr);
     
-        CacheServerRedirectionProcessor(CacheServerRedirectionProcessorParam* cache_serer_redirection_processor_param_ptr);
+        CacheServerRedirectionProcessor(CacheServerRedirectionProcessorParam* cache_server_redirection_processor_param_ptr);
         virtual ~CacheServerRedirectionProcessor();
 
         void start();

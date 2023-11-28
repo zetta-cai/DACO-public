@@ -63,5 +63,7 @@
 #include "message/control/cooperation/covered_placement_directory_update_response.h"
 // For fast-path single-placement calculation
 #include "message/control/cooperation/covered_fast_directory_lookup_response.h"
+// For beacon-based cached metadata update
+#include "message/control/cooperation/covered_metadata_update_request.h"
 
 #endif

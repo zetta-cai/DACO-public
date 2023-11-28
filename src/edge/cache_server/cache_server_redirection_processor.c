@@ -9,22 +9,22 @@ namespace covered
 {
     const std::string CacheServerRedirectionProcessor::kClassName = "CacheServerRedirectionProcessor";
 
-    void* CacheServerRedirectionProcessor::launchCacheServerRedirectionProcessor(void* cache_serer_redirection_processor_param_ptr)
+    void* CacheServerRedirectionProcessor::launchCacheServerRedirectionProcessor(void* cache_server_redirection_processor_param_ptr)
     {
-        assert(cache_serer_redirection_processor_param_ptr != NULL);
+        assert(cache_server_redirection_processor_param_ptr != NULL);
 
-        CacheServerRedirectionProcessor cache_server_redirection_processor((CacheServerRedirectionProcessorParam*)cache_serer_redirection_processor_param_ptr);
+        CacheServerRedirectionProcessor cache_server_redirection_processor((CacheServerRedirectionProcessorParam*)cache_server_redirection_processor_param_ptr);
         cache_server_redirection_processor.start();
 
         pthread_exit(NULL);
         return NULL;
     }
 
-    CacheServerRedirectionProcessor::CacheServerRedirectionProcessor(CacheServerRedirectionProcessorParam* cache_serer_redirection_processor_param_ptr) : cache_server_redirection_processor_param_ptr_(cache_serer_redirection_processor_param_ptr)
+    CacheServerRedirectionProcessor::CacheServerRedirectionProcessor(CacheServerRedirectionProcessorParam* cache_server_redirection_processor_param_ptr) : cache_server_redirection_processor_param_ptr_(cache_server_redirection_processor_param_ptr)
     {
-        assert(cache_serer_redirection_processor_param_ptr != NULL);
-        const uint32_t edge_idx = cache_serer_redirection_processor_param_ptr->getCacheServerPtr()->getEdgeWrapperPtr()->getNodeIdx();
-        const uint32_t edgecnt = cache_serer_redirection_processor_param_ptr->getCacheServerPtr()->getEdgeWrapperPtr()->getNodeCnt();
+        assert(cache_server_redirection_processor_param_ptr != NULL);
+        const uint32_t edge_idx = cache_server_redirection_processor_param_ptr->getCacheServerPtr()->getEdgeWrapperPtr()->getNodeIdx();
+        const uint32_t edgecnt = cache_server_redirection_processor_param_ptr->getCacheServerPtr()->getEdgeWrapperPtr()->getNodeCnt();
 
         // Differentiate cache servers of different edge nodes
         std::ostringstream oss;

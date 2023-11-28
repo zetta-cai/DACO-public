@@ -16,9 +16,9 @@ namespace covered
     class CacheServerPlacementProcessor
     {
     public:
-        static void* launchCacheServerPlacementProcessor(void* cache_serer_placement_processor_param_ptr);
+        static void* launchCacheServerPlacementProcessor(void* cache_server_placement_processor_param_ptr);
     
-        CacheServerPlacementProcessor(CacheServerPlacementProcessorParam* cache_serer_placement_processor_param_ptr);
+        CacheServerPlacementProcessor(CacheServerPlacementProcessorParam* cache_server_placement_processor_param_ptr);
         virtual ~CacheServerPlacementProcessor();
 
         void start();

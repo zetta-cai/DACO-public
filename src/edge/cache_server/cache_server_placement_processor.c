@@ -9,22 +9,22 @@ namespace covered
 {
     const std::string CacheServerPlacementProcessor::kClassName = "CacheServerPlacementProcessor";
 
-    void* CacheServerPlacementProcessor::launchCacheServerPlacementProcessor(void* cache_serer_placement_processor_param_ptr)
+    void* CacheServerPlacementProcessor::launchCacheServerPlacementProcessor(void* cache_server_placement_processor_param_ptr)
     {
-        assert(cache_serer_placement_processor_param_ptr != NULL);
+        assert(cache_server_placement_processor_param_ptr != NULL);
 
-        CacheServerPlacementProcessor cache_server_placement_processor((CacheServerPlacementProcessorParam*)cache_serer_placement_processor_param_ptr);
+        CacheServerPlacementProcessor cache_server_placement_processor((CacheServerPlacementProcessorParam*)cache_server_placement_processor_param_ptr);
         cache_server_placement_processor.start();
 
         pthread_exit(NULL);
         return NULL;
     }
 
-    CacheServerPlacementProcessor::CacheServerPlacementProcessor(CacheServerPlacementProcessorParam* cache_serer_placement_processor_param_ptr) : cache_server_placement_processor_param_ptr_(cache_serer_placement_processor_param_ptr)
+    CacheServerPlacementProcessor::CacheServerPlacementProcessor(CacheServerPlacementProcessorParam* cache_server_placement_processor_param_ptr) : cache_server_placement_processor_param_ptr_(cache_server_placement_processor_param_ptr)
     {
-        assert(cache_serer_placement_processor_param_ptr != NULL);
-        const uint32_t edge_idx = cache_serer_placement_processor_param_ptr->getCacheServerPtr()->getEdgeWrapperPtr()->getNodeIdx();
-        const uint32_t edgecnt = cache_serer_placement_processor_param_ptr->getCacheServerPtr()->getEdgeWrapperPtr()->getNodeCnt();
+        assert(cache_server_placement_processor_param_ptr != NULL);
+        const uint32_t edge_idx = cache_server_placement_processor_param_ptr->getCacheServerPtr()->getEdgeWrapperPtr()->getNodeIdx();
+        const uint32_t edgecnt = cache_server_placement_processor_param_ptr->getCacheServerPtr()->getEdgeWrapperPtr()->getNodeCnt();
 
         // Differentiate cache servers of different edge nodes
         std::ostringstream oss;

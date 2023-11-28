@@ -95,6 +95,7 @@ namespace covered
         kCoveredFinishBlockRequest,
         kCoveredFinishBlockResponse,
         kCoveredFastDirectoryLookupResponse,
+        kCoveredMetadataUpdateRequest,
     };
 
     enum Hitflag
