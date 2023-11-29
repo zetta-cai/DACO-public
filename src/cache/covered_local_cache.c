@@ -499,7 +499,7 @@ namespace covered
 
     // (4) Other functions
 
-    void CoveredLocalCache::updateLocalCacheMetadataInternal_(const Key& key, const std::string& func_name, void* func_param_ptr) override
+    void CoveredLocalCache::updateLocalCacheMetadataInternal_(const Key& key, const std::string& func_name, void* func_param_ptr)
     {
         assert(func_param_ptr != NULL);
 
