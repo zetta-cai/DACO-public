@@ -2,6 +2,7 @@
 
 #include <assert.h>
 
+#include "cache/covered_local_cache.h"
 #include "common/config.h"
 #include "message/control_message.h"
 
@@ -39,7 +40,7 @@ namespace covered
     void CacheServerMetadataUpdateProcessor::start()
     {
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_metadata_upadte_processor_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_metadata_update_processor_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
         bool is_finish = false; // Mark if edge node is finished
         while (tmp_edge_wrapper_ptr->isNodeRunning()) // edge_running_ is set as true by default

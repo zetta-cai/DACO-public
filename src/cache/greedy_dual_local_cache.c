@@ -178,7 +178,7 @@ namespace covered
 
     // (4) Other functions
 
-    void GreedyDualLocalCache::updateLocalCacheMetadataInternal_(const Key& key, const std::string& func_name, void* func_param_ptr)
+    void GreedyDualLocalCache::updateLocalCacheMetadataInternal_(const Key& key, const std::string& func_name, const void* func_param_ptr)
     {
         Util::dumpErrorMsg(instance_name_, "updateLocalCacheMetadataInternal_() is ONLY for COVERED!");
         exit(1);

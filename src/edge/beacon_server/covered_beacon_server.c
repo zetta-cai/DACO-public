@@ -234,7 +234,7 @@ namespace covered
             bool is_global_cached = edge_wrapper_ptr_->getCooperationWrapperPtr()->updateDirectoryTable(tmp_key, source_edge_idx, is_admit, directory_info, is_being_written, is_neighbor_cached, metadata_update_requirement);
 
             // Issue local/remote metadata update request for beacon-based cached metadata update if necessary (for remote directory admission/eviction)
-            processMetadataUpdateRequirement(tmp_key, metadata_update_requirement, skip_propagation_latency);
+            edge_wrapper_ptr_->processMetadataUpdateRequirement(tmp_key, metadata_update_requirement, skip_propagation_latency);
 
             // Update directory info in victim tracker if the local beaconed key is a local/neighbor synced victim
             covered_cache_manager_ptr->updateVictimTrackerForLocalBeaconedVictimDirinfo(tmp_key, is_admit, directory_info);

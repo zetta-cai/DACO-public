@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <sstream>
 
+#include "cache/covered_local_cache.h"
 #include "common/config.h"
 #include "common/thread_launcher.h"
 #include "common/util.h"
@@ -1245,7 +1246,7 @@ namespace covered
     }
 
     // (7.3) For beacon-based cached metadata update (non-blocking notification-based)
-    void EdgeWrapper::processMetadataUpdateRequirement(const Key& key, const MetadataUpdateRequirement& metadata_update_requirement, const bool& skip_propagation_latency)
+    void EdgeWrapper::processMetadataUpdateRequirement(const Key& key, const MetadataUpdateRequirement& metadata_update_requirement, const bool& skip_propagation_latency) const
     {
         checkPointers_();
         assert(cache_name_ == Util::COVERED_CACHE_NAME);

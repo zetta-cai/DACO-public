@@ -128,7 +128,7 @@ namespace covered
         void nonblockNotifyForPlacement(const Key& key, const Value& value, const Edgeset& best_placement_edgeset, const bool& skip_propagation_latency) const; // Notify all edges in best_placement_edgeset to admit key-value pair into their local edge cache
 
         // (7.3) For beacon-based cached metadata update (non-blocking notification-based)
-        void processMetadataUpdateRequirement(const Key& key, const MetadataUpdateRequirement& metadata_update_requirement, const bool& skip_propagation_latency);
+        void processMetadataUpdateRequirement(const Key& key, const MetadataUpdateRequirement& metadata_update_requirement, const bool& skip_propagation_latency) const;
     private:
         static const std::string kClassName;
 

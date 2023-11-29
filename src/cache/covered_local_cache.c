@@ -274,7 +274,8 @@ namespace covered
                 {
                     // Initialize and update local uncached metadata for getrsp/put/delreq with cache miss (both value-unrelated and value-related)
                     // NOTE: if the latest local uncached popularity of the newly-tracked key is NOT detracked in addForNewKey() under local uncached metadata capacity limitation, local/remote release writelock (for put/delreq) or local/remote directory lookup for the next getreq (for getrsp) will get the latest local uncached popularity for popularity aggregation to trigger placement calculation
-                    local_uncached_metadata_.addForNewKey(key, value, peredge_synced_victimcnt_, is_global_cached); // NOTE: peredge_synced_victimcnt_ will NOT be used for local uncached metadata
+                    const bool is_neighbor_cached = false; // NOTE: NEVER used by local uncached metadata
+                    local_uncached_metadata_.addForNewKey(key, value, peredge_synced_victimcnt_, is_global_cached, is_neighbor_cached); // NOTE: peredge_synced_victimcnt_ will NOT be used for local uncached metadata
                 }
                 else // Key is tracked by local uncached metadata
                 {
@@ -499,16 +500,16 @@ namespace covered
 
     // (4) Other functions
 
-    void CoveredLocalCache::updateLocalCacheMetadataInternal_(const Key& key, const std::string& func_name, void* func_param_ptr)
+    void CoveredLocalCache::updateLocalCacheMetadataInternal_(const Key& key, const std::string& func_name, const void* func_param_ptr)
     {
         assert(func_param_ptr != NULL);
 
         if (func_name == UPDATE_IS_NEIGHBOR_CACHED_FLAG_FUNC_NAME)
         {
-            const bool is_exist = local_cached_metadata_.isExist(key);
+            const bool is_exist = local_cached_metadata_.isKeyExist(key);
             if (is_exist) // Enable/disable is_neighbor_cached for local cached metadata if key exists
             {
-                const bool is_neighbor_cached = *((bool*)func_param_ptr);
+                const bool is_neighbor_cached = *((const bool*)func_param_ptr);
                 local_cached_metadata_.updateIsNeighborCachedForExistingKey(key, is_neighbor_cached);
             }
         }

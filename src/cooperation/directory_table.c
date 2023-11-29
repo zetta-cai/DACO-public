@@ -111,14 +111,13 @@ namespace covered
     {
         bool is_global_cached = false; // Whether the key is cached by a local/neighbor edge node (even if invalid temporarily)
 
-        bool is_from_single_to_multiple = false;
-        bool is_from_multiple_to_single = false;
-        uint32_t notify_edge_idx = 0;
         if (is_admit) // Add a new directory info
         {
             // Prepare directory entry for the key
             DirectoryEntry directory_entry;
-            bool tmp_is_directory_already_exist = directory_entry.addDirinfo(directory_info, directory_metadata);
+            MetadataUpdateRequirement unused_metadata_update_requirement; // Empty-to-single
+            bool tmp_is_directory_already_exist = directory_entry.addDirinfo(directory_info, directory_metadata, unused_metadata_update_requirement);
+            UNUSED(unused_metadata_update_requirement);
             assert(tmp_is_directory_already_exist == false);
 
             // Prepare AddDirinfoParam
@@ -201,8 +200,8 @@ namespace covered
         bool is_neighbor_cached = false;
 
         DirinfoSet all_dirinfo = getAll(key);
-        std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& dirinfo_unordered_set;
-        bool with_complete_dirinfo_set = getDirinfoSetIfComplete(dirinfo_unordered_set);
+        std::unordered_set<DirectoryInfo, DirectoryInfoHasher> dirinfo_unordered_set;
+        bool with_complete_dirinfo_set = all_dirinfo.getDirinfoSetIfComplete(dirinfo_unordered_set);
         assert(with_complete_dirinfo_set); // dirinfo set from directory entry MUST be complete
 
         // Check if any neighbor edge node (NOT the current node with the given edge_idx) caches the object

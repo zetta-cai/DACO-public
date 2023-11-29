@@ -18,7 +18,7 @@ namespace covered
     }
 
     // For beacon-based metadata update
-    void LocalCachedMetadata::updateIsNeighborcachedForExistingKey(const Key& key, const bool& is_neighbor_cached)
+    void LocalCachedMetadata::updateIsNeighborCachedForExistingKey(const Key& key, const bool& is_neighbor_cached)
     {
         perkey_lookup_table_iter_t perkey_lookup_iter = getLookup_(key);
         HeteroKeyLevelMetadata& key_level_metadata_ref = perkey_lookup_iter->second.getPerkeyMetadataListIter()->second;

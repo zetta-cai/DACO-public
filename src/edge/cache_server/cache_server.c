@@ -776,7 +776,7 @@ namespace covered
             CoveredCacheManager* tmp_covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
 
             // Issue local/remote metadata update request for beacon-based cached metadata update if necessary (for local directory eviction)
-            processMetadataUpdateRequirement(key, metadata_update_requirement, skip_propagation_latency);
+            edge_wrapper_ptr_->processMetadataUpdateRequirement(key, metadata_update_requirement, skip_propagation_latency);
 
             // Update directory info in victim tracker if the local beaconed key is a local/neighbor synced victim
             tmp_covered_cache_manager_ptr->updateVictimTrackerForLocalBeaconedVictimDirinfo(key, is_admit, directory_info);
