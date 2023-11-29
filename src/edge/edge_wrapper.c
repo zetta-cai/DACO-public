@@ -983,7 +983,7 @@ namespace covered
 
     // (6.2) For local directory admission
 
-    void EdgeWrapper::admitLocalDirectory_(const Key& key, const DirectoryInfo& directory_info, bool& is_being_written, bool& is_neighbor_cached) const
+    void EdgeWrapper::admitLocalDirectory_(const Key& key, const DirectoryInfo& directory_info, bool& is_being_written, bool& is_neighbor_cached, const bool& skip_propagation_latency) const
     {
         // Foreground local directory admission is triggered by independent admission
         // Background local directory admission is triggered by local placement notification at local/remote beacon edge node)
@@ -992,11 +992,13 @@ namespace covered
 
         uint32_t current_edge_idx = getNodeIdx();
         const bool is_admit = true; // Admit content directory
-        cooperation_wrapper_ptr_->updateDirectoryTable(key, current_edge_idx, is_admit, directory_info, is_being_written, is_neighbor_cached);
+        MetadataUpdateRequirement metadata_update_requirement;
+        cooperation_wrapper_ptr_->updateDirectoryTable(key, current_edge_idx, is_admit, directory_info, is_being_written, is_neighbor_cached, metadata_update_requirement);
 
         if (cache_name_ == Util::COVERED_CACHE_NAME) // ONLY for COVERED
         {
-            // TODO: END HERE (admit local directory)
+            // Issue local/remote metadata update request for beacon-based cached metadata update if necessary (for local directory admission)
+            processMetadataUpdateRequirement(key, metadata_update_requirement, skip_propagation_latency);
 
             // Update directory info in victim tracker if the local beaconed key is a local/neighbor synced victim
             covered_cache_manager_ptr_->updateVictimTrackerForLocalBeaconedVictimDirinfo(key, is_admit, directory_info);
@@ -1190,6 +1192,7 @@ namespace covered
             const VictimSyncset victim_syncset = covered_cache_manager_ptr_->accessVictimTrackerForLocalVictimSyncset(tmp_edge_idx, getCacheMarginBytes());
             CoveredPlacementNotifyRequest* covered_placement_notify_request_ptr = new CoveredPlacementNotifyRequest(key, value, is_valid, victim_syncset, current_edge_idx, edge_beacon_server_recvreq_source_addr_for_placement_, skip_propagation_latency);
             assert(covered_placement_notify_request_ptr != NULL);
+
             // Push the global request into edge-to-edge propagation simulator to the remote edge node
             NetworkAddr remote_edge_cache_server_recvreq_dst_addr = getTargetDstaddr(DirectoryInfo(tmp_edge_idx)); // Send to cache server of the target edge node for cache server placement processor
             bool is_successful = edge_toedge_propagation_simulator_param_ptr_->push(covered_placement_notify_request_ptr, remote_edge_cache_server_recvreq_dst_addr);
@@ -1208,7 +1211,7 @@ namespace covered
             // NOTE: we cannot optimistically admit valid object into local edge cache first before admiting local dirinfo, as clients may get incorrect value if key is being written
             bool tmp_is_being_written = false;
             bool tmp_is_neighbor_cached = false; // NOTE: we directly use coooperation wrapper to get is_neighbor_cached, as target edge node for local placement notification MUST be beacon here
-            admitLocalDirectory_(key, DirectoryInfo(current_edge_idx), tmp_is_being_written, tmp_is_neighbor_cached); // Local directory update for local placement notification
+            admitLocalDirectory_(key, DirectoryInfo(current_edge_idx), tmp_is_being_written, tmp_is_neighbor_cached, skip_propagation_latency); // Local directory update for local placement notification
             if (tmp_is_being_written) // Double-check is_being_written to udpate is_valid if necessary
             {
                 // NOTE: ONLY update is_valid if tmp_is_being_written is true; if tmp_is_being_written is false (i.e., key is NOT being written now), we still keep original is_valid, as the value MUST be stale if is_being_written was true before
@@ -1239,5 +1242,55 @@ namespace covered
         //return is_finish;
 
         return;
-    } 
+    }
+
+    // (7.3) For beacon-based cached metadata update (non-blocking notification-based)
+    void EdgeWrapper::processMetadataUpdateRequirement(const Key& key, const MetadataUpdateRequirement& metadata_update_requirement, const bool& skip_propagation_latency)
+    {
+        checkPointers_();
+        assert(cache_name_ == Util::COVERED_CACHE_NAME);
+        assert(currentIsBeacon(key));
+
+        const bool is_from_single_to_multiple = metadata_update_requirement.isFromSingleToMultiple();
+        const bool is_from_multiple_to_single = metadata_update_requirement.isFromMultipleToSingle();
+        const uint32_t notify_edge_idx = metadata_update_requirement.getNotifyEdgeIdx();
+        assert(!(is_from_single_to_multiple && is_from_multiple_to_single)); // Cannot be both true
+
+        const bool need_update = is_from_single_to_multiple || is_from_multiple_to_single;
+        if (need_update)
+        {
+            bool is_neighbor_cached = false;
+            if (is_from_single_to_multiple)
+            {
+                is_neighbor_cached = true; // Enable is_neighbor_cached flag
+            }
+            else
+            {
+                is_neighbor_cached = false; // Disable is_neighbor_cached flag
+            }
+
+            const uint32_t current_edge_idx = getNodeIdx();
+            if (notify_edge_idx == current_edge_idx) // If beacon itself is the first/last cache copy
+            {
+                // Directly enable/disable is_neighbor_cached flag locally
+                edge_cache_ptr_->metadataUpdate(key, CoveredLocalCache::UPDATE_IS_NEIGHBOR_CACHED_FLAG_FUNC_NAME, &is_neighbor_cached);
+            }
+            else // The first/last cache copy is a neighbor edge node
+            {
+                // Prepare metadata update request
+                // NOTE: edge_beacon_server_recvreq_source_addr_for_placement_ will NOT be used by edge cache server metadata update processor due to no response
+                const VictimSyncset victim_syncset = covered_cache_manager_ptr_->accessVictimTrackerForLocalVictimSyncset(notify_edge_idx, getCacheMarginBytes());
+                MessageBase* covered_metadata_update_request_ptr = new CoveredMetadataUpdateRequest(key, is_neighbor_cached, victim_syncset, current_edge_idx, edge_beacon_server_recvreq_source_addr_for_placement_, skip_propagation_latency);
+                assert(covered_metadata_update_request_ptr != NULL);
+
+                // Push the control request into edge-to-edge propagation simulator to the remote edge node
+                NetworkAddr remote_edge_cache_server_recvreq_dst_addr = getTargetDstaddr(DirectoryInfo(notify_edge_idx)); // Send to cache server of the remote target edge node for cache server metadata update processor
+                bool is_successful = edge_toedge_propagation_simulator_param_ptr_->push(covered_metadata_update_request_ptr, remote_edge_cache_server_recvreq_dst_addr);
+                assert(is_successful);
+                covered_metadata_update_request_ptr = NULL; // NOTE: covered_metadata_update_request_ptr will be released by edge-to-edge propagation simulator
+            }
+        }
+
+        return;
+    }
 }

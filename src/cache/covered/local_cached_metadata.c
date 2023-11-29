@@ -24,11 +24,11 @@ namespace covered
         HeteroKeyLevelMetadata& key_level_metadata_ref = perkey_lookup_iter->second.getPerkeyMetadataListIter()->second;
         if (is_neighbor_cached)
         {
-            key_level_metadata_ref.enableNeighborCached();
+            key_level_metadata_ref.enableIsNeighborCached();
         }
         else
         {
-            key_level_metadata_ref.disableNeighborCached();
+            key_level_metadata_ref.disableIsNeighborCached();
         }
         return;
     }
@@ -96,9 +96,19 @@ namespace covered
         // Get local/redirected cached popularity
         const Popularity local_cached_popularity = perkey_metadata_list_iter->second.getLocalPopularity();
         const Popularity redirected_cached_popularity = perkey_metadata_list_iter->second.getRedirectedPopularity();
+        const bool is_neighbor_cached = perkey_metadata_list_iter->second.isNeighborCached();
 
         // Calculte local reward (i.e., max eviction cost, as the local edge node does NOT know cache hit status of all other edge nodes and conservatively treat it as the last copy)
-        Reward local_reward = static_cast<Reward>(Util::popularityMultiply(local_hit_weight, local_cached_popularity)) + static_cast<Reward>(Util::popularityMultiply(cooperative_hit_weight, redirected_cached_popularity)); // w1 * local_cached_popularity + w2 * redirected_cached_popularity
+        Reward local_reward = 0.0;
+        if (!is_neighbor_cached)
+        {
+            local_reward = static_cast<Reward>(Util::popularityMultiply(local_hit_weight, local_cached_popularity)) + static_cast<Reward>(Util::popularityMultiply(cooperative_hit_weight, redirected_cached_popularity)); // w1 * local_cached_popularity + w2 * redirected_cached_popularity
+        }
+        else
+        {
+            const Weight w1_minus_w2 = Util::popularityNonegMinus(local_hit_weight, cooperative_hit_weight);
+            local_reward = static_cast<Reward>(Util::popularityMultiply(w1_minus_w2, local_cached_popularity)); // (w1 - w2) * local_cached_popularity
+        }
 
         return local_reward;
     }

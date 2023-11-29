@@ -109,8 +109,8 @@ namespace covered
         // (6.1) For local edge cache access
         bool getLocalEdgeCache_(const Key& key, const bool& is_redirected, Value& value) const; // Return is local cached and valid
 
-        // (6.2) For local directory admission (invoked by cache server worker for independent admission or local placement notification if sender is beacon; or by beacon server for local placement notification if sender is not beacon)
-        void admitLocalDirectory_(const Key& key, const DirectoryInfo& directory_info, bool& is_being_written, bool& is_neighbor_cached) const; // Admit directory info in current edge node (is_neighbor_cached indicates if key is cached by any other edge node except the current edge node after admiting local dirinfo)
+        // (6.2) For local directory admission
+        void admitLocalDirectory_(const Key& key, const DirectoryInfo& directory_info, bool& is_being_written, bool& is_neighbor_cached, const bool& skip_propagation_latency) const; // Admit directory info in current edge node (is_neighbor_cached indicates if key is cached by any other edge node except the current edge node after admiting local dirinfo; invoked by cache server worker or beacon server for local placement notification if sender is or not beacon)
 
         // (7) covered-specific utility functions (invoked by edge cache server or edge beacon server of closest/beacon edge node)
 
@@ -126,6 +126,9 @@ namespace covered
         void nonblockDataFetchFromCloudForPlacement(const Key& key, const Edgeset& best_placement_edgeset, const bool& skip_propagation_latency) const; // Fetch data from cloud without hybrid data fetching (a corner case) (ONLY invoked by edge beacon server instead of cache server of the beacon edge node)
         //bool nonblockNotifyForPlacement(const Key& key, const Value& value, const Edgeset& best_placement_edgeset, const NetworkAddr& source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, const bool& skip_propagation_latency) const; // (OBSELETE for non-blocking placement deployment) Notify all edges in best_placement_edgeset to admit key-value pair into their local edge cache; return if edge is finished
         void nonblockNotifyForPlacement(const Key& key, const Value& value, const Edgeset& best_placement_edgeset, const bool& skip_propagation_latency) const; // Notify all edges in best_placement_edgeset to admit key-value pair into their local edge cache
+
+        // (7.3) For beacon-based cached metadata update (non-blocking notification-based)
+        void processMetadataUpdateRequirement(const Key& key, const MetadataUpdateRequirement& metadata_update_requirement, const bool& skip_propagation_latency);
     private:
         static const std::string kClassName;
 

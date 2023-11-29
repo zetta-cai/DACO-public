@@ -767,15 +767,16 @@ namespace covered
         uint32_t current_edge_idx = edge_wrapper_ptr_->getNodeIdx();
         const bool is_admit = false; // Evict a victim as local uncached object
         bool unused_is_neighbor_cached = false; // NOTE: ONLY need is_neighbor_cached for directory admission to initizalize cached metadata, yet NO need for directory eviction
-        bool is_global_cached = tmp_cooperation_wrapper_ptr->updateDirectoryTable(key, current_edge_idx, is_admit, directory_info, is_being_written, unused_is_neighbor_cached);
+        MetadataUpdateRequirement metadata_update_requirement;
+        bool is_global_cached = tmp_cooperation_wrapper_ptr->updateDirectoryTable(key, current_edge_idx, is_admit, directory_info, is_being_written, unused_is_neighbor_cached, metadata_update_requirement);
         UNUSED(unused_is_neighbor_cached);
-        UNUSED(skip_propagation_latency);
 
         if (edge_wrapper_ptr_->getCacheName() == Util::COVERED_CACHE_NAME) // ONLY for COVERED
         {
             CoveredCacheManager* tmp_covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
 
-            // TODO: END HERE (evict local directory)
+            // Issue local/remote metadata update request for beacon-based cached metadata update if necessary (for local directory eviction)
+            processMetadataUpdateRequirement(key, metadata_update_requirement, skip_propagation_latency);
 
             // Update directory info in victim tracker if the local beaconed key is a local/neighbor synced victim
             tmp_covered_cache_manager_ptr->updateVictimTrackerForLocalBeaconedVictimDirinfo(key, is_admit, directory_info);

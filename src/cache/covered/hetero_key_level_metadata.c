@@ -57,19 +57,30 @@ namespace covered
         return redirected_popularity_;
     }
 
-    #ifdef ENABLE_BEACON_BASED_CACHED_METADATA_UPDATE
     void HeteroKeyLevelMetadata::enableIsNeighborCached()
     {
+        #ifdef ENABLE_BEACON_BASED_CACHED_METADATA_UPDATE
         is_neighbor_cached_ = true;
+        #endif
         return;
     }
 
     void HeteroKeyLevelMetadata::disableIsNeighborCached()
     {
+        #ifdef ENABLE_BEACON_BASED_CACHED_METADATA_UPDATE
         is_neighbor_cached_ = false;
+        #endif
         return;
     }
-    #endif
+
+    bool HeteroKeyLevelMetadata::isNeighborCached() const
+    {
+        bool is_neighbor_cached = false;
+        #ifdef ENABLE_BEACON_BASED_CACHED_METADATA_UPDATE
+        is_neighbor_cached = is_neighbor_cached_;
+        #endif
+        return is_neighbor_cached;
+    }
 
     uint64_t HeteroKeyLevelMetadata::getSizeForCapacity()
     {

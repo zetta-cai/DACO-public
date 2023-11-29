@@ -1568,7 +1568,7 @@ namespace covered
         bool unused_is_neighbor_cached = false; // NOTE: NEVER used by baselines
         if (current_is_beacon) // Update target edge index of local directory information
         {
-            tmp_edge_wrapper_ptr->admitLocalDirectory_(key, directory_info, is_being_written, unused_is_neighbor_cached);
+            tmp_edge_wrapper_ptr->admitLocalDirectory_(key, directory_info, is_being_written, unused_is_neighbor_cached, skip_propagation_latency);
         }
         else // Update remote directory information at the beacon node
         {
