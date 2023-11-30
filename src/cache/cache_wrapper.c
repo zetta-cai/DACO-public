@@ -411,7 +411,7 @@ namespace covered
 
     // (4) Other functions
 
-    void CacheWrapper::metadataUpdate(const Key& key, const std::string& func_name, void* func_param_ptr)
+    void CacheWrapper::metadataUpdate(const Key& key, const std::string& func_name, const void* func_param_ptr)
     {
         checkPointers_();
 

@@ -9,7 +9,7 @@
 
 #include <string>
 
-#include "edge/cache_server/cache_server_placement_processor_param.h"
+#include "edge/cache_server/cache_server_processor_param.h"
 
 namespace covered
 {
@@ -18,7 +18,7 @@ namespace covered
     public:
         static void* launchCacheServerPlacementProcessor(void* cache_server_placement_processor_param_ptr);
     
-        CacheServerPlacementProcessor(CacheServerPlacementProcessorParam* cache_server_placement_processor_param_ptr);
+        CacheServerPlacementProcessor(CacheServerProcessorParam* cache_server_placement_processor_param_ptr);
         virtual ~CacheServerPlacementProcessor();
 
         void start();
@@ -35,7 +35,7 @@ namespace covered
 
         // Const variable
         std::string instance_name_;
-        const CacheServerPlacementProcessorParam* cache_server_placement_processor_param_ptr_;
+        const CacheServerProcessorParam* cache_server_placement_processor_param_ptr_;
 
         // NOTE: destination addresses for sending control requests come from beacon edge index
 

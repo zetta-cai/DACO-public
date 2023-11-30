@@ -13,14 +13,14 @@ namespace covered
     {
         assert(cache_server_placement_processor_param_ptr != NULL);
 
-        CacheServerPlacementProcessor cache_server_placement_processor((CacheServerPlacementProcessorParam*)cache_server_placement_processor_param_ptr);
+        CacheServerPlacementProcessor cache_server_placement_processor((CacheServerProcessorParam*)cache_server_placement_processor_param_ptr);
         cache_server_placement_processor.start();
 
         pthread_exit(NULL);
         return NULL;
     }
 
-    CacheServerPlacementProcessor::CacheServerPlacementProcessor(CacheServerPlacementProcessorParam* cache_server_placement_processor_param_ptr) : cache_server_placement_processor_param_ptr_(cache_server_placement_processor_param_ptr)
+    CacheServerPlacementProcessor::CacheServerPlacementProcessor(CacheServerProcessorParam* cache_server_placement_processor_param_ptr) : cache_server_placement_processor_param_ptr_(cache_server_placement_processor_param_ptr)
     {
         assert(cache_server_placement_processor_param_ptr != NULL);
         const uint32_t edge_idx = cache_server_placement_processor_param_ptr->getCacheServerPtr()->getEdgeWrapperPtr()->getNodeIdx();
@@ -65,7 +65,7 @@ namespace covered
         {
             // Try to get the placement notification request from ring buffer partitioned by cache server
             CacheServerItem tmp_cache_server_item;
-            bool is_successful_for_notify_placement = cache_server_placement_processor_param_ptr_->getNotifyPlacementRequestBufferPtr()->pop(tmp_cache_server_item);
+            bool is_successful_for_notify_placement = cache_server_placement_processor_param_ptr_->getCacheServerItemBufferPtr()->pop(tmp_cache_server_item);
             if (is_successful_for_notify_placement) // Receive an item for placement notification successfully
             {
                 MessageBase* data_request_ptr = tmp_cache_server_item.getRequestPtr();

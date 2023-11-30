@@ -6,6 +6,7 @@
 #include "common/config.h"
 #include "common/thread_launcher.h"
 #include "common/util.h"
+#include "edge/cache_server/cache_server_metadata_update_processor.h"
 #include "edge/cache_server/cache_server_placement_processor.h"
 #include "edge/cache_server/cache_server_redirection_processor.h"
 #include "edge/cache_server/cache_server_victim_fetch_processor.h"
@@ -40,17 +41,20 @@ namespace covered
             CacheServerWorkerParam tmp_cache_server_worker_param(this, local_cache_server_worker_idx, Config::getEdgeCacheServerDataRequestBufferSize());
             cache_server_worker_params_[local_cache_server_worker_idx] = tmp_cache_server_worker_param;
         }
+        
+        // Prepare parameters for cache server metadata update processor thread
+        cache_server_metadata_update_processor_param_ptr_ = new CacheServerProcessorParam(this, Config::getEdgeCacheServerDataRequestBufferSize());
 
         // Prepare parameters for cache server victim fetch processor thread
-        cache_server_victim_fetch_processor_param_ptr_ = new CacheServerVictimFetchProcessorParam(this, Config::getEdgeCacheServerDataRequestBufferSize());
+        cache_server_victim_fetch_processor_param_ptr_ = new CacheServerProcessorParam(this, Config::getEdgeCacheServerDataRequestBufferSize());
         assert(cache_server_victim_fetch_processor_param_ptr_ != NULL);
 
         // Prepare parameters for cache server redirection processor thread
-        cache_server_redirection_processor_param_ptr_ = new CacheServerRedirectionProcessorParam(this, Config::getEdgeCacheServerDataRequestBufferSize());
+        cache_server_redirection_processor_param_ptr_ = new CacheServerProcessorParam(this, Config::getEdgeCacheServerDataRequestBufferSize());
         assert(cache_server_redirection_processor_param_ptr_ != NULL);
 
         // Prepare parameters for cache server placement processor thread
-        cache_server_placement_processor_param_ptr_ = new CacheServerPlacementProcessorParam(this, Config::getEdgeCacheServerDataRequestBufferSize());
+        cache_server_placement_processor_param_ptr_ = new CacheServerProcessorParam(this, Config::getEdgeCacheServerDataRequestBufferSize());
         assert(cache_server_placement_processor_param_ptr_ != NULL);
 
         // For receiving local requests
@@ -81,6 +85,11 @@ namespace covered
         assert(hash_wrapper_ptr_ != NULL);
         delete hash_wrapper_ptr_;
         hash_wrapper_ptr_ = NULL;
+
+        // Release cache server metadata update processor param
+        assert(cache_server_metadata_update_processor_param_ptr_ != NULL);
+        delete cache_server_metadata_update_processor_param_ptr_;
+        cache_server_metadata_update_processor_param_ptr_ = NULL;
 
         // Release cache server victim fetch processor param
         assert(cache_server_victim_fetch_processor_param_ptr_ != NULL);
@@ -119,6 +128,7 @@ namespace covered
         pthread_t cache_server_victim_fetch_processor_thread;
         pthread_t cache_server_redirection_processor_thread;
         pthread_t cache_server_placement_processor_thread;
+        pthread_t cache_server_metadata_update_processor_thread;
 
         // Launch cache server workers
         for (uint32_t local_cache_server_worker_idx = 0; local_cache_server_worker_idx < percacheserver_workercnt; local_cache_server_worker_idx++)
@@ -171,6 +181,18 @@ namespace covered
         tmp_thread_name = "edge-cache-server-placement-processor-" + std::to_string(edge_idx);
         ThreadLauncher::pthreadCreateHighPriority(tmp_thread_name, &cache_server_placement_processor_thread, CacheServerPlacementProcessor::launchCacheServerPlacementProcessor, (void*)(cache_server_placement_processor_param_ptr_));
 
+        // Launch cache server metadata update processor
+        //pthread_returncode = pthread_create(&cache_server_metadata_update_processor_thread, NULL, CacheServerMetadataUpdateProcessor::launchCacheServerMetadataUpdateProcessor, (void*)(cache_server_metadata_update_processor_param_ptr_));
+        // if (pthread_returncode != 0)
+        // {
+        //     std::ostringstream oss;
+        //     oss << "edge " << edge_idx << " failed to launch cache server metadata update processor (error code: " << pthread_returncode << ")" << std::endl;
+        //     covered::Util::dumpErrorMsg(instance_name_, oss.str());
+        //     exit(1);
+        // }
+        tmp_thread_name = "edge-cache-server-metadata-update-processor-" + std::to_string(edge_idx);
+        ThreadLauncher::pthreadCreateLowPriority(tmp_thread_name, &cache_server_metadata_update_processor_thread, CacheServerMetadataUpdateProcessor::launchCacheServerMetadataUpdateProcessor, (void*)(cache_server_metadata_update_processor_param_ptr_));
+
         // Receive data requests and partition to different cache server workers
         receiveRequestsAndPartition_();
 
@@ -217,6 +239,16 @@ namespace covered
             exit(1);
         }
 
+        // Wait for cache server metadata update processor
+        pthread_returncode = pthread_join(cache_server_metadata_update_processor_thread, NULL); // void* retval = NULL
+        if (pthread_returncode != 0)
+        {
+            std::ostringstream oss;
+            oss << "edge " << edge_idx << " failed to join cache server metadata update processor (error code: " << pthread_returncode << ")" << std::endl;
+            covered::Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
+
         return;
     }
 
@@ -250,7 +282,7 @@ namespace covered
                 assert(data_request_ptr != NULL);
 
                 const MessageType message_type = data_request_ptr->getMessageType();
-                if (data_request_ptr->isDataRequest() || message_type == MessageType::kCoveredVictimFetchRequest || message_type == MessageType::kCoveredPlacementNotifyRequest) // Local data requests for cache server workers; redirected data requests for cache server redirection processor; lazy victim fetching for cache server victim fetch processor; placement notification for cache server placement processor
+                if (data_request_ptr->isDataRequest() || message_type == MessageType::kCoveredVictimFetchRequest || message_type == MessageType::kCoveredPlacementNotifyRequest || message_type == MessageType::kCoveredMetadataUpdateRequest) // Local data requests for cache server workers; redirected data requests for cache server redirection processor; lazy victim fetching for cache server victim fetch processor; placement notification for cache server placement processor; metadata update requests for cache server metadata update processor
                 {
                     // Pass received request and network address to corresponding cache server worker/processor by ring buffer
                     // NOTE: received request will be released by the corresponding cache server worker/processor
@@ -292,21 +324,28 @@ namespace covered
         {
             // Pass cache server item into ring buffer of the cache server redirection processor
             CacheServerItem tmp_cache_server_item(data_requeset_ptr);
-            bool is_successful = cache_server_redirection_processor_param_ptr_->getDataRequestBufferPtr()->push(tmp_cache_server_item);
+            bool is_successful = cache_server_redirection_processor_param_ptr_->getCacheServerItemBufferPtr()->push(tmp_cache_server_item);
             assert(is_successful == true); // Ring buffer must NOT be full
         }
         else if (data_requeset_ptr->getMessageType() == MessageType::kCoveredVictimFetchRequest) // Lazy victim fetching
         {
             // Pass cache server item into ring buffer of the cache server victim fetch processor
             CacheServerItem tmp_cache_server_item(data_requeset_ptr);
-            bool is_successful = cache_server_victim_fetch_processor_param_ptr_->getControlRequestBufferPtr()->push(tmp_cache_server_item);
+            bool is_successful = cache_server_victim_fetch_processor_param_ptr_->getCacheServerItemBufferPtr()->push(tmp_cache_server_item);
             assert(is_successful == true); // Ring buffer must NOT be full
         }
         else if (data_requeset_ptr->getMessageType() == MessageType::kCoveredPlacementNotifyRequest) // Placement notification
         {
             // Pass cache server item into ring buffer of the cache server placement processor
             CacheServerItem tmp_cache_server_item(data_requeset_ptr);
-            bool is_successful = cache_server_placement_processor_param_ptr_->getNotifyPlacementRequestBufferPtr()->push(tmp_cache_server_item);
+            bool is_successful = cache_server_placement_processor_param_ptr_->getCacheServerItemBufferPtr()->push(tmp_cache_server_item);
+            assert(is_successful == true); // Ring buffer must NOT be full
+        }
+        else if (data_requeset_ptr->getMessageType() == MessageType::kCoveredMetadataUpdateRequest) // Beacon-based cached metadata update
+        {
+            // Pass cache server item into ring buffer of the cache server metadata update processor
+            CacheServerItem tmp_cache_server_item(data_requeset_ptr);
+            bool is_successful = cache_server_metadata_update_processor_param_ptr_->getCacheServerItemBufferPtr()->push(tmp_cache_server_item);
             assert(is_successful == true); // Ring buffer must NOT be full
         }
         else

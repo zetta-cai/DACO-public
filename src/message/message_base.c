@@ -318,7 +318,7 @@ namespace covered
                 message_type_str = "kCoveredFastDirectoryLookupResponse";
                 break;
             }
-            case MssageType::kCoveredMetadataUpdateRequest:
+            case MessageType::kCoveredMetadataUpdateRequest:
             {
                 message_type_str = "kCoveredMetadataUpdateRequest";
                 break;

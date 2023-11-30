@@ -13,14 +13,14 @@ namespace covered
     {
         assert(cache_server_victim_fetch_processor_param_ptr != NULL);
 
-        CacheServerVictimFetchProcessor cache_server_victim_fetch_processor((CacheServerVictimFetchProcessorParam*)cache_server_victim_fetch_processor_param_ptr);
+        CacheServerVictimFetchProcessor cache_server_victim_fetch_processor((CacheServerProcessorParam*)cache_server_victim_fetch_processor_param_ptr);
         cache_server_victim_fetch_processor.start();
 
         pthread_exit(NULL);
         return NULL;
     }
 
-    CacheServerVictimFetchProcessor::CacheServerVictimFetchProcessor(CacheServerVictimFetchProcessorParam* cache_server_victim_fetch_processor_param_ptr) : cache_server_victim_fetch_processor_param_ptr_(cache_server_victim_fetch_processor_param_ptr)
+    CacheServerVictimFetchProcessor::CacheServerVictimFetchProcessor(CacheServerProcessorParam* cache_server_victim_fetch_processor_param_ptr) : cache_server_victim_fetch_processor_param_ptr_(cache_server_victim_fetch_processor_param_ptr)
     {
         assert(cache_server_victim_fetch_processor_param_ptr != NULL);
         const uint32_t edge_idx = cache_server_victim_fetch_processor_param_ptr->getCacheServerPtr()->getEdgeWrapperPtr()->getNodeIdx();
@@ -66,7 +66,7 @@ namespace covered
         {
             // Try to get the data management request from ring buffer partitioned by cache server
             CacheServerItem tmp_cache_server_item;
-            bool is_successful = cache_server_victim_fetch_processor_param_ptr_->getControlRequestBufferPtr()->pop(tmp_cache_server_item);
+            bool is_successful = cache_server_victim_fetch_processor_param_ptr_->getCacheServerItemBufferPtr()->pop(tmp_cache_server_item);
             if (!is_successful)
             {
                 continue; // Retry to receive an item if edge is still running

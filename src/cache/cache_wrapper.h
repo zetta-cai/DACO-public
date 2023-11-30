@@ -72,7 +72,7 @@ namespace covered
 
         // (4) Other functions
 
-        void metadataUpdate(const Key& key, const std::string& func_name, void* func_param_ptr); // Update local metadata (e.g., is_neighbor_cached) for local edge cache
+        void metadataUpdate(const Key& key, const std::string& func_name, const void* func_param_ptr); // Update local metadata (e.g., is_neighbor_cached) for local edge cache
         
         // In units of bytes
         uint64_t getSizeForCapacity() const; // sum of internal size (each individual local cache) and external size (metadata for edge caching)

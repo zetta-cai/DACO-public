@@ -231,7 +231,7 @@ namespace covered
 
     // (4) Other functions
 
-    void LocalCacheBase::updateLocalCacheMetadata(const Key& key, const std::string& func_name, void* func_param_ptr)
+    void LocalCacheBase::updateLocalCacheMetadata(const Key& key, const std::string& func_name, const void* func_param_ptr)
     {
         checkPointers_();
 
