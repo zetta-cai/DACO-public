@@ -177,7 +177,7 @@ namespace covered
             size += tmp_serialize_size;
         }
         // (3) stable_total_aggregated_statistics_
-        DynamicArray tmp_dynamic_array(ClientAggregatedStatistics::getAggregatedStatisticsIOSize());
+        DynamicArray tmp_dynamic_array(TotalAggregatedStatistics::getAggregatedStatisticsIOSize());
         uint32_t tmp_serialize_size = stable_total_aggregated_statistics_.serialize(tmp_dynamic_array, 0);
         tmp_dynamic_array.writeBinaryFile(0, fs_ptr, tmp_serialize_size);
         size += tmp_serialize_size;
@@ -279,14 +279,14 @@ namespace covered
         perslot_total_aggregated_statistics_.resize(slotcnt);
         for (uint32_t i = 0; i < slotcnt; i++)
         {
-            DynamicArray tmp_dynamic_array(ClientAggregatedStatistics::getAggregatedStatisticsIOSize());
-            tmp_dynamic_array.readBinaryFile(0, fs_ptr, ClientAggregatedStatistics::getAggregatedStatisticsIOSize());
+            DynamicArray tmp_dynamic_array(TotalAggregatedStatistics::getAggregatedStatisticsIOSize());
+            tmp_dynamic_array.readBinaryFile(0, fs_ptr, TotalAggregatedStatistics::getAggregatedStatisticsIOSize());
             uint32_t tmp_deserialize_size = perslot_total_aggregated_statistics_[i].deserialize(tmp_dynamic_array, 0);
             size += tmp_deserialize_size;
         }
         // (3) stable_total_aggregated_statistics_
-        DynamicArray tmp_dynamic_array(ClientAggregatedStatistics::getAggregatedStatisticsIOSize());
-        tmp_dynamic_array.readBinaryFile(0, fs_ptr, ClientAggregatedStatistics::getAggregatedStatisticsIOSize());
+        DynamicArray tmp_dynamic_array(TotalAggregatedStatistics::getAggregatedStatisticsIOSize());
+        tmp_dynamic_array.readBinaryFile(0, fs_ptr, TotalAggregatedStatistics::getAggregatedStatisticsIOSize());
         uint32_t tmp_deserialize_size = stable_total_aggregated_statistics_.deserialize(tmp_dynamic_array, 0);
         size += tmp_deserialize_size;
 
