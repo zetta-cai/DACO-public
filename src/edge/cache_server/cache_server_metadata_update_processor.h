@@ -11,7 +11,7 @@
 
 #include <string>
 
-#include "edge/cache_server/cache_server_metadata_update_processor_param.h"
+#include "edge/cache_server/cache_server_processor_param.h"
 
 namespace covered
 {
@@ -20,7 +20,7 @@ namespace covered
     public:
         static void* launchCacheServerMetadataUpdateProcessor(void* cache_server_metadata_update_processor_param_ptr);
     
-        CacheServerMetadataUpdateProcessor(CacheServerMetadataUpdateProcessorParam* cache_server_metadata_update_processor_param_ptr);
+        CacheServerMetadataUpdateProcessor(CacheServerProcessorParam* cache_server_metadata_update_processor_param_ptr);
         virtual ~CacheServerMetadataUpdateProcessor();
 
         void start();
@@ -36,7 +36,7 @@ namespace covered
 
         // Const variable
         std::string instance_name_;
-        const CacheServerMetadataUpdateProcessorParam* cache_server_metadata_update_processor_param_ptr_;
+        const CacheServerProcessorParam* cache_server_metadata_update_processor_param_ptr_;
     };
 }
 

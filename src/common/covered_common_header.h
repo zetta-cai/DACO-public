@@ -30,11 +30,11 @@
 // NOTE: to fix the issue that unnecessary duplicate cache copies (small admission benefits) admited during cache warmup (eviction cost = 0 due to not-full cache, or extremely small eviction cost due to one-hit-wonders) CANNOT be evicted after cache is filled up, as local edge node does NOT know if any neighbor also caches this object, which over-estimates the local reward of duplicately cached objects
 // (i) Used in src/edge/cache_server/covered_cache_server_worker.c (fast-path placement) and src/core/covered_cache_manager.c (controlreq/getrsp placement and extra victim fetching placement)
 // (OBSOLETE) Temporary duplication avoidance: enforce duplication avoidance when cache is not full, while allow duplicate cache copies when cache is full -> avoid unnecessary duplicate cache copies admited under eviction cost = 0 due to not-full cache, yet CANNOT fix it under extremely small eviction cost due to one-hit-wonders (when cache is not full, only allow to admit unique objects, most of which are one-hit-wonders)
-#define ENABLE_TEMPORARY_DUPLICATION_AVOIDANCE
+//#define ENABLE_TEMPORARY_DUPLICATION_AVOIDANCE
 // (ii) Used in src/cache/covered/hetero_key_level_metadata.*
 // Beacon-based cached metadata update: initialize is_neighbor_cached based on local/remote directory admission response before each local cache admission; enable/disable is_neighbor_cached at the first/last cached edge node when the cached object becomes non-single/single cache copy after directory admission/eviction
 // NOTE: extra communication overhead is limited, as beacon node ONLY piggybacks a flag for each newly-admited object ONCE at admission, and ONLY notify the first/last cache copy when the object becomes non-single/single edge cached
-//#define ENABLE_BEACON_BASED_CACHED_METADATA_UPDATE
+#define ENABLE_BEACON_BASED_CACHED_METADATA_UPDATE
 
 #include <cstdint> // uint32_t, uint64_t
 
