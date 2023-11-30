@@ -131,9 +131,6 @@ namespace covered
                 MessageBase* data_request_ptr = tmp_cache_server_item.getRequestPtr();
                 assert(data_request_ptr != NULL);
 
-                // TMPDEBUGTMPDEBUG
-                Util::dumpVariablesForDebug(base_instance_name_, 4, "received a data request for key", MessageBase::getKeyFromMessage(data_request_ptr).getKeystr().c_str(), "msg type:", MessageBase::messageTypeToString(data_request_ptr->getMessageType()).c_str());
-
                 if (data_request_ptr->isLocalDataRequest()) // Local data requests (note that redirected data requests will be processed by cache server redirection processor)
                 {
                     NetworkAddr recvrsp_dst_addr = data_request_ptr->getSourceAddr(); // client worker or cache server worker
@@ -218,9 +215,6 @@ namespace covered
         uint32_t client_edge_local_req_bandwidth_bytes = local_request_ptr->getMsgPayloadSize();
         total_bandwidth_usage.update(BandwidthUsage(client_edge_local_req_bandwidth_bytes, 0, 0));
 
-        // TMPDEBUGTMPDEBUG
-        Util::dumpVariablesForDebug(base_instance_name_, 2, "before getLocalEdgeCache_ for key", tmp_key.getKeystr().c_str());
-
         // Access local edge cache (current edge node is the closest edge node)
         struct timespec get_local_cache_start_timestamp = Util::getCurrentTimespec();
         const bool is_redirected = false;
@@ -241,9 +235,6 @@ namespace covered
             tmp_edge_wrapper_ptr->getEdgeCachePtr()->getCollectedPopularity(tmp_key, tmp_collected_popularity_before_fetch_value);
             is_tracked_before_fetch_value = tmp_collected_popularity_before_fetch_value.isTracked();
         }
-
-        // TMPDEBUGTMPDEBUG
-        Util::dumpVariablesForDebug(base_instance_name_, 4, "getLocalEdgeCache_ for key", tmp_key.getKeystr().c_str(), "is_local_cached_and_valid:", Util::toString(is_local_cached_and_valid).c_str());
 
         #ifdef DEBUG_CACHE_SERVER_WORKER
         Util::dumpVariablesForDebug(base_instance_name_, 5, "acesss local edge cache;", "is_local_cached_and_valid:", Util::toString(is_local_cached_and_valid).c_str(), "keystr:", tmp_key.getKeystr().c_str());
@@ -429,9 +420,6 @@ namespace covered
             is_valid_directory_exist = false;
             if (current_is_beacon) // Get target edge index from local directory information
             {
-                // TMPDEBUGTMPDEBUG
-                Util::dumpVariablesForDebug(base_instance_name_, 2, "lookupLocalDirectory_ for key", key.getKeystr().c_str());
-
                 // Frequent polling
                 is_finish = lookupLocalDirectory_(key, is_being_written, is_valid_directory_exist, directory_info, best_placement_edgeset, need_hybrid_fetching, total_bandwidth_usage, event_list, skip_propagation_latency);
                 if (is_finish)
@@ -445,9 +433,6 @@ namespace covered
             }
             else // Get target edge index from remote directory information at the beacon node
             {
-                // TMPDEBUGTMPDEBUG
-                Util::dumpVariablesForDebug(base_instance_name_, 2, "lookupBeaconDirectory_ for key", key.getKeystr().c_str());
-
                 bool need_lookup_beacon_directory = needLookupBeaconDirectory_(key, is_being_written, is_valid_directory_exist, directory_info);
                 if (need_lookup_beacon_directory)
                 {
@@ -487,9 +472,6 @@ namespace covered
             Util::dumpVariablesForDebug(base_instance_name_, 4, "is_valid_directory_exist:", Util::toString(is_valid_directory_exist).c_str(), "keystr:", key.getKeystr().c_str());
             #endif
 
-            // TMPDEBUGTMPDEBUG
-            Util::dumpVariablesForDebug(base_instance_name_, 4, "lookup dirinfo for key", key.getKeystr().c_str(), "is_valid_directory_exist:", Util::toString(is_valid_directory_exist).c_str());
-
             if (is_valid_directory_exist) // The object is cached by some target edge node
             {
                 struct timespec redirect_get_start_timestamp = Util::getCurrentTimespec();
@@ -503,9 +485,6 @@ namespace covered
                     Util::dumpWarnMsg(base_instance_name_, oss.str());
                     return is_finish; // NOTE: is_finish is still false, as edge is STILL running
                 }
-
-                // TMPDEBUGTMPDEBUG
-                Util::dumpVariablesForDebug(base_instance_name_, 4, "redirectGetToTarget_ for key", key.getKeystr().c_str(), "target edge node:", std::to_string(directory_info.getTargetEdgeIdx()).c_str());
 
                 // Get data from the target edge node if any and update is_cooperative_cached_and_valid
                 is_cooperative_cached = false;
@@ -607,9 +586,6 @@ namespace covered
                 // Receive the control response message successfully
                 MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
                 assert(control_response_ptr != NULL);
-
-                // TMPDEBUGTMPDEBUG
-                Util::dumpVariablesForDebug(base_instance_name_, 2, "processRspToLookupBeaconDirectory_ for key", key.getKeystr().c_str());
 
                 processRspToLookupBeaconDirectory_(control_response_ptr, is_being_written, is_valid_directory_exist, directory_info, best_placement_edgeset, need_hybrid_fetching, fast_path_hint);
 

@@ -103,9 +103,6 @@ namespace covered
                 MessageBase* control_request_ptr = MessageBase::getRequestFromMsgPayload(control_request_msg_payload);
                 assert(control_request_ptr != NULL);
 
-                // TMPDEBUGTMPDEBUG
-                Util::dumpVariablesForDebug(base_instance_name_, 4, "receive control response for key", MessageBase::getKeyFromMessage(control_request_ptr).getKeystr().c_str(), "message type:", MessageBase::messageTypeToString(control_request_ptr->getMessageType()).c_str());
-
                 NetworkAddr edge_cache_server_worker_recvrsp_dst_addr = control_request_ptr->getSourceAddr();
 
                 if (control_request_ptr->isControlRequest()) // Control requests (e.g., invalidation and cache admission/eviction requests)
@@ -242,17 +239,11 @@ namespace covered
         uint32_t lookup_local_directory_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(lookup_local_directory_end_timestamp, lookup_local_directory_start_timestamp));
         event_list.addEvent(Event::EDGE_BEACON_SERVER_LOOKUP_LOCAL_DIRECTORY_EVENT_NAME, lookup_local_directory_latency_us);
 
-        // TMPDEBUGTMPDEBUG
-        Util::dumpVariablesForDebug(base_instance_name_, 2, "before getRspToLookupLocalDirectory_ for key", MessageBase::getKeyFromMessage(control_request_ptr).getKeystr().c_str());
-
         // Prepare a directory lookup response
         embedBackgroundCounterIfNotEmpty_(total_bandwidth_usage, event_list); // Embed background events/bandwidth if any into control response message
         MessageBase* directory_lookup_response_ptr = getRspToLookupLocalDirectory_(control_request_ptr, is_being_written, is_valid_directory_exist, directory_info, best_placement_edgeset, need_hybrid_fetching, fast_path_hint, total_bandwidth_usage, event_list);
         assert(directory_lookup_response_ptr != NULL);
 
-        // TMPDEBUGTMPDEBUG
-        Util::dumpVariablesForDebug(base_instance_name_, 4, "issue dirlookup rsp for key", MessageBase::getKeyFromMessage(control_request_ptr).getKeystr().c_str(), "to edge node:", std::to_string(control_request_ptr->getSourceIndex()).c_str());
-        
         // Push the directory lookup response into edge-to-edge propagation simulator to cache server worker
         bool is_successful = edge_wrapper_ptr_->getEdgeToedgePropagationSimulatorParamPtr()->push(directory_lookup_response_ptr, edge_cache_server_worker_recvrsp_dst_addr);
         assert(is_successful);

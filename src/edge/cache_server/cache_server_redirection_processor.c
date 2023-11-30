@@ -78,9 +78,6 @@ namespace covered
 
                 if (data_request_ptr->isRedirectedDataRequest()) // Redirected data request
                 {
-                    // TMPDEBUGTMPDEBUG
-                    Util::dumpVariablesForDebug(instance_name_, 4, "receive redirected data request for key", MessageBase::getKeyFromMessage(data_request_ptr).getKeystr().c_str(), "source edge node:", std::to_string(data_request_ptr->getSourceIndex()).c_str());
-
                     NetworkAddr recvrsp_dst_addr = data_request_ptr->getSourceAddr(); // Cache server worker addr for foreground request redirection or beacon server addr for background request redirection
                     is_finish = processRedirectedDataRequest_(data_request_ptr, recvrsp_dst_addr);
                 }

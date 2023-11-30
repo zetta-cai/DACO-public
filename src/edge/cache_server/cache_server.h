@@ -13,7 +13,8 @@
 #ifndef CACHE_SERVER_H
 #define CACHE_SERVER_H
 
-//#define DEBUG_CACHE_SERVER
+// TMPDEBUG231201
+#define DEBUG_CACHE_SERVER
 
 #include <string>
 #include <vector>

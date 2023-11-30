@@ -55,9 +55,6 @@ namespace covered
         const VictimSyncset& neighbor_victim_syncset = covered_directory_lookup_request_ptr->getVictimSyncsetRef();
         covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, edge_wrapper_ptr_->getCooperationWrapperPtr());
 
-        // TMPDEBUGTMPDEBUG
-        Util::dumpVariablesForDebug(instance_name_, 2, "before updatePopularityAggregatorForAggregatedPopularity for key", tmp_key.getKeystr().c_str());
-
         // Selective popularity aggregation
         const CollectedPopularity& collected_popularity = covered_directory_lookup_request_ptr->getCollectedPopularityRef();
         const bool need_placement_calculation = true;
@@ -66,9 +63,6 @@ namespace covered
         need_hybrid_fetching = false;
         const bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();
         is_finish = covered_cache_manager_ptr->updatePopularityAggregatorForAggregatedPopularity(tmp_key, source_edge_idx, collected_popularity, is_global_cached, is_source_cached, need_placement_calculation, sender_is_beacon, best_placement_edgeset, need_hybrid_fetching, edge_wrapper_ptr_, edge_beacon_server_recvrsp_source_addr_, edge_beacon_server_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency, &fast_path_hint); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in source edge node
-
-        // TMPDEBUGTMPDEBUG
-        Util::dumpVariablesForDebug(instance_name_, 2, "after updatePopularityAggregatorForAggregatedPopularity for key", tmp_key.getKeystr().c_str());
 
         // NOTE: need_hybrid_fetching with best_placement_edgeset is processed in CoveredBeaconServer::getRspToLookupLocalDirectory_() to issue corresponding control response message for hybrid data fetching
 
@@ -85,19 +79,10 @@ namespace covered
         const Key tmp_key = MessageBase::getKeyFromMessage(control_request_ptr);
         const bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();
 
-        // TMPDEBUGTMPDEBUG
-        Util::dumpVariablesForDebug(instance_name_, 2, "before control_request_ptr->getSourceIndex() for key", tmp_key.getKeystr().c_str());
-
         // Prepare victim syncset for piggybacking-based victim synchronization
         const uint32_t dst_edge_idx_for_compression = control_request_ptr->getSourceIndex();
 
-        // TMPDEBUGTMPDEBUG
-        Util::dumpVariablesForDebug(instance_name_, 2, "before accessVictimTrackerForLocalVictimSyncset for key", tmp_key.getKeystr().c_str());
-
         VictimSyncset victim_syncset = covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_edge_idx_for_compression, edge_wrapper_ptr_->getCacheMarginBytes());
-
-        // TMPDEBUGTMPDEBUG
-        Util::dumpVariablesForDebug(instance_name_, 2, "after accessVictimTrackerForLocalVictimSyncset for key", tmp_key.getKeystr().c_str());
 
         const uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
         MessageBase* covered_directory_lookup_response_ptr = NULL;

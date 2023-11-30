@@ -24,9 +24,6 @@ namespace covered
     {
         assert(edge_wrapper_ptr != NULL);
 
-        // TMPDEBUGTMPDEBUG
-        Util::dumpVariablesForDebug(instance_name_, 2, "beginning of updatePopularityAggregatorForAggregatedPopularity for key", key.getKeystr().c_str());
-        
         bool is_finish = false;
         bool has_best_placement = false;
         best_placement_edgeset.clear();
@@ -295,9 +292,6 @@ namespace covered
         {
             assert(has_aggregated_uncached_popularity == true);
             const ObjectSize tmp_object_size = tmp_aggregated_uncached_popularity.getObjectSize();
-
-            // TMPDEBUGTMPDEBUG
-            Util::dumpVariablesForDebug(instance_name_, 4, "beginning of parallelFetchVictims_ for key", key.getKeystr().c_str(), "best_placement_victim_fetch_edgeset:", best_placement_victim_fetch_edgeset.toString().c_str());
 
             // Issue CoveredVictimFetchRequest to fetch more victims in parallel (note that CoveredVictimFetchRequest is a foreground message before non-blocking placement deployment)
             // TODO: Maintain a small vicitm cache in each beacon edge node if with frequent lazy victim fetching to avoid degrading directory lookup performance
