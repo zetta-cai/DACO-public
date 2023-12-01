@@ -366,7 +366,7 @@ namespace covered
         checkPointers_();
 
         // TMPDEBUG231201
-        Util::dumpVariablesForDebug(instance_name_, 4, "admitLocalEdgeCache_ for key", key.getKeystr().c_str(), "is_neighbor_cached:", Util::toString(is_neighbor_cached).c_str());
+        Util::dumpVariablesForDebug(instance_name_, 8, "admitLocalEdgeCache_ for key", key.getKeystr().c_str(), "is_neighbor_cached:", Util::toString(is_neighbor_cached).c_str(), "object size:", std::to_string(key.getKeyLength() + value.getValuesize()).c_str(), "cache margin bytes:", std::to_string(edge_wrapper_ptr_->getCacheMarginBytes()).c_str());
 
         bool affect_victim_tracker = false;
         edge_wrapper_ptr_->getEdgeCachePtr()->admit(key, value, is_neighbor_cached, is_valid, affect_victim_tracker);

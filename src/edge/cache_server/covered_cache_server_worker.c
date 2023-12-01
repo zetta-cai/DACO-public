@@ -439,6 +439,9 @@ namespace covered
                 // Trigger local cache placement if local admission benefit is larger than local eviction cost
                 if (local_admission_benefit > local_eviction_cost)
                 {
+                    // TMPDEBUG231201
+                    Util::dumpVariablesForDebug(instance_name_, 10, "fast-path placement for key", key.getKeystr().c_str(), "admission benefit:", std::to_string(local_admission_benefit).c_str(), "eviction cost:", std::to_string(local_eviction_cost).c_str(), "tmp_cache_margin_bytes:", std::to_string(tmp_cache_margin_bytes).c_str(), "tmp_object_size:", std::to_string(tmp_object_size).c_str());
+
                     // Admit dirinfo into remote beacon edge node
                     bool tmp_is_being_written = false;
                     const bool is_background = true; // Similar as only-sender hybrid data fetching

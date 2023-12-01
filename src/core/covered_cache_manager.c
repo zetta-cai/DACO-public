@@ -231,6 +231,8 @@ namespace covered
 
             // Greedy-based placement calculation
             PlacementGain max_placement_gain = 0.0;
+            DeltaReward debug_admission_benefit = 0.0; // TMPDEBUG231201
+            DeltaReward debug_eviction_cost = 0.0; // TMPDEBUG231201
             for (uint32_t topicnt = 1; topicnt <= tmp_topk_list_length; topicnt++)
             {
                 // Consider topi edge nodes ordered by local uncached popularity in a descending order
@@ -260,6 +262,10 @@ namespace covered
                 {
                     max_placement_gain = tmp_placement_gain;
 
+                    // TMPDEBUG231201
+                    debug_admission_benefit = tmp_admission_benefit;
+                    debug_eviction_cost = tmp_eviction_cost;
+
                     best_placement_admission_benefit = tmp_admission_benefit;
                     tmp_best_placement_edgeset = tmp_placement_edgeset;
                     tmp_best_placement_peredge_synced_victimset = tmp_placement_peredge_synced_victimset;
@@ -273,6 +279,9 @@ namespace covered
             {
                 if (best_placement_victim_fetch_edgeset.size() == 0) // NO need for lazy victim fetching
                 {
+                    // TMPDEBUG231201
+                    Util::dumpVariablesForDebug(instance_name_, 8, "placementCalculation_ for key", key.getKeystr().c_str(), "admission benefit:", std::to_string(debug_admission_benefit).c_str(), "eviction cost:", std::to_string(debug_eviction_cost).c_str(), "object size:", std::to_string(tmp_object_size).c_str());
+
                     has_best_placement = true;
                     best_placement_edgeset = tmp_best_placement_edgeset;
                     best_placement_peredge_synced_victimset = tmp_best_placement_peredge_synced_victimset;
