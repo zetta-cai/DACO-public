@@ -116,7 +116,7 @@ namespace covered
 
         // (7.1) For victim synchronization
         uint64_t getCacheMarginBytes() const;
-        void updateCacheManagerForLocalSyncedVictims() const; // NOTE: both edge cache server worker and local/remote beacon node (non-blocking data fetching for placement deployment) will access local edge cache, which affects local cached metadata and may trigger update for local synced victims
+        void updateCacheManagerForLocalSyncedVictims(const bool& affect_victim_tracker) const; // NOTE: both edge cache server worker and local/remote beacon node (non-blocking data fetching for placement deployment) will access local edge cache, which may affect local cached metadata and hence update local synced victims (yet always update cache margin bytes)
 
         // (7.2) For non-blocking placement deployment (ONLY invoked by beacon edge node)
         // NOTE: (for non-blocking placement deployment) source_addr and recvrsp_socket_server_ptr are used for receiving eviction directory update responses if with local placement notification in current beacon edge node; skip propagation latency is used for all messages during non-blocking placement deployment (intermediate bandwidth usage and event list are counted by edge_background_counter_for_beacon_server_)

@@ -26,6 +26,12 @@ namespace covered
 
     EdgelevelVictimMetadata::~EdgelevelVictimMetadata() {}
 
+    void EdgelevelVictimMetadata::updateCacheMarginBytes(const uint64_t& cache_margin_bytes)
+    {
+        cache_margin_bytes_ = cache_margin_bytes;
+        return;
+    }
+
     uint64_t EdgelevelVictimMetadata::getCacheMarginBytes() const
     {
         return cache_margin_bytes_;

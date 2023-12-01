@@ -39,7 +39,8 @@ namespace covered
         ~VictimTracker();
 
         // For local synced/beaconed victims
-        void updateLocalSyncedVictims(const uint64_t& local_cache_margin_bytes, const std::list<VictimCacheinfo>& local_synced_victim_cacheinfos, const CooperationWrapperBase* cooperation_wrapper_ptr); // For updates on local cached metadata, which affects cacheinfos and dirinfos of local synced victims
+        void updateLocalCacheMarginBytes(const uint64_t& local_cache_margin_bytes); // Update local cache margin bytes ONLY (NOT affect cacheinfos and dirinfos of local synced victims)
+        void updateLocalSyncedVictims(const uint64_t& local_cache_margin_bytes, const std::list<VictimCacheinfo>& local_synced_victim_cacheinfos, const CooperationWrapperBase* cooperation_wrapper_ptr); // For updates on local cached metadata, which affects cacheinfos and dirinfos of local synced victims w/ local cache margin bytes
         void updateLocalBeaconedVictimDirinfo(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info); // For updates on content directory information, which affects dirinfos of local beaconed victims
 
         // For victim synchronization

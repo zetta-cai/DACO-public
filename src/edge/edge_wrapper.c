@@ -961,16 +961,13 @@ namespace covered
     {
         checkPointers_();
 
-        bool affect_victim_tracker = false;
+        bool affect_victim_tracker = false; // If key was a local synced victim before or is a local synced victim now
         bool is_local_cached_and_valid = edge_cache_ptr_->get(key, is_redirected, value, affect_victim_tracker);
 
         if (cache_name_ == Util::COVERED_CACHE_NAME) // ONLY for COVERED
         {
-            // Avoid unnecessary VictimTracker update
-            if (affect_victim_tracker) // If key was a local synced victim before or is a local synced victim now
-            {
-                updateCacheManagerForLocalSyncedVictims();
-            }
+            // Avoid unnecessary VictimTracker update by checking affect_victim_tracker
+            updateCacheManagerForLocalSyncedVictims(affect_victim_tracker);
         }
         
         return is_local_cached_and_valid;
@@ -1029,7 +1026,7 @@ namespace covered
         return local_cache_margin_bytes;
     }
 
-    void EdgeWrapper::updateCacheManagerForLocalSyncedVictims() const
+    void EdgeWrapper::updateCacheManagerForLocalSyncedVictims(const bool& affect_victim_tracker) const
     {
         checkPointers_();
         assert(cache_name_ == Util::COVERED_CACHE_NAME);
@@ -1037,12 +1034,19 @@ namespace covered
         // Get local edge margin bytes
         uint64_t local_cache_margin_bytes = getCacheMarginBytes();
 
-        // Get victim cacheinfos of local synced victims for the current edge node
-        std::list<VictimCacheinfo> local_synced_victim_cacheinfos = edge_cache_ptr_->getLocalSyncedVictimCacheinfos(); // NOTE: victim cacheinfos from local edge cache MUST be complete
+        if (affect_victim_tracker) // Need to update victim cacheinfos and dirinfos of local synced victims besides local cache margin bytes
+        {
+            // Get victim cacheinfos of local synced victims for the current edge node
+            std::list<VictimCacheinfo> local_synced_victim_cacheinfos = edge_cache_ptr_->getLocalSyncedVictimCacheinfos(); // NOTE: victim cacheinfos from local edge cache MUST be complete
 
-        
-        // Update local synced victims for the current edge node
-        covered_cache_manager_ptr_->updateVictimTrackerForLocalSyncedVictims(local_cache_margin_bytes, local_synced_victim_cacheinfos, cooperation_wrapper_ptr_);
+            // Update local synced victims for the current edge node
+            covered_cache_manager_ptr_->updateVictimTrackerForLocalSyncedVictims(local_cache_margin_bytes, local_synced_victim_cacheinfos, cooperation_wrapper_ptr_);
+        }
+        else // ONLY update local cache margin bytes
+        {
+            // Update local cache margin bytes
+            covered_cache_manager_ptr_->updateVictimTrackerForLocalCacheMarginBytes(local_cache_margin_bytes);
+        }
 
         return;
     }

@@ -132,6 +132,12 @@ namespace covered
 
     // For victim synchronization
 
+    void CoveredCacheManager::updateVictimTrackerForLocalCacheMarginBytes(const uint64_t& local_cache_margin_bytes)
+    {
+        victim_tracker_.updateLocalCacheMarginBytes(local_cache_margin_bytes);
+        return;
+    }
+
     void CoveredCacheManager::updateVictimTrackerForLocalSyncedVictims(const uint64_t& local_cache_margin_bytes, const std::list<VictimCacheinfo>& local_synced_victim_cacheinfos, const CooperationWrapperBase* cooperation_wrapper_ptr)
     {
         // NOTE: victim cacheinfos of local_synced_victim_cacheinfos and victim dirinfo sets of local_beaconed_local_synced_victim_dirinfosets MUST be complete

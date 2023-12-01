@@ -368,16 +368,13 @@ namespace covered
         // TMPDEBUG231201
         Util::dumpVariablesForDebug(instance_name_, 8, "admitLocalEdgeCache_ for key", key.getKeystr().c_str(), "is_neighbor_cached:", Util::toString(is_neighbor_cached).c_str(), "object size:", std::to_string(key.getKeyLength() + value.getValuesize()).c_str(), "cache margin bytes:", std::to_string(edge_wrapper_ptr_->getCacheMarginBytes()).c_str());
 
-        bool affect_victim_tracker = false;
+        bool affect_victim_tracker = false; // If key is a local synced victim now
         edge_wrapper_ptr_->getEdgeCachePtr()->admit(key, value, is_neighbor_cached, is_valid, affect_victim_tracker);
 
         if (edge_wrapper_ptr_->getCacheName() == Util::COVERED_CACHE_NAME) // ONLY for COVERED
         {
-            // Avoid unnecessary VictimTracker update
-            if (affect_victim_tracker) // If key is a local synced victim now
-            {
-                edge_wrapper_ptr_->updateCacheManagerForLocalSyncedVictims();
-            }
+            // Avoid unnecessary VictimTracker update by checking affect_victim_tracker
+            edge_wrapper_ptr_->updateCacheManagerForLocalSyncedVictims(affect_victim_tracker);
 
             // Remove existing cached directory if any as key is local cached, while we ONLY cache valid remote dirinfo for local uncached objects
             edge_wrapper_ptr_->getCoveredCacheManagerPtr()->updateDirectoryCacherToRemoveCachedDirectory(key);
@@ -644,7 +641,8 @@ namespace covered
         if (edge_wrapper_ptr_->getCacheName() == Util::COVERED_CACHE_NAME) // ONLY for COVERED
         {
             // NOTE: eviction MUST affect victim tracker due to evicting objects with least local rewards (i.e., local synced victims)
-            edge_wrapper_ptr_->updateCacheManagerForLocalSyncedVictims();
+            const bool affect_victim_tracker = true;
+            edge_wrapper_ptr_->updateCacheManagerForLocalSyncedVictims(affect_victim_tracker);
         }
 
         return;

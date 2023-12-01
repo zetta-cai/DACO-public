@@ -26,6 +26,8 @@ namespace covered
         EdgelevelVictimMetadata(const uint64_t& cache_margin_bytes, const std::list<VictimCacheinfo>& victim_cacheinfos);
         ~EdgelevelVictimMetadata();
 
+        void updateCacheMarginBytes(const uint64_t& cache_margin_bytes);
+
         uint64_t getCacheMarginBytes() const;
         std::list<VictimCacheinfo> getVictimCacheinfos() const;
         const std::list<VictimCacheinfo>& getVictimCacheinfosRef() const;

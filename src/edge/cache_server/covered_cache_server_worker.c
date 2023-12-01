@@ -297,7 +297,7 @@ namespace covered
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
         CacheWrapper* tmp_edge_cache_ptr = tmp_edge_wrapper_ptr->getEdgeCachePtr();
 
-        bool affect_victim_tracker = false;
+        bool affect_victim_tracker = false; // If key was a local synced victim before or is a local synced victim now
         bool is_local_cached_and_invalid = false;
         if (value.isDeleted()) // value is deleted
         {
@@ -308,11 +308,8 @@ namespace covered
             is_local_cached_and_invalid = tmp_edge_cache_ptr->updateIfInvalidForGetrsp(key, value, is_global_cached, affect_victim_tracker); // update may trigger eviction (see CacheServerWorkerBase::processLocalGetRequest_)
         }
 
-        // Avoid unnecessary VictimTracker update
-        if (affect_victim_tracker) // If key was a local synced victim before or is a local synced victim now
-        {
-            tmp_edge_wrapper_ptr->updateCacheManagerForLocalSyncedVictims();
-        }
+        // Avoid unnecessary VictimTracker update by checking affect_victim_tracker
+        tmp_edge_wrapper_ptr->updateCacheManagerForLocalSyncedVictims(affect_victim_tracker);
         
         return is_local_cached_and_invalid;
     }
@@ -604,14 +601,11 @@ namespace covered
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
-        bool affect_victim_tracker = false;
+        bool affect_victim_tracker = false; // If key was a local synced victim before or is a local synced victim now
         bool is_local_cached_after_udpate = tmp_edge_wrapper_ptr->getEdgeCachePtr()->update(key, value, is_global_cached, affect_victim_tracker);
 
-        // Avoid unnecessary VictimTracker update
-        if (affect_victim_tracker) // If key was a local synced victim before or is a local synced victim now
-        {
-            tmp_edge_wrapper_ptr->updateCacheManagerForLocalSyncedVictims();
-        }
+        // Avoid unnecessary VictimTracker update by checking affect_victim_tracker
+        tmp_edge_wrapper_ptr->updateCacheManagerForLocalSyncedVictims(affect_victim_tracker);
 
         return is_local_cached_after_udpate;
     }
@@ -621,14 +615,11 @@ namespace covered
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
-        bool affect_victim_tracker = false;
+        bool affect_victim_tracker = false; // If key was a local synced victim before or is a local synced victim now
         bool is_local_cached_after_remove = tmp_edge_wrapper_ptr->getEdgeCachePtr()->remove(key, is_global_cached, affect_victim_tracker);
 
-        // Avoid unnecessary VictimTracker update
-        if (affect_victim_tracker) // If key was a local synced victim before or is a local synced victim now
-        {
-            tmp_edge_wrapper_ptr->updateCacheManagerForLocalSyncedVictims();
-        }
+        // Avoid unnecessary VictimTracker update by checking affect_victim_tracker
+        tmp_edge_wrapper_ptr->updateCacheManagerForLocalSyncedVictims(affect_victim_tracker);
 
         return is_local_cached_after_remove;
     }
