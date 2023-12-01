@@ -23,6 +23,7 @@ namespace covered
         virtual ~LocalCachedMetadata();
 
         // For beacon-based metadata update
+        bool checkIsNeighborCachedForExistingKey(const Key& key);
         void updateIsNeighborCachedForExistingKey(const Key& key, const bool& is_neighbor_cached);
 
         // For popularity information

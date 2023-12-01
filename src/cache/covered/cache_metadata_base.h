@@ -93,6 +93,7 @@ namespace covered
         virtual void getPopularity(const Key& key, Popularity& local_uncached_popularity, Popularity& redirected_popularity) const = 0; // Local uncached metadata NOT set redirected_popularity
 
         // For reward information
+        Reward getLocalRewardForExistingKey(const Key& key) const; // Get local reward for local cached or uncached object
         bool getLeastRewardKeyAndReward(const uint32_t& least_reward_rank, Key& key, Reward& reward) const; // Get ith least popular key for local cached or uncached object
 
         virtual uint64_t getSizeForCapacity() const = 0; // Get size for capacity constraint (different for local cached or uncached objects)

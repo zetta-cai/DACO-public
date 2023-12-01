@@ -586,6 +586,19 @@ namespace covered
     // For reward information
 
     template<class T>
+    Reward CacheMetadataBase<T>::getLocalRewardForExistingKey(const Key& key) const
+    {
+        // Get lookup iterator
+        perkey_lookup_table_iter_t perkey_lookup_iter = getLookup_(key);
+
+        // For existing key
+        sorted_reward_multimap_t::const_iterator sorted_reward_iter = lookup_metadata.getSortedRewardIter();
+        assert(sorted_reward_iter != sorted_reward_multimap_.end());
+
+        return sorted_reward_multimap_->first;
+    }
+
+    template<class T>
     bool CacheMetadataBase<T>::getLeastRewardKeyAndReward(const uint32_t& least_reward_rank, Key& key, Reward& reward) const
     {
         bool is_least_reward_key_exist = false;
