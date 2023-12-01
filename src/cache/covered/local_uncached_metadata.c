@@ -134,6 +134,9 @@ namespace covered
         {
             const Weight w1_minus_w2 = Util::popularityNonegMinus(local_hit_weight, cooperative_hit_weight);
             local_reward = Util::popularityMultiply(w1_minus_w2, local_uncached_popularity); // w1 - w2
+
+            // TMPDEBUGDUPAVOID
+            local_reward = 0.0;
         }
         else
         {

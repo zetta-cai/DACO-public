@@ -48,10 +48,25 @@ namespace covered
         std::string context_name = "VictimTracker::updateLocalCacheMarginBytes()";
         rwlock_for_victim_tracker_->acquire_lock(context_name);
 
-        // NOTE: ONLY update local cache margin bytes means NOT affect local synced victims, which have already been tracked by victim tracker and hence MUST have edge-level victim metadata
+        // Update local cache margin bytes in edge-level victim metadata
         peredge_victim_metadata_t::iterator victim_metadata_map_iter = peredge_victim_metadata_.find(edge_idx_);
-        assert(victim_metadata_map_iter != peredge_victim_metadata_.end());
-        victim_metadata_map_iter->second.updateCacheMarginBytes(local_cache_margin_bytes);
+        if (victim_metadata_map_iter == peredge_victim_metadata_.end()) // NO edge-level victim metadata for current edge node
+        {
+            // NOTE: although ONLY update local cache margin bytes means NOT affect local synced victims, they may still NOT be tracked by victim tracker (e.g., the first cache miss for an empty cache)
+
+            // Create a new edge-level victim metadata w/o victim cacheinfos
+            victim_metadata_map_iter = peredge_victim_metadata_.insert(std::pair(edge_idx_, EdgelevelVictimMetadata(local_cache_margin_bytes, std::list<VictimCacheinfo>()))).first;
+            assert(victim_metadata_map_iter != peredge_victim_metadata_.end());
+
+            size_bytes_ = Util::uint64Add(size_bytes_, sizeof(uint32_t)); // For edge_idx_
+            size_bytes_ = Util::uint64Add(size_bytes_, sizeof(uint64_t)); // For local_cache_margin_bytes
+        }
+        else // Edge-level victim metadata already exists
+        {
+            victim_metadata_map_iter->second.updateCacheMarginBytes(local_cache_margin_bytes);
+
+            // NOTE: NO need to update size_bytes_
+        }
 
         rwlock_for_victim_tracker_->unlock(context_name);
 
@@ -61,9 +76,6 @@ namespace covered
     void VictimTracker::updateLocalSyncedVictims(const uint64_t& local_cache_margin_bytes, const std::list<VictimCacheinfo>& local_synced_victim_cacheinfos, const CooperationWrapperBase* cooperation_wrapper_ptr)
     {
         // NOTE: limited computation overhead to update local synced victim infos, as we track limited number of local synced victims for the current edge node
-
-        // TMPDEBUG231201
-        Util::dumpVariablesForDebug(instance_name_, 4, "updateLocalSyncedVictims for edge", std::to_string(edge_idx_).c_str(), "local_cache_margin_bytes:", std::to_string(local_cache_margin_bytes).c_str());
 
         checkPointers_();
 
@@ -262,9 +274,6 @@ namespace covered
                 peredge_victimsync_monitor_iter->second.tryToEnableEnforcementStatus_(neighbor_victim_syncset, synced_seqnum, peredge_monitored_victimsetcnt_); // Trigger complete enforcement if cached victim syncsets is full (this will cache compressed victim syncset if cached_victim_syncsets_ is not full, or enable enforcement status (set need_enforcement_ = true, enforcement_seqnum_ = synced_seqnum, and wait_for_complete_victim_syncset_ = true) otherwise)
             }
         }
-
-        // TMPDEBUG231201
-        Util::dumpVariablesForDebug(instance_name_, 6, "updateForNeighborVictimSyncset from edge", std::to_string(source_edge_idx).c_str(), "need_update_victim_tracker_:", Util::toString(need_update_victim_tracker_).c_str(), "synced_seqnum:", std::to_string(synced_seqnum).c_str());
 
         // Update edge-level victim metadata and victim dirinfo sets in victim tracker
         if (need_update_victim_tracker_)
@@ -616,9 +625,6 @@ namespace covered
     void VictimTracker::replaceVictimMetadataForEdgeIdx_(const uint32_t& edge_idx, const uint64_t& cache_margin_bytes, const std::list<VictimCacheinfo>& synced_victim_cacheinfos, const CooperationWrapperBase* cooperation_wrapper_ptr)
     {
         // NOTE: NO need to acquire a write lock which has been done in updateLocalSyncedVictims() and updateForNeighborVictimSyncset()
-
-        // TMPDEBUG231201
-        Util::dumpVariablesForDebug(instance_name_, 4, "replaceVictimMetadataForEdgeIdx_ from edge", std::to_string(edge_idx).c_str(), "cache_margin_bytes:", std::to_string(cache_margin_bytes).c_str());
 
         assert(synced_victim_cacheinfos.size() <= peredge_synced_victimcnt_);
         assert(cooperation_wrapper_ptr != NULL);

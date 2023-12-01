@@ -60,9 +60,6 @@ namespace covered
         uint64_t tmp_required_bytes = 0;
         uint64_t tmp_saved_bytes = 0;
 
-        // TMPDEBUG231201
-        Util::dumpVariablesForDebug(kClassName, 6, "EdgelevelVictimMetadata cache_margin_bytes_:", std::to_string(cache_margin_bytes_).c_str(), "edgeidx:", std::to_string(cur_edge_idx).c_str(), "object_size:", std::to_string(object_size).c_str());
-
         if (object_size > cache_margin_bytes_) // Without sufficient cache space
         {
             tmp_required_bytes = object_size - cache_margin_bytes_;

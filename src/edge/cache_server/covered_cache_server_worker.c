@@ -376,6 +376,9 @@ namespace covered
             {
                 Weight w1_minux_w2 = Util::popularityNonegMinus(local_hit_weight, cooperative_hit_weight);
                 local_admission_benefit = Util::popularityMultiply(w1_minux_w2, local_uncached_popularity); // w1 - w2
+
+                // TMPDEBUGDUPAVOID
+                local_admission_benefit = 0.0;
             }
             else // Key is NOT global cached
             {
