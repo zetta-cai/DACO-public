@@ -20,6 +20,7 @@ namespace covered
     {
         redirected_frequency_ = other.redirected_frequency_;
         redirected_popularity_ = other.redirected_popularity_;
+        is_neighbor_cached_ = other.is_neighbor_cached_;
     }
 
     HeteroKeyLevelMetadata::~HeteroKeyLevelMetadata() {}

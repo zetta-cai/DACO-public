@@ -589,13 +589,14 @@ namespace covered
     Reward CacheMetadataBase<T>::getLocalRewardForExistingKey(const Key& key) const
     {
         // Get lookup iterator
-        perkey_lookup_table_iter_t perkey_lookup_iter = getLookup_(key);
+        perkey_lookup_table_const_iter_t perkey_lookup_iter = getLookup_(key);
 
         // For existing key
+        const LookupMetadata<perkey_metadata_list_t>& lookup_metadata = perkey_lookup_iter->second;
         sorted_reward_multimap_t::const_iterator sorted_reward_iter = lookup_metadata.getSortedRewardIter();
         assert(sorted_reward_iter != sorted_reward_multimap_.end());
 
-        return sorted_reward_multimap_->first;
+        return sorted_reward_iter->first;
     }
 
     template<class T>

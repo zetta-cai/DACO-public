@@ -142,9 +142,6 @@ namespace covered
                 tmp_victim_object_size = local_cached_metadata_.getObjectSize(tmp_victim_key);
                 local_cached_metadata_.getPopularity(tmp_victim_key, tmp_local_cached_popularity, tmp_redirected_cached_popularity);
 
-                // TMPDEBUG231201
-                Util::dumpVariables(instance_name_, 6, "victim key", std::to_string(tmp_victim_key.getKeystr()).c_str(), "is_neighbor_cached:", Util::toString(local_cached_metadata_.checkIsNeighborCachedForExistingKey(tmp_victim_key)).c_str(), "local reward:", std::to_string(local_cached_metadata_.getLocalRewardForExistingKey(tmp_victim_key)).c_str());
-
                 uint32_t tmp_victim_value_size = 0;
                 LruCacheReadHandle tmp_victim_handle = covered_cache_ptr_->find(tmp_victim_key.getKeystr()); // NOTE: although find() will move the item to the front of the LRU list to update recency information inside cachelib, covered uses local cache metadata tracked outside cachelib for cache management
                 assert(tmp_victim_handle != nullptr); // Victim must be cached before eviction
@@ -374,7 +371,7 @@ namespace covered
             affect_victim_tracker = local_cached_metadata_.addForNewKey(key, value, peredge_synced_victimcnt_, is_global_cached, is_neighbor_cached);
 
             // TMPDEBUG231201
-            Util::dumpVariables(instance_name_, 8, "newly-admited key", std::to_string(key.getKeystr()).c_str(), "passed is_neighbor_cached:", Util::toString(is_neighbor_cached).c_str(), "is_neighbor_cached:", Util::toString(local_cached_metadata_.checkIsNeighborCachedForExistingKey(tmp_victim_key)).c_str(), "local reward:", std::to_string(local_cached_metadata_.getLocalRewardForExistingKey(tmp_victim_key)).c_str());
+            Util::dumpVariablesForDebug(instance_name_, 8, "newly-admited key", key.getKeystr().c_str(), "passed is_neighbor_cached:", Util::toString(is_neighbor_cached).c_str(), "is_neighbor_cached:", Util::toString(local_cached_metadata_.checkIsNeighborCachedForExistingKey(key)).c_str(), "local reward:", std::to_string(local_cached_metadata_.getLocalRewardForExistingKey(key)).c_str());
 
             // Remove from local uncached metadata if necessary for admission
             if (local_uncached_metadata_.isKeyExist(key))
@@ -484,6 +481,9 @@ namespace covered
             //LruCacheWriteHandle tmp_write_handle = std::move(handle).toWriteHandle(); // NOTE: from now we should NOT use handle, which has been converted to a rvalue reference
             //assert(tmp_write_handle.get() != nullptr);
             //covered_cache_ptr_->allocator_->free(tmp_write_handle.get());
+
+            // TMPDEBUG231201
+            Util::dumpVariablesForDebug(instance_name_, 6, "victim key", key.getKeystr().c_str(), "is_neighbor_cached:", Util::toString(local_cached_metadata_.checkIsNeighborCachedForExistingKey(key)).c_str(), "local reward:", std::to_string(local_cached_metadata_.getLocalRewardForExistingKey(key)).c_str());
 
             // Remove from local cached metadata for eviction
             local_cached_metadata_.removeForExistingKey(key, value);
