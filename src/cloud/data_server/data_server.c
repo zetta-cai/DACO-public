@@ -183,6 +183,9 @@ namespace covered
             }
         }
 
+        // TMPDEBUGDUPAVOID
+        tmp_value = Value(MB2B(0.5));
+
         #ifdef DEBUG_DATA_SERVER
         std::ostringstream oss;
         oss << "receive a global request; message type: " << MessageBase::messageTypeToString(global_request_message_type) << "; keystr: " << tmp_key.getKeystr() << "; valuesize: " << tmp_value.getValuesize();

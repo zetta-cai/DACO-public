@@ -9,9 +9,11 @@
 #ifndef CACHE_WRAPPER_H
 #define CACHE_WRAPPER_H
 
-//#define DEBUG_CACHE_WRAPPER
+// TMPDEBUGDUPAVOID
+#define DEBUG_CACHE_WRAPPER
 
 #include <list>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -115,7 +117,7 @@ namespace covered
         #ifdef DEBUG_CACHE_WRAPPER
         // For debugging
         mutable Rwlock* cache_wrapper_rwlock_for_debug_ptr_;
-        std::unordered_set<Key, KeyHasher> cached_keys_for_debug_;
+        std::set<Key> cached_keys_for_debug_;
         #endif
     };
 }

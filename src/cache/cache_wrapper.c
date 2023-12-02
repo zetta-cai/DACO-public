@@ -351,13 +351,13 @@ namespace covered
         }
 
         // Used for debugging
-        // std::ostringstream oss;
-        // oss << "After admit, " << cached_keys_for_debug_.size() << " cached keys:";
-        // for (std::unordered_set<Key, KeyHasher>::const_iterator tmp_iter = cached_keys_for_debug_.begin(); tmp_iter != cached_keys_for_debug_.end(); tmp_iter++)
-        // {
-        //     oss << " " << tmp_iter->getKeystr() << ";";
-        // }
-        // Util::dumpDebugMsg(instance_name_, oss.str());
+        std::ostringstream oss;
+        oss << "After admit, " << cached_keys_for_debug_.size() << " cached keys:";
+        for (std::set<Key>::const_iterator tmp_iter = cached_keys_for_debug_.begin(); tmp_iter != cached_keys_for_debug_.end(); tmp_iter++)
+        {
+            oss << " " << tmp_iter->getKeystr() << ";";
+        }
+        Util::dumpDebugMsg(instance_name_, oss.str());
 
         cache_wrapper_rwlock_for_debug_ptr_->unlock(context_name);
         #endif
@@ -395,13 +395,13 @@ namespace covered
         }
 
         // Used for debugging
-        // std::ostringstream oss;
-        // oss << "After evict, " << cached_keys_for_debug_.size() << " cached keys:";
-        // for (std::unordered_set<Key, KeyHasher>::const_iterator tmp_iter = cached_keys_for_debug_.begin(); tmp_iter != cached_keys_for_debug_.end(); tmp_iter++)
-        // {
-        //     oss << " " << tmp_iter->getKeystr() << ";";
-        // }
-        // Util::dumpDebugMsg(instance_name_, oss.str());
+        std::ostringstream oss;
+        oss << "After evict, " << cached_keys_for_debug_.size() << " cached keys:";
+        for (std::set<Key>::const_iterator tmp_iter = cached_keys_for_debug_.begin(); tmp_iter != cached_keys_for_debug_.end(); tmp_iter++)
+        {
+            oss << " " << tmp_iter->getKeystr() << ";";
+        }
+        Util::dumpDebugMsg(instance_name_, oss.str());
 
         cache_wrapper_rwlock_for_debug_ptr_->unlock(context_name);
         #endif
