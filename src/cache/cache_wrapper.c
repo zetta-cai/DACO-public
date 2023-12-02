@@ -37,6 +37,19 @@ namespace covered
     
     CacheWrapper::~CacheWrapper()
     {
+        // TMPDEBUG231201
+        std::ostringstream oss;
+        oss << "Before destory CacheWrapper, " << cached_keys_for_debug_.size() << " cached keys:";
+        for (std::set<Key>::const_iterator tmp_iter = cached_keys_for_debug_.begin(); tmp_iter != cached_keys_for_debug_.end(); tmp_iter++)
+        {
+            oss << " " << tmp_iter->getKeystr() << ";";
+        }
+        oss << std::endl;
+        uint64_t local_edge_cache_size = local_cache_ptr_->getSizeForCapacity();
+        uint64_t validity_map_size = validity_map_ptr_->getSizeForCapacity();
+        oss << "local_edge_cache_size: " << local_edge_cache_size << "; validity_map_size: " << validity_map_size;
+        Util::dumpDebugMsg(instance_name_, oss.str());
+
         // Release local edge cache
         assert(local_cache_ptr_ != NULL);
         delete local_cache_ptr_;
@@ -351,13 +364,13 @@ namespace covered
         }
 
         // Used for debugging
-        std::ostringstream oss;
-        oss << "After admit, " << cached_keys_for_debug_.size() << " cached keys:";
-        for (std::set<Key>::const_iterator tmp_iter = cached_keys_for_debug_.begin(); tmp_iter != cached_keys_for_debug_.end(); tmp_iter++)
-        {
-            oss << " " << tmp_iter->getKeystr() << ";";
-        }
-        Util::dumpDebugMsg(instance_name_, oss.str());
+        // std::ostringstream oss;
+        // oss << "After admit, " << cached_keys_for_debug_.size() << " cached keys:";
+        // for (std::set<Key>::const_iterator tmp_iter = cached_keys_for_debug_.begin(); tmp_iter != cached_keys_for_debug_.end(); tmp_iter++)
+        // {
+        //     oss << " " << tmp_iter->getKeystr() << ";";
+        // }
+        // Util::dumpDebugMsg(instance_name_, oss.str());
 
         cache_wrapper_rwlock_for_debug_ptr_->unlock(context_name);
         #endif
@@ -395,13 +408,13 @@ namespace covered
         }
 
         // Used for debugging
-        std::ostringstream oss;
-        oss << "After evict, " << cached_keys_for_debug_.size() << " cached keys:";
-        for (std::set<Key>::const_iterator tmp_iter = cached_keys_for_debug_.begin(); tmp_iter != cached_keys_for_debug_.end(); tmp_iter++)
-        {
-            oss << " " << tmp_iter->getKeystr() << ";";
-        }
-        Util::dumpDebugMsg(instance_name_, oss.str());
+        // std::ostringstream oss;
+        // oss << "After evict, " << cached_keys_for_debug_.size() << " cached keys:";
+        // for (std::set<Key>::const_iterator tmp_iter = cached_keys_for_debug_.begin(); tmp_iter != cached_keys_for_debug_.end(); tmp_iter++)
+        // {
+        //     oss << " " << tmp_iter->getKeystr() << ";";
+        // }
+        // Util::dumpDebugMsg(instance_name_, oss.str());
 
         cache_wrapper_rwlock_for_debug_ptr_->unlock(context_name);
         #endif

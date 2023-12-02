@@ -183,8 +183,8 @@ namespace covered
             }
         }
 
-        // TMPDEBUGDUPAVOID
-        tmp_value = Value(MB2B(0.5));
+        // TMPDEBUG231201
+        tmp_value = Value(MB2B(1));
 
         #ifdef DEBUG_DATA_SERVER
         std::ostringstream oss;

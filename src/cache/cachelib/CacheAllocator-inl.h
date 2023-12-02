@@ -109,7 +109,12 @@ template <typename CacheTrait>
 uint64_t CacheAllocator<CacheTrait>::getUsedSize(PoolId pid) const
 {
   auto& pool = allocator_->getPool(pid);
-  uint64_t used_size = static_cast<uint64_t>(pool.getCurrentAllocSize()); // Slab memory allocated for key-value data items (including key, value, LRU/FIFO and hashtable-lookup hook/pointer, and flags)
+
+  // NOTE: getCurrentUsedSize() returns currSlabAllocSize_ + freeSlabs_.size() * Slab::kSize, which includes both allocated slabs and free slabs!
+  //uint64_t used_size = static_cast<uint64_t>(pool.getCurrentUsedSize());
+
+  uint64_t used_size = static_cast<uint64_t>(pool.getCurrentAllocSize()); // All allocated memory (allocated slabs + other metadata) for key-value data items (including key, value, LRU/FIFO and hashtable-lookup hook/pointer, and flags)
+
   return used_size;
 }
 

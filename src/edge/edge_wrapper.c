@@ -137,6 +137,16 @@ namespace covered
         
     EdgeWrapper::~EdgeWrapper()
     {
+        // TMPDEBUG231201
+        uint64_t edge_cache_size = edge_cache_ptr_->getSizeForCapacity();
+        uint64_t cooperation_size = cooperation_wrapper_ptr_->getSizeForCapacity();
+        uint64_t cache_manager_size = 0;
+        if (cache_name_ == Util::COVERED_CACHE_NAME)
+        {
+            cache_manager_size = covered_cache_manager_ptr_->getSizeForCapacity();
+        }
+        Util::dumpVariablesForDebug(instance_name_, 8, "edge_cache_size:", std::to_string(edge_cache_size).c_str(), "cooperation_size:", std::to_string(cooperation_size).c_str(), "cache_manager_size:", std::to_string(cache_manager_size).c_str(), "cache_manager_size:", std::to_string(cache_manager_size).c_str());
+
         // Release local edge cache
         assert(edge_cache_ptr_ != NULL);
         delete edge_cache_ptr_;

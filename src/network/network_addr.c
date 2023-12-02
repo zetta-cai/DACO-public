@@ -130,13 +130,25 @@ namespace covered
     bool NetworkAddr::operator<(const NetworkAddr& other) const
     {
         bool is_smaller = false;
-        if (ipstr_.compare(other.ipstr_)) // Matched char is smaller, or all chars are matched yet with smaller string length
+        const int ipstr_compare_result = ipstr_.compare(other.ipstr_);
+        if (ipstr_compare_result < 0) // Current keystr length is smaller than other, or the first unmatched char is smaller than other
         {
             is_smaller = true;
         }
-        else if (port_ < other.port_)
+        else if (ipstr_compare_result > 0) // Current keystr length is larger than other, or the first unmatched char is larger than other
         {
-            is_smaller = true;
+            is_smaller = false;
+        }
+        else
+        {
+            if (port_ < other.port_)
+            {
+                is_smaller = true;
+            }
+            else
+            {
+                is_smaller = false;
+            }
         }
         return is_smaller;
     }

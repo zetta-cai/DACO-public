@@ -62,7 +62,7 @@ namespace covered
     bool Key::operator<(const Key& other) const
     {
         bool is_smaller = false;
-        if (keystr_.compare(other.keystr_)) // Matched char is smaller, or all chars are matched yet with smaller string length
+        if (keystr_.compare(other.keystr_) < 0) // Current keystr length is smaller than other, or the first unmatched char is smaller than other
         {
             is_smaller = true;
         }
