@@ -402,6 +402,12 @@ namespace covered
                 is_global_popular = true;
             }
 
+            // TMPDEBUGDUPAVOID
+            if (key.getKeystr() == "bicdwpmzuwdobknsfpyoxlshtklmaqdkxioswfymkgireyrsmaqikngzwlu")
+            {
+                Util::dumpVariablesForDebug(instance_name_, 8, "tryToTriggerCachePlacementForGetrsp_ for key", key.getKeystr().c_str(), "is_global_cached:", Util::toString(is_global_cached).c_str(), "is_global_popular:", Util::toString(is_global_popular).c_str(), "local_admission_benefit:", std::to_string(local_admission_benefit).c_str());
+            }
+
             // Approximate single-placement calculation (a fast path w/o extra message overhead towards remote beacon edge node)
             if (is_global_popular)
             {
@@ -435,6 +441,12 @@ namespace covered
                     local_admission_benefit = 0.0;
                 }
                 #endif
+
+                // TMPDEBUGDUPAVOID
+                if (key.getKeystr() == "bicdwpmzuwdobknsfpyoxlshtklmaqdkxioswfymkgireyrsmaqikngzwlu")
+                {
+                    Util::dumpVariablesForDebug(instance_name_, 8, "tryToTriggerCachePlacementForGetrsp_ for key", key.getKeystr().c_str(), "local_eviction_cost:", std::to_string(local_eviction_cost).c_str(), "tmp_cache_margin_bytes:", std::to_string(tmp_cache_margin_bytes).c_str(), "tmp_object_size:", std::to_string(tmp_object_size).c_str());
+                }
 
                 // Trigger local cache placement if local admission benefit is larger than local eviction cost
                 if (local_admission_benefit > local_eviction_cost)

@@ -1,13 +1,6 @@
 # Basic recipes
 include src/mk/recipes.mk
 
-# Recipes for third-party lib
-include src/mk/lib/boost.mk
-include src/mk/lib/cachebench.mk
-include src/mk/lib/rocksdb.mk
-include src/mk/lib/smhasher.mk
-include src/mk/lib/tommyds.mk
-
 # Recipes for cache methods (including baselines and COVERED)
 include src/mk/cache/cachelib.mk
 include src/mk/cache/covered.mk
@@ -15,6 +8,13 @@ include src/mk/cache/gdsf.mk
 include src/mk/cache/lfu.mk
 include src/mk/cache/lru.mk
 include src/mk/cache/segcache.mk
+
+# Recipes for third-party lib
+include src/mk/lib/boost.mk
+include src/mk/lib/cachebench.mk
+include src/mk/lib/rocksdb.mk
+include src/mk/lib/smhasher.mk
+include src/mk/lib/tommyds.mk
 
 ##############################################################################
 # Set link directory paths for standard libraries

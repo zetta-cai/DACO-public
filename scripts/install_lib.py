@@ -140,13 +140,9 @@ if is_install_segcache:
     # NOTE: use the hacked version to install segcache
     #segcache_install_dirpath = "{}/build".format(segcache_clone_dirpath)
     segcache_install_dirpath = "{}/src/cache/segcache/build".format(proj_dirname)
-    if not os.path.exists(segcache_install_dirpath):
-        tmp_segcache_clone_dirpath = os.path.dirname(segcache_install_dirpath)
-
-        segcache_install_tool = "mkdir build && cd build && cmake .. && make -j"
-        installFromRepo(scriptname, segcache_software_name, tmp_segcache_clone_dirpath, segcache_install_tool)
-    else:
-        dump(scriptname, "{} exists (SegCache has been installed)".format(segcache_install_dirpath))
+    tmp_segcache_clone_dirpath = os.path.dirname(segcache_install_dirpath)
+    segcache_install_tool = "mkdir build && cd build && cmake .. && make -j"
+    installFromRepoIfNot(scriptname, segcache_install_dirpath, segcache_software_name, tmp_segcache_clone_dirpath, segcache_install_tool)
 
 # (7) Install GDSF (commit ID: 8818442)
 
@@ -163,13 +159,18 @@ if is_install_gdsf:
 # (8) Install TommyDS (commit ID: 97ff743)
 
 if is_install_tommyds:
-    tommyds_clone_dirpath = "{}/tomyds".format(lib_dirpath)
+    tommyds_clone_dirpath = "{}/tommyds".format(lib_dirpath)
     tommyds_software_name = "TommyDS"
     tommyds_repo_url = "https://github.com/amadvance/tommyds.git"
     cloneRepo(scriptname, tommyds_clone_dirpath, tommyds_software_name, tommyds_repo_url)
 
     tommyds_targetcommit = "97ff743"
     checkoutCommit(scriptname, tommyds_clone_dirpath, tommyds_software_name, tommyds_targetcommit)
+
+    # NOTE: use Makefile of TommyDS itself due to using gcc instead of g++, where gcc does NOT add prefix/suffix to variable names (e.g., functions and classes)
+    tommyds_install_dirpath = "{}/libtommy.a".format(tommyds_clone_dirpath)
+    tommyds_install_tool = "make all && mv {0}/tommy.o {0}/libtommy.a".format(tommyds_clone_dirpath)
+    installFromRepoIfNot(scriptname, tommyds_install_dirpath, tommyds_software_name, tommyds_clone_dirpath, tommyds_install_tool)
 
 # (9) Others: chown of libraries and update LD_LIBRARY_PATH
 

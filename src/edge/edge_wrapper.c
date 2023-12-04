@@ -145,7 +145,7 @@ namespace covered
         {
             cache_manager_size = covered_cache_manager_ptr_->getSizeForCapacity();
         }
-        Util::dumpVariablesForDebug(instance_name_, 8, "edge_cache_size:", std::to_string(edge_cache_size).c_str(), "cooperation_size:", std::to_string(cooperation_size).c_str(), "cache_manager_size:", std::to_string(cache_manager_size).c_str(), "cache_manager_size:", std::to_string(cache_manager_size).c_str());
+        Util::dumpVariablesForDebug(instance_name_, 6, "edge_cache_size:", std::to_string(edge_cache_size).c_str(), "cooperation_size:", std::to_string(cooperation_size).c_str(), "cache_manager_size:", std::to_string(cache_manager_size).c_str());
 
         // Release local edge cache
         assert(edge_cache_ptr_ != NULL);

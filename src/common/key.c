@@ -74,6 +74,11 @@ namespace covered
         return keystr_ == other.keystr_;
     }
 
+    bool Key::operator!=(const Key& other) const
+    {
+        return keystr_ != other.keystr_;
+    }
+
     const Key& Key::operator=(const Key& other)
     {
         keystr_ = other.keystr_; // Deep copy

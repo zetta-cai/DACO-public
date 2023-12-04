@@ -181,6 +181,12 @@ def checkoutCommit(scriptname, clone_dirpath, software_name, target_commit):
         else:
             dump(scriptname, "the latest commit ID of {} is already {}".format(software_name, target_commit))
 
+def installFromRepoIfNot(scriptname, install_dirpath, software_name, clone_dirpath, install_tool, time_consuming = False):
+    if not os.path.exists(install_dirpath):
+        installFromRepo(scriptname, software_name, clone_dirpath, install_tool, time_consuming)
+    else:
+        dump(scriptname, "{} exists ({} has been installed)".format(install_dirpath, software_name))
+
 def installFromRepo(scriptname, software_name, clone_dirpath, install_tool, time_consuming = False):
     if time_consuming == False:
         prompt(scriptname, "install {}...".format(software_name))

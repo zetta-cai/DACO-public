@@ -124,7 +124,7 @@ namespace covered
         Lru2QCacheReadHandle handle = cachelib_cache_ptr_->find(keystr);
         bool is_local_cached = (handle != nullptr);
 
-        // Check value length
+        // Large object size checking
         if ((key.getKeyLength() + value.getValuesize()) > max_allocation_class_size_)
         {
             is_successful = false; // NOT cache too large object size due to slab class size limitation of Cachelib -> equivalent to NOT caching the latest value (will be invalidated by CacheWrapper later if key is local cached)
@@ -162,8 +162,8 @@ namespace covered
         
         // CacheLib (LRU2Q) cache uses default admission policy (i.e., always admit), which always returns true as long as key is not cached
         bool is_local_cached = isLocalCachedInternal_(key);
-        const bool is_valid_valuesize = ((key.getKeyLength() + value.getValuesize()) <= max_allocation_class_size_);
-        return !is_local_cached && is_valid_valuesize;
+        const bool is_valid_objsize = ((key.getKeyLength() + value.getValuesize()) <= max_allocation_class_size_); // Large object size checking
+        return !is_local_cached && is_valid_objsize;
     }
 
     void CachelibLocalCache::admitLocalCacheInternal_(const Key& key, const Value& value, const bool& is_neighbor_cached, bool& affect_victim_tracker, bool& is_successful)
@@ -173,7 +173,7 @@ namespace covered
         is_successful = false;
 
         // NOTE: MUST with a valid value length, as we always return false in needIndependentAdmitInternal_() if object size is too large
-        assert((key.getKeyLength() + value.getValuesize()) <= max_allocation_class_size_);
+        assert((key.getKeyLength() + value.getValuesize()) <= max_allocation_class_size_); // Large object size checking
         
         const std::string keystr = key.getKeystr();
 
@@ -261,7 +261,7 @@ namespace covered
         // NOTE: although we ONLY trigger independent admission for uncached objects w/ reasonable value sizes (NOT exceed max slab size) due to slab-based memory management in CacheLib engine, required size could still exceed max slab size due to multiple admissions in parallel
         //assert(required_size <= max_allocation_class_size_); // (OBSOLETE) NOTE: required size must <= newly-admited object size, while we will never admit large-value objects
         uint64_t tmp_required_size = required_size;
-        if (required_size > max_allocation_class_size_)
+        if (required_size > max_allocation_class_size_) // Large object size checking
         {
             // NOTE: extra bytes will be evicted outside CachelibLocalCache in the while loop of CacheServer
             tmp_required_size = max_allocation_class_size_;

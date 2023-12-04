@@ -38,6 +38,19 @@ namespace covered
         uint64_t local_uncached_metadata_size = local_uncached_metadata_.getSizeForCapacity();
         Util::dumpVariablesForDebug(instance_name_, 6, "internal_size:", std::to_string(internal_size).c_str(), "local_cached_metadata_size:", std::to_string(local_cached_metadata_size).c_str(), "local_uncached_metadata_size:", std::to_string(local_uncached_metadata_size).c_str());
 
+        // TMPDEBUG231201
+        uint64_t tommyds_internal_size = tommy_hashdyn_memory_usage(covered_cache_ptr_);
+        uint32_t tommyds_objcnt = tommy_hashdyn_count(covered_cache_ptr_);
+        uint64_t tommyds_kv_total_size = 0;
+        void (*tmp_func)(void*, void*) = [](void* arg, void* obj)
+        {
+            uint64_t* total_size_ptr = (uint64_t*)(arg);
+            tommyds_object_t* obj_ptr = (tommyds_object_t*)(obj);
+            *total_size_ptr += (obj_ptr->key.getKeyLength() + obj_ptr->val.getValuesize());
+        };
+        tommy_hashdyn_foreach_arg(covered_cache_ptr_, tmp_func, &tommyds_kv_total_size);
+        Util::dumpVariablesForDebug(instance_name_, 6, "tommyds_internal_size:", std::to_string(tommyds_internal_size).c_str(), "tommyds_objcnt:", std::to_string(tommyds_objcnt).c_str(), "tommyds_kv_total_size:", std::to_string(tommyds_kv_total_size).c_str());
+
         tommy_hashdyn_done(covered_cache_ptr_);
         covered_cache_ptr_ = NULL;
     }
@@ -160,12 +173,12 @@ namespace covered
             UNUSED(unused_redirection_popularity);
         }
 
-        // NOTE: (value size checking) NOT local-get/remote-collect large-objsize uncached object for aggregated uncached metadata due to slab-based memory management in Cachelib cache engine
-        if (object_size > max_allocation_class_size_) // May be with large object size
+        // NOTE: NOT local-get/remote-collect large-objsize uncached object for aggregated uncached metadata due to slab-based memory management in Cachelib cache engine
+        if (object_size >= capacity_bytes_) // Large object size checking
         {
             // NOTE: warn instead of assert, as approximate avg object size includes key size which introduces uncertainty
             std::ostringstream oss;
-            oss << "getCollectedPopularityFromLocalCacheInternal_() may get a large-value uncached object for key " << key.getKeystr() << " with avg object size " << object_size << " bytes";
+            oss << "getCollectedPopularityFromLocalCacheInternal_() may get a large-value uncached object for key " << key.getKeystr() << " with object size " << object_size << " bytes";
             Util::dumpWarnMsg(instance_name_, oss.str());
         }
 
@@ -176,7 +189,7 @@ namespace covered
 
     bool CoveredLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value, const bool& is_getrsp, const bool& is_global_cached, bool& affect_victim_tracker, bool& is_successful)
     {
-        assertCapacityForLargeObj_(key, value);
+        const bool is_valid_objsize = checkCapacityForLargeObj_(key, value); // Large object size checking
 
         affect_victim_tracker = false;
         is_successful = false;
@@ -186,12 +199,9 @@ namespace covered
         tommyds_object_t* tmp_obj_ptr = (tommyds_object_t *) tommy_hashdyn_search(covered_cache_ptr_, tommyds_compare, &key, hashForTommyds_(key));
         bool is_local_cached = (tmp_obj_ptr != NULL);
 
-        // NOTE: (value size checking) NOT track large-objsize uncached object in local uncached metadata due to slab-based memory management in Cachelib cache engine
-        const bool is_valid_valuesize = ((key.getKeyLength() + value.getValuesize()) <= capacity_bytes_);
-
         if (is_local_cached) // Key already exists
         {
-            if (!is_valid_valuesize)
+            if (!is_valid_objsize)
             {
                 is_successful = false; // NOT cache too large object size due to slab class size limitation of Cachelib -> equivalent to NOT caching the latest value (will be invalidated by CacheWrapper later if key is local cached)
                 return is_local_cached;
@@ -234,7 +244,7 @@ namespace covered
             bool is_key_tracked = local_uncached_metadata_.isKeyExist(key);
 
             const uint32_t keylen = key.getKeyLength();
-            if (!is_valid_valuesize) // Large object size -> NOT track the key in local uncached metadata
+            if (!is_valid_objsize) // Large object size -> NOT track the key in local uncached metadata
             {
                 if (is_key_tracked) // Key is already tracked by local uncached metadata
                 {
@@ -296,13 +306,13 @@ namespace covered
 
     void CoveredLocalCache::admitLocalCacheInternal_(const Key& key, const Value& value, const bool& is_neighbor_cached, bool& affect_victim_tracker, bool& is_successful)
     {
-        assertCapacityForLargeObj_(key, value);
+        const bool is_valid_objsize = checkCapacityForLargeObj_(key, value); // Large object size checking
 
         affect_victim_tracker = false;
         is_successful = false;
 
-        // NOTE: (value size checking) NOT admit large-objsize uncached object after local/remote placement notification due to slab-based memory management in Cachelib cache engine
-        if ((key.getKeyLength() + value.getValuesize()) > capacity_bytes_)
+        // NOTE: NOT admit large-objsize uncached object after local/remote placement notification due to slab-based memory management in Cachelib cache engine
+        if (!is_valid_objsize)
         {
             std::ostringstream oss;
             oss << "admitLocalCacheInternal_() admits a large-value uncached object for key " << key.getKeystr() << " with value size " << value.getValuesize() << " bytes";
@@ -312,7 +322,7 @@ namespace covered
             return;
         }
 
-        tommyds_object_t* tmp_obj_ptr = (tommyds_object_t *) tommy_hashdyn_search(covered_cache_ptr_, tommyds_compare, &key, tommy_hash_u32(0, key.getKeystr(), key.getKeyLength()));
+        tommyds_object_t* tmp_obj_ptr = (tommyds_object_t *) tommy_hashdyn_search(covered_cache_ptr_, tommyds_compare, &key, hashForTommyds_(key));
         bool is_local_cached = (tmp_obj_ptr != NULL);
     
         // assert(!is_local_cached); // (OBSOLETE) Key should NOT exist
@@ -339,7 +349,7 @@ namespace covered
         assert(tmp_allocate_obj_ptr != NULL);
         tmp_allocate_obj_ptr->key = key;
         tmp_allocate_obj_ptr->val = value;
-        tommy_hashdyn_insert(covered_cache_ptr_, &tmp_allocate_obj_ptr->node, tmp_allocate_obj_ptr, tommy_hash_u32(0, key.getKeystr(), key.getKeyLength()));
+        tommy_hashdyn_insert(covered_cache_ptr_, &tmp_allocate_obj_ptr->node, tmp_allocate_obj_ptr, hashForTommyds_(key));
 
         // Update internal key-value pair size usage
         internal_kvbytes_ = Util::uint64Add(internal_kvbytes_, (key.getKeyLength() + value.getValuesize()));
@@ -401,7 +411,7 @@ namespace covered
                 {
                     keys.insert(tmp_victim_key);
 
-                    tommyds_object_t* tmp_victim_ptr = (tommyds_object_t *) tommy_hashdyn_search(covered_cache_ptr_, tommyds_compare, &key, tommy_hash_u32(0, key.getKeystr(), key.getKeyLength()));
+                    tommyds_object_t* tmp_victim_ptr = (tommyds_object_t *) tommy_hashdyn_search(covered_cache_ptr_, tommyds_compare, &tmp_victim_key, hashForTommyds_(tmp_victim_key));
                     assert(tmp_victim_ptr != NULL); // Victim must be cached before eviction
                     uint32_t tmp_victim_value_size = tmp_victim_ptr->val.getValuesize();
                     #ifdef ENABLE_TRACK_PERKEY_OBJSIZE
@@ -446,12 +456,12 @@ namespace covered
         bool is_evict = false;
 
         // Get victim value
-        tommyds_object_t* tmp_obj_ptr = (tommyds_object_t *) tommy_hashdyn_search(covered_cache_ptr_, tommyds_compare, &key, tommy_hash_u32(0, key.getKeystr(), key.getKeyLength()));
+        tommyds_object_t* tmp_obj_ptr = (tommyds_object_t *) tommy_hashdyn_search(covered_cache_ptr_, tommyds_compare, &key, hashForTommyds_(key));
 
         if (tmp_obj_ptr != NULL) // Key exists
         {
             value = tmp_obj_ptr->val;
-            assert((key.getKeyLength() + value.getValuesize()) <= capacity_bytes_); // NOTE: we will never admit large-objsize objects into edge cache
+            assert(checkCapacityForLargeObj_(key, value)); // Large object size checking (NOTE: we will never admit large-objsize objects into edge cache)
 
             // TMPDEBUG231201
             uint64_t internal_size = internal_kvbytes_;
@@ -460,7 +470,7 @@ namespace covered
             Util::dumpVariablesForDebug(instance_name_, 6, "[before evict] internal_size:", std::to_string(internal_size).c_str(), "local_cached_metadata_size:", std::to_string(local_cached_metadata_size).c_str(), "local_uncached_metadata_size:", std::to_string(local_uncached_metadata_size).c_str());
 
             // Remove the corresponding cache item
-            tmp_obj_ptr = (tommyds_object_t *) tommy_hashdyn_remove(covered_cache_ptr_, tommyds_compare, &key, tommy_hash_u32(0, key.getKeystr(), key.getKeyLength()));
+            tmp_obj_ptr = (tommyds_object_t *) tommy_hashdyn_remove(covered_cache_ptr_, tommyds_compare, &key, hashForTommyds_(key));
             assert(tmp_obj_ptr != NULL);
             delete tmp_obj_ptr;
             tmp_obj_ptr = NULL;
@@ -469,7 +479,6 @@ namespace covered
             internal_kvbytes_ = Util::uint64Minus(internal_kvbytes_, (key.getKeyLength() + value.getValuesize()));
 
             // TMPDEBUG231201
-            handle.reset();
             uint64_t after_internal_size = internal_kvbytes_;
             uint64_t after_local_cached_metadata_size = local_cached_metadata_.getSizeForCapacity();
             uint64_t after_local_uncached_metadata_size = local_uncached_metadata_.getSizeForCapacity();
@@ -544,15 +553,16 @@ namespace covered
         return;
     }
 
-    void CoveredLocalCache::assertCapacityForLargeObj_(const Key& key, const Value& value) const
+    bool CoveredLocalCache::checkCapacityForLargeObj_(const Key& key, const Value& value) const
     {
+        bool is_valid_objsize = false;
         const uint32_t object_size = key.getKeyLength() + value.getValuesize();
-        assert(capacity_bytes_ > object_size);
-        return;
+        is_valid_objsize = (capacity_bytes_ > object_size);
+        return is_valid_objsize;
     }
 
     uint32_t CoveredLocalCache::hashForTommyds_(const Key& key) const
     {
-        return tommy_hash_u32(0, key.getKeystr(), key.getKeyLength());
+        return tommy_hash_u32(0, key.getKeystr().c_str(), key.getKeyLength());
     }
 }
