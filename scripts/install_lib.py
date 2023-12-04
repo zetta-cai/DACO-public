@@ -17,6 +17,7 @@ is_install_rocksdb = True
 is_install_smhasher = True
 is_install_segcache = True # Completely use hacked version
 is_install_gdsf = True # Completely use hacked version
+is_install_tommyds = True
 
 # (0) Check input CLI parameters
 
@@ -158,6 +159,17 @@ if is_install_gdsf:
     
     gdsf_targetcommit = "8818442"
     checkoutCommit(scriptname, gdsf_clone_dirpath, gdsf_software_name, gdsf_targetcommit)
+
+# (8) Install TommyDS (commit ID: 97ff743)
+
+if is_install_tommyds:
+    tommyds_clone_dirpath = "{}/tomyds".format(lib_dirpath)
+    tommyds_software_name = "TommyDS"
+    tommyds_repo_url = "https://github.com/amadvance/tommyds.git"
+    cloneRepo(scriptname, tommyds_clone_dirpath, tommyds_software_name, tommyds_repo_url)
+
+    tommyds_targetcommit = "97ff743"
+    checkoutCommit(scriptname, tommyds_clone_dirpath, tommyds_software_name, tommyds_targetcommit)
 
 # (9) Others: chown of libraries and update LD_LIBRARY_PATH
 

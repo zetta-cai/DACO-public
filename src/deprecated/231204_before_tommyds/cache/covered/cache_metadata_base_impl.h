@@ -284,7 +284,7 @@ namespace covered
         if (is_local_cached_metadata) // For local cached metadata
         {
             // Object-level metadata
-            // NOTE: (i) LRU list does NOT need to track keys, as COVERED finds victim key based on sorted reward list instead of LRU list; (ii) although we track local cached metadata outside TommyDS to avoid extensive hacking, per-key object-level metadata actually can be stored together with TommyDS objects -> NO need to count the size of keys of object-level metadata for local cached objects (similar as size measurement in ValidityMap and BlockTracker)
+            // NOTE: (i) LRU list does NOT need to track keys; (ii) although we track local cached metadata outside CacheLib to avoid extensive hacking, per-key object-level metadata actually can be stored into cachelib::CacheItem -> NO need to count the size of keys of object-level metadata for local cached objects (similar as size measurement in ValidityMap and BlockTracker)
             //total_size = Util::uint64Add(total_size, perkey_metadata_list_key_size_);
             total_size = Util::uint64Add(total_size, perkey_metadata_list_metadata_size);
 
@@ -293,21 +293,21 @@ namespace covered
             total_size = Util::uint64Add(total_size, pergroup_metadata_map_metadata_size);
 
             // Reward information (locate keys in lookup table for reward-based eviction)
-            // NOTE: we only need to maintain keys (or TommyDS object pointers) in reward list instead of LRU list (we NEVER use perkey_metadata_list_->first to locate keys) for reward-based eviction; also we need to count the size of keys of reward list of local cached objects, as we need to find victims based on reward list
+            // NOTE: we only need to maintain keys (or CacheItem pointers) in reward list instead of LRU list (we NEVER use perkey_metadata_list_->first to locate keys) for reward-based eviction, while cachelib has counted the size of keys (i.e., CacheItem pointers) in MMContainer's LRU list (we do NOT remove keys from LRU list in cachelib to avoid hacking too much code) -> NO need to count the size of keys of reward list for local cached objects here
             total_size = Util::uint64Add(total_size, sorted_reward_multimap_reward_size);
-            total_size = Util::uint64Add(total_size, sorted_reward_multimap_key_size_);
+            //total_size = Util::uint64Add(total_size, sorted_reward_multimap_key_size_);
 
             // Lookup table (locate keys in object-level LRU list and reward list)
-            // NOTE: although we track local cached metadata outside TommyDS to avoid extensive hacking, per-key lookup metadata actually can be stored together with TommyDS objects -> NO need to count the size of keys of lookup table for local cached objects
+            // NOTE: although we track local cached metadata outside CacheLib to avoid extensive hacking, per-key lookup metadata actually can be stored into cachelib::ChainedHashTable -> NO need to count the size of keys and object-level metadata iterators of lookup metadata for local cached objects
             //total_size = Util::uint64Add(total_size, perkey_lookup_table_key_size_);
-            total_size = Util::uint64Add(total_size, perkey_lookup_table_perkey_metadata_list_iter_size); // LRU list iterator
-            //UNUSED(perkey_lookup_table_perkey_metadata_list_iter_size);
+            //total_size = Util::uint64Add(total_size, perkey_lookup_table_perkey_metadata_list_iter_size); // LRU list iterator
+            UNUSED(perkey_lookup_table_perkey_metadata_list_iter_size);
             total_size = Util::uint64Add(total_size, perkey_lookup_table_sorted_reward_iter_size); // Reward list iterator
         }
         else // For local uncached metadata
         {
             // Object-level metadata
-            // NOTE: although we maintain keys in perkey_metadata_list_, it is just for implementation simplicity (e.g., key can be replaced by a pointer referring to the corresponding lookup table entry) but we NEVER use perkey_metadata_list_->first to locate keys (due to reward-based admission instead of LRU-based admission) -> NO need to count the size of keys of object-level metadata for local uncached objects (cache size usage of keys will be counted in lookup table below)
+            // NOTE: although we maintain keys in perkey_metadata_list_, it is just for implementation simplicity (e.g., key can be replaced by a pointer referring to the corresponding lookup table entry) but we NEVER use perkey_metadata_list_->first to locate keys (due to reward-based eviciton instead of LRU-based eviction) -> NO need to count the size of keys of object-level metadata for local uncached objects (cache size usage of keys will be counted in lookup table below)
             //total_size = Util::uint64Add(total_size, perkey_metadata_list_key_size_);
             total_size = Util::uint64Add(total_size, perkey_metadata_list_metadata_size);
 
@@ -315,7 +315,7 @@ namespace covered
             total_size = Util::uint64Add(total_size, pergroup_metadata_map_groupid_size);
             total_size = Util::uint64Add(total_size, pergroup_metadata_map_metadata_size);
 
-            // Reward information (locate keys in lookup table for reward-based admission)
+            // Reward information (locate keys in lookup table for reward-based eviction)
             total_size = Util::uint64Add(total_size, sorted_reward_multimap_reward_size);
             total_size = Util::uint64Add(total_size, sorted_reward_multimap_key_size_);
 

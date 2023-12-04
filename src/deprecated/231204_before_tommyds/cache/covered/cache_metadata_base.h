@@ -23,7 +23,7 @@
 
 namespace covered
 {
-    // NOTE: typedef MUST need complete definition of class unless you use pointers or references -> cannot use perkey_lookup_table_t::iterator in sorted_reward_multimap_t, which will cause circular dependency between LookupMetadata and sorted_reward_multimap_t (using Key here is just for implementation simplicity, yet actually we can hack TommyDS to organize key-value pairs as reward-based ordered list)
+    // NOTE: typedef MUST need complete definition of class unless you use pointers or references -> cannot use perkey_lookup_table_t::iterator in sorted_reward_multimap_t, which will cause circular dependency between LookupMetadata and sorted_reward_multimap_t (using Key here is just for implementation simplicity, yet actually we can move CacheItem pointers from MMContainer's LRU list into reward list to replace keys for reward list if we hack cachelib)
     //typedef std::multimap<Reward, LruCacheReadHandle> sorted_reward_multimap_t; // Obselete: local uncached objects cannot provide LruCacheReadHandle
 
     // NOTE: using which policy for equal-reward objects has little difference, the key point is that we should NOT simply set reward as zero for one-hit-wonders, as we may mis-evict some hot keys whose frequency is 1 during cache warmup

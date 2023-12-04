@@ -1,11 +1,11 @@
 /*
- * CoveredLocalCache: local edge cache built on TommyDS (https://github.com/amadvance/tommyds/tree/master/tommyds).
+ * CoveredLocalCache: local edge cache with COVERED's policy built based on Cachelib (https://github.com/facebook/CacheLib.git).
  *
- * NOTE: NOT use CacheLib engine, as the system bottleneck of cooperative edge caching is network propagation latency instead of single-node cache access, and slab-based memory allocation used in CacheLib is NOT memory efficient due to internal fragmentation.
+ * NOTE: To avoid hacking 352.6K LOC of CacheLib, we track metadata outside CacheLib; it is similar as MMTinyLFU in CacheLib, which maintains access frequencies outside MemoryAllocator (using a CMS in MM2QTinyLFU) due to NO need of slab-based memory management for metadata; specifically, we use CacheLib CacheItem to track key, value, LRU, and lookup information (cache size usage of this part has already been counted by CacheLib), yet maintain other metadata and sorted popularity outside CacheLib in CoveredLocalCache (see other NOTEs in src/cache/cachelib_local_cache.h).
  * 
- * NOTE: NOT use Memcached/Redis due to slow string comparison and client-server storage architecture (w/ extra cross-thread communication overhead), while TommyDS is a high-performance hashtable-based KVS library with custom object comparison.
- *
- * By Siyuan Sheng (2023.12.04).
+ * NOTE: we track local cached metadata and calculate local rewards to find local synced victims for victim synchronization; we track local uncached metadata and calculate approximate admission benefits for popularity collection.
+ * 
+ * By Siyuan Sheng (2023.08.15).
  */
 
 #ifndef COVERED_LOCAL_CACHE_H
@@ -14,10 +14,16 @@
 #include <list> // std::list
 #include <string>
 
-#include "tommy.h" // TommyDS
+#include "cache/cachelib/CacheAllocator-inl.h" // LruAllocator
 
 namespace covered
 {
+    typedef LruAllocator CachelibLruCache; // LRU2Q cache policy
+    typedef CachelibLruCache::Config LruCacheConfig;
+    typedef CachelibLruCache::ReadHandle LruCacheReadHandle;
+    typedef CachelibLruCache::WriteHandle LruCacheWriteHandle;
+    typedef CachelibLruCache::Item LruCacheItem;
+    
     // Forward declaration
     class CoveredLocalCache;
 }
@@ -29,25 +35,14 @@ namespace covered
 
 namespace covered
 {
-    // For internal TommyDS
-
-    typedef struct TommydsObject {
-        Key key;
-        Value val;
-        tommy_node node;
-    } tommyds_object_t;
-
-    static int tommyds_compare(const void *arg, const void *obj) {
-        const Key *targetkey = (const Key *)arg;
-        const tommyds_object_t *obj_to_compare = (const tommyds_object_t *)obj;
-        return *targetkey != obj_to_compare->key;
-    }
-
     class CoveredLocalCache : public LocalCacheBase
     {
     public:
         // For updateLocalCacheMetadataInternal_()
         static const std::string UPDATE_IS_NEIGHBOR_CACHED_FLAG_FUNC_NAME; // Update is_neighbor_cached flag in local cached metadata (func param is bool)
+
+        // NOTE: too small cache capacity cannot support slab-based memory allocation in cachelib (see lib/CacheLib/cachelib/allocator/CacheAllocatorConfig.h and lib/CacheLib/cachelib/allocator/memory/SlabAllocator.cpp)
+        //static const uint64_t CACHELIB_ENGINE_MIN_CAPACITY_BYTES; // (OBSOLETE: move to Util) NOTE: NOT affect capacity constraint!
 
         CoveredLocalCache(const uint32_t& edge_idx, const uint64_t& capacity_bytes, const uint64_t& local_uncached_capacity_bytes, const uint32_t& peredge_synced_victimcnt);
         virtual ~CoveredLocalCache();
@@ -86,7 +81,6 @@ namespace covered
         virtual void checkPointersInternal_() const override;
 
         void assertCapacityForLargeObj_(const Key& key, const Value& value) const;
-        uint32_t hashForTommyds_(const Key& key) const;
 
         // Member variables
 
@@ -94,12 +88,13 @@ namespace covered
         std::string instance_name_;
         const uint64_t capacity_bytes_;
         const uint32_t peredge_synced_victimcnt_;
+        uint32_t max_allocation_class_size_; // 4MiB in Cachelib by default
 
         // (B) Non-const shared variables of local cached objects for eviction
 
-        // TommyDS-based key-value storage
-        uint64_t internal_kvbytes_; // Internal bytes used for key-value pairs stored by TommyDS (in units of bytes)
-        tommy_hashdyn* covered_cache_ptr_; // Data engine for local edge cache (use TommyDS dynamic chained hashtable due to high performance)
+        // CacheLib-based key-value storage
+        std::unique_ptr<CachelibLruCache> covered_cache_ptr_; // Data engine for local edge cache
+        facebook::cachelib::PoolId covered_poolid_; // Pool ID for covered local edge cache
 
         mutable LocalCachedMetadata local_cached_metadata_; // Metadata for local cached objects
 

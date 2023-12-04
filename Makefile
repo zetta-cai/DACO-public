@@ -6,6 +6,7 @@ include src/mk/lib/boost.mk
 include src/mk/lib/cachebench.mk
 include src/mk/lib/rocksdb.mk
 include src/mk/lib/smhasher.mk
+include src/mk/lib/tommyds.mk
 
 # Recipes for cache methods (including baselines and COVERED)
 include src/mk/cache/cachelib.mk
