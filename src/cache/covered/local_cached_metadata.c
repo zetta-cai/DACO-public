@@ -70,7 +70,8 @@ namespace covered
     {
         const HeteroKeyLevelMetadata& key_level_metadata_ref = getkeyLevelMetadata(key);
         local_popularity = key_level_metadata_ref.getLocalPopularity();
-        redirected_popularity = key_level_metadata_ref.getRedirectedFrequency();
+        redirected_popularity = key_level_metadata_ref.getRedirectedPopularity();
+
         return;
     }
 

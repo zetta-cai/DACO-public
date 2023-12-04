@@ -54,12 +54,6 @@ namespace covered
     CoveredLocalCache::~CoveredLocalCache()
     {
         // NOTE: deconstructor of covered_cache_ptr_ will delete covered_cache_ptr_.get() automatically
-
-        // TMPDEBUG231201
-        uint64_t internal_size = covered_cache_ptr_->getUsedSize(covered_poolid_);
-        uint64_t local_cached_metadata_size = local_cached_metadata_.getSizeForCapacity();
-        uint64_t local_uncached_metadata_size = local_uncached_metadata_.getSizeForCapacity();
-        Util::dumpVariablesForDebug(instance_name_, 6, "internal_size:", std::to_string(internal_size).c_str(), "local_cached_metadata_size:", std::to_string(local_cached_metadata_size).c_str(), "local_uncached_metadata_size:", std::to_string(local_uncached_metadata_size).c_str());
     }
 
     const bool CoveredLocalCache::hasFineGrainedManagement() const
@@ -367,12 +361,6 @@ namespace covered
         }
         else
         {
-            // TMPDEBUG231201
-            uint64_t internal_size = covered_cache_ptr_->getUsedSize(covered_poolid_);
-            uint64_t local_cached_metadata_size = local_cached_metadata_.getSizeForCapacity();
-            uint64_t local_uncached_metadata_size = local_uncached_metadata_.getSizeForCapacity();
-            Util::dumpVariablesForDebug(instance_name_, 6, "[before admit] internal_size:", std::to_string(internal_size).c_str(), "local_cached_metadata_size:", std::to_string(local_cached_metadata_size).c_str(), "local_uncached_metadata_size:", std::to_string(local_uncached_metadata_size).c_str());
-
             std::string valuestr = value.generateValuestr();
             assert(valuestr.size() == value.getValuesize());
             std::memcpy(allocate_handle->getMemory(), valuestr.data(), value.getValuesize());
@@ -381,15 +369,6 @@ namespace covered
             // Update local cached metadata for admission
             const bool is_global_cached = true; // Local cached objects MUST be global cached
             affect_victim_tracker = local_cached_metadata_.addForNewKey(key, value, peredge_synced_victimcnt_, is_global_cached, is_neighbor_cached);
-
-            // TMPDEBUG231201
-            uint64_t after_internal_size = covered_cache_ptr_->getUsedSize(covered_poolid_);
-            uint64_t after_local_cached_metadata_size = local_cached_metadata_.getSizeForCapacity();
-            uint64_t after_local_uncached_metadata_size = local_uncached_metadata_.getSizeForCapacity();
-            Util::dumpVariablesForDebug(instance_name_, 6, "[after admit] internal_size:", std::to_string(after_internal_size).c_str(), "local_cached_metadata_size:", std::to_string(after_local_cached_metadata_size).c_str(), "local_uncached_metadata_size:", std::to_string(after_local_uncached_metadata_size).c_str());
-
-            // TMPDEBUG231201
-            Util::dumpVariablesForDebug(instance_name_, 8, "newly-admited key", key.getKeystr().c_str(), "passed is_neighbor_cached:", Util::toString(is_neighbor_cached).c_str(), "is_neighbor_cached:", Util::toString(local_cached_metadata_.checkIsNeighborCachedForExistingKey(key)).c_str(), "local reward:", std::to_string(local_cached_metadata_.getLocalRewardForExistingKey(key)).c_str());
 
             // Remove from local uncached metadata if necessary for admission
             if (local_uncached_metadata_.isKeyExist(key))
@@ -490,12 +469,6 @@ namespace covered
             value = Value(handle->getSize());
             assert((key.getKeyLength() + value.getValuesize()) <= max_allocation_class_size_); // NOTE: we will never admit large-objsize objects into edge cache
 
-            // TMPDEBUG231201
-            uint64_t internal_size = covered_cache_ptr_->getUsedSize(covered_poolid_);
-            uint64_t local_cached_metadata_size = local_cached_metadata_.getSizeForCapacity();
-            uint64_t local_uncached_metadata_size = local_uncached_metadata_.getSizeForCapacity();
-            Util::dumpVariablesForDebug(instance_name_, 6, "[before evict] internal_size:", std::to_string(internal_size).c_str(), "local_cached_metadata_size:", std::to_string(local_cached_metadata_size).c_str(), "local_uncached_metadata_size:", std::to_string(local_uncached_metadata_size).c_str());
-
             // Remove the corresponding cache item
             // NOTE: although CacheLib does NOT free slab memory immediately after remove, it will reclaim slab memory after all handles to the key are destoryed
             CachelibLruCache::RemoveRes removeRes = covered_cache_ptr_->remove(key.getKeystr());
@@ -505,16 +478,6 @@ namespace covered
             //LruCacheWriteHandle tmp_write_handle = std::move(handle).toWriteHandle(); // NOTE: from now we should NOT use handle, which has been converted to a rvalue reference
             //assert(tmp_write_handle.get() != nullptr);
             //covered_cache_ptr_->allocator_->free(tmp_write_handle.get());
-
-            // TMPDEBUG231201
-            handle.reset();
-            uint64_t after_internal_size = covered_cache_ptr_->getUsedSize(covered_poolid_);
-            uint64_t after_local_cached_metadata_size = local_cached_metadata_.getSizeForCapacity();
-            uint64_t after_local_uncached_metadata_size = local_uncached_metadata_.getSizeForCapacity();
-            Util::dumpVariablesForDebug(instance_name_, 6, "[after evict] internal_size:", std::to_string(after_internal_size).c_str(), "local_cached_metadata_size:", std::to_string(after_local_cached_metadata_size).c_str(), "local_uncached_metadata_size:", std::to_string(after_local_uncached_metadata_size).c_str());
-
-            // TMPDEBUG231201
-            Util::dumpVariablesForDebug(instance_name_, 6, "victim key", key.getKeystr().c_str(), "is_neighbor_cached:", Util::toString(local_cached_metadata_.checkIsNeighborCachedForExistingKey(key)).c_str(), "local reward:", std::to_string(local_cached_metadata_.getLocalRewardForExistingKey(key)).c_str());
 
             // Remove from local cached metadata for eviction
             local_cached_metadata_.removeForExistingKey(key, value);

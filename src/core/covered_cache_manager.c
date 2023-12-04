@@ -227,12 +227,6 @@ namespace covered
         AggregatedUncachedPopularity tmp_aggregated_uncached_popularity;
         bool has_aggregated_uncached_popularity = popularity_aggregator_.getAggregatedUncachedPopularity(key, tmp_aggregated_uncached_popularity);
 
-        // TMPDEBUGDUPAVOID
-        if (key.getKeystr() == "bicdwpmzuwdobknsfpyoxlshtklmaqdkxioswfymkgireyrsmaqikngzwlu")
-        {
-            Util::dumpVariablesForDebug(instance_name_, 4, "placementCalculation_ for key", key.getKeystr().c_str(), "has_aggregated_uncached_popularity:", Util::toString(has_aggregated_uncached_popularity).c_str());
-        }
-
         // Perform placement calculation ONLY if key is still tracked by popularity aggregator (i.e., belonging to a global popular uncached object)
         if (has_aggregated_uncached_popularity)
         {
@@ -267,12 +261,6 @@ namespace covered
                     continue;
                 }
                 #endif
-
-                // TMPDEBUGDUPAVOID (TODO: END HERE)
-                if (key.getKeystr() == "bicdwpmzuwdobknsfpyoxlshtklmaqdkxioswfymkgireyrsmaqikngzwlu")
-                {
-                    Util::dumpVariablesForDebug(instance_name_, 10, "placementCalculation_ for key", key.getKeystr().c_str(), "tmp_placement_edgeset:", tmp_placement_edgeset.toString().c_str(), "tmp_admission_benefit:", std::to_string(tmp_admission_benefit).c_str(), "tmp_eviction_cost:", std::to_string(tmp_eviction_cost).c_str(), "tmp_object_size:", std::to_string(tmp_object_size).c_str());
-                }
 
                 // Calculate placement gain (admission benefit - eviction cost)
                 const DeltaReward tmp_placement_gain = tmp_admission_benefit - tmp_eviction_cost;

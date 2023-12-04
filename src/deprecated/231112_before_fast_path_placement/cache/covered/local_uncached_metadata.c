@@ -117,11 +117,6 @@ namespace covered
 
     void LocalUncachedMetadata::addForNewKey(const Key& key, const Value& value)
     {
-        // TMPDEBUG231110
-        // std::ostringstream oss;
-        // oss << "addForNewKey: key " << key.getKeystr() << ", value size " << value.getValuesize();
-        // Util::dumpDebugMsg(kClassName, oss.str());
-
         // Initialize and update both value-unrelated and value-related metadata for newly-tracked key
         CacheMetadataBase::addForNewKey_(key, value);
 
@@ -148,12 +143,6 @@ namespace covered
             {
                 uint32_t detracked_value_size = getValueSizeForUncachedObjects(detracked_key);                
                 removeForExistingKey(detracked_key, Value(detracked_value_size)); // For getrsp with cache miss, put/delrsp with cache miss (NOTE: this will remove value from auxiliary data cache if any)
-
-                // TMPDEBUG231110
-                // oss.clear();
-                // oss.str("");
-                // oss << "need_detrack: key " << detracked_key.getKeystr() << ", value size " << detracked_value_size;
-                // Util::dumpDebugMsg(kClassName, oss.str());
             }
             else // Local uncached objects is limited
             {

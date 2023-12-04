@@ -48,7 +48,7 @@ namespace covered
         uint64_t local_edge_cache_size = local_cache_ptr_->getSizeForCapacity();
         uint64_t validity_map_size = validity_map_ptr_->getSizeForCapacity();
         oss << "local_edge_cache_size: " << local_edge_cache_size << "; validity_map_size: " << validity_map_size;
-        Util::dumpDebugMsg(instance_name_, oss.str());
+        Util::dumpWarnMsg(instance_name_, oss.str());
 
         // Release local edge cache
         assert(local_cache_ptr_ != NULL);
