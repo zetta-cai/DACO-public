@@ -13,6 +13,7 @@
 
 #include <list> // std::list
 #include <string>
+#include <vector>
 
 #include <tommy.h> // TommyDS
 
@@ -97,7 +98,7 @@ namespace covered
         // (B) Non-const shared variables of local cached objects for eviction
 
         // TommyDS-based key-value storage
-        uint64_t internal_kvbytes_; // Internal bytes used for key-value pairs stored by TommyDS (in units of bytes)
+        uint64_t internal_kvbytes_; // Internal bytes used for key-value pairs stored by TommyDS (in units of bytes) (NOTE: NOT use tommy_hashdyn_memory_usage as we only store value sizes in TommyDS)
         tommy_hashdyn* covered_cache_ptr_; // Data engine for local edge cache (use TommyDS dynamic chained hashtable due to high performance)
 
         mutable LocalCachedMetadata local_cached_metadata_; // Metadata for local cached objects

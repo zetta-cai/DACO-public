@@ -51,7 +51,33 @@ namespace covered
         tommy_hashdyn_foreach_arg(covered_cache_ptr_, tmp_func, &tommyds_kv_total_size);
         Util::dumpVariablesForDebug(instance_name_, 6, "tommyds_internal_size:", std::to_string(tommyds_internal_size).c_str(), "tommyds_objcnt:", std::to_string(tommyds_objcnt).c_str(), "tommyds_kv_total_size:", std::to_string(tommyds_kv_total_size).c_str());
 
+        // Free TommyDS objects allocated outside TommyDS
+        std::vector<tommyds_object_t*> obj_ptr_vec;
+        void (*obj_free_func_ptr)(void*, void*) = [](void* arg, void* obj)
+        {
+            assert(arg != NULL);
+            assert(obj != NULL);
+
+            std::vector<tommyds_object_t*>* obj_ptr_vec_ptr = (std::vector<tommyds_object_t*>*)(arg);
+            tommyds_object_t* obj_ptr = (tommyds_object_t*)(obj);
+            obj_ptr_vec_ptr->push_back(obj_ptr);
+            return;
+        };
+        tommy_hashdyn_foreach_arg(covered_cache_ptr_, obj_free_func_ptr, &obj_ptr_vec);
+        assert(obj_ptr_vec.size() == tommy_hashdyn_count(covered_cache_ptr_));
+        for (uint32_t i = 0; i < obj_ptr_vec.size(); i++)
+        {
+            tommyds_object_t* tmp_obj_ptr = obj_ptr_vec[i];
+            assert(tmp_obj_ptr != NULL);
+            delete tmp_obj_ptr;
+            tmp_obj_ptr = NULL;
+        }
+
+        // Free hashtable buckets allocated inside TommyDS
         tommy_hashdyn_done(covered_cache_ptr_);
+
+        // Free TommyDS itself
+        delete covered_cache_ptr_;
         covered_cache_ptr_ = NULL;
     }
 

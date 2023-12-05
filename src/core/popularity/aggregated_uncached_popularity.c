@@ -160,8 +160,9 @@ namespace covered
             const Weight w1_minus_w2 = Util::popularityNonegMinus(local_hit_weight, cooperative_hit_weight);
             admission_benefit = Util::popularityMultiply(w1_minus_w2, topi_local_uncached_popularity_); // w1 - w2
 
-            // TMPDEBUGDUPAVOID
+            #ifdef ENABLE_COMPLETE_DUPLICATION_AVOIDANCE_FOR_DEBUG
             admission_benefit = 0.0;
+            #endif
         }
         else // Global cache misses become local cache hits for the edge nodes with top-k local uncached popularity, and global cache misses become redirected cache hits for other edge nodes
         {
