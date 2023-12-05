@@ -20,7 +20,7 @@ namespace covered
 {
     const std::string SegcacheLocalCache::kClassName("SegcacheLocalCache");
 
-    SegcacheLocalCache::SegcacheLocalCache(const uint32_t& edge_idx, const uint64_t& capacity_bytes) : LocalCacheBase(edge_idx)
+    SegcacheLocalCache::SegcacheLocalCache(const uint32_t& edge_idx, const uint64_t& capacity_bytes) : LocalCacheBase(edge_idx, capacity_bytes)
     {
         // Differentiate local edge cache in different edge nodes
         std::ostringstream oss;
@@ -175,8 +175,7 @@ namespace covered
     {
         // SegCache cache uses default independent admission policy (i.e., always admit), which always returns true as long as key is not cached
         bool is_local_cached = isLocalCachedInternal_(key);
-        const bool is_valid_valuesize = ((key.getKeyLength() + value.getValuesize()) <= segcache_cache_ptr_->heap_ptr->seg_size);
-        return !is_local_cached && is_valid_valuesize;
+        return !is_local_cached;
     }
 
     void SegcacheLocalCache::admitLocalCacheInternal_(const Key& key, const Value& value, const bool& is_neighbor_cached, bool& affect_victim_tracker, bool& is_successful)
@@ -184,9 +183,6 @@ namespace covered
         UNUSED(is_neighbor_cached); // ONLY for COVERED
         UNUSED(affect_victim_tracker); // Only for COVERED
         is_successful = false;
-
-        // NOTE: MUST with a valid value length, as we always return false in needIndependentAdmitInternal_() if object size is too large
-        assert((key.getKeyLength() + value.getValuesize()) <= segcache_cache_ptr_->heap_ptr->seg_size);
 
         // NOTE: admission is the same as update for SegCache due to log-structured design
         const bool is_insert = true;
@@ -352,6 +348,8 @@ namespace covered
     // (ii) Even if we allocate internal unused capacity, segcache could still have NO free segment for seg_get_new() due to incorrect usage of seg_merge_evict() -> we have passed is_seg_get_new = false into seg_merge_evict() to fix NO free segment issue
     bool SegcacheLocalCache::appendLocalCache_(const Key& key, const Value& value, const bool& is_insert, bool& is_successful)
     {
+        const bool is_valid_objsize = isValidObjsize_(key, value); // Object size checking
+
         bool is_local_cached = true;
         is_successful = false; // Whether the value is updated/inserted successfully
 
@@ -376,17 +374,18 @@ namespace covered
         // Check value length vs. segment size
         if (!is_insert) // Not write for update w/ too large object size
         {
-            if ((key.getKeyLength() + value.getValuesize()) > segcache_cache_ptr_->heap_ptr->seg_size)
+            if (is_local_cached && !is_valid_objsize)
             {
-                is_successful = false;
+                is_successful = false; // NOT cache too large object size -> equivalent to NOT caching the latest value (will be invalidated by CacheWrapper later if key is local cached)
                 return is_local_cached;
             }
         }
         else // NOTE: value length MUST be valid for insert, as we have checked value length in needIndependentAdmitInternal_()
         {
-            assert((key.getKeyLength() + value.getValuesize()) <= segcache_cache_ptr_->heap_ptr->seg_size);
+            assert(is_valid_objsize);
         }
 
+        // Insert/update with the latest value if necessary
         if (is_insert || is_local_cached) // Always write for insert, yet only write for update if key is cached
         {
             // Append current item for new value if key is cached (will trigger independent admission later if key is NOT cached now)
@@ -400,6 +399,12 @@ namespace covered
         }
 
         return is_local_cached;
+    }
+
+    bool SegcacheLocalCache::checkObjsizeInternal_(const ObjectSize& objsize) const
+    {
+        bool is_valid_objsize = objsize <= segcache_cache_ptr_->heap_ptr->seg_size;
+        return is_valid_objsize;
     }
 
 }

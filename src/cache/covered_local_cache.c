@@ -11,7 +11,7 @@ namespace covered
 
     const std::string CoveredLocalCache::kClassName("CoveredLocalCache");
 
-    CoveredLocalCache::CoveredLocalCache(const uint32_t& edge_idx, const uint64_t& capacity_bytes, const uint64_t& local_uncached_capacity_bytes, const uint32_t& peredge_synced_victimcnt) : LocalCacheBase(edge_idx), capacity_bytes_(capacity_bytes), peredge_synced_victimcnt_(peredge_synced_victimcnt), local_cached_metadata_(), local_uncached_metadata_(local_uncached_capacity_bytes)
+    CoveredLocalCache::CoveredLocalCache(const uint32_t& edge_idx, const uint64_t& capacity_bytes, const uint64_t& local_uncached_capacity_bytes, const uint32_t& peredge_synced_victimcnt) : LocalCacheBase(edge_idx, capacity_bytes), peredge_synced_victimcnt_(peredge_synced_victimcnt), local_cached_metadata_(), local_uncached_metadata_(local_uncached_capacity_bytes)
     {
         // (A) Const variable
 
@@ -173,15 +173,6 @@ namespace covered
             UNUSED(unused_redirection_popularity);
         }
 
-        // NOTE: NOT local-get/remote-collect large-objsize uncached object for aggregated uncached metadata due to slab-based memory management in Cachelib cache engine
-        if (object_size >= capacity_bytes_) // Large object size checking
-        {
-            // NOTE: warn instead of assert, as approximate avg object size includes key size which introduces uncertainty
-            std::ostringstream oss;
-            oss << "getCollectedPopularityFromLocalCacheInternal_() may get a large-value uncached object for key " << key.getKeystr() << " with object size " << object_size << " bytes";
-            Util::dumpWarnMsg(instance_name_, oss.str());
-        }
-
         collected_popularity = CollectedPopularity(is_key_tracked, local_uncached_popularity, object_size);
 
         return;
@@ -189,13 +180,13 @@ namespace covered
 
     bool CoveredLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value, const bool& is_getrsp, const bool& is_global_cached, bool& affect_victim_tracker, bool& is_successful)
     {
-        const bool is_valid_objsize = checkCapacityForLargeObj_(key, value); // Large object size checking
+        const bool is_valid_objsize = isValidObjsize_(key, value); // Object size checking
 
         affect_victim_tracker = false;
         is_successful = false;
-
         const bool is_redirected = false; // NOTE: getrsp/putreq/delreq MUST NOT redirected getreq
 
+        // Check is local cached
         tommyds_object_t* tmp_obj_ptr = (tommyds_object_t *) tommy_hashdyn_search(covered_cache_ptr_, tommyds_compare, &key, hashForTommyds_(key));
         bool is_local_cached = (tmp_obj_ptr != NULL);
 
@@ -203,10 +194,11 @@ namespace covered
         {
             if (!is_valid_objsize)
             {
-                is_successful = false; // NOT cache too large object size due to slab class size limitation of Cachelib -> equivalent to NOT caching the latest value (will be invalidated by CacheWrapper later if key is local cached)
+                is_successful = false; // NOT cache too large object size -> equivalent to NOT caching the latest value (will be invalidated by CacheWrapper later if key is local cached)
                 return is_local_cached;
             }
 
+            // Update with the latest value
             Value original_value = tmp_obj_ptr->val; // Keep original value
             tmp_obj_ptr->val = value; // Update with the latest valid value
 
@@ -306,21 +298,8 @@ namespace covered
 
     void CoveredLocalCache::admitLocalCacheInternal_(const Key& key, const Value& value, const bool& is_neighbor_cached, bool& affect_victim_tracker, bool& is_successful)
     {
-        const bool is_valid_objsize = checkCapacityForLargeObj_(key, value); // Large object size checking
-
         affect_victim_tracker = false;
         is_successful = false;
-
-        // NOTE: NOT admit large-objsize uncached object after local/remote placement notification due to slab-based memory management in Cachelib cache engine
-        if (!is_valid_objsize)
-        {
-            std::ostringstream oss;
-            oss << "admitLocalCacheInternal_() admits a large-value uncached object for key " << key.getKeystr() << " with value size " << value.getValuesize() << " bytes";
-            Util::dumpWarnMsg(instance_name_, oss.str());
-
-            is_successful = false;
-            return;
-        }
 
         tommyds_object_t* tmp_obj_ptr = (tommyds_object_t *) tommy_hashdyn_search(covered_cache_ptr_, tommyds_compare, &key, hashForTommyds_(key));
         bool is_local_cached = (tmp_obj_ptr != NULL);
@@ -385,9 +364,6 @@ namespace covered
         // TODO: this function will also be invoked at each placement neighbor node by the beacon node for cache placement
         
         assert(hasFineGrainedManagement());
-        
-        // NOTE: (i) we find victims via COVERED's heterogeneous popularity tracking instead of slab-based eviction in CacheLib engine, so required size of eviction is NOT limited by max slab size; (ii) although we ONLY track and admit popular uncached objects w/ reasonable value sizes (NOT exceed max slab size) due to slab-based memory management in CacheLib engine, required size could still exceed max slab size due to multiple admissions in parallel
-        //assert(required_size <= max_allocation_class_size_); // (OBSOLETE) NOTE: required size must <= newly-admited object size, while we will never admit large-value objects
 
         bool has_victim_key = false;
         uint32_t least_popular_rank = 0;
@@ -422,6 +398,7 @@ namespace covered
                     tmp_victim_object_size = tmp_victim_key.getKeyLength() + tmp_victim_value_size;
                     #endif
 
+                    // Push victim cacheinfo
                     VictimCacheinfo tmp_victim_info(tmp_victim_key, tmp_victim_object_size, tmp_local_cached_popularity, tmp_redirected_cached_popularity, tmp_local_reward);
                     assert(tmp_victim_info.isComplete()); // NOTE: victim cacheinfos from local edge cache MUST be complete
                     victim_cacheinfos.push_back(tmp_victim_info); // Add to the tail of the list
@@ -461,7 +438,6 @@ namespace covered
         if (tmp_obj_ptr != NULL) // Key exists
         {
             value = tmp_obj_ptr->val;
-            assert(checkCapacityForLargeObj_(key, value)); // Large object size checking (NOTE: we will never admit large-objsize objects into edge cache)
 
             // TMPDEBUG231201
             uint64_t internal_size = internal_kvbytes_;
@@ -553,11 +529,10 @@ namespace covered
         return;
     }
 
-    bool CoveredLocalCache::checkCapacityForLargeObj_(const Key& key, const Value& value) const
+    bool CoveredLocalCache::checkObjsizeInternal_(const ObjectSize& objsize) const
     {
-        bool is_valid_objsize = false;
-        const uint32_t object_size = key.getKeyLength() + value.getValuesize();
-        is_valid_objsize = (capacity_bytes_ > object_size);
+        // NOTE: capacity has been checked by LocalCacheBase, while NO other custom object size checking here
+        const bool is_valid_objsize = true;
         return is_valid_objsize;
     }
 

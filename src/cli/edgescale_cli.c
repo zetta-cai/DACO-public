@@ -29,14 +29,14 @@ namespace covered
     void EdgescaleCLI::checkCapacityBytes_() const
     {
         assert(capacity_bytes_ > 0);
-        uint64_t min_capacity_bytes = MB2B(Config::getMinCapacityMB());
-        if (capacity_bytes_ < min_capacity_bytes)
-        {
-            std::ostringstream oss;
-            oss << "capacity (" << capacity_bytes_ << " bytes) should >= the minimum capacity (" << min_capacity_bytes << " bytes) -> please use a larger capacity_mb in CLI!";
-            Util::dumpErrorMsg(kClassName, oss.str());
-            exit(1);
-        }
+        // uint64_t min_capacity_bytes = MB2B(Config::getMinCapacityMB());
+        // if (capacity_bytes_ < min_capacity_bytes)
+        // {
+        //     std::ostringstream oss;
+        //     oss << "capacity (" << capacity_bytes_ << " bytes) should >= the minimum capacity (" << min_capacity_bytes << " bytes) -> please use a larger capacity_mb in CLI!";
+        //     Util::dumpErrorMsg(kClassName, oss.str());
+        //     exit(1);
+        // }
         return;
     }
 

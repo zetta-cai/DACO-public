@@ -84,15 +84,14 @@ namespace covered
         virtual uint64_t getSizeForCapacityInternal_() const override;
 
         virtual void checkPointersInternal_() const override;
-
-        bool checkCapacityForLargeObj_(const Key& key, const Value& value) const;
+        virtual bool checkObjsizeInternal_(const ObjectSize& objsize) const override;
+        
         uint32_t hashForTommyds_(const Key& key) const;
 
         // Member variables
 
         // (A) Const variable
         std::string instance_name_;
-        const uint64_t capacity_bytes_;
         const uint32_t peredge_synced_victimcnt_;
 
         // (B) Non-const shared variables of local cached objects for eviction

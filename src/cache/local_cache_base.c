@@ -32,11 +32,11 @@ namespace covered
         }
         else if (cache_name == Util::LFU_CACHE_NAME)
         {
-            local_cache_ptr = new LfuLocalCache(edge_idx);
+            local_cache_ptr = new LfuLocalCache(edge_idx, capacity_bytes);
         }
         else if (cache_name == Util::LRU_CACHE_NAME)
         {
-            local_cache_ptr = new LruLocalCache(edge_idx);
+            local_cache_ptr = new LruLocalCache(edge_idx, capacity_bytes);
         }
         else if (cache_name == Util::SEGCACHE_CACHE_NAME)
         {
@@ -54,7 +54,7 @@ namespace covered
         return local_cache_ptr;
     }
 
-    LocalCacheBase::LocalCacheBase(const uint32_t& edge_idx)
+    LocalCacheBase::LocalCacheBase(const uint32_t& edge_idx, const uint64_t& capacity_bytes) : capacity_bytes_(capacity_bytes)
     {
         // Differentiate local edge cache in different edge nodes
         std::ostringstream oss;
@@ -103,6 +103,13 @@ namespace covered
 
         bool is_local_cached = getLocalCacheInternal_(key, is_redirected, value, affect_victim_tracker);
 
+        // Object size checking
+        if (is_local_cached)
+        {
+            const bool is_valid_objsize = isValidObjsize_(key, value);
+            assert(is_valid_objsize);
+        }
+
         rwlock_for_local_cache_ptr_->unlock(context_name);
         return is_local_cached;
     }
@@ -117,6 +124,16 @@ namespace covered
 
         std::list<VictimCacheinfo> local_synced_victim_cacheinfos = getLocalSyncedVictimCacheinfosFromLocalCacheInternal_();
 
+        // Object size checking
+        for (std::list<VictimCacheinfo>::const_iterator victim_const_iter = local_synced_victim_cacheinfos.begin(); victim_const_iter != local_synced_victim_cacheinfos.end(); victim_const_iter++)
+        {
+            ObjectSize tmp_victim_objsize = 0;
+            bool is_complete = victim_const_iter->getObjectSize(tmp_victim_objsize);
+            assert(is_complete);
+            const bool is_valid_objsize = isValidObjsize_(tmp_victim_objsize);
+            assert(is_valid_objsize);
+        }
+
         rwlock_for_local_cache_ptr_->unlock_shared(context_name);
         return local_synced_victim_cacheinfos;
     }
@@ -130,6 +147,13 @@ namespace covered
         rwlock_for_local_cache_ptr_->acquire_lock_shared(context_name);
 
         getCollectedPopularityFromLocalCacheInternal_(key, collected_popularity);
+
+        if (collected_popularity.isTracked())
+        {
+            // Object size checking
+            const bool is_valid_objsize = isValidObjsize_(collected_popularity.getObjectSize());
+            assert(is_valid_objsize);
+        }
 
         rwlock_for_local_cache_ptr_->unlock_shared(context_name);
         return;
@@ -156,6 +180,13 @@ namespace covered
     {
         checkPointers_();
 
+        // Object size checking
+        const bool is_valid_objsize = isValidObjsize_(key, value);
+        if (!is_valid_objsize)
+        {
+            return false;
+        }
+
         // Acquire a write lock for local metadata to update local metadata atomically (so no need to hack LFU cache)
         std::string context_name = "LocalCacheBase::needIndependentAdmit()";
         rwlock_for_local_cache_ptr_->acquire_lock(context_name);
@@ -174,6 +205,10 @@ namespace covered
         std::string context_name = "LocalCacheBase::admitLocalCache()";
         rwlock_for_local_cache_ptr_->acquire_lock(context_name);
 
+        // NOTE: MUST with valid object size, as baselines always return false in needIndependentAdmitInternal_() if object size is too large, while COVERED NEVER track large objects in local uncached metadata and hence NEVER trigger normal/fast-path placement for them
+        const bool is_valid_objsize = isValidObjsize_(key, value);
+        assert(is_valid_objsize); // Object size checking
+
         is_successful = false;
         admitLocalCacheInternal_(key, value, is_neighbor_cached, affect_victim_tracker, is_successful);
 
@@ -191,7 +226,20 @@ namespace covered
         std::string context_name = "LocalCacheBase::getLocalCacheVictimKeys()";
         rwlock_for_local_cache_ptr_->acquire_lock_shared(context_name);
 
+        // NOTE: although we ONLY track and admit popular uncached objects w/ reasonable object sizes, required size could still exceed max valid object size due to multiple admissions in parallel -> NO need to check required size
+        //assert(isValidObjsize_(static_cast<uint32_t>(required_size)));
+
         bool has_victim_key = getLocalCacheVictimKeysInternal_(keys, victim_cacheinfos, required_size);
+
+        // Object size checking
+        for (std::list<VictimCacheinfo>::const_iterator victim_const_iter = victim_cacheinfos.begin(); victim_const_iter != victim_cacheinfos.end(); victim_const_iter++)
+        {
+            ObjectSize tmp_victim_objsize = 0;
+            bool is_complete = victim_const_iter->getObjectSize(tmp_victim_objsize);
+            assert(is_complete);
+            const bool is_valid_objsize = isValidObjsize_(tmp_victim_objsize);
+            assert(is_valid_objsize);
+        }
 
         rwlock_for_local_cache_ptr_->unlock_shared(context_name);
         return has_victim_key;
@@ -209,6 +257,13 @@ namespace covered
 
         bool is_evict = evictLocalCacheWithGivenKeyInternal_(key, value);
 
+        // Object size checking (NOTE: we will never admit large-objsize objects into edge cache)
+        if (is_evict)
+        {
+            const bool is_valid_objsize = isValidObjsize_(key, value);
+            assert(is_valid_objsize);
+        }
+
         rwlock_for_local_cache_ptr_->unlock(context_name);
         return is_evict;
     }
@@ -224,6 +279,16 @@ namespace covered
         rwlock_for_local_cache_ptr_->acquire_lock(context_name);
 
         evictLocalCacheNoGivenKeyInternal_(victims, required_size);
+
+        // Object size checking
+        for (std::unordered_map<Key, Value, KeyHasher>::const_iterator victim_const_iter = victims.begin(); victim_const_iter != victims.end(); ++victim_const_iter)
+        {
+            const Key& tmp_victim_key = victim_const_iter->first;
+            const Value& tmp_victim_value = victim_const_iter->second;
+
+            const bool is_valid_objsize = isValidObjsize_(tmp_victim_key, tmp_victim_value);
+            assert(is_valid_objsize);
+        }
 
         rwlock_for_local_cache_ptr_->unlock(context_name);
         return;
@@ -264,5 +329,27 @@ namespace covered
         assert(rwlock_for_local_cache_ptr_ != NULL);
         checkPointersInternal_();
         return;
+    }
+
+    bool LocalCacheBase::isValidObjsize_(const ObjectSize& objsize) const
+    {
+        bool is_valid_objsize = false;
+
+        // Compare objsize with capacity
+        is_valid_objsize = (capacity_bytes_ > objsize);
+
+        // Custom object size checking
+        if (is_valid_objsize)
+        {
+            is_valid_objsize = checkObjsizeInternal_(objsize);
+        }
+
+        return is_valid_objsize;
+    }
+
+    bool LocalCacheBase::isValidObjsize_(const Key& key, const Value& value) const
+    {
+        const ObjectSize object_size = key.getKeyLength() + value.getValuesize();
+        return isValidObjsize_(object_size);
     }
 }

@@ -27,7 +27,7 @@ namespace covered
     public:
         static LocalCacheBase* getLocalCacheByCacheName(const std::string& cache_name, const uint32_t& edge_idx, const uint64_t& capacity_bytes, const uint64_t& local_uncached_capacity_bytes, const uint32_t& peredge_synced_victimcnt);
 
-        LocalCacheBase(const uint32_t& edge_idx);
+        LocalCacheBase(const uint32_t& edge_idx, const uint64_t& capacity_bytes);
         virtual ~LocalCacheBase();
 
         // (1) Check is cached and access validity
@@ -68,9 +68,16 @@ namespace covered
 
         virtual const bool hasFineGrainedManagement() const = 0; // Whether the local edge cache supports key-level (i.e., object-level) fine-grained cache management
     protected:
+        const uint64_t capacity_bytes_; // Const variables
+
         // (4) Other functions
 
         void checkPointers_() const;
+
+        // Object size checking
+        bool isValidObjsize_(const ObjectSize& objsize) const;
+        bool isValidObjsize_(const Key& key, const Value& value) const;
+        virtual bool checkObjsizeInternal_(const ObjectSize& objsize) const = 0;
     private:
         static const std::string kClassName;
 

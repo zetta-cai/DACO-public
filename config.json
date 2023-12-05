@@ -31,7 +31,6 @@
     "is_generate_random_valuestr": 0,
     "is_track_event": 0,
     "latency_histogram_size": 1000000,
-    "min_capacity_mb": 10,
     "output_basedir": "output",
     "propagation_item_buffer_size_client_toedge": 1000,
     "propagation_item_buffer_size_edge_toclient": 1000,

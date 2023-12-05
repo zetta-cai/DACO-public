@@ -17,7 +17,7 @@ namespace covered
     class LfuLocalCache : public LocalCacheBase
     {
     public:
-        LfuLocalCache(const uint32_t& edge_idx);
+        LfuLocalCache(const uint32_t& edge_idx, const uint64_t& capacity_bytes);
         virtual ~LfuLocalCache();
 
         virtual const bool hasFineGrainedManagement() const;
@@ -52,6 +52,7 @@ namespace covered
         virtual uint64_t getSizeForCapacityInternal_() const override;
 
         virtual void checkPointersInternal_() const override;
+        virtual bool checkObjsizeInternal_(const ObjectSize& objsize) const override;
 
         // Member variables
 

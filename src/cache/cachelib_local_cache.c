@@ -14,7 +14,7 @@ namespace covered
 
     const std::string CachelibLocalCache::kClassName("CachelibLocalCache");
 
-    CachelibLocalCache::CachelibLocalCache(const uint32_t& edge_idx, const uint64_t& capacity_bytes) : LocalCacheBase(edge_idx)
+    CachelibLocalCache::CachelibLocalCache(const uint32_t& edge_idx, const uint64_t& capacity_bytes) : LocalCacheBase(edge_idx, capacity_bytes)
     {
         // Differentiate local edge cache in different edge nodes
         std::ostringstream oss;
@@ -114,25 +114,27 @@ namespace covered
 
     bool CachelibLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value, const bool& is_getrsp, const bool& is_global_cached, bool& affect_victim_tracker, bool& is_successful)
     {
+        const bool is_valid_objsize = isValidObjsize_(key, value); // Object size checking
+
         UNUSED(is_getrsp); // Only for COVERED
         UNUSED(is_global_cached); // ONLY for COVERED
         UNUSED(affect_victim_tracker); // Only for COVERED
         is_successful = false;
-        
-        const std::string keystr = key.getKeystr();
 
+        // Check is local cached
+        const std::string keystr = key.getKeystr();
         Lru2QCacheReadHandle handle = cachelib_cache_ptr_->find(keystr);
         bool is_local_cached = (handle != nullptr);
 
-        // Large object size checking
-        if ((key.getKeyLength() + value.getValuesize()) > max_allocation_class_size_)
-        {
-            is_successful = false; // NOT cache too large object size due to slab class size limitation of Cachelib -> equivalent to NOT caching the latest value (will be invalidated by CacheWrapper later if key is local cached)
-            return is_local_cached;
-        }
-
         if (is_local_cached) // Key already exists
         {
+            if (!is_valid_objsize)
+            {
+                is_successful = false; // NOT cache too large object size due to slab class size limitation of Cachelib -> equivalent to NOT caching the latest value (will be invalidated by CacheWrapper later if key is local cached)
+                return is_local_cached;
+            }
+
+            // Update with the latest value
             auto allocate_handle = cachelib_cache_ptr_->allocate(cachelib_poolid_, keystr, value.getValuesize());
             if (allocate_handle == nullptr)
             {
@@ -162,8 +164,7 @@ namespace covered
         
         // CacheLib (LRU2Q) cache uses default admission policy (i.e., always admit), which always returns true as long as key is not cached
         bool is_local_cached = isLocalCachedInternal_(key);
-        const bool is_valid_objsize = ((key.getKeyLength() + value.getValuesize()) <= max_allocation_class_size_); // Large object size checking
-        return !is_local_cached && is_valid_objsize;
+        return !is_local_cached;
     }
 
     void CachelibLocalCache::admitLocalCacheInternal_(const Key& key, const Value& value, const bool& is_neighbor_cached, bool& affect_victim_tracker, bool& is_successful)
@@ -171,9 +172,6 @@ namespace covered
         UNUSED(is_neighbor_cached); // ONLY for COVERED
         UNUSED(affect_victim_tracker); // Only for COVERED
         is_successful = false;
-
-        // NOTE: MUST with a valid value length, as we always return false in needIndependentAdmitInternal_() if object size is too large
-        assert((key.getKeyLength() + value.getValuesize()) <= max_allocation_class_size_); // Large object size checking
         
         const std::string keystr = key.getKeystr();
 
@@ -261,7 +259,7 @@ namespace covered
         // NOTE: although we ONLY trigger independent admission for uncached objects w/ reasonable value sizes (NOT exceed max slab size) due to slab-based memory management in CacheLib engine, required size could still exceed max slab size due to multiple admissions in parallel
         //assert(required_size <= max_allocation_class_size_); // (OBSOLETE) NOTE: required size must <= newly-admited object size, while we will never admit large-value objects
         uint64_t tmp_required_size = required_size;
-        if (required_size > max_allocation_class_size_) // Large object size checking
+        if (required_size > max_allocation_class_size_) // Object size checking
         {
             // NOTE: extra bytes will be evicted outside CachelibLocalCache in the while loop of CacheServer
             tmp_required_size = max_allocation_class_size_;
@@ -363,6 +361,12 @@ namespace covered
     {
         assert(cachelib_cache_ptr_ != NULL);
         return;
+    }
+
+    bool CachelibLocalCache::checkObjsizeInternal_(const ObjectSize& objsize) const
+    {
+        bool is_valid_objsize = objsize <= max_allocation_class_size_;
+        return is_valid_objsize;
     }
 
 }

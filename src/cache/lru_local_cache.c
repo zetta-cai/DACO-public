@@ -9,7 +9,7 @@ namespace covered
 {
     const std::string LruLocalCache::kClassName("LruLocalCache");
 
-    LruLocalCache::LruLocalCache(const uint32_t& edge_idx) : LocalCacheBase(edge_idx)
+    LruLocalCache::LruLocalCache(const uint32_t& edge_idx, const uint64_t& capacity_bytes) : LocalCacheBase(edge_idx, capacity_bytes)
     {
         // Differentiate local edge cache in different edge nodes
         std::ostringstream oss;
@@ -73,14 +73,27 @@ namespace covered
 
     bool LruLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value, const bool& is_getrsp, const bool& is_global_cached, bool& affect_victim_tracker, bool& is_successful)
     {
+        const bool is_valid_objsize = isValidObjsize_(key, value); // Object size checking
+
         UNUSED(is_getrsp); // ONLY for COVERED
         UNUSED(is_global_cached); // ONLY for COVERED
         UNUSED(affect_victim_tracker); // Only for COVERED
         is_successful = false;
-        
-        bool is_local_cached = lru_cache_ptr_->update(key, value);
-        if (is_local_cached)
+
+        // Check is local cached
+        bool is_local_cached = lru_cache_ptr_->exists(key);
+
+        if (is_local_cached) // Key already exists
         {
+            if (!is_valid_objsize)
+            {
+                is_successful = false; // NOT cache too large object size -> equivalent to NOT caching the latest value (will be invalidated by CacheWrapper later if key is local cached)
+                return is_local_cached;
+            }
+            
+            // Update with the latest value
+            bool tmp_is_local_cached = lru_cache_ptr_->update(key, value);
+            assert(tmp_is_local_cached);
             is_successful = true;
         }
 
@@ -168,6 +181,13 @@ namespace covered
     {
         assert(lru_cache_ptr_ != NULL);
         return;
+    }
+
+    bool LruLocalCache::checkObjsizeInternal_(const ObjectSize& objsize) const
+    {
+        // NOTE: capacity has been checked by LocalCacheBase, while NO other custom object size checking here
+        const bool is_valid_objsize = true;
+        return is_valid_objsize;
     }
 
 }

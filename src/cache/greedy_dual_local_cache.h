@@ -52,6 +52,7 @@ namespace covered
         virtual uint64_t getSizeForCapacityInternal_() const override;
 
         virtual void checkPointersInternal_() const override;
+        virtual bool checkObjsizeInternal_(const ObjectSize& objsize) const override;
 
         // Member variables
 

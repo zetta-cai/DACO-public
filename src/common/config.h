@@ -78,7 +78,7 @@ namespace covered
         static const std::string IS_GENERATE_RANDOM_VALUESTR_KEYSTR;
         static const std::string IS_TRACK_EVENT_KEYSTR;
         static const std::string LATENCY_HISTOGRAM_SIZE_KEYSTR;
-        static const std::string MIN_CAPACITY_MB_KEYSTR;
+        //static const std::string MIN_CAPACITY_MB_KEYSTR;
         static const std::string OUTPUT_BASEDIR_KEYSTR;
         static const std::string PROPAGATION_ITEM_BUFFER_SIZE_CLIENT_TOEDGE_KEYSTR;
         static const std::string PROPAGATION_ITEM_BUFFER_SIZE_EDGE_TOCLIENT_KEYSTR;
@@ -134,7 +134,7 @@ namespace covered
         static bool isGenerateRandomValuestr();
         static bool isTrackEvent();
         static uint32_t getLatencyHistogramSize();
-        static uint64_t getMinCapacityMB();
+        //static uint64_t getMinCapacityMB();
         static std::string getOutputBasedir();
         static uint32_t getPropagationItemBufferSizeClientToedge();
         static uint32_t getPropagationItemBufferSizeEdgeToclient();
@@ -198,7 +198,7 @@ namespace covered
         static bool is_generate_random_valuestr_; // Whether to generate random string to fill up value content
         static bool is_track_event_; // Whether to track per-message events for debugging -> NOT affect evaluation results and NOT changed during evaluation
         static uint32_t latency_histogram_size_; // Size of latency histogram
-        static uint64_t min_capacity_mb_; // Size of minimum capacity in units of MiB (avoid too small cache capacity which cannot work due to large-value objects and necessary memory usage of CacheLib engine)
+        //static uint64_t min_capacity_mb_; // Size of minimum capacity in units of MiB (avoid too small cache capacity which cannot work due to large-value objects and necessary memory usage of CacheLib engine)
         static std::string output_basedir_; // Base directory for output files
         static uint32_t propagation_item_buffer_size_client_toedge_; // Buffer size for client-to-edge propagated messages
         static uint32_t propagation_item_buffer_size_edge_toclient_; // Buffer size for edge-to-client propagated messages
