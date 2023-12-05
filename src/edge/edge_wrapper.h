@@ -26,9 +26,9 @@ namespace covered
 #include "concurrency/ring_buffer_impl.h"
 #include "cooperation/cooperation_wrapper_base.h"
 #include "cooperation/directory/dirinfo_set.h"
-#include "edge/background_counter.h"
+#include "edge/utils/background_counter.h"
 #include "edge/cache_server/cache_server.h"
-#include "edge/local_cache_admission_item.h"
+#include "edge/utils/local_cache_admission_item.h"
 #include "event/event_list.h"
 #include "network/propagation_simulator.h"
 

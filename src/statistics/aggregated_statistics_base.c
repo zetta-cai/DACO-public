@@ -247,8 +247,10 @@ namespace covered
         oss << "local object hit ratio: " << getLocalObjectHitRatio() << std::endl;
         oss << "cooperative object hit ratio: " << getCooperativeObjectHitRatio() << std::endl;
         oss << "total object hit ratio: " << getTotalObjectHitRatio() << std::endl;
-        const double tmp_weight = static_cast<double>(CoveredWeight::getWeightInfo().getCooperativeHitWeight() / CoveredWeight::getWeightInfo().getLocalHitWeight()); // w2/w1
-        oss << "total object hit ratio (weighted by " << tmp_weight << "): " << getLocalObjectHitRatio() + tmp_weight * getCooperativeObjectHitRatio() << std::endl; // local object hit ratio + w2/w1 * cooperative object hit ratio
+
+        // NOTE: NO need weighted global object hit ratio: (i) each edge node has its own CoveredWeight; (ii) although we can use average CoveredWeight across all edge nodes, weighted global object hit ratio makes no sense (throughput is enough to verify the benefit of trade-off-aware cooperative caching in COVERED)
+        // const double tmp_weight = static_cast<double>(CoveredWeight::getWeightInfo().getCooperativeHitWeight() / CoveredWeight::getWeightInfo().getLocalHitWeight()); // w2/w1
+        // oss << "total object hit ratio (weighted by " << tmp_weight << "): " << getLocalObjectHitRatio() + tmp_weight * getCooperativeObjectHitRatio() << std::endl; // local object hit ratio + w2/w1 * cooperative object hit ratio
 
         oss << "[Byte Hit Ratio Statistics]" << std::endl;
         oss << "total local hit bytes: " << B2MB(total_local_hitbytes_) << " MiB" << std::endl;
@@ -257,7 +259,9 @@ namespace covered
         oss << "local byte hit ratio: " << getLocalByteHitRatio() << std::endl;
         oss << "cooperative byte hit ratio: " << getCooperativeByteHitRatio() << std::endl;
         oss << "total byte hit ratio: " << getTotalByteHitRatio() << std::endl;
-        oss << "total byte hit ratio (weighted by " << tmp_weight << "): " << getLocalByteHitRatio() + tmp_weight * getCooperativeByteHitRatio() << std::endl;
+
+        // NOTE: NO need weighted global byte hit ratio due to the same reasons mentioned above
+        // oss << "total byte hit ratio (weighted by " << tmp_weight << "): " << getLocalByteHitRatio() + tmp_weight * getCooperativeByteHitRatio() << std::endl;
 
         oss << "[Latency Statistics]" << std::endl;
         oss << "average latency: " << avg_latency_ << std::endl;
