@@ -39,7 +39,7 @@ namespace covered
     public:
         static const double EWMA_ALPHA;
 
-        WeightTuner(const uint32_t& edge_idx, const uint32_t& propagation_latency_clientedge_us, const uint32_t& propagation_latency_crossedge_us, const uint32_t& propagation_latency_edgecloud_us);
+        WeightTuner(const uint32_t& edge_idx, const uint32_t& edgecnt, const uint32_t& propagation_latency_clientedge_us, const uint32_t& propagation_latency_crossedge_us, const uint32_t& propagation_latency_edgecloud_us);
         ~WeightTuner();
 
         WeightInfo getWeightInfo() const;
@@ -51,6 +51,7 @@ namespace covered
 
         // Const variables
         std::string instance_name_;
+        const float remote_beacon_prob_; // Calculated by (1.0 - 1.0/edgecnt) from CLI (NOTE: 0 means NOT consider remote content discovery overhead and 1 means always consider remote content discovery overhead; while (1.0 - 1.0/edgecnt) heuristically treat the probability of sender-is-beacon as 1.0/edgecnt under consistent-hashing-based DHT) -> TODO: maybe collect request distribution to tune probability under real workloads (i.e., workload-aware probability tuning)
 
         // For atomicity of non-const variables
         mutable Rwlock rwlock_for_weight_tuner_;

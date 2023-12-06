@@ -1,6 +1,5 @@
 #include "cache/covered/local_cached_metadata.h"
 
-#include "common/covered_weight.h"
 #include "common/util.h"
 
 namespace covered
@@ -99,29 +98,16 @@ namespace covered
 
     // For reward information
 
-    Reward LocalCachedMetadata::calculateReward_(perkey_metadata_list_t::iterator perkey_metadata_list_iter) const
+    Reward LocalCachedMetadata::calculateReward_(const EdgeWrapper* edge_wrapper_ptr, perkey_metadata_list_t::iterator perkey_metadata_list_iter) const
     {
-        // Get weight parameters from static class atomically
-        const WeightInfo weight_info = CoveredWeight::getWeightInfo();
-        const Weight local_hit_weight = weight_info.getLocalHitWeight();
-        const Weight cooperative_hit_weight = weight_info.getCooperativeHitWeight();
-
         // Get local/redirected cached popularity
         const Popularity local_cached_popularity = perkey_metadata_list_iter->second.getLocalPopularity();
         const Popularity redirected_cached_popularity = perkey_metadata_list_iter->second.getRedirectedPopularity();
         const bool is_neighbor_cached = perkey_metadata_list_iter->second.isNeighborCached();
 
         // Calculte local reward (i.e., max eviction cost, as the local edge node does NOT know cache hit status of all other edge nodes and conservatively treat it as the last copy)
-        Reward local_reward = 0.0;
-        if (!is_neighbor_cached)
-        {
-            local_reward = static_cast<Reward>(Util::popularityMultiply(local_hit_weight, local_cached_popularity)) + static_cast<Reward>(Util::popularityMultiply(cooperative_hit_weight, redirected_cached_popularity)); // w1 * local_cached_popularity + w2 * redirected_cached_popularity
-        }
-        else
-        {
-            const Weight w1_minus_w2 = Util::popularityNonegMinus(local_hit_weight, cooperative_hit_weight);
-            local_reward = static_cast<Reward>(Util::popularityMultiply(w1_minus_w2, local_cached_popularity)); // (w1 - w2) * local_cached_popularity
-        }
+        const bool is_last_copies = !is_neighbor_cached;
+        Reward local_reward = edge_wrapper_ptr->calcLocalCachedReward(local_cached_popularity, redirected_cached_popularity, is_last_copies);
 
         return local_reward;
     }

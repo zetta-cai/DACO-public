@@ -50,7 +50,7 @@ namespace covered
         // For updateLocalCacheMetadataInternal_()
         static const std::string UPDATE_IS_NEIGHBOR_CACHED_FLAG_FUNC_NAME; // Update is_neighbor_cached flag in local cached metadata (func param is bool)
 
-        CoveredLocalCache(const uint32_t& edge_idx, const uint64_t& capacity_bytes, const uint64_t& local_uncached_capacity_bytes, const uint32_t& peredge_synced_victimcnt);
+        CoveredLocalCache(const EdgeWrapper* edge_wrapper_ptr, const uint32_t& edge_idx, const uint64_t& capacity_bytes, const uint64_t& local_uncached_capacity_bytes, const uint32_t& peredge_synced_victimcnt);
         virtual ~CoveredLocalCache();
 
         virtual const bool hasFineGrainedManagement() const;

@@ -17,7 +17,7 @@ namespace covered
     class LfuLocalCache : public LocalCacheBase
     {
     public:
-        LfuLocalCache(const uint32_t& edge_idx, const uint64_t& capacity_bytes);
+        LfuLocalCache(const EdgeWrapper* edge_wrapper_ptr, const uint32_t& edge_idx, const uint64_t& capacity_bytes);
         virtual ~LfuLocalCache();
 
         virtual const bool hasFineGrainedManagement() const;

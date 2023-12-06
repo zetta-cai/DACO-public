@@ -2,7 +2,6 @@
 
 #include <assert.h>
 
-#include "common/covered_weight.h"
 #include "common/util.h"
 
 namespace covered
@@ -55,7 +54,7 @@ namespace covered
         return homo_key_level_metadata.isGlobalCached();
     }
 
-    void LocalUncachedMetadata::updateIsGlobalCachedForExistingKey(const Key& key, const bool& is_getrsp, const bool& is_global_cached)
+    void LocalUncachedMetadata::updateIsGlobalCachedForExistingKey(const EdgeWrapper* edge_wrapper_ptr, const Key& key, const bool& is_getrsp, const bool& is_global_cached)
     {
         assert(is_getrsp == true);
 
@@ -72,7 +71,7 @@ namespace covered
         calculateAndUpdatePopularity_(perkey_metadata_list_iter, perkey_metadata_list_iter->second, getGroupLevelMetadata_(perkey_lookup_iter));*/
 
         // Update reward
-        Reward new_reward = calculateReward_(perkey_metadata_list_iter);
+        Reward new_reward = calculateReward_(edge_wrapper_ptr, perkey_metadata_list_iter);
         sorted_reward_multimap_t::iterator new_sorted_reward_iter = updateReward_(new_reward, perkey_lookup_iter);
 
         // Update lookup table
@@ -118,31 +117,14 @@ namespace covered
     }
 
     // For reward information
-    Reward LocalUncachedMetadata::calculateReward_(perkey_metadata_list_t::iterator perkey_metadata_list_iter) const
+    Reward LocalUncachedMetadata::calculateReward_(const EdgeWrapper* edge_wrapper_ptr, perkey_metadata_list_t::iterator perkey_metadata_list_iter) const
     {
-        // Get weight parameters from static class atomically
-        const WeightInfo weight_info = CoveredWeight::getWeightInfo();
-        const Weight local_hit_weight = weight_info.getLocalHitWeight();
-        const Weight cooperative_hit_weight = weight_info.getCooperativeHitWeight();
-
         // Get local uncached popularity
         const Popularity local_uncached_popularity = perkey_metadata_list_iter->second.getLocalPopularity();
+        const bool is_global_cached = perkey_metadata_list_iter->second.isGlobalCached();
 
         // Calculte local reward (i.e., min admission benefit, as the local edge node does NOT know cache miss status of all other edge nodes and conservatively treat it as a local single placement)
-        Reward local_reward = 0.0;
-        if (perkey_metadata_list_iter->second.isGlobalCached())
-        {
-            const Weight w1_minus_w2 = Util::popularityNonegMinus(local_hit_weight, cooperative_hit_weight);
-            local_reward = Util::popularityMultiply(w1_minus_w2, local_uncached_popularity); // w1 - w2
-
-            #ifdef ENABLE_COMPLETE_DUPLICATION_AVOIDANCE_FOR_DEBUG
-            local_reward = 0.0;
-            #endif
-        }
-        else
-        {
-            local_reward = Util::popularityMultiply(local_hit_weight, local_uncached_popularity); // w1
-        }
+        Reward local_reward = edge_wrapper_ptr->calcLocalUncachedReward(local_uncached_popularity, is_global_cached);
 
         return local_reward;
     }

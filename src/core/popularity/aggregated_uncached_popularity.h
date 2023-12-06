@@ -16,6 +16,7 @@
 #include "common/covered_common_header.h"
 #include "common/key.h"
 #include "core/popularity/edgeset.h"
+#include "edge/edge_wrapper.h"
 
 namespace covered
 {
@@ -37,11 +38,11 @@ namespace covered
         bool clear(const uint32_t& source_edge_idx, bool& is_clear); // Return if exist_edgecnt_ == 0 (i.e., NO local uncached popularity for key) after clear
 
         // For selective popularity aggregation
-        DeltaReward calcMaxAdmissionBenefit(const bool& is_global_cached) const; // Max admission benefit if admit key into all top-k edge nodes
+        DeltaReward calcMaxAdmissionBenefit(const EdgeWrapper* edge_wrapper_ptr, const bool& is_global_cached) const; // Max admission benefit if admit key into all top-k edge nodes
 
         // For trade-off-aware placement calculation
-        //DeltaReward calcAdmissionBenefit(const uint32_t& topicnt, const bool& is_global_cached, Edgeset& placement_edgeset) const; // Admission benefit if admit key into top-i edge nodes (i <= top-k list length)
-        DeltaReward calcAdmissionBenefit(const uint32_t& edgeidx, const Key& key, const uint32_t& topicnt, const bool& is_global_cached, Edgeset& placement_edgeset) const; // TMPDEBUG23
+        //DeltaReward calcAdmissionBenefit(const EdgeWrapper* edge_wrapper_ptr, const uint32_t& topicnt, const bool& is_global_cached, Edgeset& placement_edgeset) const; // Admission benefit if admit key into top-i edge nodes (i <= top-k list length)
+        DeltaReward calcAdmissionBenefit(const EdgeWrapper* edge_wrapper_ptr, const uint32_t& edgeidx, const Key& key, const uint32_t& topicnt, const bool& is_global_cached, Edgeset& placement_edgeset) const; // TMPDEBUG23
 
         uint64_t getSizeForCapacity() const;
 

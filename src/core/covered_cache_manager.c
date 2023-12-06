@@ -197,9 +197,9 @@ namespace covered
 
     // For fast-path single-placement calculation in current edge node (NOT as a beacon node)
 
-    DeltaReward CoveredCacheManager::accessVictimTrackerForFastPathEvictionCost(const std::list<VictimCacheinfo>& curedge_local_cached_victim_cacheinfos, const std::unordered_map<Key, DirinfoSet, KeyHasher>& curedge_local_beaconed_local_cached_victim_dirinfosets) const
+    DeltaReward CoveredCacheManager::accessVictimTrackerForFastPathEvictionCost(const EdgeWrapper* edge_wrapper_ptr, const std::list<VictimCacheinfo>& curedge_local_cached_victim_cacheinfos, const std::unordered_map<Key, DirinfoSet, KeyHasher>& curedge_local_beaconed_local_cached_victim_dirinfosets) const
     {
-        return victim_tracker_.calcEvictionCostForFastPathPlacement(curedge_local_cached_victim_cacheinfos, curedge_local_beaconed_local_cached_victim_dirinfosets);
+        return victim_tracker_.calcEvictionCostForFastPathPlacement(edge_wrapper_ptr, curedge_local_cached_victim_cacheinfos, curedge_local_beaconed_local_cached_victim_dirinfosets);
     }
 
     uint64_t CoveredCacheManager::getSizeForCapacity() const
@@ -237,22 +237,20 @@ namespace covered
 
             // Greedy-based placement calculation
             PlacementGain max_placement_gain = 0.0;
-            DeltaReward debug_admission_benefit = 0.0; // TMPDEBUG231201
-            DeltaReward debug_eviction_cost = 0.0; // TMPDEBUG231201
             for (uint32_t topicnt = 1; topicnt <= tmp_topk_list_length; topicnt++)
             {
                 // Consider topi edge nodes ordered by local uncached popularity in a descending order
 
                 // Calculate admission benefit if we place the object with is_global_cached flag into topi edge nodes
                 Edgeset tmp_placement_edgeset;
-                //const DeltaReward tmp_admission_benefit = tmp_aggregated_uncached_popularity.calcAdmissionBenefit(topicnt, is_global_cached, tmp_placement_edgeset);
-                const DeltaReward tmp_admission_benefit = tmp_aggregated_uncached_popularity.calcAdmissionBenefit(edge_idx_, key, topicnt, is_global_cached, tmp_placement_edgeset); // TMPDEBUG23
+                //const DeltaReward tmp_admission_benefit = tmp_aggregated_uncached_popularity.calcAdmissionBenefit(edge_wrapper_ptr, topicnt, is_global_cached, tmp_placement_edgeset);
+                const DeltaReward tmp_admission_benefit = tmp_aggregated_uncached_popularity.calcAdmissionBenefit(edge_wrapper_ptr, edge_idx_, key, topicnt, is_global_cached, tmp_placement_edgeset); // TMPDEBUG23
 
                 // Calculate eviction cost based on tmp_placement_edgeset
                 std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>> tmp_placement_peredge_synced_victimset;
                 std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>> tmp_placement_peredge_fetched_victimset;
                 Edgeset tmp_placement_victim_fetch_edgeset;
-                const DeltaReward tmp_eviction_cost = victim_tracker_.calcEvictionCost(tmp_object_size, tmp_placement_edgeset, tmp_placement_peredge_synced_victimset, tmp_placement_peredge_fetched_victimset, tmp_placement_victim_fetch_edgeset); // NOTE: tmp_eviction_cost may be partial eviction cost if without enough victims
+                const DeltaReward tmp_eviction_cost = victim_tracker_.calcEvictionCost(edge_wrapper_ptr, tmp_object_size, tmp_placement_edgeset, tmp_placement_peredge_synced_victimset, tmp_placement_peredge_fetched_victimset, tmp_placement_victim_fetch_edgeset); // NOTE: tmp_eviction_cost may be partial eviction cost if without enough victims
 
                 #ifdef ENABLE_TEMPORARY_DUPLICATION_AVOIDANCE
                 // Enforce duplication avoidance when cache is not full
@@ -268,10 +266,6 @@ namespace covered
                 {
                     max_placement_gain = tmp_placement_gain;
 
-                    // TMPDEBUG231201
-                    debug_admission_benefit = tmp_admission_benefit;
-                    debug_eviction_cost = tmp_eviction_cost;
-
                     best_placement_admission_benefit = tmp_admission_benefit;
                     tmp_best_placement_edgeset = tmp_placement_edgeset;
                     tmp_best_placement_peredge_synced_victimset = tmp_placement_peredge_synced_victimset;
@@ -285,9 +279,6 @@ namespace covered
             {
                 if (best_placement_victim_fetch_edgeset.size() == 0) // NO need for lazy victim fetching
                 {
-                    // TMPDEBUG231201
-                    Util::dumpVariablesForDebug(instance_name_, 8, "placementCalculation_ for key", key.getKeystr().c_str(), "admission benefit:", std::to_string(debug_admission_benefit).c_str(), "eviction cost:", std::to_string(debug_eviction_cost).c_str(), "object size:", std::to_string(tmp_object_size).c_str());
-
                     has_best_placement = true;
                     best_placement_edgeset = tmp_best_placement_edgeset;
                     best_placement_peredge_synced_victimset = tmp_best_placement_peredge_synced_victimset;
@@ -324,7 +315,7 @@ namespace covered
                 std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>> tmp_placement_peredge_synced_victimset;
                 std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>> tmp_placement_peredge_fetched_victimset;
                 Edgeset tmp_placement_victim_fetch_edgeset;
-                const DeltaReward tmp_eviction_cost = victim_tracker_.calcEvictionCost(tmp_object_size, tmp_best_placement_edgeset, tmp_placement_peredge_synced_victimset, tmp_placement_peredge_fetched_victimset, tmp_placement_victim_fetch_edgeset, extra_peredge_victim_cacheinfos, extra_perkey_victim_dirinfoset); // NOTE: tmp_eviction_cost may be partial eviction cost if without enough victims
+                const DeltaReward tmp_eviction_cost = victim_tracker_.calcEvictionCost(edge_wrapper_ptr, tmp_object_size, tmp_best_placement_edgeset, tmp_placement_peredge_synced_victimset, tmp_placement_peredge_fetched_victimset, tmp_placement_victim_fetch_edgeset, extra_peredge_victim_cacheinfos, extra_perkey_victim_dirinfoset); // NOTE: tmp_eviction_cost may be partial eviction cost if without enough victims
                 assert(tmp_placement_victim_fetch_edgeset.size() == 0); // NOTE: we DISABLE recursive victim fetching
 
                 // Calculate placement gain

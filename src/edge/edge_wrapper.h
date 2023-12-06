@@ -26,9 +26,10 @@ namespace covered
 #include "concurrency/ring_buffer_impl.h"
 #include "cooperation/cooperation_wrapper_base.h"
 #include "cooperation/directory/dirinfo_set.h"
-#include "edge/utils/background_counter.h"
 #include "edge/cache_server/cache_server.h"
+#include "edge/utils/background_counter.h"
 #include "edge/utils/local_cache_admission_item.h"
+#include "edge/utils/weight_tuner.h"
 #include "event/event_list.h"
 #include "network/propagation_simulator.h"
 
@@ -129,6 +130,10 @@ namespace covered
 
         // (7.3) For beacon-based cached metadata update (non-blocking notification-based)
         void processMetadataUpdateRequirement(const Key& key, const MetadataUpdateRequirement& metadata_update_requirement, const bool& skip_propagation_latency) const;
+
+        // (7.4) Reward calculation for local reward and cache placement (delta reward of admission benefit / eviction cost)
+        Reward calcLocalCachedReward(const Popularity& local_cached_popularity, const Popularity& redirected_cached_popularity, const bool& is_last_copies) const; // For reward of local cached objects or eviction cost of victims
+        Reward calcLocalUncachedReward(const Popularity& local_uncached_popularity, const bool& is_global_cached, const Popularity& redirected_uncached_popularity = 0.0) const; // For reward for local uncached objects or admission benefit of candidates (NOTE: redirected_uncached_popularity refers to local_uncached_popularity of edge nodes not in placement edgeset, which MUST be zero for local reward of local uncached objects)
     private:
         static const std::string kClassName;
 
@@ -174,6 +179,7 @@ namespace covered
         PropagationSimulatorParam* edge_tocloud_propagation_simulator_param_ptr_; // thread safe
         // COVERED uses beacon background counter to track background events and bandwidth usage for non-blocking placement deployment (NOTE: NOT count events for non-blocking data fetching from local edge cache and non-blocking metadata releasing, due to limited computation overhead and NO bandwidth usage)
         mutable BackgroundCounter edge_background_counter_for_beacon_server_; // Update and load by beacon server (thread safe)
+        WeightTuner weight_tuner_; // Update and load by cache server and beacon server (thread safe)
 
         // Sub-threads
         pthread_t edge_toclient_propagation_simulator_thread_;

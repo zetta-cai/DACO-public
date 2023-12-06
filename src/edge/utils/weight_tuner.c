@@ -44,7 +44,7 @@ namespace covered
     const double WeightTuner::EWMA_ALPHA = 0.1;
     const std::string WeightTuner::kClassName = "WeightTuner";
 
-    WeightTuner::WeightTuner(const uint32_t& edge_idx, const uint32_t& propagation_latency_clientedge_us, const uint32_t& propagation_latency_crossedge_us, const uint32_t& propagation_latency_edgecloud_us) : rwlock_for_weight_tuner_("rwlock_for_weight_tuner_")
+    WeightTuner::WeightTuner(const uint32_t& edge_idx, const uint32_t& edgecnt, const uint32_t& propagation_latency_clientedge_us, const uint32_t& propagation_latency_crossedge_us, const uint32_t& propagation_latency_edgecloud_us) : remote_beacon_prob_(1.0 - 1.0 / static_cast<float>(edgecnt)), rwlock_for_weight_tuner_("rwlock_for_weight_tuner_")
     {
         std::ostringstream oss;
         oss << kClassName << " edge" << edge_idx;
@@ -91,17 +91,14 @@ namespace covered
         // NOTE: NO need to acquire a write lock, which is NO need in constructor, or has been done in tuneWeightInfo()
 
         // Calculate latency of different accesses
-        // TMPDEBUG231201
-        const float remote_beacon_prob = 0.5; // 105/90
-        //const float remote_beacon_prob = 1; // 110/90
-        //const float remote_beacon_prob = 0; // 100/90
         const Weight local_hit_latency = ewma_propagation_latency_clientedge_us_;
-        const Weight cooperative_hit_latency = ewma_propagation_latency_clientedge_us_ + (remote_beacon_prob + 1) * ewma_propagation_latency_crossedge_us_;
-        const Weight global_miss_latency = ewma_propagation_latency_clientedge_us_ + remote_beacon_prob * ewma_propagation_latency_crossedge_us_ + ewma_propagation_latency_edgecloud_us_;
+        const Weight cooperative_hit_latency = ewma_propagation_latency_clientedge_us_ + (remote_beacon_prob_ + 1) * ewma_propagation_latency_crossedge_us_;
+        const Weight global_miss_latency = ewma_propagation_latency_clientedge_us_ + remote_beacon_prob_ * ewma_propagation_latency_crossedge_us_ + ewma_propagation_latency_edgecloud_us_;
 
         // Update weight info
         const Weight local_hit_weight = global_miss_latency - local_hit_latency; // w1
         const Weight cooperative_hit_weight = global_miss_latency - cooperative_hit_latency; // w2
+        assert(local_hit_weight > cooperative_hit_weight && cooperative_hit_weight >= 0); // Weight verification
         weight_info_ = WeightInfo(local_hit_weight, cooperative_hit_weight);
 
         return;

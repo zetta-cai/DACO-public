@@ -4,7 +4,6 @@
 #include <list>
 #include <sstream>
 
-#include "common/covered_weight.h"
 #include "common/util.h"
 #include "core/victim/victim_cacheinfo.h"
 #include "core/victim/victim_syncset.h"
@@ -364,32 +363,10 @@ namespace covered
 
             // NOTE: although passed param (is_global_cached) is looked up before fetching value, which may be stale, we still use it due to approximate fast-path placement, instead of looking up the latest is_global_cached from remote beacon edge node, which will introduce extra message overhead
 
-            // Get weight parameters from static class atomically
-            const WeightInfo weight_info = CoveredWeight::getWeightInfo();
-            const Weight local_hit_weight = weight_info.getLocalHitWeight();
-            const Weight cooperative_hit_weight = weight_info.getCooperativeHitWeight();
-
             // Calculate local admission benefit
-            DeltaReward local_admission_benefit = 0.0;
             Popularity local_uncached_popularity = collected_popularity_after_fetch_value.getLocalUncachedPopularity();
-            if (is_global_cached) // Key is global cached
-            {
-                Weight w1_minux_w2 = Util::popularityNonegMinus(local_hit_weight, cooperative_hit_weight);
-                local_admission_benefit = Util::popularityMultiply(w1_minux_w2, local_uncached_popularity); // w1 - w2
-
-                #ifdef ENABLE_COMPLETE_DUPLICATION_AVOIDANCE_FOR_DEBUG
-                local_admission_benefit = 0.0;
-                #endif
-            }
-            else // Key is NOT global cached
-            {
-                DeltaReward tmp_local_admission_benefit0 = Util::popularityMultiply(local_hit_weight, local_uncached_popularity); // w1
-
-                // NOTE: sum_local_uncached_popularity MUST NOT include local uncached popularity of the current edge node
-                DeltaReward tmp_local_admission_benefit1 = Util::popularityMultiply(cooperative_hit_weight, fast_path_hint.getSumLocalUncachedPopularity()); // w2
-
-                local_admission_benefit = Util::popularityAdd(tmp_local_admission_benefit0, tmp_local_admission_benefit1);
-            }
+            Popularity redirected_uncached_popularity = fast_path_hint.getSumLocalUncachedPopularity(); // NOTE: sum_local_uncached_popularity MUST NOT include local uncached popularity of the current edge node
+            DeltaReward local_admission_benefit = tmp_edge_wrapper_ptr->calcLocalUncachedReward(local_uncached_popularity, is_global_cached, redirected_uncached_popularity);
 
             // Approximate global admission policy
             bool is_global_popular = false;
@@ -426,7 +403,7 @@ namespace covered
                     std::unordered_map<Key, DirinfoSet, KeyHasher> tmp_local_beaconed_local_cached_victim_dirinfoset = tmp_cooperation_wrapper_ptr->getLocalBeaconedVictimsFromCacheinfos(tmp_local_cached_victim_cacheinfos);
 
                     // Calculate local eviction cost by VictimTracker (to utilize perkey_victim_dirinfo_)
-                    local_eviction_cost = tmp_covered_cache_manager_ptr->accessVictimTrackerForFastPathEvictionCost(tmp_local_cached_victim_cacheinfos, tmp_local_beaconed_local_cached_victim_dirinfoset);
+                    local_eviction_cost = tmp_covered_cache_manager_ptr->accessVictimTrackerForFastPathEvictionCost(tmp_edge_wrapper_ptr, tmp_local_cached_victim_cacheinfos, tmp_local_beaconed_local_cached_victim_dirinfoset);
                 }
 
                 #ifdef ENABLE_TEMPORARY_DUPLICATION_AVOIDANCE
@@ -440,9 +417,6 @@ namespace covered
                 // Trigger local cache placement if local admission benefit is larger than local eviction cost
                 if (local_admission_benefit > local_eviction_cost)
                 {
-                    // TMPDEBUG231201
-                    Util::dumpVariablesForDebug(instance_name_, 10, "fast-path placement for key", key.getKeystr().c_str(), "admission benefit:", std::to_string(local_admission_benefit).c_str(), "eviction cost:", std::to_string(local_eviction_cost).c_str(), "tmp_cache_margin_bytes:", std::to_string(tmp_cache_margin_bytes).c_str(), "tmp_object_size:", std::to_string(tmp_object_size).c_str());
-
                     // Admit dirinfo into remote beacon edge node
                     bool tmp_is_being_written = false;
                     const bool is_background = true; // Similar as only-sender hybrid data fetching

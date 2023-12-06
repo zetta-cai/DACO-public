@@ -11,7 +11,7 @@ namespace covered
 
     const std::string CoveredLocalCache::kClassName("CoveredLocalCache");
 
-    CoveredLocalCache::CoveredLocalCache(const uint32_t& edge_idx, const uint64_t& capacity_bytes, const uint64_t& local_uncached_capacity_bytes, const uint32_t& peredge_synced_victimcnt) : LocalCacheBase(edge_idx, capacity_bytes), peredge_synced_victimcnt_(peredge_synced_victimcnt), local_cached_metadata_(), local_uncached_metadata_(local_uncached_capacity_bytes)
+    CoveredLocalCache::CoveredLocalCache(const EdgeWrapper* edge_wrapper_ptr, const uint32_t& edge_idx, const uint64_t& capacity_bytes, const uint64_t& local_uncached_capacity_bytes, const uint32_t& peredge_synced_victimcnt) : LocalCacheBase(edge_wrapper_ptr, edge_idx, capacity_bytes), peredge_synced_victimcnt_(peredge_synced_victimcnt), local_cached_metadata_(), local_uncached_metadata_(local_uncached_capacity_bytes)
     {
         // (A) Const variable
 
@@ -32,25 +32,6 @@ namespace covered
 
     CoveredLocalCache::~CoveredLocalCache()
     {
-        // TMPDEBUG231201
-        uint64_t internal_size = internal_kvbytes_;
-        uint64_t local_cached_metadata_size = local_cached_metadata_.getSizeForCapacity();
-        uint64_t local_uncached_metadata_size = local_uncached_metadata_.getSizeForCapacity();
-        Util::dumpVariablesForDebug(instance_name_, 6, "internal_size:", std::to_string(internal_size).c_str(), "local_cached_metadata_size:", std::to_string(local_cached_metadata_size).c_str(), "local_uncached_metadata_size:", std::to_string(local_uncached_metadata_size).c_str());
-
-        // TMPDEBUG231201
-        uint64_t tommyds_internal_size = tommy_hashdyn_memory_usage(covered_cache_ptr_);
-        uint32_t tommyds_objcnt = tommy_hashdyn_count(covered_cache_ptr_);
-        uint64_t tommyds_kv_total_size = 0;
-        void (*tmp_func)(void*, void*) = [](void* arg, void* obj)
-        {
-            uint64_t* total_size_ptr = (uint64_t*)(arg);
-            tommyds_object_t* obj_ptr = (tommyds_object_t*)(obj);
-            *total_size_ptr += (obj_ptr->key.getKeyLength() + obj_ptr->val.getValuesize());
-        };
-        tommy_hashdyn_foreach_arg(covered_cache_ptr_, tmp_func, &tommyds_kv_total_size);
-        Util::dumpVariablesForDebug(instance_name_, 6, "tommyds_internal_size:", std::to_string(tommyds_internal_size).c_str(), "tommyds_objcnt:", std::to_string(tommyds_objcnt).c_str(), "tommyds_kv_total_size:", std::to_string(tommyds_kv_total_size).c_str());
-
         // Free TommyDS objects allocated outside TommyDS
         std::vector<tommyds_object_t*> obj_ptr_vec;
         void (*obj_free_func_ptr)(void*, void*) = [](void* arg, void* obj)
@@ -111,7 +92,7 @@ namespace covered
 
             // Update local cached metadata for getreq with valid/invalid cache hit (ONLY value-unrelated metadata)
             const bool is_global_cached = true; // Local cached objects MUST be global cached
-            affect_victim_tracker = local_cached_metadata_.updateNoValueStatsForExistingKey(key, peredge_synced_victimcnt_, is_redirected, is_global_cached);
+            affect_victim_tracker = local_cached_metadata_.updateNoValueStatsForExistingKey(edge_wrapper_ptr_, key, peredge_synced_victimcnt_, is_redirected, is_global_cached);
         }
         else // key is NOT cached
         {
@@ -123,7 +104,7 @@ namespace covered
                 {
                     // Update local uncached metadata for getreq with cache miss (ONLY value-unrelated metadata)
                     const bool original_is_global_cached = local_uncached_metadata_.isGlobalCachedForExistingKey(key); // Conservatively keep original is_global_cached flag
-                    local_uncached_metadata_.updateNoValueStatsForExistingKey(key, peredge_synced_victimcnt_, is_redirected, original_is_global_cached);
+                    local_uncached_metadata_.updateNoValueStatsForExistingKey(edge_wrapper_ptr_, key, peredge_synced_victimcnt_, is_redirected, original_is_global_cached);
 
                     // NOTE: NOT update value-related metadata, as we conservatively treat the objsize unchanged (okay due to read-intensive edge cache trace)
                 }
@@ -245,13 +226,13 @@ namespace covered
             if (is_getrsp) // getrsp with invalid cache hit
             {
                 // NOTE: ONLY update value-related metadata, as value-unrelated metadata has already been updated for the corresponding getreq before in getLocalCacheInternal_()
-                affect_victim_tracker = local_cached_metadata_.updateValueStatsForExistingKey(key, value, original_value, peredge_synced_victimcnt_);
+                affect_victim_tracker = local_cached_metadata_.updateValueStatsForExistingKey(edge_wrapper_ptr_, key, value, original_value, peredge_synced_victimcnt_);
             }
             else
             {
                 const bool tmp_is_global_cached = true; // Local cached objects MUST be global cached
-                bool tmp_affect_victim_tracker0 = local_cached_metadata_.updateNoValueStatsForExistingKey(key, peredge_synced_victimcnt_, is_redirected, tmp_is_global_cached);
-                bool tmp_affect_victim_tracker1 = local_cached_metadata_.updateValueStatsForExistingKey(key, value, original_value, peredge_synced_victimcnt_);
+                bool tmp_affect_victim_tracker0 = local_cached_metadata_.updateNoValueStatsForExistingKey(edge_wrapper_ptr_, key, peredge_synced_victimcnt_, is_redirected, tmp_is_global_cached);
+                bool tmp_affect_victim_tracker1 = local_cached_metadata_.updateValueStatsForExistingKey(edge_wrapper_ptr_, key, value, original_value, peredge_synced_victimcnt_);
                 affect_victim_tracker = tmp_affect_victim_tracker0 || tmp_affect_victim_tracker1;
             }
 
@@ -278,7 +259,7 @@ namespace covered
                     // Initialize and update local uncached metadata for getrsp/put/delreq with cache miss (both value-unrelated and value-related)
                     // NOTE: if the latest local uncached popularity of the newly-tracked key is NOT detracked in addForNewKey() under local uncached metadata capacity limitation, local/remote release writelock (for put/delreq) or local/remote directory lookup for the next getreq (for getrsp) will get the latest local uncached popularity for popularity aggregation to trigger placement calculation
                     const bool is_neighbor_cached = false; // NOTE: NEVER used by local uncached metadata
-                    local_uncached_metadata_.addForNewKey(key, value, peredge_synced_victimcnt_, is_global_cached, is_neighbor_cached); // NOTE: peredge_synced_victimcnt_ will NOT be used for local uncached metadata
+                    local_uncached_metadata_.addForNewKey(edge_wrapper_ptr_, key, value, peredge_synced_victimcnt_, is_global_cached, is_neighbor_cached); // NOTE: peredge_synced_victimcnt_ will NOT be used for local uncached metadata
                 }
                 else // Key is tracked by local uncached metadata
                 {
@@ -294,15 +275,15 @@ namespace covered
                         const bool original_is_global_cached = local_uncached_metadata_.isGlobalCachedForExistingKey(key);
                         if (is_global_cached != original_is_global_cached) // If is_global_cached flag changes
                         {
-                            local_uncached_metadata_.updateIsGlobalCachedForExistingKey(key, is_getrsp, is_global_cached); // Update is_global_cached and reward
+                            local_uncached_metadata_.updateIsGlobalCachedForExistingKey(edge_wrapper_ptr_, key, is_getrsp, is_global_cached); // Update is_global_cached and reward
                         }
                     }
                     else // put/delreq with cache miss
                     {
                         // Update local uncached value-unrelated metadata for put/delreq with cache miss
-                        local_uncached_metadata_.updateNoValueStatsForExistingKey(key, peredge_synced_victimcnt_, is_redirected, is_global_cached);
+                        local_uncached_metadata_.updateNoValueStatsForExistingKey(edge_wrapper_ptr_, key, peredge_synced_victimcnt_, is_redirected, is_global_cached);
                         
-                        local_uncached_metadata_.updateValueStatsForExistingKey(key, value, original_value_size, peredge_synced_victimcnt_); // NOTE: peredge_synced_victimcnt_ will NOT be used by local uncached metadata
+                        local_uncached_metadata_.updateValueStatsForExistingKey(edge_wrapper_ptr_, key, value, original_value_size, peredge_synced_victimcnt_); // NOTE: peredge_synced_victimcnt_ will NOT be used by local uncached metadata
                     }
                 }
             }
@@ -343,12 +324,6 @@ namespace covered
             return;
         }
 
-        // TMPDEBUG231201
-        uint64_t internal_size = internal_kvbytes_;
-        uint64_t local_cached_metadata_size = local_cached_metadata_.getSizeForCapacity();
-        uint64_t local_uncached_metadata_size = local_uncached_metadata_.getSizeForCapacity();
-        Util::dumpVariablesForDebug(instance_name_, 6, "[before admit] internal_size:", std::to_string(internal_size).c_str(), "local_cached_metadata_size:", std::to_string(local_cached_metadata_size).c_str(), "local_uncached_metadata_size:", std::to_string(local_uncached_metadata_size).c_str());
-
         // Admit new key-value pair into internal TommyDS
         tommyds_object_t* tmp_allocate_obj_ptr = new tommyds_object_t();
         assert(tmp_allocate_obj_ptr != NULL);
@@ -361,16 +336,7 @@ namespace covered
 
         // Update local cached metadata for admission
         const bool is_global_cached = true; // Local cached objects MUST be global cached
-        affect_victim_tracker = local_cached_metadata_.addForNewKey(key, value, peredge_synced_victimcnt_, is_global_cached, is_neighbor_cached);
-
-        // TMPDEBUG231201
-        uint64_t after_internal_size = internal_kvbytes_;
-        uint64_t after_local_cached_metadata_size = local_cached_metadata_.getSizeForCapacity();
-        uint64_t after_local_uncached_metadata_size = local_uncached_metadata_.getSizeForCapacity();
-        Util::dumpVariablesForDebug(instance_name_, 6, "[after admit] internal_size:", std::to_string(after_internal_size).c_str(), "local_cached_metadata_size:", std::to_string(after_local_cached_metadata_size).c_str(), "local_uncached_metadata_size:", std::to_string(after_local_uncached_metadata_size).c_str());
-
-        // TMPDEBUG231201
-        Util::dumpVariablesForDebug(instance_name_, 8, "newly-admited key", key.getKeystr().c_str(), "passed is_neighbor_cached:", Util::toString(is_neighbor_cached).c_str(), "is_neighbor_cached:", Util::toString(local_cached_metadata_.checkIsNeighborCachedForExistingKey(key)).c_str(), "local reward:", std::to_string(local_cached_metadata_.getLocalRewardForExistingKey(key)).c_str());
+        affect_victim_tracker = local_cached_metadata_.addForNewKey(edge_wrapper_ptr_, key, value, peredge_synced_victimcnt_, is_global_cached, is_neighbor_cached);
 
         // Remove from local uncached metadata if necessary for admission
         if (local_uncached_metadata_.isKeyExist(key))
@@ -465,12 +431,6 @@ namespace covered
         {
             value = tmp_obj_ptr->val;
 
-            // TMPDEBUG231201
-            uint64_t internal_size = internal_kvbytes_;
-            uint64_t local_cached_metadata_size = local_cached_metadata_.getSizeForCapacity();
-            uint64_t local_uncached_metadata_size = local_uncached_metadata_.getSizeForCapacity();
-            Util::dumpVariablesForDebug(instance_name_, 6, "[before evict] internal_size:", std::to_string(internal_size).c_str(), "local_cached_metadata_size:", std::to_string(local_cached_metadata_size).c_str(), "local_uncached_metadata_size:", std::to_string(local_uncached_metadata_size).c_str());
-
             // Remove the corresponding cache item
             tmp_obj_ptr = (tommyds_object_t *) tommy_hashdyn_remove(covered_cache_ptr_, tommyds_compare, &key, hashForTommyds_(key));
             assert(tmp_obj_ptr != NULL);
@@ -479,15 +439,6 @@ namespace covered
 
             // Update internal key-value pair size usage
             internal_kvbytes_ = Util::uint64Minus(internal_kvbytes_, (key.getKeyLength() + value.getValuesize()));
-
-            // TMPDEBUG231201
-            uint64_t after_internal_size = internal_kvbytes_;
-            uint64_t after_local_cached_metadata_size = local_cached_metadata_.getSizeForCapacity();
-            uint64_t after_local_uncached_metadata_size = local_uncached_metadata_.getSizeForCapacity();
-            Util::dumpVariablesForDebug(instance_name_, 6, "[after evict] internal_size:", std::to_string(after_internal_size).c_str(), "local_cached_metadata_size:", std::to_string(after_local_cached_metadata_size).c_str(), "local_uncached_metadata_size:", std::to_string(after_local_uncached_metadata_size).c_str());
-
-            // TMPDEBUG231201
-            Util::dumpVariablesForDebug(instance_name_, 6, "victim key", key.getKeystr().c_str(), "is_neighbor_cached:", Util::toString(local_cached_metadata_.checkIsNeighborCachedForExistingKey(key)).c_str(), "local reward:", std::to_string(local_cached_metadata_.getLocalRewardForExistingKey(key)).c_str());
 
             // Remove from local cached metadata for eviction
             local_cached_metadata_.removeForExistingKey(key, value);

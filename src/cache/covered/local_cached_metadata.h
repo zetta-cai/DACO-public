@@ -44,7 +44,7 @@ namespace covered
         virtual void calculateAndUpdatePopularity_(perkey_metadata_list_t::iterator& perkey_metadata_iter, const HeteroKeyLevelMetadata& key_level_metadata_ref, const GroupLevelMetadata& group_level_metadata_ref) override; // Calculate local/redirected uncached popularity based on object-level metadata for local/redirected hits and group-level metadata for all requests
 
         // For reward information
-        virtual Reward calculateReward_(perkey_metadata_list_t::iterator perkey_metadata_iter) const override;
+        virtual Reward calculateReward_(const EdgeWrapper* edge_wrapper_ptr, perkey_metadata_list_t::iterator perkey_metadata_iter) const override;
 
         // ONLY for local cached metadata
         bool isAffectVictimTracker_(const typename perkey_lookup_table_t::const_iterator& perkey_lookup_const_iter, const uint32_t& peredge_synced_victimcnt) const;

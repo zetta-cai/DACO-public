@@ -116,7 +116,6 @@ namespace covered
 
         // Update is_neighbor_cached flag in local cached metadata
         const bool is_neighbor_cached = covered_metadata_update_request_ptr->isNeighborCached();
-        Util::dumpVariablesForDebug(instance_name_, 6, "receive metadata update request for key", tmp_key.getKeystr().c_str(), "source edgeidx:", std::to_string(source_edge_idx).c_str(), "is_neighbor_cached:", Util::toString(is_neighbor_cached).c_str()); // TMPDEBUG231201
         tmp_edge_wrapper_ptr->getEdgeCachePtr()->metadataUpdate(tmp_key, CoveredLocalCache::UPDATE_IS_NEIGHBOR_CACHED_FLAG_FUNC_NAME, &is_neighbor_cached);
 
         struct timespec metadata_update_end_timestamp = Util::getCurrentTimespec();

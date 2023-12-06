@@ -29,7 +29,7 @@ namespace covered
         // NOTE: too small cache capacity cannot support slab-based memory allocation in cachelib (see lib/CacheLib/cachelib/allocator/CacheAllocatorConfig.h and lib/CacheLib/cachelib/allocator/memory/SlabAllocator.cpp)
         //static const uint64_t CACHELIB_MIN_CAPACITY_BYTES; // (OBSOLETE: move to Util) NOTE: NOT affect capacity constraint!
 
-        CachelibLocalCache(const uint32_t& edge_idx, const uint64_t& capacity_bytes);
+        CachelibLocalCache(const EdgeWrapper* edge_wrapper_ptr, const uint32_t& edge_idx, const uint64_t& capacity_bytes);
         virtual ~CachelibLocalCache();
 
         virtual const bool hasFineGrainedManagement() const;

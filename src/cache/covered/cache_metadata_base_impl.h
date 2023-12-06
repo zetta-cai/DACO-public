@@ -110,7 +110,7 @@ namespace covered
     // For newly-admited/tracked keys
 
     template<class T>
-    bool CacheMetadataBase<T>::addForNewKey(const Key& key, const Value& value, const uint32_t& peredge_synced_victimcnt, const bool& is_global_cached, const bool& is_neighbor_cached)
+    bool CacheMetadataBase<T>::addForNewKey(const EdgeWrapper* edge_wrapper_ptr, const Key& key, const Value& value, const uint32_t& peredge_synced_victimcnt, const bool& is_global_cached, const bool& is_neighbor_cached)
     {
         bool affect_victim_tracker = false;
 
@@ -129,7 +129,7 @@ namespace covered
         calculateAndUpdatePopularity_(perkey_metadata_list_iter, key_level_metadata_ref, group_level_metadata_ref);
 
         // Calculate and add reward for newly-admited key
-        Reward new_reward = calculateReward_(perkey_metadata_list_iter);
+        Reward new_reward = calculateReward_(edge_wrapper_ptr, perkey_metadata_list_iter);
         sorted_reward_multimap_t::iterator sorted_reward_iter = addReward_(new_reward, perkey_lookup_iter);
 
         // Update lookup table
@@ -144,7 +144,7 @@ namespace covered
     // For existing key
 
     template<class T>
-    bool CacheMetadataBase<T>::updateNoValueStatsForExistingKey(const Key& key, const uint32_t& peredge_synced_victimcnt, const bool& is_redirected, const bool& is_global_cached)
+    bool CacheMetadataBase<T>::updateNoValueStatsForExistingKey(const EdgeWrapper* edge_wrapper_ptr, const Key& key, const uint32_t& peredge_synced_victimcnt, const bool& is_redirected, const bool& is_global_cached)
     {
         // Get lookup iterator
         perkey_lookup_table_iter_t perkey_lookup_iter = getLookup_(key);
@@ -162,7 +162,7 @@ namespace covered
         calculateAndUpdatePopularity_(perkey_metadata_list_iter, key_level_metadata_ref, group_level_metadata_ref);
 
         // Update reward
-        Reward new_reward = calculateReward_(perkey_metadata_list_iter);
+        Reward new_reward = calculateReward_(edge_wrapper_ptr, perkey_metadata_list_iter);
         sorted_reward_multimap_t::iterator new_sorted_reward_iter = updateReward_(new_reward, perkey_lookup_iter);
 
         // Update lookup table
@@ -177,7 +177,7 @@ namespace covered
     }
 
     template<class T>
-    bool CacheMetadataBase<T>::updateValueStatsForExistingKey(const Key& key, const Value& value, const Value& original_value, const uint32_t& peredge_synced_victimcnt)
+    bool CacheMetadataBase<T>::updateValueStatsForExistingKey(const EdgeWrapper* edge_wrapper_ptr, const Key& key, const Value& value, const Value& original_value, const uint32_t& peredge_synced_victimcnt)
     {
         // NOTE: NOT update object-/group-level value-unrelated metadata, which has been done in updateNoValueStatsForExistingKey()
 
@@ -197,7 +197,7 @@ namespace covered
         calculateAndUpdatePopularity_(perkey_metadata_list_iter, key_level_metadata_ref, group_level_metadata_ref);
 
         // Update reward
-        Reward new_reward = calculateReward_(perkey_metadata_list_iter);
+        Reward new_reward = calculateReward_(edge_wrapper_ptr, perkey_metadata_list_iter);
         sorted_reward_multimap_t::iterator new_sorted_reward_iter = updateReward_(new_reward, perkey_lookup_iter);
 
         // Update lookup table

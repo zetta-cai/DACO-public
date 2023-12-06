@@ -2,7 +2,6 @@
 
 #include <assert.h>
 
-#include "common/covered_weight.h"
 #include "common/util.h"
 
 namespace covered
@@ -133,53 +132,31 @@ namespace covered
         return (exist_edgecnt_ == 0);
     }
 
-    DeltaReward AggregatedUncachedPopularity::calcMaxAdmissionBenefit(const bool& is_global_cached) const
+    DeltaReward AggregatedUncachedPopularity::calcMaxAdmissionBenefit(const EdgeWrapper* edge_wrapper_ptr, const bool& is_global_cached) const
     {
         Edgeset placement_edgeset;
         //DeltaReward max_admission_benefit = calcAdmissionBenefit(topk_edgeidx_local_uncached_popularity_pairs_.size(), is_global_cached, placement_edgeset);
-        DeltaReward max_admission_benefit = calcAdmissionBenefit(0, Key(""), topk_edgeidx_local_uncached_popularity_pairs_.size(), is_global_cached, placement_edgeset); // TMPDEBUG23
+        DeltaReward max_admission_benefit = calcAdmissionBenefit(edge_wrapper_ptr, 0, Key(""), topk_edgeidx_local_uncached_popularity_pairs_.size(), is_global_cached, placement_edgeset); // TMPDEBUG23
         UNUSED(placement_edgeset);
         
         return max_admission_benefit;
     }
 
-    //DeltaReward AggregatedUncachedPopularity::calcAdmissionBenefit(const uint32_t& topicnt, const bool& is_global_cached, Edgeset& placement_edgeset) const
-    DeltaReward AggregatedUncachedPopularity::calcAdmissionBenefit(const uint32_t& edgeidx, const Key& key, const uint32_t& topicnt, const bool& is_global_cached, Edgeset& placement_edgeset) const // TMPDEBUG23
+    //DeltaReward AggregatedUncachedPopularity::calcAdmissionBenefit(const EdgeWrapper* edge_wrapper_ptr, const uint32_t& topicnt, const bool& is_global_cached, Edgeset& placement_edgeset) const
+    DeltaReward AggregatedUncachedPopularity::calcAdmissionBenefit(const EdgeWrapper* edge_wrapper_ptr, const uint32_t& edgeidx, const Key& key, const uint32_t& topicnt, const bool& is_global_cached, Edgeset& placement_edgeset) const // TMPDEBUG23
     {
         // TODO: Use a heuristic or learning-based approach for parameter tuning to calculate delta rewards for max admission benefits (refer to state-of-the-art studies such as LRB and GL-Cache)
 
-        // Get weight parameters from static class atomically
-        const WeightInfo weight_info = CoveredWeight::getWeightInfo();
-        const Weight local_hit_weight = weight_info.getLocalHitWeight();
-        const Weight cooperative_hit_weight = weight_info.getCooperativeHitWeight();
-
-        DeltaReward admission_benefit = 0.0;
         Popularity topi_local_uncached_popularity_ = getTopiLocalUncachedPopularitySum_(topicnt, placement_edgeset);
-        if (is_global_cached) // Redirected cache hits become local cache hits for the edge nodes with top-k local uncached popularity
+        if (!(Util::isApproxLargerEqual(sum_local_uncached_popularity_, topi_local_uncached_popularity_)))
         {
-            const Weight w1_minus_w2 = Util::popularityNonegMinus(local_hit_weight, cooperative_hit_weight);
-            admission_benefit = Util::popularityMultiply(w1_minus_w2, topi_local_uncached_popularity_); // w1 - w2
-
-            #ifdef ENABLE_COMPLETE_DUPLICATION_AVOIDANCE_FOR_DEBUG
-            admission_benefit = 0.0;
-            #endif
+            std::ostringstream oss;
+            oss << "sum_local_uncached_popularity_ " << sum_local_uncached_popularity_ << " should >= topi_local_uncached_popularity_ " << topi_local_uncached_popularity_ << "!";
+            Util::dumpErrorMsg(kClassName, oss.str());
+            exit(1);
         }
-        else // Global cache misses become local cache hits for the edge nodes with top-k local uncached popularity, and global cache misses become redirected cache hits for other edge nodes
-        {
-            admission_benefit = Util::popularityMultiply(local_hit_weight, topi_local_uncached_popularity_); // w1
-            if (!(Util::isApproxLargerEqual(sum_local_uncached_popularity_, topi_local_uncached_popularity_)))
-            {
-                std::ostringstream oss;
-                oss << "sum_local_uncached_popularity_ " << sum_local_uncached_popularity_ << " should >= topi_local_uncached_popularity_ " << topi_local_uncached_popularity_ << "!";
-                Util::dumpErrorMsg(kClassName, oss.str());
-                exit(1);
-            }
-
-            Popularity sum_minus_topi = Util::popularityNonegMinus(sum_local_uncached_popularity_, topi_local_uncached_popularity_);
-            Popularity tmp_admission_benefit = Util::popularityMultiply(cooperative_hit_weight, sum_minus_topi); // w2
-
-            admission_benefit = Util::popularityAdd(admission_benefit, tmp_admission_benefit);
-        }
+        Popularity sum_minus_topi = Util::popularityNonegMinus(sum_local_uncached_popularity_, topi_local_uncached_popularity_);
+        DeltaReward admission_benefit = edge_wrapper_ptr->calcLocalUncachedReward(topi_local_uncached_popularity_, is_global_cached, sum_minus_topi);
 
         return admission_benefit;
     }

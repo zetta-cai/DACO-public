@@ -15,32 +15,32 @@ namespace covered
 {
     const std::string LocalCacheBase::kClassName("LocalCacheBase");
 
-    LocalCacheBase* LocalCacheBase::getLocalCacheByCacheName(const std::string& cache_name, const uint32_t& edge_idx, const uint64_t& capacity_bytes, const uint64_t& local_uncached_capacity_bytes, const uint32_t& peredge_synced_victimcnt)
+    LocalCacheBase* LocalCacheBase::getLocalCacheByCacheName(const EdgeWrapper* edge_wrapper_ptr, const std::string& cache_name, const uint32_t& edge_idx, const uint64_t& capacity_bytes, const uint64_t& local_uncached_capacity_bytes, const uint32_t& peredge_synced_victimcnt)
     {
         LocalCacheBase* local_cache_ptr = NULL;
         if (cache_name == Util::CACHELIB_CACHE_NAME)
         {
-            local_cache_ptr = new CachelibLocalCache(edge_idx, capacity_bytes);
+            local_cache_ptr = new CachelibLocalCache(edge_wrapper_ptr, edge_idx, capacity_bytes);
         }
         else if (cache_name == Util::LRUK_CACHE_NAME || cache_name == Util::GDSIZE_CACHE_NAME || cache_name == Util::GDSF_CACHE_NAME || cache_name == Util::LFUDA_CACHE_NAME)
         {
-            local_cache_ptr = new GreedyDualLocalCache(cache_name, edge_idx, capacity_bytes);
+            local_cache_ptr = new GreedyDualLocalCache(edge_wrapper_ptr, cache_name, edge_idx, capacity_bytes);
         }
         else if (cache_name == Util::COVERED_CACHE_NAME)
         {
-            local_cache_ptr = new CoveredLocalCache(edge_idx, capacity_bytes, local_uncached_capacity_bytes, peredge_synced_victimcnt);
+            local_cache_ptr = new CoveredLocalCache(edge_wrapper_ptr, edge_idx, capacity_bytes, local_uncached_capacity_bytes, peredge_synced_victimcnt);
         }
         else if (cache_name == Util::LFU_CACHE_NAME)
         {
-            local_cache_ptr = new LfuLocalCache(edge_idx, capacity_bytes);
+            local_cache_ptr = new LfuLocalCache(edge_wrapper_ptr, edge_idx, capacity_bytes);
         }
         else if (cache_name == Util::LRU_CACHE_NAME)
         {
-            local_cache_ptr = new LruLocalCache(edge_idx, capacity_bytes);
+            local_cache_ptr = new LruLocalCache(edge_wrapper_ptr, edge_idx, capacity_bytes);
         }
         else if (cache_name == Util::SEGCACHE_CACHE_NAME)
         {
-            local_cache_ptr = new SegcacheLocalCache(edge_idx, capacity_bytes);
+            local_cache_ptr = new SegcacheLocalCache(edge_wrapper_ptr, edge_idx, capacity_bytes);
         }
         else
         {
@@ -54,7 +54,7 @@ namespace covered
         return local_cache_ptr;
     }
 
-    LocalCacheBase::LocalCacheBase(const uint32_t& edge_idx, const uint64_t& capacity_bytes) : capacity_bytes_(capacity_bytes)
+    LocalCacheBase::LocalCacheBase(const EdgeWrapper* edge_wrapper_ptr, const uint32_t& edge_idx, const uint64_t& capacity_bytes) : edge_wrapper_ptr_(edge_wrapper_ptr), capacity_bytes_(capacity_bytes)
     {
         // Differentiate local edge cache in different edge nodes
         std::ostringstream oss;
@@ -326,6 +326,7 @@ namespace covered
 
     void LocalCacheBase::checkPointers_() const
     {
+        assert(edge_wrapper_ptr_ != NULL);
         assert(rwlock_for_local_cache_ptr_ != NULL);
         checkPointersInternal_();
         return;

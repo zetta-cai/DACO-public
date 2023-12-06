@@ -71,7 +71,7 @@ namespace covered
         return NULL;
     }
 
-    EdgeWrapper::EdgeWrapper(const std::string& cache_name, const uint64_t& capacity_bytes, const uint32_t& edge_idx, const uint32_t& edgecnt, const std::string& hash_name, const uint64_t& local_uncached_capacity_bytes, const uint32_t& percacheserver_workercnt, const uint32_t& peredge_synced_victimcnt, const uint32_t& peredge_monitored_victimsetcnt, const uint64_t& popularity_aggregation_capacity_bytes, const double& popularity_collection_change_ratio, const uint32_t& propagation_latency_clientedge_us, const uint32_t& propagation_latency_crossedge_us, const uint32_t& propagation_latency_edgecloud_us, const uint32_t& topk_edgecnt) : NodeWrapperBase(NodeWrapperBase::EDGE_NODE_ROLE, edge_idx,edgecnt, true), cache_name_(cache_name), capacity_bytes_(capacity_bytes), percacheserver_workercnt_(percacheserver_workercnt), topk_edgecnt_for_placement_(topk_edgecnt), edge_background_counter_for_beacon_server_()
+    EdgeWrapper::EdgeWrapper(const std::string& cache_name, const uint64_t& capacity_bytes, const uint32_t& edge_idx, const uint32_t& edgecnt, const std::string& hash_name, const uint64_t& local_uncached_capacity_bytes, const uint32_t& percacheserver_workercnt, const uint32_t& peredge_synced_victimcnt, const uint32_t& peredge_monitored_victimsetcnt, const uint64_t& popularity_aggregation_capacity_bytes, const double& popularity_collection_change_ratio, const uint32_t& propagation_latency_clientedge_us, const uint32_t& propagation_latency_crossedge_us, const uint32_t& propagation_latency_edgecloud_us, const uint32_t& topk_edgecnt) : NodeWrapperBase(NodeWrapperBase::EDGE_NODE_ROLE, edge_idx,edgecnt, true), cache_name_(cache_name), capacity_bytes_(capacity_bytes), percacheserver_workercnt_(percacheserver_workercnt), topk_edgecnt_for_placement_(topk_edgecnt), edge_background_counter_for_beacon_server_(), weight_tuner_(edge_idx, propagation_latency_clientedge_us, propagation_latency_crossedge_us, propagation_latency_edgecloud_us)
     {
         // Get source address of beacon server recvreq for non-blocking placement deployment
         const bool is_launch_edge = true; // The beacon server belongs to the logical edge node launched in the current physical machine
@@ -91,7 +91,7 @@ namespace covered
         instance_name_ = oss.str();
         
         // Allocate local edge cache to store hot objects
-        edge_cache_ptr_ = new CacheWrapper(cache_name_, edge_idx, capacity_bytes, local_uncached_capacity_bytes, peredge_synced_victimcnt);
+        edge_cache_ptr_ = new CacheWrapper(this, cache_name, edge_idx, capacity_bytes, local_uncached_capacity_bytes, peredge_synced_victimcnt);
         assert(edge_cache_ptr_ != NULL);
 
         // Allocate cooperation wrapper for cooperative edge caching
@@ -137,16 +137,6 @@ namespace covered
         
     EdgeWrapper::~EdgeWrapper()
     {
-        // TMPDEBUG231201
-        uint64_t edge_cache_size = edge_cache_ptr_->getSizeForCapacity();
-        uint64_t cooperation_size = cooperation_wrapper_ptr_->getSizeForCapacity();
-        uint64_t cache_manager_size = 0;
-        if (cache_name_ == Util::COVERED_CACHE_NAME)
-        {
-            cache_manager_size = covered_cache_manager_ptr_->getSizeForCapacity();
-        }
-        Util::dumpVariablesForDebug(instance_name_, 6, "edge_cache_size:", std::to_string(edge_cache_size).c_str(), "cooperation_size:", std::to_string(cooperation_size).c_str(), "cache_manager_size:", std::to_string(cache_manager_size).c_str());
-
         // Release local edge cache
         assert(edge_cache_ptr_ != NULL);
         delete edge_cache_ptr_;
@@ -1289,5 +1279,65 @@ namespace covered
         }
 
         return;
+    }
+
+    // (7.4) Reward calculation for local reward and cache placement (delta reward of admission benefit / eviction cost)
+
+    Reward EdgeWrapper::calcLocalCachedReward(const Popularity& local_cached_popularity, const Popularity& redirected_cached_popularity, const bool& is_last_copies) const
+    {
+        // Get current weight information from weight tuner
+        WeightInfo cur_weight_info = weight_tuner_.getWeightInfo();
+        const Weight local_hit_weight = cur_weight_info.getLocalHitWeight();
+        const Weight cooperative_hit_weight = cur_weight_info.getCooperativeHitWeight();
+
+        // Calculte local reward or eviction cost (i.e., decreased reward)
+        Reward tmp_reward = 0.0;
+        if (is_last_copies) // Key is the last cache copies
+        {
+            // Local cache hits become global cache misses for the victim edge node(s), while redirected cache hits become global cache misses for other edge nodes
+            tmp_reward = static_cast<Reward>(Util::popularityMultiply(local_hit_weight, local_cached_popularity)) + static_cast<Reward>(Util::popularityMultiply(cooperative_hit_weight, redirected_cached_popularity)); // w1 * local_cached_popularity + w2 * redirected_cached_popularity
+        }
+        else // Key is NOT the last cache copies
+        {
+            // Local cache hits become redirected cache hits for the victim edge node(s)
+            const Weight w1_minus_w2 = Util::popularityNonegMinus(local_hit_weight, cooperative_hit_weight);
+            tmp_reward = static_cast<Reward>(Util::popularityMultiply(w1_minus_w2, local_cached_popularity)); // (w1 - w2) * local_cached_popularity
+        }
+
+        return tmp_reward;
+    }
+
+    Reward EdgeWrapper::calcLocalUncachedReward(const Popularity& local_uncached_popularity, const bool& is_global_cached, const Popularity& redirected_uncached_popularity) const
+    {
+        // Get current weight information from weight tuner
+        WeightInfo cur_weight_info = weight_tuner_.getWeightInfo();
+        const Weight local_hit_weight = cur_weight_info.getLocalHitWeight();
+        const Weight cooperative_hit_weight = cur_weight_info.getCooperativeHitWeight();
+
+        // Calculte local reward or admission benefit (i.e., increased reward)
+        Reward tmp_reward = 0.0;
+        if (is_global_cached) // Key is global cached
+        {
+            // Redirected cache hits become local cache hits for the placement edge node(s)
+            const Weight w1_minus_w2 = Util::popularityNonegMinus(local_hit_weight, cooperative_hit_weight);
+            tmp_reward = Util::popularityMultiply(w1_minus_w2, local_uncached_popularity); // w1 - w2
+
+            #ifdef ENABLE_COMPLETE_DUPLICATION_AVOIDANCE_FOR_DEBUG
+            tmp_reward = 0.0;
+            #endif
+        }
+        else // Key is NOT global cached
+        {
+            // Global cache misses become local cache hits for the placement edge node(s)
+            Reward tmp_reward0 = Util::popularityMultiply(local_hit_weight, local_uncached_popularity); // w1
+
+            // Global cache misses become redirected cache hits for other edge nodes
+            // NOTE: redirected_uncached_popularity MUST be zero for local reward of local uncached objects
+            Reward tmp_reward1 = Util::popularityMultiply(cooperative_hit_weight, redirected_uncached_popularity); // w2
+
+            tmp_reward = Util::popularityAdd(tmp_reward0, tmp_reward1);
+        }
+
+        return tmp_reward;
     }
 }

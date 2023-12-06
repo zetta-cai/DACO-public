@@ -81,7 +81,7 @@ namespace covered
 
         // For fast-path single-placement calculation in current edge node (NOT as a beacon node)
 
-        DeltaReward accessVictimTrackerForFastPathEvictionCost(const std::list<VictimCacheinfo>& curedge_local_cached_victim_cacheinfos, const std::unordered_map<Key, DirinfoSet, KeyHasher>& curedge_local_beaconed_local_cached_victim_dirinfosets) const; // NOTE: ONLY consider a single placement of edge_idx_
+        DeltaReward accessVictimTrackerForFastPathEvictionCost(const EdgeWrapper* edge_wrapper_ptr, const std::list<VictimCacheinfo>& curedge_local_cached_victim_cacheinfos, const std::unordered_map<Key, DirinfoSet, KeyHasher>& curedge_local_beaconed_local_cached_victim_dirinfosets) const; // NOTE: ONLY consider a single placement of edge_idx_
 
         uint64_t getSizeForCapacity() const;
     private:

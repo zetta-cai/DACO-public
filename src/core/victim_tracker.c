@@ -3,7 +3,6 @@
 #include <assert.h>
 #include <sstream>
 
-#include "common/covered_weight.h"
 #include "common/util.h"
 
 namespace covered
@@ -318,17 +317,12 @@ namespace covered
 
     // For trade-off-aware placement calculation
     
-    DeltaReward VictimTracker::calcEvictionCost(const ObjectSize& object_size, const Edgeset& placement_edgeset, std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& placement_peredge_synced_victimset, std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& placement_peredge_fetched_victimset, Edgeset& victim_fetch_edgeset, const std::unordered_map<uint32_t, std::list<VictimCacheinfo>>& extra_peredge_victim_cacheinfos, const std::unordered_map<Key, DirinfoSet, KeyHasher>& extra_perkey_victim_dirinfoset) const
+    DeltaReward VictimTracker::calcEvictionCost(const EdgeWrapper* edge_wrapper_ptr, const ObjectSize& object_size, const Edgeset& placement_edgeset, std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& placement_peredge_synced_victimset, std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& placement_peredge_fetched_victimset, Edgeset& victim_fetch_edgeset, const std::unordered_map<uint32_t, std::list<VictimCacheinfo>>& extra_peredge_victim_cacheinfos, const std::unordered_map<Key, DirinfoSet, KeyHasher>& extra_perkey_victim_dirinfoset) const
     {
         checkPointers_();
 
         const bool with_extra_victims = (extra_peredge_victim_cacheinfos.size() > 0);
         DeltaReward eviction_cost = 0.0;
-
-        // Get weight parameters from static class atomically
-        const WeightInfo weight_info = CoveredWeight::getWeightInfo();
-        const Weight local_hit_weight = weight_info.getLocalHitWeight();
-        const Weight cooperative_hit_weight = weight_info.getCooperativeHitWeight();
         
         // Acquire a read lock to calculate eviction cost atomically
         std::string context_name = "VictimTracker::calcEvictionCost()";
@@ -362,24 +356,15 @@ namespace covered
             {
                 assert(victim_cacheinfo_list_const_iter->isComplete()); // NOTE: victim cacheinfo from edge-level victim metadata of victim tracker MUST be complete
 
+                // Get local cached and redirected cache popularity of the given victim at the given edge node
                 Popularity tmp_local_cached_popularity = 0.0;
                 Popularity tmp_redirected_cached_popularity = 0.0;
-                DeltaReward tmp_eviction_cost = 0.0;
                 bool with_complete_local_cached_popularity = victim_cacheinfo_list_const_iter->getLocalCachedPopularity(tmp_local_cached_popularity);
                 assert(with_complete_local_cached_popularity); // NOTE: victim cacheinfo of pervictim_cacheinfos (from peredge_victim_metadata_ in victim tracker) MUST be complete
-                if (is_last_copies) // All local/redirected cache hits become global cache misses
-                {
-                    bool with_complete_redirected_cached_popularity = victim_cacheinfo_list_const_iter->getRedirectedCachedPopularity(tmp_redirected_cached_popularity);
-                    assert(with_complete_redirected_cached_popularity); // NOTE: victim cacheinfo of pervictim_cacheinfos (from peredge_victim_metadata_ in victim tracker) MUST be complete
+                bool with_complete_redirected_cached_popularity = victim_cacheinfo_list_const_iter->getRedirectedCachedPopularity(tmp_redirected_cached_popularity);
+                assert(with_complete_redirected_cached_popularity); // NOTE: victim cacheinfo of pervictim_cacheinfos (from peredge_victim_metadata_ in victim tracker) MUST be complete
 
-                    tmp_eviction_cost = tmp_local_cached_popularity * local_hit_weight; // w1
-                    tmp_eviction_cost += tmp_redirected_cached_popularity * cooperative_hit_weight; // w2
-                }
-                else // Local cache hits become redirected cache hits
-                {
-                    const Weight w1_minus_w2 = Util::popularityNonegMinus(local_hit_weight, cooperative_hit_weight);
-                    tmp_eviction_cost = tmp_local_cached_popularity * w1_minus_w2; // w1 - w2
-                }
+                DeltaReward tmp_eviction_cost = edge_wrapper_ptr->calcLocalCachedReward(tmp_local_cached_popularity, tmp_redirected_cached_popularity, is_last_copies);
                 eviction_cost += tmp_eviction_cost;
             }
         }
@@ -434,17 +419,12 @@ namespace covered
 
     // For fast-path single-placement calculation in current edge node (NOT as a beacon node)
     
-    DeltaReward VictimTracker::calcEvictionCostForFastPathPlacement(const std::list<VictimCacheinfo>& curedge_local_cached_victim_cacheinfos, const std::unordered_map<Key, DirinfoSet, KeyHasher>& curedge_local_beaconed_local_cached_victim_dirinfosets) const
+    DeltaReward VictimTracker::calcEvictionCostForFastPathPlacement(const EdgeWrapper* edge_wrapper_ptr, const std::list<VictimCacheinfo>& curedge_local_cached_victim_cacheinfos, const std::unordered_map<Key, DirinfoSet, KeyHasher>& curedge_local_beaconed_local_cached_victim_dirinfosets) const
     {
         checkPointers_();
 
         DeltaReward local_eviction_cost = 0.0;
 
-        // Get weight parameters from static class atomically
-        const WeightInfo weight_info = CoveredWeight::getWeightInfo();
-        const Weight local_hit_weight = weight_info.getLocalHitWeight();
-        const Weight cooperative_hit_weight = weight_info.getCooperativeHitWeight();
-        
         // Acquire a read lock to calculate eviction cost atomically
         std::string context_name = "VictimTracker::calcEvictionCostForFastPathPlacement()";
         rwlock_for_victim_tracker_->acquire_lock_shared(context_name);
@@ -460,25 +440,17 @@ namespace covered
             const Key& tmp_victim_key = tmp_victim_const_iter->getKey();
             bool is_last_copies = isLastCopiesForVictimEdgeset_(tmp_victim_key, tmp_victim_edgeset, curedge_local_beaconed_local_cached_victim_dirinfosets);
 
-            // Calculate eviction cost based on is_last_copies and the victim cacheinfo
+            // Get local cached and redirected cached popularity of the given victim at the current edge node
             assert(tmp_victim_const_iter->isComplete()); // NOTE: the victim cacheinfo from local edge cache of current edge node MUST be complete
             Popularity tmp_local_cached_popularity = 0.0;
             Popularity tmp_redirected_cached_popularity = 0.0;
-            DeltaReward tmp_eviction_cost = 0.0;
             bool with_complete_local_cached_popularity = tmp_victim_const_iter->getLocalCachedPopularity(tmp_local_cached_popularity);
             assert(with_complete_local_cached_popularity); // NOTE: the victim cacheinfo from local edge cache of current edge node MUST be complete
-            if (is_last_copies) // All local/redirected cache hits become global cache misses
-            {
-                bool with_complete_redirected_cached_popularity = tmp_victim_const_iter->getRedirectedCachedPopularity(tmp_redirected_cached_popularity);
-                assert(with_complete_redirected_cached_popularity); // NOTE: the victim cacheinfo from local edge cache of current edge node MUST be complete
+            bool with_complete_redirected_cached_popularity = tmp_victim_const_iter->getRedirectedCachedPopularity(tmp_redirected_cached_popularity);
+            assert(with_complete_redirected_cached_popularity); // NOTE: the victim cacheinfo from local edge cache of current edge node MUST be complete
 
-                tmp_eviction_cost = tmp_local_cached_popularity * local_hit_weight; // w1
-                tmp_eviction_cost += tmp_redirected_cached_popularity * cooperative_hit_weight; // w2
-            }
-            else // Local cache hits become redirected cache hits
-            {
-                tmp_eviction_cost = tmp_local_cached_popularity * (local_hit_weight - cooperative_hit_weight); // w1 - w2
-            }
+            // Calculate eviction cost based on is_last_copies and the victim cacheinfo
+            DeltaReward tmp_eviction_cost = edge_wrapper_ptr->calcLocalCachedReward(tmp_local_cached_popularity, tmp_redirected_cached_popularity, is_last_copies);
             local_eviction_cost += tmp_eviction_cost;
         }
 

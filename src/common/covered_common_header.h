@@ -30,7 +30,7 @@
 // ---> If not defined, we only perform normal trade-off-aware cache placement in beacon edge node for at lest 2nd get request of each uncached object (NOT recommend due to slow cache warmup under large edge/dataset scale)
 #define ENABLE_FAST_PATH_PLACEMENT
 
-// Used in src/cache/covered/local_uncached_metadata.c (local reward calculation), src/core/popularity/aggregated_uncached_popularity.c (normal placement), and src/edge/cache_server/covered_cache_server_worker.c (fast-path placement)
+// Used in src/edge/edge_wrapper.c (reward calculation for local reward of local cached/uncached objects, or normal/fast-path cache placement)
 // NOTE: always enforce duplication avoidance no matter cache is not full or already warmed up
 // ---> If defined, we NEVER admit duplicate cache copies of an object as long as it has been cached by an edge node (NOT recommend due to significant degradation on local hit ratio; ONLY used for debugging)
 // ---> If not defined, manage cooperative edge caching based on the trade-off between admission benefit and eviction cost, i.e., trade-off between local hit ratio and cooperative hit ratio (by default)
