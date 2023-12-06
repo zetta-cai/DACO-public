@@ -2,7 +2,6 @@
 
 #include <sstream>
 
-#include "common/covered_weight.h"
 #include "common/util.h"
 
 namespace covered

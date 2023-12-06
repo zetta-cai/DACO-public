@@ -54,7 +54,7 @@ namespace covered
         return local_cache_ptr;
     }
 
-    LocalCacheBase::LocalCacheBase(const EdgeWrapper* edge_wrapper_ptr, const uint32_t& edge_idx, const uint64_t& capacity_bytes) : edge_wrapper_ptr_(edge_wrapper_ptr), capacity_bytes_(capacity_bytes)
+    LocalCacheBase::LocalCacheBase(const EdgeWrapper* edge_wrapper_ptr, const uint32_t& edge_idx, const uint64_t& capacity_bytes) : capacity_bytes_(capacity_bytes), edge_wrapper_ptr_(edge_wrapper_ptr)
     {
         // Differentiate local edge cache in different edge nodes
         std::ostringstream oss;

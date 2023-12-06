@@ -14,6 +14,12 @@
 #include <unordered_set>
 #include <vector>
 
+namespace covered
+{
+    // Forward declaration
+    class LocalCacheBase;
+}
+
 #include "common/key.h"
 #include "common/value.h"
 #include "concurrency/rwlock.h"

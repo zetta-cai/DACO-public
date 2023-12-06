@@ -36,6 +36,7 @@ namespace covered
 #include "cooperation/directory/directory_info.h"
 #include "core/directory_cacher.h"
 #include "core/popularity/edgeset.h"
+#include "core/popularity/fast_path_hint.h"
 #include "core/popularity_aggregator.h"
 #include "core/victim/victim_cacheinfo.h"
 #include "core/victim/victim_syncset.h"
@@ -98,6 +99,9 @@ namespace covered
         void sendVictimFetchRequest_(const uint32_t& dst_edge_idx_for_compression, const ObjectSize& object_size, const EdgeWrapper* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, const NetworkAddr& edge_cache_server_recvreq_dst_addr, const bool& skip_propagation_latency) const;
         void processVictimFetchResponse_(const MessageBase* control_respnose_ptr, const EdgeWrapper* edge_wrapper_ptr, std::unordered_map<uint32_t, std::list<VictimCacheinfo>>& extra_peredge_victim_cacheinfos, std::unordered_map<Key, DirinfoSet, KeyHasher>& extra_perkey_victim_dirinfoset) const;
 
+        // Utility functions
+        void checkPointers_() const;
+
         // Const shared variables
         std::string instance_name_;
         const uint32_t edge_idx_; // Come from CLI
@@ -107,10 +111,10 @@ namespace covered
         // NOTE: we do NOT use per-key fine-grained locking here, as CoveredCacheManager does NOT need strong serializability/atomicity for its componenets, and some components (PopularityAggregator and VictimTracker) CANNOT use per-key fine-grained locking due to accessing multiple keys in one function (e.g., discardGlobalLessPopularObjects_() and updateLocalSyncedVictims())
 
         // Track aggregated uncached popularity for global admission (thread safe; used by beacon edge node)
-        PopularityAggregator popularity_aggregator_;
+        PopularityAggregator* popularity_aggregator_ptr_; // Use PopularityAggregator* to fix circular dependency between CoveredCacheManager and PopularityAggregator
 
         // Track per-edge-node least popular victims for placement and eviction (thread safe; used by sender/beacon edge node)
-        mutable VictimTracker victim_tracker_;
+        mutable VictimTracker* victim_tracker_ptr_; // Use VictimTracker* to fix circular dependency between CoveredCacheManager and VictimTracker
 
         // Track cached directory of popular local uncached objects to reduce message overhead (thread safe; used by sender edge node)
         DirectoryCacher directory_cacher_;

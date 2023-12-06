@@ -74,7 +74,7 @@ namespace covered
         return is_being_admitted;
     }
 
-    void PopularityAggregator::updateAggregatedUncachedPopularity(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached, const bool& is_source_cached, FastPathHint& fast_path_hint)
+    void PopularityAggregator::updateAggregatedUncachedPopularity(const EdgeWrapper* edge_wrapper_ptr, const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached, const bool& is_source_cached, FastPathHint& fast_path_hint)
     {
         checkPointers_();
 
@@ -130,12 +130,12 @@ namespace covered
             object_size = collected_popularity.getObjectSize();
             if (perkey_benefit_popularity_iter == perkey_benefit_popularity_table_.end()) // New key
             {
-                addAggregatedUncachedPopularityForNewKey_(key, source_edge_idx, local_uncached_popularity, object_size, is_global_cached);
+                addAggregatedUncachedPopularityForNewKey_(edge_wrapper_ptr, key, source_edge_idx, local_uncached_popularity, object_size, is_global_cached);
             }
             else // Existing key
             {
                 // Add/update local uncached popularity of source edge node
-                bool is_successful = updateAggregatedUncachedPopularityForExistingKey_(key, source_edge_idx, is_tracked_by_source_edge_node, local_uncached_popularity, object_size, is_global_cached);
+                bool is_successful = updateAggregatedUncachedPopularityForExistingKey_(edge_wrapper_ptr, key, source_edge_idx, is_tracked_by_source_edge_node, local_uncached_popularity, object_size, is_global_cached);
                 assert(is_successful);
             }
 
@@ -153,7 +153,7 @@ namespace covered
             {
                 // Remove old local uncached popularity of source edge node if any
                 // NOTE: local_uncached_popularity and object_size are NOT used when is_tracked_by_source_edge_node = false
-                bool is_successful = updateAggregatedUncachedPopularityForExistingKey_(key, source_edge_idx, is_tracked_by_source_edge_node, local_uncached_popularity, object_size, is_global_cached);
+                bool is_successful = updateAggregatedUncachedPopularityForExistingKey_(edge_wrapper_ptr, key, source_edge_idx, is_tracked_by_source_edge_node, local_uncached_popularity, object_size, is_global_cached);
                 #ifdef ENABLE_FAST_PATH_PLACEMENT
                 if (is_successful)
                 {
@@ -210,7 +210,7 @@ namespace covered
         return;
     }
 
-    void PopularityAggregator::updatePreservedEdgesetForPlacement(const Key& key, const Edgeset& placement_edgeset, const bool& is_global_cached)
+    void PopularityAggregator::updatePreservedEdgesetForPlacement(const EdgeWrapper* edge_wrapper_ptr, const Key& key, const Edgeset& placement_edgeset, const bool& is_global_cached)
     {
         checkPointers_();
 
@@ -249,7 +249,7 @@ namespace covered
 
             // Update benefit-popularity multimap and per-key lookup table for existing yet updated aggregated uncached popularity
             //const bool is_size_bytes_increased = false or true; // NOTE: NOT sure if size_bytes_ is increased or decreased here, as we may add preserved edgeset yet release local uncached popularities
-            updateBenefitPopularityForExistingKey_(key, existing_aggregated_uncached_popularity, is_aggregated_uncached_popularity_empty, is_global_cached);
+            updateBenefitPopularityForExistingKey_(edge_wrapper_ptr, key, existing_aggregated_uncached_popularity, is_aggregated_uncached_popularity_empty, is_global_cached);
         }
 
         // Discard the objects with small max admission benefits if popularity aggregation capacity bytes are used up
@@ -315,7 +315,7 @@ namespace covered
         return is_found;
     }
 
-    void PopularityAggregator::addAggregatedUncachedPopularityForNewKey_(const Key& key, const uint32_t& source_edge_idx, const Popularity& local_uncached_popularity, const ObjectSize& object_size, const bool& is_global_cached)
+    void PopularityAggregator::addAggregatedUncachedPopularityForNewKey_(const EdgeWrapper* edge_wrapper_ptr, const Key& key, const uint32_t& source_edge_idx, const Popularity& local_uncached_popularity, const ObjectSize& object_size, const bool& is_global_cached)
     {
         // NOTE: we have already acquired a write lock in updateAggregatedUncachedPopularity() for thread safety
 
@@ -324,12 +324,12 @@ namespace covered
         new_aggregated_uncached_popularity.update(source_edge_idx, local_uncached_popularity, topk_edgecnt_, object_size);
 
         // Update benefit-popularity multimap and per-key lookup table for new aggregated uncached popularity
-        addBenefitPopularityForNewKey_(key, new_aggregated_uncached_popularity, is_global_cached);
+        addBenefitPopularityForNewKey_(edge_wrapper_ptr, key, new_aggregated_uncached_popularity, is_global_cached);
 
         return;
     }
 
-    bool PopularityAggregator::updateAggregatedUncachedPopularityForExistingKey_(const Key& key, const uint32_t& source_edge_idx, const bool& is_tracked_by_source_edge_node, const Popularity& local_uncached_popularity, const ObjectSize& object_size, const bool& is_global_cached)
+    bool PopularityAggregator::updateAggregatedUncachedPopularityForExistingKey_(const EdgeWrapper* edge_wrapper_ptr, const Key& key, const uint32_t& source_edge_idx, const bool& is_tracked_by_source_edge_node, const Popularity& local_uncached_popularity, const ObjectSize& object_size, const bool& is_global_cached)
     {
         // NOTE: we have already acquired a write lock in updateAggregatedUncachedPopularity() for thread safety
 
@@ -354,12 +354,12 @@ namespace covered
 
         // Update benefit-popularity multimap and per-key lookup table for existing yet updated aggregated uncached popularity
         //const bool is_size_bytes_increased = is_tracked_by_source_edge_node;
-        updateBenefitPopularityForExistingKey_(key, existing_aggregated_uncached_popularity, is_aggregated_uncached_popularity_empty, is_global_cached);
+        updateBenefitPopularityForExistingKey_(edge_wrapper_ptr, key, existing_aggregated_uncached_popularity, is_aggregated_uncached_popularity_empty, is_global_cached);
 
         return is_successful;
     }
 
-    void PopularityAggregator::addBenefitPopularityForNewKey_(const Key& key, const AggregatedUncachedPopularity& new_aggregated_uncached_popularity, const bool& is_global_cached)
+    void PopularityAggregator::addBenefitPopularityForNewKey_(const EdgeWrapper* edge_wrapper_ptr, const Key& key, const AggregatedUncachedPopularity& new_aggregated_uncached_popularity, const bool& is_global_cached)
     {
         // NOTE: we have already acquired a write lock in updateAggregatedUncachedPopularity() for thread safety
 
@@ -367,7 +367,7 @@ namespace covered
         assert(perkey_benefit_popularity_iter == perkey_benefit_popularity_table_.end()); // For new key
 
         // Prepare new max admission benefit for the new key
-        DeltaReward new_max_admission_benefit = new_aggregated_uncached_popularity.calcMaxAdmissionBenefit(is_global_cached);
+        DeltaReward new_max_admission_benefit = new_aggregated_uncached_popularity.calcMaxAdmissionBenefit(edge_wrapper_ptr, is_global_cached);
 
         // Insert new aggregated uncached popularity and new max admission benefit into benefit_popularity_multimap_ for the new key
         benefit_popularity_multimap_iter_t new_benefit_popularity_iter = benefit_popularity_multimap_.insert(std::pair(new_max_admission_benefit, new_aggregated_uncached_popularity));
@@ -382,7 +382,7 @@ namespace covered
         return;
     }
 
-    void PopularityAggregator::updateBenefitPopularityForExistingKey_(const Key& key, const AggregatedUncachedPopularity& updated_aggregated_uncached_popularity, const bool& is_aggregated_uncached_popularity_empty, const bool& is_global_cached)
+    void PopularityAggregator::updateBenefitPopularityForExistingKey_(const EdgeWrapper* edge_wrapper_ptr, const Key& key, const AggregatedUncachedPopularity& updated_aggregated_uncached_popularity, const bool& is_aggregated_uncached_popularity_empty, const bool& is_global_cached)
     {
         // NOTE: we have already acquired a write lock in updatePreservedEdgesetForPlacement() and updateAggregatedUncachedPopularityForExistingKey_() (from updateAggregatedUncachedPopularity()) for thread safety
         
@@ -417,7 +417,7 @@ namespace covered
         else // Still need aggregated uncached popularity for the given key
         {
             // Calculate a new max admission benefit for the existing key
-            DeltaReward new_max_admission_benefit = updated_aggregated_uncached_popularity.calcMaxAdmissionBenefit(is_global_cached);
+            DeltaReward new_max_admission_benefit = updated_aggregated_uncached_popularity.calcMaxAdmissionBenefit(edge_wrapper_ptr, is_global_cached);
 
             // Update benefit_popularity_multimap_ for the new max admission benefit of the existing key
             benefit_popularity_multimap_iter_t new_benefit_popularity_iter = benefit_popularity_multimap_.insert(std::pair(new_max_admission_benefit, updated_aggregated_uncached_popularity));

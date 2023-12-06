@@ -57,6 +57,8 @@ namespace covered
         updateWeightInfo_(); // Update weight_info_ for heuristic weight calculation
     }
 
+    WeightTuner::~WeightTuner() {}
+
     WeightInfo WeightTuner::getWeightInfo() const
     {
         // Acquire a read lock

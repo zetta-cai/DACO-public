@@ -21,6 +21,12 @@
 #include <unordered_map>
 #include <unordered_set>
 
+namespace covered
+{
+    // Forward declaration
+    class VictimTracker;
+}
+
 #include "common/key.h"
 #include "cooperation/cooperation_wrapper_base.h"
 #include "concurrency/rwlock.h"

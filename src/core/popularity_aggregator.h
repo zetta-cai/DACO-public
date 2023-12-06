@@ -13,6 +13,12 @@
 #include <string>
 #include <unordered_map> // std::unordered_map
 
+namespace covered
+{
+    // Forward declaration
+    class PopularityAggregator;
+}
+
 #include "common/key.h"
 #include "concurrency/rwlock.h"
 #include "core/popularity/aggregated_uncached_popularity.h"
@@ -33,8 +39,8 @@ namespace covered
         uint32_t getTopkEdgecnt() const;
         bool isKeyBeingAdmitted(const Key& key) const;
 
-        void updateAggregatedUncachedPopularity(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached, const bool& is_source_cached, FastPathHint& fast_path_hint); // Update aggregated uncached popularity for selective popularity aggregation
-        void updatePreservedEdgesetForPlacement(const Key& key, const Edgeset& placement_edgeset, const bool& is_global_cached); // Preserve edge nodes in placement edgeset for non-blocking placement deployment
+        void updateAggregatedUncachedPopularity(const EdgeWrapper* edge_wrapper_ptr, const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached, const bool& is_source_cached, FastPathHint& fast_path_hint); // Update aggregated uncached popularity for selective popularity aggregation
+        void updatePreservedEdgesetForPlacement(const EdgeWrapper* edge_wrapper_ptr, const Key& key, const Edgeset& placement_edgeset, const bool& is_global_cached); // Preserve edge nodes in placement edgeset for non-blocking placement deployment
         void clearPreservedEdgesetAfterAdmission(const Key& key, const uint32_t& source_edge_idx); // Clear preserved edge nodes for the given key at the source edge node for metadata releasing after local/remote admission notification (NOTE: is_global_cached MUST be true)
     private:
         // NOTE: we MUST store Key in ordered list to locate lookup table during eviciton; use duplicate Keys in lookup table to update ordered list -> if we store Key pointer in ordered list and use duplicate popularity/LRU-order in lookup table, we still can locate lookup table during eviction, yet cannot locate the corresponding popularity entry / have to access all LRU entries to update ordered list
@@ -51,15 +57,15 @@ namespace covered
         bool getAggregatedUncachedPopularity_(const Key& key, AggregatedUncachedPopularity& aggregated_uncached_popularity) const; // Return if key has aggregated uncached popularity
 
         // Add a new aggregated uncached popularity for latest local uncached popularity
-        void addAggregatedUncachedPopularityForNewKey_(const Key& key, const uint32_t& source_edge_idx, const Popularity& local_uncached_popularity, const ObjectSize& object_size, const bool& is_global_cached);
+        void addAggregatedUncachedPopularityForNewKey_(const EdgeWrapper* edge_wrapper_ptr, const Key& key, const uint32_t& source_edge_idx, const Popularity& local_uncached_popularity, const ObjectSize& object_size, const bool& is_global_cached);
         // If is_tracked_by_source_edge_node = true, add/update latest local uncached popularity for key in source edge node (maybe increase cache size usage)
         // Otherwise, remove old local uncached popularity for key in edge node if any (NEVER increase cache size usage)
-        bool updateAggregatedUncachedPopularityForExistingKey_(const Key& key, const uint32_t& source_edge_idx, const bool& is_tracked_by_source_edge_node, const Popularity& local_uncached_popularity, const ObjectSize& object_size, const bool& is_global_cached); // Return if add/remove local uncached popularity successfully
+        bool updateAggregatedUncachedPopularityForExistingKey_(const EdgeWrapper* edge_wrapper_ptr, const Key& key, const uint32_t& source_edge_idx, const bool& is_tracked_by_source_edge_node, const Popularity& local_uncached_popularity, const ObjectSize& object_size, const bool& is_global_cached); // Return if add/remove local uncached popularity successfully
 
         // Update benefit-popularity multimap and per-key lookup table for new aggregated uncached popularity
-        void addBenefitPopularityForNewKey_(const Key& key, const AggregatedUncachedPopularity& new_aggregated_uncached_popularity, const bool& is_global_cached);
+        void addBenefitPopularityForNewKey_(const EdgeWrapper* edge_wrapper_ptr, const Key& key, const AggregatedUncachedPopularity& new_aggregated_uncached_popularity, const bool& is_global_cached);
         // Update benefit-popularity multimap and per-key lookup table for existing yet updated aggregated uncached popularity
-        void updateBenefitPopularityForExistingKey_(const Key& key, const AggregatedUncachedPopularity& updated_aggregated_uncached_popularity, const bool& is_aggregated_uncached_popularity_empty, const bool& is_global_cached);
+        void updateBenefitPopularityForExistingKey_(const EdgeWrapper* edge_wrapper_ptr, const Key& key, const AggregatedUncachedPopularity& updated_aggregated_uncached_popularity, const bool& is_aggregated_uncached_popularity_empty, const bool& is_global_cached);
 
         // NOTE: we ONLY keep aggregated uncached popularities of selected objects with large max admission benefits for selective popularity aggregation
         void discardGlobalLessPopularObjects_();

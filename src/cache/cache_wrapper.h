@@ -16,6 +16,12 @@
 #include <string>
 #include <vector>
 
+namespace covered
+{
+    // Forward declaration
+    class CacheWrapper;
+}
+
 #include "cache/local_cache_base.h"
 #include "cache/validity_map.h"
 #include "common/covered_common_header.h"

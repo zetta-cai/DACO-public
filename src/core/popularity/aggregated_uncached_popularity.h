@@ -13,6 +13,12 @@
 #include <string>
 #include <unordered_set>
 
+namespace covered
+{
+    // Forward declaration
+    class AggregatedUncachedPopularity;
+}
+
 #include "common/covered_common_header.h"
 #include "common/key.h"
 #include "core/popularity/edgeset.h"

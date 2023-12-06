@@ -8,20 +8,38 @@ namespace covered
 {
     const std::string CoveredCacheManager::kClassName("CoveredCacheManager");
 
-    CoveredCacheManager::CoveredCacheManager(const uint32_t& edge_idx, const uint32_t& edgecnt, const uint32_t& peredge_synced_victimcnt, const uint32_t& peredge_monitored_victimsetcnt, const uint64_t& popularity_aggregation_capacity_bytes, const double& popularity_collection_change_ratio, const uint32_t& topk_edgecnt) : edge_idx_(edge_idx), topk_edgecnt_(topk_edgecnt), popularity_aggregator_(edge_idx, edgecnt, popularity_aggregation_capacity_bytes, topk_edgecnt), victim_tracker_(edge_idx, peredge_synced_victimcnt, peredge_monitored_victimsetcnt), directory_cacher_(edge_idx, popularity_collection_change_ratio)
+    CoveredCacheManager::CoveredCacheManager(const uint32_t& edge_idx, const uint32_t& edgecnt, const uint32_t& peredge_synced_victimcnt, const uint32_t& peredge_monitored_victimsetcnt, const uint64_t& popularity_aggregation_capacity_bytes, const double& popularity_collection_change_ratio, const uint32_t& topk_edgecnt) : edge_idx_(edge_idx), topk_edgecnt_(topk_edgecnt), directory_cacher_(edge_idx, popularity_collection_change_ratio)
     {
         // Differentiate different edge nodes
         std::stringstream ss;
         ss << kClassName << " edge" << edge_idx;
         instance_name_ = ss.str();
+
+        // Allocate PopularityAggregator
+        popularity_aggregator_ptr_ = new PopularityAggregator(edge_idx, edgecnt, popularity_aggregation_capacity_bytes, topk_edgecnt);
+        assert(popularity_aggregator_ptr_ != NULL);
+
+        // Allocate VictimTracker
+        victim_tracker_ptr_ = new VictimTracker(edge_idx, peredge_synced_victimcnt, peredge_monitored_victimsetcnt);
+        assert(victim_tracker_ptr_ != NULL);
     }
     
-    CoveredCacheManager::~CoveredCacheManager() {}
+    CoveredCacheManager::~CoveredCacheManager()
+    {
+        assert(popularity_aggregator_ptr_ != NULL);
+        delete popularity_aggregator_ptr_;
+        popularity_aggregator_ptr_ = NULL;
+
+        assert(victim_tracker_ptr_ != NULL);
+        delete victim_tracker_ptr_;
+        victim_tracker_ptr_ = NULL;
+    }
 
     // For popularity aggregation
 
     bool CoveredCacheManager::updatePopularityAggregatorForAggregatedPopularity(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached, const bool& is_source_cached, const bool& need_placement_calculation, const bool& sender_is_beacon, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, const EdgeWrapper* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency, FastPathHint* fast_path_hint_ptr)
     {
+        checkPointers_();
         assert(edge_wrapper_ptr != NULL);
 
         bool is_finish = false;
@@ -34,7 +52,7 @@ namespace covered
         if (!is_global_cached)
         {
             // Set is_global_cached to true if key is being admitted
-            bool is_being_admitted = popularity_aggregator_.isKeyBeingAdmitted(key);
+            bool is_being_admitted = popularity_aggregator_ptr_->isKeyBeingAdmitted(key);
             if (is_being_admitted)
             {
                 tmp_is_global_cached = true;
@@ -42,7 +60,7 @@ namespace covered
         }
 
         FastPathHint tmp_fast_path_hint;
-        popularity_aggregator_.updateAggregatedUncachedPopularity(key, source_edge_idx, collected_popularity, tmp_is_global_cached, is_source_cached, tmp_fast_path_hint);
+        popularity_aggregator_ptr_->updateAggregatedUncachedPopularity(edge_wrapper_ptr, key, source_edge_idx, collected_popularity, tmp_is_global_cached, is_source_cached, tmp_fast_path_hint);
         #ifdef ENABLE_FAST_PATH_PLACEMENT
         if (fast_path_hint_ptr != NULL)
         {
@@ -79,7 +97,7 @@ namespace covered
                 if (has_best_placement)
                 {
                     // Preserve placement edgeset + perform local-uncached-popularity removal to avoid duplicate placement, and update max admission benefit with aggregated uncached popularity for non-blocking placement deployment
-                    popularity_aggregator_.updatePreservedEdgesetForPlacement(key, best_placement_edgeset, tmp_is_global_cached);
+                    popularity_aggregator_ptr_->updatePreservedEdgesetForPlacement(edge_wrapper_ptr, key, best_placement_edgeset, tmp_is_global_cached);
 
                     // Remove involved synced victims from victim tracker for each edge node in placement edgeset to avoid duplicate eviction
                     // NOTE: synced victims MUST exist in edge-level victim metadata of victim tracker
@@ -88,7 +106,7 @@ namespace covered
                     {
                         const uint32_t tmp_edge_idx = best_placement_peredge_synced_victimset_const_iter->first;
                         const std::unordered_set<Key, KeyHasher>& tmp_synced_victim_keyset_const_ref = best_placement_peredge_synced_victimset_const_iter->second;
-                        victim_tracker_.removeVictimsForGivenEdge(tmp_edge_idx, tmp_synced_victim_keyset_const_ref);
+                        victim_tracker_ptr_->removeVictimsForGivenEdge(tmp_edge_idx, tmp_synced_victim_keyset_const_ref);
                     }
 
                     // TODO: Remove involved extra fetched victims from victim cache for each edge node in placement edgeset to avoid duplicate eviction
@@ -107,7 +125,9 @@ namespace covered
 
     void CoveredCacheManager::clearPopularityAggregatorForPreservedEdgesetAfterAdmission(const Key& key, const uint32_t& source_edge_idx)
     {
-        popularity_aggregator_.clearPreservedEdgesetAfterAdmission(key, source_edge_idx);
+        checkPointers_();
+
+        popularity_aggregator_ptr_->clearPreservedEdgesetAfterAdmission(key, source_edge_idx);
 
         // NOTE: all old local uncached popularities have already been cleared right after placement calculation in updatePreservedEdgesetForPlacement()
         // (1) NO need to clear old local uncached popularity for the source edge node
@@ -120,9 +140,11 @@ namespace covered
 
     void CoveredCacheManager::assertNoLocalUncachedPopularity(const Key& key, const uint32_t& source_edge_idx) const
     {
+        checkPointers_();
+        
         // Assert old local uncached popularity for the source edge node MUST NOT exist
         AggregatedUncachedPopularity tmp_aggregated_uncached_popularity;
-        bool has_aggregated_uncached_popularity = popularity_aggregator_.getAggregatedUncachedPopularity(key, tmp_aggregated_uncached_popularity);
+        bool has_aggregated_uncached_popularity = popularity_aggregator_ptr_->getAggregatedUncachedPopularity(key, tmp_aggregated_uncached_popularity);
         if (has_aggregated_uncached_popularity)
         {
             assert(tmp_aggregated_uncached_popularity.hasLocalUncachedPopularity(source_edge_idx) == false);
@@ -134,38 +156,48 @@ namespace covered
 
     void CoveredCacheManager::updateVictimTrackerForLocalCacheMarginBytes(const uint64_t& local_cache_margin_bytes)
     {
-        victim_tracker_.updateLocalCacheMarginBytes(local_cache_margin_bytes);
+        checkPointers_();
+
+        victim_tracker_ptr_->updateLocalCacheMarginBytes(local_cache_margin_bytes);
         return;
     }
 
     void CoveredCacheManager::updateVictimTrackerForLocalSyncedVictims(const uint64_t& local_cache_margin_bytes, const std::list<VictimCacheinfo>& local_synced_victim_cacheinfos, const CooperationWrapperBase* cooperation_wrapper_ptr)
     {
+        checkPointers_();
+
         // NOTE: victim cacheinfos of local_synced_victim_cacheinfos and victim dirinfo sets of local_beaconed_local_synced_victim_dirinfosets MUST be complete
-        victim_tracker_.updateLocalSyncedVictims(local_cache_margin_bytes, local_synced_victim_cacheinfos, cooperation_wrapper_ptr);
+        victim_tracker_ptr_->updateLocalSyncedVictims(local_cache_margin_bytes, local_synced_victim_cacheinfos, cooperation_wrapper_ptr);
         return;
     }
 
     void CoveredCacheManager::updateVictimTrackerForLocalBeaconedVictimDirinfo(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info)
     {
-        victim_tracker_.updateLocalBeaconedVictimDirinfo(key, is_admit, directory_info);
+        checkPointers_();
+
+        victim_tracker_ptr_->updateLocalBeaconedVictimDirinfo(key, is_admit, directory_info);
         return;
     }
 
     VictimSyncset CoveredCacheManager::accessVictimTrackerForLocalVictimSyncset(const uint32_t& dst_edge_idx_for_compression, const uint64_t& latest_local_cache_margin_bytes) const
     {
+        checkPointers_();
+
         // Get current complete/compressed victim syncset from victim tracker
         // NOTE: we perform compression inside VictimTrackker:getLocalVictimSyncsetForSynchronization() for atomicity
-        VictimSyncset current_victim_syncset = victim_tracker_.getLocalVictimSyncsetForSynchronization(dst_edge_idx_for_compression, latest_local_cache_margin_bytes);
+        VictimSyncset current_victim_syncset = victim_tracker_ptr_->getLocalVictimSyncsetForSynchronization(dst_edge_idx_for_compression, latest_local_cache_margin_bytes);
 
         return current_victim_syncset;
     }
 
     void CoveredCacheManager::updateVictimTrackerForNeighborVictimSyncset(const uint32_t& source_edge_idx, const VictimSyncset& neighbor_victim_syncset, const CooperationWrapperBase* cooperation_wrapper_ptr)
     {
+        checkPointers_();
+
         // NOTE: victim cacheinfos and dirinfo sets of neighbor_victim_syncset can be either complete or compressed; while dirinfo sets of local_beaconed_neighbor_synced_victim_dirinfosets MUST be complete
 
         // NOTE: we perform recovery inside VictimTracker::updateForNeighborVictimSyncset() for atomicity
-        victim_tracker_.updateForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, cooperation_wrapper_ptr);
+        victim_tracker_ptr_->updateForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, cooperation_wrapper_ptr);
         return;
     }
 
@@ -173,24 +205,32 @@ namespace covered
 
     bool CoveredCacheManager::accessDirectoryCacherForCachedDirectory(const Key& key, CachedDirectory& cached_directory) const
     {
+        checkPointers_();
+
         bool has_cached_directory = directory_cacher_.getCachedDirectory(key, cached_directory);
         return has_cached_directory;
     }
 
     bool CoveredCacheManager::accessDirectoryCacherToCheckPopularityChange(const Key& key, const Popularity& local_uncached_popularity, CachedDirectory& cached_directory, bool& is_large_popularity_change) const
     {
+        checkPointers_();
+
         bool has_cached_directory = directory_cacher_.checkPopularityChange(key, local_uncached_popularity, cached_directory, is_large_popularity_change);
         return has_cached_directory;
     }
 
     void CoveredCacheManager::updateDirectoryCacherToRemoveCachedDirectory(const Key& key)
     {
+        checkPointers_();
+
         directory_cacher_.removeCachedDirectoryIfAny(key);
         return;
     }
 
     void CoveredCacheManager::updateDirectoryCacherForNewCachedDirectory(const Key& key, const CachedDirectory& cached_directory)
     {
+        checkPointers_();
+
         directory_cacher_.updateForNewCachedDirectory(key, cached_directory);
         return;
     }
@@ -199,14 +239,18 @@ namespace covered
 
     DeltaReward CoveredCacheManager::accessVictimTrackerForFastPathEvictionCost(const EdgeWrapper* edge_wrapper_ptr, const std::list<VictimCacheinfo>& curedge_local_cached_victim_cacheinfos, const std::unordered_map<Key, DirinfoSet, KeyHasher>& curedge_local_beaconed_local_cached_victim_dirinfosets) const
     {
-        return victim_tracker_.calcEvictionCostForFastPathPlacement(edge_wrapper_ptr, curedge_local_cached_victim_cacheinfos, curedge_local_beaconed_local_cached_victim_dirinfosets);
+        checkPointers_();
+
+        return victim_tracker_ptr_->calcEvictionCostForFastPathPlacement(edge_wrapper_ptr, curedge_local_cached_victim_cacheinfos, curedge_local_beaconed_local_cached_victim_dirinfosets);
     }
 
     uint64_t CoveredCacheManager::getSizeForCapacity() const
     {
+        checkPointers_();
+
         uint64_t total_size = 0;
 
-        total_size += victim_tracker_.getSizeForCapacity();
+        total_size += victim_tracker_ptr_->getSizeForCapacity();
 
         return total_size;
     }
@@ -225,7 +269,7 @@ namespace covered
         Edgeset best_placement_victim_fetch_edgeset;
 
         AggregatedUncachedPopularity tmp_aggregated_uncached_popularity;
-        bool has_aggregated_uncached_popularity = popularity_aggregator_.getAggregatedUncachedPopularity(key, tmp_aggregated_uncached_popularity);
+        bool has_aggregated_uncached_popularity = popularity_aggregator_ptr_->getAggregatedUncachedPopularity(key, tmp_aggregated_uncached_popularity);
 
         // Perform placement calculation ONLY if key is still tracked by popularity aggregator (i.e., belonging to a global popular uncached object)
         if (has_aggregated_uncached_popularity)
@@ -233,7 +277,7 @@ namespace covered
             const ObjectSize tmp_object_size = tmp_aggregated_uncached_popularity.getObjectSize();
             const uint32_t tmp_topk_list_length = tmp_aggregated_uncached_popularity.getTopkListLength();
             assert(tmp_topk_list_length > 0); // NOTE: we perform placement calculation only when add/update a new local uncached popularity -> at least one local uncached popularity in the top-k list
-            assert(tmp_topk_list_length <= popularity_aggregator_.getTopkEdgecnt()); // At most EdgeCLI::covered_topk_edgecnt_ times
+            assert(tmp_topk_list_length <= popularity_aggregator_ptr_->getTopkEdgecnt()); // At most EdgeCLI::covered_topk_edgecnt_ times
 
             // Greedy-based placement calculation
             PlacementGain max_placement_gain = 0.0;
@@ -250,7 +294,7 @@ namespace covered
                 std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>> tmp_placement_peredge_synced_victimset;
                 std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>> tmp_placement_peredge_fetched_victimset;
                 Edgeset tmp_placement_victim_fetch_edgeset;
-                const DeltaReward tmp_eviction_cost = victim_tracker_.calcEvictionCost(edge_wrapper_ptr, tmp_object_size, tmp_placement_edgeset, tmp_placement_peredge_synced_victimset, tmp_placement_peredge_fetched_victimset, tmp_placement_victim_fetch_edgeset); // NOTE: tmp_eviction_cost may be partial eviction cost if without enough victims
+                const DeltaReward tmp_eviction_cost = victim_tracker_ptr_->calcEvictionCost(edge_wrapper_ptr, tmp_object_size, tmp_placement_edgeset, tmp_placement_peredge_synced_victimset, tmp_placement_peredge_fetched_victimset, tmp_placement_victim_fetch_edgeset); // NOTE: tmp_eviction_cost may be partial eviction cost if without enough victims
 
                 #ifdef ENABLE_TEMPORARY_DUPLICATION_AVOIDANCE
                 // Enforce duplication avoidance when cache is not full
@@ -315,7 +359,7 @@ namespace covered
                 std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>> tmp_placement_peredge_synced_victimset;
                 std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>> tmp_placement_peredge_fetched_victimset;
                 Edgeset tmp_placement_victim_fetch_edgeset;
-                const DeltaReward tmp_eviction_cost = victim_tracker_.calcEvictionCost(edge_wrapper_ptr, tmp_object_size, tmp_best_placement_edgeset, tmp_placement_peredge_synced_victimset, tmp_placement_peredge_fetched_victimset, tmp_placement_victim_fetch_edgeset, extra_peredge_victim_cacheinfos, extra_perkey_victim_dirinfoset); // NOTE: tmp_eviction_cost may be partial eviction cost if without enough victims
+                const DeltaReward tmp_eviction_cost = victim_tracker_ptr_->calcEvictionCost(edge_wrapper_ptr, tmp_object_size, tmp_best_placement_edgeset, tmp_placement_peredge_synced_victimset, tmp_placement_peredge_fetched_victimset, tmp_placement_victim_fetch_edgeset, extra_peredge_victim_cacheinfos, extra_perkey_victim_dirinfoset); // NOTE: tmp_eviction_cost may be partial eviction cost if without enough victims
                 assert(tmp_placement_victim_fetch_edgeset.size() == 0); // NOTE: we DISABLE recursive victim fetching
 
                 // Calculate placement gain
@@ -569,6 +613,15 @@ namespace covered
             }
         }
 
+        return;
+    }
+
+    // Utility functions
+
+    void CoveredCacheManager::checkPointers_() const
+    {
+        assert(popularity_aggregator_ptr_ != NULL);
+        assert(victim_tracker_ptr_ != NULL);
         return;
     }
 }
