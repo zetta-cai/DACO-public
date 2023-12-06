@@ -810,58 +810,28 @@ namespace covered
 
         if (edge_wrapper_ptr_->getCacheName() == Util::COVERED_CACHE_NAME) // ONLY for COVERED
         {
-            CoveredCacheManager* tmp_covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
-
-            // Issue local/remote metadata update request for beacon-based cached metadata update if necessary (for local directory eviction)
-            edge_wrapper_ptr_->processMetadataUpdateRequirement(key, metadata_update_requirement, skip_propagation_latency);
-
-            // Update directory info in victim tracker if the local beaconed key is a local/neighbor synced victim
-            tmp_covered_cache_manager_ptr->updateVictimTrackerForLocalBeaconedVictimDirinfo(key, is_admit, directory_info);
-
-            // NOTE: we always perform victim synchronization before popularity aggregation, as we need the latest synced victim information for placement calculation (here we update victim dirinfo in victim tracker before popularity aggregation)
-
-            // NOTE: NOT need piggyacking-based popularity collection and victim synchronization for local directory update
+            // NOTE: we always perform victim synchronization before popularity aggregation, as we need the latest synced victim information for placement calculation -> while here NOT need piggyacking-based popularity collection and victim synchronization for local directory update
 
             // Prepare local uncached popularity of key for popularity aggregation
             CollectedPopularity collected_popularity;
             edge_wrapper_ptr_->getEdgeCachePtr()->getCollectedPopularity(key, collected_popularity); // collected_popularity.is_tracked_ indicates if the local uncached key is tracked in local uncached metadata
 
-            // NOTE: MUST NO old local uncached popularity for the newly evicted object at the source edge node before popularity aggregation
-            tmp_covered_cache_manager_ptr->assertNoLocalUncachedPopularity(key, current_edge_idx);
-
-            // Selective popularity aggregation
-            const bool is_source_cached = false; // NOTE: current edge node MUST NOT cache the object after directory eviction for itself
-            bool need_placement_calculation = !is_admit; // MUST be true here for is_admit = false
-            if (is_background) // If evictLocalDirectory_() is triggered by background cache placement
-            {
-                // NOTE: DISABLE recursive cache placement
-                need_placement_calculation = false;
-            }
-            const bool sender_is_beacon = true; // Sender and beacon is the same edge node for non-blocking placement deployment for the victim key (note that victim key is different from the key triggering eviction, e.g., update invalid/valid value by local get/put, indepdent admission, local placement notification at local/remote beacon edge node, remote placement nofication)
+            // Issue metadata update request if necessary, update victim dirinfo, assert NO local uncached popularity, and perform selective popularity aggregation after local directory eviction
             Edgeset best_placement_edgeset; // Used for non-blocking placement notification if need hybrid data fetching for COVERED
             bool need_hybrid_fetching = false;
-            is_finish = tmp_covered_cache_manager_ptr->updatePopularityAggregatorForAggregatedPopularity(key, current_edge_idx, collected_popularity, is_global_cached, is_source_cached, need_placement_calculation, sender_is_beacon, best_placement_edgeset, need_hybrid_fetching, edge_wrapper_ptr_, source_addr, recvrsp_socket_server_ptr, total_bandwidth_usage, event_list, skip_propagation_latency); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in source edge node
-
-            if (is_background) // Background local directory eviction (triggered by remote placement nofication and local placement notification at local/remote beacon edge node)
+            is_finish = edge_wrapper_ptr_->afterDirectoryEvictionHelper_(key, current_edge_idx, metadata_update_requirement, directory_info, collected_popularity, is_global_cached, best_placement_edgeset, need_hybrid_fetching, recvrsp_socket_server_ptr, source_addr, total_bandwidth_usage, event_list, skip_propagation_latency, is_background);
+            if (is_finish) // Edge node is NOT running
             {
-                // NOTE: background local directory eviction MUST NOT need hybrid data fetching due to NO need for placement calculation (we DISABLE recursive cache placement)
-                assert(!is_finish);
-                assert(best_placement_edgeset.size() == 0);
-                assert(!need_hybrid_fetching);
+                return is_finish;
             }
-            else // Foreground local directory eviction (triggered by invalid/valid value update by local get/put and independent admission)
-            {
-                if (is_finish) // Edge node is NOT running
-                {
-                    return is_finish;
-                }
 
-                // Trigger non-blocking placement notification if need hybrid fetching for non-blocking data fetching (ONLY for COVERED)
-                if (need_hybrid_fetching)
-                {
-                    assert(edge_wrapper_ptr_->getCacheName() == Util::COVERED_CACHE_NAME);
-                    edge_wrapper_ptr_->nonblockNotifyForPlacement(key, value, best_placement_edgeset, skip_propagation_latency);
-                }
+            // Trigger non-blocking placement notification if need hybrid fetching for non-blocking data fetching (ONLY for COVERED)
+            if (need_hybrid_fetching)
+            {
+                assert(!is_background); // Must be foreground local directory eviction (triggered by invalid/valid value update by local get/put and independent admission)
+
+                assert(edge_wrapper_ptr_->getCacheName() == Util::COVERED_CACHE_NAME);
+                edge_wrapper_ptr_->nonblockNotifyForPlacement(key, value, best_placement_edgeset, skip_propagation_latency);
             }
         }
 

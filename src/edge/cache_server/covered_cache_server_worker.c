@@ -53,18 +53,8 @@ namespace covered
 
         // NOTE: we always perform victim synchronization before popularity aggregation, as we need the latest synced victim information for placement calculation (note that victim tracker has been updated by getLocalEdgeCache_() before this function)
 
-        // Selective popularity aggregation
-        const bool need_placement_calculation = true;
-        const bool sender_is_beacon = true; // Sender and beacon is the same edge node for placement calculation
-        best_placement_edgeset.clear();
-        need_hybrid_fetching = false;
-        is_finish = tmp_covered_cache_manager_ptr->updatePopularityAggregatorForAggregatedPopularity(key, current_edge_idx, collected_popularity, is_global_cached, is_source_cached, need_placement_calculation, sender_is_beacon, best_placement_edgeset, need_hybrid_fetching, tmp_edge_wrapper_ptr, edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in current edge node
-        if (is_finish)
-        {
-            return is_finish; // Edge node is NOT running now
-        }
-
-        // NOTE: need_hybrid_fetching with best_placement_edgeset is processed in CacheServerWorkerBase::processLocalGetRequest_(), as we do NOT have value yet when lookuping directory information
+        // Selective popularity aggregation after local directory lookup
+        is_finish = tmp_edge_wrapper_ptr->afterDirectoryLookupHelper_(key, current_edge_idx, collected_popularity, is_global_cached, is_source_cached, best_placement_edgeset, need_hybrid_fetching, NULL, edge_cache_server_worker_recvrsp_socket_server_ptr_, edge_cache_server_worker_recvrsp_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
 
         return is_finish;
     }
@@ -467,18 +457,8 @@ namespace covered
 
         // NOTE: NO need to update local synced victims, which will be done by updateLocalEdgeCache_() and removeLocalEdgeCache_() after this function
 
-        // Selective popularity aggregation
-        // NOTE: we do NOT perform placement calculation for local/remote acquire writelock request, as newly-admitted cache copies will still be invalid even after cache placement
-        const bool need_placement_calculation = false;
-        const bool sender_is_beacon = true; // Sender and beacon is the same edge node for placement calculation
-        Edgeset best_placement_edgeset; // Used for non-blocking placement notification if need hybrid data fetching for COVERED
-        bool need_hybrid_fetching = false;
-        is_finish = tmp_covered_cache_manager_ptr->updatePopularityAggregatorForAggregatedPopularity(key, current_edge_idx, collected_popularity, is_global_cached, is_source_cached, need_placement_calculation, sender_is_beacon, best_placement_edgeset, need_hybrid_fetching, tmp_edge_wrapper_ptr, edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in current edge node
-    
-        // NOTE: local acquire writelock MUST NOT need hybrid data fetching due to NO need for placement calculation (newly-admitted cache copies will still be invalid after cache placement)
-        assert(!is_finish); // NO victim fetching due to NO placement calculation
-        assert(best_placement_edgeset.size() == 0); // NO placement deployment due to NO placement calculation
-        assert(!need_hybrid_fetching); // Also NO hybrid data fetching
+        // Selective popularity aggregation after local acquire writelock
+        is_finish = tmp_edge_wrapper_ptr->afterWritelockAcquireHelper_(key, current_edge_idx, collected_popularity, is_global_cached, is_source_cached, edge_cache_server_worker_recvrsp_socket_server_ptr_, edge_cache_server_worker_recvrsp_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
 
         return is_finish;
     }
@@ -629,13 +609,10 @@ namespace covered
 
         // NOTE: we always perform victim synchronization before popularity aggregation, as we need the latest synced victim information for placement calculation (note that we have updated victim tracker in updateLocalEdgeCache_() or removeLocalEdgeCache_() before this function)
 
-        // Selective popularity aggregation
-        const bool is_global_cached = true; // NOTE: invoking releaseLocalWritelock_() means that the result of acquiring write lock is LockResult::kSuccess -> the given key MUST be global cached
-        const bool need_placement_calculation = true;
-        const bool sender_is_beacon = true; // Sender and beacon is the same edge node for placement calculation
+        // Selective popularity aggregation after local release writelock
         Edgeset best_placement_edgeset; // Used for non-blocking placement notification if need hybrid data fetching for COVERED
         bool need_hybrid_fetching = false;
-        is_finish = tmp_covered_cache_manager_ptr->updatePopularityAggregatorForAggregatedPopularity(key, current_edge_idx, collected_popularity, is_global_cached, is_source_cached, need_placement_calculation, sender_is_beacon, best_placement_edgeset, need_hybrid_fetching, tmp_edge_wrapper_ptr, edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, total_bandwidth_usgae, event_list, skip_propagation_latency); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in current edge node
+        is_finish = tmp_edge_wrapper_ptr->afterWritelockReleaseHelper_(key, current_edge_idx, collected_popularity, is_source_cached, best_placement_edgeset, need_hybrid_fetching, edge_cache_server_worker_recvrsp_socket_server_ptr_, edge_cache_server_worker_recvrsp_source_addr_, total_bandwidth_usgae, event_list, skip_propagation_latency);
         if (is_finish)
         {
             return is_finish; // Edge node is NOT running now
