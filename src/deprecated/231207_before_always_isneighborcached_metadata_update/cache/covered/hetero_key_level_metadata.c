@@ -11,7 +11,9 @@ namespace covered
         redirected_frequency_ = 0;
         redirected_popularity_ = 0.0;
 
+        #ifdef ENABLE_BEACON_BASED_CACHED_METADATA_UPDATE
         is_neighbor_cached_ = is_neighbor_cached;
+        #endif
     }
 
     HeteroKeyLevelMetadata::HeteroKeyLevelMetadata(const HeteroKeyLevelMetadata& other) : KeyLevelMetadataBase(other)
@@ -58,19 +60,26 @@ namespace covered
 
     void HeteroKeyLevelMetadata::enableIsNeighborCached()
     {
+        #ifdef ENABLE_BEACON_BASED_CACHED_METADATA_UPDATE
         is_neighbor_cached_ = true;
+        #endif
         return;
     }
 
     void HeteroKeyLevelMetadata::disableIsNeighborCached()
     {
+        #ifdef ENABLE_BEACON_BASED_CACHED_METADATA_UPDATE
         is_neighbor_cached_ = false;
+        #endif
         return;
     }
 
     bool HeteroKeyLevelMetadata::isNeighborCached() const
     {
-        bool is_neighbor_cached = is_neighbor_cached_;
+        bool is_neighbor_cached = false;
+        #ifdef ENABLE_BEACON_BASED_CACHED_METADATA_UPDATE
+        is_neighbor_cached = is_neighbor_cached_;
+        #endif
         return is_neighbor_cached;
     }
 

@@ -2,6 +2,8 @@
 
 #include <sstream>
 
+#include "common/util.h"
+
 namespace covered
 {
     // WeightInfo
@@ -55,6 +57,12 @@ namespace covered
         ewma_propagation_latency_edgecloud_us_ = propagation_latency_edgecloud_us;
 
         updateWeightInfo_(); // Update weight_info_ for heuristic weight calculation
+
+        // Dump initial weight info
+        oss.clear();
+        oss.str("");
+        oss << "initial local hit weight: " << weight_info_.getLocalHitWeight() << ", cooperative hit weight: " << weight_info_.getCooperativeHitWeight() << ", remote beacon prob: " << remote_beacon_prob_;
+        Util::dumpDebugMsg(instance_name_, oss.str());
     }
 
     WeightTuner::~WeightTuner() {}

@@ -296,6 +296,14 @@ namespace covered
                 Edgeset tmp_placement_victim_fetch_edgeset;
                 const DeltaReward tmp_eviction_cost = victim_tracker_ptr_->calcEvictionCost(edge_wrapper_ptr, tmp_object_size, tmp_placement_edgeset, tmp_placement_peredge_synced_victimset, tmp_placement_peredge_fetched_victimset, tmp_placement_victim_fetch_edgeset); // NOTE: tmp_eviction_cost may be partial eviction cost if without enough victims
 
+                #ifdef ENABLE_TEMPORARY_DUPLICATION_AVOIDANCE
+                // Enforce duplication avoidance when cache is not full
+                if (is_global_cached && tmp_eviction_cost == 0.0)
+                {
+                    continue;
+                }
+                #endif
+
                 // Calculate placement gain (admission benefit - eviction cost)
                 const DeltaReward tmp_placement_gain = tmp_admission_benefit - tmp_eviction_cost;
                 if ((topicnt == 1) || (tmp_placement_gain > max_placement_gain))
@@ -356,6 +364,14 @@ namespace covered
 
                 // Calculate placement gain
                 DeltaReward tmp_placement_gain = best_placement_admission_benefit - tmp_eviction_cost;
+
+                #ifdef ENABLE_TEMPORARY_DUPLICATION_AVOIDANCE
+                // Enforce duplication avoidance when cache is not full
+                if (is_global_cached && tmp_eviction_cost == 0.0)
+                {
+                    tmp_placement_gain = 0.0;
+                }
+                #endif
 
                 // Double-check the best placement
                 if (tmp_placement_gain > 0.0) // Still with positive placement gain
