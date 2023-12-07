@@ -18,6 +18,7 @@ is_install_smhasher = True
 is_install_segcache = True # Completely use hacked version
 is_install_gdsf = True # Completely use hacked version
 is_install_tommyds = True
+is_install_lhd = True
 
 # (0) Check input CLI parameters
 
@@ -40,6 +41,7 @@ if is_install_boost:
     #boost_install_tool = "./bootstrap.sh --with-libraries=log,thread,system,filesystem,program_options,test,json,stacktrace,context --prefix=/usr/local && sudo ./b2 install && sudo ldconfig"
     boost_install_tool = "./bootstrap.sh --with-libraries=log,thread,system,filesystem,program_options,test,json,stacktrace,context --prefix=./install && sudo ./b2 install"
     installDecompressedTarball(scriptname, boost_decompress_dirpath, boost_install_dirpath, boost_install_tool)
+    print("")
 
 # (2) Install cachelib (commit ID: 3d475f6)
 
@@ -49,8 +51,8 @@ if is_install_cachelib:
     cachelib_repo_url = "https://github.com/facebook/CacheLib.git"
     cloneRepo(scriptname, cachelib_clone_dirpath, cachelib_software_name, cachelib_repo_url)
 
-    cachelib_targetcommit = "7886d6d"
-    checkoutCommit(scriptname, cachelib_clone_dirpath, cachelib_software_name, cachelib_targetcommit)
+    cachelib_target_commit = "7886d6d"
+    checkoutCommit(scriptname, cachelib_clone_dirpath, cachelib_software_name, cachelib_target_commit)
 
     # Note: cachelib will first build third-party libs and then itself libs
     cachelib_cachebench_filepath = "{}/build-cachelib/cachebench/libcachelib_cachebench.a".format(cachelib_clone_dirpath)
@@ -70,6 +72,7 @@ if is_install_cachelib:
         installFromRepo(scriptname, cachelib_software_name, cachelib_clone_dirpath, cachelib_install_tool, time_consuming = True)
     else:
         dump(scriptname, "cachelib has already been installed")
+    print("")
 
 # (3) Install LRU cache (commit ID: de1c4a0)
 
@@ -80,8 +83,9 @@ if is_install_lrucache:
     lrucache_repo_url = "https://github.com/lamerman/cpp-lru-cache.git"
     cloneRepo(scriptname, lrucache_clone_dirpath, lrucache_software_name, lrucache_repo_url)
 
-    lrucache_targetcommit = "de1c4a0"
-    checkoutCommit(scriptname, lrucache_clone_dirpath, lrucache_software_name, lrucache_targetcommit)
+    lrucache_target_commit = "de1c4a0"
+    checkoutCommit(scriptname, lrucache_clone_dirpath, lrucache_software_name, lrucache_target_commit)
+    print("")
 
 # (4) Install LFU cache (commit ID: 0f65db1)
 
@@ -91,8 +95,9 @@ if is_install_lfucache:
     lfucache_repo_url = "https://github.com/vpetrigo/caches.git"
     cloneRepo(scriptname, lfucache_clone_dirpath, lfucache_software_name, lfucache_repo_url)
 
-    lfucache_targetcommit = "0f65db1"
-    checkoutCommit(scriptname, lfucache_clone_dirpath, lfucache_software_name, lfucache_targetcommit)
+    lfucache_target_commit = "0f65db1"
+    checkoutCommit(scriptname, lfucache_clone_dirpath, lfucache_software_name, lfucache_target_commit)
+    print("")
 
 # (5) Install RocksDB 8.1.1
 
@@ -113,6 +118,7 @@ if is_install_rocksdb:
 
     if is_clear_tarball:
         clearTarball(scriptname, rocksdb_download_filepath)
+    print("")
 
 # (6) Install SMHasher (commit ID: 61a0530)
 
@@ -122,8 +128,9 @@ if is_install_smhasher:
     smhasher_repo_url = "https://github.com/aappleby/smhasher.git"
     cloneRepo(scriptname, smhasher_clone_dirpath, smhasher_software_name, smhasher_repo_url)
 
-    smhasher_targetcommit = "61a0530"
-    checkoutCommit(scriptname, smhasher_clone_dirpath, smhasher_software_name, smhasher_targetcommit)
+    smhasher_target_commit = "61a0530"
+    checkoutCommit(scriptname, smhasher_clone_dirpath, smhasher_software_name, smhasher_target_commit)
+    print("")
 
 # (7) Install SegCache (commit ID: 0abdfee)
 
@@ -134,8 +141,8 @@ if is_install_segcache:
     segcache_repo_url = "https://github.com/Thesys-lab/Segcache.git"
     cloneRepo(scriptname, segcache_clone_dirpath, segcache_software_name, segcache_repo_url)
 
-    segcache_targetcommit = "0abdfee"
-    checkoutCommit(scriptname, segcache_clone_dirpath, segcache_software_name, segcache_targetcommit)
+    segcache_target_commit = "0abdfee"
+    checkoutCommit(scriptname, segcache_clone_dirpath, segcache_software_name, segcache_target_commit)
     
     # NOTE: use the hacked version to install segcache
     #segcache_install_dirpath = "{}/build".format(segcache_clone_dirpath)
@@ -143,6 +150,7 @@ if is_install_segcache:
     tmp_segcache_clone_dirpath = os.path.dirname(segcache_install_dirpath)
     segcache_install_tool = "mkdir build && cd build && cmake .. && make -j"
     installFromRepoIfNot(scriptname, segcache_install_dirpath, segcache_software_name, tmp_segcache_clone_dirpath, segcache_install_tool)
+    print("")
 
 # (7) Install GDSF (commit ID: 8818442)
 
@@ -153,8 +161,9 @@ if is_install_gdsf:
     gdsf_repo_url = "https://github.com/dasebe/webcachesim.git"
     cloneRepo(scriptname, gdsf_clone_dirpath, gdsf_software_name, gdsf_repo_url)
     
-    gdsf_targetcommit = "8818442"
-    checkoutCommit(scriptname, gdsf_clone_dirpath, gdsf_software_name, gdsf_targetcommit)
+    gdsf_target_commit = "8818442"
+    checkoutCommit(scriptname, gdsf_clone_dirpath, gdsf_software_name, gdsf_target_commit)
+    print("")
 
 # (8) Install TommyDS (commit ID: 97ff743)
 
@@ -164,15 +173,28 @@ if is_install_tommyds:
     tommyds_repo_url = "https://github.com/amadvance/tommyds.git"
     cloneRepo(scriptname, tommyds_clone_dirpath, tommyds_software_name, tommyds_repo_url)
 
-    tommyds_targetcommit = "97ff743"
-    checkoutCommit(scriptname, tommyds_clone_dirpath, tommyds_software_name, tommyds_targetcommit)
+    tommyds_target_commit = "97ff743"
+    checkoutCommit(scriptname, tommyds_clone_dirpath, tommyds_software_name, tommyds_target_commit)
 
     # NOTE: use Makefile of TommyDS itself due to using gcc instead of g++, where gcc does NOT add prefix/suffix to variable names (e.g., functions and classes)
     tommyds_install_dirpath = "{}/libtommy.a".format(tommyds_clone_dirpath)
     tommyds_install_tool = "make all && mv {0}/tommy.o {0}/libtommy.a".format(tommyds_clone_dirpath)
     installFromRepoIfNot(scriptname, tommyds_install_dirpath, tommyds_software_name, tommyds_clone_dirpath, tommyds_install_tool)
+    print("")
 
-# (9) Others: chown of libraries and update LD_LIBRARY_PATH
+# (9) Install LHD (commit ID: 806ef46)
+
+if is_install_lhd:
+    lhd_clond_dirpath = "{}/lhd".format(lib_dirpath)
+    lhd_software_name = "LHD"
+    lhd_repo_url = "https://github.com/CMU-CORGI/LHD.git"
+    cloneRepo(scriptname, lhd_clond_dirpath, lhd_software_name, lhd_repo_url)
+
+    lhd_target_commit = "806ef46"
+    checkoutCommit(scriptname, lhd_clond_dirpath, lhd_software_name, lhd_target_commit)
+    print("")
+
+# (10) Others: chown of libraries and update LD_LIBRARY_PATH
 
 ## Chown of libraries
 
@@ -253,4 +275,4 @@ if need_update_ld_library_path:
 
     emphasize(scriptname, "Please update LD_LIBRARY_PATH by this command: source {}".format(bash_source_filepath))
 else:
-    prompt(scriptname, "LD_LIBRARY_PATH alreay contains all target libraries")
+    dump(scriptname, "LD_LIBRARY_PATH alreay contains all target libraries")

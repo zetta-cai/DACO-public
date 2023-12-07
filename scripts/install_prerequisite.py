@@ -52,6 +52,7 @@ if is_upgrade_python3:
 
         if is_clear_tarball:
             clearTarball(scriptname, python3_download_filepath)
+    print("")
 
 # (2) Install python libraries (some required by scripts/common.py)
 
@@ -63,6 +64,7 @@ if is_install_pylib:
     pylib_install_subprocess = runCmd(pylib_install_cmd)
     if pylib_install_subprocess.returncode != 0:
         die(scriptname, "failed to install python libraries based on {}".format(pylib_requirement_filepath))
+    print("")
 
 # (3) Upgrade gcc/g++ if necessary
 
@@ -102,6 +104,7 @@ if is_upgrade_gcc:
 
             compiler_install_filepath = "{}/{}".format(compiler_install_binpath, compiler_apt_targetname)
             preserveNewAlternative(scriptname, compiler_preferred_binpaths[compiler_name], compiler_name, compiler_install_filepath)
+    print("")
     
 # (4) Link g++ to c++ for cachelib to compile libfolly
 
@@ -116,6 +119,7 @@ if is_link_cpp:
         link_cpp_subprocess = runCmd(link_cpp_cmd)
         if link_cpp_subprocess.returncode != 0:
             die(scriptname, "failed to link g++-9 to c++ binary")
+    print("")
 
 # (5) Upgrade CMake if necessary (required by cachelib for CMake 3.12 or higher)
 
@@ -148,6 +152,7 @@ if is_upgrade_cmake:
         
         cmake_apt_targetname = "cmake"
         installByApt(scriptname, cmake_software_name, cmake_apt_targetname)
+    print("")
 
 # (6) Change system settings
 

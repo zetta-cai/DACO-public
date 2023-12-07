@@ -16,12 +16,14 @@ DEPENDENCY.c ?= $(CC) $(CFLAGS) $(CPPFLAGS) -MM
 # Note: \1 refers to the string matched by \($*\), i.e., the target name ($*) in Makefile
 # Note: $$ refers to the dollar sign itself in Makefile
 %.d: %.c
+%.dpp: %.cpp
+%.d %.dpp:
 	$(DEPENDENCY.c) $*.c > $*.Td || rm $*.Td
 	@sed 's,\($(notdir $*)\)\.o[ :]*,$*.o $@ : ,g' $*.Td > $@
 #	@sed -e 's/.*://' -e 's/\\$$//' < $*.Td | fmt -1 | \
 #	  sed -e 's/^ *//' -e 's/$$/:/' >> $*.d
 	@rm -f $*.Td
-.PRECIOUS: %.d
+.PRECIOUS: %.d %.dpp
 
 ##############################################################################
 # Preprocessing, compilation, and link macros
@@ -56,11 +58,15 @@ LINK.so = $(CC) $(LDFLAGS) -shared
 COMPILE.c = $(CC) $(CFLAGS) $(CPPFLAGS) -c
 COMPILE_OUTPUT_OPTION.c ?= -o $@
 %.o: %.c
+%.opp: %.cpp
+%.o %.opp:
 	$(COMPILE.c) $(COMPILE_OUTPUT_OPTION.c) $<
 
 # Compile C to position independent object file while generating dependency
 COMPILE_SHARED.c = $(CC) $(CFLAGS_SHARED) $(CPPFLAGS) -c
 %.shared.o: %.c
+%.shared.opp: %.cpp
+%.shared.o %.shared.opp:
 	$(COMPILE_SHARED.c) $(OUTPUT_OPTION.c) $<
 
 ##############################################################################

@@ -6,6 +6,7 @@ include src/mk/cache/cachelib.mk
 include src/mk/cache/covered.mk
 include src/mk/cache/gdsf.mk
 include src/mk/cache/lfu.mk
+include src/mk/cache/lhd.mk
 include src/mk/cache/lru.mk
 include src/mk/cache/segcache.mk
 
