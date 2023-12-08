@@ -17,6 +17,9 @@ LHD::LHD(const uint64_t& capacity_bytes)
     nextReconfiguration = ACCS_PER_RECONFIGURATION;
     explorerBudget = capacity_bytes * EXPLORER_BUDGET_FRACTION;
     
+    kvpair_bytes_ = 0;
+    internal_bytes_ = 0;
+    
     for (uint32_t i = 0; i < NUM_CLASSES; i++) {
         classes.push_back(Class());
         auto& cl = classes.back();
@@ -34,6 +37,15 @@ LHD::LHD(const uint64_t& capacity_bytes)
             classes[c].hitDensities[a] =
                 1. * (c + 1) / (a + 1);
         }
+    }
+
+    const uint64_t cache_usage_after_initialization = getSizeForCapacity();
+    if (cache_usage_after_initialization >= capacity_bytes)
+    {
+        std::ostringstream oss;
+        oss << "too small capacity (" << capacity_bytes << " bytes) for LHD cache, which already uses " << cache_usage_after_initialization << " bytes after initialization!";
+        covered::Util::dumpErrorMsg(kClassName, oss.str());
+        exit(1);
     }
 }
 
@@ -179,6 +191,11 @@ bool LHD::update(const covered::Key& key, const covered::Value& value)
 
 bool LHD::rank(covered::Key& key) {
     bool has_victim_key = false;
+
+    if (tags.size() == 0)
+    {
+        return has_victim_key;
+    }
 
     uint64_t victim_idx = 0;
     rank_t victimRank = std::numeric_limits<rank_t>::max();

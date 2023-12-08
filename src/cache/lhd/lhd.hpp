@@ -109,7 +109,8 @@ class LHD {
     // these parameters determine how aggressively to classify objects.
     // diminishing returns after a few classes; 16 is safe.
     static constexpr uint32_t HIT_AGE_CLASSES = 16;
-    static constexpr uint32_t APP_CLASSES = 16;
+    //static constexpr uint32_t APP_CLASSES = 16;
+    static constexpr uint32_t APP_CLASSES = 1; // Siyuan: we do NOT consider multi-tenant with different application IDs here
     static constexpr uint32_t NUM_CLASSES = HIT_AGE_CLASSES * APP_CLASSES;
     
     // these parameters are tuned for simulation performance, and hit
