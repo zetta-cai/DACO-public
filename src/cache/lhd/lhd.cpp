@@ -23,6 +23,9 @@ LHD::LHD(const uint64_t& capacity_bytes)
         cl.hits.resize(MAX_AGE, 0);
         cl.evictions.resize(MAX_AGE, 0);
         cl.hitDensities.resize(MAX_AGE, 0);
+
+        // Update internal_bytes_ for classes
+        internal_bytes_ = covered::Util::uint64Add(internal_bytes_, cl.getSizeForCapacity());
     }
 
     // Initialize policy to ~GDSF by default.
@@ -36,7 +39,43 @@ LHD::LHD(const uint64_t& capacity_bytes)
 
 bool LHD::exists(const covered::Key& key) const
 {
-    // TODO: END HERE
+    const bool is_local_cached = (indices.find(key) != indices.end());
+    return is_local_cached;
+}
+
+bool LHD::get(const covered::Key& key, covered::Value& value)
+{
+    bool is_local_cached = false;
+    std::unordered_map<covered::Key, uint64_t, covered::KeyHasher>::const_iterator indices_const_iter = indices.find(key);
+    if (indices_const_iter == indices.end()) // Key is NOT cached
+    {
+        is_local_cached = false;
+    }
+    else // Key is cached
+    {
+        is_local_cached = true;
+
+        // Update hitcnt for the corresponding class
+        assert(indices_const_iter->second < tags.size());
+        Tag* tag = &tags[indices_const_iter->second];
+        assert(tag->key == key);
+        auto age = getAge(*tag);
+        auto& cl = getClass(*tag);
+        cl.hits[age] += 1;
+
+        // NOTE: NO need to update explorerBudget if key is an explorer, as we do NOT update value and hence NO need to release original object size
+
+        // Update the past two access ages
+        tag->lastLastHitAge = tag->lastHitAge;
+        tag->lastHitAge = age;
+
+        // Get value from Tag
+        value = tag->value;
+
+        // Update metadata of Tag and trigger reconfiguration if necessary after get
+        afterGet_(tag, SINGLE_TENANT_APPID);
+    }
+    return is_local_cached;
 }
 
 void LHD::admit(const covered::Key& key, const covered::Value& value)
@@ -69,6 +108,13 @@ void LHD::admit(const covered::Key& key, const covered::Value& value)
         // Update Tag (kvpair and metadata), mark explorer, update recently-admited vector, and trigger reconfiguration if necessary after admit
         const uint32_t object_size = key.getKeyLength() + value.getValuesize();
         afterAdmitOrUpdate_(tag, key, SINGLE_TENANT_APPID, object_size, true);
+
+        // Update kvpair_bytes_ for newly-admited object
+        kvpair_bytes_ = covered::Util::uint64Add(kvpair_bytes_, object_size);
+
+        // Update internal_bytes_ for tags and indices
+        internal_bytes_ = covered::Util::uint64Add(internal_bytes_, tag->getSizeForCapacity()); // kvpair and metadata in tags
+        internal_bytes_ = covered::Util::uint64Add(internal_bytes_, key.getKeyLength() + sizeof(uint64_t)); // key and tag index in indices
     }
     return;
 }
@@ -82,28 +128,59 @@ bool LHD::update(const covered::Key& key, const covered::Value& value)
     {
         is_local_cached = true;
 
+        // Update hitcnt for the correpsonding class
         assert(indices_const_iter->second < tags.size());
         Tag* tag = &tags[indices_const_iter->second];
         assert(tag->key == key);
         auto age = getAge(*tag);
         auto& cl = getClass(*tag);
         cl.hits[age] += 1;
+        
+        // Update value in Tag
+        const uint64_t original_value_size = tag->value.getValuesize();
+        const uint64_t original_tag_size = tag->getSizeForCapacity();
+        tag->value = value;
 
         if (tag->explorer) { explorerBudget += tag->size; } // Release original object size for explorer budge, while latest object size will be allocated from explorer budge in afterAdmitOrUpdate_
         
+        // Update the past two access ages
         tag->lastLastHitAge = tag->lastHitAge;
         tag->lastHitAge = age;
 
         // Update Tag (kvpair and metadata), mark explorer, update recently-admited vector, and trigger reconfiguration if necessary after update
         const uint32_t object_size = key.getKeyLength() + value.getValuesize();
         afterAdmitOrUpdate_(tag, key, SINGLE_TENANT_APPID, object_size, false);
+
+        // Update kvpair_bytes_ for updated value
+        const uint64_t latest_value_size = value.getValuesize();
+        if (latest_value_size > original_value_size) // Value size is increased
+        {
+            kvpair_bytes_ = covered::Util::uint64Add(kvpair_bytes_, latest_value_size - original_value_size);
+        }
+        else if (latest_value_size < original_value_size) // Value size is decreased
+        {
+            kvpair_bytes_ = covered::Util::uint64Minus(kvpair_bytes_, original_value_size - latest_value_size);
+        }
+
+        // Update internal_bytes_ for tags
+        const uint64_t latest_tag_size = tag->getSizeForCapacity();
+        if (latest_tag_size > original_tag_size) // Tag size is increased
+        {
+            internal_bytes_ = covered::Util::uint64Add(internal_bytes_, latest_tag_size - original_tag_size);
+        }
+        else if (latest_tag_size < original_tag_size) // Tag size is decreased
+        {
+            internal_bytes_ = covered::Util::uint64Minus(internal_bytes_, original_tag_size - latest_tag_size);
+        }
     }
 
     return is_local_cached;
 }
 
-candidate_t LHD::rank(const parser::Request& req) {
-    uint64_t victim = -1;
+bool LHD::rank(covered::Key& key) {
+    bool has_victim_key = false;
+
+    uint64_t victim_idx = 0;
     rank_t victimRank = std::numeric_limits<rank_t>::max();
 
     // Sample few candidates early in the trace so that we converge
@@ -121,9 +198,12 @@ candidate_t LHD::rank(const parser::Request& req) {
         auto& tag = tags[idx];
         rank_t rank = getHitDensity(tag);
 
-        if (rank < victimRank) {
-            victim = idx;
+        if (!has_victim_key || rank < victimRank) {
+            victim_idx = idx;
             victimRank = rank;
+
+            key = tag.key;
+            has_victim_key = true;
         }
     }
 
@@ -133,44 +213,87 @@ candidate_t LHD::rank(const parser::Request& req) {
 
         auto idx = itr->second;
         auto& tag = tags[idx];
-        assert(tag.id == recentlyAdmitted[i]);
+        assert(tag.key == recentlyAdmitted[i]);
         rank_t rank = getHitDensity(tag);
 
-        if (rank < victimRank) {
-            victim = idx;
+        if (!has_victim_key || rank < victimRank) {
+            victim_idx = idx;
             victimRank = rank;
+
+            key = tag.key;
+            has_victim_key = true;
         }
     }
 
-    assert(victim != (uint64_t)-1);
+    UNUSED(victim_idx);
 
-    ewmaVictimHitDensity = EWMA_DECAY * ewmaVictimHitDensity + (1 - EWMA_DECAY) * victimRank;
+    //assert(has_victim_key);
+    if (has_victim_key) // Update ewma victim hit density if victim is found
+    {
+        ewmaVictimHitDensity = EWMA_DECAY * ewmaVictimHitDensity + (1 - EWMA_DECAY) * victimRank;
+    }
 
-    return tags[victim].id;
+    return has_victim_key;
 }
 
-void LHD::replaced(candidate_t id) {
-    auto itr = indices.find(id);
-    assert(itr != indices.end());
-    auto index = itr->second;
+bool LHD::replaced(const covered::Key& key, covered::Value& value) {
+    bool is_evict = false;
 
-    // Record stats before removing item
-    auto& tag = tags[index];
-    assert(tag.id == id);
-    auto age = getAge(tag);
-    auto& cl = getClass(tag);
-    cl.evictions[age] += 1;
+    auto itr = indices.find(key);
+    //assert(itr != indices.end());
+    if (itr != indices.end())
+    {
+        auto index = itr->second;
 
-    if (tag.explorer) { explorerBudget += tag.size; }
+        // Get value of victim
+        auto& tag = tags[index];
+        assert(tag.key == key);
+        value = tag.value;
+        const uint64_t victim_tag_size = tag.getSizeForCapacity();
+        const uint64_t victim_value_size = tag.value.getValuesize();
 
-    // Remove tag for replaced item and update index
-    indices.erase(itr);
-    tags[index] = tags.back();
-    tags.pop_back();
+        // Record stats before removing item
+        auto age = getAge(tag);
+        auto& cl = getClass(tag);
+        cl.evictions[age] += 1;
 
-    if (index < tags.size()) {
-        indices[tags[index].id] = index;
+        if (tag.explorer) { explorerBudget += tag.size; } // Release object size from explorerBudget due to eviction
+
+        // Remove tag for replaced item and update index
+        indices.erase(itr);
+        tags[index] = tags.back(); // Replace tag of the victim as the tag of the last item
+        tags.pop_back(); // NOTE: will decrease tags.size() by 1
+
+        if (index < tags.size()) { // If the victim is NOT the last item
+            // Update index in lookup table for the last item key
+            const covered::Key last_item_key = tags[index].key;
+            std::unordered_map<covered::Key, uint64_t, covered::KeyHasher>::iterator last_item_indices_iter = indices.find(last_item_key);
+            assert(last_item_indices_iter != indices.end());
+            last_item_indices_iter->second = index;
+        }
+
+        // Update kvpair_bytes_ for evicted object
+        kvpair_bytes_ = covered::Util::uint64Minus(kvpair_bytes_, key.getKeyLength() + victim_value_size);
+
+        // Update internal_bytes_ for tags and indices
+        internal_bytes_ = covered::Util::uint64Minus(internal_bytes_, victim_tag_size + key.getKeyLength() + sizeof(uint64_t));
+
+        is_evict = true;
     }
+
+    return is_evict;
+}
+
+uint64_t LHD::getSizeForCapacity() const
+{
+    uint64_t total_size_usage = covered::Util::uint64Add(sizeof(uint64_t), internal_bytes_); // sizeof(kvpair_bytes_) + internal_bytes_
+    total_size_usage = covered::Util::uint64Add(total_size_usage, sizeof(timestamp_t) * 3 + sizeof(int) + sizeof(rank_t) * 2); // sizeof(timestamp) + sizeof(nextReconfiguration) + sizeof(numReconfigurations) + sizeof(ageCoarseningShift) + sizeof(ewmaNumObjects) + sizeof(ewmaNumObjectsMass)
+    total_size_usage = covered::Util::uint64Add(total_size_usage, sizeof(uint64_t) + sizeof(int) + sizeof(rank_t) + sizeof(int64_t)); // sizeof(overflows) + sizeof(recentlyAdmittedHead) + sizeof(ewmaVictimHitDensity) + sizeof(explorerBudget)
+    for (uint32_t i = 0; i < recentlyAdmitted.size(); i++)
+    {
+        total_size_usage = covered::Util::uint64Add(total_size_usage, recentlyAdmitted[i].getKeyLength()); // recentlyAdmitted
+    }
+    return total_size_usage;
 }
 
 void LHD::reconfigure() {
@@ -248,7 +371,7 @@ void LHD::dumpClassRanks(Class& cl) {
     if (!DUMP_RANKS) { return; }
     
     // float objectAvgSize = cl.sizeAccumulator / cl.totalHits; // + cl.totalEvictions);
-    float objectAvgSize = 1. * cache->consumedCapacity / cache->getNumObjects();
+    float objectAvgSize = 1. * kvpair_bytes_ / indices.size();
     rank_t left;
 
     left = cl.totalHits + cl.totalEvictions;
@@ -305,7 +428,7 @@ void LHD::adaptAgeCoarsening() {
     ewmaNumObjects *= EWMA_DECAY;
     ewmaNumObjectsMass *= EWMA_DECAY;
 
-    ewmaNumObjects += cache->getNumObjects();
+    ewmaNumObjects += indices.size();
     ewmaNumObjectsMass += 1.;
 
     rank_t numObjects = ewmaNumObjects / ewmaNumObjectsMass;
@@ -395,6 +518,31 @@ void LHD::afterAdmitOrUpdate_(Tag* tag, const covered::Key& key, const uint32_t&
     
     ++timestamp;
 
+    // Reconfigure if necessary
+    if (--nextReconfiguration == 0) {
+        reconfigure();
+        nextReconfiguration = ACCS_PER_RECONFIGURATION;
+        ++numReconfigurations;
+    }
+
+    return;
+}
+
+void LHD::afterGet_(Tag* tag, const uint32_t& appid)
+{
+    assert(tag != NULL);
+
+    tag->timestamp = timestamp;
+    tag->app = appid % APP_CLASSES;
+    // NOTE: object size is NOT changed after get operation
+
+    // NOTE: also NO need to change explorer flag (just keep the original one assigned when admit/update)
+
+    // NOTE: also NO need to update recentlyAdmitted due to NOT admission operation
+
+    ++timestamp;
+
+    // Reconfigure if necessary
     if (--nextReconfiguration == 0) {
         reconfigure();
         nextReconfiguration = ACCS_PER_RECONFIGURATION;

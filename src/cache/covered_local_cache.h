@@ -38,12 +38,6 @@ namespace covered
         tommy_node node;
     } tommyds_object_t;
 
-    static int tommyds_compare(const void *arg, const void *obj) {
-        const Key *targetkey = (const Key *)arg;
-        const tommyds_object_t *obj_to_compare = (const tommyds_object_t *)obj;
-        return *targetkey != obj_to_compare->key;
-    }
-
     class CoveredLocalCache : public LocalCacheBase
     {
     public:
@@ -56,6 +50,8 @@ namespace covered
         virtual const bool hasFineGrainedManagement() const;
     private:
         static const std::string kClassName;
+
+        static int tommyds_compare(const void *arg, const void *obj); // Comparator used by TommyDS to lookup
 
         // (1) Check is cached and access validity
 

@@ -73,6 +73,7 @@ namespace covered
         static const std::string LFUDA_CACHE_NAME; // Greedy dual
         static const std::string LRUK_CACHE_NAME; // Greedy dual
         static const std::string LFU_CACHE_NAME;
+        static const std::string LHD_CACHE_NAME;
         static const std::string LRU_CACHE_NAME;
         static const std::string SEGCACHE_CACHE_NAME;
         static const std::string COVERED_CACHE_NAME;

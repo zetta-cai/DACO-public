@@ -1,5 +1,5 @@
 /*
- * LfuLocalCache: local edge cache with LFU policy (https://github.com/vpetrigo/caches.git).
+ * LfuLocalCache: local edge cache with LFU policy (https://github.com/vpetrigo/caches).
  * 
  * By Siyuan Sheng (2023.08.07).
  */

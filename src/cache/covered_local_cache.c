@@ -11,6 +11,13 @@ namespace covered
 
     const std::string CoveredLocalCache::kClassName("CoveredLocalCache");
 
+    int CoveredLocalCache::tommyds_compare(const void *arg, const void *obj)
+    {
+        const Key *targetkey = (const Key *)arg;
+        const tommyds_object_t *obj_to_compare = (const tommyds_object_t *)obj;
+        return *targetkey != obj_to_compare->key;
+    }
+
     CoveredLocalCache::CoveredLocalCache(const EdgeWrapper* edge_wrapper_ptr, const uint32_t& edge_idx, const uint64_t& capacity_bytes, const uint64_t& local_uncached_capacity_bytes, const uint32_t& peredge_synced_victimcnt) : LocalCacheBase(edge_wrapper_ptr, edge_idx, capacity_bytes), peredge_synced_victimcnt_(peredge_synced_victimcnt), local_cached_metadata_(), local_uncached_metadata_(local_uncached_capacity_bytes)
     {
         // (A) Const variable

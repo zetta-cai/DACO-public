@@ -7,6 +7,7 @@
 #include "cache/cachelib_local_cache.h"
 #include "cache/covered_local_cache.h"
 #include "cache/lfu_local_cache.h"
+#include "cache/lhd_local_cache.h"
 #include "cache/lru_local_cache.h"
 #include "cache/greedy_dual_local_cache.h"
 #include "cache/segcache_local_cache.h"
@@ -33,6 +34,10 @@ namespace covered
         else if (cache_name == Util::LFU_CACHE_NAME)
         {
             local_cache_ptr = new LfuLocalCache(edge_wrapper_ptr, edge_idx, capacity_bytes);
+        }
+        else if (cache_name == Util::LHD_CACHE_NAME)
+        {
+            local_cache_ptr = new LhdLocalCache(edge_wrapper_ptr, edge_idx, capacity_bytes);
         }
         else if (cache_name == Util::LRU_CACHE_NAME)
         {

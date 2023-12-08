@@ -1,5 +1,5 @@
 /*
- * CachelibLocalCache: local edge cache with LRU2Q policy based on Cachelib (https://github.com/facebook/CacheLib.git).
+ * CachelibLocalCache: local edge cache with LRU2Q policy based on Cachelib (https://github.com/facebook/CacheLib).
  * 
  * NOTE: all configuration and function calls refer to Cachelib files, including lib/CacheLib/examples/simple_cache/main.cpp and lib/cachelib/cachebench/runner/CacheStressor.h.
  * 

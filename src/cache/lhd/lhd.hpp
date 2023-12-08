@@ -34,13 +34,14 @@ class LHD {
     void admit(const covered::Key& key, const covered::Value& value);
 
     // called when an object is evicted
-    void replaced(candidate_t id);
+    bool replaced(const covered::Key& key, covered::Value& value);
 
     // called to find a victim upon a cache miss
-    candidate_t rank(const parser::Request& req);
+    bool rank(covered::Key& key);
 
     void dumpStats() { }
 
+    uint64_t getSizeForCapacity() const;
   private:
     // TYPES ///////////////////////////////
     typedef uint64_t timestamp_t;
@@ -49,15 +50,22 @@ class LHD {
 
     // info we track about each object
     struct Tag {
-        age_t timestamp;
-        age_t lastHitAge;
-        age_t lastLastHitAge;
-        uint32_t app;
+        // Updates are triggered by the current access of the corresponding key
+        age_t timestamp; // The timestamp of the last access
+        age_t lastHitAge; // The being-cached time (i.e., age) from the last access to the current acces
+        age_t lastLastHitAge; // The being-cached time (i.e., age) from the last last access to the last access
+        uint32_t app; // Application ID
         
         covered::Key key;
         covered::Value value;
         rank_t size;
         bool explorer; // Siyuan: randomly (with 1/EXPLORE_INVERSE_PROBABILITY probability) mark admited objects as explorers (within up to 1% cache capacity) to avoid being evicted unless achieving MAX_AGE
+
+        uint64_t getSizeForCapacity()
+        {
+            const uint64_t tag_size = sizeof(age_t) * 3 + sizeof(uint32_t) + key.getKeyLength() + value.getValuesize() + sizeof(rank_t) + sizeof(bool);
+            return tag_size;
+        }
     };
 
     // info we track about each class of objects
@@ -68,6 +76,12 @@ class LHD {
         rank_t totalEvictions = 0;
 
         std::vector<rank_t> hitDensities;
+
+        uint64_t getSizeForCapacity()
+        {
+            const uint64_t class_size = sizeof(rank_t) * (hits.size() + evictions.size() + hitDensities.size() + 2);
+            return class_size;
+        }
     };
 
     // CONSTANTS ///////////////////////////
@@ -109,6 +123,8 @@ class LHD {
     static constexpr bool DUMP_RANKS = false;
 
     // FIELDS //////////////////////////////
+    uint64_t kvpair_bytes_; // Siyuan: kvpair size usage for cached objects in units of bytes (NOTE: ONLY used for reconfiguration instead of cache size usage calculation, which has already been counted by internal_bytes_ as a part of tags)
+    uint64_t internal_bytes_; // Siyuan: cache size usage for tags, classes, and indices in units of bytes
 
     // object metadata; indices maps key -> Tag (kvpair and metadata) index
     std::vector<Tag> tags;
@@ -191,6 +207,7 @@ class LHD {
     void dumpClassRanks(Class& cl);
 
     void afterAdmitOrUpdate_(Tag* tag, const covered::Key& key, const uint32_t& appid, const uint32_t& object_size, const bool& is_admit); // Update Tag (kvpair and metadata), mark explorer, update recently-admited vector, and trigger reconfiguration if necessary after admit/update
+    void afterGet_(Tag* tag, const uint32_t& appid); // Update metadata of Tag and trigger reconfiguration if necessary after get
 };
 
 } // namespace repl

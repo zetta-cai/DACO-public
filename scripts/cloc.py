@@ -11,7 +11,7 @@ exclude_exts = "d,o,pyc"
 exclude_dirs = "\"(src/mk" # Module makefiles
 exclude_dirs += "|src/deprecated|scripts/deprecated" # Deprecated source code and scripts
 exclude_dirs += "|src/workload/cachebench" # Workload source code
-exclude_dirs += "|src/cache/cachelib|src/cache/greedydual|src/cache/lfu|src/cache/lru|src/cache/segcache" # Baselines (NOTE: src/cache/covered is for COVERED instead of baseline)
+exclude_dirs += "|src/cache/cachelib|src/cache/greedydual|src/cache/lfu|src/cache/lru|src/cache/segcache|src/cache/lhd" # Baselines (NOTE: src/cache/covered is for COVERED instead of baseline)
 exclude_dirs += "|scripts/cachelib|scripts/requirements\.txt)\"" # Intermediate files used by scripts
 exclude_files = "\"(src/Makefile)\""
 # --fullpath add the current working directory (pwd) ahead of --not-match-d and --not-match-f

@@ -14,11 +14,14 @@ dataset_loader
 # Prerequisites
 *.d
 *.Td
+*.dpp
+*.Tdpp
 
 # Compiled Object files
 *.slo
 *.lo
 *.o
+*.opp
 *.obj
 
 # Precompiled Headers
