@@ -398,6 +398,16 @@ namespace covered
         // Update remote address of edge_cache_server_worker_sendreq_tocloud_socket_client_ptr_ as the beacon node for the key if remote
         bool current_is_beacon = tmp_edge_wrapper_ptr->currentIsBeacon(key);
 
+        // Update local/remote beacon access cnt for workload-aware probability tuning
+        if (current_is_beacon) // Local beacon access
+        {
+            tmp_edge_wrapper_ptr->getWeightTunerRef().incrLocalBeaconAccessCnt();
+        }
+        else // Remote beacon access
+        {
+            tmp_edge_wrapper_ptr->getWeightTunerRef().incrRemoteBeaconAccessCnt();
+        }
+
         #ifdef DEBUG_CACHE_SERVER_WORKER
         Util::dumpVariablesForDebug(base_instance_name_, 4, "current_is_beacon:", Util::toString(current_is_beacon).c_str(), "keystr:", key.getKeystr().c_str());
         #endif
@@ -542,7 +552,7 @@ namespace covered
         assert(!current_is_beacon);
 
         bool is_finish = false;
-        struct timespec issue_directory_lookup_req_start_timestamp = Util::getCurrentTimespec();
+        struct timespec issue_directory_lookup_req_start_timestamp = Util::getCurrentTimespec(); // Count timeout
 
         // Get destination address of beacon node
         NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = tmp_edge_wrapper_ptr->getBeaconDstaddr_(key);
@@ -555,6 +565,9 @@ namespace covered
             #ifdef DEBUG_CACHE_SERVER_WORKER
             Util::dumpVariablesForDebug(base_instance_name_, 4, "beacon edge index:", std::to_string(tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getBeaconEdgeIdx(key)).c_str(), "keystr:", key.getKeystr().c_str());
             #endif
+
+            // Prepare for latency-aware weight tuning
+            const struct timespec tmp_content_discovery_start_timestamp = Util::getCurrentTimespec(); // NOT count timeout
 
             // Push the control request into edge-to-edge propagation simulator to send to beacon node
             bool is_successful = tmp_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->push(directory_lookup_request_ptr, beacon_edge_beacon_server_recvreq_dst_addr);
@@ -583,6 +596,16 @@ namespace covered
             } // End of (is_timeout == true)
             else
             {
+                // Update cross-edge latency for latency-aware weight tuning if NOT timeout
+                const struct timespec tmp_content_discovery_end_timestamp = Util::getCurrentTimespec();
+                const double tmp_content_discovery_cross_edge_rtt_us = Util::getDeltaTimeUs(tmp_content_discovery_end_timestamp, tmp_content_discovery_start_timestamp);
+                uint32_t tmp_content_discovery_cross_edge_latency_us = static_cast<uint32_t>(tmp_content_discovery_cross_edge_rtt_us / 2.0);
+                if (skip_propagation_latency) // Compensate propagation latency for warmup speedup
+                {
+                    tmp_content_discovery_cross_edge_latency_us += tmp_edge_wrapper_ptr->getPropagationLatencyCrossedgeUs();
+                }
+                tmp_edge_wrapper_ptr->getWeightTunerRef().updateEwmaCrossedgeLatency(tmp_content_discovery_cross_edge_latency_us);
+
                 // Receive the control response message successfully
                 MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
                 assert(control_response_ptr != NULL);
@@ -620,7 +643,7 @@ namespace covered
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
         bool is_finish = false;
-        struct timespec issue_redirect_get_req_start_timestamp = Util::getCurrentTimespec();
+        struct timespec issue_redirect_get_req_start_timestamp = Util::getCurrentTimespec(); // Count timeout
 
         // Prepare destination address of target edge cache server
         NetworkAddr target_edge_cache_server_recvreq_dst_addr = tmp_edge_wrapper_ptr->getTargetDstaddr(directory_info); // Send to cache server of the target edge node for cache server worker
@@ -630,6 +653,9 @@ namespace covered
             // Prepare redirected get request to get data from target edge node if any
             MessageBase* redirected_get_request_ptr = getReqToRedirectGet_(directory_info.getTargetEdgeIdx(), key, skip_propagation_latency);
             assert(redirected_get_request_ptr != NULL);
+
+            // Prepare for latency-aware weight tuning
+            const struct timespec tmp_request_redirection_start_timestamp = Util::getCurrentTimespec(); // NOT count timeout
 
             // Push the redirected data request into edge-to-edge propagation simulator to target node
             bool is_successful = tmp_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->push(redirected_get_request_ptr, target_edge_cache_server_recvreq_dst_addr);
@@ -658,6 +684,16 @@ namespace covered
             } // End of (is_timeout == true)
             else
             {
+                // Update cross-edge latency for latency-aware weight tuning if NOT timeout
+                const struct timespec tmp_request_direction_end_timestamp = Util::getCurrentTimespec();
+                const double tmp_request_redirection_cross_edge_rtt_us = Util::getDeltaTimeUs(tmp_request_direction_end_timestamp, tmp_request_redirection_start_timestamp);
+                uint32_t tmp_request_redirection_cross_edge_latency_us = static_cast<uint32_t>(tmp_request_redirection_cross_edge_rtt_us / 2.0);
+                if (skip_propagation_latency) // Compensate propagation latency for warmup speedup
+                {
+                    tmp_request_redirection_cross_edge_latency_us += tmp_edge_wrapper_ptr->getPropagationLatencyCrossedgeUs();
+                }
+                tmp_edge_wrapper_ptr->getWeightTunerRef().updateEwmaCrossedgeLatency(tmp_request_redirection_cross_edge_latency_us);
+
                 // Receive the redirected response message successfully
                 MessageBase* redirected_response_ptr = MessageBase::getResponseFromMsgPayload(redirected_response_msg_payload);
                 assert(redirected_response_ptr != NULL);
@@ -727,7 +763,7 @@ namespace covered
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
         bool is_finish = false; // Mark if edge node is finished
-        struct timespec issue_global_get_req_start_timestamp = Util::getCurrentTimespec();
+        struct timespec issue_global_get_req_start_timestamp = Util::getCurrentTimespec(); // Count timeout
 
         while (true) // Timeout-and-retry
         {
@@ -739,6 +775,9 @@ namespace covered
             #ifdef DEBUG_CACHE_SERVER_WORKER
             Util::dumpVariablesForDebug(base_instance_name_, 5, "issue a global request;", "type:", MessageBase::messageTypeToString(global_get_request_ptr->getMessageType()).c_str(), "keystr:", key.getKeystr().c_str());
             #endif
+
+            // Prepare for latency-aware weight tuning
+            const struct timespec tmp_cloud_access_start_timestamp = Util::getCurrentTimespec(); // NOT count timeout
 
             // Push the global request into edge-to-cloud propagation simulator to cloud
             bool is_successful = tmp_edge_wrapper_ptr->getEdgeTocloudPropagationSimulatorParamPtr()->push(global_get_request_ptr, corresponding_cloud_recvreq_dst_addr_);
@@ -767,6 +806,16 @@ namespace covered
             }
             else
             {
+                // Update edge-cloud latency for latency-aware weight tuning if NOT timeout
+                const struct timespec tmp_cloud_access_end_timestamp = Util::getCurrentTimespec();
+                const double tmp_cloud_access_edge_cloud_rtt_us = Util::getDeltaTimeUs(tmp_cloud_access_end_timestamp, tmp_cloud_access_start_timestamp);
+                uint32_t tmp_cloud_access_edge_cloud_latency_us = static_cast<uint32_t>(tmp_cloud_access_edge_cloud_rtt_us / 2.0);
+                if (skip_propagation_latency) // Compensate propagation latency for warmup speedup
+                {
+                    tmp_cloud_access_edge_cloud_latency_us += tmp_edge_wrapper_ptr->getPropagationLatencyEdgecloudUs();
+                }
+                tmp_edge_wrapper_ptr->getWeightTunerRef().updateEwmaEdgecloudLatency(tmp_cloud_access_edge_cloud_latency_us);
+
                 // Receive the global response message successfully
                 MessageBase* global_response_ptr = MessageBase::getResponseFromMsgPayload(global_response_msg_payload);
                 assert(global_response_ptr != NULL && global_response_ptr->getMessageType() == MessageType::kGlobalGetResponse);

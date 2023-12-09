@@ -33,6 +33,11 @@ namespace covered
     {
         return cooperative_hit_weight_;
     }
+
+    uint64_t WeightInfo::getSizeForCapacity() const
+    {
+        return sizeof(Weight) * 2;
+    }
     
     const WeightInfo& WeightInfo::operator=(const WeightInfo& other)
     {
@@ -43,16 +48,20 @@ namespace covered
 
     // WeightTuner
 
+    const float WeightTuner::ENOUGH_BEACON_ACCESS_CNT_FOR_PROB_TUNING = 1000.0;
     const double WeightTuner::EWMA_ALPHA = 0.1;
     const std::string WeightTuner::kClassName = "WeightTuner";
 
-    WeightTuner::WeightTuner(const uint32_t& edge_idx, const uint32_t& edgecnt, const uint32_t& propagation_latency_clientedge_us, const uint32_t& propagation_latency_crossedge_us, const uint32_t& propagation_latency_edgecloud_us) : remote_beacon_prob_(1.0 - 1.0 / static_cast<float>(edgecnt)), rwlock_for_weight_tuner_("rwlock_for_weight_tuner_")
+    WeightTuner::WeightTuner(const uint32_t& edge_idx, const uint32_t& edgecnt, const uint32_t& propagation_latency_clientedge_us, const uint32_t& propagation_latency_crossedge_us, const uint32_t& propagation_latency_edgecloud_us) : rwlock_for_weight_tuner_("rwlock_for_weight_tuner_"), ewma_propagation_latency_clientedge_us_(propagation_latency_clientedge_us)
     {
         std::ostringstream oss;
         oss << kClassName << " edge" << edge_idx;
         instance_name_ = oss.str();
 
-        ewma_propagation_latency_clientedge_us_ = propagation_latency_clientedge_us;
+        local_beacon_access_cnt_ = 0.0;
+        remote_beacon_access_cnt_ = 0.0;
+        remote_beacon_prob_ = (1.0 - 1.0 / static_cast<float>(edgecnt));
+
         ewma_propagation_latency_crossedge_us_ = propagation_latency_crossedge_us;
         ewma_propagation_latency_edgecloud_us_ = propagation_latency_edgecloud_us;
 
@@ -79,21 +88,111 @@ namespace covered
         return weight_info;
     }
 
-    void WeightTuner::tuneWeightInfo(const uint32_t& cur_propagation_latency_clientedge_us, const uint32_t& cur_propagation_latency_crossedge_us, const uint32_t& cur_propagation_latency_edgecloud_us)
+    void WeightTuner::incrLocalBeaconAccessCnt()
     {
+        #ifdef ENABLE_PROBABILITY_TUNING
         // Acquire a write lock
-        const std::string context_name = "WeightTuner::tuneWeightInfo()";
+        const std::string context_name = "WeightTuner::incrLocalBeaconAccessCnt()";
         rwlock_for_weight_tuner_.acquire_lock(context_name);
 
-        // Update latency by EWMA
-        ewma_propagation_latency_clientedge_us_ = (1 - EWMA_ALPHA) * ewma_propagation_latency_clientedge_us_ + EWMA_ALPHA * cur_propagation_latency_clientedge_us;
+        local_beacon_access_cnt_ += 1.0;
+
+        // Update remote beacon probability if with enough beacon accesses
+        if (local_beacon_access_cnt_ + remote_beacon_access_cnt_ >= ENOUGH_BEACON_ACCESS_CNT_FOR_PROB_TUNING)
+        {
+            remote_beacon_prob_ = remote_beacon_access_cnt_ / (local_beacon_access_cnt_ + remote_beacon_access_cnt_);
+            assert(remote_beacon_prob_ >= 0 && remote_beacon_prob_ <= 1.0);
+        }
+
+        updateWeightInfo_(); // Update weight_info_ for latency-aware weight tuning
+
+        rwlock_for_weight_tuner_.unlock(context_name);
+        #endif
+
+        return;
+    }
+
+    void WeightTuner::incrRemoteBeaconAccessCnt()
+    {
+        #ifdef ENABLE_PROBABILITY_TUNING
+        // Acquire a write lock
+        const std::string context_name = "WeightTuner::incrRemoteBeaconAccessCnt()";
+        rwlock_for_weight_tuner_.acquire_lock(context_name);
+
+        remote_beacon_access_cnt_ += 1.0;
+
+        // Update remote beacon probability if with enough beacon accesses
+        if (local_beacon_access_cnt_ + remote_beacon_access_cnt_ >= ENOUGH_BEACON_ACCESS_CNT_FOR_PROB_TUNING)
+        {
+            remote_beacon_prob_ = remote_beacon_access_cnt_ / (local_beacon_access_cnt_ + remote_beacon_access_cnt_);
+            assert(remote_beacon_prob_ >= 0 && remote_beacon_prob_ <= 1.0);
+        }
+
+        updateWeightInfo_(); // Update weight_info_ for latency-aware weight tuning
+
+        rwlock_for_weight_tuner_.unlock(context_name);
+        #endif
+
+        return;
+    }
+
+    void WeightTuner::updateEwmaCrossedgeLatency(const uint32_t& cur_propagation_latency_crossedge_us)
+    {
+        #ifdef ENABLE_WEIGHT_TUNING
+        // Acquire a write lock
+        const std::string context_name = "WeightTuner::updateEwmaCrossedgeLatency()";
+        rwlock_for_weight_tuner_.acquire_lock(context_name);
+
+        assert(cur_propagation_latency_crossedge_us > 0);
+
+        // Update cross-edge latency by EWMA
         ewma_propagation_latency_crossedge_us_ = (1 - EWMA_ALPHA) * ewma_propagation_latency_crossedge_us_ + EWMA_ALPHA * cur_propagation_latency_crossedge_us;
+
+        updateWeightInfo_(); // Update weight_info_ for latency-aware weight tuning
+
+        rwlock_for_weight_tuner_.unlock(context_name);
+        #endif
+
+        return;
+    }
+
+    void WeightTuner::updateEwmaEdgecloudLatency(const uint32_t& cur_propagation_latency_edgecloud_us)
+    {
+        #ifdef ENABLE_WEIGHT_TUNING
+        // Acquire a write lock
+        const std::string context_name = "WeightTuner::updateEwmaEdgecloudLatency()";
+        rwlock_for_weight_tuner_.acquire_lock(context_name);
+
+        assert(cur_propagation_latency_edgecloud_us > 0);
+
+        // Update edge-cloud latency by EWMA
         ewma_propagation_latency_edgecloud_us_ = (1 - EWMA_ALPHA) * ewma_propagation_latency_edgecloud_us_ + EWMA_ALPHA * cur_propagation_latency_edgecloud_us;
 
         updateWeightInfo_(); // Update weight_info_ for latency-aware weight tuning
 
         rwlock_for_weight_tuner_.unlock(context_name);
+        #endif
+
         return;
+    }
+
+    // void WeightTuner::tuneWeightInfo()
+    // {
+    //     // Acquire a write lock
+    //     const std::string context_name = "WeightTuner::tuneWeightInfo()";
+    //     rwlock_for_weight_tuner_.acquire_lock(context_name);
+
+    //     // Manually tune weight info
+    //     updateWeightInfo_(); // Update weight_info_ for latency-aware weight tuning
+
+    //     rwlock_for_weight_tuner_.unlock(context_name);
+    //     return;
+    // }
+
+    uint64_t WeightTuner::getSizeForCapacity() const
+    {
+        // NOTE: NOT count sizeof(ewma_propagation_latency_clientedge_us_), which is actually NO need to be tracked and does NOT affect weight_info_ (we track it here just for better understanding of source code)
+        return sizeof(float) + sizeof(uint32_t) * 2 + weight_info_.getSizeForCapacity();
     }
 
     void WeightTuner::updateWeightInfo_()

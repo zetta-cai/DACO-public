@@ -64,14 +64,17 @@ namespace covered
         std::string getCacheName() const;
         uint64_t getCapacityBytes() const;
         uint32_t getPercacheserverWorkercnt() const;
+        uint32_t getPropagationLatencyCrossedgeUs() const;
+        uint32_t getPropagationLatencyEdgecloudUs() const;
         uint32_t getTopkEdgecntForPlacement() const;
         CacheWrapper* getEdgeCachePtr() const;
         CooperationWrapperBase* getCooperationWrapperPtr() const;
-        CoveredCacheManager* getCoveredCacheManagerPtr() const;
         PropagationSimulatorParam* getEdgeToclientPropagationSimulatorParamPtr() const;
         PropagationSimulatorParam* getEdgeToedgePropagationSimulatorParamPtr() const;
         PropagationSimulatorParam* getEdgeTocloudPropagationSimulatorParamPtr() const;
+        CoveredCacheManager* getCoveredCacheManagerPtr() const;
         BackgroundCounter& getEdgeBackgroundCounterForBeaconServerRef();
+        WeightTuner& getWeightTunerRef();
         RingBuffer<LocalCacheAdmissionItem>* getLocalCacheAdmissionBufferPtr() const;
 
         // (2) Utility functions
@@ -166,6 +169,8 @@ namespace covered
         const std::string cache_name_; // Come from CLI
         const uint64_t capacity_bytes_; // Come from CLI
         const uint32_t percacheserver_workercnt_; // Come from CLI
+        const uint32_t propagation_latency_crossedge_us_; // Come from CLI
+        const uint32_t propagation_latency_edgecloud_us_; // Come from CLI
         const uint32_t topk_edgecnt_for_placement_; // Come from CLI for non-blocking placement deployment
         NetworkAddr edge_beacon_server_recvreq_source_addr_for_placement_; // Calculated from edgeidx and edgecnt for non-blocking placement deployment
         NetworkAddr corresponding_cloud_recvreq_dst_addr_for_placement_; // For non-blocking placement deployment
@@ -181,11 +186,15 @@ namespace covered
         // Non-const shared variables (thread safe)
         CacheWrapper* edge_cache_ptr_; // Data and metadata for local edge cache (thread safe)
         CooperationWrapperBase* cooperation_wrapper_ptr_; // Cooperation metadata (thread safe)
-        CoveredCacheManager* covered_cache_manager_ptr_; // CoveredCacheManager for cooperative-caching-aware cache management (thread safe)
         PropagationSimulatorParam* edge_toclient_propagation_simulator_param_ptr_; // thread safe
         PropagationSimulatorParam* edge_toedge_propagation_simulator_param_ptr_; // thread safe
         PropagationSimulatorParam* edge_tocloud_propagation_simulator_param_ptr_; // thread safe
-        // COVERED uses beacon background counter to track background events and bandwidth usage for non-blocking placement deployment (NOTE: NOT count events for non-blocking data fetching from local edge cache and non-blocking metadata releasing, due to limited computation overhead and NO bandwidth usage)
+
+        // ONLY for COVERED
+        // (i) COVERED uses cache manager for popularity aggregation of global admission, victim tracking for placement calculation, and directory metadata cache
+        // (ii) COVERED uses beacon background counter to track background events and bandwidth usage for non-blocking placement deployment (NOTE: NOT count events for non-blocking data fetching from local edge cache and non-blocking metadata releasing, due to limited computation overhead and NO bandwidth usage)
+        // (iii) COVERED uses weight tuner to track weight info to calculate reward (for local reward calculation and trade-off-aware placement calculation) with online parameter tuning
+        CoveredCacheManager* covered_cache_manager_ptr_; // CoveredCacheManager for cooperative-caching-aware cache management (thread safe)
         mutable BackgroundCounter edge_background_counter_for_beacon_server_; // Update and load by beacon server (thread safe)
         WeightTuner weight_tuner_; // Update and load by cache server and beacon server (thread safe)
 

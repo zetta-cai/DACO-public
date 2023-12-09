@@ -192,7 +192,7 @@ namespace covered
         assert(redirected_get_response_ptr != NULL);
 
         // Push the redirected response message into edge-to-client propagation simulator to cache server worker in the closest edge node
-        tmp_edge_wrapper_ptr->getEdgeToclientPropagationSimulatorParamPtr()->push(redirected_get_response_ptr, recvrsp_dst_addr);
+        tmp_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->push(redirected_get_response_ptr, recvrsp_dst_addr);
 
         // NOTE: redirected_get_response_ptr will be released by edge-to-client propagation simulator
         redirected_get_response_ptr = NULL;

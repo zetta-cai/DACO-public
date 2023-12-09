@@ -71,7 +71,7 @@ namespace covered
         return NULL;
     }
 
-    EdgeWrapper::EdgeWrapper(const std::string& cache_name, const uint64_t& capacity_bytes, const uint32_t& edge_idx, const uint32_t& edgecnt, const std::string& hash_name, const uint64_t& local_uncached_capacity_bytes, const uint32_t& percacheserver_workercnt, const uint32_t& peredge_synced_victimcnt, const uint32_t& peredge_monitored_victimsetcnt, const uint64_t& popularity_aggregation_capacity_bytes, const double& popularity_collection_change_ratio, const uint32_t& propagation_latency_clientedge_us, const uint32_t& propagation_latency_crossedge_us, const uint32_t& propagation_latency_edgecloud_us, const uint32_t& topk_edgecnt) : NodeWrapperBase(NodeWrapperBase::EDGE_NODE_ROLE, edge_idx,edgecnt, true), cache_name_(cache_name), capacity_bytes_(capacity_bytes), percacheserver_workercnt_(percacheserver_workercnt), topk_edgecnt_for_placement_(topk_edgecnt), edge_background_counter_for_beacon_server_(), weight_tuner_(edge_idx, edgecnt, propagation_latency_clientedge_us, propagation_latency_crossedge_us, propagation_latency_edgecloud_us)
+    EdgeWrapper::EdgeWrapper(const std::string& cache_name, const uint64_t& capacity_bytes, const uint32_t& edge_idx, const uint32_t& edgecnt, const std::string& hash_name, const uint64_t& local_uncached_capacity_bytes, const uint32_t& percacheserver_workercnt, const uint32_t& peredge_synced_victimcnt, const uint32_t& peredge_monitored_victimsetcnt, const uint64_t& popularity_aggregation_capacity_bytes, const double& popularity_collection_change_ratio, const uint32_t& propagation_latency_clientedge_us, const uint32_t& propagation_latency_crossedge_us, const uint32_t& propagation_latency_edgecloud_us, const uint32_t& topk_edgecnt) : NodeWrapperBase(NodeWrapperBase::EDGE_NODE_ROLE, edge_idx,edgecnt, true), cache_name_(cache_name), capacity_bytes_(capacity_bytes), percacheserver_workercnt_(percacheserver_workercnt), propagation_latency_crossedge_us_(propagation_latency_crossedge_us), propagation_latency_edgecloud_us_(propagation_latency_edgecloud_us), topk_edgecnt_for_placement_(topk_edgecnt), edge_background_counter_for_beacon_server_(), weight_tuner_(edge_idx, edgecnt, propagation_latency_clientedge_us, propagation_latency_crossedge_us, propagation_latency_edgecloud_us)
     {
         // Get source address of beacon server recvreq for non-blocking placement deployment
         const bool is_launch_edge = true; // The beacon server belongs to the logical edge node launched in the current physical machine
@@ -98,17 +98,6 @@ namespace covered
         cooperation_wrapper_ptr_ = CooperationWrapperBase::getCooperationWrapperByCacheName(cache_name, edgecnt, edge_idx, hash_name);
         assert(cooperation_wrapper_ptr_ != NULL);
 
-        // Allocate covered cache manager for COVERED only
-        if (cache_name == Util::COVERED_CACHE_NAME)
-        {
-            covered_cache_manager_ptr_ = new CoveredCacheManager(edge_idx, edgecnt, peredge_synced_victimcnt, peredge_monitored_victimsetcnt, popularity_aggregation_capacity_bytes, popularity_collection_change_ratio, topk_edgecnt);
-            assert(covered_cache_manager_ptr_ != NULL);
-        }
-        else
-        {
-            covered_cache_manager_ptr_ = NULL;
-        }
-
         // Allocate edge-to-client propagation simulator param
         edge_toclient_propagation_simulator_param_ptr_ = new PropagationSimulatorParam((NodeWrapperBase*)this, propagation_latency_clientedge_us, Config::getPropagationItemBufferSizeEdgeToclient());
         assert(edge_toclient_propagation_simulator_param_ptr_ != NULL);
@@ -120,6 +109,17 @@ namespace covered
         // Allocate edge-to-cloud propagation simulator param
         edge_tocloud_propagation_simulator_param_ptr_ = new PropagationSimulatorParam((NodeWrapperBase*)this, propagation_latency_edgecloud_us, Config::getPropagationItemBufferSizeEdgeTocloud());
         assert(edge_tocloud_propagation_simulator_param_ptr_ != NULL);
+
+        // Allocate covered cache manager ONLY for COVERED
+        if (cache_name == Util::COVERED_CACHE_NAME)
+        {
+            covered_cache_manager_ptr_ = new CoveredCacheManager(edge_idx, edgecnt, peredge_synced_victimcnt, peredge_monitored_victimsetcnt, popularity_aggregation_capacity_bytes, popularity_collection_change_ratio, topk_edgecnt);
+            assert(covered_cache_manager_ptr_ != NULL);
+        }
+        else
+        {
+            covered_cache_manager_ptr_ = NULL;
+        }
 
         // Sub-threads
         edge_toclient_propagation_simulator_thread_ = 0;
@@ -197,6 +197,16 @@ namespace covered
         return percacheserver_workercnt_;
     }
 
+    uint32_t EdgeWrapper::getPropagationLatencyCrossedgeUs() const
+    {
+        return propagation_latency_crossedge_us_;
+    }
+
+    uint32_t EdgeWrapper::getPropagationLatencyEdgecloudUs() const
+    {
+        return propagation_latency_edgecloud_us_;
+    }
+
     uint32_t EdgeWrapper::getTopkEdgecntForPlacement() const
     {
         return topk_edgecnt_for_placement_;
@@ -212,14 +222,6 @@ namespace covered
     {
         assert(cooperation_wrapper_ptr_ != NULL);
         return cooperation_wrapper_ptr_;
-    }
-
-    CoveredCacheManager* EdgeWrapper::getCoveredCacheManagerPtr() const
-    {
-        // NOTE: non-COVERED caches should NOT call this function
-        assert(cache_name_ == Util::COVERED_CACHE_NAME);
-        assert(covered_cache_manager_ptr_ != NULL);
-        return covered_cache_manager_ptr_;
     }
 
     PropagationSimulatorParam* EdgeWrapper::getEdgeToclientPropagationSimulatorParamPtr() const
@@ -240,9 +242,22 @@ namespace covered
         return edge_tocloud_propagation_simulator_param_ptr_;
     }
 
+    CoveredCacheManager* EdgeWrapper::getCoveredCacheManagerPtr() const
+    {
+        // NOTE: non-COVERED caches should NOT call this function
+        assert(cache_name_ == Util::COVERED_CACHE_NAME);
+        assert(covered_cache_manager_ptr_ != NULL);
+        return covered_cache_manager_ptr_;
+    }
+
     BackgroundCounter& EdgeWrapper::getEdgeBackgroundCounterForBeaconServerRef()
     {
         return edge_background_counter_for_beacon_server_;
+    }
+
+    WeightTuner& EdgeWrapper::getWeightTunerRef()
+    {
+        return weight_tuner_;
     }
 
     RingBuffer<LocalCacheAdmissionItem>* EdgeWrapper::getLocalCacheAdmissionBufferPtr() const
@@ -260,12 +275,14 @@ namespace covered
         uint64_t edge_cache_size = edge_cache_ptr_->getSizeForCapacity();
         uint64_t cooperation_size = cooperation_wrapper_ptr_->getSizeForCapacity();
         uint64_t cache_manager_size = 0;
-        if (cache_name_ == Util::COVERED_CACHE_NAME)
+        uint64_t weight_tuner_size = 0;
+        if (cache_name_ == Util::COVERED_CACHE_NAME) // ONLY for COVERED
         {
             cache_manager_size = covered_cache_manager_ptr_->getSizeForCapacity();
+            weight_tuner_size = weight_tuner_.getSizeForCapacity();
         }
 
-        uint64_t size = edge_cache_size + cooperation_size + cache_manager_size;
+        uint64_t size = edge_cache_size + cooperation_size + cache_manager_size + weight_tuner_size;
 
         return size;
     }
