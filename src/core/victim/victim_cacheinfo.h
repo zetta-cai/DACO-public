@@ -25,6 +25,10 @@ namespace covered
 
         static void sortByLocalRewards(std::list<VictimCacheinfo>& victim_cacheinfos); // Sort victim cacheinfos by local rewards (ascending order)
 
+        // Find victim cacheinfo for the given key
+        static std::list<VictimCacheinfo>::iterator findVictimCacheinfoForKey(const Key& key, std::list<VictimCacheinfo>& victim_cacheinfos);
+        static std::list<VictimCacheinfo>::const_iterator findVictimCacheinfoForKey(const Key& key, const std::list<VictimCacheinfo>& victim_cacheinfos);
+
         VictimCacheinfo();
         VictimCacheinfo(const Key& key, const ObjectSize& object_size, const Popularity& local_cached_popularity, const Popularity& redirected_cached_popularity, const Reward& local_reward);
         ~VictimCacheinfo();

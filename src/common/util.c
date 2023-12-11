@@ -72,7 +72,7 @@ namespace covered
     // Time measurement
     const int Util::START_YEAR = 1900;
     const long Util::NANOSECONDS_PERSECOND = 1000000000L;
-    const uint32_t Util::SECOND_PRECISION = 4;
+    const uint32_t Util::SECOND_PRECISION = 6;
 
     // For charset
     const std::string Util::CHARSET("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz");

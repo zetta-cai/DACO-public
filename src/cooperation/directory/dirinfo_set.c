@@ -136,6 +136,32 @@ namespace covered
         return complete_dirinfo_set;
     }
 
+    std::list<std::pair<Key, DirinfoSet>>::iterator DirinfoSet::findDirinfoSetForKey(const Key& key, std::list<std::pair<Key, DirinfoSet>>& dirinfo_sets)
+    {
+        std::list<std::pair<Key, DirinfoSet>>::iterator iter = dirinfo_sets.begin();
+        for (; iter != dirinfo_sets.end(); iter++)
+        {
+            if (iter->first == key)
+            {
+                break;
+            }
+        }
+        return iter;
+    }
+
+    std::list<std::pair<Key, DirinfoSet>>::const_iterator DirinfoSet::findDirinfoSetForKey(const Key& key, const std::list<std::pair<Key, DirinfoSet>>& dirinfo_sets)
+    {
+        std::list<std::pair<Key, DirinfoSet>>::const_iterator iter = dirinfo_sets.begin();
+        for (; iter != dirinfo_sets.end(); iter++)
+        {
+            if (iter->first == key)
+            {
+                break;
+            }
+        }
+        return iter;
+    }
+
     DirinfoSet::DirinfoSet() : dirinfo_set_(), new_dirinfo_delta_set_(), stale_dirinfo_delta_set_()
     {
         delta_bitmap_ = INVALID_BITMAP;

@@ -130,6 +130,32 @@ namespace covered
         return;
     }
 
+    std::list<VictimCacheinfo>::iterator VictimCacheinfo::findVictimCacheinfoForKey(const Key& key, std::list<VictimCacheinfo>& victim_cacheinfos)
+    {
+        std::list<VictimCacheinfo>::iterator iter = victim_cacheinfos.begin();
+        for (; iter != victim_cacheinfos.end(); iter++)
+        {
+            if (iter->getKey() == key)
+            {
+                break;
+            }
+        }
+        return iter;
+    }
+
+    std::list<VictimCacheinfo>::const_iterator VictimCacheinfo::findVictimCacheinfoForKey(const Key& key, const std::list<VictimCacheinfo>& victim_cacheinfos)
+    {
+        std::list<VictimCacheinfo>::const_iterator const_iter = victim_cacheinfos.begin();
+        for (; const_iter != victim_cacheinfos.end(); const_iter++)
+        {
+            if (const_iter->getKey() == key)
+            {
+                break;
+            }
+        }
+        return const_iter;
+    }
+
     VictimCacheinfo::VictimCacheinfo() : dedup_bitmap_(INVALID_BITMAP), key_(), object_size_(0), local_cached_popularity_(0.0), redirected_cached_popularity_(0.0), local_reward_(0.0)
     {
     }

@@ -12,6 +12,7 @@
 #include <string>
 #include <unordered_set>
 
+#include "common/key.h"
 #include "cooperation/directory/directory_info.h"
 
 namespace covered
@@ -21,6 +22,9 @@ namespace covered
     public:
         static DirinfoSet compress(const DirinfoSet& current_dirinfo_set, const DirinfoSet& prev_dirinfo_set);
         static DirinfoSet recover(const DirinfoSet& compressed_dirinfo_set, const DirinfoSet& existing_dirinfo_set);
+
+        static std::list<std::pair<Key, DirinfoSet>>::iterator findDirinfoSetForKey(const Key& key, std::list<std::pair<Key, DirinfoSet>>& dirinfo_sets); // Find DirinfoSet for the given key
+        static std::list<std::pair<Key, DirinfoSet>>::const_iterator findDirinfoSetForKey(const Key& key, const std::list<std::pair<Key, DirinfoSet>>& dirinfo_sets); // Find DirinfoSet for the given key
 
         DirinfoSet();
         DirinfoSet(const std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& dirinfo_set);

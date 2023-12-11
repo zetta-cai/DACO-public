@@ -11,9 +11,11 @@
 
 //#define DEBUG_VICTIM_SYNCSET
 
+// NOTE: use bitmap or booleans does NOT affect perf
+#define VICTIM_SYNCSET_USE_BITMAP
+
 #include <list>
 #include <string>
-#include <unordered_map>
 
 #include "cooperation/directory/dirinfo_set.h"
 #include "core/victim/victim_cacheinfo.h"
@@ -24,11 +26,12 @@ namespace covered
     {
     public:
         static VictimSyncset compress(const VictimSyncset& current_victim_syncset, const VictimSyncset& prev_victim_syncset); // Compress current victim syncset w.r.t. previous victim syncset
-        static VictimSyncset recover(const VictimSyncset& compressed_victim_syncset, const VictimSyncset& existing_victim_syncset); // Recover existing victim syncset w.r.t. compressed victim syncset
+        //static VictimSyncset recover(const VictimSyncset& compressed_victim_syncset, const VictimSyncset& existing_victim_syncset); // Recover existing victim syncset w.r.t. compressed victim syncset
+        static VictimSyncset recover(const VictimSyncset& compressed_victim_syncset, const VictimSyncset& existing_victim_syncset, const Key& key = Key()); // Recover existing victim syncset w.r.t. compressed victim syncset // TMPDEBUG231211
 
         VictimSyncset();
         VictimSyncset(const VictimSyncset& other);
-        VictimSyncset(const SeqNum& seqnum, const bool& is_enforce_complete, const uint64_t& cache_margin_bytes, const std::list<VictimCacheinfo>& local_synced_victims, const std::unordered_map<Key, DirinfoSet, KeyHasher>& local_beaconed_victims);
+        VictimSyncset(const SeqNum& seqnum, const bool& is_enforce_complete, const uint64_t& cache_margin_bytes, const std::list<VictimCacheinfo>& local_synced_victims, const std::list<std::pair<Key, DirinfoSet>>& local_beaconed_victims);
         ~VictimSyncset();
 
         bool isComplete() const;
@@ -40,24 +43,25 @@ namespace covered
         // For both complete and compressed victim syncsets
         bool getCacheMarginBytesOrDelta(uint64_t& cache_margin_bytes, int& cache_margin_delta_bytes) const; // Return if with complete cache margin bytes
         bool getLocalSyncedVictims(std::list<VictimCacheinfo>& local_synced_vitims) const; // Return if with complete local synced vitim cacheinfos
-        bool getLocalSyncedVictimsAsMap(std::unordered_map<Key, VictimCacheinfo, KeyHasher>& local_synced_vitims_map) const; // Return if with complete local synced vitim cacheinfos
-        bool getLocalBeaconedVictims(std::unordered_map<Key, DirinfoSet, KeyHasher>& local_beaconed_victims) const; // Return if with complete local beaconed vitim dirinfo sets
+        bool getLocalBeaconedVictims(std::list<std::pair<Key, DirinfoSet>>& local_beaconed_victims) const; // Return if with complete local beaconed vitim dirinfo sets
 
         // For complete victim syncset
         void setCacheMarginBytes(const uint64_t& cache_margin_bytes);
         void setLocalSyncedVictims(const std::list<VictimCacheinfo>& local_synced_victims);
-        void setLocalBeaconedVictims(const std::unordered_map<Key, DirinfoSet, KeyHasher>& local_beaconed_victims);
+        void setLocalBeaconedVictims(const std::list<std::pair<Key, DirinfoSet>>& local_beaconed_victims);
 
         // For compressed victim syncset
         void setCacheMarginDeltaBytes(const int& cache_margin_delta_bytes);
         void setLocalSyncedVictimsForCompress(const std::list<VictimCacheinfo>& local_synced_victims);
-        void setLocalBeaconedVictimsForCompress(const std::unordered_map<Key, DirinfoSet, KeyHasher>& local_beaconed_victims);
+        void setLocalBeaconedVictimsForCompress(const std::list<std::pair<Key, DirinfoSet>>& local_beaconed_victims);
 
         uint32_t getVictimSyncsetPayloadSize() const;
         uint32_t serialize(DynamicArray& msg_payload, const uint32_t& position) const;
         uint32_t deserialize(const DynamicArray& msg_payload, const uint32_t& position);
 
         uint64_t getSizeForCapacity() const;
+
+        // void dumpForDebug() const;
 
         const VictimSyncset& operator=(const VictimSyncset& other);
     private:
@@ -72,12 +76,24 @@ namespace covered
         static const uint8_t LOCAL_BEACONED_VICTIMS_DEDUP_MASK; // Whether at least one dirinfo set of a local beaconed victim is deduped
         static const uint8_t LOCAL_BEACONED_VICTIMS_EMPTY_MASK; // Whether local beaconed victims is empty (e.g., no local beaconed victim for complete victim syncset, or all local beaconed victims are fully-compressed and hence NOT tracked for compressed victim syncset)
 
+        void checkValidity_() const;
         void assertAtLeastOneCacheinfoDeduped_() const;
         void assertAllCacheinfosComplete_() const;
         void assertAtLeastOneDirinfoSetCompressed_() const;
         void assertAllDirinfoSetsComplete_() const;
 
+        #ifdef VICTIM_SYNCSET_USE_BITMAP
         uint8_t compressed_bitmap_; // 1st lowest bit indicates if the syncset is a compressed victim syncset (2nd lowest bit for cache margin bytes; 3rd/4th lowest bit for local synced victims; 5th/6th lowest bit for local beaconed victims)
+        #else
+        // NOTE: booleans are ONLY used for fast processing with limited CPU cost, yet calculate a bitmap for serialization/deserialization
+        bool is_valid_; // 1: valid; 0: invalid
+        bool is_complete_; // 1: complete; 0: compressed
+        bool is_cache_margin_bytes_delta_; // For cache margin bytes, 1: delta compressed; 0: complete
+        bool is_local_synced_victims_dedup_; // For local synced victims, 1: deduped; 0: complete
+        bool is_local_synced_victims_empty_; // For local synced victims, 1: empty; 0: non-empty
+        bool is_local_beaconed_victims_dedup_; // For local beaconed victims, 1: deduped; 0: complete
+        bool is_local_beaconed_victims_empty_; // For local beaconed victims, 1: empty; 0: non-empty
+        #endif
 
         // Used for sequence-based synchronization monitoring
         SeqNum seqnum_; // Sender's cur_seqnum_ to the destination edge node when sender issues the victim syncset
@@ -95,7 +111,7 @@ namespace covered
         // Delta compression (most-eviction-few-admission victim dirinfo set of unpopular cached objects)
         // (1) For complete victim syncset: all complete victim dirinfo sets; (2) for compressed victim syncset: new victim dirinfo sets (complete newly-beaconed victims or compressed existing victims w/ dirinfo set changes)
         // NOTE: we do NOT need to track stale dirinfo sets of local-/neighbor-unsynced keys, as they will be removed after refcnt changes to zero (triggered by stale victim cacheinfo removal)
-        std::unordered_map<Key, DirinfoSet, KeyHasher> local_beaconed_victims_; // For both complete and compressed victim syncset
+        std::list<std::pair<Key, DirinfoSet>> local_beaconed_victims_; // For both complete and compressed victim syncset
     };
 }
 
