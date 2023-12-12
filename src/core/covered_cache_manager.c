@@ -87,8 +87,8 @@ namespace covered
             {
                 // Perform greedy-based placement calculation for trade-off-aware cache placement
                 // NOTE: set best_placement_edgeset for preserved edgeset and placement notifications; set best_placement_peredge_synced_victimset for synced victim removal from victim tracker and best_placement_peredge_fetched_victimset for fetched victim removal from victim cache, to avoid duplicate eviction (all for non-blocking placement deployment)
-                std::unordered_map<uint32_t, std::list<Key>> best_placement_peredge_synced_victimset;
-                std::unordered_map<uint32_t, std::list<Key>> best_placement_peredge_fetched_victimset;
+                std::list<std::pair<uint32_t, std::list<Key>>> best_placement_peredge_synced_victimset;
+                std::list<std::pair<uint32_t, std::list<Key>>> best_placement_peredge_fetched_victimset;
                 is_finish = placementCalculation_(key, tmp_is_global_cached, has_best_placement, best_placement_edgeset, best_placement_peredge_synced_victimset, best_placement_peredge_fetched_victimset, edge_wrapper_ptr, recvrsp_source_addr, recvrsp_socket_server_ptr, total_bandwidth_usage, event_list, skip_propagation_latency);
                 assert(best_placement_edgeset.size() <= topk_edgecnt_); // At most k placement edge nodes each time
                 if (is_finish)
@@ -108,7 +108,7 @@ namespace covered
                     // Remove involved synced victims from victim tracker for each edge node in placement edgeset to avoid duplicate eviction
                     // NOTE: synced victims MUST exist in edge-level victim metadata of victim tracker
                     // NOTE: removed synced victims should NOT be reused <- if synced victims in the edge node do NOT change, removed victims will NOT be reported to the beacon node due to dedup/delta-compression in victim synchronization; if need more victims, victim fetching request MUST be later than placement notification request, which has changed the synced victims in the edge node
-                    for (std::unordered_map<uint32_t, std::list<Key>>::const_iterator best_placement_peredge_synced_victimset_const_iter = best_placement_peredge_synced_victimset.begin(); best_placement_peredge_synced_victimset_const_iter != best_placement_peredge_synced_victimset.end(); best_placement_peredge_synced_victimset_const_iter++)
+                    for (std::list<std::pair<uint32_t, std::list<Key>>>::const_iterator best_placement_peredge_synced_victimset_const_iter = best_placement_peredge_synced_victimset.begin(); best_placement_peredge_synced_victimset_const_iter != best_placement_peredge_synced_victimset.end(); best_placement_peredge_synced_victimset_const_iter++)
                     {
                         const uint32_t tmp_edge_idx = best_placement_peredge_synced_victimset_const_iter->first;
                         const std::list<Key>& tmp_synced_victim_keyset_const_ref = best_placement_peredge_synced_victimset_const_iter->second;
@@ -263,7 +263,7 @@ namespace covered
         return total_size;
     }
 
-    bool CoveredCacheManager::placementCalculation_(const Key& key, const bool& is_global_cached, bool& has_best_placement, Edgeset& best_placement_edgeset, std::unordered_map<uint32_t, std::list<Key>>& best_placement_peredge_synced_victimset, std::unordered_map<uint32_t, std::list<Key>>& best_placement_peredge_fetched_victimset, const EdgeWrapper* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
+    bool CoveredCacheManager::placementCalculation_(const Key& key, const bool& is_global_cached, bool& has_best_placement, Edgeset& best_placement_edgeset, std::list<std::pair<uint32_t, std::list<Key>>>& best_placement_peredge_synced_victimset, std::list<std::pair<uint32_t, std::list<Key>>>& best_placement_peredge_fetched_victimset, const EdgeWrapper* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
     {
         bool is_finish = false;
         has_best_placement = false;
@@ -273,8 +273,8 @@ namespace covered
         DeltaReward best_placement_admission_benefit = 0.0;
         DeltaReward best_placement_eviction_cost = 0.0; // TMPDEBUG231211
         Edgeset tmp_best_placement_edgeset; // For preserved edgeset and placement notifications under non-blocking placement deployment
-        std::unordered_map<uint32_t, std::list<Key>> tmp_best_placement_peredge_synced_victimset; // For synced victim removal under non-blocking placement deployment
-        std::unordered_map<uint32_t, std::list<Key>> tmp_best_placement_peredge_fetched_victimset; // For fetched victim removal under non-blocking placement deployment
+        std::list<std::pair<uint32_t, std::list<Key>>> tmp_best_placement_peredge_synced_victimset; // For synced victim removal under non-blocking placement deployment
+        std::list<std::pair<uint32_t, std::list<Key>>> tmp_best_placement_peredge_fetched_victimset; // For fetched victim removal under non-blocking placement deployment
         Edgeset best_placement_victim_fetch_edgeset;
 
         AggregatedUncachedPopularity tmp_aggregated_uncached_popularity;
@@ -306,8 +306,8 @@ namespace covered
                 const DeltaReward tmp_admission_benefit = tmp_aggregated_uncached_popularity.calcAdmissionBenefit(edge_wrapper_ptr, edge_idx_, key, topicnt, is_global_cached, tmp_placement_edgeset); // TMPDEBUG23
 
                 // Calculate eviction cost based on tmp_placement_edgeset
-                std::unordered_map<uint32_t, std::list<Key>> tmp_placement_peredge_synced_victimset;
-                std::unordered_map<uint32_t, std::list<Key>> tmp_placement_peredge_fetched_victimset;
+                std::list<std::pair<uint32_t, std::list<Key>>> tmp_placement_peredge_synced_victimset;
+                std::list<std::pair<uint32_t, std::list<Key>>> tmp_placement_peredge_fetched_victimset;
                 Edgeset tmp_placement_victim_fetch_edgeset;
                 const DeltaReward tmp_eviction_cost = victim_tracker_ptr_->calcEvictionCost(edge_wrapper_ptr, tmp_object_size, tmp_placement_edgeset, tmp_placement_peredge_synced_victimset, tmp_placement_peredge_fetched_victimset, tmp_placement_victim_fetch_edgeset); // NOTE: tmp_eviction_cost may be partial eviction cost if without enough victims
 
@@ -359,7 +359,7 @@ namespace covered
 
             // Issue CoveredVictimFetchRequest to fetch more victims in parallel (note that CoveredVictimFetchRequest is a foreground message before non-blocking placement deployment)
             // TODO: Maintain a small vicitm cache in each beacon edge node if with frequent lazy victim fetching to avoid degrading directory lookup performance
-            std::unordered_map<uint32_t, std::list<VictimCacheinfo>> extra_peredge_victim_cacheinfos;
+            std::list<std::pair<uint32_t, std::list<VictimCacheinfo>>> extra_peredge_victim_cacheinfos;
             std::list<std::pair<Key, DirinfoSet>> extra_perkey_victim_dirinfoset;
             is_finish = parallelFetchVictims_(tmp_object_size, best_placement_victim_fetch_edgeset, edge_wrapper_ptr, recvrsp_source_addr, recvrsp_socket_server_ptr, total_bandwidth_usage, event_list, skip_propagation_latency, extra_peredge_victim_cacheinfos, extra_perkey_victim_dirinfoset);
             if (is_finish)
@@ -370,8 +370,8 @@ namespace covered
             if (extra_peredge_victim_cacheinfos.size() > 0) // With extra fetched victims
             {
                 // Re-calculate eviction cost with extra fetched victims
-                std::unordered_map<uint32_t, std::list<Key>> tmp_placement_peredge_synced_victimset;
-                std::unordered_map<uint32_t, std::list<Key>> tmp_placement_peredge_fetched_victimset;
+                std::list<std::pair<uint32_t, std::list<Key>>> tmp_placement_peredge_synced_victimset;
+                std::list<std::pair<uint32_t, std::list<Key>>> tmp_placement_peredge_fetched_victimset;
                 Edgeset tmp_placement_victim_fetch_edgeset;
                 const DeltaReward tmp_eviction_cost = victim_tracker_ptr_->calcEvictionCost(edge_wrapper_ptr, tmp_object_size, tmp_best_placement_edgeset, tmp_placement_peredge_synced_victimset, tmp_placement_peredge_fetched_victimset, tmp_placement_victim_fetch_edgeset, extra_peredge_victim_cacheinfos, extra_perkey_victim_dirinfoset); // NOTE: tmp_eviction_cost may be partial eviction cost if without enough victims
                 assert(tmp_placement_victim_fetch_edgeset.size() == 0); // NOTE: we DISABLE recursive victim fetching
@@ -393,7 +393,7 @@ namespace covered
         return is_finish;
     }
 
-    bool CoveredCacheManager::parallelFetchVictims_(const ObjectSize& object_size, const Edgeset& best_placement_victim_fetch_edgeset, const EdgeWrapper* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency, std::unordered_map<uint32_t, std::list<VictimCacheinfo>>& extra_peredge_victim_cacheinfos, std::list<std::pair<Key, DirinfoSet>>& extra_perkey_victim_dirinfoset) const
+    bool CoveredCacheManager::parallelFetchVictims_(const ObjectSize& object_size, const Edgeset& best_placement_victim_fetch_edgeset, const EdgeWrapper* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency, std::list<std::pair<uint32_t, std::list<VictimCacheinfo>>>& extra_peredge_victim_cacheinfos, std::list<std::pair<Key, DirinfoSet>>& extra_perkey_victim_dirinfoset) const
     {
         const uint32_t victim_fetch_edgecnt = best_placement_victim_fetch_edgeset.size();
         assert(victim_fetch_edgecnt > 0); // At least one edge node for victim fetching
@@ -436,7 +436,7 @@ namespace covered
                     assert(has_victim_key == true);
 
                     // Update extra_peredge_victim_cacheinfos
-                    extra_peredge_victim_cacheinfos.insert(std::pair<uint32_t, std::list<VictimCacheinfo>>(tmp_edge_idx, tmp_victim_cacheinfos));
+                    extra_peredge_victim_cacheinfos.push_back(std::pair<uint32_t, std::list<VictimCacheinfo>>(tmp_edge_idx, tmp_victim_cacheinfos));
 
                     // Update extra_perkey_victim_dirinfoset
                     // NOTE: extra fetched victim dirinfo sets from local directory table MUST be complete
@@ -566,7 +566,7 @@ namespace covered
         return;
     }
 
-    void CoveredCacheManager::processVictimFetchResponse_(const MessageBase* control_respnose_ptr, const EdgeWrapper* edge_wrapper_ptr, std::unordered_map<uint32_t, std::list<VictimCacheinfo>>& extra_peredge_victim_cacheinfos, std::list<std::pair<Key, DirinfoSet>>& extra_perkey_victim_dirinfoset) const
+    void CoveredCacheManager::processVictimFetchResponse_(const MessageBase* control_respnose_ptr, const EdgeWrapper* edge_wrapper_ptr, std::list<std::pair<uint32_t, std::list<VictimCacheinfo>>>& extra_peredge_victim_cacheinfos, std::list<std::pair<Key, DirinfoSet>>& extra_perkey_victim_dirinfoset) const
     {
         assert(control_respnose_ptr != NULL);
         assert(control_respnose_ptr->getMessageType() == MessageType::kCoveredVictimFetchResponse);
@@ -588,7 +588,7 @@ namespace covered
         std::list<VictimCacheinfo> fetched_victim_cacheinfos;
         bool with_complete_victim_syncset = victim_fetchset.getLocalSyncedVictims(fetched_victim_cacheinfos);
         assert(with_complete_victim_syncset == true); // NOTE: extra fetched victim cacheinfos in victim fetchset MUST be complete
-        extra_peredge_victim_cacheinfos.insert(std::pair<uint32_t, std::list<VictimCacheinfo>>(source_edge_idx, fetched_victim_cacheinfos));
+        extra_peredge_victim_cacheinfos.push_back(std::pair<uint32_t, std::list<VictimCacheinfo>>(source_edge_idx, fetched_victim_cacheinfos));
 
         // Update extra_perkey_victim_dirinfoset
         std::list<std::pair<Key, DirinfoSet>> neighbor_beaconed_neighbor_fetched_victim_dirinfosets;

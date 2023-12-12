@@ -6,6 +6,34 @@ namespace covered
 {
     const std::string Key::kClassName("Key");
 
+    std::list<std::pair<uint32_t, std::list<Key>>>::iterator Key::findKeyListForEdge(const uint32_t& edge_idx, std::list<std::pair<uint32_t, std::list<Key>>>& peredge_keyset)
+    {
+        std::list<std::pair<uint32_t, std::list<Key>>>::iterator keylist_iter = peredge_keyset.begin();
+        while (keylist_iter != peredge_keyset.end())
+        {
+            if (keylist_iter->first == edge_idx)
+            {
+                break;
+            }
+            keylist_iter++;
+        }
+        return keylist_iter;
+    }
+
+    std::list<std::pair<uint32_t, std::list<Key>>>::const_iterator Key::findKeyListForEdge(const uint32_t& edge_idx, const std::list<std::pair<uint32_t, std::list<Key>>>& peredge_keyset)
+    {
+        std::list<std::pair<uint32_t, std::list<Key>>>::const_iterator keylist_iter = peredge_keyset.begin();
+        while (keylist_iter != peredge_keyset.end())
+        {
+            if (keylist_iter->first == edge_idx)
+            {
+                break;
+            }
+            keylist_iter++;
+        }
+        return keylist_iter;
+    }
+
     Key::Key()
     {
         keystr_ = "";

@@ -7,6 +7,7 @@
 #ifndef KEY_H
 #define KEY_H
 
+#include <list>
 #include <string>
 
 #include "common/dynamic_array.h"
@@ -16,6 +17,9 @@ namespace covered
     class Key
     {
     public:
+        static std::list<std::pair<uint32_t, std::list<Key>>>::iterator findKeyListForEdge(const uint32_t& edge_idx, std::list<std::pair<uint32_t, std::list<Key>>>& peredge_keyset);
+        static std::list<std::pair<uint32_t, std::list<Key>>>::const_iterator findKeyListForEdge(const uint32_t& edge_idx, const std::list<std::pair<uint32_t, std::list<Key>>>& peredge_keyset);
+
         Key();
         Key(const std::string& keystr);
         ~Key();

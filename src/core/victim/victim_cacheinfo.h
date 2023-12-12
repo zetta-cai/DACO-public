@@ -25,9 +25,15 @@ namespace covered
 
         static void sortByLocalRewards(std::list<VictimCacheinfo>& victim_cacheinfos); // Sort victim cacheinfos by local rewards (ascending order)
 
-        // Find victim cacheinfo for the given key
+        // Find victim cacheinfo (list) for the given key
         static std::list<VictimCacheinfo>::iterator findVictimCacheinfoForKey(const Key& key, std::list<VictimCacheinfo>& victim_cacheinfos);
         static std::list<VictimCacheinfo>::const_iterator findVictimCacheinfoForKey(const Key& key, const std::list<VictimCacheinfo>& victim_cacheinfos);
+        static std::list<std::pair<Key, std::list<VictimCacheinfo>>>::iterator findVictimCacheinfoListForKey(const Key& key, std::list<std::pair<Key, std::list<VictimCacheinfo>>>& victim_cacheinfos);
+        static std::list<std::pair<Key, std::list<VictimCacheinfo>>>::const_iterator findVictimCacheinfoListForKey(const Key& key, const std::list<std::pair<Key, std::list<VictimCacheinfo>>>& victim_cacheinfos);
+
+        // Find victim cacheinfo for the given edge idx
+        static std::list<std::pair<uint32_t, std::list<VictimCacheinfo>>>::iterator findVictimCacheinfoListForEdge(const uint32_t& edge_idx, std::list<std::pair<uint32_t, std::list<VictimCacheinfo>>>& peredge_victim_cacheinfos);
+        static std::list<std::pair<uint32_t, std::list<VictimCacheinfo>>>::const_iterator findVictimCacheinfoListForEdge(const uint32_t& edge_idx, const std::list<std::pair<uint32_t, std::list<VictimCacheinfo>>>& peredge_victim_cacheinfos);
 
         VictimCacheinfo();
         VictimCacheinfo(const Key& key, const ObjectSize& object_size, const Popularity& local_cached_popularity, const Popularity& redirected_cached_popularity, const Reward& local_reward);

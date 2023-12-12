@@ -7,16 +7,21 @@
 #ifndef EDGESET_H
 #define EDGESET_H
 
+#include <list>
 #include <string>
 #include <unordered_set>
 
 #include "common/dynamic_array.h"
+#include "common/key.h"
 
 namespace covered
 {
     class Edgeset
     {
     public:
+        static std::list<std::pair<Key, Edgeset>>::iterator findEdgesetForKey(const Key& key, std::list<std::pair<Key, Edgeset>>& perkey_edgeset);
+        static std::list<std::pair<Key, Edgeset>>::const_iterator findEdgesetForKey(const Key& key, const std::list<std::pair<Key, Edgeset>>& perkey_edgeset);
+
         Edgeset();
         Edgeset(const std::unordered_set<uint32_t>& edgeset);
         ~Edgeset();

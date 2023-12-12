@@ -18,7 +18,6 @@
 
 #include <list>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 namespace covered
@@ -58,7 +57,7 @@ namespace covered
 
         // For trade-off-aware placement calculation
         // NOTE: placement_edgeset is used for preserved edgeset, old local uncached popularities removal; placement_peredge_synced_victimset is used for synced victim removal from victim tracker, while placement_peredge_fetched_victimset is used for fetched victim removal from victim cache; victim_fetch_edgeset is used for lazy victim fetching (all under non-blocking placement deployment)
-        DeltaReward calcEvictionCost(const EdgeWrapper* edge_wrapper_ptr, const ObjectSize& object_size, const Edgeset& placement_edgeset, std::unordered_map<uint32_t, std::list<Key>>& placement_peredge_synced_victimset, std::unordered_map<uint32_t, std::list<Key>>& placement_peredge_fetched_victimset, Edgeset& victim_fetch_edgeset, const std::unordered_map<uint32_t, std::list<VictimCacheinfo>>& extra_peredge_victim_cacheinfos = std::unordered_map<uint32_t, std::list<VictimCacheinfo>>(), const std::list<std::pair<Key, DirinfoSet>>& extra_perkey_victim_dirinfoset = std::list<std::pair<Key, DirinfoSet>>()) const;
+        DeltaReward calcEvictionCost(const EdgeWrapper* edge_wrapper_ptr, const ObjectSize& object_size, const Edgeset& placement_edgeset, std::list<std::pair<uint32_t, std::list<Key>>>& placement_peredge_synced_victimset, std::list<std::pair<uint32_t, std::list<Key>>>& placement_peredge_fetched_victimset, Edgeset& victim_fetch_edgeset, const std::list<std::pair<uint32_t, std::list<VictimCacheinfo>>>& extra_peredge_victim_cacheinfos = std::list<std::pair<uint32_t, std::list<VictimCacheinfo>>>(), const std::list<std::pair<Key, DirinfoSet>>& extra_perkey_victim_dirinfoset = std::list<std::pair<Key, DirinfoSet>>()) const;
 
         // For non-blocking placement deployment
         void removeVictimsForGivenEdge(const uint32_t& edge_idx, const std::list<Key>& victim_keyset); // NOTE: removed victims should NOT be reused <- if synced victims in the edge node do NOT change, removed victims will NOT be reported to the beacon node due to dedup/delta-compression in victim synchronization; if need more victims, victim fetching request MUST be later than placement notification request, which has changed the synced victims in the edge node
@@ -90,7 +89,7 @@ namespace covered
 
         // For trade-off-aware placement calculation
         // NOTE: pervictim_edgeset and pervictim_cacheinfos are used for eviction cost in placement calculation, while peredge_synced_victimset and peredge_fetched_victimset are used for victim removal in non-blocking placement deployment
-        void findVictimsForPlacement_(const ObjectSize& object_size, const Edgeset& placement_edgeset, std::unordered_map<Key, Edgeset, KeyHasher>& pervictim_edgeset, std::unordered_map<Key, std::list<VictimCacheinfo>, KeyHasher>& pervictim_cacheinfos, std::unordered_map<uint32_t, std::list<Key>>& peredge_synced_victimset, std::unordered_map<uint32_t, std::list<Key>>& peredge_fetched_victimset, Edgeset& victim_fetch_edgeset, const std::unordered_map<uint32_t, std::list<VictimCacheinfo>>& extra_peredge_victim_cacheinfos) const; // Find victims from placement edgeset if admit a hot object with the given size
+        void findVictimsForPlacement_(const ObjectSize& object_size, const Edgeset& placement_edgeset, std::list<std::pair<Key, Edgeset>>& pervictim_edgeset, std::list<std::pair<Key, std::list<VictimCacheinfo>>>& pervictim_cacheinfos, std::list<std::pair<uint32_t, std::list<Key>>>& peredge_synced_victimset, std::list<std::pair<uint32_t, std::list<Key>>>& peredge_fetched_victimset, Edgeset& victim_fetch_edgeset, const std::list<std::pair<uint32_t, std::list<VictimCacheinfo>>>& extra_peredge_victim_cacheinfos) const; // Find victims from placement edgeset if admit a hot object with the given size
         bool isLastCopiesForVictimEdgeset_(const Key& key, const Edgeset& victim_edgeset, const std::list<std::pair<Key, DirinfoSet>>& extra_perkey_victim_dirinfoset) const; // Check whether the victim edgeset is the last cache copies of the given key
 
         void checkPointers_() const;

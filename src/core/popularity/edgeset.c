@@ -6,6 +6,34 @@ namespace covered
 {
     const std::string Edgeset::kClassName("Edgeset");
 
+    std::list<std::pair<Key, Edgeset>>::iterator Edgeset::findEdgesetForKey(const Key& key, std::list<std::pair<Key, Edgeset>>& perkey_edgeset)
+    {
+        std::list<std::pair<Key, Edgeset>>::iterator edgeset_iter = perkey_edgeset.begin();
+        while (edgeset_iter != perkey_edgeset.end())
+        {
+            if (edgeset_iter->first == key)
+            {
+                break;
+            }
+            edgeset_iter++;
+        }
+        return edgeset_iter;
+    }
+
+    std::list<std::pair<Key, Edgeset>>::const_iterator Edgeset::findEdgesetForKey(const Key& key, const std::list<std::pair<Key, Edgeset>>& perkey_edgeset)
+    {
+        std::list<std::pair<Key, Edgeset>>::const_iterator edgeset_iter = perkey_edgeset.begin();
+        while (edgeset_iter != perkey_edgeset.end())
+        {
+            if (edgeset_iter->first == key)
+            {
+                break;
+            }
+            edgeset_iter++;
+        }
+        return edgeset_iter;
+    }
+
     Edgeset::Edgeset()
     {
         edgeset_.clear();
