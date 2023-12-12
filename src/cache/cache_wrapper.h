@@ -9,7 +9,8 @@
 #ifndef CACHE_WRAPPER_H
 #define CACHE_WRAPPER_H
 
-//#define DEBUG_CACHE_WRAPPER
+// TMPDEBUG231211
+#define DEBUG_CACHE_WRAPPER
 
 #include <list>
 #include <set>

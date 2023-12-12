@@ -206,6 +206,12 @@ namespace covered
         CacheServer* tmp_cache_server_ptr = cache_server_worker_param_ptr_->getCacheServerPtr();
         EdgeWrapper* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();
 
+        // TMPDEBUG231211
+        if (tmp_key.getKeystr() == "sbyh")
+        {
+            Util::dumpVariablesForDebug(base_instance_name_, 2, "CacheServerWorkerBase::processLocalGetRequest_ for key", tmp_key.getKeystr().c_str());
+        }
+
         bool is_finish = false; // Mark if edge node is finished
         Hitflag hitflag = Hitflag::kGlobalMiss;
         BandwidthUsage total_bandwidth_usage;
@@ -274,6 +280,12 @@ namespace covered
             #endif
         }
 
+        // TMPDEBUG231211
+        if (tmp_key.getKeystr() == "amwnaqnbqcshhvkhbxzfcbtmfqnfieoeuh")
+        {
+            Util::dumpVariablesForDebug(base_instance_name_, 2, "after fetch data from neighbor for key", tmp_key.getKeystr().c_str());
+        }
+
         // NOTE: hybrid fetching MUST NOT trigger fast-path placement due to key is already tracked by local uncached metadata (no matter sender is beacon or not)
         if (need_hybrid_fetching)
         {
@@ -301,6 +313,12 @@ namespace covered
         uint32_t get_cloud_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(get_cloud_end_timestamp, get_cloud_start_timestamp));
         event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_GET_CLOUD_EVENT_NAME, get_cloud_latency_us); // Add intermediate event if with event tracking
 
+        // TMPDEBUG231211
+        if (tmp_key.getKeystr() == "amwnaqnbqcshhvkhbxzfcbtmfqnfieoeuh")
+        {
+            Util::dumpVariablesForDebug(base_instance_name_, 2, "after fetch data from cloud for key", tmp_key.getKeystr().c_str());
+        }
+
         // Trigger non-blocking placement notification if need hybrid fetching for non-blocking data fetching (ONLY for COVERED)
         struct timespec trigger_placement_start_timestamp = Util::getCurrentTimespec();
         if (need_hybrid_fetching)
@@ -314,6 +332,12 @@ namespace covered
         struct timespec trigger_placement_end_timestamp = Util::getCurrentTimespec();
         uint32_t trigger_placement_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(trigger_placement_end_timestamp, trigger_placement_start_timestamp));
         event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_TRIGGER_PLACEMENT_EVENT_NAME, trigger_placement_latency_us); // Add intermediate event if with event tracking
+
+        // TMPDEBUG231211
+        if (tmp_key.getKeystr() == "amwnaqnbqcshhvkhbxzfcbtmfqnfieoeuh")
+        {
+            Util::dumpVariablesForDebug(base_instance_name_, 2, "after trigger placement for hybrid fetching for key", tmp_key.getKeystr().c_str());
+        }
 
         // Update invalid object of local edge cache if necessary
         struct timespec update_invalid_local_cache_start_timestamp = Util::getCurrentTimespec();
@@ -331,6 +355,12 @@ namespace covered
         uint32_t update_invalid_local_cache_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(update_invalid_local_cache_end_timestamp, update_invalid_local_cache_start_timestamp));
         event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_UPDATE_INVALID_LOCAL_CACHE_EVENT_NAME, update_invalid_local_cache_latency_us); // Add intermediate event if with event tracking
 
+        // TMPDEBUG231211
+        if (tmp_key.getKeystr() == "amwnaqnbqcshhvkhbxzfcbtmfqnfieoeuh")
+        {
+            Util::dumpVariablesForDebug(base_instance_name_, 2, "after evictForCapacity_ for key", tmp_key.getKeystr().c_str());
+        }
+
         // Trigger independent cache admission for local/global cache miss if necessary
         // NOTE: For COVERED, beacon node will tell the edge node whether to admit or not, w/o independent decision
         struct timespec independent_admission_start_timestamp = Util::getCurrentTimespec();
@@ -342,6 +372,12 @@ namespace covered
         struct timespec independent_admission_end_timestamp = Util::getCurrentTimespec();
         uint32_t independent_admission_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(independent_admission_end_timestamp, independent_admission_start_timestamp));
         event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_INDEPENDENT_ADMISSION_EVENT_NAME, independent_admission_latency_us); // Add intermediate event if with event tracking
+
+        // TMPDEBUG231211
+        if (tmp_key.getKeystr() == "amwnaqnbqcshhvkhbxzfcbtmfqnfieoeuh")
+        {
+            Util::dumpVariablesForDebug(base_instance_name_, 2, "after independent_admission_start_timestamp for key", tmp_key.getKeystr().c_str());
+        }
 
         // Trigger cache placement for getrsp w/ sender-is-beacon or fast-path placement, if key is local uncached and newly-tracked after fetching value from neighbor/cloud (ONLY for COVERED)
         if (tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME && !tmp_edge_wrapper_ptr->getEdgeCachePtr()->isLocalCached(tmp_key)) // Local uncached object
@@ -362,6 +398,12 @@ namespace covered
             }
         }
 
+        // TMPDEBUG231211
+        if (tmp_key.getKeystr() == "amwnaqnbqcshhvkhbxzfcbtmfqnfieoeuh")
+        {
+            Util::dumpVariablesForDebug(base_instance_name_, 2, "after tryToTriggerCachePlacementForGetrsp_ for key", tmp_key.getKeystr().c_str());
+        }
+
         // Prepare LocalGetResponse for client
         uint64_t used_bytes = tmp_edge_wrapper_ptr->getSizeForCapacity();
         uint64_t capacity_bytes = tmp_edge_wrapper_ptr->getCapacityBytes();
@@ -369,6 +411,12 @@ namespace covered
         NetworkAddr edge_cache_server_recvreq_source_addr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeCacheServerRecvreqSourceAddr();
         MessageBase* local_get_response_ptr = new LocalGetResponse(tmp_key, tmp_value, hitflag, used_bytes, capacity_bytes, edge_idx, edge_cache_server_recvreq_source_addr, total_bandwidth_usage, event_list, skip_propagation_latency);
         assert(local_get_response_ptr != NULL);
+
+        // TMPDEBUG231211
+        if (tmp_key.getKeystr() == "amwnaqnbqcshhvkhbxzfcbtmfqnfieoeuh")
+        {
+            Util::dumpVariablesForDebug(base_instance_name_, 2, "issue local get rsp for key", tmp_key.getKeystr().c_str());
+        }
 
         // Push local response message into edge-to-client propagation simulator to a client
         bool is_successful = tmp_edge_wrapper_ptr->getEdgeToclientPropagationSimulatorParamPtr()->push(local_get_response_ptr, recvrsp_dst_addr);
@@ -569,6 +617,12 @@ namespace covered
             // Prepare for latency-aware weight tuning
             const struct timespec tmp_content_discovery_start_timestamp = Util::getCurrentTimespec(); // NOT count timeout
 
+            // TMPDEBUG231211
+            if (key.getKeystr() == "amwnaqnbqcshhvkhbxzfcbtmfqnfieoeuh")
+            {
+                Util::dumpVariablesForDebug(base_instance_name_, 2, "issue remote directory lookup req for key", key.getKeystr().c_str());
+            }
+
             // Push the control request into edge-to-edge propagation simulator to send to beacon node
             bool is_successful = tmp_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->push(directory_lookup_request_ptr, beacon_edge_beacon_server_recvreq_dst_addr);
             assert(is_successful);
@@ -596,6 +650,12 @@ namespace covered
             } // End of (is_timeout == true)
             else
             {
+                // TMPDEBUG231211
+                if (key.getKeystr() == "amwnaqnbqcshhvkhbxzfcbtmfqnfieoeuh")
+                {
+                    Util::dumpVariablesForDebug(base_instance_name_, 2, "receive remote directory lookup rsp for key", key.getKeystr().c_str());
+                }
+
                 // Update cross-edge latency for latency-aware weight tuning if NOT timeout
                 const struct timespec tmp_content_discovery_end_timestamp = Util::getCurrentTimespec();
                 const double tmp_content_discovery_cross_edge_rtt_us = Util::getDeltaTimeUs(tmp_content_discovery_end_timestamp, tmp_content_discovery_start_timestamp);
@@ -611,6 +671,12 @@ namespace covered
                 assert(control_response_ptr != NULL);
 
                 processRspToLookupBeaconDirectory_(control_response_ptr, is_being_written, is_valid_directory_exist, directory_info, best_placement_edgeset, need_hybrid_fetching, fast_path_hint);
+
+                // TMPDEBUG231211
+                if (key.getKeystr() == "amwnaqnbqcshhvkhbxzfcbtmfqnfieoeuh")
+                {
+                    Util::dumpVariablesForDebug(base_instance_name_, 2, "after process remote directory lookup rsp for key", key.getKeystr().c_str());
+                }
 
                 // Update total bandwidth usage for received directory lookup response
                 BandwidthUsage directory_lookup_response_bandwidth_usage = control_response_ptr->getBandwidthUsageRef();

@@ -202,6 +202,12 @@ namespace covered
         Key tmp_key = directory_lookup_request_ptr->getKey();
         const bool skip_propagation_latency = directory_lookup_request_ptr->isSkipPropagationLatency();*/
 
+        // TMPDEBUG231211
+        if (MessageBase::getKeyFromMessage(control_request_ptr).getKeystr() == "amwnaqnbqcshhvkhbxzfcbtmfqnfieoeuh")
+        {
+            Util::dumpVariablesForDebug(base_instance_name_, 2, "receive remote directory lookup req for key", MessageBase::getKeyFromMessage(control_request_ptr).getKeystr().c_str());
+        }
+
         checkPointers_();
 
         bool is_finish = false;
@@ -230,6 +236,12 @@ namespace covered
             return is_finish; // Edge node is NOT running now
         }
 
+        // TMPDEBUG231211
+        if (MessageBase::getKeyFromMessage(control_request_ptr).getKeystr() == "amwnaqnbqcshhvkhbxzfcbtmfqnfieoeuh")
+        {
+            Util::dumpVariablesForDebug(base_instance_name_, 2, "after process remote directory lookup req for key", MessageBase::getKeyFromMessage(control_request_ptr).getKeystr().c_str());
+        }
+
         #ifdef DEBUG_BEACON_SERVER
         Util::dumpVariablesForDebug(base_instance_name_, 6, "is_being_written:", Util::toString(is_being_written).c_str(), "is_valid_directory_exist:", Util::toString(is_valid_directory_exist).c_str(), "directory_info:", std::to_string(directory_info.getTargetEdgeIdx()).c_str());
         #endif
@@ -243,6 +255,12 @@ namespace covered
         embedBackgroundCounterIfNotEmpty_(total_bandwidth_usage, event_list); // Embed background events/bandwidth if any into control response message
         MessageBase* directory_lookup_response_ptr = getRspToLookupLocalDirectory_(control_request_ptr, is_being_written, is_valid_directory_exist, directory_info, best_placement_edgeset, need_hybrid_fetching, fast_path_hint, total_bandwidth_usage, event_list);
         assert(directory_lookup_response_ptr != NULL);
+
+        // TMPDEBUG231211
+        if (MessageBase::getKeyFromMessage(control_request_ptr).getKeystr() == "amwnaqnbqcshhvkhbxzfcbtmfqnfieoeuh")
+        {
+            Util::dumpVariablesForDebug(base_instance_name_, 2, "issue remote directory lookup rsp for key", MessageBase::getKeyFromMessage(control_request_ptr).getKeystr().c_str());
+        }
 
         // Push the directory lookup response into edge-to-edge propagation simulator to cache server worker
         bool is_successful = edge_wrapper_ptr_->getEdgeToedgePropagationSimulatorParamPtr()->push(directory_lookup_response_ptr, edge_cache_server_worker_recvrsp_dst_addr);

@@ -51,15 +51,33 @@ namespace covered
         bool is_source_cached = false;
         bool is_global_cached = edge_wrapper_ptr_->getCooperationWrapperPtr()->lookupDirectoryTableByBeaconServer(tmp_key, source_edge_idx, edge_cache_server_worker_recvreq_dst_addr, is_being_written, is_valid_directory_exist, directory_info, is_source_cached);
 
+        // TMPDEBUG231211
+        if (tmp_key.getKeystr() == "amwnaqnbqcshhvkhbxzfcbtmfqnfieoeuh")
+        {
+            Util::dumpVariablesForDebug(instance_name_, 2, "COVERED: after lookup dirtable for key", tmp_key.getKeystr().c_str());
+        }
+
         // Victim synchronization
         // NOTE: we always perform victim synchronization before popularity aggregation, as we need the latest synced victim information for placement calculation
         const VictimSyncset& neighbor_victim_syncset = covered_directory_lookup_request_ptr->getVictimSyncsetRef();
-        covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, edge_wrapper_ptr_->getCooperationWrapperPtr());
+        covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, edge_wrapper_ptr_->getCooperationWrapperPtr(), tmp_key);
+
+        // TMPDEBUG231211
+        if (tmp_key.getKeystr() == "amwnaqnbqcshhvkhbxzfcbtmfqnfieoeuh")
+        {
+            Util::dumpVariablesForDebug(instance_name_, 2, "COVERED: after victim synchronization for key", tmp_key.getKeystr().c_str());
+        }
 
         // Selective popularity aggregation after remote directory lookup
         const CollectedPopularity& collected_popularity = covered_directory_lookup_request_ptr->getCollectedPopularityRef();
         const bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();
         is_finish = edge_wrapper_ptr_->afterDirectoryLookupHelper_(tmp_key, source_edge_idx, collected_popularity, is_global_cached, is_source_cached, best_placement_edgeset, need_hybrid_fetching, &fast_path_hint, edge_beacon_server_recvrsp_socket_server_ptr_, edge_beacon_server_recvrsp_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+
+        // TMPDEBUG231211
+        if (tmp_key.getKeystr() == "amwnaqnbqcshhvkhbxzfcbtmfqnfieoeuh")
+        {
+            Util::dumpVariablesForDebug(instance_name_, 2, "COVERED: after popularity aggregation for key", tmp_key.getKeystr().c_str());
+        }
 
         return is_finish;
     }

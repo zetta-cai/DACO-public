@@ -9,6 +9,7 @@
 
 //#define DEBUG_DIRINFO_SET
 
+#include <list>
 #include <string>
 #include <unordered_set>
 

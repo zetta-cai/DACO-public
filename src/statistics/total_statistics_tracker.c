@@ -13,7 +13,7 @@ namespace covered
 {
     const double TotalStatisticsTracker::CACHE_UTILIZATION_THRESHOLD_FOR_FILLUP = double(0.999); // >= 99.9% cache utilization
     const uint64_t TotalStatisticsTracker::CACHE_MARGIN_BYTES_IOTA_FOR_FILLUP = MB2B(1); // <= 1MiB
-    const double TotalStatisticsTracker::CACHE_OBJECT_HIT_RATIO_CHANGE_THRESHOLD_FOR_STABLE = double(0.001); // <= 0.1% cache object hit ratio change
+    const double TotalStatisticsTracker::CACHE_OBJECT_HIT_RATIO_CHANGE_THRESHOLD_FOR_STABLE = double(0.00001); // <= 0.001% cache object hit ratio change
 
     const std::string TotalStatisticsTracker::kClassName("TotalStatisticsTracker");
     
@@ -90,7 +90,7 @@ namespace covered
         bool is_stable = false;
 
         const uint32_t slotcnt = perslot_total_aggregated_statistics_.size();
-        const uint32_t slot_checkcnt = 5; // Make slot_checkcnt cache stability checkings
+        const uint32_t slot_checkcnt = 10; // Make slot_checkcnt cache stability checkings
         if (slotcnt > slot_checkcnt)
         {
             bool is_cache_stable = true;

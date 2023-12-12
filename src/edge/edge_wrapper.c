@@ -137,6 +137,20 @@ namespace covered
         
     EdgeWrapper::~EdgeWrapper()
     {
+        // TMPDEBUG231211
+        uint64_t edge_cache_size = edge_cache_ptr_->getSizeForCapacity();
+        uint64_t cooperation_size = cooperation_wrapper_ptr_->getSizeForCapacity();
+        uint64_t cache_manager_size = 0;
+        uint64_t weight_tuner_size = 0;
+        if (cache_name_ == Util::COVERED_CACHE_NAME) // ONLY for COVERED
+        {
+            cache_manager_size = covered_cache_manager_ptr_->getSizeForCapacity();
+            weight_tuner_size = weight_tuner_.getSizeForCapacity();
+        }
+        std::ostringstream oss;
+        oss << "edge_cache_size: " << edge_cache_size << ", cooperation_size: " << cooperation_size << ", cache_manager_size: " << cache_manager_size << ", weight_tuner_size: " << weight_tuner_size;
+        Util::dumpDebugMsg(instance_name_, oss.str());
+
         // Release local edge cache
         assert(edge_cache_ptr_ != NULL);
         delete edge_cache_ptr_;
@@ -792,7 +806,7 @@ namespace covered
         //     exit(1);
         // }
         tmp_thread_name = "edge-cache-server-" + std::to_string(node_idx_);
-        ThreadLauncher::pthreadCreateLowPriority(tmp_thread_name, &cache_server_thread_, launchCacheServer_, (void*)(this));
+        ThreadLauncher::pthreadCreateHighPriority(tmp_thread_name, &cache_server_thread_, launchCacheServer_, (void*)(this));
 
         // Launch invalidation server
         //pthread_returncode = pthread_create(&invalidation_server_thread_, NULL, launchInvalidationServer_, (void*)(this));

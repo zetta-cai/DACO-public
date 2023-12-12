@@ -254,10 +254,6 @@ namespace covered
         std::list<VictimCacheinfo> synced_victim_cacheinfos;
         bool with_complete_synced_victim_cacheinfos = compressed_victim_syncset.getLocalSyncedVictims(synced_victim_cacheinfos);
 
-        // TMPDEBUGSYNCSET
-        struct timespec t0 = Util::getCurrentTimespec();
-        struct timespec t1, t2, t3, t4, t5;
-
         if (!with_complete_synced_victim_cacheinfos) // Recover ONLY if compressed
         {
             std::list<VictimCacheinfo> complete_victim_cacheinfos;
@@ -265,9 +261,6 @@ namespace covered
             // Start from existing synced victim cacheinfos
             bool tmp_with_complete_existing_victim_cacheinfos = existing_victim_syncset.getLocalSyncedVictims(complete_victim_cacheinfos);
             assert(tmp_with_complete_existing_victim_cacheinfos); // Existing victim cacheinfos MUST be complete
-
-            // TMPDEBUGSYNCSET
-            t1 = Util::getCurrentTimespec();
 
             // Recover complete victim cacheinfos based on existing complete victim cacheinfos and synced victim cacheinfos if compressed
             for (std::list<VictimCacheinfo>::const_iterator synced_victim_cacheinfos_const_iter = synced_victim_cacheinfos.begin(); synced_victim_cacheinfos_const_iter != synced_victim_cacheinfos.end(); synced_victim_cacheinfos_const_iter++)
@@ -317,9 +310,6 @@ namespace covered
                 } // End of tmp_synced_victim_cacheinfo.isCompressed()
             } // End of enumeration of synced vicitm cacheinfos
 
-            // TMPDEBUGSYNCSET
-            t2 = Util::getCurrentTimespec();
-
             #ifdef DEBUG_VICTIM_SYNCSET
             // std::ostringstream oss;
             // oss << "[before sort]" << std::endl;
@@ -334,9 +324,6 @@ namespace covered
             // }
             // Util::dumpDebugMsg(kClassName, oss.str());
             #endif
-
-            // TMPDEBUGSYNCSET
-            t3 = Util::getCurrentTimespec();
 
             // Sort by local rewards in an ascending order
             VictimCacheinfo::sortByLocalRewards(complete_victim_cacheinfos);
@@ -357,26 +344,14 @@ namespace covered
             // Util::dumpDebugMsg(kClassName, oss.str());
             #endif
 
-            // TMPDEBUGSYNCSET
-            t4 = Util::getCurrentTimespec();
-
             // Replace existing complete victim cacheinfos with recovered ones
             complete_victim_syncset.setLocalSyncedVictims(complete_victim_cacheinfos);
-
-            // TMPDEBUGSYNCSET
-            t5 = Util::getCurrentTimespec();
         } // End of !with_complete_synced_victim_cacheinfos
         /*else // Directly use if not compressed
         {
             // Replace existing complete victim cacheinfos with synced ones
             complete_victim_syncset.setLocalSyncedVictims(synced_victim_cacheinfos);
         } // End of with_complete_synced_victim_cacheinfos*/
-
-        // TMPDEBUGSYNCSET
-        if (key.getKeystr() == "amwnaqnbqcshhvkhbxzfcbtmfqnfieoeuh")
-        {
-            Util::dumpVariablesForDebug(kClassName, 10, "t1-t0:", std::to_string(Util::getDeltaTimeUs(t1, t0)).c_str(), "t2-t1:", std::to_string(Util::getDeltaTimeUs(t2, t1)).c_str(), "t3-t2:", std::to_string(Util::getDeltaTimeUs(t3, t2)).c_str(), "t4-t3:", std::to_string(Util::getDeltaTimeUs(t4, t3)).c_str(), "t5-t4:", std::to_string(Util::getDeltaTimeUs(t5, t4)).c_str());
-        }
 
         // (3) Recover complete victim dirinfo sets if necessary
 
@@ -1247,7 +1222,7 @@ namespace covered
         assert(compressed_bitmap_ != INVALID_BITMAP);
         #else
         assert(is_valid_);
-        #endif;
+        #endif
 
         return;
     }

@@ -141,7 +141,7 @@ namespace covered
 
         // Get dirinfo sets for local beaconed ones of fetched victims
         // NOTE: victim dirinfo sets from local directory table MUST be complete
-        std::unordered_map<Key, DirinfoSet, KeyHasher> tmp_perkey_dirinfoset = tmp_cooperation_wrapper_ptr->getLocalBeaconedVictimsFromCacheinfos(tmp_victim_cacheinfos);
+        std::list<std::pair<Key, DirinfoSet>> tmp_perkey_dirinfoset = tmp_cooperation_wrapper_ptr->getLocalBeaconedVictimsFromCacheinfos(tmp_victim_cacheinfos);
 
         struct timespec victim_fetch_end_timestamp = Util::getCurrentTimespec();
         uint32_t victim_fetch_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(victim_fetch_end_timestamp, victim_fetch_start_timestamp));

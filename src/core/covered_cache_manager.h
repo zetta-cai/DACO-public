@@ -71,7 +71,8 @@ namespace covered
         void updateVictimTrackerForLocalBeaconedVictimDirinfo(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info); // Update victim dirinfos of local beaconed victims
 
         VictimSyncset accessVictimTrackerForLocalVictimSyncset(const uint32_t& dst_edge_idx_for_compression, const uint64_t& latest_local_cache_margin_bytes) const; // Get complete/delta victim syncset from victim tracker **for piggybacking-based victim synchronization** (dst_edge_idx_for_compression is used to update prev victim syncset towards dst edge idx; latest_local_cache_margin_bytes is used to replace not-latest cache margin bytes in edge-level victim metadata of the current edge node)
-        void updateVictimTrackerForNeighborVictimSyncset(const uint32_t& source_edge_idx, const VictimSyncset& neighbor_victim_syncset, const CooperationWrapperBase* cooperation_wrapper_ptr); // Update victim tracker in the current edge node for the received victim syncset from neighbor edge node (neighbor_victim_syncset could be either complete or compressed)
+        //void updateVictimTrackerForNeighborVictimSyncset(const uint32_t& source_edge_idx, const VictimSyncset& neighbor_victim_syncset, const CooperationWrapperBase* cooperation_wrapper_ptr); // Update victim tracker in the current edge node for the received victim syncset from neighbor edge node (neighbor_victim_syncset could be either complete or compressed)
+        void updateVictimTrackerForNeighborVictimSyncset(const uint32_t& source_edge_idx, const VictimSyncset& neighbor_victim_syncset, const CooperationWrapperBase* cooperation_wrapper_ptr, const Key& key = Key()); // Update victim tracker in the current edge node for the received victim syncset from neighbor edge node (neighbor_victim_syncset could be either complete or compressed) // TMPDEBUG231211
 
         // For directory metadata cache
 
@@ -82,7 +83,7 @@ namespace covered
 
         // For fast-path single-placement calculation in current edge node (NOT as a beacon node)
 
-        DeltaReward accessVictimTrackerForFastPathEvictionCost(const EdgeWrapper* edge_wrapper_ptr, const std::list<VictimCacheinfo>& curedge_local_cached_victim_cacheinfos, const std::unordered_map<Key, DirinfoSet, KeyHasher>& curedge_local_beaconed_local_cached_victim_dirinfosets) const; // NOTE: ONLY consider a single placement of edge_idx_
+        DeltaReward accessVictimTrackerForFastPathEvictionCost(const EdgeWrapper* edge_wrapper_ptr, const std::list<VictimCacheinfo>& curedge_local_cached_victim_cacheinfos, const std::list<std::pair<Key, DirinfoSet>>& curedge_local_beaconed_local_cached_victim_dirinfosets) const; // NOTE: ONLY consider a single placement of edge_idx_
 
         uint64_t getSizeForCapacity() const;
     private:
@@ -95,9 +96,9 @@ namespace covered
         bool placementCalculation_(const Key& key, const bool& is_global_cached, bool& has_best_placement, Edgeset& best_placement_edgeset, std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& best_placement_peredge_synced_victimset, std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& best_placement_peredge_fetched_victimset, const EdgeWrapper* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const; // has_best_placement indicates if the best placement exists (i.e., with positive placement gain) (return if edge node is finished)
 
         // For lazy victim fetching
-        bool parallelFetchVictims_(const ObjectSize& object_size, const Edgeset& best_placement_victim_fetch_edgeset, const EdgeWrapper* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency, std::unordered_map<uint32_t, std::list<VictimCacheinfo>>& extra_peredge_victim_cacheinfos, std::unordered_map<Key, DirinfoSet, KeyHasher>& extra_perkey_victim_dirinfoset) const; // For each edge node index in victim fetch edgeset (return if edge node is finished)
+        bool parallelFetchVictims_(const ObjectSize& object_size, const Edgeset& best_placement_victim_fetch_edgeset, const EdgeWrapper* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency, std::unordered_map<uint32_t, std::list<VictimCacheinfo>>& extra_peredge_victim_cacheinfos, std::list<std::pair<Key, DirinfoSet>>& extra_perkey_victim_dirinfoset) const; // For each edge node index in victim fetch edgeset (return if edge node is finished)
         void sendVictimFetchRequest_(const uint32_t& dst_edge_idx_for_compression, const ObjectSize& object_size, const EdgeWrapper* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, const NetworkAddr& edge_cache_server_recvreq_dst_addr, const bool& skip_propagation_latency) const;
-        void processVictimFetchResponse_(const MessageBase* control_respnose_ptr, const EdgeWrapper* edge_wrapper_ptr, std::unordered_map<uint32_t, std::list<VictimCacheinfo>>& extra_peredge_victim_cacheinfos, std::unordered_map<Key, DirinfoSet, KeyHasher>& extra_perkey_victim_dirinfoset) const;
+        void processVictimFetchResponse_(const MessageBase* control_respnose_ptr, const EdgeWrapper* edge_wrapper_ptr, std::unordered_map<uint32_t, std::list<VictimCacheinfo>>& extra_peredge_victim_cacheinfos, std::list<std::pair<Key, DirinfoSet>>& extra_perkey_victim_dirinfoset) const;
 
         // Utility functions
         void checkPointers_() const;

@@ -113,7 +113,7 @@ namespace covered
         {
             // Load
             bandwidth_usage = bandwidth_usage_;
-            event_list = event_list_;
+            event_list.addEvents(event_list_);
 
             // Reset
             bandwidth_usage_ = BandwidthUsage();

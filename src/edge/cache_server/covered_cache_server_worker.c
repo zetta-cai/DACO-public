@@ -369,6 +369,12 @@ namespace covered
                 is_global_popular = true;
             }
 
+            // TMPDEBUG231211
+            if (key.getKeystr() == "sbyh")
+            {
+                Util::dumpVariablesForDebug(instance_name_, 6, "CoveredCacheServerWorker::tryToTriggerCachePlacementForGetrsp_ for key", key.getKeystr().c_str(), "is_global_popular:", Util::toString(is_global_popular).c_str(), "local_admission_benefit:", std::to_string(local_admission_benefit).c_str());
+            }
+
             // Approximate single-placement calculation (a fast path w/o extra message overhead towards remote beacon edge node)
             if (is_global_popular)
             {
@@ -389,7 +395,7 @@ namespace covered
                     assert(tmp_is_exist_victims == true);
 
                     // Get dirinfo for local beaconed victims
-                    std::unordered_map<Key, DirinfoSet, KeyHasher> tmp_local_beaconed_local_cached_victim_dirinfoset = tmp_cooperation_wrapper_ptr->getLocalBeaconedVictimsFromCacheinfos(tmp_local_cached_victim_cacheinfos);
+                    std::list<std::pair<Key, DirinfoSet>> tmp_local_beaconed_local_cached_victim_dirinfoset = tmp_cooperation_wrapper_ptr->getLocalBeaconedVictimsFromCacheinfos(tmp_local_cached_victim_cacheinfos);
 
                     // Calculate local eviction cost by VictimTracker (to utilize perkey_victim_dirinfo_)
                     local_eviction_cost = tmp_covered_cache_manager_ptr->accessVictimTrackerForFastPathEvictionCost(tmp_edge_wrapper_ptr, tmp_local_cached_victim_cacheinfos, tmp_local_beaconed_local_cached_victim_dirinfoset);
@@ -412,6 +418,12 @@ namespace covered
                     const bool tmp_is_valid = !tmp_is_being_written;
                     bool tmp_is_successful = tmp_edge_wrapper_ptr->getLocalCacheAdmissionBufferPtr()->push(LocalCacheAdmissionItem(key, value, is_neighbor_cached, tmp_is_valid, skip_propagation_latency));
                     assert(tmp_is_successful);
+                }
+
+                // TMPDEBUG231211
+                if (key.getKeystr() == "sbyh")
+                {
+                    Util::dumpVariablesForDebug(instance_name_, 6, "tmp_object_size:", std::to_string(tmp_object_size).c_str(), "tmp_cache_margin_bytes:", std::to_string(tmp_cache_margin_bytes).c_str(), "local_eviction_cost:", std::to_string(local_eviction_cost).c_str());
                 }
             }
         }

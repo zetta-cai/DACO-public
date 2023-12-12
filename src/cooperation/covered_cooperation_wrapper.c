@@ -23,7 +23,7 @@ namespace covered
 
     // (0) Get dirinfo of local beaconed keys over the given keyset (NOTE: we do NOT guarantee the atomicity for thess keyset-level functions due to per-key fine-grained locking in cooperation wrapper) (ONLY for COVERED)
 
-    std::unordered_map<Key, DirinfoSet, KeyHasher> CoveredCooperationWrapper::getLocalBeaconedVictimsFromVictimSyncset(const VictimSyncset& victim_syncset) const
+    std::list<std::pair<Key, DirinfoSet>> CoveredCooperationWrapper::getLocalBeaconedVictimsFromVictimSyncset(const VictimSyncset& victim_syncset) const
     {
         checkPointers_();
 
@@ -33,16 +33,16 @@ namespace covered
         UNUSED(with_complete_victim_syncset); // Transmitted victim syncset received from neighbor edge node can be either complete or compressed
 
         // Get directory info sets for neighbor synced victimed beaconed by the current edge node
-        std::unordered_map<Key, DirinfoSet, KeyHasher> local_beaconed_neighbor_synced_victim_dirinfosets = getLocalBeaconedVictimsFromCacheinfos(neighbor_synced_victims); // NOTE: dirinfo sets from local directory table MUST be complete
+        std::list<std::pair<Key, DirinfoSet>> local_beaconed_neighbor_synced_victim_dirinfosets = getLocalBeaconedVictimsFromCacheinfos(neighbor_synced_victims); // NOTE: dirinfo sets from local directory table MUST be complete
 
         return local_beaconed_neighbor_synced_victim_dirinfosets;
     }
 
-    std::unordered_map<Key, DirinfoSet, KeyHasher> CoveredCooperationWrapper::getLocalBeaconedVictimsFromCacheinfos(const std::list<VictimCacheinfo>& victim_cacheinfos) const
+    std::list<std::pair<Key, DirinfoSet>> CoveredCooperationWrapper::getLocalBeaconedVictimsFromCacheinfos(const std::list<VictimCacheinfo>& victim_cacheinfos) const
     {
         // NOTE: victim_cacheinfos is from local edge cache or neighbor edge node, which can be either complete or compressed
         
-        std::unordered_map<Key, DirinfoSet, KeyHasher> local_beaconed_victim_dirinfosets;
+        std::list<std::pair<Key, DirinfoSet>> local_beaconed_victim_dirinfosets;
         for (std::list<VictimCacheinfo>::const_iterator iter = victim_cacheinfos.begin(); iter != victim_cacheinfos.end(); iter++)
         {
             // NOTE: local/neighbor synced victim MUST NOT invalid or fully-deduped
@@ -60,7 +60,7 @@ namespace covered
             {
                 DirinfoSet tmp_dirinfo_set = getLocalDirectoryInfos(tmp_key);
                 assert(tmp_dirinfo_set.isComplete()); // NOTE: dirinfo sets from local directory table MUST be complete
-                local_beaconed_victim_dirinfosets.insert(std::pair(tmp_key, tmp_dirinfo_set));
+                local_beaconed_victim_dirinfosets.push_back(std::pair(tmp_key, tmp_dirinfo_set));
             }
         }
         return local_beaconed_victim_dirinfosets;
