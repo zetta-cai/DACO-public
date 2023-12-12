@@ -7,6 +7,7 @@
 #ifndef DIRECTORY_INFO_H
 #define DIRECTORY_INFO_H
 
+#include <list>
 #include <string>
 #include <unordered_set>
 
@@ -17,6 +18,9 @@ namespace covered
     class DirectoryInfo
     {
     public:
+        static std::list<DirectoryInfo>::iterator findDirinfoFromList(const DirectoryInfo& dirinfo, std::list<DirectoryInfo>& dirinfo_list);
+        static std::list<DirectoryInfo>::const_iterator findDirinfoFromList(const DirectoryInfo& dirinfo, const std::list<DirectoryInfo>& dirinfo_list);
+
         DirectoryInfo();
         DirectoryInfo(const uint32_t& target_edge_idx);
         ~DirectoryInfo();

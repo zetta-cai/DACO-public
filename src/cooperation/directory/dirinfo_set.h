@@ -11,7 +11,6 @@
 
 #include <list>
 #include <string>
-#include <unordered_set>
 
 #include "common/key.h"
 #include "cooperation/directory/directory_info.h"
@@ -28,7 +27,7 @@ namespace covered
         static std::list<std::pair<Key, DirinfoSet>>::const_iterator findDirinfoSetForKey(const Key& key, const std::list<std::pair<Key, DirinfoSet>>& dirinfo_sets); // Find DirinfoSet for the given key
 
         DirinfoSet();
-        DirinfoSet(const std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& dirinfo_set);
+        DirinfoSet(const std::list<DirectoryInfo>& dirinfo_set);
         ~DirinfoSet();
 
         bool isInvalid() const;
@@ -42,12 +41,12 @@ namespace covered
         bool tryToInsertIfComplete(const DirectoryInfo& directory_info, bool& is_insert); // Return if with complete dirinfo set
         bool tryToEraseIfComplete(const DirectoryInfo& directory_info, bool& is_erase); // Return if with complete dirinfo set
         bool getDirinfoIfComplete(const uint32_t advance_idx, DirectoryInfo& directory_info) const; // Return if with complete dirinfo set
-        bool getDirinfoSetIfComplete(std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& dirinfo_set) const; // Return if with complete dirinfo set
-        void setDirinfoSetForComplete(const std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& dirinfo_set);
+        bool getDirinfoSetIfComplete(std::list<DirectoryInfo>& dirinfo_set) const; // Return if with complete dirinfo set
+        void setDirinfoSetForComplete(const std::list<DirectoryInfo>& dirinfo_set);
 
         // For compressed dirinfo set
-        bool getDeltaDirinfoSetIfCompressed(std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& new_dirinfo_delta_set, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& stale_dirinfo_delta_set) const; // Return if with complete dirinfo set
-        void setDeltaDirinfoSetForCompress(const std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& new_dirinfo_delta_set, const std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& stale_dirinfo_delta_set);
+        bool getDeltaDirinfoSetIfCompressed(std::list<DirectoryInfo>& new_dirinfo_delta_set, std::list<DirectoryInfo>& stale_dirinfo_delta_set) const; // Return if with complete dirinfo set
+        void setDeltaDirinfoSetForCompress(const std::list<DirectoryInfo>& new_dirinfo_delta_set, const std::list<DirectoryInfo>& stale_dirinfo_delta_set);
 
         uint32_t getDirinfoSetPayloadSize() const;
         uint32_t serialize(DynamicArray& msg_payload, const uint32_t& position) const;
@@ -65,19 +64,19 @@ namespace covered
         static const uint8_t NEW_DIRINFO_SET_DELTA_MASK; // Whether new dirinfo set exists after delta compression
         static const uint8_t STALE_DIRINFO_SET_DELTA_MASK; // Whether stale dirinfo set exists after delta compression
 
-        uint32_t getDirinfoSetPayloadSizeInternal_(const std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& dirinfo_set) const;
-        uint32_t serializeDirinfoSetInternal_(DynamicArray& msg_payload, const uint32_t& position, const std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& dirinfo_set) const;
-        uint32_t deserializeDirinfoSetInternal_(const DynamicArray& msg_payload, const uint32_t& position, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& dirinfo_set);
+        uint32_t getDirinfoSetPayloadSizeInternal_(const std::list<DirectoryInfo>& dirinfo_set) const;
+        uint32_t serializeDirinfoSetInternal_(DynamicArray& msg_payload, const uint32_t& position, const std::list<DirectoryInfo>& dirinfo_set) const;
+        uint32_t deserializeDirinfoSetInternal_(const DynamicArray& msg_payload, const uint32_t& position, std::list<DirectoryInfo>& dirinfo_set);
 
-        uint32_t getDirinfoSetSizeForCapacityInternal_(const std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& dirinfo_set) const;
+        uint32_t getDirinfoSetSizeForCapacityInternal_(const std::list<DirectoryInfo>& dirinfo_set) const;
 
         uint8_t delta_bitmap_; // 1st lowest bit indicates if the dirinfo set is a compressed dirinfo set (2nd lowest bit for new dirinfo delta set; 3rd lowest bit for stale dirinfo delta set)
 
         // For complete dirinfo set
-        std::unordered_set<DirectoryInfo, DirectoryInfoHasher> dirinfo_set_;
+        std::list<DirectoryInfo> dirinfo_set_;
         // For compressed dirinfo set
-        std::unordered_set<DirectoryInfo, DirectoryInfoHasher> new_dirinfo_delta_set_;
-        std::unordered_set<DirectoryInfo, DirectoryInfoHasher> stale_dirinfo_delta_set_;
+        std::list<DirectoryInfo> new_dirinfo_delta_set_;
+        std::list<DirectoryInfo> stale_dirinfo_delta_set_;
     };
 }
 

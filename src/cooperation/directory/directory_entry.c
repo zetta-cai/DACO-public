@@ -27,14 +27,14 @@ namespace covered
 
     void DirectoryEntry::getAllDirinfo(DirinfoSet& dirinfo_set) const
     {
-        std::unordered_set<DirectoryInfo, DirectoryInfoHasher> tmp_dirinfo_set;
+        std::list<DirectoryInfo> tmp_dirinfo_set;
         tmp_dirinfo_set.clear();
 
         // Add all directory information into directory_info_set
         for (dirinfo_entry_t::const_iterator iter = directory_entry_.begin(); iter != directory_entry_.end(); iter++)
         {
             const DirectoryInfo& directory_info = iter->first;
-            tmp_dirinfo_set.insert(directory_info);
+            tmp_dirinfo_set.push_back(directory_info);
         }
 
         dirinfo_set = DirinfoSet(tmp_dirinfo_set);
@@ -43,7 +43,7 @@ namespace covered
 
     void DirectoryEntry::getAllValidDirinfo(DirinfoSet& dirinfo_set) const
     {
-        std::unordered_set<DirectoryInfo, DirectoryInfoHasher> tmp_dirinfo_set;
+        std::list<DirectoryInfo> tmp_dirinfo_set;
         tmp_dirinfo_set.clear();
 
         // Add all valid directory information into valid_directory_info_set
@@ -53,7 +53,7 @@ namespace covered
             const DirectoryMetadata& directory_metadata = iter->second;
             if (directory_metadata.isValidMetadata()) // validity = true
             {
-                tmp_dirinfo_set.insert(directory_info);
+                tmp_dirinfo_set.push_back(directory_info);
             }
         }
 
@@ -137,11 +137,11 @@ namespace covered
 
     void DirectoryEntry::invalidateMetadataForAllDirinfoIfExist(DirinfoSet& all_dirinfo)
     {
-        std::unordered_set<DirectoryInfo, DirectoryInfoHasher> tmp_dirinfo_set;
+        std::list<DirectoryInfo> tmp_dirinfo_set;
         for (dirinfo_entry_t::iterator iter = directory_entry_.begin(); iter != directory_entry_.end(); iter++)
         {
             iter->second.invalidateMetadata();
-            tmp_dirinfo_set.insert(iter->first);
+            tmp_dirinfo_set.push_back(iter->first);
         }
         all_dirinfo = DirinfoSet(tmp_dirinfo_set);
         return;

@@ -22,38 +22,38 @@ namespace covered
 
         // (1) Perform delta compression on the set of dirinfos
 
-        std::unordered_set<DirectoryInfo, DirectoryInfoHasher> new_dirinfo_set;
-        std::unordered_set<DirectoryInfo, DirectoryInfoHasher> stale_dirinfo_set;
+        std::list<DirectoryInfo> new_dirinfo_set;
+        std::list<DirectoryInfo> stale_dirinfo_set;
         bool with_complete_dirinfo_set = true;
         uint32_t total_payload_size_for_current_dirinfo_set = 0;
         uint32_t total_payload_size_for_final_dirinfo_set = 0;
 
         // Calculate delta dirinfos
-        std::unordered_set<DirectoryInfo, DirectoryInfoHasher> current_dirinfo_unordered_set;
-        bool current_with_complete_dirinfo_set = current_dirinfo_set.getDirinfoSetIfComplete(current_dirinfo_unordered_set);
+        std::list<DirectoryInfo> current_dirinfo_list;
+        bool current_with_complete_dirinfo_set = current_dirinfo_set.getDirinfoSetIfComplete(current_dirinfo_list);
         assert(current_with_complete_dirinfo_set == true);
-        std::unordered_set<DirectoryInfo, DirectoryInfoHasher> prev_dirinfo_unordered_set;
-        bool prev_with_complete_dirinfo_set = prev_dirinfo_set.getDirinfoSetIfComplete(prev_dirinfo_unordered_set);
+        std::list<DirectoryInfo> prev_dirinfo_list;
+        bool prev_with_complete_dirinfo_set = prev_dirinfo_set.getDirinfoSetIfComplete(prev_dirinfo_list);
         assert(prev_with_complete_dirinfo_set == true);
-        for (std::unordered_set<DirectoryInfo, DirectoryInfoHasher>::const_iterator current_dirinfo_unordered_set_const_iter = current_dirinfo_unordered_set.begin(); current_dirinfo_unordered_set_const_iter != current_dirinfo_unordered_set.end(); current_dirinfo_unordered_set_const_iter++) // Get new dirinfos
+        for (std::list<DirectoryInfo>::const_iterator current_dirinfo_list_const_iter = current_dirinfo_list.begin(); current_dirinfo_list_const_iter != current_dirinfo_list.end(); current_dirinfo_list_const_iter++) // Get new dirinfos
         {
-            const DirectoryInfo& tmp_current_dirinfo = *current_dirinfo_unordered_set_const_iter;
+            const DirectoryInfo& tmp_current_dirinfo = *current_dirinfo_list_const_iter;
             total_payload_size_for_current_dirinfo_set += tmp_current_dirinfo.getDirectoryInfoPayloadSize();
 
-            std::unordered_set<DirectoryInfo, DirectoryInfoHasher>::const_iterator tmp_prev_dirinfo_unordered_set_const_iter = prev_dirinfo_unordered_set.find(tmp_current_dirinfo);
-            if (tmp_prev_dirinfo_unordered_set_const_iter == prev_dirinfo_unordered_set.end()) // New dirinfo (with current yet without prev)
+            std::list<DirectoryInfo>::const_iterator tmp_prev_dirinfo_list_const_iter = DirectoryInfo::findDirinfoFromList(tmp_current_dirinfo, prev_dirinfo_list);
+            if (tmp_prev_dirinfo_list_const_iter == prev_dirinfo_list.end()) // New dirinfo (with current yet without prev)
             {
-                new_dirinfo_set.insert(tmp_current_dirinfo);
+                new_dirinfo_set.push_back(tmp_current_dirinfo);
                 total_payload_size_for_final_dirinfo_set += tmp_current_dirinfo.getDirectoryInfoPayloadSize();
             }
         }
-        for (std::unordered_set<DirectoryInfo, DirectoryInfoHasher>::const_iterator prev_dirinfo_unordered_set_const_iter = prev_dirinfo_unordered_set.begin(); prev_dirinfo_unordered_set_const_iter != prev_dirinfo_unordered_set.end(); prev_dirinfo_unordered_set_const_iter++) // Get stale dirinfos
+        for (std::list<DirectoryInfo>::const_iterator prev_dirinfo_list_const_iter = prev_dirinfo_list.begin(); prev_dirinfo_list_const_iter != prev_dirinfo_list.end(); prev_dirinfo_list_const_iter++) // Get stale dirinfos
         {
-            const DirectoryInfo& tmp_prev_dirinfo = *prev_dirinfo_unordered_set_const_iter;
-            std::unordered_set<DirectoryInfo, DirectoryInfoHasher>::const_iterator tmp_current_dirinfo_unordered_set_const_iter = current_dirinfo_unordered_set.find(tmp_prev_dirinfo);
-            if (tmp_current_dirinfo_unordered_set_const_iter == current_dirinfo_unordered_set.end()) // Stale dirinfo (with prev yet without current)
+            const DirectoryInfo& tmp_prev_dirinfo = *prev_dirinfo_list_const_iter;
+            std::list<DirectoryInfo>::const_iterator tmp_current_dirinfo_list_const_iter = DirectoryInfo::findDirinfoFromList(tmp_prev_dirinfo, current_dirinfo_list);
+            if (tmp_current_dirinfo_list_const_iter == current_dirinfo_list.end()) // Stale dirinfo (with prev yet without current)
             {
-                stale_dirinfo_set.insert(tmp_prev_dirinfo);
+                stale_dirinfo_set.push_back(tmp_prev_dirinfo);
                 total_payload_size_for_final_dirinfo_set += tmp_prev_dirinfo.getDirectoryInfoPayloadSize();
             }
         }
@@ -98,39 +98,39 @@ namespace covered
         // (1) Recover complete dirinfo unordered set
 
         // Start from existing complete dirinfo unordered set
-        std::unordered_set<DirectoryInfo, DirectoryInfoHasher> complete_dirinfo_unordered_set;
-        bool tmp_with_complete_dirinfo_unordered_set = existing_dirinfo_set.getDirinfoSetIfComplete(complete_dirinfo_unordered_set);
-        assert(tmp_with_complete_dirinfo_unordered_set);
+        std::list<DirectoryInfo> complete_dirinfo_list;
+        bool tmp_with_complete_dirinfo_list = existing_dirinfo_set.getDirinfoSetIfComplete(complete_dirinfo_list);
+        assert(tmp_with_complete_dirinfo_list);
 
         // Get delta dirinfo sets
-        std::unordered_set<DirectoryInfo, DirectoryInfoHasher> new_dirinfo_set;
-        std::unordered_set<DirectoryInfo, DirectoryInfoHasher> stale_dirinfo_set;
-        tmp_with_complete_dirinfo_unordered_set = compressed_dirinfo_set.getDeltaDirinfoSetIfCompressed(new_dirinfo_set, stale_dirinfo_set);
-        assert(!tmp_with_complete_dirinfo_unordered_set);
+        std::list<DirectoryInfo> new_dirinfo_set;
+        std::list<DirectoryInfo> stale_dirinfo_set;
+        tmp_with_complete_dirinfo_list = compressed_dirinfo_set.getDeltaDirinfoSetIfCompressed(new_dirinfo_set, stale_dirinfo_set);
+        assert(!tmp_with_complete_dirinfo_list);
 
         // Add new dirinfos into complete dirinfo set
-        for (std::unordered_set<DirectoryInfo, DirectoryInfoHasher>::const_iterator new_dirinfo_set_const_iter = new_dirinfo_set.begin(); new_dirinfo_set_const_iter != new_dirinfo_set.end(); new_dirinfo_set_const_iter++)
+        for (std::list<DirectoryInfo>::const_iterator new_dirinfo_set_const_iter = new_dirinfo_set.begin(); new_dirinfo_set_const_iter != new_dirinfo_set.end(); new_dirinfo_set_const_iter++)
         {
             const DirectoryInfo& tmp_dirinfo = *new_dirinfo_set_const_iter;
-            if (complete_dirinfo_unordered_set.find(tmp_dirinfo) == complete_dirinfo_unordered_set.end())
+            if (DirectoryInfo::findDirinfoFromList(tmp_dirinfo, complete_dirinfo_list) == complete_dirinfo_list.end())
             {
-                complete_dirinfo_unordered_set.insert(tmp_dirinfo);
+                complete_dirinfo_list.push_back(tmp_dirinfo);
             }
         }
 
         // Remove stale dirinfos from complete dirinfo set
-        for (std::unordered_set<DirectoryInfo, DirectoryInfoHasher>::const_iterator stale_dirinfo_set_const_iter = stale_dirinfo_set.begin(); stale_dirinfo_set_const_iter != stale_dirinfo_set.end(); stale_dirinfo_set_const_iter++)
+        for (std::list<DirectoryInfo>::const_iterator stale_dirinfo_set_const_iter = stale_dirinfo_set.begin(); stale_dirinfo_set_const_iter != stale_dirinfo_set.end(); stale_dirinfo_set_const_iter++)
         {
             const DirectoryInfo& tmp_dirinfo = *stale_dirinfo_set_const_iter;
-            std::unordered_set<DirectoryInfo, DirectoryInfoHasher>::const_iterator tmp_complete_dirinfo_unordered_set_const_iter = complete_dirinfo_unordered_set.find(tmp_dirinfo);
-            if (tmp_complete_dirinfo_unordered_set_const_iter != complete_dirinfo_unordered_set.end())
+            std::list<DirectoryInfo>::const_iterator tmp_complete_dirinfo_list_const_iter = DirectoryInfo::findDirinfoFromList(tmp_dirinfo, complete_dirinfo_list);
+            if (tmp_complete_dirinfo_list_const_iter != complete_dirinfo_list.end())
             {
-                complete_dirinfo_unordered_set.erase(tmp_complete_dirinfo_unordered_set_const_iter);
+                complete_dirinfo_list.erase(tmp_complete_dirinfo_list_const_iter);
             }
         }
 
         // Replace existing complete dirinfo set with recovered one
-        complete_dirinfo_set.setDirinfoSetForComplete(complete_dirinfo_unordered_set);
+        complete_dirinfo_set.setDirinfoSetForComplete(complete_dirinfo_list);
 
         assert(complete_dirinfo_set.isComplete());
         return complete_dirinfo_set;
@@ -167,7 +167,7 @@ namespace covered
         delta_bitmap_ = INVALID_BITMAP;
     }
 
-    DirinfoSet::DirinfoSet(const std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& dirinfo_set) : new_dirinfo_delta_set_(), stale_dirinfo_delta_set_()
+    DirinfoSet::DirinfoSet(const std::list<DirectoryInfo>& dirinfo_set) : new_dirinfo_delta_set_(), stale_dirinfo_delta_set_()
     {
         delta_bitmap_ = COMPLETE_BITMAP;
         dirinfo_set_ = dirinfo_set;
@@ -221,7 +221,7 @@ namespace covered
         if (with_complete_dirinfo_set)
         {
             // Check if directory info exists
-            std::unordered_set<DirectoryInfo, DirectoryInfoHasher>::const_iterator dirinfo_set_const_iter = dirinfo_set_.find(directory_info);
+            std::list<DirectoryInfo>::const_iterator dirinfo_set_const_iter = DirectoryInfo::findDirinfoFromList(directory_info, dirinfo_set_);
             is_exist = (dirinfo_set_const_iter != dirinfo_set_.end());
         }
         
@@ -248,10 +248,10 @@ namespace covered
         if (with_complete_dirinfo_set)
         {
             // Try to insert directory info if not exists
-            std::unordered_set<DirectoryInfo, DirectoryInfoHasher>::const_iterator dirinfo_set_const_iter = dirinfo_set_.find(directory_info);
+            std::list<DirectoryInfo>::const_iterator dirinfo_set_const_iter = DirectoryInfo::findDirinfoFromList(directory_info, dirinfo_set_);
             if (dirinfo_set_const_iter == dirinfo_set_.end())
             {
-                dirinfo_set_.insert(directory_info);
+                dirinfo_set_.push_back(directory_info);
                 is_insert = true;
             }
         }
@@ -265,7 +265,7 @@ namespace covered
         if (with_complete_dirinfo_set)
         {
             // Try to erase directory info if exists
-            std::unordered_set<DirectoryInfo, DirectoryInfoHasher>::const_iterator dirinfo_set_const_iter = dirinfo_set_.find(directory_info);
+            std::list<DirectoryInfo>::const_iterator dirinfo_set_const_iter = DirectoryInfo::findDirinfoFromList(directory_info, dirinfo_set_);
             if (dirinfo_set_const_iter != dirinfo_set_.end())
             {
                 dirinfo_set_.erase(dirinfo_set_const_iter);
@@ -283,7 +283,7 @@ namespace covered
             assert(advance_idx < dirinfo_set_.size());
 
             // Get ith directory info if exists
-            std::unordered_set<DirectoryInfo, DirectoryInfoHasher>::const_iterator dirinfo_set_const_iter = dirinfo_set_.begin();
+            std::list<DirectoryInfo>::const_iterator dirinfo_set_const_iter = dirinfo_set_.begin();
             std::advance(dirinfo_set_const_iter, advance_idx);
             assert(dirinfo_set_const_iter != dirinfo_set_.end());
             directory_info = *dirinfo_set_const_iter;
@@ -291,7 +291,7 @@ namespace covered
         return with_complete_dirinfo_set;
     }
 
-    bool DirinfoSet::getDirinfoSetIfComplete(std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& dirinfo_set) const
+    bool DirinfoSet::getDirinfoSetIfComplete(std::list<DirectoryInfo>& dirinfo_set) const
     {
         assert(delta_bitmap_ != INVALID_BITMAP);
 
@@ -306,7 +306,7 @@ namespace covered
         return with_complete_dirinfo_set;
     }
 
-    void DirinfoSet::setDirinfoSetForComplete(const std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& dirinfo_set)
+    void DirinfoSet::setDirinfoSetForComplete(const std::list<DirectoryInfo>& dirinfo_set)
     {
         assert(delta_bitmap_ != INVALID_BITMAP);
 
@@ -320,7 +320,7 @@ namespace covered
 
     // For compressed dirinfo set
 
-    bool DirinfoSet::getDeltaDirinfoSetIfCompressed(std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& new_dirinfo_delta_set, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& stale_dirinfo_delta_set) const
+    bool DirinfoSet::getDeltaDirinfoSetIfCompressed(std::list<DirectoryInfo>& new_dirinfo_delta_set, std::list<DirectoryInfo>& stale_dirinfo_delta_set) const
     {
         assert(delta_bitmap_ != INVALID_BITMAP);
 
@@ -347,7 +347,7 @@ namespace covered
         return with_complete_dirinfo_set;
     }
 
-    void DirinfoSet::setDeltaDirinfoSetForCompress(const std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& new_dirinfo_delta_set, const std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& stale_dirinfo_delta_set)
+    void DirinfoSet::setDeltaDirinfoSetForCompress(const std::list<DirectoryInfo>& new_dirinfo_delta_set, const std::list<DirectoryInfo>& stale_dirinfo_delta_set)
     {
         assert(delta_bitmap_ != INVALID_BITMAP);
 
@@ -509,12 +509,12 @@ namespace covered
         return *this;
     }
 
-    uint32_t DirinfoSet::getDirinfoSetPayloadSizeInternal_(const std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& dirinfo_set) const
+    uint32_t DirinfoSet::getDirinfoSetPayloadSizeInternal_(const std::list<DirectoryInfo>& dirinfo_set) const
     {
         uint32_t dirinfo_set_payload_size = 0;
 
         dirinfo_set_payload_size += sizeof(uint32_t); // dirinfo set size
-        for (std::unordered_set<DirectoryInfo, DirectoryInfoHasher>::const_iterator dirinfo_const_iter = dirinfo_set.begin(); dirinfo_const_iter != dirinfo_set.end(); dirinfo_const_iter++)
+        for (std::list<DirectoryInfo>::const_iterator dirinfo_const_iter = dirinfo_set.begin(); dirinfo_const_iter != dirinfo_set.end(); dirinfo_const_iter++)
         {
             dirinfo_set_payload_size += dirinfo_const_iter->getDirectoryInfoPayloadSize(); // complete dirinfos
         }
@@ -522,13 +522,13 @@ namespace covered
         return dirinfo_set_payload_size;
     }
 
-    uint32_t DirinfoSet::serializeDirinfoSetInternal_(DynamicArray& msg_payload, const uint32_t& position, const std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& dirinfo_set) const
+    uint32_t DirinfoSet::serializeDirinfoSetInternal_(DynamicArray& msg_payload, const uint32_t& position, const std::list<DirectoryInfo>& dirinfo_set) const
     {
         uint32_t size = position;
         uint32_t dirinfo_set_size = dirinfo_set.size();
         msg_payload.deserialize(size, (const char*)&dirinfo_set_size, sizeof(uint32_t));
         size += sizeof(uint32_t);
-        for (std::unordered_set<DirectoryInfo, DirectoryInfoHasher>::const_iterator dirinfo_const_iter = dirinfo_set.begin(); dirinfo_const_iter != dirinfo_set.end(); dirinfo_const_iter++)
+        for (std::list<DirectoryInfo>::const_iterator dirinfo_const_iter = dirinfo_set.begin(); dirinfo_const_iter != dirinfo_set.end(); dirinfo_const_iter++)
         {
             uint32_t dirinfo_serialize_size = dirinfo_const_iter->serialize(msg_payload, size);
             size += dirinfo_serialize_size;
@@ -536,7 +536,7 @@ namespace covered
         return size - position;
     }
 
-    uint32_t DirinfoSet::deserializeDirinfoSetInternal_(const DynamicArray& msg_payload, const uint32_t& position, std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& dirinfo_set)
+    uint32_t DirinfoSet::deserializeDirinfoSetInternal_(const DynamicArray& msg_payload, const uint32_t& position, std::list<DirectoryInfo>& dirinfo_set)
     {
         uint32_t size = position;
         uint32_t dirinfo_set_size = 0;
@@ -547,15 +547,15 @@ namespace covered
             DirectoryInfo dirinfo;
             uint32_t dirinfo_deserialize_size = dirinfo.deserialize(msg_payload, size);
             size += dirinfo_deserialize_size;
-            dirinfo_set.insert(dirinfo);
+            dirinfo_set.push_back(dirinfo);
         }
         return size - position;
     }
 
-    uint32_t DirinfoSet::getDirinfoSetSizeForCapacityInternal_(const std::unordered_set<DirectoryInfo, DirectoryInfoHasher>& dirinfo_set) const
+    uint32_t DirinfoSet::getDirinfoSetSizeForCapacityInternal_(const std::list<DirectoryInfo>& dirinfo_set) const
     {
         uint32_t dirinfo_set_total_size  = 0;
-        for (std::unordered_set<DirectoryInfo, DirectoryInfoHasher>::const_iterator dirinfo_const_iter = dirinfo_set.begin(); dirinfo_const_iter != dirinfo_set.end(); dirinfo_const_iter++)
+        for (std::list<DirectoryInfo>::const_iterator dirinfo_const_iter = dirinfo_set.begin(); dirinfo_const_iter != dirinfo_set.end(); dirinfo_const_iter++)
         {
             dirinfo_set_total_size += dirinfo_const_iter->getSizeForCapacity(); // complete dirinfos
         }

@@ -6,6 +6,32 @@ namespace covered
 {
     const std::string DirectoryInfo::kClassName("DirectoryInfo");
 
+    std::list<DirectoryInfo>::iterator DirectoryInfo::findDirinfoFromList(const DirectoryInfo& dirinfo, std::list<DirectoryInfo>& dirinfo_list)
+    {
+        std::list<DirectoryInfo>::iterator iter = dirinfo_list.begin();
+        for (; iter != dirinfo_list.end(); iter++)
+        {
+            if (*iter == dirinfo)
+            {
+                break;
+            }
+        }
+        return iter;
+    }
+
+    std::list<DirectoryInfo>::const_iterator DirectoryInfo::findDirinfoFromList(const DirectoryInfo& dirinfo, const std::list<DirectoryInfo>& dirinfo_list)
+    {
+        std::list<DirectoryInfo>::const_iterator iter = dirinfo_list.begin();
+        for (; iter != dirinfo_list.end(); iter++)
+        {
+            if (*iter == dirinfo)
+            {
+                break;
+            }
+        }
+        return iter;
+    }
+
     DirectoryInfo::DirectoryInfo()
     {
         target_edge_idx_ = 0;

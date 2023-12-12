@@ -18,15 +18,15 @@ namespace covered
     class VictimDirinfo
     {
     public:
+        static std::list<std::pair<Key, VictimDirinfo>>::iterator findVictimDirinfoForKey(const Key& key, std::list<std::pair<Key, VictimDirinfo>>& perkey_victim_dirinfos);
+        static std::list<std::pair<Key, VictimDirinfo>>::const_iterator findVictimDirinfoForKey(const Key& key, const std::list<std::pair<Key, VictimDirinfo>>& perkey_victim_dirinfos);
+        
         VictimDirinfo();
         //VictimDirinfo(const bool& is_local_beaconed);
         //VictimDirinfo(const bool& is_local_beaconed, const DirinfoSet& dirinfo_set);
         VictimDirinfo(const uint32_t& beacon_edge_idx);
         VictimDirinfo(const uint32_t& beacon_edge_idx, const DirinfoSet& dirinfo_set);
         ~VictimDirinfo();
-        
-        static std::list<std::pair<Key, VictimDirinfo>>::iterator findVictimDirinfoForKey(const Key& key, std::list<std::pair<Key, VictimDirinfo>>& perkey_victim_dirinfos);
-        static std::list<std::pair<Key, VictimDirinfo>>::const_iterator findVictimDirinfoForKey(const Key& key, const std::list<std::pair<Key, VictimDirinfo>>& perkey_victim_dirinfos);
 
         uint32_t getRefcnt() const;
         void incrRefcnt();

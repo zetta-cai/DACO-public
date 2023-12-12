@@ -366,7 +366,7 @@ namespace covered
         
         // Try to acquire permission for the write
         LockResult lock_result = LockResult::kFailure;
-        DirinfoSet all_dirinfo = DirinfoSet(std::unordered_set<DirectoryInfo, DirectoryInfoHasher>());
+        DirinfoSet all_dirinfo = DirinfoSet(std::list<DirectoryInfo>());
         is_finish = processReqToAcquireLocalWritelock_(control_request_ptr, edge_cache_server_worker_recvreq_dst_addr, lock_result, all_dirinfo, total_bandwidth_usage, event_list);
         if (is_finish)
         {

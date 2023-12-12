@@ -1097,7 +1097,7 @@ namespace covered
         bool current_is_beacon = tmp_edge_wrapper_ptr->currentIsBeacon(key);
 
         // Check if beacon node is the current edge node and acquire write permission
-        DirinfoSet all_dirinfo = DirinfoSet(std::unordered_set<DirectoryInfo, DirectoryInfoHasher>());
+        DirinfoSet all_dirinfo = DirinfoSet(std::list<DirectoryInfo>());
         while (true) // Wait for write permission by polling or interruption
         {
             if (!tmp_edge_wrapper_ptr->isNodeRunning()) // edge node is NOT running

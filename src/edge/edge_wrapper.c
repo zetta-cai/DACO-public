@@ -375,11 +375,11 @@ namespace covered
         struct timespec invalidate_cache_copies_start_timestamp = Util::getCurrentTimespec();
 
         // Get dirinfo unordered set from dirinfo set
-        std::unordered_set<DirectoryInfo, DirectoryInfoHasher> tmp_all_dirinfo_unordered_set;
-        bool with_complete_dirinfo_set = all_dirinfo.getDirinfoSetIfComplete(tmp_all_dirinfo_unordered_set);
+        std::list<DirectoryInfo> tmp_all_dirinfo_list;
+        bool with_complete_dirinfo_set = all_dirinfo.getDirinfoSetIfComplete(tmp_all_dirinfo_list);
         assert(with_complete_dirinfo_set); // NOTE: dirinfo set from local directory table MUST be complete
 
-        uint32_t invalidate_edgecnt = tmp_all_dirinfo_unordered_set.size();
+        uint32_t invalidate_edgecnt = tmp_all_dirinfo_list.size();
         if (invalidate_edgecnt == 0)
         {
             return is_finish;
@@ -388,7 +388,7 @@ namespace covered
 
         // Convert directory informations into destination network addresses
         std::unordered_map<uint32_t, NetworkAddr> percachecopy_dstaddr;
-        for (std::unordered_set<DirectoryInfo, DirectoryInfoHasher>::const_iterator iter = tmp_all_dirinfo_unordered_set.begin(); iter != tmp_all_dirinfo_unordered_set.end(); iter++)
+        for (std::list<DirectoryInfo>::const_iterator iter = tmp_all_dirinfo_list.begin(); iter != tmp_all_dirinfo_list.end(); iter++)
         {
             const bool is_launch_edge = false; // Just connect neighbor to invalidate cache copies instead of launching the neighbor
             uint32_t tmp_edgeidx = iter->getTargetEdgeIdx();

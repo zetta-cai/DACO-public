@@ -30,7 +30,7 @@ namespace covered
 
     DirinfoSet DirectoryTable::getAll(const Key& key) const
     {
-        DirinfoSet all_dirinfo = DirinfoSet(std::unordered_set<DirectoryInfo, DirectoryInfoHasher>());
+        DirinfoSet all_dirinfo = DirinfoSet(std::list<DirectoryInfo>());
 
         // Prepare GetAllDirinfoParam
         DirectoryEntry::GetAllDirinfoParam tmp_param = {all_dirinfo};
@@ -200,14 +200,14 @@ namespace covered
         bool is_neighbor_cached = false;
 
         DirinfoSet all_dirinfo = getAll(key);
-        std::unordered_set<DirectoryInfo, DirectoryInfoHasher> dirinfo_unordered_set;
-        bool with_complete_dirinfo_set = all_dirinfo.getDirinfoSetIfComplete(dirinfo_unordered_set);
+        std::list<DirectoryInfo> dirinfo_list;
+        bool with_complete_dirinfo_set = all_dirinfo.getDirinfoSetIfComplete(dirinfo_list);
         assert(with_complete_dirinfo_set); // dirinfo set from directory entry MUST be complete
 
         // Check if any neighbor edge node (NOT the current node with the given edge_idx) caches the object
-        if (dirinfo_unordered_set.size() > 0)
+        if (dirinfo_list.size() > 0)
         {
-            for (std::unordered_set<DirectoryInfo, DirectoryInfoHasher>::const_iterator dirinfo_const_iter = dirinfo_unordered_set.begin(); dirinfo_const_iter != dirinfo_unordered_set.end(); dirinfo_const_iter++)
+            for (std::list<DirectoryInfo>::const_iterator dirinfo_const_iter = dirinfo_list.begin(); dirinfo_const_iter != dirinfo_list.end(); dirinfo_const_iter++)
             {
                 if (dirinfo_const_iter->getTargetEdgeIdx() != edge_idx)
                 {
