@@ -11,7 +11,7 @@ namespace covered
 
     const std::string VictimTracker::kClassName = "VictimTracker";
 
-    VictimTracker::VictimTracker(const uint32_t& edge_idx, const uint32_t& peredge_synced_victimcnt, const uint32_t& peredge_monitored_victimsetcnt) : edge_idx_(edge_idx), peredge_synced_victimcnt_(peredge_synced_victimcnt), peredge_monitored_victimsetcnt_(peredge_monitored_victimsetcnt)
+    VictimTracker::VictimTracker(const uint32_t& edge_idx, const uint32_t& edgecnt, const uint32_t& peredge_synced_victimcnt, const uint32_t& peredge_monitored_victimsetcnt) : edge_idx_(edge_idx), peredge_synced_victimcnt_(peredge_synced_victimcnt), peredge_monitored_victimsetcnt_(peredge_monitored_victimsetcnt)
     {
         // Differentiate different edge nodes
         std::ostringstream oss;
@@ -25,13 +25,16 @@ namespace covered
         assert(rwlock_for_victim_tracker_ != NULL);
 
         size_bytes_ = 0;
-        peredge_victim_metadata_.clear();
+        peredge_victim_metadata_.resize(edgecnt, EdgelevelVictimMetadata());
         perkey_victim_dirinfo_.clear();
-        peredge_victimsync_monitor_.clear();
+        peredge_victimsync_monitor_.resize(edgecnt, VictimsyncMonitor());
     }
 
     VictimTracker::~VictimTracker()
     {
+        peredge_victim_metadata_.clear();
+        peredge_victimsync_monitor_.clear();
+
         assert(rwlock_for_victim_tracker_ != NULL);
         delete rwlock_for_victim_tracker_;
         rwlock_for_victim_tracker_ = NULL;
@@ -48,21 +51,21 @@ namespace covered
         rwlock_for_victim_tracker_->acquire_lock(context_name);
 
         // Update local cache margin bytes in edge-level victim metadata
-        peredge_victim_metadata_t::iterator victim_metadata_map_iter = peredge_victim_metadata_.find(edge_idx_);
-        if (victim_metadata_map_iter == peredge_victim_metadata_.end()) // NO edge-level victim metadata for current edge node
+        const bool is_valid_victim_metadata = peredge_victim_metadata_[edge_idx_].isValid();
+        if (!is_valid_victim_metadata) // NO edge-level victim metadata for current edge node
         {
             // NOTE: although ONLY update local cache margin bytes means NOT affect local synced victims, they may still NOT be tracked by victim tracker (e.g., the first cache miss for an empty cache)
 
             // Create a new edge-level victim metadata w/o victim cacheinfos
-            victim_metadata_map_iter = peredge_victim_metadata_.insert(std::pair(edge_idx_, EdgelevelVictimMetadata(local_cache_margin_bytes, std::list<VictimCacheinfo>()))).first;
-            assert(victim_metadata_map_iter != peredge_victim_metadata_.end());
+            peredge_victim_metadata_[edge_idx_] = EdgelevelVictimMetadata(local_cache_margin_bytes, std::list<VictimCacheinfo>());
+            assert(peredge_victim_metadata_[edge_idx_].isValid());
 
-            size_bytes_ = Util::uint64Add(size_bytes_, sizeof(uint32_t)); // For edge_idx_
+            //size_bytes_ = Util::uint64Add(size_bytes_, sizeof(uint32_t)); // For edge_idx_
             size_bytes_ = Util::uint64Add(size_bytes_, sizeof(uint64_t)); // For local_cache_margin_bytes
         }
         else // Edge-level victim metadata already exists
         {
-            victim_metadata_map_iter->second.updateCacheMarginBytes(local_cache_margin_bytes);
+            peredge_victim_metadata_[edge_idx_].updateCacheMarginBytes(local_cache_margin_bytes);
 
             // NOTE: NO need to update size_bytes_
         }
@@ -105,14 +108,14 @@ namespace covered
         rwlock_for_victim_tracker_->acquire_lock(context_name);
 
         // Update directory info if the local beaconed key is a local/neighbor synced victim
-        perkey_victim_dirinfo_t::iterator dirinfo_map_iter = perkey_victim_dirinfo_.find(key);
-        if (dirinfo_map_iter != perkey_victim_dirinfo_.end()) // The beaconed key is a local/neighbor synced victim
+        perkey_victim_dirinfo_t::iterator dirinfo_list_iter = VictimDirinfo::findVictimDirinfoForKey(key, perkey_victim_dirinfo_);
+        if (dirinfo_list_iter != perkey_victim_dirinfo_.end()) // The beaconed key is a local/neighbor synced victim
         {
-            //assert(dirinfo_map_iter->second.isLocalBeaconed());
-            assert(dirinfo_map_iter->second.getBeaconEdgeIdx() == edge_idx_);
+            //assert(dirinfo_list_iter->second.isLocalBeaconed());
+            assert(dirinfo_list_iter->second.getBeaconEdgeIdx() == edge_idx_);
             
             // Update directory info for the key
-            bool is_update = dirinfo_map_iter->second.updateDirinfoSet(is_admit, directory_info);
+            bool is_update = dirinfo_list_iter->second.updateDirinfoSet(is_admit, directory_info);
 
             if (is_update) // Update size_bytes_ only if directory info is added/removed successfully
             {
@@ -187,22 +190,22 @@ namespace covered
         rwlock_for_victim_tracker_->acquire_lock(context_name);
 
         // Enforce complete victim syncset for the next message to source edge node if necessary
-        peredge_victimsync_monitor_t::iterator peredge_victimsync_monitor_iter = peredge_victimsync_monitor_.find(source_edge_idx);
+        const bool is_valid_victimsync_monitor = peredge_victimsync_monitor_[source_edge_idx].isValid();
         if (neighbor_victim_syncset.isEnforceComplete()) // Enforce the current edge node to issue complete victim syncset without compression for the given source edge node
         {
-            assert(peredge_victimsync_monitor_iter != peredge_victimsync_monitor_.end()); // NOTE: if the source edge node notifies the current edge node to enforce complete victim syncset without compression, it means that the current edge node has sent at least one victim syncset to the source edge node -> current edge node MUST have VictimsyncMonitor for the source edge node
+            assert(is_valid_victimsync_monitor); // NOTE: if the source edge node notifies the current edge node to enforce complete victim syncset without compression, it means that the current edge node has sent at least one victim syncset to the source edge node -> current edge node MUST have VictimsyncMonitor for the source edge node
 
-            peredge_victimsync_monitor_iter->second.releasePrevVictimSyncset(); // Release prev victim syncset for the source edge node such that the next message will piggyback a complete victim syncset
+            peredge_victimsync_monitor_[source_edge_idx].releasePrevVictimSyncset(); // Release prev victim syncset for the source edge node such that the next message will piggyback a complete victim syncset
         }
 
         // Allocate VictimsyncMonitor for the source edge node if this is the first victim syncset received from the source edge node
-        if (peredge_victimsync_monitor_iter == peredge_victimsync_monitor_.end()) // No VictimsyncMonitor means that this is the first victim syncset from the source edge idx
+        if (!is_valid_victimsync_monitor) // No VictimsyncMonitor means that this is the first victim syncset from the source edge idx
         {
             // NOTE: cur_seqnum_ will be initialized as 0 such that the first victim syncset from current to source will have a seqnum of 0
             // NOTE: is_first_received_ will be initialized as true such that the first received victim syncset can directly update victim tracker
-            peredge_victimsync_monitor_iter = peredge_victimsync_monitor_.insert(std::make_pair(source_edge_idx, VictimsyncMonitor())).first;
+            peredge_victimsync_monitor_[source_edge_idx].validate();
         }
-        assert(peredge_victimsync_monitor_iter != peredge_victimsync_monitor_.end());
+        assert(peredge_victimsync_monitor_[source_edge_idx].isValid());
 
         // Start from received victim syncset from neighbor
         VictimSyncset neighbor_complete_victim_syncset = neighbor_victim_syncset;
@@ -211,16 +214,16 @@ namespace covered
 
         // Check if this is the first victim syncset received from the source edge node
         bool need_update_victim_tracker_ = false;
-        bool is_first_complete_received = peredge_victimsync_monitor_iter->second.isFirstCompleteReceived();
+        bool is_first_complete_received = peredge_victimsync_monitor_[source_edge_idx].isFirstCompleteReceived();
         if (is_first_complete_received) // This is the first complete victim syncset received from the source edge idx
         {
             if (is_neighbor_victim_syncset_complete) // Complete victim syncset
             {
                 assert(synced_seqnum >= 0); // NOTE: seqnum of the first complete victim syncset received from the specific source edge node could >= 0 due to some in-advance complete victim syncset under packet loss/reordering
 
-                peredge_victimsync_monitor_iter->second.clearFirstCompleteReceived(); // This will set is_first_complete_received_ = false in VictimsyncMonitor
+                peredge_victimsync_monitor_[source_edge_idx].clearFirstCompleteReceived(); // This will set is_first_complete_received_ = false in VictimsyncMonitor
 
-                neighbor_complete_victim_syncset = peredge_victimsync_monitor_iter->second.tryToClearEnforcementStatus_(neighbor_complete_victim_syncset, synced_seqnum, peredge_monitored_victimsetcnt_); // This will set tracked_seqnum as synced_seqnum, clear stale and continuous cached victim syncsets, and clear enforcement status (set need_enforcement_ = false, enforcement_seqnum_ = 0, and wait_for_complete_victim_syncset_ = false) if necessary in VictimsyncMonitor
+                neighbor_complete_victim_syncset = peredge_victimsync_monitor_[source_edge_idx].tryToClearEnforcementStatus_(neighbor_complete_victim_syncset, synced_seqnum, peredge_monitored_victimsetcnt_); // This will set tracked_seqnum as synced_seqnum, clear stale and continuous cached victim syncsets, and clear enforcement status (set need_enforcement_ = false, enforcement_seqnum_ = 0, and wait_for_complete_victim_syncset_ = false) if necessary in VictimsyncMonitor
 
                 need_update_victim_tracker_ = true; // Directly update victim tracker without recovery
             }
@@ -228,13 +231,13 @@ namespace covered
             {
                 need_update_victim_tracker_ = false; // No need to update victim tracker
 
-                peredge_victimsync_monitor_iter->second.tryToEnableEnforcementStatus_(neighbor_victim_syncset, synced_seqnum, peredge_monitored_victimsetcnt_); // Trigger complete enforcement if cached victim syncsets is full (this will cache compressed victim syncset if cached_victim_syncsets_ is not full, or enable enforcement status (set need_enforcement_ = true, enforcement_seqnum_ = synced_seqnum, and wait_for_complete_victim_syncset_ = true) otherwise)
+                peredge_victimsync_monitor_[source_edge_idx].tryToEnableEnforcementStatus_(neighbor_victim_syncset, synced_seqnum, peredge_monitored_victimsetcnt_); // Trigger complete enforcement if cached victim syncsets is full (this will cache compressed victim syncset if cached_victim_syncsets_ is not full, or enable enforcement status (set need_enforcement_ = true, enforcement_seqnum_ = synced_seqnum, and wait_for_complete_victim_syncset_ = true) otherwise)
             }
         }
         else // Decide whether and how to update victim tracker based on existing complete victim syncset tracked for the source edge idx in the current edge node
         {
             // Get tracked seqnum from existing VictimsyncMonitor
-            const SeqNum tracked_seqnum = peredge_victimsync_monitor_iter->second.getTrackedSeqnum();
+            const SeqNum tracked_seqnum = peredge_victimsync_monitor_[source_edge_idx].getTrackedSeqnum();
 
             // Compare synced seqnum with tracked seqnum
             if (synced_seqnum <= tracked_seqnum) // An outdated victim syncset from source edge node
@@ -252,45 +255,27 @@ namespace covered
                     VictimSyncset existing_complete_victim_syncset = getVictimSyncset_(source_edge_idx, tracked_seqnum, unused_is_enforce_complete);
                     assert(existing_complete_victim_syncset.isComplete());
 
-                    // TMPDEBUG231211
-                    if (key.getKeystr() == "amwnaqnbqcshhvkhbxzfcbtmfqnfieoeuh")
-                    {
-                        Util::dumpVariablesForDebug(instance_name_, 2, "COVERED: after getVictimSyncset_ for key", key.getKeystr().c_str());
-                    }
-
                     // Recover neighbor complete victim syncset based on existing complete victim syncset of source edge idx and received neighbor_victim_syncset if compressed
                     //neighbor_complete_victim_syncset = VictimSyncset::recover(neighbor_victim_syncset, existing_complete_victim_syncset);
                     neighbor_complete_victim_syncset = VictimSyncset::recover(neighbor_victim_syncset, existing_complete_victim_syncset, key); // TMPDEBUG231211
                     assert(neighbor_complete_victim_syncset.isComplete());
-
-                    // TMPDEBUG231211
-                    if (key.getKeystr() == "amwnaqnbqcshhvkhbxzfcbtmfqnfieoeuh")
-                    {
-                        Util::dumpVariablesForDebug(kClassName, 2, "COVERED: after recover for key", key.getKeystr().c_str());
-                    }
                 }
 
                 need_update_victim_tracker_ = true; // Update victim tracker with recovered/synced complete vicitm syncset
 
-                neighbor_complete_victim_syncset = peredge_victimsync_monitor_iter->second.tryToClearEnforcementStatus_(neighbor_complete_victim_syncset, synced_seqnum, peredge_monitored_victimsetcnt_); // This will set tracked_seqnum as synced_seqnum (i.e., tracked_seqnum + 1), clear stale and continuous cached victim syncsets, and clear enforcement status (set need_enforcement_ = false, enforcement_seqnum_ = 0, and wait_for_complete_victim_syncset_ = false) if necessary in VictimsyncMonitor
-
-                // TMPDEBUG231211
-                if (key.getKeystr() == "amwnaqnbqcshhvkhbxzfcbtmfqnfieoeuh")
-                {
-                    Util::dumpVariablesForDebug(instance_name_, 2, "COVERED: after tryToClearEnforcementStatus_ for key", key.getKeystr().c_str());
-                }
+                neighbor_complete_victim_syncset = peredge_victimsync_monitor_[source_edge_idx].tryToClearEnforcementStatus_(neighbor_complete_victim_syncset, synced_seqnum, peredge_monitored_victimsetcnt_); // This will set tracked_seqnum as synced_seqnum (i.e., tracked_seqnum + 1), clear stale and continuous cached victim syncsets, and clear enforcement status (set need_enforcement_ = false, enforcement_seqnum_ = 0, and wait_for_complete_victim_syncset_ = false) if necessary in VictimsyncMonitor
             }
             else if (is_neighbor_victim_syncset_complete) // A complete victim syncset w/ synced_seqnum > tracked_seqnum + 1
             {
                 need_update_victim_tracker_ = true; // Directly use complete victim syncset to update victim tracker
 
-                neighbor_complete_victim_syncset = peredge_victimsync_monitor_iter->second.tryToClearEnforcementStatus_(neighbor_complete_victim_syncset, synced_seqnum, peredge_monitored_victimsetcnt_); // This will set tracked_seqnum as synced_seqnum (i.e., tracked_seqnum + 1), clear stale and continuous cached victim syncsets, and clear enforcement status (set need_enforcement_ = false, enforcement_seqnum_ = 0, and wait_for_complete_victim_syncset_ = false) if necessary in VictimsyncMonitor
+                neighbor_complete_victim_syncset = peredge_victimsync_monitor_[source_edge_idx].tryToClearEnforcementStatus_(neighbor_complete_victim_syncset, synced_seqnum, peredge_monitored_victimsetcnt_); // This will set tracked_seqnum as synced_seqnum (i.e., tracked_seqnum + 1), clear stale and continuous cached victim syncsets, and clear enforcement status (set need_enforcement_ = false, enforcement_seqnum_ = 0, and wait_for_complete_victim_syncset_ = false) if necessary in VictimsyncMonitor
             }
             else // A compressed victim syncset w/ synced_seqnum > tracked_seqnum + 1
             {
                 need_update_victim_tracker_ = false; // No need to update victim tracker
 
-                peredge_victimsync_monitor_iter->second.tryToEnableEnforcementStatus_(neighbor_victim_syncset, synced_seqnum, peredge_monitored_victimsetcnt_); // Trigger complete enforcement if cached victim syncsets is full (this will cache compressed victim syncset if cached_victim_syncsets_ is not full, or enable enforcement status (set need_enforcement_ = true, enforcement_seqnum_ = synced_seqnum, and wait_for_complete_victim_syncset_ = true) otherwise)
+                peredge_victimsync_monitor_[source_edge_idx].tryToEnableEnforcementStatus_(neighbor_victim_syncset, synced_seqnum, peredge_monitored_victimsetcnt_); // Trigger complete enforcement if cached victim syncsets is full (this will cache compressed victim syncset if cached_victim_syncsets_ is not full, or enable enforcement status (set need_enforcement_ = true, enforcement_seqnum_ = synced_seqnum, and wait_for_complete_victim_syncset_ = true) otherwise)
             }
         }
 
@@ -349,7 +334,7 @@ namespace covered
 
     // For trade-off-aware placement calculation
     
-    DeltaReward VictimTracker::calcEvictionCost(const EdgeWrapper* edge_wrapper_ptr, const ObjectSize& object_size, const Edgeset& placement_edgeset, std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& placement_peredge_synced_victimset, std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& placement_peredge_fetched_victimset, Edgeset& victim_fetch_edgeset, const std::unordered_map<uint32_t, std::list<VictimCacheinfo>>& extra_peredge_victim_cacheinfos, const std::list<std::pair<Key, DirinfoSet>>& extra_perkey_victim_dirinfoset) const
+    DeltaReward VictimTracker::calcEvictionCost(const EdgeWrapper* edge_wrapper_ptr, const ObjectSize& object_size, const Edgeset& placement_edgeset, std::unordered_map<uint32_t, std::list<Key>>& placement_peredge_synced_victimset, std::unordered_map<uint32_t, std::list<Key>>& placement_peredge_fetched_victimset, Edgeset& victim_fetch_edgeset, const std::unordered_map<uint32_t, std::list<VictimCacheinfo>>& extra_peredge_victim_cacheinfos, const std::list<std::pair<Key, DirinfoSet>>& extra_perkey_victim_dirinfoset) const
     {
         checkPointers_();
 
@@ -407,7 +392,7 @@ namespace covered
 
     // For non-blocking placement deployment
 
-    void VictimTracker::removeVictimsForGivenEdge(const uint32_t& edge_idx, const std::unordered_set<Key, KeyHasher>& victim_keyset)
+    void VictimTracker::removeVictimsForGivenEdge(const uint32_t& edge_idx, const std::list<Key>& victim_keyset)
     {
         checkPointers_();
 
@@ -416,30 +401,31 @@ namespace covered
         rwlock_for_victim_tracker_->acquire_lock(context_name);
 
         // NOTE: each edge node in placement edgeset MUST have EdgeLevelVictimMetadata
-        peredge_victim_metadata_t::iterator peredge_victim_metadata_iter = peredge_victim_metadata_.find(edge_idx);
-        assert(peredge_victim_metadata_iter != peredge_victim_metadata_.end());
+        EdgelevelVictimMetadata& edge_level_victim_metadata_ref = peredge_victim_metadata_[edge_idx];
+        assert(edge_level_victim_metadata_ref.isValid());
 
         // Remove corresponding victim cacheinfos from peredge_victim_metadata_iter->second if any
         uint64_t removed_cacheinfos_size = 0;
-        bool is_empty = peredge_victim_metadata_iter->second.removeVictimsForPlacement(victim_keyset, removed_cacheinfos_size);
+        bool is_empty = edge_level_victim_metadata_ref.removeVictimsForPlacement(victim_keyset, removed_cacheinfos_size);
         if (removed_cacheinfos_size > 0)
         {
             size_bytes_ = Util::uint64Minus(size_bytes_, removed_cacheinfos_size); // For removed victim cacheinfos
         }
 
         // NOTE: even if all victim cacheinfos in the edge-level victim metadata are removed after placement calculation, we will NOT erase the edge-level victim metadata from peredge_victim_metadata_, as we need to find victims based on its cache margin bytes (see VictimTracker::findVictimsForPlacement_())
-        /*// Remove edgeidx-edge_level_metadata pair (i.e., peredge_victim_metadata_iter) from peredge_victim_metadata_
+        /*// Remove empty edge_level_metadata from peredge_victim_metadata_
         if (is_empty)
         {
-            peredge_victim_metadata_.erase(peredge_victim_metadata_iter);
+            peredge_victim_metadata_[edge_idx] = EdgeLevelVictimMetadata();
+            assert(!peredge_victim_metadata_[edge_idx].isValid());
 
-            size_bytes_ = Util::uint64Minus(size_bytes_, sizeof(uint32_t)); // For edge_idx
+            //size_bytes_ = Util::uint64Minus(size_bytes_, sizeof(uint32_t)); // For edge_idx
             size_bytes_ = Util::uint64Minus(size_bytes_, sizeof(uint64_t)); // For cache_margin_bytes
         }*/
         UNUSED(is_empty);
 
         // Remove corresponding victim dirinfos from perkey_victim_dirinfo_ if refcnt becomes zero
-        for (std::unordered_set<Key, KeyHasher>::const_iterator victim_keyset_const_iter = victim_keyset.begin(); victim_keyset_const_iter != victim_keyset.end(); victim_keyset_const_iter++)
+        for (std::list<Key>::const_iterator victim_keyset_const_iter = victim_keyset.begin(); victim_keyset_const_iter != victim_keyset.end(); victim_keyset_const_iter++)
         {
             const Key& tmp_key = *victim_keyset_const_iter;
             tryToReleaseVictimDirinfo_(tmp_key);
@@ -514,21 +500,21 @@ namespace covered
         // NOTE: NO need to acquire a write lock which has been done in getLocalVictimSyncsetForSynchronization()
 
         SeqNum cur_seqnum = 0; // Cur seqnum starts from 0 to synchronize local victim info to each dst neighbor
-        peredge_victimsync_monitor_t::iterator peredge_victimsync_monitor_iter = peredge_victimsync_monitor_.find(dst_edge_idx_for_compression);
-        if (peredge_victimsync_monitor_iter == peredge_victimsync_monitor_.end())
+        const bool is_valid_victimsync_monitor = peredge_victimsync_monitor_[dst_edge_idx_for_compression].isValid();
+        if (!is_valid_victimsync_monitor)
         {
-            peredge_victimsync_monitor_iter = peredge_victimsync_monitor_.insert(std::pair(dst_edge_idx_for_compression, VictimsyncMonitor())).first; // Next local victim syncset should be cur_seqnum + 1
+            peredge_victimsync_monitor_[dst_edge_idx_for_compression].validate(); // Next local victim syncset should be cur_seqnum + 1
 
-            size_bytes_ = Util::uint64Add(size_bytes_, sizeof(uint32_t)); // dst edge idx
-            size_bytes_ = Util::uint64Add(size_bytes_, peredge_victimsync_monitor_iter->second.getSizeForCapacity()); // cur seqnum
+            //size_bytes_ = Util::uint64Add(size_bytes_, sizeof(uint32_t)); // dst edge idx
+            size_bytes_ = Util::uint64Add(size_bytes_, peredge_victimsync_monitor_[dst_edge_idx_for_compression].getSizeForCapacity()); // cur seqnum
         }
         else
         {
-            cur_seqnum = peredge_victimsync_monitor_iter->second.getCurSeqnum();
+            cur_seqnum = peredge_victimsync_monitor_[dst_edge_idx_for_compression].getCurSeqnum();
         }
 
-        assert(peredge_victimsync_monitor_iter != peredge_victimsync_monitor_.end());
-        peredge_victimsync_monitor_iter->second.incrCurSeqnum(); // Next local victim syncset should be cur_seqnum + 1
+        assert(peredge_victimsync_monitor_[dst_edge_idx_for_compression].isValid());
+        peredge_victimsync_monitor_[dst_edge_idx_for_compression].incrCurSeqnum(); // Next local victim syncset should be cur_seqnum + 1
 
         return cur_seqnum;
     }
@@ -538,13 +524,13 @@ namespace covered
         // NOTE: NO need to acquire a write lock which has been done in getLocalVictimSyncsetForSynchronization()
 
         bool need_enforcement = false;
-        peredge_victimsync_monitor_t::iterator peredge_victimsync_monitor_iter = peredge_victimsync_monitor_.find(dst_edge_idx_for_compression);
-        assert(peredge_victimsync_monitor_iter != peredge_victimsync_monitor_.end()); // NOTE: getAndIncrCurSeqnum_() has inserted VictimsyncMonitor for dst_edge_idx_for_compression if not exist, and we will NEVER remove it
+        const bool is_valid_victimsync_monitor = peredge_victimsync_monitor_[dst_edge_idx_for_compression].isValid();
+        assert(is_valid_victimsync_monitor); // NOTE: getAndIncrCurSeqnum_() has inserted VictimsyncMonitor for dst_edge_idx_for_compression if not exist, and we will NEVER remove it
 
-        need_enforcement = peredge_victimsync_monitor_iter->second.needEnforcement();
+        need_enforcement = peredge_victimsync_monitor_[dst_edge_idx_for_compression].needEnforcement();
         if (need_enforcement)
         {
-            peredge_victimsync_monitor_iter->second.resetEnforcement();
+            peredge_victimsync_monitor_[dst_edge_idx_for_compression].resetEnforcement();
         }
 
         return need_enforcement;
@@ -557,21 +543,21 @@ namespace covered
         // Get cache margin bytes and victim cacheinfos of edge idx
         uint64_t cache_margin_bytes = 0;
         std::list<VictimCacheinfo> synced_victims;
-        peredge_victim_metadata_t::const_iterator victim_metadata_map_const_iter = peredge_victim_metadata_.find(edge_idx);
-        if (victim_metadata_map_const_iter != peredge_victim_metadata_.end())
+        const bool is_valid_victim_metadata = peredge_victim_metadata_[edge_idx].isValid();
+        if (is_valid_victim_metadata)
         {
-            cache_margin_bytes = victim_metadata_map_const_iter->second.getCacheMarginBytes();
-            synced_victims = victim_metadata_map_const_iter->second.getVictimCacheinfos();
+            cache_margin_bytes = peredge_victim_metadata_[edge_idx].getCacheMarginBytes();
+            synced_victims = peredge_victim_metadata_[edge_idx].getVictimCacheinfos();
         }
 
         // Get beaconed victims of edge idx
         std::list<std::pair<Key, DirinfoSet>> beaconed_victims;
-        for (perkey_victim_dirinfo_t::const_iterator dirinfo_map_iter = perkey_victim_dirinfo_.begin(); dirinfo_map_iter != perkey_victim_dirinfo_.end(); dirinfo_map_iter++)
+        for (perkey_victim_dirinfo_t::const_iterator dirinfo_list_iter = perkey_victim_dirinfo_.begin(); dirinfo_list_iter != perkey_victim_dirinfo_.end(); dirinfo_list_iter++)
         {
-            if (dirinfo_map_iter->second.getBeaconEdgeIdx() == edge_idx)
+            if (dirinfo_list_iter->second.getBeaconEdgeIdx() == edge_idx)
             {
-                const Key& tmp_key = dirinfo_map_iter->first;
-                const DirinfoSet& tmp_dirinfo_set = dirinfo_map_iter->second.getDirinfoSetRef(); // NOTE: dirinfo set from victim dirinfo MUST be complete
+                const Key& tmp_key = dirinfo_list_iter->first;
+                const DirinfoSet& tmp_dirinfo_set = dirinfo_list_iter->second.getDirinfoSetRef(); // NOTE: dirinfo set from victim dirinfo MUST be complete
                 beaconed_victims.push_back(std::pair(tmp_key, tmp_dirinfo_set));
             }
         }
@@ -590,13 +576,13 @@ namespace covered
 
         assert(current_victim_syncset.isComplete()); // NOTE: current victim syncset is generated by getVictimSyncset_(), which MUST be complete
 
-        peredge_victimsync_monitor_t::iterator peredge_victimsync_monitor_iter = peredge_victimsync_monitor_.find(dst_edge_idx_for_compression);
-        assert(peredge_victimsync_monitor_iter != peredge_victimsync_monitor_.end()); // NOTE: getAndIncrCurSeqnum_() has inserted VictimsyncMonitor for dst_edge_idx_for_compression if not exist, and we will NEVER remove it
+        const bool is_valid_victimsync_monitor = peredge_victimsync_monitor_[dst_edge_idx_for_compression].isValid();
+        assert(is_valid_victimsync_monitor); // NOTE: getAndIncrCurSeqnum_() has inserted VictimsyncMonitor for dst_edge_idx_for_compression if not exist, and we will NEVER remove it
 
-        bool is_prev_victim_syncset_exist = peredge_victimsync_monitor_iter->second.getPrevVictimSyncset(prev_victim_syncset); // Get prev victim syncset if any
+        bool is_prev_victim_syncset_exist = peredge_victimsync_monitor_[dst_edge_idx_for_compression].getPrevVictimSyncset(prev_victim_syncset); // Get prev victim syncset if any
         if (is_prev_victim_syncset_exist) // Prev victim syncset already exists
         {
-            peredge_victimsync_monitor_iter->second.setPrevVictimSyncset(current_victim_syncset); // Replace prev victim syncset with current victim syncset
+            peredge_victimsync_monitor_[dst_edge_idx_for_compression].setPrevVictimSyncset(current_victim_syncset); // Replace prev victim syncset with current victim syncset
 
             // Update cache size usage for replaced victim syncset in peredge_prev_victim_syncset_
             uint64_t current_victim_syncset_size_bytes = current_victim_syncset.getSizeForCapacity();
@@ -614,7 +600,7 @@ namespace covered
         }
         else
         {
-            peredge_victimsync_monitor_iter->second.setPrevVictimSyncset(current_victim_syncset); // Insert current victim syncset as prev victim syncset
+            peredge_victimsync_monitor_[dst_edge_idx_for_compression].setPrevVictimSyncset(current_victim_syncset); // Insert current victim syncset as prev victim syncset
 
             // Update cache size usage for new victim syncset in peredge_prev_victim_syncset_
             uint64_t current_victim_syncset_size_bytes = current_victim_syncset.getSizeForCapacity();
@@ -630,33 +616,39 @@ namespace covered
     {
         // NOTE: NO need to acquire a write lock which has been done in updateLocalSyncedVictims() and updateForNeighborVictimSyncset()
 
+        // TMPDEBUGTRACKER
+        struct timespec t0 = Util::getCurrentTimespec();
+
         assert(synced_victim_cacheinfos.size() <= peredge_synced_victimcnt_);
         assert(cooperation_wrapper_ptr != NULL);
 
         // Update cacheinfos of synced victims for the specific edge node
         std::list<VictimCacheinfo> old_synced_victim_cacheinfos;
-        peredge_victim_metadata_t::iterator victim_metadata_map_iter = peredge_victim_metadata_.find(edge_idx);
-        if (victim_metadata_map_iter == peredge_victim_metadata_.end()) // No synced victims for the specific edge node
+        const bool is_valid_victim_metadata = peredge_victim_metadata_[edge_idx].isValid();
+        if (!is_valid_victim_metadata) // No synced victims for the specific edge node
         {
             // (OBSOLETE: passed-in local/neighbor synced victim cacheinfos MUST be complete) NOTE: even if all victim cacheinfos are removed, we will NOT erase the edge-level victim metadata (see VictimTracker::removeVictimsForGivenEdge()) -> no edge-level victim metadata indicates the first victim synchronization of the edge idx, which MUST transmit complete victim cacheinfos
 
             // Add latest synced victims for the specific edge node
             // NOTE: EdgelevelVictimMetadata will assert that all victim cacheinfos are complete
-            victim_metadata_map_iter = peredge_victim_metadata_.insert(std::pair(edge_idx, EdgelevelVictimMetadata(cache_margin_bytes, synced_victim_cacheinfos))).first;
-            assert(victim_metadata_map_iter != peredge_victim_metadata_.end());
+            peredge_victim_metadata_[edge_idx] = EdgelevelVictimMetadata(cache_margin_bytes, synced_victim_cacheinfos);
+            assert(peredge_victim_metadata_[edge_idx].isValid());
 
-            size_bytes_ = Util::uint64Add(size_bytes_, sizeof(uint32_t)); // For edge_idx
+            //size_bytes_ = Util::uint64Add(size_bytes_, sizeof(uint32_t)); // For edge_idx
             size_bytes_ = Util::uint64Add(size_bytes_, sizeof(uint64_t)); // For cache_margin_bytes
         }
         else // Current edge node has tracked some local synced victims before
         {
             // Preserve old local synced victim cacheinfos (MUST be complete) if any
-            old_synced_victim_cacheinfos = victim_metadata_map_iter->second.getVictimCacheinfos();
+            old_synced_victim_cacheinfos = peredge_victim_metadata_[edge_idx].getVictimCacheinfos();
 
             // Replace old local synced victim cacheinfos with the latest ones
             // NOTE: EdgelevelVictimMetadata will assert that all victim cacheinfos are complete
-            victim_metadata_map_iter->second = EdgelevelVictimMetadata(cache_margin_bytes, synced_victim_cacheinfos);
+            peredge_victim_metadata_[edge_idx] = EdgelevelVictimMetadata(cache_margin_bytes, synced_victim_cacheinfos);
         }
+
+        // TMPDEBUGTRACKER
+        struct timespec t1 = Util::getCurrentTimespec();
 
         // Update victim dirinfos for new synced victim keys
         for (std::list<VictimCacheinfo>::const_iterator new_cacheinfo_list_iter = synced_victim_cacheinfos.begin(); new_cacheinfo_list_iter != synced_victim_cacheinfos.end(); new_cacheinfo_list_iter++)
@@ -669,26 +661,31 @@ namespace covered
             const Key& tmp_key = new_cacheinfo_list_iter->getKey();
             //bool tmp_is_local_beaconed = (local_beaconed_synced_victim_dirinfosets.find(tmp_key) != local_beaconed_synced_victim_dirinfosets.end());
             uint32_t tmp_beacon_edge_idx = cooperation_wrapper_ptr->getBeaconEdgeIdx(tmp_key);
-            perkey_victim_dirinfo_t::iterator dirinfo_map_iter = perkey_victim_dirinfo_.find(tmp_key);
-            if (dirinfo_map_iter == perkey_victim_dirinfo_.end()) // No victim dirinfo for the key
+            perkey_victim_dirinfo_t::iterator dirinfo_list_iter = VictimDirinfo::findVictimDirinfoForKey(tmp_key, perkey_victim_dirinfo_);
+            if (dirinfo_list_iter == perkey_victim_dirinfo_.end()) // No victim dirinfo for the key
             {
                 // Add a new victim dirinfo for the key
-                //dirinfo_map_iter = perkey_victim_dirinfo_.insert(std::pair(tmp_key, VictimDirinfo(tmp_is_local_beaconed))).first;
-                dirinfo_map_iter = perkey_victim_dirinfo_.insert(std::pair(tmp_key, VictimDirinfo(tmp_beacon_edge_idx))).first;
-                assert(dirinfo_map_iter != perkey_victim_dirinfo_.end());
+                //perkey_victim_dirinfo_.push_back(std::pair(tmp_key, VictimDirinfo(tmp_is_local_beaconed)));
+                perkey_victim_dirinfo_.push_back(std::pair(tmp_key, VictimDirinfo(tmp_beacon_edge_idx)));
+                dirinfo_list_iter = perkey_victim_dirinfo_.end();
+                dirinfo_list_iter--; // Point to the last element just pushed back
+                assert(dirinfo_list_iter != perkey_victim_dirinfo_.end());
 
-                dirinfo_map_iter->second.incrRefcnt();
+                dirinfo_list_iter->second.incrRefcnt();
 
-                size_bytes_ = Util::uint64Add(size_bytes_, (tmp_key.getKeyLength() + dirinfo_map_iter->second.getSizeForCapacity())); // For each inserted victim dirinfo of a new synced victim
+                size_bytes_ = Util::uint64Add(size_bytes_, (tmp_key.getKeyLength() + dirinfo_list_iter->second.getSizeForCapacity())); // For each inserted victim dirinfo of a new synced victim
             }
             else // The key already has a victim dirinfo
             {
-                //assert(dirinfo_map_iter->second.isLocalBeaconed() == tmp_is_local_beaconed);
-                assert(dirinfo_map_iter->second.getBeaconEdgeIdx() == tmp_beacon_edge_idx);
+                //assert(dirinfo_list_iter->second.isLocalBeaconed() == tmp_is_local_beaconed);
+                assert(dirinfo_list_iter->second.getBeaconEdgeIdx() == tmp_beacon_edge_idx);
 
-                dirinfo_map_iter->second.incrRefcnt();
+                dirinfo_list_iter->second.incrRefcnt();
             }
         }
+
+        // TMPDEBUGTRACKER
+        struct timespec t2 = Util::getCurrentTimespec();
 
         // Remove victim dirinfos for old synced victim keys
         for (std::list<VictimCacheinfo>::const_iterator old_cacheinfo_list_iter = old_synced_victim_cacheinfos.begin(); old_cacheinfo_list_iter != old_synced_victim_cacheinfos.end(); old_cacheinfo_list_iter++)
@@ -700,6 +697,10 @@ namespace covered
             const Key& tmp_key = old_cacheinfo_list_iter->getKey();
             tryToReleaseVictimDirinfo_(tmp_key);
         }
+
+        // TMPDEBUGTRACKER
+        struct timespec t3 = Util::getCurrentTimespec();
+        Util::dumpVariablesForDebug(instance_name_, 6, "t1-t0:", std::to_string(Util::getDeltaTimeUs(t1, t0)).c_str(), "t2-t1:", std::to_string(Util::getDeltaTimeUs(t2, t1)).c_str(), "t3-t2:", std::to_string(Util::getDeltaTimeUs(t3, t2)).c_str());
 
         return;
     }
@@ -714,28 +715,28 @@ namespace covered
             assert(beaconed_dirinfosets_list_iter->second.isComplete()); // NOTE: local/neighbor beaconed victim dirinfosets MUST be complete
 
             const Key& tmp_key = beaconed_dirinfosets_list_iter->first;
-            perkey_victim_dirinfo_t::iterator dirinfo_map_iter = perkey_victim_dirinfo_.find(tmp_key);
+            perkey_victim_dirinfo_t::iterator dirinfo_list_iter = VictimDirinfo::findVictimDirinfoForKey(tmp_key, perkey_victim_dirinfo_);
 
             if (is_local_beaconed) // If dirinfosets belong to keys locally beaconed by the current edge node
             {
                 // NOTE: VictimDirinfo MUST exist for local beaconed victims (local/neighbor synced victims from local-edge-cache/received-victim-syncset have already been added in replaceVictimCacheinfosForEdgeIdx_())
-                assert(dirinfo_map_iter != perkey_victim_dirinfo_.end());
+                assert(dirinfo_list_iter != perkey_victim_dirinfo_.end());
             }
 
-            if (dirinfo_map_iter != perkey_victim_dirinfo_.end())
+            if (dirinfo_list_iter != perkey_victim_dirinfo_.end())
             {
                 if (is_local_beaconed)
                 {
                     //assert(dirinfo_map_iter->second.isLocalBeaconed() == true); // NOTE: we have set is local beaconed in VictimTracker::replaceVictimMetadataForEdgeIdx_()
                     //dirinfo_map_iter->second.markLocalBeaconed();
 
-                    assert(dirinfo_map_iter->second.getBeaconEdgeIdx() == edge_idx_); // NOTE: we have set beacon edge idx in VictimTracker::replaceVictimMetadataForEdgeIdx_()
+                    assert(dirinfo_list_iter->second.getBeaconEdgeIdx() == edge_idx_); // NOTE: we have set beacon edge idx in VictimTracker::replaceVictimMetadataForEdgeIdx_()
                     //dirinfo_map_iter->second.setBeaconEdgeIdx(edge_idx_);
                 }
 
-                uint64_t prev_victim_dirinfo_size_bytes = dirinfo_map_iter->second.getSizeForCapacity();
-                dirinfo_map_iter->second.setDirinfoSet(beaconed_dirinfosets_list_iter->second);
-                uint64_t cur_victim_dirinfo_size_bytes = dirinfo_map_iter->second.getSizeForCapacity();
+                uint64_t prev_victim_dirinfo_size_bytes = dirinfo_list_iter->second.getSizeForCapacity();
+                dirinfo_list_iter->second.setDirinfoSet(beaconed_dirinfosets_list_iter->second);
+                uint64_t cur_victim_dirinfo_size_bytes = dirinfo_list_iter->second.getSizeForCapacity();
 
                 if (prev_victim_dirinfo_size_bytes < cur_victim_dirinfo_size_bytes)
                 {
@@ -756,17 +757,17 @@ namespace covered
     {
         // NOTE: NO need to acquire a write lock which has been done in removeVictimsForGivenEdge(), and replaceVictimMetadataForEdgeIdx_() (from updateLocalSyncedVictims() and updateForNeighborVictimSyncset())
 
-        perkey_victim_dirinfo_t::iterator dirinfo_map_iter = perkey_victim_dirinfo_.find(key);
-        if (dirinfo_map_iter != perkey_victim_dirinfo_.end()) // NOTE: key may NOT have corresponding victim dirinfo if the beacon node has NOT synced victim dirinfo
+        perkey_victim_dirinfo_t::iterator dirinfo_list_iter = VictimDirinfo::findVictimDirinfoForKey(key, perkey_victim_dirinfo_);
+        if (dirinfo_list_iter != perkey_victim_dirinfo_.end()) // NOTE: key may NOT have corresponding victim dirinfo if the beacon node has NOT synced victim dirinfo
         {
-            dirinfo_map_iter->second.decrRefcnt();
+            dirinfo_list_iter->second.decrRefcnt();
 
-            if (dirinfo_map_iter->second.getRefcnt() == 0) // No edge node is tracking the key as a synced victim
+            if (dirinfo_list_iter->second.getRefcnt() == 0) // No edge node is tracking the key as a synced victim
             {
-                size_bytes_ = Util::uint64Minus(size_bytes_, (key.getKeyLength() + dirinfo_map_iter->second.getSizeForCapacity())); // For each erased victim dirinfo of an old synced victim
+                size_bytes_ = Util::uint64Minus(size_bytes_, (key.getKeyLength() + dirinfo_list_iter->second.getSizeForCapacity())); // For each erased victim dirinfo of an old synced victim
 
                 // Remove the victim dirinfo for the key
-                perkey_victim_dirinfo_.erase(dirinfo_map_iter);
+                perkey_victim_dirinfo_.erase(dirinfo_list_iter);
             }
         }
         return;
@@ -774,7 +775,7 @@ namespace covered
 
     // For trade-off-aware placement calculation
 
-    void VictimTracker::findVictimsForPlacement_(const ObjectSize& object_size, const Edgeset& placement_edgeset, std::unordered_map<Key, Edgeset, KeyHasher>& pervictim_edgeset, std::unordered_map<Key, std::list<VictimCacheinfo>, KeyHasher>& pervictim_cacheinfos, std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& peredge_synced_victimset, std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& peredge_fetched_victimset, Edgeset& victim_fetch_edgeset, const std::unordered_map<uint32_t, std::list<VictimCacheinfo>>& extra_peredge_victim_cacheinfos) const
+    void VictimTracker::findVictimsForPlacement_(const ObjectSize& object_size, const Edgeset& placement_edgeset, std::unordered_map<Key, Edgeset, KeyHasher>& pervictim_edgeset, std::unordered_map<Key, std::list<VictimCacheinfo>, KeyHasher>& pervictim_cacheinfos, std::unordered_map<uint32_t, std::list<Key>>& peredge_synced_victimset, std::unordered_map<uint32_t, std::list<Key>>& peredge_fetched_victimset, Edgeset& victim_fetch_edgeset, const std::unordered_map<uint32_t, std::list<VictimCacheinfo>>& extra_peredge_victim_cacheinfos) const
     {
         // NOTE: NO need to acquire a read lock which has been done in calcEvictionCost()
 
@@ -791,17 +792,17 @@ namespace covered
         {
             uint32_t tmp_edge_idx = *placement_edgeset_const_iter;
 
-            peredge_victim_metadata_t::const_iterator victim_metadata_map_const_iter = peredge_victim_metadata_.find(tmp_edge_idx);
+            const bool tmp_is_valid = peredge_victim_metadata_[tmp_edge_idx].isValid();
 
             // (MINOR CASE) Non-existing edge-level victim metadata indicates empty victim syncset carried by the request triggering placement calculation, i.e., system is just starting and tmp_edge_idx has NOT cached any object
-            if (victim_metadata_map_const_iter == peredge_victim_metadata_.end())
+            if (!tmp_is_valid)
             {
                 continue; // Equivalent to that tmp_edge_idx has NOT used any cache size (i.e., sufficiently large cache margin bytes) and hence NOT find any victim from tmp_edge_idx
             }
 
             // NOTE: from here, edge-level victim metadata for tmp_edge_idx MUST exist, as we have performed victim synchronization when collecting local uncached popularity of the given key from tmp_edge_idx
             // NOTE: even if all victim cacheinfos in the edge-level victim metadata are removed after placement calculation, we will NOT erase the edge-level victim metadata from peredge_victim_metadata_
-            assert(victim_metadata_map_const_iter != peredge_victim_metadata_.end());
+            assert(tmp_is_valid);
 
             // Prepare extra victim cacheinfos for tmp_edge_idx if any
             std::list<VictimCacheinfo> tmp_extra_victim_cacheinfos;
@@ -813,7 +814,7 @@ namespace covered
             }
 
             // Find victims in tmp_edge_idx if without sufficient cache space
-            const EdgelevelVictimMetadata& tmp_edgelevel_victim_metadata = victim_metadata_map_const_iter->second;
+            const EdgelevelVictimMetadata& tmp_edgelevel_victim_metadata = peredge_victim_metadata_[tmp_edge_idx];
             tmp_edgelevel_victim_metadata.findVictimsForObjectSize(tmp_edge_idx, object_size, pervictim_edgeset, pervictim_cacheinfos, peredge_synced_victimset, peredge_fetched_victimset, victim_fetch_edgeset, tmp_extra_victim_cacheinfos);
         } // End of involved edge nodes
 
@@ -834,10 +835,10 @@ namespace covered
         std::vector<DirinfoSet> tmp_dirinfo_sets;
 
         // Get synced victim dirinfo set of perkey_victim_dirinfo_ for the given key if any
-        perkey_victim_dirinfo_t::const_iterator victim_dirinfo_map_const_iter = perkey_victim_dirinfo_.find(key);
-        if (victim_dirinfo_map_const_iter != perkey_victim_dirinfo_.end()) // NOTE: synced/extra-fetched victim key may be neighbor-beaconed and NOT have synced victim dirinfo in the current edge node, as the correpsonding beacon node may have NOT synced the latest victim dirinfo to the current edge node
+        perkey_victim_dirinfo_t::const_iterator victim_dirinfo_list_const_iter = VictimDirinfo::findVictimDirinfoForKey(key, perkey_victim_dirinfo_);
+        if (victim_dirinfo_list_const_iter != perkey_victim_dirinfo_.end()) // NOTE: synced/extra-fetched victim key may be neighbor-beaconed and NOT have synced victim dirinfo in the current edge node, as the correpsonding beacon node may have NOT synced the latest victim dirinfo to the current edge node
         {
-            const VictimDirinfo& tmp_victim_dirinfo = victim_dirinfo_map_const_iter->second;
+            const VictimDirinfo& tmp_victim_dirinfo = victim_dirinfo_list_const_iter->second;
             DirinfoSet tmp_dirinfo_set = tmp_victim_dirinfo.getDirinfoSetRef();
             assert(tmp_dirinfo_set.isComplete()); // NOTE: victim dirinfo set from victim dirinfo of victim tracker and extra fetched dirinfo set from extra_perkey_victim_dirinfoset MUST be complete
 

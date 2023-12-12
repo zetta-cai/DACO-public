@@ -20,6 +20,9 @@ namespace covered
         VictimsyncMonitor();
         ~VictimsyncMonitor();
 
+        bool isValid() const;
+        void validate();
+
         // As sender edge node
 
         SeqNum getCurSeqnum() const;
@@ -51,6 +54,9 @@ namespace covered
         void clearStaleCachedVictimSyncsets_(const uint32_t& peredge_monitored_victimsetcnt);
         VictimSyncset clearContinuousCachedVictimSyncsets_(const VictimSyncset& neighbor_complete_victim_syncset, const uint32_t& peredge_monitored_victimsetcnt); // If no continous compressed victim syncsets in cached_victim_syncsets_, returned victim syncset will be the same as neighbor_complete_victim_syncset (this could update tracked seqnum)
         SeqNum getMaxSeqnumFromCachedVictimSyncsets_(const uint32_t& peredge_monitored_victimsetcnt) const;
+
+        bool is_valid_;
+        void checkValidity_() const;
 
         // NOTE: dedup-/delta-based victim syncset compression/recovery MUST follow strict seqnum order (unless the received victim syncset for recovery is complete)
         // NOTE: we assert that seqnum should NOT overflow if using uint64_t (TODO: fix it by integer wrapping in the future if necessary)

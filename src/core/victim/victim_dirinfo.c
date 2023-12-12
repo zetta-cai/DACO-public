@@ -44,6 +44,32 @@ namespace covered
 
     VictimDirinfo::~VictimDirinfo() {}
 
+    std::list<std::pair<Key, VictimDirinfo>>::iterator VictimDirinfo::findVictimDirinfoForKey(const Key& key, std::list<std::pair<Key, VictimDirinfo>>& perkey_victim_dirinfos)
+    {
+        std::list<std::pair<Key, VictimDirinfo>>::iterator iter = perkey_victim_dirinfos.begin();
+        for (; iter != perkey_victim_dirinfos.end(); iter++)
+        {
+            if (iter->first == key)
+            {
+                break;
+            }
+        }
+        return iter;
+    }
+
+    std::list<std::pair<Key, VictimDirinfo>>::const_iterator VictimDirinfo::findVictimDirinfoForKey(const Key& key, const std::list<std::pair<Key, VictimDirinfo>>& perkey_victim_dirinfos)
+    {
+        std::list<std::pair<Key, VictimDirinfo>>::const_iterator iter = perkey_victim_dirinfos.begin();
+        for (; iter != perkey_victim_dirinfos.end(); iter++)
+        {
+            if (iter->first == key)
+            {
+                break;
+            }
+        }
+        return iter;
+    }
+
     uint32_t VictimDirinfo::getRefcnt() const
     {
         return refcnt_;

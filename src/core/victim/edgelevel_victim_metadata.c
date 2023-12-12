@@ -8,13 +8,14 @@ namespace covered
 {
     const std::string EdgelevelVictimMetadata::kClassName = "EdgelevelVictimMetadata";
 
-    EdgelevelVictimMetadata::EdgelevelVictimMetadata() : cache_margin_bytes_(0)
+    EdgelevelVictimMetadata::EdgelevelVictimMetadata() : is_valid_(false), cache_margin_bytes_(0)
     {
         victim_cacheinfos_.clear();
     }
 
     EdgelevelVictimMetadata::EdgelevelVictimMetadata(const uint64_t& cache_margin_bytes, const std::list<VictimCacheinfo>& victim_cacheinfos)
     {
+        is_valid_ = true;
         cache_margin_bytes_ = cache_margin_bytes;
         victim_cacheinfos_ = victim_cacheinfos;
 
@@ -26,29 +27,44 @@ namespace covered
 
     EdgelevelVictimMetadata::~EdgelevelVictimMetadata() {}
 
+    bool EdgelevelVictimMetadata::isValid() const
+    {
+        return is_valid_;
+    }
+
     void EdgelevelVictimMetadata::updateCacheMarginBytes(const uint64_t& cache_margin_bytes)
     {
+        checkValidity_();
+
         cache_margin_bytes_ = cache_margin_bytes;
         return;
     }
 
     uint64_t EdgelevelVictimMetadata::getCacheMarginBytes() const
     {
+        checkValidity_();
+
         return cache_margin_bytes_;
     }
 
     std::list<VictimCacheinfo> EdgelevelVictimMetadata::getVictimCacheinfos() const
     {
+        checkValidity_();
+
         return victim_cacheinfos_;
     }
 
     const std::list<VictimCacheinfo>& EdgelevelVictimMetadata::getVictimCacheinfosRef() const
     {
+        checkValidity_();
+
         return victim_cacheinfos_;
     }
 
-    void EdgelevelVictimMetadata::findVictimsForObjectSize(const uint32_t& cur_edge_idx, const ObjectSize& object_size, std::unordered_map<Key, Edgeset, KeyHasher>& pervictim_edgeset, std::unordered_map<Key, std::list<VictimCacheinfo>, KeyHasher>& pervictim_cacheinfos, std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& peredge_synced_victimset, std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& peredge_fetched_victimset, Edgeset& victim_fetch_edgeset, const std::list<VictimCacheinfo>& extra_victim_cacheinfos) const
+    void EdgelevelVictimMetadata::findVictimsForObjectSize(const uint32_t& cur_edge_idx, const ObjectSize& object_size, std::unordered_map<Key, Edgeset, KeyHasher>& pervictim_edgeset, std::unordered_map<Key, std::list<VictimCacheinfo>, KeyHasher>& pervictim_cacheinfos, std::unordered_map<uint32_t, std::list<Key>>& peredge_synced_victimset, std::unordered_map<uint32_t, std::list<Key>>& peredge_fetched_victimset, Edgeset& victim_fetch_edgeset, const std::list<VictimCacheinfo>& extra_victim_cacheinfos) const
     {
+        checkValidity_();
+
         // NOTE: NO need to clear pervictim_edgeset, pervictim_cacheinfos, peredge_synced_victimset, and peredge_fetched_victimset, which has been done by VictimTracker::findVictimsForPlacement_()
 
         // NOTE: NOT check seqnums here, as placement calculation allows temporarily inconsistent victim information
@@ -105,7 +121,7 @@ namespace covered
                 assert(tmp_saved_bytes < tmp_required_bytes);
 
                 // Enumerate extra victims to update per-victim edgeset, per-victim cacheinfos, and per-edge victim keyset
-                std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>::const_iterator peredge_synced_victimset_const_iter = peredge_synced_victimset.find(cur_edge_idx);
+                std::unordered_map<uint32_t, std::list<Key>>::const_iterator peredge_synced_victimset_const_iter = peredge_synced_victimset.find(cur_edge_idx);
                 for (std::list<VictimCacheinfo>::const_iterator extra_victim_cacheinfos_const_iter = extra_victim_cacheinfos.begin(); extra_victim_cacheinfos_const_iter != extra_victim_cacheinfos.end(); extra_victim_cacheinfos_const_iter++)
                 {
                     assert(extra_victim_cacheinfos_const_iter->isComplete()); // NOTE: victim cacheinfos of extra fetched victims MUST be complete
@@ -114,8 +130,19 @@ namespace covered
                     // Skip the extra victim that has already been considered by the current edge idx
                     if (peredge_synced_victimset_const_iter != peredge_synced_victimset.end())
                     {
-                        const std::unordered_set<Key, KeyHasher>& synced_victimset_ref = peredge_synced_victimset_const_iter->second;
-                        if (synced_victimset_ref.find(tmp_victim_key) != synced_victimset_ref.end())
+                        // Check if the extra victim is already found from current edge-level victim metadata
+                        bool victim_is_found = false;
+                        const std::list<Key>& synced_victimset_ref = peredge_synced_victimset_const_iter->second;
+                        for (std::list<Key>::const_iterator tmp_victim_const_iter = synced_victimset_ref.begin(); tmp_victim_const_iter != synced_victimset_ref.end(); tmp_victim_const_iter++)
+                        {
+                            if (*tmp_victim_const_iter == tmp_victim_key)
+                            {
+                                victim_is_found = true;
+                                break;
+                            }
+                        }
+
+                        if (victim_is_found)
                         {
                             continue;
                         }
@@ -153,13 +180,15 @@ namespace covered
         return;
     }
 
-    bool EdgelevelVictimMetadata::removeVictimsForPlacement(const std::unordered_set<Key, KeyHasher>& victim_keyset, uint64_t& removed_cacheinfos_size)
+    bool EdgelevelVictimMetadata::removeVictimsForPlacement(const std::list<Key>& victim_keyset, uint64_t& removed_cacheinfos_size)
     {
+        checkValidity_();
+
         // NOTE: victim removal after placement calculation does NOT affect seqnums
 
         // Remove victims from victim_cacheinfos_
         removed_cacheinfos_size = 0;
-        for (std::unordered_set<Key, KeyHasher>::const_iterator victim_keyset_const_iter = victim_keyset.begin(); victim_keyset_const_iter != victim_keyset.end(); victim_keyset_const_iter++)
+        for (std::list<Key>::const_iterator victim_keyset_const_iter = victim_keyset.begin(); victim_keyset_const_iter != victim_keyset.end(); victim_keyset_const_iter++)
         {
             bool found_victim = false;
             for (std::list<VictimCacheinfo>::iterator cacheinfo_list_iter = victim_cacheinfos_.begin(); cacheinfo_list_iter != victim_cacheinfos_.end(); cacheinfo_list_iter++)
@@ -196,6 +225,7 @@ namespace covered
     {
         if (this != &other)
         {
+            is_valid_ = other.is_valid_;
             cache_margin_bytes_ = other.cache_margin_bytes_;
             victim_cacheinfos_ = other.victim_cacheinfos_;
         }
@@ -227,15 +257,21 @@ namespace covered
         return;
     }
 
-    void EdgelevelVictimMetadata::updatePeredgeVictimset_(std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>& peredge_victimset, const uint32_t& edge_idx, const Key& victim_key) const
+    void EdgelevelVictimMetadata::updatePeredgeVictimset_(std::unordered_map<uint32_t, std::list<Key>>& peredge_victimset, const uint32_t& edge_idx, const Key& victim_key) const
     {
-        std::unordered_map<uint32_t, std::unordered_set<Key, KeyHasher>>::iterator peredge_victimset_iter = peredge_victimset.find(edge_idx);
+        std::unordered_map<uint32_t, std::list<Key>>::iterator peredge_victimset_iter = peredge_victimset.find(edge_idx);
         if (peredge_victimset_iter == peredge_victimset.end())
         {
-            peredge_victimset_iter = peredge_victimset.insert(std::pair(edge_idx, std::unordered_set<Key, KeyHasher>())).first;
+            peredge_victimset_iter = peredge_victimset.insert(std::pair(edge_idx, std::list<Key>())).first;
         }
         assert(peredge_victimset_iter != peredge_victimset.end());
-        peredge_victimset_iter->second.insert(victim_key);
+        peredge_victimset_iter->second.push_back(victim_key);
+        return;
+    }
+
+    void EdgelevelVictimMetadata::checkValidity_() const
+    {
+        assert(is_valid_);
         return;
     }
 }

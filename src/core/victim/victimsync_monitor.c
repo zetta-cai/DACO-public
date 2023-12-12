@@ -6,7 +6,7 @@ namespace covered
 {
     const std::string VictimsyncMonitor::kClassName = "VictimsyncMonitor";
 
-    VictimsyncMonitor::VictimsyncMonitor() : cur_seqnum_(0), prev_victim_syncset_ptr_(nullptr), need_enforcement_(false), is_first_complete_received_(true), tracked_seqnum_(0), enforcement_seqnum_(0), wait_for_complete_victim_syncset_(false)
+    VictimsyncMonitor::VictimsyncMonitor() : is_valid_(false), cur_seqnum_(0), prev_victim_syncset_ptr_(nullptr), need_enforcement_(false), is_first_complete_received_(true), tracked_seqnum_(0), enforcement_seqnum_(0), wait_for_complete_victim_syncset_(false)
     {
         cached_victim_syncsets_.clear();
     }
@@ -20,21 +20,39 @@ namespace covered
         }
     }
 
+    bool VictimsyncMonitor::isValid() const
+    {
+        return is_valid_;
+    }
+
+    void VictimsyncMonitor::validate()
+    {
+        assert(!is_valid_);
+        is_valid_ = true;
+        return;
+    }
+
     // As sender edge node
     
     SeqNum VictimsyncMonitor::getCurSeqnum() const
     {
+        checkValidity_();
+
         return cur_seqnum_;
     }
 
     void VictimsyncMonitor::incrCurSeqnum()
     {
+        checkValidity_();
+
         cur_seqnum_ = Util::uint64Add(cur_seqnum_, 1);
         return;
     }
 
     bool VictimsyncMonitor::getPrevVictimSyncset(VictimSyncset& prev_victim_syncset) const
     {
+        checkValidity_();
+
         if (prev_victim_syncset_ptr_ == NULL)
         {
             return false;
@@ -48,6 +66,8 @@ namespace covered
 
     void VictimsyncMonitor::setPrevVictimSyncset(const VictimSyncset& prev_victim_syncset)
     {
+        checkValidity_();
+
         if (prev_victim_syncset_ptr_ == NULL)
         {
             prev_victim_syncset_ptr_ = new VictimSyncset(prev_victim_syncset); // Copy constructor
@@ -63,6 +83,8 @@ namespace covered
 
     void VictimsyncMonitor::releasePrevVictimSyncset()
     {
+        checkValidity_();
+
         if (prev_victim_syncset_ptr_ != NULL)
         {
             delete prev_victim_syncset_ptr_;
@@ -73,6 +95,8 @@ namespace covered
 
     bool VictimsyncMonitor::needEnforcement() const
     {
+        checkValidity_();
+
         if (need_enforcement_)
         {
             assert(wait_for_complete_victim_syncset_ == true); // NOTE: current edge node MUST be waiting for a complete victim syncset from the specific neighbor if need enforcement
@@ -82,6 +106,8 @@ namespace covered
 
     void VictimsyncMonitor::resetEnforcement()
     {
+        checkValidity_();
+
         need_enforcement_ = false;
         return;
     }
@@ -90,11 +116,15 @@ namespace covered
 
     bool VictimsyncMonitor::isFirstCompleteReceived() const
     {
+        checkValidity_();
+
         return is_first_complete_received_;
     }
 
     void VictimsyncMonitor::clearFirstCompleteReceived()
     {
+        checkValidity_();
+
         assert(tracked_seqnum_ == 0); // NOTE: before the first complete victim syncset is received, tracked seqnum MUST be 0 after initialization
 
         is_first_complete_received_ = false;
@@ -103,11 +133,15 @@ namespace covered
 
     SeqNum VictimsyncMonitor::getTrackedSeqnum() const
     {
+        checkValidity_();
+
         return tracked_seqnum_;
     }
 
     VictimSyncset VictimsyncMonitor::tryToClearEnforcementStatus_(const VictimSyncset& neighbor_complete_victim_syncset, const SeqNum& synced_seqnum, const uint32_t& peredge_monitored_victimsetcnt)
     {
+        checkValidity_();
+
         assert(neighbor_complete_victim_syncset.isComplete());
         assert(neighbor_complete_victim_syncset.getSeqnum() == synced_seqnum);
 
@@ -134,6 +168,8 @@ namespace covered
 
     void VictimsyncMonitor::tryToEnableEnforcementStatus_(const VictimSyncset& neighbor_compressed_victim_syncset, const SeqNum& synced_seqnum, const uint32_t& peredge_monitored_victimsetcnt)
     {
+        checkValidity_();
+
         assert(neighbor_compressed_victim_syncset.isCompressed());
         assert(neighbor_compressed_victim_syncset.getSeqnum() == synced_seqnum);
 
@@ -160,6 +196,8 @@ namespace covered
 
     uint64_t VictimsyncMonitor::getSizeForCapacity() const
     {
+        checkValidity_();
+
         uint64_t size = 0;
 
         size += sizeof(SeqNum); // cur_seqnum_
@@ -270,5 +308,11 @@ namespace covered
         }
 
         return max_seqnum;
+    }
+
+    void VictimsyncMonitor::checkValidity_() const
+    {
+        assert(is_valid_);
+        return;
     }
 }
