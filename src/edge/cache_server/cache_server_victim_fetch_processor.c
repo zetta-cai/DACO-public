@@ -128,10 +128,10 @@ namespace covered
         // NOTE: Current edge node MUST NOT be the beacon node for the key (triggering victim fetching) due to remote victim fetch request
         // We do NOT make assertion here as CoveredVictimFetchRequest does NOT need to embed the key triggering victim fetching
 
-        // Victim synchronization
-        const uint32_t source_edge_idx = covered_victim_fetch_request_ptr->getSourceIndex();
-        const VictimSyncset& neighbor_victim_syncset = covered_victim_fetch_request_ptr->getVictimSyncsetRef();
-        tmp_covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, tmp_cooperation_wrapper_ptr);
+        // // Victim synchronization
+        // const uint32_t source_edge_idx = covered_victim_fetch_request_ptr->getSourceIndex();
+        // const VictimSyncset& neighbor_victim_syncset = covered_victim_fetch_request_ptr->getVictimSyncsetRef();
+        // tmp_edge_wrapper_ptr->updateCacheManagerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset);
 
         // Get victim cacheinfos from local edge cache for object size
         const ObjectSize object_size = covered_victim_fetch_request_ptr->getObjectSize(); // Size of newly-admitted object (i.e., required size)
@@ -147,9 +147,9 @@ namespace covered
         uint32_t victim_fetch_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(victim_fetch_end_timestamp, victim_fetch_start_timestamp));
         event_list.addEvent(Event::EDGE_CACHE_SERVER_VICTIM_FETCH_PROCESSOR_FETCHING_EVENT_NAME, victim_fetch_latency_us); // Add victim fetching event if with event tracking
         
-        // Prepare victim syncset for piggybacking-based victim synchronization
-        const uint32_t dst_edge_idx_for_compression = control_request_ptr->getSourceIndex();
-        VictimSyncset local_victim_syncset = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr()->accessVictimTrackerForLocalVictimSyncset(dst_edge_idx_for_compression, tmp_edge_wrapper_ptr->getCacheMarginBytes()); // complete or compressed
+        // // Prepare victim syncset for piggybacking-based victim synchronization
+        // const uint32_t dst_edge_idx_for_compression = control_request_ptr->getSourceIndex();
+        // VictimSyncset local_victim_syncset = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr()->accessVictimTrackerForLocalVictimSyncset(dst_edge_idx_for_compression, tmp_edge_wrapper_ptr->getCacheMarginBytes()); // complete or compressed
 
         // Prepare victim fetchset for lazy victim fetching
         // NOTE: we do NOT care about seqnum, is_enforce_complete, and cache_margin_bytes in victim_fetchset
@@ -160,7 +160,8 @@ namespace covered
         const uint32_t current_edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
         const NetworkAddr edge_cache_server_recvreq_source_addr = cache_server_victim_fetch_processor_param_ptr_->getCacheServerPtr()->getEdgeCacheServerRecvreqSourceAddr();
         const bool skip_propagation_latency = covered_victim_fetch_request_ptr->isSkipPropagationLatency();
-        MessageBase* covered_victim_fetch_response_ptr = new CoveredVictimFetchResponse(local_victim_fetchset, local_victim_syncset, current_edge_idx, edge_cache_server_recvreq_source_addr, total_bandwidth_usage, event_list, skip_propagation_latency);
+        //MessageBase* covered_victim_fetch_response_ptr = new CoveredVictimFetchResponse(local_victim_fetchset, local_victim_syncset, current_edge_idx, edge_cache_server_recvreq_source_addr, total_bandwidth_usage, event_list, skip_propagation_latency);
+        MessageBase* covered_victim_fetch_response_ptr = new CoveredVictimFetchResponse(local_victim_fetchset, current_edge_idx, edge_cache_server_recvreq_source_addr, total_bandwidth_usage, event_list, skip_propagation_latency);
         assert(covered_victim_fetch_response_ptr != NULL);
 
         // Push CoveredVictimFetchResponse into edge-to-edge propagation simulator to send back to the beacon edge node

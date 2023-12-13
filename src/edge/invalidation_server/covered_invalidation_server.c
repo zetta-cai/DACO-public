@@ -42,9 +42,8 @@ namespace covered
         }
 
         // Victim synchronization
-        // NOTE: we always perform victim synchronization before popularity aggregation, as we need the latest synced victim information for placement calculation
         const VictimSyncset& neighbor_victim_syncset = covered_invalidation_request_ptr->getVictimSyncsetRef();
-        tmp_covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, edge_wrapper_ptr_->getCooperationWrapperPtr());
+        edge_wrapper_ptr_->updateCacheManagerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset);
 
         return;
     }

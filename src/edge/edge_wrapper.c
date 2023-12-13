@@ -1068,7 +1068,7 @@ namespace covered
     }
 
     //void EdgeWrapper::updateCacheManagerForNeighborVictimSyncset(const uint32_t& source_edge_idx, const VictimSyncset& neighbor_victim_syncset) const
-    void EdgeWrapper::updateCacheManagerForNeighborVictimSyncset(const uint32_t& source_edge_idx, const VictimSyncset& neighbor_victim_syncset, const Key& key = Key()) const // TMPDEBUG231211
+    void EdgeWrapper::updateCacheManagerForNeighborVictimSyncset(const uint32_t& source_edge_idx, const VictimSyncset& neighbor_victim_syncset, const Key& key) const // TMPDEBUG231211
     {
         // Foreground victim synchronization
         // (OBSOLETE due to background processing) NOTE: we always perform victim synchronization before popularity aggregation, as we need the latest synced victim information for placement calculation

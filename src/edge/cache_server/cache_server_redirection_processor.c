@@ -242,9 +242,7 @@ namespace covered
             is_cooperative_cached = tmp_edge_wrapper_ptr->getEdgeCachePtr()->isLocalCached(tmp_key);
 
             // Victim synchronization
-            // (OBSOLETE due to background processing) tmp_covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, tmp_edge_wrapper_ptr->getCooperationWrapperPtr());
-            // tmp_edge_wrapper_ptr->getSynchronizationServerParamPtr()->getSynchronizationServerItemBufferPtr()->push(SynchronizationServerItem(source_edge_idx, neighbor_victim_syncset));
-            tmp_edge_wrapper_ptr->getSynchronizationServerParamPtr()->getSynchronizationServerItemBufferPtr()->push(SynchronizationServerItem(source_edge_idx, neighbor_victim_syncset, tmp_key)); // TMPDEBUG231211
+            tmp_edge_wrapper_ptr->updateCacheManagerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset);
         }
         else // Baselines
         {

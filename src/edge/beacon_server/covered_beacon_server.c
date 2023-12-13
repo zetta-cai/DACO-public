@@ -52,11 +52,8 @@ namespace covered
         bool is_global_cached = edge_wrapper_ptr_->getCooperationWrapperPtr()->lookupDirectoryTableByBeaconServer(tmp_key, source_edge_idx, edge_cache_server_worker_recvreq_dst_addr, is_being_written, is_valid_directory_exist, directory_info, is_source_cached);
 
         // Victim synchronization
-        // (OBSOLETE due to background processing) NOTE: we always perform victim synchronization before popularity aggregation, as we need the latest synced victim information for placement calculation
         const VictimSyncset& neighbor_victim_syncset = covered_directory_lookup_request_ptr->getVictimSyncsetRef();
-        // (OBSOLETE due to background processing) covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, edge_wrapper_ptr_->getCooperationWrapperPtr(), tmp_key);
-        // edge_wrapper_ptr_->getSynchronizationServerParamPtr()->getSynchronizationServerItemBufferPtr()->push(SynchronizationServerItem(source_edge_idx, neighbor_victim_syncset));
-        edge_wrapper_ptr_->getSynchronizationServerParamPtr()->getSynchronizationServerItemBufferPtr()->push(SynchronizationServerItem(source_edge_idx, neighbor_victim_syncset, tmp_key)); // TMPDEBUG231211
+        edge_wrapper_ptr_->updateCacheManagerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset);
 
         // Selective popularity aggregation after remote directory lookup
         const CollectedPopularity& collected_popularity = covered_directory_lookup_request_ptr->getCollectedPopularityRef();
@@ -206,10 +203,7 @@ namespace covered
         CoveredCacheManager* covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
 
         // Victim synchronization
-        // (OBSOLETE due to background processing) NOTE: we always perform victim synchronization before popularity aggregation, as we need the latest synced victim information for placement calculation
-        // (OBSOLETE due to background processing) covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, edge_wrapper_ptr_->getCooperationWrapperPtr());
-        // edge_wrapper_ptr_->getSynchronizationServerParamPtr()->getSynchronizationServerItemBufferPtr()->push(SynchronizationServerItem(source_edge_idx, neighbor_victim_syncset));
-        edge_wrapper_ptr_->getSynchronizationServerParamPtr()->getSynchronizationServerItemBufferPtr()->push(SynchronizationServerItem(source_edge_idx, neighbor_victim_syncset, tmp_key)); // TMPDEBUG231211
+        edge_wrapper_ptr_->updateCacheManagerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset);
 
         if (is_directory_update) // Update directory information
         {
@@ -364,9 +358,8 @@ namespace covered
         // NOTE: NO need to check if key is local cached or not, as collected_popularity.is_tracked_ MUST be false if key is local cached in source edge node and will NOT update/add aggregated uncached popularity
 
         // Victim synchronization
-        // NOTE: we always perform victim synchronization before popularity aggregation, as we need the latest synced victim information for placement calculation
         const VictimSyncset& neighbor_victim_syncset = covered_acquire_writelock_request_ptr->getVictimSyncsetRef();
-        covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, edge_wrapper_ptr_->getCooperationWrapperPtr());
+        edge_wrapper_ptr_->updateCacheManagerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset);
 
         // Selective popularity aggregation after remote acquire writelock
         const CollectedPopularity& collected_popularity = covered_acquire_writelock_request_ptr->getCollectedPopularityRef();
@@ -419,9 +412,8 @@ namespace covered
         // NOTE: NO need to check if key is local cached or not, as collected_popularity.is_tracked_ MUST be false if key is local cached in source edge node and will NOT update/add aggregated uncached popularity
 
         // Victim synchronization
-        // NOTE: we always perform victim synchronization before popularity aggregation, as we need the latest synced victim information for placement calculation
         const VictimSyncset& neighbor_victim_syncset = covered_release_writelock_request_ptr->getVictimSyncsetRef();
-        covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(sender_edge_idx, neighbor_victim_syncset, edge_wrapper_ptr_->getCooperationWrapperPtr());
+        edge_wrapper_ptr_->updateCacheManagerForNeighborVictimSyncset(sender_edge_idx, neighbor_victim_syncset);
 
         // Selective popularity aggregation after remote release writelock
         const CollectedPopularity& collected_popularity = covered_release_writelock_request_ptr->getCollectedPopularityRef();
@@ -485,7 +477,7 @@ namespace covered
         // Victim synchronization
         const uint32_t sender_edge_idx = covered_placement_redirected_get_response_ptr->getSourceIndex();
         const VictimSyncset& neighbor_victim_syncset = covered_placement_redirected_get_response_ptr->getVictimSyncsetRef();
-        covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(sender_edge_idx, neighbor_victim_syncset, edge_wrapper_ptr_->getCooperationWrapperPtr());
+        edge_wrapper_ptr_->updateCacheManagerForNeighborVictimSyncset(sender_edge_idx, neighbor_victim_syncset);
 
         // Get background eventlist and bandwidth usage to update background counter for beacon server
         const EventList& background_event_list = covered_placement_redirected_get_response_ptr->getEventListRef();

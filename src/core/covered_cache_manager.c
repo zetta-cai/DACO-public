@@ -266,7 +266,6 @@ namespace covered
         // For lazy victim fetching before non-blocking placement deployment
         bool need_victim_fetching = false;
         DeltaReward best_placement_admission_benefit = 0.0;
-        DeltaReward best_placement_eviction_cost = 0.0; // TMPDEBUG231211
         Edgeset tmp_best_placement_edgeset; // For preserved edgeset and placement notifications under non-blocking placement deployment
         std::list<std::pair<uint32_t, std::list<Key>>> tmp_best_placement_peredge_synced_victimset; // For synced victim removal under non-blocking placement deployment
         std::list<std::pair<uint32_t, std::list<Key>>> tmp_best_placement_peredge_fetched_victimset; // For fetched victim removal under non-blocking placement deployment
@@ -307,7 +306,6 @@ namespace covered
                     max_placement_gain = tmp_placement_gain;
 
                     best_placement_admission_benefit = tmp_admission_benefit;
-                    best_placement_eviction_cost = tmp_eviction_cost; // TMPDEBUG231211
                     tmp_best_placement_edgeset = tmp_placement_edgeset;
                     tmp_best_placement_peredge_synced_victimset = tmp_placement_peredge_synced_victimset;
                     tmp_best_placement_peredge_fetched_victimset = tmp_placement_peredge_fetched_victimset;
@@ -428,10 +426,11 @@ namespace covered
                     {
                         const Key& tmp_victim_key = tmp_victim_dirinfosets_const_iter->first;
 
-                        // NOTE: must NOT exist due to unique local beaconed local cached keys (TODO: comment)
-                        assert((KVListHelper<Key, DirinfoSet>::findVFromListForK(tmp_victim_key, extra_perkey_victim_dirinfoset) != extra_perkey_victim_dirinfoset.end()));
-
-                        extra_perkey_victim_dirinfoset.push_back(std::pair<Key, DirinfoSet>(tmp_victim_key, tmp_victim_dirinfosets_const_iter->second));
+                        // NOTE: maybe exist due to local beaconed neighbor cached keys (some victim fetch responses may already be received before fetching local victims)
+                        if (KVListHelper<Key, DirinfoSet>::findVFromListForK(tmp_victim_key, extra_perkey_victim_dirinfoset) == extra_perkey_victim_dirinfoset.end())
+                        {
+                            extra_perkey_victim_dirinfoset.push_back(std::pair<Key, DirinfoSet>(tmp_victim_key, tmp_victim_dirinfosets_const_iter->second));
+                        }
                     }
 
                     // Update ack information
@@ -530,13 +529,14 @@ namespace covered
     {
         assert(edge_wrapper_ptr != NULL);
 
-        // Prepare victim syncset for piggybacking-based victim synchronization
-        // NOTE: need to fetch more victims means that the cache of the dst edge node does NOT have sufficient space for the newly-admited object (i.e., NOT empty), so there MUST exist the corresponding edge-level victim metadata for the dst edge node -> while we still need to provide cache margin bytes of the current edge node, as we are getting victim syncset of the current edge node, which may NOT have edge-level metadata
-        VictimSyncset victim_syncset = edge_wrapper_ptr->getCoveredCacheManagerPtr()->accessVictimTrackerForLocalVictimSyncset(dst_edge_idx_for_compression, edge_wrapper_ptr->getCacheMarginBytes());
+        // // Prepare victim syncset for piggybacking-based victim synchronization
+        // // NOTE: need to fetch more victims means that the cache of the dst edge node does NOT have sufficient space for the newly-admited object (i.e., NOT empty), so there MUST exist the corresponding edge-level victim metadata for the dst edge node -> while we still need to provide cache margin bytes of the current edge node, as we are getting victim syncset of the current edge node, which may NOT have edge-level metadata
+        // VictimSyncset victim_syncset = edge_wrapper_ptr->getCoveredCacheManagerPtr()->accessVictimTrackerForLocalVictimSyncset(dst_edge_idx_for_compression, edge_wrapper_ptr->getCacheMarginBytes());
 
         // Prepare victim fetch request to fetch victims from the target edge node
         const uint32_t current_edge_idx = edge_wrapper_ptr->getNodeIdx();
-        MessageBase* victim_fetch_request_ptr = new CoveredVictimFetchRequest(object_size, victim_syncset, current_edge_idx, recvrsp_source_addr, skip_propagation_latency);
+        // MessageBase* victim_fetch_request_ptr = new CoveredVictimFetchRequest(object_size, victim_syncset, current_edge_idx, recvrsp_source_addr, skip_propagation_latency);
+        MessageBase* victim_fetch_request_ptr = new CoveredVictimFetchRequest(object_size, current_edge_idx, recvrsp_source_addr, skip_propagation_latency);
         assert(victim_fetch_request_ptr != NULL);
 
         // Push CoveredVictimFetchRequest into edge-to-edge propagation simulator to send to the target edge node
@@ -557,11 +557,11 @@ namespace covered
 
         const CoveredVictimFetchResponse* const covered_victim_fetch_response_ptr = static_cast<const CoveredVictimFetchResponse*>(control_response_ptr);
         CoveredCacheManager* tmp_covered_cache_manager_ptr = edge_wrapper_ptr->getCoveredCacheManagerPtr();
-
-        // Victim synchronization
         const uint32_t source_edge_idx = covered_victim_fetch_response_ptr->getSourceIndex();
-        const VictimSyncset& neighbor_victim_syncset = covered_victim_fetch_response_ptr->getVictimSyncsetRef();
-        tmp_covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, edge_wrapper_ptr->getCooperationWrapperPtr());
+
+        // // Victim synchronization
+        // const VictimSyncset& neighbor_victim_syncset = covered_victim_fetch_response_ptr->getVictimSyncsetRef();
+        // tmp_covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, edge_wrapper_ptr->getCooperationWrapperPtr());
 
         // NOTE: cache margin bytes of victim_fetchset will NOT be used
         const VictimSyncset& victim_fetchset = covered_victim_fetch_response_ptr->getVictimFetchsetRef();
@@ -597,7 +597,7 @@ namespace covered
             // NOTE: extra fetched victim dirinfo sets from local directory table MUST be complete
             assert(victim_dirinfosets_const_iter->second.isComplete());
 
-            // NOTE: maybe exist due to local beaconed neighbor cached keys
+            // NOTE: maybe exist due to local beaconed local/other-neighbor cached keys
             const Key& tmp_victim_key = victim_dirinfosets_const_iter->first;
             if (KVListHelper<Key, DirinfoSet>::findVFromListForK(tmp_victim_key, extra_perkey_victim_dirinfoset) == extra_perkey_victim_dirinfoset.end())
             {

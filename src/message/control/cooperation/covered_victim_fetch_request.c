@@ -4,11 +4,19 @@ namespace covered
 {
     const std::string CoveredVictimFetchRequest::kClassName("CoveredVictimFetchRequest");
 
-    CoveredVictimFetchRequest::CoveredVictimFetchRequest(const uint32_t& object_size, const VictimSyncset& victim_syncset, const uint32_t& source_index, const NetworkAddr& source_addr, const bool& skip_propagation_latency) : UintVictimsetMessage(object_size, victim_syncset, MessageType::kCoveredVictimFetchRequest, source_index, source_addr, BandwidthUsage(), EventList(), skip_propagation_latency)
+    // CoveredVictimFetchRequest::CoveredVictimFetchRequest(const uint32_t& object_size, const VictimSyncset& victim_syncset, const uint32_t& source_index, const NetworkAddr& source_addr, const bool& skip_propagation_latency) : UintVictimsetMessage(object_size, victim_syncset, MessageType::kCoveredVictimFetchRequest, source_index, source_addr, BandwidthUsage(), EventList(), skip_propagation_latency)
+    // {
+    // }
+
+    CoveredVictimFetchRequest::CoveredVictimFetchRequest(const uint32_t& object_size, const uint32_t& source_index, const NetworkAddr& source_addr, const bool& skip_propagation_latency) : UintMessage(object_size, MessageType::kCoveredVictimFetchRequest, source_index, source_addr, BandwidthUsage(), EventList(), skip_propagation_latency)
     {
     }
 
-    CoveredVictimFetchRequest::CoveredVictimFetchRequest(const DynamicArray& msg_payload) : UintVictimsetMessage(msg_payload)
+    // CoveredVictimFetchRequest::CoveredVictimFetchRequest(const DynamicArray& msg_payload) : UintVictimsetMessage(msg_payload)
+    // {
+    // }
+
+    CoveredVictimFetchRequest::CoveredVictimFetchRequest(const DynamicArray& msg_payload) : UintMessage(msg_payload)
     {
     }
 
