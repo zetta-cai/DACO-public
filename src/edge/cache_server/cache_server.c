@@ -18,6 +18,17 @@ namespace covered
 {
     const std::string CacheServer::kClassName("CacheServer");
 
+    void* CacheServer::launchCacheServer(void* edge_wrapper_ptr)
+    {
+        assert(edge_wrapper_ptr != NULL);
+
+        CacheServer cache_server = CacheServer((EdgeWrapper*)edge_wrapper_ptr);
+        cache_server.start();
+
+        pthread_exit(NULL);
+        return NULL;
+    }
+
     CacheServer::CacheServer(EdgeWrapper* edge_wrapper_ptr) : edge_wrapper_ptr_(edge_wrapper_ptr)
     {
         assert(edge_wrapper_ptr != NULL);
@@ -540,7 +551,9 @@ namespace covered
             }
 
             // Victim synchronization
-            tmp_covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, edge_wrapper_ptr_->getCooperationWrapperPtr());
+            // (OBSOLETE due to background processing) tmp_covered_cache_manager_ptr->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, edge_wrapper_ptr_->getCooperationWrapperPtr());
+            // edge_wrapper_ptr_->getSynchronizationServerParamPtr()->getSynchronizationServerItemBufferPtr()->push(SynchronizationServerItem(source_edge_idx, neighbor_victim_syncset));
+            edge_wrapper_ptr_->getSynchronizationServerParamPtr()->getSynchronizationServerItemBufferPtr()->push(SynchronizationServerItem(source_edge_idx, neighbor_victim_syncset, MessageBase::getKeyFromMessage(control_response_ptr))); // TMPDEBUG231211
         }
         else // Baselines
         {

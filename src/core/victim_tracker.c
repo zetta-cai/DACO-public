@@ -190,9 +190,6 @@ namespace covered
         std::string context_name = "VictimTracker::updateForNeighborVictimSyncset()";
         rwlock_for_victim_tracker_->acquire_lock(context_name);
 
-        // TMPDEBUGTRACKER
-        struct timespec t0 = Util::getCurrentTimespec();
-
         // Enforce complete victim syncset for the next message to source edge node if necessary
         const bool is_valid_victimsync_monitor = peredge_victimsync_monitor_[source_edge_idx].isValid();
         if (neighbor_victim_syncset.isEnforceComplete()) // Enforce the current edge node to issue complete victim syncset without compression for the given source edge node
@@ -201,10 +198,6 @@ namespace covered
 
             peredge_victimsync_monitor_[source_edge_idx].releasePrevVictimSyncset(); // Release prev victim syncset for the source edge node such that the next message will piggyback a complete victim syncset
         }
-
-        // TMPDEBUGTRACKER
-        struct timespec t1 = Util::getCurrentTimespec();
-        struct timespec t2, t2_t3, t3, t4;
 
         // Allocate VictimsyncMonitor for the source edge node if this is the first victim syncset received from the source edge node
         if (!is_valid_victimsync_monitor) // No VictimsyncMonitor means that this is the first victim syncset from the source edge idx
@@ -254,9 +247,6 @@ namespace covered
             }
             else if (synced_seqnum == Util::uint64Add(tracked_seqnum, 1)) // A matched victim syncset
             {
-                // TMPDEBUGTRACKER
-                t2 = Util::getCurrentTimespec();
-
                 // Recover neighbor complete victim syncset first if necessary
                 if (!is_neighbor_victim_syncset_complete) // If neighbor_victim_syncset is compressed
                 {
@@ -266,24 +256,15 @@ namespace covered
                     VictimSyncset existing_complete_victim_syncset = getVictimSyncset_(source_edge_idx, tracked_seqnum, unused_is_enforce_complete);
                     assert(existing_complete_victim_syncset.isComplete());
 
-                    // TMPDEBUGTRACKER
-                    t2_t3 = Util::getCurrentTimespec();
-
                     // Recover neighbor complete victim syncset based on existing complete victim syncset of source edge idx and received neighbor_victim_syncset if compressed
                     //neighbor_complete_victim_syncset = VictimSyncset::recover(neighbor_victim_syncset, existing_complete_victim_syncset);
                     neighbor_complete_victim_syncset = VictimSyncset::recover(neighbor_victim_syncset, existing_complete_victim_syncset, key); // TMPDEBUG231211
                     assert(neighbor_complete_victim_syncset.isComplete());
                 }
 
-                // TMPDEBUGTRACKER
-                t3 = Util::getCurrentTimespec();
-
                 need_update_victim_tracker_ = true; // Update victim tracker with recovered/synced complete vicitm syncset
 
                 neighbor_complete_victim_syncset = peredge_victimsync_monitor_[source_edge_idx].tryToClearEnforcementStatus_(neighbor_complete_victim_syncset, synced_seqnum, peredge_monitored_victimsetcnt_); // This will set tracked_seqnum as synced_seqnum (i.e., tracked_seqnum + 1), clear stale and continuous cached victim syncsets, and clear enforcement status (set need_enforcement_ = false, enforcement_seqnum_ = 0, and wait_for_complete_victim_syncset_ = false) if necessary in VictimsyncMonitor
-
-                // TMPDEBUGTRACKER
-                t4 = Util::getCurrentTimespec();
             }
             else if (is_neighbor_victim_syncset_complete) // A complete victim syncset w/ synced_seqnum > tracked_seqnum + 1
             {
@@ -322,20 +303,8 @@ namespace covered
             with_complete_vicitm_syncset = neighbor_complete_victim_syncset.getLocalBeaconedVictims(neighbor_beaconed_victim_dirinfosets);
             assert(with_complete_vicitm_syncset);
 
-            // TMPDEBUGTRACKER
-            struct timespec t5 = Util::getCurrentTimespec();
-
             // Replace VictimCacheinfos for neighbor synced victims of the given edge node
             replaceVictimMetadataForEdgeIdx_(source_edge_idx, neighbor_cache_margin_bytes, neighbor_synced_victim_cacheinfos, cooperation_wrapper_ptr);
-
-            // TMPDEBUGTRACKER
-            struct timespec t6 = Util::getCurrentTimespec();
-
-            // TMPDEBUG231211
-            if (key.getKeystr() == "amwnaqnbqcshhvkhbxzfcbtmfqnfieoeuh")
-            {
-                Util::dumpVariablesForDebug(instance_name_, 16, "COVERED: after replaceVictimMetadataForEdgeIdx_ for key", key.getKeystr().c_str(), "t1-t0", std::to_string(Util::getDeltaTimeUs(t1, t0)).c_str(), "t2-t1", std::to_string(Util::getDeltaTimeUs(t2, t1)).c_str(), "t2_t3-t2", std::to_string(Util::getDeltaTimeUs(t2_t3, t2)).c_str(), "t3-t2_t3", std::to_string(Util::getDeltaTimeUs(t3, t2_t3)).c_str(), "t4-t3", std::to_string(Util::getDeltaTimeUs(t4, t3)).c_str(), "t5-t4", std::to_string(Util::getDeltaTimeUs(t5, t4)).c_str(), "t6-t5", std::to_string(Util::getDeltaTimeUs(t6, t5)).c_str());
-            }
 
             // Try to replace VictimDirinfo::dirinfoset (if any) for each neighbor beaconed neighbor synced victim of the given edge node
             replaceVictimDirinfoSets_(neighbor_beaconed_victim_dirinfosets, false);
@@ -345,12 +314,6 @@ namespace covered
             const std::list<std::pair<Key, DirinfoSet>> local_beaconed_neighbor_synced_victim_dirinfosets = cooperation_wrapper_ptr->getLocalBeaconedVictimsFromCacheinfos(neighbor_synced_victim_cacheinfos);
             assert(local_beaconed_neighbor_synced_victim_dirinfosets.size() <= neighbor_synced_victim_cacheinfos.size());
             replaceVictimDirinfoSets_(local_beaconed_neighbor_synced_victim_dirinfosets, true);
-
-            // TMPDEBUG231211
-            if (key.getKeystr() == "amwnaqnbqcshhvkhbxzfcbtmfqnfieoeuh")
-            {
-                Util::dumpVariablesForDebug(instance_name_, 2, "COVERED: after replaceVictimDirinfoSets_ for key", key.getKeystr().c_str());
-            }
         }
 
         rwlock_for_victim_tracker_->unlock(context_name);

@@ -13,6 +13,22 @@ namespace covered
 {
     const std::string InvalidationServerBase::kClassName("InvalidationServerBase");
 
+    void* InvalidationServerBase::launchInvalidationServer(void* edge_wrapper_ptr)
+    {
+        assert(edge_wrapper_ptr != NULL);
+
+        InvalidationServerBase* invalidation_server_ptr = InvalidationServerBase::getInvalidationServerByCacheName((EdgeWrapper*)edge_wrapper_ptr);
+        assert(invalidation_server_ptr != NULL);
+        invalidation_server_ptr->start();
+
+        assert(invalidation_server_ptr != NULL);
+        delete invalidation_server_ptr;
+        invalidation_server_ptr = NULL;
+
+        pthread_exit(NULL);
+        return NULL;
+    }
+
     InvalidationServerBase* InvalidationServerBase::getInvalidationServerByCacheName(EdgeWrapper* edge_wrapper_ptr)
     {
         InvalidationServerBase* invalidation_server_ptr = NULL;

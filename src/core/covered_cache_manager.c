@@ -73,12 +73,6 @@ namespace covered
         Util::dumpVariablesForDebug(instance_name_, 10, "updatePopularityAggregatorForAggregatedPopularity() for key", key.getKeystr().c_str(), "is_gobal_cached:", Util::toString(is_global_cached).c_str(), "tmp_is_global_cached:", Util::toString(tmp_is_global_cached).c_str(), "need_placement_calculation:", Util::toString(need_placement_calculation).c_str(), "is_tracked_by_source_edge_node:", Util::toString(collected_popularity.isTracked()).c_str());
         #endif
 
-        // TMPDEBUG231211
-        if (key.getKeystr() == "sbyh")
-        {
-            Util::dumpVariablesForDebug(instance_name_, 4, "CoveredCacheManager::updatePopularityAggregatorForAggregatedPopularity for key", key.getKeystr().c_str(), "need_placement_calculation:", Util::toString(need_placement_calculation).c_str());
-        }
-        
         // NOTE: we do NOT perform placement calculation for local/remote acquire writelock request, as newly-admitted cache copies will still be invalid after cache placement
         if (need_placement_calculation)
         {
@@ -281,12 +275,6 @@ namespace covered
         AggregatedUncachedPopularity tmp_aggregated_uncached_popularity;
         bool has_aggregated_uncached_popularity = popularity_aggregator_ptr_->getAggregatedUncachedPopularity(key, tmp_aggregated_uncached_popularity);
 
-        // TMPDEBUG231211
-        if (key.getKeystr() == "sbyh")
-        {
-            Util::dumpVariablesForDebug(instance_name_, 4, "CoveredCacheManager::placementCalculation_ for key", key.getKeystr().c_str(), "has_aggregated_uncached_popularity:", Util::toString(has_aggregated_uncached_popularity).c_str());
-        }
-
         // Perform placement calculation ONLY if key is still tracked by popularity aggregator (i.e., belonging to a global popular uncached object)
         if (has_aggregated_uncached_popularity)
         {
@@ -342,12 +330,6 @@ namespace covered
                     // Fetch victims ONLY if admission benefit > partial eviction cost under the best placement
                     need_victim_fetching = true;
                 }
-            }
-
-            // TMPDEBUG231211
-            if (key.getKeystr() == "sbyh")
-            {
-                Util::dumpVariablesForDebug(instance_name_, 10, "need_victim_fetching:", Util::toString(need_victim_fetching).c_str(), "has_best_placement:", Util::toString(has_best_placement).c_str(), "best_placement_edgeset:", best_placement_edgeset.toString().c_str(), "best_placement_admission_benefit:", std::to_string(best_placement_admission_benefit).c_str(), "best_placement_eviction_cost:", std::to_string(best_placement_eviction_cost).c_str());
             }
         }
 
@@ -567,13 +549,13 @@ namespace covered
         return;
     }
 
-    void CoveredCacheManager::processVictimFetchResponse_(const MessageBase* control_respnose_ptr, const EdgeWrapper* edge_wrapper_ptr, std::list<std::pair<uint32_t, std::list<VictimCacheinfo>>>& extra_peredge_victim_cacheinfos, std::list<std::pair<Key, DirinfoSet>>& extra_perkey_victim_dirinfoset) const
+    void CoveredCacheManager::processVictimFetchResponse_(const MessageBase* control_response_ptr, const EdgeWrapper* edge_wrapper_ptr, std::list<std::pair<uint32_t, std::list<VictimCacheinfo>>>& extra_peredge_victim_cacheinfos, std::list<std::pair<Key, DirinfoSet>>& extra_perkey_victim_dirinfoset) const
     {
-        assert(control_respnose_ptr != NULL);
-        assert(control_respnose_ptr->getMessageType() == MessageType::kCoveredVictimFetchResponse);
+        assert(control_response_ptr != NULL);
+        assert(control_response_ptr->getMessageType() == MessageType::kCoveredVictimFetchResponse);
         assert(edge_wrapper_ptr != NULL);
 
-        const CoveredVictimFetchResponse* const covered_victim_fetch_response_ptr = static_cast<const CoveredVictimFetchResponse*>(control_respnose_ptr);
+        const CoveredVictimFetchResponse* const covered_victim_fetch_response_ptr = static_cast<const CoveredVictimFetchResponse*>(control_response_ptr);
         CoveredCacheManager* tmp_covered_cache_manager_ptr = edge_wrapper_ptr->getCoveredCacheManagerPtr();
 
         // Victim synchronization

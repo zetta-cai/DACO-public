@@ -27,6 +27,7 @@ namespace covered
 #include "cooperation/cooperation_wrapper_base.h"
 #include "cooperation/directory/dirinfo_set.h"
 #include "edge/cache_server/cache_server.h"
+#include "edge/synchronization_server/synchronization_server_param.h"
 #include "edge/utils/background_counter.h"
 #include "edge/utils/local_cache_admission_item.h"
 #include "edge/utils/weight_tuner.h"
@@ -72,6 +73,7 @@ namespace covered
         PropagationSimulatorParam* getEdgeToclientPropagationSimulatorParamPtr() const;
         PropagationSimulatorParam* getEdgeToedgePropagationSimulatorParamPtr() const;
         PropagationSimulatorParam* getEdgeTocloudPropagationSimulatorParamPtr() const;
+        SynchronizationServerParam* getSynchronizationServerParamPtr() const;
         CoveredCacheManager* getCoveredCacheManagerPtr() const;
         BackgroundCounter& getEdgeBackgroundCounterForBeaconServerRef();
         WeightTuner& getWeightTunerRef();
@@ -121,6 +123,8 @@ namespace covered
         // (7.1) For victim synchronization
         uint64_t getCacheMarginBytes() const;
         void updateCacheManagerForLocalSyncedVictims(const bool& affect_victim_tracker) const; // NOTE: both edge cache server worker and local/remote beacon node (non-blocking data fetching for placement deployment) will access local edge cache, which may affect local cached metadata and hence update local synced victims (yet always update cache margin bytes)
+        //void updateCacheManagerForNeighborVictimSyncset(const uint32_t& source_edge_idx, const VictimSyncset& neighbor_victim_syncset);
+        void updateCacheManagerForNeighborVictimSyncset(const uint32_t& source_edge_idx, const VictimSyncset& neighbor_victim_syncset, const Key& key = Key()) const; // TMPDEBUG231211
 
         // (7.2) For non-blocking placement deployment (ONLY invoked by beacon edge node)
         // NOTE: (for non-blocking placement deployment) source_addr and recvrsp_socket_server_ptr are used for receiving eviction directory update responses if with local placement notification in current beacon edge node; skip propagation latency is used for all messages during non-blocking placement deployment (intermediate bandwidth usage and event list are counted by edge_background_counter_for_beacon_server_)
@@ -157,10 +161,6 @@ namespace covered
 
         // (5) Other utilities
 
-        static void* launchBeaconServer_(void* edge_wrapper_ptr);
-        static void* launchCacheServer_(void* edge_wrapper_ptr);
-        static void* launchInvalidationServer_(void* edge_wrapper_ptr);
-
         void checkPointers_() const;
 
         std::string instance_name_;
@@ -189,6 +189,7 @@ namespace covered
         PropagationSimulatorParam* edge_toclient_propagation_simulator_param_ptr_; // thread safe
         PropagationSimulatorParam* edge_toedge_propagation_simulator_param_ptr_; // thread safe
         PropagationSimulatorParam* edge_tocloud_propagation_simulator_param_ptr_; // thread safe
+        SynchronizationServerParam* synchronization_server_param_ptr_; // thread safe
 
         // ONLY for COVERED
         // (i) COVERED uses cache manager for popularity aggregation of global admission, victim tracking for placement calculation, and directory metadata cache
@@ -205,6 +206,7 @@ namespace covered
         pthread_t beacon_server_thread_;
         pthread_t cache_server_thread_;
         pthread_t invalidation_server_thread_;
+        pthread_t synchronization_server_thread_;
 
         // Common data structure shared by edge cache server and edge beacon server
         // -> Pushed by cache server worker (for in-advance remote placement notification after hybrid data fetching and local placement notification if sender is beacon) and beacon server (for local placement notification if sender is NOT beacon)

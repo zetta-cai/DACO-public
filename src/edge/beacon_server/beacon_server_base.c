@@ -14,6 +14,22 @@ namespace covered
 {
     const std::string BeaconServerBase::kClassName("BeaconServerBase");
 
+    void* BeaconServerBase::launchBeaconServer(void* edge_wrapper_ptr)
+    {
+        assert(edge_wrapper_ptr != NULL);
+
+        BeaconServerBase* beacon_server_ptr = BeaconServerBase::getBeaconServerByCacheName((EdgeWrapper*)edge_wrapper_ptr);
+        assert(beacon_server_ptr != NULL);
+        beacon_server_ptr->start();
+
+        assert(beacon_server_ptr != NULL);
+        delete beacon_server_ptr;
+        beacon_server_ptr = NULL;
+
+        pthread_exit(NULL);
+        return NULL;
+    }
+
     BeaconServerBase* BeaconServerBase::getBeaconServerByCacheName(EdgeWrapper* edge_wrapper_ptr)
     {
         BeaconServerBase* beacon_server_ptr = NULL;

@@ -20,6 +20,7 @@ namespace covered
     class InvalidationServerBase
     {
     public:
+        static void* launchInvalidationServer(void* edge_wrapper_ptr);
         static InvalidationServerBase* getInvalidationServerByCacheName(EdgeWrapper* edge_wrapper_ptr);
 
         InvalidationServerBase(EdgeWrapper* edge_wrapper_ptr);

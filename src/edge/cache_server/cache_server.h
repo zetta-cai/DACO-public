@@ -35,6 +35,8 @@ namespace covered
     class CacheServer
     {
     public:
+        static void* launchCacheServer(void* edge_wrapper_ptr);
+
         CacheServer(EdgeWrapper* edge_wrapper_ptr);
         ~CacheServer();
 

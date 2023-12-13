@@ -10,6 +10,7 @@
 #include "edge/beacon_server/beacon_server_base.h"
 #include "edge/cache_server/cache_server.h"
 #include "edge/invalidation_server/invalidation_server_base.h"
+#include "edge/synchronization_server/covered_synchronization_server.h"
 #include "event/event.h"
 #include "message/data_message.h"
 #include "message/control_message.h"
@@ -110,6 +111,10 @@ namespace covered
         edge_tocloud_propagation_simulator_param_ptr_ = new PropagationSimulatorParam((NodeWrapperBase*)this, propagation_latency_edgecloud_us, Config::getPropagationItemBufferSizeEdgeTocloud());
         assert(edge_tocloud_propagation_simulator_param_ptr_ != NULL);
 
+        // Allocate synchronization server param
+        synchronization_server_param_ptr_ = new SynchronizationServerParam(this, Config::getEdgeCacheServerDataRequestBufferSize());
+        assert(synchronization_server_param_ptr_ != NULL);
+
         // Allocate covered cache manager ONLY for COVERED
         if (cache_name == Util::COVERED_CACHE_NAME)
         {
@@ -188,6 +193,11 @@ namespace covered
         delete edge_tocloud_propagation_simulator_param_ptr_;
         edge_tocloud_propagation_simulator_param_ptr_ = NULL;
 
+        // Release synchronization server param
+        assert(synchronization_server_param_ptr_ != NULL);
+        delete synchronization_server_param_ptr_;
+        synchronization_server_param_ptr_ = NULL;
+
         // Release local cache admission ring buffer
         assert(local_cache_admission_buffer_ptr_ != NULL);
         delete local_cache_admission_buffer_ptr_;
@@ -254,6 +264,12 @@ namespace covered
     {
         assert(edge_tocloud_propagation_simulator_param_ptr_ != NULL);
         return edge_tocloud_propagation_simulator_param_ptr_;
+    }
+
+    SynchronizationServerParam* EdgeWrapper::getSynchronizationServerParamPtr() const
+    {
+        assert(synchronization_server_param_ptr_ != NULL);
+        return synchronization_server_param_ptr_;
     }
 
     CoveredCacheManager* EdgeWrapper::getCoveredCacheManagerPtr() const
@@ -548,9 +564,8 @@ namespace covered
             const uint32_t source_edge_idx = covered_invalidation_response_ptr->getSourceIndex();
 
             // Victim synchronization
-            // NOTE: we always perform victim synchronization before popularity aggregation, as we need the latest synced victim information for placement calculation
             const VictimSyncset& neighbor_victim_syncset = covered_invalidation_response_ptr->getVictimSyncsetRef();
-            covered_cache_manager_ptr_->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, cooperation_wrapper_ptr_);
+            updateCacheManagerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset);
         }
         else
         {
@@ -730,9 +745,8 @@ namespace covered
             const uint32_t source_edge_idx = covered_finish_block_response_ptr->getSourceIndex();
 
             // Victim synchronization
-            // NOTE: we always perform victim synchronization before popularity aggregation, as we need the latest synced victim information for placement calculation
             const VictimSyncset& neighbor_victim_syncset = covered_finish_block_response_ptr->getVictimSyncsetRef();
-            covered_cache_manager_ptr_->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, cooperation_wrapper_ptr_);
+            updateCacheManagerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset);
         }
         else
         {
@@ -785,7 +799,7 @@ namespace covered
         ThreadLauncher::pthreadCreateHighPriority(tmp_thread_name, &edge_tocloud_propagation_simulator_thread_, PropagationSimulator::launchPropagationSimulator, (void*)edge_tocloud_propagation_simulator_param_ptr_);
 
         // Launch beacon server
-        //pthread_returncode = pthread_create(&beacon_server_thread_, NULL, launchBeaconServer_, (void*)(this));
+        //pthread_returncode = pthread_create(&beacon_server_thread_, NULL, BeaconServerBase::launchBeaconServer, (void*)(this));
         // if (pthread_returncode != 0)
         // {
         //     std::ostringstream oss;
@@ -794,10 +808,10 @@ namespace covered
         //     exit(1);
         // }
         tmp_thread_name = "edge-beacon-server-" + std::to_string(node_idx_);
-        ThreadLauncher::pthreadCreateHighPriority(tmp_thread_name, &beacon_server_thread_, launchBeaconServer_, (void*)(this));
+        ThreadLauncher::pthreadCreateHighPriority(tmp_thread_name, &beacon_server_thread_, BeaconServerBase::launchBeaconServer, (void*)(this));
 
         // Launch cache server
-        //pthread_returncode = pthread_create(&cache_server_thread_, NULL, launchCacheServer_, (void*)(this));
+        //pthread_returncode = pthread_create(&cache_server_thread_, NULL, CacheServer::launchCacheServer, (void*)(this));
         // if (pthread_returncode != 0)
         // {
         //     std::ostringstream oss;
@@ -806,10 +820,10 @@ namespace covered
         //     exit(1);
         // }
         tmp_thread_name = "edge-cache-server-" + std::to_string(node_idx_);
-        ThreadLauncher::pthreadCreateHighPriority(tmp_thread_name, &cache_server_thread_, launchCacheServer_, (void*)(this));
+        ThreadLauncher::pthreadCreateHighPriority(tmp_thread_name, &cache_server_thread_, CacheServer::launchCacheServer, (void*)(this));
 
         // Launch invalidation server
-        //pthread_returncode = pthread_create(&invalidation_server_thread_, NULL, launchInvalidationServer_, (void*)(this));
+        //pthread_returncode = pthread_create(&invalidation_server_thread_, NULL, InvalidationServerBase::launchInvalidationServer, (void*)(this));
         // if (pthread_returncode != 0)
         // {
         //     std::ostringstream oss;
@@ -818,7 +832,19 @@ namespace covered
         //     exit(1);
         // }
         tmp_thread_name = "edge-invalidation-server-" + std::to_string(node_idx_);
-        ThreadLauncher::pthreadCreateLowPriority(tmp_thread_name, &invalidation_server_thread_, launchInvalidationServer_, (void*)(this));
+        ThreadLauncher::pthreadCreateLowPriority(tmp_thread_name, &invalidation_server_thread_, InvalidationServerBase::launchInvalidationServer, (void*)(this));
+
+        // Launch synchronization server
+        //pthread_returncode = pthread_create(&synchronization_server_thread_, NULL, CoveredSynchronizationServer::launchCoveredSynchronizationServer, (void*)(synchronization_server_param_ptr_));
+        // if (pthread_returncode != 0)
+        // {
+        //     std::ostringstream oss;
+        //     oss << "edge " << node_idx_ << " failed to launch synchronization server (error code: " << pthread_returncode << ")" << std::endl;
+        //     Util::dumpErrorMsg(instance_name_, oss.str());
+        //     exit(1);
+        // }
+        tmp_thread_name = "edge-synchronization-server-" + std::to_string(node_idx_);
+        ThreadLauncher::pthreadCreateHighPriority(tmp_thread_name, &synchronization_server_thread_, CoveredSynchronizationServer::launchCoveredSynchronizationServer, (void*)(synchronization_server_param_ptr_));
 
         return;
     }
@@ -915,53 +941,20 @@ namespace covered
             exit(1);
         }
 
+        // Wait for synchronization server
+        pthread_returncode = pthread_join(synchronization_server_thread_, NULL); // void* retval = NULL
+        if (pthread_returncode != 0)
+        {
+            std::ostringstream oss;
+            oss << "edge " << node_idx_ << " failed to join synchronization server (error code: " << pthread_returncode << ")" << std::endl;
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
+
         return;
     }
 
     // (5) Other utilities
-
-    void* EdgeWrapper::launchBeaconServer_(void* edge_wrapper_ptr)
-    {
-        assert(edge_wrapper_ptr != NULL);
-
-        BeaconServerBase* beacon_server_ptr = BeaconServerBase::getBeaconServerByCacheName((EdgeWrapper*)edge_wrapper_ptr);
-        assert(beacon_server_ptr != NULL);
-        beacon_server_ptr->start();
-
-        assert(beacon_server_ptr != NULL);
-        delete beacon_server_ptr;
-        beacon_server_ptr = NULL;
-
-        pthread_exit(NULL);
-        return NULL;
-    }
-    
-    void* EdgeWrapper::launchCacheServer_(void* edge_wrapper_ptr)
-    {
-        assert(edge_wrapper_ptr != NULL);
-
-        CacheServer cache_server = CacheServer((EdgeWrapper*)edge_wrapper_ptr);
-        cache_server.start();
-
-        pthread_exit(NULL);
-        return NULL;
-    }
-    
-    void* EdgeWrapper::launchInvalidationServer_(void* edge_wrapper_ptr)
-    {
-        assert(edge_wrapper_ptr != NULL);
-
-        InvalidationServerBase* invalidation_server_ptr = InvalidationServerBase::getInvalidationServerByCacheName((EdgeWrapper*)edge_wrapper_ptr);
-        assert(invalidation_server_ptr != NULL);
-        invalidation_server_ptr->start();
-
-        assert(invalidation_server_ptr != NULL);
-        delete invalidation_server_ptr;
-        invalidation_server_ptr = NULL;
-
-        pthread_exit(NULL);
-        return NULL;
-    }
 
     void EdgeWrapper::checkPointers_() const
     {
@@ -1070,6 +1063,21 @@ namespace covered
             // Update local cache margin bytes
             covered_cache_manager_ptr_->updateVictimTrackerForLocalCacheMarginBytes(local_cache_margin_bytes);
         }
+
+        return;
+    }
+
+    //void EdgeWrapper::updateCacheManagerForNeighborVictimSyncset(const uint32_t& source_edge_idx, const VictimSyncset& neighbor_victim_syncset) const
+    void EdgeWrapper::updateCacheManagerForNeighborVictimSyncset(const uint32_t& source_edge_idx, const VictimSyncset& neighbor_victim_syncset, const Key& key = Key()) const // TMPDEBUG231211
+    {
+        // Foreground victim synchronization
+        // (OBSOLETE due to background processing) NOTE: we always perform victim synchronization before popularity aggregation, as we need the latest synced victim information for placement calculation
+        // (OBSOLETE due to background processing) covered_cache_manager_ptr_->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, cooperation_wrapper_ptr_);
+
+        // Background victim synchronization
+        // bool is_successful = getSynchronizationServerParamPtr()->getSynchronizationServerItemBufferPtr()->push(SynchronizationServerItem(source_edge_idx, neighbor_victim_syncset));
+        bool is_successful = getSynchronizationServerParamPtr()->getSynchronizationServerItemBufferPtr()->push(SynchronizationServerItem(source_edge_idx, neighbor_victim_syncset, key)); // TMPDEBUG231211
+        assert(is_successful); // Ring buffer must not be full
 
         return;
     }
