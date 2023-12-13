@@ -6,32 +6,6 @@ namespace covered
 {
     const std::string VictimDirinfo::kClassName = "VictimDirinfo";
 
-    std::list<std::pair<Key, VictimDirinfo>>::iterator VictimDirinfo::findVictimDirinfoForKey(const Key& key, std::list<std::pair<Key, VictimDirinfo>>& perkey_victim_dirinfos)
-    {
-        std::list<std::pair<Key, VictimDirinfo>>::iterator iter = perkey_victim_dirinfos.begin();
-        for (; iter != perkey_victim_dirinfos.end(); iter++)
-        {
-            if (iter->first == key)
-            {
-                break;
-            }
-        }
-        return iter;
-    }
-
-    std::list<std::pair<Key, VictimDirinfo>>::const_iterator VictimDirinfo::findVictimDirinfoForKey(const Key& key, const std::list<std::pair<Key, VictimDirinfo>>& perkey_victim_dirinfos)
-    {
-        std::list<std::pair<Key, VictimDirinfo>>::const_iterator iter = perkey_victim_dirinfos.begin();
-        for (; iter != perkey_victim_dirinfos.end(); iter++)
-        {
-            if (iter->first == key)
-            {
-                break;
-            }
-        }
-        return iter;
-    }
-
     //is_local_beaconed_(false)
     VictimDirinfo::VictimDirinfo() : refcnt_(0), beacon_edge_idx_(0), dirinfo_set_()
     {

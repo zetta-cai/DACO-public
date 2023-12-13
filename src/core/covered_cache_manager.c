@@ -2,6 +2,7 @@
 
 #include <sstream>
 
+#include "common/kv_list_helper_impl.h"
 #include "message/control_message.h"
 
 namespace covered
@@ -446,7 +447,7 @@ namespace covered
                         const Key& tmp_victim_key = tmp_victim_dirinfosets_const_iter->first;
 
                         // NOTE: must NOT exist due to unique local beaconed local cached keys (TODO: comment)
-                        assert(DirinfoSet::findDirinfoSetForKey(tmp_victim_key, extra_perkey_victim_dirinfoset) != extra_perkey_victim_dirinfoset.end());
+                        assert((KVListHelper<Key, DirinfoSet>::findVFromListForK(tmp_victim_key, extra_perkey_victim_dirinfoset) != extra_perkey_victim_dirinfoset.end()));
 
                         extra_perkey_victim_dirinfoset.push_back(std::pair<Key, DirinfoSet>(tmp_victim_key, tmp_victim_dirinfosets_const_iter->second));
                     }
@@ -604,7 +605,7 @@ namespace covered
             const Key& tmp_victim_key = victim_dirinfosets_const_iter->first;
 
             // NOTE: must NOT exist due to unique neighbor beaconed neighbor cached keys
-            assert(DirinfoSet::findDirinfoSetForKey(tmp_victim_key, extra_perkey_victim_dirinfoset) == extra_perkey_victim_dirinfoset.end());
+            assert((KVListHelper<Key, DirinfoSet>::findVFromListForK(tmp_victim_key, extra_perkey_victim_dirinfoset) == extra_perkey_victim_dirinfoset.end()));
 
             extra_perkey_victim_dirinfoset.push_back(std::pair<Key, DirinfoSet>(tmp_victim_key, victim_dirinfosets_const_iter->second));
         }
@@ -616,7 +617,7 @@ namespace covered
 
             // NOTE: maybe exist due to local beaconed neighbor cached keys
             const Key& tmp_victim_key = victim_dirinfosets_const_iter->first;
-            if (DirinfoSet::findDirinfoSetForKey(tmp_victim_key, extra_perkey_victim_dirinfoset) == extra_perkey_victim_dirinfoset.end())
+            if (KVListHelper<Key, DirinfoSet>::findVFromListForK(tmp_victim_key, extra_perkey_victim_dirinfoset) == extra_perkey_victim_dirinfoset.end())
             {
                 extra_perkey_victim_dirinfoset.push_back(std::pair<Key, DirinfoSet>(tmp_victim_key, victim_dirinfosets_const_iter->second));
             }

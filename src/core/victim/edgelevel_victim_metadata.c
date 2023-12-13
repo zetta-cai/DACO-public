@@ -2,6 +2,7 @@
 
 #include <assert.h>
 
+#include "common/kv_list_helper_impl.h"
 #include "common/util.h"
 
 namespace covered
@@ -121,7 +122,7 @@ namespace covered
                 assert(tmp_saved_bytes < tmp_required_bytes);
 
                 // Enumerate extra victims to update per-victim edgeset, per-victim cacheinfos, and per-edge victim keyset
-                std::list<std::pair<uint32_t, std::list<Key>>>::const_iterator peredge_synced_victimset_const_iter = Key::findKeyListForEdge(cur_edge_idx, peredge_synced_victimset);
+                std::list<std::pair<uint32_t, std::list<Key>>>::const_iterator peredge_synced_victimset_const_iter = KVListHelper<uint32_t, std::list<Key>>::findVFromListForK(cur_edge_idx, peredge_synced_victimset);
                 for (std::list<VictimCacheinfo>::const_iterator extra_victim_cacheinfos_const_iter = extra_victim_cacheinfos.begin(); extra_victim_cacheinfos_const_iter != extra_victim_cacheinfos.end(); extra_victim_cacheinfos_const_iter++)
                 {
                     assert(extra_victim_cacheinfos_const_iter->isComplete()); // NOTE: victim cacheinfos of extra fetched victims MUST be complete
@@ -235,7 +236,7 @@ namespace covered
 
     void EdgelevelVictimMetadata::updatePervictimEdgeset_(std::list<std::pair<Key, Edgeset>>& pervictim_edgeset, const Key& victim_key, const uint32_t edge_idx) const
     {
-        std::list<std::pair<Key, Edgeset>>::iterator pervictim_edgeset_iter = Edgeset::findEdgesetForKey(victim_key, pervictim_edgeset);
+        std::list<std::pair<Key, Edgeset>>::iterator pervictim_edgeset_iter = KVListHelper<Key, Edgeset>::findVFromListForK(victim_key, pervictim_edgeset);
         if (pervictim_edgeset_iter == pervictim_edgeset.end())
         {
             pervictim_edgeset.push_back(std::pair(victim_key, Edgeset()));
@@ -249,7 +250,7 @@ namespace covered
 
     void EdgelevelVictimMetadata::updatePervictimCacheinfos_(std::list<std::pair<Key, std::list<VictimCacheinfo>>>& pervictim_cacheinfos, const Key& victim_key, const VictimCacheinfo& victim_cacheinfo) const
     {
-        std::list<std::pair<Key, std::list<VictimCacheinfo>>>::iterator pervictim_cacheinfos_iter = VictimCacheinfo::findVictimCacheinfoListForKey(victim_key, pervictim_cacheinfos);
+        std::list<std::pair<Key, std::list<VictimCacheinfo>>>::iterator pervictim_cacheinfos_iter = KVListHelper<Key, std::list<VictimCacheinfo>>::findVFromListForK(victim_key, pervictim_cacheinfos);
         if (pervictim_cacheinfos_iter == pervictim_cacheinfos.end())
         {
             pervictim_cacheinfos.push_back(std::pair(victim_key, std::list<VictimCacheinfo>()));
@@ -263,7 +264,7 @@ namespace covered
 
     void EdgelevelVictimMetadata::updatePeredgeVictimset_(std::list<std::pair<uint32_t, std::list<Key>>>& peredge_victimset, const uint32_t& edge_idx, const Key& victim_key) const
     {
-        std::list<std::pair<uint32_t, std::list<Key>>>::iterator peredge_victimset_iter = Key::findKeyListForEdge(edge_idx, peredge_victimset);
+        std::list<std::pair<uint32_t, std::list<Key>>>::iterator peredge_victimset_iter = KVListHelper<uint32_t, std::list<Key>>::findVFromListForK(edge_idx, peredge_victimset);
         if (peredge_victimset_iter == peredge_victimset.end())
         {
             peredge_victimset.push_back(std::pair(edge_idx, std::list<Key>()));

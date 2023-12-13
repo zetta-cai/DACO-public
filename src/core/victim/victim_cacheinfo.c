@@ -130,7 +130,7 @@ namespace covered
         return;
     }
 
-    // Find victim cacheinfo (list) for the given key
+    // Find victim cacheinfo for the given key
 
     std::list<VictimCacheinfo>::iterator VictimCacheinfo::findVictimCacheinfoForKey(const Key& key, std::list<VictimCacheinfo>& victim_cacheinfos)
     {
@@ -151,60 +151,6 @@ namespace covered
         for (; const_iter != victim_cacheinfos.end(); const_iter++)
         {
             if (const_iter->getKey() == key)
-            {
-                break;
-            }
-        }
-        return const_iter;
-    }
-
-    std::list<std::pair<Key, std::list<VictimCacheinfo>>>::iterator VictimCacheinfo::findVictimCacheinfoListForKey(const Key& key, std::list<std::pair<Key, std::list<VictimCacheinfo>>>& victim_cacheinfos)
-    {
-        std::list<std::pair<Key, std::list<VictimCacheinfo>>>::iterator iter = victim_cacheinfos.begin();
-        for (; iter != victim_cacheinfos.end(); iter++)
-        {
-            if (iter->first == key)
-            {
-                break;
-            }
-        }
-        return iter;
-    }
-
-    std::list<std::pair<Key, std::list<VictimCacheinfo>>>::const_iterator VictimCacheinfo::findVictimCacheinfoListForKey(const Key& key, const std::list<std::pair<Key, std::list<VictimCacheinfo>>>& victim_cacheinfos)
-    {
-        std::list<std::pair<Key, std::list<VictimCacheinfo>>>::const_iterator const_iter = victim_cacheinfos.begin();
-        for (; const_iter != victim_cacheinfos.end(); const_iter++)
-        {
-            if (const_iter->first == key)
-            {
-                break;
-            }
-        }
-        return const_iter;
-    }
-
-    // Find victim cacheinfo for the given edge idx
-
-    std::list<std::pair<uint32_t, std::list<VictimCacheinfo>>>::iterator VictimCacheinfo::findVictimCacheinfoListForEdge(const uint32_t& edge_idx, std::list<std::pair<uint32_t, std::list<VictimCacheinfo>>>& peredge_victim_cacheinfos)
-    {
-        std::list<std::pair<uint32_t, std::list<VictimCacheinfo>>>::iterator iter = peredge_victim_cacheinfos.begin();
-        for (; iter != peredge_victim_cacheinfos.end(); iter++)
-        {
-            if (iter->first == edge_idx)
-            {
-                break;
-            }
-        }
-        return iter;
-    }
-
-    std::list<std::pair<uint32_t, std::list<VictimCacheinfo>>>::const_iterator VictimCacheinfo::findVictimCacheinfoListForEdge(const uint32_t& edge_idx, const std::list<std::pair<uint32_t, std::list<VictimCacheinfo>>>& peredge_victim_cacheinfos)
-    {
-        std::list<std::pair<uint32_t, std::list<VictimCacheinfo>>>::const_iterator const_iter = peredge_victim_cacheinfos.begin();
-        for (; const_iter != peredge_victim_cacheinfos.end(); const_iter++)
-        {
-            if (const_iter->first == edge_idx)
             {
                 break;
             }

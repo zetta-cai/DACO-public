@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <sstream>
 
+#include "common/kv_list_helper_impl.h"
 #include "common/util.h"
 
 namespace covered
@@ -108,7 +109,7 @@ namespace covered
         rwlock_for_victim_tracker_->acquire_lock(context_name);
 
         // Update directory info if the local beaconed key is a local/neighbor synced victim
-        perkey_victim_dirinfo_t::iterator dirinfo_list_iter = VictimDirinfo::findVictimDirinfoForKey(key, perkey_victim_dirinfo_);
+        perkey_victim_dirinfo_t::iterator dirinfo_list_iter = KVListHelper<Key, VictimDirinfo>::findVFromListForK(key, perkey_victim_dirinfo_);
         if (dirinfo_list_iter != perkey_victim_dirinfo_.end()) // The beaconed key is a local/neighbor synced victim
         {
             //assert(dirinfo_list_iter->second.isLocalBeaconed());
@@ -388,7 +389,7 @@ namespace covered
             bool is_last_copies = isLastCopiesForVictimEdgeset_(tmp_victim_key, tmp_victim_edgeset_ref, extra_perkey_victim_dirinfoset);
 
             // NOTE: we add each pair of edgeidx and cacheinfo of a victim simultaneously in findVictimsForPlacement_() -> tmp_victim_cacheinfos MUST exist and has the same size as tmp_victim_edgeset_ref
-            std::list<std::pair<Key, std::list<VictimCacheinfo>>>::const_iterator pervictim_cacheinfos_const_iter = VictimCacheinfo::findVictimCacheinfoListForKey(tmp_victim_key, pervictim_cacheinfos);
+            std::list<std::pair<Key, std::list<VictimCacheinfo>>>::const_iterator pervictim_cacheinfos_const_iter = KVListHelper<Key, std::list<VictimCacheinfo>>::findVFromListForK(tmp_victim_key, pervictim_cacheinfos);
             assert(pervictim_cacheinfos_const_iter != pervictim_cacheinfos.end());
             const std::list<VictimCacheinfo>& tmp_victim_cacheinfos = pervictim_cacheinfos_const_iter->second;
             assert(tmp_victim_cacheinfos.size() == tmp_victim_edgeset_ref.size());
@@ -680,7 +681,7 @@ namespace covered
             const Key& tmp_key = new_cacheinfo_list_iter->getKey();
             //bool tmp_is_local_beaconed = (local_beaconed_synced_victim_dirinfosets.find(tmp_key) != local_beaconed_synced_victim_dirinfosets.end());
             uint32_t tmp_beacon_edge_idx = cooperation_wrapper_ptr->getBeaconEdgeIdx(tmp_key);
-            perkey_victim_dirinfo_t::iterator dirinfo_list_iter = VictimDirinfo::findVictimDirinfoForKey(tmp_key, perkey_victim_dirinfo_);
+            perkey_victim_dirinfo_t::iterator dirinfo_list_iter = KVListHelper<Key, VictimDirinfo>::findVFromListForK(tmp_key, perkey_victim_dirinfo_);
             if (dirinfo_list_iter == perkey_victim_dirinfo_.end()) // No victim dirinfo for the key
             {
                 // Add a new victim dirinfo for the key
@@ -727,7 +728,7 @@ namespace covered
             assert(beaconed_dirinfosets_list_iter->second.isComplete()); // NOTE: local/neighbor beaconed victim dirinfosets MUST be complete
 
             const Key& tmp_key = beaconed_dirinfosets_list_iter->first;
-            perkey_victim_dirinfo_t::iterator dirinfo_list_iter = VictimDirinfo::findVictimDirinfoForKey(tmp_key, perkey_victim_dirinfo_);
+            perkey_victim_dirinfo_t::iterator dirinfo_list_iter = KVListHelper<Key, VictimDirinfo>::findVFromListForK(tmp_key, perkey_victim_dirinfo_);
 
             if (is_local_beaconed) // If dirinfosets belong to keys locally beaconed by the current edge node
             {
@@ -769,7 +770,7 @@ namespace covered
     {
         // NOTE: NO need to acquire a write lock which has been done in removeVictimsForGivenEdge(), and replaceVictimMetadataForEdgeIdx_() (from updateLocalSyncedVictims() and updateForNeighborVictimSyncset())
 
-        perkey_victim_dirinfo_t::iterator dirinfo_list_iter = VictimDirinfo::findVictimDirinfoForKey(key, perkey_victim_dirinfo_);
+        perkey_victim_dirinfo_t::iterator dirinfo_list_iter = KVListHelper<Key, VictimDirinfo>::findVFromListForK(key, perkey_victim_dirinfo_);
         if (dirinfo_list_iter != perkey_victim_dirinfo_.end()) // NOTE: key may NOT have corresponding victim dirinfo if the beacon node has NOT synced victim dirinfo
         {
             dirinfo_list_iter->second.decrRefcnt();
@@ -820,7 +821,7 @@ namespace covered
             std::list<VictimCacheinfo> tmp_extra_victim_cacheinfos;
             if (with_extra_victims)
             {
-                std::list<std::pair<uint32_t, std::list<VictimCacheinfo>>>::const_iterator extra_victim_cacheinfos_list_const_iter = VictimCacheinfo::findVictimCacheinfoListForEdge(tmp_edge_idx, extra_peredge_victim_cacheinfos);
+                std::list<std::pair<uint32_t, std::list<VictimCacheinfo>>>::const_iterator extra_victim_cacheinfos_list_const_iter = KVListHelper<uint32_t, std::list<VictimCacheinfo>>::findVFromListForK(tmp_edge_idx, extra_peredge_victim_cacheinfos);
                 assert(extra_victim_cacheinfos_list_const_iter != extra_peredge_victim_cacheinfos.end());
                 tmp_extra_victim_cacheinfos = extra_victim_cacheinfos_list_const_iter->second;
             }
@@ -847,7 +848,7 @@ namespace covered
         std::vector<DirinfoSet> tmp_dirinfo_sets;
 
         // Get synced victim dirinfo set of perkey_victim_dirinfo_ for the given key if any
-        perkey_victim_dirinfo_t::const_iterator victim_dirinfo_list_const_iter = VictimDirinfo::findVictimDirinfoForKey(key, perkey_victim_dirinfo_);
+        perkey_victim_dirinfo_t::const_iterator victim_dirinfo_list_const_iter = KVListHelper<Key, VictimDirinfo>::findVFromListForK(key, perkey_victim_dirinfo_);
         if (victim_dirinfo_list_const_iter != perkey_victim_dirinfo_.end()) // NOTE: synced/extra-fetched victim key may be neighbor-beaconed and NOT have synced victim dirinfo in the current edge node, as the correpsonding beacon node may have NOT synced the latest victim dirinfo to the current edge node
         {
             const VictimDirinfo& tmp_victim_dirinfo = victim_dirinfo_list_const_iter->second;
@@ -858,7 +859,7 @@ namespace covered
         }
 
         // Get extra fetched victim dirinfo set of extra_perkey_victim_dirinfoset for the given key if any
-        std::list<std::pair<Key, DirinfoSet>>::const_iterator extra_victim_dirinfo_map_const_iter = DirinfoSet::findDirinfoSetForKey(key, extra_perkey_victim_dirinfoset);
+        std::list<std::pair<Key, DirinfoSet>>::const_iterator extra_victim_dirinfo_map_const_iter = KVListHelper<Key, DirinfoSet>::findVFromListForK(key, extra_perkey_victim_dirinfoset);
         if (extra_victim_dirinfo_map_const_iter != extra_perkey_victim_dirinfoset.end()) // NOTE: synced/extra-fetched victim key may be neighbor-beaconed and NOT have extra fetched dirinfo set in extra_perkey_victim_dirinfoset, as the correpsonding beacon node may have NOT synced the latest victim dirinfo to the fetched edge node
         {
             DirinfoSet tmp_dirinfo_set = extra_victim_dirinfo_map_const_iter->second;

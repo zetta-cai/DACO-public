@@ -2,6 +2,7 @@
 
 #include <assert.h>
 
+#include "common/kv_list_helper_impl.h"
 #include "common/util.h"
 
 namespace covered
@@ -151,7 +152,7 @@ namespace covered
             total_payload_size_for_current_local_beaconed_victims += tmp_current_dirinfo_set.getDirinfoSetPayloadSize(); // NOTE: NOT count key size as both complete and compressed dirinfo set have the same key
 
             const Key& tmp_victim_key = current_local_beaconed_victims_const_iter->first;
-            std::list<std::pair<Key, DirinfoSet>>::const_iterator tmp_prev_local_beaconed_victims_const_iter = DirinfoSet::findDirinfoSetForKey(tmp_victim_key, prev_local_beaconed_victims);
+            std::list<std::pair<Key, DirinfoSet>>::const_iterator tmp_prev_local_beaconed_victims_const_iter = KVListHelper<Key, DirinfoSet>::findVFromListForK(tmp_victim_key, prev_local_beaconed_victims);
             if (tmp_prev_local_beaconed_victims_const_iter == prev_local_beaconed_victims.end()) // No previous victim dirinfo set
             {
                 // Add current complete victim dirinfo set
@@ -369,7 +370,7 @@ namespace covered
             {
                 const Key& tmp_synced_victim_key = synced_victim_dirinfo_sets_const_iter->first;
                 const DirinfoSet& tmp_synced_dirinfo_set = synced_victim_dirinfo_sets_const_iter->second;
-                std::list<std::pair<Key, DirinfoSet>>::iterator tmp_complete_victim_dirinfo_sets_iter = DirinfoSet::findDirinfoSetForKey(tmp_synced_victim_key, tmp_complete_victim_dirinfo_sets);
+                std::list<std::pair<Key, DirinfoSet>>::iterator tmp_complete_victim_dirinfo_sets_iter = KVListHelper<Key, DirinfoSet>::findVFromListForK(tmp_synced_victim_key, tmp_complete_victim_dirinfo_sets);
 
                 if (tmp_synced_dirinfo_set.isComplete()) // Complete victim dirinfo set for new neighbor beaconed victim (should NOT exist in existing dirinfo sets) or existing neighbor beaconed victim (exist in existing dirinfo sets)
                 {
