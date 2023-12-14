@@ -153,12 +153,6 @@ namespace covered
         // TMPDEBUG231211
         struct timespec t1 = Util::getCurrentTimespec();
 
-        // Get local complete victim syncset of the current edge node
-        const SeqNum cur_seqnum = getAndIncrCurSeqnum_(dst_edge_idx_for_compression); // NOTE: this will increase cur_seqnum_ for the given dst edge node
-        const bool need_enforcement = checkAndResetNeedEnforcement_(dst_edge_idx_for_compression); // NOTE: this will reset need_enforcement_ for the given dst edge node if need enforcement
-        VictimSyncset current_victim_syncset = getVictimSyncset_(edge_idx_, cur_seqnum, need_enforcement); // NOTE: set VictimSyncset::is_enforce_complete as true if need enforcement (dst edge node will enforce complete victim syncset for the next message towards the current edge node)
-        assert(current_victim_syncset.isComplete());
-
         // TMPDEBUG231211
         struct timespec t2 = Util::getCurrentTimespec();
 
@@ -186,11 +180,7 @@ namespace covered
         }
         else
         {
-            assert(prev_victim_syncset.isComplete());
-            assert(cur_seqnum == Util::uint64Add(prev_victim_syncset.getSeqnum(), 1)); // NOTE: dedup-/delta-based victim syncset compression MUST follow strict seqnum order
-
-            // Calculate compressed victim syncset by dedup/delta-compression based on current and prev complete victim syncset
-            VictimSyncset compressed_victim_syncset = VictimSyncset::compress(current_victim_syncset, prev_victim_syncset);
+            
 
             // TMPDEBUG231211
             struct timespec t4 = Util::getCurrentTimespec();
@@ -336,6 +326,9 @@ namespace covered
             assert(local_beaconed_neighbor_synced_victim_dirinfosets.size() <= neighbor_synced_victim_cacheinfos.size());
             replaceVictimDirinfoSets_(local_beaconed_neighbor_synced_victim_dirinfosets, true);
         }
+
+        // Pre-compression for next issued victim syncset towards the source edge node
+        precompressVictimSyncset_(source_edge_idx);
 
         rwlock_for_victim_tracker_->unlock(context_name);
 
@@ -505,6 +498,20 @@ namespace covered
 
     // For victim synchronization
 
+    void VictimTracker::precompressVictimSyncset_(const uint32_t& dst_edge_idx_for_compression) const
+    {
+        // Get local complete victim syncset of the current edge node
+        const SeqNum cur_seqnum = getAndIncrCurSeqnum_(dst_edge_idx_for_compression); // NOTE: this will increase cur_seqnum_ for the given dst edge node
+        const bool need_enforcement = checkAndResetNeedEnforcement_(dst_edge_idx_for_compression); // NOTE: this will reset need_enforcement_ for the given dst edge node if need enforcement
+        VictimSyncset current_victim_syncset = getVictimSyncset_(edge_idx_, cur_seqnum, need_enforcement); // NOTE: set VictimSyncset::is_enforce_complete as true if need enforcement (dst edge node will enforce complete victim syncset for the next message towards the current edge node)
+        assert(current_victim_syncset.isComplete());
+
+        // Pre-generate complete/compressed victim syncset for the next message towards dst edge node
+        peredge_victimsync_monitor_[dst_edge_idx_for_compression].pregenVictimSyncset(current_victim_syncset);
+
+        return;
+    }
+
     SeqNum VictimTracker::getAndIncrCurSeqnum_(const uint32_t& dst_edge_idx_for_compression) const
     {
         // NOTE: NO need to acquire a write lock which has been done in getLocalVictimSyncsetForSynchronization()
@@ -541,6 +548,16 @@ namespace covered
         if (need_enforcement)
         {
             peredge_victimsync_monitor_[dst_edge_idx_for_compression].resetEnforcement();
+        }
+        else
+        {
+            // Check if there exists any victim syncset w/ is_enforce_complete_ as true, yet has NOT been issued to the corresponding edge node
+            VictimSyncset pregen_complete_victim_syncset;
+            bool is_unissued_exist = peredge_victimsync_monitor_[dst_edge_idx_for_compression].getPregenCompleteVictimSyncset(pregen_complete_victim_syncset);
+            if (is_unissued_exist) // Inherit is_enforce_complete_ flag of unissued victim syncset if any
+            {
+                need_enforcement = pregen_complete_victim_syncset.isEnforceComplete();
+            }
         }
 
         return need_enforcement;

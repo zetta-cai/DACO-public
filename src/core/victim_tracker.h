@@ -78,6 +78,7 @@ namespace covered
         // Utils
 
         // For victim synchronization
+        void precompressVictimSyncset_(const uint32_t& dst_edge_idx_for_compression) const;
         SeqNum getAndIncrCurSeqnum_(const uint32_t& dst_edge_idx_for_compression) const;
         bool checkAndResetNeedEnforcement_(const uint32_t& dst_edge_idx_for_compression) const;
         VictimSyncset getVictimSyncset_(const uint32_t& edge_idx, const SeqNum& seqnum, const bool& is_enforce_complete) const; // For local edge idx to synchronize victim info, seqnum is the cur_seqnum_ of to-be-issued local victim syncset; for neighbor edge idx to recover complete victim info, seqnum is the tracked_seqnum_ of existing tracked victim info synced from neighbor before

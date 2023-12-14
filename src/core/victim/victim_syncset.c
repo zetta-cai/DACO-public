@@ -17,6 +17,7 @@ namespace covered
     const uint8_t VictimSyncset::LOCAL_SYNCED_VICTIMS_EMPTY_MASK = 0b00001000;
     const uint8_t VictimSyncset::LOCAL_BEACONED_VICTIMS_DEDUP_MASK = 0b00010000 | COMPRESS_MASK;
     const uint8_t VictimSyncset::LOCAL_BEACONED_VICTIMS_EMPTY_MASK = 0b00100000;
+    const uint8_t VictimSyncset::FULLY_COMPRESSED_BITMAP = 0b00111111;
 
     VictimSyncset VictimSyncset::compress(const VictimSyncset& current_victim_syncset, const VictimSyncset& prev_victim_syncset)
     {
@@ -418,6 +419,19 @@ namespace covered
         assert(complete_victim_syncset.isEnforceComplete() == compressed_victim_syncset.isEnforceComplete());
 
         return complete_victim_syncset;
+    }
+
+    VictimSyncset VictimSyncset::getFullCompressedVictimSyncset(const SeqNum& seqnum, const bool& is_enforce_complete)
+    {
+        VictimSyncset tmp_victim_syncset;
+        tmp_victim_syncset.compressed_bitmap_ = FULLY_COMPRESSED_BITMAP;
+        tmp_victim_syncset.seqnum_ = seqnum;
+        tmp_victim_syncset.is_enforce_complete_ = is_enforce_complete;
+        tmp_victim_syncset.cache_margin_bytes_ = 0;
+        tmp_victim_syncset.cache_margin_delta_bytes_ = 0;
+        tmp_victim_syncset.local_synced_victims_.clear();
+        tmp_victim_syncset.local_beaconed_victims_.clear();
+        return tmp_victim_syncset;
     }
 
     VictimSyncset::VictimSyncset() : seqnum_(0), is_enforce_complete_(false), cache_margin_bytes_(0), cache_margin_delta_bytes_(0)

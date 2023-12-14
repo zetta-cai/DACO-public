@@ -28,16 +28,15 @@ namespace covered
         SeqNum getCurSeqnum() const;
         void incrCurSeqnum();
 
-        bool getPrevVictimSyncset(VictimSyncset& prev_victim_syncset) const; // Return if prev victim syncset exists
         void setPrevVictimSyncset(const VictimSyncset& prev_victim_syncset);
-
         bool getPregenCompleteVictimSyncset(VictimSyncset& pregen_complete_victim_syncset) const; // Returhn if pre-generated complete victim syncset exists
         void setPregenCompleteVictimSyncset(const VictimSyncset& pregen_complete_victim_syncset);
-
         bool getPregenCompressedVictimSyncset(VictimSyncset& pregen_compressed_victim_syncset) const; // Return if pre-generated compressed victim syncset exists
         void setPregenCompressedVictimSyncset(const VictimSyncset& pregen_compressed_victim_syncset);
 
         void enforceComplete(); // Enforce a complete victim syncset for the next message to the receiver
+        void pregenVictimSyncset(const VictimSyncset& current_victim_syncset); // Pre-generate complete/compressed victim syncset for the next message to the receiver
+        bool getPregenVictimSyncset(VictimSyncset& final_victim_syncset); // Return if need the latest victim syncset
 
         // As receiver edge node
 
@@ -78,6 +77,7 @@ namespace covered
         VictimSyncset* prev_victim_syncset_ptr_; // Prev issued victim syncset towards a specific neighbor for dedup-/delta-based compression
         VictimSyncset* pregen_complete_victim_syncset_ptr_; // Pre-generated complete victim syncset for background pre-compression
         VictimSyncset* pregen_compressed_victim_syncset_ptr_; // Pre-generated compressed victim syncset for background pre-compression
+        bool same_as_prev_; // Is the current victim syncset is the same as the last issued one
 
         // As receiver edge node
         bool is_first_complete_received_; // If the victim syncset is the first complete one from a specific neighbor

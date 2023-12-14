@@ -29,6 +29,8 @@ namespace covered
         //static VictimSyncset recover(const VictimSyncset& compressed_victim_syncset, const VictimSyncset& existing_victim_syncset); // Recover existing victim syncset w.r.t. compressed victim syncset
         static VictimSyncset recover(const VictimSyncset& compressed_victim_syncset, const VictimSyncset& existing_victim_syncset, const Key& key = Key()); // Recover existing victim syncset w.r.t. compressed victim syncset // TMPDEBUG231211
 
+        static VictimSyncset getFullCompressedVictimSyncset(const SeqNum& seqnum, const bool& is_enforce_complete);
+
         VictimSyncset();
         VictimSyncset(const VictimSyncset& other);
         VictimSyncset(const SeqNum& seqnum, const bool& is_enforce_complete, const uint64_t& cache_margin_bytes, const std::list<VictimCacheinfo>& local_synced_victims, const std::list<std::pair<Key, DirinfoSet>>& local_beaconed_victims);
@@ -75,6 +77,7 @@ namespace covered
         static const uint8_t LOCAL_SYNCED_VICTIMS_EMPTY_MASK; // Whether local synced victims is empty (e.g., no local synced victim for complete victim syncset, or all local synced victims are fully-deduped and hence NOT tracked for compressed victim syncset)
         static const uint8_t LOCAL_BEACONED_VICTIMS_DEDUP_MASK; // Whether at least one dirinfo set of a local beaconed victim is deduped
         static const uint8_t LOCAL_BEACONED_VICTIMS_EMPTY_MASK; // Whether local beaconed victims is empty (e.g., no local beaconed victim for complete victim syncset, or all local beaconed victims are fully-compressed and hence NOT tracked for compressed victim syncset)
+        static const uint8_t FULLY_COMPRESSED_BITMAP; // All masks are set
 
         void checkValidity_() const;
         void assertAtLeastOneCacheinfoDeduped_() const;

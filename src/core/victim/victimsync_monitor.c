@@ -6,7 +6,7 @@ namespace covered
 {
     const std::string VictimsyncMonitor::kClassName = "VictimsyncMonitor";
 
-    VictimsyncMonitor::VictimsyncMonitor() : is_valid_(false), cur_seqnum_(0), prev_victim_syncset_ptr_(NULL), pregen_complete_victim_syncset_ptr_(NULL), pregen_compressed_victim_syncset_ptr_(NULL), is_first_complete_received_(true), tracked_seqnum_(0), enforcement_seqnum_(0), wait_for_complete_victim_syncset_(false), need_enforcement_(false)
+    VictimsyncMonitor::VictimsyncMonitor() : is_valid_(false), cur_seqnum_(0), prev_victim_syncset_ptr_(NULL), pregen_complete_victim_syncset_ptr_(NULL), pregen_compressed_victim_syncset_ptr_(NULL), same_as_prev_(false), is_first_complete_received_(true), tracked_seqnum_(0), enforcement_seqnum_(0), wait_for_complete_victim_syncset_(false), need_enforcement_(false)
     {
         cached_victim_syncsets_.clear();
     }
@@ -59,21 +59,6 @@ namespace covered
 
         cur_seqnum_ = Util::uint64Add(cur_seqnum_, 1);
         return;
-    }
-
-    bool VictimsyncMonitor::getPrevVictimSyncset(VictimSyncset& prev_victim_syncset) const
-    {
-        checkValidity_();
-
-        if (prev_victim_syncset_ptr_ == NULL)
-        {
-            return false;
-        }
-        else
-        {
-            prev_victim_syncset = *prev_victim_syncset_ptr_; // Deep copy
-            return true;
-        }
     }
 
     void VictimsyncMonitor::setPrevVictimSyncset(const VictimSyncset& prev_victim_syncset)
@@ -161,12 +146,90 @@ namespace covered
 
     void VictimsyncMonitor::enforceComplete()
     {
+        checkValidity_();
+
         // Release prev victim syncset, pre-generated complete victim syncset, and pre-generated compressed victim syncset for the receiver edge node such that the next message will piggyback a complete victim syncset
         releasePrevVictimSyncset_();
         releasePregenCompleteVictimSyncset_();
         releasePregenCompressedVictimSyncset_();
 
         return;
+    }
+
+    void VictimsyncMonitor::pregenVictimSyncset(const VictimSyncset& current_victim_syncset)
+    {
+        assert(current_victim_syncset.isComplete());
+
+        if (prev_victim_syncset_ptr_ == NULL)
+        {
+            releasePregenCompleteVictimSyncset_();
+            releasePregenCompressedVictimSyncset_();
+
+            pregen_complete_victim_syncset_ptr_ = new VictimSyncset(current_victim_syncset);
+        }
+        else
+        {
+            assert(prev_victim_syncset_ptr_->isComplete());
+
+            // NOTE: dedup-/delta-based victim syncset compression MUST follow strict seqnum order
+            if (pregen_complete_victim_syncset_ptr_ == NULL)
+            {
+                assert(current_victim_syncset.getSeqnum() == Util::uint64Add(prev_victim_syncset_ptr_->getSeqnum(), 1));
+            }
+            else
+            {
+                assert(current_victim_syncset.getSeqnum() == Util::uint64Add(pregen_complete_victim_syncset_ptr_->getSeqnum(), 1));
+            }
+
+            // Update pre-generated complete victim syncset
+            releasePregenCompleteVictimSyncset_();
+            pregen_complete_victim_syncset_ptr_ = new VictimSyncset(current_victim_syncset);
+
+            // Calculate compressed victim syncset by dedup/delta-compression based on current and prev complete victim syncset
+            VictimSyncset compressed_victim_syncset = VictimSyncset::compress(current_victim_syncset, *prev_victim_syncset_ptr_);
+
+            // Update pre-generated compressed victim syncset if necessary
+            releasePregenCompressedVictimSyncset_();
+            if (compressed_victim_syncset.isCompressed())
+            {
+                pregen_compressed_victim_syncset_ptr_ = new VictimSyncset(compressed_victim_syncset);
+            }
+        }
+
+        same_as_prev_ = false;
+        return;
+    }
+
+    bool VictimsyncMonitor::getPregenVictimSyncset(VictimSyncset& final_victim_syncset)
+    {
+        bool need_latest_victim_syncset = false;
+
+        if (same_as_prev_) // Current victim syncset is the same as the last issued one
+        {
+            assert(prev_victim_syncset_ptr_ != NULL);
+            assert(pregen_complete_victim_syncset_ptr_ == NULL);
+            assert(pregen_compressed_victim_syncset_ptr_ == NULL);
+
+            // NOTE: must follow strict seqnum order
+            assert(cur_seqnum_ == Util::uint64Add(prev_victim_syncset_ptr_->getSeqnum(), 1));
+
+            // NOTE: need enforcement flag MUST be false, as no neighbor victim syncset is received since the last issued message
+            assert(!need_enforcement_);
+
+            // Generate a full-compressed victim syncset w/ correct seqnum
+            const SeqNum final_seqnum = cur_seqnum_;
+            incrCurSeqnum(); // Increase seqnum by 1
+            const bool final_is_enforce_complete = false; // need_enforcement_ MUST be false and NO unissued victim syncset
+            final_victim_syncset = VictimSyncset::getFullCompressedVictimSyncset(final_seqnum, final_is_enforce_complete);
+
+            // NOTE: NO need to replace prev_victim_syncset_ptr_ and set same_as_prev_ due to same_as_prev_
+        }
+        else // Different from the last issued victim syncset
+        {
+            // TODO: END HERE
+        }
+
+        return need_latest_victim_syncset;
     }
 
     // As receiver edge node
