@@ -217,7 +217,7 @@ namespace covered
         {
             assert(is_valid_victimsync_monitor); // NOTE: if the source edge node notifies the current edge node to enforce complete victim syncset without compression, it means that the current edge node has sent at least one victim syncset to the source edge node -> current edge node MUST have VictimsyncMonitor for the source edge node
 
-            peredge_victimsync_monitor_[source_edge_idx].releasePrevVictimSyncset(); // Release prev victim syncset for the source edge node such that the next message will piggyback a complete victim syncset
+            peredge_victimsync_monitor_[source_edge_idx].enforceComplete(); // Enforce the next message to piggyback a complete victim syncset
         }
 
         // Allocate VictimsyncMonitor for the source edge node if this is the first victim syncset received from the source edge node

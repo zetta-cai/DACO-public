@@ -6,7 +6,7 @@ namespace covered
 {
     const std::string VictimsyncMonitor::kClassName = "VictimsyncMonitor";
 
-    VictimsyncMonitor::VictimsyncMonitor() : is_valid_(false), cur_seqnum_(0), prev_victim_syncset_ptr_(nullptr), need_enforcement_(false), is_first_complete_received_(true), tracked_seqnum_(0), enforcement_seqnum_(0), wait_for_complete_victim_syncset_(false)
+    VictimsyncMonitor::VictimsyncMonitor() : is_valid_(false), cur_seqnum_(0), prev_victim_syncset_ptr_(NULL), pregen_complete_victim_syncset_ptr_(NULL), pregen_compressed_victim_syncset_ptr_(NULL), is_first_complete_received_(true), tracked_seqnum_(0), enforcement_seqnum_(0), wait_for_complete_victim_syncset_(false), need_enforcement_(false)
     {
         cached_victim_syncsets_.clear();
     }
@@ -17,6 +17,18 @@ namespace covered
         {
             delete prev_victim_syncset_ptr_;
             prev_victim_syncset_ptr_ = NULL;
+        }
+
+        if (pregen_complete_victim_syncset_ptr_ != NULL)
+        {
+            delete pregen_complete_victim_syncset_ptr_;
+            pregen_complete_victim_syncset_ptr_ = NULL;
+        }
+
+        if (pregen_compressed_victim_syncset_ptr_ != NULL)
+        {
+            delete pregen_compressed_victim_syncset_ptr_;
+            pregen_compressed_victim_syncset_ptr_ = NULL;
         }
     }
 
@@ -75,40 +87,85 @@ namespace covered
         }
         else
         {
-            // NOTE: is_enforce_complete of prev_victim_syncset will NOT be used in compression later
+            // NOTE: is_enforce_complete of prev_victim_syncset will NOT be used in compression (keep is_enforce_complete of the latest victim syncset) and hence NOT embedded into message later
             *prev_victim_syncset_ptr_ = prev_victim_syncset; // Deep copy
         }
         return;
     }
 
-    void VictimsyncMonitor::releasePrevVictimSyncset()
+    bool VictimsyncMonitor::getPregenCompleteVictimSyncset(VictimSyncset& pregen_complete_victim_syncset) const
     {
         checkValidity_();
 
-        if (prev_victim_syncset_ptr_ != NULL)
+        if (pregen_complete_victim_syncset_ptr_ == NULL)
         {
-            delete prev_victim_syncset_ptr_;
-            prev_victim_syncset_ptr_ = NULL;
+            return false;
+        }
+        else
+        {
+            pregen_complete_victim_syncset = *pregen_complete_victim_syncset_ptr_; // Deep copy
+            return true;
+        }
+    }
+
+    void VictimsyncMonitor::setPregenCompleteVictimSyncset(const VictimSyncset& pregen_complete_victim_syncset)
+    {
+        checkValidity_();
+
+        if (pregen_complete_victim_syncset_ptr_ == NULL)
+        {
+            pregen_complete_victim_syncset_ptr_ = new VictimSyncset(pregen_complete_victim_syncset); // Copy constructor
+            assert(pregen_complete_victim_syncset_ptr_ != NULL);
+        }
+        else
+        {
+            // NOTE: is_enforce_complete of pregen_complete_victim_syncset (i.e., the latest victim syncset when performing pre-compression) will be embedded into message later
+            // NOTE: both pregen_complete_victim_syncset and pregen_compressed_vitim_syncset MUST have the same is_enforce_complete flag
+            *pregen_complete_victim_syncset_ptr_ = pregen_complete_victim_syncset; // Deep copy
         }
         return;
     }
 
-    bool VictimsyncMonitor::needEnforcement() const
+    bool VictimsyncMonitor::getPregenCompressedVictimSyncset(VictimSyncset& pregen_compressed_victim_syncset) const
     {
         checkValidity_();
 
-        if (need_enforcement_)
+        if (pregen_compressed_victim_syncset_ptr_ == NULL)
         {
-            assert(wait_for_complete_victim_syncset_ == true); // NOTE: current edge node MUST be waiting for a complete victim syncset from the specific neighbor if need enforcement
+            return false;
         }
-        return need_enforcement_;
+        else
+        {
+            pregen_compressed_victim_syncset = *pregen_compressed_victim_syncset_ptr_; // Deep copy
+            return true;
+        }
     }
 
-    void VictimsyncMonitor::resetEnforcement()
+    void VictimsyncMonitor::setPregenCompressedVictimSyncset(const VictimSyncset& pregen_compressed_victim_syncset)
     {
         checkValidity_();
 
-        need_enforcement_ = false;
+        if (pregen_compressed_victim_syncset_ptr_ == NULL)
+        {
+            pregen_compressed_victim_syncset_ptr_ = new VictimSyncset(pregen_compressed_victim_syncset); // Copy constructor
+            assert(pregen_compressed_victim_syncset_ptr_ != NULL);
+        }
+        else
+        {
+            // NOTE: is_enforce_complete of pregen_compressed_victim_syncset (i.e., pre-compressed based on the latest victim syncset at that time) will NOT be embedded into message later
+            // NOTE: both pregen_complete_victim_syncset and pregen_compressed_vitim_syncset MUST have the same is_enforce_complete flag
+            *pregen_compressed_victim_syncset_ptr_ = pregen_compressed_victim_syncset; // Deep copy
+        }
+        return;
+    }
+
+    void VictimsyncMonitor::enforceComplete()
+    {
+        // Release prev victim syncset, pre-generated complete victim syncset, and pre-generated compressed victim syncset for the receiver edge node such that the next message will piggyback a complete victim syncset
+        releasePrevVictimSyncset_();
+        releasePregenCompleteVictimSyncset_();
+        releasePregenCompressedVictimSyncset_();
+
         return;
     }
 
@@ -192,6 +249,25 @@ namespace covered
         return;
     }
 
+    bool VictimsyncMonitor::needEnforcement() const
+    {
+        checkValidity_();
+
+        if (need_enforcement_)
+        {
+            assert(wait_for_complete_victim_syncset_ == true); // NOTE: current edge node MUST be waiting for a complete victim syncset from the specific neighbor if need enforcement
+        }
+        return need_enforcement_;
+    }
+
+    void VictimsyncMonitor::resetEnforcement()
+    {
+        checkValidity_();
+
+        need_enforcement_ = false;
+        return;
+    }
+
     // Utils
 
     uint64_t VictimsyncMonitor::getSizeForCapacity() const
@@ -205,6 +281,14 @@ namespace covered
         {
             size += prev_victim_syncset_ptr_->getSizeForCapacity();
         }
+        if (pregen_complete_victim_syncset_ptr_ != NULL)
+        {
+            size += pregen_complete_victim_syncset_ptr_->getSizeForCapacity();
+        }
+        if (pregen_compressed_victim_syncset_ptr_ != NULL)
+        {
+            size += pregen_compressed_victim_syncset_ptr_->getSizeForCapacity();
+        }
         size += sizeof(bool); // need_enforcement_
 
         size += sizeof(bool); // is_first_received_
@@ -217,6 +301,42 @@ namespace covered
         size += sizeof(bool); // wait_for_complete_victim_syncset_
 
         return size;
+    }
+
+    void VictimsyncMonitor::releasePrevVictimSyncset_()
+    {
+        checkValidity_();
+
+        if (prev_victim_syncset_ptr_ != NULL)
+        {
+            delete prev_victim_syncset_ptr_;
+            prev_victim_syncset_ptr_ = NULL;
+        }
+        return;
+    }
+
+    void VictimsyncMonitor::releasePregenCompleteVictimSyncset_()
+    {
+        checkValidity_();
+
+        if (pregen_complete_victim_syncset_ptr_ != NULL)
+        {
+            delete pregen_complete_victim_syncset_ptr_;
+            pregen_complete_victim_syncset_ptr_ = NULL;
+        }
+        return;
+    }
+
+    void VictimsyncMonitor::releasePregenCompressedVictimSyncset_()
+    {
+        checkValidity_();
+
+        if (pregen_compressed_victim_syncset_ptr_ != NULL)
+        {
+            delete pregen_compressed_victim_syncset_ptr_;
+            pregen_compressed_victim_syncset_ptr_ = NULL;
+        }
+        return;
     }
 
     void VictimsyncMonitor::clearStaleCachedVictimSyncsets_(const uint32_t& peredge_monitored_victimsetcnt)

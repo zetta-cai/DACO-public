@@ -30,10 +30,14 @@ namespace covered
 
         bool getPrevVictimSyncset(VictimSyncset& prev_victim_syncset) const; // Return if prev victim syncset exists
         void setPrevVictimSyncset(const VictimSyncset& prev_victim_syncset);
-        void releasePrevVictimSyncset();
 
-        bool needEnforcement() const;
-        void resetEnforcement();
+        bool getPregenCompleteVictimSyncset(VictimSyncset& pregen_complete_victim_syncset) const; // Returhn if pre-generated complete victim syncset exists
+        void setPregenCompleteVictimSyncset(const VictimSyncset& pregen_complete_victim_syncset);
+
+        bool getPregenCompressedVictimSyncset(VictimSyncset& pregen_compressed_victim_syncset) const; // Return if pre-generated compressed victim syncset exists
+        void setPregenCompressedVictimSyncset(const VictimSyncset& pregen_compressed_victim_syncset);
+
+        void enforceComplete(); // Enforce a complete victim syncset for the next message to the receiver
 
         // As receiver edge node
 
@@ -45,11 +49,19 @@ namespace covered
         VictimSyncset tryToClearEnforcementStatus_(const VictimSyncset& neighbor_complete_victim_syncset, const SeqNum& synced_seqnum, const uint32_t& peredge_monitored_victimsetcnt); // If no continous compressed victim syncsets in cached_victim_syncsets_, returned victim syncset will be the same as neighbor_complete_victim_syncset
         void tryToEnableEnforcementStatus_(const VictimSyncset& neighbor_compressed_victim_syncset, const SeqNum& synced_seqnum, const uint32_t& peredge_monitored_victimsetcnt);
 
+        // NOTE: need enforcement flag will be embedded into the next message sent to the sender
+        bool needEnforcement() const;
+        void resetEnforcement();
+
         // Utils
 
         uint64_t getSizeForCapacity() const;
     private:
         static const std::string kClassName;
+
+        void releasePrevVictimSyncset_();
+        void releasePregenCompleteVictimSyncset_();
+        void releasePregenCompressedVictimSyncset_();
 
         void clearStaleCachedVictimSyncsets_(const uint32_t& peredge_monitored_victimsetcnt);
         VictimSyncset clearContinuousCachedVictimSyncsets_(const VictimSyncset& neighbor_complete_victim_syncset, const uint32_t& peredge_monitored_victimsetcnt); // If no continous compressed victim syncsets in cached_victim_syncsets_, returned victim syncset will be the same as neighbor_complete_victim_syncset (this could update tracked seqnum)
@@ -64,7 +76,8 @@ namespace covered
         // As sender edge node
         SeqNum cur_seqnum_; // The seqnum for current victim syncset towards a specific neighbor
         VictimSyncset* prev_victim_syncset_ptr_; // Prev issued victim syncset towards a specific neighbor for dedup-/delta-based compression
-        bool need_enforcement_; // If the current edge node needs to notify the specific neighbor for the enforcement on complete victim syncset (avoid duplicate notification)
+        VictimSyncset* pregen_complete_victim_syncset_ptr_; // Pre-generated complete victim syncset for background pre-compression
+        VictimSyncset* pregen_compressed_victim_syncset_ptr_; // Pre-generated compressed victim syncset for background pre-compression
 
         // As receiver edge node
         bool is_first_complete_received_; // If the victim syncset is the first complete one from a specific neighbor
@@ -72,6 +85,7 @@ namespace covered
         std::vector<VictimSyncset> cached_victim_syncsets_; // Cached in-advance compressed victim syncsets from a specific neighbor
         SeqNum enforcement_seqnum_; // The max seqnum between cached_victim_syncsets_ and the victim syncset triggering the enforcement of complete victim syncset from a specific neighbor
         bool wait_for_complete_victim_syncset_; // If the current edge node is waiting for a complete victim syncset from a specific neighbor (avoid duplicate enforcement)
+        bool need_enforcement_; // If the current edge node needs to notify the specific neighbor for the enforcement on complete victim syncset (avoid duplicate notification)
     };
 }
 
