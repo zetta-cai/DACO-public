@@ -597,12 +597,6 @@ namespace covered
             // Prepare for latency-aware weight tuning
             const struct timespec tmp_content_discovery_start_timestamp = Util::getCurrentTimespec(); // NOT count timeout
 
-            // TMPDEBUG231211
-            if (key.getKeystr() == "amwnaqnbqcshhvkhbxzfcbtmfqnfieoeuh")
-            {
-                Util::dumpVariablesForDebug(base_instance_name_, 2, "issue remote directory lookup req for key", key.getKeystr().c_str());
-            }
-
             // Push the control request into edge-to-edge propagation simulator to send to beacon node
             bool is_successful = tmp_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->push(directory_lookup_request_ptr, beacon_edge_beacon_server_recvreq_dst_addr);
             assert(is_successful);
@@ -630,12 +624,6 @@ namespace covered
             } // End of (is_timeout == true)
             else
             {
-                // TMPDEBUG231211
-                if (key.getKeystr() == "amwnaqnbqcshhvkhbxzfcbtmfqnfieoeuh")
-                {
-                    Util::dumpVariablesForDebug(base_instance_name_, 2, "receive remote directory lookup rsp for key", key.getKeystr().c_str());
-                }
-
                 // Update cross-edge latency for latency-aware weight tuning if NOT timeout
                 const struct timespec tmp_content_discovery_end_timestamp = Util::getCurrentTimespec();
                 const double tmp_content_discovery_cross_edge_rtt_us = Util::getDeltaTimeUs(tmp_content_discovery_end_timestamp, tmp_content_discovery_start_timestamp);
@@ -651,12 +639,6 @@ namespace covered
                 assert(control_response_ptr != NULL);
 
                 processRspToLookupBeaconDirectory_(control_response_ptr, is_being_written, is_valid_directory_exist, directory_info, best_placement_edgeset, need_hybrid_fetching, fast_path_hint);
-
-                // TMPDEBUG231211
-                if (key.getKeystr() == "amwnaqnbqcshhvkhbxzfcbtmfqnfieoeuh")
-                {
-                    Util::dumpVariablesForDebug(base_instance_name_, 2, "after process remote directory lookup rsp for key", key.getKeystr().c_str());
-                }
 
                 // Update total bandwidth usage for received directory lookup response
                 BandwidthUsage directory_lookup_response_bandwidth_usage = control_response_ptr->getBandwidthUsageRef();

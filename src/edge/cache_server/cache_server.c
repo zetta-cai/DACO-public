@@ -494,8 +494,6 @@ namespace covered
             // ONLY need victim synchronization yet without popularity collection/aggregation
             if (!is_background) // Foreground remote directory admission triggered by hybrid data fetching at the sender/closest edge node (different from beacon)
             {
-                assert(edge_wrapper_ptr_->getCacheName() != Util::COVERED_CACHE_NAME);
-
                 // (OBSOLETE) NOTE: For COVERED, although there still exist foreground directory update requests for eviction (triggered by local gets to update invalid value and local puts to update cached value), all directory update requests for admission MUST be background due to non-blocking placement deployment
 
                 // NOTE: For COVERED, both directory eviction (triggered by value update and local/remote placement notification) and directory admission (triggered by only-sender hybrid data fetching, fast-path single placement, and local/remote placement notification) can be foreground and background

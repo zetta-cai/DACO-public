@@ -180,13 +180,15 @@ namespace covered
         return;
     }
 
-    VictimSyncset CoveredCacheManager::accessVictimTrackerForLocalVictimSyncset(const uint32_t& dst_edge_idx_for_compression, const uint64_t& latest_local_cache_margin_bytes) const
+    //VictimSyncset CoveredCacheManager::accessVictimTrackerForLocalVictimSyncset(const uint32_t& dst_edge_idx_for_compression, const uint64_t& latest_local_cache_margin_bytes) const
+    VictimSyncset CoveredCacheManager::accessVictimTrackerForLocalVictimSyncset(const uint32_t& dst_edge_idx_for_compression, const uint64_t& latest_local_cache_margin_bytes, const Key& key) const // TMPDEBUG231211
     {
         checkPointers_();
 
         // Get current complete/compressed victim syncset from victim tracker
         // NOTE: we perform compression inside VictimTrackker:getLocalVictimSyncsetForSynchronization() for atomicity
-        VictimSyncset current_victim_syncset = victim_tracker_ptr_->getLocalVictimSyncsetForSynchronization(dst_edge_idx_for_compression, latest_local_cache_margin_bytes);
+        //VictimSyncset current_victim_syncset = victim_tracker_ptr_->getLocalVictimSyncsetForSynchronization(dst_edge_idx_for_compression, latest_local_cache_margin_bytes);
+        VictimSyncset current_victim_syncset = victim_tracker_ptr_->getLocalVictimSyncsetForSynchronization(dst_edge_idx_for_compression, latest_local_cache_margin_bytes, key); // TMPDEBUG231211
 
         return current_victim_syncset;
     }

@@ -1,7 +1,11 @@
 /*
- * CoveredSynchronizationServer: perform remote victim synchronization for received cross-edge messages in parallel to avoid foreground time cost of victim syncset recovery and victim tracker update.
+ * CoveredSynchronizationServer: perform remote victim synchronization for received cross-edge messages in parallel to avoid foreground time cost of victim syncset recovery + victim tracker update, and latest victim syncset generation + victim syncset compression.
  *
  * NOTE: ONLY COVERED needs such synchronization server, and both cache server and beacon server will push SynchronizationServerItem for victim synchronization.
+ * 
+ * NOTE: all the following operations are atomic provided by VictimTracker.
+ * (i) (Background in CoveredSynchronizationServer) For received cross-edge message, recover victim syncset to update victim tracker and generate latest victim syncset to pre-generate complete-compressed victim syncset to be issued atomically.
+ * (ii) (Foreground in EdgeWrapper) For issued cross-edge message, get complete/compressed victim syncset (generate latest vicitm syncset if w/o pre-compression, or get pre-generated complete/compressed victim syncset otherwise) and replace prev-issued complete victim syncset atomically.
  * 
  * By Siyuan Sheng (2023.12.13).
  */

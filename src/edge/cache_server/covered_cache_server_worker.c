@@ -400,7 +400,7 @@ namespace covered
                 {
                     // Admit dirinfo into remote beacon edge node
                     bool tmp_is_being_written = false;
-                    const bool is_background = true; // Similar as only-sender hybrid data fetching
+                    const bool is_background = false; // Similar as only-sender hybrid data fetching
                     bool is_neighbor_cached = false; // NOTE: we do NOT use cooperation wrapper to check is_neighbor_cached, as sender must NOT be the beacon here
                     is_finish = tmp_cache_server_ptr->admitBeaconDirectory_(key, DirectoryInfo(tmp_edge_wrapper_ptr->getNodeIdx()), tmp_is_being_written, is_neighbor_cached, edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency, is_background);
                     if (is_finish) // Edge is NOT running now

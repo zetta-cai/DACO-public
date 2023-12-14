@@ -138,19 +138,29 @@ namespace covered
 
     // For victim synchronization
 
-    VictimSyncset VictimTracker::getLocalVictimSyncsetForSynchronization(const uint32_t& dst_edge_idx_for_compression, const uint64_t& latest_local_cache_margin_bytes) const
+    //VictimSyncset VictimTracker::getLocalVictimSyncsetForSynchronization(const uint32_t& dst_edge_idx_for_compression, const uint64_t& latest_local_cache_margin_bytes) const
+    VictimSyncset VictimTracker::getLocalVictimSyncsetForSynchronization(const uint32_t& dst_edge_idx_for_compression, const uint64_t& latest_local_cache_margin_bytes, const Key& key) const // TMPDWEBUG231211
     {
+        // TMPDEBUG231211
+        struct timespec t0 = Util::getCurrentTimespec();
+
         checkPointers_();
 
         // Acquire a write lock to get local victim syncset atomically (NOTE: we need write lock here as we need to update VictimsyncMonitor)
         std::string context_name = "VictimTracker::getLocalVictimSyncsetForSynchronization()";
         rwlock_for_victim_tracker_->acquire_lock(context_name);
 
+        // TMPDEBUG231211
+        struct timespec t1 = Util::getCurrentTimespec();
+
         // Get local complete victim syncset of the current edge node
         const SeqNum cur_seqnum = getAndIncrCurSeqnum_(dst_edge_idx_for_compression); // NOTE: this will increase cur_seqnum_ for the given dst edge node
         const bool need_enforcement = checkAndResetNeedEnforcement_(dst_edge_idx_for_compression); // NOTE: this will reset need_enforcement_ for the given dst edge node if need enforcement
         VictimSyncset current_victim_syncset = getVictimSyncset_(edge_idx_, cur_seqnum, need_enforcement); // NOTE: set VictimSyncset::is_enforce_complete as true if need enforcement (dst edge node will enforce complete victim syncset for the next message towards the current edge node)
         assert(current_victim_syncset.isComplete());
+
+        // TMPDEBUG231211
+        struct timespec t2 = Util::getCurrentTimespec();
 
         // NOTE: we always use the latest cache margin bytes for local victim syncset, instead of using that in edge-level victim metadata of the current edge node, which may be stale
         current_victim_syncset.setCacheMarginBytes(latest_local_cache_margin_bytes);
@@ -162,8 +172,15 @@ namespace covered
 
         rwlock_for_victim_tracker_->unlock(context_name);
 
+        // TMPDEBUG231211
+        struct timespec t3 = Util::getCurrentTimespec();
+
         if (!is_prev_victim_syncset_exist) // No previous victim syncset for dedup/delta-compression
         {
+            // TMPDEBUG231211
+            struct timespec t4 = Util::getCurrentTimespec();
+            Util::dumpVariablesForDebug(instance_name_, 10, "getLocalVictimSyncsetForSynchronization for key", key.getKeystr().c_str(), "t1-t0:", std::to_string(Util::getDeltaTimeUs(t1, t0)).c_str(), "t2-t1:", std::to_string(Util::getDeltaTimeUs(t2, t1)).c_str(), "t3-t2:", std::to_string(Util::getDeltaTimeUs(t3, t2)).c_str(), "t4-t3:", std::to_string(Util::getDeltaTimeUs(t4, t3)).c_str());
+
             // NOTE: cur_seqnum may NOT be zero here, as prev issued victim syncset may be cleared by complete enforcement notification from dst edge node
             return current_victim_syncset;
         }
@@ -174,6 +191,10 @@ namespace covered
 
             // Calculate compressed victim syncset by dedup/delta-compression based on current and prev complete victim syncset
             VictimSyncset compressed_victim_syncset = VictimSyncset::compress(current_victim_syncset, prev_victim_syncset);
+
+            // TMPDEBUG231211
+            struct timespec t4 = Util::getCurrentTimespec();
+            Util::dumpVariablesForDebug(instance_name_, 10, "getLocalVictimSyncsetForSynchronization for key", key.getKeystr().c_str(), "t1-t0:", std::to_string(Util::getDeltaTimeUs(t1, t0)).c_str(), "t2-t1:", std::to_string(Util::getDeltaTimeUs(t2, t1)).c_str(), "t3-t2:", std::to_string(Util::getDeltaTimeUs(t3, t2)).c_str(), "t4-t3:", std::to_string(Util::getDeltaTimeUs(t4, t3)).c_str());
 
             return compressed_victim_syncset;
         }

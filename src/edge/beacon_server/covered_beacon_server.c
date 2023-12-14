@@ -32,6 +32,9 @@ namespace covered
 
     bool CoveredBeaconServer::processReqToLookupLocalDirectory_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvreq_dst_addr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, FastPathHint& fast_path_hint, BandwidthUsage& total_bandwidth_usage, EventList& event_list) const
     {
+        // TMPDEBUG231211
+        struct timespec t0 = Util::getCurrentTimespec();
+
         // Get key from control request if any
         assert(control_request_ptr != NULL);
         assert(control_request_ptr->getMessageType() == MessageType::kCoveredDirectoryLookupRequest);
@@ -51,20 +54,33 @@ namespace covered
         bool is_source_cached = false;
         bool is_global_cached = edge_wrapper_ptr_->getCooperationWrapperPtr()->lookupDirectoryTableByBeaconServer(tmp_key, source_edge_idx, edge_cache_server_worker_recvreq_dst_addr, is_being_written, is_valid_directory_exist, directory_info, is_source_cached);
 
+        // TMPDEBUG231211
+        struct timespec t1 = Util::getCurrentTimespec();
+
         // Victim synchronization
         const VictimSyncset& neighbor_victim_syncset = covered_directory_lookup_request_ptr->getVictimSyncsetRef();
         edge_wrapper_ptr_->updateCacheManagerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset);
+
+        // TMPDEBUG231211
+        struct timespec t2 = Util::getCurrentTimespec();
 
         // Selective popularity aggregation after remote directory lookup
         const CollectedPopularity& collected_popularity = covered_directory_lookup_request_ptr->getCollectedPopularityRef();
         const bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();
         is_finish = edge_wrapper_ptr_->afterDirectoryLookupHelper_(tmp_key, source_edge_idx, collected_popularity, is_global_cached, is_source_cached, best_placement_edgeset, need_hybrid_fetching, &fast_path_hint, edge_beacon_server_recvrsp_socket_server_ptr_, edge_beacon_server_recvrsp_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
 
+        // TMPDEBUG231211
+        struct timespec t3 = Util::getCurrentTimespec();
+        Util::dumpVariablesForDebug(instance_name_, 8, "COVERED: process dirlookup req for key", MessageBase::getKeyFromMessage(control_request_ptr).getKeystr().c_str(), "t1-t0:", std::to_string(Util::getDeltaTimeUs(t1, t0)).c_str(), "t2-t1:", std::to_string(Util::getDeltaTimeUs(t2, t1)).c_str(), "t3-t2:", std::to_string(Util::getDeltaTimeUs(t3, t2)).c_str());
+
         return is_finish;
     }
 
     MessageBase* CoveredBeaconServer::getRspToLookupLocalDirectory_(MessageBase* control_request_ptr, const bool& is_being_written, const bool& is_valid_directory_exist, const DirectoryInfo& directory_info, const Edgeset& best_placement_edgeset, const bool& need_hybrid_fetching, const FastPathHint& fast_path_hint, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list) const
     {
+        // TMPDEBUG231211
+        struct timespec t0 = Util::getCurrentTimespec();
+
         checkPointers_();
         CoveredCacheManager* covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
 
@@ -76,7 +92,13 @@ namespace covered
         // Prepare victim syncset for piggybacking-based victim synchronization
         const uint32_t dst_edge_idx_for_compression = control_request_ptr->getSourceIndex();
 
+        // TMPDEBUG231211
+        struct timespec t1 = Util::getCurrentTimespec();
+
         VictimSyncset victim_syncset = covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_edge_idx_for_compression, edge_wrapper_ptr_->getCacheMarginBytes());
+
+        // TMPDEBUG231211
+        struct timespec t2 = Util::getCurrentTimespec();
 
         const uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
         MessageBase* covered_directory_lookup_response_ptr = NULL;
@@ -104,11 +126,18 @@ namespace covered
         }
         assert(covered_directory_lookup_response_ptr != NULL);
 
+        // TMPDEBUG231211
+        struct timespec t3 = Util::getCurrentTimespec();
+        Util::dumpVariablesForDebug(instance_name_, 8, "COVERED: get dirlookup rsp for key", MessageBase::getKeyFromMessage(control_request_ptr).getKeystr().c_str(), "t1-t0:", std::to_string(Util::getDeltaTimeUs(t1, t0)).c_str(), "t2-t1:", std::to_string(Util::getDeltaTimeUs(t2, t1)).c_str(), "t3-t2:", std::to_string(Util::getDeltaTimeUs(t3, t2)).c_str());
+
         return covered_directory_lookup_response_ptr;
     }
 
     bool CoveredBeaconServer::processReqToUpdateLocalDirectory_(MessageBase* control_request_ptr, bool& is_being_written, bool& is_neighbor_cached, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, BandwidthUsage& total_bandwidth_usage, EventList& event_list)
     {
+        // TMPDEBUG231211
+        struct timespec t0 = Util::getCurrentTimespec();
+
         checkPointers_();
         assert(control_request_ptr != NULL);
 
@@ -199,11 +228,17 @@ namespace covered
             exit(1);
         }
 
+        // TMPDEBUG231211
+        struct timespec t1 = Util::getCurrentTimespec();
+
         checkPointers_();
         CoveredCacheManager* covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
 
         // Victim synchronization
         edge_wrapper_ptr_->updateCacheManagerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset);
+
+        // TMPDEBUG231211
+        struct timespec t2 = Util::getCurrentTimespec();
 
         if (is_directory_update) // Update directory information
         {
@@ -239,6 +274,9 @@ namespace covered
                 }
             }
         }
+
+        // TMPDEBUG231211
+        struct timespec t3 = Util::getCurrentTimespec();
         
         if (with_extra_hybrid_fetching_result) // With extra hybrid fetching result (except/besides sender) to trigger non-blocking placement notification
         {
@@ -264,11 +302,18 @@ namespace covered
             edge_wrapper_ptr_->nonblockNotifyForPlacement(tmp_key, tmp_value, extra_placement_edgeset, skip_propagation_latency);
         }
 
+        // TMPDEBUG231211
+        struct timespec t4 = Util::getCurrentTimespec();
+        Util::dumpVariablesForDebug(instance_name_, 10, "COVERED: process dirupdate req for key", MessageBase::getKeyFromMessage(control_request_ptr).getKeystr().c_str(), "t1-t0:", std::to_string(Util::getDeltaTimeUs(t1, t0)).c_str(), "t2-t1:", std::to_string(Util::getDeltaTimeUs(t2, t1)).c_str(), "t3-t2:", std::to_string(Util::getDeltaTimeUs(t3, t2)).c_str(), "t4-t3:", std::to_string(Util::getDeltaTimeUs(t4, t3)).c_str());
+
         return is_finish;
     }
 
     MessageBase* CoveredBeaconServer::getRspToUpdateLocalDirectory_(MessageBase* control_request_ptr, const bool& is_being_written, const bool& is_neighbor_cached, const Edgeset& best_placement_edgeset, const bool& need_hybrid_fetching, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list) const
     {
+        // TMPDEBUG231211
+        struct timespec t0 = Util::getCurrentTimespec();
+
         assert(control_request_ptr != NULL);
 
         const Key tmp_key = MessageBase::getKeyFromMessage(control_request_ptr);
@@ -277,9 +322,15 @@ namespace covered
         checkPointers_();
         CoveredCacheManager* covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
 
+        // TMPDEBUG231211
+        struct timespec t1 = Util::getCurrentTimespec();
+
         // Prepare victim syncset for piggybacking-based victim synchronization
         const uint32_t dst_edge_idx_for_compression = control_request_ptr->getSourceIndex();
-        VictimSyncset victim_syncset = covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_edge_idx_for_compression, edge_wrapper_ptr_->getCacheMarginBytes());
+        VictimSyncset victim_syncset = covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_edge_idx_for_compression, edge_wrapper_ptr_->getCacheMarginBytes(), tmp_key);
+
+        // TMPDEBUG231211
+        struct timespec t2 = Util::getCurrentTimespec();
 
         // Send back corresponding response based on request type
         MessageType message_type = control_request_ptr->getMessageType();
@@ -329,6 +380,10 @@ namespace covered
             exit(1);
         }
         assert(control_response_ptr != NULL);
+
+        // TMPDEBUG231211
+        struct timespec t3 = Util::getCurrentTimespec();
+        Util::dumpVariablesForDebug(instance_name_, 8, "COVERED: get dirupdate rsp for key", MessageBase::getKeyFromMessage(control_request_ptr).getKeystr().c_str(), "t1-t0:", std::to_string(Util::getDeltaTimeUs(t1, t0)).c_str(), "t2-t1:", std::to_string(Util::getDeltaTimeUs(t2, t1)).c_str(), "t3-t2:", std::to_string(Util::getDeltaTimeUs(t3, t2)).c_str());
 
         return control_response_ptr;
     }
