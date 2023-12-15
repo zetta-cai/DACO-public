@@ -28,7 +28,13 @@ namespace covered
         size_bytes_ = 0;
         peredge_victim_metadata_.resize(edgecnt, EdgelevelVictimMetadata());
         perkey_victim_dirinfo_.clear();
+
         peredge_victimsync_monitor_.resize(edgecnt, VictimsyncMonitor());
+        for (uint32_t i = 0; i < edgecnt; i++)
+        {
+            //size_bytes_ = Util::uint64Add(size_bytes_, sizeof(uint32_t)); // dst edge idx
+            size_bytes_ = Util::uint64Add(size_bytes_, peredge_victimsync_monitor_[i].getSizeForCapacity()); // cur seqnum
+        }
     }
 
     VictimTracker::~VictimTracker()
@@ -150,44 +156,48 @@ namespace covered
         std::string context_name = "VictimTracker::getLocalVictimSyncsetForSynchronization()";
         rwlock_for_victim_tracker_->acquire_lock(context_name);
 
+        const uint64_t start_victimsync_monitor_size = peredge_victimsync_monitor_[dst_edge_idx_for_compression].getSizeForCapacity();
+
         // TMPDEBUG231211
         struct timespec t1 = Util::getCurrentTimespec();
+
+        VictimSyncset final_victim_syncset;
+        bool need_latest_victim_syncset = peredge_victimsync_monitor_[dst_edge_idx_for_compression].getPregenVictimSyncset(final_victim_syncset);
 
         // TMPDEBUG231211
         struct timespec t2 = Util::getCurrentTimespec();
 
-        // NOTE: we always use the latest cache margin bytes for local victim syncset, instead of using that in edge-level victim metadata of the current edge node, which may be stale
-        current_victim_syncset.setCacheMarginBytes(latest_local_cache_margin_bytes);
-        assert(current_victim_syncset.isComplete());
+        if (need_latest_victim_syncset) // No pre-generated victim syncset (e.g., first-issued, enforce-complete, or no pre-compression)
+        {
+            // Get local complete victim syncset of the current edge node
+            VictimSyncset current_victim_syncset = getVictimSyncset_(edge_idx_);
+            assert(current_victim_syncset.isComplete());
 
-        // Replace previously-issued complete victim syncset for dst edge idx by current complete victim syncset if necessary
-        VictimSyncset prev_victim_syncset;
-        bool is_prev_victim_syncset_exist = replacePrevVictimSyncset_(dst_edge_idx_for_compression, current_victim_syncset, prev_victim_syncset);
-
-        rwlock_for_victim_tracker_->unlock(context_name);
+            VictimSyncset prev_victim_syncset;
+            bool is_prev_victim_syncset_exist = peredge_victimsync_monitor_[dst_edge_idx_for_compression].replacePrevVictimSyncset(current_victim_syncset, final_victim_syncset, prev_victim_syncset);
+        }
 
         // TMPDEBUG231211
         struct timespec t3 = Util::getCurrentTimespec();
 
-        if (!is_prev_victim_syncset_exist) // No previous victim syncset for dedup/delta-compression
-        {
-            // TMPDEBUG231211
-            struct timespec t4 = Util::getCurrentTimespec();
-            Util::dumpVariablesForDebug(instance_name_, 10, "getLocalVictimSyncsetForSynchronization for key", key.getKeystr().c_str(), "t1-t0:", std::to_string(Util::getDeltaTimeUs(t1, t0)).c_str(), "t2-t1:", std::to_string(Util::getDeltaTimeUs(t2, t1)).c_str(), "t3-t2:", std::to_string(Util::getDeltaTimeUs(t3, t2)).c_str(), "t4-t3:", std::to_string(Util::getDeltaTimeUs(t4, t3)).c_str());
+        #ifndef DISABLE_CACHE_MARGIN_BYTES_DELTA
+        // TODO: if we want to delta compress cache margin bytes, (i) we have to pass latest cache margin bytes at the time of receiving neighbor victim syncset for pre-compression, which could incur imprecise cache margin bytes; (ii) we have to pass latest cache margin bytes to getPregenVictimSyncset() if use full-compressed victim syncset yet with accurate delta of cache margin bytes; (iii) we have to set latest cache margin bytes for current_victim_syncset if need_latest_victim_syncset instead of for final_victim_syncset
+        assert(false);
+        #else
+        // NOTE: we always use the latest cache margin bytes for local victim syncset, instead of using that in edge-level victim metadata of the current edge node, which may be stale
+        final_victim_syncset.setCacheMarginBytes(latest_local_cache_margin_bytes);
+        #endif
 
-            // NOTE: cur_seqnum may NOT be zero here, as prev issued victim syncset may be cleared by complete enforcement notification from dst edge node
-            return current_victim_syncset;
-        }
-        else
-        {
-            
+        rwlock_for_victim_tracker_->unlock(context_name);
 
-            // TMPDEBUG231211
-            struct timespec t4 = Util::getCurrentTimespec();
-            Util::dumpVariablesForDebug(instance_name_, 10, "getLocalVictimSyncsetForSynchronization for key", key.getKeystr().c_str(), "t1-t0:", std::to_string(Util::getDeltaTimeUs(t1, t0)).c_str(), "t2-t1:", std::to_string(Util::getDeltaTimeUs(t2, t1)).c_str(), "t3-t2:", std::to_string(Util::getDeltaTimeUs(t3, t2)).c_str(), "t4-t3:", std::to_string(Util::getDeltaTimeUs(t4, t3)).c_str());
+        // TMPDEBUG231211
+        struct timespec t4 = Util::getCurrentTimespec();
 
-            return compressed_victim_syncset;
-        }
+        // TMPDEBUG231211
+        struct timespec t4 = Util::getCurrentTimespec();
+        Util::dumpVariablesForDebug(instance_name_, 10, "getLocalVictimSyncsetForSynchronization for key", key.getKeystr().c_str(), "t1-t0:", std::to_string(Util::getDeltaTimeUs(t1, t0)).c_str(), "t2-t1:", std::to_string(Util::getDeltaTimeUs(t2, t1)).c_str(), "t3-t2:", std::to_string(Util::getDeltaTimeUs(t3, t2)).c_str(), "t4-t3:", std::to_string(Util::getDeltaTimeUs(t4, t3)).c_str());
+
+        return final_victim_syncset;
     }
 
     //void VictimTracker::updateForNeighborVictimSyncset(const uint32_t& source_edge_idx, const VictimSyncset& neighbor_victim_syncset, const CooperationWrapperBase* cooperation_wrapper_ptr)
@@ -202,22 +212,12 @@ namespace covered
         rwlock_for_victim_tracker_->acquire_lock(context_name);
 
         // Enforce complete victim syncset for the next message to source edge node if necessary
-        const bool is_valid_victimsync_monitor = peredge_victimsync_monitor_[source_edge_idx].isValid();
         if (neighbor_victim_syncset.isEnforceComplete()) // Enforce the current edge node to issue complete victim syncset without compression for the given source edge node
         {
-            assert(is_valid_victimsync_monitor); // NOTE: if the source edge node notifies the current edge node to enforce complete victim syncset without compression, it means that the current edge node has sent at least one victim syncset to the source edge node -> current edge node MUST have VictimsyncMonitor for the source edge node
+            // NOTE: if the source edge node notifies the current edge node to enforce complete victim syncset without compression, it means that the current edge node has sent at least one victim syncset to the source edge node -> current edge node MUST have VictimsyncMonitor for the source edge node
 
             peredge_victimsync_monitor_[source_edge_idx].enforceComplete(); // Enforce the next message to piggyback a complete victim syncset
         }
-
-        // Allocate VictimsyncMonitor for the source edge node if this is the first victim syncset received from the source edge node
-        if (!is_valid_victimsync_monitor) // No VictimsyncMonitor means that this is the first victim syncset from the source edge idx
-        {
-            // NOTE: cur_seqnum_ will be initialized as 0 such that the first victim syncset from current to source will have a seqnum of 0
-            // NOTE: is_first_received_ will be initialized as true such that the first received victim syncset can directly update victim tracker
-            peredge_victimsync_monitor_[source_edge_idx].validate();
-        }
-        assert(peredge_victimsync_monitor_[source_edge_idx].isValid());
 
         // Start from received victim syncset from neighbor
         VictimSyncset neighbor_complete_victim_syncset = neighbor_victim_syncset;
@@ -263,8 +263,10 @@ namespace covered
                 {
                     // Get existing complete victim syncset from victim tracker for source edge idx
                     // NOTE: get tracked victim syncset previously-issued by the source edge node for recovery (tracked_seqnum and is_enforce_complete are NOT used during recovery)
-                    const bool unused_is_enforce_complete = false;
-                    VictimSyncset existing_complete_victim_syncset = getVictimSyncset_(source_edge_idx, tracked_seqnum, unused_is_enforce_complete);
+                    //const bool unused_is_enforce_complete = false;
+                    VictimSyncset existing_complete_victim_syncset = getVictimSyncset_(source_edge_idx);
+                    existing_complete_victim_syncset.setSeqnum(tracked_seqnum);
+                    //existing_complete_victim_syncset.setEnforceComplete(unused_is_enforce_complete);
                     assert(existing_complete_victim_syncset.isComplete());
 
                     // Recover neighbor complete victim syncset based on existing complete victim syncset of source edge idx and received neighbor_victim_syncset if compressed
@@ -327,8 +329,12 @@ namespace covered
             replaceVictimDirinfoSets_(local_beaconed_neighbor_synced_victim_dirinfosets, true);
         }
 
-        // Pre-compression for next issued victim syncset towards the source edge node
-        precompressVictimSyncset_(source_edge_idx);
+        // Get local complete victim syncset of the current edge node
+        VictimSyncset current_victim_syncset = getVictimSyncset_(edge_idx_);
+        assert(current_victim_syncset.isComplete());
+
+        // Pre-generate complete/compressed victim syncset for the next message issued towards the source edge node
+        peredge_victimsync_monitor_[source_edge_idx].pregenVictimSyncset(current_victim_syncset);
 
         rwlock_for_victim_tracker_->unlock(context_name);
 
@@ -498,72 +504,7 @@ namespace covered
 
     // For victim synchronization
 
-    void VictimTracker::precompressVictimSyncset_(const uint32_t& dst_edge_idx_for_compression) const
-    {
-        // Get local complete victim syncset of the current edge node
-        const SeqNum cur_seqnum = getAndIncrCurSeqnum_(dst_edge_idx_for_compression); // NOTE: this will increase cur_seqnum_ for the given dst edge node
-        const bool need_enforcement = checkAndResetNeedEnforcement_(dst_edge_idx_for_compression); // NOTE: this will reset need_enforcement_ for the given dst edge node if need enforcement
-        VictimSyncset current_victim_syncset = getVictimSyncset_(edge_idx_, cur_seqnum, need_enforcement); // NOTE: set VictimSyncset::is_enforce_complete as true if need enforcement (dst edge node will enforce complete victim syncset for the next message towards the current edge node)
-        assert(current_victim_syncset.isComplete());
-
-        // Pre-generate complete/compressed victim syncset for the next message towards dst edge node
-        peredge_victimsync_monitor_[dst_edge_idx_for_compression].pregenVictimSyncset(current_victim_syncset);
-
-        return;
-    }
-
-    SeqNum VictimTracker::getAndIncrCurSeqnum_(const uint32_t& dst_edge_idx_for_compression) const
-    {
-        // NOTE: NO need to acquire a write lock which has been done in getLocalVictimSyncsetForSynchronization()
-
-        SeqNum cur_seqnum = 0; // Cur seqnum starts from 0 to synchronize local victim info to each dst neighbor
-        const bool is_valid_victimsync_monitor = peredge_victimsync_monitor_[dst_edge_idx_for_compression].isValid();
-        if (!is_valid_victimsync_monitor)
-        {
-            peredge_victimsync_monitor_[dst_edge_idx_for_compression].validate(); // Next local victim syncset should be cur_seqnum + 1
-
-            //size_bytes_ = Util::uint64Add(size_bytes_, sizeof(uint32_t)); // dst edge idx
-            size_bytes_ = Util::uint64Add(size_bytes_, peredge_victimsync_monitor_[dst_edge_idx_for_compression].getSizeForCapacity()); // cur seqnum
-        }
-        else
-        {
-            cur_seqnum = peredge_victimsync_monitor_[dst_edge_idx_for_compression].getCurSeqnum();
-        }
-
-        assert(peredge_victimsync_monitor_[dst_edge_idx_for_compression].isValid());
-        peredge_victimsync_monitor_[dst_edge_idx_for_compression].incrCurSeqnum(); // Next local victim syncset should be cur_seqnum + 1
-
-        return cur_seqnum;
-    }
-
-    bool VictimTracker::checkAndResetNeedEnforcement_(const uint32_t& dst_edge_idx_for_compression) const
-    {
-        // NOTE: NO need to acquire a write lock which has been done in getLocalVictimSyncsetForSynchronization()
-
-        bool need_enforcement = false;
-        const bool is_valid_victimsync_monitor = peredge_victimsync_monitor_[dst_edge_idx_for_compression].isValid();
-        assert(is_valid_victimsync_monitor); // NOTE: getAndIncrCurSeqnum_() has inserted VictimsyncMonitor for dst_edge_idx_for_compression if not exist, and we will NEVER remove it
-
-        need_enforcement = peredge_victimsync_monitor_[dst_edge_idx_for_compression].needEnforcement();
-        if (need_enforcement)
-        {
-            peredge_victimsync_monitor_[dst_edge_idx_for_compression].resetEnforcement();
-        }
-        else
-        {
-            // Check if there exists any victim syncset w/ is_enforce_complete_ as true, yet has NOT been issued to the corresponding edge node
-            VictimSyncset pregen_complete_victim_syncset;
-            bool is_unissued_exist = peredge_victimsync_monitor_[dst_edge_idx_for_compression].getPregenCompleteVictimSyncset(pregen_complete_victim_syncset);
-            if (is_unissued_exist) // Inherit is_enforce_complete_ flag of unissued victim syncset if any
-            {
-                need_enforcement = pregen_complete_victim_syncset.isEnforceComplete();
-            }
-        }
-
-        return need_enforcement;
-    }
-
-    VictimSyncset VictimTracker::getVictimSyncset_(const uint32_t& edge_idx, const SeqNum& seqnum, const bool& is_enforce_complete) const
+    VictimSyncset VictimTracker::getVictimSyncset_(const uint32_t& edge_idx) const
     {
         // NOTE: NO need to acquire a read lock which has been done in getLocalVictimSyncsetForSynchronization() and updateForNeighborVictimSyncset()
 
@@ -589,52 +530,11 @@ namespace covered
             }
         }
 
-        VictimSyncset victim_syncset(seqnum, is_enforce_complete, cache_margin_bytes, synced_victims, beaconed_victims);
+        // NOTE: we temporarily use 0 as seqnum and false as is_enforce_complete, which will be set by VictimTracker::updateForNeighborVictimSyncset() for recovery, VictimsyncMonitor::pregenVictimSyncset() for pre-compression, or VictimsyncMonitor::replacePrevVictimSyncset() if need_latest_victim_syncset
+        VictimSyncset victim_syncset(0, false, cache_margin_bytes, synced_victims, beaconed_victims);
         assert(victim_syncset.isComplete()); // NOTE: we get complete victim syncset here (dedup/delta-compression is performed outside VictimSyncset, i.e., in CoveredCacheManager)
 
         return victim_syncset;
-    }
-
-    bool VictimTracker::replacePrevVictimSyncset_(const uint32_t& dst_edge_idx_for_compression, const VictimSyncset& current_victim_syncset, VictimSyncset& prev_victim_syncset) const
-    {
-        checkPointers_();
-
-        // NOTE: NO need to acquire a write lock to replace prev victim syncset, which has been done by getLocalVictimSyncsetForSynchronization()
-
-        assert(current_victim_syncset.isComplete()); // NOTE: current victim syncset is generated by getVictimSyncset_(), which MUST be complete
-
-        const bool is_valid_victimsync_monitor = peredge_victimsync_monitor_[dst_edge_idx_for_compression].isValid();
-        assert(is_valid_victimsync_monitor); // NOTE: getAndIncrCurSeqnum_() has inserted VictimsyncMonitor for dst_edge_idx_for_compression if not exist, and we will NEVER remove it
-
-        bool is_prev_victim_syncset_exist = peredge_victimsync_monitor_[dst_edge_idx_for_compression].getPrevVictimSyncset(prev_victim_syncset); // Get prev victim syncset if any
-        if (is_prev_victim_syncset_exist) // Prev victim syncset already exists
-        {
-            peredge_victimsync_monitor_[dst_edge_idx_for_compression].setPrevVictimSyncset(current_victim_syncset); // Replace prev victim syncset with current victim syncset
-
-            // Update cache size usage for replaced victim syncset in peredge_prev_victim_syncset_
-            uint64_t current_victim_syncset_size_bytes = current_victim_syncset.getSizeForCapacity();
-            uint64_t prev_victim_syncset_size_bytes = prev_victim_syncset.getSizeForCapacity();
-            if (current_victim_syncset_size_bytes > prev_victim_syncset_size_bytes)
-            {
-                size_bytes_ = Util::uint64Add(size_bytes_, Util::uint64Minus(current_victim_syncset_size_bytes, prev_victim_syncset_size_bytes));
-            }
-            else
-            {
-                size_bytes_ = Util::uint64Minus(size_bytes_, Util::uint64Minus(prev_victim_syncset_size_bytes, current_victim_syncset_size_bytes));
-            }
-
-            assert(prev_victim_syncset.isComplete()); // NOTE: prev victim syncset is replaced by complete victim syncset generated before, which also MUST be complete
-        }
-        else
-        {
-            peredge_victimsync_monitor_[dst_edge_idx_for_compression].setPrevVictimSyncset(current_victim_syncset); // Insert current victim syncset as prev victim syncset
-
-            // Update cache size usage for new victim syncset in peredge_prev_victim_syncset_
-            uint64_t current_victim_syncset_size_bytes = current_victim_syncset.getSizeForCapacity();
-            size_bytes_ = Util::uint64Add(size_bytes_, current_victim_syncset_size_bytes);
-        }
-
-        return is_prev_victim_syncset_exist;
     }
 
     // For victim update and removal

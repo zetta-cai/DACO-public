@@ -14,6 +14,9 @@
 // NOTE: use bitmap or booleans does NOT affect perf
 #define VICTIM_SYNCSET_USE_BITMAP
 
+// NOTE: as cache margin bytes affect placement calculation and its delta compression has limited bandwidth saving, we disable delta compression of cache margin bytes
+#define DISABLE_CACHE_MARGIN_BYTES_DELTA
+
 #include <list>
 #include <string>
 
@@ -40,7 +43,9 @@ namespace covered
         bool isCompressed() const;
 
         SeqNum getSeqnum() const;
+        void setSeqnum(const SeqNum& seqnum);
         bool isEnforceComplete() const;
+        void setEnforceComplete(const bool& is_enforce_complete);
 
         // For both complete and compressed victim syncsets
         bool getCacheMarginBytesOrDelta(uint64_t& cache_margin_bytes, int& cache_margin_delta_bytes) const; // Return if with complete cache margin bytes

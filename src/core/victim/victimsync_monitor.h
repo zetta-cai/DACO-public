@@ -20,23 +20,12 @@ namespace covered
         VictimsyncMonitor();
         ~VictimsyncMonitor();
 
-        bool isValid() const;
-        void validate();
-
         // As sender edge node
-
-        SeqNum getCurSeqnum() const;
-        void incrCurSeqnum();
-
-        void setPrevVictimSyncset(const VictimSyncset& prev_victim_syncset);
-        bool getPregenCompleteVictimSyncset(VictimSyncset& pregen_complete_victim_syncset) const; // Returhn if pre-generated complete victim syncset exists
-        void setPregenCompleteVictimSyncset(const VictimSyncset& pregen_complete_victim_syncset);
-        bool getPregenCompressedVictimSyncset(VictimSyncset& pregen_compressed_victim_syncset) const; // Return if pre-generated compressed victim syncset exists
-        void setPregenCompressedVictimSyncset(const VictimSyncset& pregen_compressed_victim_syncset);
 
         void enforceComplete(); // Enforce a complete victim syncset for the next message to the receiver
         void pregenVictimSyncset(const VictimSyncset& current_victim_syncset); // Pre-generate complete/compressed victim syncset for the next message to the receiver
         bool getPregenVictimSyncset(VictimSyncset& final_victim_syncset); // Return if need the latest victim syncset
+        bool replacePrevVictimSyncset(const VictimSyncset& current_victim_syncset, VictimSyncset& final_victim_syncset, VictimSyncset& prev_victim_syncset); // Replace prev victim syncset with the latest one w/ correct seqnum and is_enforce_complete flag, set it as final victim syncset, and return prev_victim_syncset if any
 
         // As receiver edge node
 
@@ -48,39 +37,43 @@ namespace covered
         VictimSyncset tryToClearEnforcementStatus_(const VictimSyncset& neighbor_complete_victim_syncset, const SeqNum& synced_seqnum, const uint32_t& peredge_monitored_victimsetcnt); // If no continous compressed victim syncsets in cached_victim_syncsets_, returned victim syncset will be the same as neighbor_complete_victim_syncset
         void tryToEnableEnforcementStatus_(const VictimSyncset& neighbor_compressed_victim_syncset, const SeqNum& synced_seqnum, const uint32_t& peredge_monitored_victimsetcnt);
 
-        // NOTE: need enforcement flag will be embedded into the next message sent to the sender
-        bool needEnforcement() const;
-        void resetEnforcement();
-
         // Utils
 
         uint64_t getSizeForCapacity() const;
     private:
         static const std::string kClassName;
 
+        // As sender edge node
+
         void releasePrevVictimSyncset_();
         void releasePregenCompleteVictimSyncset_();
         void releasePregenCompressedVictimSyncset_();
+
+        SeqNum getAndIncrCurSeqnum_();
+        bool getAndResetEnforcementFlag_();
+
+        // As receiver edge node
 
         void clearStaleCachedVictimSyncsets_(const uint32_t& peredge_monitored_victimsetcnt);
         VictimSyncset clearContinuousCachedVictimSyncsets_(const VictimSyncset& neighbor_complete_victim_syncset, const uint32_t& peredge_monitored_victimsetcnt); // If no continous compressed victim syncsets in cached_victim_syncsets_, returned victim syncset will be the same as neighbor_complete_victim_syncset (this could update tracked seqnum)
         SeqNum getMaxSeqnumFromCachedVictimSyncsets_(const uint32_t& peredge_monitored_victimsetcnt) const;
 
-        bool is_valid_;
-        void checkValidity_() const;
-
         // NOTE: dedup-/delta-based victim syncset compression/recovery MUST follow strict seqnum order (unless the received victim syncset for recovery is complete)
         // NOTE: we assert that seqnum should NOT overflow if using uint64_t (TODO: fix it by integer wrapping in the future if necessary)
 
+        // NOTE: both pregen_complete_victim_syncset and pregen_compressed_victim_syncset MUST have the same is_enforce_complete flag
+        // ----> is_enforce_complete of prev_victim_syncset will NOT be used in compression (keep is_enforce_complete of the latest victim syncset) and hence NOT embedded into message later
+        // ----> is_enforce_complete of pregen_complete_victim_syncset (i.e., the latest victim syncset when performing pre-compression) will be embedded into message later
+        // ----> is_enforce_complete of pregen_compressed_victim_syncset (i.e., pre-compressed based on the latest victim syncset at that time) will NOT be embedded into message later
+
         // As sender edge node
-        SeqNum cur_seqnum_; // The seqnum for current victim syncset towards a specific neighbor
+        SeqNum cur_seqnum_; // The seqnum for current victim syncset towards a specific neighbor (cur_seqnum_ will be initialized as 0 such that the first victim syncset issued to a specific edge node will have a seqnum of 0)
         VictimSyncset* prev_victim_syncset_ptr_; // Prev issued victim syncset towards a specific neighbor for dedup-/delta-based compression
         VictimSyncset* pregen_complete_victim_syncset_ptr_; // Pre-generated complete victim syncset for background pre-compression
         VictimSyncset* pregen_compressed_victim_syncset_ptr_; // Pre-generated compressed victim syncset for background pre-compression
-        bool same_as_prev_; // Is the current victim syncset is the same as the last issued one
 
         // As receiver edge node
-        bool is_first_complete_received_; // If the victim syncset is the first complete one from a specific neighbor
+        bool is_first_complete_received_; // If the victim syncset is the first complete one from a specific neighbor (is_first_complete_received_ will be initialized as true such that the first received complete victim syncset can directly update victim tracker)
         SeqNum tracked_seqnum_; // The seqnum for tracked victim syncset from a specific neighbor
         std::vector<VictimSyncset> cached_victim_syncsets_; // Cached in-advance compressed victim syncsets from a specific neighbor
         SeqNum enforcement_seqnum_; // The max seqnum between cached_victim_syncsets_ and the victim syncset triggering the enforcement of complete victim syncset from a specific neighbor
