@@ -147,9 +147,6 @@ namespace covered
     //VictimSyncset VictimTracker::getLocalVictimSyncsetForSynchronization(const uint32_t& dst_edge_idx_for_compression, const uint64_t& latest_local_cache_margin_bytes) const
     VictimSyncset VictimTracker::getLocalVictimSyncsetForSynchronization(const uint32_t& dst_edge_idx_for_compression, const uint64_t& latest_local_cache_margin_bytes, const Key& key) const // TMPDWEBUG231211
     {
-        // TMPDEBUG231211
-        struct timespec t0 = Util::getCurrentTimespec();
-
         checkPointers_();
 
         // Acquire a write lock to get local victim syncset atomically (NOTE: we need write lock here as we need to update VictimsyncMonitor)
@@ -158,14 +155,8 @@ namespace covered
 
         const uint64_t start_victimsync_monitor_size = peredge_victimsync_monitor_[dst_edge_idx_for_compression].getSizeForCapacity();
 
-        // TMPDEBUG231211
-        struct timespec t1 = Util::getCurrentTimespec();
-
         VictimSyncset final_victim_syncset;
         bool need_latest_victim_syncset = peredge_victimsync_monitor_[dst_edge_idx_for_compression].getPregenVictimSyncset(final_victim_syncset);
-
-        // TMPDEBUG231211
-        struct timespec t2 = Util::getCurrentTimespec();
 
         if (need_latest_victim_syncset) // No pre-generated victim syncset (e.g., first-issued, enforce-complete, or no pre-compression)
         {
@@ -173,12 +164,8 @@ namespace covered
             VictimSyncset current_victim_syncset = getVictimSyncset_(edge_idx_);
             assert(current_victim_syncset.isComplete());
 
-            VictimSyncset prev_victim_syncset;
-            bool is_prev_victim_syncset_exist = peredge_victimsync_monitor_[dst_edge_idx_for_compression].replacePrevVictimSyncset(current_victim_syncset, final_victim_syncset, prev_victim_syncset);
+            peredge_victimsync_monitor_[dst_edge_idx_for_compression].replacePrevVictimSyncset(current_victim_syncset, final_victim_syncset);
         }
-
-        // TMPDEBUG231211
-        struct timespec t3 = Util::getCurrentTimespec();
 
         #ifndef DISABLE_CACHE_MARGIN_BYTES_DELTA
         // TODO: if we want to delta compress cache margin bytes, (i) we have to pass latest cache margin bytes at the time of receiving neighbor victim syncset for pre-compression, which could incur imprecise cache margin bytes; (ii) we have to pass latest cache margin bytes to getPregenVictimSyncset() if use full-compressed victim syncset yet with accurate delta of cache margin bytes; (iii) we have to set latest cache margin bytes for current_victim_syncset if need_latest_victim_syncset instead of for final_victim_syncset
@@ -188,14 +175,17 @@ namespace covered
         final_victim_syncset.setCacheMarginBytes(latest_local_cache_margin_bytes);
         #endif
 
+        const uint64_t end_victimsync_monitor_size = peredge_victimsync_monitor_[dst_edge_idx_for_compression].getSizeForCapacity();
+        if (end_victimsync_monitor_size > start_victimsync_monitor_size)
+        {
+            size_bytes_ = Util::uint64Add(size_bytes_, Util::uint64Minus(end_victimsync_monitor_size, start_victimsync_monitor_size));
+        }
+        else if (end_victimsync_monitor_size < start_victimsync_monitor_size)
+        {
+            size_bytes_ = Util::uint64Minus(size_bytes_, Util::uint64Minus(start_victimsync_monitor_size, end_victimsync_monitor_size));
+        }
+
         rwlock_for_victim_tracker_->unlock(context_name);
-
-        // TMPDEBUG231211
-        struct timespec t4 = Util::getCurrentTimespec();
-
-        // TMPDEBUG231211
-        struct timespec t4 = Util::getCurrentTimespec();
-        Util::dumpVariablesForDebug(instance_name_, 10, "getLocalVictimSyncsetForSynchronization for key", key.getKeystr().c_str(), "t1-t0:", std::to_string(Util::getDeltaTimeUs(t1, t0)).c_str(), "t2-t1:", std::to_string(Util::getDeltaTimeUs(t2, t1)).c_str(), "t3-t2:", std::to_string(Util::getDeltaTimeUs(t3, t2)).c_str(), "t4-t3:", std::to_string(Util::getDeltaTimeUs(t4, t3)).c_str());
 
         return final_victim_syncset;
     }
@@ -210,6 +200,8 @@ namespace covered
         // Acquire a write lock to update local synced victims atomically
         std::string context_name = "VictimTracker::updateForNeighborVictimSyncset()";
         rwlock_for_victim_tracker_->acquire_lock(context_name);
+
+        const uint64_t start_victimsync_monitor_size = peredge_victimsync_monitor_[source_edge_idx].getSizeForCapacity();
 
         // Enforce complete victim syncset for the next message to source edge node if necessary
         if (neighbor_victim_syncset.isEnforceComplete()) // Enforce the current edge node to issue complete victim syncset without compression for the given source edge node
@@ -335,6 +327,16 @@ namespace covered
 
         // Pre-generate complete/compressed victim syncset for the next message issued towards the source edge node
         peredge_victimsync_monitor_[source_edge_idx].pregenVictimSyncset(current_victim_syncset);
+
+        const uint64_t end_victimsync_monitor_size = peredge_victimsync_monitor_[source_edge_idx].getSizeForCapacity();
+        if (end_victimsync_monitor_size > start_victimsync_monitor_size)
+        {
+            size_bytes_ = Util::uint64Add(size_bytes_, Util::uint64Minus(end_victimsync_monitor_size, start_victimsync_monitor_size));
+        }
+        else if (end_victimsync_monitor_size < start_victimsync_monitor_size)
+        {
+            size_bytes_ = Util::uint64Minus(size_bytes_, Util::uint64Minus(start_victimsync_monitor_size, end_victimsync_monitor_size));
+        }
 
         rwlock_for_victim_tracker_->unlock(context_name);
 

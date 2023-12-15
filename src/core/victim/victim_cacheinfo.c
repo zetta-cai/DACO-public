@@ -419,29 +419,37 @@ namespace covered
     {
         assert(dedup_bitmap_ != INVALID_BITMAP);
         
-        // NOTE: ONLY complete victim cacheinfo will consume metadata space for per-edge synced victims and per-edge prev victim syncset in victim tracker
-        assert(isComplete() == true);
-        const bool with_complete_object_size = true;
-        const bool with_complete_local_cached_popularity = true;
-        const bool with_complete_redirected_cached_popularity = true;
-        const bool with_complete_local_reward = true;
+        // (OBSOLETE due to pregen_compressed_victim_syncset_ptr_ in VictimSyncMonitor) NOTE: ONLY complete victim cacheinfo will consume metadata space for per-edge synced victims and per-edge prev victim syncset in victim tracker
+        // assert(isComplete() == true);
+        // const bool with_complete_object_size = true;
+        // const bool with_complete_local_cached_popularity = true;
+        // const bool with_complete_redirected_cached_popularity = true;
+        // const bool with_complete_local_reward = true;
 
         uint64_t total_size = 0;
 
         total_size += sizeof(uint8_t); // dedup bitmap
         total_size += key_.getKeyLength(); // key
+
+        bool with_complete_object_size = ((dedup_bitmap_ & OBJECT_SIZE_DEDUP_MASK) != OBJECT_SIZE_DEDUP_MASK);
         if (with_complete_object_size)
         {
             total_size += sizeof(ObjectSize);
         }
+
+        bool with_complete_local_cached_popularity = ((dedup_bitmap_ & LOCAL_CACHED_POPULARITY_DEDUP_MASK) != LOCAL_CACHED_POPULARITY_DEDUP_MASK);
         if (with_complete_local_cached_popularity)
         {
             total_size += sizeof(Popularity);
         }
+
+        bool with_complete_redirected_cached_popularity = ((dedup_bitmap_ & REDIRECTED_CACHED_POPULARITY_DEDUP_MASK) != REDIRECTED_CACHED_POPULARITY_DEDUP_MASK);
         if (with_complete_redirected_cached_popularity)
         {
             total_size += sizeof(Popularity);
         }
+
+        bool with_complete_local_reward = ((dedup_bitmap_ & LOCAL_REWARD_DEDUP_MASK) != LOCAL_REWARD_DEDUP_MASK);
         if (with_complete_local_reward)
         {
             total_size += sizeof(Reward);

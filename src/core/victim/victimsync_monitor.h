@@ -25,7 +25,7 @@ namespace covered
         void enforceComplete(); // Enforce a complete victim syncset for the next message to the receiver
         void pregenVictimSyncset(const VictimSyncset& current_victim_syncset); // Pre-generate complete/compressed victim syncset for the next message to the receiver
         bool getPregenVictimSyncset(VictimSyncset& final_victim_syncset); // Return if need the latest victim syncset
-        bool replacePrevVictimSyncset(const VictimSyncset& current_victim_syncset, VictimSyncset& final_victim_syncset, VictimSyncset& prev_victim_syncset); // Replace prev victim syncset with the latest one w/ correct seqnum and is_enforce_complete flag, set it as final victim syncset, and return prev_victim_syncset if any
+        void replacePrevVictimSyncset(const VictimSyncset& current_victim_syncset, VictimSyncset& final_victim_syncset); // Replace prev victim syncset with the latest one w/ correct seqnum and is_enforce_complete flag and set it as final victim syncset
 
         // As receiver edge node
 
@@ -49,8 +49,11 @@ namespace covered
         void releasePregenCompleteVictimSyncset_();
         void releasePregenCompressedVictimSyncset_();
 
-        SeqNum getAndIncrCurSeqnum_();
-        bool getAndResetEnforcementFlag_();
+        // NOTE: we separate get&incr and get&reset as two steps, as getting correct seqnum or enforcement flag and issuing corresponding victim syncset happen asynchronously under background pre-compression
+        SeqNum getCurSeqnum_();
+        void incrCurSeqnum_();
+        bool isNeedEnforcement_();
+        void resetNeedEnforcement_();
 
         // As receiver edge node
 

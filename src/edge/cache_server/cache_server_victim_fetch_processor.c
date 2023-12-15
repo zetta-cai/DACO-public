@@ -113,7 +113,7 @@ namespace covered
         CacheServer* tmp_cache_server_ptr = cache_server_victim_fetch_processor_param_ptr_->getCacheServerPtr();
         EdgeWrapper* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();
         CooperationWrapperBase* tmp_cooperation_wrapper_ptr = tmp_edge_wrapper_ptr->getCooperationWrapperPtr();
-        CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
+        // CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
 
         bool is_finish = false;
         BandwidthUsage total_bandwidth_usage;

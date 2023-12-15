@@ -558,7 +558,7 @@ namespace covered
         assert(edge_wrapper_ptr != NULL);
 
         const CoveredVictimFetchResponse* const covered_victim_fetch_response_ptr = static_cast<const CoveredVictimFetchResponse*>(control_response_ptr);
-        CoveredCacheManager* tmp_covered_cache_manager_ptr = edge_wrapper_ptr->getCoveredCacheManagerPtr();
+        //CoveredCacheManager* tmp_covered_cache_manager_ptr = edge_wrapper_ptr->getCoveredCacheManagerPtr();
         const uint32_t source_edge_idx = covered_victim_fetch_response_ptr->getSourceIndex();
 
         // // Victim synchronization

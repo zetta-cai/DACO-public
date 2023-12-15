@@ -36,9 +36,9 @@ namespace covered
 
         if (prev_victim_syncset_ptr_ == NULL)
         {
-            // Get correct seqnum and is_enforce_complete flag
-            const SeqNum final_seqnum = getAndIncrCurSeqnum_();
-            bool final_is_enforce_complete = getAndResetEnforcementFlag_();
+            // Get correct seqnum and need_enforcement_ flag
+            const SeqNum final_seqnum = getCurSeqnum_();
+            bool final_is_enforce_complete = isNeedEnforcement_();
 
             // Update pre-generated complete victim syncset
             releasePregenCompleteVictimSyncset_();
@@ -53,19 +53,9 @@ namespace covered
         {
             assert(prev_victim_syncset_ptr_->isComplete());
 
-            // NOTE: dedup-/delta-based victim syncset compression MUST follow strict seqnum order
-            if (pregen_complete_victim_syncset_ptr_ == NULL)
-            {
-                assert(cur_seqnum_ == Util::uint64Add(prev_victim_syncset_ptr_->getSeqnum(), 1));
-            }
-            else
-            {
-                assert(cur_seqnum_ == Util::uint64Add(pregen_complete_victim_syncset_ptr_->getSeqnum(), 1));
-            }
-
-            // Get correct seqnum and is_enforce_complete flag
-            const SeqNum final_seqnum = getAndIncrCurSeqnum_();
-            bool final_is_enforce_complete = getAndResetEnforcementFlag_();
+            // Get correct seqnum and need_enforcement_ flag
+            const SeqNum final_seqnum = getCurSeqnum_();
+            bool final_is_enforce_complete = isNeedEnforcement_();
 
             // Update pre-generated complete victim syncset
             releasePregenCompleteVictimSyncset_();
@@ -114,15 +104,13 @@ namespace covered
 
                 assert(prev_victim_syncset_ptr_->isComplete());
 
-                // NOTE: must follow strict seqnum order
-                assert(cur_seqnum_ == Util::uint64Add(prev_victim_syncset_ptr_->getSeqnum(), 1));
+                // Get correct seqnum and need_enforcement_ flag
+                const SeqNum final_seqnum = getCurSeqnum_();
+                const bool final_is_enforce_complete = isNeedEnforcement_();
+                assert(final_is_enforce_complete == false); // need_enforcement_ MUST be false (as no neighbor victim syncset is received since the last issued message)
 
-                // NOTE: need enforcement flag MUST be false, as no neighbor victim syncset is received since the last issued message
-                assert(!need_enforcement_);
-
-                // Get correct seqnum and is_enforce_complete flag
-                const SeqNum final_seqnum = getAndIncrCurSeqnum_();
-                const bool final_is_enforce_complete = false; // need_enforcement_ MUST be false and NO unissued victim syncset
+                // Incr cur_seqnum_ by 1 (NO need to reset need_enforcement_ due to already false)
+                incrCurSeqnum_();
 
                 // Generate a full-compressed victim syncset w/ correct seqnum
                 final_victim_syncset = VictimSyncset::getFullCompressedVictimSyncset(final_seqnum, final_is_enforce_complete);
@@ -149,6 +137,12 @@ namespace covered
                 final_victim_syncset = *pregen_compressed_victim_syncset_ptr_;
             }
 
+            // Incr cur_seqnum_ by 1 and reset need_enforcement_ flag
+            assert(final_victim_syncset.getSeqnum() == cur_seqnum_);
+            assert(final_victim_syncset.isEnforceComplete() == need_enforcement_);
+            incrCurSeqnum_();
+            resetNeedEnforcement_();
+
             // Replace prev-issued complete victim syncset with pre-generated complete victim syncset for the next pre-compression
             delete prev_victim_syncset_ptr_;
             prev_victim_syncset_ptr_ = pregen_complete_victim_syncset_ptr_;
@@ -161,27 +155,28 @@ namespace covered
         return need_latest_victim_syncset;
     }
 
-    bool VictimsyncMonitor::replacePrevVictimSyncset(const VictimSyncset& current_victim_syncset, VictimSyncset& final_victim_syncset, VictimSyncset& prev_victim_syncset)
+    void VictimsyncMonitor::replacePrevVictimSyncset(const VictimSyncset& current_victim_syncset, VictimSyncset& final_victim_syncset)
     {
         assert(current_victim_syncset.isComplete());
         assert(pregen_compressed_victim_syncset_ptr_ == NULL);
 
-        bool is_prev_victim_syncset_exist = false;
+        //bool is_prev_victim_syncset_exist = false;
 
         if (prev_victim_syncset_ptr_ != NULL)
         {
             assert(prev_victim_syncset_ptr_->isComplete());
 
-            // NOTE: must follow strict seqnum order
-            assert(cur_seqnum_ == Util::uint64Add(prev_victim_syncset_ptr_->getSeqnum(), 1));
-
-            is_prev_victim_syncset_exist = true;
-            prev_victim_syncset = *prev_victim_syncset_ptr_; // Deep copy
+            //is_prev_victim_syncset_exist = true;
+            //prev_victim_syncset = *prev_victim_syncset_ptr_; // Deep copy
         }
 
-        // Get correct seqnum and is_enforce_complete flag
-        const SeqNum final_seqnum = getAndIncrCurSeqnum_();
-        bool final_is_enforce_complete = getAndResetEnforcementFlag_();
+        // Get correct seqnum and need_enforcement_ flag
+        const SeqNum final_seqnum = getCurSeqnum_();
+        bool final_is_enforce_complete = isNeedEnforcement_();
+
+        // Incr cur_seqnum_ by 1 and reset need_enforcement_ flag
+        incrCurSeqnum_();
+        resetNeedEnforcement_();
 
         // Replace prev-issued victim syncset
         releasePrevVictimSyncset_();
@@ -192,6 +187,7 @@ namespace covered
         final_victim_syncset = *prev_victim_syncset_ptr_; // Deep copy
 
         return;
+        //return is_prev_victim_syncset_exist;
     }
 
     // As receiver edge node
@@ -329,28 +325,43 @@ namespace covered
         return;
     }
 
-    SeqNum VictimsyncMonitor::getAndIncrCurSeqnum_()
+    SeqNum VictimsyncMonitor::getCurSeqnum_()
     {
-        SeqNum tmp_seqnum = cur_seqnum_;
-        cur_seqnum_ = Util::uint64Add(cur_seqnum_, 1);
-        return tmp_seqnum;
-    }
-
-    bool VictimsyncMonitor::getAndResetEnforcementFlag_()
-    {
-        bool tmp_need_enforcement = need_enforcement_;
-        need_enforcement_ = false;
-
-        // Check if there exists any victim syncset w/ is_enforce_complete_ as true, yet has NOT been issued to the corresponding edge node
-        if (!tmp_need_enforcement)
+        // NOTE: dedup-/delta-based victim syncset compression MUST follow strict seqnum order
+        if (prev_victim_syncset_ptr_ != NULL)
         {
-            if (pregen_complete_victim_syncset_ptr_ != NULL)
-            {
-                tmp_need_enforcement = pregen_complete_victim_syncset_ptr_->isEnforceComplete();
-            }
+            assert(cur_seqnum_ == Util::uint64Add(prev_victim_syncset_ptr_->getSeqnum(), 1));
         }
 
+        return cur_seqnum_;
+    }
+
+    void VictimsyncMonitor::incrCurSeqnum_()
+    {
+        cur_seqnum_ = Util::uint64Add(cur_seqnum_, 1);
+        return;
+    }
+
+    bool VictimsyncMonitor::isNeedEnforcement_()
+    {
+        bool tmp_need_enforcement = need_enforcement_;
+
+        // (OBSOLETE due to NOT reset need_enforcement_ in pre-compression) Check if there exists any victim syncset w/ is_enforce_complete_ as true, yet has NOT been issued to the corresponding edge node
+        // if (!tmp_need_enforcement)
+        // {
+        //     if (pregen_complete_victim_syncset_ptr_ != NULL)
+        //     {
+        //         tmp_need_enforcement = pregen_complete_victim_syncset_ptr_->isEnforceComplete();
+        //     }
+        // }
+
         return tmp_need_enforcement;
+    }
+
+    void VictimsyncMonitor::resetNeedEnforcement_()
+    {
+        need_enforcement_ = false;
+        return;
     }
 
     // As receiver edge node

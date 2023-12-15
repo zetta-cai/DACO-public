@@ -28,7 +28,7 @@ namespace covered
     void CoveredInvalidationServer::processReqForInvalidation_(MessageBase* control_request_ptr)
     {
         assert(control_request_ptr->getMessageType() == MessageType::kCoveredInvalidationRequest);
-        CoveredCacheManager* tmp_covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
+        // CoveredCacheManager* tmp_covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
 
         const CoveredInvalidationRequest* const covered_invalidation_request_ptr = static_cast<const CoveredInvalidationRequest*>(control_request_ptr);
         const uint32_t source_edge_idx = covered_invalidation_request_ptr->getSourceIndex();

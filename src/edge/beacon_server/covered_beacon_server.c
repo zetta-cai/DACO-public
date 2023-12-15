@@ -42,7 +42,7 @@ namespace covered
         Key tmp_key = covered_directory_lookup_request_ptr->getKey();
 
         checkPointers_();
-        CoveredCacheManager* covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
+        // CoveredCacheManager* covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
 
         bool is_finish = false;
 
@@ -95,7 +95,12 @@ namespace covered
         // TMPDEBUG231211
         struct timespec t1 = Util::getCurrentTimespec();
 
-        VictimSyncset victim_syncset = covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_edge_idx_for_compression, edge_wrapper_ptr_->getCacheMarginBytes());
+        const uint64_t latest_cache_margin_bytes = edge_wrapper_ptr_->getCacheMarginBytes();
+
+        // TMPDEBUG231211
+        struct timespec t1_0 = Util::getCurrentTimespec();
+
+        VictimSyncset victim_syncset = covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_edge_idx_for_compression, latest_cache_margin_bytes);
 
         // TMPDEBUG231211
         struct timespec t2 = Util::getCurrentTimespec();
@@ -128,7 +133,7 @@ namespace covered
 
         // TMPDEBUG231211
         struct timespec t3 = Util::getCurrentTimespec();
-        Util::dumpVariablesForDebug(instance_name_, 8, "COVERED: get dirlookup rsp for key", MessageBase::getKeyFromMessage(control_request_ptr).getKeystr().c_str(), "t1-t0:", std::to_string(Util::getDeltaTimeUs(t1, t0)).c_str(), "t2-t1:", std::to_string(Util::getDeltaTimeUs(t2, t1)).c_str(), "t3-t2:", std::to_string(Util::getDeltaTimeUs(t3, t2)).c_str());
+        Util::dumpVariablesForDebug(instance_name_, 10, "COVERED: get dirlookup rsp for key", MessageBase::getKeyFromMessage(control_request_ptr).getKeystr().c_str(), "t1-t0:", std::to_string(Util::getDeltaTimeUs(t1, t0)).c_str(), "t1_0-t1:", std::to_string(Util::getDeltaTimeUs(t1_0, t1)).c_str(), "t2-t1_0", std::to_string(Util::getDeltaTimeUs(t2, t1_0)).c_str(), "t3-t2:", std::to_string(Util::getDeltaTimeUs(t3, t2)).c_str());
 
         return covered_directory_lookup_response_ptr;
     }
@@ -232,7 +237,7 @@ namespace covered
         struct timespec t1 = Util::getCurrentTimespec();
 
         checkPointers_();
-        CoveredCacheManager* covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
+        // CoveredCacheManager* covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
 
         // Victim synchronization
         edge_wrapper_ptr_->updateCacheManagerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset);
@@ -398,7 +403,7 @@ namespace covered
         Key tmp_key = covered_acquire_writelock_request_ptr->getKey();
 
         checkPointers_();
-        CoveredCacheManager* covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
+        // CoveredCacheManager* covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
 
         bool is_finish = false;
 
@@ -452,7 +457,7 @@ namespace covered
         Key tmp_key = covered_release_writelock_request_ptr->getKey();
 
         checkPointers_();
-        CoveredCacheManager* covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
+        // CoveredCacheManager* covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
 
         bool is_finish = false;
 
@@ -524,7 +529,7 @@ namespace covered
         checkPointers_();
         assert(redirected_get_response_ptr != NULL);
         assert(edge_wrapper_ptr_->getCacheName() == Util::COVERED_CACHE_NAME);
-        CoveredCacheManager* covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
+        // CoveredCacheManager* covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
 
         const CoveredPlacementRedirectedGetResponse* const covered_placement_redirected_get_response_ptr = static_cast<const CoveredPlacementRedirectedGetResponse*>(redirected_get_response_ptr);
         //const Value tmp_value = covered_placement_redirected_get_response_ptr->getValue();
