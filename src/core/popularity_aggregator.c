@@ -294,6 +294,15 @@ namespace covered
         return;
     }
 
+    uint64_t PopularityAggregator::getSizeForCapacity() const
+    {
+        checkPointers_();
+
+        // NOTE: NO need to acquire a read lock as approxiate cache size usage is enough
+
+        return size_bytes_;
+    }
+
     // Utils
 
     bool PopularityAggregator::getAggregatedUncachedPopularity_(const Key& key, AggregatedUncachedPopularity& aggregated_uncached_popularity) const

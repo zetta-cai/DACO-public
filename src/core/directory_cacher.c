@@ -146,6 +146,15 @@ namespace covered
         return;
     }
 
+    uint64_t DirectoryCacher::getSizeForCapacity() const
+    {
+        checkPointers_();
+
+        // NOTE: NO need to acquire a read lock as approxiate cache size usage is enough
+
+        return size_bytes_;
+    }
+
     void DirectoryCacher::updateForNewCachedDirectory(const Key&key, const CachedDirectory& cached_directory)
     {
         checkPointers_();

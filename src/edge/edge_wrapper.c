@@ -1070,14 +1070,16 @@ namespace covered
     //void EdgeWrapper::updateCacheManagerForNeighborVictimSyncset(const uint32_t& source_edge_idx, const VictimSyncset& neighbor_victim_syncset) const
     void EdgeWrapper::updateCacheManagerForNeighborVictimSyncset(const uint32_t& source_edge_idx, const VictimSyncset& neighbor_victim_syncset, const Key& key) const // TMPDEBUG231211
     {
+        #ifndef ENABLE_BACKGROUND_VICTIM_SYNCHRONIZATION
         // Foreground victim synchronization
-        // (OBSOLETE due to background processing) NOTE: we always perform victim synchronization before popularity aggregation, as we need the latest synced victim information for placement calculation
-        // (OBSOLETE due to background processing) covered_cache_manager_ptr_->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, cooperation_wrapper_ptr_);
-
+        // NOTE: we always perform victim synchronization before popularity aggregation, as we need the latest synced victim information for placement calculation
+        covered_cache_manager_ptr_->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, cooperation_wrapper_ptr_);
+        #else
         // Background victim synchronization
         // bool is_successful = getSynchronizationServerParamPtr()->getSynchronizationServerItemBufferPtr()->push(SynchronizationServerItem(source_edge_idx, neighbor_victim_syncset));
         bool is_successful = getSynchronizationServerParamPtr()->getSynchronizationServerItemBufferPtr()->push(SynchronizationServerItem(source_edge_idx, neighbor_victim_syncset, key)); // TMPDEBUG231211
         assert(is_successful); // Ring buffer must not be full
+        #endif
 
         return;
     }

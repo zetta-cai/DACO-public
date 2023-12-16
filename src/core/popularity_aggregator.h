@@ -42,6 +42,8 @@ namespace covered
         void updateAggregatedUncachedPopularity(const EdgeWrapper* edge_wrapper_ptr, const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached, const bool& is_source_cached, FastPathHint& fast_path_hint); // Update aggregated uncached popularity for selective popularity aggregation
         void updatePreservedEdgesetForPlacement(const EdgeWrapper* edge_wrapper_ptr, const Key& key, const Edgeset& placement_edgeset, const bool& is_global_cached); // Preserve edge nodes in placement edgeset for non-blocking placement deployment
         void clearPreservedEdgesetAfterAdmission(const Key& key, const uint32_t& source_edge_idx); // Clear preserved edge nodes for the given key at the source edge node for metadata releasing after local/remote admission notification (NOTE: is_global_cached MUST be true)
+
+        uint64_t getSizeForCapacity() const;
     private:
         // NOTE: we MUST store Key in ordered list to locate lookup table during eviciton; use duplicate Keys in lookup table to update ordered list -> if we store Key pointer in ordered list and use duplicate popularity/LRU-order in lookup table, we still can locate lookup table during eviction, yet cannot locate the corresponding popularity entry / have to access all LRU entries to update ordered list
         typedef std::multimap<DeltaReward, AggregatedUncachedPopularity> benefit_popularity_multimap_t; // Aggregated popularities for each global popular objects sorted in ascending order of Delta rewards (i.e., max admission benefits)

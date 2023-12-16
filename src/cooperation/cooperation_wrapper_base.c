@@ -146,14 +146,14 @@ namespace covered
         std::string context_name = "CooperationWrapperBase::getLocalDirectoryInfos()";
         cooperation_wrapper_perkey_rwlock_ptr_->acquire_lock_shared(key, context_name);
 
-        assert(dht_wrapper_ptr_->getBeaconEdgeIdx(key) == edge_idx_); // Current edge node MUST be beacon for the given key
+        MYASSERT(dht_wrapper_ptr_->getBeaconEdgeIdx(key) == edge_idx_); // Current edge node MUST be beacon for the given key
 
         DirinfoSet dirinfo_set = directory_table_ptr_->getAll(key);
 
         // Release a read lock
         cooperation_wrapper_perkey_rwlock_ptr_->unlock_shared(key, context_name);
 
-        assert(dirinfo_set.isComplete()); // NOTE: vicitm dirinfo set from local directory table MUST be complete
+        MYASSERT(dirinfo_set.isComplete()); // NOTE: vicitm dirinfo set from local directory table MUST be complete
         return dirinfo_set;
     }
 

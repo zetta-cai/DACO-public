@@ -52,7 +52,7 @@ namespace covered
         boost::shared_mutex* rwlock_hashtable_;
         std::atomic<uint32_t>* read_lock_cnts_;
         std::atomic<bool>* write_lock_flags_;
-        HashWrapperBase* hash_wrapper_ptr_;
+        //HashWrapperBase* hash_wrapper_ptr_;
     };
 }
 

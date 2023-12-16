@@ -6,6 +6,9 @@
  * By Siyuan Sheng (2023.12.13).
  */
 
+#ifndef KV_LIST_HELPER_H
+#define KV_LIST_HELPER_H
+
 #include <list>
 #include <string>
 
@@ -25,3 +28,5 @@ namespace covered
         static const std::string kClassName;
     };
 }
+
+#endif

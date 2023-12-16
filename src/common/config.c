@@ -90,6 +90,7 @@ namespace covered
     const std::string Config::EVALUATOR_RECVMSG_PORT_KEYSTR("evaluator_recvmsg_port");
     const std::string Config::FACEBOOK_CONFIG_FILEPATH_KEYSTR("facebook_config_filepath");
     const std::string Config::FINE_GRAINED_LOCKING_SIZE_KEYSTR("fine_grained_locking_size");
+    const std::string Config::IS_ASSERT_KEYSTR("is_assert");
     const std::string Config::IS_DEBUG_KEYSTR("is_debug");
     const std::string Config::IS_INFO_KEYSTR("is_info");
     const std::string Config::IS_GENERATE_RANDOM_VALUESTR_KEYSTR("is_generate_random_valuestr");
@@ -143,6 +144,7 @@ namespace covered
     uint16_t Config::evaluator_recvmsg_port_ = 5500; // [4096, 65536]
     std::string Config::facebook_config_filepath_("lib/CacheLib/cachelib/cachebench/test_configs/hit_ratio/cdn/config.json");
     uint32_t Config::fine_grained_locking_size_ = 1000;
+    bool Config::is_assert_ = false;
     bool Config::is_debug_ = false;
     bool Config::is_info_ = false;
     bool Config::is_generate_random_valuestr_ = false;
@@ -344,6 +346,11 @@ namespace covered
                 {
                     int64_t tmp_size = kv_ptr->value().get_int64();
                     fine_grained_locking_size_ = Util::toUint32(tmp_size);
+                }
+                kv_ptr = find_(IS_ASSERT_KEYSTR);
+                {
+                    int64_t tmp_value = kv_ptr->value().get_int64();
+                    is_assert_ = tmp_value==1?true:false;
                 }
                 kv_ptr = find_(IS_DEBUG_KEYSTR);
                 {
@@ -747,6 +754,12 @@ namespace covered
         return fine_grained_locking_size_;
     }
 
+    bool Config::isAssert()
+    {
+        checkIsValid_();
+        return is_assert_;
+    }
+
     bool Config::isDebug()
     {
         checkIsValid_();
@@ -875,6 +888,7 @@ namespace covered
         oss << "Evaluator recvmsg port: " << evaluator_recvmsg_port_ << std::endl;
         oss << "Facebook config filepath: " << facebook_config_filepath_ << std::endl;
         oss << "Fine-grained locking size: " << fine_grained_locking_size_ << std::endl;
+        oss << "Is assert: " << (is_assert_?"true":"false") << std::endl;
         oss << "Is debug: " << (is_debug_?"true":"false") << std::endl;
         oss << "Is info: " << (is_info_?"true":"false") << std::endl;
         oss << "Is generate random valuestr: " << (is_generate_random_valuestr_?"true":"false") << std::endl;

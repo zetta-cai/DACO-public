@@ -9,6 +9,9 @@
 #ifndef EDGE_WRAPPER_H
 #define EDGE_WRAPPER_H
 
+// TMPDEBUG231216
+//#define ENABLE_BACKGROUND_VICTIM_SYNCHRONIZATION
+
 #include <string>
 
 namespace covered

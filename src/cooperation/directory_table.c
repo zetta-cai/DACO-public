@@ -40,14 +40,13 @@ namespace covered
 
         if (!is_exist) // key does not exist
         {
-            assert(!all_dirinfo.isInvalid()); // Still valid DirinfoSet with an empty unordered set
+            MYASSERT(!all_dirinfo.isInvalid()); // Still valid DirinfoSet with an empty unordered set
         }
         else // key (i.e., directory entry) exists
         {
             uint32_t tmp_size = 0;
-            bool with_complete_dirinfo_set = all_dirinfo.getDirinfoSetSizeIfComplete(tmp_size);
-            assert(with_complete_dirinfo_set); // dirinfo set from directory entry MUST be complete
-            assert(tmp_size > 0); // Directory entry MUST NOT be empty
+            MYASSERT(all_dirinfo.getDirinfoSetSizeIfComplete(tmp_size)); // dirinfo set from directory entry MUST be complete
+            MYASSERT(tmp_size > 0); // Directory entry MUST NOT be empty
         }
 
         return all_dirinfo;

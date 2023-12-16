@@ -50,6 +50,8 @@ namespace covered
         bool checkPopularityChange(const Key& key, const Popularity& local_uncached_popularity, CachedDirectory& cached_directory, bool& is_large_popularity_change) const; // Return if key has cached valid remote dirinfo
         void removeCachedDirectoryIfAny(const Key& key);
         void updateForNewCachedDirectory(const Key&key, const CachedDirectory& cached_directory); // Add or insert new cached directory for the given key
+
+        uint64_t getSizeForCapacity() const;
     private:
         typedef std::unordered_map<Key, CachedDirectory, KeyHasher> perkey_dirinfo_map_t;
 

@@ -377,7 +377,8 @@ namespace covered
         checkPointers_();
 
         bool affect_victim_tracker = false; // If key is a local synced victim now
-        edge_wrapper_ptr_->getEdgeCachePtr()->admit(key, value, is_neighbor_cached, is_valid, affect_victim_tracker);
+        const uint32_t beacon_edgeidx = edge_wrapper_ptr_->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
+        edge_wrapper_ptr_->getEdgeCachePtr()->admit(key, value, is_neighbor_cached, is_valid, beacon_edgeidx, affect_victim_tracker);
 
         if (edge_wrapper_ptr_->getCacheName() == Util::COVERED_CACHE_NAME) // ONLY for COVERED
         {

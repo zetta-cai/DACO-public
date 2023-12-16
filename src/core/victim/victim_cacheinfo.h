@@ -39,8 +39,11 @@ namespace covered
         bool isDeduped() const; // Whether at least one field is deduped
         bool isFullyDeduped() const; // Whether all fields are deduped (i.e., no need for victim synchronization)
 
-        // For complete victim cacheinfo
         const Key getKey() const;
+        const bool getBeaconEdgeidx(uint32_t& beacon_edgeidx) const; // Return if with valid beaocn edgeidx
+        void setBeaconEdgeidx(const uint32_t& beacon_edgeidx);
+
+        // For complete victim cacheinfo
         bool getObjectSize(ObjectSize& object_size) const; // Return if with complete object size
         bool getLocalCachedPopularity(Popularity& local_cached_popularity) const; // Return if with complete local cached popularity
         bool getRedirectedCachedPopularity(Popularity& redirected_cached_popularity) const; // Return if with complete redirected cached popularity
@@ -75,6 +78,7 @@ namespace covered
 
         uint8_t dedup_bitmap_; // 1st lowest bit indicates if the cacheinfo is a compressed victim cacheinfo (2nd lowest bit for object size; 3rd lowest bit for local cached popularity; 4th lowest bit for redirected cached popularity; 5th lowest bit for local reward)
         Key key_;
+        int beacon_edgeidx_; // Just impl trick to avoid duplicate consistent hashing
 
         // For both complete and compressed victim cacheinfo
         ObjectSize object_size_;

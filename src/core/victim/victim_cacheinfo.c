@@ -158,11 +158,11 @@ namespace covered
         return const_iter;
     }
 
-    VictimCacheinfo::VictimCacheinfo() : dedup_bitmap_(INVALID_BITMAP), key_(), object_size_(0), local_cached_popularity_(0.0), redirected_cached_popularity_(0.0), local_reward_(0.0)
+    VictimCacheinfo::VictimCacheinfo() : dedup_bitmap_(INVALID_BITMAP), key_(), beacon_edgeidx_(-1), object_size_(0), local_cached_popularity_(0.0), redirected_cached_popularity_(0.0), local_reward_(0.0)
     {
     }
 
-    VictimCacheinfo::VictimCacheinfo(const Key& key, const ObjectSize& object_size, const Popularity& local_cached_popularity, const Popularity& redirected_cached_popularity, const Reward& local_reward)
+    VictimCacheinfo::VictimCacheinfo(const Key& key, const ObjectSize& object_size, const Popularity& local_cached_popularity, const Popularity& redirected_cached_popularity, const Reward& local_reward) : beacon_edgeidx_(-1)
     {
         dedup_bitmap_ = COMPLETE_BITMAP;
         key_ = key;
@@ -208,12 +208,35 @@ namespace covered
         return ((dedup_bitmap_ != STALE_BITMAP) && (dedup_bitmap_ & OBJECT_SIZE_DEDUP_MASK) == OBJECT_SIZE_DEDUP_MASK) && ((dedup_bitmap_ & LOCAL_CACHED_POPULARITY_DEDUP_MASK) == LOCAL_CACHED_POPULARITY_DEDUP_MASK) && ((dedup_bitmap_ & REDIRECTED_CACHED_POPULARITY_DEDUP_MASK) == REDIRECTED_CACHED_POPULARITY_DEDUP_MASK) && ((dedup_bitmap_ & LOCAL_REWARD_DEDUP_MASK) == LOCAL_REWARD_DEDUP_MASK);
     }
 
-    // For complete victim cacheinfo
-
     const Key VictimCacheinfo::getKey() const
     {
+        assert(dedup_bitmap_ != INVALID_BITMAP);
+
         return key_;
     }
+
+    const bool VictimCacheinfo::getBeaconEdgeidx(uint32_t& beacon_edgeidx) const
+    {
+        assert(dedup_bitmap_ != INVALID_BITMAP);
+
+        bool with_valid_beacon_edgeidx = false;
+        if (beacon_edgeidx_ >= 0)
+        {
+            with_valid_beacon_edgeidx = true;
+            beacon_edgeidx = static_cast<uint32_t>(beacon_edgeidx_);
+        }
+        return with_valid_beacon_edgeidx;
+    }
+
+    void VictimCacheinfo::setBeaconEdgeidx(const uint32_t& beacon_edgeidx)
+    {
+        assert(dedup_bitmap_ != INVALID_BITMAP);
+
+        beacon_edgeidx_ = static_cast<int>(beacon_edgeidx);
+        return;
+    }
+
+    // For complete victim cacheinfo
 
     bool VictimCacheinfo::getObjectSize(ObjectSize& object_size) const
     {
@@ -317,6 +340,7 @@ namespace covered
 
         victim_cacheinfo_payload_size += sizeof(uint8_t); // dedup bitmap
         victim_cacheinfo_payload_size += key_.getKeyPayloadSize(); // key
+        victim_cacheinfo_payload_size += sizeof(uint32_t); // beacon edgeidx
         bool with_complete_object_size = ((dedup_bitmap_ & OBJECT_SIZE_DEDUP_MASK) != OBJECT_SIZE_DEDUP_MASK);
         if (with_complete_object_size)
         {
@@ -350,6 +374,8 @@ namespace covered
         size += sizeof(uint8_t);
         uint32_t key_serialize_size = key_.serialize(msg_payload, size);
         size += key_serialize_size;
+        msg_payload.deserialize(size, (const char*)&beacon_edgeidx_, sizeof(uint32_t));
+        size += sizeof(uint32_t);
         bool with_complete_object_size = ((dedup_bitmap_ & OBJECT_SIZE_DEDUP_MASK) != OBJECT_SIZE_DEDUP_MASK);
         if (with_complete_object_size)
         {
@@ -387,6 +413,8 @@ namespace covered
         
         uint32_t key_deserialize_size = key_.deserialize(msg_payload, size);
         size += key_deserialize_size;
+        msg_payload.serialize(size, (char*)&beacon_edgeidx_, sizeof(uint32_t));
+        size += sizeof(uint32_t);
         bool with_complete_object_size = ((dedup_bitmap_ & OBJECT_SIZE_DEDUP_MASK) != OBJECT_SIZE_DEDUP_MASK);
         if (with_complete_object_size)
         {
@@ -430,6 +458,7 @@ namespace covered
 
         total_size += sizeof(uint8_t); // dedup bitmap
         total_size += key_.getKeyLength(); // key
+        //total_size += sizeof(uint32_t); // beacon edgeidx (NO need to count due to the impl trick is NOT necessary for edge caching)
 
         bool with_complete_object_size = ((dedup_bitmap_ & OBJECT_SIZE_DEDUP_MASK) != OBJECT_SIZE_DEDUP_MASK);
         if (with_complete_object_size)
@@ -462,6 +491,7 @@ namespace covered
     {
         dedup_bitmap_ = other.dedup_bitmap_;
         key_ = other.key_;
+        beacon_edgeidx_ = other.beacon_edgeidx_;
         object_size_ = other.object_size_;
         local_cached_popularity_ = other.local_cached_popularity_;
         redirected_cached_popularity_ = other.redirected_cached_popularity_;

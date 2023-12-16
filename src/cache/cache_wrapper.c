@@ -29,6 +29,10 @@ namespace covered
         validity_map_ptr_ = new ValidityMap(edge_idx, cache_wrapper_perkey_rwlock_ptr_);
         assert(validity_map_ptr_ != NULL);
 
+        // Allocate rwlock for per-key beacon edge idx
+        cache_wrapper_rwlock_for_beacon_edgeidx_ptr_ = new Rwlock("cache_wrapper_rwlock_for_beacon_edgeidx_ptr_");
+        perkey_beacon_edgeidx_.clear();
+
         #ifdef DEBUG_CACHE_WRAPPER
         cache_wrapper_rwlock_for_debug_ptr_ = new Rwlock("cache_wrapper_rwlock_for_debug_ptr_");
         cached_keys_for_debug_.clear();
@@ -65,6 +69,11 @@ namespace covered
         assert(validity_map_ptr_ != NULL);
         delete validity_map_ptr_;
         validity_map_ptr_ = NULL;
+
+        // Release rwlock for per-key beacon edge idx
+        assert(cache_wrapper_rwlock_for_beacon_edgeidx_ptr_ != NULL);
+        delete cache_wrapper_rwlock_for_beacon_edgeidx_ptr_;
+        cache_wrapper_rwlock_for_beacon_edgeidx_ptr_ = NULL;
 
         #ifdef DEBUG_CACHE_WRAPPER
         assert(cache_wrapper_rwlock_for_debug_ptr_ != NULL);
@@ -264,16 +273,30 @@ namespace covered
     {
         checkPointers_();
 
+        std::string context_name = "CacheWrapper::getLocalSyncedVictimCacheinfos()";
+
         // NOTE: as we only access local edge cache (thread safe w/o per-key rwlock) instead of validity map (thread safe w/ per-key rwlock), we do NOT need to acquire a fine-grained read lock here
 
         // Acquire a read lock
-        //std::string context_name = "CacheWrapper::getLocalSyncedVictimCacheinfos()";
-        //cache_wrapper_perkey_rwlock_ptr_->acquire_lock_shared(key, context_name);
+        // cache_wrapper_perkey_rwlock_ptr_->acquire_lock_shared(key, context_name);
 
         std::list<VictimCacheinfo> local_synced_victim_cacheinfos = local_cache_ptr_->getLocalSyncedVictimCacheinfosFromLocalCache(); // NOT update local metadata
 
         // Release a read lock
-        //cache_wrapper_perkey_rwlock_ptr_->unlock_shared(key, context_name);
+        // cache_wrapper_perkey_rwlock_ptr_->unlock_shared(key, context_name);
+
+        cache_wrapper_rwlock_for_beacon_edgeidx_ptr_->acquire_lock_shared(context_name);
+        for (std::list<VictimCacheinfo>::iterator victim_cacheinfo_iter = local_synced_victim_cacheinfos.begin(); victim_cacheinfo_iter != local_synced_victim_cacheinfos.end(); victim_cacheinfo_iter++)
+        {
+            const Key& tmp_victim_key = victim_cacheinfo_iter->getKey();
+            std::unordered_map<Key, uint32_t, KeyHasher>::const_iterator beacon_edgeidx_const_iter = perkey_beacon_edgeidx_.find(tmp_victim_key);
+            if (beacon_edgeidx_const_iter != perkey_beacon_edgeidx_.end())
+            {
+                const uint32_t tmp_beacon_edgeidx = beacon_edgeidx_const_iter->second;
+                victim_cacheinfo_iter->setBeaconEdgeidx(tmp_beacon_edgeidx);
+            }
+        }
+        cache_wrapper_rwlock_for_beacon_edgeidx_ptr_->unlock_shared(context_name);
 
         return local_synced_victim_cacheinfos;
     }
@@ -282,10 +305,11 @@ namespace covered
     {
         checkPointers_();
 
+        std::string context_name = "CacheWrapper::fetchVictimCacheinfosForRequiredSize()";
+
         // NOTE: as we only access local edge cache (thread safe w/o per-key rwlock) instead of validity map (thread safe w/ per-key rwlock), we do NOT need to acquire a fine-grained read lock here
 
         // Acquire a read lock
-        //std::string context_name = "CacheWrapper::fetchVictimCacheinfosForRequiredSize()";
         //cache_wrapper_perkey_rwlock_ptr_->acquire_lock_shared(key, context_name);
 
         std::unordered_set<Key, KeyHasher> tmp_victim_keys;
@@ -294,6 +318,19 @@ namespace covered
 
         // Release a read lock
         //cache_wrapper_perkey_rwlock_ptr_->unlock_shared(key, context_name);
+
+        cache_wrapper_rwlock_for_beacon_edgeidx_ptr_->acquire_lock_shared(context_name);
+        for (std::list<VictimCacheinfo>::iterator victim_cacheinfo_iter = victim_cacheinfos.begin(); victim_cacheinfo_iter != victim_cacheinfos.end(); victim_cacheinfo_iter++)
+        {
+            const Key& tmp_victim_key = victim_cacheinfo_iter->getKey();
+            std::unordered_map<Key, uint32_t, KeyHasher>::const_iterator beacon_edgeidx_const_iter = perkey_beacon_edgeidx_.find(tmp_victim_key);
+            if (beacon_edgeidx_const_iter != perkey_beacon_edgeidx_.end())
+            {
+                const uint32_t tmp_beacon_edgeidx = beacon_edgeidx_const_iter->second;
+                victim_cacheinfo_iter->setBeaconEdgeidx(tmp_beacon_edgeidx);
+            }
+        }
+        cache_wrapper_rwlock_for_beacon_edgeidx_ptr_->unlock_shared(context_name);
 
         return has_victim_key;
     }
@@ -332,7 +369,7 @@ namespace covered
         return need_independent_admit;
     }
 
-    void CacheWrapper::admit(const Key& key, const Value& value, const bool& is_neighbor_cached, const bool& is_valid, bool& affect_victim_tracker)
+    void CacheWrapper::admit(const Key& key, const Value& value, const bool& is_neighbor_cached, const bool& is_valid, const uint32_t& beacon_edgeidx, bool& affect_victim_tracker)
     {
         checkPointers_();
 
@@ -353,28 +390,24 @@ namespace covered
             {
                 invalidateKeyForLocalUncachedObject_(key);
             }
+
+            cache_wrapper_rwlock_for_beacon_edgeidx_ptr_->acquire_lock(context_name);
+            if (perkey_beacon_edgeidx_.find(key) == perkey_beacon_edgeidx_.end())
+            {
+                perkey_beacon_edgeidx_.insert(std::pair(key, beacon_edgeidx));
+            }
+            cache_wrapper_rwlock_for_beacon_edgeidx_ptr_->unlock(context_name);
+
+            #ifdef DEBUG_CACHE_WRAPPER
+            cache_wrapper_rwlock_for_debug_ptr_->acquire_lock(context_name);
+            if (cached_keys_for_debug_.find(key) == cached_keys_for_debug_.end())
+            {
+                cached_keys_for_debug_.insert(key);
+            }
+            cache_wrapper_rwlock_for_debug_ptr_->unlock(context_name);
+            #endif
         }
         // NOTE: NO need to add validity flag if admission fails
-
-        #ifdef DEBUG_CACHE_WRAPPER
-        cache_wrapper_rwlock_for_debug_ptr_->acquire_lock(context_name);
-
-        if (cached_keys_for_debug_.find(key) == cached_keys_for_debug_.end())
-        {
-            cached_keys_for_debug_.insert(key);
-        }
-
-        // Used for debugging
-        // std::ostringstream oss;
-        // oss << "After admit, " << cached_keys_for_debug_.size() << " cached keys:";
-        // for (std::set<Key>::const_iterator tmp_iter = cached_keys_for_debug_.begin(); tmp_iter != cached_keys_for_debug_.end(); tmp_iter++)
-        // {
-        //     oss << " " << tmp_iter->getKeystr() << ";";
-        // }
-        // Util::dumpDebugMsg(instance_name_, oss.str());
-
-        cache_wrapper_rwlock_for_debug_ptr_->unlock(context_name);
-        #endif
 
         // Release a write lock
         cache_wrapper_perkey_rwlock_ptr_->unlock(key, context_name);
@@ -387,6 +420,8 @@ namespace covered
     {
         checkPointers_();
 
+        std::string context_name = "CacheWrapper::evict()";
+
         if (local_cache_ptr_->hasFineGrainedManagement()) // Local cache with fine-grained management
         {
             evictForFineGrainedManagement_(victims, required_size);
@@ -396,10 +431,19 @@ namespace covered
             evictForCoarseGrainedManagement_(victims, required_size);
         }
 
-        #ifdef DEBUG_CACHE_WRAPPER
-        std::string context_name = "CacheWrapper::evict()";
-        cache_wrapper_rwlock_for_debug_ptr_->acquire_lock(context_name);
+        cache_wrapper_rwlock_for_beacon_edgeidx_ptr_->acquire_lock(context_name);
+        for (std::unordered_map<Key, Value, KeyHasher>::const_iterator victims_const_iter = victims.begin(); victims_const_iter != victims.end(); victims_const_iter++)
+        {
+            const Key& tmp_victim_key = victims_const_iter->first;
+            if (perkey_beacon_edgeidx_.find(tmp_victim_key) != perkey_beacon_edgeidx_.end())
+            {
+                perkey_beacon_edgeidx_.erase(tmp_victim_key);
+            }
+        }
+        cache_wrapper_rwlock_for_beacon_edgeidx_ptr_->unlock(context_name);
 
+        #ifdef DEBUG_CACHE_WRAPPER
+        cache_wrapper_rwlock_for_debug_ptr_->acquire_lock(context_name);
         for (std::unordered_map<Key, Value, KeyHasher>::const_iterator victims_const_iter = victims.begin(); victims_const_iter != victims.end(); victims_const_iter++)
         {
             if (cached_keys_for_debug_.find(victims_const_iter->first) != cached_keys_for_debug_.end())
@@ -407,16 +451,6 @@ namespace covered
                 cached_keys_for_debug_.erase(victims_const_iter->first);
             }
         }
-
-        // Used for debugging
-        // std::ostringstream oss;
-        // oss << "After evict, " << cached_keys_for_debug_.size() << " cached keys:";
-        // for (std::set<Key>::const_iterator tmp_iter = cached_keys_for_debug_.begin(); tmp_iter != cached_keys_for_debug_.end(); tmp_iter++)
-        // {
-        //     oss << " " << tmp_iter->getKeystr() << ";";
-        // }
-        // Util::dumpDebugMsg(instance_name_, oss.str());
-
         cache_wrapper_rwlock_for_debug_ptr_->unlock(context_name);
         #endif
 
@@ -448,6 +482,7 @@ namespace covered
         
         uint64_t local_edge_cache_size = local_cache_ptr_->getSizeForCapacity();
         uint64_t validity_map_size = validity_map_ptr_->getSizeForCapacity();
+        // NOTE: NOT consider per-key beacon edge idx, which is just impl trick to avoid duplicate consistent hashing, yet NOT necessary for edge caching
         uint64_t total_size = Util::uint64Add(local_edge_cache_size, validity_map_size);
 
         return total_size;

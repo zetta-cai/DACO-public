@@ -17,6 +17,8 @@
 #include <string>
 #include <vector>
 
+#include "concurrency/concurrent_hashtable_impl.h"
+
 namespace covered
 {
     // Forward declaration
@@ -75,7 +77,7 @@ namespace covered
         // (3) Local edge cache management
 
         bool needIndependentAdmit(const Key& key, const Value& value) const;
-        void admit(const Key& key, const Value& value, const bool& is_neighbor_cached, const bool& is_valid, bool& affect_victim_tracker);
+        void admit(const Key& key, const Value& value, const bool& is_neighbor_cached, const bool& is_valid, const uint32_t& beacon_edgeidx, bool& affect_victim_tracker);
         void evict(std::unordered_map<Key, Value, KeyHasher>& victims, const uint64_t& required_size); // NOTE: single-thread function; eviction MUST affect victim tracker due to evicting objects with least local rewards (i.e., local synced victims)
 
         // (4) Other functions
@@ -120,6 +122,10 @@ namespace covered
         mutable PerkeyRwlock* cache_wrapper_perkey_rwlock_ptr_;
         // NOTE: Due to the write-through policy, we only need to maintain an invalidity flag for MSI protocol (i.e., both M and S refers to validity)
         ValidityMap* validity_map_ptr_; // Maintain per-key validity flag for local edge cache (thread safe)
+
+        // Impl trick to avoid duplicate consistent hashing
+        mutable Rwlock* cache_wrapper_rwlock_for_beacon_edgeidx_ptr_;
+        std::unordered_map<Key, uint32_t, KeyHasher> perkey_beacon_edgeidx_;
 
         #ifdef DEBUG_CACHE_WRAPPER
         // For debugging

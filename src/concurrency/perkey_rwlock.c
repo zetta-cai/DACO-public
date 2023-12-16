@@ -42,8 +42,8 @@ namespace covered
         }
 
         // NOTE: hashing for rwlock index is orthogonal with hash partition for DHT-based content discovery
-        hash_wrapper_ptr_ = HashWrapperBase::getHashWrapperByHashName(Util::MMH3_HASH_NAME);
-        assert(hash_wrapper_ptr_ != NULL);
+        // hash_wrapper_ptr_ = HashWrapperBase::getHashWrapperByHashName(Util::MMH3_HASH_NAME);
+        // assert(hash_wrapper_ptr_ != NULL);
     }
 
     PerkeyRwlock::~PerkeyRwlock()
@@ -60,9 +60,9 @@ namespace covered
         delete[] write_lock_flags_;
         write_lock_flags_ = NULL;
 
-        assert(hash_wrapper_ptr_ != NULL);
-        delete hash_wrapper_ptr_;
-        hash_wrapper_ptr_ = NULL;
+        // assert(hash_wrapper_ptr_ != NULL);
+        // delete hash_wrapper_ptr_;
+        // hash_wrapper_ptr_ = NULL;
     }
 
     void PerkeyRwlock::acquire_lock_shared(const Key& key, const std::string& context_name)
@@ -207,13 +207,14 @@ namespace covered
 
     uint32_t PerkeyRwlock::getRwlockIndex(const Key& key) const
     {
-        assert(hash_wrapper_ptr_ != NULL);
+        //assert(hash_wrapper_ptr_ != NULL);
 
         uint32_t rwlock_index = 0;
         if (enable_fine_grained_locking_)
         {
             // Hash the key
-            uint32_t hash_value = hash_wrapper_ptr_->hash(key);
+            //uint32_t hash_value = hash_wrapper_ptr_->hash(key);
+            uint32_t hash_value = key.getKeyLength(); // NOTE: use key length as hash value for per-key fine-grained rwlock to trade hash collision for performance (avoid string hashing overhead)
             rwlock_index = hash_value % fine_grained_locking_size_;
         }
         else

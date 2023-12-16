@@ -110,12 +110,17 @@ namespace covered
     {
         checkPointers_();
 
+        struct timespec t0 = Util::getCurrentTimespec(); // TMPDEBUG231211
+
         // Acquire a write lock to update victim dirinfo atomically
         std::string context_name = "VictimTracker::updateLocalBeaconedVictimDirinfo()";
         rwlock_for_victim_tracker_->acquire_lock(context_name);
 
+        struct timespec t1 = Util::getCurrentTimespec(); // TMPDEBUG231211
+
         // Update directory info if the local beaconed key is a local/neighbor synced victim
         perkey_victim_dirinfo_t::iterator dirinfo_list_iter = KVListHelper<Key, VictimDirinfo>::findVFromListForK(key, perkey_victim_dirinfo_);
+        struct timespec t2 = Util::getCurrentTimespec(); // TMPDEBUG231211
         if (dirinfo_list_iter != perkey_victim_dirinfo_.end()) // The beaconed key is a local/neighbor synced victim
         {
             //assert(dirinfo_list_iter->second.isLocalBeaconed());
@@ -136,8 +141,13 @@ namespace covered
                 }
             }
         }
+        struct timespec t3 = Util::getCurrentTimespec(); // TMPDEBUG231211
 
         rwlock_for_victim_tracker_->unlock(context_name);
+
+        // TMPDEBUG231211
+        struct timespec t4 = Util::getCurrentTimespec();
+        Util::dumpVariablesForDebug(instance_name_, 10, "COVERED: update victim dirinfo for key", key.getKeystr().c_str(), "t1-t0:", std::to_string(Util::getDeltaTimeUs(t1, t0)).c_str(), "t2-t1:", std::to_string(Util::getDeltaTimeUs(t2, t1)).c_str(), "t3-t2:", std::to_string(Util::getDeltaTimeUs(t3, t2)).c_str(), "t4-t3:", std::to_string(Util::getDeltaTimeUs(t4, t3)).c_str());
 
         return;
     }
@@ -155,6 +165,8 @@ namespace covered
 
         const uint64_t start_victimsync_monitor_size = peredge_victimsync_monitor_[dst_edge_idx_for_compression].getSizeForCapacity();
 
+        // TMPDEBUG231216
+        #ifdef ENABLE_DELTA_DEDUP_COMPERSSION
         VictimSyncset final_victim_syncset;
         bool need_latest_victim_syncset = peredge_victimsync_monitor_[dst_edge_idx_for_compression].getPregenVictimSyncset(final_victim_syncset);
 
@@ -171,6 +183,12 @@ namespace covered
         // TODO: if we want to delta compress cache margin bytes, (i) we have to pass latest cache margin bytes at the time of receiving neighbor victim syncset for pre-compression, which could incur imprecise cache margin bytes; (ii) we have to pass latest cache margin bytes to getPregenVictimSyncset() if use full-compressed victim syncset yet with accurate delta of cache margin bytes; (iii) we have to set latest cache margin bytes for current_victim_syncset if need_latest_victim_syncset instead of for final_victim_syncset
         assert(false);
         #else
+        // NOTE: we always use the latest cache margin bytes for local victim syncset, instead of using that in edge-level victim metadata of the current edge node, which may be stale
+        final_victim_syncset.setCacheMarginBytes(latest_local_cache_margin_bytes);
+        #endif
+        #else
+        VictimSyncset final_victim_syncset = getVictimSyncset_(edge_idx_);
+
         // NOTE: we always use the latest cache margin bytes for local victim syncset, instead of using that in edge-level victim metadata of the current edge node, which may be stale
         final_victim_syncset.setCacheMarginBytes(latest_local_cache_margin_bytes);
         #endif
@@ -197,12 +215,20 @@ namespace covered
 
         checkPointers_();
 
+        struct timespec t0 = Util::getCurrentTimespec(); // TMPDEBUG231211
+
         // Acquire a write lock to update local synced victims atomically
         std::string context_name = "VictimTracker::updateForNeighborVictimSyncset()";
         rwlock_for_victim_tracker_->acquire_lock(context_name);
 
+        struct timespec t1 = Util::getCurrentTimespec(); // TMPDEBUG231211
+
         const uint64_t start_victimsync_monitor_size = peredge_victimsync_monitor_[source_edge_idx].getSizeForCapacity();
 
+        struct timespec t2 = Util::getCurrentTimespec(); // TMPDEBUG231211
+
+        // TMPDEBUG231216
+        #ifdef ENABLE_DELTA_DEDUP_COMPERSSION
         // Enforce complete victim syncset for the next message to source edge node if necessary
         if (neighbor_victim_syncset.isEnforceComplete()) // Enforce the current edge node to issue complete victim syncset without compression for the given source edge node
         {
@@ -284,7 +310,14 @@ namespace covered
                 peredge_victimsync_monitor_[source_edge_idx].tryToEnableEnforcementStatus_(neighbor_victim_syncset, synced_seqnum, peredge_monitored_victimsetcnt_); // Trigger complete enforcement if cached victim syncsets is full (this will cache compressed victim syncset if cached_victim_syncsets_ is not full, or enable enforcement status (set need_enforcement_ = true, enforcement_seqnum_ = synced_seqnum, and wait_for_complete_victim_syncset_ = true) otherwise)
             }
         }
+        #else
+        bool need_update_victim_tracker_ = true;
+        VictimSyncset neighbor_complete_victim_syncset = neighbor_victim_syncset;
+        SeqNum synced_seqnum = 0;
+        #endif
 
+        struct timespec t3 = Util::getCurrentTimespec(); // TMPDEBUG231211
+        struct timespec t4, t5, t6, t7; // TMPDEBUG231211
         // Update edge-level victim metadata and victim dirinfo sets in victim tracker
         if (need_update_victim_tracker_)
         {
@@ -308,25 +341,36 @@ namespace covered
             with_complete_vicitm_syncset = neighbor_complete_victim_syncset.getLocalBeaconedVictims(neighbor_beaconed_victim_dirinfosets);
             assert(with_complete_vicitm_syncset);
 
+            t4 = Util::getCurrentTimespec(); // TMPDEBUG231211
+
             // Replace VictimCacheinfos for neighbor synced victims of the given edge node
             replaceVictimMetadataForEdgeIdx_(source_edge_idx, neighbor_cache_margin_bytes, neighbor_synced_victim_cacheinfos, cooperation_wrapper_ptr);
 
+            t5 = Util::getCurrentTimespec(); // TMPDEBUG231211
+
             // Try to replace VictimDirinfo::dirinfoset (if any) for each neighbor beaconed neighbor synced victim of the given edge node
             replaceVictimDirinfoSets_(neighbor_beaconed_victim_dirinfosets, false);
+
+            t6 = Util::getCurrentTimespec(); // TMPDEBUG231211
 
             // Replace VictimDirinfo::dirinfoset for each local beaconed neighbor synced victim of the given edge node
             // NOTE: local_beaconed_neighbor_synced_victim_dirinfosets MUST be complete due to from local directory table
             const std::list<std::pair<Key, DirinfoSet>> local_beaconed_neighbor_synced_victim_dirinfosets = cooperation_wrapper_ptr->getLocalBeaconedVictimsFromCacheinfos(neighbor_synced_victim_cacheinfos);
             assert(local_beaconed_neighbor_synced_victim_dirinfosets.size() <= neighbor_synced_victim_cacheinfos.size());
             replaceVictimDirinfoSets_(local_beaconed_neighbor_synced_victim_dirinfosets, true);
+
+            t7 = Util::getCurrentTimespec(); // TMPDEBUG231211
         }
 
+        // TMPDEBUG231216
+        #ifdef ENABLE_DELTA_DEDUP_COMPERSSION
         // Get local complete victim syncset of the current edge node
         VictimSyncset current_victim_syncset = getVictimSyncset_(edge_idx_);
         assert(current_victim_syncset.isComplete());
 
         // Pre-generate complete/compressed victim syncset for the next message issued towards the source edge node
         peredge_victimsync_monitor_[source_edge_idx].pregenVictimSyncset(current_victim_syncset);
+        #endif
 
         const uint64_t end_victimsync_monitor_size = peredge_victimsync_monitor_[source_edge_idx].getSizeForCapacity();
         if (end_victimsync_monitor_size > start_victimsync_monitor_size)
@@ -339,6 +383,10 @@ namespace covered
         }
 
         rwlock_for_victim_tracker_->unlock(context_name);
+
+        // TMPDEBUG231211
+        struct timespec t8 = Util::getCurrentTimespec();
+        Util::dumpVariablesForDebug(instance_name_, 18, "COVERED: update victim tracker for key", key.getKeystr().c_str(), "t1-t0:", std::to_string(Util::getDeltaTimeUs(t1, t0)).c_str(), "t2-t1:", std::to_string(Util::getDeltaTimeUs(t2, t1)).c_str(), "t3-t2:", std::to_string(Util::getDeltaTimeUs(t3, t2)).c_str(), "t4-t3:", std::to_string(Util::getDeltaTimeUs(t4, t3)).c_str(), "t5-t4:", std::to_string(Util::getDeltaTimeUs(t5, t4)).c_str(), "t6-t5:", std::to_string(Util::getDeltaTimeUs(t6, t5)).c_str(), "t7-t6:", std::to_string(Util::getDeltaTimeUs(t7, t6)).c_str(), "t8-t7:", std::to_string(Util::getDeltaTimeUs(t8, t7)).c_str());
 
         return;
     }
@@ -491,15 +539,16 @@ namespace covered
     {
         checkPointers_();
 
-        // Acquire a read lock to get cache size usage atomically (TODO: maybe NO need to acquire a read lock for size_bytes_ here)
-        std::string context_name = "VictimTracker::getSizeForCapacity()";
-        rwlock_for_victim_tracker_->acquire_lock_shared(context_name);
+        // (OBSOLETE due to lock contention with background pre-compression and recovery) Acquire a read lock to get cache size usage atomically
+        // std::string context_name = "VictimTracker::getSizeForCapacity()";
+        // rwlock_for_victim_tracker_->acquire_lock_shared(context_name);
+        // uint64_t total_size = size_bytes_;
+        // rwlock_for_victim_tracker_->unlock_shared(context_name);
+        // return total_size;
 
-        uint64_t total_size = size_bytes_;
+        // NOTE: NO need to acquire a read lock as approxiate cache size usage is enough
 
-        rwlock_for_victim_tracker_->unlock_shared(context_name);
-
-        return total_size;
+        return size_bytes_;
     }
 
     // Utils
@@ -545,8 +594,10 @@ namespace covered
     {
         // NOTE: NO need to acquire a write lock which has been done in updateLocalSyncedVictims() and updateForNeighborVictimSyncset()
 
-        assert(synced_victim_cacheinfos.size() <= peredge_synced_victimcnt_);
-        assert(cooperation_wrapper_ptr != NULL);
+        struct timespec t0 = Util::getCurrentTimespec(); // TMPDEBUG231211
+
+        MYASSERT(synced_victim_cacheinfos.size() <= peredge_synced_victimcnt_);
+        MYASSERT(cooperation_wrapper_ptr != NULL);
 
         // Update cacheinfos of synced victims for the specific edge node
         std::list<VictimCacheinfo> old_synced_victim_cacheinfos;
@@ -558,7 +609,7 @@ namespace covered
             // Add latest synced victims for the specific edge node
             // NOTE: EdgelevelVictimMetadata will assert that all victim cacheinfos are complete
             peredge_victim_metadata_[edge_idx] = EdgelevelVictimMetadata(cache_margin_bytes, synced_victim_cacheinfos);
-            assert(peredge_victim_metadata_[edge_idx].isValid());
+            MYASSERT(peredge_victim_metadata_[edge_idx].isValid());
 
             //size_bytes_ = Util::uint64Add(size_bytes_, sizeof(uint32_t)); // For edge_idx
             size_bytes_ = Util::uint64Add(size_bytes_, sizeof(uint64_t)); // For cache_margin_bytes
@@ -573,11 +624,13 @@ namespace covered
             peredge_victim_metadata_[edge_idx] = EdgelevelVictimMetadata(cache_margin_bytes, synced_victim_cacheinfos);
         }
 
+        struct timespec t1 = Util::getCurrentTimespec(); // TMPDEBUG231211
+
         // Update victim dirinfos for new synced victim keys
         for (std::list<VictimCacheinfo>::const_iterator new_cacheinfo_list_iter = synced_victim_cacheinfos.begin(); new_cacheinfo_list_iter != synced_victim_cacheinfos.end(); new_cacheinfo_list_iter++)
         {
             // Local/neighbor synced victim cacheinfos passed into victim tracker MUST be complete
-            assert(new_cacheinfo_list_iter->isComplete());
+            MYASSERT(new_cacheinfo_list_iter->isComplete());
 
             size_bytes_ = Util::uint64Add(size_bytes_, new_cacheinfo_list_iter->getSizeForCapacity()); // For cacheinfo of each latest local synced victims
 
@@ -592,7 +645,7 @@ namespace covered
                 perkey_victim_dirinfo_.push_back(std::pair(tmp_key, VictimDirinfo(tmp_beacon_edge_idx)));
                 dirinfo_list_iter = perkey_victim_dirinfo_.end();
                 dirinfo_list_iter--; // Point to the last element just pushed back
-                assert(dirinfo_list_iter != perkey_victim_dirinfo_.end());
+                MYASSERT(dirinfo_list_iter != perkey_victim_dirinfo_.end());
 
                 dirinfo_list_iter->second.incrRefcnt();
 
@@ -600,23 +653,29 @@ namespace covered
             }
             else // The key already has a victim dirinfo
             {
-                //assert(dirinfo_list_iter->second.isLocalBeaconed() == tmp_is_local_beaconed);
-                assert(dirinfo_list_iter->second.getBeaconEdgeIdx() == tmp_beacon_edge_idx);
+                //MYASSERT(dirinfo_list_iter->second.isLocalBeaconed() == tmp_is_local_beaconed);
+                MYASSERT(dirinfo_list_iter->second.getBeaconEdgeIdx() == tmp_beacon_edge_idx);
 
                 dirinfo_list_iter->second.incrRefcnt();
             }
         }
 
+        struct timespec t2 = Util::getCurrentTimespec(); // TMPDEBUG231211
+
         // Remove victim dirinfos for old synced victim keys
         for (std::list<VictimCacheinfo>::const_iterator old_cacheinfo_list_iter = old_synced_victim_cacheinfos.begin(); old_cacheinfo_list_iter != old_synced_victim_cacheinfos.end(); old_cacheinfo_list_iter++)
         {
-            assert(old_cacheinfo_list_iter->isComplete()); // NOTE: old victim cacheinfo stored in victim tracker MUST be complete
+            MYASSERT(old_cacheinfo_list_iter->isComplete()); // NOTE: old victim cacheinfo stored in victim tracker MUST be complete
 
             size_bytes_ = Util::uint64Minus(size_bytes_, old_cacheinfo_list_iter->getSizeForCapacity()); // For cacheinfo of each old synced victim
 
             const Key& tmp_key = old_cacheinfo_list_iter->getKey();
             tryToReleaseVictimDirinfo_(tmp_key);
         }
+
+        // TMPDEBUG231211
+        struct timespec t3 = Util::getCurrentTimespec();
+        Util::dumpVariablesForDebug(instance_name_, 6, "COVERED: replace edge-level victim metadata t1-t0:", std::to_string(Util::getDeltaTimeUs(t1, t0)).c_str(), "t2-t1:", std::to_string(Util::getDeltaTimeUs(t2, t1)).c_str(), "t3-t2:", std::to_string(Util::getDeltaTimeUs(t3, t2)).c_str());
 
         return;
     }

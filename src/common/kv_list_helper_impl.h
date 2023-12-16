@@ -1,3 +1,6 @@
+#ifndef KV_LIST_HELPER_IMPL_H
+#define KV_LIST_HELPER_IMPL_H
+
 #include "common/kv_list_helper.h"
 
 namespace covered
@@ -33,3 +36,5 @@ namespace covered
         return iter;
     }
 }
+
+#endif

@@ -22,7 +22,7 @@ namespace covered
 
         for (std::list<VictimCacheinfo>::const_iterator victim_cacheinfos_const_iter = victim_cacheinfos.begin(); victim_cacheinfos_const_iter != victim_cacheinfos.end(); victim_cacheinfos_const_iter++)
         {
-            assert(victim_cacheinfos_const_iter->isComplete()); // NOTE: victim cacheinfos in edge-level victim metadata of victim tracker MUST be complete
+            MYASSERT(victim_cacheinfos_const_iter->isComplete()); // NOTE: victim cacheinfos in edge-level victim metadata of victim tracker MUST be complete
         }
     }
 

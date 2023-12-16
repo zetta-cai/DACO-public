@@ -9,6 +9,7 @@
 
 #define BOOST_STACKTRACE_USE_BACKTRACE
 
+#include <assert.h>
 #include <atomic> // std::memory_order
 #include <cstdarg> // std::va_list, va_start, va_arg, and va_end
 #include <iostream> // cout, cerr
@@ -20,6 +21,7 @@
 #include <time.h> // struct timespec
 
 #include "cli/evaluator_cli.h"
+#include "common/config.h"
 #include "common/covered_common_header.h"
 #include "network/network_addr.h"
 
@@ -33,6 +35,14 @@
 
 #define MS2US(var) var * 1000
 #define SEC2US(var) var * 1000 * 1000
+
+#define MYASSERT(condition) \
+{ \
+    if (Config::isAssert()) \
+    { \
+        assert(condition); \
+    } \
+}
 
 // For internal cache engine (e.g., Segcache, CacheLib, and COVERED)
 // (i) Common: 100MiB for internal unused capacity to avoid internal eviction (NOT used for cooperative edge caching and hence NOT affect cache performance)

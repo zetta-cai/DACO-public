@@ -5,6 +5,7 @@
 
 #include <sstream>
 
+#include "common/kv_list_helper_impl.h"
 #include "common/util.h"
 
 namespace covered
@@ -225,10 +226,10 @@ namespace covered
     template<class V>
     void ConcurrentHashtable<V>::constCallIfExist(const Key& key, bool& is_exist, const std::string& function_name, void* param_ptr) const
     {
-        assert(perkey_rwlock_ptr_ != NULL);
+        MYASSERT(perkey_rwlock_ptr_ != NULL);
 
         // Must be protected by a read/write lock
-        assert(perkey_rwlock_ptr_->isReadOrWriteLocked(key));
+        MYASSERT(perkey_rwlock_ptr_->isReadOrWriteLocked(key));
         uint32_t hashidx = perkey_rwlock_ptr_->getRwlockIndex(key);
 
         const std::unordered_map<Key, V, KeyHasher>& tmp_hashtable = hashtables_[hashidx];
@@ -246,7 +247,7 @@ namespace covered
         }
 
         // Must be protected by a read/write lock
-        assert(perkey_rwlock_ptr_->isReadOrWriteLocked(key));
+        MYASSERT(perkey_rwlock_ptr_->isReadOrWriteLocked(key));
 
         return;
     }

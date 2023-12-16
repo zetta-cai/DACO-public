@@ -255,7 +255,9 @@ namespace covered
 
         uint64_t total_size = 0;
 
+        total_size += popularity_aggregator_ptr_->getSizeForCapacity();
         total_size += victim_tracker_ptr_->getSizeForCapacity();
+        total_size += directory_cacher_.getSizeForCapacity();
 
         return total_size;
     }
