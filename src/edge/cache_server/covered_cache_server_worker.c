@@ -110,7 +110,7 @@ namespace covered
 
         // Prepare victim syncset for piggybacking-based victim synchronization
         const uint32_t dst_beacon_edge_idx_for_compression = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
-        assert(dst_beacon_edge_idx_for_compression != edge_idx); // Current edge node MUST NOT be the beacon edge node for the given key
+        MYASSERT(dst_beacon_edge_idx_for_compression != edge_idx); // Current edge node MUST NOT be the beacon edge node for the given key
         VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_beacon_edge_idx_for_compression, tmp_edge_wrapper_ptr->getCacheMarginBytes());
 
         // Prepare local uncached popularity of key for piggybacking-based popularity collection
@@ -389,7 +389,8 @@ namespace covered
                     assert(tmp_is_exist_victims == true);
 
                     // Get dirinfo for local beaconed victims
-                    std::list<std::pair<Key, DirinfoSet>> tmp_local_beaconed_local_cached_victim_dirinfoset = tmp_cooperation_wrapper_ptr->getLocalBeaconedVictimsFromCacheinfos(tmp_local_cached_victim_cacheinfos);
+                    std::list<std::pair<Key, DirinfoSet>> tmp_local_beaconed_local_cached_victim_dirinfoset;
+                    tmp_cooperation_wrapper_ptr->getLocalBeaconedVictimsFromCacheinfos(tmp_local_cached_victim_cacheinfos, tmp_local_beaconed_local_cached_victim_dirinfoset);
 
                     // Calculate local eviction cost by VictimTracker (to utilize perkey_victim_dirinfo_)
                     local_eviction_cost = tmp_covered_cache_manager_ptr->accessVictimTrackerForFastPathEvictionCost(tmp_edge_wrapper_ptr, tmp_local_cached_victim_cacheinfos, tmp_local_beaconed_local_cached_victim_dirinfoset);
@@ -462,7 +463,7 @@ namespace covered
 
         // Prepare victim syncset for piggybacking-based victim synchronization
         const uint32_t dst_beacon_edge_idx_for_compression = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
-        assert(dst_beacon_edge_idx_for_compression != edge_idx); // Current edge node MUST NOT be the beacon edge node for the given key
+        MYASSERT(dst_beacon_edge_idx_for_compression != edge_idx); // Current edge node MUST NOT be the beacon edge node for the given key
         VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_beacon_edge_idx_for_compression, tmp_edge_wrapper_ptr->getCacheMarginBytes());
 
         // Prepare local uncached popularity of key for piggybacking-based popularity collection
@@ -624,7 +625,7 @@ namespace covered
 
         // Prepare victim syncset for piggybacking-based victim synchronization
         const uint32_t dst_beacon_edge_idx_for_compression = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
-        assert(dst_beacon_edge_idx_for_compression != edge_idx); // Current edge node MUST NOT be the beacon edge node for the given key
+        MYASSERT(dst_beacon_edge_idx_for_compression != edge_idx); // Current edge node MUST NOT be the beacon edge node for the given key
         VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_beacon_edge_idx_for_compression, tmp_edge_wrapper_ptr->getCacheMarginBytes());
 
         // Prepare local uncached popularity of key for piggybacking-based popularity collection

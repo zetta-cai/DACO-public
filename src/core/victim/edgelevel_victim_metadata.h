@@ -25,6 +25,7 @@ namespace covered
         ~EdgelevelVictimMetadata();
 
         bool isValid() const;
+        void validate(const uint64_t& cache_margin_bytes, const std::list<VictimCacheinfo>& victim_cacheinfos);
 
         void updateCacheMarginBytes(const uint64_t& cache_margin_bytes);
 

@@ -59,7 +59,8 @@ namespace covered
 
         // Victim synchronization
         const VictimSyncset& neighbor_victim_syncset = covered_directory_lookup_request_ptr->getVictimSyncsetRef();
-        edge_wrapper_ptr_->updateCacheManagerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset);
+        //edge_wrapper_ptr_->updateCacheManagerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset);
+        edge_wrapper_ptr_->updateCacheManagerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, MessageBase::getKeyFromMessage(control_request_ptr)); // TMPDEBUG231211
 
         // TMPDEBUG231211
         struct timespec t2 = Util::getCurrentTimespec();

@@ -425,7 +425,8 @@ namespace covered
 
                     // Update extra_perkey_victim_dirinfoset
                     // NOTE: extra fetched victim dirinfo sets from local directory table MUST be complete
-                    std::list<std::pair<Key, DirinfoSet>> local_beaconed_local_fetched_victim_dirinfosets = edge_wrapper_ptr->getCooperationWrapperPtr()->getLocalBeaconedVictimsFromCacheinfos(tmp_victim_cacheinfos);
+                    std::list<std::pair<Key, DirinfoSet>> local_beaconed_local_fetched_victim_dirinfosets;
+                    edge_wrapper_ptr->getCooperationWrapperPtr()->getLocalBeaconedVictimsFromCacheinfos(tmp_victim_cacheinfos, local_beaconed_local_fetched_victim_dirinfosets);
                     for (std::list<std::pair<Key, DirinfoSet>>::const_iterator tmp_victim_dirinfosets_const_iter = local_beaconed_local_fetched_victim_dirinfosets.begin(); tmp_victim_dirinfosets_const_iter != local_beaconed_local_fetched_victim_dirinfosets.end(); tmp_victim_dirinfosets_const_iter++)
                     {
                         const Key& tmp_victim_key = tmp_victim_dirinfosets_const_iter->first;
@@ -581,7 +582,8 @@ namespace covered
         std::list<std::pair<Key, DirinfoSet>> neighbor_beaconed_neighbor_fetched_victim_dirinfosets;
         with_complete_victim_syncset = victim_fetchset.getLocalBeaconedVictims(neighbor_beaconed_neighbor_fetched_victim_dirinfosets); // Neighbor beaconed ones of neighbor fetched victims
         assert(with_complete_victim_syncset == true); // NOTE: extra fetched victim dirinfo sets in victim fetchset MUST be complete
-        const std::list<std::pair<Key, DirinfoSet>> local_beaconed_neighbor_fetched_victim_dirinfosets = edge_wrapper_ptr->getCooperationWrapperPtr()->getLocalBeaconedVictimsFromVictimSyncset(victim_fetchset); // Local beaconed ones of fetched victims (dirinfo sets MUST be complete)
+        std::list<std::pair<Key, DirinfoSet>> local_beaconed_neighbor_fetched_victim_dirinfosets;
+        edge_wrapper_ptr->getCooperationWrapperPtr()->getLocalBeaconedVictimsFromVictimSyncset(victim_fetchset, local_beaconed_neighbor_fetched_victim_dirinfosets); // Local beaconed ones of fetched victims (dirinfo sets MUST be complete)
         // Insert neighbor beaconed neighbor fetched victims
         for (std::list<std::pair<Key, DirinfoSet>>::const_iterator victim_dirinfosets_const_iter = neighbor_beaconed_neighbor_fetched_victim_dirinfosets.begin(); victim_dirinfosets_const_iter != neighbor_beaconed_neighbor_fetched_victim_dirinfosets.end(); victim_dirinfosets_const_iter++)
         {

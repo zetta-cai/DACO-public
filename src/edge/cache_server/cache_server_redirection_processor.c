@@ -211,7 +211,7 @@ namespace covered
         if (tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME) // ONLY for COVERED
         {
             assert(redirected_request_ptr->getMessageType() == MessageType::kCoveredRedirectedGetRequest || redirected_request_ptr->getMessageType() == MessageType::kCoveredPlacementRedirectedGetRequest);
-            CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
+            // CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
 
             // Get key and victim syncset from redirected get request
             Key tmp_key;

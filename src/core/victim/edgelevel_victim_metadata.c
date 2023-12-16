@@ -2,6 +2,7 @@
 
 #include <assert.h>
 
+#include "common/config.h"
 #include "common/kv_list_helper_impl.h"
 #include "common/util.h"
 
@@ -16,14 +17,7 @@ namespace covered
 
     EdgelevelVictimMetadata::EdgelevelVictimMetadata(const uint64_t& cache_margin_bytes, const std::list<VictimCacheinfo>& victim_cacheinfos)
     {
-        is_valid_ = true;
-        cache_margin_bytes_ = cache_margin_bytes;
-        victim_cacheinfos_ = victim_cacheinfos;
-
-        for (std::list<VictimCacheinfo>::const_iterator victim_cacheinfos_const_iter = victim_cacheinfos.begin(); victim_cacheinfos_const_iter != victim_cacheinfos.end(); victim_cacheinfos_const_iter++)
-        {
-            MYASSERT(victim_cacheinfos_const_iter->isComplete()); // NOTE: victim cacheinfos in edge-level victim metadata of victim tracker MUST be complete
-        }
+        validate(cache_margin_bytes, victim_cacheinfos);
     }
 
     EdgelevelVictimMetadata::~EdgelevelVictimMetadata() {}
@@ -31,6 +25,22 @@ namespace covered
     bool EdgelevelVictimMetadata::isValid() const
     {
         return is_valid_;
+    }
+
+    void EdgelevelVictimMetadata::validate(const uint64_t& cache_margin_bytes, const std::list<VictimCacheinfo>& victim_cacheinfos)
+    {
+        is_valid_ = true;
+        cache_margin_bytes_ = cache_margin_bytes;
+        victim_cacheinfos_ = victim_cacheinfos;
+
+        if (Config::isAssert())
+        {
+            for (std::list<VictimCacheinfo>::const_iterator victim_cacheinfos_const_iter = victim_cacheinfos.begin(); victim_cacheinfos_const_iter != victim_cacheinfos.end(); victim_cacheinfos_const_iter++)
+            {
+                assert(victim_cacheinfos_const_iter->isComplete()); // NOTE: victim cacheinfos in edge-level victim metadata of victim tracker MUST be complete
+            }
+        }
+        return;
     }
 
     void EdgelevelVictimMetadata::updateCacheMarginBytes(const uint64_t& cache_margin_bytes)

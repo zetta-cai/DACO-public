@@ -139,7 +139,7 @@ namespace covered
 
         // Current edge node MUST NOT be the beacon node for the given key due to remote placement notification
         const Key tmp_key = covered_placement_notify_request_ptr->getKey();
-        assert(!tmp_edge_wrapper_ptr->currentIsBeacon(tmp_key));
+        MYASSERT(!tmp_edge_wrapper_ptr->currentIsBeacon(tmp_key));
 
         // Victim synchronization
         const uint32_t source_edge_idx = covered_placement_notify_request_ptr->getSourceIndex();

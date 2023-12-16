@@ -352,8 +352,7 @@ namespace covered
         checkPointers_();
 
         // The current edge node must NOT be the beacon node for the key
-        bool current_is_beacon = currentIsBeacon(key);
-        assert(!current_is_beacon);
+        MYASSERT(!currentIsBeacon(key));
 
         // Get remote address such that current edge node can communicate with the beacon node for the key
         NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = cooperation_wrapper_ptr_->getBeaconEdgeBeaconServerRecvreqAddr(key);
@@ -1073,7 +1072,8 @@ namespace covered
         #ifndef ENABLE_BACKGROUND_VICTIM_SYNCHRONIZATION
         // Foreground victim synchronization
         // NOTE: we always perform victim synchronization before popularity aggregation, as we need the latest synced victim information for placement calculation
-        covered_cache_manager_ptr_->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, cooperation_wrapper_ptr_);
+        //covered_cache_manager_ptr_->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, cooperation_wrapper_ptr_);
+        covered_cache_manager_ptr_->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, cooperation_wrapper_ptr_, key); // TMPDEBUG231211
         #else
         // Background victim synchronization
         // bool is_successful = getSynchronizationServerParamPtr()->getSynchronizationServerItemBufferPtr()->push(SynchronizationServerItem(source_edge_idx, neighbor_victim_syncset));
@@ -1269,7 +1269,7 @@ namespace covered
     {
         checkPointers_();
         assert(cache_name_ == Util::COVERED_CACHE_NAME);
-        assert(currentIsBeacon(key));
+        MYASSERT(currentIsBeacon(key));
 
         const bool is_from_single_to_multiple = metadata_update_requirement.isFromSingleToMultiple();
         const bool is_from_multiple_to_single = metadata_update_requirement.isFromMultipleToSingle();
