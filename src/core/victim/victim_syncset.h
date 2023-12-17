@@ -49,8 +49,10 @@ namespace covered
 
         // For both complete and compressed victim syncsets
         bool getCacheMarginBytesOrDelta(uint64_t& cache_margin_bytes, int& cache_margin_delta_bytes) const; // Return if with complete cache margin bytes
-        bool getLocalSyncedVictims(std::list<VictimCacheinfo>& local_synced_vitims) const; // Return if with complete local synced vitim cacheinfos
+        bool getLocalSyncedVictims(std::list<VictimCacheinfo>& local_synced_victims) const; // Return if with complete local synced vitim cacheinfos
+        const std::list<VictimCacheinfo>* getLocalSyncedVictimsPtr(bool& is_complete) const;
         bool getLocalBeaconedVictims(std::list<std::pair<Key, DirinfoSet>>& local_beaconed_victims) const; // Return if with complete local beaconed vitim dirinfo sets
+        const std::list<std::pair<Key, DirinfoSet>>* getLocalBeaconedVictimsPtr(bool& is_complete) const;
 
         // For complete victim syncset
         void setCacheMarginBytes(const uint64_t& cache_margin_bytes);

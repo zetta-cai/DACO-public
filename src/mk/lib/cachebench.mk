@@ -10,7 +10,7 @@ CACHEBENCH_LDLIBS := -l:libcachelib_cachebench.a -l:libcachelib_allocator.a -l:l
 # Third-party libs from $(CACHEBENCH_DIRPATH)/opt/cachelib/lib
 CACHEBENCH_LDLIBS += -l:libfolly.so -l:libfmt.so -l:libzstd.so -l:libglog.so -l:libnuma.so
 # Third-party libs from /usr/lib/x86_64-linux-gnu
-CACHEBENCH_LDLIBS += -l:libdouble-conversion.so -l:libboost_system.so -l:libpthread.so
+CACHEBENCH_LDLIBS += -l:libdouble-conversion.so -l:libboost_system.so -l:libpthread.so -lrt
 LDLIBS += $(CACHEBENCH_LDLIBS)
 
 CACHEBENCH_INCDIR := -I$(CACHEBENCH_DIRPATH) -I$(CACHEBENCH_DIRPATH)/opt/cachelib/include

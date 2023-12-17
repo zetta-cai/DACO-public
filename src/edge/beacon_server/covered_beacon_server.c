@@ -72,7 +72,7 @@ namespace covered
 
         // TMPDEBUG231211
         struct timespec t3 = Util::getCurrentTimespec();
-        Util::dumpVariablesForDebug(instance_name_, 8, "COVERED: process dirlookup req for key", MessageBase::getKeyFromMessage(control_request_ptr).getKeystr().c_str(), "t1-t0:", std::to_string(Util::getDeltaTimeUs(t1, t0)).c_str(), "t2-t1:", std::to_string(Util::getDeltaTimeUs(t2, t1)).c_str(), "t3-t2:", std::to_string(Util::getDeltaTimeUs(t3, t2)).c_str());
+        // Util::dumpVariablesForDebug(instance_name_, 8, "COVERED: process dirlookup req for key", MessageBase::getKeyFromMessage(control_request_ptr).getKeystr().c_str(), "t1-t0:", std::to_string(Util::getDeltaTimeUs(t1, t0)).c_str(), "t2-t1:", std::to_string(Util::getDeltaTimeUs(t2, t1)).c_str(), "t3-t2:", std::to_string(Util::getDeltaTimeUs(t3, t2)).c_str());
 
         return is_finish;
     }
@@ -134,7 +134,7 @@ namespace covered
 
         // TMPDEBUG231211
         struct timespec t3 = Util::getCurrentTimespec();
-        Util::dumpVariablesForDebug(instance_name_, 10, "COVERED: get dirlookup rsp for key", MessageBase::getKeyFromMessage(control_request_ptr).getKeystr().c_str(), "t1-t0:", std::to_string(Util::getDeltaTimeUs(t1, t0)).c_str(), "t1_0-t1:", std::to_string(Util::getDeltaTimeUs(t1_0, t1)).c_str(), "t2-t1_0", std::to_string(Util::getDeltaTimeUs(t2, t1_0)).c_str(), "t3-t2:", std::to_string(Util::getDeltaTimeUs(t3, t2)).c_str());
+        // Util::dumpVariablesForDebug(instance_name_, 10, "COVERED: get dirlookup rsp for key", MessageBase::getKeyFromMessage(control_request_ptr).getKeystr().c_str(), "t1-t0:", std::to_string(Util::getDeltaTimeUs(t1, t0)).c_str(), "t1_0-t1:", std::to_string(Util::getDeltaTimeUs(t1_0, t1)).c_str(), "t2-t1_0", std::to_string(Util::getDeltaTimeUs(t2, t1_0)).c_str(), "t3-t2:", std::to_string(Util::getDeltaTimeUs(t3, t2)).c_str());
 
         return covered_directory_lookup_response_ptr;
     }
@@ -389,7 +389,7 @@ namespace covered
 
         // TMPDEBUG231211
         struct timespec t3 = Util::getCurrentTimespec();
-        Util::dumpVariablesForDebug(instance_name_, 8, "COVERED: get dirupdate rsp for key", MessageBase::getKeyFromMessage(control_request_ptr).getKeystr().c_str(), "t1-t0:", std::to_string(Util::getDeltaTimeUs(t1, t0)).c_str(), "t2-t1:", std::to_string(Util::getDeltaTimeUs(t2, t1)).c_str(), "t3-t2:", std::to_string(Util::getDeltaTimeUs(t3, t2)).c_str());
+        // Util::dumpVariablesForDebug(instance_name_, 8, "COVERED: get dirupdate rsp for key", MessageBase::getKeyFromMessage(control_request_ptr).getKeystr().c_str(), "t1-t0:", std::to_string(Util::getDeltaTimeUs(t1, t0)).c_str(), "t2-t1:", std::to_string(Util::getDeltaTimeUs(t2, t1)).c_str(), "t3-t2:", std::to_string(Util::getDeltaTimeUs(t3, t2)).c_str());
 
         return control_response_ptr;
     }

@@ -17,7 +17,7 @@
 #define VICTIM_TRACKER_H
 
 // TMDEBUG231216
-//#define ENABLE_DELTA_DEDUP_COMPERSSION
+#define ENABLE_DELTA_DEDUP_COMPERSSION
 
 #include <list>
 #include <string>

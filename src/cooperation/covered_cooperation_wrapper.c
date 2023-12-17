@@ -28,12 +28,12 @@ namespace covered
         checkPointers_();
 
         // Get victim cacheinfos of neighbor synced victims (complete/compressed)
-        std::list<VictimCacheinfo> neighbor_synced_victims;
-        bool with_complete_victim_syncset = victim_syncset.getLocalSyncedVictims(neighbor_synced_victims);
+        bool with_complete_victim_syncset = false;
+        const std::list<VictimCacheinfo>* neighbor_synced_victims_ptr = victim_syncset.getLocalSyncedVictimsPtr(with_complete_victim_syncset);
         UNUSED(with_complete_victim_syncset); // Transmitted victim syncset received from neighbor edge node can be either complete or compressed
 
         // Get directory info sets for neighbor synced victimed beaconed by the current edge node
-        getLocalBeaconedVictimsFromCacheinfos(neighbor_synced_victims, local_beaconed_neighbor_synced_victim_dirinfosets); // NOTE: dirinfo sets from local directory table MUST be complete
+        getLocalBeaconedVictimsFromCacheinfos(*neighbor_synced_victims_ptr, local_beaconed_neighbor_synced_victim_dirinfosets); // NOTE: dirinfo sets from local directory table MUST be complete
 
         return;
     }

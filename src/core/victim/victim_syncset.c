@@ -76,21 +76,22 @@ namespace covered
         uint32_t total_payload_size_for_final_local_synced_victims = 0;
 
         // Get complete/deduped victim cacheinfos
-        std::list<VictimCacheinfo> current_local_synced_victim_cacheinfos;
-        const bool current_with_complete_local_synced_victims = current_victim_syncset.getLocalSyncedVictims(current_local_synced_victim_cacheinfos);
+        bool current_with_complete_local_synced_victims = false;
+        const std::list<VictimCacheinfo>* current_local_synced_victim_cacheinfos_ptr = current_victim_syncset.getLocalSyncedVictimsPtr(current_with_complete_local_synced_victims);
         assert(current_with_complete_local_synced_victims == true);
-        std::list<VictimCacheinfo> prev_local_synced_victim_cacheinfos;
-        const bool prev_with_complete_local_synced_victims = prev_victim_syncset.getLocalSyncedVictims(prev_local_synced_victim_cacheinfos);
+        bool prev_with_complete_local_synced_victims = false;
+        const std::list<VictimCacheinfo>* prev_local_synced_victim_cacheinfos_ptr;
+        prev_local_synced_victim_cacheinfos_ptr = prev_victim_syncset.getLocalSyncedVictimsPtr(prev_with_complete_local_synced_victims);
         assert(prev_with_complete_local_synced_victims == true);
 
-        for (std::list<VictimCacheinfo>::const_iterator current_local_synced_victim_cacheinfos_const_iter = current_local_synced_victim_cacheinfos.begin(); current_local_synced_victim_cacheinfos_const_iter != current_local_synced_victim_cacheinfos.end(); current_local_synced_victim_cacheinfos_const_iter++)
+        for (std::list<VictimCacheinfo>::const_iterator current_local_synced_victim_cacheinfos_const_iter = current_local_synced_victim_cacheinfos_ptr->begin(); current_local_synced_victim_cacheinfos_const_iter != current_local_synced_victim_cacheinfos_ptr->end(); current_local_synced_victim_cacheinfos_const_iter++)
         {
             const VictimCacheinfo& tmp_current_victim_cacheinfo = *current_local_synced_victim_cacheinfos_const_iter;
             const Key& tmp_current_victim_key = tmp_current_victim_cacheinfo.getKey();
             total_payload_size_for_current_local_synced_victims += tmp_current_victim_cacheinfo.getVictimCacheinfoPayloadSize();
 
-            std::list<VictimCacheinfo>::const_iterator tmp_prev_local_synced_victim_cacheinfos_const_iter = VictimCacheinfo::findVictimCacheinfoForKey(tmp_current_victim_key, prev_local_synced_victim_cacheinfos);
-            if (tmp_prev_local_synced_victim_cacheinfos_const_iter == prev_local_synced_victim_cacheinfos.end()) // No previous victim cacheinfo for the given key
+            std::list<VictimCacheinfo>::const_iterator tmp_prev_local_synced_victim_cacheinfos_const_iter = VictimCacheinfo::findVictimCacheinfoForKey(tmp_current_victim_key, *prev_local_synced_victim_cacheinfos_ptr);
+            if (tmp_prev_local_synced_victim_cacheinfos_const_iter == prev_local_synced_victim_cacheinfos_ptr->end()) // No previous victim cacheinfo for the given key
             {
                 // Add current complete victim cacheinfo
                 assert(tmp_current_victim_cacheinfo.isComplete());
@@ -113,11 +114,11 @@ namespace covered
         }
 
         // Get stale victim cacheinfos
-        for (std::list<VictimCacheinfo>::const_iterator prev_local_synced_victim_cacheinfos_const_iter = prev_local_synced_victim_cacheinfos.begin(); prev_local_synced_victim_cacheinfos_const_iter != prev_local_synced_victim_cacheinfos.end(); prev_local_synced_victim_cacheinfos_const_iter++)
+        for (std::list<VictimCacheinfo>::const_iterator prev_local_synced_victim_cacheinfos_const_iter = prev_local_synced_victim_cacheinfos_ptr->begin(); prev_local_synced_victim_cacheinfos_const_iter != prev_local_synced_victim_cacheinfos_ptr->end(); prev_local_synced_victim_cacheinfos_const_iter++)
         {
             const Key& tmp_prev_victim_key = prev_local_synced_victim_cacheinfos_const_iter->getKey();
-            std::list<VictimCacheinfo>::const_iterator tmp_current_local_synced_victims_map_const_iter = VictimCacheinfo::findVictimCacheinfoForKey(tmp_prev_victim_key, current_local_synced_victim_cacheinfos);
-            if (tmp_current_local_synced_victims_map_const_iter == current_local_synced_victim_cacheinfos.end()) // Prev victim cacheinfo is stale
+            std::list<VictimCacheinfo>::const_iterator tmp_current_local_synced_victims_map_const_iter = VictimCacheinfo::findVictimCacheinfoForKey(tmp_prev_victim_key, *current_local_synced_victim_cacheinfos_ptr);
+            if (tmp_current_local_synced_victims_map_const_iter == current_local_synced_victim_cacheinfos_ptr->end()) // Prev victim cacheinfo is stale
             {
                 VictimCacheinfo tmp_stale_victim_cacheinfo = *prev_local_synced_victim_cacheinfos_const_iter;
                 tmp_stale_victim_cacheinfo.markStale();
@@ -143,20 +144,20 @@ namespace covered
         uint32_t total_payload_size_for_final_local_beaconed_victims = 0;
 
         // Get complete/delta-compressed victim dirinfo sets
-        std::list<std::pair<Key, DirinfoSet>> current_local_beaconed_victims = current_victim_syncset.local_beaconed_victims_;
-        const bool current_with_complete_local_beaconed_victims = current_victim_syncset.getLocalBeaconedVictims(current_local_beaconed_victims);
+        bool current_with_complete_local_beaconed_victims = false;
+        const std::list<std::pair<Key, DirinfoSet>>* current_local_beaconed_victims_ptr = current_victim_syncset.getLocalBeaconedVictimsPtr(current_with_complete_local_beaconed_victims);
         assert(current_with_complete_local_beaconed_victims == true);
-        std::list<std::pair<Key, DirinfoSet>> prev_local_beaconed_victims = prev_victim_syncset.local_beaconed_victims_;
-        const bool prev_with_complete_local_beaconed_victims = prev_victim_syncset.getLocalBeaconedVictims(prev_local_beaconed_victims);
+        bool prev_with_complete_local_beaconed_victims = false;
+        const std::list<std::pair<Key, DirinfoSet>>* prev_local_beaconed_victims_ptr = prev_victim_syncset.getLocalBeaconedVictimsPtr(prev_with_complete_local_beaconed_victims);
         assert(prev_with_complete_local_beaconed_victims == true);
-        for (std::list<std::pair<Key, DirinfoSet>>::const_iterator current_local_beaconed_victims_const_iter = current_local_beaconed_victims.begin(); current_local_beaconed_victims_const_iter != current_local_beaconed_victims.end(); current_local_beaconed_victims_const_iter++)
+        for (std::list<std::pair<Key, DirinfoSet>>::const_iterator current_local_beaconed_victims_const_iter = current_local_beaconed_victims_ptr->begin(); current_local_beaconed_victims_const_iter != current_local_beaconed_victims_ptr->end(); current_local_beaconed_victims_const_iter++)
         {
             const DirinfoSet& tmp_current_dirinfo_set = current_local_beaconed_victims_const_iter->second;
             total_payload_size_for_current_local_beaconed_victims += tmp_current_dirinfo_set.getDirinfoSetPayloadSize(); // NOTE: NOT count key size as both complete and compressed dirinfo set have the same key
 
             const Key& tmp_victim_key = current_local_beaconed_victims_const_iter->first;
-            std::list<std::pair<Key, DirinfoSet>>::const_iterator tmp_prev_local_beaconed_victims_const_iter = KVListHelper<Key, DirinfoSet>::findVFromListForK(tmp_victim_key, prev_local_beaconed_victims);
-            if (tmp_prev_local_beaconed_victims_const_iter == prev_local_beaconed_victims.end()) // No previous victim dirinfo set
+            std::list<std::pair<Key, DirinfoSet>>::const_iterator tmp_prev_local_beaconed_victims_const_iter = KVListHelper<Key, DirinfoSet>::findVFromListForK(tmp_victim_key, *prev_local_beaconed_victims_ptr);
+            if (tmp_prev_local_beaconed_victims_const_iter == prev_local_beaconed_victims_ptr->end()) // No previous victim dirinfo set
             {
                 // Add current complete victim dirinfo set
                 assert(tmp_current_dirinfo_set.isComplete());
@@ -259,8 +260,8 @@ namespace covered
 
         // (2) Recover complete victim cacheinfos and beacom edge indexes if necessary
 
-        std::list<VictimCacheinfo> synced_victim_cacheinfos;
-        bool with_complete_synced_victim_cacheinfos = compressed_victim_syncset.getLocalSyncedVictims(synced_victim_cacheinfos);
+        bool with_complete_synced_victim_cacheinfos = false;
+        const std::list<VictimCacheinfo>* synced_victim_cacheinfos_ptr = compressed_victim_syncset.getLocalSyncedVictimsPtr(with_complete_synced_victim_cacheinfos);
 
         if (!with_complete_synced_victim_cacheinfos) // Recover ONLY if compressed
         {
@@ -271,7 +272,7 @@ namespace covered
             assert(tmp_with_complete_existing_victim_cacheinfos); // Existing victim cacheinfos MUST be complete
 
             // Recover complete victim cacheinfos based on existing complete victim cacheinfos and synced victim cacheinfos if compressed
-            for (std::list<VictimCacheinfo>::const_iterator synced_victim_cacheinfos_const_iter = synced_victim_cacheinfos.begin(); synced_victim_cacheinfos_const_iter != synced_victim_cacheinfos.end(); synced_victim_cacheinfos_const_iter++)
+            for (std::list<VictimCacheinfo>::const_iterator synced_victim_cacheinfos_const_iter = synced_victim_cacheinfos_ptr->begin(); synced_victim_cacheinfos_const_iter != synced_victim_cacheinfos_ptr->end(); synced_victim_cacheinfos_const_iter++)
             {
                 const Key& tmp_synced_victim_key = synced_victim_cacheinfos_const_iter->getKey();
                 const VictimCacheinfo& tmp_synced_victim_cacheinfo = *synced_victim_cacheinfos_const_iter;
@@ -363,8 +364,8 @@ namespace covered
 
         // (3) Recover complete victim dirinfo sets if necessary
 
-        std::list<std::pair<Key, DirinfoSet>> synced_victim_dirinfo_sets;
-        bool with_complete_synced_victim_dirinfo_sets = compressed_victim_syncset.getLocalBeaconedVictims(synced_victim_dirinfo_sets);
+        bool with_complete_synced_victim_dirinfo_sets = false;
+        const std::list<std::pair<Key, DirinfoSet>>* synced_victim_dirinfo_sets_ptr = compressed_victim_syncset.getLocalBeaconedVictimsPtr(with_complete_synced_victim_dirinfo_sets);
         if (!with_complete_synced_victim_dirinfo_sets) // Recover ONLY if compressed
         {
             // Start from existing complete victim dirinfos sets
@@ -373,7 +374,7 @@ namespace covered
             assert(tmp_with_complete_victim_dirinfo_sets);
 
             // Recover complete victim dirinfo sets
-            for (std::list<std::pair<Key, DirinfoSet>>::const_iterator synced_victim_dirinfo_sets_const_iter = synced_victim_dirinfo_sets.begin(); synced_victim_dirinfo_sets_const_iter != synced_victim_dirinfo_sets.end(); synced_victim_dirinfo_sets_const_iter++)
+            for (std::list<std::pair<Key, DirinfoSet>>::const_iterator synced_victim_dirinfo_sets_const_iter = synced_victim_dirinfo_sets_ptr->begin(); synced_victim_dirinfo_sets_const_iter != synced_victim_dirinfo_sets_ptr->end(); synced_victim_dirinfo_sets_const_iter++)
             {
                 const Key& tmp_synced_victim_key = synced_victim_dirinfo_sets_const_iter->first;
                 const DirinfoSet& tmp_synced_dirinfo_set = synced_victim_dirinfo_sets_const_iter->second;
@@ -585,24 +586,21 @@ namespace covered
         return with_complete_cache_margin_bytes;
     }
 
-    bool VictimSyncset::getLocalSyncedVictims(std::list<VictimCacheinfo>& local_synced_vitims) const
+    bool VictimSyncset::getLocalSyncedVictims(std::list<VictimCacheinfo>& local_synced_victims) const
     {
         checkValidity_();
 
         #ifdef VICTIM_SYNCSET_USE_BITMAP
         bool with_complete_local_synced_victims = ((compressed_bitmap_ & LOCAL_SYNCED_VICTIMS_DEDUP_MASK) != LOCAL_SYNCED_VICTIMS_DEDUP_MASK);
-        #else
-        bool with_complete_local_synced_victims = !is_local_synced_victims_dedup_;
-        #endif
-
-        #ifdef VICTIM_SYNCSET_USE_BITMAP
         bool is_empty = ((compressed_bitmap_ & LOCAL_SYNCED_VICTIMS_EMPTY_MASK) == LOCAL_SYNCED_VICTIMS_EMPTY_MASK);
         #else
+        bool with_complete_local_synced_victims = !is_local_synced_victims_dedup_;
         bool is_empty = is_local_synced_victims_empty_;
         #endif
+
         if (is_empty)
         {
-            local_synced_vitims.clear();
+            local_synced_victims.clear();
         }
         else
         {
@@ -615,10 +613,44 @@ namespace covered
                 assertAllCacheinfosComplete_();
             }
 
-            local_synced_vitims = local_synced_victims_;
+            local_synced_victims = local_synced_victims_;
         }
 
         return with_complete_local_synced_victims;
+    }
+
+    const std::list<VictimCacheinfo>* VictimSyncset::getLocalSyncedVictimsPtr(bool& is_complete) const
+    {
+        checkValidity_();
+
+        #ifdef VICTIM_SYNCSET_USE_BITMAP
+        bool with_complete_local_synced_victims = ((compressed_bitmap_ & LOCAL_SYNCED_VICTIMS_DEDUP_MASK) != LOCAL_SYNCED_VICTIMS_DEDUP_MASK);
+        bool is_empty = ((compressed_bitmap_ & LOCAL_SYNCED_VICTIMS_EMPTY_MASK) == LOCAL_SYNCED_VICTIMS_EMPTY_MASK);
+        #else
+        bool with_complete_local_synced_victims = !is_local_synced_victims_dedup_;
+        bool is_empty = is_local_synced_victims_empty_;
+        #endif
+
+        if (with_complete_local_synced_victims)
+        {
+            if (!is_empty)
+            {
+                assertAllCacheinfosComplete_();
+            }
+
+            is_complete = true;
+        }
+        else
+        {
+            if (!is_empty)
+            {
+                assertAtLeastOneCacheinfoDeduped_();
+            }
+
+            is_complete = false;
+        }
+
+        return &local_synced_victims_;
     }
 
     bool VictimSyncset::getLocalBeaconedVictims(std::list<std::pair<Key, DirinfoSet>>& local_beaconed_victims) const
@@ -652,6 +684,40 @@ namespace covered
         }
 
         return with_complete_local_beaconed_victims;
+    }
+
+    const std::list<std::pair<Key, DirinfoSet>>* VictimSyncset::getLocalBeaconedVictimsPtr(bool& is_complete) const
+    {
+        checkValidity_();
+
+        #ifdef VICTIM_SYNCSET_USE_BITMAP
+        bool with_complete_local_beaconed_victims = ((compressed_bitmap_ & LOCAL_BEACONED_VICTIMS_DEDUP_MASK) != LOCAL_BEACONED_VICTIMS_DEDUP_MASK);
+        bool is_empty = ((compressed_bitmap_ & LOCAL_BEACONED_VICTIMS_EMPTY_MASK) == LOCAL_BEACONED_VICTIMS_EMPTY_MASK);
+        #else
+        bool with_complete_local_beaconed_victims = !is_local_beaconed_victims_dedup_;
+        bool is_empty = is_local_beaconed_victims_empty_;
+        #endif
+
+        if (with_complete_local_beaconed_victims)
+        {
+            if (!is_empty)
+            {
+                assertAllDirinfoSetsComplete_();
+            }
+
+            is_complete = true;
+        }
+        else
+        {
+            if (!is_empty)
+            {
+                assertAtLeastOneDirinfoSetCompressed_();
+            }
+
+            is_complete = false;
+        }
+
+        return &local_beaconed_victims_;
     }
 
     // For complete victim syncset
@@ -1288,16 +1354,19 @@ namespace covered
     {
         assert(local_synced_victims_.size() > 0);
 
-        bool tmp_all_complete = true;
-        for (std::list<VictimCacheinfo>::const_iterator cacheinfo_list_const_iter = local_synced_victims_.begin(); cacheinfo_list_const_iter != local_synced_victims_.end(); cacheinfo_list_const_iter++)
+        if (Config::isAssert())
         {
-            if (!cacheinfo_list_const_iter->isComplete())
+            bool tmp_all_complete = true;
+            for (std::list<VictimCacheinfo>::const_iterator cacheinfo_list_const_iter = local_synced_victims_.begin(); cacheinfo_list_const_iter != local_synced_victims_.end(); cacheinfo_list_const_iter++)
             {
-                tmp_all_complete = false;
-                break;
+                if (!cacheinfo_list_const_iter->isComplete())
+                {
+                    tmp_all_complete = false;
+                    break;
+                }
             }
+            assert(tmp_all_complete == true);
         }
-        assert(tmp_all_complete == true);
 
         return;
     }
@@ -1324,16 +1393,19 @@ namespace covered
     {
         assert(local_beaconed_victims_.size() > 0);
 
-        bool tmp_all_complete = true;
-        for (std::list<std::pair<Key, DirinfoSet>>::const_iterator key_dirinfoset_const_iter = local_beaconed_victims_.begin(); key_dirinfoset_const_iter != local_beaconed_victims_.end(); key_dirinfoset_const_iter++)
+        if (Config::isAssert())
         {
-            if (!key_dirinfoset_const_iter->second.isComplete())
+            bool tmp_all_complete = true;
+            for (std::list<std::pair<Key, DirinfoSet>>::const_iterator key_dirinfoset_const_iter = local_beaconed_victims_.begin(); key_dirinfoset_const_iter != local_beaconed_victims_.end(); key_dirinfoset_const_iter++)
             {
-                tmp_all_complete = false;
-                break;
+                if (!key_dirinfoset_const_iter->second.isComplete())
+                {
+                    tmp_all_complete = false;
+                    break;
+                }
             }
+            assert(tmp_all_complete == true);
         }
-        assert(tmp_all_complete == true);
 
         return;
     }

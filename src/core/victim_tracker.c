@@ -147,7 +147,7 @@ namespace covered
 
         // TMPDEBUG231211
         struct timespec t4 = Util::getCurrentTimespec();
-        Util::dumpVariablesForDebug(instance_name_, 10, "COVERED: update victim dirinfo for key", key.getKeystr().c_str(), "t1-t0:", std::to_string(Util::getDeltaTimeUs(t1, t0)).c_str(), "t2-t1:", std::to_string(Util::getDeltaTimeUs(t2, t1)).c_str(), "t3-t2:", std::to_string(Util::getDeltaTimeUs(t3, t2)).c_str(), "t4-t3:", std::to_string(Util::getDeltaTimeUs(t4, t3)).c_str());
+        // Util::dumpVariablesForDebug(instance_name_, 10, "COVERED: update victim dirinfo for key", key.getKeystr().c_str(), "t1-t0:", std::to_string(Util::getDeltaTimeUs(t1, t0)).c_str(), "t2-t1:", std::to_string(Util::getDeltaTimeUs(t2, t1)).c_str(), "t3-t2:", std::to_string(Util::getDeltaTimeUs(t3, t2)).c_str(), "t4-t3:", std::to_string(Util::getDeltaTimeUs(t4, t3)).c_str());
 
         return;
     }
@@ -245,6 +245,9 @@ namespace covered
         // Check if this is the first victim syncset received from the source edge node
         bool need_update_victim_tracker_ = false;
         bool is_first_complete_received = peredge_victimsync_monitor_[source_edge_idx].isFirstCompleteReceived();
+        struct timespec t3 = Util::getCurrentTimespec(); // TMPDEBUG231211
+        int type = -1; // TMPDEBUG231211
+        struct timespec t4, t5; // TMPDEBUG231211
         if (is_first_complete_received) // This is the first complete victim syncset received from the source edge idx
         {
             if (is_neighbor_victim_syncset_complete) // Complete victim syncset
@@ -253,7 +256,12 @@ namespace covered
 
                 peredge_victimsync_monitor_[source_edge_idx].clearFirstCompleteReceived(); // This will set is_first_complete_received_ = false in VictimsyncMonitor
 
+                type = 0; // TMPDEBUG231211
+                t4 = Util::getCurrentTimespec(); // TMPDEBUG231211
+
                 neighbor_complete_victim_syncset = peredge_victimsync_monitor_[source_edge_idx].tryToClearEnforcementStatus_(neighbor_complete_victim_syncset, synced_seqnum, peredge_monitored_victimsetcnt_); // This will set tracked_seqnum as synced_seqnum, clear stale and continuous cached victim syncsets, and clear enforcement status (set need_enforcement_ = false, enforcement_seqnum_ = 0, and wait_for_complete_victim_syncset_ = false) if necessary in VictimsyncMonitor
+
+                t5 = Util::getCurrentTimespec(); // TMPDEBUG231211
 
                 need_update_victim_tracker_ = true; // Directly update victim tracker without recovery
             }
@@ -261,7 +269,12 @@ namespace covered
             {
                 need_update_victim_tracker_ = false; // No need to update victim tracker
 
+                type = 1; // TMPDEBUG231211
+                t4 = Util::getCurrentTimespec(); // TMPDEBUG231211
+
                 peredge_victimsync_monitor_[source_edge_idx].tryToEnableEnforcementStatus_(neighbor_victim_syncset, synced_seqnum, peredge_monitored_victimsetcnt_); // Trigger complete enforcement if cached victim syncsets is full (this will cache compressed victim syncset if cached_victim_syncsets_ is not full, or enable enforcement status (set need_enforcement_ = true, enforcement_seqnum_ = synced_seqnum, and wait_for_complete_victim_syncset_ = true) otherwise)
+
+                t5 = Util::getCurrentTimespec(); // TMPDEBUG231211
             }
         }
         else // Decide whether and how to update victim tracker based on existing complete victim syncset tracked for the source edge idx in the current edge node
@@ -273,6 +286,10 @@ namespace covered
             if (synced_seqnum <= tracked_seqnum) // An outdated victim syncset from source edge node
             {
                 need_update_victim_tracker_ = false; // No need to update victim tracker
+
+                type = 2; // TMPDEBUG231211
+                t4 = Util::getCurrentTimespec(); // TMPDEBUG231211
+                t5 = Util::getCurrentTimespec(); // TMPDEBUG231211
             }
             else if (synced_seqnum == Util::uint64Add(tracked_seqnum, 1)) // A matched victim syncset
             {
@@ -287,11 +304,20 @@ namespace covered
                     //existing_complete_victim_syncset.setEnforceComplete(unused_is_enforce_complete);
                     assert(existing_complete_victim_syncset.isComplete());
 
+                    type = 2; // TMPDEBUG231211
+                    t4 = Util::getCurrentTimespec(); // TMPDEBUG231211
+
                     // Recover neighbor complete victim syncset based on existing complete victim syncset of source edge idx and received neighbor_victim_syncset if compressed
                     //neighbor_complete_victim_syncset = VictimSyncset::recover(neighbor_victim_syncset, existing_complete_victim_syncset);
                     neighbor_complete_victim_syncset = VictimSyncset::recover(neighbor_victim_syncset, existing_complete_victim_syncset, key); // TMPDEBUG231211
                     assert(neighbor_complete_victim_syncset.isComplete());
                 }
+                else // TMPDEBUG231211
+                {
+                    type = 3; // TMPDEBUG231211
+                }
+
+                t5 = Util::getCurrentTimespec(); // TMPDEBUG231211
 
                 need_update_victim_tracker_ = true; // Update victim tracker with recovered/synced complete vicitm syncset
 
@@ -301,13 +327,23 @@ namespace covered
             {
                 need_update_victim_tracker_ = true; // Directly use complete victim syncset to update victim tracker
 
+                type = 4;
+                t4 = Util::getCurrentTimespec(); // TMPDEBUG231211
+
                 neighbor_complete_victim_syncset = peredge_victimsync_monitor_[source_edge_idx].tryToClearEnforcementStatus_(neighbor_complete_victim_syncset, synced_seqnum, peredge_monitored_victimsetcnt_); // This will set tracked_seqnum as synced_seqnum (i.e., tracked_seqnum + 1), clear stale and continuous cached victim syncsets, and clear enforcement status (set need_enforcement_ = false, enforcement_seqnum_ = 0, and wait_for_complete_victim_syncset_ = false) if necessary in VictimsyncMonitor
+
+                t5 = Util::getCurrentTimespec(); // TMPDEBUG231211
             }
             else // A compressed victim syncset w/ synced_seqnum > tracked_seqnum + 1
             {
                 need_update_victim_tracker_ = false; // No need to update victim tracker
 
+                type = 5;
+                t4 = Util::getCurrentTimespec(); // TMPDEBUG231211
+
                 peredge_victimsync_monitor_[source_edge_idx].tryToEnableEnforcementStatus_(neighbor_victim_syncset, synced_seqnum, peredge_monitored_victimsetcnt_); // Trigger complete enforcement if cached victim syncsets is full (this will cache compressed victim syncset if cached_victim_syncsets_ is not full, or enable enforcement status (set need_enforcement_ = true, enforcement_seqnum_ = synced_seqnum, and wait_for_complete_victim_syncset_ = true) otherwise)
+
+                t5 = Util::getCurrentTimespec(); // TMPDEBUG231211
             }
         }
         #else
@@ -316,8 +352,8 @@ namespace covered
         SeqNum synced_seqnum = 0;
         #endif
 
-        struct timespec t3 = Util::getCurrentTimespec(); // TMPDEBUG231211
-        struct timespec t4, t5, t6, t6_5, t7; // TMPDEBUG231211
+        struct timespec t6 = Util::getCurrentTimespec(); // TMPDEBUG231211
+        struct timespec t7, t8, t9, t10, t11; // TMPDEBUG231211
         // Update edge-level victim metadata and victim dirinfo sets in victim tracker
         if (need_update_victim_tracker_)
         {
@@ -333,35 +369,36 @@ namespace covered
             assert(with_complete_vicitm_syncset);
             UNUSED(neighbor_cache_margin_delta_bytes);
             // Get neighbor synced victim cacheinfos
-            std::list<VictimCacheinfo> neighbor_synced_victim_cacheinfos;
-            with_complete_vicitm_syncset = neighbor_complete_victim_syncset.getLocalSyncedVictims(neighbor_synced_victim_cacheinfos);
+            with_complete_vicitm_syncset = false;
+            const std::list<VictimCacheinfo>* neighbor_synced_victim_cacheinfos_ptr = neighbor_complete_victim_syncset.getLocalSyncedVictimsPtr(with_complete_vicitm_syncset);
+            assert(neighbor_synced_victim_cacheinfos_ptr != NULL);
             assert(with_complete_vicitm_syncset);
             // Get neighbor beaconed victim dirinfosets
-            std::list<std::pair<Key, DirinfoSet>> neighbor_beaconed_victim_dirinfosets;
-            with_complete_vicitm_syncset = neighbor_complete_victim_syncset.getLocalBeaconedVictims(neighbor_beaconed_victim_dirinfosets);
+            with_complete_vicitm_syncset = false;
+            const std::list<std::pair<Key, DirinfoSet>>* neighbor_beaconed_victim_dirinfosets_ptr = neighbor_complete_victim_syncset.getLocalBeaconedVictimsPtr(with_complete_vicitm_syncset);
             assert(with_complete_vicitm_syncset);
 
-            t4 = Util::getCurrentTimespec(); // TMPDEBUG231211
+            t7 = Util::getCurrentTimespec(); // TMPDEBUG231211
 
             // Replace VictimCacheinfos for neighbor synced victims of the given edge node
-            replaceVictimMetadataForEdgeIdx_(source_edge_idx, neighbor_cache_margin_bytes, neighbor_synced_victim_cacheinfos, cooperation_wrapper_ptr);
+            replaceVictimMetadataForEdgeIdx_(source_edge_idx, neighbor_cache_margin_bytes, *neighbor_synced_victim_cacheinfos_ptr, cooperation_wrapper_ptr);
 
-            t5 = Util::getCurrentTimespec(); // TMPDEBUG231211
+            t8 = Util::getCurrentTimespec(); // TMPDEBUG231211
 
             // Try to replace VictimDirinfo::dirinfoset (if any) for each neighbor beaconed neighbor synced victim of the given edge node
-            replaceVictimDirinfoSets_(neighbor_beaconed_victim_dirinfosets, false);
+            replaceVictimDirinfoSets_(*neighbor_beaconed_victim_dirinfosets_ptr, false);
 
-            t6 = Util::getCurrentTimespec(); // TMPDEBUG231211
+            t9 = Util::getCurrentTimespec(); // TMPDEBUG231211
 
             // Replace VictimDirinfo::dirinfoset for each local beaconed neighbor synced victim of the given edge node
             // NOTE: local_beaconed_neighbor_synced_victim_dirinfosets MUST be complete due to from local directory table
             std::list<std::pair<Key, DirinfoSet>> local_beaconed_neighbor_synced_victim_dirinfosets;
-            cooperation_wrapper_ptr->getLocalBeaconedVictimsFromCacheinfos(neighbor_synced_victim_cacheinfos, local_beaconed_neighbor_synced_victim_dirinfosets);
-            t6_5 = Util::getCurrentTimespec(); // TMPDEBUG231211
-            assert(local_beaconed_neighbor_synced_victim_dirinfosets.size() <= neighbor_synced_victim_cacheinfos.size());
+            cooperation_wrapper_ptr->getLocalBeaconedVictimsFromCacheinfos(*neighbor_synced_victim_cacheinfos_ptr, local_beaconed_neighbor_synced_victim_dirinfosets);
+            t10 = Util::getCurrentTimespec(); // TMPDEBUG231211
+            assert(local_beaconed_neighbor_synced_victim_dirinfosets.size() <= neighbor_synced_victim_cacheinfos_ptr->size());
             replaceVictimDirinfoSets_(local_beaconed_neighbor_synced_victim_dirinfosets, true);
 
-            t7 = Util::getCurrentTimespec(); // TMPDEBUG231211
+            t11 = Util::getCurrentTimespec(); // TMPDEBUG231211
         }
 
         // TMPDEBUG231216
@@ -387,8 +424,8 @@ namespace covered
         rwlock_for_victim_tracker_->unlock(context_name);
 
         // TMPDEBUG231211
-        struct timespec t8 = Util::getCurrentTimespec();
-        Util::dumpVariablesForDebug(instance_name_, 18, "COVERED: update victim tracker for key", key.getKeystr().c_str(), "t1-t0:", std::to_string(Util::getDeltaTimeUs(t1, t0)).c_str(), "t2-t1:", std::to_string(Util::getDeltaTimeUs(t2, t1)).c_str(), "t3-t2:", std::to_string(Util::getDeltaTimeUs(t3, t2)).c_str(), "t4-t3:", std::to_string(Util::getDeltaTimeUs(t4, t3)).c_str(), "t5-t4:", std::to_string(Util::getDeltaTimeUs(t5, t4)).c_str(), "t6-t5:", std::to_string(Util::getDeltaTimeUs(t6, t5)).c_str(), "t6_5-t6:", std::to_string(Util::getDeltaTimeUs(t6_5, t6)).c_str(), "t7-t6_5:", std::to_string(Util::getDeltaTimeUs(t7, t6_5)).c_str(), "t8-t7:", std::to_string(Util::getDeltaTimeUs(t8, t7)).c_str());
+        struct timespec t12 = Util::getCurrentTimespec();
+        Util::dumpVariablesForDebug(instance_name_, 28, "COVERED: update victim tracker for key", key.getKeystr().c_str(), "type:", std::to_string(type).c_str(), "t1-t0:", std::to_string(Util::getDeltaTimeUs(t1, t0)).c_str(), "t2-t1:", std::to_string(Util::getDeltaTimeUs(t2, t1)).c_str(), "t3-t2:", std::to_string(Util::getDeltaTimeUs(t3, t2)).c_str(), "t4-t3:", std::to_string(Util::getDeltaTimeUs(t4, t3)).c_str(), "t5-t4:", std::to_string(Util::getDeltaTimeUs(t5, t4)).c_str(), "t6-t5:", std::to_string(Util::getDeltaTimeUs(t6, t5)).c_str(), "t7-t6:", std::to_string(Util::getDeltaTimeUs(t7, t6)).c_str(), "t8-t7:", std::to_string(Util::getDeltaTimeUs(t8, t7)).c_str(), "t9-t8:", std::to_string(Util::getDeltaTimeUs(t9, t8)).c_str(), "t10-t9:", std::to_string(Util::getDeltaTimeUs(t10, t9)).c_str(), "t11-t10:", std::to_string(Util::getDeltaTimeUs(t11, t10)).c_str(), "t12-t11:", std::to_string(Util::getDeltaTimeUs(t12, t11)).c_str());
 
         return;
     }

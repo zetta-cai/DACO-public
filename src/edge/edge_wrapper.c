@@ -1425,7 +1425,7 @@ namespace covered
 
         // TMPDEBUG231211
         struct timespec t3 = Util::getCurrentTimespec();
-        Util::dumpVariablesForDebug(instance_name_, 8, "afterDirectoryAdmissionHelper_ for key", key.getKeystr().c_str(), "t1-t0:", std::to_string(Util::getDeltaTimeUs(t1, t0)).c_str(), "t2-t1:", std::to_string(Util::getDeltaTimeUs(t2, t1)).c_str(), "t3-t2:", std::to_string(Util::getDeltaTimeUs(t3, t2)).c_str());
+        // Util::dumpVariablesForDebug(instance_name_, 8, "COVERED: afterDirectoryAdmissionHelper_ for key", key.getKeystr().c_str(), "t1-t0:", std::to_string(Util::getDeltaTimeUs(t1, t0)).c_str(), "t2-t1:", std::to_string(Util::getDeltaTimeUs(t2, t1)).c_str(), "t3-t2:", std::to_string(Util::getDeltaTimeUs(t3, t2)).c_str());
 
         return;
     }

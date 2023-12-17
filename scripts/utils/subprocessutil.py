@@ -15,9 +15,9 @@ new_alternative_priority = 100
 def versionToTuple(v):
     return tuple(map(int, (v.split("."))))
 
-def runCmd(cmdstr):
+def runCmd(cmdstr, is_capture_output=True):
     print("[shell] {}".format(cmdstr))
-    tmp_subprocess = subprocess.run(cmdstr, shell=True, capture_output=True)
+    tmp_subprocess = subprocess.run(cmdstr, shell=True, capture_output=is_capture_output)
     return tmp_subprocess
 
 def getSubprocessErrstr(tmp_subprocess):
@@ -194,7 +194,10 @@ def installFromRepo(scriptname, software_name, clone_dirpath, install_tool, time
         prompt(scriptname, "install {} (it takes some time)...".format(software_name))
     install_cmd = "cd {} && {}".format(clone_dirpath, install_tool)
 
-    install_subprocess = runCmd(install_cmd)
+    if time_consuming == False:
+        install_subprocess = runCmd(install_cmd)
+    else:
+        install_subprocess = runCmd(install_cmd, is_capture_output=False)
     if install_subprocess.returncode != 0:
         install_errstr = getSubprocessErrstr(install_subprocess)
         die(scriptname, "failed to install {}; error: {}".format(software_name, install_errstr))
