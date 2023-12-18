@@ -180,29 +180,25 @@ namespace covered
         return;
     }
 
-    //VictimSyncset CoveredCacheManager::accessVictimTrackerForLocalVictimSyncset(const uint32_t& dst_edge_idx_for_compression, const uint64_t& latest_local_cache_margin_bytes) const
-    VictimSyncset CoveredCacheManager::accessVictimTrackerForLocalVictimSyncset(const uint32_t& dst_edge_idx_for_compression, const uint64_t& latest_local_cache_margin_bytes, const Key& key) const // TMPDEBUG231211
+    VictimSyncset CoveredCacheManager::accessVictimTrackerForLocalVictimSyncset(const uint32_t& dst_edge_idx_for_compression, const uint64_t& latest_local_cache_margin_bytes) const
     {
         checkPointers_();
 
         // Get current complete/compressed victim syncset from victim tracker
         // NOTE: we perform compression inside VictimTrackker:getLocalVictimSyncsetForSynchronization() for atomicity
-        //VictimSyncset current_victim_syncset = victim_tracker_ptr_->getLocalVictimSyncsetForSynchronization(dst_edge_idx_for_compression, latest_local_cache_margin_bytes);
-        VictimSyncset current_victim_syncset = victim_tracker_ptr_->getLocalVictimSyncsetForSynchronization(dst_edge_idx_for_compression, latest_local_cache_margin_bytes, key); // TMPDEBUG231211
+        VictimSyncset current_victim_syncset = victim_tracker_ptr_->getLocalVictimSyncsetForSynchronization(dst_edge_idx_for_compression, latest_local_cache_margin_bytes);
 
         return current_victim_syncset;
     }
 
-    //void CoveredCacheManager::updateVictimTrackerForNeighborVictimSyncset(const uint32_t& source_edge_idx, const VictimSyncset& neighbor_victim_syncset, const CooperationWrapperBase* cooperation_wrapper_ptr)
-    void CoveredCacheManager::updateVictimTrackerForNeighborVictimSyncset(const uint32_t& source_edge_idx, const VictimSyncset& neighbor_victim_syncset, const CooperationWrapperBase* cooperation_wrapper_ptr, const Key& key) // TMPDEBUG231211
+    void CoveredCacheManager::updateVictimTrackerForNeighborVictimSyncset(const uint32_t& source_edge_idx, const VictimSyncset& neighbor_victim_syncset, const CooperationWrapperBase* cooperation_wrapper_ptr)
     {
         checkPointers_();
 
         // NOTE: victim cacheinfos and dirinfo sets of neighbor_victim_syncset can be either complete or compressed; while dirinfo sets of local_beaconed_neighbor_synced_victim_dirinfosets MUST be complete
 
         // NOTE: we perform recovery inside VictimTracker::updateForNeighborVictimSyncset() for atomicity
-        //victim_tracker_ptr_->updateForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, cooperation_wrapper_ptr);
-        victim_tracker_ptr_->updateForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, cooperation_wrapper_ptr, key); // TMPDEBUG231211
+        victim_tracker_ptr_->updateForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, cooperation_wrapper_ptr);
         return;
     }
 
@@ -294,8 +290,7 @@ namespace covered
 
                 // Calculate admission benefit if we place the object with is_global_cached flag into topi edge nodes
                 Edgeset tmp_placement_edgeset;
-                //const DeltaReward tmp_admission_benefit = tmp_aggregated_uncached_popularity.calcAdmissionBenefit(edge_wrapper_ptr, topicnt, is_global_cached, tmp_placement_edgeset);
-                const DeltaReward tmp_admission_benefit = tmp_aggregated_uncached_popularity.calcAdmissionBenefit(edge_wrapper_ptr, edge_idx_, key, topicnt, is_global_cached, tmp_placement_edgeset); // TMPDEBUG23
+                const DeltaReward tmp_admission_benefit = tmp_aggregated_uncached_popularity.calcAdmissionBenefit(edge_wrapper_ptr, topicnt, is_global_cached, tmp_placement_edgeset);
 
                 // Calculate eviction cost based on tmp_placement_edgeset
                 std::list<std::pair<uint32_t, std::list<Key>>> tmp_placement_peredge_synced_victimset;

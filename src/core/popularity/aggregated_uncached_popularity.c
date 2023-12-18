@@ -135,15 +135,13 @@ namespace covered
     DeltaReward AggregatedUncachedPopularity::calcMaxAdmissionBenefit(const EdgeWrapper* edge_wrapper_ptr, const bool& is_global_cached) const
     {
         Edgeset placement_edgeset;
-        //DeltaReward max_admission_benefit = calcAdmissionBenefit(topk_edgeidx_local_uncached_popularity_pairs_.size(), is_global_cached, placement_edgeset);
-        DeltaReward max_admission_benefit = calcAdmissionBenefit(edge_wrapper_ptr, 0, Key(""), topk_edgeidx_local_uncached_popularity_pairs_.size(), is_global_cached, placement_edgeset); // TMPDEBUG23
+        DeltaReward max_admission_benefit = calcAdmissionBenefit(edge_wrapper_ptr, topk_edgeidx_local_uncached_popularity_pairs_.size(), is_global_cached, placement_edgeset);
         UNUSED(placement_edgeset);
         
         return max_admission_benefit;
     }
 
-    //DeltaReward AggregatedUncachedPopularity::calcAdmissionBenefit(const EdgeWrapper* edge_wrapper_ptr, const uint32_t& topicnt, const bool& is_global_cached, Edgeset& placement_edgeset) const
-    DeltaReward AggregatedUncachedPopularity::calcAdmissionBenefit(const EdgeWrapper* edge_wrapper_ptr, const uint32_t& edgeidx, const Key& key, const uint32_t& topicnt, const bool& is_global_cached, Edgeset& placement_edgeset) const // TMPDEBUG23
+    DeltaReward AggregatedUncachedPopularity::calcAdmissionBenefit(const EdgeWrapper* edge_wrapper_ptr, const uint32_t& topicnt, const bool& is_global_cached, Edgeset& placement_edgeset) const
     {
         // TODO: Use a heuristic or learning-based approach for parameter tuning to calculate delta rewards for max admission benefits (refer to state-of-the-art studies such as LRB and GL-Cache)
 

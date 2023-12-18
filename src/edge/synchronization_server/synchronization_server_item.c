@@ -7,13 +7,8 @@ namespace covered
     {
     }
 
-    // SynchronizationServerItem::SynchronizationServerItem(const uint32_t& source_edge_idx, const VictimSyncset& neighbor_victim_syncset)
-    // : source_edge_idx_(source_edge_idx), neighbor_victim_syncset_(neighbor_victim_syncset)
-    // {
-    // }
-
-    SynchronizationServerItem::SynchronizationServerItem(const uint32_t& source_edge_idx, const VictimSyncset& neighbor_victim_syncset, const Key& key) // TMPDEBUG231211
-    : source_edge_idx_(source_edge_idx), neighbor_victim_syncset_(neighbor_victim_syncset), key_(key)
+    SynchronizationServerItem::SynchronizationServerItem(const uint32_t& source_edge_idx, const VictimSyncset& neighbor_victim_syncset)
+    : source_edge_idx_(source_edge_idx), neighbor_victim_syncset_(neighbor_victim_syncset)
     {
     }
 
@@ -31,16 +26,10 @@ namespace covered
         return neighbor_victim_syncset_;
     }
 
-    Key SynchronizationServerItem::getKey() const // TMPDEBUG231211
-    {
-        return key_;
-    }
-
     const SynchronizationServerItem& SynchronizationServerItem::operator=(const SynchronizationServerItem& other)
     {
         source_edge_idx_ = other.source_edge_idx_;
         neighbor_victim_syncset_ = other.neighbor_victim_syncset_;
-        key_ = other.key_; // TMPDEBUG231211
         return *this;
     }
 }

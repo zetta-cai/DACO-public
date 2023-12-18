@@ -47,8 +47,7 @@ namespace covered
         DeltaReward calcMaxAdmissionBenefit(const EdgeWrapper* edge_wrapper_ptr, const bool& is_global_cached) const; // Max admission benefit if admit key into all top-k edge nodes
 
         // For trade-off-aware placement calculation
-        //DeltaReward calcAdmissionBenefit(const EdgeWrapper* edge_wrapper_ptr, const uint32_t& topicnt, const bool& is_global_cached, Edgeset& placement_edgeset) const; // Admission benefit if admit key into top-i edge nodes (i <= top-k list length)
-        DeltaReward calcAdmissionBenefit(const EdgeWrapper* edge_wrapper_ptr, const uint32_t& edgeidx, const Key& key, const uint32_t& topicnt, const bool& is_global_cached, Edgeset& placement_edgeset) const; // TMPDEBUG23
+        DeltaReward calcAdmissionBenefit(const EdgeWrapper* edge_wrapper_ptr, const uint32_t& topicnt, const bool& is_global_cached, Edgeset& placement_edgeset) const; // Admission benefit if admit key into top-i edge nodes (i <= top-k list length)
 
         uint64_t getSizeForCapacity() const;
 

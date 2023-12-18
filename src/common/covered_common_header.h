@@ -41,6 +41,9 @@
 // ---> Beacon-based cached metadata update: initialize is_neighbor_cached based on local/remote directory admission response before each local cache admission; enable/disable is_neighbor_cached at the first/last cached edge node when the cached object becomes non-single/single cache copy after directory admission/eviction
 // ---> Limited extra communication overhead: beacon node ONLY piggybacks a flag for each newly-admited object ONCE at admission, and ONLY notify the first/last cache copy when the object becomes non-single/single edge cached
 
+// TMPDEBUG231216 (TODO: to be removed)
+//#define ENABLE_BACKGROUND_VICTIM_SYNCHRONIZATION
+
 #include <cstdint> // uint32_t, uint64_t
 
 namespace covered

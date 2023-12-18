@@ -28,6 +28,7 @@ namespace covered
         // NOTE: dedup-/delta-based victim syncset compression MUST follow strict seqnum order
         assert(current_victim_syncset.getSeqnum() == Util::uint64Add(prev_victim_syncset.getSeqnum(), 1)); // Current seqnum MUST be prev seqnum + 1
 
+        //VictimSyncset compressed_victim_syncset(current_victim_syncset.getSeqnum(), current_victim_syncset.isEnforceComplete()); // Use seqnum and is_enforce_complete of current victim syncset
         VictimSyncset compressed_victim_syncset = current_victim_syncset; // Use seqnum and is_enforce_complete of current victim syncset
 
         // (1) Perform delta compression on cache margin bytes
@@ -66,6 +67,10 @@ namespace covered
         {
             compressed_victim_syncset.setCacheMarginDeltaBytes(cache_margin_delta_bytes);
         }
+        /*else
+        {
+            compressed_victim_syncset.setCacheMarginBytes(current_cache_margin_bytes);
+        }*/
         #endif
 
         // (2) Perform dedup on victim cacheinfos
@@ -135,6 +140,10 @@ namespace covered
             // NOTE: if with at least one compressed or fully-deduped (yet NOT in list) victim cacheinfo, NO need to sort the list of victim cacheinfos (will be sorted during VictimSyncset::recover() after receiving neighbor victim syncset)
             compressed_victim_syncset.setLocalSyncedVictimsForCompress(final_local_synced_victims);
         }
+        /*else
+        {
+            compressed_victim_syncset.setLocalSyncedVictims(*current_local_synced_victim_cacheinfos_ptr);
+        }*/
 
         // (3) Perform delta compression on victim dirinfo sets
 
@@ -187,6 +196,10 @@ namespace covered
         {
             compressed_victim_syncset.setLocalBeaconedVictimsForCompress(final_local_beaconed_victims);
         }
+        /*else
+        {
+            compressed_victim_syncset.setLocalBeaconedVictims(*current_local_beaconed_victims_ptr);
+        }*/
 
         // (4) Get final victim syncset
         const uint32_t compressed_victim_syncset_payload_size = compressed_victim_syncset.getVictimSyncsetPayloadSize();
@@ -209,8 +222,7 @@ namespace covered
         }
     }
 
-    //VictimSyncset VictimSyncset::recover(const VictimSyncset& compressed_victim_syncset, const VictimSyncset& existing_victim_syncset)
-    VictimSyncset VictimSyncset::recover(const VictimSyncset& compressed_victim_syncset, const VictimSyncset& existing_victim_syncset, const Key& key) // TMPDEBUG231211
+    VictimSyncset VictimSyncset::recover(const VictimSyncset& compressed_victim_syncset, const VictimSyncset& existing_victim_syncset)
     {
         // Recover complete victim syncset based on existing complete victim syncset of source edge idx and received compressed_victim_syncset if compressed
         assert(compressed_victim_syncset.isCompressed());
@@ -219,6 +231,7 @@ namespace covered
         // NOTE: dedup-/delta-based victim syncset recovery MUST follow strict seqnum order (NOTE: compressed_victim_syncset must NOT complete here)
         assert(compressed_victim_syncset.getSeqnum() == Util::uint64Add(existing_victim_syncset.getSeqnum(), 1)); // Compressed seqnum MUST be existing seqnum + 1
 
+        //VictimSyncset complete_victim_syncset(compressed_victim_syncset.getSeqnum(), compressed_victim_syncset.isEnforceComplete()); // Use seqnum and is_enforce_complete of compressed victim syncset
         VictimSyncset complete_victim_syncset = compressed_victim_syncset; // Use seqnum and is_enforce_complete of compressed victim syncset
 
         // (1) Recover cache margin bytes if necessary
@@ -359,7 +372,7 @@ namespace covered
         /*else // Directly use if not compressed
         {
             // Replace existing complete victim cacheinfos with synced ones
-            complete_victim_syncset.setLocalSyncedVictims(synced_victim_cacheinfos);
+            complete_victim_syncset.setLocalSyncedVictims(*synced_victim_cacheinfos_ptr);
         } // End of with_complete_synced_victim_cacheinfos*/
 
         // (3) Recover complete victim dirinfo sets if necessary
@@ -417,7 +430,7 @@ namespace covered
         /*else // Directly use if not compressed
         {
             // Replace existing complete victim dirinfo sets with synced ones
-            complete_victim_syncset.setLocalBeaconedVictims(synced_victim_dirinfo_sets);
+            complete_victim_syncset.setLocalBeaconedVictims(*synced_victim_dirinfo_sets_ptr);
         } // End of with_complete_synced_victim_dirinfo_sets*/
 
         // NOTE: use the same seqnum and is_enforce_complete as compressed victim syncset
@@ -462,6 +475,37 @@ namespace covered
     VictimSyncset::VictimSyncset(const VictimSyncset& other)
     {
         *this = other;
+    }
+
+    VictimSyncset::VictimSyncset(const SeqNum& seqnum, const bool& is_enforce_complete) : seqnum_(seqnum), is_enforce_complete_(is_enforce_complete), cache_margin_bytes_(0)
+    {
+        #ifdef VICTIM_SYNCSET_USE_BITMAP
+        compressed_bitmap_ = COMPLETE_BITMAP;
+        #else
+        is_valid_ = true;
+        is_complete_ = true;
+        is_cache_margin_bytes_delta_ = false;
+        is_local_beaconed_victims_dedup_ = false;
+        is_local_synced_victims_empty_ = false;
+        is_local_beaconed_victims_dedup_ = false;
+        is_local_beaconed_victims_empty_ = false;
+        #endif
+
+        cache_margin_delta_bytes_ = 0;
+
+        local_synced_victims_.clear();
+        #ifdef VICTIM_SYNCSET_USE_BITMAP
+        compressed_bitmap_ |= LOCAL_SYNCED_VICTIMS_EMPTY_MASK;
+        #else
+        is_local_synced_victims_empty_ = true;
+        #endif
+
+        local_beaconed_victims_.clear();
+        #ifdef VICTIM_SYNCSET_USE_BITMAP
+        compressed_bitmap_ |= LOCAL_BEACONED_VICTIMS_EMPTY_MASK;
+        #else
+        is_local_synced_victims_empty_ = true;
+        #endif
     }
 
     VictimSyncset::VictimSyncset(const SeqNum& seqnum, const bool& is_enforce_complete, const uint64_t& cache_margin_bytes, const std::list<VictimCacheinfo>& local_synced_victims, const std::list<std::pair<Key, DirinfoSet>>& local_beaconed_victims) : seqnum_(seqnum), is_enforce_complete_(is_enforce_complete), cache_margin_bytes_(cache_margin_bytes)
@@ -786,6 +830,26 @@ namespace covered
         return;
     }
 
+    void VictimSyncset::pushLocalBeaconedVictimForComplete(const Key& key, const DirinfoSet& dirinfo_set)
+    {
+        checkValidity_();
+
+        assert(isComplete());
+
+        if (local_beaconed_victims_.size() == 0)
+        {
+            #ifdef VICTIM_SYNCSET_USE_BITMAP
+            compressed_bitmap_ &= ~LOCAL_BEACONED_VICTIMS_EMPTY_MASK;
+            #else
+            is_local_beaconed_victims_empty_ = false;
+            #endif
+        }
+
+        local_beaconed_victims_.push_back(std::pair(key, dirinfo_set));
+
+        return;
+    }
+
     void VictimSyncset::setLocalBeaconedVictims(const std::list<std::pair<Key, DirinfoSet>>& local_beaconed_victims)
     {
         checkValidity_();
@@ -1042,7 +1106,6 @@ namespace covered
         {
             msg_payload.deserialize(size, (const char*)&cache_margin_bytes_, sizeof(uint64_t));
             size += sizeof(uint64_t);
-
         }
         else
         {

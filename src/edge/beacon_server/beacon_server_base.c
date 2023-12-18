@@ -208,9 +208,6 @@ namespace covered
 
     bool BeaconServerBase::processDirectoryLookupRequest_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr) const
     {
-        // TMPDEBUG231211
-        struct timespec t0 = Util::getCurrentTimespec();
-
         assert(control_request_ptr != NULL);
         assert(edge_cache_server_worker_recvrsp_dst_addr.isValidAddr());
         
@@ -235,9 +232,6 @@ namespace covered
         // Calculate cache server worker recvreq destination address
         NetworkAddr edge_cache_server_worker_recvreq_dst_addr = Util::getEdgeCacheServerWorkerRecvreqAddrFromRecvrspAddr(edge_cache_server_worker_recvrsp_dst_addr);
 
-        // TMPDEBUG231211
-        struct timespec t1 = Util::getCurrentTimespec();
-
         // Lookup local directory information and randomly select a target edge index
         bool is_being_written = false;
         bool is_valid_directory_exist = false;
@@ -250,9 +244,6 @@ namespace covered
         {
             return is_finish; // Edge node is NOT running now
         }
-
-        // TMPDEBUG231211
-        struct timespec t2 = Util::getCurrentTimespec();
 
         #ifdef DEBUG_BEACON_SERVER
         Util::dumpVariablesForDebug(base_instance_name_, 6, "is_being_written:", Util::toString(is_being_written).c_str(), "is_valid_directory_exist:", Util::toString(is_valid_directory_exist).c_str(), "directory_info:", std::to_string(directory_info.getTargetEdgeIdx()).c_str());
@@ -268,9 +259,6 @@ namespace covered
         MessageBase* directory_lookup_response_ptr = getRspToLookupLocalDirectory_(control_request_ptr, is_being_written, is_valid_directory_exist, directory_info, best_placement_edgeset, need_hybrid_fetching, fast_path_hint, total_bandwidth_usage, event_list);
         assert(directory_lookup_response_ptr != NULL);
 
-        // TMPDEBUG231211
-        struct timespec t3 = Util::getCurrentTimespec();
-
         // Push the directory lookup response into edge-to-edge propagation simulator to cache server worker
         bool is_successful = edge_wrapper_ptr_->getEdgeToedgePropagationSimulatorParamPtr()->push(directory_lookup_response_ptr, edge_cache_server_worker_recvrsp_dst_addr);
         assert(is_successful);
@@ -278,18 +266,11 @@ namespace covered
         // NOTE: directory_lookup_response_ptr will be released by edge-to-edge propagation simulator
         directory_lookup_response_ptr = NULL;
 
-        // TMPDEBUG231211
-        struct timespec t4 = Util::getCurrentTimespec();
-        Util::dumpVariablesForDebug(base_instance_name_, 10, "process dirlookup req for key", MessageBase::getKeyFromMessage(control_request_ptr).getKeystr().c_str(), "t1-t0:", std::to_string(Util::getDeltaTimeUs(t1, t0)).c_str(), "t2-t1:", std::to_string(Util::getDeltaTimeUs(t2, t1)).c_str(), "t3-t2:", std::to_string(Util::getDeltaTimeUs(t3, t2)).c_str(), "t4-t3:", std::to_string(Util::getDeltaTimeUs(t4, t3)).c_str());
-
         return is_finish;
     }
 
     bool BeaconServerBase::processDirectoryUpdateRequest_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr)
     {
-        // TMPDEBUG231211
-        struct timespec t0 = Util::getCurrentTimespec();
-
         assert(control_request_ptr != NULL);
         assert(edge_cache_server_worker_recvrsp_dst_addr.isValidAddr());
 
@@ -314,9 +295,6 @@ namespace covered
 
         struct timespec update_local_directory_start_timestamp = Util::getCurrentTimespec();
 
-        // TMPDEBUG231211
-        struct timespec t1 = Util::getCurrentTimespec();
-
         // Update local directory information
         bool is_being_written = false;
         bool is_neighbor_cached = false;
@@ -327,9 +305,6 @@ namespace covered
         {
             return is_finish; // Edge node is NOT running now
         }
-
-        // TMPDEBUG231211
-        struct timespec t2 = Util::getCurrentTimespec();
 
         // Add intermediate event if with event tracking
         struct timespec update_local_directory_end_timestamp = Util::getCurrentTimespec();
@@ -348,19 +323,12 @@ namespace covered
         MessageBase* directory_update_response_ptr = getRspToUpdateLocalDirectory_(control_request_ptr, is_being_written, is_neighbor_cached, best_placement_edgeset, need_hybrid_fetching, total_bandwidth_usage, event_list);
         assert(directory_update_response_ptr != NULL);
 
-        // TMPDEBUG231211
-        struct timespec t3 = Util::getCurrentTimespec();
-
         // Push the directory update response into edge-to-edge propagation simulator to cache server worker
         bool is_successful = edge_wrapper_ptr_->getEdgeToedgePropagationSimulatorParamPtr()->push(directory_update_response_ptr, edge_cache_server_worker_recvrsp_dst_addr);
         assert(is_successful);
 
         // NOTE: directory_update_response_ptr will be released by edge-to-edge propagation simulator
         directory_update_response_ptr = NULL;
-
-        // TMPDEBUG231211
-        struct timespec t4 = Util::getCurrentTimespec();
-        Util::dumpVariablesForDebug(base_instance_name_, 10, "process dirupdate req for key", MessageBase::getKeyFromMessage(control_request_ptr).getKeystr().c_str(), "t1-t0:", std::to_string(Util::getDeltaTimeUs(t1, t0)).c_str(), "t2-t1:", std::to_string(Util::getDeltaTimeUs(t2, t1)).c_str(), "t3-t2:", std::to_string(Util::getDeltaTimeUs(t3, t2)).c_str(), "t4-t3:", std::to_string(Util::getDeltaTimeUs(t4, t3)).c_str());
 
         return is_finish;
     }

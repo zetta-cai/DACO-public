@@ -71,11 +71,10 @@ namespace covered
         // Get required information from synchronization server item
         const uint32_t source_edge_idx = synchronization_server_item.getSourceEdgeIdx();
         const VictimSyncset& neighbor_victim_syncset = synchronization_server_item.getNeighborVictimSyncsetRef();
-        const Key tmp_key = synchronization_server_item.getKey(); // TMPDEBUG231211
 
         // Victim synchronization
         // (OBSOLETE due to background processing) NOTE: we always perform victim synchronization before popularity aggregation, as we need the latest synced victim information for placement calculation
-        tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr()->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, tmp_edge_wrapper_ptr->getCooperationWrapperPtr(), tmp_key);
+        tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr()->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, tmp_edge_wrapper_ptr->getCooperationWrapperPtr());
 
         return is_finish;
     }

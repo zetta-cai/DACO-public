@@ -190,8 +190,6 @@ namespace covered
 
     bool CacheServerWorkerBase::processLocalGetRequest_(MessageBase* local_request_ptr, const NetworkAddr& recvrsp_dst_addr) const
     {
-        struct timespec t0 = Util::getCurrentTimespec(); // TMPDEBUG231211
-
         // Get key and value from local request if any
         assert(local_request_ptr != NULL && local_request_ptr->getMessageType() == MessageType::kLocalGetRequest);
         assert(recvrsp_dst_addr.isValidAddr());
@@ -217,8 +215,6 @@ namespace covered
         uint32_t client_edge_local_req_bandwidth_bytes = local_request_ptr->getMsgPayloadSize();
         total_bandwidth_usage.update(BandwidthUsage(client_edge_local_req_bandwidth_bytes, 0, 0));
 
-        struct timespec t1 = Util::getCurrentTimespec(); // TMPDEBUG231211
-
         // Access local edge cache (current edge node is the closest edge node)
         struct timespec get_local_cache_start_timestamp = Util::getCurrentTimespec();
         const bool is_redirected = false;
@@ -230,8 +226,6 @@ namespace covered
         struct timespec get_local_cache_end_timestamp = Util::getCurrentTimespec();
         uint32_t get_local_cache_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(get_local_cache_end_timestamp, get_local_cache_start_timestamp));
         event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_GET_LOCAL_CACHE_EVENT_NAME, get_local_cache_latency_us); // Add intermediate event if with event tracking
-
-        struct timespec t2 = Util::getCurrentTimespec(); // TMPDEBUG231211
 
         // Get is tracked by local uncached metadata before fetching value from neighbor/cloud (ONLY for COVERED)
         CollectedPopularity tmp_collected_popularity_before_fetch_value;
@@ -245,8 +239,6 @@ namespace covered
         #ifdef DEBUG_CACHE_SERVER_WORKER
         Util::dumpVariablesForDebug(base_instance_name_, 5, "acesss local edge cache;", "is_local_cached_and_valid:", Util::toString(is_local_cached_and_valid).c_str(), "keystr:", tmp_key.getKeystr().c_str());
         #endif
-
-        struct timespec t3 = Util::getCurrentTimespec(); // TMPDEBUG231211
 
         // Access cooperative edge cache for local cache miss or invalid object
         bool is_cooperative_cached = false;
@@ -282,8 +274,6 @@ namespace covered
             #endif
         }
 
-        struct timespec t4 = Util::getCurrentTimespec(); // TMPDEBUG231211
-
         // NOTE: hybrid fetching MUST NOT trigger fast-path placement due to key is already tracked by local uncached metadata (no matter sender is beacon or not)
         if (need_hybrid_fetching)
         {
@@ -296,8 +286,6 @@ namespace covered
             // NOTE: key MUST NOT tracked by local uncached metadata before fetching value from neighbor/cloud
             assert(!is_tracked_before_fetch_value);
         }
-
-        struct timespec t5 = Util::getCurrentTimespec(); // TMPDEBUG231211
 
         // Get data from cloud for global cache miss
         struct timespec get_cloud_start_timestamp = Util::getCurrentTimespec();
@@ -313,8 +301,6 @@ namespace covered
         uint32_t get_cloud_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(get_cloud_end_timestamp, get_cloud_start_timestamp));
         event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_GET_CLOUD_EVENT_NAME, get_cloud_latency_us); // Add intermediate event if with event tracking
 
-        struct timespec t6 = Util::getCurrentTimespec(); // TMPDEBUG231211
-
         // Trigger non-blocking placement notification if need hybrid fetching for non-blocking data fetching (ONLY for COVERED)
         struct timespec trigger_placement_start_timestamp = Util::getCurrentTimespec();
         if (need_hybrid_fetching)
@@ -328,8 +314,6 @@ namespace covered
         struct timespec trigger_placement_end_timestamp = Util::getCurrentTimespec();
         uint32_t trigger_placement_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(trigger_placement_end_timestamp, trigger_placement_start_timestamp));
         event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_TRIGGER_PLACEMENT_EVENT_NAME, trigger_placement_latency_us); // Add intermediate event if with event tracking
-
-        struct timespec t7 = Util::getCurrentTimespec(); // TMPDEBUG231211
 
         // Update invalid object of local edge cache if necessary
         struct timespec update_invalid_local_cache_start_timestamp = Util::getCurrentTimespec();
@@ -347,8 +331,6 @@ namespace covered
         uint32_t update_invalid_local_cache_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(update_invalid_local_cache_end_timestamp, update_invalid_local_cache_start_timestamp));
         event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_UPDATE_INVALID_LOCAL_CACHE_EVENT_NAME, update_invalid_local_cache_latency_us); // Add intermediate event if with event tracking
 
-        struct timespec t8 = Util::getCurrentTimespec(); // TMPDEBUG231211
-
         // Trigger independent cache admission for local/global cache miss if necessary
         // NOTE: For COVERED, beacon node will tell the edge node whether to admit or not, w/o independent decision
         struct timespec independent_admission_start_timestamp = Util::getCurrentTimespec();
@@ -360,8 +342,6 @@ namespace covered
         struct timespec independent_admission_end_timestamp = Util::getCurrentTimespec();
         uint32_t independent_admission_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(independent_admission_end_timestamp, independent_admission_start_timestamp));
         event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_INDEPENDENT_ADMISSION_EVENT_NAME, independent_admission_latency_us); // Add intermediate event if with event tracking
-
-        struct timespec t9 = Util::getCurrentTimespec(); // TMPDEBUG231211
 
         // Trigger cache placement for getrsp w/ sender-is-beacon or fast-path placement, if key is local uncached and newly-tracked after fetching value from neighbor/cloud (ONLY for COVERED)
         if (tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME && !tmp_edge_wrapper_ptr->getEdgeCachePtr()->isLocalCached(tmp_key)) // Local uncached object
@@ -382,8 +362,6 @@ namespace covered
             }
         }
 
-        struct timespec t10 = Util::getCurrentTimespec(); // TMPDEBUG231211
-
         // Prepare LocalGetResponse for client
         uint64_t used_bytes = tmp_edge_wrapper_ptr->getSizeForCapacity();
         uint64_t capacity_bytes = tmp_edge_wrapper_ptr->getCapacityBytes();
@@ -391,8 +369,6 @@ namespace covered
         NetworkAddr edge_cache_server_recvreq_source_addr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeCacheServerRecvreqSourceAddr();
         MessageBase* local_get_response_ptr = new LocalGetResponse(tmp_key, tmp_value, hitflag, used_bytes, capacity_bytes, edge_idx, edge_cache_server_recvreq_source_addr, total_bandwidth_usage, event_list, skip_propagation_latency);
         assert(local_get_response_ptr != NULL);
-
-        struct timespec t11 = Util::getCurrentTimespec(); // TMPDEBUG231211
 
         // Push local response message into edge-to-client propagation simulator to a client
         bool is_successful = tmp_edge_wrapper_ptr->getEdgeToclientPropagationSimulatorParamPtr()->push(local_get_response_ptr, recvrsp_dst_addr);
@@ -404,10 +380,6 @@ namespace covered
 
         // NOTE: local_get_response_ptr will be released by edge-to-client propagation simulator
         local_get_response_ptr = NULL;
-
-        // TMPDEBUG231211
-        struct timespec t12 = Util::getCurrentTimespec();
-        Util::dumpVariablesForDebug(base_instance_name_, 26, "process getreq for key", tmp_key.getKeystr().c_str(), "t1-t0:", std::to_string(Util::getDeltaTimeUs(t1, t0)).c_str(), "t2-t1:", std::to_string(Util::getDeltaTimeUs(t2, t1)).c_str(), "t3-t2:", std::to_string(Util::getDeltaTimeUs(t3, t2)).c_str(), "t4-t3:", std::to_string(Util::getDeltaTimeUs(t4, t3)).c_str(), "t5-t4:", std::to_string(Util::getDeltaTimeUs(t5, t4)).c_str(), "t6-t5:", std::to_string(Util::getDeltaTimeUs(t6, t5)).c_str(), "t7-t6:", std::to_string(Util::getDeltaTimeUs(t7, t6)).c_str(), "t8-t7:", std::to_string(Util::getDeltaTimeUs(t8, t7)).c_str(), "t9-t8:", std::to_string(Util::getDeltaTimeUs(t9, t8)).c_str(), "t10-t9:", std::to_string(Util::getDeltaTimeUs(t10, t9)).c_str(), "t11-t10:", std::to_string(Util::getDeltaTimeUs(t11, t10)).c_str(), "t12-t11:", std::to_string(Util::getDeltaTimeUs(t12, t11)).c_str());
 
         return is_finish;
     }

@@ -15,7 +15,7 @@
 #define VICTIM_SYNCSET_USE_BITMAP
 
 // NOTE: as cache margin bytes affect placement calculation and its delta compression has limited bandwidth saving, we disable delta compression of cache margin bytes
-#define DISABLE_CACHE_MARGIN_BYTES_DELTA
+//#define DISABLE_CACHE_MARGIN_BYTES_DELTA
 
 #include <list>
 #include <string>
@@ -30,12 +30,13 @@ namespace covered
     public:
         static VictimSyncset compress(const VictimSyncset& current_victim_syncset, const VictimSyncset& prev_victim_syncset); // Compress current victim syncset w.r.t. previous victim syncset
         //static VictimSyncset recover(const VictimSyncset& compressed_victim_syncset, const VictimSyncset& existing_victim_syncset); // Recover existing victim syncset w.r.t. compressed victim syncset
-        static VictimSyncset recover(const VictimSyncset& compressed_victim_syncset, const VictimSyncset& existing_victim_syncset, const Key& key = Key()); // Recover existing victim syncset w.r.t. compressed victim syncset // TMPDEBUG231211
+        static VictimSyncset recover(const VictimSyncset& compressed_victim_syncset, const VictimSyncset& existing_victim_syncset); // Recover existing victim syncset w.r.t. compressed victim syncset
 
         static VictimSyncset getFullCompressedVictimSyncset(const SeqNum& seqnum, const bool& is_enforce_complete);
 
         VictimSyncset();
         VictimSyncset(const VictimSyncset& other);
+        VictimSyncset(const SeqNum& seqnum, const bool& is_enforce_complete);
         VictimSyncset(const SeqNum& seqnum, const bool& is_enforce_complete, const uint64_t& cache_margin_bytes, const std::list<VictimCacheinfo>& local_synced_victims, const std::list<std::pair<Key, DirinfoSet>>& local_beaconed_victims);
         ~VictimSyncset();
 
@@ -57,6 +58,7 @@ namespace covered
         // For complete victim syncset
         void setCacheMarginBytes(const uint64_t& cache_margin_bytes);
         void setLocalSyncedVictims(const std::list<VictimCacheinfo>& local_synced_victims);
+        void pushLocalBeaconedVictimForComplete(const Key& key, const DirinfoSet& dirinfo_set);
         void setLocalBeaconedVictims(const std::list<std::pair<Key, DirinfoSet>>& local_beaconed_victims);
 
         // For compressed victim syncset

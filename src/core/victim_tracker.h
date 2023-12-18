@@ -54,10 +54,8 @@ namespace covered
 
         // For victim synchronization
         // NOTE: getLocalVictimSyncsetForSynchronization() can ONLY be used to issue local synced victims for victim synchronization, as it will increase cur_seqnum_ of the current edge node towards the given dst edge node in peredge_victimsync_monitor_
-        //VictimSyncset getLocalVictimSyncsetForSynchronization(const uint32_t& dst_edge_idx_for_compression, const uint64_t& latest_local_cache_margin_bytes) const; // Get complete victim syncset for current edge node (i.e., edge_idx_) (NOTE: we always use the latest cache margin bytes for local victim syncset, instead of using that in edge-level victim metadata of the current edge node, which may be stale)
-        VictimSyncset getLocalVictimSyncsetForSynchronization(const uint32_t& dst_edge_idx_for_compression, const uint64_t& latest_local_cache_margin_bytes, const Key& key = Key()) const; // TMPDEBUG231211
-        //void updateForNeighborVictimSyncset(const uint32_t& source_edge_idx, const VictimSyncset& neighbor_victim_syncset, const CooperationWrapperBase* cooperation_wrapper_ptr); // Update victim tracker in the current edge node for the received victim syncset from neighbor edge node (neighbor_victim_syncset may be complete/compressed) (NOTE: ONLY used by CoveredCacheManager in the background)
-        void updateForNeighborVictimSyncset(const uint32_t& source_edge_idx, const VictimSyncset& neighbor_victim_syncset, const CooperationWrapperBase* cooperation_wrapper_ptr, const Key& key = Key()); // TMPDEBUG231211
+        VictimSyncset getLocalVictimSyncsetForSynchronization(const uint32_t& dst_edge_idx_for_compression, const uint64_t& latest_local_cache_margin_bytes) const; // Get complete victim syncset for current edge node (i.e., edge_idx_) (NOTE: we always use the latest cache margin bytes for local victim syncset, instead of using that in edge-level victim metadata of the current edge node, which may be stale)
+        void updateForNeighborVictimSyncset(const uint32_t& source_edge_idx, const VictimSyncset& neighbor_victim_syncset, const CooperationWrapperBase* cooperation_wrapper_ptr); // Update victim tracker in the current edge node for the received victim syncset from neighbor edge node (neighbor_victim_syncset may be complete/compressed) (NOTE: ONLY used by CoveredCacheManager in the background)
 
         // For trade-off-aware placement calculation
         // NOTE: placement_edgeset is used for preserved edgeset, old local uncached popularities removal; placement_peredge_synced_victimset is used for synced victim removal from victim tracker, while placement_peredge_fetched_victimset is used for fetched victim removal from victim cache; victim_fetch_edgeset is used for lazy victim fetching (all under non-blocking placement deployment)
@@ -81,7 +79,7 @@ namespace covered
         // Utils
 
         // For victim synchronization
-        VictimSyncset getVictimSyncset_(const uint32_t& edge_idx) const; // For local edge idx to synchronize victim info, seqnum is the cur_seqnum_ of to-be-issued local victim syncset; for neighbor edge idx to recover complete victim info, seqnum is the tracked_seqnum_ of existing tracked victim info synced from neighbor before
+        void getVictimSyncset_(const uint32_t& edge_idx, VictimSyncset& victim_syncset) const; // For local edge idx to synchronize victim info, seqnum is the cur_seqnum_ of to-be-issued local victim syncset; for neighbor edge idx to recover complete victim info, seqnum is the tracked_seqnum_ of existing tracked victim info synced from neighbor before
 
         // For victim update and removal
         void replaceVictimMetadataForEdgeIdx_(const uint32_t& edge_idx, const uint64_t& cache_margin_bytes, const std::list<VictimCacheinfo>& synced_victim_cacheinfos, const CooperationWrapperBase* cooperation_wrapper_ptr); // Replace cache margin bytes and cacheinfos of local/neighbor synced victims for a specific edge node (synced_victim_cacheinfos MUST be complete)

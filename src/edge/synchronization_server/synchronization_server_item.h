@@ -17,13 +17,11 @@ namespace covered
     {
     public:
         SynchronizationServerItem();
-        // SynchronizationServerItem(const uint32_t& source_edge_idx, const VictimSyncset& neighbor_victim_syncset);
-        SynchronizationServerItem(const uint32_t& source_edge_idx, const VictimSyncset& neighbor_victim_syncset, const Key& key); // TMPDEBUG231211
+        SynchronizationServerItem(const uint32_t& source_edge_idx, const VictimSyncset& neighbor_victim_syncset);
         ~SynchronizationServerItem();
 
         uint32_t getSourceEdgeIdx() const;
         const VictimSyncset& getNeighborVictimSyncsetRef() const;
-        Key getKey() const; // TMPDEBUG231211
 
         const SynchronizationServerItem& operator=(const SynchronizationServerItem& other);
     private:
@@ -31,7 +29,6 @@ namespace covered
 
         uint32_t source_edge_idx_;
         VictimSyncset neighbor_victim_syncset_;
-        Key key_; // TMPDEBUG231211
     };
 }
 

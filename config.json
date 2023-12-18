@@ -26,6 +26,7 @@
     "evaluator_recvmsg_port": 5500,
     "facebook_config_filepath": "lib/CacheLib/cachelib/cachebench/test_configs/hit_ratio/cdn/config.json",
     "fine_grained_locking_size": 1000,
+    "is_assert": 0,
     "is_debug": 0,
     "is_info": 0,
     "is_generate_random_valuestr": 0,

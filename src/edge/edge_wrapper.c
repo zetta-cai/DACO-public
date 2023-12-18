@@ -1066,18 +1066,15 @@ namespace covered
         return;
     }
 
-    //void EdgeWrapper::updateCacheManagerForNeighborVictimSyncset(const uint32_t& source_edge_idx, const VictimSyncset& neighbor_victim_syncset) const
-    void EdgeWrapper::updateCacheManagerForNeighborVictimSyncset(const uint32_t& source_edge_idx, const VictimSyncset& neighbor_victim_syncset, const Key& key) const // TMPDEBUG231211
+    void EdgeWrapper::updateCacheManagerForNeighborVictimSyncset(const uint32_t& source_edge_idx, const VictimSyncset& neighbor_victim_syncset) const
     {
         #ifndef ENABLE_BACKGROUND_VICTIM_SYNCHRONIZATION
         // Foreground victim synchronization
         // NOTE: we always perform victim synchronization before popularity aggregation, as we need the latest synced victim information for placement calculation
-        //covered_cache_manager_ptr_->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, cooperation_wrapper_ptr_);
-        covered_cache_manager_ptr_->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, cooperation_wrapper_ptr_, key); // TMPDEBUG231211
+        covered_cache_manager_ptr_->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, cooperation_wrapper_ptr_);
         #else
         // Background victim synchronization
-        // bool is_successful = getSynchronizationServerParamPtr()->getSynchronizationServerItemBufferPtr()->push(SynchronizationServerItem(source_edge_idx, neighbor_victim_syncset));
-        bool is_successful = getSynchronizationServerParamPtr()->getSynchronizationServerItemBufferPtr()->push(SynchronizationServerItem(source_edge_idx, neighbor_victim_syncset, key)); // TMPDEBUG231211
+        bool is_successful = getSynchronizationServerParamPtr()->getSynchronizationServerItemBufferPtr()->push(SynchronizationServerItem(source_edge_idx, neighbor_victim_syncset));
         assert(is_successful); // Ring buffer must not be full
         #endif
 
@@ -1299,8 +1296,7 @@ namespace covered
             {
                 // Prepare metadata update request
                 // NOTE: edge_beacon_server_recvreq_source_addr_for_placement_ will NOT be used by edge cache server metadata update processor due to no response
-                //const VictimSyncset victim_syncset = covered_cache_manager_ptr_->accessVictimTrackerForLocalVictimSyncset(notify_edge_idx, getCacheMarginBytes());
-                const VictimSyncset victim_syncset = covered_cache_manager_ptr_->accessVictimTrackerForLocalVictimSyncset(notify_edge_idx, getCacheMarginBytes(), key); // TMPDEBUG231211
+                const VictimSyncset victim_syncset = covered_cache_manager_ptr_->accessVictimTrackerForLocalVictimSyncset(notify_edge_idx, getCacheMarginBytes());
                 MessageBase* covered_metadata_update_request_ptr = new CoveredMetadataUpdateRequest(key, is_neighbor_cached, victim_syncset, current_edge_idx, edge_beacon_server_recvreq_source_addr_for_placement_, skip_propagation_latency);
                 assert(covered_metadata_update_request_ptr != NULL);
 
@@ -1403,29 +1399,16 @@ namespace covered
 
     void EdgeWrapper::afterDirectoryAdmissionHelper_(const Key& key, const uint32_t& source_edge_idx, const MetadataUpdateRequirement& metadata_update_requirement, const DirectoryInfo& directory_info, const bool& skip_propagation_latency) const
     {
-        // TMPDEBUG231211
-        struct timespec t0 = Util::getCurrentTimespec();
-
         const bool is_admit = true;
 
         // Issue local/remote metadata update request for beacon-based cached metadata update if necessary (for local/remote directory admission)
         processMetadataUpdateRequirement(key, metadata_update_requirement, skip_propagation_latency);
 
-        // TMPDEBUG231211
-        struct timespec t1 = Util::getCurrentTimespec();
-
         // Update directory info in victim tracker if the local beaconed key is a local/neighbor synced victim (here we update victim dirinfo in victim tracker before access popularity aggregator)
         covered_cache_manager_ptr_->updateVictimTrackerForLocalBeaconedVictimDirinfo(key, is_admit, directory_info);
 
-        // TMPDEBUG231211
-        struct timespec t2 = Util::getCurrentTimespec();
-
         // Clear preserved edge nodes for the given key at the source edge node for metadata releasing after local/remote admission notification
         covered_cache_manager_ptr_->clearPopularityAggregatorForPreservedEdgesetAfterAdmission(key, source_edge_idx);
-
-        // TMPDEBUG231211
-        struct timespec t3 = Util::getCurrentTimespec();
-        // Util::dumpVariablesForDebug(instance_name_, 8, "COVERED: afterDirectoryAdmissionHelper_ for key", key.getKeystr().c_str(), "t1-t0:", std::to_string(Util::getDeltaTimeUs(t1, t0)).c_str(), "t2-t1:", std::to_string(Util::getDeltaTimeUs(t2, t1)).c_str(), "t3-t2:", std::to_string(Util::getDeltaTimeUs(t3, t2)).c_str());
 
         return;
     }
