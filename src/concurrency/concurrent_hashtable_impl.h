@@ -226,7 +226,7 @@ namespace covered
     template<class V>
     void ConcurrentHashtable<V>::constCallIfExist(const Key& key, bool& is_exist, const std::string& function_name, void* param_ptr) const
     {
-        MYASSERT(perkey_rwlock_ptr_ != NULL);
+        assert(perkey_rwlock_ptr_ != NULL);
 
         // Must be protected by a read/write lock
         MYASSERT(perkey_rwlock_ptr_->isReadOrWriteLocked(key));

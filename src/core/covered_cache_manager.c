@@ -588,7 +588,7 @@ namespace covered
             const Key& tmp_victim_key = victim_dirinfosets_const_iter->first;
 
             // NOTE: must NOT exist due to unique neighbor beaconed neighbor cached keys
-            assert((KVListHelper<Key, DirinfoSet>::findVFromListForK(tmp_victim_key, extra_perkey_victim_dirinfoset) == extra_perkey_victim_dirinfoset.end()));
+            MYASSERT((KVListHelper<Key, DirinfoSet>::findVFromListForK(tmp_victim_key, extra_perkey_victim_dirinfoset) == extra_perkey_victim_dirinfoset.end()));
 
             extra_perkey_victim_dirinfoset.push_back(std::pair<Key, DirinfoSet>(tmp_victim_key, victim_dirinfosets_const_iter->second));
         }

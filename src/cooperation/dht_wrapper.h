@@ -24,8 +24,10 @@ namespace covered
         ~DhtWrapper();
 
         uint32_t getBeaconEdgeIdx(const Key& key) const;
-        std::string getBeaconEdgeIpstr(const Key& key) const;
-        uint16_t getBeaconEdgeBeaconServerRecvreqPort(const Key& key) const;
+        // std::string getBeaconEdgeIpstr(const Key& key) const;
+        // uint16_t getBeaconEdgeBeaconServerRecvreqPort(const Key& key) const;
+        std::string getBeaconEdgeIpstr(const uint32_t& beacon_edge_idx) const;
+        uint16_t getBeaconEdgeBeaconServerRecvreqPort(const uint32_t& beacon_edge_idx) const;
     private:
         static const std::string kClassName;
         static const uint32_t DHT_HASH_RING_LENGTH;

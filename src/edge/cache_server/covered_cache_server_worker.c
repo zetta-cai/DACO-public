@@ -108,9 +108,11 @@ namespace covered
         CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
         uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
 
-        // Prepare victim syncset for piggybacking-based victim synchronization
+        // NOTE: current edge node MUST NOT be the beacon edge node for the given key
         const uint32_t dst_beacon_edge_idx_for_compression = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
-        MYASSERT(dst_beacon_edge_idx_for_compression != edge_idx); // Current edge node MUST NOT be the beacon edge node for the given key
+        assert(dst_beacon_edge_idx_for_compression != edge_idx);
+
+        // Prepare victim syncset for piggybacking-based victim synchronization
         VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_beacon_edge_idx_for_compression, tmp_edge_wrapper_ptr->getCacheMarginBytes());
 
         // Prepare local uncached popularity of key for piggybacking-based popularity collection
@@ -348,7 +350,7 @@ namespace covered
         #ifdef ENABLE_FAST_PATH_PLACEMENT
         else if (fast_path_hint.isValid()) // Trigger fast-path single-placement calculation if with valid FastPathHint
         {
-            assert(!current_is_beacon); // ONLY remote beacon can provide FastPathHint to sender edge node
+            MYASSERT(!current_is_beacon); // ONLY remote beacon can provide FastPathHint to sender edge node
 
             // NOTE: although passed param (is_global_cached) is looked up before fetching value, which may be stale, we still use it due to approximate fast-path placement, instead of looking up the latest is_global_cached from remote beacon edge node, which will introduce extra message overhead
 
@@ -461,9 +463,11 @@ namespace covered
         CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
         uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
 
-        // Prepare victim syncset for piggybacking-based victim synchronization
+        // NOTE: current edge node MUST NOT be the beacon edge node for the given key
         const uint32_t dst_beacon_edge_idx_for_compression = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
-        MYASSERT(dst_beacon_edge_idx_for_compression != edge_idx); // Current edge node MUST NOT be the beacon edge node for the given key
+        assert(dst_beacon_edge_idx_for_compression != edge_idx);
+
+        // Prepare victim syncset for piggybacking-based victim synchronization
         VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_beacon_edge_idx_for_compression, tmp_edge_wrapper_ptr->getCacheMarginBytes());
 
         // Prepare local uncached popularity of key for piggybacking-based popularity collection
@@ -623,9 +627,11 @@ namespace covered
         CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
         uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
 
-        // Prepare victim syncset for piggybacking-based victim synchronization
+        // NOTE: current edge node MUST NOT be the beacon edge node for the given key
         const uint32_t dst_beacon_edge_idx_for_compression = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
-        MYASSERT(dst_beacon_edge_idx_for_compression != edge_idx); // Current edge node MUST NOT be the beacon edge node for the given key
+        assert(dst_beacon_edge_idx_for_compression != edge_idx);
+
+        // Prepare victim syncset for piggybacking-based victim synchronization
         VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_beacon_edge_idx_for_compression, tmp_edge_wrapper_ptr->getCacheMarginBytes());
 
         // Prepare local uncached popularity of key for piggybacking-based popularity collection

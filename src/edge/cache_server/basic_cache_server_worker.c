@@ -63,9 +63,13 @@ namespace covered
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
+
+        // NOTE: current edge node MUST NOT be the beacon edge node for the given key
+        const uint32_t dst_beacon_edge_idx_for_compression = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
+        assert(dst_beacon_edge_idx_for_compression != edge_idx);
 
         // Prepare directory lookup request to check directory information in beacon node
-        uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
         MessageBase* directory_lookup_request_ptr = new DirectoryLookupRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
         assert(directory_lookup_request_ptr != NULL);
 
@@ -174,8 +178,12 @@ namespace covered
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
-
         uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
+
+        // NOTE: current edge node MUST NOT be the beacon edge node for the given key
+        const uint32_t dst_beacon_edge_idx_for_compression = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
+        assert(dst_beacon_edge_idx_for_compression != edge_idx);
+
         MessageBase* acquire_writelock_request_ptr = new AcquireWritelockRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
         assert(acquire_writelock_request_ptr != NULL);
 
@@ -272,8 +280,12 @@ namespace covered
     {
         checkPointers_();
         EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
-
         uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
+
+        // NOTE: current edge node MUST NOT be the beacon edge node for the given key
+        const uint32_t dst_beacon_edge_idx_for_compression = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
+        assert(dst_beacon_edge_idx_for_compression != edge_idx);
+
         MessageBase* release_writelock_request_ptr = new ReleaseWritelockRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
         assert(release_writelock_request_ptr != NULL);
 

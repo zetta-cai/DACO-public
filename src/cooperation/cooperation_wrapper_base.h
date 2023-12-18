@@ -44,6 +44,7 @@ namespace covered
 
         uint32_t getBeaconEdgeIdx(const Key& key) const;
         NetworkAddr getBeaconEdgeBeaconServerRecvreqAddr(const Key& key) const;
+        NetworkAddr getBeaconEdgeBeaconServerRecvreqAddr(const uint32_t& beacon_edge_idx) const;
 
         // (2) Access content directory table and block tracker for MSI protocol
 

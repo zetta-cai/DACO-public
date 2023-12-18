@@ -88,6 +88,7 @@ namespace covered
 
         // For request redirection (triggered by client-issued local requests and COVERED's non-blocking placement deployment)
         NetworkAddr getBeaconDstaddr_(const Key& key) const; // Get destination address of beacon server recvreq in beacon edge node
+        NetworkAddr getBeaconDstaddr_(const uint32_t& beacon_edge_idx) const; // Get destination address of beacon server recvreq in beacon edge node
         NetworkAddr getTargetDstaddr(const DirectoryInfo& directory_info) const; // Get destination address of cache server recvreq in target edge node
 
         // (3) Invalidate and unblock for MSI protocol

@@ -360,6 +360,19 @@ namespace covered
         return beacon_edge_beacon_server_recvreq_dst_addr;
     }
 
+    NetworkAddr EdgeWrapper::getBeaconDstaddr_(const uint32_t& beacon_edge_idx) const
+    {
+        checkPointers_();
+
+        // The current edge node must NOT be the beacon node for the key
+        assert(beacon_edge_idx != getNodeIdx());
+
+        // Get remote address such that current edge node can communicate with the beacon node for the key
+        NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = cooperation_wrapper_ptr_->getBeaconEdgeBeaconServerRecvreqAddr(beacon_edge_idx);
+
+        return beacon_edge_beacon_server_recvreq_dst_addr;
+    }
+
     NetworkAddr EdgeWrapper::getTargetDstaddr(const DirectoryInfo& directory_info) const
     {
         checkPointers_();
@@ -1221,7 +1234,7 @@ namespace covered
         if (edgeset_const_iter_for_local_notification != best_placement_edgeset.end()) // If current edge node is also in best_placement_edgeset
         {
             // Current edge node MUST be the beacon node for the given key
-            assert(currentIsBeacon(key));
+            MYASSERT(currentIsBeacon(key));
 
             // Admit local directory information
             // NOTE: NO need to update aggregated uncached popularity due to admitting a cached object

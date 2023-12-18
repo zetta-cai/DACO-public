@@ -45,8 +45,8 @@ namespace covered
         for (std::list<VictimCacheinfo>::const_iterator iter = victim_cacheinfos.begin(); iter != victim_cacheinfos.end(); iter++)
         {
             // NOTE: local/neighbor synced victim MUST NOT invalid or fully-deduped
-            MYASSERT(!iter->isInvalid());
-            MYASSERT(!iter->isFullyDeduped());
+            assert(!iter->isInvalid());
+            assert(!iter->isFullyDeduped());
 
             if (iter->isStale()) // NOTE: NO need to get local dirinfo set for a stale victim, as victim tracker will remove the corresponding victim cacheinfo and may also remove the victim dirinfo if refcnt becomes zero
             {
@@ -64,7 +64,7 @@ namespace covered
             if (current_is_beacon) // Key is beaconed by current edge node
             {
                 DirinfoSet tmp_dirinfo_set = getLocalDirectoryInfos(tmp_key);
-                MYASSERT(tmp_dirinfo_set.isComplete()); // NOTE: dirinfo sets from local directory table MUST be complete
+                assert(tmp_dirinfo_set.isComplete()); // NOTE: dirinfo sets from local directory table MUST be complete
                 local_beaconed_victim_dirinfosets.push_back(std::pair(tmp_key, tmp_dirinfo_set));
             }
         }

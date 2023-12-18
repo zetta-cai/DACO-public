@@ -617,8 +617,8 @@ namespace covered
     {
         // NOTE: NO need to acquire a write lock which has been done in updateLocalSyncedVictims() and updateForNeighborVictimSyncset()
 
-        MYASSERT(synced_victim_cacheinfos.size() <= peredge_synced_victimcnt_);
-        MYASSERT(cooperation_wrapper_ptr != NULL);
+        assert(synced_victim_cacheinfos.size() <= peredge_synced_victimcnt_);
+        assert(cooperation_wrapper_ptr != NULL);
 
         // Update cacheinfos of synced victims for the specific edge node
         std::list<VictimCacheinfo> old_synced_victim_cacheinfos;
@@ -630,7 +630,7 @@ namespace covered
             // Add latest synced victims for the specific edge node
             // NOTE: EdgelevelVictimMetadata will assert that all victim cacheinfos are complete
             peredge_victim_metadata_[edge_idx].validate(cache_margin_bytes, synced_victim_cacheinfos);
-            MYASSERT(peredge_victim_metadata_[edge_idx].isValid());
+            assert(peredge_victim_metadata_[edge_idx].isValid());
 
             //size_bytes_ = Util::uint64Add(size_bytes_, sizeof(uint32_t)); // For edge_idx
             size_bytes_ = Util::uint64Add(size_bytes_, sizeof(uint64_t)); // For cache_margin_bytes
@@ -649,7 +649,7 @@ namespace covered
         for (std::list<VictimCacheinfo>::const_iterator new_cacheinfo_list_iter = synced_victim_cacheinfos.begin(); new_cacheinfo_list_iter != synced_victim_cacheinfos.end(); new_cacheinfo_list_iter++)
         {
             // Local/neighbor synced victim cacheinfos passed into victim tracker MUST be complete
-            MYASSERT(new_cacheinfo_list_iter->isComplete());
+            assert(new_cacheinfo_list_iter->isComplete());
 
             size_bytes_ = Util::uint64Add(size_bytes_, new_cacheinfo_list_iter->getSizeForCapacity()); // For cacheinfo of each latest local synced victims
 
@@ -668,7 +668,7 @@ namespace covered
                 perkey_victim_dirinfo_.push_back(std::pair(tmp_key, VictimDirinfo(tmp_beacon_edge_idx)));
                 dirinfo_list_iter = perkey_victim_dirinfo_.end();
                 dirinfo_list_iter--; // Point to the last element just pushed back
-                MYASSERT(dirinfo_list_iter != perkey_victim_dirinfo_.end());
+                assert(dirinfo_list_iter != perkey_victim_dirinfo_.end());
 
                 dirinfo_list_iter->second.incrRefcnt();
 
@@ -685,7 +685,7 @@ namespace covered
         // Remove victim dirinfos for old synced victim keys
         for (std::list<VictimCacheinfo>::const_iterator old_cacheinfo_list_iter = old_synced_victim_cacheinfos.begin(); old_cacheinfo_list_iter != old_synced_victim_cacheinfos.end(); old_cacheinfo_list_iter++)
         {
-            MYASSERT(old_cacheinfo_list_iter->isComplete()); // NOTE: old victim cacheinfo stored in victim tracker MUST be complete
+            assert(old_cacheinfo_list_iter->isComplete()); // NOTE: old victim cacheinfo stored in victim tracker MUST be complete
 
             size_bytes_ = Util::uint64Minus(size_bytes_, old_cacheinfo_list_iter->getSizeForCapacity()); // For cacheinfo of each old synced victim
 

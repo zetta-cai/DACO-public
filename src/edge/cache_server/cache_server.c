@@ -482,14 +482,16 @@ namespace covered
         const bool is_admit = true; // Try to admit a new key as local cached object (NOTE: local edge cache has NOT been admitted yet)
         uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
 
+        // NOTE: current edge node MUST NOT be the beacon edge node for the given key
+        const uint32_t dst_beacon_edge_idx_for_compression = edge_wrapper_ptr_->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
+        assert(dst_beacon_edge_idx_for_compression != edge_idx);
+
         MessageBase* directory_update_request_ptr = NULL;
         if (edge_wrapper_ptr_->getCacheName() == Util::COVERED_CACHE_NAME) // ONLY for COVERED
         {
             CoveredCacheManager* tmp_covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
 
             // Prepare victim syncset for piggybacking-based victim synchronization
-            const uint32_t dst_beacon_edge_idx_for_compression = edge_wrapper_ptr_->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
-            assert(dst_beacon_edge_idx_for_compression != edge_idx); // Current edge node MUST NOT be the beacon edge node for the given key
             VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_beacon_edge_idx_for_compression, edge_wrapper_ptr_->getCacheMarginBytes());
 
             // ONLY need victim synchronization yet without popularity collection/aggregation
@@ -855,6 +857,10 @@ namespace covered
         uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
         const bool is_admit = false; // Evict a victim as local uncached object (NOTE: local edge cache has already been evicted)
         MessageBase* directory_update_request_ptr = NULL;
+
+        // NOTE: current edge node MUST NOT be the beacon edge node for the given key
+        const uint32_t dst_beacon_edge_idx_for_compression = edge_wrapper_ptr_->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
+        assert(dst_beacon_edge_idx_for_compression != edge_idx);
     
         if (edge_wrapper_ptr_->getCacheName() == Util::COVERED_CACHE_NAME) // ONLY for COVERED
         {
@@ -865,8 +871,6 @@ namespace covered
             edge_wrapper_ptr_->getEdgeCachePtr()->getCollectedPopularity(key, collected_popularity); // collected_popularity.is_tracked_ indicates if the local uncached key is tracked in local uncached metadata (due to selective metadata preservation)
 
             // Prepare victim syncset for piggybacking-based victim synchronization
-            const uint32_t dst_beacon_edge_idx_for_compression = edge_wrapper_ptr_->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
-            assert(dst_beacon_edge_idx_for_compression != edge_idx); // Current edge node MUST NOT be the beacon edge node for the given key
             VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_beacon_edge_idx_for_compression, edge_wrapper_ptr_->getCacheMarginBytes());
 
             // Need BOTH popularity collection and victim synchronization
@@ -983,13 +987,15 @@ namespace covered
 
         checkPointers_();
         CoveredCacheManager* tmp_covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
-        const bool sender_is_beacon = edge_wrapper_ptr_->currentIsBeacon(key);
-        assert(!sender_is_beacon);
+        
+        // NOTE: current edge node MUST NOT be the beacon edge node for the given key
+        const uint32_t current_edge_idx = edge_wrapper_ptr_->getNodeIdx();
+        const uint32_t dst_beacon_edge_idx_for_compression = edge_wrapper_ptr_->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
+        assert(dst_beacon_edge_idx_for_compression != current_edge_idx); 
 
         bool is_finish = false;
 
         // Check if current edge node needs placement
-        const uint32_t current_edge_idx = edge_wrapper_ptr_->getNodeIdx();
         std::unordered_set<uint32_t>::const_iterator tmp_best_placement_edgeset_const_iter = tmp_best_placement_edgest.find(current_edge_idx);
         bool current_need_placement = false;
         bool current_is_only_placement = false;
@@ -1004,11 +1010,9 @@ namespace covered
         }
 
         // Prepare destination address of beacon server
-        NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = edge_wrapper_ptr_->getBeaconDstaddr_(key);
+        NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = edge_wrapper_ptr_->getBeaconDstaddr_(dst_beacon_edge_idx_for_compression);
 
         // Prepare victim syncset for piggybacking-based victim synchronization
-        const uint32_t dst_beacon_edge_idx_for_compression = edge_wrapper_ptr_->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
-        assert(dst_beacon_edge_idx_for_compression != current_edge_idx); // Current edge node MUST NOT be the beacon edge node for the given key
         VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_beacon_edge_idx_for_compression, edge_wrapper_ptr_->getCacheMarginBytes());
 
         // Notify result of hybrid data fetching towards the beacon edge node to trigger non-blocking placement notification

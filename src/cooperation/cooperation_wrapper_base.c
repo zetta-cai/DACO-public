@@ -93,8 +93,17 @@ namespace covered
     {
         // No need to acquire a read lock due to accessing a const shared variable
 
-        std::string beacon_edge_ipstr = dht_wrapper_ptr_->getBeaconEdgeIpstr(key);
-        uint16_t beacon_edge_beacon_server_recvreq_port = dht_wrapper_ptr_->getBeaconEdgeBeaconServerRecvreqPort(key);
+        const uint32_t beacon_edge_idx = dht_wrapper_ptr_->getBeaconEdgeIdx(key);
+        NetworkAddr beacon_edge_beacon_server_recvreq_addr = getBeaconEdgeBeaconServerRecvreqAddr(beacon_edge_idx);
+        return beacon_edge_beacon_server_recvreq_addr;
+    }
+
+    NetworkAddr CooperationWrapperBase::getBeaconEdgeBeaconServerRecvreqAddr(const uint32_t& beacon_edge_idx) const
+    {
+        // No need to acquire a read lock due to accessing a const shared variable
+
+        std::string beacon_edge_ipstr = dht_wrapper_ptr_->getBeaconEdgeIpstr(beacon_edge_idx);
+        uint16_t beacon_edge_beacon_server_recvreq_port = dht_wrapper_ptr_->getBeaconEdgeBeaconServerRecvreqPort(beacon_edge_idx);
         NetworkAddr beacon_edge_beacon_server_recvreq_addr(beacon_edge_ipstr, beacon_edge_beacon_server_recvreq_port);
         return beacon_edge_beacon_server_recvreq_addr;
     }
@@ -153,7 +162,7 @@ namespace covered
         // Release a read lock
         cooperation_wrapper_perkey_rwlock_ptr_->unlock_shared(key, context_name);
 
-        MYASSERT(dirinfo_set.isComplete()); // NOTE: vicitm dirinfo set from local directory table MUST be complete
+        assert(dirinfo_set.isComplete()); // NOTE: vicitm dirinfo set from local directory table MUST be complete
         return dirinfo_set;
     }
 
