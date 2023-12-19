@@ -154,6 +154,31 @@ namespace covered
 
         const uint64_t start_victimsync_monitor_size = peredge_victimsync_monitor_[dst_edge_idx_for_compression].getSizeForCapacity();
 
+        // TMPDEBUG231216
+        #ifdef ENABLE_DELTA_DEDUP_COMPERSSION
+
+        #ifdef ENABLE_BACKGROUND_VICTIM_SYNCHRONIZATION
+        VictimSyncset final_victim_syncset;
+        bool need_latest_victim_syncset = peredge_victimsync_monitor_[dst_edge_idx_for_compression].getPregenVictimSyncset(final_victim_syncset);
+        if (need_latest_victim_syncset) // No pre-generated victim syncset (e.g., first-issued, enforce-complete, or no pre-compression)
+        {
+            // NOTE: we temporarily use 0 as seqnum and false as is_enforce_complete, which will be set by VictimsyncMonitor::replacePrevVictimSyncset()
+            VictimSyncset current_victim_syncset(0, false);
+
+            // Get local complete victim syncset of the current edge node
+            getVictimSyncset_(edge_idx_, current_victim_syncset); // NOTE: will set cache margin bytes, synced victims, and dirinfo sets
+            assert(current_victim_syncset.isComplete());
+
+            peredge_victimsync_monitor_[dst_edge_idx_for_compression].replacePrevVictimSyncset(current_victim_syncset, final_victim_syncset);
+        }
+        #ifndef DISABLE_CACHE_MARGIN_BYTES_DELTA
+        // TODO: if we want to delta compress cache margin bytes, (i) we have to pass latest cache margin bytes at the time of receiving neighbor victim syncset for pre-compression, which could incur imprecise cache margin bytes; (ii) we have to pass latest cache margin bytes to getPregenVictimSyncset() if use full-compressed victim syncset yet with accurate delta of cache margin bytes; (iii) we have to set latest cache margin bytes for current_victim_syncset if need_latest_victim_syncset instead of for final_victim_syncset
+        assert(false);
+        #else
+        // NOTE: we always use the latest cache margin bytes for local victim syncset, instead of using that in edge-level victim metadata of the current edge node, which may be stale
+        final_victim_syncset.setCacheMarginBytes(latest_local_cache_margin_bytes);
+        #endif
+        #else
         // NOTE: we temporarily use 0 as seqnum and false as is_enforce_complete, which will be set by VictimsyncMonitor::replacePrevVictimSyncset()
         VictimSyncset current_victim_syncset(0, false);
 
@@ -166,6 +191,19 @@ namespace covered
 
         VictimSyncset final_victim_syncset;
         peredge_victimsync_monitor_[dst_edge_idx_for_compression].replacePrevVictimSyncset(current_victim_syncset, final_victim_syncset); // NOTE: this will set seqnum and is_enforce_complete flag for the latest victim syncset and inherit into final victim syncset
+        #endif
+
+        #else
+
+        // NOTE: we temporarily use 0 as seqnum and false as is_enforce_complete, which will NOT be used due to disabling delta compression/recovery of victim syncset
+        VictimSyncset final_victim_syncset(0, false);
+
+        getVictimSyncset_(edge_idx_, final_victim_syncset); // NOTE: will set cache margin bytes, synced victims, and dirinfo sets
+
+        // NOTE: we always use the latest cache margin bytes for local victim syncset, instead of using that in edge-level victim metadata of the current edge node, which may be stale
+        final_victim_syncset.setCacheMarginBytes(latest_local_cache_margin_bytes);
+
+        #endif
 
         const uint64_t end_victimsync_monitor_size = peredge_victimsync_monitor_[dst_edge_idx_for_compression].getSizeForCapacity();
         if (end_victimsync_monitor_size > start_victimsync_monitor_size)
@@ -194,6 +232,8 @@ namespace covered
 
         const uint64_t start_victimsync_monitor_size = peredge_victimsync_monitor_[source_edge_idx].getSizeForCapacity();
 
+        // TMPDEBUG231216
+        #ifdef ENABLE_DELTA_DEDUP_COMPERSSION
         // Enforce complete victim syncset for the next message to source edge node if necessary
         if (neighbor_victim_syncset.isEnforceComplete()) // Enforce the current edge node to issue complete victim syncset without compression for the given source edge node
         {
@@ -290,6 +330,11 @@ namespace covered
                 peredge_victimsync_monitor_[source_edge_idx].tryToEnableEnforcementStatus_(neighbor_victim_syncset, synced_seqnum, peredge_monitored_victimsetcnt_); // Trigger complete enforcement if cached victim syncsets is full (this will cache compressed victim syncset if cached_victim_syncsets_ is not full, or enable enforcement status (set need_enforcement_ = true, enforcement_seqnum_ = synced_seqnum, and wait_for_complete_victim_syncset_ = true) otherwise)
             }
         }
+        #else
+        bool need_update_victim_tracker_ = true;
+        bool with_new_neighbor_complete_victim_syncset = false;
+        SeqNum synced_seqnum = 0;
+        #endif
 
         // Update edge-level victim metadata and victim dirinfo sets in victim tracker
         if (need_update_victim_tracker_)
@@ -337,6 +382,21 @@ namespace covered
             assert(local_beaconed_neighbor_synced_victim_dirinfosets.size() <= neighbor_synced_victim_cacheinfos_ptr->size());
             replaceVictimDirinfoSets_(local_beaconed_neighbor_synced_victim_dirinfosets, true);
         }
+
+        // TMPDEBUG231216
+        #ifdef ENABLE_DELTA_DEDUP_COMPERSSION
+        #ifdef ENABLE_BACKGROUND_VICTIM_SYNCHRONIZATION
+        // NOTE: we temporarily use 0 as seqnum and false as is_enforce_complete, which will be set by VictimsyncMonitor::pregenVictimSyncset()
+        VictimSyncset current_victim_syncset(0, false);
+
+        // Get local complete victim syncset of the current edge node
+        getVictimSyncset_(edge_idx_, current_victim_syncset); // NOTE: will set cache margin bytes, synced victims, and dirinfo sets
+        assert(current_victim_syncset.isComplete());
+
+        // Pre-generate complete/compressed victim syncset for the next message issued towards the source edge node
+        peredge_victimsync_monitor_[source_edge_idx].pregenVictimSyncset(current_victim_syncset);
+        #endif
+        #endif
 
         const uint64_t end_victimsync_monitor_size = peredge_victimsync_monitor_[source_edge_idx].getSizeForCapacity();
         if (end_victimsync_monitor_size > start_victimsync_monitor_size)

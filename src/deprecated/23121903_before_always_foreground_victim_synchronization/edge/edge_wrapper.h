@@ -27,6 +27,7 @@ namespace covered
 #include "cooperation/cooperation_wrapper_base.h"
 #include "cooperation/directory/dirinfo_set.h"
 #include "edge/cache_server/cache_server.h"
+#include "edge/synchronization_server/synchronization_server_param.h"
 #include "edge/utils/background_counter.h"
 #include "edge/utils/local_cache_admission_item.h"
 #include "edge/utils/weight_tuner.h"
@@ -72,6 +73,7 @@ namespace covered
         PropagationSimulatorParam* getEdgeToclientPropagationSimulatorParamPtr() const;
         PropagationSimulatorParam* getEdgeToedgePropagationSimulatorParamPtr() const;
         PropagationSimulatorParam* getEdgeTocloudPropagationSimulatorParamPtr() const;
+        SynchronizationServerParam* getSynchronizationServerParamPtr() const;
         CoveredCacheManager* getCoveredCacheManagerPtr() const;
         BackgroundCounter& getEdgeBackgroundCounterForBeaconServerRef();
         WeightTuner& getWeightTunerRef();
@@ -187,6 +189,7 @@ namespace covered
         PropagationSimulatorParam* edge_toclient_propagation_simulator_param_ptr_; // thread safe
         PropagationSimulatorParam* edge_toedge_propagation_simulator_param_ptr_; // thread safe
         PropagationSimulatorParam* edge_tocloud_propagation_simulator_param_ptr_; // thread safe
+        SynchronizationServerParam* synchronization_server_param_ptr_; // thread safe
 
         // ONLY for COVERED
         // (i) COVERED uses cache manager for popularity aggregation of global admission, victim tracking for placement calculation, and directory metadata cache
@@ -203,6 +206,7 @@ namespace covered
         pthread_t beacon_server_thread_;
         pthread_t cache_server_thread_;
         pthread_t invalidation_server_thread_;
+        pthread_t synchronization_server_thread_;
 
         // Common data structure shared by edge cache server and edge beacon server
         // -> Pushed by cache server worker (for in-advance remote placement notification after hybrid data fetching and local placement notification if sender is beacon) and beacon server (for local placement notification if sender is NOT beacon)

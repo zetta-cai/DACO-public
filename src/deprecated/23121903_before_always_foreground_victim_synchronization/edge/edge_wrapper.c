@@ -10,6 +10,7 @@
 #include "edge/beacon_server/beacon_server_base.h"
 #include "edge/cache_server/cache_server.h"
 #include "edge/invalidation_server/invalidation_server_base.h"
+#include "edge/synchronization_server/covered_synchronization_server.h"
 #include "event/event.h"
 #include "message/data_message.h"
 #include "message/control_message.h"
@@ -110,6 +111,10 @@ namespace covered
         edge_tocloud_propagation_simulator_param_ptr_ = new PropagationSimulatorParam((NodeWrapperBase*)this, propagation_latency_edgecloud_us, Config::getPropagationItemBufferSizeEdgeTocloud());
         assert(edge_tocloud_propagation_simulator_param_ptr_ != NULL);
 
+        // Allocate synchronization server param
+        synchronization_server_param_ptr_ = new SynchronizationServerParam(this, Config::getEdgeCacheServerDataRequestBufferSize());
+        assert(synchronization_server_param_ptr_ != NULL);
+
         // Allocate covered cache manager ONLY for COVERED
         if (cache_name == Util::COVERED_CACHE_NAME)
         {
@@ -128,6 +133,7 @@ namespace covered
         beacon_server_thread_ = 0;
         cache_server_thread_ = 0;
         invalidation_server_thread_ = 0;
+        synchronization_server_thread_ = 0;
 
         // Allocate ring buffer for local edge cache admissions
         const bool local_cache_admission_with_multi_providers = true; // Multiple providers (edge cache server workers after hybrid data fetching; edge cache server workers and edge beacon server for local placement notifications)
@@ -187,6 +193,11 @@ namespace covered
         assert(edge_tocloud_propagation_simulator_param_ptr_ != NULL);
         delete edge_tocloud_propagation_simulator_param_ptr_;
         edge_tocloud_propagation_simulator_param_ptr_ = NULL;
+
+        // Release synchronization server param
+        assert(synchronization_server_param_ptr_ != NULL);
+        delete synchronization_server_param_ptr_;
+        synchronization_server_param_ptr_ = NULL;
 
         // Release local cache admission ring buffer
         assert(local_cache_admission_buffer_ptr_ != NULL);
@@ -254,6 +265,12 @@ namespace covered
     {
         assert(edge_tocloud_propagation_simulator_param_ptr_ != NULL);
         return edge_tocloud_propagation_simulator_param_ptr_;
+    }
+
+    SynchronizationServerParam* EdgeWrapper::getSynchronizationServerParamPtr() const
+    {
+        assert(synchronization_server_param_ptr_ != NULL);
+        return synchronization_server_param_ptr_;
     }
 
     CoveredCacheManager* EdgeWrapper::getCoveredCacheManagerPtr() const
@@ -830,6 +847,18 @@ namespace covered
         tmp_thread_name = "edge-invalidation-server-" + std::to_string(node_idx_);
         ThreadLauncher::pthreadCreateLowPriority(tmp_thread_name, &invalidation_server_thread_, InvalidationServerBase::launchInvalidationServer, (void*)(this));
 
+        // Launch synchronization server
+        //pthread_returncode = pthread_create(&synchronization_server_thread_, NULL, CoveredSynchronizationServer::launchCoveredSynchronizationServer, (void*)(synchronization_server_param_ptr_));
+        // if (pthread_returncode != 0)
+        // {
+        //     std::ostringstream oss;
+        //     oss << "edge " << node_idx_ << " failed to launch synchronization server (error code: " << pthread_returncode << ")" << std::endl;
+        //     Util::dumpErrorMsg(instance_name_, oss.str());
+        //     exit(1);
+        // }
+        tmp_thread_name = "edge-synchronization-server-" + std::to_string(node_idx_);
+        ThreadLauncher::pthreadCreateHighPriority(tmp_thread_name, &synchronization_server_thread_, CoveredSynchronizationServer::launchCoveredSynchronizationServer, (void*)(synchronization_server_param_ptr_));
+
         return;
     }
 
@@ -921,6 +950,16 @@ namespace covered
         {
             std::ostringstream oss;
             oss << "edge " << node_idx_ << " failed to join invalidation server (error code: " << pthread_returncode << ")" << std::endl;
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
+
+        // Wait for synchronization server
+        pthread_returncode = pthread_join(synchronization_server_thread_, NULL); // void* retval = NULL
+        if (pthread_returncode != 0)
+        {
+            std::ostringstream oss;
+            oss << "edge " << node_idx_ << " failed to join synchronization server (error code: " << pthread_returncode << ")" << std::endl;
             Util::dumpErrorMsg(instance_name_, oss.str());
             exit(1);
         }
@@ -1043,9 +1082,15 @@ namespace covered
 
     void EdgeWrapper::updateCacheManagerForNeighborVictimSyncset(const uint32_t& source_edge_idx, const VictimSyncset& neighbor_victim_syncset) const
     {
+        #ifndef ENABLE_BACKGROUND_VICTIM_SYNCHRONIZATION
         // Foreground victim synchronization
         // NOTE: we always perform victim synchronization before popularity aggregation, as we need the latest synced victim information for placement calculation
         covered_cache_manager_ptr_->updateVictimTrackerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset, cooperation_wrapper_ptr_);
+        #else
+        // Background victim synchronization
+        bool is_successful = getSynchronizationServerParamPtr()->getSynchronizationServerItemBufferPtr()->push(SynchronizationServerItem(source_edge_idx, neighbor_victim_syncset));
+        assert(is_successful); // Ring buffer must not be full
+        #endif
 
         return;
     }

@@ -16,6 +16,9 @@
 #ifndef VICTIM_TRACKER_H
 #define VICTIM_TRACKER_H
 
+// TMDEBUG231216
+#define ENABLE_DELTA_DEDUP_COMPERSSION
+
 #include <list>
 #include <string>
 #include <vector>

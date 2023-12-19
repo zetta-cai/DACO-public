@@ -11,6 +11,12 @@
 
 //#define DEBUG_VICTIM_SYNCSET
 
+// NOTE: use bitmap or booleans does NOT affect perf
+#define ENABLE_VICTIM_SYNCSET_BITMAP
+
+// NOTE: as cache margin bytes affect placement calculation and its delta compression has limited bandwidth saving, we disable delta compression of cache margin bytes
+//#define DISABLE_CACHE_MARGIN_BYTES_DELTA
+
 #include <list>
 #include <string>
 
@@ -88,7 +94,18 @@ namespace covered
         void assertAtLeastOneDirinfoSetCompressed_() const;
         void assertAllDirinfoSetsComplete_() const;
 
+        #ifdef ENABLE_VICTIM_SYNCSET_BITMAP
         uint8_t compressed_bitmap_; // 1st lowest bit indicates if the syncset is a compressed victim syncset (2nd lowest bit for cache margin bytes; 3rd/4th lowest bit for local synced victims; 5th/6th lowest bit for local beaconed victims)
+        #else
+        // NOTE: booleans are ONLY used for fast processing with limited CPU cost, yet calculate a bitmap for serialization/deserialization
+        bool is_valid_; // 1: valid; 0: invalid
+        bool is_complete_; // 1: complete; 0: compressed
+        bool is_cache_margin_bytes_delta_; // For cache margin bytes, 1: delta compressed; 0: complete
+        bool is_local_synced_victims_dedup_; // For local synced victims, 1: deduped; 0: complete
+        bool is_local_synced_victims_empty_; // For local synced victims, 1: empty; 0: non-empty
+        bool is_local_beaconed_victims_dedup_; // For local beaconed victims, 1: deduped; 0: complete
+        bool is_local_beaconed_victims_empty_; // For local beaconed victims, 1: empty; 0: non-empty
+        #endif
 
         // Used for sequence-based synchronization monitoring
         SeqNum seqnum_; // Sender's cur_seqnum_ to the destination edge node when sender issues the victim syncset

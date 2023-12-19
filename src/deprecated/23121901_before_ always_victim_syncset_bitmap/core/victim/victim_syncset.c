@@ -33,6 +33,7 @@ namespace covered
 
         // (1) Perform delta compression on cache margin bytes
 
+        #ifndef DISABLE_CACHE_MARGIN_BYTES_DELTA
         int cache_margin_delta_bytes = 0; // Compressed cache margin bytes
         bool with_cache_margin_bytes_complete = true;
 
@@ -70,6 +71,7 @@ namespace covered
         {
             compressed_victim_syncset.setCacheMarginBytes(current_cache_margin_bytes);
         }*/
+        #endif
 
         // (2) Perform dedup on victim cacheinfos
 
@@ -237,6 +239,7 @@ namespace covered
         uint64_t synced_victim_cache_margin_bytes = 0;
         int synced_victim_cache_margin_delta_bytes = 0;
         bool with_complete_cache_margin_bytes = compressed_victim_syncset.getCacheMarginBytesOrDelta(synced_victim_cache_margin_bytes, synced_victim_cache_margin_delta_bytes);
+        #ifndef DISABLE_CACHE_MARGIN_BYTES_DELTA
         if (!with_complete_cache_margin_bytes) // Recover ONLY if compressed
         {
             // Start from existing cache margin bytes
@@ -264,6 +267,9 @@ namespace covered
             // Replace existing cache margin bytes with synced ones
             complete_victim_syncset.setCacheMarginBytes(synced_victim_cache_margin_bytes);
         } // End of with_complete_cache_margin_bytes*/
+        #else
+        assert(with_complete_cache_margin_bytes);
+        #endif
 
         // (2) Recover complete victim cacheinfos and beacom edge indexes if necessary
 
@@ -450,7 +456,17 @@ namespace covered
 
     VictimSyncset::VictimSyncset() : seqnum_(0), is_enforce_complete_(false), cache_margin_bytes_(0), cache_margin_delta_bytes_(0)
     {
+        #ifdef ENABLE_VICTIM_SYNCSET_BITMAP
         compressed_bitmap_ = INVALID_BITMAP;
+        #else
+        is_valid_ = false;
+        is_complete_ = false;
+        is_cache_margin_bytes_delta_ = false;
+        is_local_beaconed_victims_dedup_ = false;
+        is_local_synced_victims_empty_ = false;
+        is_local_beaconed_victims_dedup_ = false;
+        is_local_beaconed_victims_empty_ = false;
+        #endif
 
         local_synced_victims_.clear();
         local_beaconed_victims_.clear();
@@ -463,27 +479,59 @@ namespace covered
 
     VictimSyncset::VictimSyncset(const SeqNum& seqnum, const bool& is_enforce_complete) : seqnum_(seqnum), is_enforce_complete_(is_enforce_complete), cache_margin_bytes_(0)
     {
+        #ifdef ENABLE_VICTIM_SYNCSET_BITMAP
         compressed_bitmap_ = COMPLETE_BITMAP;
+        #else
+        is_valid_ = true;
+        is_complete_ = true;
+        is_cache_margin_bytes_delta_ = false;
+        is_local_beaconed_victims_dedup_ = false;
+        is_local_synced_victims_empty_ = false;
+        is_local_beaconed_victims_dedup_ = false;
+        is_local_beaconed_victims_empty_ = false;
+        #endif
 
         cache_margin_delta_bytes_ = 0;
 
         local_synced_victims_.clear();
+        #ifdef ENABLE_VICTIM_SYNCSET_BITMAP
         compressed_bitmap_ |= LOCAL_SYNCED_VICTIMS_EMPTY_MASK;
+        #else
+        is_local_synced_victims_empty_ = true;
+        #endif
 
         local_beaconed_victims_.clear();
+        #ifdef ENABLE_VICTIM_SYNCSET_BITMAP
         compressed_bitmap_ |= LOCAL_BEACONED_VICTIMS_EMPTY_MASK;
+        #else
+        is_local_synced_victims_empty_ = true;
+        #endif
     }
 
     VictimSyncset::VictimSyncset(const SeqNum& seqnum, const bool& is_enforce_complete, const uint64_t& cache_margin_bytes, const std::list<VictimCacheinfo>& local_synced_victims, const std::list<std::pair<Key, DirinfoSet>>& local_beaconed_victims) : seqnum_(seqnum), is_enforce_complete_(is_enforce_complete), cache_margin_bytes_(cache_margin_bytes)
     {
+        #ifdef ENABLE_VICTIM_SYNCSET_BITMAP
         compressed_bitmap_ = COMPLETE_BITMAP;
+        #else
+        is_valid_ = true;
+        is_complete_ = true;
+        is_cache_margin_bytes_delta_ = false;
+        is_local_beaconed_victims_dedup_ = false;
+        is_local_synced_victims_empty_ = false;
+        is_local_beaconed_victims_dedup_ = false;
+        is_local_beaconed_victims_empty_ = false;
+        #endif
 
         cache_margin_delta_bytes_ = 0;
 
         local_synced_victims_ = local_synced_victims;
         if (local_synced_victims.size() == 0)
         {
+            #ifdef ENABLE_VICTIM_SYNCSET_BITMAP
             compressed_bitmap_ |= LOCAL_SYNCED_VICTIMS_EMPTY_MASK;
+            #else
+            is_local_synced_victims_empty_ = true;
+            #endif
         }
         else
         {
@@ -493,7 +541,11 @@ namespace covered
         local_beaconed_victims_ = local_beaconed_victims;
         if (local_beaconed_victims.size() == 0)
         {
+            #ifdef ENABLE_VICTIM_SYNCSET_BITMAP
             compressed_bitmap_ |= LOCAL_BEACONED_VICTIMS_EMPTY_MASK;
+            #else
+            is_local_beaconed_victims_empty_ = true;
+            #endif
         }
         else
         {
@@ -507,14 +559,22 @@ namespace covered
     {
         checkValidity_();
 
+        #ifdef ENABLE_VICTIM_SYNCSET_BITMAP
         return ((compressed_bitmap_ & COMPRESS_MASK) == (COMPLETE_BITMAP & COMPRESS_MASK));
+        #else
+        return is_complete_;
+        #endif
     }
 
     bool VictimSyncset::isCompressed() const
     {
         checkValidity_();
 
+        #ifdef ENABLE_VICTIM_SYNCSET_BITMAP
         return ((compressed_bitmap_ & CACHE_MARGIN_BYTES_DELTA_MASK) == CACHE_MARGIN_BYTES_DELTA_MASK) || ((compressed_bitmap_ & LOCAL_SYNCED_VICTIMS_DEDUP_MASK) == LOCAL_SYNCED_VICTIMS_DEDUP_MASK) || ((compressed_bitmap_ & LOCAL_BEACONED_VICTIMS_DEDUP_MASK) == LOCAL_BEACONED_VICTIMS_DEDUP_MASK);
+        #else
+        return is_cache_margin_bytes_delta_ || is_local_synced_victims_dedup_ || is_local_beaconed_victims_dedup_;
+        #endif
     }
 
     uint64_t VictimSyncset::getSeqnum() const
@@ -553,7 +613,11 @@ namespace covered
     {
         checkValidity_();
 
+        #ifdef ENABLE_VICTIM_SYNCSET_BITMAP
         bool with_complete_cache_margin_bytes = ((compressed_bitmap_ & CACHE_MARGIN_BYTES_DELTA_MASK) != CACHE_MARGIN_BYTES_DELTA_MASK);
+        #else
+        bool with_complete_cache_margin_bytes = !is_cache_margin_bytes_delta_;
+        #endif
         if (!with_complete_cache_margin_bytes)
         {
             cache_margin_delta_bytes = cache_margin_delta_bytes_;
@@ -570,8 +634,13 @@ namespace covered
     {
         checkValidity_();
 
+        #ifdef ENABLE_VICTIM_SYNCSET_BITMAP
         bool with_complete_local_synced_victims = ((compressed_bitmap_ & LOCAL_SYNCED_VICTIMS_DEDUP_MASK) != LOCAL_SYNCED_VICTIMS_DEDUP_MASK);
         bool is_empty = ((compressed_bitmap_ & LOCAL_SYNCED_VICTIMS_EMPTY_MASK) == LOCAL_SYNCED_VICTIMS_EMPTY_MASK);
+        #else
+        bool with_complete_local_synced_victims = !is_local_synced_victims_dedup_;
+        bool is_empty = is_local_synced_victims_empty_;
+        #endif
 
         if (is_empty)
         {
@@ -598,8 +667,13 @@ namespace covered
     {
         checkValidity_();
 
+        #ifdef ENABLE_VICTIM_SYNCSET_BITMAP
         bool with_complete_local_synced_victims = ((compressed_bitmap_ & LOCAL_SYNCED_VICTIMS_DEDUP_MASK) != LOCAL_SYNCED_VICTIMS_DEDUP_MASK);
         bool is_empty = ((compressed_bitmap_ & LOCAL_SYNCED_VICTIMS_EMPTY_MASK) == LOCAL_SYNCED_VICTIMS_EMPTY_MASK);
+        #else
+        bool with_complete_local_synced_victims = !is_local_synced_victims_dedup_;
+        bool is_empty = is_local_synced_victims_empty_;
+        #endif
 
         if (with_complete_local_synced_victims)
         {
@@ -627,8 +701,13 @@ namespace covered
     {
         checkValidity_();
 
+        #ifdef ENABLE_VICTIM_SYNCSET_BITMAP
         bool with_complete_local_beaconed_victims = ((compressed_bitmap_ & LOCAL_BEACONED_VICTIMS_DEDUP_MASK) != LOCAL_BEACONED_VICTIMS_DEDUP_MASK);
         bool is_empty = ((compressed_bitmap_ & LOCAL_BEACONED_VICTIMS_EMPTY_MASK) == LOCAL_BEACONED_VICTIMS_EMPTY_MASK);
+        #else
+        bool with_complete_local_beaconed_victims = !is_local_beaconed_victims_dedup_;
+        bool is_empty = is_local_beaconed_victims_empty_;
+        #endif
 
         if (is_empty)
         {
@@ -655,8 +734,13 @@ namespace covered
     {
         checkValidity_();
 
+        #ifdef ENABLE_VICTIM_SYNCSET_BITMAP
         bool with_complete_local_beaconed_victims = ((compressed_bitmap_ & LOCAL_BEACONED_VICTIMS_DEDUP_MASK) != LOCAL_BEACONED_VICTIMS_DEDUP_MASK);
         bool is_empty = ((compressed_bitmap_ & LOCAL_BEACONED_VICTIMS_EMPTY_MASK) == LOCAL_BEACONED_VICTIMS_EMPTY_MASK);
+        #else
+        bool with_complete_local_beaconed_victims = !is_local_beaconed_victims_dedup_;
+        bool is_empty = is_local_beaconed_victims_empty_;
+        #endif
 
         if (with_complete_local_beaconed_victims)
         {
@@ -686,11 +770,19 @@ namespace covered
     {
         checkValidity_();
 
+        #ifdef ENABLE_VICTIM_SYNCSET_BITMAP
         compressed_bitmap_ &= (~(CACHE_MARGIN_BYTES_DELTA_MASK & ~COMPRESS_MASK)); // Remove 2nd lowest bit for complete cache margin bytes
         if (!isCompressed()) // NOT a compressed victim syncset yet
         {
             compressed_bitmap_ &= ~COMPRESS_MASK; // Remove 1st lowest bit for complete victim syncset
         }
+        #else
+        is_cache_margin_bytes_delta_ = false;
+        if (!isCompressed()) // NOT a compressed victim syncset yet
+        {
+            is_complete_ = true;
+        }
+        #endif
 
         cache_margin_bytes_ = cache_margin_bytes;
         cache_margin_delta_bytes_ = 0;
@@ -701,21 +793,37 @@ namespace covered
     {
         checkValidity_();
 
+        #ifdef ENABLE_VICTIM_SYNCSET_BITMAP
         compressed_bitmap_ &= (~(LOCAL_SYNCED_VICTIMS_DEDUP_MASK & ~COMPRESS_MASK)); // Remove 3rd lowest bit for complete local synced victims
         if (!isCompressed()) // NOT a compressed victim syncset yet
         {
             compressed_bitmap_ &= ~COMPRESS_MASK; // Remove 1st lowest bit for complete victim syncset
         }
+        #else
+        is_local_synced_victims_dedup_ = false;
+        if (!isCompressed()) // NOT a compressed victim syncset yet
+        {
+            is_complete_ = true;
+        }
+        #endif
 
         local_synced_victims_ = local_synced_victims;
 
         if (local_synced_victims.size() == 0)
         {
+            #ifdef ENABLE_VICTIM_SYNCSET_BITMAP
             compressed_bitmap_ |= LOCAL_SYNCED_VICTIMS_EMPTY_MASK;
+            #else
+            is_local_synced_victims_empty_ = true;
+            #endif
         }
         else
         {
+            #ifdef ENABLE_VICTIM_SYNCSET_BITMAP
             compressed_bitmap_ &= ~LOCAL_SYNCED_VICTIMS_EMPTY_MASK;
+            #else
+            is_local_synced_victims_empty_ = false;
+            #endif
             assertAllCacheinfosComplete_();
         }
 
@@ -730,7 +838,11 @@ namespace covered
 
         if (local_beaconed_victims_.size() == 0)
         {
+            #ifdef ENABLE_VICTIM_SYNCSET_BITMAP
             compressed_bitmap_ &= ~LOCAL_BEACONED_VICTIMS_EMPTY_MASK;
+            #else
+            is_local_beaconed_victims_empty_ = false;
+            #endif
         }
 
         local_beaconed_victims_.push_back(std::pair(key, dirinfo_set));
@@ -742,21 +854,37 @@ namespace covered
     {
         checkValidity_();
 
+        #ifdef ENABLE_VICTIM_SYNCSET_BITMAP
         compressed_bitmap_ &= (~(LOCAL_BEACONED_VICTIMS_DEDUP_MASK & ~COMPRESS_MASK)); // Remove 4th lowest bit for complete local beaconed victims
         if (!isCompressed()) // NOT a compressed victim syncset yet
         {
             compressed_bitmap_ &= ~COMPRESS_MASK; // Remove 1st lowest bit for complete victim syncset
         }
+        #else
+        is_local_beaconed_victims_dedup_ = false;
+        if (!isCompressed()) // NOT a compressed victim syncset yet
+        {
+            is_complete_ = true;
+        }
+        #endif
 
         local_beaconed_victims_ = local_beaconed_victims;
 
         if (local_beaconed_victims.size() == 0)
         {
+            #ifdef ENABLE_VICTIM_SYNCSET_BITMAP
             compressed_bitmap_ |= LOCAL_BEACONED_VICTIMS_EMPTY_MASK;
+            #else
+            is_local_beaconed_victims_empty_ = true;
+            #endif
         }
         else
         {
+            #ifdef ENABLE_VICTIM_SYNCSET_BITMAP
             compressed_bitmap_ &= ~LOCAL_BEACONED_VICTIMS_EMPTY_MASK;
+            #else
+            is_local_beaconed_victims_empty_ = false;
+            #endif
             assertAllDirinfoSetsComplete_();
         }
 
@@ -769,7 +897,12 @@ namespace covered
     {
         checkValidity_();
 
+        #ifdef ENABLE_VICTIM_SYNCSET_BITMAP
         compressed_bitmap_ |= CACHE_MARGIN_BYTES_DELTA_MASK;
+        #else
+        is_cache_margin_bytes_delta_ = true;
+        is_complete_ = false;
+        #endif
 
         cache_margin_delta_bytes_ = cache_margin_delta_bytes;
         cache_margin_bytes_ = 0;
@@ -780,17 +913,30 @@ namespace covered
     {
         checkValidity_();
 
+        #ifdef ENABLE_VICTIM_SYNCSET_BITMAP
         compressed_bitmap_ |= LOCAL_SYNCED_VICTIMS_DEDUP_MASK;
+        #else
+        is_local_synced_victims_dedup_ = true;
+        is_complete_ = false;
+        #endif
 
         local_synced_victims_ = local_synced_victims;
 
         if (local_synced_victims.size() == 0)
         {
+            #ifdef ENABLE_VICTIM_SYNCSET_BITMAP
             compressed_bitmap_ |= LOCAL_SYNCED_VICTIMS_EMPTY_MASK;
+            #else
+            is_local_synced_victims_empty_ = true;
+            #endif
         }
         else
         {
+            #ifdef ENABLE_VICTIM_SYNCSET_BITMAP
             compressed_bitmap_ &= ~LOCAL_SYNCED_VICTIMS_EMPTY_MASK;
+            #else
+            is_local_synced_victims_empty_ = false;
+            #endif
             assertAtLeastOneCacheinfoDeduped_();
         }
 
@@ -801,17 +947,30 @@ namespace covered
     {
         checkValidity_();
 
+        #ifdef ENABLE_VICTIM_SYNCSET_BITMAP
         compressed_bitmap_ |= LOCAL_BEACONED_VICTIMS_DEDUP_MASK;
+        #else
+        is_local_beaconed_victims_dedup_ = true;
+        is_complete_ = false;
+        #endif
 
         local_beaconed_victims_ = local_beaconed_victims;
 
         if (local_beaconed_victims.size() == 0)
         {
+            #ifdef ENABLE_VICTIM_SYNCSET_BITMAP
             compressed_bitmap_ |= LOCAL_BEACONED_VICTIMS_EMPTY_MASK;
+            #else
+            is_local_beaconed_victims_empty_ = true;
+            #endif
         }
         else
         {
+            #ifdef ENABLE_VICTIM_SYNCSET_BITMAP
             compressed_bitmap_ &= ~LOCAL_BEACONED_VICTIMS_EMPTY_MASK;
+            #else
+            is_local_beaconed_victims_empty_ = false;
+            #endif
             assertAtLeastOneDirinfoSetCompressed_();
         }
         
@@ -834,7 +993,11 @@ namespace covered
         victim_syncset_payload_size += sizeof(bool);
 
         // Cache margin bytes
+        #ifdef ENABLE_VICTIM_SYNCSET_BITMAP
         bool with_complete_cache_margin_bytes = ((compressed_bitmap_ & CACHE_MARGIN_BYTES_DELTA_MASK) != CACHE_MARGIN_BYTES_DELTA_MASK);
+        #else
+        bool with_complete_cache_margin_bytes = !is_cache_margin_bytes_delta_;
+        #endif
         if (with_complete_cache_margin_bytes)
         {
             victim_syncset_payload_size += sizeof(uint64_t);
@@ -845,7 +1008,11 @@ namespace covered
         }
 
         // Local synced victims
+        #ifdef ENABLE_VICTIM_SYNCSET_BITMAP
         bool is_empty_local_synced_victims = ((compressed_bitmap_ & LOCAL_SYNCED_VICTIMS_EMPTY_MASK) == LOCAL_SYNCED_VICTIMS_EMPTY_MASK);
+        #else
+        bool is_empty_local_synced_victims = is_local_synced_victims_empty_;
+        #endif
         if (!is_empty_local_synced_victims) // Non-empty local synced victims
         {
             assert(local_synced_victims_.size() > 0);
@@ -858,7 +1025,11 @@ namespace covered
         }
 
         // Local beaconed victims
+        #ifdef ENABLE_VICTIM_SYNCSET_BITMAP
         bool is_empty_local_beaconed_victims = ((compressed_bitmap_ & LOCAL_BEACONED_VICTIMS_EMPTY_MASK) == LOCAL_BEACONED_VICTIMS_EMPTY_MASK);
+        #else
+        bool is_empty_local_beaconed_victims = is_local_beaconed_victims_empty_;
+        #endif
         if (!is_empty_local_beaconed_victims) // Non-empty local beaconed victims
         {
             assert(local_beaconed_victims_.size() > 0);
@@ -884,7 +1055,37 @@ namespace covered
         uint32_t size = position;
 
         // Compressed bitmap
+        #ifdef ENABLE_VICTIM_SYNCSET_BITMAP
         msg_payload.deserialize(size, (const char*)&compressed_bitmap_, sizeof(uint8_t));
+        #else
+        uint8_t compressed_bitmap = COMPLETE_BITMAP;
+        if (!is_complete_)
+        {
+            if (is_cache_margin_bytes_delta_)
+            {
+                compressed_bitmap |= CACHE_MARGIN_BYTES_DELTA_MASK;
+            }
+            if (is_local_synced_victims_dedup_)
+            {
+                compressed_bitmap |= LOCAL_SYNCED_VICTIMS_DEDUP_MASK;
+            }
+            if (is_local_beaconed_victims_dedup_)
+            {
+                compressed_bitmap |= LOCAL_BEACONED_VICTIMS_DEDUP_MASK;
+            }
+        }
+        if (is_local_synced_victims_empty_)
+        {
+            assert(local_synced_victims_.size() == 0);
+            compressed_bitmap |= LOCAL_SYNCED_VICTIMS_EMPTY_MASK;
+        }
+        if (is_local_beaconed_victims_empty_)
+        {
+            assert(local_beaconed_victims_.size() == 0);
+            compressed_bitmap |= LOCAL_BEACONED_VICTIMS_EMPTY_MASK;
+        }
+        msg_payload.deserialize(size, (const char*)&compressed_bitmap, sizeof(uint8_t));
+        #endif
         size += sizeof(uint8_t);
 
         // Seqnum
@@ -896,7 +1097,11 @@ namespace covered
         size += sizeof(bool);
 
         // Cache margin bytes
+        #ifdef ENABLE_VICTIM_SYNCSET_BITMAP
         bool with_complete_cache_margin_bytes = ((compressed_bitmap_ & CACHE_MARGIN_BYTES_DELTA_MASK) != CACHE_MARGIN_BYTES_DELTA_MASK);
+        #else
+        bool with_complete_cache_margin_bytes = !is_cache_margin_bytes_delta_;
+        #endif
         if (with_complete_cache_margin_bytes)
         {
             msg_payload.deserialize(size, (const char*)&cache_margin_bytes_, sizeof(uint64_t));
@@ -910,7 +1115,11 @@ namespace covered
         }
 
         // Size of local synced victims
+        #ifdef ENABLE_VICTIM_SYNCSET_BITMAP
         bool is_empty_local_synced_victims = ((compressed_bitmap_ & LOCAL_SYNCED_VICTIMS_EMPTY_MASK) == LOCAL_SYNCED_VICTIMS_EMPTY_MASK);
+        #else
+        bool is_empty_local_synced_victims = is_local_synced_victims_empty_;
+        #endif
         if (!is_empty_local_synced_victims) // Non-empty local synced victims
         {
             uint32_t local_synced_victims_size = local_synced_victims_.size();
@@ -926,7 +1135,11 @@ namespace covered
         }
 
         // Size of local beaconed victims
+        #ifdef ENABLE_VICTIM_SYNCSET_BITMAP
         bool is_empty_local_beaconed_victims = ((compressed_bitmap_ & LOCAL_BEACONED_VICTIMS_EMPTY_MASK) == LOCAL_BEACONED_VICTIMS_EMPTY_MASK);
+        #else
+        bool is_empty_local_beaconed_victims = is_local_beaconed_victims_empty_;
+        #endif
         if (!is_empty_local_beaconed_victims) // Non-empty local beaconed victims
         {
             uint32_t local_beaconed_victims_size = local_beaconed_victims_.size();
@@ -954,8 +1167,27 @@ namespace covered
         uint32_t size = position;
 
         // Compressed bitmap
+        #ifdef ENABLE_VICTIM_SYNCSET_BITMAP
         msg_payload.serialize(size, (char*)&compressed_bitmap_, sizeof(uint8_t));
         assert(compressed_bitmap_ != INVALID_BITMAP);
+        #else
+        uint8_t compressed_bitmap = INVALID_BITMAP;
+        msg_payload.serialize(size, (char*)&compressed_bitmap, sizeof(uint8_t));
+        assert(compressed_bitmap != INVALID_BITMAP);
+        is_valid_ = true;
+        if (((compressed_bitmap & COMPRESS_MASK) == (COMPLETE_BITMAP & COMPRESS_MASK)))
+        {
+            is_complete_ = true;
+        }
+        else
+        {
+            is_cache_margin_bytes_delta_ = ((compressed_bitmap & CACHE_MARGIN_BYTES_DELTA_MASK) == CACHE_MARGIN_BYTES_DELTA_MASK);
+            is_local_synced_victims_dedup_ = ((compressed_bitmap & LOCAL_SYNCED_VICTIMS_DEDUP_MASK) == LOCAL_SYNCED_VICTIMS_DEDUP_MASK);
+            is_local_beaconed_victims_dedup_ = ((compressed_bitmap & LOCAL_BEACONED_VICTIMS_DEDUP_MASK) == LOCAL_BEACONED_VICTIMS_DEDUP_MASK);
+        }
+        is_local_synced_victims_empty_ = ((compressed_bitmap & LOCAL_SYNCED_VICTIMS_EMPTY_MASK) == LOCAL_SYNCED_VICTIMS_EMPTY_MASK);
+        is_local_beaconed_victims_empty_ = ((compressed_bitmap & LOCAL_BEACONED_VICTIMS_EMPTY_MASK) == LOCAL_BEACONED_VICTIMS_EMPTY_MASK);
+        #endif
         size += sizeof(uint8_t);
 
         // Seqnum
@@ -967,7 +1199,11 @@ namespace covered
         size += sizeof(bool);
 
         // Cache margin bytes
+        #ifdef ENABLE_VICTIM_SYNCSET_BITMAP
         bool with_complete_cache_margin_bytes = ((compressed_bitmap_ & CACHE_MARGIN_BYTES_DELTA_MASK) != CACHE_MARGIN_BYTES_DELTA_MASK);
+        #else
+        bool with_complete_cache_margin_bytes = !is_cache_margin_bytes_delta_;
+        #endif
         if (with_complete_cache_margin_bytes)
         {
             msg_payload.serialize(size, (char*)&cache_margin_bytes_, sizeof(uint64_t));
@@ -980,7 +1216,11 @@ namespace covered
         }
 
         // Size of local synced victims
+        #ifdef ENABLE_VICTIM_SYNCSET_BITMAP
         bool is_empty_local_synced_victims = ((compressed_bitmap_ & LOCAL_SYNCED_VICTIMS_EMPTY_MASK) == LOCAL_SYNCED_VICTIMS_EMPTY_MASK);
+        #else
+        bool is_empty_local_synced_victims = is_local_synced_victims_empty_;
+        #endif
         if (!is_empty_local_synced_victims) // Non-empty local synced victims
         {
             uint32_t local_synced_victims_size = 0;
@@ -1001,7 +1241,11 @@ namespace covered
         }
 
         // Size of local beaconed victims
+        #ifdef ENABLE_VICTIM_SYNCSET_BITMAP
         bool is_empty_local_beaconed_victims = ((compressed_bitmap_ & LOCAL_BEACONED_VICTIMS_EMPTY_MASK) == LOCAL_BEACONED_VICTIMS_EMPTY_MASK);
+        #else
+        bool is_empty_local_beaconed_victims = is_local_beaconed_victims_empty_;
+        #endif
         if (!is_empty_local_beaconed_victims) // Non-empty local beaconed victims
         {
             uint32_t local_beaconed_victims_size = 0;
@@ -1045,7 +1289,11 @@ namespace covered
         victim_syncset_size_bytes += sizeof(bool);
 
         // Cache margin bytes
+        #ifdef ENABLE_VICTIM_SYNCSET_BITMAP
         bool with_complete_cache_margin_bytes = ((compressed_bitmap_ & CACHE_MARGIN_BYTES_DELTA_MASK) != CACHE_MARGIN_BYTES_DELTA_MASK);
+        #else
+        bool with_complete_cache_margin_bytes = !is_cache_margin_bytes_delta_;
+        #endif
         if (with_complete_cache_margin_bytes)
         {
             victim_syncset_size_bytes += sizeof(uint64_t);
@@ -1056,7 +1304,11 @@ namespace covered
         }
 
         // Local synced victims
+        #ifdef ENABLE_VICTIM_SYNCSET_BITMAP
         bool is_empty_local_synced_victims = ((compressed_bitmap_ & LOCAL_SYNCED_VICTIMS_EMPTY_MASK) == LOCAL_SYNCED_VICTIMS_EMPTY_MASK);
+        #else
+        bool is_empty_local_synced_victims = is_local_synced_victims_empty_;
+        #endif
         if (!is_empty_local_synced_victims) // Non-empty local synced victims
         {
             assert(local_synced_victims_.size() > 0);
@@ -1068,7 +1320,11 @@ namespace covered
         }
 
         // Local beaconed victims
+        #ifdef ENABLE_VICTIM_SYNCSET_BITMAP
         bool is_empty_local_beaconed_victims = ((compressed_bitmap_ & LOCAL_BEACONED_VICTIMS_EMPTY_MASK) == LOCAL_BEACONED_VICTIMS_EMPTY_MASK);
+        #else
+        bool is_empty_local_beaconed_victims = is_local_beaconed_victims_empty_;
+        #endif
         if (!is_empty_local_beaconed_victims) // Non-empty local beaconed victims
         {
             assert(local_beaconed_victims_.size() > 0);
@@ -1088,6 +1344,7 @@ namespace covered
 
     // void VictimSyncset::dumpForDebug() const
     // {
+    //     #ifndef ENABLE_VICTIM_SYNCSET_BITMAP
     //     std::ostringstream oss;
     //     oss << "is_valid_: " << Util::toString(is_valid_) << std::endl;
     //     oss << "is_complete_: " << Util::toString(is_complete_) << std::endl;
@@ -1097,12 +1354,23 @@ namespace covered
     //     oss << "is_local_beaconed_victims_dedup_: " << Util::toString(is_local_beaconed_victims_dedup_) << std::endl;
     //     oss << "is_local_beaconed_victims_empty_: " << Util::toString(is_local_beaconed_victims_empty_) << std::endl;
     //     Util::dumpDebugMsg(kClassName, oss.str());
+    //     #endif
     //     return;
     // }
 
     const VictimSyncset& VictimSyncset::operator=(const VictimSyncset& other)
     {
+        #ifdef ENABLE_VICTIM_SYNCSET_BITMAP
         compressed_bitmap_ = other.compressed_bitmap_;
+        #else
+        is_valid_ = other.is_valid_;
+        is_complete_ = other.is_complete_;
+        is_cache_margin_bytes_delta_ = other.is_cache_margin_bytes_delta_;
+        is_local_synced_victims_dedup_ = other.is_local_synced_victims_dedup_;
+        is_local_synced_victims_empty_ = other.is_local_synced_victims_empty_;
+        is_local_beaconed_victims_dedup_ = other.is_local_beaconed_victims_dedup_;
+        is_local_beaconed_victims_empty_ = other.is_local_beaconed_victims_empty_;
+        #endif
 
         seqnum_ = other.seqnum_;
         is_enforce_complete_ = other.is_enforce_complete_;
@@ -1116,7 +1384,11 @@ namespace covered
 
     void VictimSyncset::checkValidity_() const
     {
+        #ifdef ENABLE_VICTIM_SYNCSET_BITMAP
         assert(compressed_bitmap_ != INVALID_BITMAP);
+        #else
+        assert(is_valid_);
+        #endif
 
         return;
     }

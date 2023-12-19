@@ -11,6 +11,9 @@
 
 //#define DEBUG_VICTIM_SYNCSET
 
+// NOTE: as cache margin bytes affect placement calculation and its delta compression has limited bandwidth saving, we disable delta compression of cache margin bytes
+//#define DISABLE_CACHE_MARGIN_BYTES_DELTA
+
 #include <list>
 #include <string>
 

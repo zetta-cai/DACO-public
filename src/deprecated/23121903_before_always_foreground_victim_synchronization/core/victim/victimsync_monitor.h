@@ -23,7 +23,13 @@ namespace covered
         // As sender edge node
 
         void enforceComplete(); // Enforce a complete victim syncset for the next message to the receiver
+        #ifdef ENABLE_BACKGROUND_VICTIM_SYNCHRONIZATION
+        void pregenVictimSyncset(const VictimSyncset& current_victim_syncset); // Pre-generate complete/compressed victim syncset for the next message to the receiver
+        bool getPregenVictimSyncset(VictimSyncset& final_victim_syncset); // Return if need the latest victim syncset
+        void replacePrevVictimSyncset(const VictimSyncset& current_victim_syncset, VictimSyncset& final_victim_syncset); // Replace prev victim syncset with the latest one w/ correct seqnum and is_enforce_complete flag and set it as final victim syncset
+        #else
         void replacePrevVictimSyncset(VictimSyncset& current_victim_syncset, VictimSyncset& final_victim_syncset); // Try to get a compressed victim syncset based on the latest one and prev-issued one w/ correct seqnum and is_enforce_complete flag as final victim syncset, or directly used the latest one as final otherwise; then replace prev-issued victim syncset with the latest one
+        #endif
 
         // As receiver edge node
 
@@ -44,6 +50,10 @@ namespace covered
         // As sender edge node
 
         void releasePrevVictimSyncset_();
+        #ifdef ENABLE_BACKGROUND_VICTIM_SYNCHRONIZATION
+        void releasePregenCompleteVictimSyncset_();
+        void releasePregenCompressedVictimSyncset_();
+        #endif
 
         // NOTE: we separate get&incr and get&reset as two steps, as getting correct seqnum or enforcement flag and issuing corresponding victim syncset happen asynchronously under background pre-compression
         SeqNum getCurSeqnum_();
@@ -68,6 +78,10 @@ namespace covered
         // As sender edge node
         SeqNum cur_seqnum_; // The seqnum for current victim syncset towards a specific neighbor (cur_seqnum_ will be initialized as 0 such that the first victim syncset issued to a specific edge node will have a seqnum of 0)
         VictimSyncset* prev_victim_syncset_ptr_; // Prev issued victim syncset towards a specific neighbor for dedup-/delta-based compression
+        #ifdef ENABLE_BACKGROUND_VICTIM_SYNCHRONIZATION
+        VictimSyncset* pregen_complete_victim_syncset_ptr_; // Pre-generated complete victim syncset for background pre-compression
+        VictimSyncset* pregen_compressed_victim_syncset_ptr_; // Pre-generated compressed victim syncset for background pre-compression
+        #endif
 
         // As receiver edge node
         bool is_first_complete_received_; // If the victim syncset is the first complete one from a specific neighbor (is_first_complete_received_ will be initialized as true such that the first received complete victim syncset can directly update victim tracker)

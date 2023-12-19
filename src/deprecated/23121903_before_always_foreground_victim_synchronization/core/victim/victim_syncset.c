@@ -33,6 +33,7 @@ namespace covered
 
         // (1) Perform delta compression on cache margin bytes
 
+        #ifndef DISABLE_CACHE_MARGIN_BYTES_DELTA
         int cache_margin_delta_bytes = 0; // Compressed cache margin bytes
         bool with_cache_margin_bytes_complete = true;
 
@@ -70,6 +71,7 @@ namespace covered
         {
             compressed_victim_syncset.setCacheMarginBytes(current_cache_margin_bytes);
         }*/
+        #endif
 
         // (2) Perform dedup on victim cacheinfos
 
@@ -237,6 +239,7 @@ namespace covered
         uint64_t synced_victim_cache_margin_bytes = 0;
         int synced_victim_cache_margin_delta_bytes = 0;
         bool with_complete_cache_margin_bytes = compressed_victim_syncset.getCacheMarginBytesOrDelta(synced_victim_cache_margin_bytes, synced_victim_cache_margin_delta_bytes);
+        #ifndef DISABLE_CACHE_MARGIN_BYTES_DELTA
         if (!with_complete_cache_margin_bytes) // Recover ONLY if compressed
         {
             // Start from existing cache margin bytes
@@ -264,6 +267,9 @@ namespace covered
             // Replace existing cache margin bytes with synced ones
             complete_victim_syncset.setCacheMarginBytes(synced_victim_cache_margin_bytes);
         } // End of with_complete_cache_margin_bytes*/
+        #else
+        assert(with_complete_cache_margin_bytes);
+        #endif
 
         // (2) Recover complete victim cacheinfos and beacom edge indexes if necessary
 

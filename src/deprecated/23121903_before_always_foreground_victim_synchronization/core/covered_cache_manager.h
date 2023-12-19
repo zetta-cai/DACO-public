@@ -70,7 +70,7 @@ namespace covered
         void updateVictimTrackerForLocalBeaconedVictimDirinfo(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info); // Update victim dirinfos of local beaconed victims
 
         VictimSyncset accessVictimTrackerForLocalVictimSyncset(const uint32_t& dst_edge_idx_for_compression, const uint64_t& latest_local_cache_margin_bytes) const; // Get complete/delta victim syncset from victim tracker **for piggybacking-based victim synchronization** (dst_edge_idx_for_compression is used to update prev victim syncset towards dst edge idx; latest_local_cache_margin_bytes is used to replace not-latest cache margin bytes in edge-level victim metadata of the current edge node)
-        void updateVictimTrackerForNeighborVictimSyncset(const uint32_t& source_edge_idx, const VictimSyncset& neighbor_victim_syncset, const CooperationWrapperBase* cooperation_wrapper_ptr); // Update victim tracker in the current edge node for the received victim syncset from neighbor edge node (neighbor_victim_syncset could be either complete or compressed)
+        void updateVictimTrackerForNeighborVictimSyncset(const uint32_t& source_edge_idx, const VictimSyncset& neighbor_victim_syncset, const CooperationWrapperBase* cooperation_wrapper_ptr); // Update victim tracker in the current edge node for the received victim syncset from neighbor edge node (neighbor_victim_syncset could be either complete or compressed) (NOTE: ONLY used by CoveredSynchronizationServer in the background)
 
         // For directory metadata cache
 
