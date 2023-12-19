@@ -24,36 +24,16 @@ namespace covered
     {
         assert(cache_server_victim_fetch_processor_param_ptr != NULL);
         const uint32_t edge_idx = cache_server_victim_fetch_processor_param_ptr->getCacheServerPtr()->getEdgeWrapperPtr()->getNodeIdx();
-        const uint32_t edgecnt = cache_server_victim_fetch_processor_param_ptr->getCacheServerPtr()->getEdgeWrapperPtr()->getNodeCnt();
 
         // Differentiate cache servers of different edge nodes
         std::ostringstream oss;
         oss << kClassName << " edge" << edge_idx << "-victim-fetch-processor";
         instance_name_ = oss.str();
-
-        // For receiving control responses
-
-        UNUSED(edgecnt);
-        // Get source address of cache server victim fetch processor to receive control responses and redirected data responses
-        // const bool is_launch_edge = true; // The edge cache server victim fetch processor belongs to the logical edge node launched in the current physical machine
-        // std::string edge_ipstr = Config::getEdgeIpstr(edge_idx, edgecnt, is_launch_edge);
-        // uint16_t edge_cache_server_victim_fetch_processor_recvrsp_port = Util::getEdgeCacheServerVictimFetchProcessorRecvrspPort(edge_idx, edgecnt);
-        // edge_cache_server_victim_fetch_processor_recvrsp_source_addr_ = NetworkAddr(edge_ipstr, edge_cache_server_victim_fetch_processor_recvrsp_port);
-
-        // Prepare a socket server to receive control responses and redirected data responses
-        //NetworkAddr recvrsp_host_addr(Util::ANY_IPSTR, edge_cache_server_victim_fetch_processor_recvrsp_port);
-        //edge_cache_server_victim_fetch_processor_recvrsp_socket_server_ptr_ = new UdpMsgSocketServer(recvrsp_host_addr);
-        //assert(edge_cache_server_victim_fetch_processor_recvrsp_socket_server_ptr_ != NULL);
     }
 
     CacheServerVictimFetchProcessor::~CacheServerVictimFetchProcessor()
     {
         // NOTE: no need to release cache_server_victim_fetch_processor_param_ptr_, which will be released outside CacheServerVictimFetchProcessor (by CacheServer)
-
-        // Release the socket server to receive control responses,
-        // assert(edge_cache_server_victim_fetch_processor_recvrsp_socket_server_ptr_ != NULL);
-        // delete edge_cache_server_victim_fetch_processor_recvrsp_socket_server_ptr_;
-        // edge_cache_server_victim_fetch_processor_recvrsp_socket_server_ptr_ = NULL;
     }
 
     void CacheServerVictimFetchProcessor::start()
@@ -178,7 +158,6 @@ namespace covered
     void CacheServerVictimFetchProcessor::checkPointers_() const
     {
         assert(cache_server_victim_fetch_processor_param_ptr_ != NULL);
-        //assert(edge_cache_server_victim_fetch_processor_recvrsp_socket_server_ptr_ != NULL);
 
         return;
     }

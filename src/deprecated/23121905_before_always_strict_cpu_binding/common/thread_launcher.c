@@ -58,7 +58,11 @@ namespace covered
         return;
     }
     
+    #ifdef ENABLE_STRICT_CPU_BINDING
     uint32_t ThreadLauncher::pthreadCreateHighPriority(const std::string thread_name, pthread_t* tid_ptr, void *(*start_routine)(void *), void* arg_ptr, const uint32_t* specified_cpuidx_ptr)
+    #else
+    void ThreadLauncher::pthreadCreateHighPriority(const std::string thread_name, pthread_t* tid_ptr, void *(*start_routine)(void *), void* arg_ptr)
+    #endif
     {
         // Prepare thread attributes
         pthread_attr_t attr;
@@ -82,9 +86,14 @@ namespace covered
             exit(1);
         }
 
+        #ifdef ENABLE_STRICT_CPU_BINDING
         // Bind to a dedicated CPU core
         uint32_t tmp_cpuidx = bindDedicatedCpuCore_(thread_name, *tid_ptr, specified_cpuidx_ptr);
         return tmp_cpuidx;
+        #else
+        bindDedicatedCpuCore_(thread_name, *tid_ptr);
+        return;
+        #endif
     }
 
     void ThreadLauncher::preparePthreadAttr_(pthread_attr_t* attr_ptr)
@@ -170,6 +179,8 @@ namespace covered
         return;
     }
 
+    #ifdef ENABLE_STRICT_CPU_BINDING
+
     uint32_t ThreadLauncher::bindDedicatedCpuCore_(const std::string thread_name, const pthread_t& tid, const uint32_t* specified_cpuidx_ptr)
     {
         // Update high-priority thread cnt
@@ -221,4 +232,49 @@ namespace covered
 
         return tmp_cpuidx;
     }
+
+    #else
+
+    void ThreadLauncher::bindDedicatedCpuCore_(const std::string thread_name, const pthread_t& tid)
+    {
+        // Update high-priority thread cnt
+        uint32_t original_high_priority_threadcnt = high_priority_threadcnt_.fetch_add(1, Util::RMW_CONCURRENCY_ORDER);
+        
+        // Calculate max dedicated CPU core ID
+        const PhysicalMachine tmp_physical_machine = Config::getCurrentPhysicalMachine();
+        const uint32_t tmp_cpu_dedicated_corecnt = tmp_physical_machine.getCpuDedicatedCorecnt();
+        const uint32_t tmp_max_cpuidx = tmp_cpu_dedicated_corecnt - 1; // MUST within the range of [0, cpu_dedicated_corecnt - 1]
+        assert(tmp_max_cpuidx < std::thread::hardware_concurrency()); // NOT exceed total # of CPU cores
+
+        // Initialize cpu_dedicated_coreset_ if NOT
+        if (original_high_priority_threadcnt == 0) // The first high-priority thread
+        {
+            // Prepare cpu_shared_coreset_ within the range of [0, cpu_dedicated_corecnt - 1]
+            CPU_ZERO(&cpu_dedicated_coreset_);
+            for (uint32_t tmp_cpuidx = 0; tmp_cpuidx <= tmp_cpu_dedicated_corecnt - 1; tmp_cpuidx++)
+            {
+                CPU_SET(tmp_cpuidx, &cpu_dedicated_coreset_);
+            }
+        }
+
+        #ifdef DEBUG_THREAD_LAUNCHER
+        std::ostringstream oss;
+        oss << "[0, " << tmp_max_cpuidx << "]";
+        Util::dumpVariablesForDebug(kClassName, 6, "bind high-priority thread:", thread_name.c_str(), "thread idx:", std::to_string(original_high_priority_threadcnt).c_str(), "cpu core set:", oss.str().c_str());
+        #endif
+
+        // Bind to the set of CPU dedicated cores
+        int pthread_returncode = pthread_setaffinity_np(tid, sizeof(cpu_dedicated_coreset_), &cpu_dedicated_coreset_);
+        if (pthread_returncode != 0)
+        {
+            std::ostringstream oss;
+            oss << "failed to set affinity of thread " << thread_name << " (pthread_returncode: " << pthread_returncode << "; errno: " << errno << ")";
+            Util::dumpErrorMsg(kClassName, oss.str());
+            exit(-1);
+        }
+
+        return;
+    }
+
+    #endif
 }

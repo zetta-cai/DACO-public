@@ -82,7 +82,6 @@ namespace covered
         CacheServerProcessorParam* cache_server_victim_fetch_processor_param_ptr_; // Only one cache server victim fetch processor thread
         CacheServerProcessorParam* cache_server_redirection_processor_param_ptr_; // Only one cache server redirection processor thread
         CacheServerProcessorParam* cache_server_placement_processor_param_ptr_; // Only one cache server placement processor thread
-        CacheServerProcessorParam* cache_server_invalidation_processor_param_ptr_; // Only one cache server invalidation processor thread
 
         // For receiving local requests
         NetworkAddr edge_cache_server_recvreq_source_addr_; // The same as that used by clients or neighbors to send local/redirected requests (const shared variable)

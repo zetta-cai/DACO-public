@@ -64,6 +64,7 @@ namespace covered
         static const std::string EDGE_CACHE_SERVER_PLACEMENT_PROCESSOR_RECVRSP_STARTPORT_KEYSTR;
         static const std::string EDGE_CACHE_SERVER_WORKER_RECVREQ_STARTPORT_KEYSTR;
         static const std::string EDGE_CACHE_SERVER_WORKER_RECVRSP_STARTPORT_KEYSTR;
+        static const std::string EDGE_INVALIDATION_SERVER_RECVREQ_STARTPORT_KEYSTR;
         static const std::string EDGE_MACHINE_INDEXES_KEYSTR;
         static const std::string EDGE_RECVMSG_STARTPORT_KEYSTR;
         static const std::string EVALUATOR_MACHINE_INDEX_KEYSTR;
@@ -113,6 +114,7 @@ namespace covered
         static uint16_t getEdgeCacheServerPlacementProcessorRecvrspStartport();
         static uint16_t getEdgeCacheServerWorkerRecvreqStartport();
         static uint16_t getEdgeCacheServerWorkerRecvrspStartport();
+        static uint16_t getEdgeInvalidationServerRecvreqStartport();
 
         // For edge physical machines
         static uint32_t getEdgeMachineCnt();

@@ -9,6 +9,7 @@
 #include "common/util.h"
 #include "edge/beacon_server/beacon_server_base.h"
 #include "edge/cache_server/cache_server.h"
+#include "edge/invalidation_server/invalidation_server_base.h"
 #include "event/event.h"
 #include "message/data_message.h"
 #include "message/control_message.h"
@@ -126,6 +127,7 @@ namespace covered
         edge_tocloud_propagation_simulator_thread_ = 0;
         beacon_server_thread_ = 0;
         cache_server_thread_ = 0;
+        invalidation_server_thread_ = 0;
 
         // Allocate ring buffer for local edge cache admissions
         const bool local_cache_admission_with_multi_providers = true; // Multiple providers (edge cache server workers after hybrid data fetching; edge cache server workers and edge beacon server for local placement notifications)
@@ -403,9 +405,9 @@ namespace covered
             const bool is_launch_edge = false; // Just connect neighbor to invalidate cache copies instead of launching the neighbor
             uint32_t tmp_edgeidx = iter->getTargetEdgeIdx();
             std::string tmp_edge_ipstr = Config::getEdgeIpstr(tmp_edgeidx, node_cnt_, is_launch_edge);
-            uint16_t tmp_edge_cache_server_recvreq_port = Util::getEdgeCacheServerRecvreqPort(tmp_edgeidx, node_cnt_);
-            NetworkAddr tmp_edge_cache_server_recvreq_dst_addr(tmp_edge_ipstr, tmp_edge_cache_server_recvreq_port);
-            percachecopy_dstaddr.insert(std::pair<uint32_t, NetworkAddr>(tmp_edgeidx, tmp_edge_cache_server_recvreq_dst_addr));
+            uint16_t tmp_edge_invaliation_server_port = Util::getEdgeInvalidationServerRecvreqPort(tmp_edgeidx, node_cnt_);
+            NetworkAddr tmp_edge_invalidation_server_recvreq_dst_addr(tmp_edge_ipstr, tmp_edge_invaliation_server_port);
+            percachecopy_dstaddr.insert(std::pair<uint32_t, NetworkAddr>(tmp_edgeidx, tmp_edge_invalidation_server_recvreq_dst_addr));
         }
 
         // Track whether invalidation requests to all involved edge nodes have been acknowledged
@@ -428,8 +430,8 @@ namespace covered
                 }
 
                 const uint32_t& tmp_dst_edge_idx = iter_for_request->first;
-                const NetworkAddr& tmp_edge_cache_server_recvreq_dst_addr = percachecopy_dstaddr[tmp_dst_edge_idx]; // cache server address of a blocked closest edge node          
-                sendInvalidationRequest_(key, recvrsp_source_addr, tmp_dst_edge_idx, tmp_edge_cache_server_recvreq_dst_addr, skip_propagation_latency);
+                const NetworkAddr& tmp_edge_invalidation_server_recvreq_dst_addr = percachecopy_dstaddr[tmp_dst_edge_idx]; // cache server address of a blocked closest edge node          
+                sendInvalidationRequest_(key, recvrsp_source_addr, tmp_dst_edge_idx, tmp_edge_invalidation_server_recvreq_dst_addr, skip_propagation_latency);
             } // End of edgeidx_for_request
 
             // Receive (invalidate_edgecnt - acked_edgecnt) control repsonses from involved edge nodes
@@ -457,7 +459,7 @@ namespace covered
                     MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
                     assert(control_response_ptr != NULL);
                     uint32_t tmp_edgeidx = control_response_ptr->getSourceIndex();
-                    NetworkAddr tmp_edge_cache_server_recvreq_source_addr = control_response_ptr->getSourceAddr();
+                    NetworkAddr tmp_edge_invalidation_server_recvreq_source_addr = control_response_ptr->getSourceAddr();
 
                     // Mark the edge node has acknowledged the InvalidationRequest
                     bool is_match = false;
@@ -466,7 +468,7 @@ namespace covered
                         if (iter_for_response->first == tmp_edgeidx) // Match a neighbor edge node
                         {
                             assert(iter_for_response->second == false); // Original ack flag should be false
-                            assert(percachecopy_dstaddr[iter_for_response->first] == tmp_edge_cache_server_recvreq_source_addr);
+                            assert(percachecopy_dstaddr[iter_for_response->first] == tmp_edge_invalidation_server_recvreq_source_addr);
 
                             // Process invalidation response
                             processInvalidationResponse_(control_response_ptr);
@@ -515,7 +517,7 @@ namespace covered
         return is_finish;
     }
 
-    void EdgeWrapper::sendInvalidationRequest_(const Key& key, const NetworkAddr& recvrsp_source_addr, const uint32_t& dst_edge_idx_for_compression, const NetworkAddr& edge_cache_server_recvreq_dst_addr, const bool& skip_propagation_latency) const
+    void EdgeWrapper::sendInvalidationRequest_(const Key& key, const NetworkAddr& recvrsp_source_addr, const uint32_t& dst_edge_idx_for_compression, const NetworkAddr& edge_invalidation_server_recvreq_dst_addr, const bool& skip_propagation_latency) const
     {
         checkPointers_();
 
@@ -538,7 +540,7 @@ namespace covered
         assert(invalidation_request_ptr != NULL);
 
         // Push invalidation request into edge-to-edge propagation simulator to send to neighbor edge node
-        bool is_successful = edge_toedge_propagation_simulator_param_ptr_->push(invalidation_request_ptr, edge_cache_server_recvreq_dst_addr);
+        bool is_successful = edge_toedge_propagation_simulator_param_ptr_->push(invalidation_request_ptr, edge_invalidation_server_recvreq_dst_addr);
         assert(is_successful);
 
         // NOTE: invalidation_request_ptr will be released by edge-to-edge propagation simulator
@@ -814,7 +816,19 @@ namespace covered
         //     exit(1);
         // }
         tmp_thread_name = "edge-cache-server-" + std::to_string(node_idx_);
-        ThreadLauncher::pthreadCreateLowPriority(tmp_thread_name, &cache_server_thread_, CacheServer::launchCacheServer, (void*)(this));
+        ThreadLauncher::pthreadCreateHighPriority(tmp_thread_name, &cache_server_thread_, CacheServer::launchCacheServer, (void*)(this));
+
+        // Launch invalidation server
+        //pthread_returncode = pthread_create(&invalidation_server_thread_, NULL, InvalidationServerBase::launchInvalidationServer, (void*)(this));
+        // if (pthread_returncode != 0)
+        // {
+        //     std::ostringstream oss;
+        //     oss << "edge " << node_idx_ << " failed to launch invalidation server (error code: " << pthread_returncode << ")" << std::endl;
+        //     Util::dumpErrorMsg(instance_name_, oss.str());
+        //     exit(1);
+        // }
+        tmp_thread_name = "edge-invalidation-server-" + std::to_string(node_idx_);
+        ThreadLauncher::pthreadCreateLowPriority(tmp_thread_name, &invalidation_server_thread_, InvalidationServerBase::launchInvalidationServer, (void*)(this));
 
         return;
     }
@@ -897,6 +911,16 @@ namespace covered
         {
             std::ostringstream oss;
             oss << "edge " << node_idx_ << " failed to join cache server (error code: " << pthread_returncode << ")" << std::endl;
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
+
+        // Wait for invalidation server
+        pthread_returncode = pthread_join(invalidation_server_thread_, NULL); // void* retval = NULL
+        if (pthread_returncode != 0)
+        {
+            std::ostringstream oss;
+            oss << "edge " << node_idx_ << " failed to join invalidation server (error code: " << pthread_returncode << ")" << std::endl;
             Util::dumpErrorMsg(instance_name_, oss.str());
             exit(1);
         }

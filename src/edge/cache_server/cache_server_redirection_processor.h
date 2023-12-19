@@ -40,12 +40,6 @@ namespace covered
         // Const variable
         std::string instance_name_;
         const CacheServerProcessorParam* cache_server_redirection_processor_param_ptr_;
-
-        // NOTE: destination addresses for sending control requests come from beacon edge index
-
-        // For receiving control responses
-        //NetworkAddr edge_cache_server_redirection_processor_recvrsp_source_addr_; // Used by cache server redirection processor to send back redirected data responses (const individual variable)
-        //UdpMsgSocketServer* edge_cache_server_redirection_processor_recvrsp_socket_server_ptr_; // Used by cache server redirection processor to receive responses from beacon server (non-const individual variable)
     };
 }
 

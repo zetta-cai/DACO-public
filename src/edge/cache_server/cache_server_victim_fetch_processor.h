@@ -35,12 +35,6 @@ namespace covered
         // Const variable
         std::string instance_name_;
         const CacheServerProcessorParam* cache_server_victim_fetch_processor_param_ptr_;
-
-        // NOTE: destination addresses for sending control requests come from beacon edge index
-
-        // For receiving control responses
-        //NetworkAddr edge_cache_server_victim_fetch_processor_recvrsp_source_addr_; // Used by cache server victim fetch processor to send back control responses (const individual variable)
-        //UdpMsgSocketServer* edge_cache_server_victim_fetch_processor_recvrsp_socket_server_ptr_; // Used by cache server victim fetch processor to receive control responses from beacon server (non-const individual variable)
     };
 }
 

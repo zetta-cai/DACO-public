@@ -6,7 +6,6 @@
 #include "common/config.h"
 #include "common/thread_launcher.h"
 #include "common/util.h"
-#include "edge/cache_server/cache_server_invalidation_processor.h"
 #include "edge/cache_server/cache_server_metadata_update_processor.h"
 #include "edge/cache_server/cache_server_placement_processor.h"
 #include "edge/cache_server/cache_server_redirection_processor.h"
@@ -69,10 +68,6 @@ namespace covered
         cache_server_placement_processor_param_ptr_ = new CacheServerProcessorParam(this, Config::getEdgeCacheServerDataRequestBufferSize());
         assert(cache_server_placement_processor_param_ptr_ != NULL);
 
-        // Prepare parameters for cache server invalidation processor thread
-        cache_server_invalidation_processor_param_ptr_ = new CacheServerProcessorParam(this, Config::getEdgeCacheServerDataRequestBufferSize());
-        assert(cache_server_invalidation_processor_param_ptr_ != NULL);
-
         // For receiving local requests
 
         // Get source address of cache server to receive local requests
@@ -122,11 +117,6 @@ namespace covered
         delete cache_server_placement_processor_param_ptr_;
         cache_server_placement_processor_param_ptr_ = NULL;
 
-        // Release cache server invalidation processor param
-        assert(cache_server_invalidation_processor_param_ptr_ != NULL);
-        delete cache_server_invalidation_processor_param_ptr_;
-        cache_server_invalidation_processor_param_ptr_ = NULL;
-
         // Release the socket server on recvreq port
         assert(edge_cache_server_recvreq_socket_server_ptr_ != NULL);
         delete edge_cache_server_recvreq_socket_server_ptr_;
@@ -149,7 +139,6 @@ namespace covered
         pthread_t cache_server_victim_fetch_processor_thread;
         pthread_t cache_server_redirection_processor_thread;
         pthread_t cache_server_placement_processor_thread;
-        pthread_t cache_server_invalidation_processor_thread;
         pthread_t cache_server_metadata_update_processor_thread;
 
         // Launch cache server workers
@@ -202,18 +191,6 @@ namespace covered
         // }
         tmp_thread_name = "edge-cache-server-placement-processor-" + std::to_string(edge_idx);
         ThreadLauncher::pthreadCreateHighPriority(tmp_thread_name, &cache_server_placement_processor_thread, CacheServerPlacementProcessor::launchCacheServerPlacementProcessor, (void*)(cache_server_placement_processor_param_ptr_));
-
-        // Launch cache server invalidation processor
-        //pthread_returncode = pthread_create(&cache_server_invalidation_processor_thread, NULL, CacheServerInvalidationProcessor::launchCacheServerInvalidationProcessor, (void*)(cache_server_invalidation_processor_param_ptr_));
-        // if (pthread_returncode != 0)
-        // {
-        //     std::ostringstream oss;
-        //     oss << "edge " << edge_idx << " failed to launch cache server invalidation processor (error code: " << pthread_returncode << ")" << std::endl;
-        //     covered::Util::dumpErrorMsg(instance_name_, oss.str());
-        //     exit(1);
-        // }
-        tmp_thread_name = "edge-cache-server-invalidation-processor-" + std::to_string(edge_idx);
-        ThreadLauncher::pthreadCreateLowPriority(tmp_thread_name, &cache_server_invalidation_processor_thread, CacheServerInvalidationProcessor::launchCacheServerInvalidationProcessor, (void*)(cache_server_invalidation_processor_param_ptr_));
 
         // Launch cache server metadata update processor
         //pthread_returncode = pthread_create(&cache_server_metadata_update_processor_thread, NULL, CacheServerMetadataUpdateProcessor::launchCacheServerMetadataUpdateProcessor, (void*)(cache_server_metadata_update_processor_param_ptr_));
@@ -273,16 +250,6 @@ namespace covered
             exit(1);
         }
 
-        // Wait for cache server invalidation processor
-        pthread_returncode = pthread_join(cache_server_invalidation_processor_thread, NULL); // void* retval = NULL
-        if (pthread_returncode != 0)
-        {
-            std::ostringstream oss;
-            oss << "edge " << edge_idx << " failed to join cache server invalidation processor (error code: " << pthread_returncode << ")" << std::endl;
-            covered::Util::dumpErrorMsg(instance_name_, oss.str());
-            exit(1);
-        }
-
         // Wait for cache server metadata update processor
         pthread_returncode = pthread_join(cache_server_metadata_update_processor_thread, NULL); // void* retval = NULL
         if (pthread_returncode != 0)
@@ -326,7 +293,7 @@ namespace covered
                 assert(data_request_ptr != NULL);
 
                 const MessageType message_type = data_request_ptr->getMessageType();
-                if (data_request_ptr->isDataRequest() || message_type == MessageType::kCoveredVictimFetchRequest || message_type == MessageType::kCoveredPlacementNotifyRequest || message_type == MessageType::kCoveredMetadataUpdateRequest || message_type == MessageType::kInvalidationRequest || message_type == MessageType::kCoveredInvalidationRequest) // Local data requests for cache server workers; redirected data requests for cache server redirection processor; lazy victim fetching for cache server victim fetch processor; placement notification for cache server placement processor; metadata update requests for cache server metadata update processor; invalidation requests for cache server invalidation processor
+                if (data_request_ptr->isDataRequest() || message_type == MessageType::kCoveredVictimFetchRequest || message_type == MessageType::kCoveredPlacementNotifyRequest || message_type == MessageType::kCoveredMetadataUpdateRequest) // Local data requests for cache server workers; redirected data requests for cache server redirection processor; lazy victim fetching for cache server victim fetch processor; placement notification for cache server placement processor; metadata update requests for cache server metadata update processor
                 {
                     // Pass received request and network address to corresponding cache server worker/processor by ring buffer
                     // NOTE: received request will be released by the corresponding cache server worker/processor
@@ -390,13 +357,6 @@ namespace covered
             // Pass cache server item into ring buffer of the cache server metadata update processor
             CacheServerItem tmp_cache_server_item(data_requeset_ptr);
             bool is_successful = cache_server_metadata_update_processor_param_ptr_->getCacheServerItemBufferPtr()->push(tmp_cache_server_item);
-            assert(is_successful == true); // Ring buffer must NOT be full
-        }
-        else if (data_requeset_ptr->getMessageType() == MessageType::kInvalidationRequest || data_requeset_ptr->getMessageType() == MessageType::kCoveredInvalidationRequest) // Cache invalidation for MSI protocol
-        {
-            // Pass cache server item into ring buffer of the cache server invalidation processor
-            CacheServerItem tmp_cache_server_item(data_requeset_ptr);
-            bool is_successful = cache_server_invalidation_processor_param_ptr_->getCacheServerItemBufferPtr()->push(tmp_cache_server_item);
             assert(is_successful == true); // Ring buffer must NOT be full
         }
         else

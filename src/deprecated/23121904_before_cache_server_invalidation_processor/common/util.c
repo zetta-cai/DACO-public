@@ -713,6 +713,12 @@ namespace covered
         return Util::toUint16(cache_server_worker_recvrsp_port);
     }
 
+    uint16_t Util::getEdgeInvalidationServerRecvreqPort(const uint32_t& edge_idx, const uint32_t& edgecnt)
+    {
+        int64_t edge_invalidation_server_recvreq_startport = static_cast<int64_t>(Config::getEdgeInvalidationServerRecvreqStartport());
+        return getNodePort_(edge_invalidation_server_recvreq_startport, edge_idx, edgecnt, Config::getEdgeMachineCnt());
+    }
+
     // (4.3) Cloud
 
     uint16_t Util::getCloudRecvmsgPort(const uint32_t& cloud_idx)

@@ -96,7 +96,7 @@ namespace covered
         bool parallelInvalidateCacheCopies(UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, const Key& key, const DirinfoSet& all_dirinfo, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const; // For each edge node idx in directory entry
 
         // NOTE: NO need to add events of issue_invalidation_req, as they happen in parallel and have been counted in the event of invalidate_cache_copies
-        void sendInvalidationRequest_(const Key& key, const NetworkAddr& recvrsp_source_addr, const uint32_t& dst_edge_idx_for_compression, const NetworkAddr& edge_cache_server_recvreq_dst_addr, const bool& skip_propagation_latency) const;
+        void sendInvalidationRequest_(const Key& key, const NetworkAddr& recvrsp_source_addr, const uint32_t& dst_edge_idx_for_compression, const NetworkAddr& edge_invalidation_server_recvreq_dst_addr, const bool& skip_propagation_latency) const;
 
         void processInvalidationResponse_(MessageBase* invalidation_response_ptr) const;
         
@@ -174,11 +174,12 @@ namespace covered
         NetworkAddr corresponding_cloud_recvreq_dst_addr_for_placement_; // For non-blocking placement deployment
 
         // NOTE: we do NOT need per-key rwlock for atomicity among CacheWrapper, CooperationWrapperBase, and CoveredCacheMananger.
-        // (1) CacheWrapper is already thread-safe for cache server, CooperationWrapperBase is already thread-safe for cache server and beacon server, and CoveredCacheMananger is already thread-safe for cache server and beacon server -> NO dead locking as each thread-safe structure releases its own lock after each function.
+        // (1) CacheWrapper is already thread-safe for cache server and invalidation server, CooperationWrapperBase is already thread-safe for cache server and beacon server, and CoveredCacheMananger is already thread-safe for cache server and beacon server -> NO dead locking as each thread-safe structure releases its own lock after each function.
         // (2) Cache server needs to access CacheWrapper, CooperationWrapperBase, and CoveredCacheManager, while there NOT exist any serializability/atomicity issue for requests of the same key, as cache server workers have already partitioned requests by hashing keys into ring buffer.
         // (2-1) Note that CacheWrapper and CooperationWrapperBase do NOT have any serializability issue, as the former tracks data and cache metadata, while the latter tracks directory metadata.
         // (3) Beacon server needs to access CacheWrapper, CooperationWrapperBase, and CoveredCacheManager, while we do NOT need strong consistency for aggregated popularity or synchronized victims in CoveredCacheManager, and hence NO need to keep serializability/atomicity.
         // (3-1) Note that CoveredCacheManager in nature has serializaiblity issues with CacheWrapper and CooperationWrapperBase due to aggregated popularity + victim cacheinfo and dirinfo, yet NO need for strong consistency.
+        // (4) Invalidation server needs to access CacheWrapper and CooperationWrapperBase, while it ONLY invalidates CacheWrapper (NOT affect directory information) and reads CooperationWrapperBase, and hence NO serializability/atomicity issue.
 
         // Non-const shared variables (thread safe)
         CacheWrapper* edge_cache_ptr_; // Data and metadata for local edge cache (thread safe)
@@ -201,6 +202,7 @@ namespace covered
         pthread_t edge_tocloud_propagation_simulator_thread_;
         pthread_t beacon_server_thread_;
         pthread_t cache_server_thread_;
+        pthread_t invalidation_server_thread_;
 
         // Common data structure shared by edge cache server and edge beacon server
         // -> Pushed by cache server worker (for in-advance remote placement notification after hybrid data fetching and local placement notification if sender is beacon) and beacon server (for local placement notification if sender is NOT beacon)
