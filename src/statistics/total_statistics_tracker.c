@@ -13,17 +13,19 @@ namespace covered
 {
     const double TotalStatisticsTracker::CACHE_UTILIZATION_THRESHOLD_FOR_FILLUP = double(0.999); // >= 99.9% cache utilization
     const uint64_t TotalStatisticsTracker::CACHE_MARGIN_BYTES_IOTA_FOR_FILLUP = MB2B(1); // <= 1MiB
-    const double TotalStatisticsTracker::CACHE_OBJECT_HIT_RATIO_CHANGE_THRESHOLD_FOR_STABLE = double(0.00001); // <= 0.001% cache object hit ratio change
+    const double TotalStatisticsTracker::CACHE_OBJECT_HIT_RATIO_CHANGE_THRESHOLD_FOR_STABLE = double(0.0001); // <= 0.01% cache object hit ratio change
 
     const std::string TotalStatisticsTracker::kClassName("TotalStatisticsTracker");
     
     TotalStatisticsTracker::TotalStatisticsTracker() : allow_update_(true)
     {
+        total_reqcnt_ = 0;
         perslot_total_aggregated_statistics_.resize(0);
     }
 
     TotalStatisticsTracker::TotalStatisticsTracker(const std::string& filepath) : allow_update_(false)
     {
+        total_reqcnt_ = 0;
         perslot_total_aggregated_statistics_.resize(0);
 
         uint32_t load_size = load_(filepath); // Load per-slot/stable total aggregated statistics from binary file
@@ -44,6 +46,7 @@ namespace covered
         assert(clientcnt > 0);
 
         TotalAggregatedStatistics total_aggregated_statistics(curslot_perclient_aggregated_statistics, slot_interval_sec);
+        total_reqcnt_ += total_aggregated_statistics.getTotalReqcnt();
         perslot_total_aggregated_statistics_.push_back(total_aggregated_statistics);
 
         return;
@@ -60,6 +63,13 @@ namespace covered
         stable_total_aggregated_statistics_ = total_aggregated_statistics;
 
         return;
+    }
+
+    uint64_t TotalStatisticsTracker::getTotalReqcnt() const
+    {
+        assert(allow_update_ == true);
+
+        return total_reqcnt_;
     }
 
     TotalAggregatedStatistics TotalStatisticsTracker::getCurslotTotalAggregatedStatistics() const
@@ -90,10 +100,10 @@ namespace covered
         bool is_stable = false;
 
         const uint32_t slotcnt = perslot_total_aggregated_statistics_.size();
-        const uint32_t slot_checkcnt = 10; // Make slot_checkcnt cache stability checkings
+        const uint32_t slot_checkcnt = 5; // Make slot_checkcnt cache stability checkings
         if (slotcnt > slot_checkcnt)
         {
-            bool is_cache_stable = true;
+            is_stable = true;
             for (uint32_t tmp_checkidx = 0; tmp_checkidx < slot_checkcnt; tmp_checkidx++)
             {
                 // Get more recent total aggregated statistics
@@ -132,15 +142,14 @@ namespace covered
                     }
                 }
 
-                is_cache_stable = false;
+                is_stable = false;
                 break;
             }
+        }
 
-            if (is_cache_stable)
-            {
-                is_stable = true;
-                cache_object_hit_ratio = getCurslotTotalAggregatedStatistics().getTotalObjectHitRatio();
-            }
+        if (is_stable)
+        {
+            cache_object_hit_ratio = getCurslotTotalAggregatedStatistics().getTotalObjectHitRatio();
         }
 
         return is_stable;
@@ -162,8 +171,11 @@ namespace covered
         assert(fs_ptr != NULL);
 
         // Dump per-slot/stable total aggregated statistics
-        // Format: slotcnt + perslot_total_aggregated_statistics_ + stable_total_aggregated_statistics_
+        // Format: total_reqcnt_ + slotcnt + perslot_total_aggregated_statistics_ + stable_total_aggregated_statistics_
         uint32_t size = 0;
+        // (0) total_reqcnt_
+        fs_ptr->write((const char*)&total_reqcnt_, sizeof(uint64_t));
+        size += sizeof(uint64_t);
         // (1) slotcnt
         const uint32_t slotcnt = perslot_total_aggregated_statistics_.size();
         fs_ptr->write((const char*)&slotcnt, sizeof(uint32_t));
@@ -193,6 +205,7 @@ namespace covered
     std::string TotalStatisticsTracker::toString() const
     {
         std::ostringstream oss;
+        oss << std::endl << "Total reqcnt: " << total_reqcnt_ << std::endl;
         for (uint32_t slot_idx = 0; slot_idx < perslot_total_aggregated_statistics_.size(); slot_idx++)
         {
             oss << std::endl << "[Time slot " << slot_idx << "]" << std::endl;
@@ -269,8 +282,11 @@ namespace covered
         assert(fs_ptr != NULL);
 
         // Load per-slot/stable total aggregated statistics
-        // Format: slotcnt + perslot_total_aggregated_statistics_ + stable_total_aggregated_statistics_
+        // Format: total_reqcnt_ + slotcnt + perslot_total_aggregated_statistics_ + stable_total_aggregated_statistics_
         uint32_t size = 0;
+        // (0) total_reqcnt_
+        fs_ptr->read((char *)&total_reqcnt_, sizeof(uint64_t));
+        size += sizeof(uint64_t);
         // (1) slotcnt
         uint32_t slotcnt = 0;
         fs_ptr->read((char *)&slotcnt, sizeof(uint32_t));

@@ -23,7 +23,8 @@ namespace covered
         EvaluatorCLI(int argc, char **argv);
         virtual ~EvaluatorCLI();
 
-        uint32_t getMaxWarmupDurationSec() const;
+        uint32_t getWarmupReqcntScale() const;
+        uint32_t getWarmupMaxDurationSec() const;
         uint32_t getStresstestDurationSec() const;
     private:
         static const std::string kClassName;
@@ -33,7 +34,8 @@ namespace covered
         bool is_dump_cli_parameters_;
         bool is_create_required_directories_;
 
-        uint32_t max_warmup_duration_sec_;
+        uint32_t warmup_reqcnt_scale_;
+        uint32_t warmup_max_duration_sec_;
         uint32_t stresstest_duration_sec_;
     protected:
         virtual void addCliParameters_();

@@ -45,7 +45,7 @@ namespace covered
     public:
         static void* launchEvaluator(void* evaluator_wrapper_param_ptr);
 
-        EvaluatorWrapper(const uint32_t& clientcnt, const uint32_t& edgecnt, const uint32_t& max_warmup_duration_sec, const uint32_t& stresstest_duration_sec, const std::string& evaluator_statistics_filepath);
+        EvaluatorWrapper(const uint32_t& clientcnt, const uint32_t& edgecnt, const uint32_t& keycnt, const uint32_t& warmup_reqcnt_scale, const uint32_t& warmup_max_duration_sec, const uint32_t& stresstest_duration_sec, const std::string& evaluator_statistics_filepath);
         ~EvaluatorWrapper();
 
         void start();
@@ -71,7 +71,8 @@ namespace covered
         // Const variables
         const uint32_t clientcnt_; // Come from CLI
         const uint32_t edgecnt_; // Come from CLI
-        const uint32_t max_warmup_duration_sec_; // Come from CLI
+        const uint32_t warmup_reqcnt_; // Calculated from CLI::keycnt and CLI::warmup_reqcnt_scale
+        const uint32_t warmup_max_duration_sec_; // Come from CLI
         const uint32_t stresstest_duration_sec_; // Come from CLI
         const std::string evaluator_statistics_filepath_; // Calculated based on CLI
 

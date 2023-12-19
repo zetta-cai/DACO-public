@@ -66,7 +66,7 @@ namespace covered
         EvaluatorCLI* evaluator_cli_ptr = evaluator_wrapper_param.getEvaluatorCLIPtr();
         std::string evaluator_statistics_filepath = Util::getEvaluatorStatisticsFilepath(evaluator_cli_ptr);
 
-        EvaluatorWrapper evaluator(evaluator_cli_ptr->getClientcnt(), evaluator_cli_ptr->getEdgecnt(), evaluator_cli_ptr->getMaxWarmupDurationSec(), evaluator_cli_ptr->getStresstestDurationSec(), evaluator_statistics_filepath);
+        EvaluatorWrapper evaluator(evaluator_cli_ptr->getClientcnt(), evaluator_cli_ptr->getEdgecnt(), evaluator_cli_ptr->getKeycnt(), evaluator_cli_ptr->getWarmupReqcntScale(), evaluator_cli_ptr->getWarmupMaxDurationSec(), evaluator_cli_ptr->getStresstestDurationSec(), evaluator_statistics_filepath);
         evaluator_wrapper_param.setEvaluatorInitialized(); // Such that simulator or prototype will continue to launch cloud, edge, and client nodes
 
         evaluator.start();
@@ -75,7 +75,7 @@ namespace covered
         return NULL;
     }
 
-    EvaluatorWrapper::EvaluatorWrapper(const uint32_t& clientcnt, const uint32_t& edgecnt, const uint32_t& max_warmup_duration_sec, const uint32_t& stresstest_duration_sec, const std::string& evaluator_statistics_filepath) : clientcnt_(clientcnt), edgecnt_(edgecnt), max_warmup_duration_sec_(max_warmup_duration_sec), stresstest_duration_sec_(stresstest_duration_sec), evaluator_statistics_filepath_(evaluator_statistics_filepath)
+    EvaluatorWrapper::EvaluatorWrapper(const uint32_t& clientcnt, const uint32_t& edgecnt, const uint32_t& keycnt, const uint32_t& warmup_reqcnt_scale, const uint32_t& warmup_max_duration_sec, const uint32_t& stresstest_duration_sec, const std::string& evaluator_statistics_filepath) : clientcnt_(clientcnt), edgecnt_(edgecnt), warmup_reqcnt_(keycnt * warmup_reqcnt_scale), warmup_max_duration_sec_(warmup_max_duration_sec), stresstest_duration_sec_(stresstest_duration_sec), evaluator_statistics_filepath_(evaluator_statistics_filepath)
     {
         is_warmup_phase_ = true;
         target_slot_idx_ = 0;
@@ -198,7 +198,7 @@ namespace covered
             if (delta_us_for_switch_slot >= static_cast<double>(SEC2US(client_raw_statistics_slot_interval_sec)))
             {
                 // Notify clients to switch cur-slot client raw statistics
-                notifyClientsToSwitchSlot_(); // Increase target_slot_idx_ by one and update per-slot total aggregated statistics
+                notifyClientsToSwitchSlot_(); // Increase target_slot_idx_ by one, update per-slot total aggregated statistics, and update total_reqcnt in TotalStatisticsTracker
 
                 // Update prev_timestamp for the next slot
                 prev_timestamp = cur_timestamp;
@@ -209,29 +209,43 @@ namespace covered
             {
                 bool finish_warmup_phase = false;
 
-                double delta_us_for_finishwarmup = Util::getDeltaTimeUs(cur_timestamp, start_timestamp);
-                if (delta_us_for_finishwarmup >= SEC2US(max_warmup_duration_sec_))
-                {
-                    std::ostringstream oss;
-                    oss << "achieve max warmup duration of " << max_warmup_duration_sec_ << " seconds with cache object hit ratio of " << total_statistics_tracker_ptr_->getCurslotTotalAggregatedStatistics().getTotalObjectHitRatio() << " -> finish warmup phase";
-                    Util::dumpNormalMsg(kClassName, oss.str());
+                // (1) First stable condition: warmup_reqcnt requests have been processed during warmup phase
 
-                    finish_warmup_phase = true;
-                } // End of achieving max_warmup_duration_sec_
-                else
-                {
-                    is_stable = total_statistics_tracker_ptr_->isPerSlotTotalAggregatedStatisticsStable(stable_object_hit_ratio);
+                const uint64_t total_reqcnt = total_statistics_tracker_ptr_->getTotalReqcnt();
+                finish_warmup_phase = (total_reqcnt >= static_cast<uint64_t>(warmup_reqcnt_));
 
-                    // Cache object hit ratio becomes stable
-                    if (is_stable)
+                // (2) Second stable condition (if ENABLE_WARMUP_MAX_DURATION is defined): monitor stable global hit ratio (i.e., cache is filled up and total object hit ratio converges) within warmup max duration
+
+                if (finish_warmup_phase) // Achieve warmup_reqcnt requests
+                {
+                    double delta_us_for_finishwarmup = Util::getDeltaTimeUs(cur_timestamp, start_timestamp);
+                    if (delta_us_for_finishwarmup >= SEC2US(warmup_max_duration_sec_))
                     {
                         std::ostringstream oss;
-                        oss << "cache object hit ratio becomes stable at " << stable_object_hit_ratio << " -> finish warmup phase";
+                        oss << "achieve warmup maximum duration of " << warmup_max_duration_sec_ << " seconds with cache object hit ratio of " << total_statistics_tracker_ptr_->getCurslotTotalAggregatedStatistics().getTotalObjectHitRatio() << " -> finish warmup phase";
                         Util::dumpNormalMsg(kClassName, oss.str());
 
                         finish_warmup_phase = true;
-                    }
-                } // End of within max_warmup_duration_sec_
+                    } // End of achieving warmup_max_duration_sec_
+                    else
+                    {
+                        is_stable = total_statistics_tracker_ptr_->isPerSlotTotalAggregatedStatisticsStable(stable_object_hit_ratio);
+
+                        // Cache object hit ratio becomes stable
+                        if (is_stable)
+                        {
+                            std::ostringstream oss;
+                            oss << "cache object hit ratio becomes stable at " << stable_object_hit_ratio << " -> finish warmup phase";
+                            Util::dumpNormalMsg(kClassName, oss.str());
+
+                            finish_warmup_phase = true;
+                        }
+                        else
+                        {
+                            finish_warmup_phase = false;
+                        }
+                    } // End of within warmup_max_duration_sec_
+                } // End of achieve warmup_reqcnt requests
 
                 if (finish_warmup_phase)
                 {

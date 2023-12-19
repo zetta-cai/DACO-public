@@ -18,9 +18,14 @@ namespace covered
 
     EvaluatorCLI::~EvaluatorCLI() {}
 
-    uint32_t EvaluatorCLI::getMaxWarmupDurationSec() const
+    uint32_t EvaluatorCLI::getWarmupReqcntScale() const
     {
-        return max_warmup_duration_sec_;
+        return warmup_reqcnt_scale_;
+    }
+
+    uint32_t EvaluatorCLI::getWarmupMaxDurationSec() const
+    {
+        return warmup_max_duration_sec_;
     }
 
     uint32_t EvaluatorCLI::getStresstestDurationSec() const
@@ -39,7 +44,8 @@ namespace covered
 
             // Dynamic configurations for client
             argument_desc_.add_options()
-                ("max_warmup_duration_sec", boost::program_options::value<uint32_t>()->default_value(30), "duration of warmup phase (seconds)")
+                ("warmup_reqcnt_scale", boost::program_options::value<uint32_t>()->default_value(5), "scale of warmup request count (= warmup_reqcnt_scale * keycnt)")
+                ("warmup_max_duration_sec_", boost::program_options::value<uint32_t>()->default_value(30), "maximum duration of warmup phase (seconds)")
                 ("stresstest_duration_sec", boost::program_options::value<uint32_t>()->default_value(30), "duration of stresstest phase (seconds)")
             ;
 
@@ -58,11 +64,13 @@ namespace covered
 
             // (3) Get CLI parameters for client dynamic configurations
 
-            uint32_t max_warmup_duration_sec = argument_info_["max_warmup_duration_sec"].as<uint32_t>();
+            uint32_t warmup_reqcnt_scale = argument_info_["warmup_reqcnt_scale"].as<uint32_t>();
+            uint32_t warmup_max_duration_sec = argument_info_["warmup_max_duration_sec"].as<uint32_t>();
             uint32_t stresstest_duration_sec = argument_info_["stresstest_duration_sec"].as<uint32_t>();
 
             // Store client CLI parameters for dynamic configurations
-            max_warmup_duration_sec_ = max_warmup_duration_sec;
+            warmup_reqcnt_scale_ = warmup_reqcnt_scale;
+            warmup_max_duration_sec_ = warmup_max_duration_sec;
             stresstest_duration_sec_ = stresstest_duration_sec;
 
             is_set_param_and_config_ = true;
@@ -82,7 +90,8 @@ namespace covered
 
             std::ostringstream oss;
             oss << "[Dynamic configurations from CLI parameters in " << kClassName << "]" << std::endl;
-            oss << "Max warmup duration seconds: " << max_warmup_duration_sec_ << std::endl;
+            oss << "Warmup request count scale: " << warmup_reqcnt_scale_ << std::endl;
+            oss << "Warmup maximum duration seconds: " << warmup_max_duration_sec_ << std::endl;
             oss << "Stresstest duration seconds: " << stresstest_duration_sec_;
             Util::dumpDebugMsg(kClassName, oss.str());
 

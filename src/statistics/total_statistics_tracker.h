@@ -31,6 +31,7 @@ namespace covered
         void updateStableTotalAggregatedStatistics(const std::vector<ClientAggregatedStatistics>& stable_perclient_aggregated_statistics, const uint32_t& stable_sec);
 
         // Get cur-slot total aggregated statistics
+        uint64_t getTotalReqcnt() const;
         TotalAggregatedStatistics getCurslotTotalAggregatedStatistics() const;
         TotalAggregatedStatistics getPrevslotTotalAggregatedStatistics() const;
         TotalAggregatedStatistics getGivenslotTotalAggregatedStatistics(const uint32_t& slotidx) const;
@@ -54,6 +55,7 @@ namespace covered
         const bool allow_update_; // NOT allow statistics update for loaded total statistics
 
         // Per-slot/stable total aggregated statistics
+        uint64_t total_reqcnt_; // Total # of requests over all time slots
         std::vector<TotalAggregatedStatistics> perslot_total_aggregated_statistics_;
         TotalAggregatedStatistics stable_total_aggregated_statistics_;
     };
