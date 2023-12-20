@@ -173,6 +173,21 @@ namespace covered
         return;
     }
 
+    uint32_t ClientRawStatistics::getMaxlatency_() const
+    {
+        assert(latency_histogram_ != NULL);
+
+        for (uint32_t latency_us = latency_histogram_size_ - 1; latency_us >= 0; latency_us--)
+        {
+            if (latency_histogram_[latency_us] > 0)
+            {
+                return latency_us;
+            }
+        }
+
+        return 0;
+    }
+
     void ClientRawStatistics::updateLatency_(const uint32_t& latency_us)
     {
         assert(latency_histogram_ != NULL);

@@ -29,6 +29,8 @@ namespace covered
     const std::string Event::EDGE_CACHE_SERVER_WORKER_UPDATE_LOCAL_DIRECTORY_EVENT_NAME("edge::cache_server_worker::update_local_directory");
     const std::string Event::EDGE_CACHE_SERVER_WORKER_UPDATE_REMOTE_DIRECTORY_EVENT_NAME("edge::cache_server_worker::update_remote_directory");
     const std::string Event::EDGE_CACHE_SERVER_WORKER_ISSUE_DIRECTORY_UPDATE_REQ_EVENT_NAME("edge::cache_server_worker::issue_directory_update_req");
+    const std::string Event::EDGE_CACHE_SERVER_WORKER_PLACEMENT_FOR_GETRSP_EVENT_NAME("edge::cache_server_worker::placement_for_getrsp");
+    const std::string Event::EDGE_CACHE_SERVER_WORKER_PROCESS_LOCAL_GETREQ_EVENT_NAME("edge::cache_server_worker::process_local_getreq");
 
     // For writes in edge cache server worker
     const std::string Event::EDGE_CACHE_SERVER_WORKER_ACQUIRE_WRITELOCK_EVENT_NAME("edge::cache_server_worker::acquire_writelock");

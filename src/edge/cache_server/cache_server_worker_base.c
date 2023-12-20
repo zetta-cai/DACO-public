@@ -190,6 +190,8 @@ namespace covered
 
     bool CacheServerWorkerBase::processLocalGetRequest_(MessageBase* local_request_ptr, const NetworkAddr& recvrsp_dst_addr) const
     {
+        struct timespec process_local_getreq_start_timestamp = Util::getCurrentTimespec();
+
         // Get key and value from local request if any
         assert(local_request_ptr != NULL && local_request_ptr->getMessageType() == MessageType::kLocalGetRequest);
         assert(recvrsp_dst_addr.isValidAddr());
@@ -352,6 +354,8 @@ namespace covered
             if (!is_tracked_before_fetch_value && is_tracked_after_fetch_value) // Newly-tracked after fetching value from neighbor/cloud
             {
                 assert(tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME); // ONLY for COVERED
+                
+                struct timespec placement_for_getrsp_start_timestamp = Util::getCurrentTimespec();
 
                 // Try to trigger cache placement if necessary
                 is_finish = tryToTriggerCachePlacementForGetrsp_(tmp_key, tmp_value, tmp_collected_popularity_after_fetch_value, fast_path_hint, is_cooperative_cached, total_bandwidth_usage, event_list, skip_propagation_latency);
@@ -359,8 +363,18 @@ namespace covered
                 {
                     return is_finish;
                 }
+
+                struct timespec placement_for_getrsp_end_timestamp = Util::getCurrentTimespec();
+                uint32_t placement_for_getrsp_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(placement_for_getrsp_end_timestamp, placement_for_getrsp_start_timestamp));
+                event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_PLACEMENT_FOR_GETRSP_EVENT_NAME, placement_for_getrsp_latency_us); // Add intermediate event if with event tracking
             }
         }
+
+        struct timespec process_local_getreq_end_timestamp = Util::getCurrentTimespec();
+        uint32_t process_local_getreq_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(process_local_getreq_end_timestamp, process_local_getreq_start_timestamp));
+        event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_PROCESS_LOCAL_GETREQ_EVENT_NAME, process_local_getreq_latency_us); // Add intermediate event if with event tracking
+
+        struct timespec t0 = Util::getCurrentTimespec(); // TMPDEBUG231220
 
         // Prepare LocalGetResponse for client
         uint64_t used_bytes = tmp_edge_wrapper_ptr->getSizeForCapacity();
@@ -370,9 +384,13 @@ namespace covered
         MessageBase* local_get_response_ptr = new LocalGetResponse(tmp_key, tmp_value, hitflag, used_bytes, capacity_bytes, edge_idx, edge_cache_server_recvreq_source_addr, total_bandwidth_usage, event_list, skip_propagation_latency);
         assert(local_get_response_ptr != NULL);
 
+        struct timespec t1 = Util::getCurrentTimespec(); // TMPDEBUG231220
+
         // Push local response message into edge-to-client propagation simulator to a client
         bool is_successful = tmp_edge_wrapper_ptr->getEdgeToclientPropagationSimulatorParamPtr()->push(local_get_response_ptr, recvrsp_dst_addr);
         assert(is_successful);
+
+        struct timespec t2 = Util::getCurrentTimespec(); // TMPDEBUG231220
 
         #ifdef DEBUG_CACHE_SERVER_WORKER
         Util::dumpVariablesForDebug(base_instance_name_, 5, "issue a local response;", "type:", MessageBase::messageTypeToString(local_get_response_ptr->getMessageType()).c_str(), "keystr:", tmp_key.getKeystr().c_str());
@@ -380,6 +398,14 @@ namespace covered
 
         // NOTE: local_get_response_ptr will be released by edge-to-client propagation simulator
         local_get_response_ptr = NULL;
+
+        struct timespec t3 = Util::getCurrentTimespec(); // TMPDEBUG231220
+
+        // TMPDEBUG231220
+        if (Util::getDeltaTimeUs(t3, t0) >= MS2US(10))
+        {
+            Util::dumpVariablesForDebug(base_instance_name_, 6, "CacheServerWorkerBase::processGetReq t1-t0:", std::to_string(Util::getDeltaTimeUs(t1, t0)).c_str(), "t2-t1:", std::to_string(Util::getDeltaTimeUs(t2, t1)).c_str(), "t3-t2:", std::to_string(Util::getDeltaTimeUs(t3, t2)).c_str());
+        }
 
         return is_finish;
     }

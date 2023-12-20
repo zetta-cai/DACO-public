@@ -42,6 +42,8 @@ namespace covered
         uint32_t dump(const std::string filepath) const;
 
         // Get string for per-slot/stable total aggregate statistics
+        std::string curslotToString(const uint32_t& cur_slotidx) const;
+        std::string stableToString() const;
         std::string toString() const;
     private:
         static const std::string kClassName;

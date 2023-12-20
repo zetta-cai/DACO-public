@@ -480,10 +480,22 @@ namespace covered
 
         // No need to acquire a read lock due to no key provided and not critical for size
         
+        struct timespec t0 = Util::getCurrentTimespec(); // TMPDEBUG231220
+
         uint64_t local_edge_cache_size = local_cache_ptr_->getSizeForCapacity();
+        struct timespec t1 = Util::getCurrentTimespec(); // TMPDEBUG231220
         uint64_t validity_map_size = validity_map_ptr_->getSizeForCapacity();
+        struct timespec t2 = Util::getCurrentTimespec(); // TMPDEBUG231220
         // NOTE: NOT consider per-key beacon edge idx, which is just impl trick to avoid duplicate consistent hashing, yet NOT necessary for edge caching
         uint64_t total_size = Util::uint64Add(local_edge_cache_size, validity_map_size);
+
+        struct timespec t3 = Util::getCurrentTimespec(); // TMPDEBUG231220
+
+        // TMPDEBUG231220
+        if (Util::getDeltaTimeUs(t3, t0) >= MS2US(10))
+        {
+            Util::dumpVariablesForDebug(instance_name_, 6, "CacheWrapper::getSizeForCapacity t1-t0:", std::to_string(Util::getDeltaTimeUs(t1, t0)).c_str(), "t2-t1:", std::to_string(Util::getDeltaTimeUs(t2, t1)).c_str(), "t3-t2:", std::to_string(Util::getDeltaTimeUs(t3, t2)).c_str());
+        }
 
         return total_size;
     }

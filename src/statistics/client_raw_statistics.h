@@ -43,6 +43,7 @@ namespace covered
         void updateReqbytes_(const uint32_t& local_client_worker_idx, const uint32_t& object_size);
 
         // Update latency statistics of a client worker
+        uint32_t getMaxlatency_() const;
         void updateLatency_(const uint32_t& latency_us);
 
         // Update read-write ratio statistics of a client worker

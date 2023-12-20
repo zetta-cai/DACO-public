@@ -341,10 +341,12 @@ namespace covered
 
         // TMPDEBUG231220
         const uint32_t curslot_idx = client_statistics_tracker_ptr_->getCurslotIdx();
-        const uint32_t curslot_reqcnt = client_statistics_tracker_ptr_->getCurslotReqcnt(local_client_worker_idx);
-        if (curslot_reqcnt == 1) // The first req in current slot
+        const uint32_t curslot_max_latency = client_statistics_tracker_ptr_->getCurslotMaxLatency(local_client_worker_idx);
+        // const uint32_t curslot_reqcnt = client_statistics_tracker_ptr_->getCurslotReqcnt(local_client_worker_idx);
+        //if (curslot_reqcnt == 1) // The first req in current slot
+        if (rtt_us >= MS2US(10)) // Reqs >= 20ms latency
         {
-            Util::dumpVariablesForDebug(instance_name_, 8, "curslot idx:", std::to_string(curslot_idx).c_str(), "hitflag:", MessageBase::hitflagToString(hitflag).c_str(), "rtt:", std::to_string(rtt_us).c_str(), "eventlist:", local_response_ptr->getEventListRef().toString().c_str());
+            Util::dumpVariablesForDebug(instance_name_, 10, "curslot idx:", std::to_string(curslot_idx).c_str(), "max latency:", std::to_string(curslot_max_latency).c_str(), "hitflag:", MessageBase::hitflagToString(hitflag).c_str(), "rtt:", std::to_string(rtt_us).c_str(), "eventlist:", local_response_ptr->getEventListRef().toString().c_str());
         }
 
         #ifdef DEBUG_CLIENT_WORKER_WRAPPER

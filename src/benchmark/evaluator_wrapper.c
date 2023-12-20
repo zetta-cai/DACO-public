@@ -176,6 +176,7 @@ namespace covered
             usleep(Util::SLEEP_INTERVAL_US);
 
             struct timespec cur_timestamp = Util::getCurrentTimespec();
+            bool with_new_slot_statistics = false;
 
             // Count down duration for stresstest phase to judge if benchmark is finished
             if (!is_warmup_phase_) // Stresstest phase
@@ -198,6 +199,8 @@ namespace covered
             {
                 // Notify clients to switch cur-slot client raw statistics
                 notifyClientsToSwitchSlot_(); // Increase target_slot_idx_ by one, update per-slot total aggregated statistics, and update total_reqcnt in TotalStatisticsTracker
+
+                with_new_slot_statistics = true;
 
                 // Update prev_timestamp for the next slot
                 prev_timestamp = cur_timestamp;
@@ -274,11 +277,21 @@ namespace covered
                     start_timestamp = Util::getCurrentTimespec();
                 } // End of finish warmup phase
             } // End if (is_warmup_phase == true)
+
+            if (with_new_slot_statistics)
+            {
+                // Print latest-slot total aggregated statistics
+                std::ostringstream oss;
+                oss << total_statistics_tracker_ptr_->curslotToString(target_slot_idx_ - 1);
+                Util::dumpNormalMsg(kClassName, oss.str());
+            }
         } // End of while loop
 
-        // Print per-slot/stable total aggregated statistics
+
+        // Print last-slot/stable total aggregated statistics
         std::ostringstream oss;
-        oss << total_statistics_tracker_ptr_->toString();
+        oss << total_statistics_tracker_ptr_->curslotToString(target_slot_idx_) << std::endl;
+        oss << total_statistics_tracker_ptr_->stableToString() << std::endl;
         Util::dumpNormalMsg(kClassName, oss.str());
 
         // Dump per-slot/stable total aggregated statistics

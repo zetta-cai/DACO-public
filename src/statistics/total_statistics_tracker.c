@@ -197,17 +197,32 @@ namespace covered
         return size - 0;
     }
 
+    std::string TotalStatisticsTracker::curslotToString(const uint32_t& cur_slotidx) const
+    {
+        std::ostringstream oss;
+        oss << std::endl << "[Time slot " << cur_slotidx << "]" << std::endl;
+        oss << "Total reqcnt: " << total_reqcnt_ << std::endl;
+        oss << perslot_total_aggregated_statistics_[cur_slotidx].toString();
+        return oss.str();
+    }
+
+    std::string TotalStatisticsTracker::stableToString() const
+    {
+        std::ostringstream oss;
+        oss << std::endl << "[Stable]" << std::endl;
+        oss << "Total reqcnt: " << total_reqcnt_ << std::endl;
+        oss << stable_total_aggregated_statistics_.toString();
+        return oss.str();
+    }
+
     std::string TotalStatisticsTracker::toString() const
     {
         std::ostringstream oss;
-        oss << std::endl << "Total reqcnt: " << total_reqcnt_ << std::endl;
         for (uint32_t slot_idx = 0; slot_idx < perslot_total_aggregated_statistics_.size(); slot_idx++)
         {
-            oss << std::endl << "[Time slot " << slot_idx << "]" << std::endl;
-            oss << perslot_total_aggregated_statistics_[slot_idx].toString() << std::endl;
+            oss << curslotToString(slot_idx) << std::endl;
         }
-        oss << std::endl << "[Stable]" << std::endl;
-        oss << stable_total_aggregated_statistics_.toString();
+        oss << stableToString() << std::endl;
         
         std::string total_statistics_string = oss.str();
         return total_statistics_string;

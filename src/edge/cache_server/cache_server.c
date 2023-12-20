@@ -177,7 +177,8 @@ namespace covered
         //     exit(1);
         // }
         std::string tmp_thread_name = "edge-cache-server-victim-fetch-processor-" + std::to_string(edge_idx);
-        ThreadLauncher::pthreadCreateLowPriority(tmp_thread_name, &cache_server_victim_fetch_processor_thread, CacheServerVictimFetchProcessor::launchCacheServerVictimFetchProcessor, (void*)(cache_server_victim_fetch_processor_param_ptr_));
+        //ThreadLauncher::pthreadCreateLowPriority(tmp_thread_name, &cache_server_victim_fetch_processor_thread, CacheServerVictimFetchProcessor::launchCacheServerVictimFetchProcessor, (void*)(cache_server_victim_fetch_processor_param_ptr_));
+        ThreadLauncher::pthreadCreateHighPriority(tmp_thread_name, &cache_server_victim_fetch_processor_thread, CacheServerVictimFetchProcessor::launchCacheServerVictimFetchProcessor, (void*)(cache_server_victim_fetch_processor_param_ptr_)); // TMPDEBUG231220
 
         // Launch cache server redirection processor
         //pthread_returncode = pthread_create(&cache_server_redirection_processor_thread, NULL, CacheServerRedirectionProcessor::launchCacheServerRedirectionProcessor, (void*)(cache_server_redirection_processor_param_ptr_));
@@ -225,7 +226,8 @@ namespace covered
         //     exit(1);
         // }
         tmp_thread_name = "edge-cache-server-metadata-update-processor-" + std::to_string(edge_idx);
-        ThreadLauncher::pthreadCreateLowPriority(tmp_thread_name, &cache_server_metadata_update_processor_thread, CacheServerMetadataUpdateProcessor::launchCacheServerMetadataUpdateProcessor, (void*)(cache_server_metadata_update_processor_param_ptr_));
+        //ThreadLauncher::pthreadCreateLowPriority(tmp_thread_name, &cache_server_metadata_update_processor_thread, CacheServerMetadataUpdateProcessor::launchCacheServerMetadataUpdateProcessor, (void*)(cache_server_metadata_update_processor_param_ptr_));
+        ThreadLauncher::pthreadCreateHighPriority(tmp_thread_name, &cache_server_metadata_update_processor_thread, CacheServerMetadataUpdateProcessor::launchCacheServerMetadataUpdateProcessor, (void*)(cache_server_metadata_update_processor_param_ptr_)); // TMPDEBUG231220
 
         // Receive data requests and partition to different cache server workers
         receiveRequestsAndPartition_();

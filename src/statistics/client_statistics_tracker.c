@@ -97,6 +97,22 @@ namespace covered
         return curslot_reqcnt;
     }
 
+    uint32_t ClientStatisticsTracker::getCurslotMaxLatency(const uint32_t& local_client_worker_idx) const
+    {
+        checkPointers_();
+
+        perclientworker_curslot_update_flags_[local_client_worker_idx].store(true, Util::STORE_CONCURRENCY_ORDER);
+
+        ClientRawStatistics* tmp_curslot_client_raw_statistics_ptr = getCurslotClientRawStatisticsPtr_(cur_slot_idx_.load(Util::LOAD_CONCURRENCY_ORDER));
+        assert(tmp_curslot_client_raw_statistics_ptr != NULL);
+        uint32_t max_latency_us = tmp_curslot_client_raw_statistics_ptr->getMaxlatency_();
+
+        perclientworker_curslot_update_flags_[local_client_worker_idx].store(false, Util::STORE_CONCURRENCY_ORDER);
+        perclientworker_curslot_update_statuses_[local_client_worker_idx]++;
+
+        return max_latency_us;
+    }
+
     // (1) Update cur-slot/stable client raw statistics (invoked by client workers)
 
     void ClientStatisticsTracker::updateLocalHitcnt(const uint32_t& local_client_worker_idx, const bool& is_stresstest_phase)

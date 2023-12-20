@@ -285,8 +285,12 @@ namespace covered
     {
         checkPointers_();
 
+        struct timespec t0 = Util::getCurrentTimespec(); // TMPDEBUG231220
+
         uint64_t edge_cache_size = edge_cache_ptr_->getSizeForCapacity();
+        struct timespec t1 = Util::getCurrentTimespec(); // TMPDEBUG231220
         uint64_t cooperation_size = cooperation_wrapper_ptr_->getSizeForCapacity();
+        struct timespec t2 = Util::getCurrentTimespec(); // TMPDEBUG231220
         uint64_t cache_manager_size = 0;
         uint64_t weight_tuner_size = 0;
         if (cache_name_ == Util::COVERED_CACHE_NAME) // ONLY for COVERED
@@ -296,6 +300,14 @@ namespace covered
         }
 
         uint64_t size = edge_cache_size + cooperation_size + cache_manager_size + weight_tuner_size;
+
+        struct timespec t3 = Util::getCurrentTimespec(); // TMPDEBUG231220
+
+        // TMPDEBUG231220
+        if (Util::getDeltaTimeUs(t3, t0) >= MS2US(10))
+        {
+            Util::dumpVariablesForDebug(instance_name_, 6, "EdgeWrapper::getSizeForCapacity t1-t0:", std::to_string(Util::getDeltaTimeUs(t1, t0)).c_str(), "t2-t1:", std::to_string(Util::getDeltaTimeUs(t2, t1)).c_str(), "t3-t2:", std::to_string(Util::getDeltaTimeUs(t3, t2)).c_str());
+        }
 
         return size;
     }
@@ -936,13 +948,25 @@ namespace covered
     {
         checkPointers_();
 
+        struct timespec t0 = Util::getCurrentTimespec(); // TMPDEBUG231220
+
         bool affect_victim_tracker = false; // If key was a local synced victim before or is a local synced victim now
         bool is_local_cached_and_valid = edge_cache_ptr_->get(key, is_redirected, value, affect_victim_tracker);
+
+        struct timespec t1 = Util::getCurrentTimespec(); // TMPDEBUG231220
 
         if (cache_name_ == Util::COVERED_CACHE_NAME) // ONLY for COVERED
         {
             // Avoid unnecessary VictimTracker update by checking affect_victim_tracker
             updateCacheManagerForLocalSyncedVictims(affect_victim_tracker);
+        }
+
+        struct timespec t2 = Util::getCurrentTimespec(); // TMPDEBUG231220
+
+        // TMPDEBUG231220
+        if (Util::getDeltaTimeUs(t2, t0) >= MS2US(15))
+        {
+            Util::dumpVariablesForDebug(instance_name_, 4, "EdgeWrapper::getLocalEdgeCache_ t1-t0:", std::to_string(Util::getDeltaTimeUs(t1, t0)).c_str(), "t2-t1:", std::to_string(Util::getDeltaTimeUs(t2, t1)).c_str());
         }
         
         return is_local_cached_and_valid;
@@ -984,11 +1008,24 @@ namespace covered
         checkPointers_();
         //assert(cache_name_ == Util::COVERED_CACHE_NAME);
 
+        struct timespec t0 = Util::getCurrentTimespec(); // TMPDEBUG231220
+
         // Get local edge margin bytes
         uint64_t used_bytes = getSizeForCapacity();
 
+        struct timespec t1 = Util::getCurrentTimespec(); // TMPDEBUG231220
+
         uint64_t capacity_bytes = getCapacityBytes();
+        struct timespec t2 = Util::getCurrentTimespec(); // TMPDEBUG231220
         uint64_t local_cache_margin_bytes = (capacity_bytes >= used_bytes) ? (capacity_bytes - used_bytes) : 0;
+
+        struct timespec t3 = Util::getCurrentTimespec(); // TMPDEBUG231220
+
+        // TMPDEBUG231220
+        if (Util::getDeltaTimeUs(t3, t0) >= MS2US(10))
+        {
+            Util::dumpVariablesForDebug(instance_name_, 6, "EdgeWrapper::getCacheMarginBytes t1-t0:", std::to_string(Util::getDeltaTimeUs(t1, t0)).c_str(), "t2-t1:", std::to_string(Util::getDeltaTimeUs(t2, t1)).c_str(), "t3-t2:", std::to_string(Util::getDeltaTimeUs(t3, t2)).c_str());
+        }
 
         return local_cache_margin_bytes;
     }
@@ -998,21 +1035,41 @@ namespace covered
         checkPointers_();
         assert(cache_name_ == Util::COVERED_CACHE_NAME);
 
+        struct timespec t0 = Util::getCurrentTimespec(); // TMPDEBUG231220
+
         // Get local edge margin bytes
         uint64_t local_cache_margin_bytes = getCacheMarginBytes();
+
+        struct timespec t1 = Util::getCurrentTimespec(); // TMPDEBUG231220
+        int type = -1; // TMPDEBUG231220
+        struct timespec t2; // TMPDEBUG231220
 
         if (affect_victim_tracker) // Need to update victim cacheinfos and dirinfos of local synced victims besides local cache margin bytes
         {
             // Get victim cacheinfos of local synced victims for the current edge node
             std::list<VictimCacheinfo> local_synced_victim_cacheinfos = edge_cache_ptr_->getLocalSyncedVictimCacheinfos(); // NOTE: victim cacheinfos from local edge cache MUST be complete
 
+            t2 = Util::getCurrentTimespec(); // TMPDEBUG231220
+            type = 0; // TMPDEBUG231220
+
             // Update local synced victims for the current edge node
             covered_cache_manager_ptr_->updateVictimTrackerForLocalSyncedVictims(local_cache_margin_bytes, local_synced_victim_cacheinfos, cooperation_wrapper_ptr_);
         }
         else // ONLY update local cache margin bytes
         {
+            t2 = Util::getCurrentTimespec(); // TMPDEBUG231220
+            type = 1; // TMPDEBUG231220
+
             // Update local cache margin bytes
             covered_cache_manager_ptr_->updateVictimTrackerForLocalCacheMarginBytes(local_cache_margin_bytes);
+        }
+
+        struct timespec t3 = Util::getCurrentTimespec(); // TMPDEBUG231220
+
+        // TMPDEBUG231220
+        if (Util::getDeltaTimeUs(t3, t0) >= MS2US(10))
+        {
+            Util::dumpVariablesForDebug(instance_name_, 8, "EdgeWrapper::updateCacheManagerForLocalSyncedVictims type:", std::to_string(type).c_str(), "t1-t0:", std::to_string(Util::getDeltaTimeUs(t1, t0)).c_str(), "t2-t1:", std::to_string(Util::getDeltaTimeUs(t2, t1)).c_str(), "t3-t2:", std::to_string(Util::getDeltaTimeUs(t3, t2)).c_str());
         }
 
         return;

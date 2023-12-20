@@ -38,6 +38,8 @@ namespace covered
         static const std::string EDGE_CACHE_SERVER_WORKER_UPDATE_LOCAL_DIRECTORY_EVENT_NAME;
         static const std::string EDGE_CACHE_SERVER_WORKER_UPDATE_REMOTE_DIRECTORY_EVENT_NAME;
         static const std::string EDGE_CACHE_SERVER_WORKER_ISSUE_DIRECTORY_UPDATE_REQ_EVENT_NAME;
+        static const std::string EDGE_CACHE_SERVER_WORKER_PLACEMENT_FOR_GETRSP_EVENT_NAME;
+        static const std::string EDGE_CACHE_SERVER_WORKER_PROCESS_LOCAL_GETREQ_EVENT_NAME;
 
         // Fot writes in edge cache server worker
         static const std::string EDGE_CACHE_SERVER_WORKER_ACQUIRE_WRITELOCK_EVENT_NAME;
