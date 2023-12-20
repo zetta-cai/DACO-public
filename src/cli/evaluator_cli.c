@@ -1,6 +1,7 @@
 #include "cli/evaluator_cli.h"
 
 #include "common/config.h"
+#include "common/covered_common_header.h"
 #include "common/util.h"
 
 namespace covered
@@ -45,7 +46,9 @@ namespace covered
             // Dynamic configurations for client
             argument_desc_.add_options()
                 ("warmup_reqcnt_scale", boost::program_options::value<uint32_t>()->default_value(5), "scale of warmup request count (= warmup_reqcnt_scale * keycnt)")
-                ("warmup_max_duration_sec_", boost::program_options::value<uint32_t>()->default_value(30), "maximum duration of warmup phase (seconds)")
+                #ifdef ENABLE_WARMUP_MAX_DURATION
+                ("warmup_max_duration_sec", boost::program_options::value<uint32_t>()->default_value(30), "maximum duration of warmup phase (seconds)")
+                #endif
                 ("stresstest_duration_sec", boost::program_options::value<uint32_t>()->default_value(30), "duration of stresstest phase (seconds)")
             ;
 
@@ -65,12 +68,18 @@ namespace covered
             // (3) Get CLI parameters for client dynamic configurations
 
             uint32_t warmup_reqcnt_scale = argument_info_["warmup_reqcnt_scale"].as<uint32_t>();
+            #ifdef ENABLE_WARMUP_MAX_DURATION
             uint32_t warmup_max_duration_sec = argument_info_["warmup_max_duration_sec"].as<uint32_t>();
+            #endif
             uint32_t stresstest_duration_sec = argument_info_["stresstest_duration_sec"].as<uint32_t>();
 
             // Store client CLI parameters for dynamic configurations
             warmup_reqcnt_scale_ = warmup_reqcnt_scale;
+            #ifdef ENABLE_WARMUP_MAX_DURATION
             warmup_max_duration_sec_ = warmup_max_duration_sec;
+            #else
+            warmup_max_duration_sec_ = 0;
+            #endif
             stresstest_duration_sec_ = stresstest_duration_sec;
 
             is_set_param_and_config_ = true;
@@ -91,7 +100,9 @@ namespace covered
             std::ostringstream oss;
             oss << "[Dynamic configurations from CLI parameters in " << kClassName << "]" << std::endl;
             oss << "Warmup request count scale: " << warmup_reqcnt_scale_ << std::endl;
+            #ifdef ENABLE_WARMUP_MAX_DURATION
             oss << "Warmup maximum duration seconds: " << warmup_max_duration_sec_ << std::endl;
+            #endif
             oss << "Stresstest duration seconds: " << stresstest_duration_sec_;
             Util::dumpDebugMsg(kClassName, oss.str());
 

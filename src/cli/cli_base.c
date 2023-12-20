@@ -43,10 +43,10 @@ namespace covered
             dumpCliParameters_(); // Dump CLI parameters
             createRequiredDirectories_(main_class_name); // Create required directories (e.g., client statistics directory and cloud RocksDB directory)
         }
-        catch (boost::program_options::error& e)
+        catch (const std::exception & e)
         {
             std::ostringstream oss;
-            oss << "Failed to parse CLI parameters: " << e.what();
+            oss << "Failed to parse and process CLI parameters:" << e.what();
             Util::dumpErrorMsg(kClassName, oss.str());
             exit(1);
         }

@@ -430,7 +430,7 @@ namespace covered
                 Util::dumpErrorMsg(kClassName, oss.str());
                 exit(1);
             }
-        }
+        } // End of if (is_valid_)
         
         return;
     }

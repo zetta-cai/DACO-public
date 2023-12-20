@@ -93,7 +93,7 @@ namespace covered
         return perslot_total_aggregated_statistics_[slotidx];
     }
 
-    bool TotalStatisticsTracker::isPerSlotTotalAggregatedStatisticsStable(double& cache_object_hit_ratio)
+    bool TotalStatisticsTracker::isPerSlotTotalAggregatedStatisticsStable()
     {
         assert(allow_update_ == true);
 
@@ -145,11 +145,6 @@ namespace covered
                 is_stable = false;
                 break;
             }
-        }
-
-        if (is_stable)
-        {
-            cache_object_hit_ratio = getCurslotTotalAggregatedStatistics().getTotalObjectHitRatio();
         }
 
         return is_stable;

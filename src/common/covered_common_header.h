@@ -35,6 +35,12 @@
 // ---> Beacon-based cached metadata update: initialize is_neighbor_cached based on local/remote directory admission response before each local cache admission; enable/disable is_neighbor_cached at the first/last cached edge node when the cached object becomes non-single/single cache copy after directory admission/eviction
 // ---> Limited extra communication overhead: beacon node ONLY piggybacks a flag for each newly-admited object ONCE at admission, and ONLY notify the first/last cache copy when the object becomes non-single/single edge cached
 
+// Used in src/cli/evaluator_cli.c and src/benchmark/evaluator_wrapper.c
+// NOTE: we fix the same number of requests to warmup all methods with fairness.
+// ---> If defined, we do NOT use any other condition to finish warmup phase.
+// ---> If not defined, we also monitor stability of global object hit ratio within warmup maximum duration (in units of seconds) after achieving warmup reqcnt if necessary (i.e., w/ remaining time).
+//#define ENABLE_WARMUP_MAX_DURATION
+
 #include <cstdint> // uint32_t, uint64_t
 
 namespace covered

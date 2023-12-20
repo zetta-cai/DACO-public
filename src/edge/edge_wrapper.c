@@ -814,7 +814,7 @@ namespace covered
         //     exit(1);
         // }
         tmp_thread_name = "edge-cache-server-" + std::to_string(node_idx_);
-        ThreadLauncher::pthreadCreateLowPriority(tmp_thread_name, &cache_server_thread_, CacheServer::launchCacheServer, (void*)(this));
+        ThreadLauncher::pthreadCreateHighPriority(tmp_thread_name, &cache_server_thread_, CacheServer::launchCacheServer, (void*)(this));
 
         return;
     }

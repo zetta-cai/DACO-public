@@ -168,8 +168,7 @@ namespace covered
 
         // Monitor cache object hit ratio for warmup and stresstest phases
         const uint32_t client_raw_statistics_slot_interval_sec = Config::getClientRawStatisticsSlotIntervalSec();
-        bool is_stable = false;
-        double stable_object_hit_ratio = double(0.0);
+        int stable_condition = -1; // 0: achieve warmup reqcnt; 1: achieve warmup max duration
         struct timespec start_timestamp = Util::getCurrentTimespec(); // For max duration of warmup phase and duration of stresstest phase
         struct timespec prev_timestamp = start_timestamp; // For switch slot
         while (true)
@@ -207,48 +206,64 @@ namespace covered
             // Monitor if cache object hit ratio is stable to finish the warmup phase if any
             if (is_warmup_phase_) // Warmup phase
             {
-                bool finish_warmup_phase = false;
-
                 // (1) First stable condition: warmup_reqcnt requests have been processed during warmup phase
 
                 const uint64_t total_reqcnt = total_statistics_tracker_ptr_->getTotalReqcnt();
-                finish_warmup_phase = (total_reqcnt >= static_cast<uint64_t>(warmup_reqcnt_));
+                bool is_achieve_warmup_reqcnt = (total_reqcnt >= static_cast<uint64_t>(warmup_reqcnt_));
 
                 // (2) Second stable condition (if ENABLE_WARMUP_MAX_DURATION is defined): monitor stable global hit ratio (i.e., cache is filled up and total object hit ratio converges) within warmup max duration
 
-                if (finish_warmup_phase) // Achieve warmup_reqcnt requests
+                #ifdef ENABLE_WARMUP_MAX_DURATION
+                bool is_achieve_warmup_max_duration = false;
+                if (is_achieve_warmup_reqcnt) // Achieve warmup_reqcnt requests
                 {
                     double delta_us_for_finishwarmup = Util::getDeltaTimeUs(cur_timestamp, start_timestamp);
                     if (delta_us_for_finishwarmup >= SEC2US(warmup_max_duration_sec_))
                     {
-                        std::ostringstream oss;
-                        oss << "achieve warmup maximum duration of " << warmup_max_duration_sec_ << " seconds with cache object hit ratio of " << total_statistics_tracker_ptr_->getCurslotTotalAggregatedStatistics().getTotalObjectHitRatio() << " -> finish warmup phase";
-                        Util::dumpNormalMsg(kClassName, oss.str());
+                        if (stable_condition == 1)
+                        {
+                            std::ostringstream oss;
+                            oss << "achieve warmup maximum duration of " << warmup_max_duration_sec_ << " seconds with cache object hit ratio of " << total_statistics_tracker_ptr_->getCurslotTotalAggregatedStatistics().getTotalObjectHitRatio() << " -> finish warmup phase";
+                            Util::dumpNormalMsg(kClassName, oss.str());
+                        }
 
-                        finish_warmup_phase = true;
+                        is_achieve_warmup_max_duration = true;
                     } // End of achieving warmup_max_duration_sec_
                     else
                     {
-                        is_stable = total_statistics_tracker_ptr_->isPerSlotTotalAggregatedStatisticsStable(stable_object_hit_ratio);
-
-                        // Cache object hit ratio becomes stable
-                        if (is_stable)
-                        {
-                            std::ostringstream oss;
-                            oss << "cache object hit ratio becomes stable at " << stable_object_hit_ratio << " -> finish warmup phase";
-                            Util::dumpNormalMsg(kClassName, oss.str());
-
-                            finish_warmup_phase = true;
-                        }
-                        else
-                        {
-                            finish_warmup_phase = false;
-                        }
+                        is_achieve_warmup_max_duration = total_statistics_tracker_ptr_->isPerSlotTotalAggregatedStatisticsStable();
                     } // End of within warmup_max_duration_sec_
                 } // End of achieve warmup_reqcnt requests
+                #else
+                bool is_achieve_warmup_max_duration = true;
+                #endif
 
-                if (finish_warmup_phase)
+                // Find the condition determines the end of warmup phase
+                if (stable_condition == -1)
                 {
+                    if (is_achieve_warmup_reqcnt && !is_achieve_warmup_max_duration)
+                    {
+                        stable_condition = 1; // Achieve warmup max duration
+                    }
+                    else if (!is_achieve_warmup_reqcnt && is_achieve_warmup_max_duration)
+                    {
+                        stable_condition = 0; // Achieve warmup reqcnt
+                    }
+                    else if (is_achieve_warmup_reqcnt && is_achieve_warmup_max_duration)
+                    {
+                        stable_condition = 0; // Achieve warmup reqcnt
+                    }
+                }
+
+                // Finish warmup phase
+                if (is_achieve_warmup_reqcnt && is_achieve_warmup_max_duration)
+                {
+                    // Cache object hit ratio becomes stable
+                    double stable_object_hit_ratio = total_statistics_tracker_ptr_->getCurslotTotalAggregatedStatistics().getTotalObjectHitRatio();
+                    std::ostringstream oss;
+                    oss << "cache object hit ratio becomes stable at " << stable_object_hit_ratio << " -> finish warmup phase";
+                    Util::dumpNormalMsg(kClassName, oss.str());
+
                     // Notify all clients to finish warmup phase (i.e., enter stresstest phase)
                     notifyClientsToFinishWarmup_(); // Mark is_warmup_phase_ as false
 
@@ -257,7 +272,7 @@ namespace covered
 
                     // Reset start_timestamp for duration of stresstest phase
                     start_timestamp = Util::getCurrentTimespec();
-                } // End of (finish_warmup_phase == true)
+                } // End of finish warmup phase
             } // End if (is_warmup_phase == true)
         } // End of while loop
 

@@ -37,7 +37,7 @@ namespace covered
         TotalAggregatedStatistics getGivenslotTotalAggregatedStatistics(const uint32_t& slotidx) const;
 
         // Cache is stable if cache is filled up and total object hit ratio converges
-        bool isPerSlotTotalAggregatedStatisticsStable(double& cache_object_hit_ratio);
+        bool isPerSlotTotalAggregatedStatisticsStable();
 
         uint32_t dump(const std::string filepath) const;
 
