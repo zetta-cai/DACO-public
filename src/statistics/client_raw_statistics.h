@@ -21,6 +21,9 @@ namespace covered
         ClientRawStatistics(uint32_t perclient_workercnt);
         ~ClientRawStatistics();
 
+        // Get client raw statistics for debug
+        uint32_t getReqcnt(const uint32_t& local_client_worker_idx) const;
+
         // Clean client raw statistics
         void clean();
 

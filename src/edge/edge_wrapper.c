@@ -135,7 +135,7 @@ namespace covered
         
     EdgeWrapper::~EdgeWrapper()
     {
-        // TMPDEBUG231211
+        #ifdef DEBUG_EDGE_WRAPPER
         uint64_t edge_cache_size = edge_cache_ptr_->getSizeForCapacity();
         uint64_t cooperation_size = cooperation_wrapper_ptr_->getSizeForCapacity();
         uint64_t cache_manager_size = 0;
@@ -148,6 +148,7 @@ namespace covered
         std::ostringstream oss;
         oss << "edge_cache_size: " << edge_cache_size << ", cooperation_size: " << cooperation_size << ", cache_manager_size: " << cache_manager_size << ", weight_tuner_size: " << weight_tuner_size;
         Util::dumpDebugMsg(instance_name_, oss.str());
+        #endif
 
         // Release local edge cache
         assert(edge_cache_ptr_ != NULL);

@@ -76,6 +76,15 @@ namespace covered
         perclientworker_writecnts_ = NULL;
     }
 
+    // Get client raw statistics for debug
+    uint32_t ClientRawStatistics::getReqcnt(const uint32_t& local_client_worker_idx) const
+    {
+        assert(perclientworker_reqcnts_ != NULL);
+        assert(local_client_worker_idx < perclient_workercnt_);
+
+        return perclientworker_reqcnts_[local_client_worker_idx];
+    }
+
     void ClientRawStatistics::clean()
     {
         Util::initializeAtomicArray<uint32_t>(perclientworker_local_hitcnts_, perclient_workercnt_, 0);

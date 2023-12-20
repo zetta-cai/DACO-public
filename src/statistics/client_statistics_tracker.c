@@ -72,6 +72,31 @@ namespace covered
         stable_client_raw_statistics_ptr_ = NULL;
     }
 
+    // (0) Get cur-slot/stable client raw statistics for debug (invoked by client workers)
+
+    uint32_t ClientStatisticsTracker::getCurslotIdx() const
+    {
+        checkPointers_();
+
+        return cur_slot_idx_.load(Util::LOAD_CONCURRENCY_ORDER);
+    }
+        
+    uint32_t ClientStatisticsTracker::getCurslotReqcnt(const uint32_t& local_client_worker_idx) const
+    {
+        checkPointers_();
+
+        perclientworker_curslot_update_flags_[local_client_worker_idx].store(true, Util::STORE_CONCURRENCY_ORDER);
+
+        ClientRawStatistics* tmp_curslot_client_raw_statistics_ptr = getCurslotClientRawStatisticsPtr_(cur_slot_idx_.load(Util::LOAD_CONCURRENCY_ORDER));
+        assert(tmp_curslot_client_raw_statistics_ptr != NULL);
+        uint32_t curslot_reqcnt = tmp_curslot_client_raw_statistics_ptr->getReqcnt(local_client_worker_idx);
+
+        perclientworker_curslot_update_flags_[local_client_worker_idx].store(false, Util::STORE_CONCURRENCY_ORDER);
+        perclientworker_curslot_update_statuses_[local_client_worker_idx]++;
+
+        return curslot_reqcnt;
+    }
+
     // (1) Update cur-slot/stable client raw statistics (invoked by client workers)
 
     void ClientStatisticsTracker::updateLocalHitcnt(const uint32_t& local_client_worker_idx, const bool& is_stresstest_phase)

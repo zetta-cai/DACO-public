@@ -339,6 +339,14 @@ namespace covered
         local_response_bandwidth_usage.update(BandwidthUsage(client_edge_local_rsp_bandwidth_bytes, 0, 0)); // Get total bandwidth usage for received local response
         client_statistics_tracker_ptr_->updateBandwidthUsage(local_client_worker_idx, local_response_bandwidth_usage, is_stresstest_phase);
 
+        // TMPDEBUG231220
+        const uint32_t curslot_idx = client_statistics_tracker_ptr_->getCurslotIdx();
+        const uint32_t curslot_reqcnt = client_statistics_tracker_ptr_->getCurslotReqcnt(local_client_worker_idx);
+        if (curslot_reqcnt == 1) // The first req in current slot
+        {
+            Util::dumpVariablesForDebug(instance_name_, 8, "curslot idx:", std::to_string(curslot_idx).c_str(), "hitflag:", MessageBase::hitflagToString(hitflag).c_str(), "rtt:", std::to_string(rtt_us).c_str(), "eventlist:", local_response_ptr->getEventListRef().toString().c_str());
+        }
+
         #ifdef DEBUG_CLIENT_WORKER_WRAPPER
         Util::dumpVariablesForDebug(instance_name_, 13, "receive a local response;", "type:", MessageBase::messageTypeToString(local_response_message_type).c_str(), "keystr", tmp_key.getKeystr().c_str(), "valuesize:", std::to_string(tmp_value.getValuesize()).c_str(), "hitflag:", MessageBase::hitflagToString(hitflag).c_str(), "latency:", std::to_string(rtt_us).c_str(), "eventlist:", local_response_ptr->getEventListRef().toString().c_str());
         // "msg payload:", local_response_msg_payload.getBytesHexstr().c_str()

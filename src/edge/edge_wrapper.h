@@ -9,6 +9,8 @@
 #ifndef EDGE_WRAPPER_H
 #define EDGE_WRAPPER_H
 
+//#define DEBUG_EDGE_WRAPPER
+
 #include <string>
 
 namespace covered

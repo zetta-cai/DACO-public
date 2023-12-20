@@ -26,6 +26,11 @@ namespace covered
         ClientStatisticsTracker(uint32_t perclient_workercnt, const uint32_t& client_idx, const uint32_t& curslot_client_raw_statistics_cnt = CURSLOT_CLIENT_RAW_STATISTICS_CNT);
         ~ClientStatisticsTracker();
 
+        // (0) Get cur-slot/stable client raw statistics for debug (invoked by client workers)
+
+        uint32_t getCurslotIdx() const;
+        uint32_t getCurslotReqcnt(const uint32_t& local_client_worker_idx) const;
+
         // (1) Update cur-slot/stable client raw statistics (invoked by client workers)
 
         // Update cur-slot/stable client raw statistics for cache object hit ratio

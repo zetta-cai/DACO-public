@@ -13,8 +13,7 @@
 #ifndef CLENT_WORKER_WRAPPER_H
 #define CLENT_WORKER_WRAPPER_H
 
-// TMPDEBUG231211
-#define DEBUG_CLIENT_WORKER_WRAPPER
+//#define DEBUG_CLIENT_WORKER_WRAPPER
 
 #include <random> // std::mt19937_64
 #include <string>

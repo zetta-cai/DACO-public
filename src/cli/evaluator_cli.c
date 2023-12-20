@@ -76,6 +76,7 @@ namespace covered
             // Store client CLI parameters for dynamic configurations
             warmup_reqcnt_scale_ = warmup_reqcnt_scale;
             #ifdef ENABLE_WARMUP_MAX_DURATION
+            assert(warmup_max_duration_sec > 0);
             warmup_max_duration_sec_ = warmup_max_duration_sec;
             #else
             warmup_max_duration_sec_ = 0;
