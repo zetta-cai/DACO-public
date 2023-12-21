@@ -1,5 +1,5 @@
 /*
- * RingBuffer: provide ring buffer interfaces for concurrency between a provider and a customer (lock free).
+ * RingBuffer: provide classical non-blocking/polling-based ring buffer interfaces for concurrency between provider(s) and a customer (lock free if w/ one provide; or based on locking if w/ multiple providers).
  * 
  * By Siyuan Sheng (2023.06.14).
  */
@@ -24,7 +24,7 @@ namespace covered
 
         // NOTE: thread-safe structure cannot return a reference, which may violate atomicity
         bool push(const T& element);
-        bool pop(T& element);
+        bool pop(T& element); // Non-blocking pop: return false if ring buffer is empty
 
         bool withMultiProviders() const;
         uint32_t getElementCnt() const;
