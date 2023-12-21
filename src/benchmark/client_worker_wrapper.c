@@ -169,6 +169,7 @@ namespace covered
         //WorkloadItem workload_item(tmp_workload_item.getKey(), Value(200000), WorkloadItemType::kWorkloadItemPut);
 
         struct timespec sendreq_timestamp = Util::getCurrentTimespec();
+        bool is_timeout = false; // TMPDEBUG231220
         while (true) // Timeout-and-retry mechanism
         {
             // Convert workload item into local request message
@@ -187,7 +188,8 @@ namespace covered
             local_request_ptr = NULL;
 
             // Receive the message payload of local response from the closest edge node
-            bool is_timeout = client_worker_recvrsp_socket_server_ptr_->recv(local_response_msg_payload);
+            //bool is_timeout = client_worker_recvrsp_socket_server_ptr_->recv(local_response_msg_payload);
+            is_timeout = client_worker_recvrsp_socket_server_ptr_->recv(local_response_msg_payload); // TMPDEBUG231220
             if (is_timeout)
             {
                 if (!tmp_client_wrapper_ptr->isNodeRunning())
@@ -212,6 +214,12 @@ namespace covered
 
         double tmp_rtt_us = Util::getDeltaTimeUs(recvrsp_timestamp, sendreq_timestamp);
         rtt_us = static_cast<uint32_t>(tmp_rtt_us);
+
+        // TMPDEBUG231220
+        if (local_response_msg_payload.getSize() == 0)
+        {
+            Util::dumpVariablesForDebug(instance_name_, 6, "is_finish:", Util::toString(is_finish).c_str(), "is_timeout:", Util::toString(is_timeout).c_str(), "rtt:", std::to_string(rtt_us).c_str());
+        }
 
         return is_finish;
     }
@@ -340,13 +348,11 @@ namespace covered
         client_statistics_tracker_ptr_->updateBandwidthUsage(local_client_worker_idx, local_response_bandwidth_usage, is_stresstest_phase);
 
         // TMPDEBUG231220
-        const uint32_t curslot_idx = client_statistics_tracker_ptr_->getCurslotIdx();
-        const uint32_t curslot_max_latency = client_statistics_tracker_ptr_->getCurslotMaxLatency(local_client_worker_idx);
-        // const uint32_t curslot_reqcnt = client_statistics_tracker_ptr_->getCurslotReqcnt(local_client_worker_idx);
-        //if (curslot_reqcnt == 1) // The first req in current slot
-        if (rtt_us >= MS2US(10)) // Reqs >= 20ms latency
+        if (rtt_us >= MS2US(1.5)) // Reqs >= 20ms latency
         {
-            Util::dumpVariablesForDebug(instance_name_, 10, "curslot idx:", std::to_string(curslot_idx).c_str(), "max latency:", std::to_string(curslot_max_latency).c_str(), "hitflag:", MessageBase::hitflagToString(hitflag).c_str(), "rtt:", std::to_string(rtt_us).c_str(), "eventlist:", local_response_ptr->getEventListRef().toString().c_str());
+            const uint32_t curslot_idx = client_statistics_tracker_ptr_->getCurslotIdx();
+            const uint32_t curslot_reqcnt = client_statistics_tracker_ptr_->getCurslotReqcnt(local_client_worker_idx);
+            Util::dumpVariablesForDebug(instance_name_, 10, "curslot idx:", std::to_string(curslot_idx).c_str(), "curslot-reqcnt:", std::to_string(curslot_reqcnt).c_str(), "hitflag:", MessageBase::hitflagToString(hitflag).c_str(), "rtt:", std::to_string(rtt_us).c_str(), "eventlist:", local_response_ptr->getEventListRef().toString().c_str());
         }
 
         #ifdef DEBUG_CLIENT_WORKER_WRAPPER

@@ -138,9 +138,13 @@ namespace covered
     {
         checkPointers_();
 
+        struct timespec t0 = Util::getCurrentTimespec(); // TMPDEBUG231220
+
         // Acquire a read lock
         std::string context_name = "CacheWrapper::get()";
         cache_wrapper_perkey_rwlock_ptr_->acquire_lock_shared(key, context_name);
+
+        struct timespec t1 = Util::getCurrentTimespec(); // TMPDEBUG231220
 
         bool is_local_cached = local_cache_ptr_->getLocalCache(key, is_redirected, value, affect_victim_tracker); // Still need to update local metadata if key is cached yet invalid
 
@@ -150,8 +154,18 @@ namespace covered
             is_valid = isValidKeyForLocalCachedObject_(key);
         }
 
+        struct timespec t2 = Util::getCurrentTimespec(); // TMPDEBUG231220
+
         // Release a read lock
         cache_wrapper_perkey_rwlock_ptr_->unlock_shared(key, context_name);
+
+        struct timespec t3 = Util::getCurrentTimespec(); // TMPDEBUG231220
+
+        // TMPDEBUG231220
+        if (Util::getDeltaTimeUs(t3, t0) >= MS2US(1.5))
+        {
+            Util::dumpVariablesForDebug(instance_name_, 6, "CacheWrapper::get t1-t0:", std::to_string(Util::getDeltaTimeUs(t1, t0)).c_str(), "t2-t1:", std::to_string(Util::getDeltaTimeUs(t2, t1)).c_str(), "t3-t2:", std::to_string(Util::getDeltaTimeUs(t3, t2)).c_str());
+        }
 
         return is_local_cached && is_valid;
     }
@@ -492,7 +506,7 @@ namespace covered
         struct timespec t3 = Util::getCurrentTimespec(); // TMPDEBUG231220
 
         // TMPDEBUG231220
-        if (Util::getDeltaTimeUs(t3, t0) >= MS2US(10))
+        if (Util::getDeltaTimeUs(t3, t0) >= MS2US(1.5))
         {
             Util::dumpVariablesForDebug(instance_name_, 6, "CacheWrapper::getSizeForCapacity t1-t0:", std::to_string(Util::getDeltaTimeUs(t1, t0)).c_str(), "t2-t1:", std::to_string(Util::getDeltaTimeUs(t2, t1)).c_str(), "t3-t2:", std::to_string(Util::getDeltaTimeUs(t3, t2)).c_str());
         }

@@ -117,11 +117,16 @@ namespace covered
     bool LocalCachedMetadata::isAffectVictimTracker_(const typename perkey_lookup_table_t::const_iterator& perkey_lookup_const_iter, const uint32_t& peredge_synced_victimcnt) const
     {
         bool affect_victim_tracker = false;
-        uint32_t least_reward_rank = getLeastRewardRank_(perkey_lookup_const_iter);
-        if (least_reward_rank < peredge_synced_victimcnt) // If key was a local synced victim before
-        {
-            affect_victim_tracker = true;
-        }
+
+        // NOTE: OBSOLETE due to time-consuming
+        // uint32_t least_reward_rank = getLeastRewardRank_(perkey_lookup_const_iter);
+        // if (least_reward_rank < peredge_synced_victimcnt) // If key was a local synced victim before
+        // {
+        //     affect_victim_tracker = true;
+        // }
+
+        affect_victim_tracker = isWithinTargetLeastRewardRank_(perkey_lookup_const_iter, peredge_synced_victimcnt);
+
         return affect_victim_tracker;
     }
 }

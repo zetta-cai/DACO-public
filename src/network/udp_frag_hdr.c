@@ -97,4 +97,12 @@ namespace covered
         assert((size - 0) == Util::UDP_FRAGHDR_SIZE);
         return size - 0;
     }
+
+    uint32_t UdpFragHdr::getudpFragHdrPayloadSize() const
+    {
+        uint32_t udp_fraghdr_payload_size = 0;
+        udp_fraghdr_payload_size += sizeof(uint32_t) * 4; // fragment_idx_, fragment_cnt_, msg_payload_size_, msg_seqnum_
+        udp_fraghdr_payload_size += source_addr_.getAddrPayloadSize(); // source_addr_
+        return udp_fraghdr_payload_size;
+    }
 }

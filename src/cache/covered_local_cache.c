@@ -90,16 +90,27 @@ namespace covered
     {
         affect_victim_tracker = false;
 
+        struct timespec t0 = Util::getCurrentTimespec(); // TMPDEBUG231220
+
         tommyds_object_t* tmp_obj_ptr = (tommyds_object_t *) tommy_hashdyn_search(covered_cache_ptr_, tommyds_compare, &key, hashForTommyds_(key));
+
+        struct timespec t1 = Util::getCurrentTimespec(); // TMPDEBUG231220
+        int type = -1;
+        struct timespec t2, t3; // TMPDEBUG231220
 
         bool is_local_cached = (tmp_obj_ptr != NULL);
         if (is_local_cached)
         {
             value = tmp_obj_ptr->val;
 
+            t2 = Util::getCurrentTimespec(); // TMPDEBUG231220
+
             // Update local cached metadata for getreq with valid/invalid cache hit (ONLY value-unrelated metadata)
             const bool is_global_cached = true; // Local cached objects MUST be global cached
             affect_victim_tracker = local_cached_metadata_.updateNoValueStatsForExistingKey(edge_wrapper_ptr_, key, peredge_synced_victimcnt_, is_redirected, is_global_cached);
+
+            type = 0; // TMPDEBUG231220
+            t3 = Util::getCurrentTimespec(); // TMPDEBUG231220
         }
         else // key is NOT cached
         {
@@ -107,22 +118,44 @@ namespace covered
             if (!is_redirected)
             {
                 bool is_tracked = local_uncached_metadata_.isKeyExist(key);
+
+                t2 = Util::getCurrentTimespec(); // TMPDEBUG231220
+
                 if (is_tracked) // Key is already tracked
                 {
                     // Update local uncached metadata for getreq with cache miss (ONLY value-unrelated metadata)
                     const bool original_is_global_cached = local_uncached_metadata_.isGlobalCachedForExistingKey(key); // Conservatively keep original is_global_cached flag
+                    t3 = Util::getCurrentTimespec(); // TMPDEBUG231220
                     local_uncached_metadata_.updateNoValueStatsForExistingKey(edge_wrapper_ptr_, key, peredge_synced_victimcnt_, is_redirected, original_is_global_cached);
+
+                    type = 1; // TMPDEBUG231220
 
                     // NOTE: NOT update value-related metadata, as we conservatively treat the objsize unchanged (okay due to read-intensive edge cache trace)
                 }
                 else // Key will be newly tracked
                 {
                     // NOTE: NOT track local uncached object into local uncached metadata by addForNewKey() here, as the get request of untracked object with (the first) cache miss cannot provide object size information to initialize and update local uncached metadata, and also cannot trigger placement
+
+                    type = 2; // TMPDEBUG231220
+                    t3 = Util::getCurrentTimespec(); // TMPDEBUG231220
                 }
+            }
+            else // TMPDEBUG231220
+            {
+                type = 3; // TMPDEBUG231220
+                t3 = Util::getCurrentTimespec(); // TMPDEBUG231220
             }
         }
 
         // NOTE: for getreq with cache miss, we will update local uncached metadata for getres by updateLocalUncachedMetadataForRspInternal_(key)
+
+        struct timespec t4 = Util::getCurrentTimespec(); // TMPDEBUG231220
+
+        // TMPDEBUG231220
+        if (Util::getDeltaTimeUs(t4, t0) >= MS2US(1.5))
+        {
+            Util::dumpVariablesForDebug(instance_name_, 10, "CoveredLocalCache::getLocalCacheInternal_ type:", std::to_string(type).c_str(), "t1-t0:", std::to_string(Util::getDeltaTimeUs(t1, t0)).c_str(), "t2-t1:", std::to_string(Util::getDeltaTimeUs(t2, t1)).c_str(), "t3-t2:", std::to_string(Util::getDeltaTimeUs(t3, t2)).c_str(), "t4-t3", std::to_string(Util::getDeltaTimeUs(t4, t3)).c_str());
+        }
 
         return is_local_cached;
     }

@@ -4,7 +4,7 @@
 #include "cache/covered/cache_metadata_base.h"
 
 #include <assert.h>
-#include <iterator> // std::distance
+//#include <iterator> // std::distance
 
 #include "common/util.h"
 
@@ -146,31 +146,55 @@ namespace covered
     template<class T>
     bool CacheMetadataBase<T>::updateNoValueStatsForExistingKey(const EdgeWrapper* edge_wrapper_ptr, const Key& key, const uint32_t& peredge_synced_victimcnt, const bool& is_redirected, const bool& is_global_cached)
     {
+        struct timespec t0 = Util::getCurrentTimespec(); // TMPDEBUG231220
+
         // Get lookup iterator
         perkey_lookup_table_iter_t perkey_lookup_iter = getLookup_(key);
 
+        struct timespec t1 = Util::getCurrentTimespec(); // TMPDEBUG231220
+
         bool affect_victim_tracker = beforeUpdateStatsForExistingKey_(perkey_lookup_iter, peredge_synced_victimcnt);
+
+        struct timespec t2 = Util::getCurrentTimespec(); // TMPDEBUG231220
 
         // Update object-level value-unrelated metadata for local requests (local hits/misses)
         perkey_metadata_list_iter_t perkey_metadata_list_iter = updateNoValuePerkeyMetadata_(perkey_lookup_iter, is_redirected, is_global_cached);
         const T& key_level_metadata_ref = perkey_metadata_list_iter->second;
 
+        struct timespec t3 = Util::getCurrentTimespec(); // TMPDEBUG231220
+
         // Update group-level value-unrelated metadata for all requests (local/redirected hits; local misses)
         const GroupLevelMetadata& group_level_metadata_ref = updateNoValuePergroupMetadata_(perkey_lookup_iter);
 
+        struct timespec t4 = Util::getCurrentTimespec(); // TMPDEBUG231220
+
         // Calculate and update popularity for newly-admited key
         calculateAndUpdatePopularity_(perkey_metadata_list_iter, key_level_metadata_ref, group_level_metadata_ref);
+
+        struct timespec t5 = Util::getCurrentTimespec(); // TMPDEBUG231220
 
         // Update reward
         Reward new_reward = calculateReward_(edge_wrapper_ptr, perkey_metadata_list_iter);
         sorted_reward_multimap_t::iterator new_sorted_reward_iter = updateReward_(new_reward, perkey_lookup_iter);
 
+        struct timespec t6 = Util::getCurrentTimespec(); // TMPDEBUG231220
+
         // Update lookup table
         updateLookup_(perkey_lookup_iter, new_sorted_reward_iter);
+
+        struct timespec t7 = Util::getCurrentTimespec(); // TMPDEBUG231220
 
         if (!affect_victim_tracker)
         {
             affect_victim_tracker = afterUpdateStatsForExistingKey_(perkey_lookup_iter, peredge_synced_victimcnt);
+        }
+
+        struct timespec t8 = Util::getCurrentTimespec(); // TMPDEBUG231220
+
+        // TMPDEBUG231220
+        if (Util::getDeltaTimeUs(t8, t0) >= MS2US(1.5))
+        {
+            Util::dumpVariablesForDebug(kClassName, 16, "CacheMetadataBase<T>::updateNoValueStatsForExistingKey t1-t0:", std::to_string(Util::getDeltaTimeUs(t1, t0)).c_str(), "t2-t1:", std::to_string(Util::getDeltaTimeUs(t2, t1)).c_str(), "t3-t2:", std::to_string(Util::getDeltaTimeUs(t3, t2)).c_str(), "t4-t3", std::to_string(Util::getDeltaTimeUs(t4, t3)).c_str(), "t5-t4", std::to_string(Util::getDeltaTimeUs(t5, t4)).c_str(), "t6-t5", std::to_string(Util::getDeltaTimeUs(t6, t5)).c_str(), "t7-t6", std::to_string(Util::getDeltaTimeUs(t7, t6)).c_str(), "t8-t7", std::to_string(Util::getDeltaTimeUs(t8, t7)).c_str());
         }
 
         return affect_victim_tracker;
@@ -623,25 +647,75 @@ namespace covered
         return is_least_reward_key_exist;
     }
 
+    // template<class T>
+    // uint32_t CacheMetadataBase<T>::getLeastRewardRank_(const typename CacheMetadataBase<T>::perkey_lookup_table_const_iter_t& perkey_lookup_iter) const
+    // {
+    //     // Verify that key must exist
+    //     const LookupMetadata<perkey_metadata_list_t>& lookup_metadata = perkey_lookup_iter->second;
+    //     sorted_reward_multimap_t::const_iterator sorted_reward_iter = lookup_metadata.getSortedRewardIter();
+    //     assert(sorted_reward_iter != sorted_reward_multimap_.end()); // For existing key
+
+    //     // // MRU for equal reward values (especially for zero-reward one-hit-wonders)
+    //     // // NOTE: std::distance is time-consuming due to enumerating reward list
+    //     // uint32_t least_reward_rank = std::distance(sorted_reward_iter, sorted_reward_multimap_.end()); // NOTE: std::distance MUST from previous iter to subsequent iter
+    //     // assert(least_reward_rank >= 1);
+    //     // least_reward_rank -= 1;
+
+    //     // LRU for equal reward values
+    //     // NOTE: std::distance is time-consuming due to enumerating reward list
+    //     uint32_t least_reward_rank = std::distance(sorted_reward_multimap_.begin(), sorted_reward_iter);
+
+    //     assert(least_reward_rank < sorted_reward_multimap_.size());
+        
+    //     return least_reward_rank;
+    // }
+
     template<class T>
-    uint32_t CacheMetadataBase<T>::getLeastRewardRank_(const typename CacheMetadataBase<T>::perkey_lookup_table_const_iter_t& perkey_lookup_iter) const
+    bool CacheMetadataBase<T>::isWithinTargetLeastRewardRank_(const perkey_lookup_table_const_iter_t& perkey_lookup_iter, const uint32_t& target_least_reward_rank) const
     {
         // Verify that key must exist
         const LookupMetadata<perkey_metadata_list_t>& lookup_metadata = perkey_lookup_iter->second;
         sorted_reward_multimap_t::const_iterator sorted_reward_iter = lookup_metadata.getSortedRewardIter();
         assert(sorted_reward_iter != sorted_reward_multimap_.end()); // For existing key
 
+        assert(sorted_reward_multimap_.size() > 0);
+        bool is_within_range = false;
+        const Key& target_key = perkey_lookup_iter->first;
+
         // // MRU for equal reward values (especially for zero-reward one-hit-wonders)
-        // uint32_t least_reward_rank = std::distance(sorted_reward_iter, sorted_reward_multimap_.end()); // NOTE: std::distance MUST from previous iter to subsequent iter
-        // assert(least_reward_rank >= 1);
-        // least_reward_rank -= 1;
+        // sorted_reward_multimap_t::const_iterator tmp_iter = sorted_reward_multimap_.end();
+        // tmp_iter--; // Start from the tail of reward list
+        // for (uint32_t i = 0; i < target_least_reward_rank; i++) // Enumerate target_least_reward_rank elements at the tail of reward list
+        // {
+        //     if (tmp_iter->second == target_key) // Find the key within the range 
+        //     {
+        //         is_within_range = true;
+        //         break;
+        //     }
+        //     if (tmp_iter == sorted_reward_multimap_.begin()) // Achieve the head of reward list
+        //     {
+        //         break;
+        //     }
+        //     tmp_iter--; // Switch to the prev element
+        // }
 
         // LRU for equal reward values
-        uint32_t least_reward_rank = std::distance(sorted_reward_multimap_.begin(), sorted_reward_iter);
+        sorted_reward_multimap_t::const_iterator tmp_iter = sorted_reward_multimap_.begin(); // Start from the head of reward list
+        for (uint32_t i = 0; i < target_least_reward_rank; i++) // Enumerate target_least_reward_rank elements at the head of reward list
+        {
+            if (tmp_iter->second == target_key) // Find the key within the range 
+            {
+                is_within_range = true;
+                break;
+            }
+            tmp_iter++; // Switch to the next element
+            if (tmp_iter == sorted_reward_multimap_.end()) // Achieve the tail of reward list
+            {
+                break;
+            }
+        }
 
-        assert(least_reward_rank < sorted_reward_multimap_.size());
-        
-        return least_reward_rank;
+        return is_within_range;
     }
 
     template<class T>

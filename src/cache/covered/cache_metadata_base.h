@@ -9,7 +9,6 @@
 #ifndef CACHE_METADATA_BASE_H
 #define CACHE_METADATA_BASE_H
 
-#include <iterator> // std::distance
 #include <list> // std::list
 #include <map> // std::multimap
 #include <string>
@@ -108,7 +107,8 @@ namespace covered
         Popularity calculatePopularity_(const Frequency& frequency, const ObjectSize& object_size) const;
 
         // For reward information
-        uint32_t getLeastRewardRank_(const perkey_lookup_table_const_iter_t& perkey_lookup_iter) const;
+        //uint32_t getLeastRewardRank_(const perkey_lookup_table_const_iter_t& perkey_lookup_iter) const; // NOTE: this function is time-consuming
+        bool isWithinTargetLeastRewardRank_(const perkey_lookup_table_const_iter_t& perkey_lookup_iter, const uint32_t& target_least_reward_rank) const; // Check if the least reward rank of the given key is in the range of [0, target_least_reward_rank) in reward list
         sorted_reward_multimap_t::iterator updateReward_(const Reward& new_reward, const perkey_lookup_table_iter_t& perkey_lookup_iter); // Return updated sorted reward iterator
 
         // For lookup table

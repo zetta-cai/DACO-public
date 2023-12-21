@@ -12,9 +12,9 @@
 
 #ifdef DEBUG_RWLOCK
 #include <unordered_map>
-#include <unordered_set>
 #endif
 #include <string>
+#include <unordered_set>
 
 #include <boost/thread/shared_mutex.hpp>
 

@@ -30,7 +30,7 @@ namespace covered
 
         uint32_t getCurslotIdx() const;
         uint32_t getCurslotReqcnt(const uint32_t& local_client_worker_idx) const;
-        uint32_t getCurslotMaxLatency(const uint32_t& local_client_worker_idx) const;
+        // uint32_t getCurslotMaxLatency(const uint32_t& local_client_worker_idx) const; // NOTE: this is time-consuming
 
         // (1) Update cur-slot/stable client raw statistics (invoked by client workers)
 

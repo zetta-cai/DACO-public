@@ -789,8 +789,9 @@ namespace covered
         uint32_t fragment_cnt = getFragmentCnt(msg_payload_size);
         if (fragment_idx == fragment_cnt - 1)
         {
-            fragment_payload_size = msg_payload_size % UDP_MAX_FRAG_PAYLOAD;
+            fragment_payload_size = msg_payload_size -  (fragment_cnt - 1) * UDP_MAX_FRAG_PAYLOAD;
         }
+        assert(fragment_payload_size >= 0);
         assert(fragment_payload_size <= UDP_MAX_FRAG_PAYLOAD);
         return fragment_payload_size;
     }

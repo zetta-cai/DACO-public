@@ -31,6 +31,8 @@ namespace covered
         // Offset of UDP fragment header must be 0 in packet payload
         uint32_t serialize(DynamicArray& pkt_payload);
         uint32_t deserialize(const DynamicArray& pkt_payload);
+
+        uint32_t getudpFragHdrPayloadSize() const;
     private:
         static const std::string kClassName;
 

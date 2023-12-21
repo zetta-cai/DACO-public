@@ -304,7 +304,7 @@ namespace covered
         struct timespec t3 = Util::getCurrentTimespec(); // TMPDEBUG231220
 
         // TMPDEBUG231220
-        if (Util::getDeltaTimeUs(t3, t0) >= MS2US(10))
+        if (Util::getDeltaTimeUs(t3, t0) >= MS2US(1.5))
         {
             Util::dumpVariablesForDebug(instance_name_, 6, "EdgeWrapper::getSizeForCapacity t1-t0:", std::to_string(Util::getDeltaTimeUs(t1, t0)).c_str(), "t2-t1:", std::to_string(Util::getDeltaTimeUs(t2, t1)).c_str(), "t3-t2:", std::to_string(Util::getDeltaTimeUs(t3, t2)).c_str());
         }
@@ -964,7 +964,7 @@ namespace covered
         struct timespec t2 = Util::getCurrentTimespec(); // TMPDEBUG231220
 
         // TMPDEBUG231220
-        if (Util::getDeltaTimeUs(t2, t0) >= MS2US(15))
+        if (Util::getDeltaTimeUs(t2, t0) >= MS2US(1.5))
         {
             Util::dumpVariablesForDebug(instance_name_, 4, "EdgeWrapper::getLocalEdgeCache_ t1-t0:", std::to_string(Util::getDeltaTimeUs(t1, t0)).c_str(), "t2-t1:", std::to_string(Util::getDeltaTimeUs(t2, t1)).c_str());
         }
@@ -1022,7 +1022,7 @@ namespace covered
         struct timespec t3 = Util::getCurrentTimespec(); // TMPDEBUG231220
 
         // TMPDEBUG231220
-        if (Util::getDeltaTimeUs(t3, t0) >= MS2US(10))
+        if (Util::getDeltaTimeUs(t3, t0) >= MS2US(1.5))
         {
             Util::dumpVariablesForDebug(instance_name_, 6, "EdgeWrapper::getCacheMarginBytes t1-t0:", std::to_string(Util::getDeltaTimeUs(t1, t0)).c_str(), "t2-t1:", std::to_string(Util::getDeltaTimeUs(t2, t1)).c_str(), "t3-t2:", std::to_string(Util::getDeltaTimeUs(t3, t2)).c_str());
         }
@@ -1067,7 +1067,7 @@ namespace covered
         struct timespec t3 = Util::getCurrentTimespec(); // TMPDEBUG231220
 
         // TMPDEBUG231220
-        if (Util::getDeltaTimeUs(t3, t0) >= MS2US(10))
+        if (Util::getDeltaTimeUs(t3, t0) >= MS2US(1.5))
         {
             Util::dumpVariablesForDebug(instance_name_, 8, "EdgeWrapper::updateCacheManagerForLocalSyncedVictims type:", std::to_string(type).c_str(), "t1-t0:", std::to_string(Util::getDeltaTimeUs(t1, t0)).c_str(), "t2-t1:", std::to_string(Util::getDeltaTimeUs(t2, t1)).c_str(), "t3-t2:", std::to_string(Util::getDeltaTimeUs(t3, t2)).c_str());
         }

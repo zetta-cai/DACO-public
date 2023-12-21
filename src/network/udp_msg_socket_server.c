@@ -101,11 +101,18 @@ namespace covered
 					uint32_t fragidx = fraghdr.getFragmentIdx();
 					uint32_t fragment_offset = Util::getFragmentOffset(fragidx);
 					uint32_t fragment_payload_size = Util::getFragmentPayloadSize(fragidx, msg_payload_size);
+					assert(fragment_payload_size == (tmp_pkt_payload.getSize() - fraghdr.getudpFragHdrPayloadSize()));
 					tmp_pkt_payload.arraycpy(Util::UDP_FRAGHDR_SIZE, msg_payload, fragment_offset, fragment_payload_size);
 
 					// Update network address for processing outside UdpSocketWrapper
 					//network_addr = source_addr;
 					//assert(network_addr.isValidAddr() == true);
+
+					// TMPDEBUG231220
+					if (msg_payload.getSize() == 0)
+					{
+						Util::dumpVariablesForDebug(kClassName, 10, "UdpMsgSocketServer::recv udp_pktsize:", std::to_string(tmp_pkt_payload.getSize()).c_str(), "source_addr:", source_addr.toString().c_str(), "msg_payload_size:", std::to_string(msg_payload_size).c_str(), "fragidx:", std::to_string(fraghdr.getFragmentIdx()).c_str(), "fragcnt:", std::to_string(fraghdr.getFragmentCnt()).c_str());
+					}
 
 					break; // Break while(true)
 				} // End of (is_last_frag == true)
