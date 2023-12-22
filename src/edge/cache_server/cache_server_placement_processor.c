@@ -65,7 +65,7 @@ namespace covered
         {
             // Try to get the placement notification request from ring buffer partitioned by cache server
             CacheServerItem tmp_cache_server_item;
-            bool is_successful_for_notify_placement = cache_server_placement_processor_param_ptr_->getCacheServerItemBufferPtr()->pop(tmp_cache_server_item);
+            bool is_successful_for_notify_placement = cache_server_placement_processor_param_ptr_->pop(tmp_cache_server_item, (void*)tmp_edge_wrapper_ptr);
             if (is_successful_for_notify_placement) // Receive an item for placement notification successfully
             {
                 MessageBase* data_request_ptr = tmp_cache_server_item.getRequestPtr();

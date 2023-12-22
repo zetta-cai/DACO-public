@@ -19,6 +19,9 @@ namespace covered
 {
     const std::string CacheServer::kClassName("CacheServer");
 
+    const bool CacheServer::IS_HIGH_PRIORITY_FOR_METADATA_UPDATE = false;
+    const bool CacheServer::IS_HIGH_PRIORITY_FOR_VICTIM_FETCH = false;
+
     void* CacheServer::launchCacheServer(void* edge_wrapper_ptr)
     {
         assert(edge_wrapper_ptr != NULL);
@@ -55,22 +58,23 @@ namespace covered
         }
         
         // Prepare parameters for cache server metadata update processor thread
-        cache_server_metadata_update_processor_param_ptr_ = new CacheServerProcessorParam(this, Config::getEdgeCacheServerDataRequestBufferSize());
+        cache_server_metadata_update_processor_param_ptr_ = new CacheServerProcessorParam(this, Config::getEdgeCacheServerDataRequestBufferSize(), IS_HIGH_PRIORITY_FOR_METADATA_UPDATE);
 
         // Prepare parameters for cache server victim fetch processor thread
-        cache_server_victim_fetch_processor_param_ptr_ = new CacheServerProcessorParam(this, Config::getEdgeCacheServerDataRequestBufferSize());
+        cache_server_victim_fetch_processor_param_ptr_ = new CacheServerProcessorParam(this, Config::getEdgeCacheServerDataRequestBufferSize(), IS_HIGH_PRIORITY_FOR_VICTIM_FETCH);
         assert(cache_server_victim_fetch_processor_param_ptr_ != NULL);
 
         // Prepare parameters for cache server redirection processor thread
-        cache_server_redirection_processor_param_ptr_ = new CacheServerProcessorParam(this, Config::getEdgeCacheServerDataRequestBufferSize());
+        cache_server_redirection_processor_param_ptr_ = new CacheServerProcessorParam(this, Config::getEdgeCacheServerDataRequestBufferSize(), true);
         assert(cache_server_redirection_processor_param_ptr_ != NULL);
 
         // Prepare parameters for cache server placement processor thread
-        cache_server_placement_processor_param_ptr_ = new CacheServerProcessorParam(this, Config::getEdgeCacheServerDataRequestBufferSize());
+        // TODO: If you want to process cache placement decisions in a low priority, you have to split placement processor into local/remote placement processors, each with an individual interruption-based ring buffer
+        cache_server_placement_processor_param_ptr_ = new CacheServerProcessorParam(this, Config::getEdgeCacheServerDataRequestBufferSize(), true);
         assert(cache_server_placement_processor_param_ptr_ != NULL);
 
         // Prepare parameters for cache server invalidation processor thread
-        cache_server_invalidation_processor_param_ptr_ = new CacheServerProcessorParam(this, Config::getEdgeCacheServerDataRequestBufferSize());
+        cache_server_invalidation_processor_param_ptr_ = new CacheServerProcessorParam(this, Config::getEdgeCacheServerDataRequestBufferSize(), false);
         assert(cache_server_invalidation_processor_param_ptr_ != NULL);
 
         // For receiving local requests
@@ -177,8 +181,14 @@ namespace covered
         //     exit(1);
         // }
         std::string tmp_thread_name = "edge-cache-server-victim-fetch-processor-" + std::to_string(edge_idx);
-        //ThreadLauncher::pthreadCreateLowPriority(tmp_thread_name, &cache_server_victim_fetch_processor_thread, CacheServerVictimFetchProcessor::launchCacheServerVictimFetchProcessor, (void*)(cache_server_victim_fetch_processor_param_ptr_));
-        ThreadLauncher::pthreadCreateHighPriority(tmp_thread_name, &cache_server_victim_fetch_processor_thread, CacheServerVictimFetchProcessor::launchCacheServerVictimFetchProcessor, (void*)(cache_server_victim_fetch_processor_param_ptr_)); // TMPDEBUG231220
+        if (IS_HIGH_PRIORITY_FOR_VICTIM_FETCH)
+        {
+            ThreadLauncher::pthreadCreateHighPriority(tmp_thread_name, &cache_server_victim_fetch_processor_thread, CacheServerVictimFetchProcessor::launchCacheServerVictimFetchProcessor, (void*)(cache_server_victim_fetch_processor_param_ptr_));
+        }
+        else
+        {
+            ThreadLauncher::pthreadCreateLowPriority(tmp_thread_name, &cache_server_victim_fetch_processor_thread, CacheServerVictimFetchProcessor::launchCacheServerVictimFetchProcessor, (void*)(cache_server_victim_fetch_processor_param_ptr_));
+        }
 
         // Launch cache server redirection processor
         //pthread_returncode = pthread_create(&cache_server_redirection_processor_thread, NULL, CacheServerRedirectionProcessor::launchCacheServerRedirectionProcessor, (void*)(cache_server_redirection_processor_param_ptr_));
@@ -226,8 +236,14 @@ namespace covered
         //     exit(1);
         // }
         tmp_thread_name = "edge-cache-server-metadata-update-processor-" + std::to_string(edge_idx);
-        //ThreadLauncher::pthreadCreateLowPriority(tmp_thread_name, &cache_server_metadata_update_processor_thread, CacheServerMetadataUpdateProcessor::launchCacheServerMetadataUpdateProcessor, (void*)(cache_server_metadata_update_processor_param_ptr_));
-        ThreadLauncher::pthreadCreateHighPriority(tmp_thread_name, &cache_server_metadata_update_processor_thread, CacheServerMetadataUpdateProcessor::launchCacheServerMetadataUpdateProcessor, (void*)(cache_server_metadata_update_processor_param_ptr_)); // TMPDEBUG231220
+        if (IS_HIGH_PRIORITY_FOR_METADATA_UPDATE)
+        {
+            ThreadLauncher::pthreadCreateHighPriority(tmp_thread_name, &cache_server_metadata_update_processor_thread, CacheServerMetadataUpdateProcessor::launchCacheServerMetadataUpdateProcessor, (void*)(cache_server_metadata_update_processor_param_ptr_));
+        }
+        else
+        {
+            ThreadLauncher::pthreadCreateLowPriority(tmp_thread_name, &cache_server_metadata_update_processor_thread, CacheServerMetadataUpdateProcessor::launchCacheServerMetadataUpdateProcessor, (void*)(cache_server_metadata_update_processor_param_ptr_));
+        }
 
         // Receive data requests and partition to different cache server workers
         receiveRequestsAndPartition_();
@@ -344,6 +360,13 @@ namespace covered
             } // End of (is_timeout == false)
         } // End of while loop
 
+        // Notify all processors to finish if necessary (i.e., with interruption-based ring buffer)
+        cache_server_metadata_update_processor_param_ptr_->notifyFinishIfNecessary(edge_wrapper_ptr_);
+        cache_server_victim_fetch_processor_param_ptr_->notifyFinishIfNecessary(edge_wrapper_ptr_);
+        cache_server_redirection_processor_param_ptr_->notifyFinishIfNecessary(edge_wrapper_ptr_);
+        cache_server_placement_processor_param_ptr_->notifyFinishIfNecessary(edge_wrapper_ptr_);
+        cache_server_invalidation_processor_param_ptr_->notifyFinishIfNecessary(edge_wrapper_ptr_);
+
         return;
     }
 
@@ -370,35 +393,35 @@ namespace covered
         {
             // Pass cache server item into ring buffer of the cache server redirection processor
             CacheServerItem tmp_cache_server_item(data_requeset_ptr);
-            bool is_successful = cache_server_redirection_processor_param_ptr_->getCacheServerItemBufferPtr()->push(tmp_cache_server_item);
+            bool is_successful = cache_server_redirection_processor_param_ptr_->push(tmp_cache_server_item);
             assert(is_successful == true); // Ring buffer must NOT be full
         }
         else if (data_requeset_ptr->getMessageType() == MessageType::kCoveredVictimFetchRequest) // Lazy victim fetching
         {
             // Pass cache server item into ring buffer of the cache server victim fetch processor
             CacheServerItem tmp_cache_server_item(data_requeset_ptr);
-            bool is_successful = cache_server_victim_fetch_processor_param_ptr_->getCacheServerItemBufferPtr()->push(tmp_cache_server_item);
+            bool is_successful = cache_server_victim_fetch_processor_param_ptr_->push(tmp_cache_server_item);
             assert(is_successful == true); // Ring buffer must NOT be full
         }
         else if (data_requeset_ptr->getMessageType() == MessageType::kCoveredPlacementNotifyRequest) // Placement notification
         {
             // Pass cache server item into ring buffer of the cache server placement processor
             CacheServerItem tmp_cache_server_item(data_requeset_ptr);
-            bool is_successful = cache_server_placement_processor_param_ptr_->getCacheServerItemBufferPtr()->push(tmp_cache_server_item);
+            bool is_successful = cache_server_placement_processor_param_ptr_->push(tmp_cache_server_item);
             assert(is_successful == true); // Ring buffer must NOT be full
         }
         else if (data_requeset_ptr->getMessageType() == MessageType::kCoveredMetadataUpdateRequest) // Beacon-based cached metadata update
         {
             // Pass cache server item into ring buffer of the cache server metadata update processor
             CacheServerItem tmp_cache_server_item(data_requeset_ptr);
-            bool is_successful = cache_server_metadata_update_processor_param_ptr_->getCacheServerItemBufferPtr()->push(tmp_cache_server_item);
+            bool is_successful = cache_server_metadata_update_processor_param_ptr_->push(tmp_cache_server_item);
             assert(is_successful == true); // Ring buffer must NOT be full
         }
         else if (data_requeset_ptr->getMessageType() == MessageType::kInvalidationRequest || data_requeset_ptr->getMessageType() == MessageType::kCoveredInvalidationRequest) // Cache invalidation for MSI protocol
         {
             // Pass cache server item into ring buffer of the cache server invalidation processor
             CacheServerItem tmp_cache_server_item(data_requeset_ptr);
-            bool is_successful = cache_server_invalidation_processor_param_ptr_->getCacheServerItemBufferPtr()->push(tmp_cache_server_item);
+            bool is_successful = cache_server_invalidation_processor_param_ptr_->push(tmp_cache_server_item);
             assert(is_successful == true); // Ring buffer must NOT be full
         }
         else

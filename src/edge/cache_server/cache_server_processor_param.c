@@ -31,7 +31,7 @@ namespace covered
         else
         {
             // Allocate interruption-based ring buffer for data/control requests
-            cache_server_item_blocking_buffer_ptr_ = new BlockingRingBuffer<CacheServerItem>(CacheServerItem(), data_request_buffer_size, CacheServerProcessorParam::isNodeFinish);
+            cache_server_item_blocking_buffer_ptr_ = new BlockingRingBuffer<CacheServerItem>(CacheServerItem(), data_request_buffer_size, CacheServerProcessorParam::isNodeFinish_);
             assert(cache_server_item_blocking_buffer_ptr_ != NULL);
         }
     }
@@ -133,31 +133,84 @@ namespace covered
         return *this;
     }
 
+    bool CacheServerProcessorParam::isPollingBase() const
+    {
+        return is_polling_based_;
+    }
+
     CacheServer* CacheServerProcessorParam::getCacheServerPtr() const
     {
         assert(cache_server_ptr_ != NULL);
         return cache_server_ptr_;
     }
 
-    RingBuffer<CacheServerItem>* CacheServerProcessorParam::getCacheServerItemBufferPtr() const
+    bool CacheServerProcessorParam::push(const CacheServerItem& cache_server_item)
     {
-        assert(is_polling_based_);
-        assert(cache_server_item_buffer_ptr_ != NULL);
-        return cache_server_item_buffer_ptr_;
+        bool is_successful = false;
+        if (is_polling_based_)
+        {
+            assert(cache_server_item_buffer_ptr_ != NULL);
+            is_successful = cache_server_item_buffer_ptr_->push(cache_server_item);
+        }
+        else
+        {
+            assert(cache_server_item_blocking_buffer_ptr_ != NULL);
+            is_successful = cache_server_item_blocking_buffer_ptr_->push(cache_server_item);
+        }
+        return is_successful;
+    }
+    
+    bool CacheServerProcessorParam::pop(CacheServerItem& cache_server_item, void* edge_wrapper_ptr)
+    {
+        bool is_successful = false;
+        if (is_polling_based_)
+        {
+            UNUSED(edge_wrapper_ptr);
+
+            is_successful = cache_server_item_buffer_ptr_->pop(cache_server_item); // Polling-based in a non-blocking manner
+        }
+        else
+        {
+            assert(edge_wrapper_ptr != NULL);
+
+            // NOTE: BlockingRingBuffer uses edge wrapper's isNodeRunning as finish condition
+            is_successful = cache_server_item_blocking_buffer_ptr_->pop(cache_server_item, edge_wrapper_ptr); // Interruption-based in a blocking manner
+        }
+
+        // NOTE: (i) for polling-based ring buffer, is_successful = false means ring buffer is empty, which needs to check if edge node is still running; (ii) for interruption-based ring buffer, is_successful = false means finish condition is satisfied (i.e., edge node is NOT running)
+        return is_successful;
     }
 
-    BlockingRingBuffer<CacheServerItem>* CacheServerProcessorParam::getCacheServerItemBlockingItemBufferPtr() const
+    void CacheServerProcessorParam::notifyFinishIfNecessary(void* edge_wrapper_ptr) const
     {
-        assert(!is_polling_based_);
-        assert(cache_server_item_blocking_buffer_ptr_ != NULL);
-        return cache_server_item_blocking_buffer_ptr_;
+        if (!is_polling_based_)
+        {
+            assert(edge_wrapper_ptr != NULL);
+
+            cache_server_item_blocking_buffer_ptr_->notifyFinish(edge_wrapper_ptr);
+        }
+        return;
     }
 
-    bool CacheServerProcessorParam::isNodeFinish(void* edge_wrapper_ptr)
+    bool CacheServerProcessorParam::isNodeFinish_(void* edge_wrapper_ptr)
     {
         assert(edge_wrapper_ptr != NULL);
         EdgeWrapper* tmp_edge_wrapper_ptr = static_cast<EdgeWrapper*>(edge_wrapper_ptr);
         const bool is_edge_finish = !tmp_edge_wrapper_ptr->isNodeRunning();
         return is_edge_finish;
     }
+
+    // RingBuffer<CacheServerItem>* CacheServerProcessorParam::getCacheServerItemBufferPtr_() const
+    // {
+    //     assert(is_polling_based_);
+    //     assert(cache_server_item_buffer_ptr_ != NULL);
+    //     return cache_server_item_buffer_ptr_;
+    // }
+
+    // BlockingRingBuffer<CacheServerItem>* CacheServerProcessorParam::getCacheServerItemBlockingItemBufferPtr_() const
+    // {
+    //     assert(!is_polling_based_);
+    //     assert(cache_server_item_blocking_buffer_ptr_ != NULL);
+    //     return cache_server_item_blocking_buffer_ptr_;
+    // }
 }

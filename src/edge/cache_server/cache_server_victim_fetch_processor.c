@@ -46,7 +46,7 @@ namespace covered
         {
             // Try to get the data management request from ring buffer partitioned by cache server
             CacheServerItem tmp_cache_server_item;
-            bool is_successful = cache_server_victim_fetch_processor_param_ptr_->getCacheServerItemBufferPtr()->pop(tmp_cache_server_item);
+            bool is_successful = cache_server_victim_fetch_processor_param_ptr_->pop(tmp_cache_server_item, (void*)tmp_edge_wrapper_ptr);
             if (!is_successful)
             {
                 continue; // Retry to receive an item if edge is still running

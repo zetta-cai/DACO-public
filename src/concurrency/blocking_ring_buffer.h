@@ -42,9 +42,9 @@ namespace covered
         static const std::string kClassName;
 
         // For wait/notify
-        std::mutex condition_mutex_; // For atomicity of head_ and tail_
+        mutable std::mutex condition_mutex_; // For atomicity of head_ and tail_
         finish_condition_func_t finish_condition_func_;
-        std::condition_variable condition_variable_;
+        mutable std::condition_variable condition_variable_;
 
         volatile uint32_t head_;
 		volatile uint32_t tail_;

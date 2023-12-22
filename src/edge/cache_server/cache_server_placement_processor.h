@@ -35,7 +35,7 @@ namespace covered
 
         // Const variable
         std::string instance_name_;
-        const CacheServerProcessorParam* cache_server_placement_processor_param_ptr_;
+        CacheServerProcessorParam* cache_server_placement_processor_param_ptr_;
 
         // NOTE: destination addresses for sending control requests come from beacon edge index
 

@@ -64,6 +64,9 @@ namespace covered
         // NOTE: recvrsp_source_addr and recvrsp_socket_server_ptr refer to some edge cache server worker
         bool notifyBeaconForPlacementAfterHybridFetch_(const Key& key, const Value& value, const Edgeset& best_placement_edgeset, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const; // Sender is NOT beacon; return if edge node is finished
     private:
+        static const bool IS_HIGH_PRIORITY_FOR_METADATA_UPDATE;
+        static const bool IS_HIGH_PRIORITY_FOR_VICTIM_FETCH;
+
         static const std::string kClassName;
 
         void receiveRequestsAndPartition_();

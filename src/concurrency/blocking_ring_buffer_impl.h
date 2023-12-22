@@ -192,7 +192,7 @@ namespace covered
     }
 
     template<class T>
-    BlockingRingBuffer<T>::finish_condition_func_t BlockingRingBuffer<T>::getFinishConditionFunc() const
+    typename BlockingRingBuffer<T>::finish_condition_func_t BlockingRingBuffer<T>::getFinishConditionFunc() const
     {
         // NOTE: NO need to acquire condition mutex due to finish_condition_func_ is NEVER changed after initialization
 

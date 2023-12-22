@@ -30,14 +30,20 @@ namespace covered
 
         const CacheServerProcessorParam& operator=(const CacheServerProcessorParam& other);
 
+        bool isPollingBase() const;
         CacheServer* getCacheServerPtr() const;
-        RingBuffer<CacheServerItem>* getCacheServerItemBufferPtr() const;
-        BlockingRingBuffer<CacheServerItem>* getCacheServerItemBlockingItemBufferPtr() const;
+
+        bool push(const CacheServerItem& cache_server_item);
+        bool pop(CacheServerItem& cache_server_item, void* edge_wrapper_ptr); // NOTE: edge_wrapper_ptr is ONLY used if is_polling_based_ = false
+        void notifyFinishIfNecessary(void* edge_wrapper_ptr) const; // NOTE: notify condition variable ONLY if is_polling_based_ = false
     private:
         static const std::string kClassName;
 
         // Static function for finish condition of interruption-based ring buffer
-        static bool isNodeFinish(void* edge_wrapper_ptr);
+        static bool isNodeFinish_(void* edge_wrapper_ptr);
+
+        // RingBuffer<CacheServerItem>* getCacheServerItemBufferPtr_() const;
+        // BlockingRingBuffer<CacheServerItem>* getCacheServerItemBlockingItemBufferPtr_() const;
 
         // Const variable
         bool is_polling_based_;
