@@ -15,6 +15,7 @@
 
 namespace covered
 {
+    //class CoveredVictimFetchRequest : public UintVictimsetMessage
     class CoveredVictimFetchRequest : public UintMessage
     {
     public:

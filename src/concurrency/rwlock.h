@@ -7,8 +7,7 @@
 #ifndef RWLOCK_H
 #define RWLOCK_H
 
-// TMPDEBUG231220
-#define DEBUG_RWLOCK
+//#define DEBUG_RWLOCK
 
 #ifdef DEBUG_RWLOCK
 #include <unordered_map>

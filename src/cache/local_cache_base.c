@@ -102,19 +102,11 @@ namespace covered
     {
         checkPointers_();
 
-        struct timespec t0 = Util::getCurrentTimespec(); // TMPDEBUG231220
-        std::unordered_set<std::string> prev_writers; // TMPDEBUG231220
-
         // Acquire a write lock to update local metadata atomically
         std::string context_name = "LocalCacheBase::getLocalCache()";
-        //rwlock_for_local_cache_ptr_->acquire_lock(context_name);
-        rwlock_for_local_cache_ptr_->acquire_lock(context_name, &prev_writers); // TMPDEBUG231220
-
-        struct timespec t1 = Util::getCurrentTimespec(); // TMPDEBUG231220
+        rwlock_for_local_cache_ptr_->acquire_lock(context_name);
 
         bool is_local_cached = getLocalCacheInternal_(key, is_redirected, value, affect_victim_tracker);
-
-        struct timespec t1_5 = Util::getCurrentTimespec(); // TMPDEBUG231220
 
         // Object size checking
         if (is_local_cached)
@@ -123,23 +115,7 @@ namespace covered
             assert(is_valid_objsize);
         }
 
-        struct timespec t2 = Util::getCurrentTimespec(); // TMPDEBUG231220
-
         rwlock_for_local_cache_ptr_->unlock(context_name);
-
-        struct timespec t3 = Util::getCurrentTimespec(); // TMPDEBUG231220
-
-        // TMPDEBUG231220
-        if (Util::getDeltaTimeUs(t3, t0) >= MS2US(1.5))
-        {
-            std::ostringstream oss;
-            oss << "LocalCacheBase::getLocalCache t1-t0: " << std::to_string(Util::getDeltaTimeUs(t1, t0)) << "t1_5-t1: " << std::to_string(Util::getDeltaTimeUs(t1_5, t1)) << " t2-t1_5: " << std::to_string(Util::getDeltaTimeUs(t2, t1_5)) << " t3-t2: " << std::to_string(Util::getDeltaTimeUs(t3, t2));
-            for (std::unordered_set<std::string>::const_iterator tmp_iter = prev_writers.begin(); tmp_iter != prev_writers.end(); tmp_iter++)
-            {
-                oss << " prev_writer: " << *tmp_iter;
-            }
-            Util::dumpDebugMsg(base_instance_name_, oss.str());
-        }
 
         return is_local_cached;
     }
@@ -330,75 +306,29 @@ namespace covered
     {
         checkPointers_();
 
-        struct timespec t0 = Util::getCurrentTimespec(); // TMPDEBUG231220
-        std::unordered_set<std::string> prev_writers; // TMPDEBUG231220
-        std::unordered_set<std::string> prev_readers; // TMPDEBUG231220
-
         // Acquire a write lock for local metadata to update local metadata atomically
         std::string context_name = "LocalCacheBase::updateLocalCacheMetadata()";
-        //rwlock_for_local_cache_ptr_->acquire_lock(context_name);
-        rwlock_for_local_cache_ptr_->acquire_lock(context_name, &prev_writers, &prev_readers); // TMPDEBUG231220
-
-        struct timespec t1 = Util::getCurrentTimespec(); // TMPDEBUG231220
+        rwlock_for_local_cache_ptr_->acquire_lock(context_name);
 
         updateLocalCacheMetadataInternal_(key, func_name, func_param_ptr);
 
-        struct timespec t2 = Util::getCurrentTimespec(); // TMPDEBUG231220
-
         rwlock_for_local_cache_ptr_->unlock(context_name);
 
-        struct timespec t3 = Util::getCurrentTimespec(); // TMPDEBUG231220
-
-        // TMPDEBUG231220
-        if (Util::getDeltaTimeUs(t3, t0) >= MS2US(1.5))
-        {
-            std::ostringstream oss;
-            oss << "LocalCacheBase::updateLocalCacheMetadata t1-t0: " << std::to_string(Util::getDeltaTimeUs(t1, t0)) << " t2-t1: " << std::to_string(Util::getDeltaTimeUs(t2, t1)) << " t3-t2: " << std::to_string(Util::getDeltaTimeUs(t3, t2));
-            for (std::unordered_set<std::string>::const_iterator tmp_iter = prev_writers.begin(); tmp_iter != prev_writers.end(); tmp_iter++)
-            {
-                oss << " prev_writer: " << *tmp_iter;
-            }
-            for (std::unordered_set<std::string>::const_iterator tmp_iter = prev_readers.begin(); tmp_iter != prev_readers.end(); tmp_iter++)
-            {
-                oss << " prev_reader: " << *tmp_iter;
-            }
-            Util::dumpDebugMsg(base_instance_name_, oss.str());
-        }
         return;
     }
 
     uint64_t LocalCacheBase::getSizeForCapacity() const
     {
         checkPointers_();
-        struct timespec t0 = Util::getCurrentTimespec(); // TMPDEBUG231220
-        std::unordered_set<std::string> prev_writers; // TMPDEBUG231220
 
         // Acquire a read lock for local metadata to update local metadata atomically
         std::string context_name = "LocalCacheBase::getSizeForCapacity()";
-        //rwlock_for_local_cache_ptr_->acquire_lock_shared(context_name);
-        rwlock_for_local_cache_ptr_->acquire_lock_shared(context_name, &prev_writers); // TMPDEBUG231220
-
-        struct timespec t1 = Util::getCurrentTimespec(); // TMPDEBUG231220
+        rwlock_for_local_cache_ptr_->acquire_lock_shared(context_name);
 
         uint64_t internal_size = getSizeForCapacityInternal_();
 
-        struct timespec t2 = Util::getCurrentTimespec(); // TMPDEBUG231220
-
         rwlock_for_local_cache_ptr_->unlock_shared(context_name);
 
-        struct timespec t3 = Util::getCurrentTimespec(); // TMPDEBUG231220
-
-        // TMPDEBUG231220
-        if (Util::getDeltaTimeUs(t3, t0) >= MS2US(1.5))
-        {
-            std::ostringstream oss;
-            oss << "LocalCacheBase::getSizeForCapacity t1-t0: " << std::to_string(Util::getDeltaTimeUs(t1, t0)) << " t2-t1: " << std::to_string(Util::getDeltaTimeUs(t2, t1)) << " t3-t2: " << std::to_string(Util::getDeltaTimeUs(t3, t2));
-            for (std::unordered_set<std::string>::const_iterator tmp_iter = prev_writers.begin(); tmp_iter != prev_writers.end(); tmp_iter++)
-            {
-                oss << " prev_writer: " << *tmp_iter;
-            }
-            Util::dumpDebugMsg(base_instance_name_, oss.str());
-        }
         return internal_size;
     }
 

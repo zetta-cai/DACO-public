@@ -99,8 +99,7 @@ namespace covered
         EventList event_list;
 
         // Update total bandwidth usage for received invalidation request
-        const CoveredMetadataUpdateRequest* const covered_metadata_update_request_ptr = static_cast<const CoveredMetadataUpdateRequest*>(control_request_ptr);
-        uint32_t cross_edge_invalidation_req_bandwidth_bytes = covered_metadata_update_request_ptr->getMsgPayloadSize();
+        uint32_t cross_edge_invalidation_req_bandwidth_bytes = control_request_ptr->getMsgPayloadSize();
         total_bandwidth_usage.update(BandwidthUsage(0, cross_edge_invalidation_req_bandwidth_bytes, 0));
 
         struct timespec invalidate_local_cache_start_timestamp = Util::getCurrentTimespec();
@@ -163,15 +162,15 @@ namespace covered
             tmp_cache_wrapper_ptr->invalidateKeyForLocalCachedObject(tmp_key);
         }
 
-        if (control_request_ptr->getMessageType() == MessageType::kCoveredInvalidationRequest)
-        {
-            assert(tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME);
+        // if (control_request_ptr->getMessageType() == MessageType::kCoveredInvalidationRequest)
+        // {
+        //     assert(tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME);
 
-            // Victim synchronization
-            const CoveredInvalidationRequest* const covered_invalidation_request_ptr = static_cast<const CoveredInvalidationRequest*>(control_request_ptr);
-            const VictimSyncset& neighbor_victim_syncset = covered_invalidation_request_ptr->getVictimSyncsetRef();
-            tmp_edge_wrapper_ptr->updateCacheManagerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset);
-        }
+        //     // Victim synchronization
+        //     const CoveredInvalidationRequest* const covered_invalidation_request_ptr = static_cast<const CoveredInvalidationRequest*>(control_request_ptr);
+        //     const VictimSyncset& neighbor_victim_syncset = covered_invalidation_request_ptr->getVictimSyncsetRef();
+        //     tmp_edge_wrapper_ptr->updateCacheManagerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset);
+        // }
 
         return;
     }
@@ -206,12 +205,13 @@ namespace covered
             tmp_key = covered_invalidation_request_ptr->getKey();
             skip_propagation_latency = covered_invalidation_request_ptr->isSkipPropagationLatency();
 
-            // Prepare victim syncset for piggybacking-based victim synchronization
-            const uint32_t dst_edge_idx_for_compression = covered_invalidation_request_ptr->getSourceIndex();
-            VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_edge_idx_for_compression, cache_margin_bytes);
+            // // Prepare victim syncset for piggybacking-based victim synchronization
+            // const uint32_t dst_edge_idx_for_compression = covered_invalidation_request_ptr->getSourceIndex();
+            // VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_edge_idx_for_compression, cache_margin_bytes);
 
             // Prepare invalidation response
-            invalidation_response_ptr = new CoveredInvalidationResponse(tmp_key, victim_syncset, edge_idx, edge_cache_server_recvreq_source_addr, total_bandwidth_usage, event_list, skip_propagation_latency);
+            // invalidation_response_ptr = new CoveredInvalidationResponse(tmp_key, victim_syncset, edge_idx, edge_cache_server_recvreq_source_addr, total_bandwidth_usage, event_list, skip_propagation_latency);
+            invalidation_response_ptr = new CoveredInvalidationResponse(tmp_key, edge_idx, edge_cache_server_recvreq_source_addr, total_bandwidth_usage, event_list, skip_propagation_latency);
         }
         else
         {

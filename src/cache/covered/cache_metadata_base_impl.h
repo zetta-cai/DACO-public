@@ -146,55 +146,31 @@ namespace covered
     template<class T>
     bool CacheMetadataBase<T>::updateNoValueStatsForExistingKey(const EdgeWrapper* edge_wrapper_ptr, const Key& key, const uint32_t& peredge_synced_victimcnt, const bool& is_redirected, const bool& is_global_cached)
     {
-        struct timespec t0 = Util::getCurrentTimespec(); // TMPDEBUG231220
-
         // Get lookup iterator
         perkey_lookup_table_iter_t perkey_lookup_iter = getLookup_(key);
 
-        struct timespec t1 = Util::getCurrentTimespec(); // TMPDEBUG231220
-
         bool affect_victim_tracker = beforeUpdateStatsForExistingKey_(perkey_lookup_iter, peredge_synced_victimcnt);
-
-        struct timespec t2 = Util::getCurrentTimespec(); // TMPDEBUG231220
 
         // Update object-level value-unrelated metadata for local requests (local hits/misses)
         perkey_metadata_list_iter_t perkey_metadata_list_iter = updateNoValuePerkeyMetadata_(perkey_lookup_iter, is_redirected, is_global_cached);
         const T& key_level_metadata_ref = perkey_metadata_list_iter->second;
 
-        struct timespec t3 = Util::getCurrentTimespec(); // TMPDEBUG231220
-
         // Update group-level value-unrelated metadata for all requests (local/redirected hits; local misses)
         const GroupLevelMetadata& group_level_metadata_ref = updateNoValuePergroupMetadata_(perkey_lookup_iter);
 
-        struct timespec t4 = Util::getCurrentTimespec(); // TMPDEBUG231220
-
         // Calculate and update popularity for newly-admited key
         calculateAndUpdatePopularity_(perkey_metadata_list_iter, key_level_metadata_ref, group_level_metadata_ref);
-
-        struct timespec t5 = Util::getCurrentTimespec(); // TMPDEBUG231220
 
         // Update reward
         Reward new_reward = calculateReward_(edge_wrapper_ptr, perkey_metadata_list_iter);
         sorted_reward_multimap_t::iterator new_sorted_reward_iter = updateReward_(new_reward, perkey_lookup_iter);
 
-        struct timespec t6 = Util::getCurrentTimespec(); // TMPDEBUG231220
-
         // Update lookup table
         updateLookup_(perkey_lookup_iter, new_sorted_reward_iter);
-
-        struct timespec t7 = Util::getCurrentTimespec(); // TMPDEBUG231220
 
         if (!affect_victim_tracker)
         {
             affect_victim_tracker = afterUpdateStatsForExistingKey_(perkey_lookup_iter, peredge_synced_victimcnt);
-        }
-
-        struct timespec t8 = Util::getCurrentTimespec(); // TMPDEBUG231220
-
-        // TMPDEBUG231220
-        if (Util::getDeltaTimeUs(t8, t0) >= MS2US(1.5))
-        {
-            Util::dumpVariablesForDebug(kClassName, 16, "CacheMetadataBase<T>::updateNoValueStatsForExistingKey t1-t0:", std::to_string(Util::getDeltaTimeUs(t1, t0)).c_str(), "t2-t1:", std::to_string(Util::getDeltaTimeUs(t2, t1)).c_str(), "t3-t2:", std::to_string(Util::getDeltaTimeUs(t3, t2)).c_str(), "t4-t3", std::to_string(Util::getDeltaTimeUs(t4, t3)).c_str(), "t5-t4", std::to_string(Util::getDeltaTimeUs(t5, t4)).c_str(), "t6-t5", std::to_string(Util::getDeltaTimeUs(t6, t5)).c_str(), "t7-t6", std::to_string(Util::getDeltaTimeUs(t7, t6)).c_str(), "t8-t7", std::to_string(Util::getDeltaTimeUs(t8, t7)).c_str());
         }
 
         return affect_victim_tracker;

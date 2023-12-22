@@ -75,9 +75,7 @@ namespace covered
 
         // Get source address of cache server worker to receive control responses and redirected data responses
         const bool is_launch_edge = true; // The edge cache server worker belongs to the logical edge node launched in the current physical machine
-        Util::dumpVariablesForDebug(base_instance_name_, 1, "before getEdgeIpstr()"); // TMPDEBUG231220
         std::string edge_ipstr = Config::getEdgeIpstr(edge_idx, edgecnt, is_launch_edge);
-        Util::dumpVariablesForDebug(base_instance_name_, 1, "after getEdgeIpstr()"); // TMPDEBUG231220
         uint16_t edge_cache_server_worker_recvrsp_port = Util::getEdgeCacheServerWorkerRecvrspPort(edge_idx, edgecnt, local_cache_server_worker_idx, percacheserver_workercnt);
         edge_cache_server_worker_recvrsp_source_addr_ = NetworkAddr(edge_ipstr, edge_cache_server_worker_recvrsp_port);
 
@@ -376,8 +374,6 @@ namespace covered
         uint32_t process_local_getreq_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(process_local_getreq_end_timestamp, process_local_getreq_start_timestamp));
         event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_PROCESS_LOCAL_GETREQ_EVENT_NAME, process_local_getreq_latency_us); // Add intermediate event if with event tracking
 
-        struct timespec t0 = Util::getCurrentTimespec(); // TMPDEBUG231220
-
         // Prepare LocalGetResponse for client
         uint64_t used_bytes = tmp_edge_wrapper_ptr->getSizeForCapacity();
         uint64_t capacity_bytes = tmp_edge_wrapper_ptr->getCapacityBytes();
@@ -386,13 +382,9 @@ namespace covered
         MessageBase* local_get_response_ptr = new LocalGetResponse(tmp_key, tmp_value, hitflag, used_bytes, capacity_bytes, edge_idx, edge_cache_server_recvreq_source_addr, total_bandwidth_usage, event_list, skip_propagation_latency);
         assert(local_get_response_ptr != NULL);
 
-        struct timespec t1 = Util::getCurrentTimespec(); // TMPDEBUG231220
-
         // Push local response message into edge-to-client propagation simulator to a client
         bool is_successful = tmp_edge_wrapper_ptr->getEdgeToclientPropagationSimulatorParamPtr()->push(local_get_response_ptr, recvrsp_dst_addr);
         assert(is_successful);
-
-        struct timespec t2 = Util::getCurrentTimespec(); // TMPDEBUG231220
 
         #ifdef DEBUG_CACHE_SERVER_WORKER
         Util::dumpVariablesForDebug(base_instance_name_, 5, "issue a local response;", "type:", MessageBase::messageTypeToString(local_get_response_ptr->getMessageType()).c_str(), "keystr:", tmp_key.getKeystr().c_str());
@@ -400,14 +392,6 @@ namespace covered
 
         // NOTE: local_get_response_ptr will be released by edge-to-client propagation simulator
         local_get_response_ptr = NULL;
-
-        struct timespec t3 = Util::getCurrentTimespec(); // TMPDEBUG231220
-
-        // TMPDEBUG231220
-        if (Util::getDeltaTimeUs(t3, t0) >= MS2US(1.5))
-        {
-            Util::dumpVariablesForDebug(base_instance_name_, 6, "CacheServerWorkerBase::processGetReq t1-t0:", std::to_string(Util::getDeltaTimeUs(t1, t0)).c_str(), "t2-t1:", std::to_string(Util::getDeltaTimeUs(t2, t1)).c_str(), "t3-t2:", std::to_string(Util::getDeltaTimeUs(t3, t2)).c_str());
-        }
 
         return is_finish;
     }

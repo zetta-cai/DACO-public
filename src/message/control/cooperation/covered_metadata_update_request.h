@@ -11,14 +11,17 @@
 
 #include "common/dynamic_array.h"
 #include "common/key.h"
-#include "message/key_byte_victimset_message.h"
+//#include "message/key_byte_victimset_message.h"
+#include "message/key_byte_message.h"
 
 namespace covered
 {
-    class CoveredMetadataUpdateRequest : public KeyByteVictimsetMessage
+    //class CoveredMetadataUpdateRequest : public KeyByteVictimsetMessage
+    class CoveredMetadataUpdateRequest : public KeyByteMessage
     {
     public:
-        CoveredMetadataUpdateRequest(const Key& key, const bool& is_neighbor_cached, const VictimSyncset& victim_syncset, const uint32_t& source_index, const NetworkAddr& source_addr, const bool& skip_propagation_latency);
+        //CoveredMetadataUpdateRequest(const Key& key, const bool& is_neighbor_cached, const VictimSyncset& victim_syncset, const uint32_t& source_index, const NetworkAddr& source_addr, const bool& skip_propagation_latency);
+        CoveredMetadataUpdateRequest(const Key& key, const bool& is_neighbor_cached, const uint32_t& source_index, const NetworkAddr& source_addr, const bool& skip_propagation_latency);
         CoveredMetadataUpdateRequest(const DynamicArray& msg_payload);
         virtual ~CoveredMetadataUpdateRequest();
 

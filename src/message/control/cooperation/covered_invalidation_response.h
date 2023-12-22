@@ -11,14 +11,17 @@
 
 #include "common/dynamic_array.h"
 #include "common/key.h"
-#include "message/key_victimset_message.h"
+// #include "message/key_victimset_message.h"
+#include "message/key_message.h"
 
 namespace covered
 {
-    class CoveredInvalidationResponse : public KeyVictimsetMessage
+    // class CoveredInvalidationResponse : public KeyVictimsetMessage
+    class CoveredInvalidationResponse : public KeyMessage
     {
     public:
-        CoveredInvalidationResponse(const Key& key, const VictimSyncset& victim_syncset, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency);
+        // CoveredInvalidationResponse(const Key& key, const VictimSyncset& victim_syncset, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency);
+        CoveredInvalidationResponse(const Key& key, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency);
         CoveredInvalidationResponse(const DynamicArray& msg_payload);
         virtual ~CoveredInvalidationResponse();
     private:
