@@ -21,6 +21,7 @@ namespace covered
     public:
         RingBuffer(const T& default_element, const uint32_t& buffer_size, const bool& with_multi_providers);
         ~RingBuffer();
+        void getAllToRelease(std::vector<T>& remaining_elements); // NOTE: NO need to acquire any lock due to ONLY being invoked once in deconstructor
 
         // NOTE: thread-safe structure cannot return a reference, which may violate atomicity
         bool push(const T& element);

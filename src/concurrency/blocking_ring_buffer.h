@@ -23,11 +23,12 @@ namespace covered
     public:
         BlockingRingBuffer(const T& default_element, const uint32_t& buffer_size, bool(*finish_condition_func)() = NULL);
         ~BlockingRingBuffer();
+        void getAllToRelease(std::vector<T>& remaining_elements); // NOTE: NO need to acquire any lock due to ONLY being invoked once in deconstructor
 
         // NOTE: thread-safe structure cannot return a reference, which may violate atomicity
         bool push(const T& element);
         bool pop(T& element); // Blocking pop: wait until finish condition if any is satisfied (return is_successful as false) or ring buffer is not empty (return is_successful as true)
-        void notifyFinish(); // NOTE: finish_condition_func_ MUST be true
+        void notifyFinish() const; // NOTE: finish_condition_func_ MUST NOT NULL and return true
 
         uint32_t getElementCnt() const;
         uint32_t getBufferSize() const;

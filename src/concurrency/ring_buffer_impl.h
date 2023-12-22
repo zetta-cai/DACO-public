@@ -64,6 +64,22 @@ namespace covered
     }
 
     template<class T>
+    void RingBuffer<T>::getAllToRelease(std::vector<T>& remaining_elements)
+    {
+        // NOTE: NO need to acquire any lock due to ONLY being invoked once in deconstructor
+
+        while (tail_ != head_)
+        {
+            remaining_elements.push_back(ring_buffer_[tail_]);
+            ring_buffer_[tail_] = default_element_;
+
+            tail_ = (tail_ + 1) % buffer_size_;
+        }
+
+        return;
+    }
+
+    template<class T>
     bool RingBuffer<T>::push(const T& element)
     {
         /*

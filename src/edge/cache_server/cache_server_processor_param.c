@@ -28,6 +28,17 @@ namespace covered
 
         if (cache_server_item_buffer_ptr_ != NULL)
         {
+            // Release messages in remaining cache server items
+            std::vector<CacheServerItem> remaining_elements;
+            cache_server_item_buffer_ptr_->getAllToRelease(remaining_elements);
+            for (uint32_t i = 0; i < remaining_elements.size(); i++)
+            {
+                MessageBase* tmp_remaining_message_ptr = remaining_elements[i].getRequestPtr();
+                assert(tmp_remaining_message_ptr != NULL);
+                delete tmp_remaining_message_ptr;
+                tmp_remaining_message_ptr = NULL;
+            }
+
             delete cache_server_item_buffer_ptr_;
             cache_server_item_buffer_ptr_ = NULL;
         }

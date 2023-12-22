@@ -13,22 +13,12 @@ namespace covered
     template<class T>
     const std::string BlockingRingBuffer<T>::kClassName = "BlockingRingBuffer<" + std::string(typeid(T).name()) + ">";
 
-    // TODO: END HERE
-
     template<class T>
-    RingBuffer<T>::RingBuffer(const T& default_element, const uint32_t& buffer_size, const bool& with_multi_providers) : with_multi_providers_(with_multi_providers)
+    BlockingRingBuffer<T>::BlockingRingBuffer(const T& default_element, const uint32_t& buffer_size, bool(*finish_condition_func)())
     {
         assert(buffer_size > 0);
 
-        if (with_multi_providers)
-        {
-            rwlock_for_multi_providers_ptr_ = new Rwlock("rwlock_for_multi_providers_ptr_");
-            assert(rwlock_for_multi_providers_ptr_ != NULL);
-        }
-        else
-        {
-            rwlock_for_multi_providers_ptr_ = NULL;
-        }
+        finish_condition_func_ = finish_condition_func;
 
         head_ = 0;
         tail_ = 0;
@@ -38,123 +28,137 @@ namespace covered
     }
 
     template<class T>
-    RingBuffer<T>::~RingBuffer()
-    {
-        /*
-        // NOTE: poped pointers are released outside RingBuffer, yet remaining pointers in ring_buffer_ are released by RingBuffer
-        while (true)
-        {
-            T* ptr = pop();
-            if (ptr != NULL)
-            {
-                delete ptr;
-                ptr = NULL;
-            }
-            else
-            {
-                break;
-            }
-        }
-        */
-        
-        if (with_multi_providers_)
-        {
-            assert(rwlock_for_multi_providers_ptr_ != NULL);
-            delete rwlock_for_multi_providers_ptr_;
-            rwlock_for_multi_providers_ptr_ = NULL;
-        }
-    }
+    BlockingRingBuffer<T>::~BlockingRingBuffer() {}
 
     template<class T>
-    bool RingBuffer<T>::push(const T& element)
+    void BlockingRingBuffer<T>::getAllToRelease(std::vector<T>& remaining_elements)
     {
-        /*
-        if (ptr == NULL)
+        // NOTE: NO need to acquire any lock due to ONLY being invoked once in deconstructor
+
+        while (tail_ != head_)
         {
-            Util::dumpErrorMsg(kClassName, "ptr is NULL for push()!");
-            exit(1);
-        }
-        */
-        
-        // Acquire a write lock
-        const std::string context_name = "RingBuffer::push()";
-        if (with_multi_providers_)
-        {
-            assert(rwlock_for_multi_providers_ptr_ != NULL);
-            rwlock_for_multi_providers_ptr_->acquire_lock(context_name);
-        }
-
-        bool is_successful = false;
-
-        if ((head_ + 1) % buffer_size_ == tail_) // ring buffer is full
-        {
-            Util::dumpWarnMsg(kClassName, "ring buffer is fulll!");
-            is_successful = false;
-        }
-        else // still with free space
-        {
-            //assert(ring_buffer_[head_] == NULL);
-            ring_buffer_[head_] = element;
-            //assert(ring_buffer_[head_] != NULL);
-            
-            head_ = (head_ + 1) % buffer_size_;
-            is_successful = true;
-        }
-
-        if (with_multi_providers_)
-        {
-            rwlock_for_multi_providers_ptr_->unlock(context_name);
-        }
-
-        return is_successful;
-    }
-
-    template<class T>
-    bool RingBuffer<T>::pop(T& element)
-    {
-        // NOTE: NO need to acquire a write lock, as there will be ONLY one reader even if with multiple providers
-
-        //const std::string context_name = "RingBuffer::pop()";
-        //if (with_multi_providers)
-        //{
-        //    assert(rwlock_for_multi_providers_ptr_ != NULL);
-        //    rwlock_for_multi_providers_ptr_->acquire_lock(context_name);
-        //}
-
-        bool is_successful = false;
-
-        if (tail_ == head_) // ring buffer is empty
-        {
-            is_successful = false;
-        }
-        else // ring buffer is NOT empty
-        {
-            element = ring_buffer_[tail_];
-            //assert(result != NULL);
+            remaining_elements.push_back(ring_buffer_[tail_]);
             ring_buffer_[tail_] = default_element_;
 
             tail_ = (tail_ + 1) % buffer_size_;
-            is_successful = true;
         }
 
-        //if (with_multi_providers)
-        //{
-        //    rwlock_for_multi_providers_ptr_->unlock(context_name);
-        //}
+        return;
+    }
+
+    template<class T>
+    bool BlockingRingBuffer<T>::push(const T& element)
+    {
+        // NOTE: invoked by provider
+
+        bool is_successful = false;
+
+        // Push element into ring buffer atomically
+        {
+            // Acquire condition mutex lock
+            std::lock_guard lock_guard(condition_mutex_);
+
+            // Push element (i.e., set ring buffer condition)
+            if ((head_ + 1) % buffer_size_ == tail_) // ring buffer is full
+            {
+                Util::dumpWarnMsg(kClassName, "ring buffer is fulll!");
+                is_successful = false;
+            }
+            else // still with free space
+            {
+                ring_buffer_[head_] = element;
+                
+                head_ = (head_ + 1) % buffer_size_;
+                is_successful = true;
+            }
+        } // NOTE: condition mutex lock will be released when destroying the lock guard
+
+        if (is_successful) // If push a new element into ring buffer
+        {
+            condition_variable_.notify_one(); // Notify a consumer waiting for the condition variable
+        }
 
         return is_successful;
     }
 
     template<class T>
-    bool RingBuffer<T>::withMultiProviders() const
+    bool BlockingRingBuffer<T>::pop(T& element)
     {
-        return with_multi_providers_;
+        // NOTE: invoked by consumer
+
+        bool is_successful = false;
+        bool with_finish_condition = false;
+        bool with_ring_buffer_condition = false;
+
+        // Wait until finish condition is satisfied or provider pushes a new element into ring buffer
+        std::unique_lock unique_lock(condition_mutex_); // Acquire condition mutex lock
+        condition_variable_.wait(unique_lock,
+            [&]()
+            {
+                // NOTE: condition mutex lock MUST be acquired when checking finish and ring buffer conditions in this lambda function
+                if (finish_condition_func_ != NULL)
+                {
+                    with_finish_condition = finish_condition_func_();
+                }
+                with_ring_buffer_condition = (tail_ != head_);
+                return with_finish_condition || with_ring_buffer_condition;
+            }
+        ); // NOTE: condition mutex lock will be released when waiting for the condition variable and re-acquired when the condition variable is notified
+
+        // NOTE: condition mutex lock is still acquired after waking from conditional wait
+        if (with_finish_condition) // Finish condition is satisfied
+        {
+            // NOTE: NOT set element due to already finished
+
+            unique_lock.unlock();
+            is_successful = false;
+        }
+        else // Finish condition is NOT satisfied
+        {
+            assert(with_ring_buffer_condition); // Ring buffer condition MUST be satisfied
+
+            // Set element
+            assert(tail_ != head_); // Ring buffer MUST NOT empty
+            element = ring_buffer_[tail_];
+            ring_buffer_[tail_] = default_element_;
+            tail_ = (tail_ + 1) % buffer_size_;
+
+            unique_lock.unlock();
+            is_successful = true;
+        }
+
+        return is_successful;
     }
 
     template<class T>
-    uint32_t RingBuffer<T>::getElementCnt() const
+    void BlockingRingBuffer<T>::notifyFinish() const
+    {
+        // NOTE: invoked by provider
+
+        // NOTE: finish condition MUST be satisfied
+        assert(finish_condition_func_ != NULL);
+        assert(finish_condition_func_() == true);
+
+        // NOTE: acquire&release condition mutex lock is important here, which ensures that either finish condition is true before consumer checks condition, or provider's notification happens after consumer's conditional wait -> set finish condition and notification in provider will NOT happen between check and wait in consumer, which will incur dead consumer
+        {
+            // Acquire condition mutex lock
+            std::lock_guard lock_guard(condition_mutex_);
+        } // NOTE: condition mutex lock will be released when destroying the lock guard
+
+        condition_variable_.notify_all(); // Notify all consumers waiting for the condition variable
+
+        return;
+    }
+
+    template<class T>
+    uint32_t BlockingRingBuffer<T>::getElementCnt() const
     {
         uint32_t size = 0;
+
+        // Acquire condition mutex
+        condition_mutex_.lock();
+
+        // Get the number of elements in ring buffer atomically
         if (head_ >= tail_)
         {
             size = head_ - tail_;
@@ -164,18 +168,26 @@ namespace covered
             size = head_ + buffer_size_ - tail_;
         }
         assert(size >= 0 && size < buffer_size_);
+
+        // Release condition mutex
+        condition_mutex_.unlock();
+
         return size;
     }
 
     template<class T>
-    uint32_t RingBuffer<T>::getBufferSize() const
+    uint32_t BlockingRingBuffer<T>::getBufferSize() const
     {
+        // NOTE: NO need to acquire condition mutex due to buffer_size_ is NEVER changed after initialization
+
         return buffer_size_;
     }
 
     template<class T>
-    T RingBuffer<T>::getDefaultElement() const
+    T BlockingRingBuffer<T>::getDefaultElement() const
     {
+        // NOTE: NO need to acquire condition mutex due to default_element_ is NEVER changed after initialization
+
         return default_element_;
     }
 }
