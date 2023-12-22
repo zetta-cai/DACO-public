@@ -56,6 +56,8 @@ namespace covered
         // Must deep copy the ring buffer of local requests
         if (data_request_buffer_ptr_ != NULL) // Release original ring buffer if any
         {
+            // TODO: may need to release messages in remaining cache server items
+            
             delete data_request_buffer_ptr_;
             data_request_buffer_ptr_ = NULL;
         }

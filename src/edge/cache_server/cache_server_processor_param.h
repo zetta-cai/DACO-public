@@ -14,6 +14,7 @@ namespace covered
     class CacheServerProcessorParam;
 }
 
+#include "concurrency/blocking_ring_buffer_impl.h"
 #include "concurrency/ring_buffer_impl.h"
 #include "edge/cache_server/cache_server_item.h"
 #include "edge/cache_server/cache_server.h"
@@ -24,18 +25,26 @@ namespace covered
     {
     public:
         CacheServerProcessorParam();
-        CacheServerProcessorParam(CacheServer* cache_server_ptr, const uint32_t& data_request_buffer_size);
+        CacheServerProcessorParam(CacheServer* cache_server_ptr, const uint32_t& data_request_buffer_size, const bool& is_polling_based);
         ~CacheServerProcessorParam();
 
         const CacheServerProcessorParam& operator=(const CacheServerProcessorParam& other);
 
         CacheServer* getCacheServerPtr() const;
         RingBuffer<CacheServerItem>* getCacheServerItemBufferPtr() const;
+        BlockingRingBuffer<CacheServerItem>* getCacheServerItemBlockingItemBufferPtr() const;
     private:
         static const std::string kClassName;
 
+        // Static function for finish condition of interruption-based ring buffer
+        static bool isNodeFinish(void* edge_wrapper_ptr);
+
+        // Const variable
+        bool is_polling_based_;
+
         CacheServer* cache_server_ptr_; // thread safe
-        RingBuffer<CacheServerItem>* cache_server_item_buffer_ptr_; // thread safe
+        RingBuffer<CacheServerItem>* cache_server_item_buffer_ptr_; // thread safe (used if is_polling_based_ = true)
+        BlockingRingBuffer<CacheServerItem>* cache_server_item_blocking_buffer_ptr_; // thread safe (used if is_polling_based_ = false)
     };
 }
 

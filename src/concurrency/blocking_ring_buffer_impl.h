@@ -14,7 +14,7 @@ namespace covered
     const std::string BlockingRingBuffer<T>::kClassName = "BlockingRingBuffer<" + std::string(typeid(T).name()) + ">";
 
     template<class T>
-    BlockingRingBuffer<T>::BlockingRingBuffer(const T& default_element, const uint32_t& buffer_size, bool(*finish_condition_func)())
+    BlockingRingBuffer<T>::BlockingRingBuffer(const T& default_element, const uint32_t& buffer_size, finish_condition_func_t finish_condition_func)
     {
         assert(buffer_size > 0);
 
@@ -82,7 +82,7 @@ namespace covered
     }
 
     template<class T>
-    bool BlockingRingBuffer<T>::pop(T& element)
+    bool BlockingRingBuffer<T>::pop(T& element, void* finish_condition_param_ptr)
     {
         // NOTE: invoked by consumer
 
@@ -95,10 +95,10 @@ namespace covered
         condition_variable_.wait(unique_lock,
             [&]()
             {
-                // NOTE: condition mutex lock MUST be acquired when checking finish and ring buffer conditions in this lambda function
+                // NOTE: condition mutex lock MUST be acquired when checking finish and ring buffer conditions in this reference-based lambda function
                 if (finish_condition_func_ != NULL)
                 {
-                    with_finish_condition = finish_condition_func_();
+                    with_finish_condition = finish_condition_func_(finish_condition_param_ptr);
                 }
                 with_ring_buffer_condition = (tail_ != head_);
                 return with_finish_condition || with_ring_buffer_condition;
@@ -131,13 +131,13 @@ namespace covered
     }
 
     template<class T>
-    void BlockingRingBuffer<T>::notifyFinish() const
+    void BlockingRingBuffer<T>::notifyFinish(void* finish_condition_param_ptr) const
     {
         // NOTE: invoked by provider
 
         // NOTE: finish condition MUST be satisfied
         assert(finish_condition_func_ != NULL);
-        assert(finish_condition_func_() == true);
+        assert(finish_condition_func_(finish_condition_param_ptr) == true);
 
         // NOTE: acquire&release condition mutex lock is important here, which ensures that either finish condition is true before consumer checks condition, or provider's notification happens after consumer's conditional wait -> set finish condition and notification in provider will NOT happen between check and wait in consumer, which will incur dead consumer
         {
@@ -189,6 +189,27 @@ namespace covered
         // NOTE: NO need to acquire condition mutex due to default_element_ is NEVER changed after initialization
 
         return default_element_;
+    }
+
+    template<class T>
+    BlockingRingBuffer<T>::finish_condition_func_t BlockingRingBuffer<T>::getFinishConditionFunc() const
+    {
+        // NOTE: NO need to acquire condition mutex due to finish_condition_func_ is NEVER changed after initialization
+
+        return finish_condition_func_;
+    }
+
+    template<class T>
+    const BlockingRingBuffer<T>& BlockingRingBuffer<T>::operator=(const BlockingRingBuffer<T>& other)
+    {
+        finish_condition_func_ = other.finish_condition_func_;
+
+        head_ = other.head_;
+        tail_ = other.tail_;
+        buffer_size_ = other.buffer_size_;
+        default_element_ = other.default_element_;
+        ring_buffer_ = other.ring_buffer_; // Deep copy
+        return *this;
     }
 }
 
