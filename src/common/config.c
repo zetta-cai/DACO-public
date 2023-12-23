@@ -157,6 +157,9 @@ namespace covered
     std::vector<PhysicalMachine> Config::physical_machines_(0);
     uint32_t Config::current_machine_idx_ = 0;
 
+    // For port verification
+    std::map<uint16_t, std::string> Config::startport_keystr_map_;
+
     void Config::loadConfig(const std::string& config_filepath, const std::string& main_class_name)
     {
         if (!is_valid_) // Invoked at most once
