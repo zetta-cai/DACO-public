@@ -194,35 +194,15 @@ namespace covered
                     int64_t tmp_interval = kv_ptr->value().get_int64();
                     client_raw_statistics_slot_interval_sec_ = Util::toUint32(tmp_interval);
                 }
-                kv_ptr = find_(CLIENT_RECVMSG_STARTPORT_KEYSTR);
-                if (kv_ptr != NULL)
-                {
-                    int64_t tmp_port = kv_ptr->value().get_int64();
-                    client_recvmsg_startport_ = Util::toUint16(tmp_port);
-                }
-                kv_ptr = find_(CLIENT_WORKER_RECVRSP_STARTPORT_KEYSTR);
-                if (kv_ptr != NULL)
-                {
-                    int64_t tmp_port = kv_ptr->value().get_int64();
-                    client_worker_recvrsp_startport_ = Util::toUint16(tmp_port);
-                }
+                tryToFindStartport_(CLIENT_RECVMSG_STARTPORT_KEYSTR, &client_recvmsg_startport_);
+                tryToFindStartport_(CLIENT_WORKER_RECVRSP_STARTPORT_KEYSTR, &client_worker_recvrsp_startport_);
                 kv_ptr = find_(CLOUD_MACHINE_INDEX_KEYSTR);
                 if (kv_ptr != NULL)
                 {
                     cloud_machine_idx_ = Util::toUint32(kv_ptr->value().get_int64());
                 }
-                kv_ptr = find_(CLOUD_RECVMSG_STARTPORT_KEYSTR);
-                if (kv_ptr != NULL)
-                {
-                    int64_t tmp_port = kv_ptr->value().get_int64();
-                    cloud_recvmsg_startport_ = Util::toUint16(tmp_port);
-                }
-                kv_ptr = find_(CLOUD_RECVREQ_STARTPORT_KEYSTR);
-                if (kv_ptr != NULL)
-                {
-                    int64_t tmp_port = kv_ptr->value().get_int64();
-                    cloud_recvreq_startport_ = Util::toUint16(tmp_port);
-                }
+                tryToFindStartport_(CLOUD_RECVMSG_STARTPORT_KEYSTR, &cloud_recvmsg_startport_);
+                tryToFindStartport_(CLOUD_RECVREQ_STARTPORT_KEYSTR, &cloud_recvreq_startport_);
                 kv_ptr = find_(CLOUD_ROCKSDB_BASEDIR_KEYSTR);
                 if (kv_ptr != NULL)
                 {
@@ -244,48 +224,18 @@ namespace covered
                     int64_t tmp_sec = kv_ptr->value().get_int64();
                     dataset_loader_sleep_for_compaction_sec_ = Util::toUint32(tmp_sec);
                 }
-                kv_ptr = find_(EDGE_BEACON_SERVER_RECVREQ_STARTPORT_KEYSTR);
-                if (kv_ptr != NULL)
-                {
-                    int64_t tmp_port = kv_ptr->value().get_int64();
-                    edge_beacon_server_recvreq_startport_ = Util::toUint16(tmp_port);
-                }
-                kv_ptr = find_(EDGE_BEACON_SERVER_RECVRSP_STARTPORT_KEYSTR);
-                if (kv_ptr != NULL)
-                {
-                    int64_t tmp_port = kv_ptr->value().get_int64();
-                    edge_beacon_server_recvrsp_startport_ = Util::toUint16(tmp_port);
-                }
+                tryToFindStartport_(EDGE_BEACON_SERVER_RECVREQ_STARTPORT_KEYSTR, &edge_beacon_server_recvreq_startport_);
+                tryToFindStartport_(EDGE_BEACON_SERVER_RECVRSP_STARTPORT_KEYSTR, &edge_beacon_server_recvrsp_startport_);
                 kv_ptr = find_(EDGE_CACHE_SERVER_DATA_REQUEST_BUFFER_SIZE_KEYSTR);
                 if (kv_ptr != NULL)
                 {
                     int64_t tmp_size = kv_ptr->value().get_int64();
                     edge_cache_server_data_request_buffer_size_ = Util::toUint32(tmp_size);
                 }
-                kv_ptr = find_(EDGE_CACHE_SERVER_RECVREQ_STARTPORT_KEYSTR);
-                if (kv_ptr != NULL)
-                {
-                    int64_t tmp_port = kv_ptr->value().get_int64();
-                    edge_cache_server_recvreq_startport_ = Util::toUint16(tmp_port);
-                }
-                kv_ptr = find_(EDGE_CACHE_SERVER_PLACEMENT_PROCESSOR_RECVRSP_STARTPORT_KEYSTR);
-                if (kv_ptr != NULL)
-                {
-                    int64_t tmp_port = kv_ptr->value().get_int64();
-                    edge_cache_server_placement_processor_recvrsp_startport_ = Util::toUint16(tmp_port);
-                }
-                kv_ptr = find_(EDGE_CACHE_SERVER_WORKER_RECVREQ_STARTPORT_KEYSTR);
-                if (kv_ptr != NULL)
-                {
-                    int64_t tmp_port = kv_ptr->value().get_int64();
-                    edge_cache_server_worker_recvreq_startport_ = Util::toUint16(tmp_port);
-                }
-                kv_ptr = find_(EDGE_CACHE_SERVER_WORKER_RECVRSP_STARTPORT_KEYSTR);
-                if (kv_ptr != NULL)
-                {
-                    int64_t tmp_port = kv_ptr->value().get_int64();
-                    edge_cache_server_worker_recvrsp_startport_ = Util::toUint16(tmp_port);
-                }
+                tryToFindStartport_(EDGE_CACHE_SERVER_RECVREQ_STARTPORT_KEYSTR, &edge_cache_server_recvreq_startport_);
+                tryToFindStartport_(EDGE_CACHE_SERVER_PLACEMENT_PROCESSOR_RECVRSP_STARTPORT_KEYSTR, &edge_cache_server_placement_processor_recvrsp_startport_);
+                tryToFindStartport_(EDGE_CACHE_SERVER_WORKER_RECVREQ_STARTPORT_KEYSTR, &edge_cache_server_worker_recvreq_startport_);
+                tryToFindStartport_(EDGE_CACHE_SERVER_WORKER_RECVRSP_STARTPORT_KEYSTR, &edge_cache_server_worker_recvrsp_startport_);
                 kv_ptr = find_(EDGE_MACHINE_INDEXES_KEYSTR);
                 if (kv_ptr != NULL)
                 {
@@ -295,12 +245,7 @@ namespace covered
                         edge_machine_idxes_.push_back(Util::toUint32(tmp_machine_idx));
                     }
                 }
-                kv_ptr = find_(EDGE_RECVMSG_STARTPORT_KEYSTR);
-                if (kv_ptr != NULL)
-                {
-                    int64_t tmp_port = kv_ptr->value().get_int64();
-                    edge_recvmsg_startport_ = Util::toUint16(tmp_port);
-                }
+                tryToFindStartport_(EDGE_RECVMSG_STARTPORT_KEYSTR, &edge_recvmsg_startport_);
                 kv_ptr = find_(EVALUATOR_MACHINE_INDEX_KEYSTR);
                 if (kv_ptr != NULL)
                 {
@@ -1092,5 +1037,37 @@ namespace covered
         assert(physial_machine_idx < physical_machines_.size());
 
         return physical_machines_[physial_machine_idx];
+    }
+
+    void Config::tryToFindStartport_(const std::string& keystr, uint16_t* startport_ptr)
+    {
+        assert(startport_ptr != NULL);
+
+        boost::json::key_value_pair* kv_ptr = find_(keystr);
+        if (kv_ptr != NULL)
+        {
+            int64_t tmp_port = kv_ptr->value().get_int64();
+            *startport_ptr = Util::toUint16(tmp_port);
+        }
+        else
+        {
+            // Keep the default value of the start port
+        }
+
+        // Add the mapping between start port and keystr for port verification
+        std::map<uint16_t, std::string>::const_iterator startport_keystr_map_const_iter = startport_keystr_map_.find(*startport_ptr);
+        if (startport_keystr_map_const_iter != startport_keystr_map_.end())
+        {
+            // NOTE: all start ports MUST be unique
+            std::cout << "[ERROR] " << keystr << " has the same value with " << startport_keystr_map_const_iter->second << " of port " << startport_keystr_map_const_iter->first << std::endl;
+            exit(1);
+        }
+        else
+        {
+            startport_keystr_map_const_iter = startport_keystr_map_.insert(std::pair(*startport_ptr, keystr)).first;
+            assert(startport_keystr_map_const_iter != startport_keystr_map_.end());
+        }
+
+        return;
     }
 }

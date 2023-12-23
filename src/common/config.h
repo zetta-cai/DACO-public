@@ -12,6 +12,7 @@
 #define CONFIG_H
 
 #include <vector>
+#include <map>
 #include <string>
 
 #include <boost/json.hpp>
@@ -155,6 +156,9 @@ namespace covered
         static void checkPhysicalMachinesAndSetCuridx_();
         static PhysicalMachine getPhysicalMachine_(const uint32_t& physial_machine_idx);
 
+        // For port verification
+        static void tryToFindStartport_(const std::string& keystr, uint16_t* startport_ptr);
+
         static bool is_valid_;
         static boost::json::object json_object_;
 
@@ -162,6 +166,7 @@ namespace covered
         static std::string config_filepath_; // Configuration file path for COVERED to load static configurations
         static std::string main_class_name_; // Come from argv[0]
 
+        // Come from config file
         static std::vector<uint32_t> client_machine_idxes_; // Physical machine indexes of physical client nodes
         static uint32_t client_raw_statistics_slot_interval_sec_; // Slot interval for client raw statistics in units of seconds
         static uint16_t client_recvmsg_startport_; // Start UDP port for client to receive benchmark control messages
@@ -205,6 +210,9 @@ namespace covered
         // For all physical machines
         static std::vector<PhysicalMachine> physical_machines_; // Physical machines
         static uint32_t current_machine_idx_; // Current physical machine index
+
+        // For port verification
+        static std::map<uint16_t, std::string> startport_keystr_map_; // The map between start ports and keystrs (in ascending order by default)
     };
 }
 
