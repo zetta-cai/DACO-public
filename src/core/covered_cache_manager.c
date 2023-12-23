@@ -130,28 +130,29 @@ namespace covered
 
         popularity_aggregator_ptr_->clearPreservedEdgesetAfterAdmission(key, source_edge_idx);
 
-        // NOTE: all old local uncached popularities have already been cleared right after placement calculation in updatePreservedEdgesetForPlacement()
+        // NOTE: there may exist a parallel message embedded with a local uncached popularity before the object is admited (note that directory admission response has not been sent back), if it is processed after clearPreservedEdgesetAfterAdmission() yet before assertNoLocalUncachedPopularity() for directory admission request, the local uncached popularity will be updated into the aggregated uncachced popularity
+        // (OBSOLETE) NOTE: all old local uncached popularities have already been cleared right after placement calculation in updatePreservedEdgesetForPlacement()
         // (1) NO need to clear old local uncached popularity for the source edge node
         //updateAggregatedUncachedPopularityForExistingKey_(key, source_edge_idx, false, 0.0, 0, true);
         // (2) Assert old local uncached popularity for the source edge node MUST NOT exist
-        assertNoLocalUncachedPopularity(key, source_edge_idx);
+        // assertNoLocalUncachedPopularity(key, source_edge_idx);
 
         return;
     }
 
-    void CoveredCacheManager::assertNoLocalUncachedPopularity(const Key& key, const uint32_t& source_edge_idx) const
-    {
-        checkPointers_();
+    // void CoveredCacheManager::assertNoLocalUncachedPopularity(const Key& key, const uint32_t& source_edge_idx) const
+    // {
+    //     checkPointers_();
         
-        // Assert old local uncached popularity for the source edge node MUST NOT exist
-        AggregatedUncachedPopularity tmp_aggregated_uncached_popularity;
-        bool has_aggregated_uncached_popularity = popularity_aggregator_ptr_->getAggregatedUncachedPopularity(key, tmp_aggregated_uncached_popularity);
-        if (has_aggregated_uncached_popularity)
-        {
-            assert(tmp_aggregated_uncached_popularity.hasLocalUncachedPopularity(source_edge_idx) == false);
-        }
-        return;
-    }
+    //     // Assert old local uncached popularity for the source edge node MUST NOT exist
+    //     AggregatedUncachedPopularity tmp_aggregated_uncached_popularity;
+    //     bool has_aggregated_uncached_popularity = popularity_aggregator_ptr_->getAggregatedUncachedPopularity(key, tmp_aggregated_uncached_popularity);
+    //     if (has_aggregated_uncached_popularity)
+    //     {
+    //         assert(tmp_aggregated_uncached_popularity.hasLocalUncachedPopularity(source_edge_idx) == false);
+    //     }
+    //     return;
+    // }
 
     // For victim synchronization
 
@@ -279,7 +280,16 @@ namespace covered
         {
             const ObjectSize tmp_object_size = tmp_aggregated_uncached_popularity.getObjectSize();
             const uint32_t tmp_topk_list_length = tmp_aggregated_uncached_popularity.getTopkListLength();
-            assert(tmp_topk_list_length > 0); // NOTE: we perform placement calculation only when add/update a new local uncached popularity -> at least one local uncached popularity in the top-k list
+
+            if (tmp_topk_list_length == 0)
+            {
+                // NOTE: we perform placement calculation only when add/update a new local uncached popularity -> at least one local uncached popularity in the top-k list
+                // NOTE: getAggregatedUncachedPopularity() will check and deep copy aggregated uncache popularity atomically -> tmp_topk_list_length should > 0 if has_aggregated_uncached_popularity = true
+                std::ostringstream oss;
+                oss << "top-list length should > 0 if aggregated uncached popularity exists, yet is zero now when calculate placement for key " << key.getKeystr();
+                Util::dumpErrorMsg(instance_name_, oss.str());
+                exit(1);
+            }
             assert(tmp_topk_list_length <= popularity_aggregator_ptr_->getTopkEdgecnt()); // At most EdgeCLI::covered_topk_edgecnt_ times
 
             // Greedy-based placement calculation

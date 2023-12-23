@@ -650,8 +650,14 @@ namespace covered
 
             if (is_local_beaconed) // If dirinfosets belong to keys locally beaconed by the current edge node
             {
-                // NOTE: VictimDirinfo MUST exist for local beaconed victims (local/neighbor synced victims from local-edge-cache/received-victim-syncset have already been added in replaceVictimCacheinfosForEdgeIdx_())
-                assert(dirinfo_list_iter != perkey_victim_dirinfo_.end());
+                // NOTE: VictimDirinfo MUST exist for local beaconed victims (local/neighbor synced victims from local-edge-cache/received-victim-syncset have already been added in replaceVictimCacheinfosForEdgeIdx_() invoked by the same atomic function)
+                if (dirinfo_list_iter == perkey_victim_dirinfo_.end())
+                {
+                    std::ostringstream oss;
+                    oss << "victim dirinfo should exist for local/neighbor synced victim " << tmp_key.getKeystr() << ", which is local beaconed!";
+                    Util::dumpErrorMsg(instance_name_, oss.str());
+                    exit(1);
+                }
             }
 
             if (dirinfo_list_iter != perkey_victim_dirinfo_.end())

@@ -61,7 +61,7 @@ namespace covered
         bool updatePopularityAggregatorForAggregatedPopularity(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached, const bool& is_source_cached, const bool& need_placement_calculation, const bool& sender_is_beacon, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, const EdgeWrapper* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency, FastPathHint* fast_path_hint_ptr = NULL); // Return if edge node is finished
         void clearPopularityAggregatorForPreservedEdgesetAfterAdmission(const Key& key, const uint32_t& source_edge_idx);
 
-        void assertNoLocalUncachedPopularity(const Key& key, const uint32_t& source_edge_idx) const;
+        // void assertNoLocalUncachedPopularity(const Key& key, const uint32_t& source_edge_idx) const;
 
         // For victim synchronization
 

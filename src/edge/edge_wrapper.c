@@ -1389,8 +1389,9 @@ namespace covered
         // Update directory info in victim tracker if the local beaconed key is a local/neighbor synced victim
         covered_cache_manager_ptr_->updateVictimTrackerForLocalBeaconedVictimDirinfo(key, is_admit, directory_info);
 
-        // NOTE: MUST NO old local uncached popularity for the newly evicted object at the source edge node before popularity aggregation
-        covered_cache_manager_ptr_->assertNoLocalUncachedPopularity(key, source_edge_idx);
+        // NOTE: there may exist a parallel message embedded with a local uncached popularity from the source edge node after the object is evicted, which updates the aggregated uncached popularity before assertNoLocalUncachedPopularity() for directory eviction request
+        // (OBSOLETE) NOTE: MUST NO old local uncached popularity for the newly evicted object at the source edge node before popularity aggregation
+        // covered_cache_manager_ptr_->assertNoLocalUncachedPopularity(key, source_edge_idx);
 
         // Selective popularity aggregation
         is_finish = covered_cache_manager_ptr_->updatePopularityAggregatorForAggregatedPopularity(key, source_edge_idx, collected_popularity, is_global_cached, is_source_cached, need_placement_calculation, sender_is_beacon, best_placement_edgeset, need_hybrid_fetching, this, recvrsp_source_addr, recvrsp_socket_server_ptr, total_bandwidth_usage, event_list, skip_propagation_latency); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in source edge node

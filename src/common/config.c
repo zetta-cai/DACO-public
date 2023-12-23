@@ -749,6 +749,33 @@ namespace covered
         return getPhysicalMachine_(current_machine_idx_);
     }
 
+    // For port verification
+    
+    void Config::portVerification(const uint16_t& startport, const uint16_t& finalport)
+    {
+        std::map<uint16_t, std::string>::const_iterator startport_keystr_map_const_iter = startport_keystr_map_.find(startport);
+        if (startport_keystr_map_const_iter == startport_keystr_map_.end())
+        {
+            // NOTE: start port MUST exist in Config module
+            std::cout << "[ERROR] start port " << startport << " does NOT exist in Config module!" << std::endl;
+            exit(1);
+        }
+        else
+        {
+            const std::string keystr = startport_keystr_map_const_iter->second;
+            startport_keystr_map_const_iter++; // Move to the next start port
+
+            // NOTE: the port should >= start port yet < the next start port if any
+            if ((startport_keystr_map_const_iter != startport_keystr_map_.end() && startport_keystr_map_const_iter->first <= finalport))
+            {
+                std::cout << "[ERROR] final port " << finalport << " starting from " << keystr << " of start port " << startport << " overlaps with " << startport_keystr_map_const_iter->second << " of start port " << startport_keystr_map_const_iter->first << "!" << std::endl;
+                exit(1);
+            }
+        }
+
+        return;
+    }
+
     std::string Config::toString()
     {
         checkIsValid_();
@@ -1038,6 +1065,8 @@ namespace covered
 
         return physical_machines_[physial_machine_idx];
     }
+
+    // For port verification
 
     void Config::tryToFindStartport_(const std::string& keystr, uint16_t* startport_ptr)
     {

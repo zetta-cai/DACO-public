@@ -573,7 +573,10 @@ namespace covered
     uint16_t Util::getClientRecvmsgPort(const uint32_t& client_idx, const uint32_t& clientcnt)
     {
         int64_t client_recvmsg_startport = static_cast<int64_t>(Config::getClientRecvmsgStartport());
-        return getNodePort_(client_recvmsg_startport, client_idx, clientcnt, Config::getClientMachineCnt());
+        const uint16_t client_recvmsg_port = getNodePort_(client_recvmsg_startport, client_idx, clientcnt, Config::getClientMachineCnt());
+        Config::portVerification(static_cast<uint16_t>(client_recvmsg_startport), client_recvmsg_port);
+
+        return client_recvmsg_port;
     }
 
     uint32_t Util::getClosestEdgeIdx(const uint32_t& client_idx, const uint32_t& clientcnt, const uint32_t& edgecnt)
@@ -626,9 +629,10 @@ namespace covered
         assert(client_recvrsp_port >= client_worker_recvrsp_startport);
 
         // Get client worker recvrsp port
-        int64_t client_worker_recvrsp_port = client_worker_recvrsp_startport + (client_recvrsp_port - client_worker_recvrsp_startport) * static_cast<int64_t>(perclient_workercnt) + static_cast<int64_t>(local_client_worker_idx);
+        const uint16_t client_worker_recvrsp_port = Util::toUint16(client_worker_recvrsp_startport + (client_recvrsp_port - client_worker_recvrsp_startport) * static_cast<int64_t>(perclient_workercnt) + static_cast<int64_t>(local_client_worker_idx));
+        Config::portVerification(static_cast<uint16_t>(client_worker_recvrsp_startport), client_worker_recvrsp_port);
         
-        return Util::toUint16(client_worker_recvrsp_port);
+        return client_worker_recvrsp_port;
     }
 
     // (4.2) Edge
@@ -636,37 +640,60 @@ namespace covered
     uint16_t Util::getEdgeRecvmsgPort(const uint32_t& edge_idx, const uint32_t& edgecnt)
     {
         int64_t edge_recvmsg_startport = static_cast<int64_t>(Config::getEdgeRecvmsgStartport());
-        return getNodePort_(edge_recvmsg_startport, edge_idx, edgecnt, Config::getEdgeMachineCnt());
+        const uint16_t edge_recvmsg_port = getNodePort_(edge_recvmsg_startport, edge_idx, edgecnt, Config::getEdgeMachineCnt());
+        Config::portVerification(static_cast<uint16_t>(edge_recvmsg_startport), edge_recvmsg_port);
+
+        return edge_recvmsg_port;
     }
 
     uint16_t Util::getEdgeBeaconServerRecvreqPort(const uint32_t& edge_idx, const uint32_t& edgecnt)
     {
         int64_t edge_beacon_server_recvreq_startport = static_cast<int64_t>(Config::getEdgeBeaconServerRecvreqStartport());
-        return getNodePort_(edge_beacon_server_recvreq_startport, edge_idx, edgecnt, Config::getEdgeMachineCnt());
+        const uint16_t edge_beacon_server_recvreq_port = getNodePort_(edge_beacon_server_recvreq_startport, edge_idx, edgecnt, Config::getEdgeMachineCnt());
+        Config::portVerification(static_cast<uint16_t>(edge_beacon_server_recvreq_startport), edge_beacon_server_recvreq_port);
+
+        return edge_beacon_server_recvreq_port;
     }
 
     uint16_t Util::getEdgeBeaconServerRecvrspPort(const uint32_t& edge_idx, const uint32_t& edgecnt)
     {
         int64_t edge_beacon_server_recvrsp_startport = static_cast<int64_t>(Config::getEdgeBeaconServerRecvrspStartport());
-        return getNodePort_(edge_beacon_server_recvrsp_startport, edge_idx, edgecnt, Config::getEdgeMachineCnt());
+        const uint16_t edge_beacon_server_recvrsp_port = getNodePort_(edge_beacon_server_recvrsp_startport, edge_idx, edgecnt, Config::getEdgeMachineCnt());
+        Config::portVerification(static_cast<uint16_t>(edge_beacon_server_recvrsp_startport), edge_beacon_server_recvrsp_port);
+
+        return edge_beacon_server_recvrsp_port;
     }
 
     uint16_t Util::getEdgeCacheServerRecvreqPort(const uint32_t& edge_idx, const uint32_t& edgecnt)
     {
         int64_t edge_cache_server_recvreq_startport = static_cast<int64_t>(Config::getEdgeCacheServerRecvreqStartport());
-        return getNodePort_(edge_cache_server_recvreq_startport, edge_idx, edgecnt, Config::getEdgeMachineCnt());
+        const uint16_t edge_cache_server_recvreq_port = getNodePort_(edge_cache_server_recvreq_startport, edge_idx, edgecnt, Config::getEdgeMachineCnt());
+        Config::portVerification(static_cast<uint16_t>(edge_cache_server_recvreq_startport), edge_cache_server_recvreq_port);
+
+        return edge_cache_server_recvreq_port;
     }
 
     uint16_t Util::getEdgeCacheServerPlacementProcessorRecvrspPort(const uint32_t& edge_idx, const uint32_t& edgecnt)
     {
         int64_t edge_cache_server_placement_processor_recvrsp_startport = static_cast<int64_t>(Config::getEdgeCacheServerPlacementProcessorRecvrspStartport());
-        return getNodePort_(edge_cache_server_placement_processor_recvrsp_startport, edge_idx, edgecnt, Config::getEdgeMachineCnt());
+        const uint16_t edge_cache_server_placement_processor_recvrsp_port = getNodePort_(edge_cache_server_placement_processor_recvrsp_startport, edge_idx, edgecnt, Config::getEdgeMachineCnt());
+        Config::portVerification(static_cast<uint16_t>(edge_cache_server_placement_processor_recvrsp_startport), edge_cache_server_placement_processor_recvrsp_port);
+
+        return edge_cache_server_placement_processor_recvrsp_port;
     }
 
     NetworkAddr Util::getEdgeCacheServerWorkerRecvreqAddrFromRecvrspAddr(const NetworkAddr& edge_cache_server_worker_recvrsp_addr)
     {
         std::string edge_ipstr = edge_cache_server_worker_recvrsp_addr.getIpstr();
-        uint16_t edge_cache_server_worker_recvreq_port = edge_cache_server_worker_recvrsp_addr.getPort() - Config::getEdgeCacheServerWorkerRecvrspStartport() + Config::getEdgeCacheServerWorkerRecvreqStartport();
+
+        const uint16_t edge_cache_server_worker_recvrsp_port = edge_cache_server_worker_recvrsp_addr.getPort();
+        const uint16_t edge_cache_server_worker_recvrsp_startport = Config::getEdgeCacheServerWorkerRecvrspStartport();
+        assert(edge_cache_server_worker_recvrsp_port >= edge_cache_server_worker_recvrsp_startport);
+
+        const uint16_t edge_cache_server_worker_recvreq_startport = Config::getEdgeCacheServerWorkerRecvreqStartport();
+        const uint16_t edge_cache_server_worker_recvreq_port = edge_cache_server_worker_recvrsp_port - edge_cache_server_worker_recvrsp_startport + edge_cache_server_worker_recvreq_startport;
+        Config::portVerification(edge_cache_server_worker_recvreq_startport, edge_cache_server_worker_recvreq_port);
+
         NetworkAddr edge_cache_server_worker_recvreq_addr(edge_ipstr, edge_cache_server_worker_recvreq_port);
 
         return edge_cache_server_worker_recvreq_addr;
@@ -679,7 +706,11 @@ namespace covered
         uint32_t edge_machine_cnt = Config::getEdgeMachineCnt();
         assert(local_edge_machine_idx < edge_machine_cnt);
 
-        uint32_t local_edge_idx = edge_cache_server_worker_recvreq_addr.getPort() - Config::getEdgeCacheServerWorkerRecvreqStartport();
+        const uint16_t edge_cache_server_worker_recvreq_port = edge_cache_server_worker_recvreq_addr.getPort();
+        const uint16_t edge_cache_server_worker_recvreq_startport = Config::getEdgeCacheServerWorkerRecvreqStartport();
+        assert(edge_cache_server_worker_recvreq_port >= edge_cache_server_worker_recvreq_startport);
+        uint32_t local_edge_idx = edge_cache_server_worker_recvreq_port - edge_cache_server_worker_recvreq_startport;
+
         uint32_t permachine_edgecnt = edgecnt / edge_machine_cnt;
         assert(permachine_edgecnt > 0);
         if (local_edge_machine_idx < edge_machine_cnt - 1)
@@ -697,9 +728,10 @@ namespace covered
         int64_t edge_cache_server_recvreq_port = static_cast<int64_t>(getNodePort_(edge_cache_server_worker_recvreq_startport, edge_idx, edgecnt, Config::getEdgeMachineCnt()));
 
         // Get cache server worker recvreq port
-        int64_t cache_server_worker_recvreq_port = edge_cache_server_worker_recvreq_startport + (edge_cache_server_recvreq_port - edge_cache_server_worker_recvreq_startport) * static_cast<int64_t>(percacheserver_workercnt) + static_cast<int64_t>(local_cache_server_worker_idx);
+        const uint16_t cache_server_worker_recvreq_port = Util::toUint16(edge_cache_server_worker_recvreq_startport + (edge_cache_server_recvreq_port - edge_cache_server_worker_recvreq_startport) * static_cast<int64_t>(percacheserver_workercnt) + static_cast<int64_t>(local_cache_server_worker_idx));
+        Config::portVerification(static_cast<uint16_t>(edge_cache_server_worker_recvreq_startport), cache_server_worker_recvreq_port);
 
-        return Util::toUint16(cache_server_worker_recvreq_port);
+        return cache_server_worker_recvreq_port;
     }
 
     uint16_t Util::getEdgeCacheServerWorkerRecvrspPort(const uint32_t& edge_idx, const uint32_t& edgecnt, const uint32_t& local_cache_server_worker_idx, const uint32_t& percacheserver_workercnt)
@@ -708,9 +740,10 @@ namespace covered
         int64_t edge_cache_server_recvrsp_port = static_cast<int64_t>(getNodePort_(edge_cache_server_worker_recvrsp_startport, edge_idx, edgecnt, Config::getEdgeMachineCnt()));
 
         // Get cache server worker recvreq port
-        int64_t cache_server_worker_recvrsp_port = edge_cache_server_worker_recvrsp_startport + (edge_cache_server_recvrsp_port - edge_cache_server_worker_recvrsp_startport) * static_cast<int64_t>(percacheserver_workercnt) + static_cast<int64_t>(local_cache_server_worker_idx);
+        const uint16_t cache_server_worker_recvrsp_port = Util::toUint16(edge_cache_server_worker_recvrsp_startport + (edge_cache_server_recvrsp_port - edge_cache_server_worker_recvrsp_startport) * static_cast<int64_t>(percacheserver_workercnt) + static_cast<int64_t>(local_cache_server_worker_idx));
+        Config::portVerification(static_cast<uint16_t>(edge_cache_server_worker_recvrsp_startport), cache_server_worker_recvrsp_port);
 
-        return Util::toUint16(cache_server_worker_recvrsp_port);
+        return cache_server_worker_recvrsp_port;
     }
 
     // (4.3) Cloud
@@ -721,7 +754,10 @@ namespace covered
         assert(cloud_idx == 0);
 
         int64_t cloud_recvmsg_startport = static_cast<int64_t>(Config::getCloudRecvmsgStartport());
-        return getNodePort_(cloud_recvmsg_startport, cloud_idx, 1, 1);
+        const uint16_t cloud_recvmsg_port = getNodePort_(cloud_recvmsg_startport, cloud_idx, 1, 1);
+        Config::portVerification(static_cast<uint16_t>(cloud_recvmsg_startport), cloud_recvmsg_port);
+
+        return cloud_recvmsg_port;
     }
 
     uint16_t Util::getCloudRecvreqPort(const uint32_t& cloud_idx)
@@ -730,7 +766,10 @@ namespace covered
         assert(cloud_idx == 0);
 
         int64_t cloud_recvreq_startport = static_cast<int64_t>(Config::getCloudRecvreqStartport());
-        return getNodePort_(cloud_recvreq_startport, cloud_idx, 1, 1);
+        const uint16_t cloud_recvreq_port = getNodePort_(cloud_recvreq_startport, cloud_idx, 1, 1);
+        Config::portVerification(static_cast<uint16_t>(cloud_recvreq_startport), cloud_recvreq_port);
+
+        return cloud_recvreq_port;
     }
 
     uint16_t Util::getNodePort_(const int64_t& start_port, const uint32_t& node_idx, const uint32_t& nodecnt, const uint32_t& machine_cnt)

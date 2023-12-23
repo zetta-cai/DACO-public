@@ -92,7 +92,10 @@ namespace covered
         {
             const uint32_t tmp_edge_idx = *placement_edgeset_const_iter;
             assert(tmp_edge_idx < bitmap_.size());
-            assert(bitmap_[tmp_edge_idx] == true); // NOTE: as placement edgeset is selected from top-k list of aggregated uncached popularity, tmp_edge_idx MUST exist in bitmap_
+
+            // NOTE: calculate placement and preserve edgeset are NOT a single atomic operation in CoveredCacheManager, if cache server (sender is beacon) and beacon server get the same placement for the same key and preserve edgeset simultaneously, the latter one may observe false bits in bitmap_ here after the former one preserves the edgeset
+            // (OBSOLETE) NOTE: as placement edgeset is selected from top-k list of aggregated uncached popularity, tmp_edge_idx MUST exist in bitmap_
+            //assert(bitmap_[tmp_edge_idx] == true);
 
             // Release local uncached popularity of tmp_edge_idx from sum/topk/bitmap in aggregated uncached popularity
             bool tmp_is_clear = false;

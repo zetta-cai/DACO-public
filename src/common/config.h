@@ -143,6 +143,9 @@ namespace covered
         // For current physical machine
         static PhysicalMachine getCurrentPhysicalMachine();
 
+        // For port verification
+        static void portVerification(const uint16_t& startport, const uint16_t& finalport);
+
         static std::string toString();
     private:
         static const std::string kClassName;
