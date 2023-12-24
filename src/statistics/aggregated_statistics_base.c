@@ -291,11 +291,17 @@ namespace covered
         oss << "total client-edge bandwidth usage: " << B2MB(static_cast<double>(total_bandwidth_usage_.getClientEdgeBandwidthBytes())) << " MiB" << std::endl;
         oss << "total cross-edge bandwidth usage: " << B2MB(static_cast<double>(total_bandwidth_usage_.getCrossEdgeBandwidthBytes())) << " MiB" << std::endl;
         oss << "total edge-cloud bandwidth usage: " << B2MB(static_cast<double>(total_bandwidth_usage_.getEdgeCloudBandwidthBytes())) << " MiB" << std::endl;
+        oss << "total client-edge message count: " << total_bandwidth_usage_.getClientEdgeMsgcnt() << std::endl;
+        oss << "total cross-edge message count: " << total_bandwidth_usage_.getCrossEdgeMsgcnt() << std::endl;
+        oss << "total edge-cloud message count: " << total_bandwidth_usage_.getEdgeCloudMsgcnt() << std::endl;
         if (total_reqcnt_ > 0)
         {
             oss << "per-request client-edge bandwidth usage: " << B2MB(static_cast<double>(total_bandwidth_usage_.getClientEdgeBandwidthBytes()) / static_cast<double>(total_reqcnt_)) << " MiB/req" << std::endl;
             oss << "per-request cross-edge bandwidth usage: " << B2MB(static_cast<double>(total_bandwidth_usage_.getCrossEdgeBandwidthBytes()) / static_cast<double>(total_reqcnt_)) << " MiB/req" << std::endl;
             oss << "per-request edge-cloud bandwidth usage: " << B2MB(static_cast<double>(total_bandwidth_usage_.getEdgeCloudBandwidthBytes()) / static_cast<double>(total_reqcnt_)) << " MiB/req" << std::endl;
+            oss << "per-request client-edge per-request message count: " << static_cast<double>(total_bandwidth_usage_.getClientEdgeMsgcnt()) / static_cast<double>(total_reqcnt_) << std::endl;
+            oss << "per-request cross-edge per-request message count: " << static_cast<double>(total_bandwidth_usage_.getCrossEdgeMsgcnt()) / static_cast<double>(total_reqcnt_) << std::endl;
+            oss << "per-request edge-cloud per-request message count: " << static_cast<double>(total_bandwidth_usage_.getEdgeCloudMsgcnt()) / static_cast<double>(total_reqcnt_) << std::endl;
         }
         
         std::string total_statistics_string = oss.str();

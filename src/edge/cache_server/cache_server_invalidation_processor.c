@@ -100,7 +100,7 @@ namespace covered
 
         // Update total bandwidth usage for received invalidation request
         uint32_t cross_edge_invalidation_req_bandwidth_bytes = control_request_ptr->getMsgPayloadSize();
-        total_bandwidth_usage.update(BandwidthUsage(0, cross_edge_invalidation_req_bandwidth_bytes, 0));
+        total_bandwidth_usage.update(BandwidthUsage(0, cross_edge_invalidation_req_bandwidth_bytes, 0, 0, 1, 0));
 
         struct timespec invalidate_local_cache_start_timestamp = Util::getCurrentTimespec();
 

@@ -336,7 +336,7 @@ namespace covered
         // Update bandwidth usage statistics for the local client
         BandwidthUsage local_response_bandwidth_usage = local_response_ptr->getBandwidthUsageRef();
         uint32_t client_edge_local_rsp_bandwidth_bytes = local_response_ptr->getMsgPayloadSize();
-        local_response_bandwidth_usage.update(BandwidthUsage(client_edge_local_rsp_bandwidth_bytes, 0, 0)); // Get total bandwidth usage for received local response
+        local_response_bandwidth_usage.update(BandwidthUsage(client_edge_local_rsp_bandwidth_bytes, 0, 0, 1, 0, 0)); // Get total bandwidth usage for received local response
         client_statistics_tracker_ptr_->updateBandwidthUsage(local_client_worker_idx, local_response_bandwidth_usage, is_stresstest_phase);
 
         #ifdef DEBUG_CLIENT_WORKER_WRAPPER

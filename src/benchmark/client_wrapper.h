@@ -72,7 +72,7 @@ namespace covered
         virtual void cleanup_() override;
 
         void processSwitchSlotRequest_(MessageBase* control_request_ptr);
-        void processWarmupRequest_();
+        void processFinishWarmupRequest_();
 
         // (3) Other utility functions
 

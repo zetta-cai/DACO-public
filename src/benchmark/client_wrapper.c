@@ -242,7 +242,7 @@ namespace covered
         }
         else if (control_request_msg_type == MessageType::kFinishWarmupRequest)
         {
-            processWarmupRequest_(); // Mark is_warmup_phase_ as false
+            processFinishWarmupRequest_(); // Mark is_warmup_phase_ as false
         }
         else
         {
@@ -302,7 +302,7 @@ namespace covered
         return;
     }
 
-    void ClientWrapper::processWarmupRequest_()
+    void ClientWrapper::processFinishWarmupRequest_()
     {
         // Finish warmup phase to start stresstest phase
         finishWarmupPhase_();

@@ -21,7 +21,7 @@ namespace covered
     {
     public:
         BandwidthUsage();
-        BandwidthUsage(const uint64_t& client_edge_bandwidth_bytes, const uint64_t& cross_edge_bandwidth_bytes, const uint64_t& edge_cloud_bandwidth_bytes);
+        BandwidthUsage(const uint64_t& client_edge_bandwidth_bytes, const uint64_t& cross_edge_bandwidth_bytes, const uint64_t& edge_cloud_bandwidth_bytes, const uint64_t& client_edge_msgcnt, const uint64_t& cross_edge_msgcnt, const uint64_t& edge_cloud_msgcnt);
         ~BandwidthUsage();
 
         void update(const BandwidthUsage& other); // Add other into *this
@@ -29,6 +29,10 @@ namespace covered
         uint64_t getClientEdgeBandwidthBytes() const;
         uint64_t getCrossEdgeBandwidthBytes() const;
         uint64_t getEdgeCloudBandwidthBytes() const;
+
+        uint64_t getClientEdgeMsgcnt() const;
+        uint64_t getCrossEdgeMsgcnt() const;
+        uint64_t getEdgeCloudMsgcnt() const;
 
         static uint32_t getBandwidthUsagePayloadSize();
         uint32_t serialize(DynamicArray& msg_payload, const uint32_t& position) const;
@@ -41,6 +45,10 @@ namespace covered
         uint64_t client_edge_bandwidth_bytes_;
         uint64_t cross_edge_bandwidth_bytes_;
         uint64_t edge_cloud_bandwidth_bytes_;
+
+        uint64_t client_edge_msgcnt_;
+        uint64_t cross_edge_msgcnt_;
+        uint64_t edge_cloud_msgcnt_;
     };
 }
 

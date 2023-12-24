@@ -129,7 +129,7 @@ namespace covered
         const bool is_background = true;
 
         const CoveredPlacementNotifyRequest* const covered_placement_notify_request_ptr = static_cast<const CoveredPlacementNotifyRequest*>(data_request_ptr);
-        total_bandwidth_usage.update(BandwidthUsage(0, covered_placement_notify_request_ptr->getMsgPayloadSize(), 0));
+        total_bandwidth_usage.update(BandwidthUsage(0, covered_placement_notify_request_ptr->getMsgPayloadSize(), 0, 0, 1, 0));
 
         struct timespec placement_notify_start_timestamp = Util::getCurrentTimespec();
 

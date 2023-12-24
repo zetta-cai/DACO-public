@@ -511,10 +511,10 @@ namespace covered
                 // Update is_neighbor_cached based on remote directory admission response
                 processRspToAdmitBeaconDirectory_(control_response_ptr, is_being_written, is_neighbor_cached, is_background); // NOTE: is_being_written is updated here
 
-                // Update total bandwidth usage for received directory update response
+                // Update total bandwidth usage for received directory update (admission) response
                 BandwidthUsage directory_update_response_bandwidth_usage = control_response_ptr->getBandwidthUsageRef();
                 uint32_t cross_edge_directory_update_rsp_bandwidth_bytes = control_response_ptr->getMsgPayloadSize();
-                directory_update_response_bandwidth_usage.update(BandwidthUsage(0, cross_edge_directory_update_rsp_bandwidth_bytes, 0));
+                directory_update_response_bandwidth_usage.update(BandwidthUsage(0, cross_edge_directory_update_rsp_bandwidth_bytes, 0, 0, 1, 0));
                 total_bandwidth_usage.update(directory_update_response_bandwidth_usage);
 
                 // Add events of intermediate response if with evet tracking
@@ -821,10 +821,10 @@ namespace covered
                         {
                             assert(iter_for_response->second == false); // Original ack flag should be false
 
-                            // Update total bandwidth usage for received directory update repsonse
+                            // Update total bandwidth usage for received directory update (eviction) repsonse
                             BandwidthUsage directory_update_response_bandwidth_usage = control_response_ptr->getBandwidthUsageRef();
                             uint32_t cross_edge_directory_update_rsp_bandwidth_bytes = control_response_ptr->getMsgPayloadSize();
-                            directory_update_response_bandwidth_usage.update(BandwidthUsage(0, cross_edge_directory_update_rsp_bandwidth_bytes, 0));
+                            directory_update_response_bandwidth_usage.update(BandwidthUsage(0, cross_edge_directory_update_rsp_bandwidth_bytes, 0, 0, 1, 0));
                             total_bandwidth_usage.update(directory_update_response_bandwidth_usage);
 
                             // Add the event of intermediate response if with event tracking
@@ -1178,10 +1178,10 @@ namespace covered
                 const uint32_t beacon_edge_idx = control_response_ptr->getSourceIndex();
                 edge_wrapper_ptr_->updateCacheManagerForNeighborVictimSyncset(beacon_edge_idx, received_beacon_victim_syncset);
 
-                // Update total bandwidth usage for received control response
+                // Update total bandwidth usage for received control response (directory update after hybrid fetching)
                 BandwidthUsage control_response_bandwidth_usage = control_response_ptr->getBandwidthUsageRef();
                 uint32_t cross_edge_control_rsp_bandwidth_bytes = control_response_ptr->getMsgPayloadSize();
-                control_response_bandwidth_usage.update(BandwidthUsage(0, cross_edge_control_rsp_bandwidth_bytes, 0));
+                control_response_bandwidth_usage.update(BandwidthUsage(0, cross_edge_control_rsp_bandwidth_bytes, 0, 0, 1, 0));
                 total_bandwidth_usage.update(control_response_bandwidth_usage);
 
                 // Add events of intermediate response if with event tracking

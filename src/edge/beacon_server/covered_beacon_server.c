@@ -485,7 +485,7 @@ namespace covered
         const EventList& background_event_list = covered_placement_redirected_get_response_ptr->getEventListRef();
         BandwidthUsage background_bandwidth_usage = covered_placement_redirected_get_response_ptr->getBandwidthUsageRef();
         uint32_t cross_edge_redirected_get_rsp_bandwidth_bytes = covered_placement_redirected_get_response_ptr->getMsgPayloadSize();
-        background_bandwidth_usage.update(BandwidthUsage(0, cross_edge_redirected_get_rsp_bandwidth_bytes, 0));
+        background_bandwidth_usage.update(BandwidthUsage(0, cross_edge_redirected_get_rsp_bandwidth_bytes, 0, 0, 1, 0));
         edge_wrapper_ptr_->getEdgeBackgroundCounterForBeaconServerRef().updateBandwidthUsgae(background_bandwidth_usage);
         edge_wrapper_ptr_->getEdgeBackgroundCounterForBeaconServerRef().addEvents(background_event_list);
 
@@ -525,7 +525,7 @@ namespace covered
         const EventList& background_event_list = covered_placement_global_get_response_ptr->getEventListRef();
         BandwidthUsage background_bandwidth_usage = covered_placement_global_get_response_ptr->getBandwidthUsageRef();
         uint32_t edge_cloud_global_get_rsp_bandwidth_bytes = covered_placement_global_get_response_ptr->getMsgPayloadSize();
-        background_bandwidth_usage.update(BandwidthUsage(0, 0, edge_cloud_global_get_rsp_bandwidth_bytes));
+        background_bandwidth_usage.update(BandwidthUsage(0, 0, edge_cloud_global_get_rsp_bandwidth_bytes, 0, 0, 1));
         edge_wrapper_ptr_->getEdgeBackgroundCounterForBeaconServerRef().updateBandwidthUsgae(background_bandwidth_usage);
         edge_wrapper_ptr_->getEdgeBackgroundCounterForBeaconServerRef().addEvents(background_event_list);
 
