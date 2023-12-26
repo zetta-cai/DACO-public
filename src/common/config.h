@@ -69,7 +69,8 @@ namespace covered
         static const std::string EDGE_RECVMSG_STARTPORT_KEYSTR;
         static const std::string EVALUATOR_MACHINE_INDEX_KEYSTR;
         static const std::string EVALUATOR_RECVMSG_PORT_KEYSTR;
-        static const std::string FACEBOOK_CONFIG_FILEPATH_KEYSTR;
+        static const std::string LIBRARY_DIRPATH_KEYSTR;
+        static const std::string LIBRARY_DIRPATH_RELATIVE_FACEBOOK_CONFIG_FILEPATH_KEYSTR;
         static const std::string FINE_GRAINED_LOCKING_SIZE_KEYSTR;
         static const std::string IS_ASSERT_KEYSTR;
         static const std::string IS_DEBUG_KEYSTR;
@@ -123,6 +124,7 @@ namespace covered
         static uint16_t getEdgeRecvmsgStartport();
         static std::string getEvaluatorIpstr(const bool& is_launch); // For evaluator physical machine
         static std::uint16_t getEvaluatorRecvmsgPort();
+        static std::string getLibraryDirpath();
         static std::string getFacebookConfigFilepath();
         static uint32_t getFineGrainedLockingSize();
         static bool isAssert();
@@ -193,7 +195,8 @@ namespace covered
         static uint16_t edge_recvmsg_startport_; // Start UDP port for edge to receive benchmark control messages
         static uint32_t evaluator_machine_idx_; // Physical machine index of physical evaluator node
         static uint16_t evaluator_recvmsg_port_; // UDP port for evaluator to receive benchmark control messages
-        static std::string facebook_config_filepath_; // Configuration file path for Facebook CDN workload
+        static std::string library_dirpath_; // Library dirpath
+        static std::string facebook_config_filepath_; // Configuration file path for Facebook CDN workload under library dirpath
         static uint32_t fine_grained_locking_size_; // Bucket size of fine-grained locking
         static bool is_assert_; // Whether to make assertions -> time-consuming assertions may degrade performance
         static bool is_debug_; // Whether to dump debug information -> NOT affect evaluation results and NOT changed during evaluation

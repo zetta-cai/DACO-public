@@ -1,6 +1,6 @@
 # tommyds module
 
-TOMMYDS_DIRPATH := lib/tommyds
+TOMMYDS_DIRPATH := $(LIBRARY_DIRPATH)/tommyds
 
 TOMMYDS_INRDIR := -I$(TOMMYDS_DIRPATH)/tommyds
 INCDIR += $(TOMMYDS_INRDIR)

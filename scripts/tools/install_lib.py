@@ -3,8 +3,7 @@
 import os
 import sys
 
-from common import *
-from utils.util import *
+from ..common import *
 
 is_clear_tarball = False # whether to clear intermediate tarball files
 
@@ -23,7 +22,7 @@ is_install_lhd = True
 # (0) Check input CLI parameters
 
 if len(sys.argv) != 2:
-    die(scriptname, "Usage: sudo python3 scripts/install_lib.py $LD_LIBRARY_PATH")
+    die(scriptname, "Usage: sudo python3 -m scripts.tools.install_lib $LD_LIBRARY_PATH")
 
 # (1) Install boost 1.81.0
 
@@ -43,7 +42,7 @@ if is_install_boost:
     installDecompressedTarball(scriptname, boost_decompress_dirpath, boost_install_dirpath, boost_install_tool)
     print("")
 
-# (2) Install cachelib (commit ID: 3d475f6)
+# (2) Install cachelib (commit ID: 7886d6d)
 
 if is_install_cachelib:
     cachelib_clone_dirpath = "{}/CacheLib".format(lib_dirpath)
@@ -58,13 +57,21 @@ if is_install_cachelib:
     cachelib_cachebench_filepath = "{}/build-cachelib/cachebench/libcachelib_cachebench.a".format(cachelib_clone_dirpath)
     cachelib_allocator_filepath = "{}/opt/cachelib/lib/libcachelib_allocator.a".format(cachelib_clone_dirpath)
     if not os.path.exists(cachelib_cachebench_filepath) or not os.path.exists(cachelib_allocator_filepath):
+        # Replace library dirpath in scripts/cachelib/build-package.sh before copying
+        custom_cachelib_buildpkg_filepath = "scripts/cachelib/build-package.sh"
+        default_lib_dirpath = "/home/sysheng/projects/covered-private/lib"
+        replace_dir(scriptname, default_lib_dirpath, lib_dirpath, custom_cachelib_buildpkg_filepath)
+
         # Update build-package.sh for folly to use libboost 1.81.0
         prompt(scriptname, "replace contrib/build-package.sh to use libboost 1.81.0...")
-        replace_build_package_cmd = "sudo cp scripts/cachelib/build-package.sh {}/contrib/build-package.sh".format(cachelib_clone_dirpath)
+        replace_build_package_cmd = "sudo cp {} {}/contrib/build-package.sh".format(custom_cachelib_buildpkg_filepath, cachelib_clone_dirpath)
         replace_build_package_subprocess = runCmd(replace_build_package_cmd)
         if replace_build_package_subprocess.returncode != 0:
             replace_build_package_errstr = getSubprocessErrstr(replace_build_package_subprocess)
             die(scriptname, "failed to replace contrib/build-package.sh; error: {}".format(replace_build_package_errstr))
+        
+        # Restore library dirpath in scripts/cachelib/build-package.sh after copying
+        restore_dir(scriptname, default_lib_dirpath, lib_dirpath, custom_cachelib_buildpkg_filepath)
 
         # Build cachelib and its dependencies
         #cachelib_install_tool = "./contrib/build.sh -j -T -v -S" # For debugging (NOTE: add -S for ./contrib/build.sh to skip git-clone/git-pull step if you have already downloaded external libs required by cachelib in lib/CacheLib/cachelib/external)

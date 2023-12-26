@@ -134,18 +134,18 @@ namespace covered
 
         // Get key from request message
         Key tmp_key;
-        uint32_t source_edge_idx = 0;
+        //uint32_t source_edge_idx = 0;
         if (control_request_ptr->getMessageType() == MessageType::kInvalidationRequest)
         {
             const InvalidationRequest* const invalidation_request_ptr = static_cast<const InvalidationRequest*>(control_request_ptr);
             tmp_key = invalidation_request_ptr->getKey();
-            source_edge_idx = invalidation_request_ptr->getSourceIndex();
+            //source_edge_idx = invalidation_request_ptr->getSourceIndex();
         }
         else if (control_request_ptr->getMessageType() == MessageType::kCoveredInvalidationRequest)
         {
             const CoveredInvalidationRequest* const covered_invalidation_request_ptr = static_cast<const CoveredInvalidationRequest*>(control_request_ptr);
             Key tmp_key = covered_invalidation_request_ptr->getKey();
-            source_edge_idx = covered_invalidation_request_ptr->getSourceIndex();
+            //source_edge_idx = covered_invalidation_request_ptr->getSourceIndex();
         }
         else
         {
@@ -180,10 +180,10 @@ namespace covered
         checkPointers_();
         CacheServer* tmp_cache_server_ptr = cache_server_invalidation_processor_param_ptr_->getCacheServerPtr();
         EdgeWrapper* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();
-        CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
+        //CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
         const uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
         NetworkAddr edge_cache_server_recvreq_source_addr = tmp_cache_server_ptr->getEdgeCacheServerRecvreqSourceAddr();
-        const uint64_t cache_margin_bytes = tmp_edge_wrapper_ptr->getCacheMarginBytes();
+        //const uint64_t cache_margin_bytes = tmp_edge_wrapper_ptr->getCacheMarginBytes();
 
         Key tmp_key;
         bool skip_propagation_latency = false;

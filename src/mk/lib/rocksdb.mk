@@ -1,6 +1,6 @@
 # rocksdb module
 
-ROCKSDB_DIRPATH := lib/rocksdb-8.1.1
+ROCKSDB_DIRPATH := $(LIBRARY_DIRPATH)/rocksdb-8.1.1
 
 ROCKSDB_LDDIR := -L$(ROCKSDB_DIRPATH)
 LDDIR += $(ROCKSDB_LDDIR)

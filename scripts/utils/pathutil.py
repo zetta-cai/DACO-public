@@ -2,7 +2,7 @@
 
 import os
 
-from utils.logutil import *
+from .logutil import *
 
 # Path-related variables and functions
 
@@ -51,3 +51,23 @@ def getPreferredDirpathForTarget(scriptname, target_name, env_pathstr):
         die(scriptname, "/usr or /usr/local are also NOT found in {}!".format(env_pathstr))
     
     return preferred_dirpath
+
+def replace_dir(scriptname, original_dir, current_dir, path):
+    if not os.path.exists(path):
+        warn(scriptname, "Path does not exist: " + path)
+        return
+    
+    replace_rootdir_cmd = "sed -i 's!{}!{}!g' {}".format(original_dir, current_dir, path)
+    replace_rootdir_subprocess = runCmd(replace_rootdir_cmd)
+    if replace_rootdir_subprocess.returncode != 0:
+        die(scriptname, "Failed to replace rootdir: " + path)
+
+def restore_dir(scriptname, original_dir, current_dir, path):
+    if not os.path.exists(path):
+        warn(scriptname, "Path does not exist: " + path)
+        return
+    
+    restore_rootdir_cmd = "sed -i 's!{}!{}!g' {}".format(current_dir, original_dir, path)
+    restore_rootdir_subprocess = runCmd(restore_rootdir_cmd)
+    if restore_rootdir_subprocess.returncode != 0:
+        die(scriptname, "Failed to restore rootdir: " + path)

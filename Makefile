@@ -1,3 +1,11 @@
+##############################################################################
+# Global variables
+
+LIBRARY_DIRPATH = $(shell python3 -m scripts.tools.parse_config library_dirpath)
+
+##############################################################################
+# Include other Makefiles
+
 # Basic recipes
 include src/mk/recipes.mk
 

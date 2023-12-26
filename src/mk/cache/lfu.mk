@@ -1,6 +1,6 @@
 # lfu module
 
-LFU_DIRPATH = lib/caches
+LFU_DIRPATH = $(LIBRARY_DIRPATH)/caches
 LFU_INCDIR = -I$(LFU_DIRPATH)/include
 INCDIR += $(LFU_INCDIR)
 

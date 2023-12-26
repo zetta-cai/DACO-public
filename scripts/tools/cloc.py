@@ -4,8 +4,7 @@ import os
 import sys
 import subprocess
 
-from common import *
-from utils.util import *
+from ..common import *
 
 exclude_exts = "d,o,pyc"
 exclude_dirs = "\"(src/mk" # Module makefiles

@@ -85,7 +85,8 @@ namespace covered
     const std::string Config::EDGE_RECVMSG_STARTPORT_KEYSTR("edge_recvmsg_startport");
     const std::string Config::EVALUATOR_MACHINE_INDEX_KEYSTR("evaluator_machine_index");
     const std::string Config::EVALUATOR_RECVMSG_PORT_KEYSTR("evaluator_recvmsg_port");
-    const std::string Config::FACEBOOK_CONFIG_FILEPATH_KEYSTR("facebook_config_filepath");
+    const std::string Config::LIBRARY_DIRPATH_KEYSTR("library_dirpath");
+    const std::string Config::LIBRARY_DIRPATH_RELATIVE_FACEBOOK_CONFIG_FILEPATH_KEYSTR("library_dirpath_relative_facebook_config_filepath");
     const std::string Config::FINE_GRAINED_LOCKING_SIZE_KEYSTR("fine_grained_locking_size");
     const std::string Config::IS_ASSERT_KEYSTR("is_assert");
     const std::string Config::IS_DEBUG_KEYSTR("is_debug");
@@ -136,6 +137,7 @@ namespace covered
     uint16_t Config::edge_recvmsg_startport_ = 5100; // [4096, 65536]
     uint32_t Config::evaluator_machine_idx_ = 0;
     uint16_t Config::evaluator_recvmsg_port_ = 5200; // [4096, 65536]
+    std::string Config::library_dirpath_("lib");
     std::string Config::facebook_config_filepath_("lib/CacheLib/cachelib/cachebench/test_configs/hit_ratio/cdn/config.json");
     uint32_t Config::fine_grained_locking_size_ = 1000;
     bool Config::is_assert_ = false;
@@ -260,10 +262,16 @@ namespace covered
                     int64_t tmp_port = kv_ptr->value().get_int64();
                     evaluator_recvmsg_port_ = Util::toUint16(tmp_port);
                 }
-                kv_ptr = find_(FACEBOOK_CONFIG_FILEPATH_KEYSTR);
+                kv_ptr = find_(LIBRARY_DIRPATH_KEYSTR);
                 if (kv_ptr != NULL)
                 {
-                    facebook_config_filepath_ = std::string(kv_ptr->value().get_string().c_str());
+                    library_dirpath_ = std::string(kv_ptr->value().get_string().c_str());
+                }
+                kv_ptr = find_(LIBRARY_DIRPATH_RELATIVE_FACEBOOK_CONFIG_FILEPATH_KEYSTR);
+                if (kv_ptr != NULL)
+                {
+                    const std::string library_dirpath_relative_facebook_config_filepath = std::string(kv_ptr->value().get_string().c_str());
+                    facebook_config_filepath_ = library_dirpath_ + "/" + library_dirpath_relative_facebook_config_filepath;
                 }
                 kv_ptr = find_(FINE_GRAINED_LOCKING_SIZE_KEYSTR);
                 if (kv_ptr != NULL)
@@ -647,6 +655,12 @@ namespace covered
         checkIsValid_();
         return evaluator_recvmsg_port_;
     }
+    
+    std::string Config::getLibraryDirpath()
+    {
+        checkIsValid_();
+        return library_dirpath_;
+    }
 
     std::string Config::getFacebookConfigFilepath()
     {
@@ -816,6 +830,7 @@ namespace covered
         oss << "Edge recvmsg startport: " << edge_recvmsg_startport_ << std::endl;
         oss << "Evaluator physical machine index:" << evaluator_machine_idx_ << std::endl;
         oss << "Evaluator recvmsg port: " << evaluator_recvmsg_port_ << std::endl;
+        oss << "Third-party library dirpath: " << library_dirpath_ << std::endl;
         oss << "Facebook config filepath: " << facebook_config_filepath_ << std::endl;
         oss << "Fine-grained locking size: " << fine_grained_locking_size_ << std::endl;
         oss << "Is assert: " << (is_assert_?"true":"false") << std::endl;

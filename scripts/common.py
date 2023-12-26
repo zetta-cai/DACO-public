@@ -3,18 +3,26 @@
 import os
 import sys
 
-# Common variables (update TODO parts based on your own testbed)
+from .utils import *
+
+# Common variables
 
 scriptname = sys.argv[0]
-proj_dirname = os.path.dirname(os.path.dirname(os.path.abspath(scriptname)))
+scriptpath = os.path.abspath(scriptname)
+proj_dirname = scriptpath[0:scriptpath.find("/scripts")] # [0, index of "/scripts")
 
 #username = os.getenv("USER") # NOTE: USER will be root if sudo is used
 username = os.getenv("SUDO_USER")
 
-# TODO: update lib_dirpath for new library installation path if necessary
-lib_dirpath = "{}/lib".format(proj_dirname)
+# NOTE: update library_path in config.json for new library installation path if necessary
+library_dirpath_fromjson = getValueForKeystr(scriptname, "library_dirpath")
+lib_dirpath = ""
+if library_dirpath_fromjson[0] == "/": # Absolute path
+    lib_dirpath = library_dirpath_fromjson
+else: # Relative path
+    lib_dirpath = "{}/{}".format(proj_dirname, library_dirpath_fromjson)
 if not os.path.exists(lib_dirpath):
-    print("{}: Create directory {}...".format(scriptname, lib_dirpath))
+    prompt(scriptname, "{}: Create directory {}...".format(scriptname, lib_dirpath))
     os.mkdir(lib_dirpath)
 #else:
-#    print("{}: {} exists (directory has been created)".format(scriptname, lib_dirpath))
+#    dump(scriptname, "{}: {} exists (third-party libarary dirpath has been created)".format(scriptname, lib_dirpath))

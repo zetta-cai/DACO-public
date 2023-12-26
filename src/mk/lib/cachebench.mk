@@ -1,6 +1,6 @@
 # cachebench module
 
-CACHEBENCH_DIRPATH := lib/CacheLib
+CACHEBENCH_DIRPATH := $(LIBRARY_DIRPATH)/CacheLib
 
 CACHEBENCH_LDDIR := -L$(CACHEBENCH_DIRPATH)/build-cachelib/cachebench -L$(CACHEBENCH_DIRPATH)/opt/cachelib/lib
 LDDIR += $(CACHEBENCH_LDDIR)

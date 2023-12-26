@@ -1,6 +1,6 @@
 # lhd module
 
-LHD_DIRPATH = lib/lhd
+LHD_DIRPATH = $(LIBRARY_DIRPATH)/lhd
 LHD_INCDIR = -I$(LHD_DIRPATH)
 INCDIR += $(LHD_INCDIR)
 

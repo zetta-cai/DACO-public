@@ -1,6 +1,6 @@
 # smhasher module
 
-SMHASHER_DIRPATH := lib/smhasher
+SMHASHER_DIRPATH := $(LIBRARY_DIRPATH)/smhasher
 
 SMHASHER_SRCFILES = $(filter-out $(SMHASHER_DIRPATH)/src/main.cpp, $(wildcard $(SMHASHER_DIRPATH)/src/*.cpp))
 SMHASHER_OBJECTS += $(SMHASHER_SRCFILES:.cpp=.opp)

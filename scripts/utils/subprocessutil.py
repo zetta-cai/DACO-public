@@ -3,7 +3,7 @@
 import os
 import subprocess
 
-from utils.logutil import *
+from .logutil import *
 
 old_alternative_priority = 10
 new_alternative_priority = 100

@@ -3,8 +3,7 @@
 import os
 import sys
 
-from common import *
-from utils.util import *
+from ..common import *
 
 is_clear_tarball = False # whether to clear intermediate tarball files
 
