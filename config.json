@@ -39,8 +39,13 @@
     "version": "1.0",
     "physical_machines": [
         {
-            "ipstr": "127.0.0.1",
+            "ipstr": "192.168.11.215",
             "cpu_dedicated_corecnt": 30,
+            "cpu_shared_corecnt": 2
+        },
+        {
+            "ipstr": "192.168.11.38",
+            "cpu_dedicated_corecnt": 14,
             "cpu_shared_corecnt": 2
         }
     ]
