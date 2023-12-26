@@ -33,20 +33,25 @@ LDDIR += -L/usr/lib/x86_64-linux-gnu
 ##############################################################################
 # Executable files
 
+dataset_loader: src/dataset_loader.o $(LINK_OBJECTS)
+	$(LINK) $^ $(LDLIBS) -o $@
+DEPS += src/dataset_loader.d
+CLEANS += src/dataset_loader.o
+
 simulator: src/simulator.o $(LINK_OBJECTS)
 	$(LINK) $^ $(LDLIBS) -o $@
 DEPS += src/simulator.d
 CLEANS += src/simulator.o
 
+client: src/client.o $(LINK_OBJECTS)
+	$(LINK) $^ $(LDLIBS) -o $@
+DEPS += src/client.o
+CLEANS += src/client.o
+
 total_statistics_loader: src/total_statistics_loader.o $(LINK_OBJECTS)
 	$(LINK) $^ $(LDLIBS) -o $@
 DEPS += src/total_statistics_loader.d
 CLEANS += src/total_statistics_loader.o
-
-dataset_loader: src/dataset_loader.o $(LINK_OBJECTS)
-	$(LINK) $^ $(LDLIBS) -o $@
-DEPS += src/dataset_loader.d
-CLEANS += src/dataset_loader.o
 
 #statistics_aggregator: src/statistics_aggregator.o $(LINK_OBJECTS)
 #	$(LINK) $^ $(LDLIBS) -o $@
@@ -56,7 +61,7 @@ CLEANS += src/dataset_loader.o
 ##############################################################################
 
 # statistics_aggregator
-TARGETS := simulator total_statistics_loader dataset_loader
+TARGETS := dataset_loader simulator client total_statistics_loader
 
 all: $(TARGETS)
 #	rm -rf $(CLEANS) $(DEPS)

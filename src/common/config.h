@@ -144,6 +144,7 @@ namespace covered
 
         // For current physical machine
         static PhysicalMachine getCurrentPhysicalMachine();
+        static void getCurrentMachineClientIdxRange(const uint32_t& clientcnt, uint32_t& left_inclusive_client_idx, uint32_t& right_inclusive_client_idx);
 
         // For port verification
         static void portVerification(const uint16_t& startport, const uint16_t& finalport);

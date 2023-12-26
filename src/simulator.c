@@ -1,5 +1,5 @@
 /*
- * Simulate all componenets including client/edge/cloud nodes and evaluator in a single node.
+ * Simulate all componenets including client/edge/cloud nodes and evaluator in a single physical machine.
  * 
  * By Siyuan Sheng (2023.07.27).
  */
@@ -24,7 +24,7 @@
 
 int main(int argc, char **argv) {
 
-    // (1) Parse and process different CLI parameters for client/edge/cloud/evaluator, and store them into Params
+    // (1) Parse and process different CLI parameters for client/edge/cloud/evaluator
 
     covered::SimulatorCLI simulator_cli(argc, argv);
 
@@ -134,7 +134,7 @@ int main(int argc, char **argv) {
         oss << "launch client " << client_idx;
         covered::Util::dumpNormalMsg(main_class_name, oss.str());
 
-        //pthread_returncode = pthread_create(&client_threads[client_idx], NULL, covered::ClientWrapper::launchClient, (void*)(&(client_idxes[client_idx])));
+        //pthread_returncode = pthread_create(&client_threads[client_idx], NULL, covered::ClientWrapper::launchClient, (void*)(&(client_params[client_idx])));
         // if (pthread_returncode != 0)
         // {
         //     std::ostringstream oss;

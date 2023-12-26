@@ -1,5 +1,5 @@
 {
-    "client_machine_indexes": [0],
+    "client_machine_indexes": [1],
     "client_raw_statistics_slot_interval_sec": 1,
     "client_recvmsg_startport": 4100,
     "client_worker_recvrsp_startport": 4200,

@@ -766,6 +766,57 @@ namespace covered
         return getPhysicalMachine_(current_machine_idx_);
     }
 
+    void Config::getCurrentMachineClientIdxRange(const uint32_t& clientcnt, uint32_t& left_inclusive_client_idx, uint32_t& right_inclusive_client_idx)
+    {
+        checkIsValid_();
+
+        const uint32_t client_physical_machine_cnt = client_machine_idxes_.size();
+        assert(client_physical_machine_cnt > 0);
+
+        // Get current relative machine idx in client machine indexes
+        bool is_current_machine_as_client = false;
+        uint32_t current_client_local_machine_idx = 0;
+        for (uint32_t tmp_client_local_machine_idx = 0; tmp_client_local_machine_idx < client_physical_machine_cnt; tmp_client_local_machine_idx++)
+        {
+            uint32_t tmp_client_global_machine_idx = client_machine_idxes_[tmp_client_local_machine_idx];
+            if (tmp_client_global_machine_idx == current_machine_idx_)
+            {
+                is_current_machine_as_client = true;
+                current_client_local_machine_idx = tmp_client_local_machine_idx;
+                break;
+            }
+        }
+        assert(!is_current_machine_as_client);
+        assert(current_client_local_machine_idx < client_physical_machine_cnt);
+
+        if (clientcnt <= client_physical_machine_cnt) // Each client is launched in an individual client physical machine
+        {
+            assert(current_client_local_machine_idx < clientcnt);
+
+            left_inclusive_client_idx = current_client_local_machine_idx;
+            right_inclusive_client_idx = current_client_local_machine_idx;
+        }
+        else // One or multiple client(s) are launched in a client physical machine
+        {
+            uint32_t permachine_clientcnt = clientcnt / client_physical_machine_cnt;
+            assert(permachine_clientcnt > 0);
+
+            left_inclusive_client_idx = permachine_clientcnt * current_client_local_machine_idx;
+            if (current_client_local_machine_idx != client_physical_machine_cnt - 1) // Not the last client physical machine
+            {
+                right_inclusive_client_idx = left_inclusive_client_idx + permachine_clientcnt - 1;
+            }
+            else // The last client physical machine
+            {
+                right_inclusive_client_idx = clientcnt - 1;
+            }
+            assert(left_inclusive_client_idx < clientcnt);
+            assert(right_inclusive_client_idx < clientcnt);
+        }
+
+        return;
+    }
+
     // For port verification
     
     void Config::portVerification(const uint16_t& startport, const uint16_t& finalport)
