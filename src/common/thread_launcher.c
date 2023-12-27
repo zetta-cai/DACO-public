@@ -53,7 +53,7 @@ namespace covered
                 const uint32_t tmp_left_inclusive_dedicated_coreidx = tmp_dedicated_coreidx;
                 const uint32_t tmp_right_inclusive_dedicated_coreidx = tmp_left_inclusive_dedicated_coreidx + tmp_required_dedicated_corecnt - 1;
                 current_machine_dedicated_cores_assignment_.insert(std::pair(tmp_thread_role, std::pair(tmp_left_inclusive_dedicated_coreidx, tmp_right_inclusive_dedicated_coreidx)));
-                perrole_cur_high_priority_cpuidx_.insert(std::pair(tmp_thread_role, 0));
+                perrole_cur_high_priority_cpuidx_.insert(std::pair(tmp_thread_role, tmp_left_inclusive_dedicated_coreidx));
 
                 tmp_dedicated_coreidx += tmp_required_dedicated_corecnt;
             }

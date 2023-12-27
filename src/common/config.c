@@ -1231,7 +1231,7 @@ namespace covered
                 break;
             }
         }
-        assert(!is_current_machine_as_node);
+        assert(is_current_machine_as_node);
         assert(current_node_local_machine_idx < node_physical_machine_cnt);
 
         if (nodecnt <= node_physical_machine_cnt) // Each node is launched in an individual node physical machine

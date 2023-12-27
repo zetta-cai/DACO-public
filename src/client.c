@@ -18,12 +18,12 @@ int main(int argc, char **argv) {
 
     covered::ClientCLI client_cli(argc, argv);
 
-    // Bind main thread of client(s) to a shared CPU core
-    const std::string main_class_name = covered::Config::getMainClassName();
-    covered::ThreadLauncher::bindMainThreadToSharedCpuCore(main_class_name);
-
     // Validate thread launcher before launching threads
+    const std::string main_class_name = covered::Config::getMainClassName();
     covered::ThreadLauncher::validate(main_class_name, client_cli.getClientcnt(), client_cli.getEdgecnt());
+
+    // Bind main thread of client(s) to a shared CPU core
+    covered::ThreadLauncher::bindMainThreadToSharedCpuCore(main_class_name);
 
     // (2) Simulate current_machine_clientcnt clients by multi-threading
 

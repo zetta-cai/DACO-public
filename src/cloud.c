@@ -17,12 +17,12 @@ int main(int argc, char **argv) {
 
     covered::CloudCLI cloud_cli(argc, argv);
 
-    // Bind main thread of cloud to a shared CPU core
-    const std::string main_class_name = covered::Config::getMainClassName();
-    covered::ThreadLauncher::bindMainThreadToSharedCpuCore(main_class_name);
-
     // Validate thread launcher before launching threads
+    const std::string main_class_name = covered::Config::getMainClassName();
     covered::ThreadLauncher::validate(main_class_name, cloud_cli.getClientcnt(), cloud_cli.getEdgecnt());
+
+    // Bind main thread of cloud to a shared CPU core
+    covered::ThreadLauncher::bindMainThreadToSharedCpuCore(main_class_name);
 
     // (2) Simulate a single cloud node for backend storage
 

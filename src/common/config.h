@@ -173,7 +173,7 @@ namespace covered
         static uint32_t getNodeGlobalMachineIdx_(const uint32_t& node_idx, const uint32_t& nodecnt, const std::vector<uint32_t>& node_machine_idxes);
 
         // For current physical machine
-        static void getCurrentMachineNodeIdxRange_(const uint32_t& nodecnt, const std::vector<uint32_t>& node_machine_idxes, uint32_t& left_inclusive_node_idx, uint32_t& right_inclusive_node_idx);
+        static void getCurrentMachineNodeIdxRange_(const uint32_t& nodecnt, const std::vector<uint32_t>& node_machine_idxes, uint32_t& left_inclusive_node_idx, uint32_t& right_inclusive_node_idx); // Return if current machine as the node
 
         // For port verification
         static void tryToFindStartport_(const std::string& keystr, uint16_t* startport_ptr);

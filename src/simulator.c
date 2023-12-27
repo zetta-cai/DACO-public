@@ -30,12 +30,12 @@ int main(int argc, char **argv) {
 
     covered::SimulatorCLI simulator_cli(argc, argv);
 
-    // Bind main thread of simulator to a shared CPU core
-    const std::string main_class_name = covered::Config::getMainClassName();
-    covered::ThreadLauncher::bindMainThreadToSharedCpuCore(main_class_name);
-
     // Validate thread launcher before launching threads
+    const std::string main_class_name = covered::Config::getMainClassName();
     covered::ThreadLauncher::validate(main_class_name, simulator_cli.getClientcnt(), simulator_cli.getEdgecnt());
+
+    // Bind main thread of simulator to a shared CPU core
+    covered::ThreadLauncher::bindMainThreadToSharedCpuCore(main_class_name);
 
     // (2) Launch evaluator to control benchmark workflow
 

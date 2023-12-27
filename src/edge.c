@@ -17,12 +17,12 @@ int main(int argc, char **argv) {
 
     covered::EdgeCLI edge_cli(argc, argv);
 
-    // Bind main thread of edge(s) to a shared CPU core
-    const std::string main_class_name = covered::Config::getMainClassName();
-    covered::ThreadLauncher::bindMainThreadToSharedCpuCore(main_class_name);
-
     // Validate thread launcher before launching threads
+    const std::string main_class_name = covered::Config::getMainClassName();
     covered::ThreadLauncher::validate(main_class_name, edge_cli.getClientcnt(), edge_cli.getEdgecnt());
+
+    // Bind main thread of edge(s) to a shared CPU core
+    covered::ThreadLauncher::bindMainThreadToSharedCpuCore(main_class_name);
 
     // (2) Simulate current_machine_edgecnt edges by multi-threading
 

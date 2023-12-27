@@ -9,6 +9,10 @@ src/cache/segcache/build
 simulator
 total_statistics_loader
 dataset_loader
+client
+edge
+cloud
+evaluator
 #statistics_aggregator
 
 # Prerequisites

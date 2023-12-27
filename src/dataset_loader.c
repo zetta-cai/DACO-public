@@ -83,12 +83,12 @@ int main(int argc, char **argv) {
 
     covered::DatasetLoaderCLI dataset_loader_cli(argc, argv);
 
-    // Bind main thread of dataset loader to a shared CPU core
-    const std::string main_class_name = covered::Config::getMainClassName();
-    covered::ThreadLauncher::bindMainThreadToSharedCpuCore(main_class_name);
-
     // Validate thread launcher before launching threads
+    const std::string main_class_name = covered::Config::getMainClassName();
     covered::ThreadLauncher::validate(main_class_name);
+
+    // Bind main thread of dataset loader to a shared CPU core
+    covered::ThreadLauncher::bindMainThreadToSharedCpuCore(main_class_name);
 
     const uint32_t cloud_idx = dataset_loader_cli.getCloudIdx();
     const uint32_t dataset_loadercnt = dataset_loader_cli.getDatasetLoadercnt();
