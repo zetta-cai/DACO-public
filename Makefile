@@ -48,6 +48,21 @@ client: src/client.o $(LINK_OBJECTS)
 DEPS += src/client.o
 CLEANS += src/client.o
 
+edge: src/edge.o $(LINK_OBJECTS)
+	$(LINK) $^ $(LDLIBS) -o $@
+DEPS += src/edge.o
+CLEANS += src/edge.o
+
+cloud: src/cloud.o $(LINK_OBJECTS)
+	$(LINK) $^ $(LDLIBS) -o $@
+DEPS += src/cloud.o
+CLEANS += src/cloud.o
+
+evaluator: src/evaluator.o $(LINK_OBJECTS)
+	$(LINK) $^ $(LDLIBS) -o $@
+DEPS += src/evaluator.o
+CLEANS += src/evaluator.o
+
 total_statistics_loader: src/total_statistics_loader.o $(LINK_OBJECTS)
 	$(LINK) $^ $(LDLIBS) -o $@
 DEPS += src/total_statistics_loader.d

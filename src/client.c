@@ -1,5 +1,5 @@
 /*
- * Launch a client node in a physical machine.
+ * Launch client node(s) in the current physical machine.
  * 
  * By Siyuan Sheng (2023.12.26).
  */
@@ -18,7 +18,7 @@ int main(int argc, char **argv) {
 
     covered::ClientCLI client_cli(argc, argv);
 
-    // Bind main thread of simulator to a shared CPU core
+    // Bind main thread of client(s) to a shared CPU core
     const std::string main_class_name = covered::Config::getMainClassName();
     covered::ThreadLauncher::bindMainThreadToSharedCpuCore(main_class_name);
 

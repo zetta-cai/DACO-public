@@ -1,5 +1,7 @@
 /*
- * Simulate all componenets including client/edge/cloud nodes and evaluator in a single physical machine.
+ * Simulate all componenets including client/edge/cloud nodes and evaluator in the current physical machine.
+ *
+ * NOTE: clients/edges/cloud/evaluator MUST be in the same physical machine in config.json.
  * 
  * By Siyuan Sheng (2023.07.27).
  */
@@ -52,6 +54,8 @@ int main(int argc, char **argv) {
     // Block until evaluator is initialized
     while (!evaluator_param.isEvaluatorInitialized()) {}
 
+    covered::Util::dumpNormalMsg(main_class_name, "Evaluator initialized"); // NOTE: used by exp scripts to verify whether the evaluator has been initialized
+
     // (2) Simulate a single cloud node for backend storage
 
     pthread_t cloud_thread;
@@ -66,7 +70,7 @@ int main(int argc, char **argv) {
 
     covered::Util::dumpNormalMsg(main_class_name, "launch cloud node");
 
-    //pthread_returncode = pthread_create(&cloud_thread, NULL, covered::CloudWrapper::launchCloud, (void*)(&(cloud_idx)));
+    //pthread_returncode = pthread_create(&cloud_thread, NULL, covered::CloudWrapper::launchCloud, (void*)(&(cloud_param)));
     // if (pthread_returncode != 0)
     // {
     //     std::ostringstream oss;
@@ -99,7 +103,7 @@ int main(int argc, char **argv) {
         oss << "launch edge node " << edge_idx;
         covered::Util::dumpNormalMsg(main_class_name, oss.str());
 
-        //pthread_returncode = pthread_create(&edge_threads[edge_idx], NULL, covered::EdgeWrapper::launchEdge, (void*)(&(edge_idxes[edge_idx])));
+        //pthread_returncode = pthread_create(&edge_threads[edge_idx], NULL, covered::EdgeWrapper::launchEdge, (void*)(&(edge_params[edge_idx])));
         // if (pthread_returncode != 0)
         // {
         //     std::ostringstream oss;
@@ -194,6 +198,19 @@ int main(int argc, char **argv) {
         exit(1);
     }
     covered::Util::dumpNormalMsg(main_class_name, "the cloud node is done");
+
+    // (5.4) Wait for the evaluator
+
+    covered::Util::dumpNormalMsg(main_class_name, "wait for the evaluator...");
+    pthread_returncode = pthread_join(evaluator_thread, NULL); // void* retval = NULL
+    if (pthread_returncode != 0)
+    {
+        std::ostringstream oss;
+        oss << "failed to join evaluator (error code: " << pthread_returncode << ")";
+        covered::Util::dumpErrorMsg(main_class_name, oss.str());
+        exit(1);
+    }
+    covered::Util::dumpNormalMsg(main_class_name, "the evaluator is done");
 
     return 0;
 }

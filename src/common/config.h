@@ -145,6 +145,7 @@ namespace covered
         // For current physical machine
         static PhysicalMachine getCurrentPhysicalMachine();
         static void getCurrentMachineClientIdxRange(const uint32_t& clientcnt, uint32_t& left_inclusive_client_idx, uint32_t& right_inclusive_client_idx);
+        static void getCurrentMachineEdgeIdxRange(const uint32_t& edgecnt, uint32_t& left_inclusive_edge_idx, uint32_t& right_inclusive_edge_idx);
 
         // For port verification
         static void portVerification(const uint16_t& startport, const uint16_t& finalport);
@@ -161,6 +162,10 @@ namespace covered
         // For all physical machines
         static void checkPhysicalMachinesAndSetCuridx_();
         static PhysicalMachine getPhysicalMachine_(const uint32_t& physial_machine_idx);
+        static uint32_t getNodeGlobalMachineIdx_(const uint32_t& node_idx, const uint32_t& nodecnt, const std::vector<uint32_t>& node_machine_idxes);
+
+        // For current physical machine
+        static void getCurrentMachineNodeIdxRange_(const uint32_t& nodecnt, const std::vector<uint32_t>& node_machine_idxes, uint32_t& left_inclusive_node_idx, uint32_t& right_inclusive_node_idx);
 
         // For port verification
         static void tryToFindStartport_(const std::string& keystr, uint16_t* startport_ptr);

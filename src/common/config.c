@@ -411,26 +411,7 @@ namespace covered
 
         assert(client_idx < clientcnt);
 
-        const uint32_t client_physical_machine_cnt = client_machine_idxes_.size();
-        assert(client_physical_machine_cnt > 0);
-
-        uint32_t tmp_client_local_machine_idx = 0;
-        if (clientcnt <= client_physical_machine_cnt)
-        {
-            tmp_client_local_machine_idx = client_idx;
-        }
-        else
-        {
-            uint32_t permachine_clientcnt = clientcnt / client_physical_machine_cnt;
-            assert(permachine_clientcnt > 0);
-            tmp_client_local_machine_idx = client_idx / permachine_clientcnt;
-            if (tmp_client_local_machine_idx >= client_physical_machine_cnt)
-            {
-                tmp_client_local_machine_idx = client_physical_machine_cnt - 1; // Assign tail clients to the last client physical machine
-            }
-        }
-
-        const uint32_t tmp_client_global_machine_idx = client_machine_idxes_[tmp_client_local_machine_idx];
+        const uint32_t tmp_client_global_machine_idx = getNodeGlobalMachineIdx_(client_idx, clientcnt, client_machine_idxes_);
         if (is_launch)
         {
             if (tmp_client_global_machine_idx != current_machine_idx_)
@@ -573,27 +554,8 @@ namespace covered
         checkIsValid_();
 
         assert(edge_idx < edgecnt);
-        
-        const uint32_t edge_physical_machine_cnt = edge_machine_idxes_.size();
-        assert(edge_physical_machine_cnt > 0);
 
-        uint32_t tmp_edge_local_machine_idx = 0;
-        if (edgecnt <= edge_physical_machine_cnt)
-        {
-            tmp_edge_local_machine_idx = edge_idx;
-        }
-        else
-        {
-            uint32_t permachine_edgecnt = edgecnt / edge_physical_machine_cnt;
-            assert(permachine_edgecnt > 0);
-            tmp_edge_local_machine_idx = edge_idx / permachine_edgecnt;
-            if (tmp_edge_local_machine_idx >= edge_physical_machine_cnt)
-            {
-                tmp_edge_local_machine_idx = edge_physical_machine_cnt - 1; // Assign tail edges to the last machine
-            }
-        }
-
-        const uint32_t tmp_edge_global_machine_idx = edge_machine_idxes_[tmp_edge_local_machine_idx];
+        const uint32_t tmp_edge_global_machine_idx = getNodeGlobalMachineIdx_(edge_idx, edgecnt, edge_machine_idxes_);
         if (is_launch)
         {
             if (tmp_edge_global_machine_idx != current_machine_idx_)
@@ -770,49 +732,16 @@ namespace covered
     {
         checkIsValid_();
 
-        const uint32_t client_physical_machine_cnt = client_machine_idxes_.size();
-        assert(client_physical_machine_cnt > 0);
+        getCurrentMachineNodeIdxRange_(clientcnt, client_machine_idxes_, left_inclusive_client_idx, right_inclusive_client_idx);
 
-        // Get current relative machine idx in client machine indexes
-        bool is_current_machine_as_client = false;
-        uint32_t current_client_local_machine_idx = 0;
-        for (uint32_t tmp_client_local_machine_idx = 0; tmp_client_local_machine_idx < client_physical_machine_cnt; tmp_client_local_machine_idx++)
-        {
-            uint32_t tmp_client_global_machine_idx = client_machine_idxes_[tmp_client_local_machine_idx];
-            if (tmp_client_global_machine_idx == current_machine_idx_)
-            {
-                is_current_machine_as_client = true;
-                current_client_local_machine_idx = tmp_client_local_machine_idx;
-                break;
-            }
-        }
-        assert(!is_current_machine_as_client);
-        assert(current_client_local_machine_idx < client_physical_machine_cnt);
+        return;
+    }
 
-        if (clientcnt <= client_physical_machine_cnt) // Each client is launched in an individual client physical machine
-        {
-            assert(current_client_local_machine_idx < clientcnt);
+    void Config::getCurrentMachineEdgeIdxRange(const uint32_t& edgecnt, uint32_t& left_inclusive_edge_idx, uint32_t& right_inclusive_edge_idx)
+    {
+        checkIsValid_();
 
-            left_inclusive_client_idx = current_client_local_machine_idx;
-            right_inclusive_client_idx = current_client_local_machine_idx;
-        }
-        else // One or multiple client(s) are launched in a client physical machine
-        {
-            uint32_t permachine_clientcnt = clientcnt / client_physical_machine_cnt;
-            assert(permachine_clientcnt > 0);
-
-            left_inclusive_client_idx = permachine_clientcnt * current_client_local_machine_idx;
-            if (current_client_local_machine_idx != client_physical_machine_cnt - 1) // Not the last client physical machine
-            {
-                right_inclusive_client_idx = left_inclusive_client_idx + permachine_clientcnt - 1;
-            }
-            else // The last client physical machine
-            {
-                right_inclusive_client_idx = clientcnt - 1;
-            }
-            assert(left_inclusive_client_idx < clientcnt);
-            assert(right_inclusive_client_idx < clientcnt);
-        }
+        getCurrentMachineNodeIdxRange_(edgecnt, edge_machine_idxes_, left_inclusive_edge_idx, right_inclusive_edge_idx);
 
         return;
     }
@@ -1133,6 +1062,82 @@ namespace covered
         assert(physial_machine_idx < physical_machines_.size());
 
         return physical_machines_[physial_machine_idx];
+    }
+
+    uint32_t Config::getNodeGlobalMachineIdx_(const uint32_t& node_idx, const uint32_t& nodecnt, const std::vector<uint32_t>& node_machine_idxes)
+    {
+        const uint32_t node_physical_machine_cnt = node_machine_idxes.size();
+        assert(node_physical_machine_cnt > 0);
+
+        uint32_t tmp_node_local_machine_idx = 0;
+        if (nodecnt <= node_physical_machine_cnt)
+        {
+            tmp_node_local_machine_idx = node_idx;
+        }
+        else
+        {
+            uint32_t permachine_nodecnt = nodecnt / node_physical_machine_cnt;
+            assert(permachine_nodecnt > 0);
+            tmp_node_local_machine_idx = node_idx / permachine_nodecnt;
+            if (tmp_node_local_machine_idx >= node_physical_machine_cnt)
+            {
+                tmp_node_local_machine_idx = node_physical_machine_cnt - 1; // Assign tail edges to the last machine
+            }
+        }
+
+        const uint32_t tmp_node_global_machine_idx = node_machine_idxes[tmp_node_local_machine_idx];
+        return tmp_node_global_machine_idx;
+    }
+
+    // For current physical machine
+
+    void Config::getCurrentMachineNodeIdxRange_(const uint32_t& nodecnt, const std::vector<uint32_t>& node_machine_idxes, uint32_t& left_inclusive_node_idx, uint32_t& right_inclusive_node_idx)
+    {
+        const uint32_t node_physical_machine_cnt = node_machine_idxes.size();
+        assert(node_physical_machine_cnt > 0);
+
+        // Get current local machine idx in node machine indexes
+        bool is_current_machine_as_node = false;
+        uint32_t current_node_local_machine_idx = 0;
+        for (uint32_t tmp_node_local_machine_idx = 0; tmp_node_local_machine_idx < node_physical_machine_cnt; tmp_node_local_machine_idx++)
+        {
+            uint32_t tmp_node_global_machine_idx = node_machine_idxes[tmp_node_local_machine_idx];
+            if (tmp_node_global_machine_idx == current_machine_idx_)
+            {
+                is_current_machine_as_node = true;
+                current_node_local_machine_idx = tmp_node_local_machine_idx;
+                break;
+            }
+        }
+        assert(!is_current_machine_as_node);
+        assert(current_node_local_machine_idx < node_physical_machine_cnt);
+
+        if (nodecnt <= node_physical_machine_cnt) // Each node is launched in an individual node physical machine
+        {
+            assert(current_node_local_machine_idx < nodecnt);
+
+            left_inclusive_node_idx = current_node_local_machine_idx;
+            right_inclusive_node_idx = current_node_local_machine_idx;
+        }
+        else // One or multiple node(s) are launched in a node physical machine
+        {
+            uint32_t permachine_nodecnt = nodecnt / node_physical_machine_cnt;
+            assert(permachine_nodecnt > 0);
+
+            left_inclusive_node_idx = permachine_nodecnt * current_node_local_machine_idx;
+            if (current_node_local_machine_idx != node_physical_machine_cnt - 1) // Not the last node physical machine
+            {
+                right_inclusive_node_idx = left_inclusive_node_idx + permachine_nodecnt - 1;
+            }
+            else // The last node physical machine
+            {
+                right_inclusive_node_idx = nodecnt - 1;
+            }
+            assert(left_inclusive_node_idx < nodecnt);
+            assert(right_inclusive_node_idx < nodecnt);
+        }
+
+        return;
     }
 
     // For port verification
