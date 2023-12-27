@@ -24,7 +24,7 @@ namespace covered
         ClientCLI(int argc, char **argv);
         virtual ~ClientCLI();
 
-        uint32_t getClientcnt() const;
+        // uint32_t getClientcnt() const;
         bool isWarmupSpeedup() const;
         uint32_t getPerclientOpcnt() const;
         uint32_t getPerclientWorkercnt() const;
@@ -38,7 +38,7 @@ namespace covered
         bool is_dump_cli_parameters_;
         bool is_create_required_directories_;
 
-        uint32_t clientcnt_;
+        // uint32_t clientcnt_;
         bool is_warmup_speedup_; // Come from --disable_warmup_speedup
         uint32_t perclient_opcnt_;
         uint32_t perclient_workercnt_;

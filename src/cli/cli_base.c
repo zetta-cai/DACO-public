@@ -26,9 +26,22 @@ namespace covered
             oss << "net.core.rmem_max " << std::to_string(net_core_rmem_max) << " >= udp_large_recvbuf_size " << std::to_string(udp_large_recvbuf_size);
             Util::dumpNormalMsg(kClassName, oss.str());
         }
+
+        clientcnt_ = 0;
+        edgecnt_ = 0;
     }
 
     CLIBase::~CLIBase() {}
+
+    uint32_t CLIBase::getClientcnt() const
+    {
+        return clientcnt_;
+    }
+
+    uint32_t CLIBase::getEdgecnt() const
+    {
+        return edgecnt_;
+    }
 
     void CLIBase::parseAndProcessCliParameters(int argc, char **argv)
     {
@@ -70,6 +83,8 @@ namespace covered
             // Common dynamic configurations
             // Obsolete: ("debug", "enable debug information"); ("track_event", "track events to break down latencies"), ("multinode", "disable single-node mode (NOT work for simulator)")
             argument_desc_.add_options()
+                ("clientcnt", boost::program_options::value<uint32_t>()->default_value(1), "the total number of clients")
+                ("edgecnt", boost::program_options::value<uint32_t>()->default_value(1), "the number of edge nodes")
                 ("config_file", boost::program_options::value<std::string>()->default_value("config.json"), "config file path of COVERED")
             ;
 
@@ -100,7 +115,14 @@ namespace covered
         {
             // (3) Get CLI parameters for common dynamic configurations
 
+            uint32_t clientcnt = argument_info_["clientcnt"].as<uint32_t>();
+            uint32_t edgecnt = argument_info_["edgecnt"].as<uint32_t>();
             std::string config_filepath = argument_info_["config_file"].as<std::string>();
+
+            // Store CLI parameters for dynamic configurations
+            clientcnt_ = clientcnt;
+            edgecnt_ = edgecnt;
+            verifyIntegrity_();
 
             // (4) Load config file for static configurations
 
@@ -147,11 +169,29 @@ namespace covered
 
             Util::dumpDebugMsg(kClassName, Config::toString());
 
-            /*std::ostringstream oss;
+            std::ostringstream oss;
             oss << "[Dynamic configurations from CLI parameters in " << kClassName << "]" << std::endl;
-            Util::dumpDebugMsg(kClassName, oss.str());*/
+            oss << "Client count: " << clientcnt_;
+            oss << "Edge count: " << edgecnt_;
+            Util::dumpDebugMsg(kClassName, oss.str());
 
             is_dump_cli_parameters_ = true;
+        }
+
+        return;
+    }
+
+    void CLIBase::verifyIntegrity_() const
+    {
+        assert(clientcnt_ > 0);
+        assert(edgecnt_ > 0);
+
+        if (clientcnt_ < edgecnt_)
+        {
+            std::ostringstream oss;
+            oss << "clientcnt " << clientcnt_ << " should >= edgecnt " << edgecnt_ << " for edge-client mapping!";
+            Util::dumpErrorMsg(kClassName, oss.str());
+            exit(1);
         }
 
         return;

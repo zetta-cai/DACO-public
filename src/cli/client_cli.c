@@ -9,7 +9,7 @@ namespace covered
 
     ClientCLI::ClientCLI() : EdgescaleCLI(), PropagationCLI(), WorkloadCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_create_required_directories_(false)
     {
-        clientcnt_ = 0;
+        // clientcnt_ = 0;
         is_warmup_speedup_ = true;
         perclient_opcnt_ = 0;
         perclient_workercnt_ = 0;
@@ -22,10 +22,10 @@ namespace covered
 
     ClientCLI::~ClientCLI() {}
 
-    uint32_t ClientCLI::getClientcnt() const
-    {
-        return clientcnt_;
-    }
+    // uint32_t ClientCLI::getClientcnt() const
+    // {
+    //     return clientcnt_;
+    // }
 
     bool ClientCLI::isWarmupSpeedup() const
     {
@@ -54,7 +54,7 @@ namespace covered
 
             // Dynamic configurations for client
             argument_desc_.add_options()
-                ("clientcnt", boost::program_options::value<uint32_t>()->default_value(1), "the total number of clients")
+                // ("clientcnt", boost::program_options::value<uint32_t>()->default_value(1), "the total number of clients")
                 ("disable_warmup_speedup", "disable speedup mode for warmup phase")
                 ("perclient_opcnt", boost::program_options::value<uint32_t>()->default_value(1000000), "the number of operations for each client")
                 ("perclient_workercnt", boost::program_options::value<uint32_t>()->default_value(1), "the number of worker threads for each client")
@@ -76,7 +76,7 @@ namespace covered
 
             // (3) Get CLI parameters for client dynamic configurations
 
-            uint32_t clientcnt = argument_info_["clientcnt"].as<uint32_t>();
+            // uint32_t clientcnt = argument_info_["clientcnt"].as<uint32_t>();
             bool is_warmup_speedup = true;
             if (argument_info_.count("disable_warmup_speedup"))
             {
@@ -86,7 +86,7 @@ namespace covered
             uint32_t perclient_workercnt = argument_info_["perclient_workercnt"].as<uint32_t>();
 
             // Store client CLI parameters for dynamic configurations
-            clientcnt_ = clientcnt;
+            // clientcnt_ = clientcnt;
             is_warmup_speedup_ = is_warmup_speedup;
             perclient_opcnt_ = perclient_opcnt;
             perclient_workercnt_ = perclient_workercnt;
@@ -110,7 +110,7 @@ namespace covered
 
             std::ostringstream oss;
             oss << "[Dynamic configurations from CLI parameters in " << kClassName << "]" << std::endl;
-            oss << "Client count: " << clientcnt_ << std::endl;
+            // oss << "Client count: " << clientcnt_ << std::endl;
             oss << "Warmup speedup flag: " << (is_warmup_speedup_?"true":"false") << std::endl;
             oss << "Per-client operation count (workload size): " << perclient_opcnt_ << std::endl;
             oss << "Per-client worker count: " << perclient_workercnt_;
@@ -133,18 +133,18 @@ namespace covered
 
     void ClientCLI::verifyIntegrity_() const
     {
-        assert(clientcnt_ > 0);
+        // assert(clientcnt_ > 0);
         assert(perclient_opcnt_ > 0);
         assert(perclient_workercnt_ > 0);
 
-        uint32_t edgecnt = getEdgecnt();
-        if (clientcnt_ < edgecnt)
-        {
-            std::ostringstream oss;
-            oss << "clientcnt " << clientcnt_ << " should >= edgecnt " << edgecnt << " for edge-client mapping!";
-            Util::dumpErrorMsg(kClassName, oss.str());
-            exit(1);
-        }
+        // uint32_t edgecnt = getEdgecnt();
+        // if (clientcnt_ < edgecnt)
+        // {
+        //     std::ostringstream oss;
+        //     oss << "clientcnt " << clientcnt_ << " should >= edgecnt " << edgecnt << " for edge-client mapping!";
+        //     Util::dumpErrorMsg(kClassName, oss.str());
+        //     exit(1);
+        // }
 
         return;
     }

@@ -34,6 +34,9 @@ int main(int argc, char **argv) {
     const std::string main_class_name = covered::Config::getMainClassName();
     covered::ThreadLauncher::bindMainThreadToSharedCpuCore(main_class_name);
 
+    // Validate thread launcher before launching threads
+    covered::ThreadLauncher::validate(simulator_cli.getClientcnt(), simulator_cli.getEdgecnt());
+
     // (2) Launch evaluator to control benchmark workflow
 
     pthread_t evaluator_thread;

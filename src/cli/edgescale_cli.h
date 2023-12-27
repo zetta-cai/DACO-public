@@ -22,7 +22,7 @@ namespace covered
         virtual ~EdgescaleCLI();
 
         uint64_t getCapacityBytes() const;
-        uint32_t getEdgecnt() const;
+        // uint32_t getEdgecnt() const;
     private:
         static const std::string kClassName;
 
@@ -34,7 +34,7 @@ namespace covered
         bool is_dump_cli_parameters_;
 
         uint64_t capacity_bytes_; // Scalability on per-edge memory bytes
-        uint32_t edgecnt_; // Scalability on the number of edge nodes
+        // uint32_t edgecnt_; // Scalability on the number of edge nodes
     protected:
         virtual void addCliParameters_();
         virtual void setParamAndConfig_(const std::string& main_class_name);

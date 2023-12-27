@@ -22,6 +22,9 @@ int main(int argc, char **argv) {
     const std::string main_class_name = covered::Config::getMainClassName();
     covered::ThreadLauncher::bindMainThreadToSharedCpuCore(main_class_name);
 
+    // Validate thread launcher before launching threads
+    covered::ThreadLauncher::validate(client_cli.getClientcnt(), client_cli.getEdgecnt());
+
     // (2) Simulate current_machine_clientcnt clients by multi-threading
 
     // Get client idx ranges in the current physical machine

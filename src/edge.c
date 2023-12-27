@@ -21,6 +21,9 @@ int main(int argc, char **argv) {
     const std::string main_class_name = covered::Config::getMainClassName();
     covered::ThreadLauncher::bindMainThreadToSharedCpuCore(main_class_name);
 
+    // Validate thread launcher before launching threads
+    covered::ThreadLauncher::validate(edge_cli.getClientcnt(), edge_cli.getEdgecnt());
+
     // (2) Simulate current_machine_edgecnt edges by multi-threading
 
     // Get edge idx ranges in the current physical machine

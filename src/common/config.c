@@ -63,10 +63,12 @@ namespace covered
 
     // Config
 
+    const std::string Config::CLIENT_DEDICATED_CORECNT_KEYSTR("client_dedicated_corecnt");
     const std::string Config::CLIENT_MACHINE_INDEXES_KEYSTR("client_machine_indexes");
     const std::string Config::CLIENT_RAW_STATISTICS_SLOT_INTERVAL_SEC_KEYSTR("client_raw_statistics_slot_interval_sec");
     const std::string Config::CLIENT_RECVMSG_STARTPORT_KEYSTR("client_recvmsg_startport");
     const std::string Config::CLIENT_WORKER_RECVRSP_STARTPORT_KEYSTR("client_worker_recvrsp_startport");
+    const std::string Config::CLOUD_DEDICATED_CORECNT_KEYSTR("cloud_dedicated_corecnt");
     const std::string Config::CLOUD_MACHINE_INDEX_KEYSTR("cloud_machine_index");
     const std::string Config::CLOUD_RECVMSG_STARTPORT_KEYSTR("cloud_recvmsg_startport");
     const std::string Config::CLOUD_RECVREQ_STARTPORT_KEYSTR("cloud_recvreq_startport");
@@ -81,8 +83,10 @@ namespace covered
     const std::string Config::EDGE_CACHE_SERVER_PLACEMENT_PROCESSOR_RECVRSP_STARTPORT_KEYSTR("edge_cache_server_placement_processor_recvrsp_startport");
     const std::string Config::EDGE_CACHE_SERVER_WORKER_RECVREQ_STARTPORT_KEYSTR("edge_cache_server_worker_recvreq_startport");
     const std::string Config::EDGE_CACHE_SERVER_WORKER_RECVRSP_STARTPORT_KEYSTR("edge_cache_server_worker_recvrsp_startport");
+    const std::string Config::EDGE_DEDICATED_CORECNT_KEYSTR("edge_dedicated_corecnt");
     const std::string Config::EDGE_MACHINE_INDEXES_KEYSTR("edge_machine_indexes");
     const std::string Config::EDGE_RECVMSG_STARTPORT_KEYSTR("edge_recvmsg_startport");
+    const std::string Config::EVALUATOR_DEDICATED_CORECNT_KEYSTR("evaluator_dedicated_corecnt");
     const std::string Config::EVALUATOR_MACHINE_INDEX_KEYSTR("evaluator_machine_index");
     const std::string Config::EVALUATOR_RECVMSG_PORT_KEYSTR("evaluator_recvmsg_port");
     const std::string Config::LIBRARY_DIRPATH_KEYSTR("library_dirpath");
@@ -115,10 +119,12 @@ namespace covered
     std::string Config::config_filepath_("");
     std::string Config::main_class_name_(""); // Come from argv[0]
 
+    uint32_t Config::client_dedicated_corecnt_ = 2;
     std::vector<uint32_t> Config::client_machine_idxes_(0);
     uint32_t Config::client_raw_statistics_slot_interval_sec_(1);
     uint16_t Config::client_recvmsg_startport_ = 4100; // [4096, 65536]
     uint16_t Config::client_worker_recvrsp_startport_ = 4200; // [4096, 65536]
+    uint32_t Config::cloud_dedicated_corecnt_ = 2;
     uint32_t Config::cloud_machine_idx_ = 0;
     uint16_t Config::cloud_recvmsg_startport_ = 4300; // [4096, 65536]
     uint16_t Config::cloud_recvreq_startport_ = 4400; // [4096, 65536]
@@ -133,8 +139,10 @@ namespace covered
     uint16_t Config::edge_cache_server_placement_processor_recvrsp_startport_ = 4800; // [4096, 65536]
     uint16_t Config::edge_cache_server_worker_recvreq_startport_ = 4900; // [4096, 65536]
     uint16_t Config::edge_cache_server_worker_recvrsp_startport_ = 5000; // [4096, 65536]
+    uint32_t Config::edge_dedicated_corecnt_ = 8;
     std::vector<uint32_t> Config::edge_machine_idxes_(0);
     uint16_t Config::edge_recvmsg_startport_ = 5100; // [4096, 65536]
+    uint32_t Config::evaluator_dedicated_corecnt_ = 1;
     uint32_t Config::evaluator_machine_idx_ = 0;
     uint16_t Config::evaluator_recvmsg_port_ = 5200; // [4096, 65536]
     std::string Config::library_dirpath_("lib");
@@ -184,6 +192,12 @@ namespace covered
 
                 // Overwrite default values of config variables if any
                 boost::json::key_value_pair* kv_ptr = NULL;
+                kv_ptr = find_(CLIENT_DEDICATED_CORECNT_KEYSTR);
+                if (kv_ptr != NULL)
+                {
+                    int64_t tmp_corecnt = kv_ptr->value().get_int64();
+                    client_dedicated_corecnt_ = Util::toUint32(tmp_corecnt);
+                }
                 kv_ptr = find_(CLIENT_MACHINE_INDEXES_KEYSTR);
                 if (kv_ptr != NULL)
                 {
@@ -201,6 +215,12 @@ namespace covered
                 }
                 tryToFindStartport_(CLIENT_RECVMSG_STARTPORT_KEYSTR, &client_recvmsg_startport_);
                 tryToFindStartport_(CLIENT_WORKER_RECVRSP_STARTPORT_KEYSTR, &client_worker_recvrsp_startport_);
+                kv_ptr = find_(CLOUD_DEDICATED_CORECNT_KEYSTR);
+                if (kv_ptr != NULL)
+                {
+                    int64_t tmp_corecnt = kv_ptr->value().get_int64();
+                    cloud_dedicated_corecnt_ = Util::toUint32(tmp_corecnt);
+                }
                 kv_ptr = find_(CLOUD_MACHINE_INDEX_KEYSTR);
                 if (kv_ptr != NULL)
                 {
@@ -241,6 +261,12 @@ namespace covered
                 tryToFindStartport_(EDGE_CACHE_SERVER_PLACEMENT_PROCESSOR_RECVRSP_STARTPORT_KEYSTR, &edge_cache_server_placement_processor_recvrsp_startport_);
                 tryToFindStartport_(EDGE_CACHE_SERVER_WORKER_RECVREQ_STARTPORT_KEYSTR, &edge_cache_server_worker_recvreq_startport_);
                 tryToFindStartport_(EDGE_CACHE_SERVER_WORKER_RECVRSP_STARTPORT_KEYSTR, &edge_cache_server_worker_recvrsp_startport_);
+                kv_ptr = find_(EDGE_DEDICATED_CORECNT_KEYSTR);
+                if (kv_ptr != NULL)
+                {
+                    int64_t tmp_corecnt = kv_ptr->value().get_int64();
+                    edge_dedicated_corecnt_ = Util::toUint32(tmp_corecnt);
+                }
                 kv_ptr = find_(EDGE_MACHINE_INDEXES_KEYSTR);
                 if (kv_ptr != NULL)
                 {
@@ -251,6 +277,12 @@ namespace covered
                     }
                 }
                 tryToFindStartport_(EDGE_RECVMSG_STARTPORT_KEYSTR, &edge_recvmsg_startport_);
+                kv_ptr = find_(EVALUATOR_DEDICATED_CORECNT_KEYSTR);
+                if (kv_ptr != NULL)
+                {
+                    int64_t tmp_corecnt = kv_ptr->value().get_int64();
+                    evaluator_dedicated_corecnt_ = Util::toUint32(tmp_corecnt);
+                }
                 kv_ptr = find_(EVALUATOR_MACHINE_INDEX_KEYSTR);
                 if (kv_ptr != NULL)
                 {
@@ -370,7 +402,7 @@ namespace covered
                     }
                     assert(physical_machines_.size() == kv_ptr->value().get_array().size());
                 }
-                checkPhysicalMachinesAndSetCuridx_();
+                checkPhysicalMachinesAndSetCuridx_(); // Set current_machine_idx_
 
                 is_valid_ = true; // valid Config
             }
@@ -398,7 +430,7 @@ namespace covered
     }
 
     // For client physical machines
-    
+
     uint32_t Config::getClientMachineCnt()
     {
         checkIsValid_();
@@ -443,7 +475,7 @@ namespace covered
         checkIsValid_();
         return client_worker_recvrsp_startport_;
     }
-
+    
     std::string Config::getCloudIpstr(const bool& is_launch)
     {
         checkIsValid_();
@@ -722,6 +754,23 @@ namespace covered
 
     // For current physical machine
 
+    bool Config::isCurrentMachineAsClient()
+    {
+        checkIsValid_();
+
+        bool is_current_machine_as_client = false;
+        for (uint32_t i = 0; i < client_machine_idxes_.size(); i++)
+        {
+            if (client_machine_idxes_[i] == current_machine_idx_)
+            {
+                is_current_machine_as_client = true;
+                break;
+            }
+        }
+
+        return is_current_machine_as_client;
+    }
+
     PhysicalMachine Config::getCurrentPhysicalMachine()
     {
         checkIsValid_();
@@ -744,6 +793,62 @@ namespace covered
         getCurrentMachineNodeIdxRange_(edgecnt, edge_machine_idxes_, left_inclusive_edge_idx, right_inclusive_edge_idx);
 
         return;
+    }
+
+    uint32_t Config::getCurrentMachineEvaluatorDedicatedCorecnt()
+    {
+        checkIsValid_();
+
+        uint32_t current_machine_evaluator_dedicated_corecnt = 0;
+        if (current_machine_idx_ == evaluator_machine_idx_)
+        {
+            current_machine_evaluator_dedicated_corecnt = evaluator_dedicated_corecnt_;
+        }
+        
+        return current_machine_evaluator_dedicated_corecnt;
+    }
+
+    uint32_t Config::getCurrentMachineCloudDedicatedCorecnt()
+    {
+        checkIsValid_();
+
+        uint32_t current_machine_cloud_dedicated_corecnt = 0;
+        if (current_machine_idx_ == cloud_machine_idx_)
+        {
+            current_machine_cloud_dedicated_corecnt = cloud_dedicated_corecnt_;
+        }
+
+        return current_machine_cloud_dedicated_corecnt;
+    }
+
+    uint32_t Config::getCurrentMachineEdgeDedicatedCorecnt(const uint32_t& edgecnt)
+    {
+        checkIsValid_();
+
+        bool is_current_machine_as_edge = false;
+        for (uint32_t i = 0; i < edge_machine_idxes_.size(); i++)
+        {
+            if (edge_machine_idxes_[i] == current_machine_idx_)
+            {
+                is_current_machine_as_edge = true;
+                break;
+            }
+        }
+
+        uint32_t current_machine_edge_dedicated_corecnt = 0;
+        if (is_current_machine_as_edge)
+        {
+            // Get current_machine_edgecnt
+            uint32_t left_inclusive_edge_idx = 0;
+            uint32_t right_inclusive_edge_idx = 0;
+            getCurrentMachineNodeIdxRange_(edgecnt, edge_machine_idxes_, left_inclusive_edge_idx, right_inclusive_edge_idx);
+            assert(right_inclusive_edge_idx >= left_inclusive_edge_idx);
+            const uint32_t current_machine_edgecnt = right_inclusive_edge_idx - left_inclusive_edge_idx + 1;
+
+            current_machine_edge_dedicated_corecnt = current_machine_edgecnt * edge_dedicated_corecnt_;
+        }
+
+        return current_machine_edge_dedicated_corecnt;
     }
 
     // For port verification
@@ -779,6 +884,7 @@ namespace covered
         std::ostringstream oss;
         oss << "[Static configurations from " << config_filepath_ << "]" << std::endl;
         oss << "Main class name: " << main_class_name_ << std::endl;
+        oss << "Client dedicated corecnt: " << client_dedicated_corecnt_ << std::endl;
         oss << "Client physical machine indexes: ";
         for (uint32_t i = 0; i < client_machine_idxes_.size(); i++)
         {
@@ -788,6 +894,7 @@ namespace covered
         oss << "Client raw statistics slot interval second: " << client_raw_statistics_slot_interval_sec_ << std::endl;
         oss << "Client recvmsg startport: " << client_recvmsg_startport_ << std::endl;
         oss << "Client worker recvrsp startport: " << client_worker_recvrsp_startport_ << std::endl;
+        oss << "Cloud dedicated corecnt: " << cloud_dedicated_corecnt_ << std::endl;
         oss << "Cloud physical machine index: " << cloud_machine_idx_ << std::endl;
         oss << "Cloud recvmsg startport: " << cloud_recvmsg_startport_ << std::endl;
         oss << "Cloud recvreq startport: " << cloud_recvreq_startport_ << std::endl;
@@ -801,6 +908,7 @@ namespace covered
         oss << "Edge cache server placement processor recvrsp startport: " << edge_cache_server_placement_processor_recvrsp_startport_ << std::endl;
         oss << "Edge cache server worker recvreq startport: " << edge_cache_server_worker_recvreq_startport_ << std::endl;
         oss << "Edge cache server worker recvrsp startport: " << edge_cache_server_worker_recvrsp_startport_ << std::endl;
+        oss << "Edge dedicated corecnt: " << edge_dedicated_corecnt_ << std::endl;
         oss << "Edge physical machine indexes: ";
         for (uint32_t i = 0; i < edge_machine_idxes_.size(); i++)
         {
@@ -808,6 +916,7 @@ namespace covered
         }
         oss << std::endl;
         oss << "Edge recvmsg startport: " << edge_recvmsg_startport_ << std::endl;
+        oss << "Evaluator dedicated corecnt: " << evaluator_dedicated_corecnt_ << std::endl;
         oss << "Evaluator physical machine index:" << evaluator_machine_idx_ << std::endl;
         oss << "Evaluator recvmsg port: " << evaluator_recvmsg_port_ << std::endl;
         oss << "Third-party library dirpath: " << library_dirpath_ << std::endl;

@@ -47,10 +47,12 @@ namespace covered
     {
     public:
         // Key strings of JSON config file for static configurations (only used by Config)
+        static const std::string CLIENT_DEDICATED_CORECNT_KEYSTR;
         static const std::string CLIENT_MACHINE_INDEXES_KEYSTR;
         static const std::string CLIENT_RAW_STATISTICS_SLOT_INTERVAL_SEC_KEYSTR;
         static const std::string CLIENT_RECVMSG_STARTPORT_KEYSTR;
         static const std::string CLIENT_WORKER_RECVRSP_STARTPORT_KEYSTR;
+        static const std::string CLOUD_DEDICATED_CORECNT_KEYSTR;
         static const std::string CLOUD_MACHINE_INDEX_KEYSTR;
         static const std::string CLOUD_RECVMSG_STARTPORT_KEYSTR;
         static const std::string CLOUD_RECVREQ_STARTPORT_KEYSTR;
@@ -65,8 +67,10 @@ namespace covered
         static const std::string EDGE_CACHE_SERVER_PLACEMENT_PROCESSOR_RECVRSP_STARTPORT_KEYSTR;
         static const std::string EDGE_CACHE_SERVER_WORKER_RECVREQ_STARTPORT_KEYSTR;
         static const std::string EDGE_CACHE_SERVER_WORKER_RECVRSP_STARTPORT_KEYSTR;
+        static const std::string EDGE_DEDICATED_CORECNT_KEYSTR;
         static const std::string EDGE_MACHINE_INDEXES_KEYSTR;
         static const std::string EDGE_RECVMSG_STARTPORT_KEYSTR;
+        static const std::string EVALUATOR_DEDICATED_CORECNT_KEYSTR;
         static const std::string EVALUATOR_MACHINE_INDEX_KEYSTR;
         static const std::string EVALUATOR_RECVMSG_PORT_KEYSTR;
         static const std::string LIBRARY_DIRPATH_KEYSTR;
@@ -146,6 +150,10 @@ namespace covered
         static PhysicalMachine getCurrentPhysicalMachine();
         static void getCurrentMachineClientIdxRange(const uint32_t& clientcnt, uint32_t& left_inclusive_client_idx, uint32_t& right_inclusive_client_idx);
         static void getCurrentMachineEdgeIdxRange(const uint32_t& edgecnt, uint32_t& left_inclusive_edge_idx, uint32_t& right_inclusive_edge_idx);
+        static uint32_t getCurrentMachineEvaluatorDedicatedCorecnt();
+        static uint32_t getCurrentMachineCloudDedicatedCorecnt();
+        static uint32_t getCurrentMachineEdgeDedicatedCorecnt(const uint32_t& edgecnt);
+        // TODO: END HERE
 
         // For port verification
         static void portVerification(const uint16_t& startport, const uint16_t& finalport);
@@ -178,10 +186,12 @@ namespace covered
         static std::string main_class_name_; // Come from argv[0]
 
         // Come from config file
+        static uint32_t client_dedicated_corecnt_; // Number of dedicated CPU cores for each client physical machine
         static std::vector<uint32_t> client_machine_idxes_; // Physical machine indexes of physical client nodes
         static uint32_t client_raw_statistics_slot_interval_sec_; // Slot interval for client raw statistics in units of seconds
         static uint16_t client_recvmsg_startport_; // Start UDP port for client to receive benchmark control messages
         static uint16_t client_worker_recvrsp_startport_; // Start UDP port for client worker to receive local responses
+        static uint32_t cloud_dedicated_corecnt_; // Number of dedicated CPU cores for cloud physical machine
         static uint32_t cloud_machine_idx_; // Physical machine index of physical cloud node
         static uint16_t cloud_recvmsg_startport_; // Start UDP port for cloud to receive benchmark control messages
         static uint16_t cloud_recvreq_startport_; // Start UDP port for cloud to receive global requests
@@ -197,8 +207,10 @@ namespace covered
         static uint16_t edge_cache_server_worker_recvreq_startport_; // Start UDP port for edge cache server worker to receive cooperation control requests
         static uint16_t edge_cache_server_worker_recvrsp_startport_; // Start UDP port for edge cache server worker to receive global responses
         static uint16_t edge_invalidation_server_recvreq_startport_; // Start UDP port for edge invalidation server to receive cooperation control requests
+        static uint32_t edge_dedicated_corecnt_; // Number of dedicated CPU cores for each edge physical machine
         static std::vector<uint32_t> edge_machine_idxes_; // Physical machine indexes of physical edge nodes
         static uint16_t edge_recvmsg_startport_; // Start UDP port for edge to receive benchmark control messages
+        static uint32_t evaluator_dedicated_corecnt_; // Number of dedicated CPU cores for evaluator physical machine
         static uint32_t evaluator_machine_idx_; // Physical machine index of physical evaluator node
         static uint16_t evaluator_recvmsg_port_; // UDP port for evaluator to receive benchmark control messages
         static std::string library_dirpath_; // Library dirpath
@@ -221,6 +233,8 @@ namespace covered
 
         // For all physical machines
         static std::vector<PhysicalMachine> physical_machines_; // Physical machines
+
+        // For current physical machine
         static uint32_t current_machine_idx_; // Current physical machine index
 
         // For port verification

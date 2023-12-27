@@ -8,21 +8,121 @@
 
 namespace covered
 {
+    const std::string ThreadLauncher::CLIENT_THREAD_ROLE("client_thread");
+    const std::string ThreadLauncher::EDGE_THREAD_ROLE("edge_thread");
+    const std::string ThreadLauncher::CLOUD_THREAD_ROLE("cloud_thread");
+    const std::string ThreadLauncher::EVALUATOR_THREAD_ROLE("evaluator_thread");
+    
     // TODO: pass nice value into each pthread for SCHED_OTHER
     //const int ThreadLauncher::SCHEDULING_POLICY = SCHED_OTHER; // Default policy used by Linux (nice value: min 19 to max -20), which relies on kernel.sched_latency_ns and kernel.sched_min_granularity_ns
     const int ThreadLauncher::SCHEDULING_POLICY = SCHED_RR; // Round-robin (priority: min 1 to max 99), which relies on /proc/sys/kernel/sched_rr_timeslice_ms
 
     const std::string ThreadLauncher::kClassName = "ThreadLauncher";
 
+    // Common utilities
+    bool ThreadLauncher::is_valid_ = false;
+
+    // For low-priority threads
     std::atomic<uint32_t> ThreadLauncher::low_priority_threadcnt_(0);
-    std::atomic<uint32_t> ThreadLauncher::cur_high_priority_cpuidx_(0);
+    cpu_set_t ThreadLauncher::cpu_shared_coreset_;
+
+    // For high-priority threads
+    std::map<std::string, std::pair<uint32_t, uint32_t>> ThreadLauncher::current_machine_dedicated_cores_assignment_;
+    std::map<std::string, std::atomic<uint32_t>> ThreadLauncher::perrole_cur_high_priority_cpuidx_;
     std::atomic<uint32_t> ThreadLauncher::high_priority_threadcnt_(0);
 
-    cpu_set_t ThreadLauncher::cpu_shared_coreset_;
-    cpu_set_t ThreadLauncher::cpu_dedicated_coreset_;
+    void ThreadLauncher::validate(const uint32_t& clientcnt, const uint32_t& edgecnt)
+    {
+        if (!is_valid_)
+        {
+            // Follow the order of evaluator/cloud/edges/clients to assign dedicated CPU cores
+            uint32_t tmp_dedicated_coreidx = 0;
+
+            // (1) Assign dedicated CPU cores for evaluator
+            if (Config::isCurrentMachineAsEvaluator())
+            {
+                const uint32_t evaluator_left_inclusive_dedicated_coreidx = tmp_dedicated_coreidx;
+                const uint32_t evaluator_right_inclusive_dedicated_coreidx = evaluator_left_inclusive_dedicated_coreidx + Config::getEvaluatorDedicatedCorecnt() - 1;
+
+                current_machine_dedicated_cores_assignment_.insert(std::pair(EVALUATOR_THREAD_ROLE, std::pair(evaluator_left_inclusive_dedicated_coreidx, evaluator_right_inclusive_dedicated_coreidx)));
+                perrole_cur_high_priority_cpuidx_.insert(std::pair(EVALUATOR_THREAD_ROLE, 0));
+
+                tmp_dedicated_coreidx += Config::getEvaluatorDedicatedCorecnt();
+            }
+
+            // (2) Assign dedicated CPU cores for cloud
+            if (Config::isCurrentMachineAsCloud())
+            {
+                const uint32_t cloud_left_inclusive_dedicated_coreidx = tmp_dedicated_coreidx;
+                const uint32_t cloud_right_inclusive_dedicated_coreidx = cloud_left_inclusive_dedicated_coreidx + Config::getCloudDedicatedCorecnt() - 1;
+
+                current_machine_dedicated_cores_assignment_.insert(std::pair(CLOUD_THREAD_ROLE, std::pair(cloud_left_inclusive_dedicated_coreidx, cloud_right_inclusive_dedicated_coreidx)));
+                perrole_cur_high_priority_cpuidx_.insert(std::pair(CLOUD_THREAD_ROLE, 0));
+
+                tmp_dedicated_coreidx += Config::getCloudDedicatedCorecnt();
+            }
+
+            // (3) Assign dedicated CPU cores for edges
+            if (Config::isCurrentMachineAsEdge())
+            {
+                // Get current_machine_edgecnt
+                uint32_t left_inclusive_edge_idx = 0;
+                uint32_t right_inclusive_edge_idx = 0;
+                Config::getCurrentMachineEdgeIdxRange(edgecnt, left_inclusive_edge_idx, right_inclusive_edge_idx);
+                assert(right_inclusive_edge_idx >= left_inclusive_edge_idx);
+                const uint32_t current_machine_edgecnt = right_inclusive_edge_idx - left_inclusive_edge_idx + 1;
+
+                const uint32_t edge_left_inclusive_dedicated_coreidx = tmp_dedicated_coreidx;
+                const uint32_t edge_right_inclusive_dedicated_coreidx = edge_left_inclusive_dedicated_coreidx + current_machine_edgecnt * Config::getEdgeDedicatedCorecnt() - 1;
+
+                current_machine_dedicated_cores_assignment_.insert(std::pair(EDGE_THREAD_ROLE, std::pair(edge_left_inclusive_dedicated_coreidx, edge_right_inclusive_dedicated_coreidx)));
+                perrole_cur_high_priority_cpuidx_.insert(std::pair(EDGE_THREAD_ROLE, 0));
+
+                tmp_dedicated_coreidx += current_machine_edgecnt * Config::getEdgeDedicatedCorecnt();
+            }
+
+            // (4) Assign dedicated CPU cores for clients
+            if (Config::isCurrentMachineAsClient())
+            {
+                // Get current_machine_clientcnt
+                uint32_t left_inclusive_client_idx = 0;
+                uint32_t right_inclusive_client_idx = 0;
+                Config::getCurrentMachineClientIdxRange(clientcnt, left_inclusive_client_idx, right_inclusive_client_idx);
+                assert(right_inclusive_client_idx >= left_inclusive_client_idx);
+                const uint32_t current_machine_clientcnt = right_inclusive_client_idx - left_inclusive_client_idx + 1;
+
+                const uint32_t client_left_inclusive_dedicated_coreidx = tmp_dedicated_coreidx;
+                const uint32_t client_right_inclusive_dedicated_coreidx = client_left_inclusive_dedicated_coreidx + current_machine_clientcnt * Config::getClientDedicatedCorecnt() - 1;
+
+                current_machine_dedicated_cores_assignment_.insert(std::pair(CLIENT_THREAD_ROLE, std::pair(client_left_inclusive_dedicated_coreidx, client_right_inclusive_dedicated_coreidx)));
+                perrole_cur_high_priority_cpuidx_.insert(std::pair(CLIENT_THREAD_ROLE, 0));
+
+                tmp_dedicated_coreidx += current_machine_clientcnt * Config::getClientDedicatedCorecnt();
+            }
+
+            // NOTE: required dedicated corecnt MUST <= total dedicated corecnt in current machine
+            const uint32_t required_dedicated_corecnt = tmp_dedicated_coreidx;
+            const uint32_t current_machine_dedicated_corecnt = Config::getCurrentPhysicalMachine().getCpuDedicatedCorecnt();
+            if (required_dedicated_corecnt > current_machine_dedicated_corecnt)
+            {
+                std::ostringstream oss;
+                oss << "required_dedicated_corecnt " << required_dedicated_corecnt << " exceeds current_machine_dedicated_corecnt " << current_machine_dedicated_corecnt << " in current physical machine!";
+                Util::dumpErrorMsg(kClassName, oss.str());
+                exit(1);
+            }
+
+            is_valid_ = true;
+        }
+
+        return;
+    }
+
+    // For low-priority threads
 
     void ThreadLauncher::bindMainThreadToSharedCpuCore(const std::string main_thread_name)
     {
+        checkIsValid_();
+
         pthread_t main_thread = pthread_self();
         bindSharedCpuCore_(main_thread_name, main_thread);
         return;
@@ -30,6 +130,8 @@ namespace covered
 
     void ThreadLauncher::pthreadCreateLowPriority(const std::string thread_name, pthread_t* tid_ptr, void *(*start_routine)(void *), void* arg_ptr)
     {
+        checkIsValid_();
+
         // Prepare thread attributes
         pthread_attr_t attr;
         preparePthreadAttr_(&attr);
@@ -54,73 +156,6 @@ namespace covered
 
         // Bind to a shared CPU core
         bindSharedCpuCore_(thread_name, *tid_ptr);
-
-        return;
-    }
-    
-    uint32_t ThreadLauncher::pthreadCreateHighPriority(const std::string thread_name, pthread_t* tid_ptr, void *(*start_routine)(void *), void* arg_ptr, const uint32_t* specified_cpuidx_ptr)
-    {
-        // Prepare thread attributes
-        pthread_attr_t attr;
-        preparePthreadAttr_(&attr);
-
-        // Prepare scheduling parameters
-        sched_param param;
-        int ret = pthread_attr_getschedparam(&attr, &param);
-        assert(ret >= 0);
-        param.sched_priority = sched_get_priority_max(SCHEDULING_POLICY);
-        ret = pthread_attr_setschedparam(&attr, &param);
-        assert(ret >= 0);
-
-        // Launch pthread
-        int pthread_returncode = pthread_create(tid_ptr, &attr, start_routine, arg_ptr);
-        if (pthread_returncode != 0)
-        {
-            std::ostringstream oss;
-            oss << "failed to launch high-priority thread " << thread_name << " (pthread_returncode: " << pthread_returncode << "; errno: " << errno << ")";
-            Util::dumpErrorMsg(kClassName, oss.str());
-            exit(1);
-        }
-
-        // Bind to a dedicated CPU core
-        uint32_t tmp_cpuidx = bindDedicatedCpuCore_(thread_name, *tid_ptr, specified_cpuidx_ptr);
-        return tmp_cpuidx;
-    }
-
-    void ThreadLauncher::preparePthreadAttr_(pthread_attr_t* attr_ptr)
-    {
-        int ret = 0;
-
-        // Init pthread attr by default
-        ret = pthread_attr_init(attr_ptr);
-        assert(ret >= 0);
-
-        // Get and print default policy
-        /*int policy = 0;
-        ret = pthread_attr_getschedpolicy(attr_ptr, &policy);
-        assert(ret >= 0);
-        if (policy == SCHED_OTHER) // This is the default policy in Ubuntu
-        {
-            Util::dumpDebugMsg(kClassName, "default policy is SCHED_OTHER");
-        }
-        else if (policy == SCHED_RR)
-        {
-            Util::dumpDebugMsg(kClassName, "default policy is SCHED_RR");
-        }
-        else if (policy == SCHED_FIFO)
-        {
-            Util::dumpDebugMsg(kClassName, "default policy is SCHED_FIFO");
-        }
-        else
-        {
-            std::ostringstream oss;
-            oss << "default policy is " << policy;
-            Util::dumpDebugMsg(kClassName, oss.str());
-        }*/
-
-        // Set scheduling policy
-        ret = pthread_attr_setschedpolicy(attr_ptr, SCHEDULING_POLICY);
-        assert(ret >= 0);
 
         return;
     }
@@ -170,37 +205,86 @@ namespace covered
         return;
     }
 
-    uint32_t ThreadLauncher::bindDedicatedCpuCore_(const std::string thread_name, const pthread_t& tid, const uint32_t* specified_cpuidx_ptr)
+    // For high-priority threads
+    
+    uint32_t ThreadLauncher::pthreadCreateHighPriority(const std::string thread_role, const std::string thread_name, pthread_t* tid_ptr, void *(*start_routine)(void *), void* arg_ptr, const uint32_t* specified_cpuidx_ptr)
+    {
+        checkIsValid_();
+
+        // Prepare thread attributes
+        pthread_attr_t attr;
+        preparePthreadAttr_(&attr);
+
+        // Prepare scheduling parameters
+        sched_param param;
+        int ret = pthread_attr_getschedparam(&attr, &param);
+        assert(ret >= 0);
+        param.sched_priority = sched_get_priority_max(SCHEDULING_POLICY);
+        ret = pthread_attr_setschedparam(&attr, &param);
+        assert(ret >= 0);
+
+        // Launch pthread
+        int pthread_returncode = pthread_create(tid_ptr, &attr, start_routine, arg_ptr);
+        if (pthread_returncode != 0)
+        {
+            std::ostringstream oss;
+            oss << "failed to launch high-priority thread " << thread_name << " (pthread_returncode: " << pthread_returncode << "; errno: " << errno << ")";
+            Util::dumpErrorMsg(kClassName, oss.str());
+            exit(1);
+        }
+
+        // Bind to a dedicated CPU core
+        uint32_t tmp_cpuidx = bindDedicatedCpuCore_(thread_role, thread_name, *tid_ptr, specified_cpuidx_ptr);
+        return tmp_cpuidx;
+    }
+
+    uint32_t ThreadLauncher::bindDedicatedCpuCore_(const std::string thread_role, const std::string thread_name, const pthread_t& tid, const uint32_t* specified_cpuidx_ptr)
     {
         // Update high-priority thread cnt
         uint32_t original_high_priority_threadcnt = high_priority_threadcnt_.fetch_add(1, Util::RMW_CONCURRENCY_ORDER);
 
-        // Calculate cpuidx for the high-priority thread
+        // Get reference of cur_high_priority_cpuidx for the given thread role
+        std::map<std::string, std::atomic<uint32_t>>::iterator perrole_cur_high_priority_cpuidx_iter = perrole_cur_high_priority_cpuidx_.find(thread_role);
+        if (perrole_cur_high_priority_cpuidx_iter == perrole_cur_high_priority_cpuidx_.end())
+        {
+            std::ostringstream oss;
+            oss << "current physical machine does NOT play the role of " << thread_role << " -> failed to bind a dedicated CPU core for thread " << thread_name;
+            Util::dumpErrorMsg(kClassName, oss.str());
+            exit(1);
+        }
+        std::atomic<uint32_t>& cur_high_priority_cpuidx_ref = perrole_cur_high_priority_cpuidx_iter->second;
+
+        // Get valid dedicated core range for the given thread role
+        std::map<std::string, std::pair<uint32_t, uint32_t>>::const_iterator current_machine_dedicated_cores_assignment_const_iter = current_machine_dedicated_cores_assignment_.find(thread_role);
+        assert(current_machine_dedicated_cores_assignment_const_iter != current_machine_dedicated_cores_assignment_.end());
+        const uint32_t left_inclusive_dedicated_coreidx = current_machine_dedicated_cores_assignment_const_iter->second.first;
+        const uint32_t right_inclusive_dedicated_coreidx = current_machine_dedicated_cores_assignment_const_iter->second.second;
+
+        // Verify correctness of dedicated core range
+        assert(right_inclusive_dedicated_coreidx >= left_inclusive_dedicated_coreidx);
+        assert(right_inclusive_dedicated_coreidx < std::thread::hardware_concurrency()); // NOT exceed total # of CPU cores in current physical machine
+        assert(right_inclusive_dedicated_coreidx < Config::getCurrentPhysicalMachine().getCpuDedicatedCorecnt()); // NOT exceed # of dedicated CPU cores in current physical machine
+
+        // Calculate a dedicated CPU core ID for the high-priority thread
         uint32_t tmp_cpuidx = 0;
         if (specified_cpuidx_ptr == NULL)
         {
-            tmp_cpuidx = cur_high_priority_cpuidx_.fetch_add(1, Util::RMW_CONCURRENCY_ORDER);
+            tmp_cpuidx = cur_high_priority_cpuidx_ref.fetch_add(1, Util::RMW_CONCURRENCY_ORDER);
         }
         else
         {
             tmp_cpuidx = *specified_cpuidx_ptr;
         }
+        //uint32_t tmp_cpuidx = 0 + tmp_cpuidx % tmp_cpu_dedicated_corecnt;
 
-        // NOTE: # of high-priority threads should NOT exceed cpu_dedicated_corecnt
-        const PhysicalMachine tmp_physical_machine = Config::getCurrentPhysicalMachine();
-        const uint32_t tmp_cpu_dedicated_corecnt = tmp_physical_machine.getCpuDedicatedCorecnt();
-        if (tmp_cpuidx >= tmp_cpu_dedicated_corecnt)
+        // NOTE: cpuidx MUST within the dedicated core range of the given thread role
+        if (tmp_cpuidx < left_inclusive_dedicated_coreidx || tmp_cpuidx > right_inclusive_dedicated_coreidx)
         {
             std::ostringstream oss;
-            oss << "too many high-priority threads, which exceeds cpu_dedicated_corecnt " << tmp_cpu_dedicated_corecnt;
+            oss << "invalid cpuidx " << tmp_cpuidx << " for thread " << thread_name << " -> must within the range of [" << left_inclusive_dedicated_coreidx << ", " << right_inclusive_dedicated_coreidx << "]";
             Util::dumpErrorMsg(kClassName, oss.str());
             exit(1);
         }
-
-        // Calculate a dedicated CPU core ID for the high-priority thread
-        //uint32_t tmp_cpuidx = 0 + tmp_cpuidx % tmp_cpu_dedicated_corecnt;
-        assert(tmp_cpuidx < std::thread::hardware_concurrency()); // NOT exceed total # of CPU cores
-        assert(tmp_cpuidx < tmp_cpu_dedicated_corecnt); // MUST within the range of [0, cpu_dedicated_corecnt - 1]
 
         #ifdef DEBUG_THREAD_LAUNCHER
         Util::dumpVariablesForDebug(kClassName, 6, "bind high-priority thread:", thread_name.c_str(), "thread idx:", std::to_string(original_high_priority_threadcnt).c_str(), "cpu core idx:", std::to_string(tmp_cpuidx).c_str());
@@ -220,5 +304,51 @@ namespace covered
         }
 
         return tmp_cpuidx;
+    }
+
+    // Common utilities
+
+    void ThreadLauncher::checkIsValid_()
+    {
+        assert(is_valid_);
+        return;
+    }
+
+    void ThreadLauncher::preparePthreadAttr_(pthread_attr_t* attr_ptr)
+    {
+        int ret = 0;
+
+        // Init pthread attr by default
+        ret = pthread_attr_init(attr_ptr);
+        assert(ret >= 0);
+
+        // Get and print default policy
+        /*int policy = 0;
+        ret = pthread_attr_getschedpolicy(attr_ptr, &policy);
+        assert(ret >= 0);
+        if (policy == SCHED_OTHER) // This is the default policy in Ubuntu
+        {
+            Util::dumpDebugMsg(kClassName, "default policy is SCHED_OTHER");
+        }
+        else if (policy == SCHED_RR)
+        {
+            Util::dumpDebugMsg(kClassName, "default policy is SCHED_RR");
+        }
+        else if (policy == SCHED_FIFO)
+        {
+            Util::dumpDebugMsg(kClassName, "default policy is SCHED_FIFO");
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "default policy is " << policy;
+            Util::dumpDebugMsg(kClassName, oss.str());
+        }*/
+
+        // Set scheduling policy
+        ret = pthread_attr_setschedpolicy(attr_ptr, SCHEDULING_POLICY);
+        assert(ret >= 0);
+
+        return;
     }
 }
