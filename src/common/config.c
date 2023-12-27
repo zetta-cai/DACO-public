@@ -754,23 +754,6 @@ namespace covered
 
     // For current physical machine
 
-    bool Config::isCurrentMachineAsClient()
-    {
-        checkIsValid_();
-
-        bool is_current_machine_as_client = false;
-        for (uint32_t i = 0; i < client_machine_idxes_.size(); i++)
-        {
-            if (client_machine_idxes_[i] == current_machine_idx_)
-            {
-                is_current_machine_as_client = true;
-                break;
-            }
-        }
-
-        return is_current_machine_as_client;
-    }
-
     PhysicalMachine Config::getCurrentPhysicalMachine()
     {
         checkIsValid_();
@@ -849,6 +832,36 @@ namespace covered
         }
 
         return current_machine_edge_dedicated_corecnt;
+    }
+
+    uint32_t Config::getCurrentMachineClientDedicatedCorecnt(const uint32_t& clientcnt)
+    {
+        checkIsValid_();
+
+        bool is_current_machine_as_client = false;
+        for (uint32_t i = 0; i < client_machine_idxes_.size(); i++)
+        {
+            if (client_machine_idxes_[i] == current_machine_idx_)
+            {
+                is_current_machine_as_client = true;
+                break;
+            }
+        }
+
+        uint32_t current_machine_client_dedicated_corecnt = 0;
+        if (is_current_machine_as_client)
+        {
+            // Get current_machine_clientcnt
+            uint32_t left_inclusive_client_idx = 0;
+            uint32_t right_inclusive_client_idx = 0;
+            getCurrentMachineNodeIdxRange_(clientcnt, client_machine_idxes_, left_inclusive_client_idx, right_inclusive_client_idx);
+            assert(right_inclusive_client_idx >= left_inclusive_client_idx);
+            const uint32_t current_machine_clientcnt = right_inclusive_client_idx - left_inclusive_client_idx + 1;
+
+            current_machine_client_dedicated_corecnt = current_machine_clientcnt * client_dedicated_corecnt_;
+        }
+
+        return current_machine_client_dedicated_corecnt;
     }
 
     // For port verification

@@ -168,7 +168,7 @@ namespace covered
             //     exit(1);
             // }
             std::string tmp_thread_name = "edge-cache-server-worker-" + std::to_string(edge_idx) + "-" + std::to_string(local_cache_server_worker_idx);
-            ThreadLauncher::pthreadCreateHighPriority(tmp_thread_name, &cache_server_worker_threads[local_cache_server_worker_idx], CacheServerWorkerBase::launchCacheServerWorker, (void*)(&cache_server_worker_params_[local_cache_server_worker_idx]));
+            ThreadLauncher::pthreadCreateHighPriority(ThreadLauncher::EDGE_THREAD_ROLE, tmp_thread_name, &cache_server_worker_threads[local_cache_server_worker_idx], CacheServerWorkerBase::launchCacheServerWorker, (void*)(&cache_server_worker_params_[local_cache_server_worker_idx]));
         }
 
         // Launch cache server victim fetch processor
@@ -183,7 +183,7 @@ namespace covered
         std::string tmp_thread_name = "edge-cache-server-victim-fetch-processor-" + std::to_string(edge_idx);
         if (IS_HIGH_PRIORITY_FOR_VICTIM_FETCH)
         {
-            ThreadLauncher::pthreadCreateHighPriority(tmp_thread_name, &cache_server_victim_fetch_processor_thread, CacheServerVictimFetchProcessor::launchCacheServerVictimFetchProcessor, (void*)(cache_server_victim_fetch_processor_param_ptr_));
+            ThreadLauncher::pthreadCreateHighPriority(ThreadLauncher::EDGE_THREAD_ROLE, tmp_thread_name, &cache_server_victim_fetch_processor_thread, CacheServerVictimFetchProcessor::launchCacheServerVictimFetchProcessor, (void*)(cache_server_victim_fetch_processor_param_ptr_));
         }
         else
         {
@@ -200,7 +200,7 @@ namespace covered
         //     exit(1);
         // }
         tmp_thread_name = "edge-cache-server-redirection-processor-" + std::to_string(edge_idx);
-        ThreadLauncher::pthreadCreateHighPriority(tmp_thread_name, &cache_server_redirection_processor_thread, CacheServerRedirectionProcessor::launchCacheServerRedirectionProcessor, (void*)(cache_server_redirection_processor_param_ptr_));
+        ThreadLauncher::pthreadCreateHighPriority(ThreadLauncher::EDGE_THREAD_ROLE, tmp_thread_name, &cache_server_redirection_processor_thread, CacheServerRedirectionProcessor::launchCacheServerRedirectionProcessor, (void*)(cache_server_redirection_processor_param_ptr_));
 
         // Launch cache server placement processor
         //pthread_returncode = pthread_create(&cache_server_placement_processor_thread, NULL, CacheServerPlacementProcessor::launchCacheServerPlacementProcessor, (void*)(cache_server_placement_processor_param_ptr_));
@@ -212,7 +212,7 @@ namespace covered
         //     exit(1);
         // }
         tmp_thread_name = "edge-cache-server-placement-processor-" + std::to_string(edge_idx);
-        ThreadLauncher::pthreadCreateHighPriority(tmp_thread_name, &cache_server_placement_processor_thread, CacheServerPlacementProcessor::launchCacheServerPlacementProcessor, (void*)(cache_server_placement_processor_param_ptr_));
+        ThreadLauncher::pthreadCreateHighPriority(ThreadLauncher::EDGE_THREAD_ROLE, tmp_thread_name, &cache_server_placement_processor_thread, CacheServerPlacementProcessor::launchCacheServerPlacementProcessor, (void*)(cache_server_placement_processor_param_ptr_));
 
         // Launch cache server invalidation processor
         //pthread_returncode = pthread_create(&cache_server_invalidation_processor_thread, NULL, CacheServerInvalidationProcessor::launchCacheServerInvalidationProcessor, (void*)(cache_server_invalidation_processor_param_ptr_));
@@ -238,7 +238,7 @@ namespace covered
         tmp_thread_name = "edge-cache-server-metadata-update-processor-" + std::to_string(edge_idx);
         if (IS_HIGH_PRIORITY_FOR_METADATA_UPDATE)
         {
-            ThreadLauncher::pthreadCreateHighPriority(tmp_thread_name, &cache_server_metadata_update_processor_thread, CacheServerMetadataUpdateProcessor::launchCacheServerMetadataUpdateProcessor, (void*)(cache_server_metadata_update_processor_param_ptr_));
+            ThreadLauncher::pthreadCreateHighPriority(ThreadLauncher::EDGE_THREAD_ROLE, tmp_thread_name, &cache_server_metadata_update_processor_thread, CacheServerMetadataUpdateProcessor::launchCacheServerMetadataUpdateProcessor, (void*)(cache_server_metadata_update_processor_param_ptr_));
         }
         else
         {

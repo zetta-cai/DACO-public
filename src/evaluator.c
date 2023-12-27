@@ -23,7 +23,7 @@ int main(int argc, char **argv) {
     covered::ThreadLauncher::bindMainThreadToSharedCpuCore(main_class_name);
 
     // Validate thread launcher before launching threads
-    covered::ThreadLauncher::validate(evaluator_cli.getClientcnt(), evaluator_cli.getEdgecnt());
+    covered::ThreadLauncher::validate(main_class_name, evaluator_cli.getClientcnt(), evaluator_cli.getEdgecnt());
 
     // (2) Launch evaluator to control benchmark workflow
 
@@ -33,7 +33,7 @@ int main(int argc, char **argv) {
     covered::Util::dumpNormalMsg(main_class_name, "launch evaluator");
 
     std::string tmp_thread_name = "evaluator-wrapper";
-    covered::ThreadLauncher::pthreadCreateHighPriority(tmp_thread_name, &evaluator_thread, covered::EvaluatorWrapper::launchEvaluator, (void*)(&evaluator_param));
+    covered::ThreadLauncher::pthreadCreateHighPriority(covered::ThreadLauncher::EVALUATOR_THREAD_ROLE, tmp_thread_name, &evaluator_thread, covered::EvaluatorWrapper::launchEvaluator, (void*)(&evaluator_param));
     // if (pthread_returncode != 0)
     // {
     //     std::ostringstream oss;

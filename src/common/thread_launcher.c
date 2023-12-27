@@ -12,6 +12,8 @@ namespace covered
     const std::string ThreadLauncher::EDGE_THREAD_ROLE("edge_thread");
     const std::string ThreadLauncher::CLOUD_THREAD_ROLE("cloud_thread");
     const std::string ThreadLauncher::EVALUATOR_THREAD_ROLE("evaluator_thread");
+    const std::string ThreadLauncher::DATASET_LOADER_THREAD_ROLE("dataset_loader_thread");
+    const std::string ThreadLauncher::TOTAL_STATISTICS_LOADER_THREAD_ROLE("total_statistics_loader_thread");
     
     // TODO: pass nice value into each pthread for SCHED_OTHER
     //const int ThreadLauncher::SCHEDULING_POLICY = SCHED_OTHER; // Default policy used by Linux (nice value: min 19 to max -20), which relies on kernel.sched_latency_ns and kernel.sched_min_granularity_ns
@@ -27,77 +29,33 @@ namespace covered
     cpu_set_t ThreadLauncher::cpu_shared_coreset_;
 
     // For high-priority threads
-    std::map<std::string, std::pair<uint32_t, uint32_t>> ThreadLauncher::current_machine_dedicated_cores_assignment_;
-    std::map<std::string, std::atomic<uint32_t>> ThreadLauncher::perrole_cur_high_priority_cpuidx_;
+    std::unordered_map<std::string, std::pair<uint32_t, uint32_t>> ThreadLauncher::current_machine_dedicated_cores_assignment_;
+    std::unordered_map<std::string, std::atomic<uint32_t>> ThreadLauncher::perrole_cur_high_priority_cpuidx_;
     std::atomic<uint32_t> ThreadLauncher::high_priority_threadcnt_(0);
 
-    void ThreadLauncher::validate(const uint32_t& clientcnt, const uint32_t& edgecnt)
+    // For validation
+
+    void ThreadLauncher::validate(const std::string main_class_name, const uint32_t clientcnt, const uint32_t edgecnt)
     {
         if (!is_valid_)
         {
-            // Follow the order of evaluator/cloud/edges/clients to assign dedicated CPU cores
+            // Get per-thread-role required dedicated corecnt
+            std::unordered_map<std::string, uint32_t> perrole_required_dedicated_corecnt;
+            getPerroleRequiredDedicatedCorecnt(main_class_name, clientcnt, edgecnt, perrole_required_dedicated_corecnt);
+
+            // Follow the insertion order of perrole_required_dedicated_corecnt to assign dedicated CPU cores
             uint32_t tmp_dedicated_coreidx = 0;
-
-            // (1) Assign dedicated CPU cores for evaluator
-            if (Config::isCurrentMachineAsEvaluator())
+            for (std::unordered_map<std::string, uint32_t>::const_iterator perrole_required_dedicated_corecnt_const_iter = perrole_required_dedicated_corecnt.begin(); perrole_required_dedicated_corecnt_const_iter != perrole_required_dedicated_corecnt.end(); perrole_required_dedicated_corecnt_const_iter++)
             {
-                const uint32_t evaluator_left_inclusive_dedicated_coreidx = tmp_dedicated_coreidx;
-                const uint32_t evaluator_right_inclusive_dedicated_coreidx = evaluator_left_inclusive_dedicated_coreidx + Config::getEvaluatorDedicatedCorecnt() - 1;
+                const std::string tmp_thread_role = perrole_required_dedicated_corecnt_const_iter->first;
+                const uint32_t tmp_required_dedicated_corecnt = perrole_required_dedicated_corecnt_const_iter->second;
 
-                current_machine_dedicated_cores_assignment_.insert(std::pair(EVALUATOR_THREAD_ROLE, std::pair(evaluator_left_inclusive_dedicated_coreidx, evaluator_right_inclusive_dedicated_coreidx)));
-                perrole_cur_high_priority_cpuidx_.insert(std::pair(EVALUATOR_THREAD_ROLE, 0));
+                const uint32_t tmp_left_inclusive_dedicated_coreidx = tmp_dedicated_coreidx;
+                const uint32_t tmp_right_inclusive_dedicated_coreidx = tmp_left_inclusive_dedicated_coreidx + tmp_required_dedicated_corecnt - 1;
+                current_machine_dedicated_cores_assignment_.insert(std::pair(tmp_thread_role, std::pair(tmp_left_inclusive_dedicated_coreidx, tmp_right_inclusive_dedicated_coreidx)));
+                perrole_cur_high_priority_cpuidx_.insert(std::pair(tmp_thread_role, 0));
 
-                tmp_dedicated_coreidx += Config::getEvaluatorDedicatedCorecnt();
-            }
-
-            // (2) Assign dedicated CPU cores for cloud
-            if (Config::isCurrentMachineAsCloud())
-            {
-                const uint32_t cloud_left_inclusive_dedicated_coreidx = tmp_dedicated_coreidx;
-                const uint32_t cloud_right_inclusive_dedicated_coreidx = cloud_left_inclusive_dedicated_coreidx + Config::getCloudDedicatedCorecnt() - 1;
-
-                current_machine_dedicated_cores_assignment_.insert(std::pair(CLOUD_THREAD_ROLE, std::pair(cloud_left_inclusive_dedicated_coreidx, cloud_right_inclusive_dedicated_coreidx)));
-                perrole_cur_high_priority_cpuidx_.insert(std::pair(CLOUD_THREAD_ROLE, 0));
-
-                tmp_dedicated_coreidx += Config::getCloudDedicatedCorecnt();
-            }
-
-            // (3) Assign dedicated CPU cores for edges
-            if (Config::isCurrentMachineAsEdge())
-            {
-                // Get current_machine_edgecnt
-                uint32_t left_inclusive_edge_idx = 0;
-                uint32_t right_inclusive_edge_idx = 0;
-                Config::getCurrentMachineEdgeIdxRange(edgecnt, left_inclusive_edge_idx, right_inclusive_edge_idx);
-                assert(right_inclusive_edge_idx >= left_inclusive_edge_idx);
-                const uint32_t current_machine_edgecnt = right_inclusive_edge_idx - left_inclusive_edge_idx + 1;
-
-                const uint32_t edge_left_inclusive_dedicated_coreidx = tmp_dedicated_coreidx;
-                const uint32_t edge_right_inclusive_dedicated_coreidx = edge_left_inclusive_dedicated_coreidx + current_machine_edgecnt * Config::getEdgeDedicatedCorecnt() - 1;
-
-                current_machine_dedicated_cores_assignment_.insert(std::pair(EDGE_THREAD_ROLE, std::pair(edge_left_inclusive_dedicated_coreidx, edge_right_inclusive_dedicated_coreidx)));
-                perrole_cur_high_priority_cpuidx_.insert(std::pair(EDGE_THREAD_ROLE, 0));
-
-                tmp_dedicated_coreidx += current_machine_edgecnt * Config::getEdgeDedicatedCorecnt();
-            }
-
-            // (4) Assign dedicated CPU cores for clients
-            if (Config::isCurrentMachineAsClient())
-            {
-                // Get current_machine_clientcnt
-                uint32_t left_inclusive_client_idx = 0;
-                uint32_t right_inclusive_client_idx = 0;
-                Config::getCurrentMachineClientIdxRange(clientcnt, left_inclusive_client_idx, right_inclusive_client_idx);
-                assert(right_inclusive_client_idx >= left_inclusive_client_idx);
-                const uint32_t current_machine_clientcnt = right_inclusive_client_idx - left_inclusive_client_idx + 1;
-
-                const uint32_t client_left_inclusive_dedicated_coreidx = tmp_dedicated_coreidx;
-                const uint32_t client_right_inclusive_dedicated_coreidx = client_left_inclusive_dedicated_coreidx + current_machine_clientcnt * Config::getClientDedicatedCorecnt() - 1;
-
-                current_machine_dedicated_cores_assignment_.insert(std::pair(CLIENT_THREAD_ROLE, std::pair(client_left_inclusive_dedicated_coreidx, client_right_inclusive_dedicated_coreidx)));
-                perrole_cur_high_priority_cpuidx_.insert(std::pair(CLIENT_THREAD_ROLE, 0));
-
-                tmp_dedicated_coreidx += current_machine_clientcnt * Config::getClientDedicatedCorecnt();
+                tmp_dedicated_coreidx += tmp_required_dedicated_corecnt;
             }
 
             // NOTE: required dedicated corecnt MUST <= total dedicated corecnt in current machine
@@ -112,6 +70,59 @@ namespace covered
             }
 
             is_valid_ = true;
+        }
+
+        return;
+    }
+
+    void ThreadLauncher::getPerroleRequiredDedicatedCorecnt(const std::string main_class_name, const uint32_t clientcnt, const uint32_t edgecnt, std::unordered_map<std::string, uint32_t>& perrole_required_dedicated_corecnt)
+    {
+        if (main_class_name == Util::SIMULATOR_MAIN_NAME || main_class_name == Util::CLIENT_MAIN_NAME || main_class_name == Util::EDGE_MAIN_NAME || main_class_name == Util::CLOUD_MAIN_NAME || main_class_name == Util::EVALUATOR_MAIN_NAME)
+        {
+            // Different thread roles of clients/edges/cloud/evaluator will share dedicated CPU cores of current physical machine
+            assert(clientcnt > 0);
+            assert(edgecnt > 0);
+
+            // NOTE: follow the order of evaluator -> cloud -> edges -> clients for insertion
+            const uint32_t evaluator_dedicated_corecnt = Config::getCurrentMachineEvaluatorDedicatedCorecnt();
+            if (evaluator_dedicated_corecnt > 0) // Current machine as evaluator
+            {
+                perrole_required_dedicated_corecnt.insert(std::pair(EVALUATOR_THREAD_ROLE, evaluator_dedicated_corecnt));
+            }
+            const uint32_t cloud_dedicated_corecnt = Config::getCurrentMachineCloudDedicatedCorecnt();
+            if (cloud_dedicated_corecnt > 0) // Current machine as cloud
+            {
+                perrole_required_dedicated_corecnt.insert(std::pair(CLOUD_THREAD_ROLE, cloud_dedicated_corecnt));
+            }
+            const uint32_t edge_dedicated_corecnt = Config::getCurrentMachineEdgeDedicatedCorecnt(edgecnt);
+            if (edge_dedicated_corecnt > 0) // Current machine as edge
+            {
+                perrole_required_dedicated_corecnt.insert(std::pair(EDGE_THREAD_ROLE, edge_dedicated_corecnt));
+            }
+            const uint32_t client_dedicated_corecnt = Config::getCurrentMachineClientDedicatedCorecnt(clientcnt);
+            if (client_dedicated_corecnt > 0) // Current machine as client
+            {
+                perrole_required_dedicated_corecnt.insert(std::pair(CLIENT_THREAD_ROLE, client_dedicated_corecnt));
+            }
+        }
+        else if (main_class_name == Util::DATASET_LOADER_MAIN_NAME)
+        {
+            // The single thread role of dataset loader can occupy all dedicated CPU cores of current physical machine due to NO contention with other thread roles
+
+            perrole_required_dedicated_corecnt.insert(std::pair(DATASET_LOADER_THREAD_ROLE, Config::getCurrentPhysicalMachine().getCpuDedicatedCorecnt()));
+        }
+        else if (main_class_name == Util::TOTAL_STATISTICS_LOADER_MAIN_NAME)
+        {
+            // The single thread role of total statistics loader can occupy all dedicated CPU cores of current physical machine due to NO contention with other thread roles
+
+            perrole_required_dedicated_corecnt.insert(std::pair(TOTAL_STATISTICS_LOADER_THREAD_ROLE, Config::getCurrentPhysicalMachine().getCpuDedicatedCorecnt()));
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "invalid main_class_name " << main_class_name;
+            Util::dumpErrorMsg(kClassName, oss.str());
+            exit(1);
         }
 
         return;
@@ -244,7 +255,7 @@ namespace covered
         uint32_t original_high_priority_threadcnt = high_priority_threadcnt_.fetch_add(1, Util::RMW_CONCURRENCY_ORDER);
 
         // Get reference of cur_high_priority_cpuidx for the given thread role
-        std::map<std::string, std::atomic<uint32_t>>::iterator perrole_cur_high_priority_cpuidx_iter = perrole_cur_high_priority_cpuidx_.find(thread_role);
+        std::unordered_map<std::string, std::atomic<uint32_t>>::iterator perrole_cur_high_priority_cpuidx_iter = perrole_cur_high_priority_cpuidx_.find(thread_role);
         if (perrole_cur_high_priority_cpuidx_iter == perrole_cur_high_priority_cpuidx_.end())
         {
             std::ostringstream oss;
@@ -255,7 +266,7 @@ namespace covered
         std::atomic<uint32_t>& cur_high_priority_cpuidx_ref = perrole_cur_high_priority_cpuidx_iter->second;
 
         // Get valid dedicated core range for the given thread role
-        std::map<std::string, std::pair<uint32_t, uint32_t>>::const_iterator current_machine_dedicated_cores_assignment_const_iter = current_machine_dedicated_cores_assignment_.find(thread_role);
+        std::unordered_map<std::string, std::pair<uint32_t, uint32_t>>::const_iterator current_machine_dedicated_cores_assignment_const_iter = current_machine_dedicated_cores_assignment_.find(thread_role);
         assert(current_machine_dedicated_cores_assignment_const_iter != current_machine_dedicated_cores_assignment_.end());
         const uint32_t left_inclusive_dedicated_coreidx = current_machine_dedicated_cores_assignment_const_iter->second.first;
         const uint32_t right_inclusive_dedicated_coreidx = current_machine_dedicated_cores_assignment_const_iter->second.second;

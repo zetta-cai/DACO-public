@@ -153,7 +153,7 @@ namespace covered
         static uint32_t getCurrentMachineEvaluatorDedicatedCorecnt();
         static uint32_t getCurrentMachineCloudDedicatedCorecnt();
         static uint32_t getCurrentMachineEdgeDedicatedCorecnt(const uint32_t& edgecnt);
-        // TODO: END HERE
+        static uint32_t getCurrentMachineClientDedicatedCorecnt(const uint32_t& clientcnt);
 
         // For port verification
         static void portVerification(const uint16_t& startport, const uint16_t& finalport);

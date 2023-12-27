@@ -127,7 +127,7 @@ namespace covered
         //     exit(1);
         // }
         std::string tmp_thread_name = "cloud-toedge-propagation-simulator-" + std::to_string(node_idx_);
-        ThreadLauncher::pthreadCreateHighPriority(tmp_thread_name, &cloud_toedge_propagation_simulator_thread_, PropagationSimulator::launchPropagationSimulator, (void*)cloud_toedge_propagation_simulator_param_ptr_);
+        ThreadLauncher::pthreadCreateHighPriority(ThreadLauncher::CLOUD_THREAD_ROLE, tmp_thread_name, &cloud_toedge_propagation_simulator_thread_, PropagationSimulator::launchPropagationSimulator, (void*)cloud_toedge_propagation_simulator_param_ptr_);
 
         // Launch a data server thread in the local cloud
         //pthread_returncode = pthread_create(&data_server_thread_, NULL, DataServer::launchDataServer, (void*)(&cloud_worker_param));
@@ -139,7 +139,7 @@ namespace covered
         //     exit(1);
         // }
         tmp_thread_name = "cloud-data-server-" + std::to_string(node_idx_);
-        ThreadLauncher::pthreadCreateHighPriority(tmp_thread_name, &data_server_thread_, DataServer::launchDataServer, (void*)(this));
+        ThreadLauncher::pthreadCreateHighPriority(ThreadLauncher::CLOUD_THREAD_ROLE, tmp_thread_name, &data_server_thread_, DataServer::launchDataServer, (void*)(this));
 
         return;
     }

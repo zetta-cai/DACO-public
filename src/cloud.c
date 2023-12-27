@@ -22,7 +22,7 @@ int main(int argc, char **argv) {
     covered::ThreadLauncher::bindMainThreadToSharedCpuCore(main_class_name);
 
     // Validate thread launcher before launching threads
-    covered::ThreadLauncher::validate(cloud_cli.getClientcnt(), cloud_cli.getEdgecnt());
+    covered::ThreadLauncher::validate(main_class_name, cloud_cli.getClientcnt(), cloud_cli.getEdgecnt());
 
     // (2) Simulate a single cloud node for backend storage
 

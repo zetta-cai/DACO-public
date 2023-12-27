@@ -22,7 +22,7 @@ int main(int argc, char **argv) {
     covered::ThreadLauncher::bindMainThreadToSharedCpuCore(main_class_name);
 
     // Validate thread launcher before launching threads
-    covered::ThreadLauncher::validate(edge_cli.getClientcnt(), edge_cli.getEdgecnt());
+    covered::ThreadLauncher::validate(main_class_name, edge_cli.getClientcnt(), edge_cli.getEdgecnt());
 
     // (2) Simulate current_machine_edgecnt edges by multi-threading
 

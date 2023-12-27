@@ -10,7 +10,7 @@
 #define DEBUG_THREAD_LAUNCHER
 
 #include <atomic>
-#include <map>
+#include <unordered_map>
 #include <sched.h> // sched_param, cpu_set_t, CPU_ZERO, CPU_SET
 #include <string>
 
@@ -25,10 +25,14 @@ namespace covered
         static const std::string EDGE_THREAD_ROLE;
         static const std::string CLOUD_THREAD_ROLE;
         static const std::string EVALUATOR_THREAD_ROLE;
+        static const std::string DATASET_LOADER_THREAD_ROLE;
+        static const std::string TOTAL_STATISTICS_LOADER_THREAD_ROLE;
 
         static const int SCHEDULING_POLICY; // Task scheduling policy
 
-        static void validate(const uint32_t& clientcnt, const uint32_t& edgecnt); // Initialize current_machine_dedicated_cores_assignment_, perrole_cur_high_priority_cpuidx_, and is_valid_
+        // For validation
+
+        static void validate(const std::string main_class_name, const uint32_t clientcnt = 0, const uint32_t edgecnt = 0); // Initialize current_machine_dedicated_cores_assignment_, perrole_cur_high_priority_cpuidx_, and is_valid_
 
         // For low-priority threads
 
@@ -41,6 +45,10 @@ namespace covered
         static uint32_t pthreadCreateHighPriority(const std::string thread_role, const std::string thread_name, pthread_t* tid_ptr, void *(*start_routine)(void *), void* arg_ptr, const uint32_t* specified_cpuidx_ptr = NULL); // Return the CPU core index that the high-priority thread is bound to
     private:
         static const std::string kClassName;
+
+        // For validation
+
+        static void getPerroleRequiredDedicatedCorecnt(const std::string main_class_name, const uint32_t clientcnt, const uint32_t edgecnt, std::unordered_map<std::string, uint32_t>& perrole_required_dedicated_corecnt); // Get the required number of dedicated CPU cores for each thread role in the current physical machine
 
         // Common utilities
 
@@ -64,8 +72,8 @@ namespace covered
         // For high-priority threads
         
         // NOTE: NOT maintain such assignment of dedicated cores in Config to avoid the dependency of Config module on clientcnt/edgecnt in CLI module -> Config module should ONLY track static configuration information instead of dynamic one
-        static std::map<std::string, std::pair<uint32_t, uint32_t>> current_machine_dedicated_cores_assignment_; // Assignment of dedicated cores for clients/edges/cloud/evaluator in the current physical machine
-        static std::map<std::string, std::atomic<uint32_t>> perrole_cur_high_priority_cpuidx_; // To calculate cpu idx of a high-priority thread for each thread role under strict CPU binding
+        static std::unordered_map<std::string, std::pair<uint32_t, uint32_t>> current_machine_dedicated_cores_assignment_; // Assignment of dedicated cores for clients/edges/cloud/evaluator in the current physical machine
+        static std::unordered_map<std::string, std::atomic<uint32_t>> perrole_cur_high_priority_cpuidx_; // To calculate cpu idx of a high-priority thread for each thread role under strict CPU binding
         static std::atomic<uint32_t> high_priority_threadcnt_;
     };
 }

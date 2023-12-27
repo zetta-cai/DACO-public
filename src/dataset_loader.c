@@ -87,6 +87,9 @@ int main(int argc, char **argv) {
     const std::string main_class_name = covered::Config::getMainClassName();
     covered::ThreadLauncher::bindMainThreadToSharedCpuCore(main_class_name);
 
+    // Validate thread launcher before launching threads
+    covered::ThreadLauncher::validate(main_class_name);
+
     const uint32_t cloud_idx = dataset_loader_cli.getCloudIdx();
     const uint32_t dataset_loadercnt = dataset_loader_cli.getDatasetLoadercnt();
     const uint32_t keycnt = dataset_loader_cli.getKeycnt();
@@ -131,7 +134,7 @@ int main(int argc, char **argv) {
     for (uint32_t dataset_loader_idx = 0; dataset_loader_idx < dataset_loadercnt; dataset_loader_idx++)
     {
         std::string tmp_thread_name = "dataset-loader-" + std::to_string(dataset_loader_idx);
-        covered::ThreadLauncher::pthreadCreateHighPriority(tmp_thread_name, &dataset_loader_threads[dataset_loader_idx], launchDatasetLoader, (void*)(&dataset_loader_params[dataset_loader_idx]));
+        covered::ThreadLauncher::pthreadCreateHighPriority(covered::ThreadLauncher::DATASET_LOADER_THREAD_ROLE, tmp_thread_name, &dataset_loader_threads[dataset_loader_idx], launchDatasetLoader, (void*)(&dataset_loader_params[dataset_loader_idx]));
         // if (pthread_returncode != 0)
         // {
         //     oss.clear();

@@ -768,7 +768,7 @@ namespace covered
         //     exit(1);
         // }
         std::string tmp_thread_name = "edge-toclient-propagation-simulator-" + std::to_string(node_idx_);
-        ThreadLauncher::pthreadCreateHighPriority(tmp_thread_name, &edge_toclient_propagation_simulator_thread_, PropagationSimulator::launchPropagationSimulator, (void*)edge_toclient_propagation_simulator_param_ptr_);
+        ThreadLauncher::pthreadCreateHighPriority(ThreadLauncher::EDGE_THREAD_ROLE, tmp_thread_name, &edge_toclient_propagation_simulator_thread_, PropagationSimulator::launchPropagationSimulator, (void*)edge_toclient_propagation_simulator_param_ptr_);
 
         // Launch edge-to-edge propagation simulator
         //pthread_returncode = pthread_create(&edge_toedge_propagation_simulator_thread_, NULL, PropagationSimulator::launchPropagationSimulator, (void*)edge_toedge_propagation_simulator_param_ptr_);
@@ -780,7 +780,7 @@ namespace covered
         //     exit(1);
         // }
         tmp_thread_name = "edge-toedge-propagation-simulator-" + std::to_string(node_idx_);
-        ThreadLauncher::pthreadCreateHighPriority(tmp_thread_name, &edge_toedge_propagation_simulator_thread_, PropagationSimulator::launchPropagationSimulator, (void*)edge_toedge_propagation_simulator_param_ptr_);
+        ThreadLauncher::pthreadCreateHighPriority(ThreadLauncher::EDGE_THREAD_ROLE, tmp_thread_name, &edge_toedge_propagation_simulator_thread_, PropagationSimulator::launchPropagationSimulator, (void*)edge_toedge_propagation_simulator_param_ptr_);
 
         // Launch edge-to-cloud propagation simulator
         //pthread_returncode = pthread_create(&edge_tocloud_propagation_simulator_thread_, NULL, PropagationSimulator::launchPropagationSimulator, (void*)edge_tocloud_propagation_simulator_param_ptr_);
@@ -792,7 +792,7 @@ namespace covered
         //     exit(1);
         // }
         tmp_thread_name = "edge-tocloud-propagation-simulator-" + std::to_string(node_idx_);
-        ThreadLauncher::pthreadCreateHighPriority(tmp_thread_name, &edge_tocloud_propagation_simulator_thread_, PropagationSimulator::launchPropagationSimulator, (void*)edge_tocloud_propagation_simulator_param_ptr_);
+        ThreadLauncher::pthreadCreateHighPriority(ThreadLauncher::EDGE_THREAD_ROLE, tmp_thread_name, &edge_tocloud_propagation_simulator_thread_, PropagationSimulator::launchPropagationSimulator, (void*)edge_tocloud_propagation_simulator_param_ptr_);
 
         // Launch beacon server
         //pthread_returncode = pthread_create(&beacon_server_thread_, NULL, BeaconServerBase::launchBeaconServer, (void*)(this));
@@ -804,7 +804,7 @@ namespace covered
         //     exit(1);
         // }
         tmp_thread_name = "edge-beacon-server-" + std::to_string(node_idx_);
-        ThreadLauncher::pthreadCreateHighPriority(tmp_thread_name, &beacon_server_thread_, BeaconServerBase::launchBeaconServer, (void*)(this));
+        ThreadLauncher::pthreadCreateHighPriority(ThreadLauncher::EDGE_THREAD_ROLE, tmp_thread_name, &beacon_server_thread_, BeaconServerBase::launchBeaconServer, (void*)(this));
 
         // Launch cache server
         //pthread_returncode = pthread_create(&cache_server_thread_, NULL, CacheServer::launchCacheServer, (void*)(this));
@@ -816,7 +816,7 @@ namespace covered
         //     exit(1);
         // }
         tmp_thread_name = "edge-cache-server-" + std::to_string(node_idx_);
-        ThreadLauncher::pthreadCreateHighPriority(tmp_thread_name, &cache_server_thread_, CacheServer::launchCacheServer, (void*)(this));
+        ThreadLauncher::pthreadCreateHighPriority(ThreadLauncher::EDGE_THREAD_ROLE, tmp_thread_name, &cache_server_thread_, CacheServer::launchCacheServer, (void*)(this));
 
         return;
     }

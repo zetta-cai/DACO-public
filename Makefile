@@ -45,22 +45,22 @@ CLEANS += src/simulator.o
 
 client: src/client.o $(LINK_OBJECTS)
 	$(LINK) $^ $(LDLIBS) -o $@
-DEPS += src/client.o
+DEPS += src/client.d
 CLEANS += src/client.o
 
 edge: src/edge.o $(LINK_OBJECTS)
 	$(LINK) $^ $(LDLIBS) -o $@
-DEPS += src/edge.o
+DEPS += src/edge.d
 CLEANS += src/edge.o
 
 cloud: src/cloud.o $(LINK_OBJECTS)
 	$(LINK) $^ $(LDLIBS) -o $@
-DEPS += src/cloud.o
+DEPS += src/cloud.d
 CLEANS += src/cloud.o
 
 evaluator: src/evaluator.o $(LINK_OBJECTS)
 	$(LINK) $^ $(LDLIBS) -o $@
-DEPS += src/evaluator.o
+DEPS += src/evaluator.d
 CLEANS += src/evaluator.o
 
 total_statistics_loader: src/total_statistics_loader.o $(LINK_OBJECTS)
@@ -76,7 +76,7 @@ CLEANS += src/total_statistics_loader.o
 ##############################################################################
 
 # statistics_aggregator
-TARGETS := dataset_loader simulator client total_statistics_loader
+TARGETS := dataset_loader simulator client edge cloud evaluator total_statistics_loader
 
 all: $(TARGETS)
 #	rm -rf $(CLEANS) $(DEPS)

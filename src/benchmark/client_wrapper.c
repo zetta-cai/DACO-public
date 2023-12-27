@@ -191,7 +191,7 @@ namespace covered
         //     exit(1);
         // }
         std::string tmp_thread_name = "client-toedge-propagation-simluator-" + std::to_string(node_idx_);
-        ThreadLauncher::pthreadCreateHighPriority(tmp_thread_name, &client_toedge_propagation_simulator_thread_, PropagationSimulator::launchPropagationSimulator, (void*)client_toedge_propagation_simulator_param_ptr_);
+        ThreadLauncher::pthreadCreateHighPriority(ThreadLauncher::CLIENT_THREAD_ROLE, tmp_thread_name, &client_toedge_propagation_simulator_thread_, PropagationSimulator::launchPropagationSimulator, (void*)client_toedge_propagation_simulator_param_ptr_);
 
         // Launch perclient_workercnt worker threads in the local client
         for (uint32_t local_client_worker_idx = 0; local_client_worker_idx < perclient_workercnt_; local_client_worker_idx++)
@@ -205,7 +205,7 @@ namespace covered
             //     exit(1);
             // }
             tmp_thread_name = "client-worker-" + std::to_string(node_idx_) + "-" + std::to_string(local_client_worker_idx);
-            ThreadLauncher::pthreadCreateHighPriority(tmp_thread_name, &client_worker_threads_[local_client_worker_idx], ClientWorkerWrapper::launchClientWorker, (void*)(&(client_worker_params_[local_client_worker_idx])));
+            ThreadLauncher::pthreadCreateHighPriority(ThreadLauncher::CLIENT_THREAD_ROLE, tmp_thread_name, &client_worker_threads_[local_client_worker_idx], ClientWorkerWrapper::launchClientWorker, (void*)(&(client_worker_params_[local_client_worker_idx])));
         }
 
         return;

@@ -16,13 +16,17 @@ DEPENDENCY.c ?= $(CC) $(CFLAGS) $(CPPFLAGS) -MM
 # Note: \1 refers to the string matched by \($*\), i.e., the target name ($*) in Makefile
 # Note: $$ refers to the dollar sign itself in Makefile
 %.d: %.c
-%.dpp: %.cpp
-%.d %.dpp:
 	$(DEPENDENCY.c) $*.c > $*.Td || rm $*.Td
 	@sed 's,\($(notdir $*)\)\.o[ :]*,$*.o $@ : ,g' $*.Td > $@
 #	@sed -e 's/.*://' -e 's/\\$$//' < $*.Td | fmt -1 | \
 #	  sed -e 's/^ *//' -e 's/$$/:/' >> $*.d
 	@rm -f $*.Td
+%.dpp: %.cpp
+	$(DEPENDENCY.c) $*.cpp > $*.Tdpp || rm $*.Tdpp
+	@sed 's,\($(notdir $*)\)\.o[ :]*,$*.opp $@ : ,g' $*.Tdpp > $@
+#	@sed -e 's/.*://' -e 's/\\$$//' < $*.Tdpp | fmt -1 | \
+#	  sed -e 's/^ *//' -e 's/$$/:/' >> $*.dpp
+	@rm -f $*.Tdpp
 .PRECIOUS: %.d %.dpp
 
 ##############################################################################
@@ -32,9 +36,9 @@ INCDIR += -I/usr/include
 CPPFLAGS += $(INCDIR)
 CPPFLAGS += $(EXTRA_CPPFLAGS)
 
-#CC := g++
+CC := g++
 # For compile debugging (excluding -v)
-CC := g++ -fsanitize=address
+#CC := g++ -fsanitize=address
 
 #CFLAGS += -std=c++17 -O3 -g -Wall -Werror -march=native -fno-omit-frame-pointer
 #CFLAGS += -std=c++17 -O3 -g -Wall -march=native -fno-omit-frame-pointer
