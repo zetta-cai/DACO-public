@@ -60,7 +60,7 @@ int main(int argc, char **argv) {
         covered::Util::dumpErrorMsg(main_class_name, oss.str());
         exit(1);
     }
-    covered::Util::dumpNormalMsg(main_class_name, "the evaluator is done");
+    covered::Util::dumpNormalMsg(main_class_name, "Evaluator done"); // NOTE: used by exp scripts to verify whether evaluation has been done
 
     return 0;
 }

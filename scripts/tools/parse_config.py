@@ -6,8 +6,8 @@ import os
 from ..common import *
 
 if len(sys.argv) != 2:
-    die(scriptname, "Usage: python3 -m scripts.tools.parse_config keystr")
+    LogUtil.die(Common.scriptname, "Usage: python3 -m scripts.tools.parse_config keystr")
 
 keystr = sys.argv[1]
-value = getValueForKeystr(scriptname, keystr)
+value = JsonUtil.getValueForKeystr(Common.scriptname, keystr)
 print("JSON value: {}".format(value)) # NOTE: used by Makefile to dig value out

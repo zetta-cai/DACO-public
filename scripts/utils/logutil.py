@@ -1,50 +1,66 @@
 #!/usr/bin/env python3
-# logutil: logging utilities to dump normal/prompt/warn/error/emphasize messages
+# LogUtil: logging utilities to dump normal/prompt/warn/error/emphasize messages
 
 import sys
 
-with_colorama = False
+class LogUtil:
+    with_colorama_ = False
+    Fore_ = None
+    Back_ = None
+    Style_ = None
 
-# Log-related variables and functions
+    # Log-related variables and functions
 
-def checkColorama():
-    global with_colorama, Fore, Back, Style
-    if with_colorama == False:
-        try:
-            from colorama import Fore, Back, Style
-            with_colorama = True
-        except ImportError:
-            with_colorama = False
+    @classmethod
+    def checkColorama(cls):
+        if cls.with_colorama_ == False:
+            try:
+                from colorama import Fore, Back, Style
+                cls.Fore_ = Fore
+                cls.Back_ = Back
+                cls.Style_ = Style
+                cls.with_colorama_ = True
+            except ImportError:
+                cls.with_colorama_ = False
 
-def dump(scriptname, dumpmsg):
-    checkColorama()
-    print("{}: {}".format(scriptname, dumpmsg))
+    @classmethod
+    def dump(cls, scriptname, dumpmsg):
+        cls.checkColorama()
+        print("{}: {}".format(scriptname, dumpmsg))
 
-def prompt(scriptname, promptmsg):
-    checkColorama()
-    if with_colorama:
-        print(Fore.GREEN + "{}: {}".format(scriptname, promptmsg) + Style.RESET_ALL)
-    else:
-        print("{}: {}".format(scriptname, promptmsg))
+    @classmethod
+    def prompt(cls, scriptname, promptmsg):
+        cls.checkColorama()
+        if cls.with_colorama_:
+            print(cls.Fore_.GREEN + "{}: {}".format(scriptname, promptmsg) + cls.Style_.RESET_ALL)
+        else:
+            print("{}: {}".format(scriptname, promptmsg))
 
-def warn(scriptname, warnmsg):
-    checkColorama()
-    if with_colorama:
-        print(Fore.YELLOW + "[WARN] {}: {}".format(scriptname, warnmsg) + Style.RESET_ALL)
-    else:
-        print("[WARN] {}: {}".format(scriptname, warnmsg))
+    @classmethod
+    def warn(cls, scriptname, warnmsg):
+        cls.checkColorama()
+        if cls.with_colorama_:
+            print(cls.Fore_.YELLOW + "[WARN] {}: {}".format(scriptname, warnmsg) + cls.Style_.RESET_ALL)
+        else:
+            print("[WARN] {}: {}".format(scriptname, warnmsg))
 
-def die(scriptname, errmsg):
-    checkColorama()
-    if with_colorama:
-        print(Fore.RED + "[ERROR] {}: {}".format(scriptname, errmsg) + Style.RESET_ALL, file=sys.stderr)
-    else:
-        print("[ERROR] {}: {}".format(scriptname, errmsg), file=sys.stderr)
-    sys.exit(1)
+    @classmethod
+    def die(cls, scriptname, errmsg):
+        cls.dieNoExit(scriptname, errmsg)
+        sys.exit(1)
 
-def emphasize(scriptname, emphasize_msg):
-    checkColorama()
-    if with_colorama:
-        print(Fore.MAGENTA + "{}: {}".format(scriptname, emphasize_msg) + Style.RESET_ALL)
-    else:
-        print("{}: {}".format(scriptname, emphasize_msg))
+    @classmethod
+    def dieNoExit(cls, scriptname, errmsg):
+        cls.checkColorama()
+        if cls.with_colorama_:
+            print(cls.Fore_.RED + "[ERROR] {}: {}".format(scriptname, errmsg) + cls.Style_.RESET_ALL, file=sys.stderr)
+        else:
+            print("[ERROR] {}: {}".format(scriptname, errmsg), file=sys.stderr)
+
+    @classmethod
+    def emphasize(cls, scriptname, emphasize_msg):
+        cls.checkColorama()
+        if cls.with_colorama_:
+            print(cls.Fore_.MAGENTA + "{}: {}".format(scriptname, emphasize_msg) + cls.Style_.RESET_ALL)
+        else:
+            print("{}: {}".format(scriptname, emphasize_msg))

@@ -1,75 +1,81 @@
 #!/usr/bin/env python3
-# pathutil: path-related utilities to operate files/folders
+# PathUtil: path-related utilities to operate files/folders
 
 import os
 
 from .logutil import *
 from .subprocessutil import *
 
-# Path-related variables and functions
+class PathUtil:
 
-system_bin_pathstr = os.getenv("PATH") # e.g., /usr/local/bin:/usr/local
+    # Path-related variables and functions
 
-def list_immediate_files_and_directories(directory):
-    # Get a list of files and directories in the given directory
-    items = os.listdir(directory)
-    
-    # Get immediate files and directories
-    files_and_dirs = [item for item in items if (item != "." and item != ".." and (os.path.isfile(os.path.join(directory, item)) or os.path.isdir(os.path.join(directory, item))))]
-    
-    return files_and_dirs
+    system_env_pathstr_ = os.getenv("PATH") # e.g., /usr/local/bin:/usr/local
 
-# Return the first dirpath including target_name from env_pathstr
-# If no dirpath includes target_name, the first dirpath including /usr or /usr/local will be returned
-def getPreferredDirpathForTarget(scriptname, target_name, env_pathstr):
-    if env_pathstr == None:
-        die(scriptname, "env_pathstr for {} is None!",format(target_name))
-    #else:
-    #    dump(scriptname, "env_pathstr for {}: {}".format(target_name, env_pathstr))
+    @staticmethod
+    def list_immediate_files_and_directories(directory):
+        # Get a list of files and directories in the given directory
+        items = os.listdir(directory)
+        
+        # Get immediate files and directories
+        files_and_dirs = [item for item in items if (item != "." and item != ".." and (os.path.isfile(os.path.join(directory, item)) or os.path.isdir(os.path.join(directory, item))))]
+        
+        return files_and_dirs
 
-    preferred_dirpath = ""
-    env_paths = env_pathstr.split(":")
-    for i in range(len(env_paths)):
-        tmp_env_path = env_paths[i].strip()
+    # Return the first dirpath including target_name from system_env_pathstr_
+    # If no dirpath includes target_name, the first dirpath including /usr or /usr/local will be returned
+    @classmethod
+    def getPreferredDirpathForTarget(cls, scriptname, target_name):
+        if cls.system_env_pathstr_ == None:
+            LogUtil.die(scriptname, "system_env_pathstr for {} is None!",format(target_name))
+        #else:
+        #    LogUtil.dump(scriptname, "system_env_pathstr for {}: {}".format(target_name, cls.system_env_pathstr_))
 
-        # Judge whether the file or directory target_name is under tmp_env_path, if tmp_env_path exists and is a directory
-        if os.path.exists(tmp_env_path) and os.path.isdir(tmp_env_path):
-            tmp_sub_files_or_dirs = list_immediate_files_and_directories(tmp_env_path)
-            for tmp_sub_file_or_dir in tmp_sub_files_or_dirs:
-                if target_name in tmp_sub_file_or_dir:
-                    preferred_dirpath = tmp_env_path.strip()
-                    break
-    
-    if preferred_dirpath == "":
-        warn(scriptname, "{} are NOT found in {}!".format(target_name, env_pathstr))
+        preferred_dirpath = ""
+        env_paths = cls.system_env_pathstr_.split(":")
         for i in range(len(env_paths)):
             tmp_env_path = env_paths[i].strip()
 
-            if "/usr" in tmp_env_path or "/usr/local" in tmp_env_path:
-                preferred_dirpath = tmp_env_path.strip()
-                break
-    
-    if preferred_dirpath == "":
-        die(scriptname, "/usr or /usr/local are also NOT found in {}!".format(env_pathstr))
-    
-    return preferred_dirpath
+            # Judge whether the file or directory target_name is under tmp_env_path, if tmp_env_path exists and is a directory
+            if os.path.exists(tmp_env_path) and os.path.isdir(tmp_env_path):
+                tmp_sub_files_or_dirs = cls.list_immediate_files_and_directories(tmp_env_path)
+                for tmp_sub_file_or_dir in tmp_sub_files_or_dirs:
+                    if target_name in tmp_sub_file_or_dir:
+                        preferred_dirpath = tmp_env_path.strip()
+                        break
+        
+        if preferred_dirpath == "":
+            LogUtil.warn(scriptname, "{} are NOT found in {}!".format(target_name, cls.system_env_pathstr_))
+            for i in range(len(env_paths)):
+                tmp_env_path = env_paths[i].strip()
 
-def replace_dir(scriptname, original_dir, current_dir, path):
-    if not os.path.exists(path):
-        warn(scriptname, "Path does not exist: " + path)
-        return
-    
-    replace_rootdir_cmd = "sed -i 's!{}!{}!g' {}".format(original_dir, current_dir, path)
-    replace_rootdir_subprocess = runCmd(replace_rootdir_cmd)
-    if replace_rootdir_subprocess.returncode != 0:
-        die(scriptname, "Failed to replace rootdir: " + path)
+                if "/usr" in tmp_env_path or "/usr/local" in tmp_env_path:
+                    preferred_dirpath = tmp_env_path.strip()
+                    break
+        
+        if preferred_dirpath == "":
+            LogUtil.die(scriptname, "/usr or /usr/local are also NOT found in {}!".format(cls.system_env_pathstr_))
+        
+        return preferred_dirpath
 
-def restore_dir(scriptname, original_dir, current_dir, path):
-    if not os.path.exists(path):
-        warn(scriptname, "Path does not exist: " + path)
-        return
-    
-    restore_rootdir_cmd = "sed -i 's!{}!{}!g' {}".format(current_dir, original_dir, path)
-    restore_rootdir_subprocess = runCmd(restore_rootdir_cmd)
-    if restore_rootdir_subprocess.returncode != 0:
-        die(scriptname, "Failed to restore rootdir: " + path)
+    @staticmethod
+    def replace_dir(scriptname, original_dir, current_dir, path):
+        if not os.path.exists(path):
+            LogUtil.warn(scriptname, "Path does not exist: " + path)
+            return
+        
+        replace_rootdir_cmd = "sed -i 's!{}!{}!g' {}".format(original_dir, current_dir, path)
+        replace_rootdir_subprocess = SubprocessUtil.runCmd(replace_rootdir_cmd)
+        if replace_rootdir_subprocess.returncode != 0:
+            LogUtil.die(scriptname, "Failed to replace rootdir: " + path)
+
+    @staticmethod
+    def restore_dir(scriptname, original_dir, current_dir, path):
+        if not os.path.exists(path):
+            LogUtil.warn(scriptname, "Path does not exist: " + path)
+            return
+        
+        restore_rootdir_cmd = "sed -i 's!{}!{}!g' {}".format(current_dir, original_dir, path)
+        restore_rootdir_subprocess = SubprocessUtil.runCmd(restore_rootdir_cmd)
+        if restore_rootdir_subprocess.returncode != 0:
+            LogUtil.die(scriptname, "Failed to restore rootdir: " + path)

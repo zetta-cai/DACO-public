@@ -1,21 +1,22 @@
 #!/usr/bin/env python3
-# jsonutil: parse config.json to get json content
+# JsonUtil: parse config.json to get json content
 
 import json
 
 from .logutil import *
 
-config_jsonobj = None
+class JsonUtil:
+    config_jsonobj_ = None
+    with open('config.json', 'r') as f:
+        config_jsonobj_ = json.load(f)
 
-with open('config.json', 'r') as f:
-    config_jsonobj = json.load(f)
+    @classmethod
+    def getValueForKeystr(cls, scriptname, keystr):
+        if cls.config_jsonobj_ is None:
+            LogUtil.die(scriptname, "config.json not loaded")
 
-def getValueForKeystr(scriptname, keystr):
-    if config_jsonobj is None:
-        die(scriptname, "config.json not loaded")
-
-    keystr.strip()
-    if keystr not in config_jsonobj.keys():
-        die(scriptname, "Key not found in config.json: " + keystr)
-    else:
-        return config_jsonobj[keystr]
+        keystr.strip()
+        if keystr not in cls.config_jsonobj_.keys():
+            LogUtil.die(scriptname, "Key not found in config.json: " + keystr)
+        else:
+            return cls.config_jsonobj_[keystr]

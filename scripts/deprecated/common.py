@@ -14,7 +14,7 @@ def getPreferredDirpathForTarget(infix_name, target_name, env_pathstr):
 
         # Judge whether the file or directory target_name is under tmp_env_path, if tmp_env_path exists and is a directory
         if "/usr/{}".format(infix_name) in tmp_env_path or "/usr/local/{}".format(infix_name) in tmp_env_path:
-            tmp_sub_files_or_dirs = list_immediate_files_and_directories(tmp_env_path)
+            tmp_sub_files_or_dirs = PathUtil.list_immediate_files_and_directories(tmp_env_path)
             for tmp_sub_file_or_dir in tmp_sub_files_or_dirs:
                 if target_name in tmp_sub_file_or_dir:
                     preferred_dirpath = tmp_env_path.strip()
@@ -60,8 +60,8 @@ def getPreferredDirpathForTarget(infix_name, target_name, env_pathstr):
 
 # For libboost (set as the default search path of find_package for cmake)
 #gpp_include_pathstr, gpp_lib_pathstr = getDefaultIncludeAndLibPathstr()
-#boost_preferred_include_dirpath = getPreferredDirpathForTarget("include", "boost", gpp_include_pathstr)
-#boost_preferred_lib_dirpath = getPreferredDirpathForTarget("lib", "boost", gpp_lib_pathstr)
+#boost_preferred_include_dirpath = PathUtil.getPreferredDirpathForTarget("include", "boost", gpp_include_pathstr)
+#boost_preferred_lib_dirpath = PathUtil.getPreferredDirpathForTarget("lib", "boost", gpp_lib_pathstr)
 boost_preferred_include_dirpath = "/usr/local/include"
 boost_preferred_lib_dirpath = "/usr/local/lib"
 
