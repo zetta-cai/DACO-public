@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# install_lib: install third-party libraries automatically
 
 import os
 import sys
@@ -22,7 +23,7 @@ is_install_lhd = True
 # (0) Check input CLI parameters
 
 if len(sys.argv) != 2:
-    die(scriptname, "Usage: sudo python3 -m scripts.tools.install_lib $LD_LIBRARY_PATH")
+    die(scriptname, "Usage: sudo python3 -m scripts.tools.install_lib :$LD_LIBRARY_PATH")
 
 # (1) Install boost 1.81.0
 
@@ -39,7 +40,7 @@ if is_install_boost:
     # (OBSOLETE) Use the following command if your set prefix as /usr/local which needs to update Linux dynamic linker
     #boost_install_tool = "./bootstrap.sh --with-libraries=log,thread,system,filesystem,program_options,test,json,stacktrace,context --prefix=/usr/local && sudo ./b2 install && sudo ldconfig"
     boost_install_tool = "./bootstrap.sh --with-libraries=log,thread,system,filesystem,program_options,test,json,stacktrace,context --prefix=./install && sudo ./b2 install"
-    installDecompressedTarball(scriptname, boost_decompress_dirpath, boost_install_dirpath, boost_install_tool)
+    installDecompressedTarball(scriptname, boost_decompress_dirpath, boost_install_dirpath, boost_install_tool, time_consuming = True)
     print("")
 
 # (2) Install cachelib (commit ID: 7886d6d)
@@ -73,10 +74,24 @@ if is_install_cachelib:
         # Restore library dirpath in scripts/cachelib/build-package.sh after copying
         restore_dir(scriptname, default_lib_dirpath, lib_dirpath, custom_cachelib_buildpkg_filepath)
 
+        # Assert that liburing (liburing2 and liburing-dev) if exist MUST >= 2.3 for Ubuntu >= 23.04, or NOT exist for Ubuntu <= 20.04 (Facebook's libfolly does NOT support Ubuntu 22.04 with liburing 2.1)
+        ## Check if we need liburing
+        cachelib_pre_install_tool = None
+        need_liburing = False
+        check_need_liburing_cmd = "dpkg -l | grep liburing-dev"
+        check_need_liburing_subprocess = runCmd(check_need_liburing_cmd)
+        if check_need_liburing_subprocess.returncode == 0 and getSubprocessOutputstr(check_need_liburing_subprocess) != "":
+            need_liburing = True
+        if need_liburing: ## Verify liburing MUST >= 2.3 if need liburing
+            need_upgrade_liburing, liburing_old_version = checkVersion(scriptname, "liburing", "2.3", "dpkg -s liburing-dev | grep ^Version: | sed -n 's/^Version: \([0-9\.]\+\)-.*/\\1/p'")
+            if need_upgrade_liburing:
+                die(scriptname, "liburing {0} is NOT supported by Facebook's libfolly used in CacheLib -> please switch to compatible Ubuntu version (>= 23.04 with liburing >= 2.3 or <= 20.04 without liburing), or purge liburing {0} by dpkg".format(liburing_old_version))
+
         # Build cachelib and its dependencies
         #cachelib_install_tool = "./contrib/build.sh -j -T -v -S" # For debugging (NOTE: add -S for ./contrib/build.sh to skip git-clone/git-pull step if you have already downloaded external libs required by cachelib in lib/CacheLib/cachelib/external)
         cachelib_install_tool = "./contrib/build.sh -j -T -v"
-        installFromRepo(scriptname, cachelib_software_name, cachelib_clone_dirpath, cachelib_install_tool, time_consuming = True)
+        #cachelib_pre_install_tool = "sudo apt-get -y install liburing-dev" # Required by libfolly
+        installFromRepo(scriptname, cachelib_software_name, cachelib_clone_dirpath, cachelib_install_tool, pre_install_tool = cachelib_pre_install_tool, time_consuming = True)
     else:
         dump(scriptname, "cachelib has already been installed")
     print("")
@@ -120,7 +135,7 @@ if is_install_rocksdb:
 
     rocksdb_install_dirpath = "{}/librocksdb.a".format(rocksdb_decompress_dirpath)
     rocksdb_install_tool = "PORTABLE=1 make static_lib"
-    rocksdb_pre_install_tool = "sudo apt-get install libgflags-dev libsnappy-dev zlib1g-dev libbz2-dev liblz4-dev libzstd-dev libjemalloc-dev libsnappy-dev"
+    rocksdb_pre_install_tool = "sudo apt-get -y install libgflags-dev libsnappy-dev zlib1g-dev libbz2-dev liblz4-dev libzstd-dev libjemalloc-dev libsnappy-dev"
     installDecompressedTarball(scriptname, rocksdb_decompress_dirpath, rocksdb_install_dirpath, rocksdb_install_tool, pre_install_tool = rocksdb_pre_install_tool, time_consuming = True)
 
     if is_clear_tarball:

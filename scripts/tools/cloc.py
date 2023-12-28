@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# cloc: count lines of C++ code and scripts
 
 import os
 import sys

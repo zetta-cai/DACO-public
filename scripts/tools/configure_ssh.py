@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# configure_ssh: configure passfree ssh connections between each pair of machines
 
 import os
 
@@ -17,11 +18,13 @@ def checkDuplicateMachine(machine_idx, machine_ip):
 
 # (0) Load config.json for preparation
 
+physical_machines = getValueForKeystr(scriptname, "physical_machines")
+
 # Load non-duplicate machine IPs from config.json
 prompt(scriptname, "load non-duplicate machine IPs from config.json")
 physical_machine_ips = [] # Follow the order of machine indexes
-for tmp_machine_idx in range(len(config_jsonobj["physical_machines"])):
-    tmp_machine_ip = config_jsonobj["physical_machines"][tmp_machine_idx]["ipstr"]
+for tmp_machine_idx in range(len(physical_machines)):
+    tmp_machine_ip = physical_machines[tmp_machine_idx]["ipstr"]
     checkDuplicateMachine(tmp_machine_idx, tmp_machine_ip)
     physical_machine_ips.append(tmp_machine_ip)
 print("")
@@ -42,29 +45,11 @@ print("")
 
 # (2) Copy SSH private key
 
-# Get current machine index to copy passfree SSH private key to other machines
-prompt(scriptname, "get current machine index based on ifconfig")
-cur_machine_idx = -1
-for tmp_machine_idx in range(len(config_jsonobj["physical_machines"])):
-    tmp_machine_ip = config_jsonobj["physical_machines"][tmp_machine_idx]["ipstr"]
-    is_current_machine_cmd = "ifconfig | grep -w " + tmp_machine_ip # -w means whole word matching
-    is_current_machine_subprocess = runCmd(is_current_machine_cmd)
-    if is_current_machine_subprocess.returncode != 0: # Error or tmp_machine_ip not found
-        if getSubprocessErrstr(is_current_machine_subprocess) != "": # Error
-            die(scriptname, getSubprocessErrstr(is_current_machine_subprocess))
-        else: # tmp_machine_ip not found
-            continue
-    elif getSubprocessOutputstr(is_current_machine_subprocess) != "": # tmp_machine_ip is found
-        cur_machine_idx = tmp_machine_idx
-        break
-if cur_machine_idx == -1:
-    die(scriptname, "cannot find current machine ip in config.json")
-
 # Copy passfree SSH private key to other machines
-for tmp_machine_idx in range(len(config_jsonobj["physical_machines"])):
+for tmp_machine_idx in range(len(physical_machines)):
     if tmp_machine_idx == cur_machine_idx:
         continue
-    tmp_machine_ip = config_jsonobj["physical_machines"][tmp_machine_idx]["ipstr"]
+    tmp_machine_ip = physical_machines[tmp_machine_idx]["ipstr"]
     prompt(scriptname, "copy passfree SSH private key to machine {}".format(tmp_machine_idx))
     copy_private_sshkey_cmd = "scp {} {}@{}:{}".format(sshkey_filepath, username, tmp_machine_ip, sshkey_filepath)
     copy_private_sshkey_subprocess = runCmd(copy_private_sshkey_cmd)
@@ -85,8 +70,8 @@ public_sshkey_content = getSubprocessOutputstr(get_public_sshkey_subprocess).str
 # Append SSH public key to authorized_keys of each machine if not exist
 authorized_keys_filepath = "/home/{}/.ssh/authorized_keys".format(username)
 prompt(scriptname, "append SSH public key to {} of each machine if not exist".format(authorized_keys_filepath))
-for tmp_machine_idx in range(len(config_jsonobj["physical_machines"])):
-    tmp_machine_ip = config_jsonobj["physical_machines"][tmp_machine_idx]["ipstr"]
+for tmp_machine_idx in range(len(physical_machines)):
+    tmp_machine_ip = physical_machines[tmp_machine_idx]["ipstr"]
 
     # Check authorized_keys filepath
     dump(scriptname, "check {} in machine {}".format(authorized_keys_filepath, tmp_machine_ip))

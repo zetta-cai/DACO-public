@@ -45,6 +45,8 @@ int main(int argc, char **argv) {
     // Block until evaluator is initialized
     while (!evaluator_param.isEvaluatorInitialized()) {}
 
+    covered::Util::dumpNormalMsg(main_class_name, "Evaluator initialized"); // NOTE: used by exp scripts to verify whether the evaluator has been initialized
+
     // (3) Wait for the evaluator
 
     int pthread_returncode = 0;

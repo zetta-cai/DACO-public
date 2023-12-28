@@ -73,3 +73,26 @@ if is_clear_tarball:
     boost_clear_subprocess = subprocess.run(boost_clear_cmd, shell=True)
     if boost_clear_subprocess.returncode != 0:
         die(filename, "failed to clear {}".format(boost_download_filepath))
+
+# (2) Before CacheLib's installFromRepo
+
+# Install liburing-dev 2.3 for Ubuntu >= 22.04 (NO need for previous Ubuntu due to NO liburing and hence NOT used by libfolly in cachelib)
+## Check if we need liburing-dev
+cachelib_pre_install_tool = None
+need_liburing = False
+check_need_liburing_cmd = "dpkg -l | grep liburing-dev"
+check_need_liburing_subprocess = runCmd(check_need_liburing_cmd)
+if check_need_liburing_subprocess.returncode == 0 and getSubprocessOutputstr(check_need_liburing_subprocess) != "":
+    need_liburing = True
+if need_liburing: ## Check if we need to install liburing-dev 2.3 if need liburing
+    need_upgrade_liburing, liburing_old_version = checkVersion(scriptname, "liburing-dev", "2.3", "dpkg -s liburing-dev | grep ^Version: | sed -n 's/^Version: \([0-9\.]\+\)-.*/\\1/p'")
+    if need_upgrade_liburing:
+        # Download liburing-dev 2.3
+        liburing_decompress_dirpath = "{}/liburing".format(lib_dirpath)
+        liburing_download_filepath = "{}/liburing-dev_2.3-3_amd64.deb".format(liburing_decompress_dirpath)
+        liburing_download_url = "http://archive.ubuntu.com/ubuntu/pool/main/libu/liburing/liburing-dev_2.3-3_amd64.deb"
+        downloadTarball(scriptname, liburing_download_filepath, liburing_download_url)
+
+        # Install liburing-dev 2.3 by dpkg
+        liburing_install_filepath = "" # Always install
+        installDecompressedTarball(scriptname, liburing_decompress_dirpath, liburing_install_filepath, "sudo dpkg -i liburing-dev_2.3-3_amd64.deb", time_consuming = True)

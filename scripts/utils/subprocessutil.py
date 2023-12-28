@@ -40,12 +40,14 @@ def checkVersion(scriptname, software_name, target_version, checkversion_cmd):
     prompt(scriptname, "check version of {}...".format(software_name))
     checkversion_subprocess = runCmd(checkversion_cmd)
     need_upgrade = False
+    current_version = ""
     if checkversion_subprocess.returncode != 0:
         die(scriptname, "failed to get the current version of {}".format(software_name))
     else:
         checkversion_outputstr = getSubprocessOutputstr(checkversion_subprocess)
 
-        current_version_tuple = versionToTuple(checkversion_outputstr.split(" ")[-1])
+        current_version = checkversion_outputstr.splitlines()[0].split(" ")[-1]
+        current_version_tuple = versionToTuple(current_version)
         target_version_tuple = versionToTuple(target_version)
         if current_version_tuple == target_version_tuple:
             dump(scriptname, "current {} version is the same as the target {}".format(software_name, target_version))
@@ -54,11 +56,42 @@ def checkVersion(scriptname, software_name, target_version, checkversion_cmd):
         else:
             need_upgrade = True
             warn(scriptname, "current {} version {} < target version {} (need to upgrade {})".format(software_name, checkversion_outputstr, target_version, software_name))
-    return need_upgrade
+    return need_upgrade, current_version
 
-def checkOldAlternative(scriptname, software_name):
+def getCanonicalFilepath(scriptname, software_name, current_version):
+    # Get software filepath, e.g., /usr/bin/gcc
+    software_filepath = ""
+    get_software_filepath_cmd = "which {}".format(software_name)
+    get_software_filepath_subprocess = runCmd(get_software_filepath_cmd)
+    if get_software_filepath_subprocess.returncode != 0:
+        die(scriptname, getSubprocessErrstr(get_software_filepath_subprocess))
+    else:
+        software_filepath = getSubprocessOutputstr(get_software_filepath_subprocess).strip()
+
+    # Get canonical filepath, e.g., /usr/bin/x86_64-linux-gnu-gcc-7
+    canonical_filepath = ""
+    get_canonical_filepath_cmd = "readlink -f $(which {})".format(software_name)
+    get_canonical_filepath_subprocess = runCmd(get_canonical_filepath_cmd)
+    if get_canonical_filepath_subprocess.returncode != 0:
+        die(scriptname, getSubprocessErrstr(get_canonical_filepath_subprocess))
+    else:
+        canonical_filepath = getSubprocessOutputstr(get_canonical_filepath_subprocess).strip()
+    
+    new_canonical_filepath = ""
+    if canonical_filepath == software_filepath: # Need to copy software to a canonical filepath for preservation later
+        new_canonical_filepath = os.path.join(os.path.dirname(canonical_filepath), "{}-{}".format(software_name, current_version)) # E.g., /usr/bin/gcc-9.4.0
+        copy_software_cmd = "sudo cp {} {}".format(software_filepath, new_canonical_filepath)
+        copy_software_subprocess = runCmd(copy_software_cmd)
+        if copy_software_subprocess.returncode != 0:
+            die(scriptname, getSubprocessErrstr(copy_software_subprocess))
+    else:
+        new_canonical_filepath = canonical_filepath
+    
+    return new_canonical_filepath
+
+def checkOldAlternative(scriptname, software_name, canonical_filepath):
     prompt(scriptname, "check if old {} is preserved...".format(software_name))
-    check_old_alternative_cmd = "sudo update-alternatives --query {0} | grep $(readlink -f $(which {0}))".format(software_name)
+    check_old_alternative_cmd = "sudo update-alternatives --query {} | grep {}".format(software_name, canonical_filepath)
     check_old_alternative_subprocess = runCmd(check_old_alternative_cmd)
     need_preserve_old_alternative = True;
     if check_old_alternative_subprocess.returncode == 0:
@@ -67,15 +100,18 @@ def checkOldAlternative(scriptname, software_name):
             need_preserve_old_alternative = False
     return need_preserve_old_alternative
 
-def preserveOldAlternative(scriptname, software_name, preferred_binpath):
+def preserveOldAlternative(scriptname, software_name, canonical_filepath, preferred_binpath):
     prompt(scriptname, "preserve old {}...".format(software_name))
-    preserve_old_cmd = "sudo update-alternatives --install {0}/{1} {1} $(readlink -f $(which {1}) {2}".format(preferred_binpath, software_name, old_alternative_priority)
+    preserve_old_cmd = "sudo update-alternatives --install {0}/{1} {1} {2} {3}".format(preferred_binpath, software_name, canonical_filepath, old_alternative_priority)
     preserve_old_subprocess = runCmd(preserve_old_cmd)
     if preserve_old_subprocess.returncode != 0:
         die(scriptname, "failed to preserve old {}".format(software_name))
 
 def downloadTarball(scriptname, download_filepath, download_url):
     tmp_parent_dirpath = os.path.dirname(download_filepath)
+    if not os.path.exists(tmp_parent_dirpath):
+        os.mkdir(tmp_parent_dirpath)
+
     tmp_download_filename = os.path.basename(download_filepath)
     if not os.path.exists(download_filepath):
         prompt(scriptname, "download {}...".format(download_filepath))
@@ -83,7 +119,7 @@ def downloadTarball(scriptname, download_filepath, download_url):
 
         download_subprocess = runCmd(download_cmd)
         if download_subprocess.returncode != 0:
-            die(scriptname, "failed to download {}".format(download_filepath))
+            die(scriptname, "failed to download {}; error: {}".format(download_filepath, getSubprocessErrstr(download_subprocess)))
     else:
         dump(scriptname, "{} exists ({} has been downloaded)".format(download_filepath, tmp_download_filename))
 
@@ -96,7 +132,7 @@ def decompressTarball(scriptname, download_filepath, decompress_dirpath, decompr
 
         decompress_subprocess = runCmd(decompress_cmd)
         if decompress_subprocess.returncode != 0:
-            die(scriptname, "failed to decompress {}".format(download_filepath))
+            die(scriptname, "failed to decompress {}; error: {}".format(download_filepath, getSubprocessErrstr(decompress_subprocess)))
     else:
         dump(scriptname, "{} exists ({} has been decompressed)".format(decompress_dirpath, tmp_download_filename))
 
@@ -108,21 +144,43 @@ def installDecompressedTarball(scriptname, decompress_dirpath, install_filepath,
             prompt(scriptname, "install {} from source...".format(tmp_decompress_dirname))
         else:
             prompt(scriptname, "install {} from source (it takes some time)...".format(tmp_decompress_dirname))
+
         install_cmd = "cd {} && {}".format(decompress_dirpath, install_tool)
         if pre_install_tool != None:
             install_cmd = "{} && {}".format(pre_install_tool, install_cmd)
-        install_subprocess = runCmd(install_cmd)
-        if install_subprocess.returncode != 0:
-            die(scriptname, "failed to install {}".format(tmp_decompress_dirname))
+        if time_consuming == False:
+            install_subprocess = runCmd(install_cmd)
+            if install_subprocess.returncode != 0:
+                install_errstr = getSubprocessErrstr(install_subprocess)
+                die(scriptname, "failed to install {}; error: {}".format(tmp_decompress_dirname, install_errstr))
+        else:
+            install_subprocess = runCmd(install_cmd, is_capture_output=False)
+            if install_subprocess.returncode != 0:
+                die(scriptname, "failed to install {}".format(tmp_decompress_dirname))
     else:
         dump(scriptname, "{} exists ({} has been installed)".format(install_filepath, tmp_decompress_dirname))
 
-def installByApt(scriptname, software_name, apt_targetname):
-    prompt(scriptname, "install {} by apt...".format(software_name))
-    install_cmd = "sudo apt install {}".format(apt_targetname)
-    install_subprocess = runCmd(install_cmd)
+def installByApt(scriptname, software_name, apt_targetname, target_version=None):
+    apt_target_fullname = ""
+    if target_version is not None:
+        # Get full aptlib name of the software with the target veriosn
+        get_apt_target_fullname_cmd = "apt-cache policy {} | grep {}".format(apt_targetname, target_version)
+        get_apt_target_fullname_subprocess = runCmd(get_apt_target_fullname_cmd)
+        if get_apt_target_fullname_subprocess.returncode != 0:
+            if getSubprocessErrstr(get_apt_target_fullname_subprocess) != "":
+                die(scriptname, "failed to get the full name of {} (errmsg: {})".format(apt_targetname, getSubprocessErrstr(get_apt_target_fullname_subprocess)))
+            else:
+                die(scriptname, "NOT found {} {} in apt".format(apt_targetname, target_version))
+        else:
+            apt_target_fullname = "{}={}".format(apt_targetname, getSubprocessOutputstr(get_apt_target_fullname_subprocess).strip().split(" ")[0])
+    else:
+        apt_target_fullname = apt_targetname
+
+    prompt(scriptname, "install {} {} by apt...".format(software_name, target_version))
+    install_cmd = "sudo apt install -y {}".format(apt_target_fullname)
+    install_subprocess = runCmd(install_cmd, is_capture_output=False)
     if install_subprocess.returncode != 0:
-        die(scriptname, "failed to install {}".format(apt_targetname))
+        die(scriptname, "failed to install {} (errmsg: {})".format(apt_target_fullname, getSubprocessErrstr(install_subprocess)))
 
 def preserveNewAlternative(scriptname, software_name, preferred_binpath, install_filepath):
     tmp_parent_dirpath = os.path.dirname(install_filepath)
@@ -181,23 +239,28 @@ def checkoutCommit(scriptname, clone_dirpath, software_name, target_commit):
         else:
             dump(scriptname, "the latest commit ID of {} is already {}".format(software_name, target_commit))
 
-def installFromRepoIfNot(scriptname, install_dirpath, software_name, clone_dirpath, install_tool, time_consuming = False):
+def installFromRepoIfNot(scriptname, install_dirpath, software_name, clone_dirpath, install_tool, pre_install_tool = None, time_consuming = False):
     if not os.path.exists(install_dirpath):
-        installFromRepo(scriptname, software_name, clone_dirpath, install_tool, time_consuming)
+        installFromRepo(scriptname, software_name, clone_dirpath, install_tool, pre_install_tool, time_consuming)
     else:
         dump(scriptname, "{} exists ({} has been installed)".format(install_dirpath, software_name))
 
-def installFromRepo(scriptname, software_name, clone_dirpath, install_tool, time_consuming = False):
+def installFromRepo(scriptname, software_name, clone_dirpath, install_tool, pre_install_tool = None, time_consuming = False):
     if time_consuming == False:
         prompt(scriptname, "install {}...".format(software_name))
     else:
         prompt(scriptname, "install {} (it takes some time)...".format(software_name))
+
     install_cmd = "cd {} && {}".format(clone_dirpath, install_tool)
+    if pre_install_tool != None:
+        install_cmd = "{} && {}".format(pre_install_tool, install_cmd)
 
     if time_consuming == False:
         install_subprocess = runCmd(install_cmd)
+        if install_subprocess.returncode != 0:
+            die(scriptname, "failed to install {}".format(software_name))
     else:
         install_subprocess = runCmd(install_cmd, is_capture_output=False)
-    if install_subprocess.returncode != 0:
-        install_errstr = getSubprocessErrstr(install_subprocess)
-        die(scriptname, "failed to install {}; error: {}".format(software_name, install_errstr))
+        if install_subprocess.returncode != 0:
+            install_errstr = getSubprocessErrstr(install_subprocess)
+            die(scriptname, "failed to install {}; error: {}".format(software_name, install_errstr))

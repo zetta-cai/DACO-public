@@ -3,6 +3,7 @@
 import os
 
 from .logutil import *
+from .subprocessutil import *
 
 # Path-related variables and functions
 

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# parse_config: parse config.json to get value corresponding to keystr (used by Makefile)
 
 from ..common import *
 

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# install_prerequisite: install pre-requisites automatically
 
 import os
 import sys
@@ -25,13 +26,14 @@ if is_upgrade_python3:
     python3_software_name = "python3"
     python3_target_version = "3.7.5"
     python3_checkversion_cmd = "python3 --version"
-    need_upgrade_python3 = checkVersion(scriptname, python3_software_name, python3_target_version, python3_checkversion_cmd)
+    need_upgrade_python3, python3_old_version = checkVersion(scriptname, python3_software_name, python3_target_version, python3_checkversion_cmd)
 
     if need_upgrade_python3:
-        need_preserve_old_python3 = checkOldAlternative(scriptname, python3_software_name)
+        python3_old_canonical_filepath = getCanonicalFilepath(scriptname, python3_software_name, python3_old_version)
+        need_preserve_old_python3 = checkOldAlternative(scriptname, python3_software_name, python3_old_canonical_filepath)
 
         if need_preserve_old_python3:
-            preserveOldAlternative(scriptname, python3_software_name, python3_preferred_binpath)
+            preserveOldAlternative(scriptname, python3_software_name, python3_old_canonical_filepath, python3_preferred_binpath)
         else:
             dump(scriptname, "old python3 has been preserved")
 
@@ -79,13 +81,13 @@ if is_upgrade_gcc:
     is_add_apt_repo_for_compiler = False
     for compiler_name in ["gcc", "g++"]:
         compiler_checkversion_cmd = "{} --version".format(compiler_name)
-        need_upgrade_compiler = checkVersion(scriptname, compiler_name, compiler_target_version, compiler_checkversion_cmd)
+        need_upgrade_compiler, compiler_old_version = checkVersion(scriptname, compiler_name, compiler_target_version, compiler_checkversion_cmd)
         
         if need_upgrade_compiler:
-            need_preserve_old_compiler = checkOldAlternative(scriptname, compiler_name)
-
+            compiler_old_canonical_filepath = getCanonicalFilepath(scriptname, compiler_name, compiler_old_version)
+            need_preserve_old_compiler = checkOldAlternative(scriptname, compiler_name, compiler_old_canonical_filepath)
             if need_preserve_old_compiler:
-                preserveOldAlternative(scriptname, compiler_name, compiler_preferred_binpaths[compiler_name])
+                preserveOldAlternative(scriptname, compiler_name, compiler_old_canonical_filepath, compiler_preferred_binpaths[compiler_name])
             else:
                 dump(scriptname, "old {} has been preserved".format(compiler_name))
 
@@ -110,7 +112,7 @@ if is_upgrade_gcc:
 if is_link_cpp:
     cpp_software_name = "c++"
     cpp_checkversion_cmd = "c++ --version"
-    need_link_cpp = checkVersion(scriptname, cpp_software_name, compiler_target_version, cpp_checkversion_cmd)
+    need_link_cpp, _ = checkVersion(scriptname, cpp_software_name, compiler_target_version, cpp_checkversion_cmd)
 
     if need_link_cpp:
         prompt(scriptname, "link g++-9 to c++ binary...")
@@ -126,31 +128,54 @@ if is_upgrade_cmake:
     cmake_software_name = "cmake"
     cmake_target_version = "3.25.2"
     cmake_checkversion_cmd = "cmake --version"
-    need_upgrade_cmake = checkVersion(scriptname, cmake_software_name, cmake_target_version, cmake_checkversion_cmd)
+    need_upgrade_cmake, cmake_old_version = checkVersion(scriptname, cmake_software_name, cmake_target_version, cmake_checkversion_cmd)
 
     if need_upgrade_cmake:
+        cmake_installpath = "/usr" # Installed by apt
+        cmake_install_binpath = "{}/bin".format(cmake_installpath) # /usr/bin
+        cmake_preferred_binpath = getPreferredDirpathForTarget(scriptname, cmake_software_name, system_bin_pathstr) # e.g., /usr/local/bin
+
+        cmake_old_canonical_filepath = getCanonicalFilepath(scriptname, cmake_software_name, cmake_old_version)
+        need_preserve_old_cmake = checkOldAlternative(scriptname, cmake_software_name, cmake_old_canonical_filepath)
+        if need_preserve_old_cmake:
+            preserveOldAlternative(scriptname, cmake_software_name, cmake_old_canonical_filepath, cmake_preferred_binpath)
+        else:
+            dump(scriptname, "old {} has been preserved".format(cmake_software_name))
+
         prompt(scriptname, "check apt repo for CMake...")
         is_add_apt_repo_for_cmake = True
         cmake_repo_website = "https://apt.kitware.com/ubuntu"
-        cmake_check_apt_repo_cmd = "sudo cat /etc/apt/sources.list | grep {}".format(cmake_repo_website)
+        cmake_check_apt_repo_cmd = "sudo grep ^ /etc/apt/sources.list /etc/apt/sources.list.d/* | grep {}".format(cmake_repo_website)
         cmake_check_apt_repo_subprocess = runCmd(cmake_check_apt_repo_cmd)
         if cmake_check_apt_repo_subprocess.returncode != 0:
-            die(scriptname, "failed to check apt repot for CMake")
+            cmake_check_apt_repo_errstr = getSubprocessErrstr(cmake_check_apt_repo_subprocess)
+            if cmake_check_apt_repo_errstr != "":
+                die(scriptname, "failed to check apt repo for CMake (errmsg: {})".format(cmake_check_apt_repo_errstr))
+            else:
+                is_add_apt_repo_for_cmake = True
         else:
             cmake_check_apt_repo_outputstr = getSubprocessOutputstr(cmake_check_apt_repo_subprocess)
-
             if cmake_repo_website in cmake_check_apt_repo_outputstr:
                 is_add_apt_repo_for_cmake = False
+            else:
+                is_add_apt_repo_for_cmake = True
 
         if is_add_apt_repo_for_cmake:
             prompt(scriptname, "Add apt repo for CMake...")
-            cmake_add_apt_repo_cmd = "wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | sudo apt-key add - && sudo apt-add-repository 'deb https://apt.kitware.com/ubuntu/ bionic main' && sudo apt-get update && sudo apt-get install kitware-archive-keyring && sudo apt-key --keyring /etc/apt/trusted.gpg del C1F34CDD40CD72DA"
-            cmake_add_apt_repo_subprocess = runCmd(cmake_add_apt_repo_cmd)
+            cmake_add_apt_repo_cmd = "wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | sudo apt-key add - && sudo apt-add-repository -y 'deb https://apt.kitware.com/ubuntu/ {} main' && sudo apt-get update && sudo apt-get install kitware-archive-keyring && sudo apt-key --keyring /etc/apt/trusted.gpg del C1F34CDD40CD72DA".format(kernel_codename)
+            cmake_add_apt_repo_subprocess = runCmd(cmake_add_apt_repo_cmd, is_capture_output=False)
             if cmake_add_apt_repo_subprocess.returncode != 0:
                 die(scriptname, "failed to add apt repo for CMake")
         
         cmake_apt_targetname = "cmake"
         installByApt(scriptname, cmake_software_name, cmake_apt_targetname)
+
+        # NOTE: as cmake apt target name is the same as cmake software name, we have to get new canonical filepath for cmake to preserve new alternative
+        tmp_need_upgrade_cmake, cmake_new_version = checkVersion(scriptname, cmake_software_name, cmake_target_version, cmake_checkversion_cmd)
+        if tmp_need_upgrade_cmake:
+            die(scriptname, "cmake {} has NOT been upgraded to >= {} successfully!".format(cmake_new_version, cmake_target_version))
+        cmake_new_canonical_filepath = getCanonicalFilepath(scriptname, cmake_software_name, cmake_new_version) # /usr/bin/cmake-3.25.2
+        preserveNewAlternative(scriptname, cmake_preferred_binpath, cmake_software_name, cmake_new_canonical_filepath)
     print("")
 
 # (6) Change system settings
