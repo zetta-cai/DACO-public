@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# logutil: logging utilities to dump normal/prompt/warn/error/emphasize messages
 
 import sys
 

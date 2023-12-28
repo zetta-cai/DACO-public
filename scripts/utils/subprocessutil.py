@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# subprocessutil: subprocess utilities for common shell operations
 
 import os
 import subprocess

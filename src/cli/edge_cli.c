@@ -94,7 +94,7 @@ namespace covered
                 ("covered_peredge_synced_victimcnt", boost::program_options::value<uint32_t>()->default_value(3), "per-edge number of victims synced to each neighbor (only for COVERED)")
                 ("covered_peredge_monitored_victimsetcnt", boost::program_options::value<uint32_t>()->default_value(3), "per-edge number of monitored victim syncsets for each neighbor (only for COVERED)")
                 ("covered_popularity_aggregation_max_mem_usage_mb", boost::program_options::value<uint64_t>()->default_value(1), "the maximum memory usage for popularity aggregation in units of MiB (only for COVERED)")
-                ("covered_popularity_collection_change_ratio", boost::program_options::value<double>()->default_value(0.0), "the ratio for local uncached popularity changes to trigger popularity collection (only for COVERED)")
+                ("covered_popularity_collection_change_ratio", boost::program_options::value<double>()->default_value(0.1), "the ratio for local uncached popularity changes to trigger popularity collection (only for COVERED)")
                 ("covered_topk_edgecnt", boost::program_options::value<uint32_t>()->default_value(1), "the number of top-k edge nodes for popularity aggregation and trade-off-aware cache placement (only for COVERED)")
             ;
 

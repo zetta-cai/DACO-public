@@ -62,15 +62,15 @@ LINK.so = $(CC) $(LDFLAGS) -shared
 COMPILE.c = $(CC) $(CFLAGS) $(CPPFLAGS) -c
 COMPILE_OUTPUT_OPTION.c ?= -o $@
 %.o: %.c
+	$(COMPILE.c) $(COMPILE_OUTPUT_OPTION.c) $<
 %.opp: %.cpp
-%.o %.opp:
 	$(COMPILE.c) $(COMPILE_OUTPUT_OPTION.c) $<
 
 # Compile C to position independent object file while generating dependency
 COMPILE_SHARED.c = $(CC) $(CFLAGS_SHARED) $(CPPFLAGS) -c
 %.shared.o: %.c
+	$(COMPILE_SHARED.c) $(OUTPUT_OPTION.c) $<
 %.shared.opp: %.cpp
-%.shared.o %.shared.opp:
 	$(COMPILE_SHARED.c) $(OUTPUT_OPTION.c) $<
 
 ##############################################################################

@@ -1,7 +1,7 @@
 ##############################################################################
 # Global variables
 
-LIBRARY_DIRPATH = $(shell python3 -m scripts.tools.parse_config library_dirpath)
+LIBRARY_DIRPATH = $(shell python3 -m scripts.tools.parse_config library_dirpath | tail -n 1 | sed -n 's/^JSON value: \(.*\)/\1/p')
 
 ##############################################################################
 # Include other Makefiles

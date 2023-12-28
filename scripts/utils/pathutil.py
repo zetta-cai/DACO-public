@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pathutil: path-related utilities to operate files/folders
 
 import os
 

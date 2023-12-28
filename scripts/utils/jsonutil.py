@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# jsonutil: parse config.json to get json content
 
 import json
 
