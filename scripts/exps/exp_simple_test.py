@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 # exp_simple_test: an example for usage of exps.utils.prototype and exps.utils.simulator
 
-from exps.utils.prototype import Prototype
+from .utils.prototype import *
+from .utils.simulator import *
 
 exp_simple_test_settings = {
-    "clientnt": 3,
+    "clientcnt": 3,
     "edgecnt": 3,
     "keycnt": 100000,
     "capacity_mb": 1000,

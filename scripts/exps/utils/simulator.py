@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 # Simulator: for evaluation on single-node prototype (used by exp scripts)
 
-from ....common import *
+import time
+
+from ...common import *
+from .exputil import *
 
 class Simulator:
     def __init__(self, **kwargs):
@@ -28,18 +31,19 @@ class Simulator:
         # (1) Launch simulator
         ## Get launch simulator command
         simulator_logfile = "tmp_simulator.out"
-        launch_simulator_cmd = "nohup ./simulator {} >{} 2>&1 &".format(cliutil_instance.getSimulatorCLIStr(), simulator_logfile)
+        launch_simulator_cmd = "nohup ./simulator {} >{} 2>&1 &".format(self.cliutil_instance_.getSimulatorCLIStr(), simulator_logfile)
         ## Execute command
         launch_simulator_subprocess = SubprocessUtil.runCmd(launch_simulator_cmd)
         if launch_simulator_subprocess.returncode != 0:
             self.dieWithCleanup_("failed to launch simulator (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(launch_simulator_subprocess)))
         
         # (2) Periodically check whether simulator finishes benchmark
+        LogUtil.prompt(Common.scriptname, "wait for simulator to finish benchmark...")
         ## Get check simulator finish benchmark command
         check_simulator_finish_benchmark_cmd = "cat {} | grep '{}'".format(simulator_logfile, Common.EVALUATOR_FINISH_BENCHMARK_SYMBOL)
         while True:
             ## Periodically check
-            sleep(5)
+            time.sleep(5)
             ## Check existence of simulator finish benchmark symbol
             check_simulator_finish_benchmark_subprocess = SubprocessUtil.runCmd(check_simulator_finish_benchmark_cmd)
             if check_simulator_finish_benchmark_subprocess.returncode == 0 and SubprocessUtil.getSubprocessOutputstr(check_simulator_finish_benchmark_subprocess) != "": # Symbol exist
@@ -49,7 +53,7 @@ class Simulator:
         # (3) Kill simulator
         ## Wait for all launched threads which may be blocked by UDP sockets before timeout
         LogUtil.prompt(Common.scriptname, "wait for all launched threads to finish...")
-        sleep(5)
+        time.sleep(5)
         ## Cleanup all launched threads
         self.is_successful_finish_ = True
         self.cleanup_()
@@ -59,10 +63,9 @@ class Simulator:
         self.cleanup_()
     
     def cleanup_(self):
-        kill_simulator_cmd = "ps -aux | grep ./simulator | grep -v grep | awk '{print $2}'"
-        kill_simulator_subprocess = SubprocessUtil.runCmd(kill_simulator_cmd)
-        if kill_simulator_subprocess.returncode != 0 and not self.is_successful_finish_:
-            LogUtil.dieNoExit(Common.scriptname, "failed to kill ./simulator; error: {}".format(SubprocessUtil.getSubprocessErrstr(kill_component_subprocess)))
+        # Kill launched simulator
+        ExpUtil.killComponenet_(Common.cur_machine_idx, "./simulator")
+
         if not self.is_successful_finish_:
             LogUtil.dieNoExit(Common.scriptname, "failed to launch simulator")
             exit(1)

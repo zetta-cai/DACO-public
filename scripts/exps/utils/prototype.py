@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 # Prototype: for evaluation on multi-machine prototype (used by exp scripts)
 
-from ....common import *
+import time
+
+from ...common import *
+from .exputil import *
 
 class Prototype:
     def __init__(self, **kwargs):
@@ -20,7 +23,7 @@ class Prototype:
         evaluator_logfile = "tmp_evaluator.out"
         launch_evaluator_cmd = "nohup ./evaluator {} >{} 2>&1 &".format(cliutil_instance.getEvaluatorCLIStr(), evaluator_logfile)
         if evaluator_machine_idx != Common.cur_machine_idx:
-            launch_evaluator_cmd = getRemoteCmd_(evaluator_machine_idx, launch_evaluator_cmd)
+            launch_evaluator_cmd = ExpUtil.getRemoteCmd_(evaluator_machine_idx, launch_evaluator_cmd)
         ## Execute command and update launched components
         launch_evaluator_subprocess = SubprocessUtil.runCmd(launch_evaluator_cmd)
         if evaluator_machine_idx not in self.permachine_launched_components_:
@@ -31,11 +34,11 @@ class Prototype:
 
         # (2) Verify that evaluator finishes initialization
         ## Wait for evaluator initialization
-        sleep(0.5)
+        time.sleep(0.5)
         ## Get verify evaluator finish initialization command
         verify_evaluator_initialization_cmd =  "cat {} | grep '{}'".format(evaluator_logfile, Common.EVALUATOR_FINISH_INITIALIZATION_SYMBOL)
         if evaluator_machine_idx != Common.cur_machine_idx:
-            verify_evaluator_initialization_cmd = getRemoteCmd_(evaluator_machine_idx, verify_evaluator_initialization_cmd)
+            verify_evaluator_initialization_cmd = ExpUtil.getRemoteCmd_(evaluator_machine_idx, verify_evaluator_initialization_cmd)
         ## Verify existence of evaluator finish initialization symbol
         verify_evaluator_initialization_subprocess = SubprocessUtil.runCmd(verify_evaluator_initialization_cmd)
         if verify_evaluator_initialization_subprocess.returncode != 0: # Error or symbol NOT exist
@@ -53,7 +56,7 @@ class Prototype:
         cloud_logfile = "tmp_cloud.out"
         launch_cloud_cmd = "nohup ./cloud {} >{} 2>&1 &".format(cliutil_instance.getCloudCLIStr(), cloud_logfile)
         if cloud_machine_idx != Common.cur_machine_idx:
-            launch_cloud_cmd = getRemoteCmd_(cloud_machine_idx, launch_cloud_cmd)
+            launch_cloud_cmd = ExpUtil.getRemoteCmd_(cloud_machine_idx, launch_cloud_cmd)
         ## Execute command and update launched components
         launch_cloud_subprocess = SubprocessUtil.runCmd(launch_cloud_cmd)
         if cloud_machine_idx not in self.permachine_launched_components_:
@@ -72,7 +75,7 @@ class Prototype:
             ## Get launch edge command
             launch_edge_cmd = "nohup ./edge {} >{} 2>&1 &".format(cliutil_instance.getEdgeCLIStr(), edge_logfile)
             if tmp_edge_machine_idx != Common.cur_machine_idx:
-                launch_edge_cmd = getRemoteCmd_(tmp_edge_machine_idx, launch_edge_cmd)
+                launch_edge_cmd = ExpUtil.getRemoteCmd_(tmp_edge_machine_idx, launch_edge_cmd)
             ## Execute command and update launched components
             launch_edge_subprocess = SubprocessUtil.runCmd(launch_edge_cmd)
             if tmp_edge_machine_idx not in self.permachine_launched_components_:
@@ -83,7 +86,7 @@ class Prototype:
         
         # (5) Launch clients
         ## Wait for cloud/edges to notify evaluator on finish initialization
-        sleep(0.5)
+        time.sleep(0.5)
         ## For each client machine
         client_machine_idxes = JsonUtil.getValueForKeystr(Common.scriptname, "client_machine_indexes")
         client_logfile = "tmp_client.out"
@@ -93,7 +96,7 @@ class Prototype:
             ## Get launch client command
             launch_client_cmd = "nohup ./client {} >{} 2>&1 &".format(cliutil_instance.getClientCLIStr(), client_logfile)
             if tmp_client_machine_idx != Common.cur_machine_idx:
-                launch_client_cmd = getRemoteCmd_(tmp_client_machine_idx, launch_client_cmd)
+                launch_client_cmd = ExpUtil.getRemoteCmd_(tmp_client_machine_idx, launch_client_cmd)
             ## Execute command and update launched components
             launch_client_subprocess = SubprocessUtil.runCmd(launch_client_cmd)
             if tmp_client_machine_idx not in self.permachine_launched_components_:
@@ -103,13 +106,14 @@ class Prototype:
                 self.dieWithCleanup_("failed to launch client (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(launch_client_subprocess)))
             
         # (6) Periodically check whether evaluator finishes benchmark
+        LogUtil.prompt(Common.scriptname, "wait for prototype to finish benchmark...")
         ## Get check evaluator finish benchmark command
         check_evaluator_finish_benchmark_cmd = "cat {} | grep '{}'".format(evaluator_logfile, Common.EVALUATOR_FINISH_BENCHMARK_SYMBOL)
         if evaluator_machine_idx != Common.cur_machine_idx:
-            check_evaluator_finish_benchmark_cmd = getRemoteCmd_(evaluator_machine_idx, check_evaluator_finish_benchmark_cmd)
+            check_evaluator_finish_benchmark_cmd = ExpUtil.getRemoteCmd_(evaluator_machine_idx, check_evaluator_finish_benchmark_cmd)
         while True:
             ## Periodically check
-            sleep(5)
+            time.sleep(5)
             ## Check existence of evaluator finish benchmark symbol
             check_evaluator_finish_benchmark_subprocess = SubprocessUtil.runCmd(check_evaluator_finish_benchmark_cmd)
             if check_evaluator_finish_benchmark_subprocess.returncode == 0 and SubprocessUtil.getSubprocessOutputstr(check_evaluator_finish_benchmark_subprocess) != "": # Symbol exist
@@ -119,32 +123,21 @@ class Prototype:
         # (7) Kill all launched components
         ## Wait for all launched components which may be blocked by UDP sockets before timeout
         LogUtil.prompt(Common.scriptname, "wait for all launched components to finish...")
-        sleep(5)
+        time.sleep(5)
         ## Cleanup all launched componenets
         self.is_successful_finish_ = True
         self.cleanup_()
-    
-    def getRemoteCmd_(self, remote_machine_idx, internal_cmd):
-        if remote_machine_idx == Common.cur_machine_idx:
-            self.dieWithCleanup_("remote machine index {} should != current machine index {}".format(remote_machine_idx, Common.cur_machine_idx))
-        remote_cmd = "ssh -i ~/.ssh/{} {}@{} \"cd {} && {}\"".format(Common.sshkey_name, Common.username, physical_machines[remote_machine_idx]["ipstr"], Common.proj_dirname, internal_cmd)
-        return remote_cmd
     
     def dieWithCleanup_(self, msg):
         LogUtil.dieNoExit(Common.scriptname, msg)
         self.cleanup_()
     
     def cleanup_(self):
+        # Kill all launched components
         for tmp_machine_idx in self.permachine_launched_components_:
             for tmp_component in self.permachine_launched_components_[machine_idx]:
-                kill_component_cmd = ""
-                if tmp_machine_idx == Common.cur_machine_idx:
-                    kill_component_cmd = "ps -aux | grep {} | grep -v grep | awk '{print $2}'".format(tmp_component)
-                else:
-                    kill_component_cmd = "ssh -i ~/.ssh/{} {}@{} \"ps -aux | grep {} | grep -v grep | awk '{print $2}'\"".format(Common.sshkey_name, Common.username, physical_machines[tmp_machine_idx]["ipstr"], tmp_component)
-                kill_component_subprocess = SubprocessUtil.runCmd(kill_component_cmd)
-                if kill_component_subprocess.returncode != 0 and not self.is_successful_finish_:
-                    LogUtil.dieNoExit(Common.scriptname, "failed to kill {}; error: {}".format(tmp_component, SubprocessUtil.getSubprocessErrstr(kill_component_subprocess)))
+                ExpUtil.killComponenet_(tmp_machine_idx, tmp_component)
+
         if not self.is_successful_finish_:
             LogUtil.dieNoExit(Common.scriptname, "failed to launch prototype")
             exit(1)

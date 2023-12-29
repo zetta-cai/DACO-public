@@ -48,7 +48,7 @@ class CLIUtil:
     DEFAULT_KEYCNT = 10000
     DEFAULT_WORKLOAD_NAME = "facebook"
 
-    def __init__(self, scriptname, clientcnt=CLIUtil.DEFAULT_CLIENTCNT, edgecnt=CLIUtil.DEFAULT_EDGECNT, is_warmup_speedup=CLIUtil.DEFAULT_IS_WARMUP_SPEEDUP, perclient_opcnt=CLIUtil.DEFAULT_PERCLIENT_OPCNT, perclient_workercnt=CLIUtil.DEFAULT_PERCLIENT_WORKERCNT, cloud_storage=CLIUtil.DEFAULT_CLOUD_STORAGE, dataset_loadercnt=CLIUtil.DEFAULT_DATASET_LOADERCNT, cloud_idx=CLIUtil.DEFAULT_CLOUD_IDX, cache_name=CLIUtil.DEFAULT_CACHE_NAME, hash_name=CLIUtil.DEFAULT_HASH_NAME, percacheserver_workercnt=CLIUtil.DEFAULT_PERCACHESERVER_WORKERCNT, covered_local_uncached_max_mem_usage_mb=CLIUtil.DEFAULT_COVERED_LOCAL_UNCACHED_MAX_MEM_USAGE_MB, covered_peredge_synced_victimcnt=CLIUtil.DEFAULT_COVERED_PEREDGE_SYNCED_VICTIMCNT, covered_peredge_monitored_victimsetcnt=CLIUtil.DEFAULT_COVERED_PEREDGE_MONITORED_VICTIMSETCNT, covered_popularity_aggregation_max_mem_usage_mb=CLIUtil.DEFAULT_COVERED_POPULARITY_AGGREGATION_MAX_MEM_USAGE_MB, covered_popularity_collection_change_ratio=CLIUtil.DEFAULT_COVERED_POPULARITY_COLLECTION_CHANGE_RATIO, covered_topk_edgecnt=CLIUtil.DEFAULT_COVERED_TOPK_EDGECNT, capacity_mb=CLIUtil.DEFAULT_CAPACITY_MB, warmup_reqcnt_scale=CLIUtil.DEFAULT_WARMUP_REQCNT_SCALE, stresstest_duration_sec=CLIUtil.DEFAULT_STRESSTEST_DURATION_SEC, propagation_latency_clientedge_us=CLIUtil.DEFAULT_PROPAGATION_LATENCY_CLIENTEDGE_US, propagation_latency_crossedge_us=CLIUtil.DEFAULT_PROPAGATION_LATENCY_CROSSEDGE_US, propagation_latency_edgecloud_us=CLIUtil.DEFAULT_PROPAGATION_LATENCY_EDGECLOUD_US, keycnt=CLIUtil.DEFAULT_KEYCNT, workload_name=CLIUtil.DEFAULT_WORKLOAD_NAME):
+    def __init__(self, scriptname, clientcnt=DEFAULT_CLIENTCNT, edgecnt=DEFAULT_EDGECNT, is_warmup_speedup=DEFAULT_IS_WARMUP_SPEEDUP, perclient_opcnt=DEFAULT_PERCLIENT_OPCNT, perclient_workercnt=DEFAULT_PERCLIENT_WORKERCNT, cloud_storage=DEFAULT_CLOUD_STORAGE, dataset_loadercnt=DEFAULT_DATASET_LOADERCNT, cloud_idx=DEFAULT_CLOUD_IDX, cache_name=DEFAULT_CACHE_NAME, hash_name=DEFAULT_HASH_NAME, percacheserver_workercnt=DEFAULT_PERCACHESERVER_WORKERCNT, covered_local_uncached_max_mem_usage_mb=DEFAULT_COVERED_LOCAL_UNCACHED_MAX_MEM_USAGE_MB, covered_peredge_synced_victimcnt=DEFAULT_COVERED_PEREDGE_SYNCED_VICTIMCNT, covered_peredge_monitored_victimsetcnt=DEFAULT_COVERED_PEREDGE_MONITORED_VICTIMSETCNT, covered_popularity_aggregation_max_mem_usage_mb=DEFAULT_COVERED_POPULARITY_AGGREGATION_MAX_MEM_USAGE_MB, covered_popularity_collection_change_ratio=DEFAULT_COVERED_POPULARITY_COLLECTION_CHANGE_RATIO, covered_topk_edgecnt=DEFAULT_COVERED_TOPK_EDGECNT, capacity_mb=DEFAULT_CAPACITY_MB, warmup_reqcnt_scale=DEFAULT_WARMUP_REQCNT_SCALE, stresstest_duration_sec=DEFAULT_STRESSTEST_DURATION_SEC, propagation_latency_clientedge_us=DEFAULT_PROPAGATION_LATENCY_CLIENTEDGE_US, propagation_latency_crossedge_us=DEFAULT_PROPAGATION_LATENCY_CROSSEDGE_US, propagation_latency_edgecloud_us=DEFAULT_PROPAGATION_LATENCY_EDGECLOUD_US, keycnt=DEFAULT_KEYCNT, workload_name=DEFAULT_WORKLOAD_NAME):
         self.scriptname_ = scriptname
 
         # CLI base
@@ -104,7 +104,7 @@ class CLIUtil:
         client_cli_str += self.getClientCLIStr_()
         
         # Strip the first blank space
-        if client_cli_str != ""
+        if client_cli_str != "":
             if client_cli_str[0] != " ":
                 die(self.scriptname_, "the first char in client_cli_str should be blank space")
             client_cli_str = client_cli_str[1:] # client_cli_str[0] is " " here
@@ -118,7 +118,7 @@ class CLIUtil:
         edge_cli_str += self.getEdgeCLIStr_()
         
         # Strip the first blank space
-        if edge_cli_str != ""
+        if edge_cli_str != "":
             if edge_cli_str[0] != " ":
                 die(self.scriptname_, "the first char in edge_cli_str should be blank space")
             edge_cli_str = edge_cli_str[1:]
@@ -132,7 +132,7 @@ class CLIUtil:
         cloud_cli_str += self.getCloudCLIStr_()
 
         # Strip the first blank space
-        if cloud_cli_str != ""
+        if cloud_cli_str != "":
             if cloud_cli_str[0] != " ":
                 die(self.scriptname_, "the first char in cloud_cli_str should be blank space")
             cloud_cli_str = cloud_cli_str[1:]
@@ -149,7 +149,7 @@ class CLIUtil:
         evaluator_cli_str += self.getEdgeCLIStr_()
 
         # Strip the first blank space
-        if evaluator_cli_str != ""
+        if evaluator_cli_str != "":
             if evaluator_cli_str[0] != " ":
                 die(self.scriptname_, "the first char in evaluator_cli_str should be blank space")
             evaluator_cli_str = evaluator_cli_str[1:]
@@ -167,7 +167,7 @@ class CLIUtil:
         simulator_cli_str += self.getCloudCLIStr_()
 
         # Strip the first blank space
-        if simulator_cli_str != ""
+        if simulator_cli_str != "":
             if simulator_cli_str[0] != " ":
                 die(self.scriptname_, "the first char in simulator_cli_str should be blank space")
             simulator_cli_str = simulator_cli_str[1:]
@@ -179,7 +179,7 @@ class CLIUtil:
         dataset_loader_cli_str += self.getDatasetLoaderCLIStr_()
 
         # Strip the first blank space
-        if dataset_loader_cli_str != ""
+        if dataset_loader_cli_str != "":
             if dataset_loader_cli_str[0] != " ":
                 die(self.scriptname_, "the first char in dataset_loader_cli_str should be blank space")
             dataset_loader_cli_str = dataset_loader_cli_str[1:]
@@ -190,90 +190,90 @@ class CLIUtil:
     
     def getCLIBaseStr_(self):
         cli_base_str = ""
-        if self.clientcnt_ != DEFAULT_CLIENTCNT:
+        if self.clientcnt_ != self.DEFAULT_CLIENTCNT:
             cli_base_str += " --clientcnt " + str(self.clientcnt_)
-        if self.edgecnt_ != DEFAULT_EDGECNT:
+        if self.edgecnt_ != self.DEFAULT_EDGECNT:
             cli_base_str += " --edgecnt " + str(self.edgecnt_)
         return cli_base_str
     
     def getClientCLIStr_(self):
         client_cli_str = ""
-        if self.is_warmup_speedup_ != DEFAULT_IS_WARMUP_SPEEDUP:
+        if self.is_warmup_speedup_ != self.DEFAULT_IS_WARMUP_SPEEDUP:
             if self.is_warmup_speedup_ is True:
                 die(self.scriptname_, "default is_warmup_speedup should be True")
             client_cli_str += " --disable_warmup_speedup" # self.is_warmup_speedup_ is False here
-        if self.perclient_opcnt_ != DEFAULT_PERCLIENT_OPCNT:
+        if self.perclient_opcnt_ != self.DEFAULT_PERCLIENT_OPCNT:
             client_cli_str += " --perclient_opcnt " + str(self.perclient_opcnt_)
-        if self.perclient_workercnt_ != DEFAULT_PERCLIENT_WORKERCNT:
+        if self.perclient_workercnt_ != self.DEFAULT_PERCLIENT_WORKERCNT:
             client_cli_str += " --perclient_workercnt " + str(self.perclient_workercnt_)
         return client_cli_str
     
     def getCloudCLIStr_(self):
         cloud_cli_str = ""
-        if self.cloud_storage_ != DEFAULT_CLOUD_STORAGE:
+        if self.cloud_storage_ != self.DEFAULT_CLOUD_STORAGE:
             cloud_cli_str += " --cloud_storage " + str(self.cloud_storage_)
         return cloud_cli_str
     
     def getDatasetLoaderCLIStr_(self):
         dataset_loader_cli_str = ""
-        if self.dataset_loadercnt_ != DEFAULT_DATASET_LOADERCNT:
+        if self.dataset_loadercnt_ != self.DEFAULT_DATASET_LOADERCNT:
             dataset_loader_cli_str += " --dataset_loadercnt " + str(self.dataset_loadercnt_)
-        if self.cloud_idx_ != DEFAULT_CLOUD_IDX:
+        if self.cloud_idx_ != self.DEFAULT_CLOUD_IDX:
             dataset_loader_cli_str += " --cloud_idx " + str(self.cloud_idx_)
         return dataset_loader_cli_str
 
     def getEdgeCLIStr_(self):
         edge_cli_str = ""
-        if self.cache_name_ != DEFAULT_CACHE_NAME:
+        if self.cache_name_ != self.DEFAULT_CACHE_NAME:
             edge_cli_str += " --cache_name " + str(self.cache_name_)
-        if self.hash_name_ != DEFAULT_HASH_NAME:
+        if self.hash_name_ != self.DEFAULT_HASH_NAME:
             edge_cli_str += " --hash_name " + str(self.hash_name_)
-        if self.percacheserver_workercnt_ != DEFAULT_PERCACHESERVER_WORKERCNT:
+        if self.percacheserver_workercnt_ != self.DEFAULT_PERCACHESERVER_WORKERCNT:
             edge_cli_str += " --percacheserver_workercnt " + str(self.percacheserver_workercnt_)
-        if self.covered_local_uncached_max_mem_usage_mb_ != DEFAULT_COVERED_LOCAL_UNCACHED_MAX_MEM_USAGE_MB:
+        if self.covered_local_uncached_max_mem_usage_mb_ != self.DEFAULT_COVERED_LOCAL_UNCACHED_MAX_MEM_USAGE_MB:
             edge_cli_str += " --covered_local_uncached_max_mem_usage_mb " + str(self.covered_local_uncached_max_mem_usage_mb_)
-        if self.covered_peredge_synced_victimcnt_ != DEFAULT_COVERED_PEREDGE_SYNCED_VICTIMCNT:
+        if self.covered_peredge_synced_victimcnt_ != self.DEFAULT_COVERED_PEREDGE_SYNCED_VICTIMCNT:
             edge_cli_str += " --covered_peredge_synced_victimcnt " + str(self.covered_peredge_synced_victimcnt_)
-        if self.covered_peredge_monitored_victimsetcnt_ != DEFAULT_COVERED_PEREDGE_MONITORED_VICTIMSETCNT:
+        if self.covered_peredge_monitored_victimsetcnt_ != self.DEFAULT_COVERED_PEREDGE_MONITORED_VICTIMSETCNT:
             edge_cli_str += " --covered_peredge_monitored_victimsetcnt " + str(self.covered_peredge_monitored_victimsetcnt_)
-        if self.covered_popularity_aggregation_max_mem_usage_mb_ != DEFAULT_COVERED_POPULARITY_AGGREGATION_MAX_MEM_USAGE_MB:
+        if self.covered_popularity_aggregation_max_mem_usage_mb_ != self.DEFAULT_COVERED_POPULARITY_AGGREGATION_MAX_MEM_USAGE_MB:
             edge_cli_str += " --covered_popularity_aggregation_max_mem_usage_mb " + str(self.covered_popularity_aggregation_max_mem_usage_mb_)
-        if self.covered_popularity_collection_change_ratio_ != DEFAULT_COVERED_POPULARITY_COLLECTION_CHANGE_RATIO:
+        if self.covered_popularity_collection_change_ratio_ != self.DEFAULT_COVERED_POPULARITY_COLLECTION_CHANGE_RATIO:
             edge_cli_str += " --covered_popularity_collection_change_ratio " + str(self.covered_popularity_collection_change_ratio_)
-        if self.covered_topk_edgecnt_ != DEFAULT_COVERED_TOPK_EDGECNT:
+        if self.covered_topk_edgecnt_ != self.DEFAULT_COVERED_TOPK_EDGECNT:
             edge_cli_str += " --covered_topk_edgecnt " + str(self.covered_topk_edgecnt_)
         return edge_cli_str
     
     def getEdgescaleCLIStr_(self):
         edgescale_cli_str = ""
-        if self.capacity_mb_ != DEFAULT_CAPACITY_MB:
+        if self.capacity_mb_ != self.DEFAULT_CAPACITY_MB:
             edgescale_cli_str += " --capacity_mb " + str(self.capacity_mb_)
         return edgescale_cli_str
 
     def getEvaluatorCLIStr_(self):
         evaluator_cli_str = ""
-        if self.warmup_reqcnt_scale_ != DEFAULT_WARMUP_REQCNT_SCALE:
+        if self.warmup_reqcnt_scale_ != self.DEFAULT_WARMUP_REQCNT_SCALE:
             evaluator_cli_str += " --warmup_reqcnt_scale " + str(self.warmup_reqcnt_scale_)
-        #if self.warmup_max_duration_sec_ != DEFAULT_WARMUP_MAX_DURATION_SEC:
+        #if self.warmup_max_duration_sec_ != self.DEFAULT_WARMUP_MAX_DURATION_SEC:
         #    evaluator_cli_str += " --warmup_max_duration_sec " + str(self.warmup_max_duration_sec_)
-        if self.stresstest_duration_sec_ != DEFAULT_STRESSTEST_DURATION_SEC:
+        if self.stresstest_duration_sec_ != self.DEFAULT_STRESSTEST_DURATION_SEC:
             evaluator_cli_str += " --stresstest_duration_sec " + str(self.stresstest_duration_sec_)
         return evaluator_cli_str
     
     def getPropagationCLIStr_(self):
         propagation_cli_str = ""
-        if self.propagation_latency_clientedge_us_ != DEFAULT_PROPAGATION_LATENCY_CLIENTEDGE_US:
+        if self.propagation_latency_clientedge_us_ != self.DEFAULT_PROPAGATION_LATENCY_CLIENTEDGE_US:
             propagation_cli_str += " --propagation_latency_clientedge_us " + str(self.propagation_latency_clientedge_us_)
-        if self.propagation_latency_crossedge_us_ != DEFAULT_PROPAGATION_LATENCY_CROSSEDGE_US:
+        if self.propagation_latency_crossedge_us_ != self.DEFAULT_PROPAGATION_LATENCY_CROSSEDGE_US:
             propagation_cli_str += " --propagation_latency_crossedge_us " + str(self.propagation_latency_crossedge_us_)
-        if self.propagation_latency_edgecloud_us_ != DEFAULT_PROPAGATION_LATENCY_EDGECLOUD_US:
+        if self.propagation_latency_edgecloud_us_ != self.DEFAULT_PROPAGATION_LATENCY_EDGECLOUD_US:
             propagation_cli_str += " --propagation_latency_edgecloud_us " + str(self.propagation_latency_edgecloud_us_)
         return propagation_cli_str
     
     def getWorkloadCLIStr_(self):
         workload_cli_str = ""
-        if self.keycnt_ != DEFAULT_KEYCNT:
+        if self.keycnt_ != self.DEFAULT_KEYCNT:
             workload_cli_str += " --keycnt " + str(self.keycnt_)
-        if self.workload_name_ != DEFAULT_WORKLOAD_NAME:
+        if self.workload_name_ != self.DEFAULT_WORKLOAD_NAME:
             workload_cli_str += " --workload_name " + str(self.workload_name_)
         return workload_cli_str
