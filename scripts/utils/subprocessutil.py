@@ -50,7 +50,7 @@ class SubprocessUtil:
         need_upgrade = False
         current_version = ""
         if checkversion_subprocess.returncode != 0:
-            LogUtil.die(scriptname, "failed to get the current version of {}".format(software_name))
+            LogUtil.die(scriptname, "failed to get the current version of {} (errmsg: {})".format(software_name, cls.getSubprocessErrstr(checkversion_subprocess)))
         else:
             checkversion_outputstr = cls.getSubprocessOutputstr(checkversion_subprocess)
 
@@ -113,10 +113,10 @@ class SubprocessUtil:
     @classmethod
     def preserveOldAlternative(cls, scriptname, software_name, canonical_filepath, preferred_binpath):
         LogUtil.prompt(scriptname, "preserve old {}...".format(software_name))
-        preserve_old_cmd = "sudo update-alternatives --install {0}/{1} {1} {2} {3}".format(preferred_binpath, software_name, canonical_filepath, old_alternative_priority_)
+        preserve_old_cmd = "sudo update-alternatives --install {0}/{1} {1} {2} {3}".format(preferred_binpath, software_name, canonical_filepath, cls.old_alternative_priority_)
         preserve_old_subprocess = cls.runCmd(preserve_old_cmd)
         if preserve_old_subprocess.returncode != 0:
-            LogUtil.die(scriptname, "failed to preserve old {}".format(software_name))
+            LogUtil.die(scriptname, "failed to preserve old {} (errmsg: {})".format(software_name, cls.getSubprocessErrstr(preserve_old_subprocess)))
 
     @classmethod
     def downloadTarball(cls, scriptname, download_filepath, download_url):
@@ -131,7 +131,7 @@ class SubprocessUtil:
 
             download_subprocess = cls.runCmd(download_cmd)
             if download_subprocess.returncode != 0:
-                LogUtil.die(scriptname, "failed to download {}; error: {}".format(download_filepath, cls.getSubprocessErrstr(download_subprocess)))
+                LogUtil.die(scriptname, "failed to download {} (errmsg: {})".format(download_filepath, cls.getSubprocessErrstr(download_subprocess)))
         else:
             LogUtil.dump(scriptname, "{} exists ({} has been downloaded)".format(download_filepath, tmp_download_filename))
 
@@ -145,7 +145,7 @@ class SubprocessUtil:
 
             decompress_subprocess = cls.runCmd(decompress_cmd)
             if decompress_subprocess.returncode != 0:
-                LogUtil.die(scriptname, "failed to decompress {}; error: {}".format(download_filepath, cls.getSubprocessErrstr(decompress_subprocess)))
+                LogUtil.die(scriptname, "failed to decompress {} (errmsg: {})".format(download_filepath, cls.getSubprocessErrstr(decompress_subprocess)))
         else:
             LogUtil.dump(scriptname, "{} exists ({} has been decompressed)".format(decompress_dirpath, tmp_download_filename))
 
@@ -166,11 +166,11 @@ class SubprocessUtil:
                 install_subprocess = cls.runCmd(install_cmd)
                 if install_subprocess.returncode != 0:
                     install_errstr = cls.getSubprocessErrstr(install_subprocess)
-                    LogUtil.die(scriptname, "failed to install {}; error: {}".format(tmp_decompress_dirname, install_errstr))
+                    LogUtil.die(scriptname, "failed to install {} (errmsg: {})".format(tmp_decompress_dirname, install_errstr))
             else:
                 install_subprocess = cls.runCmd(install_cmd, is_capture_output=False)
                 if install_subprocess.returncode != 0:
-                    LogUtil.die(scriptname, "failed to install {}".format(tmp_decompress_dirname))
+                    LogUtil.die(scriptname, "failed to install {} (errmsg: {})".format(tmp_decompress_dirname, cls.getSubprocessErrstr(install_subprocess)))
         else:
             LogUtil.dump(scriptname, "{} exists ({} has been installed)".format(install_filepath, tmp_decompress_dirname))
 
@@ -203,10 +203,10 @@ class SubprocessUtil:
         tmp_install_filename = os.path.basename(install_filepath)
 
         LogUtil.prompt(scriptname, "switch to {}...".format(tmp_install_filename))
-        switch_new_cmd = "sudo update-alternatives --install {0}/{1} {1} {2} {3}".format(preferred_binpath, software_name, install_filepath, new_alternative_priority_)
+        switch_new_cmd = "sudo update-alternatives --install {0}/{1} {1} {2} {3}".format(preferred_binpath, software_name, install_filepath, cls.new_alternative_priority_)
         switch_new_subprocess = cls.runCmd(switch_new_cmd)
         if switch_new_subprocess.returncode != 0:
-            LogUtil.die(scriptname, "failed to switch {}".format(install_filepath))
+            LogUtil.die(scriptname, "failed to switch {} (errmsg: {})".format(install_filepath, cls.getSubprocessErrstr(switch_new_subprocess)))
 
     @classmethod
     def clearTarball(cls, scriptname, download_filepath):
@@ -218,7 +218,7 @@ class SubprocessUtil:
 
         clear_subprocess = cls.runCmd(clear_cmd)
         if clear_subprocess.returncode != 0:
-            LogUtil.die(scriptname, "failed to clear {}".format(download_filepath))
+            LogUtil.die(scriptname, "failed to clear {} (errmsg: {})".format(download_filepath, cls.getSubprocessErrstr(clear_subprocess)))
 
     ## (3) For softwares from github
 
@@ -234,7 +234,7 @@ class SubprocessUtil:
             clone_subprocess = cls.runCmd(clone_cmd)
             if clone_subprocess.returncode != 0:
                 clone_errstr = cls.getSubprocessErrstr(clone_subprocess)
-                LogUtil.die(scriptname, "failed to clone {} into {}; error: {}".format(software_name, clone_dirpath, clone_errstr))
+                LogUtil.die(scriptname, "failed to clone {} into {} (errmsg: {})".format(software_name, clone_dirpath, clone_errstr))
         else:
             LogUtil.dump(scriptname, "{} exists ({} has been cloned)".format(clone_dirpath, software_name))
 
@@ -244,7 +244,7 @@ class SubprocessUtil:
         check_commit_subprocess = cls. runCmd(check_commit_cmd)
         if check_commit_subprocess.returncode != 0:
             check_commit_errstr = cls.getSubprocessErrstr(check_commit_subprocess)
-            LogUtil.die(scriptname, "failed to get the latest commit ID of {}; error: {}".format(software_name, check_commit_errstr))
+            LogUtil.die(scriptname, "failed to get the latest commit ID of {} (errmsg: {})".format(software_name, check_commit_errstr))
         else:
             check_commit_outputstr = cls.getSubprocessOutputstr(check_commit_subprocess)
             if target_commit not in check_commit_outputstr:
@@ -254,7 +254,7 @@ class SubprocessUtil:
                 reset_subprocess = cls.runCmd(reset_cmd)
                 if reset_subprocess.returncode != 0:
                     reset_errstr = cls.getSubprocessErrstr(reset_subprocess)
-                    LogUtil.die(scriptname, "failed to reset {}; error: {}".format(software_name, reset_errstr))
+                    LogUtil.die(scriptname, "failed to reset {} (errmsg: {})".format(software_name, reset_errstr))
             else:
                 LogUtil.dump(scriptname, "the latest commit ID of {} is already {}".format(software_name, target_commit))
 
@@ -279,9 +279,9 @@ class SubprocessUtil:
         if time_consuming == False:
             install_subprocess = cls.runCmd(install_cmd)
             if install_subprocess.returncode != 0:
-                LogUtil.die(scriptname, "failed to install {}".format(software_name))
+                LogUtil.die(scriptname, "failed to install {} (errmsg: {})".format(software_name, cls.getSubprocessErrstr(install_subprocess)))
         else:
             install_subprocess = cls.runCmd(install_cmd, is_capture_output=False)
             if install_subprocess.returncode != 0:
                 install_errstr = cls.getSubprocessErrstr(install_subprocess)
-                LogUtil.die(scriptname, "failed to install {}; error: {}".format(software_name, install_errstr))
+                LogUtil.die(scriptname, "failed to install {} (errmsg: {})".format(software_name, install_errstr))

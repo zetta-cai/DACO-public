@@ -64,7 +64,7 @@ if is_install_pylib:
 
     pylib_install_subprocess = SubprocessUtil.runCmd(pylib_install_cmd)
     if pylib_install_subprocess.returncode != 0:
-        LogUtil.die(Common.scriptname, "failed to install python libraries based on {}".format(pylib_requirement_filepath))
+        LogUtil.die(Common.scriptname, "failed to install python libraries based on {} (errmsg: {})".format(pylib_requirement_filepath, SubprocessUtil.getSubprocessErrstr(pylib_install_subprocess)))
     print("")
 
 # (3) Upgrade gcc/g++ if necessary
@@ -97,7 +97,7 @@ if is_upgrade_gcc:
                 compiler_addrepo_cmd = "sudo add-apt-repository ppa:ubuntu-toolchain-r/test && sudo apt update"
                 compiler_addrepo_subprocess = SubprocessUtil.runCmd(compiler_addrepo_cmd)
                 if compiler_addrepo_subprocess.returncode != 0:
-                    LogUtil.die(Common.scriptname, "failed to add apt repo for {}".format(compiler_name))
+                    LogUtil.die(Common.scriptname, "failed to add apt repo for {} (errmsg: {})".format(compiler_name, SubprocessUtil.getSubprocessErrstr(compiler_addrepo_subprocess)))
                 is_add_apt_repo_for_compiler = True
 
             compiler_apt_targetname = "{}-9".format(compiler_name)
@@ -119,7 +119,7 @@ if is_link_cpp:
         link_cpp_cmd = "sudo mv $(which c++) $(which c++).bak; sudo ln -s {0}/g++ {0}/c++".foramt(compiler_preferred_binpaths["g++"])
         link_cpp_subprocess = SubprocessUtil.runCmd(link_cpp_cmd)
         if link_cpp_subprocess.returncode != 0:
-            LogUtil.die(Common.scriptname, "failed to link g++-9 to c++ binary")
+            LogUtil.die(Common.scriptname, "failed to link g++-9 to c++ binary (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(link_cpp_subprocess)))
     print("")
 
 # (5) Upgrade CMake if necessary (required by cachelib for CMake 3.12 or higher)
@@ -149,10 +149,12 @@ if is_upgrade_cmake:
         cmake_check_apt_repo_subprocess = SubprocessUtil.runCmd(cmake_check_apt_repo_cmd)
         if cmake_check_apt_repo_subprocess.returncode != 0:
             cmake_check_apt_repo_errstr = SubprocessUtil.getSubprocessErrstr(cmake_check_apt_repo_subprocess)
-            if cmake_check_apt_repo_errstr != "":
-                LogUtil.die(Common.scriptname, "failed to check apt repo for CMake (errmsg: {})".format(cmake_check_apt_repo_errstr))
-            else:
-                is_add_apt_repo_for_cmake = True
+            # OBSOLETE: if no files under /etc/apt/sources.list.d/, an error of "/etc/apt/sources.list.d/*: No such file or directory" will be raised
+            # if cmake_check_apt_repo_errstr != "":
+            #     LogUtil.die(Common.scriptname, "failed to check apt repo for CMake (errmsg: {})".format(cmake_check_apt_repo_errstr))
+            # else:
+            #     is_add_apt_repo_for_cmake = True
+            is_add_apt_repo_for_cmake = True
         else:
             cmake_check_apt_repo_outputstr = SubprocessUtil.getSubprocessOutputstr(cmake_check_apt_repo_subprocess)
             if cmake_repo_website in cmake_check_apt_repo_outputstr:
@@ -165,7 +167,7 @@ if is_upgrade_cmake:
             cmake_add_apt_repo_cmd = "wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | sudo apt-key add - && sudo apt-add-repository -y 'deb https://apt.kitware.com/ubuntu/ {} main' && sudo apt-get update && sudo apt-get install kitware-archive-keyring && sudo apt-key --keyring /etc/apt/trusted.gpg del C1F34CDD40CD72DA".format(Common.kernel_codename)
             cmake_add_apt_repo_subprocess = SubprocessUtil.runCmd(cmake_add_apt_repo_cmd, is_capture_output=False)
             if cmake_add_apt_repo_subprocess.returncode != 0:
-                LogUtil.die(Common.scriptname, "failed to add apt repo for CMake")
+                LogUtil.die(Common.scriptname, "failed to add apt repo for CMake (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(cmake_add_apt_repo_subprocess)))
         
         cmake_apt_targetname = "cmake"
         SubprocessUtil.installByApt(Common.scriptname, cmake_software_name, cmake_apt_targetname)
@@ -175,7 +177,7 @@ if is_upgrade_cmake:
         if tmp_need_upgrade_cmake:
             LogUtil.die(Common.scriptname, "cmake {} has NOT been upgraded to >= {} successfully!".format(cmake_new_version, cmake_target_version))
         cmake_new_canonical_filepath = SubprocessUtil.getCanonicalFilepath(Common.scriptname, cmake_software_name, cmake_new_version) # /usr/bin/cmake-3.25.2
-        SubprocessUtil.preserveNewAlternative(Common.scriptname, cmake_preferred_binpath, cmake_software_name, cmake_new_canonical_filepath)
+        SubprocessUtil.preserveNewAlternative(Common.scriptname, cmake_software_name, cmake_preferred_binpath, cmake_new_canonical_filepath)
     print("")
 
 # (6) Change system settings
@@ -186,7 +188,7 @@ need_set_rmem_max = False
 check_rmem_max_cmd = "sysctl -a 2>/dev/null | grep net.core.rmem_max"
 check_rmem_max_subprocess = SubprocessUtil.runCmd(check_rmem_max_cmd)
 if check_rmem_max_subprocess.returncode != 0:
-    LogUtil.die(Common.scriptname, "failed to check net.core.rmem_max")
+    LogUtil.die(Common.scriptname, "failed to check net.core.rmem_max (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(check_rmem_max_subprocess)))
 else:
     check_rmem_max_outputstr = SubprocessUtil.getSubprocessOutputstr(check_rmem_max_subprocess)
     cur_rmem_max = int(check_rmem_max_outputstr.split("=")[-1])
@@ -201,4 +203,4 @@ if need_set_rmem_max:
     set_rmem_max_cmd = "sudo sysctl -w net.core.rmem_max={}".format(target_rmem_max)
     set_rmem_max_subprocess = SubprocessUtil.runCmd(set_rmem_max_cmd)
     if set_rmem_max_subprocess.returncode != 0:
-        LogUtil.die(Common.scriptname, "failed to set net.core.rmem_max")
+        LogUtil.die(Common.scriptname, "failed to set net.core.rmem_max (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(set_rmem_max_subprocess)))

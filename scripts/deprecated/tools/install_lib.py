@@ -12,7 +12,7 @@ else:
     boost_system_checkversion_cmd = "cat {} | grep '#define BOOST_LIB_VERSION'".format(boost_system_version_filepath)
     boost_system_checkversion_subprocess = subprocess.run(boost_system_checkversion_cmd, shell=True, capture_output=True)
     if boost_system_checkversion_subprocess.returncode != 0:
-        LogUtil.die(filename, "failed to get the version of libboost preferred by system")
+        LogUtil.die(filename, "failed to get the version of libboost preferred by system (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(boost_system_checkversion_subprocess)))
     else:
         boost_system_checkversion_outputbytes = boost_system_checkversion_subprocess.stdout
         boost_system_checkversion_outputstr = boost_system_checkversion_outputbytes.decode("utf-8")
@@ -26,14 +26,14 @@ if need_link_boost_system:
         backup_original_boost_system_include_cmd = "sudo mv {} {}".format(boost_system_include_dirpath, backup_boost_system_include_dirpath)
         backup_original_boost_system_include_subprocess = subprocess.run(backup_original_boost_system_include_cmd, shell=True)
         if backup_original_boost_system_include_subprocess.returncode != 0:
-            LogUtil.die(filename, "failed to backup original {}".format(boost_system_include_dirpath))
+            LogUtil.die(filename, "failed to backup original {} (errmsg: {})".format(boost_system_include_dirpath, SubprocessUtil.getSubprocessErrstr(backup_original_boost_system_include_subprocess)))
     
     boost_install_include_dirpath = "{}/include/boost".format(boost_install_dirpath)
     LogUtil.prompt(filename, "copy {} to {}...".format(boost_install_include_dirpath, boost_system_include_dirpath))
     copy_boost_system_include_cmd = "sudo cp -r {} {}".format(boost_install_include_dirpath, boost_system_include_dirpath)
     copy_boost_system_include_subprocess = subprocess.run(copy_boost_system_include_cmd, shell=True)
     if copy_boost_system_include_subprocess.returncode != 0:
-        LogUtil.die(filename, "failed to copy {} to {}".format(boost_install_include_dirpath, boost_system_include_dirpath))
+        LogUtil.die(filename, "failed to copy {} to {} (errmsg: {})".format(boost_install_include_dirpath, boost_system_include_dirpath, SubprocessUtil.getSubprocessErrstr(copy_boost_system_include_subprocess)))
     
     backup_boost_system_lib_dirpath = "{}/boost_backup".format(boost_preferred_lib_dirpath)
     if not os.path.exists(backup_boost_system_lib_dirpath):
@@ -41,14 +41,14 @@ if need_link_boost_system:
         create_backup_boost_system_lib_dirpath_cmd = "sudo mkdir {}".format(backup_boost_system_lib_dirpath)
         create_backup_boost_system_lib_dirpath_subprocess = subprocess.run(create_backup_boost_system_lib_dirpath_cmd, shell=True)
         if create_backup_boost_system_lib_dirpath_subprocess.returncode != 0:
-            LogUtil.die(filename, "failed to create {}".format(backup_boost_system_lib_dirpath))
+            LogUtil.die(filename, "failed to create {} (errmsg: {})".format(backup_boost_system_lib_dirpath, SubprocessUtil.getSubprocessErrstr(create_backup_boost_system_lib_dirpath_subprocess)))
 
     original_boost_system_libs = "{}/libboost_*".format(boost_preferred_lib_dirpath)
     LogUtil.prompt(filename, "backup original {} into {}...".format(original_boost_system_libs, backup_boost_system_lib_dirpath))
     backup_boost_system_lib_cmd = "sudo mv {} {}".format(original_boost_system_libs, backup_boost_system_lib_dirpath)
     backup_boost_system_lib_subprocess = subprocess.run(backup_boost_system_lib_cmd, shell=True)
     #if backup_boost_system_lib_subprocess.returncode != 0:
-    #    LogUtil.die(filename, "failed to backup original {} into {}".format(original_boost_system_libs, backup_boost_system_lib_dirpath))
+    #    LogUtil.die(filename, "failed to backup original {} into {} (errmsg: {})".format(original_boost_system_libs, backup_boost_system_lib_dirpath, SubprocessUtil.getSubprocessErrstr(backup_boost_system_lib_subprocess)))
     
     boost_install_lib_dirpath = "{}/lib".format(boost_install_dirpath)
     boost_install_libs_filepath = "{}/libboost_*".format(boost_install_lib_dirpath)
@@ -56,13 +56,13 @@ if need_link_boost_system:
     copy_boost_system_lib_cmd = "sudo cp {} {}".format(boost_install_libs_filepath, boost_preferred_lib_dirpath)
     copy_boost_system_include_subprocess = subprocess.run(copy_boost_system_lib_cmd, shell=True)
     if copy_boost_system_include_subprocess.returncode != 0:
-        LogUtil.die(filename, "failed to copy {} to {}".format(boost_install_libs_filepath, boost_preferred_lib_dirpath))
+        LogUtil.die(filename, "failed to copy {} to {} (errmsg: {})".format(boost_install_libs_filepath, boost_preferred_lib_dirpath, SubprocessUtil.getSubprocessErrstr(copy_boost_system_include_subprocess)))
 
     LogUtil.prompt(filename, "update OS by ldconfig")
     update_ldconfig_cmd = "sudo ldconfig"
     update_ldconfig_subprocess = subprocess.run(update_ldconfig_cmd, shell=True)
     if update_ldconfig_subprocess.returncode != 0:
-        LogUtil.die(filename, "failed to update OS by ldconfig")
+        LogUtil.die(filename, "failed to update OS by ldconfig (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(update_ldconfig_subprocess)))
 else:
     LogUtil.dump(filename, "libboost preferred by system is already {}".format(target_boost_system_versionstr))
 
@@ -72,7 +72,7 @@ if is_clear_tarball:
 
     boost_clear_subprocess = subprocess.run(boost_clear_cmd, shell=True)
     if boost_clear_subprocess.returncode != 0:
-        LogUtil.die(filename, "failed to clear {}".format(boost_download_filepath))
+        LogUtil.die(filename, "failed to clear {} (errmsg: {})".format(boost_download_filepath, SubprocessUtil.getSubprocessErrstr(boost_clear_subprocess)))
 
 # (2) Before CacheLib's installFromRepo
 

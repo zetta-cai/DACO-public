@@ -43,6 +43,9 @@ class PathUtil:
                     if target_name in tmp_sub_file_or_dir:
                         preferred_dirpath = tmp_env_path.strip()
                         break
+            
+            if preferred_dirpath != "":
+                break
         
         if preferred_dirpath == "":
             LogUtil.warn(scriptname, "{} are NOT found in {}!".format(target_name, cls.system_env_pathstr_))
@@ -67,7 +70,7 @@ class PathUtil:
         replace_rootdir_cmd = "sed -i 's!{}!{}!g' {}".format(original_dir, current_dir, path)
         replace_rootdir_subprocess = SubprocessUtil.runCmd(replace_rootdir_cmd)
         if replace_rootdir_subprocess.returncode != 0:
-            LogUtil.die(scriptname, "Failed to replace rootdir: " + path)
+            LogUtil.die(scriptname, "Failed to replace rootdir: {} (errmsg: {})".format(path, SubprocessUtil.getSubprocessErrstr(replace_rootdir_subprocess)))
 
     @staticmethod
     def restore_dir(scriptname, original_dir, current_dir, path):
@@ -78,4 +81,4 @@ class PathUtil:
         restore_rootdir_cmd = "sed -i 's!{}!{}!g' {}".format(current_dir, original_dir, path)
         restore_rootdir_subprocess = SubprocessUtil.runCmd(restore_rootdir_cmd)
         if restore_rootdir_subprocess.returncode != 0:
-            LogUtil.die(scriptname, "Failed to restore rootdir: " + path)
+            LogUtil.die(scriptname, "Failed to restore rootdir: {} (errmsg: {})".format(path, SubprocessUtil.getSubprocessErrstr(restore_rootdir_subprocess)))

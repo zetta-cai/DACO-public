@@ -69,7 +69,7 @@ if is_install_cachelib:
         replace_build_package_subprocess = SubprocessUtil.runCmd(replace_build_package_cmd)
         if replace_build_package_subprocess.returncode != 0:
             replace_build_package_errstr = SubprocessUtil.getSubprocessErrstr(replace_build_package_subprocess)
-            LogUtil.die(Common.scriptname, "failed to replace contrib/build-package.sh; error: {}".format(replace_build_package_errstr))
+            LogUtil.die(Common.scriptname, "failed to replace contrib/build-package.sh (errmsg: {})".format(replace_build_package_errstr))
         
         # Restore library dirpath in scripts/cachelib/build-package.sh after copying
         PathUtil.restore_dir(Common.scriptname, default_lib_dirpath, Common.lib_dirpath, custom_cachelib_buildpkg_filepath)
@@ -225,7 +225,7 @@ chown_cmd = "sudo chown -R {0}:{0} {1}".format(Common.username, Common.lib_dirpa
 chown_subprocess = SubprocessUtil.runCmd(chown_cmd)
 if chown_subprocess.returncode != 0:
     chown_errstr = SubprocessUtil.getSubprocessErrstr(chown_subprocess)
-    LogUtil.die(Common.scriptname, "failed to chown of libraries; error: {}".format(chown_errstr))
+    LogUtil.die(Common.scriptname, "failed to chown of libraries (errmsg: {})".format(chown_errstr))
 
 ## Update LD_LIBRARY_PATH
 
@@ -269,7 +269,7 @@ if need_update_ld_library_path:
             LogUtil.dump(Common.scriptname, "bash source file {} already contains all target libraries".format(bash_source_filepath))
     else: # NOTE: if returncode is not 0, it also means that the target libraries are not contained in LD_LIBRARY_PATH at bash source file
         need_update_bash_source_file = True
-        #LogUtil.die(Common.scriptname, "failed to check bash source file {}".format(bash_source_filepath))
+        #LogUtil.die(Common.scriptname, "failed to check bash source file {} (errmsg: {})".format(bash_source_filepath, SubprocessUtil.getSubprocessErrstr(check_bash_source_file_subprocess)))
     
     if need_update_bash_source_file:
         LogUtil.prompt(Common.scriptname, "update bash source file {}...".format(bash_source_filepath))
@@ -285,15 +285,15 @@ if need_update_ld_library_path:
         update_bash_source_file_subprocess = SubprocessUtil.runCmd(update_bash_source_file_cmd)
         if update_bash_source_file_subprocess.returncode != 0:
             update_bash_source_file_errstr = SubprocessUtil.getSubprocessErrstr(update_bash_source_file_subprocess)
-            LogUtil.die(Common.scriptname, "failed to update bash source file {}; error: {}".format(bash_source_filepath, update_bash_source_file_errstr))
+            LogUtil.die(Common.scriptname, "failed to update bash source file {} (errmsg: {})".format(bash_source_filepath, update_bash_source_file_errstr))
 
     # NOTE: as python will fork a non-interative bash to execute update_ld_library_path_cmd, it cannot find the built-in source command and also cannot change the environment variable of the interative bash launching the python script
     #LogUtil.prompt(Common.scriptname, "source {} to update LD_LIBRARY_PATH...".format(bash_source_filepath))
     #update_ld_library_path_cmd = "source {}".format(bash_source_filepath)
     #update_ld_library_path_subprocess = SubprocessUtil.runCmd(update_ld_library_path_cmd)
     #if update_ld_library_path_subprocess.returncode != 0:
-    #    update_ld_library_path_outputstr = SubprocessUtil.getSubprocessErrstr(update_ld_library_path_subprocess)
-    #    LogUtil.die(Common.scriptname, "failed to source {} to update LD_LIBRARY_PATH; error: {}".format(bash_source_filepath, update_ld_library_path_outputstr))
+    #    update_ld_library_path_errstr = SubprocessUtil.getSubprocessErrstr(update_ld_library_path_subprocess)
+    #    LogUtil.die(Common.scriptname, "failed to source {} to update LD_LIBRARY_PATH (errmsg: {})".format(bash_source_filepath, update_ld_library_path_errstr))
 
     LogUtil.emphasize(Common.scriptname, "Please update LD_LIBRARY_PATH by this command: source {}".format(bash_source_filepath))
 else:

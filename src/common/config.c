@@ -1067,7 +1067,7 @@ namespace covered
             }
         }
 
-        // (ii) Each physical machine MUST have positive cpu dedicated/shared corecnt
+        // (ii) Each physical machine MUST have positive cpu dedicated corecnt and non-negative cpu shared corecnt
         for (uint32_t i = 0; i < physical_machines_.size(); i++)
         {
             assert(physical_machines_[i].getCpuDedicatedCorecnt() > 0);
@@ -1162,7 +1162,7 @@ namespace covered
             Util::dumpWarnMsg(kClassName, oss.str());
         }
 
-        // (v) client/edge/cloud physical machine indexes MUST be valid
+        // (v) client/edge/cloud/evaluator physical machine indexes MUST be valid
         assert(client_machine_idxes_.size() > 0);
         for (uint32_t i = 0; i < client_machine_idxes_.size(); i++)
         {
@@ -1174,6 +1174,15 @@ namespace covered
             assert(edge_machine_idxes_[i] < physical_machines_.size());
         }
         assert(cloud_machine_idx_ < physical_machines_.size());
+        assert(evaluator_machine_idx_ < physical_machines_.size());
+
+        // (vi) client/edge/cloud/evaluator MUST be current machine idx if under single-node simulation
+        assert(client_machine_idxes_.size() == 1);
+        assert(client_machine_idxes_[0] == current_machine_idx_);
+        assert(edge_machine_idxes_.size() == 1);
+        assert(edge_machine_idxes_[0] == current_machine_idx_);
+        assert(cloud_machine_idx_ == current_machine_idx_);
+        assert(evaluator_machine_idx_ == current_machine_idx_);
 
         return;
     }

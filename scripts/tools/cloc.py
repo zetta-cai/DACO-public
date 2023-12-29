@@ -26,7 +26,7 @@ for tmp_dir in c_dirs:
 
     tmp_cloc_subprocess = SubprocessUtil.runCmd(tmp_cloc_cmd)
     if tmp_cloc_subprocess.returncode != 0:
-        LogUtil.die(Common.scriptname, "failed to count LOC for all C/C++ source code in {}".format(tmp_dir))
+        LogUtil.die(Common.scriptname, "failed to count LOC for all C/C++ source code in {} (errmsg: {})".format(tmp_dir, SubprocessUtil.getSubprocessErrstr(tmp_cloc_subprocess)))
     else:
         tmp_outputstr = SubprocessUtil.getSubprocessOutputstr(tmp_cloc_subprocess)
         print(tmp_outputstr)
@@ -45,7 +45,7 @@ tmp_cloc_cmd = "cloc {} {}".format(exclude_command, design_c_dir_str)
 
 tmp_cloc_subprocess = SubprocessUtil.runCmd(tmp_cloc_cmd)
 if tmp_cloc_subprocess.returncode != 0:
-    LogUtil.die(Common.scriptname, "failed to count LOC for design-related C/C++ source code in {}".format(tmp_dir))
+    LogUtil.die(Common.scriptname, "failed to count LOC for design-related C/C++ source code in {} (errmsg: {})".format(tmp_dir, SubprocessUtil.getSubprocessErrstr(tmp_cloc_subprocess)))
 else:
     tmp_outputstr = SubprocessUtil.getSubprocessOutputstr(tmp_cloc_subprocess)
     print(tmp_outputstr)
@@ -60,7 +60,7 @@ for tmp_dir in py_dirs:
 
     tmp_cloc_subprocess = SubprocessUtil.runCmd(tmp_cloc_cmd)
     if tmp_cloc_subprocess.returncode != 0:
-        LogUtil.die(Common.scriptname, "failed to count python script code in {}".format(tmp_dir))
+        LogUtil.die(Common.scriptname, "failed to count python script code in {} (errmsg: {})".format(tmp_dir, SubprocessUtil.getSubprocessErrstr(tmp_cloc_subprocess)))
     else:
         tmp_outputstr = SubprocessUtil.getSubprocessOutputstr(tmp_cloc_subprocess)
         print(tmp_outputstr)
