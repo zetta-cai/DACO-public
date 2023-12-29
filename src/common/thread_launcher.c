@@ -41,7 +41,7 @@ namespace covered
         {
             // Get per-thread-role required dedicated corecnt
             std::unordered_map<std::string, uint32_t> perrole_required_dedicated_corecnt;
-            getPerroleRequiredDedicatedCorecnt(main_class_name, clientcnt, edgecnt, perrole_required_dedicated_corecnt);
+            getPerroleRequiredDedicatedCorecnt_(main_class_name, clientcnt, edgecnt, perrole_required_dedicated_corecnt);
 
             // Follow the insertion order of perrole_required_dedicated_corecnt to assign dedicated CPU cores
             uint32_t tmp_dedicated_coreidx = 0;
@@ -75,7 +75,7 @@ namespace covered
         return;
     }
 
-    void ThreadLauncher::getPerroleRequiredDedicatedCorecnt(const std::string main_class_name, const uint32_t clientcnt, const uint32_t edgecnt, std::unordered_map<std::string, uint32_t>& perrole_required_dedicated_corecnt)
+    void ThreadLauncher::getPerroleRequiredDedicatedCorecnt_(const std::string main_class_name, const uint32_t clientcnt, const uint32_t edgecnt, std::unordered_map<std::string, uint32_t>& perrole_required_dedicated_corecnt)
     {
         if (main_class_name == Util::SIMULATOR_MAIN_NAME || main_class_name == Util::CLIENT_MAIN_NAME || main_class_name == Util::EDGE_MAIN_NAME || main_class_name == Util::CLOUD_MAIN_NAME || main_class_name == Util::EVALUATOR_MAIN_NAME)
         {
@@ -182,16 +182,17 @@ namespace covered
         const PhysicalMachine tmp_physical_machine = Config::getCurrentPhysicalMachine();
         const uint32_t tmp_cpu_dedicated_corecnt = tmp_physical_machine.getCpuDedicatedCorecnt();
         const uint32_t tmp_cpu_shared_corecnt = tmp_physical_machine.getCpuSharedCorecnt();
+        const uint32_t tmp_min_cpuidx = tmp_cpu_shared_corecnt > 0 ? tmp_cpu_dedicated_corecnt : 0; // Bind low-priority threads to the set of all CPU cores if NO shared CPU cores
         const uint32_t tmp_max_cpuidx = tmp_cpu_dedicated_corecnt + tmp_cpu_shared_corecnt - 1;
         assert(tmp_max_cpuidx < std::thread::hardware_concurrency()); // NOT exceed total # of CPU cores
-        assert(tmp_max_cpuidx >= tmp_cpu_dedicated_corecnt && tmp_max_cpuidx < (tmp_cpu_dedicated_corecnt + tmp_cpu_shared_corecnt)); // MUST within the range of [cpu_dedicated_corecnt, cpu_dedicated_corecnt + cpu_shared_corecnt - 1]
+        assert(tmp_max_cpuidx >= tmp_min_cpuidx && tmp_max_cpuidx < (tmp_cpu_dedicated_corecnt + tmp_cpu_shared_corecnt)); // MUST within the range of [tmp_min_cpuidx, cpu_dedicated_corecnt + cpu_shared_corecnt - 1]
 
         // Initialize cpu_shared_coreset_ if NOT
         if (original_low_priority_threadcnt == 0) // The first low-priority thread
         {
-            // Prepare cpu_shared_coreset_ within the range of [cpu_dedicated_corecnt, cpu_dedicated_corecnt + cpu_shared_corecnt - 1]
+            // Prepare cpu_shared_coreset_ within the range of [tmp_min_cpuidx, cpu_dedicated_corecnt + cpu_shared_corecnt - 1]
             CPU_ZERO(&cpu_shared_coreset_);
-            for (uint32_t tmp_cpuidx = tmp_cpu_dedicated_corecnt; tmp_cpuidx <= tmp_max_cpuidx; tmp_cpuidx++)
+            for (uint32_t tmp_cpuidx = tmp_min_cpuidx; tmp_cpuidx <= tmp_max_cpuidx; tmp_cpuidx++)
             {
                 CPU_SET(tmp_cpuidx, &cpu_shared_coreset_);
             }

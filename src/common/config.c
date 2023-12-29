@@ -1071,7 +1071,7 @@ namespace covered
         for (uint32_t i = 0; i < physical_machines_.size(); i++)
         {
             assert(physical_machines_[i].getCpuDedicatedCorecnt() > 0);
-            assert(physical_machines_[i].getCpuSharedCorecnt() > 0);
+            assert(physical_machines_[i].getCpuSharedCorecnt() >= 0); // NOTE: if CPU shared corecnt = 0, low-priority threads will be bound to the set of all CPU cores
         }
 
         // (iii) Set current physical machine index by mathcing ipstr

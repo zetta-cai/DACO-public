@@ -48,7 +48,7 @@ namespace covered
 
         // For validation
 
-        static void getPerroleRequiredDedicatedCorecnt(const std::string main_class_name, const uint32_t clientcnt, const uint32_t edgecnt, std::unordered_map<std::string, uint32_t>& perrole_required_dedicated_corecnt); // Get the required number of dedicated CPU cores for each thread role in the current physical machine
+        static void getPerroleRequiredDedicatedCorecnt_(const std::string main_class_name, const uint32_t clientcnt, const uint32_t edgecnt, std::unordered_map<std::string, uint32_t>& perrole_required_dedicated_corecnt); // Get the required number of dedicated CPU cores for each thread role in the current physical machine
 
         // Common utilities
 

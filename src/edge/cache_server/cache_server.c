@@ -19,8 +19,8 @@ namespace covered
 {
     const std::string CacheServer::kClassName("CacheServer");
 
-    //const bool CacheServer::IS_HIGH_PRIORITY_FOR_CACHE_PLACEMENT = true;
-    const bool CacheServer::IS_HIGH_PRIORITY_FOR_CACHE_PLACEMENT = false; // TMPDEBUG231228
+    // NOTE: do NOT change the following const variables unless you know what you are doing
+    const bool CacheServer::IS_HIGH_PRIORITY_FOR_CACHE_PLACEMENT = true;
     const bool CacheServer::IS_HIGH_PRIORITY_FOR_METADATA_UPDATE = false;
     const bool CacheServer::IS_HIGH_PRIORITY_FOR_VICTIM_FETCH = false;
 

@@ -45,7 +45,8 @@ int main(int argc, char **argv) {
     covered::Util::dumpNormalMsg(main_class_name, "launch evaluator");
 
     std::string tmp_thread_name = "evaluator-wrapper";
-    covered::ThreadLauncher::pthreadCreateHighPriority(covered::ThreadLauncher::EVALUATOR_THREAD_ROLE, tmp_thread_name, &evaluator_thread, covered::EvaluatorWrapper::launchEvaluator, (void*)(&evaluator_param));
+    // covered::ThreadLauncher::pthreadCreateHighPriority(covered::ThreadLauncher::EVALUATOR_THREAD_ROLE, tmp_thread_name, &evaluator_thread, covered::EvaluatorWrapper::launchEvaluator, (void*)(&evaluator_param));
+    covered::ThreadLauncher::pthreadCreateLowPriority(tmp_thread_name, &evaluator_thread, covered::EvaluatorWrapper::launchEvaluator, (void*)(&evaluator_param)); // TMPDEBUG231229
     // if (pthread_returncode != 0)
     // {
     //     std::ostringstream oss;
