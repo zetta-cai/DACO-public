@@ -778,33 +778,37 @@ namespace covered
         return;
     }
 
-    uint32_t Config::getCurrentMachineEvaluatorDedicatedCorecnt()
+    bool Config::getCurrentMachineEvaluatorDedicatedCorecnt(uint32_t& current_machine_evaluator_dedicated_corecnt)
     {
         checkIsValid_();
 
-        uint32_t current_machine_evaluator_dedicated_corecnt = 0;
+        bool is_current_machine_as_evaluator = false;
+        current_machine_evaluator_dedicated_corecnt = 0;
         if (current_machine_idx_ == evaluator_machine_idx_)
         {
+            is_current_machine_as_evaluator = true;
             current_machine_evaluator_dedicated_corecnt = evaluator_dedicated_corecnt_;
         }
         
-        return current_machine_evaluator_dedicated_corecnt;
+        return is_current_machine_as_evaluator;
     }
 
-    uint32_t Config::getCurrentMachineCloudDedicatedCorecnt()
+    bool Config::getCurrentMachineCloudDedicatedCorecnt(uint32_t& current_machine_cloud_dedicated_corecnt)
     {
         checkIsValid_();
 
-        uint32_t current_machine_cloud_dedicated_corecnt = 0;
+        bool is_current_machine_as_cloud = false;
+        current_machine_cloud_dedicated_corecnt = 0;
         if (current_machine_idx_ == cloud_machine_idx_)
         {
+            is_current_machine_as_cloud = true;
             current_machine_cloud_dedicated_corecnt = cloud_dedicated_corecnt_;
         }
 
-        return current_machine_cloud_dedicated_corecnt;
+        return is_current_machine_as_cloud;
     }
 
-    uint32_t Config::getCurrentMachineEdgeDedicatedCorecnt(const uint32_t& edgecnt)
+    bool Config::getCurrentMachineEdgeDedicatedCorecnt(const uint32_t& edgecnt, uint32_t& current_machine_edge_dedicated_corecnt)
     {
         checkIsValid_();
 
@@ -818,7 +822,7 @@ namespace covered
             }
         }
 
-        uint32_t current_machine_edge_dedicated_corecnt = 0;
+        current_machine_edge_dedicated_corecnt = 0;
         if (is_current_machine_as_edge)
         {
             // Get current_machine_edgecnt
@@ -831,10 +835,10 @@ namespace covered
             current_machine_edge_dedicated_corecnt = current_machine_edgecnt * edge_dedicated_corecnt_;
         }
 
-        return current_machine_edge_dedicated_corecnt;
+        return is_current_machine_as_edge;
     }
 
-    uint32_t Config::getCurrentMachineClientDedicatedCorecnt(const uint32_t& clientcnt)
+    bool Config::getCurrentMachineClientDedicatedCorecnt(const uint32_t& clientcnt, uint32_t& current_machine_client_dedicated_corecnt)
     {
         checkIsValid_();
 
@@ -848,7 +852,7 @@ namespace covered
             }
         }
 
-        uint32_t current_machine_client_dedicated_corecnt = 0;
+        current_machine_client_dedicated_corecnt = 0;
         if (is_current_machine_as_client)
         {
             // Get current_machine_clientcnt
@@ -861,7 +865,7 @@ namespace covered
             current_machine_client_dedicated_corecnt = current_machine_clientcnt * client_dedicated_corecnt_;
         }
 
-        return current_machine_client_dedicated_corecnt;
+        return is_current_machine_as_client;
     }
 
     // For port verification
@@ -1033,7 +1037,7 @@ namespace covered
     void Config::checkMainClassName_()
     {
         // Obsolete: STATISTICS_AGGREGATOR_MAIN_NAME
-        if (main_class_name_ != Util::SIMULATOR_MAIN_NAME && main_class_name_ != Util::TOTAL_STATISTICS_LOADER_MAIN_NAME && main_class_name_ != Util::DATASET_LOADER_MAIN_NAME && main_class_name_ != Util::CLIENT_MAIN_NAME && main_class_name_ != Util::EDGE_MAIN_NAME && main_class_name_ != Util::CLOUD_MAIN_NAME)
+        if (main_class_name_ != Util::SIMULATOR_MAIN_NAME && main_class_name_ != Util::TOTAL_STATISTICS_LOADER_MAIN_NAME && main_class_name_ != Util::DATASET_LOADER_MAIN_NAME && main_class_name_ != Util::CLIENT_MAIN_NAME && main_class_name_ != Util::EDGE_MAIN_NAME && main_class_name_ != Util::CLOUD_MAIN_NAME && main_class_name_ != Util::EVALUATOR_MAIN_NAME)
         {
             std::ostringstream oss;
             oss << "main class name " << main_class_name_ << " is not supported!";

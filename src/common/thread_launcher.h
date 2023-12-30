@@ -18,6 +18,32 @@
 
 namespace covered
 {
+    class DedicatedCoreAssignment
+    {
+    public:
+        DedicatedCoreAssignment();
+        DedicatedCoreAssignment(const uint32_t& left_inclusive_dedicated_coreidx, const uint32_t& right_inclusive_dedicated_coreidx);
+        DedicatedCoreAssignment(const DedicatedCoreAssignment& other);
+        ~DedicatedCoreAssignment();
+
+        bool isAssigned() const;
+        uint32_t getLeftInclusiveDedicatedCoreidx() const;
+        uint32_t getRightInclusiveDedicatedCoreidx() const;
+
+        uint32_t assignDedicatedCore(); // Return assigned CPU index
+
+        const DedicatedCoreAssignment& operator=(const DedicatedCoreAssignment& other);
+    private:
+        static const std::string kClassName;
+
+        bool is_assigned_;
+        uint32_t left_inclusive_dedicated_coreidx_;
+        uint32_t right_inclusive_dedicated_coreidx_;
+
+        // To calculate cpu idx of a high-priority thread for the given thread role under strict CPU binding
+        std::atomic<uint32_t> cur_high_priority_cputidx_; // Within the range of [left_inclusive_dedicated_coreidx_, right_inclusive_dedicated_coreidx_] if is_assigned_ is true
+    };
+
     class ThreadLauncher
     {
     public:
@@ -72,8 +98,7 @@ namespace covered
         // For high-priority threads
         
         // NOTE: NOT maintain such assignment of dedicated cores in Config to avoid the dependency of Config module on clientcnt/edgecnt in CLI module -> Config module should ONLY track static configuration information instead of dynamic one
-        static std::unordered_map<std::string, std::pair<uint32_t, uint32_t>> current_machine_dedicated_cores_assignment_; // Assignment of dedicated cores for clients/edges/cloud/evaluator in the current physical machine
-        static std::unordered_map<std::string, std::atomic<uint32_t>> perrole_cur_high_priority_cpuidx_; // To calculate cpu idx of a high-priority thread for each thread role under strict CPU binding
+        static std::unordered_map<std::string, DedicatedCoreAssignment> current_machine_dedicated_core_assignments_; // Assignment of dedicated cores for clients/edges/cloud/evaluator in the current physical machine
         static std::atomic<uint32_t> high_priority_threadcnt_;
     };
 }

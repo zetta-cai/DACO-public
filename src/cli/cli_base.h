@@ -5,6 +5,8 @@
  * 
  * NOTE: different CLIs should NOT have overlapped parameters, and each virtual function will be invoked at most once.
  * 
+ * NOTE: any update of any CLI MUST be synced to scripts/utils/cliutil.py!!!
+ * 
  * By Siyuan Sheng (2023.08.02).
  */
 

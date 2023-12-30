@@ -113,6 +113,7 @@ class CLIUtil:
     
     def getEdgeCLIStr(self):
         edge_cli_str = ""
+        edge_cli_str += self.getCLIBaseStr_()
         edge_cli_str += self.getEdgescaleCLIStr_()
         edge_cli_str += self.getPropagationCLIStr_()
         edge_cli_str += self.getEdgeCLIStr_()
@@ -127,6 +128,7 @@ class CLIUtil:
     
     def getCloudCLIStr(self):
         cloud_cli_str = ""
+        cloud_cli_str += self.getCLIBaseStr_()
         cloud_cli_str += self.getPropagationCLIStr_()
         cloud_cli_str += self.getWorkloadCLIStr_()
         cloud_cli_str += self.getCloudCLIStr_()
@@ -147,6 +149,7 @@ class CLIUtil:
         evaluator_cli_str += self.getWorkloadCLIStr_()
         evaluator_cli_str += self.getClientCLIStr_()
         evaluator_cli_str += self.getEdgeCLIStr_()
+        evaluator_cli_str += self.getEvaluatorCLIStr_()
 
         # Strip the first blank space
         if evaluator_cli_str != "":
@@ -164,6 +167,7 @@ class CLIUtil:
         simulator_cli_str += self.getWorkloadCLIStr_()
         simulator_cli_str += self.getClientCLIStr_()
         simulator_cli_str += self.getEdgeCLIStr_()
+        evaluator_cli_str += self.getEvaluatorCLIStr_()
         simulator_cli_str += self.getCloudCLIStr_()
 
         # Strip the first blank space
@@ -176,6 +180,10 @@ class CLIUtil:
 
     def getDatasetLoaderCLIStr(self):
         dataset_loader_cli_str = ""
+        dataset_loader_cli_str += self.getCLIBaseStr_()
+        dataset_loader_cli_str += self.getPropagationCLIStr_()
+        dataset_loader_cli_str += self.getWorkloadCLIStr_()
+        dataset_loader_cli_str += self.getCloudCLIStr_()
         dataset_loader_cli_str += self.getDatasetLoaderCLIStr_()
 
         # Strip the first blank space

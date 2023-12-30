@@ -13,9 +13,9 @@ exp_simple_test_settings = {
 }
 
 # For prototype
-# prototype_instance = Prototype(**exp_simple_test_settings)
-# prototype_instance.run()
+prototype_instance = Prototype(**exp_simple_test_settings)
+prototype_instance.run()
 
 # For simulator
-simulator_instance = Simulator(**exp_simple_test_settings)
-simulator_instance.run()
+# simulator_instance = Simulator(**exp_simple_test_settings)
+# simulator_instance.run()

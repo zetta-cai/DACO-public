@@ -21,7 +21,7 @@ class Prototype:
         ## Get launch evaluator command
         evaluator_machine_idx = JsonUtil.getValueForKeystr(Common.scriptname, "evaluator_machine_index")
         evaluator_logfile = "tmp_evaluator.out"
-        launch_evaluator_cmd = "nohup ./evaluator {} >{} 2>&1 &".format(cliutil_instance.getEvaluatorCLIStr(), evaluator_logfile)
+        launch_evaluator_cmd = "nohup ./evaluator {} >{} 2>&1 &".format(self.cliutil_instance_.getEvaluatorCLIStr(), evaluator_logfile)
         if evaluator_machine_idx != Common.cur_machine_idx:
             launch_evaluator_cmd = ExpUtil.getRemoteCmd_(evaluator_machine_idx, launch_evaluator_cmd)
         ## Execute command and update launched components
@@ -45,16 +45,16 @@ class Prototype:
             if SubprocessUtil.getSubprocessErrstr(verify_evaluator_initialization_subprocess) != "": # Error
                 self.dieWithCleanup_("failed to verify evaluator initialization (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(verify_evaluator_initialization_subprocess)))
             else: # Symbol NOT exist
-                self.dieWithCleanup_("evaluator has NOT finished initialization")
+                self.dieWithCleanup_("evaluator has NOT finished initialization (please check tmp_evaluator.out in corresponding machine)")
         else:
             if SubprocessUtil.getSubprocessOutputstr(verify_evaluator_initialization_subprocess) == "": # Symbol NOT exist
-                self.dieWithCleanup_("evaluator has NOT finished initialization")
+                self.dieWithCleanup_("evaluator has NOT finished initialization (please check tmp_evaluator.out in corresponding machine)")
 
         # (3) Launch cloud
         ## Get launch cloud command
         cloud_machine_idx = JsonUtil.getValueForKeystr(Common.scriptname, "cloud_machine_index")
         cloud_logfile = "tmp_cloud.out"
-        launch_cloud_cmd = "nohup ./cloud {} >{} 2>&1 &".format(cliutil_instance.getCloudCLIStr(), cloud_logfile)
+        launch_cloud_cmd = "nohup ./cloud {} >{} 2>&1 &".format(self.cliutil_instance_.getCloudCLIStr(), cloud_logfile)
         if cloud_machine_idx != Common.cur_machine_idx:
             launch_cloud_cmd = ExpUtil.getRemoteCmd_(cloud_machine_idx, launch_cloud_cmd)
         ## Execute command and update launched components
@@ -71,9 +71,9 @@ class Prototype:
         edge_logfile = "tmp_edge.out"
         if len(edge_machine_idxes) != len(set(edge_machine_idxes)):
             self.dieWithCleanup_("duplicate edge machine indexes")
-        for tmp_edge_machine_idx in edge_machine_indexes:
+        for tmp_edge_machine_idx in edge_machine_idxes:
             ## Get launch edge command
-            launch_edge_cmd = "nohup ./edge {} >{} 2>&1 &".format(cliutil_instance.getEdgeCLIStr(), edge_logfile)
+            launch_edge_cmd = "nohup ./edge {} >{} 2>&1 &".format(self.cliutil_instance_.getEdgeCLIStr(), edge_logfile)
             if tmp_edge_machine_idx != Common.cur_machine_idx:
                 launch_edge_cmd = ExpUtil.getRemoteCmd_(tmp_edge_machine_idx, launch_edge_cmd)
             ## Execute command and update launched components
@@ -92,9 +92,9 @@ class Prototype:
         client_logfile = "tmp_client.out"
         if len(client_machine_idxes) != len(set(client_machine_idxes)):
             self.dieWithCleanup_("duplicate client machine indexes")
-        for tmp_client_machine_idx in client_machine_indexes:
+        for tmp_client_machine_idx in client_machine_idxes:
             ## Get launch client command
-            launch_client_cmd = "nohup ./client {} >{} 2>&1 &".format(cliutil_instance.getClientCLIStr(), client_logfile)
+            launch_client_cmd = "nohup ./client {} >{} 2>&1 &".format(self.cliutil_instance_.getClientCLIStr(), client_logfile)
             if tmp_client_machine_idx != Common.cur_machine_idx:
                 launch_client_cmd = ExpUtil.getRemoteCmd_(tmp_client_machine_idx, launch_client_cmd)
             ## Execute command and update launched components
@@ -135,7 +135,7 @@ class Prototype:
     def cleanup_(self):
         # Kill all launched components
         for tmp_machine_idx in self.permachine_launched_components_:
-            for tmp_component in self.permachine_launched_components_[machine_idx]:
+            for tmp_component in self.permachine_launched_components_[tmp_machine_idx]:
                 ExpUtil.killComponenet_(tmp_machine_idx, tmp_component)
 
         if not self.is_successful_finish_:

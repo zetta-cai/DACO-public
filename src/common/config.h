@@ -150,10 +150,11 @@ namespace covered
         static PhysicalMachine getCurrentPhysicalMachine();
         static void getCurrentMachineClientIdxRange(const uint32_t& clientcnt, uint32_t& left_inclusive_client_idx, uint32_t& right_inclusive_client_idx);
         static void getCurrentMachineEdgeIdxRange(const uint32_t& edgecnt, uint32_t& left_inclusive_edge_idx, uint32_t& right_inclusive_edge_idx);
-        static uint32_t getCurrentMachineEvaluatorDedicatedCorecnt();
-        static uint32_t getCurrentMachineCloudDedicatedCorecnt();
-        static uint32_t getCurrentMachineEdgeDedicatedCorecnt(const uint32_t& edgecnt);
-        static uint32_t getCurrentMachineClientDedicatedCorecnt(const uint32_t& clientcnt);
+        // Return if current machine plays the role
+        static bool getCurrentMachineEvaluatorDedicatedCorecnt(uint32_t& current_machine_evaluator_dedicated_corecnt);
+        static bool getCurrentMachineCloudDedicatedCorecnt(uint32_t& current_machine_cloud_dedicated_corecnt);
+        static bool getCurrentMachineEdgeDedicatedCorecnt(const uint32_t& edgecnt, uint32_t& current_machine_edge_dedicated_corecnt);
+        static bool getCurrentMachineClientDedicatedCorecnt(const uint32_t& clientcnt, uint32_t& current_machine_client_dedicated_corecnt);
 
         // For port verification
         static void portVerification(const uint16_t& startport, const uint16_t& finalport);
