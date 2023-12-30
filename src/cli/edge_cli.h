@@ -34,7 +34,20 @@ namespace covered
         uint64_t getCoveredPopularityAggregationMaxMemUsageBytes() const;
         double getCoveredPopularityCollectionChangeRatio() const;
         uint32_t getCoveredTopkEdgecnt() const;
+
+        std::string toCliString(); // NOT virtual for cilutil
+        virtual void clearIsToCliString(); // Idempotent operation: clear is_to_cli_string_ for the next toCliString()
     private:
+        static const std::string DEFAULT_CACHE_NAME;
+        static const std::string DEFAULT_HASH_NAME;
+        static const uint32_t DEFAULT_PERCACHESERVER_WORKERCNT;
+        static const uint64_t DEFAULT_COVERED_LOCAL_UNCACHED_MAX_MEM_USAGE_MB;
+        static const uint32_t DEFAULT_COVERED_PEREDGE_SYNCED_VICTIMCNT;
+        static const uint32_t DEFAULT_COVERED_PEREDGE_MONITORED_VICTIMSETCNT;
+        static const uint64_t DEFAULT_COVERED_POPULARITY_AGGREGATION_MAX_MEM_USAGE_MB;
+        static const double DEFAULT_COVERED_POPULARITY_COLLECTION_CHANGE_RATIO;
+        static const uint32_t DEFAULT_COVERED_TOPK_EDGECNT;
+
         static const std::string kClassName;
 
         void checkCacheName_() const;
@@ -45,6 +58,8 @@ namespace covered
         bool is_set_param_and_config_;
         bool is_dump_cli_parameters_;
         bool is_create_required_directories_;
+
+        bool is_to_cli_string_;
 
         std::string cache_name_;
         std::string hash_name_;

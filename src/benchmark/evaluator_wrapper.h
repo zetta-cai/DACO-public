@@ -43,6 +43,10 @@ namespace covered
     class EvaluatorWrapper
     {
     public:
+        // NOTE: used by exp scripts to verify whether the evaluator has been initialized or done -> MUST be the same as scripts/common.py
+        static const std::string EVALUATOR_FINISH_INITIALIZATION_SYMBOL;
+        static const std::string EVALUATOR_FINISH_BENCHMARK_SYMBOL;
+        
         static void* launchEvaluator(void* evaluator_wrapper_param_ptr);
 
         EvaluatorWrapper(const uint32_t& clientcnt, const uint32_t& edgecnt, const uint32_t& keycnt, const uint32_t& warmup_reqcnt_scale, const uint32_t& warmup_max_duration_sec, const uint32_t& stresstest_duration_sec, const std::string& evaluator_statistics_filepath);

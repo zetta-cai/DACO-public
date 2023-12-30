@@ -10,4 +10,4 @@ if len(sys.argv) != 2:
 
 keystr = sys.argv[1]
 value = JsonUtil.getValueForKeystr(Common.scriptname, keystr)
-print("JSON value: {}".format(value)) # NOTE: used by Makefile to dig value out
+print("JSON value: {}".format(value)) # NOTE: used by Makefile to dig value out -> MUST be the same as Makefile

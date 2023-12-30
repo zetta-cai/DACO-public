@@ -23,7 +23,13 @@ namespace covered
 
         uint64_t getCapacityBytes() const;
         // uint32_t getEdgecnt() const;
+
+        std::string toCliString(); // NOT virtual for cilutil
+        virtual void clearIsToCliString(); // Idempotent operation: clear is_to_cli_string_ for the next toCliString()
     private:
+        static const uint64_t DEFAULT_CAPACITY_MB;
+        //static const uint32_t DEFAULT_EDGECNT;
+
         static const std::string kClassName;
 
         void checkCapacityBytes_() const;
@@ -32,6 +38,8 @@ namespace covered
         bool is_add_cli_parameters_;
         bool is_set_param_and_config_;
         bool is_dump_cli_parameters_;
+
+        bool is_to_cli_string_;
 
         uint64_t capacity_bytes_; // Scalability on per-edge memory bytes
         // uint32_t edgecnt_; // Scalability on the number of edge nodes

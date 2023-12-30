@@ -23,7 +23,13 @@ namespace covered
 
         uint32_t getKeycnt() const;
         std::string getWorkloadName() const;
+
+        std::string toCliString(); // NOT virtual for cilutil
+        virtual void clearIsToCliString(); // Idempotent operation: clear is_to_cli_string_ for the next toCliString()
     private:
+        static const uint32_t DEFAULT_KEYCNT;
+        static const std::string DEFAULT_WORKLOAD_NAME;
+
         static const std::string kClassName;
 
         void checkWorkloadName_() const;
@@ -32,6 +38,8 @@ namespace covered
         bool is_add_cli_parameters_;
         bool is_set_param_and_config_;
         bool is_dump_cli_parameters_;
+
+        bool is_to_cli_string_;
 
         uint32_t keycnt_;
         std::string workload_name_;

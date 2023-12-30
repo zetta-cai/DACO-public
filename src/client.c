@@ -13,7 +13,6 @@
 #include "common/thread_launcher.h"
 
 int main(int argc, char **argv) {
-
     // (1) Parse and process client CLI parameters
 
     covered::ClientCLI client_cli(argc, argv);

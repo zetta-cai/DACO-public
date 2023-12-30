@@ -24,7 +24,13 @@ namespace covered
 
         uint32_t getDatasetLoadercnt() const;
         uint32_t getCloudIdx() const;
+
+        std::string toCliString(); // NOT virtual for cilutil
+        virtual void clearIsToCliString(); // Idempotent operation: clear is_to_cli_string_ for the next toCliString()
     private:
+        static const uint32_t DEFAULT_DATASET_LOADERCNT;
+        static const uint32_t DEFAULT_CLOUD_IDX;
+
         static const std::string kClassName;
 
         void verifyIntegrity_() const;
@@ -33,6 +39,8 @@ namespace covered
         bool is_set_param_and_config_;
         bool is_dump_cli_parameters_;
         bool is_create_required_directories_;
+
+        bool is_to_cli_string_;
 
         uint32_t dataset_loadercnt_;
         uint32_t cloud_idx_;

@@ -26,6 +26,7 @@ namespace covered
     const std::string Util::EDGE_MAIN_NAME("edge");
     const std::string Util::CLOUD_MAIN_NAME("cloud");
     const std::string Util::EVALUATOR_MAIN_NAME("evaluator");
+    const std::string Util::CLIUTIL_MAIN_NAME("cliutil");
 
     // Workload name
     const std::string Util::FACEBOOK_WORKLOAD_NAME("facebook");

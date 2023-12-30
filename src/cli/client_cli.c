@@ -5,9 +5,14 @@
 
 namespace covered
 {
+    // const uint32_t ClientCLI::DEFAULT_CLIENTCNT = 1;
+    const bool ClientCLI::DEFAULT_IS_WARMUP_SPEEDUP = true;
+    const uint32_t ClientCLI::DEFAULT_PERCLIENT_OPCNT = 1000000;
+    const uint32_t ClientCLI::DEFAULT_PERCLIENT_WORKERCNT = 1;
+
     const std::string ClientCLI::kClassName("ClientCLI");
 
-    ClientCLI::ClientCLI() : EdgescaleCLI(), PropagationCLI(), WorkloadCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_create_required_directories_(false)
+    ClientCLI::ClientCLI() : EdgescaleCLI(), PropagationCLI(), WorkloadCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_create_required_directories_(false), is_to_cli_string_(false)
     {
         // clientcnt_ = 0;
         is_warmup_speedup_ = true;
@@ -15,7 +20,7 @@ namespace covered
         perclient_workercnt_ = 0;
     }
 
-    ClientCLI::ClientCLI(int argc, char **argv) : EdgescaleCLI(), PropagationCLI(), WorkloadCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_create_required_directories_(false)
+    ClientCLI::ClientCLI(int argc, char **argv) : EdgescaleCLI(), PropagationCLI(), WorkloadCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_create_required_directories_(false), is_to_cli_string_(false)
     {
         parseAndProcessCliParameters(argc, argv);
     }
@@ -42,6 +47,54 @@ namespace covered
         return perclient_workercnt_;
     }
 
+    std::string ClientCLI::toCliString()
+    {
+        std::ostringstream oss;
+        if (!is_to_cli_string_)
+        {
+            // NOTE: MUST already parse and process CLI parameters
+            assert(is_add_cli_parameters_);
+            assert(is_set_param_and_config_);
+            assert(is_dump_cli_parameters_);
+            assert(is_create_required_directories_);
+
+            oss << EdgescaleCLI::toCliString();
+            oss << PropagationCLI::toCliString();
+            oss << WorkloadCLI::toCliString();
+            // if (clientcnt_ != DEFAULT_CLIENTCNT)
+            // {
+            //     oss << " --clientcnt " << clientcnt_;
+            // }
+            if (is_warmup_speedup_ != DEFAULT_IS_WARMUP_SPEEDUP)
+            {
+                assert(!is_warmup_speedup_);
+                oss << " --disable_warmup_speedup";
+            }
+            if (perclient_opcnt_ != DEFAULT_PERCLIENT_OPCNT)
+            {
+                oss << " --perclient_opcnt " << perclient_opcnt_;
+            }
+            if (perclient_workercnt_ != DEFAULT_PERCLIENT_WORKERCNT)
+            {
+                oss << " --perclient_workercnt " << perclient_workercnt_;
+            }
+
+            is_to_cli_string_ = true;
+        }
+        
+        return oss.str();
+    }
+
+    void ClientCLI::clearIsToCliString()
+    {
+        EdgescaleCLI::clearIsToCliString();
+        PropagationCLI::clearIsToCliString();
+        WorkloadCLI::clearIsToCliString();
+        
+        is_to_cli_string_ = false;
+        return;
+    }
+
     void ClientCLI::addCliParameters_()
     {
         if (!is_add_cli_parameters_)
@@ -54,10 +107,10 @@ namespace covered
 
             // Dynamic configurations for client
             argument_desc_.add_options()
-                // ("clientcnt", boost::program_options::value<uint32_t>()->default_value(1), "the total number of clients")
+                // ("clientcnt", boost::program_options::value<uint32_t>()->default_value(DEFAULT_CLIENTCNT), "the total number of clients")
                 ("disable_warmup_speedup", "disable speedup mode for warmup phase")
-                ("perclient_opcnt", boost::program_options::value<uint32_t>()->default_value(1000000), "the number of operations for each client")
-                ("perclient_workercnt", boost::program_options::value<uint32_t>()->default_value(1), "the number of worker threads for each client")
+                ("perclient_opcnt", boost::program_options::value<uint32_t>()->default_value(DEFAULT_PERCLIENT_OPCNT), "the number of operations for each client")
+                ("perclient_workercnt", boost::program_options::value<uint32_t>()->default_value(DEFAULT_PERCLIENT_WORKERCNT), "the number of worker threads for each client")
             ;
 
             is_add_cli_parameters_ = true;

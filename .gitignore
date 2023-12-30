@@ -13,6 +13,7 @@ client
 edge
 cloud
 evaluator
+cliutil
 #statistics_aggregator
 
 # Prerequisites

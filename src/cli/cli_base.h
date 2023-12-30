@@ -5,8 +5,6 @@
  * 
  * NOTE: different CLIs should NOT have overlapped parameters, and each virtual function will be invoked at most once.
  * 
- * NOTE: any update of any CLI MUST be synced to scripts/utils/cliutil.py!!!
- * 
  * By Siyuan Sheng (2023.08.02).
  */
 
@@ -29,16 +27,26 @@ namespace covered
         uint32_t getEdgecnt() const;
 
         void parseAndProcessCliParameters(int argc, char **argv);
+
+        std::string toCliString(); // NOT virtual for cilutil
+        virtual void clearIsToCliString(); // Idempotent operation: clear is_to_cli_string_ for the next toCliString()
     private:
+        static const uint32_t DEFAULT_CLIENTCNT;
+        static const uint32_t DEFAULT_EDGECNT;
+        static const std::string DEFAULT_CONFIG_FILE;
+
         static const std::string kClassName;
 
         bool is_add_cli_parameters_;
         bool is_set_param_and_config_;
         bool is_dump_cli_parameters_;
 
+        bool is_to_cli_string_;
+
         // NOTE: JUST for evaluation trick as we may launch nodes with different roles under the same physical machine due to limited devices, while clientcnt/edgecnt is ONLY required by ClientCLI/EdgescaleCLI if each machine plays a single role in practice
         uint32_t clientcnt_;
         uint32_t edgecnt_; // Scalability on the number of edge nodes
+        std::string config_file_;
     protected:
         virtual void addCliParameters_();
         void parseCliParameters_(int argc, char **argv);

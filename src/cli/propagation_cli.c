@@ -5,9 +5,13 @@
 
 namespace covered
 {
+    const uint32_t PropagationCLI::DEFAULT_PROPAGATION_LATENCY_CLIENTEDGE_US = 1000;
+    const uint32_t PropagationCLI::DEFAULT_PROPAGATION_LATENCY_CROSSEDGE_US = 10000;
+    const uint32_t PropagationCLI::DEFAULT_PROPAGATION_LATENCY_EDGECLOUD_US = 100000;
+
     const std::string PropagationCLI::kClassName("PropagationCLI");
 
-    PropagationCLI::PropagationCLI() : CLIBase(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false)
+    PropagationCLI::PropagationCLI() : CLIBase(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_to_cli_string_(false)
     {
         propagation_latency_clientedge_us_ = 0;
         propagation_latency_crossedge_us_ = 0;
@@ -31,6 +35,44 @@ namespace covered
         return propagation_latency_edgecloud_us_;
     }
 
+    std::string PropagationCLI::toCliString()
+    {
+        std::ostringstream oss;
+        if (!is_to_cli_string_)
+        {
+            // NOTE: MUST already parse and process CLI parameters
+            assert(is_add_cli_parameters_);
+            assert(is_set_param_and_config_);
+            assert(is_dump_cli_parameters_);
+
+            oss << CLIBase::toCliString();
+            if (propagation_latency_clientedge_us_ != DEFAULT_PROPAGATION_LATENCY_CLIENTEDGE_US)
+            {
+                oss << " --propagation_latency_clientedge_us " << propagation_latency_clientedge_us_;
+            }
+            if (propagation_latency_crossedge_us_ != DEFAULT_PROPAGATION_LATENCY_CROSSEDGE_US)
+            {
+                oss << " --propagation_latency_crossedge_us " << propagation_latency_crossedge_us_;
+            }
+            if (propagation_latency_edgecloud_us_ != DEFAULT_PROPAGATION_LATENCY_EDGECLOUD_US)
+            {
+                oss << " --propagation_latency_edgecloud_us " << propagation_latency_edgecloud_us_;
+            }
+
+            is_to_cli_string_ = true;
+        }
+        
+        return oss.str();
+    }
+
+    void PropagationCLI::clearIsToCliString()
+    {
+        CLIBase::clearIsToCliString();
+        
+        is_to_cli_string_ = false;
+        return;
+    }
+
     void PropagationCLI::addCliParameters_()
     {
         if (!is_add_cli_parameters_)
@@ -41,9 +83,9 @@ namespace covered
 
             // Dynamic configurations for client
             argument_desc_.add_options()
-                ("propagation_latency_clientedge_us", boost::program_options::value<uint32_t>()->default_value(1000), "the propagation latency between client and edge (in units of us)")
-                ("propagation_latency_crossedge_us", boost::program_options::value<uint32_t>()->default_value(10000), "the propagation latency between edge and neighbor (in units of us)")
-                ("propagation_latency_edgecloud_us", boost::program_options::value<uint32_t>()->default_value(100000), "the propagation latency between edge and cloud (in units of us)")
+                ("propagation_latency_clientedge_us", boost::program_options::value<uint32_t>()->default_value(DEFAULT_PROPAGATION_LATENCY_CLIENTEDGE_US), "the propagation latency between client and edge (in units of us)")
+                ("propagation_latency_crossedge_us", boost::program_options::value<uint32_t>()->default_value(DEFAULT_PROPAGATION_LATENCY_CROSSEDGE_US), "the propagation latency between edge and neighbor (in units of us)")
+                ("propagation_latency_edgecloud_us", boost::program_options::value<uint32_t>()->default_value(DEFAULT_PROPAGATION_LATENCY_EDGECLOUD_US), "the propagation latency between edge and cloud (in units of us)")
             ;
 
             is_add_cli_parameters_ = true;

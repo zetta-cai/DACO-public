@@ -1,6 +1,7 @@
 ##############################################################################
 # Global variables
 
+# NOTE: used by exp scripts to parse library path -> "JSON value: " MUST be the same as scripts/tools/parse_config.py
 LIBRARY_DIRPATH = $(shell python3 -m scripts.tools.parse_config library_dirpath | tail -n 1 | sed -n 's/^JSON value: \(.*\)/\1/p')
 
 ##############################################################################
@@ -63,6 +64,11 @@ evaluator: src/evaluator.o $(LINK_OBJECTS)
 DEPS += src/evaluator.d
 CLEANS += src/evaluator.o
 
+cliutil: src/cliutil.o $(LINK_OBJECTS)
+	$(LINK) $^ $(LDLIBS) -o $@
+DEPS += src/cliutil.d
+CLEANS += src/cliutil.o
+
 total_statistics_loader: src/total_statistics_loader.o $(LINK_OBJECTS)
 	$(LINK) $^ $(LDLIBS) -o $@
 DEPS += src/total_statistics_loader.d
@@ -76,7 +82,7 @@ CLEANS += src/total_statistics_loader.o
 ##############################################################################
 
 # statistics_aggregator
-TARGETS := dataset_loader simulator client edge cloud evaluator total_statistics_loader
+TARGETS := dataset_loader simulator client edge cloud evaluator cliutil total_statistics_loader
 
 all: $(TARGETS)
 #	rm -rf $(CLEANS) $(DEPS)

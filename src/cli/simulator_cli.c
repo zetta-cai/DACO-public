@@ -7,12 +7,41 @@ namespace covered
 {
     const std::string SimulatorCLI::kClassName("SimulatorCLI");
 
-    SimulatorCLI::SimulatorCLI(int argc, char **argv) : CloudCLI(), EvaluatorCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_create_required_directories_(false)
+    SimulatorCLI::SimulatorCLI(int argc, char **argv) : CloudCLI(), EvaluatorCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_create_required_directories_(false), is_to_cli_string_(false)
     {
         parseAndProcessCliParameters(argc, argv);
     }
 
     SimulatorCLI::~SimulatorCLI() {}
+
+    std::string SimulatorCLI::toCliString()
+    {
+        std::ostringstream oss;
+        if (!is_to_cli_string_)
+        {
+            // NOTE: MUST already parse and process CLI parameters
+            assert(is_add_cli_parameters_);
+            assert(is_set_param_and_config_);
+            assert(is_dump_cli_parameters_);
+            assert(is_create_required_directories_);
+
+            oss << CloudCLI::toCliString();
+            oss << EvaluatorCLI::toCliString();
+
+            is_to_cli_string_ = true;
+        }
+        
+        return oss.str();
+    }
+
+    void SimulatorCLI::clearIsToCliString()
+    {
+        CloudCLI::clearIsToCliString();
+        EvaluatorCLI::clearIsToCliString();
+        
+        is_to_cli_string_ = false;
+        return;
+    }
 
     void SimulatorCLI::addCliParameters_()
     {

@@ -12,7 +12,6 @@
 #include "common/thread_launcher.h"
 
 int main(int argc, char **argv) {
-
     // (1) Parse and process cloud CLI parameters
 
     covered::CloudCLI cloud_cli(argc, argv);

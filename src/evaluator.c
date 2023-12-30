@@ -13,7 +13,6 @@
 #include "common/util.h"
 
 int main(int argc, char **argv) {
-
     // (1) Parse and process evaluator CLI parameters
 
     covered::EvaluatorCLI evaluator_cli(argc, argv);
@@ -46,7 +45,7 @@ int main(int argc, char **argv) {
     // Block until evaluator is initialized
     while (!evaluator_param.isEvaluatorInitialized()) {}
 
-    covered::Util::dumpNormalMsg(main_class_name, "Evaluator initialized"); // NOTE: used by exp scripts to verify whether the evaluator has been initialized
+    covered::Util::dumpNormalMsg(main_class_name, covered::EvaluatorWrapper::EVALUATOR_FINISH_INITIALIZATION_SYMBOL);
 
     // (3) Wait for the evaluator
 
@@ -61,7 +60,7 @@ int main(int argc, char **argv) {
         covered::Util::dumpErrorMsg(main_class_name, oss.str());
         exit(1);
     }
-    covered::Util::dumpNormalMsg(main_class_name, "Evaluator done"); // NOTE: used by exp scripts to verify whether evaluation has been done
+    covered::Util::dumpNormalMsg(main_class_name, covered::EvaluatorWrapper::EVALUATOR_FINISH_BENCHMARK_SYMBOL);
 
     return 0;
 }

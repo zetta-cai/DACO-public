@@ -12,6 +12,10 @@
 
 namespace covered
 {
+    // NOTE: used by exp scripts to verify whether the evaluator has been initialized or done -> MUST be the same as scripts/common.py
+    const std::string EvaluatorWrapper::EVALUATOR_FINISH_INITIALIZATION_SYMBOL("Evaluator initialized");
+    const std::string EvaluatorWrapper::EVALUATOR_FINISH_BENCHMARK_SYMBOL("Evaluator done");
+
     const std::string EvaluatorWrapper::kClassName("EvaluatorWrapper");
 
     EvaluatorWrapperParam::EvaluatorWrapperParam()

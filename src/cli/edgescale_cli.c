@@ -5,9 +5,12 @@
 
 namespace covered
 {
+    const uint64_t EdgescaleCLI::DEFAULT_CAPACITY_MB = 1024;
+    // const uint32_t EdgescaleCLI::DEFAULT_EDGECNT = 1;
+
     const std::string EdgescaleCLI::kClassName("EdgescaleCLI");
 
-    EdgescaleCLI::EdgescaleCLI() : CLIBase(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false)
+    EdgescaleCLI::EdgescaleCLI() : CLIBase(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_to_cli_string_(false)
     {
         capacity_bytes_ = 0;
         // edgecnt_ = 0;
@@ -25,6 +28,40 @@ namespace covered
     // {
     //     return edgecnt_;
     // }
+
+    std::string EdgescaleCLI::toCliString()
+    {
+        std::ostringstream oss;
+        if (!is_to_cli_string_)
+        {
+            // NOTE: MUST already parse and process CLI parameters
+            assert(is_add_cli_parameters_);
+            assert(is_set_param_and_config_);
+            assert(is_dump_cli_parameters_);
+
+            oss << CLIBase::toCliString();
+            if (capacity_bytes_ != MB2B(DEFAULT_CAPACITY_MB))
+            {
+                oss << " --capacity_mb " << B2MB(capacity_bytes_);
+            }
+            // if (edgecnt_ != DEFAULT_EDGECNT)
+            // {
+            //     oss << " --edgecnt " << edgecnt_;
+            // }
+
+            is_to_cli_string_ = true;
+        }
+        
+        return oss.str();
+    }
+
+    void EdgescaleCLI::clearIsToCliString()
+    {
+        CLIBase::clearIsToCliString();
+        
+        is_to_cli_string_ = false;
+        return;
+    }
 
     void EdgescaleCLI::checkCapacityBytes_() const
     {
@@ -58,8 +95,8 @@ namespace covered
 
             // Dynamic configurations for client
             argument_desc_.add_options()
-                ("capacity_mb", boost::program_options::value<uint64_t>()->default_value(1024), "total cache capacity (including data and metadata) in units of MiB")
-                // ("edgecnt", boost::program_options::value<uint32_t>()->default_value(1), "the number of edge nodes")
+                ("capacity_mb", boost::program_options::value<uint64_t>()->default_value(DEFAULT_CAPACITY_MB), "total cache capacity (including data and metadata) in units of MiB")
+                // ("edgecnt", boost::program_options::value<uint32_t>()->default_value(DEFAULT_EDGECNT), "the number of edge nodes")
             ;
 
             is_add_cli_parameters_ = true;

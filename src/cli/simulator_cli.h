@@ -21,6 +21,9 @@ namespace covered
     public:
         SimulatorCLI(int argc, char **argv);
         virtual ~SimulatorCLI();
+
+        std::string toCliString(); // NOT virtual for cilutil
+        virtual void clearIsToCliString(); // Idempotent operation: clear is_to_cli_string_ for the next toCliString()
     private:
         static const std::string kClassName;
 
@@ -28,6 +31,8 @@ namespace covered
         bool is_set_param_and_config_;
         bool is_dump_cli_parameters_;
         bool is_create_required_directories_;
+
+        bool is_to_cli_string_;
     protected:
         virtual void addCliParameters_();
         virtual void setParamAndConfig_(const std::string& main_class_name);

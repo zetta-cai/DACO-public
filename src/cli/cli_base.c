@@ -6,9 +6,13 @@
 
 namespace covered
 {
+    const uint32_t CLIBase::DEFAULT_CLIENTCNT = 1;
+    const uint32_t CLIBase::DEFAULT_EDGECNT = 1;
+    const std::string CLIBase::DEFAULT_CONFIG_FILE = "config.json";
+
     const std::string CLIBase::kClassName("CLIBase");
 
-    CLIBase::CLIBase() : is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), argument_desc_("Allowed arguments:"), argument_info_()
+    CLIBase::CLIBase() : is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_to_cli_string_(false), argument_desc_("Allowed arguments:"), argument_info_()
     {
         // Verify system settings
         uint32_t net_core_rmem_max = Util::getNetCoreRmemMax();
@@ -29,6 +33,7 @@ namespace covered
 
         clientcnt_ = 0;
         edgecnt_ = 0;
+        config_file_ = "";
     }
 
     CLIBase::~CLIBase() {}
@@ -67,6 +72,41 @@ namespace covered
         return;
     }
 
+    std::string CLIBase::toCliString()
+    {
+        std::ostringstream oss;
+        if (!is_to_cli_string_)
+        {
+            // NOTE: MUST already parse and process CLI parameters
+            assert(is_add_cli_parameters_);
+            assert(is_set_param_and_config_);
+            assert(is_dump_cli_parameters_);
+
+            if (clientcnt_ != DEFAULT_CLIENTCNT)
+            {
+                oss << " --clientcnt " << clientcnt_;
+            }
+            if (edgecnt_ != DEFAULT_EDGECNT)
+            {
+                oss << " --edgecnt " << edgecnt_;
+            }
+            if (config_file_ != DEFAULT_CONFIG_FILE)
+            {
+                oss << " --config_file " << config_file_;
+            }
+
+            is_to_cli_string_ = true;
+        }
+        
+        return oss.str();
+    }
+
+    void CLIBase::clearIsToCliString()
+    {
+        is_to_cli_string_ = false;
+        return;
+    }
+
     void CLIBase::addCliParameters_()
     {
         if (!is_add_cli_parameters_)
@@ -83,9 +123,9 @@ namespace covered
             // Common dynamic configurations
             // Obsolete: ("debug", "enable debug information"); ("track_event", "track events to break down latencies"), ("multinode", "disable single-node mode (NOT work for simulator)")
             argument_desc_.add_options()
-                ("clientcnt", boost::program_options::value<uint32_t>()->default_value(1), "the total number of clients")
-                ("edgecnt", boost::program_options::value<uint32_t>()->default_value(1), "the number of edge nodes")
-                ("config_file", boost::program_options::value<std::string>()->default_value("config.json"), "config file path of COVERED")
+                ("clientcnt", boost::program_options::value<uint32_t>()->default_value(DEFAULT_CLIENTCNT), "the total number of clients")
+                ("edgecnt", boost::program_options::value<uint32_t>()->default_value(DEFAULT_EDGECNT), "the number of edge nodes")
+                ("config_file", boost::program_options::value<std::string>()->default_value(DEFAULT_CONFIG_FILE), "config file path of COVERED")
             ;
 
             // Common dynamic actions
@@ -122,6 +162,7 @@ namespace covered
             // Store CLI parameters for dynamic configurations
             clientcnt_ = clientcnt;
             edgecnt_ = edgecnt;
+            config_file_ = config_filepath;
             verifyIntegrity_();
 
             // (4) Load config file for static configurations
@@ -173,6 +214,7 @@ namespace covered
             oss << "[Dynamic configurations from CLI parameters in " << kClassName << "]" << std::endl;
             oss << "Client count: " << clientcnt_;
             oss << "Edge count: " << edgecnt_;
+            oss << "Config filepath: " << config_file_;
             Util::dumpDebugMsg(kClassName, oss.str());
 
             is_dump_cli_parameters_ = true;
@@ -185,6 +227,7 @@ namespace covered
     {
         assert(clientcnt_ > 0);
         assert(edgecnt_ > 0);
+        assert(config_file_ != "");
 
         if (clientcnt_ < edgecnt_)
         {

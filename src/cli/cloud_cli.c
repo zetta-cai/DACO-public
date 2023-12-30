@@ -5,14 +5,16 @@
 
 namespace covered
 {
+    const std::string CloudCLI::DEFAULT_CLOUD_STORAGE = "hdd"; // NOTE: NOT use UTil::HDD_NAME due to undefined initialization order of C++ static variables
+
     const std::string CloudCLI::kClassName("CloudCLI");
 
-    CloudCLI::CloudCLI() : PropagationCLI(), WorkloadCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_create_required_directories_(false)
+    CloudCLI::CloudCLI() : PropagationCLI(), WorkloadCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_create_required_directories_(false), is_to_cli_string_(false)
     {
         cloud_storage_ = "";
     }
 
-    CloudCLI::CloudCLI(int argc, char **argv) : PropagationCLI(), WorkloadCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_create_required_directories_(false)
+    CloudCLI::CloudCLI(int argc, char **argv) : PropagationCLI(), WorkloadCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_create_required_directories_(false), is_to_cli_string_(false)
     {
         parseAndProcessCliParameters(argc, argv);
     }
@@ -22,6 +24,45 @@ namespace covered
     std::string CloudCLI::getCloudStorage() const
     {
         return cloud_storage_;
+    }
+
+    std::string CloudCLI::toCliString()
+    {
+        std::cout << "CloudCLI::toCliString " << is_to_cli_string_ << std::endl; // TMPDEBUG231230
+        std::ostringstream oss;
+        if (!is_to_cli_string_)
+        {
+            // NOTE: MUST already parse and process CLI parameters
+            assert(is_add_cli_parameters_);
+            assert(is_set_param_and_config_);
+            assert(is_dump_cli_parameters_);
+            assert(is_create_required_directories_);
+
+            std::cout << "111" << std::endl; // TMPDEBUG231230
+
+            oss << PropagationCLI::toCliString();
+            std::cout << "222" << std::endl; // TMPDEBUG231230
+            oss << WorkloadCLI::toCliString();
+            std::cout << "333" << std::endl; // TMPDEBUG231230
+            if (cloud_storage_ != DEFAULT_CLOUD_STORAGE)
+            {
+                oss << " --cloud_storage " << cloud_storage_;
+            }
+            std::cout << "444" << std::endl; // TMPDEBUG231230
+
+            is_to_cli_string_ = true;
+        }
+        
+        return oss.str();
+    }
+
+    void CloudCLI::clearIsToCliString()
+    {
+        PropagationCLI::clearIsToCliString();
+        WorkloadCLI::clearIsToCliString();
+        
+        is_to_cli_string_ = false;
+        return;
     }
 
     void CloudCLI::addCliParameters_()
@@ -35,7 +76,7 @@ namespace covered
 
             // Dynamic configurations for client
             argument_desc_.add_options()
-                ("cloud_storage", boost::program_options::value<std::string>()->default_value(Util::HDD_NAME), "type of cloud storage (e.g., hdd)")
+                ("cloud_storage", boost::program_options::value<std::string>()->default_value(DEFAULT_CLOUD_STORAGE), "type of cloud storage (e.g., hdd)")
             ;
 
             is_add_cli_parameters_ = true;

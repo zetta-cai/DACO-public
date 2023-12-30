@@ -5,9 +5,12 @@
 
 namespace covered
 {
+    const uint32_t WorkloadCLI::DEFAULT_KEYCNT = 10000;
+    const std::string WorkloadCLI::DEFAULT_WORKLOAD_NAME = "facebook"; // NOTE: NOT use UTil::FACEBOOK_WORKLOAD_NAME due to undefined initialization order of C++ static variables
+
     const std::string WorkloadCLI::kClassName("WorkloadCLI");
 
-    WorkloadCLI::WorkloadCLI() : CLIBase(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false)
+    WorkloadCLI::WorkloadCLI() : CLIBase(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_to_cli_string_(false)
     {
         keycnt_ = 0;
         workload_name_ = "";
@@ -25,6 +28,48 @@ namespace covered
         return workload_name_;
     }
 
+    std::string WorkloadCLI::toCliString()
+    {
+        std::cout << "WorkloadCLI::toCliString " << is_to_cli_string_ << std::endl; // TMPDEBUG231230
+        std::ostringstream oss;
+        if (!is_to_cli_string_)
+        {
+            // NOTE: MUST already parse and process CLI parameters
+            assert(is_add_cli_parameters_);
+            assert(is_set_param_and_config_);
+            assert(is_dump_cli_parameters_);
+
+            std::cout << "222-111" << std::endl; // TMPDEBUG231230
+
+            oss << CLIBase::toCliString();
+            std::cout << "222-222" << std::endl; // TMPDEBUG231230
+            if (keycnt_ != DEFAULT_KEYCNT)
+            {
+                oss << " --keycnt " << keycnt_;
+            }
+            std::cout << "222-333" << std::endl; // TMPDEBUG231230
+            std::cout << DEFAULT_WORKLOAD_NAME << std::endl; // TMPDEBUG231230
+            std::cout << workload_name_ << std::endl; // TMPDEBUG231230
+            if (workload_name_ != DEFAULT_WORKLOAD_NAME)
+            {
+                oss << " --workload_name " << workload_name_;
+            }
+            std::cout << "222-444" << std::endl; // TMPDEBUG231230
+
+            is_to_cli_string_ = true;
+        }
+        
+        return oss.str();
+    }
+
+    void WorkloadCLI::clearIsToCliString()
+    {
+        CLIBase::clearIsToCliString();
+        
+        is_to_cli_string_ = false;
+        return;
+    }
+
     void WorkloadCLI::addCliParameters_()
     {
         if (!is_add_cli_parameters_)
@@ -35,8 +80,8 @@ namespace covered
 
             // Dynamic configurations for client
             argument_desc_.add_options()
-                ("keycnt", boost::program_options::value<uint32_t>()->default_value(10000), "the total number of keys")
-                ("workload_name", boost::program_options::value<std::string>()->default_value(Util::FACEBOOK_WORKLOAD_NAME), "workload name (e.g., facebook)")
+                ("keycnt", boost::program_options::value<uint32_t>()->default_value(DEFAULT_KEYCNT), "the total number of keys")
+                ("workload_name", boost::program_options::value<std::string>()->default_value(DEFAULT_WORKLOAD_NAME), "workload name (e.g., facebook)")
             ;
 
             is_add_cli_parameters_ = true;

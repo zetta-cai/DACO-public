@@ -5,15 +5,18 @@
 
 namespace covered
 {
+    const uint32_t DatasetLoaderCLI::DEFAULT_DATASET_LOADERCNT = 1;
+    const uint32_t DatasetLoaderCLI::DEFAULT_CLOUD_IDX = 0;
+
     const std::string DatasetLoaderCLI::kClassName("DatasetLoaderCLI");
 
-    DatasetLoaderCLI::DatasetLoaderCLI() : CloudCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_create_required_directories_(false)
+    DatasetLoaderCLI::DatasetLoaderCLI() : CloudCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_create_required_directories_(false), is_to_cli_string_(false)
     {
         dataset_loadercnt_ = 0;
         cloud_idx_ = 0;
     }
 
-    DatasetLoaderCLI::DatasetLoaderCLI(int argc, char **argv) : CloudCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_create_required_directories_(false)
+    DatasetLoaderCLI::DatasetLoaderCLI(int argc, char **argv) : CloudCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_create_required_directories_(false), is_to_cli_string_(false)
     {
         parseAndProcessCliParameters(argc, argv);
     }
@@ -30,6 +33,41 @@ namespace covered
         return cloud_idx_;
     }
 
+    std::string DatasetLoaderCLI::toCliString()
+    {
+        std::ostringstream oss;
+        if (!is_to_cli_string_)
+        {
+            // NOTE: MUST already parse and process CLI parameters
+            assert(is_add_cli_parameters_);
+            assert(is_set_param_and_config_);
+            assert(is_dump_cli_parameters_);
+            assert(is_create_required_directories_);
+
+            oss << CloudCLI::toCliString();
+            if (dataset_loadercnt_ != DEFAULT_DATASET_LOADERCNT)
+            {
+                oss << " --dataset_loadercnt " << dataset_loadercnt_;
+            }
+            if (cloud_idx_ != DEFAULT_CLOUD_IDX)
+            {
+                oss << " --cloud_idx " << cloud_idx_;
+            }
+
+            is_to_cli_string_ = true;
+        }
+
+        return oss.str();
+    }
+
+    void DatasetLoaderCLI::clearIsToCliString()
+    {
+        CloudCLI::clearIsToCliString();
+
+        is_to_cli_string_ = false;
+        return;
+    }
+
     void DatasetLoaderCLI::addCliParameters_()
     {
         if (!is_add_cli_parameters_)
@@ -40,8 +78,8 @@ namespace covered
 
             // Dynamic configurations for client
             argument_desc_.add_options()
-                ("dataset_loadercnt", boost::program_options::value<uint32_t>()->default_value(1), "the total number of dataset loaders")
-                ("cloud_idx", boost::program_options::value<uint32_t>()->default_value(0), "the index of current cloud node")
+                ("dataset_loadercnt", boost::program_options::value<uint32_t>()->default_value(DEFAULT_DATASET_LOADERCNT), "the total number of dataset loaders")
+                ("cloud_idx", boost::program_options::value<uint32_t>()->default_value(DEFAULT_CLOUD_IDX), "the index of current cloud node")
             ;
 
             is_add_cli_parameters_ = true;
@@ -102,6 +140,10 @@ namespace covered
             if (main_class_name == Util::DATASET_LOADER_MAIN_NAME)
             {
                 is_createdir_for_rocksdb = true;
+            }
+            else if (main_class_name == Util::CLIUTIL_MAIN_NAME)
+            {
+                is_createdir_for_rocksdb = false;
             }
             else
             {

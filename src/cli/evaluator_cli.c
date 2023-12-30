@@ -6,13 +6,17 @@
 
 namespace covered
 {
+    const uint32_t EvaluatorCLI::DEFAULT_WARMUP_REQCNT_SCALE = 5;
+    const uint32_t EvaluatorCLI::DEFAULT_WARMUP_MAX_DURATION_SEC = 30;
+    const uint32_t EvaluatorCLI::DEFAULT_STRESSTEST_DURATION_SEC = 30;
+
     const std::string EvaluatorCLI::kClassName("EvaluatorCLI");
 
-    EvaluatorCLI::EvaluatorCLI() : ClientCLI(), EdgeCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_create_required_directories_(false)
+    EvaluatorCLI::EvaluatorCLI() : ClientCLI(), EdgeCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_create_required_directories_(false), is_to_cli_string_(false)
     {
     }
 
-    EvaluatorCLI::EvaluatorCLI(int argc, char **argv) : ClientCLI(), EdgeCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_create_required_directories_(false)
+    EvaluatorCLI::EvaluatorCLI(int argc, char **argv) : ClientCLI(), EdgeCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_create_required_directories_(false), is_to_cli_string_(false)
     {
         parseAndProcessCliParameters(argc, argv);
     }
@@ -34,6 +38,49 @@ namespace covered
         return stresstest_duration_sec_;
     }
 
+    std::string EvaluatorCLI::toCliString()
+    {
+        std::ostringstream oss;
+        if (!is_to_cli_string_)
+        {
+            // NOTE: MUST already parse and process CLI parameters
+            assert(is_add_cli_parameters_);
+            assert(is_set_param_and_config_);
+            assert(is_dump_cli_parameters_);
+            assert(is_create_required_directories_);
+
+            oss << ClientCLI::toCliString();
+            oss << EdgeCLI::toCliString();
+            if (warmup_reqcnt_scale_ != DEFAULT_WARMUP_REQCNT_SCALE)
+            {
+                oss << " --warmup_reqcnt_scale " << warmup_reqcnt_scale_;
+            }
+            #ifdef ENABLE_WARMUP_MAX_DURATION
+            if (warmup_max_duration_sec_ != DEFAULT_WARMUP_MAX_DURATION_SEC)
+            {
+                oss << " --warmup_max_duration_sec " << warmup_max_duration_sec_;
+            }
+            #endif
+            if (stresstest_duration_sec_ != DEFAULT_STRESSTEST_DURATION_SEC)
+            {
+                oss << " --stresstest_duration_sec " << stresstest_duration_sec_;
+            }
+
+            is_to_cli_string_ = true;
+        }
+
+        return oss.str();
+    }
+
+    void EvaluatorCLI::clearIsToCliString()
+    {
+        ClientCLI::clearIsToCliString();
+        EdgeCLI::clearIsToCliString();
+
+        is_to_cli_string_ = false;
+        return;
+    }
+
     void EvaluatorCLI::addCliParameters_()
     {
         if (!is_add_cli_parameters_)
@@ -45,11 +92,11 @@ namespace covered
 
             // Dynamic configurations for client
             argument_desc_.add_options()
-                ("warmup_reqcnt_scale", boost::program_options::value<uint32_t>()->default_value(5), "scale of warmup request count (= warmup_reqcnt_scale * keycnt)")
+                ("warmup_reqcnt_scale", boost::program_options::value<uint32_t>()->default_value(DEFAULT_WARMUP_REQCNT_SCALE), "scale of warmup request count (= warmup_reqcnt_scale * keycnt)")
                 #ifdef ENABLE_WARMUP_MAX_DURATION
-                ("warmup_max_duration_sec", boost::program_options::value<uint32_t>()->default_value(30), "maximum duration of warmup phase (seconds)")
+                ("warmup_max_duration_sec", boost::program_options::value<uint32_t>()->default_value(DEFAULT_WARMUP_MAX_DURATION_SEC), "maximum duration of warmup phase (seconds)")
                 #endif
-                ("stresstest_duration_sec", boost::program_options::value<uint32_t>()->default_value(30), "duration of stresstest phase (seconds)")
+                ("stresstest_duration_sec", boost::program_options::value<uint32_t>()->default_value(DEFAULT_STRESSTEST_DURATION_SEC), "duration of stresstest phase (seconds)")
             ;
 
             is_add_cli_parameters_ = true;
@@ -125,7 +172,7 @@ namespace covered
             {
                 is_createdir_for_evaluator_statistics = true;
             }
-            else if (main_class_name == Util::TOTAL_STATISTICS_LOADER_MAIN_NAME)
+            else if (main_class_name == Util::TOTAL_STATISTICS_LOADER_MAIN_NAME || main_class_name == Util::CLIUTIL_MAIN_NAME)
             {
                 is_createdir_for_evaluator_statistics = false;
             }

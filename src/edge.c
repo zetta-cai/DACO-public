@@ -12,7 +12,6 @@
 #include "edge/edge_wrapper.h"
 
 int main(int argc, char **argv) {
-
     // (1) Parse and process edge CLI parameters
 
     covered::EdgeCLI edge_cli(argc, argv);

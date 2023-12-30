@@ -69,6 +69,7 @@ namespace covered
         static const std::string EDGE_MAIN_NAME;
         static const std::string CLOUD_MAIN_NAME;
         static const std::string EVALUATOR_MAIN_NAME;
+        static const std::string CLIUTIL_MAIN_NAME;
 
         // Workload name
         static const std::string FACEBOOK_WORKLOAD_NAME; // Workload generator type

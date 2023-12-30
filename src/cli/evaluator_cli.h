@@ -26,13 +26,22 @@ namespace covered
         uint32_t getWarmupReqcntScale() const;
         uint32_t getWarmupMaxDurationSec() const;
         uint32_t getStresstestDurationSec() const;
+
+        std::string toCliString(); // NOT virtual for cilutil
+        virtual void clearIsToCliString(); // Idempotent operation: clear is_to_cli_string_ for the next toCliString()
     private:
+        static const uint32_t DEFAULT_WARMUP_REQCNT_SCALE;
+        static const uint32_t DEFAULT_WARMUP_MAX_DURATION_SEC;
+        static const uint32_t DEFAULT_STRESSTEST_DURATION_SEC;
+
         static const std::string kClassName;
 
         bool is_add_cli_parameters_;
         bool is_set_param_and_config_;
         bool is_dump_cli_parameters_;
         bool is_create_required_directories_;
+
+        bool is_to_cli_string_;
 
         uint32_t warmup_reqcnt_scale_;
         uint32_t warmup_max_duration_sec_;

@@ -28,7 +28,15 @@ namespace covered
         bool isWarmupSpeedup() const;
         uint32_t getPerclientOpcnt() const;
         uint32_t getPerclientWorkercnt() const;
+
+        std::string toCliString(); // NOT virtual for cilutil
+        virtual void clearIsToCliString(); // Idempotent operation: clear is_to_cli_string_ for the next toCliString()
     private:
+        //static const uint32_t DEFAULT_CLIENTCNT;
+        static const bool DEFAULT_IS_WARMUP_SPEEDUP;
+        static const uint32_t DEFAULT_PERCLIENT_OPCNT;
+        static const uint32_t DEFAULT_PERCLIENT_WORKERCNT;
+
         static const std::string kClassName;
 
         void verifyIntegrity_() const;
@@ -37,6 +45,8 @@ namespace covered
         bool is_set_param_and_config_;
         bool is_dump_cli_parameters_;
         bool is_create_required_directories_;
+
+        bool is_to_cli_string_;
 
         // uint32_t clientcnt_;
         bool is_warmup_speedup_; // Come from --disable_warmup_speedup

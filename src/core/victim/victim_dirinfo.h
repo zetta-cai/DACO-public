@@ -47,7 +47,7 @@ namespace covered
 
         uint32_t refcnt_;
         //bool is_local_beaconed_;
-        uint32_t beacon_edge_idx_; // NOTE: used by VictimTracker get victim syncset of a specific edge idx for delta recovery of delta-based victim synchronization in CoveredCacheManager (outside VictimTracker)
+        uint32_t beacon_edge_idx_; // NOTE: will be used by VictimTracker get victim syncset of a specific edge idx for delta recovery of delta-based victim synchronization in CoveredCacheManager (outside VictimTracker)
         DirinfoSet dirinfo_set_;
     };
 }

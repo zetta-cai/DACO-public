@@ -4,6 +4,7 @@
 import time
 
 from ...common import *
+from .cliutil import *
 from .exputil import *
 
 class Prototype:

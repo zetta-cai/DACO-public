@@ -59,6 +59,6 @@ class Common:
     if cur_machine_idx == -1:
         LogUtil.die(scriptname, "cannot find current machine ip in config.json")
 
-    # NOTE: ONLY used by exp scripts -> MUST be the same as simulator.c and evaluator.c
+    # NOTE: used by C++ programs -> MUST be the same as src/benchmark/evaluator_wrapper.c
     EVALUATOR_FINISH_INITIALIZATION_SYMBOL = "Evaluator initialized"
     EVALUATOR_FINISH_BENCHMARK_SYMBOL = "Evaluator done"

@@ -5,9 +5,19 @@
 
 namespace covered
 {
+    const std::string EdgeCLI::DEFAULT_CACHE_NAME = "lru"; // NOTE: NOT use UTil::LRU_CACHE_NAME due to undefined initialization order of C++ static variables
+    const std::string EdgeCLI::DEFAULT_HASH_NAME = "mmh3"; // NOTE: NOT use UTil::MMH3_HASH_NAME due to undefined initialization order of C++ static variables
+    const uint32_t EdgeCLI::DEFAULT_PERCACHESERVER_WORKERCNT = 1;
+    const uint64_t EdgeCLI::DEFAULT_COVERED_LOCAL_UNCACHED_MAX_MEM_USAGE_MB = 1;
+    const uint32_t EdgeCLI::DEFAULT_COVERED_PEREDGE_SYNCED_VICTIMCNT = 3;
+    const uint32_t EdgeCLI::DEFAULT_COVERED_PEREDGE_MONITORED_VICTIMSETCNT = 3;
+    const uint64_t EdgeCLI::DEFAULT_COVERED_POPULARITY_AGGREGATION_MAX_MEM_USAGE_MB = 1;
+    const double EdgeCLI::DEFAULT_COVERED_POPULARITY_COLLECTION_CHANGE_RATIO = double(0.1);
+    const uint32_t EdgeCLI::DEFAULT_COVERED_TOPK_EDGECNT = 1;
+
     const std::string EdgeCLI::kClassName("EdgeCLI");
 
-    EdgeCLI::EdgeCLI() : EdgescaleCLI(), PropagationCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_create_required_directories_(false)
+    EdgeCLI::EdgeCLI() : EdgescaleCLI(), PropagationCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_create_required_directories_(false), is_to_cli_string_(false)
     {
         cache_name_ = "";
         hash_name_ = "";
@@ -22,7 +32,7 @@ namespace covered
         covered_topk_edgecnt_ = 0;
     }
 
-    EdgeCLI::EdgeCLI(int argc, char **argv) : EdgescaleCLI(), PropagationCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_create_required_directories_(false)
+    EdgeCLI::EdgeCLI(int argc, char **argv) : EdgescaleCLI(), PropagationCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_create_required_directories_(false), is_to_cli_string_(false)
     {
         parseAndProcessCliParameters(argc, argv);
     }
@@ -76,6 +86,75 @@ namespace covered
         return covered_topk_edgecnt_;
     }
 
+    std::string EdgeCLI::toCliString()
+    {
+        std::ostringstream oss;
+        if (!is_to_cli_string_)
+        {
+            // NOTE: MUST already parse and process CLI parameters
+            assert(is_add_cli_parameters_);
+            assert(is_set_param_and_config_);
+            assert(is_dump_cli_parameters_);
+            assert(is_create_required_directories_);
+
+            oss << EdgescaleCLI::toCliString();
+            oss << PropagationCLI::toCliString();
+            if (cache_name_ != DEFAULT_CACHE_NAME)
+            {
+                oss << " --cache_name " << cache_name_;
+            }
+            if (hash_name_ != DEFAULT_HASH_NAME)
+            {
+                oss << " --hash_name " << hash_name_;
+            }
+            if (percacheserver_workercnt_ != DEFAULT_PERCACHESERVER_WORKERCNT)
+            {
+                oss << " --percacheserver_workercnt " << percacheserver_workercnt_;
+            }
+            // ONLY for COVERED
+            if (cache_name_ == Util::COVERED_CACHE_NAME)
+            {
+                if (covered_local_uncached_max_mem_usage_bytes_ != MB2B(DEFAULT_COVERED_LOCAL_UNCACHED_MAX_MEM_USAGE_MB))
+                {
+                    oss << " --covered_local_uncached_max_mem_usage_mb " << B2MB(covered_local_uncached_max_mem_usage_bytes_);
+                }
+                if (covered_peredge_synced_victimcnt_ != DEFAULT_COVERED_PEREDGE_SYNCED_VICTIMCNT)
+                {
+                    oss << " --covered_peredge_synced_victimcnt " << covered_peredge_synced_victimcnt_;
+                }
+                if (covered_peredge_monitored_victimsetcnt_ != DEFAULT_COVERED_PEREDGE_MONITORED_VICTIMSETCNT)
+                {
+                    oss << " --covered_peredge_monitored_victimsetcnt " << covered_peredge_monitored_victimsetcnt_;
+                }
+                if (covered_popularity_aggregation_max_mem_usage_bytes_ != MB2B(DEFAULT_COVERED_POPULARITY_AGGREGATION_MAX_MEM_USAGE_MB))
+                {
+                    oss << " --covered_popularity_aggregation_max_mem_usage_mb " << B2MB(covered_popularity_aggregation_max_mem_usage_bytes_);
+                }
+                if (covered_popularity_collection_change_ratio_ != DEFAULT_COVERED_POPULARITY_COLLECTION_CHANGE_RATIO)
+                {
+                    oss << " --covered_popularity_collection_change_ratio " << covered_popularity_collection_change_ratio_;
+                }
+                if (covered_topk_edgecnt_ != DEFAULT_COVERED_TOPK_EDGECNT)
+                {
+                    oss << " --covered_topk_edgecnt " << covered_topk_edgecnt_;
+                }
+            }
+
+            is_to_cli_string_ = true;
+        }
+
+        return oss.str();
+    }
+
+    void EdgeCLI::clearIsToCliString()
+    {
+        EdgescaleCLI::clearIsToCliString();
+        PropagationCLI::clearIsToCliString();
+        
+        is_to_cli_string_ = false;
+        return;
+    }
+
     void EdgeCLI::addCliParameters_()
     {
         if (!is_add_cli_parameters_)
@@ -87,15 +166,15 @@ namespace covered
 
             // Dynamic configurations for client
             argument_desc_.add_options()
-                ("cache_name", boost::program_options::value<std::string>()->default_value(Util::LRU_CACHE_NAME), "cache name (e.g., cachelib, lruk, gdsize, gdsf, lfuda, lfu, lhd, lru, segcache, and covered)")
-                ("hash_name", boost::program_options::value<std::string>()->default_value(Util::MMH3_HASH_NAME, "the type of consistent hashing for DHT (e.g., mmh3)"))
-                ("percacheserver_workercnt", boost::program_options::value<uint32_t>()->default_value(1), "the number of worker threads for each cache server")
-                ("covered_local_uncached_max_mem_usage_mb", boost::program_options::value<uint64_t>()->default_value(1), "the maximum memory usage for local uncached metadata in units of MiB (only for COVERED)")
-                ("covered_peredge_synced_victimcnt", boost::program_options::value<uint32_t>()->default_value(3), "per-edge number of victims synced to each neighbor (only for COVERED)")
-                ("covered_peredge_monitored_victimsetcnt", boost::program_options::value<uint32_t>()->default_value(3), "per-edge number of monitored victim syncsets for each neighbor (only for COVERED)")
-                ("covered_popularity_aggregation_max_mem_usage_mb", boost::program_options::value<uint64_t>()->default_value(1), "the maximum memory usage for popularity aggregation in units of MiB (only for COVERED)")
-                ("covered_popularity_collection_change_ratio", boost::program_options::value<double>()->default_value(0.1), "the ratio for local uncached popularity changes to trigger popularity collection (only for COVERED)")
-                ("covered_topk_edgecnt", boost::program_options::value<uint32_t>()->default_value(1), "the number of top-k edge nodes for popularity aggregation and trade-off-aware cache placement (only for COVERED)")
+                ("cache_name", boost::program_options::value<std::string>()->default_value(DEFAULT_CACHE_NAME), "cache name (e.g., cachelib, lruk, gdsize, gdsf, lfuda, lfu, lhd, lru, segcache, and covered)")
+                ("hash_name", boost::program_options::value<std::string>()->default_value(DEFAULT_HASH_NAME, "the type of consistent hashing for DHT (e.g., mmh3)"))
+                ("percacheserver_workercnt", boost::program_options::value<uint32_t>()->default_value(DEFAULT_PERCACHESERVER_WORKERCNT), "the number of worker threads for each cache server")
+                ("covered_local_uncached_max_mem_usage_mb", boost::program_options::value<uint64_t>()->default_value(DEFAULT_COVERED_LOCAL_UNCACHED_MAX_MEM_USAGE_MB), "the maximum memory usage for local uncached metadata in units of MiB (only for COVERED)")
+                ("covered_peredge_synced_victimcnt", boost::program_options::value<uint32_t>()->default_value(DEFAULT_COVERED_PEREDGE_SYNCED_VICTIMCNT), "per-edge number of victims synced to each neighbor (only for COVERED)")
+                ("covered_peredge_monitored_victimsetcnt", boost::program_options::value<uint32_t>()->default_value(DEFAULT_COVERED_PEREDGE_MONITORED_VICTIMSETCNT), "per-edge number of monitored victim syncsets for each neighbor (only for COVERED)")
+                ("covered_popularity_aggregation_max_mem_usage_mb", boost::program_options::value<uint64_t>()->default_value(DEFAULT_COVERED_POPULARITY_AGGREGATION_MAX_MEM_USAGE_MB), "the maximum memory usage for popularity aggregation in units of MiB (only for COVERED)")
+                ("covered_popularity_collection_change_ratio", boost::program_options::value<double>()->default_value(DEFAULT_COVERED_POPULARITY_COLLECTION_CHANGE_RATIO), "the ratio for local uncached popularity changes to trigger popularity collection (only for COVERED)")
+                ("covered_topk_edgecnt", boost::program_options::value<uint32_t>()->default_value(DEFAULT_COVERED_TOPK_EDGECNT), "the number of top-k edge nodes for popularity aggregation and trade-off-aware cache placement (only for COVERED)")
             ;
 
             is_add_cli_parameters_ = true;

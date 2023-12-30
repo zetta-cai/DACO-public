@@ -78,7 +78,6 @@ void* launchDatasetLoader(void* dataset_loader_param_ptr)
 }
 
 int main(int argc, char **argv) {
-
     // (1) Parse and process CLI parameters and store them into DatasetLoaderParam
 
     covered::DatasetLoaderCLI dataset_loader_cli(argc, argv);
