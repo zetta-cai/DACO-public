@@ -28,7 +28,6 @@ namespace covered
 
     std::string CloudCLI::toCliString()
     {
-        std::cout << "CloudCLI::toCliString " << is_to_cli_string_ << std::endl; // TMPDEBUG231230
         std::ostringstream oss;
         if (!is_to_cli_string_)
         {
@@ -38,17 +37,12 @@ namespace covered
             assert(is_dump_cli_parameters_);
             assert(is_create_required_directories_);
 
-            std::cout << "111" << std::endl; // TMPDEBUG231230
-
             oss << PropagationCLI::toCliString();
-            std::cout << "222" << std::endl; // TMPDEBUG231230
             oss << WorkloadCLI::toCliString();
-            std::cout << "333" << std::endl; // TMPDEBUG231230
             if (cloud_storage_ != DEFAULT_CLOUD_STORAGE)
             {
                 oss << " --cloud_storage " << cloud_storage_;
             }
-            std::cout << "444" << std::endl; // TMPDEBUG231230
 
             is_to_cli_string_ = true;
         }

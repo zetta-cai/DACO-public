@@ -1,0 +1,97 @@
+#include "cli/cliutil_cli.h"
+
+#include "common/config.h"
+#include "common/util.h"
+
+namespace covered
+{
+    const std::string CliutilCLI::kClassName("CliutilCLI");
+
+    CliutilCLI::CliutilCLI(int argc, char **argv) : DatasetLoaderCLI(), SimulatorCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_create_required_directories_(false), is_to_cli_string_(false)
+    {
+        parseAndProcessCliParameters(argc, argv);
+    }
+
+    CliutilCLI::~CliutilCLI() {}
+
+    std::string CliutilCLI::toCliString()
+    {
+        std::ostringstream oss;
+        if (!is_to_cli_string_)
+        {
+            // NOTE: MUST already parse and process CLI parameters
+            assert(is_add_cli_parameters_);
+            assert(is_set_param_and_config_);
+            assert(is_dump_cli_parameters_);
+            assert(is_create_required_directories_);
+
+            oss << DatasetLoaderCLI::toCliString();
+            oss << SimulatorCLI::toCliString();
+
+            is_to_cli_string_ = true;
+        }
+        
+        return oss.str();
+    }
+
+    void CliutilCLI::clearIsToCliString()
+    {
+        DatasetLoaderCLI::clearIsToCliString();
+        SimulatorCLI::clearIsToCliString();
+        
+        is_to_cli_string_ = false;
+        return;
+    }
+
+    void CliutilCLI::addCliParameters_()
+    {
+        if (!is_add_cli_parameters_)
+        {
+            DatasetLoaderCLI::addCliParameters_();
+            SimulatorCLI::addCliParameters_();
+
+            is_add_cli_parameters_ = true;
+        }
+
+        return;
+    }
+
+    void CliutilCLI::setParamAndConfig_(const std::string& main_class_name)
+    {
+        if (!is_set_param_and_config_)
+        {
+            DatasetLoaderCLI::setParamAndConfig_(main_class_name);
+            SimulatorCLI::setParamAndConfig_(main_class_name);
+
+            is_set_param_and_config_ = true;
+        }
+
+        return;
+    }
+
+    void CliutilCLI::dumpCliParameters_()
+    {
+        if (!is_dump_cli_parameters_)
+        {
+            DatasetLoaderCLI::dumpCliParameters_();
+            SimulatorCLI::dumpCliParameters_();
+
+            is_dump_cli_parameters_ = true;
+        }
+
+        return;
+    }
+
+    void CliutilCLI::createRequiredDirectories_(const std::string& main_class_name)
+    {
+        if (!is_create_required_directories_)
+        {
+            DatasetLoaderCLI::createRequiredDirectories_(main_class_name);
+            SimulatorCLI::createRequiredDirectories_(main_class_name);
+
+            is_create_required_directories_ = true;
+        }
+
+        return;
+    }
+}

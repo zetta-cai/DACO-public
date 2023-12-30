@@ -12,7 +12,7 @@ class Simulator:
         # For launched componenets
         self.is_successful_finish_ = False
 
-        self.cliutil_instance_ = CLIUtil(Common.scriptname, **kwargs)
+        self.cliutil_instance_ = CLIUtil(**kwargs)
     
     def run(self):
         # NOTE: client/edge/cloud/evaluator machine idx MUST be current machine idx, which will also be checked by src/common/config.c after launching simulator

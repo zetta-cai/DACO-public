@@ -31,5 +31,9 @@ int main(int argc, char **argv) {
     oss << total_statistics_tracker.toString();
     covered::Util::dumpNormalMsg(main_class_name, oss.str());
 
+    // NOTE: used by exp scripts to verify whether existing statistics have been reloaded -> MUST be the same as scripts/common.py
+    const std::string TOTAL_STATISTICS_LOADER_FINISH_RELOADING_SYMBOL = "Total statistics loader done";
+    covered::Util::dumpNormalMsg(main_class_name, TOTAL_STATISTICS_LOADER_FINISH_RELOADING_SYMBOL);
+
     return 0;
 }

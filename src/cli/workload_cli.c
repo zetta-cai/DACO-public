@@ -30,7 +30,6 @@ namespace covered
 
     std::string WorkloadCLI::toCliString()
     {
-        std::cout << "WorkloadCLI::toCliString " << is_to_cli_string_ << std::endl; // TMPDEBUG231230
         std::ostringstream oss;
         if (!is_to_cli_string_)
         {
@@ -39,22 +38,15 @@ namespace covered
             assert(is_set_param_and_config_);
             assert(is_dump_cli_parameters_);
 
-            std::cout << "222-111" << std::endl; // TMPDEBUG231230
-
             oss << CLIBase::toCliString();
-            std::cout << "222-222" << std::endl; // TMPDEBUG231230
             if (keycnt_ != DEFAULT_KEYCNT)
             {
                 oss << " --keycnt " << keycnt_;
             }
-            std::cout << "222-333" << std::endl; // TMPDEBUG231230
-            std::cout << DEFAULT_WORKLOAD_NAME << std::endl; // TMPDEBUG231230
-            std::cout << workload_name_ << std::endl; // TMPDEBUG231230
             if (workload_name_ != DEFAULT_WORKLOAD_NAME)
             {
                 oss << " --workload_name " << workload_name_;
             }
-            std::cout << "222-444" << std::endl; // TMPDEBUG231230
 
             is_to_cli_string_ = true;
         }

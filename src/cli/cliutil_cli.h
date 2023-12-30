@@ -1,27 +1,26 @@
 /*
- * SimulatorCLI: parse and process simulator CLI parameters dynamic configurations.
+ * CliutilCLI: cover all possible CLI parameters of all components such that cliutil can generate CLI string for python exp scripts.
  * 
- * By Siyuan Sheng (2023.08.04).
+ * By Siyuan Sheng (2023.12.30).
  */
 
-#ifndef SIMULATOR_CLI_H
-#define SIMULATOR_CLI_H
+#ifndef CLIUTIL_CLI_H
+#define CLIUTIL_CLI_H
 
 #include <string>
 
 #include <boost/program_options.hpp>
 
-#include "cli/cloud_cli.h"
-#include "cli/evaluator_cli.h"
+#include "cli/dataset_loader_cli.h"
+#include "cli/simulator_cli.h"
 
 namespace covered
 {
-    class SimulatorCLI : virtual public CloudCLI, virtual public EvaluatorCLI
+    class CliutilCLI : virtual public DatasetLoaderCLI, virtual public SimulatorCLI
     {
     public:
-        SimulatorCLI();
-        SimulatorCLI(int argc, char **argv);
-        virtual ~SimulatorCLI();
+        CliutilCLI(int argc, char **argv);
+        virtual ~CliutilCLI();
 
         std::string toCliString(); // NOT virtual for cilutil
         virtual void clearIsToCliString(); // Idempotent operation: clear is_to_cli_string_ for the next toCliString()

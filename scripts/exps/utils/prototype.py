@@ -13,7 +13,7 @@ class Prototype:
         self.is_successful_finish_ = False
         self.permachine_launched_components_ = {}
 
-        self.cliutil_instance_ = CLIUtil(Common.scriptname, **kwargs)
+        self.cliutil_instance_ = CLIUtil(**kwargs)
 
     def run(self):
         physical_machines = JsonUtil.getValueForKeystr(Common.scriptname, "physical_machines")

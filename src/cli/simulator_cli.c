@@ -7,6 +7,9 @@ namespace covered
 {
     const std::string SimulatorCLI::kClassName("SimulatorCLI");
 
+    SimulatorCLI::SimulatorCLI() : CloudCLI(), EvaluatorCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_create_required_directories_(false), is_to_cli_string_(false)
+    {}
+
     SimulatorCLI::SimulatorCLI(int argc, char **argv) : CloudCLI(), EvaluatorCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_create_required_directories_(false), is_to_cli_string_(false)
     {
         parseAndProcessCliParameters(argc, argv);

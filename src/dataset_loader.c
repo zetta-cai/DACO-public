@@ -183,5 +183,9 @@ int main(int argc, char **argv) {
     delete rocksdb_wrapper_ptr;
     rocksdb_wrapper_ptr = NULL;
 
+    // NOTE: used by exp scripts to verify whether loading phase has been finished -> MUST be the same as scripts/common.py
+    const std::string DATASET_LOADER_FINISH_LOADING_SYMBOL = "Dataset loader done";
+    covered::Util::dumpNormalMsg(main_class_name, DATASET_LOADER_FINISH_LOADING_SYMBOL);
+
     return 0;
 }
