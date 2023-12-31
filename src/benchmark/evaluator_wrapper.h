@@ -46,6 +46,8 @@ namespace covered
         // NOTE: used by exp scripts to verify whether the evaluator has been initialized or done -> MUST be the same as scripts/common.py
         static const std::string EVALUATOR_FINISH_INITIALIZATION_SYMBOL;
         static const std::string EVALUATOR_FINISH_BENCHMARK_SYMBOL;
+
+        static const bool IS_HIGH_PRIORITY_FOR_EVALUATOR;
         
         static void* launchEvaluator(void* evaluator_wrapper_param_ptr);
 

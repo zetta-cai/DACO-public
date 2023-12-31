@@ -16,6 +16,11 @@ namespace covered
     const std::string EvaluatorWrapper::EVALUATOR_FINISH_INITIALIZATION_SYMBOL("Evaluator initialized");
     const std::string EvaluatorWrapper::EVALUATOR_FINISH_BENCHMARK_SYMBOL("Evaluator done");
 
+    // NOTE: do NOT change the following const variables unless you know what you are doing
+    // NOTE: you should guarantee the correctness of dedicated corecnt settings in config.json
+    //const bool EvaluatorWrapper::IS_HIGH_PRIORITY_FOR_EVALUATOR = true;
+    const bool EvaluatorWrapper::IS_HIGH_PRIORITY_FOR_EVALUATOR = false; // TMPDEBUG
+
     const std::string EvaluatorWrapper::kClassName("EvaluatorWrapper");
 
     EvaluatorWrapperParam::EvaluatorWrapperParam()
