@@ -56,7 +56,8 @@ namespace covered
         }
         node_recvmsg_source_addr_ = NetworkAddr(node_ipstr, node_recvmsg_port);
 
-        std::string evaluator_ipstr = Config::getEvaluatorIpstr(is_launch_node);
+        const bool is_launch_evaluator = false;
+        std::string evaluator_ipstr = Config::getEvaluatorIpstr(is_launch_evaluator);
         uint16_t evaluator_recvmsg_port = Config::getEvaluatorRecvmsgPort();
         evaluator_recvmsg_dst_addr_ = NetworkAddr(evaluator_ipstr, evaluator_recvmsg_port);
         

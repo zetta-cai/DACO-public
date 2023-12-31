@@ -9,4 +9,4 @@ physical_machines = JsonUtil.getValueForKeystr(Common.scriptname, "physical_mach
 
 for tmp_machine_idx in range(len(physical_machines)):
     for tmp_component in related_components:
-        ExpUtil.killComponenet_(tmp_machine_idx, tmp_component)
+        ExpUtil.killComponenet(tmp_machine_idx, tmp_component)

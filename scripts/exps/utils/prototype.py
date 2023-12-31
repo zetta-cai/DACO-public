@@ -19,17 +19,15 @@ class Prototype:
         physical_machines = JsonUtil.getValueForKeystr(Common.scriptname, "physical_machines")
 
         # (1) Launch evaluator
-        ## Get launch evaluator command
+        ## Launch evaluator in background
         evaluator_machine_idx = JsonUtil.getValueForKeystr(Common.scriptname, "evaluator_machine_index")
+        evaluator_component = "./evaluator"
         evaluator_logfile = "tmp_evaluator.out"
-        launch_evaluator_cmd = "nohup ./evaluator {} >{} 2>&1 &".format(self.cliutil_instance_.getEvaluatorCLIStr(), evaluator_logfile)
-        if evaluator_machine_idx != Common.cur_machine_idx:
-            launch_evaluator_cmd = ExpUtil.getRemoteCmd_(evaluator_machine_idx, launch_evaluator_cmd)
-        ## Execute command and update launched components
-        launch_evaluator_subprocess = SubprocessUtil.runCmd(launch_evaluator_cmd)
+        launch_evaluator_subprocess = ExpUtil.launchComponent(evaluator_machine_idx, evaluator_component, self.cliutil_instance_.getEvaluatorCLIStr(), evaluator_logfile)
+        ## Update launched components
         if evaluator_machine_idx not in self.permachine_launched_components_:
             self.permachine_launched_components_[evaluator_machine_idx] = []
-        self.permachine_launched_components_[evaluator_machine_idx].append("./evaluator")
+        self.permachine_launched_components_[evaluator_machine_idx].append(evaluator_component)
         if launch_evaluator_subprocess.returncode != 0:
             self.dieWithCleanup_("failed to launch evaluator (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(launch_evaluator_subprocess)))
 
@@ -39,7 +37,7 @@ class Prototype:
         ## Get verify evaluator finish initialization command
         verify_evaluator_initialization_cmd =  "cat {} | grep '{}'".format(evaluator_logfile, Common.EVALUATOR_FINISH_INITIALIZATION_SYMBOL)
         if evaluator_machine_idx != Common.cur_machine_idx:
-            verify_evaluator_initialization_cmd = ExpUtil.getRemoteCmd_(evaluator_machine_idx, verify_evaluator_initialization_cmd)
+            verify_evaluator_initialization_cmd = ExpUtil.getRemoteCmd(evaluator_machine_idx, verify_evaluator_initialization_cmd)
         ## Verify existence of evaluator finish initialization symbol
         verify_evaluator_initialization_subprocess = SubprocessUtil.runCmd(verify_evaluator_initialization_cmd)
         if verify_evaluator_initialization_subprocess.returncode != 0: # Error or symbol NOT exist
@@ -52,14 +50,12 @@ class Prototype:
                 self.dieWithCleanup_("evaluator has NOT finished initialization (please check tmp_evaluator.out in corresponding machine)")
 
         # (3) Launch cloud
-        ## Get launch cloud command
+        ## Launch cloud in background
         cloud_machine_idx = JsonUtil.getValueForKeystr(Common.scriptname, "cloud_machine_index")
+        cloud_component = "./cloud"
         cloud_logfile = "tmp_cloud.out"
-        launch_cloud_cmd = "nohup ./cloud {} >{} 2>&1 &".format(self.cliutil_instance_.getCloudCLIStr(), cloud_logfile)
-        if cloud_machine_idx != Common.cur_machine_idx:
-            launch_cloud_cmd = ExpUtil.getRemoteCmd_(cloud_machine_idx, launch_cloud_cmd)
-        ## Execute command and update launched components
-        launch_cloud_subprocess = SubprocessUtil.runCmd(launch_cloud_cmd)
+        launch_cloud_subprocess = ExpUtil.launchComponent(cloud_machine_idx, cloud_component, self.cliutil_instance_.getCloudCLIStr(), cloud_logfile)
+        ## Update launched components
         if cloud_machine_idx not in self.permachine_launched_components_:
             self.permachine_launched_components_[cloud_machine_idx] = []
         self.permachine_launched_components_[cloud_machine_idx].append("./cloud")
@@ -69,16 +65,14 @@ class Prototype:
         # (4) Launch edges
         ## For each edge machine
         edge_machine_idxes = JsonUtil.getValueForKeystr(Common.scriptname, "edge_machine_indexes")
+        edge_component = "./edge"
         edge_logfile = "tmp_edge.out"
         if len(edge_machine_idxes) != len(set(edge_machine_idxes)):
             self.dieWithCleanup_("duplicate edge machine indexes")
         for tmp_edge_machine_idx in edge_machine_idxes:
-            ## Get launch edge command
-            launch_edge_cmd = "nohup ./edge {} >{} 2>&1 &".format(self.cliutil_instance_.getEdgeCLIStr(), edge_logfile)
-            if tmp_edge_machine_idx != Common.cur_machine_idx:
-                launch_edge_cmd = ExpUtil.getRemoteCmd_(tmp_edge_machine_idx, launch_edge_cmd)
-            ## Execute command and update launched components
-            launch_edge_subprocess = SubprocessUtil.runCmd(launch_edge_cmd)
+            ## Launch edge in background
+            launch_edge_subprocess = ExpUtil.launchComponent(tmp_edge_machine_idx, edge_component, self.cliutil_instance_.getEdgeCLIStr(), edge_logfile)
+            ## Update launched components
             if tmp_edge_machine_idx not in self.permachine_launched_components_:
                 self.permachine_launched_components_[tmp_edge_machine_idx] = []
             self.permachine_launched_components_[tmp_edge_machine_idx].append("./edge")
@@ -90,16 +84,14 @@ class Prototype:
         time.sleep(0.5)
         ## For each client machine
         client_machine_idxes = JsonUtil.getValueForKeystr(Common.scriptname, "client_machine_indexes")
+        client_component = "./client"
         client_logfile = "tmp_client.out"
         if len(client_machine_idxes) != len(set(client_machine_idxes)):
             self.dieWithCleanup_("duplicate client machine indexes")
         for tmp_client_machine_idx in client_machine_idxes:
-            ## Get launch client command
-            launch_client_cmd = "nohup ./client {} >{} 2>&1 &".format(self.cliutil_instance_.getClientCLIStr(), client_logfile)
-            if tmp_client_machine_idx != Common.cur_machine_idx:
-                launch_client_cmd = ExpUtil.getRemoteCmd_(tmp_client_machine_idx, launch_client_cmd)
-            ## Execute command and update launched components
-            launch_client_subprocess = SubprocessUtil.runCmd(launch_client_cmd)
+            ## Launch client in background
+            launch_client_subprocess = ExpUtil.launchComponent(tmp_client_machine_idx, client_component, self.cliutil_instance_.getClientCLIStr(), client_logfile)
+            ## Update launched components
             if tmp_client_machine_idx not in self.permachine_launched_components_:
                 self.permachine_launched_components_[tmp_client_machine_idx] = []
             self.permachine_launched_components_[tmp_client_machine_idx].append("./client")
@@ -111,7 +103,7 @@ class Prototype:
         ## Get check evaluator finish benchmark command
         check_evaluator_finish_benchmark_cmd = "cat {} | grep '{}'".format(evaluator_logfile, Common.EVALUATOR_FINISH_BENCHMARK_SYMBOL)
         if evaluator_machine_idx != Common.cur_machine_idx:
-            check_evaluator_finish_benchmark_cmd = ExpUtil.getRemoteCmd_(evaluator_machine_idx, check_evaluator_finish_benchmark_cmd)
+            check_evaluator_finish_benchmark_cmd = ExpUtil.getRemoteCmd(evaluator_machine_idx, check_evaluator_finish_benchmark_cmd)
         while True:
             ## Periodically check
             time.sleep(5)
@@ -137,7 +129,7 @@ class Prototype:
         # Kill all launched components
         for tmp_machine_idx in self.permachine_launched_components_:
             for tmp_component in self.permachine_launched_components_[tmp_machine_idx]:
-                ExpUtil.killComponenet_(tmp_machine_idx, tmp_component)
+                ExpUtil.killComponenet(tmp_machine_idx, tmp_component)
 
         if not self.is_successful_finish_:
             LogUtil.dieNoExit(Common.scriptname, "failed to launch prototype")

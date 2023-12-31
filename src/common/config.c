@@ -1181,12 +1181,15 @@ namespace covered
         assert(evaluator_machine_idx_ < physical_machines_.size());
 
         // (vi) client/edge/cloud/evaluator MUST be current machine idx if under single-node simulation
-        assert(client_machine_idxes_.size() == 1);
-        assert(client_machine_idxes_[0] == current_machine_idx_);
-        assert(edge_machine_idxes_.size() == 1);
-        assert(edge_machine_idxes_[0] == current_machine_idx_);
-        assert(cloud_machine_idx_ == current_machine_idx_);
-        assert(evaluator_machine_idx_ == current_machine_idx_);
+        if (main_class_name_ == Util::SIMULATOR_MAIN_NAME)
+        {
+            assert(client_machine_idxes_.size() == 1);
+            assert(client_machine_idxes_[0] == current_machine_idx_);
+            assert(edge_machine_idxes_.size() == 1);
+            assert(edge_machine_idxes_[0] == current_machine_idx_);
+            assert(cloud_machine_idx_ == current_machine_idx_);
+            assert(evaluator_machine_idx_ == current_machine_idx_);
+        }
 
         return;
     }

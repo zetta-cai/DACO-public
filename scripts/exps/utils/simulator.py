@@ -65,7 +65,7 @@ class Simulator:
     
     def cleanup_(self):
         # Kill launched simulator
-        ExpUtil.killComponenet_(Common.cur_machine_idx, "./simulator")
+        ExpUtil.killComponenet(Common.cur_machine_idx, "./simulator")
 
         if not self.is_successful_finish_:
             LogUtil.dieNoExit(Common.scriptname, "failed to launch simulator")

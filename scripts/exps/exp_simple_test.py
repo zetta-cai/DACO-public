@@ -7,8 +7,8 @@ from .utils.simulator import *
 from .utils.total_statistics_loader import *
 
 exp_simple_test_settings = {
-    "clientcnt": 3,
-    "edgecnt": 3,
+    "clientcnt": 4,
+    "edgecnt": 4,
     "keycnt": 100000,
     "capacity_mb": 1000,
     "cache_name": "covered"

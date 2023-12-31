@@ -35,7 +35,7 @@ class TotalStatisticsLoader:
         check_total_statistics_loader_finish_reloading_cmd = "cat {} | grep '{}'".format(total_statistics_loader_logfile, Common.TOTAL_STATISTICS_LOADER_FINISH_RELOADING_SYMBOL)
         while True:
             ## Periodically check
-            time.sleep(5)
+            time.sleep(1)
             ## Check existence of total statistics loader finish reloading symbol
             check_total_statistics_loader_finish_reloading_subprocess = SubprocessUtil.runCmd(check_total_statistics_loader_finish_reloading_cmd)
             if check_total_statistics_loader_finish_reloading_subprocess.returncode == 0 and SubprocessUtil.getSubprocessOutputstr(check_total_statistics_loader_finish_reloading_subprocess) != "": # Symbol exist
@@ -45,7 +45,7 @@ class TotalStatisticsLoader:
         # (3) Kill total statistics loader
         ## Wait for all launched threads which may be blocked by UDP sockets before timeout
         LogUtil.prompt(Common.scriptname, "wait for all launched threads to finish...")
-        time.sleep(5)
+        time.sleep(1)
         ## Cleanup all launched threads
         self.is_successful_finish_ = True
         self.cleanup_()
@@ -56,7 +56,7 @@ class TotalStatisticsLoader:
     
     def cleanup_(self):
         # Kill launched total statistics loader
-        ExpUtil.killComponenet_(Common.cur_machine_idx, "./total_statistics_loader")
+        ExpUtil.killComponenet(Common.cur_machine_idx, "./total_statistics_loader")
 
         if not self.is_successful_finish_:
             LogUtil.dieNoExit(Common.scriptname, "failed to launch total statistics loader")

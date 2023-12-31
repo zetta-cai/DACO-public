@@ -7,21 +7,48 @@ class ExpUtil:
     physical_machines_ = JsonUtil.getValueForKeystr(Common.scriptname, "physical_machines")
 
     @classmethod
-    def getRemoteCmd_(cls, remote_machine_idx, internal_cmd):
+    def getRemoteCmd(cls, remote_machine_idx, internal_cmd, with_background = False):
         remote_cmd = ""
         if remote_machine_idx == Common.cur_machine_idx:
-            LogUtil.dieNoExit(Common.scriptname, "remote machine index {} should != current machine index {} in getRemoteCmd_".format(remote_machine_idx, Common.cur_machine_idx))
+            LogUtil.dieNoExit(Common.scriptname, "remote machine index {} should != current machine index {} in getRemoteCmd".format(remote_machine_idx, Common.cur_machine_idx))
         else:
-            remote_cmd = "ssh -i ~/.ssh/{} {}@{} \"cd {} && {}\"".format(Common.sshkey_name, Common.username, cls.physical_machines_[remote_machine_idx]["ipstr"], Common.proj_dirname, internal_cmd)
+            ssh_cmd = ""
+            if with_background:
+                # NOTE: use -f to move SSH connection into background in target machine after launching the background command, such that current machine will NOT get stuck
+                ssh_cmd = "ssh -f -i ~/.ssh/{} {}@{}".format(Common.sshkey_name, Common.username, cls.physical_machines_[remote_machine_idx]["ipstr"])
+            else:
+                ssh_cmd = "ssh -i ~/.ssh/{} {}@{}".format(Common.sshkey_name, Common.username, cls.physical_machines_[remote_machine_idx]["ipstr"])
+            remote_cmd = "{} \"source /home/{}/.bashrc_non_interactive && cd {} && {}\"".format(ssh_cmd, Common.username, Common.proj_dirname, internal_cmd)
         return remote_cmd
+
+    @classmethod
+    def launchComponent(cls, tmp_machine_idx, tmp_component, tmp_component_clistr, tmp_component_logfile):
+        # Get launch component command
+        launch_component_cmd = "nohup {} {} >{} 2>&1 &".format(tmp_component, tmp_component_clistr, tmp_component_logfile)
+        if tmp_machine_idx != Common.cur_machine_idx:
+            # NOTE: set with_background = True to avoid getting stuck by background command
+            launch_component_cmd = cls.getRemoteCmd(tmp_machine_idx, launch_component_cmd, with_background = True)
+        
+        # Execute command to launch component
+        # NOTE: set is_capture_output = False to avoid getting stuck by background command
+        launch_component_subprocess = SubprocessUtil.runCmd(launch_component_cmd, is_capture_output = False)
+
+        return launch_component_subprocess
     
     @classmethod
-    def killComponenet_(cls, tmp_machine_idx, tmp_component):
+    def killComponenet(cls, tmp_machine_idx, tmp_component):
         # Check PID(s) of the given component
         tmp_pidstr_list = []
-        check_component_cmd = "ps -aux | grep {} | grep -v grep | awk '{{print $2}}'".format(tmp_component) # Doubling braces to escape them
+        
+        check_component_cmd = "ps -aux | grep -F {} | grep -v grep".format(tmp_component)
         if tmp_machine_idx != Common.cur_machine_idx:
-            check_component_cmd = cls.getRemoteCmd_(tmp_machine_idx, check_component_cmd)
+            # NOTE: use double braces to escape braces from python string format processing
+            # NOTE: use \$ to escape $ from ssh command, otherwise $2 will be interpreted as a variable by bash due to using double quotes in getRemoteCmd()
+            check_component_cmd = "{} | awk '{{print \$2}}'".format(check_component_cmd)
+            check_component_cmd = cls.getRemoteCmd(tmp_machine_idx, check_component_cmd)
+        else:
+            # NOTE: use double braces to escape braces from python string format processing
+            check_component_cmd = "{} | awk '{{print $2}}'".format(check_component_cmd)
         check_component_subprocess = SubprocessUtil.runCmd(check_component_cmd)
         if check_component_subprocess.returncode == 0 and SubprocessUtil.getSubprocessOutputstr(check_component_subprocess) != "": # PID exist
             tmp_pidstr_list = SubprocessUtil.getSubprocessOutputstr(check_component_subprocess).split()
@@ -29,9 +56,13 @@ class ExpUtil:
         # Kill the given component if exist
         if len(tmp_pidstr_list) > 0:
             for tmp_pidstr in tmp_pidstr_list:
+                # Check if tmp_pidstr is numberic
+                if not tmp_pidstr.isnumeric():
+                    LogUtil.die(Common.scriptname, "pidstr {} is not numeric for component {}; outputstr of command {} is {}".format(tmp_pidstr, tmp_component, check_component_cmd, SubprocessUtil.getSubprocessOutputstr(check_component_subprocess)))
+
                 kill_component_cmd = "kill -9 {}".format(tmp_pidstr)
                 if tmp_machine_idx != Common.cur_machine_idx:
-                    kill_component_cmd = cls.getRemoteCmd_(tmp_machine_idx, kill_component_cmd)
+                    kill_component_cmd = cls.getRemoteCmd(tmp_machine_idx, kill_component_cmd)
                 kill_component_subprocess = SubprocessUtil.runCmd(kill_component_cmd)
                 if kill_component_subprocess.returncode != 0:
                     LogUtil.dieNoExit(Common.scriptname, "failed to kill {} (errmsg: {})".format(tmp_component, SubprocessUtil.getSubprocessErrstr(kill_component_subprocess)))

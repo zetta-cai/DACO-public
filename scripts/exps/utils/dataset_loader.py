@@ -56,7 +56,7 @@ class DatasetLoader:
     
     def cleanup_(self):
         # Kill launched dataset loader
-        ExpUtil.killComponenet_(Common.cur_machine_idx, "./dataset_loader")
+        ExpUtil.killComponenet(Common.cur_machine_idx, "./dataset_loader")
 
         if not self.is_successful_finish_:
             LogUtil.dieNoExit(Common.scriptname, "failed to launch dataset loader")

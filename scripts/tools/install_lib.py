@@ -218,7 +218,7 @@ if is_install_lhd:
 
 # (10) Others: chown of libraries and update LD_LIBRARY_PATH
 
-## Chown of libraries
+## (10.1) Chown of libraries
 
 LogUtil.prompt(Common.scriptname, "chown of libraries...")
 chown_cmd = "sudo chown -R {0}:{0} {1}".format(Common.username, Common.lib_dirpath)
@@ -227,10 +227,28 @@ if chown_subprocess.returncode != 0:
     chown_errstr = SubprocessUtil.getSubprocessErrstr(chown_subprocess)
     LogUtil.die(Common.scriptname, "failed to chown of libraries (errmsg: {})".format(chown_errstr))
 
-## Update LD_LIBRARY_PATH
+## (10.2) Update LD_LIBRARY_PATH for interactive and non-interactive shells
 
 target_ld_libs = ["segcache", "cachelib", "boost", "x86_64-linux-gnu"]
 target_ld_lib_dirpaths = ["{}/src/cache/segcache/build/ccommon/lib".format(Common.proj_dirname), "{}/CacheLib/opt/cachelib/lib".format(Common.lib_dirpath), "{}/boost_1_81_0/install/lib".format(Common.lib_dirpath), "/usr/lib/x86_64-linux-gnu"]
+
+# Formulate grepstr to check LD_LIBRARY_PATH in {~/.bashrc or ~/.bash_profile} and ~/.bashrc_non_interactive
+check_bash_source_grepstr = "grep \"LD_LIBRARY_PATH\""
+for i in range(len(target_ld_libs)):
+    check_bash_source_grepstr = "{} | grep \"{}\"".format(check_bash_source_grepstr, target_ld_libs[i])
+
+# Formulate grepstr for LD_LIBRARY_PATH to be appended into {~/.bashrc or ~/.bash_profile} and ~/.bashrc_non_interactive if necessary
+update_bash_source_grepstr = ""
+for i in range(len(target_ld_lib_dirpaths)):
+    if i == 0:
+        update_bash_source_grepstr = "{}".format(target_ld_lib_dirpaths[i])
+    elif i == len(target_ld_lib_dirpaths) - 1:
+        # NOTE: MUST use double braces to avoid python string format processing
+        update_bash_source_grepstr = "{}:{}:${{LD_LIBRARY_PATH}}".format(update_bash_source_grepstr, target_ld_lib_dirpaths[i])
+    else:
+        update_bash_source_grepstr = "{}:{}".format(update_bash_source_grepstr, target_ld_lib_dirpaths[i])
+
+### (10.3) Update LD_LIBRARY_PATH for interactive shells
 
 LogUtil.prompt(Common.scriptname, "check if need to update LD_LIBRARY_PATH...")
 need_update_ld_library_path = False
@@ -257,9 +275,7 @@ if need_update_ld_library_path:
     LogUtil.prompt(Common.scriptname, "check if need to update bash source file {}...".format(bash_source_filepath))
     need_update_bash_source_file = False
     # Check whether target libraries are contained in LD_LIBRARY_PATH at bash source file
-    check_bash_source_file_cmd = "cat {} | grep \"LD_LIBRARY_PATH\"".format(bash_source_filepath)
-    for i in range(len(target_ld_libs)):
-        check_bash_source_file_cmd = "{} | grep \"{}\"".format(check_bash_source_file_cmd, target_ld_libs[i])
+    check_bash_source_file_cmd = "cat {} | {}".format(bash_source_filepath, check_bash_source_grepstr)
     check_bash_source_file_subprocess = SubprocessUtil.runCmd(check_bash_source_file_cmd)
     if check_bash_source_file_subprocess.returncode == 0:
         check_bash_source_file_outputstr = SubprocessUtil.getSubprocessOutputstr(check_bash_source_file_subprocess)
@@ -273,15 +289,8 @@ if need_update_ld_library_path:
     
     if need_update_bash_source_file:
         LogUtil.prompt(Common.scriptname, "update bash source file {}...".format(bash_source_filepath))
-        update_bash_source_grepstr = ""
-        for i in range(len(target_ld_lib_dirpaths)):
-            if i == 0:
-                update_bash_source_grepstr = "{}".format(target_ld_lib_dirpaths[i])
-            elif i == len(target_ld_lib_dirpaths) - 1:
-                update_bash_source_grepstr = "{}:{}:${{LD_LIBRARY_PATH}}".format(update_bash_source_grepstr, target_ld_lib_dirpaths[i])
-            else:
-                update_bash_source_grepstr = "{}:{}".format(update_bash_source_grepstr, target_ld_lib_dirpaths[i])
-        update_bash_source_file_cmd = "echo \"export LD_LIBRARY_PATH={}\" >> {}".format(update_bash_source_grepstr, bash_source_filepath)
+        # NOTE: use single quotes (or \$) instead of double quotes here, otherwise ${LD_LIBRARY_PATH} in update_bash_source_grepstr will not be processed literally
+        update_bash_source_file_cmd = "echo 'export LD_LIBRARY_PATH={}' >> {}".format(update_bash_source_grepstr, bash_source_filepath)
         update_bash_source_file_subprocess = SubprocessUtil.runCmd(update_bash_source_file_cmd)
         if update_bash_source_file_subprocess.returncode != 0:
             update_bash_source_file_errstr = SubprocessUtil.getSubprocessErrstr(update_bash_source_file_subprocess)
@@ -298,3 +307,35 @@ if need_update_ld_library_path:
     LogUtil.emphasize(Common.scriptname, "Please update LD_LIBRARY_PATH by this command: source {}".format(bash_source_filepath))
 else:
     LogUtil.dump(Common.scriptname, "LD_LIBRARY_PATH alreay contains all target libraries")
+
+### (10.4) Update LD_LIBRARY_PATH for non-interactive shells
+
+noninteractive_bash_source_filepath = "/home/{}/.bashrc_non_interactive".format(Common.username)
+
+# Check whether target libraries are contained in LD_LIBRARY_PATH at non-interactive bash source file
+need_update_noninteractive_bash_source_file = False;
+check_noninteractive_bash_source_file_cmd = "cat {} | {}".format(noninteractive_bash_source_filepath, check_bash_source_grepstr)
+check_noninteractive_bash_source_file_subprocess = SubprocessUtil.runCmd(check_noninteractive_bash_source_file_cmd)
+if check_noninteractive_bash_source_file_subprocess.returncode == 0:
+    check_noninteractive_bash_source_file_outputstr = SubprocessUtil.getSubprocessOutputstr(check_noninteractive_bash_source_file_subprocess)
+    if check_noninteractive_bash_source_file_outputstr == "":
+        need_update_noninteractive_bash_source_file = True
+    else:
+        LogUtil.dump(Common.scriptname, "non-interactive bash source file {} already contains all target libraries".format(noninteractive_bash_source_filepath))
+else: # NOTE: if returncode is not 0, it also means that the target libraries are not contained in LD_LIBRARY_PATH at non-interactive bash source file
+    need_update_noninteractive_bash_source_file = True
+
+if need_update_noninteractive_bash_source_file:
+    LogUtil.prompt(Common.scriptname, "create non-interactive bash source file {}...".format(noninteractive_bash_source_filepath))
+
+    # Remove old non-interactive bash source file if any
+    remove_old_noninteractive_bash_source_file_cmd = "rm {}".format(noninteractive_bash_source_filepath)
+    remove_old_noninteractive_bash_source_file_subprocess = SubprocessUtil.runCmd(remove_old_noninteractive_bash_source_file_cmd)
+
+    # Create new non-interactive bash source file with correct LD_LIBRARY_PATH
+    # NOTE: use single quotes (or \$) instead of double quotes here, otherwise ${LD_LIBRARY_PATH} in update_bash_source_grepstr will not be processed literally
+    create_noninteractive_bash_source_file_cmd = "echo 'export LD_LIBRARY_PATH={}' >> {}".format(update_bash_source_grepstr, noninteractive_bash_source_filepath)
+    create_noninteractive_bash_source_file_subprocess = SubprocessUtil.runCmd(create_noninteractive_bash_source_file_cmd)
+    if create_noninteractive_bash_source_file_subprocess.returncode != 0:
+        create_noninteractive_bash_source_file_errstr = SubprocessUtil.getSubprocessErrstr(create_noninteractive_bash_source_file_subprocess)
+        LogUtil.die(Common.scriptname, "failed to create non-interactive bash source file {} (errmsg: {})".format(noninteractive_bash_source_filepath, create_noninteractive_bash_source_file_errstr))
