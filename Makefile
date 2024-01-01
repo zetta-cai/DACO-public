@@ -13,6 +13,7 @@ include src/mk/recipes.mk
 # Recipes for cache methods (including baselines and COVERED)
 include src/mk/cache/cachelib.mk
 include src/mk/cache/covered.mk
+include src/mk/cache/fifo.mk
 include src/mk/cache/gdsf.mk
 include src/mk/cache/lfu.mk
 include src/mk/cache/lhd.mk

@@ -6,6 +6,7 @@
 #include "common/util.h"
 #include "cache/cachelib_local_cache.h"
 #include "cache/covered_local_cache.h"
+#include "cache/fifo_local_cache.h"
 #include "cache/lfu_local_cache.h"
 #include "cache/lhd_local_cache.h"
 #include "cache/lru_local_cache.h"
@@ -23,13 +24,13 @@ namespace covered
         {
             local_cache_ptr = new CachelibLocalCache(edge_wrapper_ptr, edge_idx, capacity_bytes);
         }
-        else if (cache_name == Util::LRUK_CACHE_NAME || cache_name == Util::GDSIZE_CACHE_NAME || cache_name == Util::GDSF_CACHE_NAME || cache_name == Util::LFUDA_CACHE_NAME)
+        else if (cache_name == Util::FIFO_CACHE_NAME)
+        {
+            local_cache_ptr = new FifoLocalCache(edge_wrapper_ptr, edge_idx, capacity_bytes);
+        }
+        else if (cache_name == Util::LRUK_CACHE_NAME || cache_name == Util::GDSIZE_CACHE_NAME || cache_name == Util::GDSF_CACHE_NAME || cache_name == Util::LFUDA_CACHE_NAME) // Greedy dual
         {
             local_cache_ptr = new GreedyDualLocalCache(edge_wrapper_ptr, cache_name, edge_idx, capacity_bytes);
-        }
-        else if (cache_name == Util::COVERED_CACHE_NAME)
-        {
-            local_cache_ptr = new CoveredLocalCache(edge_wrapper_ptr, edge_idx, capacity_bytes, local_uncached_capacity_bytes, peredge_synced_victimcnt);
         }
         else if (cache_name == Util::LFU_CACHE_NAME)
         {
@@ -46,6 +47,10 @@ namespace covered
         else if (cache_name == Util::SEGCACHE_CACHE_NAME)
         {
             local_cache_ptr = new SegcacheLocalCache(edge_wrapper_ptr, edge_idx, capacity_bytes);
+        }
+        else if (cache_name == Util::COVERED_CACHE_NAME)
+        {
+            local_cache_ptr = new CoveredLocalCache(edge_wrapper_ptr, edge_idx, capacity_bytes, local_uncached_capacity_bytes, peredge_synced_victimcnt);
         }
         else
         {
