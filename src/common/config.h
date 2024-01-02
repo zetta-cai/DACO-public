@@ -5,6 +5,8 @@
  * 
  * NOTE: when get ipstr of client/edge/cloud/evaluator, is_launch indicates whether the logical node is being launched at the current physical machine; if is_launch = true, assert that the physical machine idx of the logical node MUST be current physical machine idx.
  * 
+ * NOTE: (i) use private IP for client-closest_edge communication; (ii) use public IP for cross-edge, edge-cloud, and evaluator-client/edge/cloud communication; (iii) if you deploy COVERED in local data center, just set public IP the same as private IP in config.json for each physical machine based on your testbed.
+ * 
  * By Siyuan Sheng (2023.04.10).
  */
 
@@ -25,10 +27,11 @@ namespace covered
     {
     public:
         PhysicalMachine();
-        PhysicalMachine(const std::string& ipstr, const uint32_t& cpu_dedicated_corecnt, const uint32_t& cpu_shared_corecnt);
+        PhysicalMachine(const std::string& private_ipstr, const std::string& public_ipstr, const uint32_t& cpu_dedicated_corecnt, const uint32_t& cpu_shared_corecnt);
         ~PhysicalMachine();
 
-        std::string getIpstr() const;
+        std::string getPrivateIpstr() const;
+        std::string getPublicIpstr() const;
         uint32_t getCpuDedicatedCorecnt() const;
         uint32_t getCpuSharedCorecnt() const;
 
@@ -38,7 +41,8 @@ namespace covered
     private:
         static const std::string kClassName;
 
-        std::string ipstr_;
+        std::string private_ipstr_;
+        std::string public_ipstr_;
         uint32_t cpu_dedicated_corecnt_;
         uint32_t cpu_shared_corecnt_;
     };
@@ -100,12 +104,12 @@ namespace covered
 
         // For client physical machines
         static uint32_t getClientMachineCnt();
-        static std::string getClientIpstr(const uint32_t& client_idx, const uint32_t& clientcnt, const bool& is_launch); // clientcnt is the number of logical client nodes
+        static std::string getClientIpstr(const uint32_t& client_idx, const uint32_t& clientcnt, const bool& is_private_ipstr, const bool& is_launch); // clientcnt is the number of logical client nodes
 
         static uint32_t getClientRawStatisticsSlotIntervalSec();
         static uint16_t getClientRecvmsgStartport();
         static uint16_t getClientWorkerRecvrspStartport();
-        static std::string getCloudIpstr(const bool& is_launch); // For cloud physical machine
+        static std::string getCloudIpstr(const bool& is_private_ipstr, const bool& is_launch); // For cloud physical machine
         static uint16_t getCloudRecvmsgStartport();
         static uint16_t getCloudRecvreqStartport();
         static std::string getCloudRocksdbBasedir();
@@ -122,11 +126,11 @@ namespace covered
 
         // For edge physical machines
         static uint32_t getEdgeMachineCnt();
-        static std::string getEdgeIpstr(const uint32_t& edge_idx, const uint32_t& edgecnt, const bool& is_launch); // edgecnt is the number of logical edge nodes
-        static uint32_t getEdgeLocalMachineIdxByIpstr(const std::string& edge_ipstr); // Return the position (i.e., local machine index) in edge_machine_idxes_, instead of the position (i.e., global machine index = edge_machine_idxes_[local_machine_index]) in physical_machines_
+        static std::string getEdgeIpstr(const uint32_t& edge_idx, const uint32_t& edgecnt, const bool& is_private_ipstr, const bool& is_launch); // edgecnt is the number of logical edge nodes
+        static uint32_t getEdgeLocalMachineIdxByIpstr(const std::string& edge_ipstr, const bool& is_private_ipstr); // Return the position (i.e., local machine index) in edge_machine_idxes_, instead of the position (i.e., global machine index = edge_machine_idxes_[local_machine_index]) in physical_machines_
 
         static uint16_t getEdgeRecvmsgStartport();
-        static std::string getEvaluatorIpstr(const bool& is_launch); // For evaluator physical machine
+        static std::string getEvaluatorIpstr(const bool& is_private_ipstr, const bool& is_launch); // For evaluator physical machine
         static std::uint16_t getEvaluatorRecvmsgPort();
         static std::string getLibraryDirpath();
         static std::string getFacebookConfigFilepath();

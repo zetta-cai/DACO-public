@@ -66,8 +66,9 @@ namespace covered
 
     std::string DhtWrapper::getBeaconEdgeIpstr(const uint32_t& beacon_edge_idx) const
     {
+        const bool is_private_edge_ipstr = false; // NOTE: cross-edge communication for directory lookup/update, acquire/release writelock, and non-blocking data fetching uses public IP address
         const bool is_launch_edge = false; // Just connect the beacon edge node by the current edge node instead of launching the beacon edge node
-        return Config::getEdgeIpstr(beacon_edge_idx, edgecnt_, is_launch_edge);
+        return Config::getEdgeIpstr(beacon_edge_idx, edgecnt_, is_private_edge_ipstr, is_launch_edge);
     }
 
     uint16_t DhtWrapper::getBeaconEdgeBeaconServerRecvreqPort(const uint32_t& beacon_edge_idx) const

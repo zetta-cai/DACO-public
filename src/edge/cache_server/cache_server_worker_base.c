@@ -66,16 +66,18 @@ namespace covered
         base_instance_name_ = oss.str();
 
         // Prepare destination address to the corresponding cloud
+        const bool is_private_cloud_ipstr = false; // NOTE: edge communicates with cloud via public IP address
         const bool is_launch_cloud = false; // Just connect cloud by the logical edge node instead of launching the cloud
-        std::string cloud_ipstr = Config::getCloudIpstr(is_launch_cloud);
+        std::string cloud_ipstr = Config::getCloudIpstr(is_private_cloud_ipstr, is_launch_cloud);
         uint16_t cloud_recvreq_port = Util::getCloudRecvreqPort(0); // TODO: only support 1 cloud node now!
         corresponding_cloud_recvreq_dst_addr_ = NetworkAddr(cloud_ipstr, cloud_recvreq_port);
 
         // For receiving control responses and redirected data responses
 
         // Get source address of cache server worker to receive control responses and redirected data responses
+        const bool is_private_edge_ipstr = false; // NOTE: cross-edge and edge-cloud communication for control messages, request redirection, and global data messages use public IP address
         const bool is_launch_edge = true; // The edge cache server worker belongs to the logical edge node launched in the current physical machine
-        std::string edge_ipstr = Config::getEdgeIpstr(edge_idx, edgecnt, is_launch_edge);
+        std::string edge_ipstr = Config::getEdgeIpstr(edge_idx, edgecnt, is_private_edge_ipstr, is_launch_edge);
         uint16_t edge_cache_server_worker_recvrsp_port = Util::getEdgeCacheServerWorkerRecvrspPort(edge_idx, edgecnt, local_cache_server_worker_idx, percacheserver_workercnt);
         edge_cache_server_worker_recvrsp_source_addr_ = NetworkAddr(edge_ipstr, edge_cache_server_worker_recvrsp_port);
 
@@ -378,7 +380,7 @@ namespace covered
         uint64_t used_bytes = tmp_edge_wrapper_ptr->getSizeForCapacity();
         uint64_t capacity_bytes = tmp_edge_wrapper_ptr->getCapacityBytes();
         uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
-        NetworkAddr edge_cache_server_recvreq_source_addr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeCacheServerRecvreqSourceAddr();
+        NetworkAddr edge_cache_server_recvreq_source_addr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeCacheServerRecvreqPrivateSourceAddr(); // NOTE: the closest edge communicates client via private IP address
         MessageBase* local_get_response_ptr = new LocalGetResponse(tmp_key, tmp_value, hitflag, used_bytes, capacity_bytes, edge_idx, edge_cache_server_recvreq_source_addr, total_bandwidth_usage, event_list, skip_propagation_latency);
         assert(local_get_response_ptr != NULL);
 
@@ -944,7 +946,7 @@ namespace covered
         // Try to update/remove local edge cache
         struct timespec write_local_cache_start_timestamp = Util::getCurrentTimespec();
         bool is_local_cached = false;
-        NetworkAddr edge_cache_server_recvreq_source_addr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeCacheServerRecvreqSourceAddr();
+        NetworkAddr edge_cache_server_recvreq_source_addr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeCacheServerRecvreqPrivateSourceAddr(); // NOTE: the closest edge communicates client via private IP address
         // NOTE: message type has been checked, which must be one of the following two types
         const bool is_global_cached = (lock_result == LockResult::kSuccess); // NOTE: put/delreq needs to try to acquire writelock first -> kSuccess means global cached, otherwise kNoNeed means NOT global cached
         if (local_request_ptr->getMessageType() == MessageType::kLocalPutRequest)

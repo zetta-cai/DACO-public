@@ -139,7 +139,7 @@ namespace covered
         
         // Prepare CoveredVictimFetchResponse with total_bandwidth_usage and event_list
         const uint32_t current_edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
-        const NetworkAddr edge_cache_server_recvreq_source_addr = cache_server_victim_fetch_processor_param_ptr_->getCacheServerPtr()->getEdgeCacheServerRecvreqSourceAddr();
+        const NetworkAddr edge_cache_server_recvreq_source_addr = cache_server_victim_fetch_processor_param_ptr_->getCacheServerPtr()->getEdgeCacheServerRecvreqPublicSourceAddr(); // NOTE: cross-edge communication for victim fetching uses public IP address
         const bool skip_propagation_latency = covered_victim_fetch_request_ptr->isSkipPropagationLatency();
         //MessageBase* covered_victim_fetch_response_ptr = new CoveredVictimFetchResponse(local_victim_fetchset, local_victim_syncset, current_edge_idx, edge_cache_server_recvreq_source_addr, total_bandwidth_usage, event_list, skip_propagation_latency);
         MessageBase* covered_victim_fetch_response_ptr = new CoveredVictimFetchResponse(local_victim_fetchset, current_edge_idx, edge_cache_server_recvreq_source_addr, total_bandwidth_usage, event_list, skip_propagation_latency);

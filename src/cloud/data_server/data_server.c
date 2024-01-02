@@ -34,8 +34,9 @@ namespace covered
         // For receiving global requests
 
         // Get source address of cloud recvreq
+        const bool is_private_cloud_ipstr = false; // NOTE: cloud communicates with edges via public IP address
         const bool is_launch_cloud = true; // The cloud data server belons to the logical cloud node launched in the current physical machine
-        std::string cloud_ipstr = Config::getCloudIpstr(is_launch_cloud);
+        std::string cloud_ipstr = Config::getCloudIpstr(is_private_cloud_ipstr, is_launch_cloud);
         uint16_t cloud_recvreq_port = Util::getCloudRecvreqPort(cloud_idx);
         cloud_recvreq_source_addr_ = NetworkAddr(cloud_ipstr, cloud_recvreq_port);
 

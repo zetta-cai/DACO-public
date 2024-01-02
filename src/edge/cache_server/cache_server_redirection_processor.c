@@ -248,7 +248,7 @@ namespace covered
         CacheServer* tmp_cache_server_ptr = cache_server_redirection_processor_param_ptr_->getCacheServerPtr();
         EdgeWrapper* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();
         uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
-        NetworkAddr edge_cache_server_recvreq_source_addr = tmp_cache_server_ptr->getEdgeCacheServerRecvreqSourceAddr();
+        NetworkAddr edge_cache_server_recvreq_source_addr = tmp_cache_server_ptr->getEdgeCacheServerRecvreqPublicSourceAddr(); // NOTE: cross-edge communication for request redirection uses public IP address
 
         MessageBase* redirected_get_response_ptr = NULL;
         if (tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME) // ONLY for COVERED

@@ -182,7 +182,7 @@ namespace covered
         EdgeWrapper* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();
         //CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
         const uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
-        NetworkAddr edge_cache_server_recvreq_source_addr = tmp_cache_server_ptr->getEdgeCacheServerRecvreqSourceAddr();
+        NetworkAddr edge_cache_server_recvreq_source_addr = tmp_cache_server_ptr->getEdgeCacheServerRecvreqPublicSourceAddr(); // NOTE: cross-edge communication for cache invalidation uses public IP address
         //const uint64_t cache_margin_bytes = tmp_edge_wrapper_ptr->getCacheMarginBytes();
 
         Key tmp_key;

@@ -82,11 +82,17 @@ namespace covered
 
         // For receiving local requests
 
-        // Get source address of cache server to receive local requests
+        // Get private source address of cache server to receive local requests
+        const bool is_private_edge_ipstr_for_clients = true; // NOTE: the closest edge communicates with client via private IP address
         const bool is_launch_edge = true; // The edge cache server belongs to the logical edge node launched in the current physical machine
-        std::string edge_ipstr = Config::getEdgeIpstr(edge_idx, edgecnt, is_launch_edge);
+        std::string edge_private_ipstr = Config::getEdgeIpstr(edge_idx, edgecnt, is_private_edge_ipstr_for_clients, is_launch_edge);
         uint16_t edge_cache_server_recvreq_port = Util::getEdgeCacheServerRecvreqPort(edge_idx, edgecnt);
-        edge_cache_server_recvreq_source_addr_ = NetworkAddr(edge_ipstr, edge_cache_server_recvreq_port);
+        edge_cache_server_recvreq_private_source_addr_ = NetworkAddr(edge_private_ipstr, edge_cache_server_recvreq_port);
+
+        // Get public source address of cache server to receive local requests
+        const bool is_private_edge_ipstr_for_neighbors = false; // NOTE: edge communicates with neighbors via public IP address
+        std::string edge_public_ipstr = Config::getEdgeIpstr(edge_idx, edgecnt, is_private_edge_ipstr_for_neighbors, is_launch_edge);
+        edge_cache_server_recvreq_public_source_addr_ = NetworkAddr(edge_public_ipstr, edge_cache_server_recvreq_port);
 
         // Prepare a socket server on recvreq port for cache server
         NetworkAddr host_addr(Util::ANY_IPSTR, edge_cache_server_recvreq_port);
@@ -330,9 +336,14 @@ namespace covered
         return edge_wrapper_ptr_;
     }
 
-    NetworkAddr CacheServer::getEdgeCacheServerRecvreqSourceAddr() const
+    NetworkAddr CacheServer::getEdgeCacheServerRecvreqPrivateSourceAddr() const
     {
-        return edge_cache_server_recvreq_source_addr_;
+        return edge_cache_server_recvreq_private_source_addr_;
+    }
+
+    NetworkAddr CacheServer::getEdgeCacheServerRecvreqPublicSourceAddr() const
+    {
+        return edge_cache_server_recvreq_public_source_addr_;
     }
 
     void CacheServer::receiveRequestsAndPartition_()

@@ -73,14 +73,16 @@ namespace covered
     EdgeWrapper::EdgeWrapper(const std::string& cache_name, const uint64_t& capacity_bytes, const uint32_t& edge_idx, const uint32_t& edgecnt, const std::string& hash_name, const uint64_t& local_uncached_capacity_bytes, const uint32_t& percacheserver_workercnt, const uint32_t& peredge_synced_victimcnt, const uint32_t& peredge_monitored_victimsetcnt, const uint64_t& popularity_aggregation_capacity_bytes, const double& popularity_collection_change_ratio, const uint32_t& propagation_latency_clientedge_us, const uint32_t& propagation_latency_crossedge_us, const uint32_t& propagation_latency_edgecloud_us, const uint32_t& topk_edgecnt) : NodeWrapperBase(NodeWrapperBase::EDGE_NODE_ROLE, edge_idx,edgecnt, true), cache_name_(cache_name), capacity_bytes_(capacity_bytes), percacheserver_workercnt_(percacheserver_workercnt), propagation_latency_crossedge_us_(propagation_latency_crossedge_us), propagation_latency_edgecloud_us_(propagation_latency_edgecloud_us), topk_edgecnt_for_placement_(topk_edgecnt), edge_background_counter_for_beacon_server_(), weight_tuner_(edge_idx, edgecnt, propagation_latency_clientedge_us, propagation_latency_crossedge_us, propagation_latency_edgecloud_us)
     {
         // Get source address of beacon server recvreq for non-blocking placement deployment
+        const bool is_private_edge_ipstr = false; // NOTE: cross-edge communication for non-blocking placement deployment uses public IP address
         const bool is_launch_edge = true; // The beacon server belongs to the logical edge node launched in the current physical machine
-        std::string edge_ipstr = Config::getEdgeIpstr(edge_idx, edgecnt, is_launch_edge);
+        std::string edge_ipstr = Config::getEdgeIpstr(edge_idx, edgecnt, is_private_edge_ipstr, is_launch_edge);
         uint16_t edge_beacon_server_recvreq_port = Util::getEdgeBeaconServerRecvreqPort(edge_idx, edgecnt);
         edge_beacon_server_recvreq_source_addr_for_placement_ = NetworkAddr(edge_ipstr, edge_beacon_server_recvreq_port);
 
         // Get destination address towards the corresponding cloud recvreq for non-blocking placement deployment
+        const bool is_private_cloud_ipstr = false; // NOTE: edge communicates with cloud via public IP address
         const bool is_launch_cloud = false; // Just connect cloud by the logical edge node instead of launching the cloud
-        std::string cloud_ipstr = Config::getCloudIpstr(is_launch_cloud);
+        std::string cloud_ipstr = Config::getCloudIpstr(is_private_cloud_ipstr, is_launch_cloud);
         uint16_t cloud_recvreq_port = Util::getCloudRecvreqPort(0); // TODO: only support 1 cloud node now!
         corresponding_cloud_recvreq_dst_addr_for_placement_ = NetworkAddr(cloud_ipstr, cloud_recvreq_port);
 
@@ -365,9 +367,10 @@ namespace covered
         assert(!current_is_target);
 
         // Set remote address such that the current edge node can communicate with the target edge node
+        const bool is_private_edge_ipstr = false; // NOTE: cross-edge communication for request redirection uses public IP address
         const bool is_launch_edge = false; // Just connect target edge node by the current edge node instead of launching the target edge node
         uint32_t target_edge_idx = directory_info.getTargetEdgeIdx();
-        std::string target_edge_ipstr = Config::getEdgeIpstr(target_edge_idx, getNodeCnt(), is_launch_edge);
+        std::string target_edge_ipstr = Config::getEdgeIpstr(target_edge_idx, getNodeCnt(), is_private_edge_ipstr, is_launch_edge);
         uint16_t target_edge_cache_server_recvreq_port = Util::getEdgeCacheServerRecvreqPort(target_edge_idx, getNodeCnt());
         NetworkAddr target_edge_cache_server_recvreq_dst_addr(target_edge_ipstr, target_edge_cache_server_recvreq_port);
 
@@ -401,9 +404,10 @@ namespace covered
         std::unordered_map<uint32_t, NetworkAddr> percachecopy_dstaddr;
         for (std::list<DirectoryInfo>::const_iterator iter = tmp_all_dirinfo_list.begin(); iter != tmp_all_dirinfo_list.end(); iter++)
         {
+            const bool is_private_edge_ipstr = false; // NOTE: cross-edge communication for cache invalidation uses public IP address
             const bool is_launch_edge = false; // Just connect neighbor to invalidate cache copies instead of launching the neighbor
             uint32_t tmp_edgeidx = iter->getTargetEdgeIdx();
-            std::string tmp_edge_ipstr = Config::getEdgeIpstr(tmp_edgeidx, node_cnt_, is_launch_edge);
+            std::string tmp_edge_ipstr = Config::getEdgeIpstr(tmp_edgeidx, node_cnt_, is_private_edge_ipstr, is_launch_edge);
             uint16_t tmp_edge_cache_server_recvreq_port = Util::getEdgeCacheServerRecvreqPort(tmp_edgeidx, node_cnt_);
             NetworkAddr tmp_edge_cache_server_recvreq_dst_addr(tmp_edge_ipstr, tmp_edge_cache_server_recvreq_port);
             percachecopy_dstaddr.insert(std::pair<uint32_t, NetworkAddr>(tmp_edgeidx, tmp_edge_cache_server_recvreq_dst_addr));
@@ -609,7 +613,8 @@ namespace covered
                 const NetworkAddr& tmp_edge_cache_server_worker_recvreq_dst_addr = iter_for_request->first; // cache server address of a blocked closest edge node
 
                 // NOTE: dst edge idx to finish blocking MUST NOT be the current local/remote beacon edge node, as requests on a being-written object MUST poll instead of block if sender is beacon
-                uint32_t tmp_dst_edge_idx = Util::getEdgeIdxFromCacheServerWorkerRecvreqAddr(tmp_edge_cache_server_worker_recvreq_dst_addr, getNodeCnt());
+                const bool is_private_edge_ipstr = false; // NOTE: IP address for finishing blocking under MSI comes from directory lookup/update and acquire/release writelock requests, which MUST be public due to cross-edge communication
+                uint32_t tmp_dst_edge_idx = Util::getEdgeIdxFromCacheServerWorkerRecvreqAddr(tmp_edge_cache_server_worker_recvreq_dst_addr, is_private_edge_ipstr, getNodeCnt());
                 assert(tmp_dst_edge_idx != node_idx_);
    
                 // Issue finish block request to dst edge node

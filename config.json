@@ -43,12 +43,14 @@
     "version": "1.0",
     "physical_machines": [
         {
-            "ipstr": "192.168.11.215",
+            "private_ipstr": "192.168.11.215",
+            "public_ipstr": "192.168.11.215",
             "cpu_dedicated_corecnt": 32,
             "cpu_shared_corecnt": 0
         },
         {
-            "ipstr": "192.168.11.15",
+            "private_ipstr": "192.168.11.15",
+            "public_ipstr": "192.168.11.15",
             "cpu_dedicated_corecnt": 36,
             "cpu_shared_corecnt": 4
         }

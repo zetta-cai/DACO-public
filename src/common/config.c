@@ -17,22 +17,28 @@ namespace covered
 
     const std::string PhysicalMachine::kClassName("PhysicalMachine");
 
-    PhysicalMachine::PhysicalMachine() : ipstr_(""), cpu_dedicated_corecnt_(0), cpu_shared_corecnt_(0)
+    PhysicalMachine::PhysicalMachine() : private_ipstr_(""), public_ipstr_(""), cpu_dedicated_corecnt_(0), cpu_shared_corecnt_(0)
     {
     }
 
-    PhysicalMachine::PhysicalMachine(const std::string& ipstr, const uint32_t& cpu_dedicated_corecnt, const uint32_t& cpu_shared_corecnt)
+    PhysicalMachine::PhysicalMachine(const std::string& private_ipstr, const std::string& public_ipstr, const uint32_t& cpu_dedicated_corecnt, const uint32_t& cpu_shared_corecnt)
     {
-        ipstr_ = ipstr;
+        private_ipstr_ = private_ipstr;
+        public_ipstr_ = public_ipstr;
         cpu_dedicated_corecnt_ = cpu_dedicated_corecnt;
         cpu_shared_corecnt_ = cpu_shared_corecnt;
     }
 
     PhysicalMachine::~PhysicalMachine() {}
 
-    std::string PhysicalMachine::getIpstr() const
+    std::string PhysicalMachine::getPrivateIpstr() const
     {
-        return ipstr_;
+        return private_ipstr_;
+    }
+
+    std::string PhysicalMachine::getPublicIpstr() const
+    {
+        return public_ipstr_;
     }
 
     uint32_t PhysicalMachine::getCpuDedicatedCorecnt() const
@@ -48,13 +54,14 @@ namespace covered
     std::string PhysicalMachine::toString() const
     {
         std::ostringstream oss;
-        oss << "ipstr: " << ipstr_ << ", cpu_dedicated_corecnt: " << cpu_dedicated_corecnt_ << ", cpu_shared_corecnt: " << cpu_shared_corecnt_;
+        oss << "private_ipstr: " << private_ipstr_ << "; public_ipstr: " << public_ipstr_ << ", cpu_dedicated_corecnt: " << cpu_dedicated_corecnt_ << ", cpu_shared_corecnt: " << cpu_shared_corecnt_;
         return oss.str();
     }
 
     const PhysicalMachine& PhysicalMachine::operator=(const PhysicalMachine& other)
     {
-        ipstr_ = other.ipstr_;
+        private_ipstr_ = other.private_ipstr_;
+        public_ipstr_ = other.public_ipstr_;
         cpu_dedicated_corecnt_ = other.cpu_dedicated_corecnt_;
         cpu_shared_corecnt_ = other.cpu_shared_corecnt_;
 
@@ -395,10 +402,11 @@ namespace covered
                 {
                     for (boost::json::array::iterator iter = kv_ptr->value().get_array().begin(); iter != kv_ptr->value().get_array().end(); iter++)
                     {
-                        std::string ipstr = std::string(iter->get_object().at("ipstr").get_string().c_str());
+                        std::string private_ipstr = std::string(iter->get_object().at("private_ipstr").get_string().c_str());
+                        std::string public_ipstr = std::string(iter->get_object().at("public_ipstr").get_string().c_str());
                         int64_t tmp_cpu_dedicated_corecnt = iter->get_object().at("cpu_dedicated_corecnt").get_int64();
                         int64_t tmp_cpu_shared_corecnt = iter->get_object().at("cpu_shared_corecnt").get_int64();
-                        physical_machines_.push_back(PhysicalMachine(ipstr, Util::toUint32(tmp_cpu_dedicated_corecnt), Util::toUint32(tmp_cpu_shared_corecnt)));
+                        physical_machines_.push_back(PhysicalMachine(private_ipstr, public_ipstr, Util::toUint32(tmp_cpu_dedicated_corecnt), Util::toUint32(tmp_cpu_shared_corecnt)));
                     }
                     assert(physical_machines_.size() == kv_ptr->value().get_array().size());
                 }
@@ -437,7 +445,7 @@ namespace covered
         return client_machine_idxes_.size();
     }
     
-    std::string Config::getClientIpstr(const uint32_t& client_idx, const uint32_t& clientcnt, const bool& is_launch)
+    std::string Config::getClientIpstr(const uint32_t& client_idx, const uint32_t& clientcnt, const bool& is_private_ipstr, const bool& is_launch)
     {
         checkIsValid_();
 
@@ -455,7 +463,14 @@ namespace covered
             }
         }
 
-        return getPhysicalMachine_(tmp_client_global_machine_idx).getIpstr();
+        if (is_private_ipstr)
+        {
+            return getPhysicalMachine_(tmp_client_global_machine_idx).getPrivateIpstr();
+        }
+        else
+        {
+            return getPhysicalMachine_(tmp_client_global_machine_idx).getPublicIpstr();
+        }
     }
 
     uint32_t Config::getClientRawStatisticsSlotIntervalSec()
@@ -476,7 +491,7 @@ namespace covered
         return client_worker_recvrsp_startport_;
     }
     
-    std::string Config::getCloudIpstr(const bool& is_launch)
+    std::string Config::getCloudIpstr(const bool& is_private_ipstr, const bool& is_launch)
     {
         checkIsValid_();
 
@@ -492,7 +507,14 @@ namespace covered
             }
         }
         
-        return getPhysicalMachine_(cloud_machine_idx_).getIpstr();
+        if (is_private_ipstr)
+        {
+            return getPhysicalMachine_(cloud_machine_idx_).getPrivateIpstr();
+        }
+        else
+        {
+            return getPhysicalMachine_(cloud_machine_idx_).getPublicIpstr();
+        }
     }
 
     uint16_t Config::getCloudRecvmsgStartport()
@@ -581,7 +603,7 @@ namespace covered
         return edge_machine_idxes_.size();
     }
 
-    std::string Config::getEdgeIpstr(const uint32_t& edge_idx, const uint32_t& edgecnt, const bool& is_launch)
+    std::string Config::getEdgeIpstr(const uint32_t& edge_idx, const uint32_t& edgecnt, const bool& is_private_ipstr, const bool& is_launch)
     {
         checkIsValid_();
 
@@ -599,10 +621,17 @@ namespace covered
             }
         }
 
-        return getPhysicalMachine_(tmp_edge_global_machine_idx).getIpstr();
+        if (is_private_ipstr)
+        {
+            return getPhysicalMachine_(tmp_edge_global_machine_idx).getPrivateIpstr();
+        }
+        else
+        {
+            return getPhysicalMachine_(tmp_edge_global_machine_idx).getPublicIpstr();
+        }
     }
 
-    uint32_t Config::getEdgeLocalMachineIdxByIpstr(const std::string& edge_ipstr)
+    uint32_t Config::getEdgeLocalMachineIdxByIpstr(const std::string& edge_ipstr, const bool& is_private_ipstr)
     {
         checkIsValid_();
 
@@ -611,13 +640,22 @@ namespace covered
         for (uint32_t tmp_edge_local_machine_idx = 0; tmp_edge_local_machine_idx < edge_machine_idxes_.size(); tmp_edge_local_machine_idx++)
         {
             const uint32_t tmp_edge_global_machine_idx = edge_machine_idxes_[tmp_edge_local_machine_idx];
-            if (getPhysicalMachine_(tmp_edge_global_machine_idx).getIpstr() == edge_ipstr)
+            if (is_private_ipstr && getPhysicalMachine_(tmp_edge_global_machine_idx).getPrivateIpstr() == edge_ipstr)
+            {
+                return tmp_edge_local_machine_idx;
+            }
+            else if (!is_private_ipstr && getPhysicalMachine_(tmp_edge_global_machine_idx).getPublicIpstr() == edge_ipstr)
             {
                 return tmp_edge_local_machine_idx;
             }
         }
 
-        assert(false); // Should NOT arrive here
+        // Should NOT arrive here
+        //assert(false);
+        std::ostringstream oss;
+        oss << "edge_ipstr " << edge_ipstr << " (is_private_ipstr: " << Util::toString(is_private_ipstr) << ") is not found in edge physical machines!";
+        Util::dumpErrorMsg(kClassName, oss.str());
+        exit(1);
     }
 
     uint16_t Config::getEdgeRecvmsgStartport()
@@ -626,7 +664,7 @@ namespace covered
         return edge_recvmsg_startport_;
     }
 
-    std::string Config::getEvaluatorIpstr(const bool& is_launch)
+    std::string Config::getEvaluatorIpstr(const bool& is_private_ipstr, const bool& is_launch)
     {
         checkIsValid_();
 
@@ -641,7 +679,14 @@ namespace covered
             }
         }
         
-        return getPhysicalMachine_(evaluator_machine_idx_).getIpstr();
+        if (is_private_ipstr)
+        {
+            return getPhysicalMachine_(evaluator_machine_idx_).getPrivateIpstr();
+        }
+        else
+        {
+            return getPhysicalMachine_(evaluator_machine_idx_).getPublicIpstr();
+        }
     }
 
     uint16_t Config::getEvaluatorRecvmsgPort()
@@ -1053,21 +1098,37 @@ namespace covered
     {
         assert(physical_machines_.size() > 0);
 
-        // (i) Different physical machines should NOT have duplicate ipstrs
-        std::unordered_set<std::string> tmp_ipstr_set;
+        // (i) Different physical machines should NOT have duplicate private/public ipstrs
+        std::unordered_set<std::string> tmp_private_ipstr_set;
+        std::unordered_set<std::string> tmp_public_ipstr_set;
         for (uint32_t i = 0; i < physical_machines_.size(); i++)
         {
-            std::string tmp_ipstr = physical_machines_[i].getIpstr();
-            if (tmp_ipstr_set.find(tmp_ipstr) != tmp_ipstr_set.end())
+            // Check private ipstrs
+            std::string tmp_private_ipstr = physical_machines_[i].getPrivateIpstr();
+            if (tmp_private_ipstr_set.find(tmp_private_ipstr) != tmp_private_ipstr_set.end())
             {
                 std::ostringstream oss;
-                oss << "physical machine [" << i << "] has a duplicate ipstr " << tmp_ipstr << "!";
+                oss << "physical machine [" << i << "] has a duplicate private ipstr " << tmp_private_ipstr << "!";
                 Util::dumpErrorMsg(kClassName, oss.str());
                 exit(1);
             }
             else
             {
-                tmp_ipstr_set.insert(tmp_ipstr);
+                tmp_private_ipstr_set.insert(tmp_private_ipstr);
+            }
+
+            // Check public ipstrs
+            std::string tmp_public_ipstr = physical_machines_[i].getPublicIpstr();
+            if (tmp_public_ipstr_set.find(tmp_public_ipstr) != tmp_public_ipstr_set.end())
+            {
+                std::ostringstream oss;
+                oss << "physical machine [" << i << "] has a duplicate public ipstr " << tmp_public_ipstr << "!";
+                Util::dumpErrorMsg(kClassName, oss.str());
+                exit(1);
+            }
+            else
+            {
+                tmp_public_ipstr_set.insert(tmp_public_ipstr);
             }
         }
 
@@ -1124,14 +1185,14 @@ namespace covered
         }
         assert(current_ipstrs.size() > 0);
 
-        // Match ipstr to set current physical machine index
+        // Match public ipstr to set current physical machine index
         bool is_found = false;
         for (uint32_t i = 0; i < physical_machines_.size(); i++)
         {
-            std::string tmp_ipstr = physical_machines_[i].getIpstr();
+            std::string tmp_public_ipstr = physical_machines_[i].getPublicIpstr();
             for (std::unordered_set<std::string>::const_iterator current_ipstrs_const_iter = current_ipstrs.cbegin(); current_ipstrs_const_iter != current_ipstrs.cend(); current_ipstrs_const_iter++)
             {
-                if (tmp_ipstr == *current_ipstrs_const_iter)
+                if (tmp_public_ipstr == *current_ipstrs_const_iter)
                 {
                     current_machine_idx_ = i;
                     is_found = true;

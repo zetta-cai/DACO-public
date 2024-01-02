@@ -596,9 +596,10 @@ namespace covered
 
     std::string Util::getClosestEdgeIpstr(const uint32_t& client_idx, const uint32_t& clientcnt, const uint32_t& edgecnt)
     {
+        const bool is_private_client_ipstr = true; // NOTE: client communicates with the closest edge via public IP address
         const bool is_launch_edge = false; // Just connect the closest edge node by the logical client edge node instead of launching the closest edge node
         uint32_t closest_edge_idx = getClosestEdgeIdx(client_idx, clientcnt, edgecnt);
-        return Config::getEdgeIpstr(closest_edge_idx, edgecnt, is_launch_edge);
+        return Config::getEdgeIpstr(closest_edge_idx, edgecnt, is_private_client_ipstr, is_launch_edge);
     }
 
     uint16_t Util::getClosestEdgeCacheServerRecvreqPort(const uint32_t& client_idx, const uint32_t& clientcnt, const uint32_t& edgecnt)
@@ -701,10 +702,10 @@ namespace covered
         return edge_cache_server_worker_recvreq_addr;
     }
 
-    uint32_t Util::getEdgeIdxFromCacheServerWorkerRecvreqAddr(const NetworkAddr& edge_cache_server_worker_recvreq_addr, const uint32_t& edgecnt)
+    uint32_t Util::getEdgeIdxFromCacheServerWorkerRecvreqAddr(const NetworkAddr& edge_cache_server_worker_recvreq_addr, const bool& is_private_ipstr, const uint32_t& edgecnt)
     {
         std::string edge_ipstr = edge_cache_server_worker_recvreq_addr.getIpstr();
-        uint32_t local_edge_machine_idx = Config::getEdgeLocalMachineIdxByIpstr(edge_ipstr);
+        uint32_t local_edge_machine_idx = Config::getEdgeLocalMachineIdxByIpstr(edge_ipstr, is_private_ipstr);
         uint32_t edge_machine_cnt = Config::getEdgeMachineCnt();
         assert(local_edge_machine_idx < edge_machine_cnt);
 

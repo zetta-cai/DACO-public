@@ -45,15 +45,15 @@ class Common:
     cur_machine_idx = -1
     tmp_physical_machines = JsonUtil.getValueForKeystr(scriptname, "physical_machines")
     for tmp_machine_idx in range(len(tmp_physical_machines)):
-        tmp_machine_ip = tmp_physical_machines[tmp_machine_idx]["ipstr"]
-        tmp_is_current_machine_cmd = "ifconfig | grep -w " + tmp_machine_ip # -w means whole word matching
+        tmp_machine_public_ip = tmp_physical_machines[tmp_machine_idx]["public_ipstr"]
+        tmp_is_current_machine_cmd = "ifconfig | grep -w " + tmp_machine_public_ip # -w means whole word matching
         tmp_is_current_machine_subprocess = SubprocessUtil.runCmd(tmp_is_current_machine_cmd)
-        if tmp_is_current_machine_subprocess.returncode != 0: # Error or tmp_machine_ip not found
+        if tmp_is_current_machine_subprocess.returncode != 0: # Error or tmp_machine_public_ip not found
             if SubprocessUtil.getSubprocessErrstr(tmp_is_current_machine_subprocess) != "": # Error
                 LogUtil.die(scriptname, SubprocessUtil.getSubprocessErrstr(tmp_is_current_machine_subprocess))
-            else: # tmp_machine_ip not found
+            else: # tmp_machine_public_ip not found
                 continue
-        elif SubprocessUtil.getSubprocessOutputstr(tmp_is_current_machine_subprocess) != "": # tmp_machine_ip is found
+        elif SubprocessUtil.getSubprocessOutputstr(tmp_is_current_machine_subprocess) != "": # tmp_machine_public_ip is found
             cur_machine_idx = tmp_machine_idx
             break
     if cur_machine_idx == -1:

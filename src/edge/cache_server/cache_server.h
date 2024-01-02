@@ -43,7 +43,8 @@ namespace covered
         void start();
 
         EdgeWrapper* getEdgeWrapperPtr() const;
-        NetworkAddr getEdgeCacheServerRecvreqSourceAddr() const;
+        NetworkAddr getEdgeCacheServerRecvreqPrivateSourceAddr() const;
+        NetworkAddr getEdgeCacheServerRecvreqPublicSourceAddr() const;
 
         // (1) For local edge cache admission and remote directory admission (invoked by edge cache server worker for independent admission; or by placement processor for remote placement notification)
         void admitLocalEdgeCache_(const Key& key, const Value& value, const bool& is_neighbor_cached, const bool& is_valid) const;
@@ -88,8 +89,9 @@ namespace covered
         CacheServerProcessorParam* cache_server_placement_processor_param_ptr_; // Only one cache server placement processor thread
         CacheServerProcessorParam* cache_server_invalidation_processor_param_ptr_; // Only one cache server invalidation processor thread
 
-        // For receiving local requests
-        NetworkAddr edge_cache_server_recvreq_source_addr_; // The same as that used by clients or neighbors to send local/redirected requests (const shared variable)
+        // For receiving local/redirected data requests and control requests for MSI and victim fetching
+        NetworkAddr edge_cache_server_recvreq_private_source_addr_; // The same as that used by clients send local data requests (const shared variable)
+        NetworkAddr edge_cache_server_recvreq_public_source_addr_; // The same as that used by neighbors to send redirected data requests and control requests (const shared variable)
         UdpMsgSocketServer* edge_cache_server_recvreq_socket_server_ptr_; // Used by cache server to receive local requests from clients and redirected requests from neighbors (non-const individual variable)
 
         mutable Rwlock* rwlock_for_eviction_ptr_; // Guarantee the atomicity of eviction among different edge cache server workers
