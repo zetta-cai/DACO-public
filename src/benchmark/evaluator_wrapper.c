@@ -774,9 +774,6 @@ namespace covered
         {
             if (iter->second == false)
             {
-                // TMPDEBUG231231
-                Util::dumpVariablesForDebug(kClassName, 4, "receive", MessageBase::messageTypeToString(message_ptr->getMessageType()).c_str(), "; from", tmp_dst_addr.toString().c_str());
-
                 iter->second = true;
                 is_first_msg = true;
             }

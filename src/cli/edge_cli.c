@@ -266,8 +266,8 @@ namespace covered
                 oss << "Covered popularity aggregation max mem usage (bytes): " << covered_popularity_aggregation_max_mem_usage_bytes_ << std::endl;
                 oss << "Covered popularity collection change ratio: " << covered_popularity_collection_change_ratio_ << std::endl;
                 oss << "Covered top-k edge count: " << covered_topk_edgecnt_;
-                Util::dumpDebugMsg(kClassName, oss.str());   
             }
+            Util::dumpDebugMsg(kClassName, oss.str());
 
             is_dump_cli_parameters_ = true;
         }
@@ -286,7 +286,7 @@ namespace covered
 
     void EdgeCLI::checkCacheName_() const
     {
-        if (cache_name_ != Util::CACHELIB_CACHE_NAME && cache_name_ != Util::LRUK_CACHE_NAME && cache_name_ != Util::GDSIZE_CACHE_NAME && cache_name_ != Util::GDSF_CACHE_NAME && cache_name_ != Util::LFUDA_CACHE_NAME && cache_name_ != Util::LFU_CACHE_NAME && cache_name_ != Util::LHD_CACHE_NAME && cache_name_ != Util::LRU_CACHE_NAME && cache_name_ != Util::SEGCACHE_CACHE_NAME && cache_name_ != Util::COVERED_CACHE_NAME)
+        if (cache_name_ != Util::CACHELIB_CACHE_NAME && cache_name_ != Util::FIFO_CACHE_NAME && cache_name_ != Util::LRUK_CACHE_NAME && cache_name_ != Util::GDSIZE_CACHE_NAME && cache_name_ != Util::GDSF_CACHE_NAME && cache_name_ != Util::LFUDA_CACHE_NAME && cache_name_ != Util::LFU_CACHE_NAME && cache_name_ != Util::LHD_CACHE_NAME && cache_name_ != Util::LRU_CACHE_NAME && cache_name_ != Util::SEGCACHE_CACHE_NAME && cache_name_ != Util::COVERED_CACHE_NAME)
         {
             std::ostringstream oss;
             oss << "cache name " << cache_name_ << " is not supported!";
