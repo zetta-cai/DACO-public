@@ -67,7 +67,7 @@ namespace covered
             return static_cast<uint64_t>(key_.getKeyLength() + value_.getValuesize() + sizeof(bool));
         }
 
-        const SieveItem& SieveItem::operator=(const SieveItem& other)
+        const SieveItem& operator=(const SieveItem& other)
         {
             if (this != &other)
             {
@@ -87,8 +87,8 @@ namespace covered
     class SieveCachePolicy
     {
     public:
-        using sieve_iterator = typename std::list<SieveItem<key, value>>::iterator;
-        using sieve_const_iterator = typename std::list<SieveItem<key, value>>::const_iterator;
+        using sieve_iterator = typename std::list<SieveItem<Key, Value>>::iterator;
+        using sieve_const_iterator = typename std::list<SieveItem<Key, Value>>::const_iterator;
         typedef typename std::unordered_map<Key, sieve_iterator, KeyHasher>::iterator map_iterator_t;
         typedef typename std::unordered_map<Key, sieve_iterator, KeyHasher>::const_iterator map_const_iterator_t;
 
@@ -100,7 +100,7 @@ namespace covered
             size_ = 0;
         }
 
-        virtual ~SieveCachePolicy() override
+        ~SieveCachePolicy()
         {
         }
 
@@ -123,7 +123,7 @@ namespace covered
                 // Update visited flag
                 sieve_iterator list_iter = map_iter->second;
                 assert(list_iter != sieve_queue_.end());
-                assert(list_iter->first == key);
+                assert(list_iter->getKey()== key);
                 list_iter->setVisited();
 
                 // Get value
@@ -145,7 +145,7 @@ namespace covered
                 // Update visited flag
                 sieve_iterator list_iter = map_iter->second;
                 assert(list_iter != sieve_queue_.end());
-                assert(list_iter->first == key);
+                assert(list_iter->getKey() == key);
                 list_iter->setVisited();
 
                 // Get previous value
@@ -188,7 +188,7 @@ namespace covered
             return;
         }
 
-        bool getVictimKey(Key& key) const
+        bool getVictimKey(Key& key)
         {
             bool has_victim_key = false;
 
@@ -239,8 +239,8 @@ namespace covered
             {
                 sieve_iterator victim_list_iter = victim_map_iter->second;
                 assert(victim_list_iter != sieve_queue_.end());
-                assert(victim_list_iter->first == key);
-                value = victim_list_iter->second;
+                assert(victim_list_iter->getKey() == key);
+                value = victim_list_iter->getValue();
 
                 // Remove the corresponding map entry
                 key_lookup_.erase(victim_map_iter);
@@ -249,7 +249,7 @@ namespace covered
                 // Remove the corresponding list entry
                 const uint64_t victim_size = victim_list_iter->getSizeForCapacity();
                 sieve_queue_.erase(victim_list_iter);
-                size_ = Util::uint64Minus(size_, victim_size));
+                size_ = Util::uint64Minus(size_, victim_size);
 
                 is_evict = true;
             }
@@ -265,7 +265,7 @@ namespace covered
     private:
         static const std::string kClassName;
 
-        std::list<SieveItem<key, value>> sieve_queue_; // SIEVE items in CLOCK order
+        std::list<SieveItem<Key, Value>> sieve_queue_; // SIEVE items in CLOCK order
         std::unordered_map<Key, sieve_iterator, KeyHasher> key_lookup_; // Key indexing for quick lookup
         sieve_iterator hand_iter_;
 
