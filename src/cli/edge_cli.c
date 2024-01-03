@@ -286,7 +286,7 @@ namespace covered
 
     void EdgeCLI::checkCacheName_() const
     {
-        if (cache_name_ != Util::CACHELIB_CACHE_NAME && cache_name_ != Util::FIFO_CACHE_NAME && cache_name_ != Util::LRUK_CACHE_NAME && cache_name_ != Util::GDSIZE_CACHE_NAME && cache_name_ != Util::GDSF_CACHE_NAME && cache_name_ != Util::LFUDA_CACHE_NAME && cache_name_ != Util::LFU_CACHE_NAME && cache_name_ != Util::LHD_CACHE_NAME && cache_name_ != Util::LRU_CACHE_NAME && cache_name_ != Util::SEGCACHE_CACHE_NAME && cache_name_ != Util::COVERED_CACHE_NAME)
+        if (cache_name_ != Util::CACHELIB_CACHE_NAME && cache_name_ != Util::FIFO_CACHE_NAME && cache_name_ != Util::LRUK_CACHE_NAME && cache_name_ != Util::GDSIZE_CACHE_NAME && cache_name_ != Util::GDSF_CACHE_NAME && cache_name_ != Util::LFUDA_CACHE_NAME && cache_name_ != Util::LFU_CACHE_NAME && cache_name_ != Util::LHD_CACHE_NAME && cache_name_ != Util::LRU_CACHE_NAME && cache_name_ != Util::SEGCACHE_CACHE_NAME && cache_name_ != Util::SIEVE_CACHE_NAME && cache_name_ != Util::COVERED_CACHE_NAME)
         {
             std::ostringstream oss;
             oss << "cache name " << cache_name_ << " is not supported!";

@@ -12,6 +12,7 @@
 #include "cache/lru_local_cache.h"
 #include "cache/greedy_dual_local_cache.h"
 #include "cache/segcache_local_cache.h"
+#include "cache/sieve_local_cache.h"
 
 namespace covered
 {
@@ -47,6 +48,10 @@ namespace covered
         else if (cache_name == Util::SEGCACHE_CACHE_NAME)
         {
             local_cache_ptr = new SegcacheLocalCache(edge_wrapper_ptr, edge_idx, capacity_bytes);
+        }
+        else if (cache_name == Util::SIEVE_CACHE_NAME)
+        {
+            local_cache_ptr = new SieveLocalCache(edge_wrapper_ptr, edge_idx, capacity_bytes);
         }
         else if (cache_name == Util::COVERED_CACHE_NAME)
         {

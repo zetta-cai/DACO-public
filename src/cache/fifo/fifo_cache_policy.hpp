@@ -156,7 +156,7 @@ namespace covered
         }
 
         bool evictWithGivenKey(const Key& key, Value& value)
-        {   
+        {
             bool is_evict = false;
             
             // Get victim value
