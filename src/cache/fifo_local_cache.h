@@ -1,5 +1,5 @@
 /*
- * FifoLocalCache: local edge cache with FIFO policy (https://github.com/vpetrigo/caches).
+ * FifoLocalCache: local edge cache with FIFO policy (the same repo as LRU in https://github.com/vpetrigo/caches).
  * 
  * By Siyuan Sheng (2024.01.01).
  */

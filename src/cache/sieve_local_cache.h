@@ -1,5 +1,5 @@
 /*
- * SieveLocalCache: local edge cache with SIEVE policy (https://junchengyang.com/publication/nsdi24-SIEVE.pdf).
+ * SieveLocalCache: local edge cache with SIEVE policy (the same repo as S3-FIFO in https://github.com/Thesys-lab/sosp23-s3fifo.git).
  * 
  * By Siyuan Sheng (2024.01.03).
  */

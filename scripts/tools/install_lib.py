@@ -12,13 +12,14 @@ is_clear_tarball = False # whether to clear intermediate tarball files
 is_install_boost = True
 is_install_cachelib = True
 is_install_lrucache = True # Completely use hacked version
-is_install_lfucache = True
+is_install_lfucache = True # Also including FIFO
 is_install_rocksdb = True
 is_install_smhasher = True
 is_install_segcache = True # Completely use hacked version
 is_install_gdsf = True # Completely use hacked version
 is_install_tommyds = True
 is_install_lhd = True
+is_install_s3fifo = True # Completely use hacked version (also including SIEVE)
 
 # (0) Check input CLI parameters
 
@@ -109,7 +110,7 @@ if is_install_lrucache:
     SubprocessUtil.checkoutCommit(Common.scriptname, lrucache_clone_dirpath, lrucache_software_name, lrucache_target_commit)
     print("")
 
-# (4) Install LFU cache (commit ID: 0f65db1)
+# (4) Install LFU cache with FIFO (commit ID: 0f65db1)
 
 if is_install_lfucache:
     lfucache_clone_dirpath = "{}/caches".format(Common.lib_dirpath)
@@ -207,18 +208,30 @@ if is_install_tommyds:
 # (9) Install LHD (commit ID: 806ef46)
 
 if is_install_lhd:
-    lhd_clond_dirpath = "{}/lhd".format(Common.lib_dirpath)
+    lhd_clone_dirpath = "{}/lhd".format(Common.lib_dirpath)
     lhd_software_name = "LHD"
     lhd_repo_url = "https://github.com/CMU-CORGI/LHD.git"
-    SubprocessUtil.cloneRepo(Common.scriptname, lhd_clond_dirpath, lhd_software_name, lhd_repo_url)
+    SubprocessUtil.cloneRepo(Common.scriptname, lhd_clone_dirpath, lhd_software_name, lhd_repo_url)
 
     lhd_target_commit = "806ef46"
-    SubprocessUtil.checkoutCommit(Common.scriptname, lhd_clond_dirpath, lhd_software_name, lhd_target_commit)
+    SubprocessUtil.checkoutCommit(Common.scriptname, lhd_clone_dirpath, lhd_software_name, lhd_target_commit)
     print("")
 
-# (10) Others: chown of libraries and update LD_LIBRARY_PATH
+# (10) Install S3FIFO with SIEVE (commit ID: 79fde46)
 
-## (10.1) Chown of libraries
+if is_install_s3fifo:
+    s3fifo_clone_dirpath = "{}/s3fifo".format(Common.lib_dirpath)
+    s3fifo_software_name = "S3FIFO"
+    s3fifo_repo_url = "https://github.com/Thesys-lab/sosp23-s3fifo.git"
+    SubprocessUtil.cloneRepo(Common.scriptname, s3fifo_clone_dirpath, s3fifo_software_name, s3fifo_repo_url)
+
+    s3fifo_target_commit = "79fde46"
+    SubprocessUtil.checkoutCommit(Common.scriptname, s3fifo_clone_dirpath, s3fifo_software_name, s3fifo_target_commit)
+    print("")
+
+# (11) Others: chown of libraries and update LD_LIBRARY_PATH
+
+## (11.1) Chown of libraries
 
 LogUtil.prompt(Common.scriptname, "chown of libraries...")
 chown_cmd = "sudo chown -R {0}:{0} {1}".format(Common.username, Common.lib_dirpath)
@@ -227,7 +240,7 @@ if chown_subprocess.returncode != 0:
     chown_errstr = SubprocessUtil.getSubprocessErrstr(chown_subprocess)
     LogUtil.die(Common.scriptname, "failed to chown of libraries (errmsg: {})".format(chown_errstr))
 
-## (10.2) Update LD_LIBRARY_PATH for interactive and non-interactive shells
+## (11.2) Update LD_LIBRARY_PATH for interactive and non-interactive shells
 
 target_ld_libs = ["segcache", "cachelib", "boost", "x86_64-linux-gnu"]
 target_ld_lib_dirpaths = ["{}/src/cache/segcache/build/ccommon/lib".format(Common.proj_dirname), "{}/CacheLib/opt/cachelib/lib".format(Common.lib_dirpath), "{}/boost_1_81_0/install/lib".format(Common.lib_dirpath), "/usr/lib/x86_64-linux-gnu"]
@@ -248,7 +261,7 @@ for i in range(len(target_ld_lib_dirpaths)):
     else:
         update_bash_source_grepstr = "{}:{}".format(update_bash_source_grepstr, target_ld_lib_dirpaths[i])
 
-### (10.3) Update LD_LIBRARY_PATH for interactive shells
+### (11.3) Update LD_LIBRARY_PATH for interactive shells
 
 LogUtil.prompt(Common.scriptname, "check if need to update LD_LIBRARY_PATH...")
 need_update_ld_library_path = False
@@ -308,7 +321,7 @@ if need_update_ld_library_path:
 else:
     LogUtil.dump(Common.scriptname, "LD_LIBRARY_PATH alreay contains all target libraries")
 
-### (10.4) Update LD_LIBRARY_PATH for non-interactive shells
+### (11.4) Update LD_LIBRARY_PATH for non-interactive shells
 
 noninteractive_bash_source_filepath = "/home/{}/.bashrc_non_interactive".format(Common.username)
 
