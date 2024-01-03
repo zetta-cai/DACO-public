@@ -178,7 +178,7 @@ namespace covered
             }
             else // No previous list and map entry
             {
-                // Insert a new sieven item to the head of the list
+                // Insert a new sieve item to the head of the list
                 SieveItem tmp_item(key, value);
                 sieve_queue_.emplace_front(tmp_item);
                 size_ = Util::uint64Add(size_, tmp_item.getSizeForCapacity());

@@ -15,6 +15,7 @@
 
 #include <list>
 #include <unordered_map>
+#include <unordered_set>
 
 #include "common/util.h"
 
@@ -65,6 +66,13 @@ namespace covered
             return;
         }
 
+        void decrFreq()
+        {
+            assert(freq_ > 0);
+            freq_--;
+            return;
+        }
+
         const double getSizeForCapacity() const
         {
             // NOTE: count freq_ as 1B/4.0 = 2b
@@ -96,7 +104,7 @@ namespace covered
         typedef typename std::unordered_map<Key, s3fifo_iterator, KeyHasher>::iterator map_iterator_t;
         typedef typename std::unordered_map<Key, s3fifo_iterator, KeyHasher>::const_iterator map_const_iterator_t;
 
-        S3fifoCachePolicy()
+        S3fifoCachePolicy(const uint64_t& capacity_bytes) : capacity_bytes_(capacity_bytes)
         {
             s3fifo_small_queue_.clear();
             s3fifo_main_queue_.clear();
@@ -104,7 +112,10 @@ namespace covered
             key_lookup_for_small_.clear();
             key_lookup_for_main_.clear();
             key_lookup_for_ghost_.clear();
-            size_ = 0;
+
+            size_for_small_ = 0;
+            size_for_main_ = 0;
+            size_for_ghost_ = 0;
         }
 
         ~S3fifoCachePolicy()
@@ -159,17 +170,20 @@ namespace covered
         {
             bool is_local_cached = false;
 
+            bool is_small_cache = false;
             map_iterator_t map_iter = key_lookup_for_small_.find(key);
             if (map_iter == key_lookup_for_small_.end()) // NOT found in small cache
             {
                 map_iter = key_lookup_for_main_.find(key);
                 if (map_iter != key_lookup_for_main_.end()) // Found in main cache
                 {
+                    is_small_cache = false;
                     is_local_cached = true;
                 }
             }
             else // Found in small cache
             {
+                is_small_cache = true;
                 is_local_cached = true;
             }
             
@@ -183,11 +197,35 @@ namespace covered
 
                 // Get previous value
                 uint32_t prev_valuesize = list_iter->getValue().getValuesize();
-                size_ = Util::uint64Minus(size_, static_cast<uint64_t>(prev_valuesize));
+                if (is_small_cache)
+                {
+                    size_for_small_ -= static_cast<double>(prev_valuesize);
+                }
+                else
+                {
+                    size_for_main_ -= static_cast<double>(prev_valuesize);
+                }
 
                 // Update value
                 list_iter->setValue(value);
-                size_ = Util::uint64Add(size_, static_cast<uint64_t>(value.getValuesize()));
+                if (is_small_cache)
+                {
+                    size_for_small_ += static_cast<double>(value.getValuesize());
+                }
+                else
+                {
+                    size_for_main_ += static_cast<double>(value.getValuesize());
+                }
+
+                // Fix double precision issue if any
+                if (size_for_small_ < 0)
+                {
+                    size_for_small_ = 0;
+                }
+                if (size_for_main_ < 0)
+                {
+                    size_for_main_ = 0;
+                }
             }
 
             return is_local_cached;
@@ -195,95 +233,210 @@ namespace covered
 
         void admit(const Key& key, const Value& value)
         {
-            // TODO: END HERE
-            map_iterator_t map_iter = key_lookup_.find(key);
-            if (map_iter != key_lookup_.end()) // Previous list and map entry exist
+            bool is_local_cached = false;
+
+            bool is_small_cache = false;
+            map_iterator_t map_iter = key_lookup_for_small_.find(key);
+            if (map_iter == key_lookup_for_small_.end()) // NOT found in small cache
             {
+                map_iter = key_lookup_for_main_.find(key);
+                if (map_iter != key_lookup_for_main_.end()) // Found in main cache
+                {
+                    is_small_cache = false;
+                    is_local_cached = true;
+                }
+            }
+            else // Found in small cache
+            {
+                is_small_cache = true;
+                is_local_cached = true;
+            }
+
+            if (is_local_cached) // Previous list and map entry exist
+            {
+                std::string lookup_table_name = "";
+                uint32_t queue_size = 0;
+                if (is_small_cache)
+                {
+                    lookup_table_name = "key_lookup_for_small_";
+                    queue_size = s3fifo_small_queue_.size();
+                }
+                else
+                {
+                    lookup_table_name = "key_lookup_for_main_";
+                    queue_size = s3fifo_main_queue_.size();
+                }
+
                 std::ostringstream oss;
-                oss << "key " << key.getKeystr() << " already exists in key_lookup_ (list size: " << sieve_queue_.size() << ") for admit()";
+                oss << "key " << key.getKeystr() << " already exists in " << lookup_table_name << " (list size: " << queue_size << ") for admit()";
                 Util::dumpWarnMsg(kClassName, oss.str());
                 return;
             }
             else // No previous list and map entry
             {
-                // Insert a new sieven item to the head of the list
-                SieveItem tmp_item(key, value);
-                sieve_queue_.emplace_front(tmp_item);
-                size_ = Util::uint64Add(size_, tmp_item.getSizeForCapacity());
+                // Check ghost cache
+                bool hit_on_ghost = (key_lookup_for_ghost_.find(key) != key_lookup_for_ghost_.end());
+
+                // Insert a new s3fifo item to the head of the correpsonding list
+                S3fifoItem tmp_item(key, value);
+                if (hit_on_ghost) // Insert into main cache
+                {
+                    s3fifo_main_queue_.emplace_front(tmp_item);
+                    size_for_main_ += tmp_item.getSizeForCapacity();
+                }
+                else // Insert into small cache
+                {
+                    s3fifo_small_queue_.emplace_front(tmp_item);
+                    size_for_small_ += tmp_item.getSizeForCapacity();
+                }
 
                 // Insert new list iterator for key indexing
-                map_iter = key_lookup_.insert(std::pair(key, sieve_queue_.begin())).first;
-                assert(map_iter != key_lookup_.end());
-                size_ = Util::uint64Add(size_, static_cast<uint64_t>(key.getKeyLength() + sizeof(sieve_iterator)));
+                if (hit_on_ghost) // Insert into lookup table for main cache
+                {
+                    map_iter = key_lookup_for_main_.insert(std::pair(key, s3fifo_main_queue_.begin())).first;
+                    assert(map_iter != key_lookup_for_main_.end());
+                    size_for_main_ += static_cast<double>(key.getKeyLength() + sizeof(s3fifo_iterator));
+                }
+                else // Insert into lookup table for small cache
+                {
+                    map_iter = key_lookup_for_small_.insert(std::pair(key, s3fifo_small_queue_.begin())).first;
+                    assert(map_iter != key_lookup_for_small_.end());
+                    size_for_small_ += static_cast<double>(key.getKeyLength() + sizeof(s3fifo_iterator));
+                }
             }
 
             return;
         }
 
-        bool getVictimKey(Key& key)
-        {
-            bool has_victim_key = false;
-
-            if (sieve_queue_.size() > 0)
-            {
-                sieve_iterator cur_iter = hand_iter_; // Start from hand pointer
-                if (cur_iter == sieve_queue_.end())
-                {
-                    cur_iter--; // Move the the tail of sieve queue
-                }
-
-                while (cur_iter->isVisited())
-                {
-                    cur_iter->resetVisited();
-                    if (cur_iter == sieve_queue_.begin()) // Arrive at the head of sieve queue
-                    {
-                        cur_iter = sieve_queue_.end(); // Go back to the tail of sieve queue
-                    }
-                    cur_iter--; // Move to the previous sieve item
-                }
-
-                if (cur_iter != sieve_queue_.begin())
-                {
-                    hand_iter_ = cur_iter;
-                    hand_iter_--; // Move to the previous sieve item vs. the current victim
-                }
-                else
-                {
-                    hand_iter_ = sieve_queue_.end(); // Will start from the tail of sieve queue in the next eviction
-                }
-
-                // Get the tail of the list
-                key = cur_iter->getKey();
-
-                has_victim_key = true;
-            }
-
-            return has_victim_key;
-        }
-
-        bool evictWithGivenKey(const Key& key, Value& value)
+        bool evictNoGivenKey(std::unordered_map<Key, Value, KeyHasher>& victims)
         {
             bool is_evict = false;
-            
-            // Get victim value
-            map_iterator_t victim_map_iter = key_lookup_.find(key);
-            if (victim_map_iter != key_lookup_.end()) // Key exists
+
+            if (size_for_small_ >= 0.1 * static_cast<double>(capacity_bytes_)) // Evict from small cache
             {
-                sieve_iterator victim_list_iter = victim_map_iter->second;
-                assert(victim_list_iter != sieve_queue_.end());
-                assert(victim_list_iter->getKey() == key);
-                value = victim_list_iter->getValue();
+                is_evict = evictFromSmall_(victims);
+            }
+            else // Evict from main cache
+            {
+                is_evict = evictFromMain_(victims);
+            }
+
+            return is_evict;
+        }
+
+        bool evictFromSmall_(std::unordered_map<Key, Value, KeyHasher>& victims)
+        {
+            bool is_evict = false;
+
+            bool has_evicted = false;
+            while (!has_evicted && s3fifo_small_queue_.size() > 0) // Evict until one object is evicted from small cache or small cache becomes empty
+            {
+                // Start from the tail of the small cache
+                s3fifo_iterator victim_list_iter = s3fifo_small_queue_.end();
+                victim_list_iter--;
+                const Key& victim_key = victim_list_iter->getKey();
+
+                if (victim_list_iter->getFreq() > 1) // Move to main cache
+                {
+                    // Insert the victim object into main cache
+                    s3fifo_main_queue_.emplace_front(*victim_list_iter);
+                    size_for_main_ += victim_list_iter->getSizeForCapacity();
+
+                    // Insert corresponding map entry
+                    map_iterator_t map_iter = key_lookup_for_main_.insert(std::pair(victim_key, s3fifo_main_queue_.begin())).first;
+                    assert(map_iter != key_lookup_for_main_.end());
+                    size_for_main_ += static_cast<double>(victim_key.getKeyLength() + sizeof(s3fifo_iterator));
+
+                    if (size_for_main_ >= 0.9 * static_cast<double>(capacity_bytes_)) // Main cache is full
+                    {
+                        bool tmp_is_evict = evictFromMain_(victims);
+                        if (!is_evict)
+                        {
+                            is_evict = tmp_is_evictl;
+                        }
+                    }
+                }
+                else // Evict to ghost cache
+                {
+                    // Insert the victim key into ghost cache
+                    s3fifo_ghost_queue_.emplace_front(victim_key);
+                    size_for_ghost_ += static_cast<double>(victim_key.getKeyLength());
+
+                    // Insert corresponding map entry
+                    std::unordered_map<Key, std::list<Key>::iterator, KeyHasher>::iterator = map_iter = key_lookup_for_ghost_.insert(std::pair(victim_key, s3fifo_ghost_queue_.begin())).first;
+                    assert(map_iter != key_lookup_for_ghost_.end());
+                    size_for_ghost_ += static_cast<double>(victim_key.getKeyLength() + sizeof(std::list<Key>::iterator));
+
+                    // Add into victims
+                    victims.insert(std::pair(victim_key, victim_list_iter->getValue()));
+
+                    // Will break the while loop
+                    has_evicted = true;
+                    is_evict = true;
+                }
 
                 // Remove the corresponding map entry
-                key_lookup_.erase(victim_map_iter);
-                size_ = Util::uint64Minus(size_, static_cast<uint64_t>(key.getKeyLength() + sizeof(sieve_iterator)));
+                key_lookup_for_small_.erase(victim_key);
+                size_for_small_ -= static_cast<double>(victim_key.getKeyLength() + sizeof(s3fifo_iterator));
 
-                // Remove the corresponding list entry
-                const uint64_t victim_size = victim_list_iter->getSizeForCapacity();
-                sieve_queue_.erase(victim_list_iter);
-                size_ = Util::uint64Minus(size_, victim_size);
+                // Remove the victim object from small cache
+                const double victim_size = victim_list_iter->getSizeForCapacity();
+                s3fifo_small_queue_.erase(victim_list_iter);
+                size_for_small_ -= victim_size;
+            }
 
-                is_evict = true;
+            return is_evict;
+        }
+
+        bool evictFromMain_(std::unordered_map<Key, Value, KeyHasher>& victims)
+        {
+            bool is_evict = false;
+
+            bool has_evicted = false;
+            while (!has_evicted && s3fifo_main_queue_.size() > 0) // Evict until one object is evicted from main cache or main cache becomes empty
+            {
+                // Start from the tail of the main cache
+                s3fifo_iterator victim_list_iter = s3fifo_main_queue_.end();
+                victim_list_iter--;
+                const Key& victim_key = victim_list_iter->getKey();
+
+                if (victim_list_iter->getFreq() > 0) // FIFO reinsertion
+                {
+                    // Copy before remove
+                    S3fifoItem tmp_item = *victim_list_iter;
+                    s3fifo_main_queue_.erase(victim_list_iter);
+                    victim_list_iter = s3fifo_main_queue_.end();
+
+                    // Reinsert into the head of the main cache
+                    s3fifo_main_queue_.emplace_front(tmp_item);
+                    victim_list_iter = s3fifo_main_queue_.begin();
+                    victim_list_iter->decrFreq();
+
+                    // Update the corresponding map entry
+                    map_iterator_t map_iter = key_lookup_for_main_.find(victim_key);
+                    assert(map_iter != key_lookup_for_main_.end());
+                    map_iter->second = victim_list_iter;
+
+                    // NOTE: NO need to update size_for_main_ during FIFO reinsertion
+                }
+                else // Remove from main cache
+                {
+                    // Add into victims
+                    victims.insert(std::pair(victim_key, victim_list_iter->getValue()));
+
+                    // Remove the correpsonding map entry
+                    key_lookup_for_main_.remove(victim_key);
+                    size_for_main_ -= static_cast<double>(victim_key.getKeyLength() + sizeof(s3fifo_iterator));
+
+                    // Remove the victim object from main cache
+                    const double victim_size = victim_list_iter->getSizeForCapacity();
+                    s3fifo_main_queue_.erase(victim_list_iter);
+                    size_for_main_ -= victim_size;
+
+                    // Will break the while loop
+                    has_evicted = true;
+                    is_evict = true;
+                }
             }
 
             return is_evict;
@@ -291,11 +444,14 @@ namespace covered
 
         uint64_t getSizeForCapacity() const
         {
-            return size_;
+            const double total_size = size_for_small_ + size_for_main_ + size_for_ghost_;
+            return static_cast<uint64_t>(total_size);
         }
 
     private:
         static const std::string kClassName;
+
+        const uint64_t capacity_bytes_; // Cache capacity (used for eviction)
 
         std::list<S3fifoItem<Key, Value>> s3fifo_small_queue_; // Small s3fifo items in FIFO order
         std::list<S3fifoItem<Key, Value>> s3fifo_main_queue_; // Main s3fifo items in FIFO order
@@ -304,7 +460,9 @@ namespace covered
         std::unordered_map<Key, s3fifo_iterator, KeyHasher> key_lookup_for_main_; // Key indexing for quick lookup in main cache
         std::unordered_set<Key, std::list<Key>::iterator, KeyHasher> key_lookup_for_ghost_; // Key indexing for quick lookup in ghost cache
 
-        uint64_t size_; // in units of bytes
+        double size_for_small_; // Cache size usage of small cache in units of bytes (used for eviction and capacity limitation)
+        double size_for_main_; // Cache size usage of main cache in units of bytes (used for eviction and capacity limitation)
+        double size_for_ghost_; // Cache size usage of ghost cache in units of bytes (used for capacity limitation)
     };
 
     template <typename Key, typename Value, typename KeyHasher>
