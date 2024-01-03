@@ -44,6 +44,7 @@ namespace covered
     const std::string Util::LFU_CACHE_NAME("lfu");
     const std::string Util::LHD_CACHE_NAME("lhd");
     const std::string Util::LRU_CACHE_NAME("lru");
+    const std::string Util::S3FIFO_CACHE_NAME("s3fifo");
     const std::string Util::SEGCACHE_CACHE_NAME("segcache");
     const std::string Util::SIEVE_CACHE_NAME("sieve");
     const std::string Util::COVERED_CACHE_NAME("covered");

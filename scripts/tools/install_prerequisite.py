@@ -62,9 +62,9 @@ if is_install_pylib:
     LogUtil.prompt(Common.scriptname, "install python libraries based on {}...".format(pylib_requirement_filepath))
     pylib_install_cmd = "python3 -m pip install -r {}".format(pylib_requirement_filepath)
 
-    pylib_install_subprocess = SubprocessUtil.runCmd(pylib_install_cmd)
+    pylib_install_subprocess = SubprocessUtil.runCmd(pylib_install_cmd, is_capture_output=False)
     if pylib_install_subprocess.returncode != 0:
-        LogUtil.die(Common.scriptname, "failed to install python libraries based on {} (errmsg: {})".format(pylib_requirement_filepath, SubprocessUtil.getSubprocessErrstr(pylib_install_subprocess)))
+        LogUtil.die(Common.scriptname, "failed to install python libraries based on {}".format(pylib_requirement_filepath))
     print("")
 
 # (3) Upgrade gcc/g++ if necessary

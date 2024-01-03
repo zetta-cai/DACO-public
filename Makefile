@@ -18,6 +18,7 @@ include src/mk/cache/gdsf.mk
 include src/mk/cache/lfu.mk
 include src/mk/cache/lhd.mk
 include src/mk/cache/lru.mk
+include src/mk/cache/s3fifo.mk
 include src/mk/cache/segcache.mk
 include src/mk/cache/sieve.mk
 

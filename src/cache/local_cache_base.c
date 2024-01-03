@@ -11,6 +11,7 @@
 #include "cache/lhd_local_cache.h"
 #include "cache/lru_local_cache.h"
 #include "cache/greedy_dual_local_cache.h"
+#include "cache/s3fifo_local_cache.h"
 #include "cache/segcache_local_cache.h"
 #include "cache/sieve_local_cache.h"
 
@@ -44,6 +45,10 @@ namespace covered
         else if (cache_name == Util::LRU_CACHE_NAME)
         {
             local_cache_ptr = new LruLocalCache(edge_wrapper_ptr, edge_idx, capacity_bytes);
+        }
+        else if (cache_name == Util::S3FIFO_CACHE_NAME)
+        {
+            local_cache_ptr = new S3fifoLocalCache(edge_wrapper_ptr, edge_idx, capacity_bytes);
         }
         else if (cache_name == Util::SEGCACHE_CACHE_NAME)
         {
