@@ -1,5 +1,5 @@
 /*
- * S3fifoLocalCache: local edge cache with S3-FIFO policy (https://github.com/Thesys-lab/sosp23-s3fifo.git).
+ * S3fifoLocalCache: local edge cache with S3-FIFO policy (https://github.com/Thesys-lab/sosp23-s3fifo).
  * 
  * By Siyuan Sheng (2024.01.03).
  */

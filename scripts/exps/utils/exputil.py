@@ -40,7 +40,7 @@ class ExpUtil:
         # Check PID(s) of the given component
         tmp_pidstr_list = []
         
-        check_component_cmd = "ps -aux | grep -F {} | grep -v grep".format(tmp_component)
+        check_component_cmd = "ps -aux | grep -F {} | grep -v grep | grep {}".format(tmp_component, Common.username)
         if tmp_machine_idx != Common.cur_machine_idx:
             # NOTE: use double braces to escape braces from python string format processing
             # NOTE: use \$ to escape $ from ssh command, otherwise $2 will be interpreted as a variable by bash due to using double quotes in getRemoteCmd()
