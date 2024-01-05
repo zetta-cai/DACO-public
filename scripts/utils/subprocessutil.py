@@ -223,13 +223,17 @@ class SubprocessUtil:
     ## (3) For softwares from github
 
     @classmethod
-    def cloneRepo(cls, scriptname, clone_dirpath, software_name, repo_url):
+    def cloneRepo(cls, scriptname, clone_dirpath, software_name, repo_url, with_subrepo = False):
         if not os.path.exists(clone_dirpath):
             tmp_parent_dirpath = os.path.dirname(clone_dirpath)
             tmp_repo_dirname = os.path.basename(clone_dirpath)
 
             LogUtil.prompt(scriptname, "clone {} into {}...".format(software_name, clone_dirpath))
-            clone_cmd = "cd {} && git clone {} {}".format(tmp_parent_dirpath, repo_url, tmp_repo_dirname)
+            clone_cmd = ""
+            if with_subrepo:
+                clone_cmd = "cd {} && git clone --recursive {} {}".format(tmp_parent_dirpath, repo_url, tmp_repo_dirname)
+            else:
+                clone_cmd = "cd {} && git clone {} {}".format(tmp_parent_dirpath, repo_url, tmp_repo_dirname)
 
             clone_subprocess = cls.runCmd(clone_cmd)
             if clone_subprocess.returncode != 0:

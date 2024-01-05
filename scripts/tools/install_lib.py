@@ -9,6 +9,7 @@ from ..common import *
 is_clear_tarball = False # whether to clear intermediate tarball files
 
 # Variables to control whether to install the corresponding softwares
+is_install_xgboost = True
 is_install_boost = True
 is_install_cachelib = True
 is_install_lrucache = True # Completely use hacked version
@@ -22,10 +23,24 @@ is_install_lhd = True
 is_install_s3fifo = True # Completely use hacked version (also including SIEVE)
 is_install_glcache = True
 
-# (0) Check input CLI parameters
-
+# Check input CLI parameters
 if len(sys.argv) != 2:
     LogUtil.die(Common.scriptname, "Usage: sudo python3 -m scripts.tools.install_lib :$LD_LIBRARY_PATH")
+
+# (0) Install XGBoost (commit ID: c03a4d5) for GLCache
+if is_install_xgboost:
+    xgboost_clone_dirpath = "{}/xgboost".format(Common.lib_dirpath)
+    xgboost_software_name = "XGBoost"
+    xgboost_repo_url = "https://github.com/dmlc/xgboost.git"
+    SubprocessUtil.cloneRepo(Common.scriptname, xgboost_clone_dirpath, xgboost_software_name, xgboost_repo_url, with_subrepo = True)
+
+    xgboost_target_commit = "c03a4d5"
+    SubprocessUtil.checkoutCommit(Common.scriptname, xgboost_clone_dirpath, xgboost_software_name, xgboost_target_commit)
+
+    xgboost_install_dirpath = "/usr/local/lib/libxgboost.so" # NOTE: lib/xgboost/build/cmake_install.cmake sets CMAKE_INSTALL_PREFIX as /usr/local by default to install header files, libxgboost.so, and XGBoostTargets.cmake
+    xgboost_install_tool = "mkdir build && cd build && cmake .. && make -j && sudo make install"
+    SubprocessUtil.installFromRepoIfNot(Common.scriptname, xgboost_install_dirpath, xgboost_software_name, xgboost_clone_dirpath, xgboost_install_tool, time_consuming = True)
+    print("")
 
 # (1) Install boost 1.81.0
 
@@ -241,6 +256,12 @@ if is_install_glcache:
 
     glcache_target_commit = "fbb8240"
     SubprocessUtil.checkoutCommit(Common.scriptname, glcache_clone_dirpath, glcache_software_name, glcache_target_commit)
+
+    glcache_microimpl_clone_dirpath = "{}/micro-implementation".format(glcache_clone_dirpath)
+    glcache_install_dirpath = "{}/build/lib/liblibCacheSim.so".format(glcache_microimpl_clone_dirpath)
+    glcache_install_tool = "mkdir _build && cd _build && cmake -DSUPPORT_ZSTD_TRACE=OFF -DCMAKE_INSTALL_PREFIX=../build .. && make -j && make install" # NOTE: we do NOT use zstd-compressed traces and install glcache into lib/glcache/micro-implementation/build/
+    glcache_preinstall_tool = "sudo apt-get -y install libglib2.0-dev libgoogle-perftools-dev"
+    SubprocessUtil.installFromRepoIfNot(Common.scriptname, glcache_install_dirpath, glcache_software_name, glcache_microimpl_clone_dirpath, glcache_install_tool, pre_install_tool = glcache_preinstall_tool)
     print("")
 
 # (12) Others: chown of libraries and update LD_LIBRARY_PATH
