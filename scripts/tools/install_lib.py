@@ -262,7 +262,7 @@ if is_install_glcache:
     #glcache_microimpl_clone_dirpath = "{}/micro-implementation".format(glcache_clone_dirpath)
     glcache_microimpl_clone_dirpath = "{}/src/cache/glcache/micro-implementation".format(Common.proj_dirname)
     glcache_install_dirpath = "{}/build/lib/liblibCacheSim.so".format(glcache_microimpl_clone_dirpath)
-    glcache_install_tool = "mkdir _build && cd _build && cmake -DSUPPORT_ZSTD_TRACE=OFF -DCMAKE_INSTALL_PREFIX=../build .. && make -j && make install" # NOTE: we do NOT use zstd-compressed traces and install glcache into lib/glcache/micro-implementation/build/
+    glcache_install_tool = "mkdir _build && cd _build && cmake -DSUPPORT_ZSTD_TRACE=OFF -DCMAKE_INSTALL_PREFIX=../build .. && make -j && sudo make install" # NOTE: we do NOT use zstd-compressed traces and install glcache into lib/glcache/micro-implementation/build/
     glcache_preinstall_tool = "sudo apt-get -y install libglib2.0-dev libgoogle-perftools-dev"
     SubprocessUtil.installFromRepoIfNot(Common.scriptname, glcache_install_dirpath, glcache_software_name, glcache_microimpl_clone_dirpath, glcache_install_tool, pre_install_tool = glcache_preinstall_tool)
     print("")

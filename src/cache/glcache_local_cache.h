@@ -1,7 +1,7 @@
 /*
  * GLCacheLocalCache: local edge cache with GLCache policy (https://github.com/Thesys-lab/fast23-glcache).
  *
- * NOTE: all configuration and function calls refer to GLCache files, including lib/glcache/micro-implementation/test/test_glcache.c and lib/glcache/micro-implementation/libCacheSim/cache/eviction/GLCache/*, yet reimplement in C++ (see src/cache/glcache/micro-implementation/*) and fix libcachesim limitations (only metadata operations + fixed-length uint64_t key + impractical assumption of in-request next access time + not-make-installed header files).
+ * NOTE: all configuration and function calls refer to GLCache files, including lib/glcache/micro-implementation/test/test_glcache.c and lib/glcache/micro-implementation/libCacheSim/cache/eviction/GLCache/*, yet reimplement in C++ (see src/cache/glcache/micro-implementation/*) and fix libcachesim limitations (only metadata operations + fixed-length uint64_t key + impractical assumption of in-request next access time).
  *
  * Hack to support key-value caching, required interfaces, and cache size in units of bytes for capacity constraint.
  * 
