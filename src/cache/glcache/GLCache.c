@@ -3,26 +3,27 @@
 //
 //
 
-#include "cache/glcache/glcache.h"
+#include "../../../include/libCacheSim/evictionAlgo/GLCache.h"
 
 #include <assert.h>
 #include <stdbool.h>
 
 #include "cache/glcache/hashtable.h" // Siyuan: src/cache/glcache/hashtable.h
+#include "cache/glcache/GLCacheInternal.h" // Siyuan: src/cache/glcache/GLCacheInternal.h
+#include "cache/glcache/cacheState.h" // Siyuan: src/cache/glcache/cacheState.h
+#include "cache/glcache/const.h" // Siyuan: src/cache/glcache/const.h
+#include "cache/glcache/obj.h" // Siyuan: src/cache/glcache/obj.h
+#include "cache/glcache/utils.h" // Siyuan: src/cache/glcache/utils.h
 
-#include "GLCacheInternal.h" // TODO: END HERE
-#include "cacheState.h"
-#include "const.h"
-#include "obj.h"
-#include "utils.h"
-
+// Siyuan: here original code uses extern "C", as some function definitions are also declarations
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /* output file for comparing online and offline calculated segment utility */
-FILE *ofile_cmp_y = NULL;
+FILE *cpp_ofile_cmp_y = NULL;
 
+// Siyuan: NO need to add a prefix of "cpp_" due to static function
 static void set_default_params(GLCache_params_t *params) {
   params->segment_size = 100;
   params->n_merge = 2;
@@ -43,6 +44,7 @@ const char *GLCache_default_params(void) {
          "retrain-intvl=86400";
 }
 
+// Siyuan: NO need to add a prefix of "cpp_" due to static function
 static void parse_init_params(const char *cache_specific_params,
                               GLCache_params_t *params) {
   char *params_str = strdup(cache_specific_params);
@@ -100,8 +102,7 @@ static void parse_init_params(const char *cache_specific_params,
   }
 }
 
-cache_t *GLCache_init(const common_cache_params_t ccache_params,
-                      const char *cache_specific_params) {
+cache_t *cpp_GLCache_init(const common_cache_params_t ccache_params, const char *cache_specific_params, covered::GLCachePolicy* glcache_policy_ptr) {
   cache_t *cache = cache_struct_init("GLCache", ccache_params);
 
   if (ccache_params.consider_obj_metadata) {
@@ -124,7 +125,7 @@ cache_t *GLCache_init(const common_cache_params_t ccache_params,
   if (cache_specific_params != NULL)
     parse_init_params(cache_specific_params, params);
 
-  check_params(params);
+  cpp_check_params(params);
 
   params->n_retain_per_seg = params->segment_size / params->n_merge;
 
@@ -149,8 +150,9 @@ cache_t *GLCache_init(const common_cache_params_t ccache_params,
       abort();
   };
 
-  init_global_params();
-  init_seg_sel(cache);
+  cpp_init_global_params();
+  cpp_init_seg_sel(cache);
+  // TODO: END HERE
   init_obj_sel(cache);
   init_learner(cache);
   init_cache_state(cache);
@@ -173,7 +175,7 @@ cache_t *GLCache_init(const common_cache_params_t ccache_params,
       params->retrain_intvl, params->train_source_y, params->rank_intvl,
       params->merge_consecutive_segs, params->n_merge);
   return cache;
-}
+  }
 
 void GLCache_free(cache_t *cache) {
   GLCache_params_t *params = cache->eviction_params;
