@@ -78,9 +78,10 @@ check_function_exists(accept4 HAVE_ACCEPT4)
 
 # how to use config.h.in to generate config.h
 # this has to be set _after_ the above checks
+# Siyuan: use cc_config.h instead of config.h to avoid conflicting name with libCacheSim's config.h in GLCache project
 configure_file(
   "${PROJECT_SOURCE_DIR}/config.h.in"
-  "${PROJECT_SOURCE_DIR}/include/config.h")
+  "${PROJECT_SOURCE_DIR}/include/cc_config.h")
 
 
 ##########################

@@ -21,7 +21,7 @@ is_install_gdsf = True # Completely use hacked version
 is_install_tommyds = True
 is_install_lhd = True
 is_install_s3fifo = True # Completely use hacked version (also including SIEVE)
-is_install_glcache = True
+is_install_glcache = True # Completely used hacked version
 
 # Check input CLI parameters
 if len(sys.argv) != 2:
@@ -248,6 +248,7 @@ if is_install_s3fifo:
 
 # (11) Install GLCache (commit ID: fbb8240)
 
+# NOTE: we just use GLCache downloaded from github in lib/glcache as a reference, while always use our hacked version in src/cache/glcache to fix GLCache's implementation issues
 if is_install_glcache:
     glcache_clone_dirpath = "{}/glcache".format(Common.lib_dirpath)
     glcache_software_name = "GLCache"
@@ -257,7 +258,9 @@ if is_install_glcache:
     glcache_target_commit = "fbb8240"
     SubprocessUtil.checkoutCommit(Common.scriptname, glcache_clone_dirpath, glcache_software_name, glcache_target_commit)
 
-    glcache_microimpl_clone_dirpath = "{}/micro-implementation".format(glcache_clone_dirpath)
+    # NOTE: use the hacked version to install glcache
+    #glcache_microimpl_clone_dirpath = "{}/micro-implementation".format(glcache_clone_dirpath)
+    glcache_microimpl_clone_dirpath = "{}/src/cache/glcache/micro-implementation".format(Common.proj_dirname)
     glcache_install_dirpath = "{}/build/lib/liblibCacheSim.so".format(glcache_microimpl_clone_dirpath)
     glcache_install_tool = "mkdir _build && cd _build && cmake -DSUPPORT_ZSTD_TRACE=OFF -DCMAKE_INSTALL_PREFIX=../build .. && make -j && make install" # NOTE: we do NOT use zstd-compressed traces and install glcache into lib/glcache/micro-implementation/build/
     glcache_preinstall_tool = "sudo apt-get -y install libglib2.0-dev libgoogle-perftools-dev"

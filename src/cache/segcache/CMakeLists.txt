@@ -88,9 +88,10 @@ check_function_exists(backtrace HAVE_BACKTRACE)
 
 # how to use config.h.in to generate config.h
 # this has to be set _after_ the above checks
+# Siyuan: use segcache_config.h instead of config.h to avoid conflicting name with libCacheSim's config.h in GLCache project
 configure_file(
   "${PROJECT_SOURCE_DIR}/cmake/config.h.in"
-  "${PROJECT_BINARY_DIR}/config.h")
+  "${PROJECT_BINARY_DIR}/segcache_config.h")
 
 # Note: duplicate custom targets only works with Makefile generators, will break XCode & VS
 # reference: http://public.kitware.com/Bug/view.php?id=6348
