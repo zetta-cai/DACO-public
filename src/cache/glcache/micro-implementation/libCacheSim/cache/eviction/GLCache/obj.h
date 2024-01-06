@@ -9,26 +9,44 @@ static inline void obj_init(cache_t *cache, const request_t *req,
   GLCache_params_t *params = cache->eviction_params;
   copy_request_to_cache_obj(cache_obj, req);
   cache_obj->GLCache.freq = 0;
-  cache_obj->GLCache.last_access_rtime = req->real_time;
-  cache_obj->GLCache.last_access_vtime = params->curr_vtime;
+  // Siyuan: in-req next access time is invalid assumption in practice
+  // cache_obj->GLCache.last_access_rtime = req->real_time;
+  // cache_obj->GLCache.last_access_vtime = params->curr_vtime;
+  cache_obj->GLCache.last_access_rtime = -1; // obj_age and cal_obj_score will return 0 if the object is newly-inserted
+  cache_obj->GLCache.last_access_vtime = -1; // obj_age and cal_obj_score will return 0 if the object is newly-inserted
   cache_obj->GLCache.in_cache = 1;
   cache_obj->GLCache.seen_after_snapshot = 0;
-  cache_obj->GLCache.next_access_vtime = req->next_access_vtime;
+  // Siyuan: in-req next access time is invalid assumption in practice
+  //cache_obj->GLCache.next_access_vtime = req->next_access_vtime;
+  cache_obj->GLCache.next_access_vtime = req->real_time;
+  cache_obj->GLCache.next_access_rtime = params->curr_vtime; // Used for obj_hit_update
 
   cache_obj->GLCache.segment = seg;
   cache_obj->GLCache.idx_in_segment = seg->n_obj;
 }
 
 static inline int64_t obj_age(GLCache_params_t *params, cache_obj_t *obj) {
-  return params->curr_rtime - obj->GLCache.last_access_rtime;
+  if (obj->GLCache.last_access_rtime == -1 || obj->GLCache.last_access_rtime == INT64_MAX) // Siyuan: return zero age for newly-inserted objects
+  {
+    return 0;
+  }
+  else
+  {
+    return params->curr_rtime - obj->GLCache.last_access_rtime;
+  }
 }
 
 /* some internal state update when an object is requested */
 static inline void obj_hit_update(GLCache_params_t *params, cache_obj_t *obj,
                                   const request_t *req) {
-  obj->GLCache.next_access_vtime = req->next_access_vtime;
-  obj->GLCache.last_access_rtime = params->curr_rtime;
-  obj->GLCache.last_access_vtime = params->curr_vtime;
+  // Siyuan: in-req next access time is invalid assumption in practice
+  //obj->GLCache.next_access_vtime = req->next_access_vtime;
+  //obj->GLCache.last_access_rtime = params->curr_rtime;
+  //obj->GLCache.last_access_vtime = params->curr_vtime;
+  obj->GLCache.last_access_rtime = obj->GLCache.next_access_rtime;
+  obj->GLCache.last_access_vtime = obj->GLCache.next_access_vtime;
+  obj->GLCache.next_access_rtime = params->curr_rtime;
+  obj->GLCache.next_access_vtime = params->curr_vtime;
   obj->GLCache.freq += 1;
 
   segment_t *seg = obj->GLCache.segment;
@@ -47,6 +65,13 @@ static inline void obj_evict_update(cache_t *cache, cache_obj_t *obj) {
 static inline double cal_obj_score(GLCache_params_t *params,
                                    obj_score_type_e score_type,
                                    cache_obj_t *cache_obj) {
+
+  // Siyuan: return zero score for newly-inserted objects
+  if (cache_obj->GLCache.last_access_rtime == -1 || cache_obj->GLCache.last_access_rtime == INT64_MAX || cache_obj->GLCache.last_access_vtime == -1 || cache_obj->GLCache.last_access_vtime == INT64_MAX)
+  {
+    return 0;
+  }
+
   segment_t *seg = cache_obj->GLCache.segment;
   int64_t curr_rtime = params->curr_rtime;
   int64_t curr_vtime = params->curr_vtime;

@@ -58,7 +58,7 @@ void SR_LRU_free(cache_t *cache) {
   cache_struct_free(cache);
 }
 
-cache_ck_res_e SR_LRU_check(cache_t *cache, const request_t *req,
+cache_ck_res_e SR_LRU_check(cache_t *cache, request_t *req,
                             const bool update_cache) {
   // SR_LRU_check will cover cases where:
   // Hit in Cache (R) and hit in Cache (SR) and does not hit anything
@@ -139,7 +139,7 @@ cache_ck_res_e SR_LRU_check(cache_t *cache, const request_t *req,
   return ck_R;
 }
 
-cache_ck_res_e SR_LRU_get(cache_t *cache, const request_t *req) {
+cache_ck_res_e SR_LRU_get(cache_t *cache, request_t *req) {
   cache_ck_res_e ret;
   ret = SR_LRU_check(cache, req, true);
   SR_LRU_params_t *params = (SR_LRU_params_t *)(cache->eviction_params);

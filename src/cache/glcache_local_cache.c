@@ -48,7 +48,8 @@ namespace covered
 
     bool GLCacheLocalCache::isLocalCachedInternal_(const Key& key) const
     {
-        bool is_cached = s3fifo_cache_ptr_->exists(key);
+        request_t req = buildRequest_(key);
+        bool is_cached = glcache_ptr_->exists(glcache_ptr_, &req);
 
         return is_cached;
     }
@@ -196,16 +197,39 @@ namespace covered
 
     request_t GLCacheLocalCache::buildRequest_(const Key& key, const Value& value) const
     {
+        // Refer to src/cache/glcache/micro-implementation/libCacheSim/include/libCacheSim/request.h for default settings of some fields
+
         request_t req;
         req.real_time = Util::getCurrentTimeUs();
         req.hv = 0; // src/cache/glcache/micro-implementation/libCacheSim/cache/eviction/GLCache/GLCache.c will hash key to get a hash value
         req.obj_id = 0; // NOT used by glcache due to key-based lookup
-        req.obj_size = value.getValuesize();
+        req.obj_size = key.getKeyLength() + value.getValuesize();
         req.ttl = 0; // NOT used by glcache
-        req.op = req_op_e.OP_NOP; // NOT used by glcache
+        req.op = OP_INVALID; // NOT used by glcache
+
         req.n_req = 0; // NOT used by glcache
         req.next_access_vtime; // NOTE: we should NOT provide next access time in req, which is invalid assumption in practice
-        // TODO: END HERE
+        req.key_size = key.getKeyLength(); // NOT used by glcache
+        req.value_size = value.getValuesize(); // NOT used by glcache
+
+        req.ns = 0; // NOT used by glcache
+        req.content_type = 0; // NOT used by glcache
+        req.tenant_id = 0; // NOT used by glcache
+
+        req.bucket_id = 0; // NOT used by glcache due to disablling TTL
+        req.age = 0; // NOT used by glcache
+        req.hostname = 0; // NOT used by glcache
+        req.extension = 0; // NOT used by glcache
+        req.colo = 0; // NOT used by glcache
+        req.n_level = 0; // NOT used by glcache
+        req.n_param = 0; // NOT used by glcache
+        req.method = 0; // NOT used by glcache
+
+        req.valid = true;
+
+        req.is_keybased_req = true;
+        req.key = key;
+        req.value = value;
 
         return req;
     }

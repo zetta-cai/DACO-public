@@ -164,7 +164,7 @@ void SLRU_cool(cache_t *cache, int i) {
   LRU_insert(SLRU_params->LRUs[i - 1], req_local);
 }
 
-cache_ck_res_e SLRU_check(cache_t *cache, const request_t *req,
+cache_ck_res_e SLRU_check(cache_t *cache, request_t *req,
                           const bool update_cache) {
   SLRU_params_t *SLRU_params = (SLRU_params_t *)(cache->eviction_params);
   static __thread request_t *req_local = NULL;
@@ -197,7 +197,7 @@ cache_ck_res_e SLRU_check(cache_t *cache, const request_t *req,
   return cache_ck_miss;
 }
 
-cache_ck_res_e SLRU_get(cache_t *cache, const request_t *req) {
+cache_ck_res_e SLRU_get(cache_t *cache, request_t *req) {
   /* because this field cannot be updated in time since segment LRUs are updated, 
    * so we should not use this field */
   DEBUG_ASSERT(cache->occupied_size == 0);

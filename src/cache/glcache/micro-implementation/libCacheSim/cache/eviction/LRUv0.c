@@ -65,7 +65,7 @@ void LRUv0_free(cache_t *cache) {
   cache_struct_free(cache);
 }
 
-cache_ck_res_e LRUv0_check(cache_t *cache, const request_t *req,
+cache_ck_res_e LRUv0_check(cache_t *cache, request_t *req,
                            const bool update_cache) {
   LRUv0_params_t *LRUv0_params = (LRUv0_params_t *)(cache->eviction_params);
   GList *node = (GList *)g_hash_table_lookup(LRUv0_params->hashtable,
@@ -87,7 +87,7 @@ cache_ck_res_e LRUv0_check(cache_t *cache, const request_t *req,
   return cache_ck_hit;
 }
 
-cache_ck_res_e LRUv0_get(cache_t *cache, const request_t *req) {
+cache_ck_res_e LRUv0_get(cache_t *cache, request_t *req) {
   cache_ck_res_e cache_check = LRUv0_check(cache, req, true);
   if (req->obj_size <= cache->cache_size) {
     if (cache_check == cache_ck_miss) LRUv0_insert(cache, req);

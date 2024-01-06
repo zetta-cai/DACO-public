@@ -89,7 +89,7 @@ cache_t *BeladySize_init(const common_cache_params_t ccache_params,
 
 void BeladySize_free(cache_t *cache) { cache_struct_free(cache); }
 
-cache_ck_res_e BeladySize_check(cache_t *cache, const request_t *req,
+cache_ck_res_e BeladySize_check(cache_t *cache, request_t *req,
                                 const bool update_cache) {
   cache_obj_t *obj;
   cache_ck_res_e ck = cache_check_base(cache, req, update_cache, &obj);
@@ -107,7 +107,7 @@ cache_ck_res_e BeladySize_check(cache_t *cache, const request_t *req,
   return ck;
 }
 
-cache_ck_res_e BeladySize_get(cache_t *cache, const request_t *req) {
+cache_ck_res_e BeladySize_get(cache_t *cache, request_t *req) {
   return cache_get_base(cache, req);
 }
 

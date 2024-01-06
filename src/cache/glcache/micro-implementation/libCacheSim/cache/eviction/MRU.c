@@ -44,7 +44,7 @@ cache_obj_t *MRU_insert(cache_t *cache, const request_t *req) {
   return cache_insert_LRU(cache, req);
 }
 
-cache_ck_res_e MRU_check(cache_t *cache, const request_t *req,
+cache_ck_res_e MRU_check(cache_t *cache, request_t *req,
                          const bool update_cache) {
   cache_obj_t *cache_obj;
   cache_ck_res_e ret = cache_check_base(cache, req, update_cache, &cache_obj);
@@ -68,7 +68,7 @@ void MRU_evict(cache_t *cache, const request_t *req, cache_obj_t *cache_obj) {
   cache_remove_obj_base(cache, obj_to_evict);
 }
 
-cache_ck_res_e MRU_get(cache_t *cache, const request_t *req) {
+cache_ck_res_e MRU_get(cache_t *cache, request_t *req) {
   return cache_get_base(cache, req);
 }
 

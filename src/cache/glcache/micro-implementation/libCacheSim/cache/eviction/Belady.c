@@ -63,7 +63,7 @@ void Belady_free(cache_t *cache) {
   cache_struct_free(cache);
 }
 
-cache_ck_res_e Belady_check(cache_t *cache, const request_t *req,
+cache_ck_res_e Belady_check(cache_t *cache, request_t *req,
                             const bool update_cache) {
   Belady_params_t *params = cache->eviction_params;
   cache_obj_t *cached_obj;
@@ -90,7 +90,7 @@ cache_ck_res_e Belady_check(cache_t *cache, const request_t *req,
   return cache_ck_miss;
 }
 
-cache_ck_res_e Belady_get(cache_t *cache, const request_t *req) {
+cache_ck_res_e Belady_get(cache_t *cache, request_t *req) {
   /* -2 means the trace does not have next_access ts information */
   DEBUG_ASSERT(req->next_access_vtime != -2);
   Belady_params_t *params = cache->eviction_params;

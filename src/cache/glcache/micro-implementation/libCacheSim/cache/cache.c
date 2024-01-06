@@ -172,7 +172,7 @@ cache_ck_res_e cache_check_base(cache_t *cache, const request_t *req,
  * @param req
  * @return cache_ck_hit, cache_ck_miss, cache_ck_expired
  */
-cache_ck_res_e cache_get_base(cache_t *cache, const request_t *req) {
+cache_ck_res_e cache_get_base(cache_t *cache, request_t *req) {
   cache->n_req += 1;
 
   VVERBOSE("******* req %" PRIu64 ", obj %" PRIu64 ", obj_size %" PRIu32
@@ -180,7 +180,7 @@ cache_ck_res_e cache_get_base(cache_t *cache, const request_t *req) {
            cache->n_req, req->obj_id, req->obj_size, cache->occupied_size,
            cache->cache_size);
 
-  cache_ck_res_e cache_check = cache->check(cache, req, true);
+  cache_ck_res_e cache_check = cache->check(cache, req, true); // Siyuan: this will update req->value if with cache hit
 
   if (cache_check == cache_ck_hit) {
     VVERBOSE("req %" PRIu64 ", obj %" PRIu64 " --- cache hit\n", cache->n_req,
@@ -188,6 +188,8 @@ cache_ck_res_e cache_get_base(cache_t *cache, const request_t *req) {
     return cache_check;
   }
 
+  // Siyuan: we do NOT admit during get; instead, we will trigger admission outside glcache after get by EdgeWrapper
+  /*
   if (cache->can_insert(cache, req) == false) {
     return cache_check;
   }
@@ -199,6 +201,7 @@ cache_ck_res_e cache_get_base(cache_t *cache, const request_t *req) {
 
     cache->insert(cache, req);
   }
+  */
 
   return cache_check;
 }

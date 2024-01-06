@@ -130,7 +130,7 @@ void _verify(cache_t *cache, const request_t *req) {
   if (hit2 == cache_ck_hit) DEBUG_ASSERT(hit1 != cache_ck_hit);
 }
 
-cache_ck_res_e ARC_check(cache_t *cache, const request_t *req,
+cache_ck_res_e ARC_check(cache_t *cache, request_t *req,
                          const bool update_cache) {
   static __thread request_t *req_local = NULL;
   if (req_local == NULL) req_local = new_request();
@@ -187,7 +187,7 @@ cache_ck_res_e ARC_check(cache_t *cache, const request_t *req,
   return hit;
 }
 
-cache_ck_res_e ARC_get(cache_t *cache, const request_t *req) {
+cache_ck_res_e ARC_get(cache_t *cache, request_t *req) {
   return cache_get_base(cache, req);
 }
 

@@ -183,7 +183,7 @@ void SFIFO_Belady_cool(cache_t *cache, int i) {
   FIFO_insert(SFIFO_Belady_params->FIFOs[i - 1], SFIFO_Belady_params->temp_req);
 }
 
-cache_ck_res_e SFIFO_Belady_check(cache_t *cache, const request_t *req,
+cache_ck_res_e SFIFO_Belady_check(cache_t *cache, request_t *req,
                                   const bool update_cache) {
   SFIFO_Belady_params_t *SFIFO_Belady_params =
       (SFIFO_Belady_params_t *)(cache->eviction_params);
@@ -214,7 +214,7 @@ cache_ck_res_e SFIFO_Belady_check(cache_t *cache, const request_t *req,
   return cache_ck_miss;
 }
 
-cache_ck_res_e SFIFO_Belady_get(cache_t *cache, const request_t *req) {
+cache_ck_res_e SFIFO_Belady_get(cache_t *cache, request_t *req) {
   /* because this field cannot be updated in time since segment LRUs are
    * updated, so we should not use this field */
   DEBUG_ASSERT(cache->occupied_size == 0);

@@ -21,10 +21,10 @@ void GLCache_free(cache_t *cache);
 
 cache_ck_res_e GLCache_exists(cache_t *cache, const request_t *req); // Siyuan: check if key exists
 
-cache_ck_res_e GLCache_check(cache_t *cache, const request_t *req,
+cache_ck_res_e GLCache_check(cache_t *cache, request_t *req,
                              const bool update_cache);
 
-cache_ck_res_e GLCache_get(cache_t *cache, const request_t *req);
+cache_ck_res_e GLCache_get(cache_t *cache, request_t *req);
 
 cache_obj_t *GLCache_insert(cache_t *GLCache, const request_t *req);
 

@@ -50,7 +50,7 @@ void GDSF_free(cache_t *cache) {
   cache_struct_free(cache);
 }
 
-cache_ck_res_e GDSF_check(cache_t *cache, const request_t *req,
+cache_ck_res_e GDSF_check(cache_t *cache, request_t *req,
                           const bool update_cache) {
   auto *gdsf = reinterpret_cast<eviction::GDSF *>(cache->eviction_params);
   cache_obj_t *obj;

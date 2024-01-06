@@ -44,7 +44,8 @@ typedef cache_ck_res_e (*cache_exists_func_ptr)(cache_t *, const request_t *);
 
 typedef cache_ck_res_e (*cache_get_func_ptr)(cache_t *, const request_t *);
 
-typedef cache_ck_res_e (*cache_check_func_ptr)(cache_t *, const request_t *,
+// Siyuan: use request_t* instead of const request_t* such that we can get value of cached object
+typedef cache_ck_res_e (*cache_check_func_ptr)(cache_t *, request_t *,
                                                const bool);
 
 typedef bool (*cache_can_insert_func_ptr)(cache_t *cache, const request_t *req);
@@ -180,7 +181,8 @@ cache_ck_res_e cache_check_base(cache_t *cache, const request_t *req,
  * @param req
  * @return
  */
-cache_ck_res_e cache_get_base(cache_t *cache, const request_t *req);
+// Siyuan: use request_t* instead of const request_t* such that we can get value of cached object
+cache_ck_res_e cache_get_base(cache_t *cache, request_t *req);
 
 /**
  * @brief check whether the object can be inserted into the cache

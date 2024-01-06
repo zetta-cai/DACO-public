@@ -131,7 +131,7 @@ static void check_and_update_history(cache_t *cache, const request_t *req) {
   }
 }
 
-cache_ck_res_e LeCaRv0_check(cache_t *cache, const request_t *req,
+cache_ck_res_e LeCaRv0_check(cache_t *cache, request_t *req,
                              bool update_cache) {
   LeCaRv0_params_t *params = (LeCaRv0_params_t *)(cache->eviction_params);
 
@@ -157,7 +157,7 @@ cache_ck_res_e LeCaRv0_check(cache_t *cache, const request_t *req,
   return ck_lru;
 }
 
-cache_ck_res_e LeCaRv0_get(cache_t *cache, const request_t *req) {
+cache_ck_res_e LeCaRv0_get(cache_t *cache, request_t *req) {
   return cache_get_base(cache, req);
 }
 

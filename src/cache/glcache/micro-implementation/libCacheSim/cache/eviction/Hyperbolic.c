@@ -91,7 +91,7 @@ void Hyperbolic_free(cache_t *cache) {
   cache_struct_free(cache);
 }
 
-cache_ck_res_e Hyperbolic_check(cache_t *cache, const request_t *req,
+cache_ck_res_e Hyperbolic_check(cache_t *cache, request_t *req,
                                 const bool update_cache) {
   cache_obj_t *cached_obj;
   cache_ck_res_e ret = cache_check_base(cache, req, update_cache, &cached_obj);
@@ -107,7 +107,7 @@ cache_ck_res_e Hyperbolic_check(cache_t *cache, const request_t *req,
   return cache_ck_miss;
 }
 
-cache_ck_res_e Hyperbolic_get(cache_t *cache, const request_t *req) {
+cache_ck_res_e Hyperbolic_get(cache_t *cache, request_t *req) {
   cache_ck_res_e ret = cache_get_base(cache, req);
 
   return ret;

@@ -21,10 +21,10 @@ cache_t *LFUDA_init(const common_cache_params_t ccache_params,
 
 void LFUDA_free(cache_t *cache);
 
-cache_ck_res_e LFUDA_check(cache_t *cache, const request_t *req,
+cache_ck_res_e LFUDA_check(cache_t *cache, request_t *req,
                            const bool update);
 
-cache_ck_res_e LFUDA_get(cache_t *cache, const request_t *req);
+cache_ck_res_e LFUDA_get(cache_t *cache, request_t *req);
 
 void LFUDA_remove(cache_t *cache, const obj_id_t obj_id);
 

@@ -196,7 +196,7 @@ static void check_and_update_history(cache_t *cache, const request_t *req) {
   }
 }
 
-cache_ck_res_e Cacheus_check(cache_t *cache, const request_t *req,
+cache_ck_res_e Cacheus_check(cache_t *cache, request_t *req,
                              bool update_cache) {
   Cacheus_params_t *params = (Cacheus_params_t *)(cache->eviction_params);
 
@@ -226,7 +226,7 @@ cache_ck_res_e Cacheus_check(cache_t *cache, const request_t *req,
   return ck_lru;
 }
 
-cache_ck_res_e Cacheus_get(cache_t *cache, const request_t *req) {
+cache_ck_res_e Cacheus_get(cache_t *cache, request_t *req) {
   Cacheus_params_t *params = (Cacheus_params_t *)(cache->eviction_params);
   DEBUG_ASSERT(params->LRU->occupied_size == params->LFU->occupied_size);
   DEBUG_ASSERT(params->LRU->n_obj == cache->n_obj);

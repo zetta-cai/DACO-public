@@ -274,7 +274,7 @@ static void update_weight(cache_t *cache, int64_t t, double *w_update,
   *w_no_update = (*w_no_update + 1e-10) / s;
 }
 
-cache_ck_res_e LeCaR_check(cache_t *cache, const request_t *req,
+cache_ck_res_e LeCaR_check(cache_t *cache, request_t *req,
                            bool update_cache) {
   LeCaR_params_t *params = (LeCaR_params_t *)(cache->eviction_params);
 
@@ -354,7 +354,7 @@ cache_ck_res_e LeCaR_check(cache_t *cache, const request_t *req,
   return ck;
 }
 
-cache_ck_res_e LeCaR_get(cache_t *cache, const request_t *req) {
+cache_ck_res_e LeCaR_get(cache_t *cache, request_t *req) {
   // LeCaR_params_t *params = (LeCaR_params_t *)(cache->eviction_params);
   cache_ck_res_e ck = cache_get_base(cache, req);
   return ck;

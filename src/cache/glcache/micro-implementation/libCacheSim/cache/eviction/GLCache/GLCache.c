@@ -158,7 +158,7 @@ cache_t *GLCache_init(const common_cache_params_t ccache_params,
   cache->cache_free = GLCache_free;
   cache->get = GLCache_get;
   cache->exists = GLCache_exists; // Siyuan: check if key exists
-  cache->check = GLCache_check;
+  cache->check = GLCache_check; // Siyuan: we pass request_t* such that we can get value of cached object
   cache->insert = GLCache_insert;
   cache->evict = GLCache_evict;
   cache->remove = GLCache_remove;
@@ -257,7 +257,7 @@ cache_ck_res_e GLCache_exists(cache_t *cache, const request_t *req)
   return cache_ck_miss;
 }
 
-cache_ck_res_e GLCache_check(cache_t *cache, const request_t *req,
+cache_ck_res_e GLCache_check(cache_t *cache, request_t *req,
                              const bool update_cache) {
   GLCache_params_t *params = cache->eviction_params;
 
@@ -275,10 +275,28 @@ cache_ck_res_e GLCache_check(cache_t *cache, const request_t *req,
   while (cache_obj != NULL) {
     /* a cache obj can be a cached object, or one of the objects on the evicted
      * segments */
-    if (cache_obj->obj_id != req->obj_id) {
-      cache_obj = cache_obj->hash_next;
-      continue;
+    // Siyuan: for key-value caching
+    if (req->is_keybased_req)
+    {
+      assert(cache_obj->is_keybased_obj == true);
+      if (cache_obj->key != req->key)
+      {
+        cache_obj = cache_obj->hash_next;
+        continue;
+      }
     }
+    else
+    {
+      if (cache_obj->obj_id != req->obj_id) {
+        cache_obj = cache_obj->hash_next;
+        continue;
+      }
+    }
+
+    // Siyuan: get value of the cached object
+    req->value = cache_obj->value;
+
+    // Update object-level and segment-level metadata for the cached object, which will be used for training model to calculate segment-level pred_utility
 
     segment_t *seg = cache_obj->GLCache.segment;
 
@@ -315,10 +333,10 @@ cache_ck_res_e GLCache_check(cache_t *cache, const request_t *req,
   return cache_ck_hit;
 }
 
-cache_ck_res_e GLCache_get(cache_t *cache, const request_t *req) {
+cache_ck_res_e GLCache_get(cache_t *cache, request_t *req) {
   GLCache_params_t *params = cache->eviction_params;
 
-  cache_ck_res_e ret = cache_get_base(cache, req);
+  cache_ck_res_e ret = cache_get_base(cache, req); // Siyuan: this will update req->value if with cache hit
 
   if (params->type == LOGCACHE_LEARNED ||
       params->type == LOGCACHE_ITEM_ORACLE) {
@@ -342,6 +360,7 @@ cache_ck_res_e GLCache_get(cache_t *cache, const request_t *req) {
   return ret;
 }
 
+// TODO: END HERE
 cache_obj_t *GLCache_insert(cache_t *cache, const request_t *req) {
   GLCache_params_t *params = cache->eviction_params;
   bucket_t *bucket = &params->buckets[0];

@@ -50,7 +50,7 @@ void LFUCpp_free(cache_t *cache) {
   cache_struct_free(cache);
 }
 
-cache_ck_res_e LFUCpp_check(cache_t *cache, const request_t *req,
+cache_ck_res_e LFUCpp_check(cache_t *cache, request_t *req,
                             const bool update_cache) {
   auto *lfu = static_cast<eviction::LFUCpp *>(cache->eviction_params);
   cache_obj_t *obj;
@@ -89,7 +89,7 @@ void LFUCpp_evict(cache_t *cache, const request_t *req,
   cache_remove_obj_base(cache, obj);
 }
 
-cache_ck_res_e LFUCpp_get(cache_t *cache, const request_t *req) {
+cache_ck_res_e LFUCpp_get(cache_t *cache, request_t *req) {
   return cache_get_base(cache, req);
 }
 

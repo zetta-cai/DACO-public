@@ -12,10 +12,10 @@ cache_t *Cacheus_init(const common_cache_params_t ccache_params,
 
 void Cacheus_free(cache_t *cache);
 
-cache_ck_res_e Cacheus_check(cache_t *cache, const request_t *req,
+cache_ck_res_e Cacheus_check(cache_t *cache, request_t *req,
                              const bool update_cache);
 
-cache_ck_res_e Cacheus_get(cache_t *cache, const request_t *req);
+cache_ck_res_e Cacheus_get(cache_t *cache, request_t *req);
 
 cache_obj_t *Cacheus_insert(cache_t *Cacheus, const request_t *req);
 

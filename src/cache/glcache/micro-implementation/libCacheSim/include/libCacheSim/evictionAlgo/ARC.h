@@ -21,10 +21,10 @@ cache_t *ARC_init(const common_cache_params_t ccache_params,
 
 void ARC_free(cache_t *cache);
 
-cache_ck_res_e ARC_check(cache_t *cache, const request_t *req,
+cache_ck_res_e ARC_check(cache_t *cache, request_t *req,
                          const bool update);
 
-cache_ck_res_e ARC_get(cache_t *cache, const request_t *req);
+cache_ck_res_e ARC_get(cache_t *cache, request_t *req);
 
 cache_obj_t *ARC_insert(cache_t *ARC, const request_t *req);
 
