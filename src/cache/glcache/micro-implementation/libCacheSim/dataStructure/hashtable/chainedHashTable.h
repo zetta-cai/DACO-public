@@ -8,10 +8,6 @@
 #ifndef libCacheSim_CHAINEDHASHTABLE_H
 #define libCacheSim_CHAINEDHASHTABLE_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <assert.h>
 #include <stdbool.h>
 
@@ -19,12 +15,19 @@ extern "C" {
 #include "../../include/libCacheSim/request.h"
 #include "hashtableStruct.h"
 
+#include "common/key.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 hashtable_t *create_chained_hashtable(const uint16_t hashpower_init);
 
 cache_obj_t *chained_hashtable_find_obj(hashtable_t *hashtable,
                                         cache_obj_t *cache_obj);
 
-cache_obj_t *chained_hashtable_find(hashtable_t *hashtable, obj_id_t obj_id);
+cache_obj_t *chained_hashtable_find_obj_id(hashtable_t *hashtable, obj_id_t obj_id);
+cache_obj_t *chained_hashtable_find_key(hashtable_t *hashtable, const covered::Key& key); // Siyuan: for key-value caching
 
 cache_obj_t *chained_hashtable_find_req(hashtable_t *hashtable, request_t *req);
 

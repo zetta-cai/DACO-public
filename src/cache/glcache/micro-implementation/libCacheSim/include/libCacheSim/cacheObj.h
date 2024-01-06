@@ -75,7 +75,6 @@ typedef struct {
   int64_t next_access_vtime;
 } FIFO_Reinsertion_obj_metadata_t;
 
-// TODO: Siyuan: track key and value in object-level metadata
 typedef struct {
   void *segment;
   int64_t next_access_vtime;
@@ -87,6 +86,11 @@ typedef struct {
   int16_t in_cache : 2;
   int16_t seen_after_snapshot : 2;
 } GLCache_obj_metadata_t;
+
+// Siyuan: g++ does not mangle struct non-static member variables, so we disable extern "C" for common object-level metadata such that we can declare class Key and Value instances
+#ifdef __cplusplus
+}
+#endif
 
 // ############################## cache obj ###################################
 struct cache_obj;
@@ -131,7 +135,17 @@ typedef struct cache_obj {
     GLCache_obj_metadata_t GLCache;
 //#endif
   };
+
+  // Siyuan: for key-value caching
+  bool is_keybased_obj; // Use obj_id as key if false, or use key otherwise
+  covered::Key key;
+  covered::Value value;
 } __attribute__((packed)) cache_obj_t;
+
+// Siyuan: g++ does not mangle struct non-static member variables, so we disable extern "C" for common object-level metadata such that we can declare class Key and Value instances
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 struct request;
 /**

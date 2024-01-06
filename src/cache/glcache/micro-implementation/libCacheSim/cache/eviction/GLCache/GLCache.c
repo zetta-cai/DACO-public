@@ -226,7 +226,35 @@ void GLCache_free(cache_t *cache) {
 // Siyuan: check if key exists
 cache_ck_res_e GLCache_exists(cache_t *cache, const request_t *req)
 {
-  // TODO: END HERE
+  cache_obj_t *cache_obj = hashtable_find(cache->hashtable, req);
+
+  if (cache_obj == NULL) {
+    return cache_ck_miss;
+  }
+
+  while (cache_obj != NULL) {
+    if (req->is_keybased_req)
+    {
+      assert(cache_obj->is_keybased_obj == true);
+      if (cache_obj->key != req->key)
+      {
+        cache_obj = cache_obj->hash_next;
+        continue;
+      }
+    }
+    else
+    {
+      if (cache_obj->obj_id != req->obj_id)
+      {
+        cache_obj = cache_obj->hash_next;
+        continue;
+      }
+    }
+
+    return cache_ck_hit;
+  }
+
+  return cache_ck_miss;
 }
 
 cache_ck_res_e GLCache_check(cache_t *cache, const request_t *req,

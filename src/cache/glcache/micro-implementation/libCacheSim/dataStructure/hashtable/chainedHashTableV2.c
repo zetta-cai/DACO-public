@@ -116,14 +116,47 @@ cache_obj_t *chained_hashtable_find_obj_id_v2(const hashtable_t *hashtable,
   return cache_obj;
 }
 
+// Siyuan: for key-value caching
+cache_obj_t *chained_hashtable_find_key_v2(const hashtable_t *hashtable,
+                                              const covered::Key& key)
+{
+  cache_obj_t *cache_obj = NULL;
+  uint64_t hv = get_hash_value_str(static_cast<const void*>(key.getKeystr().c_str()), key.getKeyLength());
+  hv = hv & hashmask(hashtable->hashpower);
+  cache_obj = hashtable->ptr_table[hv];
+
+  while (cache_obj) {
+    assert(cache_obj->is_keybased_obj == true);
+    if (cache_obj->key == key) {
+      return cache_obj;
+    }
+    cache_obj = cache_obj->hash_next;
+  }
+  return cache_obj;
+}
+
 cache_obj_t *chained_hashtable_find_v2(const hashtable_t *hashtable,
                                        const request_t *req) {
-  return chained_hashtable_find_obj_id_v2(hashtable, req->obj_id);
+  if (req->is_keybased_req) // Siyuan: for key-value caching
+  {
+    return chained_hashtable_find_key_v2(hashtable, req->key);
+  }
+  else
+  {
+    return chained_hashtable_find_obj_id_v2(hashtable, req->obj_id);
+  }
 }
 
 cache_obj_t *chained_hashtable_find_obj_v2(const hashtable_t *hashtable,
                                            const cache_obj_t *obj_to_find) {
-  return chained_hashtable_find_obj_id_v2(hashtable, obj_to_find->obj_id);
+  if (obj_to_find->is_keybased_obj) // Siyuan: for key-value caching
+  {
+    return chained_hashtable_find_key_v2(hashtable, obj_to_find->key);
+  }
+  else
+  {
+    return chained_hashtable_find_obj_id_v2(hashtable, obj_to_find->obj_id);
+  }
 }
 
 /* the user needs to make sure the added object is not in the hash table */

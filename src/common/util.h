@@ -148,6 +148,7 @@ namespace covered
         // (2) Time measurement
 
         static struct timespec getCurrentTimespec();
+        static uint64_t getCurrentTimeUs();
         static std::string getCurrentTimestr();
         static double getDeltaTimeUs(const struct timespec& current_timespec, const struct timespec& previous_timespec); // In units of microseconds
 

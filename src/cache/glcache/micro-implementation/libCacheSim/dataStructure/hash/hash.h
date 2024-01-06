@@ -40,8 +40,8 @@ typedef enum{
   #define XXH_INLINE_ALL
   #include "xxhash.h"
   #include "xxh3.h"
-  #define get_hash_value_int_64(key_p) (uint64_t) (XXH3_64bits((void*)(key_p), sizeof(obj_id_t)))
-  #define get_hash_value_str(key, key_len) (uint64_t) (XXH3_64bits((void*)(key), key_len))
+  #define get_hash_value_int_64(key_p) (uint64_t) (XXH3_64bits((const void*)(key_p), sizeof(obj_id_t)))
+  #define get_hash_value_str(key, key_len) (uint64_t) (XXH3_64bits((const void*)(key), key_len))
 #elif HASH_TYPE == WYHASH
   #include "wyhash.h"
   #define get_hash_value_int_64(key_p) (uint64_t) (wyhash64(*(obj_id_t*)key_p, HASH_SEED0))

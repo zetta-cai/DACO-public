@@ -17,6 +17,10 @@
 #include "../hash/hash.h"
 #include "hashtableStruct.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define OBJ_EMPTY(cache_obj) ((cache_obj)->obj_size == 0)
 
 static void chained_hashtable_remove_ptr_from_monitoring(
@@ -110,7 +114,7 @@ hashtable_t *create_chained_hashtable(const uint16_t hash_power) {
   return hashtable;
 }
 
-cache_obj_t *chained_hashtable_find(hashtable_t *hashtable, obj_id_t obj_id) {
+cache_obj_t *chained_hashtable_find_obj_id(hashtable_t *hashtable, obj_id_t obj_id) {
   cache_obj_t *cache_obj, *ret = NULL;
   uint64_t hv = get_hash_value_int_64(&obj_id);
   hv = hv & hashmask(hashtable->hashpower);
@@ -132,13 +136,46 @@ cache_obj_t *chained_hashtable_find(hashtable_t *hashtable, obj_id_t obj_id) {
   return ret;
 }
 
+// Siyuan: for key-value caching
+cache_obj_t *chained_hashtable_find_key(hashtable_t *hashtable, const covered::Key& key)
+{
+  cache_obj_t *cache_obj, *ret = NULL;
+  uint64_t hv = get_hash_value_str(static_cast<const void*>(key.getKeystr().c_str()), key.getKeyLength());
+  hv = hv & hashmask(hashtable->hashpower);
+  cache_obj = &hashtable->table[hv];
+  if (OBJ_EMPTY(cache_obj)) {
+    // the object does not exist
+    return NULL;
+  }
+
+  int depth = 0;
+  while (cache_obj) {
+    assert(cache_obj->is_keybased_obj == true);
+    depth += 1;
+    if (cache_obj->key == key) {
+      ret = cache_obj;
+      break;
+    }
+    cache_obj = cache_obj->hash_next;
+  }
+  return ret;
+
+}
+
 cache_obj_t *chained_hashtable_find_req(hashtable_t *hashtable,
                                         request_t *req) {
   cache_obj_t *cache_obj, *ret = NULL;
   uint64_t hv;
 
   if (req->hv == 0) {
-    hv = get_hash_value_int_64(&req->obj_id);
+    if (req->is_keybased_req) // Siyuan: support key-based lookup
+    {
+      hv = get_hash_value_str(static_cast<const void*>(req->key.getKeystr().c_str()), req->key.getKeyLength());
+    }
+    else
+    {
+      hv = get_hash_value_int_64(&req->obj_id);
+    }
     req->hv = hv;
   } else {
     hv = req->hv;
@@ -154,9 +191,20 @@ cache_obj_t *chained_hashtable_find_req(hashtable_t *hashtable,
   int depth = 0;
   while (cache_obj) {
     depth += 1;
-    if (cache_obj->obj_id == req->obj_id) {
-      ret = cache_obj;
-      break;
+    if (req->is_keybased_req) // Siyuan: support key-based lookup
+    {
+      assert(cache_obj->is_keybased_obj == true);
+      if (cache_obj->key == req->key) {
+        ret = cache_obj;
+        break;
+      }
+    }
+    else
+    {
+      if (cache_obj->obj_id == req->obj_id) {
+        ret = cache_obj;
+        break;
+      }
     }
     cache_obj = cache_obj->hash_next;
   }
@@ -170,7 +218,14 @@ cache_obj_t *chained_hashtable_find_req(hashtable_t *hashtable,
 
 cache_obj_t *chained_hashtable_find_obj(hashtable_t *hashtable,
                                         cache_obj_t *obj_to_find) {
-  return chained_hashtable_find(hashtable, obj_to_find->obj_id);
+  if (obj_to_find->is_keybased_obj) // Siyuan: for key-value caching
+  {
+    return chained_hashtable_find_key(hashtable, obj_to_find->key);
+  }
+  else
+  {
+    return chained_hashtable_find_obj_id(hashtable, obj_to_find->obj_id);
+  }
 }
 
 cache_obj_t *chained_hashtable_insert(hashtable_t *hashtable, request_t *req) {

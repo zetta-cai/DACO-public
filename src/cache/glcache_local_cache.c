@@ -4,6 +4,7 @@
 #include <sstream>
 
 #include <libCacheSim/evictionAlgo/GLCache.h> // src/cache/glcache/micro-implementation/build/include/libCacheSim/evictionAlgo/GLCache.h
+#include <libCacheSim/enum.h> // src/cache/glcache/micro-implementation/libCacheSim/include/libCacheSim/enum.h
 
 #include "common/util.h"
 
@@ -18,7 +19,7 @@ namespace covered
         oss << kClassName << " edge" << edge_idx;
         instance_name_ = oss.str();
 
-        // Refer to the same settings in lib/glcache/micro-implementation/libCacheSim/bin/cachesim/cli.c and lib/glcache/micro-implementation/test/test_glcache.c
+        // Refer to the same settings of cc_params in lib/glcache/micro-implementation/libCacheSim/bin/cachesim/cli.c and lib/glcache/micro-implementation/test/test_glcache.c
         common_cache_params_t cc_params = {
             .cache_size = capacity_bytes,
             .default_ttl = 86400 * 300,
@@ -191,6 +192,22 @@ namespace covered
         // NOTE: capacity has been checked by LocalCacheBase, while NO other custom object size checking here
         const bool is_valid_objsize = true;
         return is_valid_objsize;
+    }
+
+    request_t GLCacheLocalCache::buildRequest_(const Key& key, const Value& value) const
+    {
+        request_t req;
+        req.real_time = Util::getCurrentTimeUs();
+        req.hv = 0; // src/cache/glcache/micro-implementation/libCacheSim/cache/eviction/GLCache/GLCache.c will hash key to get a hash value
+        req.obj_id = 0; // NOT used by glcache due to key-based lookup
+        req.obj_size = value.getValuesize();
+        req.ttl = 0; // NOT used by glcache
+        req.op = req_op_e.OP_NOP; // NOT used by glcache
+        req.n_req = 0; // NOT used by glcache
+        req.next_access_vtime; // NOTE: we should NOT provide next access time in req, which is invalid assumption in practice
+        // TODO: END HERE
+
+        return req;
     }
 
 }

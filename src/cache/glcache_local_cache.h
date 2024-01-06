@@ -1,7 +1,7 @@
 /*
  * GLCacheLocalCache: local edge cache with GLCache policy (https://github.com/Thesys-lab/fast23-glcache).
  *
- * NOTE: all configuration and function calls refer to GLCache files, including lib/glcache/micro-implementation/test/test_glcache.c and lib/glcache/micro-implementation/libCacheSim/cache/eviction/GLCache/*, yet reimplement in C++ (see src/cache/glcache/micro-implementation/*) and fix libcachesim limitations (only metadata operations + fixed-length uint64_t key + impractical assumption of in-request next access time).
+ * NOTE: all configuration and function calls refer to GLCache files, including lib/glcache/micro-implementation/libCacheSim/bin/cachesim/* and lib/glcache/micro-implementation/libCacheSim/cache/eviction/GLCache/*, yet reimplement in C++ (see src/cache/glcache/micro-implementation/*) and fix libcachesim limitations (only metadata operations + fixed-length uint64_t key + impractical assumption of in-request next access time).
  *
  * Hack to support key-value caching, required interfaces, and cache size in units of bytes for capacity constraint.
  * 
@@ -16,6 +16,7 @@
 #include <string>
 
 #include <libCacheSim/cache.h> // src/cache/glcache/micro-implementation/build/include/libCacheSim/cache.h
+#include <libCacheSim/request.h> // src/cache/glcache/micro-implementation/libCacheSim/include/libCacheSim/request.h
 
 #include "cache/local_cache_base.h"
 
@@ -60,6 +61,9 @@ namespace covered
 
         virtual void checkPointersInternal_() const override;
         virtual bool checkObjsizeInternal_(const ObjectSize& objsize) const override;
+
+        // Build request for GLCache
+        static request_t buildRequest_(const Key& key, const Value& value = Value()) const;
 
         // Member variables
 

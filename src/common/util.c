@@ -278,6 +278,13 @@ namespace covered
         return current_timespec;
     }
 
+    uint64_t Util::getCurrentTimeUs()
+    {
+        struct timespec current_timespec = getCurrentTimespec();
+        double current_time_us = SEC2US(current_timespec.tv_sec) + double(current_timespec.tv_nsec) / double(1000.0);
+        return static_cast<uint64_t>(current_time_us);
+    }
+
     std::string Util::getCurrentTimestr()
     {
         // Calculate reuiqred data
