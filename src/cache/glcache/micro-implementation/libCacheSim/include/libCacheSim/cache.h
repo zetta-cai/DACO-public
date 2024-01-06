@@ -40,6 +40,8 @@ typedef cache_t *(*cache_init_func_ptr)(const common_cache_params_t,
 
 typedef void (*cache_free_func_ptr)(cache_t *);
 
+typedef cache_ck_res_e (*cache_exists_func_ptr)(cache_t *, const request_t *);
+
 typedef cache_ck_res_e (*cache_get_func_ptr)(cache_t *, const request_t *);
 
 typedef cache_ck_res_e (*cache_check_func_ptr)(cache_t *, const request_t *,
@@ -87,6 +89,7 @@ struct cache {
   struct hashtable *hashtable;
 
   cache_get_func_ptr get;
+  cache_exists_func_ptr exists; // Siyuan: check if key exists
   cache_check_func_ptr check;
   cache_can_insert_func_ptr can_insert;
   cache_insert_func_ptr insert;

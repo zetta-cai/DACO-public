@@ -157,6 +157,7 @@ cache_t *GLCache_init(const common_cache_params_t ccache_params,
   cache->cache_init = GLCache_init;
   cache->cache_free = GLCache_free;
   cache->get = GLCache_get;
+  cache->exists = GLCache_exists; // Siyuan: check if key exists
   cache->check = GLCache_check;
   cache->insert = GLCache_insert;
   cache->evict = GLCache_evict;
@@ -220,6 +221,12 @@ void GLCache_free(cache_t *cache) {
 
   my_free(sizeof(GLCache_params_t), params);
   cache_struct_free(cache);
+}
+
+// Siyuan: check if key exists
+cache_ck_res_e GLCache_exists(cache_t *cache, const request_t *req)
+{
+  // TODO: END HERE
 }
 
 cache_ck_res_e GLCache_check(cache_t *cache, const request_t *req,
