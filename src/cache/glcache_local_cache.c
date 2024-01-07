@@ -49,19 +49,23 @@ namespace covered
     bool GLCacheLocalCache::isLocalCachedInternal_(const Key& key) const
     {
         request_t req = buildRequest_(key);
-        bool is_cached = glcache_ptr_->exists(glcache_ptr_, &req);
+        cache_ck_res_e result = glcache_ptr_->exists(glcache_ptr_, &req);
+        bool is_cached = (result == cache_ck_hit);
 
         return is_cached;
     }
 
     // (2) Access local edge cache (KV data and local metadata)
 
-    bool S3fifoLocalCache::getLocalCacheInternal_(const Key& key, const bool& is_redirected, Value& value, bool& affect_victim_tracker) const
+    bool GLCacheLocalCache::getLocalCacheInternal_(const Key& key, const bool& is_redirected, Value& value, bool& affect_victim_tracker) const
     {
         UNUSED(is_redirected); // ONLY for COVERED
         UNUSED(affect_victim_tracker); // Only for COVERED
 
-        bool is_local_cached = s3fifo_cache_ptr_->get(key, value);
+        request_t req = buildRequest_(key);
+        cache_ck_res_e result = glcache_ptr_->get(glcache_ptr_, &req);
+        value = req->value;
+        bool is_local_cached = (result == cache_ck_hit);
 
         return is_local_cached;
     }
@@ -84,6 +88,7 @@ namespace covered
         return;
     }
 
+    // TODO: END HERE
     bool S3fifoLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value, const bool& is_getrsp, const bool& is_global_cached, bool& affect_victim_tracker, bool& is_successful)
     {
         const bool is_valid_objsize = isValidObjsize_(key, value); // Object size checking

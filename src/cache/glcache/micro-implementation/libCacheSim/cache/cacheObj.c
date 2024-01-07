@@ -33,6 +33,11 @@ void copy_request_to_cache_obj(cache_obj_t *cache_obj, const request_t *req) {
     cache_obj->exp_time = UINT32_MAX;
 #endif
   cache_obj->obj_id = req->obj_id;
+
+  // Siyuan: for key-value caching
+  cache_obj->is_keybased_obj = req->is_keybased_req;
+  cache_obj->key = req->key;
+  cache_obj->value = req->value;
 }
 
 /**

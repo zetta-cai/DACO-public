@@ -58,8 +58,15 @@ static inline cache_obj_t *_last_obj_in_bucket(const hashtable_t *hashtable,
 /* add an object to the hashtable */
 static inline void add_to_bucket(hashtable_t *hashtable,
                                  cache_obj_t *cache_obj) {
-  uint64_t hv = get_hash_value_int_64(&cache_obj->obj_id) &
-                hashmask(hashtable->hashpower);
+  uint64_t hv = 0;
+  if (cache_obj->is_keybased_obj) // Siyuan: for key-value caching
+  {
+    hv = get_hash_value_str(static_cast<const void*>(cache_obj->key.getKeystr().c_str()), cache_obj->key.getKeyLength()) & hashmask(hashtable->hashpower);
+  }
+  else
+  {
+    hv = get_hash_value_int_64(&cache_obj->obj_id) & hashmask(hashtable->hashpower);
+  }
   if (hashtable->ptr_table[hv] == NULL) {
     hashtable->ptr_table[hv] = cache_obj;
     return;

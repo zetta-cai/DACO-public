@@ -104,7 +104,10 @@ cache_t *GLCache_init(const common_cache_params_t ccache_params,
   cache_t *cache = cache_struct_init("GLCache", ccache_params);
 
   if (ccache_params.consider_obj_metadata) {
-    cache->per_obj_metadata_size = 2 + 1 + 8;  // freq, bool, history
+    // Siyuan: fix incorrect object-level metadata size
+    //cache->per_obj_metadata_size = 2 + 1 + 8;  // freq, bool, history
+    // NOTE: NOT consider key and value size here, as glcache will increase/decrease obj_size during admission (see GLCache_insert) and eviction (GLCache_evict)
+    cache->per_obj_metadata_size = sizeof(struct cache_obj *) + sizeof(obj_id_t) + sizeof(uint32_t) + sizeof(void *) + 4 * sizeof(int64_t) + sizeof(int32_t) + sizeof(int16_t) * 4; // hash_next pointer, obj_id, obj_size, segment pointer + next/last access rtime/vtime + freq + segment idx + active + in_cache + seen_after_snapshot
   } else {
     cache->per_obj_metadata_size = 0;
   }
@@ -360,7 +363,6 @@ cache_ck_res_e GLCache_get(cache_t *cache, request_t *req) {
   return ret;
 }
 
-// TODO: END HERE
 cache_obj_t *GLCache_insert(cache_t *cache, const request_t *req) {
   GLCache_params_t *params = cache->eviction_params;
   bucket_t *bucket = &params->buckets[0];

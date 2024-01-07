@@ -233,8 +233,15 @@ cache_obj_t *chained_hashtable_insert(hashtable_t *hashtable, request_t *req) {
                                     CHAINED_HASHTABLE_EXPAND_THRESHOLD))
     _chained_hashtable_expand(hashtable);
 
-  uint64_t hv =
-      get_hash_value_int_64(&req->obj_id) & hashmask(hashtable->hashpower);
+  uint64_t hv = 0;
+  if (req->is_keybased_req) // Siyuan: for key-value caching
+  {
+    hv = get_hash_value_str(static_cast<const void*>(req->key.getKeystr().c_str()), req->key.getKeyLength()) & hashmask(hashtable->hashpower);
+  }
+  else
+  {
+    hv = get_hash_value_int_64(&req->obj_id) & hashmask(hashtable->hashpower);
+  }
   cache_obj_t *cache_obj = &hashtable->table[hv];
   if (OBJ_EMPTY(cache_obj)) {
     // this place is available

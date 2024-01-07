@@ -42,7 +42,7 @@ typedef void (*cache_free_func_ptr)(cache_t *);
 
 typedef cache_ck_res_e (*cache_exists_func_ptr)(cache_t *, const request_t *);
 
-typedef cache_ck_res_e (*cache_get_func_ptr)(cache_t *, const request_t *);
+typedef cache_ck_res_e (*cache_get_func_ptr)(cache_t *, request_t *);
 
 // Siyuan: use request_t* instead of const request_t* such that we can get value of cached object
 typedef cache_ck_res_e (*cache_check_func_ptr)(cache_t *, request_t *,
