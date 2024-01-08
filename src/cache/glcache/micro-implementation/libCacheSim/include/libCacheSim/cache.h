@@ -48,6 +48,9 @@ typedef cache_ck_res_e (*cache_get_func_ptr)(cache_t *, request_t *);
 typedef cache_ck_res_e (*cache_check_func_ptr)(cache_t *, request_t *,
                                                const bool);
 
+// Siyuan: get value of cached object
+typedef cache_ck_res_e (*cache_update_func_ptr)(cache_t *, request_t *);
+
 typedef bool (*cache_can_insert_func_ptr)(cache_t *cache, const request_t *req);
 
 typedef cache_obj_t *(*cache_insert_func_ptr)(cache_t *, const request_t *);
@@ -92,6 +95,7 @@ struct cache {
   cache_get_func_ptr get;
   cache_exists_func_ptr exists; // Siyuan: check if key exists
   cache_check_func_ptr check;
+  cache_update_func_ptr update; // Siyuan: update value of cached object
   cache_can_insert_func_ptr can_insert;
   cache_insert_func_ptr insert;
   cache_evict_func_ptr evict;
@@ -183,6 +187,9 @@ cache_ck_res_e cache_check_base(cache_t *cache, const request_t *req,
  */
 // Siyuan: use request_t* instead of const request_t* such that we can get value of cached object
 cache_ck_res_e cache_get_base(cache_t *cache, request_t *req);
+
+// Siyuan: a common cache update function
+cache_ck_res_e cache_update_base(cache_t *cache, request_t *req);
 
 /**
  * @brief check whether the object can be inserted into the cache

@@ -7,7 +7,7 @@
 static inline void obj_init(cache_t *cache, const request_t *req,
                             cache_obj_t *cache_obj, segment_t *seg) {
   GLCache_params_t *params = cache->eviction_params;
-  copy_request_to_cache_obj(cache_obj, req);
+  copy_request_to_cache_obj(cache_obj, req); // Siyuan: this will copy key-value pair from req into cache_obj
   cache_obj->GLCache.freq = 0;
   // Siyuan: in-req next access time is invalid assumption in practice
   // cache_obj->GLCache.last_access_rtime = req->real_time;

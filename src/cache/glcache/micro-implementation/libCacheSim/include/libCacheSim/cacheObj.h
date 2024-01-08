@@ -106,6 +106,7 @@ typedef struct cache_obj {
     struct cache_obj *prev;
     struct cache_obj *next;
   } queue;  // for LRU, FIFO, etc.
+  struct cache_obj *evict_next; // Siyuan: for GLCache (NULL by default due to memset when allocate_new_seg)
 #if defined(SUPPORT_TTL) && SUPPORT_TTL == 1
   uint32_t exp_time;
 #endif

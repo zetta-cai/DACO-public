@@ -137,20 +137,42 @@ void GLCache_merge_segs(cache_t *cache, bucket_t *bucket, segment_t **segs) {
 
 // called when there is no segment can be merged due to fragmentation
 // different from clean_one_seg becausee this function also updates cache state
-int evict_one_seg(cache_t *cache, segment_t *seg) {
+int evict_one_seg(cache_t *cache, segment_t *seg, cache_obj_t *evicted_obj) {
   VVERBOSE("req %lu, evict one seg id %d occupied size %lu/%lu\n", cache->n_req, seg->seg_id,
            cache->occupied_size, cache->cache_size);
   GLCache_params_t *params = cache->eviction_params;
   bucket_t *bucket = &params->buckets[seg->bucket_id];
 
   int n_cleaned = 0;
+  cache_obj_t *tail_evicted_obj = NULL; // Siyuan: for victim copy
   for (int i = 0; i < seg->n_obj; i++) {
     cache_obj_t *cache_obj = &seg->objs[i];
+
+    assert(cache_obj->evict_next == NULL); // Siyuan: for victim copy
 
     obj_evict_update(cache, cache_obj);
 
     // if (hashtable_try_delete(cache->hashtable, cache_obj)) {
     if (cache_obj->GLCache.in_cache == 1) {
+      if (evicted_obj != NULL) // Siyuan: for victim copy
+      {
+        if (i == 0) // The first victim
+        {
+          memcpy(evicted_obj, cache_obj, sizeof(cache_obj_t));
+          tail_evicted_obj = evicted_obj;
+        }
+        else // The non-first victim linked by evict_next at the tail of evicted objects
+        {
+          tail_evicted_obj->evict_next = my_malloc(cache_obj_t);
+          assert(tail_evicted_obj->evict_next != NULL);
+          memcpy(tail_evicted_obj->evict_next, cache_obj, sizeof(cache_obj_t));
+
+          tail_evicted_obj = tail_evicted_obj->evict_next;
+        }
+        assert(tail_evicted_obj != NULL);
+        assert(tail_evicted_obj->evict_next == NULL);
+      }
+
       cache_obj->GLCache.in_cache = 0;
 
       n_cleaned += 1;
@@ -168,7 +190,7 @@ int evict_one_seg(cache_t *cache, segment_t *seg) {
     transform_seg_to_training(cache, bucket, seg);
   } else {
     remove_seg_from_bucket(params, bucket, seg);
-    clean_one_seg(cache, seg);
+    clean_one_seg(cache, seg); // Siyuan: NO double free due to hashtable->external_obj = true!!!
   }
 
   return n_cleaned;

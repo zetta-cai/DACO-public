@@ -114,7 +114,7 @@ cache_t *GLCache_init(const common_cache_params_t ccache_params,
 
   // tells hash table that the cache_obj does not need to be free when removed
   // from the hash table
-  cache->hashtable->external_obj = true;
+  cache->hashtable->external_obj = true; // Siyuan: with external_obj = true, hashtable will NOT free the space of cache_obj_t for hashtable_delete, as cache_obj_t is allocated/released by segment_t
   cache->init_params = cache_specific_params;
 
   GLCache_params_t *params = my_malloc(GLCache_params_t);
@@ -161,6 +161,7 @@ cache_t *GLCache_init(const common_cache_params_t ccache_params,
   cache->cache_free = GLCache_free;
   cache->get = GLCache_get;
   cache->exists = GLCache_exists; // Siyuan: check if key exists
+  cache->update = GLCache_update; // Siyuan: update value of cached object
   cache->check = GLCache_check; // Siyuan: we pass request_t* such that we can get value of cached object
   cache->insert = GLCache_insert;
   cache->evict = GLCache_evict;
@@ -270,9 +271,10 @@ cache_ck_res_e GLCache_check(cache_t *cache, request_t *req,
     return cache_ck_miss;
   }
 
-  if (!update_cache) {
-    assert(0);
-  }
+  // Siyuan: update_cache = false for get, yet = true for update
+  // if (!update_cache) {
+  //   assert(0);
+  // }
 
   int n_in_cache = 0;
   while (cache_obj != NULL) {
@@ -296,13 +298,36 @@ cache_ck_res_e GLCache_check(cache_t *cache, request_t *req,
       }
     }
 
-    // Siyuan: get value of the cached object
-    req->value = cache_obj->value;
+    segment_t *seg = cache_obj->GLCache.segment;
+    assert(seg != NULL); // Siyuan: seg should NOT be NULL, which is allocated in obj_init
+
+    if (!update_cache) // Siyuan: get value of the cached object (triggered by GLCache_get)
+    {
+      req->value = cache_obj->value;
+    }
+    else // Siyuan: update value of the cached object (triggered by GLCache_update)
+    {
+      // Get original object size
+      const uint32_t original_obj_size = cache_obj->obj_size;
+
+      // Update value and object size
+      cache_obj->obj_size = req->obj_size;
+      cache_obj->value = req->value;
+
+      // Update segment-level and cache-level cache size usage (NO need to consider cache->per_obj_metadata_size which is fixed)
+      if (cache_obj->obj_size > original_obj_size)
+      {
+        seg->n_byte += (cache_obj->obj_size - original_obj_size);
+        cache->occupied_size += (cache_obj->obj_size - original_obj_size);
+      }
+      else if (cache_obj->obj_size < original_obj_size)
+      {
+        seg->n_byte -= (original_obj_size - cache_obj->obj_size);
+        cache->occupied_size -= (original_obj_size - cache_obj->obj_size);
+      }
+    }
 
     // Update object-level and segment-level metadata for the cached object, which will be used for training model to calculate segment-level pred_utility
-
-    segment_t *seg = cache_obj->GLCache.segment;
-
     if (cache_obj->GLCache.in_cache == 1) {
       // update features
       n_in_cache++;
@@ -339,7 +364,36 @@ cache_ck_res_e GLCache_check(cache_t *cache, request_t *req,
 cache_ck_res_e GLCache_get(cache_t *cache, request_t *req) {
   GLCache_params_t *params = cache->eviction_params;
 
-  cache_ck_res_e ret = cache_get_base(cache, req); // Siyuan: this will update req->value if with cache hit
+  cache_ck_res_e ret = cache_get_base(cache, req); // Siyuan: this will read cache_obj->value into req->value if with cache hit
+
+  if (params->type == LOGCACHE_LEARNED ||
+      params->type == LOGCACHE_ITEM_ORACLE) {
+    /* generate training data by taking a snapshot */
+    learner_t *l = &params->learner;
+    if (params->curr_rtime > 86400) {
+      if (l->n_train == -1) {
+        snapshot_segs_to_training_data(cache);
+        l->last_train_rtime = params->curr_rtime;
+        l->n_train = 0;
+      } else if (params->curr_rtime - l->last_train_rtime >=
+                 params->retrain_intvl + 1) {
+        train(cache);
+        snapshot_segs_to_training_data(cache);
+      }
+    }
+  }
+
+  update_cache_state(cache, req, ret);
+
+  return ret;
+}
+
+// Siyuan: update value of cached object
+cache_ck_res_e GLCache_update(cache_t *cache, request_t *req)
+{
+  GLCache_params_t *params = cache->eviction_params;
+
+  cache_ck_res_e ret = cache_update_base(cache, req); // Siyuan: this will update cache_obj->value by req->value if with cache hit
 
   if (params->type == LOGCACHE_LEARNED ||
       params->type == LOGCACHE_ITEM_ORACLE) {
@@ -384,7 +438,7 @@ cache_obj_t *GLCache_insert(cache_t *cache, const request_t *req) {
   }
 
   cache_obj_t *cache_obj = &seg->objs[seg->n_obj];
-  obj_init(cache, req, cache_obj, seg);
+  obj_init(cache, req, cache_obj, seg); // Siyuan: this will copy key-value pair from req into cache_obj
   hashtable_insert_obj(cache->hashtable, cache_obj);
 
   seg->n_byte += cache_obj->obj_size + cache->per_obj_metadata_size;
@@ -419,7 +473,7 @@ void GLCache_evict(cache_t *cache, const request_t *req,
           params->n_in_use_segs);
     }
 
-    evict_one_seg(cache, params->obj_sel.segs_to_evict[0]);
+    evict_one_seg(cache, params->obj_sel.segs_to_evict[0], evicted_obj);
     return;
   }
 

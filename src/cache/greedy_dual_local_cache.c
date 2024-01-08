@@ -111,7 +111,7 @@ namespace covered
         // Check is local cached
         bool is_local_cached = greedy_dual_cache_ptr_->exists(key);
 
-        if (is_local_cached) // Key alread exists
+        if (is_local_cached) // Key already exists
         {
             if (!is_valid_objsize)
             {

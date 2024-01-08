@@ -69,7 +69,7 @@ int clean_one_seg(cache_t *cache, segment_t *seg) {
       n_cleaned += 1;
     }
   }
-  my_free(sizeof(cache_obj_t) * params->n_obj, seg->objs);
+  my_free(sizeof(cache_obj_t) * params->n_obj, seg->objs); // Siyuan: NO double free due to hashtable->external_obj = true!!!
   my_free(sizeof(segment_t), seg);
 
   return n_cleaned;

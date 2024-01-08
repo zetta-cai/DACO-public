@@ -4,6 +4,7 @@
 #include <sstream>
 
 #include <libCacheSim/evictionAlgo/GLCache.h> // src/cache/glcache/micro-implementation/build/include/libCacheSim/evictionAlgo/GLCache.h
+#include <libCacheSim/cacheObj.h> // Siyuan: src/cache/glcache/micro-implementation/libCacheSim/include/libCacheSim/cacheObj.h
 #include <libCacheSim/enum.h> // src/cache/glcache/micro-implementation/libCacheSim/include/libCacheSim/enum.h
 
 #include "common/util.h"
@@ -64,13 +65,13 @@ namespace covered
 
         request_t req = buildRequest_(key);
         cache_ck_res_e result = glcache_ptr_->get(glcache_ptr_, &req);
-        value = req->value;
+        value = req.value;
         bool is_local_cached = (result == cache_ck_hit);
 
         return is_local_cached;
     }
 
-    std::list<VictimCacheinfo> S3fifoLocalCache::getLocalSyncedVictimCacheinfosFromLocalCacheInternal_() const
+    std::list<VictimCacheinfo> GLCacheLocalCache::getLocalSyncedVictimCacheinfosFromLocalCacheInternal_() const
     {
         std::list<VictimCacheinfo> local_synced_victim_cacheinfos;
 
@@ -80,7 +81,7 @@ namespace covered
         return local_synced_victim_cacheinfos;
     }
 
-    void S3fifoLocalCache::getCollectedPopularityFromLocalCacheInternal_(const Key& key, CollectedPopularity& collected_popularity) const
+    void GLCacheLocalCache::getCollectedPopularityFromLocalCacheInternal_(const Key& key, CollectedPopularity& collected_popularity) const
     {
         Util::dumpErrorMsg(instance_name_, "getCollectedPopularityFromLocalCacheInternal_() can ONLY be invoked by COVERED local cache!");
         exit(1);
@@ -88,8 +89,7 @@ namespace covered
         return;
     }
 
-    // TODO: END HERE
-    bool S3fifoLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value, const bool& is_getrsp, const bool& is_global_cached, bool& affect_victim_tracker, bool& is_successful)
+    bool GLCacheLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value, const bool& is_getrsp, const bool& is_global_cached, bool& affect_victim_tracker, bool& is_successful)
     {
         const bool is_valid_objsize = isValidObjsize_(key, value); // Object size checking
 
@@ -99,9 +99,11 @@ namespace covered
         is_successful = false;
 
         // Check is local cached
-        bool is_local_cached = s3fifo_cache_ptr_->exists(key);
+        request_t req = buildRequest_(key);
+        cache_ck_res_e result = glcache_ptr_->exists(glcache_ptr_, &req);
+        bool is_local_cached = (result == cache_ck_hit);
         
-        if (is_local_cached) // Key alread exists
+        if (is_local_cached) // Key already exists
         {
             if (!is_valid_objsize)
             {
@@ -110,7 +112,9 @@ namespace covered
             }
 
             // Update with the latest value
-            bool tmp_is_local_cached = s3fifo_cache_ptr_->update(key, value);
+            request_t tmp_req = buildRequest_(key, value);
+            cache_ck_res_e tmp_result = glcache_ptr_->update(glcache_ptr_, &tmp_req);
+            bool tmp_is_local_cached = (tmp_result == cache_ck_hit);
             assert(tmp_is_local_cached);
             is_successful = true;
         }
@@ -120,27 +124,43 @@ namespace covered
 
     // (3) Local edge cache management
 
-    bool S3fifoLocalCache::needIndependentAdmitInternal_(const Key& key, const Value& value) const
+    bool GLCacheLocalCache::needIndependentAdmitInternal_(const Key& key, const Value& value) const
     {
         UNUSED(value);
         
-        // S3-FIFO cache uses default admission policy (i.e., always admit) (i.e., always admit), which always returns true as long as key is not cached
+        // GL-Cache cache uses default admission policy (i.e., always admit) (i.e., always admit), which always returns true as long as key is not cached
         bool is_local_cached = isLocalCachedInternal_(key);
         return !is_local_cached;
     }
 
-    void S3fifoLocalCache::admitLocalCacheInternal_(const Key& key, const Value& value, const bool& is_neighbor_cached, bool& affect_victim_tracker, bool& is_successful)
+    void GLCacheLocalCache::admitLocalCacheInternal_(const Key& key, const Value& value, const bool& is_neighbor_cached, bool& affect_victim_tracker, bool& is_successful)
     {
         UNUSED(is_neighbor_cached); // ONLY for COVERED
         UNUSED(affect_victim_tracker); // ONLY for COVERED
-        
-        s3fifo_cache_ptr_->admit(key, value);
-        is_successful = true;
+
+        // Check is local cached
+        request_t req = buildRequest_(key);
+        cache_ck_res_e result = glcache_ptr_->exists(glcache_ptr_, &req);
+        bool is_local_cached = (result == cache_ck_hit);
+
+        if (!is_local_cached) // Admit if NOT exist
+        {
+            request_t tmp_req = buildRequest_(key, value);
+            cache_obj_t* tmp_cache_obj_ptr = glcache_ptr_->insert(glcache_ptr_, &tmp_req);
+            bool tmp_is_local_cached = (tmp_cache_obj_ptr != NULL);
+            assert(tmp_is_local_cached);
+
+            is_successful = true;
+        }
+        else
+        {
+            is_successful = false;
+        }
 
         return;
     }
 
-    bool S3fifoLocalCache::getLocalCacheVictimKeysInternal_(std::unordered_set<Key, KeyHasher>& keys, std::list<VictimCacheinfo>& victim_cacheinfos, const uint64_t& required_size) const
+    bool GLCacheLocalCache::getLocalCacheVictimKeysInternal_(std::unordered_set<Key, KeyHasher>& keys, std::list<VictimCacheinfo>& victim_cacheinfos, const uint64_t& required_size) const
     {
         assert(hasFineGrainedManagement());
 
@@ -150,7 +170,7 @@ namespace covered
         return false;
     }
 
-    bool S3fifoLocalCache::evictLocalCacheWithGivenKeyInternal_(const Key& key, Value& value)
+    bool GLCacheLocalCache::evictLocalCacheWithGivenKeyInternal_(const Key& key, Value& value)
     {        
         assert(hasFineGrainedManagement());
 
@@ -160,6 +180,7 @@ namespace covered
         return false;
     }
 
+    // TODO: END HERE
     void S3fifoLocalCache::evictLocalCacheNoGivenKeyInternal_(std::unordered_map<Key, Value, KeyHasher>& victims, const uint64_t& required_size)
     {
         assert(!hasFineGrainedManagement());
