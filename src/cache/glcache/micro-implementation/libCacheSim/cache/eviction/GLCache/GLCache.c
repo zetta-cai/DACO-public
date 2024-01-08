@@ -483,7 +483,7 @@ void GLCache_evict(cache_t *cache, const request_t *req,
   }
   params->n_evictions += 1;
 
-  GLCache_merge_segs(cache, bucket, params->obj_sel.segs_to_evict);
+  GLCache_merge_segs(cache, bucket, params->obj_sel.segs_to_evict, evicted_obj);
 }
 
 void GLCache_remove_obj(cache_t *cache, cache_obj_t *obj_to_remove) {

@@ -9,6 +9,9 @@ set(${PROJECT_NAME}_VERSION_PATCH 0)
 set(${PROJECT_NAME}_RELEASE_VERSION ${${PROJECT_NAME}_VERSION_MAJOR}.${${PROJECT_NAME}_VERSION_MINOR})
 set(${PROJECT_NAME}_VERSION ${${PROJECT_NAME}_RELEASE_VERSION}.${${PROJECT_NAME}_VERSION_PATCH})
 
+# Siyuan: enforce to use g++ to compile glcache for key-value caching
+# Alternative: -DCMAKE_C_COMPILER=g++ -DCMAKE_CXX_COMPILER=g++
+set(CMAKE_C_COMPILER g++)
 
 ########################################
 # detect platform #
@@ -44,7 +47,7 @@ endif()
 # define options #
 ########################################
 option(USE_HUGEPAGE "use transparent huge page, can provide % improvement, do `echo madvise | sudo tee /sys/kernel/mm/transparent_hugepage/enabled`" ON)
-option(ENABLE_TESTS "whether enable test" ON)
+option(ENABLE_TESTS "whether enable test" OFF) # Siyuan: disable CTest to avoid C compiler checking
 option(ENABLE_GLCACHE "enable group-learned cache" ON)
 option(SUPPORT_TTL "whether support TTL" OFF)
 option(SUPPORT_ZSTD_TRACE "whether support zstd trace" ON)

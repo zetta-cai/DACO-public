@@ -181,13 +181,49 @@ namespace covered
     }
 
     // TODO: END HERE
-    void S3fifoLocalCache::evictLocalCacheNoGivenKeyInternal_(std::unordered_map<Key, Value, KeyHasher>& victims, const uint64_t& required_size)
+    void GLCacheLocalCache::evictLocalCacheNoGivenKeyInternal_(std::unordered_map<Key, Value, KeyHasher>& victims, const uint64_t& required_size)
     {
         assert(!hasFineGrainedManagement());
 
         UNUSED(required_size);
 
-        s3fifo_cache_ptr_->evictNoGivenKey(victims);
+        cache_obj_t* evicted_obj = static_cast<cache_obj_t*>(malloc(sizeof(cache_obj_t)));
+        assert(evicted_obj != NULL);
+        memset(evicted_obj, 0, sizeof(cache_obj_t));
+        assert(evicted_obj->is_keybased_obj == false);
+        glcache_ptr_->evict(glcache_ptr_, NULL, evicted_obj);
+
+        // Convert evicted objs into victims
+        std::vector<cache_obj_t*> objptrs; // used for memory free
+        if (evicted_obj->is_keybased_obj == true) // Must memcpy some cached object(s) into evicted_obj, i.e., with victim(s)
+        {
+            cache_obj_t* tmp_objptr = evicted_obj; // Shallow copy
+            while (tmp_objptr != NULL)
+            {
+                assert(tmp_objptr->is_keybased_obj == true);
+
+                objptrs.push_back(tmp_objptr);
+                if (victims.find(tmp_objptr->key) == victims.end()) // NOT found
+                {
+                    victims.insert(std::pair(tmp_objptr->key, tmp_objptr->value));
+                }
+
+                tmp_objptr = tmp_objptr->evict_next;
+            }
+        }
+        else // No victim found
+        {
+            objptrs.push_back(evicted_obj);
+        }
+
+        // Release allocated cache objects
+        for (uint32_t i = 0; i < objptrs.size(); i++)
+        {
+            assert(objptrs[i] != NULL);
+            free(objptrs[i]);
+            objptrs[i] = NULL;
+        }
+        evicted_obj = NULL; // I.e., objptrs[0]
 
         return;
     }

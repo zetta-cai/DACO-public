@@ -54,7 +54,7 @@ static void assert_seg_not_in_bucket(GLCache_params_t *params, bucket_t *bucket,
 }
 
 /** merge multiple segments into one segment **/
-void GLCache_merge_segs(cache_t *cache, bucket_t *bucket, segment_t **segs) {
+void GLCache_merge_segs(cache_t *cache, bucket_t *bucket, segment_t **segs, cache_obj_t *evicted_obj) {
   GLCache_params_t *params = cache->eviction_params;
 
   DEBUG_ASSERT(bucket->bucket_id == segs[0]->bucket_id);
@@ -90,11 +90,13 @@ void GLCache_merge_segs(cache_t *cache, bucket_t *bucket, segment_t **segs) {
   #ifdef RANDOMIZE_MERGE
   int pos = 0;
   #endif
+  cache_obj_t *tail_evicted_obj = NULL; // Siyuan: for victim copy
   for (int i = 0; i < params->n_merge; i++) {
     // merge n segments into one segment
     DEBUG_ASSERT(segs[i]->magic == MAGIC);
     for (int j = 0; j < segs[i]->n_obj; j++) {
       cache_obj = &segs[i]->objs[j];
+      assert(cache_obj->evict_next == NULL); // Siyuan: for victim copy
       #ifdef RANDOMIZE_MERGE
       double obj_score = params->obj_sel.score_array_offset[pos++];
       #else 
@@ -114,6 +116,26 @@ void GLCache_merge_segs(cache_t *cache, bucket_t *bucket, segment_t **segs) {
         new_seg->n_obj += 1;
         new_seg->n_byte += cache_obj->obj_size;
       } else {
+        if (evicted_obj != NULL) // Siyuan: for victim copy
+        {
+          if (tail_evicted_obj == NULL) // The first victim
+          {
+            memcpy(evicted_obj, cache_obj, sizeof(cache_obj_t));
+            tail_evicted_obj = evicted_obj;
+          }
+          else // The non-first victim linked by evict_next at the tail of evicted objects
+          {
+            tail_evicted_obj->evict_next = my_malloc(cache_obj_t);
+            assert(tail_evicted_obj->evict_next != NULL);
+            memset(tail_evicted_obj->evict_next, 0, sizeof(cache_obj_t));
+            memcpy(tail_evicted_obj->evict_next, cache_obj, sizeof(cache_obj_t));
+
+            tail_evicted_obj = tail_evicted_obj->evict_next;
+          }
+          assert(tail_evicted_obj != NULL);
+          assert(tail_evicted_obj->evict_next == NULL);
+        }
+
         cache->n_obj -= 1;
         cache->occupied_size -= (cache_obj->obj_size + cache->per_obj_metadata_size);
       }
@@ -156,7 +178,7 @@ int evict_one_seg(cache_t *cache, segment_t *seg, cache_obj_t *evicted_obj) {
     if (cache_obj->GLCache.in_cache == 1) {
       if (evicted_obj != NULL) // Siyuan: for victim copy
       {
-        if (i == 0) // The first victim
+        if (tail_evicted_obj == NULL) // The first victim
         {
           memcpy(evicted_obj, cache_obj, sizeof(cache_obj_t));
           tail_evicted_obj = evicted_obj;
@@ -165,6 +187,7 @@ int evict_one_seg(cache_t *cache, segment_t *seg, cache_obj_t *evicted_obj) {
         {
           tail_evicted_obj->evict_next = my_malloc(cache_obj_t);
           assert(tail_evicted_obj->evict_next != NULL);
+          memset(tail_evicted_obj->evict_next, 0, sizeof(cache_obj_t));
           memcpy(tail_evicted_obj->evict_next, cache_obj, sizeof(cache_obj_t));
 
           tail_evicted_obj = tail_evicted_obj->evict_next;

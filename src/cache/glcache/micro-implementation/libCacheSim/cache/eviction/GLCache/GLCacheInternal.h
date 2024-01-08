@@ -270,9 +270,9 @@ void rank_segs(cache_t *cache);
 /********************** eviction ********************/
 bucket_t *select_segs_to_evict(cache_t *cache, segment_t **segs);
 
-void GLCache_merge_segs(cache_t *cache, bucket_t *bucket, segment_t **segs);
+void GLCache_merge_segs(cache_t *cache, bucket_t *bucket, segment_t **segs, cache_obj_t *evicted_obj); // Siyuan: get evicted victims
 
-int evict_one_seg(cache_t *cache, segment_t *seg, cache_obj_t *evicted_obj);
+int evict_one_seg(cache_t *cache, segment_t *seg, cache_obj_t *evicted_obj); // Siyuan: get evicted victims
 
 /************* feature *****************/
 void seg_hit_update(GLCache_params_t *params, cache_obj_t *cache_obj);
