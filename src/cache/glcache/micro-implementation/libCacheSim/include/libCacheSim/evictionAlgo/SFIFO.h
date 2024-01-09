@@ -28,7 +28,7 @@ cache_ck_res_e SFIFO_get(cache_t *cache, request_t *req);
 
 void SFIFO_remove(cache_t *cache, const obj_id_t obj_id);
 
-cache_obj_t *SFIFO_insert(cache_t *cache, const request_t *req);
+cache_obj_t *SFIFO_insert(cache_t *cache, request_t *req);
 
 cache_obj_t *SFIFO_to_evict(cache_t *cache);
 

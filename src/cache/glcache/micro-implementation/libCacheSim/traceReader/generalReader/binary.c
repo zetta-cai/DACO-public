@@ -231,7 +231,7 @@ int binary_read_one_req(reader_t *reader, request_t *req) {
 
   /* read operation */
   if (params->op_field_idx > 0) {
-    req->op = read_data(start + params->op_offset, params->op_format);
+    req->op = static_cast<req_op_e>(read_data(start + params->op_offset, params->op_format)); // Siyuan: explicit type conversion
   }
 
 #ifdef ENABLE_TTL

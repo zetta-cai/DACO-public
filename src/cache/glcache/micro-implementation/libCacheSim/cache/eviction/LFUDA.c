@@ -32,7 +32,7 @@ static int _verify(cache_t *cache) {
   /* update min freq */
   for (uint64_t freq = 1; freq <= LFUDA_params->max_freq; freq++) {
     freq_node_t *freq_node =
-        g_hash_table_lookup(LFUDA_params->freq_map, GSIZE_TO_POINTER(freq));
+        (freq_node_t *)g_hash_table_lookup(LFUDA_params->freq_map, GSIZE_TO_POINTER(freq));
     if (freq_node != NULL) {
       uint32_t n_obj = 0;
       cache_obj = freq_node->first_obj;
@@ -113,7 +113,7 @@ cache_ck_res_e LFUDA_check(cache_t *cache, request_t *req,
       LFUDA_params->max_freq = cache_obj->lfu.freq;
     }
 
-    freq_node_t *new_node = g_hash_table_lookup(
+    freq_node_t *new_node = (freq_node_t *)g_hash_table_lookup(
         LFUDA_params->freq_map, GSIZE_TO_POINTER(cache_obj->lfu.freq));
     if (new_node == NULL) {
       new_node = my_malloc_n(freq_node_t, 1);
@@ -128,7 +128,7 @@ cache_ck_res_e LFUDA_check(cache_t *cache, request_t *req,
       new_node->n_obj += 1;
     }
 
-    freq_node_t *old_node = g_hash_table_lookup(
+    freq_node_t *old_node = (freq_node_t *)g_hash_table_lookup(
         LFUDA_params->freq_map,
         GSIZE_TO_POINTER(cache_obj->lfu.freq - LFUDA_params->min_freq));
     DEBUG_ASSERT(old_node != NULL);
@@ -156,12 +156,12 @@ cache_ck_res_e LFUDA_get(cache_t *cache, request_t *req) {
   return cache_get_base(cache, req);
 }
 
-cache_obj_t *LFUDA_insert(cache_t *cache, const request_t *req) {
+cache_obj_t *LFUDA_insert(cache_t *cache, request_t *req) {
   LFUDA_params_t *params = (LFUDA_params_t *)(cache->eviction_params);
   cache_obj_t *cache_obj = cache_insert_base(cache, req);
   cache_obj->lfu.freq = params->min_freq + 1;
 
-  freq_node_t *new_node = g_hash_table_lookup(
+  freq_node_t *new_node = (freq_node_t *)g_hash_table_lookup(
       params->freq_map, GSIZE_TO_POINTER(cache_obj->lfu.freq));
   if (new_node == NULL) {
     new_node = my_malloc_n(freq_node_t, 1);
@@ -193,9 +193,9 @@ cache_obj_t *LFUDA_to_evict(cache_t *cache) {
   LFUDA_params_t *params = (LFUDA_params_t *)(cache->eviction_params);
 
   freq_node_t *min_freq_node =
-      g_hash_table_lookup(params->freq_map, GSIZE_TO_POINTER(params->min_freq));
+      (freq_node_t *)g_hash_table_lookup(params->freq_map, GSIZE_TO_POINTER(params->min_freq));
   if (min_freq_node == NULL || min_freq_node->first_obj == NULL)
-    min_freq_node = g_hash_table_lookup(params->freq_map,
+    min_freq_node = (freq_node_t *)g_hash_table_lookup(params->freq_map,
                                         GSIZE_TO_POINTER(params->min_freq + 1));
 
   DEBUG_ASSERT(min_freq_node != NULL);
@@ -209,9 +209,9 @@ void LFUDA_evict(cache_t *cache, const request_t *req,
   LFUDA_params_t *params = (LFUDA_params_t *)(cache->eviction_params);
 
   freq_node_t *min_freq_node =
-      g_hash_table_lookup(params->freq_map, GSIZE_TO_POINTER(params->min_freq));
+      (freq_node_t *)g_hash_table_lookup(params->freq_map, GSIZE_TO_POINTER(params->min_freq));
   if (min_freq_node == NULL || min_freq_node->first_obj == NULL)
-    min_freq_node = g_hash_table_lookup(params->freq_map,
+    min_freq_node = (freq_node_t *)g_hash_table_lookup(params->freq_map,
                                         GSIZE_TO_POINTER(params->min_freq + 1));
   DEBUG_ASSERT(min_freq_node != NULL);
   DEBUG_ASSERT(min_freq_node->first_obj != NULL);
@@ -257,7 +257,7 @@ void LFUDA_remove(cache_t *cache, const obj_id_t obj_id) {
   }
 
   freq_node_t *freq_node =
-      g_hash_table_lookup(params->freq_map, GSIZE_TO_POINTER(obj->lfu.freq));
+      (freq_node_t *)g_hash_table_lookup(params->freq_map, GSIZE_TO_POINTER(obj->lfu.freq));
   DEBUG_ASSERT(freq_node->freq == obj->lfu.freq);
   DEBUG_ASSERT(freq_node->n_obj > 0);
 

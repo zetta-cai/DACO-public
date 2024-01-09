@@ -6,7 +6,7 @@
 
 /* choose which segment to evict */
 bucket_t *select_segs_to_evict(cache_t *cache, segment_t **segs) {
-  GLCache_params_t *params = cache->eviction_params;
+  GLCache_params_t *params = (GLCache_params_t *)cache->eviction_params;
 
   if (params->type == LOGCACHE_ITEM_ORACLE) {
     if (params->learner.n_train <= 0) {
@@ -31,7 +31,7 @@ bucket_t *select_segs_to_evict(cache_t *cache, segment_t **segs) {
 }
 
 void transform_seg_to_training(cache_t *cache, bucket_t *bucket, segment_t *seg) {
-  GLCache_params_t *params = cache->eviction_params;
+  GLCache_params_t *params = (GLCache_params_t *)cache->eviction_params;
   seg->become_train_seg_vtime = params->curr_vtime;
   seg->become_train_seg_rtime = params->curr_rtime;
   seg->train_utility = 0;
@@ -55,7 +55,7 @@ static void assert_seg_not_in_bucket(GLCache_params_t *params, bucket_t *bucket,
 
 /** merge multiple segments into one segment **/
 void GLCache_merge_segs(cache_t *cache, bucket_t *bucket, segment_t **segs, cache_obj_t *evicted_obj) {
-  GLCache_params_t *params = cache->eviction_params;
+  GLCache_params_t *params = (GLCache_params_t *)cache->eviction_params;
 
   DEBUG_ASSERT(bucket->bucket_id == segs[0]->bucket_id);
   DEBUG_ASSERT(bucket->bucket_id == segs[1]->bucket_id);
@@ -162,7 +162,7 @@ void GLCache_merge_segs(cache_t *cache, bucket_t *bucket, segment_t **segs, cach
 int evict_one_seg(cache_t *cache, segment_t *seg, cache_obj_t *evicted_obj) {
   VVERBOSE("req %lu, evict one seg id %d occupied size %lu/%lu\n", cache->n_req, seg->seg_id,
            cache->occupied_size, cache->cache_size);
-  GLCache_params_t *params = cache->eviction_params;
+  GLCache_params_t *params = (GLCache_params_t *)cache->eviction_params;
   bucket_t *bucket = &params->buckets[seg->bucket_id];
 
   int n_cleaned = 0;

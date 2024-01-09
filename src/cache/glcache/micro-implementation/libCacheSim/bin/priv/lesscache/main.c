@@ -126,8 +126,8 @@ int main(int argc, char **argv) {
       setup_reader(trace_path, ORACLE_SYS_TWRNS_TRACE, NULL);
 
   common_cache_params_t cc_params = {.cache_size = cache_size_in_mb * MiB,
-                                     .hashpower = 28,
                                      .default_ttl = 86400 * 300,
+                                     .hashpower = 28,
                                      .consider_obj_metadata = false};
   cache_t *cache;
 

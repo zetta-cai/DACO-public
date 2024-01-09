@@ -14,7 +14,7 @@ typedef struct temporal_sampler_params {
 } temporal_sampler_params_t;
 
 bool temporal_sample(sampler_t *sampler, request_t *req) {
-  temporal_sampler_params_t *params = sampler->other_params;
+  temporal_sampler_params_t *params = (temporal_sampler_params_t *)sampler->other_params;
 
   if (++params->n_samples == sampler->sampling_ratio_inv) {
     params->n_samples = 0;

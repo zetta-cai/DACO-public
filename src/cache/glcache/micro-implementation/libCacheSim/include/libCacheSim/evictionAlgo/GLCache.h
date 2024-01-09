@@ -28,7 +28,7 @@ cache_ck_res_e GLCache_get(cache_t *cache, request_t *req);
 
 cache_ck_res_e GLCache_update(cache_t *cache, request_t *req); // Siyuan: update value of cached object
 
-cache_obj_t *GLCache_insert(cache_t *GLCache, const request_t *req);
+cache_obj_t *GLCache_insert(cache_t *GLCache, request_t *req);
 
 void GLCache_evict(cache_t *cache, const request_t *req,
                    cache_obj_t *evicted_obj);

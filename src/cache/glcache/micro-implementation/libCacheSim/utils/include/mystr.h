@@ -5,6 +5,11 @@
 
 #include <inttypes.h>
 
+// Siyuan: avoid undefined reference due to C++ name mangling
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * convert size to an appropriate string with unit, for example 1048576 will be
  * 1 MiB
@@ -24,3 +29,7 @@ uint64_t str_to_u64(const char *start, size_t len);
 
 /* replace all matching char in a string */
 char *replace_char(char *str, char find, char replace);
+
+#ifdef __cplusplus
+}
+#endif

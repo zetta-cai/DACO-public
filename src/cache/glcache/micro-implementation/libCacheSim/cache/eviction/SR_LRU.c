@@ -153,7 +153,7 @@ cache_ck_res_e SR_LRU_get(cache_t *cache, request_t *req) {
   return ret;
 }
 
-cache_obj_t *SR_LRU_insert(cache_t *cache, const request_t *req) {
+cache_obj_t *SR_LRU_insert(cache_t *cache, request_t *req) {
   // SR_LRU_insert covers the cases where hit in history or does not hit
   // anything.
   SR_LRU_params_t *params = (SR_LRU_params_t *)(cache->eviction_params);

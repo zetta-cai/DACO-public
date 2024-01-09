@@ -122,7 +122,7 @@ reader_t *setup_reader(const char *const trace_path,
     reader->line_buf = (char *)malloc(reader->line_buf_size);
   } else {
     // set up mmap region
-    reader->mapped_file = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0);
+    reader->mapped_file = (char *)mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0);
 #ifdef MADV_HUGEPAGE
     if (!_info_printed) {
       VERBOSE("use hugepage\n");
@@ -409,7 +409,8 @@ int read_one_req(reader_t *const reader, request_t *const req) {
  */
 int go_back_one_req(reader_t *const reader) {
   switch (reader->trace_format) {
-    case TXT_TRACE_FORMAT:;
+    case TXT_TRACE_FORMAT:
+    {
       ssize_t curr_offset = ftell(reader->file);
       if (curr_offset <= reader->trace_start_offset) {
         // we are at the start of the file
@@ -452,8 +453,9 @@ int go_back_one_req(reader_t *const reader) {
 
       VVERBOSE("go_back_one_req after pos %ld\n", ftell(reader->file));
       return 0;
-
+    }
     case BINARY_TRACE_FORMAT:
+    {
       if (reader->mmap_offset >=
           reader->trace_start_offset + reader->item_size) {
         reader->mmap_offset -= (reader->item_size);
@@ -461,9 +463,12 @@ int go_back_one_req(reader_t *const reader) {
       } else {
         return 1;
       }
+    }
     default:
+    {
       ERROR("cannot recognize reader trace format: %d\n", reader->trace_format);
       exit(1);
+    }
   }
 }
 
@@ -616,13 +621,13 @@ int close_reader(reader_t *const reader) {
     fclose(reader->file);
     free(reader->line_buf);
   } else if (reader->trace_type == CSV_TRACE) {
-    csv_params_t *csv_params = reader->reader_params;
+    csv_params_t *csv_params = (csv_params_t *)reader->reader_params;
     fclose(reader->file);
     free(reader->line_buf);
     csv_free(csv_params->csv_parser);
     free(csv_params->csv_parser);
   } else if (reader->trace_type == BIN_TRACE) {
-    binary_params_t *params = reader->reader_params;
+    binary_params_t *params = (binary_params_t *)reader->reader_params;
     if (params != NULL && params->fmt_str != NULL) {
       free(params->fmt_str);
     }

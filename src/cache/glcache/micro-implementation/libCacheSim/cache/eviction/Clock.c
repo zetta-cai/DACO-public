@@ -60,7 +60,7 @@ cache_ck_res_e Clock_get(cache_t *cache, request_t *req) {
   return cache_get_base(cache, req);
 }
 
-cache_obj_t *Clock_insert(cache_t *cache, const request_t *req) {
+cache_obj_t *Clock_insert(cache_t *cache, request_t *req) {
   cache_obj_t *cached_obj = cache_insert_LRU(cache, req);
   cached_obj->clock.visited = false;
 
@@ -68,7 +68,7 @@ cache_obj_t *Clock_insert(cache_t *cache, const request_t *req) {
 }
 
 cache_obj_t *Clock_to_evict(cache_t *cache) {
-  Clock_params_t *params = cache->eviction_params;
+  Clock_params_t *params = (Clock_params_t *)cache->eviction_params;
   cache_obj_t *moving_pointer = params->pointer;
 
   /* if we have run one full around or first eviction */
@@ -93,7 +93,7 @@ cache_obj_t *Clock_to_evict(cache_t *cache) {
 
 void Clock_evict(cache_t *cache, const request_t *req,
                  cache_obj_t *evicted_obj) {
-  Clock_params_t *params = cache->eviction_params;
+  Clock_params_t *params = (Clock_params_t *)cache->eviction_params;
   cache_obj_t *moving_pointer = Clock_to_evict(cache);
 
   if (evicted_obj != NULL) {

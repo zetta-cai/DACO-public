@@ -26,7 +26,7 @@ cache_ck_res_e FIFO_Reinsertion_check(cache_t *cache, request_t *req,
 cache_ck_res_e FIFO_Reinsertion_get(cache_t *cache, request_t *req);
 
 cache_obj_t *FIFO_Reinsertion_insert(cache_t *FIFO_Reinsertion,
-                                     const request_t *req);
+                                     request_t *req);
 
 cache_obj_t *FIFO_Reinsertion_to_evict(cache_t *cache);
 

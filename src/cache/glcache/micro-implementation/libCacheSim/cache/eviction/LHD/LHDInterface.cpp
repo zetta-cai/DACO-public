@@ -101,7 +101,7 @@ cache_ck_res_e LHD_get(cache_t *cache, request_t *req) {
   return cache_get_base(cache, req);
 }
 
-cache_obj_t *LHD_insert(cache_t *cache, const request_t *req) {
+cache_obj_t *LHD_insert(cache_t *cache, request_t *req) {
   auto *params = static_cast<LHD_params_t *>(cache->eviction_params);
   auto *lhd = static_cast<repl::LHD *>(params->LHD_cache);
   auto id = repl::candidate_t::make(req);

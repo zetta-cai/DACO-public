@@ -158,38 +158,38 @@ static sTree * sedgewickized_splay (int i, sTree * t) {
 sTree * insert(key_type i, sTree * t) {
     /* Insert i into the sTree t, unless it's already there.    */
     /* Return a pointer to the resulting sTree.                 */
-    sTree * new;
+    sTree * tmp_new;
     
-    new = (sTree *) malloc (sizeof (sTree));
-    if (new == NULL) {
+    tmp_new = (sTree *) malloc (sizeof (sTree));
+    if (tmp_new == NULL) {
         printf("Ran out of space\n");
         exit(1);
     }
-    assign_key(new, i);
-    new->value = 1;
+    assign_key(tmp_new, i);
+    tmp_new->value = 1;
     if (t == NULL) {
-        new->left = new->right = NULL;
-        return new;
+        tmp_new->left = tmp_new->right = NULL;
+        return tmp_new;
     }
     t = splay(i,t);
     if (key_cmp(i, t->key) < 0) {
-        new->left = t->left;
-        new->right = t;
+        tmp_new->left = t->left;
+        tmp_new->right = t;
         t->left = NULL;
         t->value = 1 + node_value(t->right);
     } else if (key_cmp(i, t->key) > 0) {
-        new->right = t->right;
-        new->left = t;
+        tmp_new->right = t->right;
+        tmp_new->left = t;
         t->right = NULL;
         t->value = 1 + node_value(t->left);
     } else { /* We get here if it's already in the sTree */
         /* Don't add it again                      */
-        free_node(new);
+        free_node(tmp_new);
         assert (t->value == 1 + node_value(t->left) + node_value(t->right));
         return t;
     }
-    new->value = 1 + node_value(new->left) + node_value(new->right);
-    return new;
+    tmp_new->value = 1 + node_value(tmp_new->left) + node_value(tmp_new->right);
+    return tmp_new;
 }
 
 sTree * splay_delete(key_type i, sTree * t) {

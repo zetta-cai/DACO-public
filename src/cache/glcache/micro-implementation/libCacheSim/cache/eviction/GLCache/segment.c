@@ -41,7 +41,7 @@ static void seg_feature_shift(GLCache_params_t *params, segment_t *seg) {
 }
 
 void seg_hit_update(GLCache_params_t *params, cache_obj_t *cache_obj) {
-  segment_t *segment = cache_obj->GLCache.segment;
+  segment_t *segment = (segment_t *)cache_obj->GLCache.segment;
   segment->n_hit += 1;
 
   if (params->curr_rtime - segment->feature.last_min_window_ts >= 60) {
@@ -60,7 +60,7 @@ void seg_hit_update(GLCache_params_t *params, cache_obj_t *cache_obj) {
 
 /* this function removes objects from hash table, but not update the cache state */
 int clean_one_seg(cache_t *cache, segment_t *seg) {
-  GLCache_params_t *params = cache->eviction_params;
+  GLCache_params_t *params = (GLCache_params_t *)cache->eviction_params;
   int n_cleaned = 0;
 
   for (int i = 0; i < seg->n_obj; i++) {
@@ -77,7 +77,7 @@ int clean_one_seg(cache_t *cache, segment_t *seg) {
 
 /* deprecated */
 void clear_dynamic_features(cache_t *cache) {
-  GLCache_params_t *params = cache->eviction_params;
+  GLCache_params_t *params = (GLCache_params_t *)cache->eviction_params;
   segment_t *curr_seg = NULL; 
 
   for (int bi = 0; bi < MAX_N_BUCKET; bi++) {
@@ -96,7 +96,7 @@ void clear_dynamic_features(cache_t *cache) {
 }
 
 segment_t *allocate_new_seg(cache_t *cache, int bucket_id) {
-  GLCache_params_t *params = cache->eviction_params;
+  GLCache_params_t *params = (GLCache_params_t *)cache->eviction_params;
 
   /* allocate a new segment */
   segment_t *new_seg = my_malloc(segment_t);
@@ -144,7 +144,7 @@ void link_new_seg_before_seg(GLCache_params_t *params, bucket_t *bucket, segment
 /* find the cutoff object score to retain objects, this is used in merging multiple segments into one */
 double find_cutoff(cache_t *cache, obj_score_type_e obj_score_type, segment_t **segs,
                    int n_segs, int n_retain) {
-  GLCache_params_t *params = cache->eviction_params;
+  GLCache_params_t *params = (GLCache_params_t *)cache->eviction_params;
 
   segment_t *seg;
   int pos = 0;
@@ -178,7 +178,7 @@ double find_cutoff(cache_t *cache, obj_score_type_e obj_score_type, segment_t **
  * if false, use current obj_score_type to choose what objects to retain
  * this is used to make sure logOracle can choose the best segments given the object selection **/
 double cal_seg_utility(cache_t *cache, segment_t *seg, bool oracle_obj_sel) {
-  GLCache_params_t *params = cache->eviction_params;
+  GLCache_params_t *params = (GLCache_params_t *)cache->eviction_params;
   cache_obj_t *cache_obj;
 
   /* array of object score pair, the first is online score, the second is oracle score */
@@ -219,7 +219,7 @@ static int count_n_obj_reuse(cache_t *cache, segment_t *seg) {
 }
 
 void print_seg(cache_t *cache, segment_t *seg, int log_level) {
-  GLCache_params_t *params = cache->eviction_params;
+  GLCache_params_t *params = (GLCache_params_t *)cache->eviction_params;
 
   printf("seg %6d, age %6d, mean obj size %8.0lf bytes, "
          "req/write rate %6.0lf/%4.2lf, "

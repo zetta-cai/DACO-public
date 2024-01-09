@@ -211,7 +211,7 @@ cache_ck_res_e SFIFO_get(cache_t *cache, request_t *req) {
   return cache_get_base(cache, req);
 }
 
-cache_obj_t *SFIFO_insert(cache_t *cache, const request_t *req) {
+cache_obj_t *SFIFO_insert(cache_t *cache, request_t *req) {
   SFIFO_params_t *SFIFO_params = (SFIFO_params_t *)(cache->eviction_params);
 
   int i;
@@ -293,6 +293,5 @@ void SFIFO_remove(cache_t *cache, const obj_id_t obj_id) {
 }
 
 #ifdef __cplusplus
-extern "C"
 }
 #endif

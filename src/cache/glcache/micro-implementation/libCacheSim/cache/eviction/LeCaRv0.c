@@ -105,7 +105,7 @@ static void update_weight(cache_t *cache, int64_t t, double *w_update,
   *w_no_update = (*w_no_update + 1e-10) / s;
 }
 
-static void check_and_update_history(cache_t *cache, const request_t *req) {
+static void check_and_update_history(cache_t *cache, request_t *req) {
   LeCaRv0_params_t *params = (LeCaRv0_params_t *)(cache->eviction_params);
 
   cache_ck_res_e ck_lru_g, ck_lfu_g;
@@ -161,7 +161,7 @@ cache_ck_res_e LeCaRv0_get(cache_t *cache, request_t *req) {
   return cache_get_base(cache, req);
 }
 
-cache_obj_t *LeCaRv0_insert(cache_t *cache, const request_t *req) {
+cache_obj_t *LeCaRv0_insert(cache_t *cache, request_t *req) {
   LeCaRv0_params_t *params = (LeCaRv0_params_t *)(cache->eviction_params);
 
   params->LRU->insert(params->LRU, req);

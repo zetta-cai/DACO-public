@@ -24,7 +24,7 @@ int main(int argc, char **argv) {
   //     args.reader, args.cache, args.n_cache_size, args.cache_sizes, NULL, 0,
   //     args.warmup_sec, args.n_thread);
 
-  cache_t **caches = malloc(sizeof(cache_t *) * args.n_cache_size);
+  cache_t **caches = (cache_t **)malloc(sizeof(cache_t *) * args.n_cache_size);
   for (int i = 0; i < args.n_cache_size; i++) {
     caches[i] = create_cache_with_new_size(args.cache, args.cache_sizes[i]);
   }

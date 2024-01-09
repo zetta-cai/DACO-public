@@ -9,11 +9,12 @@
 #ifndef LRU_H
 #define LRU_H
 
+#include "../cache.h"
+
+// Siyuan: avoid C linkage on C++ code
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include "../cache.h"
 
 cache_t *LRU_init(const common_cache_params_t ccache_params,
                   const char *cache_specific_params);
@@ -29,7 +30,7 @@ cache_ck_res_e LRU_get(cache_t *cache, request_t *req);
 
 void LRU_remove(cache_t *cache, const obj_id_t obj_id);
 
-cache_obj_t *LRU_insert(cache_t *cache, const request_t *req);
+cache_obj_t *LRU_insert(cache_t *cache, request_t *req);
 
 cache_obj_t *LRU_to_evict(cache_t *cache);
 

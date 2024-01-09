@@ -68,8 +68,8 @@ cache_t *create_cache_with_new_size(const cache_t *old_cache,
                                     uint64_t new_size) {
   common_cache_params_t cc_params = {
       .cache_size = new_size,
-      .hashpower = old_cache->hashtable->hashpower,
       .default_ttl = old_cache->default_ttl,
+      .hashpower = old_cache->hashtable->hashpower,
       .consider_obj_metadata =
           old_cache->per_obj_metadata_size == 0 ? false : true,
   };

@@ -20,7 +20,7 @@ static void debug_print_feature_matrix(const DMatrixHandle handle, int print_n_r
 }
 
 static void train_xgboost(cache_t *cache) {
-  GLCache_params_t *params = cache->eviction_params;
+  GLCache_params_t *params = (GLCache_params_t *)cache->eviction_params;
   learner_t *learner = &params->learner;
 
   if (learner->n_train != 0) {
@@ -55,8 +55,8 @@ static void train_xgboost(cache_t *cache) {
     safe_call(
         XGBoosterEvalOneIter(learner->booster, i, eval_dmats, eval_names, 2, &eval_result));
 #if OBJECTIVE == REG
-    char *train_pos = strstr(eval_result, "train-rmse:") + 11;
-    char *valid_pos = strstr(eval_result, "valid-rmse") + 11;
+    const char *train_pos = strstr(eval_result, "train-rmse:") + 11;
+    const char *valid_pos = strstr(eval_result, "valid-rmse") + 11;
     train_loss = strtof(train_pos, NULL);
     valid_loss = strtof(valid_pos, NULL);
 

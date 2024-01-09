@@ -90,7 +90,7 @@ static int oracleSysTwrNSBin_read_one_req(reader_t *reader, request_t *req) {
   req->key_size = *(uint16_t *)(record + 12);
   req->val_size = *(uint32_t *)(record + 14);
   req->obj_size = req->key_size + req->val_size;
-  req->op = *(uint16_t *)(record + 18);
+  req->op = static_cast<req_op_e>(*(uint16_t *)(record + 18)); // Siyuan: explicit type conversion
   req->ns = *(uint16_t *)(record + 20);
   req->ttl = *(int32_t *)(record + 22);
   req->next_access_vtime = *(int64_t *)(record + 26);

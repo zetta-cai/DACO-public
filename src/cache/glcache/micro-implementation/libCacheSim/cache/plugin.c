@@ -52,7 +52,8 @@ cache_t *create_cache_external(const char *const cache_alg_name,
 cache_t *create_cache_internal(const char *const cache_alg_name,
                                common_cache_params_t cc_params,
                                void *cache_specific_params) {
-  cache_t *(*cache_init)(common_cache_params_t, void *) = NULL;
+  typedef cache_t *(*tmp_cache_init_func_ptr)(common_cache_params_t, void *);
+  tmp_cache_init_func_ptr cache_init = NULL;
   char *err = NULL;
 
   char cache_init_func_name[256];
@@ -62,7 +63,7 @@ cache_t *create_cache_internal(const char *const cache_alg_name,
 
   sprintf(cache_init_func_name, "%s_init", cache_alg_name);
   //  *(void **) (&cache_init) = dlsym(handle, cache_init_func_name);
-  cache_init = dlsym(handle, cache_init_func_name);
+  cache_init = (tmp_cache_init_func_ptr)dlsym(handle, cache_init_func_name);
   err = dlerror();
 
   if (cache_init == NULL) {

@@ -9,6 +9,11 @@
 #include <string.h>
 #include <unistd.h>
 
+// Siyuan: avoid undefined reference due to C++ name mangling (note that although we use extern "C" in ./include/myprint.h, logging.c does NOT include myprint.h and hence the following functions are both declarations and definitions)
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 pthread_mutex_t log_mtx = PTHREAD_MUTEX_INITIALIZER;
 
 void print_stack_trace(void) {
@@ -39,3 +44,7 @@ void print_progress(double perc) {
   last_perc = perc;
   last_print_time = cur_time;
 }
+
+#ifdef __cplusplus
+}
+#endif

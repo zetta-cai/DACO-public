@@ -52,11 +52,11 @@ cache_t *Belady_init(const common_cache_params_t ccache_params,
 }
 
 void Belady_free(cache_t *cache) {
-  Belady_params_t *params = cache->eviction_params;
-  pq_node_t *node = pqueue_pop(params->pq);
+  Belady_params_t *params = (Belady_params_t *)cache->eviction_params;
+  pq_node_t *node = (pq_node_t *)pqueue_pop(params->pq);
   while (node) {
     my_free(sizeof(pq_node_t), node);
-    node = pqueue_pop(params->pq);
+    node = (pq_node_t *)pqueue_pop(params->pq);
   }
   pqueue_free(params->pq);
 
@@ -65,7 +65,7 @@ void Belady_free(cache_t *cache) {
 
 cache_ck_res_e Belady_check(cache_t *cache, request_t *req,
                             const bool update_cache) {
-  Belady_params_t *params = cache->eviction_params;
+  Belady_params_t *params = (Belady_params_t *)cache->eviction_params;
   cache_obj_t *cached_obj;
   cache_ck_res_e ret = cache_check_base(cache, req, update_cache, &cached_obj);
 
@@ -93,7 +93,7 @@ cache_ck_res_e Belady_check(cache_t *cache, request_t *req,
 cache_ck_res_e Belady_get(cache_t *cache, request_t *req) {
   /* -2 means the trace does not have next_access ts information */
   DEBUG_ASSERT(req->next_access_vtime != -2);
-  Belady_params_t *params = cache->eviction_params;
+  Belady_params_t *params = (Belady_params_t *)cache->eviction_params;
 
   DEBUG_ASSERT(cache->n_obj == params->pq->size - 1);
   cache_ck_res_e ret = cache_get_base(cache, req);
@@ -101,8 +101,8 @@ cache_ck_res_e Belady_get(cache_t *cache, request_t *req) {
   return ret;
 }
 
-cache_obj_t *Belady_insert(cache_t *cache, const request_t *req) {
-  Belady_params_t *params = cache->eviction_params;
+cache_obj_t *Belady_insert(cache_t *cache, request_t *req) {
+  Belady_params_t *params = (Belady_params_t *)cache->eviction_params;
 
   if (req->next_access_vtime == -1 || req->next_access_vtime == INT64_MAX) {
 #if defined(TRACK_EVICTION_R_AGE) || defined(TRACK_EVICTION_V_AGE)
@@ -128,14 +128,14 @@ cache_obj_t *Belady_insert(cache_t *cache, const request_t *req) {
 }
 
 cache_obj_t *Belady_to_evict(cache_t *cache) {
-  Belady_params_t *params = cache->eviction_params;
+  Belady_params_t *params = (Belady_params_t *)cache->eviction_params;
   pq_node_t *node = (pq_node_t *)pqueue_peek(params->pq);
   return cache_get_obj_by_id(cache, node->obj_id);
 }
 
 void Belady_evict(cache_t *cache, __attribute__((unused)) const request_t *req,
                   __attribute__((unused)) cache_obj_t *evicted_obj) {
-  Belady_params_t *params = cache->eviction_params;
+  Belady_params_t *params = (Belady_params_t *)cache->eviction_params;
   pq_node_t *node = (pq_node_t *)pqueue_pop(params->pq);
 
   cache_obj_t *obj_to_evict = cache_get_obj_by_id(cache, node->obj_id);
@@ -155,7 +155,7 @@ void Belady_evict(cache_t *cache, __attribute__((unused)) const request_t *req,
 }
 
 void Belady_remove_obj(cache_t *cache, cache_obj_t *obj) {
-  Belady_params_t *params = cache->eviction_params;
+  Belady_params_t *params = (Belady_params_t *)cache->eviction_params;
 
   DEBUG_ASSERT(hashtable_find_obj(cache->hashtable, obj) == obj);
   DEBUG_ASSERT(cache->occupied_size >= obj->obj_size);

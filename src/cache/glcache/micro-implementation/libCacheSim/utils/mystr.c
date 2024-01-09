@@ -1,8 +1,3 @@
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <inttypes.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -10,6 +5,11 @@ extern "C" {
 #include <string.h>
 
 #include "../include/libCacheSim/const.h"
+
+// Siyuan: avoid C linkage on C++ code
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * convert size to an appropriate string with unit, for example 1048576 will be

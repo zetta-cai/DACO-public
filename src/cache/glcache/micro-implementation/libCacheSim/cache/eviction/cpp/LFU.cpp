@@ -66,7 +66,7 @@ cache_ck_res_e LFUCpp_check(cache_t *cache, request_t *req,
   return res;
 }
 
-cache_obj_t *LFUCpp_insert(cache_t *cache, const request_t *req) {
+cache_obj_t *LFUCpp_insert(cache_t *cache, request_t *req) {
   auto *lfu = static_cast<eviction::LFUCpp *>(cache->eviction_params);
 
   cache_obj_t *obj = cache_insert_base(cache, req);

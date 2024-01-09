@@ -74,7 +74,7 @@ cache_ck_res_e LRUv0_check(cache_t *cache, request_t *req,
 
   if (!update_cache) return cache_ck_hit;
 
-  cache_obj_t *cache_obj = node->data;
+  cache_obj_t *cache_obj = (cache_obj_t *)node->data;
   if (likely(update_cache)) {
     if (unlikely(cache_obj->obj_size != req->obj_size)) {
       cache->occupied_size -= cache_obj->obj_size;
@@ -101,7 +101,7 @@ cache_ck_res_e LRUv0_get(cache_t *cache, request_t *req) {
   return cache_check;
 }
 
-cache_obj_t *LRUv0_insert(cache_t *cache, const request_t *req) {
+cache_obj_t *LRUv0_insert(cache_t *cache, request_t *req) {
   LRUv0_params_t *LRUv0_params = (LRUv0_params_t *)(cache->eviction_params);
 
   cache->occupied_size += req->obj_size + cache->per_obj_metadata_size;
@@ -121,7 +121,7 @@ cache_obj_t *LRUv0_get_cached_obj(cache_t *cache, const request_t *req) {
   LRUv0_params_t *LRUv0_params = (LRUv0_params_t *)(cache->eviction_params);
   GList *node = (GList *)g_hash_table_lookup(LRUv0_params->hashtable,
                                              GSIZE_TO_POINTER(req->obj_id));
-  cache_obj_t *cache_obj = node->data;
+  cache_obj_t *cache_obj = (cache_obj_t *)node->data;
   return cache_obj;
 }
 

@@ -9,11 +9,12 @@
 #ifndef ARC_h
 #define ARC_h
 
+#include "../cache.h"
+
+// Siyuan: avoid C linkage on C++ code
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include "../cache.h"
 
 /* initialize ARC, the default ghost list size is the same as the cache size */
 cache_t *ARC_init(const common_cache_params_t ccache_params,
@@ -26,7 +27,7 @@ cache_ck_res_e ARC_check(cache_t *cache, request_t *req,
 
 cache_ck_res_e ARC_get(cache_t *cache, request_t *req);
 
-cache_obj_t *ARC_insert(cache_t *ARC, const request_t *req);
+cache_obj_t *ARC_insert(cache_t *ARC, request_t *req);
 
 cache_obj_t *ARC_to_evict(cache_t *cache);
 

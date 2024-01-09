@@ -180,7 +180,7 @@ cache_t *GLCache_init(const common_cache_params_t ccache_params,
 }
 
 void GLCache_free(cache_t *cache) {
-  GLCache_params_t *params = cache->eviction_params;
+  GLCache_params_t *params = (GLCache_params_t *)cache->eviction_params;
   bucket_t *bkt = &params->train_bucket;
   segment_t *seg = bkt->first_seg, *next_seg;
 
@@ -263,7 +263,7 @@ cache_ck_res_e GLCache_exists(cache_t *cache, const request_t *req)
 
 cache_ck_res_e GLCache_check(cache_t *cache, request_t *req,
                              const bool update_cache) {
-  GLCache_params_t *params = cache->eviction_params;
+  GLCache_params_t *params = (GLCache_params_t *)cache->eviction_params;
 
   cache_obj_t *cache_obj = hashtable_find(cache->hashtable, req);
 
@@ -298,7 +298,7 @@ cache_ck_res_e GLCache_check(cache_t *cache, request_t *req,
       }
     }
 
-    segment_t *seg = cache_obj->GLCache.segment;
+    segment_t *seg = (segment_t *)cache_obj->GLCache.segment;
     assert(seg != NULL); // Siyuan: seg should NOT be NULL, which is allocated in obj_init
 
     if (!update_cache) // Siyuan: get value of the cached object (triggered by GLCache_get)
@@ -362,7 +362,7 @@ cache_ck_res_e GLCache_check(cache_t *cache, request_t *req,
 }
 
 cache_ck_res_e GLCache_get(cache_t *cache, request_t *req) {
-  GLCache_params_t *params = cache->eviction_params;
+  GLCache_params_t *params = (GLCache_params_t *)cache->eviction_params;
 
   cache_ck_res_e ret = cache_get_base(cache, req); // Siyuan: this will read cache_obj->value into req->value if with cache hit
 
@@ -391,7 +391,7 @@ cache_ck_res_e GLCache_get(cache_t *cache, request_t *req) {
 // Siyuan: update value of cached object
 cache_ck_res_e GLCache_update(cache_t *cache, request_t *req)
 {
-  GLCache_params_t *params = cache->eviction_params;
+  GLCache_params_t *params = (GLCache_params_t *)cache->eviction_params;
 
   cache_ck_res_e ret = cache_update_base(cache, req); // Siyuan: this will update cache_obj->value by req->value if with cache hit
 
@@ -417,8 +417,8 @@ cache_ck_res_e GLCache_update(cache_t *cache, request_t *req)
   return ret;
 }
 
-cache_obj_t *GLCache_insert(cache_t *cache, const request_t *req) {
-  GLCache_params_t *params = cache->eviction_params;
+cache_obj_t *GLCache_insert(cache_t *cache, request_t *req) {
+  GLCache_params_t *params = (GLCache_params_t *)cache->eviction_params;
   bucket_t *bucket = &params->buckets[0];
   segment_t *seg = bucket->last_seg;
   DEBUG_ASSERT(seg == NULL || seg->next_seg == NULL);
@@ -455,7 +455,7 @@ cache_obj_t *GLCache_insert(cache_t *cache, const request_t *req) {
 
 void GLCache_evict(cache_t *cache, const request_t *req,
                    cache_obj_t *evicted_obj) {
-  GLCache_params_t *params = cache->eviction_params;
+  GLCache_params_t *params = (GLCache_params_t *)cache->eviction_params;
   learner_t *l = &params->learner;
 
   bucket_t *bucket = select_segs_to_evict(cache, params->obj_sel.segs_to_evict);
@@ -487,7 +487,7 @@ void GLCache_evict(cache_t *cache, const request_t *req,
 }
 
 void GLCache_remove_obj(cache_t *cache, cache_obj_t *obj_to_remove) {
-  GLCache_params_t *params = cache->eviction_params;
+  GLCache_params_t *params = (GLCache_params_t *)cache->eviction_params;
   abort();
 }
 

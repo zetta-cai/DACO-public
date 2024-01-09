@@ -57,11 +57,11 @@ static void size_admissioner_parse_params(const char *init_params,
 }
 
 admissioner_t *clone_size_admissioner(admissioner_t *admissioner) {
-  return create_size_admissioner(admissioner->init_params);
+  return create_size_admissioner((const char*)admissioner->init_params);
 }
 
 void free_size_admissioner(admissioner_t *admissioner) {
-  size_admission_params_t *pa = admissioner->params;
+  size_admission_params_t *pa = (size_admission_params_t *)admissioner->params;
 
   free(pa);
   free(admissioner);

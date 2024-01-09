@@ -191,8 +191,8 @@ bool check_delimiter(const reader_t *reader, char delimiter) {
  */
 static inline void csv_cb1(void *s, size_t len, void *data) {
   reader_t *reader = (reader_t *)data;
-  csv_params_t *csv_params = reader->reader_params;
-  request_t *req = csv_params->request;
+  csv_params_t *csv_params = (csv_params_t *)reader->reader_params;
+  request_t *req = (request_t *)csv_params->request;
   char *end;
 
   if (csv_params->curr_field_idx == csv_params->obj_id_field_idx) {
@@ -202,7 +202,7 @@ static inline void csv_cb1(void *s, size_t len, void *data) {
         WARN("object id is not numeric %s\n", (char *)s);
       }
     } else {
-      req->obj_id = (uint64_t)g_quark_from_string(s);
+      req->obj_id = (uint64_t)g_quark_from_string((const gchar*)s);
     }
   } else if (csv_params->curr_field_idx == csv_params->time_field_idx) {
     // this does not work, because s is not null terminated
@@ -229,7 +229,7 @@ static inline void csv_cb1(void *s, size_t len, void *data) {
  */
 static inline void csv_cb2(int c, void *data) {
   reader_t *reader = (reader_t *)data;
-  csv_params_t *csv_params = reader->reader_params;
+  csv_params_t *csv_params = (csv_params_t *)reader->reader_params;
   csv_params->curr_field_idx = 1;
 
   // printf("cb2 %d '%c'\n", csv_params->curr_field_idx, c);
@@ -246,7 +246,7 @@ void csv_setup_reader(reader_t *const reader) {
   reader_init_param_t *init_params = &reader->init_params;
 
   reader->reader_params = (csv_params_t *)malloc(sizeof(csv_params_t));
-  csv_params_t *csv_params = reader->reader_params;
+  csv_params_t *csv_params = (csv_params_t *)reader->reader_params;
   csv_params->curr_field_idx = 1;
 
   csv_params->time_field_idx = init_params->time_field;
@@ -289,7 +289,7 @@ void csv_setup_reader(reader_t *const reader) {
  * @return int
  */
 int csv_read_one_req(reader_t *const reader, request_t *const req) {
-  csv_params_t *csv_params = reader->reader_params;
+  csv_params_t *csv_params = (csv_params_t *)reader->reader_params;
   struct csv_parser *csv_parser = csv_params->csv_parser;
   char **line_buf_ptr = &reader->line_buf;
   size_t *line_buf_size_ptr = &reader->line_buf_size;
@@ -315,7 +315,7 @@ int csv_read_one_req(reader_t *const reader, request_t *const req) {
 }
 
 void csv_reset_reader(reader_t *reader) {
-  csv_params_t *csv_params = reader->reader_params;
+  csv_params_t *csv_params = (csv_params_t *)reader->reader_params;
 
   fseek(reader->file, 0L, SEEK_SET);
 

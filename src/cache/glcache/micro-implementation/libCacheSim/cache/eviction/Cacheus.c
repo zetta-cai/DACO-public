@@ -107,7 +107,7 @@ void Cacheus_free(cache_t *cache) {
   cache_struct_free(cache);
 }
 
-static void update_weight(cache_t *cache, const request_t *req) {
+static void update_weight(cache_t *cache, request_t *req) {
   Cacheus_params_t *params = (Cacheus_params_t *)(cache->eviction_params);
   cache_ck_res_e ck_lru_g, ck_lfu_g;
 
@@ -174,7 +174,7 @@ static void update_lr(cache_t *cache, const request_t *req) {
 }
 
 // Update weight and history, only called in cache miss.
-static void check_and_update_history(cache_t *cache, const request_t *req) {
+static void check_and_update_history(cache_t *cache, request_t *req) {
   Cacheus_params_t *params = (Cacheus_params_t *)(cache->eviction_params);
 
   cache_ck_res_e ck_lru_g, ck_lfu_g;
@@ -275,7 +275,7 @@ cache_ck_res_e Cacheus_get(cache_t *cache, request_t *req) {
   return ret;
 }
 
-cache_obj_t *Cacheus_insert(cache_t *cache, const request_t *req) {
+cache_obj_t *Cacheus_insert(cache_t *cache, request_t *req) {
   Cacheus_params_t *params = (Cacheus_params_t *)(cache->eviction_params);
   DEBUG_ASSERT(params->LRU->occupied_size == params->LFU->occupied_size);
   DEBUG_ASSERT(params->LRU->n_obj == cache->n_obj);

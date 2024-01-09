@@ -19,10 +19,6 @@
 //
 //
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include "chainedHashTableV2.h"
 
 #include <assert.h>
@@ -36,6 +32,11 @@ extern "C" {
 #include "../../include/libCacheSim/macro.h"
 #include "../../utils/include/mymath.h"
 #include "../hash/hash.h"
+
+// Siyuan: avoid C linkage on C++ code
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #define OBJ_EMPTY(cache_obj) ((cache_obj)->obj_size == 0)
 #define NEXT_OBJ(cur_obj) (((cache_obj_t *)(cur_obj))->hash_next)
@@ -61,7 +62,7 @@ static inline void add_to_bucket(hashtable_t *hashtable,
   uint64_t hv = 0;
   if (cache_obj->is_keybased_obj) // Siyuan: for key-value caching
   {
-    hv = get_hash_value_str(static_cast<const void*>(cache_obj->key.getKeystr().c_str()), cache_obj->key.getKeyLength()) & hashmask(hashtable->hashpower);
+    hv = get_hash_value_str(static_cast<const void*>(cache_obj->key.c_str()), cache_obj->key.length()) & hashmask(hashtable->hashpower);
   }
   else
   {
@@ -125,10 +126,10 @@ cache_obj_t *chained_hashtable_find_obj_id_v2(const hashtable_t *hashtable,
 
 // Siyuan: for key-value caching
 cache_obj_t *chained_hashtable_find_key_v2(const hashtable_t *hashtable,
-                                              const covered::Key& key)
+                                              const std::string& key)
 {
   cache_obj_t *cache_obj = NULL;
-  uint64_t hv = get_hash_value_str(static_cast<const void*>(key.getKeystr().c_str()), key.getKeyLength());
+  uint64_t hv = get_hash_value_str(static_cast<const void*>(key.c_str()), key.length());
   hv = hv & hashmask(hashtable->hashpower);
   cache_obj = hashtable->ptr_table[hv];
 

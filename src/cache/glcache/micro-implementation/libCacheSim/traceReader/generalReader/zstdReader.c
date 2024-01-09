@@ -16,7 +16,7 @@
 #define LINE_DELIM '\n'
 
 zstd_reader *create_zstd_reader(const char *trace_path) {
-  zstd_reader *reader = malloc(sizeof(zstd_reader));
+  zstd_reader *reader = (zstd_reader *)malloc(sizeof(zstd_reader));
 
   reader->ifile = fopen(trace_path, "rb");
   if (reader->ifile == NULL) {
@@ -37,7 +37,7 @@ zstd_reader *create_zstd_reader(const char *trace_path) {
   reader->output.pos = 0;
 
   reader->buff_out_read_pos = 0;
-  reader->status = 0;
+  reader->status = (rstatus)0;
 
   reader->zds = ZSTD_createDStream();
 
@@ -117,10 +117,10 @@ size_t zstd_reader_read_line(zstd_reader *reader, char **line_start,
 
   if (reader->buff_out_read_pos < reader->output.pos) {
     /* there are still content in output buffer */
-    *line_start = reader->buff_out + reader->buff_out_read_pos;
+    *line_start = (char *)(reader->buff_out + reader->buff_out_read_pos);
     void *buff_start = reader->buff_out + reader->buff_out_read_pos;
     size_t buff_left_sz = reader->output.pos - reader->buff_out_read_pos;
-    *line_end = memchr(buff_start, LINE_DELIM, buff_left_sz);
+    *line_end = (char *)memchr(buff_start, LINE_DELIM, buff_left_sz);
     if (*line_end == NULL) {
       /* cannot find end of line, copy left over bytes, and decompress the next
        * frame */
@@ -147,8 +147,8 @@ size_t zstd_reader_read_line(zstd_reader *reader, char **line_start,
     status = _decompress_from_buff(reader);
   }
 
-  *line_start = reader->buff_out + reader->buff_out_read_pos;
-  *line_end = memchr(*line_start, LINE_DELIM, reader->output.pos);
+  *line_start = (char *)(reader->buff_out + reader->buff_out_read_pos);
+  *line_end = (char *)memchr(*line_start, LINE_DELIM, reader->output.pos);
   // printf("start at %d %d end %d %d\n", reader->buff_out_read_pos,
   // **line_start, *line_end - *line_start, **line_end);
   assert(*line_end != NULL);

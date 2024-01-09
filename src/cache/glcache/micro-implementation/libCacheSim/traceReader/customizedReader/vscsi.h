@@ -94,7 +94,7 @@ static inline size_t record_size(vscsi_version_e version) {
 }
 
 static inline int vscsiReader_setup(reader_t *const reader) {
-  vscsi_params_t *params = malloc(sizeof(vscsi_params_t));
+  vscsi_params_t *params = (vscsi_params_t *)malloc(sizeof(vscsi_params_t));
   reader->reader_params = params;
   reader->trace_format = BINARY_TRACE_FORMAT;
   reader->obj_id_is_num = true;
@@ -130,7 +130,7 @@ static inline int vscsi_read_ver1(reader_t *reader, request_t *req) {
   req->real_time = record->ts / 1000000;
   req->obj_size = record->len;
   /* need to parse this */
-  req->op = record->cmd;
+  req->op = static_cast<req_op_e>(record->cmd);
   req->obj_id = record->lbn;
   (reader->mmap_offset) += reader->item_size;
   return 0;
@@ -141,7 +141,7 @@ static inline int vscsi_read_ver2(reader_t *reader, request_t *req) {
       (trace_v2_record_t *)(reader->mapped_file + reader->mmap_offset);
   req->real_time = record->ts / 1000000;
   req->obj_size = record->len;
-  req->op = record->cmd;
+  req->op = static_cast<req_op_e>(record->cmd);
   req->obj_id = record->lbn;
   (reader->mmap_offset) += reader->item_size;
   return 0;

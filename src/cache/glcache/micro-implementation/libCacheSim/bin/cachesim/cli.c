@@ -75,7 +75,7 @@ static struct argp_option options[] = {
    Order of parameters: KEY, ARG, STATE.
 */
 static error_t parse_opt(int key, char *arg, struct argp_state *state) {
-  struct arguments *arguments = state->input;
+  struct arguments *arguments = (struct arguments *)state->input;
 
   switch (key) {
     case OPTION_NUM_THREAD:
@@ -258,8 +258,8 @@ void parse_cmd(int argc, char *argv[], struct arguments *args) {
 
   common_cache_params_t cc_params = {
       .cache_size = args->cache_sizes[0],
-      .hashpower = 24,
       .default_ttl = 86400 * 300,
+      .hashpower = 24,
       .consider_obj_metadata = args->consider_obj_metadata,
   };
   cache_t *cache;

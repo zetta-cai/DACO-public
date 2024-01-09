@@ -8,6 +8,11 @@
 #include "../../include/libCacheSim/reader.h"
 #include "../../include/libCacheSim/admissionAlgo.h"
 
+// Siyuan: avoid inconsistent C linkage
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define N_ARGS 4
 #define N_MAX_CACHE_SIZE 128
 #define OFILEPATH_LEN 128
@@ -59,3 +64,7 @@ void print_parsed_args(struct arguments *args);
 void set_cache_size(struct arguments *args, reader_t *reader);
 
 bool is_true(const char *arg); 
+
+#ifdef __cplusplus
+}
+#endif

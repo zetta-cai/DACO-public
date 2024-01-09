@@ -82,7 +82,7 @@ static void check_ranked_segs_per_bucket(cache_t *cache) {
 /* rank the segments according to predicted segment utility, 
  * the ranked segments will be used for merge eviction */
 void rank_segs(cache_t *cache) {
-  GLCache_params_t *params = cache->eviction_params;
+  GLCache_params_t *params = (GLCache_params_t *)cache->eviction_params;
   segment_t **ranked_segs = params->seg_sel.ranked_segs;
   int32_t *ranked_seg_pos_p = &(params->seg_sel.ranked_seg_pos);
 
@@ -176,7 +176,7 @@ void rank_segs(cache_t *cache) {
  * it is possible that there is no bucket with n_merge + 1 segments, 
  * in which case, we randonly pick one and uses eviction w/o merge */
 static bucket_t *select_one_seg_to_evict(cache_t *cache, segment_t **segs) {
-  GLCache_params_t *params = cache->eviction_params;
+  GLCache_params_t *params = (GLCache_params_t *)cache->eviction_params;
   bucket_t *bucket = NULL; 
 
   // no evictable seg found, random+FIFO select one
@@ -200,7 +200,7 @@ static bucket_t *select_one_seg_to_evict(cache_t *cache, segment_t **segs) {
 /* choose the next segment to evict, use FIFO to choose bucket, 
  * and FIFO within bucket */
 bucket_t *select_segs_fifo(cache_t *cache, segment_t **segs) {
-  GLCache_params_t *params = cache->eviction_params;
+  GLCache_params_t *params = (GLCache_params_t *)cache->eviction_params;
 
   int n_scanned_bucket = 0;
   bucket_t *bucket = &params->buckets[params->curr_evict_bucket_idx];
@@ -243,7 +243,7 @@ bucket_t *select_segs_fifo(cache_t *cache, segment_t **segs) {
 /* choose bucket with probability being the size of the bucket, 
  * uses FIFO to choose within bucket */
 bucket_t *select_segs_weighted_fifo(cache_t *cache, segment_t **segs) {
-  GLCache_params_t *params = cache->eviction_params;
+  GLCache_params_t *params = (GLCache_params_t *)cache->eviction_params;
 
   segment_t *seg_to_evict = NULL;
   bucket_t *bucket = NULL;
@@ -293,7 +293,7 @@ bucket_t *select_segs_weighted_fifo(cache_t *cache, segment_t **segs) {
 /* select segment randomly, we choose bucket in fifo order, 
  * and randomly within the bucket */
 bucket_t *select_segs_rand(cache_t *cache, segment_t **segs) {
-  GLCache_params_t *params = cache->eviction_params;
+  GLCache_params_t *params = (GLCache_params_t *)cache->eviction_params;
 
   bucket_t *bucket = NULL;
   segment_t *seg_to_evict = NULL;
@@ -322,7 +322,7 @@ bucket_t *select_segs_rand(cache_t *cache, segment_t **segs) {
 
 /* choose which segment to evict, segs store the segments to evict */
 bucket_t *select_segs_learned(cache_t *cache, segment_t **segs) {
-  GLCache_params_t *params = cache->eviction_params;
+  GLCache_params_t *params = (GLCache_params_t *)cache->eviction_params;
   seg_sel_t *ss = &params->seg_sel;
 
   bool array_resized = false;

@@ -205,7 +205,7 @@ cache_ck_res_e SLRU_get(cache_t *cache, request_t *req) {
   return cache_get_base(cache, req);
 }
 
-cache_obj_t *SLRU_insert(cache_t *cache, const request_t *req) {
+cache_obj_t *SLRU_insert(cache_t *cache, request_t *req) {
   SLRU_params_t *SLRU_params = (SLRU_params_t *)(cache->eviction_params);
 
   int i;
@@ -292,6 +292,5 @@ void SLRU_remove(cache_t *cache, const obj_id_t obj_id) {
 }
 
 #ifdef __cplusplus
-extern "C"
 }
 #endif

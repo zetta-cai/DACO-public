@@ -72,7 +72,7 @@ static inline int oracleGeneralOpNS_read_one_req(reader_t *reader,
   req->real_time = *(uint32_t *)record;
   req->obj_id = *(uint64_t *)(record + 4);
   req->obj_size = *(uint32_t *)(record + 12);
-  req->op = *(uint8_t *)(record + 16);
+  req->op = static_cast<req_op_e>(*(uint8_t *)(record + 16)); // Siyuan: explicit type conversion
   req->ns = *(uint16_t *)(record + 17);
   req->next_access_vtime = *(int64_t *)(record + 19);
   if (req->next_access_vtime == -1) {

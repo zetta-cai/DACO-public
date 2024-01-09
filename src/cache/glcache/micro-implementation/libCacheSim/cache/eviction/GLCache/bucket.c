@@ -54,7 +54,7 @@ void remove_seg_from_bucket(GLCache_params_t *params, bucket_t *bucket,
 }
 
 void print_bucket(cache_t *cache) {
-  GLCache_params_t *params = cache->eviction_params;
+  GLCache_params_t *params = (GLCache_params_t *)cache->eviction_params;
 
   printf("bucket has segs: ");
   for (int i = 0; i < MAX_N_BUCKET; i++) {

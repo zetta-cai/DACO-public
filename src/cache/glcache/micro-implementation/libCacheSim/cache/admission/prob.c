@@ -68,11 +68,11 @@ static void prob_admissioner_parse_params(const char *init_params,
 }
 
 admissioner_t *clone_prob_admissioner(admissioner_t *admissioner) {
-  return create_prob_admissioner(admissioner->init_params);
+  return create_prob_admissioner((const char*)admissioner->init_params);
 }
 
 void free_prob_admissioner(admissioner_t *admissioner) {
-  prob_admission_params_t *pa = admissioner->params;
+  prob_admission_params_t *pa = (prob_admission_params_t *)admissioner->params;
 
   free(pa);
   free(admissioner);

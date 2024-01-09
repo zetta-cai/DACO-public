@@ -65,7 +65,7 @@ namespace covered
 
         request_t req = buildRequest_(key);
         cache_ck_res_e result = glcache_ptr_->get(glcache_ptr_, &req);
-        value = req.value;
+        value = Value(req.value.length());
         bool is_local_cached = (result == cache_ck_hit);
 
         return is_local_cached;
@@ -180,7 +180,6 @@ namespace covered
         return false;
     }
 
-    // TODO: END HERE
     void GLCacheLocalCache::evictLocalCacheNoGivenKeyInternal_(std::unordered_map<Key, Value, KeyHasher>& victims, const uint64_t& required_size)
     {
         assert(!hasFineGrainedManagement());
@@ -205,7 +204,7 @@ namespace covered
                 objptrs.push_back(tmp_objptr);
                 if (victims.find(tmp_objptr->key) == victims.end()) // NOT found
                 {
-                    victims.insert(std::pair(tmp_objptr->key, tmp_objptr->value));
+                    victims.insert(std::pair(Key(tmp_objptr->key), Value(tmp_objptr->value.length())));
                 }
 
                 tmp_objptr = tmp_objptr->evict_next;
@@ -230,34 +229,34 @@ namespace covered
 
     // (4) Other functions
 
-    void S3fifoLocalCache::updateLocalCacheMetadataInternal_(const Key& key, const std::string& func_name, const void* func_param_ptr)
+    void GLCacheLocalCache::updateLocalCacheMetadataInternal_(const Key& key, const std::string& func_name, const void* func_param_ptr)
     {
         Util::dumpErrorMsg(instance_name_, "updateLocalCacheMetadataInternal_() is ONLY for COVERED!");
         exit(1);
         return;
     }
 
-    uint64_t S3fifoLocalCache::getSizeForCapacityInternal_() const
+    uint64_t GLCacheLocalCache::getSizeForCapacityInternal_() const
     {
-        uint64_t internal_size = s3fifo_cache_ptr_->getSizeForCapacity();
+        uint64_t internal_size = glcache_ptr_->occupied_size;
 
         return internal_size;
     }
 
-    void S3fifoLocalCache::checkPointersInternal_() const
+    void GLCacheLocalCache::checkPointersInternal_() const
     {
-        assert(s3fifo_cache_ptr_ != NULL);
+        assert(glcache_ptr_ != NULL);
         return;
     }
 
-    bool S3fifoLocalCache::checkObjsizeInternal_(const ObjectSize& objsize) const
+    bool GLCacheLocalCache::checkObjsizeInternal_(const ObjectSize& objsize) const
     {
-        // NOTE: capacity has been checked by LocalCacheBase, while NO other custom object size checking here
+        // NOTE: capacity has been checked by LocalCacheBase, while NO other custom object size checking here (glcache uses # of objects as segment size limitation instead of bytes)
         const bool is_valid_objsize = true;
         return is_valid_objsize;
     }
 
-    request_t GLCacheLocalCache::buildRequest_(const Key& key, const Value& value) const
+    request_t GLCacheLocalCache::buildRequest_(const Key& key, const Value& value)
     {
         // Refer to src/cache/glcache/micro-implementation/libCacheSim/include/libCacheSim/request.h for default settings of some fields
 
@@ -272,7 +271,7 @@ namespace covered
         req.n_req = 0; // NOT used by glcache
         req.next_access_vtime; // NOTE: we should NOT provide next access time in req, which is invalid assumption in practice
         req.key_size = key.getKeyLength(); // NOT used by glcache
-        req.value_size = value.getValuesize(); // NOT used by glcache
+        req.val_size = value.getValuesize(); // NOT used by glcache
 
         req.ns = 0; // NOT used by glcache
         req.content_type = 0; // NOT used by glcache
@@ -290,8 +289,8 @@ namespace covered
         req.valid = true;
 
         req.is_keybased_req = true;
-        req.key = key;
-        req.value = value;
+        req.key = key.getKeystr();
+        req.value = value.generateValuestr();
 
         return req;
     }

@@ -151,6 +151,9 @@ set(LIBS ${LIBS} ${GLib_LIBRARY})
 #    link_libraries(${GLib2_LDFLAGS})
 #endif()
 
+## (OBSOLETE due to NOT use Key and Value now) Siyuan: add include directory of src/
+#include_directories(../../../../src)
+
 if (SUPPORT_ZSTD_TRACE)
     add_compile_definitions(SUPPORT_ZSTD_TRACE=1)
     find_package(ZSTD)

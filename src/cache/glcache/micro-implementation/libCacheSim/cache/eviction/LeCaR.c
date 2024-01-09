@@ -90,7 +90,7 @@ static inline void update_LFU_min_freq(LeCaR_params_t *params) {
   unsigned old_min_freq = params->min_freq;
   for (uint64_t freq = params->min_freq + 1; freq <= params->max_freq; freq++) {
     freq_node_t *node =
-        g_hash_table_lookup(params->freq_map, GSIZE_TO_POINTER(freq));
+        (freq_node_t *)g_hash_table_lookup(params->freq_map, GSIZE_TO_POINTER(freq));
     if (node != NULL && node->n_obj > 0) {
       params->min_freq = freq;
       break;
@@ -106,7 +106,7 @@ static inline freq_node_t *get_min_freq_node(LeCaR_params_t *params) {
   if (params->min_freq == 1) {
     min_freq_node = params->freq_one_node;
   } else {
-    min_freq_node = g_hash_table_lookup(params->freq_map,
+    min_freq_node = (freq_node_t *)g_hash_table_lookup(params->freq_map,
                                         GSIZE_TO_POINTER(params->min_freq));
   }
 
@@ -119,7 +119,7 @@ static inline freq_node_t *get_min_freq_node(LeCaR_params_t *params) {
 
 static inline void remove_obj_from_freq_node(LeCaR_params_t *params,
                                              cache_obj_t *cache_obj) {
-  freq_node_t *freq_node = g_hash_table_lookup(
+  freq_node_t *freq_node = (freq_node_t *)g_hash_table_lookup(
       params->freq_map, GSIZE_TO_POINTER(cache_obj->LeCaR.freq));
   DEBUG_ASSERT(freq_node != NULL);
   DEBUG_ASSERT(freq_node->freq == cache_obj->LeCaR.freq);
@@ -130,14 +130,14 @@ static inline void remove_obj_from_freq_node(LeCaR_params_t *params,
 
   if (cache_obj == freq_node->first_obj) {
     VVVERBOSE("remove object from freq node --- object is the first object\n");
-    freq_node->first_obj = cache_obj->LeCaR.lfu_next;
+    freq_node->first_obj = (cache_obj_t *)cache_obj->LeCaR.lfu_next;
     if (cache_obj->LeCaR.lfu_next != NULL)
       ((cache_obj_t *)(cache_obj->LeCaR.lfu_next))->LeCaR.lfu_prev = NULL;
   }
 
   if (cache_obj == freq_node->last_obj) {
     VVVERBOSE("remove object from freq node --- object is the last object\n");
-    freq_node->last_obj = cache_obj->LeCaR.lfu_prev;
+    freq_node->last_obj = (cache_obj_t *)cache_obj->LeCaR.lfu_prev;
     if (cache_obj->LeCaR.lfu_prev != NULL)
       ((cache_obj_t *)(cache_obj->LeCaR.lfu_prev))->LeCaR.lfu_next = NULL;
   }
@@ -161,7 +161,7 @@ static inline void remove_obj_from_freq_node(LeCaR_params_t *params,
 static inline void insert_obj_info_freq_node(LeCaR_params_t *params,
                                              cache_obj_t *cache_obj) {
   // find the new freq_node this object should move to
-  freq_node_t *new_node = g_hash_table_lookup(
+  freq_node_t *new_node = (freq_node_t *)g_hash_table_lookup(
       params->freq_map, GSIZE_TO_POINTER(cache_obj->LeCaR.freq));
   if (new_node == NULL) {
     new_node = my_malloc_n(freq_node_t, 1);
@@ -360,7 +360,7 @@ cache_ck_res_e LeCaR_get(cache_t *cache, request_t *req) {
   return ck;
 }
 
-cache_obj_t *LeCaR_insert(cache_t *cache, const request_t *req) {
+cache_obj_t *LeCaR_insert(cache_t *cache, request_t *req) {
   LeCaR_params_t *params = (LeCaR_params_t *)(cache->eviction_params);
 
   VVERBOSE("insert object %lu into cache\n", (unsigned long)req->obj_id);

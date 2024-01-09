@@ -28,7 +28,7 @@ static inline void resize_matrix(GLCache_params_t *params, feature_t **x_p,
 /* calculate the ranking of all segments for eviction */
 /* TODO: can sample some segments to improve throughput */
 static int prepare_inference_data(cache_t *cache) {
-  GLCache_params_t *params = cache->eviction_params;
+  GLCache_params_t *params = (GLCache_params_t *)cache->eviction_params;
   learner_t *learner = &params->learner;
 
   /** because each segment is not fixed size, 
@@ -67,13 +67,13 @@ static int prepare_inference_data(cache_t *cache) {
   safe_call(XGDMatrixCreateFromMat(learner->inference_x, n_segs,
                                    learner->n_feature, -2, &learner->inf_dm));
 
-  safe_call(XGDMatrixSetUIntInfo(learner->inf_dm, "group", &n_segs, 1));
+  safe_call(XGDMatrixSetUIntInfo(learner->inf_dm, "group", (const unsigned *)&n_segs, 1));
 
   return n_segs; 
 }
 
 void inference_xgboost(cache_t *cache) {
-  GLCache_params_t *params = cache->eviction_params;
+  GLCache_params_t *params = (GLCache_params_t *)cache->eviction_params;
   learner_t *learner = &params->learner;
 
   int n_segs = prepare_inference_data(cache);

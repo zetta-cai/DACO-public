@@ -111,7 +111,7 @@ cache_ck_res_e BeladySize_get(cache_t *cache, request_t *req) {
   return cache_get_base(cache, req);
 }
 
-cache_obj_t *BeladySize_insert(cache_t *cache, const request_t *req) {
+cache_obj_t *BeladySize_insert(cache_t *cache, request_t *req) {
   if (req->next_access_vtime == -1 || req->next_access_vtime == INT64_MAX) {
     return NULL;
   }

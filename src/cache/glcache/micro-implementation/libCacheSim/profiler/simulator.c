@@ -6,10 +6,6 @@
 //  Copyright © 2016-2019 Juncheng. All rights reserved.
 //
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include "../include/libCacheSim/simulator.h"
 
 #include <math.h>
@@ -19,6 +15,11 @@ extern "C" {
 #include "../include/libCacheSim/plugin.h"
 #include "../utils/include/myprint.h"
 #include "../utils/include/mystr.h"
+
+// Siyuan: avoid C linkage on C++ code
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct simulator_multithreading_params {
   reader_t *reader;

@@ -7,12 +7,11 @@
 
 #include <assert.h>
 #include <stdbool.h>
+#include <string> // Siyuan: for key-value caching
 
 #include "../../include/libCacheSim/cacheObj.h"
 #include "../../include/libCacheSim/request.h"
 #include "hashtableStruct.h"
-
-#include "common/key.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -25,7 +24,7 @@ cache_obj_t *chained_hashtable_find_obj_id_v2(const hashtable_t *hashtable,
 
 // Siyuan: for key-value caching
 cache_obj_t *chained_hashtable_find_key_v2(const hashtable_t *hashtable,
-                                              const covered::Key& key);
+                                              const std::string& key);
 
 cache_obj_t *chained_hashtable_find_v2(const hashtable_t *hashtable,
                                        const request_t *req);

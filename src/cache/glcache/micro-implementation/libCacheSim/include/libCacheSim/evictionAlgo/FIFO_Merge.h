@@ -25,7 +25,7 @@ cache_ck_res_e FIFO_Merge_check(cache_t *cache, request_t *req,
 
 cache_ck_res_e FIFO_Merge_get(cache_t *cache, request_t *req);
 
-cache_obj_t *FIFO_Merge_insert(cache_t *FIFO_Merge, const request_t *req);
+cache_obj_t *FIFO_Merge_insert(cache_t *FIFO_Merge, request_t *req);
 
 cache_obj_t *FIFO_Merge_to_evict(cache_t *cache);
 

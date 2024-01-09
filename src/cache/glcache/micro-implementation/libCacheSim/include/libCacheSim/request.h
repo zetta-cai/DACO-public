@@ -8,14 +8,17 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
+#include <string> // Siyuan: for key-value caching
 
 #include "enum.h"
 #include "logging.h"
 #include "mem.h"
 
-// Siyuan: for key-value caching
-#include "common/key.h"
-#include "common/value.h"
+// (OBSOLETE) Siyuan: as g++ will not mangle struct non-static member variables, we use extern "C" for C language linkage after declaration of struct request such that we can declare instances of std::string (NOT use covered::Key and covered::Value now)
+// Siyuan: as g++ will not mangle struct non-static member variables, compiler will ignore extern "C" even if std::string is NOT supported by gcc
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /* need to optimize this for CPU cacheline */
 typedef struct request {
@@ -51,14 +54,9 @@ typedef struct request {
   
   // Siyuan: for key-value caching
   bool is_keybased_req; // Use obj_id as key if false, or use key otherwise
-  covered::Key key;
-  covered::Value value;
+  std::string key;
+  std::string value;
 } request_t;
-
-// Siyuan: as g++ will not mangle struct non-static member variables, we use extern "C" for C language linkage after declaration of struct request such that we can declare instances of class Key and Value
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /**
  * allocate a new request_t struct and fill in necessary field

@@ -23,7 +23,7 @@ static int _verify(cache_t *cache) {
   /* update min freq */
   for (uint64_t freq = 1; freq <= CR_LFUDA_params->max_freq; freq++) {
     freq_node_t *freq_node =
-        g_hash_table_lookup(CR_LFUDA_params->freq_map, GSIZE_TO_POINTER(freq));
+        (freq_node_t *)g_hash_table_lookup(CR_LFUDA_params->freq_map, GSIZE_TO_POINTER(freq));
     if (freq_node != NULL) {
       uint32_t n_obj = 0;
       cache_obj = freq_node->first_obj;
@@ -108,7 +108,7 @@ cache_ck_res_e CR_LFU_check(cache_t *cache, request_t *req,
     }
 
     // find the freq_node this object belongs to and update its info
-    freq_node_t *old_node = g_hash_table_lookup(
+    freq_node_t *old_node = (freq_node_t *)g_hash_table_lookup(
         params->freq_map, GSIZE_TO_POINTER(cache_obj->lfu.freq - 1));
     DEBUG_ASSERT(old_node != NULL);
     DEBUG_ASSERT(old_node->freq == cache_obj->lfu.freq - 1);
@@ -117,7 +117,7 @@ cache_ck_res_e CR_LFU_check(cache_t *cache, request_t *req,
     remove_obj_from_list(&old_node->first_obj, &old_node->last_obj, cache_obj);
 
     // find the new freq_node this object should move to
-    freq_node_t *new_node = g_hash_table_lookup(
+    freq_node_t *new_node = (freq_node_t *)g_hash_table_lookup(
         params->freq_map, GSIZE_TO_POINTER(cache_obj->lfu.freq));
     if (new_node == NULL) {
       new_node = my_malloc_n(freq_node_t, 1);
@@ -156,7 +156,7 @@ cache_ck_res_e CR_LFU_check(cache_t *cache, request_t *req,
       for (uint64_t freq = params->min_freq + 1; freq <= params->max_freq;
            freq++) {
         freq_node_t *node =
-            g_hash_table_lookup(params->freq_map, GSIZE_TO_POINTER(freq));
+            (freq_node_t *)g_hash_table_lookup(params->freq_map, GSIZE_TO_POINTER(freq));
         if (node != NULL && node->n_obj > 0) {
           params->min_freq = freq;
           break;
@@ -172,7 +172,7 @@ cache_ck_res_e CR_LFU_get(cache_t *cache, request_t *req) {
   return cache_get_base(cache, req);
 }
 
-cache_obj_t *CR_LFU_insert(cache_t *cache, const request_t *req) {
+cache_obj_t *CR_LFU_insert(cache_t *cache, request_t *req) {
   CR_LFU_params_t *params = (CR_LFU_params_t *)(cache->eviction_params);
   cache_obj_t *cache_obj = cache_insert_base(cache, req);
   cache_obj->lfu.freq = 1;
@@ -216,7 +216,7 @@ cache_obj_t *CR_LFU_insert(cache_t *cache, const request_t *req) {
     // find the new freq_node this object should move to
 
     DEBUG_ASSERT(params->other_cache != NULL);
-    freq_node_t *new_node = g_hash_table_lookup(
+    freq_node_t *new_node = (freq_node_t *)g_hash_table_lookup(
         params->freq_map, GSIZE_TO_POINTER(cache_obj->lfu.freq));
     if (new_node == NULL) {
       new_node = my_malloc_n(freq_node_t, 1);
@@ -254,7 +254,7 @@ cache_obj_t *CR_LFU_insert(cache_t *cache, const request_t *req) {
     params->min_freq = cache_obj->lfu.freq;
   }
   freq_node_t *min_freq_node =
-      g_hash_table_lookup(params->freq_map, GSIZE_TO_POINTER(params->min_freq));
+      (freq_node_t *)g_hash_table_lookup(params->freq_map, GSIZE_TO_POINTER(params->min_freq));
   DEBUG_ASSERT(min_freq_node != NULL);
   DEBUG_ASSERT(min_freq_node->last_obj != NULL);
   DEBUG_ASSERT(min_freq_node->n_obj > 0);
@@ -266,7 +266,7 @@ cache_obj_t *CR_LFU_to_evict(cache_t *cache) {
   CR_LFU_params_t *params = (CR_LFU_params_t *)(cache->eviction_params);
 
   freq_node_t *min_freq_node =
-      g_hash_table_lookup(params->freq_map, GSIZE_TO_POINTER(params->min_freq));
+      (freq_node_t *)g_hash_table_lookup(params->freq_map, GSIZE_TO_POINTER(params->min_freq));
   DEBUG_ASSERT(min_freq_node != NULL);
   DEBUG_ASSERT(min_freq_node->last_obj != NULL);
   DEBUG_ASSERT(min_freq_node->n_obj > 0);
@@ -279,7 +279,7 @@ void CR_LFU_evict(cache_t *cache, const request_t *req,
   CR_LFU_params_t *params = (CR_LFU_params_t *)(cache->eviction_params);
 
   freq_node_t *min_freq_node =
-      g_hash_table_lookup(params->freq_map, GSIZE_TO_POINTER(params->min_freq));
+      (freq_node_t *)g_hash_table_lookup(params->freq_map, GSIZE_TO_POINTER(params->min_freq));
   DEBUG_ASSERT(min_freq_node != NULL);
   DEBUG_ASSERT(min_freq_node->last_obj != NULL);
 
@@ -314,7 +314,7 @@ void CR_LFU_evict(cache_t *cache, const request_t *req,
     for (uint64_t freq = params->min_freq + 1; freq <= params->max_freq;
          freq++) {
       freq_node_t *node =
-          g_hash_table_lookup(params->freq_map, GSIZE_TO_POINTER(freq));
+          (freq_node_t *)g_hash_table_lookup(params->freq_map, GSIZE_TO_POINTER(freq));
       if (node != NULL && node->n_obj > 0) {
         params->min_freq = freq;
         break;
@@ -329,7 +329,7 @@ void CR_LFU_evict(cache_t *cache, const request_t *req,
   cache_remove_obj_base(cache, obj_to_evict);
 
   min_freq_node =
-      g_hash_table_lookup(params->freq_map, GSIZE_TO_POINTER(params->min_freq));
+      (freq_node_t *)g_hash_table_lookup(params->freq_map, GSIZE_TO_POINTER(params->min_freq));
   DEBUG_ASSERT(min_freq_node != NULL);
   DEBUG_ASSERT(min_freq_node->last_obj != NULL);
   DEBUG_ASSERT(min_freq_node->n_obj > 0);
@@ -358,7 +358,7 @@ void CR_LFU_remove(cache_t *cache, const obj_id_t obj_id) {
   }
 
   freq_node_t *freq_node =
-      g_hash_table_lookup(params->freq_map, GSIZE_TO_POINTER(obj->lfu.freq));
+      (freq_node_t *)g_hash_table_lookup(params->freq_map, GSIZE_TO_POINTER(obj->lfu.freq));
   DEBUG_ASSERT(freq_node->freq == obj->lfu.freq);
   DEBUG_ASSERT(freq_node->n_obj > 0);
 
@@ -368,7 +368,7 @@ void CR_LFU_remove(cache_t *cache, const obj_id_t obj_id) {
   cache_remove_obj_base(cache, obj);
 
   freq_node_t *min_freq_node =
-      g_hash_table_lookup(params->freq_map, GSIZE_TO_POINTER(params->min_freq));
+      (freq_node_t *)g_hash_table_lookup(params->freq_map, GSIZE_TO_POINTER(params->min_freq));
 
   if (min_freq_node->n_obj == 0) {
     /* the only obj of min freq */
@@ -380,7 +380,7 @@ void CR_LFU_remove(cache_t *cache, const obj_id_t obj_id) {
     for (uint64_t freq = params->min_freq + 1; freq <= params->max_freq;
          freq++) {
       freq_node_t *node =
-          g_hash_table_lookup(params->freq_map, GSIZE_TO_POINTER(freq));
+          (freq_node_t *)g_hash_table_lookup(params->freq_map, GSIZE_TO_POINTER(freq));
       if (node != NULL && node->n_obj > 0) {
         params->min_freq = freq;
         break;
@@ -390,7 +390,7 @@ void CR_LFU_remove(cache_t *cache, const obj_id_t obj_id) {
   }
 
   min_freq_node =
-      g_hash_table_lookup(params->freq_map, GSIZE_TO_POINTER(params->min_freq));
+      (freq_node_t *)g_hash_table_lookup(params->freq_map, GSIZE_TO_POINTER(params->min_freq));
   DEBUG_ASSERT(min_freq_node != NULL);
   DEBUG_ASSERT(min_freq_node->last_obj != NULL);
   DEBUG_ASSERT(min_freq_node->n_obj > 0);

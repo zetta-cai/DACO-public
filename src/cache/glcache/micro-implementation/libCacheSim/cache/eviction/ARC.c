@@ -120,7 +120,7 @@ void ARC_free(cache_t *cache) {
   cache_struct_free(cache);
 }
 
-void _verify(cache_t *cache, const request_t *req) {
+void _verify(cache_t *cache, request_t *req) {
   ARC_params_t *params = (ARC_params_t *)(cache->eviction_params);
   cache_ck_res_e hit1 = params->LRU1->check(params->LRU1, req, false);
   cache_ck_res_e hit2 = params->LRU2->check(params->LRU2, req, false);
@@ -191,7 +191,7 @@ cache_ck_res_e ARC_get(cache_t *cache, request_t *req) {
   return cache_get_base(cache, req);
 }
 
-cache_obj_t *ARC_insert(cache_t *cache, const request_t *req) {
+cache_obj_t *ARC_insert(cache_t *cache, request_t *req) {
   /* first time add, then it should be add to LRU1 */
   ARC_params_t *params = (ARC_params_t *)(cache->eviction_params);
 

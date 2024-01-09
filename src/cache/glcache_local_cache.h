@@ -63,7 +63,7 @@ namespace covered
         virtual bool checkObjsizeInternal_(const ObjectSize& objsize) const override;
 
         // Build request for GLCache
-        static request_t buildRequest_(const Key& key, const Value& value = Value()) const;
+        static request_t buildRequest_(const Key& key, const Value& value = Value());
 
         // Member variables
 

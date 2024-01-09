@@ -5,20 +5,21 @@
 #ifndef libCacheSim_CACHEUTILS_H
 #define libCacheSim_CACHEUTILS_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <glib.h>
 
 #include "../dataStructure/hashtable/hashtable.h"
 #include "../include/libCacheSim/cache.h"
 #include "../include/libCacheSim/cacheObj.h"
 
+// Siyuan: avoid C linkage on C++ code
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /****************** find obj expiration related info ******************/
 static inline void _get_cache_state_ht_iter(cache_obj_t *cache_obj,
                                             gpointer user_data) {
-  cache_stat_t *cache_state = user_data;
+  cache_stat_t *cache_state = (cache_stat_t *)user_data;
   cache_state->n_obj += 1;
   cache_state->occupied_size += cache_obj->obj_size;
 #if defined(SUPPORT_TTL) && SUPPORT_TTL == 1

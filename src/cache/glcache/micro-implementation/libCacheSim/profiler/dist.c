@@ -2,10 +2,6 @@
 // Created by Juncheng Yang on 11/24/19.
 //
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>
@@ -14,6 +10,11 @@ extern "C" {
 #include "../dataStructure/splay.h"
 #include "../include/libCacheSim/dist.h"
 #include "../include/libCacheSim/macro.h"
+
+// Siyuan: avoid C linkage on C++ code
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /***********************************************************
  * this function is called by _get_dist,
@@ -116,7 +117,7 @@ int32_t *get_stack_dist(reader_t *reader, const dist_type_e dist_type,
   request_t *req = new_request();
   *array_size = get_num_of_req(reader);
 
-  int32_t *stack_dist_array = malloc(sizeof(int32_t) * get_num_of_req(reader));
+  int32_t *stack_dist_array = (int32_t *)malloc(sizeof(int32_t) * get_num_of_req(reader));
   if (dist_type == FUTURE_STACK_DIST) {
     for (int64_t i = 0; i < get_num_of_req(reader); i++) {
       stack_dist_array[i] = -1;
@@ -164,7 +165,7 @@ int32_t *get_access_dist(reader_t *reader, const dist_type_e dist_type, int64_t 
   int64_t dist = 0;
   request_t *req = new_request();
   *array_size = get_num_of_req(reader);
-  int32_t *dist_array = malloc(sizeof(int32_t) * get_num_of_req(reader));
+  int32_t *dist_array = (int32_t *)malloc(sizeof(int32_t) * get_num_of_req(reader));
 
   GHashTable *hash_table =
       g_hash_table_new_full(g_direct_hash, g_direct_equal, NULL, NULL);
@@ -230,7 +231,7 @@ int32_t *load_dist(reader_t *const reader, const char *const ifilepath,
   fstat(fd, &buf);
   assert(buf.st_size == sizeof(int32_t) * get_num_of_req(reader));
 
-  int32_t *dist_array = malloc(sizeof(int32_t) * get_num_of_req(reader));
+  int32_t *dist_array = (int32_t *)malloc(sizeof(int32_t) * get_num_of_req(reader));
   size_t n_read =
       fread(dist_array, sizeof(int32_t), get_num_of_req(reader), file);
   assert(n_read == get_num_of_req(reader));

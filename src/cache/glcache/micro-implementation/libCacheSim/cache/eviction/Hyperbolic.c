@@ -86,7 +86,7 @@ cache_t *Hyperbolic_init(const common_cache_params_t ccache_params,
 }
 
 void Hyperbolic_free(cache_t *cache) {
-  Hyperbolic_params_t *params = cache->eviction_params;
+  Hyperbolic_params_t *params = (Hyperbolic_params_t *)cache->eviction_params;
   my_free(sizeof(Hyperbolic_params_t), params);
   cache_struct_free(cache);
 }
@@ -113,7 +113,7 @@ cache_ck_res_e Hyperbolic_get(cache_t *cache, request_t *req) {
   return ret;
 }
 
-cache_obj_t *Hyperbolic_insert(cache_t *cache, const request_t *req) {
+cache_obj_t *Hyperbolic_insert(cache_t *cache, request_t *req) {
   cache_obj_t *cached_obj = cache_insert_base(cache, req);
   cached_obj->hyperbolic.freq = 1;
   cached_obj->hyperbolic.vtime_enter_cache = cache->n_req;
@@ -122,7 +122,7 @@ cache_obj_t *Hyperbolic_insert(cache_t *cache, const request_t *req) {
 }
 
 cache_obj_t *Hyperbolic_to_evict(cache_t *cache) {
-  Hyperbolic_params_t *params = cache->eviction_params;
+  Hyperbolic_params_t *params = (Hyperbolic_params_t *)cache->eviction_params;
   cache_obj_t *best_candidate = NULL, *sampled_obj;
   double best_candidate_score = 1.0e16, sampled_obj_score;
   for (int i = 0; i < params->n_sample; i++) {

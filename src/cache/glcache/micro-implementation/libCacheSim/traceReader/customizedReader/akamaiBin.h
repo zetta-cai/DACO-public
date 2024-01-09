@@ -1,7 +1,4 @@
 #pragma once
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /*
  * format
@@ -20,6 +17,11 @@ extern "C" {
 
 #include "../../include/libCacheSim/reader.h"
 #include "binaryUtils.h"
+
+// Siyuan: avoid C linkage on C++ code
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #define MAX_OBJ_SIZE (1048576L * 4000L)
 

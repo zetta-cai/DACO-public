@@ -6,7 +6,7 @@
 
 static inline void obj_init(cache_t *cache, const request_t *req,
                             cache_obj_t *cache_obj, segment_t *seg) {
-  GLCache_params_t *params = cache->eviction_params;
+  GLCache_params_t *params = (GLCache_params_t *)cache->eviction_params;
   copy_request_to_cache_obj(cache_obj, req); // Siyuan: this will copy key-value pair from req into cache_obj
   cache_obj->GLCache.freq = 0;
   // Siyuan: in-req next access time is invalid assumption in practice
@@ -49,14 +49,14 @@ static inline void obj_hit_update(GLCache_params_t *params, cache_obj_t *obj,
   obj->GLCache.next_access_vtime = params->curr_vtime;
   obj->GLCache.freq += 1;
 
-  segment_t *seg = obj->GLCache.segment;
+  segment_t *seg = (segment_t *)obj->GLCache.segment;
   bucket_t *bkt = &params->buckets[seg->bucket_id];
 }
 
 /* some internal state update bwhen an object is evicted */
 static inline void obj_evict_update(cache_t *cache, cache_obj_t *obj) {
-  GLCache_params_t *params = cache->eviction_params;
-  segment_t *seg = obj->GLCache.segment;
+  GLCache_params_t *params = (GLCache_params_t *)cache->eviction_params;
+  segment_t *seg = (segment_t *)obj->GLCache.segment;
   bucket_t *bkt = &params->buckets[seg->bucket_id];
 }
 
@@ -72,7 +72,7 @@ static inline double cal_obj_score(GLCache_params_t *params,
     return 0;
   }
 
-  segment_t *seg = cache_obj->GLCache.segment;
+  segment_t *seg = (segment_t *)cache_obj->GLCache.segment;
   int64_t curr_rtime = params->curr_rtime;
   int64_t curr_vtime = params->curr_vtime;
   bucket_t *bkt = &params->buckets[seg->bucket_id];
