@@ -270,6 +270,9 @@ static void prepare_training_data_per_package(cache_t *cache) {
   GLCache_params_t *params = (GLCache_params_t *)cache->eviction_params;
   learner_t *learner = &params->learner;
 
+  // TMPDEBUG240109
+  printf("learner->valid_y: %f, learner->n_valid_samples: %d, &(learner->n_valid_samples): %p\n", learner->valid_y, learner->n_valid_samples, (void*)&(learner->n_valid_samples));
+
   safe_call(XGDMatrixCreateFromMat(learner->train_x, learner->n_train_samples,
                                    learner->n_feature, -2, &learner->train_dm));
 
@@ -456,6 +459,9 @@ void prepare_training_data(cache_t *cache) {
 #endif
   learner->n_train_samples = pos_in_train_data;
   learner->n_valid_samples = pos_in_valid_data;
+
+  // TMPDEBUG240109
+  printf("pos_in_train_data: %d, pos_in_valid_data: %d, learner->n_valid_samples: %d, &(learner->n_valid_samples): %p\n", pos_in_train_data, pos_in_valid_data, learner->n_valid_samples, (void*)&(learner->n_valid_samples));
 
   prepare_training_data_per_package(cache);
 #ifdef TRAIN_KEEP_HALF

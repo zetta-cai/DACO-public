@@ -1,6 +1,7 @@
-
-
+// Siyuan: avoid conflicting macros
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
 #include <assert.h>
 #include <string.h>
 

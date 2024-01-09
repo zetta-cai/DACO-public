@@ -77,7 +77,7 @@ cache_ck_res_e Belady_check(cache_t *cache, request_t *req,
     if (req->next_access_vtime == -1 || req->next_access_vtime == INT64_MAX) {
       Belady_remove_obj(cache, cached_obj);
     } else {
-      pqueue_pri_t pri = {.pri = req->next_access_vtime};
+      pqueue_pri_t pri = {.pri = static_cast<double>(req->next_access_vtime)}; // Siyuan: explicit type conversion
       pqueue_change_priority(params->pq, pri,
                              (pq_node_t *)(cached_obj->Belady.pq_node));
       DEBUG_ASSERT(
