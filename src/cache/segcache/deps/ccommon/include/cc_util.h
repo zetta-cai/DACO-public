@@ -43,9 +43,16 @@ extern "C" {
 #define CRLF_LEN        (uint32_t) (sizeof(CRLF) - 1)
 
 /* unit */
+// Siyuan: avoid conflicting macros
+#ifndef KiB
 #define KiB             1024
+#endif
+#ifndef MiB
 #define MiB             (1024 * KiB)
+#endif
+#ifndef GiB
 #define GiB             (1024 * MiB)
+#endif
 
 /* int */
 /*

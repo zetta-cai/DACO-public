@@ -37,6 +37,7 @@ namespace covered
     // Cache name
     const std::string Util::CACHELIB_CACHE_NAME("cachelib");
     const std::string Util::FIFO_CACHE_NAME("fifo");
+    const std::string Util::GLCACHE_CACHE_NAME("glcache");
     const std::string Util::GDSF_CACHE_NAME("gdsf"); // Greedy dual
     const std::string Util::GDSIZE_CACHE_NAME("gdsize"); // Greedy dual
     const std::string Util::LFUDA_CACHE_NAME("lfuda"); // Greedy dual

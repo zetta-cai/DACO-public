@@ -48,9 +48,16 @@ extern "C" {
 #define SEVERE_LEVEL 9
 
 // this is correct, to change to this, need to update test
+// Siyuan: avoid conflicting macros
+#ifndef KiB
 #define KiB 1024LL
+#endif
+#ifndef MiB
 #define MiB 1048576LL
+#endif
+#ifndef GiB
 #define GiB 1073741824LL
+#endif
 #define TiB 1099511627776LL
 
 #define KB 1000L

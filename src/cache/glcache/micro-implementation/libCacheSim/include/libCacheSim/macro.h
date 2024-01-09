@@ -9,7 +9,10 @@
 extern "C" {
 #endif
 
+// Siyuan: avoid conflicting macros
+#ifndef UNUSED
 #define UNUSED(x) (void)(x)
+#endif
 #define UNUSED_PARAM __attribute__((unused))  // gcc only
 #define SUPPRESS_FUNCTION_NO_USE_WARN(f) (void)f
 #define ARRAY_LENGTH(A) (sizeof(A) / sizeof(A[0]))
@@ -39,7 +42,8 @@ extern "C" {
 
 #define PASTE(a, b) a##b
 
-#define U(x) ((unsigned)(x))
+// Siyuan: avoid conflicting macros (libboost will use U as a template class name)
+//#define U(x) ((unsigned)(x))
 #define UL(x) ((unsigned long)(x))
 #define ULL(x) ((unsigned long long)(x))
 #define L(x) ((long)(x))
@@ -90,8 +94,11 @@ extern "C" {
 
 #define ASSERT_EQUAL(a, b, FMT, ...) \
   CHECK_CONDITION(a, !=, b, FMT, ##__VA_ARGS__)
+// Siyuan: avoid conflicting macros
+#ifndef ASSERT_TRUE
 #define ASSERT_TRUE(x, FMT, ...) \
   CHECK_CONDITION(x, !=, true, FMT, ##__VA_ARGS__)
+#endif
 #define ASSERT_ZERO(x, FMT, ...) CHECK_CONDITION(a, !=, 0, FMT, ##__VA_ARGS__)
 
 #if LOGLEVEL < INFO_LEVEL

@@ -10,6 +10,7 @@
 #include "cache/lfu_local_cache.h"
 #include "cache/lhd_local_cache.h"
 #include "cache/lru_local_cache.h"
+#include "cache/glcache_local_cache.h"
 #include "cache/greedy_dual_local_cache.h"
 #include "cache/s3fifo_local_cache.h"
 #include "cache/segcache_local_cache.h"
@@ -29,6 +30,10 @@ namespace covered
         else if (cache_name == Util::FIFO_CACHE_NAME)
         {
             local_cache_ptr = new FifoLocalCache(edge_wrapper_ptr, edge_idx, capacity_bytes);
+        }
+        else if (cache_name == Util::GLCACHE_CACHE_NAME)
+        {
+            local_cache_ptr = new GLCacheLocalCache(edge_wrapper_ptr, edge_idx, capacity_bytes);
         }
         else if (cache_name == Util::LRUK_CACHE_NAME || cache_name == Util::GDSIZE_CACHE_NAME || cache_name == Util::GDSF_CACHE_NAME || cache_name == Util::LFUDA_CACHE_NAME) // Greedy dual
         {

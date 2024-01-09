@@ -14,6 +14,7 @@ include src/mk/recipes.mk
 include src/mk/cache/cachelib.mk
 include src/mk/cache/covered.mk
 include src/mk/cache/fifo.mk
+include src/mk/cache/glcache.mk
 include src/mk/cache/gdsf.mk
 include src/mk/cache/lfu.mk
 include src/mk/cache/lhd.mk

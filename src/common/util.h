@@ -25,7 +25,10 @@
 #include "common/covered_common_header.h"
 #include "network/network_addr.h"
 
+// Avoid conflicting macros
+#ifndef UNUSED
 #define UNUSED(var) (void(var))
+#endif
 
 #define KB2B(var) var * 1024
 #define MB2B(var) var * 1024 * 1024
@@ -80,6 +83,7 @@ namespace covered
         // Cache name
         static const std::string CACHELIB_CACHE_NAME;
         static const std::string FIFO_CACHE_NAME;
+        static const std::string GLCACHE_CACHE_NAME;
         static const std::string GDSF_CACHE_NAME; // Greedy dual
         static const std::string GDSIZE_CACHE_NAME; // Greedy dual
         static const std::string LFUDA_CACHE_NAME; // Greedy dual

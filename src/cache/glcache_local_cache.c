@@ -269,7 +269,7 @@ namespace covered
         req.op = OP_INVALID; // NOT used by glcache
 
         req.n_req = 0; // NOT used by glcache
-        req.next_access_vtime; // NOTE: we should NOT provide next access time in req, which is invalid assumption in practice
+        req.next_access_vtime = -1; // NOTE: we should NOT provide next access time in req, which is invalid assumption in practice
         req.key_size = key.getKeyLength(); // NOT used by glcache
         req.val_size = value.getValuesize(); // NOT used by glcache
 
