@@ -16,6 +16,7 @@
 #include <string>
 #include <vector>
 
+#include "cache/custom_func_param_base.h"
 #include "concurrency/concurrent_hashtable_impl.h"
 
 namespace covered
@@ -63,15 +64,8 @@ namespace covered
         bool updateIfInvalidForGetrsp(const Key& key, const Value& value, const bool& is_global_cached, bool& affect_victim_tracker); // Update value only if key is locally cached yet invalid
         bool removeIfInvalidForGetrsp(const Key& key, const bool& is_global_cached, bool& affect_victim_tracker); // Remove value only if it is locally cached yet invalid
 
-        // Return up to peredge_synced_victimcnt local synced victims with the least local rewards
-        std::list<VictimCacheinfo> getLocalSyncedVictimCacheinfos() const;
-
         // Return if exist victims for the required size
         bool fetchVictimCacheinfosForRequiredSize(std::list<VictimCacheinfo>& victim_cacheinfos, const uint64_t& required_size) const;
-
-        // Set collected_popularity.is_tracked_ as true if the local uncached key is tracked; set collected_popularity.is_tracked_ as false if key is either local cached or local uncached yet untracked by local uncached metadata
-        // NOTE: for directory lookup req, directory eviction req, acquire writelock req, and release writelock req, is_key_tracked flag could still be false for returned collected popularity -> reason: under local uncached metadata capacity limitation, newly-tracked or preserved-after-eviciton local uncached popularity could be immediately detracked from local uncached metadata and hence NO need for popularity collection/aggregation
-        void getCollectedPopularity(const Key& key, CollectedPopularity& collected_popularity) const;
 
         // (3) Local edge cache management
 
@@ -81,7 +75,7 @@ namespace covered
 
         // (4) Other functions
 
-        void metadataUpdate(const Key& key, const std::string& func_name, const void* func_param_ptr); // Update local metadata (e.g., is_neighbor_cached) for local edge cache
+        void customFunc(const std::string& func_name, CustomFuncParamBase* func_param_ptr); // Invoke method-specific functions for local edge cache
         
         // In units of bytes
         uint64_t getSizeForCapacity() const; // sum of internal size (each individual local cache) and external size (metadata for edge caching)

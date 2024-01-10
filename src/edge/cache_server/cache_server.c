@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <sstream>
 
+#include "cache/covered_custom_func_param.h"
 #include "common/config.h"
 #include "common/thread_launcher.h"
 #include "common/util.h"
@@ -911,13 +912,13 @@ namespace covered
             // NOTE: we always perform victim synchronization before popularity aggregation, as we need the latest synced victim information for placement calculation -> while here NOT need piggyacking-based popularity collection and victim synchronization for local directory update
 
             // Prepare local uncached popularity of key for popularity aggregation
-            CollectedPopularity collected_popularity;
-            edge_wrapper_ptr_->getEdgeCachePtr()->getCollectedPopularity(key, collected_popularity); // collected_popularity.is_tracked_ indicates if the local uncached key is tracked in local uncached metadata
+            GetCollectedPopularityParam tmp_param(key);
+            edge_wrapper_ptr_->getEdgeCachePtr()->customFunc(GetCollectedPopularityParam::FUNCNAME, &tmp_param); // collected_popularity.is_tracked_ indicates if the local uncached key is tracked in local uncached metadata
 
             // Issue metadata update request if necessary, update victim dirinfo, assert NO local uncached popularity, and perform selective popularity aggregation after local directory eviction
             Edgeset best_placement_edgeset; // Used for non-blocking placement notification if need hybrid data fetching for COVERED
             bool need_hybrid_fetching = false;
-            is_finish = edge_wrapper_ptr_->afterDirectoryEvictionHelper_(key, current_edge_idx, metadata_update_requirement, directory_info, collected_popularity, is_global_cached, best_placement_edgeset, need_hybrid_fetching, recvrsp_socket_server_ptr, source_addr, total_bandwidth_usage, event_list, skip_propagation_latency, is_background);
+            is_finish = edge_wrapper_ptr_->afterDirectoryEvictionHelper_(key, current_edge_idx, metadata_update_requirement, directory_info, tmp_param.getCollectedPopularity(), is_global_cached, best_placement_edgeset, need_hybrid_fetching, recvrsp_socket_server_ptr, source_addr, total_bandwidth_usage, event_list, skip_propagation_latency, is_background);
             if (is_finish) // Edge node is NOT running
             {
                 return is_finish;
@@ -953,8 +954,8 @@ namespace covered
             CoveredCacheManager* tmp_covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
 
             // Prepare local uncached popularity of key for piggybacking-based popularity collection
-            CollectedPopularity collected_popularity;
-            edge_wrapper_ptr_->getEdgeCachePtr()->getCollectedPopularity(key, collected_popularity); // collected_popularity.is_tracked_ indicates if the local uncached key is tracked in local uncached metadata (due to selective metadata preservation)
+            GetCollectedPopularityParam tmp_param(key);
+            edge_wrapper_ptr_->getEdgeCachePtr()->customFunc(GetCollectedPopularityParam::FUNCNAME, &tmp_param); // collected_popularity.is_tracked_ indicates if the local uncached key is tracked in local uncached metadata (due to selective metadata preservation)
 
             // Prepare victim syncset for piggybacking-based victim synchronization
             VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_beacon_edge_idx_for_compression, edge_wrapper_ptr_->getCacheMarginBytes());
@@ -962,12 +963,12 @@ namespace covered
             // Need BOTH popularity collection and victim synchronization
             if (!is_background) // Foreground remote directory eviction (triggered by invalid/valid value update by local get/put and independent admission)
             {
-                directory_update_request_ptr = new CoveredDirectoryUpdateRequest(key, is_admit, directory_info, collected_popularity, victim_syncset, edge_idx, source_addr, skip_propagation_latency);
+                directory_update_request_ptr = new CoveredDirectoryUpdateRequest(key, is_admit, directory_info, tmp_param.getCollectedPopularity(), victim_syncset, edge_idx, source_addr, skip_propagation_latency);
             }
             else // Background remote directory eviction (triggered by remote placement nofication and local placement notification at local/remote beacon edge node)
             {
                 // NOTE: use background event names and DISABLE recursive cache placement by sending CoveredPlacementDirectoryUpdateRequest
-                directory_update_request_ptr = new CoveredPlacementDirectoryUpdateRequest(key, is_admit, directory_info, collected_popularity, victim_syncset, edge_idx, source_addr, skip_propagation_latency);
+                directory_update_request_ptr = new CoveredPlacementDirectoryUpdateRequest(key, is_admit, directory_info, tmp_param.getCollectedPopularity(), victim_syncset, edge_idx, source_addr, skip_propagation_latency);
             }
 
             // NOTE: key MUST NOT have any cached directory, as key is local cached before eviction (even if key may be local uncached and tracked by local uncached metadata due to metadata preservation after eviction, we have NOT lookuped remote directory yet from beacon node)

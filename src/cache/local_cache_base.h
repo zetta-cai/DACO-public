@@ -14,6 +14,8 @@
 #include <unordered_set>
 #include <vector>
 
+#include "cache/custom_func_param_base.h"
+
 namespace covered
 {
     // Forward declaration
@@ -44,8 +46,6 @@ namespace covered
         // (2) Access local edge cache (KV data and local metadata)
 
         bool getLocalCache(const Key& key, const bool& is_redirected, Value& value, bool& affect_victim_tracker) const; // Return whether key is cached
-        std::list<VictimCacheinfo> getLocalSyncedVictimCacheinfosFromLocalCache() const; // Return up to peredge_synced_victimcnt local synced victims with the least local rewards
-        void getCollectedPopularityFromLocalCache(const Key& key, CollectedPopularity& collected_popularity) const; // Return true if local uncached key is tracked
 
         bool updateLocalCache(const Key& key, const Value& value, const bool& is_getrsp, const bool& is_global_cached, bool& affect_victim_tracker, bool& is_successful); // Return whether key is local cached for getrsp/put/delreq (is_getrsp indicates getrsp w/ invalid hit or cache miss; is_successful indicates whether value is updated successfully)
 
@@ -68,7 +68,7 @@ namespace covered
 
         // (4) Other functions
 
-        void updateLocalCacheMetadata(const Key& key, const std::string& func_name, const void* func_param_ptr); // Update local metadata (e.g., is_neighbor_cached) for local edge cache
+        void invokeCustomFunction(const std::string& func_name, CustomFuncParamBase* func_param_ptr); // Invoke some method-specific function for local edge cache
         
         // In units of bytes
         uint64_t getSizeForCapacity() const; // Get size of data and metadata for local edge cache
@@ -96,8 +96,6 @@ namespace covered
         // (2) Access local edge cache (KV data and local metadata)
 
         virtual bool getLocalCacheInternal_(const Key& key, const bool& is_redirected, Value& value, bool& affect_victim_tracker) const = 0; // Return whether key is cached
-        virtual std::list<VictimCacheinfo> getLocalSyncedVictimCacheinfosFromLocalCacheInternal_() const = 0; // Return up to peredge_synced_victimcnt local synced victims with the least local rewards
-        virtual void getCollectedPopularityFromLocalCacheInternal_(const Key& key, CollectedPopularity& collected_popularity) const = 0; // Return true if local uncached key is tracked
 
         virtual bool updateLocalCacheInternal_(const Key& key, const Value& value, const bool& is_getrsp, const bool& is_global_cached, bool& affect_victim_tracker, bool& is_successful) = 0; // Return whether key is local cached for getrsp/put/delreq (is_getrsp indicates getrsp w/ invalid hit or cache miss; is_successful indicates whether value is updated successfully)
 
@@ -113,7 +111,7 @@ namespace covered
 
         // (4) Other functions
 
-        virtual void updateLocalCacheMetadataInternal_(const Key& key, const std::string& func_name, const void* func_param_ptr) = 0; // Update local metadata (e.g., is_neighbor_cached) for local edge cache
+        virtual void invokeCustomFunctionInternal_(const std::string& func_name, CustomFuncParamBase* func_param_ptr) = 0; // Invoke some method-specific function for local edge cache
 
         virtual uint64_t getSizeForCapacityInternal_() const = 0; // Get size of data and metadata for local edge cache
 

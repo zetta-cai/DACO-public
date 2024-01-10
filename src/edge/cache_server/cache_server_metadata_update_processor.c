@@ -2,7 +2,7 @@
 
 #include <assert.h>
 
-#include "cache/covered_local_cache.h"
+#include "cache/covered_custom_func_param.h"
 #include "common/config.h"
 #include "message/control_message.h"
 
@@ -116,7 +116,8 @@ namespace covered
 
         // Update is_neighbor_cached flag in local cached metadata
         const bool is_neighbor_cached = covered_metadata_update_request_ptr->isNeighborCached();
-        tmp_edge_wrapper_ptr->getEdgeCachePtr()->metadataUpdate(tmp_key, CoveredLocalCache::UPDATE_IS_NEIGHBOR_CACHED_FLAG_FUNC_NAME, &is_neighbor_cached);
+        UpdateIsNeighborCachedFlagFuncParam tmp_param(tmp_key, is_neighbor_cached);
+        tmp_edge_wrapper_ptr->getEdgeCachePtr()->customFunc(UpdateIsNeighborCachedFlagFuncParam::FUNCNAME, &tmp_param);
 
         struct timespec metadata_update_end_timestamp = Util::getCurrentTimespec();
         uint32_t metadata_update_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(metadata_update_end_timestamp, metadata_update_start_timestamp));

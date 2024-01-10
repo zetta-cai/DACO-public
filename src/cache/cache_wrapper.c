@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <sstream>
 
+#include "cache/covered_custom_func_param.h"
 #include "common/config.h"
 #include "common/util.h"
 
@@ -269,38 +270,6 @@ namespace covered
         return is_local_cached_and_invalid;
     }
 
-    std::list<VictimCacheinfo> CacheWrapper::getLocalSyncedVictimCacheinfos() const
-    {
-        checkPointers_();
-
-        std::string context_name = "CacheWrapper::getLocalSyncedVictimCacheinfos()";
-
-        // NOTE: as we only access local edge cache (thread safe w/o per-key rwlock) instead of validity map (thread safe w/ per-key rwlock), we do NOT need to acquire a fine-grained read lock here
-
-        // Acquire a read lock
-        // cache_wrapper_perkey_rwlock_ptr_->acquire_lock_shared(key, context_name);
-
-        std::list<VictimCacheinfo> local_synced_victim_cacheinfos = local_cache_ptr_->getLocalSyncedVictimCacheinfosFromLocalCache(); // NOT update local metadata
-
-        // Release a read lock
-        // cache_wrapper_perkey_rwlock_ptr_->unlock_shared(key, context_name);
-
-        cache_wrapper_rwlock_for_beacon_edgeidx_ptr_->acquire_lock_shared(context_name);
-        for (std::list<VictimCacheinfo>::iterator victim_cacheinfo_iter = local_synced_victim_cacheinfos.begin(); victim_cacheinfo_iter != local_synced_victim_cacheinfos.end(); victim_cacheinfo_iter++)
-        {
-            const Key& tmp_victim_key = victim_cacheinfo_iter->getKey();
-            std::unordered_map<Key, uint32_t, KeyHasher>::const_iterator beacon_edgeidx_const_iter = perkey_beacon_edgeidx_.find(tmp_victim_key);
-            if (beacon_edgeidx_const_iter != perkey_beacon_edgeidx_.end())
-            {
-                const uint32_t tmp_beacon_edgeidx = beacon_edgeidx_const_iter->second;
-                victim_cacheinfo_iter->setBeaconEdgeidx(tmp_beacon_edgeidx);
-            }
-        }
-        cache_wrapper_rwlock_for_beacon_edgeidx_ptr_->unlock_shared(context_name);
-
-        return local_synced_victim_cacheinfos;
-    }
-
     bool CacheWrapper::fetchVictimCacheinfosForRequiredSize(std::list<VictimCacheinfo>& victim_cacheinfos, const uint64_t& required_size) const
     {
         checkPointers_();
@@ -333,22 +302,6 @@ namespace covered
         cache_wrapper_rwlock_for_beacon_edgeidx_ptr_->unlock_shared(context_name);
 
         return has_victim_key;
-    }
-
-    void CacheWrapper::getCollectedPopularity(const Key& key, CollectedPopularity& collected_popularity) const
-    {
-        checkPointers_();
-
-        // Acquire a read lock
-        std::string context_name = "CacheWrapper::getCollectedPopularity()";
-        cache_wrapper_perkey_rwlock_ptr_->acquire_lock_shared(key, context_name);
-
-        local_cache_ptr_->getCollectedPopularityFromLocalCache(key, collected_popularity);
-
-        // Release a read lock
-        cache_wrapper_perkey_rwlock_ptr_->unlock_shared(key, context_name);
-
-        return;
     }
 
     // (3) Local edge cache management
@@ -459,18 +412,64 @@ namespace covered
 
     // (4) Other functions
 
-    void CacheWrapper::metadataUpdate(const Key& key, const std::string& func_name, const void* func_param_ptr)
+    void CacheWrapper::customFunc(const std::string& func_name, CustomFuncParamBase* func_param_ptr)
     {
         checkPointers_();
 
-        // Acquire a write lock
-        std::string context_name = "CacheWrapper::metadataUpdate()";
-        cache_wrapper_perkey_rwlock_ptr_->acquire_lock(key, context_name);
+        std::string context_name = "CacheWrapper::customFunc(" + func_name + ")";
 
-        local_cache_ptr_->updateLocalCacheMetadata(key, func_name, func_param_ptr);
+        bool need_perkey_lock = func_param_ptr->needPerkeyLock();
+        bool is_perkey_write_lock = func_param_ptr->isPerkeyWriteLock();
+        Key key = func_param_ptr->getKey(); // NOTE: key will be Key() if not key-related
+        if (need_perkey_lock)
+        {
+            if (is_perkey_write_lock)
+            {
+                // Acquire a write lock
+                cache_wrapper_perkey_rwlock_ptr_->acquire_lock(key, context_name);
+            }
+            else
+            {
+                // Acquire a read lock
+                cache_wrapper_perkey_rwlock_ptr_->acquire_lock_shared(key, context_name);
+            }
+        }
 
-        // Release a write lock
-        cache_wrapper_perkey_rwlock_ptr_->unlock(key, context_name);
+        local_cache_ptr_->invokeCustomFunction(func_name, func_param_ptr);
+
+        if (need_perkey_lock)
+        {
+            if (is_perkey_write_lock)
+            {
+                // Release a write lock
+                cache_wrapper_perkey_rwlock_ptr_->unlock(key, context_name);
+            }
+            else
+            {
+                // Release a read lock
+                cache_wrapper_perkey_rwlock_ptr_->unlock_shared(key, context_name);
+            }
+        }
+
+        // Post processing
+        if (func_name == GetLocalSyncedVictimCacheinfosParam::FUNCNAME)
+        {
+            GetLocalSyncedVictimCacheinfosParam* tmp_param_ptr = static_cast<GetLocalSyncedVictimCacheinfosParam*>(func_param_ptr);
+            cache_wrapper_rwlock_for_beacon_edgeidx_ptr_->acquire_lock_shared(context_name);
+            std::list<VictimCacheinfo>& victim_cacheinfos_ref = tmp_param_ptr->getVictimCacheinfosRef();
+            for (std::list<VictimCacheinfo>::iterator victim_cacheinfo_iter = victim_cacheinfos_ref.begin(); victim_cacheinfo_iter != victim_cacheinfos_ref.end(); victim_cacheinfo_iter++)
+            {
+                const Key& tmp_victim_key = victim_cacheinfo_iter->getKey();
+                std::unordered_map<Key, uint32_t, KeyHasher>::const_iterator beacon_edgeidx_const_iter = perkey_beacon_edgeidx_.find(tmp_victim_key);
+                if (beacon_edgeidx_const_iter != perkey_beacon_edgeidx_.end())
+                {
+                    const uint32_t tmp_beacon_edgeidx = beacon_edgeidx_const_iter->second;
+                    victim_cacheinfo_iter->setBeaconEdgeidx(tmp_beacon_edgeidx);
+                }
+            }
+            cache_wrapper_rwlock_for_beacon_edgeidx_ptr_->unlock_shared(context_name);
+        }
+        
         return;
     }
 

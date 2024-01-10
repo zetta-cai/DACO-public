@@ -3,7 +3,7 @@
 #include <assert.h>
 #include <sstream>
 
-#include "cache/covered_local_cache.h"
+#include "cache/covered_custom_func_param.h"
 #include "common/config.h"
 #include "common/thread_launcher.h"
 #include "common/util.h"
@@ -1010,10 +1010,11 @@ namespace covered
         if (affect_victim_tracker) // Need to update victim cacheinfos and dirinfos of local synced victims besides local cache margin bytes
         {
             // Get victim cacheinfos of local synced victims for the current edge node
-            std::list<VictimCacheinfo> local_synced_victim_cacheinfos = edge_cache_ptr_->getLocalSyncedVictimCacheinfos(); // NOTE: victim cacheinfos from local edge cache MUST be complete
+            GetLocalSyncedVictimCacheinfosParam tmp_param;
+            edge_cache_ptr_->customFunc(GetLocalSyncedVictimCacheinfosParam::FUNCNAME, &tmp_param); // NOTE: victim cacheinfos from local edge cache MUST be complete
 
             // Update local synced victims for the current edge node
-            covered_cache_manager_ptr_->updateVictimTrackerForLocalSyncedVictims(local_cache_margin_bytes, local_synced_victim_cacheinfos, cooperation_wrapper_ptr_);
+            covered_cache_manager_ptr_->updateVictimTrackerForLocalSyncedVictims(local_cache_margin_bytes, tmp_param.getVictimCacheinfosConstRef(), cooperation_wrapper_ptr_);
         }
         else // ONLY update local cache margin bytes
         {
@@ -1242,7 +1243,8 @@ namespace covered
             if (notify_edge_idx == current_edge_idx) // If beacon itself is the first/last cache copy
             {
                 // Directly enable/disable is_neighbor_cached flag locally
-                edge_cache_ptr_->metadataUpdate(key, CoveredLocalCache::UPDATE_IS_NEIGHBOR_CACHED_FLAG_FUNC_NAME, &is_neighbor_cached);
+                UpdateIsNeighborCachedFlagFuncParam tmp_param(key, is_neighbor_cached);
+                edge_cache_ptr_->customFunc(UpdateIsNeighborCachedFlagFuncParam::FUNCNAME, &tmp_param);
             }
             else // The first/last cache copy is a neighbor edge node
             {

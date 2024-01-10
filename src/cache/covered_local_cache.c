@@ -7,8 +7,6 @@
 
 namespace covered
 {
-    const std::string CoveredLocalCache::UPDATE_IS_NEIGHBOR_CACHED_FLAG_FUNC_NAME("update_is_neighbor_cached_flag");
-
     const std::string CoveredLocalCache::kClassName("CoveredLocalCache");
 
     int CoveredLocalCache::tommyds_compare(const void *arg, const void *obj)
@@ -126,71 +124,6 @@ namespace covered
         // NOTE: for getreq with cache miss, we will update local uncached metadata for getres by updateLocalUncachedMetadataForRspInternal_(key)
 
         return is_local_cached;
-    }
-
-    std::list<VictimCacheinfo> CoveredLocalCache::getLocalSyncedVictimCacheinfosFromLocalCacheInternal_() const
-    {
-        std::list<VictimCacheinfo> local_synced_victim_cacheinfos;
-
-        for (uint32_t least_popular_rank = 0; least_popular_rank < peredge_synced_victimcnt_; least_popular_rank++)
-        {
-            Key tmp_victim_key;
-            ObjectSize tmp_victim_object_size = 0;
-            Popularity tmp_local_cached_popularity = 0.0;
-            Popularity tmp_redirected_cached_popularity = 0.0;
-            Reward tmp_local_reward = 0.0;
-
-            bool is_least_popular_key_exist = local_cached_metadata_.getLeastRewardKeyAndReward(least_popular_rank, tmp_victim_key, tmp_local_reward);
-
-            if (is_least_popular_key_exist)
-            {
-                tmp_victim_object_size = local_cached_metadata_.getObjectSize(tmp_victim_key);
-                local_cached_metadata_.getPopularity(tmp_victim_key, tmp_local_cached_popularity, tmp_redirected_cached_popularity);
-
-                uint32_t tmp_victim_value_size = 0;
-                tommyds_object_t* tmp_victim_ptr = (tommyds_object_t *) tommy_hashdyn_search(covered_cache_ptr_, tommyds_compare, &tmp_victim_key, hashForTommyds_(tmp_victim_key));
-                assert(tmp_victim_ptr != NULL); // Victim must be cached before eviction
-                tmp_victim_value_size = tmp_victim_ptr->val.getValuesize();
-                #ifdef ENABLE_TRACK_PERKEY_OBJSIZE
-                // NOTE: tmp_victim_object_size got from key-level metadata is already accurate
-                assert(tmp_victim_object_size == (tmp_victim_key.getKeyLength() + tmp_victim_value_size));
-                #else
-                // NOTE: tmp_victim_object_size got from group-level metadata is approximate, which should be replaced with the accurate one from local edge cache
-                tmp_victim_object_size = tmp_victim_key.getKeyLength() + tmp_victim_value_size;
-                #endif
-
-                VictimCacheinfo tmp_victim_info(tmp_victim_key, tmp_victim_object_size, tmp_local_cached_popularity, tmp_redirected_cached_popularity, tmp_local_reward);
-                assert(tmp_victim_info.isComplete()); // NOTE: victim cacheinfos from local edge cache MUST be complete
-                local_synced_victim_cacheinfos.push_back(tmp_victim_info); // Add to the tail of the list
-            }
-            else
-            {
-                break;
-            }
-        }
-
-        assert(local_synced_victim_cacheinfos.size() <= peredge_synced_victimcnt_);
-
-        return local_synced_victim_cacheinfos;
-    }
-
-    void CoveredLocalCache::getCollectedPopularityFromLocalCacheInternal_(const Key& key, CollectedPopularity& collected_popularity) const
-    {
-        ObjectSize object_size = 0;
-        Popularity local_uncached_popularity = 0.0;
-        bool is_key_tracked = local_uncached_metadata_.isKeyExist(key);
-        if (is_key_tracked)
-        {
-            object_size = local_uncached_metadata_.getObjectSize(key);
-
-            Popularity unused_redirection_popularity = 0.0;
-            local_uncached_metadata_.getPopularity(key, local_uncached_popularity, unused_redirection_popularity);
-            UNUSED(unused_redirection_popularity);
-        }
-
-        collected_popularity = CollectedPopularity(is_key_tracked, local_uncached_popularity, object_size);
-
-        return;
     }
 
     bool CoveredLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value, const bool& is_getrsp, const bool& is_global_cached, bool& affect_victim_tracker, bool& is_successful)
@@ -469,26 +402,133 @@ namespace covered
 
     // (4) Other functions
 
-    void CoveredLocalCache::updateLocalCacheMetadataInternal_(const Key& key, const std::string& func_name, const void* func_param_ptr)
+    void CoveredLocalCache::invokeCustomFunctionInternal_(const std::string& func_name, CustomFuncParamBase* func_param_ptr)
     {
         assert(func_param_ptr != NULL);
 
-        if (func_name == UPDATE_IS_NEIGHBOR_CACHED_FLAG_FUNC_NAME)
+        if (func_name == UpdateIsNeighborCachedFlagFuncParam::FUNCNAME)
         {
-            const bool is_exist = local_cached_metadata_.isKeyExist(key);
-            if (is_exist) // Enable/disable is_neighbor_cached for local cached metadata if key exists
+            UpdateIsNeighborCachedFlagFuncParam* tmp_param_ptr = static_cast<UpdateIsNeighborCachedFlagFuncParam*>(func_param_ptr);
+            updateIsNeighborCachedInternal_(tmp_param_ptr);            
+        }
+        else if (func_name == GetLocalSyncedVictimCacheinfosParam::FUNCNAME)
+        {
+            GetLocalSyncedVictimCacheinfosParam* tmp_param_ptr = static_cast<GetLocalSyncedVictimCacheinfosParam*>(func_param_ptr);
+            getLocalSyncedVictimCacheinfosFromLocalCacheInternal_(tmp_param_ptr);
+
+            // Object size checking
+            const std::list<VictimCacheinfo>& victim_cacheinfos_const_ref = tmp_param_ptr->getVictimCacheinfosConstRef();
+            for (std::list<VictimCacheinfo>::const_iterator victim_const_iter = victim_cacheinfos_const_ref.begin(); victim_const_iter != victim_cacheinfos_const_ref.end(); victim_const_iter++)
             {
-                const bool is_neighbor_cached = *((const bool*)func_param_ptr);
-                local_cached_metadata_.updateIsNeighborCachedForExistingKey(key, is_neighbor_cached);
+                ObjectSize tmp_victim_objsize = 0;
+                bool is_complete = victim_const_iter->getObjectSize(tmp_victim_objsize);
+                assert(is_complete);
+                const bool is_valid_objsize = isValidObjsize_(tmp_victim_objsize);
+                assert(is_valid_objsize);
+            }
+        }
+        else if (func_name == GetCollectedPopularityParam::FUNCNAME)
+        {
+            GetCollectedPopularityParam* tmp_param_ptr = static_cast<GetCollectedPopularityParam*>(func_param_ptr);
+            getCollectedPopularityFromLocalCacheInternal_(tmp_param_ptr);
+
+            // Object size checking
+            const CollectedPopularity collected_popularity = tmp_param_ptr->getCollectedPopularity();
+            if (collected_popularity.isTracked())
+            {
+                const bool is_valid_objsize = isValidObjsize_(collected_popularity.getObjectSize());
+                assert(is_valid_objsize);
             }
         }
         else
         {
             std::ostringstream oss;
-            oss << "updateLocalCacheMetadataInternal_() does NOT support func_name " << func_name;
+            oss << "invokeCustomFunctionInternal_() does NOT support func_name " << func_name;
             Util::dumpErrorMsg(instance_name_, oss.str());
             exit(1);
         }
+        return;
+    }
+
+    void CoveredLocalCache::updateIsNeighborCachedInternal_(UpdateIsNeighborCachedFlagFuncParam* func_param_ptr)
+    {
+        assert(func_param_ptr != NULL);
+
+        const Key key = func_param_ptr->getKey();
+        const bool is_neighbor_cached = func_param_ptr->isNeighborCached();
+        const bool is_exist = local_cached_metadata_.isKeyExist(key);
+        if (is_exist) // Enable/disable is_neighbor_cached for local cached metadata if key exists
+        {
+            local_cached_metadata_.updateIsNeighborCachedForExistingKey(key, is_neighbor_cached);
+        }
+
+        return;
+    }
+
+    void CoveredLocalCache::getLocalSyncedVictimCacheinfosFromLocalCacheInternal_(GetLocalSyncedVictimCacheinfosParam* func_param_ptr) const
+    {
+        assert(func_param_ptr != NULL);
+
+        for (uint32_t least_popular_rank = 0; least_popular_rank < peredge_synced_victimcnt_; least_popular_rank++)
+        {
+            Key tmp_victim_key;
+            ObjectSize tmp_victim_object_size = 0;
+            Popularity tmp_local_cached_popularity = 0.0;
+            Popularity tmp_redirected_cached_popularity = 0.0;
+            Reward tmp_local_reward = 0.0;
+
+            bool is_least_popular_key_exist = local_cached_metadata_.getLeastRewardKeyAndReward(least_popular_rank, tmp_victim_key, tmp_local_reward);
+
+            if (is_least_popular_key_exist)
+            {
+                tmp_victim_object_size = local_cached_metadata_.getObjectSize(tmp_victim_key);
+                local_cached_metadata_.getPopularity(tmp_victim_key, tmp_local_cached_popularity, tmp_redirected_cached_popularity);
+
+                uint32_t tmp_victim_value_size = 0;
+                tommyds_object_t* tmp_victim_ptr = (tommyds_object_t *) tommy_hashdyn_search(covered_cache_ptr_, tommyds_compare, &tmp_victim_key, hashForTommyds_(tmp_victim_key));
+                assert(tmp_victim_ptr != NULL); // Victim must be cached before eviction
+                tmp_victim_value_size = tmp_victim_ptr->val.getValuesize();
+                #ifdef ENABLE_TRACK_PERKEY_OBJSIZE
+                // NOTE: tmp_victim_object_size got from key-level metadata is already accurate
+                assert(tmp_victim_object_size == (tmp_victim_key.getKeyLength() + tmp_victim_value_size));
+                #else
+                // NOTE: tmp_victim_object_size got from group-level metadata is approximate, which should be replaced with the accurate one from local edge cache
+                tmp_victim_object_size = tmp_victim_key.getKeyLength() + tmp_victim_value_size;
+                #endif
+
+                VictimCacheinfo tmp_victim_info(tmp_victim_key, tmp_victim_object_size, tmp_local_cached_popularity, tmp_redirected_cached_popularity, tmp_local_reward);
+                assert(tmp_victim_info.isComplete()); // NOTE: victim cacheinfos from local edge cache MUST be complete
+                func_param_ptr->getVictimCacheinfosRef().push_back(tmp_victim_info); // Add to the tail of the list
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        assert(func_param_ptr->getVictimCacheinfosConstRef().size() <= peredge_synced_victimcnt_);
+
+        return;
+    }
+
+    void CoveredLocalCache::getCollectedPopularityFromLocalCacheInternal_(GetCollectedPopularityParam* func_param_ptr) const
+    {
+        const Key key = func_param_ptr->getKey();
+
+        ObjectSize object_size = 0;
+        Popularity local_uncached_popularity = 0.0;
+        bool is_key_tracked = local_uncached_metadata_.isKeyExist(key);
+        if (is_key_tracked)
+        {
+            object_size = local_uncached_metadata_.getObjectSize(key);
+
+            Popularity unused_redirection_popularity = 0.0;
+            local_uncached_metadata_.getPopularity(key, local_uncached_popularity, unused_redirection_popularity);
+            UNUSED(unused_redirection_popularity);
+        }
+
+        func_param_ptr->setCollectedPopularity(CollectedPopularity(is_key_tracked, local_uncached_popularity, object_size));
+
         return;
     }
 

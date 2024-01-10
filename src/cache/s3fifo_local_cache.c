@@ -53,24 +53,6 @@ namespace covered
         return is_local_cached;
     }
 
-    std::list<VictimCacheinfo> S3fifoLocalCache::getLocalSyncedVictimCacheinfosFromLocalCacheInternal_() const
-    {
-        std::list<VictimCacheinfo> local_synced_victim_cacheinfos;
-
-        Util::dumpErrorMsg(instance_name_, "getLocalSyncedVictimCacheinfosFromLocalCacheInternal_() can ONLY be invoked by COVERED local cache!");
-        exit(1);
-
-        return local_synced_victim_cacheinfos;
-    }
-
-    void S3fifoLocalCache::getCollectedPopularityFromLocalCacheInternal_(const Key& key, CollectedPopularity& collected_popularity) const
-    {
-        Util::dumpErrorMsg(instance_name_, "getCollectedPopularityFromLocalCacheInternal_() can ONLY be invoked by COVERED local cache!");
-        exit(1);
-
-        return;
-    }
-
     bool S3fifoLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value, const bool& is_getrsp, const bool& is_global_cached, bool& affect_victim_tracker, bool& is_successful)
     {
         const bool is_valid_objsize = isValidObjsize_(key, value); // Object size checking
@@ -155,9 +137,11 @@ namespace covered
 
     // (4) Other functions
 
-    void S3fifoLocalCache::updateLocalCacheMetadataInternal_(const Key& key, const std::string& func_name, const void* func_param_ptr)
+    void S3fifoLocalCache::invokeCustomFunctionInternal_(const std::string& func_name, CustomFuncParamBase* func_param_ptr)
     {
-        Util::dumpErrorMsg(instance_name_, "updateLocalCacheMetadataInternal_() is ONLY for COVERED!");
+        std::ostringstream oss;
+        oss << "invokeCustomFunctionInternal_() does NOT support func_name " << func_name;
+        Util::dumpErrorMsg(instance_name_, oss.str());
         exit(1);
         return;
     }

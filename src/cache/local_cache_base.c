@@ -140,51 +140,6 @@ namespace covered
         return is_local_cached;
     }
 
-    std::list<VictimCacheinfo> LocalCacheBase::getLocalSyncedVictimCacheinfosFromLocalCache() const
-    {
-        checkPointers_();
-
-        // Acquire a read lock to check local metadata atomically
-        std::string context_name = "LocalCacheBase::getLocalSyncedVictimCacheinfosFromLocalCache()";
-        rwlock_for_local_cache_ptr_->acquire_lock_shared(context_name);
-
-        std::list<VictimCacheinfo> local_synced_victim_cacheinfos = getLocalSyncedVictimCacheinfosFromLocalCacheInternal_();
-
-        // Object size checking
-        for (std::list<VictimCacheinfo>::const_iterator victim_const_iter = local_synced_victim_cacheinfos.begin(); victim_const_iter != local_synced_victim_cacheinfos.end(); victim_const_iter++)
-        {
-            ObjectSize tmp_victim_objsize = 0;
-            bool is_complete = victim_const_iter->getObjectSize(tmp_victim_objsize);
-            assert(is_complete);
-            const bool is_valid_objsize = isValidObjsize_(tmp_victim_objsize);
-            assert(is_valid_objsize);
-        }
-
-        rwlock_for_local_cache_ptr_->unlock_shared(context_name);
-        return local_synced_victim_cacheinfos;
-    }
-
-    void LocalCacheBase::getCollectedPopularityFromLocalCache(const Key& key, CollectedPopularity& collected_popularity) const
-    {
-        checkPointers_();
-
-        // Acquire a read lock to get local metadata atomically
-        std::string context_name = "LocalCacheBase::getCollectedPopularityFromLocalCache()";
-        rwlock_for_local_cache_ptr_->acquire_lock_shared(context_name);
-
-        getCollectedPopularityFromLocalCacheInternal_(key, collected_popularity);
-
-        if (collected_popularity.isTracked())
-        {
-            // Object size checking
-            const bool is_valid_objsize = isValidObjsize_(collected_popularity.getObjectSize());
-            assert(is_valid_objsize);
-        }
-
-        rwlock_for_local_cache_ptr_->unlock_shared(context_name);
-        return;
-    }
-
     bool LocalCacheBase::updateLocalCache(const Key& key, const Value& value, const bool& is_getrsp, const bool& is_global_cached, bool& affect_victim_tracker, bool& is_successful)
     {
         checkPointers_();
@@ -322,17 +277,34 @@ namespace covered
 
     // (4) Other functions
 
-    void LocalCacheBase::updateLocalCacheMetadata(const Key& key, const std::string& func_name, const void* func_param_ptr)
+    void LocalCacheBase::invokeCustomFunction(const std::string& func_name, CustomFuncParamBase* func_param_ptr)
     {
         checkPointers_();
 
-        // Acquire a write lock for local metadata to update local metadata atomically
-        std::string context_name = "LocalCacheBase::updateLocalCacheMetadata()";
-        rwlock_for_local_cache_ptr_->acquire_lock(context_name);
+        std::string context_name = "LocalCacheBase::invokeCustomFunction(" + func_name + ")";
 
-        updateLocalCacheMetadataInternal_(key, func_name, func_param_ptr);
+        const bool is_local_cache_write_lock = func_param_ptr->isLocalCacheWriteLock();
+        if (is_local_cache_write_lock)
+        {
+            // Acquire a write lock for local metadata to invoke method-specific function atomically
+            rwlock_for_local_cache_ptr_->acquire_lock(context_name);
+        }
+        else
+        {
+            // Acquire a read lock for local metadata to invoke method-specific function atomically
+            rwlock_for_local_cache_ptr_->acquire_lock_shared(context_name);
+        }
 
-        rwlock_for_local_cache_ptr_->unlock(context_name);
+        invokeCustomFunctionInternal_(func_name, func_param_ptr);
+
+        if (is_local_cache_write_lock)
+        {
+            rwlock_for_local_cache_ptr_->unlock(context_name);
+        }
+        else
+        {
+            rwlock_for_local_cache_ptr_->unlock_shared(context_name);
+        }
 
         return;
     }

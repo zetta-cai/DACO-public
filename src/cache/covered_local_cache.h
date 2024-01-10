@@ -17,6 +17,8 @@
 
 #include <tommy.h> // TommyDS
 
+#include "cache/covered_custom_func_param.h"
+
 namespace covered
 {
     // Forward declaration
@@ -38,12 +40,11 @@ namespace covered
         tommy_node node;
     } tommyds_object_t;
 
+    // For invokeCustomFunctionInternal_()
+
     class CoveredLocalCache : public LocalCacheBase
     {
     public:
-        // For updateLocalCacheMetadataInternal_()
-        static const std::string UPDATE_IS_NEIGHBOR_CACHED_FLAG_FUNC_NAME; // Update is_neighbor_cached flag in local cached metadata (func param is bool)
-
         CoveredLocalCache(const EdgeWrapper* edge_wrapper_ptr, const uint32_t& edge_idx, const uint64_t& capacity_bytes, const uint64_t& local_uncached_capacity_bytes, const uint32_t& peredge_synced_victimcnt);
         virtual ~CoveredLocalCache();
 
@@ -60,8 +61,6 @@ namespace covered
         // (2) Access local edge cache (KV data and local metadata)
 
         virtual bool getLocalCacheInternal_(const Key& key, const bool& is_redirected, Value& value, bool& affect_victim_tracker) const override;
-        virtual std::list<VictimCacheinfo> getLocalSyncedVictimCacheinfosFromLocalCacheInternal_() const override; // Return up to peredge_synced_victimcnt local synced victims with the least local rewards
-        virtual void getCollectedPopularityFromLocalCacheInternal_(const Key& key, CollectedPopularity& collected_popularity) const override; // Return true if local uncached key is tracked (for piggybacking-based popularity colleciton)
 
         virtual bool updateLocalCacheInternal_(const Key& key, const Value& value, const bool& is_getrsp, const bool& is_global_cached, bool& affect_victim_tracker, bool& is_successful) override; // Return if key is local cached for getrsp/put/delreq (is_getrsp indicates getrsp w/ invalid hit or cache miss; is_successful indicates whether value is updated successfully)
 
@@ -75,7 +74,12 @@ namespace covered
 
         // (4) Other functions
 
-        virtual void updateLocalCacheMetadataInternal_(const Key& key, const std::string& func_name, const void* func_param_ptr) override; // Update local metadata (e.g., is_neighbor_cached) for local edge cache
+        virtual void invokeCustomFunctionInternal_(const std::string& func_name, CustomFuncParamBase* func_param_ptr) override; // Invoke some method-specific function for local edge cache
+        void updateIsNeighborCachedInternal_(UpdateIsNeighborCachedFlagFuncParam* func_param_ptr); // Update is_neighbor_cached flag in local cached metadata (for beacon-based local cache metadata udpate)
+        void getLocalSyncedVictimCacheinfosFromLocalCacheInternal_(GetLocalSyncedVictimCacheinfosParam* func_param_ptr) const; // Get up to peredge_synced_victimcnt local synced victims with the least local rewards (for victim synchronization)
+        // Set collected_popularity.is_tracked_ as true if the local uncached key is tracked; set collected_popularity.is_tracked_ as false if key is either local cached or local uncached yet untracked by local uncached metadata
+        // NOTE: for directory lookup req, directory eviction req, acquire writelock req, and release writelock req, is_key_tracked flag could still be false for returned collected popularity -> reason: under local uncached metadata capacity limitation, newly-tracked or preserved-after-eviciton local uncached popularity could be immediately detracked from local uncached metadata and hence NO need for popularity collection/aggregation
+        void getCollectedPopularityFromLocalCacheInternal_(GetCollectedPopularityParam* func_param_ptr) const; // Get collected popularity of local uncached objects (for piggybacking-based popularity colleciton)
 
         // In units of bytes
         virtual uint64_t getSizeForCapacityInternal_() const override;
