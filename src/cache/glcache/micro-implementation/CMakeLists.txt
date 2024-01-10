@@ -94,8 +94,12 @@ endif()
 
 message(STATUS "SUPPORT TTL ${SUPPORT_TTL}, USE_HUGEPAGE ${USE_HUGEPAGE}, LOGLEVEL ${LOG_LEVEL}, ENABLE_GLCache ${ENABLE_GLCache}")
 
-# add_compile_options(-fsanitize=address)
-# add_link_options(-fsanitize=address)
+# Siyuan: enforce to compile by c++17 in x86-64 architecture
+add_compile_options(-std=c++17 -march=x86-64)
+
+# Siyuan: uncomment for debugging (TMPDEBUG240109)
+add_compile_options(-fsanitize=address)
+add_link_options(-fsanitize=address)
 
 # set compiler flags
 # string concat is easier in 3.0, but older versions don't have the concat subcommand

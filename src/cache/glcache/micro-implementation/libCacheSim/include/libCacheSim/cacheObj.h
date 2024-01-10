@@ -143,7 +143,8 @@ typedef struct cache_obj {
   bool is_keybased_obj; // Use obj_id as key if false, or use key otherwise
   std::string key;
   std::string value;
-} __attribute__((packed)) cache_obj_t;
+} cache_obj_t; // Siyuan: fix the warning of ignoring packed attribute because of unpacked non-POD field ‘std::string cache_obj::key’
+//} __attribute__((packed)) cache_obj_t;
 
 // Siyuan: g++ does not mangle struct non-static member variables, so we disable extern "C" for common object-level metadata such that we can declare std::string (NOT use covered::Key and covered::Value now)
 #ifdef __cplusplus

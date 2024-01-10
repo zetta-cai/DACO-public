@@ -157,6 +157,9 @@ cache_t *GLCache_init(const common_cache_params_t ccache_params,
   init_learner(cache);
   init_cache_state(cache);
 
+  // TMPDEBUG240109
+  printf("cache->eviction_params->learner: %p, params->learner: %p, params: %p, cache: %p\n", (void *)&(((GLCache_params_t *)cache->eviction_params)->learner), (void*)&(params->learner), (void*)params, (void*)cache);
+
   cache->cache_init = GLCache_init;
   cache->cache_free = GLCache_free;
   cache->get = GLCache_get;
