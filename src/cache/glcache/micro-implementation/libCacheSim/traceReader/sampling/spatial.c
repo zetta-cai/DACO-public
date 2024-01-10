@@ -13,7 +13,14 @@ extern "C" {
 bool spatial_sample(sampler_t *sampler, request_t *req) {
   uint64_t hash_value = req->hv;
   if (hash_value == 0) {
-    hash_value = get_hash_value_int_64(&(req->obj_id));
+    if (req->is_keybased_req) // Siyuan: for key-value caching (although spatial_sample is NOT used by glcache)
+    {
+      hash_value = get_hash_value_str(static_cast<const void*>(req->key.c_str()), req->key.length());
+    }
+    else
+    {
+      hash_value = get_hash_value_int_64(&(req->obj_id));
+    }
     req->hv = hash_value;
   }
 

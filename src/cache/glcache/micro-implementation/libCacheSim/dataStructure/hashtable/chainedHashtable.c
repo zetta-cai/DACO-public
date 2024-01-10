@@ -73,8 +73,15 @@ static inline void delete_obj_in_table(hashtable_t *hashtable,
 static inline void _move_into_new_table(hashtable_t *hashtable,
                                         cache_obj_t *cache_obj,
                                         bool part_of_old_table) {
-  uint64_t hv = get_hash_value_int_64(&cache_obj->obj_id) &
-                hashmask(hashtable->hashpower);
+  uint64_t hv = 0;
+  if (cache_obj->is_keybased_obj) // Siyuan: support key-based lookup
+  {
+    hv = get_hash_value_str(static_cast<const void*>(cache_obj->key.c_str()), cache_obj->key.length()) & hashmask(hashtable->hashpower);
+  }
+  else
+  {
+    hv = get_hash_value_int_64(&cache_obj->obj_id) & hashmask(hashtable->hashpower);
+  }
   if (OBJ_EMPTY(&(hashtable->table[hv]))) {
     _move_obj_to_new_loc(hashtable, &hashtable->table[hv], cache_obj);
     hashtable->table[hv].hash_next = NULL;
@@ -126,6 +133,7 @@ cache_obj_t *chained_hashtable_find_obj_id(hashtable_t *hashtable, obj_id_t obj_
 
   int depth = 0;
   while (cache_obj) {
+    assert(!cache_obj->is_keybased_obj); // Siyuan: MUST NOT key-based lookup
     depth += 1;
     if (cache_obj->obj_id == obj_id) {
       ret = cache_obj;
@@ -234,7 +242,7 @@ cache_obj_t *chained_hashtable_insert(hashtable_t *hashtable, request_t *req) {
     _chained_hashtable_expand(hashtable);
 
   uint64_t hv = 0;
-  if (req->is_keybased_req) // Siyuan: for key-value caching
+  if (req->is_keybased_req) // Siyuan: support key-based lookup
   {
     hv = get_hash_value_str(static_cast<const void*>(req->key.c_str()), req->key.length()) & hashmask(hashtable->hashpower);
   }
@@ -265,8 +273,15 @@ cache_obj_t *chained_hashtable_insert(hashtable_t *hashtable, request_t *req) {
 /* you need to free the extra_metadata before deleting from hash table */
 void chained_hashtable_delete(hashtable_t *hashtable, cache_obj_t *cache_obj) {
   hashtable->n_obj -= 1;
-  uint64_t hv = get_hash_value_int_64(&cache_obj->obj_id) &
-                hashmask(hashtable->hashpower);
+  uint64_t hv = 0;
+  if (cache_obj->is_keybased_obj) // Siyuan: support key-based lookup
+  {
+    hv = get_hash_value_str(static_cast<const void*>(cache_obj->key.c_str()), cache_obj->key.length()) & hashmask(hashtable->hashpower);
+  }
+  else
+  {
+    hv = get_hash_value_int_64(&cache_obj->obj_id) & hashmask(hashtable->hashpower);
+  }
   cache_obj_t *cache_obj_in_bucket = &hashtable->table[hv];
   assert(!OBJ_EMPTY(cache_obj_in_bucket));
   if (cache_obj == cache_obj_in_bucket) {
@@ -455,8 +470,14 @@ void check_chained_hashtable_integrity(hashtable_t *hashtable) {
   for (uint64_t i = 0; i < hashsize(hashtable->hashpower); i++) {
     cur_obj = &(hashtable->table[i]);
     while (cur_obj && !OBJ_EMPTY(cur_obj)) {
-      hv = get_hash_value_int_64(&cur_obj->obj_id) &
-           hashmask(hashtable->hashpower);
+      if (cur_obj->is_keybased_obj) // Siyuan: support key-based lookup
+      {
+        hv = get_hash_value_str(static_cast<const void*>(cur_obj->key.c_str()), cur_obj->key.length()) & hashmask(hashtable->hashpower);
+      }
+      else
+      {
+        hv = get_hash_value_int_64(&cur_obj->obj_id) & hashmask(hashtable->hashpower);
+      }
       assert(i == hv);
       cur_obj = cur_obj->hash_next;
     }
@@ -472,8 +493,14 @@ void check_chained_hashtable_integrity2(hashtable_t *hashtable,
   uint64_t hv;
   uint32_t list_idx = 0;
   while (cur_obj) {
-    hv = get_hash_value_int_64(&cur_obj->obj_id) &
-         hashmask(hashtable->hashpower);
+    if (cur_obj->is_keybased_obj) // Siyuan: support key-based lookup
+    {
+      hv = get_hash_value_str(static_cast<const void*>(cur_obj->key.c_str()), cur_obj->key.length()) & hashmask(hashtable->hashpower);
+    }
+    else
+    {
+      hv = get_hash_value_int_64(&cur_obj->obj_id) & hashmask(hashtable->hashpower);
+    }
     cur_obj_in_chain = &hashtable->table[hv];
     while (cur_obj_in_chain && cur_obj != cur_obj_in_chain) {
       cur_obj_in_chain = cur_obj_in_chain->hash_next;

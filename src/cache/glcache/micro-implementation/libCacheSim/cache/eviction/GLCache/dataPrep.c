@@ -267,23 +267,8 @@ static int cmp_train_y(const void *p1, const void *p2) {
 }
 
 static void prepare_training_data_per_package(cache_t *cache) {
-  // TMPDEBUG240109
-  printf("0th-0 prepare_training_data_per_package, cache: %p\n", (void*)cache);
-  GLCache_params_t *tmp_params = (GLCache_params_t *)cache->eviction_params;
-  printf("0th-1 prepare_training_data_per_package after tmp_params, cache: %p\n", (void*)cache);
-  learner_t *tmp_learner = &tmp_params->learner;
-  printf("0th-1 prepare_training_data_per_package after tmp_learner, cache: %p\n", (void*)cache);
-  uint32_t tmp_valid_samples = tmp_learner->n_valid_samples;
-  printf("0th-1 prepare_training_data_per_package after tmp_valid_samples, tmp_valid_samples: %d, cache: %p\n", tmp_valid_samples, (void*)cache);
-
-  // TMPDEBUG240109
-  printf("1st prepare_training_data_per_package, learner->valid_y: %f, learner->n_valid_samples: %d, &(learner->n_valid_samples): %p, learner: %p, params: %p, cache: %p\n", *(((GLCache_params_t *)cache->eviction_params)->learner.valid_y), ((GLCache_params_t *)cache->eviction_params)->learner.n_valid_samples, (void*)&(((GLCache_params_t *)cache->eviction_params)->learner.n_valid_samples), (void*)&((GLCache_params_t *)cache->eviction_params)->learner, (void*)cache->eviction_params, (void*)cache);
-
   GLCache_params_t *params = (GLCache_params_t *)cache->eviction_params;
   learner_t *learner = &params->learner;
-
-  // TMPDEBUG240109
-  printf("2nd prepare_training_data_per_package, learner->valid_y: %f, learner->n_valid_samples: %d, &(learner->n_valid_samples): %p, learner: %p, params: %p, cache: %p\n", *(learner->valid_y), learner->n_valid_samples, (void*)&(learner->n_valid_samples), (void*)learner, (void*)params, (void*)cache);
 
   safe_call(XGDMatrixCreateFromMat(learner->train_x, learner->n_train_samples,
                                    learner->n_feature, -2, &learner->train_dm));
@@ -314,9 +299,6 @@ static void prepare_training_data_per_package(cache_t *cache) {
   safe_call(XGDMatrixSetUIntInfo(learner->valid_dm, "group",
                                  &learner->n_valid_samples, 1));
 #endif
-
-  // TMPDEBUG240109
-  printf("3rd prepare_training_data_per_package, learner->valid_y: %f, learner->n_valid_samples: %d, &(learner->n_valid_samples): %p, learner: %p, params: %p, cache: %p\n", *(learner->valid_y), learner->n_valid_samples, (void*)&(learner->n_valid_samples), (void*)learner, (void*)params, (void*)cache);
 }
 
 void prepare_training_data(cache_t *cache) {
@@ -387,6 +369,7 @@ void prepare_training_data(cache_t *cache) {
       min_y = learner->train_y[y];
     }
   }
+  bool need_normalize = (max_y != min_y); // Siyuan: normalize unless max_y != min_y
 #endif
 
 #ifdef STANDARDIZE_Y
@@ -443,7 +426,10 @@ void prepare_training_data(cache_t *cache) {
     // TODO: optimize memcpy by splitting into train and valid in snapshot
     memcpy(x, &learner->train_x[i * n_feature], sizeof(feature_t) * n_feature);
 #if defined(NORMALIZE_Y)
-    *y = (learner->train_y[i] - min_y) / (max_y - min_y);
+    if (need_normalize) // Siyuan: normalize unless max_y != min_y
+    {
+      *y = (learner->train_y[i] - min_y) / (max_y - min_y);
+    }
 #elif defined(STANDARDIZE_Y)
     *y = (learner->train_y[i] - average) / stdev;
 #else
@@ -475,18 +461,10 @@ void prepare_training_data(cache_t *cache) {
   learner->n_train_samples = pos_in_train_data;
   learner->n_valid_samples = pos_in_valid_data;
 
-  // TMPDEBUG240109
-  printf("1st prepare_training_data, pos_in_train_data: %d, pos_in_valid_data: %d, learner->n_valid_samples: %d, &(learner->n_valid_samples): %p, learner: %p, params: %p, cache: %p\n", pos_in_train_data, pos_in_valid_data, learner->n_valid_samples, (void*)&(learner->n_valid_samples), (void*)learner, (void*)params, (void*)cache);
-  // TMPDEBUG240109
-  printf("2nd prepare_training_data, pos_in_train_data: %d, pos_in_valid_data: %d, learner->n_valid_samples: %d, &(learner->n_valid_samples): %p, learner: %p, params: %p, cache: %p\n", pos_in_train_data, pos_in_valid_data, learner->n_valid_samples, (void*)&(learner->n_valid_samples), (void*)learner, (void*)params, (void*)cache);
-
   prepare_training_data_per_package(cache);
 #ifdef TRAIN_KEEP_HALF
   learner->n_train_samples = original_n_train_samples;
 #endif
-
-  // TMPDEBUG240109
-  printf("3rd prepare_training_data, pos_in_train_data: %d, pos_in_valid_data: %d, learner->n_valid_samples: %d, &(learner->n_valid_samples): %p, learner: %p, params: %p, cache: %p\n", pos_in_train_data, pos_in_valid_data, learner->n_valid_samples, (void*)&(learner->n_valid_samples), (void*)learner, (void*)params, (void*)cache);
 
 #ifdef DUMP_TRAINING_DATA
   dump_training_data(cache);

@@ -96,6 +96,7 @@ void GLCache_merge_segs(cache_t *cache, bucket_t *bucket, segment_t **segs, cach
     DEBUG_ASSERT(segs[i]->magic == MAGIC);
     for (int j = 0; j < segs[i]->n_obj; j++) {
       cache_obj = &segs[i]->objs[j];
+
       assert(cache_obj->evict_next == NULL); // Siyuan: for victim copy
       #ifdef RANDOMIZE_MERGE
       double obj_score = params->obj_sel.score_array_offset[pos++];

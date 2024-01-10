@@ -36,9 +36,9 @@ INCDIR += -I/usr/include
 CPPFLAGS += $(INCDIR)
 CPPFLAGS += $(EXTRA_CPPFLAGS)
 
-#CC := g++
+CC := g++
 # For compile debugging (excluding -v)
-CC := g++ -fsanitize=address
+#CC := g++ -fsanitize=address
 
 #CFLAGS += -std=c++17 -O3 -g -Wall -Werror -march=native -fno-omit-frame-pointer
 #CFLAGS += -std=c++17 -O3 -g -Wall -march=native -fno-omit-frame-pointer

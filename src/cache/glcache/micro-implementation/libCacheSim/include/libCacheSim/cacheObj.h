@@ -140,6 +140,7 @@ typedef struct cache_obj {
   };
 
   // Siyuan: for key-value caching
+  // NOTE: sizeof(std::string) can work correctly for sizeof(cache_obj_t) and sizeof(request_t) <- std::string is equivalent to char*, which occupies 8B when using sizeof(cache_obj_t) and sizeof(request_t) to create new cache objects and requests; std::string is responsible for memory allocation/free referred by char* when get/update Key
   bool is_keybased_obj; // Use obj_id as key if false, or use key otherwise
   std::string key;
   std::string value;

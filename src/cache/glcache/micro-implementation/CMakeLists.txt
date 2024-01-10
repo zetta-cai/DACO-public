@@ -97,9 +97,9 @@ message(STATUS "SUPPORT TTL ${SUPPORT_TTL}, USE_HUGEPAGE ${USE_HUGEPAGE}, LOGLEV
 # Siyuan: enforce to compile by c++17 in x86-64 architecture
 add_compile_options(-std=c++17 -march=x86-64)
 
-# Siyuan: uncomment for debugging (TMPDEBUG240109)
-add_compile_options(-fsanitize=address)
-add_link_options(-fsanitize=address)
+# Siyuan: uncomment for debugging
+#add_compile_options(-fsanitize=address)
+#add_link_options(-fsanitize=address)
 
 # set compiler flags
 # string concat is easier in 3.0, but older versions don't have the concat subcommand
@@ -136,7 +136,8 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} $ENV{CFLAGS} ${LOCAL_CFLAGS}")
 if (CMAKE_BUILD_TYPE MATCHES Debug)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0 -g -ggdb3")     # -DLOGLEVEL=5
 else ()
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3")
+    #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -g") # Siyuan: capture code lines
 endif ()
 
 

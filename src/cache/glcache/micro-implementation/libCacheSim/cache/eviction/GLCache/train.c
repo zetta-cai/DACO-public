@@ -29,14 +29,8 @@ static void train_xgboost(cache_t *cache) {
     safe_call(XGDMatrixFree(learner->valid_dm));
   }
 
-  // TMPDEBUG240109
-  printf("1st train_xgboost, cache: %p\n", (void*)cache);
-
   prepare_training_data(cache);
   // debug_print_feature_matrix(learner->train_dm, 20);
-
-  // TMPDEBUG240109
-  printf("2nd train_xgboost, cache: %p\n", (void*)cache);
 
   DMatrixHandle eval_dmats[2] = {learner->train_dm, learner->valid_dm};
   static const char *eval_names[2] = {"train", "valid"};
