@@ -6,9 +6,6 @@ import sys
 
 from ..common import *
 
-def clearCmakefiles():
-    # TODO: END HERE
-
 is_clear_tarball = False # whether to clear intermediate tarball files
 
 # Variables to control whether to install the corresponding softwares
@@ -281,6 +278,16 @@ if is_install_lrb:
 
     lrb_target_commit = "9e8b442"
     SubprocessUtil.checkoutCommit(Common.scriptname, lrb_clone_dirpath, lrb_software_name, lrb_target_commit)
+
+    # Overwrite lib/lrb/src/CMakeLists.txt to fix errors of cmake files provided by authors
+    original_lrb_cmakelists_filepath = "{}/lrb/src/CMakeLists.txt".format(Common.lib_dirpath)
+    correct_lrb_cmakelists_filepath = "scripts/lrb/CMakeLists.txt"
+    LogUtil.prompt(Common.scriptname, "Overwrite {} by {}...".format(original_lrb_cmakelists_filepath, correct_lrb_cmakelists_filepath))
+    overwrite_lrb_cmakelists_cmd = "cp {} {}".format(correct_lrb_cmakelists_filepath, original_lrb_cmakelists_filepath)
+    overwrite_lrb_cmakelists_subprocess = SubprocessUtil.runCmd(overwrite_lrb_cmakelists_cmd)
+    if overwrite_lrb_cmakelists_subprocess.returncode != 0:
+        overwrite_lrb_cmakelists_errstr = SubprocessUtil.getSubprocessErrstr(overwrite_lrb_cmakelists_subprocess)
+        LogUtil.die(Common.scriptname, "failed to overwrite {} by {} (errmsg: {})".format(original_lrb_cmakelists_filepath, correct_lrb_cmakelists_filepath, overwrite_lrb_cmakelists_errstr))
 
     # Install LRB
     lrb_install_dirpath = "{}/install".format(lrb_clone_dirpath)
