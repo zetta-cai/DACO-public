@@ -6,6 +6,9 @@ import sys
 
 from ..common import *
 
+def clearCmakefiles():
+    # TODO: END HERE
+
 is_clear_tarball = False # whether to clear intermediate tarball files
 
 # Variables to control whether to install the corresponding softwares
@@ -22,6 +25,7 @@ is_install_tommyds = True
 is_install_lhd = True
 is_install_s3fifo = True # Completely use hacked version (also including SIEVE)
 is_install_glcache = True # Completely used hacked version
+is_install_lrb = True
 
 # Check input CLI parameters
 if len(sys.argv) != 2:
@@ -267,9 +271,26 @@ if is_install_glcache:
     SubprocessUtil.installFromRepoIfNot(Common.scriptname, glcache_install_dirpath, glcache_software_name, glcache_microimpl_clone_dirpath, glcache_install_tool, pre_install_tool = glcache_preinstall_tool)
     print("")
 
-# (12) Others: chown of libraries and update LD_LIBRARY_PATH
+# (12) Install LRB (commit ID: 9e8b442)
 
-## (12.1) Chown of libraries
+if is_install_lrb:
+    lrb_clone_dirpath = "{}/lrb".format(Common.lib_dirpath)
+    lrb_software_name = "LRB"
+    lrb_repo_url = "https://github.com/sunnyszy/lrb.git"
+    SubprocessUtil.cloneRepo(Common.scriptname, lrb_clone_dirpath, lrb_software_name, lrb_repo_url, with_subrepo = True)
+
+    lrb_target_commit = "9e8b442"
+    SubprocessUtil.checkoutCommit(Common.scriptname, lrb_clone_dirpath, lrb_software_name, lrb_target_commit)
+
+    # Install LRB
+    lrb_install_dirpath = "{}/install".format(lrb_clone_dirpath)
+    lrb_install_tool = "bash {}/scripts/lrb/install.sh".format(Common.proj_dirname)
+    SubprocessUtil.installFromRepoIfNot(Common.scriptname, lrb_install_dirpath, lrb_software_name, lrb_clone_dirpath, lrb_install_tool, time_consuming = True)
+    print("")
+
+# (13) Others: chown of libraries and update LD_LIBRARY_PATH
+
+## (13.1) Chown of libraries
 
 LogUtil.prompt(Common.scriptname, "chown of libraries...")
 chown_cmd = "sudo chown -R {0}:{0} {1}".format(Common.username, Common.lib_dirpath)
@@ -278,7 +299,7 @@ if chown_subprocess.returncode != 0:
     chown_errstr = SubprocessUtil.getSubprocessErrstr(chown_subprocess)
     LogUtil.die(Common.scriptname, "failed to chown of libraries (errmsg: {})".format(chown_errstr))
 
-## (12.2) Update LD_LIBRARY_PATH for interactive and non-interactive shells
+## (13.2) Update LD_LIBRARY_PATH for interactive and non-interactive shells
 
 target_ld_libs = ["glcache", "segcache", "cachelib", "boost", "x86_64-linux-gnu"]
 target_ld_lib_dirpaths = ["{}/src/cache/glcache/micro-implementation/build/lib".format(Common.proj_dirname), "{}/src/cache/segcache/build/ccommon/lib".format(Common.proj_dirname), "{}/CacheLib/opt/cachelib/lib".format(Common.lib_dirpath), "{}/boost_1_81_0/install/lib".format(Common.lib_dirpath), "/usr/lib/x86_64-linux-gnu"]
@@ -299,7 +320,7 @@ for i in range(len(target_ld_lib_dirpaths)):
     else:
         update_bash_source_grepstr = "{}:{}".format(update_bash_source_grepstr, target_ld_lib_dirpaths[i])
 
-### (12.3) Update LD_LIBRARY_PATH for non-interactive shells
+### (13.3) Update LD_LIBRARY_PATH for non-interactive shells
 
 noninteractive_bash_source_filepath = "/home/{}/.bashrc_non_interactive".format(Common.username)
 
@@ -332,7 +353,7 @@ if need_update_noninteractive_bash_source_file:
         create_noninteractive_bash_source_file_errstr = SubprocessUtil.getSubprocessErrstr(create_noninteractive_bash_source_file_subprocess)
         LogUtil.die(Common.scriptname, "failed to create non-interactive bash source file {} (errmsg: {})".format(noninteractive_bash_source_filepath, create_noninteractive_bash_source_file_errstr))
 
-### (12.4) Update LD_LIBRARY_PATH for interactive shells
+### (13.4) Update LD_LIBRARY_PATH for interactive shells
 
 LogUtil.prompt(Common.scriptname, "check if need to update LD_LIBRARY_PATH for interactive shells...")
 need_update_ld_library_path = False
