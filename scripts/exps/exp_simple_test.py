@@ -11,7 +11,7 @@ exp_simple_test_settings = {
     "edgecnt": 4,
     "keycnt": 100000,
     "capacity_mb": 1000,
-    "cache_name": "glcache"
+    "cache_name": "covered"
 }
 
 # For dataset loader
