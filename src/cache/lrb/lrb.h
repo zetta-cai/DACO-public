@@ -111,6 +111,13 @@ public:
             _edc[i] = _edc[i] * lrb_cache_ptr_->hash_edc[_distance_idx] + 1;
         }
     }
+
+    // Siyuan: for correct cache size usage calculation
+    uint64_t getSizeForCapacity() const
+    {
+        uint64_t total_size = 10 * sizeof(float) + _past_distances.size() * sizeof(uint32_t) + sizeof(uint8_t); // _edc + _past_distances + _past_distance_idx
+        return total_size;
+    }
 };
 
 class Meta {
@@ -135,7 +142,7 @@ public:
 
 #ifdef EVICTION_LOGGING
     Meta(const uint64_t &key, const uint64_t &size, const uint64_t &past_timestamp,
-            const vector<uint16_t> &extra_features, const uint64_t &future_timestamp, LRBCache* lrb_cache_ptr, const bool& is_keybased_meta, const std::string& keystr) {
+            const vector<uint16_t> &extra_features, const uint64_t &future_timestamp, LRBCache* lrb_cache_ptr, const bool& is_keybased_meta, const std::string& keystr, const std::string& valuestr) {
         assert(lrb_cache_ptr != NULL);
         lrb_cache_ptr_ = lrb_cache_ptr;
 
@@ -150,6 +157,7 @@ public:
 
         _is_keybased_meta = is_keybased_meta;
         _keystr = keystr;
+        _valuestr = valuestr;
     }
 
 #else
@@ -234,7 +242,7 @@ public:
     }
     bool operator==(const SimpleRequest& other)
     {
-        assert(_is_keybased_meta == other._is_keybased_req);
+        assert(_is_keybased_meta == other.is_keybased_req);
         if (_is_keybased_meta)
         {
             return _keystr == other.keystr;
@@ -299,14 +307,29 @@ public:
     int sample_overhead() {
         return sizeof(_sample_times) + sizeof(uint32_t) * _sample_times.capacity();
     }
+
+    // Siyuan: for correct cache size usage calculation
+    uint64_t getSizeForCapacity() const
+    {
+        uint64_t total_size = sizeof(uint32_t) + sizeof(uint32_t) + sizeof(uint16_t) * lrb_cache_ptr_->n_extra_fields + _sample_times.size() * sizeof(uint32_t) + _keystr.length(); // _size + _past_timestamp + _extra_features + _sample_times + key
+        if (_extra != nullptr)
+        {
+            total_size += _extra->getSizeForCapacity();
+        }
+        return total_size;
+    }
 };
 
 
 class InCacheMeta : public Meta {
 public:
     //pointer to lru0
-    list<int64_t>::const_iterator p_last_request;
+    //list<int64_t>::const_iterator p_last_request;
+    list<std::string>::const_iterator p_last_request; // Siyuan: for key-value caching
     //any change to functions?
+
+    // Siyuan: for key-value caching
+    std::string valuestr;
 
 #ifdef EVICTION_LOGGING
 
@@ -325,31 +348,53 @@ public:
                 const uint64_t &size,
                 const uint64_t &past_timestamp,
                 const vector<uint16_t> &extra_features,
-                const list<int64_t>::const_iterator &it,
-                LRBCache* lrb_cache_ptr) :
-            Meta(key, size, past_timestamp, extra_features, lrb_cache_ptr) {
+                //const list<int64_t>::const_iterator &it,
+                const list<std::string>::const_iterator &it, // Siyuan: for key-value caching
+                LRBCache* lrb_cache_ptr,
+                const bool& is_keybased_meta, const std::string& keystr, const std::string& valuestr) // Siyuan: for key-value caching
+            : Meta(key, size, past_timestamp, extra_features, lrb_cache_ptr, is_keybased_meta, keystr) {
         p_last_request = it;
+        this->valuestr = valuestr;
     };
 #endif
 
-    InCacheMeta(const Meta &meta, const list<int64_t>::const_iterator &it) : Meta(meta) {
+    //InCacheMeta(const Meta &meta, const list<int64_t>::const_iterator &it) : Meta(meta) {
+    InCacheMeta(const Meta &meta, const list<std::string>::const_iterator &it, const std::string& valuestr) : Meta(meta) { // Siyuan: for key-value caching
         p_last_request = it;
+        this->valuestr = valuestr;
     };
+
+    // Siyuan: for key-value caching
+    InCacheMeta(const InCacheMeta &other) : Meta(other) {
+        p_last_request = other.p_last_request;
+        valuestr = other.valuestr;
+    };
+
+    // Siyuan: for correct cache size usage calculation
+    uint64_t getSizeForCapacity() const
+    {
+        uint64_t total_size = Meta::getSizeForCapacity();
+        total_size += sizeof(std::list<std::string>::const_iterator) + valuestr.length(); // p_last_request + valuestr
+        return total_size;
+    }
 
 };
 
 class InCacheLRUQueue {
 public:
-    list<int64_t> dq;
+    //list<int64_t> dq;
+    list<std::string> dq; // Siyuan: for key-value caching
 
     //size?
     //the hashtable (location information is maintained outside, and assume it is always correct)
-    list<int64_t>::const_iterator request(int64_t key) {
+    //list<int64_t>::const_iterator request(int64_t key) {
+    list<std::string>::const_iterator request(std::string key) { // Siyuan: for key-value caching
         dq.emplace_front(key);
         return dq.cbegin();
     }
 
-    list<int64_t>::const_iterator re_request(list<int64_t>::const_iterator it) {
+    //list<int64_t>::const_iterator re_request(list<int64_t>::const_iterator it) {
+    list<std::string>::const_iterator re_request(list<std::string>::const_iterator it) { // Siyuan: for key-value caching
         if (it != dq.cbegin()) {
             dq.emplace_front(*it);
             dq.erase(it);
@@ -378,7 +423,8 @@ public:
         data.reserve(lrb_cache_ptr_->batch_size * lrb_cache_ptr_->n_feature);
     }
 
-    void emplace_back(Meta &meta, uint32_t &sample_timestamp, uint32_t &future_interval, const uint64_t &key) {
+    //void emplace_back(Meta &meta, uint32_t &sample_timestamp, uint32_t &future_interval, const uint64_t &key) {
+    void emplace_back(Meta &meta, uint32_t &sample_timestamp, uint32_t &future_interval) { // Siyuan: LRB maps object-level metadata into next access time, yet key is NOT input for inference
         int32_t counter = indptr.back();
 
         indices.emplace_back(0);
@@ -464,7 +510,7 @@ public:
             lrb_cache_ptr_->trainings_and_predictions.emplace_back(NAN);
             lrb_cache_ptr_->trainings_and_predictions.emplace_back(sample_timestamp);
             lrb_cache_ptr_->trainings_and_predictions.emplace_back(0);
-            lrb_cache_ptr_->trainings_and_predictions.emplace_back(key);
+            //lrb_cache_ptr_->trainings_and_predictions.emplace_back(key); // Siyuan: LRB maps object-level metadata into next access time, yet key is NOT input for inference
         }
 #endif
 
@@ -499,7 +545,8 @@ public:
         data.reserve(lrb_cache_ptr_->batch_size * lrb_cache_ptr_->n_feature);
     }
 
-    void emplace_back(Meta &meta, uint32_t &sample_timestamp, uint32_t &future_interval, const uint64_t &key) {
+    //void emplace_back(Meta &meta, uint32_t &sample_timestamp, uint32_t &future_interval, const uint64_t &key) {
+    void emplace_back(Meta &meta, uint32_t &sample_timestamp, uint32_t &future_interval) { // Siyuan: LRB maps object-level metadata into next access time, yet key is NOT input for inference
         int32_t counter = indptr.back();
 
         indices.emplace_back(0);
@@ -580,7 +627,7 @@ public:
             lrb_cache_ptr_->trainings_and_predictions.emplace_back(NAN);
             lrb_cache_ptr_->trainings_and_predictions.emplace_back(sample_timestamp);
             lrb_cache_ptr_->trainings_and_predictions.emplace_back(2);
-            lrb_cache_ptr_->trainings_and_predictions.emplace_back(key);
+            //lrb_cache_ptr_->trainings_and_predictions.emplace_back(key); // Siyuan: LRB maps object-level metadata into next access time, yet key is NOT input for inference
         }
 
     }
@@ -632,7 +679,8 @@ public:
     vector<Meta> out_cache_metas;
 
     InCacheLRUQueue in_cache_lru_queue;
-    shared_ptr<sparse_hash_map<uint64_t, uint64_t>> negative_candidate_queue;
+    //shared_ptr<sparse_hash_map<uint64_t, uint64_t>> negative_candidate_queue;
+    shared_ptr<sparse_hash_map<uint64_t, std::string>> negative_candidate_queue; // Siyuan: for key-value caching
     TrainingData *training_data;
 #ifdef EVICTION_LOGGING
     LRBEvictionTrainingData *eviction_training_data;
@@ -758,7 +806,9 @@ public:
             }
         }
 
-        negative_candidate_queue = make_shared<sparse_hash_map<uint64_t, uint64_t>>(memory_window);
+        // Siyuan: negative_candidate_queue will map forget timestamp to key
+        //negative_candidate_queue = make_shared<sparse_hash_map<uint64_t, uint64_t>>(memory_window);
+        negative_candidate_queue = make_shared<sparse_hash_map<uint64_t, std::string>>(memory_window); // Siyuan: for key-value caching
         max_n_past_distances = max_n_past_timestamps - 1;
         //init
         edc_windows = vector<uint32_t>(n_edc_feature);
@@ -810,7 +860,8 @@ public:
     void forget();
 
     //sample, rank the 1st and return
-    pair<uint64_t, uint32_t> rank();
+    //pair<uint64_t, uint32_t> rank();
+    pair<std::string, uint32_t> rank(); // Siyuan: for key-value caching
 
     void train();
 
@@ -826,7 +877,11 @@ public:
             hash_edc[i] = pow(0.5, i);
     }
 
-    void remove_from_outcache_metas(Meta &meta, unsigned int &pos, const uint64_t &key);
+    //void remove_from_outcache_metas(Meta &meta, unsigned int &pos, const uint64_t &key);
+    void remove_from_outcache_metas(Meta &meta, unsigned int &pos, const std::string &key); // Siyuan: for key-value caching
+
+    // Siyuan: for correct size usage calculation
+    void decreaseCurrentSize(const uint64_t decreased_size);
 
     // Siyuan: for key-value caching
     bool has(const std::string &keystr) {
