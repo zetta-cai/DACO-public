@@ -14,11 +14,26 @@ namespace covered
 {
 
 // Siyuan: constructor
-LRBCache::LRBCache() : Cache()
+LRBCache::LRBCache() : Cache(), n_edc_feature(10), max_n_extra_feature(4)
 {
     current_seq = -1;
     max_n_past_timestamps = 32;
     max_n_past_distances = 31;
+    base_edc_window = 10;
+    edc_windows.clear();
+    hash_edc.clear();
+    max_hash_edc_idx = 0;
+    memory_window = 67108864;
+    n_extra_fields = 0;
+    batch_size = 131072;
+    n_feature = 0;
+#ifdef EVICTION_LOGGING
+    future_timestamps.clear();
+    n_logging_start = 0;
+    trainings_and_predictions.clear();
+    start_train_logging = false;
+    range_log = 1000000;
+#endif
 
     training_data = NULL;
 #ifdef EVICTION_LOGGING
@@ -199,13 +214,16 @@ bool LRBCache::lookup(const SimpleRequest &req) {
     forget();
 
     //first update the metadata: insert/update, which can trigger pending data.mature
-    auto it = key_map.find(req.id);
+    //auto it = key_map.find(req.id);
+    assert(req.is_keybased_req); // Siyuan: for key-value caching
+    auto it = key_map.find(req.keystr); // Siyuan: for key-value caching
     if (it != key_map.end()) {
         auto list_idx = it->second.list_idx;
         auto list_pos = it->second.list_pos;
         Meta &meta = list_idx ? out_cache_metas[list_pos] : in_cache_metas[list_pos];
         //update past timestamps
-        assert(meta._key == req.id);
+        assert(meta == req); // Siyuan: for key-value caching
+        //assert(meta._key == req.id);
         uint64_t last_timestamp = meta._past_timestamp;
         uint64_t forget_timestamp = last_timestamp % memory_window;
         //if the key in out_metadata, it must also in forget table
@@ -341,14 +359,17 @@ void LRBCache::admit(const SimpleRequest &req) {
     const uint64_t &size = req.size;
     // object feasible to store?
     if (size > _cacheSize) {
-        LOG("L", _cacheSize, req.id, size);
+        //LOG("L", _cacheSize, req.id, size); // Siyuan: should log req.keystr
         return;
     }
 
-    auto it = key_map.find(req.id);
+    //auto it = key_map.find(req.id);
+    assert(req.is_keybased_req); // Siyuan: for key-value caching
+    auto it = key_map.find(req.keystr); // Siyuan: for key-value caching
     if (it == key_map.end()) {
         //fresh insert
-        key_map.insert({req.id, {0, (uint32_t) in_cache_metas.size()}});
+        //key_map.insert({req.id, {0, (uint32_t) in_cache_metas.size()}});
+        key_map.insert({req.keystr, {0, (uint32_t) in_cache_metas.size()}}); // Siyuan: for key-value caching
         auto lru_it = in_cache_lru_queue.request(req.id);
 #ifdef EVICTION_LOGGING
         AnnotatedRequest *_req = (AnnotatedRequest *) &req;
@@ -376,7 +397,9 @@ void LRBCache::admit(const SimpleRequest &req) {
         if (it->second.list_pos != tail1_pos) {
             //swap tail
             out_cache_metas[it->second.list_pos] = out_cache_metas[tail1_pos];
-            key_map.find(out_cache_metas[tail1_pos]._key)->second.list_pos = it->second.list_pos;
+            //key_map.find(out_cache_metas[tail1_pos]._key)->second.list_pos = it->second.list_pos;
+            assert(out_cache_metas[tail1_pos]._is_keybased_meta); // Siyuan: for key-value caching
+            key_map.find(out_cache_metas[tail1_pos]._keystr)->second.list_pos = it->second.list_pos; // Siyuan: for key-value caching
         }
         out_cache_metas.pop_back();
         it->second = {0, tail0_pos};
@@ -634,7 +657,9 @@ void LRBCache::evict() {
         if (old_pos != activate_tail_idx) {
             //move tail
             in_cache_metas[old_pos] = in_cache_metas[activate_tail_idx];
-            key_map.find(in_cache_metas[activate_tail_idx]._key)->second.list_pos = old_pos;
+            //key_map.find(in_cache_metas[activate_tail_idx]._key)->second.list_pos = old_pos;
+            assert(in_cache_metas[activate_tail_idx]._is_keybased_meta); // Siyuan: for key-value caching
+            key_map.find(in_cache_metas[activate_tail_idx]._keystr)->second.list_pos = old_pos; // Siyuan: for key-value caching
         }
         in_cache_metas.pop_back();
         ++n_force_eviction;
@@ -651,7 +676,9 @@ void LRBCache::evict() {
         if (old_pos != activate_tail_idx) {
             //move tail
             in_cache_metas[old_pos] = in_cache_metas[activate_tail_idx];
-            key_map.find(in_cache_metas[activate_tail_idx]._key)->second.list_pos = old_pos;
+            //key_map.find(in_cache_metas[activate_tail_idx]._key)->second.list_pos = old_pos;
+            assert(in_cache_metas[activate_tail_idx]._is_keybased_meta); // Siyuan: for key-value caching
+            key_map.find(in_cache_metas[activate_tail_idx]._keystr)->second.list_pos = old_pos; // Siyuan: for key-value caching
         }
         in_cache_metas.pop_back();
         key_map.find(key)->second = {1, new_pos};
@@ -667,7 +694,9 @@ void LRBCache::remove_from_outcache_metas(Meta &meta, unsigned int &pos, const u
     if (pos != tail_pos) {
         //swap tail
         out_cache_metas[pos] = out_cache_metas[tail_pos];
-        key_map.find(out_cache_metas[tail_pos]._key)->second.list_pos = pos;
+        //key_map.find(out_cache_metas[tail_pos]._key)->second.list_pos = pos;
+        assert(out_cache_metas[tail_pos]._is_keybased_meta); // Siyuan: for key-value caching
+        key_map.find(out_cache_metas[tail_pos]._keystr)->second.list_pos = pos; // Siyuan: for key-value caching
     }
     out_cache_metas.pop_back();
     key_map.erase(key);

@@ -10,6 +10,7 @@
 #include <fstream>
 #include <list>
 #include <random>
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -24,8 +25,9 @@
 #include "cache/lrb/cache.h"
 //#include <webcachesim/cache.h>
 //using namespace webcachesim;
+#include "cache/lrb/request.h"
 
-using namespace std;
+//using namespace std;
 using spp::sparse_hash_map;
 using bsoncxx::builder::basic::kvp;
 using bsoncxx::builder::basic::sub_array;
@@ -38,29 +40,29 @@ namespace covered {
     //uint32_t current_seq = -1;
     //uint8_t max_n_past_timestamps = 32;
     //uint8_t max_n_past_distances = 31;
-    uint8_t base_edc_window = 10;
-    const uint8_t n_edc_feature = 10;
-    vector<uint32_t> edc_windows;
-    vector<double> hash_edc;
-    uint32_t max_hash_edc_idx;
-    uint32_t memory_window = 67108864;
-    uint32_t n_extra_fields = 0;
-    uint32_t batch_size = 131072;
-    const uint max_n_extra_feature = 4;
-    uint32_t n_feature;
+    //uint8_t base_edc_window = 10;
+    //const uint8_t n_edc_feature = 10;
+    //vector<uint32_t> edc_windows;
+    //vector<double> hash_edc;
+    //uint32_t max_hash_edc_idx;
+    //uint32_t memory_window = 67108864;
+    //uint32_t n_extra_fields = 0;
+    //uint32_t batch_size = 131072;
+    //const uint max_n_extra_feature = 4;
+    //uint32_t n_feature;
     //TODO: interval clock should tick by event instead of following incoming packet time
 #ifdef EVICTION_LOGGING
-    unordered_map<uint64_t, uint32_t> future_timestamps;
-    int n_logging_start;
-    vector<float> trainings_and_predictions;
-    bool start_train_logging = false;
-    int range_log = 1000000;
+    //unordered_map<uint64_t, uint32_t> future_timestamps;
+    //int n_logging_start;
+    //vector<float> trainings_and_predictions;
+    //bool start_train_logging = false;
+    //int range_log = 1000000;
 #endif
 
 struct MetaExtra {
 private:
     LRBCache* lrb_cache_ptr_; // Siyuan: used for access original global variables
-
+public:
     //vector overhead = 24 (8 pointer, 8 size, 8 allocation)
     //40 + 24 + 4*x + 1
     //65 byte at least
@@ -72,14 +74,26 @@ private:
     uint8_t _past_distance_idx = 1;
 
     MetaExtra(const uint32_t &distance, LRBCache* lrb_cache_ptr) {
-        _past_distances = vector<uint32_t>(1, distance);
-        for (uint8_t i = 0; i < n_edc_feature; ++i) {
-            uint32_t _distance_idx = min(uint32_t(distance / edc_windows[i]), max_hash_edc_idx);
-            _edc[i] = hash_edc[_distance_idx] + 1;
-        }
-
         assert(lrb_cache_ptr != NULL);
         lrb_cache_ptr_ = lrb_cache_ptr;
+
+        _past_distances = vector<uint32_t>(1, distance);
+        for (uint8_t i = 0; i < lrb_cache_ptr_->n_edc_feature; ++i) {
+            uint32_t _distance_idx = min(uint32_t(distance / lrb_cache_ptr_->edc_windows[i]), lrb_cache_ptr_->max_hash_edc_idx);
+            _edc[i] = lrb_cache_ptr_->hash_edc[_distance_idx] + 1;
+        }
+    }
+
+    // Siyuan: copy assignment constructor
+    MetaExtra(const MetaExtra& other)
+    {
+        lrb_cache_ptr_ = other.lrb_cache_ptr_;
+
+        _past_distances = other._past_distances;
+        for (uint8_t i = 0; i < lrb_cache_ptr_->n_edc_feature; ++i) {
+            _edc[i] = other._edc[i];
+        }
+        _past_distance_idx = other._past_distance_idx;
     }
 
     void update(const uint32_t &distance) {
@@ -92,9 +106,9 @@ private:
         _past_distance_idx = _past_distance_idx + (uint8_t) 1;
         if (_past_distance_idx >= lrb_cache_ptr_->max_n_past_distances * 2)
             _past_distance_idx -= lrb_cache_ptr_->max_n_past_distances;
-        for (uint8_t i = 0; i < n_edc_feature; ++i) {
-            uint32_t _distance_idx = min(uint32_t(distance / edc_windows[i]), max_hash_edc_idx);
-            _edc[i] = _edc[i] * hash_edc[_distance_idx] + 1;
+        for (uint8_t i = 0; i < lrb_cache_ptr_->n_edc_feature; ++i) {
+            uint32_t _distance_idx = min(uint32_t(distance / lrb_cache_ptr_->edc_windows[i]), lrb_cache_ptr_->max_hash_edc_idx);
+            _edc[i] = _edc[i] * lrb_cache_ptr_->hash_edc[_distance_idx] + 1;
         }
     }
 };
@@ -107,7 +121,7 @@ public:
     uint64_t _key;
     uint32_t _size;
     uint32_t _past_timestamp;
-    uint16_t _extra_features[max_n_extra_feature];
+    uint16_t* _extra_features;
     MetaExtra *_extra = nullptr;
     vector<uint32_t> _sample_times;
 #ifdef EVICTION_LOGGING
@@ -115,37 +129,121 @@ public:
     uint32_t _future_timestamp;
 #endif
 
+    // Siyuan: for key-value caching
+    bool _is_keybased_meta;
+    std::string _keystr;
 
 #ifdef EVICTION_LOGGING
     Meta(const uint64_t &key, const uint64_t &size, const uint64_t &past_timestamp,
-            const vector<uint16_t> &extra_features, const uint64_t &future_timestamp, LRBCache* lrb_cache_ptr) {
+            const vector<uint16_t> &extra_features, const uint64_t &future_timestamp, LRBCache* lrb_cache_ptr, const bool& is_keybased_meta, const std::string& keystr) {
+        assert(lrb_cache_ptr != NULL);
+        lrb_cache_ptr_ = lrb_cache_ptr;
+
         _key = key;
         _size = size;
         _past_timestamp = past_timestamp;
-        for (int i = 0; i < n_extra_fields; ++i)
+        _extra_features = new uint16_t[lrb_cache_ptr_->max_n_extra_feature];
+        assert(_extra_features != NULL);
+        for (int i = 0; i < lrb_cache_ptr_->n_extra_fields; ++i)
             _extra_features[i] = extra_features[i];
         _future_timestamp = future_timestamp;
 
-        assert(lrb_cache_ptr != NULL);
-        lrb_cache_ptr_ = lrb_cache_ptr;
+        _is_keybased_meta = is_keybased_meta;
+        _keystr = keystr;
     }
 
 #else
     Meta(const uint64_t &key, const uint64_t &size, const uint64_t &past_timestamp,
-            const vector<uint16_t> &extra_features, LRBCache* lrb_cache_ptr) {
+            const vector<uint16_t> &extra_features, LRBCache* lrb_cache_ptr, const bool& is_keybased_meta, const std::string& keystr) {
+        assert(lrb_cache_ptr != NULL);
+        lrb_cache_ptr_ = lrb_cache_ptr;
+
         _key = key;
         _size = size;
         _past_timestamp = past_timestamp;
-        for (int i = 0; i < n_extra_fields; ++i)
+        _extra_features = new uint16_t[lrb_cache_ptr_->max_n_extra_feature];
+        assert(_extra_features != NULL);
+        for (int i = 0; i < lrb_cache_ptr_->n_extra_fields; ++i)
             _extra_features[i] = extra_features[i];
-
-        assert(lrb_cache_ptr != NULL);
-        lrb_cache_ptr_ = lrb_cache_ptr;
-        // TODO: END HERE
+        
+        _is_keybased_meta = is_keybased_meta;
+        _keystr = keystr;
     }
 #endif
 
-    virtual ~Meta() = default;
+    // Siyuan: copy assignment constructor
+    Meta(const Meta& other)
+    {
+        lrb_cache_ptr_ = other.lrb_cache_ptr_;
+
+        _key = other._key;
+        _size = other._size;
+        _past_timestamp = other._past_timestamp;
+        _extra_features = new uint16_t[lrb_cache_ptr_->max_n_extra_feature];
+        assert(_extra_features != NULL);
+        for (int i = 0; i < lrb_cache_ptr_->n_extra_fields; ++i)
+            _extra_features[i] = other._extra_features[i];
+        
+        if (_extra != nullptr)
+        {
+            delete _extra;
+            _extra = nullptr;
+        }
+        if (other._extra != nullptr)
+        {
+            _extra = new MetaExtra(*other._extra);
+            assert(_extra != nullptr);
+        }
+
+        _sample_times = other._sample_times;
+
+#ifdef EVICTION_LOGGING
+        _eviction_sample_times = other._eviction_sample_times;
+        _future_timestamp = other._future_timestamp;
+#endif
+
+        _is_keybased_meta = other._is_keybased_meta;
+        _keystr = other._keystr;
+    }
+
+    virtual ~Meta()
+    {
+        assert(_extra_features != NULL);
+        delete [] _extra_features;
+        _extra_features = NULL;
+
+        if (_extra != nullptr)
+        {
+            delete _extra;
+            _extra = nullptr;
+        }
+    }
+
+    // Siyuan: for key-value caching
+    bool operator==(const Meta& other)
+    {
+        assert(_is_keybased_meta == other._is_keybased_meta);
+        if (_is_keybased_meta)
+        {
+            return _keystr == other._keystr;
+        }
+        else
+        {
+            return _key == other._key;
+        }
+    }
+    bool operator==(const SimpleRequest& other)
+    {
+        assert(_is_keybased_meta == other._is_keybased_req);
+        if (_is_keybased_meta)
+        {
+            return _keystr == other.keystr;
+        }
+        else
+        {
+            return _key == other.id;
+        }
+    }
 
     void emplace_sample(uint32_t &sample_t) {
         _sample_times.emplace_back(sample_t);
@@ -159,6 +257,7 @@ public:
 
     void free() {
         delete _extra;
+        _extra = nullptr;
     }
 
 #ifdef EVICTION_LOGGING
@@ -168,7 +267,7 @@ public:
         uint32_t _distance = past_timestamp - _past_timestamp;
         assert(_distance);
         if (!_extra) {
-            _extra = new MetaExtra(_distance);
+            _extra = new MetaExtra(_distance, lrb_cache_ptr_);
         } else
             _extra->update(_distance);
         //timestamp
@@ -182,7 +281,7 @@ public:
         uint32_t _distance = past_timestamp - _past_timestamp;
         assert(_distance);
         if (!_extra) {
-            _extra = new MetaExtra(_distance);
+            _extra = new MetaExtra(_distance, lrb_cache_ptr_);
         } else
             _extra->update(_distance);
         //timestamp
@@ -216,16 +315,19 @@ public:
                 const uint64_t &past_timestamp,
                 const vector<uint16_t> &extra_features,
                 const uint64_t &future_timestamp,
-                const list<KeyT>::const_iterator &it) :
-            Meta(key, size, past_timestamp, extra_features, future_timestamp) {
+                const list<KeyT>::const_iterator &it,
+                LRBCache* lrb_cache_ptr) :
+            Meta(key, size, past_timestamp, extra_features, future_timestamp, lrb_cache_ptr) {
         p_last_request = it;
     };
 #else
     InCacheMeta(const uint64_t &key,
                 const uint64_t &size,
                 const uint64_t &past_timestamp,
-                const vector<uint16_t> &extra_features, const list<int64_t>::const_iterator &it) :
-            Meta(key, size, past_timestamp, extra_features) {
+                const vector<uint16_t> &extra_features,
+                const list<int64_t>::const_iterator &it,
+                LRBCache* lrb_cache_ptr) :
+            Meta(key, size, past_timestamp, extra_features, lrb_cache_ptr) {
         p_last_request = it;
     };
 #endif
@@ -266,14 +368,14 @@ public:
     vector<double> data;
 
     TrainingData(LRBCache* lrb_cache_ptr) {
-        labels.reserve(batch_size);
-        indptr.reserve(batch_size + 1);
-        indptr.emplace_back(0);
-        indices.reserve(batch_size * n_feature);
-        data.reserve(batch_size * n_feature);
-
         assert(lrb_cache_ptr != NULL);
         lrb_cache_ptr_ = lrb_cache_ptr;
+
+        labels.reserve(lrb_cache_ptr_->batch_size);
+        indptr.reserve(lrb_cache_ptr_->batch_size + 1);
+        indptr.emplace_back(0);
+        indices.reserve(lrb_cache_ptr_->batch_size * lrb_cache_ptr_->n_feature);
+        data.reserve(lrb_cache_ptr_->batch_size * lrb_cache_ptr_->n_feature);
     }
 
     void emplace_back(Meta &meta, uint32_t &sample_timestamp, uint32_t &future_interval, const uint64_t &key) {
@@ -293,7 +395,7 @@ public:
                 this_past_distance += past_distance;
                 indices.emplace_back(j + 1);
                 data.emplace_back(past_distance);
-                if (this_past_distance < memory_window) {
+                if (this_past_distance < lrb_cache_ptr_->memory_window) {
                     ++n_within;
                 }
             }
@@ -305,35 +407,36 @@ public:
         data.push_back(meta._size);
         ++counter;
 
-        for (int k = 0; k < n_extra_fields; ++k) {
+        for (int k = 0; k < lrb_cache_ptr_->n_extra_fields; ++k) {
             indices.push_back(lrb_cache_ptr_->max_n_past_timestamps + k + 1);
+            assert(meta._extra_features != NULL); // Siyuan: poiner verification
             data.push_back(meta._extra_features[k]);
         }
-        counter += n_extra_fields;
+        counter += lrb_cache_ptr_->n_extra_fields;
 
-        indices.push_back(lrb_cache_ptr_->max_n_past_timestamps + n_extra_fields + 1);
+        indices.push_back(lrb_cache_ptr_->max_n_past_timestamps + lrb_cache_ptr_->n_extra_fields + 1);
         data.push_back(n_within);
         ++counter;
 
         if (meta._extra) {
-            for (int k = 0; k < n_edc_feature; ++k) {
-                indices.push_back(lrb_cache_ptr_->max_n_past_timestamps + n_extra_fields + 2 + k);
+            for (int k = 0; k < lrb_cache_ptr_->n_edc_feature; ++k) {
+                indices.push_back(lrb_cache_ptr_->max_n_past_timestamps + lrb_cache_ptr_->n_extra_fields + 2 + k);
                 uint32_t _distance_idx = std::min(
-                        uint32_t(sample_timestamp - meta._past_timestamp) / edc_windows[k],
-                        max_hash_edc_idx);
-                data.push_back(meta._extra->_edc[k] * hash_edc[_distance_idx]);
+                        uint32_t(sample_timestamp - meta._past_timestamp) / lrb_cache_ptr_->edc_windows[k],
+                        lrb_cache_ptr_->max_hash_edc_idx);
+                data.push_back(meta._extra->_edc[k] * lrb_cache_ptr_->hash_edc[_distance_idx]);
             }
         } else {
-            for (int k = 0; k < n_edc_feature; ++k) {
-                indices.push_back(lrb_cache_ptr_->max_n_past_timestamps + n_extra_fields + 2 + k);
+            for (int k = 0; k < lrb_cache_ptr_->n_edc_feature; ++k) {
+                indices.push_back(lrb_cache_ptr_->max_n_past_timestamps + lrb_cache_ptr_->n_extra_fields + 2 + k);
                 uint32_t _distance_idx = std::min(
-                        uint32_t(sample_timestamp - meta._past_timestamp) / edc_windows[k],
-                        max_hash_edc_idx);
-                data.push_back(hash_edc[_distance_idx]);
+                        uint32_t(sample_timestamp - meta._past_timestamp) / lrb_cache_ptr_->edc_windows[k],
+                        lrb_cache_ptr_->max_hash_edc_idx);
+                data.push_back(lrb_cache_ptr_->hash_edc[_distance_idx]);
             }
         }
 
-        counter += n_edc_feature;
+        counter += lrb_cache_ptr_->n_edc_feature;
 
         labels.push_back(log1p(future_interval));
         indptr.push_back(counter);
@@ -341,27 +444,27 @@ public:
 
 #ifdef EVICTION_LOGGING
         assert(lrb_cache_ptr_ != NULL);
-        if ((lrb_cache_ptr_->current_seq >= n_logging_start) && !start_train_logging && (indptr.size() == 2)) {
-            start_train_logging = true;
+        if ((lrb_cache_ptr_->current_seq >= lrb_cache_ptr_->n_logging_start) && !lrb_cache_ptr_->start_train_logging && (indptr.size() == 2)) {
+            lrb_cache_ptr_->start_train_logging = true;
         }
 
-        if (start_train_logging) {
+        if (lrb_cache_ptr_->start_train_logging) {
 //            training_and_prediction_logic_timestamps.emplace_back(lrb_cache_ptr_->current_seq / 65536);
             int i = indptr.size() - 2;
             int current_idx = indptr[i];
-            for (int p = 0; p < n_feature; ++p) {
+            for (int p = 0; p < lrb_cache_ptr_->n_feature; ++p) {
                 if (p == indices[current_idx]) {
-                    trainings_and_predictions.emplace_back(data[current_idx]);
+                    lrb_cache_ptr_->trainings_and_predictions.emplace_back(data[current_idx]);
                     if (current_idx + 1 < indptr[i + 1])
                         ++current_idx;
                 } else
-                    trainings_and_predictions.emplace_back(NAN);
+                    lrb_cache_ptr_->trainings_and_predictions.emplace_back(NAN);
             }
-            trainings_and_predictions.emplace_back(future_interval);
-            trainings_and_predictions.emplace_back(NAN);
-            trainings_and_predictions.emplace_back(sample_timestamp);
-            trainings_and_predictions.emplace_back(0);
-            trainings_and_predictions.emplace_back(key);
+            lrb_cache_ptr_->trainings_and_predictions.emplace_back(future_interval);
+            lrb_cache_ptr_->trainings_and_predictions.emplace_back(NAN);
+            lrb_cache_ptr_->trainings_and_predictions.emplace_back(sample_timestamp);
+            lrb_cache_ptr_->trainings_and_predictions.emplace_back(0);
+            lrb_cache_ptr_->trainings_and_predictions.emplace_back(key);
         }
 #endif
 
@@ -386,14 +489,14 @@ public:
     vector<double> data;
 
     LRBEvictionTrainingData(LRBCache* lrb_cache_ptr) {
-        labels.reserve(batch_size);
-        indptr.reserve(batch_size + 1);
-        indptr.emplace_back(0);
-        indices.reserve(batch_size * n_feature);
-        data.reserve(batch_size * n_feature);
-
         assert(lrb_cache_ptr != NULL);
         lrb_cache_ptr_ = lrb_cache_ptr;
+
+        labels.reserve(lrb_cache_ptr_->batch_size);
+        indptr.reserve(lrb_cache_ptr_->batch_size + 1);
+        indptr.emplace_back(0);
+        indices.reserve(lrb_cache_ptr_->batch_size * lrb_cache_ptr_->n_feature);
+        data.reserve(lrb_cache_ptr_->batch_size * lrb_cache_ptr_->n_feature);
     }
 
     void emplace_back(Meta &meta, uint32_t &sample_timestamp, uint32_t &future_interval, const uint64_t &key) {
@@ -413,7 +516,7 @@ public:
                 this_past_distance += past_distance;
                 indices.emplace_back(j + 1);
                 data.emplace_back(past_distance);
-                if (this_past_distance < memory_window) {
+                if (this_past_distance < lrb_cache_ptr_->memory_window) {
                     ++n_within;
                 }
             }
@@ -425,58 +528,59 @@ public:
         data.push_back(meta._size);
         ++counter;
 
-        for (int k = 0; k < n_extra_fields; ++k) {
+        for (int k = 0; k < lrb_cache_ptr_->n_extra_fields; ++k) {
             indices.push_back(lrb_cache_ptr_->max_n_past_timestamps + k + 1);
+            assert(meta._extra_features != NULL); // Siyuan: poiner verification
             data.push_back(meta._extra_features[k]);
         }
-        counter += n_extra_fields;
+        counter += lrb_cache_ptr_->n_extra_fields;
 
-        indices.push_back(lrb_cache_ptr_->max_n_past_timestamps + n_extra_fields + 1);
+        indices.push_back(lrb_cache_ptr_->max_n_past_timestamps + lrb_cache_ptr_->n_extra_fields + 1);
         data.push_back(n_within);
         ++counter;
 
         if (meta._extra) {
-            for (int k = 0; k < n_edc_feature; ++k) {
-                indices.push_back(lrb_cache_ptr_->max_n_past_timestamps + n_extra_fields + 2 + k);
+            for (int k = 0; k < lrb_cache_ptr_->n_edc_feature; ++k) {
+                indices.push_back(lrb_cache_ptr_->max_n_past_timestamps + lrb_cache_ptr_->n_extra_fields + 2 + k);
                 uint32_t _distance_idx = std::min(
-                        uint32_t(sample_timestamp - meta._past_timestamp) / edc_windows[k],
-                        max_hash_edc_idx);
-                data.push_back(meta._extra->_edc[k] * hash_edc[_distance_idx]);
+                        uint32_t(sample_timestamp - meta._past_timestamp) / lrb_cache_ptr_->edc_windows[k],
+                        lrb_cache_ptr_->max_hash_edc_idx);
+                data.push_back(meta._extra->_edc[k] * lrb_cache_ptr_->hash_edc[_distance_idx]);
             }
         } else {
-            for (int k = 0; k < n_edc_feature; ++k) {
-                indices.push_back(lrb_cache_ptr_->max_n_past_timestamps + n_extra_fields + 2 + k);
+            for (int k = 0; k < lrb_cache_ptr_->n_edc_feature; ++k) {
+                indices.push_back(lrb_cache_ptr_->max_n_past_timestamps + lrb_cache_ptr_->n_extra_fields + 2 + k);
                 uint32_t _distance_idx = std::min(
-                        uint32_t(sample_timestamp - meta._past_timestamp) / edc_windows[k],
-                        max_hash_edc_idx);
-                data.push_back(hash_edc[_distance_idx]);
+                        uint32_t(sample_timestamp - meta._past_timestamp) / lrb_cache_ptr_->edc_windows[k],
+                        lrb_cache_ptr_->max_hash_edc_idx);
+                data.push_back(lrb_cache_ptr_->hash_edc[_distance_idx]);
             }
         }
 
-        counter += n_edc_feature;
+        counter += lrb_cache_ptr_->n_edc_feature;
 
         labels.push_back(log1p(future_interval));
         indptr.push_back(counter);
 
 
-        if (start_train_logging) {
+        if (lrb_cache_ptr_->start_train_logging) {
 //            assert(lrb_cache_ptr_ != NULL);
 //            training_and_prediction_logic_timestamps.emplace_back(lrb_cache_ptr_->current_seq / 65536);
             int i = indptr.size() - 2;
             int current_idx = indptr[i];
-            for (int p = 0; p < n_feature; ++p) {
+            for (int p = 0; p < lrb_cache_ptr_->n_feature; ++p) {
                 if (p == indices[current_idx]) {
-                    trainings_and_predictions.emplace_back(data[current_idx]);
+                    lrb_cache_ptr_->trainings_and_predictions.emplace_back(data[current_idx]);
                     if (current_idx + 1 < indptr[i + 1])
                         ++current_idx;
                 } else
-                    trainings_and_predictions.emplace_back(NAN);
+                    lrb_cache_ptr_->trainings_and_predictions.emplace_back(NAN);
             }
-            trainings_and_predictions.emplace_back(future_interval);
-            trainings_and_predictions.emplace_back(NAN);
-            trainings_and_predictions.emplace_back(sample_timestamp);
-            trainings_and_predictions.emplace_back(2);
-            trainings_and_predictions.emplace_back(key);
+            lrb_cache_ptr_->trainings_and_predictions.emplace_back(future_interval);
+            lrb_cache_ptr_->trainings_and_predictions.emplace_back(NAN);
+            lrb_cache_ptr_->trainings_and_predictions.emplace_back(sample_timestamp);
+            lrb_cache_ptr_->trainings_and_predictions.emplace_back(2);
+            lrb_cache_ptr_->trainings_and_predictions.emplace_back(key);
         }
 
     }
@@ -502,9 +606,27 @@ public:
     uint32_t current_seq = -1;
     uint8_t max_n_past_timestamps = 32;
     uint8_t max_n_past_distances = 31;
+    uint8_t base_edc_window = 10;
+    const uint8_t n_edc_feature = 10;
+    vector<uint32_t> edc_windows;
+    vector<double> hash_edc;
+    uint32_t max_hash_edc_idx;
+    uint32_t memory_window = 67108864;
+    uint32_t n_extra_fields = 0;
+    uint32_t batch_size = 131072;
+    const uint max_n_extra_feature = 4;
+    uint32_t n_feature;
+#ifdef EVICTION_LOGGING
+    unordered_map<uint64_t, uint32_t> future_timestamps;
+    int n_logging_start;
+    vector<float> trainings_and_predictions;
+    bool start_train_logging = false;
+    int range_log = 1000000;
+#endif
 
     //key -> (0/1 list, idx)
-    sparse_hash_map<uint64_t, KeyMapEntryT> key_map;
+    //sparse_hash_map<uint64_t, KeyMapEntryT> key_map;
+    sparse_hash_map<std::string, KeyMapEntryT> key_map; // Siyuan: for key-value caching
 //    vector<Meta> meta_holder[2];
     vector<InCacheMeta> in_cache_metas;
     vector<Meta> out_cache_metas;
@@ -696,7 +818,8 @@ public:
 
     void update_stat_periodic() override;
 
-    static void set_hash_edc() {
+    // Siyuan: remove "static" from set_hash_edc for thread-scalability
+    void set_hash_edc() {
         max_hash_edc_idx = (uint64_t) (memory_window / pow(2, base_edc_window)) - 1;
         hash_edc = vector<double>(max_hash_edc_idx + 1);
         for (int i = 0; i < hash_edc.size(); ++i)
@@ -705,8 +828,11 @@ public:
 
     void remove_from_outcache_metas(Meta &meta, unsigned int &pos, const uint64_t &key);
 
-    bool has(const uint64_t &id) {
-        auto it = key_map.find(id);
+    // Siyuan: for key-value caching
+    bool has(const std::string &keystr) {
+    //bool has(const uint64_t &id) {
+        //auto it = key_map.find(id);
+        auto it = key_map.find(keystr);
         if (it == key_map.end())
             return false;
         return !it->second.list_idx;

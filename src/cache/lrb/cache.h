@@ -9,9 +9,12 @@
 #include <cstdint>
 #include <memory>
 
-#include <webcachesim/request.h>
 #include <webcachesim/common.h>
 #include <bsoncxx/builder/basic/document.hpp>
+
+// Siyuan: for key-value caching
+#include "cache/lrb/request.h"
+//#include <webcachesim/request.h>
 
 namespace covered {
 
