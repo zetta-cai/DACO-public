@@ -1,5 +1,5 @@
 /*
- * GDSFCache: refer to lib/webcachesim/caches/gd_variants.*.
+ * GDSFCache: refer to lib/greedydual/caches/gd_variants.*.
  *
  * Hack to support required interfaces and cache size in units of bytes for capacity constraint.
  * 

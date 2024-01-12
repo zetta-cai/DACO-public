@@ -9,8 +9,10 @@
 
 using namespace chrono;
 using namespace std;
-using namespace lrb;
 
+namespace covered
+{
+    
 void LRBCache::train() {
     ++n_retrain;
     auto timeBegin = chrono::system_clock::now();
@@ -31,10 +33,10 @@ void LRBCache::train() {
             &trainData);
 
     LGBM_DatasetSetField(trainData,
-                         "label",
-                         static_cast<void *>(training_data->labels.data()),
-                         training_data->labels.size(),
-                         C_API_DTYPE_FLOAT32);
+                        "label",
+                        static_cast<void *>(training_data->labels.data()),
+                        training_data->labels.size(),
+                        C_API_DTYPE_FLOAT32);
 
     // init booster
     LGBM_BoosterCreate(trainData, training_params, &booster);
@@ -50,19 +52,19 @@ void LRBCache::train() {
     int64_t len;
     vector<double> result(training_data->indptr.size() - 1);
     LGBM_BoosterPredictForCSR(booster,
-                              static_cast<void *>(training_data->indptr.data()),
-                              C_API_DTYPE_INT32,
-                              training_data->indices.data(),
-                              static_cast<void *>(training_data->data.data()),
-                              C_API_DTYPE_FLOAT64,
-                              training_data->indptr.size(),
-                              training_data->data.size(),
-                              n_feature,  //remove future t
-                              C_API_PREDICT_NORMAL,
-                              0,
-                              training_params,
-                              &len,
-                              result.data());
+                            static_cast<void *>(training_data->indptr.data()),
+                            C_API_DTYPE_INT32,
+                            training_data->indices.data(),
+                            static_cast<void *>(training_data->data.data()),
+                            C_API_DTYPE_FLOAT64,
+                            training_data->indptr.size(),
+                            training_data->data.size(),
+                            n_feature,  //remove future t
+                            C_API_PREDICT_NORMAL,
+                            0,
+                            training_params,
+                            &len,
+                            result.data());
 
 
     double se = 0;
@@ -174,7 +176,7 @@ bool LRBCache::lookup(const SimpleRequest &req) {
         uint64_t forget_timestamp = last_timestamp % memory_window;
         //if the key in out_metadata, it must also in forget table
         assert((!list_idx) ||
-               (negative_candidate_queue->find(forget_timestamp) !=
+            (negative_candidate_queue->find(forget_timestamp) !=
                 negative_candidate_queue->end()));
         //re-request
         if (!meta._sample_times.empty()) {
@@ -222,7 +224,7 @@ bool LRBCache::lookup(const SimpleRequest &req) {
             negative_candidate_queue->erase(forget_timestamp);
             negative_candidate_queue->insert({current_seq % memory_window, req.id});
             assert(negative_candidate_queue->find(current_seq % memory_window) !=
-                   negative_candidate_queue->end());
+                negative_candidate_queue->end());
         } else {
             auto *p = dynamic_cast<InCacheMeta *>(&meta);
             p->p_last_request = in_cache_lru_queue.re_request(p->p_last_request);
@@ -244,9 +246,9 @@ bool LRBCache::lookup(const SimpleRequest &req) {
 
 void LRBCache::forget() {
     /*
-     * forget happens exactly after the beginning of each time, without doing any other operations. For example, an
-     * object is request at time 0 with memory window = 5, and will be forgotten exactly at the start of time 5.
-     * */
+    * forget happens exactly after the beginning of each time, without doing any other operations. For example, an
+    * object is request at time 0 with memory window = 5, and will be forgotten exactly at the start of time 5.
+    * */
     //remove item from forget table, which is not going to be affect from update
     auto it = negative_candidate_queue->find(current_seq % memory_window);
     if (it != negative_candidate_queue->end()) {
@@ -442,7 +444,7 @@ pair<uint64_t, uint32_t> LRBCache::rank() {
         for (uint8_t k = 0; k < n_edc_feature; ++k) {
             indices[idx_feature] = max_n_past_timestamps + n_extra_fields + 2 + k;
             uint32_t _distance_idx = min(uint32_t(current_seq - meta._past_timestamp) / edc_windows[k],
-                                         max_hash_edc_idx);
+                                        max_hash_edc_idx);
             if (meta._extra)
                 data[idx_feature++] = meta._extra->_edc[k] * hash_edc[_distance_idx];
             else
@@ -459,23 +461,23 @@ pair<uint64_t, uint32_t> LRBCache::rank() {
     if (!(current_seq % 10000))
         timeBegin = chrono::system_clock::now();
     LGBM_BoosterPredictForCSR(booster,
-                              static_cast<void *>(indptr),
-                              C_API_DTYPE_INT32,
-                              indices,
-                              static_cast<void *>(data),
-                              C_API_DTYPE_FLOAT64,
-                              idx_row + 1,
-                              idx_feature,
-                              n_feature,  //remove future t
-                              C_API_PREDICT_NORMAL,
-                              0,
-                              inference_params,
-                              &len,
-                              scores);
+                            static_cast<void *>(indptr),
+                            C_API_DTYPE_INT32,
+                            indices,
+                            static_cast<void *>(data),
+                            C_API_DTYPE_FLOAT64,
+                            idx_row + 1,
+                            idx_feature,
+                            n_feature,  //remove future t
+                            C_API_PREDICT_NORMAL,
+                            0,
+                            inference_params,
+                            &len,
+                            scores);
     if (!(current_seq % 10000))
         inference_time = 0.95 * inference_time +
-                         0.05 *
-                         chrono::duration_cast<chrono::microseconds>(chrono::system_clock::now() - timeBegin).count();
+                        0.05 *
+                        chrono::duration_cast<chrono::microseconds>(chrono::system_clock::now() - timeBegin).count();
 //    for (int i = 0; i < n_sample; ++i)
 //        result[i] -= (t - past_timestamps[i]);
     for (int i = sample_rate - n_new_sample; i < sample_rate; ++i) {
@@ -498,9 +500,9 @@ pair<uint64_t, uint32_t> LRBCache::rank() {
     }
 
     sort(index.begin(), index.end(),
-         [&](const int &a, const int &b) {
-             return (scores[a] > scores[b]);
-         }
+        [&](const int &a, const int &b) {
+            return (scores[a] > scores[b]);
+        }
     );
 
 #ifdef EVICTION_LOGGING
@@ -638,3 +640,4 @@ void LRBCache::remove_from_outcache_metas(Meta &meta, unsigned int &pos, const u
     negative_candidate_queue->erase(current_seq % memory_window);
 }
 
+} // End of namespace covered

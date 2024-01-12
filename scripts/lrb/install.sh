@@ -72,6 +72,7 @@ CMAKE_PREFIX_PATH=${libboost_prefix_path}:${lrb_rootpath}/install/mongocxxdriver
 export CMAKE_PREFIX_PATH
 cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${lrb_rootpath}/install/webcachesim ..
 make -j
+sudo make install
 sudo ldconfig
 cd ../
 

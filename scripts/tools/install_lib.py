@@ -194,9 +194,9 @@ if is_install_segcache:
 
 # (7) Install GDSF (commit ID: 8818442)
 
-# NOTE: we just use GDSF downloaded from github in lib/webcachesim as a reference, while always use our hacked version in src/cache/greedydual to support required interfaces
+# NOTE: we just use GDSF downloaded from github in lib/greedydual as a reference, while always use our hacked version in src/cache/greedydual to support required interfaces
 if is_install_gdsf:
-    gdsf_clone_dirpath = "{}/webcachesim".format(Common.lib_dirpath)
+    gdsf_clone_dirpath = "{}/greedydual".format(Common.lib_dirpath)
     gdsf_software_name = "GDSF"
     gdsf_repo_url = "https://github.com/dasebe/webcachesim.git"
     SubprocessUtil.cloneRepo(Common.scriptname, gdsf_clone_dirpath, gdsf_software_name, gdsf_repo_url)

@@ -1,7 +1,7 @@
 # gdsf module
 
 # NOTE: NOT used by src/cache/greedydual/*
-#GDSF_DIRPATH = $(LIBRARY_DIRPATH)/webcachesim
+#GDSF_DIRPATH = $(LIBRARY_DIRPATH)/greedydual
 #GDSF_INCDIR = $(GDSF_DIRPATH)/caches
 #INCDIR += $(GDSF_INCDIR)
 

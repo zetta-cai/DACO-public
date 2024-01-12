@@ -5,29 +5,32 @@
 #ifndef WEBCACHESIM_LRB_H
 #define WEBCACHESIM_LRB_H
 
-#include "cache.h"
-#include <unordered_map>
-#include <unordered_set>
-#include "sparsepp/sparsepp/spp.h"
-#include <vector>
-#include <random>
-#include <cmath>
-#include <LightGBM/c_api.h>
 #include <assert.h>
+#include <cmath>
 #include <fstream>
 #include <list>
-#include "mongocxx/client.hpp"
-#include "mongocxx/uri.hpp"
-#include <bsoncxx/builder/basic/document.hpp>
-#include "bsoncxx/json.hpp"
+#include <random>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
 
-using namespace webcachesim;
+#include <sparsepp/spp.h>
+#include <LightGBM/c_api.h>
+#include <mongocxx/client.hpp>
+#include <mongocxx/uri.hpp>
+#include <bsoncxx/builder/basic/document.hpp>
+#include <bsoncxx/json.hpp>
+
+#include "cache/lrb/cache.h"
+//#include <webcachesim/cache.h>
+//using namespace webcachesim;
+
 using namespace std;
 using spp::sparse_hash_map;
 using bsoncxx::builder::basic::kvp;
 using bsoncxx::builder::basic::sub_array;
 
-namespace lrb {
+namespace covered {
     uint32_t current_seq = -1;
     uint8_t max_n_past_timestamps = 32;
     uint8_t max_n_past_distances = 31;
