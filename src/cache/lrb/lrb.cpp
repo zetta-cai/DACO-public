@@ -12,6 +12,40 @@ using namespace std;
 
 namespace covered
 {
+
+// Siyuan: constructor
+LRBCache::LRBCache() : Cache()
+{
+    current_seq = -1;
+    max_n_past_timestamps = 32;
+    max_n_past_distances = 31;
+
+    training_data = NULL;
+#ifdef EVICTION_LOGGING
+    eviction_training_data = NULL;
+#endif
+    booster = nullptr;
+}
+
+// Siyuan: free heap memory
+LRBCache::~LRBCache()
+{
+    if (training_data != NULL)
+    {
+        delete training_data;
+        training_data = NULL;
+    }
+
+#ifdef EVICTION_LOGGING
+    if (eviction_training_data != NULL)
+    {
+        delete eviction_training_data;
+        eviction_training_data = NULL;
+    }
+#endif
+
+    if (booster) LGBM_BoosterFree(booster);
+}
     
 void LRBCache::train() {
     ++n_retrain;

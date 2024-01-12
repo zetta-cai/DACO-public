@@ -31,9 +31,13 @@ using bsoncxx::builder::basic::kvp;
 using bsoncxx::builder::basic::sub_array;
 
 namespace covered {
-    uint32_t current_seq = -1;
-    uint8_t max_n_past_timestamps = 32;
-    uint8_t max_n_past_distances = 31;
+    // Siyuan: forward declaration
+    class LRBCache;
+
+    // Siyuan: remove global variables for thread-scalability
+    //uint32_t current_seq = -1;
+    //uint8_t max_n_past_timestamps = 32;
+    //uint8_t max_n_past_distances = 31;
     uint8_t base_edc_window = 10;
     const uint8_t n_edc_feature = 10;
     vector<uint32_t> edc_windows;
@@ -54,6 +58,9 @@ namespace covered {
 #endif
 
 struct MetaExtra {
+private:
+    LRBCache* lrb_cache_ptr_; // Siyuan: used for access original global variables
+
     //vector overhead = 24 (8 pointer, 8 size, 8 allocation)
     //40 + 24 + 4*x + 1
     //65 byte at least
@@ -64,24 +71,27 @@ struct MetaExtra {
     //the next index to put the distance
     uint8_t _past_distance_idx = 1;
 
-    MetaExtra(const uint32_t &distance) {
+    MetaExtra(const uint32_t &distance, LRBCache* lrb_cache_ptr) {
         _past_distances = vector<uint32_t>(1, distance);
         for (uint8_t i = 0; i < n_edc_feature; ++i) {
             uint32_t _distance_idx = min(uint32_t(distance / edc_windows[i]), max_hash_edc_idx);
             _edc[i] = hash_edc[_distance_idx] + 1;
         }
+
+        assert(lrb_cache_ptr != NULL);
+        lrb_cache_ptr_ = lrb_cache_ptr;
     }
 
     void update(const uint32_t &distance) {
-        uint8_t distance_idx = _past_distance_idx % max_n_past_distances;
-        if (_past_distances.size() < max_n_past_distances)
+        uint8_t distance_idx = _past_distance_idx % lrb_cache_ptr_->max_n_past_distances;
+        if (_past_distances.size() < lrb_cache_ptr_->max_n_past_distances)
             _past_distances.emplace_back(distance);
         else
             _past_distances[distance_idx] = distance;
-        assert(_past_distances.size() <= max_n_past_distances);
+        assert(_past_distances.size() <= lrb_cache_ptr_->max_n_past_distances);
         _past_distance_idx = _past_distance_idx + (uint8_t) 1;
-        if (_past_distance_idx >= max_n_past_distances * 2)
-            _past_distance_idx -= max_n_past_distances;
+        if (_past_distance_idx >= lrb_cache_ptr_->max_n_past_distances * 2)
+            _past_distance_idx -= lrb_cache_ptr_->max_n_past_distances;
         for (uint8_t i = 0; i < n_edc_feature; ++i) {
             uint32_t _distance_idx = min(uint32_t(distance / edc_windows[i]), max_hash_edc_idx);
             _edc[i] = _edc[i] * hash_edc[_distance_idx] + 1;
@@ -90,6 +100,8 @@ struct MetaExtra {
 };
 
 class Meta {
+private:
+    LRBCache* lrb_cache_ptr_; // Siyuan: used for access original global variables
 public:
     //25 byte
     uint64_t _key;
@@ -106,23 +118,30 @@ public:
 
 #ifdef EVICTION_LOGGING
     Meta(const uint64_t &key, const uint64_t &size, const uint64_t &past_timestamp,
-            const vector<uint16_t> &extra_features, const uint64_t &future_timestamp) {
+            const vector<uint16_t> &extra_features, const uint64_t &future_timestamp, LRBCache* lrb_cache_ptr) {
         _key = key;
         _size = size;
         _past_timestamp = past_timestamp;
         for (int i = 0; i < n_extra_fields; ++i)
             _extra_features[i] = extra_features[i];
         _future_timestamp = future_timestamp;
+
+        assert(lrb_cache_ptr != NULL);
+        lrb_cache_ptr_ = lrb_cache_ptr;
     }
 
 #else
     Meta(const uint64_t &key, const uint64_t &size, const uint64_t &past_timestamp,
-            const vector<uint16_t> &extra_features) {
+            const vector<uint16_t> &extra_features, LRBCache* lrb_cache_ptr) {
         _key = key;
         _size = size;
         _past_timestamp = past_timestamp;
         for (int i = 0; i < n_extra_fields; ++i)
             _extra_features[i] = extra_features[i];
+
+        assert(lrb_cache_ptr != NULL);
+        lrb_cache_ptr_ = lrb_cache_ptr;
+        // TODO: END HERE
     }
 #endif
 
@@ -238,18 +257,23 @@ public:
 };
 
 class TrainingData {
+private:
+    LRBCache* lrb_cache_ptr_; // Siyuan: used for access original global variables
 public:
     vector<float> labels;
     vector<int32_t> indptr;
     vector<int32_t> indices;
     vector<double> data;
 
-    TrainingData() {
+    TrainingData(LRBCache* lrb_cache_ptr) {
         labels.reserve(batch_size);
         indptr.reserve(batch_size + 1);
         indptr.emplace_back(0);
         indices.reserve(batch_size * n_feature);
         data.reserve(batch_size * n_feature);
+
+        assert(lrb_cache_ptr != NULL);
+        lrb_cache_ptr_ = lrb_cache_ptr;
     }
 
     void emplace_back(Meta &meta, uint32_t &sample_timestamp, uint32_t &future_interval, const uint64_t &key) {
@@ -263,8 +287,8 @@ public:
         int j = 0;
         uint8_t n_within = 0;
         if (meta._extra) {
-            for (; j < meta._extra->_past_distance_idx && j < max_n_past_distances; ++j) {
-                uint8_t past_distance_idx = (meta._extra->_past_distance_idx - 1 - j) % max_n_past_distances;
+            for (; j < meta._extra->_past_distance_idx && j < lrb_cache_ptr_->max_n_past_distances; ++j) {
+                uint8_t past_distance_idx = (meta._extra->_past_distance_idx - 1 - j) % lrb_cache_ptr_->max_n_past_distances;
                 const uint32_t &past_distance = meta._extra->_past_distances[past_distance_idx];
                 this_past_distance += past_distance;
                 indices.emplace_back(j + 1);
@@ -277,23 +301,23 @@ public:
 
         counter += j;
 
-        indices.emplace_back(max_n_past_timestamps);
+        indices.emplace_back(lrb_cache_ptr_->max_n_past_timestamps);
         data.push_back(meta._size);
         ++counter;
 
         for (int k = 0; k < n_extra_fields; ++k) {
-            indices.push_back(max_n_past_timestamps + k + 1);
+            indices.push_back(lrb_cache_ptr_->max_n_past_timestamps + k + 1);
             data.push_back(meta._extra_features[k]);
         }
         counter += n_extra_fields;
 
-        indices.push_back(max_n_past_timestamps + n_extra_fields + 1);
+        indices.push_back(lrb_cache_ptr_->max_n_past_timestamps + n_extra_fields + 1);
         data.push_back(n_within);
         ++counter;
 
         if (meta._extra) {
             for (int k = 0; k < n_edc_feature; ++k) {
-                indices.push_back(max_n_past_timestamps + n_extra_fields + 2 + k);
+                indices.push_back(lrb_cache_ptr_->max_n_past_timestamps + n_extra_fields + 2 + k);
                 uint32_t _distance_idx = std::min(
                         uint32_t(sample_timestamp - meta._past_timestamp) / edc_windows[k],
                         max_hash_edc_idx);
@@ -301,7 +325,7 @@ public:
             }
         } else {
             for (int k = 0; k < n_edc_feature; ++k) {
-                indices.push_back(max_n_past_timestamps + n_extra_fields + 2 + k);
+                indices.push_back(lrb_cache_ptr_->max_n_past_timestamps + n_extra_fields + 2 + k);
                 uint32_t _distance_idx = std::min(
                         uint32_t(sample_timestamp - meta._past_timestamp) / edc_windows[k],
                         max_hash_edc_idx);
@@ -316,12 +340,13 @@ public:
 
 
 #ifdef EVICTION_LOGGING
-        if ((current_seq >= n_logging_start) && !start_train_logging && (indptr.size() == 2)) {
+        assert(lrb_cache_ptr_ != NULL);
+        if ((lrb_cache_ptr_->current_seq >= n_logging_start) && !start_train_logging && (indptr.size() == 2)) {
             start_train_logging = true;
         }
 
         if (start_train_logging) {
-//            training_and_prediction_logic_timestamps.emplace_back(current_seq / 65536);
+//            training_and_prediction_logic_timestamps.emplace_back(lrb_cache_ptr_->current_seq / 65536);
             int i = indptr.size() - 2;
             int current_idx = indptr[i];
             for (int p = 0; p < n_feature; ++p) {
@@ -352,18 +377,23 @@ public:
 
 #ifdef EVICTION_LOGGING
 class LRBEvictionTrainingData {
+private:
+    LRBCache* lrb_cache_ptr_; // Siyuan: used for access original global variables
 public:
     vector<float> labels;
     vector<int32_t> indptr;
     vector<int32_t> indices;
     vector<double> data;
 
-    LRBEvictionTrainingData() {
+    LRBEvictionTrainingData(LRBCache* lrb_cache_ptr) {
         labels.reserve(batch_size);
         indptr.reserve(batch_size + 1);
         indptr.emplace_back(0);
         indices.reserve(batch_size * n_feature);
         data.reserve(batch_size * n_feature);
+
+        assert(lrb_cache_ptr != NULL);
+        lrb_cache_ptr_ = lrb_cache_ptr;
     }
 
     void emplace_back(Meta &meta, uint32_t &sample_timestamp, uint32_t &future_interval, const uint64_t &key) {
@@ -377,8 +407,8 @@ public:
         int j = 0;
         uint8_t n_within = 0;
         if (meta._extra) {
-            for (; j < meta._extra->_past_distance_idx && j < max_n_past_distances; ++j) {
-                uint8_t past_distance_idx = (meta._extra->_past_distance_idx - 1 - j) % max_n_past_distances;
+            for (; j < meta._extra->_past_distance_idx && j < lrb_cache_ptr_->max_n_past_distances; ++j) {
+                uint8_t past_distance_idx = (meta._extra->_past_distance_idx - 1 - j) % lrb_cache_ptr_->max_n_past_distances;
                 const uint32_t &past_distance = meta._extra->_past_distances[past_distance_idx];
                 this_past_distance += past_distance;
                 indices.emplace_back(j + 1);
@@ -391,23 +421,23 @@ public:
 
         counter += j;
 
-        indices.emplace_back(max_n_past_timestamps);
+        indices.emplace_back(lrb_cache_ptr_->max_n_past_timestamps);
         data.push_back(meta._size);
         ++counter;
 
         for (int k = 0; k < n_extra_fields; ++k) {
-            indices.push_back(max_n_past_timestamps + k + 1);
+            indices.push_back(lrb_cache_ptr_->max_n_past_timestamps + k + 1);
             data.push_back(meta._extra_features[k]);
         }
         counter += n_extra_fields;
 
-        indices.push_back(max_n_past_timestamps + n_extra_fields + 1);
+        indices.push_back(lrb_cache_ptr_->max_n_past_timestamps + n_extra_fields + 1);
         data.push_back(n_within);
         ++counter;
 
         if (meta._extra) {
             for (int k = 0; k < n_edc_feature; ++k) {
-                indices.push_back(max_n_past_timestamps + n_extra_fields + 2 + k);
+                indices.push_back(lrb_cache_ptr_->max_n_past_timestamps + n_extra_fields + 2 + k);
                 uint32_t _distance_idx = std::min(
                         uint32_t(sample_timestamp - meta._past_timestamp) / edc_windows[k],
                         max_hash_edc_idx);
@@ -415,7 +445,7 @@ public:
             }
         } else {
             for (int k = 0; k < n_edc_feature; ++k) {
-                indices.push_back(max_n_past_timestamps + n_extra_fields + 2 + k);
+                indices.push_back(lrb_cache_ptr_->max_n_past_timestamps + n_extra_fields + 2 + k);
                 uint32_t _distance_idx = std::min(
                         uint32_t(sample_timestamp - meta._past_timestamp) / edc_windows[k],
                         max_hash_edc_idx);
@@ -430,7 +460,8 @@ public:
 
 
         if (start_train_logging) {
-//            training_and_prediction_logic_timestamps.emplace_back(current_seq / 65536);
+//            assert(lrb_cache_ptr_ != NULL);
+//            training_and_prediction_logic_timestamps.emplace_back(lrb_cache_ptr_->current_seq / 65536);
             int i = indptr.size() - 2;
             int current_idx = indptr[i];
             for (int p = 0; p < n_feature; ++p) {
@@ -467,6 +498,11 @@ struct KeyMapEntryT {
 
 class LRBCache : public Cache {
 public:
+    // Siyuan: move global variables here for thread-scalability
+    uint32_t current_seq = -1;
+    uint8_t max_n_past_timestamps = 32;
+    uint8_t max_n_past_distances = 31;
+
     //key -> (0/1 list, idx)
     sparse_hash_map<uint64_t, KeyMapEntryT> key_map;
 //    vector<Meta> meta_holder[2];
@@ -539,6 +575,9 @@ public:
     vector<int64_t> middle_bytes;
     vector<int64_t> far_bytes;
 #endif
+
+    LRBCache();
+    ~LRBCache();
 
     void init_with_params(const map<string, string> &params) override {
         //set params
@@ -623,9 +662,11 @@ public:
         inference_params = training_params;
         //can set number of threads, however the inference time will increase a lot (2x~3x) if use 1 thread
 //        inference_params["num_threads"] = "4";
-        training_data = new TrainingData();
+        training_data = new TrainingData(this);
+        assert(training_data != NULL); // Siyuan: allocate heap memory for TrainingData
 #ifdef EVICTION_LOGGING
-        eviction_training_data = new LRBEvictionTrainingData();
+        eviction_training_data = new LRBEvictionTrainingData(this);
+        assert(eviction_training_data != NULL); // Siyuan: allocate heap memory for TrainingData
 #endif
 
 #ifdef EVICTION_LOGGING
