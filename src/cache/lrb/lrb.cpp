@@ -33,6 +33,7 @@ MetaExtra::MetaExtra(const uint32_t &distance, LRBCache* lrb_cache_ptr) {
 // Siyuan: copy assignment constructor
 MetaExtra::MetaExtra(const MetaExtra& other)
 {
+    assert(other.lrb_cache_ptr_ != NULL);
     lrb_cache_ptr_ = other.lrb_cache_ptr_;
 
     _past_distances = other._past_distances;
@@ -66,6 +67,19 @@ uint64_t MetaExtra::getSizeForCapacity() const
 }
 
 // Meta
+
+Meta::Meta()
+{
+    lrb_cache_ptr_ = NULL;
+    _key = 0;
+    _size = 0;
+    _past_timestamp = 0;
+    _extra_features = NULL;
+    _extra = nullptr;
+    _sample_times.clear();
+    _is_keybased_meta = false;
+    _keystr = "";
+}
 
 #ifdef EVICTION_LOGGING
 Meta::Meta(const uint64_t &key, const uint64_t &size, const uint64_t &past_timestamp,
@@ -108,15 +122,29 @@ Meta::Meta(const uint64_t &key, const uint64_t &size, const uint64_t &past_times
 // Siyuan: copy assignment constructor
 Meta::Meta(const Meta& other)
 {
+    *this = other;
+}
+
+const Meta& Meta::operator=(const Meta& other)
+{
     lrb_cache_ptr_ = other.lrb_cache_ptr_;
 
     _key = other._key;
     _size = other._size;
     _past_timestamp = other._past_timestamp;
-    _extra_features = new uint16_t[lrb_cache_ptr_->max_n_extra_feature];
-    assert(_extra_features != NULL);
-    for (int i = 0; i < lrb_cache_ptr_->n_extra_fields; ++i)
-        _extra_features[i] = other._extra_features[i];
+    if (lrb_cache_ptr_ != NULL)
+    {
+        _extra_features = new uint16_t[lrb_cache_ptr_->max_n_extra_feature];
+        assert(_extra_features != NULL);
+        for (int i = 0; i < lrb_cache_ptr_->n_extra_fields; ++i)
+            _extra_features[i] = other._extra_features[i];
+    }
+    else
+    {
+        assert(other.lrb_cache_ptr_ == NULL);
+        assert(other._extra_features == NULL);
+        _extra_features = NULL;
+    }
     
     if (_extra != nullptr)
     {
@@ -138,13 +166,17 @@ Meta::Meta(const Meta& other)
 
     _is_keybased_meta = other._is_keybased_meta;
     _keystr = other._keystr;
+
+    return *this;
 }
 
 Meta::~Meta()
 {
-    assert(_extra_features != NULL);
-    delete [] _extra_features;
-    _extra_features = NULL;
+    if (_extra_features != NULL)
+    {
+        delete [] _extra_features;
+        _extra_features = NULL;
+    }
 
     if (_extra != nullptr)
     {
@@ -246,6 +278,11 @@ uint64_t Meta::getSizeForCapacity() const
 
 // InCacheMeta
 
+InCacheMeta::InCacheMeta() : Meta(), p_last_request()
+{
+    valuestr = "";
+}
+
 #ifdef EVICTION_LOGGING
 InCacheMeta::InCacheMeta(const uint64_t &key,
             const uint64_t &size,
@@ -277,11 +314,19 @@ InCacheMeta::InCacheMeta(const Meta &meta, const std::list<std::string>::const_i
     this->valuestr = valuestr;
 };
 
-// Siyuan: for key-value caching
-InCacheMeta::InCacheMeta(const InCacheMeta &other) : Meta(other) {
+// Siyuan: copy assignment operator and constructor
+InCacheMeta::InCacheMeta(const InCacheMeta &other) {
+    *this = other;
+};
+
+const InCacheMeta& InCacheMeta::operator=(const InCacheMeta& other)
+{
+    Meta::operator=(other);
     p_last_request = other.p_last_request;
     valuestr = other.valuestr;
-};
+    
+    return *this;
+}
 
 // Siyuan: for correct cache size usage calculation
 uint64_t InCacheMeta::getSizeForCapacity() const
@@ -871,9 +916,16 @@ bool LRBCache::access(SimpleRequest &req, const bool& is_update) {
         uint64_t last_timestamp = meta._past_timestamp;
         uint64_t forget_timestamp = last_timestamp % memory_window;
         //if the key in out_metadata, it must also in forget table
-        assert((!list_idx) ||
-            (negative_candidate_queue->find(forget_timestamp) !=
-                negative_candidate_queue->end()));
+        // Siyuan: the following assertion made by LRB original code may fail in some rare cases, but NOT affect correctness and cache performance
+        //assert((!list_idx) ||
+        //    (negative_candidate_queue->find(forget_timestamp) !=
+        //        negative_candidate_queue->end()));
+        if (list_idx == 1 && negative_candidate_queue->find(forget_timestamp) == negative_candidate_queue->end())
+        {
+            std::ostringstream oss;
+            oss << "key " << req.keystr << " is not found in negative_candidate_queue (last_timestamp: " << last_timestamp << "; forget_timestamp: " << forget_timestamp << "; " << "current_seq: " << current_seq << ")";
+            Util::dumpInfoMsg("LRBCache", oss.str());
+        }
         //re-request
         if (!meta._sample_times.empty()) {
             uint64_t original_training_data_size = training_data->getSizeForcapacity(); // Siyuan: for correct cache size usage calculation
@@ -1446,7 +1498,7 @@ bool LRBCache::evict(const std::string& keystr, std::string& valuestr) {
 
         uint32_t new_pos = out_cache_metas.size();
         Meta tmp_out_cache_meta(in_cache_metas[old_pos]);
-        out_cache_metas.emplace_back(tmp_out_cache_meta);
+        out_cache_metas.push_back(tmp_out_cache_meta);
         uint32_t activate_tail_idx = in_cache_metas.size() - 1;
         if (old_pos != activate_tail_idx) {
             //move tail

@@ -104,6 +104,8 @@ public:
     bool _is_keybased_meta;
     std::string _keystr;
 
+    Meta();
+
 #ifdef EVICTION_LOGGING
     Meta(const uint64_t &key, const uint64_t &size, const uint64_t &past_timestamp,
             const std::vector<uint16_t> &extra_features, const uint64_t &future_timestamp, LRBCache* lrb_cache_ptr, const bool& is_keybased_meta, const std::string& keystr); // Siyuan: for key-value caching
@@ -112,8 +114,9 @@ public:
             const std::vector<uint16_t> &extra_features, LRBCache* lrb_cache_ptr, const bool& is_keybased_meta, const std::string& keystr); // Siyuan: for key-value caching
 #endif
 
-    // Siyuan: copy assignment constructor
+    // Siyuan: copy assignment operator and constructor
     Meta(const Meta& other);
+    const Meta& operator=(const Meta& other);
 
     virtual ~Meta();
 
@@ -154,6 +157,8 @@ public:
     // Siyuan: for key-value caching
     std::string valuestr;
 
+    InCacheMeta();
+
 #ifdef EVICTION_LOGGING
     InCacheMeta(const uint64_t &key,
                 const uint64_t &size,
@@ -176,8 +181,9 @@ public:
     //InCacheMeta(const Meta &meta, const std::list<int64_t>::const_iterator &it) : Meta(meta);
     InCacheMeta(const Meta &meta, const std::list<std::string>::const_iterator &it, const std::string& valuestr); // Siyuan: for key-value caching
 
-    // Siyuan: for key-value caching
+    // Siyuan: copy assignment operator and constructor
     InCacheMeta(const InCacheMeta &other);
+    const InCacheMeta& operator=(const InCacheMeta& other);
 
     // Siyuan: for correct cache size usage calculation
     uint64_t getSizeForCapacity() const;
