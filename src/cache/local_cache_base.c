@@ -9,6 +9,7 @@
 #include "cache/fifo_local_cache.h"
 #include "cache/lfu_local_cache.h"
 #include "cache/lhd_local_cache.h"
+#include "cache/lrb_local_cache.h"
 #include "cache/lru_local_cache.h"
 #include "cache/glcache_local_cache.h"
 #include "cache/greedy_dual_local_cache.h"
@@ -46,6 +47,10 @@ namespace covered
         else if (cache_name == Util::LHD_CACHE_NAME)
         {
             local_cache_ptr = new LhdLocalCache(edge_wrapper_ptr, edge_idx, capacity_bytes);
+        }
+        else if (cache_name == Util::LRB_CACHE_NAME)
+        {
+            local_cache_ptr = new LrbLocalCache(edge_wrapper_ptr, edge_idx, capacity_bytes);
         }
         else if (cache_name == Util::LRU_CACHE_NAME)
         {

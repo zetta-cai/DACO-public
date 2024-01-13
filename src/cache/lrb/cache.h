@@ -38,10 +38,10 @@ namespace covered {
         virtual ~Cache() = default;
 
         // main cache management functions (to be defined by a policy)
-        virtual bool lookup(const SimpleRequest &req) = 0;
+        virtual bool access(SimpleRequest &req, const bool& is_update) = 0;
         // check whether an object in a cache. Not update metadata
         virtual bool exist(const int64_t &key) {
-            throw runtime_error("Error: exist() function not implemented");
+            throw std::runtime_error("Error: exist() function not implemented");
         }
 
         virtual void admit(const SimpleRequest &req) = 0;
@@ -55,7 +55,7 @@ namespace covered {
 //        }
         }
 
-        virtual void init_with_params(const map<string, string> &params) {}
+        virtual void init_with_params(const std::map<std::string, std::string> &params) {}
 
         virtual bool has(const uint64_t &id) {
 //        cerr<<"has() interface is not implemented for this cache algorithm, "
