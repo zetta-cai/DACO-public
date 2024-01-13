@@ -138,11 +138,21 @@ void LRBCache::sample() {
     if (is_from_in == true) {
         uint32_t pos = rand_idx % n_in;
         auto &meta = in_cache_metas[pos];
-        meta.emplace_sample(current_seq);
+        uint64_t original_in_cache_meta_size = meta.getSizeForCapacity(); // Siyuan: for correct cache size calculation
+        meta.emplace_sample(current_seq); // Siyuan: this will insert a sample time
+        // Siyuan: for correct cache size calculation
+        uint64_t current_in_cache_meta_size = meta.getSizeForCapacity();
+        assert(current_in_cache_meta_size > original_in_cache_meta_size);
+        _currentSize += (current_in_cache_meta_size - original_in_cache_meta_size);
     } else {
         uint32_t pos = rand_idx % n_out;
         auto &meta = out_cache_metas[pos];
+        uint64_t original_in_cache_meta_size = meta.getSizeForCapacity(); // Siyuan: for correct cache size calculation
         meta.emplace_sample(current_seq);
+        // Siyuan: for correct cache size calculation
+        uint64_t current_in_cache_meta_size = meta.getSizeForCapacity();
+        assert(current_in_cache_meta_size > original_in_cache_meta_size);
+        _currentSize += (current_in_cache_meta_size - original_in_cache_meta_size);
     }
 }
 
@@ -223,6 +233,7 @@ bool LRBCache::lookup(const SimpleRequest &req) {
         Meta &meta = list_idx ? out_cache_metas[list_pos] : in_cache_metas[list_pos];
         //update past timestamps
         assert(meta == req); // Siyuan: for key-value caching
+        uint64_t original_cache_meta_size = meta.getSizeForCapacity(); // Siyuan: for correct cache size usage calculation
         //assert(meta._key == req.id);
         uint64_t last_timestamp = meta._past_timestamp;
         uint64_t forget_timestamp = last_timestamp % memory_window;
@@ -245,7 +256,7 @@ bool LRBCache::lookup(const SimpleRequest &req) {
                 train();
                 training_data->clear();
             }
-            meta._sample_times.clear();
+            meta._sample_times.clear(); // Siyuan: this will clear sample times decrease cache size usage
             meta._sample_times.shrink_to_fit();
         }
 
@@ -262,7 +273,7 @@ bool LRBCache::lookup(const SimpleRequest &req) {
                     eviction_training_data->clear();
                 }
             }
-            meta._eviction_sample_times.clear();
+            meta._eviction_sample_times.clear(); // Siyuan: this will clear sample times decrease cache size usage
             meta._eviction_sample_times.shrink_to_fit();
         }
 #endif
@@ -270,9 +281,9 @@ bool LRBCache::lookup(const SimpleRequest &req) {
         //make this update after update training, otherwise the last timestamp will change
 #ifdef EVICTION_LOGGING
         AnnotatedRequest *_req = (AnnotatedRequest *) &req;
-        meta.update(current_seq, _req->_next_seq);
+        meta.update(current_seq, _req->_next_seq); // Siyuan: this will create MetaExtra or insert new extra feature if features not full, which may increase cache size usage
 #else
-        meta.update(current_seq);
+        meta.update(current_seq); // Siyuan: this will create MetaExtra or insert new extra feature if features not full, which may increase cache size usage
 #endif
         if (list_idx) {
             negative_candidate_queue->erase(forget_timestamp);
@@ -287,6 +298,17 @@ bool LRBCache::lookup(const SimpleRequest &req) {
         }
         //update negative_candidate_queue
         ret = !list_idx;
+
+        // Siyuan: for correct cache size usage calculation
+        uint64_t current_cache_meta_size = meta.getSizeForCapacity();
+        if (current_cache_meta_size > original_cache_meta_size)
+        {
+            _currentSize += (current_cache_meta_size - original_cache_meta_size);
+        }
+        else
+        {
+            decreaseCurrentSize(original_cache_meta_size - current_cache_meta_size);
+        }
     } else {
         ret = false;
     }
@@ -332,8 +354,13 @@ void LRBCache::forget() {
                 train();
                 training_data->clear();
             }
-            meta._sample_times.clear();
+            uint64_t original_out_cache_meta_size = meta.getSizeForCapacity(); // Siyuan: for correct cache size calculation
+            meta._sample_times.clear(); // Siyuan: this will clear sample times to reduce cache size usage of out-cache object-level meta
             meta._sample_times.shrink_to_fit();
+            // Siyuan: for correct cache size calculation
+            uint64_t current_out_cache_meta_size = meta.getSizeForCapacity();
+            assert(original_out_cache_meta_size > current_out_cache_meta_size); // NOT: meta._sample_times is NOT empty
+            decreaseCurrentSize(original_out_cache_meta_size - current_out_cache_meta_size);
         }
 
 #ifdef EVICTION_LOGGING
@@ -389,7 +416,7 @@ void LRBCache::admit(const SimpleRequest &req) {
         InCacheMeta tmp_in_cache_meta(req.id, req.size, current_seq, req.extra_features, lru_it, this, req.is_keybased_req, req.keystr, req.valuestr);
         in_cache_metas.push_back(tmp_in_cache_meta);
 #endif
-        _currentSize += (req.keystr.length() + sizeof(uint32_t)); // Siyuan: key and list index/pos in lookup table
+        _currentSize += (req.keystr.length() + sizeof(KeyMapEntryT)); // Siyuan: key and list index/pos in lookup table
         _currentSize += (req.keystr.length()); // Siyuan: key in LRU list
         //_currentSize += size;
         _currentSize += tmp_in_cache_meta.getSizeForCapacity(); // Siyuan: in-cache object-level metadata w/ key-value size
@@ -415,7 +442,7 @@ void LRBCache::admit(const SimpleRequest &req) {
         //in_cache_metas.emplace_back(out_cache_metas[it->second.list_pos], it_lru);
         // Siyuan: for key-value caching
         InCacheMeta tmp_in_cache_meta(out_cache_metas[it->second.list_pos], it_lru, req.valuestr);
-        in_cache_metas.emplace_back(tmp_in_cache_meta);
+        in_cache_metas.push_back(tmp_in_cache_meta);
         uint32_t tail1_pos = out_cache_metas.size() - 1;
         if (it->second.list_pos != tail1_pos) {
             //swap tail
@@ -427,9 +454,9 @@ void LRBCache::admit(const SimpleRequest &req) {
         out_cache_metas.pop_back();
         it->second = {0, tail0_pos};
         //_currentSize += size;
-        // Siyuan: increased cache size usage from out-cache to in-cache object-level metadata
+        // Siyuan: increased cache size usage includes delta from out-cache to in-cache object-level metadata + key in LRU list
         assert(tmp_in_cache_meta.getSizeForCapacity() >= original_out_cache_meta_size);
-        _currentSize += (tmp_in_cache_meta.getSizeForCapacity() - original_out_cache_meta_size);
+        _currentSize += (tmp_in_cache_meta.getSizeForCapacity() - original_out_cache_meta_size + req.keystr.length());
         decreaseCurrentSize(sizeof(uint64_t) + req.keystr.length()); // Siyuan: forget timestamp and key in negative_candidate_queue
     }
     if (_currentSize > _cacheSize) {
@@ -661,7 +688,7 @@ void LRBCache::evict() {
                 train();
                 training_data->clear();
             }
-            meta._sample_times.clear();
+            meta._sample_times.clear(); // Siyuan: victim_in_cache_meta_size already contains cache size usage of sample times
             meta._sample_times.shrink_to_fit();
         }
 
@@ -679,7 +706,7 @@ void LRBCache::evict() {
                     eviction_training_data->clear();
                 }
             }
-            meta._eviction_sample_times.clear();
+            meta._eviction_sample_times.clear(); // Siyuan: victim_in_cache_meta_size already contains cache size usage of sample times
             meta._eviction_sample_times.shrink_to_fit();
         }
 #endif
@@ -688,7 +715,7 @@ void LRBCache::evict() {
         meta.p_last_request = in_cache_lru_queue.dq.end();
         //above is suppose to be below, but to make sure the action is correct
 //        in_cache_lru_queue.dq.pop_back();
-        meta.free();
+        meta.free(); // Siyuan: victim_in_cache_meta_size already contains cache size usage of MetaExtra
         key_map.erase(key);
 
         uint32_t activate_tail_idx = in_cache_metas.size() - 1;
@@ -703,7 +730,7 @@ void LRBCache::evict() {
         ++n_force_eviction;
 
         //_currentSize -= meta._size;
-        decreaseCurrentSize(victim_in_cache_meta_size + key.length() + key.length() + sizeof(uint32_t)); // Siyuan: victim in-cache object-level metadata + key in LRU list + key and list index/pos in lookup table
+        decreaseCurrentSize(victim_in_cache_meta_size + key.length() + key.length() + sizeof(KeyMapEntryT)); // Siyuan: victim in-cache object-level metadata + key in LRU list + key and list index/pos in lookup table
     } else {
         //bring list 0 to list 1
         in_cache_lru_queue.dq.erase(meta.p_last_request);
@@ -735,6 +762,7 @@ void LRBCache::evict() {
 //void LRBCache::remove_from_outcache_metas(Meta &meta, unsigned int &pos, const uint64_t &key) {
 void LRBCache::remove_from_outcache_metas(Meta &meta, unsigned int &pos, const std::string &key) { // Siyuan: for key-value caching
     //free the actual content
+    uint64_t original_out_cache_meta_size = meta.getSizeForCapacity(); // Siyuan: for correct cache size usage calculation
     meta.free();
     //TODO: can add a function to delete from a queue with (key, pos)
     //evict
@@ -749,6 +777,8 @@ void LRBCache::remove_from_outcache_metas(Meta &meta, unsigned int &pos, const s
     out_cache_metas.pop_back();
     key_map.erase(key);
     negative_candidate_queue->erase(current_seq % memory_window);
+
+    decreaseCurrentSize(original_out_cache_meta_size + key.length() + sizeof(KeyMapEntryT) + sizeof(uint64_t) + key.length()); // Siyuan: out-cache object-level metadata + key and list index/pos in lookup table + forget timestamp and key in negative_candidate_queue
 }
 
 // Siyuan: for correct cache size usage calculation
