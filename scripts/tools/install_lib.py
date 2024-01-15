@@ -23,6 +23,7 @@ is_install_lhd = True
 is_install_s3fifo = True # Completely use hacked version (also including SIEVE)
 is_install_glcache = True # Completely used hacked version
 is_install_lrb = True
+is_install_frozenhot = True
 
 # Check input CLI parameters
 if len(sys.argv) != 2:
@@ -295,9 +296,36 @@ if is_install_lrb:
     SubprocessUtil.installFromRepoIfNot(Common.scriptname, lrb_install_dirpath, lrb_software_name, lrb_clone_dirpath, lrb_install_tool, time_consuming = True)
     print("")
 
-# (13) Others: chown of libraries and update LD_LIBRARY_PATH
+# (13) Install FrozenHot (commit ID: eabb2b9)
 
-## (13.1) Chown of libraries
+if is_install_frozenhot:
+    frozenhot_clone_dirpath = "{}/frozenhot".format(Common.lib_dirpath)
+    frozenhot_software_name = "FrozenHot"
+    frozenhot_repo_url = "https://github.com/ziyueqiu/FrozenHot.git"
+    SubprocessUtil.cloneRepo(Common.scriptname, frozenhot_clone_dirpath, frozenhot_software_name, frozenhot_repo_url, with_subrepo = True)
+
+    frozenhot_target_commit = "eabb2b9"
+    SubprocessUtil.checkoutCommit(Common.scriptname, frozenhot_clone_dirpath, frozenhot_software_name, frozenhot_target_commit)
+
+    # Compile CLHT
+    clht_target_filepath = "{}/CLHT/libclht.a".format(frozenhot_clone_dirpath)
+    if not os.path.exists(clht_target_filepath):
+        LogUtil.prompt(Common.scriptname, "compile CLHT...")
+        clht_compile_cmd = "cd {}/CLHT && ./prepare_everything.sh".format(frozenhot_clone_dirpath)
+        clht_compile_subprocess = SubprocessUtil.runCmd(clht_compile_cmd)
+        if clht_compile_subprocess.returncode != 0:
+            LogUtil.die(Common.scriptname, "failed to compile CLHT (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(clht_compile_subprocess)))
+
+    # Install FrozenHot (still compile the executable binary in FrozenHot to install third-party libs, although the executable binary is not used in COVERED project)
+    frozenhot_install_dirpath = "{}/build/test_trace".format(frozenhot_clone_dirpath)
+    frozenhot_install_tool = "./prepare.sh"
+    frozenhot_preinstall_tool = "sudo apt-get -y install libtbb-dev numactl"
+    SubprocessUtil.installFromRepoIfNot(Common.scriptname, frozenhot_install_dirpath, frozenhot_software_name, frozenhot_clone_dirpath, frozenhot_install_tool, pre_install_tool = frozenhot_preinstall_tool)
+    print("")
+
+# (14) Others: chown of libraries and update LD_LIBRARY_PATH
+
+## (14.1) Chown of libraries
 
 LogUtil.prompt(Common.scriptname, "chown of libraries...")
 chown_cmd = "sudo chown -R {0}:{0} {1}".format(Common.username, Common.lib_dirpath)
@@ -306,9 +334,9 @@ if chown_subprocess.returncode != 0:
     chown_errstr = SubprocessUtil.getSubprocessErrstr(chown_subprocess)
     LogUtil.die(Common.scriptname, "failed to chown of libraries (errmsg: {})".format(chown_errstr))
 
-## (13.2) Update LD_LIBRARY_PATH for interactive and non-interactive shells
+## (14.2) Update LD_LIBRARY_PATH for interactive and non-interactive shells
 
-target_ld_libs = ["libwebcachesim", "libbf", "libbsoncxx", "lightgbm", "glcache", "segcache", "cachelib", "boost", "x86_64-linux-gnu"]
+target_ld_libs = ["webcachesim", "libbf", "libbsoncxx", "lightgbm", "glcache", "segcache", "cachelib", "boost", "x86_64-linux-gnu"]
 target_ld_lib_dirpaths = ["{}/lrb/install/webcachesim/lib".format(Common.lib_dirpath), "{}/lrb/install/libbf/lib".format(Common.lib_dirpath), "{}/lrb/install/mongocxxdriver/lib".format(Common.lib_dirpath), "{}/lrb/install/lightgbm/lib".format(Common.lib_dirpath), "{}/src/cache/glcache/micro-implementation/build/lib".format(Common.proj_dirname), "{}/src/cache/segcache/build/ccommon/lib".format(Common.proj_dirname), "{}/CacheLib/opt/cachelib/lib".format(Common.lib_dirpath), "{}/boost_1_81_0/install/lib".format(Common.lib_dirpath), "/usr/lib/x86_64-linux-gnu"]
 
 # Formulate grepstr to check LD_LIBRARY_PATH in {~/.bashrc or ~/.bash_profile} and ~/.bashrc_non_interactive
@@ -327,7 +355,7 @@ for i in range(len(target_ld_lib_dirpaths)):
     else:
         update_bash_source_grepstr = "{}:{}".format(update_bash_source_grepstr, target_ld_lib_dirpaths[i])
 
-### (13.3) Update LD_LIBRARY_PATH for non-interactive shells
+### (14.3) Update LD_LIBRARY_PATH for non-interactive shells
 
 noninteractive_bash_source_filepath = "/home/{}/.bashrc_non_interactive".format(Common.username)
 
@@ -360,7 +388,7 @@ if need_update_noninteractive_bash_source_file:
         create_noninteractive_bash_source_file_errstr = SubprocessUtil.getSubprocessErrstr(create_noninteractive_bash_source_file_subprocess)
         LogUtil.die(Common.scriptname, "failed to create non-interactive bash source file {} (errmsg: {})".format(noninteractive_bash_source_filepath, create_noninteractive_bash_source_file_errstr))
 
-### (13.4) Update LD_LIBRARY_PATH for interactive shells
+### (14.4) Update LD_LIBRARY_PATH for interactive shells
 
 LogUtil.prompt(Common.scriptname, "check if need to update LD_LIBRARY_PATH for interactive shells...")
 need_update_ld_library_path = False

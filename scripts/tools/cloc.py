@@ -11,13 +11,13 @@ exclude_exts = "d,o,pyc"
 exclude_dirs = "\"(src/mk" # Module makefiles
 exclude_dirs += "|src/deprecated|scripts/deprecated" # Deprecated source code and scripts
 exclude_dirs += "|src/workload/cachebench" # Workload source code
-exclude_dirs += "|src/cache/cachelib|src/cache/greedydual|src/cache/lfu|src/cache/lru|src/cache/segcache|src/cache/lhd|src/cache/fifo|src/cache/sieve|src/cache/s3fifo|src/cache/glcache|src/cache/lrb" # Baselines (NOTE: src/cache/covered is for COVERED instead of baseline)
+exclude_dirs += "|src/cache/cachelib|src/cache/greedydual|src/cache/lfu|src/cache/lru|src/cache/segcache|src/cache/lhd|src/cache/fifo|src/cache/sieve|src/cache/s3fifo|src/cache/glcache|src/cache/lrb|src/cache/frozenhot" # Baselines (NOTE: src/cache/covered is for COVERED instead of baseline)
 exclude_dirs += "|scripts/cachelib|scripts/requirements\.txt|scripts/lrb)\"" # Intermediate files used by scripts
 exclude_files = "\"(src/Makefile)\"" # Root makefile
 
 # TODO: Reduce redundant code
 #exclude_files = "\"(src/Makefile" # Root makefile
-#exclude_files += "|src/cache/cachelib_local_cache.*|src/cache/fifo_local_cache.*|src/cache/greedy_dual_local_cache.*|src/cache/lfu_local_cache.*|src/cache/lhd_local_cache.*|src/cache/lru_local_cache.*|src/cache/segcache_local_cache.*|src/cache/sieve_local_cache.*|src/cache/s3fifo_local_cache.*|src/cache/glcache_local_cache.*|src/cache/lrb_local_cache.*)\"" # Redundant code for baseline wrappers
+#exclude_files += "|src/cache/cachelib_local_cache.*|src/cache/fifo_local_cache.*|src/cache/greedy_dual_local_cache.*|src/cache/lfu_local_cache.*|src/cache/lhd_local_cache.*|src/cache/lru_local_cache.*|src/cache/segcache_local_cache.*|src/cache/sieve_local_cache.*|src/cache/s3fifo_local_cache.*|src/cache/glcache_local_cache.*|src/cache/lrb_local_cache.*|src/cache/frozenhot_local_cache.*)\"" # Redundant code for baseline wrappers
 
 # --fullpath add the current working directory (pwd) ahead of --not-match-d and --not-match-f
 exclude_command = "--exclude-ext={} --fullpath --not-match-d={} --not-match-f={}".format(exclude_exts, exclude_dirs, exclude_files)
