@@ -19,7 +19,7 @@
 #define RECENCY
 
 #include <queue>
-#include "cache_header.h"
+#include <cache/cache_header.h> // Siyuan: lib/frozenhot/cache/cache_header.h
 
 #include <limits>
 #include <memory>
@@ -27,7 +27,7 @@
 #include <cmath>
 #include <set>
 
-namespace tstarling {
+namespace covered {
 
   bool should_stop = false;
   //ssdlogging::statistics::MySet request_latency_;
@@ -534,6 +534,7 @@ BaseMonitor(){
       WAIT_STABLE_SLEEP_INTERVAL_US, WAIT_STABLE_SLEEP_INTERVAL_US*1.0/1000/1000);
   //printf("wait stable interval: 1s\n");
 
+  // Siyuan: even if we perform warmup phase outside FrozenHot for stable cache performance, we still need internal warmup in FrozenHot for FC ratio adjustment
   auto start_wait_stable = SSDLOGGING_TIME_NOW;
   double last_miss_ratio = 1.5;
   double miss_ratio;
@@ -541,7 +542,7 @@ BaseMonitor(){
   int wait_count = 0;
   //size_t print_step_counter = 0;
 
-  /* warm up run (non-valid) */
+  // warm up run (non-valid)
   while(!should_stop){
     printf("\ndata pass %lu\n", print_step_counter++);
     miss_ratio = PrintMissRatio();
@@ -595,19 +596,21 @@ FastHashMonitor(){
   // use shard 0 simulate all the cache
   // TODO @ Ziyue: could be independent, not only shard 0
 WAIT_STABLE:
+  // Siyuan: the following declarations will be used in other places -> NOT comment them
+  size_t thput_step;
+  double performance;
+  stop_sample_stat = true;
+  double monitor_time = 0;
+
+  // Siyuan: even if we perform warmup phase outside FrozenHot for stable cache performance, we still need internal warmup in FrozenHot for FC ratio adjustment
   auto start_wait_stable = SSDLOGGING_TIME_NOW;
   double last_miss_ratio = 1.5;
   double miss_ratio;
 
-  /* latency in this setting
-   * not throughput
-   */
-  double performance;
-  size_t thput_step;
+  // latency in this setting
+  // not throughput
   size_t last_size = 0, size = 0;
-  stop_sample_stat = true;
   int wait_count = 0;
-  double monitor_time = 0;
 
   // Fill up cache
   printf("\n* start observation *\n");
@@ -618,9 +621,9 @@ WAIT_STABLE:
     miss_ratio = PrintMissRatio();
     PrintStepLat();
     
-    /* This logic is for the case that the cache is already full != cache is stable
-     * still need several extra loops to evict the coldest items
-     * the metric is miss ratio non-decreasing */
+    // This logic is for the case that the cache is already full != cache is stable
+    // still need several extra loops to evict the coldest items
+    // the metric is miss ratio non-decreasing
     if(last_size >= size){ // cache is full
       if(last_miss_ratio <= miss_ratio) // Miss ratio is non-decreasing
         wait_count++;
@@ -652,9 +655,9 @@ WAIT_STABLE:
   auto wait_stable_duration = SSDLOGGING_TIME_DURATION(start_wait_stable, SSDLOGGING_TIME_NOW);
   printf("\nwait stable spend time: %lf s\n", wait_stable_duration / 1000 / 1000);
 
-  monitor_time = double(500 * m_numShards);
-
   printf("\n* end observation *\n");
+
+  monitor_time = double(500 * m_numShards);
 
   printf("\n* start search *\n");
   auto start_learning_time = SSDLOGGING_TIME_NOW;
