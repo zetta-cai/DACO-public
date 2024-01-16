@@ -5,7 +5,7 @@ FROZENHOT_DIRPATH = $(LIBRARY_DIRPATH)/frozenhot
 FROZENHOT_INCDIR = -I$(FROZENHOT_DIRPATH)/CLHT/include -I$(FROZENHOT_DIRPATH)
 INCDIR += $(FROZENHOT_INCDIR)
 
-# NOTE: FrozenHot uses libtbb for unordered map and libclht for fast hashing
+# NOTE: FrozenHot uses libtbb for unordered map of dynamic cache and libclht for fast hash table of frozen cache
 FROZENHOT_LDLIBS := -l:libtbb.so -l:libclht.a
 LDLIBS += $(FROZENHOT_LDLIBS)
 
