@@ -57,10 +57,9 @@ namespace covered
 
     // (1) Check is cached and access validity
 
-    bool LrbLocalCache::isLocalCachedInternal_(const Key& key) const
+    bool FrozenhotLocalCache::isLocalCachedInternal_(const Key& key) const
     {
-        // TODO: END HERE
-        bool is_cached = lrb_cache_ptr_->has(key.getKeystr());
+        bool is_cached = frozenhot_cache_ptr_->exists(key);
 
         return is_cached;
     }
@@ -69,6 +68,8 @@ namespace covered
 
     bool LrbLocalCache::getLocalCacheInternal_(const Key& key, const bool& is_redirected, Value& value, bool& affect_victim_tracker) const
     {
+        // TODO: END HERE
+
         UNUSED(is_redirected); // ONLY for COVERED
         UNUSED(affect_victim_tracker); // Only for COVERED
 

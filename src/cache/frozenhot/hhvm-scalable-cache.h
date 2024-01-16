@@ -105,6 +105,9 @@ struct ConcurrentScalableCache {
 
   virtual ~ConcurrentScalableCache() {clear(); }
 
+  // Siyuan: check existence of a given key yet not update any cache metadata
+  bool exists(const TKey& key) const;
+
   /**
    * Find a value by key, and return it by filling the ConstAccessor, which
    * can be default-constructed. Returns true if the element was found, false
@@ -298,6 +301,14 @@ getShard(const TKey& key) {
   // std::cout << "hashed at shard: " << h << std::endl;
   // fflush(stdout);
   return *m_shards.at(h);
+}
+
+// Siyuan: check existence of a given key yet not update any cache metadata
+template <class TKey, class TValue, class THash>
+bool ConcurrentScalableCache<TKey, TValue, THash>::
+exists(const TKey& key) const
+{
+  return getShard(key).exists(key);
 }
 
 template <class TKey, class TValue, class THash>

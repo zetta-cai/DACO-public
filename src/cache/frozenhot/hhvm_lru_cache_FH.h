@@ -151,6 +151,9 @@ class LRU_FHCache : public Cache::FHCacheAPI<TKey, TValue, THash> {
     m_fasthash->thread_init(tid);
   }
 
+  // Siyuan: check existence of a given key yet not update any cache metadata
+  void exists(const TKey& key);
+
   /**
    * Find a value by key, and return it by filling the ConstAccessor, which
    * can be default-constructed. Returns true if the element was found, false
@@ -518,6 +521,41 @@ void LRU_FHCache<TKey, TValue, THash>::deconstruct() {
   m_fasthash->clear();
 }
 
+// Siyuan: check existence of a given key yet not update any cache metadata
+template <class TKey, class TValue, class THash>
+void LRU_FHCache<TKey, TValue, THash>::exists(const TKey& key)
+{
+  assert(!(tier_ready || fast_hash_ready) || !curve_flag.load());
+
+  // Check frozen cache first
+  TValue unused_value;
+  if (tier_ready || fast_hash_ready) // Frozen cache is ready for all objects or partial objects
+  {
+    if (m_fasthash->find(key, unused_value) && (unused_value != nullptr)) // Found in frozen cache
+    {
+      return true;
+    }
+    else // Not found in frozen cache
+    {
+      if (tier_ready) // Frozen cache is ready for all objects -> no need to check dynamic cache
+      {
+        return false;
+      }
+    }
+  }
+
+  // Check dynamic cache then
+  HashMapConstAccessor unused_hash_accessor;
+  if (!m_map.find(unused_hash_accessor, key))
+  {
+    return false;
+  }
+
+  // NOTE: NO need to update cache metadata (marker and LRU list) here
+
+  return true;
+}
+
 template <class TKey, class TValue, class THash>
 bool LRU_FHCache<TKey, TValue, THash>::find(TValue& ac,
                                                    const TKey& key) {
@@ -562,7 +600,7 @@ bool LRU_FHCache<TKey, TValue, THash>::find(TValue& ac,
     return false;
   }
   ac = hashAccessor->second.m_value;
-  if(!fast_hash_construct) {
+  if(!fast_hash_construct) { // Siyuan: this code is weird -> it simply disables cache metadata update (marker and LRU list) during frozen cache construction, which should be well resolved by locking
     // Acquire the lock, but don't block if it is already held
     ListNode* node = hashAccessor->second.m_listNode;
     uint64_t last_update = 0;

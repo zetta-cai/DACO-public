@@ -146,6 +146,9 @@ class FIFO_FHCache : public Cache::FHCacheAPI<TKey, TValue, THash> {
     m_fasthash->thread_init(tid);
   }
 
+  // Siyuan: check existence of a given key yet not update any cache metadata
+  void exists(const TKey& key);
+
   /**
    * Find a value by key, and return it by filling the ConstAccessor, which
    * can be default-constructed. Returns true if the element was found, false
@@ -562,6 +565,41 @@ void FIFO_FHCache<TKey, TValue, THash>::deconstruct() {
   
   // Clear the frozen hashtable
   m_fasthash->clear();
+}
+
+// Siyuan: check existence of a given key yet not update any cache metadata
+template <class TKey, class TValue, class THash>
+void FIFO_FHCache<TKey, TValue, THash>::exists(const TKey& key)
+{
+  assert(!(tier_ready || fast_hash_ready) || !curve_flag.load());
+
+  // Check frozen cache first
+  TValue unused_value;
+  if (tier_ready || fast_hash_ready) // Frozen cache is ready for all objects or partial objects
+  {
+    if (m_fasthash->find(key, unused_value) && (unused_value != nullptr)) // Found in frozen cache
+    {
+      return true;
+    }
+    else // Not found in frozen cache
+    {
+      if (tier_ready) // Frozen cache is ready for all objects -> no need to check dynamic cache
+      {
+        return false;
+      }
+    }
+  }
+
+  // Check dynamic cache then
+  HashMapConstAccessor unused_hash_accessor;
+  if (!m_map.find(unused_hash_accessor, key))
+  {
+    return false;
+  }
+
+  // NOTE: NO need to update cache metadata (marker) here
+
+  return true;
 }
 
 template <class TKey, class TValue, class THash>
