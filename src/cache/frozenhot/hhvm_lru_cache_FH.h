@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-#ifndef incl_LRU_CACHE_FH_H
-#define incl_LRU_CACHE_FH_H
+#ifndef COVERED_incl_LRU_CACHE_FH_H
+#define COVERED_incl_LRU_CACHE_FH_H
 
 #include <tbb/concurrent_hash_map.h>
-#include <hash/hash_header.h> // Siyuan: lib/frozenhot/hash/hash_header.h
-#include <cache/FHCache.h> // Siyuan: lib/frozenhot/cache/FHCache.h
+//#include <hash/hash_header.h> // Siyuan: lib/frozenhot/hash/hash_header.h
+//#include <cache/FHCache.h> // Siyuan: lib/frozenhot/cache/FHCache.h
 
 #include <atomic>
 #include <mutex>
@@ -37,6 +37,8 @@
 //#define BASELINE_STAT
 //#define LOCK_P (double(1))
 
+#include "cache/frozenhot/hash/hash_header.h" // Siyuan: src/cache/frozenhot/hash/hash_header.h for covered::FashHashAPI
+#include "cache/frozenhot/FHCache.h" // Siyuan: src/cache/frozenhot/FHCache.h for covered::FHCacheAPI
 
 /* in high concurrency, no need to be too accurate */
 #define FC_RELAXATION 20
@@ -66,7 +68,7 @@ namespace covered {
  * ThreadSafeScalableCache is recommended instead.
  */
 template <class TKey, class TValue, class THash = tbb::tbb_hash_compare<TKey>>
-class LRU_FHCache : public Cache::FHCacheAPI<TKey, TValue, THash> {
+class LRU_FHCache : public covered::FHCacheAPI<TKey, TValue, THash> { // Siyuan: use hacked FHCacheAPI for required interfaces
   /**
    * The LRU list node.
    *
@@ -152,7 +154,7 @@ class LRU_FHCache : public Cache::FHCacheAPI<TKey, TValue, THash> {
   }
 
   // Siyuan: check existence of a given key yet not update any cache metadata
-  void exists(const TKey& key);
+  virtual void exists(const TKey& key) override;
 
   /**
    * Find a value by key, and return it by filling the ConstAccessor, which
@@ -162,6 +164,9 @@ class LRU_FHCache : public Cache::FHCacheAPI<TKey, TValue, THash> {
    */
   //bool find(ConstAccessor& ac, const TKey& key);
   virtual bool find(TValue& ac, const TKey& key) override;
+
+  // Siyuan: update value of the given key with the given value if cached
+  virtual bool update(const TKey& key, const TValue& value) override;
 
   /**
    * Insert a value into the container. Both the key and value will be copied.
@@ -600,7 +605,118 @@ bool LRU_FHCache<TKey, TValue, THash>::find(TValue& ac,
     return false;
   }
   ac = hashAccessor->second.m_value;
-  if(!fast_hash_construct) { // Siyuan: this code is weird -> it simply disables cache metadata update (marker and LRU list) during frozen cache construction, which should be well resolved by locking
+  if(!fast_hash_construct) { // Siyuan: note that the following original code simply disables cache metadata update (marker and LRU list) during frozen cache construction as linked list does not support concurrent access
+    // Acquire the lock, but don't block if it is already held
+    ListNode* node = hashAccessor->second.m_listNode;
+    uint64_t last_update = 0;
+    if(curve_flag.load()){
+      // TODO @ Ziyue: there is no lock, so corner case is that
+      // curve_flag turns into false, m_marker might cause core dump
+      last_update = node->m_time;
+      if(m_marker != nullptr && last_update <= m_marker->m_time){
+        if(stat_yes){
+          LRU_FHCache::end_to_end_find_succ++;
+        }
+        movement_counter++;
+        node->m_time = SPDK_TIME;
+        std::unique_lock<ListMutex> lock(m_listMutex);
+        if(node->isInList()) {
+          delink(node);
+          pushFront(node);
+        }
+      }
+      else if(stat_yes){
+        LRU_FHCache::fast_find_hit++;
+      }
+      return true;
+    }
+
+    std::unique_lock<ListMutex> lock(m_listMutex, std::try_to_lock);
+    if (lock) {
+      //ListNode* node = hashAccessor->second.m_listNode;
+      // The list node may be out of the list if it is in the process of being
+      // inserted or evicted. Doing this check allows us to lock the list for
+      // shorter periods of time.
+      if(fast_hash_construct){
+        ;
+      } else if (node->isInList()) {
+        delink(node);
+        pushFront(node);
+      }
+      lock.unlock();
+    }
+  }
+  if(stat_yes){
+    LRU_FHCache::end_to_end_find_succ++;
+  }
+  return true;
+}
+
+// Siyuan: update value of the given key with the given value if cached
+template <class TKey, class TValue, class THash>
+bool LRU_FHCache<TKey, TValue, THash>::update(const TKey& key, const TValue& value)
+{
+  // Siyuan: basically follow the same logic as find() yet with some changes for in-place update
+
+  bool stat_yes = LRU_FHCache::sample_generator();
+  HashMapConstAccessor hashAccessor;
+  //HashMapAccessor& hashAccessor = ac.m_hashAccessor;
+  assert(!(tier_ready || fast_hash_ready) || !curve_flag.load());
+
+  if(tier_ready || fast_hash_ready) {
+
+    TValue unused_value;
+#ifdef HANDLE_WRITE
+    if(m_fasthash->find(key, unused_value) && (unused_value != nullptr))
+#else
+    if(m_fasthash->find(key, unused_value))
+#endif
+    {
+
+#ifdef FH_STAT
+      if(stat_yes) {
+        LRU_FHCache::fast_find_hit++;
+      }
+#endif
+
+      // Siyuan: support in-place update (insert-after-remove)
+      // NOTE: m_fasthash (CLHT or TbbCHT) are already concurrent hashmap
+      m_fasthash->remove(key, unused_value);
+      m_fasthash->insert(key, value);
+
+      return true;
+    }
+    else {
+      if(tier_ready){
+#ifdef FH_STAT
+        if(stat_yes) {
+          LRU_FHCache::tbb_find_miss++;
+        }
+#endif
+        return false;
+      }
+    }
+  }
+
+  if (!m_map.find(hashAccessor, key)) {
+#ifdef FH_STAT
+    if(stat_yes) {
+      LRU_FHCache::tbb_find_miss++;
+    }
+#endif
+    return false;
+  }
+
+  TValue unused_value;
+  unused_value = hashAccessor->second.m_value;
+  // Siyuan: support in-place update (insert-after-remove)
+  // NOTE: tbb::concurrent_hash_map is already concurrent hashmap
+  m_map.erase(key);
+  HashMapConstAccessor tmp_const_accessor;
+  HashMapValuePair tmp_hashmap_value_pair(key, value);
+  m_map->insert(tmp_const_accessor, tmp_hashmap_value_pair);
+
+  if(!fast_hash_construct) { // Siyuan: note that the following original code simply disables cache metadata update (marker and LRU list) during frozen cache construction as linked list does not support concurrent access
     // Acquire the lock, but don't block if it is already held
     ListNode* node = hashAccessor->second.m_listNode;
     uint64_t last_update = 0;

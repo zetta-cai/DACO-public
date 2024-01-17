@@ -66,17 +66,12 @@ namespace covered
 
     // (2) Access local edge cache (KV data and local metadata)
 
-    bool LrbLocalCache::getLocalCacheInternal_(const Key& key, const bool& is_redirected, Value& value, bool& affect_victim_tracker) const
+    bool FrozenhotLocalCache::getLocalCacheInternal_(const Key& key, const bool& is_redirected, Value& value, bool& affect_victim_tracker) const
     {
-        // TODO: END HERE
-
         UNUSED(is_redirected); // ONLY for COVERED
         UNUSED(affect_victim_tracker); // Only for COVERED
 
-        SimpleRequest req = buildRequest_(key);
-        const bool is_update = false;
-        bool is_local_cached = lrb_cache_ptr_->access(req, is_update);
-        value = Value(req.valuestr.length());
+        bool is_local_cached = frozenhot_cache_ptr_->find(value, key);
 
         return is_local_cached;
     }

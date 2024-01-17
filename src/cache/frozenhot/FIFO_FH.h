@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-#ifndef incl_FIFO_CACHE_FH_H
-#define incl_FIFO_CACHE_FH_H
+#ifndef COVERED_incl_FIFO_CACHE_FH_H
+#define COVERED_incl_FIFO_CACHE_FH_H
 
 #include <tbb/concurrent_hash_map.h>
-#include <hash/hash_header.h> // Siyuan: lib/frozenhot/hash/hash_header.h
-#include <cache/FHCache.h> // Siyuan: lib/frozenhot/cache/FHCache.h
+//#include <hash/hash_header.h> // Siyuan: lib/frozenhot/hash/hash_header.h
+//#include <cache/FHCache.h> // Siyuan: lib/frozenhot/cache/FHCache.h
 
 #include <atomic>
 #include <mutex>
@@ -35,6 +35,9 @@
 #define SPECIAL_KEY 0 // 0 is reserved for special key
 #define TOMB_KEY 1 // 1 is reserved for tomb key
 #define FC_RELAXATION 20 // TODO @ Ziyue: remove it later, could be 0 with careful design
+
+#include "cache/frozenhot/hash/hash_header.h" // Siyuan: src/cache/frozenhot/hash/hash_header.h for covered::FashHashAPI
+#include "cache/frozenhot/FHCache.h" // Siyuan: src/cache/frozenhot/FHCache.h for covered::FHCacheAPI
 
 namespace covered {
 /**
@@ -61,7 +64,7 @@ namespace covered {
  * ThreadSafeScalableCache is recommended instead.
  */
 template <class TKey, class TValue, class THash = tbb::tbb_hash_compare<TKey>>
-class FIFO_FHCache : public Cache::FHCacheAPI<TKey, TValue, THash> {
+class FIFO_FHCache : public covered::FHCacheAPI<TKey, TValue, THash> { // Siyuan: use hacked FHCacheAPI for required interfaces
   /**
    * The LRU list node.
    *
@@ -147,7 +150,7 @@ class FIFO_FHCache : public Cache::FHCacheAPI<TKey, TValue, THash> {
   }
 
   // Siyuan: check existence of a given key yet not update any cache metadata
-  void exists(const TKey& key);
+  virtual void exists(const TKey& key) override;
 
   /**
    * Find a value by key, and return it by filling the ConstAccessor, which
@@ -157,6 +160,9 @@ class FIFO_FHCache : public Cache::FHCacheAPI<TKey, TValue, THash> {
    */
   //bool find(ConstAccessor& ac, const TKey& key);
   virtual bool find(TValue& ac, const TKey& key) override;
+
+  // Siyuan: update value of the given key with the given value if cached
+  virtual bool update(const TKey& key, const TValue& value) override;
 
   /**
    * Insert a value into the container. Both the key and value will be copied.
@@ -658,7 +664,132 @@ bool FIFO_FHCache<TKey, TValue, THash>::find(TValue& ac,
   ac = hashAccessor->second.m_value;
   
   // If we are not constructing the frozen, then we need to update the list for recency
-  if(!fast_hash_construct) {
+  if(!fast_hash_construct) { // Siyuan: note that the following original code simply disables cache metadata update (marker in FIFO list) during frozen cache construction as linked list does not support concurrent access
+    ListNode* node = hashAccessor->second.m_listNode;
+    uint64_t last_update = 0;
+    
+    // If we are in curve mode, for each find,
+    // it potentially updates the recency of the node and pushes the marker forward
+    if(curve_flag.load()){
+      // TODO @ Ziyue: there is no lock, check whether a corner case exists that
+      // curve_flag turns into false, m_marker might cause core dump
+      last_update = node->m_time;
+      if(m_marker != nullptr && last_update <= m_marker->m_time){
+        if(stat_yes){
+          FIFO_FHCache::end_to_end_find_succ++;
+        }
+        movement_counter++;
+        node->m_time = SPDK_TIME;
+        std::unique_lock<ListMutex> lock(m_listMutex);
+        if(node->isInList()) {
+          delink(node);
+          pushFront(node);
+        }
+      }
+      else if(stat_yes){
+        FIFO_FHCache::fast_find_hit++;
+      }
+      return true;
+    }
+    
+    // disable following promotion since this is FIFO_FHCache
+
+    //if(((double)(ssdlogging::random::Random::GetTLSInstance()->Next()) / (double)(RAND_MAX)) < LOCK_P){
+    // std::unique_lock<ListMutex> lock(m_listMutex, std::try_to_lock);
+    // if (lock) {
+    //   //ListNode* node = hashAccessor->second.m_listNode;
+    //   // The list node may be out of the list if it is in the process of being
+    //   // inserted or evicted. Doing this check allows us to lock the list for
+    //   // shorter periods of time.
+    //   if(fast_hash_construct){
+    //     ;
+    //   } else if (node->isInList()) {
+    //     delink(node);
+    //     pushFront(node);
+    //   }
+    //   lock.unlock();
+    // }
+  }
+  if(stat_yes){
+    FIFO_FHCache::end_to_end_find_succ++;
+  }
+  return true;
+}
+
+// Siyuan: update value of the given key with the given value if cached
+template <class TKey, class TValue, class THash>
+bool FIFO_FHCache<TKey, TValue, THash>::update(const TKey& key, const TValue& value)
+{
+  // Siyuan: basically follow the same logic as find() yet with some changes for in-place update
+
+  bool stat_yes = FIFO_FHCache::sample_generator();
+  HashMapConstAccessor hashAccessor;
+  //HashMapAccessor& hashAccessor = ac.m_hashAccessor;
+  assert(!(tier_ready || fast_hash_ready) || !curve_flag.load()); // What's this for, what's curve flag
+  
+  // Frozen ready for use
+  if(tier_ready || fast_hash_ready) {
+  
+    TValue unused_value;
+#ifdef HANDLE_WRITE
+    // TODO @ Ziyue: ac != nullptr is a deprecated mechanism to check tomb
+    // we can re-check this and remove it if possible
+
+    // Generally when we found the thing in frozen cache
+    if(m_fasthash->find(key, unused_value) && (unused_value != nullptr))
+#else
+    if(m_fasthash->find(key, unused_value))
+#endif
+    {
+
+#ifdef FH_STAT
+      if(stat_yes) {
+        FIFO_FHCache::fast_find_hit++;
+      }
+#endif
+
+      // Siyuan: support in-place update (insert-after-remove)
+      // NOTE: m_fasthash (CLHT or TbbCHT) are already concurrent hashmap
+      m_fasthash->remove(key, unused_value);
+      m_fasthash->insert(key, value);
+
+      return true;
+    }
+    else { // Not found in frozen
+      if(tier_ready){ // If we only have frozen, then cache miss anyway
+#ifdef FH_STAT
+        if(stat_yes) {
+          FIFO_FHCache::tbb_find_miss++;
+        }
+#endif
+        return false;
+      }
+    }
+  }
+
+  // Now we try to find in DC if data not in FC
+  if (!m_map.find(hashAccessor, key)) {
+#ifdef FH_STAT
+    if(stat_yes) {
+      FIFO_FHCache::tbb_find_miss++;
+    }
+#endif
+    // Not found in DC also (cache miss)
+    return false;
+  }
+  
+  // Now we found it in DC
+  TValue unused_value;
+  unused_value = hashAccessor->second.m_value;
+  // Siyuan: support in-place update (insert-after-remove)
+  // NOTE: tbb::concurrent_hash_map is already concurrent hashmap
+  m_map.erase(key);
+  HashMapConstAccessor tmp_const_accessor;
+  HashMapValuePair tmp_hashmap_value_pair(key, value);
+  m_map->insert(tmp_const_accessor, tmp_hashmap_value_pair);
+  
+  // If we are not constructing the frozen, then we need to update the list for recency
+  if(!fast_hash_construct) { // Siyuan: note that the following original code simply disables cache metadata update (marker in FIFO list) during frozen cache construction as linked list does not support concurrent access
     ListNode* node = hashAccessor->second.m_listNode;
     uint64_t last_update = 0;
     

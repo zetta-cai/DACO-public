@@ -14,18 +14,22 @@
  * limitations under the License.
  */
 
-#pragma once
+#ifndef COVERED_HHVM_SCALABLE_CACHE_H
+#define COVERED_HHVM_SCALABLE_CACHE_H
 
 #define RECENCY
 
 #include <queue>
-#include <cache/cache_header.h> // Siyuan: lib/frozenhot/cache/cache_header.h
+#include <cache/cache_header.h> // Siyuan: lib/frozenhot/cache/cache_header.h for other cache policies
 
 #include <limits>
 #include <memory>
 // stat
 #include <cmath>
 #include <set>
+
+#include "cache/frozenhot/hhvm_lru_cache_FH.h" // Siyuan: src/cache/frozenhot/hhvm_lru_cache_FH.h for covered::LRU_FHCache
+#include "cache/frozenhot/FIFO_FH.h" // Siyuan: src/cache/frozenhot/FIFO_FH.h for covered::FIFO_FHCache
 
 namespace covered {
 
@@ -257,7 +261,7 @@ ConcurrentScalableCache(size_t maxSize, size_t numShards, Type type, int rebuild
       m_shards.emplace_back(std::make_shared<Cache::LFUCache<TKey, TValue, THash>>(s));
     else if(algType == Type::LRU_FH) {
       assert(FROZEN_THRESHOLD > 0);
-      m_shards.emplace_back(std::make_shared<Cache::LRU_FHCache<TKey, TValue, THash>>(s));
+      m_shards.emplace_back(std::make_shared<covered::LRU_FHCache<TKey, TValue, THash>>(s)); // Siyuan: use hacked LRU_FHCache for required interfaces
     }
     else if(algType == Type::Redis_LRU) {
       m_shards.emplace_back(std::make_shared<Cache::RedisLRUCache<TKey, TValue, THash>>(s));
@@ -274,7 +278,7 @@ ConcurrentScalableCache(size_t maxSize, size_t numShards, Type type, int rebuild
     }
     else if(algType == Type::FIFO_FH) {
       assert(FROZEN_THRESHOLD > 0);
-      m_shards.emplace_back(std::make_shared<Cache::FIFO_FHCache<TKey, TValue, THash>>(s));
+      m_shards.emplace_back(std::make_shared<covered::FIFO_FHCache<TKey, TValue, THash>>(s)); // Siyuan: use hacked FIFO_FHCache for required interfaces
     }
     else {
       printf("cannot find the cache type\n");
@@ -1083,4 +1087,6 @@ monitor_stop(){
   printf("\nshould stop = true\n");
 }
 #endif
-} // namespace tstarling
+} // namespace covered
+
+#endif
