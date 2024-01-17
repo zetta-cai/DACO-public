@@ -6,7 +6,7 @@
 
 namespace covered
 {
-    template <typename TValue>
+    template <typename TKey, typename TValue>
     class TbbCHT : public FashHashAPI<TValue>
     {
         typedef typename tbb::concurrent_hash_map<TKey, TValue> HashMap;
@@ -18,9 +18,9 @@ namespace covered
         std::unique_ptr<HashMap> m_map;
     
     public:
-        virtual bool insert(TKey idex, TValue value){
+        virtual bool insert(TKey idx, TValue value){
             HashMapConstAccessor const_accessor;
-            HashMapValuePair hashMapValue(idex, value);
+            HashMapValuePair hashMapValue(idx, value);
             if(m_map->insert(const_accessor, hashMapValue))
                 return true;
             else

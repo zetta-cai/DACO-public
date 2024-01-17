@@ -3,9 +3,9 @@
 
 namespace covered
 {
-    typedef unsigned TKey;
+    //typedef unsigned TKey; // Siyuan: support variable-length keys
 
-    template <typename TValue> 
+    template <typename TKey, typename TValue>
     class FashHashAPI {
     public:
         virtual bool insert(TKey idx, TValue value) = 0;

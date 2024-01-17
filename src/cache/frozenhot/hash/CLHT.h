@@ -1,3 +1,5 @@
+// Siyuan: NOT use CLHT due to only supporting fixed-length unsigned long as keys and std::shared_ptr<std::string>> as values
+/*
 //#include <hash/FastHashBase.h> // Siyuan: lib/frozenhot/hash/FastHashBase.h
 #include "cache/frozenhot/hash/FastHashBase.h" // Siyuan: src/cache/frozenhot/hash/FastHashBase.h for covered::FastHashAPI
 #include <clht.h> // Siyuan: lib/frozenhot/CLHT/include/clht.h
@@ -40,7 +42,7 @@ namespace covered
 	virtual bool find(TKey idx, TValue &value) {
 	   clht_val_t v = clht_get(m_hashtable->ht, (clht_addr_t)idx);
 	   if (v == 0) return false;
-	   value.reset((std::string*)v, [](auto p) {});
+	   value.reset((std::string*)v, [](auto p) {}); // Siyuan: ONLY support std::shared_ptr<std::string> as value -> then why you use a template value???
 	   return true;
 	};
 
@@ -49,7 +51,7 @@ namespace covered
 	{
 		clht_val_t v = clht_remove(m_hashtable, (clht_addr_t)idx);
 		if (v == 0 || v == false) return false;
-		value.reset((std::string*)v, [](auto p) {});
+		value.reset((std::string*)v, [](auto p) {}); // Siyuan: ONLY support std::shared_ptr<std::string> as value -> then why you use a template value???
 		return true;
 	}
 	bool update(TKey idx, TValue value, TValue& original_value)
@@ -68,3 +70,4 @@ namespace covered
 } // namespace covered
 
 #endif
+*/
