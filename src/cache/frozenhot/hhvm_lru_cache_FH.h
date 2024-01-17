@@ -31,9 +31,12 @@
 // stat
 #define FH_STAT
 #define HANDLE_WRITE
-#define MARKER_KEY 2
-#define SPECIAL_KEY 0
-#define TOMB_KEY 1
+// #define MARKER_KEY 2
+// #define SPECIAL_KEY 0
+// #define TOMB_KEY 1
+#define MARKER_KEY TKey("MARKER_KEY") // Siyuan: "MARKER_KEY" is reserved for marker key
+#define SPECIAL_KEY TKey("SPECIAL_KEY") // Siyuan: "SPECIAL_KEY" is reserved for special key
+#define TOMB_KEY TKey("TOMB_KEY") // Siyuan: "TOMB_KEY" is reserved for tomb key
 //#define BASELINE_STAT
 //#define LOCK_P (double(1))
 
@@ -235,7 +238,11 @@ class LRU_FHCache : public covered::FHCacheAPI<TKey, TValue, THash> { // Siyuan:
    * Evict the least-recently used item from the container. This function does
    * its own locking.
    */
-  bool evict();
+  //bool evict(); // Siyuan: comment out since not used
+
+  // Siyuan: for fine-grained eviction
+  virtual bool findVictimKey(TKey& key);
+  virtual bool evict(const TKey& key, TValue& value);
 
   /**
    * The maximum number of elements in the container.
@@ -656,47 +663,14 @@ bool LRU_FHCache<TKey, TValue, THash>::find(TValue& ac,
 template <class TKey, class TValue, class THash>
 bool LRU_FHCache<TKey, TValue, THash>::update(const TKey& key, const TValue& value)
 {
-  // Siyuan: basically follow the same logic as find() yet with some changes for in-place update
+  // Siyuan: always update dynamic cache which has all cached objects; update frozen cache (a subset of dynamic cache) if key exists
 
   bool stat_yes = LRU_FHCache::sample_generator();
-  HashMapConstAccessor hashAccessor;
+  HashMapAccessor hashAccessor;
   //HashMapAccessor& hashAccessor = ac.m_hashAccessor;
   assert(!(tier_ready || fast_hash_ready) || !curve_flag.load());
 
-  if(tier_ready || fast_hash_ready) {
-
-    TValue unused_value;
-#ifdef HANDLE_WRITE
-    if(m_fasthash->find(key, unused_value) && (unused_value != nullptr))
-#else
-    if(m_fasthash->find(key, unused_value))
-#endif
-    {
-
-#ifdef FH_STAT
-      if(stat_yes) {
-        LRU_FHCache::fast_find_hit++;
-      }
-#endif
-
-      // Siyuan: support in-place update (insert-after-remove)
-      // NOTE: m_fasthash (CLHT or TbbCHT) are already concurrent hashmap
-      m_fasthash->remove(key, unused_value);
-      m_fasthash->insert(key, value);
-
-      return true;
-    }
-    else {
-      if(tier_ready){
-#ifdef FH_STAT
-        if(stat_yes) {
-          LRU_FHCache::tbb_find_miss++;
-        }
-#endif
-        return false;
-      }
-    }
-  }
+  // (1) Siyuan: update dynamic cache first along with cache metadata
 
   if (!m_map.find(hashAccessor, key)) {
 #ifdef FH_STAT
@@ -704,17 +678,15 @@ bool LRU_FHCache<TKey, TValue, THash>::update(const TKey& key, const TValue& val
       LRU_FHCache::tbb_find_miss++;
     }
 #endif
-    return false;
+    return false; // Siyuan: key MUST NOT be cached if dynamic cache does NOT have such a key
   }
 
-  TValue unused_value;
-  unused_value = hashAccessor->second.m_value;
-  // Siyuan: support in-place update (insert-after-remove)
+  // Now we found it in DC
+  TValue original_value;
+  original_value = hashAccessor->second.m_value;
+  // Siyuan: support in-place update
   // NOTE: tbb::concurrent_hash_map is already concurrent hashmap
-  m_map.erase(key);
-  HashMapConstAccessor tmp_const_accessor;
-  HashMapValuePair tmp_hashmap_value_pair(key, value);
-  m_map->insert(tmp_const_accessor, tmp_hashmap_value_pair);
+  hashAccessor->second.m_value = value; // Siyuan: note that hashAccessor already acquires a write lock for the given key
 
   if(!fast_hash_construct) { // Siyuan: note that the following original code simply disables cache metadata update (marker and LRU list) during frozen cache construction as linked list does not support concurrent access
     // Acquire the lock, but don't block if it is already held
@@ -760,7 +732,45 @@ bool LRU_FHCache<TKey, TValue, THash>::update(const TKey& key, const TValue& val
   if(stat_yes){
     LRU_FHCache::end_to_end_find_succ++;
   }
-  return true;
+
+  // (2) Siyuan: update frozen cache if key exists
+
+  if(tier_ready || fast_hash_ready) {
+
+    TValue unused_value;
+#ifdef HANDLE_WRITE
+    if(m_fasthash->find(key, unused_value) && (unused_value != nullptr)) // Siyuan: note that unused_value will NOT be changed if NOT exist
+#else
+    if(m_fasthash->find(key, unused_value)) // Siyuan: note that unused_value will NOT be changed if NOT exist
+#endif
+    {
+
+#ifdef FH_STAT
+      if(stat_yes) {
+        LRU_FHCache::fast_find_hit++;
+      }
+#endif
+
+      // Siyuan: support in-place update
+      // NOTE: m_fasthash (CLHT or TbbCHT) are already concurrent hashmap
+      bool unused_is_exist = m_fasthash->update(key, value, unused_value); // Siyuan: note that unused_value will NOT be changed if NOT exist
+      UNUSED(unused_is_exist);
+
+      //return true; // Siyuan: already found in DC, should return true no matter unused_is_exist = true or false
+    }
+    else {
+      if(tier_ready){
+#ifdef FH_STAT
+        if(stat_yes) {
+          LRU_FHCache::tbb_find_miss++;
+        }
+#endif
+        //return false; // Siyuan: should NOT arrive here, as already found in DC and MUST found in FC if tier_ready is true (i.e., FC = DC)
+      }
+    }
+  }
+
+  return true; // Siyuan: always return true no matter whether frozen cache has the key, as dynamic cache must have the key at this LOC
 }
 
 template <class TKey, class TValue, class THash>
@@ -851,12 +861,13 @@ bool LRU_FHCache<TKey, TValue, THash>::insert(const TKey& key,
   // Evict if necessary, now that we know the hashmap insertion was successful.
   size_t s = m_size.load();
   bool evictionDone = false;
-  if (s >= m_maxSize) {
-    // The container is at (or over) capacity, so eviction needs to be done.
-    // Do not decrement m_size, since that would cause other threads to
-    // inappropriately omit eviction during their own inserts.
-    evictionDone = evict();
-  }
+  // Siyuan: disable internal eviction due to edge-level eviction outside FrozenHot
+  // if (s >= m_maxSize) {
+  //   // The container is at (or over) capacity, so eviction needs to be done.
+  //   // Do not decrement m_size, since that would cause other threads to
+  //   // inappropriately omit eviction during their own inserts.
+  //   evictionDone = evict();
+  // }
 
   // Note that we have to update the LRU list before we increment m_size, so
   // that other threads don't attempt to evict list items before they even
@@ -879,23 +890,24 @@ bool LRU_FHCache<TKey, TValue, THash>::insert(const TKey& key,
   if (!evictionDone) {
     s = m_size++;
   }
-  if (s > m_maxSize) {
-    // It is possible for the size to temporarily exceed the maximum if there is
-    // a heavy insert() load, once only as the cache fills. In this situation,
-    // we have to be careful not to have every thread simultaneously attempt to
-    // evict the extra entries, since we could end up underfilled. Instead we do
-    // a compare-and-exchange to acquire an exclusive right to reduce the size
-    // to a particular value.
-    //
-    // We could continue to evict in a loop, but if there are a lot of threads
-    // here at the same time, that could lead to spinning. So we will just evict
-    // one extra element per insert() until the overfill is rectified.
-    if(evict())
-      m_size--;
-    // if (m_size.compare_exchange_strong(s, s - 1)) {
-    //   evict();
-    // }
-  }
+  // Siyuan: disable internal eviction due to edge-level eviction outside FrozenHot
+  // if (s > m_maxSize) {
+  //   // It is possible for the size to temporarily exceed the maximum if there is
+  //   // a heavy insert() load, once only as the cache fills. In this situation,
+  //   // we have to be careful not to have every thread simultaneously attempt to
+  //   // evict the extra entries, since we could end up underfilled. Instead we do
+  //   // a compare-and-exchange to acquire an exclusive right to reduce the size
+  //   // to a particular value.
+  //   //
+  //   // We could continue to evict in a loop, but if there are a lot of threads
+  //   // here at the same time, that could lead to spinning. So we will just evict
+  //   // one extra element per insert() until the overfill is rectified.
+  //   if(evict())
+  //     m_size--;
+  //   // if (m_size.compare_exchange_strong(s, s - 1)) {
+  //   //   evict();
+  //   // }
+  // }
   return true;
 }
 
@@ -967,8 +979,57 @@ inline void LRU_FHCache<TKey, TValue, THash>::pushAfter(ListNode* nodeBefore, Li
   nodeBefore->m_next = nodeAfter;
 }
 
+// Siyuan: NO need further
+// template <class TKey, class TValue, class THash>
+// bool LRU_FHCache<TKey, TValue, THash>::evict() {
+// #ifdef HANDLE_WRITE
+//   std::unique_lock<ListMutex> lock(m_listMutex);
+//   ListNode* moribund = m_tail.m_prev;
+//   while(moribund->m_key == TOMB_KEY) {
+//     delink(moribund);
+//     delete moribund;
+//     moribund = m_tail.m_prev;
+//     // fast_hash_evict_tomb++;
+//   }
+//   if (moribund == &m_head) {
+//     // List is empty, can't evict
+//     //printf("List is empty!\n");
+//     return false;
+//   }
+//   delink(moribund);
+//   lock.unlock();
+// #else
+//   std::unique_lock<ListMutex> lock(m_listMutex);
+//   ListNode* moribund = m_tail.m_prev;
+//   if (moribund == &m_head) {
+//     // List is empty, can't evict
+//     return false;
+//   }
+//   // if(!moribund->isInList()){
+//   //   printf("Error key: %lu\n", moribund->m_key);
+//   //   debug(0);
+//   // }
+//   assert(moribund->isInList());
+//   delink(moribund);
+//   lock.unlock();
+// #endif
+
+//   HashMapAccessor hashAccessor;
+//   if (!m_map.find(hashAccessor, moribund->m_key)) {
+//     //Presumably unreachable
+//     //printf("m_key: %ld Presumably unreachable\n", moribund->m_key);
+//     unreachable_counter++;
+//     return false;
+//   }
+//   m_map.erase(hashAccessor);
+//   delete moribund;
+//   return true;
+// }
+
+// Siyuan: for fine-grained eviction
 template <class TKey, class TValue, class THash>
-bool LRU_FHCache<TKey, TValue, THash>::evict() {
+bool LRU_FHCache<TKey, TValue, THash>::findVictimKey(TKey& key)
+{
 #ifdef HANDLE_WRITE
   std::unique_lock<ListMutex> lock(m_listMutex);
   ListNode* moribund = m_tail.m_prev;
@@ -983,7 +1044,7 @@ bool LRU_FHCache<TKey, TValue, THash>::evict() {
     //printf("List is empty!\n");
     return false;
   }
-  delink(moribund);
+  key = moribund->m_key;
   lock.unlock();
 #else
   std::unique_lock<ListMutex> lock(m_listMutex);
@@ -997,19 +1058,34 @@ bool LRU_FHCache<TKey, TValue, THash>::evict() {
   //   debug(0);
   // }
   assert(moribund->isInList());
-  delink(moribund);
+  key = moribund->m_key;
   lock.unlock();
 #endif
-
+  return true;
+}
+template <class TKey, class TValue, class THash>
+bool LRU_FHCache<TKey, TValue, THash>::evict(const TKey& key, TValue& value)
+{
   HashMapAccessor hashAccessor;
-  if (!m_map.find(hashAccessor, moribund->m_key)) {
+  if (!m_map.find(hashAccessor, key)) {
     //Presumably unreachable
-    //printf("m_key: %ld Presumably unreachable\n", moribund->m_key);
+    //printf("m_key: %ld Presumably unreachable\n", key);
     unreachable_counter++;
     return false;
   }
+
+  value = hashAccessor->second.m_value; // Siyuan: note that hashAccessor already acquires a write lock for the victim key
+
+  // Siyuan: remove key from LRU list
+  std::unique_lock<ListMutex> lock(m_listMutex);
+  ListNode* moribund = hashAccessor->second.m_listNode;
+  assert(moribund != NULL);
+  delink(moribund);
+  lock.unlock();
+
   m_map.erase(hashAccessor);
   delete moribund;
+  moribund = NULL; // Siyuan: avoid dangling pointer
   return true;
 }
 

@@ -121,6 +121,9 @@ struct ConcurrentScalableCache {
   //bool find(ConstAccessor& ac, const TKey& key);
   bool find(TValue& ac, const TKey& key);
 
+  // Siyuan: update value of the given key with the given value if cached
+  bool update(const TKey& key, const TValue& value);
+
   /**
    * Insert a value into the container. Both the key and value will be copied.
    * The new element will put into the eviction list as the most-recently
@@ -131,6 +134,10 @@ struct ConcurrentScalableCache {
    * returned.
    */
   bool insert(const TKey& key, const TValue& value);
+
+  // Siyuan: for fine-grained eviction
+  bool findVictimKey(TKey& key);
+  bool evict(const TKey& key, TValue& value);
 
   /**
    * Clear the container. NOT THREAD SAFE -- do not use while other threads
@@ -321,10 +328,31 @@ find(TValue & ac, const TKey& key) {
   return getShard(key).find(ac, key);
 }
 
+// Siyuan: update value of the given key with the given value if cached
+template <class TKey, class TValue, class THash>
+bool ConcurrentScalableCache<TKey, TValue, THash>::
+update(const TKey& key, const TValue& value) {
+  return getShard(key).update(key, value);
+}
+
 template <class TKey, class TValue, class THash>
 bool ConcurrentScalableCache<TKey, TValue, THash>::
 insert(const TKey& key, const TValue& value) {
   return getShard(key).insert(key, value);
+}
+
+// Siyuan: for fine-grained eviction
+template <class TKey, class TValue, class THash>
+bool ConcurrentScalableCache<TKey, TValue, THash>::
+findVictimKey(TKey& key)
+{
+  return getShard(key).findVictimKey(key);
+}
+template <class TKey, class TValue, class THash>
+bool ConcurrentScalableCache<TKey, TValue, THash>::
+evict(const TKey& key, TValue& value)
+{
+  return getShard(key).evict(key, value);
 }
 
 template <class TKey, class TValue, class THash>
@@ -336,12 +364,13 @@ delete_key(const TKey& key) {
 template <class TKey, class TValue, class THash>
 void ConcurrentScalableCache<TKey, TValue, THash>::
 clear() {
-  // printf("Size: %lu, %.2lf GB\n", size(), size()*4.0/1000000);
-  // for (size_t i = 0; i < m_numShards; i++) {
-  //   printf("cache No.%ld size %ld\n", i, m_shards[i]->size());
-  //   m_shards[i]->clear();
-  // }
-  // printf("numShards: %lu\n", m_numShards);
+  // Siyuan: uncomment for clear() in destructor
+  printf("Size: %lu, %.2lf GB\n", size(), size()*4.0/1000000);
+  for (size_t i = 0; i < m_numShards; i++) {
+    printf("cache No.%ld size %ld\n", i, m_shards[i]->size());
+    m_shards[i]->clear();
+  }
+  printf("numShards: %lu\n", m_numShards);
 }
 
 template <class TKey, class TValue, class THash>

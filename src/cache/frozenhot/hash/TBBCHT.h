@@ -11,14 +11,14 @@ namespace covered
     {
         typedef typename tbb::concurrent_hash_map<TKey, TValue> HashMap;
         typedef typename HashMap::const_accessor HashMapConstAccessor;
-        //typedef typename HashMap::accessor HashMapAccessor;
+        typedef typename HashMap::accessor HashMapAccessor;
         typedef typename HashMap::value_type HashMapValuePair;
 
     protected:
         std::unique_ptr<HashMap> m_map;
     
     public:
-        bool insert(TKey idex, TValue value){
+        virtual bool insert(TKey idex, TValue value){
             HashMapConstAccessor const_accessor;
             HashMapValuePair hashMapValue(idex, value);
             if(m_map->insert(const_accessor, hashMapValue))
@@ -27,7 +27,7 @@ namespace covered
                 return false;
         }
 
-        bool find(TKey idx, TValue &value) {
+        virtual bool find(TKey idx, TValue &value) {
             HashMapConstAccessor const_accessor;
             if(m_map->find(const_accessor, idx)){
                 value = const_accessor->second;
@@ -37,15 +37,32 @@ namespace covered
             }
         }
 
-        // Siyuan: for in-place update (insert-after-remove)
-        bool remove(TKey idx, TValue& value)
+        // Siyuan: additional required interfaces
+        virtual bool remove(TKey idx, TValue& value)
         {
-            HashMapConstAccessor const_accessor;
-            if(m_map->find(const_accessor, idx)){
-                value = const_accessor->second;
-                m_map.erase(idx);
+            HashMapAccessor accessor;
+            if (m_map->find(accessor, idx)) // Siyuan: this will acquire a write lock for the key
+            {
+                value = accessor->second;
+                m_map.erase(accessor); // Siyuan: destructor of accessor will release the write lock for the key
                 return true;
-            } else {
+            }
+            else
+            {
+                return false;
+            }
+        }
+        virtual bool update(TKey idx, TValue value, TValue& original_value)
+        {
+            HashMapAccessor accessor;
+            if (m_map->find(accessor, idx)) // Siyuan: this will acquire a write lock for the key
+            {
+                original_value = accessor->second;
+                accessor->second = value; // Siyuan: accessor::operation->() returns the pointer of the reference of the value at the corresponding hashmap node
+                return true;
+            }
+            else
+            {
                 return false;
             }
         }
@@ -54,7 +71,7 @@ namespace covered
             m_map.reset(new HashMap(size));
         }
 
-        void clear() {
+        virtual void clear() {
             m_map->clear();
         }
     };

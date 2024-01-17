@@ -76,7 +76,7 @@ namespace covered
         return is_local_cached;
     }
 
-    bool LrbLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value, const bool& is_getrsp, const bool& is_global_cached, bool& affect_victim_tracker, bool& is_successful)
+    bool FrozenhotLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value, const bool& is_getrsp, const bool& is_global_cached, bool& affect_victim_tracker, bool& is_successful)
     {
         const bool is_valid_objsize = isValidObjsize_(key, value); // Object size checking
 
@@ -86,7 +86,7 @@ namespace covered
         is_successful = false;
 
         // Check is local cached
-        bool is_local_cached = lrb_cache_ptr_->has(key.getKeystr());
+        bool is_local_cached = frozenhot_cache_ptr_->exists(key);
         
         if (is_local_cached) // Key already exists
         {
@@ -97,9 +97,7 @@ namespace covered
             }
 
             // Update with the latest value
-            SimpleRequest req = buildRequest_(key, value);
-            const bool is_update = true;
-            bool tmp_is_local_cached = lrb_cache_ptr_->access(req, is_update);
+            bool tmp_is_local_cached = frozenhot_cache_ptr_->update(key, value);
             assert(tmp_is_local_cached);
             is_successful = true;
         }
@@ -109,7 +107,7 @@ namespace covered
 
     // (3) Local edge cache management
 
-    bool LrbLocalCache::needIndependentAdmitInternal_(const Key& key, const Value& value) const
+    bool FrozenhotLocalCache::needIndependentAdmitInternal_(const Key& key, const Value& value) const
     {
         UNUSED(value);
         
@@ -118,7 +116,7 @@ namespace covered
         return !is_local_cached;
     }
 
-    void LrbLocalCache::admitLocalCacheInternal_(const Key& key, const Value& value, const bool& is_neighbor_cached, bool& affect_victim_tracker, bool& is_successful)
+    void FrozenhotLocalCache::admitLocalCacheInternal_(const Key& key, const Value& value, const bool& is_neighbor_cached, bool& affect_victim_tracker, bool& is_successful)
     {
         UNUSED(is_neighbor_cached); // ONLY for COVERED
         UNUSED(affect_victim_tracker); // ONLY for COVERED
@@ -126,27 +124,25 @@ namespace covered
         bool is_local_cached = isLocalCachedInternal_(key);
         if (!is_local_cached) // NOTE: NOT admit if key exists
         {
-            SimpleRequest req = buildRequest_(key, value);
-            lrb_cache_ptr_->admit(req);
+            bool is_uncached = frozenhot_cache_ptr_->insert(key, value);
+            assert(is_uncached == true);
             is_successful = true;
         }
 
         return;
     }
 
-    bool LrbLocalCache::getLocalCacheVictimKeysInternal_(std::unordered_set<Key, KeyHasher>& keys, std::list<VictimCacheinfo>& victim_cacheinfos, const uint64_t& required_size) const
+    bool FrozenhotLocalCache::getLocalCacheVictimKeysInternal_(std::unordered_set<Key, KeyHasher>& keys, std::list<VictimCacheinfo>& victim_cacheinfos, const uint64_t& required_size) const
     {
         assert(hasFineGrainedManagement());
 
         UNUSED(required_size); // NO need to provide multiple victims based on required size due to without victim fetching
         UNUSED(victim_cacheinfos); // ONLY for COVERED
 
-        bool has_victim_key = (lrb_cache_ptr_->getInCacheMetadataCnt() > 0);
+        Key tmp_victim_key;
+        bool has_victim_key = frozenhot_cache_ptr_->findVictimKey(tmp_victim_key);
         if (has_victim_key)
         {
-            std::string tmp_victim_keystr = lrb_cache_ptr_->getVictimKey();
-            Key tmp_victim_key(tmp_victim_keystr);
-
             if (keys.find(tmp_victim_key) == keys.end())
             {
                 keys.insert(tmp_victim_key);   
@@ -156,19 +152,16 @@ namespace covered
         return has_victim_key;
     }
 
-    bool LrbLocalCache::evictLocalCacheWithGivenKeyInternal_(const Key& key, Value& value)
+    bool FrozenhotLocalCache::evictLocalCacheWithGivenKeyInternal_(const Key& key, Value& value)
     {        
         assert(hasFineGrainedManagement());
 
-        const std::string keystr = key.getKeystr();
-        std::string valuestr = "";
-        bool is_evict = lrb_cache_ptr_->evict(keystr, valuestr);
-        value = Value(valuestr.length());
+        bool is_evict = frozenhot_cache_ptr_->evict(key, value);
 
         return is_evict;
     }
 
-    void LrbLocalCache::evictLocalCacheNoGivenKeyInternal_(std::unordered_map<Key, Value, KeyHasher>& victims, const uint64_t& required_size)
+    void FrozenhotLocalCache::evictLocalCacheNoGivenKeyInternal_(std::unordered_map<Key, Value, KeyHasher>& victims, const uint64_t& required_size)
     {
         assert(!hasFineGrainedManagement());
 
@@ -180,7 +173,7 @@ namespace covered
 
     // (4) Other functions
 
-    void LrbLocalCache::invokeCustomFunctionInternal_(const std::string& func_name, CustomFuncParamBase* func_param_ptr)
+    void FrozenhotLocalCache::invokeCustomFunctionInternal_(const std::string& func_name, CustomFuncParamBase* func_param_ptr)
     {
         std::ostringstream oss;
         oss << "invokeCustomFunctionInternal_() does NOT support func_name " << func_name;
@@ -207,25 +200,16 @@ namespace covered
         return;
     }
 
-    void LrbLocalCache::checkPointersInternal_() const
+    void FrozenhotLocalCache::checkPointersInternal_() const
     {
-        assert(lrb_cache_ptr_ != NULL);
+        assert(frozenhot_cache_ptr_ != NULL);
         return;
     }
 
-    bool LrbLocalCache::checkObjsizeInternal_(const ObjectSize& objsize) const
+    bool FrozenhotLocalCache::checkObjsizeInternal_(const ObjectSize& objsize) const
     {
         // NOTE: capacity has been checked by LocalCacheBase, while NO other custom object size checking here
         const bool is_valid_objsize = true;
         return is_valid_objsize;
     }
-
-    SimpleRequest LrbLocalCache::buildRequest_(const Key& key, const Value& value)
-    {
-        const int64_t objsize = key.getKeyLength() + value.getValuesize();
-        SimpleRequest req(0, objsize, true, key.getKeystr(), value.generateValuestr());
-
-        return req;
-    }
-
 }

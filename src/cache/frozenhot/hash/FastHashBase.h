@@ -14,8 +14,9 @@ namespace covered
 
         virtual void thread_init(int tid) {}
 
-        // Siyuan: for in-place update (insert-after-remove)
+        // Siyuan: additional required interfaces
         virtual bool remove(TKey idx, TValue& value) = 0;
+        virtual bool update(TKey idx, TValue value, TValue& original_value) = 0;
 
         virtual void clear() = 0;
     };

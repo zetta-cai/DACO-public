@@ -58,6 +58,10 @@ namespace covered
 
         virtual bool insert(const TKey& key, const TValue& value) = 0;
 
+        // Siyuan: for fine-grained eviction
+        virtual bool findVictimKey(TKey& key) = 0;
+        virtual bool evict(const TKey& key, TValue& value) = 0;
+
         virtual void delete_key(const TKey& key) {}
 
         // fast_find_hit_latency_ fh hit

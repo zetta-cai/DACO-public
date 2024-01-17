@@ -44,13 +44,20 @@ namespace covered
 	   return true;
 	};
 
-	// Siyuan: for in-place update (insert-after-remove)
+	// Siyuan: additional required interfaces
 	virtual bool remove(TKey idx, TValue& value)
 	{
 		clht_val_t v = clht_remove(m_hashtable, (clht_addr_t)idx);
 		if (v == 0 || v == false) return false;
 		value.reset((std::string*)v, [](auto p) {});
 		return true;
+	}
+	bool update(TKey idx, TValue value, TValue& original_value)
+	{
+		// NOTE: CLHT does NOT provide atomic semantics to update value of existing key
+		// TODO: Use insert-after-remove to implement update, which may need additional locking for atomicity
+		remove(idx, original_value);
+		return insert(idx, value);
 	}
 
 	virtual void clear() {
