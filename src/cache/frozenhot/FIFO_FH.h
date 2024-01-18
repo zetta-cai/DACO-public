@@ -37,11 +37,13 @@
 #define MARKER_KEY TKey("MARKER_KEY") // Siyuan: "MARKER_KEY" is reserved for marker key
 #define SPECIAL_KEY TKey("SPECIAL_KEY") // Siyuan: "SPECIAL_KEY" is reserved for special key
 #define TOMB_KEY TKey("TOMB_KEY") // Siyuan: "TOMB_KEY" is reserved for tomb key
-//#define FC_RELAXATION 20 // TODO @ Ziyue: remove it later, could be 0 with careful design
-#define FC_RELAXATION 0 // Siyuan: extremely tricky magic number -> just set it as 0!!!
 
 #include "cache/frozenhot/hash/hash_header.h" // Siyuan: src/cache/frozenhot/hash/hash_header.h for covered::FashHashAPI
 #include "cache/frozenhot/FHCache.h" // Siyuan: src/cache/frozenhot/FHCache.h for covered::FHCacheAPI
+
+/* in high concurrency, no need to be too accurate */
+//#define FC_RELAXATION 20 // TODO @ Ziyue: remove it later, could be 0 with careful design
+#define FC_RELAXATION 0 // Siyuan: extremely tricky magic number -> just set it as 0!!!
 
 namespace covered {
 /**
@@ -238,7 +240,7 @@ class FIFO_FHCache : public covered::FHCacheAPI<TKey, TValue, THash> { // Siyuan
    * Evict the least-recently used item from the container. This function does
    * its own locking.
    */
-  // bool evict(); // Siyuan: comment out since not used
+  //bool evict(); // Siyuan: comment out since not used
 
   // Siyuan: for fine-grained eviction
   virtual bool findVictimKey(TKey& key);
@@ -258,14 +260,31 @@ class FIFO_FHCache : public covered::FHCacheAPI<TKey, TValue, THash> { // Siyuan
 
   // Siyuan: for correct cache size usage calculation
   uint64_t capacity_bytes;
-  std::atomic<uint64_t> dckv_used_bytes; // Siyuan: for FC ratio adjustment (ONLY including DC key-value)
+  std::atomic<uint64_t> fckv_used_bytes; // Siyuan: for FC deconstruct (ONLY including FC key-value of m_fasthash)
+  std::atomic<uint64_t> dckv_used_bytes; // Siyuan: for FC ratio adjustment (ONLY including DC key-value of m_map; excluding list pointers)
   std::atomic<uint64_t> total_used_bytes; // Siyuan: for capacity restriction (including LRU list, DC key-value-listptr, and FC key-value)
+  void increase_fckv_and_total_used_bytes(uint64_t bytes) {
+    fckv_used_bytes.fetch_add(bytes);
+    increase_total_used_bytes(bytes);
+  }
   void increase_dckv_and_total_used_bytes(uint64_t bytes) {
     dckv_used_bytes.fetch_add(bytes);
     increase_total_used_bytes(bytes);
   }
   void increase_total_used_bytes(uint64_t bytes) {
     total_used_bytes.fetch_add(bytes);
+  }
+  void decrease_fckv_and_total_used_bytes(uint64_t bytes) {
+    if (fckv_used_bytes.load() > bytes)
+    {
+      fckv_used_bytes.fetch_sub(bytes);
+    }
+    else
+    {
+      fckv_used_bytes.store(0);
+    }
+
+    decrease_total_used_bytes(bytes);
   }
   void decrease_dckv_and_total_used_bytes(uint64_t bytes) {
     if (dckv_used_bytes.load() > bytes)
@@ -311,9 +330,10 @@ class FIFO_FHCache : public covered::FHCacheAPI<TKey, TValue, THash> { // Siyuan
   bool fast_hash_construct = false;
   std::atomic<bool> tier_no_insert{false};
   std::atomic<bool> curve_flag{false};
-  std::atomic<size_t> movement_counter{0};
+  //std::atomic<size_t> movement_counter{0};
   //std::atomic<size_t> eviction_counter{0};
-  std::atomic<size_t> eviction_bytes_counter{0}; // Siyuan: fix impractical input of max # of objects
+  std::atomic<uint64_t> movement_bytes_counter{0}; // Siyuan: fix impractical input of max # of objects
+  std::atomic<uint64_t> eviction_bytes_counter{0}; // Siyuan: fix impractical input of max # of objects
 
   size_t unreachable_counter = 0;
 
@@ -331,6 +351,7 @@ FIFO_FHCache<TKey, TValue, THash>::FIFO_FHCache(size_t maxSize, uint64_t capacit
     : //m_maxSize(maxSize), // Siyuan: impractical input
       m_size(0),
       capacity_bytes(capacityBytes),
+      fckv_used_bytes(0),
       dckv_used_bytes(0),
       total_used_bytes(0),
       m_map(std::thread::hardware_concurrency() *
@@ -433,7 +454,7 @@ bool FIFO_FHCache<TKey, TValue, THash>::construct_ratio(double FC_ratio) {
     // Node exists
     m_fasthash->insert(temp_node->m_key, temp_hashAccessor->second.m_value);
     // Siyuan: for correct cache size usage calculation
-    increase_total_used_bytes(temp_node->m_key.getKeyLength() + temp_hashAccessor->second.m_value.getValuesize());
+    increase_fckv_and_total_used_bytes(temp_node->m_key.getKeyLength() + temp_hashAccessor->second.m_value.getValuesize());
     temp_node = temp_node->m_next;
 
     // cutoff FC list, in two cases
@@ -583,7 +604,7 @@ bool FIFO_FHCache<TKey, TValue, THash>::construct_tier() {
     // Insert the valid node to Frozen
     m_fasthash->insert(temp_node->m_key, temp_hashAccessor->second.m_value);
     // Siyuan: for correct cache size usage calculation
-    increase_total_used_bytes(temp_node->m_key.getKeyLength() + temp_hashAccessor->second.m_value.getValuesize());
+    increase_fckv_and_total_used_bytes(temp_node->m_key.getKeyLength() + temp_hashAccessor->second.m_value.getValuesize());
     // Siyuan: fix impractical input of max # of objects
     //count++;
     bytes += temp_node->m_key.getKeyLength() + temp_hashAccessor->second.m_value.getValuesize();
@@ -678,6 +699,7 @@ void FIFO_FHCache<TKey, TValue, THash>::deconstruct() {
   
   // Clear the frozen hashtable
   m_fasthash->clear();
+  decrease_fckv_and_total_used_bytes(fckv_used_bytes.load()); // Siyuan: for correct cache size usage calculation
 }
 
 // Siyuan: check existence of a given key yet not update any cache metadata
@@ -785,7 +807,8 @@ bool FIFO_FHCache<TKey, TValue, THash>::find(TValue& ac,
         if(stat_yes){
           FIFO_FHCache::end_to_end_find_succ++;
         }
-        movement_counter++;
+        //movement_counter++;
+        movement_bytes_counter.fetch_add(key.getKeyLength() + ac.getValuesize()); // Siyuan: fix impractical input of max # of objects
         node->m_time = SPDK_TIME;
         std::unique_lock<ListMutex> lock(m_listMutex);
         if(node->isInList()) {
@@ -854,6 +877,16 @@ bool FIFO_FHCache<TKey, TValue, THash>::update(const TKey& key, const TValue& va
   // NOTE: tbb::concurrent_hash_map is already concurrent hashmap
   hashAccessor->second.m_value = value; // Siyuan: note that hashAccessor already acquires a write lock for the given key
 
+  // Siyuan: for correct cache size usage calculation
+  if (value.getValuesize() > original_value.getValuesize())
+  {
+    increase_dckv_and_total_used_bytes(value.getValuesize() - original_value.getValuesize());
+  }
+  else if (value.getValuesize() < original_value.getValuesize())
+  {
+    decrease_dckv_and_total_used_bytes(original_value.getValuesize() - value.getValuesize());
+  }
+
   // If we are not constructing the frozen, then we need to update the list for recency
   if(!fast_hash_construct) { // Siyuan: note that the following original code simply disables cache metadata update (marker in FIFO list) during frozen cache construction as linked list does not support concurrent access
     ListNode* node = hashAccessor->second.m_listNode;
@@ -869,7 +902,8 @@ bool FIFO_FHCache<TKey, TValue, THash>::update(const TKey& key, const TValue& va
         if(stat_yes){
           FIFO_FHCache::end_to_end_find_succ++;
         }
-        movement_counter++;
+        //movement_counter++;
+        movement_bytes_counter.fetch_add(key.getKeyLength() + original_value.getValuesize()); // Siyuan: fix impractical input of max # of objects
         node->m_time = SPDK_TIME;
         std::unique_lock<ListMutex> lock(m_listMutex);
         if(node->isInList()) {
@@ -929,10 +963,21 @@ bool FIFO_FHCache<TKey, TValue, THash>::update(const TKey& key, const TValue& va
 
       // Siyuan: support in-place update
       // NOTE: m_fasthash (CLHT or TbbCHT) are already concurrent hashmap
-      bool unused_is_exist = m_fasthash->update(key, value, unused_value); // Siyuan: note that unused_value will NOT be changed if NOT exist
-      UNUSED(unused_is_exist);
+      bool is_exist = m_fasthash->update(key, value, unused_value); // Siyuan: note that unused_value will NOT be changed if NOT exist
+      // Siyuan: for correct cache size usage calculation
+      if (is_exist)
+      {
+        if (value.getValuesize() > original_value.getValuesize())
+        {
+          increase_fckv_and_total_used_bytes(value.getValuesize() - original_value.getValuesize());
+        }
+        else if (value.getValuesize() < original_value.getValuesize())
+        {
+          decrease_fckv_and_total_used_bytes(original_value.getValuesize() - value.getValuesize());
+        }
+      }
 
-      //return true; // Siyuan: already found in DC, should return true no matter unused_is_exist = true or false
+      //return true; // Siyuan: already found in DC, should return true no matter is_exist = true or false
     }
     else { // Not found in frozen
       if(tier_ready){ // If we only have frozen, then cache miss anyway
@@ -971,7 +1016,8 @@ bool FIFO_FHCache<TKey, TValue, THash>::get_curve(bool& should_stop) {
   lockA.unlock();
 
   assert(FIFO_FHCache::curve_container.size() == 0);
-  size_t FC_size = 0;
+  //size_t FC_size = 0;
+  uint64_t FC_bytes = 0; // Siyuan: fix impractical input of max # of objects
   auto start_time = SSDLOGGING_TIME_NOW;
   
   // why 45 loops:
@@ -983,19 +1029,24 @@ bool FIFO_FHCache<TKey, TValue, THash>::get_curve(bool& should_stop) {
       FIFO_FHCache::get_step(temp_hit, temp_miss); // get the hit and miss ratio data for
                                                    // last period of time (step)
                                                    
-      FC_size = movement_counter.load(); // movement counter: how far the marker is 
+      //FC_size = movement_counter.load(); // movement counter: how far the marker is 
                                          // pushed forward by DC HIT
+      FC_bytes = movement_bytes_counter.load(); // Siyuan: fix impractical input of max # of objects
                                          
       //if(temp_hit + temp_miss > 0.98 && FC_size > m_maxSize * 0.2){
       if(temp_hit + temp_miss > 0.993){ // a magic number; but actually for early stop
         break;
       }
-    }while(FC_size <= m_maxSize * i * 1.0/100 * 2 && !should_stop); // use 2% as the step size
+    //}while(FC_size <= m_maxSize * i * 1.0/100 * 2 && !should_stop); // use 2% as the step Size
+    }while(FC_bytes <= capacity_bytes * i * 1.0/100 * 2 && !should_stop); // Siyuan: fix impractical input of max # of objects
     
     // Message printing and calculate FC ratio from size (marker movements)
     printf("\ncurve pass %lu\n", pass_counter++);
-    double FC_ratio = FC_size * 1.0 / m_maxSize;
-    printf("FC_size: %lu (FC_ratio: %.3lf)\n", FC_size, FC_ratio);
+    // double FC_ratio = FC_size * 1.0 / m_maxSize;
+    // printf("FC_size: %lu (FC_ratio: %.3lf)\n", FC_size, FC_ratio);
+    // Siyuan: fix impractical input of max # of objects
+    double FC_ratio = FC_bytes * 1.0 / capacity_bytes;
+    printf("FC_bytes: %llu (FC_ratio: %.3lf)\n", FC_bytes, FC_ratio);
     double FC_hit = 0, miss = 1;
     FIFO_FHCache::print_step(FC_hit, miss);
     auto curr_time = SSDLOGGING_TIME_NOW;
@@ -1016,6 +1067,7 @@ bool FIFO_FHCache<TKey, TValue, THash>::get_curve(bool& should_stop) {
     // curve_container is a place to STORE each time we try to look at potential FC status
     // STORE FC ratio, FC hit and miss (DC hit = 1 - (FC_hit + miss))
     // By potential, since we only have the marker but the cache is not yet frozen
+    // Siyuan: note that we do NOT count cache size usage of curve_container, as it only contains up to 45 elements and will be cleared by ConcurrentScalableCache outside FIFO_FHCache
     FIFO_FHCache::curve_container.insert(FIFO_FHCache::curve_container.end(), curve_data_node(FC_ratio, FC_hit, miss));
   }
   FIFO_FHCache::sample_flag = true;
@@ -1028,7 +1080,8 @@ bool FIFO_FHCache<TKey, TValue, THash>::get_curve(bool& should_stop) {
   lockB.unlock();
   delete(m_marker);
   m_marker = nullptr;
-  movement_counter = 0;
+  //movement_counter = 0;
+  movement_bytes_counter = 0; // Siyuan: fix impractical input of max # of objects
 
   return true;
 }
@@ -1064,7 +1117,7 @@ bool FIFO_FHCache<TKey, TValue, THash>::insert(const TKey& key,
   // if(fast_hash_construct)
   //   eviction_counter++;
   if(fast_hash_construct)
-    eviction_bytes_counter += (key.getKeyLength() + value.getValuesize());
+    eviction_bytes_counter.fetch_add(key.getKeyLength() + value.getValuesize());
     
   // Evict if necessary, now that we know the hashmap insertion was successful.
   size_t s = m_size.load();
