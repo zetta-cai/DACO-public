@@ -1,5 +1,5 @@
 /*
- * S3fifoCachePolicy: refer to Algorithm 1 in original paper and lib/s3fifo/libCacheSim/libCacheSim/cache/eviction/S3FIFO.c, yet directly reimplement in C++ due to simplicity of S3FIFO to escape the dependency on libcachesim and fix libcachesim limitations (only metadata operations + fixed-length uint64_t key).
+ * S3fifoCachePolicy: refer to Algorithm 1 in original paper and lib/s3fifo/libCacheSim/libCacheSim/cache/eviction/S3FIFO.c, yet directly reimplement in C++ due to simplicity of S3FIFO to escape the dependency on libcachesim and fix libcachesim limitations (only metadata operations + fixed-length uint64_t key + insufficient cache size usage calculation).
  *
  * Hack to support key-value caching, required interfaces, and cache size in units of bytes for capacity constraint.
  * 

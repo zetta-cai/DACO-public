@@ -19,11 +19,11 @@
 
 // Siyuan: disable most dump information by default
 //#define DEBUG_COVERED_incl_FIFO_CACHE_FH_H
-#ifndef MYPRINTF
+#ifndef LRU_PRTINF
 #ifdef DEBUG_COVERED_incl_LRU_CACHE_FH_H
-#define MYPRINTF(...) MYPRINTF(__VA_ARGS__)
+#define LRU_PRTINF(...) printf(__VA_ARGS__)
 #else
-#define MYPRINTF(...)
+#define LRU_PRTINF(...)
 #endif
 #endif
 
@@ -426,7 +426,7 @@ bool LRU_FHCache<TKey, TValue, THash>::construct_ratio(double FC_ratio) {
   // Siyuan: fix impractical input of max # of objects
   uint64_t FC_bytes = FC_ratio * capacity_bytes;
   uint64_t DC_bytes = capacity_bytes - FC_bytes;
-  MYPRINTF("FC_size: %llu, DC_size: %llu\n", FC_bytes, DC_bytes);
+  LRU_PRTINF("FC_size: %llu, DC_size: %llu\n", FC_bytes, DC_bytes);
   uint64_t fail_bytes = 0, bytes = 0;
 
   /* "first pass flag" is used to avoid inconsistency
@@ -513,10 +513,10 @@ bool LRU_FHCache<TKey, TValue, THash>::construct_ratio(double FC_ratio) {
   //   printf("fast hash insert num: %lu, m_size: %ld (FC_ratio: %.2lf)\n", 
   //       count, m_size.load(), count*1.0/m_size.load());
   if(fail_bytes > 0)
-    MYPRINTF("fast hash insert num: %lu, fail bytes: %lu, dckv_used_bytes: %ld (FC_ratio: %.2lf)\n", 
+    LRU_PRTINF("fast hash insert num: %lu, fail bytes: %lu, dckv_used_bytes: %ld (FC_ratio: %.2lf)\n", 
         bytes, fail_bytes, dckv_used_bytes.load(), bytes*1.0/dckv_used_bytes.load());
   else
-    MYPRINTF("fast hash insert bytes: %lu, dckv_used_bytes: %ld (FC_ratio: %.2lf)\n", 
+    LRU_PRTINF("fast hash insert bytes: %lu, dckv_used_bytes: %ld (FC_ratio: %.2lf)\n", 
         bytes, dckv_used_bytes.load(), bytes*1.0/dckv_used_bytes.load());
   
   fast_hash_ready = true;
@@ -596,7 +596,7 @@ bool LRU_FHCache<TKey, TValue, THash>::construct_tier() {
   // Siyuan: fix impractical input of max # of objects
   // printf("fast hash insert num: %d, m_size: %ld (FC_ratio: %.2lf)\n", 
   //     count, m_size.load(), count*1.0/m_size.load());
-  MYPRINTF("fast hash insert bytes: %d, dckv_used_bytes: %ld (FC_ratio: %.2lf)\n", 
+  LRU_PRTINF("fast hash insert bytes: %d, dckv_used_bytes: %ld (FC_ratio: %.2lf)\n", 
       bytes, dckv_used_bytes.load(), bytes*1.0/dckv_used_bytes.load());
   tier_ready = true;
   fast_hash_construct = false;
@@ -613,7 +613,7 @@ void LRU_FHCache<TKey, TValue, THash>::debug(int status) {
       assert(temp != nullptr);
       temp = temp->m_next;
     }
-    MYPRINTF("Main LRU list Size: %d, m_size: %ld\n", count, m_size.load());
+    LRU_PRTINF("Main LRU list Size: %d, m_size: %ld\n", count, m_size.load());
   }
   else if(status == 1){
     ListNode* temp = m_fast_head.m_next;
@@ -623,7 +623,7 @@ void LRU_FHCache<TKey, TValue, THash>::debug(int status) {
       assert(temp != nullptr);
       temp = temp->m_next;
     }
-    MYPRINTF("Fast LRU list Size: %d, m_size: %ld\n", count, m_size.load());
+    LRU_PRTINF("Fast LRU list Size: %d, m_size: %ld\n", count, m_size.load());
   }
   else if(status == 2){
     std::unique_lock<ListMutex> lock(m_listMutex);
@@ -634,7 +634,7 @@ void LRU_FHCache<TKey, TValue, THash>::debug(int status) {
       assert(temp != nullptr);
       temp = temp->m_next;
     }
-    MYPRINTF("Main LRU list Size: %d, m_size: %ld\n", count, m_size.load());
+    LRU_PRTINF("Main LRU list Size: %d, m_size: %ld\n", count, m_size.load());
   }
 }
 
@@ -643,7 +643,7 @@ void LRU_FHCache<TKey, TValue, THash>::deconstruct() {
   // assert(fast_hash_ready == false && tier_ready == false);
   assert(!((m_fast_head.m_next == &m_fast_tail) ^ (m_fast_tail.m_prev == &m_fast_head)));
   if(m_fast_head.m_next == &m_fast_tail){
-    MYPRINTF("no need to deconstruct!\n");
+    LRU_PRTINF("no need to deconstruct!\n");
     fflush(stdout);
     return;
   }
@@ -972,16 +972,16 @@ bool LRU_FHCache<TKey, TValue, THash>::get_curve(bool& should_stop) {
     //}while(FC_size <= m_maxSize * i * 1.0/100 * 2 && !should_stop);
     }while(FC_bytes <= capacity_bytes * i * 1.0/100 * 2 && !should_stop); // Siyuan: fix impractical input of max # of objects
     
-    MYPRINTF("\ncurve pass %lu\n", pass_counter++);
+    LRU_PRTINF("\ncurve pass %lu\n", pass_counter++);
     // double FC_ratio = FC_size * 1.0 / m_maxSize;
     // printf("FC_size: %lu (FC_ratio: %.3lf)\n", FC_size, FC_ratio);
     // Siyuan: fix impractical input of max # of objects
     double FC_ratio = FC_bytes * 1.0 / capacity_bytes;
-    MYPRINTF("FC_bytes: %llu (FC_ratio: %.3lf)\n", FC_bytes, FC_ratio);
+    LRU_PRTINF("FC_bytes: %llu (FC_ratio: %.3lf)\n", FC_bytes, FC_ratio);
     double FC_hit = 0, miss = 1;
     LRU_FHCache::print_step(FC_hit, miss);
     auto curr_time = SSDLOGGING_TIME_NOW;
-    MYPRINTF("duration: %.3lf ms\n", SSDLOGGING_TIME_DURATION(start_time, curr_time)/1000);
+    LRU_PRTINF("duration: %.3lf ms\n", SSDLOGGING_TIME_DURATION(start_time, curr_time)/1000);
     start_time = curr_time;
     fflush(stdout);
     if(FC_hit + miss > 0.992 || FC_ratio > 0.9){
@@ -993,7 +993,7 @@ bool LRU_FHCache<TKey, TValue, THash>::get_curve(bool& should_stop) {
   }
   LRU_FHCache::sample_flag = true;
 
-  MYPRINTF("\ncurve container size: %lu\n", LRU_FHCache::curve_container.size());
+  LRU_PRTINF("\ncurve container size: %lu\n", LRU_FHCache::curve_container.size());
   std::unique_lock<ListMutex> lockB(m_listMutex);
   curve_flag = false;
   delink(m_marker);

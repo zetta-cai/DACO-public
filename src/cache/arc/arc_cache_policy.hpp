@@ -1,20 +1,22 @@
 /*
- * SieveCachePolicy: refer to Algorithm 1 in original paper and lib/s3fifo/libCacheSim/libCacheSim/cache/eviction/Sieve.c, yet directly reimplement in C++ due to simplicity of SIEVE to escape the dependency on libcachesim and fix libcachesim limitations (only metadata operations + fixed-length uint64_t key + insufficient cache size usage calculation).
+ * ArcCachePolicy: refer to Algorithm ARC(c) in original paper and lib/s3fifo/libCacheSim/libCacheSim/cache/eviction/ARC.c, yet directly reimplement in C++ due to simplicity of ARC to escape the dependency on libcachesim and fix libcachesim limitations (only metadata operations + fixed-length uint64_t key + insufficient cache size usage calculation).
  *
  * Hack to support key-value caching, required interfaces, and cache size in units of bytes for capacity constraint.
  * 
  * NOTE: NO need to use optimized data structures, as system bottleneck is network propagation latency in geo-distributed edge settings.
  * 
- * By Siyuan Sheng (2024.01.03).
+ * By Siyuan Sheng (2024.01.18).
  */
 
-#ifndef SIEVE_CACHE_POLICY_HPP
-#define SIEVE_CACHE_POLICY_HPP
+#ifndef ARC_CACHE_POLICY_HPP
+#define ARC_CACHE_POLICY_HPP
 
 #include <list>
 #include <unordered_map>
 
 #include "common/util.h"
+
+// TODO: END HERE
 
 namespace covered
 {

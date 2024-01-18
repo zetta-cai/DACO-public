@@ -1,7 +1,18 @@
 #ifndef COVERED_incl_FH_CACHE_H
 #define COVERED_incl_FH_CACHE_H
 
-#include <ssdlogging/util.h> // Siyuan: lib/frozenhot/ssdlogging/util.h
+// Siyuan: disable most dump information by default
+//#define DEBUG_COVERED_incl_FIFO_CACHE_FH_H
+#ifndef FHCACHE_PRINTF
+#ifdef COVERED_incl_FH_CACHE_H
+#define FHCACHE_PRINTF(...) printf(__VA_ARGS__)
+#else
+#define FHCACHE_PRINTF(...)
+#endif
+#endif
+
+//#include <ssdlogging/util.h> // Siyuan: lib/frozenhot/ssdlogging/util.h
+#include "cache/frozenhot/ssdlogging/util.h" // Siyuan: src/cache/frozenhot/ssdlogging/util.h to disable unnecessary dump information
 //#include <cache/cache.h> // Siyuan: lib/frozenhot/cache/cache.h
 
 #include "cache/frozenhot/cache.h" // Siyuan: src/cache/frozenhot/cache.h for covered::CacheAPI
@@ -121,8 +132,8 @@ namespace covered
                 temp = 1 - fast_hit * 1.0/total;
                 global_miss = insert_num*1.0/total;
             }
-            printf("miss ratio: %.5f / %.5f\n", temp, global_miss);
-            printf("fast find hit: %ld, global hit: %ld, global miss: %ld, total insert: %ld\n", 
+            FHCACHE_PRINTF("miss ratio: %.5f / %.5f\n", temp, global_miss);
+            FHCACHE_PRINTF("fast find hit: %ld, global hit: %ld, global miss: %ld, total insert: %ld\n", 
                 fast_hit, o_hit, miss, insert_num);
             fflush(stdout);
 
@@ -148,8 +159,8 @@ namespace covered
                 temp = 1 - fast_hit * 1.0/total;
                 global_miss = insert_num*1.0/total;
             }
-            printf("miss ratio: %.5f / %.5f\n", temp, global_miss);
-            printf("fast find hit: %ld, global hit: %ld, global miss: %ld, total insert: %ld\n", 
+            FHCACHE_PRINTF("miss ratio: %.5f / %.5f\n", temp, global_miss);
+            FHCACHE_PRINTF("fast find hit: %ld, global hit: %ld, global miss: %ld, total insert: %ld\n", 
                 fast_hit, o_hit, miss, insert_num);
             fflush(stdout);
 
@@ -177,7 +188,7 @@ namespace covered
         }
 
         virtual double print_reset_fast_hash() override {
-            printf("fast find hit: %ld, global hit: %ld, global miss: %ld\n", 
+            FHCACHE_PRINTF("fast find hit: %ld, global hit: %ld, global miss: %ld\n", 
                 fast_find_hit.load(), end_to_end_find_succ.load(), tbb_find_miss.load());
             double temp, global_miss, total;
             total = fast_find_hit.load()+tbb_find_miss.load()+end_to_end_find_succ.load();
@@ -189,7 +200,7 @@ namespace covered
                 temp = 1 - fast_find_hit.load() * 1.0/total;
                 global_miss = tbb_find_miss.load()*1.0/total;
             }
-            printf("miss ratio: %.5f / %.5f\n", temp, global_miss);
+            FHCACHE_PRINTF("miss ratio: %.5f / %.5f\n", temp, global_miss);
             fast_find_hit = 0;
             tbb_find_miss = 0;
             end_to_end_find_succ = 0;
@@ -207,8 +218,8 @@ namespace covered
                 temp = 1 - fast_find_hit.load() * 1.0 / total;
                 global_miss = tbb_find_miss.load() * 1.0 / total;
             }
-            printf("miss ratio: %.5f / %.5f\n", temp, global_miss);
-            printf("fast find hit: %ld, global hit: %ld, global miss: %ld\n", 
+            FHCACHE_PRINTF("miss ratio: %.5f / %.5f\n", temp, global_miss);
+            FHCACHE_PRINTF("fast find hit: %ld, global hit: %ld, global miss: %ld\n", 
                 fast_find_hit.load(), end_to_end_find_succ.load(), tbb_find_miss.load());
             fflush(stdout);
             return temp;
@@ -258,7 +269,7 @@ namespace covered
             if(!CacheBase::sample_flag)
                 return true;
             else
-                return ((double)(ssdlogging::random::Random::GetTLSInstance()->Next()) / (double)(RAND_MAX)) < sample_percentage;
+                return ((double)(covered::random::Random::GetTLSInstance()->Next()) / (double)(RAND_MAX)) < sample_percentage;
         }
 
         std::atomic<size_t> fast_find_hit{0};

@@ -19,11 +19,11 @@
 
 // Siyuan: disable most dump information by default
 //#define DEBUG_COVERED_HHVM_SCALABLE_CACHE
-#ifndef MYPRINTF
+#ifndef HHVM_PRTINF
 #ifdef DEBUG_COVERED_HHVM_SCALABLE_CACHE
-#define MYPRINTF(...) MYPRINTF(__VA_ARGS__)
+#define HHVM_PRTINF(...) printf(__VA_ARGS__)
 #else
-#define MYPRINTF(...)
+#define HHVM_PRTINF(...)
 #endif
 #endif
 
@@ -203,10 +203,10 @@ struct ConcurrentScalableCache {
 private:
   // Siyuan: move global variables here
   bool should_stop = false;
-  //ssdlogging::statistics::MySet request_latency_;
-  ssdlogging::statistics::MySet total_hit_latency_;
-  ssdlogging::statistics::MySet total_other_latency_;
-  ssdlogging::statistics::MySet req_latency_[16];
+  //covered::statistics::MySet request_latency_;
+  covered::statistics::MySet total_hit_latency_;
+  covered::statistics::MySet total_other_latency_;
+  covered::statistics::MySet req_latency_[16];
   std::chrono::_V2::system_clock::time_point cursor;
   size_t print_step_counter = 0;
 
@@ -453,22 +453,22 @@ getSizeForCapacity() {
 template <class TKey, class TValue, class THash>
 void ConcurrentScalableCache<TKey, TValue, THash>::
 PrintStat(){
-  //MYPRINTF("Size: %lu, %.2lf GB\n", size(), size()*4.0/1000000);
+  //HHVM_PRTINF("Size: %lu, %.2lf GB\n", size(), size()*4.0/1000000);
   size_t total_hit = 0, total_miss = 0;
   for (size_t i = 0; i < m_numShards; i++) {
-    MYPRINTF("cache No.%ld size %ld\n", i, m_shards[i]->size());
+    HHVM_PRTINF("cache No.%ld size %ld\n", i, m_shards[i]->size());
     size_t hit_num = 0, miss_num = 0;
     m_shards[i]->PrintStat(hit_num, miss_num);
     total_hit += hit_num;
     total_miss += miss_num;
   }
   if(total_hit + total_miss != 0)
-    MYPRINTF("Total hit rate: %.4lf, hit num: %lu, miss num: %lu\n", 
+    HHVM_PRTINF("Total hit rate: %.4lf, hit num: %lu, miss num: %lu\n", 
                   total_hit*1.0/(total_hit+total_miss), total_hit, total_miss);
   // else
-  //   MYPRINTF("Total no hit & no miss stat\n");
+  //   HHVM_PRTINF("Total no hit & no miss stat\n");
 
-  MYPRINTF("numShards: %lu\n", m_numShards);
+  HHVM_PRTINF("numShards: %lu\n", m_numShards);
 }
 
 template <class TKey, class TValue, class THash>
@@ -484,7 +484,7 @@ PrintMissRatio(){
   double temp = 1;
   if(total_hit + total_miss != 0){
     temp = total_miss*1.0/(total_hit+total_miss);
-    MYPRINTF("Total miss rate: %.4lf, hit num: %lu, miss num: %lu\n", 
+    HHVM_PRTINF("Total miss rate: %.4lf, hit num: %lu, miss num: %lu\n", 
                   temp, total_hit, total_miss);
     fflush(stdout);
   }
@@ -511,8 +511,8 @@ PrintFrozenStat(){
   else {
       temp = 1 - total_FH_hit * 1.0/total;
       global_miss = total_miss*1.0/total;
-      MYPRINTF("Total miss rate: %.5f / %.5f, ", temp, global_miss);
-      MYPRINTF("fast find hit: %ld, global hit: %ld, global miss: %ld\n", 
+      HHVM_PRTINF("Total miss rate: %.5f / %.5f, ", temp, global_miss);
+      HHVM_PRTINF("fast find hit: %ld, global hit: %ld, global miss: %ld\n", 
           total_FH_hit, total_O_hit, total_miss);
   }
   //return temp;
@@ -522,13 +522,13 @@ template <class TKey, class TValue, class THash>
 void ConcurrentScalableCache<TKey, TValue, THash>::
 PrintGlobalLat(){
   size_t hit_num = 0, other_num = 0;
-  MYPRINTF("- Hit ");
+  HHVM_PRTINF("- Hit ");
   auto avg_hit = total_hit_latency_.print_tail(hit_num);
-  MYPRINTF("- Other ");
+  HHVM_PRTINF("- Other ");
   auto avg_other = total_other_latency_.print_tail(other_num);
   
   auto total_num = hit_num+other_num;
-  MYPRINTF("Total Avg Lat: %.3lf (size: %lu, miss ratio: %.6lf)\n", 
+  HHVM_PRTINF("Total Avg Lat: %.3lf (size: %lu, miss ratio: %.6lf)\n", 
       (avg_hit*hit_num+avg_other*other_num)/total_num, 
       total_num, other_num*1.0/total_num);
   fflush(stdout);
@@ -543,14 +543,14 @@ double ConcurrentScalableCache<TKey, TValue, THash>::
 PrintStepLat(){
   size_t hit_num = 0, other_num = 0;
   auto curr_time = SSDLOGGING_TIME_NOW;
-  MYPRINTF("- Hit ");
+  HHVM_PRTINF("- Hit ");
   auto avg_hit = total_hit_latency_.print_from_last_end(hit_num);
-  MYPRINTF("- Other ");
+  HHVM_PRTINF("- Other ");
   auto avg_other = total_other_latency_.print_from_last_end(other_num);
   
   auto total_num = hit_num+other_num;
   auto temp = (avg_hit*hit_num+avg_other*other_num)/total_num;
-  MYPRINTF("Total Avg Lat: %.3lf (size: %lu, duration: %.5lf s, approx miss rate: %.4lf)\n",
+  HHVM_PRTINF("Total Avg Lat: %.3lf (size: %lu, duration: %.5lf s, approx miss rate: %.4lf)\n",
     temp, total_num, SSDLOGGING_TIME_DURATION(cursor, curr_time)/1000/1000, other_num*1.0/total_num);
   cursor = curr_time;
   return temp;
@@ -569,14 +569,14 @@ double ConcurrentScalableCache<TKey, TValue, THash>::
 PrintStepLat(size_t& total_num){
   size_t hit_num = 0, other_num = 0;
   auto curr_time = SSDLOGGING_TIME_NOW;
-  MYPRINTF("- Hit ");
+  HHVM_PRTINF("- Hit ");
   auto avg_hit = total_hit_latency_.print_from_last_end(hit_num);
-  MYPRINTF("- Other ");
+  HHVM_PRTINF("- Other ");
   auto avg_other = total_other_latency_.print_from_last_end(other_num);
   
   total_num = hit_num+other_num;
   auto temp = (avg_hit*hit_num+avg_other*other_num)/total_num;
-  MYPRINTF("Total Avg Lat: %.3lf (size: %lu, duration: %.5lf s, approx miss rate: %.4lf)\n",
+  HHVM_PRTINF("Total Avg Lat: %.3lf (size: %lu, duration: %.5lf s, approx miss rate: %.4lf)\n",
     temp, total_num, SSDLOGGING_TIME_DURATION(cursor, curr_time)/1000/1000, other_num*1.0/total_num);
   cursor = curr_time;
   return temp;
@@ -587,14 +587,14 @@ double ConcurrentScalableCache<TKey, TValue, THash>::
 PrintStepLat(double& avg_hit, double& avg_other){
   size_t hit_num = 0, other_num = 0;
   auto curr_time = SSDLOGGING_TIME_NOW;
-  MYPRINTF("- Hit ");
+  HHVM_PRTINF("- Hit ");
   avg_hit = total_hit_latency_.print_from_last_end(hit_num);
-  MYPRINTF("- Other ");
+  HHVM_PRTINF("- Other ");
   avg_other = total_other_latency_.print_from_last_end(other_num);
   
   auto total_num = hit_num+other_num;
   auto temp = (avg_hit*hit_num+avg_other*other_num)/total_num;
-  MYPRINTF("Total Avg Lat: %.3lf (size: %lu, duration: %.5lf s, approx miss rate: %.4lf)\n",
+  HHVM_PRTINF("Total Avg Lat: %.3lf (size: %lu, duration: %.5lf s, approx miss rate: %.4lf)\n",
     temp, total_num, SSDLOGGING_TIME_DURATION(cursor, curr_time)/1000/1000, other_num*1.0/total_num);
   cursor = curr_time;
   return temp;
@@ -619,9 +619,9 @@ PrintStepLat(double& avg_hit, double& avg_other){
 template <class TKey, class TValue, class THash>
 void ConcurrentScalableCache<TKey, TValue, THash>::
 BaseMonitor(){
-  MYPRINTF("wait stable interval: %d us (%.3lf s)\n",
+  HHVM_PRTINF("wait stable interval: %d us (%.3lf s)\n",
       WAIT_STABLE_SLEEP_INTERVAL_US, WAIT_STABLE_SLEEP_INTERVAL_US*1.0/1000/1000);
-  //MYPRINTF("wait stable interval: 1s\n");
+  //HHVM_PRTINF("wait stable interval: 1s\n");
 
   // Siyuan: even if we perform warmup phase outside FrozenHot for stable cache performance, we still need internal warmup in FrozenHot for FC ratio adjustment
   auto start_wait_stable = SSDLOGGING_TIME_NOW;
@@ -633,41 +633,41 @@ BaseMonitor(){
 
   // warm up run (non-valid)
   while(!should_stop){
-    MYPRINTF("\ndata pass %lu\n", print_step_counter++);
+    HHVM_PRTINF("\ndata pass %lu\n", print_step_counter++);
     miss_ratio = PrintMissRatio();
     PrintStepLat();
     if(last_size >= size){
       if(last_miss_ratio <= miss_ratio)
         wait_count++;
       if(wait_count >= WAIT_STABLE_THRESHOLD){
-        // MYPRINTF("- miss ratio = %.5lf -> %.5lf, with m_size = %lu (max = %lu)\n",
+        // HHVM_PRTINF("- miss ratio = %.5lf -> %.5lf, with m_size = %lu (max = %lu)\n",
         //           last_miss_ratio, miss_ratio, size, m_maxSize);
-        MYPRINTF("- miss ratio = %.5lf -> %.5lf, with m_size = %lu (max bytes = %lu)\n",
+        HHVM_PRTINF("- miss ratio = %.5lf -> %.5lf, with m_size = %lu (max bytes = %lu)\n",
                   last_miss_ratio, miss_ratio, size, m_maxBytes);
         break;
       }
     }
     last_size = size;
     size = Size();
-    // MYPRINTF("- miss ratio = %.5lf -> %.5lf, with m_size = %lu (max = %lu)\n",
+    // HHVM_PRTINF("- miss ratio = %.5lf -> %.5lf, with m_size = %lu (max = %lu)\n",
     //               last_miss_ratio, miss_ratio, size, m_maxSize);
-    MYPRINTF("- miss ratio = %.5lf -> %.5lf, with m_size = %lu (max bytes = %lu)\n",
+    HHVM_PRTINF("- miss ratio = %.5lf -> %.5lf, with m_size = %lu (max bytes = %lu)\n",
                   last_miss_ratio, miss_ratio, size, m_maxBytes);
     fflush(stdout);
     last_miss_ratio = miss_ratio;
     usleep(WAIT_STABLE_SLEEP_INTERVAL_US);
     //sleep(1);
   }
-  MYPRINTF("\nthe first wait stable\n");
-  MYPRINTF("clear stat for next stage:\n");
+  HHVM_PRTINF("\nthe first wait stable\n");
+  HHVM_PRTINF("clear stat for next stage:\n");
   PrintGlobalLat(); // with clear inside
 
   auto wait_stable_duration = SSDLOGGING_TIME_DURATION(start_wait_stable, SSDLOGGING_TIME_NOW);
-  MYPRINTF("\nwait stable spend time: %lf s\n", wait_stable_duration / 1000 / 1000);
+  HHVM_PRTINF("\nwait stable spend time: %lf s\n", wait_stable_duration / 1000 / 1000);
 
   /* valid run */
   while(!should_stop){
-    MYPRINTF("\ndata pass %lu\n", print_step_counter++);
+    HHVM_PRTINF("\ndata pass %lu\n", print_step_counter++);
     //usleep(WAIT_STABLE_SLEEP_INTERVAL_US);
     sleep(1);
     PrintMissRatio();
@@ -679,11 +679,11 @@ BaseMonitor(){
 template <class TKey, class TValue, class THash>
 void ConcurrentScalableCache<TKey, TValue, THash>::
 FastHashMonitor(){
-  MYPRINTF("start monitor...\n");
-  MYPRINTF("wait stable interval: %d us (%.1lf s)\n",
+  HHVM_PRTINF("start monitor...\n");
+  HHVM_PRTINF("wait stable interval: %d us (%.1lf s)\n",
       WAIT_STABLE_SLEEP_INTERVAL_US, WAIT_STABLE_SLEEP_INTERVAL_US*1.0/1000/1000);
   
-  MYPRINTF("Add extra FH performance threshold %.2lf for construction & frozen\n",
+  HHVM_PRTINF("Add extra FH performance threshold %.2lf for construction & frozen\n",
       FH_PERFORMANCE_THRESHOLD);
 
   // use shard 0 simulate all the cache
@@ -706,11 +706,11 @@ WAIT_STABLE:
   int wait_count = 0;
 
   // Fill up cache
-  MYPRINTF("\n* start observation *\n");
+  HHVM_PRTINF("\n* start observation *\n");
   while(!should_stop) {
     // Note that 'should_stop' is set true when clients run out of the workload
     // It is a user-level signal, not a signal from the monitor
-    MYPRINTF("\ndata pass %lu\n", print_step_counter++);
+    HHVM_PRTINF("\ndata pass %lu\n", print_step_counter++);
     miss_ratio = PrintMissRatio();
     PrintStepLat();
     
@@ -721,9 +721,9 @@ WAIT_STABLE:
       if(last_miss_ratio <= miss_ratio) // Miss ratio is non-decreasing
         wait_count++;
       if(wait_count >= WAIT_STABLE_THRESHOLD){ // Waiting too long, stop filling process
-        // MYPRINTF("- miss ratio = %.5lf -> %.5lf, with m_size = %lu (max = %lu)\n",
+        // HHVM_PRTINF("- miss ratio = %.5lf -> %.5lf, with m_size = %lu (max = %lu)\n",
         //           last_miss_ratio, miss_ratio, size, m_maxSize);
-        MYPRINTF("- miss ratio = %.5lf -> %.5lf, with m_size = %lu (max bytes = %lu)\n",
+        HHVM_PRTINF("- miss ratio = %.5lf -> %.5lf, with m_size = %lu (max bytes = %lu)\n",
                   last_miss_ratio, miss_ratio, size, m_maxBytes);
         break;
       }
@@ -732,31 +732,31 @@ WAIT_STABLE:
     // Update size
     last_size = size;
     size = Size();
-    // MYPRINTF("- miss ratio = %.5lf -> %.5lf, with m_size = %lu (max = %lu)\n",
+    // HHVM_PRTINF("- miss ratio = %.5lf -> %.5lf, with m_size = %lu (max = %lu)\n",
     //               last_miss_ratio, miss_ratio, size, m_maxSize);
-    MYPRINTF("- miss ratio = %.5lf -> %.5lf, with m_size = %lu (max bytes = %lu)\n",
+    HHVM_PRTINF("- miss ratio = %.5lf -> %.5lf, with m_size = %lu (max bytes = %lu)\n",
                   last_miss_ratio, miss_ratio, size, m_maxBytes);
     fflush(stdout);
     last_miss_ratio = miss_ratio; // Update miss ratio
     usleep(WAIT_STABLE_SLEEP_INTERVAL_US);
   }
-  MYPRINTF("\ncache is stable\n");
+  HHVM_PRTINF("\ncache is stable\n");
   
   // Message for end filling
   if(beginning_flag){
-    MYPRINTF("the first wait stable\n");
-    MYPRINTF("clear stat for next stage:\n");
+    HHVM_PRTINF("the first wait stable\n");
+    HHVM_PRTINF("clear stat for next stage:\n");
     PrintGlobalLat();
     beginning_flag = false;
   }
   auto wait_stable_duration = SSDLOGGING_TIME_DURATION(start_wait_stable, SSDLOGGING_TIME_NOW);
-  MYPRINTF("\nwait stable spend time: %lf s\n", wait_stable_duration / 1000 / 1000);
+  HHVM_PRTINF("\nwait stable spend time: %lf s\n", wait_stable_duration / 1000 / 1000);
 
-  MYPRINTF("\n* end observation *\n");
+  HHVM_PRTINF("\n* end observation *\n");
 
   monitor_time = double(500 * m_numShards);
 
-  MYPRINTF("\n* start search *\n");
+  HHVM_PRTINF("\n* start search *\n");
   auto start_learning_time = SSDLOGGING_TIME_NOW;
 
   // get curve
@@ -774,7 +774,7 @@ WAIT_STABLE:
   do{
     usleep(WAIT_STABLE_SLEEP_INTERVAL_US);
   }while(total_other_latency_.size_from_last_end() < 5 && !should_stop);
-  MYPRINTF("\ndraw curve\ndata pass %lu\n", print_step_counter++);
+  HHVM_PRTINF("\ndraw curve\ndata pass %lu\n", print_step_counter++);
   PrintMissRatio();
   /* become aware of DC latency (hit lat) and DC miss latency + disk latency (miss lat) */
   PrintStepLat(DC_hit_lat, miss_lat);
@@ -783,7 +783,7 @@ WAIT_STABLE:
   for(size_t i = 0; i < m_numShards; i++){
     m_shards[i]->construct_tier();
   }
-  MYPRINTF("\ndata pass %lu\n", print_step_counter++);
+  HHVM_PRTINF("\ndata pass %lu\n", print_step_counter++);
   PrintMissRatio();
   PrintStepLat();
 
@@ -792,7 +792,7 @@ WAIT_STABLE:
    * get performance and miss ratio after sleep
    */
   usleep(WAIT_STABLE_SLEEP_INTERVAL_US);
-  MYPRINTF("\ndata pass %lu\n", print_step_counter++);
+  HHVM_PRTINF("\ndata pass %lu\n", print_step_counter++);
   
   /* get one endpoint of FC miss ratio in curve -- when 100% FC
    * but not used (only printed)
@@ -804,7 +804,7 @@ WAIT_STABLE:
     m_shards[i]->deconstruct();
   }
 
-  MYPRINTF("\nHothash lat: %.3lf, 100%% Frozen Avg lat: %.3lf us, Miss Rate: %.3lf\n",
+  HHVM_PRTINF("\nHothash lat: %.3lf, 100%% Frozen Avg lat: %.3lf us, Miss Rate: %.3lf\n",
     FC_lat, Frozen_Avg, Frozen_Miss);
   fflush(stdout);
 
@@ -821,7 +821,7 @@ WAIT_STABLE:
     if(tSize < 0.01){
       avg = tMiss * miss_lat + (1-tMiss) * DC_hit_lat;
       tSize = 0;
-      MYPRINTF("when baseline, avg from %.3lf to %.3lf\n",
+      HHVM_PRTINF("when baseline, avg from %.3lf to %.3lf\n",
           avg, avg / (1 + FH_PERFORMANCE_THRESHOLD));
       avg = avg / (1 + FH_PERFORMANCE_THRESHOLD);
     }
@@ -829,7 +829,7 @@ WAIT_STABLE:
     // when tSize is large, we regard it as ~100% FC
     else if(i == container.size() - 1 && tSize > 0.65){
       //avg = tMiss * disk_lat + (1-tMiss) * FC_lat;
-      MYPRINTF("regard tSize from %.3lf to %d\n", tSize, 1);
+      HHVM_PRTINF("regard tSize from %.3lf to %d\n", tSize, 1);
       tSize = 1;
       avg = tFC_hit_ * FC_lat + tMiss * (miss_lat+FC_lat) + (1-tFC_hit_-tMiss) * (FC_lat + DC_hit_lat);
     }
@@ -842,14 +842,14 @@ WAIT_STABLE:
       best_size = tSize;
       best_option_tMiss = tMiss;
       /* only print when best avg is updated */
-      MYPRINTF("(Update) best avg: %.3lf us, best size: %.3lf (w. FC_hit: %.3lf, miss: %.3lf)\n",
+      HHVM_PRTINF("(Update) best avg: %.3lf us, best size: %.3lf (w. FC_hit: %.3lf, miss: %.3lf)\n",
         best_avg, best_size, tFC_hit_, best_option_tMiss);
     }
   }
   
   // Compare best "partially" frozen [0, 100%) one with 100% Frozen
   if(best_avg > Frozen_Avg){
-    MYPRINTF("(Update) best avg: %.3lf us, best size: %.3lf\n",
+    HHVM_PRTINF("(Update) best avg: %.3lf us, best size: %.3lf\n",
       Frozen_Avg, 1.0);
     best_avg = Frozen_Avg;
     best_size = 1.0;
@@ -860,28 +860,28 @@ WAIT_STABLE:
   m_shards[0]->curve_container.clear();
 
   auto learning_duration = SSDLOGGING_TIME_DURATION(start_learning_time, SSDLOGGING_TIME_NOW);
-  MYPRINTF("\nsearch time: %lf s\n", learning_duration / 1000 / 1000);
-  MYPRINTF("Profiling best size: %.3lf\n", best_size);
+  HHVM_PRTINF("\nsearch time: %lf s\n", learning_duration / 1000 / 1000);
+  HHVM_PRTINF("Profiling best size: %.3lf\n", best_size);
 
   // debugging
-  // MYPRINTF("\nDebug: Test 1.0 Size\n");
+  // HHVM_PRTINF("\nDebug: Test 1.0 Size\n");
   // best_size = 1;
   
   // End of FH evaluation, and got the desired ratio to construct
-  MYPRINTF("\n* end search *\n");
+  HHVM_PRTINF("\n* end search *\n");
   
   if(!should_stop && best_size < 0.05){ // 0.05 is magic
     // not suitable for FH
     // sleep longer and longer (wait)
     SLEEP_THRESHOLD *= 8; // 8 is magic
-    MYPRINTF("Sleep threshold increase to %zu\n", SLEEP_THRESHOLD);
-    MYPRINTF("Sleep %zu s\n", SLEEP_THRESHOLD);
+    HHVM_PRTINF("Sleep threshold increase to %zu\n", SLEEP_THRESHOLD);
+    HHVM_PRTINF("Sleep %zu s\n", SLEEP_THRESHOLD);
     fflush(stdout);
     for(size_t i = 0; i < SLEEP_THRESHOLD; i++){
       if(should_stop)
         break;
       sleep(1);
-      MYPRINTF("\ndata pass %lu\n", print_step_counter++);
+      HHVM_PRTINF("\ndata pass %lu\n", print_step_counter++);
       PrintMissRatio();
       PrintStepLat();
     }
@@ -896,15 +896,15 @@ CONSTRUCT:
   double baseline_metrics[80];
   std::set<int> fail_list;
   fail_list.clear();
-  MYPRINTF("\n* start construct *\n");
+  HHVM_PRTINF("\n* start construct *\n");
 
   assert(construct_container.empty());
 
-  MYPRINTF("\nFind median avg lat of baseline:");
+  HHVM_PRTINF("\nFind median avg lat of baseline:");
   do{
     sleep(1);
   }while(GetStepSize() < 100 && !should_stop);
-  MYPRINTF("\ndata pass %lu\n", print_step_counter++);
+  HHVM_PRTINF("\ndata pass %lu\n", print_step_counter++);
   PrintMissRatio();
 
   size_t baseline_step = 0;
@@ -913,13 +913,13 @@ CONSTRUCT:
   baseline_performance_for_query = PrintStepLat(construct_step);
   double baseline_performance_with_threshold = baseline_performance_for_query  / (1 + FH_PERFORMANCE_THRESHOLD);
 
-  MYPRINTF("FH compare with baseline metric: %.3lf\n", baseline_performance_for_query);
-  MYPRINTF("FH compare with baseline metric with threshold: %.3lf\n", baseline_performance_with_threshold);
+  HHVM_PRTINF("FH compare with baseline metric: %.3lf\n", baseline_performance_for_query);
+  HHVM_PRTINF("FH compare with baseline metric with threshold: %.3lf\n", baseline_performance_with_threshold);
 
   stop_sample_stat = false; // enable req_latency_[]
 
   /* req_latency_[] array is used to store the latency of each shard */
-  MYPRINTF("\nPer shard baseline print tail\n");
+  HHVM_PRTINF("\nPer shard baseline print tail\n");
   for(size_t i = 0; i < m_numShards; i++) { // initialization
     req_latency_[i].reset();
   }
@@ -949,11 +949,11 @@ CONSTRUCT:
     for(size_t k = 0; k < pass_len; k++){
       // simply print with order
       // TODO @ Ziyue: maybe we can use a better way to print (just indexing?)
-      MYPRINTF("%d ", construct_container.front());
+      HHVM_PRTINF("%d ", construct_container.front());
       construct_container.push(construct_container.front());
       construct_container.pop();
     }
-    MYPRINTF("left\n");
+    HHVM_PRTINF("left\n");
 
     /* alloc maximum = PASS_THRESHOLD times of pass */
     if(pass_count >= PASS_THRESHOLD){
@@ -987,7 +987,7 @@ CONSTRUCT:
       construct_container.push(shard_id);
     }
     // query
-    MYPRINTF("try query\n");
+    HHVM_PRTINF("try query\n");
     fflush(stdout);
     usleep(monitor_time);
     
@@ -1005,21 +1005,21 @@ CONSTRUCT:
         // clear baseline latency, since not baseline during FH phase
         req_latency_[shard_id].reset();
         usleep(monitor_time);
-        MYPRINTF("shard %lu baseline metrics (update):\n", shard_id);
+        HHVM_PRTINF("shard %lu baseline metrics (update):\n", shard_id);
         baseline_metrics[shard_id] = req_latency_[shard_id].print_tail();
       }
     }
-    MYPRINTF("pass %d end\n", pass_count++);
+    HHVM_PRTINF("pass %d end\n", pass_count++);
     fflush(stdout);
 
-    MYPRINTF("\nconstruct phase:\ndata pass %lu\n", print_step_counter++);
+    HHVM_PRTINF("\nconstruct phase:\ndata pass %lu\n", print_step_counter++);
     PrintMissRatio();
     size_t temp_step = 0;
     PrintStepLat(temp_step);
     construct_step += temp_step;
   }
 
-  MYPRINTF("\nconstruct step: %lu\n", construct_step);
+  HHVM_PRTINF("\nconstruct step: %lu\n", construct_step);
 
   // Means all shards fail, pretty bad :(
   if(!should_stop && fail_list.size() == m_numShards){
@@ -1029,23 +1029,23 @@ CONSTRUCT:
 
   // Message for construction phase details
   auto construct_duration = SSDLOGGING_TIME_DURATION(start_construct_time, SSDLOGGING_TIME_NOW);
-  MYPRINTF("\nconstruct time: %lf s\n", construct_duration / 1000 / 1000);
+  HHVM_PRTINF("\nconstruct time: %lf s\n", construct_duration / 1000 / 1000);
   if(fail_list.size() == 0)
-    MYPRINTF("fail %ld shard, construct fully succeed\n", fail_list.size());
+    HHVM_PRTINF("fail %ld shard, construct fully succeed\n", fail_list.size());
   else
-    MYPRINTF("fail %ld shard\n", fail_list.size());
+    HHVM_PRTINF("fail %ld shard\n", fail_list.size());
   
-  MYPRINTF("\n* end construct *\n"); // End of the FH construction
+  HHVM_PRTINF("\n* end construct *\n"); // End of the FH construction
 
   stop_sample_stat = true; // disable req_latency_[] in client logic
                            // this helps us do less job
   
   // Start of Frozen run after construction, and monitor it
   auto start_query_stage = SSDLOGGING_TIME_NOW;
-  MYPRINTF("\n* start frozen *\n");
+  HHVM_PRTINF("\n* start frozen *\n");
   
   double check_time = CHECK_SLEEP_INTERVAL_US;
-  MYPRINTF("check interval: %.3lf s\n", check_time/1000/1000);
+  HHVM_PRTINF("check interval: %.3lf s\n", check_time/1000/1000);
   performance_depletion = COUNT_THRESHOLD;
   bool first_flag = true;
   size_t total_step = 0;
@@ -1056,7 +1056,7 @@ CONSTRUCT:
       usleep(check_time);
     } while(GetStepSize() < 50 && !should_stop);
     
-    MYPRINTF("\ndata pass %lu\n", print_step_counter++);
+    HHVM_PRTINF("\ndata pass %lu\n", print_step_counter++);
     PrintFrozenStat();
     performance = PrintStepLat(thput_step);
     if(first_flag){
@@ -1074,19 +1074,19 @@ CONSTRUCT:
     if(performance_depletion <= 0){
     // give 3 times baseline as start-up capital,
     // if depleted, goto DECONSTRUCT
-      MYPRINTF("depleted: %.3lf <= 0\n\n", performance_depletion);
+      HHVM_PRTINF("depleted: %.3lf <= 0\n\n", performance_depletion);
       SLEEP_THRESHOLD *= 8;
-      MYPRINTF("Sleep threshold increase to %zu\n", SLEEP_THRESHOLD);
+      HHVM_PRTINF("Sleep threshold increase to %zu\n", SLEEP_THRESHOLD);
       goto DECONSTRUCT;
     }
     else{
-      MYPRINTF("not depleted: %.3lf > 0\n", performance_depletion);
+      HHVM_PRTINF("not depleted: %.3lf > 0\n", performance_depletion);
     }
 
     total_step += thput_step;
     current_step += thput_step;
     if(total_step > construct_step * FROZEN_THRESHOLD){ // Periodic Reconstruction of FH
-      MYPRINTF("\nAfter %lu frozen step (> %d * %lu = %lu), need periodically refresh!\n",
+      HHVM_PRTINF("\nAfter %lu frozen step (> %d * %lu = %lu), need periodically refresh!\n",
         total_step, FROZEN_THRESHOLD, construct_step, construct_step * FROZEN_THRESHOLD);
       for(size_t i = 0; i < m_numShards; i++) {
         m_shards[i]->deconstruct();
@@ -1096,7 +1096,7 @@ CONSTRUCT:
 
       if(SLEEP_THRESHOLD >= 2)
         SLEEP_THRESHOLD /= 2;
-      MYPRINTF("Perform Well, Sleep Threshold decrease into %zu\n", SLEEP_THRESHOLD);
+      HHVM_PRTINF("Perform Well, Sleep Threshold decrease into %zu\n", SLEEP_THRESHOLD);
       goto CONSTRUCT;
     } else if(current_step > construct_step) {
       /* this is a round to check whether need to deconstruct
@@ -1108,13 +1108,13 @@ CONSTRUCT:
        * else (performance_depletion <= COUNT_THRESHOLD), it means FH is not good enough
        */
       if(performance_depletion > COUNT_THRESHOLD){
-        MYPRINTF("\nPeformance Depletion set to %d after %zu step for a round!\n", COUNT_THRESHOLD, current_step);
+        HHVM_PRTINF("\nPeformance Depletion set to %d after %zu step for a round!\n", COUNT_THRESHOLD, current_step);
         // it is still good enough
         performance_depletion = COUNT_THRESHOLD;
         current_step = 0;
       } else {
         // it is not good enough, need to deconstruct
-        MYPRINTF("\nAfter %lu frozen step (~ %d * %lu), need to refresh!\n",
+        HHVM_PRTINF("\nAfter %lu frozen step (~ %d * %lu), need to refresh!\n",
           total_step, int(total_step/construct_step),construct_step);
         for(size_t i = 0; i < m_numShards; i++) {
           m_shards[i]->deconstruct();
@@ -1133,14 +1133,14 @@ DECONSTRUCT:
   }
 
   auto query_duration = SSDLOGGING_TIME_DURATION(start_query_stage, SSDLOGGING_TIME_NOW);
-  MYPRINTF("\nfrozen stage duration time: %lf\n", query_duration /1000 / 1000);
-  MYPRINTF("\n* end frozen *\n");
+  HHVM_PRTINF("\nfrozen stage duration time: %lf\n", query_duration /1000 / 1000);
+  HHVM_PRTINF("\n* end frozen *\n");
   if(!should_stop){
-    MYPRINTF("Sleep %zu s\n", SLEEP_THRESHOLD);
+    HHVM_PRTINF("Sleep %zu s\n", SLEEP_THRESHOLD);
     fflush(stdout);
     for(size_t i = 0; i < SLEEP_THRESHOLD; i++){
       sleep(1);
-      MYPRINTF("\ndata pass %lu\n", print_step_counter++);
+      HHVM_PRTINF("\ndata pass %lu\n", print_step_counter++);
       PrintMissRatio();
       PrintStepLat();
       if(should_stop)
@@ -1156,7 +1156,7 @@ DECONSTRUCT:
    * or the profiling results (curve) might not be accurate
    */
   if(!should_stop){
-    MYPRINTF("\ngo back to wait stable\n");
+    HHVM_PRTINF("\ngo back to wait stable\n");
     goto WAIT_STABLE;
   }
   printf("\nend monitor\n");
