@@ -6,10 +6,10 @@
 
 namespace covered
 {
-    template <typename TKey, typename TValue>
-    class TbbCHT : public FashHashAPI<TValue>
+    template <typename TKey, typename TValue, class THash>
+    class TbbCHT : public FashHashAPI<TKey, TValue, THash>
     {
-        typedef typename tbb::concurrent_hash_map<TKey, TValue> HashMap;
+        typedef typename tbb::concurrent_hash_map<TKey, TValue, THash> HashMap;
         typedef typename HashMap::const_accessor HashMapConstAccessor;
         typedef typename HashMap::accessor HashMapAccessor;
         typedef typename HashMap::value_type HashMapValuePair;
@@ -44,7 +44,7 @@ namespace covered
             if (m_map->find(accessor, idx)) // Siyuan: this will acquire a write lock for the key
             {
                 value = accessor->second;
-                m_map.erase(accessor); // Siyuan: destructor of accessor will release the write lock for the key
+                m_map->erase(accessor); // Siyuan: destructor of accessor will release the write lock for the key
                 return true;
             }
             else
@@ -67,7 +67,8 @@ namespace covered
             }
         }
 
-        TbbCHT(TKey size) {
+        //TbbCHT(TKey size) {
+        TbbCHT(size_t size) { // Siyuan: fix impl error
             m_map.reset(new HashMap(size));
         }
 

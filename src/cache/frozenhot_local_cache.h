@@ -28,7 +28,7 @@ namespace covered
 
         virtual const bool hasFineGrainedManagement() const;
     private:
-        typedef ConcurrentScalableCache<Key, Value> FrozenhotCache;
+        typedef ConcurrentScalableCache<Key, Value, KeyHasher> FrozenhotCache;
 
         static const std::string kClassName;
 
@@ -69,7 +69,7 @@ namespace covered
 
         // Non-const shared variables
         mutable FrozenhotCache* frozenhot_cache_ptr_; // Data and metadata for local edge cache
-        std::unordered_set<uint32_t> thread_init_set_; // Track which CPU cores have been initialized for CLHT GC
+        mutable std::unordered_set<uint32_t> thread_init_set_; // Track which CPU cores have been initialized for CLHT GC
         std::thread* monitor_thread_ptr_; // Monitor thread for FrozenHot period construction
     };
 }

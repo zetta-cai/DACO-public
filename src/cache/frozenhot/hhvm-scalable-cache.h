@@ -20,7 +20,7 @@
 #define RECENCY
 
 #include <queue>
-#include <cache/cache_header.h> // Siyuan: lib/frozenhot/cache/cache_header.h for other cache policies
+//#include <cache/cache_header.h> // Siyuan: lib/frozenhot/cache/cache_header.h for other cache policies (NOT use cache policies under namespace Cache due to NO hacked interfaces)
 
 #include <limits>
 #include <memory>
@@ -33,13 +33,14 @@
 
 namespace covered {
 
-  bool should_stop = false;
-  //ssdlogging::statistics::MySet request_latency_;
-  ssdlogging::statistics::MySet total_hit_latency_;
-  ssdlogging::statistics::MySet total_other_latency_;
-  ssdlogging::statistics::MySet req_latency_[16];
-  std::chrono::_V2::system_clock::time_point cursor;
-  size_t print_step_counter = 0;
+  // Siyuan: should NOT define global variables in C++ heade filers
+  // bool should_stop = false;
+  // //ssdlogging::statistics::MySet request_latency_;
+  // ssdlogging::statistics::MySet total_hit_latency_;
+  // ssdlogging::statistics::MySet total_other_latency_;
+  // ssdlogging::statistics::MySet req_latency_[16];
+  // std::chrono::_V2::system_clock::time_point cursor;
+  // size_t print_step_counter = 0;
 
 #ifdef RECENCY
   struct Learning_Result_Node {
@@ -80,9 +81,10 @@ namespace covered {
  * a key with a memoized hash function. LRUCacheKey is provided for
  * this purpose.
  */
-template <class TKey, class TValue, class THash = tbb::tbb_hash_compare<TKey>>
+//template <class TKey, class TValue, class THash = tbb::tbb_hash_compare<TKey>>
+template <class TKey, class TValue, class THash> // Siyuan: support custom key hasher
 struct ConcurrentScalableCache {
-  using Shard = Cache::CacheAPI<TKey, TValue, THash>;
+  using Shard = covered::CacheAPI<TKey, TValue, THash>; // Siyuan: use covered::CacheAPI instead of Cache::CacheAPI
   enum Type{
     LRU,
     LFU,
@@ -97,12 +99,14 @@ struct ConcurrentScalableCache {
 
   /**
    * Constructor
-   *   - maxSize: the maximum number of items in the container
+   *   - (OBSOLETE) maxSize: the maximum number of items in the container
+   *   - (Siyuan) capacity_bytes: the maximum number of bytes in the container
    *   - numShards: the number of child containers. If this is zero, the
    *     "hardware concurrency" will be used (typically the logical processor
    *     count).
    */
-  explicit ConcurrentScalableCache(size_t maxSize, size_t numShards = 0, Type type = Type::LRU, int rebuild_freq = 0);
+  //explicit ConcurrentScalableCache(size_t maxSize, size_t numShards = 0, Type type = Type::LRU, int rebuild_freq = 0);
+  explicit ConcurrentScalableCache(uint64_t capacity_bytes, size_t numShards = 0, Type type = Type::LRU, int rebuild_freq = 0); // Siyuan: fix the impractical input of maxSize
 
   ConcurrentScalableCache(const ConcurrentScalableCache&) = delete;
   ConcurrentScalableCache& operator=(const ConcurrentScalableCache&) = delete;
@@ -110,7 +114,7 @@ struct ConcurrentScalableCache {
   virtual ~ConcurrentScalableCache() {clear(); }
 
   // Siyuan: check existence of a given key yet not update any cache metadata
-  bool exists(const TKey& key) const;
+  bool exists(const TKey& key);
 
   /**
    * Find a value by key, and return it by filling the ConstAccessor, which
@@ -162,7 +166,9 @@ struct ConcurrentScalableCache {
    * Get the approximate size of the container. May be slightly too low when
    * insertion is in progress.
    */
-  size_t Size(); 
+  size_t Size();
+
+  uint64_t getSizeForCapacity(); // Siyuan: for correct cache size usage calculation
 
   virtual void evict_key() {}
 
@@ -185,6 +191,15 @@ struct ConcurrentScalableCache {
   bool stop_sample_stat = true; 
 
 private:
+  // Siyuan: move global variables here
+  bool should_stop = false;
+  //ssdlogging::statistics::MySet request_latency_;
+  ssdlogging::statistics::MySet total_hit_latency_;
+  ssdlogging::statistics::MySet total_other_latency_;
+  ssdlogging::statistics::MySet req_latency_[16];
+  std::chrono::_V2::system_clock::time_point cursor;
+  size_t print_step_counter = 0;
+
   /**
    * Get the child container for a given key
    */
@@ -193,7 +208,9 @@ private:
   /**
    * The maximum number of elements in the container.
    */
-  size_t m_maxSize;
+  //size_t m_maxSize;
+
+  uint64_t m_maxBytes; // Siyuan: fix the impractical input of maxSize
 
   /**
    * The child containers
@@ -213,8 +230,8 @@ private:
 
   // learning machine
   double last_sleep = 0;
-  std::queue<tstarling::Learning_Input_Node> ratio_container;
-  std::priority_queue<tstarling::Learning_Result_Node, std::vector<tstarling::Learning_Result_Node>, cmp> learning_container;
+  std::queue<Learning_Input_Node> ratio_container;
+  std::priority_queue<Learning_Result_Node, std::vector<Learning_Result_Node>, cmp> learning_container;
   std::queue<int> construct_container; // Note that this is a queue not a stack
   int PASS_THRESHOLD = 3;
 
@@ -249,40 +266,46 @@ private:
 
 template <class TKey, class TValue, class THash>
 ConcurrentScalableCache<TKey, TValue, THash>::
-ConcurrentScalableCache(size_t maxSize, size_t numShards, Type type, int rebuild_freq)
-  : m_maxSize(maxSize), m_numShards(numShards), algType(type), FROZEN_THRESHOLD(rebuild_freq) 
+//ConcurrentScalableCache(size_t maxSize, size_t numShards, Type type, int rebuild_freq)
+ConcurrentScalableCache(uint64_t capacity_bytes, size_t numShards, Type type, int rebuild_freq)
+  //: m_maxSize(maxSize), m_numShards(numShards), algType(type), FROZEN_THRESHOLD(rebuild_freq) 
+  : m_maxBytes(capacity_bytes), m_numShards(numShards), algType(type), FROZEN_THRESHOLD(rebuild_freq) // Siyuan: fix the impractical input of maxSize
 {
   if (m_numShards == 0) {
     m_numShards = std::thread::hardware_concurrency();
   }
   /* initialize multiple shards (cache instances) */
   for (size_t i = 0; i < m_numShards; i++) {
-    size_t s = maxSize / m_numShards;
-    size_t t = maxSize % m_numShards;
+    // size_t s = maxSize / m_numShards;
+    // size_t t = maxSize % m_numShards;
+    // Siyuan: fix the impractical input of maxSize
+    uint64_t s = capacity_bytes / m_numShards;
+    uint64_t t = capacity_bytes % m_numShards;
     if(i < t){
       s = s + 1;
     }
-    if(algType == Type::LRU)
-      m_shards.emplace_back(std::make_shared<Cache::LRUCache<TKey, TValue, THash>>(s));
-    else if(algType == Type::LFU)
-      m_shards.emplace_back(std::make_shared<Cache::LFUCache<TKey, TValue, THash>>(s));
-    else if(algType == Type::LRU_FH) {
+    // if(algType == Type::LRU)
+    //   m_shards.emplace_back(std::make_shared<Cache::LRUCache<TKey, TValue, THash>>(s));
+    // else if(algType == Type::LFU)
+    //   m_shards.emplace_back(std::make_shared<Cache::LFUCache<TKey, TValue, THash>>(s));
+    // else if(algType == Type::LRU_FH) {
+    if(algType == Type::LRU_FH) {
       assert(FROZEN_THRESHOLD > 0);
       m_shards.emplace_back(std::make_shared<covered::LRU_FHCache<TKey, TValue, THash>>(s)); // Siyuan: use hacked LRU_FHCache for required interfaces
     }
-    else if(algType == Type::Redis_LRU) {
-      m_shards.emplace_back(std::make_shared<Cache::RedisLRUCache<TKey, TValue, THash>>(s));
-    }
-    else if(algType == Type::FIFO) {
-      m_shards.emplace_back(std::make_shared<Cache::FIFOCache<TKey, TValue, THash>>(s));
-    }
-    else if(algType == Type::StrictLRU) {
-      m_shards.emplace_back(std::make_shared<Cache::StrictLRUCache<TKey, TValue, THash>>(s));
-    }
-    else if(algType == Type::LFU_FH) {
-      assert(FROZEN_THRESHOLD > 0);
-      m_shards.emplace_back(std::make_shared<Cache::LFU_FHCache<TKey, TValue, THash>>(s));
-    }
+    // else if(algType == Type::Redis_LRU) {
+    //   m_shards.emplace_back(std::make_shared<Cache::RedisLRUCache<TKey, TValue, THash>>(s));
+    // }
+    // else if(algType == Type::FIFO) {
+    //   m_shards.emplace_back(std::make_shared<Cache::FIFOCache<TKey, TValue, THash>>(s));
+    // }
+    // else if(algType == Type::StrictLRU) {
+    //   m_shards.emplace_back(std::make_shared<Cache::StrictLRUCache<TKey, TValue, THash>>(s));
+    // }
+    // else if(algType == Type::LFU_FH) {
+    //   assert(FROZEN_THRESHOLD > 0);
+    //   m_shards.emplace_back(std::make_shared<Cache::LFU_FHCache<TKey, TValue, THash>>(s));
+    // }
     else if(algType == Type::FIFO_FH) {
       assert(FROZEN_THRESHOLD > 0);
       m_shards.emplace_back(std::make_shared<covered::FIFO_FHCache<TKey, TValue, THash>>(s)); // Siyuan: use hacked FIFO_FHCache for required interfaces
@@ -293,11 +316,12 @@ ConcurrentScalableCache(size_t maxSize, size_t numShards, Type type, int rebuild
     }
   }
 
-  // set special parameters for RedisLRU
-  if(algType == Type::Redis_LRU) {
-    printf("Eviction pool size: %d, sample size: %d\n", EVICTION_POOL_SIZE, EVICTION_SAMPLE);
-    printf("Resolution: %.1lf ms\n", LRU_CLOCK_RESOLUTION * 1.0 / 1000);
-  }
+  // Siyuan: NOT use cache policies under namespace Cache
+  // // set special parameters for RedisLRU
+  // if(algType == Type::Redis_LRU) {
+  //   printf("Eviction pool size: %d, sample size: %d\n", EVICTION_POOL_SIZE, EVICTION_SAMPLE);
+  //   printf("Resolution: %.1lf ms\n", LRU_CLOCK_RESOLUTION * 1.0 / 1000);
+  // }
 }
 
 template <class TKey, class TValue, class THash>
@@ -317,7 +341,7 @@ getShard(const TKey& key) {
 // Siyuan: check existence of a given key yet not update any cache metadata
 template <class TKey, class TValue, class THash>
 bool ConcurrentScalableCache<TKey, TValue, THash>::
-exists(const TKey& key) const
+exists(const TKey& key)
 {
   return getShard(key).exists(key);
 }
@@ -365,7 +389,7 @@ template <class TKey, class TValue, class THash>
 void ConcurrentScalableCache<TKey, TValue, THash>::
 clear() {
   // Siyuan: uncomment for clear() in destructor
-  printf("Size: %lu, %.2lf GB\n", size(), size()*4.0/1000000);
+  printf("Size: %lu, %.2lf GB\n", Size(), Size()*4.0/1000000);
   for (size_t i = 0; i < m_numShards; i++) {
     printf("cache No.%ld size %ld\n", i, m_shards[i]->size());
     m_shards[i]->clear();
@@ -389,6 +413,17 @@ Size() {
     size += m_shards[i]->size();
   }
   return size;
+}
+
+// Siyuan: for correct cache size usage calculation
+template <class TKey, class TValue, class THash>
+uint64_t ConcurrentScalableCache<TKey, TValue, THash>::
+getSizeForCapacity() {
+  uint64_t used_bytes = 0;
+  for (size_t i = 0; i < m_numShards; i++) {
+    used_bytes += m_shards[i]->getSizeForCapacity();
+  }
+  return used_bytes;
 }
 
 // template <class TKey, class TValue, class THash>
@@ -595,15 +630,19 @@ BaseMonitor(){
       if(last_miss_ratio <= miss_ratio)
         wait_count++;
       if(wait_count >= WAIT_STABLE_THRESHOLD){
-        printf("- miss ratio = %.5lf -> %.5lf, with m_size = %lu (max = %lu)\n",
-                  last_miss_ratio, miss_ratio, size, m_maxSize);
+        // printf("- miss ratio = %.5lf -> %.5lf, with m_size = %lu (max = %lu)\n",
+        //           last_miss_ratio, miss_ratio, size, m_maxSize);
+        printf("- miss ratio = %.5lf -> %.5lf, with m_size = %lu (max bytes = %lu)\n",
+                  last_miss_ratio, miss_ratio, size, m_maxBytes);
         break;
       }
     }
     last_size = size;
     size = Size();
-    printf("- miss ratio = %.5lf -> %.5lf, with m_size = %lu (max = %lu)\n",
-                  last_miss_ratio, miss_ratio, size, m_maxSize);
+    // printf("- miss ratio = %.5lf -> %.5lf, with m_size = %lu (max = %lu)\n",
+    //               last_miss_ratio, miss_ratio, size, m_maxSize);
+    printf("- miss ratio = %.5lf -> %.5lf, with m_size = %lu (max bytes = %lu)\n",
+                  last_miss_ratio, miss_ratio, size, m_maxBytes);
     fflush(stdout);
     last_miss_ratio = miss_ratio;
     usleep(WAIT_STABLE_SLEEP_INTERVAL_US);
@@ -672,8 +711,10 @@ WAIT_STABLE:
       if(last_miss_ratio <= miss_ratio) // Miss ratio is non-decreasing
         wait_count++;
       if(wait_count >= WAIT_STABLE_THRESHOLD){ // Waiting too long, stop filling process
-        printf("- miss ratio = %.5lf -> %.5lf, with m_size = %lu (max = %lu)\n",
-                  last_miss_ratio, miss_ratio, size, m_maxSize);
+        // printf("- miss ratio = %.5lf -> %.5lf, with m_size = %lu (max = %lu)\n",
+        //           last_miss_ratio, miss_ratio, size, m_maxSize);
+        printf("- miss ratio = %.5lf -> %.5lf, with m_size = %lu (max bytes = %lu)\n",
+                  last_miss_ratio, miss_ratio, size, m_maxBytes);
         break;
       }
     }
@@ -681,8 +722,10 @@ WAIT_STABLE:
     // Update size
     last_size = size;
     size = Size();
-    printf("- miss ratio = %.5lf -> %.5lf, with m_size = %lu (max = %lu)\n",
-                  last_miss_ratio, miss_ratio, size, m_maxSize);
+    // printf("- miss ratio = %.5lf -> %.5lf, with m_size = %lu (max = %lu)\n",
+    //               last_miss_ratio, miss_ratio, size, m_maxSize);
+    printf("- miss ratio = %.5lf -> %.5lf, with m_size = %lu (max bytes = %lu)\n",
+                  last_miss_ratio, miss_ratio, size, m_maxBytes);
     fflush(stdout);
     last_miss_ratio = miss_ratio; // Update miss ratio
     usleep(WAIT_STABLE_SLEEP_INTERVAL_US);

@@ -69,7 +69,8 @@ namespace covered {
  * TBB::CHM. So if that is a possibility for your workload,
  * ThreadSafeScalableCache is recommended instead.
  */
-template <class TKey, class TValue, class THash = tbb::tbb_hash_compare<TKey>>
+//template <class TKey, class TValue, class THash = tbb::tbb_hash_compare<TKey>>
+template <class TKey, class TValue, class THash> // Siyuan: support custom key hasher
 class FIFO_FHCache : public covered::FHCacheAPI<TKey, TValue, THash> { // Siyuan: use hacked FHCacheAPI for required interfaces
   /**
    * The LRU list node.
@@ -144,7 +145,8 @@ class FIFO_FHCache : public covered::FHCacheAPI<TKey, TValue, THash> { // Siyuan
   /**
    * Create a container with a given maximum size
    */
-  explicit FIFO_FHCache(size_t maxSize, uint64_t capacityBytes); // Siyuan: for correct cache size usage calculation
+  //explicit FIFO_FHCache(size_t maxSize);
+  explicit FIFO_FHCache(uint64_t capacityBytes); // Siyuan: for correct cache size usage calculation
 
   FIFO_FHCache(const FIFO_FHCache& other) = delete;
   FIFO_FHCache& operator=(const FIFO_FHCache&) = delete;
@@ -156,7 +158,7 @@ class FIFO_FHCache : public covered::FHCacheAPI<TKey, TValue, THash> { // Siyuan
   }
 
   // Siyuan: check existence of a given key yet not update any cache metadata
-  virtual void exists(const TKey& key) override;
+  virtual bool exists(const TKey& key) override;
 
   /**
    * Find a value by key, and return it by filling the ConstAccessor, which
@@ -200,6 +202,8 @@ class FIFO_FHCache : public covered::FHCacheAPI<TKey, TValue, THash> { // Siyuan
    * insertion is in progress.
    */
   virtual size_t size() const override { return m_size.load(); }
+
+  virtual uint64_t getSizeForCapacity() const override { return total_used_bytes.load(); } // Siyuan: for correct cache size usage calculation
 
   virtual bool is_full() override {
     //return m_size.load() >= m_maxSize; // Siyuan: impractical input
@@ -314,7 +318,7 @@ class FIFO_FHCache : public covered::FHCacheAPI<TKey, TValue, THash> { // Siyuan
    */
   HashMap m_map;
 
-  std::unique_ptr<covered::FashHashAPI<TValue>>  m_fasthash; // Siyuan: use covered::FastHashAPI
+  std::unique_ptr<covered::FashHashAPI<TKey, TValue, THash>>  m_fasthash; // Siyuan: use covered::FastHashAPI
 
   /**
    * The linked list. The "head" is the most-recently used node, and the
@@ -347,7 +351,8 @@ typename FIFO_FHCache<TKey, TValue, THash>::ListNode* const
     FIFO_FHCache<TKey, TValue, THash>::OutOfListMarker = (ListNode*)-1;
 
 template <class TKey, class TValue, class THash>
-FIFO_FHCache<TKey, TValue, THash>::FIFO_FHCache(size_t maxSize, uint64_t capacityBytes) // Siyuan: for correct cache size usage calculation
+//FIFO_FHCache<TKey, TValue, THash>::FIFO_FHCache(size_t maxSize)
+FIFO_FHCache<TKey, TValue, THash>::FIFO_FHCache(uint64_t capacityBytes) // Siyuan: for correct cache size usage calculation
     : //m_maxSize(maxSize), // Siyuan: impractical input
       m_size(0),
       capacity_bytes(capacityBytes),
@@ -370,7 +375,7 @@ FIFO_FHCache<TKey, TValue, THash>::FIFO_FHCache(size_t maxSize, uint64_t capacit
   //m_fasthash.reset(new covered::CLHT<TKey, TValue>(0, align_len));
   // Siyuan: fix impractical input of max # of objects
   size_t hashtable_bucketcnt = static_cast<size_t>(capacityBytes / 1024 / 1024); // Siyuan: assume one bucket contains 1MiB objects
-  m_fasthash.reset(new covered::TbbCHT<TKey, TValue>(hashtable_bucketcnt));
+  m_fasthash.reset(new covered::TbbCHT<TKey, TValue, THash>(hashtable_bucketcnt));
 }
 
 template <class TKey, class TValue, class THash>
@@ -437,11 +442,10 @@ bool FIFO_FHCache<TKey, TValue, THash>::construct_ratio(double FC_ratio) {
       //printf("fail key No.%lu: %lu, count: %lu\n", fail_count, delete_temp->m_key, count);
       //printf("insert count: %lu v.s. eviction count: %lu\n", count, eviction_count);
       temp_node = temp_node->m_next; // Keep looping to next node
+      // Siyuan: for correct cache size usage calculation
+      decrease_total_used_bytes(delete_temp->m_key.getKeyLength() + sizeof(uint64_t)); // key and m_time in FIFO list
       if(delete_temp->isInList())
       {
-        // Siyuan: for correct cache size usage calculation
-        decrease_total_used_bytes(delete_temp->m_key.getKeyLength());
-
         delink(delete_temp);
       }
       delete delete_temp;
@@ -561,7 +565,7 @@ bool FIFO_FHCache<TKey, TValue, THash>::construct_tier() {
      */
     if(temp_node->m_key == TOMB_KEY) {
       // Siyuan: for correct cache size usage calculation
-      decrease_total_used_bytes(temp_node->m_key.getKeyLength());
+      decrease_total_used_bytes(temp_node->m_key.getKeyLength() + sizeof(uint64_t)); // key and m_time in FIFO list
 
       delete_temp = temp_node;
       temp_node = temp_node->m_next;
@@ -575,10 +579,9 @@ bool FIFO_FHCache<TKey, TValue, THash>::construct_tier() {
     if(! m_map.find(temp_hashAccessor, temp_node->m_key)){
       delete_temp = temp_node;
       temp_node = temp_node->m_next;
+      // Siyuan: for correct cache size usage calculation
+      decrease_total_used_bytes(delete_temp->m_key.getKeyLength() + sizeof(uint64_t)); // key and m_time in FIFO list
       if(delete_temp->isInList()){
-        // Siyuan: for correct cache size usage calculation
-        decrease_total_used_bytes(delete_temp->m_key.getKeyLength());
-
         delink(delete_temp);
       }
       delete delete_temp;
@@ -591,7 +594,7 @@ bool FIFO_FHCache<TKey, TValue, THash>::construct_tier() {
     // TODO @ Ziyue: not sure whether this is used, to check
     if(temp_node->m_key == TOMB_KEY) {
       // Siyuan: for correct cache size usage calculation
-      decrease_total_used_bytes(temp_node->m_key.getKeyLength());
+      decrease_total_used_bytes(temp_node->m_key.getKeyLength() + sizeof(uint64_t)); // key and m_time in FIFO list
 
       delete_temp = temp_node;
       temp_node = temp_node->m_next;
@@ -704,7 +707,7 @@ void FIFO_FHCache<TKey, TValue, THash>::deconstruct() {
 
 // Siyuan: check existence of a given key yet not update any cache metadata
 template <class TKey, class TValue, class THash>
-void FIFO_FHCache<TKey, TValue, THash>::exists(const TKey& key)
+bool FIFO_FHCache<TKey, TValue, THash>::exists(const TKey& key)
 {
   assert(!(tier_ready || fast_hash_ready) || !curve_flag.load());
 
@@ -712,7 +715,8 @@ void FIFO_FHCache<TKey, TValue, THash>::exists(const TKey& key)
   TValue unused_value;
   if (tier_ready || fast_hash_ready) // Frozen cache is ready for all objects or partial objects
   {
-    if (m_fasthash->find(key, unused_value) && (unused_value != nullptr)) // Found in frozen cache
+    //if (m_fasthash->find(key, unused_value) && (unused_value != nullptr)) // Found in frozen cache
+    if (m_fasthash->find(key, unused_value)) // Found in frozen cache (Siyuan: NO need to compare value with nullptr)
     {
       return true;
     }
@@ -753,7 +757,8 @@ bool FIFO_FHCache<TKey, TValue, THash>::find(TValue& ac,
     // we can re-check this and remove it if possible
 
     // Generally when we found the thing in frozen cache
-    if(m_fasthash->find(key, ac) && (ac != nullptr))
+    //if(m_fasthash->find(key, ac) && (ac != nullptr))
+    if(m_fasthash->find(key, ac)) // Siyuan: NO need to compare value with nullptr
 #else
     if(m_fasthash->find(key, ac))
 #endif
@@ -949,7 +954,8 @@ bool FIFO_FHCache<TKey, TValue, THash>::update(const TKey& key, const TValue& va
     // we can re-check this and remove it if possible
 
     // Generally when we found the thing in frozen cache
-    if(m_fasthash->find(key, unused_value) && (unused_value != nullptr)) // Siyuan: note that unused_value will NOT be changed if NOT exist
+    //if(m_fasthash->find(key, unused_value) && (unused_value != nullptr))
+    if(m_fasthash->find(key, unused_value)) // Siyuan: note that unused_value will NOT be changed if NOT exist (Siyuan: NO need to compare value with nullptr)
 #else
     if(m_fasthash->find(key, unused_value)) // Siyuan: note that unused_value will NOT be changed if NOT exist
 #endif
@@ -1108,9 +1114,24 @@ bool FIFO_FHCache<TKey, TValue, THash>::insert(const TKey& key,
   // Follow the same logic as HHVM cache
   // What about in frozen part but not in DC: FC objects are a subset of DC objects, so it is fine
   if (!m_map.insert(hashAccessor, hashMapValue)) {
-    hashAccessor->second = HashMapValue(value, node);
+    // Siyuan: for correct cache size usage calculation
+    TValue original_value = hashAccessor->second.m_value; // NOTE: hashAccessor already acquires a write lock for the given key
+    if (value.getValuesize() > original_value.getValuesize())
+    {
+      increase_dckv_and_total_used_bytes(value.getValuesize() - original_value.getValuesize());
+    }
+    else if (original_value.getValuesize() > value.getValuesize())
+    {
+      decrease_dckv_and_total_used_bytes(original_value.getValuesize() - value.getValuesize());
+    }
+
+    hashAccessor->second = HashMapValue(value, node); // Siyuan: memory leakage of original ListNode*???
     return false;
   }
+
+  // Siyuan: for correct cache size usage calculation
+  increase_dckv_and_total_used_bytes(key.getKeyLength() + value.getValuesize());
+  increase_total_used_bytes(sizeof(ListNode*));
   
   // Siyuan: fix impractical input of max # of objects
   // // be aware of FC list movement
@@ -1136,6 +1157,10 @@ bool FIFO_FHCache<TKey, TValue, THash>::insert(const TKey& key,
   std::unique_lock<ListMutex> lock(m_listMutex);
   // Frozen all cahce
   if(tier_no_insert.load()){
+    // Siyuan: for correct cache size usage calculation
+    decrease_dckv_and_total_used_bytes(key.getKeyLength() + value.getValuesize());
+    decrease_total_used_bytes(sizeof(ListNode*));
+
     // How can we still reach this point:
     // while we are inserting, the cache is 100% frozen
     lock.unlock();
@@ -1151,9 +1176,12 @@ bool FIFO_FHCache<TKey, TValue, THash>::insert(const TKey& key,
     node->m_time = m_marker->m_time;
     pushAfter(m_marker, node);
   }
+
+  // Siyuan: for correct cache size usage calculation
+  increase_total_used_bytes(key.getKeyLength() + sizeof(uint64_t)); // key and m_time in FIFO list
   
   lock.unlock();
-  hashAccessor.release(); // avoid deadlock
+  hashAccessor.release(); // avoid deadlock (Siyuan: not sure whether this is necessary, as hashAccessor will release its mutex in deconstructor)
   
   // Some eviction logic
   if (!evictionDone) {
@@ -1207,6 +1235,11 @@ void FIFO_FHCache<TKey, TValue, THash>::clear() {
   m_fast_tail.m_prev = &m_fast_head;
 
   m_size = 0;
+
+  // Siyuan: for correct cache size usage calculation
+  fckv_used_bytes = 0;
+  dckv_used_bytes = 0;
+  total_used_bytes = 0;
 }
 
 template <class TKey, class TValue, class THash>
@@ -1320,6 +1353,9 @@ bool FIFO_FHCache<TKey, TValue, THash>::findVictimKey(TKey& key)
   
   // Delete all the tombs for write in the end of list
   while(moribund->m_key == TOMB_KEY) {
+    // Siyuan: for correct cache size usage calculation
+    decrease_total_used_bytes(moribund->m_key.getKeyLength() + sizeof(uint64_t)); // key and m_time in FIFO list
+
     delink(moribund);
     delete moribund;
     moribund = m_tail.m_prev;
@@ -1370,12 +1406,18 @@ bool FIFO_FHCache<TKey, TValue, THash>::evict(const TKey& key, TValue& value)
 
   value = hashAccessor->second.m_value; // Siyuan: note that hashAccessor already acquires a write lock for the victim key
 
+  // Siyuan: for correct cache size usage calculation
+  decrease_total_used_bytes(key.getKeyLength() + sizeof(uint64_t)); // key and m_time in FIFO list
+
   // Siyuan: remove key from FIFO list
   std::unique_lock<ListMutex> lock(m_listMutex);
   ListNode* moribund = hashAccessor->second.m_listNode;
   assert(moribund != NULL);
   delink(moribund);
   lock.unlock();
+
+  // Siyuan: for correct cache size usage calculation
+  decrease_dckv_and_total_used_bytes(key.getKeyLength() + value.getValuesize() + sizeof(ListNode*));
   
   // Delete the data from hashmap also
   m_map.erase(hashAccessor);
@@ -1419,7 +1461,8 @@ void FIFO_FHCache<TKey, TValue, THash>::delete_key(const TKey& key) {
       // fast_hash_invalid++;
     }
   } // Found in the frozen part
-  else if ((tier_ready || fast_hash_ready) && m_fasthash->find(key, ac) && (ac != nullptr)) {
+  //else if ((tier_ready || fast_hash_ready) && m_fasthash->find(key, ac) && (ac != nullptr)) {
+  else if ((tier_ready || fast_hash_ready) && m_fasthash->find(key, ac)) { // Siyuan: NO need to compare value with nullptr
     node->m_key = TOMB_KEY; // Mark it as dead
     
     // std::unique_lock<ListMutex> lock(m_listMutex);

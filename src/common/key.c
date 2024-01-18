@@ -85,6 +85,16 @@ namespace covered
         return *this;
     }
 
+    bool KeyHasher::equal(const Key& keya, const Key& keyb) const
+    {
+        return keya == keyb;
+    }
+
+    size_t KeyHasher::hash(const Key& key) const
+    {
+        return std::hash<std::string>{}(key.getKeystr());
+    }
+
     size_t KeyHasher::operator()(const Key& key) const
     {
         return std::hash<std::string>{}(key.getKeystr());

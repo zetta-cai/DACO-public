@@ -30,7 +30,8 @@ namespace covered
     //     return mst;
     // }
 
-    template <class TKey, class TValue, class THash = tbb::tbb_hash_compare<TKey>>
+    //template <class TKey, class TValue, class THash = tbb::tbb_hash_compare<TKey>>
+    template <class TKey, class TValue, class THash> // Siyuan: support custom key hasher
     class CacheAPI {
     public:
         virtual ~CacheAPI() {}
@@ -42,6 +43,8 @@ namespace covered
         virtual void snapshotKeys(std::vector<TKey>& keys) {}
 
         virtual size_t size() const = 0;
+
+        virtual uint64_t getSizeForCapacity() const = 0; // Siyuan: for correct cache size usage calculation
 
         virtual void evict_key() {}
 
@@ -55,7 +58,7 @@ namespace covered
 
         virtual void GetStat(size_t& FH_hit, size_t& O_hit, size_t& miss) {}
 
-        virtual void exists(const TKey& key) = 0; // Siyuan: support existence check
+        virtual bool exists(const TKey& key) = 0; // Siyuan: support existence check
 
         virtual bool find(TValue& ac, const TKey& key) = 0;
 

@@ -182,9 +182,9 @@ namespace covered
         return;
     }
 
-    uint64_t LrbLocalCache::getSizeForCapacityInternal_() const
+    uint64_t FrozenhotLocalCache::getSizeForCapacityInternal_() const
     {
-        uint64_t internal_size = lrb_cache_ptr_->getCurrentSize();
+        uint64_t internal_size = frozenhot_cache_ptr_->getSizeForCapacity();
 
         return internal_size;
     }
@@ -192,10 +192,11 @@ namespace covered
     void FrozenhotLocalCache::threadInitIfNot_() const
     {
         int current_cpuid = sched_getcpu();
+        assert(current_cpuid >= 0);
         if (thread_init_set_.find(current_cpuid) == thread_init_set_.end()) // Not initialized before
         {
             frozenhot_cache_ptr_->thread_init(current_cpuid); // Initialize CLHT GC for current CPU core ID
-            thread_init_set_.insert(current_cpuid);
+            thread_init_set_.insert(static_cast<uint32_t>(current_cpuid));
         }
         return;
     }

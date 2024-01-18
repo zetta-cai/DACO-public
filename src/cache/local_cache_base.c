@@ -7,6 +7,7 @@
 #include "cache/cachelib_local_cache.h"
 #include "cache/covered_local_cache.h"
 #include "cache/fifo_local_cache.h"
+#include "cache/frozenhot_local_cache.h"
 #include "cache/lfu_local_cache.h"
 #include "cache/lhd_local_cache.h"
 #include "cache/lrb_local_cache.h"
@@ -31,6 +32,10 @@ namespace covered
         else if (cache_name == Util::FIFO_CACHE_NAME)
         {
             local_cache_ptr = new FifoLocalCache(edge_wrapper_ptr, edge_idx, capacity_bytes);
+        }
+        else if (cache_name == Util::FROZENHOT_CACHE_NAME)
+        {
+            local_cache_ptr = new FrozenhotLocalCache(edge_wrapper_ptr, edge_idx, capacity_bytes);
         }
         else if (cache_name == Util::GLCACHE_CACHE_NAME)
         {

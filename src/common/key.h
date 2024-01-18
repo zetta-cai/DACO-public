@@ -42,6 +42,8 @@ namespace covered
     class KeyHasher
     {
     public:
+        bool equal(const Key& keya, const Key& keyb) const;
+        size_t hash(const Key& key) const;
         size_t operator()(const Key& key) const;
     };
 }

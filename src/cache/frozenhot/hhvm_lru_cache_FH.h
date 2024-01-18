@@ -71,7 +71,8 @@ namespace covered {
  * TBB::CHM. So if that is a possibility for your workload,
  * ThreadSafeScalableCache is recommended instead.
  */
-template <class TKey, class TValue, class THash = tbb::tbb_hash_compare<TKey>>
+//template <class TKey, class TValue, class THash = tbb::tbb_hash_compare<TKey>>
+template <class TKey, class TValue, class THash> // Siyuan: support custom key hasher
 class LRU_FHCache : public covered::FHCacheAPI<TKey, TValue, THash> { // Siyuan: use hacked FHCacheAPI for required interfaces
   /**
    * The LRU list node.
@@ -146,7 +147,8 @@ class LRU_FHCache : public covered::FHCacheAPI<TKey, TValue, THash> { // Siyuan:
   /**
    * Create a container with a given maximum size
    */
-  explicit LRU_FHCache(size_t maxSize, uint64_t capacityBytes); // Siyuan: for correct cache size usage calculation
+  //explicit LRU_FHCache(size_t maxSize);
+  explicit LRU_FHCache(uint64_t capacityBytes); // Siyuan: for correct cache size usage calculation
 
   LRU_FHCache(const LRU_FHCache& other) = delete;
   LRU_FHCache& operator=(const LRU_FHCache&) = delete;
@@ -158,7 +160,7 @@ class LRU_FHCache : public covered::FHCacheAPI<TKey, TValue, THash> { // Siyuan:
   }
 
   // Siyuan: check existence of a given key yet not update any cache metadata
-  virtual void exists(const TKey& key) override;
+  virtual bool exists(const TKey& key) override;
 
   /**
    * Find a value by key, and return it by filling the ConstAccessor, which
@@ -202,6 +204,8 @@ class LRU_FHCache : public covered::FHCacheAPI<TKey, TValue, THash> { // Siyuan:
    * insertion is in progress.
    */
   virtual size_t size() const override { return m_size.load(); }
+
+  virtual uint64_t getSizeForCapacity() const override { return total_used_bytes.load(); } // Siyuan: for correct cache size usage calculation
 
   virtual bool is_full() override {
     //return m_size.load() >= m_maxSize; // Siyuan: impractical input
@@ -316,7 +320,7 @@ class LRU_FHCache : public covered::FHCacheAPI<TKey, TValue, THash> { // Siyuan:
    */
   HashMap m_map;
 
-  std::unique_ptr<covered::FashHashAPI<TValue>>  m_fasthash; // Siyuan: use covered::FastHashAPI
+  std::unique_ptr<covered::FashHashAPI<TKey, TValue, THash>>  m_fasthash; // Siyuan: use covered::FastHashAPI
 
   /**
    * The linked list. The "head" is the most-recently used node, and the
@@ -351,7 +355,8 @@ typename LRU_FHCache<TKey, TValue, THash>::ListNode* const
     LRU_FHCache<TKey, TValue, THash>::OutOfListMarker = (ListNode*)-1;
 
 template <class TKey, class TValue, class THash>
-LRU_FHCache<TKey, TValue, THash>::LRU_FHCache(size_t maxSize, uint64_t capacityBytes) // Siyuan: for correct cache size usage calculation
+//LRU_FHCache<TKey, TValue, THash>::LRU_FHCache(size_t maxSize)
+LRU_FHCache<TKey, TValue, THash>::LRU_FHCache(uint64_t capacityBytes) // Siyuan: for correct cache size usage calculation
     : //m_maxSize(maxSize), // Siyuan: impractical input
       m_size(0),
       capacity_bytes(capacityBytes),
@@ -379,7 +384,7 @@ LRU_FHCache<TKey, TValue, THash>::LRU_FHCache(size_t maxSize, uint64_t capacityB
   //m_fasthash.reset(new covered::CLHT<TKey, TValue>(0, align_len));
   // Siyuan: fix impractical input of max # of objects
   size_t hashtable_bucketcnt = static_cast<size_t>(capacityBytes / 1024 / 1024); // Siyuan: assume one bucket contains 1MiB objects
-  m_fasthash.reset(new covered::TbbCHT<TKey, TValue>(hashtable_bucketcnt));
+  m_fasthash.reset(new covered::TbbCHT<TKey, TValue, THash>(hashtable_bucketcnt));
 }
 
 template <class TKey, class TValue, class THash>
@@ -438,11 +443,10 @@ bool LRU_FHCache<TKey, TValue, THash>::construct_ratio(double FC_ratio) {
       //printf("fail key No.%lu: %lu, count: %lu\n", fail_count, delete_temp->m_key, count);
       //printf("insert count: %lu v.s. eviction count: %lu\n", count, eviction_count);
       temp_node = temp_node->m_next;
+      // Siyuan: for correct cache size usage calculation
+      decrease_total_used_bytes(delete_temp->m_key.getKeyLength() + sizeof(uint64_t)); // key and m_time in LRU list
       if(delete_temp->isInList())
       {
-        // Siyuan: for correct cache size usage calculation
-        decrease_total_used_bytes(delete_temp->m_key.getKeyLength());
-
         delink(delete_temp);
       }
       delete delete_temp;
@@ -538,7 +542,7 @@ bool LRU_FHCache<TKey, TValue, THash>::construct_tier() {
 #ifdef HANDLE_WRITE
     if(temp_node->m_key == TOMB_KEY) {
       // Siyuan: for correct cache size usage calculation
-      decrease_total_used_bytes(temp_node->m_key.getKeyLength());
+      decrease_total_used_bytes(temp_node->m_key.getKeyLength() + sizeof(uint64_t)); // key and m_time in LRU list
 
       delete_temp = temp_node;
       temp_node = temp_node->m_next;
@@ -550,10 +554,9 @@ bool LRU_FHCache<TKey, TValue, THash>::construct_tier() {
     if(! m_map.find(temp_hashAccessor, temp_node->m_key)){
       delete_temp = temp_node;
       temp_node = temp_node->m_next;
+      // Siyuan: for correct cache size usage calculation
+      decrease_total_used_bytes(delete_temp->m_key.getKeyLength() + sizeof(uint64_t)); // key and m_time in LRU list
       if(delete_temp->isInList()){
-        // Siyuan: for correct cache size usage calculation
-        decrease_total_used_bytes(delete_temp->m_key.getKeyLength());
-
         delink(delete_temp);
       }
       delete delete_temp;
@@ -562,7 +565,7 @@ bool LRU_FHCache<TKey, TValue, THash>::construct_tier() {
 #ifdef HANDLE_WRITE
     if(temp_node->m_key == TOMB_KEY) {
       // Siyuan: for correct cache size usage calculation
-      decrease_total_used_bytes(temp_node->m_key.getKeyLength());
+      decrease_total_used_bytes(temp_node->m_key.getKeyLength() + sizeof(uint64_t)); // key and m_time in LRU list
 
       delete_temp = temp_node;
       temp_node = temp_node->m_next;
@@ -659,7 +662,7 @@ void LRU_FHCache<TKey, TValue, THash>::deconstruct() {
 
 // Siyuan: check existence of a given key yet not update any cache metadata
 template <class TKey, class TValue, class THash>
-void LRU_FHCache<TKey, TValue, THash>::exists(const TKey& key)
+bool LRU_FHCache<TKey, TValue, THash>::exists(const TKey& key)
 {
   assert(!(tier_ready || fast_hash_ready) || !curve_flag.load());
 
@@ -667,7 +670,8 @@ void LRU_FHCache<TKey, TValue, THash>::exists(const TKey& key)
   TValue unused_value;
   if (tier_ready || fast_hash_ready) // Frozen cache is ready for all objects or partial objects
   {
-    if (m_fasthash->find(key, unused_value) && (unused_value != nullptr)) // Found in frozen cache
+    //if (m_fasthash->find(key, unused_value) && (unused_value != nullptr)) // Found in frozen cache
+    if (m_fasthash->find(key, unused_value)) // Found in frozen cache (Siyuan: NO need to compare value with nullptr)
     {
       return true;
     }
@@ -702,7 +706,8 @@ bool LRU_FHCache<TKey, TValue, THash>::find(TValue& ac,
 
   if(tier_ready || fast_hash_ready) {
 #ifdef HANDLE_WRITE
-    if(m_fasthash->find(key, ac) && (ac != nullptr))
+    //if(m_fasthash->find(key, ac) && (ac != nullptr))
+    if(m_fasthash->find(key, ac)) // Siyuan: NO need to compare value with nullptr
 #else
     if(m_fasthash->find(key, ac))
 #endif
@@ -875,7 +880,8 @@ bool LRU_FHCache<TKey, TValue, THash>::update(const TKey& key, const TValue& val
 
     TValue unused_value;
 #ifdef HANDLE_WRITE
-    if(m_fasthash->find(key, unused_value) && (unused_value != nullptr)) // Siyuan: note that unused_value will NOT be changed if NOT exist
+    //if(m_fasthash->find(key, unused_value) && (unused_value != nullptr))
+    if(m_fasthash->find(key, unused_value)) // Siyuan: note that unused_value will NOT be changed if NOT exist (Siyuan: NO need to compare value with nullptr)
 #else
     if(m_fasthash->find(key, unused_value)) // Siyuan: note that unused_value will NOT be changed if NOT exist
 #endif
@@ -1012,9 +1018,24 @@ bool LRU_FHCache<TKey, TValue, THash>::insert(const TKey& key,
   HashMapAccessor hashAccessor;
   HashMapValuePair hashMapValue(key, HashMapValue(value, node));
   if (!m_map.insert(hashAccessor, hashMapValue)) {
-    hashAccessor->second = HashMapValue(value, node);
+    // Siyuan: for correct cache size usage calculation
+    TValue original_value = hashAccessor->second.m_value; // NOTE: hashAccessor already acquires a write lock for the given key
+    if (value.getValuesize() > original_value.getValuesize())
+    {
+      increase_dckv_and_total_used_bytes(value.getValuesize() - original_value.getValuesize());
+    }
+    else if (original_value.getValuesize() > value.getValuesize())
+    {
+      decrease_dckv_and_total_used_bytes(original_value.getValuesize() - value.getValuesize());
+    }
+    
+    hashAccessor->second = HashMapValue(value, node); // Siyuan: memory leakage of original ListNode*???
     return false;
   }
+
+  // Siyuan: for correct cache size usage calculation
+  increase_dckv_and_total_used_bytes(key.getKeyLength() + value.getValuesize());
+  increase_total_used_bytes(sizeof(ListNode*));
 
   // Siyuan: fix impractical input of max # of objects
   // if(fast_hash_construct)
@@ -1038,19 +1059,28 @@ bool LRU_FHCache<TKey, TValue, THash>::insert(const TKey& key,
   // exist.
   std::unique_lock<ListMutex> lock(m_listMutex);
   if(tier_no_insert.load()){
+    // Siyuan: for correct cache size usage calculation
+    decrease_dckv_and_total_used_bytes(key.getKeyLength() + value.getValuesize());
+    decrease_total_used_bytes(sizeof(ListNode*));
+
     lock.unlock();
     m_map.erase(hashAccessor);
     delete(node);
     return false;
   }
+
   if(!curve_flag.load())
     pushFront(node);
   else{
     node->m_time = m_marker->m_time;
     pushAfter(m_marker, node);
   }
+
+  // Siyuan: for correct cache size usage calculation
+  increase_total_used_bytes(key.getKeyLength() + sizeof(uint64_t)); // key and m_time in LRU list
+
   lock.unlock();
-  hashAccessor.release(); // for deadlock
+  hashAccessor.release(); // for deadlock (Siyuan: not sure whether this is necessary, as hashAccessor will release its mutex in deconstructor)
   if (!evictionDone) {
     s = m_size++;
   }
@@ -1100,6 +1130,11 @@ void LRU_FHCache<TKey, TValue, THash>::clear() {
   m_fast_tail.m_prev = &m_fast_head;
 
   m_size = 0;
+
+  // Siyuan: for correct cache size usage calculation
+  fckv_used_bytes = 0;
+  dckv_used_bytes = 0;
+  total_used_bytes = 0;
 }
 
 template <class TKey, class TValue, class THash>
@@ -1198,6 +1233,9 @@ bool LRU_FHCache<TKey, TValue, THash>::findVictimKey(TKey& key)
   std::unique_lock<ListMutex> lock(m_listMutex);
   ListNode* moribund = m_tail.m_prev;
   while(moribund->m_key == TOMB_KEY) {
+    // Siyuan: for correct cache size usage calculation
+    decrease_total_used_bytes(moribund->m_key.getKeyLength() + sizeof(uint64_t)); // key and m_time in LRU list
+
     delink(moribund);
     delete moribund;
     moribund = m_tail.m_prev;
@@ -1240,12 +1278,18 @@ bool LRU_FHCache<TKey, TValue, THash>::evict(const TKey& key, TValue& value)
 
   value = hashAccessor->second.m_value; // Siyuan: note that hashAccessor already acquires a write lock for the victim key
 
+  // Siyuan: for correct cache size usage calculation
+  decrease_total_used_bytes(key.getKeyLength() + sizeof(uint64_t)); // key and m_time in LRU list
+
   // Siyuan: remove key from LRU list
   std::unique_lock<ListMutex> lock(m_listMutex);
   ListNode* moribund = hashAccessor->second.m_listNode;
   assert(moribund != NULL);
   delink(moribund);
   lock.unlock();
+
+  // Siyuan: for correct cache size usage calculation
+  decrease_dckv_and_total_used_bytes(key.getKeyLength() + value.getValuesize() + sizeof(ListNode*));
 
   m_map.erase(hashAccessor);
   delete moribund;
@@ -1278,7 +1322,8 @@ void LRU_FHCache<TKey, TValue, THash>::delete_key(const TKey& key) {
       // fast_hash_invalid++;
     }
   }
-  else if ((tier_ready || fast_hash_ready) && m_fasthash->find(key, ac) && (ac != nullptr)) {
+  //else if ((tier_ready || fast_hash_ready) && m_fasthash->find(key, ac) && (ac != nullptr)) {
+  else if ((tier_ready || fast_hash_ready) && m_fasthash->find(key, ac)) { // Siyuan: NO need to compare value with nullptr
     node->m_key = TOMB_KEY;
     std::unique_lock<ListMutex> lock(m_listMutex);
     // m_fasthash.set_key_value(key, nullptr);

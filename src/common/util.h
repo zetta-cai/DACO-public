@@ -83,6 +83,7 @@ namespace covered
         // Cache name
         static const std::string CACHELIB_CACHE_NAME;
         static const std::string FIFO_CACHE_NAME;
+        static const std::string FROZENHOT_CACHE_NAME;
         static const std::string GLCACHE_CACHE_NAME;
         static const std::string GDSF_CACHE_NAME; // Greedy dual
         static const std::string GDSIZE_CACHE_NAME; // Greedy dual
