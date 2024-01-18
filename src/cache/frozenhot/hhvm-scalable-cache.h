@@ -17,6 +17,16 @@
 #ifndef COVERED_HHVM_SCALABLE_CACHE_H
 #define COVERED_HHVM_SCALABLE_CACHE_H
 
+// Siyuan: disable most dump information by default
+//#define DEBUG_COVERED_HHVM_SCALABLE_CACHE
+#ifndef MYPRINTF
+#ifdef DEBUG_COVERED_HHVM_SCALABLE_CACHE
+#define MYPRINTF(...) MYPRINTF(__VA_ARGS__)
+#else
+#define MYPRINTF(...)
+#endif
+#endif
+
 #define RECENCY
 
 #include <queue>
@@ -443,22 +453,22 @@ getSizeForCapacity() {
 template <class TKey, class TValue, class THash>
 void ConcurrentScalableCache<TKey, TValue, THash>::
 PrintStat(){
-  //printf("Size: %lu, %.2lf GB\n", size(), size()*4.0/1000000);
+  //MYPRINTF("Size: %lu, %.2lf GB\n", size(), size()*4.0/1000000);
   size_t total_hit = 0, total_miss = 0;
   for (size_t i = 0; i < m_numShards; i++) {
-    printf("cache No.%ld size %ld\n", i, m_shards[i]->size());
+    MYPRINTF("cache No.%ld size %ld\n", i, m_shards[i]->size());
     size_t hit_num = 0, miss_num = 0;
     m_shards[i]->PrintStat(hit_num, miss_num);
     total_hit += hit_num;
     total_miss += miss_num;
   }
   if(total_hit + total_miss != 0)
-    printf("Total hit rate: %.4lf, hit num: %lu, miss num: %lu\n", 
+    MYPRINTF("Total hit rate: %.4lf, hit num: %lu, miss num: %lu\n", 
                   total_hit*1.0/(total_hit+total_miss), total_hit, total_miss);
   // else
-  //   printf("Total no hit & no miss stat\n");
+  //   MYPRINTF("Total no hit & no miss stat\n");
 
-  printf("numShards: %lu\n", m_numShards);
+  MYPRINTF("numShards: %lu\n", m_numShards);
 }
 
 template <class TKey, class TValue, class THash>
@@ -474,7 +484,7 @@ PrintMissRatio(){
   double temp = 1;
   if(total_hit + total_miss != 0){
     temp = total_miss*1.0/(total_hit+total_miss);
-    printf("Total miss rate: %.4lf, hit num: %lu, miss num: %lu\n", 
+    MYPRINTF("Total miss rate: %.4lf, hit num: %lu, miss num: %lu\n", 
                   temp, total_hit, total_miss);
     fflush(stdout);
   }
@@ -501,8 +511,8 @@ PrintFrozenStat(){
   else {
       temp = 1 - total_FH_hit * 1.0/total;
       global_miss = total_miss*1.0/total;
-      printf("Total miss rate: %.5f / %.5f, ", temp, global_miss);
-      printf("fast find hit: %ld, global hit: %ld, global miss: %ld\n", 
+      MYPRINTF("Total miss rate: %.5f / %.5f, ", temp, global_miss);
+      MYPRINTF("fast find hit: %ld, global hit: %ld, global miss: %ld\n", 
           total_FH_hit, total_O_hit, total_miss);
   }
   //return temp;
@@ -512,13 +522,13 @@ template <class TKey, class TValue, class THash>
 void ConcurrentScalableCache<TKey, TValue, THash>::
 PrintGlobalLat(){
   size_t hit_num = 0, other_num = 0;
-  printf("- Hit ");
+  MYPRINTF("- Hit ");
   auto avg_hit = total_hit_latency_.print_tail(hit_num);
-  printf("- Other ");
+  MYPRINTF("- Other ");
   auto avg_other = total_other_latency_.print_tail(other_num);
   
   auto total_num = hit_num+other_num;
-  printf("Total Avg Lat: %.3lf (size: %lu, miss ratio: %.6lf)\n", 
+  MYPRINTF("Total Avg Lat: %.3lf (size: %lu, miss ratio: %.6lf)\n", 
       (avg_hit*hit_num+avg_other*other_num)/total_num, 
       total_num, other_num*1.0/total_num);
   fflush(stdout);
@@ -533,14 +543,14 @@ double ConcurrentScalableCache<TKey, TValue, THash>::
 PrintStepLat(){
   size_t hit_num = 0, other_num = 0;
   auto curr_time = SSDLOGGING_TIME_NOW;
-  printf("- Hit ");
+  MYPRINTF("- Hit ");
   auto avg_hit = total_hit_latency_.print_from_last_end(hit_num);
-  printf("- Other ");
+  MYPRINTF("- Other ");
   auto avg_other = total_other_latency_.print_from_last_end(other_num);
   
   auto total_num = hit_num+other_num;
   auto temp = (avg_hit*hit_num+avg_other*other_num)/total_num;
-  printf("Total Avg Lat: %.3lf (size: %lu, duration: %.5lf s, approx miss rate: %.4lf)\n",
+  MYPRINTF("Total Avg Lat: %.3lf (size: %lu, duration: %.5lf s, approx miss rate: %.4lf)\n",
     temp, total_num, SSDLOGGING_TIME_DURATION(cursor, curr_time)/1000/1000, other_num*1.0/total_num);
   cursor = curr_time;
   return temp;
@@ -559,14 +569,14 @@ double ConcurrentScalableCache<TKey, TValue, THash>::
 PrintStepLat(size_t& total_num){
   size_t hit_num = 0, other_num = 0;
   auto curr_time = SSDLOGGING_TIME_NOW;
-  printf("- Hit ");
+  MYPRINTF("- Hit ");
   auto avg_hit = total_hit_latency_.print_from_last_end(hit_num);
-  printf("- Other ");
+  MYPRINTF("- Other ");
   auto avg_other = total_other_latency_.print_from_last_end(other_num);
   
   total_num = hit_num+other_num;
   auto temp = (avg_hit*hit_num+avg_other*other_num)/total_num;
-  printf("Total Avg Lat: %.3lf (size: %lu, duration: %.5lf s, approx miss rate: %.4lf)\n",
+  MYPRINTF("Total Avg Lat: %.3lf (size: %lu, duration: %.5lf s, approx miss rate: %.4lf)\n",
     temp, total_num, SSDLOGGING_TIME_DURATION(cursor, curr_time)/1000/1000, other_num*1.0/total_num);
   cursor = curr_time;
   return temp;
@@ -577,14 +587,14 @@ double ConcurrentScalableCache<TKey, TValue, THash>::
 PrintStepLat(double& avg_hit, double& avg_other){
   size_t hit_num = 0, other_num = 0;
   auto curr_time = SSDLOGGING_TIME_NOW;
-  printf("- Hit ");
+  MYPRINTF("- Hit ");
   avg_hit = total_hit_latency_.print_from_last_end(hit_num);
-  printf("- Other ");
+  MYPRINTF("- Other ");
   avg_other = total_other_latency_.print_from_last_end(other_num);
   
   auto total_num = hit_num+other_num;
   auto temp = (avg_hit*hit_num+avg_other*other_num)/total_num;
-  printf("Total Avg Lat: %.3lf (size: %lu, duration: %.5lf s, approx miss rate: %.4lf)\n",
+  MYPRINTF("Total Avg Lat: %.3lf (size: %lu, duration: %.5lf s, approx miss rate: %.4lf)\n",
     temp, total_num, SSDLOGGING_TIME_DURATION(cursor, curr_time)/1000/1000, other_num*1.0/total_num);
   cursor = curr_time;
   return temp;
@@ -609,9 +619,9 @@ PrintStepLat(double& avg_hit, double& avg_other){
 template <class TKey, class TValue, class THash>
 void ConcurrentScalableCache<TKey, TValue, THash>::
 BaseMonitor(){
-  printf("wait stable interval: %d us (%.3lf s)\n",
+  MYPRINTF("wait stable interval: %d us (%.3lf s)\n",
       WAIT_STABLE_SLEEP_INTERVAL_US, WAIT_STABLE_SLEEP_INTERVAL_US*1.0/1000/1000);
-  //printf("wait stable interval: 1s\n");
+  //MYPRINTF("wait stable interval: 1s\n");
 
   // Siyuan: even if we perform warmup phase outside FrozenHot for stable cache performance, we still need internal warmup in FrozenHot for FC ratio adjustment
   auto start_wait_stable = SSDLOGGING_TIME_NOW;
@@ -623,41 +633,41 @@ BaseMonitor(){
 
   // warm up run (non-valid)
   while(!should_stop){
-    printf("\ndata pass %lu\n", print_step_counter++);
+    MYPRINTF("\ndata pass %lu\n", print_step_counter++);
     miss_ratio = PrintMissRatio();
     PrintStepLat();
     if(last_size >= size){
       if(last_miss_ratio <= miss_ratio)
         wait_count++;
       if(wait_count >= WAIT_STABLE_THRESHOLD){
-        // printf("- miss ratio = %.5lf -> %.5lf, with m_size = %lu (max = %lu)\n",
+        // MYPRINTF("- miss ratio = %.5lf -> %.5lf, with m_size = %lu (max = %lu)\n",
         //           last_miss_ratio, miss_ratio, size, m_maxSize);
-        printf("- miss ratio = %.5lf -> %.5lf, with m_size = %lu (max bytes = %lu)\n",
+        MYPRINTF("- miss ratio = %.5lf -> %.5lf, with m_size = %lu (max bytes = %lu)\n",
                   last_miss_ratio, miss_ratio, size, m_maxBytes);
         break;
       }
     }
     last_size = size;
     size = Size();
-    // printf("- miss ratio = %.5lf -> %.5lf, with m_size = %lu (max = %lu)\n",
+    // MYPRINTF("- miss ratio = %.5lf -> %.5lf, with m_size = %lu (max = %lu)\n",
     //               last_miss_ratio, miss_ratio, size, m_maxSize);
-    printf("- miss ratio = %.5lf -> %.5lf, with m_size = %lu (max bytes = %lu)\n",
+    MYPRINTF("- miss ratio = %.5lf -> %.5lf, with m_size = %lu (max bytes = %lu)\n",
                   last_miss_ratio, miss_ratio, size, m_maxBytes);
     fflush(stdout);
     last_miss_ratio = miss_ratio;
     usleep(WAIT_STABLE_SLEEP_INTERVAL_US);
     //sleep(1);
   }
-  printf("\nthe first wait stable\n");
-  printf("clear stat for next stage:\n");
+  MYPRINTF("\nthe first wait stable\n");
+  MYPRINTF("clear stat for next stage:\n");
   PrintGlobalLat(); // with clear inside
 
   auto wait_stable_duration = SSDLOGGING_TIME_DURATION(start_wait_stable, SSDLOGGING_TIME_NOW);
-  printf("\nwait stable spend time: %lf s\n", wait_stable_duration / 1000 / 1000);
+  MYPRINTF("\nwait stable spend time: %lf s\n", wait_stable_duration / 1000 / 1000);
 
   /* valid run */
   while(!should_stop){
-    printf("\ndata pass %lu\n", print_step_counter++);
+    MYPRINTF("\ndata pass %lu\n", print_step_counter++);
     //usleep(WAIT_STABLE_SLEEP_INTERVAL_US);
     sleep(1);
     PrintMissRatio();
@@ -669,11 +679,11 @@ BaseMonitor(){
 template <class TKey, class TValue, class THash>
 void ConcurrentScalableCache<TKey, TValue, THash>::
 FastHashMonitor(){
-  printf("start monitor...\n");
-  printf("wait stable interval: %d us (%.1lf s)\n",
+  MYPRINTF("start monitor...\n");
+  MYPRINTF("wait stable interval: %d us (%.1lf s)\n",
       WAIT_STABLE_SLEEP_INTERVAL_US, WAIT_STABLE_SLEEP_INTERVAL_US*1.0/1000/1000);
   
-  printf("Add extra FH performance threshold %.2lf for construction & frozen\n",
+  MYPRINTF("Add extra FH performance threshold %.2lf for construction & frozen\n",
       FH_PERFORMANCE_THRESHOLD);
 
   // use shard 0 simulate all the cache
@@ -696,11 +706,11 @@ WAIT_STABLE:
   int wait_count = 0;
 
   // Fill up cache
-  printf("\n* start observation *\n");
+  MYPRINTF("\n* start observation *\n");
   while(!should_stop) {
     // Note that 'should_stop' is set true when clients run out of the workload
     // It is a user-level signal, not a signal from the monitor
-    printf("\ndata pass %lu\n", print_step_counter++);
+    MYPRINTF("\ndata pass %lu\n", print_step_counter++);
     miss_ratio = PrintMissRatio();
     PrintStepLat();
     
@@ -711,9 +721,9 @@ WAIT_STABLE:
       if(last_miss_ratio <= miss_ratio) // Miss ratio is non-decreasing
         wait_count++;
       if(wait_count >= WAIT_STABLE_THRESHOLD){ // Waiting too long, stop filling process
-        // printf("- miss ratio = %.5lf -> %.5lf, with m_size = %lu (max = %lu)\n",
+        // MYPRINTF("- miss ratio = %.5lf -> %.5lf, with m_size = %lu (max = %lu)\n",
         //           last_miss_ratio, miss_ratio, size, m_maxSize);
-        printf("- miss ratio = %.5lf -> %.5lf, with m_size = %lu (max bytes = %lu)\n",
+        MYPRINTF("- miss ratio = %.5lf -> %.5lf, with m_size = %lu (max bytes = %lu)\n",
                   last_miss_ratio, miss_ratio, size, m_maxBytes);
         break;
       }
@@ -722,31 +732,31 @@ WAIT_STABLE:
     // Update size
     last_size = size;
     size = Size();
-    // printf("- miss ratio = %.5lf -> %.5lf, with m_size = %lu (max = %lu)\n",
+    // MYPRINTF("- miss ratio = %.5lf -> %.5lf, with m_size = %lu (max = %lu)\n",
     //               last_miss_ratio, miss_ratio, size, m_maxSize);
-    printf("- miss ratio = %.5lf -> %.5lf, with m_size = %lu (max bytes = %lu)\n",
+    MYPRINTF("- miss ratio = %.5lf -> %.5lf, with m_size = %lu (max bytes = %lu)\n",
                   last_miss_ratio, miss_ratio, size, m_maxBytes);
     fflush(stdout);
     last_miss_ratio = miss_ratio; // Update miss ratio
     usleep(WAIT_STABLE_SLEEP_INTERVAL_US);
   }
-  printf("\ncache is stable\n");
+  MYPRINTF("\ncache is stable\n");
   
   // Message for end filling
   if(beginning_flag){
-    printf("the first wait stable\n");
-    printf("clear stat for next stage:\n");
+    MYPRINTF("the first wait stable\n");
+    MYPRINTF("clear stat for next stage:\n");
     PrintGlobalLat();
     beginning_flag = false;
   }
   auto wait_stable_duration = SSDLOGGING_TIME_DURATION(start_wait_stable, SSDLOGGING_TIME_NOW);
-  printf("\nwait stable spend time: %lf s\n", wait_stable_duration / 1000 / 1000);
+  MYPRINTF("\nwait stable spend time: %lf s\n", wait_stable_duration / 1000 / 1000);
 
-  printf("\n* end observation *\n");
+  MYPRINTF("\n* end observation *\n");
 
   monitor_time = double(500 * m_numShards);
 
-  printf("\n* start search *\n");
+  MYPRINTF("\n* start search *\n");
   auto start_learning_time = SSDLOGGING_TIME_NOW;
 
   // get curve
@@ -764,7 +774,7 @@ WAIT_STABLE:
   do{
     usleep(WAIT_STABLE_SLEEP_INTERVAL_US);
   }while(total_other_latency_.size_from_last_end() < 5 && !should_stop);
-  printf("\ndraw curve\ndata pass %lu\n", print_step_counter++);
+  MYPRINTF("\ndraw curve\ndata pass %lu\n", print_step_counter++);
   PrintMissRatio();
   /* become aware of DC latency (hit lat) and DC miss latency + disk latency (miss lat) */
   PrintStepLat(DC_hit_lat, miss_lat);
@@ -773,7 +783,7 @@ WAIT_STABLE:
   for(size_t i = 0; i < m_numShards; i++){
     m_shards[i]->construct_tier();
   }
-  printf("\ndata pass %lu\n", print_step_counter++);
+  MYPRINTF("\ndata pass %lu\n", print_step_counter++);
   PrintMissRatio();
   PrintStepLat();
 
@@ -782,7 +792,7 @@ WAIT_STABLE:
    * get performance and miss ratio after sleep
    */
   usleep(WAIT_STABLE_SLEEP_INTERVAL_US);
-  printf("\ndata pass %lu\n", print_step_counter++);
+  MYPRINTF("\ndata pass %lu\n", print_step_counter++);
   
   /* get one endpoint of FC miss ratio in curve -- when 100% FC
    * but not used (only printed)
@@ -794,7 +804,7 @@ WAIT_STABLE:
     m_shards[i]->deconstruct();
   }
 
-  printf("\nHothash lat: %.3lf, 100%% Frozen Avg lat: %.3lf us, Miss Rate: %.3lf\n",
+  MYPRINTF("\nHothash lat: %.3lf, 100%% Frozen Avg lat: %.3lf us, Miss Rate: %.3lf\n",
     FC_lat, Frozen_Avg, Frozen_Miss);
   fflush(stdout);
 
@@ -811,7 +821,7 @@ WAIT_STABLE:
     if(tSize < 0.01){
       avg = tMiss * miss_lat + (1-tMiss) * DC_hit_lat;
       tSize = 0;
-      printf("when baseline, avg from %.3lf to %.3lf\n",
+      MYPRINTF("when baseline, avg from %.3lf to %.3lf\n",
           avg, avg / (1 + FH_PERFORMANCE_THRESHOLD));
       avg = avg / (1 + FH_PERFORMANCE_THRESHOLD);
     }
@@ -819,7 +829,7 @@ WAIT_STABLE:
     // when tSize is large, we regard it as ~100% FC
     else if(i == container.size() - 1 && tSize > 0.65){
       //avg = tMiss * disk_lat + (1-tMiss) * FC_lat;
-      printf("regard tSize from %.3lf to %d\n", tSize, 1);
+      MYPRINTF("regard tSize from %.3lf to %d\n", tSize, 1);
       tSize = 1;
       avg = tFC_hit_ * FC_lat + tMiss * (miss_lat+FC_lat) + (1-tFC_hit_-tMiss) * (FC_lat + DC_hit_lat);
     }
@@ -832,14 +842,14 @@ WAIT_STABLE:
       best_size = tSize;
       best_option_tMiss = tMiss;
       /* only print when best avg is updated */
-      printf("(Update) best avg: %.3lf us, best size: %.3lf (w. FC_hit: %.3lf, miss: %.3lf)\n",
+      MYPRINTF("(Update) best avg: %.3lf us, best size: %.3lf (w. FC_hit: %.3lf, miss: %.3lf)\n",
         best_avg, best_size, tFC_hit_, best_option_tMiss);
     }
   }
   
   // Compare best "partially" frozen [0, 100%) one with 100% Frozen
   if(best_avg > Frozen_Avg){
-    printf("(Update) best avg: %.3lf us, best size: %.3lf\n",
+    MYPRINTF("(Update) best avg: %.3lf us, best size: %.3lf\n",
       Frozen_Avg, 1.0);
     best_avg = Frozen_Avg;
     best_size = 1.0;
@@ -850,28 +860,28 @@ WAIT_STABLE:
   m_shards[0]->curve_container.clear();
 
   auto learning_duration = SSDLOGGING_TIME_DURATION(start_learning_time, SSDLOGGING_TIME_NOW);
-  printf("\nsearch time: %lf s\n", learning_duration / 1000 / 1000);
-  printf("Profiling best size: %.3lf\n", best_size);
+  MYPRINTF("\nsearch time: %lf s\n", learning_duration / 1000 / 1000);
+  MYPRINTF("Profiling best size: %.3lf\n", best_size);
 
   // debugging
-  // printf("\nDebug: Test 1.0 Size\n");
+  // MYPRINTF("\nDebug: Test 1.0 Size\n");
   // best_size = 1;
   
   // End of FH evaluation, and got the desired ratio to construct
-  printf("\n* end search *\n");
+  MYPRINTF("\n* end search *\n");
   
   if(!should_stop && best_size < 0.05){ // 0.05 is magic
     // not suitable for FH
     // sleep longer and longer (wait)
     SLEEP_THRESHOLD *= 8; // 8 is magic
-    printf("Sleep threshold increase to %zu\n", SLEEP_THRESHOLD);
-    printf("Sleep %zu s\n", SLEEP_THRESHOLD);
+    MYPRINTF("Sleep threshold increase to %zu\n", SLEEP_THRESHOLD);
+    MYPRINTF("Sleep %zu s\n", SLEEP_THRESHOLD);
     fflush(stdout);
     for(size_t i = 0; i < SLEEP_THRESHOLD; i++){
       if(should_stop)
         break;
       sleep(1);
-      printf("\ndata pass %lu\n", print_step_counter++);
+      MYPRINTF("\ndata pass %lu\n", print_step_counter++);
       PrintMissRatio();
       PrintStepLat();
     }
@@ -886,15 +896,15 @@ CONSTRUCT:
   double baseline_metrics[80];
   std::set<int> fail_list;
   fail_list.clear();
-  printf("\n* start construct *\n");
+  MYPRINTF("\n* start construct *\n");
 
   assert(construct_container.empty());
 
-  printf("\nFind median avg lat of baseline:");
+  MYPRINTF("\nFind median avg lat of baseline:");
   do{
     sleep(1);
   }while(GetStepSize() < 100 && !should_stop);
-  printf("\ndata pass %lu\n", print_step_counter++);
+  MYPRINTF("\ndata pass %lu\n", print_step_counter++);
   PrintMissRatio();
 
   size_t baseline_step = 0;
@@ -903,13 +913,13 @@ CONSTRUCT:
   baseline_performance_for_query = PrintStepLat(construct_step);
   double baseline_performance_with_threshold = baseline_performance_for_query  / (1 + FH_PERFORMANCE_THRESHOLD);
 
-  printf("FH compare with baseline metric: %.3lf\n", baseline_performance_for_query);
-  printf("FH compare with baseline metric with threshold: %.3lf\n", baseline_performance_with_threshold);
+  MYPRINTF("FH compare with baseline metric: %.3lf\n", baseline_performance_for_query);
+  MYPRINTF("FH compare with baseline metric with threshold: %.3lf\n", baseline_performance_with_threshold);
 
   stop_sample_stat = false; // enable req_latency_[]
 
   /* req_latency_[] array is used to store the latency of each shard */
-  printf("\nPer shard baseline print tail\n");
+  MYPRINTF("\nPer shard baseline print tail\n");
   for(size_t i = 0; i < m_numShards; i++) { // initialization
     req_latency_[i].reset();
   }
@@ -939,11 +949,11 @@ CONSTRUCT:
     for(size_t k = 0; k < pass_len; k++){
       // simply print with order
       // TODO @ Ziyue: maybe we can use a better way to print (just indexing?)
-      printf("%d ", construct_container.front());
+      MYPRINTF("%d ", construct_container.front());
       construct_container.push(construct_container.front());
       construct_container.pop();
     }
-    printf("left\n");
+    MYPRINTF("left\n");
 
     /* alloc maximum = PASS_THRESHOLD times of pass */
     if(pass_count >= PASS_THRESHOLD){
@@ -977,7 +987,7 @@ CONSTRUCT:
       construct_container.push(shard_id);
     }
     // query
-    printf("try query\n");
+    MYPRINTF("try query\n");
     fflush(stdout);
     usleep(monitor_time);
     
@@ -995,21 +1005,21 @@ CONSTRUCT:
         // clear baseline latency, since not baseline during FH phase
         req_latency_[shard_id].reset();
         usleep(monitor_time);
-        printf("shard %lu baseline metrics (update):\n", shard_id);
+        MYPRINTF("shard %lu baseline metrics (update):\n", shard_id);
         baseline_metrics[shard_id] = req_latency_[shard_id].print_tail();
       }
     }
-    printf("pass %d end\n", pass_count++);
+    MYPRINTF("pass %d end\n", pass_count++);
     fflush(stdout);
 
-    printf("\nconstruct phase:\ndata pass %lu\n", print_step_counter++);
+    MYPRINTF("\nconstruct phase:\ndata pass %lu\n", print_step_counter++);
     PrintMissRatio();
     size_t temp_step = 0;
     PrintStepLat(temp_step);
     construct_step += temp_step;
   }
 
-  printf("\nconstruct step: %lu\n", construct_step);
+  MYPRINTF("\nconstruct step: %lu\n", construct_step);
 
   // Means all shards fail, pretty bad :(
   if(!should_stop && fail_list.size() == m_numShards){
@@ -1019,23 +1029,23 @@ CONSTRUCT:
 
   // Message for construction phase details
   auto construct_duration = SSDLOGGING_TIME_DURATION(start_construct_time, SSDLOGGING_TIME_NOW);
-  printf("\nconstruct time: %lf s\n", construct_duration / 1000 / 1000);
+  MYPRINTF("\nconstruct time: %lf s\n", construct_duration / 1000 / 1000);
   if(fail_list.size() == 0)
-    printf("fail %ld shard, construct fully succeed\n", fail_list.size());
+    MYPRINTF("fail %ld shard, construct fully succeed\n", fail_list.size());
   else
-    printf("fail %ld shard\n", fail_list.size());
+    MYPRINTF("fail %ld shard\n", fail_list.size());
   
-  printf("\n* end construct *\n"); // End of the FH construction
+  MYPRINTF("\n* end construct *\n"); // End of the FH construction
 
   stop_sample_stat = true; // disable req_latency_[] in client logic
                            // this helps us do less job
   
   // Start of Frozen run after construction, and monitor it
   auto start_query_stage = SSDLOGGING_TIME_NOW;
-  printf("\n* start frozen *\n");
+  MYPRINTF("\n* start frozen *\n");
   
   double check_time = CHECK_SLEEP_INTERVAL_US;
-  printf("check interval: %.3lf s\n", check_time/1000/1000);
+  MYPRINTF("check interval: %.3lf s\n", check_time/1000/1000);
   performance_depletion = COUNT_THRESHOLD;
   bool first_flag = true;
   size_t total_step = 0;
@@ -1046,7 +1056,7 @@ CONSTRUCT:
       usleep(check_time);
     } while(GetStepSize() < 50 && !should_stop);
     
-    printf("\ndata pass %lu\n", print_step_counter++);
+    MYPRINTF("\ndata pass %lu\n", print_step_counter++);
     PrintFrozenStat();
     performance = PrintStepLat(thput_step);
     if(first_flag){
@@ -1064,19 +1074,19 @@ CONSTRUCT:
     if(performance_depletion <= 0){
     // give 3 times baseline as start-up capital,
     // if depleted, goto DECONSTRUCT
-      printf("depleted: %.3lf <= 0\n\n", performance_depletion);
+      MYPRINTF("depleted: %.3lf <= 0\n\n", performance_depletion);
       SLEEP_THRESHOLD *= 8;
-      printf("Sleep threshold increase to %zu\n", SLEEP_THRESHOLD);
+      MYPRINTF("Sleep threshold increase to %zu\n", SLEEP_THRESHOLD);
       goto DECONSTRUCT;
     }
     else{
-      printf("not depleted: %.3lf > 0\n", performance_depletion);
+      MYPRINTF("not depleted: %.3lf > 0\n", performance_depletion);
     }
 
     total_step += thput_step;
     current_step += thput_step;
     if(total_step > construct_step * FROZEN_THRESHOLD){ // Periodic Reconstruction of FH
-      printf("\nAfter %lu frozen step (> %d * %lu = %lu), need periodically refresh!\n",
+      MYPRINTF("\nAfter %lu frozen step (> %d * %lu = %lu), need periodically refresh!\n",
         total_step, FROZEN_THRESHOLD, construct_step, construct_step * FROZEN_THRESHOLD);
       for(size_t i = 0; i < m_numShards; i++) {
         m_shards[i]->deconstruct();
@@ -1086,7 +1096,7 @@ CONSTRUCT:
 
       if(SLEEP_THRESHOLD >= 2)
         SLEEP_THRESHOLD /= 2;
-      printf("Perform Well, Sleep Threshold decrease into %zu\n", SLEEP_THRESHOLD);
+      MYPRINTF("Perform Well, Sleep Threshold decrease into %zu\n", SLEEP_THRESHOLD);
       goto CONSTRUCT;
     } else if(current_step > construct_step) {
       /* this is a round to check whether need to deconstruct
@@ -1098,13 +1108,13 @@ CONSTRUCT:
        * else (performance_depletion <= COUNT_THRESHOLD), it means FH is not good enough
        */
       if(performance_depletion > COUNT_THRESHOLD){
-        printf("\nPeformance Depletion set to %d after %zu step for a round!\n", COUNT_THRESHOLD, current_step);
+        MYPRINTF("\nPeformance Depletion set to %d after %zu step for a round!\n", COUNT_THRESHOLD, current_step);
         // it is still good enough
         performance_depletion = COUNT_THRESHOLD;
         current_step = 0;
       } else {
         // it is not good enough, need to deconstruct
-        printf("\nAfter %lu frozen step (~ %d * %lu), need to refresh!\n",
+        MYPRINTF("\nAfter %lu frozen step (~ %d * %lu), need to refresh!\n",
           total_step, int(total_step/construct_step),construct_step);
         for(size_t i = 0; i < m_numShards; i++) {
           m_shards[i]->deconstruct();
@@ -1123,14 +1133,14 @@ DECONSTRUCT:
   }
 
   auto query_duration = SSDLOGGING_TIME_DURATION(start_query_stage, SSDLOGGING_TIME_NOW);
-  printf("\nfrozen stage duration time: %lf\n", query_duration /1000 / 1000);
-  printf("\n* end frozen *\n");
+  MYPRINTF("\nfrozen stage duration time: %lf\n", query_duration /1000 / 1000);
+  MYPRINTF("\n* end frozen *\n");
   if(!should_stop){
-    printf("Sleep %zu s\n", SLEEP_THRESHOLD);
+    MYPRINTF("Sleep %zu s\n", SLEEP_THRESHOLD);
     fflush(stdout);
     for(size_t i = 0; i < SLEEP_THRESHOLD; i++){
       sleep(1);
-      printf("\ndata pass %lu\n", print_step_counter++);
+      MYPRINTF("\ndata pass %lu\n", print_step_counter++);
       PrintMissRatio();
       PrintStepLat();
       if(should_stop)
@@ -1146,7 +1156,7 @@ DECONSTRUCT:
    * or the profiling results (curve) might not be accurate
    */
   if(!should_stop){
-    printf("\ngo back to wait stable\n");
+    MYPRINTF("\ngo back to wait stable\n");
     goto WAIT_STABLE;
   }
   printf("\nend monitor\n");

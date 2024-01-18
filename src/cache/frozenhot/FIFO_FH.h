@@ -17,6 +17,16 @@
 #ifndef COVERED_incl_FIFO_CACHE_FH_H
 #define COVERED_incl_FIFO_CACHE_FH_H
 
+// Siyuan: disable most dump information by default
+//#define DEBUG_COVERED_incl_FIFO_CACHE_FH_H
+#ifndef MYPRINTF
+#ifdef DEBUG_COVERED_incl_FIFO_CACHE_FH_H
+#define MYPRINTF(...) MYPRINTF(__VA_ARGS__)
+#else
+#define MYPRINTF(...)
+#endif
+#endif
+
 #include <tbb/concurrent_hash_map.h>
 //#include <hash/hash_header.h> // Siyuan: lib/frozenhot/hash/hash_header.h
 //#include <cache/FHCache.h> // Siyuan: lib/frozenhot/cache/FHCache.h
@@ -412,7 +422,7 @@ bool FIFO_FHCache<TKey, TValue, THash>::construct_ratio(double FC_ratio) {
   // Siyuan: fix impractical input of max # of objects
   uint64_t FC_bytes = FC_ratio * capacity_bytes;
   uint64_t DC_bytes = capacity_bytes - FC_bytes;
-  printf("FC_size: %llu, DC_size: %llu\n", FC_bytes, DC_bytes);
+  MYPRINTF("FC_size: %llu, DC_size: %llu\n", FC_bytes, DC_bytes);
   uint64_t fail_bytes = 0, bytes = 0;
 
   // false when FC is already pushed to the tail of the list
@@ -509,10 +519,10 @@ bool FIFO_FHCache<TKey, TValue, THash>::construct_ratio(double FC_ratio) {
   //   printf("fast hash insert num: %lu, m_size: %ld (FC_ratio: %.2lf)\n", 
   //       count, m_size.load(), count*1.0/m_size.load());
   if(fail_bytes > 0)
-    printf("fast hash insert num: %lu, fail bytes: %lu, dckv_used_bytes: %ld (FC_ratio: %.2lf)\n", 
+    MYPRINTF("fast hash insert num: %lu, fail bytes: %lu, dckv_used_bytes: %ld (FC_ratio: %.2lf)\n", 
         bytes, fail_bytes, dckv_used_bytes.load(), bytes*1.0/dckv_used_bytes.load());
   else
-    printf("fast hash insert bytes: %lu, dckv_used_bytes: %ld (FC_ratio: %.2lf)\n", 
+    MYPRINTF("fast hash insert bytes: %lu, dckv_used_bytes: %ld (FC_ratio: %.2lf)\n", 
         bytes, dckv_used_bytes.load(), bytes*1.0/dckv_used_bytes.load());
   
   
@@ -617,7 +627,7 @@ bool FIFO_FHCache<TKey, TValue, THash>::construct_tier() {
   // Siyuan: fix impractical input of max # of objects
   // printf("fast hash insert num: %d, m_size: %ld (FC_ratio: %.2lf)\n", 
   //     count, m_size.load(), count*1.0/m_size.load());
-  printf("fast hash insert bytes: %d, dckv_used_bytes: %ld (FC_ratio: %.2lf)\n", 
+  MYPRINTF("fast hash insert bytes: %d, dckv_used_bytes: %ld (FC_ratio: %.2lf)\n", 
       bytes, dckv_used_bytes.load(), bytes*1.0/dckv_used_bytes.load());
   tier_ready = true;
   fast_hash_construct = false;
@@ -635,7 +645,7 @@ void FIFO_FHCache<TKey, TValue, THash>::debug(int status) {
       assert(temp != nullptr);
       temp = temp->m_next;
     }
-    printf("Main LRU list Size: %d, m_size: %ld\n", count, m_size.load());
+    MYPRINTF("Main LRU list Size: %d, m_size: %ld\n", count, m_size.load());
   }
   else if(status == 1){
     ListNode* temp = m_fast_head.m_next;
@@ -645,7 +655,7 @@ void FIFO_FHCache<TKey, TValue, THash>::debug(int status) {
       assert(temp != nullptr);
       temp = temp->m_next;
     }
-    printf("Fast LRU list Size: %d, m_size: %ld\n", count, m_size.load());
+    MYPRINTF("Fast LRU list Size: %d, m_size: %ld\n", count, m_size.load());
   }
   else if(status == 2){
     std::unique_lock<ListMutex> lock(m_listMutex);
@@ -656,7 +666,7 @@ void FIFO_FHCache<TKey, TValue, THash>::debug(int status) {
       assert(temp != nullptr);
       temp = temp->m_next;
     }
-    printf("Main LRU list Size: %d, m_size: %ld\n", count, m_size.load());
+    MYPRINTF("Main LRU list Size: %d, m_size: %ld\n", count, m_size.load());
   }
 }
 
@@ -670,7 +680,7 @@ void FIFO_FHCache<TKey, TValue, THash>::deconstruct() {
   
   // If the cache was DC already, do nothing
   if(m_fast_head.m_next == &m_fast_tail){
-    printf("no need to deconstruct!\n");
+    MYPRINTF("no need to deconstruct!\n");
     fflush(stdout);
     return;
   }
@@ -1047,16 +1057,16 @@ bool FIFO_FHCache<TKey, TValue, THash>::get_curve(bool& should_stop) {
     }while(FC_bytes <= capacity_bytes * i * 1.0/100 * 2 && !should_stop); // Siyuan: fix impractical input of max # of objects
     
     // Message printing and calculate FC ratio from size (marker movements)
-    printf("\ncurve pass %lu\n", pass_counter++);
+    MYPRINTF("\ncurve pass %lu\n", pass_counter++);
     // double FC_ratio = FC_size * 1.0 / m_maxSize;
     // printf("FC_size: %lu (FC_ratio: %.3lf)\n", FC_size, FC_ratio);
     // Siyuan: fix impractical input of max # of objects
     double FC_ratio = FC_bytes * 1.0 / capacity_bytes;
-    printf("FC_bytes: %llu (FC_ratio: %.3lf)\n", FC_bytes, FC_ratio);
+    MYPRINTF("FC_bytes: %llu (FC_ratio: %.3lf)\n", FC_bytes, FC_ratio);
     double FC_hit = 0, miss = 1;
     FIFO_FHCache::print_step(FC_hit, miss);
     auto curr_time = SSDLOGGING_TIME_NOW;
-    printf("duration: %.3lf ms\n", SSDLOGGING_TIME_DURATION(start_time, curr_time)/1000);
+    MYPRINTF("duration: %.3lf ms\n", SSDLOGGING_TIME_DURATION(start_time, curr_time)/1000);
     start_time = curr_time;
     fflush(stdout);
     
@@ -1079,7 +1089,7 @@ bool FIFO_FHCache<TKey, TValue, THash>::get_curve(bool& should_stop) {
   FIFO_FHCache::sample_flag = true;
   
   // Remove the marker
-  printf("\ncurve container size: %lu\n", FIFO_FHCache::curve_container.size());
+  MYPRINTF("\ncurve container size: %lu\n", FIFO_FHCache::curve_container.size());
   std::unique_lock<ListMutex> lockB(m_listMutex);
   curve_flag = false;
   delink(m_marker);
