@@ -164,6 +164,7 @@ namespace covered
         {
             if (this != &other)
             {
+                lru_id_ = other.lru_id_;
                 is_ghost_ = other.is_ghost_;
                 data_list_iter_ = other.data_list_iter_;
                 ghost_list_iter_ = other.ghost_list_iter_;
@@ -234,178 +235,65 @@ namespace covered
 
         bool get(const Key& key, Value& value)
         {
-            reqseq_ += 1; // Update global virtual/logical timestamp
-
-            bool is_local_cached = false;
-
-            lookupmap_iterator_t lookup_map_iter = key_lookup_.find(key);
-            if (lookup_map_iter == key_lookup_.end())
-            {
-                is_local_cached = false;
-            }
-            else
-            {
-                curr_obj_in_L1_ghost_ = false;
-                curr_obj_in_L2_ghost_ = false;
-
-                int lru_id = lookup_map_iter->second.getLruId();
-                if (lookup_map_iter->second.isGhost())
-                {
-                    is_local_cached = false;
-
-                    // ghost hit
-                    vtime_last_req_in_ghost_ = reqseq_;
-                    if (lru_id == 1) {
-                        const ghostlist_const_iterator_t& ghost_list_const_iter_const_ref = lookup_map_iter->second.getGhostListIterConstRef();
-                        assert(ghost_list_const_iter_const_ref != L1_ghost_list_.end());
-                        assert(ghost_list_const_iter_const_ref->getKey() == key);
-                        assert(ghost_list_const_iter_const_ref->getLruId() == lru_id);
-                        assert(ghost_list_const_iter_const_ref->isGhost());
-
-                        curr_obj_in_L1_ghost_ = true;
-                        // case II: x in L1_ghost
-                        assert(L1_ghost_size_ >= 1);
-                        double delta = MAX((double)L2_ghost_size_ / L1_ghost_size_, 1);
-                        p_ = MIN(p_ + delta, capacity_bytes_);
-
-                        // Remove ArcGhostItem from ghost LRU 1
-                        decreaseGhostAndTotalSize_(ghost_list_const_iter_const_ref->getSizeForCapacity(), lru_id);
-                        L1_ghost_list_.erase(ghost_list_const_iter_const_ref);
-                    }
-                    else {
-                        const ghostlist_const_iterator_t& ghost_list_const_iter_const_ref = lookup_map_iter->second.getGhostListIterConstRef();
-                        assert(ghost_list_const_iter_const_ref != L2_ghost_list_.end());
-                        assert(ghost_list_const_iter_const_ref->getKey() == key);
-                        assert(ghost_list_const_iter_const_ref->getLruId() == lru_id);
-                        assert(ghost_list_const_iter_const_ref->isGhost());
-
-                        curr_obj_in_L2_ghost_ = true;
-                        // case III: x in L2_ghost
-                        assert(L2_ghost_size_ >= 1);
-                        double delta = MAX((double)L1_ghost_size_ / L2_ghost_size_, 1);
-                        p_ = MAX(p_ - delta, 0);
-
-                        // Remove ArcGhostItem from ghost LRU 2
-                        decreaseGhostAndTotalSize_(ghost_list_const_iter_const_ref->getSizeForCapacity(), lru_id);
-                        L2_ghost_list_.erase(ghost_list_const_iter_const_ref);
-                    }
-
-                    // Remove lookup map entry
-                    decreaseTotalSize_(key.getKeyLength() + lookup_map_iter->second.getSizeForCapacity());
-                    key_lookup_.erase(lookup_map_iter);
-                }
-                else
-                {
-                    is_local_cached = true;
-
-                    // cache hit, case I: x in L1_data or L2_data
-                    if (lru_id == 1) {
-                        const datalist_iterator_t& data_list_iter_const_ref = lookup_map_iter->second.getDataListIterConstRef();
-                        assert(data_list_iter_const_ref != L1_data_list_.end());
-                        assert(data_list_iter_const_ref->getKey() == key);
-                        assert(data_list_iter_const_ref->getLruId() == lru_id);
-                        assert(!data_list_iter_const_ref->isGhost());
-
-						// Get value
-						value = data_list_iter_const_ref->getValue();
-
-                        // move to LRU2 (no need to update cache size usage due to no change)
-						// Remove from data LRU 1
-						//decreaseDataAndTotalSize_(data_list_iter_const_ref->getSizeForCapacity(), lru_id);
-						L1_data_list_.erase(data_list_iter_const_ref);
-						// Insert into data LRU 2
-						ArcDataItem tmp_item(key, value, 2);
-						//increaseDataAndTotalSize_(tmp_item.getSizeForCapacity(), 2);
-						L2_data_list_.push_front(tmp_item);
-
-						// update lookup table (no need to update cache size usage due to no change)
-						ArcLookupIter tmp_lookup_iter(L2_data_list_.begin());
-						assert(tmp_lookup_iter.getLruId() == 2);
-						assert(!tmp_lookup_iter.isGhost());
-						lookup_map_iter->second = tmp_lookup_iter;
-                    } else {
-                        const datalist_iterator_t& data_list_iter_const_ref = lookup_map_iter->second.getDataListIterConstRef();
-                        assert(data_list_iter_const_ref != L2_data_list_.end());
-                        assert(data_list_iter_const_ref->getKey() == key);
-                        assert(data_list_iter_const_ref->getLruId() == lru_id);
-                        assert(!data_list_iter_const_ref->isGhost());
-
-						// Get value
-						value = data_list_iter_const_ref->getValue();
-
-                        // move to LRU2 head (no need to update cache size usage due to no change)
-						ArcDataItem tmp_item = *data_list_iter_const_ref;
-						// Remove from data LRU 2
-						//decreaseDataAndTotalSize_(data_list_iter_const_ref->getSizeForCapacity(), lru_id);
-						L2_data_list_.erase(data_list_iter_const_ref);
-						// Insert into head of data LRU 2
-						//increaseDataAndTotalSize_(tmp_item.getSizeForCapacity(), lru_id);
-						L2_data_list_.push_front(tmp_item);
-
-						// update lookup table (no need to update cache size usage due to no change)
-						ArcLookupIter tmp_lookup_iter(L2_data_list_.begin());
-						assert(tmp_lookup_iter.getLruId() == 2);
-						assert(!tmp_lookup_iter.isGhost());
-						lookup_map_iter->second = tmp_lookup_iter;
-                    }
-                }
-            }
-
+            bool is_local_cached = access_(key, value);
             return is_local_cached;
         }
 
         bool update(const Key& key, const Value& value)
         {
-            bool is_local_cached = false;
-
-            map_iterator_t map_iter = key_lookup_.find(key);
-            if (map_iter != key_lookup_.end()) // Previous value exists
-            {
-                // Update visited flag
-                sieve_iterator list_iter = map_iter->second;
-                assert(list_iter != sieve_queue_.end());
-                assert(list_iter->getKey() == key);
-                list_iter->setVisited();
-
-                // Get previous value
-                uint32_t prev_valuesize = list_iter->getValue().getValuesize();
-                size_ = Util::uint64Minus(size_, static_cast<uint64_t>(prev_valuesize));
-
-                // Update value
-                list_iter->setValue(value);
-                size_ = Util::uint64Add(size_, static_cast<uint64_t>(value.getValuesize()));
-
-                is_local_cached = true;
-            }
+            Value unused_fetched_value;
+            bool is_local_cached = access_(key, unused_fetched_value, true, value);
 
             return is_local_cached;
         }
 
         void admit(const Key& key, const Value& value)
         {
-            map_iterator_t map_iter = key_lookup_.find(key);
-            if (map_iter != key_lookup_.end()) // Previous list and map entry exist
+            lookupmap_const_iterator_t lookup_map_const_iter = key_lookup_.find(key);
+            if (lookup_map_const_iter != key_lookup_.end()) // Previous list and map entry exist
             {
+                // NOTE: object MUST be in L1/L2 data list, as ghost list entry will be removed if any in access_() for cache miss before admit()
+                assert(!lookup_map_const_iter->second.isGhost());
+
                 std::ostringstream oss;
-                oss << "key " << key.getKeystr() << " already exists in key_lookup_ (list size: " << sieve_queue_.size() << ") for admit()";
+                oss << "key " << key.getKeystr() << " already exists in key_lookup_ (L1 data list size: " << L1_data_list_.size() << "; L2 data list size: " << L2_data_list_.size() << ") for admit()";
                 Util::dumpWarnMsg(kClassName, oss.str());
                 return;
             }
             else // No previous list and map entry
             {
-                // Insert a new sieve item to the head of the list
-                SieveItem tmp_item(key, value);
-                sieve_queue_.emplace_front(tmp_item);
-                size_ = Util::uint64Add(size_, tmp_item.getSizeForCapacity());
+                if (vtime_last_req_in_ghost_ == reqseq_ &&
+                    (curr_obj_in_L1_ghost_ || curr_obj_in_L2_ghost_)) {
+                    // insert to L2 data head
+                    ArcDataItem tmp_item(key, value, 2);
+                    L2_data_list_.push_front(tmp_item);
+                    increaseDataAndTotalSize_(tmp_item.getSizeForCapacity(), 2);
 
-                // Insert new list iterator for key indexing
-                map_iter = key_lookup_.insert(std::pair(key, sieve_queue_.begin())).first;
-                assert(map_iter != key_lookup_.end());
-                size_ = Util::uint64Add(size_, static_cast<uint64_t>(key.getKeyLength() + sizeof(sieve_iterator)));
+                    curr_obj_in_L1_ghost_ = false;
+                    curr_obj_in_L2_ghost_ = false;
+                    vtime_last_req_in_ghost_ = -1;
+
+                    // Insert into key lookup map
+                    ArcKeyLookupIter tmp_lookup_iter(L2_data_list_.begin());
+                    key_lookup_.insert(std::pair(key, tmp_lookup_iter));
+                    increaseTotalSize_(key.getKeyLength() + tmp_lookup_iter.getSizeForCapacity());
+                } else {
+                    // insert to L1 data head
+                    ArcDataItem tmp_item(key, value, 1);
+                    L1_data_list_.push_front(tmp_item);
+                    increaseDataAndTotalSize_(tmp_item.getSizeForCapacity(), 1);
+
+                    // Insert into key lookup map
+                    ArcKeyLookupIter tmp_lookup_iter(L1_data_list_.begin());
+                    key_lookup_.insert(std::pair(key, tmp_lookup_iter));
+                    increaseTotalSize_(key.getKeyLength() + tmp_lookup_iter.getSizeForCapacity());
+                }
             }
 
             return;
         }
+
+        // TODO: END HERE
 
         bool getVictimKey(Key& key)
         {
@@ -479,6 +367,137 @@ namespace covered
         uint64_t getSizeForCapacity() const
         {
             return size_;
+        }
+
+        bool access_(const Key& key, Value& fetched_value, const bool& is_update = false, const Value& new_value)
+        {
+            reqseq_ += 1; // Update global virtual/logical timestamp
+
+            bool is_local_cached = false;
+
+            lookupmap_iterator_t lookup_map_iter = key_lookup_.find(key);
+            if (lookup_map_iter == key_lookup_.end())
+            {
+                is_local_cached = false;
+            }
+            else
+            {
+                curr_obj_in_L1_ghost_ = false;
+                curr_obj_in_L2_ghost_ = false;
+
+                int lru_id = lookup_map_iter->second.getLruId();
+                if (lookup_map_iter->second.isGhost())
+                {
+                    is_local_cached = false;
+
+                    // ghost hit
+                    vtime_last_req_in_ghost_ = reqseq_;
+                    if (lru_id == 1) {
+                        const ghostlist_const_iterator_t& ghost_list_const_iter_const_ref = lookup_map_iter->second.getGhostListIterConstRef();
+                        assert(ghost_list_const_iter_const_ref != L1_ghost_list_.end());
+                        assert(ghost_list_const_iter_const_ref->getKey() == key);
+                        assert(ghost_list_const_iter_const_ref->getLruId() == lru_id);
+                        assert(ghost_list_const_iter_const_ref->isGhost());
+
+                        curr_obj_in_L1_ghost_ = true;
+                        // case II: x in L1_ghost
+                        assert(L1_ghost_size_ >= 1);
+                        double delta = MAX((double)L2_ghost_size_ / L1_ghost_size_, 1);
+                        p_ = MIN(p_ + delta, capacity_bytes_);
+
+                        // Remove ArcGhostItem from ghost LRU 1
+                        decreaseGhostAndTotalSize_(ghost_list_const_iter_const_ref->getSizeForCapacity(), lru_id);
+                        L1_ghost_list_.erase(ghost_list_const_iter_const_ref);
+                    }
+                    else if (lru_id == 2) {
+                        const ghostlist_const_iterator_t& ghost_list_const_iter_const_ref = lookup_map_iter->second.getGhostListIterConstRef();
+                        assert(ghost_list_const_iter_const_ref != L2_ghost_list_.end());
+                        assert(ghost_list_const_iter_const_ref->getKey() == key);
+                        assert(ghost_list_const_iter_const_ref->getLruId() == lru_id);
+                        assert(ghost_list_const_iter_const_ref->isGhost());
+
+                        curr_obj_in_L2_ghost_ = true;
+                        // case III: x in L2_ghost
+                        assert(L2_ghost_size_ >= 1);
+                        double delta = MAX((double)L1_ghost_size_ / L2_ghost_size_, 1);
+                        p_ = MAX(p_ - delta, 0);
+
+                        // Remove ArcGhostItem from ghost LRU 2
+                        decreaseGhostAndTotalSize_(ghost_list_const_iter_const_ref->getSizeForCapacity(), lru_id);
+                        L2_ghost_list_.erase(ghost_list_const_iter_const_ref);
+                    }
+                    else
+                    {
+                        std::ostringstream oss;
+                        oss << "invalid lru_id " << lru_id;
+                        Util::dumpErrorMsg(kClassName, oss.str());
+                        exit(1);
+                    }
+
+                    // Remove lookup map entry
+                    decreaseTotalSize_(key.getKeyLength() + lookup_map_iter->second.getSizeForCapacity());
+                    key_lookup_.erase(lookup_map_iter);
+                }
+                else
+                {
+                    is_local_cached = true;
+
+                    // cache hit, case I: x in L1_data or L2_data
+                    if (lru_id == 1) {
+                        const datalist_iterator_t& data_list_iter_const_ref = lookup_map_iter->second.getDataListIterConstRef();
+                        assert(data_list_iter_const_ref != L1_data_list_.end());
+                        assert(data_list_iter_const_ref->getKey() == key);
+                        assert(data_list_iter_const_ref->getLruId() == lru_id);
+                        assert(!data_list_iter_const_ref->isGhost());
+
+						// Get value
+						fetched_value = data_list_iter_const_ref->getValue();
+
+                        // move to LRU2 (need to update cache size usage especially for in-place update)
+						// Remove from data LRU 1
+						decreaseDataAndTotalSize_(data_list_iter_const_ref->getSizeForCapacity(), lru_id);
+						L1_data_list_.erase(data_list_iter_const_ref);
+						// Insert into data LRU 2
+                        Value tmp_value = is_update ? new_value : fetched_value;
+						ArcDataItem tmp_item(key, tmp_value, 2);
+						increaseDataAndTotalSize_(tmp_item.getSizeForCapacity(), 2);
+						L2_data_list_.push_front(tmp_item);
+
+						// update lookup table (no need to update cache size usage due to no change)
+						ArcLookupIter tmp_lookup_iter(L2_data_list_.begin());
+						assert(tmp_lookup_iter.getLruId() == 2);
+						assert(!tmp_lookup_iter.isGhost());
+						lookup_map_iter->second = tmp_lookup_iter;
+                    } else {
+                        const datalist_iterator_t& data_list_iter_const_ref = lookup_map_iter->second.getDataListIterConstRef();
+                        assert(data_list_iter_const_ref != L2_data_list_.end());
+                        assert(data_list_iter_const_ref->getKey() == key);
+                        assert(data_list_iter_const_ref->getLruId() == lru_id);
+                        assert(!data_list_iter_const_ref->isGhost());
+
+						// Get value
+						fetched_value = data_list_iter_const_ref->getValue();
+
+                        // move to LRU2 head (need to update cache size usage especially for in-place update)
+						// Remove from data LRU 2
+						decreaseDataAndTotalSize_(data_list_iter_const_ref->getSizeForCapacity(), lru_id);
+						L2_data_list_.erase(data_list_iter_const_ref);
+						// Insert into head of data LRU 2
+                        Value tmp_value = is_update ? new_value : fetched_value;
+                        ArcDataItem tmp_item(key, tmp_value, 2);
+						increaseDataAndTotalSize_(tmp_item.getSizeForCapacity(), lru_id);
+						L2_data_list_.push_front(tmp_item);
+
+						// update lookup table (no need to update cache size usage due to no change)
+						ArcLookupIter tmp_lookup_iter(L2_data_list_.begin());
+						assert(tmp_lookup_iter.getLruId() == 2);
+						assert(!tmp_lookup_iter.isGhost());
+						lookup_map_iter->second = tmp_lookup_iter;
+                    }
+                }
+            }
+
+            return is_local_cached;
         }
 
         void decreaseGhostAndTotalSize_(const uint64_t& decrease_bytes, const int& lru_id)
