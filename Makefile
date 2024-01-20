@@ -11,6 +11,7 @@ LIBRARY_DIRPATH = $(shell python3 -m scripts.tools.parse_config library_dirpath 
 include src/mk/recipes.mk
 
 # Recipes for cache methods (including baselines and COVERED)
+include src/mk/cache/arc.mk
 include src/mk/cache/cachelib.mk
 include src/mk/cache/covered.mk
 include src/mk/cache/fifo.mk

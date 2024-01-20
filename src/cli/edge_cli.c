@@ -166,7 +166,7 @@ namespace covered
 
             // Dynamic configurations for client
             argument_desc_.add_options()
-                ("cache_name", boost::program_options::value<std::string>()->default_value(DEFAULT_CACHE_NAME), "cache name (e.g., cachelib, fifo, frozenhot, glcache, lrb, lruk, gdsize, gdsf, lfuda, lfu, lhd, lru, s3fifo, segcache, sieve, and covered)")
+                ("cache_name", boost::program_options::value<std::string>()->default_value(DEFAULT_CACHE_NAME), "cache name (e.g., arc, cachelib, fifo, frozenhot, glcache, lrb, lruk, gdsize, gdsf, lfuda, lfu, lhd, lru, s3fifo, segcache, sieve, and covered)")
                 ("hash_name", boost::program_options::value<std::string>()->default_value(DEFAULT_HASH_NAME, "the type of consistent hashing for DHT (e.g., mmh3)"))
                 ("percacheserver_workercnt", boost::program_options::value<uint32_t>()->default_value(DEFAULT_PERCACHESERVER_WORKERCNT), "the number of worker threads for each cache server")
                 ("covered_local_uncached_max_mem_usage_mb", boost::program_options::value<uint64_t>()->default_value(DEFAULT_COVERED_LOCAL_UNCACHED_MAX_MEM_USAGE_MB), "the maximum memory usage for local uncached metadata in units of MiB (only for COVERED)")
@@ -286,7 +286,7 @@ namespace covered
 
     void EdgeCLI::checkCacheName_() const
     {
-        if (cache_name_ != Util::CACHELIB_CACHE_NAME && cache_name_ != Util::FIFO_CACHE_NAME && cache_name_ != Util::FROZENHOT_CACHE_NAME && cache_name_ != Util::GLCACHE_CACHE_NAME && cache_name_ != Util::LRUK_CACHE_NAME && cache_name_ != Util::GDSIZE_CACHE_NAME && cache_name_ != Util::GDSF_CACHE_NAME && cache_name_ != Util::LFUDA_CACHE_NAME && cache_name_ != Util::LFU_CACHE_NAME && cache_name_ != Util::LHD_CACHE_NAME && cache_name_ != Util::LRB_CACHE_NAME && cache_name_ != Util::LRU_CACHE_NAME && cache_name_ != Util::S3FIFO_CACHE_NAME && cache_name_ != Util::SEGCACHE_CACHE_NAME && cache_name_ != Util::SIEVE_CACHE_NAME && cache_name_ != Util::COVERED_CACHE_NAME)
+        if (cache_name_ != Util::ARC_CACHE_NAME && cache_name_ != Util::CACHELIB_CACHE_NAME && cache_name_ != Util::FIFO_CACHE_NAME && cache_name_ != Util::FROZENHOT_CACHE_NAME && cache_name_ != Util::GLCACHE_CACHE_NAME && cache_name_ != Util::LRUK_CACHE_NAME && cache_name_ != Util::GDSIZE_CACHE_NAME && cache_name_ != Util::GDSF_CACHE_NAME && cache_name_ != Util::LFUDA_CACHE_NAME && cache_name_ != Util::LFU_CACHE_NAME && cache_name_ != Util::LHD_CACHE_NAME && cache_name_ != Util::LRB_CACHE_NAME && cache_name_ != Util::LRU_CACHE_NAME && cache_name_ != Util::S3FIFO_CACHE_NAME && cache_name_ != Util::SEGCACHE_CACHE_NAME && cache_name_ != Util::SIEVE_CACHE_NAME && cache_name_ != Util::COVERED_CACHE_NAME)
         {
             std::ostringstream oss;
             oss << "cache name " << cache_name_ << " is not supported!";

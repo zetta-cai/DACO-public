@@ -42,6 +42,7 @@ namespace covered {
         // check whether an object in a cache. Not update metadata
         virtual bool exist(const int64_t &key) {
             throw std::runtime_error("Error: exist() function not implemented");
+            return false;
         }
 
         virtual void admit(const SimpleRequest &req) = 0;

@@ -4,6 +4,7 @@
 #include <sstream>
 
 #include "common/util.h"
+#include "cache/arc_local_cache.h"
 #include "cache/cachelib_local_cache.h"
 #include "cache/covered_local_cache.h"
 #include "cache/fifo_local_cache.h"
@@ -25,7 +26,11 @@ namespace covered
     LocalCacheBase* LocalCacheBase::getLocalCacheByCacheName(const EdgeWrapper* edge_wrapper_ptr, const std::string& cache_name, const uint32_t& edge_idx, const uint64_t& capacity_bytes, const uint64_t& local_uncached_capacity_bytes, const uint32_t& peredge_synced_victimcnt)
     {
         LocalCacheBase* local_cache_ptr = NULL;
-        if (cache_name == Util::CACHELIB_CACHE_NAME)
+        if (cache_name == Util::ARC_CACHE_NAME)
+        {
+            local_cache_ptr = new ArcLocalCache(edge_wrapper_ptr, edge_idx, capacity_bytes);
+        }
+        else if (cache_name == Util::CACHELIB_CACHE_NAME)
         {
             local_cache_ptr = new CachelibLocalCache(edge_wrapper_ptr, edge_idx, capacity_bytes);
         }
