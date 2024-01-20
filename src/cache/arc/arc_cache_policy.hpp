@@ -147,11 +147,13 @@ namespace covered
 
         const std::list<ArcDataItem<Key, Value>>::iterator& getDataListIterConstRef() const
         {
+            assert(!is_ghost_);
             return data_list_iter_;
         }
 
         const std::list<ArcGhostItem<Key, Value>>::iterator& getGhostListIterConstRef() const
         {
+            assert(is_ghost_);
             return ghost_list_iter_;
         }
 
@@ -181,6 +183,15 @@ namespace covered
     template <typename Key, typename Value, typename KeyHasher>
     class ArcCachePolicy
     {
+    private:
+        // Function declarations
+        bool access_(const Key& key, Value& fetched_value, const bool& is_update = false, const Value& new_value);
+        bool _ARC_to_replace(const Key& key);
+        bool _ARC_to_evict_miss_on_all_queues(const Key& key);
+        void decreaseGhostAndTotalSize_(const uint64_t& decrease_bytes, const int& lru_id);
+        void increaseDataAndTotalSize_(const uint64_t& increase_bytes, const int& lru_id);
+        void decreaseTotalSize_(const uint64_t& decrease_bytes);
+        void increaseTotalSize_(const uint64_t& increase_bytes);
     public:
         typedef typename std::list<ArcDataItem<Key, Value>>::iterator datalist_iterator_t;
         typedef typename std::list<ArcDataItem<Key, Value>>::const_iterator datalist_const_iterator_t;
@@ -288,49 +299,23 @@ namespace covered
                     key_lookup_.insert(std::pair(key, tmp_lookup_iter));
                     increaseTotalSize_(key.getKeyLength() + tmp_lookup_iter.getSizeForCapacity());
                 }
+
+                incoming_objsize_ = key.getKeyLength() + value.getValuesize(); // Siyuan: update the most recent admited object size for potential eviction
             }
 
             return;
         }
 
-        // TODO: END HERE
-
         bool getVictimKey(Key& key)
         {
             bool has_victim_key = false;
 
-            if (sieve_queue_.size() > 0)
-            {
-                sieve_iterator cur_iter = hand_iter_; // Start from hand pointer
-                if (cur_iter == sieve_queue_.end())
-                {
-                    cur_iter--; // Move the the tail of sieve queue
-                }
-
-                while (cur_iter->isVisited())
-                {
-                    cur_iter->resetVisited();
-                    if (cur_iter == sieve_queue_.begin()) // Arrive at the head of sieve queue
-                    {
-                        cur_iter = sieve_queue_.end(); // Go back to the tail of sieve queue
-                    }
-                    cur_iter--; // Move to the previous sieve item
-                }
-
-                if (cur_iter != sieve_queue_.begin())
-                {
-                    hand_iter_ = cur_iter;
-                    hand_iter_--; // Move to the previous sieve item vs. the current victim
-                }
-                else
-                {
-                    hand_iter_ = sieve_queue_.end(); // Will start from the tail of sieve queue in the next eviction
-                }
-
-                // Get the tail of the list
-                key = cur_iter->getKey();
-
-                has_victim_key = true;
+            to_evict_candidate_gen_vtime_ = reqseq_;
+            if (vtime_last_req_in_ghost_ == reqseq_ &&
+                (curr_obj_in_L1_ghost_ || curr_obj_in_L2_ghost_)) {
+                has_victim_key = _ARC_to_replace(key);
+            } else {
+                has_victim_key = _ARC_to_evict_miss_on_all_queues(key);
             }
 
             return has_victim_key;
@@ -340,25 +325,91 @@ namespace covered
         {
             bool is_evict = false;
             
-            // Get victim value
-            map_iterator_t victim_map_iter = key_lookup_.find(key);
-            if (victim_map_iter != key_lookup_.end()) // Key exists
-            {
-                sieve_iterator victim_list_iter = victim_map_iter->second;
-                assert(victim_list_iter != sieve_queue_.end());
-                assert(victim_list_iter->getKey() == key);
-                value = victim_list_iter->getValue();
+            lookupmap_const_iterator_t lookup_map_const_iter = key_lookup_.find(key);
+            if (lookup_map_const_iter != key_lookup_.end()) {
+                int lru_id = lookup_map_const_iter->second.getLruId();
+                if (lookup_map_const_iter->second.isGhost() {
+                    // NOTE: getVictimKey() MUST get a victim from L1/L2 data list instead of any ghost list
+                    assert(false);
 
-                // Remove the corresponding map entry
-                key_lookup_.erase(victim_map_iter);
-                size_ = Util::uint64Minus(size_, static_cast<uint64_t>(key.getKeyLength() + sizeof(sieve_iterator)));
+                    ghostlist_const_iterator_t ghost_list_const_iter_const_ref = lookup_map_const_iter->second.getGhostListIterConstRef();
+                    if (lru_id == 1) {
+                        assert(ghost_list_const_iter_const_ref != L1_ghost_list_.end());
+                        assert(ghost_list_const_iter_const_ref->getKey() == key);
+                        assert(ghost_list_const_iter_const_ref->getLruId() == lru_id);
+                        assert(ghost_list_const_iter_const_ref->isGhost());
 
-                // Remove the corresponding list entry
-                const uint64_t victim_size = victim_list_iter->getSizeForCapacity();
-                sieve_queue_.erase(victim_list_iter);
-                size_ = Util::uint64Minus(size_, victim_size);
+                        // NOTE: no value to get
+                        is_evict = false;
 
-                is_evict = true;
+                        // Remove from ghost LRU 1
+                        decreaseGhostAndTotalSize_(ghost_list_const_iter_const_ref->getSizeForCapacity(), lru_id);
+                        L1_ghost_list_.erase(ghost_list_const_iter_const_ref);
+                    }
+                    else if (lru_id == 2) {
+                        assert(ghost_list_const_iter_const_ref != L2_ghost_list_.end());
+                        assert(ghost_list_const_iter_const_ref->getKey() == key);
+                        assert(ghost_list_const_iter_const_ref->getLruId() == lru_id);
+                        assert(ghost_list_const_iter_const_ref->isGhost());
+
+                        // NOTE: no value to get
+                        is_evict = false;
+
+                        // Remove from ghost LRU 2
+                        decreaseGhostAndTotalSize_(ghost_list_const_iter_const_ref->getSizeForCapacity(), lru_id);
+                        L2_ghost_list_.erase(ghost_list_const_iter_const_ref);
+                    }
+                    else {
+                        std::ostringstream oss;
+                        oss << "invalid lru_id " << lru_id;
+                        Util::dumpErrorMsg(kClassName, oss.str());
+                        exit(1);
+                    }
+
+                    // Remove from key lookup map
+                    decreaseTotalSize_(key.getKeyLength() + lookup_map_const_iter->second.getSizeForCapacity());
+                    key_lookup_.erase(lookup_map_const_iter);
+                } else {
+                    datalist_const_iterator_t data_list_const_iter_const_ref = lookup_map_const_iter->second.getDataListIterConstRef();
+                    if (lru_id == 1) {
+                        assert(data_list_const_iter_const_ref != L1_data_list_.end());
+                        assert(data_list_const_iter_const_ref->getKey() == key);
+                        assert(data_list_const_iter_const_ref->getLruId() == lru_id);
+                        assert(!data_list_const_iter_const_ref->isGhost());
+
+                        // Get value
+                        value = data_list_const_iter_const_ref->getValue();
+                        is_evict = true;
+
+                        // Remove from data LRU 1
+                        decreaseDataAndTotalSize_(data_list_const_iter_const_ref->getSizeForCapacity(), lru_id);
+                        L1_data_list_.erase(data_list_const_iter_const_ref);
+                    }
+                    else if (lru_id == 2) {
+                        assert(data_list_const_iter_const_ref != L2_data_list_.end());
+                        assert(data_list_const_iter_const_ref->getKey() == key);
+                        assert(data_list_const_iter_const_ref->getLruId() == lru_id);
+                        assert(!data_list_const_iter_const_ref->isGhost());
+
+                        // Get value
+                        value = data_list_const_iter_const_ref->getValue();
+                        is_evict = true;
+
+                        // Remove from data LRU 2
+                        decreaseDataAndTotalSize_(data_list_const_iter_const_ref->getSizeForCapacity(), lru_id);
+                        L2_data_list_.erase(data_list_const_iter_const_ref);
+                    }
+                    else {
+                        std::ostringstream oss;
+                        oss << "invalid lru_id " << lru_id;
+                        Util::dumpErrorMsg(kClassName, oss.str());
+                        exit(1);
+                    }
+
+                    // Remove from key lookup map
+                    decreaseTotalSize_(key.getKeyLength() + lookup_map_const_iter->second.getSizeForCapacity());
+                    key_lookup_.erase(lookup_map_const_iter);
+                }
             }
 
             return is_evict;
@@ -368,6 +419,9 @@ namespace covered
         {
             return size_;
         }
+    private:
+
+        // Cache access for get and update
 
         bool access_(const Key& key, Value& fetched_value, const bool& is_update = false, const Value& new_value)
         {
@@ -500,6 +554,65 @@ namespace covered
             return is_local_cached;
         }
 
+        // Cache eviction
+
+        /* finding the eviction candidate in _ARC_replace but do not perform eviction */
+        bool _ARC_to_replace(const Key& key)
+        {
+            bool has_victim_key = false;
+
+            if (L1_data_size_ == 0 && L2_data_size_ == 0) {
+                std::ostringstream oss;
+                oss << "L1_data_size_ == 0 && L2_data_size_ == 0";
+                Util::dumpWarnMsg(kClassName, oss.str());
+                return has_victim_key;
+            }
+
+            bool cond1 = L1_data_size_ > 0;
+            bool cond2 = L1_data_size_ > p_;
+            bool cond3 = L1_data_size_ == p_ && curr_obj_in_L2_ghost_;
+            bool cond4 = L2_data_size_ == 0;
+
+            if ((cond1 && (cond2 || cond3)) || cond4) {
+                // delete the LRU in L1 data, move to L1_ghost
+                key = L1_data_list_.back().getKey();
+                has_victim_key = true;
+            } else {
+                // delete the item in L2 data, move to L2_ghost
+                key = L2_data_list_.back().getKey();
+                has_victim_key = true;
+            }
+
+            assert(key_lookup_.find(key) != key_lookup_.end());
+            return has_victim_key;
+        }
+
+        /* finding the eviction candidate in _ARC_evict_miss_on_all_queues, but do not
+        * perform eviction */
+        bool _ARC_to_evict_miss_on_all_queues(const Key& key)
+        {
+            bool has_victim_key = false;
+
+            if (L1_data_size_ + L1_ghost_size_ + incoming_objsize_ > capacity_bytes_)
+            {
+                // case A: L1 = T1 U B1 has exactly c pages
+                if (L1_ghost_size_ > 0) {
+                    has_victim_key = _ARC_to_replace(key);
+                } else {
+                // T1 >= c, L1 data size is too large, ghost is empty, so evict from L1
+                // data
+                    key = L1_data_list_.back().getKey();
+                    has_victim_key = true;
+                }
+            } else {
+                has_victim_key = _ARC_to_replace(key);
+            }
+
+            return has_victim_key;
+        }
+
+        // Cache size usage calculation
+
         void decreaseGhostAndTotalSize_(const uint64_t& decrease_bytes, const int& lru_id)
         {
             assert(lru_id == 1 || lru_id == 2);
@@ -588,6 +701,9 @@ namespace covered
         int64_t vtime_last_req_in_ghost_;
         int64_t reqseq_; // Siyuan: virtual/logical timestamp of the incoming request
         //request_t *req_local; // Siyuan: NOT used by ARC in src/cache/arc/ARC.c
+
+        int64_t to_evict_candidate_gen_vtime_; // Siyuan: seems make no sense
+        uint64_t incoming_objsize_; // Siyuan: EdgeWrapper will evict after admission, so we track the most recent admited object size to find victim
 
         std::unordered_map<Key, ArcKeyLookupIter, KeyHasher> key_lookup_; // Key indexing for quick lookup
         uint64_t size_; // in units of bytes
