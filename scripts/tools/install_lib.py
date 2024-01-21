@@ -235,7 +235,7 @@ if is_install_lhd:
     SubprocessUtil.checkoutCommit(Common.scriptname, lhd_clone_dirpath, lhd_software_name, lhd_target_commit)
     print("")
 
-# (10) Install S3FIFO with SIEVE and ARC (commit ID: 79fde46)
+# (10) Install S3FIFO with SIEVE, ARC, and TinyLFU (commit ID: 79fde46)
 
 # NOTE: we just use S3FIFO and SIEVE downloaded from github in lib/s3fifo as references, while always use our hacked version in src/cache/s3fifo and src/cache/sieve to escape libcachesim for edge settings and support required interfaces
 if is_install_s3fifo:

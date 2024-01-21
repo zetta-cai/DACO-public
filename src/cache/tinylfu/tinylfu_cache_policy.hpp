@@ -1,25 +1,17 @@
 /*
- * ArcCachePolicy: refer to Algorithm Fig.4 in original paper and lib/s3fifo/libCacheSim/libCacheSim/cache/eviction/ARC.c, yet directly reimplement in C++ due to simplicity of ARC to escape the dependency on libcachesim and fix libcachesim limitations (only metadata operations + fixed-length uint64_t key + insufficient cache size usage calculation).
+ * TinylfuCachePolicy: refer to Algorithm Fig.5 in original paper and lib/s3fifo/libCacheSim/libCacheSim/cache/eviction/WTinyLFU.c, yet directly reimplement in C++ due to simplicity of W-TinyLFU to escape the dependency on libcachesim and fix libcachesim limitations (only metadata operations + fixed-length uint64_t key + insufficient cache size usage calculation).
+ *
+ * NOTE: (i) TinyLFU is an admission control framework, which uses CBF to compare popularity between to-be-admited object and victim for admission or not; (ii) SLRU is a fine-grained replacement policy, which uses multiple LRU lists to lookup with SLRU cool operations and admit/evict starting from the lowest LRU list; (iii) W-TinyLRU is TinyLFU as admission control + SLRU as main cache along with a small LRU-based window cache, which pre-filters requests to evict objects into backend TinyLFU + SLRU.
  *
  * Hack to support key-value caching, required interfaces, and cache size in units of bytes for capacity constraint.
  * 
  * NOTE: NO need to use optimized data structures, as system bottleneck is network propagation latency in geo-distributed edge settings.
  * 
- * By Siyuan Sheng (2024.01.18).
+ * By Siyuan Sheng (2024.01.21).
  */
 
-#ifndef ARC_CACHE_POLICY_HPP
-#define ARC_CACHE_POLICY_HPP
-
-#ifndef MAX
-//#undef MAX
-#define MAX(a, b) (((a) > (b)) ? (a) : (b))
-#endif
-
-#ifndef MIN
-//#undef MIN
-#define MIN(a, b) (((a) < (b)) ? (a) : (b))
-#endif
+#ifndef TINYLFU_CACHE_POLICY_HPP
+#define TINYLFU_CACHE_POLICY_HPP
 
 #include <list>
 #include <unordered_map>
