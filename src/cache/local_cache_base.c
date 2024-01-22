@@ -18,6 +18,7 @@
 #include "cache/s3fifo_local_cache.h"
 #include "cache/segcache_local_cache.h"
 #include "cache/sieve_local_cache.h"
+#include "cache/slru_local_cache.h"
 
 namespace covered
 {
@@ -77,6 +78,10 @@ namespace covered
         else if (cache_name == Util::SIEVE_CACHE_NAME)
         {
             local_cache_ptr = new SieveLocalCache(edge_wrapper_ptr, edge_idx, capacity_bytes);
+        }
+        else if (cache_name == Util::SLRU_CACHE_NAME)
+        {
+            local_cache_ptr = new SlruLocalCache(edge_wrapper_ptr, edge_idx, capacity_bytes);
         }
         else if (cache_name == Util::COVERED_CACHE_NAME)
         {

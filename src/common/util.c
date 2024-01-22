@@ -51,6 +51,7 @@ namespace covered
     const std::string Util::S3FIFO_CACHE_NAME("s3fifo");
     const std::string Util::SEGCACHE_CACHE_NAME("segcache");
     const std::string Util::SIEVE_CACHE_NAME("sieve");
+    const std::string Util::SLRU_CACHE_NAME("slru");
     const std::string Util::COVERED_CACHE_NAME("covered");
 
     // Hash name
