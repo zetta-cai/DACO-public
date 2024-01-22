@@ -351,6 +351,7 @@ namespace covered
                 SlruKeyLookupIter<Key, Value> tmp_lookup_iter(lru_lists_[lru_id + 1].begin());
                 lookup_map_iter->second = tmp_lookup_iter;
 
+                // NOTE: lru_id + 1 >= 1 > 0, which must NOT be the first LRU list
                 while (lru_n_bytes_[lru_id + 1] > lru_max_n_bytes_[lru_id + 1]) {
                     // if the next LRU list is full
                     cool_(lru_id + 1);
@@ -367,14 +368,14 @@ namespace covered
     {
         assert(lru_id < n_seg_);
 
-        if (lru_id == 0)
-        {
-            // (Siyuan) NOTE: we do NOT want internal eviction, so we leave the cached object here for LRU 0 during cool_()
-            //return SLRU_evict(cache, req);
-
-            // NOTE: we will evict victim from LRU 0 outside SLRU by EdgeWrapper
-            return;
-        }
+        // NOTE: we never invoke cool_() for the first LRU list, as we will evict victim from LRU 0 outside SLRU by EdgeWrapper
+        assert(lru_id > 0);
+        // if (lru_id == 0)
+        // {
+        //     // (Siyuan) NOTE: we do NOT want internal eviction, so we leave the cached object here for LRU 0 during cool_()
+        //     //return SLRU_evict(cache, req);
+        //     return;
+        // }
 
         // Get tail element from the given LRU list
         std::list<SlruItem<Key, Value>>& tmp_lru_list_ref = lru_lists_[lru_id];
@@ -398,7 +399,8 @@ namespace covered
         lookup_map_iter->second = SlruKeyLookupIter<Key, Value>(lru_lists_[lru_id - 1].begin());
 
         // If lower LRUs are full
-        while (lru_n_bytes_[lru_id - 1] > lru_max_n_bytes_[lru_id - 1]) {
+        // Siyuan: if lru_id - 1 = 0, we do NOT invoke cool_() recursively, which may incur infinite loop due to disabling internal eviction in the first LRU list
+        while ((lru_id - 1 > 0) && (lru_n_bytes_[lru_id - 1] > lru_max_n_bytes_[lru_id - 1])) {
             cool_(lru_id - 1);
         }
     }
