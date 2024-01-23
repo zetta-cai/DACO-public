@@ -95,7 +95,7 @@ namespace covered
 
         const uint64_t getSizeForCapacity() const
         {
-            return static_cast<uint64_t>(sizeof(lrulist_iterator_t)); // Siyuan: ONLY count cache size usage of one iterator (we maintain a boolean and two iterators just for impl trick)
+            return static_cast<uint64_t>(sizeof(lrulist_iterator_t)); // Siyuan: ONLY count cache size usage of one iterator (we maintain lru_id_ just for impl trick)
         }
 
         const SlruKeyLookupIter<Key, Value>& operator=(const SlruKeyLookupIter<Key, Value>& other)
@@ -131,7 +131,7 @@ namespace covered
         void decreaseTotalSize_(const uint64_t& decrease_bytes);
         void increaseTotalSize_(const uint64_t& increase_bytes);
     public:
-        SlruCachePolicy(const uint64_t& capacity_bytes) : capacity_bytes_(capacity_bytes)
+        SlruCachePolicy(const uint64_t& capacity_bytes) // : capacity_bytes_(capacity_bytes)
         {
             // Use 4 LRU lists equally partitioning cache capacity bytes by default (refer to SLRU_init() in lib/s3fifo/libCacheSim/libCacheSim/cache/eviction/SLRU.c)
             n_seg_ = 4;
@@ -292,7 +292,7 @@ namespace covered
 
         std::unordered_map<Key, SlruKeyLookupIter<Key, Value>, KeyHasher> key_lookup_; // Key indexing for quick lookup
         uint64_t size_; // in units of bytes
-        const uint64_t capacity_bytes_; // in units of bytes
+        //const uint64_t capacity_bytes_; // in units of bytes
     };
 
     template <typename Key, typename Value, typename KeyHasher>

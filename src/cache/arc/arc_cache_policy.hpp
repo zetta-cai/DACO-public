@@ -164,7 +164,7 @@ namespace covered
 
         const uint64_t getSizeForCapacity() const
         {
-            return static_cast<uint64_t>(sizeof(datalist_iterator_t)); // Siyuan: ONLY count cache size usage of one iterator (we maintain a boolean and two iterators just for impl trick)
+            return static_cast<uint64_t>(sizeof(datalist_iterator_t)); // Siyuan: ONLY count cache size usage of one iterator (we maintain lru_id_, a boolean, and two iterators just for impl trick)
         }
 
         const ArcGhostItem<Key, Value>& operator=(const ArcGhostItem<Key, Value>& other)
@@ -414,7 +414,7 @@ namespace covered
         bool curr_obj_in_L2_ghost_;
         int64_t vtime_last_req_in_ghost_;
         int64_t reqseq_; // Siyuan: virtual/logical timestamp of the incoming request
-        //request_t *req_local; // Siyuan: NOT used by ARC in src/cache/arc/ARC.c
+        //request_t *req_local; // Siyuan: NOT used by ARC in lib/s3fifo/libCacheSim/libCacheSim/cache/eviction/ARC.c
 
         int64_t to_evict_candidate_gen_vtime_; // Siyuan: seems make no sense
         uint64_t incoming_objsize_; // Siyuan: EdgeWrapper will evict after admission, so we track the most recent admited object size to find victim

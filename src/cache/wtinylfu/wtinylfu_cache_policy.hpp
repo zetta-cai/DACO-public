@@ -1,37 +1,46 @@
 /*
- * TinylfuCachePolicy: refer to Algorithm Fig.5 in original paper and lib/s3fifo/libCacheSim/libCacheSim/cache/eviction/WTinyLFU.c, yet directly reimplement in C++ due to simplicity of W-TinyLFU to escape the dependency on libcachesim and fix libcachesim limitations (only metadata operations + fixed-length uint64_t key + insufficient cache size usage calculation).
+ * WTinylfuCachePolicy: refer to Algorithm Fig.5 in original paper and lib/s3fifo/libCacheSim/libCacheSim/cache/eviction/WTinyLFU.c, yet directly reimplement in C++ due to simplicity of W-TinyLFU to escape the dependency on libcachesim and fix libcachesim limitations (only metadata operations + fixed-length uint64_t key + insufficient cache size usage calculation).
  *
- * NOTE: (i) TinyLFU is an admission control framework, which uses CBF to compare popularity between to-be-admited object and victim for admission or not; (ii) SLRU is a fine-grained replacement policy, which uses multiple LRU lists to lookup with SLRU cool operations and admit/evict starting from the lowest LRU list; (iii) W-TinyLRU is TinyLFU as admission control + SLRU as main cache along with a small LRU-based window cache, which pre-filters requests to evict objects into backend TinyLFU + SLRU.
+ * NOTE: (i) TinyLFU is an admission control framework, which uses CBF to compare popularity between to-be-admited object and victim for admission or not if cache is full (always admit if cache is not full); (ii) SLRU is a fine-grained replacement policy, which uses multiple LRU lists to lookup with SLRU cool operations and admit/evict starting from the lowest LRU list; (iii) W-TinyLRU is a small LRU-based window cache + TinyLFU with SLRU as main cache; W-TinyLFU always admit into window cache no matter cache is full or not, while TinyLFU's admission control becomes a part of from-window-to-main eviction process (coarse-grained).
+ * 
+ * NOTE: we follow lib/s3fifo/libCacheSim/libCacheSim/cache/eviction/WTinyLFU.c to always admit objects into window cache when total cache is not full, which is equivalent to original W-TinyLFU that evicts objects from window cache into main cache when LRU is full <- the reason is that when total cache is not full (i.e., main cache is also not full), objects evicted from window cache will be always admited into main cache.
+ * 
+ * NOTE: lib/s3fifo/libCacheSim/libCacheSim/cache/eviction/WTinyLFU.c NOT invoke LRU/SLRU cache_get_base() and hence NOT trigger LRU/SLRU's internal eviction even if LRU/SLRU is full -> TinyLFU's admission control will be triggered during from-window-to-main eviction when total cache is full.
  *
  * Hack to support key-value caching, required interfaces, and cache size in units of bytes for capacity constraint.
  * 
  * NOTE: NO need to use optimized data structures, as system bottleneck is network propagation latency in geo-distributed edge settings.
  * 
- * By Siyuan Sheng (2024.01.21).
+ * By Siyuan Sheng (2024.01.23).
  */
 
-#ifndef TINYLFU_CACHE_POLICY_HPP
-#define TINYLFU_CACHE_POLICY_HPP
+#ifndef WTINYLFU_CACHE_POLICY_HPP
+#define WTINYLFU_CACHE_POLICY_HPP
 
 #include <list>
 #include <unordered_map>
 
+#include "cache/slru/slru_cache_policy.hpp"
 #include "common/util.h"
+
+// NOTE: default settings refer to lib/s3fifo/libCacheSim/libCacheSim/cache/eviction/WTinyLFU.c
+#define WTINYLFU_WINDOW_RATIO 0.01
+#define WTINYLFU_CBF_RATIO 0.001
 
 namespace covered
 {
     template <typename Key, typename Value>
-    class ArcGhostItem
+    class WTinylfuItem
     {
     public:
-        ArcGhostItem(): key_(), lru_id_(0), is_ghost_(true)
+        WTinylfuItem(): key_(), value_()
         {
         }
 
-        ArcGhostItem(const Key& key, const int& lru_id) : is_ghost_(true)
+        WTinylfuItem(const Key& key, const Value& value)
         {
             key_ = key;
-            lru_id_ = lru_id;
+            value_ = value;
         }
 
         Key getKey() const
@@ -39,154 +48,38 @@ namespace covered
             return key_;
         }
 
-        int getLruId() const
-        {
-            return lru_id_;
-        }
-
-        bool isGhost() const
-        {
-            return is_ghost_;
-        }
-
-        const uint64_t getSizeForCapacity() const
-        {
-            return static_cast<uint64_t>(key_.getKeyLength() + sizeof(int) + sizeof(bool));
-        }
-
-        const ArcGhostItem& operator=(const ArcGhostItem& other)
-        {
-            if (this != &other)
-            {
-                key_ = other.key_;
-                lru_id_ = other.lru_id_;
-                is_ghost_ = other.is_ghost_;
-            }
-            return *this;
-        }
-    private:
-        Key key_;
-        int lru_id_; // In LRU 1 or LRU 2
-    protected:
-        bool is_ghost_; // In ghost LRU or data LRU
-    };
-
-    template <typename Key, typename Value>
-    class ArcDataItem : public ArcGhostItem<Key, Value>
-    {
-    public:
-        ArcDataItem() : ArcGhostItem<Key, Value>(), value_()
-        {
-            this->is_ghost_ = false;
-        }
-
-        ArcDataItem(const Key& key, const Value& value, const int& lru_id) : ArcGhostItem<Key, Value>(key, lru_id)
-        {
-            value_ = value;
-            this->is_ghost_ = false;
-        }
-
         Value getValue() const
         {
             return value_;
         }
 
-        void setValue(const Value& value)
-        {
-            value_ = value;
-            return;
-        }
-
         const uint64_t getSizeForCapacity() const
         {
-            return static_cast<uint64_t>(ArcGhostItem<Key, Value>::getSizeForCapacity() + value_.getValuesize());
+            return static_cast<uint64_t>(key_.getKeyLength() + value_.getValuesize());
         }
 
-        const ArcDataItem& operator=(const ArcDataItem& other)
+        const WTinylfuItem<Key, Value>& operator=(const WTinylfuItem<Key, Value>& other)
         {
             if (this != &other)
             {
-                ArcGhostItem<Key, Value>::operator=(other);
+                key_ = other.key_;
                 value_ = other.value_;
             }
             return *this;
         }
     private:
+        Key key_;
         Value value_;
     };
 
-    template <typename Key, typename Value>
-    class ArcKeyLookupIter
-    {
-    public:
-        typedef typename std::list<ArcDataItem<Key, Value>>::iterator datalist_iterator_t;
-        typedef typename std::list<ArcGhostItem<Key, Value>>::iterator ghostlist_iterator_t;
-
-        ArcKeyLookupIter(const datalist_iterator_t& data_list_iter) : lru_id_(data_list_iter->getLruId()), is_ghost_(false)
-        {
-            data_list_iter_ =  data_list_iter;
-        }
-
-        ArcKeyLookupIter(const ghostlist_iterator_t& ghost_list_iter) : lru_id_(ghost_list_iter->getLruId()), is_ghost_(true)
-        {
-            ghost_list_iter_ = ghost_list_iter;
-        }
-
-        int getLruId() const
-        {
-            return lru_id_;
-        }
-
-        bool isGhost() const
-        {
-            return is_ghost_;
-        }
-
-        const datalist_iterator_t& getDataListIterConstRef() const
-        {
-            assert(!is_ghost_);
-            return data_list_iter_;
-        }
-
-        const ghostlist_iterator_t& getGhostListIterConstRef() const
-        {
-            assert(is_ghost_);
-            return ghost_list_iter_;
-        }
-
-        const uint64_t getSizeForCapacity() const
-        {
-            return static_cast<uint64_t>(sizeof(datalist_iterator_t)); // Siyuan: ONLY count cache size usage of one iterator (we maintain a boolean and two iterators just for impl trick)
-        }
-
-        const ArcGhostItem<Key, Value>& operator=(const ArcGhostItem<Key, Value>& other)
-        {
-            if (this != &other)
-            {
-                lru_id_ = other.lru_id_;
-                is_ghost_ = other.is_ghost_;
-                data_list_iter_ = other.data_list_iter_;
-                ghost_list_iter_ = other.ghost_list_iter_;
-            }
-            return *this;
-        }
-    private:
-        int lru_id_;
-        bool is_ghost_;
-        datalist_iterator_t data_list_iter_;
-        ghostlist_iterator_t ghost_list_iter_;
-    };
-
     template <typename Key, typename Value, typename KeyHasher>
-    class ArcCachePolicy
+    class WTinylfuCachePolicy
     {
     public:
-        typedef typename std::list<ArcDataItem<Key, Value>>::iterator datalist_iterator_t;
-        typedef typename std::list<ArcDataItem<Key, Value>>::const_iterator datalist_const_iterator_t;
-        typedef typename std::list<ArcGhostItem<Key, Value>>::iterator ghostlist_iterator_t;
-        typedef typename std::list<ArcGhostItem<Key, Value>>::const_iterator ghostlist_const_iterator_t;
-        typedef typename std::unordered_map<Key, ArcKeyLookupIter<Key, Value>, KeyHasher>::iterator lookupmap_iterator_t;
-        typedef typename std::unordered_map<Key, ArcKeyLookupIter<Key, Value>, KeyHasher>::const_iterator lookupmap_const_iterator_t;
+        typedef typename std::list<WTinylfuItem<Key, Value>>::iterator windowlist_iterator_t;
+        typedef typename std::list<WTinylfuItem<Key, Value>>::const_iterator windowlist_const_iterator_t;
+        typedef typename std::unordered_map<Key, windowlist_iterator_t, KeyHasher>::iterator lookupmap_iterator_t;
+        typedef typename std::unordered_map<Key, windowlist_iterator_t, KeyHasher>::const_iterator lookupmap_const_iterator_t;
     private:
         // Function declarations
         // Cache eviction
@@ -206,39 +99,48 @@ namespace covered
         void decreaseTotalSize_(const uint64_t& decrease_bytes);
         void increaseTotalSize_(const uint64_t& increase_bytes);
     public:
-        ArcCachePolicy(const uint64_t& capacity_bytes) : capacity_bytes_(capacity_bytes)
+        WTinylfuCachePolicy(const uint64_t& capacity_bytes) //: capacity_bytes_(capacity_bytes)
         {
-            L1_data_size_ = 0;
-            L2_data_size_ = 0;
-            L1_ghost_size_ = 0;
-            L2_ghost_size_ = 0;
-            L1_data_list_.clear();
-            L1_ghost_list_.clear();
-            L2_data_list_.clear();
-            L2_ghost_list_.clear();
+            uint64_t main_cache_size = capacity_bytes * (1.0 - WTINYLFU_WINDOW_RATIO - WTINYLFU_CBF_RATIO);
 
-            p_ = 0;
-            curr_obj_in_L1_ghost_ = false;
-            curr_obj_in_L2_ghost_ = false;
-            vtime_last_req_in_ghost_ = -1;
-            reqseq_ = 0;
+            window_cache_.clear();
+            main_cache_ptr_ = new SlruCachePolicy<Key, Value, KeyHasher>(main_cache_size);
+            assert(main_cache_ptr_ != NULL);
+            cbf_decay_threshold_ = 32 * main_cache_size;
+            request_bytes_for_main_ = 0;
+
+            cbf_ = (struct minimalIncrementCBF *)malloc(sizeof(struct minimalIncrementCBF));
+            assert(cbf_ != NULL);
+            cbf_->ready = 0;
+            int ret = minimalIncrementCBF_init(cbf_, main_cache_size, WTINYLFU_CBF_RATIO);
+            if (ret != 0) {
+                Util::dumpErrorMsg(kClassName, "CBF init failed!");
+                exit(1);
+            }
 
             key_lookup_.clear();
             size_ = 0;
         }
 
-        ~ArcCachePolicy()
+        ~WTinylfuCachePolicy()
         {
-            L1_data_list_.clear();
-            L1_ghost_list_.clear();
-            L2_data_list_.clear();
-            L2_ghost_list_.clear();
+            window_cache_.clear();
+
+            assert(main_cache_ptr_ != NULL);
+            delete main_cache_ptr_;
+            main_cache_ptr_ = NULL;
+
+            assert(cbf_ != NULL);
+            delete cbf_;
+            cbf_ = NULL;
             
             key_lookup_.clear();
         }
 
         bool exists(const Key& key) const
         {
+            // TODO: END HERE
+
             bool is_local_cached = false;
 
             lookupmap_const_iterator_t lookup_map_const_iter = key_lookup_.find(key);
@@ -389,31 +291,16 @@ namespace covered
     private:
         static const std::string kClassName;
 
-        // L1_data is T1 in the paper, L1_ghost is B1 in the paper
-        uint64_t L1_data_size_;
-        uint64_t L2_data_size_;
-        uint64_t L1_ghost_size_;
-        uint64_t L2_ghost_size_;
+        std::list<WTinylfuItem<Key, Value>> window_cache_; // LRU as windowed LRU
+        SlruCachePolicy<Key, Value, KeyHasher>* main_cache_ptr_; // SLRU as main cache
+        struct minimalIncrementCBF *cbf_;
+        uint64_t cbf_decay_threshold_; // Siyuan: corresponding to max_request_num in lib/s3fifo/libCacheSim/libCacheSim/cache/eviction/WTinyLFU.c yet in units of bytes instead of number of requests
+        uint64_t request_bytes_for_main_; // Siyuan: corresponding to request_counter in lib/s3fifo/libCacheSim/libCacheSim/cache/eviction/WTinyLFU.c yet in units of bytes instead of number of requests
+        //request_t *req_local; // Siyuan: just used as a temporary variable to track victim object in lib/s3fifo/libCacheSim/libCacheSim/cache/eviction/WTinyLFU.c
 
-        std::list<ArcDataItem<Key, Value>> L1_data_list_;
-        std::list<ArcGhostItem<Key, Value>> L1_ghost_list_;
-
-        std::list<ArcDataItem<Key, Value>> L2_data_list_;
-        std::list<ArcGhostItem<Key, Value>> L2_ghost_list_;
-
-        double p_; // Siyuan: max bytes of L1 data and ghose lists
-        bool curr_obj_in_L1_ghost_;
-        bool curr_obj_in_L2_ghost_;
-        int64_t vtime_last_req_in_ghost_;
-        int64_t reqseq_; // Siyuan: virtual/logical timestamp of the incoming request
-        //request_t *req_local; // Siyuan: NOT used by ARC in src/cache/arc/ARC.c
-
-        int64_t to_evict_candidate_gen_vtime_; // Siyuan: seems make no sense
-        uint64_t incoming_objsize_; // Siyuan: EdgeWrapper will evict after admission, so we track the most recent admited object size to find victim
-
-        std::unordered_map<Key, ArcKeyLookupIter<Key, Value>, KeyHasher> key_lookup_; // Key indexing for quick lookup
+        std::unordered_map<Key, windowlist_iterator_t, KeyHasher> key_lookup_for_window_; // Key indexing for quick lookup of window cache (main cache lookup is supported by SlruCachePolicy itself)
         uint64_t size_; // in units of bytes
-        const uint64_t capacity_bytes_; // in units of bytes
+        //const uint64_t capacity_bytes_; // in units of bytes
     };
 
     template <typename Key, typename Value, typename KeyHasher>
