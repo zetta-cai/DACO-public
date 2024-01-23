@@ -122,8 +122,9 @@ namespace covered
         typedef typename std::unordered_map<Key, SlruKeyLookupIter<Key, Value>, KeyHasher>::const_iterator lookupmap_const_iterator_t;
     private:
         // Function declarations
-        // Cache eviction
+        // Cache access for get and update
         bool access_(const Key& key, Value& fetched_value, const bool& is_update = false, const Value& new_value = Value());
+        // Cache eviction
         void cool_(const int& lru_id);
         // Cache size calculation
         void decreaseLruAndTotalSize_(const uint64_t& decrease_bytes, const int& lru_id);
@@ -362,6 +363,8 @@ namespace covered
 
         return is_local_cached;
     }
+
+    // Cache eviction
 
     template <typename Key, typename Value, typename KeyHasher>
     void SlruCachePolicy<Key, Value, KeyHasher>::cool_(const int& lru_id)

@@ -10,12 +10,12 @@ namespace covered
 {
     const std::string HashWrapperBase::kClassName("HashWrapperBase");
 
-    HashWrapperBase* HashWrapperBase::getHashWrapperByHashName(const std::string& hash_name)
+    HashWrapperBase* HashWrapperBase::getHashWrapperByHashName(const std::string& hash_name, const uint32_t& seed)
     {
         HashWrapperBase* hash_wrapper_base_ptr = NULL;
         if (hash_name == Util::MMH3_HASH_NAME)
         {
-            hash_wrapper_base_ptr = new Mmh3HashWrapper();
+            hash_wrapper_base_ptr = new Mmh3HashWrapper(seed);
         }
         else
         {

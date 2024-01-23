@@ -393,7 +393,8 @@ LRU_FHCache<TKey, TValue, THash>::LRU_FHCache(uint64_t capacityBytes) // Siyuan:
   //int align_len = 1 + int(log2(m_maxSize));
   //m_fasthash.reset(new covered::CLHT<TKey, TValue>(0, align_len));
   // Siyuan: fix impractical input of max # of objects
-  size_t hashtable_bucketcnt = static_cast<size_t>(capacityBytes / 1024 / 1024); // Siyuan: assume one bucket contains 1MiB objects
+  int m_maxSize = capacityBytes / 10 / 1024; // Siyuan: assume average object size is in units of 10 KiB (e.g., average object size is ~30 KiB in Facebook CDN trace)
+  size_t hashtable_bucketcnt = static_cast<size_t>(1 + int(log2(m_maxSize)));
   m_fasthash.reset(new covered::TbbCHT<TKey, TValue, THash>(hashtable_bucketcnt));
 }
 

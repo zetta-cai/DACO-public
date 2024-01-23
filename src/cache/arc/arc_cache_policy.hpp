@@ -197,8 +197,9 @@ namespace covered
         typedef typename std::unordered_map<Key, ArcKeyLookupIter<Key, Value>, KeyHasher>::const_iterator lookupmap_const_iterator_t;
     private:
         // Function declarations
-        // Cache eviction
+        // Cache access for get and update
         bool access_(const Key& key, Value& fetched_value, const bool& is_update = false, const Value& new_value = Value());
+        // Cache eviction
         bool _ARC_to_replace(Key& key);
         bool _ARC_to_evict_miss_on_all_queues(Key& key);
         void _ARC_evict_L1_data_no_ghost(const lookupmap_iterator_t& lookupmap_iter_const_ref, const Key& key, Value& value);

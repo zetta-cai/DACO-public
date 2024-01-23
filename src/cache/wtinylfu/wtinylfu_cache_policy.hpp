@@ -21,11 +21,12 @@
 #include <unordered_map>
 
 #include "cache/slru/slru_cache_policy.hpp"
+#include "common/cbf.h"
 #include "common/util.h"
 
 // NOTE: default settings refer to lib/s3fifo/libCacheSim/libCacheSim/cache/eviction/WTinyLFU.c
 #define WTINYLFU_WINDOW_RATIO 0.01
-#define WTINYLFU_CBF_RATIO 0.001
+#define WTINYLFU_CBF_ERROR 0.001
 
 namespace covered
 {
@@ -51,6 +52,12 @@ namespace covered
         Value getValue() const
         {
             return value_;
+        }
+
+        void setValue(const Value& value)
+        {
+            value_ = value;
+            return;
         }
 
         const uint64_t getSizeForCapacity() const
@@ -82,26 +89,23 @@ namespace covered
         typedef typename std::unordered_map<Key, windowlist_iterator_t, KeyHasher>::const_iterator lookupmap_const_iterator_t;
     private:
         // Function declarations
-        // Cache eviction
+        // Cache access for get and update
         bool access_(const Key& key, Value& fetched_value, const bool& is_update = false, const Value& new_value = Value());
-        bool _ARC_to_replace(Key& key);
-        bool _ARC_to_evict_miss_on_all_queues(Key& key);
-        void _ARC_evict_L1_data_no_ghost(const lookupmap_iterator_t& lookupmap_iter_const_ref, const Key& key, Value& value);
-        void _ARC_evict_L1_data(const lookupmap_iterator_t& lookupmap_iter_const_ref, const Key& key, Value& value);
-        void _ARC_evict_L1_ghost();
-        void _ARC_evict_L2_data(const lookupmap_iterator_t& lookupmap_iter_const_ref, const Key& key, Value& value);
-        void _ARC_evict_L2_ghost();
         // Cache size calculation
-        void decreaseGhostAndTotalSize_(const uint64_t& decrease_bytes, const int& lru_id);
-        void increaseGhostAndTotalSize_(const uint64_t& increase_bytes, const int& lru_id);
-        void decreaseDataAndTotalSize_(const uint64_t& decrease_bytes, const int& lru_id);
-        void increaseDataAndTotalSize_(const uint64_t& increase_bytes, const int& lru_id);
-        void decreaseTotalSize_(const uint64_t& decrease_bytes);
-        void increaseTotalSize_(const uint64_t& increase_bytes);
+        void decreaseWindowSize_(const uint64_t& decrease_bytes);
+        void increaseWindowSize_(const uint64_t& increase_bytes);
     public:
         WTinylfuCachePolicy(const uint64_t& capacity_bytes) //: capacity_bytes_(capacity_bytes)
         {
-            uint64_t main_cache_size = capacity_bytes * (1.0 - WTINYLFU_WINDOW_RATIO - WTINYLFU_CBF_RATIO);
+            uint64_t main_cache_size = capacity_bytes * (1.0 - WTINYLFU_WINDOW_RATIO);
+
+            // Siyuan: fix impractical input of max # of objects
+            const uint64_t entries = main_cache_size / 10 / 1024; // Siyuan: assume average object size is in units of 10 KiB (e.g., average object size is ~30 KiB in Facebook CDN trace)
+            cbf_ = new CBF(entries, WTINYLFU_CBF_ERROR);
+            assert(cbf_ != NULL);
+            const uint64_t cbf_size = cbf_->getSizeForCapacity();
+            assert(cbf_size < main_cache_size);
+            main_cache_size -= cbf_size;
 
             window_cache_.clear();
             main_cache_ptr_ = new SlruCachePolicy<Key, Value, KeyHasher>(main_cache_size);
@@ -109,44 +113,40 @@ namespace covered
             cbf_decay_threshold_ = 32 * main_cache_size;
             request_bytes_for_main_ = 0;
 
-            cbf_ = (struct minimalIncrementCBF *)malloc(sizeof(struct minimalIncrementCBF));
-            assert(cbf_ != NULL);
-            cbf_->ready = 0;
-            int ret = minimalIncrementCBF_init(cbf_, main_cache_size, WTINYLFU_CBF_RATIO);
-            if (ret != 0) {
-                Util::dumpErrorMsg(kClassName, "CBF init failed!");
-                exit(1);
-            }
-
             key_lookup_.clear();
-            size_ = 0;
+            window_size_ = 0;
         }
 
         ~WTinylfuCachePolicy()
         {
+            assert(cbf_ != NULL);
+            delete cbf_;
+            cbf_ = NULL;
+
             window_cache_.clear();
 
             assert(main_cache_ptr_ != NULL);
             delete main_cache_ptr_;
             main_cache_ptr_ = NULL;
-
-            assert(cbf_ != NULL);
-            delete cbf_;
-            cbf_ = NULL;
             
             key_lookup_.clear();
         }
 
         bool exists(const Key& key) const
         {
-            // TODO: END HERE
-
             bool is_local_cached = false;
 
-            lookupmap_const_iterator_t lookup_map_const_iter = key_lookup_.find(key);
-            if (lookup_map_const_iter != key_lookup_.end() && !lookup_map_const_iter->second.isGhost()) // Key exists in L1/L2 data list
+            // Find in window cache
+            lookupmap_const_iterator_t lookup_map_const_iter = key_lookup_for_window_.find(key);
+            if (lookup_map_const_iter != key_lookup_for_window_.end()) // Key exists in window cache
             {
                 is_local_cached = true;
+            }
+
+            // Find in main cache
+            if (!is_local_cached)
+            {
+                is_local_cached = main_cache_ptr_->exists(key);
             }
 
             return is_local_cached;
@@ -286,484 +286,111 @@ namespace covered
 
         uint64_t getSizeForCapacity() const
         {
-            return size_;
+            return window_size_ + cbf_->getSizeForCapacity() + main_cache_ptr_->getSizeForCapacity();
         }
     private:
         static const std::string kClassName;
 
+        CBF* cbf_;
         std::list<WTinylfuItem<Key, Value>> window_cache_; // LRU as windowed LRU
         SlruCachePolicy<Key, Value, KeyHasher>* main_cache_ptr_; // SLRU as main cache
-        struct minimalIncrementCBF *cbf_;
-        uint64_t cbf_decay_threshold_; // Siyuan: corresponding to max_request_num in lib/s3fifo/libCacheSim/libCacheSim/cache/eviction/WTinyLFU.c yet in units of bytes instead of number of requests
-        uint64_t request_bytes_for_main_; // Siyuan: corresponding to request_counter in lib/s3fifo/libCacheSim/libCacheSim/cache/eviction/WTinyLFU.c yet in units of bytes instead of number of requests
+        uint64_t cbf_decay_threshold_; // Siyuan: corresponding to max_request_num in lib/s3fifo/libCacheSim/libCacheSim/cache/eviction/WTinyLFU.c yet in units of bytes instead of number of requests (due to cache capacity restriction in units of bytes)
+        uint64_t request_bytes_for_main_; // Siyuan: corresponding to request_counter in lib/s3fifo/libCacheSim/libCacheSim/cache/eviction/WTinyLFU.c yet in units of bytes instead of number of requests (due to cache capacity restriction in units of bytes)
         //request_t *req_local; // Siyuan: just used as a temporary variable to track victim object in lib/s3fifo/libCacheSim/libCacheSim/cache/eviction/WTinyLFU.c
 
         std::unordered_map<Key, windowlist_iterator_t, KeyHasher> key_lookup_for_window_; // Key indexing for quick lookup of window cache (main cache lookup is supported by SlruCachePolicy itself)
-        uint64_t size_; // in units of bytes
+        uint64_t window_size_; // Cache size usage of window cache and lookup table in units of bytes
         //const uint64_t capacity_bytes_; // in units of bytes
     };
 
     template <typename Key, typename Value, typename KeyHasher>
-    const std::string ArcCachePolicy<Key, Value, KeyHasher>::kClassName("ArcCachePolicy");
+    const std::string WTinylfuCachePolicy<Key, Value, KeyHasher>::kClassName("WTinylfuCachePolicy");
 
     // Cache access for get and update
 
     template <typename Key, typename Value, typename KeyHasher>
-    bool ArcCachePolicy<Key, Value, KeyHasher>::access_(const Key& key, Value& fetched_value, const bool& is_update, const Value& new_value)
+    bool WTinylfuCachePolicy<Key, Value, KeyHasher>::access_(const Key& key, Value& fetched_value, const bool& is_update, const Value& new_value)
     {
-        reqseq_ += 1; // Update global virtual/logical timestamp
-
         bool is_local_cached = false;
 
-        lookupmap_iterator_t lookup_map_iter = key_lookup_.find(key);
-        if (lookup_map_iter == key_lookup_.end())
+        // Access window cache
+        bool is_local_cached_in_window = false;
+        Value fetched_value_in_window;
+        lookupmap_iterator_t lookup_map_iter = key_lookup_for_window_.find(key);
+        if (lookup_map_iter != key_lookup_for_window_.end())
         {
-            is_local_cached = false;
-        }
-        else
-        {
-            curr_obj_in_L1_ghost_ = false;
-            curr_obj_in_L2_ghost_ = false;
+            is_local_cached_in_window = true;
 
-            int lru_id = lookup_map_iter->second.getLruId();
-            if (lookup_map_iter->second.isGhost())
+            // Get value
+            fetched_value_in_window = lookup_map_iter->second->getValue();
+
+            // Update value if necessary
+            if (is_update)
             {
-                is_local_cached = false;
+                lookup_map_iter->second->setValue(new_value);
 
-                // ghost hit
-                vtime_last_req_in_ghost_ = reqseq_;
-                if (lru_id == 1) {
-                    const ghostlist_const_iterator_t& ghost_list_const_iter_const_ref = lookup_map_iter->second.getGhostListIterConstRef();
-                    assert(ghost_list_const_iter_const_ref != L1_ghost_list_.end());
-                    assert(ghost_list_const_iter_const_ref->getKey() == key);
-                    assert(ghost_list_const_iter_const_ref->getLruId() == lru_id);
-                    assert(ghost_list_const_iter_const_ref->isGhost());
-
-                    curr_obj_in_L1_ghost_ = true;
-                    // case II: x in L1_ghost
-                    assert(L1_ghost_size_ >= 1);
-                    double delta = MAX((double)L2_ghost_size_ / L1_ghost_size_, 1);
-                    p_ = MIN(p_ + delta, capacity_bytes_);
-
-                    // Remove ArcGhostItem from ghost LRU 1
-                    decreaseGhostAndTotalSize_(ghost_list_const_iter_const_ref->getSizeForCapacity(), lru_id);
-                    L1_ghost_list_.erase(ghost_list_const_iter_const_ref);
-                }
-                else if (lru_id == 2) {
-                    const ghostlist_const_iterator_t& ghost_list_const_iter_const_ref = lookup_map_iter->second.getGhostListIterConstRef();
-                    assert(ghost_list_const_iter_const_ref != L2_ghost_list_.end());
-                    assert(ghost_list_const_iter_const_ref->getKey() == key);
-                    assert(ghost_list_const_iter_const_ref->getLruId() == lru_id);
-                    assert(ghost_list_const_iter_const_ref->isGhost());
-
-                    curr_obj_in_L2_ghost_ = true;
-                    // case III: x in L2_ghost
-                    assert(L2_ghost_size_ >= 1);
-                    double delta = MAX((double)L1_ghost_size_ / L2_ghost_size_, 1);
-                    p_ = MAX(p_ - delta, 0);
-
-                    // Remove ArcGhostItem from ghost LRU 2
-                    decreaseGhostAndTotalSize_(ghost_list_const_iter_const_ref->getSizeForCapacity(), lru_id);
-                    L2_ghost_list_.erase(ghost_list_const_iter_const_ref);
-                }
-                else
-                {
-                    std::ostringstream oss;
-                    oss << "invalid lru_id " << lru_id;
-                    Util::dumpErrorMsg(kClassName, oss.str());
-                    exit(1);
-                }
-
-                // Remove lookup map entry
-                decreaseTotalSize_(key.getKeyLength() + lookup_map_iter->second.getSizeForCapacity());
-                key_lookup_.erase(lookup_map_iter);
+                // Update cache size usage (TODO: END HERE)
+                decreaseWindowSize_()
             }
-            else
-            {
-                is_local_cached = true;
+        }
 
-                // cache hit, case I: x in L1_data or L2_data
-                if (lru_id == 1) {
-                    const datalist_iterator_t& data_list_iter_const_ref = lookup_map_iter->second.getDataListIterConstRef();
-                    assert(data_list_iter_const_ref != L1_data_list_.end());
-                    assert(data_list_iter_const_ref->getKey() == key);
-                    assert(data_list_iter_const_ref->getLruId() == lru_id);
-                    assert(!data_list_iter_const_ref->isGhost());
+        // Access main cache
+        Value fetched_value_in_main;
+        bool is_local_cached_in_main = main_cache_ptr_->get(key, fetched_value_in_main); // Get value
+        if (is_local_cached_in_main && is_update)
+        {
+            // Update value if necessary
+            bool tmp_is_local_cached_in_main = main_cache_ptr_->update(key, new_value); // TODO: END HERE
+            assert(tmp_is_local_cached_in_main);
+        }
 
-                    // Get value
-                    fetched_value = data_list_iter_const_ref->getValue();
+        // Get value if cached in window/main cache
+        is_local_cached = is_local_cached_in_window || is_local_cached_in_main;
+        if (is_local_cached)
+        {
+            fetched_value = is_local_cached_in_window ? fetched_value_in_window : fetched_value_in_main;
+        }
 
-                    // move to LRU2 (need to update cache size usage especially for in-place update)
-                    // Remove from data LRU 1
-                    decreaseDataAndTotalSize_(data_list_iter_const_ref->getSizeForCapacity(), lru_id);
-                    L1_data_list_.erase(data_list_iter_const_ref);
-                    // Insert into data LRU 2
-                    Value tmp_value = is_update ? new_value : fetched_value;
-                    ArcDataItem tmp_item(key, tmp_value, 2);
-                    increaseDataAndTotalSize_(tmp_item.getSizeForCapacity(), 2);
-                    L2_data_list_.push_front(tmp_item);
+        // Update CBF if necessary
+        if (is_local_cached_in_main)
+        {
+            // frequency update
+            cbf_->update(key);
 
-                    // update lookup table (no need to update cache size usage due to no change)
-                    ArcKeyLookupIter<Key, Value> tmp_lookup_iter(L2_data_list_.begin());
-                    assert(tmp_lookup_iter.getLruId() == 2);
-                    assert(!tmp_lookup_iter.isGhost());
-                    lookup_map_iter->second = tmp_lookup_iter;
-                } else {
-                    const datalist_iterator_t& data_list_iter_const_ref = lookup_map_iter->second.getDataListIterConstRef();
-                    assert(data_list_iter_const_ref != L2_data_list_.end());
-                    assert(data_list_iter_const_ref->getKey() == key);
-                    assert(data_list_iter_const_ref->getLruId() == lru_id);
-                    assert(!data_list_iter_const_ref->isGhost());
+            // Update request bytes
+            const uint64_t tmp_value_bytes = is_update ? new_value.getValuesize() : fetched_value.getValuesize();
+            request_bytes_for_main_ = key.getKeyLength() + tmp_value_bytes;
 
-                    // Get value
-                    fetched_value = data_list_iter_const_ref->getValue();
-
-                    // move to LRU2 head (need to update cache size usage especially for in-place update)
-                    // Remove from data LRU 2
-                    decreaseDataAndTotalSize_(data_list_iter_const_ref->getSizeForCapacity(), lru_id);
-                    L2_data_list_.erase(data_list_iter_const_ref);
-                    // Insert into head of data LRU 2
-                    Value tmp_value = is_update ? new_value : fetched_value;
-                    ArcDataItem tmp_item(key, tmp_value, 2);
-                    increaseDataAndTotalSize_(tmp_item.getSizeForCapacity(), lru_id);
-                    L2_data_list_.push_front(tmp_item);
-
-                    // update lookup table (no need to update cache size usage due to no change)
-                    ArcKeyLookupIter<Key, Value> tmp_lookup_iter(L2_data_list_.begin());
-                    assert(tmp_lookup_iter.getLruId() == 2);
-                    assert(!tmp_lookup_iter.isGhost());
-                    lookup_map_iter->second = tmp_lookup_iter;
-                }
+            // Decay CBF if necessary
+            if (request_bytes_for_main_ >= cbf_decay_threshold_) {
+                request_bytes_for_main_ = 0;
+                cbf_->decay();
             }
         }
 
         return is_local_cached;
     }
 
-    // Cache eviction
-
-    /* finding the eviction candidate in _ARC_replace but do not perform eviction */
-    template <typename Key, typename Value, typename KeyHasher>
-    bool ArcCachePolicy<Key, Value, KeyHasher>::_ARC_to_replace(Key& key)
-    {
-        bool has_victim_key = false;
-
-        if (L1_data_size_ == 0 && L2_data_size_ == 0) {
-            std::ostringstream oss;
-            oss << "L1_data_size_ == 0 && L2_data_size_ == 0";
-            Util::dumpWarnMsg(kClassName, oss.str());
-            return has_victim_key;
-        }
-
-        bool cond1 = L1_data_size_ > 0;
-        bool cond2 = L1_data_size_ > p_;
-        bool cond3 = L1_data_size_ == p_ && curr_obj_in_L2_ghost_;
-        bool cond4 = L2_data_size_ == 0;
-
-        if ((cond1 && (cond2 || cond3)) || cond4) {
-            // delete the LRU in L1 data, move to L1_ghost
-            key = L1_data_list_.back().getKey();
-            has_victim_key = true;
-        } else {
-            // delete the item in L2 data, move to L2_ghost
-            key = L2_data_list_.back().getKey();
-            has_victim_key = true;
-        }
-
-        assert(key_lookup_.find(key) != key_lookup_.end());
-        return has_victim_key;
-    }
-
-    /* finding the eviction candidate in _ARC_evict_miss_on_all_queues, but do not
-    * perform eviction */
-    template <typename Key, typename Value, typename KeyHasher>
-    bool ArcCachePolicy<Key, Value, KeyHasher>::_ARC_to_evict_miss_on_all_queues(Key& key)
-    {
-        bool has_victim_key = false;
-
-        if (L1_data_size_ + L1_ghost_size_ + incoming_objsize_ > capacity_bytes_)
-        {
-            // case A: L1 = T1 U B1 has exactly c pages
-            if (L1_ghost_size_ > 0) {
-                has_victim_key = _ARC_to_replace(key);
-            } else {
-            // T1 >= c, L1 data size is too large, ghost is empty, so evict from L1
-            // data
-                key = L1_data_list_.back().getKey();
-                has_victim_key = true;
-            }
-        } else {
-            has_victim_key = _ARC_to_replace(key);
-        }
-
-        return has_victim_key;
-    }
-
-    template <typename Key, typename Value, typename KeyHasher>
-    void ArcCachePolicy<Key, Value, KeyHasher>::_ARC_evict_L1_data_no_ghost(const lookupmap_iterator_t& lookupmap_iter_const_ref, const Key& key, Value& value)
-    {
-        assert(lookupmap_iter_const_ref != key_lookup_.end());
-        const datalist_const_iterator_t& data_list_const_iter_const_ref = lookupmap_iter_const_ref->second.getDataListIterConstRef();
-
-        assert(data_list_const_iter_const_ref != L1_data_list_.end());
-        assert(data_list_const_iter_const_ref->getKey() == key);
-        assert(data_list_const_iter_const_ref->getLruId() == 1);
-        assert(!data_list_const_iter_const_ref->isGhost());
-
-        // Get value
-        value = data_list_const_iter_const_ref->getValue();
-
-        // Remove from data LRU 1
-        decreaseDataAndTotalSize_(data_list_const_iter_const_ref->getSizeForCapacity(), 1);
-        L1_data_list_.erase(data_list_const_iter_const_ref);
-
-        // Remove from key lookup map
-        decreaseTotalSize_(key.getKeyLength() + lookupmap_iter_const_ref->second.getSizeForCapacity());
-        key_lookup_.erase(lookupmap_iter_const_ref);
-
-        return;
-    }
-
-    template <typename Key, typename Value, typename KeyHasher>
-    void ArcCachePolicy<Key, Value, KeyHasher>::_ARC_evict_L1_data(const lookupmap_iterator_t& lookupmap_iter_const_ref, const Key& key, Value& value)
-    {
-        assert(lookupmap_iter_const_ref != key_lookup_.end());
-        const datalist_const_iterator_t& data_list_const_iter_const_ref = lookupmap_iter_const_ref->second.getDataListIterConstRef();
-
-        assert(data_list_const_iter_const_ref != L1_data_list_.end());
-        assert(data_list_const_iter_const_ref->getKey() == key);
-        assert(data_list_const_iter_const_ref->getLruId() == 1);
-        assert(!data_list_const_iter_const_ref->isGhost());
-
-        // Get value
-        value = data_list_const_iter_const_ref->getValue();
-
-        // Remove from data LRU 1
-        decreaseDataAndTotalSize_(data_list_const_iter_const_ref->getSizeForCapacity(), 1);
-        L1_data_list_.erase(data_list_const_iter_const_ref);
-
-        // Insert into ghost LRU 1
-        ArcGhostItem<Key, Value> tmp_item(key, 1);
-        increaseGhostAndTotalSize_(tmp_item.getSizeForCapacity(), 1);
-        L1_ghost_list_.push_front(tmp_item);
-
-        // Update key lookup map (no need to update cache size usage due to no change)
-        ArcKeyLookupIter<Key, Value> tmp_lookup_iter(L1_ghost_list_.begin());
-        assert(tmp_lookup_iter.getLruId() == 1);
-        assert(tmp_lookup_iter.isGhost());
-        lookupmap_iter_const_ref->second = tmp_lookup_iter;
-
-        return;
-    }
-
-    template <typename Key, typename Value, typename KeyHasher>
-    void ArcCachePolicy<Key, Value, KeyHasher>::_ARC_evict_L1_ghost()
-    {
-        assert(L1_ghost_list_.size() > 0);
-        ghostlist_const_iterator_t ghost_list_const_iter = L1_ghost_list_.end();
-        ghost_list_const_iter--;
-
-        assert(ghost_list_const_iter != L1_ghost_list_.end());
-        assert(ghost_list_const_iter->getLruId() == 1);
-        assert(ghost_list_const_iter->isGhost());
-
-        Key tmp_key = ghost_list_const_iter->getKey();
-
-        // Remove from ghost LRU 1
-        decreaseGhostAndTotalSize_(ghost_list_const_iter->getSizeForCapacity(), 1);
-        L1_ghost_list_.erase(ghost_list_const_iter);
-
-        // Remove from key lookup map
-        lookupmap_const_iterator_t lookup_map_const_iter = key_lookup_.find(tmp_key);
-        assert(lookup_map_const_iter != key_lookup_.end());
-        assert(lookup_map_const_iter->second.getLruId() == 1);
-        assert(lookup_map_const_iter->second.isGhost());
-        decreaseTotalSize_(tmp_key.getKeyLength() + lookup_map_const_iter->second.getSizeForCapacity());
-        key_lookup_.erase(lookup_map_const_iter);
-
-        return;
-    }
-
-    template <typename Key, typename Value, typename KeyHasher>
-    void ArcCachePolicy<Key, Value, KeyHasher>::_ARC_evict_L2_data(const lookupmap_iterator_t& lookupmap_iter_const_ref, const Key& key, Value& value)
-    {
-        assert(lookupmap_iter_const_ref != key_lookup_.end());
-        const datalist_const_iterator_t& data_list_const_iter_const_ref = lookupmap_iter_const_ref->second.getDataListIterConstRef();
-
-        assert(data_list_const_iter_const_ref != L2_data_list_.end());
-        assert(data_list_const_iter_const_ref->getKey() == key);
-        assert(data_list_const_iter_const_ref->getLruId() == 2);
-        assert(!data_list_const_iter_const_ref->isGhost());
-
-        // Get value
-        value = data_list_const_iter_const_ref->getValue();
-
-        // Remove from data LRU 2
-        decreaseDataAndTotalSize_(data_list_const_iter_const_ref->getSizeForCapacity(), 2);
-        L2_data_list_.erase(data_list_const_iter_const_ref);
-
-        // Insert into ghost LRU 2
-        ArcGhostItem<Key, Value> tmp_item(key, 2);
-        increaseGhostAndTotalSize_(tmp_item.getSizeForCapacity(), 2);
-        L2_ghost_list_.push_front(tmp_item);
-
-        // Update key lookup map (no need to update cache size usage due to no change)
-        ArcKeyLookupIter<Key, Value> tmp_lookup_iter(L2_ghost_list_.begin());
-        assert(tmp_lookup_iter.getLruId() == 2);
-        assert(tmp_lookup_iter.isGhost());
-        lookupmap_iter_const_ref->second = tmp_lookup_iter;
-
-        return;
-    }
-
-    template <typename Key, typename Value, typename KeyHasher>
-    void ArcCachePolicy<Key, Value, KeyHasher>::_ARC_evict_L2_ghost()
-    {
-        assert(L2_ghost_list_.size() > 0);
-        ghostlist_const_iterator_t ghost_list_const_iter = L2_ghost_list_.end();
-        ghost_list_const_iter--;
-
-        assert(ghost_list_const_iter != L2_ghost_list_.end());
-        assert(ghost_list_const_iter->getLruId() == 2);
-        assert(ghost_list_const_iter->isGhost());
-
-        Key tmp_key = ghost_list_const_iter->getKey();
-
-        // Remove from ghost LRU 2
-        decreaseGhostAndTotalSize_(ghost_list_const_iter->getSizeForCapacity(), 2);
-        L2_ghost_list_.erase(ghost_list_const_iter);
-
-        // Remove from key lookup map
-        lookupmap_const_iterator_t lookup_map_const_iter = key_lookup_.find(tmp_key);
-        assert(lookup_map_const_iter != key_lookup_.end());
-        assert(lookup_map_const_iter->second.getLruId() == 2);
-        assert(lookup_map_const_iter->second.isGhost());
-        decreaseTotalSize_(tmp_key.getKeyLength() + lookup_map_const_iter->second.getSizeForCapacity());
-        key_lookup_.erase(lookup_map_const_iter);
-
-        return;
-    }
-
     // Cache size usage calculation
 
     template <typename Key, typename Value, typename KeyHasher>
-    void ArcCachePolicy<Key, Value, KeyHasher>::decreaseGhostAndTotalSize_(const uint64_t& decrease_bytes, const int& lru_id)
+    void WTinylfuCachePolicy<Key, Value, KeyHasher>::decreaseWindowSize_(const uint64_t& decrease_bytes)
     {
-        assert(lru_id == 1 || lru_id == 2);
-
-        if (lru_id == 1) // Ghost LRU 1
+        if (window_size_ <= decrease_bytes)
         {
-            if (L1_ghost_size_ <= decrease_bytes)
-            {
-                L1_ghost_size_ = 0;
-            }
-            else
-            {
-                L1_ghost_size_ -= decrease_bytes;
-            }
-        }
-        else if (lru_id == 2) // Ghost LRU 2
-        {
-            if (L2_ghost_size_ <= decrease_bytes)
-            {
-                L2_ghost_size_ = 0;
-            }
-            else
-            {
-                L2_ghost_size_ -= decrease_bytes;
-            }
-        }
-
-        decreaseTotalSize_(decrease_bytes);
-        return;
-    }
-
-    template <typename Key, typename Value, typename KeyHasher>
-    void ArcCachePolicy<Key, Value, KeyHasher>::increaseGhostAndTotalSize_(const uint64_t& increase_bytes, const int& lru_id)
-    {
-        assert(lru_id == 1 || lru_id == 2);
-
-        if (lru_id == 1) // Ghost LRU 1
-        {
-            L1_ghost_size_ += increase_bytes;
-        }
-        else // Ghost LRU 2
-        {
-            L2_ghost_size_ += increase_bytes;
-        }
-
-        increaseTotalSize_(increase_bytes);
-        return;
-    }
-
-    template <typename Key, typename Value, typename KeyHasher>
-    void ArcCachePolicy<Key, Value, KeyHasher>::decreaseDataAndTotalSize_(const uint64_t& decrease_bytes, const int& lru_id)
-    {
-        assert(lru_id == 1 || lru_id == 2);
-
-        if (lru_id == 1) // Data LRU 1
-        {
-            if (L1_data_size_ <= decrease_bytes)
-            {
-                L1_data_size_ = 0;
-            }
-            else
-            {
-                L1_data_size_ -= decrease_bytes;
-            }
-        }
-        else // Data LRU 2
-        {
-            if (L2_data_size_ <= decrease_bytes)
-            {
-                L2_data_size_ = 0;
-            }
-            else
-            {
-                L2_data_size_ -= decrease_bytes;
-            }
-        }
-
-        decreaseTotalSize_(decrease_bytes);
-        return;
-    }
-
-    template <typename Key, typename Value, typename KeyHasher>
-    void ArcCachePolicy<Key, Value, KeyHasher>::increaseDataAndTotalSize_(const uint64_t& increase_bytes, const int& lru_id)
-    {
-        assert(lru_id == 1 || lru_id == 2);
-
-        if (lru_id == 1) // Data LRU 1
-        {
-            L1_data_size_ += increase_bytes;
-        }
-        else // Data LRU 2
-        {
-            L2_data_size_ += increase_bytes;
-        }
-
-        increaseTotalSize_(increase_bytes);
-        return;
-    }
-
-    template <typename Key, typename Value, typename KeyHasher>
-    void ArcCachePolicy<Key, Value, KeyHasher>::decreaseTotalSize_(const uint64_t& decrease_bytes)
-    {
-        if (size_ <= decrease_bytes)
-        {
-            size_ = 0;
+            window_size_ = 0;
         }
         else
         {
-            size_ -= decrease_bytes;
+            window_size_ -= decrease_bytes;
         }
         return;
     }
 
     template <typename Key, typename Value, typename KeyHasher>
-    void ArcCachePolicy<Key, Value, KeyHasher>::increaseTotalSize_(const uint64_t& increase_bytes)
+    void WTinylfuCachePolicy<Key, Value, KeyHasher>::increaseWindowSize_(const uint64_t& increase_bytes)
     {
-        size_ += increase_bytes;
+        window_size_ += increase_bytes;
         return;
     }
 

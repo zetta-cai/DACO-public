@@ -9,7 +9,7 @@
 
 #include <string>
 
-#include "hash_wrapper_base.h"
+#include "hash/hash_wrapper_base.h"
 
 namespace covered
 {
