@@ -161,8 +161,8 @@ namespace covered
 
     bool S3fifoLocalCache::checkObjsizeInternal_(const ObjectSize& objsize) const
     {
-        // NOTE: capacity has been checked by LocalCacheBase, while NO other custom object size checking here
-        const bool is_valid_objsize = true;
+        // NOTE: S3FIFO requires objsize <= small cache size
+        const bool is_valid_objsize = s3fifo_cache_ptr_->canAdmit(objsize);
         return is_valid_objsize;
     }
 

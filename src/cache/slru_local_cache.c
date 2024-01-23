@@ -169,8 +169,8 @@ namespace covered
 
     bool SlruLocalCache::checkObjsizeInternal_(const ObjectSize& objsize) const
     {
-        // NOTE: capacity has been checked by LocalCacheBase, while NO other custom object size checking here
-        const bool is_valid_objsize = true;
+        // NOTE: SLRU requires objsize <= per LRU size
+        const bool is_valid_objsize = slru_cache_ptr_->canAdmit(objsize);
         return is_valid_objsize;
     }
 

@@ -18,6 +18,8 @@
 
 #include "common/util.h"
 
+#define S3FIFO_SMALL_CACHE_RATIO 0.1
+
 namespace covered
 {
     template <typename Key, typename Value>
@@ -204,6 +206,11 @@ namespace covered
             return is_local_cached;
         }
 
+        bool canAdmit(const uint32_t& objsize) const
+        {
+            return objsize <= (S3FIFO_SMALL_CACHE_RATIO * capacity_bytes_); // Need <= small cache size
+        }
+
         void admit(const Key& key, const Value& value)
         {
             bool is_small_cache = false;
@@ -255,7 +262,7 @@ namespace covered
 
         void evictNoGivenKey(std::unordered_map<Key, Value, KeyHasher>& victims)
         {
-            if (size_for_small_ >= 0.1 * static_cast<double>(capacity_bytes_)) // Evict from small cache
+            if (size_for_small_ >= S3FIFO_SMALL_CACHE_RATIO * static_cast<double>(capacity_bytes_)) // Evict from small cache
             {
                 evictFromSmall_(victims);
             }

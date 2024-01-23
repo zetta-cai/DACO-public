@@ -269,6 +269,7 @@ namespace covered
         {
             Value unused_fetched_value;
             bool is_local_cached = access_(key, unused_fetched_value, true, value);
+            UNUSED(unused_fetched_value);
 
             return is_local_cached;
         }

@@ -54,12 +54,6 @@ namespace covered
             return value_;
         }
 
-        void setValue(const Value& value)
-        {
-            value_ = value;
-            return;
-        }
-
         const uint64_t getSizeForCapacity() const
         {
             return static_cast<uint64_t>(key_.getKeyLength() + value_.getValuesize());
@@ -113,6 +107,10 @@ namespace covered
             cbf_decay_threshold_ = 32 * main_cache_size;
             request_bytes_for_main_ = 0;
 
+            cbf_max_bytes_ = cbf_size;
+            window_cache_max_bytes_ = capacity_bytes * WTINYLFU_WINDOW_RATIO;
+            main_cache_max_bytes_ = main_cache_size;
+
             key_lookup_.clear();
             window_size_ = 0;
         }
@@ -162,126 +160,164 @@ namespace covered
         {
             Value unused_fetched_value;
             bool is_local_cached = access_(key, unused_fetched_value, true, value);
+            UNUSED(unused_fetched_value);
 
             return is_local_cached;
         }
 
+        bool canAdmit(const uint32_t& objsize) const
+        {
+            return objsize <= window_cache_max_bytes_ && main_cache_ptr_->canAdmit(objsize); // Need <= window cache size and main cache size
+        }
+
         void admit(const Key& key, const Value& value)
         {
-            lookupmap_const_iterator_t lookup_map_const_iter = key_lookup_.find(key);
-            if (lookup_map_const_iter != key_lookup_.end()) // Previous list and map entry exist
+            // Check window cache
+            lookupmap_const_iterator_t lookup_map_const_iter = key_lookup_for_window_.find(key);
+            if (lookup_map_const_iter != key_lookup_for_window_.end()) // Previous list and map entry exist
             {
-                // NOTE: object MUST be in L1/L2 data list, as ghost list entry will be removed if any in access_() for cache miss before admit()
-                assert(!lookup_map_const_iter->second.isGhost());
-
                 std::ostringstream oss;
-                oss << "key " << key.getKeystr() << " already exists in key_lookup_ (L1 data list size: " << L1_data_list_.size() << "; L2 data list size: " << L2_data_list_.size() << ") for admit()";
+                oss << "key " << key.getKeystr() << " already exists in key_lookup_for_window_ (window cache size: " << window_cache_.size() << ") for admit()";
                 Util::dumpWarnMsg(kClassName, oss.str());
                 return;
             }
-            else // No previous list and map entry
+
+            // Check main cache
+            bool is_local_cached = main_cache_ptr_->exists(key);
+            if (is_local_cached)
             {
-                if (vtime_last_req_in_ghost_ == reqseq_ &&
-                    (curr_obj_in_L1_ghost_ || curr_obj_in_L2_ghost_)) {
-                    // insert to L2 data head
-                    ArcDataItem tmp_item(key, value, 2);
-                    L2_data_list_.push_front(tmp_item);
-                    increaseDataAndTotalSize_(tmp_item.getSizeForCapacity(), 2);
-
-                    curr_obj_in_L1_ghost_ = false;
-                    curr_obj_in_L2_ghost_ = false;
-                    vtime_last_req_in_ghost_ = -1;
-
-                    // Insert into key lookup map
-                    ArcKeyLookupIter<Key, Value> tmp_lookup_iter(L2_data_list_.begin());
-                    key_lookup_.insert(std::pair(key, tmp_lookup_iter));
-                    increaseTotalSize_(key.getKeyLength() + tmp_lookup_iter.getSizeForCapacity());
-                } else {
-                    // insert to L1 data head
-                    ArcDataItem<Key, Value> tmp_item(key, value, 1);
-                    L1_data_list_.push_front(tmp_item);
-                    increaseDataAndTotalSize_(tmp_item.getSizeForCapacity(), 1);
-
-                    // Insert into key lookup map
-                    ArcKeyLookupIter<Key, Value> tmp_lookup_iter(L1_data_list_.begin());
-                    key_lookup_.insert(std::pair(key, tmp_lookup_iter));
-                    increaseTotalSize_(key.getKeyLength() + tmp_lookup_iter.getSizeForCapacity());
-                }
-
-                incoming_objsize_ = key.getKeyLength() + value.getValuesize(); // Siyuan: update the most recent admited object size for potential eviction
+                std::ostringstream oss;
+                oss << "key " << key.getKeystr() << " already exists in main_cache_ for admit()";
+                Util::dumpWarnMsg(kClassName, oss.str());
+                return;
             }
+
+            // Insert into the head of window cache (note from-window-to-main eviction is triggered outside WTinyLFU by EdgeWrapper when total cache is full)
+            WTinylfuItem<Key, Value> tmp_item(key, value);
+            increaseWindowSize_(tmp_item.getSizeForCapacity());
+            window_cache_.push_front(tmp_item);
+
+            // Update key lookup map for window cache
+            increaseWindowSize_(key.getKeyLength() + sizeof(windowlist_iterator_t));
+            key_lookup_for_window_.insert(std::make_pair(key, window_cache_.begin()));
 
             return;
         }
 
-        bool getVictimKey(Key& key)
+        void evictNoGivenKey(std::unordered_map<Key, Value, KeyHasher>& victims)
         {
-            bool has_victim_key = false;
+            bool evicted = false;
+            while (!evicted) // NOTE: evict until window cache is empty or a window victim is evicted
+            {
+                if (window_cache_.size() > 0) // Window cache is NOT empty
+                {
+                    // Get window cache victim
+                    windowlist_const_iterator_t window_list_const_iter = window_cache_.end();
+                    window_list_const_iter--;
+                    assert(window_list_const_iter != window_cache_.end());
+                    const Key tmp_window_victim_key = window_list_const_iter->getKey();
+                    const Value tmp_window_victim_value = window_list_const_iter->getValue();
 
-            to_evict_candidate_gen_vtime_ = reqseq_;
-            if (vtime_last_req_in_ghost_ == reqseq_ &&
-                (curr_obj_in_L1_ghost_ || curr_obj_in_L2_ghost_)) {
-                has_victim_key = _ARC_to_replace(key);
-            } else {
-                has_victim_key = _ARC_to_evict_miss_on_all_queues(key);
-            }
+                    /** only when main_cache is full, evict an obj from the main_cache **/
 
-            return has_victim_key;
-        }
+                    // if main_cache has enough space, insert the obj into main_cache
+                    if (main_cache_ptr_->getSizeForCapacity() + tmp_window_victim_key.getKeyLength() + tmp_window_victim_value.getValuesize() + sizeof(int) <= main_cache_max_bytes_) // NOTE: sizeof(int) is metadata of lru_id in SLRU
+                    {
+                        // NOTE: NOT update victims for window victim due to just moving it from window cache into main cache
 
-        bool evictWithGivenKey(const Key& key, Value& value)
-        {
-            bool is_evict = false;
-            
-            lookupmap_iterator_t lookup_map_iter = key_lookup_.find(key);
-            if (lookup_map_iter != key_lookup_.end()) {
-                // NOTE: getVictimKey() MUST get a victim from L1/L2 data list instead of any ghost list
-                assert(!lookup_map_iter->second.isGhost());
+                        // Admit window victim into main cache
+                        main_cache_ptr_->admit(tmp_window_victim_key, tmp_window_victim_value); // NOTE: main cache will update its cache size usage by itself internally
 
-                int lru_id = lookup_map_iter->second.getLruId();
-                if (lru_id == 1) {
-                    if (L1_data_size_ + L1_ghost_size_ + incoming_objsize_ > capacity_bytes_) {
-                        // case A: L1 = T1 U B1 has exactly c pages
-                        if (L1_ghost_size_ > 0) {
-                            // if T1 < c (ghost is not empty),
-                            // delete the LRU of the L1 ghost, and replace
-                            // we do not use params->L1_data_size < cache->cache_size
-                            // because it does not work for variable size objects
-                            _ARC_evict_L1_ghost();
-                        } else {
-                            // T1 >= c, L1 data size is too large, ghost is empty, so evict from L1
-                            // data
-                            _ARC_evict_L1_data_no_ghost(lookup_map_iter, key, value); // Get value, remove from data LRU 1, and remove from key lookup map (NOTE: NOT insert into ghost LRU 1)
-                            is_evict = true;
+                        // Remove window victim from window cache
+                        decreaseWindowSize_(window_list_const_iter->getSizeForCapacity());
+                        window_cache_.erase(window_list_const_iter);
+                        
+                        // Remove window victim from key lookup map for window cache
+                        decreaseWindowSize_(tmp_window_victim_key.getKeyLength() + sizeof(windowlist_iterator_t));
+                        lookupmap_iterator_t lookup_map_iter = key_lookup_for_window_.find(tmp_window_victim_key);
+                        assert(lookup_map_iter != key_lookup_for_window_.end());
+                        key_lookup_for_window_.erase(lookup_map_iter);
+                    } // End of non-full main cache
+                    else
+                    {
+                        // compare the frequency of window_victim and main_cache_victim
+                        Key tmp_main_victim_key;
+                        bool tmp_main_has_victim_key = main_cache_ptr_->getVictimKey(tmp_main_victim_key);
+                        assert(tmp_main_has_victim_key);
 
-                            return is_evict;
+                        // if window_victim is more frequent, insert it into main_cache
+                        if (cbf_->estimate(tmp_window_victim_key) > cbf_->estimate(tmp_main_victim_key))
+                        {
+                            // NOTE: we will update victims for main victim, yet not for window victim that will be inserted into main cache
+
+                            // Remove main victim from main cache and add into victims
+                            Value tmp_main_victim_value;
+                            bool tmp_main_is_evict = window_cache_.evictWithGivenKey(tmp_main_victim_key, tmp_main_victim_value); // NOTE: main cache will update its cache size usage by itself internally
+                            assert(tmp_main_is_evict);
+                            if (victims.find(tmp_main_victim_key) == victims.end())
+                            {
+                                victims.insert(std::make_pair(tmp_main_victim_key, tmp_main_victim_value));
+                            }
+
+                            // Admit window victim into main cache
+                            main_cache_ptr_->admit(tmp_window_victim_key, tmp_window_victim_value); // NOTE: main cache will update its cache size usage by itself internally
+
+                            // Remove window victim from window cache
+                            decreaseWindowSize_(window_list_const_iter->getSizeForCapacity());
+                            window_cache_.erase(window_list_const_iter);
+
+                            // Remove window victim from key lookup map
+                            decreaseWindowSize_(tmp_window_victim_key.getKeyLength() + sizeof(windowlist_iterator_t));
+                            lookupmap_iterator_t lookup_map_iter = key_lookup_for_window_.find(tmp_window_victim_key);
+                            assert(lookup_map_iter != key_lookup_for_window_.end());
+                            key_lookup_for_window_.erase(lookup_map_iter);
+                        } // End of window victim is more frequent than main victim
+                        else
+                        {
+                            // NOTE: we will update victims for window victim, yet not for main victim that will still be cached by main cache
+
+                            // Remove window victim from window cache and add into victims
+                            decreaseWindowSize_(window_list_const_iter->getSizeForCapacity());
+                            window_cache_.erase(window_list_const_iter);
+                            if (victims.find(tmp_window_victim_key) == victims.end())
+                            {
+                                victims.insert(std::make_pair(tmp_window_victim_key, tmp_window_victim_value));
+                            }
+
+                            // Remove window victim from key lookup map
+                            decreaseWindowSize_(tmp_window_victim_key.getKeyLength() + sizeof(windowlist_iterator_t));
+                            lookupmap_iterator_t lookup_map_iter = key_lookup_for_window_.find(tmp_window_victim_key);
+                            assert(lookup_map_iter != key_lookup_for_window_.end());
+                            key_lookup_for_window_.erase(lookup_map_iter);
+
+                            evicted = true; // Terminate while loop due to evicting a window victim
                         }
+                    } // End of full main cache
+
+                    cbf_->update(tmp_window_victim_key);
+                } // End of if (window_cache_.size() > 0)
+                else
+                {
+                    assert(window_cache_.size() == 0);
+
+                    // Get main victim from main cache
+                    Key tmp_main_victim_key;
+                    bool tmp_main_has_victim_key = main_cache_ptr_->getVictimKey(tmp_main_victim_key);
+                    assert(tmp_main_has_victim_key);
+
+                    // Remove main victim from main cache and add into victims
+                    Value tmp_main_victim_value;
+                    bool tmp_main_is_evict = window_cache_.evictWithGivenKey(tmp_main_victim_key, tmp_main_victim_value); // NOTE: main cache will update its cache size usage by itself internally
+                    assert(tmp_main_is_evict);
+                    if (victims.find(tmp_main_victim_key) == victims.end())
+                    {
+                        victims.insert(std::make_pair(tmp_main_victim_key, tmp_main_victim_value));
                     }
 
-                    _ARC_evict_L1_data(lookup_map_iter, key, value); // Get value, remove from data LRU 1, insert into ghost LRU 1, and update key lookup map
-                    is_evict = true;
-                }
-                else if (lru_id == 2) {
-                    if (L1_data_size_ + L1_ghost_size_ + L2_data_size_ + L2_ghost_size_ >= capacity_bytes_ * 2) {
-                        // delete the LRU end of the L2 ghost
-                        if (L2_ghost_size_ > 0) {
-                            // it maybe empty if object size is variable
-                            _ARC_evict_L2_ghost();
-                        }
-                    }
-
-                    _ARC_evict_L2_data(lookup_map_iter, key, value); // Get value, remove from data LRU 2, insert into ghost LRU 2, and update key lookup map
-                    is_evict = true;
-                }
-                else {
-                    std::ostringstream oss;
-                    oss << "invalid lru_id " << lru_id;
-                    Util::dumpErrorMsg(kClassName, oss.str());
-                    exit(1);
-                }
-            }
-
-            return is_evict;
+                    return;
+                } // End of if (window_cache_.size() == 0)
+            } // End of while (!evicted)
+            return;
         }
 
         uint64_t getSizeForCapacity() const
@@ -297,6 +333,10 @@ namespace covered
         uint64_t cbf_decay_threshold_; // Siyuan: corresponding to max_request_num in lib/s3fifo/libCacheSim/libCacheSim/cache/eviction/WTinyLFU.c yet in units of bytes instead of number of requests (due to cache capacity restriction in units of bytes)
         uint64_t request_bytes_for_main_; // Siyuan: corresponding to request_counter in lib/s3fifo/libCacheSim/libCacheSim/cache/eviction/WTinyLFU.c yet in units of bytes instead of number of requests (due to cache capacity restriction in units of bytes)
         //request_t *req_local; // Siyuan: just used as a temporary variable to track victim object in lib/s3fifo/libCacheSim/libCacheSim/cache/eviction/WTinyLFU.c
+
+        uint64_t cbf_max_bytes_;
+        uint64_t window_cache_max_bytes_;
+        uint64_t main_cache_max_bytes_;
 
         std::unordered_map<Key, windowlist_iterator_t, KeyHasher> key_lookup_for_window_; // Key indexing for quick lookup of window cache (main cache lookup is supported by SlruCachePolicy itself)
         uint64_t window_size_; // Cache size usage of window cache and lookup table in units of bytes
@@ -322,16 +362,22 @@ namespace covered
             is_local_cached_in_window = true;
 
             // Get value
-            fetched_value_in_window = lookup_map_iter->second->getValue();
+            windowlist_iterator_t window_list_iter = lookup_map_iter->second;
+            assert(window_list_iter != window_cache_.end());
+            fetched_value_in_window = window_list_iter->getValue();
 
-            // Update value if necessary
-            if (is_update)
-            {
-                lookup_map_iter->second->setValue(new_value);
+            // Move to the head of window cache
+            // -> Remove original item from window cache
+            decreaseWindowSize_(window_list_iter->getSizeForCapacity());
+            window_cache_.erase(window_list_iter);
+            // -> Insert new item into window cache
+            Value tmp_value = is_update ? new_value : fetched_value_in_window;
+            WTinylfuItem<Key, Value> tmp_item(key, tmp_value);
+            increaseWindowSize_(tmp_item.getSizeForCapacity());
+            window_cache_.push_front(tmp_item);
 
-                // Update cache size usage (TODO: END HERE)
-                decreaseWindowSize_()
-            }
+            // Update key lookup map for window cache (NO need to update cache size due to no change)
+            lookup_map_iter->second = window_cache_.begin();
         }
 
         // Access main cache
@@ -340,7 +386,7 @@ namespace covered
         if (is_local_cached_in_main && is_update)
         {
             // Update value if necessary
-            bool tmp_is_local_cached_in_main = main_cache_ptr_->update(key, new_value); // TODO: END HERE
+            bool tmp_is_local_cached_in_main = main_cache_ptr_->update(key, new_value); // NOTE: SlruLocalCache will update its cache size usage by itself internally
             assert(tmp_is_local_cached_in_main);
         }
 
@@ -359,7 +405,7 @@ namespace covered
 
             // Update request bytes
             const uint64_t tmp_value_bytes = is_update ? new_value.getValuesize() : fetched_value.getValuesize();
-            request_bytes_for_main_ = key.getKeyLength() + tmp_value_bytes;
+            request_bytes_for_main_ += key.getKeyLength() + tmp_value_bytes;
 
             // Decay CBF if necessary
             if (request_bytes_for_main_ >= cbf_decay_threshold_) {

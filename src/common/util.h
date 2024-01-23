@@ -98,6 +98,7 @@ namespace covered
         static const std::string SEGCACHE_CACHE_NAME;
         static const std::string SIEVE_CACHE_NAME;
         static const std::string SLRU_CACHE_NAME;
+        static const std::string WTINYLFU_CACHE_NAME;
         static const std::string COVERED_CACHE_NAME;
 
         // Hash name

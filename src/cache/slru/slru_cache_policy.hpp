@@ -176,8 +176,14 @@ namespace covered
         {
             Value unused_fetched_value;
             bool is_local_cached = access_(key, unused_fetched_value, true, value);
+            UNUSED(unused_fetched_value);
 
             return is_local_cached;
+        }
+
+        bool canAdmit(const uint32_t& objsize) const
+        {
+            return objsize <= lru_max_n_bytes_[0]; // NOTE: need <= per LRU size
         }
 
         void admit(const Key& key, const Value& value)

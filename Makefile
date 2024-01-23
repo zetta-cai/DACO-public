@@ -26,6 +26,7 @@ include src/mk/cache/s3fifo.mk
 include src/mk/cache/segcache.mk
 include src/mk/cache/sieve.mk
 include src/mk/cache/slru.mk
+include src/mk/cache/wtinylfu.mk
 
 # Recipes for third-party lib
 include src/mk/lib/boost.mk
