@@ -111,7 +111,7 @@ namespace covered
             window_cache_max_bytes_ = capacity_bytes * WTINYLFU_WINDOW_RATIO;
             main_cache_max_bytes_ = main_cache_size;
 
-            key_lookup_.clear();
+            key_lookup_for_window_.clear();
             window_size_ = 0;
         }
 
@@ -127,7 +127,7 @@ namespace covered
             delete main_cache_ptr_;
             main_cache_ptr_ = NULL;
             
-            key_lookup_.clear();
+            key_lookup_for_window_.clear();
         }
 
         bool exists(const Key& key) const
@@ -252,7 +252,7 @@ namespace covered
 
                             // Remove main victim from main cache and add into victims
                             Value tmp_main_victim_value;
-                            bool tmp_main_is_evict = window_cache_.evictWithGivenKey(tmp_main_victim_key, tmp_main_victim_value); // NOTE: main cache will update its cache size usage by itself internally
+                            bool tmp_main_is_evict = main_cache_ptr_->evictWithGivenKey(tmp_main_victim_key, tmp_main_victim_value); // NOTE: main cache will update its cache size usage by itself internally
                             assert(tmp_main_is_evict);
                             if (victims.find(tmp_main_victim_key) == victims.end())
                             {
@@ -307,7 +307,7 @@ namespace covered
 
                     // Remove main victim from main cache and add into victims
                     Value tmp_main_victim_value;
-                    bool tmp_main_is_evict = window_cache_.evictWithGivenKey(tmp_main_victim_key, tmp_main_victim_value); // NOTE: main cache will update its cache size usage by itself internally
+                    bool tmp_main_is_evict = main_cache_ptr_->evictWithGivenKey(tmp_main_victim_key, tmp_main_victim_value); // NOTE: main cache will update its cache size usage by itself internally
                     assert(tmp_main_is_evict);
                     if (victims.find(tmp_main_victim_key) == victims.end())
                     {
