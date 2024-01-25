@@ -82,6 +82,7 @@ namespace covered
 
         // Cache name
         static const std::string ARC_CACHE_NAME;
+        static const std::string BESTGUESS_CACHE_NAME; // Canonical cooperaive caching
         static const std::string CACHELIB_CACHE_NAME;
         static const std::string FIFO_CACHE_NAME;
         static const std::string FROZENHOT_CACHE_NAME;

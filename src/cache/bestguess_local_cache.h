@@ -39,6 +39,11 @@ namespace covered
 
         virtual const bool hasFineGrainedManagement() const;
     private:
+        typedef std::list<BestGuessItem>::iterator list_iterator_t;
+        typedef std::list<BestGuessItem>::const_iterator list_const_iterator_t;
+        typedef std::unordered_map<Key, list_iterator_t, KeyHasher>::iterator lookupmap_iterator_t;
+        typedef std::unordered_map<Key, list_iterator_t, KeyHasher>::const_iterator lookupmap_const_iterator_t;
+
         static const std::string kClassName;
 
         // (1) Check is cached and access validity
@@ -62,11 +67,9 @@ namespace covered
         // (4) Other functions
 
         virtual void invokeCustomFunctionInternal_(const std::string& func_name, CustomFuncParamBase* func_param_ptr) override; // Invoke some method-specific function for local edge cache
-        void updateIsNeighborCachedInternal_(UpdateIsNeighborCachedFlagFuncParam* func_param_ptr); // Update is_neighbor_cached flag in local cached metadata (for beacon-based local cache metadata udpate)
-        void getLocalSyncedVictimCacheinfosFromLocalCacheInternal_(GetLocalSyncedVictimCacheinfosParam* func_param_ptr) const; // Get up to peredge_synced_victimcnt local synced victims with the least local rewards (for victim synchronization)
-        // Set collected_popularity.is_tracked_ as true if the local uncached key is tracked; set collected_popularity.is_tracked_ as false if key is either local cached or local uncached yet untracked by local uncached metadata
-        // NOTE: for directory lookup req, directory eviction req, acquire writelock req, and release writelock req, is_key_tracked flag could still be false for returned collected popularity -> reason: under local uncached metadata capacity limitation, newly-tracked or preserved-after-eviciton local uncached popularity could be immediately detracked from local uncached metadata and hence NO need for popularity collection/aggregation
-        void getCollectedPopularityFromLocalCacheInternal_(GetCollectedPopularityParam* func_param_ptr) const; // Get collected popularity of local uncached objects (for piggybacking-based popularity colleciton)
+        void getLocalVictimVtimeInternal_(GetLocalVictimVtimeFuncParam* func_param_ptr) const; // Get victim vtime of current edge node
+        void updateNeighborVictimVtimeInternal_(UpdateNeighborVictimVtimeParam* func_param_ptr); // Update victim vtime of the given neighbor edge node
+        void getPlacementEdgeIdxInternal_(GetPlacementEdgeIdxParam* func_param_ptr) const; // Get placement edge idx under best-guess replacement policy
 
         // In units of bytes
         virtual uint64_t getSizeForCapacityInternal_() const override;
@@ -78,11 +81,14 @@ namespace covered
 
         // (A) Const variable
         std::string instance_name_;
+        uint32_t edge_idx_;
 
         // (B) Non-const shared variables
-        std::list<BestGuessItem> bestguess_cache_; // BestGuess cache (in LRU order)
-        std::unordered_map<Key, std::list<BestGuessItem>::iterator> lookup_map_; // Lookup map for BestGuess cache (key -> iterator in BestGuess cache)
-        uint64_t size_; // Current size of BestGuess cache (in bytes)
+        mutable std::list<BestGuessItem> bestguess_cache_; // BestGuess cache (in LRU order)
+        mutable std::unordered_map<Key, list_iterator_t, KeyHasher> lookup_map_; // Lookup map for BestGuess cache (key -> iterator in BestGuess cache)
+        std::unordered_map<uint32_t, uint64_t> peredge_victim_vtime_; // Corresponding to oldest block list in original paper for best-guess replacement
+        mutable uint64_t cur_vtime_;
+        mutable uint64_t size_; // Current size of BestGuess cache (in bytes)
     };
 }
 

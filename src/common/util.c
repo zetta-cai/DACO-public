@@ -36,6 +36,7 @@ namespace covered
 
     // Cache name
     const std::string Util::ARC_CACHE_NAME("arc");
+    const std::string Util::BESTGUESS_CACHE_NAME("bestguess");
     const std::string Util::CACHELIB_CACHE_NAME("cachelib");
     const std::string Util::FIFO_CACHE_NAME("fifo");
     const std::string Util::FROZENHOT_CACHE_NAME("frozenhot");

@@ -5,6 +5,7 @@
 
 #include "common/util.h"
 #include "cache/arc_local_cache.h"
+#include "cache/bestguess_local_cache.h"
 #include "cache/cachelib_local_cache.h"
 #include "cache/covered_local_cache.h"
 #include "cache/fifo_local_cache.h"
@@ -31,6 +32,10 @@ namespace covered
         if (cache_name == Util::ARC_CACHE_NAME)
         {
             local_cache_ptr = new ArcLocalCache(edge_wrapper_ptr, edge_idx, capacity_bytes);
+        }
+        else if (cache_name == Util::BESTGUESS_CACHE_NAME)
+        {
+            local_cache_ptr = new BestGuessLocalCache(edge_wrapper_ptr, edge_idx, capacity_bytes);
         }
         else if (cache_name == Util::CACHELIB_CACHE_NAME)
         {

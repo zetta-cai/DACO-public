@@ -1,11 +1,11 @@
 /*
- * UpdateIsNeighborCachedFlagFuncParam: different custom function parameters for COVERED.
+ * Different custom function parameters for COVERED.
  *
  * By Siyuan Sheng (2024.01.10).
  */
 
-#ifndef COVERED_CUSTOM_FUNC_PARAM
-#define COVERED_CUSTOM_FUNC_PARAM
+#ifndef COVERED_CUSTOM_FUNC_PARAM_H
+#define COVERED_CUSTOM_FUNC_PARAM_H
 
 #include <list>
 #include <string>
