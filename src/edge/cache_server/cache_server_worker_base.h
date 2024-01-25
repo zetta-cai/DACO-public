@@ -114,7 +114,11 @@ namespace covered
 
         // (1.5) Trigger cache placement for getrsp (ONLY for COVERED)
 
-        virtual bool tryToTriggerCachePlacementForGetrsp_(const Key& key, const Value& value, const CollectedPopularity& collected_popularity_after_fetch_value, const FastPathHint& fast_path_hint, const bool& is_global_cached, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const = 0; // Return is edge is finished
+        virtual bool tryToTriggerCachePlacementForGetrsp_(const Key& key, const Value& value, const CollectedPopularity& collected_popularity_after_fetch_value, const FastPathHint& fast_path_hint, const bool& is_global_cached, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const = 0; // Return if edge is finished
+
+        // (1.6) Trigger best-guess placement/replacement for getrsp & putrsp (ONLY for BestGuess)
+
+        virtual bool triggerBestGuessPlacement_(const Key& key, const Value& value, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const = 0; // Return if edge is finished
 
         // (2) Process write requests
 
@@ -171,7 +175,7 @@ namespace covered
         // (4.3) Trigger non-blocking placement notification (ONLY for COVERED)
 
         // Return if edge node is finished
-        bool tryToTriggerPlacementNotificationAfterHybridFetch_(const Key& key, const Value& value, const Edgeset& best_placement_edgeset, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const;
+        virtual bool tryToTriggerPlacementNotificationAfterHybridFetch_(const Key& key, const Value& value, const Edgeset& best_placement_edgeset, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const = 0;
 
         // (5) Utility functions
 

@@ -308,7 +308,7 @@ namespace covered
 
         // Trigger non-blocking placement notification if need hybrid fetching for non-blocking data fetching (ONLY for COVERED)
         struct timespec trigger_placement_start_timestamp = Util::getCurrentTimespec();
-        if (need_hybrid_fetching)
+        if (tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME && need_hybrid_fetching)
         {
             is_finish = tryToTriggerPlacementNotificationAfterHybridFetch_(tmp_key, tmp_value, best_placement_edgeset, total_bandwidth_usage, event_list, skip_propagation_latency);
             if (is_finish) // Edge is NOT running now
@@ -348,7 +348,7 @@ namespace covered
         uint32_t independent_admission_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(independent_admission_end_timestamp, independent_admission_start_timestamp));
         event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_INDEPENDENT_ADMISSION_EVENT_NAME, independent_admission_latency_us); // Add intermediate event if with event tracking
 
-        // Trigger cache placement for getrsp w/ sender-is-beacon or fast-path placement, if key is local uncached and newly-tracked after fetching value from neighbor/cloud (ONLY for COVERED)
+        // (1) Try to trigger cache placement for getrsp if w/ sender-is-beacon or fast-path placement, if key is local uncached and newly-tracked after fetching value from neighbor/cloud (ONLY for COVERED);
         if (tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME && !tmp_edge_wrapper_ptr->getEdgeCachePtr()->isLocalCached(tmp_key)) // Local uncached object
         {
             GetCollectedPopularityParam tmp_param(tmp_key);
@@ -361,7 +361,7 @@ namespace covered
                 
                 struct timespec placement_for_getrsp_start_timestamp = Util::getCurrentTimespec();
 
-                // Try to trigger cache placement if necessary
+                // Try to trigger cache placement if necessary (sender is beacon, or beacon node provides fast-path hint)
                 is_finish = tryToTriggerCachePlacementForGetrsp_(tmp_key, tmp_value, tmp_collected_popularity_after_fetch_value, fast_path_hint, is_cooperative_cached, total_bandwidth_usage, event_list, skip_propagation_latency);
                 if (is_finish)
                 {
@@ -371,6 +371,15 @@ namespace covered
                 struct timespec placement_for_getrsp_end_timestamp = Util::getCurrentTimespec();
                 uint32_t placement_for_getrsp_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(placement_for_getrsp_end_timestamp, placement_for_getrsp_start_timestamp));
                 event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_PLACEMENT_FOR_GETRSP_EVENT_NAME, placement_for_getrsp_latency_us); // Add intermediate event if with event tracking
+            }
+        }
+        // (2) Trigger best-guess placement/replacement (ONLY for BestGuess)
+        else if (tmp_edge_wrapper_ptr->getCacheName() == Util::BESTGUESS_CACHE_NAME && !tmp_edge_wrapper_ptr->getEdgeCachePtr()->isLocalCached(tmp_key) && !is_cooperative_cached) // Local uncached and cooperative uncached (i.e., global uncached)
+        {
+            is_finish = triggerBestGuessPlacement_(tmp_key, tmp_value, total_bandwidth_usage, event_list, skip_propagation_latency);
+            if (is_finish)
+            {
+                return is_finish;
             }
         }
 
@@ -869,6 +878,8 @@ namespace covered
     }
 
     // (1.4) Update invalid cached objects in local edge cache
+
+    // (1.5) Trigger cache placement for getrsp (ONLY for COVERED)
 
     // (2) Process write requests
 
@@ -1627,30 +1638,6 @@ namespace covered
     }
 
     // (4.3) Trigger non-blocking placement notification (ONLY for COVERED)
-
-    bool CacheServerWorkerBase::tryToTriggerPlacementNotificationAfterHybridFetch_(const Key& key, const Value& value, const Edgeset& best_placement_edgeset, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
-    {
-        checkPointers_();
-        CacheServer* tmp_cache_server_ptr = cache_server_worker_param_ptr_->getCacheServerPtr();
-        EdgeWrapper* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();
-        assert(tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME); // ONLY for COVERED
-
-        bool is_finish = false;
-        
-        const bool sender_is_beacon = tmp_edge_wrapper_ptr->currentIsBeacon(key);
-        if (sender_is_beacon) // best_placement_edgeset and need_hybrid_fetching come from lookupLocalDirectory_()
-        {
-            // Trigger placement notification locally
-            tmp_edge_wrapper_ptr->nonblockNotifyForPlacement(key, value, best_placement_edgeset, skip_propagation_latency);
-        }
-        else // best_placement_edgeset and need_hybrid_fetching come from lookupBeaconDirectory_()
-        {
-            // Trigger placement notification remotely at the beacon edge node
-            is_finish = tmp_cache_server_ptr->notifyBeaconForPlacementAfterHybridFetch_(key, value, best_placement_edgeset, edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency);
-        }
-
-        return is_finish;
-    }
 
     // (5) Utility functions
 

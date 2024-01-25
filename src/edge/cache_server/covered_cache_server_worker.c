@@ -426,6 +426,16 @@ namespace covered
         return is_finish;
     }
 
+    // (1.6) Trigger best-guess placement/replacement for getrsp & putrsp (ONLY for BestGuess)
+
+    bool CoveredCacheServerWorker::triggerBestGuessPlacement_(const Key& key, const Value& value, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
+    {
+        std::ostringstream oss;
+        oss << cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr()->getCacheName() << " should NOT invoke triggerBestGuessPlacement_(), which is ONLY for BestGuess!";
+        Util::dumpErrorMsg(instance_name_, oss.str());
+        exit(1);
+    }
+
     // (2.1) Acquire write lock and block for MSI protocol
 
     bool CoveredCacheServerWorker::acquireLocalWritelock_(const Key& key, LockResult& lock_result, DirinfoSet& all_dirinfo, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency)
@@ -714,4 +724,30 @@ namespace covered
     // (4.1) Admit uncached objects in local edge cache
 
     // (4.2) Admit content directory information
+
+    // (4.3) Trigger non-blocking placement notification (ONLY for COVERED)
+
+    bool CoveredCacheServerWorker::tryToTriggerPlacementNotificationAfterHybridFetch_(const Key& key, const Value& value, const Edgeset& best_placement_edgeset, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
+    {
+        checkPointers_();
+        CacheServer* tmp_cache_server_ptr = cache_server_worker_param_ptr_->getCacheServerPtr();
+        EdgeWrapper* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();
+        assert(tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME); // ONLY for COVERED
+
+        bool is_finish = false;
+        
+        const bool sender_is_beacon = tmp_edge_wrapper_ptr->currentIsBeacon(key);
+        if (sender_is_beacon) // best_placement_edgeset and need_hybrid_fetching come from lookupLocalDirectory_()
+        {
+            // Trigger placement notification locally
+            tmp_edge_wrapper_ptr->nonblockNotifyForPlacement(key, value, best_placement_edgeset, skip_propagation_latency);
+        }
+        else // best_placement_edgeset and need_hybrid_fetching come from lookupBeaconDirectory_()
+        {
+            // Trigger placement notification remotely at the beacon edge node
+            is_finish = tmp_cache_server_ptr->notifyBeaconForPlacementAfterHybridFetch_(key, value, best_placement_edgeset, edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+        }
+
+        return is_finish;
+    }
 }

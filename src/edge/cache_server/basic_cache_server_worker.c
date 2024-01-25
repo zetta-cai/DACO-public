@@ -154,6 +154,13 @@ namespace covered
         exit(1);
     }
 
+    // (1.6) Trigger best-guess placement/replacement for getrsp & putrsp (ONLY for BestGuess)
+
+    bool BasicCacheServerWorker::triggerBestGuessPlacement_(const Key& key, const Value& value, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
+    {
+        // TODO: END HERE
+    }
+
     // (2.1) Acquire write lock and block for MSI protocol
 
     bool BasicCacheServerWorker::acquireLocalWritelock_(const Key& key, LockResult& lock_result, DirinfoSet& all_dirinfo, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency)
@@ -313,4 +320,14 @@ namespace covered
     // (4.1) Admit uncached objects in local edge cache
 
     // (4.2) Admit content directory information
+
+    // (4.3) Trigger non-blocking placement notification (ONLY for COVERED)
+
+    bool BasicCacheServerWorker::tryToTriggerPlacementNotificationAfterHybridFetch_(const Key& key, const Value& value, const Edgeset& best_placement_edgeset, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
+    {
+        std::ostringstream oss;
+        oss << "Baseline " << cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr()->getCacheName() << " should NOT invoke tryToTriggerPlacementNotificationAfterHybridFetch_(), which is ONLY for COVERED!";
+        Util::dumpErrorMsg(instance_name_, oss.str());
+        exit(1);
+    }
 }

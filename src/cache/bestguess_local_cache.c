@@ -323,14 +323,19 @@ namespace covered
     {
         assert(func_param_ptr != NULL);
 
+        // Choose current edge node as the placement edge node by default
+        uint32_t placement_edge_idx = edge_idx_; // Current edge index
+        GetLocalVictimVtimeFuncParam tmp_param;
+        getLocalVictimVtimeInternal_(&tmp_param);
+        uint64_t min_victim_vtime = tmp_param.getLocalVictimVtime(); // Local victim vtime in current edge node
+
         // Get placement edge idx under best-guess replacement policy (i.e., approximate global LRU)
-        uint32_t placement_edge_idx = edge_idx_; // NOTE: choose current edge node as the placement edge node by default if NO victim vtime info of any neighbor edge node
-        uint64_t min_victim_vtime = 0;
         for (std::unordered_map<uint32_t, uint64_t>::const_iterator peredge_victim_vtime_const_iter = peredge_victim_vtime_.begin(); peredge_victim_vtime_const_iter != peredge_victim_vtime_.end(); peredge_victim_vtime_const_iter++)
         {
             uint32_t tmp_neighbor_edge_idx = peredge_victim_vtime_const_iter->first;
+            assert(tmp_neighbor_edge_idx != edge_idx_);
             uint64_t tmp_neighbor_victim_vtime = peredge_victim_vtime_const_iter->second;
-            if (peredge_victim_vtime_const_iter == peredge_victim_vtime_.begin() || tmp_neighbor_victim_vtime < min_victim_vtime)
+            if (tmp_neighbor_victim_vtime < min_victim_vtime)
             {
                 min_victim_vtime = tmp_neighbor_victim_vtime;
                 placement_edge_idx = tmp_neighbor_edge_idx;
