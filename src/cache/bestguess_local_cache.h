@@ -1,56 +1,45 @@
 /*
- * CoveredLocalCache: local edge cache with trade-off-aware cache management policy built on TommyDS (https://github.com/amadvance/tommyds/tree/master/tommyds).
+ * BestGuessLocalCache: local edge cache of BestGuess with best-guess replacement policy (refer to Section 4.3 in original paper).
  *
- * NOTE: NOT use CacheLib engine, as the system bottleneck of cooperative edge caching is network propagation latency instead of single-node cache access, and slab-based memory allocation used in CacheLib is NOT memory efficient due to internal fragmentation.
- * 
- * NOTE: NOT use Memcached/Redis due to slow string comparison and client-server storage architecture (w/ extra cross-thread communication overhead), while TommyDS is a high-performance hashtable-based KVS library with custom object comparison.
+ * NOTE: we mainly implement best-guess replacement policy (i.e., approximate global LRU), yet still use DHT-based content discovery with unseparated cooperative caching (acceptable).
+ * -> (i) Content discovery and cache separation is orthogonal with our problem on cache management policies, i.e., out of our scope.
+ * -> (ii) Keep content discovery and cache separation the same as all other methods for fair comparison.
+ * -> (iii) DHT-based content discovery with unseparated cooperative caching is better than original design in BestGuess, which over-estimates BestGuess performance instead of under-estimating.
+ * ---> (iii-i) BestGuess originally uses hint-based content discovery, which is infeasible under geo-distributed edge settings -> (a) scalability issue: each edge node needs to maintain content directory of all cached objects for all other edge nodes, which incurs space overhead; (b) synchronization issue: each edge node needs to synchronize updated hints to all other edge nodes, which incurs extra network overhead; (c) consistency issue: given an edge node, hints of other edge nodes may not be consistent and accurate, which incurs extra cache miss rate -> DHT-based content discovery is better (scalable, no synchronization, and consistent).
+ * ---> (iii-ii) Best Guess originally uses local-cooperative cache separation, which is infeasible under geo-distributed edge settings -> local cache consumes a part of cache capacity yet cannot be used to serve redirected requests from neighbor edge nodes, which degrades global cache hit rate and incurs extra edge-cloud access latency -> unseparated cooperative caching is better (no capacity waste and hence larger global hit rate).
  *
- * By Siyuan Sheng (2023.12.04).
+ * By Siyuan Sheng (2024.01.25).
  */
 
-#ifndef COVERED_LOCAL_CACHE_H
-#define COVERED_LOCAL_CACHE_H
+#ifndef BESTGUESS_LOCAL_CACHE_H
+#define BESTGUESS_LOCAL_CACHE_H
 
 #include <list> // std::list
 #include <string>
 #include <vector>
 
-#include <tommy.h> // TommyDS
-
-#include "cache/covered_custom_func_param.h"
+#include "cache/bestguess_custom_func_param.h"
 
 namespace covered
 {
     // Forward declaration
-    class CoveredLocalCache;
+    class BestGuessLocalCache;
 }
 
-#include "common/covered_common_header.h"
-#include "cache/covered/local_cached_metadata.h"
-#include "cache/covered/local_uncached_metadata.h"
+#include "cache/bestguess/bestguess_item.h"
 #include "cache/local_cache_base.h"
 
 namespace covered
 {
-    // For internal TommyDS
-
-    typedef struct TommydsObject {
-        Key key;
-        Value val;
-        tommy_node node;
-    } tommyds_object_t;
-
-    class CoveredLocalCache : public LocalCacheBase
+    class BestGuessLocalCache : public LocalCacheBase
     {
     public:
-        CoveredLocalCache(const EdgeWrapper* edge_wrapper_ptr, const uint32_t& edge_idx, const uint64_t& capacity_bytes, const uint64_t& local_uncached_capacity_bytes, const uint32_t& peredge_synced_victimcnt);
-        virtual ~CoveredLocalCache();
+        BestGuessLocalCache(const EdgeWrapper* edge_wrapper_ptr, const uint32_t& edge_idx, const uint64_t& capacity_bytes);
+        virtual ~BestGuessLocalCache();
 
         virtual const bool hasFineGrainedManagement() const;
     private:
         static const std::string kClassName;
-
-        static int tommyds_compare(const void *arg, const void *obj); // Comparator used by TommyDS to lookup
 
         // (1) Check is cached and access validity
 
@@ -85,25 +74,15 @@ namespace covered
         virtual void checkPointersInternal_() const override;
         virtual bool checkObjsizeInternal_(const ObjectSize& objsize) const override;
         
-        uint32_t hashForTommyds_(const Key& key) const;
-
         // Member variables
 
         // (A) Const variable
         std::string instance_name_;
-        const uint32_t peredge_synced_victimcnt_;
 
-        // (B) Non-const shared variables of local cached objects for eviction
-
-        // TommyDS-based key-value storage
-        uint64_t internal_kvbytes_; // Internal bytes used for key-value pairs stored by TommyDS (in units of bytes) (NOTE: NOT use tommy_hashdyn_memory_usage as we only store value sizes in TommyDS)
-        tommy_hashdyn* covered_cache_ptr_; // Data engine for local edge cache (use TommyDS dynamic chained hashtable due to high performance)
-
-        mutable LocalCachedMetadata local_cached_metadata_; // Metadata for local cached objects
-
-        // (C) Non-const shared variables of local uncached objects for admission
-
-        mutable LocalUncachedMetadata local_uncached_metadata_; // Metadata for local uncached objects
+        // (B) Non-const shared variables
+        std::list<BestGuessItem> bestguess_cache_; // BestGuess cache (in LRU order)
+        std::unordered_map<Key, std::list<BestGuessItem>::iterator> lookup_map_; // Lookup map for BestGuess cache (key -> iterator in BestGuess cache)
+        uint64_t size_; // Current size of BestGuess cache (in bytes)
     };
 }
 
