@@ -307,12 +307,38 @@ namespace covered
 
     // (4) Other functions
 
-    void LocalCacheBase::invokeCustomFunction(const std::string& func_name, CustomFuncParamBase* func_param_ptr)
+    void LocalCacheBase::invokeCustomFunction(const std::string& func_name, CacheCustomFuncParamBase* func_param_ptr)
     {
         checkPointers_();
 
         std::string context_name = "LocalCacheBase::invokeCustomFunction(" + func_name + ")";
 
+        preInvokeCustomFunction_(context_name, func_param_ptr);
+
+        invokeCustomFunctionInternal_(func_name, func_param_ptr);
+
+        postInvokeCustomFunction_(context_name, func_param_ptr);
+
+        return;
+    }
+
+    void LocalCacheBase::invokeConstCustomFunction(const std::string& func_name, CacheCustomFuncParamBase* func_param_ptr) const
+    {
+        checkPointers_();
+
+        std::string context_name = "LocalCacheBase::invokeConstCustomFunction(" + func_name + ")";
+
+        preInvokeCustomFunction_(context_name, func_param_ptr);
+
+        invokeConstCustomFunctionInternal_(func_name, func_param_ptr);
+
+        postInvokeCustomFunction_(context_name, func_param_ptr);
+
+        return;
+    }
+
+    void LocalCacheBase::preInvokeCustomFunction_(const std::string& context_name, CacheCustomFuncParamBase* func_param_ptr) const
+    {
         const bool is_local_cache_write_lock = func_param_ptr->isLocalCacheWriteLock();
         if (is_local_cache_write_lock)
         {
@@ -325,8 +351,12 @@ namespace covered
             rwlock_for_local_cache_ptr_->acquire_lock_shared(context_name);
         }
 
-        invokeCustomFunctionInternal_(func_name, func_param_ptr);
+        return;
+    }
 
+    void LocalCacheBase::postInvokeCustomFunction_(const std::string& context_name, CacheCustomFuncParamBase* func_param_ptr) const
+    {
+        const bool is_local_cache_write_lock = func_param_ptr->isLocalCacheWriteLock();
         if (is_local_cache_write_lock)
         {
             rwlock_for_local_cache_ptr_->unlock(context_name);

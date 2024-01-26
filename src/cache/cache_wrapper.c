@@ -3,7 +3,7 @@
 #include <assert.h>
 #include <sstream>
 
-#include "cache/covered_custom_func_param.h"
+#include "cache/covered_cache_custom_func_param.h"
 #include "common/config.h"
 #include "common/util.h"
 
@@ -412,12 +412,38 @@ namespace covered
 
     // (4) Other functions
 
-    void CacheWrapper::customFunc(const std::string& func_name, CustomFuncParamBase* func_param_ptr)
+    void CacheWrapper::customFunc(const std::string& func_name, CacheCustomFuncParamBase* func_param_ptr)
     {
         checkPointers_();
 
         std::string context_name = "CacheWrapper::customFunc(" + func_name + ")";
 
+        preCustomFunc_(context_name, func_param_ptr);
+
+        local_cache_ptr_->invokeCustomFunction(func_name, func_param_ptr);
+
+        postCustomFunc_(func_name, context_name, func_param_ptr);
+        
+        return;
+    }
+
+    void CacheWrapper::constCustomFunc(const std::string& func_name, CacheCustomFuncParamBase* func_param_ptr) const
+    {
+        checkPointers_();
+
+        std::string context_name = "CacheWrapper::customFunc(" + func_name + ")";
+
+        preCustomFunc_(context_name, func_param_ptr);
+
+        local_cache_ptr_->invokeConstCustomFunction(func_name, func_param_ptr);
+
+        postCustomFunc_(func_name, context_name, func_param_ptr);
+        
+        return;
+    }
+
+    void CacheWrapper::preCustomFunc_(const std::string context_name, CacheCustomFuncParamBase* func_param_ptr) const
+    {
         bool need_perkey_lock = func_param_ptr->needPerkeyLock();
         bool is_perkey_write_lock = func_param_ptr->isPerkeyWriteLock();
         Key key = func_param_ptr->getKey(); // NOTE: key will be Key() if not key-related
@@ -435,8 +461,14 @@ namespace covered
             }
         }
 
-        local_cache_ptr_->invokeCustomFunction(func_name, func_param_ptr);
+        return;
+    }
 
+    void CacheWrapper::postCustomFunc_(const std::string& func_name, const std::string context_name, CacheCustomFuncParamBase* func_param_ptr) const
+    {
+        bool need_perkey_lock = func_param_ptr->needPerkeyLock();
+        bool is_perkey_write_lock = func_param_ptr->isPerkeyWriteLock();
+        Key key = func_param_ptr->getKey(); // NOTE: key will be Key() if not key-related
         if (need_perkey_lock)
         {
             if (is_perkey_write_lock)
@@ -469,7 +501,7 @@ namespace covered
             }
             cache_wrapper_rwlock_for_beacon_edgeidx_ptr_->unlock_shared(context_name);
         }
-        
+
         return;
     }
 

@@ -4,8 +4,9 @@
 #include <list>
 #include <sstream>
 
-#include "cache/covered_custom_func_param.h"
+#include "cache/covered_cache_custom_func_param.h"
 #include "common/util.h"
+#include "cooperation/covered_cooperation_custom_func_param.h"
 #include "core/victim/victim_cacheinfo.h"
 #include "core/victim/victim_syncset.h"
 #include "message/control_message.h"
@@ -49,7 +50,7 @@ namespace covered
         // Prepare local uncached popularity of key for popularity aggregation
         // NOTE: NOT need piggyacking-based popularity collection and victim synchronization for local directory lookup
         GetCollectedPopularityParam tmp_param(key);
-        tmp_edge_wrapper_ptr->getEdgeCachePtr()->customFunc(GetCollectedPopularityParam::FUNCNAME, &tmp_param); // collected_popularity.is_tracked indicates if the local uncached key is tracked in local uncached metadata
+        tmp_edge_wrapper_ptr->getEdgeCachePtr()->constCustomFunc(GetCollectedPopularityParam::FUNCNAME, &tmp_param); // collected_popularity.is_tracked indicates if the local uncached key is tracked in local uncached metadata
 
         // NOTE: we always perform victim synchronization before popularity aggregation, as we need the latest synced victim information for placement calculation (note that victim tracker has been updated by getLocalEdgeCache_() before this function)
 
@@ -69,7 +70,7 @@ namespace covered
 
         // Check if key is tracked by local uncached metadata and get local uncached popularity if any
         GetCollectedPopularityParam tmp_param(key);
-        tmp_edge_wrapper_ptr->getEdgeCachePtr()->customFunc(GetCollectedPopularityParam::FUNCNAME, &tmp_param);
+        tmp_edge_wrapper_ptr->getEdgeCachePtr()->constCustomFunc(GetCollectedPopularityParam::FUNCNAME, &tmp_param);
 
         const CollectedPopularity tmp_collected_popularity = tmp_param.getCollectedPopularity();
         bool is_key_tracked = tmp_collected_popularity.isTracked(); // Indicate if the local uncached key is tracked in local uncached metadata
@@ -119,7 +120,7 @@ namespace covered
 
         // Prepare local uncached popularity of key for piggybacking-based popularity collection
         GetCollectedPopularityParam tmp_param(key);
-        tmp_edge_wrapper_ptr->getEdgeCachePtr()->customFunc(GetCollectedPopularityParam::FUNCNAME, &tmp_param); // collected_popularity.is_tracked_ indicates if the local uncached key is tracked in local uncached metadata
+        tmp_edge_wrapper_ptr->getEdgeCachePtr()->constCustomFunc(GetCollectedPopularityParam::FUNCNAME, &tmp_param); // collected_popularity.is_tracked_ indicates if the local uncached key is tracked in local uncached metadata
 
         // Prepare CoveredDirectoryLookupRequest to check directory information in beacon node with popularity collection and victim synchronization
         MessageBase* covered_directory_lookup_request_ptr = new CoveredDirectoryLookupRequest(key, tmp_param.getCollectedPopularity(), victim_syncset, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
@@ -213,7 +214,7 @@ namespace covered
         {
             // Check if key is tracked by local uncached metadata and get local uncached popularity if any
             GetCollectedPopularityParam tmp_param(tmp_key);
-            tmp_edge_wrapper_ptr->getEdgeCachePtr()->customFunc(GetCollectedPopularityParam::FUNCNAME, &tmp_param);
+            tmp_edge_wrapper_ptr->getEdgeCachePtr()->constCustomFunc(GetCollectedPopularityParam::FUNCNAME, &tmp_param);
 
             const CollectedPopularity tmp_collected_popularity = tmp_param.getCollectedPopularity();
             bool is_key_tracked = tmp_collected_popularity.isTracked(); // Indicate if the local uncached key is tracked in local uncached metadata
@@ -394,11 +395,12 @@ namespace covered
                     assert(tmp_is_exist_victims == true);
 
                     // Get dirinfo for local beaconed victims
-                    std::list<std::pair<Key, DirinfoSet>> tmp_local_beaconed_local_cached_victim_dirinfoset;
-                    tmp_cooperation_wrapper_ptr->getLocalBeaconedVictimsFromCacheinfos(tmp_local_cached_victim_cacheinfos, tmp_local_beaconed_local_cached_victim_dirinfoset);
+                    GetLocalBeaconedVictimsFromCacheinfosParam tmp_param(tmp_local_cached_victim_cacheinfos);
+                    tmp_cooperation_wrapper_ptr->constCustomFunc(GetLocalBeaconedVictimsFromCacheinfosParam::FUNCNAME, &tmp_param);
+                    const std::list<std::pair<Key, DirinfoSet>>& tmp_local_beaconed_local_cached_victim_dirinfoset_const_ref = tmp_param.getLocalBeaconedVictimDirinfosetsRef();
 
                     // Calculate local eviction cost by VictimTracker (to utilize perkey_victim_dirinfo_)
-                    local_eviction_cost = tmp_covered_cache_manager_ptr->accessVictimTrackerForFastPathEvictionCost(tmp_edge_wrapper_ptr, tmp_local_cached_victim_cacheinfos, tmp_local_beaconed_local_cached_victim_dirinfoset);
+                    local_eviction_cost = tmp_covered_cache_manager_ptr->accessVictimTrackerForFastPathEvictionCost(tmp_edge_wrapper_ptr, tmp_local_cached_victim_cacheinfos, tmp_local_beaconed_local_cached_victim_dirinfoset_const_ref);
                 }
 
                 // Trigger local cache placement if local admission benefit is larger than local eviction cost
@@ -459,7 +461,7 @@ namespace covered
         // NOTE: we NEED popularity aggregation for accumulated changes on local uncached popularity due to directory metadata cache
         // NOTE: NOT need piggyacking-based popularity collection and victim synchronization for local acquire write lock
         GetCollectedPopularityParam tmp_param(key);
-        tmp_edge_wrapper_ptr->getEdgeCachePtr()->customFunc(GetCollectedPopularityParam::FUNCNAME, &tmp_param); // collected_popularity.is_tracked_ is false if the given key is local cached or the key is local uncached yet NOT tracked in local uncached metadata
+        tmp_edge_wrapper_ptr->getEdgeCachePtr()->constCustomFunc(GetCollectedPopularityParam::FUNCNAME, &tmp_param); // collected_popularity.is_tracked_ is false if the given key is local cached or the key is local uncached yet NOT tracked in local uncached metadata
 
         // NOTE: NO need to update local synced victims, which will be done by updateLocalEdgeCache_() and removeLocalEdgeCache_() after this function
 
@@ -486,7 +488,7 @@ namespace covered
         // Prepare local uncached popularity of key for piggybacking-based popularity collection
         // NOTE: we NEED popularity aggregation for accumulated changes on local uncached popularity due to directory metadata cache
         GetCollectedPopularityParam tmp_param(key);
-        tmp_edge_wrapper_ptr->getEdgeCachePtr()->customFunc(GetCollectedPopularityParam::FUNCNAME, &tmp_param); // collected_popularity.is_tracked_ is false if the given key is local cached or the key is local uncached yet NOT tracked in local uncached metadata
+        tmp_edge_wrapper_ptr->getEdgeCachePtr()->constCustomFunc(GetCollectedPopularityParam::FUNCNAME, &tmp_param); // collected_popularity.is_tracked_ is false if the given key is local cached or the key is local uncached yet NOT tracked in local uncached metadata
 
         MessageBase* covered_acquire_writelock_request_ptr = new CoveredAcquireWritelockRequest(key, tmp_param.getCollectedPopularity(), victim_syncset, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
         assert(covered_acquire_writelock_request_ptr != NULL);
@@ -610,7 +612,7 @@ namespace covered
         // NOTE: although acquireLocalWritelock_() has aggregated accumulated changes of local uncached popularity due to directory metadata cache, we still NEED popularity aggregation as local uncached metadata may be updated before releasing the write lock if the global cached key is local uncached
         // NOTE: NOT need piggyacking-based popularity collection and victim synchronization for local release write lock
         GetCollectedPopularityParam tmp_param(key);
-        tmp_edge_wrapper_ptr->getEdgeCachePtr()->customFunc(GetCollectedPopularityParam::FUNCNAME, &tmp_param); // collected_popularity.is_tracked_ is false if the given key is local cached or the key is local uncached yet NOT tracked in local uncached metadata
+        tmp_edge_wrapper_ptr->getEdgeCachePtr()->constCustomFunc(GetCollectedPopularityParam::FUNCNAME, &tmp_param); // collected_popularity.is_tracked_ is false if the given key is local cached or the key is local uncached yet NOT tracked in local uncached metadata
 
         // NOTE: we always perform victim synchronization before popularity aggregation, as we need the latest synced victim information for placement calculation (note that we have updated victim tracker in updateLocalEdgeCache_() or removeLocalEdgeCache_() before this function)
 
@@ -650,7 +652,7 @@ namespace covered
         // Prepare local uncached popularity of key for piggybacking-based popularity collection
         // NOTE: although getReqToAcquireBeaconWritelock_() has aggregated accumulated changes of local uncached popularity due to directory metadata cache, we still NEED popularity aggregation as local uncached metadata may be updated before releasing the write lock if the global cached key is local uncached
         GetCollectedPopularityParam tmp_param(key);
-        tmp_edge_wrapper_ptr->getEdgeCachePtr()->customFunc(GetCollectedPopularityParam::FUNCNAME, &tmp_param); // collected_popularity.is_tracked_ is false if the given key is local cached or the key is local uncached yet NOT tracked in local uncached metadata
+        tmp_edge_wrapper_ptr->getEdgeCachePtr()->constCustomFunc(GetCollectedPopularityParam::FUNCNAME, &tmp_param); // collected_popularity.is_tracked_ is false if the given key is local cached or the key is local uncached yet NOT tracked in local uncached metadata
 
         MessageBase* covered_release_writelock_request_ptr = new CoveredReleaseWritelockRequest(key, tmp_param.getCollectedPopularity(), victim_syncset, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
         assert(covered_release_writelock_request_ptr != NULL);

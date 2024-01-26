@@ -11,8 +11,6 @@
 
 #include <string>
 
-#include "common/key.h"
-#include "common/value.h"
 #include "cooperation/cooperation_wrapper_base.h"
 
 namespace covered
@@ -23,10 +21,9 @@ namespace covered
         BasicCooperationWrapper(const uint32_t& edgecnt, const uint32_t& edge_idx, const std::string& hash_name);
         virtual ~BasicCooperationWrapper();
 
-        // (0) Get dirinfo of local beaconed keys over the given keyset (NOTE: we do NOT guarantee the atomicity for thess keyset-level functions due to per-key fine-grained locking in cooperation wrapper) (ONLY for COVERED)
+        // (0) Cache-method-specific custom functions
 
-        virtual void getLocalBeaconedVictimsFromVictimSyncset(const VictimSyncset& victim_syncset, std::list<std::pair<Key, DirinfoSet>>& local_beaconed_neighbor_synced_victim_dirinfosets) const override; // NOTE: all edge cache/beacon/invalidation servers will access cooperation wrapper to get content directory information for local beaconed victims from received victim syncset
-        virtual void getLocalBeaconedVictimsFromCacheinfos(const std::list<VictimCacheinfo>& victim_cacheinfos, std::list<std::pair<Key, DirinfoSet>>& local_beaconed_victim_dirinfosets) const override;
+        virtual void constCustomFunc(const std::string& funcname, CooperationCustomFuncParamBase* func_param_ptr) const override;
     private:
         static const std::string kClassName;
 

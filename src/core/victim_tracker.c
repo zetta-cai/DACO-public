@@ -5,6 +5,7 @@
 
 #include "common/kv_list_helper_impl.h"
 #include "common/util.h"
+#include "cooperation/covered_cooperation_custom_func_param.h"
 
 namespace covered
 {
@@ -97,10 +98,11 @@ namespace covered
         replaceVictimMetadataForEdgeIdx_(edge_idx_, local_cache_margin_bytes, local_synced_victim_cacheinfos, cooperation_wrapper_ptr);
 
         // Replace VictimDirinfo::dirinfoset for each local beaconed local synced victim of current edge node
-        std::list<std::pair<Key, DirinfoSet>> local_beaconed_local_synced_victim_dirinfosets;
-        cooperation_wrapper_ptr->getLocalBeaconedVictimsFromCacheinfos(local_synced_victim_cacheinfos, local_beaconed_local_synced_victim_dirinfosets); // Get directory info sets for local synced victimed beaconed by the current edge node (NOTE: dirinfo sets from local directory table MUST be complete)
-        assert(local_beaconed_local_synced_victim_dirinfosets.size() <= local_synced_victim_cacheinfos.size());
-        replaceVictimDirinfoSets_(local_beaconed_local_synced_victim_dirinfosets, true);
+        GetLocalBeaconedVictimsFromCacheinfosParam tmp_param(local_synced_victim_cacheinfos);
+        cooperation_wrapper_ptr->constCustomFunc(GetLocalBeaconedVictimsFromCacheinfosParam::FUNCNAME, &tmp_param); // Get directory info sets for local synced victimed beaconed by the current edge node (NOTE: dirinfo sets from local directory table MUST be complete)
+        const std::list<std::pair<Key, DirinfoSet>>& local_beaconed_local_synced_victim_dirinfosets_const_ref = tmp_param.getLocalBeaconedVictimDirinfosetsRef();
+        assert(local_beaconed_local_synced_victim_dirinfosets_const_ref.size() <= local_synced_victim_cacheinfos.size());
+        replaceVictimDirinfoSets_(local_beaconed_local_synced_victim_dirinfosets_const_ref, true);
 
         rwlock_for_victim_tracker_->unlock(context_name);
 
@@ -332,10 +334,11 @@ namespace covered
 
             // Replace VictimDirinfo::dirinfoset for each local beaconed neighbor synced victim of the given edge node
             // NOTE: local_beaconed_neighbor_synced_victim_dirinfosets MUST be complete due to from local directory table
-            std::list<std::pair<Key, DirinfoSet>> local_beaconed_neighbor_synced_victim_dirinfosets;
-            cooperation_wrapper_ptr->getLocalBeaconedVictimsFromCacheinfos(*neighbor_synced_victim_cacheinfos_ptr, local_beaconed_neighbor_synced_victim_dirinfosets);
-            assert(local_beaconed_neighbor_synced_victim_dirinfosets.size() <= neighbor_synced_victim_cacheinfos_ptr->size());
-            replaceVictimDirinfoSets_(local_beaconed_neighbor_synced_victim_dirinfosets, true);
+            GetLocalBeaconedVictimsFromCacheinfosParam tmp_param(*neighbor_synced_victim_cacheinfos_ptr);
+            cooperation_wrapper_ptr->constCustomFunc(GetLocalBeaconedVictimsFromCacheinfosParam::FUNCNAME, &tmp_param);
+            const std::list<std::pair<Key, DirinfoSet>>& local_beaconed_neighbor_synced_victim_dirinfosets_const_ref = tmp_param.getLocalBeaconedVictimDirinfosetsRef();
+            assert(local_beaconed_neighbor_synced_victim_dirinfosets_const_ref.size() <= neighbor_synced_victim_cacheinfos_ptr->size());
+            replaceVictimDirinfoSets_(local_beaconed_neighbor_synced_victim_dirinfosets_const_ref, true);
         }
 
         const uint64_t end_victimsync_monitor_size = peredge_victimsync_monitor_[source_edge_idx].getSizeForCapacity();

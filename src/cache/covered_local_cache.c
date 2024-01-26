@@ -402,7 +402,7 @@ namespace covered
 
     // (4) Other functions
 
-    void CoveredLocalCache::invokeCustomFunctionInternal_(const std::string& func_name, CustomFuncParamBase* func_param_ptr)
+    void CoveredLocalCache::invokeCustomFunctionInternal_(const std::string& func_name, CacheCustomFuncParamBase* func_param_ptr)
     {
         assert(func_param_ptr != NULL);
 
@@ -411,7 +411,36 @@ namespace covered
             UpdateIsNeighborCachedFlagFuncParam* tmp_param_ptr = static_cast<UpdateIsNeighborCachedFlagFuncParam*>(func_param_ptr);
             updateIsNeighborCachedInternal_(tmp_param_ptr);            
         }
-        else if (func_name == GetLocalSyncedVictimCacheinfosParam::FUNCNAME)
+        else
+        {
+            std::ostringstream oss;
+            oss << "invokeCustomFunctionInternal_() does NOT support func_name " << func_name;
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
+        return;
+    }
+
+    void CoveredLocalCache::updateIsNeighborCachedInternal_(UpdateIsNeighborCachedFlagFuncParam* func_param_ptr)
+    {
+        assert(func_param_ptr != NULL);
+
+        const Key key = func_param_ptr->getKey();
+        const bool is_neighbor_cached = func_param_ptr->isNeighborCached();
+        const bool is_exist = local_cached_metadata_.isKeyExist(key);
+        if (is_exist) // Enable/disable is_neighbor_cached for local cached metadata if key exists
+        {
+            local_cached_metadata_.updateIsNeighborCachedForExistingKey(key, is_neighbor_cached);
+        }
+
+        return;
+    }
+
+    void CoveredLocalCache::invokeConstCustomFunctionInternal_(const std::string& func_name, CacheCustomFuncParamBase* func_param_ptr) const
+    {
+        assert(func_param_ptr != NULL);
+
+        if (func_name == GetLocalSyncedVictimCacheinfosParam::FUNCNAME)
         {
             GetLocalSyncedVictimCacheinfosParam* tmp_param_ptr = static_cast<GetLocalSyncedVictimCacheinfosParam*>(func_param_ptr);
             getLocalSyncedVictimCacheinfosFromLocalCacheInternal_(tmp_param_ptr);
@@ -443,23 +472,9 @@ namespace covered
         else
         {
             std::ostringstream oss;
-            oss << "invokeCustomFunctionInternal_() does NOT support func_name " << func_name;
+            oss << "invokeConstCustomFunctionInternal_() does NOT support func_name " << func_name;
             Util::dumpErrorMsg(instance_name_, oss.str());
             exit(1);
-        }
-        return;
-    }
-
-    void CoveredLocalCache::updateIsNeighborCachedInternal_(UpdateIsNeighborCachedFlagFuncParam* func_param_ptr)
-    {
-        assert(func_param_ptr != NULL);
-
-        const Key key = func_param_ptr->getKey();
-        const bool is_neighbor_cached = func_param_ptr->isNeighborCached();
-        const bool is_exist = local_cached_metadata_.isKeyExist(key);
-        if (is_exist) // Enable/disable is_neighbor_cached for local cached metadata if key exists
-        {
-            local_cached_metadata_.updateIsNeighborCachedForExistingKey(key, is_neighbor_cached);
         }
 
         return;

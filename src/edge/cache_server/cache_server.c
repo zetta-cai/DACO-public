@@ -3,7 +3,7 @@
 #include <assert.h>
 #include <sstream>
 
-#include "cache/covered_custom_func_param.h"
+#include "cache/covered_cache_custom_func_param.h"
 #include "common/config.h"
 #include "common/thread_launcher.h"
 #include "common/util.h"
@@ -913,7 +913,7 @@ namespace covered
 
             // Prepare local uncached popularity of key for popularity aggregation
             GetCollectedPopularityParam tmp_param(key);
-            edge_wrapper_ptr_->getEdgeCachePtr()->customFunc(GetCollectedPopularityParam::FUNCNAME, &tmp_param); // collected_popularity.is_tracked_ indicates if the local uncached key is tracked in local uncached metadata
+            edge_wrapper_ptr_->getEdgeCachePtr()->constCustomFunc(GetCollectedPopularityParam::FUNCNAME, &tmp_param); // collected_popularity.is_tracked_ indicates if the local uncached key is tracked in local uncached metadata
 
             // Issue metadata update request if necessary, update victim dirinfo, assert NO local uncached popularity, and perform selective popularity aggregation after local directory eviction
             Edgeset best_placement_edgeset; // Used for non-blocking placement notification if need hybrid data fetching for COVERED
@@ -955,7 +955,7 @@ namespace covered
 
             // Prepare local uncached popularity of key for piggybacking-based popularity collection
             GetCollectedPopularityParam tmp_param(key);
-            edge_wrapper_ptr_->getEdgeCachePtr()->customFunc(GetCollectedPopularityParam::FUNCNAME, &tmp_param); // collected_popularity.is_tracked_ indicates if the local uncached key is tracked in local uncached metadata (due to selective metadata preservation)
+            edge_wrapper_ptr_->getEdgeCachePtr()->constCustomFunc(GetCollectedPopularityParam::FUNCNAME, &tmp_param); // collected_popularity.is_tracked_ indicates if the local uncached key is tracked in local uncached metadata (due to selective metadata preservation)
 
             // Prepare victim syncset for piggybacking-based victim synchronization
             VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_beacon_edge_idx_for_compression, edge_wrapper_ptr_->getCacheMarginBytes());

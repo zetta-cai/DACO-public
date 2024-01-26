@@ -18,11 +18,11 @@
 #include "common/value.h"
 #include "concurrency/perkey_rwlock.h"
 #include "cooperation/block_tracker.h"
+#include "cooperation/cooperation_custom_func_param_base.h"
 #include "cooperation/dht_wrapper.h"
 #include "cooperation/directory/directory_info.h"
 #include "cooperation/directory/dirinfo_set.h"
 #include "cooperation/directory_table.h"
-#include "core/victim/victim_syncset.h"
 #include "message/message_base.h"
 
 namespace covered
@@ -35,10 +35,9 @@ namespace covered
         CooperationWrapperBase(const uint32_t& edgecnt, const uint32_t& edge_idx, const std::string& hash_name);
         virtual ~CooperationWrapperBase();
 
-        // (0) Get dirinfo of local beaconed keys over the given keyset (NOTE: we do NOT guarantee the atomicity for thess keyset-level functions due to per-key fine-grained locking in cooperation wrapper) (ONLY for COVERED)
+        // (0) Cache-method-specific custom functions
 
-        virtual void getLocalBeaconedVictimsFromVictimSyncset(const VictimSyncset& victim_syncset, std::list<std::pair<Key, DirinfoSet>>& local_beaconed_neighbor_synced_victim_dirinfosets) const = 0; // NOTE: all edge cache/beacon/invalidation servers will access cooperation wrapper to get content directory information for local beaconed victims from received victim syncset
-        virtual void getLocalBeaconedVictimsFromCacheinfos(const std::list<VictimCacheinfo>& victim_cacheinfos, std::list<std::pair<Key, DirinfoSet>>& local_beaconed_victim_dirinfosets) const = 0;
+        virtual void constCustomFunc(const std::string& funcname, CooperationCustomFuncParamBase* func_param_ptr) const = 0;
 
         // (1) Locate beacon edge node
 

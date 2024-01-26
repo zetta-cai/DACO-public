@@ -1,4 +1,4 @@
-#include "cache/covered_custom_func_param.h"
+#include "cache/covered_cache_custom_func_param.h"
 
 namespace covered
 {
@@ -9,7 +9,7 @@ namespace covered
     const std::string UpdateIsNeighborCachedFlagFuncParam::FUNCNAME("update_is_neighbor_cached_flag");
 
     UpdateIsNeighborCachedFlagFuncParam::UpdateIsNeighborCachedFlagFuncParam(const Key& key, const bool& is_neighbor_cached)
-        : CustomFuncParamBase(true, true, key, true), is_neighbor_cached_(is_neighbor_cached)
+        : CacheCustomFuncParamBase(true, true, key, true), is_neighbor_cached_(is_neighbor_cached)
     {
     }
 
@@ -29,7 +29,7 @@ namespace covered
     const std::string GetLocalSyncedVictimCacheinfosParam::FUNCNAME("get_local_synced_victim_cacheinfos");
 
     GetLocalSyncedVictimCacheinfosParam::GetLocalSyncedVictimCacheinfosParam()
-        : CustomFuncParamBase(false, false, Key(), false)
+        : CacheCustomFuncParamBase(false, false, Key(), false)
     {
         // NOTE: as we only access local edge cache (thread safe w/o per-key rwlock) instead of validity map (thread safe w/ per-key rwlock), we do NOT need to acquire a fine-grained read lock here
 
@@ -61,7 +61,7 @@ namespace covered
     const std::string GetCollectedPopularityParam::FUNCNAME("get_collected_popularity");
 
     GetCollectedPopularityParam::GetCollectedPopularityParam(const Key& key)
-        : CustomFuncParamBase(true, false, key, false)
+        : CacheCustomFuncParamBase(true, false, key, false)
     {
         // NOTE: for is_local_cache_write_lock_, will acquire a read lock to get local metadata atomically
     }

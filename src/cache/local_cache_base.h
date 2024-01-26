@@ -14,7 +14,7 @@
 #include <unordered_set>
 #include <vector>
 
-#include "cache/custom_func_param_base.h"
+#include "cache/cache_custom_func_param_base.h"
 
 namespace covered
 {
@@ -68,7 +68,10 @@ namespace covered
 
         // (4) Other functions
 
-        void invokeCustomFunction(const std::string& func_name, CustomFuncParamBase* func_param_ptr); // Invoke some method-specific function for local edge cache
+        void invokeCustomFunction(const std::string& func_name, CacheCustomFuncParamBase* func_param_ptr); // Invoke some method-specific function for local edge cache
+        void invokeConstCustomFunction(const std::string& func_name, CacheCustomFuncParamBase* func_param_ptr) const; // Invoke some method-specific function for local edge cache
+        void preInvokeCustomFunction_(const std::string& context_name, CacheCustomFuncParamBase* func_param_ptr) const;
+        void postInvokeCustomFunction_(const std::string& context_name, CacheCustomFuncParamBase* func_param_ptr) const;
         
         // In units of bytes
         uint64_t getSizeForCapacity() const; // Get size of data and metadata for local edge cache
@@ -111,7 +114,8 @@ namespace covered
 
         // (4) Other functions
 
-        virtual void invokeCustomFunctionInternal_(const std::string& func_name, CustomFuncParamBase* func_param_ptr) = 0; // Invoke some method-specific function for local edge cache
+        virtual void invokeCustomFunctionInternal_(const std::string& func_name, CacheCustomFuncParamBase* func_param_ptr) = 0; // Invoke some method-specific function for local edge cache
+        virtual void invokeConstCustomFunctionInternal_(const std::string& func_name, CacheCustomFuncParamBase* func_param_ptr) const = 0; // Invoke some method-specific function for local edge cache
 
         virtual uint64_t getSizeForCapacityInternal_() const = 0; // Get size of data and metadata for local edge cache
 

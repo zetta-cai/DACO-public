@@ -1,11 +1,11 @@
 /*
- * CustomFuncParamBase: base class for custom function parameters.
+ * CacheCustomFuncParamBase: base class of custom function parameters for cache module.
  *
  * By Siyuan Sheng (2024.01.10).
  */
 
-#ifndef CUSTOM_FUNC_PARAM_BASE
-#define CUSTOM_FUNC_PARAM_BASE
+#ifndef CACHE_CUSTOM_FUNC_PARAM_BASE
+#define CACHE_CUSTOM_FUNC_PARAM_BASE
 
 #include <string>
 
@@ -13,11 +13,11 @@
 
 namespace covered
 {
-    class CustomFuncParamBase
+    class CacheCustomFuncParamBase
     {
     public:
-        CustomFuncParamBase(const bool& need_perkey_lock, const bool& is_perkey_write_lock, const Key& key, const bool& is_local_cache_write_lock);
-        virtual ~CustomFuncParamBase();
+        CacheCustomFuncParamBase(const bool& need_perkey_lock, const bool& is_perkey_write_lock, const Key& key, const bool& is_local_cache_write_lock);
+        virtual ~CacheCustomFuncParamBase();
 
         bool needPerkeyLock() const;
         bool isPerkeyWriteLock() const;

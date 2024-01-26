@@ -2,7 +2,7 @@
 
 #include <assert.h>
 
-#include "cache/covered_custom_func_param.h"
+#include "cache/covered_cache_custom_func_param.h"
 #include "common/bandwidth_usage.h"
 #include "common/config.h"
 #include "common/util.h"
@@ -237,7 +237,7 @@ namespace covered
         if (tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME)
         {
             GetCollectedPopularityParam tmp_param(tmp_key);
-            tmp_edge_wrapper_ptr->getEdgeCachePtr()->customFunc(GetCollectedPopularityParam::FUNCNAME, &tmp_param);
+            tmp_edge_wrapper_ptr->getEdgeCachePtr()->constCustomFunc(GetCollectedPopularityParam::FUNCNAME, &tmp_param);
             is_tracked_before_fetch_value = tmp_param.getCollectedPopularity().isTracked();
         }
 
@@ -352,7 +352,7 @@ namespace covered
         if (tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME && !tmp_edge_wrapper_ptr->getEdgeCachePtr()->isLocalCached(tmp_key)) // Local uncached object
         {
             GetCollectedPopularityParam tmp_param(tmp_key);
-            tmp_edge_wrapper_ptr->getEdgeCachePtr()->customFunc(GetCollectedPopularityParam::FUNCNAME, &tmp_param);
+            tmp_edge_wrapper_ptr->getEdgeCachePtr()->constCustomFunc(GetCollectedPopularityParam::FUNCNAME, &tmp_param);
             const CollectedPopularity tmp_collected_popularity_after_fetch_value = tmp_param.getCollectedPopularity();
             const bool is_tracked_after_fetch_value = tmp_collected_popularity_after_fetch_value.isTracked();
             if (!is_tracked_before_fetch_value && is_tracked_after_fetch_value) // Newly-tracked after fetching value from neighbor/cloud

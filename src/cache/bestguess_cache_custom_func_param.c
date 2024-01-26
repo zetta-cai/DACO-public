@@ -1,4 +1,4 @@
-#include "cache/bestguess_custom_func_param.h"
+#include "cache/bestguess_cache_custom_func_param.h"
 
 namespace covered
 {
@@ -8,7 +8,7 @@ namespace covered
 
     const std::string GetLocalVictimVtimeFuncParam::FUNCNAME("get_local_victim_vtime");
 
-    GetLocalVictimVtimeFuncParam::GetLocalVictimVtimeFuncParam() : CustomFuncParamBase(false, false, Key(), false)
+    GetLocalVictimVtimeFuncParam::GetLocalVictimVtimeFuncParam() : CacheCustomFuncParamBase(false, false, Key(), false)
     {
         local_victim_vtime_ = 0;
     }
@@ -35,7 +35,7 @@ namespace covered
     const std::string UpdateNeighborVictimVtimeParam::FUNCNAME("update_neighbor_victim_vtime");
 
     UpdateNeighborVictimVtimeParam::UpdateNeighborVictimVtimeParam(const uint32_t& neighbor_edge_idx, const uint64_t& neighbor_victim_vtime)
-        : CustomFuncParamBase(false, false, Key(), true), neighbor_edge_idx_(neighbor_edge_idx), neighbor_victim_vtime_(neighbor_victim_vtime)
+        : CacheCustomFuncParamBase(false, false, Key(), true), neighbor_edge_idx_(neighbor_edge_idx), neighbor_victim_vtime_(neighbor_victim_vtime)
     {
     }
 
@@ -60,7 +60,7 @@ namespace covered
     const std::string GetPlacementEdgeIdxParam::FUNCNAME("get_placement_edge_idx");
 
     GetPlacementEdgeIdxParam::GetPlacementEdgeIdxParam()
-        : CustomFuncParamBase(false, false, Key(), false)
+        : CacheCustomFuncParamBase(false, false, Key(), false)
     {
         placement_edge_idx_ = 0;
     }

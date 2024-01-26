@@ -1,16 +1,16 @@
 /*
- * Different custom function parameters for BestGuess.
+ * Different custom function parameters of BestGuess for cache module.
  *
  * By Siyuan Sheng (2024.01.25).
  */
 
-#ifndef BESTGUESS_CUSTOM_FUNC_PARAM_H
-#define BESTGUESS_CUSTOM_FUNC_PARAM_H
+#ifndef BESTGUESS_CACHE_CUSTOM_FUNC_PARAM_H
+#define BESTGUESS_CACHE_CUSTOM_FUNC_PARAM_H
 
 #include <list>
 #include <string>
 
-#include "cache/custom_func_param_base.h"
+#include "cache/cache_custom_func_param_base.h"
 #include "common/key.h"
 #include "core/popularity/collected_popularity.h"
 #include "core/victim/victim_cacheinfo.h"
@@ -19,7 +19,7 @@ namespace covered
 {
     // GetLocalVictimVtimeFuncParam
 
-    class GetLocalVictimVtimeFuncParam : public CustomFuncParamBase
+    class GetLocalVictimVtimeFuncParam : public CacheCustomFuncParamBase
     {
     public:
         static const std::string FUNCNAME; // get victim vtime of the current edge node
@@ -37,7 +37,7 @@ namespace covered
 
     // UpdateNeighborVictimVtimeParam
 
-    class UpdateNeighborVictimVtimeParam : public CustomFuncParamBase
+    class UpdateNeighborVictimVtimeParam : public CacheCustomFuncParamBase
     {
     public:
         static const std::string FUNCNAME; // Update victim vtime of the given neighbor edge node
@@ -56,7 +56,7 @@ namespace covered
 
     // GetPlacementEdgeIdxParam
 
-    class GetPlacementEdgeIdxParam : public CustomFuncParamBase
+    class GetPlacementEdgeIdxParam : public CacheCustomFuncParamBase
     {
     public:
         static const std::string FUNCNAME; // Get placement edge idx for best-guess replacement

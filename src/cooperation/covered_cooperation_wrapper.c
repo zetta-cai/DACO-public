@@ -21,9 +21,39 @@ namespace covered
 
     CoveredCooperationWrapper::~CoveredCooperationWrapper() {}
 
-    // (0) Get dirinfo of local beaconed keys over the given keyset (NOTE: we do NOT guarantee the atomicity for thess keyset-level functions due to per-key fine-grained locking in cooperation wrapper) (ONLY for COVERED)
+    // (0) Cache-method-specific custom functions
 
-    void CoveredCooperationWrapper::getLocalBeaconedVictimsFromVictimSyncset(const VictimSyncset& victim_syncset, std::list<std::pair<Key, DirinfoSet>>& local_beaconed_neighbor_synced_victim_dirinfosets) const
+    void CoveredCooperationWrapper::constCustomFunc(const std::string& funcname, CooperationCustomFuncParamBase* func_param_ptr) const
+    {
+        checkPointers_();
+        assert(func_param_ptr != NULL);
+
+        if (funcname == GetLocalBeaconedVictimsFromVictimSyncsetFuncParam::FUNCNAME)
+        {
+            GetLocalBeaconedVictimsFromVictimSyncsetFuncParam* tmp_param_ptr = static_cast<GetLocalBeaconedVictimsFromVictimSyncsetFuncParam*>(func_param_ptr);
+            getLocalBeaconedVictimsFromVictimSyncsetInternal_(tmp_param_ptr->getVictimSyncsetConstRef(), tmp_param_ptr->getLocalBeaconedVictimDirinfosetsRef());
+        }
+        else if (funcname == GetLocalBeaconedVictimsFromCacheinfosParam::FUNCNAME)
+        {
+            GetLocalBeaconedVictimsFromCacheinfosParam* tmp_param_ptr = static_cast<GetLocalBeaconedVictimsFromCacheinfosParam*>(func_param_ptr);
+            getLocalBeaconedVictimsFromCacheinfosInternal_(tmp_param_ptr->getVictimCacheinfosConstRef(), tmp_param_ptr->getLocalBeaconedVictimDirinfosetsRef());
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "Unknown const custom function name: " << funcname;
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
+
+        return;
+    }
+
+    // COVERED-specific internal functions
+
+    // Get dirinfo of local beaconed keys over the given keyset (NOTE: we do NOT guarantee the atomicity for thess keyset-level functions due to per-key fine-grained locking in cooperation wrapper)
+
+    void CoveredCooperationWrapper::getLocalBeaconedVictimsFromVictimSyncsetInternal_(const VictimSyncset& victim_syncset, std::list<std::pair<Key, DirinfoSet>>& local_beaconed_neighbor_synced_victim_dirinfosets) const
     {
         checkPointers_();
 
@@ -33,12 +63,12 @@ namespace covered
         UNUSED(with_complete_victim_syncset); // Transmitted victim syncset received from neighbor edge node can be either complete or compressed
 
         // Get directory info sets for neighbor synced victimed beaconed by the current edge node
-        getLocalBeaconedVictimsFromCacheinfos(*neighbor_synced_victims_ptr, local_beaconed_neighbor_synced_victim_dirinfosets); // NOTE: dirinfo sets from local directory table MUST be complete
+        getLocalBeaconedVictimsFromCacheinfosInternal_(*neighbor_synced_victims_ptr, local_beaconed_neighbor_synced_victim_dirinfosets); // NOTE: dirinfo sets from local directory table MUST be complete
 
         return;
     }
 
-    void CoveredCooperationWrapper::getLocalBeaconedVictimsFromCacheinfos(const std::list<VictimCacheinfo>& victim_cacheinfos, std::list<std::pair<Key, DirinfoSet>>& local_beaconed_victim_dirinfosets) const
+    void CoveredCooperationWrapper::getLocalBeaconedVictimsFromCacheinfosInternal_(const std::list<VictimCacheinfo>& victim_cacheinfos, std::list<std::pair<Key, DirinfoSet>>& local_beaconed_victim_dirinfosets) const
     {
         // NOTE: victim_cacheinfos is from local edge cache or neighbor edge node, which can be either complete or compressed
 

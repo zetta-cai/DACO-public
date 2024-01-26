@@ -18,7 +18,7 @@
 #include <string>
 #include <vector>
 
-#include "cache/bestguess_custom_func_param.h"
+#include "cache/bestguess_cache_custom_func_param.h"
 
 namespace covered
 {
@@ -66,9 +66,11 @@ namespace covered
 
         // (4) Other functions
 
-        virtual void invokeCustomFunctionInternal_(const std::string& func_name, CustomFuncParamBase* func_param_ptr) override; // Invoke some method-specific function for local edge cache
-        void getLocalVictimVtimeInternal_(GetLocalVictimVtimeFuncParam* func_param_ptr) const; // Get victim vtime of current edge node
+        virtual void invokeCustomFunctionInternal_(const std::string& func_name, CacheCustomFuncParamBase* func_param_ptr) override; // Invoke some method-specific function for local edge cache
         void updateNeighborVictimVtimeInternal_(UpdateNeighborVictimVtimeParam* func_param_ptr); // Update victim vtime of the given neighbor edge node
+
+        virtual void invokeConstCustomFunctionInternal_(const std::string& func_name, CacheCustomFuncParamBase* func_param_ptr) const override; // Invoke some method-specific function for local edge cache
+        void getLocalVictimVtimeInternal_(GetLocalVictimVtimeFuncParam* func_param_ptr) const; // Get victim vtime of current edge node
         void getPlacementEdgeIdxInternal_(GetPlacementEdgeIdxParam* func_param_ptr) const; // Get placement edge idx under best-guess replacement policy
 
         // In units of bytes
@@ -86,7 +88,7 @@ namespace covered
         // (B) Non-const shared variables
         mutable std::list<BestGuessItem> bestguess_cache_; // BestGuess cache (in LRU order)
         mutable std::unordered_map<Key, list_iterator_t, KeyHasher> lookup_map_; // Lookup map for BestGuess cache (key -> iterator in BestGuess cache)
-        std::unordered_map<uint32_t, uint64_t> peredge_victim_vtime_; // Corresponding to oldest block list in original paper for best-guess replacement
+        mutable std::unordered_map<uint32_t, uint64_t> peredge_victim_vtime_; // Corresponding to oldest block list in original paper for best-guess replacement
         mutable uint64_t cur_vtime_;
         mutable uint64_t size_; // Current size of BestGuess cache (in bytes)
     };

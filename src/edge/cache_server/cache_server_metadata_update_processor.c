@@ -2,7 +2,7 @@
 
 #include <assert.h>
 
-#include "cache/covered_custom_func_param.h"
+#include "cache/covered_cache_custom_func_param.h"
 #include "common/config.h"
 #include "message/control_message.h"
 

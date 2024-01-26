@@ -145,10 +145,19 @@ namespace covered
 
     // (4) Other functions
 
-    void ArcLocalCache::invokeCustomFunctionInternal_(const std::string& func_name, CustomFuncParamBase* func_param_ptr)
+    void ArcLocalCache::invokeCustomFunctionInternal_(const std::string& func_name, CacheCustomFuncParamBase* func_param_ptr)
     {
         std::ostringstream oss;
         oss << "invokeCustomFunctionInternal_() does NOT support func_name " << func_name;
+        Util::dumpErrorMsg(instance_name_, oss.str());
+        exit(1);
+        return;
+    }
+
+    void ArcLocalCache::invokeConstCustomFunctionInternal_(const std::string& func_name, CacheCustomFuncParamBase* func_param_ptr) const
+    {
+        std::ostringstream oss;
+        oss << "invokeConstCustomFunctionInternal_() does NOT support func_name " << func_name;
         Util::dumpErrorMsg(instance_name_, oss.str());
         exit(1);
         return;

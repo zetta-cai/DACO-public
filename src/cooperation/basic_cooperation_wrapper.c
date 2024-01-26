@@ -21,17 +21,15 @@ namespace covered
 
     BasicCooperationWrapper::~BasicCooperationWrapper() {}
 
-    // (0) Get dirinfo of local beaconed keys over the given keyset (NOTE: we do NOT guarantee the atomicity for thess keyset-level functions due to per-key fine-grained locking in cooperation wrapper) (ONLY for COVERED)
+    // (0) Cache-method-specific custom functions
 
-    void BasicCooperationWrapper::getLocalBeaconedVictimsFromVictimSyncset(const VictimSyncset& victim_syncset, std::list<std::pair<Key, DirinfoSet>>& local_beaconed_neighbor_synced_victim_dirinfosets) const
+    void BasicCooperationWrapper::constCustomFunc(const std::string& funcname, CooperationCustomFuncParamBase* func_param_ptr) const
     {
-        Util::dumpErrorMsg(instance_name_, "Baselines should NOT invoke getLocalBeaconedVictimsFromVictimSyncset(), which is ONLY for COVERED!");
+        std::ostringstream oss;
+        oss << "Unknown const custom function name: " << funcname;
+        Util::dumpErrorMsg(instance_name_, oss.str());
         exit(1);
-    }
 
-    void BasicCooperationWrapper::getLocalBeaconedVictimsFromCacheinfos(const std::list<VictimCacheinfo>& victim_cacheinfos, std::list<std::pair<Key, DirinfoSet>>& local_beaconed_victim_dirinfosets) const
-    {
-        Util::dumpErrorMsg(instance_name_, "Baselines should NOT invoke getLocalBeaconedVictimsFromCacheinfos(), which is ONLY for COVERED!");
-        exit(1);
+        return;
     }
 }

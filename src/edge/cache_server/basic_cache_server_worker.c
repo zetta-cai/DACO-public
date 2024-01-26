@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <sstream>
 
+#include "cache/bestguess_cache_custom_func_param.h"
 #include "message/control_message.h"
 #include "message/data_message.h"
 #include "network/propagation_simulator.h"
@@ -158,7 +159,15 @@ namespace covered
 
     bool BasicCacheServerWorker::triggerBestGuessPlacement_(const Key& key, const Value& value, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
     {
-        // TODO: END HERE
+        checkPointers_();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        CacheWrapper* tmp_edge_cache_ptr = tmp_edge_wrapper_ptr->getEdgeCachePtr();
+
+        // Get placement edge idx with the approximate global LRU victim
+        GetPlacementEdgeIdxParam tmp_param;
+        tmp_edge_cache_ptr->constCustomFunc(GetPlacementEdgeIdxParam::FUNCNAME, &tmp_param);
+        uint32_t placement_edge_idx = tmp_param.getPlacementEdgeIdx();
+        assert(placement_edge_idx < tmp_edge_wrapper_ptr->getNodeCnt());
     }
 
     // (2.1) Acquire write lock and block for MSI protocol

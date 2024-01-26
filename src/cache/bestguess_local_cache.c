@@ -252,24 +252,14 @@ namespace covered
 
     // (4) Other functions
 
-    void BestGuessLocalCache::invokeCustomFunctionInternal_(const std::string& func_name, CustomFuncParamBase* func_param_ptr)
+    void BestGuessLocalCache::invokeCustomFunctionInternal_(const std::string& func_name, CacheCustomFuncParamBase* func_param_ptr)
     {
         assert(func_param_ptr != NULL);
 
-        if (func_name == GetLocalVictimVtimeFuncParam::FUNCNAME)
-        {
-            GetLocalVictimVtimeFuncParam* tmp_param_ptr = static_cast<GetLocalVictimVtimeFuncParam*>(func_param_ptr);
-            getLocalVictimVtimeInternal_(tmp_param_ptr);            
-        }
-        else if (func_name == UpdateNeighborVictimVtimeParam::FUNCNAME)
+        if (func_name == UpdateNeighborVictimVtimeParam::FUNCNAME)
         {
             UpdateNeighborVictimVtimeParam* tmp_param_ptr = static_cast<UpdateNeighborVictimVtimeParam*>(func_param_ptr);
             updateNeighborVictimVtimeInternal_(tmp_param_ptr);
-        }
-        else if (func_name == GetPlacementEdgeIdxParam::FUNCNAME)
-        {
-            GetPlacementEdgeIdxParam* tmp_param_ptr = static_cast<GetPlacementEdgeIdxParam*>(func_param_ptr);
-            getPlacementEdgeIdxInternal_(tmp_param_ptr);
         }
         else
         {
@@ -278,23 +268,6 @@ namespace covered
             Util::dumpErrorMsg(instance_name_, oss.str());
             exit(1);
         }
-        return;
-    }
-
-    void BestGuessLocalCache::getLocalVictimVtimeInternal_(GetLocalVictimVtimeFuncParam* func_param_ptr) const
-    {
-        assert(func_param_ptr != NULL);
-
-        // Get local victim vtime
-        uint64_t local_victim_vtime = 0; // NOTE: keep victim as 0 if BestGuess cache is empty, which has the largest priority for admission placement
-        if (bestguess_cache_.size() > 0)
-        {
-            local_victim_vtime = bestguess_cache_.back().getVtime();
-        }
-
-        // Update function param
-        func_param_ptr->setLocalVictimVtime(local_victim_vtime);
-
         return;
     }
 
@@ -315,6 +288,47 @@ namespace covered
         {
             peredge_victim_vtime_iter->second = neighbor_victim_vtime;
         }
+
+        return;
+    }
+
+    void BestGuessLocalCache::invokeConstCustomFunctionInternal_(const std::string& func_name, CacheCustomFuncParamBase* func_param_ptr) const
+    {
+        assert(func_param_ptr != NULL);
+
+        if (func_name == GetLocalVictimVtimeFuncParam::FUNCNAME)
+        {
+            GetLocalVictimVtimeFuncParam* tmp_param_ptr = static_cast<GetLocalVictimVtimeFuncParam*>(func_param_ptr);
+            getLocalVictimVtimeInternal_(tmp_param_ptr);            
+        }
+        else if (func_name == GetPlacementEdgeIdxParam::FUNCNAME)
+        {
+            GetPlacementEdgeIdxParam* tmp_param_ptr = static_cast<GetPlacementEdgeIdxParam*>(func_param_ptr);
+            getPlacementEdgeIdxInternal_(tmp_param_ptr);
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "invokeConstCustomFunctionInternal_() does NOT support func_name " << func_name;
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
+        return;
+    }
+
+    void BestGuessLocalCache::getLocalVictimVtimeInternal_(GetLocalVictimVtimeFuncParam* func_param_ptr) const
+    {
+        assert(func_param_ptr != NULL);
+
+        // Get local victim vtime
+        uint64_t local_victim_vtime = 0; // NOTE: keep victim as 0 if BestGuess cache is empty, which has the largest priority for admission placement
+        if (bestguess_cache_.size() > 0)
+        {
+            local_victim_vtime = bestguess_cache_.back().getVtime();
+        }
+
+        // Update function param
+        func_param_ptr->setLocalVictimVtime(local_victim_vtime);
 
         return;
     }
@@ -340,6 +354,12 @@ namespace covered
                 min_victim_vtime = tmp_neighbor_victim_vtime;
                 placement_edge_idx = tmp_neighbor_edge_idx;
             }
+        }
+        
+        // Remove from peredge_victim_vtime_ if the placement edge node is a neighbor edge node
+        if (placement_edge_idx != edge_idx_)
+        {
+            peredge_victim_vtime_.erase(placement_edge_idx);
         }
 
         // Update function param

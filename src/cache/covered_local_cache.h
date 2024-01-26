@@ -17,7 +17,7 @@
 
 #include <tommy.h> // TommyDS
 
-#include "cache/covered_custom_func_param.h"
+#include "cache/covered_cache_custom_func_param.h"
 
 namespace covered
 {
@@ -72,8 +72,10 @@ namespace covered
 
         // (4) Other functions
 
-        virtual void invokeCustomFunctionInternal_(const std::string& func_name, CustomFuncParamBase* func_param_ptr) override; // Invoke some method-specific function for local edge cache
+        virtual void invokeCustomFunctionInternal_(const std::string& func_name, CacheCustomFuncParamBase* func_param_ptr) override; // Invoke some method-specific function for local edge cache
         void updateIsNeighborCachedInternal_(UpdateIsNeighborCachedFlagFuncParam* func_param_ptr); // Update is_neighbor_cached flag in local cached metadata (for beacon-based local cache metadata udpate)
+
+        virtual void invokeConstCustomFunctionInternal_(const std::string& func_name, CacheCustomFuncParamBase* func_param_ptr) const override; // Invoke some method-specific function for local edge cache
         void getLocalSyncedVictimCacheinfosFromLocalCacheInternal_(GetLocalSyncedVictimCacheinfosParam* func_param_ptr) const; // Get up to peredge_synced_victimcnt local synced victims with the least local rewards (for victim synchronization)
         // Set collected_popularity.is_tracked_ as true if the local uncached key is tracked; set collected_popularity.is_tracked_ as false if key is either local cached or local uncached yet untracked by local uncached metadata
         // NOTE: for directory lookup req, directory eviction req, acquire writelock req, and release writelock req, is_key_tracked flag could still be false for returned collected popularity -> reason: under local uncached metadata capacity limitation, newly-tracked or preserved-after-eviciton local uncached popularity could be immediately detracked from local uncached metadata and hence NO need for popularity collection/aggregation

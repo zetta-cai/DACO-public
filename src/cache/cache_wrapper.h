@@ -16,7 +16,7 @@
 #include <string>
 #include <vector>
 
-#include "cache/custom_func_param_base.h"
+#include "cache/cache_custom_func_param_base.h"
 #include "concurrency/concurrent_hashtable_impl.h"
 
 namespace covered
@@ -75,7 +75,10 @@ namespace covered
 
         // (4) Other functions
 
-        void customFunc(const std::string& func_name, CustomFuncParamBase* func_param_ptr); // Invoke method-specific functions for local edge cache
+        void customFunc(const std::string& func_name, CacheCustomFuncParamBase* func_param_ptr); // Invoke method-specific functions for local edge cache
+        void constCustomFunc(const std::string& func_name, CacheCustomFuncParamBase* func_param_ptr) const;
+        void preCustomFunc_(const std::string context_name, CacheCustomFuncParamBase* func_param_ptr) const;
+        void postCustomFunc_(const std::string& func_name, const std::string context_name, CacheCustomFuncParamBase* func_param_ptr) const;
         
         // In units of bytes
         uint64_t getSizeForCapacity() const; // sum of internal size (each individual local cache) and external size (metadata for edge caching)
