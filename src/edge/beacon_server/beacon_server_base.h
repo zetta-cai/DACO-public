@@ -25,6 +25,7 @@
 
 #include "core/popularity/fast_path_hint.h"
 #include "edge/edge_wrapper.h"
+#include "edge/edge_custom_func_param_base.h"
 #include "message/message_base.h"
 #include "network/udp_msg_socket_server.h"
 
@@ -75,14 +76,13 @@ namespace covered
         // Return if edge node is finished
         virtual bool processOtherControlRequest_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr) = 0;
 
-        // (4) Process redirected/global get response for non-blocking placement deployment (ONLY for COVERED)
-
-        virtual void processRspToRedirectGetForPlacement_(MessageBase* redirected_get_response_ptr) = 0;
-        virtual void processRspToAccessCloudForPlacement_(MessageBase* global_get_response_ptr) = 0;
-
-        // (5) Embed background events and bandwidth usage
+        // (4) Embed background events and bandwidth usage
 
         void embedBackgroundCounterIfNotEmpty_(BandwidthUsage& bandwidth_usage, EventList& event_list) const;
+
+        // (5) Cache-method-specific custom functions
+
+        virtual void customFunc(const std::string& funcname, EdgeCustomFuncParamBase* func_param_ptr) = 0;
 
         // Member varaibles
 

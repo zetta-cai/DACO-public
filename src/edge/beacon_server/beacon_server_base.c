@@ -5,6 +5,7 @@
 #include "common/bandwidth_usage.h"
 #include "common/config.h"
 #include "common/util.h"
+#include "edge/covered_edge_custom_func_param.h"
 #include "edge/beacon_server/basic_beacon_server.h"
 #include "edge/beacon_server/covered_beacon_server.h"
 #include "message/control_message.h"
@@ -129,12 +130,14 @@ namespace covered
                 else if (control_request_ptr->getMessageType() == MessageType::kCoveredPlacementRedirectedGetResponse) // Non-blocking placement deployment
                 {
                     // NOTE: NOT embed background events/bandwidth-usage into CoveredPlacementRedirectedGetResponse even if it is received by beacon server, as we need to embed such information into foreground messages to be tracked by clients
-                    processRspToRedirectGetForPlacement_(control_request_ptr);
+                    ProcessRspToRedirectGetForPlacementFuncParam tmp_param(control_request_ptr);
+                    customFunc(ProcessRspToRedirectGetForPlacementFuncParam::FUNCNAME, &tmp_param);
                 }
                 else if (control_request_ptr->getMessageType() == MessageType::kCoveredPlacementGlobalGetResponse) // Non-blocking placement deployment
                 {
                     // NOTE: NOT embed background events/bandwidth-usage into CoveredPlacementRedirectedGetResponse even if it is received by beacon server, as we need to embed such information into foreground messages to be tracked by clients
-                    processRspToAccessCloudForPlacement_(control_request_ptr);
+                    ProcessRspToAccessCloudForPlacementFuncParam tmp_param(control_request_ptr);
+                    customFunc(ProcessRspToAccessCloudForPlacementFuncParam::FUNCNAME, &tmp_param);
                 }
                 else
                 {

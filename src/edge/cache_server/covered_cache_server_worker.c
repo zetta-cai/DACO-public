@@ -9,6 +9,7 @@
 #include "cooperation/covered_cooperation_custom_func_param.h"
 #include "core/victim/victim_cacheinfo.h"
 #include "core/victim/victim_syncset.h"
+#include "edge/covered_edge_custom_func_param.h"
 #include "message/control_message.h"
 #include "message/data_message.h"
 
@@ -308,136 +309,6 @@ namespace covered
         return is_local_cached_and_invalid;
     }
 
-    // (1.5) Trigger cache placement for getrsp (ONLY for COVERED)
-
-    bool CoveredCacheServerWorker::tryToTriggerCachePlacementForGetrsp_(const Key& key, const Value& value, const CollectedPopularity& collected_popularity_after_fetch_value, const FastPathHint& fast_path_hint, const bool& is_global_cached, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
-    {
-        checkPointers_();
-        assert(collected_popularity_after_fetch_value.isTracked()); // MUST be tracked (actually newly-tracked) after fetching value from neighbor/cloud
-
-        CacheServer* tmp_cache_server_ptr = cache_server_worker_param_ptr_->getCacheServerPtr();
-        EdgeWrapper* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();
-        CooperationWrapperBase* tmp_cooperation_wrapper_ptr = tmp_edge_wrapper_ptr->getCooperationWrapperPtr();
-        CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
-
-        bool is_finish = false;
-
-        const bool current_is_beacon = tmp_edge_wrapper_ptr->currentIsBeacon(key);
-        if (current_is_beacon) // Trigger normal cache placement by popularity aggregation if sender is beacon
-        {
-            assert(!fast_path_hint.isValid()); // ONLY remote beacon can provide FastPathHint to sender edge node
-
-            uint32_t current_edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
-            bool latest_is_global_cached = false; // NOTE: passed param (is_global_cached) is looked up before fetching value, which may be stale, so we use the latest is_global_cached here
-            bool is_source_cached = false;
-            tmp_cooperation_wrapper_ptr->isGlobalAndSourceCached(key, current_edge_idx, latest_is_global_cached, is_source_cached);
-
-            // Selective popularity aggregation
-            const bool need_placement_calculation = true;
-            const bool sender_is_beacon = true; // Sender and beacon is the same edge node for placement calculation
-            Edgeset best_placement_edgeset;
-            best_placement_edgeset.clear();
-            bool need_hybrid_fetching = false;
-            is_finish = tmp_covered_cache_manager_ptr->updatePopularityAggregatorForAggregatedPopularity(key, current_edge_idx, collected_popularity_after_fetch_value, latest_is_global_cached, is_source_cached, need_placement_calculation, sender_is_beacon, best_placement_edgeset, need_hybrid_fetching, tmp_edge_wrapper_ptr, edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in current edge node
-            if (is_finish)
-            {
-                return is_finish; // Edge node is NOT running now
-            }
-
-            // Trigger non-blocking placement notification if need hybrid fetching for non-blocking data fetching (ONLY for COVERED)
-            if (need_hybrid_fetching)
-            {
-                assert(tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME);
-                tmp_edge_wrapper_ptr->nonblockNotifyForPlacement(key, value, best_placement_edgeset, skip_propagation_latency);
-            }
-        }
-        #ifdef ENABLE_FAST_PATH_PLACEMENT
-        else if (fast_path_hint.isValid()) // Trigger fast-path single-placement calculation if with valid FastPathHint
-        {
-            MYASSERT(!current_is_beacon); // ONLY remote beacon can provide FastPathHint to sender edge node
-
-            // NOTE: although passed param (is_global_cached) is looked up before fetching value, which may be stale, we still use it due to approximate fast-path placement, instead of looking up the latest is_global_cached from remote beacon edge node, which will introduce extra message overhead
-
-            // Calculate local admission benefit
-            Popularity local_uncached_popularity = collected_popularity_after_fetch_value.getLocalUncachedPopularity();
-            Popularity redirected_uncached_popularity = fast_path_hint.getSumLocalUncachedPopularity(); // NOTE: sum_local_uncached_popularity MUST NOT include local uncached popularity of the current edge node
-            DeltaReward local_admission_benefit = tmp_edge_wrapper_ptr->calcLocalUncachedReward(local_uncached_popularity, is_global_cached, redirected_uncached_popularity);
-
-            // Approximate global admission policy
-            bool is_global_popular = false;
-            DeltaReward smallest_max_admission_benfit = fast_path_hint.getSmallestMaxAdmissionBenefit();
-            if (smallest_max_admission_benfit == MIN_ADMISSION_BENEFIT) // Beacon edge node has sufficient space to add/update the local uncached popularity of the object from the current edge node
-            {
-                is_global_popular = true;
-            }
-            else if (local_admission_benefit > smallest_max_admission_benfit)
-            {
-                is_global_popular = true;
-            }
-
-            // Approximate single-placement calculation (a fast path w/o extra message overhead towards remote beacon edge node)
-            if (is_global_popular)
-            {
-                const uint64_t tmp_object_size = key.getKeyLength() + value.getValuesize();
-                const uint64_t tmp_cache_margin_bytes = tmp_edge_wrapper_ptr->getCacheMarginBytes();
-
-                DeltaReward local_eviction_cost = 0.0;
-                if (tmp_cache_margin_bytes >= tmp_object_size) // With sufficient space to admit the object -> NO need to evict
-                {
-                    local_eviction_cost = 0.0;
-                }
-                else
-                {
-                    // Find victims from local edge cache based on required size (NOT use local synced victims in victim tracker, as it still needs to access local edge cache if need more extra victims)
-                    std::list<VictimCacheinfo> tmp_local_cached_victim_cacheinfos;
-                    const uint64_t tmp_required_size = Util::uint64Minus(tmp_object_size, tmp_cache_margin_bytes);
-                    bool tmp_is_exist_victims = tmp_edge_wrapper_ptr->getEdgeCachePtr()->fetchVictimCacheinfosForRequiredSize(tmp_local_cached_victim_cacheinfos, tmp_required_size);
-                    assert(tmp_is_exist_victims == true);
-
-                    // Get dirinfo for local beaconed victims
-                    GetLocalBeaconedVictimsFromCacheinfosParam tmp_param(tmp_local_cached_victim_cacheinfos);
-                    tmp_cooperation_wrapper_ptr->constCustomFunc(GetLocalBeaconedVictimsFromCacheinfosParam::FUNCNAME, &tmp_param);
-                    const std::list<std::pair<Key, DirinfoSet>>& tmp_local_beaconed_local_cached_victim_dirinfoset_const_ref = tmp_param.getLocalBeaconedVictimDirinfosetsRef();
-
-                    // Calculate local eviction cost by VictimTracker (to utilize perkey_victim_dirinfo_)
-                    local_eviction_cost = tmp_covered_cache_manager_ptr->accessVictimTrackerForFastPathEvictionCost(tmp_edge_wrapper_ptr, tmp_local_cached_victim_cacheinfos, tmp_local_beaconed_local_cached_victim_dirinfoset_const_ref);
-                }
-
-                // Trigger local cache placement if local admission benefit is larger than local eviction cost
-                if (local_admission_benefit > local_eviction_cost)
-                {
-                    // Admit dirinfo into remote beacon edge node
-                    bool tmp_is_being_written = false;
-                    const bool is_background = false; // Similar as only-sender hybrid data fetching
-                    bool is_neighbor_cached = false; // NOTE: we do NOT use cooperation wrapper to check is_neighbor_cached, as sender must NOT be the beacon here
-                    is_finish = tmp_cache_server_ptr->admitBeaconDirectory_(key, DirectoryInfo(tmp_edge_wrapper_ptr->getNodeIdx()), tmp_is_being_written, is_neighbor_cached, edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency, is_background);
-                    if (is_finish) // Edge is NOT running now
-                    {
-                        return is_finish;
-                    }
-
-                    // Notify placement processor to admit local edge cache (NOTE: NO need to admit directory) and trigger local cache eviciton, to avoid blocking cache server worker which may serve subsequent fast-path single-placement calculation
-                    const bool tmp_is_valid = !tmp_is_being_written;
-                    bool tmp_is_successful = tmp_edge_wrapper_ptr->getLocalCacheAdmissionBufferPtr()->push(LocalCacheAdmissionItem(key, value, is_neighbor_cached, tmp_is_valid, skip_propagation_latency));
-                    assert(tmp_is_successful);
-                }
-            }
-        }
-        #endif
-
-        return is_finish;
-    }
-
-    // (1.6) Trigger best-guess placement/replacement for getrsp & putrsp (ONLY for BestGuess)
-
-    bool CoveredCacheServerWorker::triggerBestGuessPlacement_(const Key& key, const Value& value, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
-    {
-        std::ostringstream oss;
-        oss << cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr()->getCacheName() << " should NOT invoke triggerBestGuessPlacement_(), which is ONLY for BestGuess!";
-        Util::dumpErrorMsg(instance_name_, oss.str());
-        exit(1);
-    }
-
     // (2.1) Acquire write lock and block for MSI protocol
 
     bool CoveredCacheServerWorker::acquireLocalWritelock_(const Key& key, LockResult& lock_result, DirinfoSet& all_dirinfo, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency)
@@ -727,9 +598,157 @@ namespace covered
 
     // (4.2) Admit content directory information
 
-    // (4.3) Trigger non-blocking placement notification (ONLY for COVERED)
+    // (5) Cache-method-specific custom functions
 
-    bool CoveredCacheServerWorker::tryToTriggerPlacementNotificationAfterHybridFetch_(const Key& key, const Value& value, const Edgeset& best_placement_edgeset, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
+    void CoveredCacheServerWorker::constCustomFunc(const std::string& funcname, EdgeCustomFuncParamBase* func_param_ptr) const
+    {
+        checkPointers_();
+        assert(func_param_ptr != NULL);
+
+        if (funcname == TryToTriggerCachePlacementForGetrspFuncParam::FUNCNAME)
+        {
+            TryToTriggerCachePlacementForGetrspFuncParam* tmp_param_ptr = static_cast<TryToTriggerCachePlacementForGetrspFuncParam*>(func_param_ptr);
+            bool is_finish = tryToTriggerCachePlacementForGetrspInternal_(tmp_param_ptr->getKeyConstRef(), tmp_param_ptr->getValueConstRef(), tmp_param_ptr->getCollectedPopularityConstRef(), tmp_param_ptr->getFastPathHintConstRef(), tmp_param_ptr->isGlobalCached(), tmp_param_ptr->getTotalBandwidthUsageRef(), tmp_param_ptr->getEventListRef(), tmp_param_ptr->isSkipPropagationLatency());
+            tmp_param_ptr->setIsFinish(is_finish);
+        }
+        else if (funcname == TryToTriggerPlacementNotificationAfterHybridFetchFuncParam::FUNCNAME)
+        {
+            TryToTriggerPlacementNotificationAfterHybridFetchFuncParam* tmp_param_ptr = static_cast<TryToTriggerPlacementNotificationAfterHybridFetchFuncParam*>(func_param_ptr);
+            bool is_finish = tryToTriggerPlacementNotificationAfterHybridFetchInternal_(tmp_param_ptr->getKeyConstRef(), tmp_param_ptr->getValueConstRef(), tmp_param_ptr->getBestPlacementEdgesetConstRef(), tmp_param_ptr->getTotalBandwidthUsageRef(), tmp_param_ptr->getEventListRef(), tmp_param_ptr->isSkipPropagationLatency());
+            tmp_param_ptr->setIsFinish(is_finish);
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "Invalid function name: " << funcname << " for constCustomFunc()";
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
+
+        return;
+    }
+
+    // Trigger cache placement for getrsp
+    bool CoveredCacheServerWorker::tryToTriggerCachePlacementForGetrspInternal_(const Key& key, const Value& value, const CollectedPopularity& collected_popularity_after_fetch_value, const FastPathHint& fast_path_hint, const bool& is_global_cached, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
+    {
+        checkPointers_();
+        assert(collected_popularity_after_fetch_value.isTracked()); // MUST be tracked (actually newly-tracked) after fetching value from neighbor/cloud
+
+        CacheServer* tmp_cache_server_ptr = cache_server_worker_param_ptr_->getCacheServerPtr();
+        EdgeWrapper* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();
+        CooperationWrapperBase* tmp_cooperation_wrapper_ptr = tmp_edge_wrapper_ptr->getCooperationWrapperPtr();
+        CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
+
+        bool is_finish = false;
+
+        const bool current_is_beacon = tmp_edge_wrapper_ptr->currentIsBeacon(key);
+        if (current_is_beacon) // Trigger normal cache placement by popularity aggregation if sender is beacon
+        {
+            assert(!fast_path_hint.isValid()); // ONLY remote beacon can provide FastPathHint to sender edge node
+
+            uint32_t current_edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
+            bool latest_is_global_cached = false; // NOTE: passed param (is_global_cached) is looked up before fetching value, which may be stale, so we use the latest is_global_cached here
+            bool is_source_cached = false;
+            tmp_cooperation_wrapper_ptr->isGlobalAndSourceCached(key, current_edge_idx, latest_is_global_cached, is_source_cached);
+
+            // Selective popularity aggregation
+            const bool need_placement_calculation = true;
+            const bool sender_is_beacon = true; // Sender and beacon is the same edge node for placement calculation
+            Edgeset best_placement_edgeset;
+            best_placement_edgeset.clear();
+            bool need_hybrid_fetching = false;
+            is_finish = tmp_covered_cache_manager_ptr->updatePopularityAggregatorForAggregatedPopularity(key, current_edge_idx, collected_popularity_after_fetch_value, latest_is_global_cached, is_source_cached, need_placement_calculation, sender_is_beacon, best_placement_edgeset, need_hybrid_fetching, tmp_edge_wrapper_ptr, edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency); // Update aggregated uncached popularity, to add/update latest local uncached popularity or remove old local uncached popularity, for key in current edge node
+            if (is_finish)
+            {
+                return is_finish; // Edge node is NOT running now
+            }
+
+            // Trigger non-blocking placement notification if need hybrid fetching for non-blocking data fetching (ONLY for COVERED)
+            if (need_hybrid_fetching)
+            {
+                assert(tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME);
+                tmp_edge_wrapper_ptr->nonblockNotifyForPlacement(key, value, best_placement_edgeset, skip_propagation_latency);
+            }
+        }
+        #ifdef ENABLE_FAST_PATH_PLACEMENT
+        else if (fast_path_hint.isValid()) // Trigger fast-path single-placement calculation if with valid FastPathHint
+        {
+            MYASSERT(!current_is_beacon); // ONLY remote beacon can provide FastPathHint to sender edge node
+
+            // NOTE: although passed param (is_global_cached) is looked up before fetching value, which may be stale, we still use it due to approximate fast-path placement, instead of looking up the latest is_global_cached from remote beacon edge node, which will introduce extra message overhead
+
+            // Calculate local admission benefit
+            Popularity local_uncached_popularity = collected_popularity_after_fetch_value.getLocalUncachedPopularity();
+            Popularity redirected_uncached_popularity = fast_path_hint.getSumLocalUncachedPopularity(); // NOTE: sum_local_uncached_popularity MUST NOT include local uncached popularity of the current edge node
+            DeltaReward local_admission_benefit = tmp_edge_wrapper_ptr->calcLocalUncachedReward(local_uncached_popularity, is_global_cached, redirected_uncached_popularity);
+
+            // Approximate global admission policy
+            bool is_global_popular = false;
+            DeltaReward smallest_max_admission_benfit = fast_path_hint.getSmallestMaxAdmissionBenefit();
+            if (smallest_max_admission_benfit == MIN_ADMISSION_BENEFIT) // Beacon edge node has sufficient space to add/update the local uncached popularity of the object from the current edge node
+            {
+                is_global_popular = true;
+            }
+            else if (local_admission_benefit > smallest_max_admission_benfit)
+            {
+                is_global_popular = true;
+            }
+
+            // Approximate single-placement calculation (a fast path w/o extra message overhead towards remote beacon edge node)
+            if (is_global_popular)
+            {
+                const uint64_t tmp_object_size = key.getKeyLength() + value.getValuesize();
+                const uint64_t tmp_cache_margin_bytes = tmp_edge_wrapper_ptr->getCacheMarginBytes();
+
+                DeltaReward local_eviction_cost = 0.0;
+                if (tmp_cache_margin_bytes >= tmp_object_size) // With sufficient space to admit the object -> NO need to evict
+                {
+                    local_eviction_cost = 0.0;
+                }
+                else
+                {
+                    // Find victims from local edge cache based on required size (NOT use local synced victims in victim tracker, as it still needs to access local edge cache if need more extra victims)
+                    std::list<VictimCacheinfo> tmp_local_cached_victim_cacheinfos;
+                    const uint64_t tmp_required_size = Util::uint64Minus(tmp_object_size, tmp_cache_margin_bytes);
+                    bool tmp_is_exist_victims = tmp_edge_wrapper_ptr->getEdgeCachePtr()->fetchVictimCacheinfosForRequiredSize(tmp_local_cached_victim_cacheinfos, tmp_required_size);
+                    assert(tmp_is_exist_victims == true);
+
+                    // Get dirinfo for local beaconed victims
+                    GetLocalBeaconedVictimsFromCacheinfosParam tmp_param(tmp_local_cached_victim_cacheinfos);
+                    tmp_cooperation_wrapper_ptr->constCustomFunc(GetLocalBeaconedVictimsFromCacheinfosParam::FUNCNAME, &tmp_param);
+                    const std::list<std::pair<Key, DirinfoSet>>& tmp_local_beaconed_local_cached_victim_dirinfoset_const_ref = tmp_param.getLocalBeaconedVictimDirinfosetsRef();
+
+                    // Calculate local eviction cost by VictimTracker (to utilize perkey_victim_dirinfo_)
+                    local_eviction_cost = tmp_covered_cache_manager_ptr->accessVictimTrackerForFastPathEvictionCost(tmp_edge_wrapper_ptr, tmp_local_cached_victim_cacheinfos, tmp_local_beaconed_local_cached_victim_dirinfoset_const_ref);
+                }
+
+                // Trigger local cache placement if local admission benefit is larger than local eviction cost
+                if (local_admission_benefit > local_eviction_cost)
+                {
+                    // Admit dirinfo into remote beacon edge node
+                    bool tmp_is_being_written = false;
+                    const bool is_background = false; // Similar as only-sender hybrid data fetching
+                    bool is_neighbor_cached = false; // NOTE: we do NOT use cooperation wrapper to check is_neighbor_cached, as sender must NOT be the beacon here
+                    is_finish = tmp_cache_server_ptr->admitBeaconDirectory_(key, DirectoryInfo(tmp_edge_wrapper_ptr->getNodeIdx()), tmp_is_being_written, is_neighbor_cached, edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency, is_background);
+                    if (is_finish) // Edge is NOT running now
+                    {
+                        return is_finish;
+                    }
+
+                    // Notify placement processor to admit local edge cache (NOTE: NO need to admit directory) and trigger local cache eviciton, to avoid blocking cache server worker which may serve subsequent fast-path single-placement calculation
+                    const bool tmp_is_valid = !tmp_is_being_written;
+                    bool tmp_is_successful = tmp_edge_wrapper_ptr->getLocalCacheAdmissionBufferPtr()->push(LocalCacheAdmissionItem(key, value, is_neighbor_cached, tmp_is_valid, skip_propagation_latency));
+                    assert(tmp_is_successful);
+                }
+            }
+        }
+        #endif
+
+        return is_finish;
+    }
+
+    // Trigger non-blocking placement notification
+    bool CoveredCacheServerWorker::tryToTriggerPlacementNotificationAfterHybridFetchInternal_(const Key& key, const Value& value, const Edgeset& best_placement_edgeset, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
     {
         checkPointers_();
         CacheServer* tmp_cache_server_ptr = cache_server_worker_param_ptr_->getCacheServerPtr();

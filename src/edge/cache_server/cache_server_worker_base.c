@@ -6,6 +6,8 @@
 #include "common/bandwidth_usage.h"
 #include "common/config.h"
 #include "common/util.h"
+#include "edge/basic_edge_custom_func_param.h"
+#include "edge/covered_edge_custom_func_param.h"
 #include "edge/cache_server/basic_cache_server_worker.h"
 #include "edge/cache_server/covered_cache_server_worker.h"
 #include "event/event.h"
@@ -310,7 +312,9 @@ namespace covered
         struct timespec trigger_placement_start_timestamp = Util::getCurrentTimespec();
         if (tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME && need_hybrid_fetching)
         {
-            is_finish = tryToTriggerPlacementNotificationAfterHybridFetch_(tmp_key, tmp_value, best_placement_edgeset, total_bandwidth_usage, event_list, skip_propagation_latency);
+            TryToTriggerPlacementNotificationAfterHybridFetchFuncParam tmp_param(tmp_key, tmp_value, best_placement_edgeset, total_bandwidth_usage, event_list, skip_propagation_latency);
+            constCustomFunc(TryToTriggerPlacementNotificationAfterHybridFetchFuncParam::FUNCNAME, &tmp_param);
+            is_finish = tmp_param.isFinish();
             if (is_finish) // Edge is NOT running now
             {
                 return is_finish;
@@ -362,7 +366,9 @@ namespace covered
                 struct timespec placement_for_getrsp_start_timestamp = Util::getCurrentTimespec();
 
                 // Try to trigger cache placement if necessary (sender is beacon, or beacon node provides fast-path hint)
-                is_finish = tryToTriggerCachePlacementForGetrsp_(tmp_key, tmp_value, tmp_collected_popularity_after_fetch_value, fast_path_hint, is_cooperative_cached, total_bandwidth_usage, event_list, skip_propagation_latency);
+                TryToTriggerCachePlacementForGetrspFuncParam tmp_param(tmp_key, tmp_value, tmp_collected_popularity_after_fetch_value, fast_path_hint, is_cooperative_cached, total_bandwidth_usage, event_list, skip_propagation_latency);
+                constCustomFunc(TryToTriggerCachePlacementForGetrspFuncParam::FUNCNAME, &tmp_param);
+                is_finish = tmp_param.isFinish();
                 if (is_finish)
                 {
                     return is_finish;
@@ -376,7 +382,9 @@ namespace covered
         // (2) Trigger best-guess placement/replacement (ONLY for BestGuess)
         else if (tmp_edge_wrapper_ptr->getCacheName() == Util::BESTGUESS_CACHE_NAME && !tmp_edge_wrapper_ptr->getEdgeCachePtr()->isLocalCached(tmp_key) && !is_cooperative_cached) // Local uncached and cooperative uncached (i.e., global uncached)
         {
-            is_finish = triggerBestGuessPlacement_(tmp_key, tmp_value, total_bandwidth_usage, event_list, skip_propagation_latency);
+            TriggerBestGuessPlacementFuncParam tmp_param(tmp_key, tmp_value, total_bandwidth_usage, event_list, skip_propagation_latency);
+            constCustomFunc(TriggerBestGuessPlacementFuncParam::FUNCNAME, &tmp_param);
+            is_finish = tmp_param.isFinish();
             if (is_finish)
             {
                 return is_finish;

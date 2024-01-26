@@ -3,7 +3,8 @@
 #include <assert.h>
 #include <sstream>
 
-#include "cache/bestguess_cache_custom_func_param.h"
+#include "cache/basic_cache_custom_func_param.h"
+#include "edge/basic_edge_custom_func_param.h"
 #include "message/control_message.h"
 #include "message/data_message.h"
 #include "network/propagation_simulator.h"
@@ -143,31 +144,6 @@ namespace covered
         UNUSED(affect_victim_tracker); // ONLY for COVERED
         
         return is_local_cached_and_invalid;
-    }
-
-    // (1.5) Trigger cache placement for getrsp (ONLY for COVERED)
-
-    bool BasicCacheServerWorker::tryToTriggerCachePlacementForGetrsp_(const Key& key, const Value& value, const CollectedPopularity& collected_popularity_after_fetch_value, const FastPathHint& fast_path_hint, const bool& is_global_cached, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
-    {
-        std::ostringstream oss;
-        oss << "Baseline " << cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr()->getCacheName() << " should NOT invoke tryToTriggerCachePlacementForGetrsp_(), which is ONLY for COVERED!";
-        Util::dumpErrorMsg(instance_name_, oss.str());
-        exit(1);
-    }
-
-    // (1.6) Trigger best-guess placement/replacement for getrsp & putrsp (ONLY for BestGuess)
-
-    bool BasicCacheServerWorker::triggerBestGuessPlacement_(const Key& key, const Value& value, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
-    {
-        checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
-        CacheWrapper* tmp_edge_cache_ptr = tmp_edge_wrapper_ptr->getEdgeCachePtr();
-
-        // Get placement edge idx with the approximate global LRU victim
-        GetPlacementEdgeIdxParam tmp_param;
-        tmp_edge_cache_ptr->constCustomFunc(GetPlacementEdgeIdxParam::FUNCNAME, &tmp_param);
-        uint32_t placement_edge_idx = tmp_param.getPlacementEdgeIdx();
-        assert(placement_edge_idx < tmp_edge_wrapper_ptr->getNodeCnt());
     }
 
     // (2.1) Acquire write lock and block for MSI protocol
@@ -330,13 +306,43 @@ namespace covered
 
     // (4.2) Admit content directory information
 
-    // (4.3) Trigger non-blocking placement notification (ONLY for COVERED)
+    // (5) Cache-method-specific custom functions
 
-    bool BasicCacheServerWorker::tryToTriggerPlacementNotificationAfterHybridFetch_(const Key& key, const Value& value, const Edgeset& best_placement_edgeset, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
+    void BasicCacheServerWorker::constCustomFunc(const std::string& funcname, EdgeCustomFuncParamBase* func_param_ptr) const
     {
-        std::ostringstream oss;
-        oss << "Baseline " << cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr()->getCacheName() << " should NOT invoke tryToTriggerPlacementNotificationAfterHybridFetch_(), which is ONLY for COVERED!";
-        Util::dumpErrorMsg(instance_name_, oss.str());
-        exit(1);
+        checkPointers_();
+        assert(func_param_ptr != NULL);
+
+        if (funcname == TriggerBestGuessPlacementFuncParam::FUNCNAME)
+        {
+            TriggerBestGuessPlacementFuncParam* tmp_param_ptr = static_cast<TriggerBestGuessPlacementFuncParam*>(func_param_ptr);
+            bool is_finish = triggerBestGuessPlacementInternal_(tmp_param_ptr->getKeyConstRef(), tmp_param_ptr->getValueConstRef(), tmp_param_ptr->getTotalBandwidthUsageRef(), tmp_param_ptr->getEventListRef(), tmp_param_ptr->isSkipPropagationLatency());
+            tmp_param_ptr->setIsFinish(is_finish);
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "Unknown function name: " << funcname;
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
+
+        return;
+    }
+
+    // Trigger best-guess placement/replacement for getrsp & putrsp (ONLY for BestGuess)
+    bool BasicCacheServerWorker::triggerBestGuessPlacementInternal_(const Key& key, const Value& value, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
+    {
+        checkPointers_();
+        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        CacheWrapper* tmp_edge_cache_ptr = tmp_edge_wrapper_ptr->getEdgeCachePtr();
+
+        // Get placement edge idx with the approximate global LRU victim
+        GetPlacementEdgeIdxParam tmp_param;
+        tmp_edge_cache_ptr->constCustomFunc(GetPlacementEdgeIdxParam::FUNCNAME, &tmp_param);
+        uint32_t placement_edge_idx = tmp_param.getPlacementEdgeIdx();
+        assert(placement_edge_idx < tmp_edge_wrapper_ptr->getNodeCnt());
+
+        // TODO: END HERE
     }
 }

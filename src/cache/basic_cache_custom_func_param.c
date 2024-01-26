@@ -1,8 +1,8 @@
-#include "cache/bestguess_cache_custom_func_param.h"
+#include "cache/basic_cache_custom_func_param.h"
 
 namespace covered
 {
-    // GetLocalVictimVtimeFuncParam
+    // GetLocalVictimVtimeFuncParam for BestGuess
 
     const std::string GetLocalVictimVtimeFuncParam::kClassName("GetLocalVictimVtimeFuncParam");
 
@@ -28,7 +28,7 @@ namespace covered
         return;
     }
 
-    // UpdateNeighborVictimVtimeParam
+    // UpdateNeighborVictimVtimeParam for BestGuess
 
     const std::string UpdateNeighborVictimVtimeParam::kClassName("UpdateNeighborVictimVtimeParam");
 
@@ -53,7 +53,7 @@ namespace covered
         return neighbor_victim_vtime_;
     }
 
-    // GetPlacementEdgeIdxParam
+    // GetPlacementEdgeIdxParam for BestGuess
 
     const std::string GetPlacementEdgeIdxParam::kClassName("GetPlacementEdgeIdxParam");
 

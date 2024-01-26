@@ -57,6 +57,7 @@
 
 #include "core/popularity/edgeset.h"
 #include "core/popularity/fast_path_hint.h"
+#include "edge/edge_custom_func_param_base.h"
 #include "edge/cache_server/cache_server_worker_param.h"
 #include "event/event_list.h"
 #include "message/message_base.h"
@@ -112,14 +113,6 @@ namespace covered
 
         virtual bool tryToUpdateInvalidLocalEdgeCache_(const Key& key, const Value& value, const bool& is_global_cached) const = 0; // Return if key is local cached yet invalid
 
-        // (1.5) Trigger cache placement for getrsp (ONLY for COVERED)
-
-        virtual bool tryToTriggerCachePlacementForGetrsp_(const Key& key, const Value& value, const CollectedPopularity& collected_popularity_after_fetch_value, const FastPathHint& fast_path_hint, const bool& is_global_cached, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const = 0; // Return if edge is finished
-
-        // (1.6) Trigger best-guess placement/replacement for getrsp & putrsp (ONLY for BestGuess)
-
-        virtual bool triggerBestGuessPlacement_(const Key& key, const Value& value, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const = 0; // Return if edge is finished
-
         // (2) Process write requests
 
         bool processLocalWriteRequest_(MessageBase* local_request_ptr, const NetworkAddr& recvrsp_dst_addr); // For put/del
@@ -172,12 +165,11 @@ namespace covered
         // Return if edge node is finished
         bool admitDirectory_(const Key& key, bool& is_being_written, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const; // Admit content directory information
 
-        // (4.3) Trigger non-blocking placement notification (ONLY for COVERED)
+        // (5) Cache-method-specific custom functions
 
-        // Return if edge node is finished
-        virtual bool tryToTriggerPlacementNotificationAfterHybridFetch_(const Key& key, const Value& value, const Edgeset& best_placement_edgeset, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const = 0;
+        virtual void constCustomFunc(const std::string& funcname, EdgeCustomFuncParamBase* func_param_ptr) const = 0;
 
-        // (5) Utility functions
+        // (6) Utility functions
 
         void checkPointers_() const;
 

@@ -4,6 +4,7 @@
 #include <sstream>
 
 #include "common/util.h"
+#include "edge/covered_edge_custom_func_param.h"
 #include "event/event.h"
 #include "event/event_list.h"
 #include "message/data_message.h"
@@ -261,8 +262,7 @@ namespace covered
                 }
             }
 
-            // Trigger non-blocking placement notification for the extra hybrid fetching result (ONLY for COVERED)
-            assert(edge_wrapper_ptr_->getCacheName() == Util::COVERED_CACHE_NAME);
+            // Trigger non-blocking placement notification for the extra hybrid fetching result
             edge_wrapper_ptr_->nonblockNotifyForPlacement(tmp_key, tmp_value, extra_placement_edgeset, skip_propagation_latency);
         }
 
@@ -464,9 +464,33 @@ namespace covered
         return false;
     }
 
-    // (4) Process redirected/global get response for non-blocking placement deployment (ONLY for COVERED)
+    // (5) Cache-method-specific custom functions
 
-    void CoveredBeaconServer::processRspToRedirectGetForPlacement_(MessageBase* redirected_get_response_ptr)
+    void CoveredBeaconServer::customFunc(const std::string& funcname, EdgeCustomFuncParamBase* func_param_ptr)
+    {
+        checkPointers_();
+        assert(func_param_ptr != NULL);
+
+        if (funcname == ProcessRspToRedirectGetForPlacementFuncParam::FUNCNAME)
+        {
+            ProcessRspToRedirectGetForPlacementFuncParam* tmp_param = static_cast<ProcessRspToRedirectGetForPlacementFuncParam*>(func_param_ptr);
+            processRspToRedirectGetForPlacementInternal_(tmp_param->getMessagePtr());
+        }
+        else if (funcname == ProcessRspToAccessCloudForPlacementFuncParam::FUNCNAME)
+        {
+            ProcessRspToAccessCloudForPlacementFuncParam* tmp_param = static_cast<ProcessRspToAccessCloudForPlacementFuncParam*>(func_param_ptr);
+            processRspToAccessCloudForPlacementInternal_(tmp_param->getMessagePtr());
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "Invalid funcname " << funcname << " for CoveredBeaconServer::customFunc()";
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
+    }
+
+    void CoveredBeaconServer::processRspToRedirectGetForPlacementInternal_(MessageBase* redirected_get_response_ptr)
     {
         checkPointers_();
         assert(redirected_get_response_ptr != NULL);
@@ -510,7 +534,7 @@ namespace covered
         return;
     }
 
-    void CoveredBeaconServer::processRspToAccessCloudForPlacement_(MessageBase* global_get_response_ptr)
+    void CoveredBeaconServer::processRspToAccessCloudForPlacementInternal_(MessageBase* global_get_response_ptr)
     {
         checkPointers_();
         assert(global_get_response_ptr != NULL);

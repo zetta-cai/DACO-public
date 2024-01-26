@@ -1,11 +1,11 @@
 /*
- * Different custom function parameters of BestGuess for cache module.
+ * Different custom function parameters of baselines for cache module.
  *
  * By Siyuan Sheng (2024.01.25).
  */
 
-#ifndef BESTGUESS_CACHE_CUSTOM_FUNC_PARAM_H
-#define BESTGUESS_CACHE_CUSTOM_FUNC_PARAM_H
+#ifndef BASIC_CACHE_CUSTOM_FUNC_PARAM_H
+#define BASIC_CACHE_CUSTOM_FUNC_PARAM_H
 
 #include <list>
 #include <string>
@@ -17,7 +17,7 @@
 
 namespace covered
 {
-    // GetLocalVictimVtimeFuncParam
+    // GetLocalVictimVtimeFuncParam for BestGuess
 
     class GetLocalVictimVtimeFuncParam : public CacheCustomFuncParamBase
     {
@@ -35,7 +35,7 @@ namespace covered
         uint64_t local_victim_vtime_;
     };
 
-    // UpdateNeighborVictimVtimeParam
+    // UpdateNeighborVictimVtimeParam for BestGuess
 
     class UpdateNeighborVictimVtimeParam : public CacheCustomFuncParamBase
     {
@@ -54,7 +54,7 @@ namespace covered
         const uint64_t neighbor_victim_vtime_;
     };
 
-    // GetPlacementEdgeIdxParam
+    // GetPlacementEdgeIdxParam for BestGuess
 
     class GetPlacementEdgeIdxParam : public CacheCustomFuncParamBase
     {
