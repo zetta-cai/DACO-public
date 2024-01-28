@@ -18,7 +18,7 @@
 #include <string>
 #include <vector>
 
-#include "cache/bestguess_cache_custom_func_param.h"
+#include "cache/basic_cache_custom_func_param.h"
 
 namespace covered
 {

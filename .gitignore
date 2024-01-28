@@ -1,20 +1,22 @@
+# NOTE: gitignore uses / instead of . to indicate the root directory of the git project
+
 .vscode
 .DS_Store
 *.tar.gz
 *.pyc
 *.bak
-output/*
-lib/*
-src/cache/segcache/build
-simulator
-total_statistics_loader
-dataset_loader
-client
-edge
-cloud
-evaluator
-cliutil
-#statistics_aggregator
+/output/*
+/lib/*
+/src/cache/segcache/build
+/simulator
+/total_statistics_loader
+/dataset_loader
+/client
+/edge
+/cloud
+/evaluator
+/cliutil
+#/statistics_aggregator
 
 # Prerequisites
 *.d

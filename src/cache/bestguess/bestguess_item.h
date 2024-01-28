@@ -19,6 +19,7 @@ namespace covered
     public:
         BestGuessItem();
         BestGuessItem(const Key& key, const Value& value, const uint64_t& vtime);
+        ~BestGuessItem();
 
         Key getKey() const;
         Value getValue() const;
