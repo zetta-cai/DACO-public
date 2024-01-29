@@ -23,7 +23,7 @@ namespace covered
     class FrozenhotLocalCache : public LocalCacheBase
     {
     public:
-        FrozenhotLocalCache(const EdgeWrapper* edge_wrapper_ptr, const uint32_t& edge_idx, const uint64_t& capacity_bytes);
+        FrozenhotLocalCache(const EdgeWrapperBase* edge_wrapper_ptr, const uint32_t& edge_idx, const uint64_t& capacity_bytes);
         virtual ~FrozenhotLocalCache();
 
         virtual const bool hasFineGrainedManagement() const;

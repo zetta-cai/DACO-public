@@ -25,7 +25,7 @@ namespace covered
     class GLCacheLocalCache : public LocalCacheBase
     {
     public:
-        GLCacheLocalCache(const EdgeWrapper* edge_wrapper_ptr, const uint32_t& edge_idx, const uint64_t& capacity_bytes);
+        GLCacheLocalCache(const EdgeWrapperBase* edge_wrapper_ptr, const uint32_t& edge_idx, const uint64_t& capacity_bytes);
         virtual ~GLCacheLocalCache();
 
         virtual const bool hasFineGrainedManagement() const;

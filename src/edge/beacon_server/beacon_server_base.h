@@ -24,7 +24,7 @@
 #include <string>
 
 #include "core/popularity/fast_path_hint.h"
-#include "edge/edge_wrapper.h"
+#include "edge/edge_wrapper_base.h"
 #include "edge/edge_custom_func_param_base.h"
 #include "message/message_base.h"
 #include "network/udp_msg_socket_server.h"
@@ -35,9 +35,9 @@ namespace covered
     {
     public:
         static void* launchBeaconServer(void* edge_wrapper_ptr);
-        static BeaconServerBase* getBeaconServerByCacheName(EdgeWrapper* edge_wrapper_ptr);
+        static BeaconServerBase* getBeaconServerByCacheName(EdgeWrapperBase* edge_wrapper_ptr);
 
-        BeaconServerBase(EdgeWrapper* edge_wrapper_ptr);
+        BeaconServerBase(EdgeWrapperBase* edge_wrapper_ptr);
         virtual ~BeaconServerBase();
 
         void start();
@@ -95,7 +95,7 @@ namespace covered
         // Member variables
 
         // Const variable
-        mutable EdgeWrapper* edge_wrapper_ptr_; // Mutable to update and load&reset beacon background counter
+        mutable EdgeWrapperBase* edge_wrapper_ptr_; // Mutable to update and load&reset beacon background counter
 
         // For receiving control requests
         NetworkAddr edge_beacon_server_recvreq_source_addr_; // The same as cache server worker to send control requests (const individual variable)

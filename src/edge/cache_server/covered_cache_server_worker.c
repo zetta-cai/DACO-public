@@ -40,7 +40,7 @@ namespace covered
     bool CoveredCacheServerWorker::lookupLocalDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
     {
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
         bool is_finish = false;
 
@@ -64,7 +64,7 @@ namespace covered
     bool CoveredCacheServerWorker::needLookupBeaconDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
     {
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
         CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
 
         bool need_lookup_beacon_directory = true;
@@ -108,7 +108,7 @@ namespace covered
     MessageBase* CoveredCacheServerWorker::getReqToLookupBeaconDirectory_(const Key& key, const bool& skip_propagation_latency) const
     {
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
         CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
         uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
 
@@ -133,7 +133,7 @@ namespace covered
     void CoveredCacheServerWorker::processRspToLookupBeaconDirectory_(MessageBase* control_response_ptr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, FastPathHint& fast_path_hint) const
     {
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
         CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
 
         assert(control_response_ptr != NULL);
@@ -208,7 +208,8 @@ namespace covered
         }
 
         // Victim synchronization
-        tmp_edge_wrapper_ptr->updateCacheManagerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset);
+        UpdateCacheManagerForNeighborVictimSyncsetFuncParam tmp_param(source_edge_idx, neighbor_victim_syncset);
+        tmp_edge_wrapper_ptr->constCustomFunc(UpdateCacheManagerForNeighborVictimSyncsetFuncParam::FUNCNAME, &tmp_param);
 
         // Update DirectoryCacher if necessary
         if (is_valid_directory_exist) // If with valid dirinfo
@@ -240,7 +241,7 @@ namespace covered
     MessageBase* CoveredCacheServerWorker::getReqToRedirectGet_(const uint32_t& dst_edge_idx_for_compression, const Key& key, const bool& skip_propagation_latency) const
     {
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
         CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
 
         // Prepare victim syncset for piggybacking-based victim synchronization
@@ -260,7 +261,7 @@ namespace covered
         assert(redirected_response_ptr->getMessageType() == MessageType::kCoveredRedirectedGetResponse);
 
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
         CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
 
         // Get value and hitflag from redirected response message
@@ -271,7 +272,8 @@ namespace covered
         // Victim synchronization
         const uint32_t source_edge_idx = covered_redirected_get_response_ptr->getSourceIndex();
         const VictimSyncset& neighbor_victim_syncset = covered_redirected_get_response_ptr->getVictimSyncsetRef();
-        tmp_edge_wrapper_ptr->updateCacheManagerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset);
+        UpdateCacheManagerForNeighborVictimSyncsetFuncParam tmp_param(source_edge_idx, neighbor_victim_syncset);
+        tmp_edge_wrapper_ptr->constCustomFunc(UpdateCacheManagerForNeighborVictimSyncsetFuncParam::FUNCNAME, &tmp_param);
 
         // Invalidate DirectoryCacher if necessary
         if (hitflag == Hitflag::kCooperativeInvalid || hitflag == Hitflag::kGlobalMiss) // Dirinfo is invalid
@@ -289,7 +291,7 @@ namespace covered
     bool CoveredCacheServerWorker::tryToUpdateInvalidLocalEdgeCache_(const Key& key, const Value& value, const bool& is_global_cached) const
     {
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
         CacheWrapper* tmp_edge_cache_ptr = tmp_edge_wrapper_ptr->getEdgeCachePtr();
 
         bool affect_victim_tracker = false; // If key was a local synced victim before or is a local synced victim now
@@ -304,7 +306,8 @@ namespace covered
         }
 
         // Avoid unnecessary VictimTracker update by checking affect_victim_tracker
-        tmp_edge_wrapper_ptr->updateCacheManagerForLocalSyncedVictims(affect_victim_tracker);
+        UpdateCacheManagerForLocalSyncedVictimsFuncParam tmp_param(affect_victim_tracker);
+        tmp_edge_wrapper_ptr->customFunc(UpdateCacheManagerForLocalSyncedVictimsFuncParam::FUNCNAME, &tmp_param);
         
         return is_local_cached_and_invalid;
     }
@@ -314,7 +317,7 @@ namespace covered
     bool CoveredCacheServerWorker::acquireLocalWritelock_(const Key& key, LockResult& lock_result, DirinfoSet& all_dirinfo, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency)
     {
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
         CooperationWrapperBase* tmp_cooperation_wrapper_ptr = tmp_edge_wrapper_ptr->getCooperationWrapperPtr();
 
         bool is_finish = false;
@@ -345,7 +348,7 @@ namespace covered
     MessageBase* CoveredCacheServerWorker::getReqToAcquireBeaconWritelock_(const Key& key, const bool& skip_propagation_latency) const
     {
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
         CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
         uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
 
@@ -377,7 +380,7 @@ namespace covered
         assert(control_response_ptr->getMessageType() == MessageType::kCoveredAcquireWritelockResponse);
 
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
         // Get result of acquiring write lock
         const CoveredAcquireWritelockResponse* const covered_acquire_writelock_response_ptr = static_cast<const CoveredAcquireWritelockResponse*>(control_response_ptr);
@@ -386,7 +389,8 @@ namespace covered
         // Victim synchronization
         const uint32_t source_edge_idx = covered_acquire_writelock_response_ptr->getSourceIndex();
         const VictimSyncset& neighbor_victim_syncset = covered_acquire_writelock_response_ptr->getVictimSyncsetRef();
-        tmp_edge_wrapper_ptr->updateCacheManagerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset);
+        UpdateCacheManagerForNeighborVictimSyncsetFuncParam tmp_param(source_edge_idx, neighbor_victim_syncset);
+        tmp_edge_wrapper_ptr->constCustomFunc(UpdateCacheManagerForNeighborVictimSyncsetFuncParam::FUNCNAME, &tmp_param);
 
         return;
     }
@@ -397,13 +401,14 @@ namespace covered
         assert(control_request_ptr->getMessageType() == MessageType::kCoveredFinishBlockRequest);
 
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
         // Victim synchronization
         const CoveredFinishBlockRequest* const covered_finish_block_request_ptr = static_cast<const CoveredFinishBlockRequest*>(control_request_ptr);
         const uint32_t source_edge_idx = covered_finish_block_request_ptr->getSourceIndex();
         const VictimSyncset& neighbor_victim_syncset = covered_finish_block_request_ptr->getVictimSyncsetRef();
-        tmp_edge_wrapper_ptr->updateCacheManagerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset);
+        UpdateCacheManagerForNeighborVictimSyncsetFuncParam tmp_param(source_edge_idx, neighbor_victim_syncset);
+        tmp_edge_wrapper_ptr->constCustomFunc(UpdateCacheManagerForNeighborVictimSyncsetFuncParam::FUNCNAME, &tmp_param);
 
         return;
     }
@@ -418,7 +423,7 @@ namespace covered
         const bool skip_propagation_latency = covered_finish_block_request_ptr->isSkipPropagationLatency();
 
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
         CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
 
         // Prepare victim syncset for piggybacking-based victim synchronization
@@ -436,13 +441,14 @@ namespace covered
     bool CoveredCacheServerWorker::updateLocalEdgeCache_(const Key& key, const Value& value, const bool& is_global_cached) const
     {
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
         bool affect_victim_tracker = false; // If key was a local synced victim before or is a local synced victim now
         bool is_local_cached_after_udpate = tmp_edge_wrapper_ptr->getEdgeCachePtr()->update(key, value, is_global_cached, affect_victim_tracker);
 
         // Avoid unnecessary VictimTracker update by checking affect_victim_tracker
-        tmp_edge_wrapper_ptr->updateCacheManagerForLocalSyncedVictims(affect_victim_tracker);
+        UpdateCacheManagerForLocalSyncedVictimsFuncParam tmp_param(affect_victim_tracker);
+        tmp_edge_wrapper_ptr->customFunc(UpdateCacheManagerForLocalSyncedVictimsFuncParam::FUNCNAME, &tmp_param);
 
         return is_local_cached_after_udpate;
     }
@@ -450,13 +456,14 @@ namespace covered
     bool CoveredCacheServerWorker::removeLocalEdgeCache_(const Key& key, const bool& is_global_cached) const
     {
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
         bool affect_victim_tracker = false; // If key was a local synced victim before or is a local synced victim now
         bool is_local_cached_after_remove = tmp_edge_wrapper_ptr->getEdgeCachePtr()->remove(key, is_global_cached, affect_victim_tracker);
 
         // Avoid unnecessary VictimTracker update by checking affect_victim_tracker
-        tmp_edge_wrapper_ptr->updateCacheManagerForLocalSyncedVictims(affect_victim_tracker);
+        UpdateCacheManagerForLocalSyncedVictimsFuncParam tmp_param(affect_victim_tracker);
+        tmp_edge_wrapper_ptr->customFunc(UpdateCacheManagerForLocalSyncedVictimsFuncParam::FUNCNAME, &tmp_param);
 
         return is_local_cached_after_remove;
     }
@@ -466,7 +473,7 @@ namespace covered
     bool CoveredCacheServerWorker::releaseLocalWritelock_(const Key& key, const Value& value, std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges, BandwidthUsage& total_bandwidth_usgae, EventList& event_list, const bool& skip_propagation_latency)
     {
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
         bool is_finish = false;
 
@@ -509,7 +516,7 @@ namespace covered
     MessageBase* CoveredCacheServerWorker::getReqToReleaseBeaconWritelock_(const Key& key, const bool& skip_propagation_latency) const
     {
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
         CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
         uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
 
@@ -573,10 +580,11 @@ namespace covered
 
         checkPointers_();
         CacheServer* tmp_cache_server_ptr = cache_server_worker_param_ptr_->getCacheServerPtr();
-        EdgeWrapper* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();
 
         // Victim synchronization
-        tmp_edge_wrapper_ptr->updateCacheManagerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset);
+        UpdateCacheManagerForNeighborVictimSyncsetFuncParam tmp_param(source_edge_idx, neighbor_victim_syncset);
+        tmp_edge_wrapper_ptr->constCustomFunc(UpdateCacheManagerForNeighborVictimSyncsetFuncParam::FUNCNAME, &tmp_param);
 
         // Do nothing for CoveredReleaseWritelockResponse, yet notify beacon for non-blocking placement notification for CoveredPlacementReleaseWritelockResponse after hybrid data fetching
         if (need_hybrid_fetching)
@@ -635,7 +643,7 @@ namespace covered
         assert(collected_popularity_after_fetch_value.isTracked()); // MUST be tracked (actually newly-tracked) after fetching value from neighbor/cloud
 
         CacheServer* tmp_cache_server_ptr = cache_server_worker_param_ptr_->getCacheServerPtr();
-        EdgeWrapper* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();
         CooperationWrapperBase* tmp_cooperation_wrapper_ptr = tmp_edge_wrapper_ptr->getCooperationWrapperPtr();
         CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
 
@@ -752,7 +760,7 @@ namespace covered
     {
         checkPointers_();
         CacheServer* tmp_cache_server_ptr = cache_server_worker_param_ptr_->getCacheServerPtr();
-        EdgeWrapper* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();
         assert(tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME);
 
         bool is_finish = false;

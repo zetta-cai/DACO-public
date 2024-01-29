@@ -17,7 +17,7 @@ namespace covered
     class S3fifoLocalCache : public LocalCacheBase
     {
     public:
-        S3fifoLocalCache(const EdgeWrapper* edge_wrapper_ptr, const uint32_t& edge_idx, const uint64_t& capacity_bytes);
+        S3fifoLocalCache(const EdgeWrapperBase* edge_wrapper_ptr, const uint32_t& edge_idx, const uint64_t& capacity_bytes);
         virtual ~S3fifoLocalCache();
 
         virtual const bool hasFineGrainedManagement() const;

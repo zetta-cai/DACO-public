@@ -358,7 +358,7 @@ namespace covered
 
     // For trade-off-aware placement calculation
     
-    DeltaReward VictimTracker::calcEvictionCost(const EdgeWrapper* edge_wrapper_ptr, const ObjectSize& object_size, const Edgeset& placement_edgeset, std::list<std::pair<uint32_t, std::list<Key>>>& placement_peredge_synced_victimset, std::list<std::pair<uint32_t, std::list<Key>>>& placement_peredge_fetched_victimset, Edgeset& victim_fetch_edgeset, const std::list<std::pair<uint32_t, std::list<VictimCacheinfo>>>& extra_peredge_victim_cacheinfos, const std::list<std::pair<Key, DirinfoSet>>& extra_perkey_victim_dirinfoset) const
+    DeltaReward VictimTracker::calcEvictionCost(const EdgeWrapperBase* edge_wrapper_ptr, const ObjectSize& object_size, const Edgeset& placement_edgeset, std::list<std::pair<uint32_t, std::list<Key>>>& placement_peredge_synced_victimset, std::list<std::pair<uint32_t, std::list<Key>>>& placement_peredge_fetched_victimset, Edgeset& victim_fetch_edgeset, const std::list<std::pair<uint32_t, std::list<VictimCacheinfo>>>& extra_peredge_victim_cacheinfos, const std::list<std::pair<Key, DirinfoSet>>& extra_perkey_victim_dirinfoset) const
     {
         checkPointers_();
 
@@ -461,7 +461,7 @@ namespace covered
 
     // For fast-path single-placement calculation in current edge node (NOT as a beacon node)
     
-    DeltaReward VictimTracker::calcEvictionCostForFastPathPlacement(const EdgeWrapper* edge_wrapper_ptr, const std::list<VictimCacheinfo>& curedge_local_cached_victim_cacheinfos, const std::list<std::pair<Key, DirinfoSet>>& curedge_local_beaconed_local_cached_victim_dirinfosets) const
+    DeltaReward VictimTracker::calcEvictionCostForFastPathPlacement(const EdgeWrapperBase* edge_wrapper_ptr, const std::list<VictimCacheinfo>& curedge_local_cached_victim_cacheinfos, const std::list<std::pair<Key, DirinfoSet>>& curedge_local_beaconed_local_cached_victim_dirinfosets) const
     {
         checkPointers_();
 

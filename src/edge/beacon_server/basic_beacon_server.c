@@ -14,7 +14,7 @@ namespace covered
 {
     const std::string BasicBeaconServer::kClassName("BasicBeaconServer");
 
-    BasicBeaconServer::BasicBeaconServer(EdgeWrapper* edge_wrapper_ptr) : BeaconServerBase(edge_wrapper_ptr)
+    BasicBeaconServer::BasicBeaconServer(EdgeWrapperBase* edge_wrapper_ptr) : BeaconServerBase(edge_wrapper_ptr)
     {
         assert(edge_wrapper_ptr_ != NULL);
         assert(edge_wrapper_ptr_->getCacheName() != Util::COVERED_CACHE_NAME);

@@ -40,7 +40,7 @@ namespace covered
 #include "core/victim/victim_cacheinfo.h"
 #include "core/victim/victim_syncset.h"
 #include "core/victim_tracker.h"
-#include "edge/edge_wrapper.h"
+#include "edge/edge_wrapper_base.h"
 #include "network/network_addr.h"
 #include "network/udp_msg_socket_server.h"
 
@@ -58,7 +58,7 @@ namespace covered
         // NOTE: sender_is_beacon indicates whether sender is cache server worker in beacon edge node to trigger local placement calculation, or sender is beacon server in beacon edge node to trigger placement calculation for remote requests; best_placement_edgeset is used for non-blocking placement notification if need hybrid data fetching; need_hybrid_fetching MUST be true under sender_is_beacon = true if with best placement yet local edge cache misses
         // NOTE: (for lazy victim fetching) edge_wrapper_ptr is used for issuing victim fetch requests; recvrsp_source_addr and recvrsp_socket_server_ptr are used for receiving victim fetch responses; bandwidth usage, event list, and skip propagation latency is used for victim fetch messages
         // NOTE: (for non-blocking placement deployment) edge_wrapper_ptr is used for issuing non-blocking data fetching and placement notification requests; recvrsp_source_addr and recvrsp_socket_server_ptr are NOT used due to background processing of local placement notification in current beacon edge node; skip propagation latency is used for all messages during non-blocking placement deployment (bandwidth usage and event list are ONLY used by foreground victim fetching instead of background non-blocking placement deployment)
-        bool updatePopularityAggregatorForAggregatedPopularity(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached, const bool& is_source_cached, const bool& need_placement_calculation, const bool& sender_is_beacon, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, const EdgeWrapper* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency, FastPathHint* fast_path_hint_ptr = NULL); // Return if edge node is finished
+        bool updatePopularityAggregatorForAggregatedPopularity(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached, const bool& is_source_cached, const bool& need_placement_calculation, const bool& sender_is_beacon, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, const EdgeWrapperBase* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency, FastPathHint* fast_path_hint_ptr = NULL); // Return if edge node is finished
         void clearPopularityAggregatorForPreservedEdgesetAfterAdmission(const Key& key, const uint32_t& source_edge_idx);
 
         // void assertNoLocalUncachedPopularity(const Key& key, const uint32_t& source_edge_idx) const;
@@ -81,7 +81,7 @@ namespace covered
 
         // For fast-path single-placement calculation in current edge node (NOT as a beacon node)
 
-        DeltaReward accessVictimTrackerForFastPathEvictionCost(const EdgeWrapper* edge_wrapper_ptr, const std::list<VictimCacheinfo>& curedge_local_cached_victim_cacheinfos, const std::list<std::pair<Key, DirinfoSet>>& curedge_local_beaconed_local_cached_victim_dirinfosets) const; // NOTE: ONLY consider a single placement of edge_idx_
+        DeltaReward accessVictimTrackerForFastPathEvictionCost(const EdgeWrapperBase* edge_wrapper_ptr, const std::list<VictimCacheinfo>& curedge_local_cached_victim_cacheinfos, const std::list<std::pair<Key, DirinfoSet>>& curedge_local_beaconed_local_cached_victim_dirinfosets) const; // NOTE: ONLY consider a single placement of edge_idx_
 
         uint64_t getSizeForCapacity() const;
     private:
@@ -91,12 +91,12 @@ namespace covered
 
         // Perform placement calculation only if key belongs to a global popular uncached object (i.e., with large enough max admission benefit)
         // NOTE: best_placement_edgeset is used for perserved edgeset and placement notifications; best_placement_peredge_synced_victimset is used for synced victim removal from victim tracker; best_placement_peredge_fetched_victimset is used for fetched victim removal from victim cache (all for non-blocking placement deployment)
-        bool placementCalculation_(const Key& key, const bool& is_global_cached, bool& has_best_placement, Edgeset& best_placement_edgeset, std::list<std::pair<uint32_t, std::list<Key>>>& best_placement_peredge_synced_victimset, std::list<std::pair<uint32_t, std::list<Key>>>& best_placement_peredge_fetched_victimset, const EdgeWrapper* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const; // has_best_placement indicates if the best placement exists (i.e., with positive placement gain) (return if edge node is finished)
+        bool placementCalculation_(const Key& key, const bool& is_global_cached, bool& has_best_placement, Edgeset& best_placement_edgeset, std::list<std::pair<uint32_t, std::list<Key>>>& best_placement_peredge_synced_victimset, std::list<std::pair<uint32_t, std::list<Key>>>& best_placement_peredge_fetched_victimset, const EdgeWrapperBase* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const; // has_best_placement indicates if the best placement exists (i.e., with positive placement gain) (return if edge node is finished)
 
         // For lazy victim fetching
-        bool parallelFetchVictims_(const ObjectSize& object_size, const Edgeset& best_placement_victim_fetch_edgeset, const EdgeWrapper* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency, std::list<std::pair<uint32_t, std::list<VictimCacheinfo>>>& extra_peredge_victim_cacheinfos, std::list<std::pair<Key, DirinfoSet>>& extra_perkey_victim_dirinfoset) const; // For each edge node index in victim fetch edgeset (return if edge node is finished)
-        void sendVictimFetchRequest_(const uint32_t& dst_edge_idx_for_compression, const ObjectSize& object_size, const EdgeWrapper* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, const NetworkAddr& edge_cache_server_recvreq_dst_addr, const bool& skip_propagation_latency) const;
-        void processVictimFetchResponse_(const MessageBase* control_response_ptr, const EdgeWrapper* edge_wrapper_ptr, std::list<std::pair<uint32_t, std::list<VictimCacheinfo>>>& extra_peredge_victim_cacheinfos, std::list<std::pair<Key, DirinfoSet>>& extra_perkey_victim_dirinfoset) const;
+        bool parallelFetchVictims_(const ObjectSize& object_size, const Edgeset& best_placement_victim_fetch_edgeset, const EdgeWrapperBase* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency, std::list<std::pair<uint32_t, std::list<VictimCacheinfo>>>& extra_peredge_victim_cacheinfos, std::list<std::pair<Key, DirinfoSet>>& extra_perkey_victim_dirinfoset) const; // For each edge node index in victim fetch edgeset (return if edge node is finished)
+        void sendVictimFetchRequest_(const uint32_t& dst_edge_idx_for_compression, const ObjectSize& object_size, const EdgeWrapperBase* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, const NetworkAddr& edge_cache_server_recvreq_dst_addr, const bool& skip_propagation_latency) const;
+        void processVictimFetchResponse_(const MessageBase* control_response_ptr, const EdgeWrapperBase* edge_wrapper_ptr, std::list<std::pair<uint32_t, std::list<VictimCacheinfo>>>& extra_peredge_victim_cacheinfos, std::list<std::pair<Key, DirinfoSet>>& extra_perkey_victim_dirinfoset) const;
 
         // Utility functions
         void checkPointers_() const;

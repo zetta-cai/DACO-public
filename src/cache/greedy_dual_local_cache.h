@@ -17,7 +17,7 @@ namespace covered
     class GreedyDualLocalCache : public LocalCacheBase
     {
     public:
-        GreedyDualLocalCache(const EdgeWrapper* edge_wrapper_ptr, const std::string& cache_name, const uint32_t& edge_idx, const uint64_t& capacity_bytes);
+        GreedyDualLocalCache(const EdgeWrapperBase* edge_wrapper_ptr, const std::string& cache_name, const uint32_t& edge_idx, const uint64_t& capacity_bytes);
         virtual ~GreedyDualLocalCache();
 
         virtual const bool hasFineGrainedManagement() const;

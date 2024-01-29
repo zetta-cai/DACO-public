@@ -3,6 +3,7 @@
 #include <assert.h>
 
 #include "common/config.h"
+#include "edge/covered_edge_custom_func_param.h"
 #include "message/data_message.h"
 
 namespace covered
@@ -39,7 +40,7 @@ namespace covered
     void CacheServerRedirectionProcessor::start()
     {
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_redirection_processor_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_redirection_processor_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
         bool is_finish = false; // Mark if edge node is finished
         while (tmp_edge_wrapper_ptr->isNodeRunning()) // edge_running_ is set as true by default
@@ -120,7 +121,7 @@ namespace covered
         const bool skip_propagation_latency = redirected_get_request_ptr->isSkipPropagationLatency();*/
 
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_redirection_processor_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_redirection_processor_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
         bool is_finish = false;
         BandwidthUsage total_bandwidth_usage;
@@ -185,7 +186,7 @@ namespace covered
         assert(redirected_request_ptr != NULL);
 
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_redirection_processor_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_redirection_processor_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
         const bool is_redirected = true;
         if (tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME) // ONLY for COVERED
@@ -222,7 +223,8 @@ namespace covered
             is_cooperative_cached = tmp_edge_wrapper_ptr->getEdgeCachePtr()->isLocalCached(tmp_key);
 
             // Victim synchronization
-            tmp_edge_wrapper_ptr->updateCacheManagerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset);
+            UpdateCacheManagerForNeighborVictimSyncsetFuncParam tmp_param(source_edge_idx, neighbor_victim_syncset);
+            tmp_edge_wrapper_ptr->constCustomFunc(UpdateCacheManagerForNeighborVictimSyncsetFuncParam::FUNCNAME, &tmp_param);
         }
         else // Baselines
         {
@@ -246,7 +248,7 @@ namespace covered
 
         checkPointers_();
         CacheServer* tmp_cache_server_ptr = cache_server_redirection_processor_param_ptr_->getCacheServerPtr();
-        EdgeWrapper* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();
         uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
         NetworkAddr edge_cache_server_recvreq_source_addr = tmp_cache_server_ptr->getEdgeCacheServerRecvreqPublicSourceAddr(); // NOTE: cross-edge communication for request redirection uses public IP address
 

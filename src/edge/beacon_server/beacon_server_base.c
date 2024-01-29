@@ -31,7 +31,7 @@ namespace covered
         return NULL;
     }
 
-    BeaconServerBase* BeaconServerBase::getBeaconServerByCacheName(EdgeWrapper* edge_wrapper_ptr)
+    BeaconServerBase* BeaconServerBase::getBeaconServerByCacheName(EdgeWrapperBase* edge_wrapper_ptr)
     {
         BeaconServerBase* beacon_server_ptr = NULL;
 
@@ -50,7 +50,7 @@ namespace covered
         return beacon_server_ptr;
     }
 
-    BeaconServerBase::BeaconServerBase(EdgeWrapper* edge_wrapper_ptr) : edge_wrapper_ptr_(edge_wrapper_ptr)
+    BeaconServerBase::BeaconServerBase(EdgeWrapperBase* edge_wrapper_ptr) : edge_wrapper_ptr_(edge_wrapper_ptr)
     {
         assert(edge_wrapper_ptr != NULL);
         const uint32_t edge_idx = edge_wrapper_ptr->getNodeIdx();

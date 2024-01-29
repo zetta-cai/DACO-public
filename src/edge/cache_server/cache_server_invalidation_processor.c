@@ -40,7 +40,7 @@ namespace covered
     void CacheServerInvalidationProcessor::start()
     {
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_invalidation_processor_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_invalidation_processor_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
         bool is_finish = false; // Mark if edge node is finished
         while (tmp_edge_wrapper_ptr->isNodeRunning()) // edge_running_ is set as true by default
@@ -92,7 +92,7 @@ namespace covered
 
         checkPointers_();
         CacheServer* tmp_cache_server_ptr = cache_server_invalidation_processor_param_ptr_->getCacheServerPtr();
-        EdgeWrapper* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();
 
         bool is_finish = false;
         BandwidthUsage total_bandwidth_usage;
@@ -129,7 +129,7 @@ namespace covered
     {
         checkPointers_();
         CacheServer* tmp_cache_server_ptr = cache_server_invalidation_processor_param_ptr_->getCacheServerPtr();
-        EdgeWrapper* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();
         CacheWrapper* tmp_cache_wrapper_ptr = tmp_edge_wrapper_ptr->getEdgeCachePtr();
 
         // Get key from request message
@@ -169,7 +169,8 @@ namespace covered
         //     // Victim synchronization
         //     const CoveredInvalidationRequest* const covered_invalidation_request_ptr = static_cast<const CoveredInvalidationRequest*>(control_request_ptr);
         //     const VictimSyncset& neighbor_victim_syncset = covered_invalidation_request_ptr->getVictimSyncsetRef();
-        //     tmp_edge_wrapper_ptr->updateCacheManagerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset);
+        //     UpdateCacheManagerForNeighborVictimSyncsetFuncParam tmp_param(source_edge_idx, neighbor_victim_syncset);
+        //     edge_wrapper_ptr_->constCustomFunc(UpdateCacheManagerForNeighborVictimSyncsetFuncParam::FUNCNAME, &tmp_param);
         // }
 
         return;
@@ -179,7 +180,7 @@ namespace covered
     {
         checkPointers_();
         CacheServer* tmp_cache_server_ptr = cache_server_invalidation_processor_param_ptr_->getCacheServerPtr();
-        EdgeWrapper* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();
         //CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
         const uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
         NetworkAddr edge_cache_server_recvreq_source_addr = tmp_cache_server_ptr->getEdgeCacheServerRecvreqPublicSourceAddr(); // NOTE: cross-edge communication for cache invalidation uses public IP address

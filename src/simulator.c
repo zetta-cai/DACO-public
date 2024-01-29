@@ -20,7 +20,7 @@
 #include "common/thread_launcher.h"
 #include "common/util.h"
 #include "cloud/cloud_wrapper.h"
-#include "edge/edge_wrapper.h"
+#include "edge/edge_wrapper_base.h"
 #include "benchmark/evaluator_wrapper.h"
 #include "statistics/client_statistics_tracker.h"
 

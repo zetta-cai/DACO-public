@@ -19,7 +19,7 @@
 #include "common/covered_common_header.h"
 #include "common/key.h"
 #include "common/value.h"
-#include "edge/edge_wrapper.h"
+#include "edge/edge_wrapper_base.h"
 
 namespace covered
 {
@@ -77,13 +77,13 @@ namespace covered
 
         // For newly-admited/tracked keys
         // NOTE: for admission and getrsp/put/delreq w/ miss, intialize and update object-/group-level metadata (both value-unrelated and value-related) for newly admitted cached key or currently tracked uncached key
-        bool addForNewKey(const EdgeWrapper* edge_wrapper_ptr, const Key& key, const Value& value, const uint32_t& peredge_synced_victimcnt, const bool& is_global_cached, const bool& is_neighbor_cached); // Return if affect local synced victims in victim tracker (always return false for local uncached metadata)
+        bool addForNewKey(const EdgeWrapperBase* edge_wrapper_ptr, const Key& key, const Value& value, const uint32_t& peredge_synced_victimcnt, const bool& is_global_cached, const bool& is_neighbor_cached); // Return if affect local synced victims in victim tracker (always return false for local uncached metadata)
 
         // For existing key
         // NOTE: for get/put/delreq w/ hit/miss, update object-/group-level value-unrelated metadata for existing key (i.e., already admitted/tracked objects for local cached/uncached)
-        bool updateNoValueStatsForExistingKey(const EdgeWrapper* edge_wrapper_ptr, const Key& key, const uint32_t& peredge_synced_victimcnt, const bool& is_redirected, const bool& is_global_cached); // Return if affect local synced victims in victim tracker (always return false for local uncached metadata)
+        bool updateNoValueStatsForExistingKey(const EdgeWrapperBase* edge_wrapper_ptr, const Key& key, const uint32_t& peredge_synced_victimcnt, const bool& is_redirected, const bool& is_global_cached); // Return if affect local synced victims in victim tracker (always return false for local uncached metadata)
         // NOTE: for put/delreq w/ hit/miss and getrsp w/ invalid-hit, update object-/group-level value-related metadata for existing key (i.e., already admitted/tracked objects for local cached/uncached)
-        bool updateValueStatsForExistingKey(const EdgeWrapper* edge_wrapper_ptr, const Key& key, const Value& value, const Value& original_value, const uint32_t& peredge_synced_victimcnt); // Return if affect local synced victims in victim tracker (always return false for local uncached metadata)
+        bool updateValueStatsForExistingKey(const EdgeWrapperBase* edge_wrapper_ptr, const Key& key, const Value& value, const Value& original_value, const uint32_t& peredge_synced_victimcnt); // Return if affect local synced victims in victim tracker (always return false for local uncached metadata)
         void removeForExistingKey(const Key& detracked_key, const Value& value); // Remove admitted cached key or tracked uncached key (for getrsp with cache miss, put/delrsp with cache miss, admission, eviction)
 
         // For object size
@@ -144,7 +144,7 @@ namespace covered
         void removePergroupMetadata_(const perkey_lookup_table_iter_t& perkey_lookup_iter, const Key& key, const Value& value);
 
         // For reward information
-        virtual Reward calculateReward_(const EdgeWrapper* edge_wrapper_ptr, perkey_metadata_list_iter_t perkey_metadata_list_iter) const = 0; // NOTE: ONLY local cached metadata needs redirected_popularity for local cached objects
+        virtual Reward calculateReward_(const EdgeWrapperBase* edge_wrapper_ptr, perkey_metadata_list_iter_t perkey_metadata_list_iter) const = 0; // NOTE: ONLY local cached metadata needs redirected_popularity for local cached objects
         sorted_reward_multimap_t::iterator addReward_(const Reward& new_reward, const perkey_lookup_table_iter_t& perkey_lookup_iter); // Return new sorted reward iterator
         void removeReward_(const perkey_lookup_table_iter_t& perkey_lookup_iter);
 

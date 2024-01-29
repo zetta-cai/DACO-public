@@ -17,7 +17,7 @@ namespace covered
     class SlruLocalCache : public LocalCacheBase
     {
     public:
-        SlruLocalCache(const EdgeWrapper* edge_wrapper_ptr, const uint32_t& edge_idx, const uint64_t& capacity_bytes);
+        SlruLocalCache(const EdgeWrapperBase* edge_wrapper_ptr, const uint32_t& edge_idx, const uint64_t& capacity_bytes);
         virtual ~SlruLocalCache();
 
         virtual const bool hasFineGrainedManagement() const;

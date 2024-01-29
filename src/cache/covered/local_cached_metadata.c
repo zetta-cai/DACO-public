@@ -98,7 +98,7 @@ namespace covered
 
     // For reward information
 
-    Reward LocalCachedMetadata::calculateReward_(const EdgeWrapper* edge_wrapper_ptr, perkey_metadata_list_t::iterator perkey_metadata_list_iter) const
+    Reward LocalCachedMetadata::calculateReward_(const EdgeWrapperBase* edge_wrapper_ptr, perkey_metadata_list_t::iterator perkey_metadata_list_iter) const
     {
         // Get local/redirected cached popularity
         const Popularity local_cached_popularity = perkey_metadata_list_iter->second.getLocalPopularity();

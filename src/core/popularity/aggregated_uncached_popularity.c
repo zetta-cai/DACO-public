@@ -135,7 +135,7 @@ namespace covered
         return (exist_edgecnt_ == 0);
     }
 
-    DeltaReward AggregatedUncachedPopularity::calcMaxAdmissionBenefit(const EdgeWrapper* edge_wrapper_ptr, const bool& is_global_cached) const
+    DeltaReward AggregatedUncachedPopularity::calcMaxAdmissionBenefit(const EdgeWrapperBase* edge_wrapper_ptr, const bool& is_global_cached) const
     {
         Edgeset placement_edgeset;
         DeltaReward max_admission_benefit = calcAdmissionBenefit(edge_wrapper_ptr, topk_edgeidx_local_uncached_popularity_pairs_.size(), is_global_cached, placement_edgeset);
@@ -144,7 +144,7 @@ namespace covered
         return max_admission_benefit;
     }
 
-    DeltaReward AggregatedUncachedPopularity::calcAdmissionBenefit(const EdgeWrapper* edge_wrapper_ptr, const uint32_t& topicnt, const bool& is_global_cached, Edgeset& placement_edgeset) const
+    DeltaReward AggregatedUncachedPopularity::calcAdmissionBenefit(const EdgeWrapperBase* edge_wrapper_ptr, const uint32_t& topicnt, const bool& is_global_cached, Edgeset& placement_edgeset) const
     {
         // TODO: Use a heuristic or learning-based approach for parameter tuning to calculate delta rewards for max admission benefits (refer to state-of-the-art studies such as LRB and GL-Cache)
 

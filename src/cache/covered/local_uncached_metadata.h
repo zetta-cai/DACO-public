@@ -24,7 +24,7 @@ namespace covered
 
         // For existig key
         bool isGlobalCachedForExistingKey(const Key& key) const;
-        void updateIsGlobalCachedForExistingKey(const EdgeWrapper* edge_wrapper_ptr, const Key& key, const bool& is_getrsp, const bool& is_global_cached); // NOTE: ONLY for getrsp (put/delreq will update is_global_cached when update value-unrelated metadata)
+        void updateIsGlobalCachedForExistingKey(const EdgeWrapperBase* edge_wrapper_ptr, const Key& key, const bool& is_getrsp, const bool& is_global_cached); // NOTE: ONLY for getrsp (put/delreq will update is_global_cached when update value-unrelated metadata)
 
         // For popularity information
         virtual void getPopularity(const Key& key, Popularity& local_popularity, Popularity& redirected_popularity) const override; // Local uncached metadata NOT set redirected_popularity
@@ -44,7 +44,7 @@ namespace covered
         virtual void calculateAndUpdatePopularity_(perkey_metadata_list_t::iterator& perkey_metadata_iter, const HomoKeyLevelMetadata& key_level_metadata_ref, const GroupLevelMetadata& group_level_metadata_ref) override; // Calculate local uncached popularity based on object-level metadata for local misses and group-level metadata for all requests
 
         // For reward information
-        virtual Reward calculateReward_(const EdgeWrapper* edge_wrapper_ptr, perkey_metadata_list_t::iterator perkey_metadata_iter) const override;
+        virtual Reward calculateReward_(const EdgeWrapperBase* edge_wrapper_ptr, perkey_metadata_list_t::iterator perkey_metadata_iter) const override;
 
         // ONLY for local uncached metadata
         bool needDetrackForUncachedObjects_(Key& detracked_key) const; // Check if need to detrack the least popular key for local uncached object

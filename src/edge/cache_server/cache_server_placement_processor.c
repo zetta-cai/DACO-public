@@ -3,6 +3,7 @@
 #include <assert.h>
 
 #include "common/config.h"
+#include "edge/covered_edge_custom_func_param.h"
 #include "message/control_message.h"
 
 namespace covered
@@ -59,7 +60,7 @@ namespace covered
     void CacheServerPlacementProcessor::start()
     {
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_placement_processor_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_placement_processor_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
         bool is_finish = false; // Mark if edge node is finished
         while (tmp_edge_wrapper_ptr->isNodeRunning()) // edge_running_ is set as true by default
@@ -121,7 +122,7 @@ namespace covered
 
         checkPointers_();
         CacheServer* tmp_cache_server_ptr = cache_server_placement_processor_param_ptr_->getCacheServerPtr();
-        EdgeWrapper* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();
         // CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
 
         bool is_finish = false;
@@ -145,7 +146,8 @@ namespace covered
         // Victim synchronization
         const uint32_t source_edge_idx = covered_placement_notify_request_ptr->getSourceIndex();
         const VictimSyncset& neighbor_victim_syncset = covered_placement_notify_request_ptr->getVictimSyncsetRef();
-        tmp_edge_wrapper_ptr->updateCacheManagerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset);
+        UpdateCacheManagerForNeighborVictimSyncsetFuncParam tmp_param(source_edge_idx, neighbor_victim_syncset);
+        tmp_edge_wrapper_ptr->constCustomFunc(UpdateCacheManagerForNeighborVictimSyncsetFuncParam::FUNCNAME, &tmp_param);
 
         // Issue directory update request with is_admit = true
         // NOTE: remote beacon edge node sends remote placement notification to notify the current edge node for edge cache admission, so we should use current edge index for directory admission instead of source edge index
@@ -190,7 +192,7 @@ namespace covered
     {
         checkPointers_();
         CacheServer* tmp_cache_server_ptr = cache_server_placement_processor_param_ptr_->getCacheServerPtr();
-        EdgeWrapper* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();
 
         bool is_finish = false;
         BandwidthUsage total_bandwidth_usage;

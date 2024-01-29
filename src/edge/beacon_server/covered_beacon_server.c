@@ -15,7 +15,7 @@ namespace covered
 {
     const std::string CoveredBeaconServer::kClassName("CoveredBeaconServer");
 
-    CoveredBeaconServer::CoveredBeaconServer(EdgeWrapper* edge_wrapper_ptr) : BeaconServerBase(edge_wrapper_ptr)
+    CoveredBeaconServer::CoveredBeaconServer(EdgeWrapperBase* edge_wrapper_ptr) : BeaconServerBase(edge_wrapper_ptr)
     {
         assert(edge_wrapper_ptr_ != NULL);
         assert(edge_wrapper_ptr_->getCacheName() == Util::COVERED_CACHE_NAME);
@@ -54,7 +54,8 @@ namespace covered
 
         // Victim synchronization
         const VictimSyncset& neighbor_victim_syncset = covered_directory_lookup_request_ptr->getVictimSyncsetRef();
-        edge_wrapper_ptr_->updateCacheManagerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset);
+        UpdateCacheManagerForNeighborVictimSyncsetFuncParam tmp_param(source_edge_idx, neighbor_victim_syncset);
+        edge_wrapper_ptr_->constCustomFunc(UpdateCacheManagerForNeighborVictimSyncsetFuncParam::FUNCNAME, &tmp_param);
 
         // Selective popularity aggregation after remote directory lookup
         const CollectedPopularity& collected_popularity = covered_directory_lookup_request_ptr->getCollectedPopularityRef();
@@ -206,7 +207,8 @@ namespace covered
         // CoveredCacheManager* covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
 
         // Victim synchronization
-        edge_wrapper_ptr_->updateCacheManagerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset);
+        UpdateCacheManagerForNeighborVictimSyncsetFuncParam tmp_param(source_edge_idx, neighbor_victim_syncset);
+        edge_wrapper_ptr_->constCustomFunc(UpdateCacheManagerForNeighborVictimSyncsetFuncParam::FUNCNAME, &tmp_param);
 
         if (is_directory_update) // Update directory information
         {
@@ -361,7 +363,8 @@ namespace covered
 
         // Victim synchronization
         const VictimSyncset& neighbor_victim_syncset = covered_acquire_writelock_request_ptr->getVictimSyncsetRef();
-        edge_wrapper_ptr_->updateCacheManagerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset);
+        UpdateCacheManagerForNeighborVictimSyncsetFuncParam tmp_param(source_edge_idx, neighbor_victim_syncset);
+        edge_wrapper_ptr_->constCustomFunc(UpdateCacheManagerForNeighborVictimSyncsetFuncParam::FUNCNAME, &tmp_param);
 
         // Selective popularity aggregation after remote acquire writelock
         const CollectedPopularity& collected_popularity = covered_acquire_writelock_request_ptr->getCollectedPopularityRef();
@@ -415,7 +418,8 @@ namespace covered
 
         // Victim synchronization
         const VictimSyncset& neighbor_victim_syncset = covered_release_writelock_request_ptr->getVictimSyncsetRef();
-        edge_wrapper_ptr_->updateCacheManagerForNeighborVictimSyncset(sender_edge_idx, neighbor_victim_syncset);
+        UpdateCacheManagerForNeighborVictimSyncsetFuncParam tmp_param(sender_edge_idx, neighbor_victim_syncset);
+        edge_wrapper_ptr_->constCustomFunc(UpdateCacheManagerForNeighborVictimSyncsetFuncParam::FUNCNAME, &tmp_param);
 
         // Selective popularity aggregation after remote release writelock
         const CollectedPopularity& collected_popularity = covered_release_writelock_request_ptr->getCollectedPopularityRef();
@@ -503,7 +507,8 @@ namespace covered
         // Victim synchronization
         const uint32_t sender_edge_idx = covered_placement_redirected_get_response_ptr->getSourceIndex();
         const VictimSyncset& neighbor_victim_syncset = covered_placement_redirected_get_response_ptr->getVictimSyncsetRef();
-        edge_wrapper_ptr_->updateCacheManagerForNeighborVictimSyncset(sender_edge_idx, neighbor_victim_syncset);
+        UpdateCacheManagerForNeighborVictimSyncsetFuncParam tmp_param(sender_edge_idx, neighbor_victim_syncset);
+        edge_wrapper_ptr_->constCustomFunc(UpdateCacheManagerForNeighborVictimSyncsetFuncParam::FUNCNAME, &tmp_param);
 
         // Get background eventlist and bandwidth usage to update background counter for beacon server
         const EventList& background_event_list = covered_placement_redirected_get_response_ptr->getEventListRef();

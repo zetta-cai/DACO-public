@@ -4,6 +4,7 @@
 
 #include "common/kv_list_helper_impl.h"
 #include "cooperation/covered_cooperation_custom_func_param.h"
+#include "edge/covered_edge_custom_func_param.h"
 #include "message/control_message.h"
 
 namespace covered
@@ -39,7 +40,7 @@ namespace covered
 
     // For popularity aggregation
 
-    bool CoveredCacheManager::updatePopularityAggregatorForAggregatedPopularity(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached, const bool& is_source_cached, const bool& need_placement_calculation, const bool& sender_is_beacon, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, const EdgeWrapper* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency, FastPathHint* fast_path_hint_ptr)
+    bool CoveredCacheManager::updatePopularityAggregatorForAggregatedPopularity(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached, const bool& is_source_cached, const bool& need_placement_calculation, const bool& sender_is_beacon, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, const EdgeWrapperBase* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency, FastPathHint* fast_path_hint_ptr)
     {
         checkPointers_();
         assert(edge_wrapper_ptr != NULL);
@@ -117,7 +118,8 @@ namespace covered
                     UNUSED(best_placement_peredge_fetched_victimset);
 
                     // Non-blocking data fetching if with best placement
-                    edge_wrapper_ptr->nonblockDataFetchForPlacement(key, best_placement_edgeset, skip_propagation_latency, sender_is_beacon, need_hybrid_fetching);
+                    NonblockDataFetchForPlacementFuncParam tmp_param(key, best_placement_edgeset, skip_propagation_latency, sender_is_beacon, need_hybrid_fetching);
+                    edge_wrapper_ptr->constCustomFunc(NonblockDataFetchForPlacementFuncParam::FUNCNAME, &tmp_param);
                 }
             }
         }
@@ -240,7 +242,7 @@ namespace covered
 
     // For fast-path single-placement calculation in current edge node (NOT as a beacon node)
 
-    DeltaReward CoveredCacheManager::accessVictimTrackerForFastPathEvictionCost(const EdgeWrapper* edge_wrapper_ptr, const std::list<VictimCacheinfo>& curedge_local_cached_victim_cacheinfos, const std::list<std::pair<Key, DirinfoSet>>& curedge_local_beaconed_local_cached_victim_dirinfosets) const
+    DeltaReward CoveredCacheManager::accessVictimTrackerForFastPathEvictionCost(const EdgeWrapperBase* edge_wrapper_ptr, const std::list<VictimCacheinfo>& curedge_local_cached_victim_cacheinfos, const std::list<std::pair<Key, DirinfoSet>>& curedge_local_beaconed_local_cached_victim_dirinfosets) const
     {
         checkPointers_();
 
@@ -260,7 +262,7 @@ namespace covered
         return total_size;
     }
 
-    bool CoveredCacheManager::placementCalculation_(const Key& key, const bool& is_global_cached, bool& has_best_placement, Edgeset& best_placement_edgeset, std::list<std::pair<uint32_t, std::list<Key>>>& best_placement_peredge_synced_victimset, std::list<std::pair<uint32_t, std::list<Key>>>& best_placement_peredge_fetched_victimset, const EdgeWrapper* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
+    bool CoveredCacheManager::placementCalculation_(const Key& key, const bool& is_global_cached, bool& has_best_placement, Edgeset& best_placement_edgeset, std::list<std::pair<uint32_t, std::list<Key>>>& best_placement_peredge_synced_victimset, std::list<std::pair<uint32_t, std::list<Key>>>& best_placement_peredge_fetched_victimset, const EdgeWrapperBase* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
     {
         bool is_finish = false;
         has_best_placement = false;
@@ -384,7 +386,7 @@ namespace covered
         return is_finish;
     }
 
-    bool CoveredCacheManager::parallelFetchVictims_(const ObjectSize& object_size, const Edgeset& best_placement_victim_fetch_edgeset, const EdgeWrapper* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency, std::list<std::pair<uint32_t, std::list<VictimCacheinfo>>>& extra_peredge_victim_cacheinfos, std::list<std::pair<Key, DirinfoSet>>& extra_perkey_victim_dirinfoset) const
+    bool CoveredCacheManager::parallelFetchVictims_(const ObjectSize& object_size, const Edgeset& best_placement_victim_fetch_edgeset, const EdgeWrapperBase* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency, std::list<std::pair<uint32_t, std::list<VictimCacheinfo>>>& extra_peredge_victim_cacheinfos, std::list<std::pair<Key, DirinfoSet>>& extra_perkey_victim_dirinfoset) const
     {
         const uint32_t victim_fetch_edgecnt = best_placement_victim_fetch_edgeset.size();
         assert(victim_fetch_edgecnt > 0); // At least one edge node for victim fetching
@@ -537,7 +539,7 @@ namespace covered
         return is_finish;
     }
 
-    void CoveredCacheManager::sendVictimFetchRequest_(const uint32_t& dst_edge_idx_for_compression, const ObjectSize& object_size, const EdgeWrapper* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, const NetworkAddr& edge_cache_server_recvreq_dst_addr, const bool& skip_propagation_latency) const
+    void CoveredCacheManager::sendVictimFetchRequest_(const uint32_t& dst_edge_idx_for_compression, const ObjectSize& object_size, const EdgeWrapperBase* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, const NetworkAddr& edge_cache_server_recvreq_dst_addr, const bool& skip_propagation_latency) const
     {
         assert(edge_wrapper_ptr != NULL);
 
@@ -561,7 +563,7 @@ namespace covered
         return;
     }
 
-    void CoveredCacheManager::processVictimFetchResponse_(const MessageBase* control_response_ptr, const EdgeWrapper* edge_wrapper_ptr, std::list<std::pair<uint32_t, std::list<VictimCacheinfo>>>& extra_peredge_victim_cacheinfos, std::list<std::pair<Key, DirinfoSet>>& extra_perkey_victim_dirinfoset) const
+    void CoveredCacheManager::processVictimFetchResponse_(const MessageBase* control_response_ptr, const EdgeWrapperBase* edge_wrapper_ptr, std::list<std::pair<uint32_t, std::list<VictimCacheinfo>>>& extra_peredge_victim_cacheinfos, std::list<std::pair<Key, DirinfoSet>>& extra_perkey_victim_dirinfoset) const
     {
         assert(control_response_ptr != NULL);
         assert(control_response_ptr->getMessageType() == MessageType::kCoveredVictimFetchResponse);

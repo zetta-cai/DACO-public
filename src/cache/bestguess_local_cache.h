@@ -34,7 +34,7 @@ namespace covered
     class BestGuessLocalCache : public LocalCacheBase
     {
     public:
-        BestGuessLocalCache(const EdgeWrapper* edge_wrapper_ptr, const uint32_t& edge_idx, const uint64_t& capacity_bytes);
+        BestGuessLocalCache(const EdgeWrapperBase* edge_wrapper_ptr, const uint32_t& edge_idx, const uint64_t& capacity_bytes);
         virtual ~BestGuessLocalCache();
 
         virtual const bool hasFineGrainedManagement() const;

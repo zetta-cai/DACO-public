@@ -17,7 +17,7 @@ namespace covered
     class SieveLocalCache : public LocalCacheBase
     {
     public:
-        SieveLocalCache(const EdgeWrapper* edge_wrapper_ptr, const uint32_t& edge_idx, const uint64_t& capacity_bytes);
+        SieveLocalCache(const EdgeWrapperBase* edge_wrapper_ptr, const uint32_t& edge_idx, const uint64_t& capacity_bytes);
         virtual ~SieveLocalCache();
 
         virtual const bool hasFineGrainedManagement() const;

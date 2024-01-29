@@ -110,7 +110,7 @@ namespace covered
     // For newly-admited/tracked keys
 
     template<class T>
-    bool CacheMetadataBase<T>::addForNewKey(const EdgeWrapper* edge_wrapper_ptr, const Key& key, const Value& value, const uint32_t& peredge_synced_victimcnt, const bool& is_global_cached, const bool& is_neighbor_cached)
+    bool CacheMetadataBase<T>::addForNewKey(const EdgeWrapperBase* edge_wrapper_ptr, const Key& key, const Value& value, const uint32_t& peredge_synced_victimcnt, const bool& is_global_cached, const bool& is_neighbor_cached)
     {
         bool affect_victim_tracker = false;
 
@@ -144,7 +144,7 @@ namespace covered
     // For existing key
 
     template<class T>
-    bool CacheMetadataBase<T>::updateNoValueStatsForExistingKey(const EdgeWrapper* edge_wrapper_ptr, const Key& key, const uint32_t& peredge_synced_victimcnt, const bool& is_redirected, const bool& is_global_cached)
+    bool CacheMetadataBase<T>::updateNoValueStatsForExistingKey(const EdgeWrapperBase* edge_wrapper_ptr, const Key& key, const uint32_t& peredge_synced_victimcnt, const bool& is_redirected, const bool& is_global_cached)
     {
         // Get lookup iterator
         perkey_lookup_table_iter_t perkey_lookup_iter = getLookup_(key);
@@ -177,7 +177,7 @@ namespace covered
     }
 
     template<class T>
-    bool CacheMetadataBase<T>::updateValueStatsForExistingKey(const EdgeWrapper* edge_wrapper_ptr, const Key& key, const Value& value, const Value& original_value, const uint32_t& peredge_synced_victimcnt)
+    bool CacheMetadataBase<T>::updateValueStatsForExistingKey(const EdgeWrapperBase* edge_wrapper_ptr, const Key& key, const Value& value, const Value& original_value, const uint32_t& peredge_synced_victimcnt)
     {
         // NOTE: NOT update object-/group-level value-unrelated metadata, which has been done in updateNoValueStatsForExistingKey()
 

@@ -26,7 +26,7 @@ namespace covered
 {
     const std::string LocalCacheBase::kClassName("LocalCacheBase");
 
-    LocalCacheBase* LocalCacheBase::getLocalCacheByCacheName(const EdgeWrapper* edge_wrapper_ptr, const std::string& cache_name, const uint32_t& edge_idx, const uint64_t& capacity_bytes, const uint64_t& local_uncached_capacity_bytes, const uint32_t& peredge_synced_victimcnt)
+    LocalCacheBase* LocalCacheBase::getLocalCacheByCacheName(const EdgeWrapperBase* edge_wrapper_ptr, const std::string& cache_name, const uint32_t& edge_idx, const uint64_t& capacity_bytes, const uint64_t& local_uncached_capacity_bytes, const uint32_t& peredge_synced_victimcnt)
     {
         LocalCacheBase* local_cache_ptr = NULL;
         if (cache_name == Util::ARC_CACHE_NAME)
@@ -109,7 +109,7 @@ namespace covered
         return local_cache_ptr;
     }
 
-    LocalCacheBase::LocalCacheBase(const EdgeWrapper* edge_wrapper_ptr, const uint32_t& edge_idx, const uint64_t& capacity_bytes) : capacity_bytes_(capacity_bytes), edge_wrapper_ptr_(edge_wrapper_ptr)
+    LocalCacheBase::LocalCacheBase(const EdgeWrapperBase* edge_wrapper_ptr, const uint32_t& edge_idx, const uint64_t& capacity_bytes) : capacity_bytes_(capacity_bytes), edge_wrapper_ptr_(edge_wrapper_ptr)
     {
         // Differentiate local edge cache in different edge nodes
         std::ostringstream oss;

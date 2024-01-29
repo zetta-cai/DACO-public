@@ -54,7 +54,7 @@ namespace covered
         return homo_key_level_metadata.isGlobalCached();
     }
 
-    void LocalUncachedMetadata::updateIsGlobalCachedForExistingKey(const EdgeWrapper* edge_wrapper_ptr, const Key& key, const bool& is_getrsp, const bool& is_global_cached)
+    void LocalUncachedMetadata::updateIsGlobalCachedForExistingKey(const EdgeWrapperBase* edge_wrapper_ptr, const Key& key, const bool& is_getrsp, const bool& is_global_cached)
     {
         assert(is_getrsp == true);
 
@@ -117,7 +117,7 @@ namespace covered
     }
 
     // For reward information
-    Reward LocalUncachedMetadata::calculateReward_(const EdgeWrapper* edge_wrapper_ptr, perkey_metadata_list_t::iterator perkey_metadata_list_iter) const
+    Reward LocalUncachedMetadata::calculateReward_(const EdgeWrapperBase* edge_wrapper_ptr, perkey_metadata_list_t::iterator perkey_metadata_list_iter) const
     {
         // Get local uncached popularity
         const Popularity local_uncached_popularity = perkey_metadata_list_iter->second.getLocalPopularity();

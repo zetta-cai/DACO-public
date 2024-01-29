@@ -2,7 +2,9 @@
 
 namespace covered
 {
-    // ProcessRspToRedirectGetForPlacementFuncParam for edge beacon server
+    // (1) For edge beacon server
+
+    // ProcessRspToRedirectGetForPlacementFuncParam
 
     const std::string ProcessRspToRedirectGetForPlacementFuncParam::kClassName("ProcessRspToRedirectGetForPlacementFuncParam");
 
@@ -21,7 +23,7 @@ namespace covered
         return message_ptr_;
     }
 
-    // ProcessRspToAccessCloudForPlacementFuncParam for edge beacon server
+    // ProcessRspToAccessCloudForPlacementFuncParam
 
     const std::string ProcessRspToAccessCloudForPlacementFuncParam::kClassName("ProcessRspToAccessCloudForPlacementFuncParam");
 
@@ -40,7 +42,9 @@ namespace covered
         return message_ptr_;
     }
 
-    // TryToTriggerCachePlacementForGetrspFuncParam for edge cache server
+    // (2) For edge cache server
+
+    // TryToTriggerCachePlacementForGetrspFuncParam
 
     const std::string TryToTriggerCachePlacementForGetrspFuncParam::kClassName("TryToTriggerCachePlacementForGetrspFuncParam");
 
@@ -105,7 +109,7 @@ namespace covered
         return;
     }
 
-    // TryToTriggerPlacementNotificationAfterHybridFetchFuncParam for edge cache server
+    // TryToTriggerPlacementNotificationAfterHybridFetchFuncParam
 
     const std::string TryToTriggerPlacementNotificationAfterHybridFetchFuncParam::kClassName("TryToTriggerPlacementNotificationAfterHybridFetchFuncParam");
 
@@ -158,5 +162,80 @@ namespace covered
     {
         is_finish_ = is_finish;
         return;
+    }
+
+    // (3) For edge wrapper
+
+    // UpdateCacheManagerForLocalSyncedVictimsFuncParam
+
+    const std::string UpdateCacheManagerForLocalSyncedVictimsFuncParam::kClassName("UpdateCacheManagerForLocalSyncedVictimsFuncParam");
+
+    const std::string UpdateCacheManagerForLocalSyncedVictimsFuncParam::FUNCNAME("update_cache_manager_for_local_synced_victims");
+
+    UpdateCacheManagerForLocalSyncedVictimsFuncParam::UpdateCacheManagerForLocalSyncedVictimsFuncParam(const bool& affect_victim_tracker) : EdgeCustomFuncParamBase(), affect_victim_tracker_(affect_victim_tracker)
+    {
+    }
+
+    UpdateCacheManagerForLocalSyncedVictimsFuncParam::~UpdateCacheManagerForLocalSyncedVictimsFuncParam()
+    {}
+
+    bool UpdateCacheManagerForLocalSyncedVictimsFuncParam::isAffectVictimTracker() const
+    {
+        return affect_victim_tracker_;
+    }
+
+    // UpdateCacheManagerForNeighborVictimSyncsetFuncParam
+
+    const std::string UpdateCacheManagerForNeighborVictimSyncsetFuncParam::kClassName("UpdateCacheManagerForNeighborVictimSyncsetFuncParam");
+
+    const std::string UpdateCacheManagerForNeighborVictimSyncsetFuncParam::FUNCNAME("update_cache_manager_for_neighbor_victim_syncset");
+
+    UpdateCacheManagerForNeighborVictimSyncsetFuncParam::UpdateCacheManagerForNeighborVictimSyncsetFuncParam(const uint32_t& source_edge_idx, const VictimSyncset& neighbor_victim_syncset) : EdgeCustomFuncParamBase(), source_edge_idx_(source_edge_idx), victim_syncset_const_ref_(neighbor_victim_syncset)
+    {
+    }
+
+    uint32_t UpdateCacheManagerForNeighborVictimSyncsetFuncParam::getSourceEdgeIdx() const
+    {
+        return source_edge_idx_;
+    }
+
+    const VictimSyncset& UpdateCacheManagerForNeighborVictimSyncsetFuncParam::getVictimSyncsetConstRef() const
+    {
+        return victim_syncset_const_ref_;
+    }
+
+    // NonblockDataFetchForPlacementFuncParam
+
+    const std::string NonblockDataFetchForPlacementFuncParam::kClassName("NonblockDataFetchForPlacementFuncParam");
+
+    const std::string NonblockDataFetchForPlacementFuncParam::FUNCNAME("nonblock_data_fetch_for_placement");
+
+    NonblockDataFetchForPlacementFuncParam::NonblockDataFetchForPlacementFuncParam(const Key& key, const Edgeset& best_placement_edgeset, const bool& skip_propagation_latency, const bool& sender_is_beacon, bool& need_hybrid_fetching) : EdgeCustomFuncParamBase(), key_const_ref_(key), best_placement_edgeset_const_ref_(best_placement_edgeset), skip_propagation_latency_(skip_propagation_latency), sender_is_beacon_(sender_is_beacon), need_hybrid_fetching_ref_(need_hybrid_fetching)
+    {
+    }
+
+    const Key& NonblockDataFetchForPlacementFuncParam::getKeyConstRef() const
+    {
+        return key_const_ref_;
+    }
+
+    const Edgeset& NonblockDataFetchForPlacementFuncParam::getBestPlacementEdgesetConstRef() const
+    {
+        return best_placement_edgeset_const_ref_;
+    }
+
+    bool NonblockDataFetchForPlacementFuncParam::isSkipPropagationLatency() const
+    {
+        return skip_propagation_latency_;
+    }
+
+    bool NonblockDataFetchForPlacementFuncParam::isSenderBeacon() const
+    {
+        return sender_is_beacon_;
+    }
+
+    bool& NonblockDataFetchForPlacementFuncParam::getNeedHybridFetchingRef() const
+    {
+        return need_hybrid_fetching_ref_;
     }
 }

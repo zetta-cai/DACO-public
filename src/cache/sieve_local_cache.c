@@ -9,7 +9,7 @@ namespace covered
 {
     const std::string SieveLocalCache::kClassName("SieveLocalCache");
 
-    SieveLocalCache::SieveLocalCache(const EdgeWrapper* edge_wrapper_ptr, const uint32_t& edge_idx, const uint64_t& capacity_bytes) : LocalCacheBase(edge_wrapper_ptr, edge_idx, capacity_bytes)
+    SieveLocalCache::SieveLocalCache(const EdgeWrapperBase* edge_wrapper_ptr, const uint32_t& edge_idx, const uint64_t& capacity_bytes) : LocalCacheBase(edge_wrapper_ptr, edge_idx, capacity_bytes)
     {
         // Differentiate local edge cache in different edge nodes
         std::ostringstream oss;

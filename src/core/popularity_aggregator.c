@@ -74,7 +74,7 @@ namespace covered
         return is_being_admitted;
     }
 
-    void PopularityAggregator::updateAggregatedUncachedPopularity(const EdgeWrapper* edge_wrapper_ptr, const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached, const bool& is_source_cached, FastPathHint& fast_path_hint)
+    void PopularityAggregator::updateAggregatedUncachedPopularity(const EdgeWrapperBase* edge_wrapper_ptr, const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached, const bool& is_source_cached, FastPathHint& fast_path_hint)
     {
         checkPointers_();
 
@@ -210,7 +210,7 @@ namespace covered
         return;
     }
 
-    void PopularityAggregator::updatePreservedEdgesetForPlacement(const EdgeWrapper* edge_wrapper_ptr, const Key& key, const Edgeset& placement_edgeset, const bool& is_global_cached)
+    void PopularityAggregator::updatePreservedEdgesetForPlacement(const EdgeWrapperBase* edge_wrapper_ptr, const Key& key, const Edgeset& placement_edgeset, const bool& is_global_cached)
     {
         checkPointers_();
 
@@ -324,7 +324,7 @@ namespace covered
         return is_found;
     }
 
-    void PopularityAggregator::addAggregatedUncachedPopularityForNewKey_(const EdgeWrapper* edge_wrapper_ptr, const Key& key, const uint32_t& source_edge_idx, const Popularity& local_uncached_popularity, const ObjectSize& object_size, const bool& is_global_cached)
+    void PopularityAggregator::addAggregatedUncachedPopularityForNewKey_(const EdgeWrapperBase* edge_wrapper_ptr, const Key& key, const uint32_t& source_edge_idx, const Popularity& local_uncached_popularity, const ObjectSize& object_size, const bool& is_global_cached)
     {
         // NOTE: we have already acquired a write lock in updateAggregatedUncachedPopularity() for thread safety
 
@@ -338,7 +338,7 @@ namespace covered
         return;
     }
 
-    bool PopularityAggregator::updateAggregatedUncachedPopularityForExistingKey_(const EdgeWrapper* edge_wrapper_ptr, const Key& key, const uint32_t& source_edge_idx, const bool& is_tracked_by_source_edge_node, const Popularity& local_uncached_popularity, const ObjectSize& object_size, const bool& is_global_cached)
+    bool PopularityAggregator::updateAggregatedUncachedPopularityForExistingKey_(const EdgeWrapperBase* edge_wrapper_ptr, const Key& key, const uint32_t& source_edge_idx, const bool& is_tracked_by_source_edge_node, const Popularity& local_uncached_popularity, const ObjectSize& object_size, const bool& is_global_cached)
     {
         // NOTE: we have already acquired a write lock in updateAggregatedUncachedPopularity() for thread safety
 
@@ -368,7 +368,7 @@ namespace covered
         return is_successful;
     }
 
-    void PopularityAggregator::addBenefitPopularityForNewKey_(const EdgeWrapper* edge_wrapper_ptr, const Key& key, const AggregatedUncachedPopularity& new_aggregated_uncached_popularity, const bool& is_global_cached)
+    void PopularityAggregator::addBenefitPopularityForNewKey_(const EdgeWrapperBase* edge_wrapper_ptr, const Key& key, const AggregatedUncachedPopularity& new_aggregated_uncached_popularity, const bool& is_global_cached)
     {
         // NOTE: we have already acquired a write lock in updateAggregatedUncachedPopularity() for thread safety
 
@@ -391,7 +391,7 @@ namespace covered
         return;
     }
 
-    void PopularityAggregator::updateBenefitPopularityForExistingKey_(const EdgeWrapper* edge_wrapper_ptr, const Key& key, const AggregatedUncachedPopularity& updated_aggregated_uncached_popularity, const bool& is_aggregated_uncached_popularity_empty, const bool& is_global_cached)
+    void PopularityAggregator::updateBenefitPopularityForExistingKey_(const EdgeWrapperBase* edge_wrapper_ptr, const Key& key, const AggregatedUncachedPopularity& updated_aggregated_uncached_popularity, const bool& is_aggregated_uncached_popularity_empty, const bool& is_global_cached)
     {
         // NOTE: we have already acquired a write lock in updatePreservedEdgesetForPlacement() and updateAggregatedUncachedPopularityForExistingKey_() (from updateAggregatedUncachedPopularity()) for thread safety
         

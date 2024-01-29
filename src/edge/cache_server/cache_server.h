@@ -26,7 +26,7 @@ namespace covered
 #include "concurrency/rwlock.h"
 #include "edge/cache_server/cache_server_processor_param.h"
 #include "edge/cache_server/cache_server_worker_param.h"
-#include "edge/edge_wrapper.h"
+#include "edge/edge_wrapper_base.h"
 #include "hash/hash_wrapper_base.h"
 #include "network/udp_msg_socket_server.h"
 
@@ -37,12 +37,12 @@ namespace covered
     public:
         static void* launchCacheServer(void* edge_wrapper_ptr);
 
-        CacheServer(EdgeWrapper* edge_wrapper_ptr);
+        CacheServer(EdgeWrapperBase* edge_wrapper_ptr);
         ~CacheServer();
 
         void start();
 
-        EdgeWrapper* getEdgeWrapperPtr() const;
+        EdgeWrapperBase* getEdgeWrapperPtr() const;
         NetworkAddr getEdgeCacheServerRecvreqPrivateSourceAddr() const;
         NetworkAddr getEdgeCacheServerRecvreqPublicSourceAddr() const;
 
@@ -78,7 +78,7 @@ namespace covered
 
         // Const shared variable
         std::string instance_name_;
-        EdgeWrapper* edge_wrapper_ptr_;
+        EdgeWrapperBase* edge_wrapper_ptr_;
         HashWrapperBase* hash_wrapper_ptr_;
 
         // Non-const individual variable

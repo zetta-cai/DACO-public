@@ -9,7 +9,7 @@ namespace covered
 {
     const std::string BestGuessLocalCache::kClassName("BestGuessLocalCache");
 
-    BestGuessLocalCache::BestGuessLocalCache(const EdgeWrapper* edge_wrapper_ptr, const uint32_t& edge_idx, const uint64_t& capacity_bytes) : LocalCacheBase(edge_wrapper_ptr, edge_idx, capacity_bytes), edge_idx_(edge_idx)
+    BestGuessLocalCache::BestGuessLocalCache(const EdgeWrapperBase* edge_wrapper_ptr, const uint32_t& edge_idx, const uint64_t& capacity_bytes) : LocalCacheBase(edge_wrapper_ptr, edge_idx, capacity_bytes), edge_idx_(edge_idx)
     {
         // (A) Const variable
 

@@ -27,16 +27,16 @@ namespace covered
 #include "concurrency/rwlock.h"
 #include "core/popularity/collected_popularity.h"
 #include "core/victim/victim_cacheinfo.h"
-#include "edge/edge_wrapper.h"
+#include "edge/edge_wrapper_base.h"
 
 namespace covered
 {
     class LocalCacheBase
     {
     public:
-        static LocalCacheBase* getLocalCacheByCacheName(const EdgeWrapper* edge_wrapper_ptr, const std::string& cache_name, const uint32_t& edge_idx, const uint64_t& capacity_bytes, const uint64_t& local_uncached_capacity_bytes, const uint32_t& peredge_synced_victimcnt);
+        static LocalCacheBase* getLocalCacheByCacheName(const EdgeWrapperBase* edge_wrapper_ptr, const std::string& cache_name, const uint32_t& edge_idx, const uint64_t& capacity_bytes, const uint64_t& local_uncached_capacity_bytes, const uint32_t& peredge_synced_victimcnt);
 
-        LocalCacheBase(const EdgeWrapper* edge_wrapper_ptr, const uint32_t& edge_idx, const uint64_t& capacity_bytes);
+        LocalCacheBase(const EdgeWrapperBase* edge_wrapper_ptr, const uint32_t& edge_idx, const uint64_t& capacity_bytes);
         virtual ~LocalCacheBase();
 
         // (1) Check is cached and access validity
@@ -79,7 +79,7 @@ namespace covered
         virtual const bool hasFineGrainedManagement() const = 0; // Whether the local edge cache supports key-level (i.e., object-level) fine-grained cache management
     protected:
         const uint64_t capacity_bytes_; // Const variables
-        const EdgeWrapper* edge_wrapper_ptr_; // ONLY use weight info for local reward calculation
+        const EdgeWrapperBase* edge_wrapper_ptr_; // ONLY use weight info for local reward calculation
 
         // (4) Other functions
 

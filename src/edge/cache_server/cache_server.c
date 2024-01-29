@@ -7,6 +7,7 @@
 #include "common/config.h"
 #include "common/thread_launcher.h"
 #include "common/util.h"
+#include "edge/covered_edge_custom_func_param.h"
 #include "edge/cache_server/cache_server_invalidation_processor.h"
 #include "edge/cache_server/cache_server_metadata_update_processor.h"
 #include "edge/cache_server/cache_server_placement_processor.h"
@@ -37,7 +38,7 @@ namespace covered
         return NULL;
     }
 
-    CacheServer::CacheServer(EdgeWrapper* edge_wrapper_ptr) : edge_wrapper_ptr_(edge_wrapper_ptr)
+    CacheServer::CacheServer(EdgeWrapperBase* edge_wrapper_ptr) : edge_wrapper_ptr_(edge_wrapper_ptr)
     {
         assert(edge_wrapper_ptr != NULL);
         uint32_t edge_idx = edge_wrapper_ptr->getNodeIdx();
@@ -331,7 +332,7 @@ namespace covered
         return;
     }
 
-    EdgeWrapper* CacheServer::getEdgeWrapperPtr() const
+    EdgeWrapperBase* CacheServer::getEdgeWrapperPtr() const
     {
         assert(edge_wrapper_ptr_ != NULL);
         return edge_wrapper_ptr_;
@@ -470,7 +471,8 @@ namespace covered
         if (edge_wrapper_ptr_->getCacheName() == Util::COVERED_CACHE_NAME) // ONLY for COVERED
         {
             // Avoid unnecessary VictimTracker update by checking affect_victim_tracker
-            edge_wrapper_ptr_->updateCacheManagerForLocalSyncedVictims(affect_victim_tracker);
+            UpdateCacheManagerForLocalSyncedVictimsFuncParam tmp_param(affect_victim_tracker);
+            edge_wrapper_ptr_->constCustomFunc(UpdateCacheManagerForLocalSyncedVictimsFuncParam::FUNCNAME, &tmp_param);
 
             // Remove existing cached directory if any as key is local cached, while we ONLY cache valid remote dirinfo for local uncached objects
             edge_wrapper_ptr_->getCoveredCacheManagerPtr()->updateDirectoryCacherToRemoveCachedDirectory(key);
@@ -639,7 +641,8 @@ namespace covered
             }
 
             // Victim synchronization
-            edge_wrapper_ptr_->updateCacheManagerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset);
+            UpdateCacheManagerForNeighborVictimSyncsetFuncParam tmp_param(source_edge_idx, neighbor_victim_syncset);
+            edge_wrapper_ptr_->constCustomFunc(UpdateCacheManagerForNeighborVictimSyncsetFuncParam::FUNCNAME, &tmp_param);
         }
         else // Baselines
         {
@@ -738,7 +741,8 @@ namespace covered
         {
             // NOTE: eviction MUST affect victim tracker due to evicting objects with least local rewards (i.e., local synced victims)
             const bool affect_victim_tracker = true;
-            edge_wrapper_ptr_->updateCacheManagerForLocalSyncedVictims(affect_victim_tracker);
+            UpdateCacheManagerForLocalSyncedVictimsFuncParam tmp_param(affect_victim_tracker);
+            edge_wrapper_ptr_->constCustomFunc(UpdateCacheManagerForLocalSyncedVictimsFuncParam::FUNCNAME, &tmp_param);
         }
 
         return;
@@ -1002,7 +1006,8 @@ namespace covered
             const uint32_t source_edge_idx = directory_update_response_ptr->getSourceIndex();
             const VictimSyncset& neighbor_victim_syncset = 
             directory_update_response_ptr->getVictimSyncsetRef();
-            edge_wrapper_ptr_->updateCacheManagerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset);
+            UpdateCacheManagerForNeighborVictimSyncsetFuncParam tmp_param(source_edge_idx, neighbor_victim_syncset);
+            edge_wrapper_ptr_->constCustomFunc(UpdateCacheManagerForNeighborVictimSyncsetFuncParam::FUNCNAME, &tmp_param);
             
             if (!is_background) // Foreground remote directory eviction (triggered by invalid/valid value update by local get/put and independent admission)
             {
@@ -1198,7 +1203,8 @@ namespace covered
 
                 // Victim synchronization
                 const uint32_t beacon_edge_idx = control_response_ptr->getSourceIndex();
-                edge_wrapper_ptr_->updateCacheManagerForNeighborVictimSyncset(beacon_edge_idx, received_beacon_victim_syncset);
+                UpdateCacheManagerForNeighborVictimSyncsetFuncParam tmp_param(beacon_edge_idx, received_beacon_victim_syncset);
+                edge_wrapper_ptr_->constCustomFunc(UpdateCacheManagerForNeighborVictimSyncsetFuncParam::FUNCNAME, &tmp_param);
 
                 // Update total bandwidth usage for received control response (directory update after hybrid fetching)
                 BandwidthUsage control_response_bandwidth_usage = control_response_ptr->getBandwidthUsageRef();

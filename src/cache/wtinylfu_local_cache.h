@@ -17,7 +17,7 @@ namespace covered
     class WTinylfuLocalCache : public LocalCacheBase
     {
     public:
-        WTinylfuLocalCache(const EdgeWrapper* edge_wrapper_ptr, const uint32_t& edge_idx, const uint64_t& capacity_bytes);
+        WTinylfuLocalCache(const EdgeWrapperBase* edge_wrapper_ptr, const uint32_t& edge_idx, const uint64_t& capacity_bytes);
         virtual ~WTinylfuLocalCache();
 
         virtual const bool hasFineGrainedManagement() const;

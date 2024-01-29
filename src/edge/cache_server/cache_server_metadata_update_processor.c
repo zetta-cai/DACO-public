@@ -40,7 +40,7 @@ namespace covered
     void CacheServerMetadataUpdateProcessor::start()
     {
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_metadata_update_processor_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_metadata_update_processor_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
         bool is_finish = false; // Mark if edge node is finished
         while (tmp_edge_wrapper_ptr->isNodeRunning()) // edge_running_ is set as true by default
@@ -92,7 +92,7 @@ namespace covered
 
         checkPointers_();
         CacheServer* tmp_cache_server_ptr = cache_server_metadata_update_processor_param_ptr_->getCacheServerPtr();
-        EdgeWrapper* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();
         // CooperationWrapperBase* tmp_cooperation_wrapper_ptr = tmp_edge_wrapper_ptr->getCooperationWrapperPtr();
         // CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
 
@@ -112,7 +112,8 @@ namespace covered
         // // Victim synchronization
         // const uint32_t source_edge_idx = covered_metadata_update_request_ptr->getSourceIndex();
         // const VictimSyncset& neighbor_victim_syncset = covered_metadata_update_request_ptr->getVictimSyncsetRef();
-        // tmp_edge_wrapper_ptr->updateCacheManagerForNeighborVictimSyncset(source_edge_idx, neighbor_victim_syncset);
+        // UpdateCacheManagerForNeighborVictimSyncsetFuncParam tmp_param(source_edge_idx, neighbor_victim_syncset);
+        // edge_wrapper_ptr_->constCustomFunc(UpdateCacheManagerForNeighborVictimSyncsetFuncParam::FUNCNAME, &tmp_param);
 
         // Update is_neighbor_cached flag in local cached metadata
         const bool is_neighbor_cached = covered_metadata_update_request_ptr->isNeighborCached();

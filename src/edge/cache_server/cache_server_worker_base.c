@@ -119,7 +119,7 @@ namespace covered
     void CacheServerWorkerBase::start()
     {
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
         bool is_finish = false; // Mark if edge node is finished
         while (tmp_edge_wrapper_ptr->isNodeRunning()) // edge_running_ is set as true by default
@@ -211,7 +211,7 @@ namespace covered
 
         checkPointers_();
         CacheServer* tmp_cache_server_ptr = cache_server_worker_param_ptr_->getCacheServerPtr();
-        EdgeWrapper* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();
 
         bool is_finish = false; // Mark if edge node is finished
         Hitflag hitflag = Hitflag::kGlobalMiss;
@@ -423,7 +423,7 @@ namespace covered
     bool CacheServerWorkerBase::fetchDataFromNeighbor_(const Key& key, Value& value, bool& is_cooperative_cached, bool& is_cooperative_valid, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, FastPathHint& fast_path_hint, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
     {
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
         bool is_finish = false;
 
@@ -577,7 +577,7 @@ namespace covered
     bool CacheServerWorkerBase::lookupBeaconDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, FastPathHint& fast_path_hint, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
     {
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
         // The current edge node must NOT be the beacon node for the key
         bool current_is_beacon = tmp_edge_wrapper_ptr->currentIsBeacon(key);
@@ -672,7 +672,7 @@ namespace covered
     bool CacheServerWorkerBase::redirectGetToTarget_(const DirectoryInfo& directory_info, const Key& key, Value& value, bool& is_cooperative_cached, bool& is_valid, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
     {
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
         bool is_finish = false;
         struct timespec issue_redirect_get_req_start_timestamp = Util::getCurrentTimespec(); // Count timeout
@@ -792,7 +792,7 @@ namespace covered
     bool CacheServerWorkerBase::fetchDataFromCloud_(const Key& key, Value& value, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
     {
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
         bool is_finish = false; // Mark if edge node is finished
         struct timespec issue_global_get_req_start_timestamp = Util::getCurrentTimespec(); // Count timeout
@@ -923,7 +923,7 @@ namespace covered
         
         checkPointers_();
         CacheServer* tmp_cache_server_ptr = cache_server_worker_param_ptr_->getCacheServerPtr();
-        EdgeWrapper* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();
 
         bool is_finish = false; // Mark if edge node is finished
         const Hitflag hitflag = Hitflag::kGlobalMiss; // Must be global miss due to write-through policy
@@ -1054,7 +1054,7 @@ namespace covered
     bool CacheServerWorkerBase::acquireWritelock_(const Key& key, LockResult& lock_result, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency)
     {
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
         bool is_finish = false;
         struct timespec acquire_local_or_remote_writelock_start_timestamp = Util::getCurrentTimespec();
@@ -1132,7 +1132,7 @@ namespace covered
     bool CacheServerWorkerBase::acquireBeaconWritelock_(const Key& key, LockResult& lock_result, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency)
     {
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
         // The current edge node must NOT be the beacon node for the key
         bool current_is_beacon = tmp_edge_wrapper_ptr->currentIsBeacon(key);
@@ -1211,7 +1211,7 @@ namespace covered
     bool CacheServerWorkerBase::blockForWritesByInterruption_(const Key& key, EventList& event_list, const bool& skip_propagation_latency) const
     {
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
         // Closest edge node must NOT be the beacon node if with interruption
         bool current_is_beacon = tmp_edge_wrapper_ptr->currentIsBeacon(key);
@@ -1327,7 +1327,7 @@ namespace covered
     bool CacheServerWorkerBase::writeDataToCloud_(const Key& key, const Value& value, const MessageType& message_type, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency)
     {        
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
         bool is_finish = false; // Mark if edge node is finished
         struct timespec issue_global_write_req_start_timestamp = Util::getCurrentTimespec();
@@ -1417,7 +1417,7 @@ namespace covered
     bool CacheServerWorkerBase::releaseWritelock_(const Key& key, const Value& value, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency)
     {
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
         bool is_finish = false;
         struct timespec release_local_or_remote_writelock_start_timestamp = Util::getCurrentTimespec();
@@ -1465,7 +1465,7 @@ namespace covered
     bool CacheServerWorkerBase::releaseBeaconWritelock_(const Key& key, const Value& value, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency)
     {
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
         // The current edge node must NOT be the beacon node for the key
         bool current_is_beacon = tmp_edge_wrapper_ptr->currentIsBeacon(key);
@@ -1554,7 +1554,7 @@ namespace covered
     bool CacheServerWorkerBase::tryToTriggerIndependentAdmission_(const Key& key, const Value& value, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
     {
         checkPointers_();
-        EdgeWrapper* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
         CacheWrapper* local_edge_cache_ptr = tmp_edge_wrapper_ptr->getEdgeCachePtr();
 
         bool is_finish = false;
@@ -1612,7 +1612,7 @@ namespace covered
     {
         checkPointers_();
         CacheServer* tmp_cache_server_ptr = cache_server_worker_param_ptr_->getCacheServerPtr();
-        EdgeWrapper* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();
 
         bool is_finish = false;
         struct timespec update_directory_start_timestamp = Util::getCurrentTimespec();

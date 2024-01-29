@@ -9,7 +9,7 @@
 #include "cli/edge_cli.h"
 #include "common/config.h"
 #include "common/thread_launcher.h"
-#include "edge/edge_wrapper.h"
+#include "edge/edge_wrapper_base.h"
 
 int main(int argc, char **argv) {
     // (1) Parse and process edge CLI parameters

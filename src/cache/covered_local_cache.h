@@ -43,7 +43,7 @@ namespace covered
     class CoveredLocalCache : public LocalCacheBase
     {
     public:
-        CoveredLocalCache(const EdgeWrapper* edge_wrapper_ptr, const uint32_t& edge_idx, const uint64_t& capacity_bytes, const uint64_t& local_uncached_capacity_bytes, const uint32_t& peredge_synced_victimcnt);
+        CoveredLocalCache(const EdgeWrapperBase* edge_wrapper_ptr, const uint32_t& edge_idx, const uint64_t& capacity_bytes, const uint64_t& local_uncached_capacity_bytes, const uint32_t& peredge_synced_victimcnt);
         virtual ~CoveredLocalCache();
 
         virtual const bool hasFineGrainedManagement() const;
