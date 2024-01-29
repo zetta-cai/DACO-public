@@ -3,6 +3,7 @@
 #include <assert.h>
 
 #include "common/util.h"
+#include "edge/covered_edge_custom_func_param.h"
 
 namespace covered
 {
@@ -124,7 +125,9 @@ namespace covered
         const bool is_global_cached = perkey_metadata_list_iter->second.isGlobalCached();
 
         // Calculte local reward (i.e., min admission benefit, as the local edge node does NOT know cache miss status of all other edge nodes and conservatively treat it as a local single placement)
-        Reward local_reward = edge_wrapper_ptr->calcLocalUncachedReward(local_uncached_popularity, is_global_cached);
+        CalcLocalUncachedRewardFuncParam tmp_param(local_uncached_popularity, is_global_cached);
+        edge_wrapper_ptr->constCustomFunc(CalcLocalUncachedRewardFuncParam::FUNCNAME, &tmp_param);
+        Reward local_reward = tmp_param.getReward();
 
         return local_reward;
     }

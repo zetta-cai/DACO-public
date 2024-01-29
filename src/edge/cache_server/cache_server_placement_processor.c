@@ -199,9 +199,9 @@ namespace covered
         EventList event_list;
         const bool is_background = true;
 
-        // NOTE: NO need victim synchronization here (local placement notification from cache server worker (local beacon node) or beacon server (remote beacon node) has NO directory update request&response and hence NO victim synchronization -> see EdgeWrapper::nonblockNotifyForPlacement(); cache server worker (sender node) has finished victim synchronization when notifying results of hybrid data fetching to beacon node -> see CacheServerWorkerBase::notifyBeaconForPlacementAfterHybridFetch_())
+        // NOTE: NO need victim synchronization here (local placement notification from cache server worker (local beacon node) or beacon server (remote beacon node) has NO directory update request&response and hence NO victim synchronization -> see EdgeWrapper::nonblockNotifyForPlacementInternal_(); cache server worker (sender node) has finished victim synchronization when notifying results of hybrid data fetching to beacon node -> see CacheServerWorkerBase::notifyBeaconForPlacementAfterHybridFetch_())
 
-        // NOTE: NO need to issue directory udpate requests (local placement notification from cache server worker (local beacon node) or beacon server (remote beacon node) does NOT need directory update request as the current edge node is beacon -> see EdgeWrapper::nonblockNotifyForPlacement(); cache server worker (sender node) has finished remote directory admission when notifying results of hybrid data fetching to beacon node -> see CacheServerWorkerBase::notifyBeaconForPlacementAfterHybridFetch_())
+        // NOTE: NO need to issue directory udpate requests (local placement notification from cache server worker (local beacon node) or beacon server (remote beacon node) does NOT need directory update request as the current edge node is beacon -> see EdgeWrapper::nonblockNotifyForPlacementInternal_(); cache server worker (sender node) has finished remote directory admission when notifying results of hybrid data fetching to beacon node -> see CacheServerWorkerBase::notifyBeaconForPlacementAfterHybridFetch_())
 
         struct timespec admission_start_timestamp = Util::getCurrentTimespec();
 

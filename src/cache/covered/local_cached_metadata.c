@@ -1,6 +1,7 @@
 #include "cache/covered/local_cached_metadata.h"
 
 #include "common/util.h"
+#include "edge/covered_edge_custom_func_param.h"
 
 namespace covered
 {
@@ -107,7 +108,9 @@ namespace covered
 
         // Calculte local reward (i.e., max eviction cost, as the local edge node does NOT know cache hit status of all other edge nodes and conservatively treat it as the last copy)
         const bool is_last_copies = !is_neighbor_cached;
-        Reward local_reward = edge_wrapper_ptr->calcLocalCachedReward(local_cached_popularity, redirected_cached_popularity, is_last_copies);
+        CalcLocalCachedRewardFuncParam tmp_param(local_cached_popularity, redirected_cached_popularity, is_last_copies);
+        edge_wrapper_ptr->constCustomFunc(CalcLocalCachedRewardFuncParam::FUNCNAME, &tmp_param);
+        Reward local_reward = tmp_param.getReward();
 
         return local_reward;
     }

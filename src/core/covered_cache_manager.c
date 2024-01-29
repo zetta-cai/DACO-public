@@ -118,8 +118,9 @@ namespace covered
                     UNUSED(best_placement_peredge_fetched_victimset);
 
                     // Non-blocking data fetching if with best placement
-                    NonblockDataFetchForPlacementFuncParam tmp_param(key, best_placement_edgeset, skip_propagation_latency, sender_is_beacon, need_hybrid_fetching);
+                    NonblockDataFetchForPlacementFuncParam tmp_param(key, best_placement_edgeset, skip_propagation_latency, sender_is_beacon);
                     edge_wrapper_ptr->constCustomFunc(NonblockDataFetchForPlacementFuncParam::FUNCNAME, &tmp_param);
+                    need_hybrid_fetching = tmp_param.isNeedHybridFetching();
                 }
             }
         }

@@ -6,6 +6,7 @@
 #include "common/kv_list_helper_impl.h"
 #include "common/util.h"
 #include "cooperation/covered_cooperation_custom_func_param.h"
+#include "edge/covered_edge_custom_func_param.h"
 
 namespace covered
 {
@@ -405,7 +406,9 @@ namespace covered
                 bool with_complete_redirected_cached_popularity = victim_cacheinfo_list_const_iter->getRedirectedCachedPopularity(tmp_redirected_cached_popularity);
                 assert(with_complete_redirected_cached_popularity); // NOTE: victim cacheinfo of pervictim_cacheinfos (from peredge_victim_metadata_ in victim tracker) MUST be complete
 
-                DeltaReward tmp_eviction_cost = edge_wrapper_ptr->calcLocalCachedReward(tmp_local_cached_popularity, tmp_redirected_cached_popularity, is_last_copies);
+                CalcLocalCachedRewardFuncParam tmp_param(tmp_local_cached_popularity, tmp_redirected_cached_popularity, is_last_copies);
+                edge_wrapper_ptr->constCustomFunc(CalcLocalCachedRewardFuncParam::FUNCNAME, &tmp_param);
+                Reward tmp_eviction_cost = tmp_param.getReward();
                 eviction_cost += tmp_eviction_cost;
             }
         }
@@ -492,7 +495,9 @@ namespace covered
             assert(with_complete_redirected_cached_popularity); // NOTE: the victim cacheinfo from local edge cache of current edge node MUST be complete
 
             // Calculate eviction cost based on is_last_copies and the victim cacheinfo
-            DeltaReward tmp_eviction_cost = edge_wrapper_ptr->calcLocalCachedReward(tmp_local_cached_popularity, tmp_redirected_cached_popularity, is_last_copies);
+            CalcLocalCachedRewardFuncParam tmp_param(tmp_local_cached_popularity, tmp_redirected_cached_popularity, is_last_copies);
+            edge_wrapper_ptr->constCustomFunc(CalcLocalCachedRewardFuncParam::FUNCNAME, &tmp_param);
+            Reward tmp_eviction_cost = tmp_param.getReward();
             local_eviction_cost += tmp_eviction_cost;
         }
 

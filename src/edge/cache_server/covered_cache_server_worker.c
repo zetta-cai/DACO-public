@@ -50,13 +50,19 @@ namespace covered
 
         // Prepare local uncached popularity of key for popularity aggregation
         // NOTE: NOT need piggyacking-based popularity collection and victim synchronization for local directory lookup
-        GetCollectedPopularityParam tmp_param(key);
-        tmp_edge_wrapper_ptr->getEdgeCachePtr()->constCustomFunc(GetCollectedPopularityParam::FUNCNAME, &tmp_param); // collected_popularity.is_tracked indicates if the local uncached key is tracked in local uncached metadata
+        GetCollectedPopularityParam tmp_param_for_popcollect(key);
+        tmp_edge_wrapper_ptr->getEdgeCachePtr()->constCustomFunc(GetCollectedPopularityParam::FUNCNAME, &tmp_param_for_popcollect); // collected_popularity.is_tracked indicates if the local uncached key is tracked in local uncached metadata
 
         // NOTE: we always perform victim synchronization before popularity aggregation, as we need the latest synced victim information for placement calculation (note that victim tracker has been updated by getLocalEdgeCache_() before this function)
 
         // Selective popularity aggregation after local directory lookup
-        is_finish = tmp_edge_wrapper_ptr->afterDirectoryLookupHelper_(key, current_edge_idx, tmp_param.getCollectedPopularity(), is_global_cached, is_source_cached, best_placement_edgeset, need_hybrid_fetching, NULL, edge_cache_server_worker_recvrsp_socket_server_ptr_, edge_cache_server_worker_recvrsp_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+        AfterDirectoryLookupHelperFuncParam tmp_param_after_dirlookup(key, current_edge_idx, tmp_param_for_popcollect.getCollectedPopularity(), is_global_cached, is_source_cached, NULL, edge_cache_server_worker_recvrsp_socket_server_ptr_, edge_cache_server_worker_recvrsp_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+        tmp_edge_wrapper_ptr->constCustomFunc(AfterDirectoryLookupHelperFuncParam::FUNCNAME, &tmp_param_after_dirlookup);
+        is_finish = tmp_param_after_dirlookup.isFinish();
+        best_placement_edgeset = tmp_param_after_dirlookup.getBestPlacementEdgesetConstRef();
+        need_hybrid_fetching = tmp_param_after_dirlookup.isNeedHybridFetching();
+        total_bandwidth_usage = tmp_param_after_dirlookup.getTotalBandwidthUsage();
+        event_list = tmp_param_after_dirlookup.getEventListConstRef();
 
         return is_finish;
     }
@@ -507,7 +513,8 @@ namespace covered
         if (need_hybrid_fetching)
         {
             assert(tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME);
-            tmp_edge_wrapper_ptr->nonblockNotifyForPlacement(key, value, best_placement_edgeset, skip_propagation_latency);
+            NonblockNotifyForPlacementFuncParam tmp_param(key, value, best_placement_edgeset, skip_propagation_latency);
+            tmp_edge_wrapper_ptr->constCustomFunc(NonblockNotifyForPlacementFuncParam::FUNCNAME, &tmp_param);
         }
 
         return is_finish;
@@ -675,7 +682,8 @@ namespace covered
             if (need_hybrid_fetching)
             {
                 assert(tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME);
-                tmp_edge_wrapper_ptr->nonblockNotifyForPlacement(key, value, best_placement_edgeset, skip_propagation_latency);
+                NonblockNotifyForPlacementFuncParam tmp_param(key, value, best_placement_edgeset, skip_propagation_latency);
+                tmp_edge_wrapper_ptr->constCustomFunc(NonblockNotifyForPlacementFuncParam::FUNCNAME, &tmp_param);
             }
         }
         #ifdef ENABLE_FAST_PATH_PLACEMENT
@@ -688,7 +696,9 @@ namespace covered
             // Calculate local admission benefit
             Popularity local_uncached_popularity = collected_popularity_after_fetch_value.getLocalUncachedPopularity();
             Popularity redirected_uncached_popularity = fast_path_hint.getSumLocalUncachedPopularity(); // NOTE: sum_local_uncached_popularity MUST NOT include local uncached popularity of the current edge node
-            DeltaReward local_admission_benefit = tmp_edge_wrapper_ptr->calcLocalUncachedReward(local_uncached_popularity, is_global_cached, redirected_uncached_popularity);
+            CalcLocalUncachedRewardFuncParam tmp_param(local_uncached_popularity, is_global_cached, redirected_uncached_popularity);
+            tmp_edge_wrapper_ptr->constCustomFunc(CalcLocalUncachedRewardFuncParam::FUNCNAME, &tmp_param);
+            DeltaReward local_admission_benefit = tmp_param.getReward();
 
             // Approximate global admission policy
             bool is_global_popular = false;
@@ -769,7 +779,8 @@ namespace covered
         if (sender_is_beacon) // best_placement_edgeset and need_hybrid_fetching come from lookupLocalDirectory_()
         {
             // Trigger placement notification locally
-            tmp_edge_wrapper_ptr->nonblockNotifyForPlacement(key, value, best_placement_edgeset, skip_propagation_latency);
+            NonblockNotifyForPlacementFuncParam tmp_param(key, value, best_placement_edgeset, skip_propagation_latency);
+            tmp_edge_wrapper_ptr->constCustomFunc(NonblockNotifyForPlacementFuncParam::FUNCNAME, &tmp_param);
         }
         else // best_placement_edgeset and need_hybrid_fetching come from lookupBeaconDirectory_()
         {

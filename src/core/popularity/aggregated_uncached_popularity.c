@@ -3,6 +3,7 @@
 #include <assert.h>
 
 #include "common/util.h"
+#include "edge/covered_edge_custom_func_param.h"
 
 namespace covered
 {
@@ -157,7 +158,9 @@ namespace covered
             exit(1);
         }
         Popularity sum_minus_topi = Util::popularityNonegMinus(sum_local_uncached_popularity_, topi_local_uncached_popularity_);
-        DeltaReward admission_benefit = edge_wrapper_ptr->calcLocalUncachedReward(topi_local_uncached_popularity_, is_global_cached, sum_minus_topi);
+        CalcLocalUncachedRewardFuncParam tmp_param(topi_local_uncached_popularity_, is_global_cached, sum_minus_topi);
+        edge_wrapper_ptr->constCustomFunc(CalcLocalUncachedRewardFuncParam::FUNCNAME, &tmp_param);
+        DeltaReward admission_benefit = tmp_param.getReward();
 
         return admission_benefit;
     }
