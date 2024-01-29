@@ -141,7 +141,7 @@ namespace covered
         {
             is_local_cached_and_invalid = tmp_edge_wrapper_ptr->getEdgeCachePtr()->updateIfInvalidForGetrsp(key, value, is_global_cached, affect_victim_tracker); // update may trigger eviction (see CacheServerWorkerBase::processLocalGetRequest_)
         }
-        UNUSED(affect_victim_tracker); // ONLY for COVERED
+        UNUSED(affect_victim_tracker); // ONLY used by COVERED
         
         return is_local_cached_and_invalid;
     }
@@ -229,7 +229,7 @@ namespace covered
 
         bool affect_victim_tracker = false;
         bool is_local_cached_after_udpate = tmp_edge_wrapper_ptr->getEdgeCachePtr()->update(key, value, is_global_cached, affect_victim_tracker);
-        UNUSED(affect_victim_tracker); // ONLY for COVERED        
+        UNUSED(affect_victim_tracker); // ONLY used by COVERED        
 
         return is_local_cached_after_udpate;
     }
@@ -241,7 +241,7 @@ namespace covered
 
         bool affect_victim_tracker = false;
         bool is_local_cached_after_remove = tmp_edge_wrapper_ptr->getEdgeCachePtr()->remove(key, is_global_cached, affect_victim_tracker);
-        UNUSED(affect_victim_tracker); // ONLY for COVERED
+        UNUSED(affect_victim_tracker); // ONLY used by COVERED
 
         return is_local_cached_after_remove;
     }
@@ -330,7 +330,7 @@ namespace covered
         return;
     }
 
-    // Trigger best-guess placement/replacement for getrsp & putrsp (ONLY for BestGuess)
+    // Trigger best-guess placement/replacement for getrsp & putrsp
     bool BasicCacheServerWorker::triggerBestGuessPlacementInternal_(const Key& key, const Value& value, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
     {
         checkPointers_();

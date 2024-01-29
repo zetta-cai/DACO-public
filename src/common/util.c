@@ -927,7 +927,7 @@ namespace covered
         const uint32_t stresstest_duration_sec = evaluator_cli_ptr->getStresstestDurationSec();
         const std::string workload_name = evaluator_cli_ptr->getWorkloadName();
         
-        // ONLY for COVERED
+        // ONLY used by COVERED
         uint64_t local_uncached_capacitymb = B2MB(evaluator_cli_ptr->getCoveredLocalUncachedMaxMemUsageBytes());
         const uint32_t covered_peredge_synced_victimcnt = evaluator_cli_ptr->getCoveredPeredgeSyncedVictimcnt();
         const uint32_t covered_peredge_monitored_victimsetcnt = evaluator_cli_ptr->getCoveredPeredgeMonitoredVictimsetcnt();

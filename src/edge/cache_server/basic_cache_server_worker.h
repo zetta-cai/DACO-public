@@ -67,7 +67,7 @@ namespace covered
         // (5) Cache-method-specific custom functions
 
         virtual void constCustomFunc(const std::string& funcname, EdgeCustomFuncParamBase* func_param_ptr) const override;
-        // Trigger best-guess placement/replacement for getrsp & putrsp (ONLY for BestGuess)
+        // Trigger best-guess placement/replacement for getrsp & putrsp
         bool triggerBestGuessPlacementInternal_(const Key& key, const Value& value, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const; // Return if edge is finished
 
         // Const variable

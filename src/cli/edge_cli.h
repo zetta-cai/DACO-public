@@ -27,7 +27,7 @@ namespace covered
         std::string getHashName() const;
         uint32_t getPercacheserverWorkercnt() const;
 
-        // ONLY for COVERED
+        // ONLY used by COVERED
         uint64_t getCoveredLocalUncachedMaxMemUsageBytes() const;
         uint32_t getCoveredPeredgeSyncedVictimcnt() const;
         uint32_t getCoveredPeredgeMonitoredVictimsetcnt() const;
@@ -65,7 +65,7 @@ namespace covered
         std::string hash_name_;
         uint32_t percacheserver_workercnt_;
 
-        // ONLY for COVERED
+        // ONLY used by COVERED
         uint64_t covered_local_uncached_max_mem_usage_bytes_;
         uint32_t covered_peredge_synced_victimcnt_; // Max # of victim cacheinfos tracked by an edge node for each neighbor
         uint32_t covered_peredge_monitored_victimsetcnt_; // Max # of victim syncsets monitored by an edge node for each neighbor

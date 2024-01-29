@@ -496,7 +496,7 @@ namespace covered
             return is_finish; // Edge node is NOT running now
         }
 
-        // Trigger non-blocking placement notification if need hybrid fetching for non-blocking data fetching (ONLY for COVERED)
+        // Trigger non-blocking placement notification if need hybrid fetching for non-blocking data fetching
         if (need_hybrid_fetching)
         {
             assert(tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME);
@@ -663,7 +663,7 @@ namespace covered
                 return is_finish; // Edge node is NOT running now
             }
 
-            // Trigger non-blocking placement notification if need hybrid fetching for non-blocking data fetching (ONLY for COVERED)
+            // Trigger non-blocking placement notification if need hybrid fetching for non-blocking data fetching
             if (need_hybrid_fetching)
             {
                 assert(tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME);
@@ -753,7 +753,7 @@ namespace covered
         checkPointers_();
         CacheServer* tmp_cache_server_ptr = cache_server_worker_param_ptr_->getCacheServerPtr();
         EdgeWrapper* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();
-        assert(tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME); // ONLY for COVERED
+        assert(tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME);
 
         bool is_finish = false;
         

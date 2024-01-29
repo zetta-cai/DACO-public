@@ -234,7 +234,7 @@ namespace covered
         uint32_t get_local_cache_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(get_local_cache_end_timestamp, get_local_cache_start_timestamp));
         event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_GET_LOCAL_CACHE_EVENT_NAME, get_local_cache_latency_us); // Add intermediate event if with event tracking
 
-        // Get is tracked by local uncached metadata before fetching value from neighbor/cloud (ONLY for COVERED)
+        // Get is tracked by local uncached metadata before fetching value from neighbor/cloud (ONLY used by COVERED)
         bool is_tracked_before_fetch_value = false;
         if (tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME)
         {
@@ -308,7 +308,7 @@ namespace covered
         uint32_t get_cloud_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(get_cloud_end_timestamp, get_cloud_start_timestamp));
         event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_GET_CLOUD_EVENT_NAME, get_cloud_latency_us); // Add intermediate event if with event tracking
 
-        // Trigger non-blocking placement notification if need hybrid fetching for non-blocking data fetching (ONLY for COVERED)
+        // Trigger non-blocking placement notification if need hybrid fetching for non-blocking data fetching (ONLY used by COVERED)
         struct timespec trigger_placement_start_timestamp = Util::getCurrentTimespec();
         if (tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME && need_hybrid_fetching)
         {
@@ -352,7 +352,8 @@ namespace covered
         uint32_t independent_admission_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(independent_admission_end_timestamp, independent_admission_start_timestamp));
         event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_INDEPENDENT_ADMISSION_EVENT_NAME, independent_admission_latency_us); // Add intermediate event if with event tracking
 
-        // (1) Try to trigger cache placement for getrsp if w/ sender-is-beacon or fast-path placement, if key is local uncached and newly-tracked after fetching value from neighbor/cloud (ONLY for COVERED);
+        // TODO: Introduce a virtual function tryToTriggerSpecialPlacement for COVERED and BestGuess
+        // (1) Try to trigger cache placement for getrsp if w/ sender-is-beacon or fast-path placement, if key is local uncached and newly-tracked after fetching value from neighbor/cloud (ONLY used by COVERED);
         if (tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME && !tmp_edge_wrapper_ptr->getEdgeCachePtr()->isLocalCached(tmp_key)) // Local uncached object
         {
             GetCollectedPopularityParam tmp_param(tmp_key);
@@ -361,8 +362,6 @@ namespace covered
             const bool is_tracked_after_fetch_value = tmp_collected_popularity_after_fetch_value.isTracked();
             if (!is_tracked_before_fetch_value && is_tracked_after_fetch_value) // Newly-tracked after fetching value from neighbor/cloud
             {
-                assert(tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME); // ONLY for COVERED
-                
                 struct timespec placement_for_getrsp_start_timestamp = Util::getCurrentTimespec();
 
                 // Try to trigger cache placement if necessary (sender is beacon, or beacon node provides fast-path hint)
@@ -379,7 +378,7 @@ namespace covered
                 event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_PLACEMENT_FOR_GETRSP_EVENT_NAME, placement_for_getrsp_latency_us); // Add intermediate event if with event tracking
             }
         }
-        // (2) Trigger best-guess placement/replacement (ONLY for BestGuess)
+        // (2) Trigger best-guess placement/replacement
         else if (tmp_edge_wrapper_ptr->getCacheName() == Util::BESTGUESS_CACHE_NAME && !tmp_edge_wrapper_ptr->getEdgeCachePtr()->isLocalCached(tmp_key) && !is_cooperative_cached) // Local uncached and cooperative uncached (i.e., global uncached)
         {
             TriggerBestGuessPlacementFuncParam tmp_param(tmp_key, tmp_value, total_bandwidth_usage, event_list, skip_propagation_latency);
@@ -886,8 +885,6 @@ namespace covered
     }
 
     // (1.4) Update invalid cached objects in local edge cache
-
-    // (1.5) Trigger cache placement for getrsp (ONLY for COVERED)
 
     // (2) Process write requests
 
@@ -1644,8 +1641,6 @@ namespace covered
 
         return is_finish;
     }
-
-    // (4.3) Trigger non-blocking placement notification (ONLY for COVERED)
 
     // (5) Utility functions
 

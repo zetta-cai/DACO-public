@@ -60,8 +60,8 @@ namespace covered
 
     bool GLCacheLocalCache::getLocalCacheInternal_(const Key& key, const bool& is_redirected, Value& value, bool& affect_victim_tracker) const
     {
-        UNUSED(is_redirected); // ONLY for COVERED
-        UNUSED(affect_victim_tracker); // Only for COVERED
+        UNUSED(is_redirected); // ONLY used by COVERED
+        UNUSED(affect_victim_tracker); // ONLY used by COVERED
 
         request_t req = buildRequest_(key);
         cache_ck_res_e result = glcache_ptr_->get(glcache_ptr_, &req);
@@ -75,9 +75,9 @@ namespace covered
     {
         const bool is_valid_objsize = isValidObjsize_(key, value); // Object size checking
 
-        UNUSED(is_getrsp); // ONLY for COVERED
-        UNUSED(is_global_cached); // ONLY for COVERED
-        UNUSED(affect_victim_tracker); // Only for COVERED
+        UNUSED(is_getrsp); // ONLY used by COVERED
+        UNUSED(is_global_cached); // ONLY used by COVERED
+        UNUSED(affect_victim_tracker); // ONLY used by COVERED
         is_successful = false;
 
         // Check is local cached
@@ -117,8 +117,8 @@ namespace covered
 
     void GLCacheLocalCache::admitLocalCacheInternal_(const Key& key, const Value& value, const bool& is_neighbor_cached, bool& affect_victim_tracker, bool& is_successful)
     {
-        UNUSED(is_neighbor_cached); // ONLY for COVERED
-        UNUSED(affect_victim_tracker); // ONLY for COVERED
+        UNUSED(is_neighbor_cached); // ONLY used by COVERED
+        UNUSED(affect_victim_tracker); // ONLY used by COVERED
 
         // Check is local cached
         request_t req = buildRequest_(key);

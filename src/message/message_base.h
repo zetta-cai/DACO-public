@@ -63,7 +63,7 @@ namespace covered
         kInvalidationResponse,
         kReleaseWritelockRequest,
         kReleaseWritelockResponse,
-        // ONLY for COVERED
+        // ONLY used by COVERED
         kCoveredDirectoryLookupRequest,
         kCoveredDirectoryLookupResponse,
         kCoveredDirectoryUpdateRequest,
